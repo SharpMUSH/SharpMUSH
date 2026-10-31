@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 
 namespace SharpMUSH.Plugins.World.Storage;
@@ -22,7 +23,10 @@ public enum WorldEdge : byte
 	Lock = 4,
 }
 
-/// <summary>The sides of a place, and the step each takes.</summary>
+/// <summary>
+/// The sides of a place, and the step each takes. A square place has north, east, south and west; a hex place has
+/// north, northeast, southeast, south, southwest and northwest. Both have up and down.
+/// </summary>
 public enum WorldSide
 {
 	North,
@@ -31,13 +35,18 @@ public enum WorldSide
 	West,
 	Up,
 	Down,
+	NorthEast,
+	SouthEast,
+	SouthWest,
+	NorthWest,
 }
 
 /// <summary>
 /// How a stored map's places sit in its tiles. A tile is 32 by 32 places of one level; each place is four bytes,
-/// little-endian: its terrain (0 for nothing, else an index into the map's palette plus one), then the edges it owns.
-/// A place owns its north, east and up edges, three bits each (<see cref="WorldEdge"/>); its south, west and down
-/// edges are the north, east and up edges of the places beside it.
+/// little-endian: its terrain (0 for nothing, else an index into the map's palette plus one), then the edges it owns,
+/// three bits each (<see cref="WorldEdge"/>). A square place owns its north, east and up edges; its south, west and
+/// down edges are the north, east and up edges of the places beside it. A hex place, flat-topped at axial column x and
+/// row y, owns its north, northeast, southeast and up edges in the same way.
 /// </summary>
 public static class WorldGrid
 {
@@ -98,13 +107,38 @@ public static class WorldGrid
 	public static void SetEdges(Span<byte> tile, int column, int row, ushort edges) =>
 		BinaryPrimitives.WriteUInt16LittleEndian(tile[(Index(column, row) + 2)..], edges);
 
-	/// <summary>The bit position of an owned edge: north, east and up.</summary>
+	/// <summary>The sides of a square place.</summary>
+	public static readonly IReadOnlyList<WorldSide> SquareSides =
+		[WorldSide.North, WorldSide.East, WorldSide.South, WorldSide.West, WorldSide.Up, WorldSide.Down];
+
+	/// <summary>The sides of a hex place, clockwise from north, then up and down.</summary>
+	public static readonly IReadOnlyList<WorldSide> HexSides =
+	[
+		WorldSide.North, WorldSide.NorthEast, WorldSide.SouthEast, WorldSide.South, WorldSide.SouthWest, WorldSide.NorthWest,
+		WorldSide.Up, WorldSide.Down,
+	];
+
+	/// <summary>The sides a place in <paramref name="space"/> has.</summary>
+	public static IReadOnlyList<WorldSide> Sides(string space) => space == MapSpaces.Hex ? HexSides : SquareSides;
+
+	/// <summary>The sides a place in <paramref name="space"/> owns: the edges stored on it.</summary>
+	public static IReadOnlyList<WorldSide> Owned(string space) => space == MapSpaces.Hex
+		? [WorldSide.North, WorldSide.NorthEast, WorldSide.SouthEast, WorldSide.Up]
+		: [WorldSide.North, WorldSide.East, WorldSide.Up];
+
+	/// <summary>A place's sides in <paramref name="space"/> by letter, as a refusal lists them: "n, e, s, w, u or d".</summary>
+	public static string SideLetters(string space) =>
+		$"{string.Join(", ", Sides(space).SkipLast(1).Select(Letter))} or {Letter(Sides(space)[^1])}";
+
+	/// <summary>The bit position of an owned edge: north, east and up on a square place, north, northeast, southeast and up on a hex one.</summary>
 	private static int Shift(WorldSide owned) => owned switch
 	{
 		WorldSide.North => 0,
 		WorldSide.East => 3,
 		WorldSide.Up => 6,
-		_ => throw new ArgumentOutOfRangeException(nameof(owned), owned, "A place owns only its north, east and up edges."),
+		WorldSide.NorthEast => 9,
+		WorldSide.SouthEast => 12,
+		_ => throw new ArgumentOutOfRangeException(nameof(owned), owned, "A place owns only its north, east, northeast, southeast and up edges."),
 	};
 
 	public static WorldEdge Edge(ushort edges, WorldSide owned) => (WorldEdge)((edges >> Shift(owned)) & 0b111);
@@ -112,28 +146,45 @@ public static class WorldGrid
 	public static ushort WithEdge(ushort edges, WorldSide owned, WorldEdge edge) =>
 		(ushort)((edges & ~(0b111 << Shift(owned))) | ((int)edge << Shift(owned)));
 
-	/// <summary>The step a side takes.</summary>
+	/// <summary>The step a side takes. The hex sides step in axial coordinates, north being y + 1.</summary>
 	public static (int X, int Y, int Z) Step(WorldSide side) => side switch
 	{
 		WorldSide.North => (0, 1, 0),
-		WorldSide.East => (1, 0, 0),
+		WorldSide.East or WorldSide.NorthEast => (1, 0, 0),
 		WorldSide.South => (0, -1, 0),
-		WorldSide.West => (-1, 0, 0),
+		WorldSide.West or WorldSide.SouthWest => (-1, 0, 0),
+		WorldSide.SouthEast => (1, -1, 0),
+		WorldSide.NorthWest => (-1, 1, 0),
 		WorldSide.Up => (0, 0, 1),
 		_ => (0, 0, -1),
 	};
 
-	/// <summary>
-	/// Where the edge on <paramref name="side"/> of (x, y, z) is stored: on that place for north, east and up, on the
-	/// place beside it otherwise, with whether the edge is seen from the other side.
-	/// </summary>
-	public static (int X, int Y, int Z, WorldSide Owned, bool Flipped) Owner(int x, int y, int z, WorldSide side) => side switch
+	/// <summary>The side across from <paramref name="side"/>.</summary>
+	public static WorldSide Opposite(WorldSide side) => side switch
 	{
-		WorldSide.South => (x, y - 1, z, WorldSide.North, true),
-		WorldSide.West => (x - 1, y, z, WorldSide.East, true),
-		WorldSide.Down => (x, y, z - 1, WorldSide.Up, true),
-		_ => (x, y, z, side, false),
+		WorldSide.North => WorldSide.South,
+		WorldSide.East => WorldSide.West,
+		WorldSide.South => WorldSide.North,
+		WorldSide.West => WorldSide.East,
+		WorldSide.Up => WorldSide.Down,
+		WorldSide.Down => WorldSide.Up,
+		WorldSide.NorthEast => WorldSide.SouthWest,
+		WorldSide.SouthEast => WorldSide.NorthWest,
+		WorldSide.SouthWest => WorldSide.NorthEast,
+		_ => WorldSide.SouthEast,
 	};
+
+	/// <summary>
+	/// Where the edge on <paramref name="side"/> of (x, y, z) is stored: on that place for a side it owns, on the place
+	/// beside it otherwise, with whether the edge is seen from the other side.
+	/// </summary>
+	public static (int X, int Y, int Z, WorldSide Owned, bool Flipped) Owner(int x, int y, int z, WorldSide side)
+	{
+		if (side is not (WorldSide.South or WorldSide.West or WorldSide.Down or WorldSide.SouthWest or WorldSide.NorthWest))
+			return (x, y, z, side, false);
+		var (dx, dy, dz) = Step(side);
+		return (x + dx, y + dy, z + dz, Opposite(side), true);
+	}
 
 	/// <summary>An edge as the place on its other side sees it: a one-way edge points the other way.</summary>
 	public static WorldEdge Flip(WorldEdge edge) => edge switch
@@ -150,12 +201,16 @@ public static class WorldGrid
 		WorldSide.South => "s",
 		WorldSide.West => "w",
 		WorldSide.Up => "u",
-		_ => "d",
+		WorldSide.Down => "d",
+		WorldSide.NorthEast => "ne",
+		WorldSide.SouthEast => "se",
+		WorldSide.SouthWest => "sw",
+		_ => "nw",
 	};
 
 	public static string Word(WorldSide side) => side.ToString().ToLowerInvariant();
 
-	/// <summary>A side by its letter or its word, any case.</summary>
+	/// <summary>A side by its letters or its word, any case, whatever space it belongs to.</summary>
 	public static WorldSide? ParseSide(string text) => text.Trim().ToLowerInvariant() switch
 	{
 		"n" or "north" => WorldSide.North,
@@ -164,6 +219,14 @@ public static class WorldGrid
 		"w" or "west" => WorldSide.West,
 		"u" or "up" => WorldSide.Up,
 		"d" or "down" => WorldSide.Down,
+		"ne" or "northeast" => WorldSide.NorthEast,
+		"se" or "southeast" => WorldSide.SouthEast,
+		"sw" or "southwest" => WorldSide.SouthWest,
+		"nw" or "northwest" => WorldSide.NorthWest,
 		_ => null,
 	};
+
+	/// <summary>A side of a place in <paramref name="space"/>; null for no side, or one that space's places do not have.</summary>
+	public static WorldSide? ParseSide(string text, string space) =>
+		ParseSide(text) is { } side && Sides(space).Contains(side) ? side : null;
 }

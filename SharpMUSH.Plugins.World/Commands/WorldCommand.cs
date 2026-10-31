@@ -106,8 +106,8 @@ public static partial class WorldCommand
 		async ValueTask<Option<CallState>> CreateAsync()
 		{
 			var space = string.IsNullOrWhiteSpace(value) ? MapSpaces.Square : value.Trim().ToLowerInvariant();
-			if (space != MapSpaces.Square)
-				return await Say($"{space} maps are not stored yet; square is.", "#-1 BAD SPACE");
+			if (space is not (MapSpaces.Square or MapSpaces.Hex))
+				return await Say($"{space} maps are not stored; a world map is square or hex.", "#-1 BAD SPACE");
 			if (!await store.CreateAsync(dbref, space)) return await Say($"{name} is already a world map.", "#-1 ALREADY A WORLD MAP");
 
 			// The World map lists an object that names its kind; a stored map is drawn on a grid.
@@ -146,8 +146,8 @@ public static partial class WorldCommand
 
 		async ValueTask<Option<CallState>> WallAsync(WorldPosition place)
 		{
-			if (parts.Length < 3 || WorldGrid.ParseSide(parts[2]) is not { } side)
-				return await Say("Which side? Give it as <map>/<x>,<y>[,<z>]/<n|e|s|w|u|d>.", "#-1 NO SIDE");
+			if (parts.Length < 3 || WorldGrid.ParseSide(parts[2], record.Space) is not { } side)
+				return await NoSideAsync();
 			var setting = (value ?? "").Split(',', 2, StringSplitOptions.TrimEntries);
 			WorldEdge? edge = setting[0].ToLowerInvariant() switch
 			{
@@ -170,10 +170,15 @@ public static partial class WorldCommand
 			return await Say($"The {WorldGrid.Word(side)} side of {place} is now {what}.", "");
 		}
 
+		// A side that names nothing, or one a place in this space does not have, is refused with the sides it has.
+		ValueTask<Option<CallState>> NoSideAsync() =>
+			Say($"Which side? A {record.Space} place's sides are {WorldGrid.SideLetters(record.Space)}: give one as <map>/<x>,<y>[,<z>]/<side>.",
+				"#-1 NO SIDE");
+
 		async ValueTask<Option<CallState>> LockAsync(WorldPosition place)
 		{
-			if (parts.Length < 3 || WorldGrid.ParseSide(parts[2]) is not { } side)
-				return await Say("Which side? Give it as <map>/<x>,<y>[,<z>]/<n|e|s|w|u|d>.", "#-1 NO SIDE");
+			if (parts.Length < 3 || WorldGrid.ParseSide(parts[2], record.Space) is not { } side)
+				return await NoSideAsync();
 			if (string.IsNullOrWhiteSpace(value))
 			{
 				await store.SetLockAsync(dbref, place.X, place.Y, place.Z, side, null);
@@ -285,7 +290,7 @@ public static partial class WorldCommand
 			lines.Add($"{place} on {name}: {(terrain is null ? "nothing painted" : $"{terrain.Label} ({terrain.Type})")}"
 				+ (held?.Name is { } placeName ? $", named {placeName}" : "") + ".");
 			if (terrain?.Closed is { } closed) lines.Add($"Closed: {closed}");
-			foreach (var side in Enum.GetValues<WorldSide>())
+			foreach (var side in WorldGrid.Sides(record.Space))
 			{
 				var (edge, reason, key) = store.Edge(dbref, place.X, place.Y, place.Z, side);
 				if (edge == WorldEdge.Open) continue;

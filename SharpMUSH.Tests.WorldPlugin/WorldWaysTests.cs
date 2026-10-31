@@ -50,10 +50,47 @@ public class WorldWaysTests
 	private async Task<WorldWay> Way(int x, int y, string direction, bool examine = true, Func<string, ValueTask<bool>>? unlock = null,
 		WorldLegend? legend = null) =>
 		await WorldWays.WayAsync(_store, _store.Map(Map)!, legend ?? _legend, Map, examine, new WorldPosition(x, y, 0),
-			WorldWays.ParseDirection(direction)!, unlock);
+			WorldWays.ParseDirection(direction, _store.Map(Map)!.Space)!, unlock);
 
 	/// <summary>A mover who passes exactly the keys given.</summary>
 	private static Func<string, ValueTask<bool>> Holding(params string[] keys) => key => ValueTask.FromResult(keys.Contains(key));
+
+	[Test]
+	public async Task AHexPlaceHasSixSidesAndNoDiagonals()
+	{
+		var hex = new DBRef(4301, 1000);
+		await _store.CreateAsync(hex, "hex");
+		await _store.PaintAsync(hex, 0, -2, -2, 2, 2, "grass");
+		await _store.SetEdgeAsync(hex, 0, 0, 0, WorldSide.SouthWest, WorldEdge.Wall, "A thorn hedge.");
+		await _store.SetEdgeAsync(hex, 0, 0, 0, WorldSide.NorthWest, WorldEdge.OneWayOut, null);
+		var record = _store.Map(hex)!;
+
+		async Task<WorldWay> HexWay(int x, int y, string direction) =>
+			await WorldWays.WayAsync(_store, record, _legend, hex, true, new WorldPosition(x, y, 0),
+				WorldWays.ParseDirection(direction, record.Space)!);
+
+		await Assert.That((await HexWay(0, 0, "ne")).To).IsEqualTo(new WorldPosition(1, 0, 0));
+		await Assert.That((await HexWay(0, 0, "se")).To).IsEqualTo(new WorldPosition(1, -1, 0));
+		await Assert.That((await HexWay(0, 0, "n")).To).IsEqualTo(new WorldPosition(0, 1, 0));
+		await Assert.That(await HexWay(0, 0, "sw")).IsEqualTo(new WorldWay(WorldWayState.Wall, "A thorn hedge.", new WorldPosition(-1, 0, 0)));
+		await Assert.That((await HexWay(-1, 0, "ne")).State).IsEqualTo(WorldWayState.Wall).Because("the hedge is the same edge seen from the other side");
+		await Assert.That((await HexWay(0, 0, "nw")).State).IsEqualTo(WorldWayState.OneWay);
+		await Assert.That((await HexWay(-1, 1, "se")).State).IsEqualTo(WorldWayState.Wall).Because("a one-way side refuses the way back");
+		await Assert.That(WorldWays.ParseDirection("e", record.Space)).IsNull().Because("a hex place has no east side");
+		await Assert.That(WorldWays.ParseDirection("ne", "square")).IsEquivalentTo([WorldSide.North, WorldSide.East])
+			.Because("a square map's northeast is still a diagonal");
+	}
+
+	[Test]
+	[Arguments("square", 10)]
+	[Arguments("hex", 8)]
+	public async Task EveryDirectionOfASpaceIsAWayOutOfItsPlaces(string space, int count)
+	{
+		var directions = WorldWays.Directions(space);
+		await Assert.That(directions.Count).IsEqualTo(count);
+		foreach (var direction in directions)
+			await Assert.That(WorldWays.ParseDirection(direction, space)).IsNotNull().Because($"{direction} is a {space} direction");
+	}
 
 	[Test]
 	public async Task AnOpenSideLeadsToThePlaceBesideIt()

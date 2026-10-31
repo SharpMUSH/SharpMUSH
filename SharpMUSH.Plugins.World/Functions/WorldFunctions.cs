@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -92,8 +93,29 @@ public static class WorldFunctions
 		});
 
 	/// <summary>
+	/// worldmap(&lt;map&gt;[, &lt;field&gt;]): a world map's <c>space</c> (the default: <c>square</c> or <c>hex</c>),
+	/// <c>sides</c> (its places' sides, by letter), <c>ways</c> (the directions worldway() takes there), <c>levels</c> (the levels painted, lowest first) or <c>box</c> (the
+	/// painted box as <c>left bottom right top</c>, empty before anything is painted).
+	/// </summary>
+	[SharpFunction(Name = "worldmap", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["map", "field"])]
+	public static ValueTask<CallState> WorldMap(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
+		ReadAsync(parser, reading =>
+		{
+			var record = reading.Record;
+			return ValueTask.FromResult((Arg(parser, 1) is { Length: > 0 } given ? given.ToLowerInvariant() : "space") switch
+			{
+				"space" => new CallState(record.Space),
+				"sides" => new CallState(string.Join(" ", WorldGrid.Sides(record.Space).Select(WorldGrid.Letter))),
+				"ways" => new CallState(string.Join(" ", WorldWays.Directions(record.Space))),
+				"levels" => new CallState(string.Join(" ", record.Levels)),
+				"box" => new CallState(record.Painted ? $"{record.Left} {record.Bottom} {record.Right} {record.Top}" : ""),
+				_ => new CallState(BadField),
+			});
+		});
+
+	/// <summary>
 	/// worldway(&lt;map&gt;, &lt;x&gt;, &lt;y&gt;, &lt;z&gt;, &lt;direction&gt;[, &lt;field&gt;[, &lt;mover&gt;]]): the way out of a
-	/// place toward a side or a diagonal: its <c>state</c> (the default: open, oneway, lock, closed, wall or none),
+	/// place toward one of its sides, or on a square map a diagonal: its <c>state</c> (the default: open, oneway, lock, closed, wall or none),
 	/// <c>reason</c>, or <c>to</c>, the place it leads to. Given a mover, each lock on the way is evaluated for them, as an
 	/// exit's lock is, with the map as the locked object: a lock they pass is open. Naming a mover other than yourself
 	/// needs examine of the map.
@@ -104,7 +126,7 @@ public static class WorldFunctions
 		ReadAsync(parser, async reading =>
 		{
 			if (Position(parser) is not { } at) return new CallState(BadPlace);
-			if (WorldWays.ParseDirection(Arg(parser, 4)) is not { } direction) return new CallState(BadDirection);
+			if (WorldWays.ParseDirection(Arg(parser, 4), reading.Record.Space) is not { } direction) return new CallState(BadDirection);
 			var field = Arg(parser, 5) is { Length: > 0 } given ? given.ToLowerInvariant() : "state";
 			if (field is not ("state" or "reason" or "to")) return new CallState(BadField);
 
@@ -150,7 +172,8 @@ public static class WorldFunctions
 	/// <summary>
 	/// worlddraw(&lt;map&gt;, &lt;x&gt;, &lt;y&gt;[, &lt;z&gt;[, &lt;radius&gt;[, &lt;mark&gt;]]]): the places within
 	/// &lt;radius&gt; (3 by default, at most 20) of a place, one character each and north up, a row a line. A place
-	/// with nothing painted is a space; &lt;mark&gt;, when given, stands in the centre.
+	/// with nothing painted is a space; &lt;mark&gt;, when given, stands in the centre. A hex map draws each column two
+	/// characters apart and each column half a row above the one to its west, so a place's row takes two lines.
 	/// </summary>
 	[SharpFunction(Name = "worlddraw", MinArgs = 3, MaxArgs = 6, Flags = FunctionFlags.Regular,
 		ParameterNames = ["map", "x", "y", "z", "radius", "mark"])]
@@ -165,6 +188,7 @@ public static class WorldFunctions
 
 			var dbref = reading.Map.Object().DBRef;
 			var window = reading.Store.Window(dbref, at.Z, at.X - radius, at.Y - radius, at.X + radius, at.Y + radius);
+			if (reading.Record.Space == MapSpaces.Hex) return new CallState(await HexDrawingAsync(reading, window, at, radius, mark));
 			var drawing = new StringBuilder();
 			for (var y = at.Y + radius; y >= at.Y - radius; y--)
 			{
@@ -181,6 +205,26 @@ public static class WorldFunctions
 			}
 			return new CallState(drawing.ToString());
 		});
+
+	/// <summary>
+	/// The hex places within <paramref name="radius"/> steps of <paramref name="at"/>: column x on character 2·(x − at.X + radius),
+	/// and place (x, y) on line 2·radius − (2·(y − at.Y) + x − at.X), so north is up and each column sits half a row
+	/// above the one to its left.
+	/// </summary>
+	private static async ValueTask<string> HexDrawingAsync(Reading reading, WorldWindowRead? window, WorldPosition at, int radius, string mark)
+	{
+		// A slot per character position, so a glyph of several UTF-16 units never shifts or splits another.
+		var lines = Enumerable.Range(0, 4 * radius + 1).Select(_ => Enumerable.Repeat(" ", 4 * radius + 1).ToArray()).ToArray();
+		for (var dx = -radius; dx <= radius; dx++)
+		{
+			for (var dy = Math.Max(-radius, -dx - radius); dy <= Math.Min(radius, -dx + radius); dy++)
+			{
+				var (line, column) = (2 * radius - (2 * dy + dx), 2 * (dx + radius));
+				lines[line][column] = dx == 0 && dy == 0 && mark.Length > 0 ? mark : await GlyphAsync(reading, window, at.X + dx, at.Y + dy);
+			}
+		}
+		return string.Join("\n", lines.Select(line => string.Concat(line)));
+	}
 
 	private static async ValueTask<string> GlyphAsync(Reading reading, WorldWindowRead? window, int x, int y)
 	{

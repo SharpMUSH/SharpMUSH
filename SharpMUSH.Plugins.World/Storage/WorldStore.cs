@@ -7,7 +7,7 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Plugins.World.Storage;
 
 /// <summary>What the store keeps about one stored map.</summary>
-/// <param name="Space">The space its places are in; <c>square</c> alone so far.</param>
+/// <param name="Space">The space its places are in: <c>square</c> or <c>hex</c>.</param>
 /// <param name="Created">The map object's creation time, so a record never passes to an object that reuses its number.</param>
 /// <param name="Palette">The terrain types painted on it, by terrain id less one.</param>
 public sealed record WorldMapRecord(string Space, long Created, List<string> Palette)
@@ -30,7 +30,7 @@ public sealed record WorldMapRecord(string Space, long Created, List<string> Pal
 /// <summary>What a place has beyond its terrain and edges.</summary>
 /// <param name="Name">Its own name.</param>
 /// <param name="Data">A JSON object of whatever the game keeps there.</param>
-/// <param name="Reasons">Why each edge it owns refuses a mover, by side letter (<c>n</c>, <c>e</c>, <c>u</c>).</param>
+/// <param name="Reasons">Why each edge it owns refuses a mover, by side letter (<c>n</c>, <c>e</c>, <c>ne</c>, <c>se</c>, <c>u</c>).</param>
 public sealed record WorldPlaceRecord(string? Name, string? Data, Dictionary<string, string>? Reasons)
 {
 	public static readonly WorldPlaceRecord Empty = new(null, null, null);

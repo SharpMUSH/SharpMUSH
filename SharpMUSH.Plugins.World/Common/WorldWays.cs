@@ -1,3 +1,4 @@
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Plugins.World.Storage;
 
@@ -38,14 +39,27 @@ public sealed record WorldWay(WorldWayState State, string? Reason, WorldPosition
 /// <summary>A way out of a place, by side or by compass point.</summary>
 public static class WorldWays
 {
-	/// <summary>The compass points: a side, or two sides at once for a diagonal.</summary>
-	public static IReadOnlyList<WorldSide>? ParseDirection(string text) => text.Trim().ToLowerInvariant() switch
+	/// <summary>
+	/// The directions a place in <paramref name="space"/> has a way out by, by letter: a hex map's sides, or a square
+	/// map's four sides, four diagonals, up and down.
+	/// </summary>
+	public static IReadOnlyList<string> Directions(string space) => space == MapSpaces.Hex
+		? [.. WorldGrid.HexSides.Select(WorldGrid.Letter)]
+		: ["n", "e", "s", "w", "ne", "nw", "se", "sw", "u", "d"];
+
+	/// <summary>
+	/// A way out of a place in <paramref name="space"/>: one of its sides, or on a square map a diagonal, two sides at
+	/// once. Null for a direction the space has no way out by.
+	/// </summary>
+	public static IReadOnlyList<WorldSide>? ParseDirection(string text, string space) => text.Trim().ToLowerInvariant() switch
 	{
+		_ when WorldGrid.ParseSide(text, space) is { } side => [side],
+		_ when space == MapSpaces.Hex => null,
 		"ne" or "northeast" => [WorldSide.North, WorldSide.East],
 		"nw" or "northwest" => [WorldSide.North, WorldSide.West],
 		"se" or "southeast" => [WorldSide.South, WorldSide.East],
 		"sw" or "southwest" => [WorldSide.South, WorldSide.West],
-		var other => WorldGrid.ParseSide(other) is { } side ? [side] : null,
+		_ => null,
 	};
 
 	/// <summary>

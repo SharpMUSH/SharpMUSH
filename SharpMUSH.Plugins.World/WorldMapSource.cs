@@ -29,7 +29,9 @@ public sealed class WorldMapSource(WorldStore store, IAttributeService attribute
 		var empty = new MapCellsDto(level, left, bottom, right, top, [], [], false);
 		if (window.Cells > MapWindow.MaxCells) return empty with { Truncated = true };
 		var dbref = map.Object().DBRef;
-		if (store.Window(dbref, level, left, bottom, right, top) is not { } read) return empty;
+		// The window reads a row more above it: a hex place's northwest edge is stored on the place up and to the left.
+		if (store.Window(dbref, level, left, bottom, right, top + 1) is not { } read) return empty;
+		var space = read.Map.Space;
 
 		var examine = await permissions.CanExamine(viewer, map);
 		var legend = new WorldLegend(attributes, map);
@@ -67,9 +69,11 @@ public sealed class WorldMapSource(WorldStore store, IAttributeService attribute
 		{
 			if (cell.Edges == 0 || HiddenAt(x, y)) continue;
 			var reasons = read.Places.GetValueOrDefault((x, y))?.Reasons;
-			if (Inside(x, y) || Inside(x, y + 1)) Add(x, y, WorldSide.North);
-			if (Inside(x, y) || Inside(x + 1, y)) Add(x, y, WorldSide.East);
-			if (Inside(x, y)) Add(x, y, WorldSide.Up);
+			foreach (var owned in WorldGrid.Owned(space))
+			{
+				var (dx, dy, _) = WorldGrid.Step(owned);
+				if (Inside(x, y) || (owned != WorldSide.Up && Inside(x + dx, y + dy))) Add(x, y, owned);
+			}
 
 			void Add(int ax, int ay, WorldSide owned)
 			{
@@ -90,7 +94,7 @@ public sealed class WorldMapSource(WorldStore store, IAttributeService attribute
 						break;
 					// One way in from above is the level above's to draw, as a way down.
 					case WorldEdge.OneWayIn when owned != WorldSide.Up:
-						walls.Add(new MapWallDto(ax + dx, ay + dy, WorldGrid.Letter(Opposite(owned)), MapWallKinds.OneWay, reason));
+						walls.Add(new MapWallDto(ax + dx, ay + dy, WorldGrid.Letter(WorldGrid.Opposite(owned)), MapWallKinds.OneWay, reason));
 						break;
 				}
 			}
@@ -118,14 +122,4 @@ public sealed class WorldMapSource(WorldStore store, IAttributeService attribute
 
 		return empty with { Cells = cells, Walls = walls };
 	}
-
-	private static WorldSide Opposite(WorldSide side) => side switch
-	{
-		WorldSide.North => WorldSide.South,
-		WorldSide.East => WorldSide.West,
-		WorldSide.South => WorldSide.North,
-		WorldSide.West => WorldSide.East,
-		WorldSide.Up => WorldSide.Down,
-		_ => WorldSide.Up,
-	};
 }
