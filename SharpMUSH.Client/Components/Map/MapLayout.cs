@@ -55,6 +55,19 @@ public sealed class MapLayout
 		["down"] = (0, 0, -1), ["d"] = (0, 0, -1),
 	};
 
+	/// <summary>The steps on a hex map, in its axial coordinates; east and west are no hex's sides.</summary>
+	private static readonly Dictionary<string, (int X, int Y, int Z)> HexDirections = new(StringComparer.OrdinalIgnoreCase)
+	{
+		["north"] = (0, 1, 0), ["n"] = (0, 1, 0),
+		["south"] = (0, -1, 0), ["s"] = (0, -1, 0),
+		["northeast"] = (1, 0, 0), ["ne"] = (1, 0, 0),
+		["northwest"] = (-1, 1, 0), ["nw"] = (-1, 1, 0),
+		["southeast"] = (1, -1, 0), ["se"] = (1, -1, 0),
+		["southwest"] = (-1, 0, 0), ["sw"] = (-1, 0, 0),
+		["up"] = (0, 0, 1), ["u"] = (0, 0, 1),
+		["down"] = (0, 0, -1), ["d"] = (0, 0, -1),
+	};
+
 	public MapDto Map { get; }
 
 	/// <summary>Every room and region, placed or not, by dbref.</summary>
@@ -115,10 +128,13 @@ public sealed class MapLayout
 			.Select(other => other is not null && placed.TryGetValue(other, out var neighbour) ? neighbour.Level : (int?)null)
 			.FirstOrDefault(level => level is not null);
 
-	/// <summary>The direction an exit named <paramref name="exit"/> goes, by its name or any alias; null when it names none.</summary>
-	public static (int X, int Y, int Z)? Direction(MapExitDto exit) =>
+	/// <summary>
+	/// The direction an exit named <paramref name="exit"/> goes, by its name or any alias, on a square map or, given
+	/// <paramref name="hex"/>, a hex map's axial steps; null when it names none.
+	/// </summary>
+	public static (int X, int Y, int Z)? Direction(MapExitDto exit, bool hex = false) =>
 		new[] { exit.Name }.Concat(exit.Aliases)
-			.Select(name => Directions.TryGetValue(name.Trim(), out var step) ? step : ((int, int, int)?)null)
+			.Select(name => (hex ? HexDirections : Directions).TryGetValue(name.Trim(), out var step) ? step : ((int, int, int)?)null)
 			.FirstOrDefault(step => step is not null);
 
 	/// <summary>The rooms placed on <paramref name="level"/>.</summary>
@@ -375,7 +391,7 @@ public sealed class MapLayout
 		// Each compass exit is a step both ways: north from A to B puts B north of A, and A south of B.
 		var steps = new Dictionary<string, List<(string To, (int X, int Y, int Z) Step)>>();
 		var compass = map.Exits.OrderBy(exit => Number(exit.Id))
-			.Select(exit => (From: exit.Source, To: exit.Destination ?? "", Step: Direction(exit)))
+			.Select(exit => (From: exit.Source, To: exit.Destination ?? "", Step: Direction(exit, IsHex)))
 			.Where(exit => exit.Step is not null && byId.ContainsKey(exit.From) && byId.ContainsKey(exit.To));
 		foreach (var (from, to, direction) in compass)
 		{
