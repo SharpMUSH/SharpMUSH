@@ -16,7 +16,7 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.Integration.World;
 
 /// <summary>
-/// The bundled world-grid package over the World plugin: +map/exits opens the ten direction exits on a world map,
+/// The bundled world-grid package over the World plugin: +map/exits opens a direction exit for each way of a world map,
 /// a player walks between the rooms its places are lent and is refused by walls and the locks they do not pass with
 /// their reasons, the cell parent
 /// describes a lent room from the legend and lists its ways, and +map draws the places around the player with a key. Not in parallel: the
@@ -156,6 +156,36 @@ public class WorldGridIntegrationTests
 			await God($"&CLIMBER {walker.DbRef}=yes");
 			await As(walker, "west");
 			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(await Eval($"worldcell({mapRef},1,2,,room)"));
+		}
+		finally
+		{
+			await WebAppFactoryArg.Services.UninstallWithBridgesAsync("world-grid");
+			if (_installedWorldMap) await WebAppFactoryArg.Services.UninstallWithBridgesAsync("world-map");
+		}
+	}
+
+	[Test]
+	public async Task APlayerWalksAHexMapOnItsSixSides()
+	{
+		try
+		{
+			await InstallAsync();
+			var map = TestIsolationHelpers.GenerateUniqueName("Steppe");
+			await God($"@dig {map}");
+			var mapRef = await Eval($"num(search(name={map}))");
+			await God($"@world/create {mapRef}=hex");
+			await God($"@world/paint {mapRef}/-1,-1:1,1=grass");
+			await Assert.That(await God($"+map/exits {mapRef}")).Contains($"Opened 8 direction exits on {map}.");
+			await Assert.That(await Eval($"sort(iter(lexits({mapRef}),get(%i0/MAP`WAY)))")).IsEqualTo("d n ne nw s se sw u");
+
+			var walker = await Player("Rider");
+			await God($"@tel {walker.DbRef}={await Eval($"worldroom({mapRef},0,0)")}");
+			var walked = await As(walker, "northeast");
+			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(await Eval($"worldcell({mapRef},1,0,,room)"));
+			// From 1,0 the map goes on north, south, southwest and northwest; it ends northeast and southeast.
+			await Assert.That(walked).Contains("North").And.Contains("South").And.Contains("Southwest").And.Contains("Northwest")
+				.And.DoesNotContain("Northeast").And.DoesNotContain("Southeast");
+			await Assert.That(await As(walker, "+map")).Contains("@");
 		}
 		finally
 		{
