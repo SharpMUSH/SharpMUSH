@@ -28,7 +28,9 @@ AUTHORS = {
 
 
 def picks():
-	for line in open(os.path.join(HERE, "icons.txt"), encoding="utf-8"):
+	with open(os.path.join(HERE, "icons.txt"), encoding="utf-8") as listing:
+		lines = listing.read().splitlines()
+	for line in lines:
 		line = line.strip()
 		if not line or line.startswith("#"):
 			continue
@@ -49,7 +51,8 @@ def main(archive):
 		folder = found[0].split(os.sep)[-2]
 		if folder not in AUTHORS:
 			sys.exit(f"{folder}: add the author's name to AUTHORS")
-		paths = re.findall(r'<path[^>]*?\sd="([^"]+)"', open(found[0], encoding="utf-8").read())
+		with open(found[0], encoding="utf-8") as svg:
+			paths = re.findall(r'<path[^>]*?\sd="([^"]+)"', svg.read())
 		if len(paths) != 1:
 			sys.exit(f"{icon}: expected one path, found {len(paths)}")
 		entries.append((name, paths[0], AUTHORS[folder]))
