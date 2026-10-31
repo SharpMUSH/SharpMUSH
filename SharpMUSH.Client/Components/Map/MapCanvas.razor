@@ -77,10 +77,6 @@
             {
                 @Way(link)
             }
-            @foreach (var link in _climbs)
-            {
-                @Climb(link)
-            }
             @foreach (var edge in _edges)
             {
                 <line class="map-edge @(edge.Route ? "map-edge--route" : null)" x1="@Num(edge.X1)" y1="@Num(edge.Y1)" x2="@Num(edge.X2)" y2="@Num(edge.Y2)"
@@ -134,7 +130,23 @@
                     <circle class="map-door" cx="@Num(room.X + room.Width - Inset - 9)" cy="@Num(room.Y + Inset + 9)" r="5" />
                 }
             }
+            @* After the rooms, so an arrow reaching over a neighbour's room is not hidden under it. *@
+            @for (var i = 0; i < _climbs.Count; i++)
+            {
+                var link = _climbs[i];
+                @Climb(link, _climbs.Take(i).Count(other => SameArrow(other, link)))
+            }
         </svg>
+        @if (_links.Count + _climbs.Count > 0)
+        {
+            @* The drawing is hidden from a screen reader; its ways are read from here. *@
+            <ul class="visually-hidden">
+                @foreach (var link in _links.Concat(_climbs))
+                {
+                    <li>@WayText(link)</li>
+                }
+            </ul>
+        }
         <div class="map-rooms">
             @if (Editing && Layout.IsGraph)
             {
@@ -344,9 +356,9 @@
             var reach = Reach * MapLayout.GraphRoom;
             bounds = (bounds.Left - reach, bounds.Top - reach, bounds.Right + reach, bounds.Bottom + reach);
         }
-        if (_links.Count + _climbs.Count > 0)
+        if (Layout.HasWays)
         {
-            // A way's name stands beside its line, and a way to another level reaches out of its place: room for both.
+            // Every graph map leaves the same room, so the drawing does not shift as ways scroll in and out of view. A way's name stands beside its line, and a way to another level reaches out of its place: room for both.
             bounds = (bounds.Left - WayRoom, bounds.Top - MapLayout.Cell, bounds.Right + WayRoom, bounds.Bottom + MapLayout.Cell);
         }
         (_left, _top) = (bounds.Left - Margin, bounds.Top - Margin);
@@ -682,7 +694,7 @@
     /// A way to a place on another level: a short arrow out of its place toward where the other lies, or up the page
     /// when it lies straight above and down when straight below, named with the level it leads to.
     /// </summary>
-    private RenderFragment Climb(MapLinkDto link) => __builder =>
+    private RenderFragment Climb(MapLinkDto link, int stack) => __builder =>
     {
         var (fromX, fromY) = Layout.PlaceCentre(link.X, link.Y);
         var (toX, toY) = Layout.PlaceCentre(link.ToX, link.ToY);
@@ -706,8 +718,27 @@
         // Beside the arrow, on its right, as a way's name is.
         var (nx, ny) = (-uy, ux);
         var anchor = nx > 0.4 ? "start" : nx < -0.4 ? "end" : "middle";
-        @SvgText("map-way-name", (x1 + x2) / 2 + nx * 12, (y1 + y2) / 2 + ny * 12, label, anchor)
+        // Ways that share an arrow stack their names under one another.
+        @SvgText("map-way-name", (x1 + x2) / 2 + nx * 12, (y1 + y2) / 2 + ny * 12 + stack * 14, label, anchor)
     };
+
+    /// <summary>Whether two ways to other levels are drawn as the same arrow.</summary>
+    private bool SameArrow(MapLinkDto one, MapLinkDto other) =>
+        (one.X, one.Y, one.ToX, one.ToY) == (other.X, other.Y, other.ToX, other.ToY)
+        && (one.ToX != one.X || one.ToY != one.Y || one.ToZ > Level == other.ToZ > Level);
+
+    /// <summary>A way as words: the place it leaves, its name, and the place or level it leads to.</summary>
+    private string WayText(MapLinkDto link)
+    {
+        var name = link.Names.Split(';')[0];
+        var to = link.ToZ != Level
+            ? Layout.Map.LevelNames.GetValueOrDefault(link.ToZ) is { Length: > 0 } named ? named : Loc["NavMapLevel", link.ToZ].Value
+            : PlaceAt(link.ToX, link.ToY);
+        return $"{PlaceAt(link.X, link.Y)}: {Loc["NavMapWayLeads", name, to]}";
+    }
+
+    private string PlaceAt(int x, int y) =>
+        _places.FirstOrDefault(place => place.X == x && place.Y == y) is { } place ? PlaceName(place) : Loc["NavMapCell", x, y].Value;
 
     /// <summary>An SVG <c>text</c> element, which Razor markup reserves for its own use.</summary>
     private static RenderFragment SvgText(string className, double x, double y, string content, string? anchor = null) => builder =>

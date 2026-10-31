@@ -885,6 +885,10 @@ public class WorldMapPageTests : TrackingBunitContext
 		await Assert.That(cut.FindAll("text.map-way-name").Select(name => name.TextContent))
 			.IsEquivalentTo(["Old Road", "Back", "Shrine Path", "NavMapWayToLevel(Stair, NavMapLevel(1))", "NavMapWayToLevel(Cellar, NavMapLevel(-1))"]);
 		await Assert.That(cut.Find("line.map-way--wall title").TextContent).IsEqualTo("Shrine Path: Brambles.");
+		var spoken = cut.FindAll("ul.visually-hidden li").Select(item => item.TextContent).ToList();
+		await Assert.That(spoken.Count).IsEqualTo(5).Because("a screen reader cannot read the drawing, so every way is listed beside it");
+		await Assert.That(spoken).Contains(item => item.EndsWith("NavMapWayLeads(Cellar, NavMapLevel(-1))"));
+		await Assert.That(spoken).Contains(item => item.StartsWith("Barrow: NavMapWayLeads(Back, "));
 	}
 
 	[Test]
