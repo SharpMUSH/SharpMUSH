@@ -121,6 +121,10 @@ public class WorldCommandIntegrationTests
 		await Assert.That(string.Join("\n", await God($"@world {map}/-1,0", "Northeast"))).Contains("Northeast: wall (A thorn hedge.)");
 
 		await Assert.That(await Eval($"worlddraw({map},0,0,0,1,@)")).IsEqualTo("  G  \nG   G\n  @  \nG   G\n  G  ");
+		// A glyph of two UTF-16 units keeps its place and leaves the others whole.
+		await God($"&MAP`LEGEND`GRASS`CHAR {map}=\U0001F33E", map);
+		await Assert.That(await Eval($"worlddraw({map},0,0,0,1,@)"))
+			.IsEqualTo("  \U0001F33E  \n\U0001F33E   \U0001F33E\n  @  \n\U0001F33E   \U0001F33E\n  \U0001F33E  ");
 
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		var stored = (await mediator.Send(new GetObjectNodeQuery(new DBRef(int.Parse((await Eval($"num({map})")).TrimStart('#'))))))
