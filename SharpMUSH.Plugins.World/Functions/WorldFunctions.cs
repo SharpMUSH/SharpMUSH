@@ -173,7 +173,7 @@ public static class WorldFunctions
 	/// worlddraw(&lt;map&gt;, &lt;x&gt;, &lt;y&gt;[, &lt;z&gt;[, &lt;radius&gt;[, &lt;mark&gt;]]]): the places within
 	/// &lt;radius&gt; (3 by default, at most 20) of a place, one character each and north up, a row a line. A place
 	/// with nothing painted is a space; &lt;mark&gt;, when given, stands in the centre. A hex map draws each column two
-	/// characters apart and every other column half a row lower, so a place's row takes two lines.
+	/// characters apart and each column half a row above the one to its west, so a place's row takes two lines.
 	/// </summary>
 	[SharpFunction(Name = "worlddraw", MinArgs = 3, MaxArgs = 6, Flags = FunctionFlags.Regular,
 		ParameterNames = ["map", "x", "y", "z", "radius", "mark"])]
@@ -209,7 +209,7 @@ public static class WorldFunctions
 	/// <summary>
 	/// The hex places within <paramref name="radius"/> steps of <paramref name="at"/>: column x on character 2·(x − at.X + radius),
 	/// and place (x, y) on line 2·radius − (2·(y − at.Y) + x − at.X), so north is up and each column sits half a row
-	/// below the one to its left.
+	/// above the one to its left.
 	/// </summary>
 	private static async ValueTask<string> HexDrawingAsync(Reading reading, WorldWindowRead? window, WorldPosition at, int radius, string mark)
 	{
