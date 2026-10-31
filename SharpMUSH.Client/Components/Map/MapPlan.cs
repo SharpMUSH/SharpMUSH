@@ -243,20 +243,26 @@ public sealed partial class MapPlan(MapDto map)
 		Upsert(new($"map:{key}", MapChangeKind.MapSetting, id, attribute, [Set(id, attribute, value)]) { Other = value });
 	}
 
-	/// <summary>Makes the map a world map, which keeps its places itself (<c>@world/create</c>).</summary>
-	public void CreateWorld()
+	/// <summary>
+	/// Makes the map a world map, which keeps its places itself (<c>@world/create</c>), of square places or of hexagons.
+	/// </summary>
+	public void CreateWorld(string space = MapSpaces.Square)
 	{
 		var id = Map.Map.Id;
+		var command = space == MapSpaces.Hex ? $"@world/create {id}=hex" : $"@world/create {id}";
 		Upsert(new("world:create", MapChangeKind.CreateWorld, id, Map.Map.Name,
-			[new($"@world/create {id}", $"strmatch(worldcell({id},0,0),#-1 NOT A WORLD MAP)", "0")]));
+			[new(command, $"worldmap({id})", space)]));
 	}
 
-	/// <summary>Opens the ten direction exits that walk the map (world-grid's <c>+map/exits</c>); the map must be a room.</summary>
+	/// <summary>
+	/// Opens the direction exits that walk the map (world-grid's <c>+map/exits</c>), one for each way out of its places;
+	/// the map must be a room.
+	/// </summary>
 	public void OpenWays()
 	{
 		var id = Map.Map.Id;
 		Upsert(new("world:ways", MapChangeKind.OpenWays, id, Map.Map.Name,
-			[new($"+map/exits {id}", $"gte(words(lexits({id})),10)", "1")]));
+			[new($"+map/exits {id}", $"gte(words(lexits({id})),words(worldmap({id},ways)))", "1")]));
 	}
 
 	/// <summary>Paints the places in the box from (x, y) to (x2, y2) on level z with <paramref name="type"/>; empty erases them.</summary>

@@ -10652,6 +10652,9 @@
   <data name="NavMapMakeWorld" xml:space="preserve">
     <value>Make this a world map</value>
   </data>
+  <data name="NavMapMakeHexWorld" xml:space="preserve">
+    <value>Make this a hex world map</value>
+  </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Paint a place, or every place in a box, with a terrain type. Click the map to choose a place.</value>
   </data>
@@ -10674,7 +10677,7 @@
     <value>The legend's types</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>Players walk a world map through ten direction exits on it. Opening them needs the World grid package, and the map must be a room.</value>
+    <value>Players walk a world map through direction exits on it: ten on a square map, eight on a hex map. Opening them needs the World grid package, and the map must be a room.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Open the direction exits</value>
@@ -10699,6 +10702,18 @@
   </data>
   <data name="NavMapSideW" xml:space="preserve">
     <value>West</value>
+  </data>
+  <data name="NavMapSideNE" xml:space="preserve">
+    <value>Northeast</value>
+  </data>
+  <data name="NavMapSideSE" xml:space="preserve">
+    <value>Southeast</value>
+  </data>
+  <data name="NavMapSideSW" xml:space="preserve">
+    <value>Southwest</value>
+  </data>
+  <data name="NavMapSideNW" xml:space="preserve">
+    <value>Northwest</value>
   </data>
   <data name="NavMapSideU" xml:space="preserve">
     <value>Up</value>

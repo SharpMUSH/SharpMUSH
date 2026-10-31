@@ -7049,6 +7049,9 @@
   <data name="NavMapMakeWorld" xml:space="preserve">
     <value>设为世界地图</value>
   </data>
+  <data name="NavMapMakeHexWorld" xml:space="preserve">
+    <value>设为六边形世界地图</value>
+  </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>用地形类型绘制一个地点或方框内的所有地点。点击地图选择地点。</value>
   </data>
@@ -7071,7 +7074,7 @@
     <value>图例中的类型</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>玩家通过地图上的十个方向出口在世界地图上行走。打开它们需要 World grid 包，且地图必须是房间。</value>
+    <value>玩家通过地图上的方向出口在世界地图上行走：方形地图十个，六边形地图八个。打开它们需要 World grid 包，且地图必须是房间。</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>打开方向出口</value>
@@ -7096,6 +7099,18 @@
   </data>
   <data name="NavMapSideW" xml:space="preserve">
     <value>西</value>
+  </data>
+  <data name="NavMapSideNE" xml:space="preserve">
+    <value>东北</value>
+  </data>
+  <data name="NavMapSideSE" xml:space="preserve">
+    <value>东南</value>
+  </data>
+  <data name="NavMapSideSW" xml:space="preserve">
+    <value>西南</value>
+  </data>
+  <data name="NavMapSideNW" xml:space="preserve">
+    <value>西北</value>
   </data>
   <data name="NavMapSideU" xml:space="preserve">
     <value>上</value>

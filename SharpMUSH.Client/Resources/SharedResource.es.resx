@@ -7049,6 +7049,9 @@
   <data name="NavMapMakeWorld" xml:space="preserve">
     <value>Convertir en mapa del mundo</value>
   </data>
+  <data name="NavMapMakeHexWorld" xml:space="preserve">
+    <value>Convertir en mapa del mundo hexagonal</value>
+  </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Pinta un lugar, o cada lugar de un recuadro, con un tipo de terreno. Haz clic en el mapa para elegir un lugar.</value>
   </data>
@@ -7071,7 +7074,7 @@
     <value>Tipos de la leyenda</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>Los jugadores recorren un mapa del mundo por diez salidas de dirección en él. Abrirlas requiere el paquete World grid, y el mapa debe ser una sala.</value>
+    <value>Los jugadores recorren un mapa del mundo por salidas de dirección en él: diez en un mapa cuadrado, ocho en uno hexagonal. Abrirlas requiere el paquete World grid, y el mapa debe ser una sala.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Abrir las salidas de dirección</value>
@@ -7096,6 +7099,18 @@
   </data>
   <data name="NavMapSideW" xml:space="preserve">
     <value>Oeste</value>
+  </data>
+  <data name="NavMapSideNE" xml:space="preserve">
+    <value>Noreste</value>
+  </data>
+  <data name="NavMapSideSE" xml:space="preserve">
+    <value>Sureste</value>
+  </data>
+  <data name="NavMapSideSW" xml:space="preserve">
+    <value>Suroeste</value>
+  </data>
+  <data name="NavMapSideNW" xml:space="preserve">
+    <value>Noroeste</value>
   </data>
   <data name="NavMapSideU" xml:space="preserve">
     <value>Arriba</value>

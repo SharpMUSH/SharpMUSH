@@ -7049,6 +7049,9 @@
   <data name="NavMapMakeWorld" xml:space="preserve">
     <value>Gør dette til et verdenskort</value>
   </data>
+  <data name="NavMapMakeHexWorld" xml:space="preserve">
+    <value>Gør dette til et sekskantet verdenskort</value>
+  </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Mal et sted, eller hvert sted i en boks, med en terræntype. Klik på kortet for at vælge et sted.</value>
   </data>
@@ -7071,7 +7074,7 @@
     <value>Signaturforklaringens typer</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>Spillere går rundt på et verdenskort gennem ti retningsudgange på det. At åbne dem kræver pakken World grid, og kortet skal være et rum.</value>
+    <value>Spillere går rundt på et verdenskort gennem retningsudgange på det: ti på et kvadratisk kort, otte på et sekskantet. At åbne dem kræver pakken World grid, og kortet skal være et rum.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Åbn retningsudgangene</value>
@@ -7096,6 +7099,18 @@
   </data>
   <data name="NavMapSideW" xml:space="preserve">
     <value>Vest</value>
+  </data>
+  <data name="NavMapSideNE" xml:space="preserve">
+    <value>Nordøst</value>
+  </data>
+  <data name="NavMapSideSE" xml:space="preserve">
+    <value>Sydøst</value>
+  </data>
+  <data name="NavMapSideSW" xml:space="preserve">
+    <value>Sydvest</value>
+  </data>
+  <data name="NavMapSideNW" xml:space="preserve">
+    <value>Nordvest</value>
   </data>
   <data name="NavMapSideU" xml:space="preserve">
     <value>Op</value>

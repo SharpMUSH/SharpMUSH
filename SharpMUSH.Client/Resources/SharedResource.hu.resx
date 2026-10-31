@@ -7049,6 +7049,9 @@
   <data name="NavMapMakeWorld" xml:space="preserve">
     <value>Legyen világtérkép</value>
   </data>
+  <data name="NavMapMakeHexWorld" xml:space="preserve">
+    <value>Legyen hatszöges világtérkép</value>
+  </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Fess egy helyet, vagy egy téglalap minden helyét, egy tereptípussal. Kattints a térképre egy hely kiválasztásához.</value>
   </data>
@@ -7071,7 +7074,7 @@
     <value>A jelmagyarázat típusai</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>A játékosok a rajta lévő tíz irány-kijáraton át járják a világtérképet. Megnyitásukhoz a World grid csomag kell, és a térképnek szobának kell lennie.</value>
+    <value>A játékosok a rajta lévő irány-kijáratokon át járják a világtérképet: négyzetes térképen tízen, hatszögesen nyolcon. Megnyitásukhoz a World grid csomag kell, és a térképnek szobának kell lennie.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Irány-kijáratok megnyitása</value>
@@ -7096,6 +7099,18 @@
   </data>
   <data name="NavMapSideW" xml:space="preserve">
     <value>Nyugat</value>
+  </data>
+  <data name="NavMapSideNE" xml:space="preserve">
+    <value>Északkelet</value>
+  </data>
+  <data name="NavMapSideSE" xml:space="preserve">
+    <value>Délkelet</value>
+  </data>
+  <data name="NavMapSideSW" xml:space="preserve">
+    <value>Délnyugat</value>
+  </data>
+  <data name="NavMapSideNW" xml:space="preserve">
+    <value>Északnyugat</value>
   </data>
   <data name="NavMapSideU" xml:space="preserve">
     <value>Fel</value>

@@ -7049,6 +7049,9 @@
   <data name="NavMapMakeWorld" xml:space="preserve">
     <value>Zrób z tego mapę świata</value>
   </data>
+  <data name="NavMapMakeHexWorld" xml:space="preserve">
+    <value>Zrób z tego heksagonalną mapę świata</value>
+  </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Pomaluj miejsce lub każde miejsce w prostokącie typem terenu. Kliknij mapę, aby wybrać miejsce.</value>
   </data>
@@ -7071,7 +7074,7 @@
     <value>Typy z legendy</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>Gracze chodzą po mapie świata przez dziesięć wyjść kierunkowych na niej. Ich otwarcie wymaga pakietu World grid, a mapa musi być pokojem.</value>
+    <value>Gracze chodzą po mapie świata przez wyjścia kierunkowe na niej: dziesięć na mapie kwadratowej, osiem na heksagonalnej. Ich otwarcie wymaga pakietu World grid, a mapa musi być pokojem.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Otwórz wyjścia kierunkowe</value>
@@ -7096,6 +7099,18 @@
   </data>
   <data name="NavMapSideW" xml:space="preserve">
     <value>Zachód</value>
+  </data>
+  <data name="NavMapSideNE" xml:space="preserve">
+    <value>Północny wschód</value>
+  </data>
+  <data name="NavMapSideSE" xml:space="preserve">
+    <value>Południowy wschód</value>
+  </data>
+  <data name="NavMapSideSW" xml:space="preserve">
+    <value>Południowy zachód</value>
+  </data>
+  <data name="NavMapSideNW" xml:space="preserve">
+    <value>Północny zachód</value>
   </data>
   <data name="NavMapSideU" xml:space="preserve">
     <value>Góra</value>
