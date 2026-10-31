@@ -7055,6 +7055,39 @@
   <data name="NavMapMakePointyHexWorld" xml:space="preserve">
     <value>Gør dette til et verdenskort med spidse sekskanter</value>
   </data>
+  <data name="NavMapMakeGraphWorld" xml:space="preserve">
+    <value>Gør dette til et grafverdenskort, hvor stederne forbindes af navngivne veje</value>
+  </data>
+  <data name="NavMapWay" xml:space="preserve">
+    <value>Vej</value>
+  </data>
+  <data name="NavMapWaysNote" xml:space="preserve">
+    <value>Veje fører ud fra dette sted. Fjern en, eller tilføj en ny nedenfor.</value>
+  </data>
+  <data name="NavMapNoWays" xml:space="preserve">
+    <value>Ingen vej fører endnu ud fra dette sted. Tilføj en nedenfor: hvor den fører hen, og dens navne.</value>
+  </data>
+  <data name="NavMapWayLeads" xml:space="preserve">
+    <value>{0} fører til {1}</value>
+  </data>
+  <data name="NavMapUnlink" xml:space="preserve">
+    <value>Fjern</value>
+  </data>
+  <data name="NavMapWayNames" xml:space="preserve">
+    <value>Vejens navne (Old Road;road)</value>
+  </data>
+  <data name="NavMapWayBack" xml:space="preserve">
+    <value>Navne på vejen tilbage (valgfrit)</value>
+  </data>
+  <data name="NavMapLink" xml:space="preserve">
+    <value>Tilføj vej</value>
+  </data>
+  <data name="NavMapPlanLink" xml:space="preserve">
+    <value>Tilføj vejen {0} ud fra {1}</value>
+  </data>
+  <data name="NavMapPlanUnlink" xml:space="preserve">
+    <value>Fjern vejen {0}</value>
+  </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Mal et sted, eller hvert sted i en boks, med en terræntype. Klik på kortet for at vælge et sted.</value>
   </data>

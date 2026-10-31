@@ -7055,6 +7055,39 @@
   <data name="NavMapMakePointyHexWorld" xml:space="preserve">
     <value>Convertir en mapa del mundo de hexágonos en punta</value>
   </data>
+  <data name="NavMapMakeGraphWorld" xml:space="preserve">
+    <value>Convertir en mapa del mundo de grafo, con lugares unidos por caminos con nombre</value>
+  </data>
+  <data name="NavMapWay" xml:space="preserve">
+    <value>Camino</value>
+  </data>
+  <data name="NavMapWaysNote" xml:space="preserve">
+    <value>De este lugar salen caminos. Quita uno o añade otro abajo.</value>
+  </data>
+  <data name="NavMapNoWays" xml:space="preserve">
+    <value>Aún no sale ningún camino de este lugar. Añade uno abajo: adónde lleva y sus nombres.</value>
+  </data>
+  <data name="NavMapWayLeads" xml:space="preserve">
+    <value>{0} lleva a {1}</value>
+  </data>
+  <data name="NavMapUnlink" xml:space="preserve">
+    <value>Quitar</value>
+  </data>
+  <data name="NavMapWayNames" xml:space="preserve">
+    <value>Nombres del camino (Old Road;road)</value>
+  </data>
+  <data name="NavMapWayBack" xml:space="preserve">
+    <value>Nombres del camino de vuelta (opcional)</value>
+  </data>
+  <data name="NavMapLink" xml:space="preserve">
+    <value>Añadir camino</value>
+  </data>
+  <data name="NavMapPlanLink" xml:space="preserve">
+    <value>Añadir el camino {0} desde {1}</value>
+  </data>
+  <data name="NavMapPlanUnlink" xml:space="preserve">
+    <value>Quitar el camino {0}</value>
+  </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Pinta un lugar, o cada lugar de un recuadro, con un tipo de terreno. Haz clic en el mapa para elegir un lugar.</value>
   </data>

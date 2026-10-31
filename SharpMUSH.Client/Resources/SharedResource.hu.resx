@@ -7055,6 +7055,39 @@
   <data name="NavMapMakePointyHexWorld" xml:space="preserve">
     <value>Legyen hegyes hatszöges világtérkép</value>
   </data>
+  <data name="NavMapMakeGraphWorld" xml:space="preserve">
+    <value>Legyen gráf világtérkép, a helyeket elnevezett utak kötik össze</value>
+  </data>
+  <data name="NavMapWay" xml:space="preserve">
+    <value>Út</value>
+  </data>
+  <data name="NavMapWaysNote" xml:space="preserve">
+    <value>Erről a helyről utak vezetnek. Távolíts el egyet, vagy adj hozzá újat lent.</value>
+  </data>
+  <data name="NavMapNoWays" xml:space="preserve">
+    <value>Erről a helyről még nem vezet út. Adj hozzá egyet lent: hová vezet, és mik a nevei.</value>
+  </data>
+  <data name="NavMapWayLeads" xml:space="preserve">
+    <value>{0} ide vezet: {1}</value>
+  </data>
+  <data name="NavMapUnlink" xml:space="preserve">
+    <value>Eltávolítás</value>
+  </data>
+  <data name="NavMapWayNames" xml:space="preserve">
+    <value>Az út nevei (Old Road;road)</value>
+  </data>
+  <data name="NavMapWayBack" xml:space="preserve">
+    <value>A visszaút nevei (nem kötelező)</value>
+  </data>
+  <data name="NavMapLink" xml:space="preserve">
+    <value>Út hozzáadása</value>
+  </data>
+  <data name="NavMapPlanLink" xml:space="preserve">
+    <value>A(z) {0} út hozzáadása innen: {1}</value>
+  </data>
+  <data name="NavMapPlanUnlink" xml:space="preserve">
+    <value>A(z) {0} út eltávolítása</value>
+  </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Fess egy helyet, vagy egy téglalap minden helyét, egy tereptípussal. Kattints a térképre egy hely kiválasztásához.</value>
   </data>
