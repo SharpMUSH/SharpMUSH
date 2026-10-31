@@ -40,31 +40,40 @@ public sealed record WorldWay(WorldWayState State, string? Reason, WorldPosition
 public static class WorldWays
 {
 	/// <summary>
-	/// The directions a place in <paramref name="space"/> has a way out by, by letter: a hex map's sides, or a square
-	/// map's four sides, four diagonals, up and down.
+	/// The directions a place in <paramref name="space"/> has a way out by, by letter: its sides, then the corner steps
+	/// (a square map's four diagonals, a flat hex map's east and west, a pointy one's north and south), then up and down.
 	/// </summary>
-	public static IReadOnlyList<string> Directions(string space) => space == MapSpaces.Hex
-		? [.. WorldGrid.HexSides.Select(WorldGrid.Letter)]
-		: ["n", "e", "s", "w", "ne", "nw", "se", "sw", "u", "d"];
+	public static IReadOnlyList<string> Directions(string space) => space switch
+	{
+		MapSpaces.Hex => ["n", "ne", "se", "s", "sw", "nw", "e", "w", "u", "d"],
+		MapSpaces.PointyHex => ["ne", "e", "se", "sw", "w", "nw", "n", "s", "u", "d"],
+		_ => ["n", "e", "s", "w", "ne", "nw", "se", "sw", "u", "d"],
+	};
 
 	/// <summary>
-	/// A way out of a place in <paramref name="space"/>: one of its sides, or on a square map a diagonal, two sides at
-	/// once. Null for a direction the space has no way out by.
+	/// A way out of a place in <paramref name="space"/>: one of its sides, or a corner step, two sides at once round the
+	/// corner between them. A square map's corner steps are its diagonals; a flat hex map's are east and west, which
+	/// face a corner and lead to the place two columns over; a pointy hex map's are north and south. Null for a
+	/// direction the space has no way out by.
 	/// </summary>
-	public static IReadOnlyList<WorldSide>? ParseDirection(string text, string space) => text.Trim().ToLowerInvariant() switch
+	public static IReadOnlyList<WorldSide>? ParseDirection(string text, string space) => (text.Trim().ToLowerInvariant(), space) switch
 	{
 		_ when WorldGrid.ParseSide(text, space) is { } side => [side],
-		_ when space == MapSpaces.Hex => null,
-		"ne" or "northeast" => [WorldSide.North, WorldSide.East],
-		"nw" or "northwest" => [WorldSide.North, WorldSide.West],
-		"se" or "southeast" => [WorldSide.South, WorldSide.East],
-		"sw" or "southwest" => [WorldSide.South, WorldSide.West],
+		("e" or "east", MapSpaces.Hex) => [WorldSide.NorthEast, WorldSide.SouthEast],
+		("w" or "west", MapSpaces.Hex) => [WorldSide.NorthWest, WorldSide.SouthWest],
+		("n" or "north", MapSpaces.PointyHex) => [WorldSide.PointyNorthEast, WorldSide.NorthWest],
+		("s" or "south", MapSpaces.PointyHex) => [WorldSide.SouthEast, WorldSide.PointySouthWest],
+		(_, MapSpaces.Hex or MapSpaces.PointyHex) => null,
+		("ne" or "northeast", _) => [WorldSide.North, WorldSide.East],
+		("nw" or "northwest", _) => [WorldSide.North, WorldSide.West],
+		("se" or "southeast", _) => [WorldSide.South, WorldSide.East],
+		("sw" or "southwest", _) => [WorldSide.South, WorldSide.West],
 		_ => null,
 	};
 
 	/// <summary>
-	/// The way out of <paramref name="from"/> toward <paramref name="direction"/>. A diagonal goes round a corner: it is
-	/// as good as the better of its two routes, each as good as its worse step. Given <paramref name="unlock"/>, which
+	/// The way out of <paramref name="from"/> toward <paramref name="direction"/>. A corner step goes round a corner: it
+	/// is as good as the better of its two routes, each as good as its worse step. Given <paramref name="unlock"/>, which
 	/// says whether the mover passes a lock key, a lock the mover passes is open; without it, every lock is a lock.
 	/// </summary>
 	public static async ValueTask<WorldWay> WayAsync(WorldStore store, WorldMapRecord record, WorldLegend legend, DBRef map,

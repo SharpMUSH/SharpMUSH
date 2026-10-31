@@ -7050,7 +7050,10 @@
     <value>Pretvori u kartu svijeta</value>
   </data>
   <data name="NavMapMakeHexWorld" xml:space="preserve">
-    <value>Pretvori u šesterokutnu kartu svijeta</value>
+    <value>Pretvori u kartu svijeta s ravnim šesterokutima</value>
+  </data>
+  <data name="NavMapMakePointyHexWorld" xml:space="preserve">
+    <value>Pretvori u kartu svijeta sa šiljastim šesterokutima</value>
   </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Obojite mjesto, ili svako mjesto u pravokutniku, vrstom terena. Kliknite kartu za odabir mjesta.</value>
@@ -7074,7 +7077,7 @@
     <value>Vrste iz legende</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>Igrači hodaju kartom svijeta kroz izlaze za smjerove na njoj: deset na kvadratnoj karti, osam na šesterokutnoj. Za njihovo otvaranje treba paket World grid, a karta mora biti soba.</value>
+    <value>Igrači hodaju kartom svijeta kroz izlaze za smjerove na njoj: deset, od sjevera do dolje. Za njihovo otvaranje treba paket World grid, a karta mora biti soba.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Otvori izlaze za smjerove</value>

@@ -7050,7 +7050,10 @@
     <value>Сделать картой мира</value>
   </data>
   <data name="NavMapMakeHexWorld" xml:space="preserve">
-    <value>Сделать шестиугольной картой мира</value>
+    <value>Сделать картой мира с плоскими шестиугольниками</value>
+  </data>
+  <data name="NavMapMakePointyHexWorld" xml:space="preserve">
+    <value>Сделать картой мира с острыми шестиугольниками</value>
   </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Раскрасьте место или все места в прямоугольнике типом местности. Щёлкните по карте, чтобы выбрать место.</value>
@@ -7074,7 +7077,7 @@
     <value>Типы из легенды</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>Игроки ходят по карте мира через выходы-направления на ней: десять на квадратной карте, восемь на шестиугольной. Для их открытия нужен пакет World grid, а карта должна быть комнатой.</value>
+    <value>Игроки ходят по карте мира через выходы-направления на ней: десять, от севера до низа. Для их открытия нужен пакет World grid, а карта должна быть комнатой.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Открыть выходы-направления</value>

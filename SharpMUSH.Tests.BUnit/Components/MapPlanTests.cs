@@ -411,6 +411,17 @@ public class MapPlanTests
 	}
 
 	[Test]
+	public async Task APointyHexWorldMapIsCreatedAsOne()
+	{
+		var plan = new MapPlan(Grid());
+
+		plan.CreateWorld(MapSpaces.PointyHex);
+
+		await Assert.That(plan.Changes.Single().Steps)
+			.IsEquivalentTo([new MapStep("@world/create #50=pointy-hex", "worldmap(#50)", "pointy-hex")]);
+	}
+
+	[Test]
 	public async Task ARoomPlacedByItsObjidIsCheckedByItsDbref()
 	{
 		var plan = new MapPlan(Grid() with { Space = new(MapSpaces.Square, 0, 0, 9, 9, [0]) });

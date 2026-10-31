@@ -7050,7 +7050,10 @@
     <value>Gør dette til et verdenskort</value>
   </data>
   <data name="NavMapMakeHexWorld" xml:space="preserve">
-    <value>Gør dette til et sekskantet verdenskort</value>
+    <value>Gør dette til et verdenskort med flade sekskanter</value>
+  </data>
+  <data name="NavMapMakePointyHexWorld" xml:space="preserve">
+    <value>Gør dette til et verdenskort med spidse sekskanter</value>
   </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Mal et sted, eller hvert sted i en boks, med en terræntype. Klik på kortet for at vælge et sted.</value>
@@ -7074,7 +7077,7 @@
     <value>Signaturforklaringens typer</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>Spillere går rundt på et verdenskort gennem retningsudgange på det: ti på et kvadratisk kort, otte på et sekskantet. At åbne dem kræver pakken World grid, og kortet skal være et rum.</value>
+    <value>Spillere går rundt på et verdenskort gennem retningsudgange på det: ti, fra nord til ned. At åbne dem kræver pakken World grid, og kortet skal være et rum.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Åbn retningsudgangene</value>

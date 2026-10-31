@@ -20,8 +20,9 @@ public sealed record MapPlacement(MapRoomDto Room, double X, double Y, double Wi
 /// stored <c>MAP`COORDS</c>, since no exit leads to it.
 /// Screen y grows downward, so a map's y is negated: north is up.
 /// A hex world map's places are flat-topped hexagons at axial x (q) and y (r): column x is 1.5 sides east of column
-/// x - 1 and half a row south of it, so the place at (x, y) is centred at (1.5·x·s, -(y + x/2)·√3·s). Its rooms stand
-/// on their places, one hexagon each.
+/// x - 1 and half a row south of it, so the place at (x, y) is centred at (1.5·x·s, -(y + x/2)·√3·s). A pointy hex
+/// map's are pointy-topped: row y is 1.5 sides north of row y - 1 and half a place east of it, centred at
+/// (√3·s·(x + y/2), -1.5·y·s). Its rooms stand on their places, one hexagon each.
 /// </summary>
 public sealed class MapLayout
 {
@@ -54,15 +55,36 @@ public sealed class MapLayout
 		["down"] = (0, 0, -1), ["d"] = (0, 0, -1),
 	};
 
-	/// <summary>The steps on a hex map, in its axial coordinates; east and west are no hex's sides.</summary>
+	/// <summary>
+	/// The steps on a flat-topped hex map, in its axial coordinates; east and west go round a corner to the hex two over.
+	/// </summary>
 	private static readonly Dictionary<string, (int X, int Y, int Z)> HexDirections = new(StringComparer.OrdinalIgnoreCase)
 	{
 		["north"] = (0, 1, 0), ["n"] = (0, 1, 0),
 		["south"] = (0, -1, 0), ["s"] = (0, -1, 0),
+		["east"] = (2, -1, 0), ["e"] = (2, -1, 0),
+		["west"] = (-2, 1, 0), ["w"] = (-2, 1, 0),
 		["northeast"] = (1, 0, 0), ["ne"] = (1, 0, 0),
 		["northwest"] = (-1, 1, 0), ["nw"] = (-1, 1, 0),
 		["southeast"] = (1, -1, 0), ["se"] = (1, -1, 0),
 		["southwest"] = (-1, 0, 0), ["sw"] = (-1, 0, 0),
+		["up"] = (0, 0, 1), ["u"] = (0, 0, 1),
+		["down"] = (0, 0, -1), ["d"] = (0, 0, -1),
+	};
+
+	/// <summary>
+	/// The steps on a pointy-topped hex map, in its axial coordinates; north and south go round a corner to the hex two over.
+	/// </summary>
+	private static readonly Dictionary<string, (int X, int Y, int Z)> PointyHexDirections = new(StringComparer.OrdinalIgnoreCase)
+	{
+		["north"] = (-1, 2, 0), ["n"] = (-1, 2, 0),
+		["south"] = (1, -2, 0), ["s"] = (1, -2, 0),
+		["east"] = (1, 0, 0), ["e"] = (1, 0, 0),
+		["west"] = (-1, 0, 0), ["w"] = (-1, 0, 0),
+		["northeast"] = (0, 1, 0), ["ne"] = (0, 1, 0),
+		["northwest"] = (-1, 1, 0), ["nw"] = (-1, 1, 0),
+		["southeast"] = (1, -1, 0), ["se"] = (1, -1, 0),
+		["southwest"] = (0, -1, 0), ["sw"] = (0, -1, 0),
 		["up"] = (0, 0, 1), ["u"] = (0, 0, 1),
 		["down"] = (0, 0, -1), ["d"] = (0, 0, -1),
 	};
@@ -81,10 +103,19 @@ public sealed class MapLayout
 	/// The square or hex cells a map source stores this map's places in, drawn under its rooms; null for a map of rooms
 	/// alone, a picture, or a space this portal does not draw.
 	/// </summary>
-	public MapSpaceDto? Space => !IsGraph && Map.Space is { Kind: MapSpaces.Square or MapSpaces.Hex } space ? space : null;
+	public MapSpaceDto? Space => !IsGraph && Map.Space is { Kind: MapSpaces.Square or MapSpaces.Hex or MapSpaces.PointyHex } space ? space : null;
 
-	/// <summary>Whether the map's places are hexagons.</summary>
-	public bool IsHex => Space is { Kind: MapSpaces.Hex };
+	/// <summary>Whether the map's places are hexagons, flat- or pointy-topped.</summary>
+	public bool IsHex => MapSpaces.IsHex(Space?.Kind);
+
+	/// <summary>Whether the map's places are pointy-topped hexagons.</summary>
+	public bool IsPointy => Space is { Kind: MapSpaces.PointyHex };
+
+	/// <summary>The width of the map's hexagons, from corner to corner when flat-topped and side to side when pointy.</summary>
+	private double HexWidth => IsPointy ? HexHeight : 2 * HexSide;
+
+	/// <summary>The height of the map's hexagons, from side to side when flat-topped and corner to corner when pointy.</summary>
+	private double HexTall => IsPointy ? 2 * HexSide : HexHeight;
 
 	public MapLayout(MapDto map)
 	{
@@ -119,13 +150,21 @@ public sealed class MapLayout
 			.FirstOrDefault(level => level is not null);
 
 	/// <summary>
-	/// The direction an exit named <paramref name="exit"/> goes, by its name or any alias, on a square map or, given
-	/// <paramref name="hex"/>, a hex map's axial steps; null when it names none.
+	/// The direction an exit named <paramref name="exit"/> goes, by its name or any alias, in the cells of a map whose space
+	/// is <paramref name="space"/>: a square grid's unless it names a hex one; null when it names none.
 	/// </summary>
-	public static (int X, int Y, int Z)? Direction(MapExitDto exit, bool hex = false) =>
-		new[] { exit.Name }.Concat(exit.Aliases)
-			.Select(name => (hex ? HexDirections : Directions).TryGetValue(name.Trim(), out var step) ? step : ((int, int, int)?)null)
+	public static (int X, int Y, int Z)? Direction(MapExitDto exit, string? space = null)
+	{
+		var steps = space switch
+		{
+			MapSpaces.Hex => HexDirections,
+			MapSpaces.PointyHex => PointyHexDirections,
+			_ => Directions,
+		};
+		return new[] { exit.Name }.Concat(exit.Aliases)
+			.Select(name => steps.TryGetValue(name.Trim(), out var step) ? step : ((int, int, int)?)null)
 			.FirstOrDefault(step => step is not null);
+	}
 
 	/// <summary>The rooms placed on <paramref name="level"/>.</summary>
 	public IEnumerable<MapPlacement> On(int level) => Rooms.Values.Where(room => room.Placed && room.Level == level);
@@ -178,7 +217,10 @@ public sealed class MapLayout
 			? (Left: double.MaxValue, Top: double.MaxValue, Right: double.MinValue, Bottom: double.MinValue)
 			: (Left: rooms.Min(r => r.X), Top: rooms.Min(r => r.Y), Right: Right(rooms), Bottom: Bottom(rooms));
 		if (Space is not { } space || !includePlaces) return box;
-		var places = IsHex
+		var places = IsPointy
+			? (Left: (space.Left + Math.Min(space.Bottom, space.Top) / 2d) * HexHeight - HexHeight / 2, Top: -1.5 * HexSide * space.Top - HexSide,
+				Right: (space.Right + Math.Max(space.Bottom, space.Top) / 2d) * HexHeight + HexHeight / 2, Bottom: -1.5 * HexSide * space.Bottom + HexSide)
+			: IsHex
 			? (Left: 1.5 * HexSide * space.Left - HexSide, Top: -(space.Top + Math.Max(space.Left, space.Right) / 2d) * HexHeight - HexHeight / 2,
 				Right: 1.5 * HexSide * space.Right + HexSide, Bottom: -(space.Bottom + Math.Min(space.Left, space.Right) / 2d) * HexHeight + HexHeight / 2)
 			: (Left: space.Left * Cell, Top: -(space.Top + 1d) * Cell, Right: (space.Right + 1d) * Cell, Bottom: -space.Bottom * Cell);
@@ -191,17 +233,26 @@ public sealed class MapLayout
 
 	/// <summary>
 	/// The places a box of the drawing touches, as a box of x and y: its cells on a square map; on a hex map every place
-	/// whose hexagon may reach into it, which reaches further north at its west end and further south at its east.
+	/// whose hexagon may reach into it, which reaches further north at its west end and further south at its east, or on
+	/// a pointy hex map further west at its north end and further east at its south.
 	/// </summary>
 	public (int Left, int Bottom, int Right, int Top) PlacesIn(double left, double top, double right, double bottom)
 	{
 		if (!IsHex) return CellsIn(left, top, right, bottom);
+		if (IsPointy)
+		{
+			var (south, north) = ((int)Math.Floor((-bottom - HexSide) / (1.5 * HexSide)), (int)Math.Ceiling((-top + HexSide) / (1.5 * HexSide)));
+			return ((int)Math.Floor((left - HexHeight / 2) / HexHeight - north / 2d), south,
+				(int)Math.Ceiling((right + HexHeight / 2) / HexHeight - south / 2d), north);
+		}
 		var (west, east) = ((int)Math.Floor((left - HexSide) / (1.5 * HexSide)), (int)Math.Ceiling((right + HexSide) / (1.5 * HexSide)));
 		return (west, (int)Math.Floor(-bottom / HexHeight - east / 2d - 0.5), east, (int)Math.Ceiling(-top / HexHeight - west / 2d + 0.5));
 	}
 
 	/// <summary>The centre of the place at (x, y), in drawing units.</summary>
-	public (double X, double Y) PlaceCentre(int x, int y) => IsHex
+	public (double X, double Y) PlaceCentre(int x, int y) => IsPointy
+		? ((x + y / 2d) * HexHeight, -1.5 * HexSide * y)
+		: IsHex
 		? (1.5 * HexSide * x, -(y + x / 2d) * HexHeight)
 		: ((x + 0.5) * Cell, -(y + 0.5) * Cell);
 
@@ -210,17 +261,18 @@ public sealed class MapLayout
 	{
 		if (!IsHex) return (x * Cell, -(y + 1) * Cell, Cell, Cell);
 		var (cx, cy) = PlaceCentre(x, y);
-		return (cx - HexSide, cy - HexHeight / 2, 2 * HexSide, HexHeight);
+		return (cx - HexWidth / 2, cy - HexTall / 2, HexWidth, HexTall);
 	}
 
 	/// <summary>
 	/// The widest box that keeps clear of a hexagon's sides, around its centre, in drawing units: 1.2 sides wide and 0.8
-	/// of its height, so a room or a place's button drawn in it leaves the hexagon's edges and their walls showing.
+	/// of its height when flat-topped, 0.8 of its width and 1.2 sides tall when pointy, so a room or a place's button
+	/// drawn in it leaves the hexagon's edges and their walls showing.
 	/// </summary>
 	public (double Left, double Top, double Width, double Height) HexInside(int x, int y)
 	{
 		var (cx, cy) = PlaceCentre(x, y);
-		var (width, height) = (1.2 * HexSide, 0.8 * HexHeight);
+		var (width, height) = IsPointy ? (0.8 * HexHeight, 1.2 * HexSide) : (1.2 * HexSide, 0.8 * HexHeight);
 		return (cx - width / 2, cy - height / 2, width, height);
 	}
 
@@ -229,8 +281,9 @@ public sealed class MapLayout
 	{
 		if (!IsHex) return ((int)Math.Floor(x / Cell), (int)Math.Floor(-y / Cell));
 		// Rounds axial to the nearest hexagon by its cube coordinates, whose three always sum to 0.
-		var q = x / (1.5 * HexSide);
-		var r = -y / HexHeight - q / 2;
+		var (q, r) = IsPointy
+			? (x / HexHeight + y / (3 * HexSide), -y / (1.5 * HexSide))
+			: (x / (1.5 * HexSide), -y / HexHeight - x / (3 * HexSide));
 		var (rq, rr, rs) = (Math.Round(q), Math.Round(r), Math.Round(-q - r));
 		var (dq, dr, ds) = (Math.Abs(rq - q), Math.Abs(rr - r), Math.Abs(rs + q + r));
 		if (dq > dr && dq > ds) rq = -rr - rs;
@@ -239,13 +292,16 @@ public sealed class MapLayout
 	}
 
 	/// <summary>
-	/// The corners of the hexagon at (x, y), shrunk toward its centre by <paramref name="scale"/>, from its east corner
-	/// clockwise on screen: east, south-east, south-west, west, north-west, north-east.
+	/// The corners of the hexagon at (x, y), shrunk toward its centre by <paramref name="scale"/>, clockwise on screen:
+	/// when flat-topped from its east corner (east, south-east, south-west, west, north-west, north-east), and when
+	/// pointy from its lower east one (lower east, south, lower west, upper west, north, upper east).
 	/// </summary>
 	public IReadOnlyList<(double X, double Y)> HexCorners(int x, int y, double scale = 1)
 	{
 		var (cx, cy) = PlaceCentre(x, y);
-		return [.. Enumerable.Range(0, 6).Select(corner => (cx + scale * HexSide * Math.Cos(corner * Math.PI / 3), cy + scale * HexSide * Math.Sin(corner * Math.PI / 3)))];
+		var turn = IsPointy ? Math.PI / 6 : 0;
+		return [.. Enumerable.Range(0, 6).Select(corner => (cx + scale * HexSide * Math.Cos(turn + corner * Math.PI / 3),
+			cy + scale * HexSide * Math.Sin(turn + corner * Math.PI / 3)))];
 	}
 
 	/// <summary>
@@ -254,14 +310,20 @@ public sealed class MapLayout
 	/// </summary>
 	public (double X1, double Y1, double X2, double Y2, double Dx, double Dy)? HexEdge(int x, int y, string side)
 	{
-		(int From, int To)? corners = side switch
+		(int From, int To)? corners = (side, IsPointy) switch
 		{
-			"n" => (4, 5),
-			"ne" => (5, 0),
-			"se" => (0, 1),
-			"s" => (1, 2),
-			"sw" => (2, 3),
-			"nw" => (3, 4),
+			("n", false) => (4, 5),
+			("ne", false) => (5, 0),
+			("se", false) => (0, 1),
+			("s", false) => (1, 2),
+			("sw", false) => (2, 3),
+			("nw", false) => (3, 4),
+			("e", true) => (5, 0),
+			("se", true) => (0, 1),
+			("sw", true) => (1, 2),
+			("w", true) => (2, 3),
+			("nw", true) => (3, 4),
+			("ne", true) => (4, 5),
 			_ => null,
 		};
 		if (corners is not var (from, to)) return null;
@@ -358,7 +420,7 @@ public sealed class MapLayout
 		// Each compass exit is a step both ways: north from A to B puts B north of A, and A south of B.
 		var steps = new Dictionary<string, List<(string To, (int X, int Y, int Z) Step)>>();
 		var compass = map.Exits.OrderBy(exit => Number(exit.Id))
-			.Select(exit => (From: exit.Source, To: exit.Destination ?? "", Step: Direction(exit, IsHex)))
+			.Select(exit => (From: exit.Source, To: exit.Destination ?? "", Step: Direction(exit, Space?.Kind)))
 			.Where(exit => exit.Step is not null && byId.ContainsKey(exit.From) && byId.ContainsKey(exit.To));
 		foreach (var (from, to, direction) in compass)
 		{

@@ -175,13 +175,19 @@ public static class MapSpaces
 	/// <summary>Square cells at x and y, a level at a time; north is y + 1.</summary>
 	public const string Square = "square";
 
-	/// <summary>Hexagons at axial q and r, a level at a time.</summary>
+	/// <summary>Flat-topped hexagons at axial q and r, a level at a time; their sides face n, ne, se, s, sw and nw.</summary>
 	public const string Hex = "hex";
+
+	/// <summary>Pointy-topped hexagons at axial q and r, a level at a time; their sides face ne, e, se, sw, w and nw.</summary>
+	public const string PointyHex = "pointy-hex";
 
 	/// <summary>Named places joined by named ways, with no grid.</summary>
 	public const string Graph = "graph";
 
-	public static IReadOnlyList<string> All { get; } = [Square, Hex, Graph];
+	public static IReadOnlyList<string> All { get; } = [Square, Hex, PointyHex, Graph];
+
+	/// <summary>Whether <paramref name="kind"/> is either hex space.</summary>
+	public static bool IsHex(string? kind) => kind is Hex or PointyHex;
 }
 
 /// <summary>

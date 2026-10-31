@@ -6359,7 +6359,10 @@
     <value>En faire une carte du monde</value>
   </data>
   <data name="NavMapMakeHexWorld" xml:space="preserve">
-    <value>En faire une carte du monde hexagonale</value>
+    <value>En faire une carte du monde à hexagones plats</value>
+  </data>
+  <data name="NavMapMakePointyHexWorld" xml:space="preserve">
+    <value>En faire une carte du monde à hexagones pointus</value>
   </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Peignez un lieu, ou chaque lieu d’un rectangle, avec un type de terrain. Cliquez sur la carte pour choisir un lieu.</value>
@@ -6383,7 +6386,7 @@
     <value>Types de la légende</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>Les joueurs parcourent une carte du monde par des sorties de direction posées dessus : dix sur une carte carrée, huit sur une carte hexagonale. Les ouvrir demande le paquet World grid, et la carte doit être une salle.</value>
+    <value>Les joueurs parcourent une carte du monde par des sorties de direction posées dessus : dix, du nord jusqu’au bas. Les ouvrir demande le paquet World grid, et la carte doit être une salle.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Ouvrir les sorties de direction</value>

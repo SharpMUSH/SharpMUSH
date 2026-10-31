@@ -114,6 +114,22 @@ public class WorldStoreTests
 	}
 
 	[Test]
+	public async Task APointyHexPlaceStoresItsNortheastEastAndSoutheastEdges()
+	{
+		await _store.CreateAsync(Map, "pointy-hex");
+		await _store.SetEdgeAsync(Map, 0, 0, 0, WorldSide.PointySouthWest, WorldEdge.Wall, "Brambles");
+		await _store.SetEdgeAsync(Map, 0, 0, 0, WorldSide.West, WorldEdge.Lock, "A gate");
+		await _store.SetEdgeAsync(Map, 0, 0, 0, WorldSide.NorthWest, WorldEdge.OneWayOut, null);
+
+		await Assert.That(_store.Edge(Map, 0, -1, 0, WorldSide.PointyNorthEast)).IsEqualTo((WorldEdge.Wall, (string?)"Brambles", (string?)null));
+		await Assert.That(_store.Place(Map, 0, -1, 0)!.Reasons).IsEquivalentTo(new Dictionary<string, string> { ["ne"] = "Brambles" });
+		await Assert.That(_store.Edge(Map, -1, 0, 0, WorldSide.East)).IsEqualTo((WorldEdge.Lock, (string?)"A gate", (string?)null));
+		await Assert.That(_store.Edge(Map, -1, 1, 0, WorldSide.SouthEast).Edge).IsEqualTo(WorldEdge.OneWayIn);
+		await Assert.That(WorldGrid.ParseSide("ne", "pointy-hex")).IsEqualTo(WorldSide.PointyNorthEast);
+		await Assert.That(WorldGrid.ParseSide("n", "pointy-hex")).IsNull().Because("a pointy place's north is a corner");
+	}
+
+	[Test]
 	public async Task AWindowHoldsItsPlacesAndTheEdgesOnItsBorder()
 	{
 		await _store.CreateAsync(Map, "square");

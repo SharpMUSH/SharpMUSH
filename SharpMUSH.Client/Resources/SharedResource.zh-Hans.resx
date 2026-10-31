@@ -7050,7 +7050,10 @@
     <value>设为世界地图</value>
   </data>
   <data name="NavMapMakeHexWorld" xml:space="preserve">
-    <value>设为六边形世界地图</value>
+    <value>设为平顶六边形世界地图</value>
+  </data>
+  <data name="NavMapMakePointyHexWorld" xml:space="preserve">
+    <value>设为尖顶六边形世界地图</value>
   </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>用地形类型绘制一个地点或方框内的所有地点。点击地图选择地点。</value>
@@ -7074,7 +7077,7 @@
     <value>图例中的类型</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>玩家通过地图上的方向出口在世界地图上行走：方形地图十个，六边形地图八个。打开它们需要 World grid 包，且地图必须是房间。</value>
+    <value>玩家通过地图上的方向出口在世界地图上行走：共十个，从北到下。打开它们需要 World grid 包，且地图必须是房间。</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>打开方向出口</value>

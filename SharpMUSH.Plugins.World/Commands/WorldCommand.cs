@@ -106,8 +106,8 @@ public static partial class WorldCommand
 		async ValueTask<Option<CallState>> CreateAsync()
 		{
 			var space = string.IsNullOrWhiteSpace(value) ? MapSpaces.Square : value.Trim().ToLowerInvariant();
-			if (space is not (MapSpaces.Square or MapSpaces.Hex))
-				return await Say($"{space} maps are not stored; a world map is square or hex.", "#-1 BAD SPACE");
+			if (space is not (MapSpaces.Square or MapSpaces.Hex or MapSpaces.PointyHex))
+				return await Say($"{space} maps are not stored; a world map is square, hex or pointy-hex.", "#-1 BAD SPACE");
 			if (!await store.CreateAsync(dbref, space)) return await Say($"{name} is already a world map.", "#-1 ALREADY A WORLD MAP");
 
 			// The World map lists an object that names its kind; a stored map is drawn on a grid.

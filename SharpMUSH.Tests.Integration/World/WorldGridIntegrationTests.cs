@@ -175,8 +175,8 @@ public class WorldGridIntegrationTests
 			var mapRef = await Eval($"num(search(name={map}))");
 			await God($"@world/create {mapRef}=hex");
 			await God($"@world/paint {mapRef}/-1,-1:1,1=grass");
-			await Assert.That(await God($"+map/exits {mapRef}")).Contains($"Opened 8 direction exits on {map}.");
-			await Assert.That(await Eval($"sort(iter(lexits({mapRef}),get(%i0/MAP`WAY)))")).IsEqualTo("d n ne nw s se sw u");
+			await Assert.That(await God($"+map/exits {mapRef}")).Contains($"Opened 10 direction exits on {map}.");
+			await Assert.That(await Eval($"sort(iter(lexits({mapRef}),get(%i0/MAP`WAY)))")).IsEqualTo("d e n ne nw s se sw u w");
 
 			var walker = await Player("Rider");
 			await God($"@tel {walker.DbRef}={await Eval($"worldroom({mapRef},0,0)")}");
@@ -186,6 +186,10 @@ public class WorldGridIntegrationTests
 			await Assert.That(walked).Contains("North").And.Contains("South").And.Contains("Southwest").And.Contains("Northwest")
 				.And.DoesNotContain("Northeast").And.DoesNotContain("Southeast");
 			await Assert.That(await As(walker, "+map")).Contains("@");
+
+			// West faces a corner: it leads round it to the place two columns over.
+			await As(walker, "west");
+			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(await Eval($"worldcell({mapRef},-1,1,,room)"));
 		}
 		finally
 		{
