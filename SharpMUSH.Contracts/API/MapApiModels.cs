@@ -111,7 +111,17 @@ public sealed record MapRoomDto(string Id, string Name, double[]? Position, doub
 /// <param name="Label">What the legend calls it: its <c>LABEL</c>, or the kind itself when unset.</param>
 /// <param name="Tone">A <c>tone()</c> colour's name (<c>info</c>, <c>green</c>); null when unset.</param>
 /// <param name="Icon">An icon's name, or a character or two drawn as text; null when unset.</param>
-public sealed record MapLegendDto(string Type, string Label, string? Tone, string? Icon);
+public sealed record MapLegendDto(string Type, string Label, string? Tone, string? Icon)
+{
+	/// <summary>Whether the entry comes from a map this one is zoned to, rather than the map itself.</summary>
+	public bool Inherited { get; init; }
+
+	/// <summary>
+	/// For an entry the map holds itself, the entry a map it is zoned to gives the type, which shows again once the map's
+	/// own is cleared; null when no such map names the type.
+	/// </summary>
+	public MapLegendDto? Parent { get; init; }
+}
 
 /// <param name="Id">The exit's dbref.</param>
 /// <param name="Aliases">The exit's other names, as <c>@name</c> takes them after <c>;</c>.</param>

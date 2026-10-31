@@ -309,6 +309,28 @@ public class MapPlanTests
 	}
 
 	[Test]
+	public async Task ClearingATypeShowsWhatTheMapsAboveGiveIt()
+	{
+		var town = new MapLegendDto("water", "Sea", "info", null) { Inherited = true };
+		var plan = new MapPlan(Grid(Room("#10", "Quay", [0, 0, 0])) with
+		{
+			Legend =
+			[
+				new("water", "Water", "blue", "~") { Parent = town },
+				new("street", "Street", "muted", null) { Inherited = true },
+				new("dock", "Dock", null, null),
+			],
+		});
+
+		plan.SetLegend("water", "", "", "");
+		plan.SetLegend("street", "", "", "");
+		plan.SetLegend("dock", "", "", "");
+
+		await Assert.That(plan.Preview().Legend).IsEquivalentTo([town, new MapLegendDto("street", "Street", "muted", null) { Inherited = true }])
+			.Because("the town's water shows once the map's own is cleared, the street was the town's all along, and no map above names docks");
+	}
+
+	[Test]
 	public async Task TheMapsOwnSettingsAreItsAttributesAndShowInThePreview()
 	{
 		var plan = new MapPlan(Grid(Room("#10", "Quay", [0, 0, 0])) with { Legend = [new("water", "Water", "blue", "~")] });

@@ -271,8 +271,8 @@ public sealed partial class MapPlan(MapDto map)
 	}
 
 	/// <summary>
-	/// Sets side <paramref name="side"/> of place (x, y, z): <c>open</c>, <c>wall</c> or <c>oneway</c>, with the reason a
-	/// refused mover is told. The check reads the way out through it, which is <c>none</c> or <c>closed</c> when the place
+	/// Sets side <paramref name="side"/> of place (x, y, z): <c>open</c>, <c>wall</c>, <c>oneway</c> or <c>lock</c> (which
+	/// keeps the key it has), with the reason a refused mover is told. The check reads the way out through it, which is <c>none</c> or <c>closed</c> when the place
 	/// beyond is unpainted or closed, whatever the side holds.
 	/// </summary>
 	public void Side(int x, int y, int z, string side, string state, string reason)
@@ -631,7 +631,10 @@ public sealed partial class MapPlan(MapDto map)
 	/// <summary>What step <paramref name="step"/> of <paramref name="change"/> sets.</summary>
 	private static string Value(MapChange change, int step = 0) => change.Steps[step].Expect ?? "";
 
-	/// <summary>The legend with each planned entry in place of the stored one; an entry with nothing set is left out.</summary>
+	/// <summary>
+	/// The legend with each planned entry in place of the stored one. An entry with nothing set leaves the type to the
+	/// maps this one is zoned to: their entry shows, and the type is left out when none names it.
+	/// </summary>
 	private IReadOnlyList<MapLegendDto> PlannedLegend()
 	{
 		var legend = Map.Legend.ToDictionary(entry => entry.Type.ToUpperInvariant(), StringComparer.Ordinal);
@@ -639,7 +642,11 @@ public sealed partial class MapPlan(MapDto map)
 		{
 			var (label, tone, icon) = (Value(change), Value(change, 1), Value(change, 2));
 			var type = change.Name.ToUpperInvariant();
-			if (label.Length == 0 && tone.Length == 0 && icon.Length == 0) legend.Remove(type);
+			if (label.Length == 0 && tone.Length == 0 && icon.Length == 0)
+			{
+				if (legend.GetValueOrDefault(type) is { } stored && (stored.Inherited ? stored : stored.Parent) is { } above) legend[type] = above;
+				else legend.Remove(type);
+			}
 			else legend[type] = new MapLegendDto(legend.GetValueOrDefault(type)?.Type ?? change.Name.ToLowerInvariant(),
 				label.Length > 0 ? label : change.Name, NullIfEmpty(tone.ToLowerInvariant()), NullIfEmpty(icon));
 		}

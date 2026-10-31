@@ -414,7 +414,8 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 	/// <summary>
 	/// The legend <paramref name="map"/> draws its rooms by: each <c>MAP`LEGEND`&lt;type&gt;`TONE</c>, <c>`ICON</c> and
 	/// <c>`LABEL</c> on it, then on the map it is zoned to, and so up; a type takes all three from the nearest map that
-	/// names it. Each map's legend is read as that map.
+	/// names it. Each map's legend is read as that map. A type the map names itself also carries the entry the nearest
+	/// map above it gives the type, which a client shows once the map's own is cleared.
 	/// </summary>
 	private async Task<IReadOnlyList<MapLegendDto>> LegendAsync(AnySharpObject map, CancellationToken ct)
 	{
@@ -428,12 +429,20 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			var types = found
 				.Select(attribute => (Name: attribute.LongName.Split('`'), Value: attribute.Value.ToPlainText().Trim()))
 				.Where(entry => entry.Name.Length == 4 && entry.Value.Length > 0)
-				.GroupBy(entry => entry.Name[2].ToLowerInvariant())
-				.Where(type => !legend.ContainsKey(type.Key));
+				.GroupBy(entry => entry.Name[2].ToLowerInvariant());
 			foreach (var type in types)
 			{
 				string? Field(string field) => type.FirstOrDefault(entry => entry.Name[3].Equals(field, StringComparison.OrdinalIgnoreCase)).Value;
-				legend[type.Key] = new(type.Key, Field("LABEL") ?? type.Key, Field("TONE")?.ToLowerInvariant(), Field("ICON"));
+				var entry = new MapLegendDto(type.Key, Field("LABEL") ?? type.Key, Field("TONE")?.ToLowerInvariant(), Field("ICON"))
+				{
+					Inherited = seen.Count > 1,
+				};
+				legend[type.Key] = legend.GetValueOrDefault(type.Key) switch
+				{
+					null => entry,
+					{ Inherited: false, Parent: null } own => own with { Parent = entry },
+					var nearer => nearer,
+				};
 			}
 		}
 		return [.. legend.Values.OrderBy(entry => entry.Label, StringComparer.OrdinalIgnoreCase).Take(MaxLegend)];

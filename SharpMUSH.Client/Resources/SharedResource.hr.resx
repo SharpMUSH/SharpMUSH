@@ -7115,6 +7115,12 @@
   <data name="NavMapSideStateoneway" xml:space="preserve">
     <value>Samo van</value>
   </data>
+  <data name="NavMapSideStatelock" xml:space="preserve">
+    <value>Zaključano</value>
+  </data>
+  <data name="NavMapSideLockNote" xml:space="preserve">
+    <value>Tko smije proći zaključanu stranu, postavlja se u igri naredbom @world/lock.</value>
+  </data>
   <data name="NavMapSideReason" xml:space="preserve">
     <value>Što se kaže odbijenom igraču</value>
   </data>

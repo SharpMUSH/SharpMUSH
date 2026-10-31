@@ -7115,6 +7115,12 @@
   <data name="NavMapSideStateoneway" xml:space="preserve">
     <value>仅可离开</value>
   </data>
+  <data name="NavMapSideStatelock" xml:space="preserve">
+    <value>已上锁</value>
+  </data>
+  <data name="NavMapSideLockNote" xml:space="preserve">
+    <value>谁能通过上锁的一侧，需在游戏中用 @world/lock 设置。</value>
+  </data>
   <data name="NavMapSideReason" xml:space="preserve">
     <value>被拒玩家看到的说明</value>
   </data>

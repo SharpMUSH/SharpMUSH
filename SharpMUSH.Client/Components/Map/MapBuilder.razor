@@ -660,7 +660,7 @@
     private string _sideState = "open";
     private string _sideReason = "";
     private static readonly string[] Sides = ["n", "e", "s", "w", "u", "d"];
-    private static readonly string[] SideStates = ["open", "wall", "oneway"];
+    private static readonly string[] SideStates = ["open", "wall", "oneway", "lock"];
 
     /// <summary>The place at (x, y) on the level on show, as the view read it; null when it holds nothing or was not read.</summary>
     private MapCellDto? PlaceAt(int x, int y) =>
@@ -677,9 +677,10 @@
     }
 
     /// <summary>
-    /// The side's state and reason as the view read them: open when it lists no wall there. A wall between two places is
-    /// listed once, on the north, east or up side of the one it belongs to, so a south or west side reads it from the
-    /// neighbour's; a one-way side is listed on the place it leads out of.
+    /// The side's state and reason as the view read them: open when it lists no wall there. A wall or lock between two
+    /// places on one level is listed once, on the north or east side of the one it belongs to, so a south or west side
+    /// reads it from the neighbour's; up and down sides are listed on the place itself; a one-way side is listed on the
+    /// place it leads out of.
     /// </summary>
     private void ChooseSide(string side)
     {
@@ -695,7 +696,7 @@
                 _ => (x, y, side),
             };
             wall = cells.Walls.FirstOrDefault(wall => wall.X == x && wall.Y == y && wall.Side == side && wall.Kind == MapWallKinds.OneWay)
-                ?? cells.Walls.FirstOrDefault(wall => wall.X == ownerX && wall.Y == ownerY && wall.Side == ownerSide && wall.Kind == MapWallKinds.Wall);
+                ?? cells.Walls.FirstOrDefault(wall => wall.X == ownerX && wall.Y == ownerY && wall.Side == ownerSide && wall.Kind is MapWallKinds.Wall or MapWallKinds.Lock);
         }
         (_sideState, _sideReason) = wall is { } found ? (found.Kind, found.Reason ?? "") : ("open", "");
     }
@@ -779,6 +780,10 @@
                               Disabled="@(_sideState == "open")" />
                 <MudButton Variant="Variant.Outlined" OnClick="() => SideAsync(x, y)">@Loc["NavMapSetSide"]</MudButton>
             </div>
+            @if (_sideState == "lock")
+            {
+                <p class="map-note">@Loc["NavMapSideLockNote"]</p>
+            }
             <div class="map-builder-row">
                 <MudButton Variant="Variant.Text" OnClick="() => HidePlaceAsync(x, y, true)">@Loc["NavMapHidePlace"]</MudButton>
                 <MudButton Variant="Variant.Text" OnClick="() => HidePlaceAsync(x, y, false)">@Loc["NavMapShowPlace"]</MudButton>

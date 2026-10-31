@@ -7115,6 +7115,12 @@
   <data name="NavMapSideStateoneway" xml:space="preserve">
     <value>Csak kifelé</value>
   </data>
+  <data name="NavMapSideStatelock" xml:space="preserve">
+    <value>Zárt</value>
+  </data>
+  <data name="NavMapSideLockNote" xml:space="preserve">
+    <value>Hogy ki haladhat át egy zárt oldalon, azt a játékban a @world/lock paranccsal adhatod meg.</value>
+  </data>
   <data name="NavMapSideReason" xml:space="preserve">
     <value>Mit lát az elutasított játékos</value>
   </data>

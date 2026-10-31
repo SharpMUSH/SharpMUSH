@@ -96,6 +96,26 @@ public sealed class WorldMapSource(WorldStore store, IAttributeService attribute
 			}
 		}
 
+		// A place's down side is the up side of the place below it, which the level below holds.
+		if (store.Window(dbref, level - 1, left, bottom, right, top) is { } below)
+		{
+			foreach (var ((x, y), cell) in below.Cells)
+			{
+				if (!Inside(x, y) || cell.Edges == 0) continue;
+				if (!examine && WorldPlaceData.Hidden(WorldPlaceData.Parse(below.Places.GetValueOrDefault((x, y))?.Data))) continue;
+				var reason = below.Places.GetValueOrDefault((x, y))?.Reasons?.GetValueOrDefault(WorldGrid.Letter(WorldSide.Up));
+				var kind = WorldGrid.Edge(cell.Edges, WorldSide.Up) switch
+				{
+					WorldEdge.Wall => MapWallKinds.Wall,
+					WorldEdge.Lock => MapWallKinds.Lock,
+					// One way in from above leads down out of this place.
+					WorldEdge.OneWayIn => MapWallKinds.OneWay,
+					_ => null,
+				};
+				if (kind is not null) walls.Add(new MapWallDto(x, y, WorldGrid.Letter(WorldSide.Down), kind, reason));
+			}
+		}
+
 		return empty with { Cells = cells, Walls = walls };
 	}
 
