@@ -55,15 +55,36 @@ public sealed class MapLayout
 		["down"] = (0, 0, -1), ["d"] = (0, 0, -1),
 	};
 
-	/// <summary>The steps on a hex map, in its axial coordinates; east and west are no hex's sides.</summary>
+	/// <summary>
+	/// The steps on a flat-topped hex map, in its axial coordinates; east and west go round a corner to the hex two over.
+	/// </summary>
 	private static readonly Dictionary<string, (int X, int Y, int Z)> HexDirections = new(StringComparer.OrdinalIgnoreCase)
 	{
 		["north"] = (0, 1, 0), ["n"] = (0, 1, 0),
 		["south"] = (0, -1, 0), ["s"] = (0, -1, 0),
+		["east"] = (2, -1, 0), ["e"] = (2, -1, 0),
+		["west"] = (-2, 1, 0), ["w"] = (-2, 1, 0),
 		["northeast"] = (1, 0, 0), ["ne"] = (1, 0, 0),
 		["northwest"] = (-1, 1, 0), ["nw"] = (-1, 1, 0),
 		["southeast"] = (1, -1, 0), ["se"] = (1, -1, 0),
 		["southwest"] = (-1, 0, 0), ["sw"] = (-1, 0, 0),
+		["up"] = (0, 0, 1), ["u"] = (0, 0, 1),
+		["down"] = (0, 0, -1), ["d"] = (0, 0, -1),
+	};
+
+	/// <summary>
+	/// The steps on a pointy-topped hex map, in its axial coordinates; north and south go round a corner to the hex two over.
+	/// </summary>
+	private static readonly Dictionary<string, (int X, int Y, int Z)> PointyHexDirections = new(StringComparer.OrdinalIgnoreCase)
+	{
+		["north"] = (-1, 2, 0), ["n"] = (-1, 2, 0),
+		["south"] = (1, -2, 0), ["s"] = (1, -2, 0),
+		["east"] = (1, 0, 0), ["e"] = (1, 0, 0),
+		["west"] = (-1, 0, 0), ["w"] = (-1, 0, 0),
+		["northeast"] = (0, 1, 0), ["ne"] = (0, 1, 0),
+		["northwest"] = (-1, 1, 0), ["nw"] = (-1, 1, 0),
+		["southeast"] = (1, -1, 0), ["se"] = (1, -1, 0),
+		["southwest"] = (0, -1, 0), ["sw"] = (0, -1, 0),
 		["up"] = (0, 0, 1), ["u"] = (0, 0, 1),
 		["down"] = (0, 0, -1), ["d"] = (0, 0, -1),
 	};
@@ -129,13 +150,21 @@ public sealed class MapLayout
 			.FirstOrDefault(level => level is not null);
 
 	/// <summary>
-	/// The direction an exit named <paramref name="exit"/> goes, by its name or any alias, on a square map or, given
-	/// <paramref name="hex"/>, a hex map's axial steps; null when it names none.
+	/// The direction an exit named <paramref name="exit"/> goes, by its name or any alias, in the cells of a map whose space
+	/// is <paramref name="space"/>: a square grid's unless it names a hex one; null when it names none.
 	/// </summary>
-	public static (int X, int Y, int Z)? Direction(MapExitDto exit, bool hex = false) =>
-		new[] { exit.Name }.Concat(exit.Aliases)
-			.Select(name => (hex ? HexDirections : Directions).TryGetValue(name.Trim(), out var step) ? step : ((int, int, int)?)null)
+	public static (int X, int Y, int Z)? Direction(MapExitDto exit, string? space = null)
+	{
+		var steps = space switch
+		{
+			MapSpaces.Hex => HexDirections,
+			MapSpaces.PointyHex => PointyHexDirections,
+			_ => Directions,
+		};
+		return new[] { exit.Name }.Concat(exit.Aliases)
+			.Select(name => steps.TryGetValue(name.Trim(), out var step) ? step : ((int, int, int)?)null)
 			.FirstOrDefault(step => step is not null);
+	}
 
 	/// <summary>The rooms placed on <paramref name="level"/>.</summary>
 	public IEnumerable<MapPlacement> On(int level) => Rooms.Values.Where(room => room.Placed && room.Level == level);
@@ -391,7 +420,7 @@ public sealed class MapLayout
 		// Each compass exit is a step both ways: north from A to B puts B north of A, and A south of B.
 		var steps = new Dictionary<string, List<(string To, (int X, int Y, int Z) Step)>>();
 		var compass = map.Exits.OrderBy(exit => Number(exit.Id))
-			.Select(exit => (From: exit.Source, To: exit.Destination ?? "", Step: Direction(exit, IsHex)))
+			.Select(exit => (From: exit.Source, To: exit.Destination ?? "", Step: Direction(exit, Space?.Kind)))
 			.Where(exit => exit.Step is not null && byId.ContainsKey(exit.From) && byId.ContainsKey(exit.To));
 		foreach (var (from, to, direction) in compass)
 		{
