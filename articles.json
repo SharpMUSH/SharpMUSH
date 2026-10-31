@@ -16427,6 +16427,14 @@
         ]
       },
       {
+        "id": "world-link",
+        "lookup": "@world link",
+        "heading": "Ways on a graph map",
+        "aliases": [
+          "@world/link"
+        ]
+      },
+      {
         "id": "world-terrain-lock",
         "lookup": "@world terrain",
         "heading": "Terrain locks",

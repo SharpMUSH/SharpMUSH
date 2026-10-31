@@ -34,9 +34,10 @@ A place whose data hides it reads as bare terrain to whoever may not examine the
 
 What a world map is. The fields:
 
-- `space`: `square`, `hex` or `pointy-hex` (the default)
-- `sides`: its places' sides, by letter, separated by spaces
-- `ways`: the directions [worldway()] takes there: the sides, then the corner steps
+- `space`: `square`, `hex`, `pointy-hex` or `graph` (the default)
+- `sides`: its places' sides, by letter, separated by spaces; none on a graph map
+- `ways`: the directions [worldway()] takes there: the sides, then the corner steps. On a graph map, the name of every way out of any place
+- `names`: on a graph map, each of those ways' full names, `|` between them
 - `levels`: the levels painted, lowest first
 - `box`: the painted box as `<left> <bottom> <right> <top>`; empty before anything is painted
 
@@ -68,6 +69,7 @@ One field of a place:
 - `id`: an id that stays the same for that place, for a client's mapper
 - `room`: the room standing there, lent or placed; empty when none is. It lends none
 - `permanent`: 1 when that room was placed there to stay, else 0
+- `ways`: the ways out of it [worldway()] takes; on a graph map its own, by name
 
 Any other field is `#-1 BAD FIELD`.
 
@@ -81,13 +83,13 @@ Output: forest/Old Oak
 
 `worldway(<map>, <x>, <y>, <z>, <direction>[, <field>[, <mover>]])`
 
-The way out of a place toward a direction, by its letters or the word: a side or a corner step, as [worldmap()] lists. Any other direction gives `#-1 BAD DIRECTION`. The fields:
+The way out of a place toward a side or corner step, as [worldmap()] lists, or on a graph map a way's name (see [@world link]); else `#-1 BAD DIRECTION`. The fields:
 
 - `state`: how a mover fares (the default)
 - `reason`: why, when the way is not open
-- `to`: the place it leads to, as `x,y,z`
+- `to`: the place it leads to, as `x,y,z`; empty for no such way
 
-The state is `open`; `oneway`, open but not back; `lock`, a locked side or a terrain lock (see [@world lock]); `closed`, when the place it leads to has a closed type; `wall`, also for a one-way side coming the wrong way; or `none`, when nothing is painted there. A corner step (a square map's diagonals, a hex map's `e` and `w`) goes round a corner, as good as the better of its two routes.
+The state is `open`; `oneway`, open but not back; `lock`, a locked side or a terrain lock (see [@world lock]); `closed`, into a closed type; `wall`, also a one-way side the wrong way round; or `none`, when nothing is painted there or there is no such way. A corner step (a square map's diagonals, a hex map's `e` and `w`) is as good as the better of its two routes round the corner.
 
 Given a `<mover>`, each lock on the way is evaluated for them, with the map as the locked object: a lock they pass is `open`, and one they do not is `lock` with its reason. Naming anyone but yourself needs examine of the map.
 

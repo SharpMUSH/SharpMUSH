@@ -10,6 +10,7 @@
     {"id": "world-paint", "heading": "Painting places", "lookup": "@world paint", "aliases": ["@world/paint"]},
     {"id": "world-wall", "heading": "Walls and ways", "lookup": "@world wall", "aliases": ["@world/wall"]},
     {"id": "world-lock", "heading": "Locks", "lookup": "@world lock", "aliases": ["@world/lock"]},
+    {"id": "world-link", "heading": "Ways on a graph map", "lookup": "@world link", "aliases": ["@world/link"]},
     {"id": "world-terrain-lock", "heading": "Terrain locks", "lookup": "@world terrain", "aliases": ["terrain locks"]},
     {"id": "world-place", "heading": "Naming places", "lookup": "@world place", "aliases": ["@world/place"]},
     {"id": "world-data", "heading": "A place's data", "lookup": "@world data", "aliases": ["@world/data", "@world/data/merge", "@world/data/clear"]},
@@ -20,16 +21,17 @@
 -->
 # @world
 
-`@world[/<switch>] <map>[/<x>,<y>[,<z>][/<side>]][=<value>]`
+`@world[/<switch>] <map>[/<x>,<y>[,<z>][/<side or way>]][=<value>]`
 
 A world map keeps its places itself, so a large grid needs no room for each one. Any object can be one. Its places are painted with a terrain type, may have walls and one-way or locked sides, and may have a name and data of their own. The World map in the portal draws them, a window at a time.
 
-`@world <map>` describes the map, and `@world <map>/<x>,<y>,<z>` one place on it: its terrain, name, sides and data. Reading needs examine; every switch needs control of the map. A place is `x,y` or `x,y,z`; z, the level, is 0 when left out. Each number is at most 1000000 either way.
+`@world <map>` describes the map, and `@world <map>/<x>,<y>,<z>` one place on it: its terrain, name, sides or ways, and data. Reading needs examine; every switch needs control of the map. A place is `x,y` or `x,y,z`; z, the level, is 0 when left out. Each number is at most 1000000 either way.
 
 - [@world create]: make an object a world map
 - [@world paint]: paint places with a terrain type, or erase them
 - [@world wall]: walls, one-way sides and locks
 - [@world lock]: who passes a locked side
+- [@world link]: the named ways between a graph map's places
 - [@world terrain]: locks on moving into a terrain type
 - [@world place]: give a place a name
 - [@world data]: JSON a place keeps, and how it is drawn
@@ -40,15 +42,17 @@ The [world functions] read the same places.
 
 ## Making a world map
 
-`@world/create <map>[=square|hex|pointy-hex]`
+`@world/create <map>[=square|hex|pointy-hex|graph]`
 
-Makes `<map>` a world map, a level at a time in one of three spaces:
+Makes `<map>` a world map, a level at a time in one of four spaces:
 
 - `square` (the default): places at x and y, with sides `n`, `e`, `s` and `w`.
 - `hex`: flat-topped hexagons at column x and row y, with sides `n`, `ne`, `se`, `s`, `sw` and `nw`. North is y + 1, northeast x + 1, and southeast x + 1 and y - 1.
 - `pointy-hex`: pointy-topped hexagons, with sides `ne`, `e`, `se`, `sw`, `w` and `nw`. East is x + 1, northeast y + 1, and northwest x - 1 and y + 1.
 
-Places on all three have `u` and `d` too. When the map has no `` MAP`KIND `` yet, it gets `coordinates`, so the World map lists it.
+- `graph`: places at x and y with no sides. They are joined only by the ways made between them (see [@world link]); x and y say where the World map draws them.
+
+Places on the first three have `u` and `d` too. When the map has no `` MAP`KIND `` yet, it gets `coordinates`, so the World map lists it.
 
 ```sharp
 > @create Wilds
@@ -109,6 +113,30 @@ Locks one side of a place with a lock key, as `@lock` locks an exit: a mover who
 ```
 
 Output: The north side of 2,1,0 is now locked.
+
+## Ways on a graph map
+
+- `@world/link <map>/<x>,<y>[,<z>]=<x2>,<y2>[,<z2>],<names>[,<names back>]`
+- `@world/link <map>/<x>,<y>[,<z>]/<way>`
+
+Makes a way out of a place of a graph map, to any place on any level of it. Its names are given as an exit's are, `;` between them: the first is shown, and any of them walks it. Given names back, the way back is made too. A way of the same name out of the same place is replaced. With a way and no `=`, removes that way; the way back stays. A place has at most 64 ways out.
+
+On a graph map, `@world/wall` and `@world/lock` take a way's name where a side goes. A way is `open`, `wall` (it stays, and refuses with its reason) or `lock`. A way leads one way already, so it is never `oneway`.
+
+```sharp
+> @create Downs
+> @world/create Downs=graph
+> @world/paint Downs/0,0=grass
+> @world/paint Downs/4,2=grass
+> @world/link Downs/0,0=4,2,Old Road;road,Back Road;back
+> @world/wall Downs/4,2/back=wall,The bridge is out.
+```
+
+Output:
+```
+Old Road leads from 0,0,0 to 4,2,0, and Back Road from 4,2,0 back.
+The way Back Road out of 4,2,0 is now a wall.
+```
 
 ## Terrain locks
 
