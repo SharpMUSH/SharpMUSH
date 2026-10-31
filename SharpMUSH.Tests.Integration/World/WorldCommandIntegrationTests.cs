@@ -142,15 +142,15 @@ public class WorldCommandIntegrationTests
 			.IsEqualTo("none//none").Because("a graph map's places have no sides, and nothing is painted at 9,9");
 		await Assert.That(await Eval($"worlddraw({map},0,0,0,1,@)")).IsEqualTo("   \n @ \n   ");
 
-		await Assert.That(await God($"@world/wall {map}/4,2,1/back=wall,The bridge is out.", "back"))
-			.Contains("The way back out of 4,2,1 is now a wall.");
+		await Assert.That(await God($"@world/wall {map}/4,2,1/back=wall,The bridge is out.", "Back Road"))
+			.Contains("The way Back Road out of 4,2,1 is now a wall.");
 		await Assert.That(await Eval($"worldway({map},4,2,1,back)/[worldway({map},4,2,1,back,reason)]")).IsEqualTo("wall/The bridge is out.");
 		await Assert.That(string.Join("\n", await God($"@world/wall {map}/4,2,1/back=oneway", "already")))
 			.Contains("A graph map's way leads one way already; link one back to go both ways.");
 		await God($"@world/lock {map}/0,0/road=#FALSE", "locked");
 		await Assert.That(await Eval($"worldway({map},0,0,0,road)/[worldway({map},0,0,0,road,state,me)]")).IsEqualTo("lock/lock");
 		await Assert.That(string.Join("\n", await God($"@world {map}/0,0", "Way"))).Contains("Way Old Road;road: to 4,2,1, lock, key #FALSE");
-		await Assert.That(await God($"@world/lock {map}/0,0/road=", "open")).Contains("The way road out of 0,0,0 is now open.");
+		await Assert.That(await God($"@world/lock {map}/0,0/road=", "open")).Contains("The way Old Road out of 0,0,0 is now open.");
 
 		// The World map draws each way from the place it leads out of.
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
