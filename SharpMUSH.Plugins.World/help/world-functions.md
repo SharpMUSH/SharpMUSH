@@ -81,7 +81,7 @@ Output: forest/Old Oak
 
 `worldway(<map>, <x>, <y>, <z>, <direction>[, <field>[, <mover>]])`
 
-The way out of a place toward a direction, by its letters or the word. On a square map that is a side (`n`, `e`, `s`, `w`, `u` or `d`) or a diagonal (`ne`, `nw`, `se` or `sw`); on a hex map, one of its sides (`n`, `ne`, `se`, `s`, `sw`, `nw`, `u` or `d`). Any other direction gives `#-1 BAD DIRECTION`. The fields:
+The way out of a place toward a direction, by its letters or the word: a side, or on a square map a diagonal, as [worldmap()] lists. Any other direction gives `#-1 BAD DIRECTION`. The fields:
 
 - `state`: how a mover fares (the default)
 - `reason`: why, when the way is not open
@@ -95,14 +95,12 @@ Given a `<mover>`, each lock on the way is evaluated for them, with the map as t
 > think worldway(Wilds, 4, 4, 0, n)/[worldway(Wilds, 4, 4, 0, n, reason)]
 > &RANGER me=yes
 > think worldway(Wilds, 2, 1, 0, n)/[worldway(Wilds, 2, 1, 0, n, state, me)]
-> think worldway(Steppe, -1, 0, 0, ne)/[worldway(Steppe, 0, 0, 0, se, to)]
 ```
 
 Output:
 ```
 wall/A fallen oak blocks the path.
 lock/open
-wall/1,-1,0
 ```
 
 ## worlddraw()
