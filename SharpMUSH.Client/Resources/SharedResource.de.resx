@@ -7115,6 +7115,12 @@
   <data name="NavMapSideStateoneway" xml:space="preserve">
     <value>Nur hinaus</value>
   </data>
+  <data name="NavMapSideStatelock" xml:space="preserve">
+    <value>Verschlossen</value>
+  </data>
+  <data name="NavMapSideLockNote" xml:space="preserve">
+    <value>Wer eine verschlossene Seite passieren darf, legst du im Spiel mit @world/lock fest.</value>
+  </data>
   <data name="NavMapSideReason" xml:space="preserve">
     <value>Was ein abgewiesener Spieler liest</value>
   </data>

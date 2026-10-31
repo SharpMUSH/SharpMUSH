@@ -7115,6 +7115,12 @@
   <data name="NavMapSideStateoneway" xml:space="preserve">
     <value>Tylko na zewnątrz</value>
   </data>
+  <data name="NavMapSideStatelock" xml:space="preserve">
+    <value>Zamknięte</value>
+  </data>
+  <data name="NavMapSideLockNote" xml:space="preserve">
+    <value>Kto może przejść przez zamkniętą stronę, ustawiasz w grze poleceniem @world/lock.</value>
+  </data>
   <data name="NavMapSideReason" xml:space="preserve">
     <value>Co usłyszy odrzucony gracz</value>
   </data>

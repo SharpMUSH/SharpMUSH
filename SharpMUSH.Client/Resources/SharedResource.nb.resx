@@ -7115,6 +7115,12 @@
   <data name="NavMapSideStateoneway" xml:space="preserve">
     <value>Bare ut</value>
   </data>
+  <data name="NavMapSideStatelock" xml:space="preserve">
+    <value>Låst</value>
+  </data>
+  <data name="NavMapSideLockNote" xml:space="preserve">
+    <value>Hvem som kan passere en låst side, settes i spillet med @world/lock.</value>
+  </data>
   <data name="NavMapSideReason" xml:space="preserve">
     <value>Hva en avvist spiller får vite</value>
   </data>

@@ -420,9 +420,9 @@ public class WorldMapReaderTests
 
 		await Assert.That(map.Rooms.Select(room => (room.Id, room.Environment))).IsEquivalentTo([("#10", (string?)"water"), ("#11", null)]);
 		await Assert.That(map.Legend).IsEquivalentTo([
-			new MapLegendDto("street", "Street", "muted", null),
-			new MapLegendDto("water", "water", "blue", "≈"),
-		]).Because("Harbour names water itself, so Town's label for it is not used; a blank value names nothing");
+			new MapLegendDto("street", "Street", "muted", null) { Inherited = true },
+			new MapLegendDto("water", "water", "blue", "≈") { Parent = new("water", "Sea", null, null) { Inherited = true } },
+		]).Because("Harbour names water itself, so Town's label for it is only what shows once Harbour's is cleared; a blank value names nothing");
 	}
 
 	[Test]

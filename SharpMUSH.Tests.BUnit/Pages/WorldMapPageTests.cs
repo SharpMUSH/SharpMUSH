@@ -139,7 +139,8 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 					Info = [new("Owner", "Miller Bram"), new("Grinds", "Barley")],
 				},
 			],
-			[new(0, 0, "n", MapWallKinds.Wall, null), new(0, 0, "e", MapWallKinds.Lock, "The gate is barred."), new(1, 0, "w", MapWallKinds.OneWay, null)],
+			[new(0, 0, "n", MapWallKinds.Wall, null), new(0, 0, "e", MapWallKinds.Lock, "The gate is barred."), new(1, 0, "w", MapWallKinds.OneWay, null),
+				new(0, 1, "d", MapWallKinds.Lock, "A trapdoor.")],
 			false)
 		: new(1, left, bottom, right, top, [new(0, 0, "forest") { Name = "Lookout" }], [], false);
 
@@ -753,6 +754,28 @@ public class WorldMapPageTests : TrackingBunitContext
 
 		await Assert.That(cut.FindComponents<MudBlazor.MudSelect<string>>()[1].Instance.Value).IsEqualTo(MapWallKinds.Wall)
 			.Because("the wall between 0,1 and 0,0 is listed once, as the north side of 0,0");
+	}
+
+	[Test]
+	public async Task APlacesDownSideReadsTheLockOfTheLevelBelow()
+	{
+		Arrange();
+		_api.WildsEditable = true;
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 59));
+		cut.WaitForAssertion(() => cut.Find(".map-room--place"));
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+		await cut.Find(".map-room--place").ClickAsync();
+
+		var selects = cut.FindComponents<MudBlazor.MudSelect<string>>();
+		await cut.InvokeAsync(() => selects[0].Instance.ValueChanged.InvokeAsync("d"));
+
+		await Assert.That(cut.FindComponents<MudBlazor.MudSelect<string>>()[1].Instance.Value).IsEqualTo(MapWallKinds.Lock)
+			.Because("the map source lists the up side of the place below as this place's down side");
+		await Assert.That(cut.Find(".map-builder").TextContent).Contains("NavMapSideLockNote");
+		await Click(cut, "NavMapSetSide");
+		await Click(cut, "NavMapReview");
+		await Assert.That(cut.FindAll(".map-review-commands").Select(commands => commands.TextContent))
+			.IsEquivalentTo(["@world/wall #59/0,1,0/d=lock,A trapdoor."]).Because("setting it again keeps the side locked, and its key");
 	}
 
 	private async Task<IRenderedComponent<SharpMUSH.Client.Pages.WorldMap>> EditWorksAsync(bool authorized = false)

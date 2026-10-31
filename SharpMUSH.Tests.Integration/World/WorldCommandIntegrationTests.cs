@@ -102,6 +102,38 @@ public class WorldCommandIntegrationTests
 	}
 
 	[Test]
+	public async Task APlacesDownSideIsReadFromTheLevelBelow()
+	{
+		var map = TestIsolationHelpers.GenerateUniqueName("Stair");
+		await God($"@create {map}", map);
+		await God($"@world/create {map}", map);
+		await God($"@world/paint {map}/0,0:2,0=stone", "places");
+		await God($"@world/paint {map}/0,0,-1:2,0=stone", "places");
+		await God($"@world/wall {map}/0,0/d=wall,Bedrock.", "0,0,0");
+		await God($"@world/wall {map}/1,0/d=oneway", "1,0,0");
+		await God($"@world/wall {map}/2,0,-1/u=lock,A trapdoor.", "2,0,-1");
+
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var stored = (await mediator.Send(new GetObjectNodeQuery(new DBRef(int.Parse((await Eval($"num({map})")).TrimStart('#'))))))
+			.Expect<AnySharpObject>();
+		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
+		var source = WebAppFactoryArg.Services.GetServices<IWorldMapSource>().Single();
+		async Task<IEnumerable<(int, int, string, string, string?)>> Walls(int level) =>
+			(await source.CellsAsync(god, stored, new MapWindow(level, 0, 0, 2, 0), CancellationToken.None))
+			.Walls.Select(wall => (wall.X, wall.Y, wall.Side, wall.Kind, wall.Reason));
+
+		await Assert.That(await Walls(0)).IsEquivalentTo([
+			(0, 0, "d", MapWallKinds.Wall, (string?)"Bedrock."),
+			(1, 0, "d", MapWallKinds.OneWay, (string?)null),
+			(2, 0, "d", MapWallKinds.Lock, (string?)"A trapdoor."),
+		]);
+		await Assert.That(await Walls(-1)).IsEquivalentTo([
+			(0, 0, "u", MapWallKinds.Wall, (string?)"Bedrock."),
+			(2, 0, "u", MapWallKinds.Lock, (string?)"A trapdoor."),
+		]).Because("the way up from below the one-way side is the level above's, as a way down");
+	}
+
+	[Test]
 	public async Task AHiddenPlaceIsBareTerrainWithoutItsWallsToThoseWhoMayNotExamineTheMap()
 	{
 		var map = TestIsolationHelpers.GenerateUniqueName("Hollow");

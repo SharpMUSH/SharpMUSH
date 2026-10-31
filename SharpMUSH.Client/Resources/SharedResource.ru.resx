@@ -7115,6 +7115,12 @@
   <data name="NavMapSideStateoneway" xml:space="preserve">
     <value>Только наружу</value>
   </data>
+  <data name="NavMapSideStatelock" xml:space="preserve">
+    <value>Заперто</value>
+  </data>
+  <data name="NavMapSideLockNote" xml:space="preserve">
+    <value>Кто может пройти через запертую сторону, задаётся в игре командой @world/lock.</value>
+  </data>
   <data name="NavMapSideReason" xml:space="preserve">
     <value>Что увидит игрок при отказе</value>
   </data>

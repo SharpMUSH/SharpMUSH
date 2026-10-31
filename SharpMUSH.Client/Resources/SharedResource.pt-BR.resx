@@ -7115,6 +7115,12 @@
   <data name="NavMapSideStateoneway" xml:space="preserve">
     <value>Só de saída</value>
   </data>
+  <data name="NavMapSideStatelock" xml:space="preserve">
+    <value>Trancado</value>
+  </data>
+  <data name="NavMapSideLockNote" xml:space="preserve">
+    <value>Quem pode passar por um lado trancado é definido no jogo com @world/lock.</value>
+  </data>
   <data name="NavMapSideReason" xml:space="preserve">
     <value>O que o jogador recusado lê</value>
   </data>
