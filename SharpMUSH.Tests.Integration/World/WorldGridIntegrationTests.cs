@@ -271,6 +271,16 @@ public class WorldGridIntegrationTests
 			await God($"@tel {walker.DbRef}=[worldroom({mapRef},4,2)]");
 			await As(walker, "west");
 			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(origin);
+
+			// A way first named it takes the name's exit, which look then lists.
+			await God($"@world/link {mapRef}/9,9=4,2,West");
+			await Assert.That(await God($"+map/exits {mapRef}")).Contains($"Renamed 1 way exits on {map}");
+			await Assert.That(await Eval($"sort(iter(lexits({mapRef}),fullname(%i0),,|),,|,|)")).IsEqualTo("Back Road|Ford|Hill Path|Old Road|West");
+			await Assert.That(await Eval($"squish(iter(lexits({mapRef}),if(hasattr(%i0,MAP`SHARED),%i0)))")).IsEqualTo(string.Empty);
+			await God($"@tel {walker.DbRef}=[worldroom({mapRef},9,9)]");
+			await Assert.That(await As(walker, "look")).Contains("West");
+			await As(walker, "west");
+			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(await Eval($"worldcell({mapRef},4,2,,room)"));
 		}
 		finally
 		{
