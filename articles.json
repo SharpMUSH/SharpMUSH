@@ -1446,6 +1446,12 @@
         "aliases": []
       },
       {
+        "id": "pennmush-mapsql-order-mapsql-sync",
+        "lookup": "compatibility config pennmush mapsql order mapsql sync",
+        "heading": "PennMUSH @mapsql order: \u0060mapsql_sync\u0060",
+        "aliases": []
+      },
+      {
         "id": "logical-functions-mux-logic",
         "lookup": "compatibility config logical functions mux logic",
         "heading": "Logical functions: \u0060mux_logic\u0060",
@@ -2480,6 +2486,14 @@
         "lookup": "@dolist iteration examples",
         "heading": "Iteration examples",
         "aliases": []
+      },
+      {
+        "id": "then",
+        "lookup": "@dolist then",
+        "heading": "Running something afterwards",
+        "aliases": [
+          "@dolist/then"
+        ]
       },
       {
         "id": "nested-examples",
@@ -5230,6 +5244,14 @@
         "aliases": [
           "@mapsql/notify",
           "@mapsql/spoof"
+        ]
+      },
+      {
+        "id": "then",
+        "lookup": "@mapsql then",
+        "heading": "Running something afterwards",
+        "aliases": [
+          "@mapsql/then"
         ]
       },
       {

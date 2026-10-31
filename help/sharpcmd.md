@@ -2292,6 +2292,8 @@ With `/inline` or `/inplace`, `@map` outputs what the last command it ran output
 
 Switches are the queue-control set shared with [@dolist] and [@include]: `/inline`, `/inplace`, `/localize`, `/clearregs`, `/nobreak`, `/notify` and `/delimit`.
 
+`@map/then <object>/<attribute>=<list>,<afterwards>` runs the action list after the last comma once after every run of the attribute, with the number of elements in %0, as [@dolist then] does.
+
 This is a SharpMUSH command; PennMUSH spells the same idea with [@dolist] and [MAP()].
 
 
