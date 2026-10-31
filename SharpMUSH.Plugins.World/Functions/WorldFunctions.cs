@@ -59,7 +59,8 @@ public static class WorldFunctions
 	/// <summary>
 	/// worldcell(&lt;map&gt;, &lt;x&gt;, &lt;y&gt;[, &lt;z&gt;[, &lt;field&gt;]]): the place's <c>type</c> (the default),
 	/// <c>label</c>, <c>name</c>, <c>data</c>, <c>closed</c> (1 or 0), <c>reason</c>, <c>id</c>, <c>room</c> (the room
-	/// standing there, lending none) or <c>permanent</c> (1 when that room was placed there to stay).
+	/// standing there, lending none), <c>permanent</c> (1 when that room was placed there to stay) or <c>ways</c> (the
+	/// ways out of it worldway() takes: on a graph map its own, by name).
 	/// </summary>
 	[SharpFunction(Name = "worldcell", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular,
 		ParameterNames = ["map", "x", "y", "z", "field"])]
@@ -88,14 +89,21 @@ public static class WorldFunctions
 				"id" => new CallState(type is null ? "" : WorldPlaceId.Of(dbref, at.X, at.Y, at.Z)),
 				"room" => new CallState(standing is { } held ? $"#{held.Number}" : ""),
 				"permanent" => new CallState(standing is { } room && reading.Store.Room(room) is { Permanent: true }),
+				"ways" => new CallState(reading.Record.Space != MapSpaces.Graph
+					? string.Join(" ", WorldWays.Directions(reading.Record.Space))
+					: string.Join(" ", reading.Store.Links(dbref, at.X, at.Y, at.Z)
+						.Where(link => WorldWays.Visible(reading.Store, dbref, reading.Examine, at, link))
+						.Select(link => link.Way))),
 				_ => new CallState(BadField),
 			};
 		});
 
 	/// <summary>
-	/// worldmap(&lt;map&gt;[, &lt;field&gt;]): a world map's <c>space</c> (the default: <c>square</c>, <c>hex</c> or <c>pointy-hex</c>),
-	/// <c>sides</c> (its places' sides, by letter), <c>ways</c> (the directions worldway() takes there), <c>levels</c> (the levels painted, lowest first) or <c>box</c> (the
-	/// painted box as <c>left bottom right top</c>, empty before anything is painted).
+	/// worldmap(&lt;map&gt;[, &lt;field&gt;]): a world map's <c>space</c> (the default: <c>square</c>, <c>hex</c>, <c>pointy-hex</c>
+	/// or <c>graph</c>), <c>sides</c> (its places' sides, by letter), <c>ways</c> (the directions worldway() takes there; on a
+	/// graph map, every way of every place, by name), <c>names</c> (on a graph map, each of those ways' full names,
+	/// <c>|</c> between them), <c>levels</c> (the levels painted, lowest first) or <c>box</c> (the painted box as
+	/// <c>left bottom right top</c>, empty before anything is painted).
 	/// </summary>
 	[SharpFunction(Name = "worldmap", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["map", "field"])]
 	public static ValueTask<CallState> WorldMap(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
@@ -106,12 +114,26 @@ public static class WorldFunctions
 			{
 				"space" => new CallState(record.Space),
 				"sides" => new CallState(string.Join(" ", WorldGrid.Sides(record.Space).Select(WorldGrid.Letter))),
-				"ways" => new CallState(string.Join(" ", WorldWays.Directions(record.Space))),
+				"ways" => new CallState(record.Space == MapSpaces.Graph
+					? string.Join(" ", Ways(reading).Select(link => link.Way))
+					: string.Join(" ", WorldWays.Directions(record.Space))),
+				"names" => new CallState(record.Space == MapSpaces.Graph ? string.Join("|", Ways(reading).Select(link => link.Names)) : ""),
 				"levels" => new CallState(string.Join(" ", record.Levels)),
 				"box" => new CallState(record.Painted ? $"{record.Left} {record.Bottom} {record.Right} {record.Top}" : ""),
 				_ => new CallState(BadField),
 			});
 		});
+
+	/// <summary>A graph map's ways the reader may learn of, the first of each name, by name.</summary>
+	private static IEnumerable<WorldLinkRecord> Ways(Reading reading)
+	{
+		var dbref = reading.Map.Object().DBRef;
+		return reading.Store.AllLinks(dbref)
+			.Where(entry => WorldWays.Visible(reading.Store, dbref, reading.Examine, entry.From, entry.Link))
+			.Select(entry => entry.Link)
+			.DistinctBy(link => link.Way)
+			.OrderBy(link => link.Way, StringComparer.Ordinal);
+	}
 
 	/// <summary>
 	/// worldway(&lt;map&gt;, &lt;x&gt;, &lt;y&gt;, &lt;z&gt;, &lt;direction&gt;[, &lt;field&gt;[, &lt;mover&gt;]]): the way out of a
@@ -126,7 +148,13 @@ public static class WorldFunctions
 		ReadAsync(parser, async reading =>
 		{
 			if (Position(parser) is not { } at) return new CallState(BadPlace);
-			if (WorldWays.ParseDirection(Arg(parser, 4), reading.Record.Space) is not { } direction) return new CallState(BadDirection);
+			var graph = reading.Record.Space == MapSpaces.Graph;
+			IReadOnlyList<WorldSide>? direction = null;
+			if (!graph)
+			{
+				if (WorldWays.ParseDirection(Arg(parser, 4), reading.Record.Space) is not { } parsed) return new CallState(BadDirection);
+				direction = parsed;
+			}
 			var field = Arg(parser, 5) is { Length: > 0 } given ? given.ToLowerInvariant() : "state";
 			if (field is not ("state" or "reason" or "to")) return new CallState(BadField);
 
@@ -142,12 +170,16 @@ public static class WorldFunctions
 				unlock = Unlock(parser, reading.Map, mover);
 			}
 
-			var way = await WorldWays.WayAsync(reading.Store, reading.Record, reading.Legend, reading.Map.Object().DBRef, reading.Examine, at,
-				direction, unlock);
+			var dbref = reading.Map.Object().DBRef;
+			var way = direction is not null
+				? await WorldWays.WayAsync(reading.Store, reading.Record, reading.Legend, dbref, reading.Examine, at, direction, unlock)
+				: await WorldWays.LinkAsync(reading.Store, reading.Record, reading.Legend, dbref, reading.Examine, at, Arg(parser, 4), unlock);
 			return field switch
 			{
 				"state" => new CallState(way.StateWord),
 				"reason" => new CallState(way.Reason ?? ""),
+				// A graph map's way that leads nowhere the reader may know of has no place to name.
+				_ when graph && way.State == WorldWayState.None => new CallState(""),
 				_ => new CallState(way.To.ToString()),
 			};
 		});

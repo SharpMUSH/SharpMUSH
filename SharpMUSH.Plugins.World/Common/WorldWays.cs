@@ -42,9 +42,11 @@ public static class WorldWays
 	/// <summary>
 	/// The directions a place in <paramref name="space"/> has a way out by, by letter: its sides, then the corner steps
 	/// (a square map's four diagonals, a flat hex map's east and west, a pointy one's north and south), then up and down.
+	/// A graph map's places have none: their ways are named (<see cref="LinkAsync"/>).
 	/// </summary>
 	public static IReadOnlyList<string> Directions(string space) => space switch
 	{
+		MapSpaces.Graph => [],
 		MapSpaces.Hex => ["n", "ne", "se", "s", "sw", "nw", "e", "w", "u", "d"],
 		MapSpaces.PointyHex => ["ne", "e", "se", "sw", "w", "nw", "n", "s", "u", "d"],
 		_ => ["n", "e", "s", "w", "ne", "nw", "se", "sw", "u", "d"],
@@ -58,6 +60,7 @@ public static class WorldWays
 	/// </summary>
 	public static IReadOnlyList<WorldSide>? ParseDirection(string text, string space) => (text.Trim().ToLowerInvariant(), space) switch
 	{
+		(_, MapSpaces.Graph) => null,
 		_ when WorldGrid.ParseSide(text, space) is { } side => [side],
 		("e" or "east", MapSpaces.Hex) => [WorldSide.NorthEast, WorldSide.SouthEast],
 		("w" or "west", MapSpaces.Hex) => [WorldSide.NorthWest, WorldSide.SouthWest],
@@ -118,6 +121,38 @@ public static class WorldWays
 			WorldEdge.Lock => WorldWayState.Lock,
 			_ => WorldWayState.Open,
 		};
+		return await ArriveAsync(store, record, legend, map, from, to, state, reason, key, unlock);
+	}
+
+	/// <summary>
+	/// The way named <paramref name="name"/> out of <paramref name="from"/> on a graph map: <see cref="WorldWayState.None"/>
+	/// when the place has no way of that name, or the reader may not learn of it; then as a step across a side
+	/// (<see cref="StepAsync"/>), with the way's own wall or lock in place of the side's.
+	/// </summary>
+	public static async ValueTask<WorldWay> LinkAsync(WorldStore store, WorldMapRecord record, WorldLegend legend, DBRef map,
+		bool examine, WorldPosition from, string name, Func<string, ValueTask<bool>>? unlock = null)
+	{
+		if (Hidden(store, map, examine, from) || store.Link(map, from.X, from.Y, from.Z, name) is not { } link)
+			return new WorldWay(WorldWayState.None, null, from);
+		var to = new WorldPosition(link.X, link.Y, link.Z);
+		if (Hidden(store, map, examine, to)) return new WorldWay(WorldWayState.None, null, to);
+		var state = link.Edge switch
+		{
+			WorldEdge.Wall => WorldWayState.Wall,
+			WorldEdge.Lock => WorldWayState.Lock,
+			_ => WorldWayState.Open,
+		};
+		return await ArriveAsync(store, record, legend, map, from, to, state, link.Reason, link.Key, unlock);
+	}
+
+	/// <summary>
+	/// Arriving at <paramref name="to"/> from <paramref name="from"/> past an edge in <paramref name="state"/>: a wall,
+	/// a place with nothing painted or closed terrain refuses; then a lock, and the legend's lock on moving from this
+	/// place's terrain into that one's (<see cref="WorldLegend.LockAsync"/>), each for whoever does not pass it.
+	/// </summary>
+	private static async ValueTask<WorldWay> ArriveAsync(WorldStore store, WorldMapRecord record, WorldLegend legend, DBRef map,
+		WorldPosition from, WorldPosition to, WorldWayState state, string? reason, string? key, Func<string, ValueTask<bool>>? unlock)
+	{
 		if (state == WorldWayState.Wall) return new WorldWay(state, reason, to);
 		if (!WorldGrid.InReach(to.X, to.Y, to.Z) || record.Type(store.Cell(map, to.X, to.Y, to.Z).Terrain) is not { } type)
 			return new WorldWay(WorldWayState.None, null, to);
@@ -125,7 +160,7 @@ public static class WorldWays
 
 		if (state == WorldWayState.Lock)
 		{
-			// A side locked with no key yet lets nobody through.
+			// A way locked with no key yet lets nobody through.
 			if (unlock is null || !await unlock(key ?? "")) return new WorldWay(state, reason, to);
 			(state, reason) = (WorldWayState.Open, null);
 		}
@@ -137,6 +172,13 @@ public static class WorldWays
 
 	private static WorldPosition Target(WorldPosition from, IReadOnlyList<WorldSide> direction) =>
 		direction.Aggregate(from, (at, side) => at.Toward(side));
+
+	/// <summary>
+	/// Whether a reader learns of the way <paramref name="link"/> out of <paramref name="from"/>: not when either end is
+	/// hidden from them.
+	/// </summary>
+	public static bool Visible(WorldStore store, DBRef map, bool examine, WorldPosition from, WorldLinkRecord link) =>
+		!Hidden(store, map, examine, from) && !Hidden(store, map, examine, new WorldPosition(link.X, link.Y, link.Z));
 
 	/// <summary>Whether the place at <paramref name="at"/> is hidden from a reader who may not examine the map.</summary>
 	private static bool Hidden(WorldStore store, DBRef map, bool examine, WorldPosition at) =>

@@ -23,7 +23,8 @@ namespace SharpMUSH.Plugins.World.Commands;
 
 /// <summary>
 /// <c>@world[/&lt;switch&gt;] &lt;map&gt;[/&lt;x&gt;,&lt;y&gt;[,&lt;z&gt;][/&lt;side&gt;]][=&lt;value&gt;]</c>: makes an object a stored
-/// map and paints, walls, names and fills in its places, and places rooms on them. Every change needs control of the
+/// map and paints, walls, names and fills in its places, and places rooms on them. A graph map's places have no sides:
+/// <c>/link</c> makes named ways between them, which <c>/wall</c> and <c>/lock</c> take in place of a side. Every change needs control of the
 /// map; reading it, examine. A locked side opens for whoever passes its key, as an exit's <c>@lock</c> does.
 /// The left side is evaluated, and the right side too except for <c>/data</c>, whose JSON is taken as typed.
 /// </summary>
@@ -35,7 +36,7 @@ public static partial class WorldCommand
 	[GeneratedRegex("^[a-z0-9_-]+$")]
 	private static partial Regex TypePattern();
 
-	[SharpCommand(Name = "@WORLD", Switches = ["CREATE", "PAINT", "WALL", "LOCK", "PLACE", "DATA", "MERGE", "CLEAR", "ROOM", "SWEEP"],
+	[SharpCommand(Name = "@WORLD", Switches = ["CREATE", "PAINT", "WALL", "LOCK", "LINK", "PLACE", "DATA", "MERGE", "CLEAR", "ROOM", "SWEEP"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2, ParameterNames = ["target", "value"])]
 	public static async ValueTask<Option<CallState>> World(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -96,8 +97,10 @@ public static partial class WorldCommand
 		if (WorldPosition.Parse(parts[1]) is not { } at)
 			return await Say($"{parts[1]} is not a place: give it as <x>,<y> or <x>,<y>,<z>.", "#-1 BAD PLACE");
 
-		if (switches.Contains("WALL")) return await WallAsync(at);
-		if (switches.Contains("LOCK")) return await LockAsync(at);
+		var graph = record.Space == MapSpaces.Graph;
+		if (switches.Contains("LINK")) return graph ? await LinkAsync(at) : await Say("Only a graph map's places are linked; give a side to /wall instead.", "#-1 NOT A GRAPH MAP");
+		if (switches.Contains("WALL")) return graph ? await WallWayAsync(at) : await WallAsync(at);
+		if (switches.Contains("LOCK")) return graph ? await LockWayAsync(at) : await LockAsync(at);
 		if (switches.Contains("PLACE")) return await NameAsync(at);
 		if (switches.Contains("DATA")) return await DataAsync(at);
 		if (switches.Contains("ROOM")) return await RoomAsync(at);
@@ -106,8 +109,8 @@ public static partial class WorldCommand
 		async ValueTask<Option<CallState>> CreateAsync()
 		{
 			var space = string.IsNullOrWhiteSpace(value) ? MapSpaces.Square : value.Trim().ToLowerInvariant();
-			if (space is not (MapSpaces.Square or MapSpaces.Hex or MapSpaces.PointyHex))
-				return await Say($"{space} maps are not stored; a world map is square, hex or pointy-hex.", "#-1 BAD SPACE");
+			if (space is not (MapSpaces.Square or MapSpaces.Hex or MapSpaces.PointyHex or MapSpaces.Graph))
+				return await Say($"{space} maps are not stored; a world map is square, hex, pointy-hex or graph.", "#-1 BAD SPACE");
 			if (!await store.CreateAsync(dbref, space)) return await Say($"{name} is already a world map.", "#-1 ALREADY A WORLD MAP");
 
 			// The World map lists an object that names its kind; a stored map is drawn on a grid.
@@ -168,6 +171,93 @@ public static partial class WorldCommand
 				_ => "locked",
 			};
 			return await Say($"The {WorldGrid.Word(side)} side of {place} is now {what}.", "");
+		}
+
+		async ValueTask<Option<CallState>> LinkAsync(WorldPosition place)
+		{
+			if (parts.Length > 2)
+			{
+				if (!string.IsNullOrWhiteSpace(value))
+					return await Say("Give the way to remove as <map>/<x>,<y>[,<z>]/<way>, with nothing after =.", "#-1 BAD WAY");
+				var removed = Shown(place);
+				return await store.ChangeLinkAsync(dbref, place.X, place.Y, place.Z, parts[2], _ => null)
+					? await Say($"Removed the way {removed} out of {place}.", "")
+					: await NoWayAsync(place, parts[2]);
+			}
+
+			// <x>,<y>[,<z>],<names>[,<back names>]: a third number is the level.
+			var fields = (value ?? "").Split(',', StringSplitOptions.TrimEntries);
+			var levelGiven = fields.Length > 2 && int.TryParse(fields[2], System.Globalization.NumberStyles.AllowLeadingSign,
+				System.Globalization.CultureInfo.InvariantCulture, out _);
+			var count = levelGiven ? 3 : 2;
+			if (fields.Length < count + 1 || WorldPosition.Parse(string.Join(",", fields.Take(count))) is not { } to)
+				return await Say("Link it as <map>/<x>,<y>[,<z>]=<x>,<y>[,<z>],<name>[;<alias>...][,<name back>[;<alias>...]].", "#-1 BAD WAY");
+			if (fields.Length > count + 2 || WorldLinks.Normalize(fields[count]) is not { } names
+				|| (fields.Length == count + 2 && WorldLinks.Normalize(fields[count + 1]) is null))
+				return await Say($"A way's names are separated by ;, each at most {WorldLinks.MaxNameLength} characters with no , = / or |.", "#-1 BAD NAME");
+			var back = fields.Length == count + 2 ? WorldLinks.Normalize(fields[count + 1]) : null;
+			if (await store.LinkAsync(dbref, (place.X, place.Y, place.Z), (to.X, to.Y, to.Z), names, back) == WorldLinking.TooMany)
+				return await Say($"A place has at most {WorldLinks.MaxWays} ways out.", "#-1 TOO MANY WAYS");
+			var shown = WorldLinks.Split(names)[0];
+			return await Say(back is null
+				? $"{shown} leads from {place} to {to}."
+				: $"{shown} leads from {place} to {to}, and {WorldLinks.Split(back)[0]} from {to} back.", "");
+		}
+
+		// A way is told by its first name, whichever of its names it was given by.
+		string Shown(WorldPosition place) =>
+			store.Link(dbref, place.X, place.Y, place.Z, parts[2]) is { } link ? link.NameList[0] : parts[2];
+
+		ValueTask<Option<CallState>> NoWayAsync(WorldPosition place, string way) =>
+			Say($"{place} has no way out named {way}.", "#-1 NO WAY");
+
+		async ValueTask<Option<CallState>> WallWayAsync(WorldPosition place)
+		{
+			if (parts.Length < 3) return await Say("Which way? Give it as <map>/<x>,<y>[,<z>]/<way>.", "#-1 NO WAY");
+			var setting = (value ?? "").Split(',', 2, StringSplitOptions.TrimEntries);
+			WorldEdge? edge = setting[0].ToLowerInvariant() switch
+			{
+				"" or "open" => WorldEdge.Open,
+				"wall" => WorldEdge.Wall,
+				"lock" => WorldEdge.Lock,
+				_ => null,
+			};
+			if (edge is not { } set)
+			{
+				return await Say(setting[0].Equals("oneway", StringComparison.OrdinalIgnoreCase)
+					? "A graph map's way leads one way already; link one back to go both ways."
+					: "A way is open, wall or lock.", "#-1 BAD EDGE");
+			}
+			var reason = set == WorldEdge.Open || setting.Length < 2 || setting[1].Length == 0 ? null : setting[1];
+			if (!await store.ChangeLinkAsync(dbref, place.X, place.Y, place.Z, parts[2],
+				link => link with { Edge = set, Reason = reason, Key = set == WorldEdge.Lock ? link.Key : null }))
+				return await NoWayAsync(place, parts[2]);
+			var what = set switch
+			{
+				WorldEdge.Open => "open",
+				WorldEdge.Wall => "a wall",
+				_ => "locked",
+			};
+			return await Say($"The way {Shown(place)} out of {place} is now {what}.", "");
+		}
+
+		async ValueTask<Option<CallState>> LockWayAsync(WorldPosition place)
+		{
+			if (parts.Length < 3) return await Say("Which way? Give it as <map>/<x>,<y>[,<z>]/<way>.", "#-1 NO WAY");
+			string? key = null;
+			if (!string.IsNullOrWhiteSpace(value))
+			{
+				var keys = parser.ServiceProvider.GetRequiredService<IBooleanExpressionParser>();
+				var bound = await keys.BindAsync(value.Trim(), executor);
+				if (bound is not string given)
+					return await Say($"I don't understand that key: {(bound is Error<string> error ? error.Value : "")}", ErrorMessages.Returns.InvalidLock);
+				key = await StampAsync(given);
+			}
+			if (!await store.ChangeLinkAsync(dbref, place.X, place.Y, place.Z, parts[2], link => key is null
+				? link with { Edge = WorldEdge.Open, Reason = null, Key = null }
+				: link with { Edge = WorldEdge.Lock, Key = key }))
+				return await NoWayAsync(place, parts[2]);
+			return await Say($"The way {Shown(place)} out of {place} is now {(key is null ? "open" : "locked")}.", "");
 		}
 
 		// A side that names nothing, or one a place in this space does not have, is refused with the sides it has.
@@ -305,6 +395,17 @@ public static partial class WorldCommand
 					: key is null ? ", no key"
 					: $", key {await parser.ServiceProvider.GetRequiredService<IBooleanExpressionParser>().ReadbackAsync(key, executor)}";
 				lines.Add($"{char.ToUpperInvariant(WorldGrid.Word(side)[0])}{WorldGrid.Word(side)[1..]}: {what}{shown}{(reason is null ? "" : $" ({reason})")}");
+			}
+			foreach (var link in store.Links(dbref, place.X, place.Y, place.Z))
+			{
+				var what = link.Edge switch
+				{
+					WorldEdge.Wall => ", wall",
+					WorldEdge.Lock when link.Key is null => ", lock, no key",
+					WorldEdge.Lock => $", lock, key {await parser.ServiceProvider.GetRequiredService<IBooleanExpressionParser>().ReadbackAsync(link.Key, executor)}",
+					_ => "",
+				};
+				lines.Add($"Way {link.Names}: to {link.X},{link.Y},{link.Z}{what}{(link.Reason is null ? "" : $" ({link.Reason})")}");
 			}
 			if (held?.Data is { } data) lines.Add($"Data: {data}");
 			if (await parser.ServiceProvider.GetRequiredService<WorldRooms>().StandingAsync(dbref, place) is { } standing)

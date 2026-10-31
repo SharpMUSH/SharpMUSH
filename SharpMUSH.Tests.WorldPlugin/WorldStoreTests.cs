@@ -4,6 +4,7 @@ using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Plugins.World.Common;
 using SharpMUSH.Plugins.World.Storage;
 
 namespace SharpMUSH.Tests.WorldPlugin;
@@ -127,6 +128,44 @@ public class WorldStoreTests
 		await Assert.That(_store.Edge(Map, -1, 1, 0, WorldSide.SouthEast).Edge).IsEqualTo(WorldEdge.OneWayIn);
 		await Assert.That(WorldGrid.ParseSide("ne", "pointy-hex")).IsEqualTo(WorldSide.PointyNorthEast);
 		await Assert.That(WorldGrid.ParseSide("n", "pointy-hex")).IsNull().Because("a pointy place's north is a corner");
+	}
+
+	[Test]
+	public async Task AGraphPlaceKeepsItsWaysByNameAndTheyGoWithTheMap()
+	{
+		await _store.CreateAsync(Map, "graph");
+		await Assert.That(await _store.LinkAsync(Map, (0, 0, 0), (4, 2, 1), "Old Road;road", "Back Road;back")).IsEqualTo(WorldLinking.Linked);
+		await _store.LinkAsync(Map, (0, 0, 0), (7, 7, 0), "Ford", null);
+
+		await Assert.That(_store.Links(Map, 0, 0, 0).Select(link => link.Way)).IsEquivalentTo(["ford", "old_road"]);
+		await Assert.That(_store.Link(Map, 0, 0, 0, "ROAD")).IsEqualTo(new WorldLinkRecord("Old Road;road", 4, 2, 1, WorldEdge.Open, null, null));
+		await Assert.That(_store.Link(Map, 4, 2, 1, "back_road")!.Z).IsEqualTo(0);
+		await Assert.That(_store.AllLinks(Map).Select(entry => (entry.From, entry.Link.Way)))
+			.IsEquivalentTo([(new WorldPosition(0, 0, 0), "ford"), (new WorldPosition(0, 0, 0), "old_road"), (new WorldPosition(4, 2, 1), "back_road")]);
+
+		await _store.ChangeLinkAsync(Map, 0, 0, 0, "road", link => link with { Edge = WorldEdge.Lock, Key = "#FALSE" });
+		await _store.LinkAsync(Map, (0, 0, 0), (5, 5, 0), "old road", null);
+		await Assert.That(_store.Link(Map, 0, 0, 0, "old_road")).IsEqualTo(new WorldLinkRecord("old road", 5, 5, 0, WorldEdge.Open, null, null))
+			.Because("a way of the same name is replaced, lock and all");
+		await Assert.That(await _store.ChangeLinkAsync(Map, 0, 0, 0, "ford", _ => null)).IsTrue();
+		await Assert.That(await _store.ChangeLinkAsync(Map, 0, 0, 0, "ford", _ => null)).IsFalse();
+
+		await _store.ObjectsFreedAsync([Map]);
+		await _store.CreateAsync(Map, "graph");
+		await Assert.That(_store.AllLinks(Map)).IsEmpty();
+	}
+
+	[Test]
+	public async Task AGraphPlaceHasAtMostSoManyWaysOut()
+	{
+		await _store.CreateAsync(Map, "graph");
+		for (var i = 0; i < WorldLinks.MaxWays; i++) await _store.LinkAsync(Map, (0, 0, 0), (i, 1, 0), $"way{i}", null);
+
+		await Assert.That(await _store.LinkAsync(Map, (0, 0, 0), (0, 2, 0), "one more", null)).IsEqualTo(WorldLinking.TooMany);
+		await Assert.That(await _store.LinkAsync(Map, (0, 0, 0), (0, 2, 0), "way0", null)).IsEqualTo(WorldLinking.Linked)
+			.Because("replacing a way adds none");
+		await Assert.That(WorldLinks.Normalize(" Old Road ; road ;")).IsEqualTo("Old Road;road");
+		await Assert.That(WorldLinks.Normalize("a,b")).IsNull();
 	}
 
 	[Test]
