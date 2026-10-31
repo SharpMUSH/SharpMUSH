@@ -1093,6 +1093,34 @@ public class ControlFlowCommandTests
 		await Assert.That(await WaitForMessage(executor, "What do you want to run afterwards? Put it after the last comma.")).IsTrue();
 	}
 
+	/// <summary>A comma with nothing after it leaves nothing to run afterwards, so nothing runs at all.</summary>
+	[Test]
+	public async ValueTask DoList_Then_WithNothingAfterTheCommaIsRefused()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+			$"@dolist/then/inline a=@pemit #1=DlThenBlank_{id},{{ }}"));
+
+		await Assert.That(Heard(executor, $"DlThenBlank_{id}")).IsEqualTo(0);
+	}
+
+	/// <summary>@map/then on a blank attribute runs nothing, but still runs what comes afterwards, with 0 in %0.</summary>
+	[Test]
+	public async ValueTask Map_Then_BlankAttributeStillRunsIt()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapThenBlank");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"think attrib_set({thing}/RUN,%b)"));
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+			$"@map/then/inline {thing}/RUN=x y,@pemit #1=MapThenBlank_%0_{id}"));
+
+		await Assert.That(Heard(executor, $"MapThenBlank_0_{id}")).IsEqualTo(1);
+	}
+
 	/// <summary>@map/then queues the command after the last comma once the attribute is queued for each element.</summary>
 	[Test]
 	public async ValueTask Map_Then_RunsAfterTheQueuedRuns()

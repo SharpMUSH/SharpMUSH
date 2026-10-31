@@ -136,6 +136,19 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(attributeText))
 		{
+			// Nothing runs, but what comes afterwards still does, with no runs to count.
+			if (afterwards is { } afterNothing)
+			{
+				if (switches.Contains("INLINE"))
+					await parser.With(state => ThenState(state, 0), inner => inner.CommandListParse(afterNothing));
+				else
+					await Mediator.Send(new AdmitCommandListRequest(
+						afterNothing,
+						ThenState(parser.CurrentState.SnapshotForQueuedAction(), 0),
+						new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
+						-1), ExecutionBudget.CurrentToken);
+			}
+
 			return CallState.Empty;
 		}
 

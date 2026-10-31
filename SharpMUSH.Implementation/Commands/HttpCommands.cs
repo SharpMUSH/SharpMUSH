@@ -116,6 +116,15 @@ public partial class Commands
 				// Capture the caller before the request runs; its later mutations belong to its own entry.
 				var callbackState = parser.CurrentState.SnapshotForQueuedAction();
 
+				// PennMUSH tells the object and queues nothing (src/bsd.c:1209-1210). A timeout has spent the
+				// request's budget, so the notice gets one of its own.
+				async ValueTask RequestFailedAsync(string reason)
+				{
+					using var notice = new ExecutionBudget(TimeSpan.FromSeconds(5), CancellationToken.None);
+					using (notice.Enter())
+						await NotifyService.Notify(found, $"Request failed: {reason}", found);
+				}
+
 				// The request runs off the queue, as PennMUSH's does in libcurl's multi handle (src/cmds.c:1992),
 				// and the attribute is queued when the response arrives (src/bsd.c:1206).
 				var admission = await Mediator.Send(new AdmitAttributeAfterRequest(
@@ -125,6 +134,7 @@ public partial class Commands
 
 						using var message = BuildRequest(method, requestUri, requestBody, contentType, userPass, sentHeaders);
 						HttpResponseMessage response;
+						ResponseBody body;
 						try
 						{
 							response = await client.SendAsync(message, HttpCompletionOption.ResponseHeadersRead,
@@ -132,16 +142,20 @@ public partial class Commands
 						}
 						catch (Exception failure) when (RequestFailure(failure) is { } reason)
 						{
-							// PennMUSH tells the object and queues nothing (src/bsd.c:1209-1210). A timeout has spent the
-							// request's budget, so the notice gets one of its own.
-							using var notice = new ExecutionBudget(TimeSpan.FromSeconds(5), CancellationToken.None);
-							using (notice.Enter())
-								await NotifyService.Notify(found, $"Request failed: {reason}", found);
+							await RequestFailedAsync(reason);
 							return null;
 						}
 						using var held = response;
 
-						var body = await ReadResponseAsync(response.Content, outputLimit, ExecutionBudget.CurrentToken);
+						try
+						{
+							body = await ReadResponseAsync(response.Content, outputLimit, ExecutionBudget.CurrentToken);
+						}
+						catch (Exception failure) when (RequestFailure(failure) is { } reason)
+						{
+							await RequestFailedAsync(reason);
+							return null;
+						}
 						if (body.Overflowed)
 							await NotifyService.Notify(found, "Too much HTTP data received; excess truncated.", found);
 
@@ -206,6 +220,7 @@ public partial class Commands
 	private static string? RequestFailure(Exception failure) => failure switch
 	{
 		HttpRequestException request => request.Message,
+		IOException io => io.Message,
 		OperationCanceledException when ExecutionBudget.Current is { IsExpired: true } => "Timeout was reached",
 		_ => null
 	};

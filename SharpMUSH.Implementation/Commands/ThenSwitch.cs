@@ -10,7 +10,7 @@ public partial class Commands
 	/// <summary>
 	/// The right side of a command given <c>/then</c>, split at its last comma outside braces, brackets and
 	/// parentheses: what comes before it, and the command list to run afterwards, as written. None when
-	/// there is no such comma.
+	/// there is no such comma, or nothing to run after it.
 	/// </summary>
 	private static (MString Before, MString After)? SplitThen(MString text)
 	{
@@ -36,9 +36,9 @@ public partial class Commands
 			}
 		}
 
-		return split < 0
-			? null
-			: (text.Substring(0, split), text.Substring(split + 1, raw.Length - split - 1));
+		if (split < 0) return null;
+		var after = text.Substring(split + 1, raw.Length - split - 1);
+		return string.IsNullOrWhiteSpace(Unbrace(after).Text) ? null : (text.Substring(0, split), after);
 	}
 
 	/// <summary>
