@@ -550,7 +550,8 @@ public partial class TaskScheduler(
 	/// <remarks>
 	/// Only entries the readiness gate has published are waited on. A <c>@wait</c> parked on a
 	/// semaphore or a timer also sits in <see cref="_pendingEntries"/>, and waiting for that to empty
-	/// would be waiting for the semaphore to be notified.
+	/// would be waiting for the semaphore to be notified. Work admitted with <see cref="AdmitAfter"/> is
+	/// waited on until it finishes, since what it returns is queued then.
 	/// </remarks>
 	public async ValueTask DrainImmediateQueueForTests(TimeSpan? timeout = null)
 	{
@@ -565,7 +566,7 @@ public partial class TaskScheduler(
 		{
 			int outstanding;
 			lock (_admissionLock) outstanding = _ready.Count;
-			if (outstanding == 0 && _runawayHalts.IsEmpty) return;
+			if (outstanding == 0 && _runawayHalts.IsEmpty && _background.IsEmpty) return;
 
 			if (DateTimeOffset.UtcNow >= deadline)
 			{
@@ -1093,17 +1094,115 @@ public partial class TaskScheduler(
 			return await RejectInvalidTarget(executor ?? dbAttribute.DbRef, EnqueueGroup);
 		dbAttribute = new DbRefAttribute(target.Object().DBRef, dbAttribute.Attribute);
 		executor = (await CaptureExecutor(ParserState.Empty with { Executor = executor ?? dbAttribute.DbRef })).Executor;
-		return await Admit(async () =>
+		return await Admit(async () => await CallbackHolder(dbAttribute, executor) is AnySharpObject holder
+				? await ExecuteCallback(holder, dbAttribute, await function())
+				: null,
+			$"async:{dbAttribute}", EnqueueGroup, executor, sourceAttribute: dbAttribute.DbRef == executor ? string.Join('`', dbAttribute.Attribute) : null, enactor: enactor);
+	}
+
+	public async ValueTask<QueueAdmissionResult> AdmitAttributeAfter(Func<ValueTask<ParserState?>> work, DbRefAttribute dbAttribute, DBRef? executor = null, DBRef? enactor = null)
+	{
+		if (await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken) is not AnySharpObject target)
+			return await RejectInvalidTarget(executor ?? dbAttribute.DbRef, EnqueueGroup);
+		dbAttribute = new DbRefAttribute(target.Object().DBRef, dbAttribute.Attribute);
+		executor = (await CaptureExecutor(ParserState.Empty with { Executor = executor ?? dbAttribute.DbRef })).Executor;
+		return await AdmitAfter(async () => await work() is { } state
+				? async () => await CallbackHolder(dbAttribute, executor) is AnySharpObject holder
+					? await ExecuteCallback(holder, dbAttribute, state)
+					: null
+				: null,
+			$"async:{dbAttribute}", executor, enactor, dbAttribute.DbRef == executor ? string.Join('`', dbAttribute.Attribute) : null);
+	}
+
+	public ValueTask<QueueAdmissionResult> AdmitWorkAfter(Func<ValueTask<Func<ValueTask<CallState?>>?>> work, string triggerName, DBRef executor, DBRef? enactor = null)
+		=> AdmitAfter(work, triggerName, executor, enactor, null, chargesOwner: false);
+
+	/// <summary>The object holding a callback attribute, or none once it or the callback's executor is gone.</summary>
+	private async ValueTask<AnyOptionalSharpObject> CallbackHolder(DbRefAttribute dbAttribute, DBRef? executor)
+		=> executor is not null && await mediator.Send(new GetObjectNodeQuery(executor.Value), ExecutionBudget.CurrentToken) is None
+			? new None()
+			: await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken);
+
+	private async ValueTask<CallState?> ExecuteCallback(AnySharpObject holder, DbRefAttribute dbAttribute, ParserState state)
+	{
+		var parserState = state.SnapshotForQueuedAction();
+		ExecutionBudget.Current?.ThrowIfExceeded();
+		var actor = await parserState.KnownExecutorObject(mediator);
+		var attr = await attributeService.GetAttributeAsync(actor, holder, string.Join('`', dbAttribute.Attribute), IAttributeService.AttributeMode.Execute);
+		if (attr is not SharpAttribute[] chain) return new CallState("#-1");
+		return await ExecuteList(chain.Last().Value, parserState);
+	}
+
+	/// <summary>
+	/// How long work admitted with <see cref="AdmitAfter"/> may run: PennMUSH's limit on an <c>@http</c>
+	/// request (<c>CURLOPT_TIMEOUT</c> 60, <c>src/cmds.c:1937</c>).
+	/// </summary>
+	public static readonly TimeSpan BackgroundWorkTimeout = TimeSpan.FromSeconds(60);
+
+	/// <summary>Work admitted with <see cref="AdmitAfter"/> that has not finished, by the PID it holds.</summary>
+	private readonly ConcurrentDictionary<long, Task> _background = new();
+
+	/// <summary>For tests: finishes once the work <see cref="AdmitAfter"/> had started by now has finished.</summary>
+	internal Task BackgroundWorkSettled() => Task.WhenAll(_background.Values);
+
+	/// <summary>
+	/// Reserves an entry for <paramref name="executor"/> now, counted against its quota, shown by <c>@ps</c>
+	/// and halted with it, then runs <paramref name="work"/> off the queue, so the game keeps running while
+	/// it waits. What the work returns runs as that entry, at the tail of the queue when the work finishes;
+	/// nothing releases it. PennMUSH runs <c>@http</c> this way: the request waits in libcurl's multi handle
+	/// beside the game loop and its attribute is queued when the response arrives (<c>src/bsd.c:1206</c>).
+	/// </summary>
+	/// <remarks>
+	/// The work runs under a budget of its own, <see cref="BackgroundWorkTimeout"/> long, that halting the
+	/// entry or shutting down cancels; the caller's budget does not flow into it.
+	/// </remarks>
+	private async ValueTask<QueueAdmissionResult> AdmitAfter(Func<ValueTask<Func<ValueTask<CallState?>>?>> work,
+		string identity, DBRef? executor, DBRef? enactor, string? sourceAttribute, bool chargesOwner = true)
+	{
+		var body = new StrongBox<Func<ValueTask<CallState?>>?>();
+		var admission = await Admit(() => body.Value is { } run ? run() : ValueTask.FromResult<CallState?>(null),
+			identity, EnqueueGroup, executor, ready: false, sourceAttribute: sourceAttribute, enactor: enactor, chargesOwner: chargesOwner);
+		if (!admission.Accepted) return admission;
+		var pid = admission.Pid!.Value;
+		CancellationToken halted;
+		lock (_admissionLock)
 		{
-			if (executor is not null && await mediator.Send(new GetObjectNodeQuery(executor.Value), ExecutionBudget.CurrentToken) is None) return null;
-			if (await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken) is not AnySharpObject obj) return null;
-			var parserState = (await function()).SnapshotForQueuedAction();
-			ExecutionBudget.Current?.ThrowIfExceeded();
-			var actor = await parserState.KnownExecutorObject(mediator);
-			var attr = await attributeService.GetAttributeAsync(actor, obj, string.Join('`', dbAttribute.Attribute), IAttributeService.AttributeMode.Execute);
-			if (attr is not SharpAttribute[] chain) return new CallState("#-1");
-			return await ExecuteList(chain.Last().Value, parserState);
-		}, $"async:{dbAttribute}", EnqueueGroup, executor, sourceAttribute: dbAttribute.DbRef == executor ? string.Join('`', dbAttribute.Attribute) : null, enactor: enactor);
+			if (!_pendingEntries.TryGetValue(pid, out var entry)) return new(null, QueueRejectionReason.AlreadyReleased);
+			halted = entry.Cts.Token;
+		}
+		var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		Task running;
+		using (ExecutionContext.IsFlowSuppressed() ? default : ExecutionContext.SuppressFlow())
+			running = Task.Run(async () =>
+			{
+				await started.Task;
+				try { await RunAfter(pid, work, body, halted); }
+				finally { _background.TryRemove(pid, out _); }
+			});
+		_background[pid] = running;
+		started.SetResult();
+		return admission;
+	}
+
+	private async Task RunAfter(long pid, Func<ValueTask<Func<ValueTask<CallState?>>?>> work,
+		StrongBox<Func<ValueTask<CallState?>>?> body, CancellationToken halted)
+	{
+		try
+		{
+			using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(halted, _shutdownCts.Token);
+			using var budget = new ExecutionBudget(BackgroundWorkTimeout, cancellation.Token);
+			using var scope = budget.Enter();
+			body.Value = await work();
+		}
+		catch (OperationCanceledException) { body.Value = null; }
+		catch (ObjectDisposedException) { body.Value = null; }
+		catch (Exception ex)
+		{
+			body.Value = null;
+			logger.LogError(ex, "Background work for queue entry {Pid} failed", pid);
+		}
+		if (body.Value is null) ReleasePending(pid);
+		else await Activate(pid);
 	}
 
 	public async ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state,
@@ -1610,6 +1709,9 @@ public partial class TaskScheduler(
 		lock (_admissionLock) { _stopping = true; _immediateQueue.Writer.TryComplete(); entries = LockedPendingEntries.ToArray(); }
 		foreach (var entry in entries) CancelEntry(entry);
 		await _shutdownCts.CancelAsync();
+		// Background work sees the cancellation and releases its entry; wait for it before the ledger goes.
+		try { await Task.WhenAll(_background.Values); }
+		catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException) { }
 		if (_consumerTask is not null)
 		{
 			try

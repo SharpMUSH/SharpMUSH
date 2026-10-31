@@ -27,6 +27,24 @@ public class AdmissionAsyncScheduleHandler(ITaskScheduler scheduler) : IRequestH
 	}
 }
 
+public class AdmissionAfterScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<AdmitAttributeAfterRequest, QueueAdmissionResult>
+{
+	public async ValueTask<QueueAdmissionResult> Handle(AdmitAttributeAfterRequest request, CancellationToken cancellationToken)
+	{
+		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
+		return await scheduler.AdmitAttributeAfter(request.Work, request.DbRefAttribute, request.Executor, request.Enactor);
+	}
+}
+
+public class AdmissionWorkAfterScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<AdmitWorkAfterRequest, QueueAdmissionResult>
+{
+	public async ValueTask<QueueAdmissionResult> Handle(AdmitWorkAfterRequest request, CancellationToken cancellationToken)
+	{
+		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
+		return await scheduler.AdmitWorkAfter(request.Work, request.TriggerName, request.Executor, request.Enactor);
+	}
+}
+
 public class GetScheduledTasksHandler(ITaskQueueReader queue)
 	: IStreamQueryHandler<ScheduleSemaphoreQuery, SemaphoreTaskData>
 {

@@ -92,13 +92,14 @@ public class PennMUSHDatabase
 	/// <summary>
 	/// Configuration options, by name, that the source's softcode needs, which the import sets once the
 	/// world is written. A <see cref="bool"/> is set as given; a <see cref="uint"/> is a minimum, raised to
-	/// and never lowered; an alias table (<c>command_aliases</c>) is added to the aliases already set. PennMUSH softcode writes literal parentheses unescaped and reads @http's status
-	/// from q-registers.
+	/// and never lowered; an alias table (<c>command_aliases</c>) is added to the aliases already set. PennMUSH softcode writes literal parentheses unescaped, reads @http's status
+	/// from q-registers, and counts on @mapsql's rows running before what is queued after it.
 	/// </summary>
 	public Dictionary<string, object> SourceOptions { get; set; } = new(StringComparer.OrdinalIgnoreCase)
 	{
 		["paren_groups"] = true,
-		["http_qregisters"] = true
+		["http_qregisters"] = true,
+		["mapsql_sync"] = true
 	};
 
 	/// <summary>

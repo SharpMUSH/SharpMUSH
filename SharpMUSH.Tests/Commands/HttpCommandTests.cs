@@ -75,7 +75,7 @@ public class HttpCommandTests
 		parser.CurrentState.Returns(state);
 		var admission = new QueueAdmissionResult(reason == QueueRejectionReason.None ? 42 : null, reason);
 		var mediator = Substitute.For<IMediator>();
-		mediator.Send(Arg.Any<AdmitAttributeRequest>(), Arg.Any<CancellationToken>()).Returns(admission);
+		mediator.Send(Arg.Any<AdmitAttributeAfterRequest>(), Arg.Any<CancellationToken>()).Returns(admission);
 		var clients = Substitute.For<IHttpClientFactory>();
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
 			WebAppFactoryArg.Services, mediator, clients);
@@ -85,7 +85,7 @@ public class HttpCommandTests
 		var result = (await commands.Http(parser, new SharpCommandAttribute { Name = "@HTTP" })).Expect<CallState>();
 
 		await Assert.That(result.Message.ToPlainText()).IsEqualTo(admission.Accepted ? "" : admission.Error);
-		await mediator.Received(1).Send(Arg.Any<AdmitAttributeRequest>(), budget.Token);
+		await mediator.Received(1).Send(Arg.Any<AdmitAttributeAfterRequest>(), budget.Token);
 		clients.DidNotReceive().CreateClient(Arg.Any<string>());
 		if (reason is QueueRejectionReason.InvalidTarget or QueueRejectionReason.AlreadyReleased)
 			await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(player.DbRef),
@@ -138,10 +138,10 @@ public class HttpCommandTests
 			Substitute.For<Quartz.ISchedulerFactory>(), WebAppFactoryArg.Services.GetRequiredService<IAttributeService>(),
 			lookup, Microsoft.Extensions.Logging.Abstractions.NullLogger<SharpMUSH.Library.Services.TaskScheduler>.Instance,
 			options, notifications);
-		var handler = new SharpMUSH.Implementation.Handlers.AdmissionAsyncScheduleHandler(scheduler);
+		var handler = new SharpMUSH.Implementation.Handlers.AdmissionAfterScheduleHandler(scheduler);
 		var admissionMediator = Substitute.For<IMediator>();
-		admissionMediator.Send(Arg.Any<AdmitAttributeRequest>(), Arg.Any<CancellationToken>())
-			.Returns(call => handler.Handle(call.Arg<AdmitAttributeRequest>(), call.Arg<CancellationToken>()));
+		admissionMediator.Send(Arg.Any<AdmitAttributeAfterRequest>(), Arg.Any<CancellationToken>())
+			.Returns(call => handler.Handle(call.Arg<AdmitAttributeAfterRequest>(), call.Arg<CancellationToken>()));
 		var clients = Substitute.For<IHttpClientFactory>();
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
 			WebAppFactoryArg.Services, admissionMediator, clients, notifications);
@@ -202,6 +202,117 @@ public class HttpCommandTests
 				: null;
 	}
 
+	/// <summary>Answers once <paramref name="wait"/> finishes, telling the test when the request has started.</summary>
+	private sealed class GatedHandler(Func<CancellationToken, Task> wait) : HttpMessageHandler
+	{
+		public TaskCompletionSource<CancellationToken> Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+		{
+			Entered.TrySetResult(cancellationToken);
+			await wait(cancellationToken);
+			return new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent("ok") };
+		}
+	}
+
+	/// <summary>
+	/// Runs <c>@http</c> as a player of its own against the real queue, sending through <paramref name="handler"/>,
+	/// with <paramref name="callback"/> as the player's CALLBACK attribute.
+	/// </summary>
+	private async Task<TestIsolationHelpers.TestPlayer> HttpOnTheQueueAsync(string name, HttpMessageHandler handler, string callback)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, name);
+		await GrantHttpAsync(player.DbRef);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&CALLBACK {player.DbRef}={callback}"));
+		var state = ParserState.RootFor(player.DbRef) with
+		{
+			Arguments = new()
+			{
+				["0"] = new CallState(player.DbRef + "/CALLBACK"),
+				["1"] = new CallState("https://example.invalid/slow")
+			}
+		};
+		await state.KnownExecutorObject(Mediator);
+		await state.KnownEnactorObject(Mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.CurrentState.Returns(state);
+		var clients = Substitute.For<IHttpClientFactory>();
+		clients.CreateClient(Arg.Any<string>()).Returns(_ => new HttpClient(handler));
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(WebAppFactoryArg.Services, clients);
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
+		using var scope = budget.Enter();
+		var result = (await commands.Http(parser, new SharpCommandAttribute { Name = "@HTTP" })).Expect<CallState>();
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo("");
+		return player;
+	}
+
+	private static async Task WaitUntilAsync(Func<bool> condition)
+	{
+		for (var started = System.Diagnostics.Stopwatch.GetTimestamp();
+			System.Diagnostics.Stopwatch.GetElapsedTime(started) < TimeSpan.FromSeconds(15);)
+		{
+			if (condition()) return;
+			await Task.Delay(20);
+		}
+		throw new TimeoutException("The condition never held.");
+	}
+
+	/// <summary>
+	/// The request waits off the queue, as PennMUSH's waits in libcurl's multi handle: other queued work
+	/// runs while it waits, and the callback is queued when the reply arrives.
+	/// </summary>
+	[Test]
+	public async Task HttpWaitsForItsReplyOffTheQueue()
+	{
+		var marker = TestIsolationHelpers.GenerateUniqueName("HttpReplied");
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var handler = new GatedHandler(token => release.Task.WaitAsync(token));
+		var player = await HttpOnTheQueueAsync("HttpOffQueue", handler, $"think {marker} %<status>");
+		await handler.Entered.Task.WaitAsync(TimeSpan.FromSeconds(15));
+
+		var bystander = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var queue = WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+		await queue.AdmitWork(() => { bystander.TrySetResult(); return ValueTask.FromResult<CallState?>(null); },
+			"http-bystander", SharpMUSH.Library.Services.TaskScheduler.EnqueueGroup);
+		await bystander.Task.WaitAsync(TimeSpan.FromSeconds(15));
+		await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef).Any(message => message.Contains(marker))).IsFalse();
+
+		release.SetResult();
+		await WaitUntilAsync(() => WebAppFactoryArg.Notifications.For(player.DbRef).Contains($"{marker} 200"));
+	}
+
+	/// <summary>A request that fails tells the object why and queues nothing (PennMUSH, src/bsd.c:1209-1210).</summary>
+	[Test]
+	public async Task HttpTellsTheObjectWhenItsRequestFails()
+	{
+		var marker = TestIsolationHelpers.GenerateUniqueName("HttpNeverAnswered");
+		var handler = new GatedHandler(_ => Task.FromException(new HttpRequestException("Connection refused")));
+		var player = await HttpOnTheQueueAsync("HttpFails", handler, $"think {marker}");
+		await WaitUntilAsync(() => WebAppFactoryArg.Notifications.For(player.DbRef).Contains("Request failed: Connection refused"));
+		await WebAppFactoryArg.QueueBarrierAsync();
+		await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef).Any(message => message.Contains(marker))).IsFalse();
+	}
+
+	/// <summary>@halt cancels a request still waiting, and releases the queue entry it held.</summary>
+	[Test]
+	public async Task HaltCancelsAnHttpRequestStillWaiting()
+	{
+		var marker = TestIsolationHelpers.GenerateUniqueName("HttpHalted");
+		var handler = new GatedHandler(token => Task.Delay(Timeout.Infinite, token));
+		var player = await HttpOnTheQueueAsync("HttpHalt", handler, $"think {marker}");
+		var request = await handler.Entered.Task.WaitAsync(TimeSpan.FromSeconds(15));
+		var scheduler = WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.TaskScheduler>();
+		await Assert.That(scheduler.GetQueueEntries().Any(entry => entry.Source?.Number == player.DbRef.Number)).IsTrue();
+
+		await scheduler.Halt(player.DbRef);
+
+		await WaitUntilAsync(() => request.IsCancellationRequested);
+		await WaitUntilAsync(() => !scheduler.GetQueueEntries().Any(entry => entry.Source?.Number == player.DbRef.Number));
+		await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef).Any(message => message.StartsWith("Request failed"))).IsFalse();
+		await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef).Any(message => message.Contains(marker))).IsFalse();
+	}
+
 	/// <summary>What one <c>@http</c> run sent and the state its callback was queued with.</summary>
 	private sealed record HttpRun(CallState Result, RecordingHandler Handler, ParserState? Callback, bool ClientCreated, string? ClientName);
 
@@ -234,8 +345,8 @@ public class HttpCommandTests
 
 		ParserState? callback = null;
 		var mediator = Substitute.For<IMediator>();
-		mediator.Send(Arg.Any<AdmitAttributeRequest>(), Arg.Any<CancellationToken>())
-			.Returns(call => Admit(call.Arg<AdmitAttributeRequest>()));
+		mediator.Send(Arg.Any<AdmitAttributeAfterRequest>(), Arg.Any<CancellationToken>())
+			.Returns(call => Admit(call.Arg<AdmitAttributeAfterRequest>()));
 		var handler = new RecordingHandler(reply);
 		string? clientName = null;
 		var clients = Substitute.For<IHttpClientFactory>();
@@ -255,10 +366,10 @@ public class HttpCommandTests
 		var result = (await commands.Http(parser, new SharpCommandAttribute { Name = "@HTTP" })).Expect<CallState>();
 		return new HttpRun(result, handler, callback, clientName is not null, clientName);
 
-		async ValueTask<QueueAdmissionResult> Admit(AdmitAttributeRequest request)
+		async ValueTask<QueueAdmissionResult> Admit(AdmitAttributeAfterRequest request)
 		{
 			beforeCallback?.Invoke(state);
-			callback = await request.Input();
+			callback = await request.Work();
 			return new QueueAdmissionResult(1, QueueRejectionReason.None);
 		}
 	}

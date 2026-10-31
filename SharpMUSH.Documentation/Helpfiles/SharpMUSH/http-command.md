@@ -58,6 +58,8 @@ Incoming requests, which softcode answers, are described in [http].
 
 ## The reply
 
+The game keeps running while the request waits. The reply has 60 seconds to arrive. If the request fails or runs out of time, the object holding `<attr>` is told "Request failed: <reason>" and nothing is queued. @halt on the object using @http cancels a request still waiting.
+
 The action list receives:
 - %0: the body of the reply.
 - `%<status>`: the HTTP status, such as 200.

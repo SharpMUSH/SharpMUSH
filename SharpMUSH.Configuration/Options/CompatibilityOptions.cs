@@ -176,5 +176,13 @@ public record CompatibilityOptions(
 		Description = "The /quiet switch of drop, get, give, goto, enter, leave and @teleport does what TinyMUX's does: it holds only on what you control and leaves out the o-message and action, give/quiet is a wizard's and leaves out the default notices, and @teleport/quiet hushes leaving and arriving but runs @move. Off, /quiet leaves out your own message and the o-message, and the action still runs. Importing a TinyMUX database turns it on",
 		Group = "TinyMUX Compatibility",
 		Order = 6)]
-	bool MuxQuiet
+	bool MuxQuiet,
+
+	[property: SharpConfig(
+		Name = "mapsql_sync",
+		Category = "Compatibility",
+		Description = "@mapsql runs its query inside the command, as PennMUSH does, so every row is queued before anything queued after the command; the game waits while the query runs. Off, the query runs while the game goes on and each row is queued as it arrives. A PennMUSH database import turns it on",
+		Group = "PennMUSH Compatibility",
+		Order = 3)]
+	bool MapsqlSync
 );

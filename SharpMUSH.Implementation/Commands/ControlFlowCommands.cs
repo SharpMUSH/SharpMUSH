@@ -42,8 +42,8 @@ public partial class Commands
 		return (originalListText.Substring(0, spaceIndex), originalListText.Substring(spaceIndex + 1));
 	}
 
-	[SharpCommand(Name = "@MAP", Output = CommandOutput.Runs, Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
-		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY"], ParameterNames = ["object", "code"])]
+	[SharpCommand(Name = "@MAP", Output = CommandOutput.Runs, Behavior = CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 1, MaxArgs = 2,
+		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY", "THEN"], ParameterNames = ["object", "code"])]
 	public async ValueTask<Option<CallState>> Map(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -75,7 +75,20 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoAttributeSpecified);
 		}
 
+		// The list keeps its braces through the split, so /then can find the comma before the command list
+		// that runs afterwards; each loses its outer pair here.
 		var originalListText = args.Count >= 2 ? args["1"].Message : MarkupText.Empty;
+		MString? afterwards = null;
+		if (switches.Contains("THEN"))
+		{
+			if (SplitThen(originalListText) is not var (before, after))
+			{
+				await NotifyService.Notify(executor, ThenNeedsACommand, executor);
+				return new CallState(ErrorMessages.Returns.InvalidArguments);
+			}
+			(originalListText, afterwards) = (Unbrace(before), Unbrace(after));
+		}
+		else originalListText = Unbrace(originalListText);
 		var (delimiter, listText) = ExtractFirstParameter(originalListText, switches.Contains("DELIMIT"));
 		var list = MushText.Split(delimiter, listText);
 
@@ -123,6 +136,19 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(attributeText))
 		{
+			// Nothing runs, but what comes afterwards still does, with no runs to count.
+			if (afterwards is { } afterNothing)
+			{
+				if (switches.Contains("INLINE"))
+					await parser.With(state => ThenState(state, 0), inner => inner.CommandListParse(afterNothing));
+				else
+					await Mediator.Send(new AdmitCommandListRequest(
+						afterNothing,
+						ThenState(parser.CurrentState.SnapshotForQueuedAction(), 0),
+						new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
+						-1), ExecutionBudget.CurrentToken);
+			}
+
 			return CallState.Empty;
 		}
 
@@ -149,6 +175,12 @@ public partial class Commands
 				}
 			}
 
+			if (afterwards is { } thenList)
+			{
+				var after = await parser.With(state => ThenState(state, list.Length), inner => inner.CommandListParse(thenList));
+				hadErrors |= after?.HadErrors == true;
+			}
+
 			if (switches.Contains("NOTIFY"))
 			{
 				await Mediator.Send(new AdmitCommandListRequest(
@@ -170,6 +202,15 @@ public partial class Commands
 					attribute.Value,
 					stateForElement,
 					new DbRefAttribute(target.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1), ExecutionBudget.CurrentToken);
+			}
+
+			if (afterwards is { } thenList)
+			{
+				await Mediator.Send(new AdmitCommandListRequest(
+					thenList,
+					ThenState(parser.CurrentState.SnapshotForQueuedAction(), list.Length),
+					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1), ExecutionBudget.CurrentToken);
 			}
 
@@ -207,8 +248,8 @@ public partial class Commands
 		};
 	}
 
-	[SharpCommand(Name = "@DOLIST", Output = CommandOutput.Runs, Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
-		Switches = ["CLEARREG", "CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY", "PID", "SPACE", "NOW"], ParameterNames = ["list", "command"])]
+	[SharpCommand(Name = "@DOLIST", Output = CommandOutput.Runs, Behavior = CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 1, MaxArgs = 2,
+		Switches = ["CLEARREG", "CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY", "PID", "SPACE", "NOW", "THEN"], ParameterNames = ["list", "command"])]
 	public async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
@@ -251,7 +292,20 @@ public partial class Commands
 		}
 
 		var list = MushText.Split(delimiter, listText);
+		// The command keeps its braces through the split (PennMUSH's CMD_T_RS_BRACE), so /then can find the
+		// comma before the command list that runs afterwards; each loses its outer pair here.
 		var command = parser.CurrentState.Arguments["1"].Message;
+		MString? afterwards = null;
+		if (switches.Contains("THEN"))
+		{
+			if (SplitThen(command) is not var (before, after))
+			{
+				await NotifyService.Notify(executor, ThenNeedsACommand, executor);
+				return new CallState(ErrorMessages.Returns.InvalidArguments);
+			}
+			(command, afterwards) = (Unbrace(before), Unbrace(after));
+		}
+		else command = Unbrace(command);
 
 		// TinyMUX's /now is /inline.
 		var isInline = switches.Contains("INLINE") || switches.Contains("NOW") || switches.Contains("INPLACE");
@@ -291,6 +345,12 @@ public partial class Commands
 			}
 
 			parser.CurrentState.IterationRegisters.TryPop(out _);
+
+			if (afterwards is { } thenList)
+			{
+				var after = await parser.With(state => ThenState(state, list.Length), inner => inner.CommandListParse(thenList));
+				hadErrors |= after?.HadErrors == true;
+			}
 
 			if (switches.Contains("NOTIFY"))
 			{
@@ -342,6 +402,15 @@ public partial class Commands
 				await Mediator.Send(new AdmitCommandListRequest(
 					command,
 					stateForIteration,
+					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1), ExecutionBudget.CurrentToken);
+			}
+
+			if (afterwards is { } thenList)
+			{
+				await Mediator.Send(new AdmitCommandListRequest(
+					thenList,
+					ThenState(parser.CurrentState.SnapshotForQueuedAction(), list.Length),
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1), ExecutionBudget.CurrentToken);
 			}

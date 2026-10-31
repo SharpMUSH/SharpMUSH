@@ -101,7 +101,7 @@ public partial class Commands
 	/// triggerer (the executor, or the original enactor under <c>/spoof</c>) as both its enactor and
 	/// its caller, while the executor remains the identity the attribute is read under.
 	/// </remarks>
-	[SharpCommand(Name = "@MAPSQL", Switches = ["NOTIFY", "COLNAMES", "SPOOF", "PREPARE"], Behavior = CB.Default | CB.EqSplit,
+	[SharpCommand(Name = "@MAPSQL", Switches = ["NOTIFY", "COLNAMES", "SPOOF", "PREPARE", "THEN"], Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace,
 		CommandLock = "FLAG^WIZARD|POWER^SQL_OK", MinArgs = 0, MaxArgs = 0, ParameterNames = ["obj/attr", "query"])]
 	public async ValueTask<Option<CallState>> MapSql(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -129,7 +129,22 @@ public partial class Commands
 		}
 
 		var objAttrStr = objAttrArg.Message.ToPlainText();
-		var rawQueryInput = queryArg.Message.ToPlainText();
+		// The right side arrives unevaluated, so /then can split off the command list that runs after the
+		// rows before the query is evaluated; the query is evaluated here, as PennMUSH evaluates it.
+		MString? afterwards = null;
+		string rawQueryInput;
+		if (switches.Contains("THEN"))
+		{
+			if (SplitThen(queryArg.Message) is not var (query, after))
+			{
+				await NotifyService.Notify(executor, ThenNeedsACommand, executor);
+				return new CallState(ErrorMessages.Returns.InvalidArguments);
+			}
+			// The query keeps its braces for its one evaluation, which removes them, as without /then.
+			afterwards = Unbrace(after);
+			rawQueryInput = (await parser.FunctionParse(query))?.Message.ToPlainText() ?? string.Empty;
+		}
+		else rawQueryInput = (await queryArg.ParsedMessage())?.ToPlainText() ?? string.Empty;
 
 		if (string.IsNullOrWhiteSpace(objAttrStr) || string.IsNullOrWhiteSpace(rawQueryInput))
 		{
@@ -183,114 +198,145 @@ public partial class Commands
 				var triggererRef = triggerer.Object().DBRef;
 				var callbackAttribute = new DbRefAttribute(targetRef, attribute.LongName!.Split("`"));
 
+				// PennMUSH runs the query inside the command (cmd_mapsql, src/sql.c:486), so its rows are queued
+				// before anything queued after the command; mapsql_sync keeps that. Otherwise the query runs off
+				// the queue and the rows are queued as they arrive, so the game keeps running while it waits.
+				var sync = Configuration.CurrentValue.Compatibility.MapsqlSync;
+
 				// PennMUSH queues the attribute on the object that holds it and hands the triggerer both
 				// remaining identities: new_queue_actionlist_int(thing, triggerer, triggerer, …)
 				// (cque.c:866-868). So the target is %!, and the triggerer is %# and %@ alike.
 				// Built at admission, so its %> copy is the one each queued callback starts with.
-				ParserState CallbackState(Dictionary<string, CallState> arguments) => (parser.CurrentState.ForAttributeArguments(arguments) with
+				var admitted = sync ? parser.CurrentState : parser.CurrentState.SnapshotForQueuedAction();
+				ParserState CallbackState(Dictionary<string, CallState> arguments) => (admitted.ForAttributeArguments(arguments) with
 				{
 					Executor = targetRef,
 					Enactor = triggererRef,
 					Caller = triggererRef
 				}).SnapshotForQueuedAction();
 
-				try
+				if (sync) return await RunQueryAsync();
+
+				var admission = await Mediator.Send(new AdmitWorkAfterRequest(async () =>
 				{
-					// Hold one counted completion slot before streaming any row callbacks. Publication
-					// happens at the FIFO tail only after those callbacks have been admitted.
-					using var completion = notifySwitch
-						? await Mediator.Send(new ReserveCommandListRequest(MarkupText.Plain("@notify me"), parser.CurrentState), ExecutionBudget.CurrentToken)
-						: null;
-					if (completion is not null && !completion.Admission.Accepted)
+					await RunQueryAsync();
+					return null;
+				}, $"mapsql:{callbackAttribute}", executor.Object().DBRef, triggererRef), ExecutionBudget.CurrentToken);
+				if (!admission.Accepted)
+				{
+					// Capacity and shutdown refusals are already reported by the scheduler.
+					if (admission.Reason is QueueRejectionReason.InvalidTarget or QueueRejectionReason.AlreadyReleased)
+						await NotifyService.Notify(executor, admission.Error, executor);
+					return new CallState(admission.Error);
+				}
+				return CallState.Empty;
+
+				async ValueTask<CallState> RunQueryAsync()
+				{
+					try
 					{
-						// Capacity/shutdown rejection is already reported by scheduler admission.
-						// Preflight failures return before that notification path.
-						if (completion.Admission.Reason is not (QueueRejectionReason.OwnerLimit or QueueRejectionReason.GlobalLimit or QueueRejectionReason.ShuttingDown))
-							await NotifyService.Notify(executor, completion.Admission.Error, executor);
-						return new CallState(completion.Admission.Error);
-					}
-
-					var firstRow = true;
-					var rowNumber = 1;
-					var admittedRows = 0;
-					var sourceRows = 0;
-
-					IAsyncEnumerable<Dictionary<string, object?>> queryResults;
-
-					if (prepareSwitch)
-					{
-						var parts = SplitPreparedInput(rawQueryInput);
-						var query = parts.Count > 0 ? parts[0] : rawQueryInput;
-						var parameters = parts.Skip(1).Cast<object?>().ToArray();
-
-						queryResults = SqlService.ExecuteStreamPreparedQueryAsync(query, parameters);
-					}
-					else
-					{
-						queryResults = SqlService.ExecuteStreamQueryAsync(rawQueryInput);
-					}
-
-					await foreach (var row in queryResults)
-					{
-						sourceRows++;
-						if (colnamesSwitch && firstRow)
+						// Hold one counted completion slot before streaming any row callbacks. Publication
+						// happens at the FIFO tail only after those callbacks have been admitted.
+						using var completion = notifySwitch
+							? await Mediator.Send(new ReserveCommandListRequest(MarkupText.Plain("@notify me"), admitted), ExecutionBudget.CurrentToken)
+							: null;
+						if (completion is not null && !completion.Admission.Accepted)
 						{
-							var headerState = CallbackState(SqlRowArguments.ForHeader(row.Keys));
-							var headerAdmission = await Mediator.Send(new AdmitAttributeRequest(
-								() => ValueTask.FromResult(headerState), callbackAttribute, targetRef, headerState.Enactor), ExecutionBudget.CurrentToken);
+							// Capacity/shutdown rejection is already reported by scheduler admission.
+							// Preflight failures return before that notification path.
+							if (completion.Admission.Reason is not (QueueRejectionReason.OwnerLimit or QueueRejectionReason.GlobalLimit or QueueRejectionReason.ShuttingDown))
+								await NotifyService.Notify(executor, completion.Admission.Error, executor);
+							return new CallState(completion.Admission.Error);
+						}
 
-							if (!headerAdmission.Accepted)
+						var firstRow = true;
+						var rowNumber = 1;
+						var admittedRows = 0;
+						var sourceRows = 0;
+
+						IAsyncEnumerable<Dictionary<string, object?>> queryResults;
+
+						if (prepareSwitch)
+						{
+							var parts = SplitPreparedInput(rawQueryInput);
+							var query = parts.Count > 0 ? parts[0] : rawQueryInput;
+							var parameters = parts.Skip(1).Cast<object?>().ToArray();
+
+							queryResults = SqlService.ExecuteStreamPreparedQueryAsync(query, parameters);
+						}
+						else
+						{
+							queryResults = SqlService.ExecuteStreamQueryAsync(rawQueryInput);
+						}
+
+						await foreach (var row in queryResults)
+						{
+							sourceRows++;
+							if (colnamesSwitch && firstRow)
 							{
-								if (headerAdmission.Reason == QueueRejectionReason.InvalidTarget)
-									await NotifyService.Notify(executor, headerAdmission.Error, executor);
+								var headerState = CallbackState(SqlRowArguments.ForHeader(row.Keys));
+								var headerAdmission = await Mediator.Send(new AdmitAttributeRequest(
+									() => ValueTask.FromResult(headerState), callbackAttribute, targetRef, headerState.Enactor), ExecutionBudget.CurrentToken);
+
+								if (!headerAdmission.Accepted)
+								{
+									if (headerAdmission.Reason == QueueRejectionReason.InvalidTarget)
+										await NotifyService.Notify(executor, headerAdmission.Error, executor);
+									break;
+								}
+								firstRow = false;
+							}
+
+							// Materialised before admission: a provider is free to hand the same dictionary
+							// back for every row, and a callback that read it when it ran would see the last.
+							var rowState = CallbackState(SqlRowArguments.ForRow(row, rowNumber));
+							var rowAdmission = await Mediator.Send(new AdmitAttributeRequest(
+								() => ValueTask.FromResult(rowState), callbackAttribute, targetRef, rowState.Enactor), ExecutionBudget.CurrentToken);
+
+							if (!rowAdmission.Accepted)
+							{
+								if (rowAdmission.Reason == QueueRejectionReason.InvalidTarget)
+									await NotifyService.Notify(executor, rowAdmission.Error, executor);
 								break;
 							}
-							firstRow = false;
+							admittedRows++;
+							rowNumber++;
 						}
 
-						// Materialised before admission: a provider is free to hand the same dictionary
-						// back for every row, and a callback that read it when it ran would see the last.
-						var rowState = CallbackState(SqlRowArguments.ForRow(row, rowNumber));
-						var rowAdmission = await Mediator.Send(new AdmitAttributeRequest(
-							() => ValueTask.FromResult(rowState), callbackAttribute, targetRef, rowState.Enactor), ExecutionBudget.CurrentToken);
-
-						if (!rowAdmission.Accepted)
+						if (afterwards is { } thenList)
 						{
-							if (rowAdmission.Reason == QueueRejectionReason.InvalidTarget)
-								await NotifyService.Notify(executor, rowAdmission.Error, executor);
-							break;
+							await Mediator.Send(new AdmitCommandListRequest(thenList, ThenState(admitted.SnapshotForQueuedAction(), admittedRows),
+								new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray), -1), ExecutionBudget.CurrentToken);
 						}
-						admittedRows++;
-						rowNumber++;
-					}
 
-					if (completion is not null)
+						if (completion is not null)
+						{
+							var published = await completion.PublishAsync();
+							if (!published.Accepted)
+							{
+								await NotifyService.Notify(executor, published.Error, executor);
+								return new CallState(published.Error);
+							}
+						}
+
+						var message = sourceRows == 0
+							? "No rows returned."
+							: $"{admittedRows} row{(admittedRows != 1 ? "s" : "")} queued for execution.";
+						await NotifyService.Notify(executor, message, executor);
+						return new CallState(MarkupText.Plain(message));
+					}
+					catch (DbException ex)
 					{
-						var published = await completion.PublishAsync();
-						if (!published.Accepted)
-						{
-							await NotifyService.Notify(executor, published.Error, executor);
-							return new CallState(published.Error);
-						}
+						var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
+						await NotifyService.Notify(executor, errorMsg, executor);
+						return new CallState(errorMsg);
 					}
-
-					var message = sourceRows == 0
-						? "No rows returned."
-						: $"{admittedRows} row{(admittedRows != 1 ? "s" : "")} queued for execution.";
-					await NotifyService.Notify(executor, message, executor);
-					return new CallState(MarkupText.Plain(message));
-				}
-				catch (DbException ex)
-				{
-					var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
-					await NotifyService.Notify(executor, errorMsg, executor);
-					return new CallState(errorMsg);
-				}
-				catch (InvalidOperationException ex)
-				{
-					var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
-					await NotifyService.Notify(executor, errorMsg, executor);
-					return new CallState(errorMsg);
+					catch (InvalidOperationException ex)
+					{
+						var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
+						await NotifyService.Notify(executor, errorMsg, executor);
+						return new CallState(errorMsg);
+					}
 				}
 			});
 	}

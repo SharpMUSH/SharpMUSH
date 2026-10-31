@@ -53,6 +53,62 @@ public class NetworkCommandTests
 		await Assert.That(heard).Contains($"row 1:{token}");
 	}
 
+	/// <summary>A braced query loses its braces, as an evaluated argument does, and its commas stay in the query.</summary>
+	[Test]
+	public async ValueTask MapsqlBracedQuery()
+	{
+		var wizard = await Players.WizardAsync("MapsqlBraced");
+		var token = TestIsolationHelpers.GenerateUniqueName("MapsqlBraced");
+		await Players.RunAsync(wizard, "&ROW me=@pemit me=row %0:%1:%2");
+
+		var heard = await Players.HeardRunning(wizard, $"@mapsql me/ROW={{SELECT '{token}', 'two'}}");
+
+		await Assert.That(heard).Contains($"row 1:{token}:two");
+	}
+
+	/// <summary>@mapsql/then queues the command list after the last comma after the last row, with the row count in %0.</summary>
+	[Test]
+	public async ValueTask MapsqlThenRunsAfterTheLastRow()
+	{
+		var wizard = await Players.WizardAsync("MapsqlThen");
+		var token = TestIsolationHelpers.GenerateUniqueName("MapsqlThen");
+		await Players.RunAsync(wizard, "&ROW me=@pemit me=row %0:%1");
+
+		var heard = await Players.HeardRunning(wizard,
+			$"@mapsql/then me/ROW={{SELECT '{token}' UNION ALL SELECT 'b'}},{{@pemit me=done %0, {token}}}");
+
+		await Assert.That(heard.IndexOf($"done 2, {token}")).IsGreaterThan(heard.IndexOf("row 2:b"));
+		await Assert.That(heard).Contains($"row 1:{token}");
+	}
+
+	/// <summary>A braced query given /then loses only its own braces, as it does without /then.</summary>
+	[Test]
+	public async ValueTask MapsqlThenKeepsBracesInsideTheQuery()
+	{
+		var wizard = await Players.WizardAsync("MapsqlThenBraces");
+		var token = TestIsolationHelpers.GenerateUniqueName("MapsqlThenBraces");
+		await Players.RunAsync(wizard, "&ROW me=@pemit me=row %0:%1");
+
+		var heard = await Players.HeardRunning(wizard, $"@mapsql/then me/ROW={{SELECT '{{{token}}}'}},@pemit me=done %0");
+
+		await Assert.That(heard).Contains($"row 1:{{{token}}}");
+		await Assert.That(heard).Contains("done 1");
+	}
+
+	/// <summary>The query of @mapsql/then is evaluated, and a query with no rows still runs what comes after it.</summary>
+	[Test]
+	public async ValueTask MapsqlThenRunsAfterNoRows()
+	{
+		var wizard = await Players.WizardAsync("MapsqlThenNone");
+		var token = TestIsolationHelpers.GenerateUniqueName("MapsqlThenNone");
+		await Players.RunAsync(wizard, "&ROW me=@pemit me=row %0");
+
+		var heard = await Players.HeardRunning(wizard, $"@mapsql/then me/ROW=SELECT [lcstr(1)] WHERE 1 = 0,@pemit me=none %0 {token}");
+
+		await Assert.That(heard).Contains($"none 0 {token}");
+		await Assert.That(heard).DoesNotContain("row 1");
+	}
+
 	[Test]
 	public async ValueTask SitelockCommand()
 	{

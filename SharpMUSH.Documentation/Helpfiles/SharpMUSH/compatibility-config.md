@@ -26,6 +26,11 @@
       "lookup": "compatibility config parenthesis groups paren groups"
     },
     {
+      "id": "pennmush-mapsql-order-mapsql-sync",
+      "heading": "PennMUSH @mapsql order: `mapsql_sync`",
+      "lookup": "compatibility config pennmush mapsql order mapsql sync"
+    },
+    {
       "id": "logical-functions-mux-logic",
       "heading": "Logical functions: `mux_logic`",
       "lookup": "compatibility config logical functions mux logic"
@@ -167,6 +172,21 @@ With the option on, the unescaped form groups as PennMUSH's does:
 > think cat(x,(a,b)c)
 x (a,b)c
 ```
+
+## PennMUSH @mapsql order: `mapsql_sync`
+
+**A choice.** Off by default; importing a PennMUSH database turns it on.
+
+**PennMUSH** runs `@mapsql`'s query inside the command, so the game waits for the SQL server, and every row is queued before anything queued after the command.<br>
+**SharpMUSH**, with `mapsql_sync` off, runs the query while the game goes on and queues each row as it arrives, so work queued after the command can run before the rows.<br>
+**Why.** A slow query does not hold up every player.<br>
+**Workaround.** To run something after the last row, give it to `/then`, after the last comma:
+
+```
+@mapsql/then me/ROW=SELECT name FROM scores,{@pemit me=%0 scores.}
+```
+
+**No example.** The order shows only while the SQL server is slow to answer, which no example can rely on.
 
 ## Logical functions: `mux_logic`
 
