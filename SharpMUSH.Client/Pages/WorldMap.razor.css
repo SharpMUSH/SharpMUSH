@@ -277,6 +277,16 @@
 	font-weight: 600;
 }
 
+.map-credit {
+	margin: 6px 0 0;
+	color: var(--text-faint);
+	font: 11px/1.3 var(--font-ui);
+}
+
+.map-credit a {
+	color: inherit;
+}
+
 .map-legend-swatch--toned {
 	border-color: var(--room-tone);
 	background: color-mix(in srgb, var(--room-tone) 22%, var(--surface));

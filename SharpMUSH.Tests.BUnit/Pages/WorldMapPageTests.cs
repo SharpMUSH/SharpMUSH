@@ -325,6 +325,9 @@ public class WorldMapPageTests : TrackingBunitContext
 		await Assert.That(kinds).Count().IsEqualTo(2).Because("no room on the shore is forest");
 		await Assert.That(kinds[0]).Contains("Sand");
 		await Assert.That(kinds[1]).Contains("Open water");
+		await Assert.That(cut.Find(".map-credit").TextContent).Contains("NavMapIconCredit(Lorc)")
+			.Because("the icons are CC BY: whoever drew the water icon is credited, and not the forest's artist, whose icon is not shown");
+		await Assert.That(cut.Find(".map-credit a").GetAttribute("href")).IsEqualTo("https://game-icons.net");
 	}
 
 	[Test]

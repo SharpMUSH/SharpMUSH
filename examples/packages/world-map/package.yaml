@@ -1,7 +1,7 @@
 format: "1.16"
 package: world-map
 title: "World map"
-version: 1.3.0
+version: 1.3.1
 authors: [SharpMUSH]
 description: "The portal's World map: every map in the game, drawn from its rooms and exits. A map is an object whose MAP`KIND says how it is drawn (coordinates, compass or graph); a room is on the map that is its zone."
 license: MIT
@@ -126,7 +126,7 @@ objects:
 
         - ``MAP`LEGEND`<kind>`LABEL``: the name the legend shows. Without one, the kind itself.
         - ``MAP`LEGEND`<kind>`TONE``: the room's colour, one of the colours `tone()` takes (`muted`, `info`, `green`). Each reader sees it in their own theme.
-        - ``MAP`LEGEND`<kind>`ICON``: a picture beside the name, so the kind reads without its colour. One of `water`, `forest`, `park`, `mountain`, `road`, `home`, `shop`, `food`, `drink`, `bed`, `temple`, `castle`, `shield`, `anchor`, `star`, `chat`, `book`, `mask`, `lock` or `flag`, or a character or two of your own.
+        - ``MAP`LEGEND`<kind>`ICON``: a picture beside the name, so the kind reads without its colour. A map icon's name, such as `forest`, `mountain`, `castle`, `village`, `lighthouse` or `ringed-planet`, or a character or two of your own. The legend editor on the World map lists every icon with its picture.
 
         ```
         &MAP`LEGEND`WATER`LABEL Harbour=Open water

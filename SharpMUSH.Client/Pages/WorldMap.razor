@@ -839,6 +839,16 @@
                 </li>
             }
         </ul>
+        @* The map icons are CC BY 3.0: whoever drew the ones shown is credited beside them. *@
+        var authors = MapLegendStyle.Authors(kinds.Select(kind => kind.Icon)
+            .Concat(_cells?.Level == _level ? _cells.Cells.Select(place => place.Icon) : []));
+        @if (authors.Count > 0)
+        {
+            <p class="map-credit">
+                @Loc["NavMapIconCredit", string.Join(", ", authors)] · <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a>
+                · <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>
+            </p>
+        }
     };
 
     private RenderFragment GettingThere() => __builder =>

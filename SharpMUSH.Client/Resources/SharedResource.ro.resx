@@ -6794,6 +6794,9 @@
   <data name="NavMapLegend" xml:space="preserve">
     <value>Legendă</value>
   </data>
+  <data name="NavMapIconCredit" xml:space="preserve">
+    <value>Pictograme de {0}</value>
+  </data>
   <data name="NavMapHereOffMap" xml:space="preserve">
     <value>Ești în {0}, care nu e pe nicio hartă.</value>
   </data>
