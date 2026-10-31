@@ -190,6 +190,8 @@
 .map-room {
 	position: absolute;
 	display: flex;
+	flex-direction: column;
+	gap: 2px;
 	align-items: center;
 	justify-content: center;
 	padding: 4px 6px;
@@ -209,9 +211,8 @@
 	background: color-mix(in srgb, var(--text) 6%, transparent);
 }
 
-/* Too small to hold its name: the name goes on a label below, as a pin's does. Smaller still, the room keeps it for
-   its tooltip and its screen reader. */
-.map-room--small .map-room-icon,
+/* Too small to hold its name: the name goes on a label below, as a pin's does, and the icon keeps the middle. Smaller
+   still, the room keeps both for its tooltip and its screen reader. */
 .map-room--tiny .map-room-name,
 .map-room--tiny .map-room-icon {
 	display: none;
@@ -227,11 +228,30 @@
 	outline-offset: 2px;
 }
 
-.map-room--here .map-room-icon {
+/* The kind's icon above the name, as large as the drawing allows, in the kind's tone darkened toward the text so it
+   stands off the tinted room. */
+.map-room-icon {
 	flex: none;
-	margin-right: 4px;
-	color: var(--text-dim);
+	width: clamp(18px, calc(30px * var(--map-zoom)), 48px);
+	height: clamp(18px, calc(30px * var(--map-zoom)), 48px);
+	max-width: 70%;
+	max-height: 60%;
+	color: color-mix(in srgb, var(--room-tone, var(--text-dim)) 70%, var(--text));
+	fill: currentColor;
 	font-weight: 600;
+	line-height: 1;
+}
+
+span.map-room-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: clamp(16px, calc(24px * var(--map-zoom)), 36px);
+}
+
+.map-place-icon {
+	fill: color-mix(in srgb, var(--room-tone, var(--text-dim)) 75%, var(--surface));
+	pointer-events: none;
 }
 
 /* Who is here: a count in the room's corner, so the name keeps the middle. */
