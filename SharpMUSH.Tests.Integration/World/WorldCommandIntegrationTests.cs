@@ -102,6 +102,38 @@ public class WorldCommandIntegrationTests
 	}
 
 	[Test]
+	public async Task AHexMapIsWalledDrawnAndReadOnItsSixSides()
+	{
+		var map = TestIsolationHelpers.GenerateUniqueName("Steppe");
+		await God($"@create {map}", map);
+		await Assert.That(await God($"@world/create {map}=hex", map)).Contains($"{map} is now a world map.");
+		await Assert.That(await God($"@world/create {map}=graph", "stored")).Contains("graph maps are not stored; a world map is square or hex.");
+		await God($"@world/paint {map}/-2,-2:2,2=grass", "places");
+		await Assert.That(await Eval($"worldmap({map})/[worldmap({map},sides)]/[worldmap({map},levels)]/[worldmap({map},box)]"))
+			.IsEqualTo("hex/n ne se s sw nw u d/0/-2 -2 2 2");
+
+		await Assert.That(await God($"@world/wall {map}/0,0/sw=wall,A thorn hedge.", "0,0,0"))
+			.Contains("The southwest side of 0,0,0 is now a wall.");
+		await Assert.That(string.Join("\n", await God($"@world/wall {map}/0,0/e=wall", "sides")))
+			.Contains("Which side? A hex place's sides are n, ne, se, s, sw, nw, u or d");
+		await Assert.That(await Eval($"worldway({map},0,0,0,sw)/[worldway({map},-1,0,0,ne,reason)]/[worldway({map},0,0,0,se,to)]/[worldway({map},0,0,0,e)]"))
+			.IsEqualTo("wall/A thorn hedge./1,-1,0/#-1 BAD DIRECTION");
+		await Assert.That(string.Join("\n", await God($"@world {map}/-1,0", "Northeast"))).Contains("Northeast: wall (A thorn hedge.)");
+
+		await Assert.That(await Eval($"worlddraw({map},0,0,0,1,@)")).IsEqualTo("  G  \nG   G\n  @  \nG   G\n  G  ");
+
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var stored = (await mediator.Send(new GetObjectNodeQuery(new DBRef(int.Parse((await Eval($"num({map})")).TrimStart('#'))))))
+			.Expect<AnySharpObject>();
+		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
+		var source = WebAppFactoryArg.Services.GetServices<IWorldMapSource>().Single();
+		await Assert.That((await source.SpaceAsync(stored, CancellationToken.None)).Expect<MapSpaceDto>().Kind).IsEqualTo(MapSpaces.Hex);
+		var window = await source.CellsAsync(god, stored, new MapWindow(0, 0, 0, 0, 0), CancellationToken.None);
+		await Assert.That(window.Walls.Select(wall => (wall.X, wall.Y, wall.Side, wall.Kind)))
+			.IsEquivalentTo([(-1, 0, "ne", MapWallKinds.Wall)]).Because("the hedge is stored on the place to the southwest, which borders the window");
+	}
+
+	[Test]
 	public async Task APlacesDownSideIsReadFromTheLevelBelow()
 	{
 		var map = TestIsolationHelpers.GenerateUniqueName("Stair");

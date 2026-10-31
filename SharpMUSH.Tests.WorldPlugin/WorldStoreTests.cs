@@ -97,6 +97,23 @@ public class WorldStoreTests
 	}
 
 	[Test]
+	public async Task AHexPlaceStoresItsNorthNortheastAndSoutheastEdges()
+	{
+		await _store.CreateAsync(Map, "hex");
+		await _store.SetEdgeAsync(Map, 0, 0, 0, WorldSide.SouthWest, WorldEdge.Wall, "Brambles");
+		await _store.SetEdgeAsync(Map, 0, 0, 0, WorldSide.NorthWest, WorldEdge.Lock, "A gate");
+		await _store.SetEdgeAsync(Map, 0, 0, 0, WorldSide.North, WorldEdge.OneWayOut, null);
+
+		await Assert.That(_store.Edge(Map, -1, 0, 0, WorldSide.NorthEast)).IsEqualTo((WorldEdge.Wall, (string?)"Brambles", (string?)null));
+		await Assert.That(_store.Edge(Map, -1, 1, 0, WorldSide.SouthEast)).IsEqualTo((WorldEdge.Lock, (string?)"A gate", (string?)null));
+		await Assert.That(_store.Place(Map, -1, 1, 0)!.Reasons).IsEquivalentTo(new Dictionary<string, string> { ["se"] = "A gate" });
+		await Assert.That(_store.Edge(Map, 0, 1, 0, WorldSide.South).Edge).IsEqualTo(WorldEdge.OneWayIn);
+		var edges = _store.Cell(Map, -1, 0, 0).Edges;
+		await Assert.That((WorldGrid.Edge(edges, WorldSide.NorthEast), WorldGrid.Edge(edges, WorldSide.North), WorldGrid.Edge(edges, WorldSide.East)))
+			.IsEqualTo((WorldEdge.Wall, WorldEdge.Open, WorldEdge.Open)).Because("each owned edge has bits of its own");
+	}
+
+	[Test]
 	public async Task AWindowHoldsItsPlacesAndTheEdgesOnItsBorder()
 	{
 		await _store.CreateAsync(Map, "square");
