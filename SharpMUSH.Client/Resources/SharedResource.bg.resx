@@ -7050,7 +7050,10 @@
     <value>Направи я карта на света</value>
   </data>
   <data name="NavMapMakeHexWorld" xml:space="preserve">
-    <value>Направи това шестоъгълна карта на света</value>
+    <value>Направи това карта на света с плоски шестоъгълници</value>
+  </data>
+  <data name="NavMapMakePointyHexWorld" xml:space="preserve">
+    <value>Направи това карта на света с остри шестоъгълници</value>
   </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Оцветете място или всички места в правоъгълник с тип терен. Щракнете върху картата, за да изберете място.</value>
@@ -7074,7 +7077,7 @@
     <value>Типовете в легендата</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>Играчите обикалят картата на света през изходи за посоки върху нея: десет на квадратна карта, осем на шестоъгълна. За да се отворят, е нужен пакетът World grid, а картата трябва да е стая.</value>
+    <value>Играчите обикалят картата на света през изходи за посоки върху нея: десет, от север до надолу. За да се отворят, е нужен пакетът World grid, а картата трябва да е стая.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Отвори изходите за посоки</value>

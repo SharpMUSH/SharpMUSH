@@ -7050,7 +7050,10 @@
     <value>Transformă în hartă a lumii</value>
   </data>
   <data name="NavMapMakeHexWorld" xml:space="preserve">
-    <value>Fă din aceasta o hartă a lumii hexagonală</value>
+    <value>Fă din aceasta o hartă a lumii cu hexagoane plate</value>
+  </data>
+  <data name="NavMapMakePointyHexWorld" xml:space="preserve">
+    <value>Fă din aceasta o hartă a lumii cu hexagoane ascuțite</value>
   </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Pictează un loc, sau fiecare loc dintr-un dreptunghi, cu un tip de teren. Fă clic pe hartă pentru a alege un loc.</value>
@@ -7074,7 +7077,7 @@
     <value>Tipurile din legendă</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>Jucătorii străbat o hartă a lumii prin ieșiri de direcție de pe ea: zece pe o hartă pătrată, opt pe una hexagonală. Deschiderea lor cere pachetul World grid, iar harta trebuie să fie o cameră.</value>
+    <value>Jucătorii străbat o hartă a lumii prin ieșiri de direcție de pe ea: zece, de la nord până la jos. Deschiderea lor cere pachetul World grid, iar harta trebuie să fie o cameră.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Deschide ieșirile de direcție</value>

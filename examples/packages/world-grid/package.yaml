@@ -1,7 +1,7 @@
 format: "1.16"
 package: world-grid
 title: "World grid"
-version: 1.3.0
+version: 1.4.0
 authors: [SharpMUSH]
 description: "Walking a world map the World plugin keeps: direction exits on the map lead from place to place through the rooms it lends them, a parent describes those rooms from the map's legend, and +map draws the places around you."
 license: MIT
@@ -156,7 +156,7 @@ objects:
       HELP`MAP`GRID: |-
         A world map keeps its places itself (see `help @world`). With this package, people walk it.
 
-        The map must be a room that nobody enters. `+map/exits <map>` opens an exit on it for each way its places have (name a map you are not near by its dbref): ten on a square map, `North;n` to `Down;d`, and eight on a hex map, which has no east or west. A map is a zone master room, so its exits work in every room zoned to it. Going north from a place leads to the room standing on the place north of it, lent there if it has none. A wall, a one-way side, a closed terrain or a lock the mover does not pass refuses, with its reason. Rooms placed on the map keep their own exits, and those come first. `look` in a lent room lists the ways that lead somewhere, and so do the Play page and a GMCP client, through the map's ``ZONE`EXITS``.
+        The map must be a room that nobody enters. `+map/exits <map>` opens an exit on it for each way its places have (name a map you are not near by its dbref): ten, `North;n` to `Down;d`. On a hex map east and west, and on a pointy hex map north and south, face a corner and lead round it to the place two over. A map is a zone master room, so its exits work in every room zoned to it. Going north from a place leads to the room standing on the place north of it, lent there if it has none. A wall, a one-way side, a closed terrain or a lock the mover does not pass refuses, with its reason. Rooms placed on the map keep their own exits, and those come first. `look` in a lent room lists the ways that lead somewhere, and so do the Play page and a GMCP client, through the map's ``ZONE`EXITS``.
 
         A lent room is named after its place and described by the map's legend: ``MAP`LEGEND`<type>`DESC``, else the type's label. Set ``MAP`CELLPARENT`` on the map to describe them your own way; copy World Cell Parent's ``EXITFORMAT`` to it to keep the ways listed.
 

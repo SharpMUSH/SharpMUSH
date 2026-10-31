@@ -661,7 +661,8 @@
     private string _sideReason = "";
     private static readonly string[] SquareSides = ["n", "e", "s", "w", "u", "d"];
     private static readonly string[] HexSides = ["n", "ne", "se", "s", "sw", "nw", "u", "d"];
-    private string[] Sides => Layout.IsHex ? HexSides : SquareSides;
+    private static readonly string[] PointyHexSides = ["ne", "e", "se", "sw", "w", "nw", "u", "d"];
+    private string[] Sides => Layout.IsPointy ? PointyHexSides : Layout.IsHex ? HexSides : SquareSides;
     private static readonly string[] SideStates = ["open", "wall", "oneway", "lock"];
 
     /// <summary>The place at (x, y) on the level on show, as the view read it; null when it holds nothing or was not read.</summary>
@@ -681,7 +682,8 @@
     /// <summary>
     /// The side's state and reason as the view read them: open when it lists no wall there. A wall or lock between two
     /// places on one level is listed once, on the north or east side of the one it belongs to (on a hex map, its north,
-    /// north-east or south-east side), so the other sides read it from the neighbour's; up and down sides are listed on the place itself; a one-way side is listed on the
+    /// north-east or south-east side, and on a pointy hex map its north-east, east or south-east side), so the other sides
+    /// read it from the neighbour's; up and down sides are listed on the place itself; a one-way side is listed on the
     /// place it leads out of.
     /// </summary>
     private void ChooseSide(string side)
@@ -695,6 +697,7 @@
             {
                 "s" => (x, y - 1, "n"),
                 "w" => (x - 1, y, "e"),
+                "sw" when Layout.IsPointy => (x, y - 1, "ne"),
                 "sw" => (x - 1, y, "ne"),
                 "nw" => (x - 1, y + 1, "se"),
                 _ => (x, y, side),
@@ -723,6 +726,7 @@
                 <div class="map-builder-row">
                     <MudButton Variant="Variant.Outlined" Disabled="WorldPlanned" OnClick="() => CreateWorldAsync(MapSpaces.Square)">@Loc["NavMapMakeWorld"]</MudButton>
                     <MudButton Variant="Variant.Outlined" Disabled="WorldPlanned" OnClick="() => CreateWorldAsync(MapSpaces.Hex)">@Loc["NavMapMakeHexWorld"]</MudButton>
+                    <MudButton Variant="Variant.Outlined" Disabled="WorldPlanned" OnClick="() => CreateWorldAsync(MapSpaces.PointyHex)">@Loc["NavMapMakePointyHexWorld"]</MudButton>
                 </div>
             }
             else

@@ -7050,7 +7050,10 @@
     <value>Tornar um mapa do mundo</value>
   </data>
   <data name="NavMapMakeHexWorld" xml:space="preserve">
-    <value>Transformar em mapa do mundo hexagonal</value>
+    <value>Transformar em mapa do mundo de hexágonos planos</value>
+  </data>
+  <data name="NavMapMakePointyHexWorld" xml:space="preserve">
+    <value>Transformar em mapa do mundo de hexágonos pontudos</value>
   </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Pinte um lugar, ou cada lugar de uma caixa, com um tipo de terreno. Clique no mapa para escolher um lugar.</value>
@@ -7074,7 +7077,7 @@
     <value>Tipos da legenda</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>Os jogadores percorrem um mapa do mundo por saídas de direção nele: dez em um mapa quadrado, oito em um hexagonal. Abri-las requer o pacote World grid, e o mapa deve ser uma sala.</value>
+    <value>Os jogadores percorrem um mapa do mundo por saídas de direção nele: dez, do norte até baixo. Abri-las requer o pacote World grid, e o mapa deve ser uma sala.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Abrir as saídas de direção</value>

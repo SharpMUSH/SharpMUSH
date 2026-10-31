@@ -34,9 +34,9 @@ A place whose data hides it reads as bare terrain to whoever may not examine the
 
 What a world map is. The fields:
 
-- `space`: `square` or `hex` (the default)
+- `space`: `square`, `hex` or `pointy-hex` (the default)
 - `sides`: its places' sides, by letter, separated by spaces
-- `ways`: the directions [worldway()] takes there: the sides, and on a square map the diagonals too
+- `ways`: the directions [worldway()] takes there: the sides, then the corner steps
 - `levels`: the levels painted, lowest first
 - `box`: the painted box as `<left> <bottom> <right> <top>`; empty before anything is painted
 
@@ -81,13 +81,13 @@ Output: forest/Old Oak
 
 `worldway(<map>, <x>, <y>, <z>, <direction>[, <field>[, <mover>]])`
 
-The way out of a place toward a direction, by its letters or the word: a side, or on a square map a diagonal, as [worldmap()] lists. Any other direction gives `#-1 BAD DIRECTION`. The fields:
+The way out of a place toward a direction, by its letters or the word: a side or a corner step, as [worldmap()] lists. Any other direction gives `#-1 BAD DIRECTION`. The fields:
 
 - `state`: how a mover fares (the default)
 - `reason`: why, when the way is not open
 - `to`: the place it leads to, as `x,y,z`
 
-The state is `open`; `oneway`, open but not back; `lock`, a locked side or a terrain lock (see [@world lock]); `closed`, when the place it leads to has a closed type; `wall`, also for a one-way side coming the wrong way; or `none`, when nothing is painted there. A square map's diagonal goes round a corner, and is as good as the better of its two routes.
+The state is `open`; `oneway`, open but not back; `lock`, a locked side or a terrain lock (see [@world lock]); `closed`, when the place it leads to has a closed type; `wall`, also for a one-way side coming the wrong way; or `none`, when nothing is painted there. A corner step (a square map's diagonals, a hex map's `e` and `w`) goes round a corner, as good as the better of its two routes.
 
 Given a `<mover>`, each lock on the way is evaluated for them, with the map as the locked object: a lock they pass is `open`, and one they do not is `lock` with its reason. Naming anyone but yourself needs examine of the map.
 
@@ -109,7 +109,7 @@ lock/open
 
 The places within `<radius>` steps of a place, 3 by default and at most 20, one character each, north up and a row a line. A place shows its type's ``MAP`LEGEND`<type>`CHAR``, else its icon when that is a character or two, else its label's first letter; a place with nothing painted is a space. `<mark>`, when given, stands in the centre.
 
-A hex map draws its columns two characters apart, each half a row above the one to its left, so a row of places takes two lines.
+A hex map draws its columns two characters apart, each half a row above the one to its left, so a row of places takes two lines. A pointy hex map draws a row a line, each a character to the right of the one below it.
 
 ```sharp
 > think worlddraw(Wilds, 1, 1, 0, 1, @)

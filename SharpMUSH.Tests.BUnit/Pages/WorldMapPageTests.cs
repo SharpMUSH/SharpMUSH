@@ -1176,6 +1176,48 @@ public class MapLayoutTests
 	}
 
 	[Test]
+	public async Task APointyHexMapsPlacesArePointyToppedHexagonsAtTheirAxialCoordinates()
+	{
+		var layout = new MapLayout(Map(MapKinds.Coordinates, [new("#1", "Camp", [0, 1, 0], null)], []) with
+		{
+			Space = new(MapSpaces.PointyHex, -2, -2, 2, 2, [0]),
+		});
+		var (s, h) = (MapLayout.HexSide, MapLayout.HexHeight);
+
+		await Assert.That((layout.IsHex, layout.IsPointy)).IsEqualTo((true, true));
+		await Assert.That(layout.PlaceCentre(1, 0)).IsEqualTo((h, -0d)).Because("east is a place's width east");
+		await Assert.That(layout.PlaceCentre(0, 1)).IsEqualTo((h / 2, -1.5 * s)).Because("northeast is a row up and half a place east");
+		foreach (var (x, y) in new[] { (0, 0), (1, 0), (1, -1), (-1, 1), (-2, 2), (2, -2), (0, -2) })
+		{
+			var (cx, cy) = layout.PlaceCentre(x, y);
+			await Assert.That(layout.PlaceAt(cx, cy)).IsEqualTo((x, y));
+			await Assert.That(layout.PlaceAt(cx, cy - 0.9 * s)).IsEqualTo((x, y)).Because("a point inside the hexagon is on it");
+		}
+		await Assert.That(layout.PlaceAt(0.1 * s, -1.05 * s)).IsEqualTo((0, 1)).Because("past the north corner, to its east, is the northeast place");
+
+		var camp = layout.Rooms["#1"];
+		await Assert.That((camp.X + camp.Width / 2, camp.Y + camp.Height / 2)).IsEqualTo(layout.PlaceCentre(0, 1));
+		await Assert.That(layout.Spot(camp)).IsEqualTo((0d, 1d, 0));
+
+		await Assert.That(layout.HexEdge(0, 0, "n")).IsNull();
+		var east = layout.HexEdge(0, 0, "e")!.Value;
+		await Assert.That(new[] { east.X1, east.X2, east.Dx, east.Dy }.Select(value => Math.Round(value, 9)))
+			.IsEquivalentTo([Math.Round(h / 2, 9), Math.Round(h / 2, 9), 1d, 0d]);
+		var southwest = layout.HexEdge(0, 1, "sw")!.Value;
+		var northeast = layout.HexEdge(0, 0, "ne")!.Value;
+		await Assert.That(Math.Abs(southwest.X1 - northeast.X2) + Math.Abs(southwest.Y1 - northeast.Y2)
+				+ Math.Abs(southwest.X2 - northeast.X1) + Math.Abs(southwest.Y2 - northeast.Y1)).IsLessThan(1e-9)
+			.Because("a place's southwest edge is its neighbour's northeast edge");
+
+		var bounds = layout.Bounds(0);
+		await Assert.That((bounds.Left, bounds.Right)).IsEqualTo(((-2 - 1) * h - h / 2, (2 + 1) * h + h / 2));
+		await Assert.That((bounds.Top, bounds.Bottom)).IsEqualTo((-3 * s - s, 3 * s + s));
+		var view = layout.PlacesIn(-h, -s, h, s);
+		await Assert.That(view.Left <= -1 && view.Right >= 1 && view.Bottom <= -1 && view.Top >= 1).IsTrue()
+			.Because($"a view around the middle holds the places around it, not {view}");
+	}
+
+	[Test]
 	public async Task AWindowOfPlacesIsTheViewAndHalfAgainWithinTheStoredPlacesAndAtMost128ASide()
 	{
 		var layout = new MapLayout(Map(MapKinds.Coordinates, [], []) with

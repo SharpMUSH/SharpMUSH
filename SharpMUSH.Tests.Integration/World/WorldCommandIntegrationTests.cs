@@ -102,22 +102,42 @@ public class WorldCommandIntegrationTests
 	}
 
 	[Test]
+	public async Task APointyHexMapIsWalledDrawnAndReadOnItsSixSides()
+	{
+		var map = TestIsolationHelpers.GenerateUniqueName("Marsh");
+		await God($"@create {map}", map);
+		await Assert.That(await God($"@world/create {map}=pointy-hex", map)).Contains($"{map} is now a world map.");
+		await God($"@world/paint {map}/-2,-2:2,2=grass", "places");
+		await Assert.That(await Eval($"worldmap({map})/[worldmap({map},sides)]/[worldmap({map},ways)]"))
+			.IsEqualTo("pointy-hex/ne e se sw w nw u d/ne e se sw w nw n s u d");
+
+		await Assert.That(await God($"@world/wall {map}/0,0/w=wall,A dyke.", "0,0,0")).Contains("The west side of 0,0,0 is now a wall.");
+		await Assert.That(string.Join("\n", await God($"@world/wall {map}/0,0/n=wall", "sides")))
+			.Contains("Which side? A pointy-hex place's sides are ne, e, se, sw, w, nw, u or d");
+		await Assert.That(await Eval($"worldway({map},0,0,0,w)/[worldway({map},0,0,0,ne,to)]/[worldway({map},0,0,0,n,to)]"))
+			.IsEqualTo("wall/0,1,0/-1,2,0");
+		await Assert.That(await Eval($"worldway({map},-1,0,0,e)")).IsEqualTo("wall").Because("the dyke is the same edge seen from the other side");
+
+		await Assert.That(await Eval($"worlddraw({map},0,0,0,1,@)")).IsEqualTo(" G G \nG @ G\n G G ");
+	}
+
+	[Test]
 	public async Task AHexMapIsWalledDrawnAndReadOnItsSixSides()
 	{
 		var map = TestIsolationHelpers.GenerateUniqueName("Steppe");
 		await God($"@create {map}", map);
 		await Assert.That(await God($"@world/create {map}=hex", map)).Contains($"{map} is now a world map.");
-		await Assert.That(await God($"@world/create {map}=graph", "stored")).Contains("graph maps are not stored; a world map is square or hex.");
+		await Assert.That(await God($"@world/create {map}=graph", "stored")).Contains("graph maps are not stored; a world map is square, hex or pointy-hex.");
 		await God($"@world/paint {map}/-2,-2:2,2=grass", "places");
 		await Assert.That(await Eval($"worldmap({map})/[worldmap({map},sides)]/[worldmap({map},ways)]/[worldmap({map},levels)]/[worldmap({map},box)]"))
-			.IsEqualTo("hex/n ne se s sw nw u d/n ne se s sw nw u d/0/-2 -2 2 2");
+			.IsEqualTo("hex/n ne se s sw nw u d/n ne se s sw nw e w u d/0/-2 -2 2 2");
 
 		await Assert.That(await God($"@world/wall {map}/0,0/sw=wall,A thorn hedge.", "0,0,0"))
 			.Contains("The southwest side of 0,0,0 is now a wall.");
 		await Assert.That(string.Join("\n", await God($"@world/wall {map}/0,0/e=wall", "sides")))
 			.Contains("Which side? A hex place's sides are n, ne, se, s, sw, nw, u or d");
-		await Assert.That(await Eval($"worldway({map},0,0,0,sw)/[worldway({map},-1,0,0,ne,reason)]/[worldway({map},0,0,0,se,to)]/[worldway({map},0,0,0,e)]"))
-			.IsEqualTo("wall/A thorn hedge./1,-1,0/#-1 BAD DIRECTION");
+		await Assert.That(await Eval($"worldway({map},0,0,0,sw)/[worldway({map},-1,0,0,ne,reason)]/[worldway({map},0,0,0,se,to)]/[worldway({map},0,0,0,e,to)]/[worldway({map},0,0,0,x)]"))
+			.IsEqualTo("wall/A thorn hedge./1,-1,0/2,-1,0/#-1 BAD DIRECTION");
 		await Assert.That(string.Join("\n", await God($"@world {map}/-1,0", "Northeast"))).Contains("Northeast: wall (A thorn hedge.)");
 
 		await Assert.That(await Eval($"worlddraw({map},0,0,0,1,@)")).IsEqualTo("  G  \nG   G\n  @  \nG   G\n  G  ");

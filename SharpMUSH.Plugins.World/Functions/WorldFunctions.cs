@@ -93,7 +93,7 @@ public static class WorldFunctions
 		});
 
 	/// <summary>
-	/// worldmap(&lt;map&gt;[, &lt;field&gt;]): a world map's <c>space</c> (the default: <c>square</c> or <c>hex</c>),
+	/// worldmap(&lt;map&gt;[, &lt;field&gt;]): a world map's <c>space</c> (the default: <c>square</c>, <c>hex</c> or <c>pointy-hex</c>),
 	/// <c>sides</c> (its places' sides, by letter), <c>ways</c> (the directions worldway() takes there), <c>levels</c> (the levels painted, lowest first) or <c>box</c> (the
 	/// painted box as <c>left bottom right top</c>, empty before anything is painted).
 	/// </summary>
@@ -189,6 +189,7 @@ public static class WorldFunctions
 			var dbref = reading.Map.Object().DBRef;
 			var window = reading.Store.Window(dbref, at.Z, at.X - radius, at.Y - radius, at.X + radius, at.Y + radius);
 			if (reading.Record.Space == MapSpaces.Hex) return new CallState(await HexDrawingAsync(reading, window, at, radius, mark));
+			if (reading.Record.Space == MapSpaces.PointyHex) return new CallState(await PointyHexDrawingAsync(reading, window, at, radius, mark));
 			var drawing = new StringBuilder();
 			for (var y = at.Y + radius; y >= at.Y - radius; y--)
 			{
@@ -220,6 +221,26 @@ public static class WorldFunctions
 			for (var dy = Math.Max(-radius, -dx - radius); dy <= Math.Min(radius, -dx + radius); dy++)
 			{
 				var (line, column) = (2 * radius - (2 * dy + dx), 2 * (dx + radius));
+				lines[line][column] = dx == 0 && dy == 0 && mark.Length > 0 ? mark : await GlyphAsync(reading, window, at.X + dx, at.Y + dy);
+			}
+		}
+		return string.Join("\n", lines.Select(line => string.Concat(line)));
+	}
+
+	/// <summary>
+	/// The pointy hex places within <paramref name="radius"/> steps of <paramref name="at"/>: row y on line
+	/// radius − (y − at.Y), and place (x, y) on character 2·(x − at.X) + (y − at.Y) + 2·radius, so north is up and each
+	/// row sits a place's half-width to the right of the one below it.
+	/// </summary>
+	private static async ValueTask<string> PointyHexDrawingAsync(Reading reading, WorldWindowRead? window, WorldPosition at, int radius, string mark)
+	{
+		// A slot per character position, so a glyph of several UTF-16 units never shifts or splits another.
+		var lines = Enumerable.Range(0, 2 * radius + 1).Select(_ => Enumerable.Repeat(" ", 4 * radius + 1).ToArray()).ToArray();
+		for (var dy = -radius; dy <= radius; dy++)
+		{
+			for (var dx = Math.Max(-radius, -dy - radius); dx <= Math.Min(radius, -dy + radius); dx++)
+			{
+				var (line, column) = (radius - dy, 2 * dx + dy + 2 * radius);
 				lines[line][column] = dx == 0 && dy == 0 && mark.Length > 0 ? mark : await GlyphAsync(reading, window, at.X + dx, at.Y + dy);
 			}
 		}

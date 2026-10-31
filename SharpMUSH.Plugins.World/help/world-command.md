@@ -40,14 +40,15 @@ The [world functions] read the same places.
 
 ## Making a world map
 
-`@world/create <map>[=square|hex]`
+`@world/create <map>[=square|hex|pointy-hex]`
 
-Makes `<map>` a world map, a level at a time in one of two spaces:
+Makes `<map>` a world map, a level at a time in one of three spaces:
 
 - `square` (the default): places at x and y, with sides `n`, `e`, `s` and `w`.
 - `hex`: flat-topped hexagons at column x and row y, with sides `n`, `ne`, `se`, `s`, `sw` and `nw`. North is y + 1, northeast x + 1, and southeast x + 1 and y - 1.
+- `pointy-hex`: pointy-topped hexagons, with sides `ne`, `e`, `se`, `sw`, `w` and `nw`. East is x + 1, northeast y + 1, and northwest x - 1 and y + 1.
 
-Places on either have `u` and `d` too. When the map has no `` MAP`KIND `` yet, it gets `coordinates`, so the World map lists it.
+Places on all three have `u` and `d` too. When the map has no `` MAP`KIND `` yet, it gets `coordinates`, so the World map lists it.
 
 ```sharp
 > @create Wilds
@@ -81,7 +82,7 @@ Output: Painted 100 places as forest.
 
 `@world/wall <map>/<x>,<y>[,<z>]/<side>=<state>[,<reason>]`
 
-Sets one side of a place, by its letters or the word: `n`, `e`, `s`, `w`, `u` or `d` on a square map, and `n`, `ne`, `se`, `s`, `sw`, `nw`, `u` or `d` on a hex one. The place on the other side shares it. The state is `open`, `wall`, `oneway` (a mover may leave this way but not come back) or `lock` (see [@world lock]). The reason is what a refused mover is told, and what the World map shows. A locked side keeps its key; any other state drops it.
+Sets one side of a place, by its letters or the word, from the sides its space has (see [@world create]). The place on the other side shares it. The state is `open`, `wall`, `oneway` (a mover may leave this way but not come back) or `lock` (see [@world lock]). The reason is what a refused mover is told, and what the World map shows. A locked side keeps its key; any other state drops it.
 
 ```sharp
 > @world/wall Wilds/4,4/n=wall,A fallen oak blocks the path.

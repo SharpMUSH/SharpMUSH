@@ -10653,7 +10653,10 @@
     <value>Make this a world map</value>
   </data>
   <data name="NavMapMakeHexWorld" xml:space="preserve">
-    <value>Make this a hex world map</value>
+    <value>Make this a flat-topped hex world map</value>
+  </data>
+  <data name="NavMapMakePointyHexWorld" xml:space="preserve">
+    <value>Make this a pointy-topped hex world map</value>
   </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Paint a place, or every place in a box, with a terrain type. Click the map to choose a place.</value>
@@ -10677,7 +10680,7 @@
     <value>The legend's types</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>Players walk a world map through direction exits on it: ten on a square map, eight on a hex map. Opening them needs the World grid package, and the map must be a room.</value>
+    <value>Players walk a world map through direction exits on it: ten, north to down. Opening them needs the World grid package, and the map must be a room.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Open the direction exits</value>

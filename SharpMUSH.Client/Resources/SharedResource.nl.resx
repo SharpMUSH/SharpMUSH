@@ -7050,7 +7050,10 @@
     <value>Maak hier een wereldkaart van</value>
   </data>
   <data name="NavMapMakeHexWorld" xml:space="preserve">
-    <value>Maak hier een zeshoekige wereldkaart van</value>
+    <value>Maak hier een wereldkaart met platte zeshoeken van</value>
+  </data>
+  <data name="NavMapMakePointyHexWorld" xml:space="preserve">
+    <value>Maak hier een wereldkaart met puntige zeshoeken van</value>
   </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Schilder een plaats, of elke plaats in een vak, met een terreintype. Klik op de kaart om een plaats te kiezen.</value>
@@ -7074,7 +7077,7 @@
     <value>Typen uit de legenda</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>Spelers lopen over een wereldkaart via richtingsuitgangen erop: tien op een vierkante kaart, acht op een zeshoekige. Openen vraagt het pakket World grid, en de kaart moet een kamer zijn.</value>
+    <value>Spelers lopen over een wereldkaart via richtingsuitgangen erop: tien, van noord tot omlaag. Openen vraagt het pakket World grid, en de kaart moet een kamer zijn.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Richtingsuitgangen openen</value>

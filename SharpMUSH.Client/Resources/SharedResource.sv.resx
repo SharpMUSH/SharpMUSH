@@ -7050,7 +7050,10 @@
     <value>Gör detta till en världskarta</value>
   </data>
   <data name="NavMapMakeHexWorld" xml:space="preserve">
-    <value>Gör detta till en sexkantig världskarta</value>
+    <value>Gör detta till en världskarta med platta sexhörningar</value>
+  </data>
+  <data name="NavMapMakePointyHexWorld" xml:space="preserve">
+    <value>Gör detta till en världskarta med spetsiga sexhörningar</value>
   </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Måla en plats, eller varje plats i en ruta, med en terrängtyp. Klicka på kartan för att välja en plats.</value>
@@ -7074,7 +7077,7 @@
     <value>Teckenförklaringens typer</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>Spelare går på en världskarta genom riktningsutgångar på den: tio på en kvadratisk karta, åtta på en sexkantig. Att öppna dem kräver paketet World grid, och kartan måste vara ett rum.</value>
+    <value>Spelare går på en världskarta genom riktningsutgångar på den: tio, från norr till ner. Att öppna dem kräver paketet World grid, och kartan måste vara ett rum.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Öppna riktningsutgångarna</value>

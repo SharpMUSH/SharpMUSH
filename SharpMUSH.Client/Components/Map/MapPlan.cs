@@ -249,7 +249,7 @@ public sealed partial class MapPlan(MapDto map)
 	public void CreateWorld(string space = MapSpaces.Square)
 	{
 		var id = Map.Map.Id;
-		var command = space == MapSpaces.Hex ? $"@world/create {id}=hex" : $"@world/create {id}";
+		var command = space == MapSpaces.Square ? $"@world/create {id}" : $"@world/create {id}={space}";
 		Upsert(new("world:create", MapChangeKind.CreateWorld, id, Map.Map.Name,
 			[new(command, $"worldmap({id})", space)]));
 	}

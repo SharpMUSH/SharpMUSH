@@ -7050,7 +7050,10 @@
     <value>Zur Weltkarte machen</value>
   </data>
   <data name="NavMapMakeHexWorld" xml:space="preserve">
-    <value>Zu einer Sechseck-Weltkarte machen</value>
+    <value>Zu einer Weltkarte mit flachen Sechsecken machen</value>
+  </data>
+  <data name="NavMapMakePointyHexWorld" xml:space="preserve">
+    <value>Zu einer Weltkarte mit spitzen Sechsecken machen</value>
   </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Einen Ort oder jeden Ort in einem Rechteck mit einem Geländetyp malen. Auf die Karte klicken, um einen Ort zu wählen.</value>
@@ -7074,7 +7077,7 @@
     <value>Typen der Legende</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>Spieler durchwandern eine Weltkarte über Richtungsausgänge darauf: zehn auf einer quadratischen Karte, acht auf einer Sechseckkarte. Zum Öffnen braucht es das Paket World grid, und die Karte muss ein Raum sein.</value>
+    <value>Spieler durchwandern eine Weltkarte über Richtungsausgänge darauf: zehn, von Norden bis hinunter. Zum Öffnen braucht es das Paket World grid, und die Karte muss ein Raum sein.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Richtungsausgänge öffnen</value>

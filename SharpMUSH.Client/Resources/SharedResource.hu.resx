@@ -7050,7 +7050,10 @@
     <value>Legyen világtérkép</value>
   </data>
   <data name="NavMapMakeHexWorld" xml:space="preserve">
-    <value>Legyen hatszöges világtérkép</value>
+    <value>Legyen lapos hatszöges világtérkép</value>
+  </data>
+  <data name="NavMapMakePointyHexWorld" xml:space="preserve">
+    <value>Legyen hegyes hatszöges világtérkép</value>
   </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Fess egy helyet, vagy egy téglalap minden helyét, egy tereptípussal. Kattints a térképre egy hely kiválasztásához.</value>
@@ -7074,7 +7077,7 @@
     <value>A jelmagyarázat típusai</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>A játékosok a rajta lévő irány-kijáratokon át járják a világtérképet: négyzetes térképen tízen, hatszögesen nyolcon. Megnyitásukhoz a World grid csomag kell, és a térképnek szobának kell lennie.</value>
+    <value>A játékosok a rajta lévő irány-kijáratokon át járják a világtérképet: tízen, északtól lefelé. Megnyitásukhoz a World grid csomag kell, és a térképnek szobának kell lennie.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Irány-kijáratok megnyitása</value>
