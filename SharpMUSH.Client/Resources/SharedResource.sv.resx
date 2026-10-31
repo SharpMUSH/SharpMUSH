@@ -7178,6 +7178,9 @@
   <data name="NavMapSetSide" xml:space="preserve">
     <value>Ange sida</value>
   </data>
+  <data name="NavMapSetWay" xml:space="preserve">
+    <value>Ange väg</value>
+  </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>Dölj för spelare</value>
   </data>

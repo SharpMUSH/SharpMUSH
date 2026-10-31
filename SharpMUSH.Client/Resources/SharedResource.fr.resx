@@ -6487,6 +6487,9 @@
   <data name="NavMapSetSide" xml:space="preserve">
     <value>Définir le côté</value>
   </data>
+  <data name="NavMapSetWay" xml:space="preserve">
+    <value>Définir le chemin</value>
+  </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>Cacher aux joueurs</value>
   </data>

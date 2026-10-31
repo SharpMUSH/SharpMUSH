@@ -7178,6 +7178,9 @@
   <data name="NavMapSetSide" xml:space="preserve">
     <value>Setează latura</value>
   </data>
+  <data name="NavMapSetWay" xml:space="preserve">
+    <value>Setează drumul</value>
+  </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>Ascunde de jucători</value>
   </data>

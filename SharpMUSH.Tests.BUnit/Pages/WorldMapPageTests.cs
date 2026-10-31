@@ -890,14 +890,14 @@ public class WorldMapPageTests : TrackingBunitContext
 
 		await Assert.That(cut.Find("#map-place-title").TextContent).IsEqualTo("NavMapPlaceAt(3, 0, 0)");
 		await Assert.That(cut.FindAll(".map-builder-list li").Select(item => item.TextContent.Replace("NavMapUnlink", "").Trim()))
-			.IsEquivalentTo(["NavMapWayLeads(Back, 0,0,0)", "NavMapWayLeads(Shrine Path, 0,3,0)"]);
+			.IsEquivalentTo(["NavMapWayLeads(Back, 0,0,0)", "NavMapWayLeads(Shrine Path, 0,3,0) · NavMapSideStatewall"]);
 		var selects = cut.FindComponents<MudBlazor.MudSelect<string>>();
 		await Assert.That(selects[0].Instance.Value).IsEqualTo("back").Because("a graph place's first way is chosen, not a side");
 		await cut.InvokeAsync(() => selects[0].Instance.ValueChanged.InvokeAsync("shrine_path"));
 		await Assert.That(cut.FindComponents<MudBlazor.MudSelect<string>>()[1].Instance.Value).IsEqualTo(MapWallKinds.Wall);
 		await Assert.That(cut.FindComponents<MudBlazor.MudTextField<string>>().Select(field => field.Instance.Value)).Contains("Brambles.");
 		await cut.InvokeAsync(() => cut.FindComponents<MudBlazor.MudSelect<string>>()[1].Instance.ValueChanged.InvokeAsync("open"));
-		await Click(cut, "NavMapSetSide");
+		await Click(cut, "NavMapSetWay");
 
 		var names = cut.FindComponents<MudBlazor.MudTextField<string>>().Single(field => field.Instance.Label == "NavMapWayNames");
 		await cut.InvokeAsync(() => names.Instance.ValueChanged.InvokeAsync("Ridgeway;ridge"));

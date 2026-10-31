@@ -7178,6 +7178,9 @@
   <data name="NavMapSetSide" xml:space="preserve">
     <value>Sett side</value>
   </data>
+  <data name="NavMapSetWay" xml:space="preserve">
+    <value>Sett vei</value>
+  </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>Skjul for spillere</value>
   </data>

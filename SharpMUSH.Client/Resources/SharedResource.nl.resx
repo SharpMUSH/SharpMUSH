@@ -7178,6 +7178,9 @@
   <data name="NavMapSetSide" xml:space="preserve">
     <value>Zijde instellen</value>
   </data>
+  <data name="NavMapSetWay" xml:space="preserve">
+    <value>Weg instellen</value>
+  </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>Verbergen voor spelers</value>
   </data>

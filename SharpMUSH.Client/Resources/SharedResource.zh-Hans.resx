@@ -7178,6 +7178,9 @@
   <data name="NavMapSetSide" xml:space="preserve">
     <value>设置边</value>
   </data>
+  <data name="NavMapSetWay" xml:space="preserve">
+    <value>设置道路</value>
+  </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>对玩家隐藏</value>
   </data>

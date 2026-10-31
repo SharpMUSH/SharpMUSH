@@ -10781,6 +10781,9 @@
   <data name="NavMapSetSide" xml:space="preserve">
     <value>Set side</value>
   </data>
+  <data name="NavMapSetWay" xml:space="preserve">
+    <value>Set way</value>
+  </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>Hide from players</value>
   </data>

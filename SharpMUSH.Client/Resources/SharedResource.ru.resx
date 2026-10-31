@@ -7178,6 +7178,9 @@
   <data name="NavMapSetSide" xml:space="preserve">
     <value>Задать сторону</value>
   </data>
+  <data name="NavMapSetWay" xml:space="preserve">
+    <value>Задать путь</value>
+  </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>Скрыть от игроков</value>
   </data>

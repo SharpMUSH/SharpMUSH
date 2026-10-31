@@ -7178,6 +7178,9 @@
   <data name="NavMapSetSide" xml:space="preserve">
     <value>Oldal beállítása</value>
   </data>
+  <data name="NavMapSetWay" xml:space="preserve">
+    <value>Út beállítása</value>
+  </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>Elrejtés a játékosok elől</value>
   </data>

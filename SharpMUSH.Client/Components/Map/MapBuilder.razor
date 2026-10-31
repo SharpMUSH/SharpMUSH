@@ -827,7 +827,7 @@
             <div class="map-builder-row">
                 <MudTextField T="string" @bind-Value="_sideReason" Label="@Loc["NavMapSideReason"]" Variant="Variant.Outlined" Immediate="true"
                               Disabled="@(_sideState == "open")" />
-                <MudButton Variant="Variant.Outlined" OnClick="() => SideAsync(x, y)">@Loc["NavMapSetSide"]</MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="() => SideAsync(x, y)">@Loc[Layout.HasWays ? "NavMapSetWay" : "NavMapSetSide"]</MudButton>
             </div>
             @if (_sideState == "lock")
             {
@@ -861,7 +861,13 @@
                 @foreach (var link in links)
                 {
                     <li>
-                        @Loc["NavMapWayLeads", link.Names.Split(';')[0], $"{link.ToX},{link.ToY},{link.ToZ}"]
+                        <span>
+                            @Loc["NavMapWayLeads", link.Names.Split(';')[0], $"{link.ToX},{link.ToY},{link.ToZ}"]
+                            @if (link.Kind is { } kind)
+                            {
+                                @($" · {Loc[$"NavMapSideState{kind}"]}")
+                            }
+                        </span>
                         <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => UnlinkAsync(x, y, link.Way)">@Loc["NavMapUnlink"]</MudButton>
                     </li>
                 }

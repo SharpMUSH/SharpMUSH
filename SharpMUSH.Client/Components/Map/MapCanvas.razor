@@ -656,17 +656,21 @@
               marker-end="@(back ? null : $"url(#{ArrowId})")">
             <title>@(link.Reason is { } reason ? $"{link.Names.Split(';')[0]}: {reason}" : link.Names.Split(';')[0])</title>
         </line>
-        @SvgText("map-way-name", x1 + (x2 - x1) / 3 + sx * 3, y1 + (y2 - y1) / 3 + sy * 3, link.Names.Split(';')[0])
+        // The name stands off the right of its line, so a way and the way back each keep a side, and reads away from it.
+        var (nx, ny) = (-uy, ux);
+        var anchor = nx > 0.4 ? "start" : nx < -0.4 ? "end" : "middle";
+        @SvgText("map-way-name", x1 + (x2 - x1) / 3 + nx * 12, y1 + (y2 - y1) / 3 + ny * 12, link.Names.Split(';')[0], anchor)
     };
 
     /// <summary>An SVG <c>text</c> element, which Razor markup reserves for its own use.</summary>
-    private static RenderFragment SvgText(string className, double x, double y, string content) => builder =>
+    private static RenderFragment SvgText(string className, double x, double y, string content, string? anchor = null) => builder =>
     {
         builder.OpenElement(0, "text");
         builder.AddAttribute(1, "class", className);
         builder.AddAttribute(2, "x", Num(x));
         builder.AddAttribute(3, "y", Num(y));
-        builder.AddContent(4, content);
+        builder.AddAttribute(4, "text-anchor", anchor);
+        builder.AddContent(5, content);
         builder.CloseElement();
     };
 
