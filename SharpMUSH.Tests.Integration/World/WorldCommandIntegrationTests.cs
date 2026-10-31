@@ -109,8 +109,8 @@ public class WorldCommandIntegrationTests
 		await Assert.That(await God($"@world/create {map}=hex", map)).Contains($"{map} is now a world map.");
 		await Assert.That(await God($"@world/create {map}=graph", "stored")).Contains("graph maps are not stored; a world map is square or hex.");
 		await God($"@world/paint {map}/-2,-2:2,2=grass", "places");
-		await Assert.That(await Eval($"worldmap({map})/[worldmap({map},sides)]/[worldmap({map},levels)]/[worldmap({map},box)]"))
-			.IsEqualTo("hex/n ne se s sw nw u d/0/-2 -2 2 2");
+		await Assert.That(await Eval($"worldmap({map})/[worldmap({map},sides)]/[worldmap({map},ways)]/[worldmap({map},levels)]/[worldmap({map},box)]"))
+			.IsEqualTo("hex/n ne se s sw nw u d/n ne se s sw nw u d/0/-2 -2 2 2");
 
 		await Assert.That(await God($"@world/wall {map}/0,0/sw=wall,A thorn hedge.", "0,0,0"))
 			.Contains("The southwest side of 0,0,0 is now a wall.");

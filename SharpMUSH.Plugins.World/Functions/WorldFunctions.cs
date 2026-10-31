@@ -94,7 +94,7 @@ public static class WorldFunctions
 
 	/// <summary>
 	/// worldmap(&lt;map&gt;[, &lt;field&gt;]): a world map's <c>space</c> (the default: <c>square</c> or <c>hex</c>),
-	/// <c>sides</c> (its places' sides, by letter), <c>levels</c> (the levels painted, lowest first) or <c>box</c> (the
+	/// <c>sides</c> (its places' sides, by letter), <c>ways</c> (the directions worldway() takes there), <c>levels</c> (the levels painted, lowest first) or <c>box</c> (the
 	/// painted box as <c>left bottom right top</c>, empty before anything is painted).
 	/// </summary>
 	[SharpFunction(Name = "worldmap", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["map", "field"])]
@@ -106,6 +106,7 @@ public static class WorldFunctions
 			{
 				"space" => new CallState(record.Space),
 				"sides" => new CallState(string.Join(" ", WorldGrid.Sides(record.Space).Select(WorldGrid.Letter))),
+				"ways" => new CallState(string.Join(" ", WorldWays.Directions(record.Space))),
 				"levels" => new CallState(string.Join(" ", record.Levels)),
 				"box" => new CallState(record.Painted ? $"{record.Left} {record.Bottom} {record.Right} {record.Top}" : ""),
 				_ => new CallState(BadField),

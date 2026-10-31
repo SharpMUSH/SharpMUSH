@@ -21,7 +21,7 @@ These read the places of a world map that [@world] keeps. A place is given as x,
 
 A place whose data hides it reads as bare terrain to whoever may not examine the map, with no name, data or room, and only the `render` and `info` keys of its data show to them.
 
-- [worldmap()]: a map's space, sides, levels and painted box
+- [worldmap()]: a map's space, sides, ways, levels and painted box
 - [worldcell()]: a place's terrain, name, data or id
 - [worldway()]: whether a mover can go one way out of a place
 - [worlddraw()]: the places around one, drawn as text
@@ -36,17 +36,20 @@ What a world map is. The fields:
 
 - `space`: `square` or `hex` (the default)
 - `sides`: its places' sides, by letter, separated by spaces
+- `ways`: the directions [worldway()] takes there: the sides, and on a square map the diagonals too
 - `levels`: the levels painted, lowest first
 - `box`: the painted box as `<left> <bottom> <right> <top>`; empty before anything is painted
 
 ```sharp
 > think worldmap(Steppe)/[worldmap(Steppe, sides)]
+> think worldmap(Wilds, ways)
 > think worldmap(Wilds, box)
 ```
 
 Output:
 ```
 hex/n ne se s sw nw u d
+n e s w ne nw se sw u d
 0 0 9 9
 ```
 

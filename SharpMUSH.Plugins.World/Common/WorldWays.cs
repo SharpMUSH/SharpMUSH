@@ -40,6 +40,14 @@ public sealed record WorldWay(WorldWayState State, string? Reason, WorldPosition
 public static class WorldWays
 {
 	/// <summary>
+	/// The directions a place in <paramref name="space"/> has a way out by, by letter: a hex map's sides, or a square
+	/// map's four sides, four diagonals, up and down.
+	/// </summary>
+	public static IReadOnlyList<string> Directions(string space) => space == MapSpaces.Hex
+		? [.. WorldGrid.HexSides.Select(WorldGrid.Letter)]
+		: ["n", "e", "s", "w", "ne", "nw", "se", "sw", "u", "d"];
+
+	/// <summary>
 	/// A way out of a place in <paramref name="space"/>: one of its sides, or on a square map a diagonal, two sides at
 	/// once. Null for a direction the space has no way out by.
 	/// </summary>

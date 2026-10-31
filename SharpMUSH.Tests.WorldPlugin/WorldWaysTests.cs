@@ -82,6 +82,17 @@ public class WorldWaysTests
 	}
 
 	[Test]
+	[Arguments("square", 10)]
+	[Arguments("hex", 8)]
+	public async Task EveryDirectionOfASpaceIsAWayOutOfItsPlaces(string space, int count)
+	{
+		var directions = WorldWays.Directions(space);
+		await Assert.That(directions.Count).IsEqualTo(count);
+		foreach (var direction in directions)
+			await Assert.That(WorldWays.ParseDirection(direction, space)).IsNotNull().Because($"{direction} is a {space} direction");
+	}
+
+	[Test]
 	public async Task AnOpenSideLeadsToThePlaceBesideIt()
 	{
 		var way = await Way(1, 1, "n");
