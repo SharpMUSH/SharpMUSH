@@ -40,16 +40,27 @@ The [world functions] read the same places.
 
 ## Making a world map
 
-`@world/create <map>[=square]`
+`@world/create <map>[=square|hex]`
 
-Makes `<map>` a world map. Square, places on x and y a level at a time, is the only space so far. When the map has no `` MAP`KIND `` yet, it gets `coordinates`, so the World map lists it.
+Makes `<map>` a world map, a level at a time in one of two spaces:
+
+- `square` (the default): places at x and y, with sides `n`, `e`, `s` and `w`.
+- `hex`: flat-topped hexagons at column x and row y, with sides `n`, `ne`, `se`, `s`, `sw` and `nw`. North is y + 1, northeast x + 1, and southeast x + 1 and y - 1.
+
+Places on either have `u` and `d` too. When the map has no `` MAP`KIND `` yet, it gets `coordinates`, so the World map lists it.
 
 ```sharp
 > @create Wilds
 > @world/create Wilds
+> @create Steppe
+> @world/create Steppe=hex
 ```
 
-Output: Wilds is now a world map.
+Output:
+```
+Wilds is now a world map.
+Steppe is now a world map.
+```
 
 ## Painting places
 
@@ -70,13 +81,18 @@ Output: Painted 100 places as forest.
 
 `@world/wall <map>/<x>,<y>[,<z>]/<side>=<state>[,<reason>]`
 
-Sets one side of a place: `n`, `e`, `s`, `w`, `u` or `d`, or the word. The place on the other side shares it. The state is `open`, `wall`, `oneway` (a mover may leave this way but not come back) or `lock` (see [@world lock]). The reason is what a refused mover is told, and what the World map shows. A locked side keeps its key; any other state drops it.
+Sets one side of a place, by its letters or the word: `n`, `e`, `s`, `w`, `u` or `d` on a square map, and `n`, `ne`, `se`, `s`, `sw`, `nw`, `u` or `d` on a hex one. The place on the other side shares it. The state is `open`, `wall`, `oneway` (a mover may leave this way but not come back) or `lock` (see [@world lock]). The reason is what a refused mover is told, and what the World map shows. A locked side keeps its key; any other state drops it.
 
 ```sharp
 > @world/wall Wilds/4,4/n=wall,A fallen oak blocks the path.
+> @world/wall Steppe/0,0/sw=wall,A thorn hedge.
 ```
 
-Output: The north side of 4,4,0 is now a wall.
+Output:
+```
+The north side of 4,4,0 is now a wall.
+The southwest side of 0,0,0 is now a wall.
+```
 
 ## Locks
 

@@ -16479,6 +16479,12 @@
     "aliases": [],
     "sections": [
       {
+        "id": "worldmap",
+        "lookup": "worldmap()",
+        "heading": "worldmap()",
+        "aliases": []
+      },
+      {
         "id": "worldcell",
         "lookup": "worldcell()",
         "heading": "worldcell()",
