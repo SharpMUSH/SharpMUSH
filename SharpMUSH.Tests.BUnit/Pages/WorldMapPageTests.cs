@@ -786,6 +786,8 @@ public class WorldMapPageTests : TrackingBunitContext
 
 		await Assert.That(cut.FindAll("polygon.map-place").Count).IsEqualTo(3);
 		await Assert.That(cut.FindAll("rect.map-place")).IsEmpty();
+		await Assert.That(cut.FindAll("polygon.map-box").Count).IsEqualTo(1).Because("the camp is drawn as a hexagon inside its place");
+		await Assert.That(cut.FindAll("rect.map-box")).IsEmpty();
 		await Assert.That(cut.FindAll("line.map-grid")).IsEmpty().Because("the hexagons are the grid");
 		await Assert.That(cut.FindAll("line.map-wall").Count).IsEqualTo(3);
 		await Assert.That(cut.FindAll("line.map-wall--lock").Count).IsEqualTo(1);

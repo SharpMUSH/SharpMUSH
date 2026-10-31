@@ -104,8 +104,17 @@
                     }
                     continue;
                 }
-                <rect class="@RoomClass(room)" style="@MapLegendStyle.Style(Kind(room))" x="@Num(room.X + Inset)" y="@Num(room.Y + Inset)"
-                      width="@Num(room.Width - 2 * Inset)" height="@Num(room.Height - 2 * Inset)" rx="8" />
+                @if (Layout.IsHex && room.Room.Position is [var hexX, var hexY, ..])
+                {
+                    @* A room on a hex map is the hexagon it stands on, drawn in from its sides so their walls show. *@
+                    <polygon class="@RoomClass(room)" style="@MapLegendStyle.Style(Kind(room))"
+                             points="@Points(Layout.HexCorners((int)Math.Round(hexX), (int)Math.Round(hexY), 1 - 2 * Inset / MapLayout.HexSide))" />
+                }
+                else
+                {
+                    <rect class="@RoomClass(room)" style="@MapLegendStyle.Style(Kind(room))" x="@Num(room.X + Inset)" y="@Num(room.Y + Inset)"
+                          width="@Num(room.Width - 2 * Inset)" height="@Num(room.Height - 2 * Inset)" rx="8" />
+                }
                 @if (_vertical.TryGetValue(room.Room.Id, out var vertical))
                 {
                     @Vertical(room, vertical)
