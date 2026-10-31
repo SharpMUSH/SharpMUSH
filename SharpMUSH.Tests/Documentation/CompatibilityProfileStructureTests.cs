@@ -74,6 +74,7 @@ public class CompatibilityProfileStructureTests
 		["A command that crashes says so"] = "a crash is a defect, fixed once found, so none is kept to show it",
 		["`@config/set` is stored"] = "shows only after a restart; the parity harness starts each server once",
 		["A `MAILFILTER` that mails its owner does not recurse"] = "PennMUSH's side crashes the server",
+		["PennMUSH @mapsql order: `mapsql_sync`"] = "the order shows only while the SQL server is slow to answer",
 	};
 
 	/// <summary>An <c>**Example.**</c> line: the parity case and the scenario file it is in.</summary>

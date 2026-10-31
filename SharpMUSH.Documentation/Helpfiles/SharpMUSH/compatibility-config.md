@@ -180,12 +180,13 @@ x (a,b)c
 **PennMUSH** runs `@mapsql`'s query inside the command, so the game waits for the SQL server, and every row is queued before anything queued after the command.<br>
 **SharpMUSH**, with `mapsql_sync` off, runs the query while the game goes on and queues each row as it arrives, so work queued after the command can run before the rows.<br>
 **Why.** A slow query does not hold up every player.<br>
-**Workaround.** To run something after the last row, use `/notify` and wait on the object's semaphore:
+**Workaround.** To run something after the last row, give it to `/then`, after the last comma:
 
 ```
-@mapsql/notify me/ROW=SELECT name FROM scores
-@wait me=@trigger me/DONE
+@mapsql/then me/ROW=SELECT name FROM scores,{@pemit me=%0 scores.}
 ```
+
+**No example.** The order shows only while the SQL server is slow to answer, which no example can rely on.
 
 ## Logical functions: `mux_logic`
 

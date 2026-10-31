@@ -1017,4 +1017,80 @@ public class ControlFlowCommandTests
 		await Assert.That(Heard(executor, "DolSpace_a,b_51064")).IsEqualTo(1);
 		await Assert.That(Heard(executor, "DolSpace_c_51064")).IsEqualTo(1);
 	}
+
+	/// <summary>@dolist/then queues the command after the last comma once every run is queued, with the count in %0.</summary>
+	[Test]
+	public async ValueTask DoList_Then_RunsAfterTheQueuedRuns()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+			$"@dolist/then a b={{@pemit #1=DlThen_##_{id}}},{{@pemit #1=DlThenDone_%0_{id}}}"));
+
+		await Assert.That(await WaitForMessage(executor, $"DlThenDone_2_{id}")).IsTrue();
+		var messages = MessagesFor(executor);
+		await Assert.That(messages.IndexOf($"DlThenDone_2_{id}")).IsGreaterThan(messages.IndexOf($"DlThen_b_{id}"));
+		await Assert.That(messages).Contains($"DlThen_a_{id}");
+	}
+
+	/// <summary>With /inline, the command after the last comma runs in place after the last run.</summary>
+	[Test]
+	public async ValueTask DoList_Then_Inline_RunsInPlace()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandListParse(MarkupText.Plain(
+			$"@dolist/then/inline a b c=@pemit #1=DlThenIn_##_{id},@pemit #1=DlThenInDone_%0_{id};@pemit #1=DlThenInAfter_{id}"));
+
+		var messages = MessagesFor(executor);
+		await Assert.That(messages.IndexOf($"DlThenInDone_3_{id}")).IsGreaterThan(messages.IndexOf($"DlThenIn_c_{id}"));
+		await Assert.That(messages.IndexOf($"DlThenInAfter_{id}")).IsGreaterThan(messages.IndexOf($"DlThenInDone_3_{id}"));
+	}
+
+	/// <summary>An empty list still runs the command afterwards, with 0 in %0.</summary>
+	[Test]
+	public async ValueTask DoList_Then_EmptyListStillRunsIt()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+			$"@dolist/then/inline =@pemit #1=DlThenEmpty_##_{id},@pemit #1=DlThenEmptyDone_%0_{id}"));
+
+		await Assert.That(Heard(executor, $"DlThenEmptyDone_0_{id}")).IsEqualTo(1);
+	}
+
+	/// <summary>Without a comma there is nothing to run afterwards, and nothing runs at all.</summary>
+	[Test]
+	public async ValueTask DoList_Then_WithoutACommaIsRefused()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+			$"@dolist/then/inline a={{@pemit #1=DlThenNone_{id}}}"));
+
+		await Assert.That(Heard(executor, $"DlThenNone_{id}")).IsEqualTo(0);
+		await Assert.That(await WaitForMessage(executor, "What do you want to run afterwards? Put it after the last comma.")).IsTrue();
+	}
+
+	/// <summary>@map/then queues the command after the last comma once the attribute is queued for each element.</summary>
+	[Test]
+	public async ValueTask Map_Then_RunsAfterTheQueuedRuns()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapThen");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&RUN {thing}=@pemit #1=MapThen_%0_{id}"));
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+			$"@map/then {thing}/RUN=x y,{{@pemit #1=MapThenDone_%0_{id}}}"));
+
+		await Assert.That(await WaitForMessage(executor, $"MapThenDone_2_{id}")).IsTrue();
+		var messages = MessagesFor(executor);
+		await Assert.That(messages.IndexOf($"MapThenDone_2_{id}")).IsGreaterThan(messages.IndexOf($"MapThen_y_{id}"));
+		await Assert.That(messages).Contains($"MapThen_x_{id}");
+	}
 }

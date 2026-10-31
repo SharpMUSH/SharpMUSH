@@ -101,7 +101,7 @@ public partial class Commands
 	/// triggerer (the executor, or the original enactor under <c>/spoof</c>) as both its enactor and
 	/// its caller, while the executor remains the identity the attribute is read under.
 	/// </remarks>
-	[SharpCommand(Name = "@MAPSQL", Switches = ["NOTIFY", "COLNAMES", "SPOOF", "PREPARE"], Behavior = CB.Default | CB.EqSplit,
+	[SharpCommand(Name = "@MAPSQL", Switches = ["NOTIFY", "COLNAMES", "SPOOF", "PREPARE", "THEN"], Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace,
 		CommandLock = "FLAG^WIZARD|POWER^SQL_OK", MinArgs = 0, MaxArgs = 0, ParameterNames = ["obj/attr", "query"])]
 	public async ValueTask<Option<CallState>> MapSql(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -129,7 +129,21 @@ public partial class Commands
 		}
 
 		var objAttrStr = objAttrArg.Message.ToPlainText();
-		var rawQueryInput = queryArg.Message.ToPlainText();
+		// The right side arrives unevaluated, so /then can split off the command list that runs after the
+		// rows before the query is evaluated; the query is evaluated here, as PennMUSH evaluates it.
+		MString? afterwards = null;
+		string rawQueryInput;
+		if (switches.Contains("THEN"))
+		{
+			if (SplitThen(queryArg.Message) is not var (query, after))
+			{
+				await NotifyService.Notify(executor, ThenNeedsACommand, executor);
+				return new CallState(ErrorMessages.Returns.InvalidArguments);
+			}
+			afterwards = after;
+			rawQueryInput = (await parser.FunctionParse(query))?.Message.ToPlainText() ?? string.Empty;
+		}
+		else rawQueryInput = (await queryArg.ParsedMessage())?.ToPlainText() ?? string.Empty;
 
 		if (string.IsNullOrWhiteSpace(objAttrStr) || string.IsNullOrWhiteSpace(rawQueryInput))
 		{
@@ -286,6 +300,12 @@ public partial class Commands
 							}
 							admittedRows++;
 							rowNumber++;
+						}
+
+						if (afterwards is { } thenList)
+						{
+							await Mediator.Send(new AdmitCommandListRequest(thenList, ThenState(admitted.SnapshotForQueuedAction(), admittedRows),
+								new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray), -1), ExecutionBudget.CurrentToken);
 						}
 
 						if (completion is not null)
