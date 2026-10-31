@@ -659,7 +659,9 @@
     private int? _placeRead;
     private string _sideState = "open";
     private string _sideReason = "";
-    private static readonly string[] Sides = ["n", "e", "s", "w", "u", "d"];
+    private static readonly string[] SquareSides = ["n", "e", "s", "w", "u", "d"];
+    private static readonly string[] HexSides = ["n", "ne", "se", "s", "sw", "nw", "u", "d"];
+    private string[] Sides => Layout.IsHex ? HexSides : SquareSides;
     private static readonly string[] SideStates = ["open", "wall", "oneway", "lock"];
 
     /// <summary>The place at (x, y) on the level on show, as the view read it; null when it holds nothing or was not read.</summary>
@@ -678,8 +680,8 @@
 
     /// <summary>
     /// The side's state and reason as the view read them: open when it lists no wall there. A wall or lock between two
-    /// places on one level is listed once, on the north or east side of the one it belongs to, so a south or west side
-    /// reads it from the neighbour's; up and down sides are listed on the place itself; a one-way side is listed on the
+    /// places on one level is listed once, on the north or east side of the one it belongs to (on a hex map, its north,
+    /// north-east or south-east side), so the other sides read it from the neighbour's; up and down sides are listed on the place itself; a one-way side is listed on the
     /// place it leads out of.
     /// </summary>
     private void ChooseSide(string side)
@@ -693,6 +695,8 @@
             {
                 "s" => (x, y - 1, "n"),
                 "w" => (x - 1, y, "e"),
+                "sw" => (x - 1, y, "ne"),
+                "nw" => (x - 1, y + 1, "se"),
                 _ => (x, y, side),
             };
             wall = cells.Walls.FirstOrDefault(wall => wall.X == x && wall.Y == y && wall.Side == side && wall.Kind == MapWallKinds.OneWay)
@@ -716,7 +720,10 @@
             @if (Layout.Space is null)
             {
                 <p class="map-note">@Loc["NavMapWorldNote"]</p>
-                <MudButton Variant="Variant.Outlined" Disabled="WorldPlanned" OnClick="CreateWorldAsync">@Loc["NavMapMakeWorld"]</MudButton>
+                <div class="map-builder-row">
+                    <MudButton Variant="Variant.Outlined" Disabled="WorldPlanned" OnClick="() => CreateWorldAsync(MapSpaces.Square)">@Loc["NavMapMakeWorld"]</MudButton>
+                    <MudButton Variant="Variant.Outlined" Disabled="WorldPlanned" OnClick="() => CreateWorldAsync(MapSpaces.Hex)">@Loc["NavMapMakeHexWorld"]</MudButton>
+                </div>
             }
             else
             {
@@ -803,9 +810,9 @@
     /// <summary>One paint covers at most 262144 places, as <c>@world/paint</c> allows.</summary>
     private bool PaintTooLarge => (Math.Abs((long)_paintX2 - _paintX) + 1) * (Math.Abs((long)_paintY2 - _paintY) + 1) > 262144;
 
-    private async Task CreateWorldAsync()
+    private async Task CreateWorldAsync(string space)
     {
-        Plan.CreateWorld();
+        Plan.CreateWorld(space);
         await OnChanged.InvokeAsync(null);
     }
 

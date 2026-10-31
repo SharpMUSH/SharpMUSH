@@ -7049,6 +7049,9 @@
   <data name="NavMapMakeWorld" xml:space="preserve">
     <value>Zur Weltkarte machen</value>
   </data>
+  <data name="NavMapMakeHexWorld" xml:space="preserve">
+    <value>Zu einer Sechseck-Weltkarte machen</value>
+  </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Einen Ort oder jeden Ort in einem Rechteck mit einem Geländetyp malen. Auf die Karte klicken, um einen Ort zu wählen.</value>
   </data>
@@ -7071,7 +7074,7 @@
     <value>Typen der Legende</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>Spieler durchwandern eine Weltkarte über zehn Richtungsausgänge darauf. Zum Öffnen braucht es das Paket World grid, und die Karte muss ein Raum sein.</value>
+    <value>Spieler durchwandern eine Weltkarte über Richtungsausgänge darauf: zehn auf einer quadratischen Karte, acht auf einer Sechseckkarte. Zum Öffnen braucht es das Paket World grid, und die Karte muss ein Raum sein.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Richtungsausgänge öffnen</value>
@@ -7096,6 +7099,18 @@
   </data>
   <data name="NavMapSideW" xml:space="preserve">
     <value>Westen</value>
+  </data>
+  <data name="NavMapSideNE" xml:space="preserve">
+    <value>Nordosten</value>
+  </data>
+  <data name="NavMapSideSE" xml:space="preserve">
+    <value>Südosten</value>
+  </data>
+  <data name="NavMapSideSW" xml:space="preserve">
+    <value>Südwesten</value>
+  </data>
+  <data name="NavMapSideNW" xml:space="preserve">
+    <value>Nordwesten</value>
   </data>
   <data name="NavMapSideU" xml:space="preserve">
     <value>Oben</value>

@@ -121,6 +121,20 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 		Legend = [new("forest", "Forest", "green", "forest"), new("water", "Deep water", "blue", "~")],
 	};
 
+	/// <summary>The wilds again as a hex map, the steppe.</summary>
+	public static readonly MapDto SteppeMap = WildsMap with { Map = new("#62", "Steppe", MapKinds.Coordinates, null), Space = new(MapSpaces.Hex, -20, -20, 20, 20, [0]) };
+
+	/// <summary>
+	/// The steppe's places: the camp, and the ford north-east of it. The camp's north-east side is a wall, its south-east
+	/// side locked, its north side one way out, and its north-west side a wall, listed as the south-east side of the place
+	/// it shares it with.
+	/// </summary>
+	public static MapCellsDto SteppeCells(int left, int bottom, int right, int top) => new(0, left, bottom, right, top,
+		[new(0, 0, "forest") { Room = "#85" }, new(1, 0, "water") { Name = "Ford" }, new(-1, 1, "forest")],
+		[new(0, 0, "ne", MapWallKinds.Wall, "Reeds."), new(0, 0, "se", MapWallKinds.Lock, "A gate."), new(0, 0, "n", MapWallKinds.OneWay, null),
+			new(-1, 1, "se", MapWallKinds.Wall, null)],
+		false);
+
 	/// <summary>The windows of the wilds' places read, as their queries.</summary>
 	public List<string> CellsAsked { get; } = [];
 
@@ -175,6 +189,11 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			Commands.Add(sent!.Command);
 			return Json(new PortalCommandResponse([], Read(sent), false));
 		}
+		if (path == "api/maps/62/cells")
+		{
+			var query = System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query);
+			return Json(SteppeCells(int.Parse(query["left"]!), int.Parse(query["bottom"]!), int.Parse(query["right"]!), int.Parse(query["top"]!)));
+		}
 		if (path == "api/maps/59/cells")
 		{
 			CellsAsked.Add(request.RequestUri.Query);
@@ -196,6 +215,7 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			"api/maps/57" => Json(ShoreMap),
 			"api/maps/58" => Json(PierMap),
 			"api/maps/59" => Json(WildsMap with { CanEdit = WildsEditable }),
+			"api/maps/62" => Json(SteppeMap with { CanEdit = WildsEditable }),
 			"api/maps/here" when Here is { } here => Json(here),
 			"api/maps/route/11" => Json(ToLighthouse),
 			"api/maps/route/10" => Json(new MapRouteDto([], null)),
@@ -757,6 +777,34 @@ public class WorldMapPageTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task AHexMapDrawsHexagonsWithWallsOnTheirSixSides()
+	{
+		Arrange();
+		_api.WildsEditable = true;
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 62));
+		cut.WaitForAssertion(() => cut.Find("polygon.map-place"));
+
+		await Assert.That(cut.FindAll("polygon.map-place").Count).IsEqualTo(3);
+		await Assert.That(cut.FindAll("rect.map-place")).IsEmpty();
+		await Assert.That(cut.FindAll("line.map-grid")).IsEmpty().Because("the hexagons are the grid");
+		await Assert.That(cut.FindAll("line.map-wall").Count).IsEqualTo(3);
+		await Assert.That(cut.FindAll("line.map-wall--lock").Count).IsEqualTo(1);
+		var oneWay = cut.Find("line.map-oneway");
+		await Assert.That(double.Parse(oneWay.GetAttribute("y2")!, System.Globalization.CultureInfo.InvariantCulture))
+			.IsLessThan(double.Parse(oneWay.GetAttribute("y1")!, System.Globalization.CultureInfo.InvariantCulture))
+			.Because("one way out north points up the screen");
+
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+		await cut.Find(".map-room--place").ClickAsync();
+		await Assert.That(cut.Find("#map-place-title").TextContent).IsEqualTo("NavMapPlaceAt(1, 0, 0)");
+		var selects = cut.FindComponents<MudBlazor.MudSelect<string>>();
+		await cut.InvokeAsync(() => selects[0].Instance.ValueChanged.InvokeAsync("sw"));
+		await Assert.That(cut.FindComponents<MudBlazor.MudSelect<string>>()[1].Instance.Value).IsEqualTo(MapWallKinds.Wall)
+			.Because("the ford's south-west side is the camp's north-east side");
+		await Assert.That(cut.FindComponents<MudBlazor.MudTextField<string>>().Select(field => field.Instance.Value)).Contains("Reeds.");
+	}
+
+	[Test]
 	public async Task APlacesDownSideReadsTheLockOfTheLevelBelow()
 	{
 		Arrange();
@@ -1073,8 +1121,56 @@ public class MapLayoutTests
 		await Assert.That(layout.Bounds(0, includePlaces: false)).IsEqualTo((0d, -MapLayout.Cell, MapLayout.Cell, 0d));
 		await Assert.That(new MapLayout(Map(MapKinds.Graph, [], []) with { Space = new(MapSpaces.Square, 0, 0, 1, 1, [0]) }).Space).IsNull()
 			.Because("a picture places rooms by its pixels, not by cells");
-		await Assert.That(new MapLayout(Map(MapKinds.Coordinates, [], []) with { Space = new(MapSpaces.Hex, 0, 0, 1, 1, [0]) }).Space).IsNull()
-			.Because("this portal draws square cells only");
+		await Assert.That(new MapLayout(Map(MapKinds.Coordinates, [], []) with { Space = new(MapSpaces.Graph, 0, 0, 1, 1, [0]) }).Space).IsNull()
+			.Because("this portal draws square and hex places only");
+	}
+
+	[Test]
+	public async Task AHexMapsPlacesAreFlatToppedHexagonsAtTheirAxialCoordinates()
+	{
+		var layout = new MapLayout(Map(MapKinds.Coordinates, [new("#1", "Camp", [1, 0, 0], null)], []) with
+		{
+			Space = new(MapSpaces.Hex, -2, -2, 2, 2, [0]),
+		});
+		var (s, h) = (MapLayout.HexSide, MapLayout.HexHeight);
+
+		await Assert.That(layout.IsHex).IsTrue();
+		await Assert.That(layout.PlaceCentre(0, 1)).IsEqualTo((0d, -h)).Because("north is a row up");
+		await Assert.That(layout.PlaceCentre(1, 0)).IsEqualTo((1.5 * s, -h / 2)).Because("northeast is a column east and half a row up");
+		foreach (var (x, y) in new[] { (0, 0), (1, 0), (1, -1), (-1, 1), (-2, 2), (2, -2), (0, -2) })
+		{
+			var (cx, cy) = layout.PlaceCentre(x, y);
+			await Assert.That(layout.PlaceAt(cx, cy)).IsEqualTo((x, y));
+			await Assert.That(layout.PlaceAt(cx + 0.9 * h / 2, cy)).IsEqualTo((x, y)).Because("a point inside the hexagon is on it");
+		}
+		await Assert.That(layout.PlaceAt(0.95 * s, 0)).IsEqualTo((0, 0));
+		await Assert.That(layout.PlaceAt(1.05 * s, -h / 4)).IsEqualTo((1, 0)).Because("past the east corner is the northeast place");
+
+		var camp = layout.Rooms["#1"];
+		await Assert.That((camp.X + camp.Width / 2, camp.Y + camp.Height / 2)).IsEqualTo(layout.PlaceCentre(1, 0));
+		await Assert.That(layout.Spot(camp)).IsEqualTo((1d, 0d, 0));
+
+		await Assert.That(layout.HexEdge(0, 0, "e")).IsNull();
+		var north = layout.HexEdge(0, 0, "n")!.Value;
+		await Assert.That(new[] { north.Y1, north.Y2, north.Dx, north.Dy }.Select(value => Math.Round(value, 9)))
+			.IsEquivalentTo([Math.Round(-h / 2, 9), Math.Round(-h / 2, 9), 0d, -1d]);
+		var southwest = layout.HexEdge(1, 0, "sw")!.Value;
+		var northeast = layout.HexEdge(0, 0, "ne")!.Value;
+		await Assert.That(Math.Abs(southwest.X1 - northeast.X2) + Math.Abs(southwest.Y1 - northeast.Y2)
+				+ Math.Abs(southwest.X2 - northeast.X1) + Math.Abs(southwest.Y2 - northeast.Y1)).IsLessThan(1e-9)
+			.Because("a place's southwest edge is its neighbour's northeast edge");
+
+		// The places' box runs from the west corner of the west column to the east corner of the east one, and from the
+		// north side of the north-east corner's place to the south side of the south-west one's.
+		var bounds = layout.Bounds(0);
+		await Assert.That(bounds.Left).IsEqualTo(-3 * s - s);
+		await Assert.That(bounds.Right).IsEqualTo(3 * s + s);
+		await Assert.That(bounds.Top).IsEqualTo(-(2 + 1) * h - h / 2);
+		await Assert.That(bounds.Bottom).IsEqualTo((2 + 1) * h + h / 2);
+
+		var view = layout.PlacesIn(-s, -h, s, h);
+		await Assert.That(view.Left <= -1 && view.Right >= 1 && view.Bottom <= -1 && view.Top >= 1).IsTrue()
+			.Because($"a view around the middle holds the places around it, not {view}");
 	}
 
 	[Test]

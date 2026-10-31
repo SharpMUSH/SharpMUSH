@@ -30,7 +30,7 @@
                 <image class="map-backdrop" href="@_backdrop" x="0" y="0" width="@Num(Layout.Map.Size![0])" height="@Num(Layout.Map.Size[1])"
                        preserveAspectRatio="none" />
             }
-            @if (!Layout.IsGraph)
+            @if (!Layout.IsGraph && !Layout.IsHex)
             {
                 @foreach (var line in GridLines())
                 {
@@ -39,20 +39,32 @@
             }
             @foreach (var place in _places)
             {
-                var (px, py) = (place.X * MapLayout.Cell, -(place.Y + 1) * MapLayout.Cell);
-                <rect class="map-place @(PlaceStyle(place) is null ? null : "map-place--toned") @(SelectedPlace == (place.X, place.Y) ? "map-place--selected" : null)"
-                      style="@PlaceStyle(place)" x="@Num(px)" y="@Num(py)" width="@Num(MapLayout.Cell)" height="@Num(MapLayout.Cell)" />
-                @if (place.Closed)
+                var (px, py, pw, ph) = Layout.PlaceBox(place.X, place.Y);
+                var placeClass = $"map-place {(PlaceStyle(place) is null ? null : "map-place--toned")} {(SelectedPlace == (place.X, place.Y) ? "map-place--selected" : null)}";
+                @if (Layout.IsHex)
                 {
-                    <rect class="map-place-hatch" fill="url(#@HatchId)" x="@Num(px)" y="@Num(py)" width="@Num(MapLayout.Cell)" height="@Num(MapLayout.Cell)" />
+                    <polygon class="@placeClass" style="@PlaceStyle(place)" points="@Points(Layout.HexCorners(place.X, place.Y))" />
+                    @if (place.Closed)
+                    {
+                        <polygon class="map-place-hatch" fill="url(#@HatchId)" points="@Points(Layout.HexCorners(place.X, place.Y))" />
+                    }
+                }
+                else
+                {
+                    <rect class="@placeClass" style="@PlaceStyle(place)" x="@Num(px)" y="@Num(py)" width="@Num(pw)" height="@Num(ph)" />
+                    @if (place.Closed)
+                    {
+                        <rect class="map-place-hatch" fill="url(#@HatchId)" x="@Num(px)" y="@Num(py)" width="@Num(pw)" height="@Num(ph)" />
+                    }
                 }
                 @if (!_marked.Contains(place) && MapLegendStyle.Glyph(Icon(place)) is { } glyph)
                 {
-                    @SvgText("map-place-glyph", px + MapLayout.Cell / 2, py + MapLayout.Cell / 2, glyph)
+                    @SvgText("map-place-glyph", px + pw / 2, py + ph / 2, glyph)
                 }
                 @if (place.Badge is { Length: > 0 } badge)
                 {
-                    @SvgText("map-place-badge", px + MapLayout.Cell - Inset, py + Inset, badge)
+                    @* A hexagon's corner is cut away: its badge sits in from the top of its north-east edge. *@
+                    @SvgText("map-place-badge", px + pw - (Layout.IsHex ? MapLayout.HexSide / 2 : 0) - Inset, py + Inset, badge)
                 }
             }
             @foreach (var wall in _walls)
@@ -69,6 +81,10 @@
                 @if (Layout.IsGraph)
                 {
                     <circle class="map-spot" cx="@Num(cellX)" cy="@Num(cellY)" r="10" />
+                }
+                else if (Layout.IsHex)
+                {
+                    <polygon class="map-spot" points="@Points(Layout.HexCorners((int)cellX, (int)cellY, 1 - 2 * Inset / MapLayout.HexSide))" />
                 }
                 else
                 {
@@ -123,7 +139,7 @@
             @foreach (var place in _marked)
             {
                 var chosen = SelectedPlace == (place.X, place.Y);
-                <button type="button" class="map-room map-room--place @(chosen ? "map-room--selected" : null)" style="@CellBox(place.X, place.Y)"
+                <button type="button" class="map-room map-room--place @(chosen ? "map-room--selected" : null)" style="@PlaceButtonBox(place.X, place.Y)"
                         aria-pressed="@(chosen ? "true" : "false")" aria-label="@PlaceLabel(place)" title="@PlaceName(place)"
                         @onclick="() => OnPlace.InvokeAsync(place)">
                     @if (MapLegendStyle.Svg(Icon(place)) is { } svg)
@@ -220,7 +236,7 @@
 
     [Parameter] public EventCallback<MapCellDto> OnPlace { get; set; }
 
-    private const double Inset = 6;
+    private const double Inset = MapLayout.RoomInset;
     private const double Margin = 24;
 
     /// <summary>The narrowest a room is drawn, in pixels, with its name inside.</summary>
@@ -378,10 +394,22 @@
     private Task PickAsync(MouseEventArgs click) =>
         OnCell.InvokeAsync((Math.Round(_left + click.OffsetX / Zoom), Math.Round(_top + click.OffsetY / Zoom)));
 
-    /// <summary>A click on a world map: the cell under it.</summary>
-    private Task PickPlaceAsync(MouseEventArgs click) =>
-        OnCell.InvokeAsync((Math.Floor((_left + click.OffsetX / Zoom) / MapLayout.Cell),
-            -Math.Floor((_top + click.OffsetY / Zoom) / MapLayout.Cell) - 1));
+    /// <summary>The button over a place, inside the box its cell or hexagon fits in.</summary>
+    private string PlaceButtonBox(int x, int y)
+    {
+        if (!Layout.IsHex) return CellBox(x, y);
+        // A hexagon's button keeps clear of its sides, so their walls show.
+        var (left, top, width, height) = Layout.HexInside(x, y);
+        return $"left: {Percent(left - _left, _width)}%; top: {Percent(top - _top, _height)}%; " +
+               $"width: {Percent(width, _width)}%; height: {Percent(height, _height)}%;";
+    }
+
+    /// <summary>A click on a world map: the place under it.</summary>
+    private Task PickPlaceAsync(MouseEventArgs click)
+    {
+        var (x, y) = Layout.PlaceAt(_left + click.OffsetX / Zoom, _top + click.OffsetY / Zoom);
+        return OnCell.InvokeAsync((x, y));
+    }
 
     private static (string, string) Pair(string a, string b) => string.CompareOrdinal(a, b) < 0 ? (a, b) : (b, a);
 
@@ -441,7 +469,7 @@
     /// <summary>The view settled at (x, y), width by height, in the figure's pixels.</summary>
     [JSInvokable]
     public Task ViewAt(double x, double y, double width, double height) =>
-        Zoom <= 0 ? Task.CompletedTask : OnView.InvokeAsync(MapLayout.CellsIn(_left + x / Zoom, _top + y / Zoom,
+        Zoom <= 0 ? Task.CompletedTask : OnView.InvokeAsync(Layout.PlacesIn(_left + x / Zoom, _top + y / Zoom,
             _left + (x + width) / Zoom, _top + (y + height) / Zoom));
 
     /// <summary>A pinch or Ctrl+wheel: zoom by <paramref name="factor"/>, holding still the point (x, y) of the frame.</summary>
@@ -558,7 +586,7 @@
     {
         var (left, top) = (wall.X * MapLayout.Cell, -(wall.Y + 1) * MapLayout.Cell);
         var (right, bottom) = (left + MapLayout.Cell, top + MapLayout.Cell);
-        (double X1, double Y1, double X2, double Y2, double Dx, double Dy)? side = wall.Side switch
+        var side = Layout.IsHex ? Layout.HexEdge(wall.X, wall.Y, wall.Side) : wall.Side switch
         {
             "n" => (left, top, right, top, 0, -1),
             "e" => (right, top, right, bottom, 1, 0),
@@ -659,6 +687,9 @@
     private static string Percent(double at, double of) => Num(of <= 0 ? 0 : at / of * 100);
 
     private static string Px(double value) => Num(value) + "px";
+
+    private static string Points(IEnumerable<(double X, double Y)> points) =>
+        string.Join(' ', points.Select(point => $"{Num(point.X)},{Num(point.Y)}"));
 
     private static string Num(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
 }

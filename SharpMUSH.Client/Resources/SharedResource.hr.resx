@@ -7049,6 +7049,9 @@
   <data name="NavMapMakeWorld" xml:space="preserve">
     <value>Pretvori u kartu svijeta</value>
   </data>
+  <data name="NavMapMakeHexWorld" xml:space="preserve">
+    <value>Pretvori u šesterokutnu kartu svijeta</value>
+  </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Obojite mjesto, ili svako mjesto u pravokutniku, vrstom terena. Kliknite kartu za odabir mjesta.</value>
   </data>
@@ -7071,7 +7074,7 @@
     <value>Vrste iz legende</value>
   </data>
   <data name="NavMapOpenWaysNote" xml:space="preserve">
-    <value>Igrači hodaju kartom svijeta kroz deset izlaza za smjerove na njoj. Za njihovo otvaranje treba paket World grid, a karta mora biti soba.</value>
+    <value>Igrači hodaju kartom svijeta kroz izlaze za smjerove na njoj: deset na kvadratnoj karti, osam na šesterokutnoj. Za njihovo otvaranje treba paket World grid, a karta mora biti soba.</value>
   </data>
   <data name="NavMapOpenWays" xml:space="preserve">
     <value>Otvori izlaze za smjerove</value>
@@ -7096,6 +7099,18 @@
   </data>
   <data name="NavMapSideW" xml:space="preserve">
     <value>Zapad</value>
+  </data>
+  <data name="NavMapSideNE" xml:space="preserve">
+    <value>Sjeveroistok</value>
+  </data>
+  <data name="NavMapSideSE" xml:space="preserve">
+    <value>Jugoistok</value>
+  </data>
+  <data name="NavMapSideSW" xml:space="preserve">
+    <value>Jugozapad</value>
+  </data>
+  <data name="NavMapSideNW" xml:space="preserve">
+    <value>Sjeverozapad</value>
   </data>
   <data name="NavMapSideU" xml:space="preserve">
     <value>Gore</value>
