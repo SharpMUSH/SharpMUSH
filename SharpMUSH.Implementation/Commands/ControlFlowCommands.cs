@@ -86,7 +86,7 @@ public partial class Commands
 				await NotifyService.Notify(executor, ThenNeedsACommand, executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
-			(originalListText, afterwards) = (before, after);
+			(originalListText, afterwards) = (Unbrace(before), Unbrace(after));
 		}
 		else originalListText = Unbrace(originalListText);
 		var (delimiter, listText) = ExtractFirstParameter(originalListText, switches.Contains("DELIMIT"));
@@ -290,7 +290,7 @@ public partial class Commands
 				await NotifyService.Notify(executor, ThenNeedsACommand, executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
-			(command, afterwards) = (before, after);
+			(command, afterwards) = (Unbrace(before), Unbrace(after));
 		}
 		else command = Unbrace(command);
 

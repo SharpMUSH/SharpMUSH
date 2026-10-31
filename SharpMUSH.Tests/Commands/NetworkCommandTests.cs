@@ -81,6 +81,20 @@ public class NetworkCommandTests
 		await Assert.That(heard).Contains($"row 1:{token}");
 	}
 
+	/// <summary>A braced query given /then loses only its own braces, as it does without /then.</summary>
+	[Test]
+	public async ValueTask MapsqlThenKeepsBracesInsideTheQuery()
+	{
+		var wizard = await Players.WizardAsync("MapsqlThenBraces");
+		var token = TestIsolationHelpers.GenerateUniqueName("MapsqlThenBraces");
+		await Players.RunAsync(wizard, "&ROW me=@pemit me=row %0:%1");
+
+		var heard = await Players.HeardRunning(wizard, $"@mapsql/then me/ROW={{SELECT '{{{token}}}'}},@pemit me=done %0");
+
+		await Assert.That(heard).Contains($"row 1:{{{token}}}");
+		await Assert.That(heard).Contains("done 1");
+	}
+
 	/// <summary>The query of @mapsql/then is evaluated, and a query with no rows still runs what comes after it.</summary>
 	[Test]
 	public async ValueTask MapsqlThenRunsAfterNoRows()

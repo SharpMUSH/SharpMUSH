@@ -132,8 +132,11 @@ public partial class Commands
 						}
 						catch (Exception failure) when (RequestFailure(failure) is { } reason)
 						{
-							// PennMUSH tells the object and queues nothing (src/bsd.c:1209-1210).
-							await NotifyService.Notify(found, $"Request failed: {reason}", found);
+							// PennMUSH tells the object and queues nothing (src/bsd.c:1209-1210). A timeout has spent the
+							// request's budget, so the notice gets one of its own.
+							using var notice = new ExecutionBudget(TimeSpan.FromSeconds(5), CancellationToken.None);
+							using (notice.Enter())
+								await NotifyService.Notify(found, $"Request failed: {reason}", found);
 							return null;
 						}
 						using var held = response;

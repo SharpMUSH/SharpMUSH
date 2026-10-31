@@ -9,8 +9,8 @@ public partial class Commands
 
 	/// <summary>
 	/// The right side of a command given <c>/then</c>, split at its last comma outside braces, brackets and
-	/// parentheses: what comes before it, and the command list to run afterwards. Each part is trimmed and
-	/// loses one pair of braces around it. None when there is no such comma.
+	/// parentheses: what comes before it, and the command list to run afterwards, as written. None when
+	/// there is no such comma.
 	/// </summary>
 	private static (MString Before, MString After)? SplitThen(MString text)
 	{
@@ -38,12 +38,13 @@ public partial class Commands
 
 		return split < 0
 			? null
-			: (Unbrace(text.Substring(0, split)), Unbrace(text.Substring(split + 1, raw.Length - split - 1)));
+			: (text.Substring(0, split), text.Substring(split + 1, raw.Length - split - 1));
 	}
 
 	/// <summary>
 	/// <paramref name="text"/> without its outer spaces and without the braces at its top level, as a command
-	/// argument split without evaluation loses them: <c>{a;b}; c</c> is <c>a;b; c</c>.
+	/// argument split without evaluation loses them: <c>{a;b}; c</c> is <c>a;b; c</c>. Braces inside
+	/// brackets or a function's parentheses belong to that call and stay.
 	/// </summary>
 	private static MString Unbrace(MString text)
 	{
@@ -55,6 +56,7 @@ public partial class Commands
 
 		var kept = new List<(int Start, int Length)>();
 		var depth = 0;
+		var nested = 0;
 		var from = start;
 		for (var index = start; index < end; index++)
 		{
@@ -62,6 +64,14 @@ public partial class Commands
 			{
 				case '\\' or '%':
 					index++;
+					break;
+				case '[' or '(' when depth == 0:
+					nested++;
+					break;
+				case ']' or ')' when depth == 0 && nested > 0:
+					nested--;
+					break;
+				case '{' or '}' when nested > 0:
 					break;
 				case '{':
 					if (depth++ == 0)

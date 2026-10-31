@@ -140,7 +140,8 @@ public partial class Commands
 				await NotifyService.Notify(executor, ThenNeedsACommand, executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
-			afterwards = after;
+			// The query keeps its braces for its one evaluation, which removes them, as without /then.
+			afterwards = Unbrace(after);
 			rawQueryInput = (await parser.FunctionParse(query))?.Message.ToPlainText() ?? string.Empty;
 		}
 		else rawQueryInput = (await queryArg.ParsedMessage())?.ToPlainText() ?? string.Empty;

@@ -1049,6 +1049,23 @@ public class ControlFlowCommandTests
 		await Assert.That(messages.IndexOf($"DlThenInAfter_{id}")).IsGreaterThan(messages.IndexOf($"DlThenInDone_3_{id}"));
 	}
 
+	/// <summary>Braces inside a function call in the command belong to that call and are kept.</summary>
+	[Test]
+	public async ValueTask DoList_KeepsBracesInsideAFunctionCall()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+			$"@dolist/inline a=@pemit #1=DlFn_[if(1,{{add(1,2)}},no)]_{id}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+			$"@dolist/inline/then a=@pemit #1=DlFnThen_[if(1,{{add(1,2)}},no)]_{id},@pemit #1=DlFnThenDone_{id}"));
+
+		await Assert.That(Heard(executor, $"DlFn_add(1,2)_{id}")).IsEqualTo(1);
+		await Assert.That(Heard(executor, $"DlFnThen_add(1,2)_{id}")).IsEqualTo(1);
+		await Assert.That(Heard(executor, $"DlFnThenDone_{id}")).IsEqualTo(1);
+	}
+
 	/// <summary>An empty list still runs the command afterwards, with 0 in %0.</summary>
 	[Test]
 	public async ValueTask DoList_Then_EmptyListStillRunsIt()
