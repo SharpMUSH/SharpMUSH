@@ -893,6 +893,8 @@ public partial class Commands
 			{
 				await parser.FromState(parser.CurrentState with { ExecutionBudget = budget })
 					.CommandParse(handle, ConnectionService, MarkupText.Plain("look"));
+				// The look's output carries this budget's token, and ending the budget cancels it: publish it first.
+				await OutputBatch.FlushAsync();
 			}
 			catch (OperationCanceledException) when (budget.IsExpired) { }
 		}
