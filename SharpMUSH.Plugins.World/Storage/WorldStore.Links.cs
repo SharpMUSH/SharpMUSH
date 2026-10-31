@@ -24,9 +24,9 @@ public sealed record WorldLinkRecord(string Names, int X, int Y, int Z, WorldEdg
 	/// <summary>The name a place knows it by: its first, in lower case, spaces as <c>_</c>.</summary>
 	public string Way => WorldLinks.Key(NameList[0]);
 
-	/// <summary>Whether <paramref name="name"/> is its way or one of its names, any case.</summary>
+	/// <summary>Whether <paramref name="name"/> is one of its names, keyed as its way is: any case, <c>_</c> for a space.</summary>
 	public bool Answers(string name) =>
-		WorldLinks.Key(name) == Way || NameList.Any(own => own.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase));
+		NameList.Any(own => WorldLinks.Key(own) == WorldLinks.Key(name));
 }
 
 /// <summary>The names a graph map's ways are given by.</summary>

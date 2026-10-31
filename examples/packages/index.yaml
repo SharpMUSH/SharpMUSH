@@ -619,7 +619,7 @@ packages:
   - path: world-grid/
     name: World grid
     package: world-grid
-    version: 1.5.1
+    version: 1.5.2
     description: Walking a world map the World plugin keeps — direction exits lead between the rooms it lends its places, a parent describes them from the legend, +map draws the places around you
   - path: world-grid-help/
     name: World grid help

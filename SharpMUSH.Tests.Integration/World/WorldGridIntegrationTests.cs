@@ -247,6 +247,30 @@ public class WorldGridIntegrationTests
 			await Assert.That(await God($"+map/exits {mapRef}")).Contains($"Renamed 1 way exits on {map}");
 			await Assert.That(await Eval($"squish(iter(lexits({mapRef}),if(strmatch(get(%i0/MAP`WAY),old_road),fullname(%i0)),,|),|)")).IsEqualTo("Old Road");
 			await Assert.That(await God($"+map/exits {mapRef}")).DoesNotContain("Renamed");
+
+			// A name ways out of two places go by is an exit of its own, which walks whichever of them leaves the mover's place.
+			await God($"@world/link {mapRef}/4,2/back_road");
+			await God($"@world/link {mapRef}/4,2=0,0,Back Road;west");
+			await God($"@world/link {mapRef}/9,9=0,0,Hill Path;west");
+			var shared = await God($"+map/exits {mapRef}");
+			await Assert.That(shared).Contains($"Renamed 1 way exits on {map}");
+			await Assert.That(await Eval($"sort(iter(lexits({mapRef}),fullname(%i0),,|),,|,|)")).IsEqualTo("Back Road|Ford|Hill Path|Old Road|west");
+			var origin = await Eval($"worldroom({mapRef},0,0)");
+			await God($"@tel {walker.DbRef}=[worldroom({mapRef},4,2)]");
+			await As(walker, "west");
+			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(origin).Because("from 4,2 west is the Back Road");
+			await God($"@tel {walker.DbRef}=[worldroom({mapRef},9,9)]");
+			await As(walker, "west");
+			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(origin).Because("from 9,9 west is the Hill Path");
+			await Assert.That(await As(walker, "look")).DoesNotContain("west").Because("look lists the ways by their own names");
+
+			// The name keeps its exit once only one way goes by it, so no two exits ever answer to it.
+			await God($"@world/link {mapRef}/9,9/hill_path");
+			await Assert.That(await God($"+map/exits {mapRef}")).DoesNotContain("Renamed");
+			await Assert.That(await Eval($"sort(iter(lexits({mapRef}),fullname(%i0),,|),,|,|)")).IsEqualTo("Back Road|Ford|Hill Path|Old Road|west");
+			await God($"@tel {walker.DbRef}=[worldroom({mapRef},4,2)]");
+			await As(walker, "west");
+			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(origin);
 		}
 		finally
 		{
