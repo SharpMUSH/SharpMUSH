@@ -422,6 +422,23 @@ public class MapPlanTests
 	}
 
 	[Test]
+	public async Task AGraphWorldMapIsCreatedAndItsWaysLinkedAndRemoved()
+	{
+		var plan = new MapPlan(Grid() with { Space = new(MapSpaces.Graph, 0, 0, 9, 9, [0]) });
+
+		plan.CreateWorld(MapSpaces.Graph);
+		plan.Link(0, 0, 0, 4, 2, 1, " Old  Road ; road ", "");
+		plan.Link(4, 2, 1, 0, 0, 0, "Back", "");
+		plan.Unlink(4, 2, 1, "back");
+
+		await Assert.That(plan.Changes.SelectMany(change => change.Steps)).IsEquivalentTo([
+			new MapStep("@world/create #50=graph", "worldmap(#50)", "graph"),
+			new MapStep("@world/link #50/0,0,0=4,2,1,Old  Road;road", "worldway(#50,0,0,0,old_road,to)", "4,2,1"),
+			new MapStep("@world/link #50/4,2,1/back", "worldway(#50,4,2,1,back,to)", ""),
+		]).Because("removing a way that was only planned drops the plan to add it");
+	}
+
+	[Test]
 	public async Task ARoomPlacedByItsObjidIsCheckedByItsDbref()
 	{
 		var plan = new MapPlan(Grid() with { Space = new(MapSpaces.Square, 0, 0, 9, 9, [0]) });

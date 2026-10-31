@@ -7055,6 +7055,39 @@
   <data name="NavMapMakePointyHexWorld" xml:space="preserve">
     <value>Gjør dette til et verdenskart med spisse sekskanter</value>
   </data>
+  <data name="NavMapMakeGraphWorld" xml:space="preserve">
+    <value>Gjør dette til et grafverdenskart, der stedene bindes sammen av navngitte veier</value>
+  </data>
+  <data name="NavMapWay" xml:space="preserve">
+    <value>Vei</value>
+  </data>
+  <data name="NavMapWaysNote" xml:space="preserve">
+    <value>Veier fører ut fra dette stedet. Fjern en, eller legg til en ny nedenfor.</value>
+  </data>
+  <data name="NavMapNoWays" xml:space="preserve">
+    <value>Ingen vei fører ut fra dette stedet ennå. Legg til en nedenfor: hvor den fører, og navnene dens.</value>
+  </data>
+  <data name="NavMapWayLeads" xml:space="preserve">
+    <value>{0} fører til {1}</value>
+  </data>
+  <data name="NavMapUnlink" xml:space="preserve">
+    <value>Fjern</value>
+  </data>
+  <data name="NavMapWayNames" xml:space="preserve">
+    <value>Veiens navn (Old Road;road)</value>
+  </data>
+  <data name="NavMapWayBack" xml:space="preserve">
+    <value>Navn på veien tilbake (valgfritt)</value>
+  </data>
+  <data name="NavMapLink" xml:space="preserve">
+    <value>Legg til vei</value>
+  </data>
+  <data name="NavMapPlanLink" xml:space="preserve">
+    <value>Legg til veien {0} ut fra {1}</value>
+  </data>
+  <data name="NavMapPlanUnlink" xml:space="preserve">
+    <value>Fjern veien {0}</value>
+  </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Mal et sted, eller hvert sted i en boks, med en terrengtype. Klikk på kartet for å velge et sted.</value>
   </data>
@@ -7144,6 +7177,9 @@
   </data>
   <data name="NavMapSetSide" xml:space="preserve">
     <value>Sett side</value>
+  </data>
+  <data name="NavMapSetWay" xml:space="preserve">
+    <value>Sett vei</value>
   </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>Skjul for spillere</value>

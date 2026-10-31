@@ -125,6 +125,25 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 	public static readonly MapDto SteppeMap = WildsMap with { Map = new("#62", "Steppe", MapKinds.Coordinates, null), Space = new(MapSpaces.Hex, -20, -20, 20, 20, [0]) };
 
 	/// <summary>The wilds again as a pointy hex map, the fen: the camp and a pool east of it, nothing walled.</summary>
+	/// <summary>
+	/// The wilds again as a graph map, the downs: the camp, a barrow two cells east and a shrine on the level above.
+	/// The road leads from the camp to the barrow and back; the barrow's way to the shrine is walled; the shrine is
+	/// up a way to another level, which the drawing leaves out.
+	/// </summary>
+	public static readonly MapDto DownsMap = WildsMap with { Map = new("#64", "Downs", MapKinds.Coordinates, null), Space = new(MapSpaces.Graph, -20, -20, 20, 20, [0, 1]) };
+
+	public static MapCellsDto DownsCells(int left, int bottom, int right, int top) => new(0, left, bottom, right, top,
+		[new(0, 0, "forest") { Room = "#85" }, new(3, 0, "forest") { Name = "Barrow" }], [], false)
+	{
+		Links =
+		[
+			new(0, 0, "old_road", "Old Road;road", 3, 0, 0, null, null),
+			new(3, 0, "back", "Back;b", 0, 0, 0, null, null),
+			new(3, 0, "shrine_path", "Shrine Path", 0, 3, 0, MapWallKinds.Wall, "Brambles."),
+			new(0, 0, "stair", "Stair", 0, 0, 1, null, null),
+		],
+	};
+
 	public static readonly MapDto FenMap = WildsMap with { Map = new("#63", "Fen", MapKinds.Coordinates, null), Space = new(MapSpaces.PointyHex, -20, -20, 20, 20, [0]) };
 
 	/// <summary>
@@ -197,6 +216,11 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			var query = System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query);
 			return Json(SteppeCells(int.Parse(query["left"]!), int.Parse(query["bottom"]!), int.Parse(query["right"]!), int.Parse(query["top"]!)));
 		}
+		if (path == "api/maps/64/cells")
+		{
+			var query = System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query);
+			return Json(DownsCells(int.Parse(query["left"]!), int.Parse(query["bottom"]!), int.Parse(query["right"]!), int.Parse(query["top"]!)));
+		}
 		if (path == "api/maps/63/cells")
 		{
 			var query = System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query);
@@ -226,6 +250,7 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			"api/maps/59" => Json(WildsMap with { CanEdit = WildsEditable }),
 			"api/maps/62" => Json(SteppeMap with { CanEdit = WildsEditable }),
 			"api/maps/63" => Json(FenMap with { CanEdit = WildsEditable }),
+			"api/maps/64" => Json(DownsMap with { CanEdit = WildsEditable }),
 			"api/maps/here" when Here is { } here => Json(here),
 			"api/maps/route/11" => Json(ToLighthouse),
 			"api/maps/route/10" => Json(new MapRouteDto([], null)),
@@ -836,6 +861,64 @@ public class WorldMapPageTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task AGraphMapDrawsItsWaysBetweenPlacesWithNoGrid()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 64));
+		cut.WaitForAssertion(() => cut.Find("line.map-way"));
+
+		await Assert.That(cut.FindAll("rect.map-place").Count).IsEqualTo(2);
+		await Assert.That(cut.FindAll("line.map-grid")).IsEmpty().Because("a graph map's places are joined by its ways alone");
+		var ways = cut.FindAll("line.map-way");
+		await Assert.That(ways.Count).IsEqualTo(3).Because("the stair leads to another level, which this drawing does not show");
+		await Assert.That(ways.Count(way => way.GetAttribute("marker-end") is { Length: > 0 })).IsEqualTo(1)
+			.Because("only the shrine path has no way back");
+		await Assert.That(cut.FindAll("line.map-way--wall").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("text.map-way-name").Select(name => name.TextContent)).IsEquivalentTo(["Old Road", "Back", "Shrine Path"]);
+		await Assert.That(cut.Find("line.map-way--wall title").TextContent).IsEqualTo("Shrine Path: Brambles.");
+	}
+
+	[Test]
+	public async Task AGraphPlaceListsItsWaysAndLinksWallsAndRemovesThem()
+	{
+		Arrange();
+		_api.WildsEditable = true;
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 64));
+		cut.WaitForAssertion(() => cut.Find(".map-room--place"));
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+		await cut.Find(".map-room--place").ClickAsync();
+
+		await Assert.That(cut.Find("#map-place-title").TextContent).IsEqualTo("NavMapPlaceAt(3, 0, 0)");
+		await Assert.That(cut.FindAll(".map-builder-list li").Select(item => item.TextContent.Replace("NavMapUnlink", "").Trim()))
+			.IsEquivalentTo(["NavMapWayLeads(Back, 0,0,0)", "NavMapWayLeads(Shrine Path, 0,3,0) · NavMapSideStatewall"]);
+		var selects = cut.FindComponents<MudBlazor.MudSelect<string>>();
+		await Assert.That(selects[0].Instance.Value).IsEqualTo("back").Because("a graph place's first way is chosen, not a side");
+		await cut.InvokeAsync(() => selects[0].Instance.ValueChanged.InvokeAsync("shrine_path"));
+		await Assert.That(cut.FindComponents<MudBlazor.MudSelect<string>>()[1].Instance.Value).IsEqualTo(MapWallKinds.Wall);
+		await Assert.That(cut.FindComponents<MudBlazor.MudTextField<string>>().Select(field => field.Instance.Value)).Contains("Brambles.");
+		await cut.InvokeAsync(() => cut.FindComponents<MudBlazor.MudSelect<string>>()[1].Instance.ValueChanged.InvokeAsync("open"));
+		await Click(cut, "NavMapSetWay");
+
+		var names = cut.FindComponents<MudBlazor.MudTextField<string>>().Single(field => field.Instance.Label == "NavMapWayNames");
+		await cut.InvokeAsync(() => names.Instance.ValueChanged.InvokeAsync("Ridgeway;ridge"));
+		var back = cut.FindComponents<MudBlazor.MudTextField<string>>().Single(field => field.Instance.Label == "NavMapWayBack");
+		await cut.InvokeAsync(() => back.Instance.ValueChanged.InvokeAsync("Down"));
+		// The way's x, y and z come just before its names.
+		var numbers = cut.FindComponents<MudBlazor.MudNumericField<int>>().ToList();
+		var z = numbers.FindLastIndex(field => field.Instance.Label == "z");
+		await cut.InvokeAsync(() => numbers[z - 1].Instance.ValueChanged.InvokeAsync(5));
+		await Click(cut, "NavMapLink");
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapUnlink").ClickAsync();
+		await Click(cut, "NavMapReview");
+
+		await Assert.That(cut.FindAll(".map-review-commands").Select(commands => commands.TextContent)).IsEquivalentTo([
+			"@world/wall #64/3,0,0/shrine_path=open",
+			"@world/link #64/3,0,0=3,5,0,Ridgeway;ridge,Down",
+			"@world/link #64/3,0,0/back",
+		]);
+	}
+
+	[Test]
 	public async Task APlacesDownSideReadsTheLockOfTheLevelBelow()
 	{
 		Arrange();
@@ -1189,8 +1272,9 @@ public class MapLayoutTests
 		await Assert.That(layout.Bounds(0, includePlaces: false)).IsEqualTo((0d, -MapLayout.Cell, MapLayout.Cell, 0d));
 		await Assert.That(new MapLayout(Map(MapKinds.Graph, [], []) with { Space = new(MapSpaces.Square, 0, 0, 1, 1, [0]) }).Space).IsNull()
 			.Because("a picture places rooms by its pixels, not by cells");
-		await Assert.That(new MapLayout(Map(MapKinds.Coordinates, [], []) with { Space = new(MapSpaces.Graph, 0, 0, 1, 1, [0]) }).Space).IsNull()
-			.Because("this portal draws square and hex places only");
+		await Assert.That(new MapLayout(Map(MapKinds.Coordinates, [], []) with { Space = new("octagon", 0, 0, 1, 1, [0]) }).Space).IsNull()
+			.Because("this portal draws square, hex and graph places only");
+		await Assert.That(new MapLayout(Map(MapKinds.Coordinates, [], []) with { Space = new(MapSpaces.Graph, 0, 0, 1, 1, [0]) }).HasWays).IsTrue();
 	}
 
 	[Test]

@@ -7055,6 +7055,39 @@
   <data name="NavMapMakePointyHexWorld" xml:space="preserve">
     <value>Gör detta till en världskarta med spetsiga sexhörningar</value>
   </data>
+  <data name="NavMapMakeGraphWorld" xml:space="preserve">
+    <value>Gör detta till en grafvärldskarta, där platserna förbinds av namngivna vägar</value>
+  </data>
+  <data name="NavMapWay" xml:space="preserve">
+    <value>Väg</value>
+  </data>
+  <data name="NavMapWaysNote" xml:space="preserve">
+    <value>Vägar leder ut från den här platsen. Ta bort en, eller lägg till en ny nedan.</value>
+  </data>
+  <data name="NavMapNoWays" xml:space="preserve">
+    <value>Ingen väg leder ännu ut från den här platsen. Lägg till en nedan: vart den leder och dess namn.</value>
+  </data>
+  <data name="NavMapWayLeads" xml:space="preserve">
+    <value>{0} leder till {1}</value>
+  </data>
+  <data name="NavMapUnlink" xml:space="preserve">
+    <value>Ta bort</value>
+  </data>
+  <data name="NavMapWayNames" xml:space="preserve">
+    <value>Vägens namn (Old Road;road)</value>
+  </data>
+  <data name="NavMapWayBack" xml:space="preserve">
+    <value>Namn på vägen tillbaka (valfritt)</value>
+  </data>
+  <data name="NavMapLink" xml:space="preserve">
+    <value>Lägg till väg</value>
+  </data>
+  <data name="NavMapPlanLink" xml:space="preserve">
+    <value>Lägg till vägen {0} ut från {1}</value>
+  </data>
+  <data name="NavMapPlanUnlink" xml:space="preserve">
+    <value>Ta bort vägen {0}</value>
+  </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Måla en plats, eller varje plats i en ruta, med en terrängtyp. Klicka på kartan för att välja en plats.</value>
   </data>
@@ -7144,6 +7177,9 @@
   </data>
   <data name="NavMapSetSide" xml:space="preserve">
     <value>Ange sida</value>
+  </data>
+  <data name="NavMapSetWay" xml:space="preserve">
+    <value>Ange väg</value>
   </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>Dölj för spelare</value>

@@ -103,13 +103,20 @@ public sealed class MapLayout
 	/// The square or hex cells a map source stores this map's places in, drawn under its rooms; null for a map of rooms
 	/// alone, a picture, or a space this portal does not draw.
 	/// </summary>
-	public MapSpaceDto? Space => !IsGraph && Map.Space is { Kind: MapSpaces.Square or MapSpaces.Hex or MapSpaces.PointyHex } space ? space : null;
+	public MapSpaceDto? Space =>
+		!IsGraph && Map.Space is { Kind: MapSpaces.Square or MapSpaces.Hex or MapSpaces.PointyHex or MapSpaces.Graph } space ? space : null;
 
 	/// <summary>Whether the map's places are hexagons, flat- or pointy-topped.</summary>
 	public bool IsHex => MapSpaces.IsHex(Space?.Kind);
 
 	/// <summary>Whether the map's places are pointy-topped hexagons.</summary>
 	public bool IsPointy => Space is { Kind: MapSpaces.PointyHex };
+
+	/// <summary>
+	/// Whether the map's places are joined by the named ways made between them, not by their sides: a graph world map,
+	/// whose places stand in square cells with no grid drawn.
+	/// </summary>
+	public bool HasWays => Space is { Kind: MapSpaces.Graph };
 
 	/// <summary>The width of the map's hexagons, from corner to corner when flat-topped and side to side when pointy.</summary>
 	private double HexWidth => IsPointy ? HexHeight : 2 * HexSide;

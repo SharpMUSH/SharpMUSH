@@ -30,7 +30,7 @@
                 <image class="map-backdrop" href="@_backdrop" x="0" y="0" width="@Num(Layout.Map.Size![0])" height="@Num(Layout.Map.Size[1])"
                        preserveAspectRatio="none" />
             }
-            @if (!Layout.IsGraph && !Layout.IsHex)
+            @if (!Layout.IsGraph && !Layout.IsHex && !Layout.HasWays)
             {
                 @foreach (var line in GridLines())
                 {
@@ -51,10 +51,12 @@
                 }
                 else
                 {
-                    <rect class="@placeClass" style="@PlaceStyle(place)" x="@Num(px)" y="@Num(py)" width="@Num(pw)" height="@Num(ph)" />
+                    @* A graph map's places stand apart, joined only by its ways. *@
+                    var round = Layout.HasWays ? 12 : 0;
+                    <rect class="@placeClass" style="@PlaceStyle(place)" x="@Num(px)" y="@Num(py)" width="@Num(pw)" height="@Num(ph)" rx="@round" />
                     @if (place.Closed)
                     {
-                        <rect class="map-place-hatch" fill="url(#@HatchId)" x="@Num(px)" y="@Num(py)" width="@Num(pw)" height="@Num(ph)" />
+                        <rect class="map-place-hatch" fill="url(#@HatchId)" x="@Num(px)" y="@Num(py)" width="@Num(pw)" height="@Num(ph)" rx="@round" />
                     }
                 }
                 @if (!_marked.Contains(place) && MapLegendStyle.Glyph(Icon(place)) is { } glyph)
@@ -70,6 +72,10 @@
             @foreach (var wall in _walls)
             {
                 @Wall(wall)
+            }
+            @foreach (var link in _links)
+            {
+                @Way(link)
             }
             @foreach (var edge in _edges)
             {
@@ -292,11 +298,18 @@
 
     private sealed record Edge(double X1, double Y1, double X2, double Y2, bool OneWay, bool Route);
 
+    /// <summary>A graph map's ways on the level on show, and each as from, to, to know which have a way back.</summary>
+    private List<MapLinkDto> _links = [];
+    private HashSet<(int, int, int, int)> _twoWay = [];
+
     protected override void OnParametersSet()
     {
         _rooms = [.. Layout.On(Level), .. Layout.Unplaced(Level)];
         _legend = Layout.Map.Legend.ToDictionary(entry => entry.Type);
         (_places, _walls) = Layout.Space is not null && Cells is { } cells && cells.Level == Level ? (cells.Cells, cells.Walls) : ([], []);
+        // A way to another level has no line on a drawing of one; the place's panel lists it.
+        _links = Layout.HasWays && Cells is { } read && read.Level == Level ? [.. read.Links.Where(link => link.ToZ == Level)] : [];
+        _twoWay = _links.Select(link => (link.X, link.Y, link.ToX, link.ToY)).ToHashSet();
         // Read in the order the eye does: rows top to bottom, cells left to right.
         _marked =
         [
@@ -614,14 +627,50 @@
         <line class="map-wall @(wall.Kind == MapWallKinds.Lock ? "map-wall--lock" : null)" x1="@Num(x1)" y1="@Num(y1)" x2="@Num(x2)" y2="@Num(y2)" />
     };
 
+    /// <summary>
+    /// A graph map's way: a line from the edge of the place it leads out of toward the place it leads to, with an arrow
+    /// when there is no way back, its first name a third of the way along. A way with a way back keeps to its own side
+    /// of the pair, so both show. A wall is drawn as a wall is, and a lock broken, as on a grid.
+    /// </summary>
+    private RenderFragment Way(MapLinkDto link) => __builder =>
+    {
+        var (fromX, fromY) = Layout.PlaceCentre(link.X, link.Y);
+        var (toX, toY) = Layout.PlaceCentre(link.ToX, link.ToY);
+        var (dx, dy) = (toX - fromX, toY - fromY);
+        var length = Math.Sqrt(dx * dx + dy * dy);
+        if (length < MapLayout.Cell) return;
+        var (ux, uy) = (dx / length, dy / length);
+        var back = _twoWay.Contains((link.ToX, link.ToY, link.X, link.Y));
+        // The right of the direction of travel, on screen: (−uy, ux) with y down.
+        var (sx, sy) = back ? (-uy * 5, ux * 5) : (0.0, 0.0);
+        var reach = MapLayout.Cell / 2;
+        var (x1, y1) = (fromX + ux * reach + sx, fromY + uy * reach + sy);
+        var (x2, y2) = (toX - ux * reach + sx, toY - uy * reach + sy);
+        var kind = link.Kind switch
+        {
+            MapWallKinds.Wall => "map-way--wall",
+            MapWallKinds.Lock => "map-way--lock",
+            _ => null,
+        };
+        <line class="map-way @kind" x1="@Num(x1)" y1="@Num(y1)" x2="@Num(x2)" y2="@Num(y2)"
+              marker-end="@(back ? null : $"url(#{ArrowId})")">
+            <title>@(link.Reason is { } reason ? $"{link.Names.Split(';')[0]}: {reason}" : link.Names.Split(';')[0])</title>
+        </line>
+        // The name stands off the right of its line, so a way and the way back each keep a side, and reads away from it.
+        var (nx, ny) = (-uy, ux);
+        var anchor = nx > 0.4 ? "start" : nx < -0.4 ? "end" : "middle";
+        @SvgText("map-way-name", x1 + (x2 - x1) / 3 + nx * 12, y1 + (y2 - y1) / 3 + ny * 12, link.Names.Split(';')[0], anchor)
+    };
+
     /// <summary>An SVG <c>text</c> element, which Razor markup reserves for its own use.</summary>
-    private static RenderFragment SvgText(string className, double x, double y, string content) => builder =>
+    private static RenderFragment SvgText(string className, double x, double y, string content, string? anchor = null) => builder =>
     {
         builder.OpenElement(0, "text");
         builder.AddAttribute(1, "class", className);
         builder.AddAttribute(2, "x", Num(x));
         builder.AddAttribute(3, "y", Num(y));
-        builder.AddContent(4, content);
+        builder.AddAttribute(4, "text-anchor", anchor);
+        builder.AddContent(5, content);
         builder.CloseElement();
     };
 

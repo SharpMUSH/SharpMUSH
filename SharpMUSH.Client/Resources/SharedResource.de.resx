@@ -7055,6 +7055,39 @@
   <data name="NavMapMakePointyHexWorld" xml:space="preserve">
     <value>Zu einer Weltkarte mit spitzen Sechsecken machen</value>
   </data>
+  <data name="NavMapMakeGraphWorld" xml:space="preserve">
+    <value>Zu einer Graph-Weltkarte machen, deren Orte benannte Wege verbinden</value>
+  </data>
+  <data name="NavMapWay" xml:space="preserve">
+    <value>Weg</value>
+  </data>
+  <data name="NavMapWaysNote" xml:space="preserve">
+    <value>Von diesem Ort führen Wege weg. Entferne einen oder füge unten einen hinzu.</value>
+  </data>
+  <data name="NavMapNoWays" xml:space="preserve">
+    <value>Von diesem Ort führt noch kein Weg weg. Füge unten einen hinzu: wohin er führt und seine Namen.</value>
+  </data>
+  <data name="NavMapWayLeads" xml:space="preserve">
+    <value>{0} führt nach {1}</value>
+  </data>
+  <data name="NavMapUnlink" xml:space="preserve">
+    <value>Entfernen</value>
+  </data>
+  <data name="NavMapWayNames" xml:space="preserve">
+    <value>Namen des Wegs (Old Road;road)</value>
+  </data>
+  <data name="NavMapWayBack" xml:space="preserve">
+    <value>Namen des Rückwegs (optional)</value>
+  </data>
+  <data name="NavMapLink" xml:space="preserve">
+    <value>Weg hinzufügen</value>
+  </data>
+  <data name="NavMapPlanLink" xml:space="preserve">
+    <value>Weg {0} von {1} hinzufügen</value>
+  </data>
+  <data name="NavMapPlanUnlink" xml:space="preserve">
+    <value>Weg {0} entfernen</value>
+  </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Einen Ort oder jeden Ort in einem Rechteck mit einem Geländetyp malen. Auf die Karte klicken, um einen Ort zu wählen.</value>
   </data>
@@ -7144,6 +7177,9 @@
   </data>
   <data name="NavMapSetSide" xml:space="preserve">
     <value>Seite setzen</value>
+  </data>
+  <data name="NavMapSetWay" xml:space="preserve">
+    <value>Weg setzen</value>
   </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>Vor Spielern verbergen</value>

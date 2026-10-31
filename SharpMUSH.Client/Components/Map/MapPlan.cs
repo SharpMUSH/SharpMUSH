@@ -44,6 +44,8 @@ public enum MapChangeKind
 	NamePlace,
 	HidePlace,
 	PlaceRoom,
+	Link,
+	Unlink,
 }
 
 /// <summary>
@@ -290,6 +292,40 @@ public sealed partial class MapPlan(MapDto map)
 			[new($"@world/wall {id}/{at}/{side}={value}", $"t(match({state} none closed,worldway({id},{x},{y},{z},{side})))", "1")])
 		{ Other = state });
 	}
+
+	/// <summary>
+	/// On a graph map, makes the way <paramref name="names"/> out of place (x, y, z) to (toX, toY, toZ), and the way back
+	/// named <paramref name="back"/> unless that is empty.
+	/// </summary>
+	public void Link(int x, int y, int z, int toX, int toY, int toZ, string names, string back)
+	{
+		var id = Map.Map.Id;
+		var at = Place(x, y, z);
+		var to = Place(toX, toY, toZ);
+		var (given, returning) = (Names(names), Names(back));
+		var way = Way(given);
+		var value = returning.Length > 0 ? $"{to},{given},{returning}" : $"{to},{given}";
+		var steps = new List<MapStep> { new($"@world/link {id}/{at}={value}", $"worldway({id},{x},{y},{z},{way},to)", to) };
+		Upsert(new($"link:{at}/{way}", MapChangeKind.Link, id, at, steps) { Other = given.Split(';')[0] });
+	}
+
+	/// <summary>On a graph map, removes the way <paramref name="way"/> out of place (x, y, z); the way back stays.</summary>
+	public void Unlink(int x, int y, int z, string way)
+	{
+		var id = Map.Map.Id;
+		var at = Place(x, y, z);
+		_changes.RemoveAll(change => change.Key == $"link:{at}/{way}");
+		Upsert(new($"unlink:{at}/{way}", MapChangeKind.Unlink, id, $"{at}/{way}",
+			[new($"@world/link {id}/{at}/{way}", $"worldway({id},{x},{y},{z},{way},to)", "")]));
+	}
+
+	/// <summary>A way's names as <c>@world/link</c> takes them: trimmed, <c>;</c> between them.</summary>
+	private static string Names(string names) =>
+		string.Join(";", names.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+
+	/// <summary>The name a place knows a way by: its first, in lower case, each run of spaces one <c>_</c>.</summary>
+	private static string Way(string names) =>
+		string.Join("_", names.Split(';')[0].ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
 
 	/// <summary>Names place (x, y, z); empty takes its name away.</summary>
 	public void NamePlace(int x, int y, int z, string name)

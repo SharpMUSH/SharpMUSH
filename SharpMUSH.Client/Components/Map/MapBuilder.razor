@@ -662,8 +662,29 @@
     private static readonly string[] SquareSides = ["n", "e", "s", "w", "u", "d"];
     private static readonly string[] HexSides = ["n", "ne", "se", "s", "sw", "nw", "u", "d"];
     private static readonly string[] PointyHexSides = ["ne", "e", "se", "sw", "w", "nw", "u", "d"];
-    private string[] Sides => Layout.IsPointy ? PointyHexSides : Layout.IsHex ? HexSides : SquareSides;
+    private string[] Sides => Layout.HasWays ? [.. PlaceLinks().Select(link => link.Way)]
+        : Layout.IsPointy ? PointyHexSides : Layout.IsHex ? HexSides : SquareSides;
     private static readonly string[] SideStates = ["open", "wall", "oneway", "lock"];
+
+    /// <summary>A graph map's way leads one way already, so it is open, a wall or locked.</summary>
+    private static readonly string[] WayStates = ["open", "wall", "lock"];
+    private string[] States => Layout.HasWays ? WayStates : SideStates;
+
+    /// <summary>On a graph map, the ways out of the place chosen, as the view read them.</summary>
+    private IEnumerable<MapLinkDto> PlaceLinks() =>
+        Cell is var (cx, cy) && Cells is { } cells && cells.Level == Level
+            ? cells.Links.Where(link => link.X == (int)cx && link.Y == (int)cy)
+            : [];
+
+    private int _linkX, _linkY, _linkZ;
+    private string _linkNames = "";
+    private string _linkBack = "";
+
+    /// <summary>A way's names, <c>;</c> between them, each at most 64 characters with no <c>,</c> <c>=</c> <c>/</c> or <c>|</c>, as <c>@world/link</c> takes them.</summary>
+    private static bool WayNamesValid(string names, bool required) =>
+        names.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) is var list
+        && (list.Length > 0 || !required && names.Trim().Length == 0)
+        && list.All(name => name.Length <= 64 && name.IndexOfAny([',', '=', '/', '|']) < 0);
 
     /// <summary>The place at (x, y) on the level on show, as the view read it; null when it holds nothing or was not read.</summary>
     private MapCellDto? PlaceAt(int x, int y) =>
@@ -679,7 +700,8 @@
         _placeRead = Cells?.Level == Level ? Level : null;
         (_paintX, _paintY, _paintX2, _paintY2, _paintType) = (x, y, x, y, place?.Type ?? _paintType);
         (_placeName, _placeRoom, _placeRoomProblem) = (place?.Name ?? "", place?.Room ?? "", null);
-        ChooseSide(Sides.Contains(_side) ? _side : Sides[0]);
+        (_linkX, _linkY, _linkZ) = (x, y, Level);
+        ChooseSide(Sides.Contains(_side) ? _side : Sides.FirstOrDefault() ?? "");
     }
 
     /// <summary>
@@ -692,6 +714,12 @@
     private void ChooseSide(string side)
     {
         _side = side;
+        if (Layout.HasWays)
+        {
+            var link = PlaceLinks().FirstOrDefault(link => link.Way == side);
+            (_sideState, _sideReason) = (link?.Kind ?? "open", link?.Reason ?? "");
+            return;
+        }
         MapWallDto? wall = null;
         if (Cell is var (cx, cy) && Cells is { } cells && cells.Level == Level)
         {
@@ -730,6 +758,7 @@
                     <MudButton Variant="Variant.Outlined" Disabled="WorldPlanned" OnClick="() => CreateWorldAsync(MapSpaces.Square)">@Loc["NavMapMakeWorld"]</MudButton>
                     <MudButton Variant="Variant.Outlined" Disabled="WorldPlanned" OnClick="() => CreateWorldAsync(MapSpaces.Hex)">@Loc["NavMapMakeHexWorld"]</MudButton>
                     <MudButton Variant="Variant.Outlined" Disabled="WorldPlanned" OnClick="() => CreateWorldAsync(MapSpaces.PointyHex)">@Loc["NavMapMakePointyHexWorld"]</MudButton>
+                    <MudButton Variant="Variant.Outlined" Disabled="WorldPlanned" OnClick="() => CreateWorldAsync(MapSpaces.Graph)">@Loc["NavMapMakeGraphWorld"]</MudButton>
                 </div>
             }
             else
@@ -775,15 +804,21 @@
                 <MudTextField T="string" @bind-Value="_placeName" Label="@Loc["NavMapPlaceName"]" Variant="Variant.Outlined" Immediate="true" />
                 <MudButton Variant="Variant.Outlined" Disabled="@(_placeName.Trim() == (place?.Name ?? ""))" OnClick="() => NamePlaceAsync(x, y)">@Loc["NavMapSetName"]</MudButton>
             </div>
+            @if (Layout.HasWays)
+            {
+                @Ways(x, y)
+            }
+            @if (Sides.Length > 0)
+            {
             <div class="map-builder-row">
-                <MudSelect T="string" Value="_side" ValueChanged="ChooseSide" Label="@Loc["NavMapSide"]" Variant="Variant.Outlined">
+                <MudSelect T="string" Value="_side" ValueChanged="ChooseSide" Label="@Loc[Layout.HasWays ? "NavMapWay" : "NavMapSide"]" Variant="Variant.Outlined">
                     @foreach (var side in Sides)
                     {
-                        <MudSelectItem T="string" Value="side">@Loc[$"NavMapSide{side.ToUpperInvariant()}"]</MudSelectItem>
+                        <MudSelectItem T="string" Value="side">@(Layout.HasWays ? WayName(side) : Loc[$"NavMapSide{side.ToUpperInvariant()}"])</MudSelectItem>
                     }
                 </MudSelect>
                 <MudSelect T="string" @bind-Value="_sideState" Label="@Loc["NavMapSideState"]" Variant="Variant.Outlined">
-                    @foreach (var state in SideStates)
+                    @foreach (var state in States)
                     {
                         <MudSelectItem T="string" Value="state">@Loc[$"NavMapSideState{state}"]</MudSelectItem>
                     }
@@ -792,11 +827,12 @@
             <div class="map-builder-row">
                 <MudTextField T="string" @bind-Value="_sideReason" Label="@Loc["NavMapSideReason"]" Variant="Variant.Outlined" Immediate="true"
                               Disabled="@(_sideState == "open")" />
-                <MudButton Variant="Variant.Outlined" OnClick="() => SideAsync(x, y)">@Loc["NavMapSetSide"]</MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="() => SideAsync(x, y)">@Loc[Layout.HasWays ? "NavMapSetWay" : "NavMapSetSide"]</MudButton>
             </div>
             @if (_sideState == "lock")
             {
                 <p class="map-note">@Loc["NavMapSideLockNote"]</p>
+            }
             }
             <div class="map-builder-row">
                 <MudButton Variant="Variant.Text" OnClick="() => HidePlaceAsync(x, y, true)">@Loc["NavMapHidePlace"]</MudButton>
@@ -810,6 +846,64 @@
             </div>
         </section>
     };
+
+    /// <summary>
+    /// A graph map's place: the ways out of it, each with a button that removes it, and a way to add, to any place on
+    /// any level, with names back to add the way back too.
+    /// </summary>
+    private RenderFragment Ways(int x, int y) => __builder =>
+    {
+        var links = PlaceLinks().ToList();
+        <p class="map-note">@Loc[links.Count == 0 ? "NavMapNoWays" : "NavMapWaysNote"]</p>
+        @if (links.Count > 0)
+        {
+            <ul class="map-builder-list">
+                @foreach (var link in links)
+                {
+                    <li>
+                        <span>
+                            @Loc["NavMapWayLeads", link.Names.Split(';')[0], $"{link.ToX},{link.ToY},{link.ToZ}"]
+                            @if (link.Kind is { } kind)
+                            {
+                                @($" · {Loc[$"NavMapSideState{kind}"]}")
+                            }
+                        </span>
+                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => UnlinkAsync(x, y, link.Way)">@Loc["NavMapUnlink"]</MudButton>
+                    </li>
+                }
+            </ul>
+        }
+        <div class="map-builder-row map-builder-row--numbers">
+            <MudNumericField T="int" @bind-Value="_linkX" Label="x" Variant="Variant.Outlined" />
+            <MudNumericField T="int" @bind-Value="_linkY" Label="y" Variant="Variant.Outlined" />
+            <MudNumericField T="int" @bind-Value="_linkZ" Label="z" Variant="Variant.Outlined" />
+        </div>
+        <div class="map-builder-row">
+            <MudTextField T="string" @bind-Value="_linkNames" Label="@Loc["NavMapWayNames"]" Variant="Variant.Outlined" Immediate="true"
+                          Error="@(!WayNamesValid(_linkNames, required: false))" />
+            <MudTextField T="string" @bind-Value="_linkBack" Label="@Loc["NavMapWayBack"]" Variant="Variant.Outlined" Immediate="true"
+                          Error="@(!WayNamesValid(_linkBack, required: false))" />
+        </div>
+        <div class="map-builder-row">
+            <MudButton Variant="Variant.Outlined" Disabled="@(!WayNamesValid(_linkNames, required: true) || !WayNamesValid(_linkBack, required: false))"
+                       OnClick="() => LinkAsync(x, y)">@Loc["NavMapLink"]</MudButton>
+        </div>
+    };
+
+    /// <summary>A way's first name, the one it is shown by, from the view; its own name when the view does not have it.</summary>
+    private string WayName(string way) => PlaceLinks().FirstOrDefault(link => link.Way == way)?.Names.Split(';')[0] ?? way;
+
+    private async Task LinkAsync(int x, int y)
+    {
+        Plan.Link(x, y, Level, _linkX, _linkY, _linkZ, _linkNames, _linkBack);
+        await OnChanged.InvokeAsync(null);
+    }
+
+    private async Task UnlinkAsync(int x, int y, string way)
+    {
+        Plan.Unlink(x, y, Level, way);
+        await OnChanged.InvokeAsync(null);
+    }
 
     /// <summary>A terrain type is letters, digits, <c>_</c> and <c>-</c>, at most 32; empty erases.</summary>
     private bool PaintTypeValid => _paintType.Trim() is var type && type.Length <= 32 && type.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-');
@@ -978,6 +1072,7 @@
         { Kind: MapChangeKind.NamePlace, Other.Length: 0 } => Loc["NavMapPlanUnnamePlace", change.Name],
         { Kind: MapChangeKind.HidePlace, Other.Length: 0 } => Loc["NavMapPlanShowPlace", change.Name],
         { Kind: MapChangeKind.PlaceRoom, Other.Length: 0 } => Loc["NavMapPlanUnplaceRoom", change.Name],
+        { Kind: MapChangeKind.Link } => Loc["NavMapPlanLink", change.Other ?? "", change.Name],
         _ => Loc[$"NavMapPlan{change.Kind}", change.Name, change.Other ?? ""],
     };
 

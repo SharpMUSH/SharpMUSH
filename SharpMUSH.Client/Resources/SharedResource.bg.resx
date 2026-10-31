@@ -7055,6 +7055,39 @@
   <data name="NavMapMakePointyHexWorld" xml:space="preserve">
     <value>Направи това карта на света с остри шестоъгълници</value>
   </data>
+  <data name="NavMapMakeGraphWorld" xml:space="preserve">
+    <value>Направи това карта на света като граф, с места, свързани с именувани пътища</value>
+  </data>
+  <data name="NavMapWay" xml:space="preserve">
+    <value>Път</value>
+  </data>
+  <data name="NavMapWaysNote" xml:space="preserve">
+    <value>От това място излизат пътища. Премахни някой или добави нов по-долу.</value>
+  </data>
+  <data name="NavMapNoWays" xml:space="preserve">
+    <value>От това място още не излиза път. Добави един по-долу: къде води и имената му.</value>
+  </data>
+  <data name="NavMapWayLeads" xml:space="preserve">
+    <value>{0} води до {1}</value>
+  </data>
+  <data name="NavMapUnlink" xml:space="preserve">
+    <value>Премахни</value>
+  </data>
+  <data name="NavMapWayNames" xml:space="preserve">
+    <value>Имена на пътя (Old Road;road)</value>
+  </data>
+  <data name="NavMapWayBack" xml:space="preserve">
+    <value>Имена на пътя обратно (по избор)</value>
+  </data>
+  <data name="NavMapLink" xml:space="preserve">
+    <value>Добави път</value>
+  </data>
+  <data name="NavMapPlanLink" xml:space="preserve">
+    <value>Добави пътя {0} от {1}</value>
+  </data>
+  <data name="NavMapPlanUnlink" xml:space="preserve">
+    <value>Премахни пътя {0}</value>
+  </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Оцветете място или всички места в правоъгълник с тип терен. Щракнете върху картата, за да изберете място.</value>
   </data>
@@ -7144,6 +7177,9 @@
   </data>
   <data name="NavMapSetSide" xml:space="preserve">
     <value>Задай страна</value>
+  </data>
+  <data name="NavMapSetWay" xml:space="preserve">
+    <value>Задай път</value>
   </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>Скрий от играчите</value>

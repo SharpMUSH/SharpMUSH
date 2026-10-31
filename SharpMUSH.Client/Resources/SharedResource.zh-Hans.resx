@@ -7055,6 +7055,39 @@
   <data name="NavMapMakePointyHexWorld" xml:space="preserve">
     <value>设为尖顶六边形世界地图</value>
   </data>
+  <data name="NavMapMakeGraphWorld" xml:space="preserve">
+    <value>设为图结构世界地图，地点之间由命名的道路相连</value>
+  </data>
+  <data name="NavMapWay" xml:space="preserve">
+    <value>道路</value>
+  </data>
+  <data name="NavMapWaysNote" xml:space="preserve">
+    <value>有道路从此地点通出。移除一条，或在下方添加新的。</value>
+  </data>
+  <data name="NavMapNoWays" xml:space="preserve">
+    <value>此地点还没有通出的道路。在下方添加一条：通往何处，以及它的名称。</value>
+  </data>
+  <data name="NavMapWayLeads" xml:space="preserve">
+    <value>{0} 通往 {1}</value>
+  </data>
+  <data name="NavMapUnlink" xml:space="preserve">
+    <value>移除</value>
+  </data>
+  <data name="NavMapWayNames" xml:space="preserve">
+    <value>道路名称（Old Road;road）</value>
+  </data>
+  <data name="NavMapWayBack" xml:space="preserve">
+    <value>返程道路名称（可选）</value>
+  </data>
+  <data name="NavMapLink" xml:space="preserve">
+    <value>添加道路</value>
+  </data>
+  <data name="NavMapPlanLink" xml:space="preserve">
+    <value>添加从 {1} 出发的道路 {0}</value>
+  </data>
+  <data name="NavMapPlanUnlink" xml:space="preserve">
+    <value>移除道路 {0}</value>
+  </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>用地形类型绘制一个地点或方框内的所有地点。点击地图选择地点。</value>
   </data>
@@ -7144,6 +7177,9 @@
   </data>
   <data name="NavMapSetSide" xml:space="preserve">
     <value>设置边</value>
+  </data>
+  <data name="NavMapSetWay" xml:space="preserve">
+    <value>设置道路</value>
   </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>对玩家隐藏</value>

@@ -7055,6 +7055,39 @@
   <data name="NavMapMakePointyHexWorld" xml:space="preserve">
     <value>Fă din aceasta o hartă a lumii cu hexagoane ascuțite</value>
   </data>
+  <data name="NavMapMakeGraphWorld" xml:space="preserve">
+    <value>Fă din aceasta o hartă a lumii ca graf, cu locuri legate prin drumuri cu nume</value>
+  </data>
+  <data name="NavMapWay" xml:space="preserve">
+    <value>Drum</value>
+  </data>
+  <data name="NavMapWaysNote" xml:space="preserve">
+    <value>Din acest loc pleacă drumuri. Elimină unul sau adaugă altul mai jos.</value>
+  </data>
+  <data name="NavMapNoWays" xml:space="preserve">
+    <value>Din acest loc nu pleacă încă niciun drum. Adaugă unul mai jos: unde duce și numele lui.</value>
+  </data>
+  <data name="NavMapWayLeads" xml:space="preserve">
+    <value>{0} duce la {1}</value>
+  </data>
+  <data name="NavMapUnlink" xml:space="preserve">
+    <value>Elimină</value>
+  </data>
+  <data name="NavMapWayNames" xml:space="preserve">
+    <value>Numele drumului (Old Road;road)</value>
+  </data>
+  <data name="NavMapWayBack" xml:space="preserve">
+    <value>Numele drumului înapoi (opțional)</value>
+  </data>
+  <data name="NavMapLink" xml:space="preserve">
+    <value>Adaugă drum</value>
+  </data>
+  <data name="NavMapPlanLink" xml:space="preserve">
+    <value>Adaugă drumul {0} din {1}</value>
+  </data>
+  <data name="NavMapPlanUnlink" xml:space="preserve">
+    <value>Elimină drumul {0}</value>
+  </data>
   <data name="NavMapPaintNote" xml:space="preserve">
     <value>Pictează un loc, sau fiecare loc dintr-un dreptunghi, cu un tip de teren. Fă clic pe hartă pentru a alege un loc.</value>
   </data>
@@ -7144,6 +7177,9 @@
   </data>
   <data name="NavMapSetSide" xml:space="preserve">
     <value>Setează latura</value>
+  </data>
+  <data name="NavMapSetWay" xml:space="preserve">
+    <value>Setează drumul</value>
   </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>Ascunde de jucători</value>
