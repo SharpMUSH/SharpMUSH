@@ -6282,6 +6282,24 @@
     <value>Lägg till ett steg</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraphZoom" xml:space="preserve">
+    <value>Zoom</value>
+  </data>
+  <data name="WidGraphZoomIn" xml:space="preserve">
+    <value>Zooma in</value>
+  </data>
+  <data name="WidGraphZoomOut" xml:space="preserve">
+    <value>Zooma ut</value>
+  </data>
+  <data name="WidGraphZoomReset" xml:space="preserve">
+    <value>Tillbaka till 100 %</value>
+  </data>
+  <data name="WidGraphFit" xml:space="preserve">
+    <value>Anpassa till vyn</value>
+  </data>
+  <data name="WidGraphDragLink" xml:space="preserve">
+    <value>Dra till ett steg för att länka {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Städa layouten</value>
     <comment>MT</comment>

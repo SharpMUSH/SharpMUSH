@@ -6282,6 +6282,24 @@
     <value>Adicionar uma etapa</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraphZoom" xml:space="preserve">
+    <value>Zoom</value>
+  </data>
+  <data name="WidGraphZoomIn" xml:space="preserve">
+    <value>Aproximar</value>
+  </data>
+  <data name="WidGraphZoomOut" xml:space="preserve">
+    <value>Afastar</value>
+  </data>
+  <data name="WidGraphZoomReset" xml:space="preserve">
+    <value>Voltar a 100%</value>
+  </data>
+  <data name="WidGraphFit" xml:space="preserve">
+    <value>Ajustar à visualização</value>
+  </data>
+  <data name="WidGraphDragLink" xml:space="preserve">
+    <value>Arraste até uma etapa para ligar {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Organizar layout</value>
     <comment>MT</comment>

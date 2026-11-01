@@ -234,6 +234,33 @@ public sealed partial class GraphDraft
 		}
 	}
 
+	/// <summary>The step whose box holds the point (<paramref name="x"/>, <paramref name="y"/>), the topmost first.</summary>
+	public GraphNode? At(double x, double y)
+		=> _nodes.LastOrDefault(node => x >= node.X && x <= node.X + NodeWidth && y >= node.Y && y <= node.Y + NodeHeight);
+
+	/// <summary>
+	/// The place nearest (<paramref name="x"/>, <paramref name="y"/>) where a step overlaps none but
+	/// <paramref name="except"/>: there, else beside it to the right or the left, else a row further down.
+	/// </summary>
+	public (double X, double Y) FreeSpot(double x, double y, string? except = null)
+	{
+		for (var row = 0; row < 50; row++)
+		{
+			foreach (var shift in (int[])[0, 1, -1, 2, -2])
+			{
+				var cx = x + shift * (NodeWidth + GapX);
+				var cy = y + row * (NodeHeight + GapY);
+				if (cx < 0) continue;
+				if (!_nodes.Any(node => node.Key != except && Math.Abs(node.X - cx) < NodeWidth + 8 && Math.Abs(node.Y - cy) < NodeHeight + 8))
+				{
+					return (cx, cy);
+				}
+			}
+		}
+
+		return (x, y);
+	}
+
 	/// <summary>Moves a step, keeping it on the map.</summary>
 	public void Move(string key, double x, double y)
 	{

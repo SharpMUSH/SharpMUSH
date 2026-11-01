@@ -6282,6 +6282,24 @@
     <value>添加步骤</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraphZoom" xml:space="preserve">
+    <value>缩放</value>
+  </data>
+  <data name="WidGraphZoomIn" xml:space="preserve">
+    <value>放大</value>
+  </data>
+  <data name="WidGraphZoomOut" xml:space="preserve">
+    <value>缩小</value>
+  </data>
+  <data name="WidGraphZoomReset" xml:space="preserve">
+    <value>恢复到 100%</value>
+  </data>
+  <data name="WidGraphFit" xml:space="preserve">
+    <value>适应视图</value>
+  </data>
+  <data name="WidGraphDragLink" xml:space="preserve">
+    <value>拖到某个步骤上以连接{0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>整理布局</value>
     <comment>MT</comment>

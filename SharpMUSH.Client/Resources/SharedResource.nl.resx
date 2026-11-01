@@ -6282,6 +6282,24 @@
     <value>Stap toevoegen</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraphZoom" xml:space="preserve">
+    <value>Zoom</value>
+  </data>
+  <data name="WidGraphZoomIn" xml:space="preserve">
+    <value>Inzoomen</value>
+  </data>
+  <data name="WidGraphZoomOut" xml:space="preserve">
+    <value>Uitzoomen</value>
+  </data>
+  <data name="WidGraphZoomReset" xml:space="preserve">
+    <value>Terug naar 100%</value>
+  </data>
+  <data name="WidGraphFit" xml:space="preserve">
+    <value>Passend maken</value>
+  </data>
+  <data name="WidGraphDragLink" xml:space="preserve">
+    <value>Sleep naar een stap om {0} te koppelen</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Indeling opruimen</value>
     <comment>MT</comment>

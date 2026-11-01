@@ -6282,6 +6282,24 @@
     <value>Tilføj et trin</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraphZoom" xml:space="preserve">
+    <value>Zoom</value>
+  </data>
+  <data name="WidGraphZoomIn" xml:space="preserve">
+    <value>Zoom ind</value>
+  </data>
+  <data name="WidGraphZoomOut" xml:space="preserve">
+    <value>Zoom ud</value>
+  </data>
+  <data name="WidGraphZoomReset" xml:space="preserve">
+    <value>Tilbage til 100 %</value>
+  </data>
+  <data name="WidGraphFit" xml:space="preserve">
+    <value>Tilpas til visningen</value>
+  </data>
+  <data name="WidGraphDragLink" xml:space="preserve">
+    <value>Træk hen på et trin for at forbinde {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Ryd op i layout</value>
     <comment>MT</comment>

@@ -267,6 +267,69 @@ public class SchemaGraphEditorTests : BunitContext
 		await Assert.That(draft.StartNode?.Key).IsEqualTo("bog");
 	}
 
+	private static SchemaElement RequiredField() => new(
+		Kind: "field", Key: "draft", Label: "Steps", Type: "graph",
+		Graph: new SchemaGraphSpec(Kinds:
+		[
+			new SchemaGraphKind("challenge", "Challenge",
+				Ports: [new SchemaGraphPort("crit", "Critical"), new SchemaGraphPort("success", "Success", Required: true)]),
+			new SchemaGraphKind("end", "End")
+		]));
+
+	[Test]
+	public async Task Adding_a_step_follows_an_outcome_the_selected_step_must_have_and_stands_clear_of_the_others()
+	{
+		JsonElement? sent = null;
+		var cut = Render<SchemaGraphEditor>(p => p
+			.Add(x => x.Element, RequiredField())
+			.Add(x => x.Value, Parse("""{"nodes":[{"key":"bog","kind":"challenge","label":"Bog","x":0,"y":0},{"key":"won","kind":"end","label":"Won","x":0,"y":132}],"edges":[]}"""))
+			.Add(x => x.ValueChanged, (JsonElement v) => sent = v));
+
+		// Both outcomes lead nowhere: the one the step must have is drawn as a stub, the other is not.
+		await Assert.That(cut.FindAll(".graph-stub").Count).IsEqualTo(1);
+		await cut.FindAll(".graph-node").Single(b => b.GetAttribute("data-key") == "bog").ClickAsync(new());
+		await cut.FindAll(".graph-add button").Single(b => b.TextContent.Contains("End")).ClickAsync(new());
+
+		var draft = GraphDraft.Read(sent);
+		await Assert.That(draft.Target("bog", "success")?.Key).IsEqualTo("end1");
+		await Assert.That(draft.Target("bog", "crit")).IsNull();
+		var added = draft.Find("end1")!;
+		await Assert.That(Math.Abs(added.X - 0) < GraphDraft.NodeWidth && Math.Abs(added.Y - 132) < GraphDraft.NodeHeight).IsFalse();
+	}
+
+	[Test]
+	public async Task Dragging_an_outcome_handle_onto_a_step_links_it()
+	{
+		JsonElement? sent = null;
+		var cut = Render<SchemaGraphEditor>(p => p
+			.Add(x => x.Element, Field())
+			.Add(x => x.Value, Parse(Lantern))
+			.Add(x => x.ValueChanged, (JsonElement v) => sent = v));
+
+		await cut.FindAll(".graph-node").Single(b => b.GetAttribute("data-key") == "bog").ClickAsync(new());
+		// The drag starts under bog (10, 150) at (96, 218) and ends inside mist (200, 150).
+		await cut.FindAll(".graph-handle").Single(b => b.TextContent == "Fail").PointerDownAsync(new() { Button = 0, ClientX = 0, ClientY = 0 });
+		await cut.Find(".graph-map").PointerMoveAsync(new() { ClientX = 190, ClientY = -34 });
+		await Assert.That(cut.FindAll(".graph-line--pending").Count).IsEqualTo(1);
+		await cut.Find(".graph-map").PointerUpAsync(new());
+
+		var draft = GraphDraft.Read(sent);
+		await Assert.That(draft.Targets("bog", "fail").Select(n => n.Key)).IsEquivalentTo(new[] { "toad", "mist" });
+		await Assert.That(cut.FindAll(".graph-line--pending").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task A_spot_for_a_step_is_found_beside_the_ones_in_the_way()
+	{
+		var draft = GraphDraft.Read(Parse("""{"nodes":[{"key":"a","kind":"end","label":"A","x":0,"y":0},{"key":"b","kind":"end","label":"B","x":244,"y":0}],"edges":[]}"""));
+
+		await Assert.That(draft.At(10, 10)?.Key).IsEqualTo("a");
+		await Assert.That(draft.At(230, 10)).IsNull();
+		await Assert.That(draft.FreeSpot(0, 0)).IsEqualTo((488d, 0d));
+		await Assert.That(draft.FreeSpot(0, 0, except: "a")).IsEqualTo((0d, 0d));
+		await Assert.That(draft.FreeSpot(0, 400)).IsEqualTo((0d, 400d));
+	}
+
 	[Test]
 	public async Task A_step_shows_the_fields_its_kind_declares_and_an_edit_lands_in_the_step()
 	{

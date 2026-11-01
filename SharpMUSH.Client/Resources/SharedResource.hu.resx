@@ -6282,6 +6282,24 @@
     <value>Lépés hozzáadása</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraphZoom" xml:space="preserve">
+    <value>Nagyítás</value>
+  </data>
+  <data name="WidGraphZoomIn" xml:space="preserve">
+    <value>Nagyítás</value>
+  </data>
+  <data name="WidGraphZoomOut" xml:space="preserve">
+    <value>Kicsinyítés</value>
+  </data>
+  <data name="WidGraphZoomReset" xml:space="preserve">
+    <value>Vissza 100%-ra</value>
+  </data>
+  <data name="WidGraphFit" xml:space="preserve">
+    <value>Igazítás a nézethez</value>
+  </data>
+  <data name="WidGraphDragLink" xml:space="preserve">
+    <value>Húzza egy lépésre a(z) {0} összekötéséhez</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Elrendezés rendezése</value>
     <comment>MT</comment>

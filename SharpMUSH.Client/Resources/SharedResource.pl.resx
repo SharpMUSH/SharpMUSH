@@ -6282,6 +6282,24 @@
     <value>Dodaj krok</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraphZoom" xml:space="preserve">
+    <value>Powiększenie</value>
+  </data>
+  <data name="WidGraphZoomIn" xml:space="preserve">
+    <value>Powiększ</value>
+  </data>
+  <data name="WidGraphZoomOut" xml:space="preserve">
+    <value>Pomniejsz</value>
+  </data>
+  <data name="WidGraphZoomReset" xml:space="preserve">
+    <value>Wróć do 100%</value>
+  </data>
+  <data name="WidGraphFit" xml:space="preserve">
+    <value>Dopasuj do widoku</value>
+  </data>
+  <data name="WidGraphDragLink" xml:space="preserve">
+    <value>Przeciągnij na krok, aby połączyć {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Uporządkuj układ</value>
     <comment>MT</comment>
