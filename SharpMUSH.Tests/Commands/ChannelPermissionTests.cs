@@ -418,6 +418,55 @@ public class ChannelPermissionTests
 	}
 
 
+	/// <summary>
+	/// <c>cemit()</c>'s fourth argument is the picture the portal shows beside the line: kept with the line, as an
+	/// https URL or as the objid of a character the emitter controls.
+	/// </summary>
+	[Test]
+	public async Task Cemit_KeepsThePictureItWasSentWith()
+	{
+		var name = UniqueChannel("CemPic");
+		await CreateChannel(name, "Player");
+		var persona = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "ChanPermPersona");
+		var personaObjid = (await Mediator.Send(new GetObjectNodeQuery(persona))).Expect<AnySharpObject>().Object().DBRef;
+
+		await FunctionParserFor(new DBRef(1)).FunctionParse(
+			MarkupText.Plain($"cemit({name},Pictured.,1,https://example.com/bell.png)"));
+		await FunctionParserFor(new DBRef(1)).FunctionParse(MarkupText.Plain($"cemit({name},Persona.,1,{persona})"));
+
+		var channel = await Mediator.Send(new GetChannelQuery(name));
+		var lines = await Mediator.CreateStream(new GetChannelMessagesQuery(channel!.Id ?? string.Empty, int.MaxValue))
+			.ToListAsync();
+		await Assert.That(lines.Select(line => line.Picture).ToList())
+			.IsEquivalentTo(new[] { "https://example.com/bell.png", personaObjid.ToString() },
+				TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	/// <summary>
+	/// A picture that is neither an https URL nor a character the emitter controls is refused, and nothing is sent:
+	/// no one shows up on a channel under another player's face.
+	/// </summary>
+	[Test]
+	[Arguments("http://example.com/plain.png", "#-1 INVALID PICTURE")]
+	[Arguments("bell", "#-1 INVALID PICTURE")]
+	[Arguments("#1", "#-1 PERMISSION DENIED*")]
+	public async Task Cemit_RefusesAPictureItMayNotUse(string picture, string refusal)
+	{
+		var name = UniqueChannel("CemPicNo");
+		await CreateChannel(name, "Player", "Object");
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "ChanPermPicThing");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thing}=WIZARD"));
+		var mortal = await CreateMortal("ChanPermPicMortal");
+		var emitter = picture == "#1" ? mortal.DbRef : thing;
+
+		var before = await MessageCount(name);
+		var result = await FunctionParserFor(emitter).FunctionParse(MarkupText.Plain($"cemit({name},Refused.,1,{picture})"));
+
+		await Assert.That(result!.Message.ToPlainText()).Matches(
+			"^" + System.Text.RegularExpressions.Regex.Escape(refusal).Replace("\\*", ".*") + "$");
+		await Assert.That(await MessageCount(name)).IsEqualTo(before);
+	}
+
 	[Test]
 	public async Task PlayerOnlyChannel_RefusesAThing()
 	{

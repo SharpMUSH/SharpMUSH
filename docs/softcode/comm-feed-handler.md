@@ -73,7 +73,7 @@ Each event passes its arguments by name, read as `%<name>`, and by position
 
 | Event | Arguments, in order |
 |---|---|
-| ``CHANNEL`MESSAGE`` | `channel` (channel name), `speaker` (objid; empty when sourceless or an `@cemit`), `style`, `name` (speaker name; empty for an `@cemit`), `message`, `recipients` (objids), `time` (unix ms), `id` (line id) |
+| ``CHANNEL`MESSAGE`` | `channel` (channel name), `speaker` (objid; empty when sourceless or an `@cemit`), `style`, `name` (speaker name; empty for an `@cemit`), `message`, `recipients` (objids), `time` (unix ms), `id` (line id), `picture` (the picture `cemit()` was given: an objid or an image URL; empty for none) |
 | ``PAGE`MESSAGE`` | `speaker` (pager objid), `recipients` (objids), `style`, `name` (pager name, with the page alias when `page_aliases` is on), `message`, `time` (unix ms), `id` (page id) |
 | ``PLAYER`CHANNELS`` | `objid` (player), `cause`, `channel` (empty on connect and resume) |
 | ``CHANNEL`WHO`` | `channel` (channel name), `member` (objid), `name` (member name), `change` (`on` or `off`), `viewers` (objids), `cause` |
@@ -220,7 +220,10 @@ A page (here a group pose-page):
   MString `json(markupstring)` writes. The portal draws it in place of `text`;
   a channel line's `GET api/comm/channels/<channel>/recall` line carries the
   same. An `@cemit` line, which names no speaker, is drawn on its own, without
-  a name or picture, as the terminal shows it.
+  a name, as the terminal shows it.
+- `picture` is the picture the line was sent with, `cemit()`'s fourth argument:
+  a character's objid, whose portal picture is shown, or an image URL. It is
+  absent when there is none; the recall line carries the same.
 - `ts` is milliseconds since 1970, taken when the line was sent.
 - `id` is the line's id: for a channel line the one
   `GET api/comm/channels/<channel>/recall` returns for the same line, and for a

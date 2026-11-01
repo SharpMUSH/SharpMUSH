@@ -480,6 +480,27 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		await Assert.That(pushedMarkup.Render(MarkupFormat.Ansi)).Contains("\u001b[").Because("ALARM: is red");
 		await Assert.That(MarkupTextSerializer.Deserialize(pulled.Markup!).Render(MarkupFormat.Ansi))
 			.IsEqualTo(pushedMarkup.Render(MarkupFormat.Ansi));
+		await Assert.That(pushed.ContainsKey("picture")).IsFalse().Because("it was sent without one");
+	}
+
+	/// <summary>The picture <c>cemit()</c> was given reaches the portal pushed and pulled alike.</summary>
+	[Test]
+	public async Task ChannelEmit_CarriesItsPicture_PushedAndPulled()
+	{
+		var member = await ViewerAsync("CommPictureMember");
+		var channel = await ChannelAsync("CommPicture", member);
+		var marker = TestIsolationHelpers.GenerateUniqueName("picture");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => God($"think cemit({channel},{marker},1,https://cdn.example/ann.png)"), Run, member);
+
+		var pushed = Frames(sent[member.Handle], "comm.message").Single();
+		var recall = await (await Portal.PortalControllers.CommControllerAs(factory, member.DbRef))
+			.Recall(channel, null, null, CancellationToken.None);
+		var pulled = recall.Value!.Single(line => line.Id == pushed["id"]!.GetValue<long>());
+
+		await Assert.That(pushed["picture"]!.GetValue<string>()).IsEqualTo("https://cdn.example/ann.png");
+		await Assert.That(pulled.Picture).IsEqualTo("https://cdn.example/ann.png");
 	}
 
 	/// <summary>

@@ -159,6 +159,11 @@
 	flex-shrink: 0;
 }
 
+/* A pictured emit whose character has no picture: the room it would take, empty. */
+::deep .comm-avatar--none {
+	display: block;
+}
+
 ::deep .comm-avatar--initials {
 	display: grid;
 	place-items: center;

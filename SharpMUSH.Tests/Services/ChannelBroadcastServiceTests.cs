@@ -46,7 +46,7 @@ public class ChannelBroadcastServiceTests
 		await eventService.Received(1).TriggerEventAsync(SharpEvents.ChannelMessage,
 			null,
 			Arg.Is<IReadOnlyList<MString>>(args =>
-				args.Count == 8
+				args.Count == 9
 				&& args[0].ToPlainText() == "Public"
 				&& args[1].ToPlainText() == string.Empty
 				&& args[2].ToPlainText() == "say"
@@ -54,7 +54,8 @@ public class ChannelBroadcastServiceTests
 				&& args[4].ToPlainText() == "The server is restarting."
 				&& args[5].ToPlainText() == member.Object().DBRef.ToString()
 				&& long.Parse(args[6].ToPlainText()) >= before
-				&& args[7].ToPlainText() == Ids.Peek.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+				&& args[7].ToPlainText() == Ids.Peek.ToString(System.Globalization.CultureInfo.InvariantCulture)
+				&& args[8].ToPlainText() == string.Empty));
 	}
 
 	/// <summary>

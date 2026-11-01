@@ -17,6 +17,7 @@ public sealed record DiscordAttachment(string FileName, string Url);
 /// <param name="ReplyingTo">The author of the message it replies to, by the name Discord shows, or null.</param>
 /// <param name="ReplyingToId">That author's Discord id, so a linked author reads as their speaking identity.</param>
 /// <param name="Users">The display name of each user it mentions.</param>
+/// <param name="Picture">The author's avatar as Discord shows it in the server, as an image URL.</param>
 public sealed record DiscordIncoming(
 	ulong MessageId,
 	ulong ChannelId,
@@ -29,7 +30,8 @@ public sealed record DiscordIncoming(
 	ulong? ReplyingToId,
 	IReadOnlyDictionary<ulong, string> Users,
 	IReadOnlyDictionary<ulong, string> Channels,
-	IReadOnlyDictionary<ulong, string> Roles);
+	IReadOnlyDictionary<ulong, string> Roles,
+	string Picture = "");
 
 /// <summary>A line to speak into a linked channel's feed, as a member's speaking identity.</summary>
 /// <param name="AccountId">The game account the Discord author is linked to.</param>
@@ -123,7 +125,7 @@ public sealed class DiscordInbound(
 
 		var speech = new DiscordSpeech(link, account?.AccountId ?? "", character ?? "", style, text,
 			$"{DiscordChannelLink.FeedKind}/{message.MessageId.ToString(CultureInfo.InvariantCulture)}",
-			character is null ? new ExternalFeedIdentity("discord", message.AuthorId.ToString(CultureInfo.InvariantCulture), SafeName(message.AuthorName)) : null, message.AuthorId);
+			character is null ? new ExternalFeedIdentity("discord", message.AuthorId.ToString(CultureInfo.InvariantCulture), SafeName(message.AuthorName), message.Picture) : null, message.AuthorId);
 		if (await game.SpeakAsync(speech, cancellationToken) is Refused refused)
 		{
 			await TellAsync(message.AuthorId, $"Your message in #{link.ChannelName} did not reach the game: {refused.Reason}",

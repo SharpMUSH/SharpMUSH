@@ -118,6 +118,26 @@ public class CommViewTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".comm-group").Count).IsEqualTo(2).Because("the emits split Wren's lines");
 	}
 
+	/// <summary>
+	/// An emit sent with a picture shows it beside the line, still without a name: a Discord member's avatar, say,
+	/// beside the line their post came in as.
+	/// </summary>
+	[Test]
+	public async Task AnEmitWithAPicture_ShowsItBesideTheLine()
+	{
+		_feed.ChannelList = [new CommChannel("Public", 0)];
+		_feed.Lines["Public"] =
+		[
+			new("channel", "Public", [], "", null, "[D] Ann says, \"hi\"", Now, Picture: "https://cdn.example/ann.png")
+		];
+		var cut = RenderView("Public");
+
+		var row = cut.Find(".comm-emit--pictured");
+		await Assert.That(row.QuerySelector("img.comm-avatar")!.GetAttribute("src")).IsEqualTo("https://cdn.example/ann.png");
+		await Assert.That(row.QuerySelector(".comm-name")).IsNull();
+		await Assert.That(row.QuerySelector(".comm-text")!.TextContent).IsEqualTo("[D] Ann says, \"hi\"");
+	}
+
 	/// <summary>A line keeps the colour the game gave it.</summary>
 	[Test]
 	public async Task ABody_IsDrawnFromItsMarkup()

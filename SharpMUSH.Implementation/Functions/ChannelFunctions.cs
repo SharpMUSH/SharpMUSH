@@ -121,14 +121,14 @@ public partial class Functions
 	/// reimplementing it, and so does this: <see cref="ChannelEmit"/> is the one implementation behind
 	/// all four spellings, so softcode cannot be held to a different gate than the command.
 	/// </summary>
-	[SharpFunction(Name = "cemit", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX,
-		ParameterNames = ["channel", "message", "noisy"])]
+	[SharpFunction(Name = "cemit", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX,
+		ParameterNames = ["channel", "message", "noisy", "picture"])]
 	public async ValueTask<CallState> ChannelEmitFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await EmitOnChannel(parser, spoof: false);
 
 	/// <summary>PennMUSH <c>fun_cemit</c> called as <c>NSCEMIT</c> (<c>src/extchat.c:3447</c>).</summary>
-	[SharpFunction(Name = "nscemit", MinArgs = 2, MaxArgs = 3,
-		Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["channel", "message", "noisy"])]
+	[SharpFunction(Name = "nscemit", MinArgs = 2, MaxArgs = 4,
+		Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["channel", "message", "noisy", "picture"])]
 	public async ValueTask<CallState> NoSpoofChannelEmitFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await EmitOnChannel(parser, spoof: true);
 
@@ -141,7 +141,9 @@ public partial class Functions
 			parser.CurrentState.Arguments["1"].Message,
 			spoof,
 			// fun_cemit (src/extchat.c:3454): silent unless the third argument is true.
-			silent: !(parser.CurrentState.Arguments.TryGetValue("2", out var noisy) && noisy.Message.Truthy()));
+			silent: !(parser.CurrentState.Arguments.TryGetValue("2", out var noisy) && noisy.Message.Truthy()),
+			// SharpMUSH's own: the picture the portal shows with the line.
+			picture: parser.CurrentState.Arguments.TryGetValue("3", out var picture) ? picture.Message.ToPlainText() : string.Empty);
 	}
 
 	[SharpFunction(Name = "cflags", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,

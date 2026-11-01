@@ -75,7 +75,7 @@ public class ChannelBroadcastService(
 	/// a handler can pass it on (the <c>comm-feed</c> package's <c>comm.message</c>) without deciding again
 	/// who may hear it. Nobody heard it, nothing fires. The name and message keep their markup, after the mogrifier; a
 	/// member's own <c>@chatformat</c> changes only their terminal line. The last argument is the line's id,
-	/// which the recall buffer holds it under too.
+	/// which the recall buffer holds it under too, and after it the picture the line was sent with, if any.
 	/// </summary>
 	private async ValueTask RaiseChannelMessageEventAsync(
 		ChannelMessageNotification notification,
@@ -102,7 +102,8 @@ public class ChannelBroadcastService(
 				line.Message,
 				MarkupText.Plain(string.Join(' ', recipients.Select(recipient => recipient.Object().DBRef.ToString()))),
 				MarkupText.Plain(sentAt.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture)),
-				MarkupText.Plain(id.ToString(CultureInfo.InvariantCulture))
+				MarkupText.Plain(id.ToString(CultureInfo.InvariantCulture)),
+				MarkupText.Plain(notification.Picture)
 			]);
 	}
 
@@ -397,7 +398,8 @@ public class ChannelBroadcastService(
 			SeeAllOnly = notification.SeeAllOnly,
 			Style = StyleFor(line.ChatType),
 			SpeakerName = Named(notification) ? line.PlayerName.ToPlainText() : string.Empty,
-			MessageText = line.Message
+			MessageText = line.Message,
+			Picture = notification.Picture
 		};
 		await mediator.Send(new AddChannelMessageCommand(channelMessage), cancellationToken);
 	}

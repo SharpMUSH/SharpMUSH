@@ -16,8 +16,10 @@ public sealed record CommChannel(string Name, int Unread, bool Joined = true, bo
 /// sends none.</param>
 /// <param name="Markup"><paramref name="Text"/> with its colour and markup, as a serialized MString, when the game
 /// sent it.</param>
+/// <param name="Picture">The picture the line was sent with, shown beside it: a character's objid or an image URL; null
+/// for none.</param>
 public sealed record CommMessage(string Kind, string? Channel, IReadOnlyList<string> To, string From, string? FromObjId, string Text, DateTimeOffset Timestamp, long? Id = null,
-	string? Markup = null);
+	string? Markup = null, string? Picture = null);
 
 /// <summary>A page conversation: the other people in it (one, or several for a group page).</summary>
 public sealed record CommConversation(string Key, IReadOnlyList<string> With, IReadOnlyList<string?> WithObjIds, int Unread, DateTimeOffset LastAt);

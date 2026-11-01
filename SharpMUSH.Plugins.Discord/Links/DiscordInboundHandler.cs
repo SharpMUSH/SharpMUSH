@@ -59,7 +59,8 @@ public sealed class DiscordInboundHandler(DiscordInbound inbound, ILogger<Discor
 			replied?.Author.Id,
 			posted.MentionedUsers.DistinctBy(user => user.Id).ToDictionary(user => user.Id, user => DisplayName(user)),
 			posted.MentionedChannels.DistinctBy(mentioned => mentioned.Id).ToDictionary(mentioned => mentioned.Id, mentioned => mentioned.Name),
-			posted.MentionedRoles.DistinctBy(role => role.Id).ToDictionary(role => role.Id, role => role.Name));
+			posted.MentionedRoles.DistinctBy(role => role.Id).ToDictionary(role => role.Id, role => role.Name),
+			posted.Author.GetDisplayAvatarUrl());
 	}
 
 	/// <summary>The name Discord shows for the user in the server: nickname, then display name, then username.</summary>

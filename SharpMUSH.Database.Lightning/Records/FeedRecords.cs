@@ -67,6 +67,9 @@ public sealed record FeedMessageRecord
 	public string Audience { get; init; } = "";
 	public SharpMUSH.Library.Models.ExternalFeedIdentity? ExternalIdentity { get; init; }
 
+	/// <summary>The picture shown with the line, an objid or an image URL, or empty.</summary>
+	public string Picture { get; init; } = "";
+
 	/// <summary>What the line counts against the feed's byte limit.</summary>
 	public long Bytes { get; init; }
 

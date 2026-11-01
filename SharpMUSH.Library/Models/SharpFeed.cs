@@ -128,6 +128,8 @@ public sealed record SharpFeedMember(
 /// line after its mogrifier) rather than for each reader; null otherwise.</param>
 /// <param name="Audience">Who the line was meant for when it was not every member, as the system names it (a
 /// channel's <c>seeall</c> line); empty for everyone. The feed keeps it; the system decides what it means.</param>
+/// <param name="Picture">The picture shown with the line when it is not the speaker's own (a channel emit's), as an
+/// objid or an image URL; empty for none.</param>
 public sealed record SharpFeedMessage(
 	long Id,
 	string Kind,
@@ -144,7 +146,8 @@ public sealed record SharpFeedMessage(
 	string DisplayName = "",
 	MString? Line = null,
 	string Audience = "",
-	ExternalFeedIdentity? ExternalIdentity = null)
+	ExternalFeedIdentity? ExternalIdentity = null,
+	string Picture = "")
 {
 	public string Feed => $"{Kind}/{Key}";
 }
@@ -194,8 +197,10 @@ public static class FeedStyles
 /// <remarks>
 /// The game shows the name behind a short tag for where it came from, <c>[D] Ann</c>, so it never passes for a
 /// character's; the subject stays out of the line and is read with <c>feedmsg(the subject stays out of the line and is read with <c>feedmsg()</c>.lt;idthe subject stays out of the line and is read with <c>feedmsg()</c>.gt;,external_id)</c>.
+/// <para><c>Picture</c> is the speaker's picture where they came from (a Discord member's avatar), as an image URL,
+/// or empty.</para>
 /// </remarks>
-public sealed record ExternalFeedIdentity(string Provider, string Subject, string Name)
+public sealed record ExternalFeedIdentity(string Provider, string Subject, string Name, string Picture = "")
 {
 	public string DisplayName => $"[{(Provider == "discord" ? "D" : Provider)}] {Name}";
 }

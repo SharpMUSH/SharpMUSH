@@ -405,12 +405,14 @@ public class CommController(
 		if (line.Style.Length == 0)
 		{
 			return new ChannelRecallLine(line.Id, channel, string.Empty, null, line.Message.ToPlainText(), "emit", ts,
-				MarkupTextSerializer.Serialize(line.Message));
+				MarkupTextSerializer.Serialize(line.Message), PictureOf(line));
 		}
 
 		var named = line.SpeakerName.Length > 0;
 		var text = await textComposer.ComposeAsync(handler, line, ct);
 		return new ChannelRecallLine(line.Id, channel, line.SpeakerName, named ? line.Sender.ToString() : null,
-			text.ToPlainText(), line.Style, ts, MarkupTextSerializer.Serialize(text));
+			text.ToPlainText(), line.Style, ts, MarkupTextSerializer.Serialize(text), PictureOf(line));
 	}
+
+	private static string? PictureOf(SharpChannelMessage line) => line.Picture.Length > 0 ? line.Picture : null;
 }
