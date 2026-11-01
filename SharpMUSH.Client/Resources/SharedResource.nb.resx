@@ -7420,13 +7420,13 @@
     <value>Dra et rom for å flytte det, eller et hjørne av det valgte rommet for å endre størrelsen. Med tastaturet flytter piltastene det valgte rommet (lenger med Shift), og Ctrl+Shift med piltastene endrer størrelsen.</value>
   </data>
   <data name="NavMapMoveHintHex" xml:space="preserve">
-    <value>Dra et rom for å flytte det til en annen sekskant. Med tastaturet flytter piltastene det valgte rommet til neste sekskant; Shift med venstre eller høyre tar de øvre naboene.</value>
+    <value>Dra et rom for å flytte det til en annen sekskant. Med tastaturet flytter piltastene det valgte rommet til neste sekskant i den retningen; der det ligger to sekskanter i den retningen, tar Shift den andre.</value>
   </data>
   <data name="NavMapMovedTo" xml:space="preserve">
     <value>{0} flyttet til {1}, {2}.</value>
   </data>
   <data name="NavMapResizedTo" xml:space="preserve">
-    <value>{0} er nå {1} ganger {2}.</value>
+    <value>{0} er nå {1} × {2}.</value>
   </data>
   <data name="NavMapAtEdge" xml:space="preserve">
     <value>Bildets kant stoppet det.</value>

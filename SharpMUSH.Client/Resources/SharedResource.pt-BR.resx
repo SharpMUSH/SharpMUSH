@@ -7420,7 +7420,7 @@
     <value>Arraste uma sala para movê-la, ou um canto da sala escolhida para redimensioná-la. Pelo teclado, as setas movem a sala escolhida (mais longe com Shift) e Ctrl+Shift com as setas a redimensiona.</value>
   </data>
   <data name="NavMapMoveHintHex" xml:space="preserve">
-    <value>Arraste uma sala para movê-la para outro hexágono. Pelo teclado, as setas movem a sala escolhida para o próximo hexágono; Shift com esquerda ou direita leva aos vizinhos de cima.</value>
+    <value>Arraste uma sala para movê-la para outro hexágono. Pelo teclado, as setas movem a sala escolhida para o próximo hexágono nessa direção; onde há dois hexágonos nessa direção, Shift leva ao outro.</value>
   </data>
   <data name="NavMapMovedTo" xml:space="preserve">
     <value>{0} movida para {1}, {2}.</value>

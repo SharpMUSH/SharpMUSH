@@ -1185,6 +1185,21 @@ public class WorldMapPageTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task APinMovesByArrowKeysButIsNotGivenASize()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 65));
+		cut.WaitForAssertion(() => cut.Find(".map-room"));
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+		var canvas = cut.FindComponent<MapCanvas>();
+
+		await cut.InvokeAsync(() => canvas.Instance.Nudged("#60", 0, 0, big: false, resize: true));
+		await cut.InvokeAsync(() => canvas.Instance.Nudged("#60", 1, 0, big: false, resize: true));
+
+		await Assert.That(cut.Find(".map-builder").TextContent).Contains("NavMapChangesWaiting(0)").Because("Ford has no size to change");
+	}
+
+	[Test]
 	public async Task OnAPictureADragStopsAtTheEdgeAndARoomStoredPastItIsDrawnOnIt()
 	{
 		Arrange();

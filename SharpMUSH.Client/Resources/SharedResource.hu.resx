@@ -7420,7 +7420,7 @@
     <value>Húzz egy szobát az áthelyezéséhez, vagy a kiválasztott szoba egy sarkát az átméretezéséhez. Billentyűzettel a nyilak mozgatják a kiválasztott szobát (Shifttel messzebb), a Ctrl+Shift a nyilakkal átméretezi.</value>
   </data>
   <data name="NavMapMoveHintHex" xml:space="preserve">
-    <value>Húzz egy szobát, hogy másik hatszögre helyezd. Billentyűzettel a nyilak a következő hatszögre viszik a kiválasztott szobát; a Shift a bal vagy jobb nyíllal a felső szomszédokat választja.</value>
+    <value>Húzz egy szobát, hogy másik hatszögre helyezd. Billentyűzettel a nyilak a kiválasztott szobát az abba az irányba eső következő hatszögre viszik; ahol abba az irányba két hatszög esik, a Shift a másikat választja.</value>
   </data>
   <data name="NavMapMovedTo" xml:space="preserve">
     <value>{0} áthelyezve ide: {1}, {2}.</value>

@@ -169,7 +169,7 @@
         }
         @if (Editing)
         {
-            <p id="@HintId" class="visually-hidden">@Loc["NavMapMoveHint"]</p>
+            <p id="@HintId" class="visually-hidden">@Loc[Layout.Resizable ? "NavMapMoveHint" : "NavMapMoveHintHex"]</p>
         }
         <p class="visually-hidden" role="status" aria-live="polite">@_announced</p>
         <div class="map-rooms">
@@ -641,6 +641,7 @@
         if (Room(id) is not { } room) return Task.CompletedTask;
         if (!resize) return ReshapeAsync(room, Layout.Nudged(room, dx, dy, big));
         if (!Layout.Resizable) return Announce(Loc["NavMapNoResizeHex", room.Room.Name].Value);
+        if (!Resizable(room)) return Task.CompletedTask;
         var step = Layout.IsGraph ? MapLayout.PictureStep : MapLayout.Cell;
         return ReshapeAsync(room, Layout.Resized(room, 0, 0, dx * step, dy * step));
     }

@@ -7420,7 +7420,7 @@
     <value>Arrastra una sala para moverla, o una esquina de la sala elegida para cambiar su tamaño. Con el teclado, las flechas mueven la sala elegida (más lejos con Mayús) y Ctrl+Mayús con las flechas cambia su tamaño.</value>
   </data>
   <data name="NavMapMoveHintHex" xml:space="preserve">
-    <value>Arrastra una sala para moverla a otro hexágono. Con el teclado, las flechas mueven la sala elegida al hexágono siguiente; Mayús con izquierda o derecha toma los vecinos de arriba.</value>
+    <value>Arrastra una sala para moverla a otro hexágono. Con el teclado, las flechas mueven la sala elegida al hexágono siguiente en esa dirección; donde hay dos hexágonos en esa dirección, Mayús toma el otro.</value>
   </data>
   <data name="NavMapMovedTo" xml:space="preserve">
     <value>{0} movida a {1}, {2}.</value>

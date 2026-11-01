@@ -7420,7 +7420,7 @@
     <value>Sleep een kamer om haar te verplaatsen, of een hoek van de gekozen kamer om haar groter of kleiner te maken. Met het toetsenbord verplaatsen de pijltjestoetsen de gekozen kamer (met Shift verder) en Ctrl+Shift met de pijltjestoetsen verandert haar grootte.</value>
   </data>
   <data name="NavMapMoveHintHex" xml:space="preserve">
-    <value>Sleep een kamer om haar naar een andere zeshoek te verplaatsen. Met het toetsenbord verplaatsen de pijltjestoetsen de gekozen kamer naar de volgende zeshoek; Shift met links of rechts neemt de bovenste buren.</value>
+    <value>Sleep een kamer om haar naar een andere zeshoek te verplaatsen. Met het toetsenbord verplaatsen de pijltjestoetsen de gekozen kamer naar de volgende zeshoek in die richting; liggen er in die richting twee zeshoeken, dan neemt Shift de andere.</value>
   </data>
   <data name="NavMapMovedTo" xml:space="preserve">
     <value>{0} verplaatst naar {1}, {2}.</value>

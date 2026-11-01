@@ -7420,7 +7420,7 @@
     <value>Przeciągnij pokój, aby go przesunąć, albo róg wybranego pokoju, aby zmienić jego rozmiar. Na klawiaturze strzałki przesuwają wybrany pokój (z Shift dalej), a Ctrl+Shift ze strzałkami zmienia jego rozmiar.</value>
   </data>
   <data name="NavMapMoveHintHex" xml:space="preserve">
-    <value>Przeciągnij pokój, aby przenieść go na inny sześciokąt. Na klawiaturze strzałki przenoszą wybrany pokój na następny sześciokąt; Shift ze strzałką w lewo lub w prawo wybiera górnych sąsiadów.</value>
+    <value>Przeciągnij pokój, aby przenieść go na inny sześciokąt. Na klawiaturze strzałki przenoszą wybrany pokój na następny sześciokąt w tym kierunku; tam, gdzie w tym kierunku leżą dwa sześciokąty, Shift wybiera drugi.</value>
   </data>
   <data name="NavMapMovedTo" xml:space="preserve">
     <value>{0} przesunięto na {1}, {2}.</value>

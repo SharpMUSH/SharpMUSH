@@ -7420,7 +7420,7 @@
     <value>Dra ett rum för att flytta det, eller ett hörn av det valda rummet för att ändra storleken. Med tangentbordet flyttar piltangenterna det valda rummet (längre med Skift) och Ctrl+Skift med piltangenterna ändrar storleken.</value>
   </data>
   <data name="NavMapMoveHintHex" xml:space="preserve">
-    <value>Dra ett rum för att flytta det till en annan hexagon. Med tangentbordet flyttar piltangenterna det valda rummet till nästa hexagon; Skift med vänster eller höger tar de övre grannarna.</value>
+    <value>Dra ett rum för att flytta det till en annan hexagon. Med tangentbordet flyttar piltangenterna det valda rummet till nästa hexagon åt det hållet; där två hexagoner ligger åt det hållet tar Skift den andra.</value>
   </data>
   <data name="NavMapMovedTo" xml:space="preserve">
     <value>{0} flyttat till {1}, {2}.</value>

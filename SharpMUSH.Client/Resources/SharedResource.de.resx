@@ -7420,7 +7420,7 @@
     <value>Ziehe einen Raum, um ihn zu verschieben, oder eine Ecke des gewählten Raums, um seine Größe zu ändern. Mit der Tastatur verschieben die Pfeiltasten den gewählten Raum (mit Umschalt weiter), Strg+Umschalt mit den Pfeiltasten ändert seine Größe.</value>
   </data>
   <data name="NavMapMoveHintHex" xml:space="preserve">
-    <value>Ziehe einen Raum, um ihn auf ein anderes Sechseck zu verschieben. Mit der Tastatur bewegen die Pfeiltasten den gewählten Raum zum nächsten Sechseck; Umschalt mit links oder rechts nimmt die oberen Nachbarn.</value>
+    <value>Ziehe einen Raum, um ihn auf ein anderes Sechseck zu verschieben. Mit der Tastatur bewegen die Pfeiltasten den gewählten Raum zum nächsten Sechseck in diese Richtung; liegen in dieser Richtung zwei Sechsecke, nimmt Umschalt das andere.</value>
   </data>
   <data name="NavMapMovedTo" xml:space="preserve">
     <value>{0} verschoben nach {1}, {2}.</value>

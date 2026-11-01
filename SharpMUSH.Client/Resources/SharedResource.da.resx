@@ -7420,7 +7420,7 @@
     <value>Træk et rum for at flytte det, eller et hjørne af det valgte rum for at ændre størrelsen. Med tastaturet flytter piletasterne det valgte rum (længere med Skift), og Ctrl+Skift med piletasterne ændrer størrelsen.</value>
   </data>
   <data name="NavMapMoveHintHex" xml:space="preserve">
-    <value>Træk et rum for at flytte det til en anden sekskant. Med tastaturet flytter piletasterne det valgte rum til næste sekskant; Skift med venstre eller højre tager de øverste naboer.</value>
+    <value>Træk et rum for at flytte det til en anden sekskant. Med tastaturet flytter piletasterne det valgte rum til næste sekskant i den retning; hvor der ligger to sekskanter i den retning, tager Skift den anden.</value>
   </data>
   <data name="NavMapMovedTo" xml:space="preserve">
     <value>{0} flyttet til {1}, {2}.</value>

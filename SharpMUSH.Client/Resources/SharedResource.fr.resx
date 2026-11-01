@@ -6729,7 +6729,7 @@
     <value>Faites glisser une pièce pour la déplacer, ou un coin de la pièce choisie pour la redimensionner. Au clavier, les flèches déplacent la pièce choisie (plus loin avec Maj) et Ctrl+Maj avec les flèches la redimensionne.</value>
   </data>
   <data name="NavMapMoveHintHex" xml:space="preserve">
-    <value>Faites glisser une pièce pour la déplacer vers un autre hexagone. Au clavier, les flèches déplacent la pièce choisie vers l'hexagone suivant ; Maj avec gauche ou droite prend les voisins du haut.</value>
+    <value>Faites glisser une pièce pour la déplacer vers un autre hexagone. Au clavier, les flèches déplacent la pièce choisie vers l'hexagone suivant dans cette direction ; là où deux hexagones se trouvent dans cette direction, Maj prend l'autre.</value>
   </data>
   <data name="NavMapMovedTo" xml:space="preserve">
     <value>{0} déplacée en {1}, {2}.</value>
