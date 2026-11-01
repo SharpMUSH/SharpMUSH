@@ -116,8 +116,10 @@ One document type, `kind: "form" | "view"`, generalizing the profile schema's
   "key": "strength",
   "label": "Strength",
   "type": "number",            // text|textarea|mstring|number|select|multiselect|
-                               //   boolean|radio|slider|date|hidden|computed
+                               //   list|rows|graph|boolean|radio|slider|date|hidden|computed
   "options": [ {"value":"str","label":"Strength"} ],   // select/radio/multiselect
+  "item_fields": [ ... ],      // rows: the fields of each row
+  "graph": { ... },            // graph: step kinds, ports, guidance (see the authoring guide)
   "default": 8,
   "help": "Roll 4d6 drop lowest.",
   "validation": { "required": true, "min": 3, "max": 18, "max_length": 120,

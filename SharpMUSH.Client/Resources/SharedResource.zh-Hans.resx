@@ -6266,6 +6266,142 @@
     <value>{0} 到 {1}：{2}</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraphView" xml:space="preserve">
+    <value>视图</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphMap" xml:space="preserve">
+    <value>地图</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphOutline" xml:space="preserve">
+    <value>大纲</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphAdd" xml:space="preserve">
+    <value>添加步骤</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphTidy" xml:space="preserve">
+    <value>整理布局</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphCheck" xml:space="preserve">
+    <value>检查</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphEmpty" xml:space="preserve">
+    <value>还没有步骤。请在上方添加第一个。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphGuidance" xml:space="preserve">
+    <value>指引</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphStep" xml:space="preserve">
+    <value>所选步骤</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphSelectHint" xml:space="preserve">
+    <value>选择一个步骤进行编辑。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphKeyInvalid" xml:space="preserve">
+    <value>请使用小写字母、数字、- 和 _，并以字母或数字开头。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphKeyTaken" xml:space="preserve">
+    <value>另一个步骤已使用此键。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphNodeLabel" xml:space="preserve">
+    <value>{0}：{1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphStart" xml:space="preserve">
+    <value>第一步</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphAdded" xml:space="preserve">
+    <value>已添加</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphChanged" xml:space="preserve">
+    <value>已更改</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphIssueCount" xml:space="preserve">
+    <value>{0} 项待查看</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphNowhere" xml:space="preserve">
+    <value>尚未连接</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphDelete" xml:space="preserve">
+    <value>删除步骤</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphName" xml:space="preserve">
+    <value>名称</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphKey" xml:space="preserve">
+    <value>键</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphOutcomes" xml:space="preserve">
+    <value>每个结果通向何处</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphLeadsTo" xml:space="preserve">
+    <value>{0} 通向</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphNotes" xml:space="preserve">
+    <value>备注</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphPinNote" xml:space="preserve">
+    <value>为此步骤固定一条备注</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphPin" xml:space="preserve">
+    <value>固定备注</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphOneOf" xml:space="preserve">
+    <value>其中之一：{0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphAddNext" xml:space="preserve">
+    <value>添加可能的下一步</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphRemoveLink" xml:space="preserve">
+    <value>移除 {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRowsAdd" xml:space="preserve">
+    <value>添加一行</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRowsRemove" xml:space="preserve">
+    <value>删除此行</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRowsUp" xml:space="preserve">
+    <value>上移</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRowsDown" xml:space="preserve">
+    <value>下移</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidSelectNone" xml:space="preserve">
+    <value>无</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolNameCardLabel" xml:space="preserve">
     <value>{0} 的名片</value>
     <comment>MT</comment>

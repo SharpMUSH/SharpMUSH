@@ -5575,6 +5575,142 @@
     <value>{0} vers {1} : {2}</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraphView" xml:space="preserve">
+    <value>Vue</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphMap" xml:space="preserve">
+    <value>Carte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphOutline" xml:space="preserve">
+    <value>Plan</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphAdd" xml:space="preserve">
+    <value>Ajouter une étape</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphTidy" xml:space="preserve">
+    <value>Ranger la disposition</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphCheck" xml:space="preserve">
+    <value>Vérifier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphEmpty" xml:space="preserve">
+    <value>Aucune étape pour l'instant. Ajoutez la première ci-dessus.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphGuidance" xml:space="preserve">
+    <value>Conseils</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphStep" xml:space="preserve">
+    <value>Étape sélectionnée</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphSelectHint" xml:space="preserve">
+    <value>Sélectionnez une étape pour la modifier.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphKeyInvalid" xml:space="preserve">
+    <value>Utilisez des minuscules, des chiffres, - et _, en commençant par une lettre ou un chiffre.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphKeyTaken" xml:space="preserve">
+    <value>Une autre étape a déjà cette clé.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphNodeLabel" xml:space="preserve">
+    <value>{0} : {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphStart" xml:space="preserve">
+    <value>Première étape</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphAdded" xml:space="preserve">
+    <value>Ajoutée</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphChanged" xml:space="preserve">
+    <value>Modifiée</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphIssueCount" xml:space="preserve">
+    <value>{0} à revoir</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphNowhere" xml:space="preserve">
+    <value>Nulle part pour l'instant</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphDelete" xml:space="preserve">
+    <value>Supprimer l'étape</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphName" xml:space="preserve">
+    <value>Nom</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphKey" xml:space="preserve">
+    <value>Clé</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphOutcomes" xml:space="preserve">
+    <value>Où mène chaque résultat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphLeadsTo" xml:space="preserve">
+    <value>{0} mène à</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphNotes" xml:space="preserve">
+    <value>Notes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphPinNote" xml:space="preserve">
+    <value>Épingler une note à cette étape</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphPin" xml:space="preserve">
+    <value>Épingler la note</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphOneOf" xml:space="preserve">
+    <value>l'une de : {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphAddNext" xml:space="preserve">
+    <value>Ajouter une étape suivante possible</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphRemoveLink" xml:space="preserve">
+    <value>Retirer {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRowsAdd" xml:space="preserve">
+    <value>Ajouter une ligne</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRowsRemove" xml:space="preserve">
+    <value>Retirer la ligne</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRowsUp" xml:space="preserve">
+    <value>Monter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRowsDown" xml:space="preserve">
+    <value>Descendre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidSelectNone" xml:space="preserve">
+    <value>Aucun</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolNameCardLabel" xml:space="preserve">
     <value>Fiche de {0}</value>
     <comment>MT</comment>

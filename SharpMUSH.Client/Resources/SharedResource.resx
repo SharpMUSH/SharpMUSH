@@ -8737,6 +8737,108 @@
   <data name="WidGraphEdge" xml:space="preserve">
     <value>{0} to {1}: {2}</value>
   </data>
+  <data name="WidGraphView" xml:space="preserve">
+    <value>View</value>
+  </data>
+  <data name="WidGraphMap" xml:space="preserve">
+    <value>Map</value>
+  </data>
+  <data name="WidGraphOutline" xml:space="preserve">
+    <value>Outline</value>
+  </data>
+  <data name="WidGraphAdd" xml:space="preserve">
+    <value>Add a step</value>
+  </data>
+  <data name="WidGraphTidy" xml:space="preserve">
+    <value>Tidy layout</value>
+  </data>
+  <data name="WidGraphCheck" xml:space="preserve">
+    <value>Check</value>
+  </data>
+  <data name="WidGraphEmpty" xml:space="preserve">
+    <value>No steps yet. Add the first one above.</value>
+  </data>
+  <data name="WidGraphGuidance" xml:space="preserve">
+    <value>Guidance</value>
+  </data>
+  <data name="WidGraphStep" xml:space="preserve">
+    <value>Selected step</value>
+  </data>
+  <data name="WidGraphSelectHint" xml:space="preserve">
+    <value>Select a step to edit it.</value>
+  </data>
+  <data name="WidGraphKeyInvalid" xml:space="preserve">
+    <value>Use lower-case letters, digits, - and _, starting with a letter or digit.</value>
+  </data>
+  <data name="WidGraphKeyTaken" xml:space="preserve">
+    <value>Another step already has this key.</value>
+  </data>
+  <data name="WidGraphNodeLabel" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="WidGraphStart" xml:space="preserve">
+    <value>First step</value>
+  </data>
+  <data name="WidGraphAdded" xml:space="preserve">
+    <value>Added</value>
+  </data>
+  <data name="WidGraphChanged" xml:space="preserve">
+    <value>Changed</value>
+  </data>
+  <data name="WidGraphIssueCount" xml:space="preserve">
+    <value>{0} to look at</value>
+  </data>
+  <data name="WidGraphNowhere" xml:space="preserve">
+    <value>Nowhere yet</value>
+  </data>
+  <data name="WidGraphDelete" xml:space="preserve">
+    <value>Delete step</value>
+  </data>
+  <data name="WidGraphName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="WidGraphKey" xml:space="preserve">
+    <value>Key</value>
+  </data>
+  <data name="WidGraphOutcomes" xml:space="preserve">
+    <value>Where each outcome leads</value>
+  </data>
+  <data name="WidGraphLeadsTo" xml:space="preserve">
+    <value>{0} leads to</value>
+  </data>
+  <data name="WidGraphNotes" xml:space="preserve">
+    <value>Notes</value>
+  </data>
+  <data name="WidGraphPinNote" xml:space="preserve">
+    <value>Pin a note to this step</value>
+  </data>
+  <data name="WidGraphPin" xml:space="preserve">
+    <value>Pin note</value>
+  </data>
+  <data name="WidGraphOneOf" xml:space="preserve">
+    <value>one of: {0}</value>
+  </data>
+  <data name="WidGraphAddNext" xml:space="preserve">
+    <value>Add a possible next step</value>
+  </data>
+  <data name="WidGraphRemoveLink" xml:space="preserve">
+    <value>Remove {0}</value>
+  </data>
+  <data name="WidRowsAdd" xml:space="preserve">
+    <value>Add a row</value>
+  </data>
+  <data name="WidRowsRemove" xml:space="preserve">
+    <value>Remove row</value>
+  </data>
+  <data name="WidRowsUp" xml:space="preserve">
+    <value>Move up</value>
+  </data>
+  <data name="WidRowsDown" xml:space="preserve">
+    <value>Move down</value>
+  </data>
+  <data name="WidSelectNone" xml:space="preserve">
+    <value>None</value>
+  </data>
   <data name="RolNameCardLabel" xml:space="preserve">
     <value>{0}'s card</value>
   </data>

@@ -112,7 +112,7 @@ else
     // Content too long for a grid cell takes the whole row of an auto grid.
     private static bool IsWide(SchemaElement element) => (element.Kind ?? "field").ToLowerInvariant() switch
     {
-        "field" => string.Equals(element.Type, "mstring", StringComparison.OrdinalIgnoreCase),
+        "field" => element.Type?.ToLowerInvariant() is "mstring" or "graph",
         _ => true,
     };
 
@@ -159,6 +159,19 @@ else
         {
             case var kind when SchemaDisplay.Kinds.Contains(kind):
                 <SchemaDisplay Element="element" Data="_data" Actions="_document?.Actions" Busy="_busy" OnAction="DispatchAsync" />
+                break;
+
+            case "field" when string.Equals(element.Type, "graph", StringComparison.OrdinalIgnoreCase):
+                @* A view shows a graph as its editor does, without letting it change. *@
+                <div class="schema-field" data-config-option="@element.Key">
+                    @if (!string.IsNullOrWhiteSpace(element.Label))
+                    {
+                        <div class="schema-label">@element.Label</div>
+                    }
+                    <SchemaGraphEditor Element="@(element with { Graph = (element.Graph ?? new SchemaGraphSpec()) with { Readonly = true } })"
+                                       Value="@(element.Key is not null ? Lookup(element.Key) : null)"
+                                       Data="_data" Busy="_busy" OnAction="DispatchAsync" />
+                </div>
                 break;
 
             default:

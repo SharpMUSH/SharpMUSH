@@ -146,10 +146,6 @@ else
         await ActionHandler.InvokeAsync(new(actionName, values));
     }
 
-    private string GetString(string key) => _model.GetString(key);
-    private bool GetBool(string key) => _model.GetBool(key);
-    private double? GetNumber(string key) => _model.GetNumber(key);
-    private IEnumerable<string> GetMulti(string key) => _model.GetMulti(key);
 
     /// <summary>
     /// Stores an edit, then dispatches the field's <c>triggers_action</c> if it names one — how a filter
@@ -209,115 +205,17 @@ else
         }
 
         var key = element.Key;
-        var label = element.Label ?? key;
-        var help = element.Help;
-        var error = Error(key);
-        var required = element.Validation?.Required ?? false;
-
-        switch ((element.Type ?? "text").ToLowerInvariant())
+        if (string.Equals(element.Type, "graph", StringComparison.OrdinalIgnoreCase))
         {
-            case "boolean":
-                <div class="mb-2">
-                    <MudSwitch T="bool" Value="GetBool(key)" ValueChanged="v => Changed(element, () => _model.SetBool(key, v))"
-                               Label="@label" Color="Color.Primary" />
-                    @if (!string.IsNullOrWhiteSpace(help))
-                    {
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@help</MudText>
-                    }
-                </div>
-                break;
-
-            case "number":
-            case "slider":
-                @if (element.Type == "slider")
-                {
-                    <div class="mb-3">
-                        <MudText Typo="Typo.body2">@label: @(GetNumber(key)?.ToString() ?? "—")</MudText>
-                        <MudSlider T="double" Value="@(GetNumber(key) ?? element.Validation?.Min ?? 0)"
-                                   ValueChanged="v => Changed(element, () => _model.SetNumber(key, v))"
-                                   Min="@(element.Validation?.Min ?? 0)" Max="@(element.Validation?.Max ?? 100)" Step="1" />
-                    </div>
-                }
-                else
-                {
-                    <MudNumericField T="double?" Value="GetNumber(key)" ValueChanged="v => Changed(element, () => _model.SetNumber(key, v))"
-                                     Label="@label" Variant="Variant.Outlined" Class="mb-2"
-                                     HelperText="@help" Required="required" Error="@(error is not null)" ErrorText="@error"
-                                     Min="@(element.Validation?.Min)" Max="@(element.Validation?.Max)" />
-                }
-                break;
-
-            case "textarea":
-            case "mstring":
-                <MudTextField T="string" Value="GetString(key)" ValueChanged="v => Changed(element, () => _model.SetString(key, v))"
-                              Label="@label" Variant="Variant.Outlined" Lines="4" Class="mb-2"
-                              HelperText="@help" Required="required" Error="@(error is not null)" ErrorText="@error" />
-                break;
-
-            case "select":
-                <MudSelect T="string" Value="GetString(key)" ValueChanged="v => Changed(element, () => _model.SetString(key, v))"
-                           Label="@label" Variant="Variant.Outlined" Class="mb-2"
-                           HelperText="@help" Required="required" Error="@(error is not null)" ErrorText="@error">
-                    @foreach (var option in element.Options ?? [])
-                    {
-                        <MudSelectItem T="string" Value="@option.Value">@option.Label</MudSelectItem>
-                    }
-                </MudSelect>
-                break;
-
-            case "multiselect":
-                <MudSelect T="string" SelectedValues="GetMulti(key).ToHashSet()"
-                           SelectedValuesChanged="v => Changed(element, () => _model.SetMulti(key, v))" MultiSelection="true"
-                           Label="@label" Variant="Variant.Outlined" Class="mb-2"
-                           HelperText="@help" Error="@(error is not null)" ErrorText="@error">
-                    @foreach (var option in element.Options ?? [])
-                    {
-                        <MudSelectItem T="string" Value="@option.Value">@option.Label</MudSelectItem>
-                    }
-                </MudSelect>
-                break;
-
-            case "list":
-                @* One value a line, so a value may hold a comma; posted as a JSON list. *@
-                <div class="mb-2">
-                    <ListEditor Items="GetMulti(key).ToList()" ItemsChanged="v => Changed(element, () => _model.SetMulti(key, v))"
-                                Label="@label" Help="@help" Separators="[]" Disabled="_busy" />
-                    @if (error is not null)
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Error">@error</MudText>
-                    }
-                </div>
-                break;
-
-            case "radio":
-                <div class="mb-2">
-                    <MudText Typo="Typo.body2">@label</MudText>
-                    <MudRadioGroup T="string" Value="GetString(key)" ValueChanged="v => Changed(element, () => _model.SetString(key, v))">
-                        @foreach (var option in element.Options ?? [])
-                        {
-                            <MudRadio T="string" Value="@option.Value">@option.Label</MudRadio>
-                        }
-                    </MudRadioGroup>
-                    @if (error is not null)
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Error">@error</MudText>
-                    }
-                </div>
-                break;
-
-            case "date":
-                <MudDatePicker Label="@label" Date="_model.GetDate(key)"
-                               DateChanged="d => Changed(element, () => _model.SetDate(key, d))"
-                               Variant="Variant.Outlined" Class="mb-2" HelperText="@help"
-                               Error="@(error is not null)" ErrorText="@error" />
-                break;
-
-            default:
-                <MudTextField T="string" Value="GetString(key)" ValueChanged="v => Changed(element, () => _model.SetString(key, v))"
-                              Label="@label" Variant="Variant.Outlined" Class="mb-2"
-                              HelperText="@help" Required="required" Error="@(error is not null)" ErrorText="@error"
-                              MaxLength="@(element.Validation?.MaxLength ?? 524288)" />
-                break;
+            <div class="mb-2">
+                <SchemaGraphEditor Element="element" Value="SchemaValues.AsJson(_model.Get(key))"
+                                   ValueChanged="v => Changed(element, () => _model.SetValue(key, v))"
+                                   Data="_data" Busy="_busy" OnAction="Dispatch" Error="@Error(key)" />
+            </div>
+            return;
         }
+
+        <SchemaFieldInput Element="element" Value="_model.Get(key)" Error="@Error(key)" Disabled="_busy"
+                          ValueChanged="v => Changed(element, () => _model.SetValue(key, v))" />
     };
 }

@@ -1,0 +1,246 @@
+@using System.Text.Json
+@using System.Text.Json.Nodes
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Components.Kit
+@inject IStringLocalizer<SharedResource> Loc
+
+@* One schema field's input, bound to a value held the way SchemaValues describes. The form draws its fields
+   with it, and so does a graph step's form, whose values live inside the step. *@
+
+@switch ((Element.Type ?? "text").ToLowerInvariant())
+{
+    case "boolean":
+        <div class="mb-2">
+            <MudSwitch T="bool" Value="SchemaValues.AsBool(Value)" ValueChanged="v => Set(v)"
+                       Label="@_label" Color="Color.Primary" />
+            @if (!string.IsNullOrWhiteSpace(Element.Help))
+            {
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">@Element.Help</MudText>
+            }
+        </div>
+        break;
+
+    case "slider":
+        <div class="mb-3">
+            <MudText Typo="Typo.body2">@_label: @(SchemaValues.AsNumber(Value)?.ToString() ?? "—")</MudText>
+            <MudSlider T="double" Value="@(SchemaValues.AsNumber(Value) ?? Element.Validation?.Min ?? 0)"
+                       ValueChanged="v => Set(v)"
+                       Min="@(Element.Validation?.Min ?? 0)" Max="@(Element.Validation?.Max ?? 100)" Step="1" />
+        </div>
+        break;
+
+    case "number":
+        <MudNumericField T="double?" Value="SchemaValues.AsNumber(Value)" ValueChanged="v => Set(v)"
+                         Label="@_label" Variant="Variant.Outlined" Class="mb-2"
+                         HelperText="@Element.Help" Required="_required" Error="@(Error is not null)" ErrorText="@Error"
+                         Min="@(Element.Validation?.Min)" Max="@(Element.Validation?.Max)" />
+        break;
+
+    case "textarea":
+    case "mstring":
+        <MudTextField T="string" Value="SchemaValues.AsString(Value)" ValueChanged="v => Set(v)"
+                      Label="@_label" Variant="Variant.Outlined" Lines="4" Class="mb-2"
+                      HelperText="@Element.Help" Required="_required" Error="@(Error is not null)" ErrorText="@Error" />
+        break;
+
+    case "select":
+        <MudSelect T="string" Value="SchemaValues.AsString(Value)" ValueChanged="v => Set(v)"
+                   Label="@_label" Variant="Variant.Outlined" Class="mb-2"
+                   HelperText="@Element.Help" Required="_required" Error="@(Error is not null)" ErrorText="@Error">
+            @foreach (var option in Element.Options ?? [])
+            {
+                <MudSelectItem T="string" Value="@option.Value">@option.Label</MudSelectItem>
+            }
+        </MudSelect>
+        break;
+
+    case "multiselect":
+        <MudSelect T="string" SelectedValues="SchemaValues.AsMulti(Value).ToHashSet()"
+                   SelectedValuesChanged="v => Set(v.ToList())" MultiSelection="true"
+                   Label="@_label" Variant="Variant.Outlined" Class="mb-2"
+                   HelperText="@Element.Help" Error="@(Error is not null)" ErrorText="@Error">
+            @foreach (var option in Element.Options ?? [])
+            {
+                <MudSelectItem T="string" Value="@option.Value">@option.Label</MudSelectItem>
+            }
+        </MudSelect>
+        break;
+
+    case "list":
+        @* One value a line, so a value may hold a comma; posted as a JSON list. *@
+        <div class="mb-2">
+            <ListEditor Items="SchemaValues.AsMulti(Value).ToList()" ItemsChanged="v => Set(v.ToList())"
+                        Label="@_label" Help="@Element.Help" Separators="[]" Disabled="Disabled" />
+            @ErrorLine
+        </div>
+        break;
+
+    case "rows":
+        @* A list of objects, one per row, each row the item fields side by side. *@
+        <div class="mb-2 schema-rows">
+            <MudText Typo="Typo.body2">@_label</MudText>
+            @if (!string.IsNullOrWhiteSpace(Element.Help))
+            {
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">@Element.Help</MudText>
+            }
+            @{ var rows = Rows(); }
+            <ol class="schema-rows-list">
+                @for (var i = 0; i < rows.Count; i++)
+                {
+                    var index = i;
+                    <li class="schema-row">
+                        <div class="schema-row-fields">
+                            @foreach (var item in SchemaValues.Shown(FieldsOf(rows[index])))
+                            {
+                                <SchemaFieldInput Element="item" Disabled="Disabled"
+                                                  Value="RowValue(rows[index], item.Key!)"
+                                                  ValueChanged="v => SetRowValue(index, item.Key!, v)" />
+                            }
+                        </div>
+                        <div class="schema-row-tools">
+                            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Disabled="@(Disabled || index == 0)"
+                                           aria-label="@Loc["WidRowsUp"]" OnClick="() => MoveRow(index, -1)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Disabled="@(Disabled || index == rows.Count - 1)"
+                                           aria-label="@Loc["WidRowsDown"]" OnClick="() => MoveRow(index, 1)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Disabled="Disabled"
+                                           aria-label="@Loc["WidRowsRemove"]" OnClick="() => RemoveRow(index)" />
+                        </div>
+                    </li>
+                }
+            </ol>
+            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" Disabled="Disabled"
+                       OnClick="AddRow">@Loc["WidRowsAdd"]</MudButton>
+            @ErrorLine
+        </div>
+        break;
+
+    case "radio":
+        <div class="mb-2">
+            <MudText Typo="Typo.body2">@_label</MudText>
+            <MudRadioGroup T="string" Value="SchemaValues.AsString(Value)" ValueChanged="v => Set(v)">
+                @foreach (var option in Element.Options ?? [])
+                {
+                    <MudRadio T="string" Value="@option.Value">@option.Label</MudRadio>
+                }
+            </MudRadioGroup>
+            @ErrorLine
+        </div>
+        break;
+
+    case "date":
+        <MudDatePicker Label="@_label" Date="SchemaValues.AsDate(Value)"
+                       DateChanged="d => Set(SchemaValues.FromDate(d))"
+                       Variant="Variant.Outlined" Class="mb-2" HelperText="@Element.Help"
+                       Error="@(Error is not null)" ErrorText="@Error" />
+        break;
+
+    default:
+        <MudTextField T="string" Value="SchemaValues.AsString(Value)" ValueChanged="v => Set(v)"
+                      Label="@_label" Variant="Variant.Outlined" Class="mb-2"
+                      HelperText="@Element.Help" Required="_required" Error="@(Error is not null)" ErrorText="@Error"
+                      MaxLength="@(Element.Validation?.MaxLength ?? 524288)" />
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired] public SchemaElement Element { get; set; } = default!;
+
+    /// <summary>The value, held the way <see cref="SchemaValues"/> describes.</summary>
+    [Parameter] public object? Value { get; set; }
+
+    [Parameter] public EventCallback<object?> ValueChanged { get; set; }
+
+    [Parameter] public string? Error { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    private string _label => Element.Label ?? Element.Key ?? "";
+
+    private bool _required => Element.Validation?.Required ?? false;
+
+    private RenderFragment ErrorLine => __builder =>
+    {
+        if (Error is not null)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Error">@Error</MudText>
+        }
+    };
+
+    private Task Set(object? value) => ValueChanged.InvokeAsync(value);
+
+    private List<JsonObject> Rows()
+        => SchemaValues.AsJson(Value) is { ValueKind: JsonValueKind.Array } array && JsonNode.Parse(array.GetRawText()) is JsonArray rows
+            ? [.. rows.OfType<JsonObject>()]
+            : [];
+
+    private static object? RowValue(JsonObject row, string key)
+        => row[key] is { } value ? SchemaValues.FromJson(JsonSerializer.SerializeToElement(value)) : null;
+
+    private Task SetRows(List<JsonObject> rows)
+        => Set(JsonSerializer.SerializeToElement(new JsonArray([.. rows.Select(row => (JsonNode)row.DeepClone())])));
+
+    private Task SetRowValue(int index, string key, object? value)
+    {
+        var rows = Rows();
+        if (index >= rows.Count) return Task.CompletedTask;
+        var before = FieldsOf(rows[index]).Select(item => item.Key).ToHashSet();
+        rows[index][key] = value is null ? null : JsonNode.Parse(SchemaValues.ToJson(value).GetRawText());
+        if (key == Element.ItemBy) Rekind(rows[index], before);
+        return SetRows(rows);
+    }
+
+    // The fields a row shows: the item fields, then those of the variant its ItemBy value names.
+    private IEnumerable<SchemaElement> FieldsOf(JsonObject row)
+        => (Element.ItemFields ?? []).Concat(Element.ItemBy is { } by && row[by] is JsonValue kind
+            && Element.ItemVariants?.TryGetValue(kind.ToString(), out var variant) == true ? variant! : []);
+
+    // A row that changed kind drops the details of its old kind and starts the new kind's from their defaults.
+    private void Rekind(JsonObject row, HashSet<string?> before)
+    {
+        var now = FieldsOf(row).ToList();
+        foreach (var key in before.Where(key => key is not null && now.All(item => item.Key != key)))
+        {
+            row.Remove(key!);
+        }
+        foreach (var item in now.Where(item => item.Key is not null && !before.Contains(item.Key) && item.Default is not null))
+        {
+            row[item.Key!] = JsonNode.Parse(item.Default!.Value.GetRawText());
+        }
+    }
+
+    // A new row starts from each item field's default. When the rows carry a hidden "id", it gets the next
+    // number, so something else can point at the row.
+    private Task AddRow()
+    {
+        var rows = Rows();
+        var row = new JsonObject();
+        foreach (var item in (Element.ItemFields ?? []).Where(item => item.Key is not null && item.Default is not null))
+        {
+            row[item.Key!] = JsonNode.Parse(item.Default!.Value.GetRawText());
+        }
+        Rekind(row, [.. Element.ItemFields?.Select(item => item.Key) ?? []]);
+        if ((Element.ItemFields ?? []).Any(item => item.Key == "id" && string.Equals(item.Type, "hidden", StringComparison.OrdinalIgnoreCase)))
+        {
+            row["id"] = rows.Select(other => other["id"] is JsonValue id && int.TryParse(id.ToString(), out var n) ? n : 0).DefaultIfEmpty(0).Max() + 1;
+        }
+        rows.Add(row);
+        return SetRows(rows);
+    }
+
+    private Task RemoveRow(int index)
+    {
+        var rows = Rows();
+        if (index >= rows.Count) return Task.CompletedTask;
+        rows.RemoveAt(index);
+        return SetRows(rows);
+    }
+
+    private Task MoveRow(int index, int by)
+    {
+        var rows = Rows();
+        var to = index + by;
+        if (index >= rows.Count || to < 0 || to >= rows.Count) return Task.CompletedTask;
+        (rows[index], rows[to]) = (rows[to], rows[index]);
+        return SetRows(rows);
+    }
+}

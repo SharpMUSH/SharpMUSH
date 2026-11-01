@@ -6266,6 +6266,142 @@
     <value>{0} prema {1}: {2}</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraphView" xml:space="preserve">
+    <value>Prikaz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphMap" xml:space="preserve">
+    <value>Karta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphOutline" xml:space="preserve">
+    <value>Pregled</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphAdd" xml:space="preserve">
+    <value>Dodaj korak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphTidy" xml:space="preserve">
+    <value>Posloži raspored</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphCheck" xml:space="preserve">
+    <value>Provjeri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphEmpty" xml:space="preserve">
+    <value>Još nema koraka. Dodaj prvi iznad.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphGuidance" xml:space="preserve">
+    <value>Smjernice</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphStep" xml:space="preserve">
+    <value>Odabrani korak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphSelectHint" xml:space="preserve">
+    <value>Odaberi korak za uređivanje.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphKeyInvalid" xml:space="preserve">
+    <value>Koristi mala slova, znamenke, - i _, počevši slovom ili znamenkom.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphKeyTaken" xml:space="preserve">
+    <value>Drugi korak već ima ovaj ključ.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphNodeLabel" xml:space="preserve">
+    <value>{0}: {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphStart" xml:space="preserve">
+    <value>Prvi korak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphAdded" xml:space="preserve">
+    <value>Dodano</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphChanged" xml:space="preserve">
+    <value>Promijenjeno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphIssueCount" xml:space="preserve">
+    <value>Za pregled: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphNowhere" xml:space="preserve">
+    <value>Još nikamo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphDelete" xml:space="preserve">
+    <value>Izbriši korak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphName" xml:space="preserve">
+    <value>Naziv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphKey" xml:space="preserve">
+    <value>Ključ</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphOutcomes" xml:space="preserve">
+    <value>Kamo vodi svaki ishod</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphLeadsTo" xml:space="preserve">
+    <value>{0} vodi do</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphNotes" xml:space="preserve">
+    <value>Bilješke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphPinNote" xml:space="preserve">
+    <value>Prikvači bilješku na ovaj korak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphPin" xml:space="preserve">
+    <value>Prikvači bilješku</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphOneOf" xml:space="preserve">
+    <value>jedan od: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphAddNext" xml:space="preserve">
+    <value>Dodaj mogući sljedeći korak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphRemoveLink" xml:space="preserve">
+    <value>Ukloni {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRowsAdd" xml:space="preserve">
+    <value>Dodaj redak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRowsRemove" xml:space="preserve">
+    <value>Ukloni redak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRowsUp" xml:space="preserve">
+    <value>Pomakni gore</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRowsDown" xml:space="preserve">
+    <value>Pomakni dolje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidSelectNone" xml:space="preserve">
+    <value>Ništa</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolNameCardLabel" xml:space="preserve">
     <value>Kartica: {0}</value>
     <comment>MT</comment>

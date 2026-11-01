@@ -6266,6 +6266,142 @@
     <value>{0} către {1}: {2}</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraphView" xml:space="preserve">
+    <value>Vizualizare</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphMap" xml:space="preserve">
+    <value>Hartă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphOutline" xml:space="preserve">
+    <value>Schiță</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphAdd" xml:space="preserve">
+    <value>Adaugă un pas</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphTidy" xml:space="preserve">
+    <value>Aranjează dispunerea</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphCheck" xml:space="preserve">
+    <value>Verifică</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphEmpty" xml:space="preserve">
+    <value>Încă nu există pași. Adaugă-l pe primul mai sus.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphGuidance" xml:space="preserve">
+    <value>Îndrumări</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphStep" xml:space="preserve">
+    <value>Pas selectat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphSelectHint" xml:space="preserve">
+    <value>Selectează un pas pentru a-l edita.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphKeyInvalid" xml:space="preserve">
+    <value>Folosește litere mici, cifre, - și _, începând cu o literă sau o cifră.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphKeyTaken" xml:space="preserve">
+    <value>Alt pas are deja această cheie.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphNodeLabel" xml:space="preserve">
+    <value>{0}: {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphStart" xml:space="preserve">
+    <value>Primul pas</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphAdded" xml:space="preserve">
+    <value>Adăugat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphChanged" xml:space="preserve">
+    <value>Modificat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphIssueCount" xml:space="preserve">
+    <value>{0} de verificat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphNowhere" xml:space="preserve">
+    <value>Încă nicăieri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphDelete" xml:space="preserve">
+    <value>Șterge pasul</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphName" xml:space="preserve">
+    <value>Nume</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphKey" xml:space="preserve">
+    <value>Cheie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphOutcomes" xml:space="preserve">
+    <value>Unde duce fiecare rezultat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphLeadsTo" xml:space="preserve">
+    <value>{0} duce la</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphNotes" xml:space="preserve">
+    <value>Note</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphPinNote" xml:space="preserve">
+    <value>Fixează o notă pe acest pas</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphPin" xml:space="preserve">
+    <value>Fixează nota</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphOneOf" xml:space="preserve">
+    <value>unul dintre: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphAddNext" xml:space="preserve">
+    <value>Adaugă un posibil pas următor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidGraphRemoveLink" xml:space="preserve">
+    <value>Elimină {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRowsAdd" xml:space="preserve">
+    <value>Adaugă un rând</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRowsRemove" xml:space="preserve">
+    <value>Elimină rândul</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRowsUp" xml:space="preserve">
+    <value>Mută în sus</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRowsDown" xml:space="preserve">
+    <value>Mută în jos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidSelectNone" xml:space="preserve">
+    <value>Niciunul</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolNameCardLabel" xml:space="preserve">
     <value>Fișa lui {0}</value>
     <comment>MT</comment>

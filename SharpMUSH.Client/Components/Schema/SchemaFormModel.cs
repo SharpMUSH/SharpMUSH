@@ -130,38 +130,33 @@ public sealed class SchemaFormModel
 		}
 	}
 
-	public string GetString(string key) => _values.TryGetValue(key, out var v)
-		? v switch
-		{
-			IEnumerable<string> list => string.Join(", ", list),
-			_ => v?.ToString() ?? ""
-		}
-		: "";
+	/// <summary>The value entered under <paramref name="key"/>, as the form holds it, or <c>null</c>.</summary>
+	public object? Get(string key) => _values.TryGetValue(key, out var v) ? v : null;
+
+	/// <summary>Stores a value under <paramref name="key"/>, clearing its error.</summary>
+	public void SetValue(string key, object? value) => Set(key, value);
+
+	public string GetString(string key) => SchemaValues.AsString(Get(key));
 
 	public void SetString(string key, string? value) => Set(key, value);
 
-	public bool GetBool(string key) => _values.TryGetValue(key, out var v) && v is true;
+	public bool GetBool(string key) => SchemaValues.AsBool(Get(key));
 
 	public void SetBool(string key, bool value) => Set(key, value);
 
-	public double? GetNumber(string key)
-		=> _values.TryGetValue(key, out var v) && v is not null
-			? v is JsonElement { ValueKind: JsonValueKind.Number } number && number.TryGetDouble(out var value) ? value
-				: double.TryParse(v.ToString(), out var d) ? d : null
-			: null;
+	public double? GetNumber(string key) => SchemaValues.AsNumber(Get(key));
 
 	public void SetNumber(string key, double? value) => Set(key, value);
 
-	public IEnumerable<string> GetMulti(string key)
-		=> _values.TryGetValue(key, out var v) && v is IEnumerable<string> list ? list : [];
+	public IEnumerable<string> GetMulti(string key) => SchemaValues.AsMulti(Get(key));
 
 	public void SetMulti(string key, IEnumerable<string> values) => Set(key, values.ToList());
 
 	/// <summary>The date a field holds, or <c>null</c> when it holds none that parses.</summary>
-	public DateTime? GetDate(string key) => DateTime.TryParse(GetString(key), out var d) ? d : null;
+	public DateTime? GetDate(string key) => SchemaValues.AsDate(Get(key));
 
 	/// <summary>Stores a date as <c>yyyy-MM-dd</c>, the form softcode receives it in.</summary>
-	public void SetDate(string key, DateTime? date) => SetString(key, date?.ToString("yyyy-MM-dd"));
+	public void SetDate(string key, DateTime? date) => SetString(key, SchemaValues.FromDate(date));
 
 	/// <summary>The error bound to <paramref name="key"/>, or <c>null</c>.</summary>
 	public string? Error(string key) => _errors.TryGetValue(key, out var e) ? e : null;
@@ -259,19 +254,7 @@ public sealed class SchemaFormModel
 		}
 	}
 
-	/// <summary>A value as the form holds it: a JSON list as its items (multiselect, list), a JSON
-	/// boolean as a bool; numbers, objects and mixed arrays retain their JSON types.</summary>
-	private static object? Seed(JsonElement value) => value.ValueKind switch
-	{
-		JsonValueKind.Array when value.EnumerateArray().All(item => item.ValueKind == JsonValueKind.String) => value.EnumerateArray().Select(item => item.GetString()!).ToList(),
-		JsonValueKind.Array => value.Clone(),
-		JsonValueKind.Number => value.Clone(),
-		JsonValueKind.Null or JsonValueKind.Undefined => null,
-		JsonValueKind.Object => value.Clone(),
-		JsonValueKind.True => true,
-		JsonValueKind.False => false,
-		_ => SchemaViewRenderer.ValueToString(value)
-	};
+	private static object? Seed(JsonElement value) => SchemaValues.FromJson(value);
 
 	/// <summary>The width, out of 12, of one element in an N-column section, honouring its span.</summary>
 	public static int ColumnWidth(int columns, int span)
