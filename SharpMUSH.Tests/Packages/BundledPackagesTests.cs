@@ -151,6 +151,7 @@ public class BundledPackagesTests
 	/// <summary>
 	/// A package does not depend on +help or +config: a bridge joins them, so a game without either still runs it.
 	/// plus-config keeps its own topics in +help, and wiki-reader's whole job is putting the wiki into +help.
+	/// A bridge joins at least two packages, which is what it waits for.
 	/// </summary>
 	[Test]
 	public async Task OnlyBridges_DependOnHelpOrConfig()
@@ -158,10 +159,18 @@ public class BundledPackagesTests
 		string[] exempt = ["plus-config", "wiki-reader"];
 		foreach (var descriptor in BundledPackages.All.Where(d => !exempt.Contains(d.PackageId)))
 		{
-			var dependsOnEither = BundledPackages.Dependencies(descriptor.PackageId, _manifests)
-				.Any(dependency => dependency is "plus-help" or "plus-config");
-			await Assert.That(dependsOnEither).IsEqualTo(descriptor.Bridge)
-				.Because($"{descriptor.PackageId} is {(descriptor.Bridge ? "" : "not ")}a bridge");
+			var dependencies = BundledPackages.Dependencies(descriptor.PackageId, _manifests).ToList();
+			if (dependencies.Any(dependency => dependency is "plus-help" or "plus-config"))
+			{
+				await Assert.That(descriptor.Bridge).IsTrue()
+					.Because($"{descriptor.PackageId} depends on +help or +config, so it must be a bridge");
+			}
+
+			if (descriptor.Bridge)
+			{
+				await Assert.That(dependencies.Count).IsGreaterThanOrEqualTo(2)
+					.Because($"{descriptor.PackageId} is a bridge, so it joins two packages");
+			}
 		}
 	}
 
