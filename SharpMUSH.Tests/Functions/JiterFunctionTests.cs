@@ -45,6 +45,8 @@ public class JiterFunctionTests
 		await Check($"jiter(#{objNum}/F1 #{objNum}/F2 #{objNum}/F3, 10)", "11 20 7");
 		// Custom output separator.
 		await Check($"jiter(#{objNum}/F1 #{objNum}/F2 #{objNum}/F3, 10, |)", "11|20|7");
+		// An empty output separator puts nothing between the results.
+		await Check($"jiter(#{objNum}/F1 #{objNum}/F2 #{objNum}/F3, 10,)", "11207");
 		// A single attribute is just that one evaluation.
 		await Check($"jiter(#{objNum}/F1, 10)", "11");
 	}

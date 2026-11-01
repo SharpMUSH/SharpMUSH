@@ -36,7 +36,9 @@ public partial class Functions
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var delim = await errors.DefaultArgumentAsync(parser, 3, MarkupText.Space);
-		var sep = await errors.DefaultArgumentAsync(parser, 4, delim);
+		// With arguments after the output separator an empty one is the delimiter, as filter() reads it.
+		var sep = await errors.OutputSeparatorAsync(parser, 4, delim,
+			parser.CurrentState.Arguments.Count > 5 ? delim : null);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["2"].Message);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))

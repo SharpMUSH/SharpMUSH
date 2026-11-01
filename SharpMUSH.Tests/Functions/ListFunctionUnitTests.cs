@@ -46,6 +46,35 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
+	// An output separator given empty joins the results with nothing, as PennMUSH reads it; only a
+	// separator left out falls back to the delimiter.
+	[Test]
+	[Arguments("iter(a|b|c,%i0,|,)", "abc")]
+	[Arguments("iter(a b c,%i0,,)", "abc")]
+	[Arguments("iter(a|b|c,%i0,|,[null()])", "abc")]
+	[Arguments(@"map(#lambda/\%0,a|b|c,|,)", "abc")]
+	[Arguments(@"map(#lambda/\%0,a|b|c,|)", "a|b|c")]
+	[Arguments(@"filter(#lambda/1,a|b|c,|,)", "abc")]
+	[Arguments(@"filterbool(#lambda/1,a|b|c,|,)", "abc")]
+	[Arguments(@"filterq(fq,#lambda/1,a|b|c,|,)", "abc")]
+	[Arguments(@"munge(#lambda/\%0,a|b,1|2,|,)", "12")]
+	[Arguments("revwords(a|b|c,|,)", "cba")]
+	[Arguments("revwords(a|b|c,|)", "c|b|a")]
+	[Arguments(@"sortby(#lambda/comp\(\%0\,\%1\),c|a|b,|,)", "abc")]
+	[Arguments(@"sortkey(#lambda/\%0,c|a|b,,|,)", "abc")]
+	[Arguments(@"step(#lambda/\%0\%1,a|b|c|d,2,|,)", "abcd")]
+	[Arguments(@"stepargs(#lambda/\%0,a|b,x,|,)", "ab")]
+	[Arguments(@"json_map(#lambda/\%1,json(array,1,2),)", "12")]
+	// Arguments after the separator are RhostMUSH's form, which reads an empty one as map()'s space
+	// and filter()'s delimiter.
+	[Arguments(@"map(#lambda/\%0\%1,a|b,|,,x)", "ax bx")]
+	[Arguments(@"filter(#lambda/1,a|b,|,,x)", "a|b")]
+	public async Task EmptyOutputSeparator(string function, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
 	// inum(0) is the CURRENT iteration — the innermost one — so in the nested case it counts the
 	// inner list 1..3 while %i1 holds the outer element. The old expectation ("2 2 2-4 4 4-6 6 6")
 	// was inum(0) returning the OUTERMOST iteration, which is what itext()/inum() did before they

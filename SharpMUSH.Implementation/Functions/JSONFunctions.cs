@@ -107,7 +107,7 @@ public partial class Functions
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var jsonStr = parser.CurrentState.Arguments["1"].Message.ToPlainText();
-		var separatorResult = parser.CurrentState.Arguments.TryGetValue("2", out var separatorArg) && separatorArg.Message.Length > 0
+		var separatorResult = parser.CurrentState.Arguments.TryGetValue("2", out var separatorArg)
 			? await separatorArg.GetParsedResultAsync() : new CallState(MarkupText.Space);
 		var osep = separatorResult.Message;
 
