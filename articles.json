@@ -7173,6 +7173,12 @@
         "lookup": "roll arithmetic",
         "heading": "Arithmetic",
         "aliases": []
+      },
+      {
+        "id": "roll-dice-conditions",
+        "lookup": "roll conditions",
+        "heading": "Conditions",
+        "aliases": []
       }
     ],
     "file": "roll-dice.md"
