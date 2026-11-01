@@ -346,7 +346,7 @@ objects:
       # +duty/reward <duty>/<step>=<kind> [once|every] <details>. Details are text for info; for a sheet
       # system's kind, a JSON object of its fields or the value of its first field.
       DO`REWARD: |-
-        @assert cand(%q<eq>,eq(%q<pn>,2))=@pemit %#=notice(DUTY,+duty/reward <duty>/<step>=<kind> %[once|every%] <details>,warn); @include %!/INC`NEED`EDIT; @include %!/INC`NEED`NODE; think setq(rkind,lcstr(first(%q<rhs>)))[setq(rrep,if(member(once every,lcstr(extract(%q<rhs>,2,1))),lcstr(extract(%q<rhs>,2,1))))][setq(rtext,trim(if(strlen(%q<rrep>),rest(rest(%q<rhs>)),rest(%q<rhs>))))][setq(prov,u(%!/FUN`PROVIDER))]; @assert member(u(%!/FUN`REWARDKINDS),%q<rkind>)=@pemit %#=notice(DUTY,A reward is [itemize(u(%!/FUN`REWARDKINDS),,or)].,warn); @assert strlen(%q<rtext>)=@pemit %#=notice(DUTY,Say what the reward is after its kind.,warn); think setq(rjson,u(%!/FUN`REWARDJSON,%q<rkind>,%q<rtext>)); @assert strlen(%q<rjson>)=@pemit %#=notice(DUTY,A %q<rkind> reward takes a JSON object of its fields.,warn); think setq(rrow,add(firstof(get({{store}}/%q<root>`WN),0),1)); &%q<root>`WN {{store}}=%q<rrow>; &%q<root>`N`%q<key>`W`%q<rrow> {{store}}=%q<rkind>; &%q<root>`N`%q<key>`W`%q<rrow>`REPEAT {{store}}=firstof(%q<rrep>,once); &%q<root>`N`%q<key>`W`%q<rrow>`DETAILS {{store}}=%q<rjson>; @pemit %#=notice(DUTY,Reward %q<rrow> on %q<key>: %q<rkind>%, [firstof(%q<rrep>,once)].,ok)
+        @assert cand(%q<eq>,eq(%q<pn>,2))=@pemit %#=notice(DUTY,+duty/reward <duty>/<step>=<kind> %[once|every%] %[success=<percent>%] <details>,warn); @include %!/INC`NEED`EDIT; @include %!/INC`NEED`NODE; think setq(rkind,lcstr(first(%q<rhs>)))[setq(rrep,if(member(once every,lcstr(extract(%q<rhs>,2,1))),lcstr(extract(%q<rhs>,2,1))))][setq(rtext,trim(if(strlen(%q<rrep>),rest(rest(%q<rhs>)),rest(%q<rhs>))))][setq(rsucc,if(strmatch(first(%q<rtext>),success=*),after(first(%q<rtext>),=)))][if(strmatch(first(%q<rtext>),success=*),setq(rtext,rest(%q<rtext>)))][setq(prov,u(%!/FUN`PROVIDER))]; @assert member(u(%!/FUN`REWARDKINDS),%q<rkind>)=@pemit %#=notice(DUTY,A reward is [itemize(u(%!/FUN`REWARDKINDS),,or)].,warn); @assert cor(not(strlen(%q<rsucc>)),cand(isint(%q<rsucc>),gte(%q<rsucc>,0),lte(%q<rsucc>,100)))=@pemit %#=notice(DUTY,success is 0 to 100: the share of the duty's challenges the party must have succeeded at.,warn); @assert strlen(%q<rtext>)=@pemit %#=notice(DUTY,Say what the reward is after its kind.,warn); think setq(rjson,u(%!/FUN`REWARDJSON,%q<rkind>,%q<rtext>)); @assert strlen(%q<rjson>)=@pemit %#=notice(DUTY,A %q<rkind> reward takes a JSON object of its fields.,warn); think setq(rrow,add(firstof(get({{store}}/%q<root>`WN),0),1)); &%q<root>`WN {{store}}=%q<rrow>; &%q<root>`N`%q<key>`W`%q<rrow> {{store}}=%q<rkind>; &%q<root>`N`%q<key>`W`%q<rrow>`REPEAT {{store}}=firstof(%q<rrep>,once); &%q<root>`N`%q<key>`W`%q<rrow>`DETAILS {{store}}=%q<rjson>; &%q<root>`N`%q<key>`W`%q<rrow>`SUCCESS {{store}}=if(gt(%q<rsucc>,0),%q<rsucc>); @pemit %#=notice(DUTY,Reward %q<rrow> on %q<key>: %q<rkind>%, [firstof(%q<rrep>,once)][if(gt(%q<rsucc>,0),%, at %q<rsucc>%% success or more)].,ok)
       DO`UNREWARD: |-
         @assert eq(%q<pn>,3)=@pemit %#=notice(DUTY,+duty/unreward <duty>/<step>/<reward number>,warn); @include %!/INC`NEED`EDIT; @include %!/INC`NEED`NODE; @assert cand(isint(%q<p3>),hasattr({{store}},%q<root>`N`%q<key>`W`%q<p3>))=@pemit %#=notice(DUTY,%q<key> has no reward %q<p3>.,warn); @wipe {{store}}/%q<root>`N`%q<key>`W`%q<p3>; @pemit %#=notice(DUTY,Reward %q<p3> is gone.,ok)
       # The steps, options, links and rewards, for the author and reviewers.
@@ -403,7 +403,7 @@ objects:
       # the duty; reaching a successful one marks it done for each member.
       INC`RUN`ENTER: |-
         think setq(node,%q<next>)[setq(kind,get({{store}}/%q<root>`N`%q<next>))]; &RUN`%q<run>`NODE {{store}}=%q<node>; &RUN`%q<run>`FRESH {{store}}=squish(iter(%q<mem>,if(hasattr({{store}},SEEN`[u(%!/FUN`KEY,%i0)]`%q<id>`%q<node>),,%i0))); &RUN`%q<run>`ROUND {{store}}=1; @wipe {{store}}/RUN`%q<run>`ROLL; @wipe {{store}}/RUN`%q<run>`LAST; @wipe {{store}}/RUN`%q<run>`OK; @wipe {{store}}/RUN`%q<run>`BAD; @dolist/inline %q<mem>={&SEEN`[u(%!/FUN`KEY,%i0)]`%q<id>`%q<node> {{store}}=secs()}; @dolist/inline %q<mem>={@pemit %i0=u(%!/FUN`SCREEN`RUN,%q<run>,%i0)}; @break strmatch(%q<kind>,challenge); think setqm(gnode,%q<node>,
-        gwho,%q<mem>); @include/nobreak %!/INC`RUN`GRANT; @assert strmatch(%q<kind>,end); @assert strmatch(get({{store}}/%q<root>`N`%q<node>`RESULT),success)={@include/args %!/INC`RUN`FINISH=why,The duty is over. It ends in failure.}; @dolist/inline %q<mem>={&DONE`[u(%!/FUN`KEY,%i0)]`%q<id> {{store}}=secs()}; @include/args %!/INC`RUN`FINISH=why,The duty is over. It ends in success.
+        gwho,%q<mem>); @include/nobreak %!/INC`RUN`GRANT; @assert strmatch(%q<kind>,end); @assert strmatch(get({{store}}/%q<root>`N`%q<node>`RESULT),success)={@include/args %!/INC`RUN`FINISH=why,The duty is over. It ends in failure.[u(%!/FUN`TALLY,%q<run>)]}; @dolist/inline %q<mem>={&DONE`[u(%!/FUN`KEY,%i0)]`%q<id> {{store}}=secs()}; @include/args %!/INC`RUN`FINISH=why,The duty is over. It ends in success.[u(%!/FUN`TALLY,%q<run>)]
       # %<roller> rolls %<opt> at the current challenge.
       INC`RUN`ROLL: |-
         think setq(rk,u(%!/FUN`KEY,%<roller>))[setq(ctx,json(object,duty,json(string,%q<id>),run,%q<run>,node,json(string,%q<node>),option,json(string,%<opt>),round,get({{store}}/RUN`%q<run>`ROUND)))][setq(rtrait,if(strmatch(%<opt>,improvise),u(%!/FUN`IMPROVTRAIT,%<roller>,%q<ctx>),get({{store}}/%q<root>`N`%q<node>`O`%<opt>`TRAIT)))][setq(rdiff,if(strmatch(%<opt>,improvise),u(%!/FUN`IMPROVDIFF,%q<root>,%q<node>),get({{store}}/%q<root>`N`%q<node>`O`%<opt>`DIFF)))][setq(rres,uargs(%q<prov>/FN`DUTIES`CHECK,roller,%<roller>,trait,%q<rtrait>,difficulty,%q<rdiff>,mods,json(object,helpers,json(array),invokes,0),context,%q<ctx>))][setq(rtier,u(%!/FUN`TIER,json_query(%q<rres>,extract,$.tier)))][setq(rgood,u(%!/FUN`GOOD,%q<rtier>))]; &RUN`%q<run>`ROLL`%q<rk> {{store}}=%<opt>; &RUN`%q<run>`LAST`%q<rk> {{store}}=%<opt>; &RUN`%q<run>`LAST`%q<rk>`TIER {{store}}=%q<rtier>; &RUN`%q<run>`OK`%<opt> {{store}}=add(firstof(get({{store}}/RUN`%q<run>`OK`%<opt>),0),%q<rgood>); &RUN`%q<run>`BAD`%<opt> {{store}}=add(firstof(get({{store}}/RUN`%q<run>`BAD`%<opt>),0),not(%q<rgood>)); @pemit/list %q<mem>=notice(DUTY,name(%<roller>) tries [if(strmatch(%<opt>,improvise),Improvise,get({{store}}/%q<root>`N`%q<node>`O`%<opt>))] with [u(%!/FUN`TRAITLABEL,%q<rtrait>)] at %q<rdiff>: [json_query(%q<rres>,extract,$.text)] [badge(u(%!/FUN`TIERLABEL,%q<rtier>),if(%q<rgood>,ok,warn))],info)
@@ -412,13 +412,13 @@ objects:
       INC`RUN`SETTLE: |-
         @assert cand(strmatch(get({{store}}/RUN`%q<run>`STATE),play),strmatch(%q<kind>,challenge),words(%q<mem>),not(words(u(%!/FUN`WAITING,%q<run>)))); think setq(open,squish(iter(u(%!/FUN`ROUNDOPTS,%q<run>),if(strmatch(u(%!/FUN`OPTSTATE,%q<run>,%q<root>,%q<node>,%i0),open),%i0)))); @break words(%q<open>)={&RUN`%q<run>`ROUND {{store}}=add(firstof(get({{store}}/RUN`%q<run>`ROUND),0),1); @wipe {{store}}/RUN`%q<run>`ROLL; @pemit/list %q<mem>=notice(DUTY,Round [get({{store}}/RUN`%q<run>`ROUND)]: [itemize(iter(%q<open>,get({{store}}/%q<root>`N`%q<node>`O`%i0),,|),|)] [if(eq(words(%q<open>),1),needs,need)] more rolls. Everyone rolls again with +duty/try <option>.,info)}; @include %!/INC`RUN`RESOLVE
       INC`RUN`RESOLVE: |-
-        think setq(tiers,iter(%q<mem>,u(%!/FUN`MEMBERTIER,%q<run>,%q<root>,%q<node>,%i0)))[setq(winners,squish(iter(%q<mem>,if(u(%!/FUN`GOOD,extract(%q<tiers>,inum(0),1)),%i0))))][setq(count,words(%q<winners>))][setq(share,round(mul(fdiv(%q<count>,words(%q<mem>)),100),0))][setq(won,squish(iter(u(%!/FUN`OPTIONS,%q<root>,%q<node>),if(strmatch(u(%!/FUN`OPTSTATE,%q<run>,%q<root>,%q<node>,%i0),won),%i0))))][setq(tier,u(%!/FUN`COMBINE,get({{store}}/%q<root>`N`%q<node>`COMBINE),%q<tiers>))][setq(next,u(%!/FUN`PICK,%q<root>,%q<node>,%q<tier>))]; @pemit/list %q<mem>=box([u(%!/FUN`OUTCOME,%q<root>,%q<node>,%q<tier>)]%r[rule()]%r[tone(muted,%q<count> of [words(%q<mem>)] succeeded.)],u(%!/FUN`TIERLABEL,%q<tier>)); think setqm(gnode,%q<node>,
+        think setq(tiers,iter(%q<mem>,u(%!/FUN`MEMBERTIER,%q<run>,%q<root>,%q<node>,%i0)))[setq(winners,squish(iter(%q<mem>,if(u(%!/FUN`GOOD,extract(%q<tiers>,inum(0),1)),%i0))))][setq(count,words(%q<winners>))][setq(share,round(mul(fdiv(%q<count>,words(%q<mem>)),100),0))][setq(won,squish(iter(u(%!/FUN`OPTIONS,%q<root>,%q<node>),if(strmatch(u(%!/FUN`OPTSTATE,%q<run>,%q<root>,%q<node>,%i0),won),%i0))))][setq(tier,u(%!/FUN`COMBINE,get({{store}}/%q<root>`N`%q<node>`COMBINE),%q<tiers>))][setq(next,u(%!/FUN`PICK,%q<root>,%q<node>,%q<tier>))]; @pemit/list %q<mem>=box([u(%!/FUN`OUTCOME,%q<root>,%q<node>,%q<tier>)]%r[rule()]%r[tone(muted,%q<count> of [words(%q<mem>)] succeeded.)],u(%!/FUN`TIERLABEL,%q<tier>)); &RUN`%q<run>`FACED {{store}}=inc(firstof(get({{store}}/RUN`%q<run>`FACED),0)); &RUN`%q<run>`WON {{store}}=add(firstof(get({{store}}/RUN`%q<run>`WON),0),u(%!/FUN`GOOD,%q<tier>)); think setqm(gnode,%q<node>,
         gwho,%q<winners>); @include/nobreak %!/INC`RUN`GRANT; @assert strlen(%q<next>)={@include/args %!/INC`RUN`FINISH=why,The way on is missing%, so the duty ends here.}; @include %!/INC`RUN`ENTER
       # The rewards on step gnode for the characters in gwho.
       INC`RUN`GRANT: |-
         @dolist/inline/nobreak iter(%q<gwho>,iter(u(%!/FUN`REWARDS,%q<root>,%q<gnode>),%i1|%i0)) ={@include/args %!/INC`RUN`GRANTONE=member,before(%i0,|),row,after(%i0,|)}
       INC`RUN`GRANTONE: |-
-        think setq(gpath,%q<root>`N`%q<gnode>`W`%<row>)[setq(ggot,GOT`[u(%!/FUN`KEY,%<member>)]`%q<id>`%q<gnode>`%<row>)][setq(gkind,get({{store}}/%q<gpath>))]; @break cand(strmatch(get({{store}}/%q<gpath>`REPEAT),once),hasattr({{store}},%q<ggot>)); &%q<ggot> {{store}}=secs(); @break strmatch(%q<gkind>,info)={@pemit %<member>=notice(DUTY,You learn: [json_query(get({{store}}/%q<gpath>`DETAILS),extract,$.text)],info)}; @trigger/args %q<prov>/ON`DUTIES`GRANT=roller,%<member>,reward,json_mod(get({{store}}/%q<gpath>`DETAILS),patch,json(object,kind,json(string,%q<gkind>),repeat,json(string,get({{store}}/%q<gpath>`REPEAT)))),context,json(object,duty,json(string,%q<id>),run,%q<run>,node,json(string,%q<gnode>))
+        think setq(gpath,%q<root>`N`%q<gnode>`W`%<row>)[setq(ggot,GOT`[u(%!/FUN`KEY,%<member>)]`%q<id>`%q<gnode>`%<row>)][setq(gkind,get({{store}}/%q<gpath>))]; @break lt(u(%!/FUN`SUCCESS,%q<run>),firstof(get({{store}}/%q<gpath>`SUCCESS),0)); @break cand(strmatch(get({{store}}/%q<gpath>`REPEAT),once),hasattr({{store}},%q<ggot>)); &%q<ggot> {{store}}=secs(); @break strmatch(%q<gkind>,info)={@pemit %<member>=notice(DUTY,You learn: [json_query(get({{store}}/%q<gpath>`DETAILS),extract,$.text)],info)}; @trigger/args %q<prov>/ON`DUTIES`GRANT=roller,%<member>,reward,json_mod(get({{store}}/%q<gpath>`DETAILS),patch,json(object,kind,json(string,%q<gkind>),repeat,json(string,get({{store}}/%q<gpath>`REPEAT)))),context,json(object,duty,json(string,%q<id>),run,%q<run>,node,json(string,%q<gnode>))
       # Takes gone out of the party: their roll this round no longer counts. The longest-standing member
       # leads when the leader goes; the duty ends when nobody is left.
       INC`RUN`DROP: |-
@@ -495,6 +495,12 @@ objects:
         mem,get({{store}}/RUN`%0`MEMBERS),
         leader,get({{store}}/RUN`%0`LEADER),
         state,get({{store}}/RUN`%0`STATE))[setq(kind,get({{store}}/%q<root>`N`%q<node>))]
+      # %0 a run: the percentage of its challenges the party has succeeded at so far, 100 before the first.
+      FUN`SUCCESS: |-
+        if(gt(setr(su_f,firstof(get({{store}}/RUN`%0`FACED),0)),0),round(mul(fdiv(firstof(get({{store}}/RUN`%0`WON),0),%q<su_f>),100),0),100)
+      # %0 a run: how its challenges went, for the notice at its end. Nothing when it had none.
+      FUN`TALLY: |-
+        if(gt(setr(ta_f,firstof(get({{store}}/RUN`%0`FACED),0)),0),%bThe party succeeded at [firstof(get({{store}}/RUN`%0`WON),0)] of %q<ta_f> [if(eq(%q<ta_f>,1),challenge,challenges)] %([u(%!/FUN`SUCCESS,%0)]%%%).)
       # %0 the members, %1 a name: the member it names.
       FUN`MEMBERNAMED: |-
         first(squish(iter(%0,if(cor(strmatch(name(%i0),%1),strmatch(objid(pmatch(%1)),%i0)),%i0))))
@@ -800,7 +806,7 @@ objects:
       WEB`REWARDS`FIELD: |-
         setq(web_rk,if(strlen(setr(web_rp,u(%!/FUN`PROVIDER))),u(%q<web_rp>/FN`DUTIES`REWARDS)))[json_fill(v(DATA`WEB`F`REWARDS),/item_fields/0/options,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`F`INFOKIND)[if(strlen(%q<web_rk>),%r[json_map(%!/WEB`REWARDS`KIND,%q<web_rk>,%r)])]),/item_variants,u(%!/WEB`JSON`OBJECT,json(object,info,v(DATA`WEB`F`INFO))[if(strlen(%q<web_rk>),%r[json_map(%!/WEB`REWARDS`VARIANT,%q<web_rk>,%r)])]))]
       DATA`WEB`F`REWARDS: |-
-        {"kind":"field","key":"rewards","label":"Rewards","type":"rows","help":"A challenge rewards the members who succeeded; any other step everyone there.","item_by":"kind","item_fields":[{"kind":"field","key":"kind","label":"Kind","type":"select","default":"info","options":[]},{"kind":"field","key":"repeat","label":"Given","type":"select","default":"once","options":[{"value":"once","label":"The first time only"},{"value":"every","label":"Every time"}]}],"item_variants":{}}
+        {"kind":"field","key":"rewards","label":"Rewards","type":"rows","help":"A challenge rewards the members who succeeded; any other step everyone there.","item_by":"kind","item_fields":[{"kind":"field","key":"kind","label":"Kind","type":"select","default":"info","options":[]},{"kind":"field","key":"repeat","label":"Given","type":"select","default":"once","options":[{"value":"once","label":"The first time only"},{"value":"every","label":"Every time"}]},{"kind":"field","key":"success","label":"Needs success (%)","type":"number","default":0,"help":"Given only when the party has succeeded at this share of the duty's challenges so far. 0 always gives it."}],"item_variants":{}}
       DATA`WEB`F`INFOKIND: |-
         {"value":"info","label":"Something learned"}
       DATA`WEB`F`INFO: |-
@@ -826,7 +832,7 @@ objects:
 
       # %0 a revision's root: its steps and links as the graph field holds them.
       WEB`STEPS: |-
-        json(object,start,json(string,get({{store}}/%0`START)),nodes,u(%!/WEB`JSON`ARRAY,iter(u(%!/FUN`NODES,%0),u(%!/WEB`STEP,%0`N`%i0,%i0),%b,%r)),edges,u(%!/WEB`JSON`ARRAY,iter(u(%!/FUN`EDGES,%0),u(%!/WEB`EDGE,%0`E`%i0),%b,%r)))
+        setq(web_ss,json(object,start,json(string,get({{store}}/%0`START)),nodes,u(%!/WEB`JSON`ARRAY,iter(u(%!/FUN`NODES,%0),u(%!/WEB`STEP,%0`N`%i0,%i0),%b,%r)),edges,u(%!/WEB`JSON`ARRAY,iter(u(%!/FUN`EDGES,%0),u(%!/WEB`EDGE,%0`E`%i0),%b,%r))))[if(hasattr({{store}},%0`START`X),json_mod(%q<web_ss>,patch,json(object,start_x,json(number,firstof(get({{store}}/%0`START`X),0)),start_y,json(number,firstof(get({{store}}/%0`START`Y),0)))),%q<web_ss>)]
       # %0 a step's attribute, %1 its key. A step with no place on the map yet has no x and y, and the
       # editor lays it out.
       WEB`STEP: |-
@@ -838,7 +844,7 @@ objects:
         json(object,id,json(string,%1),label,json(string,get({{store}}/%0)),trait,json(string,get({{store}}/%0`TRAIT)),difficulty,json(string,get({{store}}/%0`DIFF)),successes,json(number,firstof(get({{store}}/%0`SUCC),1)),failures,json(number,firstof(get({{store}}/%0`FAIL),1)),trained,u(%!/WEB`JSON`BOOLEAN,get({{store}}/%0`TRAINED)),note,json(string,get({{store}}/%0`NOTE)))
       # %0 a reward's attribute: its details, with its kind and how often it is given.
       WEB`REWARD: |-
-        json_mod(if(cand(isjson(setr(web_rd,get({{store}}/%0`DETAILS))),strmatch(json_query(%q<web_rd>,type),object)),%q<web_rd>,json(object)),patch,json(object,kind,json(string,get({{store}}/%0)),repeat,json(string,firstof(get({{store}}/%0`REPEAT),once))))
+        json_mod(if(cand(isjson(setr(web_rd,get({{store}}/%0`DETAILS))),strmatch(json_query(%q<web_rd>,type),object)),%q<web_rd>,json(object)),patch,json(object,kind,json(string,get({{store}}/%0)),repeat,json(string,firstof(get({{store}}/%0`REPEAT),once)),success,json(number,firstof(get({{store}}/%0`SUCCESS),0))))
       # %0 a link's attribute: where it leads, with the settings it has.
       WEB`EDGE: |-
         u(%!/WEB`JSON`PUT,u(%!/WEB`JSON`PUT,u(%!/WEB`JSON`PUT,u(%!/WEB`JSON`PUT,u(%!/WEB`JSON`PUT,json(object,from,json(string,get({{store}}/%0)),port,json(string,get({{store}}/%0`PORT)),to,json(string,get({{store}}/%0`TO))),weight,json(number,firstof(get({{store}}/%0`WEIGHT),1)),strlen(get({{store}}/%0`WEIGHT))),min,json(number,firstof(get({{store}}/%0`MIN),0)),strlen(get({{store}}/%0`MIN))),max,json(number,firstof(get({{store}}/%0`MAX),0)),strlen(get({{store}}/%0`MAX))),share,json(number,firstof(get({{store}}/%0`SHARE),0)),strlen(get({{store}}/%0`SHARE))),requires,json(string,get({{store}}/%0`REQ)),strlen(get({{store}}/%0`REQ)))
@@ -934,7 +940,7 @@ objects:
       WEB`SAVE`REWARDS: |-
         setq(web_sr,json_query(%q<web_sn>,extract,$.fields.rewards))[iter(lnum(if(strmatch(json_query(%q<web_sr>,type),array),json_query(%q<web_sr>,size),0)),u(%!/WEB`SAVE`REWARD,json_query(%q<web_sr>,get,%i0)),%b,~)]
       WEB`SAVE`REWARD: |-
-        if(not(member(u(%!/FUN`REWARDKINDS),lcstr(json_query(%0,extract,$.kind)))),A reward on %q<web_sk> is a kind the sheet system does not give.~)[if(not(match(once every,lcstr(firstof(json_query(%0,extract,$.repeat),once)))),A reward on %q<web_sk> is given once or every time.~)]
+        if(not(member(u(%!/FUN`REWARDKINDS),lcstr(json_query(%0,extract,$.kind)))),A reward on %q<web_sk> is a kind the sheet system does not give.~)[if(not(match(once every,lcstr(firstof(json_query(%0,extract,$.repeat),once)))),A reward on %q<web_sk> is given once or every time.~)][if(not(cand(isint(setr(web_rs,firstof(json_query(%0,extract,$.success),0))),gte(%q<web_rs>,0),lte(%q<web_rs>,100))),A reward on %q<web_sk> needs a success of 0 to 100.~)]
       # %0 a link's place in the posted list: what is wrong with it.
       WEB`SAVE`LINK: |-
         setq(web_le,json_query(%q<web_ge>,get,%0))[setq(web_lf,lcstr(json_query(%q<web_le>,extract,$.from)))][setq(web_lt,lcstr(json_query(%q<web_le>,extract,$.to)))][setq(web_lp,lcstr(json_query(%q<web_le>,extract,$.port)))][if(not(cand(member(%q<web_keys>,%q<web_lf>),member(%q<web_keys>,%q<web_lt>))),A link joins a step that is not there.~,if(not(member(v(DATA`PORTS`[extract(%q<web_kinds>,match(%q<web_keys>,%q<web_lf>),1)]),%q<web_lp>)),%q<web_lf> cannot lead on by %q<web_lp>.~))][if(not(u(%!/WEB`SAVE`NUMBER,weight,1,100)),A link's weight is 1 to 100.~)][if(not(cand(u(%!/WEB`SAVE`NUMBER,min,0,20),u(%!/WEB`SAVE`NUMBER,max,0,20))),How many succeeded is 0 to 20.~)][if(not(u(%!/WEB`SAVE`NUMBER,share,0,100)),A share is 0 to 100.~)][if(cand(strlen(setr(web_lr,lcstr(json_query(%q<web_le>,extract,$.requires)))),not(u(%!/WEB`SAVE`HASOPTION,%q<web_lf>,%q<web_lr>))),A link from %q<web_lf> needs a way to beat it that is not there.~)]
@@ -948,7 +954,7 @@ objects:
       # Writes the checked post into root: the duty's fields, then its steps and links afresh. A reviewer's
       # notes stay.
       INC`WEB`WRITE: |-
-        &%q<root> {{store}}=%q<web_title>; &%q<root>`DESC {{store}}=%q<web_desc>; &%q<root>`REPEAT {{store}}=%q<web_repeat>; &%q<root>`MIN {{store}}=%q<web_min>; &%q<root>`MAX {{store}}=%q<web_max>; &%q<root>`START {{store}}=lcstr(json_query(%q<web_g>,extract,$.start)); @dolist/inline lattr({{store}}/%q<root>`N`*) lattr({{store}}/%q<root>`E`*)={@wipe {{store}}/##}; &%q<root>`EN {{store}}=%q<web_en>; &%q<root>`WN {{store}}=0; @dolist/inline lnum(%q<web_nn>)={think setq(web_i,##); @include %!/INC`WEB`WRITE`STEP}; @dolist/inline lnum(%q<web_en>)={think setq(web_i,##); @include %!/INC`WEB`WRITE`LINK}
+        &%q<root> {{store}}=%q<web_title>; &%q<root>`DESC {{store}}=%q<web_desc>; &%q<root>`REPEAT {{store}}=%q<web_repeat>; &%q<root>`MIN {{store}}=%q<web_min>; &%q<root>`MAX {{store}}=%q<web_max>; &%q<root>`START {{store}}=lcstr(json_query(%q<web_g>,extract,$.start)); @wipe {{store}}/%q<root>`START`*; think setqm(web_sx,json_query(%q<web_g>,extract,$.start_x),web_sy,json_query(%q<web_g>,extract,$.start_y)); @switch/inline cand(isnum(%q<web_sx>),isnum(%q<web_sy>))=1,{&%q<root>`START`X {{store}}=round(%q<web_sx>,0); &%q<root>`START`Y {{store}}=round(%q<web_sy>,0)}; @dolist/inline lattr({{store}}/%q<root>`N`*) lattr({{store}}/%q<root>`E`*)={@wipe {{store}}/##}; &%q<root>`EN {{store}}=%q<web_en>; &%q<root>`WN {{store}}=0; @dolist/inline lnum(%q<web_nn>)={think setq(web_i,##); @include %!/INC`WEB`WRITE`STEP}; @dolist/inline lnum(%q<web_en>)={think setq(web_i,##); @include %!/INC`WEB`WRITE`LINK}
       INC`WEB`WRITE`STEP: |-
         think setqm(web_n,json_query(%q<web_gn>,get,%q<web_i>),
         web_kind,extract(%q<web_kinds>,inc(%q<web_i>),1),
@@ -959,7 +965,7 @@ objects:
         web_opath,%q<web_p>`O`[u(%!/WEB`OPTION`ID,%q<web_wo>,%q<web_j>)]); think setq(web_ot,lcstr(json_query(%q<web_o>,extract,$.trait))); &%q<web_opath> {{store}}=firstof(trim(json_query(%q<web_o>,extract,$.label)),u(%!/FUN`TRAITLABEL,%q<web_ot>),last(%q<web_opath>,`)); &%q<web_opath>`TRAIT {{store}}=%q<web_ot>; &%q<web_opath>`DIFF {{store}}=lcstr(json_query(%q<web_o>,extract,$.difficulty)); &%q<web_opath>`SUCC {{store}}=firstof(json_query(%q<web_o>,extract,$.successes),1); &%q<web_opath>`FAIL {{store}}=firstof(json_query(%q<web_o>,extract,$.failures),1); &%q<web_opath>`TRAINED {{store}}=t(match(true 1,json_query(%q<web_o>,extract,$.trained))); &%q<web_opath>`NOTE {{store}}=json_query(%q<web_o>,extract,$.note)
       INC`WEB`WRITE`REWARD: |-
         think setqm(web_r,json_query(%q<web_wr>,get,%q<web_j>),
-        web_w,inc(firstof(get({{store}}/%q<root>`WN),0))); &%q<root>`WN {{store}}=%q<web_w>; &%q<web_p>`W`%q<web_w> {{store}}=lcstr(json_query(%q<web_r>,extract,$.kind)); &%q<web_p>`W`%q<web_w>`REPEAT {{store}}=lcstr(firstof(json_query(%q<web_r>,extract,$.repeat),once)); &%q<web_p>`W`%q<web_w>`DETAILS {{store}}=json_mod(%q<web_r>,patch,json(object,kind,null,repeat,null))
+        web_w,inc(firstof(get({{store}}/%q<root>`WN),0))); &%q<root>`WN {{store}}=%q<web_w>; &%q<web_p>`W`%q<web_w> {{store}}=lcstr(json_query(%q<web_r>,extract,$.kind)); &%q<web_p>`W`%q<web_w>`REPEAT {{store}}=lcstr(firstof(json_query(%q<web_r>,extract,$.repeat),once)); &%q<web_p>`W`%q<web_w>`SUCCESS {{store}}=if(gt(firstof(json_query(%q<web_r>,extract,$.success),0),0),json_query(%q<web_r>,extract,$.success)); &%q<web_p>`W`%q<web_w>`DETAILS {{store}}=json_mod(%q<web_r>,patch,json(object,kind,null,repeat,null,success,null))
       INC`WEB`WRITE`LINK: |-
         think setqm(web_l,json_query(%q<web_ge>,get,%q<web_i>),
         web_lp,%q<root>`E`[inc(%q<web_i>)]); &%q<web_lp> {{store}}=lcstr(json_query(%q<web_l>,extract,$.from)); &%q<web_lp>`PORT {{store}}=lcstr(json_query(%q<web_l>,extract,$.port)); &%q<web_lp>`TO {{store}}=lcstr(json_query(%q<web_l>,extract,$.to)); &%q<web_lp>`WEIGHT {{store}}=json_query(%q<web_l>,extract,$.weight); &%q<web_lp>`MIN {{store}}=json_query(%q<web_l>,extract,$.min); &%q<web_lp>`MAX {{store}}=json_query(%q<web_l>,extract,$.max); &%q<web_lp>`SHARE {{store}}=json_query(%q<web_l>,extract,$.share); &%q<web_lp>`REQ {{store}}=lcstr(json_query(%q<web_l>,extract,$.requires))
@@ -980,8 +986,8 @@ objects:
   #
   # DUTY`<ID> a duty: AUTHOR, LIVE (the approved revision), DRAFT (the one being edited), STATE (editing,
   # submitted or returned), NOTE, RETIRED, NEXT. Each revision DUTY`<ID>`R<n> holds the title, with DESC,
-  # START, REPEAT, MIN, MAX, steps N`<KEY> (the kind, with LABEL TEXT SEEN COMBINE RESULT, T`<TIER>
-  # outcome texts, options O`<OPT> and rewards W`<n>), links E`<n> (the step it leaves, with PORT TO
+  # START (with X and Y, where the editor draws it), REPEAT, MIN, MAX, steps N`<KEY> (the kind, with LABEL TEXT SEEN COMBINE RESULT, T`<TIER>
+  # outcome texts, options O`<OPT> and rewards W`<n>, with REPEAT DETAILS SUCCESS), links E`<n> (the step it leaves, with PORT TO
   # WEIGHT MIN MAX SHARE REQ), and reviewers' notes REMARK`<KEY>.
   # ROSTER`<ID> the active roster. RUN`<n> a party. Per character key: INRUN, SEEN, GOT, DONE.
   - ref: store
@@ -1136,6 +1142,9 @@ objects:
         - The sheet system adds its own kinds, such as coin or items. The details are a JSON object of its
           fields, or the value of its first field.
         - `once` gives it to each character only the first time; `every` each time. `once` when not given.
+        - `success=<percent>` gives it only when the party has succeeded at that share of the duty's
+          challenges so far: `success=75` needs three of four. A duty with no challenges counts as 100.
+          The notice at the end says how many the party succeeded at.
         - A challenge gives its rewards to the members who succeeded. A narration or an end gives them to
           everyone there.
         - `+duty/unreward <duty>/<step>/<number>` removes one.
@@ -1145,6 +1154,10 @@ objects:
         `+duty/reward harbor/end=info every The fire was set on purpose.`
 
         Output: `\[DUTY\] Done: Reward 1 on end: info, every.`
+
+        `+duty/reward harbor/end=info once success=75 The harbourmaster paid them.`
+
+        Output: `\[DUTY\] Done: Reward 2 on end: info, once, at 75% success or more.`
       LOCK`DUTY`REVIEW: |-
         perm^softcode.duties.review
       HELP`DUTY`REVIEW: |-
