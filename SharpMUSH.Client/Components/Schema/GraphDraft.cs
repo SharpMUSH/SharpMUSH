@@ -246,9 +246,8 @@ public sealed partial class GraphDraft
 	{
 		for (var row = 0; row < 50; row++)
 		{
-			foreach (var shift in (int[])[0, 1, -1, 2, -2])
+			foreach (var cx in ((int[])[0, 1, -1, 2, -2]).Select(shift => x + shift * (NodeWidth + GapX)))
 			{
-				var cx = x + shift * (NodeWidth + GapX);
 				var cy = y + row * (NodeHeight + GapY);
 				if (cx < 0) continue;
 				if (!_nodes.Any(node => node.Key != except && Math.Abs(node.X - cx) < NodeWidth + 8 && Math.Abs(node.Y - cy) < NodeHeight + 8))
