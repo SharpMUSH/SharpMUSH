@@ -6282,6 +6282,24 @@
     <value>Добави стъпка</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraphZoom" xml:space="preserve">
+    <value>Мащаб</value>
+  </data>
+  <data name="WidGraphZoomIn" xml:space="preserve">
+    <value>Увеличаване</value>
+  </data>
+  <data name="WidGraphZoomOut" xml:space="preserve">
+    <value>Намаляване</value>
+  </data>
+  <data name="WidGraphZoomReset" xml:space="preserve">
+    <value>Обратно на 100 %</value>
+  </data>
+  <data name="WidGraphFit" xml:space="preserve">
+    <value>Побиране в изгледа</value>
+  </data>
+  <data name="WidGraphDragLink" xml:space="preserve">
+    <value>Плъзнете върху стъпка, за да свържете {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Подреди оформлението</value>
     <comment>MT</comment>

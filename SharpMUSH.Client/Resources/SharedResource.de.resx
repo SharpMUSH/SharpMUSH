@@ -6282,6 +6282,24 @@
     <value>Schritt hinzufügen</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraphZoom" xml:space="preserve">
+    <value>Zoom</value>
+  </data>
+  <data name="WidGraphZoomIn" xml:space="preserve">
+    <value>Vergrößern</value>
+  </data>
+  <data name="WidGraphZoomOut" xml:space="preserve">
+    <value>Verkleinern</value>
+  </data>
+  <data name="WidGraphZoomReset" xml:space="preserve">
+    <value>Zurück auf 100 %</value>
+  </data>
+  <data name="WidGraphFit" xml:space="preserve">
+    <value>An Ansicht anpassen</value>
+  </data>
+  <data name="WidGraphDragLink" xml:space="preserve">
+    <value>Auf einen Schritt ziehen, um {0} zu verknüpfen</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Anordnung aufräumen</value>
     <comment>MT</comment>

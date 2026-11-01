@@ -6282,6 +6282,24 @@
     <value>Adaugă un pas</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraphZoom" xml:space="preserve">
+    <value>Zoom</value>
+  </data>
+  <data name="WidGraphZoomIn" xml:space="preserve">
+    <value>Mărește</value>
+  </data>
+  <data name="WidGraphZoomOut" xml:space="preserve">
+    <value>Micșorează</value>
+  </data>
+  <data name="WidGraphZoomReset" xml:space="preserve">
+    <value>Înapoi la 100%</value>
+  </data>
+  <data name="WidGraphFit" xml:space="preserve">
+    <value>Potrivește în vizualizare</value>
+  </data>
+  <data name="WidGraphDragLink" xml:space="preserve">
+    <value>Trage pe un pas pentru a lega {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Aranjează dispunerea</value>
     <comment>MT</comment>

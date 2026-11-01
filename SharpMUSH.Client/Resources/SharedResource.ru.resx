@@ -6282,6 +6282,24 @@
     <value>Добавить шаг</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraphZoom" xml:space="preserve">
+    <value>Масштаб</value>
+  </data>
+  <data name="WidGraphZoomIn" xml:space="preserve">
+    <value>Увеличить</value>
+  </data>
+  <data name="WidGraphZoomOut" xml:space="preserve">
+    <value>Уменьшить</value>
+  </data>
+  <data name="WidGraphZoomReset" xml:space="preserve">
+    <value>Вернуть 100 %</value>
+  </data>
+  <data name="WidGraphFit" xml:space="preserve">
+    <value>Вписать в окно</value>
+  </data>
+  <data name="WidGraphDragLink" xml:space="preserve">
+    <value>Перетащите на шаг, чтобы связать {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Упорядочить расположение</value>
     <comment>MT</comment>

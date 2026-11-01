@@ -6282,6 +6282,24 @@
     <value>Legg til et steg</value>
     <comment>MT</comment>
   </data>
+  <data name="WidGraphZoom" xml:space="preserve">
+    <value>Zoom</value>
+  </data>
+  <data name="WidGraphZoomIn" xml:space="preserve">
+    <value>Zoom inn</value>
+  </data>
+  <data name="WidGraphZoomOut" xml:space="preserve">
+    <value>Zoom ut</value>
+  </data>
+  <data name="WidGraphZoomReset" xml:space="preserve">
+    <value>Tilbake til 100 %</value>
+  </data>
+  <data name="WidGraphFit" xml:space="preserve">
+    <value>Tilpass visningen</value>
+  </data>
+  <data name="WidGraphDragLink" xml:space="preserve">
+    <value>Dra til et steg for å koble {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Rydd opp i oppsettet</value>
     <comment>MT</comment>

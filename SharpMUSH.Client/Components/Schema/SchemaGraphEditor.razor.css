@@ -56,18 +56,27 @@
 	border-color: var(--graph-tone, var(--border));
 }
 
+/* The editor is a workspace of its own: the map fills it and the step scrolls beside it. */
 .graph-body {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) 360px;
+	height: min(78vh, 880px);
 }
 
 .graph-main {
 	min-width: 0;
 	display: grid;
 	align-content: start;
+	overflow: auto;
+	grid-template-rows: minmax(0, 1fr);
+}
+
+.graph-main:has(.graph-guidance) {
+	grid-template-rows: minmax(0, 1fr) auto;
 }
 
 .graph-inspector {
+	overflow-y: auto;
 	border-left: 1px solid var(--border);
 	padding: 12px;
 	display: grid;
@@ -112,7 +121,7 @@
 /* The map: steps over the lines that join them, on a dotted ground that scrolls both ways. */
 .graph-map {
 	overflow: auto;
-	max-height: 70vh;
+	height: 100%;
 	background:
 		radial-gradient(circle, var(--border) 1px, transparent 1.2px) 0 0 / 22px 22px,
 		var(--surface-3);
@@ -395,9 +404,25 @@ ul.graph-guidance--step {
 @container page (max-width: 64rem) {
 	.graph-body {
 		grid-template-columns: minmax(0, 1fr);
+		height: auto;
+	}
+
+	.graph-main {
+		overflow: visible;
+		grid-template-rows: none;
+	}
+
+	.graph-main:has(.graph-guidance) {
+		grid-template-rows: none;
+	}
+
+	.graph-map {
+		height: auto;
+		max-height: 70vh;
 	}
 
 	.graph-inspector {
+		overflow-y: visible;
 		border-left: 0;
 		border-top: 1px solid var(--border);
 	}
@@ -459,4 +484,81 @@ ul.graph-guidance--step {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+/* The map scales inside a frame sized to the scaled canvas, so its scrollbars follow the zoom. */
+.graph-frame {
+	position: relative;
+}
+
+.graph-frame > .graph-canvas {
+	transform-origin: 0 0;
+}
+
+.graph-zoom {
+	display: inline-flex;
+	align-items: center;
+	gap: 0;
+}
+
+.graph-zoom-level {
+	min-width: 44px;
+	padding: 2px 4px;
+	border: 0;
+	background: transparent;
+	color: var(--text-dim);
+	font: 600 12px var(--font-mono);
+	cursor: pointer;
+}
+
+.graph-zoom-level:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+/* An outcome a step must have that leads nowhere yet. */
+.graph-stub {
+	fill: none;
+	stroke: var(--text-dim);
+	stroke-width: 2;
+	stroke-dasharray: 3 3;
+}
+
+.graph-stub-end {
+	fill: var(--surface-3);
+	stroke: var(--text-dim);
+	stroke-width: 2;
+}
+
+.graph-line--pending {
+	stroke: var(--accent);
+	stroke-dasharray: 6 4;
+}
+
+/* The selected step's outcomes: drag one onto another step to link it. */
+.graph-handles {
+	position: absolute;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	width: calc(var(--graph-node-width) * 1.6);
+}
+
+.graph-handle {
+	padding: 2px 8px;
+	border: 1px dashed var(--graph-tone, var(--text-dim));
+	border-radius: 999px;
+	background: var(--surface);
+	color: var(--graph-tone, var(--text-dim));
+	font: 600 10.5px var(--font-mono);
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	white-space: nowrap;
+	cursor: crosshair;
+	touch-action: none;
+	user-select: none;
+}
+
+.graph-handle--linked {
+	border-style: solid;
 }

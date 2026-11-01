@@ -3,6 +3,7 @@
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Client.Components.Scenes
 @inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
 
 @* A graph field: steps joined by their outcomes, edited on a map or as an outline. The schema declares every
    kind of step, the outcomes leaving it and the fields it holds; softcode's Check answers with the guidance.
@@ -26,6 +27,18 @@
             </div>
         }
         <span class="graph-toolbar-spacer"></span>
+        @if (_view == "map" && _draft.Nodes.Count > 0)
+        {
+            <div class="graph-zoom" role="group" aria-label="@Loc["WidGraphZoom"]">
+                <MudIconButton Icon="@Icons.Material.Filled.Remove" Size="Size.Small" aria-label="@Loc["WidGraphZoomOut"]" title="@Loc["WidGraphZoomOut"]"
+                               Disabled="@(_zoom <= MinZoom)" OnClick="() => ZoomBy(-0.1)" />
+                <button type="button" class="graph-zoom-level" title="@Loc["WidGraphZoomReset"]" @onclick="() => SetZoom(1)">@($"{Math.Round(_zoom * 100)}%")</button>
+                <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" aria-label="@Loc["WidGraphZoomIn"]" title="@Loc["WidGraphZoomIn"]"
+                               Disabled="@(_zoom >= MaxZoom)" OnClick="() => ZoomBy(0.1)" />
+                <MudIconButton Icon="@Icons.Material.Filled.FitScreen" Size="Size.Small" aria-label="@Loc["WidGraphFit"]" title="@Loc["WidGraphFit"]"
+                               OnClick="FitAsync" />
+            </div>
+        }
         @if (!Locked && _draft.Nodes.Count > 1)
         {
             <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.AccountTree" Class="graph-tidy" OnClick="TidyAsync">@Loc["WidGraphTidy"]</MudButton>
@@ -183,14 +196,22 @@
             node = node.WithField(field.Key!, field.Default!.Value);
         }
         _draft.Update(node);
-        if (Selected is { } from && Ports(from.Kind).FirstOrDefault(port => _draft.Target(from.Key, port.Key) is null) is { } open)
+        if (Selected is { } from && OpenPort(from) is { } open)
         {
-            // A step added while another is selected follows it, from its first outcome that leads nowhere.
-            _draft.Move(node.Key, from.X, from.Y + GraphDraft.NodeHeight + 64);
+            // A step added while another is selected follows it, from the first outcome it must have that leads
+            // nowhere (else any that does), placed below it where no other step stands.
+            var (x, y) = _draft.FreeSpot(from.X, from.Y + GraphDraft.NodeHeight + 64, node.Key);
+            _draft.Move(node.Key, x, y);
             _draft.Link(from.Key, open.Key, node.Key);
         }
         Select(node.Key);
         await EmitAsync();
+    }
+
+    private SchemaGraphPort? OpenPort(GraphNode from)
+    {
+        var open = Ports(from.Kind).Where(port => _draft.Target(from.Key, port.Key) is null).ToList();
+        return open.FirstOrDefault(port => port.Required) ?? open.FirstOrDefault();
     }
 
     private async Task RemoveAsync(string key)
@@ -267,6 +288,43 @@
         await EmitAsync();
     }
 
+    // ── Zoom. The map opens fitted to its frame when it is larger, and stays as the author sets it after. ──
+
+    private const double MinZoom = 0.4, MaxZoom = 1.5;
+    private double _zoom = 1;
+    private bool _fitted;
+    private ElementReference _mapFrame;
+
+    private void SetZoom(double zoom) => _zoom = Math.Clamp(Math.Round(zoom, 2), MinZoom, MaxZoom);
+
+    private void ZoomBy(double step) => SetZoom(Math.Round((_zoom + step) * 10) / 10);
+
+    private async Task FitAsync()
+    {
+        if (_draft.Nodes.Count == 0) return;
+        double[] size;
+        try
+        {
+            size = await JS.InvokeAsync<double[]>("sharpmushLayout.viewportSize", _mapFrame);
+        }
+        catch (JSException)
+        {
+            return;
+        }
+        if (size is not [> 0 and var frameWidth, > 0 and var frameHeight]) return;
+        var (width, height) = CanvasSize();
+        SetZoom(Math.Floor(Math.Min(1, Math.Min((frameWidth - 8) / width, (frameHeight - 8) / height)) * 20) / 20);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_fitted || _view != "map" || _draft.Nodes.Count == 0) return;
+        _fitted = true;
+        var before = _zoom;
+        await FitAsync();
+        if (_zoom != before) StateHasChanged();
+    }
+
     private int Count(string key) => _guidance.On(key).Count(issue => issue.Severity != "hint");
 
     // ── Dragging a step. A press that moves less than a few pixels is a click. ──
@@ -285,8 +343,8 @@
     private void Drag(PointerEventArgs e)
     {
         if (_drag is not { } drag) return;
-        var dx = e.ClientX - drag.StartX;
-        var dy = e.ClientY - drag.StartY;
+        var dx = (e.ClientX - drag.StartX) / _zoom;
+        var dy = (e.ClientY - drag.StartY) / _zoom;
         if (!_moved && Math.Abs(dx) + Math.Abs(dy) < 5) return;
         _moved = true;
         _draft.Move(drag.Key, drag.NodeX + dx, drag.NodeY + dy);
@@ -298,6 +356,42 @@
         _drag = null;
         _suppressClick = _moved;
         if (_moved) await EmitAsync();
+    }
+
+    // ── Linking by dragging from an outcome's handle under the selected step onto another step. ──
+
+    private (string From, string Port, double X, double Y, double StartX, double StartY)? _linking;
+    private (double X, double Y) _linkEnd;
+
+    private void StartLink(PointerEventArgs e, GraphNode node, SchemaGraphPort port, double x, double y)
+    {
+        if (Locked || e.Button != 0) return;
+        _linking = (node.Key, port.Key, x, y, e.ClientX, e.ClientY);
+        _linkEnd = (x, y);
+    }
+
+    private void Pointer(PointerEventArgs e)
+    {
+        if (_linking is { } link)
+        {
+            _linkEnd = (link.X + (e.ClientX - link.StartX) / _zoom, link.Y + (e.ClientY - link.StartY) / _zoom);
+            return;
+        }
+        Drag(e);
+    }
+
+    private async Task PointerUpAsync()
+    {
+        if (_linking is { } link)
+        {
+            _linking = null;
+            if (_draft.At(_linkEnd.X, _linkEnd.Y) is not { } target || _draft.Find(link.From) is not { } from) return;
+            if (Port(from.Kind, link.Port) is { Many: true }) _draft.AddLink(link.From, link.Port, target.Key);
+            else _draft.Link(link.From, link.Port, target.Key);
+            await EmitAsync();
+            return;
+        }
+        await EndDragAsync();
     }
 
     private void Click(GraphNode node)
@@ -323,8 +417,9 @@
         foreach (var edge in _draft.Edges)
         {
             if (_draft.Find(edge.From) is not { } a || _draft.Find(edge.To) is not { } b) continue;
-            var twin = _draft.Edges.Any(other => other.From == edge.To && other.To == edge.From);
-            var off = twin ? (string.CompareOrdinal(edge.From, edge.To) < 0 ? -12 : 12) : 0;
+            // Edges joining the same two steps, either way, are spread apart so each line and label shows.
+            var pair = _draft.Edges.Where(other => (other.From == edge.From && other.To == edge.To) || (other.From == edge.To && other.To == edge.From)).ToList();
+            var off = (pair.IndexOf(edge) - (pair.Count - 1) / 2.0) * 14;
             double acx = a.X + W / 2, acy = a.Y + H / 2, bcx = b.X + W / 2, bcy = b.Y + H / 2;
             double dx = bcx - acx, dy = bcy - acy, x1, y1, x2, y2;
             string path;
@@ -357,13 +452,39 @@
 
     private string MarkerId(string? token) => $"graph-{_id}-arrow{(token ?? "").Replace("-", "")}";
 
+    // Room under the lowest step for its outcome handles and the outcomes still leading nowhere.
+    private (double Width, double Height) CanvasSize()
+        => (Math.Max(480, _draft.Nodes.Max(node => node.X) + W + 64), Math.Max(240, _draft.Nodes.Max(node => node.Y) + H + 72));
+
+    // An outcome a step must have that leads nowhere yet: a dashed stub under the step, as a link to nowhere.
+    private sealed record Stub(double X, double Y, string Label, string? Token);
+
+    private IEnumerable<Stub> Stubs()
+    {
+        foreach (var node in _draft.Nodes.Where(node => node.Key != _selected || Locked))
+        {
+            var open = Ports(node.Kind).Where(port => port.Required && _draft.Target(node.Key, port.Key) is null).ToList();
+            for (var i = 0; i < open.Count; i++)
+            {
+                var x = node.X + W * (i + 1) / (open.Count + 1);
+                yield return new Stub(x, node.Y + H, open[i].Label ?? open[i].Key, PoseTypeStyle.ToneToken(open[i].Tone));
+            }
+        }
+    }
+
+    private void CancelPointer()
+    {
+        _linking = null;
+    }
+
     private RenderFragment Map => __builder =>
     {
-        var width = Math.Max(480, _draft.Nodes.Max(node => node.X) + W + 64);
-        var height = Math.Max(240, _draft.Nodes.Max(node => node.Y) + H + 32);
+        var (width, height) = CanvasSize();
         var lines = Lines().ToList();
-        <div class="graph-map" @onpointermove="Drag" @onpointerup="EndDragAsync" @onpointerleave="EndDragAsync">
-            <div class="graph-canvas" style="@($"width: {Num(width)}px; height: {Num(height)}px;")">
+        var stubs = Stubs().ToList();
+        <div class="graph-map" @ref="_mapFrame" @onpointermove="Pointer" @onpointerup="PointerUpAsync" @onpointerleave="LeaveAsync">
+            <div class="graph-frame" style="@($"width: {Num(width * _zoom)}px; height: {Num(height * _zoom)}px;")">
+            <div class="graph-canvas" style="@($"width: {Num(width)}px; height: {Num(height)}px; transform: scale({Num2(_zoom)});")">
                 <svg class="graph-lines" viewBox="@($"0 0 {Num(width)} {Num(height)}")" width="@Num(width)" height="@Num(height)" aria-hidden="true" focusable="false">
                     <defs>
                         @foreach (var token in lines.Select(line => line.Token).Distinct())
@@ -381,6 +502,15 @@
                     @foreach (var line in lines)
                     {
                         @LineLabel(line)
+                    }
+                    @foreach (var stub in stubs)
+                    {
+                        <path class="graph-stub" d="@($"M{Num(stub.X)},{Num(stub.Y)} v22")" style="@(stub.Token is null ? null : $"stroke: var({stub.Token});")" />
+                        <circle class="graph-stub-end" cx="@Num(stub.X)" cy="@Num(stub.Y + 26)" r="4" style="@(stub.Token is null ? null : $"stroke: var({stub.Token});")" />
+                    }
+                    @if (_linking is { } link)
+                    {
+                        <path class="graph-line graph-line--pending" d="@($"M{Num(link.X)},{Num(link.Y)} L{Num(_linkEnd.X)},{Num(_linkEnd.Y)}")" />
                     }
                 </svg>
                 @foreach (var node in _draft.Nodes)
@@ -416,9 +546,33 @@
                         }
                     </button>
                 }
+                @if (!Locked && Selected is { } chosen)
+                {
+                    // A dragged link is drawn from the bottom of the step, whichever handle it started on.
+                    var (fromX, fromY) = (chosen.X + W / 2, chosen.Y + H);
+                    <div class="graph-handles" style="@($"left: {Num(chosen.X)}px; top: {Num(chosen.Y + H + 8)}px;")">
+                        @foreach (var port in Ports(chosen.Kind))
+                        {
+                            var linked = _draft.Targets(chosen.Key, port.Key).Count > 0;
+                            <button type="button" class="@(linked ? "graph-handle graph-handle--linked" : "graph-handle")" tabindex="-1"
+                                    style="@(PoseTypeStyle.ToneToken(port.Tone) is { } t ? $"--graph-tone: var({t});" : null)"
+                                    title="@Loc["WidGraphDragLink", port.Label ?? port.Key]"
+                                    @onpointerdown="e => StartLink(e, chosen, port, fromX, fromY)">@(port.Label ?? port.Key)</button>
+                        }
+                    </div>
+                }
+            </div>
             </div>
         </div>
     };
+
+    private static string Num2(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private async Task LeaveAsync()
+    {
+        CancelPointer();
+        await EndDragAsync();
+    }
 
     // SVG <text> written straight inside a Razor code block reads as Razor's own <text> tag, so it is drawn from
     // a fragment whose first element is a group.
@@ -629,6 +783,47 @@
         {
             <MudText Typo="Typo.caption" Class="mud-text-secondary">@kind.Help</MudText>
         }
+        var issues = _guidance.On(node.Key).ToList();
+        @if (issues.Count > 0)
+        {
+            <ul class="graph-guidance graph-guidance--step">
+                @foreach (var issue in issues)
+                {
+                    <li class="@($"graph-issue graph-issue--{issue.Severity}")">
+                        <span class="graph-issue-mark" aria-hidden="true">@Mark(issue.Severity)</span>
+                        <span>@(issue.Port is null ? issue.Message : $"{PortLabel(node.Kind, issue.Port)}: {issue.Message}")</span>
+                    </li>
+                }
+            </ul>
+        }
+
+        @if (_guidance.ChangeOf(node.Key) is { Text: { Length: > 0 } changed } change)
+        {
+            <p class="@($"graph-change graph-change--{change.Kind}")">@changed</p>
+        }
+
+        var notes = _guidance.NotesOn(node.Key).ToList();
+        @if (notes.Count > 0 || !string.IsNullOrWhiteSpace(Spec?.NoteAction))
+        {
+            <h3 class="graph-heading">@Loc["WidGraphNotes"]</h3>
+            @foreach (var note in notes)
+            {
+                <div class="graph-note">
+                    @if (!string.IsNullOrWhiteSpace(note.Author))
+                    {
+                        <span class="graph-note-author">@(note.Port is null ? note.Author : $"{note.Author} · {PortLabel(node.Kind, note.Port)}")</span>
+                    }
+                    <span>@note.Text</span>
+                </div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Spec?.NoteAction))
+            {
+                <MudTextField T="string" @bind-Value="_note" Label="@Loc["WidGraphPinNote"]" Variant="Variant.Outlined" Lines="2" Class="mt-2" Immediate="true" />
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="mt-1" Disabled="@(Busy || string.IsNullOrWhiteSpace(_note))"
+                           OnClick="() => PinNoteAsync(node.Key)">@Loc["WidGraphPin"]</MudButton>
+            }
+        }
+
         <fieldset disabled="@Locked" class="graph-inspector-fields">
             <MudTextField @key="@($"{node.Key}-label")" T="string" Value="node.Label" ValueChanged="v => SetLabelAsync(node, v)"
                           Label="@Loc["WidGraphName"]" Variant="Variant.Outlined" Class="mb-2" />
@@ -671,45 +866,5 @@
             }
         </fieldset>
 
-        var issues = _guidance.On(node.Key).ToList();
-        @if (issues.Count > 0)
-        {
-            <ul class="graph-guidance graph-guidance--step">
-                @foreach (var issue in issues)
-                {
-                    <li class="@($"graph-issue graph-issue--{issue.Severity}")">
-                        <span class="graph-issue-mark" aria-hidden="true">@Mark(issue.Severity)</span>
-                        <span>@(issue.Port is null ? issue.Message : $"{PortLabel(node.Kind, issue.Port)}: {issue.Message}")</span>
-                    </li>
-                }
-            </ul>
-        }
-
-        @if (_guidance.ChangeOf(node.Key) is { Text: { Length: > 0 } changed } change)
-        {
-            <p class="@($"graph-change graph-change--{change.Kind}")">@changed</p>
-        }
-
-        var notes = _guidance.NotesOn(node.Key).ToList();
-        @if (notes.Count > 0 || !string.IsNullOrWhiteSpace(Spec?.NoteAction))
-        {
-            <h3 class="graph-heading">@Loc["WidGraphNotes"]</h3>
-            @foreach (var note in notes)
-            {
-                <div class="graph-note">
-                    @if (!string.IsNullOrWhiteSpace(note.Author))
-                    {
-                        <span class="graph-note-author">@(note.Port is null ? note.Author : $"{note.Author} · {PortLabel(node.Kind, note.Port)}")</span>
-                    }
-                    <span>@note.Text</span>
-                </div>
-            }
-            @if (!string.IsNullOrWhiteSpace(Spec?.NoteAction))
-            {
-                <MudTextField T="string" @bind-Value="_note" Label="@Loc["WidGraphPinNote"]" Variant="Variant.Outlined" Lines="2" Class="mt-2" Immediate="true" />
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="mt-1" Disabled="@(Busy || string.IsNullOrWhiteSpace(_note))"
-                           OnClick="() => PinNoteAsync(node.Key)">@Loc["WidGraphPin"]</MudButton>
-            }
-        }
     };
 }

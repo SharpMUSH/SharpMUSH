@@ -7,6 +7,11 @@ window.sharpmushLayout = {
 		return window.matchMedia(this.touchChromeQuery).matches;
 	},
 
+	// The inner size of a scrolling element, [width, height], for a view that fits its content to it.
+	viewportSize: function (element) {
+		return element ? [element.clientWidth, element.clientHeight] : [0, 0];
+	},
+
 	// The key is data, never a selector. Only a control rendered by this authorized page can match.
 	focusConfigurationOption: function (key) {
 		const row = Array.from(document.querySelectorAll('[data-config-option]'))

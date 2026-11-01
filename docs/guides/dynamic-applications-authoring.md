@@ -203,7 +203,9 @@ their defaults. Other keys on the row stay.
 
 **Graphs.** A `graph` field edits steps joined by outcomes: a map to drag steps around, an outline
 that reads the same graph as a list (the only view on a phone, and the one a screen reader uses), and
-a panel for the selected step. Its `graph` object says what steps exist:
+a panel for the selected step. On the map, the selected step's outcomes sit under it as handles: drag
+one onto another step to link them. A `required` outcome that leads nowhere shows as a dashed stub, and
+the map zooms and fits itself to its frame. Its `graph` object says what steps exist:
 
 ```jsonc
 { "kind": "field", "key": "draft", "label": "Steps", "type": "graph", "graph": {

@@ -8749,6 +8749,24 @@
   <data name="WidGraphAdd" xml:space="preserve">
     <value>Add a step</value>
   </data>
+  <data name="WidGraphZoom" xml:space="preserve">
+    <value>Zoom</value>
+  </data>
+  <data name="WidGraphZoomIn" xml:space="preserve">
+    <value>Zoom in</value>
+  </data>
+  <data name="WidGraphZoomOut" xml:space="preserve">
+    <value>Zoom out</value>
+  </data>
+  <data name="WidGraphZoomReset" xml:space="preserve">
+    <value>Back to 100%</value>
+  </data>
+  <data name="WidGraphFit" xml:space="preserve">
+    <value>Fit to view</value>
+  </data>
+  <data name="WidGraphDragLink" xml:space="preserve">
+    <value>Drag onto a step to link {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Tidy layout</value>
   </data>
