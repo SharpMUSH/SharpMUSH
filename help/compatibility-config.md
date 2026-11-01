@@ -66,11 +66,6 @@
       "lookup": "compatibility config rhostmush edit modes rhost edit"
     },
     {
-      "id": "rhostmush-iter-separator-rhost-iter-separator",
-      "heading": "RhostMUSH iter() separator: `rhost_iter_separator`",
-      "lookup": "compatibility config rhostmush iter separator rhost iter separator"
-    },
-    {
       "id": "rhostmush-lattr-arguments-rhost-lattr",
       "heading": "RhostMUSH lattr() arguments: `rhost_lattr`",
       "lookup": "compatibility config rhostmush lattr arguments rhost lattr"
@@ -303,19 +298,6 @@ With `rhost_edit` off, edit() reads its arguments after the string as from/to pa
 aXcabc
 > think edit(abcabc,b,X,c,Y)
 aXcaXc
-```
-
-## RhostMUSH iter() separator: `rhost_iter_separator`
-
-Off by default; meant for a game moved from RhostMUSH.
-
-With `rhost_iter_separator` off, iter() and parse() put the list's delimiter between results when no output separator is given, as PennMUSH does. With it on, they put a space, as RhostMUSH does.
-
-```sharp rhost_iter_separator
-> think iter(a|b|c,ucstr(##),|)
-A B C
-> think iter(a|b|c,ucstr(##),|,-)
-A-B-C
 ```
 
 ## RhostMUSH lattr() arguments: `rhost_lattr`

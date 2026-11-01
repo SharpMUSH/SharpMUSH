@@ -1494,12 +1494,6 @@
         "aliases": []
       },
       {
-        "id": "rhostmush-iter-separator-rhost-iter-separator",
-        "lookup": "compatibility config rhostmush iter separator rhost iter separator",
-        "heading": "RhostMUSH iter() separator: \u0060rhost_iter_separator\u0060",
-        "aliases": []
-      },
-      {
         "id": "rhostmush-lattr-arguments-rhost-lattr",
         "lookup": "compatibility config rhostmush lattr arguments rhost lattr",
         "heading": "RhostMUSH lattr() arguments: \u0060rhost_lattr\u0060",
