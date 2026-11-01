@@ -58,7 +58,8 @@
         var oldHeight = figure.offsetHeight / ratio;
         var tall = frame.clientHeight - below(figure);
         var atX = typeof x === "number" ? x : frame.clientWidth / 2;
-        var atY = typeof y === "number" ? y : tall / 2;
+        // The middle of the view: of the drawing while it was centred, else of the frame.
+        var atY = typeof y === "number" ? y : oldHeight < tall ? tall / 2 : frame.clientHeight / 2;
         var onX = frame.scrollLeft + atX - Math.max(0, (frame.clientWidth - oldWidth) / 2);
         var onY = frame.scrollTop + atY - Math.max(0, (tall - oldHeight) / 2);
         frame.scrollLeft = onX * ratio - atX;

@@ -497,17 +497,21 @@ public sealed partial class MapPlan(MapDto map)
 	/// </summary>
 	public static IReadOnlyList<MissingWayBack> OneWay(MapDto map)
 	{
+		// A truncated map may leave the way back out; it is not known to be missing.
+		if (map.Truncated) return [];
 		var rooms = map.Rooms.Select(room => room.Id).ToHashSet();
 		var missing = new List<MissingWayBack>();
 		foreach (var exit in map.Exits.Where(exit => exit.Destination is { } to && to != exit.Source && rooms.Contains(to)))
 		{
 			var backs = map.Exits.Where(back => back.Source == exit.Destination && back.Destination == exit.Source).ToList();
 			if (backs.Count == 0) missing.Add(new(exit, null));
-			else if (MapLayout.Direction(exit) is (var x, var y, var z) && !backs.Any(back => MapLayout.Direction(back) == (-x, -y, -z)))
+			else if (MapLayout.Direction(exit) is (var x, var y, var z) && !backs.Any(back => Names(back).Any(name => MapLayout.Direction(back with { Name = name, Aliases = [] }) == (-x, -y, -z))))
 				missing.Add(new(exit, First(WayBackNames(exit))));
 		}
 		return missing;
 	}
+
+	private static IEnumerable<string> Names(MapExitDto exit) => [exit.Name, .. exit.Aliases];
 
 	/// <summary>
 	/// The names the way back through <paramref name="exit"/> takes: the opposite direction, <c>West;w</c> for

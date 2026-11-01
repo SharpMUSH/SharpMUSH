@@ -78,6 +78,17 @@ test('a drawing that was narrower than its frame was centred in it, so its middl
     assert.equal(el.scrollLeft, 100);
 });
 
+test('a drawing taller than its frame keeps the frame\'s middle still', () => {
+    // A 528-tall frame with 28 kept below, scrolled to 100 over a 1000-tall drawing: its middle (264) is at 364,
+    // which doubles to 728 and shows from 464.
+    const el = frame({ clientWidth: 1000, clientHeight: 528, top: 100 }, { width: 2000, height: 2000 });
+    const map = load(new Map([[el.firstElementChild, { marginBottom: '28px' }]]));
+
+    map.mapRescale(el, 2);
+
+    assert.equal(el.scrollTop, 464);
+});
+
 test('a drawing that was shorter than its frame was centred in it, so its middle is its own', () => {
     // Drawing 300 tall in a 528-tall frame with 28 kept below sat 100 down; its middle (150) doubles to 300 in a
     // 600-tall drawing, which the frame's middle (250) shows from 50.

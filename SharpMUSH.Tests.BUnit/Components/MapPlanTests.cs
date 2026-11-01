@@ -144,6 +144,11 @@ public class MapPlanTests
 		await Assert.That(MapPlan.OneWay(map)).IsEquivalentTo([new MissingWayBack(east, "West")])
 			.Because("a player who went east tries west to come back, not Back");
 		await Assert.That(MapPlan.OneWay(map with { Exits = [east, new("#133", "w", [], "#87", "#0", null)] })).IsEmpty();
+		await Assert.That(MapPlan.OneWay(map with { Exits = [east, new("#133", "Gate", ["up", "w"], "#87", "#0", null)] })
+			.Select(missing => missing.Exit.Id)).DoesNotContain("#132")
+			.Because("an alias of the way back is West, whatever its first direction name");
+		await Assert.That(MapPlan.OneWay(map with { Exits = [east], Truncated = true })).IsEmpty()
+			.Because("a truncated map may have left the way back out");
 	}
 
 	[Test]
