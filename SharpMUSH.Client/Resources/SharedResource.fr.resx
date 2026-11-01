@@ -6043,6 +6043,21 @@
   <data name="NavMapNoWayIn" xml:space="preserve">
     <value>{0} n'a aucune entrée.</value>
   </data>
+  <data name="NavMapOneWay" xml:space="preserve">
+    <value>Sens unique : rien dans {0} ne ramène à {1}. Un joueur qui y va ne peut pas revenir par le même chemin.</value>
+  </data>
+  <data name="NavMapOneWayCheck" xml:space="preserve">
+    <value>{0} mène de {1} à {2}, mais aucune sortie ne ramène.</value>
+  </data>
+  <data name="NavMapNoOpposite" xml:space="preserve">
+    <value>{0} n'a pas de {1} qui ramène à {2}. Un joueur qui prend {3} s'attend à revenir par {1}.</value>
+  </data>
+  <data name="NavMapNoOppositeCheck" xml:space="preserve">
+    <value>{0} mène de {1} à {2}, mais aucun {3} ne ramène.</value>
+  </data>
+  <data name="NavMapPictureUnits" xml:space="preserve">
+    <value>Sur une carte image, X et Y sont le centre d'une salle, et la largeur et la hauteur sa taille, en pixels de l'image. Une salle sans taille fait {0} de large.</value>
+  </data>
   <data name="NavMapNotRun" xml:space="preserve">
     <value>non exécuté</value>
   </data>

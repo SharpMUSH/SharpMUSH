@@ -41,6 +41,9 @@ public sealed class MapLayout
 	/// <summary>The side of a room with no size on a graph map, in the backdrop's pixels: a grid cell's, so its name fits.</summary>
 	public const double GraphRoom = Cell;
 
+	/// <summary>The least side a room on a graph map is drawn with, whatever its size says, so it can be seen and chosen.</summary>
+	public const double MinGraphRoom = 4 * RoomInset;
+
 	private static readonly Dictionary<string, (int X, int Y, int Z)> Directions = new(StringComparer.OrdinalIgnoreCase)
 	{
 		["north"] = (0, 1, 0), ["n"] = (0, 1, 0),
@@ -174,7 +177,9 @@ public sealed class MapLayout
 	}
 
 	/// <summary>The rooms placed on <paramref name="level"/>.</summary>
-	public IEnumerable<MapPlacement> On(int level) => Rooms.Values.Where(room => room.Placed && room.Level == level);
+	public IEnumerable<MapPlacement> On(int level) => Rooms.Values.Where(room => room.Placed && room.Level == level)
+		// Larger first, so a room standing inside another is drawn over it, not hidden under it.
+		.OrderByDescending(room => room.Width * room.Height);
 
 	/// <summary>
 	/// Where <paramref name="room"/> is in the map's own units: its south-west cell and level on a coordinate or compass
@@ -382,8 +387,9 @@ public sealed class MapLayout
 	private static double Right(List<MapPlacement> rooms) => rooms.Count == 0 ? 0 : rooms.Max(r => r.X + r.Width);
 	private static double Bottom(List<MapPlacement> rooms) => rooms.Count == 0 ? 0 : rooms.Max(r => r.Y + r.Height);
 
-	private double Side(MapRoomDto room, int axis) =>
-		(room.Size is { Length: > 1 } size ? size[axis] : 1) * (IsGraph ? (room.Size is null ? GraphRoom : 1) : Cell);
+	private double Side(MapRoomDto room, int axis) => IsGraph
+		? room.Size is { Length: > 1 } size ? Math.Max(size[axis], MinGraphRoom) : GraphRoom
+		: (room.Size is { Length: > 1 } cells ? cells[axis] : 1) * Cell;
 
 	private Dictionary<string, MapPlacement> Graph(IEnumerable<MapRoomDto> rooms) =>
 		rooms.Where(room => room.Position is [_, _, ..]).DistinctBy(room => room.Id).ToDictionary(room => room.Id, room =>

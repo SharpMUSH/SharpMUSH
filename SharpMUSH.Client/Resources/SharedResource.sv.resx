@@ -6734,6 +6734,21 @@
   <data name="NavMapNoWayIn" xml:space="preserve">
     <value>{0} har ingen ingång.</value>
   </data>
+  <data name="NavMapOneWay" xml:space="preserve">
+    <value>Enkelriktat: inget i {0} leder tillbaka till {1}. En spelare som går dit kan inte komma tillbaka samma väg.</value>
+  </data>
+  <data name="NavMapOneWayCheck" xml:space="preserve">
+    <value>{0} leder från {1} till {2}, men ingen utgång leder tillbaka.</value>
+  </data>
+  <data name="NavMapNoOpposite" xml:space="preserve">
+    <value>{0} har ingen {1} tillbaka till {2}. En spelare som går {3} väntar sig att {1} leder tillbaka.</value>
+  </data>
+  <data name="NavMapNoOppositeCheck" xml:space="preserve">
+    <value>{0} leder från {1} till {2}, men ingen {3} leder tillbaka.</value>
+  </data>
+  <data name="NavMapPictureUnits" xml:space="preserve">
+    <value>På en bildkarta är X och Y rummets mitt, och bredd och höjd dess storlek, i bildens pixlar. Ett rum utan storlek är {0} brett.</value>
+  </data>
   <data name="NavMapNotRun" xml:space="preserve">
     <value>inte kört</value>
   </data>

@@ -6734,6 +6734,21 @@
   <data name="NavMapNoWayIn" xml:space="preserve">
     <value>В {0} нет входа.</value>
   </data>
+  <data name="NavMapOneWay" xml:space="preserve">
+    <value>В одну сторону: ничто в {0} не ведёт обратно в {1}. Игрок, ушедший туда, не вернётся тем же путём.</value>
+  </data>
+  <data name="NavMapOneWayCheck" xml:space="preserve">
+    <value>{0} ведёт из {1} в {2}, но обратного выхода нет.</value>
+  </data>
+  <data name="NavMapNoOpposite" xml:space="preserve">
+    <value>В {0} нет выхода {1} обратно в {2}. Игрок, ушедший через {3}, ждёт, что {1} вернёт его.</value>
+  </data>
+  <data name="NavMapNoOppositeCheck" xml:space="preserve">
+    <value>{0} ведёт из {1} в {2}, но обратного выхода {3} нет.</value>
+  </data>
+  <data name="NavMapPictureUnits" xml:space="preserve">
+    <value>На карте-картинке X и Y — центр комнаты, а ширина и высота — её размер, в пикселях картинки. Комната без размера шириной {0}.</value>
+  </data>
   <data name="NavMapNotRun" xml:space="preserve">
     <value>не выполнено</value>
   </data>

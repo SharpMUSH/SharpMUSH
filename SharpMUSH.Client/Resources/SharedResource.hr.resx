@@ -6734,6 +6734,21 @@
   <data name="NavMapNoWayIn" xml:space="preserve">
     <value>{0} nema ulaz.</value>
   </data>
+  <data name="NavMapOneWay" xml:space="preserve">
+    <value>Jednosmjerno: ništa u {0} ne vodi natrag u {1}. Igrač koji ode tamo ne može se vratiti istim putem.</value>
+  </data>
+  <data name="NavMapOneWayCheck" xml:space="preserve">
+    <value>{0} vodi iz {1} u {2}, ali nijedan izlaz ne vodi natrag.</value>
+  </data>
+  <data name="NavMapNoOpposite" xml:space="preserve">
+    <value>{0} nema {1} natrag u {2}. Igrač koji ode {3} očekuje da ga {1} vrati.</value>
+  </data>
+  <data name="NavMapNoOppositeCheck" xml:space="preserve">
+    <value>{0} vodi iz {1} u {2}, ali nijedan {3} ne vodi natrag.</value>
+  </data>
+  <data name="NavMapPictureUnits" xml:space="preserve">
+    <value>Na karti sa slikom X i Y su središte sobe, a širina i visina njezina veličina, u pikselima slike. Soba bez veličine široka je {0}.</value>
+  </data>
   <data name="NavMapNotRun" xml:space="preserve">
     <value>nije pokrenuto</value>
   </data>

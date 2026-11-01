@@ -10193,6 +10193,21 @@
   <data name="NavMapNoWayIn" xml:space="preserve">
     <value>{0} has no way in.</value>
   </data>
+  <data name="NavMapOneWay" xml:space="preserve">
+    <value>One way: nothing in {0} leads back to {1}. A player who goes there cannot return the same way.</value>
+  </data>
+  <data name="NavMapOneWayCheck" xml:space="preserve">
+    <value>{0} leads from {1} to {2}, but no exit leads back.</value>
+  </data>
+  <data name="NavMapNoOpposite" xml:space="preserve">
+    <value>{0} has no {1} leading back to {2}. A player who goes {3} expects {1} to bring them back.</value>
+  </data>
+  <data name="NavMapNoOppositeCheck" xml:space="preserve">
+    <value>{0} leads from {1} to {2}, but no {3} leads back.</value>
+  </data>
+  <data name="NavMapPictureUnits" xml:space="preserve">
+    <value>On a picture map, X and Y are a room's centre and width and height its size, in the picture's pixels. A room with no size is {0} across.</value>
+  </data>
   <data name="NavMapNotRun" xml:space="preserve">
     <value>not run</value>
   </data>

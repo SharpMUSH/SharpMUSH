@@ -6734,6 +6734,21 @@
   <data name="NavMapNoWayIn" xml:space="preserve">
     <value>{0} no tiene entrada.</value>
   </data>
+  <data name="NavMapOneWay" xml:space="preserve">
+    <value>Solo de ida: nada en {0} lleva de vuelta a {1}. Quien vaya allí no puede volver por el mismo camino.</value>
+  </data>
+  <data name="NavMapOneWayCheck" xml:space="preserve">
+    <value>{0} lleva de {1} a {2}, pero ninguna salida lleva de vuelta.</value>
+  </data>
+  <data name="NavMapNoOpposite" xml:space="preserve">
+    <value>{0} no tiene {1} de vuelta a {2}. Quien va por {3} espera que {1} lo traiga de vuelta.</value>
+  </data>
+  <data name="NavMapNoOppositeCheck" xml:space="preserve">
+    <value>{0} lleva de {1} a {2}, pero ningún {3} lleva de vuelta.</value>
+  </data>
+  <data name="NavMapPictureUnits" xml:space="preserve">
+    <value>En un mapa de imagen, X e Y son el centro de la sala, y el ancho y el alto su tamaño, en píxeles de la imagen. Una sala sin tamaño mide {0} de ancho.</value>
+  </data>
   <data name="NavMapNotRun" xml:space="preserve">
     <value>no ejecutado</value>
   </data>

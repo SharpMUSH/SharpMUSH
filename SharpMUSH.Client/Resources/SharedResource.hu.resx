@@ -6734,6 +6734,21 @@
   <data name="NavMapNoWayIn" xml:space="preserve">
     <value>{0} szobába nincs bejárat.</value>
   </data>
+  <data name="NavMapOneWay" xml:space="preserve">
+    <value>Egyirányú: semmi sem vezet vissza innen: {0}, ide: {1}. Aki odamegy, nem jöhet vissza ugyanazon az úton.</value>
+  </data>
+  <data name="NavMapOneWayCheck" xml:space="preserve">
+    <value>{0} innen: {1}, ide: {2} vezet, de nincs visszavezető kijárat.</value>
+  </data>
+  <data name="NavMapNoOpposite" xml:space="preserve">
+    <value>{0} helyről nincs {1} vissza ide: {2}. Aki a(z) {3} kijáraton megy, azt várja, hogy a(z) {1} visszahozza.</value>
+  </data>
+  <data name="NavMapNoOppositeCheck" xml:space="preserve">
+    <value>{0} innen: {1}, ide: {2} vezet, de nincs visszavezető {3}.</value>
+  </data>
+  <data name="NavMapPictureUnits" xml:space="preserve">
+    <value>Képtérképen az X és Y a szoba közepe, a szélesség és magasság a mérete, a kép képpontjaiban. A méret nélküli szoba {0} széles.</value>
+  </data>
   <data name="NavMapNotRun" xml:space="preserve">
     <value>nem futott</value>
   </data>

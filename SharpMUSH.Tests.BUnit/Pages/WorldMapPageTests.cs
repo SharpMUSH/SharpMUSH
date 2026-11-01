@@ -1244,6 +1244,20 @@ public class MapLayoutTests
 	}
 
 	[Test]
+	public async Task ARoomInsideAnotherIsDrawnOverIt()
+	{
+		// Room Zero sized 3 x 3 pixels at (1, 1), inside Room One's box at (0, 0): drawn first, it was hidden under it.
+		var layout = new MapLayout(Map(MapKinds.Graph, [new("#0", "Room Zero", [1, 1], [3, 3]), new("#87", "Room One", [0, 0], null)], []));
+
+		await Assert.That(layout.On(0).Select(room => room.Room.Id)).IsEquivalentTo(["#87", "#0"])
+			.Because("both are drawn");
+		await Assert.That(layout.On(0).First().Room.Id).IsEqualTo("#87").Because("the larger room is drawn first, so the smaller one stays in view");
+		await Assert.That(layout.Rooms["#0"].Width).IsEqualTo(MapLayout.MinGraphRoom)
+			.Because("a room a few pixels across is still drawn large enough to see and choose");
+		await Assert.That(layout.Rooms["#0"].X + layout.Rooms["#0"].Width / 2).IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task AnUnplacedRoomIsDrawnOnTheLevelItsExitsReach()
 	{
 		var layout = new MapLayout(Map(MapKinds.Coordinates,

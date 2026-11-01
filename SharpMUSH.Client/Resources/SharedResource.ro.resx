@@ -6734,6 +6734,21 @@
   <data name="NavMapNoWayIn" xml:space="preserve">
     <value>{0} nu are intrare.</value>
   </data>
+  <data name="NavMapOneWay" xml:space="preserve">
+    <value>Sens unic: nimic din {0} nu duce înapoi la {1}. Un jucător care merge acolo nu se poate întoarce pe același drum.</value>
+  </data>
+  <data name="NavMapOneWayCheck" xml:space="preserve">
+    <value>{0} duce din {1} la {2}, dar nicio ieșire nu duce înapoi.</value>
+  </data>
+  <data name="NavMapNoOpposite" xml:space="preserve">
+    <value>{0} nu are {1} înapoi spre {2}. Un jucător care merge {3} se așteaptă ca {1} să-l aducă înapoi.</value>
+  </data>
+  <data name="NavMapNoOppositeCheck" xml:space="preserve">
+    <value>{0} duce din {1} la {2}, dar niciun {3} nu duce înapoi.</value>
+  </data>
+  <data name="NavMapPictureUnits" xml:space="preserve">
+    <value>Pe o hartă-imagine, X și Y sunt centrul camerei, iar lățimea și înălțimea mărimea ei, în pixeli ai imaginii. O cameră fără mărime are {0} lățime.</value>
+  </data>
   <data name="NavMapNotRun" xml:space="preserve">
     <value>nerulat</value>
   </data>

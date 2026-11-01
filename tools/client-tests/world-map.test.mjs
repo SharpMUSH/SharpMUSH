@@ -49,9 +49,10 @@ function frame({ clientWidth, clientHeight, left = 0, top = 0 }, figure) {
     };
 }
 
-test('a frame has its width and the tallest it may grow, less the room kept below the drawing', () => {
-    const el = frame({ clientWidth: 1200, clientHeight: 300 }, { width: 500, height: 280 });
-    const map = load(new Map([[el, { maxHeight: '700px' }], [el.firstElementChild, { marginBottom: '28px' }]]));
+test('a frame has its own size for the drawing, less the room kept below it', () => {
+    // The frame's height is fixed, so a fit measures it rather than the drawing it holds.
+    const el = frame({ clientWidth: 1200, clientHeight: 700 }, { width: 500, height: 280 });
+    const map = load(new Map([[el.firstElementChild, { marginBottom: '28px' }]]));
 
     assert.deepEqual([...map.mapFrameSize(el)], [1200, 672]);
 });
@@ -75,6 +76,17 @@ test('a drawing that was narrower than its frame was centred in it, so its middl
     map.mapRescale(el, 2);
 
     assert.equal(el.scrollLeft, 100);
+});
+
+test('a drawing that was shorter than its frame was centred in it, so its middle is its own', () => {
+    // Drawing 300 tall in a 528-tall frame with 28 kept below sat 100 down; its middle (150) doubles to 300 in a
+    // 600-tall drawing, which the frame's middle (250) shows from 50.
+    const el = frame({ clientWidth: 1000, clientHeight: 528 }, { width: 2000, height: 600 });
+    const map = load(new Map([[el.firstElementChild, { marginBottom: '28px' }]]));
+
+    map.mapRescale(el, 2);
+
+    assert.equal(el.scrollTop, 50);
 });
 
 test('a room is brought to the middle of the view, at once for a reader who asked for less motion', () => {
