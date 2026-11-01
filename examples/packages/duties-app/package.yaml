@@ -1,0 +1,43 @@
+format: "1.16"
+package: duties-app
+title: "Duties in the portal"
+version: 1.0.0
+kind: application
+authors: [SharpMUSH]
+description: "Registers duties (the duties package) as a portal page at /apps/duties: the viewer's duties and a form to start one, a map editor for a duty's steps with guidance on what still needs work, and for duty reviewers the duties waiting for review, with notes pinned to steps and what changed since the approved version."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [portal, application, duties, editor, review]
+category: Roleplay
+requires_server: ">=0.1"
+
+# An application package owns no objects. The duties package serves the routes it points at:
+# GET /http/duties/schema and /http/duties/data, and POST /http/duties/act, /check and /note. Everything the
+# page shows, and every button on it, is decided by that softcode for the character viewing it.
+depends:
+  - package: duties
+    version: ">=1.1"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/duties/
+      branch: main
+
+# The installing admin chooses who may open the page, players by default.
+configure:
+  access:
+    label: "Minimum portal role that may open the page"
+    type: string
+    default: player
+
+# {path} is what follows /apps/duties/: nothing for the viewer's own duties, or a duty's id for its editor.
+application:
+  slug: duties
+  display_name: Duties
+  icon: explore
+  type: page
+  schema_url: http/duties/schema?at={path}
+  data_url: http/duties/data?at={path}
+  submit_route: http/duties/act
+  minimum_role: "{{?access}}"
+  nav_placement: Play
+  order: 55
