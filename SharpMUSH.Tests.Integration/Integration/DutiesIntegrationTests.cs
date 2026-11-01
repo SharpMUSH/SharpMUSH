@@ -146,6 +146,11 @@ public class DutiesIntegrationTests
 		await As(author, $"+duty/link {id}/hall/continue=loot");
 		await Assert.That(await Read(author, $"+duty/reward {id}/gate=coin once 5")).Contains("Reward 1 on gate: coin, once.");
 		await As(author, $"+duty/reward {id}/loot=info every The fire was set on purpose.");
+		await Assert.That(await Read(author, $"+duty/reward {id}/loot=info every success=100 The harbourmaster paid them."))
+			.Contains("Reward 3 on loot: info, every, at 100% success or more.");
+		await Assert.That(await Read(author, $"+duty/reward {id}/lost=info every success=101 Too much.")).Contains("success is 0 to 100");
+		await As(author, $"+duty/reward {id}/lost=info every success=50 The fire spread to the hall.");
+		await As(author, $"+duty/reward {id}/lost=info every The gate held.");
 		await Assert.That(await Read(author, $"+duty/check {id}")).Contains($"{id} is ready to submit");
 
 		await Assert.That(await Read(author, $"+duty/submit {id}")).Contains("waiting for a duty reviewer");
@@ -200,10 +205,11 @@ public class DutiesIntegrationTests
 			await Assert.That(await Read(ben, "+duty")).Contains("Waiting for");
 
 			var end = await Read(ana, "+duty/go");
-			await Assert.That(end).Contains("You learn: The fire was set on purpose.").And.Contains("It ends in success.");
+			await Assert.That(end).Contains("You learn: The fire was set on purpose.").And.Contains("It ends in success.")
+				.And.Contains("You learn: The harbourmaster paid them.").And.Contains("The party succeeded at 1 of 1 challenge (100%).");
 			await Assert.That(await Read(ana, "+duty")).DoesNotContain("A quiet hall.");
 			var progress = await Read(ana, $"+duty {id}");
-			await Assert.That(progress).Contains("2 of 2").And.Contains("1 of 1");
+			await Assert.That(progress).Contains("3 of 5").And.Contains("1 of 1");
 			await Assert.That(await Read(ana, $"+duty/info {id}")).Contains("The fire was set on purpose.");
 
 			// Coin is once: a second run gives the information again but not the coin.
@@ -212,6 +218,14 @@ public class DutiesIntegrationTests
 			var again = await Read(ana, "+duty/try force");
 			await Assert.That(again).Contains("You force it open.").And.DoesNotContain("GRANTED");
 			await Assert.That(await Read(ana, "+duty/go")).Contains("You learn:");
+
+			// A failed challenge leaves the party at 0%: the lost end gives what needs no success and holds back the rest.
+			await As(ana, $"+duty/start {id}");
+			await As(ana, "+duty/go");
+			await God($"&FATE #{ana.DbRef.Number}=lose");
+			var lost = await Read(ana, "+duty/try force");
+			await Assert.That(lost).Contains("You learn: The gate held.").And.DoesNotContain("The fire spread")
+				.And.Contains("It ends in failure. The party succeeded at 0 of 1 challenge (0%).");
 		}
 		finally
 		{
@@ -423,6 +437,8 @@ public class DutiesIntegrationTests
 		steps = new
 		{
 			start = "gate",
+			start_x = 47,
+			start_y = -66,
 			nodes = new object[]
 			{
 				new { key = "gate", kind = "challenge", label = "The gate", x = 10, y = 10, fields = new
@@ -438,7 +454,11 @@ public class DutiesIntegrationTests
 					rewards = new object[] { new { kind = "coin", repeat = "once", amount = 5 } },
 				} },
 				new { key = "hall", kind = "narration", label = "The hall", x = 10, y = 150, fields = new { text = "A quiet hall." } },
-				new { key = "loot", kind = "end", label = "Loot", x = 10, y = 300, fields = new { result = "success" } },
+				new { key = "loot", kind = "end", label = "Loot", x = 10, y = 300, fields = new
+				{
+					result = "success",
+					rewards = new object[] { new { kind = "info", repeat = "every", success = 60, text = "The harbourmaster paid them." } },
+				} },
 				new { key = "lost", kind = "end", label = "Lost", x = 200, y = 300, fields = new { result = "fail" } },
 			},
 			edges = new object[]
@@ -480,11 +500,17 @@ public class DutiesIntegrationTests
 			var data = (await GetAsync(author, $"data?at={id}"))["fields"]!;
 			var steps = data["steps"]!["value"]!;
 			await Assert.That(steps["start"]!.GetValue<string>()).IsEqualTo("gate");
+			await Assert.That(steps["start_x"]!.GetValue<int>()).IsEqualTo(47);
+			await Assert.That(steps["start_y"]!.GetValue<int>()).IsEqualTo(-66);
 			await Assert.That(steps["nodes"]!.AsArray().Count).IsEqualTo(4);
 			await Assert.That(steps["edges"]!.AsArray().Count).IsEqualTo(4);
 			var gate = steps["nodes"]!.AsArray().Single(n => n!["key"]!.GetValue<string>() == "gate")!;
 			await Assert.That(gate["fields"]!["options"]!.AsArray().Select(o => o!["id"]!.GetValue<string>())).IsEquivalentTo(["force", "o2"]);
 			await Assert.That(gate["fields"]!["rewards"]![0]!["amount"]!.GetValue<int>()).IsEqualTo(5);
+			await Assert.That(gate["fields"]!["rewards"]![0]!["success"]!.GetValue<int>()).IsEqualTo(0);
+			var loot = steps["nodes"]!.AsArray().Single(n => n!["key"]!.GetValue<string>() == "loot")!;
+			await Assert.That(loot["fields"]!["rewards"]![0]!["success"]!.GetValue<int>()).IsEqualTo(60);
+			await Assert.That(loot["fields"]!["rewards"]![0]!["text"]!.GetValue<string>()).IsEqualTo("The harbourmaster paid them.");
 			await Assert.That(data["issues"]!["value"]!["issues"]!.AsArray().Count).IsEqualTo(0);
 			// The same duty, in game.
 			await Assert.That(await As(staff, $"+duty/steps {id}")).Contains("gate (challenge) The gate");
