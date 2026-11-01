@@ -257,7 +257,9 @@
         }
 
         function onPointerDown(e) {
-            if (e.button !== 0 || drag) return;
+            // A second finger is a pinch: the map's own gestures take it, and the room goes back where it was.
+            if (drag) { if (e.pointerId !== drag.pointer) abandon(); return; }
+            if (e.button !== 0) return;
             var handle = e.target.closest && e.target.closest("[data-map-handle]");
             var room = !handle && e.target.closest && e.target.closest("[data-map-drag]");
             if ((!handle && !room) || !frame.contains(e.target)) return;
@@ -408,6 +410,11 @@
             if (e.key !== "Escape" || !drag) return;
             e.preventDefault();
             e.stopPropagation();
+            abandon();
+        }
+
+        // Ends the drag without a change, and keeps the click that ends it from choosing anything.
+        function abandon() {
             var moved = drag.moved;
             cancel();
             if (moved) {

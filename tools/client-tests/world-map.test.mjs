@@ -410,6 +410,22 @@ test('a drag on a square map snaps to whole cells, and Escape puts the room back
     assert.deepEqual(dotNet.calls, [['Dragged', '#1', 192, 0]]);
 });
 
+test('a second finger during a drag is a pinch: the room goes back and nothing is planned', () => {
+    const map = load();
+    const dotNet = asyncRecorder();
+    const { el, els } = editFrame([{ id: '#1', left: 0, top: 0, width: 96, height: 96, attrs: { 'data-map-drag': 'box' } }], { 'data-snap': '96' });
+    map.mapEdit(el, dotNet);
+
+    el.fire('pointerdown', event({ button: 0, pointerId: 1, clientX: 10, clientY: 10, target: els[0] }));
+    map.window.fire('pointermove', event({ pointerId: 1, clientX: 160, clientY: 20 }));
+    el.fire('pointerdown', event({ button: 0, pointerId: 2, clientX: 300, clientY: 300, target: els[0] }));
+    map.window.fire('pointermove', event({ pointerId: 1, clientX: 400, clientY: 20 }));
+    map.window.fire('pointerup', event({ pointerId: 1 }));
+
+    assert.deepEqual(dotNet.calls, []);
+    assert.equal(els[0].attrs.style, 'left: 1%;');
+});
+
 test('choosing a room shows the top of the builder panel below the map, and no more', () => {
     const scroller = { scrollHeight: 3000, clientHeight: 900, parentElement: null, getBoundingClientRect: () => ({ top: 0, bottom: 900 }), scrollBy(to) { this.scrolled = to; } };
     const panel = { parentElement: scroller, getBoundingClientRect: () => ({ top: 1400 }) };
