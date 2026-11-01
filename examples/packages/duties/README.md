@@ -11,7 +11,8 @@ supplies the traits, the roll and the rewards it can give. Without one, duties c
 checked or played.
 
 The [`duties-app`](../duties-app/) package adds the portal page `/apps/duties`, where duties are written
-on a map of their steps and reviewed. `duties` serves its routes on the HTTP handler.
+on a map of their steps and reviewed, and where reviewers manage the active roster. `duties` serves its
+routes on the HTTP handler.
 
 ## Playing
 

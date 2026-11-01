@@ -1,7 +1,7 @@
 format: "1.16"
 package: duties
 title: "Duties"
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "Duties: short adventures a party plays through with +duty, from challenge to challenge. Everyone rolls at each challenge, the outcome picks the way on, and the steps nobody in the party has seen are favoured. Players write duties and submit them, a duty reviewer approves them, and staff choose which approved duties are on the active roster and when. The rolls come from a sheet system's bridge, such as duties-d20 or duties-fate."
 license: MIT
@@ -400,16 +400,16 @@ objects:
       DO`NOTE: |-
         @assert cand(%q<eq>,eq(%q<pn>,2))=@pemit %#=notice(DUTY,+duty/note <duty>/<step>=<note>,warn); think setqm(do_viewer,%q<me>,do_id,%q<p1>,do_key,%q<p2>,do_text,%q<rhs>); @include/nobreak %!/INC`DO`NOTE; @include %!/INC`DO`TELL
       DO`RETIRE: |-
-        @include %!/INC`NEED`STAFF; think setq(p1,lcstr(%q<arg>)); @include %!/INC`NEED`DUTY; @assert get({{store}}/DUTY`%q<id>`LIVE)=@pemit %#=notice(DUTY,%q<id> has never been approved.,warn); &DUTY`%q<id>`RETIRED {{store}}=1; @pemit %#=notice(DUTY,%q<id> is retired. Parties already on it finish it.,ok)
+        think setqm(do_viewer,%q<me>,do_id,%q<arg>); @include/nobreak %!/INC`DO`RETIRE; @include %!/INC`DO`TELL
       DO`RESTORE: |-
-        @include %!/INC`NEED`STAFF; think setq(p1,lcstr(%q<arg>)); @include %!/INC`NEED`DUTY; @assert get({{store}}/DUTY`%q<id>`RETIRED)=@pemit %#=notice(DUTY,%q<id> is not retired.,warn); &DUTY`%q<id>`RETIRED {{store}}; @pemit %#=notice(DUTY,%q<id> is back among the approved duties.,ok)
+        think setqm(do_viewer,%q<me>,do_id,%q<arg>); @include/nobreak %!/INC`DO`RESTORE; @include %!/INC`DO`TELL
       DO`ROSTER: |-
-        @break not(strlen(%q<arg>))={@pemit %#=u(%!/FUN`SCREEN`ROSTERADMIN)}; @include %!/INC`NEED`STAFF; @include %!/INC`NEED`DUTY; @assert cand(%q<eq>,member(on off,lcstr(%q<rhs>)))=@pemit %#=notice(DUTY,+duty/roster %q<id>=on or off,warn); @assert cor(strmatch(lcstr(%q<rhs>),off),cand(get({{store}}/DUTY`%q<id>`LIVE),not(get({{store}}/DUTY`%q<id>`RETIRED))))=@pemit %#=notice(DUTY,Only an approved duty that is not retired goes on the roster.,warn); &ROSTER`%q<id> {{store}}=strmatch(lcstr(%q<rhs>),on); @pemit %#=notice(DUTY,%q<id> is [if(strmatch(lcstr(%q<rhs>),on),on,off)] the active roster.,ok)
+        @break not(strlen(%q<arg>))={@pemit %#=u(%!/FUN`SCREEN`ROSTERADMIN)}; think setqm(do_viewer,%q<me>,do_id,%q<p1>,do_text,if(%q<eq>,%q<rhs>)); @include/nobreak %!/INC`DO`ROSTER; @include %!/INC`DO`TELL
       # +duty/window <duty>=<from>,<to>[,yearly]; empty clears it.
       DO`WINDOW: |-
-        @include %!/INC`NEED`STAFF; @include %!/INC`NEED`DUTY; @assert %q<eq>=@pemit %#=notice(DUTY,+duty/window %q<id>=<from>%,<to>%[%,yearly%],warn); think setq(wy,strmatch(lcstr(trim(extract(%q<rhs>,3,1,%,))),yearly))[setq(wf,trim(extract(%q<rhs>,1,1,%,)))][setq(wt,trim(extract(%q<rhs>,2,1,%,)))]; @assert cand(u(%!/FUN`DATEOK,%q<wf>,%q<wy>),u(%!/FUN`DATEOK,%q<wt>,%q<wy>))=@pemit %#=notice(DUTY,if(%q<wy>,Yearly days are MM-DD%, such as 12-01.,Days are YYYY-MM-DD%, such as 2026-12-01%, or add %,yearly for MM-DD.),warn); &ROSTER`%q<id>`FROM {{store}}=%q<wf>; &ROSTER`%q<id>`TO {{store}}=%q<wt>; &ROSTER`%q<id>`YEARLY {{store}}=%q<wy>; @pemit %#=notice(DUTY,u(%!/FUN`WINDOW,%q<id>),ok)
+        think setqm(do_viewer,%q<me>,do_id,%q<p1>,do_set,%q<eq>,do_from,trim(extract(%q<rhs>,1,1,%,)),do_to,trim(extract(%q<rhs>,2,1,%,)),do_yearly,strmatch(lcstr(trim(extract(%q<rhs>,3,1,%,))),yearly)); @include/nobreak %!/INC`DO`WINDOW; @include %!/INC`DO`TELL
       DO`END: |-
-        @include %!/INC`NEED`STAFF; think setq(run,trim(%q<arg>)); @assert cand(isint(%q<run>),hasattr({{store}},RUN`%q<run>))=@pemit %#=notice(DUTY,There is no party %q<run>.,warn); think u(%!/FUN`RUNREGS,%q<run>); @include/args %!/INC`RUN`FINISH=why,A duty reviewer ends the duty. Nobody earns its rewards.; @pemit %#=notice(DUTY,Party %q<run> is ended.,ok)
+        think setqm(do_viewer,%q<me>,do_id,,do_run,%q<arg>); @include/nobreak %!/INC`DO`END; @include %!/INC`DO`TELL
 
       # ---- Writes --------------------------------------------------------------------------
       # Duty id has a revision to edit: a new one copied from the approved duty when it has none.
@@ -494,6 +494,9 @@ objects:
       # %0 a duty: 1 when players can start it now.
       FUN`ACTIVE: |-
         cand(get({{store}}/DUTY`%0`LIVE),not(get({{store}}/DUTY`%0`RETIRED)),get({{store}}/ROSTER`%0),u(%!/FUN`INWINDOW,%0))
+      # %0 a duty: the parties on it, gathering or playing.
+      FUN`RUNSOF: |-
+        squish(iter(lattr({{store}}/RUN`*),if(cand(eq(words(%i0,`),2),strmatch(get({{store}}/%i0),%0)),last(%i0,`))))
       # %0 a duty: 1 when today is inside its window, or it has none.
       FUN`INWINDOW: |-
         setq(wf,get({{store}}/ROSTER`%0`FROM))[setq(wt,get({{store}}/ROSTER`%0`TO))][setq(wd,timefmt(if(get({{store}}/ROSTER`%0`YEARLY),$m-$d,$Y-$m-$d)))][cond(not(strlen(%q<wf>)),cor(not(strlen(%q<wt>)),lte(comp(%q<wd>,%q<wt>),0)),not(strlen(%q<wt>)),gte(comp(%q<wd>,%q<wf>),0),lte(comp(%q<wf>,%q<wt>),0),cand(gte(comp(%q<wd>,%q<wf>),0),lte(comp(%q<wd>,%q<wt>),0)),cor(gte(comp(%q<wd>,%q<wf>),0),lte(comp(%q<wd>,%q<wt>),0)))]
@@ -724,13 +727,28 @@ objects:
       # A reviewer's note on one step (do_key), shown with it to the author. Empty removes it.
       INC`DO`NOTE: |-
         @include %!/INC`DO`BEGIN; @include %!/INC`DO`NEED`STAFF; @include %!/INC`DO`NEED; think setqm(root,u(%!/FUN`ROOT,%q<id>),key,lcstr(trim(%q<do_key>))); @assert u(%!/FUN`HASNODE,%q<root>,%q<key>)=think setq(do_msg,%q<id> has no step called %q<key>. +duty/show %q<id> lists them.); &%q<root>`REMARK`%q<key> {{store}}=%q<do_text>; think setqm(do_ok,1,do_tone,ok,do_msg,if(strlen(%q<do_text>),Noted on %q<key>.,The note on %q<key> is gone.))
+      # Puts duty do_id on the active roster or takes it off (do_text on or off).
+      INC`DO`ROSTER: |-
+        @include %!/INC`DO`BEGIN; @include %!/INC`DO`NEED`STAFF; @include %!/INC`DO`NEED; think setq(do_on,lcstr(trim(%q<do_text>))); @assert member(on off,%q<do_on>)=think setq(do_msg,if(strlen(%q<sw>),+duty/roster %q<id>=on or off,Say on or off.)); @assert cor(strmatch(%q<do_on>,off),cand(get({{store}}/DUTY`%q<id>`LIVE),not(get({{store}}/DUTY`%q<id>`RETIRED))))=think setq(do_msg,Only an approved duty that is not retired goes on the roster.); &ROSTER`%q<id> {{store}}=strmatch(%q<do_on>,on); think setqm(do_ok,1,do_tone,ok,do_msg,%q<id> is %q<do_on> the active roster.)
+      # The days duty do_id is on the roster: do_from and do_to (YYYY-MM-DD, or MM-DD when do_yearly), either
+      # empty for no limit. do_set is 0 when the command had no =.
+      INC`DO`WINDOW: |-
+        @include %!/INC`DO`BEGIN; @include %!/INC`DO`NEED`STAFF; @include %!/INC`DO`NEED; @assert cor(not(strlen(%q<sw>)),%q<do_set>)=think setq(do_msg,+duty/window %q<id>=<from>%,<to>%[%,yearly%]); think setqm(wf,trim(%q<do_from>),wt,trim(%q<do_to>),wy,if(%q<do_yearly>,1,0)); @assert cand(u(%!/FUN`DATEOK,%q<wf>,%q<wy>),u(%!/FUN`DATEOK,%q<wt>,%q<wy>))=think setq(do_msg,if(%q<wy>,Yearly days are MM-DD%, such as 12-01.,Days are YYYY-MM-DD%, such as 2026-12-01[if(strlen(%q<sw>),%, or add %,yearly for MM-DD)].)); &ROSTER`%q<id>`FROM {{store}}=%q<wf>; &ROSTER`%q<id>`TO {{store}}=%q<wt>; &ROSTER`%q<id>`YEARLY {{store}}=%q<wy>; think setqm(do_ok,1,do_tone,ok,do_msg,u(%!/FUN`WINDOW,%q<id>))
+      INC`DO`RETIRE: |-
+        @include %!/INC`DO`BEGIN; @include %!/INC`DO`NEED`STAFF; @include %!/INC`DO`NEED; @assert get({{store}}/DUTY`%q<id>`LIVE)=think setq(do_msg,%q<id> has never been approved.); &DUTY`%q<id>`RETIRED {{store}}=1; think setqm(do_ok,1,do_tone,ok,do_msg,%q<id> is retired. Parties already on it finish it.)
+      INC`DO`RESTORE: |-
+        @include %!/INC`DO`BEGIN; @include %!/INC`DO`NEED`STAFF; @include %!/INC`DO`NEED; @assert get({{store}}/DUTY`%q<id>`RETIRED)=think setq(do_msg,%q<id> is not retired.); &DUTY`%q<id>`RETIRED {{store}}; think setqm(do_ok,1,do_tone,ok,do_msg,%q<id> is back among the approved duties.)
+      # Ends party do_run without rewards; when do_id names a duty, only a party on it.
+      INC`DO`END: |-
+        @include %!/INC`DO`BEGIN; @include %!/INC`DO`NEED`STAFF; think setq(run,trim(%q<do_run>)); @assert cand(isint(%q<run>),hasattr({{store}},RUN`%q<run>))=think setq(do_msg,There is no party %q<run>.); @assert cor(not(strlen(%q<do_id>)),strmatch(get({{store}}/RUN`%q<run>),lcstr(trim(%q<do_id>))))=think setq(do_msg,Party %q<run> is not on [lcstr(trim(%q<do_id>))].); think u(%!/FUN`RUNREGS,%q<run>); think setqm(do_ok,1,do_tone,ok,do_msg,Party %q<run> is ended.); @include/args %!/INC`RUN`FINISH=why,A duty reviewer ends the duty. Nobody earns its rewards.
 
       # ---- Portal ---------------------------------------------------------------------------
       # The duties-app package shows these at /apps/duties. The routes on the HTTP handler (at the end of the
       # package) read WEB`SCHEMA and WEB`DATA through u(), and run WEB`ACT here with @force, so writes run as
       # this object and their "Set." lines never reach the response. %<viewer> is the character the portal
       # signed in as. Pages, by the address after /apps/duties/: nothing, the viewer's duties, the ones
-      # waiting for review (for a reviewer) and a form to start one; a duty's id, its editor.
+      # waiting for review and the approved ones (for a reviewer) and a form to start one; a duty's id, its
+      # editor, with its roster for a reviewer once it is approved.
       #
       # The editor's steps are one graph field, steps: { start, nodes: [{ key, kind, label, x, y, fields }],
       # edges: [{ from, port, to, weight, min, max, share, requires }] }. A step's fields are text, seen,
@@ -774,15 +792,17 @@ objects:
         {"kind":"view","schema_version":1,"title":"","pages":[{"key":"main","title":"Duties","order":1,"sections":[{"name":"","order":1,"elements":[{"kind":"markdown","value":""}]}]}],"actions":{}}
       # %0 the viewer: their duties, the ones waiting for review when they review duties, and a new one.
       WEB`SCHEMA`HOME: |-
-        json(object,kind,json(string,form),schema_version,json(number,1),title,json(string,Duties),pages,json(array,json(object,key,json(string,main),title,json(string,Duties),order,json(number,1),sections,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`HOME`PLAY)%r[v(DATA`WEB`HOME`MINE)][if(u(%!/FUN`STAFF,%0),%r[v(DATA`WEB`HOME`REVIEW)])]%r[v(DATA`WEB`HOME`NEW)]))),actions,json(object,act,v(DATA`WEB`ACT)))
+        json(object,kind,json(string,form),schema_version,json(number,1),title,json(string,Duties),pages,json(array,json(object,key,json(string,main),title,json(string,Duties),order,json(number,1),sections,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`HOME`PLAY)%r[v(DATA`WEB`HOME`MINE)][if(u(%!/FUN`STAFF,%0),%r[v(DATA`WEB`HOME`REVIEW)]%r[v(DATA`WEB`HOME`ROSTER)])]%r[v(DATA`WEB`HOME`NEW)]))),actions,json(object,act,v(DATA`WEB`ACT)))
       DATA`WEB`HOME`PLAY: |-
         {"name":"Duties you can start","order":0,"elements":[{"kind":"table","rows_field":"play","empty":"No duties are on the active roster now.","columns":[{"key":"title","label":"Duty"},{"key":"id","label":"Id"},{"key":"about","label":"About"},{"key":"party","label":"Party"},{"key":"rewards","label":"Rewards"},{"key":"challenges","label":"Challenges seen"},{"key":"explored","label":"Explored"}]},{"kind":"markdown","value":"Start one in the game with `+duty/start` and its id. With the Duties in scenes package, `+duty/start/scene` plays it in a scene of its own."}]}
       DATA`WEB`HOME`MINE: |-
         {"name":"Your duties","order":1,"elements":[{"kind":"table","rows_field":"mine","empty":"You have not written a duty yet.","columns":[{"key":"title","label":"Duty","link":"/apps/duties/{id}"},{"key":"id","label":"Id"},{"key":"status","label":"Status","type":"chip","color_key":"color"}]}]}
       DATA`WEB`HOME`REVIEW: |-
         {"name":"Waiting for review","order":2,"elements":[{"kind":"table","rows_field":"review","empty":"No duty is waiting for review.","columns":[{"key":"title","label":"Duty","link":"/apps/duties/{id}"},{"key":"id","label":"Id"},{"key":"author","label":"Author"}]}]}
+      DATA`WEB`HOME`ROSTER: |-
+        {"name":"Approved duties","order":3,"elements":[{"kind":"table","rows_field":"approved","empty":"No duty has been approved yet.","columns":[{"key":"title","label":"Duty","link":"/apps/duties/{id}"},{"key":"id","label":"Id"},{"key":"roster","label":"Roster","type":"chip","color_key":"color"},{"key":"days","label":"Days"},{"key":"now","label":"Now"},{"key":"parties","label":"Parties"}]}]}
       DATA`WEB`HOME`NEW: |-
-        {"name":"Write a new duty","order":3,"columns":2,"elements":[{"kind":"field","key":"new_title","label":"Title","type":"text","validation":{"required":false,"max_length":80}},{"kind":"field","key":"new_id","label":"Id","type":"text","help":"A short name for commands: a letter, then letters, digits or _, 24 at most.","validation":{"required":false,"max_length":24}},{"kind":"button","label":"Create","action":"act","values":{"op":"create"},"color":"primary","variant":"filled"}]}
+        {"name":"Write a new duty","order":4,"columns":2,"elements":[{"kind":"field","key":"new_title","label":"Title","type":"text","validation":{"required":false,"max_length":80}},{"kind":"field","key":"new_id","label":"Id","type":"text","help":"A short name for commands: a letter, then letters, digits or _, 24 at most.","validation":{"required":false,"max_length":24}},{"kind":"button","label":"Create","action":"act","values":{"op":"create"},"color":"primary","variant":"filled"}]}
       DATA`WEB`ACT: |-
         {"transport":"http","method":"POST","route":"/http/duties/act","payload":"fields","on_error":{"bind_field_errors":true}}
       DATA`WEB`CHECK: |-
@@ -795,7 +815,7 @@ objects:
       WEB`SCHEMA`DUTY: |-
         setqm(web_state,get({{store}}/DUTY`%1`STATE),
         web_edit,cand(u(%!/FUN`CANEDIT,%0,%1),not(strmatch(get({{store}}/DUTY`%1`STATE),submitted))),
-        web_review,cand(u(%!/FUN`STAFF,%0),strmatch(get({{store}}/DUTY`%1`STATE),submitted)))[json(object,kind,json(string,form),schema_version,json(number,1),title,json(string,u(%!/FUN`TITLE,u(%!/FUN`ROOT,%1))),pages,json(array,json(object,key,json(string,main),title,json(string,Duty),order,json(number,1),sections,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`DUTY`STATUS)%r[v(if(%q<web_edit>,DATA`WEB`DUTY`ABOUT,DATA`WEB`DUTY`ABOUTVIEW))]%r[json(object,name,json(string,Steps),order,json(number,3),elements,json(array,u(%!/WEB`GRAPH`FIELD,%q<web_edit>,%q<web_review>)))]%r[u(%!/WEB`SCHEMA`BUTTONS,%0,%1)]))),actions,json(object,act,v(DATA`WEB`ACT),check,v(DATA`WEB`CHECK),note,v(DATA`WEB`NOTE)))]
+        web_review,cand(u(%!/FUN`STAFF,%0),strmatch(get({{store}}/DUTY`%1`STATE),submitted)))[json(object,kind,json(string,form),schema_version,json(number,1),title,json(string,u(%!/FUN`TITLE,u(%!/FUN`ROOT,%1))),pages,json(array,json(object,key,json(string,main),title,json(string,Duty),order,json(number,1),sections,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`DUTY`STATUS)%r[v(if(%q<web_edit>,DATA`WEB`DUTY`ABOUT,DATA`WEB`DUTY`ABOUTVIEW))]%r[json(object,name,json(string,Steps),order,json(number,3),elements,json(array,u(%!/WEB`GRAPH`FIELD,%q<web_edit>,%q<web_review>)))]%r[u(%!/WEB`SCHEMA`BUTTONS,%0,%1)][if(cand(u(%!/FUN`STAFF,%0),get({{store}}/DUTY`%1`LIVE)),%r[u(%!/WEB`SCHEMA`ROSTER,%1)])]))),actions,json(object,act,v(DATA`WEB`ACT),check,v(DATA`WEB`CHECK),note,v(DATA`WEB`NOTE)))]
       DATA`WEB`DUTY`STATUS: |-
         {"name":"","order":1,"elements":[{"kind":"keyvalue","fields":["Status","Reviewer's note"]}]}
       DATA`WEB`DUTY`ABOUT: |-
@@ -810,6 +830,26 @@ objects:
         json(object,kind,json(string,button),label,json(string,%0),action,json(string,act),values,json(object,op,json(string,%1)),color,json(string,%2),variant,json(string,if(match(primary success,%2),filled,outlined)),confirm,json(string,%3))
       DATA`WEB`RETURNNOTE: |-
         {"kind":"field","key":"return_note","label":"What needs changing","type":"textarea","help":"Sent to the author with the duty."}
+
+      # %0 an approved duty: for a reviewer, three sections: its place on the roster, the days it is on, and
+      # the parties on it.
+      WEB`SCHEMA`ROSTER: |-
+        setq(web_runs,u(%!/FUN`RUNSOF,%0))[json(object,name,json(string,On the roster),order,json(number,5),elements,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`ROSTER`STATE)%r[if(get({{store}}/DUTY`%0`RETIRED),u(%!/WEB`BUTTON,Restore,restore,success),if(get({{store}}/ROSTER`%0),u(%!/WEB`BUTTON,Take off the roster,rosteroff,warning),u(%!/WEB`BUTTON,Put on the roster,rosteron,success))%r[u(%!/WEB`BUTTON,Retire,retire,error,Retire %0? Players can no longer start it. Parties on it now finish it.)])]))][if(not(get({{store}}/DUTY`%0`RETIRED)),%r[json(object,name,json(string,The days it is on),order,json(number,6),columns,json(number,3),elements,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`ROSTER`FROM)%r[v(DATA`WEB`ROSTER`TO)]%r[v(DATA`WEB`ROSTER`YEARLY)]%r[u(%!/WEB`BUTTON,Save the days,window,primary)]))])]%r[json(object,name,json(string,Parties on it),order,json(number,7),elements,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`ROSTER`PARTIES)[if(words(%q<web_runs>),%r[json_fill(v(DATA`WEB`ROSTER`END),/options,u(%!/WEB`RUNOPTIONS,%q<web_runs>))]%r[u(%!/WEB`BUTTON,End the party,end,error,End this party? Nobody earns the duty's rewards.)])]))]
+      DATA`WEB`ROSTER`STATE: |-
+        {"kind":"keyvalue","fields":["Roster","Days","Now"]}
+      DATA`WEB`ROSTER`FROM: |-
+        {"kind":"field","key":"window_from","label":"From","type":"text","help":"YYYY-MM-DD, or MM-DD with Every year. Empty: no first day.","validation":{"required":false,"max_length":10}}
+      DATA`WEB`ROSTER`TO: |-
+        {"kind":"field","key":"window_to","label":"Until","type":"text","help":"The last day it is on, written the same way. Empty: no last day.","validation":{"required":false,"max_length":10}}
+      DATA`WEB`ROSTER`YEARLY: |-
+        {"kind":"field","key":"window_yearly","label":"Every year","type":"boolean"}
+      DATA`WEB`ROSTER`PARTIES: |-
+        {"kind":"table","rows_field":"parties","empty":"No party is on it.","columns":[{"key":"party","label":"Party"},{"key":"leader","label":"Leader"},{"key":"members","label":"Members"},{"key":"step","label":"Where they are"}]}
+      DATA`WEB`ROSTER`END: |-
+        {"kind":"field","key":"end_run","label":"Party to end","type":"select","options":[]}
+      # %0 parties: each as a choice for the party to end.
+      WEB`RUNOPTIONS: |-
+        u(%!/WEB`JSON`ARRAY,iter(%0,json(object,value,json(string,%i0),label,json(string,Party %i0%, led by [name(get({{store}}/RUN`%i0`LEADER))])),%b,%r))
 
       # The steps: a graph field, read-only unless %0, with pinned notes when %1 (a reviewer reviewing).
       WEB`GRAPH`FIELD: |-
@@ -858,18 +898,28 @@ objects:
       WEB`DATA: |-
         setq(web_at,lcstr(trim(%<at>,b,/)))[json(object,fields,switch(1,not(cand(strlen(%<viewer>),hastype(%<viewer>,player))),json(object),not(strlen(%q<web_at>)),u(%!/WEB`DATA`HOME,%<viewer>),not(cand(u(%!/FUN`EXISTS,%q<web_at>),u(%!/FUN`CANEDIT,%<viewer>,%q<web_at>))),json(object),u(%!/WEB`DATA`DUTY,%<viewer>,%q<web_at>)))]
       WEB`DATA`HOME: |-
-        u(%!/WEB`JSON`OBJECT,u(%!/WEB`JSON`MEMBER,play,u(%!/WEB`PLAYROWS,%0),1)%r[u(%!/WEB`JSON`MEMBER,mine,u(%!/WEB`ROWS,squish(iter(lattr({{store}}/DUTY`*),if(strmatch(get({{store}}/%i0`AUTHOR),objid(%0)),lcstr(last(%i0,`)))))),1)]%r[u(%!/WEB`JSON`MEMBER,review,u(%!/WEB`ROWS,squish(iter(lattr({{store}}/DUTY`*),if(strmatch(get({{store}}/%i0`STATE),submitted),lcstr(last(%i0,`)))))),u(%!/FUN`STAFF,%0))]%r[u(%!/WEB`JSON`MEMBER,new_id,json(string,),1)]%r[u(%!/WEB`JSON`MEMBER,new_title,json(string,),1)])
+        u(%!/WEB`JSON`OBJECT,u(%!/WEB`JSON`MEMBER,play,u(%!/WEB`PLAYROWS,%0),1)%r[u(%!/WEB`JSON`MEMBER,mine,u(%!/WEB`ROWS,squish(iter(lattr({{store}}/DUTY`*),if(strmatch(get({{store}}/%i0`AUTHOR),objid(%0)),lcstr(last(%i0,`)))))),1)]%r[u(%!/WEB`JSON`MEMBER,review,u(%!/WEB`ROWS,squish(iter(lattr({{store}}/DUTY`*),if(strmatch(get({{store}}/%i0`STATE),submitted),lcstr(last(%i0,`)))))),u(%!/FUN`STAFF,%0))]%r[u(%!/WEB`JSON`MEMBER,approved,u(%!/WEB`ROSTERROWS),u(%!/FUN`STAFF,%0))]%r[u(%!/WEB`JSON`MEMBER,new_id,json(string,),1)]%r[u(%!/WEB`JSON`MEMBER,new_title,json(string,),1)])
       # %0 the viewer: the duties on the active roster, with their progress, as the roster screen has them.
       WEB`PLAYROWS: |-
         setq(web_pk,u(%!/FUN`KEY,%0))[u(%!/WEB`JSON`ARRAY,iter(squish(iter(lattr({{store}}/DUTY`*),if(u(%!/FUN`ACTIVE,lcstr(last(%i0,`))),lcstr(last(%i0,`))))),u(%!/WEB`PLAYROW,%i0,u(%!/FUN`LIVEROOT,%i0)),%b,%r))]
       WEB`PLAYROW: |-
         json(object,id,json(string,%0),title,json(string,get({{store}}/%1)),about,json(string,get({{store}}/%1`DESC)),party,json(string,[get({{store}}/%1`MIN)]-[get({{store}}/%1`MAX)]),rewards,json(string,u(%!/FUN`REWARDCOUNT,%q<web_pk>,%0,%1)),challenges,json(string,u(%!/FUN`SEENCOUNT,%q<web_pk>,%0,%1)),explored,json(string,[u(%!/FUN`EXPLORED,%q<web_pk>,%0,%1)]%%))
+      # Every approved duty, with its place on the roster, for a reviewer.
+      WEB`ROSTERROWS: |-
+        u(%!/WEB`JSON`ARRAY,iter(squish(iter(lattr({{store}}/DUTY`*),if(get({{store}}/%i0`LIVE),lcstr(last(%i0,`))))),json(object,id,json(string,%i0),title,json(string,get({{store}}/[u(%!/FUN`LIVEROOT,%i0)])),roster,json(string,cond(get({{store}}/DUTY`%i0`RETIRED),Retired,get({{store}}/ROSTER`%i0),On,Off)),color,json(string,cond(get({{store}}/DUTY`%i0`RETIRED),default,get({{store}}/ROSTER`%i0),success,warning)),days,json(string,u(%!/FUN`WINDOW,%i0)),now,json(string,if(u(%!/FUN`ACTIVE,%i0),Can be started,-)),parties,json(string,words(u(%!/FUN`RUNSOF,%i0)))),%b,%r))
       WEB`ROWS: |-
         u(%!/WEB`JSON`ARRAY,iter(%0,json(object,id,json(string,%i0),title,json(string,u(%!/FUN`TITLE,u(%!/FUN`ROOT,%i0))),status,json(string,u(%!/FUN`STATUSLABEL,%i0)),color,json(string,switch(u(%!/FUN`STATUS,%i0),submitted,warning,returned,error,retired,default,approved,success,info)),author,json(string,name(get({{store}}/DUTY`%i0`AUTHOR)))),%b,%r))
       # %0 the viewer, %1 a duty: everything its editor shows.
       WEB`DATA`DUTY: |-
         setqm(web_root,u(%!/FUN`ROOT,%1),
-        web_note,get({{store}}/DUTY`%1`NOTE))[u(%!/WEB`JSON`OBJECT,u(%!/WEB`JSON`MEMBER,duty,json(string,%1),1)%r[u(%!/WEB`JSON`MEMBER,Status,json(string,u(%!/FUN`STATUSLABEL,%1)),1)]%r[u(%!/WEB`JSON`MEMBER,Reviewer's note,json(string,%q<web_note>),strlen(%q<web_note>))]%r[u(%!/WEB`JSON`MEMBER,title,json(string,get({{store}}/%q<web_root>)),1)]%r[u(%!/WEB`JSON`MEMBER,Title,json(string,get({{store}}/%q<web_root>)),1)]%r[u(%!/WEB`JSON`MEMBER,description,json(string,get({{store}}/%q<web_root>`DESC)),1)]%r[u(%!/WEB`JSON`MEMBER,Description,json(string,get({{store}}/%q<web_root>`DESC)),1)]%r[u(%!/WEB`JSON`MEMBER,min,json(number,firstof(get({{store}}/%q<web_root>`MIN),1)),1)]%r[u(%!/WEB`JSON`MEMBER,max,json(number,firstof(get({{store}}/%q<web_root>`MAX),1)),1)]%r[u(%!/WEB`JSON`MEMBER,Party,json(string,firstof(get({{store}}/%q<web_root>`MIN),1) to [firstof(get({{store}}/%q<web_root>`MAX),1)]),1)]%r[u(%!/WEB`JSON`MEMBER,repeat,json(string,firstof(get({{store}}/%q<web_root>`REPEAT),every)),1)]%r[u(%!/WEB`JSON`MEMBER,Each character can do it,json(string,if(strmatch(get({{store}}/%q<web_root>`REPEAT),once),Once,Again and again)),1)]%r[u(%!/WEB`JSON`MEMBER,steps,u(%!/WEB`STEPS,%q<web_root>),1)]%r[u(%!/WEB`JSON`MEMBER,notes,u(%!/WEB`NOTES,%q<web_root>),1)]%r[u(%!/WEB`JSON`MEMBER,changes,u(%!/WEB`CHANGES,%1),1)]%r[u(%!/WEB`JSON`MEMBER,issues,u(%!/WEB`ISSUES,%1,%q<web_root>),1)]%r[u(%!/WEB`JSON`MEMBER,return_note,json(string,),1)])]
+        web_note,get({{store}}/DUTY`%1`NOTE))[u(%!/WEB`JSON`OBJECT,u(%!/WEB`JSON`MEMBER,duty,json(string,%1),1)%r[u(%!/WEB`JSON`MEMBER,Status,json(string,u(%!/FUN`STATUSLABEL,%1)),1)]%r[u(%!/WEB`JSON`MEMBER,Reviewer's note,json(string,%q<web_note>),strlen(%q<web_note>))]%r[u(%!/WEB`JSON`MEMBER,title,json(string,get({{store}}/%q<web_root>)),1)]%r[u(%!/WEB`JSON`MEMBER,Title,json(string,get({{store}}/%q<web_root>)),1)]%r[u(%!/WEB`JSON`MEMBER,description,json(string,get({{store}}/%q<web_root>`DESC)),1)]%r[u(%!/WEB`JSON`MEMBER,Description,json(string,get({{store}}/%q<web_root>`DESC)),1)]%r[u(%!/WEB`JSON`MEMBER,min,json(number,firstof(get({{store}}/%q<web_root>`MIN),1)),1)]%r[u(%!/WEB`JSON`MEMBER,max,json(number,firstof(get({{store}}/%q<web_root>`MAX),1)),1)]%r[u(%!/WEB`JSON`MEMBER,Party,json(string,firstof(get({{store}}/%q<web_root>`MIN),1) to [firstof(get({{store}}/%q<web_root>`MAX),1)]),1)]%r[u(%!/WEB`JSON`MEMBER,repeat,json(string,firstof(get({{store}}/%q<web_root>`REPEAT),every)),1)]%r[u(%!/WEB`JSON`MEMBER,Each character can do it,json(string,if(strmatch(get({{store}}/%q<web_root>`REPEAT),once),Once,Again and again)),1)]%r[u(%!/WEB`JSON`MEMBER,steps,u(%!/WEB`STEPS,%q<web_root>),1)]%r[u(%!/WEB`JSON`MEMBER,notes,u(%!/WEB`NOTES,%q<web_root>),1)]%r[u(%!/WEB`JSON`MEMBER,changes,u(%!/WEB`CHANGES,%1),1)]%r[u(%!/WEB`JSON`MEMBER,issues,u(%!/WEB`ISSUES,%1,%q<web_root>),1)]%r[u(%!/WEB`JSON`MEMBER,return_note,json(string,),1)][if(cand(u(%!/FUN`STAFF,%0),get({{store}}/DUTY`%1`LIVE)),%r[u(%!/WEB`DATA`ROSTER,%1)])])]
+      # %0 an approved duty: what its roster section shows, a member a line.
+      WEB`DATA`ROSTER: |-
+        setq(web_runs,u(%!/FUN`RUNSOF,%0))[u(%!/WEB`JSON`MEMBER,Roster,json(string,cond(get({{store}}/DUTY`%0`RETIRED),Retired,get({{store}}/ROSTER`%0),On,Off)),1)]%r[u(%!/WEB`JSON`MEMBER,Days,json(string,u(%!/FUN`WINDOW,%0)),1)]%r[u(%!/WEB`JSON`MEMBER,Now,json(string,if(u(%!/FUN`ACTIVE,%0),Players can start it,Players cannot start it)),1)]%r[u(%!/WEB`JSON`MEMBER,window_from,json(string,get({{store}}/ROSTER`%0`FROM)),1)]%r[u(%!/WEB`JSON`MEMBER,window_to,json(string,get({{store}}/ROSTER`%0`TO)),1)]%r[u(%!/WEB`JSON`MEMBER,window_yearly,u(%!/WEB`JSON`BOOLEAN,get({{store}}/ROSTER`%0`YEARLY)),1)]%r[u(%!/WEB`JSON`MEMBER,parties,u(%!/WEB`JSON`ARRAY,iter(%q<web_runs>,u(%!/WEB`PARTYROW,%i0),%b,%r)),1)]%r[u(%!/WEB`JSON`MEMBER,end_run,json(string,first(%q<web_runs>)),1)]
+      # %0 a party: its row in the parties table.
+      WEB`PARTYROW: |-
+        setqm(web_pr,DUTY`[get({{store}}/RUN`%0)]`R[get({{store}}/RUN`%0`REV)],
+        web_pn,get({{store}}/RUN`%0`NODE))[json(object,party,json(string,%0),leader,json(string,name(get({{store}}/RUN`%0`LEADER))),members,json(string,iter(get({{store}}/RUN`%0`MEMBERS),name(%i0),%b,%,%b)),step,json(string,if(strmatch(get({{store}}/RUN`%0`STATE),lobby),Gathering,firstof(get({{store}}/%q<web_pr>`N`%q<web_pn>`LABEL),%q<web_pn>))))]
 
       # %0 a revision's root: its steps and links as the graph field holds them.
       WEB`STEPS: |-
@@ -915,13 +965,14 @@ objects:
         iter(trim(squish(%1,~),b,~),if(strlen(trim(%i0)),u(%!/WEB`JSON`PUT,json(object,severity,json(string,error),message,json(string,trim(%i0))),node,json(string,%0),strlen(%0))),~,%r)
 
       # actions: POST /http/duties/act, /check and /note, run with @force so the writes are this object's.
-      # %q<body> is the posted JSON: op (create, save, submit, withdraw, discard, approve or return; the
+      # %q<body> is the posted JSON: op (create, save, submit, withdraw, discard, approve, return, rosteron,
+      # rosteroff, window, retire, restore or end; the
       # route's own %<op> for check and note), duty and the fields. Each op leaves the answer in
       # %q<web_response>. Everything posted goes into registers, never into a command's text.
       WEB`ACT: |-
         think setqm(web_response,u(%!/WEB`RESULT`ERROR,Something went wrong.),
         web_op,lcstr(firstof(%<op>,u(%!/WEB`BODY`GET,op),save)),
-        web_viewer,%<viewer>); @assert cand(strlen(%q<web_viewer>),hastype(%q<web_viewer>,player))=think setq(web_response,u(%!/WEB`RESULT`ERROR,Sign in with a character first.)); @assert match(create save check submit withdraw discard approve return note,%q<web_op>)=think setq(web_response,u(%!/WEB`RESULT`ERROR,There is no such action.)); think setqm(do_viewer,objid(%q<web_viewer>),
+        web_viewer,%<viewer>); @assert cand(strlen(%q<web_viewer>),hastype(%q<web_viewer>,player))=think setq(web_response,u(%!/WEB`RESULT`ERROR,Sign in with a character first.)); @assert match(create save check submit withdraw discard approve return note rosteron rosteroff window retire restore end,%q<web_op>)=think setq(web_response,u(%!/WEB`RESULT`ERROR,There is no such action.)); think setqm(do_viewer,objid(%q<web_viewer>),
         do_id,u(%!/WEB`BODY`GET,duty),
         sw,); @include %!/WEB`ACT`%q<web_op>
       WEB`ACT`CREATE: |-
@@ -947,6 +998,23 @@ objects:
       WEB`ACT`NOTE: |-
         think setqm(do_key,u(%!/WEB`BODY`GET,node),
         do_text,u(%!/WEB`BODY`GET,text)); @include/nobreak %!/INC`DO`NOTE; @assert %q<do_ok>=think setq(web_response,u(%!/WEB`RESULT`FAIL)); think setq(web_response,u(%!/WEB`RESULT`PAGE,%q<do_msg>))
+      WEB`ACT`ROSTERON: |-
+        think setq(do_text,on); @include %!/INC`WEB`STAFFDO=ROSTER
+      WEB`ACT`ROSTEROFF: |-
+        think setq(do_text,off); @include %!/INC`WEB`STAFFDO=ROSTER
+      WEB`ACT`WINDOW: |-
+        think setqm(do_from,u(%!/WEB`BODY`GET,window_from),
+        do_to,u(%!/WEB`BODY`GET,window_to),
+        do_yearly,strmatch(u(%!/WEB`BODY`GET,window_yearly),true)); @include %!/INC`WEB`STAFFDO=WINDOW
+      WEB`ACT`RETIRE: |-
+        @include %!/INC`WEB`STAFFDO=RETIRE
+      WEB`ACT`RESTORE: |-
+        @include %!/INC`WEB`STAFFDO=RESTORE
+      WEB`ACT`END: |-
+        think setq(do_run,u(%!/WEB`BODY`GET,end_run)); @include %!/INC`WEB`STAFFDO=END
+      # Runs INC`DO`<%0> and answers with the page drawn again, or what it refused.
+      INC`WEB`STAFFDO: |-
+        @include/nobreak %!/INC`DO`%0; @assert %q<do_ok>=think setq(web_response,u(%!/WEB`RESULT`FAIL)); think setq(web_response,u(%!/WEB`RESULT`PAGE,%q<do_msg>))
 
       # Saves the posted duty (do_viewer, do_id, and the fields in %q<body>) into the revision being edited,
       # starting one from the approved duty when there is none. Nothing is written unless all of it passes.

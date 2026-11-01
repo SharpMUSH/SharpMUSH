@@ -604,8 +604,59 @@ public class DutiesIntegrationTests
 			await Assert.That(await As(staff, $"+duty {id}")).Contains("The Lantern Road").And.DoesNotContain("again");
 			await Assert.That((await ActAsync(author, "act", new { op = "discard", duty = id }))["ok"]!.GetValue<bool>()).IsTrue();
 
+			// A reviewer puts it on the active roster from the page; its author cannot.
+			await Assert.That((await ActAsync(author, "act", new { op = "rosteron", duty = id }))["errors"]!["_global"]!.GetValue<string>())
+				.Contains("Permission denied.");
+			await Assert.That((await GetAsync(author, $"schema?at={id}")).ToJsonString()).DoesNotContain("On the roster");
+			await Assert.That((await GetAsync(reviewer, $"schema?at={id}")).ToJsonString()).Contains("Put on the roster");
+			await Assert.That((await ActAsync(reviewer, "act", new { op = "rosteron", duty = id }))["message"]!.GetValue<string>())
+				.IsEqualTo($"{id} is on the active roster.");
+			var roster = (await GetAsync(reviewer, $"data?at={id}"))["fields"]!;
+			await Assert.That(roster["Roster"]!["value"]!.GetValue<string>()).IsEqualTo("On");
+			await Assert.That(roster["Now"]!["value"]!.GetValue<string>()).IsEqualTo("Players can start it");
+			await Assert.That((await GetAsync(reviewer, $"schema?at={id}")).ToJsonString()).Contains("Take off the roster");
+			var approved = (await GetAsync(reviewer, "data?at="))["fields"]!["approved"]!;
+			await Assert.That(approved["visible"]!.GetValue<bool>()).IsTrue();
+			var row = approved["value"]!.AsArray().Single(r => r!["id"]!.GetValue<string>() == id)!;
+			await Assert.That(row["roster"]!.GetValue<string>()).IsEqualTo("On");
+			await Assert.That(row["parties"]!.GetValue<string>()).IsEqualTo("0");
+			await Assert.That((await GetAsync(author, "data?at="))["fields"]!["approved"]!["visible"]!.GetValue<bool>()).IsFalse();
+
+			// Its days: a bad one is refused with the form to use, a good one shown back.
+			await Assert.That((await ActAsync(reviewer, "act", new { op = "window", duty = id, window_from = "12-01", window_to = "", window_yearly = false }))
+				["errors"]!["_global"]!.GetValue<string>()).Contains("Days are YYYY-MM-DD");
+			await Assert.That((await ActAsync(reviewer, "act", new { op = "window", duty = id, window_from = "01-01", window_to = "12-31", window_yearly = true }))
+				["message"]!.GetValue<string>()).IsEqualTo("From 01-01 to 12-31 every year");
+			roster = (await GetAsync(reviewer, $"data?at={id}"))["fields"]!;
+			await Assert.That(roster["window_from"]!["value"]!.GetValue<string>()).IsEqualTo("01-01");
+			await Assert.That(roster["window_yearly"]!["value"]!.GetValue<bool>()).IsTrue();
+			await Assert.That(roster["Now"]!["value"]!.GetValue<string>()).IsEqualTo("Players can start it");
+
+			// A party gathers on it in the game; the reviewer sees it and ends it.
+			await Assert.That(await Read(staff, $"+duty/start {id}")).Contains("You gather a party for The Lantern Road.");
+			roster = (await GetAsync(reviewer, $"data?at={id}"))["fields"]!;
+			var party = roster["parties"]!["value"]!.AsArray().Single()!;
+			await Assert.That(party["leader"]!.GetValue<string>()).IsEqualTo(staff.Name);
+			await Assert.That(party["step"]!.GetValue<string>()).IsEqualTo("Gathering");
+			var run = party["party"]!.GetValue<string>();
+			await Assert.That(roster["end_run"]!["value"]!.GetValue<string>()).IsEqualTo(run);
+			await Assert.That((await GetAsync(reviewer, $"schema?at={id}")).ToJsonString()).Contains("End the party");
+			await Assert.That((await ActAsync(reviewer, "act", new { op = "end", duty = id, end_run = "999999" }))["errors"]!["_global"]!.GetValue<string>())
+				.Contains("There is no party 999999.");
+			await Assert.That((await ActAsync(reviewer, "act", new { op = "end", duty = id, end_run = run }))["message"]!.GetValue<string>())
+				.IsEqualTo($"Party {run} is ended.");
+			await Assert.That((await GetAsync(reviewer, $"data?at={id}"))["fields"]!["parties"]!["value"]!.AsArray().Count).IsEqualTo(0);
+
+			// Retired, players cannot start it until it is restored.
+			await Assert.That((await ActAsync(reviewer, "act", new { op = "retire", duty = id }))["message"]!.GetValue<string>()).Contains($"{id} is retired.");
+			roster = (await GetAsync(reviewer, $"data?at={id}"))["fields"]!;
+			await Assert.That(roster["Roster"]!["value"]!.GetValue<string>()).IsEqualTo("Retired");
+			await Assert.That(roster["Now"]!["value"]!.GetValue<string>()).IsEqualTo("Players cannot start it");
+			await Assert.That((await GetAsync(reviewer, $"schema?at={id}")).ToJsonString()).Contains("Restore").And.DoesNotContain("Put on the roster");
+			await Assert.That((await ActAsync(reviewer, "act", new { op = "restore", duty = id }))["message"]!.GetValue<string>())
+				.Contains("back among the approved duties");
+
 			// On the active roster, every player sees it among the duties they can start, with their progress.
-			await As(staff, $"+duty/roster {id}=on");
 			var play = (await GetAsync(other, "data?at="))["fields"]!["play"]!["value"]!.AsArray()
 				.Single(row => row!["id"]!.GetValue<string>() == id)!;
 			await Assert.That(play["title"]!.GetValue<string>()).IsEqualTo("The Lantern Road");
