@@ -11,7 +11,7 @@ public class DutiesSchemaTests
 		var dir = new DirectoryInfo(AppContext.BaseDirectory);
 		while (dir is not null)
 		{
-			var candidate = Path.Combine(dir.FullName, "examples", "packages");
+			var candidate = Path.Join(dir.FullName, "examples", "packages");
 			if (Directory.Exists(candidate))
 			{
 				return candidate;
