@@ -64,7 +64,7 @@ Each handler ends by emitting JSON:
 ```
 
 **Field types:** `text`, `textarea`, `mstring`, `number`, `select`, `multiselect`, `list`,
-`boolean`, `radio`, `slider`, `date`, `hidden`, `computed`. `mstring` fields render your
+`rows`, `graph`, `boolean`, `radio`, `slider`, `date`, `hidden`, `computed`. `mstring` fields render your
 ANSI/MXP markup. `select`/`radio`/`multiselect` carry an `options` array of
 `{value,label}`. A `list` is free text, one value at a time, each shown as a chip that can be
 removed; a value may hold a comma. Give it a JSON array in the data, and it posts one back:
@@ -168,6 +168,89 @@ on mobile); give an element `span: N` to make it occupy N of those columns:
   { "kind": "field", "key": "notes", "label": "Notes", "type": "textarea", "span": 3 }
 ]}
 ```
+
+## Rows and graphs
+
+**Rows.** A `rows` field is a list of objects. Each row shows its `item_fields` side by side, with
+buttons to move it up or down and to remove it; "Add a row" starts a new row from each item field's
+default. When the item fields include a `hidden` field keyed `id`, a new row gets the next number,
+so something else can point at the row.
+
+```jsonc
+{ "kind": "field", "key": "options", "label": "Ways to beat it", "type": "rows", "item_fields": [
+  { "kind": "field", "key": "id", "type": "hidden" },
+  { "kind": "field", "key": "trait", "label": "Trait", "type": "select", "options": [ ... ] },
+  { "kind": "field", "key": "successes", "label": "Successes needed", "type": "number", "default": 1 },
+  { "kind": "field", "key": "trained", "label": "Must be trained", "type": "boolean" } ] }
+```
+
+The value is a JSON array of objects, posted back the same way.
+
+**Graphs.** A `graph` field edits steps joined by outcomes: a map to drag steps around, an outline
+that reads the same graph as a list (the only view on a phone, and the one a screen reader uses), and
+a panel for the selected step. Its `graph` object says what steps exist:
+
+```jsonc
+{ "kind": "field", "key": "draft", "label": "Steps", "type": "graph", "graph": {
+  "kinds": [
+    { "key": "challenge", "label": "Challenge", "tone": "primary",
+      "help": "Everyone rolls one of the ways to beat it.",
+      "fields": [ { "kind": "field", "key": "text", "label": "What players read", "type": "textarea" },
+                  { "kind": "field", "key": "options", "label": "Ways to beat it", "type": "rows", ... } ],
+      "ports": [
+        { "key": "success", "label": "Success", "tone": "success", "required": true, "many": true,
+          "edge_fields": [ { "kind": "field", "key": "weight", "label": "Weight", "type": "number", "default": 1 },
+                           { "kind": "field", "key": "requires", "label": "Needs this roll",
+                             "type": "select", "options_from": "options" } ] },
+        { "key": "fail", "label": "Fail", "tone": "error", "required": true } ] },
+    { "key": "end", "label": "End", "tone": "warning",
+      "fields": [ { "kind": "field", "key": "rewards", "label": "Rewards", "type": "list" } ] } ],
+  "check": "check",
+  "issues_field": "issues", "notes_field": "notes", "changes_field": "changes",
+  "note_action": "note",
+  "readonly": false } }
+```
+
+- A **kind** is a type of step. Its `fields` are the step's settings, drawn with the same inputs as
+  the form's own fields. Its `ports` are its outcomes; a kind with no ports ends the graph. `tone`
+  colours the kind and its lines: one of the portal's tone names, such as `primary`, `info`,
+  `success`, `warning`, `error` or `muted`.
+- A **port** leads to one step, or with `many` to several, one of which is picked at run time; softcode
+  decides how. `edge_fields` are settings on each link, such as a weight or a condition. A select with
+  `options_from` lists the rows of that field on the step the link leaves (by their `id`), so a link
+  can name one of the step's rolls.
+- `check` names an action. The Check button dispatches it with the form's values; return the
+  guidance in `data` under `issues_field`.
+- `notes_field` and `changes_field` show a reviewer's notes and what a revision changed. With
+  `note_action`, a reviewer can pin a note to a step: the action posts `node` and `text`.
+- `readonly` shows the graph without letting anyone change it. A `view` always shows it read-only.
+
+The value is one object. Keys the editor does not know about are kept as they are, on the graph, on
+each step and on each link:
+
+```jsonc
+{ "start": "gate",
+  "nodes": [ { "key": "gate", "kind": "narration", "label": "The lantern at the gate", "x": 16, "y": 16,
+               "fields": { "text": "A grinning lantern hangs from the old gate." } }, ... ],
+  "edges": [ { "from": "gate", "port": "continue", "to": "bog" },
+             { "from": "bog", "port": "success", "to": "hollow", "requires": "3" }, ... ] }
+```
+
+A step's key is lower-case letters, digits, `_` and `-`; renaming a step carries its links with it.
+Guidance is a list, or `{ "issues": [...], "hints": [...] }` where a hint is a line of text:
+
+```jsonc
+{ "issues": [ { "edge": "riddle/fail", "severity": "error", "message": "The fail outcome goes nowhere." },
+              { "node": "win", "severity": "warning", "message": "60 coin is above the cap of 50." } ],
+  "hints": [ "A challenge with one way to beat it is easy to stall on." ] }
+```
+
+`severity` is `error`, `warning` or `hint`. A line naming a `node`, or an `edge` as `step/port`, shows on
+that step and links to it. Notes are `[{ node, edge, author, text }]` and changes
+`[{ node, change, text }]`, `change` being `added` or `changed`.
+
+The `graph` field and the `graph` display element are different things: the display element draws a
+read-only diagram from `{nodes,edges}` in another field.
 
 ## The action response envelope (what `POST` routes return)
 

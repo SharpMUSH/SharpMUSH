@@ -1,0 +1,28 @@
+.schema-rows-list {
+	list-style: none;
+	margin: 4px 0;
+	padding: 0;
+	display: grid;
+	gap: 6px;
+}
+
+.schema-row {
+	display: grid;
+	gap: 0;
+	padding: 0 4px 0 8px;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+}
+
+.schema-row-fields {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+	gap: 0 8px;
+	min-width: 0;
+}
+
+.schema-row-tools {
+	order: -1;
+	display: flex;
+	justify-content: flex-end;
+}

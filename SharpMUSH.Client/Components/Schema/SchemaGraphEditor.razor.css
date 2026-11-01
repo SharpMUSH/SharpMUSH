@@ -1,0 +1,462 @@
+.graph-editor {
+	--graph-node-width: 172px;
+	--graph-node-height: 68px;
+	display: grid;
+	gap: 0;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+	overflow: hidden;
+}
+
+.graph-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--border);
+}
+
+.graph-toolbar-spacer {
+	flex: 1;
+}
+
+.graph-views {
+	display: inline-flex;
+	gap: 2px;
+	padding: 2px;
+	border-radius: 6px;
+	background: var(--surface-2);
+}
+
+.graph-view-button {
+	font: 600 12px var(--font-ui);
+	padding: 4px 10px;
+	border: 0;
+	border-radius: 4px;
+	background: transparent;
+	color: var(--text-dim);
+	cursor: pointer;
+	transition: background-color var(--motion-fade), color var(--motion-fade);
+}
+
+.graph-view-button[aria-pressed="true"] {
+	background: var(--surface);
+	color: var(--text);
+}
+
+.graph-add {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+::deep .graph-add-button {
+	border-color: var(--graph-tone, var(--border));
+}
+
+.graph-body {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 360px;
+}
+
+.graph-main {
+	min-width: 0;
+	display: grid;
+	align-content: start;
+}
+
+.graph-inspector {
+	border-left: 1px solid var(--border);
+	padding: 12px;
+	display: grid;
+	gap: 8px;
+	align-content: start;
+	min-width: 0;
+}
+
+.graph-inspector-fields {
+	border: 0;
+	padding: 0;
+	margin: 0;
+	min-width: 0;
+}
+
+.graph-inspector-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.graph-inspector-kind,
+.graph-node-kind,
+.graph-outline-kind {
+	font: 600 11px var(--font-mono);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--graph-tone, var(--text-dim));
+}
+
+.graph-heading {
+	font-size: 13px;
+	font-weight: 600;
+	margin: 8px 0 4px;
+}
+
+.graph-empty {
+	padding: 24px 16px;
+}
+
+/* The map: steps over the lines that join them, on a dotted ground that scrolls both ways. */
+.graph-map {
+	overflow: auto;
+	max-height: 70vh;
+	background:
+		radial-gradient(circle, var(--border) 1px, transparent 1.2px) 0 0 / 22px 22px,
+		var(--surface-3);
+}
+
+.graph-canvas {
+	position: relative;
+}
+
+.graph-lines {
+	position: absolute;
+	inset: 0;
+	overflow: visible;
+}
+
+.graph-line {
+	fill: none;
+	stroke: var(--text-dim);
+	stroke-width: 2;
+}
+
+.graph-arrow {
+	fill: var(--text-dim);
+}
+
+.graph-line-label {
+	font: 600 10.5px var(--font-mono);
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	text-anchor: middle;
+	dominant-baseline: central;
+	fill: var(--text-dim);
+	paint-order: stroke;
+	stroke: var(--surface-3);
+	stroke-width: 5px;
+	stroke-linejoin: round;
+}
+
+.graph-node {
+	position: absolute;
+	width: var(--graph-node-width);
+	height: var(--graph-node-height);
+	box-sizing: border-box;
+	display: grid;
+	align-content: start;
+	justify-items: start;
+	gap: 2px;
+	padding: 8px 10px;
+	text-align: start;
+	font: inherit;
+	color: var(--text);
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-top: 3px solid var(--graph-tone, var(--text-dim));
+	border-radius: 8px;
+	cursor: pointer;
+	user-select: none;
+	transition: border-color var(--motion-fade), box-shadow var(--motion-fade);
+}
+
+.graph-node--movable {
+	cursor: grab;
+	touch-action: none;
+}
+
+.graph-node--selected {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 1px var(--accent);
+}
+
+.graph-node--added {
+	box-shadow: 0 0 0 2px var(--success);
+}
+
+.graph-node--changed {
+	box-shadow: 0 0 0 2px var(--warn);
+}
+
+.graph-node:focus-visible,
+.graph-outline-head:focus-visible,
+.graph-view-button:focus-visible,
+.graph-link:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.graph-node-kind {
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.graph-node-start {
+	color: var(--accent);
+	margin-inline-end: 4px;
+}
+
+.graph-node-label {
+	font-weight: 600;
+	font-size: 13.5px;
+	line-height: 1.3;
+	overflow: hidden;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+}
+
+.graph-badge {
+	position: absolute;
+	top: -9px;
+	right: -7px;
+	min-width: 18px;
+	height: 18px;
+	padding: 0 4px;
+	box-sizing: border-box;
+	border-radius: 9px;
+	font: 700 11px/18px var(--font-mono);
+	text-align: center;
+	color: var(--bg);
+}
+
+.graph-badge--issue {
+	background: var(--warn);
+}
+
+.graph-badge--note {
+	background: var(--accent);
+}
+
+.graph-badge--inline {
+	position: static;
+	height: auto;
+	line-height: 1.5;
+}
+
+/* The outline: the same graph as a list, in reading order. */
+.graph-outline {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.graph-editor--map .graph-outline {
+	display: none;
+}
+
+.graph-outline-step {
+	border-bottom: 1px solid var(--border);
+	border-left: 3px solid var(--graph-tone, var(--text-dim));
+	padding: 8px 12px;
+}
+
+.graph-outline-step--selected {
+	background: var(--surface-2);
+}
+
+.graph-outline-head {
+	all: unset;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 8px;
+	cursor: pointer;
+	width: 100%;
+}
+
+.graph-outline-label {
+	font-weight: 600;
+}
+
+.graph-outline-ports li {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: baseline;
+}
+
+.graph-outline-ports {
+	list-style: none;
+	margin: 4px 0 0;
+	padding: 0;
+	display: grid;
+	gap: 2px;
+	font-size: 13px;
+	color: var(--text-dim);
+}
+
+.graph-port {
+	font: 600 10.5px var(--font-mono);
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.graph-nowhere {
+	color: var(--warn);
+}
+
+.graph-change {
+	font-size: 12px;
+	margin: 0;
+}
+
+.graph-change--added {
+	color: var(--success);
+}
+
+.graph-change--changed {
+	color: var(--warn);
+}
+
+/* Guidance, under the map and on the selected step. */
+.graph-guidance {
+	border-top: 1px solid var(--border);
+	padding: 10px 12px;
+}
+
+.graph-guidance ul,
+ul.graph-guidance {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: 4px;
+}
+
+ul.graph-guidance--step {
+	border-top: 0;
+	padding: 0;
+}
+
+.graph-issue {
+	display: grid;
+	grid-template-columns: 14px minmax(0, 1fr);
+	gap: 6px;
+	font-size: 13px;
+}
+
+.graph-issue-mark {
+	font: 700 12px var(--font-mono);
+	text-align: center;
+}
+
+.graph-issue--error .graph-issue-mark {
+	color: var(--danger);
+}
+
+.graph-issue--warning .graph-issue-mark {
+	color: var(--warn);
+}
+
+.graph-issue--hint .graph-issue-mark {
+	color: var(--text-dim);
+}
+
+.graph-link {
+	all: unset;
+	cursor: pointer;
+	text-decoration: underline;
+	text-decoration-color: var(--border);
+	text-underline-offset: 3px;
+}
+
+.graph-note {
+	display: grid;
+	gap: 2px;
+	padding: 8px 10px;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	background: var(--surface-2);
+	font-size: 13px;
+}
+
+.graph-note-author {
+	font: 11px var(--font-mono);
+	color: var(--text-faint);
+}
+
+/* Below a tablet the inspector goes under the map; on a phone the outline stands in for the map. */
+@container page (max-width: 64rem) {
+	.graph-body {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.graph-inspector {
+		border-left: 0;
+		border-top: 1px solid var(--border);
+	}
+}
+
+@container page (max-width: 48rem) {
+	.graph-views,
+	.graph-map,
+	::deep .graph-tidy {
+		display: none;
+	}
+
+	.graph-editor--map .graph-outline {
+		display: block;
+	}
+}
+
+/* An outcome that may lead to several steps. */
+.graph-pool {
+	display: grid;
+	gap: 4px;
+	margin-bottom: 8px;
+}
+
+.graph-pool-port {
+	color: var(--graph-tone, var(--text-dim));
+}
+
+.graph-pool-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: 4px;
+}
+
+.graph-pool-row {
+	display: grid;
+	gap: 4px;
+	padding: 4px 4px 0 8px;
+	border-left: 2px solid var(--graph-tone, var(--border));
+	font-size: 13px;
+}
+
+.graph-pool-head {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 6px;
+}
+
+.graph-edge-fields {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+	gap: 0 8px;
+}
+
+.graph-pool-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}

@@ -1,0 +1,717 @@
+@using System.Globalization
+@using System.Text.Json
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Components.Scenes
+@inject IStringLocalizer<SharedResource> Loc
+
+@* A graph field: steps joined by their outcomes, edited on a map or as an outline. The schema declares every
+   kind of step, the outcomes leaving it and the fields it holds; softcode's Check answers with the guidance.
+   The map is for pointers. The outline holds every edit too, and is what a phone or a screen reader gets. *@
+
+<div class="@($"graph-editor graph-editor--{_view}")">
+    <div class="graph-toolbar">
+        <div class="graph-views" role="group" aria-label="@Loc["WidGraphView"]">
+            <button type="button" class="graph-view-button" aria-pressed="@(_view == "map" ? "true" : "false")" @onclick="@(() => _view = "map")">@Loc["WidGraphMap"]</button>
+            <button type="button" class="graph-view-button" aria-pressed="@(_view == "outline" ? "true" : "false")" @onclick="@(() => _view = "outline")">@Loc["WidGraphOutline"]</button>
+        </div>
+        @if (!Locked)
+        {
+            <div class="graph-add" role="group" aria-label="@Loc["WidGraphAdd"]">
+                @foreach (var kind in Kinds)
+                {
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add"
+                               title="@kind.Help" Style="@ToneVar(kind.Tone)" Class="graph-add-button"
+                               OnClick="() => AddAsync(kind)">@KindLabel(kind.Key)</MudButton>
+                }
+            </div>
+        }
+        <span class="graph-toolbar-spacer"></span>
+        @if (!Locked && _draft.Nodes.Count > 1)
+        {
+            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.AccountTree" Class="graph-tidy" OnClick="TidyAsync">@Loc["WidGraphTidy"]</MudButton>
+        }
+        @if (!string.IsNullOrWhiteSpace(Spec?.Check))
+        {
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Checklist"
+                       Disabled="Busy" OnClick="CheckAsync">@Loc["WidGraphCheck"]</MudButton>
+        }
+    </div>
+
+    <div class="graph-body">
+        <div class="graph-main">
+            @if (_draft.Nodes.Count == 0)
+            {
+                <div class="schema-empty graph-empty">@(Element.Empty ?? Loc["WidGraphEmpty"].Value)</div>
+            }
+            else
+            {
+                @if (_view == "map")
+                {
+                    @Map
+                }
+                @Outline
+            }
+
+            @if (_guidance.Issues.Count > 0)
+            {
+                <section class="graph-guidance" aria-live="polite">
+                    <h3 class="graph-heading">@Loc["WidGraphGuidance"]</h3>
+                    <ul>
+                        @foreach (var issue in _guidance.Issues)
+                        {
+                            <li class="@($"graph-issue graph-issue--{issue.Severity}")">
+                                <span class="graph-issue-mark" aria-hidden="true">@Mark(issue.Severity)</span>
+                                @if (_draft.Find(issue.Node) is { } about)
+                                {
+                                    <button type="button" class="graph-link" @onclick="() => Select(about.Key)">@issue.Message</button>
+                                }
+                                else
+                                {
+                                    <span>@issue.Message</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                </section>
+            }
+            @if (Error is not null)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error">@Error</MudText>
+            }
+        </div>
+
+        <aside class="graph-inspector" aria-label="@Loc["WidGraphStep"]">
+            @if (Selected is { } node)
+            {
+                @Inspector(node)
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WidGraphSelectHint"]</MudText>
+            }
+        </aside>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public SchemaElement Element { get; set; } = default!;
+
+    /// <summary>The graph, <c>{ nodes, edges, start }</c>; anything else becomes an empty graph.</summary>
+    [Parameter] public JsonElement? Value { get; set; }
+
+    [Parameter] public EventCallback<JsonElement> ValueChanged { get; set; }
+
+    /// <summary>The page's data, which carries the guidance, notes and changes the spec names.</summary>
+    [Parameter] public SchemaData? Data { get; set; }
+
+    [Parameter] public bool Busy { get; set; }
+
+    [Parameter] public string? Error { get; set; }
+
+    /// <summary>Dispatches the Check and note actions, as a button would.</summary>
+    [Parameter] public EventCallback<SchemaActionRequest> OnAction { get; set; }
+
+    private SchemaGraphSpec? Spec => Element.Graph;
+
+    private IReadOnlyList<SchemaGraphKind> Kinds => Spec?.Kinds ?? [];
+
+    private bool Locked => Spec?.Readonly == true || Busy;
+
+    private GraphDraft _draft = GraphDraft.Read(null);
+    private GraphGuidance _guidance = GraphGuidance.None;
+    private string? _raw;
+    private string? _selected;
+    private string _view = "map";
+    private string? _keyError;
+    private string _note = "";
+
+    private GraphNode? Selected => _draft.Find(_selected);
+
+    // Ids in the page are shared by every graph on it, so each editor names its own.
+    private readonly string _id = Guid.NewGuid().ToString("N")[..8];
+
+    protected override void OnParametersSet()
+    {
+        var raw = Value?.GetRawText();
+        if (raw != _raw)
+        {
+            _raw = raw;
+            _draft = GraphDraft.Read(Value);
+            if (_draft.Find(_selected) is null) _selected = null;
+        }
+        _guidance = GraphGuidance.Read(Spec, Data);
+    }
+
+    private SchemaGraphKind? Kind(string key) => Kinds.FirstOrDefault(kind => kind.Key == key);
+
+    private string KindLabel(string key) => Kind(key)?.Label ?? key;
+
+    private IReadOnlyList<SchemaGraphPort> Ports(string kind) => Kind(kind)?.Ports ?? [];
+
+    private IReadOnlyList<string> PortKeys(string kind) => [.. Ports(kind).Select(port => port.Key)];
+
+    private SchemaGraphPort? Port(string kind, string port) => Ports(kind).FirstOrDefault(p => p.Key == port);
+
+    private string PortLabel(string kind, string port) => Port(kind, port)?.Label ?? port;
+
+    private static string? ToneVar(string? tone)
+        => PoseTypeStyle.ToneToken(tone) is { } token ? $"--graph-tone: var({token});" : null;
+
+    private static string Mark(string severity) => severity switch { "error" => "!", "hint" => "i", _ => "!" };
+
+    private async Task EmitAsync()
+    {
+        var json = _draft.ToJson();
+        _raw = json.GetRawText();
+        await ValueChanged.InvokeAsync(json);
+    }
+
+    private void Select(string key)
+    {
+        _selected = key;
+        _keyError = null;
+        _note = "";
+    }
+
+    private async Task AddAsync(SchemaGraphKind kind)
+    {
+        if (Locked) return;
+        var node = _draft.Add(kind.Key, kind.Label ?? kind.Key);
+        // A new step starts with its fields' defaults written in, so what the author sees is what is stored.
+        foreach (var field in kind.Fields ?? [])
+        {
+            if (field.Key is not null && field.Default is { } fallback) node = node.WithField(field.Key, fallback);
+        }
+        _draft.Update(node);
+        if (Selected is { } from && Ports(from.Kind).FirstOrDefault(port => _draft.Target(from.Key, port.Key) is null) is { } open)
+        {
+            // A step added while another is selected follows it, from its first outcome that leads nowhere.
+            _draft.Move(node.Key, from.X, from.Y + GraphDraft.NodeHeight + 64);
+            _draft.Link(from.Key, open.Key, node.Key);
+        }
+        Select(node.Key);
+        await EmitAsync();
+    }
+
+    private async Task RemoveAsync(string key)
+    {
+        if (Locked) return;
+        _draft.Remove(key);
+        _selected = null;
+        await EmitAsync();
+    }
+
+    private async Task TidyAsync()
+    {
+        if (Locked) return;
+        _draft.Tidy(PortKeys);
+        await EmitAsync();
+    }
+
+    private Task CheckAsync() => Busy || string.IsNullOrWhiteSpace(Spec?.Check)
+        ? Task.CompletedTask
+        : OnAction.InvokeAsync(new SchemaActionRequest(Spec.Check!, null));
+
+    private async Task PinNoteAsync(string key)
+    {
+        if (Busy || string.IsNullOrWhiteSpace(Spec?.NoteAction) || string.IsNullOrWhiteSpace(_note)) return;
+        var values = new Dictionary<string, JsonElement>
+        {
+            ["node"] = JsonSerializer.SerializeToElement(key),
+            ["text"] = JsonSerializer.SerializeToElement(_note)
+        };
+        _note = "";
+        await OnAction.InvokeAsync(new SchemaActionRequest(Spec.NoteAction!, values));
+    }
+
+    private async Task SetLabelAsync(GraphNode node, string? label)
+    {
+        if (Locked || string.IsNullOrWhiteSpace(label)) return;
+        _draft.Update(node with { Label = label.Trim() });
+        await EmitAsync();
+    }
+
+    private async Task SetKeyAsync(GraphNode node, string? key)
+    {
+        if (Locked) return;
+        key = key?.Trim() ?? "";
+        _keyError = _draft.CheckKey(node.Key, key) switch
+        {
+            KeyProblem.Invalid => Loc["WidGraphKeyInvalid"].Value,
+            KeyProblem.Taken => Loc["WidGraphKeyTaken"].Value,
+            _ => null
+        };
+        if (_keyError is not null || !_draft.Rename(node.Key, key)) return;
+        _selected = key;
+        await EmitAsync();
+    }
+
+    private async Task SetStartAsync(GraphNode node, bool start)
+    {
+        if (Locked || !start) return;
+        _draft.SetStart(node.Key);
+        await EmitAsync();
+    }
+
+    private async Task SetFieldAsync(string key, string field, object? value)
+    {
+        if (Locked || _draft.Find(key) is not { } node) return;
+        _draft.Update(node.WithField(field, SchemaValues.ToJson(value)));
+        await EmitAsync();
+    }
+
+    private async Task LinkAsync(string from, string port, string? to)
+    {
+        if (Locked) return;
+        _draft.Link(from, port, to);
+        await EmitAsync();
+    }
+
+    private int Count(string key) => _guidance.On(key).Count(issue => issue.Severity != "hint");
+
+    // ── Dragging a step. A press that moves less than a few pixels is a click. ──
+
+    private (string Key, double StartX, double StartY, double NodeX, double NodeY)? _drag;
+    private bool _moved;
+    private bool _suppressClick;
+
+    private void StartDrag(PointerEventArgs e, GraphNode node)
+    {
+        if (Locked || e.Button != 0) return;
+        _drag = (node.Key, e.ClientX, e.ClientY, node.X, node.Y);
+        _moved = false;
+    }
+
+    private void Drag(PointerEventArgs e)
+    {
+        if (_drag is not { } drag) return;
+        var dx = e.ClientX - drag.StartX;
+        var dy = e.ClientY - drag.StartY;
+        if (!_moved && Math.Abs(dx) + Math.Abs(dy) < 5) return;
+        _moved = true;
+        _draft.Move(drag.Key, drag.NodeX + dx, drag.NodeY + dy);
+    }
+
+    private async Task EndDragAsync()
+    {
+        if (_drag is null) return;
+        _drag = null;
+        _suppressClick = _moved;
+        if (_moved) await EmitAsync();
+    }
+
+    private void Click(GraphNode node)
+    {
+        if (_suppressClick)
+        {
+            _suppressClick = false;
+            return;
+        }
+        Select(node.Key);
+    }
+
+    // ── The map ──
+
+    private const double W = GraphDraft.NodeWidth, H = GraphDraft.NodeHeight;
+
+    private static string Num(double value) => value.ToString("0.#", CultureInfo.InvariantCulture);
+
+    private sealed record Line(string Path, double LabelX, double LabelY, string Label, string? Token, string Port);
+
+    private IEnumerable<Line> Lines()
+    {
+        foreach (var edge in _draft.Edges)
+        {
+            if (_draft.Find(edge.From) is not { } a || _draft.Find(edge.To) is not { } b) continue;
+            var twin = _draft.Edges.Any(other => other.From == edge.To && other.To == edge.From);
+            var off = twin ? (string.CompareOrdinal(edge.From, edge.To) < 0 ? -12 : 12) : 0;
+            double acx = a.X + W / 2, acy = a.Y + H / 2, bcx = b.X + W / 2, bcy = b.Y + H / 2;
+            double dx = bcx - acx, dy = bcy - acy, x1, y1, x2, y2;
+            string path;
+            if (a.Key == b.Key)
+            {
+                // An outcome back to its own step loops round its right side.
+                x1 = a.X + W; y1 = a.Y + H / 3; x2 = a.X + W; y2 = a.Y + 2 * H / 3;
+                path = $"M{Num(x1)},{Num(y1)} C{Num(x1 + 48)},{Num(y1 - 20)} {Num(x2 + 48)},{Num(y2 + 20)} {Num(x2)},{Num(y2)}";
+                yield return new Line(path, x1 + 40, (y1 + y2) / 2, PortLabel(a.Kind, edge.Port), PoseTypeStyle.ToneToken(Port(a.Kind, edge.Port)?.Tone), edge.Port);
+                continue;
+            }
+            if (Math.Abs(dy) > Math.Abs(dx) * 0.6)
+            {
+                var down = dy > 0;
+                x1 = acx + off; y1 = down ? a.Y + H : a.Y; x2 = bcx + off; y2 = down ? b.Y : b.Y + H;
+                var k = Math.Max(28, Math.Abs(y2 - y1) / 2) * (down ? 1 : -1);
+                path = $"M{Num(x1)},{Num(y1)} C{Num(x1)},{Num(y1 + k)} {Num(x2)},{Num(y2 - k)} {Num(x2)},{Num(y2)}";
+            }
+            else
+            {
+                var right = dx > 0;
+                x1 = right ? a.X + W : a.X; y1 = acy + off; x2 = right ? b.X : b.X + W; y2 = bcy + off;
+                var k = Math.Max(28, Math.Abs(x2 - x1) / 2) * (right ? 1 : -1);
+                path = $"M{Num(x1)},{Num(y1)} C{Num(x1 + k)},{Num(y1)} {Num(x2 - k)},{Num(y2)} {Num(x2)},{Num(y2)}";
+            }
+            yield return new Line(path, (x1 + x2) / 2, (y1 + y2) / 2 + off, PortLabel(a.Kind, edge.Port),
+                PoseTypeStyle.ToneToken(Port(a.Kind, edge.Port)?.Tone), edge.Port);
+        }
+    }
+
+    private string MarkerId(string? token) => $"graph-{_id}-arrow{(token ?? "").Replace("-", "")}";
+
+    private RenderFragment Map => __builder =>
+    {
+        var width = Math.Max(480, _draft.Nodes.Max(node => node.X) + W + 64);
+        var height = Math.Max(240, _draft.Nodes.Max(node => node.Y) + H + 32);
+        var lines = Lines().ToList();
+        <div class="graph-map" @onpointermove="Drag" @onpointerup="EndDragAsync" @onpointerleave="EndDragAsync">
+            <div class="graph-canvas" style="@($"width: {Num(width)}px; height: {Num(height)}px;")">
+                <svg class="graph-lines" viewBox="@($"0 0 {Num(width)} {Num(height)}")" width="@Num(width)" height="@Num(height)" aria-hidden="true" focusable="false">
+                    <defs>
+                        @foreach (var token in lines.Select(line => line.Token).Distinct())
+                        {
+                            <marker id="@MarkerId(token)" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                                <path d="M0,0 L10,5 L0,10 z" class="graph-arrow" style="@(token is null ? null : $"fill: var({token});")" />
+                            </marker>
+                        }
+                    </defs>
+                    @foreach (var line in lines)
+                    {
+                        <path class="graph-line" d="@line.Path" style="@(line.Token is null ? null : $"stroke: var({line.Token});")"
+                              marker-end="@($"url(#{MarkerId(line.Token)})")" />
+                    }
+                    @foreach (var line in lines)
+                    {
+                        @LineLabel(line)
+                    }
+                </svg>
+                @foreach (var node in _draft.Nodes)
+                {
+                    var kind = Kind(node.Kind);
+                    var change = _guidance.ChangeOf(node.Key);
+                    var count = Count(node.Key);
+                    var notes = _guidance.NotesOn(node.Key).Count();
+                    var classes = "graph-node"
+                        + (node.Key == _selected ? " graph-node--selected" : "")
+                        + (change is null ? "" : $" graph-node--{change.Kind}")
+                        + (Locked ? "" : " graph-node--movable");
+                    <button type="button" class="@classes" data-key="@node.Key"
+                            style="@($"left: {Num(node.X)}px; top: {Num(node.Y)}px; {ToneVar(kind?.Tone)}")"
+                            aria-label="@Loc["WidGraphNodeLabel", node.Key == _draft.StartNode?.Key ? $"{KindLabel(node.Kind)}, {Loc["WidGraphStart"]}" : KindLabel(node.Kind), node.Label]"
+                            aria-pressed="@(node.Key == _selected ? "true" : "false")"
+                            @onpointerdown="e => StartDrag(e, node)" @onclick="() => Click(node)">
+                        <span class="graph-node-kind">
+                            @if (node.Key == _draft.StartNode?.Key)
+                            {
+                                <span class="graph-node-start" title="@Loc["WidGraphStart"]">▶</span>
+                            }
+                            @KindLabel(node.Kind)
+                        </span>
+                        <span class="graph-node-label">@node.Label</span>
+                        @if (count > 0)
+                        {
+                            <span class="graph-badge graph-badge--issue">@count</span>
+                        }
+                        else if (notes > 0)
+                        {
+                            <span class="graph-badge graph-badge--note">@notes</span>
+                        }
+                    </button>
+                }
+            </div>
+        </div>
+    };
+
+    // SVG <text> written straight inside a Razor code block reads as Razor's own <text> tag, so it is drawn from
+    // a fragment whose first element is a group.
+    private RenderFragment LineLabel(Line line) => __builder =>
+    {
+        <g><text class="graph-line-label" x="@Num(line.LabelX)" y="@Num(line.LabelY)" style="@(line.Token is null ? null : $"fill: var({line.Token});")">@line.Label</text></g>
+    };
+
+    // ── The outline ──
+
+    private RenderFragment Outline => __builder =>
+    {
+        <ol class="graph-outline">
+            @foreach (var node in _draft.Order(PortKeys))
+            {
+                var kind = Kind(node.Kind);
+                var change = _guidance.ChangeOf(node.Key);
+                var count = Count(node.Key);
+                <li class="@(node.Key == _selected ? "graph-outline-step graph-outline-step--selected" : "graph-outline-step")" style="@ToneVar(kind?.Tone)">
+                    <button type="button" class="graph-outline-head" aria-pressed="@(node.Key == _selected ? "true" : "false")" @onclick="() => Select(node.Key)">
+                        <span class="graph-outline-label">@node.Label</span>
+                        <span class="graph-outline-kind">@KindLabel(node.Kind)</span>
+                        @if (node.Key == _draft.StartNode?.Key)
+                        {
+                            <span class="graph-outline-kind">@Loc["WidGraphStart"]</span>
+                        }
+                        @if (change is not null)
+                        {
+                            <span class="@($"graph-change graph-change--{change.Kind}")">@(change.Kind == "added" ? Loc["WidGraphAdded"] : Loc["WidGraphChanged"])</span>
+                        }
+                        @if (count > 0)
+                        {
+                            <span class="graph-badge graph-badge--issue graph-badge--inline">@Loc["WidGraphIssueCount", count]</span>
+                        }
+                    </button>
+                    @if (Ports(node.Kind).Count > 0)
+                    {
+                        <ul class="graph-outline-ports">
+                            @foreach (var port in Ports(node.Kind))
+                            {
+                                var targets = _draft.Targets(node.Key, port.Key);
+                                <li>
+                                    <span class="graph-port" style="@(PoseTypeStyle.ToneToken(port.Tone) is { } t ? $"color: var({t});" : null)">@(port.Label ?? port.Key)</span>
+                                    <span aria-hidden="true">→</span>
+                                    @if (targets.Count == 0)
+                                    {
+                                        <em class="graph-nowhere">@Loc["WidGraphNowhere"]</em>
+                                    }
+                                    else if (targets.Count == 1)
+                                    {
+                                        <span>@Described(node, port, targets[0])</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@Loc["WidGraphOneOf", string.Join(", ", targets.Select(target => Described(node, port, target)))]</span>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                </li>
+            }
+        </ol>
+    };
+
+    // A step an outcome leads to, followed by the settings its edge holds: "Reward (Weight: 2 · Needs: Stealth)".
+    private string Described(GraphNode from, SchemaGraphPort port, GraphNode target)
+    {
+        if (_draft.Edge(from.Key, port.Key, target.Key) is not { } edge) return target.Label;
+        var settings = (port.EdgeFields ?? [])
+            .Where(field => field.Key is not null && !string.Equals(field.Type, "hidden", StringComparison.OrdinalIgnoreCase))
+            .Select(field => (Field: EdgeField(from, field), Value: edge.Field(field.Key!)))
+            .Where(pair => pair.Value is { } value && value.ValueKind is not (JsonValueKind.Null or JsonValueKind.Undefined)
+                && !(pair.Field.Default is { } fallback && fallback.GetRawText() == value.GetRawText()))
+            .Select(pair => $"{pair.Field.Label ?? pair.Field.Key}: {Shown(pair.Field, pair.Value!.Value)}")
+            .ToList();
+        return settings.Count == 0 ? target.Label : $"{target.Label} ({string.Join(" · ", settings)})";
+    }
+
+    private static string Shown(SchemaElement field, JsonElement value)
+    {
+        var text = SchemaViewRenderer.ValueToString(value);
+        return field.Options?.FirstOrDefault(option => option.Value == text)?.Label ?? text;
+    }
+
+    // An edge field whose choices are the rows of one of its step's fields.
+    private SchemaElement EdgeField(GraphNode from, SchemaElement field)
+    {
+        if (string.IsNullOrWhiteSpace(field.OptionsFrom)) return field;
+        var rows = from.Field(field.OptionsFrom) is { ValueKind: JsonValueKind.Array } array
+            ? array.EnumerateArray().Where(row => row.ValueKind == JsonValueKind.Object)
+            : [];
+        var rowsField = Kind(from.Kind)?.Fields?.FirstOrDefault(other => other.Key == field.OptionsFrom);
+        var options = rows
+            .Select(row => (Id: Text(row, "id"), Label: Text(row, "label") ?? RowText(row, rowsField)))
+            .Where(row => !string.IsNullOrEmpty(row.Id))
+            .Select(row => new SchemaOption(row.Id!, string.IsNullOrWhiteSpace(row.Label) ? row.Id! : row.Label!));
+        return field with { Options = [new SchemaOption("", Loc["WidSelectNone"]), .. options] };
+    }
+
+    // A row named by its first shown item field, the way that field shows it (a select by its option's label).
+    private static string? RowText(JsonElement row, SchemaElement? rowsField)
+    {
+        var item = rowsField?.ItemFields?.FirstOrDefault(item => item.Key is not null
+            && !string.Equals(item.Type, "hidden", StringComparison.OrdinalIgnoreCase) && row.TryGetProperty(item.Key, out _));
+        return item is not null && row.TryGetProperty(item.Key!, out var value) ? Shown(item, value) : null;
+    }
+
+    // A setting as its input holds it; one never set shows its field's default.
+    private static object? Held(JsonElement? value, SchemaElement field)
+        => (value ?? field.Default) is { } held ? SchemaValues.FromJson(held) : null;
+
+    private static string? Text(JsonElement row, string name)
+        => row.TryGetProperty(name, out var value) && value.ValueKind is JsonValueKind.String or JsonValueKind.Number ? value.ToString() : null;
+
+    private async Task AddLinkAsync(string from, string port, string? to)
+    {
+        if (Locked || string.IsNullOrEmpty(to)) return;
+        _draft.AddLink(from, port, to);
+        await EmitAsync();
+    }
+
+    private async Task UnlinkAsync(string from, string port, string to)
+    {
+        if (Locked) return;
+        _draft.Unlink(from, port, to);
+        await EmitAsync();
+    }
+
+    private async Task SetEdgeFieldAsync(string from, string port, string to, string key, object? value)
+    {
+        if (Locked) return;
+        // An empty choice clears the setting rather than storing "".
+        var json = value is string { Length: 0 } ? (JsonElement?)null : SchemaValues.ToJson(value);
+        _draft.SetEdgeField(from, port, to, key, json);
+        await EmitAsync();
+    }
+
+    // The settings of one edge, drawn under the step it leads to.
+    private RenderFragment EdgeFields(GraphNode node, SchemaGraphPort port, GraphNode target) => __builder =>
+    {
+        var edge = _draft.Edge(node.Key, port.Key, target.Key);
+        if (edge is null || port.EdgeFields is not { Count: > 0 } fields) return;
+        <div class="graph-edge-fields">
+            @foreach (var field in fields)
+            {
+                if (field.Key is null || string.Equals(field.Type, "hidden", StringComparison.OrdinalIgnoreCase)) continue;
+                var shown = EdgeField(node, field);
+                <SchemaFieldInput @key="@($"{node.Key}-e-{port.Key}-{target.Key}-{field.Key}")" Element="shown" Disabled="Locked"
+                                  Value="@Held(edge.Field(field.Key), field)"
+                                  ValueChanged="v => SetEdgeFieldAsync(node.Key, port.Key, target.Key, field.Key!, v)" />
+            }
+        </div>
+    };
+
+    // An outcome that may lead to several steps: each one on its own row with its edge's settings, then a picker
+    // that adds another.
+    private RenderFragment ManyPort(GraphNode node, SchemaGraphPort port) => __builder =>
+    {
+        var targets = _draft.Targets(node.Key, port.Key);
+        <div class="graph-pool" style="@(PoseTypeStyle.ToneToken(port.Tone) is { } t ? $"--graph-tone: var({t});" : null)">
+            <span class="graph-port graph-pool-port">@Loc["WidGraphLeadsTo", port.Label ?? port.Key]</span>
+            @if (targets.Count == 0)
+            {
+                <em class="graph-nowhere">@Loc["WidGraphNowhere"]</em>
+            }
+            <ul class="graph-pool-list">
+                @foreach (var target in targets)
+                {
+                    <li class="graph-pool-row">
+                        <div class="graph-pool-head">
+                            <span class="graph-pool-label">@target.Label</span>
+                            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Disabled="Locked"
+                                           aria-label="@Loc["WidGraphRemoveLink", target.Label]"
+                                           OnClick="() => UnlinkAsync(node.Key, port.Key, target.Key)" />
+                        </div>
+                        @EdgeFields(node, port, target)
+                    </li>
+                }
+            </ul>
+            @if (!Locked)
+            {
+                <MudSelect @key="@($"{node.Key}-add-{port.Key}-{targets.Count}")" T="string" Value="@("")"
+                           ValueChanged="v => AddLinkAsync(node.Key, port.Key, v)"
+                           Label="@Loc["WidGraphAddNext"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2">
+                    @foreach (var other in _draft.Order(PortKeys).Where(other => targets.All(target => target.Key != other.Key)))
+                    {
+                        <MudSelectItem T="string" Value="@other.Key">@other.Label</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+        </div>
+    };
+
+    // ── The selected step ──
+
+    private RenderFragment Inspector(GraphNode node) => __builder =>
+    {
+        var kind = Kind(node.Kind);
+        <div class="graph-inspector-head" style="@ToneVar(kind?.Tone)">
+            <span class="graph-inspector-kind">@KindLabel(node.Kind)</span>
+            @if (!Locked)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" aria-label="@Loc["WidGraphDelete"]"
+                               OnClick="() => RemoveAsync(node.Key)" />
+            }
+        </div>
+        @if (!string.IsNullOrWhiteSpace(kind?.Help))
+        {
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">@kind.Help</MudText>
+        }
+        <fieldset disabled="@Locked" class="graph-inspector-fields">
+            <MudTextField @key="@($"{node.Key}-label")" T="string" Value="node.Label" ValueChanged="v => SetLabelAsync(node, v)"
+                          Label="@Loc["WidGraphName"]" Variant="Variant.Outlined" Class="mb-2" />
+            <MudTextField @key="@($"{node.Key}-key")" T="string" Value="node.Key" ValueChanged="v => SetKeyAsync(node, v)"
+                          Label="@Loc["WidGraphKey"]" Variant="Variant.Outlined" Class="mb-2"
+                          Error="@(_keyError is not null)" ErrorText="@_keyError" />
+            <MudSwitch T="bool" Value="@(node.Key == _draft.StartNode?.Key)" ValueChanged="v => SetStartAsync(node, v)"
+                       Label="@Loc["WidGraphStart"]" Color="Color.Primary" Disabled="@(Locked || node.Key == _draft.StartNode?.Key)" />
+            @foreach (var field in kind?.Fields ?? [])
+            {
+                if (field.Key is null || string.Equals(field.Type, "hidden", StringComparison.OrdinalIgnoreCase)) continue;
+                <SchemaFieldInput @key="@($"{node.Key}-f-{field.Key}")" Element="field" Disabled="Locked"
+                                  Value="@Held(node.Field(field.Key), field)"
+                                  ValueChanged="v => SetFieldAsync(node.Key, field.Key!, v)" />
+            }
+            @if (Ports(node.Kind).Count > 0)
+            {
+                <h3 class="graph-heading">@Loc["WidGraphOutcomes"]</h3>
+                @foreach (var port in Ports(node.Kind))
+                {
+                    if (port.Many)
+                    {
+                        @ManyPort(node, port)
+                        continue;
+                    }
+                    <MudSelect @key="@($"{node.Key}-p-{port.Key}")" T="string" Value="@(_draft.Target(node.Key, port.Key)?.Key ?? "")"
+                               ValueChanged="v => LinkAsync(node.Key, port.Key, v)"
+                               Label="@Loc["WidGraphLeadsTo", port.Label ?? port.Key]" Variant="Variant.Outlined" Class="mb-2"
+                               Style="@(PoseTypeStyle.ToneToken(port.Tone) is { } t ? $"--graph-tone: var({t});" : null)">
+                        <MudSelectItem T="string" Value="@("")">@Loc["WidGraphNowhere"]</MudSelectItem>
+                        @foreach (var other in _draft.Order(PortKeys))
+                        {
+                            <MudSelectItem T="string" Value="@other.Key">@other.Label</MudSelectItem>
+                        }
+                    </MudSelect>
+                    if (_draft.Target(node.Key, port.Key) is { } single)
+                    {
+                        @EdgeFields(node, port, single)
+                    }
+                }
+            }
+        </fieldset>
+
+        var issues = _guidance.On(node.Key).ToList();
+        @if (issues.Count > 0)
+        {
+            <ul class="graph-guidance graph-guidance--step">
+                @foreach (var issue in issues)
+                {
+                    <li class="@($"graph-issue graph-issue--{issue.Severity}")">
+                        <span class="graph-issue-mark" aria-hidden="true">@Mark(issue.Severity)</span>
+                        <span>@(issue.Port is null ? issue.Message : $"{PortLabel(node.Kind, issue.Port)}: {issue.Message}")</span>
+                    </li>
+                }
+            </ul>
+        }
+
+        @if (_guidance.ChangeOf(node.Key) is { Text: { Length: > 0 } changed } change)
+        {
+            <p class="@($"graph-change graph-change--{change.Kind}")">@changed</p>
+        }
+
+        var notes = _guidance.NotesOn(node.Key).ToList();
+        @if (notes.Count > 0 || !string.IsNullOrWhiteSpace(Spec?.NoteAction))
+        {
+            <h3 class="graph-heading">@Loc["WidGraphNotes"]</h3>
+            @foreach (var note in notes)
+            {
+                <div class="graph-note">
+                    @if (!string.IsNullOrWhiteSpace(note.Author))
+                    {
+                        <span class="graph-note-author">@(note.Port is null ? note.Author : $"{note.Author} · {PortLabel(node.Kind, note.Port)}")</span>
+                    }
+                    <span>@note.Text</span>
+                </div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Spec?.NoteAction))
+            {
+                <MudTextField T="string" @bind-Value="_note" Label="@Loc["WidGraphPinNote"]" Variant="Variant.Outlined" Lines="2" Class="mt-2" Immediate="true" />
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="mt-1" Disabled="@(Busy || string.IsNullOrWhiteSpace(_note))"
+                           OnClick="() => PinNoteAsync(node.Key)">@Loc["WidGraphPin"]</MudButton>
+            }
+        }
+    };
+}

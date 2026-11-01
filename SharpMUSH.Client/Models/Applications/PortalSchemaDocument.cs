@@ -68,6 +68,10 @@ public sealed record SchemaSection(
 /// serialized MString, the way an mstring field is drawn. <c>Reorder</c> belongs to a table: the row group whose
 /// rows the viewer may drag into a new order. A graph draws <c>SrcField</c>'s <c>{ nodes, edges }</c>, and its
 /// <c>Link</c> is the href template each node follows, filled from that node like a table column's.
+/// <c>ItemFields</c> belongs to a <c>rows</c> field: the fields of each row, whose value is a list of objects.
+/// <c>Graph</c> belongs to a <c>graph</c> field: the step kinds it offers and where its guidance comes from.
+/// <c>OptionsFrom</c> belongs to a select on a graph edge: the rows field of the edge's step whose rows are its
+/// choices, each row's <c>id</c> the value and its <c>label</c> (else <c>trait</c>, else the id) the text.
 /// </remarks>
 public sealed record SchemaElement(
 	string? Kind = null,
@@ -98,7 +102,49 @@ public sealed record SchemaElement(
 	[property: JsonPropertyName("triggers_action")] string? TriggersAction = null,
 	string? Format = null,
 	SchemaReorder? Reorder = null,
-	string? Link = null);
+	string? Link = null,
+	[property: JsonPropertyName("item_fields")] IReadOnlyList<SchemaElement>? ItemFields = null,
+	SchemaGraphSpec? Graph = null,
+	[property: JsonPropertyName("options_from")] string? OptionsFrom = null);
+
+/// <summary>
+/// What a <c>graph</c> field lets its author build: the step kinds, each with the outcomes leaving it and the
+/// fields it holds. The value is <c>{ nodes: [{ key, kind, label, x, y, fields }], edges: [{ from, port, to }],
+/// start }</c>. <c>Check</c> names the action the Check button dispatches; its answer's data carries the
+/// guidance under <c>IssuesField</c>. <c>NotesField</c> and <c>ChangesField</c> name data a reviewer's notes and a
+/// revision's changes come from, and <c>NoteAction</c> the action that pins a note. <c>Readonly</c> shows the
+/// graph without letting it change.
+/// </summary>
+public sealed record SchemaGraphSpec(
+	IReadOnlyList<SchemaGraphKind>? Kinds = null,
+	string? Check = null,
+	[property: JsonPropertyName("issues_field")] string? IssuesField = null,
+	[property: JsonPropertyName("notes_field")] string? NotesField = null,
+	[property: JsonPropertyName("changes_field")] string? ChangesField = null,
+	[property: JsonPropertyName("note_action")] string? NoteAction = null,
+	bool Readonly = false);
+
+/// <summary>A kind of step: its <c>tone()</c> colour, the outcomes leaving it, and the fields it holds.</summary>
+public sealed record SchemaGraphKind(
+	string Key,
+	string? Label = null,
+	string? Tone = null,
+	string? Help = null,
+	IReadOnlyList<SchemaGraphPort>? Ports = null,
+	IReadOnlyList<SchemaElement>? Fields = null);
+
+/// <summary>
+/// An outcome leaving a step. It leads to one step, or with <c>Many</c> to any number of them, of which whatever
+/// runs the graph picks one. <c>EdgeFields</c> are the settings each of its edges carries (a weight, a condition),
+/// stored on the edge under their keys.
+/// </summary>
+public sealed record SchemaGraphPort(
+	string Key,
+	string? Label = null,
+	string? Tone = null,
+	bool Required = false,
+	bool Many = false,
+	[property: JsonPropertyName("edge_fields")] IReadOnlyList<SchemaElement>? EdgeFields = null);
 
 /// <summary>
 /// The rows of a table's <c>Group</c> (rows whose <c>group</c> field holds it) that the viewer may put in a new
