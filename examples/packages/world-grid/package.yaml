@@ -1,9 +1,9 @@
 format: "1.16"
 package: world-grid
 title: "World grid"
-version: 1.5.2
+version: 1.6.0
 authors: [SharpMUSH]
-description: "Walking a world map the World plugin keeps: direction exits on the map lead from place to place through the rooms it lends them, a parent describes those rooms from the map's legend, and +map draws the places around you."
+description: "Walking a world map the World plugin keeps: direction exits on the map lead from place to place through the rooms it lends them, and a parent describes those rooms from the map's legend. +map, from world-map, draws the places around you."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [map, world, grid, wilderness, building]
@@ -15,7 +15,7 @@ plugins: [world]
 
 depends:
   - package: world-map
-    version: ">=1.3"
+    version: ">=1.4"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/world-map/
@@ -29,8 +29,7 @@ attributes:
 objects:
   # The command object, in the master room. WIZARD because +map/exits opens the direction exits on a map its player
   # controls and gives them to the map's owner, and +map/keep places a room on a map the player controls; both
-  # check that control first. +map draws as the player, so a place hidden from them stays hidden, though it
-  # finds the map as itself: zone() answers only someone who may examine the room.
+  # check that control first.
   #
   # Trees: CMD` the commands, INC` one routine each, FUN` the reads. DATA`WAY`<way> each exit's name and
   # aliases, DATA`WAYS the ways in the order they are opened.
@@ -66,9 +65,6 @@ objects:
         Up;u
       DATA`WAY`D: |-
         Down;d
-      # How far +map draws around you.
-      DATA`RADIUS: |-
-        5
       # Copied onto each map by +map/exits. ZONE`EXITS, with %0 a room on the map and %1 a viewer, lists the
       # direction exits that lead somewhere from that room for that viewer, leaving out a DARK one the viewer
       # can't see and a way the room has an exit of its own for (by any of its names, in any case). ZONE`EXITS`TO, with %1 one of them, is the room standing where it leads; empty
@@ -81,10 +77,6 @@ objects:
         [setq(zoneexits_to,worldway(me,worldplace(%0,x),worldplace(%0,y),worldplace(%0,z),get(%1/MAP`WAY),to))][if(eq(words(%q<zoneexits_to>,%,),3),worldcell(me,extract(%q<zoneexits_to>,1,1,%,),extract(%q<zoneexits_to>,2,1,%,),extract(%q<zoneexits_to>,3,1,%,),room))]
 
       # ---- commands -------------------------------------------------------------
-      CMD`MAP:
-        value: |-
-          $+map:@include %!/INC`SHOW
-        flags: [cmdsyntax]
       CMD`MAP`KEEP:
         value: |-
           $+map/keep:@include %!/INC`KEEP
@@ -96,16 +88,6 @@ objects:
         flags: [cmdsyntax]
 
       # ---- routines -------------------------------------------------------------
-      # The places within DATA`RADIUS of the player's, drawn as the player sees them, @ where they stand, then the
-      # key of the map's legend.
-      INC`SHOW:
-        value: |-
-          @assert strlen(worldplace(%l))=@pemit %#=notice(MAP,You are not on a world map.,warn); think setqm(map,num(zone(%l)),
-          x,worldplace(%l,x),
-          y,worldplace(%l,y),
-          z,worldplace(%l,z),
-          radius,v(DATA`RADIUS)); @pemit %#=objeval(%#,worlddraw(%q<map>,%q<x>,%q<y>,%q<z>,%q<radius>,@)); @assert strlen(setr(key,u(%!/FUN`KEY,%q<map>))); @pemit %#=%q<key>
-        flags: [cmdsyntax]
       # The room the player stands in, lent to its place, stays there from now on.
       INC`KEEP:
         value: |-
@@ -129,17 +111,6 @@ objects:
         flags: [cmdsyntax]
 
       # ---- reads ----------------------------------------------------------------
-      # %0 a map: each type its legend names, as the character worlddraw() shows for it and its label, on one line.
-      FUN`KEY:
-        value: |-
-          if(words(setr(types,iter(lattr(%0/MAP`LEGEND`*),after(%i0,MAP`LEGEND`)))),Key: [iter(%q<types>,u(%!/FUN`KEY`TYPE,%0,%i0),%b,%b·%b)])
-        flags: [funsyntax]
-      # %0 a map, %1 a type: its CHAR, else its ICON when that is a character or two, else its label's first letter;
-      # then its label.
-      FUN`KEY`TYPE:
-        value: |-
-          [setq(label,strfirstof(get(%0/MAP`LEGEND`%1`LABEL),lcstr(%1)))][strfirstof(left(get(%0/MAP`LEGEND`%1`CHAR),1),if(lte(strlen(setr(icon,get(%0/MAP`LEGEND`%1`ICON))),2),left(%q<icon>,1)),ucstr(left(%q<label>,1)))] %q<label>
-        flags: [funsyntax]
       # %0 a map: the ways out of its places, by its space, that it has no direction exit for. A graph map's are
       # every way any of its places has.
       FUN`MISSING:
@@ -202,7 +173,10 @@ objects:
         Opened 10 direction exits on Wilds.
         ```
 
-        `+map` draws the places around you, with `@` where you stand, and a key below: each type's ``MAP`LEGEND`<type>`CHAR``, else its icon when that is a character or two, else its label's first letter. `+map/keep` keeps the lent room you stand in on its place, so it is never taken back; you need to control the map.
+        `+map` draws the places around you (see `+help map`): each type's ``MAP`LEGEND`<type>`CHAR``, else its icon when that is a character or two, else its label's first letter. `+map/keep` keeps the lent room you stand in on its place, so it is never taken back; you need to control the map.
+      # Building a world map's ways is for builders and staff.
+      LOCK`MAP`GRID: |-
+        power^builder|flag^wizard|flag^royalty
 
   # The parent of every direction exit. Its attributes run as the exit, which the map's owner owns, so the World
   # functions answer for the map. %l is the room the mover stands in.

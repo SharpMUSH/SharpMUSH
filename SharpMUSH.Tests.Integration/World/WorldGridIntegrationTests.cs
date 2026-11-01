@@ -19,8 +19,8 @@ namespace SharpMUSH.Tests.Integration.World;
 /// The bundled world-grid package over the World plugin: +map/exits opens a direction exit for each way of a world map,
 /// a player walks between the rooms its places are lent and is refused by walls and the locks they do not pass with
 /// their reasons, the cell parent
-/// describes a lent room from the legend and lists its ways, and +map draws the places around the player with a key. Not in parallel: the
-/// package's commands are global.
+/// describes a lent room from the legend and lists its ways, and world-map's +map draws the places around the player with a key, or on
+/// a map of rooms the rooms and the exits between them. Not in parallel: the packages' commands are global.
 /// </summary>
 [NotInParallel]
 public class WorldGridIntegrationTests
@@ -69,6 +69,15 @@ public class WorldGridIntegrationTests
 
 	private async Task InstallAsync()
 	{
+		var controller = await InstallWorldMapAsync();
+		var applied = await controller.Apply(
+			new ApplyRequest(BundledPackages.RemoteName, "world-grid", null, null, null), CancellationToken.None);
+		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("world-grid must install from the catalogue");
+		await WebAppFactoryArg.QueueBarrierAsync();
+	}
+
+	private async Task<PackagesController> InstallWorldMapAsync()
+	{
 		var registry = WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>();
 		var controller = new PackagesController(
 			registry,
@@ -88,10 +97,69 @@ public class WorldGridIntegrationTests
 			await Assert.That(map.Result).IsTypeOf<OkObjectResult>().Because("world-map must install from the catalogue");
 			_installedWorldMap = true;
 		}
-		var applied = await controller.Apply(
-			new ApplyRequest(BundledPackages.RemoteName, "world-grid", null, null, null), CancellationToken.None);
-		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("world-grid must install from the catalogue");
 		await WebAppFactoryArg.QueueBarrierAsync();
+		return controller;
+	}
+
+	private async Task<string> Dig(string prefix, string zone)
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName(prefix);
+		await God($"@dig {name}");
+		var room = await Eval($"num(search(name={name}))");
+		await God($"@chzone {room}={zone}");
+		return room;
+	}
+
+	[Test]
+	public async Task PlusMapDrawsTheRoomsOfACompassMapAroundThePlayer()
+	{
+		try
+		{
+			await InstallWorldMapAsync();
+			var map = TestIsolationHelpers.GenerateUniqueName("Bay");
+			await God($"@create {map}");
+			var mapRef = await Eval($"num(search(name={map}))");
+			await God($"&MAP`KIND {mapRef}=compass");
+			await God($"&MAP`LEGEND`MARKET`LABEL {mapRef}=Market");
+			await God($"&MAP`LEGEND`WATER`LABEL {mapRef}=Open water");
+			await God($"&MAP`LEGEND`WATER`CHAR {mapRef}=~");
+			var quay = await Dig("Quay", mapRef);
+			var market = await Dig("Market", mapRef);
+			var pier = await Dig("Pier", mapRef);
+			var cave = await Dig("Cave", mapRef);
+			await God($"&ENVIRONMENT {market}=market");
+			await God($"&ENVIRONMENT {pier}=water");
+			await God($"@open East;e={market},West;w,{quay}");
+			await God($"@open Southwest;sw={pier},,{quay}");
+			await God($"@open North;n={cave},,{quay}");
+			await God($"@set {cave}=DARK");
+
+			var walker = await Player("Sailor");
+			await God($"@tel {walker.DbRef}={quay}");
+			// The DARK cave and the way to it are not drawn for the walker, so the map is two rows high.
+			await Assert.That(await As(walker, "+map")).Contains($"{map}\n    [@]-[M]\n   /       \n[~]        ")
+				.And.Contains("Key: @ you · M Market · ~ Open water").And.DoesNotContain("|");
+			var keeper = await Player("Keeper");
+			await God($"@set {keeper.DbRef}=WIZARD");
+			await God($"@tel {keeper.DbRef}={quay}");
+			await Assert.That(await As(keeper, "+map")).Contains("    [ ]    \n     |     \n    [@]-[M]");
+
+			// A coordinate map places a room by its MAP`COORDS; a room without them has no place on it.
+			await God($"&MAP`KIND {mapRef}=coordinates");
+			await Assert.That(await As(walker, "+map")).Contains("has no place on");
+			await God($"&MAP`COORDS`X {quay}=0");
+			await God($"&MAP`COORDS`Y {quay}=0");
+			await God($"&MAP`COORDS`X {pier}=-1");
+			await God($"&MAP`COORDS`Y {pier}=-2");
+			await Assert.That(await As(walker, "+map")).Contains("    [@]\n       \n       \n       \n[~]    ");
+
+			await God($"@tel {walker.DbRef}={await Dig("Shed", "none")}");
+			await Assert.That(await As(walker, "+map")).Contains("You are not on a map.");
+		}
+		finally
+		{
+			if (_installedWorldMap) await WebAppFactoryArg.Services.UninstallWithBridgesAsync("world-map");
+		}
 	}
 
 	[Test]
@@ -136,9 +204,9 @@ public class WorldGridIntegrationTests
 			await Assert.That(await As(walker, "look")).Contains("w, Southwest").And.Contains("and North").And.DoesNotContain("West");
 
 			await Assert.That(await As(walker, "e")).Contains("You can't go that way.");
-			await Assert.That(await As(walker, "+map")).Contains("   OO@").And.Contains("Key: O Old forest");
+			await Assert.That(await As(walker, "+map")).Contains("   OO@").And.Contains("Key: @ you · O Old forest");
 			await God($"&MAP`LEGEND`FOREST`CHAR {mapRef}=f");
-			await Assert.That(await As(walker, "+map")).Contains("   ff@").And.Contains("Key: f Old forest");
+			await Assert.That(await As(walker, "+map")).Contains("   ff@").And.Contains("Key: @ you · f Old forest");
 			await Assert.That(await As(walker, "+map/keep")).Contains($"You do not control {map}.");
 
 			// A locked side opens for whoever passes its key, as an exit's lock does.

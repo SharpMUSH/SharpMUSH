@@ -1,9 +1,9 @@
 format: "1.16"
 package: world-map
 title: "World map"
-version: 1.3.1
+version: 1.4.0
 authors: [SharpMUSH]
-description: "The portal's World map: every map in the game, drawn from its rooms and exits. A map is an object whose MAP`KIND says how it is drawn (coordinates, compass or graph); a room is on the map that is its zone."
+description: "The World map: every map in the game, drawn from its rooms and exits, in the portal and in the game with +map. A map is an object whose MAP`KIND says how it is drawn (coordinates, compass or graph); a room is on the map that is its zone."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [map, world, grid, building, portal]
@@ -11,13 +11,214 @@ category: Building
 requires_server: ">=0.1"
 
 # The portal reads the maps through api/maps, which lists them from this index: an object is a map when it holds
-# its own MAP`KIND. Any type may be one, so a zone master room can be a map. The package owns no code; the Map
-# Guide only carries the +help topic.
+# its own MAP`KIND. Any type may be one, so a zone master room can be a map. The World Map object carries +map; the
+# Map Guide carries the +help topics.
 attributes:
   MAP`KIND:
     index: true
 
 objects:
+  # The command object, in the master room. WIZARD because +map reads the rooms zoned to a map and their places,
+  # which the player may not examine; it shows only the rooms and exits the player may see (a DARK one only to who
+  # controls it or sees all, and only what the player perceives under @reality), and reads a World plugin map's
+  # places as the player. Under @reality it finds rooms as itself, so a game with layers gives it every layer
+  # (@reality/rx) for players on those layers to see their rooms.
+  #
+  # Trees: CMD` the command, INC` one routine each, FUN` the reads, DATA` the settings.
+  - ref: command
+    type: thing
+    name: World Map
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      DATA: |-
+        Settings. One leaf per setting.
+      # How far +map draws around you on a map of rooms, in cells.
+      DATA`RADIUS: |-
+        3
+      # How far +map draws around you on a World plugin map, in places; DATA`RADIUS`HEX on a (flat) hex map, whose rows
+      # take two lines each.
+      DATA`RADIUS`PLACES: |-
+        5
+      DATA`RADIUS`HEX: |-
+        3
+      # The compass exit names a compass map walks, each as <name>:<east>:<north>, as the World map reads them.
+      DATA`STEPS: |-
+        north:0:1 n:0:1 south:0:-1 s:0:-1 east:1:0 e:1:0 west:-1:0 w:-1:0 northeast:1:1 ne:1:1 northwest:-1:1 nw:-1:1 southeast:1:-1 se:1:-1 southwest:-1:-1 sw:-1:-1
+      # ---- commands -------------------------------------------------------------
+      CMD`MAP:
+        value: |-
+          $+map:@include %!/INC`SHOW
+        flags: [cmdsyntax]
+      # ---- routines -------------------------------------------------------------
+      # The map the player's room is on, drawn around them: a World plugin map's places, else its rooms.
+      INC`SHOW:
+        value: |-
+          think setqm(here,room(%#),map,u(%!/FUN`MAP,room(%#))); @assert isdbref(%q<map>)=@pemit %#=notice(MAP,You are not on a map.,warn); @select/inline hasattr(%q<here>,MAP`PLACE)=1,{@include %!/INC`PLACES=%q<here>,%q<map>},{@include %!/INC`ROOMS=%q<here>,%q<map>}
+        flags: [cmdsyntax]
+      # %0 the room, %1 its map: the places within DATA`RADIUS`PLACES, drawn as the player sees them, @ where they stand,
+      # and the key of the types drawn.
+      INC`PLACES:
+        value: |-
+          think setqm(x,worldplace(%0,x),y,worldplace(%0,y),z,worldplace(%0,z),radius,v(DATA`RADIUS`[if(strmatch(worldmap(%1),hex),HEX,PLACES)])); think setqm(places,u(%!/FUN`PLACES,%1,%q<x>,%q<y>,%q<z>,%q<radius>,%#)); @pemit %#=u(%!/FUN`TITLE,%1,%q<z>)%r[objeval(%#,worlddraw(%1,%q<x>,%q<y>,%q<z>,%q<radius>,@))]%r[u(%!/FUN`KEY,u(%!/FUN`PLACES`KEY,%1,%q<z>,%#))]
+        flags: [cmdsyntax]
+      # %0 the room, %1 its map: the rooms within DATA`RADIUS cells the player may see, @ where they stand, the exits between
+      # rooms side by side as lines, and the key of the kinds drawn.
+      INC`ROOMS:
+        value: |-
+          think setqm(cells,u(%!/FUN`CELLS,%1,%0,%#,v(DATA`RADIUS))); @assert strlen(%q<cells>)=@pemit %#=notice(MAP,[name(%0)] has no place on [name(%1)].,warn); think setqm(links,u(%!/FUN`LINKS,%#)); @pemit %#=u(%!/FUN`TITLE,%1,get(%0/MAP`COORDS`Z))%r[u(%!/FUN`DRAW,%0)]%r[u(%!/FUN`KEY,u(%!/FUN`ROOMS`KEY,%1,%0))]
+        flags: [cmdsyntax]
+      # ---- reads ----------------------------------------------------------------
+      # %0 a room: the map it is on, its zone when that holds its own MAP`KIND.
+      FUN`MAP:
+        value: |-
+          [setq(map,num(zone(%0)))][if(cand(isdbref(%q<map>),hasattr(%q<map>,MAP`KIND)),%q<map>)]
+        flags: [funsyntax]
+      # %0 a map, %1 a level: the map's name, then the level's MAP`LEVEL`<level> name, else its number when it is not 0.
+      FUN`TITLE:
+        value: |-
+          [name(%0)][if(strlen(setr(level,if(isnum(%1),strfirstof(get(%0/MAP`LEVEL`%1),if(neq(%1,0),Level %1))))),%b·%b%q<level>)]
+        flags: [funsyntax]
+      # %0 a room or exit, %1 the viewer: whether +map shows it to them. Only one they perceive under @reality (God,
+      # whom chkreality() can't be asked about, perceives all), and a DARK one only to who controls it or sees all.
+      FUN`SEES:
+        value: |-
+          cand(if(controls(me,%1),chkreality(%1,%0),1),cor(not(hasflag(%0,DARK)),controls(%1,%0),hasflag(%1,WIZARD),hasflag(%1,ROYALTY),haspower(%1,See_All)))
+        flags: [funsyntax]
+      # %0 a map, %1 the viewer: the rooms zoned to it they may see.
+      FUN`ROOMS:
+        value: |-
+          squish(iter(zfind(%0),if(cand(hastype(%i0,ROOM),u(%!/FUN`SEES,%i0,%1)),num(%i0))))
+        flags: [funsyntax]
+      # %0 a map, %1 the viewer's room, %2 the viewer, %3 the radius: each room drawn, as <dbref>:<east>:<north> from the
+      # viewer's room, theirs first. Empty when the map does not place their room.
+      FUN`CELLS:
+        value: |-
+          switch(get(%0/MAP`KIND),compass,u(%!/FUN`CELLS`COMPASS,%0,%1,%2,%3),graph,u(%!/FUN`CELLS`GRID,%0,%1,%2,%3,MAP`POS,96),u(%!/FUN`CELLS`GRID,%0,%1,%2,%3,MAP`COORDS,1))
+        flags: [funsyntax]
+      # %4 the attributes a room's place is in (MAP`COORDS, or MAP`POS on a graph map), %5 how many units make a cell: the
+      # rooms on the viewer's level placed within the radius. On a graph map y grows downward and a cell is 96 pixels, as
+      # the World map draws a room.
+      FUN`CELLS`GRID:
+        value: |-
+          [setq(x0,get(%1/%4`X))][setq(y0,get(%1/%4`Y))][setq(z0,default(%1/%4`Z,0))][if(cand(isnum(%q<x0>),isnum(%q<y0>)),squish([num(%1)]:0:0 [iter(setdiff(u(%!/FUN`ROOMS,%0,%2),num(%1)),u(%!/FUN`CELLS`GRID`ROOM,%i0,%3,%4,%5))]))]
+        flags: [funsyntax]
+      # %0 a room, %1 the radius, %2 and %3 as %4 and %5 above.
+      FUN`CELLS`GRID`ROOM:
+        value: |-
+          [setq(cx,get(%0/%2`X))][setq(cy,get(%0/%2`Y))][if(cand(isnum(%q<cx>),isnum(%q<cy>),eq(default(%0/%2`Z,0),%q<z0>)),[setq(dx,round(fdiv(sub(%q<cx>,%q<x0>),%3),0))][setq(dy,round(fdiv(sub(%q<cy>,%q<y0>),%3),0))][if(strmatch(%2,MAP`POS),setq(dy,mul(-1,%q<dy>)))][if(cand(lte(abs(%q<dx>),%1),lte(abs(%q<dy>),%1)),%0:%q<dx>:%q<dy>)])]
+        flags: [funsyntax]
+      # A compass map places the rooms its compass exits reach from the viewer's, a step at a time until no new room is
+      # placed (at most one step per cell); a cell already taken, or past the radius, stops that way.
+      FUN`CELLS`COMPASS:
+        value: |-
+          [setq(cells,[num(%1)]:0:0)][setq(front,num(%1))][null(iter(lnum(power(inc(mul(2,%3)),2)),if(words(%q<front>),setq(front,u(%!/FUN`WALK,%0,%2,%3)))))]%q<cells>
+        flags: [funsyntax]
+      # %0 a map, %1 the viewer, %2 the radius: one step out from each room in q<front>; the rooms it reaches.
+      FUN`WALK:
+        value: |-
+          squish(iter(%q<front>,u(%!/FUN`WALK`FROM,%0,%1,%2,%i0,after(grab(%q<cells>,%i0:*),:))))
+        flags: [funsyntax]
+      # %3 a room, %4 its <east>:<north>.
+      FUN`WALK`FROM:
+        value: |-
+          squish(iter(lexits(%3),u(%!/FUN`WALK`EXIT,%0,%1,%2,num(%i0),first(%4,:),rest(%4,:))))
+        flags: [funsyntax]
+      # %3 an exit, %4 and %5 where its room is: the room it leads to, placed one step its way, unless it is off the map,
+      # placed already, past the radius or in a taken cell.
+      FUN`WALK`EXIT:
+        value: |-
+          [setq(step,u(%!/FUN`STEP,%3))][setq(to,num(loc(%3)))][if(cand(strlen(%q<step>),hastype(%q<to>,ROOM),not(strlen(grab(%q<cells>,%q<to>:*))),strmatch(num(zone(%q<to>)),%0),u(%!/FUN`SEES,%q<to>,%1),u(%!/FUN`SEES,%3,%1)),[setq(nx,add(%4,elements(%q<step>,2,:)))][setq(ny,add(%5,elements(%q<step>,3,:)))][if(cand(lte(abs(%q<nx>),%2),lte(abs(%q<ny>),%2),not(strlen(grab(%q<cells>,*:%q<nx>:%q<ny>)))),[setq(cells,%q<cells> %q<to>:%q<nx>:%q<ny>)]%q<to>)])]
+        flags: [funsyntax]
+      # %0 an exit: the DATA`STEPS entry for its first compass name or alias.
+      FUN`STEP:
+        value: |-
+          first(squish(iter(fullname(%0),grab(v(DATA`STEPS),[lcstr(trim(%i0))]:*),;,%b)))
+        flags: [funsyntax]
+      # %0 the viewer: <from>:<to> for each exit they may see between two rooms drawn.
+      FUN`LINKS:
+        value: |-
+          squish(iter(%q<cells>,u(%!/FUN`LINKS`FROM,first(%i0,:),%0)))
+        flags: [funsyntax]
+      FUN`LINKS`FROM:
+        value: |-
+          squish(iter(lexits(%0),if(cand(u(%!/FUN`SEES,%i0,%1),strlen(grab(%q<cells>,[num(loc(%i0))]:*))),%0:[num(loc(%i0))])))
+        flags: [funsyntax]
+      # %0 east, %1 north: the room drawn there.
+      FUN`AT:
+        value: |-
+          first(grab(%q<cells>,*:%0:%1),:)
+        flags: [funsyntax]
+      # %0 and %1 rooms: whether an exit joins them, either way.
+      FUN`LINKED:
+        value: |-
+          cand(strlen(%0),strlen(%1),cor(match(%q<links>,%0:%1),match(%q<links>,%1:%0)))
+        flags: [funsyntax]
+      # %0 the viewer's room: the rooms in q<cells>, cropped to the rows and columns that hold one, a line of cells and a line
+      # of the exits between rows in turn.
+      FUN`DRAW:
+        value: |-
+          [setq(xs,sort(iter(%q<cells>,elements(%i0,2,:)),n))][setq(ys,sort(iter(%q<cells>,elements(%i0,3,:)),n))][setq(left,first(%q<xs>))][setq(right,last(%q<xs>))][setq(bottom,first(%q<ys>))][iter(lnum(last(%q<ys>),%q<bottom>),u(%!/FUN`DRAW`ROW,%i0,num(%0))[if(gt(%i0,%q<bottom>),%r[u(%!/FUN`DRAW`GAP,%i0)])],%b,%r)]
+        flags: [funsyntax]
+      # %0 a row, %1 the viewer's room: each cell and a - to the next where an exit joins them.
+      FUN`DRAW`ROW:
+        value: |-
+          iter(lnum(%q<left>,%q<right>),[u(%!/FUN`DRAW`CELL,%i0,%0,%1)][if(lt(%i0,%q<right>),if(u(%!/FUN`LINKED,u(%!/FUN`AT,%i0,%0),u(%!/FUN`AT,inc(%i0),%0)),-,%b))],%b,[null()])
+        flags: [funsyntax]
+      # %0 east, %1 north, %2 the viewer's room: [@] there, [<character>] for another room's kind, three spaces for none.
+      FUN`DRAW`CELL:
+        value: |-
+          [setq(room,u(%!/FUN`AT,%0,%1))][if(strlen(%q<room>),\[[if(strmatch(%q<room>,%2),@,u(%!/FUN`CHAR,%q<map>,lcstr(get(%q<room>/ENVIRONMENT))))]\],%b%b%b)]
+        flags: [funsyntax]
+      # %0 a row: under each cell a | to the one below where an exit joins them, and the diagonal between columns.
+      FUN`DRAW`GAP:
+        value: |-
+          iter(lnum(%q<left>,%q<right>),%b[if(u(%!/FUN`LINKED,u(%!/FUN`AT,%i0,%0),u(%!/FUN`AT,%i0,dec(%0))),|,%b)]%b[if(lt(%i0,%q<right>),u(%!/FUN`DRAW`CROSS,%i0,%0))],%b,[null()])
+        flags: [funsyntax]
+      # %0 a column, %1 a row: \ for an exit from it down to the right, / from the next column down to the left, X for both.
+      FUN`DRAW`CROSS:
+        value: |-
+          [setq(fall,u(%!/FUN`LINKED,u(%!/FUN`AT,%0,%1),u(%!/FUN`AT,inc(%0),dec(%1))))][setq(rise,u(%!/FUN`LINKED,u(%!/FUN`AT,inc(%0),%1),u(%!/FUN`AT,%0,dec(%1))))][switch(%q<fall>%q<rise>,11,X,10,\\,01,/,%b)]
+        flags: [funsyntax]
+      # %0 a map, %1 a kind, %2 a part: MAP`LEGEND`<kind>`<part>, from the map, else from the maps it is inside.
+      FUN`LEGEND:
+        value: |-
+          if(hasattr(%0,MAP`LEGEND`%1`%2),get(%0/MAP`LEGEND`%1`%2),if(cand(lt(%3,8),isdbref(setr(up,num(zone(%0)))),hasattr(%q<up>,MAP`KIND)),u(%!/FUN`LEGEND,%q<up>,%1,%2,inc(%3))))
+        flags: [funsyntax]
+      # %0 a map, %1 a kind: its CHAR, else its ICON when that is a character or two, else its label's first letter; a space
+      # for no kind.
+      FUN`CHAR:
+        value: |-
+          if(strlen(%1),[setq(icon,u(%!/FUN`LEGEND,%0,%1,ICON))][strfirstof(left(u(%!/FUN`LEGEND,%0,%1,CHAR),1),switch(strlen(%q<icon>),1,%q<icon>,2,if(regmatch(%q<icon>,^\[ -~\]+$),left(%q<icon>,1),%q<icon>)),ucstr(left(strfirstof(u(%!/FUN`LEGEND,%0,%1,LABEL),%1),1)))],%b)
+        flags: [funsyntax]
+      # %0 the viewer's room: the kinds (ENVIRONMENT) of the other rooms drawn.
+      FUN`KINDS:
+        value: |-
+          setunion(iter(%q<cells>,if(comp(first(%i0,:),num(%0)),lcstr(get(first(%i0,:)/ENVIRONMENT)))),)
+        flags: [funsyntax]
+      # %0 a map, %1 the viewer's room: <character> <label> for each kind drawn, | between.
+      FUN`ROOMS`KEY:
+        value: |-
+          iter(u(%!/FUN`KINDS,%1),[u(%!/FUN`CHAR,%0,%i0)] [strfirstof(u(%!/FUN`LEGEND,%0,%i0,LABEL),%i0)],%b,|)
+        flags: [funsyntax]
+      # %0 <character> <label> entries, | between: the key line.
+      FUN`KEY:
+        value: |-
+          Key: @ you[iter(%0,%b·%b%i0,|,[null()])]
+        flags: [funsyntax]
+      # %0 a map, %1 %2 %3 a place, %4 the radius, %5 the viewer: <type>:<x>:<y> for each place worlddraw() draws with a type,
+      # as the viewer reads it.
+      FUN`PLACES:
+        value: |-
+          squish(iter(lnum(mul(-1,%4),%4),iter(lnum(mul(-1,%4),%4),if(cor(not(match(hex pointy-hex,worldmap(%0))),lte(abs(add(%i0,%i1)),%4)),[setq(type,objeval(%5,worldcell(%0,add(%1,%i1),add(%2,%i0),%3)))][if(strlen(%q<type>),%q<type>:[add(%1,%i1)]:[add(%2,%i0)])]))))
+        flags: [funsyntax]
+      # %0 a map, %1 a level, %2 the viewer: <character> <label> for each type in q<places>, the character as worlddraw()
+      # draws it.
+      FUN`PLACES`KEY:
+        value: |-
+          iter(setunion(iter(%q<places>,first(%i0,:)),),[setq(at,rest(grab(%q<places>,%i0:*),:))][objeval(%2,worlddraw(%0,first(%q<at>,:),rest(%q<at>,:),%1,0))] [objeval(%2,worldcell(%0,first(%q<at>,:),rest(%q<at>,:),%1,label))],%b,|)
+        flags: [funsyntax]
+
   - ref: world_map
     type: thing
     name: Map Guide
@@ -30,13 +231,36 @@ objects:
       SEE`MAP: |-
         zones|gmcp room
       HELP`MAP: |-
-        The portal's **World map** draws each map of the game from its rooms and the exits between them. Everyone can look at a map; the room you are in is marked.
+        A map shows the rooms of a place and the ways between them. See one in the portal's **World map**, or in the game with `+map`. Everyone can look at a map; the room you are in is marked.
 
+        `+map` draws the map your room is on, around you, north up, with `@` where you stand. Each room is a cell, `\[ \]`, holding the first letter or character of its kind. The exits between rooms side by side are lines: `-`, `|`, `/` and `\\`. A key under the map names each kind, and the first line names the map and, below or above ground, the level.
+
+        In the Quay:
+
+        ```
+        +map
+        ```
+
+        Output:
+        ```
+        Bay
+        %b%b%b%b\[L\] \[ \]
+        %b%b%b%b%b| /
+        \[ \]-\[@\]-\[M\]
+        %b%b%b%b%b|
+        %b%b%b%b\[~\]
+        Key: @ you · L Lighthouse · M Market · ~ Open water
+        ```
+
+        On a map of places, such as the wilds, `+map` draws a character for each place instead.
+
+        On the World map, the arrows beside a level's name step up and down; you start on your own level. Choosing a room shows the way there from where you stand. See `+help map routes`.
+      HELP`MAP`MAKING: |-
         A map is an object, usually a thing, whose ``MAP`KIND`` attribute says how it is drawn. A room is on the map that is its zone.
 
         - `coordinates`: a grid. Each room sits in the cell its ``MAP`COORDS`X``, ``MAP`COORDS`Y`` and ``MAP`COORDS`Z`` name, one level (z) at a time, north up.
         - `compass`: placed by its exits. A room north of another is drawn above it; `up` and `down` change the level.
-        - `graph`: each room at the point its ``MAP`POS`X`` and ``MAP`POS`Y`` name, with no grid.
+        - `graph`: each room at the point its ``MAP`POS`X`` and ``MAP`POS`Y`` name, with no grid. `+map` draws it on a grid of 96 a cell.
 
         A room covers one cell unless its ``MAP`SIZE`W`` and ``MAP`SIZE`H`` say more.
 
@@ -62,7 +286,7 @@ objects:
         Boathouse/MAP`COORDS`Y - Set.
         ```
 
-        Do the same in each room of the harbour. A room without coordinates is drawn in a row below the grid.
+        Do the same in each room of the harbour. A room without coordinates is drawn in a row below the grid, and `+map` there says it has no place on the map.
 
         **New map**, under the portal's map list, runs the first two commands for you. The map stays in your inventory; keep it there, or anywhere you like, but destroying it takes the map away.
 
@@ -78,9 +302,20 @@ objects:
 
         A graph map can be drawn on a picture. See `+help map pictures`.
 
-        Choosing a room shows the way there from where you stand. See `+help map routes`.
-
         Someone who controls a map can change it in the portal. See `+help map building`.
+      # Making and changing maps is for builders and staff; the rest is for everyone.
+      LOCK`MAP`MAKING: |-
+        power^builder|flag^wizard|flag^royalty
+      LOCK`MAP`REGIONS: |-
+        power^builder|flag^wizard|flag^royalty
+      LOCK`MAP`LEVELS: |-
+        power^builder|flag^wizard|flag^royalty
+      LOCK`MAP`LEGEND: |-
+        power^builder|flag^wizard|flag^royalty
+      LOCK`MAP`PICTURES: |-
+        power^builder|flag^wizard|flag^royalty
+      LOCK`MAP`BUILDING: |-
+        power^builder|flag^wizard|flag^royalty
       HELP`MAP`REGIONS: |-
         A map zoned to another map is a region inside it. Regions nest as deep as you like: Sol System, Earth, United States, New York, Brooklyn.
 
@@ -109,7 +344,7 @@ objects:
       HELP`MAP`LEVELS: |-
         A `coordinates` or `compass` map shows one level at a time. The arrows beside the level names step up and down, and choosing a room's up or down exit goes to its level.
 
-        ``MAP`LEVEL`<level>`` names a level; a level without a name is numbered. ``MAP`LEVEL`` is the level a visitor sees first. Someone standing on the map starts on their own level.
+        ``MAP`LEVEL`<level>`` names a level; a level without a name is numbered. ``MAP`LEVEL`` is the level a visitor sees first. Someone standing on the map starts on their own level, and `+map` names it on its first line.
 
         ```
         &MAP`LEVEL`-1 Harbour=Sewers
@@ -127,6 +362,7 @@ objects:
         - ``MAP`LEGEND`<kind>`LABEL``: the name the legend shows. Without one, the kind itself.
         - ``MAP`LEGEND`<kind>`TONE``: the room's colour, one of the colours `tone()` takes (`muted`, `info`, `green`). Each reader sees it in their own theme.
         - ``MAP`LEGEND`<kind>`ICON``: a picture beside the name, so the kind reads without its colour. A map icon's name, such as `forest`, `mountain`, `castle`, `village`, `lighthouse` or `ringed-planet`, or a character or two of your own. The legend editor on the World map lists every icon with its picture.
+        - ``MAP`LEGEND`<kind>`CHAR``: the character `+map` draws the kind's rooms with. Without one, its icon when that is a character or two, else the first letter of its label.
 
         ```
         &MAP`LEGEND`WATER`LABEL Harbour=Open water

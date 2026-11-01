@@ -1,9 +1,9 @@
 format: "1.16"
 package: world-grid-help
 title: "World grid: +help topics"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
-description: "Puts the +map topic into +help: registers the world-grid package's help with the +help librarian."
+description: "Puts the map grid topic into +help: registers the world-grid package's help with the +help librarian."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [world-grid, help, bridge]
