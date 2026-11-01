@@ -90,7 +90,7 @@
                     var index = i;
                     <li class="schema-row">
                         <div class="schema-row-fields">
-                            @foreach (var item in Element.ItemFields ?? [])
+                            @foreach (var item in FieldsOf(rows[index]))
                             {
                                 if (item.Key is null || string.Equals(item.Type, "hidden", StringComparison.OrdinalIgnoreCase)) continue;
                                 <SchemaFieldInput Element="item" Disabled="Disabled"
@@ -184,8 +184,29 @@
     {
         var rows = Rows();
         if (index >= rows.Count) return Task.CompletedTask;
+        var before = FieldsOf(rows[index]).Select(item => item.Key).ToHashSet();
         rows[index][key] = value is null ? null : JsonNode.Parse(SchemaValues.ToJson(value).GetRawText());
+        if (key == Element.ItemBy) Rekind(rows[index], before);
         return SetRows(rows);
+    }
+
+    // The fields a row shows: the item fields, then those of the variant its ItemBy value names.
+    private IEnumerable<SchemaElement> FieldsOf(JsonObject row)
+        => (Element.ItemFields ?? []).Concat(Element.ItemBy is { } by && row[by] is JsonValue kind
+            && Element.ItemVariants?.TryGetValue(kind.ToString(), out var variant) == true ? variant! : []);
+
+    // A row that changed kind drops the details of its old kind and starts the new kind's from their defaults.
+    private void Rekind(JsonObject row, HashSet<string?> before)
+    {
+        var now = FieldsOf(row).ToList();
+        foreach (var key in before.Where(key => key is not null && now.All(item => item.Key != key)))
+        {
+            row.Remove(key!);
+        }
+        foreach (var item in now.Where(item => item.Key is not null && !before.Contains(item.Key) && item.Default is not null))
+        {
+            row[item.Key!] = JsonNode.Parse(item.Default!.Value.GetRawText());
+        }
     }
 
     // A new row starts from each item field's default. When the rows carry a hidden "id", it gets the next
@@ -198,6 +219,7 @@
         {
             if (item.Key is not null && item.Default is { } fallback) row[item.Key] = JsonNode.Parse(fallback.GetRawText());
         }
+        Rekind(row, [.. Element.ItemFields?.Select(item => item.Key) ?? []]);
         if ((Element.ItemFields ?? []).Any(item => item.Key == "id" && string.Equals(item.Type, "hidden", StringComparison.OrdinalIgnoreCase)))
         {
             row["id"] = rows.Select(other => other["id"] is JsonValue id && int.TryParse(id.ToString(), out var n) ? n : 0).DefaultIfEmpty(0).Max() + 1;

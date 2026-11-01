@@ -186,6 +186,21 @@ so something else can point at the row.
 
 The value is a JSON array of objects, posted back the same way.
 
+Rows of different kinds can each have their own details. `item_by` names the item field that holds a
+row's kind, and `item_variants` lists the further fields for each kind:
+
+```jsonc
+{ "kind": "field", "key": "rewards", "label": "Rewards", "type": "rows", "item_by": "kind",
+  "item_fields": [ { "kind": "field", "key": "kind", "label": "Kind", "type": "select", "options": [
+                     { "value": "info", "label": "Information" }, { "value": "coin", "label": "Coin" } ] } ],
+  "item_variants": {
+    "info": [ { "kind": "field", "key": "text", "label": "What they learn", "type": "text" } ],
+    "coin": [ { "kind": "field", "key": "amount", "label": "Amount", "type": "number", "default": 10 } ] } }
+```
+
+When a row's kind changes, the fields of its old kind are removed from it and the new kind's start from
+their defaults. Other keys on the row stay.
+
 **Graphs.** A `graph` field edits steps joined by outcomes: a map to drag steps around, an outline
 that reads the same graph as a list (the only view on a phone, and the one a screen reader uses), and
 a panel for the selected step. Its `graph` object says what steps exist:

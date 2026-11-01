@@ -359,4 +359,33 @@ public class SchemaGraphEditorTests : BunitContext
 
 		await Assert.That(((JsonElement)sent!)[2].GetProperty("id").GetInt32()).IsEqualTo(5);
 	}
+
+	[Test]
+	public async Task A_row_that_changes_kind_takes_that_kinds_details()
+	{
+		object? sent = null;
+		var rows = new SchemaElement(Kind: "field", Key: "rewards", Type: "rows",
+			ItemFields: [new SchemaElement(Kind: "field", Key: "kind", Label: "Kind")],
+			ItemBy: "kind",
+			ItemVariants: new Dictionary<string, IReadOnlyList<SchemaElement>>
+			{
+				["info"] = [new SchemaElement(Kind: "field", Key: "text", Label: "Info text")],
+				["coin"] = [new SchemaElement(Kind: "field", Key: "amount", Label: "Amount", Type: "number", Default: Parse("10"))]
+			});
+		var cut = Render<SchemaFieldInput>(p => p
+			.Add(x => x.Element, rows)
+			.Add(x => x.Value, Parse("""[{"kind":"info","text":"A lantern","note":"kept"}]"""))
+			.Add(x => x.ValueChanged, (object? v) => sent = v));
+
+		await Assert.That(cut.Markup).Contains("Info text");
+		await Assert.That(cut.Markup).DoesNotContain("Amount");
+
+		await cut.FindAll("input").First().ChangeAsync(new() { Value = "coin" });
+
+		var row = ((JsonElement)sent!)[0];
+		await Assert.That(row.GetProperty("kind").GetString()).IsEqualTo("coin");
+		await Assert.That(row.GetProperty("amount").GetInt32()).IsEqualTo(10);
+		await Assert.That(row.TryGetProperty("text", out _)).IsFalse();
+		await Assert.That(row.GetProperty("note").GetString()).IsEqualTo("kept");
+	}
 }
