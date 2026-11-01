@@ -277,7 +277,7 @@ packages:
   - path: duties/
     name: Duties
     package: duties
-    version: 1.2.0
+    version: 1.3.0
     description: +duty — short adventures a party plays from challenge to challenge, written by players, approved by duty reviewers and put on a seasonal roster; rolls come from a sheet system bridge
   - path: duties-help/
     name: Duties help
@@ -292,8 +292,8 @@ packages:
   - path: duties-app/
     name: Duties in the portal
     package: duties-app
-    version: 1.0.0
-    description: Application package (Area 21) — registers duties as a portal page at /apps/duties, with a map editor for a duty's steps and the review of submitted duties (requires duties)
+    version: 1.1.0
+    description: Application package (Area 21) — registers duties as a portal page at /apps/duties, with a map editor for a duty's steps, the review of submitted duties and the active roster (requires duties)
   - path: duties-scene/
     name: Duties in scenes
     package: duties-scene
