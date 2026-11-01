@@ -65,8 +65,8 @@ Normally, when an object attempts to speak on the channel system with @chat, usi
 
 - `@cemit[/noisy|/silent][/noeval][/spoof] <channel>=<message>`
 - `@nscemit[/noisy|/silent][/noeval] <channel>=<message>`
-- `cemit(<channel>, <message>[, <noisy>])`
-- `nscemit(<channel>, <message>[, <noisy>])`
+- `cemit(<channel>, <message>[, <noisy>[, <picture>]])`
+- `nscemit(<channel>, <message>[, <noisy>[, <picture>]])`
 
 @cemit emits *\<message\>* on *\<channel\>*. It does not include your name. The channel prefix is included if the /noisy switch is given, and omitted if /silent is given - if neither is given, the default behaviour is controlled by the noisy_cemit @config option. The /noeval switch prevents *\<message\>* from being evaluated.
 
@@ -76,10 +76,26 @@ You must be able to speak on the channel, or have the See_All and Pemit_All @pow
 
 cemit() and nscemit() work the same as @cemit/silent and @nscemit/silent, respectively. If *\<noisy\>* is given as a true value, they work like @cemit/noisy and @nscemit/noisy, respectively, instead.
 
+*\<picture\>* is shown beside the line in the web portal; see [Channel Pictures].
+
 @cemit is intended for use in writing extended chat systems. 
 
 ::: seealso
 - [@chat]
+:::
+
+# Channel Pictures
+
+The fourth argument to cemit() and nscemit(), *\<picture\>*, is a picture the web portal shows beside the line; a MU* client shows nothing of it. It is a character you control, by dbref or objid, whose portal picture is used, or an https image URL. Any other value returns `#-1 INVALID PICTURE`, and a character you do not control returns `#-1 PERMISSION DENIED`.
+
+```
+> think cemit(Public, The tower bell rings., 1, https://example.com/bell.png)
+```
+
+Output: `<Public> The tower bell rings.` In the web portal, the line has the bell picture beside it.
+
+::: seealso
+- [@cemit]
 :::
 
 # @channel

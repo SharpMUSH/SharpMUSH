@@ -62,8 +62,26 @@ public class FeedChannelBufferTests
 		SeeAllOnly = seeAll,
 		Style = "say",
 		SpeakerName = "Ann",
-		MessageText = $"line {id}"
+		MessageText = MarkupText.Plain($"line {id}")
 	};
+
+	/// <summary>
+	/// The message part keeps its colour, and the line its picture, so the portal's recalled line reads as the pushed
+	/// one.
+	/// </summary>
+	[Test]
+	public async Task ALine_KeepsTheMarkupOfItsMessage_AndItsPicture()
+	{
+		var buffer = Buffer();
+		var styled = MarkupText.Wrap(AnsiMarkup.Create(bold: true), "ALARM");
+		var sent = Line("Channel/Styled", 6);
+		sent.MessageText = styled;
+		sent.Picture = "https://example.com/bell.png";
+		await buffer.AddMessageAsync(sent);
+		var line = (await buffer.GetMessagesAsync("Channel/Styled", 10).ToListAsync()).Single();
+		await Assert.That(line.MessageText.Render(MarkupFormat.Ansi)).IsEqualTo(styled.Render(MarkupFormat.Ansi));
+		await Assert.That(line.Picture).IsEqualTo("https://example.com/bell.png");
+	}
 
 	[Test]
 	public async Task ALine_ComesBackAsItWasDelivered()
@@ -73,7 +91,7 @@ public class FeedChannelBufferTests
 
 		var line = (await buffer.GetMessagesAsync("Channel/Public", 10).ToListAsync()).Single();
 		await Assert.That(line.Message.ToPlainText()).IsEqualTo("<Public> Ann says, \"line 5\"");
-		await Assert.That(line.MessageText).IsEqualTo("line 5");
+		await Assert.That(line.MessageText.ToPlainText()).IsEqualTo("line 5");
 		await Assert.That(line.SpeakerName).IsEqualTo("Ann");
 		await Assert.That(line.Style).IsEqualTo("say");
 		await Assert.That(line.SeeAllOnly).IsTrue();

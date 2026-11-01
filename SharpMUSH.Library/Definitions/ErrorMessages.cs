@@ -25,6 +25,7 @@ public static partial class ErrorMessages
 		public const string NotVisible = "#-1 NO SUCH OBJECT VISIBLE";
 		public const string CantSeeThat = "#-1 CAN'T SEE THAT HERE";
 		public const string InvalidDbref = "#-1 INVALID DBREF";
+		public const string InvalidPicture = "#-1 INVALID PICTURE";
 
 		public const string NotARoom = "#-1 NOT A ROOM";
 

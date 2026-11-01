@@ -7,7 +7,8 @@
 
 @* D1 §5.1 / board 06 the channel view: one channel, or one page conversation, in main. Lines are grouped
    by day ("Today", "Yesterday", a date) and by author (a header per run of lines within five minutes), with
-   a "New" divider where the lines unread at opening begin. Bodies are text, never markup. The composer
+   a "New" divider where the lines unread at opening begin. A line that names no speaker (an @cemit) stands
+   alone, without a header, and with the picture it was sent with (a character's or an image) when it has one. Bodies keep their colour when the game sent it (markup), else are text. The composer
    sends @chat to a channel, or page to the conversation's people by objid (a quoted name when there is no
    objid). While open, the feed's Viewing is this key, so its lines do not count as unread. Opening a channel
    pulls its recent lines from the server, and opening a conversation its logged pages; live lines then append,
@@ -65,7 +66,29 @@
                     {
                         <div class="comm-new" role="separator"><span>@Loc["NavPlayNewLines"]</span></div>
                     }
-                    if (StartsGroup(i))
+                    if (line.From.Length == 0 && line.Picture is { } picture)
+                    {
+                        @* An @cemit sent with a picture: the picture beside it, still with no name. *@
+                        var persona = PersonaName(picture);
+                        <div class="comm-group comm-emit--pictured">
+                            <CharacterAvatar Class="comm-avatar" Name="@persona" Character="@(IsUrl(picture) ? null : picture)"
+                                             ImageUrl="@(IsUrl(picture) ? picture : null)"
+                                             Fallback="@(persona is null ? NoPicture : null)" />
+                            <div class="comm-body">
+                                <div class="comm-meta"><span class="comm-time">@line.Timestamp.ToLocalTime().ToString("HH:mm")</span></div>
+                                <div class="comm-text">@Body(line)</div>
+                            </div>
+                        </div>
+                    }
+                    else if (line.From.Length == 0)
+                    {
+                        @* An @cemit names nobody: the line alone, as the terminal shows it. *@
+                        <div class="comm-emit">
+                            <span class="comm-time">@line.Timestamp.ToLocalTime().ToString("HH:mm")</span>
+                            <div class="comm-text">@Body(line)</div>
+                        </div>
+                    }
+                    else if (StartsGroup(i))
                     {
                         var end = GroupEnd(i);
                         <div class="comm-group">
@@ -77,7 +100,7 @@
                                 </div>
                                 @for (var j = i; j <= end; j++)
                                 {
-                                    <div class="comm-text">@_lines[j].Text</div>
+                                    <div class="comm-text">@Body(_lines[j])</div>
                                 }
                             </div>
                         </div>
@@ -282,10 +305,39 @@
     }
 
     private static bool SameRun(CommMessage a, CommMessage b) =>
-        string.Equals(a.From, b.From, StringComparison.Ordinal)
+        a.From.Length > 0
+        && string.Equals(a.From, b.From, StringComparison.Ordinal)
         && string.Equals(a.FromObjId, b.FromObjId, StringComparison.Ordinal)
         && a.Timestamp.ToLocalTime().Date == b.Timestamp.ToLocalTime().Date
         && b.Timestamp - a.Timestamp <= GroupGap;
+
+    /// <summary>A picture given as an image URL rather than a character.</summary>
+    private static bool IsUrl(string picture) => !picture.StartsWith('#');
+
+    /// <summary>
+    /// A character picture's name, for its initials when it has no picture: known when the character is on the
+    /// channel's member list.
+    /// </summary>
+    private string? PersonaName(string picture) =>
+        IsUrl(picture) ? null : Members?.FirstOrDefault(m => string.Equals(m.ObjId, picture, StringComparison.Ordinal))?.Name;
+
+    /// <summary>The room a picture would take, empty: an image that did not load, or a character not on the list.</summary>
+    private static readonly RenderFragment NoPicture = builder =>
+    {
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", "comm-avatar comm-avatar--none");
+        builder.AddAttribute(2, "aria-hidden", "true");
+        builder.CloseElement();
+    };
+
+    /// <summary>A line's body: its markup drawn as the terminal draws it, or its text when the game sent none.</summary>
+    private static RenderFragment Body(CommMessage line) => builder =>
+    {
+        if (line.Markup is { } markup)
+            builder.AddMarkupContent(0, SceneMarkupRenderer.ToHtml(markup));
+        else
+            builder.AddContent(0, line.Text);
+    };
 
     private string DayLabel(DateTime day)
     {

@@ -53,6 +53,12 @@ public class SharpChannelMessage
 	/// </summary>
 	public string SpeakerName { get; set; } = string.Empty;
 
-	/// <summary>The message part alone, plain, after the mogrifier; empty when only <see cref="Message"/> is known.</summary>
-	public string MessageText { get; set; } = string.Empty;
+	/// <summary>The message part alone, with its markup, after the mogrifier; empty when only <see cref="Message"/> is known.</summary>
+	public MString MessageText { get; set; } = MarkupText.Empty;
+
+	/// <summary>
+	/// The picture the line was sent with (<c>cemit()</c>'s fourth argument): a character's objid or an image URL;
+	/// empty for none.
+	/// </summary>
+	public string Picture { get; set; } = string.Empty;
 }

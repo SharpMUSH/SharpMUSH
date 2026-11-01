@@ -6,6 +6,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
@@ -29,14 +30,51 @@ public static class ChannelEmit
 		MString channelName,
 		MString message,
 		bool spoof,
-		bool silent)
-		=> await ChannelHelper.GetVisibleChannelOrError(channelPermissions, mediator,
-				notifyService, executor, channelName, notify: true) switch
+		bool silent,
+		string picture = "")
+		=> await PictureAsync(permissionService, mediator, executor, picture) switch
 		{
-			SharpChannel channel => await EmitAsync(permissionService, channelPermissions, mediator, notifyService, executor, channel, message,
-				spoof, silent),
-			Error<CallState> error => error.Value
+			Error<string> refused => new CallState(refused.Value),
+			string shown => await ChannelHelper.GetVisibleChannelOrError(channelPermissions, mediator,
+					notifyService, executor, channelName, notify: true) switch
+			{
+				SharpChannel channel => await EmitAsync(permissionService, channelPermissions, mediator, notifyService, executor,
+					channel, message, spoof, silent, shown),
+				Error<CallState> error => error.Value
+			}
 		};
+
+	/// <summary>
+	/// The picture a line is sent with, as it is kept: nothing, the objid of a character the emitter controls, or an
+	/// https image URL, which is all the portal draws. A character the emitter does not control is refused, so no one shows up under another
+	/// player's face.
+	/// </summary>
+	private static async ValueTask<Result<string>> PictureAsync(IPermissionService permissionService, IMediator mediator,
+		AnySharpObject executor, string picture)
+	{
+		picture = picture.Trim();
+		if (picture.Length == 0)
+		{
+			return string.Empty;
+		}
+
+		if (!picture.StartsWith('#'))
+		{
+			return Uri.TryCreate(picture, UriKind.Absolute, out var url) && url.Scheme == Uri.UriSchemeHttps
+				? url.AbsoluteUri
+				: new Error<string>(ErrorMessages.Returns.InvalidPicture);
+		}
+
+		if (!DBRef.TryParse(picture, out var parsed) || parsed is not { } dbref
+			|| await mediator.Send(new GetObjectNodeQuery(dbref)) is not AnySharpObject persona)
+		{
+			return new Error<string>(ErrorMessages.Returns.NoSuchObject);
+		}
+
+		return await permissionService.Controls(executor, persona)
+			? persona.Object().DBRef.ToString()
+			: new Error<string>(PermissionRefusal.NotControlled(persona).ReturnText);
+	}
 
 	private static async ValueTask<CallState> EmitAsync(
 		IPermissionService permissionService,
@@ -47,7 +85,8 @@ public static class ChannelEmit
 		SharpChannel channel,
 		MString message,
 		bool spoof,
-		bool silent)
+		bool silent,
+		string picture)
 	{
 		var check = await ChannelHelper.CemitRefusal(channelPermissions, executor, channel);
 		if (check.Refused)
@@ -89,7 +128,8 @@ public static class ChannelEmit
 			// format ignores it, but a mogrifier or @chatformat is handed it as %6.
 			MarkupText.Empty,
 			// extchat.c:1656: PEMIT_SILENT is CB_QUIET, which leaves the channel name off the line.
-			[silent ? "silent" : "noisy"]
+			[silent ? "silent" : "noisy"],
+			Picture: picture
 		));
 
 		return new CallState(string.Empty);

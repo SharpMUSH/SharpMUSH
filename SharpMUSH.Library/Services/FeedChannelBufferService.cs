@@ -33,8 +33,8 @@ public class FeedChannelBufferService(IFeedStore store, IChannelMessageIdSource 
 		var name = message.SpeakerName;
 		await store.AppendFeedMessageAsync(new SharpFeedMessage(message.Id, FeedNames.Channel, message.ChannelId,
 			message.Timestamp, message.Sender, name, message.Sender, name, null, "", message.Style,
-			MarkupText.Plain(message.MessageText), Line: message.Message,
-			Audience: message.SeeAllOnly ? SeeAllAudience : ""), Limits);
+			message.MessageText, Line: message.Message,
+			Audience: message.SeeAllOnly ? SeeAllAudience : "", Picture: message.Picture), Limits);
 	}
 
 	public async IAsyncEnumerable<SharpChannelMessage> GetMessagesAsync(string channelId, int count)
@@ -51,7 +51,8 @@ public class FeedChannelBufferService(IFeedStore store, IChannelMessageIdSource 
 				SeeAllOnly = line.Audience == SeeAllAudience,
 				Style = line.Style,
 				SpeakerName = line.SpeakerName,
-				MessageText = line.Text.ToPlainText()
+				MessageText = line.Text,
+				Picture = line.Picture
 			};
 		}
 	}

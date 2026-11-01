@@ -85,6 +85,7 @@ public partial class Functions
 			"speaker" => new CallState(message.Speaker),
 			"external_provider" => new CallState(message.ExternalIdentity?.Provider ?? ""),
 			"external_id" => new CallState(message.ExternalIdentity?.Subject ?? ""),
+			"external_picture" => new CallState(message.ExternalIdentity?.Picture ?? ""),
 			"name" => new CallState(message.SpeakerName),
 			"executor" => new CallState(message.Executor),
 			"executor_name" => new CallState(message.ExecutorName),

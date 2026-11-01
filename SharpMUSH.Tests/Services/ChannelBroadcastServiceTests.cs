@@ -46,7 +46,7 @@ public class ChannelBroadcastServiceTests
 		await eventService.Received(1).TriggerEventAsync(SharpEvents.ChannelMessage,
 			null,
 			Arg.Is<IReadOnlyList<MString>>(args =>
-				args.Count == 8
+				args.Count == 9
 				&& args[0].ToPlainText() == "Public"
 				&& args[1].ToPlainText() == string.Empty
 				&& args[2].ToPlainText() == "say"
@@ -54,7 +54,8 @@ public class ChannelBroadcastServiceTests
 				&& args[4].ToPlainText() == "The server is restarting."
 				&& args[5].ToPlainText() == member.Object().DBRef.ToString()
 				&& long.Parse(args[6].ToPlainText()) >= before
-				&& args[7].ToPlainText() == Ids.Peek.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+				&& args[7].ToPlainText() == Ids.Peek.ToString(System.Globalization.CultureInfo.InvariantCulture)
+				&& args[8].ToPlainText() == string.Empty));
 	}
 
 	/// <summary>
@@ -88,7 +89,7 @@ public class ChannelBroadcastServiceTests
 		await Assert.That(raised![7].ToPlainText()).IsEqualTo(buffered.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
 		await Assert.That(buffered.Style).IsEqualTo("pose");
 		await Assert.That(buffered.SpeakerName).IsEqualTo("System");
-		await Assert.That(buffered.MessageText).IsEqualTo("The server is restarting.");
+		await Assert.That(buffered.MessageText.ToPlainText()).IsEqualTo("The server is restarting.");
 	}
 
 	/// <summary>A line nobody was sent — here, its one member gagged the channel — raises nothing.</summary>

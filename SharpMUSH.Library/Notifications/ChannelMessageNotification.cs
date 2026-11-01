@@ -28,5 +28,10 @@ public record ChannelMessageNotification(
 	/// <c>CU_QUIET</c> on the channel — the flag <c>@channel/mute</c> sets. Speech and poses are never
 	/// sent with it, which is why muting a channel does not silence the conversation on it.
 	/// </summary>
-	bool CheckQuiet = false
+	bool CheckQuiet = false,
+	/// <summary>
+	/// The picture shown with the line in the portal, given to <c>cemit()</c>: the objid of a character the emitter
+	/// controls, or an image URL; empty for none. A terminal shows nothing of it.
+	/// </summary>
+	string Picture = ""
 	) : INotification;

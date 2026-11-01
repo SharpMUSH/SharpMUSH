@@ -159,11 +159,34 @@
 	flex-shrink: 0;
 }
 
+/* A pictured emit whose character has no picture: the room it would take, empty. */
+::deep .comm-avatar--none {
+	display: block;
+}
+
 ::deep .comm-avatar--initials {
 	display: grid;
 	place-items: center;
 	font-size: 12px;
 	font-weight: 700;
+}
+
+/* A line that names nobody: its time where the picture would be, the text in line with the others. */
+.comm-emit {
+	display: flex;
+	align-items: baseline;
+	gap: 12px;
+}
+
+.comm-emit .comm-time {
+	width: 40px;
+	flex-shrink: 0;
+	text-align: center;
+}
+
+.comm-emit .comm-text {
+	min-width: 0;
+	flex: 1;
 }
 
 .comm-body {

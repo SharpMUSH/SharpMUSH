@@ -456,6 +456,54 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
+	/// A line keeps its colour for the portal, pushed and pulled alike: <c>markup</c> is the text as a serialized
+	/// MString, so an <c>@cemit</c> reads in the channel view as it does on the terminal.
+	/// </summary>
+	[Test]
+	public async Task ChannelEmit_KeepsItsMarkup_PushedAndPulled()
+	{
+		var member = await ViewerAsync("CommMarkupMember");
+		var channel = await ChannelAsync("CommMarkup", member);
+		var marker = TestIsolationHelpers.GenerateUniqueName("markup");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => God($"@cemit {channel}=[ansi(hr,ALARM:)] {marker}"), Run, member);
+
+		var pushed = Frames(sent[member.Handle], "comm.message").Single();
+		var recall = await (await Portal.PortalControllers.CommControllerAs(factory, member.DbRef))
+			.Recall(channel, null, null, CancellationToken.None);
+		var pulled = recall.Value!.Single(line => line.Id == pushed["id"]!.GetValue<long>());
+
+		var pushedMarkup = MarkupTextSerializer.Deserialize(pushed["markup"]!.GetValue<string>());
+		await Assert.That(pushed["text"]!.GetValue<string>()).IsEqualTo($"ALARM: {marker}");
+		await Assert.That(pushedMarkup.ToPlainText()).IsEqualTo($"ALARM: {marker}");
+		await Assert.That(pushedMarkup.Render(MarkupFormat.Ansi)).Contains("\u001b[").Because("ALARM: is red");
+		await Assert.That(MarkupTextSerializer.Deserialize(pulled.Markup!).Render(MarkupFormat.Ansi))
+			.IsEqualTo(pushedMarkup.Render(MarkupFormat.Ansi));
+		await Assert.That(pushed.ContainsKey("picture")).IsFalse().Because("it was sent without one");
+	}
+
+	/// <summary>The picture <c>cemit()</c> was given reaches the portal pushed and pulled alike.</summary>
+	[Test]
+	public async Task ChannelEmit_CarriesItsPicture_PushedAndPulled()
+	{
+		var member = await ViewerAsync("CommPictureMember");
+		var channel = await ChannelAsync("CommPicture", member);
+		var marker = TestIsolationHelpers.GenerateUniqueName("picture");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => God($"think cemit({channel},{marker},1,https://cdn.example/ann.png)"), Run, member);
+
+		var pushed = Frames(sent[member.Handle], "comm.message").Single();
+		var recall = await (await Portal.PortalControllers.CommControllerAs(factory, member.DbRef))
+			.Recall(channel, null, null, CancellationToken.None);
+		var pulled = recall.Value!.Single(line => line.Id == pushed["id"]!.GetValue<long>());
+
+		await Assert.That(pushed["picture"]!.GetValue<string>()).IsEqualTo("https://cdn.example/ann.png");
+		await Assert.That(pulled.Picture).IsEqualTo("https://cdn.example/ann.png");
+	}
+
+	/// <summary>
 	/// Connecting puts the member on their channels' member lists in the portal, in place of the connect line
 	/// (#1579): the line still goes to the channel and its recall buffer, as on a terminal, but no
 	/// <c>comm.message</c> carries it. The list follows <c>@channel/who</c>: a member hiding on the channel

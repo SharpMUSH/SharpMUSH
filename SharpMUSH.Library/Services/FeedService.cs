@@ -265,7 +265,8 @@ public class FeedService(
 			}
 
 			var arguments = Arguments(("id", message.Id), ("feed", message.Feed), ("recipients", Objids(recipients)),
-				("speaker", message.Speaker), ("style", message.Style), ("text", message.Text), ("name", message.DisplayName), ("origin", origin));
+				("speaker", message.Speaker), ("style", message.Style), ("text", message.Text), ("name", message.DisplayName), ("origin", origin),
+				("picture", message.ExternalIdentity?.Picture ?? ""));
 			var state = ParserState.RootFor(tapObject.Object().DBRef) with
 			{
 				Enactor = message.Speaker,

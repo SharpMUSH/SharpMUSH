@@ -123,23 +123,25 @@ public class FeedCommandTests : ServerTestBase
 	{
 		await Cmd($"@feed/join {_kind}/newbies={Ref(_ann)}");
 		var tap = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "ExternalTap");
-		await Cmd($"&LOG {Ref(tap)}=@pemit {Ref(_bo)}=External %<speaker>: %<name> %<text>");
+		await Cmd($"&LOG {Ref(tap)}=@pemit {Ref(_bo)}=External %<speaker>: %<name> %<text> %<picture>");
 		await Cmd($"@feed/tap {_kind}={Ref(tap)}/LOG");
 		var feeds = WebAppFactoryArg.Services.GetRequiredService<IFeedService>();
 		var kind = (await feeds.GetKindAsync(_kind)).Expect<SharpFeedKind>();
 		var system = (await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(_system.DbRef))).Expect<AnySharpObject>();
 		var text = TestIsolationHelpers.GenerateUniqueName("ExternalFeed");
 		var result = await feeds.SendExternalAsync(CommandParser.FromState(ParserState.RootFor(_system.DbRef)),
-			new(kind, SharpFeed.New(_kind, "newbies"), system, new("discord", "1234", "Ann"), FeedStyles.Say, MarkupText.Plain(text), "discord/99"));
+			new(kind, SharpFeed.New(_kind, "newbies"), system, new("discord", "1234", "Ann", "https://cdn.example/ann.png"), FeedStyles.Say, MarkupText.Plain(text), "discord/99"));
 		var delivery = result.Expect<FeedDelivery>();
 		await WebAppFactoryArg.Notifications.WaitForAsync(_ann.DbRef, text);
 		await Assert.That(Lines(_ann, text).Single()).Contains("[D] Ann");
 		await WebAppFactoryArg.Notifications.WaitForAsync(_bo.DbRef, text);
 		await Assert.That(Lines(_bo, text).Single()).Contains("External #-1: [D] Ann");
+		await Assert.That(Lines(_bo, text).Single()).EndsWith(" https://cdn.example/ann.png");
 		var stored = (await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetFeedMessageQuery(delivery.Id))).Expect<SharpFeedMessage>();
 		await Assert.That(stored.Speaker.Number).IsEqualTo(-1);
 		await Assert.That(stored.ExternalIdentity?.Subject).IsEqualTo("1234");
 		await Assert.That(await Eval($"feedmsg({delivery.Id},external_provider)")).IsEqualTo("discord");
+		await Assert.That(await Eval($"feedmsg({delivery.Id},external_picture)")).IsEqualTo("https://cdn.example/ann.png");
 	}
 	[Test]
 	public async Task ExternalDiscordSpeechCannotBorrowBridgeAuthorityToPassSendLocks()

@@ -15,7 +15,11 @@ namespace SharpMUSH.Library.API;
 /// <param name="Text">The line after the channel name: a pose carries the name, as <c>comm.message</c>'s does.</param>
 /// <param name="Style"><c>say</c>, <c>pose</c>, <c>semipose</c>, <c>emit</c> or <c>presence</c>.</param>
 /// <param name="Ts">Milliseconds since 1970.</param>
-public sealed record ChannelRecallLine(long Id, string Channel, string From, string? FromObjid, string Text, string Style, long Ts);
+/// <param name="Markup"><paramref name="Text"/> with its colour and markup, as a serialized MString.</param>
+/// <param name="Picture">The picture the line was sent with (<c>cemit()</c>'s fourth argument): a character's objid or
+/// an image URL; null for none.</param>
+public sealed record ChannelRecallLine(long Id, string Channel, string From, string? FromObjid, string Text, string Style, long Ts,
+	string? Markup = null, string? Picture = null);
 
 /// <summary>
 /// Who is on a channel now, as <c>@channel/who</c> lists them for the acting character: connected players

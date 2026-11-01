@@ -14,7 +14,12 @@ public sealed record CommChannel(string Name, int Unread, bool Joined = true, bo
 /// <param name="Id">The line's id where it has one: a channel line or a page, pulled from the server or
 /// pushed. Two copies of a line with the same id are one line. A game whose comm-feed package predates ids
 /// sends none.</param>
-public sealed record CommMessage(string Kind, string? Channel, IReadOnlyList<string> To, string From, string? FromObjId, string Text, DateTimeOffset Timestamp, long? Id = null);
+/// <param name="Markup"><paramref name="Text"/> with its colour and markup, as a serialized MString, when the game
+/// sent it.</param>
+/// <param name="Picture">The picture the line was sent with, shown beside it: a character's objid or an image URL; null
+/// for none.</param>
+public sealed record CommMessage(string Kind, string? Channel, IReadOnlyList<string> To, string From, string? FromObjId, string Text, DateTimeOffset Timestamp, long? Id = null,
+	string? Markup = null, string? Picture = null);
 
 /// <summary>A page conversation: the other people in it (one, or several for a group page).</summary>
 public sealed record CommConversation(string Key, IReadOnlyList<string> With, IReadOnlyList<string?> WithObjIds, int Unread, DateTimeOffset LastAt);

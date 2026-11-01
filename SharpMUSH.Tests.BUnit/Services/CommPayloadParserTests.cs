@@ -57,6 +57,24 @@ public class CommPayloadParserTests
 		await Assert.That(entry.Message.Id).IsEqualTo(1790780182950123);
 	}
 
+	/// <summary>The text with its colour, as the game sent it, for the channel view to draw.</summary>
+	[Test]
+	public async Task A_lines_markup_is_read()
+	{
+		var entry = CommPayloadParser.ParseMessage(ChannelLine.Replace("\"v\":2,", "\"v\":2,\"markup\":\"styled\","), Received)!;
+
+		await Assert.That(entry.Message.Markup).IsEqualTo("styled");
+	}
+
+	/// <summary>The picture a line was sent with, for the channel view to show beside it.</summary>
+	[Test]
+	public async Task A_lines_picture_is_read()
+	{
+		var entry = CommPayloadParser.ParseMessage(ChannelLine.Replace("\"v\":2,", "\"v\":2,\"picture\":\"#12:5\","), Received)!;
+
+		await Assert.That(entry.Message.Picture).IsEqualTo("#12:5");
+	}
+
 	[Test]
 	[Arguments("""{"v":2,"kind":"page","from":"X","text":"hi"}""")]
 	[Arguments("""{"v":2,"kind":"page","from":"X","text":"hi","id":"soon"}""")]

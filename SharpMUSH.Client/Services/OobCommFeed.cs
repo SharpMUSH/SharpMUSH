@@ -208,7 +208,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 		_pulled.Add(key);
 		if (Merge(key, lines.Select(line => new CommMessage(CommPayloadParser.ChannelKind, key, [], line.From,
-				line.FromObjid, line.Text, DateTimeOffset.FromUnixTimeMilliseconds(line.Ts), line.Id)).ToList()))
+				line.FromObjid, line.Text, DateTimeOffset.FromUnixTimeMilliseconds(line.Ts), line.Id, line.Markup, line.Picture)).ToList()))
 			Changed?.Invoke();
 		return true;
 	}

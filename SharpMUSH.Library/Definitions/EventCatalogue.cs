@@ -227,7 +227,7 @@ public static class EventCatalogue
 
 		new(SharpEvents.ChannelMessage,
 			Args(("channel", T), ("speaker", O), ("style", W), ("name", M), ("message", M), ("recipients", OL), ("time", Ms),
-				("id", N)),
+				("id", N), ("picture", T)),
 			"The speaker", "A channel line was delivered.", EventPrivacy.Private, false, Sharp),
 		new(SharpEvents.ChannelWho,
 			Args(("channel", T), ("member", O), ("name", T), ("change", W), ("viewers", OL), ("cause", W)), "The member",

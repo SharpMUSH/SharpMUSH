@@ -93,6 +93,16 @@ public class DiscordInboundTests
 		await Assert.That(bridge.Game.Spoken.Single().ExternalIdentity?.Provider).IsEqualTo("discord");
 		await Assert.That(bridge.Game.Spoken.Single().ExternalIdentity?.Subject).IsEqualTo(Ann.ToString());
 	}
+	/// <summary>A member without a character keeps their Discord avatar, for the game to show beside the line.</summary>
+	[Test]
+	public async Task AMemberWithoutACharacter_KeepsTheirDiscordAvatar()
+	{
+		var bridge = new Bridge(); bridge.Links.Get(Channel).Returns(Link with { Unrestricted = true });
+		await bridge.Inbound.ReceivedAsync(Message("Hello.") with { Picture = "https://cdn.discordapp.com/avatars/1/a.png" }, default);
+		await Assert.That(bridge.Game.Spoken.Single().ExternalIdentity?.Picture)
+			.IsEqualTo("https://cdn.discordapp.com/avatars/1/a.png");
+	}
+
 	[Test]
 	public async Task ExternalNameNeverAddsTerminalControlCharacters()
 	{
