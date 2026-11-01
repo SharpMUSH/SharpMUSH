@@ -254,9 +254,9 @@ internal sealed class DiceEvaluator(Func<int, int> roll, DiceRollMode mode)
 		var cases = new List<Evaluated>();
 		foreach (var (condition, value) in arguments)
 		{
-			if (condition is { } settled && IsPoint(settled) && settled.Low.Value == 0) continue;
+			if (condition is { } settled && AlwaysFalse(settled)) continue;
 			cases.AddRange(value.Ends);
-			if (condition is not { } open || IsPoint(open)) return Span.Of(cases);
+			if (condition is not { } open || AlwaysTrue(open)) return Span.Of(cases);
 		}
 
 		cases.Add(Evaluated.Of(0));
@@ -270,10 +270,16 @@ internal sealed class DiceEvaluator(Func<int, int> roll, DiceRollMode mode)
 
 	private static bool IsPoint(Span span) => span.Low.Value == span.High.Value;
 
+	/// <summary>A condition that cannot come out 0.</summary>
+	private static bool AlwaysTrue(Span condition) => condition.Low.Value > 0 || condition.High.Value < 0;
+
+	/// <summary>A condition that can only come out 0.</summary>
+	private static bool AlwaysFalse(Span condition) => IsPoint(condition) && condition.Low.Value == 0;
+
 	/// <summary>
-	/// A comparison is settled only when everything it compares is; otherwise it may come out 0 or 1.
-	/// ternary() and when() follow their condition when it is settled and take in every value they
-	/// could give when it is not.
+	/// A comparison is settled when the ranges it compares settle it, such as gt(1d6, 0); otherwise it
+	/// may come out 0 or 1. ternary() and when() follow a condition that cannot be 0, or can only be 0,
+	/// and take in every value they could give otherwise.
 	/// </summary>
 	private Span ConditionalRange(string name, ImmutableArray<Span> arguments)
 	{
@@ -282,12 +288,39 @@ internal sealed class DiceEvaluator(Func<int, int> roll, DiceRollMode mode)
 		var condition = arguments[0];
 		return name switch
 		{
-			"ternary" when IsPoint(condition) => condition.Low.Value != 0 ? arguments[1] : arguments[2],
+			"ternary" when AlwaysTrue(condition) => arguments[1],
+			"ternary" when AlwaysFalse(condition) => arguments[2],
 			"ternary" => Span.Of([.. arguments[1].Ends, .. arguments[2].Ends]),
-			"when" when IsPoint(condition) => condition.Low.Value != 0 ? arguments[1] : Span.Point(Evaluated.Of(0)),
+			"when" when AlwaysTrue(condition) => arguments[1],
+			"when" when AlwaysFalse(condition) => Span.Point(Evaluated.Of(0)),
 			"when" => Span.Of([.. arguments[1].Ends, Evaluated.Of(0)]),
-			_ => new Span(Evaluated.Of(0), Evaluated.Of(1))
+			_ => ComparisonRange(name, arguments)
 		};
+	}
+
+	/// <summary>1 when every value the ranges hold makes the comparison true, 0 when none does, else 0 to 1.</summary>
+	private static Span ComparisonRange(string name, ImmutableArray<Span> arguments)
+	{
+		var (low, high) = (arguments[0].Low.Value, arguments[0].High.Value);
+		var (otherLow, otherHigh) = (arguments[1].Low.Value, arguments[1].High.Value);
+		var apart = high < otherLow || otherHigh < low;
+		int? settled = name switch
+		{
+			"gt" when low > otherHigh => 1,
+			"gt" when high <= otherLow => 0,
+			"gte" when low >= otherHigh => 1,
+			"gte" when high < otherLow => 0,
+			"lt" when high < otherLow => 1,
+			"lt" when low >= otherHigh => 0,
+			"lte" when high <= otherLow => 1,
+			"lte" when low > otherHigh => 0,
+			"eq" when apart => 0,
+			"ne" when apart => 1,
+			"btwn" when low >= otherHigh && high <= arguments[2].Low.Value => 1,
+			"btwn" when high < otherLow || low > arguments[2].High.Value => 0,
+			_ => null
+		};
+		return settled is int truth ? Span.Point(Evaluated.Of(truth)) : new Span(Evaluated.Of(0), Evaluated.Of(1));
 	}
 
 	/// <summary>
