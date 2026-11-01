@@ -319,6 +319,41 @@ public class SchemaGraphEditorTests : BunitContext
 	}
 
 	[Test]
+	public async Task Dragging_the_start_markers_handle_onto_a_step_makes_the_run_begin_there()
+	{
+		JsonElement? sent = null;
+		var cut = Render<SchemaGraphEditor>(p => p
+			.Add(x => x.Element, Field())
+			.Add(x => x.Value, Parse(Lantern))
+			.Add(x => x.ValueChanged, (JsonElement v) => sent = v));
+
+		await Assert.That(cut.FindAll(".graph-line--entry").Count).IsEqualTo(1);
+		await cut.Find(".graph-entry").ClickAsync(new());
+		// The marker stands above gate (10, 10); its handle starts the line at (96, -30), and the drag ends inside mist.
+		await cut.Find(".graph-handle").PointerDownAsync(new() { Button = 0, ClientX = 0, ClientY = 0 });
+		await cut.Find(".graph-map").PointerMoveAsync(new() { ClientX = 200, ClientY = 200 });
+		await cut.Find(".graph-map").PointerUpAsync(new());
+
+		await Assert.That(GraphDraft.Read(sent).StartNode?.Key).IsEqualTo("mist");
+	}
+
+	[Test]
+	public async Task The_start_marker_stands_above_the_first_step_until_moved_and_tidying_puts_it_back()
+	{
+		var draft = GraphDraft.Read(Parse(Lantern));
+
+		await Assert.That(draft.Entry).IsEqualTo((48d, -66d));
+		draft.MoveEntry(300.4, 20.6);
+		await Assert.That(draft.Entry).IsEqualTo((300d, 21d));
+		var moved = GraphDraft.Read(draft.ToJson());
+		await Assert.That(moved.Entry).IsEqualTo((300d, 21d));
+
+		moved.Tidy(PortsOf);
+		await Assert.That(moved.ToJson().TryGetProperty("start_x", out _)).IsFalse();
+		await Assert.That(moved.Entry.Y).IsEqualTo(moved.StartNode?.Y - GraphDraft.EntryHeight - 40);
+	}
+
+	[Test]
 	public async Task A_spot_for_a_step_is_found_beside_the_ones_in_the_way()
 	{
 		var draft = GraphDraft.Read(Parse("""{"nodes":[{"key":"a","kind":"end","label":"A","x":0,"y":0},{"key":"b","kind":"end","label":"B","x":244,"y":0}],"edges":[]}"""));

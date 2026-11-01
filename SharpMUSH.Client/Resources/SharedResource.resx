@@ -8767,6 +8767,15 @@
   <data name="WidGraphDragLink" xml:space="preserve">
     <value>Drag onto a step to link {0}</value>
   </data>
+  <data name="WidGraphEntry" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="WidGraphEntryHelp" xml:space="preserve">
+    <value>Where a run begins. Drag its handle onto a step, or pick the step here.</value>
+  </data>
+  <data name="WidGraphEntryLabel" xml:space="preserve">
+    <value>Start, leads to {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Tidy layout</value>
   </data>

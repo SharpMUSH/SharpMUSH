@@ -6300,6 +6300,15 @@
   <data name="WidGraphDragLink" xml:space="preserve">
     <value>Плъзнете върху стъпка, за да свържете {0}</value>
   </data>
+  <data name="WidGraphEntry" xml:space="preserve">
+    <value>Начало</value>
+  </data>
+  <data name="WidGraphEntryHelp" xml:space="preserve">
+    <value>Откъдето започва изпълнението. Плъзнете дръжката му върху стъпка или изберете стъпката тук.</value>
+  </data>
+  <data name="WidGraphEntryLabel" xml:space="preserve">
+    <value>Начало, води до {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Подреди оформлението</value>
     <comment>MT</comment>

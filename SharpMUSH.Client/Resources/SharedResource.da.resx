@@ -6300,6 +6300,15 @@
   <data name="WidGraphDragLink" xml:space="preserve">
     <value>Træk hen på et trin for at forbinde {0}</value>
   </data>
+  <data name="WidGraphEntry" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="WidGraphEntryHelp" xml:space="preserve">
+    <value>Hvor et forløb begynder. Træk dets håndtag over på et trin, eller vælg trinnet her.</value>
+  </data>
+  <data name="WidGraphEntryLabel" xml:space="preserve">
+    <value>Start, fører til {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Ryd op i layout</value>
     <comment>MT</comment>

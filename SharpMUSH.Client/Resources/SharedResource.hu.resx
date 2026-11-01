@@ -6300,6 +6300,15 @@
   <data name="WidGraphDragLink" xml:space="preserve">
     <value>Húzza egy lépésre a(z) {0} összekötéséhez</value>
   </data>
+  <data name="WidGraphEntry" xml:space="preserve">
+    <value>Kezdet</value>
+  </data>
+  <data name="WidGraphEntryHelp" xml:space="preserve">
+    <value>Ahol egy futás kezdődik. Húzd a fogantyúját egy lépésre, vagy válaszd ki itt a lépést.</value>
+  </data>
+  <data name="WidGraphEntryLabel" xml:space="preserve">
+    <value>Kezdet, ide vezet: {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Elrendezés rendezése</value>
     <comment>MT</comment>

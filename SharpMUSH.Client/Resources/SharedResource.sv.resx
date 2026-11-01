@@ -6300,6 +6300,15 @@
   <data name="WidGraphDragLink" xml:space="preserve">
     <value>Dra till ett steg för att länka {0}</value>
   </data>
+  <data name="WidGraphEntry" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="WidGraphEntryHelp" xml:space="preserve">
+    <value>Där en körning börjar. Dra dess handtag till ett steg, eller välj steget här.</value>
+  </data>
+  <data name="WidGraphEntryLabel" xml:space="preserve">
+    <value>Start, leder till {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Städa layouten</value>
     <comment>MT</comment>

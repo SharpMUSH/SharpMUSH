@@ -6300,6 +6300,15 @@
   <data name="WidGraphDragLink" xml:space="preserve">
     <value>Auf einen Schritt ziehen, um {0} zu verknüpfen</value>
   </data>
+  <data name="WidGraphEntry" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="WidGraphEntryHelp" xml:space="preserve">
+    <value>Wo ein Durchlauf beginnt. Ziehe seinen Griff auf einen Schritt oder wähle den Schritt hier.</value>
+  </data>
+  <data name="WidGraphEntryLabel" xml:space="preserve">
+    <value>Start, führt zu {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Anordnung aufräumen</value>
     <comment>MT</comment>

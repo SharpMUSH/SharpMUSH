@@ -5609,6 +5609,15 @@
   <data name="WidGraphDragLink" xml:space="preserve">
     <value>Glissez sur une étape pour relier {0}</value>
   </data>
+  <data name="WidGraphEntry" xml:space="preserve">
+    <value>Départ</value>
+  </data>
+  <data name="WidGraphEntryHelp" xml:space="preserve">
+    <value>Là où commence une partie. Faites glisser sa poignée sur une étape, ou choisissez l’étape ici.</value>
+  </data>
+  <data name="WidGraphEntryLabel" xml:space="preserve">
+    <value>Départ, mène à {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Ranger la disposition</value>
     <comment>MT</comment>

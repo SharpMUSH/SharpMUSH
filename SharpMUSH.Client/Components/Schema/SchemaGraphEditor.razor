@@ -94,7 +94,11 @@
         </div>
 
         <aside class="graph-inspector" aria-label="@Loc["WidGraphStep"]">
-            @if (Selected is { } node)
+            @if (_selected == EntryKey && _draft.Nodes.Count > 0)
+            {
+                @EntryInspector
+            }
+            else if (Selected is { } node)
             {
                 @Inspector(node)
             }
@@ -267,13 +271,6 @@
         await EmitAsync();
     }
 
-    private async Task SetStartAsync(GraphNode node, bool start)
-    {
-        if (Locked || !start) return;
-        _draft.SetStart(node.Key);
-        await EmitAsync();
-    }
-
     private async Task SetFieldAsync(string key, string field, object? value)
     {
         if (Locked || _draft.Find(key) is not { } node) return;
@@ -347,7 +344,8 @@
         var dy = (e.ClientY - drag.StartY) / _zoom;
         if (!_moved && Math.Abs(dx) + Math.Abs(dy) < 5) return;
         _moved = true;
-        _draft.Move(drag.Key, drag.NodeX + dx, drag.NodeY + dy);
+        if (drag.Key == EntryKey) _draft.MoveEntry(drag.NodeX + dx, drag.NodeY + dy);
+        else _draft.Move(drag.Key, drag.NodeX + dx, drag.NodeY + dy);
     }
 
     private async Task EndDragAsync()
@@ -385,13 +383,75 @@
         if (_linking is { } link)
         {
             _linking = null;
-            if (_draft.At(_linkEnd.X, _linkEnd.Y) is not { } target || _draft.Find(link.From) is not { } from) return;
+            if (_draft.At(_linkEnd.X, _linkEnd.Y) is not { } target) return;
+            if (link.From == EntryKey)
+            {
+                _draft.SetStart(target.Key);
+                await EmitAsync();
+                return;
+            }
+            if (_draft.Find(link.From) is not { } from) return;
             if (Port(from.Kind, link.Port) is { Many: true }) _draft.AddLink(link.From, link.Port, target.Key);
             else _draft.Link(link.From, link.Port, target.Key);
             await EmitAsync();
             return;
         }
         await EndDragAsync();
+    }
+
+    // ── The start marker: every graph has one, it leads to the step a run begins at, and it cannot be removed. ──
+
+    // Not a valid step key, so it never names a step.
+    private const string EntryKey = "@start";
+
+    private void StartEntryDrag(PointerEventArgs e)
+    {
+        if (Locked || e.Button != 0) return;
+        var (x, y) = _draft.Entry;
+        _drag = (EntryKey, e.ClientX, e.ClientY, x, y);
+        _moved = false;
+    }
+
+    private void StartEntryLink(PointerEventArgs e)
+    {
+        if (Locked || e.Button != 0) return;
+        var (x, y) = _draft.Entry;
+        x += GraphDraft.EntryWidth / 2;
+        y += GraphDraft.EntryHeight;
+        _linking = (EntryKey, "", x, y, e.ClientX, e.ClientY);
+        _linkEnd = (x, y);
+    }
+
+    private void ClickEntry()
+    {
+        if (_suppressClick)
+        {
+            _suppressClick = false;
+            return;
+        }
+        Select(EntryKey);
+    }
+
+    private RenderFragment EntryInspector => __builder =>
+    {
+        <div class="graph-inspector-head">
+            <span class="graph-inspector-kind">@Loc["WidGraphEntry"]</span>
+        </div>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">@Loc["WidGraphEntryHelp"]</MudText>
+        <MudSelect T="string" Value="@(_draft.StartNode?.Key ?? "")" ValueChanged="SetEntryAsync" Disabled="Locked"
+                   Label="@Loc["WidGraphLeadsTo", Loc["WidGraphEntry"]]" Variant="Variant.Outlined" Class="mb-2">
+            @foreach (var other in _draft.Order(PortKeys))
+            {
+                <MudSelectItem T="string" Value="@other.Key">@other.Label</MudSelectItem>
+            }
+        </MudSelect>
+    };
+
+    private async Task SetEntryAsync(string? key)
+    {
+        if (Locked || string.IsNullOrEmpty(key)) return;
+        _draft.SetStart(key);
+        await EmitAsync();
     }
 
     private void Click(GraphNode node)
@@ -452,9 +512,30 @@
 
     private string MarkerId(string? token) => $"graph-{_id}-arrow{(token ?? "").Replace("-", "")}";
 
-    // Room under the lowest step for its outcome handles and the outcomes still leading nowhere.
-    private (double Width, double Height) CanvasSize()
-        => (Math.Max(480, _draft.Nodes.Max(node => node.X) + W + 64), Math.Max(240, _draft.Nodes.Max(node => node.Y) + H + 72));
+    // The map's extent in the draft's coordinates: room for the start marker wherever it stands, and under the
+    // lowest step for its outcome handles and the outcomes still leading nowhere.
+    private (double X, double Y, double Width, double Height) Bounds()
+    {
+        var (entryX, entryY) = _draft.Entry;
+        var x = Math.Min(0, entryX - GraphDraft.Margin);
+        var y = Math.Min(0, entryY - GraphDraft.Margin);
+        var right = Math.Max(_draft.Nodes.Max(node => node.X) + W + 64, entryX + GraphDraft.EntryWidth + 64);
+        var bottom = Math.Max(_draft.Nodes.Max(node => node.Y) + H + 72, entryY + GraphDraft.EntryHeight + 72);
+        return (x, y, Math.Max(480, right - x), Math.Max(240, bottom - y));
+    }
+
+    private (double Width, double Height) CanvasSize() => Bounds() is var (_, _, width, height) ? (width, height) : default;
+
+    // The line from the start marker down to the step a run begins at.
+    private string? EntryPath()
+    {
+        if (_draft.StartNode is not { } start) return null;
+        var (ex, ey) = _draft.Entry;
+        double x1 = ex + GraphDraft.EntryWidth / 2, y1 = ey + GraphDraft.EntryHeight, x2 = start.X + W / 2, y2 = start.Y;
+        if (y2 < y1) y2 = start.Y + H;
+        var k = Math.Max(20, Math.Abs(y2 - y1) / 2) * (y2 >= y1 ? 1 : -1);
+        return $"M{Num(x1)},{Num(y1)} C{Num(x1)},{Num(y1 + k)} {Num(x2)},{Num(y2 - k)} {Num(x2)},{Num(y2)}";
+    }
 
     // An outcome a step must have that leads nowhere yet: a dashed stub under the step, as a link to nowhere.
     private sealed record Stub(double X, double Y, string Label, string? Token);
@@ -479,21 +560,27 @@
 
     private RenderFragment Map => __builder =>
     {
-        var (width, height) = CanvasSize();
+        var (originX, originY, width, height) = Bounds();
         var lines = Lines().ToList();
+        var entryPath = EntryPath();
+        var (entryX, entryY) = _draft.Entry;
         var stubs = Stubs().ToList();
         <div class="graph-map" @ref="_mapFrame" @onpointermove="Pointer" @onpointerup="PointerUpAsync" @onpointerleave="LeaveAsync">
             <div class="graph-frame" style="@($"width: {Num(width * _zoom)}px; height: {Num(height * _zoom)}px;")">
             <div class="graph-canvas" style="@($"width: {Num(width)}px; height: {Num(height)}px; transform: scale({Num2(_zoom)});")">
-                <svg class="graph-lines" viewBox="@($"0 0 {Num(width)} {Num(height)}")" width="@Num(width)" height="@Num(height)" aria-hidden="true" focusable="false">
+                <svg class="graph-lines" viewBox="@($"{Num(originX)} {Num(originY)} {Num(width)} {Num(height)}")" width="@Num(width)" height="@Num(height)" aria-hidden="true" focusable="false">
                     <defs>
-                        @foreach (var token in lines.Select(line => line.Token).Distinct())
+                        @foreach (var token in lines.Select(line => line.Token).Append(null).Distinct())
                         {
                             <marker id="@MarkerId(token)" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                                 <path d="M0,0 L10,5 L0,10 z" class="graph-arrow" style="@(token is null ? null : $"fill: var({token});")" />
                             </marker>
                         }
                     </defs>
+                    @if (entryPath is not null)
+                    {
+                        <path class="graph-line graph-line--entry" d="@entryPath" marker-end="@($"url(#{MarkerId(null)})")" />
+                    }
                     @foreach (var line in lines)
                     {
                         <path class="graph-line" d="@line.Path" style="@(line.Token is null ? null : $"stroke: var({line.Token});")"
@@ -513,6 +600,25 @@
                         <path class="graph-line graph-line--pending" d="@($"M{Num(link.X)},{Num(link.Y)} L{Num(_linkEnd.X)},{Num(_linkEnd.Y)}")" />
                     }
                 </svg>
+                <div class="graph-origin" style="@($"transform: translate({Num(-originX)}px, {Num(-originY)}px);")">
+                @if (_draft.Nodes.Count > 0)
+                {
+                    <button type="button" class="@(_selected == EntryKey ? "graph-entry graph-node--selected" : "graph-entry")"
+                            style="@($"left: {Num(entryX)}px; top: {Num(entryY)}px;")"
+                            aria-label="@Loc["WidGraphEntryLabel", _draft.StartNode?.Label ?? ""]"
+                            aria-pressed="@(_selected == EntryKey ? "true" : "false")"
+                            @onpointerdown="StartEntryDrag" @onclick="ClickEntry">
+                        <span aria-hidden="true">▶</span> @Loc["WidGraphEntry"]
+                    </button>
+                    @if (!Locked && _selected == EntryKey)
+                    {
+                        <div class="graph-handles" style="@($"left: {Num(entryX)}px; top: {Num(entryY + GraphDraft.EntryHeight + 8)}px;")">
+                            <button type="button" class="graph-handle graph-handle--linked" tabindex="-1"
+                                    title="@Loc["WidGraphDragLink", Loc["WidGraphEntry"]]"
+                                    @onpointerdown="StartEntryLink">@Loc["WidGraphEntry"]</button>
+                        </div>
+                    }
+                }
                 @foreach (var node in _draft.Nodes)
                 {
                     var kind = Kind(node.Kind);
@@ -528,13 +634,7 @@
                             aria-label="@Loc["WidGraphNodeLabel", node.Key == _draft.StartNode?.Key ? $"{KindLabel(node.Kind)}, {Loc["WidGraphStart"]}" : KindLabel(node.Kind), node.Label]"
                             aria-pressed="@(node.Key == _selected ? "true" : "false")"
                             @onpointerdown="e => StartDrag(e, node)" @onclick="() => Click(node)">
-                        <span class="graph-node-kind">
-                            @if (node.Key == _draft.StartNode?.Key)
-                            {
-                                <span class="graph-node-start" title="@Loc["WidGraphStart"]">▶</span>
-                            }
-                            @KindLabel(node.Kind)
-                        </span>
+                        <span class="graph-node-kind">@KindLabel(node.Kind)</span>
                         <span class="graph-node-label">@node.Label</span>
                         @if (count > 0)
                         {
@@ -561,6 +661,7 @@
                         }
                     </div>
                 }
+                </div>
             </div>
             </div>
         </div>
@@ -830,8 +931,6 @@
             <MudTextField @key="@($"{node.Key}-key")" T="string" Value="node.Key" ValueChanged="v => SetKeyAsync(node, v)"
                           Label="@Loc["WidGraphKey"]" Variant="Variant.Outlined" Class="mb-2"
                           Error="@(_keyError is not null)" ErrorText="@_keyError" />
-            <MudSwitch T="bool" Value="@(node.Key == _draft.StartNode?.Key)" ValueChanged="v => SetStartAsync(node, v)"
-                       Label="@Loc["WidGraphStart"]" Color="Color.Primary" Disabled="@(Locked || node.Key == _draft.StartNode?.Key)" />
             @foreach (var field in SchemaValues.Shown(kind?.Fields))
             {
                 <SchemaFieldInput @key="@($"{node.Key}-f-{field.Key}")" Element="field" Disabled="Locked"

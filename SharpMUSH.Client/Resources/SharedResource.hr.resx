@@ -6300,6 +6300,15 @@
   <data name="WidGraphDragLink" xml:space="preserve">
     <value>Povucite na korak da biste povezali {0}</value>
   </data>
+  <data name="WidGraphEntry" xml:space="preserve">
+    <value>Početak</value>
+  </data>
+  <data name="WidGraphEntryHelp" xml:space="preserve">
+    <value>Gdje prolaz počinje. Povucite njegovu ručku na korak ili ovdje odaberite korak.</value>
+  </data>
+  <data name="WidGraphEntryLabel" xml:space="preserve">
+    <value>Početak, vodi do {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Posloži raspored</value>
     <comment>MT</comment>
