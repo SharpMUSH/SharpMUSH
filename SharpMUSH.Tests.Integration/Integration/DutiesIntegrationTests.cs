@@ -101,6 +101,7 @@ public class DutiesIntegrationTests
 		await God($"&FN`DUTIES`TRAITS {roller}=lit([{{\"key\":\"win\",\"label\":\"Winning\",\"always\":true}},{{\"key\":\"lose\",\"label\":\"Losing\",\"always\":true}},{{\"key\":\"crit\",\"label\":\"Critical\",\"always\":true}},{{\"key\":\"part\",\"label\":\"Partial\",\"always\":true}},{{\"key\":\"skill\",\"label\":\"Skill\"}}])");
 		await God($"&FN`DUTIES`CHECK {roller}=json(object,tier,json(string,switch(firstof(get(%<roller>/FATE),%<trait>),win,success,lose,fail,crit,crit-success,part,partial,skill,success,fail)),text,json(string,rolled %<trait> at %<difficulty>))");
 		await God($"&FN`DUTIES`TRAINED {roller}=t(get(%<roller>/TRAINED))");
+		await God($"&FN`DUTIES`FALLBACK {roller}=firstof(get(%<roller>/IMPROVISE),win)");
 		await God($"&FN`DUTIES`REWARDS {roller}=lit([{{\"kind\":\"coin\",\"label\":\"Coin\",\"fields\":[{{\"key\":\"amount\",\"type\":\"number\"}}]}}])");
 		await God($"&ON`DUTIES`GRANT {roller}=@pemit %<roller>=GRANTED [json_query(%<reward>,extract,$.kind)] [json_query(%<reward>,extract,$.amount)] [json_query(%<reward>,extract,$.repeat)] at [json_query(%<context>,extract,$.node)]");
 		// WIZARD, so it reads a character's FATE as a real system reads their sheet.
@@ -173,6 +174,7 @@ public class DutiesIntegrationTests
 			var party = (await As(ben, "+duty")).Split('\n').First(line => line.Contains("+duty/join"));
 			var number = party[(party.IndexOf("+duty/join ", StringComparison.Ordinal) + 11)..].Split(' ')[0];
 			await Assert.That(await Read(ben, $"+duty/join {number}")).Contains("joins the party");
+			await Assert.That(await Read(ben, "+duty")).Contains("The Harbor Fire").And.DoesNotContain("#-1");
 			await Assert.That(await Read(ben, "+duty/go")).Contains("Only the party's leader");
 
 			// Setting out shows the challenge: its text, the open options, Improvise and the way on.
@@ -182,6 +184,9 @@ public class DutiesIntegrationTests
 			await Assert.That(await Read(ben, "+duty/try sneak")).Contains("needs training in Skill");
 			await Assert.That(await Read(ben, "+duty/try force")).Contains("rolled win at standard");
 			await Assert.That(await Read(ben, "+duty/try force")).Contains("You have rolled this round.");
+			// Improvise shows the trait the sheet system picks for the one looking.
+			await God($"&IMPROVISE #{ben.DbRef.Number}=part");
+			await Assert.That(await Read(ben, "+duty")).Contains("improvise Improvise Partial");
 
 			// The last roll resolves the challenge: both succeed, both get the coin, and the party is in the hall.
 			var resolved = await Read(ana, "+duty/try improvise");
