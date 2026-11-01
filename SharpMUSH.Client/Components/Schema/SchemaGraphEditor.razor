@@ -320,9 +320,9 @@
     {
         if (_fitted || _view != "map" || _draft.Nodes.Count == 0) return;
         _fitted = true;
-        var before = _zoom;
+        var before = (int)Math.Round(_zoom * 100);
         await FitAsync();
-        if (_zoom != before) StateHasChanged();
+        if ((int)Math.Round(_zoom * 100) != before) StateHasChanged();
     }
 
     private int Count(string key) => _guidance.On(key).Count(issue => issue.Severity != "hint");
