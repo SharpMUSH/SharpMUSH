@@ -11,6 +11,11 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Services;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace SharpMUSH.Tests.Integration;
 
@@ -368,6 +373,151 @@ public class DutiesIntegrationTests
 		}
 		finally
 		{
+			await UninstallAsync();
+		}
+	}
+
+	private sealed record PortalCharacter(int DbrefNumber, long CreationTime);
+	private sealed record PortalAccount(string AccountSessionToken);
+
+	/// <summary>A new account with one character, and an HTTP client signed in as it.</summary>
+	private async Task<(HttpClient Http, int Dbref)> SignedInAsync(string prefix)
+	{
+		var http = WebAppFactoryArg.CreateHttpClient();
+		http.BaseAddress = new Uri("https://localhost/");
+		const string password = "Duties-Portal-Pw-1!";
+		var register = await http.PostAsJsonAsync("api/auth/account-register",
+			new { Username = $"{prefix}{Guid.NewGuid():N}"[..15], Email = (string?)null, Password = password });
+		await Assert.That(register.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		var account = (await register.Content.ReadFromJsonAsync<PortalAccount>())!;
+		http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", account.AccountSessionToken);
+		var created = await http.PostAsJsonAsync("api/account/characters",
+			new { Name = $"{prefix}{Guid.NewGuid():N}"[..15], Password = password });
+		await Assert.That(created.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		return (http, (await created.Content.ReadFromJsonAsync<PortalCharacter>())!.DbrefNumber);
+	}
+
+	private static async Task<JsonNode> ActAsync(HttpClient http, string route, object body)
+	{
+		var response = await http.PostAsJsonAsync($"http/duties/{route}", body);
+		var text = (await response.Content.ReadAsStringAsync()).Trim();
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK).Because(text);
+		await Assert.That(text).StartsWith("{").Because(text);
+		return JsonNode.Parse(text)!;
+	}
+
+	private static async Task<JsonNode> GetAsync(HttpClient http, string route) =>
+		JsonNode.Parse(await http.GetStringAsync($"http/duties/{route}"))!;
+
+	/// <summary>The duty <paramref name="id"/> as the page posts it: a challenge with two ways to beat it, a narration
+	/// and two ends, with a reward and a link that needs one of the rolls.</summary>
+	private static object Draft(string op, string id, string title) => new
+	{
+		op,
+		duty = id,
+		title,
+		description = "Follow the lantern through the bog.",
+		min = 1,
+		max = 4,
+		repeat = "once",
+		steps = new
+		{
+			start = "gate",
+			nodes = new object[]
+			{
+				new { key = "gate", kind = "challenge", label = "The gate", x = 10, y = 10, fields = new
+				{
+					text = "A burning gate.",
+					combine = "majority",
+					success = "You force it open.",
+					options = new object[]
+					{
+						new { id = "force", label = "Force it", trait = "win", difficulty = "standard", successes = 1, failures = 1, trained = false },
+						new { id = "", label = "Sneak", trait = "skill", difficulty = "hard", successes = 1, failures = 1, trained = true },
+					},
+					rewards = new object[] { new { kind = "coin", repeat = "once", amount = 5 } },
+				} },
+				new { key = "hall", kind = "narration", label = "The hall", x = 10, y = 150, fields = new { text = "A quiet hall." } },
+				new { key = "loot", kind = "end", label = "Loot", x = 10, y = 300, fields = new { result = "success" } },
+				new { key = "lost", kind = "end", label = "Lost", x = 200, y = 300, fields = new { result = "fail" } },
+			},
+			edges = new object[]
+			{
+				new { from = "gate", port = "success", to = "hall" },
+				new { from = "gate", port = "success", to = "loot", weight = 2, requires = "force" },
+				new { from = "gate", port = "fail", to = "lost" },
+				new { from = "hall", port = "continue", to = "loot" },
+			},
+		},
+	};
+
+	[Test]
+	public async Task ThePortalWritesReviewsAndApprovesADuty()
+	{
+		try
+		{
+			await InstallAsync();
+			await ApplyAsync("duties-app");
+			var (author, _) = await SignedInAsync("DuWeb");
+			var (reviewer, reviewerDbref) = await SignedInAsync("DuWebRev");
+			var (other, _) = await SignedInAsync("DuWebOth");
+			await God($"@role/assign #{reviewerDbref}=duty-reviewer");
+			// A reviewer at a terminal, to see the same duty in game.
+			var staff = await Player("DuWebSta");
+			await God($"@role/assign #{staff.DbRef.Number}=duty-reviewer");
+			var id = NewId();
+
+			// Every page and its data parse; the home page offers to write one.
+			var home = await GetAsync(author, "schema?at=");
+			await Assert.That(home.ToJsonString()).Contains("Write a new duty");
+			await Assert.That((await ActAsync(author, "act", new { op = "create", new_title = "", new_id = id }))["ok"]!.GetValue<bool>()).IsFalse();
+			var created = await ActAsync(author, "act", new { op = "create", new_title = "The Lantern Road", new_id = id });
+			await Assert.That(created["redirect"]!.GetValue<string>()).IsEqualTo($"/apps/duties/{id}");
+
+			// A save writes the graph; the data reads it back the way the page posted it.
+			var saved = await ActAsync(author, "act", Draft("save", id, "The Lantern Road"));
+			await Assert.That(saved["ok"]!.GetValue<bool>()).IsTrue().Because(saved.ToJsonString());
+			var data = (await GetAsync(author, $"data?at={id}"))["fields"]!;
+			var steps = data["steps"]!["value"]!;
+			await Assert.That(steps["start"]!.GetValue<string>()).IsEqualTo("gate");
+			await Assert.That(steps["nodes"]!.AsArray().Count).IsEqualTo(4);
+			await Assert.That(steps["edges"]!.AsArray().Count).IsEqualTo(4);
+			var gate = steps["nodes"]!.AsArray().Single(n => n!["key"]!.GetValue<string>() == "gate")!;
+			await Assert.That(gate["fields"]!["options"]!.AsArray().Select(o => o!["id"]!.GetValue<string>())).IsEquivalentTo(["force", "o2"]);
+			await Assert.That(gate["fields"]!["rewards"]![0]!["amount"]!.GetValue<int>()).IsEqualTo(5);
+			await Assert.That(data["issues"]!["value"]!["issues"]!.AsArray().Count).IsEqualTo(0);
+			// The same duty, in game.
+			await Assert.That(await As(staff, $"+duty/steps {id}")).Contains("gate (challenge) The gate");
+
+			// Someone else can neither read nor change it; a bad step is refused with the reason.
+			await Assert.That((await GetAsync(other, $"schema?at={id}")).ToJsonString()).DoesNotContain("graph");
+			var refused = await ActAsync(other, "act", Draft("save", id, "Mine"));
+			await Assert.That(refused["errors"]!["_global"]!.GetValue<string>()).Contains("Permission denied.");
+			var bad = await ActAsync(author, "act", Draft("save", id, new string('x', 81)));
+			await Assert.That(bad["errors"]!["_global"]!.GetValue<string>()).Contains("80 characters");
+
+			// Submitted, it waits for review: the reviewer notes a step and returns it, then approves it.
+			await Assert.That((await ActAsync(author, "act", Draft("submit", id, "The Lantern Road")))["message"]!.GetValue<string>())
+				.Contains("waiting for a duty reviewer");
+			await Assert.That((await GetAsync(reviewer, "data?at="))["fields"]!["review"]!.ToJsonString()).Contains(id);
+			await Assert.That((await ActAsync(reviewer, "note", new { duty = id, node = "hall", text = "Say what is in it." }))["ok"]!.GetValue<bool>()).IsTrue();
+			await Assert.That((await GetAsync(author, $"data?at={id}"))["fields"]!["notes"]!.ToJsonString()).Contains("Say what is in it.");
+			await ActAsync(reviewer, "act", new { op = "return", duty = id, return_note = "Fill in the hall." });
+			await Assert.That(await As(staff, $"+duty {id}")).Contains("Fill in the hall.");
+			await ActAsync(author, "act", Draft("submit", id, "The Lantern Road"));
+			await Assert.That((await ActAsync(author, "act", new { op = "approve", duty = id }))["errors"]!["_global"]!.GetValue<string>()).Contains("Permission denied.");
+			await Assert.That((await ActAsync(reviewer, "act", new { op = "approve", duty = id }))["message"]!.GetValue<string>()).Contains($"{id} is approved.");
+
+			// A change to an approved duty is a draft beside it, listed step by step.
+			await ActAsync(author, "act", Draft("save", id, "The Lantern Road, again"));
+			var changed = (await GetAsync(author, $"data?at={id}"))["fields"]!;
+			await Assert.That(changed["Status"]!["value"]!.GetValue<string>()).Contains("changes being made");
+			await Assert.That(await As(staff, $"+duty {id}")).Contains("The Lantern Road").And.DoesNotContain("again");
+			await Assert.That((await ActAsync(author, "act", new { op = "discard", duty = id }))["ok"]!.GetValue<bool>()).IsTrue();
+		}
+		finally
+		{
+			await Installer.UninstallAsync("duties-app", force: true, CancellationToken.None);
 			await UninstallAsync();
 		}
 	}

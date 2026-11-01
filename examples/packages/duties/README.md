@@ -10,6 +10,9 @@ Duties do not roll dice themselves. A **sheet system** bridge, such as `duties-d
 supplies the traits, the roll and the rewards it can give. Without one, duties can be written but not
 checked or played.
 
+The [`duties-app`](../duties-app/) package adds the portal page `/apps/duties`, where duties are written
+on a map of their steps and reviewed. `duties` serves its routes on the HTTP handler.
+
 ## Playing
 
 | Command | What |

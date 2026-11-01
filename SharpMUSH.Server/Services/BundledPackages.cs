@@ -171,9 +171,10 @@ public static class BundledPackages
 		new("staff-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("staff-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: +duty is a name a game may already use, and it needs a sheet system bridge.
-		new("duties", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("duties", BundledPackageHandler.Http, InstallAtFirstBoot: false),
 		new("duties-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("duties-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("duties-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: joins staff and status, so +staff shows each staff member's +status.
 		new("staff-status", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +census is a name a game may already use for its own code.
