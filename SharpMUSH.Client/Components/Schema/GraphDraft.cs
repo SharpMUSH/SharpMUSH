@@ -19,7 +19,15 @@ public sealed partial class GraphDraft
 	/// <summary>A step's width and height on the map, in pixels.</summary>
 	public const double NodeWidth = 172, NodeHeight = 68;
 
-	private const double GapX = 72, GapY = 64, Margin = 16;
+	/// <summary>The width and height of the start marker, the entry every graph has, which leads to <see cref="StartNode"/>.</summary>
+	public const double EntryWidth = 96, EntryHeight = 36;
+
+	private const double EntryGap = 40;
+
+	private const double GapX = 72, GapY = 64;
+
+	/// <summary>The space the map keeps clear round its contents.</summary>
+	public const double Margin = 16;
 
 	private readonly JsonObject _extra;
 	private readonly List<GraphNode> _nodes;
@@ -107,6 +115,31 @@ public sealed partial class GraphDraft
 		_edges.RemoveAll(edge => edge.From == key || edge.To == key);
 		if (Start == key) Start = _nodes.FirstOrDefault()?.Key;
 	}
+
+	/// <summary>
+	/// Where the start marker stands: as the value holds it (<c>start_x</c>, <c>start_y</c>), else just above
+	/// <see cref="StartNode"/>. It may stand above or left of the steps; the map makes room for it.
+	/// </summary>
+	public (double X, double Y) Entry
+	{
+		get
+		{
+			if (Number(_extra, "start_x") is { } x && Number(_extra, "start_y") is { } y) return (x, y);
+			return StartNode is { } start
+				? (start.X + (NodeWidth - EntryWidth) / 2, start.Y - EntryHeight - EntryGap)
+				: (Margin, Margin);
+		}
+	}
+
+	/// <summary>Moves the start marker.</summary>
+	public void MoveEntry(double x, double y)
+	{
+		_extra["start_x"] = Math.Round(x);
+		_extra["start_y"] = Math.Round(y);
+	}
+
+	private static double? Number(JsonObject root, string name)
+		=> root[name] is JsonValue value && value.TryGetValue<double>(out var number) ? number : null;
 
 	/// <summary>Makes <paramref name="key"/> the step a run begins at.</summary>
 	public void SetStart(string key)
@@ -232,6 +265,9 @@ public sealed partial class GraphDraft
 				Update(node with { X = Margin + column++ * (NodeWidth + GapX), Y = Margin + row.Key * (NodeHeight + GapY) });
 			}
 		}
+
+		_extra.Remove("start_x");
+		_extra.Remove("start_y");
 	}
 
 	/// <summary>The step whose box holds the point (<paramref name="x"/>, <paramref name="y"/>), the topmost first.</summary>

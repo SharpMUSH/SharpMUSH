@@ -6300,6 +6300,15 @@
   <data name="WidGraphDragLink" xml:space="preserve">
     <value>Trage pe un pas pentru a lega {0}</value>
   </data>
+  <data name="WidGraphEntry" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="WidGraphEntryHelp" xml:space="preserve">
+    <value>Locul unde începe o parcurgere. Trage mânerul pe un pas sau alege pasul aici.</value>
+  </data>
+  <data name="WidGraphEntryLabel" xml:space="preserve">
+    <value>Start, duce la {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Aranjează dispunerea</value>
     <comment>MT</comment>

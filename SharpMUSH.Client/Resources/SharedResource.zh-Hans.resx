@@ -6300,6 +6300,15 @@
   <data name="WidGraphDragLink" xml:space="preserve">
     <value>拖到某个步骤上以连接{0}</value>
   </data>
+  <data name="WidGraphEntry" xml:space="preserve">
+    <value>开始</value>
+  </data>
+  <data name="WidGraphEntryHelp" xml:space="preserve">
+    <value>运行从这里开始。把它的手柄拖到一个步骤上，或在这里选择步骤。</value>
+  </data>
+  <data name="WidGraphEntryLabel" xml:space="preserve">
+    <value>开始，通往 {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>整理布局</value>
     <comment>MT</comment>

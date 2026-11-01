@@ -6300,6 +6300,15 @@
   <data name="WidGraphDragLink" xml:space="preserve">
     <value>Arraste até uma etapa para ligar {0}</value>
   </data>
+  <data name="WidGraphEntry" xml:space="preserve">
+    <value>Início</value>
+  </data>
+  <data name="WidGraphEntryHelp" xml:space="preserve">
+    <value>Onde uma rodada começa. Arraste a alça dele até uma etapa ou escolha a etapa aqui.</value>
+  </data>
+  <data name="WidGraphEntryLabel" xml:space="preserve">
+    <value>Início, leva a {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Organizar layout</value>
     <comment>MT</comment>

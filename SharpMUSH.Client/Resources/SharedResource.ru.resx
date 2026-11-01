@@ -6300,6 +6300,15 @@
   <data name="WidGraphDragLink" xml:space="preserve">
     <value>Перетащите на шаг, чтобы связать {0}</value>
   </data>
+  <data name="WidGraphEntry" xml:space="preserve">
+    <value>Начало</value>
+  </data>
+  <data name="WidGraphEntryHelp" xml:space="preserve">
+    <value>Где начинается прохождение. Перетащите его маркер на шаг или выберите шаг здесь.</value>
+  </data>
+  <data name="WidGraphEntryLabel" xml:space="preserve">
+    <value>Начало, ведёт к {0}</value>
+  </data>
   <data name="WidGraphTidy" xml:space="preserve">
     <value>Упорядочить расположение</value>
     <comment>MT</comment>

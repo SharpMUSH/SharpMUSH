@@ -215,9 +215,32 @@
 	white-space: nowrap;
 }
 
-.graph-node-start {
+.graph-origin {
+	position: absolute;
+	inset: 0;
+}
+
+.graph-entry {
+	position: absolute;
+	width: 96px;
+	height: 36px;
+	box-sizing: border-box;
+	border: 2px solid var(--accent);
+	border-radius: 18px;
+	background: var(--surface);
 	color: var(--accent);
-	margin-inline-end: 4px;
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+	touch-action: none;
+}
+
+.graph-entry.graph-node--selected {
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.graph-line--entry {
+	stroke: var(--accent);
 }
 
 .graph-node-label {
