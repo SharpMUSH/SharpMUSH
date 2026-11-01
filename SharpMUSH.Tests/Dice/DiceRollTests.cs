@@ -457,11 +457,68 @@ public class DiceRollTests
 	[Arguments("abs(-4)", "4")]
 	[Arguments("min(4, 2, 9)", "2")]
 	[Arguments("max(4, 2, 9)", "9")]
+	[Arguments("clamp(12, 0, 10)", "10")]
+	[Arguments("clamp(-3, 0, 10)", "0")]
+	[Arguments("ternary(gte(5, 3), 3, 0)", "3")]
+	[Arguments("ternary(lt(5, 3), 3, 0)", "0")]
+	[Arguments("btwn(9, 8, 10) + btwn(11, 8, 10)", "1")]
+	[Arguments("eq(2, 2) + ne(2, 2) + gt(3, 2) + lte(3, 2)", "2")]
+	[Arguments("when(gt(2, 1), 7)", "7")]
+	[Arguments("1 + when(gt(1, 2), 7)", "1")]
+	[Arguments("match(when(gte(12, 15), 8), when(gte(12, 7), 3), 1)", "3")]
+	[Arguments("match(when(gte(2, 15), 8), when(gte(2, 7), 3), 1)", "1")]
+	[Arguments("match(when(gte(2, 15), 8))", "0")]
 	public async Task Functions(string formula, string total)
 	{
 		var result = Roll(formula, null);
 
 		await Assert.That(SharpMUSH.Library.Utilities.MushNumber.Unparse(result.Total)).IsEqualTo(total);
+	}
+
+	[Test]
+	public async Task FoundryFormulasReadTheirValues()
+	{
+		var result = Roll("match(when(btwn(@actor.level, 8, 10), 4), when(btwn(@actor.level, 11, 14), 6), when(gte(@actor.level, 15), 8))",
+			"""{"actor":{"level":12}}""");
+
+		await Assert.That(result.Total).IsEqualTo(6m);
+		await Assert.That(result.Text).IsEqualTo(
+			"match(when(btwn(actor.level(12), 8, 10), 4), when(btwn(actor.level(12), 11, 14), 6), when(gte(actor.level(12), 15), 8)) = 6");
+	}
+
+	[Test]
+	public async Task EveryArgumentOfAConditionalIsRolled()
+	{
+		var result = Roll("ternary(gt(1d6, 3), 1d4, 1d8)", null, 5, 2, 7);
+
+		await Assert.That(result.Total).IsEqualTo(2m);
+		await Assert.That(result.Text).IsEqualTo("ternary(gt(1d6[5], 3), 1d4[2], 1d8[7]) = 2");
+	}
+
+	[Test]
+	[Arguments("ternary(gt(1d6, 3), 10, 1d4)", "1", "10")]
+	[Arguments("ternary(gt(5, 3), 1d4, 100)", "1", "4")]
+	[Arguments("gte(1d20, 10)", "0", "1")]
+	[Arguments("gte(5, 3)", "1", "1")]
+	[Arguments("5 + when(gt(1d6, 3), 2)", "5", "7")]
+	[Arguments("match(when(gte(1d6, 4), 10), when(gt(2, 1), 3), 100)", "3", "10")]
+	[Arguments("match(when(gte(1d6, 4), 10))", "0", "10")]
+	public async Task MinimizeAndMaximizeTakeInEveryBranchAConditionalCouldGive(string formula, string lowest, string highest)
+	{
+		var low = Rolled(formula, null, DiceRollMode.Minimize, []).Expect<DiceRollResult>();
+		var high = Rolled(formula, null, DiceRollMode.Maximize, []).Expect<DiceRollResult>();
+
+		await Assert.That(SharpMUSH.Library.Utilities.MushNumber.Unparse(low.Total)).IsEqualTo(lowest);
+		await Assert.That(SharpMUSH.Library.Utilities.MushNumber.Unparse(high.Total)).IsEqualTo(highest);
+	}
+
+	[Test]
+	[Arguments("ternary(1, 2)")]
+	[Arguments("when(1)")]
+	[Arguments("btwn(1, 2)")]
+	public async Task ConditionalsNeedTheirArguments(string formula)
+	{
+		await Assert.That(Error(formula)).StartsWith("#-1");
 	}
 
 	[Test]
