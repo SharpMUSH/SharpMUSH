@@ -101,6 +101,11 @@ public class FunctionArityParityTests : ServerTestBase
 		["list"] = "RhostMUSH's list(list,eval,delimiter,header,target), TinyMUX's in its first three, under rhost_list",
 		["ifelse"] = "two arguments, as RhostMUSH's ifelse(x,yes) is if(x,yes)",
 
+		// The picture a channel line is shown with in the portal (help Channel Pictures). Omitted, the
+		// line has none, as in PennMUSH.
+		["cemit"] = "trailing <picture> argument shown beside the line in the portal",
+		["nscemit"] = "trailing <picture> argument shown beside the line in the portal",
+
 		// RhostMUSH's map() passes arguments after <osep> to the attribute as %1 onwards. PennMUSH
 		// refuses a fifth argument, so no PennMUSH call reaches them.
 		["map"] = "arguments past <osep> are passed as %1 onwards (from RhostMUSH)",
