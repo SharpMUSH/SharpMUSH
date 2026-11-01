@@ -468,6 +468,8 @@ public class DiceRollTests
 	[Arguments("match(when(gte(12, 15), 8), when(gte(12, 7), 3), 1)", "3")]
 	[Arguments("match(when(gte(2, 15), 8), when(gte(2, 7), 3), 1)", "1")]
 	[Arguments("match(when(gte(2, 15), 8))", "0")]
+	[Arguments("match((when(0, 7)), 9)", "9")]
+	[Arguments("match(((when(1, 7))), 9)", "7")]
 	public async Task Functions(string formula, string total)
 	{
 		var result = Roll(formula, null);
@@ -503,6 +505,7 @@ public class DiceRollTests
 	[Arguments("5 + when(gt(1d6, 3), 2)", "5", "7")]
 	[Arguments("match(when(gte(1d6, 4), 10), when(gt(2, 1), 3), 100)", "3", "10")]
 	[Arguments("match(when(gte(1d6, 4), 10))", "0", "10")]
+	[Arguments("match((when(0, 7)), 9)", "9", "9")]
 	public async Task MinimizeAndMaximizeTakeInEveryBranchAConditionalCouldGive(string formula, string lowest, string highest)
 	{
 		var low = Rolled(formula, null, DiceRollMode.Minimize, []).Expect<DiceRollResult>();
@@ -510,6 +513,26 @@ public class DiceRollTests
 
 		await Assert.That(SharpMUSH.Library.Utilities.MushNumber.Unparse(low.Total)).IsEqualTo(lowest);
 		await Assert.That(SharpMUSH.Library.Utilities.MushNumber.Unparse(high.Total)).IsEqualTo(highest);
+	}
+
+	[Test]
+	public async Task AGroupedWhenKeepsItsParenthesesInTheText()
+	{
+		var result = Roll("match((when(0, 7)), 9)", null);
+
+		await Assert.That(result.Text).IsEqualTo("match((when(0, 7)), 9) = 9");
+	}
+
+	[Test]
+	[Arguments("match(when(0, 1/0), 7)", DiceRollMode.Minimize)]
+	[Arguments("match(when(0, 1/0), 7)", DiceRollMode.Maximize)]
+	[Arguments("match(7, 1/0)", DiceRollMode.Minimize)]
+	[Arguments("match(when(1, 7), 1/0)", DiceRollMode.Maximize)]
+	public async Task MinimizeAndMaximizeFailWhereRollingWould(string formula, DiceRollMode mode)
+	{
+		await Assert.That(Rolled(formula, null, mode, []).Expect<Error<string>>().Value)
+			.IsEqualTo(ErrorMessages.Returns.DivisionByZero);
+		await Assert.That(Error(formula)).IsEqualTo(ErrorMessages.Returns.DivisionByZero);
 	}
 
 	[Test]

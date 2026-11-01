@@ -208,8 +208,9 @@ internal sealed class DiceEvaluator(Func<int, int> roll, DiceRollMode mode)
 
 	/// <summary>
 	/// match() gives the value of its first when() whose condition holds, or of its first argument that
-	/// is not a when(), and 0 when there is neither. Every argument is rolled, as Foundry's pf2e
-	/// system rolls them, so the text shows each one.
+	/// is not a when(), and 0 when there is neither. Parentheses round a when() leave it a when(), as in
+	/// Foundry's pf2e system, where a when() that fails is null however it is grouped. Every argument is
+	/// rolled, as Foundry rolls them, so the text shows each one.
 	/// </summary>
 	private Evaluated Match(FunctionNode match)
 	{
@@ -217,12 +218,12 @@ internal sealed class DiceEvaluator(Func<int, int> roll, DiceRollMode mode)
 		var shown = new List<Evaluated>();
 		foreach (var argument in match.Arguments)
 		{
-			if (argument is FunctionNode { Name: "when" } when)
+			if (Ungrouped(argument) is FunctionNode { Name: "when" } when)
 			{
 				var condition = Evaluate(when.Arguments[0]);
 				var value = Evaluate(when.Arguments[1]);
 				if (chosen is null && condition.Value != 0) chosen = value.Value;
-				shown.Add(new Evaluated(value.Value, $"when({condition.Text}, {value.Text})", [.. condition.Terms, .. value.Terms]));
+				shown.Add(Regrouped(argument, new Evaluated(value.Value, $"when({condition.Text}, {value.Text})", [.. condition.Terms, .. value.Terms])));
 				continue;
 			}
 
@@ -238,29 +239,34 @@ internal sealed class DiceEvaluator(Func<int, int> roll, DiceRollMode mode)
 
 	/// <summary>
 	/// Every value match() could give: a when() whose condition is settled either decides or drops
-	/// out, one that is not adds its value and reading goes on, and 0 when nothing has to decide.
+	/// out, one that is not adds its value and reading goes on, and 0 when nothing has to decide. Every
+	/// argument is taken in first, so a formula that cannot be rolled has no lowest or highest either.
 	/// </summary>
 	private Span MatchRange(FunctionNode match)
 	{
-		var cases = new List<Evaluated>();
-		foreach (var argument in match.Arguments)
-		{
-			if (argument is FunctionNode { Name: "when" } when)
-			{
-				var condition = Range(when.Arguments[0]);
-				if (IsPoint(condition) && condition.Low.Value == 0) continue;
-				cases.AddRange(Range(when.Arguments[1]).Ends);
-				if (IsPoint(condition)) return _failure is null ? Span.Of(cases) : Span.Failed;
-				continue;
-			}
+		var arguments = match.Arguments
+			.Select(argument => Ungrouped(argument) is FunctionNode { Name: "when" } when
+				? (Condition: (Span?)Range(when.Arguments[0]), Value: Range(when.Arguments[1]))
+				: (Condition: null, Value: Range(argument)))
+			.ToList();
+		if (_failure is not null) return Span.Failed;
 
-			cases.AddRange(Range(argument).Ends);
-			return _failure is null ? Span.Of(cases) : Span.Failed;
+		var cases = new List<Evaluated>();
+		foreach (var (condition, value) in arguments)
+		{
+			if (condition is { } settled && IsPoint(settled) && settled.Low.Value == 0) continue;
+			cases.AddRange(value.Ends);
+			if (condition is not { } open || IsPoint(open)) return Span.Of(cases);
 		}
 
 		cases.Add(Evaluated.Of(0));
-		return _failure is null ? Span.Of(cases) : Span.Failed;
+		return Span.Of(cases);
 	}
+
+	private static DiceNode Ungrouped(DiceNode node) => node is GroupNode group ? Ungrouped(group.Inner) : node;
+
+	private static Evaluated Regrouped(DiceNode node, Evaluated inner) =>
+		node is GroupNode group ? Group(Regrouped(group.Inner, inner)) : inner;
 
 	private static bool IsPoint(Span span) => span.Low.Value == span.High.Value;
 
