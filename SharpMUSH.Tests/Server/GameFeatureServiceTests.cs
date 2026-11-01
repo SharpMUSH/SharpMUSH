@@ -162,10 +162,10 @@ public class GameFeatureServiceTests
 				&& !p.Id.StartsWith("world-grid", StringComparison.Ordinal)).Select(p => p.Id))
 			.IsEquivalentTo(["scene", "scene-help", "scene-config", "scene-verse", "scene-safety", "scene-safety-help", "scene-safety-config",
 				"radio-scene", "timeline", "timeline-help", "timeline-config", "highlights", "highlights-app", "highlights-config",
-				"scene-availability", "scene-here", "relationships-scene"])
+				"scene-availability", "scene-here", "relationships-scene", "duties-scene"])
 			.Because("highlights-app and the scene bridges call no plugin themselves, but the packages they join do");
 		await Assert.That(new Game().Features().PackagesOver("scene"))
-			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline", "highlights", "relationships-scene", "discord-scenes", "scene-availability"]);
+			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline", "highlights", "relationships-scene", "discord-scenes", "scene-availability", "duties-scene"]);
 	}
 
 	/// <summary>
