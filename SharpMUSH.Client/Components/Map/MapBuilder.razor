@@ -132,6 +132,7 @@
         if (Selected is { } id && Layout.Rooms.TryGetValue(id, out var room) && (id != _editing || room != _shown))
         {
             var chosen = id != _editing;
+            if (chosen) _placeNote = null;
             if (chosen) (_vertical, _exitEditing, _backFor, _joinTo, _joinNames, _joinBack, _joinWayBack, _joinId, _joinIdProblem) = (0, null, null, null, "", "", true, "", null);
             (_editing, _shown) = (id, room);
             _roomName = room.Room.Name;
@@ -287,6 +288,11 @@
 
     private async Task MoveHereAsync(string room, double x, double y)
     {
+        if (Layout.Rooms.TryGetValue(room, out var placed))
+        {
+            var (width, height) = Layout.Extent(placed);
+            (x, y, _) = Layout.InsidePicture(x, y, width, height);
+        }
         Plan.Place(room, x, y, Level);
         await OnChanged.InvokeAsync(room);
     }
@@ -386,6 +392,23 @@
                 @if (!room.Placed)
                 {
                     <p class="map-note">@Loc["NavMapUnplaced"]</p>
+                }
+                @if (room.Outside)
+                {
+                    <div class="map-builder-wayback">
+                        <p class="map-builder-warning">@Loc["NavMapOutside", room.Room.Name]</p>
+                        <div class="map-builder-row">
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="() => BringInsideAsync(room)">@Loc["NavMapBringInside"]</MudButton>
+                        </div>
+                    </div>
+                }
+                @if (!room.Room.OnPlace)
+                {
+                    <p class="map-note map-builder-keys">@Loc[Layout.Resizable ? "NavMapMoveHint" : "NavMapMoveHintHex"]</p>
+                }
+                @if (_placeNote is { } placeNote)
+                {
+                    <p class="map-note" role="status">@placeNote</p>
                 }
                 <div class="map-builder-fields">
                     <MudNumericField T="double?" @bind-Value="_x" Label="X" Variant="Variant.Outlined" Class="map-builder-x" />
@@ -1040,9 +1063,19 @@
         (_exitTo, _exitBack) = (names.To, names.Back);
     }
 
+    /// <summary>Said under the place fields when the picture's edge kept a typed place or size from reaching past it.</summary>
+    private string? _placeNote;
+
     private async Task SavePlaceAsync()
     {
         if (_editing is null || _x is not { } x || _y is not { } y) return;
+        _placeNote = null;
+        if (Layout.Rooms.TryGetValue(_editing, out var room))
+        {
+            var (width, height) = room.Room.Size is [var w, var h, ..] ? Layout.FitPicture(w, h) : Layout.Extent(room);
+            (x, y, var moved) = Layout.InsidePicture(x, y, width, height);
+            if (moved) _placeNote = Loc["NavMapKeptInside", Num(x), Num(y)].Value;
+        }
         Plan.Place(_editing, x, y, _z);
         await OnChanged.InvokeAsync(_editing);
     }
@@ -1050,8 +1083,33 @@
     private async Task SaveSizeAsync()
     {
         if (_editing is null) return;
-        Plan.Size(_editing, Math.Max(1, _width), Math.Max(1, _height));
+        _placeNote = null;
+        var (width, height) = Layout.FitPicture(Math.Max(1, _width), Math.Max(1, _height));
+        Plan.Size(_editing, width, height);
+        // A room grown past the picture's edge moves in, so all of it stays on the picture.
+        if (Layout.Picture is not null && Layout.Rooms.TryGetValue(_editing, out var room) && room.Placed)
+        {
+            var (x, y, z) = Layout.Spot(room);
+            var (fitX, fitY, moved) = Layout.InsidePicture(x, y, width, height);
+            if (moved) Plan.Place(_editing, fitX, fitY, z);
+            if (moved || (width, height) != (Math.Max(1, _width), Math.Max(1, _height)))
+            {
+                _placeNote = Loc["NavMapKeptInside", Num(fitX), Num(fitY)].Value;
+            }
+        }
         await OnChanged.InvokeAsync(_editing);
+    }
+
+    /// <summary>A room stored past the picture's edge goes where the map draws it: on the picture, at its edge.</summary>
+    private async Task BringInsideAsync(MapPlacement room)
+    {
+        var (x, y, z) = Layout.Spot(room);
+        Plan.Place(room.Room.Id, x, y, z);
+        if (room.Room.Size is [var w, var h, ..] && Layout.FitPicture(w, h) is var (width, height) && (width, height) != (w, h))
+        {
+            Plan.Size(room.Room.Id, width, height);
+        }
+        await OnChanged.InvokeAsync(room.Room.Id);
     }
 
     private async Task RemoveAsync(string room)
@@ -1110,13 +1168,18 @@
     {
         var stranded = Plan.NoWayIn();
         var oneWay = MapPlan.OneWay(Layout.Map);
-        if (stranded.Count == 0 && oneWay.Count == 0) return;
+        var outside = Layout.Rooms.Values.Where(room => room.Outside && room.Room.Editable).OrderBy(room => room.Room.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        if (stranded.Count == 0 && oneWay.Count == 0 && outside.Count == 0) return;
         <section class="map-builder-section" aria-labelledby="map-checks-title">
             <h3 id="map-checks-title" class="map-builder-title">@Loc["NavMapChecks"]</h3>
             <ul class="map-builder-list">
                 @foreach (var room in stranded)
                 {
                     <li>@Loc["NavMapNoWayIn", room.Name]</li>
+                }
+                @foreach (var room in outside)
+                {
+                    <li>@Loc["NavMapOutsideCheck", room.Room.Name]</li>
                 }
                 @foreach (var (exit, expected) in oneWay)
                 {

@@ -7416,4 +7416,40 @@
   <data name="NavMapPlaceRoomHere" xml:space="preserve">
     <value>Постави стая</value>
   </data>
+  <data name="NavMapMoveHint" xml:space="preserve">
+    <value>Плъзнете стая, за да я преместите, или ъгъл на избраната стая, за да промените размера ѝ. С клавиатурата стрелките местят избраната стая (по-далеч с Shift), а Ctrl+Shift със стрелките променя размера ѝ.</value>
+  </data>
+  <data name="NavMapMoveHintHex" xml:space="preserve">
+    <value>Плъзнете стая, за да я преместите на друг шестоъгълник. С клавиатурата стрелките местят избраната стая на следващия шестоъгълник; Shift с лява или дясна стрелка взима горните съседи.</value>
+  </data>
+  <data name="NavMapMovedTo" xml:space="preserve">
+    <value>{0} е преместена на {1}, {2}.</value>
+  </data>
+  <data name="NavMapResizedTo" xml:space="preserve">
+    <value>{0} вече е {1} на {2}.</value>
+  </data>
+  <data name="NavMapAtEdge" xml:space="preserve">
+    <value>Ръбът на картината я спря.</value>
+  </data>
+  <data name="NavMapTaken" xml:space="preserve">
+    <value>{0} не може да отиде там: друга стая заема тези клетки.</value>
+  </data>
+  <data name="NavMapTakenHex" xml:space="preserve">
+    <value>{0} не може да отиде там: на този шестоъгълник стои друга стая.</value>
+  </data>
+  <data name="NavMapNoResizeHex" xml:space="preserve">
+    <value>На шестоъгълна карта всяка стая е един шестоъгълник, затова {0} няма размер за промяна.</value>
+  </data>
+  <data name="NavMapOutside" xml:space="preserve">
+    <value>{0} е записана извън ръба на картината, затова картата я рисува на ръба.</value>
+  </data>
+  <data name="NavMapBringInside" xml:space="preserve">
+    <value>Премести в картината</value>
+  </data>
+  <data name="NavMapOutsideCheck" xml:space="preserve">
+    <value>{0} е записана извън ръба на картината.</value>
+  </data>
+  <data name="NavMapKeptInside" xml:space="preserve">
+    <value>Задържана в картината, на {0}, {1}.</value>
+  </data>
 </root>

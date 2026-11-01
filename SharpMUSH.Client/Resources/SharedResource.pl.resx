@@ -7416,4 +7416,40 @@
   <data name="NavMapPlaceRoomHere" xml:space="preserve">
     <value>Umieść pokój</value>
   </data>
+  <data name="NavMapMoveHint" xml:space="preserve">
+    <value>Przeciągnij pokój, aby go przesunąć, albo róg wybranego pokoju, aby zmienić jego rozmiar. Na klawiaturze strzałki przesuwają wybrany pokój (z Shift dalej), a Ctrl+Shift ze strzałkami zmienia jego rozmiar.</value>
+  </data>
+  <data name="NavMapMoveHintHex" xml:space="preserve">
+    <value>Przeciągnij pokój, aby przenieść go na inny sześciokąt. Na klawiaturze strzałki przenoszą wybrany pokój na następny sześciokąt; Shift ze strzałką w lewo lub w prawo wybiera górnych sąsiadów.</value>
+  </data>
+  <data name="NavMapMovedTo" xml:space="preserve">
+    <value>{0} przesunięto na {1}, {2}.</value>
+  </data>
+  <data name="NavMapResizedTo" xml:space="preserve">
+    <value>{0} ma teraz {1} na {2}.</value>
+  </data>
+  <data name="NavMapAtEdge" xml:space="preserve">
+    <value>Zatrzymała go krawędź obrazu.</value>
+  </data>
+  <data name="NavMapTaken" xml:space="preserve">
+    <value>{0} nie może tam stanąć: te pola zajmuje inny pokój.</value>
+  </data>
+  <data name="NavMapTakenHex" xml:space="preserve">
+    <value>{0} nie może tam stanąć: na tym sześciokącie stoi inny pokój.</value>
+  </data>
+  <data name="NavMapNoResizeHex" xml:space="preserve">
+    <value>Pokoje na mapie sześciokątnej zajmują po jednym sześciokącie, więc {0} nie ma rozmiaru do zmiany.</value>
+  </data>
+  <data name="NavMapOutside" xml:space="preserve">
+    <value>{0} jest zapisany poza krawędzią obrazu, więc mapa rysuje go na krawędzi.</value>
+  </data>
+  <data name="NavMapBringInside" xml:space="preserve">
+    <value>Przenieś do obrazu</value>
+  </data>
+  <data name="NavMapOutsideCheck" xml:space="preserve">
+    <value>{0} jest zapisany poza krawędzią obrazu.</value>
+  </data>
+  <data name="NavMapKeptInside" xml:space="preserve">
+    <value>Zatrzymano w obrazie, w {0}, {1}.</value>
+  </data>
 </root>

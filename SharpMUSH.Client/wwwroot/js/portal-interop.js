@@ -103,6 +103,8 @@
         var drag = null;
         function onPointerDown(e) {
             if (e.pointerType !== "mouse" || e.button !== 0) return;
+            // A room or corner a builder may drag moves that, not the view.
+            if (e.target && e.target.closest && e.target.closest("[data-map-drag], [data-map-handle]")) return;
             drag = { x: e.clientX, y: e.clientY, left: frame.scrollLeft, top: frame.scrollTop, moved: false };
             window.addEventListener("pointermove", onPointerMove);
             window.addEventListener("pointerup", onPointerUp);
@@ -181,6 +183,250 @@
         };
     };
 
+    // The World map's rooms by keyboard and, while editing, by drag. For every reader an arrow key on a room goes to the
+    // nearest room that way (falling back to scrolling when there is none). While editing, on the chosen room a builder
+    // may move ([data-map-drag], aria-pressed), arrows move it instead, through dotNet's Nudged(id, dx, dy, big,
+    // resize): Shift for a bigger step, Ctrl/Cmd+Shift to move its east or south edge. A drag of such a room, or of a
+    // corner of the chosen one ([data-map-handle]), follows the pointer, snapped to the figure's data-snap pixels and
+    // kept inside its data-picture box, and ends in Dragged(id, dx, dy) or Stretched(id, corner, dx, dy) in the
+    // figure's pixels. Escape puts it back. Alt is left alone: Alt+arrow is the browser's Back and Forward.
+    window.SharpMUSH.mapEdit = function (frame, dotNet) {
+        if (!frame || !dotNet) return { dispose: function () { } };
+
+        var arrows = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+
+        function centre(el) {
+            var box = el.getBoundingClientRect();
+            return [box.left + box.width / 2, box.top + box.height / 2];
+        }
+
+        // The room nearest from `from` in direction (dx, dy): ahead of it, scored by distance along the way plus twice
+        // the distance off it, so a room straight ahead wins over a nearer one off to the side.
+        function nearest(from, dx, dy) {
+            var at = centre(from), best = null, score = Infinity;
+            frame.querySelectorAll(".map-room").forEach(function (el) {
+                if (el === from || el.offsetParent === null) return;
+                var c = centre(el), ax = c[0] - at[0], ay = c[1] - at[1];
+                var along = ax * dx + ay * dy;
+                if (along <= 1) return;
+                var off = Math.abs(ax * dy - ay * dx);
+                var s = along + 2 * off;
+                if (s < score) { score = s; best = el; }
+            });
+            return best;
+        }
+
+        // Focus follows the room after the page draws it again, which may give it a new element.
+        function refocus(id) {
+            window.requestAnimationFrame(function () {
+                var el = frame.querySelector('[data-room-id="' + CSS.escape(id) + '"]');
+                if (!el) return;
+                if (document.activeElement !== el) el.focus({ preventScroll: true });
+                el.scrollIntoView({ block: "nearest", inline: "nearest" });
+            });
+        }
+
+        function onKeyDown(e) {
+            var step = arrows[e.key];
+            if (!step || e.altKey) return;
+            var room = e.target.closest && e.target.closest(".map-room");
+            if (!room || !frame.contains(room)) return;
+            var id = room.getAttribute("data-room-id");
+            if (id && room.hasAttribute("data-map-drag") && room.getAttribute("aria-pressed") === "true") {
+                e.preventDefault();
+                var resize = !!((e.ctrlKey || e.metaKey) && e.shiftKey);
+                if (!resize && (e.ctrlKey || e.metaKey)) return;
+                dotNet.invokeMethodAsync("Nudged", id, step[0], step[1], !!e.shiftKey && !resize, resize)
+                    .then(function () { refocus(id); }, function () { });
+                return;
+            }
+            if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+            var next = nearest(room, step[0], step[1]);
+            if (!next) return;
+            e.preventDefault();
+            next.focus();
+        }
+
+        // A drag in progress: the element moving, what it started as, and how far the pointer has gone.
+        var drag = null;
+
+        function figureOf(el) { return el.closest(".map-figure"); }
+
+        function numbers(text) {
+            return (text || "").split(",").map(Number);
+        }
+
+        function onPointerDown(e) {
+            if (e.button !== 0 || drag) return;
+            var handle = e.target.closest && e.target.closest("[data-map-handle]");
+            var room = !handle && e.target.closest && e.target.closest("[data-map-drag]");
+            if ((!handle && !room) || !frame.contains(e.target)) return;
+            var figure = figureOf(handle || room);
+            var id = handle ? handle.getAttribute("data-room") : room.getAttribute("data-room-id");
+            var el = frame.querySelector('[data-room-id="' + CSS.escape(id) + '"]');
+            if (!el || !figure) return;
+            var box = { left: el.offsetLeft, top: el.offsetTop, width: el.offsetWidth, height: el.offsetHeight };
+            drag = {
+                id: id, el: el, handle: handle, corner: handle ? handle.getAttribute("data-map-handle") : null,
+                point: !handle && el.getAttribute("data-map-drag") === "point",
+                figure: figure, x: e.clientX, y: e.clientY, dx: 0, dy: 0, box: box, moved: false,
+                style: el.getAttribute("style"), pointer: e.pointerId,
+                snap: Number(figure.getAttribute("data-snap")) || 0,
+                picture: figure.getAttribute("data-picture") ? numbers(figure.getAttribute("data-picture")) : null,
+                // A room's button is drawn in from its box by data-inset pixels: the box, not the button, meets the edge.
+                inset: Number(figure.getAttribute("data-inset")) || 0,
+                origin: numbers(figure.getAttribute("data-origin"))
+            };
+            if (handle) e.preventDefault();
+            window.addEventListener("pointermove", onPointerMove);
+            window.addEventListener("pointerup", onPointerUp);
+            window.addEventListener("pointercancel", cancel);
+            window.addEventListener("keydown", onEscape, true);
+        }
+
+        function snap(value) {
+            return drag.snap > 0 ? Math.round(value / drag.snap) * drag.snap : value;
+        }
+
+        // The box the drag has made, in the figure's pixels: moved whole, or with the dragged corner moved.
+        function shaped(dx, dy) {
+            var b = drag.box, left = b.left, top = b.top, right = b.left + b.width, bottom = b.top + b.height;
+            var p = drag.picture, i = drag.point ? 0 : drag.inset;
+            if (p) p = [p[0] + i, p[1] + i, p[2] - 2 * i, p[3] - 2 * i];
+            if (!drag.corner) {
+                dx = snap(dx); dy = snap(dy);
+                if (p) {
+                    // A box stays inside the picture; a point (a room with no size) keeps its middle inside.
+                    var halfW = drag.point ? b.width / 2 : 0, halfH = drag.point ? b.height / 2 : 0;
+                    dx = Math.min(Math.max(dx, p[0] - halfW - left), p[0] + p[2] + halfW - right);
+                    dy = Math.min(Math.max(dy, p[1] - halfH - top), p[1] + p[3] + halfH - bottom);
+                }
+                return { left: left + dx, top: top + dy, width: b.width, height: b.height, dx: dx, dy: dy };
+            }
+            var c = drag.corner, min = Math.max(8, drag.snap);
+            if (c.indexOf("w") >= 0) left = Math.min(left + snap(dx), right - min);
+            else right = Math.max(right + snap(dx), left + min);
+            if (c.indexOf("n") >= 0) top = Math.min(top + snap(dy), bottom - min);
+            else bottom = Math.max(bottom + snap(dy), top + min);
+            if (p) {
+                left = Math.max(left, p[0]); top = Math.max(top, p[1]);
+                right = Math.min(right, p[0] + p[2]); bottom = Math.min(bottom, p[1] + p[3]);
+            }
+            return {
+                left: left, top: top, width: right - left, height: bottom - top,
+                dx: c.indexOf("w") >= 0 ? left - b.left : right - (b.left + b.width),
+                dy: c.indexOf("n") >= 0 ? top - b.top : bottom - (b.top + b.height)
+            };
+        }
+
+        // What the readout under the box says: on a picture, the point it would be centred on or the size it is being
+        // given, in the picture's pixels; on a square map, a size in cells. A move on a grid or hex map shows where it
+        // lands by its snapped place, so says nothing.
+        function readout(box) {
+            if (!drag.picture) {
+                var cell = drag.box.width > 0 && drag.snap > 0 ? drag.snap : 0;
+                return drag.corner && cell ? Math.round((box.width + 2 * drag.inset) / cell) + " × " + Math.round((box.height + 2 * drag.inset) / cell) : "";
+            }
+            var o = drag.origin, zoom = o[2] || 1;
+            var x = Math.round(o[0] + (box.left + box.width / 2) / zoom);
+            var y = Math.round(o[1] + (box.top + box.height / 2) / zoom);
+            var i = drag.point ? 0 : 2 * drag.inset;
+            return drag.corner ? Math.round((box.width + i) / zoom) + " × " + Math.round((box.height + i) / zoom) : "x " + x + " · y " + y;
+        }
+
+        function onPointerMove(e) {
+            if (!drag || e.pointerId !== drag.pointer) return;
+            var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+            if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 5) return;
+            e.preventDefault();
+            if (!drag.moved) {
+                drag.moved = true;
+                frame.classList.add("map-frame--editing-drag");
+                drag.el.classList.add("map-room--dragging");
+                var origin = frame.querySelector('[data-room="' + CSS.escape(drag.id) + '"]:not([data-map-handle])');
+                if (origin) { origin.classList.add("map-box--origin"); drag.origin_el = origin; }
+                drag.chip = document.createElement("span");
+                drag.chip.className = "map-drag-readout";
+                drag.chip.setAttribute("aria-hidden", "true");
+                drag.figure.appendChild(drag.chip);
+            }
+            var box = shaped(dx, dy);
+            drag.dx = box.dx; drag.dy = box.dy;
+            var s = drag.el.style;
+            s.left = box.left + "px"; s.top = box.top + "px"; s.width = box.width + "px"; s.height = box.height + "px";
+            drag.chip.textContent = readout(box);
+            drag.chip.hidden = drag.chip.textContent === "";
+            drag.chip.style.left = box.left + box.width / 2 + "px";
+            drag.chip.style.top = box.top + box.height + 8 + "px";
+        }
+
+        // Puts the room back as the page drew it, so the page's next drawing, moved or not, is what shows.
+        function restore() {
+            if (!drag) return;
+            if (drag.style === null) drag.el.removeAttribute("style"); else drag.el.setAttribute("style", drag.style);
+            drag.el.classList.remove("map-room--dragging");
+            if (drag.origin_el) drag.origin_el.classList.remove("map-box--origin");
+            if (drag.chip) drag.chip.remove();
+            frame.classList.remove("map-frame--editing-drag");
+        }
+
+        function stop() {
+            window.removeEventListener("pointermove", onPointerMove);
+            window.removeEventListener("pointerup", onPointerUp);
+            window.removeEventListener("pointercancel", cancel);
+            window.removeEventListener("keydown", onEscape, true);
+        }
+
+        function swallow(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function onPointerUp(e) {
+            if (!drag || e.pointerId !== drag.pointer) return;
+            stop();
+            var done = drag;
+            restore();
+            drag = null;
+            if (!done.moved) return;
+            frame.addEventListener("click", swallow, { capture: true, once: true });
+            window.setTimeout(function () { frame.removeEventListener("click", swallow, { capture: true }); }, 0);
+            if (Math.abs(done.dx) < 0.5 && Math.abs(done.dy) < 0.5) return;
+            var call = done.corner
+                ? dotNet.invokeMethodAsync("Stretched", done.id, done.corner, done.dx, done.dy)
+                : dotNet.invokeMethodAsync("Dragged", done.id, done.dx, done.dy);
+            call.then(function () { refocus(done.id); }, function () { });
+        }
+
+        function cancel() {
+            stop();
+            restore();
+            drag = null;
+        }
+
+        function onEscape(e) {
+            if (e.key !== "Escape" || !drag) return;
+            e.preventDefault();
+            e.stopPropagation();
+            var moved = drag.moved;
+            cancel();
+            if (moved) {
+                frame.addEventListener("click", swallow, { capture: true, once: true });
+                window.setTimeout(function () { frame.removeEventListener("click", swallow, { capture: true }); }, 0);
+            }
+        }
+
+        frame.addEventListener("keydown", onKeyDown);
+        frame.addEventListener("pointerdown", onPointerDown);
+        return {
+            dispose: function () {
+                frame.removeEventListener("keydown", onKeyDown);
+                frame.removeEventListener("pointerdown", onPointerDown);
+                cancel();
+            }
+        };
+    };
+
     // Tells a World map what part of its drawing is in view, once the frame stops scrolling or changes size: dotNet's
     // ViewAt(x, y, width, height), in the drawing's pixels. A drawing narrower than its frame is centred in it, so
     // its view starts at its own edge.
@@ -234,12 +480,26 @@
         if (focus) room.focus({ preventScroll: true });
     };
 
-    // Brings a World map's builder panel into the page's view once a room or cell is chosen: on a narrow screen it
-    // sits below the map. Smooth unless the reader asked for less motion.
+    // Brings the top of a World map's builder panel into the page's view once a room or cell is chosen, when it sits
+    // below the map out of sight: the page scrolls only far enough to show its first lines, so the map, where the room
+    // was just chosen and may be dragged next, stays in view above it. Smooth unless the reader asked for less motion.
     window.SharpMUSH.mapPanelIntoView = function (panel) {
         if (!panel) return;
         var still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        panel.scrollIntoView({ block: "nearest", behavior: still ? "auto" : "smooth" });
+        var scroller = panel.parentElement;
+        while (scroller && scroller !== document.body) {
+            var overflow = getComputedStyle(scroller).overflowY;
+            if ((overflow === "auto" || overflow === "scroll") && scroller.scrollHeight > scroller.clientHeight) break;
+            scroller = scroller.parentElement;
+        }
+        if (!scroller || scroller === document.body) scroller = document.scrollingElement || document.documentElement;
+        var view = scroller === document.scrollingElement || scroller === document.documentElement
+            ? { top: 0, bottom: window.innerHeight }
+            : scroller.getBoundingClientRect();
+        var peek = Math.min(240, (view.bottom - view.top) / 3);
+        var top = panel.getBoundingClientRect().top;
+        if (top <= view.bottom - peek) return;
+        scroller.scrollBy({ top: top - (view.bottom - peek), behavior: still ? "auto" : "smooth" });
     };
 
     // A picture's size in pixels, [width, height], or null when it does not load: the map settings take a picture

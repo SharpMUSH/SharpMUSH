@@ -7416,4 +7416,40 @@
   <data name="NavMapPlaceRoomHere" xml:space="preserve">
     <value>Postavi sobu</value>
   </data>
+  <data name="NavMapMoveHint" xml:space="preserve">
+    <value>Povuci sobu da je pomakneš ili kut odabrane sobe da joj promijeniš veličinu. Tipkovnicom strelice pomiču odabranu sobu (sa Shiftom dalje), a Ctrl+Shift sa strelicama mijenja joj veličinu.</value>
+  </data>
+  <data name="NavMapMoveHintHex" xml:space="preserve">
+    <value>Povuci sobu da je premjestiš na drugi šesterokut. Tipkovnicom strelice pomiču odabranu sobu na sljedeći šesterokut; Shift s lijevom ili desnom strelicom uzima gornje susjede.</value>
+  </data>
+  <data name="NavMapMovedTo" xml:space="preserve">
+    <value>{0} premještena na {1}, {2}.</value>
+  </data>
+  <data name="NavMapResizedTo" xml:space="preserve">
+    <value>{0} je sada {1} sa {2}.</value>
+  </data>
+  <data name="NavMapAtEdge" xml:space="preserve">
+    <value>Zaustavio ju je rub slike.</value>
+  </data>
+  <data name="NavMapTaken" xml:space="preserve">
+    <value>{0} ne može tamo: ta polja zauzima druga soba.</value>
+  </data>
+  <data name="NavMapTakenHex" xml:space="preserve">
+    <value>{0} ne može tamo: na tom šesterokutu stoji druga soba.</value>
+  </data>
+  <data name="NavMapNoResizeHex" xml:space="preserve">
+    <value>Sobe na šesterokutnoj karti zauzimaju po jedan šesterokut, pa {0} nema veličinu za promjenu.</value>
+  </data>
+  <data name="NavMapOutside" xml:space="preserve">
+    <value>{0} je spremljena izvan ruba slike, pa je karta crta na rubu.</value>
+  </data>
+  <data name="NavMapBringInside" xml:space="preserve">
+    <value>Premjesti u sliku</value>
+  </data>
+  <data name="NavMapOutsideCheck" xml:space="preserve">
+    <value>{0} je spremljena izvan ruba slike.</value>
+  </data>
+  <data name="NavMapKeptInside" xml:space="preserve">
+    <value>Zadržana unutar slike, na {0}, {1}.</value>
+  </data>
 </root>

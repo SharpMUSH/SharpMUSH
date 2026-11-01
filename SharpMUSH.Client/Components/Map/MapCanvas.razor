@@ -13,9 +13,14 @@
    name carries it on a label below, as a pin does, and one smaller still keeps it for its tooltip and screen reader.
    A map whose places a map source stores draws the window of them it was given (Cells) under its rooms: each place
    in its terrain's tone, hatched when closed, and walls, one-way edges and locked ways on their sides. A place with
-   something to say (a name, a room, a panel) is a button too. *@
+   something to say (a name, a room, a panel) is a button too.
+   Arrow keys on a room go to the nearest room that way. While editing, a room the builder may move is dragged to
+   where it goes (to the nearest cell or hexagon, or on a picture to the point, kept on the picture), the chosen one
+   is resized by its corners, and the arrow keys move it (Ctrl+Shift resizes it); each change goes to the page as
+   OnReshape and is read out. The builder's fields do the same without a drag (portal-interop.js, mapEdit). *@
 <div class="map-frame @(Layout.IsGraph && _backdrop is null ? "map-frame--blank" : null)" tabindex="-1" @ref="_frame">
-    <figure class="map-figure" style="width: @Px(_width * Zoom); height: @Px(_height * Zoom); --map-zoom: @Num(Zoom); --map-dots: @Px(DotSpacing);">
+    <figure class="map-figure" style="width: @Px(_width * Zoom); height: @Px(_height * Zoom); --map-zoom: @Num(Zoom); --map-dots: @Px(DotSpacing);"
+            data-snap="@Num(Snap)" data-picture="@PictureBox()" data-inset="@Num(Inset * Zoom)" data-origin="@($"{Num(_left)},{Num(_top)},{Num(Zoom)}")">
         <svg viewBox="@Num(_left) @Num(_top) @Num(_width) @Num(_height)" class="map-svg" preserveAspectRatio="none" aria-hidden="true" focusable="false">
             <defs>
                 <marker id="@ArrowId" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -29,6 +34,13 @@
             {
                 <image class="map-backdrop" href="@_backdrop" x="0" y="0" width="@Num(Layout.Map.Size![0])" height="@Num(Layout.Map.Size[1])"
                        preserveAspectRatio="none" />
+            }
+            @if (Editing && Layout.Picture is var (pictureWidth, pictureHeight))
+            {
+                @* While editing, the picture is the board: what lies outside it is shaded, and its edge is drawn. *@
+                <path class="map-outside" fill-rule="evenodd"
+                      d="@($"M{Num(_left)},{Num(_top)} h{Num(_width)} v{Num(_height)} h{Num(-_width)} z M0,0 v{Num(pictureHeight)} h{Num(pictureWidth)} v{Num(-pictureHeight)} z")" />
+                <rect class="map-edge-line" x="0" y="0" width="@Num(pictureWidth)" height="@Num(pictureHeight)" />
             }
             @if (!Layout.IsGraph && !Layout.IsHex && !Layout.HasWays)
             {
@@ -111,7 +123,7 @@
                 @if (Pin(room))
                 {
                     var (cx, cy) = Centre(room);
-                    <circle class="@RoomClass(room) map-box--pin" style="@MapLegendStyle.Style(Kind(room))" cx="@Num(cx)" cy="@Num(cy)" r="9" />
+                    <circle class="@RoomClass(room) map-box--pin" style="@MapLegendStyle.Style(Kind(room))" cx="@Num(cx)" cy="@Num(cy)" r="9" data-room="@room.Room.Id" />
                     @if (_doors.Contains(room.Room.Id))
                     {
                         <circle class="map-door" cx="@Num(cx + 9)" cy="@Num(cy - 9)" r="5" />
@@ -121,12 +133,12 @@
                 @if (Layout.IsHex && room.Room.Position is [var hexX, var hexY, ..])
                 {
                     @* A room on a hex map is the hexagon it stands on, drawn in from its sides so their walls show. *@
-                    <polygon class="@RoomClass(room)" style="@MapLegendStyle.Style(Kind(room))"
+                    <polygon class="@RoomClass(room)" style="@MapLegendStyle.Style(Kind(room))" data-room="@room.Room.Id"
                              points="@Points(Layout.HexCorners((int)Math.Round(hexX), (int)Math.Round(hexY), 1 - 2 * Inset / MapLayout.HexSide))" />
                 }
                 else
                 {
-                    <rect class="@RoomClass(room)" style="@MapLegendStyle.Style(Kind(room))" x="@Num(room.X + Inset)" y="@Num(room.Y + Inset)"
+                    <rect class="@RoomClass(room)" style="@MapLegendStyle.Style(Kind(room))" data-room="@room.Room.Id" x="@Num(room.X + Inset)" y="@Num(room.Y + Inset)"
                           width="@Num(room.Width - 2 * Inset)" height="@Num(room.Height - 2 * Inset)" rx="8" />
                 }
                 @if (_vertical.TryGetValue(room.Room.Id, out var vertical))
@@ -155,6 +167,11 @@
                 }
             </ul>
         }
+        @if (Editing)
+        {
+            <p id="@HintId" class="visually-hidden">@Loc["NavMapMoveHint"]</p>
+        }
+        <p class="visually-hidden" role="status" aria-live="polite">@_announced</p>
         <div class="map-rooms">
             @if (Editing && Layout.IsGraph)
             {
@@ -210,11 +227,14 @@
             @foreach (var room in _rooms.Where(room => !room.Region))
             {
                 var here = room.Room.Id == Layout.Map.Here;
-                <button type="button" class="map-room @(Pin(room) ? "map-room--pin" : null) @Fit(room) @(Editing && !room.Room.Editable ? "map-room--locked" : null) @(room.Room.Id == Selected ? "map-room--selected" : null) @(here ? "map-room--here" : null)"
+                var movable = Movable(room);
+                <button type="button" class="map-room @(Pin(room) ? "map-room--pin" : null) @Fit(room) @(Editing && !room.Room.Editable ? "map-room--locked" : null) @(movable ? "map-room--movable" : null) @(room.Room.Id == Selected ? "map-room--selected" : null) @(here ? "map-room--here" : null)"
                         style="@Box(room) @MapLegendStyle.Style(Kind(room))" aria-pressed="@(room.Room.Id == Selected ? "true" : "false")"
-                        aria-label="@Label(room, here)"
+                        aria-label="@Label(room, here)" aria-describedby="@(movable ? HintId : null)"
+                        aria-keyshortcuts="@(movable ? MoveKeys : null)"
+                        data-room-id="@room.Room.Id" data-map-drag="@(movable ? (Layout.IsGraph && room.Room.Size is null ? "point" : "box") : null)"
                         title="@room.Room.Name" @onclick="() => OnSelect.InvokeAsync(room.Room.Id)"
-                        @ref="_buttons[room.Room.Id]">
+                        @key="room.Room.Id" @ref="_buttons[room.Room.Id]">
                     @if (Kind(room) is { } kind)
                     {
                         @* The icon says the kind without its colour, for a reader who cannot tell the colours apart. *@
@@ -235,6 +255,17 @@
                         </span>
                     }
                 </button>
+            }
+            @if (Selected is { } chosenId && Layout.Rooms.TryGetValue(chosenId, out var chosenRoom) && Resizable(chosenRoom) && chosenRoom.Level == Level)
+            {
+                @* The chosen room's corners, for a pointer: drawn small, with room around them to grab. The keyboard resizes
+                   with Ctrl+Shift and the arrows, and the builder's fields take a size as numbers. *@
+                var shown = _rooms.First(room => room.Room.Id == chosenId);
+                @foreach (var corner in Corners)
+                {
+                    <span class="map-handle map-handle--@corner" style="@HandleBox(shown, corner)" data-map-handle="@corner" data-room="@chosenId"
+                          aria-hidden="true"></span>
+                }
             }
         </div>
     </figure>
@@ -275,6 +306,9 @@
 
     [Parameter] public EventCallback<MapCellDto> OnPlace { get; set; }
 
+    /// <summary>A builder moved or resized a room, by pointer or keys: where it goes, in the map's own units.</summary>
+    [Parameter] public EventCallback<(string Room, MapReshape To)> OnReshape { get; set; }
+
     private const double Inset = MapLayout.RoomInset;
     private const double Margin = 24;
 
@@ -302,11 +336,20 @@
     private DotNetObjectReference<MapCanvas>? _self;
     private IJSObjectReference? _gestures;
     private IJSObjectReference? _viewport;
+    private IJSObjectReference? _editor;
+
+    /// <summary>What the last move or resize did, read out by a screen reader.</summary>
+    private string? _announced;
+
+    private static readonly string[] Corners = ["nw", "ne", "se", "sw"];
+
+    private const string MoveKeys = "ArrowUp ArrowDown ArrowLeft ArrowRight Shift+ArrowUp Control+Shift+ArrowRight";
     private bool _disposed;
 
     private readonly string _arrowId = "map-arrow-" + Guid.NewGuid().ToString("N")[..8];
     private string ArrowId => _arrowId;
     private string HatchId => _arrowId.Replace("arrow", "hatch");
+    private string HintId => _arrowId.Replace("arrow", "hint");
 
     private readonly Dictionary<string, ElementReference> _buttons = new();
     private List<MapPlacement> _rooms = [];
@@ -496,6 +539,7 @@
     {
         if (firstRender) await WatchGesturesAsync();
         if (firstRender) await WatchViewAsync();
+        if (firstRender) await WatchEditsAsync();
         var (drawn, anchor) = (_drawnZoom, _anchor);
         (_drawnZoom, _anchor) = (Zoom, null);
         if (drawn <= 0 || Zoom == drawn) return;
@@ -553,8 +597,115 @@
         return OnZoomAt.InvokeAsync(factor);
     }
 
+    /// <summary>
+    /// Arrow keys on the rooms, for every reader: they go to the nearest room that way, or, while editing, move the chosen
+    /// room. Drags of a room or of its corners, while editing.
+    /// </summary>
+    private async Task WatchEditsAsync()
+    {
+        _self ??= DotNetObjectReference.Create(this);
+        try
+        {
+            _editor = await JS.InvokeAsync<IJSObjectReference?>("SharpMUSH.mapEdit", _frame, _self);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException)
+        {
+            // No portal-interop.js (tests): the builder's fields still move and size a room.
+        }
+        if (_disposed) await ReleaseGesturesAsync();
+    }
+
+    /// <summary>A room was dragged (x, y) pixels of the figure.</summary>
+    [JSInvokable]
+    public Task Dragged(string id, double x, double y) =>
+        Room(id) is { } room ? ReshapeAsync(room, Layout.Moved(room, x / Zoom, y / Zoom)) : Task.CompletedTask;
+
+    /// <summary>A corner of a room was dragged (x, y) pixels of the figure.</summary>
+    [JSInvokable]
+    public Task Stretched(string id, string corner, double x, double y)
+    {
+        if (Room(id) is not { } room) return Task.CompletedTask;
+        var (dx, dy) = (x / Zoom, y / Zoom);
+        var (left, right) = corner.EndsWith('w') ? (dx, 0d) : (0d, dx);
+        var (top, bottom) = corner.StartsWith('n') ? (dy, 0d) : (0d, dy);
+        return ReshapeAsync(room, Layout.Resized(room, left, top, right, bottom));
+    }
+
+    /// <summary>
+    /// An arrow key on the chosen room: (dx, dy) across and down the screen. It moves the room, further with
+    /// <paramref name="big"/>; with <paramref name="resize"/> it moves the room's east or south edge instead.
+    /// </summary>
+    [JSInvokable]
+    public Task Nudged(string id, int dx, int dy, bool big, bool resize)
+    {
+        if (Room(id) is not { } room) return Task.CompletedTask;
+        if (!resize) return ReshapeAsync(room, Layout.Nudged(room, dx, dy, big));
+        if (!Layout.Resizable) return Announce(Loc["NavMapNoResizeHex", room.Room.Name].Value);
+        var step = Layout.IsGraph ? MapLayout.PictureStep : MapLayout.Cell;
+        return ReshapeAsync(room, Layout.Resized(room, 0, 0, dx * step, dy * step));
+    }
+
+    /// <summary>The room <paramref name="id"/> as drawn on this level, when a builder may move it.</summary>
+    private MapPlacement? Room(string id) => Editing ? _rooms.FirstOrDefault(room => room.Room.Id == id && Movable(room)) : null;
+
+    private async Task ReshapeAsync(MapPlacement room, MapReshape? to)
+    {
+        if (to is null)
+        {
+            await Announce(Loc[Layout.IsHex ? "NavMapTakenHex" : "NavMapTaken", room.Room.Name].Value);
+            return;
+        }
+        await OnReshape.InvokeAsync((room.Room.Id, to));
+        var where = to.Width is { } width && to.Height is { } height
+            ? Loc["NavMapResizedTo", room.Room.Name, Num(width), Num(height)].Value
+            : Loc["NavMapMovedTo", room.Room.Name, Num(to.X), Num(to.Y)].Value;
+        await Announce(to.AtEdge ? $"{where} {Loc["NavMapAtEdge"]}" : where);
+    }
+
+    private Task Announce(string text)
+    {
+        _announced = text;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Whether a builder may move <paramref name="room"/> on the map: theirs, a room, and not standing on a place.</summary>
+    private bool Movable(MapPlacement room) => Editing && room.Room.Editable && !room.Region && !room.Room.OnPlace;
+
+    /// <summary>Whether the chosen room shows corners to resize it by: one a builder may move, on a map whose rooms have sizes.</summary>
+    private bool Resizable(MapPlacement room) => Movable(room) && room.Placed && Layout.Resizable && !Pin(room);
+
+    /// <summary>A corner of <paramref name="room"/>'s box, as the box is drawn.</summary>
+    private string HandleBox(MapPlacement room, string corner)
+    {
+        var x = corner.EndsWith('w') ? room.X + Inset : room.X + room.Width - Inset;
+        var y = corner.StartsWith('n') ? room.Y + Inset : room.Y + room.Height - Inset;
+        return $"left: {Percent(x - _left, _width)}%; top: {Percent(y - _top, _height)}%;";
+    }
+
+    /// <summary>How far apart a drag snaps on screen, in pixels: a cell on a square map; free on a picture or hex map.</summary>
+    private double Snap => !Layout.IsGraph && !Layout.IsHex ? MapLayout.Cell * Zoom : 0;
+
+    /// <summary>The picture's box in the figure's pixels, for a drag to stay inside; empty with no picture.</summary>
+    private string? PictureBox() => Layout.Picture is var (width, height)
+        ? $"{Num(-_left * Zoom)},{Num(-_top * Zoom)},{Num(width * Zoom)},{Num(height * Zoom)}"
+        : null;
+
     private async Task ReleaseGesturesAsync()
     {
+        if (_editor is { } editor)
+        {
+            _editor = null;
+            try
+            {
+                await editor.InvokeVoidAsync("dispose");
+                await editor.DisposeAsync();
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException)
+            {
+                // The page is already gone, and its listeners with it.
+            }
+        }
         if (_viewport is { } viewport)
         {
             _viewport = null;
@@ -837,6 +988,7 @@
         room.Room.Id == Selected ? "map-box--selected" : null,
         Route?.Any(step => step.Destination == room.Room.Id) == true ? "map-box--route" : null,
         MapLegendStyle.Style(Kind(room)) is not null ? "map-box--toned" : null,
+        Editing && room.Outside ? "map-box--outside" : null,
     }.Where(c => c is not null));
 
     private static (double X, double Y) Centre(MapPlacement room) => (room.X + room.Width / 2, room.Y + room.Height / 2);

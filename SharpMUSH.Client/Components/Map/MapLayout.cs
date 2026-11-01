@@ -5,8 +5,16 @@ namespace SharpMUSH.Client.Components.Map;
 /// <summary>A room where the map draws it: its cell (or pixel, on a graph map), its size and its level.</summary>
 /// <param name="Placed">Whether the map says where it is. An unplaced room is drawn in the strip below its level: the level of a room an exit joins it to.</param>
 /// <param name="Region">A map inside this one rather than a room: choosing it opens that map.</param>
+/// <param name="Outside">A room whose stored point or size reaches past its map's picture: it is drawn at the picture's edge.</param>
 public sealed record MapPlacement(MapRoomDto Room, double X, double Y, double Width, double Height, int Level, bool Placed,
-	bool Region = false);
+	bool Region = false, bool Outside = false);
+
+/// <summary>
+/// Where a room goes after a move or a resize, in the map's own units (see <see cref="MapLayout.Spot"/>), and its size
+/// when that changed: cells on a grid, pixels on a picture.
+/// </summary>
+/// <param name="AtEdge">The picture's edge stopped it short of where it was taken.</param>
+public sealed record MapReshape(double X, double Y, int Z, double? Width = null, double? Height = null, bool AtEdge = false);
 
 /// <summary>
 /// Where each room of a <see cref="MapDto"/> is drawn. No UI state, so the page and the tests share it.
@@ -120,6 +128,15 @@ public sealed class MapLayout
 	/// whose places stand in square cells with no grid drawn.
 	/// </summary>
 	public bool HasWays => Space is { Kind: MapSpaces.Graph };
+
+	/// <summary>
+	/// The picture a graph map's rooms stand on, in its pixels: every room is drawn inside it, and a move or resize stays
+	/// inside it. Null for a graph map with no size, which has no edge, and for every other kind.
+	/// </summary>
+	public (double Width, double Height)? Picture => IsGraph && Map.Size is [> 0 and var width, > 0 and var height, ..] ? (width, height) : null;
+
+	/// <summary>How far one arrow key moves a room on a picture, in its pixels; Shift moves five times as far.</summary>
+	public const double PictureStep = 8;
 
 	/// <summary>The width of the map's hexagons, from corner to corner when flat-topped and side to side when pointy.</summary>
 	private double HexWidth => IsPointy ? HexHeight : 2 * HexSide;
@@ -384,6 +401,130 @@ public sealed class MapLayout
 					 || (cells.Left, cells.Bottom, cells.Right, cells.Top) == window;
 	}
 
+	/// <summary>
+	/// The point a room <paramref name="width"/> by <paramref name="height"/> pixels may be centred at nearest
+	/// (<paramref name="x"/>, <paramref name="y"/>) with all of it on the picture, and whether that moved it; the point
+	/// itself on a map with no picture. A room wider than the picture is centred on it.
+	/// </summary>
+	public (double X, double Y, bool Moved) InsidePicture(double x, double y, double width, double height)
+	{
+		if (Picture is not var (pictureWidth, pictureHeight)) return (x, y, false);
+		var (halfW, halfH) = (Math.Min(width, pictureWidth) / 2, Math.Min(height, pictureHeight) / 2);
+		var (fitX, fitY) = (Math.Round(Math.Clamp(x, halfW, pictureWidth - halfW)), Math.Round(Math.Clamp(y, halfH, pictureHeight - halfH)));
+		return (fitX, fitY, fitX != Math.Round(x) || fitY != Math.Round(y));
+	}
+
+	/// <summary>How much of the picture <paramref name="room"/> covers: none for a room with no size, which is a point on it.</summary>
+	public (double Width, double Height) Extent(MapPlacement room) => IsGraph && room.Room.Size is null ? (0, 0) : (room.Width, room.Height);
+
+	/// <summary>The size a room may have on the picture: no wider or taller than it; the size itself with no picture.</summary>
+	public (double Width, double Height) FitPicture(double width, double height) =>
+		Picture is var (pictureWidth, pictureHeight) ? (Math.Min(width, pictureWidth), Math.Min(height, pictureHeight)) : (width, height);
+
+	/// <summary>
+	/// Where <paramref name="room"/> goes when taken <paramref name="dx"/> across and <paramref name="dy"/> down the drawing,
+	/// in drawing units: to the nearest point on a picture, kept on it; to the nearest cell on a grid; to the hexagon its
+	/// middle lands in on a hex map. Null when the cells it would cover hold another room of its level, which a grid or hex
+	/// map draws one to a cell.
+	/// </summary>
+	public MapReshape? Moved(MapPlacement room, double dx, double dy)
+	{
+		if (IsGraph)
+		{
+			var (width, height) = Extent(room);
+			var (x, y, moved) = InsidePicture(room.X + room.Width / 2 + dx, room.Y + room.Height / 2 + dy, width, height);
+			return new(x, y, room.Level, AtEdge: moved);
+		}
+		if (IsHex)
+		{
+			var (q, r) = PlaceAt(room.X + room.Width / 2 + dx, room.Y + room.Height / 2 + dy);
+			return Taken(room, q, r, 1, 1) ? null : new(q, r, room.Level);
+		}
+		var (columns, rows) = (Math.Max(1, (int)Math.Round(room.Width / Cell)), Math.Max(1, (int)Math.Round(room.Height / Cell)));
+		var column = (int)Math.Round((room.X + dx) / Cell);
+		var row = (int)Math.Round(-(room.Y + dy + room.Height) / Cell);
+		return Taken(room, column, row, columns, rows) ? null : new(column, row, room.Level);
+	}
+
+	/// <summary>
+	/// Where an arrow key takes <paramref name="room"/>: <paramref name="dx"/> and <paramref name="dy"/> are -1, 0 or 1
+	/// across and down the screen. A grid room moves a cell, a picture's room <see cref="PictureStep"/> pixels (five times
+	/// that with <paramref name="big"/>). A flat-topped hexagon has no east or west neighbour: left and right step to its
+	/// lower west and east neighbours, or with <paramref name="big"/> its upper ones; a pointy one has no north or south,
+	/// so up and down step north-east and south-west, or with <paramref name="big"/> north-west and south-east.
+	/// </summary>
+	public MapReshape? Nudged(MapPlacement room, int dx, int dy, bool big)
+	{
+		if (IsGraph)
+		{
+			var step = PictureStep * (big ? 5 : 1);
+			return Moved(room, dx * step, dy * step);
+		}
+		var (x, y, _) = Spot(room);
+		var (q, r) = ((int)x, (int)y);
+		var (stepX, stepY) = (IsHex, IsPointy, dx, dy) switch
+		{
+			(true, false, 0, _) => (0, -dy),
+			(true, false, 1, _) => big ? (1, 0) : (1, -1),
+			(true, false, -1, _) => big ? (-1, 1) : (-1, 0),
+			(true, true, _, 0) => (dx, 0),
+			(true, true, _, -1) => big ? (-1, 1) : (0, 1),
+			(true, true, _, 1) => big ? (1, -1) : (0, -1),
+			_ => (dx, -dy),
+		};
+		if (IsHex) return Taken(room, q + stepX, r + stepY, 1, 1) ? null : new(q + stepX, r + stepY, room.Level);
+		var (columns, rows) = (Math.Max(1, (int)Math.Round(room.Width / Cell)), Math.Max(1, (int)Math.Round(room.Height / Cell)));
+		return Taken(room, q + stepX, r + stepY, columns, rows) ? null : new(q + stepX, r + stepY, room.Level);
+	}
+
+	/// <summary>Whether a room may be given a size on this map: a hex map's rooms are each one hexagon.</summary>
+	public bool Resizable => !IsHex;
+
+	/// <summary>
+	/// <paramref name="room"/> with its edges moved, in drawing units: <paramref name="left"/> and <paramref name="top"/>
+	/// move its north-west corner, <paramref name="right"/> and <paramref name="bottom"/> its south-east one, and the
+	/// other edges stay. A grid room's edges go to the nearest cell lines, at least one cell apart; a picture's room's to
+	/// whole pixels, at least <see cref="MinGraphRoom"/> apart and inside the picture. Null on a hex map, or where the grid
+	/// cells it would cover hold another room.
+	/// </summary>
+	public MapReshape? Resized(MapPlacement room, double left, double top, double right, double bottom)
+	{
+		if (IsHex) return null;
+		var (l, t, r, b) = (room.X + left, room.Y + top, room.X + room.Width + right, room.Y + room.Height + bottom);
+		if (IsGraph)
+		{
+			var edge = false;
+			if (Picture is var (pictureWidth, pictureHeight))
+			{
+				var (cl, ct, cr, cb) = (Math.Max(0, l), Math.Max(0, t), Math.Min(pictureWidth, r), Math.Min(pictureHeight, b));
+				edge = (cl, ct, cr, cb) != (l, t, r, b);
+				(l, t, r, b) = (cl, ct, cr, cb);
+			}
+			(l, t, r, b) = (Math.Round(l), Math.Round(t), Math.Round(r), Math.Round(b));
+			if (r - l < MinGraphRoom) (l, r) = left != 0 ? (r - MinGraphRoom, r) : (l, l + MinGraphRoom);
+			if (b - t < MinGraphRoom) (t, b) = top != 0 ? (b - MinGraphRoom, b) : (t, t + MinGraphRoom);
+			return new((l + r) / 2, (t + b) / 2, room.Level, r - l, b - t, edge);
+		}
+		var (cellL, cellT, cellR, cellB) = ((int)Math.Round(l / Cell), (int)Math.Round(t / Cell), (int)Math.Round(r / Cell), (int)Math.Round(b / Cell));
+		if (cellR - cellL < 1) (cellL, cellR) = left != 0 ? (cellR - 1, cellR) : (cellL, cellL + 1);
+		if (cellB - cellT < 1) (cellT, cellB) = top != 0 ? (cellB - 1, cellB) : (cellT, cellT + 1);
+		var (columns, rows) = (cellR - cellL, cellB - cellT);
+		return Taken(room, cellL, -cellB, columns, rows) ? null : new(cellL, -cellB, room.Level, columns, rows);
+	}
+
+	/// <summary>
+	/// Whether the cells <paramref name="columns"/> by <paramref name="rows"/> from the south-west cell (x, y), or on a hex
+	/// map the hexagon at (x, y), hold a room of <paramref name="room"/>'s level other than it.
+	/// </summary>
+	private bool Taken(MapPlacement room, int x, int y, int columns, int rows) => On(room.Level).Where(other => !other.Region && other.Room.Id != room.Room.Id)
+		.Any(other =>
+		{
+			var (ox, oy, _) = Spot(other);
+			if (IsHex) return (int)ox == x && (int)oy == y;
+			var (oc, or) = (Math.Max(1, (int)Math.Round(other.Width / Cell)), Math.Max(1, (int)Math.Round(other.Height / Cell)));
+			return x < ox + oc && ox < x + columns && y < oy + or && oy < y + rows;
+		});
+
 	private static double Right(List<MapPlacement> rooms) => rooms.Count == 0 ? 0 : rooms.Max(r => r.X + r.Width);
 	private static double Bottom(List<MapPlacement> rooms) => rooms.Count == 0 ? 0 : rooms.Max(r => r.Y + r.Height);
 
@@ -395,8 +536,16 @@ public sealed class MapLayout
 		rooms.Where(room => room.Position is [_, _, ..]).DistinctBy(room => room.Id).ToDictionary(room => room.Id, room =>
 		{
 			var (width, height) = (Side(room, 0), Side(room, 1));
-			// A graph room's position is its centre on the picture.
-			return new MapPlacement(room, room.Position![0] - width / 2, room.Position[1] - height / 2, width, height, 0, Placed: true);
+			// A graph room's position is its centre on the picture; a room reaching past the picture is drawn at its edge.
+			var (left, top) = (room.Position![0] - width / 2, room.Position[1] - height / 2);
+			if (Picture is not var (pictureWidth, pictureHeight)) return new MapPlacement(room, left, top, width, height, 0, Placed: true);
+			// A room with no size is a point: its point stays on the picture, and the box drawn around it may reach over the edge.
+			var (fitWidth, fitHeight) = room.Size is null ? (0, 0) : (Math.Min(width, pictureWidth), Math.Min(height, pictureHeight));
+			var (x, y) = (Math.Clamp(room.Position[0], fitWidth / 2, pictureWidth - fitWidth / 2),
+				Math.Clamp(room.Position[1], fitHeight / 2, pictureHeight - fitHeight / 2));
+			var (drawWidth, drawHeight) = room.Size is null ? (width, height) : (fitWidth, fitHeight);
+			return new MapPlacement(room, x - drawWidth / 2, y - drawHeight / 2, drawWidth, drawHeight, 0, Placed: true,
+				Outside: (x, y, drawWidth, drawHeight) != (room.Position[0], room.Position[1], width, height));
 		});
 
 	private Dictionary<string, MapPlacement> Grid(IEnumerable<MapRoomDto> rooms) =>

@@ -7416,4 +7416,40 @@
   <data name="NavMapPlaceRoomHere" xml:space="preserve">
     <value>Placér rum</value>
   </data>
+  <data name="NavMapMoveHint" xml:space="preserve">
+    <value>Træk et rum for at flytte det, eller et hjørne af det valgte rum for at ændre størrelsen. Med tastaturet flytter piletasterne det valgte rum (længere med Skift), og Ctrl+Skift med piletasterne ændrer størrelsen.</value>
+  </data>
+  <data name="NavMapMoveHintHex" xml:space="preserve">
+    <value>Træk et rum for at flytte det til en anden sekskant. Med tastaturet flytter piletasterne det valgte rum til næste sekskant; Skift med venstre eller højre tager de øverste naboer.</value>
+  </data>
+  <data name="NavMapMovedTo" xml:space="preserve">
+    <value>{0} flyttet til {1}, {2}.</value>
+  </data>
+  <data name="NavMapResizedTo" xml:space="preserve">
+    <value>{0} er nu {1} gange {2}.</value>
+  </data>
+  <data name="NavMapAtEdge" xml:space="preserve">
+    <value>Billedets kant stoppede det.</value>
+  </data>
+  <data name="NavMapTaken" xml:space="preserve">
+    <value>{0} kan ikke stå der: et andet rum dækker de felter.</value>
+  </data>
+  <data name="NavMapTakenHex" xml:space="preserve">
+    <value>{0} kan ikke stå der: et andet rum står på den sekskant.</value>
+  </data>
+  <data name="NavMapNoResizeHex" xml:space="preserve">
+    <value>Rum på et sekskantkort fylder én sekskant hver, så {0} har ingen størrelse at ændre.</value>
+  </data>
+  <data name="NavMapOutside" xml:space="preserve">
+    <value>{0} er gemt uden for billedets kant, så kortet tegner det på kanten.</value>
+  </data>
+  <data name="NavMapBringInside" xml:space="preserve">
+    <value>Flyt ind i billedet</value>
+  </data>
+  <data name="NavMapOutsideCheck" xml:space="preserve">
+    <value>{0} er gemt uden for billedets kant.</value>
+  </data>
+  <data name="NavMapKeptInside" xml:space="preserve">
+    <value>Holdt inde i billedet, ved {0}, {1}.</value>
+  </data>
 </root>

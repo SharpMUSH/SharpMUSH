@@ -7416,4 +7416,40 @@
   <data name="NavMapPlaceRoomHere" xml:space="preserve">
     <value>Kamer plaatsen</value>
   </data>
+  <data name="NavMapMoveHint" xml:space="preserve">
+    <value>Sleep een kamer om haar te verplaatsen, of een hoek van de gekozen kamer om haar groter of kleiner te maken. Met het toetsenbord verplaatsen de pijltjestoetsen de gekozen kamer (met Shift verder) en Ctrl+Shift met de pijltjestoetsen verandert haar grootte.</value>
+  </data>
+  <data name="NavMapMoveHintHex" xml:space="preserve">
+    <value>Sleep een kamer om haar naar een andere zeshoek te verplaatsen. Met het toetsenbord verplaatsen de pijltjestoetsen de gekozen kamer naar de volgende zeshoek; Shift met links of rechts neemt de bovenste buren.</value>
+  </data>
+  <data name="NavMapMovedTo" xml:space="preserve">
+    <value>{0} verplaatst naar {1}, {2}.</value>
+  </data>
+  <data name="NavMapResizedTo" xml:space="preserve">
+    <value>{0} is nu {1} bij {2}.</value>
+  </data>
+  <data name="NavMapAtEdge" xml:space="preserve">
+    <value>De rand van de afbeelding hield haar tegen.</value>
+  </data>
+  <data name="NavMapTaken" xml:space="preserve">
+    <value>{0} kan daar niet heen: een andere kamer beslaat die vakken.</value>
+  </data>
+  <data name="NavMapTakenHex" xml:space="preserve">
+    <value>{0} kan daar niet heen: op die zeshoek staat een andere kamer.</value>
+  </data>
+  <data name="NavMapNoResizeHex" xml:space="preserve">
+    <value>Kamers op een zeshoekkaart zijn elk één zeshoek, dus {0} heeft geen grootte om te veranderen.</value>
+  </data>
+  <data name="NavMapOutside" xml:space="preserve">
+    <value>{0} is voorbij de rand van de afbeelding opgeslagen, dus de kaart tekent haar op de rand.</value>
+  </data>
+  <data name="NavMapBringInside" xml:space="preserve">
+    <value>Binnen de afbeelding zetten</value>
+  </data>
+  <data name="NavMapOutsideCheck" xml:space="preserve">
+    <value>{0} is voorbij de rand van de afbeelding opgeslagen.</value>
+  </data>
+  <data name="NavMapKeptInside" xml:space="preserve">
+    <value>Binnen de afbeelding gehouden, op {0}, {1}.</value>
+  </data>
 </root>

@@ -158,7 +158,7 @@
                         <MapCanvas @ref="_canvas" Layout="Shown" Level="_level" Zoom="_zoom" Selected="@_selected" OnSelect="Select"
                                    Route="@(!_editing && _route?.Steps is { Count: > 0 } steps ? steps : null)"
                                    Editing="_editing" Cell="_cell" OnCell="SelectCell" OnZoomAt="ZoomBy"
-                                   Cells="_cells" OnView="ViewAsync" SelectedPlace="_place" OnPlace="SelectPlace" />
+                                   Cells="_cells" OnView="ViewAsync" SelectedPlace="_place" OnPlace="SelectPlace" OnReshape="ReshapeAsync" />
                         @Legend()
                         @if (_editing && _plan is not null)
                         {
@@ -215,6 +215,17 @@
         (_editing, _plan, _cell, _applied) = (true, new MapPlan(_layout.Map), null, null);
         ForgetRoute();
         _preview = new MapLayout(_plan.Preview());
+    }
+
+    /// <summary>A builder dragged a room or its corner, or moved it by keys: the plan takes its new place, and size if that changed.</summary>
+    private async Task ReshapeAsync((string Room, MapReshape To) change)
+    {
+        if (_plan is null) return;
+        var (room, to) = change;
+        _plan.Place(room, to.X, to.Y, to.Z);
+        if (to.Width is { } width && to.Height is { } height) _plan.Size(room, width, height);
+        _cell = null;
+        await PlanChangedAsync(room);
     }
 
     private void StopEditing() => (_editing, _plan, _preview, _cell) = (false, null, null, null);

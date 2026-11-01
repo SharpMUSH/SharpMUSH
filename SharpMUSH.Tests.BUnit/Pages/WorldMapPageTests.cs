@@ -66,6 +66,14 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 		Backdrop = "/api/wiki-assets/7/isle.webp",
 	};
 
+	/// <summary>The island as a builder who controls it and its rooms sees it, with the salt pans stored past its east edge.</summary>
+	public static readonly MapDto IsleWorksMap = IsleMap with
+	{
+		Map = new("#65", "Isle works", MapKinds.Graph, null),
+		Rooms = [new("#60", "Ford", [470, 390], null) { Editable = true }, new("#61", "Saltpans", [880, 520], [120, 80]) { Editable = true }],
+		CanEdit = true,
+	};
+
 	/// <summary>The same island with a picture from an http address, which the portal never loads.</summary>
 	public static readonly MapDto PlainIsleMap = IsleMap with { Map = new("#54", "Plain isle", MapKinds.Graph, null), Backdrop = "http://example.com/isle.png" };
 
@@ -253,6 +261,7 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			"api/maps/62" => Json(SteppeMap with { CanEdit = WildsEditable }),
 			"api/maps/63" => Json(FenMap with { CanEdit = WildsEditable }),
 			"api/maps/64" => Json(DownsMap with { CanEdit = WildsEditable }),
+			"api/maps/65" => Json(IsleWorksMap),
 			"api/maps/here" when Here is { } here => Json(here),
 			"api/maps/route/11" => Json(ToLighthouse),
 			"api/maps/route/10" => Json(new MapRouteDto([], null)),
@@ -1123,6 +1132,83 @@ public class WorldMapPageTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task DraggingARoomPlansItsMoveToTheCellItLandsIn()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 55));
+		cut.WaitForAssertion(() => cut.Find(".map-room--here"));
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+		var canvas = cut.FindComponent<MapCanvas>();
+		var zoom = canvas.Instance.Zoom;
+
+		await Assert.That(cut.FindAll("button.map-room[data-map-drag]")).Count().IsEqualTo(3).Because("each room of the builder's on the level on show may be dragged, the shed waiting below the map too");
+		await cut.InvokeAsync(() => canvas.Instance.Dragged("#11", 2.4 * MapLayout.Cell * zoom, 0));
+
+		await Assert.That(cut.Find(".map-builder").TextContent).Contains("NavMapChangesWaiting(1)");
+		await Assert.That(cut.Find("[role=status][aria-live=polite]").TextContent).IsEqualTo("NavMapMovedTo(Lighthouse, 2, 1)")
+			.Because("the move is read out, to the nearest cell");
+		await Assert.That(_api.Commands).IsEmpty();
+	}
+
+	[Test]
+	public async Task ARoomCannotBeDraggedOntoAnother()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 55));
+		cut.WaitForAssertion(() => cut.Find(".map-room--here"));
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+		var canvas = cut.FindComponent<MapCanvas>();
+
+		await cut.InvokeAsync(() => canvas.Instance.Dragged("#11", 0, MapLayout.Cell * canvas.Instance.Zoom));
+
+		await Assert.That(cut.Find(".map-builder").TextContent).Contains("NavMapChangesWaiting(0)");
+		await Assert.That(cut.Find("[role=status][aria-live=polite]").TextContent).IsEqualTo("NavMapTaken(Lighthouse)");
+	}
+
+	[Test]
+	public async Task TheChosenRoomMovesAndGrowsByArrowKeys()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 55));
+		cut.WaitForAssertion(() => cut.Find(".map-room--here"));
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+		await cut.FindAll("button.map-room").First(room => room.TextContent.Trim() == "Lighthouse").ClickAsync();
+		var canvas = cut.FindComponent<MapCanvas>();
+
+		await Assert.That(cut.FindAll(".map-handle")).Count().IsEqualTo(4).Because("the chosen room shows its four corners");
+		await cut.InvokeAsync(() => canvas.Instance.Nudged("#11", 1, 0, big: false, resize: false));
+		await cut.InvokeAsync(() => canvas.Instance.Nudged("#11", 1, 0, big: false, resize: true));
+
+		await Assert.That(cut.Find(".map-builder-x input").GetAttribute("value")).IsEqualTo("1");
+		await Assert.That(cut.Find("[role=status][aria-live=polite]").TextContent).IsEqualTo("NavMapResizedTo(Lighthouse, 2, 1)");
+		await Assert.That(cut.Find(".map-builder").TextContent).Contains("NavMapChangesWaiting(2)").Because("a place and a size");
+	}
+
+	[Test]
+	public async Task OnAPictureADragStopsAtTheEdgeAndARoomStoredPastItIsDrawnOnIt()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 65));
+		cut.WaitForAssertion(() => cut.Find(".map-room"));
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+
+		await Assert.That(cut.FindAll("rect.map-edge-line")).Count().IsEqualTo(1).Because("the picture's edge is drawn while editing");
+		await Assert.That(cut.Find(".map-builder").TextContent).Contains("NavMapOutsideCheck(Saltpans)");
+
+		var canvas = cut.FindComponent<MapCanvas>();
+		await cut.InvokeAsync(() => canvas.Instance.Dragged("#60", 5000 * canvas.Instance.Zoom, 0));
+
+		await Assert.That(cut.Find("[role=status][aria-live=polite]").TextContent).IsEqualTo("NavMapMovedTo(Ford, 900, 390) NavMapAtEdge")
+			.Because("a pin's point stops on the picture's edge");
+
+		await cut.FindAll("button.map-room").First(room => room.TextContent.Trim() == "Saltpans").ClickAsync();
+		await cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == "NavMapBringInside").ClickAsync();
+
+		await Assert.That(cut.Find(".map-builder-x input").GetAttribute("value")).IsEqualTo("840").Because("its whole box is on the 900-pixel picture");
+		await Assert.That(cut.Find(".map-builder").TextContent).DoesNotContain("NavMapOutsideCheck");
+	}
+
+	[Test]
 	public async Task APictureFromAnHttpAddressIsNotLoaded()
 	{
 		Arrange();
@@ -1447,5 +1533,69 @@ public class MapLayoutTests
 		await Assert.That(layout.Rooms["#60"].Width).IsEqualTo(2 * MapLayout.Cell);
 		await Assert.That(layout.Rooms["#61"].Placed).IsFalse();
 		await Assert.That(layout.Unplaced(0).Select(room => room.Room.Name)).IsEquivalentTo(["Docks"]);
+	}
+
+	[Test]
+	public async Task APictureMapDrawsEveryRoomOnThePicture()
+	{
+		var layout = new MapLayout(Map(MapKinds.Graph,
+			[new("#1", "Pier", [-40, 50], null), new("#2", "Hall", [390, 290], [100, 60]), new("#3", "Giant", [200, 150], [900, 900])], []) with
+		{ Size = [400, 300] });
+
+		await Assert.That((layout.Rooms["#1"].X + layout.Rooms["#1"].Width / 2, layout.Rooms["#1"].Outside)).IsEqualTo((0.0, true))
+			.Because("a room with no size is a point, kept on the picture");
+		await Assert.That((layout.Rooms["#2"].X, layout.Rooms["#2"].Y, layout.Rooms["#2"].Outside)).IsEqualTo((300.0, 240.0, true))
+			.Because("a box reaching past the edge is drawn against it");
+		await Assert.That((layout.Rooms["#3"].Width, layout.Rooms["#3"].Height)).IsEqualTo((400.0, 300.0));
+		await Assert.That(layout.Bounds(0, includeUnplaced: false)).IsEqualTo((0.0, 0.0, 400.0, 300.0));
+	}
+
+	[Test]
+	public async Task AMoveOnAPictureStaysOnItAndAMoveOnAGridGoesToTheNearestCell()
+	{
+		var picture = new MapLayout(Map(MapKinds.Graph, [new("#1", "Hall", [100, 100], [100, 60])], []) with { Size = [400, 300] });
+		var grid = new MapLayout(Map(MapKinds.Coordinates, [new("#1", "Hall", [0, 0, 2], [2, 1]), new("#2", "Shed", [4, 0, 2], null)], []));
+
+		await Assert.That(picture.Moved(picture.Rooms["#1"], 33.4, -10)).IsEqualTo(new MapReshape(133, 90, 0));
+		await Assert.That(picture.Moved(picture.Rooms["#1"], 1000, 1000)).IsEqualTo(new MapReshape(350, 270, 0, AtEdge: true));
+		await Assert.That(grid.Moved(grid.Rooms["#1"], 1.4 * MapLayout.Cell, -0.6 * MapLayout.Cell)).IsEqualTo(new MapReshape(1, 1, 2));
+		await Assert.That(grid.Moved(grid.Rooms["#1"], 3 * MapLayout.Cell, 0)).IsNull()
+			.Because("two cells wide, its east cell would land on the shed");
+	}
+
+	[Test]
+	public async Task ArrowKeysStepToTheNextCellOrHexagon()
+	{
+		var grid = new MapLayout(Map(MapKinds.Coordinates, [new("#1", "Hall", [0, 0, 0], null)], []));
+		MapLayout Hex(string space) => new(Map(MapKinds.Coordinates, [new("#1", "Ford", [0, 0, 0], null)], []) with
+		{
+			Space = new(space, -5, -5, 5, 5, [0]),
+		});
+		var flat = Hex(MapSpaces.Hex);
+		var pointy = Hex(MapSpaces.PointyHex);
+		var picture = new MapLayout(Map(MapKinds.Graph, [new("#1", "Hall", [100, 100], null)], []) with { Size = [400, 300] });
+
+		await Assert.That(grid.Nudged(grid.Rooms["#1"], 0, -1, big: false)).IsEqualTo(new MapReshape(0, 1, 0)).Because("up the screen is north");
+		await Assert.That(flat.Nudged(flat.Rooms["#1"], 1, 0, big: false)).IsEqualTo(new MapReshape(1, -1, 0)).Because("right is the south-east hexagon");
+		await Assert.That(flat.Nudged(flat.Rooms["#1"], 1, 0, big: true)).IsEqualTo(new MapReshape(1, 0, 0)).Because("Shift takes the north-east one");
+		await Assert.That(pointy.Nudged(pointy.Rooms["#1"], 0, -1, big: false)).IsEqualTo(new MapReshape(0, 1, 0)).Because("up is the north-east hexagon");
+		await Assert.That(pointy.Nudged(pointy.Rooms["#1"], 1, 0, big: false)).IsEqualTo(new MapReshape(1, 0, 0));
+		await Assert.That(picture.Nudged(picture.Rooms["#1"], 1, 0, big: true)).IsEqualTo(new MapReshape(100 + 5 * MapLayout.PictureStep, 100, 0));
+	}
+
+	[Test]
+	public async Task AResizeMovesOneCornerAndKeepsTheOther()
+	{
+		var grid = new MapLayout(Map(MapKinds.Coordinates, [new("#1", "Hall", [0, 0, 0], null)], []));
+		var picture = new MapLayout(Map(MapKinds.Graph, [new("#1", "Hall", [100, 100], [100, 60])], []) with { Size = [400, 300] });
+		var hex = new MapLayout(Map(MapKinds.Coordinates, [new("#1", "Ford", [0, 0, 0], null)], []) with { Space = new(MapSpaces.Hex, -5, -5, 5, 5, [0]) });
+
+		await Assert.That(grid.Resized(grid.Rooms["#1"], 0, 0, MapLayout.Cell, MapLayout.Cell)).IsEqualTo(new MapReshape(0, -1, 0, 2, 2))
+			.Because("growing down the screen moves its south-west cell south");
+		await Assert.That(grid.Resized(grid.Rooms["#1"], 0, 0, -3 * MapLayout.Cell, 0)).IsEqualTo(new MapReshape(0, 0, 0, 1, 1))
+			.Because("a room is at least one cell");
+		await Assert.That(picture.Resized(picture.Rooms["#1"], -500, 0, 0, 0)).IsEqualTo(new MapReshape(75, 100, 0, 150, 60, AtEdge: true))
+			.Because("its west edge stops at the picture's, and its east edge stays");
+		await Assert.That(hex.Resized(hex.Rooms["#1"], 0, 0, 10, 10)).IsNull();
 	}
 }

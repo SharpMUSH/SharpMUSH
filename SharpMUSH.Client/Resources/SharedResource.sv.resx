@@ -7416,4 +7416,40 @@
   <data name="NavMapPlaceRoomHere" xml:space="preserve">
     <value>Placera rum</value>
   </data>
+  <data name="NavMapMoveHint" xml:space="preserve">
+    <value>Dra ett rum för att flytta det, eller ett hörn av det valda rummet för att ändra storleken. Med tangentbordet flyttar piltangenterna det valda rummet (längre med Skift) och Ctrl+Skift med piltangenterna ändrar storleken.</value>
+  </data>
+  <data name="NavMapMoveHintHex" xml:space="preserve">
+    <value>Dra ett rum för att flytta det till en annan hexagon. Med tangentbordet flyttar piltangenterna det valda rummet till nästa hexagon; Skift med vänster eller höger tar de övre grannarna.</value>
+  </data>
+  <data name="NavMapMovedTo" xml:space="preserve">
+    <value>{0} flyttat till {1}, {2}.</value>
+  </data>
+  <data name="NavMapResizedTo" xml:space="preserve">
+    <value>{0} är nu {1} gånger {2}.</value>
+  </data>
+  <data name="NavMapAtEdge" xml:space="preserve">
+    <value>Bildens kant stoppade det.</value>
+  </data>
+  <data name="NavMapTaken" xml:space="preserve">
+    <value>{0} kan inte stå där: ett annat rum täcker de rutorna.</value>
+  </data>
+  <data name="NavMapTakenHex" xml:space="preserve">
+    <value>{0} kan inte stå där: ett annat rum står på den hexagonen.</value>
+  </data>
+  <data name="NavMapNoResizeHex" xml:space="preserve">
+    <value>Rum på en hexkarta är en hexagon var, så {0} har ingen storlek att ändra.</value>
+  </data>
+  <data name="NavMapOutside" xml:space="preserve">
+    <value>{0} är sparat utanför bildens kant, så kartan ritar det på kanten.</value>
+  </data>
+  <data name="NavMapBringInside" xml:space="preserve">
+    <value>Flytta in i bilden</value>
+  </data>
+  <data name="NavMapOutsideCheck" xml:space="preserve">
+    <value>{0} är sparat utanför bildens kant.</value>
+  </data>
+  <data name="NavMapKeptInside" xml:space="preserve">
+    <value>Hölls inne i bilden, vid {0}, {1}.</value>
+  </data>
 </root>
