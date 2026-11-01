@@ -492,6 +492,35 @@ public sealed partial class MapPlan(MapDto map)
 	}
 
 	/// <summary>
+	/// The exits of <paramref name="map"/> that lead to another room on it with no way back a player would look for: no
+	/// exit back at all, or, for an exit named for a direction (<c>East</c>), none named for the opposite one (<c>West</c>).
+	/// </summary>
+	public static IReadOnlyList<MissingWayBack> OneWay(MapDto map)
+	{
+		// A truncated map may leave the way back out; it is not known to be missing.
+		if (map.Truncated) return [];
+		var rooms = map.Rooms.Select(room => room.Id).ToHashSet();
+		var missing = new List<MissingWayBack>();
+		foreach (var exit in map.Exits.Where(exit => exit.Destination is { } to && to != exit.Source && rooms.Contains(to)))
+		{
+			var backs = map.Exits.Where(back => back.Source == exit.Destination && back.Destination == exit.Source).ToList();
+			if (backs.Count == 0) missing.Add(new(exit, null));
+			else if (MapLayout.Direction(exit) is (var x, var y, var z) && !backs.Any(back => Names(back).Any(name => MapLayout.Direction(back with { Name = name, Aliases = [] }) == (-x, -y, -z))))
+				missing.Add(new(exit, First(WayBackNames(exit))));
+		}
+		return missing;
+	}
+
+	private static IEnumerable<string> Names(MapExitDto exit) => [exit.Name, .. exit.Aliases];
+
+	/// <summary>
+	/// The names the way back through <paramref name="exit"/> takes: the opposite direction, <c>West;w</c> for
+	/// <c>East</c>, when one of its names is a compass direction; empty when none is.
+	/// </summary>
+	public static string WayBackNames(MapExitDto exit) =>
+		MapLayout.Direction(exit) is (var dx, var dy, var dz) && DirectionNames(dx, dy, dz) is { Back: var back } ? back : "";
+
+	/// <summary>
 	/// The exit names a dig in direction (dx, dy, dz) gets: <c>East;e</c> there and <c>West;w</c> back. Null when the
 	/// step is no compass direction.
 	/// </summary>
@@ -716,6 +745,12 @@ public sealed partial class MapPlan(MapDto map)
 
 /// <summary>How one change of an applied plan went.</summary>
 /// <param name="Error">What the game said when a step failed.</param>
+/// <summary>
+/// An exit with no way back a player would look for: none at all when <paramref name="Expected"/> is null, else none
+/// named <paramref name="Expected"/>, the opposite of the exit's direction.
+/// </summary>
+public sealed record MissingWayBack(MapExitDto Exit, string? Expected);
+
 public sealed record MapApplied(string Title, MapAppliedState State, string? Error);
 
 public enum MapAppliedState

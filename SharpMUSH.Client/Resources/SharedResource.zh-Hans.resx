@@ -6870,6 +6870,21 @@
   <data name="NavMapNoWayIn" xml:space="preserve">
     <value>{0} 没有入口。</value>
   </data>
+  <data name="NavMapOneWay" xml:space="preserve">
+    <value>单向：{0} 中没有出口通回 {1}。走过去的玩家无法原路返回。</value>
+  </data>
+  <data name="NavMapOneWayCheck" xml:space="preserve">
+    <value>{0} 从 {1} 通往 {2}，但没有出口通回来。</value>
+  </data>
+  <data name="NavMapNoOpposite" xml:space="preserve">
+    <value>{0} 没有通回 {2} 的 {1}。走 {3} 的玩家会以为 {1} 能带他们回来。</value>
+  </data>
+  <data name="NavMapNoOppositeCheck" xml:space="preserve">
+    <value>{0} 从 {1} 通往 {2}，但没有 {3} 通回来。</value>
+  </data>
+  <data name="NavMapPictureUnits" xml:space="preserve">
+    <value>在图片地图上，X 和 Y 是房间的中心，宽度和高度是它的大小，单位是图片的像素。没有大小的房间宽 {0}。</value>
+  </data>
   <data name="NavMapNotRun" xml:space="preserve">
     <value>未运行</value>
   </data>

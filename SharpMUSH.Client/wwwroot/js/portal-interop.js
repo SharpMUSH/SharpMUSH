@@ -35,28 +35,33 @@
         if (el) el.scrollIntoView({ block: "start" });
     };
 
-    // The room a World map frame has for its drawing, as [width, height]: its width, and the tallest it may grow,
-    // less the space kept below the drawing for labels.
+    // The space kept below a World map's drawing for the labels of the rooms along its bottom edge.
+    function below(figure) {
+        return parseFloat(getComputedStyle(figure).marginBottom) || 0;
+    }
+
+    // The room a World map frame has for its drawing, as [width, height]: its size, less the space kept below the
+    // drawing for labels.
     window.SharpMUSH.mapFrameSize = function (frame) {
         var figure = frame && frame.firstElementChild;
         if (!figure) return null;
-        var tallest = parseFloat(getComputedStyle(frame).maxHeight);
-        var below = parseFloat(getComputedStyle(figure).marginBottom) || 0;
-        return [frame.clientWidth, (isFinite(tallest) ? tallest : frame.clientHeight) - below];
+        return [frame.clientWidth, frame.clientHeight - below(figure)];
     };
 
     // Keeps one point of a World map's view in place after its drawing grew (or shrank) by ratio: the point at
-    // (x, y) in the frame, its middle when none is given. A drawing narrower than its frame was centred in it, so the
+    // (x, y) in the frame, its middle when none is given. A drawing smaller than its frame was centred in it, so the
     // point is measured from where the drawing began.
     window.SharpMUSH.mapRescale = function (frame, ratio, x, y) {
         var figure = frame && frame.firstElementChild;
         if (!figure || !(ratio > 0)) return;
         var oldWidth = figure.offsetWidth / ratio;
         var oldHeight = figure.offsetHeight / ratio;
+        var tall = frame.clientHeight - below(figure);
         var atX = typeof x === "number" ? x : frame.clientWidth / 2;
-        var atY = typeof y === "number" ? y : Math.min(frame.clientHeight, oldHeight) / 2;
+        // The middle of the view: of the drawing while it was centred, else of the frame.
+        var atY = typeof y === "number" ? y : oldHeight < tall ? tall / 2 : frame.clientHeight / 2;
         var onX = frame.scrollLeft + atX - Math.max(0, (frame.clientWidth - oldWidth) / 2);
-        var onY = frame.scrollTop + atY;
+        var onY = frame.scrollTop + atY - Math.max(0, (tall - oldHeight) / 2);
         frame.scrollLeft = onX * ratio - atX;
         frame.scrollTop = onY * ratio - atY;
     };

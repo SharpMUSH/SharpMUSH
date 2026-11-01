@@ -6870,6 +6870,21 @@
   <data name="NavMapNoWayIn" xml:space="preserve">
     <value>{0} няма вход.</value>
   </data>
+  <data name="NavMapOneWay" xml:space="preserve">
+    <value>Еднопосочен изход: нищо в {0} не води обратно към {1}. Играч, който отиде там, не може да се върне по същия път.</value>
+  </data>
+  <data name="NavMapOneWayCheck" xml:space="preserve">
+    <value>{0} води от {1} към {2}, но няма изход обратно.</value>
+  </data>
+  <data name="NavMapNoOpposite" xml:space="preserve">
+    <value>{0} няма изход {1} обратно към {2}. Играч, който тръгне на {3}, очаква {1} да го върне.</value>
+  </data>
+  <data name="NavMapNoOppositeCheck" xml:space="preserve">
+    <value>{0} води от {1} към {2}, но няма {3} обратно.</value>
+  </data>
+  <data name="NavMapPictureUnits" xml:space="preserve">
+    <value>На карта-картина X и Y са центърът на стаята, а ширината и височината — размерът ѝ, в пиксели на картината. Стая без размер е широка {0}.</value>
+  </data>
   <data name="NavMapNotRun" xml:space="preserve">
     <value>не е изпълнено</value>
   </data>

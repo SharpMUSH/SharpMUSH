@@ -6870,6 +6870,21 @@
   <data name="NavMapNoWayIn" xml:space="preserve">
     <value>{0} nie ma wejścia.</value>
   </data>
+  <data name="NavMapOneWay" xml:space="preserve">
+    <value>Jednokierunkowe: nic w {0} nie prowadzi z powrotem do {1}. Gracz, który tam pójdzie, nie wróci tą samą drogą.</value>
+  </data>
+  <data name="NavMapOneWayCheck" xml:space="preserve">
+    <value>{0} prowadzi z {1} do {2}, ale żadne wyjście nie prowadzi z powrotem.</value>
+  </data>
+  <data name="NavMapNoOpposite" xml:space="preserve">
+    <value>{0} nie ma wyjścia {1} z powrotem do {2}. Gracz, który idzie {3}, oczekuje, że {1} go zawróci.</value>
+  </data>
+  <data name="NavMapNoOppositeCheck" xml:space="preserve">
+    <value>{0} prowadzi z {1} do {2}, ale żadne {3} nie prowadzi z powrotem.</value>
+  </data>
+  <data name="NavMapPictureUnits" xml:space="preserve">
+    <value>Na mapie-obrazie X i Y to środek pokoju, a szerokość i wysokość to jego rozmiar, w pikselach obrazu. Pokój bez rozmiaru ma {0} szerokości.</value>
+  </data>
   <data name="NavMapNotRun" xml:space="preserve">
     <value>nie uruchomiono</value>
   </data>

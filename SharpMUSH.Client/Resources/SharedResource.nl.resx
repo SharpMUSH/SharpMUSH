@@ -6870,6 +6870,21 @@
   <data name="NavMapNoWayIn" xml:space="preserve">
     <value>{0} heeft geen ingang.</value>
   </data>
+  <data name="NavMapOneWay" xml:space="preserve">
+    <value>Eenrichting: niets in {0} leidt terug naar {1}. Wie daarheen gaat, kan niet langs dezelfde weg terug.</value>
+  </data>
+  <data name="NavMapOneWayCheck" xml:space="preserve">
+    <value>{0} leidt van {1} naar {2}, maar geen uitgang leidt terug.</value>
+  </data>
+  <data name="NavMapNoOpposite" xml:space="preserve">
+    <value>{0} heeft geen {1} terug naar {2}. Wie {3} gaat, verwacht dat {1} terugleidt.</value>
+  </data>
+  <data name="NavMapNoOppositeCheck" xml:space="preserve">
+    <value>{0} leidt van {1} naar {2}, maar geen {3} leidt terug.</value>
+  </data>
+  <data name="NavMapPictureUnits" xml:space="preserve">
+    <value>Op een afbeeldingskaart zijn X en Y het midden van een kamer, en breedte en hoogte de grootte, in pixels van de afbeelding. Een kamer zonder grootte is {0} breed.</value>
+  </data>
   <data name="NavMapNotRun" xml:space="preserve">
     <value>niet uitgevoerd</value>
   </data>

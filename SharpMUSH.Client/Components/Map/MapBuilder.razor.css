@@ -56,6 +56,18 @@
 	color: var(--text-faint);
 }
 
+/* What an exit with no way back lacks, on a line of its own under the exit. */
+.map-builder-list li:has(.map-builder-wayback) {
+	flex-wrap: wrap;
+}
+
+.map-builder-wayback {
+	flex-basis: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
 .map-builder-warning {
 	margin: 0;
 	color: var(--warn);

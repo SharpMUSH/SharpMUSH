@@ -1,8 +1,12 @@
-/* The map is a well sunk into the page, so the rooms on it read as the brightest things there. */
+/* The map is a well sunk into the page, so the rooms on it read as the brightest things there. Its height is fixed:
+   zooming changes the drawing inside it, never the page around it. A drawing shorter than the frame sits in its middle. */
 .map-frame {
+	display: flex;
+	flex-direction: column;
 	overflow: auto;
 	max-width: 100%;
-	max-height: 70vh;
+	height: 70vh;
+	min-height: 240px;
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
 	background: var(--surface-3);
@@ -17,8 +21,15 @@
 	cursor: grabbing;
 }
 
+.map-frame::before,
+.map-frame::after {
+	content: "";
+	flex: 1 0 0;
+}
+
 .map-figure {
 	position: relative;
+	flex: none;
 	/* Room below the drawing for the labels of the rooms along its bottom edge. */
 	margin: 0 auto 28px;
 }

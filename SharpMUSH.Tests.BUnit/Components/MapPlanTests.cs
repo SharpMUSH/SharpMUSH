@@ -121,6 +121,60 @@ public class MapPlanTests
 	}
 
 	[Test]
+	public async Task AnExitWithNoWayBackIsOneWay()
+	{
+		var map = Grid(Room("#0", "Room Zero", [0, 0, 0]), Room("#87", "Room One", [1, 0, 0])) with
+		{
+			Exits = [new("#88", "Next", [], "#0", "#87", null), new("#89", "Back", [], "#87", "#0", null)],
+		};
+
+		await Assert.That(MapPlan.OneWay(map)).IsEmpty().Because("Back leads from Room One to Room Zero");
+		await Assert.That(MapPlan.OneWay(map with { Exits = map.Exits.Take(1).ToArray() })).IsEquivalentTo([new MissingWayBack(map.Exits[0], null)]);
+	}
+
+	[Test]
+	public async Task AnEastExitWantsAWestOneBack()
+	{
+		var east = new MapExitDto("#132", "East", ["e"], "#0", "#87", null);
+		var map = Grid(Room("#0", "Room Zero", [0, 0, 0]), Room("#87", "Room One", [1, 0, 0])) with
+		{
+			Exits = [east, new("#89", "Back", [], "#87", "#0", null)],
+		};
+
+		await Assert.That(MapPlan.OneWay(map)).IsEquivalentTo([new MissingWayBack(east, "West")])
+			.Because("a player who went east tries west to come back, not Back");
+		await Assert.That(MapPlan.OneWay(map with { Exits = [east, new("#133", "w", [], "#87", "#0", null)] })).IsEmpty();
+		await Assert.That(MapPlan.OneWay(map with { Exits = [east, new("#133", "Gate", ["up", "w"], "#87", "#0", null)] })
+			.Select(missing => missing.Exit.Id)).DoesNotContain("#132")
+			.Because("an alias of the way back is West, whatever its first direction name");
+		await Assert.That(MapPlan.OneWay(map with { Exits = [east], Truncated = true })).IsEmpty()
+			.Because("a truncated map may have left the way back out");
+	}
+
+	[Test]
+	public async Task APlannedWayBackEndsTheOneWay()
+	{
+		var map = Grid(Room("#0", "Room Zero", [0, 0, 0]), Room("#87", "Room One", [1, 0, 0])) with
+		{
+			Exits = [new("#132", "East", ["e"], "#0", "#87", null)],
+		};
+		var plan = new MapPlan(map);
+
+		plan.Join("#87", "#0", MapPlan.WayBackNames(map.Exits[0]), null);
+
+		await Assert.That(MapPlan.WayBackNames(map.Exits[0])).IsEqualTo("West;w");
+		await Assert.That(Commands(plan.Changes.Single())).Contains(command => command.StartsWith("@open West;w=#0,,#87", StringComparison.Ordinal));
+		await Assert.That(MapPlan.OneWay(plan.Preview())).IsEmpty();
+	}
+
+	[Test]
+	public async Task AWayBackHasNoNameWhenTheExitNamesNoDirection()
+	{
+		await Assert.That(MapPlan.WayBackNames(new("#88", "Next", [], "#0", "#87", null))).IsEmpty();
+		await Assert.That(MapPlan.WayBackNames(new("#90", "Ladder", ["u"], "#0", "#87", null))).IsEqualTo("Down;d");
+	}
+
+	[Test]
 	public async Task NoWayInNamesOnlyRoomsTheBuilderMayChange()
 	{
 		var map = Grid(Room("#10", "Quay", [0, 0, 0]), Room("#11", "Shed", [1, 0, 0]), new MapRoomDto("#12", "Theirs", [2, 0, 0], null))

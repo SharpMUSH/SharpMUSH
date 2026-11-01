@@ -85,6 +85,10 @@
     private int _descriptionAsked;
     private string? _exitEditing;
     private string _exitNames = "";
+
+    /// <summary>The one-way exit whose way back is being named, and the names it takes.</summary>
+    private string? _backFor;
+    private string _backNames = "";
     private string? _joinTo;
 
     /// <summary>The name of the room a way leads to when it is not on this map; null for one on it.</summary>
@@ -128,7 +132,7 @@
         if (Selected is { } id && Layout.Rooms.TryGetValue(id, out var room) && (id != _editing || room != _shown))
         {
             var chosen = id != _editing;
-            if (chosen) (_vertical, _exitEditing, _joinTo, _joinNames, _joinBack, _joinWayBack, _joinId, _joinIdProblem) = (0, null, null, "", "", true, "", null);
+            if (chosen) (_vertical, _exitEditing, _backFor, _joinTo, _joinNames, _joinBack, _joinWayBack, _joinId, _joinIdProblem) = (0, null, null, null, "", "", true, "", null);
             (_editing, _shown) = (id, room);
             _roomName = room.Room.Name;
             (_x, _y, _z) = room switch
@@ -397,6 +401,10 @@
                     <MudNumericField T="double" @bind-Value="_height" Min="1" Label="@Loc["NavMapHeight"]" Variant="Variant.Outlined" />
                 </div>
                 <MudButton Variant="Variant.Outlined" OnClick="SaveSizeAsync">@Loc["NavMapSetSize"]</MudButton>
+                @if (Layout.IsGraph)
+                {
+                    <p class="map-note">@Loc["NavMapPictureUnits", MapLayout.GraphRoom]</p>
+                }
                 @if (!Layout.IsGraph && room.Placed)
                 {
                     <div class="map-builder-row">
@@ -443,6 +451,7 @@
     {
         var exits = Layout.Map.Exits.Where(exit => exit.Source == room.Room.Id).OrderBy(exit => exit.Name, StringComparer.OrdinalIgnoreCase).ToList();
         if (exits.Count == 0) return;
+        var oneWay = MapPlan.OneWay(Layout.Map).ToDictionary(missing => missing.Exit.Id);
         <h4 class="map-builder-subtitle">@Loc["NavMapExits"]</h4>
         <ul class="map-builder-list">
             @foreach (var exit in exits)
@@ -477,11 +486,61 @@
                                 <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error" OnClick="() => RemoveExitAsync(exit.Id)">@Loc["NavMapRemoveExit"]</MudButton>
                             </span>
                         }
+                        @if (oneWay.TryGetValue(exit.Id, out var missing) && Layout.Rooms.TryGetValue(exit.Destination!, out var target))
+                        {
+                            @WayBack(room, missing, target)
+                        }
                     }
                 </li>
             }
         </ul>
     };
+
+    /// <summary>
+    /// Why an exit with no way back is not enough: a player who takes it to <paramref name="target"/> cannot walk back to
+    /// <paramref name="room"/>, or not by the opposite direction they would try. A builder who may change
+    /// <paramref name="target"/> may plan the way back, named for the opposite direction when the exit names one.
+    /// </summary>
+    private RenderFragment WayBack(MapPlacement room, MissingWayBack missing, MapPlacement target) => __builder =>
+    {
+        var exit = missing.Exit;
+        <div class="map-builder-wayback">
+            <p class="map-builder-warning">
+                @(missing.Expected is { } expected
+                    ? Loc["NavMapNoOpposite", target.Room.Name, expected, room.Room.Name, exit.Name]
+                    : Loc["NavMapOneWay", target.Room.Name, room.Room.Name])
+            </p>
+            @if (target.Room.Editable && _backFor != exit.Id)
+            {
+                <div class="map-builder-row">
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="() => (_backFor, _backNames) = (exit.Id, MapPlan.WayBackNames(exit))">
+                        @Loc["NavMapMakeWayBack"]
+                    </MudButton>
+                </div>
+            }
+            else if (target.Room.Editable)
+            {
+                var problem = ExitProblem(_backNames, target.Room.Id);
+                <MudTextField T="string" @bind-Value="_backNames" Label="@Loc["NavMapExitBack"]" Variant="Variant.Outlined" Immediate="true"
+                              HelperText="@(problem ?? Loc["NavMapExitHelp"].Value)" Error="@(problem is not null)" />
+                <div class="map-builder-row">
+                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => _backFor = null">@Loc["NavMapCancel"]</MudButton>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@(problem is not null)"
+                               OnClick="() => AddWayBackAsync(target.Room.Id, room.Room.Id)">@Loc["NavMapAddToPlan"]</MudButton>
+                </div>
+            }
+        </div>
+    };
+
+    private string RoomName(string id) => Layout.Rooms.TryGetValue(id, out var room) ? room.Room.Name : id;
+
+    private async Task AddWayBackAsync(string from, string to)
+    {
+        if (ExitProblem(_backNames, from) is not null) return;
+        Plan.Join(from, to, _backNames, null);
+        _backFor = null;
+        await OnChanged.InvokeAsync(_editing);
+    }
 
     /// <summary>
     /// Why <paramref name="names"/> cannot name an exit, or, given the room it leaves <paramref name="from"/>, why not
@@ -1050,13 +1109,22 @@
     private RenderFragment Checks() => __builder =>
     {
         var stranded = Plan.NoWayIn();
-        if (stranded.Count == 0) return;
+        var oneWay = MapPlan.OneWay(Layout.Map);
+        if (stranded.Count == 0 && oneWay.Count == 0) return;
         <section class="map-builder-section" aria-labelledby="map-checks-title">
             <h3 id="map-checks-title" class="map-builder-title">@Loc["NavMapChecks"]</h3>
             <ul class="map-builder-list">
                 @foreach (var room in stranded)
                 {
                     <li>@Loc["NavMapNoWayIn", room.Name]</li>
+                }
+                @foreach (var (exit, expected) in oneWay)
+                {
+                    <li>
+                        @(expected is null
+                            ? Loc["NavMapOneWayCheck", exit.Name, RoomName(exit.Source), RoomName(exit.Destination!)]
+                            : Loc["NavMapNoOppositeCheck", exit.Name, RoomName(exit.Source), RoomName(exit.Destination!), expected])
+                    </li>
                 }
             </ul>
         </section>

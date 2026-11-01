@@ -6870,6 +6870,21 @@
   <data name="NavMapNoWayIn" xml:space="preserve">
     <value>{0} hat keinen Zugang.</value>
   </data>
+  <data name="NavMapOneWay" xml:space="preserve">
+    <value>Einbahn: Nichts in {0} führt zurück nach {1}. Wer dorthin geht, kommt auf demselben Weg nicht zurück.</value>
+  </data>
+  <data name="NavMapOneWayCheck" xml:space="preserve">
+    <value>{0} führt von {1} nach {2}, aber kein Ausgang führt zurück.</value>
+  </data>
+  <data name="NavMapNoOpposite" xml:space="preserve">
+    <value>{0} hat kein {1} zurück nach {2}. Wer {3} geht, erwartet, dass {1} zurückführt.</value>
+  </data>
+  <data name="NavMapNoOppositeCheck" xml:space="preserve">
+    <value>{0} führt von {1} nach {2}, aber kein {3} führt zurück.</value>
+  </data>
+  <data name="NavMapPictureUnits" xml:space="preserve">
+    <value>Auf einer Bildkarte sind X und Y die Mitte eines Raums und Breite und Höhe seine Größe, in Pixeln des Bildes. Ein Raum ohne Größe ist {0} breit.</value>
+  </data>
   <data name="NavMapNotRun" xml:space="preserve">
     <value>nicht ausgeführt</value>
   </data>
