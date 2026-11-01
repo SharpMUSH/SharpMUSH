@@ -119,7 +119,6 @@ public class RhostImportTests
 			RhostMapArgs = true,
 			SidefxFlag = true,
 			RhostList = true,
-			RhostIterSeparator = true,
 			RhostLrooms = true,
 			Dialect = "rhost"
 		});

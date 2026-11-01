@@ -33,7 +33,7 @@ Text after a leading call is still evaluated, so only a *later* call needs brack
 | text inside an argument | `iter(%0,%i0: [name(%i0)])` |
 | an opening brace inside an argument | `if(%0,{[u(FUN`A)]})`: braces stop calls being recognised, brackets inside them start it again |
 
-The argument case breaks more than the one call: the unevaluated call's own `,` and `)` split and close the outer call. `cat(a,b add(1,2))` gives `a b add(1 2)`, and `iter(1 2,%i0: add(%i0,1))` gives `: add(1 2: add( 2)`. That is with `paren_groups` off, the default; with it on, a bare `(` opens a group of text that keeps its `,` and `)` (`help compatibility config`).
+The argument case breaks more than the one call: the unevaluated call's own `,` and `)` split and close the outer call. `cat(a,b add(1,2))` gives `a b add(1 2)`, and `iter(1 2,%i0: add(%i0,1))` gives `: add(  2: add( 2)`. That is with `paren_groups` off, the default; with it on, a bare `(` opens a group of text that keeps its `,` and `)` (`help compatibility config`).
 
 **Never needed:** round a whole attribute body (`[add(%0,1)]`), a nested call (`add([mul(2,3)],1)`), a whole argument (`` if(%0,[u(FUN`A)]) ``), a whole command argument (`think [setq(…)]`, `@pemit %#=[u(…)]`, `@assert [cand(…)]=`), a substitution (`[%0]`), or another pair (`[[add(1,2)]]`). Each gives the same result as without, except in an argument the function does not evaluate, where they stay as text: `lit([add(1,2)])` gives `[add(1,2)]`.
 

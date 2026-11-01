@@ -37,7 +37,7 @@ public class BracketEvaluationGuideTests : ServerTestBase
 	[Arguments("add (1,2)", "add (1,2)")]
 	// Inside an argument, an unbracketed call after text keeps its commas and parens, which split
 	// and close the outer call.
-	[Arguments("iter(1 2,%i0: add(%i0,1))", ": add(1 2: add( 2)")]
+	[Arguments("iter(1 2,%i0: add(%i0,1))", ": add(  2: add( 2)")]
 	[Arguments("iter(1 2,%i0: [add(%i0,1)])", "1: 2 2: 3")]
 	[Arguments("cat(a,b add(1,2))", "a b add(1 2)")]
 	// Brackets around a substitution, or doubled, change nothing.

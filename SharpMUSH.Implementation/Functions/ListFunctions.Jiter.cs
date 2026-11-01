@@ -26,7 +26,7 @@ public partial class Functions
 		// jiter fans ONE input across every attribute: each is evaluated with the same %0,
 		// side by side (contrast chain(), which threads each result into the next step).
 		var input = parser.CurrentState.Arguments["1"].Message;
-		var osep = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
+		var osep = await errors.OutputSeparatorAsync(parser, 2, MarkupText.Space);
 
 		if (tokens.Length == 0)
 		{

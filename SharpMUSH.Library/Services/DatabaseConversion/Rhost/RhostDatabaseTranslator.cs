@@ -49,7 +49,6 @@ public static partial class RhostDatabaseTranslator
 		["rhost_map_args"] = true,
 		["sidefx_flag"] = true,
 		["rhost_list"] = true,
-		["rhost_iter_separator"] = true,
 		["rhost_lrooms"] = true,
 		["dialect"] = SoftcodeDialects.Rhost.Key,
 		// RhostMUSH's mail command is mail (see the note Translate gives).
@@ -139,9 +138,9 @@ public static partial class RhostDatabaseTranslator
 			"(SOFTCOM), which comes across with the objects that hold it; a game built with the hardcoded comsys keeps each " +
 			"player's channels in the CHANNELS attribute, which is imported as an attribute and not turned into channels.");
 		report.Line(ImportWarningKind.Softcode, $"Imported from a {ServerName} flatfile: the import turns on paren_groups, mux_logic, tiny_trim_fun, " +
-			"rhost_edit, rhost_lattr, rhost_printf, rhost_map_args, sidefx_flag, rhost_list, rhost_iter_separator and " +
+			"rhost_edit, rhost_lattr, rhost_printf, rhost_map_args, sidefx_flag, rhost_list and " +
 			"rhost_lrooms, so the imported softcode reads its parentheses, and(), or(), xor(), trim(), edit(), lattr(), " +
-			"printf(), map(), list(), iter() and lrooms() the RhostMUSH way and its SIDEFX flags count. " +
+			"printf(), map(), list() and lrooms() the RhostMUSH way and its SIDEFX flags count. " +
 			"It sets dialect to rhost and gives every attribute it brings in the rhost attribute flag, so that code reads " +
 			$"{ServerName}'s names for functions and commands SharpMUSH has under its own, such as wildmatch() and @sudo.");
 		MapTotems(database, RhostNameTables.BuiltInTotems, report);

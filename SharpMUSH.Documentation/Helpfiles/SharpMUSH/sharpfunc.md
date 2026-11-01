@@ -1862,7 +1862,7 @@ b-c
 
   These functions returns the elements of `<list>` for which a user-defined function evaluates to "1" (for filter()), or to a boolean true value (for filterbool()). That function is specified by the first argument (just as with the ufun() function), and the element of the list being tested is passed to that user-defined function as %0. Up to 31 further `<arg>`s can be specified, and will be available in the function as v(1) to v(31).
 
-  `<delimiter>` defaults to a space, and `<osep>` defaults to `<delimiter>`.
+  `<delimiter>` defaults to a space, and `<osep>` defaults to `<delimiter>`. An empty `<osep>` puts nothing between the elements, unless `<arg>`s follow it, when it is `<delimiter>`, as on RhostMUSH.
 
   filter(`<obj>`/`<attr>`, `<list>`) is roughly equivalent to squish(iter(`<list>`, switch(ufun(`<obj>`/`<attr>`, %i0),1,%i0,))) though the filter() version is much more efficient.
 

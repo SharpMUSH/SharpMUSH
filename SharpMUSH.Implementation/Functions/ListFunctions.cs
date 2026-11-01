@@ -142,7 +142,9 @@ public partial class Functions
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
-		var sep = await errors.DefaultArgumentAsync(parser, 3, delim);
+		// Arguments after the output separator are RhostMUSH's form, where an empty one is the delimiter.
+		var sep = await errors.OutputSeparatorAsync(parser, 3, delim,
+			parser.CurrentState.Arguments.Count > 4 ? delim : null);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
@@ -175,7 +177,9 @@ public partial class Functions
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
-		var sep = await errors.DefaultArgumentAsync(parser, 3, delim);
+		// Arguments after the output separator are RhostMUSH's form, where an empty one is the delimiter.
+		var sep = await errors.OutputSeparatorAsync(parser, 3, delim,
+			parser.CurrentState.Arguments.Count > 4 ? delim : null);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
@@ -478,8 +482,7 @@ public partial class Functions
 		var listArg = errors.Record(await parser.CurrentState.Arguments["0"].GetParsedResultAsync());
 
 		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
-		var sep = await errors.DefaultArgumentAsync(parser, 3,
-			Configuration.CurrentValue.Compatibility.RhostIterSeparator ? MarkupText.Space : delim);
+		var sep = await errors.OutputSeparatorAsync(parser, 3, MarkupText.Space);
 		var list = MushText.SplitList(delim, listArg);
 		var wrappedIteration = new IterationWrapper<MString>
 		{
@@ -609,9 +612,10 @@ public partial class Functions
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
-		var sep = await errors.DefaultArgumentAsync(parser, 3, delim);
-		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
 		var extras = ExtraPredicateArguments(parser, 4);
+		// Arguments after the output separator are RhostMUSH's form, where an empty one is a space.
+		var sep = await errors.OutputSeparatorAsync(parser, 3, delim, extras.Count > 0 ? MarkupText.Space : null);
+		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
 		var withPosition = extras.Count == 0 && !Configuration.CurrentValue.Compatibility.RhostMapArgs;
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
@@ -735,7 +739,7 @@ public partial class Functions
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var delim = await errors.DefaultArgumentAsync(parser, 3, MarkupText.Space);
-		var sep = await errors.DefaultArgumentAsync(parser, 4, delim);
+		var sep = await errors.OutputSeparatorAsync(parser, 4, delim);
 
 		var list1 = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
 		var list2 = MushText.SplitList(delim, parser.CurrentState.Arguments["2"].Message);
@@ -1004,7 +1008,7 @@ public partial class Functions
 	{
 		var errors = new ListEvaluationErrors();
 		var delim = await errors.DefaultArgumentAsync(parser, 1, MarkupText.Space);
-		var sep = await errors.DefaultArgumentAsync(parser, 2, delim);
+		var sep = await errors.OutputSeparatorAsync(parser, 2, delim);
 		var list = MushText.SplitList(delim, errors.Record(await parser.CurrentState.Arguments["0"].GetParsedResultAsync()));
 
 		return errors.Complete(new CallState(MarkupText.Join(sep, list.Reverse())));
@@ -1054,7 +1058,7 @@ public partial class Functions
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
-		var sep = await errors.DefaultArgumentAsync(parser, 3, delim);
+		var sep = await errors.OutputSeparatorAsync(parser, 3, delim);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
 
 		async Task<int> CompareViaLambda(MString a, MString b)
@@ -1155,7 +1159,7 @@ public partial class Functions
 
 		var sortType = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Plain(""));
 		var delim = await errors.DefaultArgumentAsync(parser, 3, MarkupText.Space);
-		var sep = await errors.DefaultArgumentAsync(parser, 4, delim);
+		var sep = await errors.OutputSeparatorAsync(parser, 4, delim);
 
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
 
@@ -1282,7 +1286,7 @@ public partial class Functions
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var delim = await errors.DefaultArgumentAsync(parser, 3, MarkupText.Space);
-		var sep = await errors.DefaultArgumentAsync(parser, 4, delim);
+		var sep = await errors.OutputSeparatorAsync(parser, 4, delim);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
 		var runs = list.Chunk(names.Length).Select(run =>
 		{

@@ -24,7 +24,6 @@ public class RhostHelpExampleTests : ServerTestBase
 			RhostPrintf = true,
 			RhostMapArgs = true,
 			RhostList = true,
-			RhostIterSeparator = true,
 			RhostLrooms = true,
 			Dialect = SoftcodeDialects.Rhost.Key
 		}
