@@ -178,9 +178,9 @@
         if (Locked) return;
         var node = _draft.Add(kind.Key, kind.Label ?? kind.Key);
         // A new step starts with its fields' defaults written in, so what the author sees is what is stored.
-        foreach (var field in kind.Fields ?? [])
+        foreach (var field in (kind.Fields ?? []).Where(field => field.Key is not null && field.Default is not null))
         {
-            if (field.Key is not null && field.Default is { } fallback) node = node.WithField(field.Key, fallback);
+            node = node.WithField(field.Key!, field.Default!.Value);
         }
         _draft.Update(node);
         if (Selected is { } from && Ports(from.Kind).FirstOrDefault(port => _draft.Target(from.Key, port.Key) is null) is { } open)
