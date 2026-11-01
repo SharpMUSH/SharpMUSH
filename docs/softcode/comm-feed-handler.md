@@ -216,6 +216,11 @@ A page (here a group pose-page):
 - `text` is the line as the terminal reads it after the channel name or the
   page prefix: a pose carries the name (`Ilsa Varn nods`), because that is how
   a pose reads; `style` says which it was.
+- `markup` is `text` with its colour and markup kept, as the serialized
+  MString `json(markupstring)` writes. The portal draws it in place of `text`;
+  a channel line's `GET api/comm/channels/<channel>/recall` line carries the
+  same. An `@cemit` line, which names no speaker, is drawn on its own, without
+  a name or picture, as the terminal shows it.
 - `ts` is milliseconds since 1970, taken when the line was sent.
 - `id` is the line's id: for a channel line the one
   `GET api/comm/channels/<channel>/recall` returns for the same line, and for a

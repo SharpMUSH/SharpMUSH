@@ -99,7 +99,8 @@ public static class CommPayloadParser
 				Text(root, "fromObjid"),
 				Str(root, "text") ?? string.Empty,
 				Time(root) ?? receivedAt,
-				Id(root));
+				Id(root),
+				Text(root, "markup"));
 
 			return new CommEntry(message, recipients);
 		}

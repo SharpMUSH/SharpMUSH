@@ -1,4 +1,6 @@
 using Bunit;
+using MarkupString;
+using MarkupString.Ansi;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Client.Components.Play;
 using SharpMUSH.Client.Services;
@@ -8,7 +10,7 @@ namespace SharpMUSH.Tests.BUnit.Components.Play;
 
 /// <summary>
 /// README §5.1 / board 06 channel view: a channel or a page conversation in main, its lines grouped by day
-/// and by author, a "New" divider where the unread lines begin, plain-text bodies, and a composer that
+/// and by author, a "New" divider where the unread lines begin, bodies drawn from their markup, and a composer that
 /// sends @chat or page.
 /// </summary>
 public class CommViewTests : TrackingBunitContext
@@ -82,13 +84,57 @@ public class CommViewTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task Bodies_AreText_NeverMarkup()
+	public async Task ABody_TheGameSentNoMarkupFor_IsText()
 	{
 		_feed.ChannelList = [new CommChannel("Public", 0)];
 		_feed.Lines["Public"] = [Line("Mallory", "<img src=x onerror=alert(1)> [ansi(r,hi)]", Now)];
 		var cut = RenderView("Public");
 		await Assert.That(cut.FindAll(".comm-text img").Count).IsEqualTo(0);
 		await Assert.That(cut.Find(".comm-text").TextContent).IsEqualTo("<img src=x onerror=alert(1)> [ansi(r,hi)]");
+	}
+
+	/// <summary>
+	/// An @cemit names nobody: it reads as the terminal shows it, on its own line with no name or picture, and
+	/// does not join the lines around it into one run.
+	/// </summary>
+	[Test]
+	public async Task AnEmit_StandsAlone_WithoutANameOrPicture()
+	{
+		_feed.ChannelList = [new CommChannel("Public", 0)];
+		_feed.Lines["Public"] =
+		[
+			Line("Wren Halloway", "anyone up for a scene?", Now.AddMinutes(-3)),
+			Line("", "The tower bell rings.", Now.AddMinutes(-2)),
+			Line("", "Mercutio says, \"Evening, all.\"", Now.AddMinutes(-2)),
+			Line("Wren Halloway", "who rang that?", Now.AddMinutes(-1)),
+		];
+		var cut = RenderView("Public");
+
+		var emits = cut.FindAll(".comm-emit");
+		await Assert.That(emits.Select(e => e.QuerySelector(".comm-text")!.TextContent).ToList())
+			.IsEquivalentTo(new[] { "The tower bell rings.", "Mercutio says, \"Evening, all.\"" },
+				TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(emits.Any(e => e.QuerySelector(".comm-avatar, .comm-name") is not null)).IsFalse();
+		await Assert.That(cut.FindAll(".comm-group").Count).IsEqualTo(2).Because("the emits split Wren's lines");
+	}
+
+	/// <summary>A line keeps the colour the game gave it.</summary>
+	[Test]
+	public async Task ABody_IsDrawnFromItsMarkup()
+	{
+		var styled = MarkupText.Concat(
+			MarkupText.Wrap(AnsiMarkup.Create(foreground: new AnsiColor.Standard(1, false)), "ALARM:"),
+			MarkupText.Plain(" The tower bell rings."));
+		_feed.ChannelList = [new CommChannel("Public", 0)];
+		_feed.Lines["Public"] =
+		[
+			new("channel", "Public", [], "", null, styled.ToPlainText(), Now, Markup: MarkupTextSerializer.Serialize(styled))
+		];
+		var cut = RenderView("Public");
+
+		var body = cut.Find(".comm-text");
+		await Assert.That(body.TextContent).IsEqualTo("ALARM: The tower bell rings.");
+		await Assert.That(body.InnerHtml).Contains("ALARM:</span>").Because("the word keeps its colour");
 	}
 
 	[Test]

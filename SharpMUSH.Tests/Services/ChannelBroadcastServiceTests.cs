@@ -88,7 +88,7 @@ public class ChannelBroadcastServiceTests
 		await Assert.That(raised![7].ToPlainText()).IsEqualTo(buffered.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
 		await Assert.That(buffered.Style).IsEqualTo("pose");
 		await Assert.That(buffered.SpeakerName).IsEqualTo("System");
-		await Assert.That(buffered.MessageText).IsEqualTo("The server is restarting.");
+		await Assert.That(buffered.MessageText.ToPlainText()).IsEqualTo("The server is restarting.");
 	}
 
 	/// <summary>A line nobody was sent — here, its one member gagged the channel — raises nothing.</summary>

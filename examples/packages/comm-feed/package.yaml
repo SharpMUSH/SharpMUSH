@@ -1,7 +1,7 @@
 format: "1.16"
 package: comm-feed
 title: "Channel and page feed"
-version: 1.3.1
+version: 1.4.0
 authors: [SharpMUSH]
 description: "Pushes comm.channels, comm.message and comm.who OOB v2 updates — the channels a player may see and which they are on, each channel line or page to exactly the players who received it, and who comes onto or goes off a channel's member list — the data source for the portal Play sidebar's Channels and Pages."
 license: MIT
@@ -13,6 +13,8 @@ requires_server: ">=0.1"
 # Attach mode (decision 20.3): manages four event handlers and their helpers on
 # the existing event_handler object ({{$event_handler}}, #9 by default). Every
 # helper is under FUN`COMM` so it cannot collide with room-contents' FUN`ROOMCONTENTS`*.
+#
+# 1.4.0 adds markup to comm.message: the text with its colour kept.
 #
 # 1.3.0 renames the helpers from FN`COMM`<Name> to FUN`COMM`<Name>, the standard kind for a
 # function. A game that redefined FN`COMM`TEXT sets FUN`COMM`TEXT instead.
@@ -88,11 +90,12 @@ objects:
       # sourceless line), name (the speaker's name), style, message, time
       # (unix-ms), to (a page's recipients' objids) and id. The id is the one
       # the recall buffer holds a channel line under, or the page log a page,
-      # so the portal can tell a line it pulled from the same line pushed. A
+      # so the portal can tell a line it pulled from the same line pushed.
+      # markup is text with its colour, the serialized MString the portal draws. A
       # key a line has no value for is absent, not null — a null in a
       # json_mod() patch removes the key.
       FUN`COMM`MESSAGE: |-
-        json_mod(json(object,v,json(number,2),kind,json(string,%<kind>),to,json_array(iter(%<to>,json(string,name(%i0)),,%r),%r),from,json(string,%<name>),text,json(string,uargs(me/FUN`COMM`TEXT,0,%<style>,1,%<name>,2,%<message>,style,%<style>,name,%<name>,message,%<message>)),style,json(string,%<style>),ts,json(number,%<time>)),patch,json(object,channel,if(strlen(%<channel>),json(string,%<channel>),null),fromObjid,if(strlen(%<speaker>),json(string,%<speaker>),null),toObjids,if(words(%<to>),json_array(iter(%<to>,json(string,%i0),,%r),%r),null),id,if(strlen(%<id>),json(number,%<id>),null)))
+        json_mod(json(object,v,json(number,2),kind,json(string,%<kind>),to,json_array(iter(%<to>,json(string,name(%i0)),,%r),%r),from,json(string,%<name>),text,json(string,setr(text,uargs(me/FUN`COMM`TEXT,0,%<style>,1,%<name>,2,%<message>,style,%<style>,name,%<name>,message,%<message>))),style,json(string,%<style>),ts,json(number,%<time>)),patch,json(object,channel,if(strlen(%<channel>),json(string,%<channel>),null),fromObjid,if(strlen(%<speaker>),json(string,%<speaker>),null),toObjids,if(words(%<to>),json_array(iter(%<to>,json(string,%i0),,%r),%r),null),id,if(strlen(%<id>),json(number,%<id>),null),markup,json(markupstring,%q<text>)))
 
       # comm.who, from named arguments: channel, member (objid), name (the
       # member's name) and change (on|off): the member came onto or went off

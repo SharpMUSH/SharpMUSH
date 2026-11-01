@@ -57,6 +57,15 @@ public class CommPayloadParserTests
 		await Assert.That(entry.Message.Id).IsEqualTo(1790780182950123);
 	}
 
+	/// <summary>The text with its colour, as the game sent it, for the channel view to draw.</summary>
+	[Test]
+	public async Task A_lines_markup_is_read()
+	{
+		var entry = CommPayloadParser.ParseMessage(ChannelLine.Replace("\"v\":2,", "\"v\":2,\"markup\":\"styled\","), Received)!;
+
+		await Assert.That(entry.Message.Markup).IsEqualTo("styled");
+	}
+
 	[Test]
 	[Arguments("""{"v":2,"kind":"page","from":"X","text":"hi"}""")]
 	[Arguments("""{"v":2,"kind":"page","from":"X","text":"hi","id":"soon"}""")]

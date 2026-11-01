@@ -7,7 +7,8 @@
 
 @* D1 §5.1 / board 06 the channel view: one channel, or one page conversation, in main. Lines are grouped
    by day ("Today", "Yesterday", a date) and by author (a header per run of lines within five minutes), with
-   a "New" divider where the lines unread at opening begin. Bodies are text, never markup. The composer
+   a "New" divider where the lines unread at opening begin. A line that names no speaker (an @cemit) stands
+   alone, without a header. Bodies keep their colour when the game sent it (markup), else are text. The composer
    sends @chat to a channel, or page to the conversation's people by objid (a quoted name when there is no
    objid). While open, the feed's Viewing is this key, so its lines do not count as unread. Opening a channel
    pulls its recent lines from the server, and opening a conversation its logged pages; live lines then append,
@@ -65,7 +66,15 @@
                     {
                         <div class="comm-new" role="separator"><span>@Loc["NavPlayNewLines"]</span></div>
                     }
-                    if (StartsGroup(i))
+                    if (line.From.Length == 0)
+                    {
+                        @* An @cemit names nobody: the line alone, as the terminal shows it. *@
+                        <div class="comm-emit">
+                            <span class="comm-time">@line.Timestamp.ToLocalTime().ToString("HH:mm")</span>
+                            <div class="comm-text">@Body(line)</div>
+                        </div>
+                    }
+                    else if (StartsGroup(i))
                     {
                         var end = GroupEnd(i);
                         <div class="comm-group">
@@ -77,7 +86,7 @@
                                 </div>
                                 @for (var j = i; j <= end; j++)
                                 {
-                                    <div class="comm-text">@_lines[j].Text</div>
+                                    <div class="comm-text">@Body(_lines[j])</div>
                                 }
                             </div>
                         </div>
@@ -282,10 +291,20 @@
     }
 
     private static bool SameRun(CommMessage a, CommMessage b) =>
-        string.Equals(a.From, b.From, StringComparison.Ordinal)
+        a.From.Length > 0
+        && string.Equals(a.From, b.From, StringComparison.Ordinal)
         && string.Equals(a.FromObjId, b.FromObjId, StringComparison.Ordinal)
         && a.Timestamp.ToLocalTime().Date == b.Timestamp.ToLocalTime().Date
         && b.Timestamp - a.Timestamp <= GroupGap;
+
+    /// <summary>A line's body: its markup drawn as the terminal draws it, or its text when the game sent none.</summary>
+    private static RenderFragment Body(CommMessage line) => builder =>
+    {
+        if (line.Markup is { } markup)
+            builder.AddMarkupContent(0, SceneMarkupRenderer.ToHtml(markup));
+        else
+            builder.AddContent(0, line.Text);
+    };
 
     private string DayLabel(DateTime day)
     {

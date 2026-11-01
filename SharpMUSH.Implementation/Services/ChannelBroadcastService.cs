@@ -397,7 +397,7 @@ public class ChannelBroadcastService(
 			SeeAllOnly = notification.SeeAllOnly,
 			Style = StyleFor(line.ChatType),
 			SpeakerName = Named(notification) ? line.PlayerName.ToPlainText() : string.Empty,
-			MessageText = line.Message.ToPlainText()
+			MessageText = line.Message
 		};
 		await mediator.Send(new AddChannelMessageCommand(channelMessage), cancellationToken);
 	}
