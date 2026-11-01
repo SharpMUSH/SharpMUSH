@@ -14,6 +14,11 @@
       "id": "roll-dice-arithmetic",
       "heading": "Arithmetic",
       "lookup": "roll arithmetic"
+    },
+    {
+      "id": "roll-dice-conditions",
+      "heading": "Conditions",
+      "lookup": "roll conditions"
     }
   ]
 }
@@ -57,6 +62,31 @@ floor(1d6[5] / 2) = 2
 > think roll(lit(max(1d6,1d6)),,text)
 max(1d6[2], 1d6[5]) = 5
 ```
+
+`clamp(<value>, <low>, <high>)` keeps a value between two others.
+
+## Conditions
+
+These are the formula functions of Foundry VTT's pf2e system, so its formulas roll as written.
+
+| Function | Gives |
+|---|---|
+| `eq(a, b)`, `ne(a, b)` | 1 if a equals b (does not equal b), else 0 |
+| `gt(a, b)`, `gte(a, b)` | 1 if a is more than b (or equal), else 0 |
+| `lt(a, b)`, `lte(a, b)` | 1 if a is less than b (or equal), else 0 |
+| `btwn(v, low, high)` | 1 if v is from low to high, else 0 |
+| `ternary(c, a, b)` | a if c is not 0, else b |
+| `when(c, a)` | a if c is not 0, else 0 |
+| `match(...)` | the first when() whose c is not 0, or the first other argument; 0 if none |
+
+```sharp
+> think roll(lit(match(when(gte(@level,15),8), when(gte(@level,7),3), 1)),lit({"level":9}),text)
+match(when(gte(level(9), 15), 8), when(gte(level(9), 7), 3), 1) = 3
+> think roll(lit(ternary(gt(1d6,3),1d4,1d8)),,text)
+ternary(gt(1d6[5], 3), 1d4[2], 1d8[7]) = 2
+```
+
+Output: every argument is rolled, and the text shows each one; only the chosen one counts.
 
 ::: seealso
 - [roll()]

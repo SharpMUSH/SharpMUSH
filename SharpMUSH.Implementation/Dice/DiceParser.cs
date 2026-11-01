@@ -547,11 +547,14 @@ public sealed class DiceParser
 	private string SyntaxError()
 		=> string.Format(ErrorMessages.Returns.RollSyntaxErrorFormat, _position + 1);
 
-	private static bool IsFunction(string name) => name is "floor" or "ceil" or "round" or "abs" or "min" or "max";
+	private static bool IsFunction(string name) => name is "floor" or "ceil" or "round" or "abs" or "min" or "max"
+		or "clamp" or "ternary" or "when" or "match" or "btwn" or "eq" or "ne" or "gt" or "gte" or "lt" or "lte";
 
 	private static bool AcceptsArguments(string name, int count) => name switch
 	{
-		"min" or "max" => count >= 1,
+		"min" or "max" or "match" => count >= 1,
+		"clamp" or "ternary" or "btwn" => count == 3,
+		"when" or "eq" or "ne" or "gt" or "gte" or "lt" or "lte" => count == 2,
 		_ => count == 1
 	};
 }

@@ -47,6 +47,7 @@ internal sealed class DiceEvaluator(Func<int, int> roll, DiceRollMode mode)
 			GroupNode group => Group(Evaluate(group.Inner)),
 			NegateNode negate => Negate(Evaluate(negate.Operand)),
 			BinaryNode binary => Chain(binary),
+			FunctionNode { Name: "match" } match => Match(match),
 			FunctionNode function => Function(function.Name, [.. function.Arguments.Select(Evaluate)]),
 			VariableNode variable => Variable(variable.Name, Evaluate(variable.Value)),
 			FlavorNode flavored => Flavored(Evaluate(flavored.Inner), flavored.Flavor),
@@ -66,6 +67,7 @@ internal sealed class DiceEvaluator(Func<int, int> roll, DiceRollMode mode)
 			GroupNode group => Range(group.Inner).Map(Group),
 			NegateNode negate => NegateRange(Range(negate.Operand)),
 			BinaryNode binary => ChainRange(binary),
+			FunctionNode { Name: "match" } match => MatchRange(match),
 			FunctionNode function => FunctionRange(function.Name, [.. function.Arguments.Select(Range)]),
 			VariableNode variable => Range(variable.Value).Map(value => Variable(variable.Name, value)),
 			FlavorNode flavored => Range(flavored.Inner).Map(inner => Flavored(inner, flavored.Flavor)),
@@ -181,7 +183,17 @@ internal sealed class DiceEvaluator(Func<int, int> roll, DiceRollMode mode)
 				"round" => Math.Floor(first + 0.5m),
 				"abs" => Math.Abs(first),
 				"min" => arguments.Min(argument => argument.Value),
-				_ => arguments.Max(argument => argument.Value)
+				"max" => arguments.Max(argument => argument.Value),
+				"clamp" => Math.Min(Math.Max(first, arguments[1].Value), arguments[2].Value),
+				"ternary" => first != 0 ? arguments[1].Value : arguments[2].Value,
+				"when" => first != 0 ? arguments[1].Value : 0,
+				"btwn" => Truth(first >= arguments[1].Value && first <= arguments[2].Value),
+				"eq" => Truth(first == arguments[1].Value),
+				"ne" => Truth(first != arguments[1].Value),
+				"gt" => Truth(first > arguments[1].Value),
+				"gte" => Truth(first >= arguments[1].Value),
+				"lt" => Truth(first < arguments[1].Value),
+				_ => Truth(first <= arguments[1].Value)
 			};
 			return new Evaluated(value, $"{name}({string.Join(", ", arguments.Select(argument => argument.Text))})",
 				[.. arguments.SelectMany(argument => argument.Terms)]);
@@ -192,13 +204,136 @@ internal sealed class DiceEvaluator(Func<int, int> roll, DiceRollMode mode)
 		}
 	}
 
+	private static decimal Truth(bool value) => value ? 1 : 0;
+
 	/// <summary>
-	/// Every function but abs() rises with its arguments, so the lowest arguments give the lowest
-	/// value. abs() of a range that crosses zero can only be bounded below by 0.
+	/// match() gives the value of its first when() whose condition holds, or of its first argument that
+	/// is not a when(), and 0 when there is neither. Parentheses round a when() leave it a when(), as in
+	/// Foundry's pf2e system, where a when() that fails is null however it is grouped. Every argument is
+	/// rolled, as Foundry rolls them, so the text shows each one.
+	/// </summary>
+	private Evaluated Match(FunctionNode match)
+	{
+		decimal? chosen = null;
+		var shown = new List<Evaluated>();
+		foreach (var argument in match.Arguments)
+		{
+			if (Ungrouped(argument) is FunctionNode { Name: "when" } when)
+			{
+				var condition = Evaluate(when.Arguments[0]);
+				var value = Evaluate(when.Arguments[1]);
+				if (chosen is null && condition.Value != 0) chosen = value.Value;
+				shown.Add(Regrouped(argument, new Evaluated(value.Value, $"when({condition.Text}, {value.Text})", [.. condition.Terms, .. value.Terms])));
+				continue;
+			}
+
+			var other = Evaluate(argument);
+			chosen ??= other.Value;
+			shown.Add(other);
+		}
+
+		if (_failure is not null) return Evaluated.Failed;
+		return new Evaluated(chosen ?? 0, $"match({string.Join(", ", shown.Select(argument => argument.Text))})",
+			[.. shown.SelectMany(argument => argument.Terms)]);
+	}
+
+	/// <summary>
+	/// Every value match() could give: a when() whose condition is settled either decides or drops
+	/// out, one that is not adds its value and reading goes on, and 0 when nothing has to decide. Every
+	/// argument is taken in first, so a formula that cannot be rolled has no lowest or highest either.
+	/// </summary>
+	private Span MatchRange(FunctionNode match)
+	{
+		var arguments = match.Arguments
+			.Select(argument => Ungrouped(argument) is FunctionNode { Name: "when" } when
+				? (Condition: (Span?)Range(when.Arguments[0]), Value: Range(when.Arguments[1]))
+				: (Condition: null, Value: Range(argument)))
+			.ToList();
+		if (_failure is not null) return Span.Failed;
+
+		var cases = new List<Evaluated>();
+		foreach (var (condition, value) in arguments)
+		{
+			if (condition is { } settled && AlwaysFalse(settled)) continue;
+			cases.AddRange(value.Ends);
+			if (condition is not { } open || AlwaysTrue(open)) return Span.Of(cases);
+		}
+
+		cases.Add(Evaluated.Of(0));
+		return Span.Of(cases);
+	}
+
+	private static DiceNode Ungrouped(DiceNode node) => node is GroupNode group ? Ungrouped(group.Inner) : node;
+
+	private static Evaluated Regrouped(DiceNode node, Evaluated inner) =>
+		node is GroupNode group ? Group(Regrouped(group.Inner, inner)) : inner;
+
+	private static bool IsPoint(Span span) => span.Low.Value == span.High.Value;
+
+	/// <summary>A condition that cannot come out 0.</summary>
+	private static bool AlwaysTrue(Span condition) => condition.Low.Value > 0 || condition.High.Value < 0;
+
+	/// <summary>A condition that can only come out 0.</summary>
+	private static bool AlwaysFalse(Span condition) => IsPoint(condition) && condition.Low.Value == 0;
+
+	/// <summary>
+	/// A comparison is settled when the ranges it compares settle it, such as gt(1d6, 0); otherwise it
+	/// may come out 0 or 1. ternary() and when() follow a condition that cannot be 0, or can only be 0,
+	/// and take in every value they could give otherwise.
+	/// </summary>
+	private Span ConditionalRange(string name, ImmutableArray<Span> arguments)
+	{
+		if (arguments.All(IsPoint)) return Span.Point(Function(name, [.. arguments.Select(argument => argument.Low)]));
+
+		var condition = arguments[0];
+		return name switch
+		{
+			"ternary" when AlwaysTrue(condition) => arguments[1],
+			"ternary" when AlwaysFalse(condition) => arguments[2],
+			"ternary" => Span.Of([.. arguments[1].Ends, .. arguments[2].Ends]),
+			"when" when AlwaysTrue(condition) => arguments[1],
+			"when" when AlwaysFalse(condition) => Span.Point(Evaluated.Of(0)),
+			"when" => Span.Of([.. arguments[1].Ends, Evaluated.Of(0)]),
+			_ => ComparisonRange(name, arguments)
+		};
+	}
+
+	/// <summary>1 when every value the ranges hold makes the comparison true, 0 when none does, else 0 to 1.</summary>
+	private static Span ComparisonRange(string name, ImmutableArray<Span> arguments)
+	{
+		var (low, high) = (arguments[0].Low.Value, arguments[0].High.Value);
+		var (otherLow, otherHigh) = (arguments[1].Low.Value, arguments[1].High.Value);
+		var apart = high < otherLow || otherHigh < low;
+		int? settled = name switch
+		{
+			"gt" when low > otherHigh => 1,
+			"gt" when high <= otherLow => 0,
+			"gte" when low >= otherHigh => 1,
+			"gte" when high < otherLow => 0,
+			"lt" when high < otherLow => 1,
+			"lt" when low >= otherHigh => 0,
+			"lte" when high <= otherLow => 1,
+			"lte" when low > otherHigh => 0,
+			"eq" when apart => 0,
+			"ne" when apart => 1,
+			"btwn" when low >= otherHigh && high <= arguments[2].Low.Value => 1,
+			"btwn" when high < otherLow || low > arguments[2].High.Value => 0,
+			_ => null
+		};
+		return settled is int truth ? Span.Point(Evaluated.Of(truth)) : new Span(Evaluated.Of(0), Evaluated.Of(1));
+	}
+
+	/// <summary>
+	/// Every function but abs() and the conditionals rises with its arguments, so the lowest arguments
+	/// give the lowest value. abs() of a range that crosses zero can only be bounded below by 0.
 	/// </summary>
 	private Span FunctionRange(string name, ImmutableArray<Span> arguments)
 	{
 		if (_failure is not null) return Span.Failed;
+		if (name is "ternary" or "when" or "btwn" or "eq" or "ne" or "gt" or "gte" or "lt" or "lte")
+		{
+			return ConditionalRange(name, arguments);
+		}
 
 		var low = Function(name, [.. arguments.Select(argument => argument.Low)]);
 		var high = Function(name, [.. arguments.Select(argument => argument.High)]);
