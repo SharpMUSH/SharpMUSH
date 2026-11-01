@@ -12,6 +12,8 @@ Everyone in the party joins the scene and is focused on it, and so does each pla
 - `duties` 1.2 or later, which tells its extensions what happens to a party.
 - `scene` and the Scene plugin.
 
+A game that has both installs this package by itself; an administrator who removes it keeps it off.
+
 ## How it works
 
 The package attaches `EXTENSION`SCENE` to the Duties object. Duties runs `DO`SCENE` and `FLAG`START`SCENE` from it for `+duty/scene` and `+duty/start/scene`, and triggers its `ON`DUTIES`JOIN`, `ON`DUTIES`LINE` and `ON`DUTIES`FINISH` as the party plays. `+help duty extensions` describes the hooks.
