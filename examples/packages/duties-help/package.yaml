@@ -1,0 +1,35 @@
+format: "1.16"
+package: duties-help
+title: "Duties: +help topics"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the Duties topics into +help: registers the duties package's help with the +help librarian."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [duties, help, bridge]
+category: Roleplay
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. duties keeps its topics on its own help
+# object, and plus-help reads any object registered with its librarian. This package is only that registration;
+# uninstalling it takes the topics out of +help, and neither package changes.
+depends:
+  - package: duties
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/duties/
+      branch: main
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  - ref: duties_help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`DUTIES: |-
+        {{duties/duties_help}}
