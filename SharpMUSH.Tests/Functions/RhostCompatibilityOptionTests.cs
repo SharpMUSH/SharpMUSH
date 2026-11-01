@@ -44,17 +44,6 @@ public class RhostCompatibilityOptionTests
 	}
 
 	[Test]
-	[Arguments("iter(a|b|c,ucstr(##),|)", "A|B|C", "A B C")]
-	[Arguments("parse(a|b|c,##,|)", "a|b|c", "a b c")]
-	[Arguments("iter(a|b|c,##,|,-)", "a-b-c", "a-b-c")]
-	[Arguments("iter(a b c,##)", "a b c", "a b c")]
-	public async Task RhostIterSeparator(string code, string off, string on)
-	{
-		await Assert.That(await EvaluateAsync(code, options => options with { RhostIterSeparator = false })).IsEqualTo(off);
-		await Assert.That(await EvaluateAsync(code, options => options with { RhostIterSeparator = true })).IsEqualTo(on);
-	}
-
-	[Test]
 	public async Task RhostLroomsFollowsExitsWithoutALimit()
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("RhostLrooms");

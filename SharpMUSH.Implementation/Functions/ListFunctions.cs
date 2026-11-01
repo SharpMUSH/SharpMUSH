@@ -482,8 +482,7 @@ public partial class Functions
 		var listArg = errors.Record(await parser.CurrentState.Arguments["0"].GetParsedResultAsync());
 
 		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
-		var sep = await errors.OutputSeparatorAsync(parser, 3,
-			Configuration.CurrentValue.Compatibility.RhostIterSeparator ? MarkupText.Space : delim);
+		var sep = await errors.OutputSeparatorAsync(parser, 3, MarkupText.Space);
 		var list = MushText.SplitList(delim, listArg);
 		var wrappedIteration = new IterationWrapper<MString>
 		{

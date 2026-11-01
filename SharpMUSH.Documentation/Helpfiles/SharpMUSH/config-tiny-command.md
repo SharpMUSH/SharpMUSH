@@ -42,7 +42,6 @@ Options that make SharpMUSH behave like TinyMUSH, TinyMUX or RhostMUSH, for code
 The `rhost_` options below are for a game moved from RhostMUSH. Each is off by default, and off leaves the function as PennMUSH has it. See [compatibility config].
 
 - `rhost_edit=<boolean>`: Are edit()'s fourth and fifth arguments RhostMUSH's first-only and ANSI modes, rather than another from/to pair?
-- `rhost_iter_separator=<boolean>`: Do iter() and parse() put a space between results when no output separator is given, as RhostMUSH does, rather than the list's delimiter?
 - `rhost_lattr=<boolean>`: Do lattr() and lattrp() take RhostMUSH's target, type, flags, regexp and tree arguments, rather than an output separator?
 - `rhost_list=<boolean>`: Is list() with two to five arguments RhostMUSH's loop, which tells each result to the enactor (or to a target the enactor controls) after an optional header? Its first three arguments are TinyMUX's list().
 - `rhost_printf=<boolean>`: Does printf() read RhostMUSH's `$`-fields, rather than SharpMUSH's `%` directives?

@@ -25,7 +25,7 @@
 
 `iter(<list>, <pattern>[, <delimiter>[, <output separator>]])`
 
-For each word in `<list>`, iter() evaluates `<pattern>` once, and returns a list of the results of those evaluations. Words in `<list>` are separated by `<delimiter>`, if given, and spaces if not. Words in the resulting list are separated by the given `<output separator>`, or the input delimiter if no output separator is given. An empty `<output separator>` puts nothing between them.
+For each word in `<list>`, iter() evaluates `<pattern>` once, and returns a list of the results of those evaluations. Words in `<list>` are separated by `<delimiter>`, if given, and spaces if not. Words in the resulting list are separated by the given `<output separator>`, or a space if no output separator is given. An empty `<output separator>` puts nothing between them.
 
 In `<pattern>`, "##" stands for the current word and "#@" for its position in `<list>`, counting from 1. The word is never evaluated as code, so ## is safe on user input. See [compatibility parser in iter is data not code].
 

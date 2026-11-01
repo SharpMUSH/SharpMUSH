@@ -47,7 +47,7 @@ public partial class Functions
 	/// <c>inf(&lt;list&gt;, &lt;pattern&gt;[, &lt;delimiter&gt;[, &lt;output separator&gt;]])</c>: iter(), and
 	/// for a list written <c>:&lt;start&gt;:&gt;:</c> or <c>:&lt;start&gt;:&lt;:</c>, a count up or down from
 	/// <c>&lt;start&gt;</c> that goes on until the pattern calls ibreak(). The output separator defaults to
-	/// the delimiter, as iter()'s does. An endless count still stops at
+	/// a space, as iter()'s does. An endless count still stops at
 	/// the game's function invocation limit, at the output limit, or when the time limit runs out.
 	/// </summary>
 	[SharpFunction(Name = "inf", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.NoParse, ParameterNames = ["list", "pattern", "delimiter", "output-separator"])]
@@ -56,10 +56,7 @@ public partial class Functions
 		var errors = new ListEvaluationErrors();
 		var listArg = errors.Record(await parser.CurrentState.Arguments["0"].GetParsedResultAsync());
 		var delimiter = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
-		// A fourth argument given empty is no separator at all, as RhostMUSH reads it.
-		var separator = parser.CurrentState.Arguments.Count > 3
-			? errors.Record(await parser.CurrentState.Arguments["3"].GetParsedResultAsync())
-			: delimiter;
+		var separator = await errors.OutputSeparatorAsync(parser, 3, MarkupText.Space);
 
 		var results = ReadCount(listArg.ToPlainText()) is { } count
 			? await RunPatternLoopAsync(parser, Count(count.Start, count.Step), errors,

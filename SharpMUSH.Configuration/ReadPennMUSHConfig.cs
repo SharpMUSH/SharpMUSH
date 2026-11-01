@@ -141,7 +141,6 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(CompatibilityOptions.RhostList)), d.Compatibility.RhostList),
 				String(Get(nameof(CompatibilityOptions.Dialect)), d.Compatibility.Dialect)?.Trim().ToLowerInvariant(),
 				Boolean(Get(nameof(CompatibilityOptions.MuxQueueFunctions)), d.Compatibility.MuxQueueFunctions),
-				Boolean(Get(nameof(CompatibilityOptions.RhostIterSeparator)), d.Compatibility.RhostIterSeparator),
 				Boolean(Get(nameof(CompatibilityOptions.RhostLrooms)), d.Compatibility.RhostLrooms),
 				Boolean(Get(nameof(CompatibilityOptions.MuxQuiet)), d.Compatibility.MuxQuiet),
 				Boolean(Get(nameof(CompatibilityOptions.MapsqlSync)), d.Compatibility.MapsqlSync)

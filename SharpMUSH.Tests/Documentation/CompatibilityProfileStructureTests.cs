@@ -51,7 +51,6 @@ public class CompatibilityProfileStructureTests
 		["RhostMUSH edit() modes: `rhost_edit`"] = "a RhostMUSH option; off, edit() is PennMUSH's",
 		["RhostMUSH lattr() arguments: `rhost_lattr`"] = "a RhostMUSH option; off, lattr() is PennMUSH's",
 		["RhostMUSH map() arguments: `rhost_map_args`"] = "a RhostMUSH option; off, map() is PennMUSH's",
-		["RhostMUSH iter() separator: `rhost_iter_separator`"] = "a RhostMUSH option; off, iter() is PennMUSH's",
 		["RhostMUSH lrooms() depth: `rhost_lrooms`"] = "a RhostMUSH option; PennMUSH has no lrooms()",
 		["RhostMUSH printf() fields: `rhost_printf`"] = "a RhostMUSH option; off, printf() is SharpMUSH's own",
 		["RhostMUSH side-effect flag: `sidefx_flag`"] = "a RhostMUSH option; off, side-effect functions are PennMUSH's",

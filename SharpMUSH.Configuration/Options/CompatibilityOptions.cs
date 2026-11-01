@@ -155,14 +155,6 @@ public record CompatibilityOptions(
 	bool MuxQueueFunctions,
 
 	[property: SharpConfig(
-		Name = "rhost_iter_separator",
-		Category = "Compatibility",
-		Description = "iter() and parse() put a space between results when no output separator is given, as RhostMUSH does, instead of the list's delimiter",
-		Group = "RhostMUSH Compatibility",
-		Order = 7)]
-	bool RhostIterSeparator,
-
-	[property: SharpConfig(
 		Name = "rhost_lrooms",
 		Category = "Compatibility",
 		Description = "lrooms() takes any depth, and a depth of 0 follows exits as far as they lead, as RhostMUSH does; it lists at most 1,000 rooms. Off, a depth of 0 lists nothing and the deepest is 50, as on TinyMUX",

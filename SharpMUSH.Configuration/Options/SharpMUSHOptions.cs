@@ -116,7 +116,6 @@ public record SharpMUSHOptions
 			RhostList: false,
 			Dialect: null,
 			MuxQueueFunctions: false,
-			RhostIterSeparator: false,
 			RhostLrooms: false,
 			MuxQuiet: false,
 			MapsqlSync: false

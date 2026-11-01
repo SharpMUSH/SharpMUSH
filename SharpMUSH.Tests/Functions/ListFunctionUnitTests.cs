@@ -33,7 +33,11 @@ public class ListFunctionUnitTests
 	[Arguments("iter(1 2 3,%i0)", "1 2 3")]
 	[Arguments("iter(1,%i1)", "#-1 REGISTER OUT OF RANGE")]
 	[Arguments("iter(1 2 3,add(%i0,1))", "2 3 4")]
-	[Arguments("iter(1|2|3,%i0,|)", "1|2|3")]
+	// Without an output separator the results are separated by a space, as PennMUSH, TinyMUX and
+	// RhostMUSH all do, whatever the delimiter.
+	[Arguments("iter(1|2|3,%i0,|)", "1 2 3")]
+	[Arguments("parse(1|2|3,%i0,|)", "1 2 3")]
+	[Arguments("inf(1|2|3,%i0,|)", "1 2 3")]
 	[Arguments("iter(1|2|3,%i0,|,-)", "1-2-3")]
 	[Arguments("iter(1|2|3,add(%i0,1),|,-)", "2-3-4")]
 	[Arguments("iter(1|2|3,iter(1 2 3,add(%i0,%i1)),|,-)", "2 3 4-3 4 5-4 5 6")]
