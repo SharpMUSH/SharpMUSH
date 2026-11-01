@@ -563,12 +563,11 @@
         var edge = _draft.Edge(node.Key, port.Key, target.Key);
         if (edge is null || port.EdgeFields is not { Count: > 0 } fields) return;
         <div class="graph-edge-fields">
-            @foreach (var field in fields)
+            @foreach (var field in SchemaValues.Shown(fields))
             {
-                if (field.Key is null || string.Equals(field.Type, "hidden", StringComparison.OrdinalIgnoreCase)) continue;
                 var shown = EdgeField(node, field);
                 <SchemaFieldInput @key="@($"{node.Key}-e-{port.Key}-{target.Key}-{field.Key}")" Element="shown" Disabled="Locked"
-                                  Value="@Held(edge.Field(field.Key), field)"
+                                  Value="@Held(edge.Field(field.Key!), field)"
                                   ValueChanged="v => SetEdgeFieldAsync(node.Key, port.Key, target.Key, field.Key!, v)" />
             }
         </div>
@@ -638,11 +637,10 @@
                           Error="@(_keyError is not null)" ErrorText="@_keyError" />
             <MudSwitch T="bool" Value="@(node.Key == _draft.StartNode?.Key)" ValueChanged="v => SetStartAsync(node, v)"
                        Label="@Loc["WidGraphStart"]" Color="Color.Primary" Disabled="@(Locked || node.Key == _draft.StartNode?.Key)" />
-            @foreach (var field in kind?.Fields ?? [])
+            @foreach (var field in SchemaValues.Shown(kind?.Fields))
             {
-                if (field.Key is null || string.Equals(field.Type, "hidden", StringComparison.OrdinalIgnoreCase)) continue;
                 <SchemaFieldInput @key="@($"{node.Key}-f-{field.Key}")" Element="field" Disabled="Locked"
-                                  Value="@Held(node.Field(field.Key), field)"
+                                  Value="@Held(node.Field(field.Key!), field)"
                                   ValueChanged="v => SetFieldAsync(node.Key, field.Key!, v)" />
             }
             @if (Ports(node.Kind).Count > 0)

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using SharpMUSH.Client.Models.Applications;
 
 namespace SharpMUSH.Client.Components.Schema;
 
@@ -30,6 +31,10 @@ public static class SchemaValues
 	public static DateTime? AsDate(object? value) => DateTime.TryParse(AsString(value), out var d) ? d : null;
 
 	public static string? FromDate(DateTime? date) => date?.ToString("yyyy-MM-dd");
+
+	/// <summary>The fields a form draws: those with a key that are not hidden.</summary>
+	public static IEnumerable<SchemaElement> Shown(IEnumerable<SchemaElement>? fields)
+		=> (fields ?? []).Where(field => field.Key is not null && !string.Equals(field.Type, "hidden", StringComparison.OrdinalIgnoreCase));
 
 	/// <summary>The JSON a value held as an object or array, else <c>null</c>.</summary>
 	public static JsonElement? AsJson(object? value) => value switch

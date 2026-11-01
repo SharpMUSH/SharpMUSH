@@ -90,11 +90,10 @@
                     var index = i;
                     <li class="schema-row">
                         <div class="schema-row-fields">
-                            @foreach (var item in FieldsOf(rows[index]))
+                            @foreach (var item in SchemaValues.Shown(FieldsOf(rows[index])))
                             {
-                                if (item.Key is null || string.Equals(item.Type, "hidden", StringComparison.OrdinalIgnoreCase)) continue;
                                 <SchemaFieldInput Element="item" Disabled="Disabled"
-                                                  Value="RowValue(rows[index], item.Key)"
+                                                  Value="RowValue(rows[index], item.Key!)"
                                                   ValueChanged="v => SetRowValue(index, item.Key!, v)" />
                             }
                         </div>
@@ -215,9 +214,9 @@
     {
         var rows = Rows();
         var row = new JsonObject();
-        foreach (var item in Element.ItemFields ?? [])
+        foreach (var item in (Element.ItemFields ?? []).Where(item => item.Key is not null && item.Default is not null))
         {
-            if (item.Key is not null && item.Default is { } fallback) row[item.Key] = JsonNode.Parse(fallback.GetRawText());
+            row[item.Key!] = JsonNode.Parse(item.Default!.Value.GetRawText());
         }
         Rekind(row, [.. Element.ItemFields?.Select(item => item.Key) ?? []]);
         if ((Element.ItemFields ?? []).Any(item => item.Key == "id" && string.Equals(item.Type, "hidden", StringComparison.OrdinalIgnoreCase)))
