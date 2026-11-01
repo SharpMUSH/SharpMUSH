@@ -7416,4 +7416,40 @@
   <data name="NavMapPlaceRoomHere" xml:space="preserve">
     <value>Colocar sala</value>
   </data>
+  <data name="NavMapMoveHint" xml:space="preserve">
+    <value>Arraste uma sala para movê-la, ou um canto da sala escolhida para redimensioná-la. Pelo teclado, as setas movem a sala escolhida (mais longe com Shift) e Ctrl+Shift com as setas a redimensiona.</value>
+  </data>
+  <data name="NavMapMoveHintHex" xml:space="preserve">
+    <value>Arraste uma sala para movê-la para outro hexágono. Pelo teclado, as setas movem a sala escolhida para o próximo hexágono nessa direção; onde há dois hexágonos nessa direção, Shift leva ao outro.</value>
+  </data>
+  <data name="NavMapMovedTo" xml:space="preserve">
+    <value>{0} movida para {1}, {2}.</value>
+  </data>
+  <data name="NavMapResizedTo" xml:space="preserve">
+    <value>{0} agora tem {1} por {2}.</value>
+  </data>
+  <data name="NavMapAtEdge" xml:space="preserve">
+    <value>A borda da imagem a deteve.</value>
+  </data>
+  <data name="NavMapTaken" xml:space="preserve">
+    <value>{0} não pode ir para lá: outra sala ocupa essas células.</value>
+  </data>
+  <data name="NavMapTakenHex" xml:space="preserve">
+    <value>{0} não pode ir para lá: outra sala está nesse hexágono.</value>
+  </data>
+  <data name="NavMapNoResizeHex" xml:space="preserve">
+    <value>Num mapa hexagonal cada sala ocupa um hexágono, então {0} não tem tamanho para mudar.</value>
+  </data>
+  <data name="NavMapOutside" xml:space="preserve">
+    <value>{0} está salva além da borda da imagem, então o mapa a desenha na borda.</value>
+  </data>
+  <data name="NavMapBringInside" xml:space="preserve">
+    <value>Mover para dentro da imagem</value>
+  </data>
+  <data name="NavMapOutsideCheck" xml:space="preserve">
+    <value>{0} está salva além da borda da imagem.</value>
+  </data>
+  <data name="NavMapKeptInside" xml:space="preserve">
+    <value>Mantida dentro da imagem, em {0}, {1}.</value>
+  </data>
 </root>

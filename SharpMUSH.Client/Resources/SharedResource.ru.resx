@@ -7416,4 +7416,40 @@
   <data name="NavMapPlaceRoomHere" xml:space="preserve">
     <value>Поставить комнату</value>
   </data>
+  <data name="NavMapMoveHint" xml:space="preserve">
+    <value>Перетащите комнату, чтобы переместить её, или угол выбранной комнаты, чтобы изменить её размер. С клавиатуры стрелки двигают выбранную комнату (с Shift дальше), а Ctrl+Shift со стрелками меняет её размер.</value>
+  </data>
+  <data name="NavMapMoveHintHex" xml:space="preserve">
+    <value>Перетащите комнату, чтобы переместить её на другой шестиугольник. С клавиатуры стрелки двигают выбранную комнату на следующий шестиугольник в эту сторону; где в эту сторону два шестиугольника, Shift выбирает другой.</value>
+  </data>
+  <data name="NavMapMovedTo" xml:space="preserve">
+    <value>{0} перемещена в {1}, {2}.</value>
+  </data>
+  <data name="NavMapResizedTo" xml:space="preserve">
+    <value>{0} теперь {1} на {2}.</value>
+  </data>
+  <data name="NavMapAtEdge" xml:space="preserve">
+    <value>Её остановил край картинки.</value>
+  </data>
+  <data name="NavMapTaken" xml:space="preserve">
+    <value>{0} не может встать туда: эти клетки занимает другая комната.</value>
+  </data>
+  <data name="NavMapTakenHex" xml:space="preserve">
+    <value>{0} не может встать туда: на этом шестиугольнике стоит другая комната.</value>
+  </data>
+  <data name="NavMapNoResizeHex" xml:space="preserve">
+    <value>На шестиугольной карте каждая комната занимает один шестиугольник, поэтому у {0} нет размера для изменения.</value>
+  </data>
+  <data name="NavMapOutside" xml:space="preserve">
+    <value>{0} сохранена за краем картинки, поэтому карта рисует её на краю.</value>
+  </data>
+  <data name="NavMapBringInside" xml:space="preserve">
+    <value>Переместить на картинку</value>
+  </data>
+  <data name="NavMapOutsideCheck" xml:space="preserve">
+    <value>{0} сохранена за краем картинки.</value>
+  </data>
+  <data name="NavMapKeptInside" xml:space="preserve">
+    <value>Оставлена на картинке, в {0}, {1}.</value>
+  </data>
 </root>

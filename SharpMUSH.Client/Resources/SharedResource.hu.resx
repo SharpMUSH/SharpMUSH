@@ -7416,4 +7416,40 @@
   <data name="NavMapPlaceRoomHere" xml:space="preserve">
     <value>Szoba elhelyezése</value>
   </data>
+  <data name="NavMapMoveHint" xml:space="preserve">
+    <value>Húzz egy szobát az áthelyezéséhez, vagy a kiválasztott szoba egy sarkát az átméretezéséhez. Billentyűzettel a nyilak mozgatják a kiválasztott szobát (Shifttel messzebb), a Ctrl+Shift a nyilakkal átméretezi.</value>
+  </data>
+  <data name="NavMapMoveHintHex" xml:space="preserve">
+    <value>Húzz egy szobát, hogy másik hatszögre helyezd. Billentyűzettel a nyilak a kiválasztott szobát az abba az irányba eső következő hatszögre viszik; ahol abba az irányba két hatszög esik, a Shift a másikat választja.</value>
+  </data>
+  <data name="NavMapMovedTo" xml:space="preserve">
+    <value>{0} áthelyezve ide: {1}, {2}.</value>
+  </data>
+  <data name="NavMapResizedTo" xml:space="preserve">
+    <value>{0} mérete most {1} × {2}.</value>
+  </data>
+  <data name="NavMapAtEdge" xml:space="preserve">
+    <value>A kép széle megállította.</value>
+  </data>
+  <data name="NavMapTaken" xml:space="preserve">
+    <value>{0} nem kerülhet oda: azokat a mezőket egy másik szoba foglalja.</value>
+  </data>
+  <data name="NavMapTakenHex" xml:space="preserve">
+    <value>{0} nem kerülhet oda: azon a hatszögön egy másik szoba áll.</value>
+  </data>
+  <data name="NavMapNoResizeHex" xml:space="preserve">
+    <value>A hatszöges térképen minden szoba egy hatszög, így {0} méretét nem lehet változtatni.</value>
+  </data>
+  <data name="NavMapOutside" xml:space="preserve">
+    <value>{0} a kép szélén túl van tárolva, ezért a térkép a szélére rajzolja.</value>
+  </data>
+  <data name="NavMapBringInside" xml:space="preserve">
+    <value>Áthelyezés a képre</value>
+  </data>
+  <data name="NavMapOutsideCheck" xml:space="preserve">
+    <value>{0} a kép szélén túl van tárolva.</value>
+  </data>
+  <data name="NavMapKeptInside" xml:space="preserve">
+    <value>A képen belül tartva, itt: {0}, {1}.</value>
+  </data>
 </root>

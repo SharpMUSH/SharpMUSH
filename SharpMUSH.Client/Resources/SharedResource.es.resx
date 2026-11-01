@@ -7416,4 +7416,40 @@
   <data name="NavMapPlaceRoomHere" xml:space="preserve">
     <value>Colocar sala</value>
   </data>
+  <data name="NavMapMoveHint" xml:space="preserve">
+    <value>Arrastra una sala para moverla, o una esquina de la sala elegida para cambiar su tamaño. Con el teclado, las flechas mueven la sala elegida (más lejos con Mayús) y Ctrl+Mayús con las flechas cambia su tamaño.</value>
+  </data>
+  <data name="NavMapMoveHintHex" xml:space="preserve">
+    <value>Arrastra una sala para moverla a otro hexágono. Con el teclado, las flechas mueven la sala elegida al hexágono siguiente en esa dirección; donde hay dos hexágonos en esa dirección, Mayús toma el otro.</value>
+  </data>
+  <data name="NavMapMovedTo" xml:space="preserve">
+    <value>{0} movida a {1}, {2}.</value>
+  </data>
+  <data name="NavMapResizedTo" xml:space="preserve">
+    <value>{0} ahora mide {1} por {2}.</value>
+  </data>
+  <data name="NavMapAtEdge" xml:space="preserve">
+    <value>El borde de la imagen la detuvo.</value>
+  </data>
+  <data name="NavMapTaken" xml:space="preserve">
+    <value>{0} no puede ir allí: otra sala ocupa esas casillas.</value>
+  </data>
+  <data name="NavMapTakenHex" xml:space="preserve">
+    <value>{0} no puede ir allí: otra sala está en ese hexágono.</value>
+  </data>
+  <data name="NavMapNoResizeHex" xml:space="preserve">
+    <value>En un mapa hexagonal cada sala ocupa un hexágono, así que {0} no tiene tamaño que cambiar.</value>
+  </data>
+  <data name="NavMapOutside" xml:space="preserve">
+    <value>{0} está guardada fuera del borde de la imagen, así que el mapa la dibuja en el borde.</value>
+  </data>
+  <data name="NavMapBringInside" xml:space="preserve">
+    <value>Mover dentro de la imagen</value>
+  </data>
+  <data name="NavMapOutsideCheck" xml:space="preserve">
+    <value>{0} está guardada fuera del borde de la imagen.</value>
+  </data>
+  <data name="NavMapKeptInside" xml:space="preserve">
+    <value>Mantenida dentro de la imagen, en {0}, {1}.</value>
+  </data>
 </root>

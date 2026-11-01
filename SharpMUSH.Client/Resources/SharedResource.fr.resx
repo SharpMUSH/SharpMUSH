@@ -6725,4 +6725,40 @@
   <data name="NavMapPlaceRoomHere" xml:space="preserve">
     <value>Placer la salle</value>
   </data>
+  <data name="NavMapMoveHint" xml:space="preserve">
+    <value>Faites glisser une pièce pour la déplacer, ou un coin de la pièce choisie pour la redimensionner. Au clavier, les flèches déplacent la pièce choisie (plus loin avec Maj) et Ctrl+Maj avec les flèches la redimensionne.</value>
+  </data>
+  <data name="NavMapMoveHintHex" xml:space="preserve">
+    <value>Faites glisser une pièce pour la déplacer vers un autre hexagone. Au clavier, les flèches déplacent la pièce choisie vers l'hexagone suivant dans cette direction ; là où deux hexagones se trouvent dans cette direction, Maj prend l'autre.</value>
+  </data>
+  <data name="NavMapMovedTo" xml:space="preserve">
+    <value>{0} déplacée en {1}, {2}.</value>
+  </data>
+  <data name="NavMapResizedTo" xml:space="preserve">
+    <value>{0} mesure maintenant {1} sur {2}.</value>
+  </data>
+  <data name="NavMapAtEdge" xml:space="preserve">
+    <value>Le bord de l'image l'a arrêtée.</value>
+  </data>
+  <data name="NavMapTaken" xml:space="preserve">
+    <value>{0} ne peut pas aller là : une autre pièce occupe ces cases.</value>
+  </data>
+  <data name="NavMapTakenHex" xml:space="preserve">
+    <value>{0} ne peut pas aller là : une autre pièce occupe cet hexagone.</value>
+  </data>
+  <data name="NavMapNoResizeHex" xml:space="preserve">
+    <value>Sur une carte hexagonale, chaque pièce occupe un hexagone : {0} n'a pas de taille à changer.</value>
+  </data>
+  <data name="NavMapOutside" xml:space="preserve">
+    <value>{0} est enregistrée au-delà du bord de l'image ; la carte la dessine sur le bord.</value>
+  </data>
+  <data name="NavMapBringInside" xml:space="preserve">
+    <value>Ramener dans l'image</value>
+  </data>
+  <data name="NavMapOutsideCheck" xml:space="preserve">
+    <value>{0} est enregistrée au-delà du bord de l'image.</value>
+  </data>
+  <data name="NavMapKeptInside" xml:space="preserve">
+    <value>Gardée dans l'image, en {0}, {1}.</value>
+  </data>
 </root>

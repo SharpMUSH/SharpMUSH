@@ -395,3 +395,107 @@ span.map-room-icon {
 	hyphens: auto;
 	-webkit-line-clamp: 2;
 }
+
+/* Editing a picture: the picture is the board. What lies past its edge is shaded, and the edge is drawn. */
+.map-outside {
+	fill: color-mix(in srgb, var(--surface-3) 70%, transparent);
+	pointer-events: none;
+}
+
+.map-edge-line {
+	fill: none;
+	stroke: var(--text-dim);
+	stroke-width: 1.5;
+	stroke-dasharray: 6 5;
+	pointer-events: none;
+}
+
+/* A room stored past the picture's edge, drawn on it: a builder sees it needs moving. */
+.map-box--outside {
+	stroke: var(--hue-orange);
+	stroke-width: 2.5;
+	stroke-dasharray: 4 3;
+}
+
+/* A room a builder may move: a pointer drags it, so a finger does too rather than scrolling the map. */
+.map-room--movable {
+	cursor: move;
+	touch-action: none;
+}
+
+/* While a room is dragged, where it was stays as a dashed outline and the room follows the pointer as a ghost. */
+.map-box--origin {
+	fill: transparent;
+	stroke: var(--text-faint);
+	stroke-dasharray: 5 4;
+}
+
+.map-room--dragging {
+	z-index: 2;
+	border: 2px solid var(--accent);
+	background: color-mix(in srgb, var(--accent) 12%, transparent);
+	box-shadow: var(--shadow);
+	cursor: grabbing;
+}
+
+.map-frame--editing-drag .map-handle {
+	visibility: hidden;
+}
+
+.map-frame--editing-drag,
+.map-frame--editing-drag .map-room {
+	cursor: grabbing;
+}
+
+/* The chosen room's corners: drawn 10px, with 24px around each to grab (WCAG 2.5.8). */
+.map-handle {
+	position: absolute;
+	z-index: 1;
+	width: 24px;
+	height: 24px;
+	transform: translate(-50%, -50%);
+	touch-action: none;
+}
+
+.map-handle::after {
+	content: "";
+	position: absolute;
+	inset: 7px;
+	border: 2px solid var(--accent);
+	border-radius: 2px;
+	background: var(--surface);
+}
+
+.map-handle:hover::after {
+	background: var(--accent);
+}
+
+.map-handle--nw,
+.map-handle--se {
+	cursor: nwse-resize;
+}
+
+.map-handle--ne,
+.map-handle--sw {
+	cursor: nesw-resize;
+}
+
+/* Where a dragged room will land, or the size it is being given, under it. */
+::deep .map-drag-readout {
+	position: absolute;
+	z-index: 3;
+	transform: translateX(-50%);
+	padding: 2px 10px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--surface-2);
+	color: var(--text);
+	font: 12px/1.5 var(--font-ui);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+	pointer-events: none;
+}
+
+.map-box--outside.map-box--selected {
+	stroke-width: 3.5;
+}

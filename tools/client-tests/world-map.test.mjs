@@ -32,7 +32,7 @@ function load(styles = new Map(), reducedMotion = false) {
         setTimeout: () => {},
         frames,
     });
-    const context = vm.createContext({ window, getComputedStyle: el => styles.get(el) ?? {} });
+    const context = vm.createContext({ window, getComputedStyle: el => styles.get(el) ?? {}, CSS: { escape: text => text }, document: { activeElement: null, createElement: () => ({ style: {}, setAttribute() {}, remove() {} }) } });
     vm.runInContext(readFileSync(new URL('js/portal-interop.js', root), 'utf8'), context, { filename: 'js/portal-interop.js' });
     window.SharpMUSH.window = window;
     return window.SharpMUSH;
@@ -309,4 +309,139 @@ test('a resize of the frame or the drawing reports the view, and disposing stops
     assert.equal(timers.size, 0);
     assert.equal(observers[0].disconnected, true);
     assert.deepEqual(el.listeners.scroll, []);
+});
+
+// The rooms of a map frame for mapEdit: buttons at (left, top) in the figure, `width` x `height`, with their data
+// attributes, inside a figure carrying the drag's snap, picture and origin.
+function editFrame(rooms, figureData = {}) {
+    const figure = { attrs: { 'data-origin': '0,0,1', ...figureData }, getAttribute(name) { return this.attrs[name] ?? null; }, appendChild() {} };
+    figure.closest = () => figure;
+    const els = rooms.map(room => {
+        const attrs = { 'data-room-id': room.id, 'aria-pressed': room.chosen ? 'true' : 'false', style: 'left: 1%;', ...room.attrs };
+        const el = {
+            attrs, offsetLeft: room.left, offsetTop: room.top, offsetWidth: room.width, offsetHeight: room.height, offsetParent: figure,
+            style: {}, focused: false,
+            classList: { add() {}, remove() {} },
+            getAttribute: name => attrs[name] ?? null,
+            hasAttribute: name => name in attrs,
+            setAttribute(name, value) { attrs[name] = value; this.style = {}; },
+            removeAttribute(name) { delete attrs[name]; },
+            getBoundingClientRect: () => ({ left: room.left, top: room.top, width: room.width, height: room.height }),
+            focus() { el.focused = true; },
+            scrollIntoView() {},
+        };
+        el.closest = selector => selector.includes('map-figure') ? figure
+            : selector.includes('data-map-handle') ? null
+            : selector.includes('data-map-drag') ? ('data-map-drag' in attrs ? el : null)
+            : el;
+        return el;
+    });
+    const el = listening({ classList: { add() {}, remove() {} } });
+    el.contains = () => true;
+    el.querySelectorAll = () => ({ forEach: fn => els.forEach(fn) });
+    el.querySelector = selector => els.find(room => selector.includes(`"${room.attrs['data-room-id']}"`) && selector.startsWith('[data-room-id')) ?? null;
+    return { el, els };
+}
+
+function asyncRecorder() {
+    const calls = [];
+    return { calls, invokeMethodAsync: (name, ...args) => { calls.push([name, ...args]); return Promise.resolve(); } };
+}
+
+test('an arrow key on a room goes to the nearest room that way, preferring one straight ahead', () => {
+    const map = load();
+    const { el, els } = editFrame([
+        { id: '#1', left: 0, top: 0, width: 80, height: 80 },
+        { id: '#2', left: 200, top: 120, width: 80, height: 80 },
+        { id: '#3', left: 300, top: 0, width: 80, height: 80 },
+    ]);
+    map.mapEdit(el, asyncRecorder());
+
+    const key = event({ key: 'ArrowRight', target: els[0] });
+    el.fire('keydown', key);
+
+    assert.equal(els[2].focused, true, 'the room straight east, though the other is nearer');
+    assert.equal(key.prevented, true);
+});
+
+test('an arrow key on the chosen room a builder may move asks to move it, and Ctrl+Shift to resize it', () => {
+    const map = load();
+    const dotNet = asyncRecorder();
+    const { el, els } = editFrame([{ id: '#1', left: 0, top: 0, width: 80, height: 80, chosen: true, attrs: { 'data-map-drag': 'box' } }]);
+    map.mapEdit(el, dotNet);
+
+    el.fire('keydown', event({ key: 'ArrowUp', target: els[0], shiftKey: true }));
+    el.fire('keydown', event({ key: 'ArrowRight', target: els[0], shiftKey: true, ctrlKey: true }));
+    el.fire('keydown', event({ key: 'ArrowLeft', target: els[0], altKey: true }));
+
+    assert.deepEqual(dotNet.calls, [['Nudged', '#1', 0, -1, true, false], ['Nudged', '#1', 1, 0, false, true]],
+        'Alt+arrow is the browser\'s Back and is left alone');
+});
+
+test('a dragged room stays inside the picture and lands where it was let go', () => {
+    const map = load();
+    const dotNet = asyncRecorder();
+    const { el, els } = editFrame([{ id: '#1', left: 100, top: 100, width: 80, height: 60, attrs: { 'data-map-drag': 'box' } }],
+        { 'data-snap': '0', 'data-picture': '24,24,400,300' });
+    map.mapEdit(el, dotNet);
+
+    el.fire('pointerdown', event({ button: 0, pointerId: 1, clientX: 120, clientY: 120, target: els[0] }));
+    map.window.fire('pointermove', event({ pointerId: 1, clientX: 900, clientY: 150 }));
+    map.window.fire('pointerup', event({ pointerId: 1 }));
+
+    assert.deepEqual(dotNet.calls, [['Dragged', '#1', 244, 30]], 'its east edge stops at the picture\'s, 24 + 400');
+    assert.equal(els[0].attrs.style, 'left: 1%;', 'the page draws it where it lands; the drag leaves no style of its own');
+});
+
+test('a drag on a square map snaps to whole cells, and Escape puts the room back', () => {
+    const map = load();
+    const dotNet = asyncRecorder();
+    const { el, els } = editFrame([{ id: '#1', left: 0, top: 0, width: 96, height: 96, attrs: { 'data-map-drag': 'box' } }], { 'data-snap': '96' });
+    map.mapEdit(el, dotNet);
+
+    el.fire('pointerdown', event({ button: 0, pointerId: 1, clientX: 10, clientY: 10, target: els[0] }));
+    map.window.fire('pointermove', event({ pointerId: 1, clientX: 160, clientY: 20 }));
+    map.window.fire('pointerup', event({ pointerId: 1 }));
+    el.fire('pointerdown', event({ button: 0, pointerId: 2, clientX: 10, clientY: 10, target: els[0] }));
+    map.window.fire('pointermove', event({ pointerId: 2, clientX: 400, clientY: 10 }));
+    map.window.fire('keydown', event({ key: 'Escape' }));
+    map.window.fire('pointerup', event({ pointerId: 2 }));
+
+    assert.deepEqual(dotNet.calls, [['Dragged', '#1', 192, 0]]);
+});
+
+test('a second finger during a drag is a pinch: the room goes back and nothing is planned', () => {
+    const map = load();
+    const dotNet = asyncRecorder();
+    const { el, els } = editFrame([{ id: '#1', left: 0, top: 0, width: 96, height: 96, attrs: { 'data-map-drag': 'box' } }], { 'data-snap': '96' });
+    map.mapEdit(el, dotNet);
+
+    el.fire('pointerdown', event({ button: 0, pointerId: 1, clientX: 10, clientY: 10, target: els[0] }));
+    map.window.fire('pointermove', event({ pointerId: 1, clientX: 160, clientY: 20 }));
+    el.fire('pointerdown', event({ button: 0, pointerId: 2, clientX: 300, clientY: 300, target: els[0] }));
+    map.window.fire('pointermove', event({ pointerId: 1, clientX: 400, clientY: 20 }));
+    map.window.fire('pointerup', event({ pointerId: 1 }));
+
+    assert.deepEqual(dotNet.calls, []);
+    assert.equal(els[0].attrs.style, 'left: 1%;');
+});
+
+test('choosing a room shows the top of the builder panel below the map, and no more', () => {
+    const scroller = { scrollHeight: 3000, clientHeight: 900, parentElement: null, getBoundingClientRect: () => ({ top: 0, bottom: 900 }), scrollBy(to) { this.scrolled = to; } };
+    const panel = { parentElement: scroller, getBoundingClientRect: () => ({ top: 1400 }) };
+    const map = load(new Map([[scroller, { overflowY: 'auto' }]]));
+
+    map.mapPanelIntoView(panel);
+
+    assert.deepEqual([scroller.scrolled.top, scroller.scrolled.behavior], [740, 'smooth'], 'its top 240 pixels into view; the map above stays');
+});
+
+test('a builder panel already in view does not move the page', () => {
+    const scroller = { scrollHeight: 3000, clientHeight: 900, parentElement: null, getBoundingClientRect: () => ({ top: 0, bottom: 900 }), scrollBy(to) { this.scrolled = to; } };
+    const panel = { parentElement: scroller, getBoundingClientRect: () => ({ top: 500 }) };
+    const map = load(new Map([[scroller, { overflowY: 'auto' }]]));
+
+    map.mapPanelIntoView(panel);
+
+    assert.equal(scroller.scrolled, undefined);
 });

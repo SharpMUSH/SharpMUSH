@@ -10985,4 +10985,40 @@
   <data name="NavMapPlaceRoomHere" xml:space="preserve">
     <value>Place room</value>
   </data>
+  <data name="NavMapMoveHint" xml:space="preserve">
+    <value>Drag a room to move it, or a corner of the chosen room to resize it. With the keyboard, the arrow keys move the chosen room (with Shift, further) and Ctrl+Shift with the arrow keys resizes it.</value>
+  </data>
+  <data name="NavMapMoveHintHex" xml:space="preserve">
+    <value>Drag a room to move it to another hexagon. With the keyboard, the arrow keys move the chosen room to the next hexagon that way; where two hexagons lie that way, Shift takes the other one.</value>
+  </data>
+  <data name="NavMapMovedTo" xml:space="preserve">
+    <value>{0} moved to {1}, {2}.</value>
+  </data>
+  <data name="NavMapResizedTo" xml:space="preserve">
+    <value>{0} is now {1} by {2}.</value>
+  </data>
+  <data name="NavMapAtEdge" xml:space="preserve">
+    <value>The picture's edge stopped it.</value>
+  </data>
+  <data name="NavMapTaken" xml:space="preserve">
+    <value>{0} cannot go there: another room covers those cells.</value>
+  </data>
+  <data name="NavMapTakenHex" xml:space="preserve">
+    <value>{0} cannot go there: another room stands on that hexagon.</value>
+  </data>
+  <data name="NavMapNoResizeHex" xml:space="preserve">
+    <value>Rooms on a hex map are one hexagon each, so {0} has no size to change.</value>
+  </data>
+  <data name="NavMapOutside" xml:space="preserve">
+    <value>{0} is stored past the picture's edge, so the map draws it on the edge.</value>
+  </data>
+  <data name="NavMapBringInside" xml:space="preserve">
+    <value>Move inside the picture</value>
+  </data>
+  <data name="NavMapOutsideCheck" xml:space="preserve">
+    <value>{0} is stored past the picture's edge.</value>
+  </data>
+  <data name="NavMapKeptInside" xml:space="preserve">
+    <value>Kept inside the picture, at {0}, {1}.</value>
+  </data>
 </root>

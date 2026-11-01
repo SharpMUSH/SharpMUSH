@@ -7416,4 +7416,40 @@
   <data name="NavMapPlaceRoomHere" xml:space="preserve">
     <value>Plasează camera</value>
   </data>
+  <data name="NavMapMoveHint" xml:space="preserve">
+    <value>Trage o cameră pentru a o muta sau un colț al camerei alese pentru a-i schimba mărimea. De la tastatură, săgețile mută camera aleasă (mai departe cu Shift), iar Ctrl+Shift cu săgețile îi schimbă mărimea.</value>
+  </data>
+  <data name="NavMapMoveHintHex" xml:space="preserve">
+    <value>Trage o cameră pentru a o muta pe alt hexagon. De la tastatură, săgețile mută camera aleasă pe hexagonul următor în acea direcție; acolo unde în acea direcție sunt două hexagoane, Shift îl ia pe celălalt.</value>
+  </data>
+  <data name="NavMapMovedTo" xml:space="preserve">
+    <value>Camera {0} a fost mutată la {1}, {2}.</value>
+  </data>
+  <data name="NavMapResizedTo" xml:space="preserve">
+    <value>{0} are acum {1} pe {2}.</value>
+  </data>
+  <data name="NavMapAtEdge" xml:space="preserve">
+    <value>Marginea imaginii a oprit-o.</value>
+  </data>
+  <data name="NavMapTaken" xml:space="preserve">
+    <value>{0} nu poate merge acolo: altă cameră acoperă acele celule.</value>
+  </data>
+  <data name="NavMapTakenHex" xml:space="preserve">
+    <value>{0} nu poate merge acolo: altă cameră stă pe acel hexagon.</value>
+  </data>
+  <data name="NavMapNoResizeHex" xml:space="preserve">
+    <value>Pe o hartă hexagonală fiecare cameră ocupă un hexagon, deci {0} nu are mărime de schimbat.</value>
+  </data>
+  <data name="NavMapOutside" xml:space="preserve">
+    <value>{0} este salvată dincolo de marginea imaginii, așa că harta o desenează pe margine.</value>
+  </data>
+  <data name="NavMapBringInside" xml:space="preserve">
+    <value>Mută în imagine</value>
+  </data>
+  <data name="NavMapOutsideCheck" xml:space="preserve">
+    <value>{0} este salvată dincolo de marginea imaginii.</value>
+  </data>
+  <data name="NavMapKeptInside" xml:space="preserve">
+    <value>Păstrată în imagine, la {0}, {1}.</value>
+  </data>
 </root>

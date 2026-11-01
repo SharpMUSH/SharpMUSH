@@ -7416,4 +7416,40 @@
   <data name="NavMapPlaceRoomHere" xml:space="preserve">
     <value>Raum platzieren</value>
   </data>
+  <data name="NavMapMoveHint" xml:space="preserve">
+    <value>Ziehe einen Raum, um ihn zu verschieben, oder eine Ecke des gewählten Raums, um seine Größe zu ändern. Mit der Tastatur verschieben die Pfeiltasten den gewählten Raum (mit Umschalt weiter), Strg+Umschalt mit den Pfeiltasten ändert seine Größe.</value>
+  </data>
+  <data name="NavMapMoveHintHex" xml:space="preserve">
+    <value>Ziehe einen Raum, um ihn auf ein anderes Sechseck zu verschieben. Mit der Tastatur bewegen die Pfeiltasten den gewählten Raum zum nächsten Sechseck in diese Richtung; liegen in dieser Richtung zwei Sechsecke, nimmt Umschalt das andere.</value>
+  </data>
+  <data name="NavMapMovedTo" xml:space="preserve">
+    <value>{0} verschoben nach {1}, {2}.</value>
+  </data>
+  <data name="NavMapResizedTo" xml:space="preserve">
+    <value>{0} ist jetzt {1} mal {2}.</value>
+  </data>
+  <data name="NavMapAtEdge" xml:space="preserve">
+    <value>Der Rand des Bildes hat ihn aufgehalten.</value>
+  </data>
+  <data name="NavMapTaken" xml:space="preserve">
+    <value>{0} kann nicht dorthin: Ein anderer Raum belegt diese Felder.</value>
+  </data>
+  <data name="NavMapTakenHex" xml:space="preserve">
+    <value>{0} kann nicht dorthin: Auf diesem Sechseck steht ein anderer Raum.</value>
+  </data>
+  <data name="NavMapNoResizeHex" xml:space="preserve">
+    <value>Räume auf einer Sechseckkarte sind je ein Sechseck groß, also hat {0} keine Größe zum Ändern.</value>
+  </data>
+  <data name="NavMapOutside" xml:space="preserve">
+    <value>{0} ist jenseits des Bildrands gespeichert, daher zeichnet die Karte ihn am Rand.</value>
+  </data>
+  <data name="NavMapBringInside" xml:space="preserve">
+    <value>Ins Bild verschieben</value>
+  </data>
+  <data name="NavMapOutsideCheck" xml:space="preserve">
+    <value>{0} ist jenseits des Bildrands gespeichert.</value>
+  </data>
+  <data name="NavMapKeptInside" xml:space="preserve">
+    <value>Im Bild gehalten, bei {0}, {1}.</value>
+  </data>
 </root>
