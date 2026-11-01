@@ -17,8 +17,9 @@ on a map of their steps and reviewed. `duties` serves its routes on the HTTP han
 
 | Command | What |
 |---|---|
-| `+duty` | Your party's duty, or the duties you can start and the parties gathering |
-| `+duty <duty>` | One duty, with the rewards you have received and the challenges you have seen |
+| `+duty/list`, `+duties` | The duties you can start, with your progress, and the parties gathering |
+| `+duty` | Your party's duty, or the list when you are not on one |
+| `+duty <duty>` | One duty: its description, the rewards you have received, the challenges you have seen and how much of it you have explored |
 | `+duty/start <duty>` | Gather a party |
 | `+duty/join <number>` | Join a party that is gathering |
 | `+duty/go` | Leader: set out, or go on from a narration |
@@ -63,6 +64,14 @@ answers `` FN`DUTIES`TRAITS ``, `` FN`DUTIES`CHECK ``, `` FN`DUTIES`REWARDS `` a
 and optionally `` FN`DUTIES`TRAINED ``, `` FN`DUTIES`CAN `` and `` FN`DUTIES`FALLBACK ``. Every call gets
 its arguments by name (`%<roller>`, `%<trait>`, `%<difficulty>`, `%<mods>`, `%<context>`, `%<reward>`).
 `+help duty systems` describes each.
+
+## Extending +duty
+
+Any other bridge attaches `` EXTENSION`<NAME> `` to `{{duties/duties}}`, holding its object, to add
+switches (`` DO`<SWITCH> ``), options of a switch (`` FLAG`<SWITCH>`<OPTION> ``, typed
+`+duty/<switch>/<option>`) and to hear what happens to a party (`` ON`DUTIES`JOIN ``, `` ON`DUTIES`LINE ``,
+`` ON`DUTIES`FINISH ``). `duties-scene` uses them to play a duty in a scene. `+help duty extensions`
+describes each.
 
 ## Storage
 

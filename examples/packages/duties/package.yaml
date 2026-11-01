@@ -1,7 +1,7 @@
 format: "1.16"
 package: duties
 title: "Duties"
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Duties: short adventures a party plays through with +duty, from challenge to challenge. Everyone rolls at each challenge, the outcome picks the way on, and the steps nobody in the party has seen are favoured. Players write duties and submit them, a duty reviewer approves them, and staff choose which approved duties are on the active roster and when. The rolls come from a sheet system's bridge, such as duties-d20 or duties-fate."
 license: MIT
@@ -51,6 +51,16 @@ objects:
   #
   # A sheet system's bridge attaches PROVIDER`<NAME> here, holding its object. +config duties/system picks
   # one when several are installed. Without one, duties can be written but not checked or played.
+  #
+  # Any other bridge attaches EXTENSION`<NAME> here, holding its object, to add to +duty without duties
+  # knowing it (duties-scene is one). The extension object may hold:
+  #   DO`<SWITCH>          a switch duties does not have, triggered with player, arg and run (the player's
+  #                        party, or nothing)
+  #   FLAG`<SWITCH>`<FLAG> an option of a switch, +duty/<switch>/<flag>, triggered with player, arg and run
+  #                        once the switch has done its work
+  #   ON`DUTIES`JOIN       a member joined a party: run, member
+  #   ON`DUTIES`LINE       something happened to a party, in a line of prose: run, text
+  #   ON`DUTIES`FINISH     a party's run is over: run, why. RUN`<run> is gone by the time it runs.
   #
   # Trees: CMD`DUTY the command, DO`<SWITCH> one routine per switch, INC`NEED` the guards they share,
   # INC` the writes and the runner, FUN` the reads, FUN`SCREEN` the screens. DATA`CONFIG` the settings.
@@ -245,16 +255,22 @@ objects:
         REQ
 
       # ---- The command --------------------------------------------------------------
-      # %0 the switches and %1 what follows, exactly as typed. A switch names a DO` routine; a bare +duty
-      # shows the party's duty or the roster, +duty <id> one duty.
+      # %0 the switches and %1 what follows, exactly as typed. A switch names a DO` routine here or on an
+      # extension; a bare +duty shows the party's duty or the roster, +duty <id> one duty. Further switches
+      # are options an extension adds to the first, run once it has done its work.
       CMD`DUTY:
         value: |-
-          $(?is)^\+duty(/\S*)?(?\: +(.*))?$:think u(%!/FUN`PARSE,%1,%2); @assert hastype(%#,player)=@pemit %#=notice(DUTY,Only players take on duties.,warn); @assert cor(not(strlen(%q<sw>)),cand(regmatch(%q<sw>,^%[A-Z%]+$),hasattr(%!,DO`%q<sw>)))=@pemit %#=notice(DUTY,+duty has no /[lcstr(%q<sw>)] switch. +help duty lists them.,warn); @include %!/DO`[if(strlen(%q<sw>),%q<sw>,if(strlen(%q<arg>),SHOW,HOME))]
+          $(?is)^\+duty(/\S*)?(?\: +(.*))?$:think u(%!/FUN`PARSE,%1,%2); @assert hastype(%#,player)=@pemit %#=notice(DUTY,Only players take on duties.,warn); @assert cor(not(strlen(%q<sw>)),cand(regmatch(%q<sw>,^%[A-Z%]+$),cor(hasattr(%!,DO`%q<sw>),strlen(u(%!/FUN`EXTENSION,DO`%q<sw>)))))=@pemit %#=notice(DUTY,+duty has no /[lcstr(%q<sw>)] switch. +help duty lists them.,warn); @assert not(words(setr(badflags,squish(iter(%q<flags>,if(cand(regmatch(%i0,^%[A-Z%]+$),strlen(u(%!/FUN`EXTENSION,FLAG`%q<sw>`%i0))),,lcstr(%i0)))))))=@pemit %#=notice(DUTY,+duty/[lcstr(%q<sw>)] has no /[first(%q<badflags>)] option.,warn); @break not(hasattr(%!,DO`[firstof(%q<sw>,HOME)]))={@trigger/args [u(%!/FUN`EXTENSION,DO`%q<sw>)]/DO`%q<sw>=player,%#,arg,%q<arg>,run,u(%!/FUN`INRUN,%#)}; @include %!/DO`[if(strlen(%q<sw>),%q<sw>,if(strlen(%q<arg>),SHOW,HOME))]; @dolist/inline %q<flags>={@trigger/args [u(%!/FUN`EXTENSION,FLAG`%q<sw>`##)]/FLAG`%q<sw>`##=player,%#,arg,%q<arg>,run,u(%!/FUN`INRUN,%#)}
         flags: [regexp]
-      # Sets sw (the switch, upper case), arg, eq (1 with an =), lhs and rhs around the first =, p1 to p4 and
+      CMD`DUTIES:
+        value: |-
+          $(?is)^\+duties$:@assert hastype(%#,player)=@pemit %#=notice(DUTY,Only players take on duties.,warn); think u(%!/FUN`PARSE,/list,); @include %!/DO`LIST
+        flags: [regexp]
+      # Sets sw (the first switch, upper case), flags (any further switches, upper case), arg, eq (1 with an =), lhs and rhs around the first =, p1 to p4 and
       # pn the /-separated parts of lhs (lower case), me and pk (the player's objid and key), staff.
       FUN`PARSE: |-
-        setqm(sw,ucstr(trim(after(%0,/))),
+        setqm(sw,ucstr(trim(first(after(%0,/),/))),
+        flags,ucstr(trim(edit(rest(after(%0,/),/),/,%b))),
         arg,trim(%1),
         eq,strmatch(%1,*=*),
         lhs,trim(before(%1,=)),
@@ -298,14 +314,16 @@ objects:
       # ---- Playing ----------------------------------------------------------------------
       DO`HOME: |-
         @pemit %#=if(strlen(setr(home_run,u(%!/FUN`INRUN,%#))),u(%!/FUN`SCREEN`RUN,%q<home_run>,%q<me>),u(%!/FUN`SCREEN`ROSTER,%q<me>))
+      DO`LIST: |-
+        @pemit %#=u(%!/FUN`SCREEN`ROSTER,%q<me>)
       DO`SHOW: |-
         @include %!/INC`NEED`DUTY; @assert cor(get({{store}}/DUTY`%q<id>`LIVE),u(%!/FUN`CANEDIT,%#,%q<id>))=@pemit %#=notice(DUTY,There is no duty called %q<id>.,warn); @pemit %#=u(%!/FUN`SCREEN`DUTY,%q<id>,%q<me>)
       DO`START: |-
         think setq(p1,lcstr(%q<arg>)); @include %!/INC`NEED`DUTY; @include %!/INC`NEED`PROVIDER; @assert not(strlen(u(%!/FUN`INRUN,%#)))=@pemit %#=notice(DUTY,You are already on a duty. +duty shows it.,warn); @assert u(%!/FUN`ACTIVE,%q<id>)=@pemit %#=notice(DUTY,%q<id> is not on the active roster now.,warn); @assert u(%!/FUN`MAYTAKE,%q<pk>,%q<id>)=@pemit %#=notice(DUTY,You have finished %q<id> and it is done only once.,warn); think setq(run,add(firstof(get({{store}}/NEXTRUN),0),1)); &NEXTRUN {{store}}=%q<run>; &RUN`%q<run> {{store}}=%q<id>; &RUN`%q<run>`REV {{store}}=get({{store}}/DUTY`%q<id>`LIVE); &RUN`%q<run>`LEADER {{store}}=%q<me>; &RUN`%q<run>`MEMBERS {{store}}=%q<me>; &RUN`%q<run>`STATE {{store}}=lobby; &INRUN`%q<pk> {{store}}=%q<run>; think u(%!/FUN`RUNREGS,%q<run>); @pemit %#=notice(DUTY,You gather a party for [u(%!/FUN`TITLE,%q<root>)]. Others join with +duty/join %q<run>. +duty/go sets out once [get({{store}}/%q<root>`MIN)] [if(eq(get({{store}}/%q<root>`MIN),1),is,are)] here.,ok)
       DO`JOIN: |-
-        think setq(run,trim(%q<arg>)); @include %!/INC`NEED`PROVIDER; @assert cand(isint(%q<run>),hasattr({{store}},RUN`%q<run>))=@pemit %#=notice(DUTY,There is no party %q<run>. +duty lists the parties gathering.,warn); @assert not(strlen(u(%!/FUN`INRUN,%#)))=@pemit %#=notice(DUTY,You are already on a duty. +duty shows it.,warn); think u(%!/FUN`RUNREGS,%q<run>); @assert strmatch(%q<state>,lobby)=@pemit %#=notice(DUTY,Party %q<run> has already set out.,warn); @assert lt(words(%q<mem>),get({{store}}/%q<root>`MAX))=@pemit %#=notice(DUTY,Party %q<run> is full.,warn); @assert u(%!/FUN`MAYTAKE,%q<pk>,%q<id>)=@pemit %#=notice(DUTY,You have finished %q<id> and it is done only once.,warn); &RUN`%q<run>`MEMBERS {{store}}=%q<mem> %q<me>; &INRUN`%q<pk> {{store}}=%q<run>; @pemit/list %q<mem> %q<me>=notice(DUTY,name(%#) joins the party for [u(%!/FUN`TITLE,%q<root>)].,info)
+        think setq(run,trim(%q<arg>)); @include %!/INC`NEED`PROVIDER; @assert cand(isint(%q<run>),hasattr({{store}},RUN`%q<run>))=@pemit %#=notice(DUTY,There is no party %q<run>. +duty lists the parties gathering.,warn); @assert not(strlen(u(%!/FUN`INRUN,%#)))=@pemit %#=notice(DUTY,You are already on a duty. +duty shows it.,warn); think u(%!/FUN`RUNREGS,%q<run>); @assert strmatch(%q<state>,lobby)=@pemit %#=notice(DUTY,Party %q<run> has already set out.,warn); @assert lt(words(%q<mem>),get({{store}}/%q<root>`MAX))=@pemit %#=notice(DUTY,Party %q<run> is full.,warn); @assert u(%!/FUN`MAYTAKE,%q<pk>,%q<id>)=@pemit %#=notice(DUTY,You have finished %q<id> and it is done only once.,warn); &RUN`%q<run>`MEMBERS {{store}}=%q<mem> %q<me>; &INRUN`%q<pk> {{store}}=%q<run>; @pemit/list %q<mem> %q<me>=notice(DUTY,name(%#) joins the party for [u(%!/FUN`TITLE,%q<root>)].,info); @include/args %!/INC`RUN`EVENT=event,JOIN,member,%q<me>
       DO`GO: |-
-        @include %!/INC`NEED`RUN; @include %!/INC`NEED`LEADER; @break strmatch(%q<state>,lobby)={@assert gte(words(%q<mem>),get({{store}}/%q<root>`MIN))=@pemit %#=notice(DUTY,[u(%!/FUN`TITLE,%q<root>)] needs at least [get({{store}}/%q<root>`MIN)] in the party.,warn); &RUN`%q<run>`STATE {{store}}=play; think setq(next,get({{store}}/%q<root>`START)); @include %!/INC`RUN`ENTER}; @assert strmatch(%q<kind>,narration)=@pemit %#=notice(DUTY,Everyone rolls here first. Waiting on [itemize(iter(u(%!/FUN`WAITING,%q<run>),name(%i0),,|),|)].,warn); think setqm(count,words(%q<mem>),
+        @include %!/INC`NEED`RUN; @include %!/INC`NEED`LEADER; @break strmatch(%q<state>,lobby)={@assert gte(words(%q<mem>),get({{store}}/%q<root>`MIN))=@pemit %#=notice(DUTY,[u(%!/FUN`TITLE,%q<root>)] needs at least [get({{store}}/%q<root>`MIN)] in the party.,warn); &RUN`%q<run>`STATE {{store}}=play; @include/args %!/INC`RUN`EVENT=event,LINE,text,[itemize(iter(%q<mem>,name(%i0),,|),|)] set out on [u(%!/FUN`TITLE,%q<root>)].; think setq(next,get({{store}}/%q<root>`START)); @include %!/INC`RUN`ENTER}; @assert strmatch(%q<kind>,narration)=@pemit %#=notice(DUTY,Everyone rolls here first. Waiting on [itemize(iter(u(%!/FUN`WAITING,%q<run>),name(%i0),,|),|)].,warn); think setqm(count,words(%q<mem>),
         share,100,
         won,)[setq(next,u(%!/FUN`PICK,%q<root>,%q<node>,continue))]; @assert strlen(%q<next>)={@include/args %!/INC`RUN`FINISH=why,The way on is missing%, so the duty ends here.}; @include %!/INC`RUN`ENTER
       DO`TRY: |-
@@ -402,17 +420,17 @@ objects:
       # Enters step next: the screen for everyone, then a narration's or an end's rewards. An end finishes
       # the duty; reaching a successful one marks it done for each member.
       INC`RUN`ENTER: |-
-        think setq(node,%q<next>)[setq(kind,get({{store}}/%q<root>`N`%q<next>))]; &RUN`%q<run>`NODE {{store}}=%q<node>; &RUN`%q<run>`FRESH {{store}}=squish(iter(%q<mem>,if(hasattr({{store}},SEEN`[u(%!/FUN`KEY,%i0)]`%q<id>`%q<node>),,%i0))); &RUN`%q<run>`ROUND {{store}}=1; @wipe {{store}}/RUN`%q<run>`ROLL; @wipe {{store}}/RUN`%q<run>`LAST; @wipe {{store}}/RUN`%q<run>`OK; @wipe {{store}}/RUN`%q<run>`BAD; @dolist/inline %q<mem>={&SEEN`[u(%!/FUN`KEY,%i0)]`%q<id>`%q<node> {{store}}=secs()}; @dolist/inline %q<mem>={@pemit %i0=u(%!/FUN`SCREEN`RUN,%q<run>,%i0)}; @break strmatch(%q<kind>,challenge); think setqm(gnode,%q<node>,
+        think setq(node,%q<next>)[setq(kind,get({{store}}/%q<root>`N`%q<next>))]; &RUN`%q<run>`NODE {{store}}=%q<node>; &RUN`%q<run>`FRESH {{store}}=squish(iter(%q<mem>,if(hasattr({{store}},SEEN`[u(%!/FUN`KEY,%i0)]`%q<id>`%q<node>),,%i0))); &RUN`%q<run>`ROUND {{store}}=1; @wipe {{store}}/RUN`%q<run>`ROLL; @wipe {{store}}/RUN`%q<run>`LAST; @wipe {{store}}/RUN`%q<run>`OK; @wipe {{store}}/RUN`%q<run>`BAD; @dolist/inline %q<mem>={&SEEN`[u(%!/FUN`KEY,%i0)]`%q<id>`%q<node> {{store}}=secs()}; @dolist/inline %q<mem>={@pemit %i0=u(%!/FUN`SCREEN`RUN,%q<run>,%i0)}; @include/args %!/INC`RUN`EVENT=event,LINE,text,[u(%!/FUN`LINE`STEP,%q<root>,%q<node>)]; @break strmatch(%q<kind>,challenge); think setqm(gnode,%q<node>,
         gwho,%q<mem>); @include/nobreak %!/INC`RUN`GRANT; @assert strmatch(%q<kind>,end); @assert strmatch(get({{store}}/%q<root>`N`%q<node>`RESULT),success)={@include/args %!/INC`RUN`FINISH=why,The duty is over. It ends in failure.[u(%!/FUN`TALLY,%q<run>)]}; @dolist/inline %q<mem>={&DONE`[u(%!/FUN`KEY,%i0)]`%q<id> {{store}}=secs()}; @include/args %!/INC`RUN`FINISH=why,The duty is over. It ends in success.[u(%!/FUN`TALLY,%q<run>)]
       # %<roller> rolls %<opt> at the current challenge.
       INC`RUN`ROLL: |-
-        think setq(rk,u(%!/FUN`KEY,%<roller>))[setq(ctx,json(object,duty,json(string,%q<id>),run,%q<run>,node,json(string,%q<node>),option,json(string,%<opt>),round,get({{store}}/RUN`%q<run>`ROUND)))][setq(rtrait,if(strmatch(%<opt>,improvise),u(%!/FUN`IMPROVTRAIT,%<roller>,%q<ctx>),get({{store}}/%q<root>`N`%q<node>`O`%<opt>`TRAIT)))][setq(rdiff,if(strmatch(%<opt>,improvise),u(%!/FUN`IMPROVDIFF,%q<root>,%q<node>),get({{store}}/%q<root>`N`%q<node>`O`%<opt>`DIFF)))][setq(rres,uargs(%q<prov>/FN`DUTIES`CHECK,roller,%<roller>,trait,%q<rtrait>,difficulty,%q<rdiff>,mods,json(object,helpers,json(array),invokes,0),context,%q<ctx>))][setq(rtier,u(%!/FUN`TIER,json_query(%q<rres>,extract,$.tier)))][setq(rgood,u(%!/FUN`GOOD,%q<rtier>))]; &RUN`%q<run>`ROLL`%q<rk> {{store}}=%<opt>; &RUN`%q<run>`LAST`%q<rk> {{store}}=%<opt>; &RUN`%q<run>`LAST`%q<rk>`TIER {{store}}=%q<rtier>; &RUN`%q<run>`OK`%<opt> {{store}}=add(firstof(get({{store}}/RUN`%q<run>`OK`%<opt>),0),%q<rgood>); &RUN`%q<run>`BAD`%<opt> {{store}}=add(firstof(get({{store}}/RUN`%q<run>`BAD`%<opt>),0),not(%q<rgood>)); @pemit/list %q<mem>=notice(DUTY,name(%<roller>) tries [if(strmatch(%<opt>,improvise),Improvise,get({{store}}/%q<root>`N`%q<node>`O`%<opt>))] with [u(%!/FUN`TRAITLABEL,%q<rtrait>)] at %q<rdiff>: [json_query(%q<rres>,extract,$.text)] [badge(u(%!/FUN`TIERLABEL,%q<rtier>),if(%q<rgood>,ok,warn))],info)
+        think setq(rk,u(%!/FUN`KEY,%<roller>))[setq(ctx,json(object,duty,json(string,%q<id>),run,%q<run>,node,json(string,%q<node>),option,json(string,%<opt>),round,get({{store}}/RUN`%q<run>`ROUND)))][setq(rtrait,if(strmatch(%<opt>,improvise),u(%!/FUN`IMPROVTRAIT,%<roller>,%q<ctx>),get({{store}}/%q<root>`N`%q<node>`O`%<opt>`TRAIT)))][setq(rdiff,if(strmatch(%<opt>,improvise),u(%!/FUN`IMPROVDIFF,%q<root>,%q<node>),get({{store}}/%q<root>`N`%q<node>`O`%<opt>`DIFF)))][setq(rres,uargs(%q<prov>/FN`DUTIES`CHECK,roller,%<roller>,trait,%q<rtrait>,difficulty,%q<rdiff>,mods,json(object,helpers,json(array),invokes,0),context,%q<ctx>))][setq(rtier,u(%!/FUN`TIER,json_query(%q<rres>,extract,$.tier)))][setq(rgood,u(%!/FUN`GOOD,%q<rtier>))]; &RUN`%q<run>`ROLL`%q<rk> {{store}}=%<opt>; &RUN`%q<run>`LAST`%q<rk> {{store}}=%<opt>; &RUN`%q<run>`LAST`%q<rk>`TIER {{store}}=%q<rtier>; &RUN`%q<run>`OK`%<opt> {{store}}=add(firstof(get({{store}}/RUN`%q<run>`OK`%<opt>),0),%q<rgood>); &RUN`%q<run>`BAD`%<opt> {{store}}=add(firstof(get({{store}}/RUN`%q<run>`BAD`%<opt>),0),not(%q<rgood>)); @pemit/list %q<mem>=notice(DUTY,name(%<roller>) tries [if(strmatch(%<opt>,improvise),Improvise,get({{store}}/%q<root>`N`%q<node>`O`%<opt>))] with [u(%!/FUN`TRAITLABEL,%q<rtrait>)] at %q<rdiff>: [json_query(%q<rres>,extract,$.text)] [badge(u(%!/FUN`TIERLABEL,%q<rtier>),if(%q<rgood>,ok,warn))],info); @include/args %!/INC`RUN`EVENT=event,LINE,text,[name(%<roller>)] tries [if(strmatch(%<opt>,improvise),Improvise,get({{store}}/%q<root>`N`%q<node>`O`%<opt>))] with [u(%!/FUN`TRAITLABEL,%q<rtrait>)] at %q<rdiff>: [json_query(%q<rres>,extract,$.text)] %([u(%!/FUN`TIERLABEL,%q<rtier>)]%)
       # When everyone has rolled: another round while an option rolled this round is still open, else the
       # challenge's outcome and the way on.
       INC`RUN`SETTLE: |-
         @assert cand(strmatch(get({{store}}/RUN`%q<run>`STATE),play),strmatch(%q<kind>,challenge),words(%q<mem>),not(words(u(%!/FUN`WAITING,%q<run>)))); think setq(open,squish(iter(u(%!/FUN`ROUNDOPTS,%q<run>),if(strmatch(u(%!/FUN`OPTSTATE,%q<run>,%q<root>,%q<node>,%i0),open),%i0)))); @break words(%q<open>)={&RUN`%q<run>`ROUND {{store}}=add(firstof(get({{store}}/RUN`%q<run>`ROUND),0),1); @wipe {{store}}/RUN`%q<run>`ROLL; @pemit/list %q<mem>=notice(DUTY,Round [get({{store}}/RUN`%q<run>`ROUND)]: [itemize(iter(%q<open>,get({{store}}/%q<root>`N`%q<node>`O`%i0),,|),|)] [if(eq(words(%q<open>),1),needs,need)] more rolls. Everyone rolls again with +duty/try <option>.,info)}; @include %!/INC`RUN`RESOLVE
       INC`RUN`RESOLVE: |-
-        think setq(tiers,iter(%q<mem>,u(%!/FUN`MEMBERTIER,%q<run>,%q<root>,%q<node>,%i0)))[setq(winners,squish(iter(%q<mem>,if(u(%!/FUN`GOOD,extract(%q<tiers>,inum(0),1)),%i0))))][setq(count,words(%q<winners>))][setq(share,round(mul(fdiv(%q<count>,words(%q<mem>)),100),0))][setq(won,squish(iter(u(%!/FUN`OPTIONS,%q<root>,%q<node>),if(strmatch(u(%!/FUN`OPTSTATE,%q<run>,%q<root>,%q<node>,%i0),won),%i0))))][setq(tier,u(%!/FUN`COMBINE,get({{store}}/%q<root>`N`%q<node>`COMBINE),%q<tiers>))][setq(next,u(%!/FUN`PICK,%q<root>,%q<node>,%q<tier>))]; @pemit/list %q<mem>=box([u(%!/FUN`OUTCOME,%q<root>,%q<node>,%q<tier>)]%r[rule()]%r[tone(muted,%q<count> of [words(%q<mem>)] succeeded.)],u(%!/FUN`TIERLABEL,%q<tier>)); &RUN`%q<run>`FACED {{store}}=inc(firstof(get({{store}}/RUN`%q<run>`FACED),0)); &RUN`%q<run>`WON {{store}}=add(firstof(get({{store}}/RUN`%q<run>`WON),0),u(%!/FUN`GOOD,%q<tier>)); think setqm(gnode,%q<node>,
+        think setq(tiers,iter(%q<mem>,u(%!/FUN`MEMBERTIER,%q<run>,%q<root>,%q<node>,%i0)))[setq(winners,squish(iter(%q<mem>,if(u(%!/FUN`GOOD,extract(%q<tiers>,inum(0),1)),%i0))))][setq(count,words(%q<winners>))][setq(share,round(mul(fdiv(%q<count>,words(%q<mem>)),100),0))][setq(won,squish(iter(u(%!/FUN`OPTIONS,%q<root>,%q<node>),if(strmatch(u(%!/FUN`OPTSTATE,%q<run>,%q<root>,%q<node>,%i0),won),%i0))))][setq(tier,u(%!/FUN`COMBINE,get({{store}}/%q<root>`N`%q<node>`COMBINE),%q<tiers>))][setq(next,u(%!/FUN`PICK,%q<root>,%q<node>,%q<tier>))]; @pemit/list %q<mem>=box([u(%!/FUN`OUTCOME,%q<root>,%q<node>,%q<tier>)]%r[rule()]%r[tone(muted,%q<count> of [words(%q<mem>)] succeeded.)],u(%!/FUN`TIERLABEL,%q<tier>)); @include/args %!/INC`RUN`EVENT=event,LINE,text,[u(%!/FUN`OUTCOME,%q<root>,%q<node>,%q<tier>)] %q<count> of [words(%q<mem>)] succeeded.; &RUN`%q<run>`FACED {{store}}=inc(firstof(get({{store}}/RUN`%q<run>`FACED),0)); &RUN`%q<run>`WON {{store}}=add(firstof(get({{store}}/RUN`%q<run>`WON),0),u(%!/FUN`GOOD,%q<tier>)); think setqm(gnode,%q<node>,
         gwho,%q<winners>); @include/nobreak %!/INC`RUN`GRANT; @assert strlen(%q<next>)={@include/args %!/INC`RUN`FINISH=why,The way on is missing%, so the duty ends here.}; @include %!/INC`RUN`ENTER
       # The rewards on step gnode for the characters in gwho.
       INC`RUN`GRANT: |-
@@ -426,8 +444,11 @@ objects:
       INC`RUN`NEWLEADER: |-
         @assert strmatch(%q<leader>,%q<gone>); think setq(leader,first(%q<mem>)); &RUN`%q<run>`LEADER {{store}}=%q<leader>; @pemit/list %q<mem>=notice(DUTY,name(%q<leader>) leads the party now.,info)
       # Ends run, telling everyone still on it %<why>.
+      # Tells the extensions what happened to party run: %<event> JOIN (member), LINE (text) or FINISH (why).
+      INC`RUN`EVENT: |-
+        @dolist/inline squish(iter(u(%!/FUN`EXTENSIONS),if(hasattr(%i0,ON`DUTIES`%<event>),%i0)))={@trigger/args ##/ON`DUTIES`%<event>=run,%q<run>,member,%<member>,text,%<text>,why,%<why>}
       INC`RUN`FINISH: |-
-        @pemit/list %q<mem>=notice(DUTY,%<why>,info); @dolist/inline %q<mem>={&INRUN`[u(%!/FUN`KEY,%i0)] {{store}}}; @wipe {{store}}/RUN`%q<run>
+        @include/args %!/INC`RUN`EVENT=event,FINISH,why,%<why>; @pemit/list %q<mem>=notice(DUTY,%<why>,info); @dolist/inline %q<mem>={&INRUN`[u(%!/FUN`KEY,%i0)] {{store}}}; @wipe {{store}}/RUN`%q<run>
 
       # ---- Reads -------------------------------------------------------------------------------
       # %0 a character: the key their records are filed under, #12:1790888816538 as 12_1790888816538.
@@ -495,6 +516,10 @@ objects:
         mem,get({{store}}/RUN`%0`MEMBERS),
         leader,get({{store}}/RUN`%0`LEADER),
         state,get({{store}}/RUN`%0`STATE))[setq(kind,get({{store}}/%q<root>`N`%q<node>))]
+      # %0 a root, %1 a step: the step as a line for an extension, its label and the text a party reads there
+      # the first time.
+      FUN`LINE`STEP: |-
+        trim([get({{store}}/%0`N`%1`LABEL)][if(cand(strlen(get({{store}}/%0`N`%1`LABEL)),strlen(get({{store}}/%0`N`%1`TEXT))),:%b)][get({{store}}/%0`N`%1`TEXT)])
       # %0 a run: the percentage of its challenges the party has succeeded at so far, 100 before the first.
       FUN`SUCCESS: |-
         if(gt(setr(su_f,firstof(get({{store}}/RUN`%0`FACED),0)),0),round(mul(fdiv(firstof(get({{store}}/RUN`%0`WON),0),%q<su_f>),100),0),100)
@@ -560,6 +585,12 @@ objects:
 
       # ---- The sheet system ------------------------------------------------------------------
       # The chosen system's object, or nothing: +config duties/system, else the only one installed.
+      # The objects the extensions attached, as objids.
+      FUN`EXTENSIONS: |-
+        squish(iter(lattr(%!/EXTENSION`*),if(isdbref(setr(ex_o,u(%!/%i0))),objid(%q<ex_o>))))
+      # %0 an attribute: the first extension object that holds it, or nothing.
+      FUN`EXTENSION: |-
+        first(squish(iter(u(%!/FUN`EXTENSIONS),if(hasattr(%i0,%0),%i0))))
       FUN`PROVIDER: |-
         setq(pv_name,v(DATA`CONFIG`SYSTEM))[setq(pv_attr,if(strlen(%q<pv_name>),if(hasattr(%!,PROVIDER`%q<pv_name>),PROVIDER`%q<pv_name>),if(eq(words(lattr(%!/PROVIDER`*)),1),lattr(%!/PROVIDER`*))))][if(strlen(%q<pv_attr>),if(isdbref(setr(pv_obj,u(%!/%q<pv_attr>))),objid(%q<pv_obj>)))]
       FUN`TRAITS: |-
@@ -598,6 +629,9 @@ objects:
         setq(rc_rows,lattr({{store}}/%2`N`*`W`*))[ladd(0 [iter(%q<rc_rows>,hasattr({{store}},GOT`%0`%1`[extract(%i0,5,1,`)]`[last(%i0,`)]))])] of [words(%q<rc_rows>)]
       FUN`SEENCOUNT: |-
         setq(sc_nodes,squish(iter(u(%!/FUN`NODES,%2),if(strmatch(get({{store}}/%2`N`%i0),challenge),%i0))))[ladd(0 [iter(%q<sc_nodes>,hasattr({{store}},SEEN`%0`%1`%i0))])] of [words(%q<sc_nodes>)]
+      # %0 a key, %1 a duty, %2 its approved root: the steps of it they have seen, as a whole percentage.
+      FUN`EXPLORED: |-
+        setq(ex_nodes,u(%!/FUN`NODES,%2))[if(words(%q<ex_nodes>),round(mul(fdiv(ladd(0 [iter(%q<ex_nodes>,hasattr({{store}},SEEN`%0`%1`%i0))]),words(%q<ex_nodes>)),100),0),0)]
       # %0 a key, %1 a duty, %2 its approved root: what they have learned, one line each.
       FUN`LEARNED: |-
         iter(squish(iter(lattr({{store}}/%2`N`*`W`*),if(cand(strmatch(get({{store}}/%i0),info),hasattr({{store}},GOT`%0`%1`[extract(%i0,5,1,`)]`[last(%i0,`)])),%i0))),json_query(get({{store}}/%i0`DETAILS),extract,$.text),,%r)
@@ -626,12 +660,12 @@ objects:
       # ---- Screens -----------------------------------------------------------------------------
       # %0 the viewer: the duties they can start, with their progress, and the parties gathering.
       FUN`SCREEN`ROSTER: |-
-        setq(sr_key,u(%!/FUN`KEY,%0))[setq(sr_ids,squish(iter(lattr({{store}}/DUTY`*),if(u(%!/FUN`ACTIVE,lcstr(last(%i0,`))),lcstr(last(%i0,`))))))][setq(sr_lobbies,squish(iter(lattr({{store}}/RUN`*),if(strmatch(get({{store}}/%i0`STATE),lobby),last(%i0,`)))))][box(if(words(%q<sr_ids>),ldatatable(json(object,delim,json(string,%r),nowrap,json(string,1%r3%r4%r5),grow,json(string,%r1%r%r%r)),tone(strong,Duty)%r[tone(strong,Title)]%r[tone(strong,Party)]%r[tone(strong,Rewards)]%r[tone(strong,Seen)],iter(%q<sr_ids>,u(%!/FUN`SCREEN`ROSTERROW,%i0,%q<sr_key>),,%*<|>),%*<|>),tone(muted,No duties are on the active roster now.))[if(words(%q<sr_lobbies>),%r[rule(Gathering)]%r[iter(%q<sr_lobbies>,Party %i0: [u(%!/FUN`TITLE,DUTY`[get({{store}}/RUN`%i0)]`R[get({{store}}/RUN`%i0`REV)])]%, led by [name(get({{store}}/RUN`%i0`LEADER))]%, [words(get({{store}}/RUN`%i0`MEMBERS))] in the party. +duty/join %i0,,%r)])][if(not(strlen(u(%!/FUN`PROVIDER))),%r[tone(muted,No sheet system is installed%, so duties cannot be played yet.)])]%r[rule()]%r[tone(muted,+duty <duty> to read one. +duty/start <duty> to gather a party.)],Duties)]
+        setq(sr_key,u(%!/FUN`KEY,%0))[setq(sr_ids,squish(iter(lattr({{store}}/DUTY`*),if(u(%!/FUN`ACTIVE,lcstr(last(%i0,`))),lcstr(last(%i0,`))))))][setq(sr_lobbies,squish(iter(lattr({{store}}/RUN`*),if(strmatch(get({{store}}/%i0`STATE),lobby),last(%i0,`)))))][box(if(words(%q<sr_ids>),ldatatable(json(object,delim,json(string,%r),nowrap,json(string,1%r3%r4%r5%r6),grow,json(string,%r1%r%r%r%r)),tone(strong,Duty)%r[tone(strong,Title)]%r[tone(strong,Party)]%r[tone(strong,Rewards)]%r[tone(strong,Challenges)]%r[tone(strong,Explored)],iter(%q<sr_ids>,u(%!/FUN`SCREEN`ROSTERROW,%i0,%q<sr_key>),,%*<|>),%*<|>),tone(muted,No duties are on the active roster now.))[if(words(%q<sr_lobbies>),%r[rule(Gathering)]%r[iter(%q<sr_lobbies>,Party %i0: [u(%!/FUN`TITLE,DUTY`[get({{store}}/RUN`%i0)]`R[get({{store}}/RUN`%i0`REV)])]%, led by [name(get({{store}}/RUN`%i0`LEADER))]%, [words(get({{store}}/RUN`%i0`MEMBERS))] in the party. +duty/join %i0,,%r)])][if(not(strlen(u(%!/FUN`PROVIDER))),%r[tone(muted,No sheet system is installed%, so duties cannot be played yet.)])]%r[rule()]%r[tone(muted,+duty <duty> to read one. +duty/start <duty> to gather a party.)],Duties)]
       FUN`SCREEN`ROSTERROW: |-
-        setq(rr_root,u(%!/FUN`LIVEROOT,%0))[unmark(%0%r[get({{store}}/%q<rr_root>)]%r[get({{store}}/%q<rr_root>`MIN)]-[get({{store}}/%q<rr_root>`MAX)]%r[u(%!/FUN`REWARDCOUNT,%1,%0,%q<rr_root>)]%r[u(%!/FUN`SEENCOUNT,%1,%0,%q<rr_root>)])]
+        setq(rr_root,u(%!/FUN`LIVEROOT,%0))[unmark(%0%r[get({{store}}/%q<rr_root>)]%r[get({{store}}/%q<rr_root>`MIN)]-[get({{store}}/%q<rr_root>`MAX)]%r[u(%!/FUN`REWARDCOUNT,%1,%0,%q<rr_root>)]%r[u(%!/FUN`SEENCOUNT,%1,%0,%q<rr_root>)]%r[u(%!/FUN`EXPLORED,%1,%0,%q<rr_root>)]%%)]
       # %0 a duty, %1 the viewer: one duty, with what the viewer has made of it.
       FUN`SCREEN`DUTY: |-
-        setq(sd_key,u(%!/FUN`KEY,%1))[setq(sd_root,firstof(u(%!/FUN`LIVEROOT,%0),u(%!/FUN`ROOT,%0)))][box(lfields(,Duty%rStatus%rParty%rDone%rRewards received%rChallenges seen,%0%r[u(%!/FUN`STATUSLABEL,%0)]%r[get({{store}}/%q<sd_root>`MIN)] to [get({{store}}/%q<sd_root>`MAX)] characters%r[if(strmatch(get({{store}}/%q<sd_root>`REPEAT),once),Once,As often as you like)]%r[u(%!/FUN`REWARDCOUNT,%q<sd_key>,%0,%q<sd_root>)]%r[u(%!/FUN`SEENCOUNT,%q<sd_key>,%0,%q<sd_root>)],%r)[if(strlen(get({{store}}/%q<sd_root>`DESC)),%r%r[get({{store}}/%q<sd_root>`DESC)])][if(cand(get({{store}}/DUTY`%0`NOTE),u(%!/FUN`CANEDIT,%1,%0)),%r%r[tone(warning,Reviewer's note: [get({{store}}/DUTY`%0`NOTE)])])]%r[rule()]%r[tone(muted,if(u(%!/FUN`ACTIVE,%0),+duty/start %0 gathers a party.,Not on the active roster now.)[if(u(%!/FUN`CANEDIT,%1,%0),%b+duty/steps %0 shows its steps.)])],get({{store}}/%q<sd_root>))]
+        setq(sd_key,u(%!/FUN`KEY,%1))[setq(sd_root,firstof(u(%!/FUN`LIVEROOT,%0),u(%!/FUN`ROOT,%0)))][box(lfields(,Duty%rStatus%rParty%rDone%rRewards received%rChallenges seen%rExplored,%0%r[u(%!/FUN`STATUSLABEL,%0)]%r[get({{store}}/%q<sd_root>`MIN)] to [get({{store}}/%q<sd_root>`MAX)] characters%r[if(strmatch(get({{store}}/%q<sd_root>`REPEAT),once),Once,As often as you like)]%r[u(%!/FUN`REWARDCOUNT,%q<sd_key>,%0,%q<sd_root>)]%r[u(%!/FUN`SEENCOUNT,%q<sd_key>,%0,%q<sd_root>)]%r[u(%!/FUN`EXPLORED,%q<sd_key>,%0,%q<sd_root>)]%% of its steps,%r)[if(strlen(get({{store}}/%q<sd_root>`DESC)),%r%r[get({{store}}/%q<sd_root>`DESC)])][if(cand(get({{store}}/DUTY`%0`NOTE),u(%!/FUN`CANEDIT,%1,%0)),%r%r[tone(warning,Reviewer's note: [get({{store}}/DUTY`%0`NOTE)])])]%r[rule()]%r[tone(muted,if(u(%!/FUN`ACTIVE,%0),+duty/start %0 gathers a party.,Not on the active roster now.)[if(u(%!/FUN`CANEDIT,%1,%0),%b+duty/steps %0 shows its steps.)])],get({{store}}/%q<sd_root>))]
       # %0 the duties, %1 a title: a table of them.
       FUN`SCREEN`LIST: |-
         box(if(words(%0),ldatatable(json(object,delim,json(string,%r),nowrap,json(string,1%r3),grow,json(string,%r1%r)),tone(strong,Duty)%r[tone(strong,Title)]%r[tone(strong,Status)],iter(%0,unmark(%i0%r[get({{store}}/[u(%!/FUN`ROOT,%i0)])]%r[u(%!/FUN`STATUSLABEL,%i0)]),,%*<|>),%*<|>),tone(muted,None.)),%1)
@@ -740,7 +774,9 @@ objects:
         {"kind":"view","schema_version":1,"title":"","pages":[{"key":"main","title":"Duties","order":1,"sections":[{"name":"","order":1,"elements":[{"kind":"markdown","value":""}]}]}],"actions":{}}
       # %0 the viewer: their duties, the ones waiting for review when they review duties, and a new one.
       WEB`SCHEMA`HOME: |-
-        json(object,kind,json(string,form),schema_version,json(number,1),title,json(string,Duties),pages,json(array,json(object,key,json(string,main),title,json(string,Duties),order,json(number,1),sections,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`HOME`MINE)[if(u(%!/FUN`STAFF,%0),%r[v(DATA`WEB`HOME`REVIEW)])]%r[v(DATA`WEB`HOME`NEW)]))),actions,json(object,act,v(DATA`WEB`ACT)))
+        json(object,kind,json(string,form),schema_version,json(number,1),title,json(string,Duties),pages,json(array,json(object,key,json(string,main),title,json(string,Duties),order,json(number,1),sections,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`HOME`PLAY)%r[v(DATA`WEB`HOME`MINE)][if(u(%!/FUN`STAFF,%0),%r[v(DATA`WEB`HOME`REVIEW)])]%r[v(DATA`WEB`HOME`NEW)]))),actions,json(object,act,v(DATA`WEB`ACT)))
+      DATA`WEB`HOME`PLAY: |-
+        {"name":"Duties you can start","order":0,"elements":[{"kind":"table","rows_field":"play","empty":"No duties are on the active roster now.","columns":[{"key":"title","label":"Duty"},{"key":"id","label":"Id"},{"key":"about","label":"About"},{"key":"party","label":"Party"},{"key":"rewards","label":"Rewards"},{"key":"challenges","label":"Challenges seen"},{"key":"explored","label":"Explored"}]},{"kind":"markdown","value":"Start one in the game with `+duty/start` and its id. With the Duties in scenes package, `+duty/start/scene` plays it in a scene of its own."}]}
       DATA`WEB`HOME`MINE: |-
         {"name":"Your duties","order":1,"elements":[{"kind":"table","rows_field":"mine","empty":"You have not written a duty yet.","columns":[{"key":"title","label":"Duty","link":"/apps/duties/{id}"},{"key":"id","label":"Id"},{"key":"status","label":"Status","type":"chip","color_key":"color"}]}]}
       DATA`WEB`HOME`REVIEW: |-
@@ -822,7 +858,12 @@ objects:
       WEB`DATA: |-
         setq(web_at,lcstr(trim(%<at>,b,/)))[json(object,fields,switch(1,not(cand(strlen(%<viewer>),hastype(%<viewer>,player))),json(object),not(strlen(%q<web_at>)),u(%!/WEB`DATA`HOME,%<viewer>),not(cand(u(%!/FUN`EXISTS,%q<web_at>),u(%!/FUN`CANEDIT,%<viewer>,%q<web_at>))),json(object),u(%!/WEB`DATA`DUTY,%<viewer>,%q<web_at>)))]
       WEB`DATA`HOME: |-
-        u(%!/WEB`JSON`OBJECT,u(%!/WEB`JSON`MEMBER,mine,u(%!/WEB`ROWS,squish(iter(lattr({{store}}/DUTY`*),if(strmatch(get({{store}}/%i0`AUTHOR),objid(%0)),lcstr(last(%i0,`)))))),1)%r[u(%!/WEB`JSON`MEMBER,review,u(%!/WEB`ROWS,squish(iter(lattr({{store}}/DUTY`*),if(strmatch(get({{store}}/%i0`STATE),submitted),lcstr(last(%i0,`)))))),u(%!/FUN`STAFF,%0))]%r[u(%!/WEB`JSON`MEMBER,new_id,json(string,),1)]%r[u(%!/WEB`JSON`MEMBER,new_title,json(string,),1)])
+        u(%!/WEB`JSON`OBJECT,u(%!/WEB`JSON`MEMBER,play,u(%!/WEB`PLAYROWS,%0),1)%r[u(%!/WEB`JSON`MEMBER,mine,u(%!/WEB`ROWS,squish(iter(lattr({{store}}/DUTY`*),if(strmatch(get({{store}}/%i0`AUTHOR),objid(%0)),lcstr(last(%i0,`)))))),1)]%r[u(%!/WEB`JSON`MEMBER,review,u(%!/WEB`ROWS,squish(iter(lattr({{store}}/DUTY`*),if(strmatch(get({{store}}/%i0`STATE),submitted),lcstr(last(%i0,`)))))),u(%!/FUN`STAFF,%0))]%r[u(%!/WEB`JSON`MEMBER,new_id,json(string,),1)]%r[u(%!/WEB`JSON`MEMBER,new_title,json(string,),1)])
+      # %0 the viewer: the duties on the active roster, with their progress, as the roster screen has them.
+      WEB`PLAYROWS: |-
+        setq(web_pk,u(%!/FUN`KEY,%0))[u(%!/WEB`JSON`ARRAY,iter(squish(iter(lattr({{store}}/DUTY`*),if(u(%!/FUN`ACTIVE,lcstr(last(%i0,`))),lcstr(last(%i0,`))))),u(%!/WEB`PLAYROW,%i0,u(%!/FUN`LIVEROOT,%i0)),%b,%r))]
+      WEB`PLAYROW: |-
+        json(object,id,json(string,%0),title,json(string,get({{store}}/%1)),about,json(string,get({{store}}/%1`DESC)),party,json(string,[get({{store}}/%1`MIN)]-[get({{store}}/%1`MAX)]),rewards,json(string,u(%!/FUN`REWARDCOUNT,%q<web_pk>,%0,%1)),challenges,json(string,u(%!/FUN`SEENCOUNT,%q<web_pk>,%0,%1)),explored,json(string,[u(%!/FUN`EXPLORED,%q<web_pk>,%0,%1)]%%))
       WEB`ROWS: |-
         u(%!/WEB`JSON`ARRAY,iter(%0,json(object,id,json(string,%i0),title,json(string,u(%!/FUN`TITLE,u(%!/FUN`ROOT,%i0))),status,json(string,u(%!/FUN`STATUSLABEL,%i0)),color,json(string,switch(u(%!/FUN`STATUS,%i0),submitted,warning,returned,error,retired,default,approved,success,info)),author,json(string,name(get({{store}}/DUTY`%i0`AUTHOR)))),%b,%r))
       # %0 the viewer, %1 a duty: everything its editor shows.
@@ -973,7 +1014,7 @@ objects:
       # ---- Lifecycle --------------------------------------------------------------------------------
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP: |-
-        @command/add/noparse/rsnoparse +duty; @hook/override/inline +duty=%!,CMD`DUTY
+        @command/add/noparse/rsnoparse +duty; @hook/override/inline +duty=%!,CMD`DUTY; @command/add/noparse/rsnoparse +duties; @hook/override/inline +duties=%!,CMD`DUTIES
       AINSTALL: |-
         @trigger %!/STARTUP
       AUPDATE: |-
@@ -1039,18 +1080,21 @@ objects:
         everyone rolls, and how the party did picks the way on. A duty can hand out rewards on the way and at
         its end.
 
-        - `+duty` shows your party's duty, or the duties you can start and the parties gathering.
+        - `+duty/list`, or `+duties`, lists the duties you can start and the parties gathering.
+        - `+duty` shows your party's duty, or the list when you are not on one.
         - `+duty <duty>` shows one duty: what it is about, the party it wants, and your progress: the rewards
-          you have received and the challenges you have seen.
+          you have received, the challenges you have seen and how much of it you have explored.
         - `+duty/start <duty>` gathers a party. Others join with `+duty/join <number>`.
         - `+duty/info <duty>` shows what you have learned from it.
 
+        **Explored** is the share of its steps you have been to, on any run.
+
         Example:
 
-        `+duty`
+        `+duties`
 
         Output: a box titled `Duties` with a row per duty you can start, such as
-        `harbor | The Harbor Fire | 1-4 | 0 of 2 | 1 of 5`.
+        `harbor | The Harbor Fire | 1-4 | 0 of 2 | 1 of 5 | 25%`.
       HELP`DUTY`PLAYING: |-
         Once the party is gathered, its leader sets out with `+duty/go`.
 
@@ -1206,3 +1250,26 @@ objects:
           the fields\) and `%%<context>`.
         - Optional: `` FN`DUTIES`TRAINED `` and `` FN`DUTIES`CAN `` \(1 or 0 for `%%<roller>` and `%%<trait>`\),
           and `` FN`DUTIES`FALLBACK `` \(the trait Improvise rolls\).
+
+        Other bridges add to `+duty` through `` EXTENSION`<NAME> `` on the same object; see
+        `+help duty extensions`.
+      HELP`DUTY`EXTENSIONS: |-
+        A bridge package adds to `+duty` by attaching `` EXTENSION`<NAME> `` to the Duties object, holding its
+        own object. Duties triggers these on it, each given its values by name:
+
+        - `` DO`<SWITCH> ``: a switch Duties does not have, with `%%<player>`, `%%<arg>` and `%%<run>` \(the
+          player's party, or nothing\).
+        - `` FLAG`<SWITCH>`<OPTION> ``: `+duty/<switch>/<option>`, once the switch has done its work, with the
+          same values.
+        - `` ON`DUTIES`JOIN ``: a member joined a party, with `%%<run>` and `%%<member>`.
+        - `` ON`DUTIES`LINE ``: something happened to a party, with `%%<run>` and `%%<text>`, one line of
+          prose: setting out, each step's text, each roll and each outcome.
+        - `` ON`DUTIES`FINISH ``: the party's run is over, with `%%<run>` and `%%<why>`.
+
+        `duties-scene` is one: `+duty/start/scene` and `+duty/scene` tie a party to a scene.
+
+        Example:
+
+        `+duty/start/scene harbor`
+
+        Output: the party is gathered and a scene is made for it.
