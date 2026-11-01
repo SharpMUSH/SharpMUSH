@@ -180,6 +180,9 @@ public class DutiesIntegrationTests
 			await WriteAndApproveAsync(author, reviewer, id);
 
 			await Assert.That(await Read(ana, "+duty")).Contains(id).And.Contains("The Harbor Fire");
+			await Assert.That(await Read(ana, "+duties")).Contains(id).And.Contains("The Harbor Fire").And.Contains("0%");
+			await Assert.That(await Read(ana, "+duty/list")).Contains(id).And.Contains("Explored");
+			await Assert.That(await Read(ana, $"+duty/start/nosuch {id}")).Contains("+duty/start has no /nosuch option.");
 			await Assert.That(await Read(ana, $"+duty/start {id}")).Contains("You gather a party for The Harbor Fire.");
 			var party = (await As(ben, "+duty")).Split('\n').First(line => line.Contains("+duty/join"));
 			var number = party[(party.IndexOf("+duty/join ", StringComparison.Ordinal) + 11)..].Split(' ')[0];
@@ -209,7 +212,10 @@ public class DutiesIntegrationTests
 				.And.Contains("You learn: The harbourmaster paid them.").And.Contains("The party succeeded at 1 of 1 challenge (100%).");
 			await Assert.That(await Read(ana, "+duty")).DoesNotContain("A quiet hall.");
 			var progress = await Read(ana, $"+duty {id}");
-			await Assert.That(progress).Contains("3 of 5").And.Contains("1 of 1");
+			await Assert.That(progress).Contains("3 of 5").And.Contains("1 of 1").And.Contains("Smoke over the docks.");
+			// gate, hall and loot of its four steps.
+			await Assert.That(progress).Contains("75% of its steps");
+			await Assert.That(await Read(ana, "+duties")).Contains("75%");
 			await Assert.That(await Read(ana, $"+duty/info {id}")).Contains("The fire was set on purpose.");
 
 			// Coin is once: a second run gives the information again but not the coin.
@@ -232,6 +238,63 @@ public class DutiesIntegrationTests
 			await UninstallAsync();
 		}
 	}
+	[Test]
+	public async Task APartyPlaysADutyInAScene()
+	{
+		try
+		{
+			await InstallAsync();
+			await ApplyAsync("duties-scene");
+			var author = await Player("DuScA");
+			var reviewer = await Player("DuScR");
+			var ana = await Player("DuScAna");
+			var ben = await Player("DuScBen");
+			await God($"@role/assign #{reviewer.DbRef.Number}=duty-reviewer");
+			// Approved characters may make and join scenes.
+			await God($"@role/assign #{ana.DbRef.Number}=approved");
+			await God($"@role/assign #{ben.DbRef.Number}=approved");
+			var id = NewId();
+			await WriteAndApproveAsync(author, reviewer, id);
+
+			await Assert.That(await Read(ana, "+duty/scene")).Contains("You are not on a duty.");
+			var started = await Read(ana, $"+duty/start/scene {id}");
+			await Assert.That(started).Contains("You gather a party for The Harbor Fire.").And.Contains("goes into scene");
+			var scene = (await God($"think [scenefocus(#{ana.DbRef.Number})]")).Trim();
+			await Assert.That(scene).Matches(@"^\d+$");
+			await Assert.That(await God($"think [scene({scene},title)]")).IsEqualTo("The Harbor Fire");
+			await Assert.That(await Read(ana, "+duty/scene")).Contains($"goes into scene {scene}: The Harbor Fire.");
+
+			// A member who joins the party joins the scene too.
+			var party = (await As(ben, "+duty")).Split('\n').First(line => line.Contains("+duty/join"));
+			var number = party[(party.IndexOf("+duty/join ", StringComparison.Ordinal) + 11)..].Split(' ')[0];
+			await As(ben, $"+duty/join {number}");
+			await Assert.That((await God($"think [scenefocus(#{ben.DbRef.Number})]")).Trim()).IsEqualTo(scene);
+			await Assert.That(await Read(ben, $"+duty/scene {scene}")).Contains("Only the party's leader");
+
+			await As(ana, "+duty/go");
+			await As(ben, "+duty/try force");
+			await As(ana, "+duty/try improvise");
+			await As(ana, "+duty/go");
+
+			var poses = (await God($"think [sceneposes({scene})]")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+			var log = new List<string>();
+			foreach (var pose in poses)
+			{
+				log.Add(await God($"think [scenepose({scene},{pose},content)]"));
+			}
+			var text = string.Join("\n", log);
+			await Assert.That(text).Contains("set out on The Harbor Fire.").And.Contains("The Gate: A burning gate.")
+				.And.Contains(" tries ").And.Contains("You force it open. 2 of 2 succeeded.")
+				.And.Contains("A quiet hall.").And.Contains("It ends in success.");
+			await Assert.That(await God($"think [scenepose({scene},{poses[^1]},type)]")).IsEqualTo("narration");
+		}
+		finally
+		{
+			await Installer.UninstallAsync("duties-scene", force: true, CancellationToken.None);
+			await UninstallAsync();
+		}
+	}
+
 	/// <summary>A climb needing two successes, two successful ends on success, a vault on a critical success
 	/// and a failed end. Approved and on the roster.</summary>
 	private async Task WriteClimbAsync(TestIsolationHelpers.TestPlayer author, TestIsolationHelpers.TestPlayer reviewer, string id)
@@ -540,6 +603,15 @@ public class DutiesIntegrationTests
 			await Assert.That(changed["Status"]!["value"]!.GetValue<string>()).Contains("changes being made");
 			await Assert.That(await As(staff, $"+duty {id}")).Contains("The Lantern Road").And.DoesNotContain("again");
 			await Assert.That((await ActAsync(author, "act", new { op = "discard", duty = id }))["ok"]!.GetValue<bool>()).IsTrue();
+
+			// On the active roster, every player sees it among the duties they can start, with their progress.
+			await As(staff, $"+duty/roster {id}=on");
+			var play = (await GetAsync(other, "data?at="))["fields"]!["play"]!["value"]!.AsArray()
+				.Single(row => row!["id"]!.GetValue<string>() == id)!;
+			await Assert.That(play["title"]!.GetValue<string>()).IsEqualTo("The Lantern Road");
+			await Assert.That(play["about"]!.GetValue<string>()).IsEqualTo("Follow the lantern through the bog.");
+			await Assert.That(play["explored"]!.GetValue<string>()).IsEqualTo("0%");
+			await Assert.That((await GetAsync(other, "schema?at=")).ToJsonString()).Contains("Duties you can start");
 		}
 		finally
 		{
