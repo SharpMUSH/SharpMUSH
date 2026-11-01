@@ -419,6 +419,38 @@ public class ChannelPermissionTests
 
 
 	/// <summary>
+	/// PennMUSH's <c>cemit(&lt;channel&gt;, &lt;message&gt;[, &lt;noisy&gt;])</c> and TinyMUX's two-argument form read as they
+	/// do there: silent without the channel's name, noisy with it, nothing returned, and no picture on the line.
+	/// </summary>
+	[Test]
+	[Arguments("cemit({0},{1})", false)]
+	[Arguments("cemit({0},{1},0)", false)]
+	[Arguments("cemit({0},{1},1)", true)]
+	[Arguments("nscemit({0},{1})", false)]
+	[Arguments("nscemit({0},{1},1)", true)]
+	public async Task Cemit_PennAndMuxForms_ReadAsThere(string call, bool noisy)
+	{
+		var name = UniqueChannel("CemCompat");
+		var channel = await CreateChannel(name, "Player");
+		var listener = await CreateMortal("ChanPermCemListener");
+		var listenerObject = (await Mediator.Send(new GetObjectNodeQuery(listener.DbRef))).Expect<AnySharpObject>();
+		await Mediator.Send(new AddUserToChannelCommand(channel, listenerObject));
+		var text = TestIsolationHelpers.GenerateUniqueName("CemCompatLine");
+
+		var heard = await MessagesWhile(listener.DbRef, async () =>
+		{
+			var result = await FunctionParserFor(new DBRef(1)).FunctionParse(MarkupText.Plain(string.Format(call, name, text)));
+			await Assert.That(result!.Message.ToPlainText()).IsEmpty();
+		});
+
+		await Assert.That(heard.Where(line => line.Contains(text)).ToList())
+			.IsEquivalentTo(new[] { noisy ? $"<{name}> {text}" : text });
+		var lines = await Mediator.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, int.MaxValue))
+			.ToListAsync();
+		await Assert.That(lines.Single().Picture).IsEmpty();
+	}
+
+	/// <summary>
 	/// <c>cemit()</c>'s fourth argument is the picture the portal shows beside the line: kept with the line, as an
 	/// https URL or as the objid of a character the emitter controls.
 	/// </summary>
