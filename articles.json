@@ -7743,6 +7743,14 @@
     "file": "sharpchat.md"
   },
   {
+    "id": "legacy:Channel Pictures",
+    "lookup": "Channel Pictures",
+    "title": "Channel Pictures",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpchat.md"
+  },
+  {
     "id": "legacy:@channel",
     "lookup": "@channel",
     "title": "@channel",
