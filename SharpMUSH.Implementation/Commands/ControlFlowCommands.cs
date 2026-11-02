@@ -291,7 +291,7 @@ public partial class Commands
 			listText = parser.CurrentState.Arguments["0"].Message;
 		}
 
-		var list = MushText.Split(delimiter, listText);
+		var list = MushText.SplitList(delimiter, listText);
 		// The command keeps its braces through the split (PennMUSH's CMD_T_RS_BRACE), so /then can find the
 		// comma before the command list that runs afterwards; each loses its outer pair here.
 		var command = parser.CurrentState.Arguments["1"].Message;
