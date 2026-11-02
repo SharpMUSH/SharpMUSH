@@ -436,9 +436,13 @@ public partial class Functions
 				var close = rest.IndexOf(']', i);
 				if (close < 0) return null;
 				var index = rest[i..close];
-				segments.Add(index is ['"', .., '"'] or ['\'', .., '\'']
-					? index[1..^1].Replace("~", "~0").Replace("/", "~1")
-					: index);
+				segments.Add(index switch
+				{
+					['"', .., '"'] => JsonSerializer.Deserialize<string>(index)!.Replace("~", "~0").Replace("/", "~1"),
+					['\'', .., '\''] => JsonSerializer.Deserialize<string>(
+						$"\"{index[1..^1].Replace("\\'", "'").Replace("\"", "\\\"")}\"")!.Replace("~", "~0").Replace("/", "~1"),
+					_ => index
+				});
 				i = close + 1;
 			}
 			else
