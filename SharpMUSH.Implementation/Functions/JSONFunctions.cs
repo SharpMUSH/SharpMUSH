@@ -314,7 +314,9 @@ public partial class Functions
 						return new CallState(ErrorMessages.Returns.PathNotFound);
 					setPointer = derived.Value;
 				}
-				var setPatch = new JsonPatch(PatchOperation.Add(setPointer, jsonDoc2));
+				var setPatch = new JsonPatch(pathExists
+					? PatchOperation.Replace(setPointer, jsonDoc2)
+					: PatchOperation.Add(setPointer, jsonDoc2));
 				var setResult = setPatch.Apply(jsonDoc);
 				return setResult.IsSuccess
 					? new CallState(setResult.Result!.ToJsonString(JsonHelpers.RelaxedJsonOptions))
@@ -353,7 +355,7 @@ public partial class Functions
 
 			return new CallState(ErrorMessages.Returns.InvalidOperation);
 		}
-		catch (JsonException)
+		catch (Exception ex) when (ex is JsonException or PathParseException)
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "json_mod"));
 		}
@@ -434,7 +436,13 @@ public partial class Functions
 				var close = rest.IndexOf(']', i);
 				if (close < 0) return null;
 				var index = rest[i..close];
-				segments.Add(index);
+				segments.Add(index switch
+				{
+					['"', .., '"'] => JsonSerializer.Deserialize<string>(index)!.Replace("~", "~0").Replace("/", "~1"),
+					['\'', .., '\''] => JsonSerializer.Deserialize<string>(
+						$"\"{index[1..^1].Replace("\\'", "'").Replace("\"", "\\\"")}\"")!.Replace("~", "~0").Replace("/", "~1"),
+					_ => index
+				});
 				i = close + 1;
 			}
 			else

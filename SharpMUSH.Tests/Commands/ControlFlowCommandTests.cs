@@ -1018,6 +1018,23 @@ public class ControlFlowCommandTests
 		await Assert.That(Heard(executor, "DolSpace_c_51064")).IsEqualTo(1);
 	}
 
+	/// <summary>A space-separated list drops the empty items around extra spaces, as PennMUSH's cmd_dolist does.</summary>
+	[Test]
+	public async ValueTask DoList_ExtraSpacesRunNoEmptyItems()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandListParse(MarkupText.Plain(
+			$"@dolist/then/inline [space(2)]a[space(2)]b[space(2)]=@pemit #1=DlSpaces_##_{id},@pemit #1=DlSpacesDone_%0_{id}"));
+
+		var messages = MessagesFor(executor);
+		await Assert.That(messages.Count(message => message == $"DlSpaces_a_{id}")).IsEqualTo(1);
+		await Assert.That(messages.Count(message => message == $"DlSpaces_b_{id}")).IsEqualTo(1);
+		await Assert.That(messages).Contains($"DlSpacesDone_2_{id}");
+		await Assert.That(messages).DoesNotContain($"DlSpaces__{id}");
+	}
+
 	/// <summary>@dolist/then queues the command after the last comma once every run is queued, with the count in %0.</summary>
 	[Test]
 	public async ValueTask DoList_Then_RunsAfterTheQueuedRuns()
