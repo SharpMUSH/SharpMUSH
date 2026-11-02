@@ -413,6 +413,11 @@ public class JsonFunctionUnitTests
 	[Arguments("json_mod(json(object,a,1),set,$.a,null)", "{\"a\":null}")]
 	[Arguments("json_mod(json(object),set,$\\[\"\\\\u0061\"\\],1)", "{\"a\":1}")]
 	[Arguments("json_mod(json(object),set,$\\['it\\\\'s'\\],1)", "{\"it's\":1}")]
+	[Arguments("json_mod(json(object),set,$\\[\"x/y\"\\],1)", "{\"x/y\":1}")]
+	[Arguments("json_mod(json(object,x/y,1),set,$\\[\"x/y\"\\],2)", "{\"x/y\":2}")]
+	[Arguments("json_mod(json(object),insert,$\\['a~b'\\],1)", "{\"a~b\":1}")]
+	[Arguments("json_mod(json(object,a~b,1),replace,$\\['a~b'\\],2)", "{\"a~b\":2}")]
+	[Arguments("json_mod(json(object,x/y,1,a~b,2),remove,$\\[\"x/y\"\\])", "{\"a~b\":2}")]
 	public async Task JsonPathEdgeCases(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
