@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -36,8 +37,18 @@ public partial class LayoutThemeService(IExpandedObjectDataService data) : ILayo
 
 	private sealed record Snapshot(ImmutableDictionary<string, string> Added, ImmutableHashSet<string> Disabled)
 	{
-		public static Snapshot Empty { get; } = new(ImmutableDictionary<string, string>.Empty, ImmutableHashSet<string>.Empty);
+		// A new one each time: each holds its own Resolved.
+		public static Snapshot Empty => new(ImmutableDictionary<string, string>.Empty, ImmutableHashSet<string>.Empty);
+
+		/// <summary>
+		/// What each spec resolved to against these themes. The house look resolves <c>layout_theme</c> for every
+		/// layout drawn, and writing a preset out is a JSON parse and a serialization; a change makes a new snapshot.
+		/// </summary>
+		public ConcurrentDictionary<string, Result<string>> Resolved { get; } = new(StringComparer.Ordinal);
 	}
+
+	/// <summary>How many specs a snapshot remembers; softcode can name any number of them.</summary>
+	private const int ResolvedLimit = 256;
 
 	// One record holds every theme: two changes at once must not each drop the other's.
 	private readonly SemaphoreSlim _writeLock = new(1, 1);
@@ -51,7 +62,14 @@ public partial class LayoutThemeService(IExpandedObjectDataService data) : ILayo
 	};
 
 	/// <inheritdoc />
-	public Result<string> Resolve(string spec) => Resolve(spec, _themes, allowDisabled: false);
+	public Result<string> Resolve(string spec)
+	{
+		var themes = _themes;
+		if (themes.Resolved.TryGetValue(spec, out var known)) return known;
+		var resolved = Resolve(spec, themes, allowDisabled: false);
+		if (themes.Resolved.Count < ResolvedLimit) themes.Resolved.TryAdd(spec, resolved);
+		return resolved;
+	}
 
 	/// <inheritdoc />
 	public IEnumerable<string> Names

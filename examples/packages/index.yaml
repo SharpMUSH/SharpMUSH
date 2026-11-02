@@ -67,7 +67,7 @@ packages:
   - path: plus-help/
     name: "+help"
     package: plus-help
-    version: 1.9.1
+    version: 1.9.2
     description: "+help — aggregates the topics installed packages carry, and keeps the ones the game writes itself (bundled default)"
   - path: plus-config/
     name: "+config"

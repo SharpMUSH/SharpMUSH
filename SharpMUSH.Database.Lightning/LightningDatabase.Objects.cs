@@ -1413,10 +1413,12 @@ public partial class LightningDatabase
 		=> Store.DupsMapAsync(Tables.Parent.Reverse, Keys.Dbref(dbref), ReadSharpObject, ct: ct);
 
 	/// <summary>Through <see cref="IObjectRelationLoader"/> when the host supplied one, which may keep the read.</summary>
-	private Lazy<IAsyncEnumerable<SharpObjectFlag>> FlagsOf(long dbref, string type) => new(()
-		=> new FreshAsyncList<SharpObjectFlag>(_relations is { } r
-			? () => r.FlagsOf((int)dbref, type, () => ReadFlagsNow(dbref, type))
-			: () => ReadFlagsNow(dbref, type)));
+	private Lazy<IAsyncEnumerable<SharpObjectFlag>> FlagsOf(long dbref, string type) => new(() =>
+	{
+		// One reader per object, not one per flag question.
+		Func<SharpObjectFlag[]> read = () => ReadFlagsNow(dbref, type);
+		return new FreshAsyncList<SharpObjectFlag>(_relations is { } r ? () => r.FlagsOf((int)dbref, type, read) : read);
+	});
 
 	/// <summary>The object's stored flags, then the one for its type, in one read.</summary>
 	private SharpObjectFlag[] ReadFlagsNow(long dbref, string type)

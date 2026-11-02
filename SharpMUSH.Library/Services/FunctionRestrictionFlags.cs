@@ -32,6 +32,9 @@ public static class FunctionRestrictionFlags
 	/// </summary>
 	public static FunctionFlags Apply(FunctionFlags flags, string? restriction, bool userFunction)
 	{
+		// Asked on every function call, and nearly every function has no restriction.
+		if (string.IsNullOrEmpty(restriction)) return flags;
+
 		foreach (var (word, clear) in Terms(restriction))
 		{
 			if (!Words.TryGetValue(word, out var flag)
@@ -48,7 +51,7 @@ public static class FunctionRestrictionFlags
 
 	/// <summary>Whether <paramref name="restriction"/> leaves <c>nosidefx</c> set.</summary>
 	public static bool ForbidsSideEffects(string? restriction)
-		=> Terms(restriction)
+		=> !string.IsNullOrEmpty(restriction) && Terms(restriction)
 			.Where(term => term.Word.Equals(NoSideEffects, StringComparison.OrdinalIgnoreCase))
 			.Select(term => !term.Clear)
 			.LastOrDefault();
