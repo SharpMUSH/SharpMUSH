@@ -177,3 +177,6 @@
     .lib-addons { margin-left: 12px; }
     .lib-addons-toggle { padding-left: 4px; }
 }
+
+/* The dependency graph, in place of the list. */
+.lib-graph { padding: 14px 16px; }
