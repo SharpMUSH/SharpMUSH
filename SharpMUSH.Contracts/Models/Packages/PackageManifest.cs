@@ -86,6 +86,30 @@ public sealed record PackageManifest(
 	/// </summary>
 	public PackageWikiLandingPageSpec? WikiLandingPage { get; init; }
 
+	/// <summary>
+	/// Whether the package is a bridge (<c>bridge: true</c>, format 1.20): it joins two packages listed in
+	/// <see cref="Dependencies"/>, and is listed beside the package it extends rather than on its own.
+	/// </summary>
+	public bool Bridge { get; init; }
+
+	/// <summary>
+	/// The group the package is listed under within its <see cref="Category"/>, such as <c>Fate</c>
+	/// (<c>subcategory:</c>, format 1.20), or null for none.
+	/// </summary>
+	public string? Subcategory { get; init; }
+
+	/// <summary>What the package ships: softcode objects, wiki pages, a portal application, a plugin.</summary>
+	public PackageContents Contents =>
+		(Objects.Count > 0 ? PackageContents.Softcode : PackageContents.None)
+		| (WikiPages.Count > 0 ? PackageContents.Wiki : PackageContents.None)
+		| Kind switch
+		{
+			PackageKind.Application => PackageContents.Application,
+			PackageKind.Plugin => PackageContents.Plugin,
+			PackageKind.Ui => PackageContents.Ui,
+			_ => PackageContents.None
+		};
+
 	/// <summary>What the package declares beyond its objects; never null.</summary>
 	public PackageDeclarations Declared => Declarations ?? PackageDeclarations.None;
 
@@ -94,6 +118,28 @@ public sealed record PackageManifest(
 
 	/// <summary>The plugins the package needs running; never null.</summary>
 	public IReadOnlyList<string> RequiredPlugins => Plugins ?? [];
+}
+
+/// <summary>What a package ships, as the package lists show it; a package may ship more than one.</summary>
+[Flags]
+public enum PackageContents
+{
+	None = 0,
+
+	/// <summary>Objects and attributes.</summary>
+	Softcode = 1,
+
+	/// <summary>Wiki pages.</summary>
+	Wiki = 2,
+
+	/// <summary>A portal application registration.</summary>
+	Application = 4,
+
+	/// <summary>A compiled C# plugin.</summary>
+	Plugin = 8,
+
+	/// <summary>Portal interface code.</summary>
+	Ui = 16
 }
 
 /// <summary>
@@ -203,7 +249,7 @@ public enum PackageApplicationDisplay
 public sealed record PackageFormatVersion(int Major, int Minor)
 {
 	/// <summary>The format version this parser implements.</summary>
-	public static PackageFormatVersion Supported { get; } = new(1, 19);
+	public static PackageFormatVersion Supported { get; } = new(1, 20);
 
 	public override string ToString() => Minor == 0 ? $"{Major}" : $"{Major}.{Minor}";
 }

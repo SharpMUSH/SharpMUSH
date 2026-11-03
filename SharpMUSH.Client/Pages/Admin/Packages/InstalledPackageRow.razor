@@ -2,14 +2,12 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 @* An installed package: its kind, version, source and update state, and the check, README, history and uninstall actions. *@
-<PackageRow Icon="@KindIcon(Package.Package.Kind)" Kind="@Package.Package.Kind.ToString().ToLowerInvariant()"
-            IconTitle="@KindName(Package.Package.Kind)" Name="@(Package.Title ?? Package.Package.Id)"
+<PackageRow Icon="@(Package.Bridge ? Icons.Material.Filled.Link : PackageKinds.Icon(Main))"
+            Kind="@(Package.Bridge ? "bridge" : Main.ToString().ToLowerInvariant())"
+            IconTitle="@(Package.Bridge ? Loc["PkgKindBridge"] : PackageKinds.Name(Main, Loc))" Name="@(Package.Title ?? Package.Package.Id)"
             Id="@(Package.Title is null ? null : Package.Package.Id)">
     <Tags>
-        @if (Package.Package.Kind != PackageKind.Softcode)
-        {
-            <Pill Tag="true">@KindName(Package.Package.Kind)</Pill>
-        }
+        <PackageKindTags Contents="@Contents" Bridge="@Package.Bridge" />
         <Pill Tag="true">v@(Package.Package.Version)</Pill>
         @if (Package.Package.PastMaximum is { } past)
         {
@@ -87,19 +85,6 @@
     [Parameter] public EventCallback OnHistory { get; set; }
     [Parameter] public EventCallback OnUninstall { get; set; }
 
-    private static string KindIcon(PackageKind kind) => kind switch
-    {
-        PackageKind.Ui => Icons.Material.Filled.WebAsset,
-        PackageKind.Application => Icons.Material.Filled.Apps,
-        PackageKind.Plugin => Icons.Material.Filled.Extension,
-        _ => Icons.Material.Filled.Archive
-    };
-
-    private string KindName(PackageKind kind) => kind switch
-    {
-        PackageKind.Ui => "UI",
-        PackageKind.Application => Loc["PkgKindApplication"],
-        PackageKind.Plugin => Loc["PkgKindPlugin"],
-        _ => Loc["PkgKindSoftcode"]
-    };
+    private PackageContents Contents => PackageKinds.Of(Package.Package.Kind, Package.ObjectCount, Package.ManagedAttributeCount, Package.WikiPageCount);
+    private PackageContents Main => PackageKinds.Primary(Contents);
 }

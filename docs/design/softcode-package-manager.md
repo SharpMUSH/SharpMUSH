@@ -145,6 +145,10 @@ permissions) and `roles:`. The reference is
   review screen, the three-way merge, rollback and removal are the attribute model's. The writer
   turns it back into the key. A manifest may not name `WIREFUNCEVAL` as an attribute, and an
   attach object may not declare the key.
+- **Subcategory and bridges (format 1.20).** `subcategory:` is a second listing level under
+  `category:`, read like it. `bridge: true` marks a package joining two dependencies and needs at
+  least two in `depends:`. Both are listing metadata: browse snapshots carry them
+  (`PackageRepoEntry`), and nothing installs or resolves differently.
 
 ### Configuration options (format 1.3)
 

@@ -1,0 +1,98 @@
+@using SharpMUSH.Library.API
+@using SharpMUSH.Library.Models.Packages
+@inject IStringLocalizer<SharedResource> Loc
+
+@* One package in the remote library: what it ships, its version and install state, and the queue, review and README actions. *@
+<div class="lib-row">
+<PackageRow Icon="@(Entry.Bridge ? Icons.Material.Filled.Link : PackageKinds.Icon(Primary))"
+            Kind="@(Entry.Bridge ? "bridge" : Primary.ToString().ToLowerInvariant())"
+            IconTitle="@(Entry.Bridge ? Loc["PkgKindBridge"] : PackageKinds.Name(Primary, Loc))"
+            Name="@PackageLibraryGroups.Name(Entry)"
+            Id="@(Entry.Title is null ? null : Entry.PackageId)">
+    <Tags>
+        <PackageKindTags Contents="@Entry.Contents" Bridge="@Entry.Bridge" Joins="@Entry.DependsOn" />
+        @if (Entry.Version is { } version)
+        {
+            <Pill Tag="true">v@(version)</Pill>
+        }
+        @if (Installed is not null)
+        {
+            <span class="lib-installed">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" aria-hidden="true" />
+                @Loc["PkgBrowseInstalled", Installed.Version]
+            </span>
+        }
+    </Tags>
+    <Meta>
+        <span class="lib-desc">@(Entry.Description ?? Loc["PkgNoDescription"])</span>
+        @if (!Entry.Bridge && Entry.DependsOn is { Count: > 0 } needs)
+        {
+            <span>@Loc["PkgBrowseNeeds", string.Join(", ", needs)]</span>
+        }
+        @if (Installed is not null && (!string.Equals(Installed.SourceRepo, SnapshotUrl, StringComparison.Ordinal)
+            || !string.Equals(Installed.SourcePath ?? "", Entry.Path, StringComparison.Ordinal)))
+        {
+            <span class="lib-note">@Loc["PkgBrowseInstalledOrigin", Installed.SourceRepo, string.IsNullOrEmpty(Installed.SourcePath) ? "/" : Installed.SourcePath]</span>
+        }
+        @if (Entry.PackageId is null)
+        {
+            <span class="lib-warn">@Loc["PkgManifestParseFailed"]</span>
+        }
+        else if (Entry.Versions.Count == 0)
+        {
+            <span>@Loc["PkgNoReleaseTags"]</span>
+        }
+    </Meta>
+    <Actions>
+        <MudSelect T="string" Value="@Version" ValueChanged="@VersionChanged"
+                   Label="@Loc["PkgVersionLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Class="lib-version-select">
+            @foreach (var tag in Entry.Versions)
+            {
+                <MudSelectItem Value="@tag.Version">@tag.Version</MudSelectItem>
+            }
+            <MudSelectItem Value="@DevChannel">@Loc["PkgDevChannelOption", Entry.Version ?? "tip"]</MudSelectItem>
+        </MudSelect>
+        @if (Queued is not null)
+        {
+            <MudTooltip Text="@Loc["PkgBatchQueuedTooltip"]">
+                <MudButton Class="lib-queued" Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Check"
+                           aria-pressed="true" OnClick="@OnUnqueue">@Loc["PkgBatchQueued"]</MudButton>
+            </MudTooltip>
+        }
+        else
+        {
+            <MudButton Class="pkg-btn-primary" Variant="Variant.Filled" Size="Size.Small" StartIcon="@Icons.Material.Filled.AddToQueue"
+                       aria-pressed="false" Disabled="@(Entry.PackageId is null)" OnClick="@OnQueue">@Loc["PkgBatchQueueInstall"]</MudButton>
+        }
+        <MudButton Size="Size.Small" OnClick="@OnReview">@Loc["PkgReviewInstall"]</MudButton>
+        <MudTooltip Text="@Loc["PkgShowReadme", Entry.PackageId ?? Entry.Path]">
+            <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" aria-label="@Loc["PkgShowReadme", Entry.PackageId ?? Entry.Path]"
+                           OnClick="@OnReadme" />
+        </MudTooltip>
+    </Actions>
+</PackageRow>
+</div>
+
+@code {
+    /// <summary>The version choice that installs the branch tip.</summary>
+    public const string DevChannel = "__dev__";
+
+    [Parameter, EditorRequired] public PackageRepoEntry Entry { get; set; } = null!;
+
+    /// <summary>The remote's URL, to tell a package installed from elsewhere.</summary>
+    [Parameter] public string? SnapshotUrl { get; set; }
+
+    [Parameter] public InstalledPackageRecord? Installed { get; set; }
+
+    /// <summary>The queued install of this package, or null when it is not queued.</summary>
+    [Parameter] public PackageBatchIntent? Queued { get; set; }
+
+    [Parameter, EditorRequired] public string Version { get; set; } = DevChannel;
+    [Parameter] public EventCallback<string> VersionChanged { get; set; }
+    [Parameter] public EventCallback OnQueue { get; set; }
+    [Parameter] public EventCallback OnUnqueue { get; set; }
+    [Parameter] public EventCallback OnReview { get; set; }
+    [Parameter] public EventCallback OnReadme { get; set; }
+
+    private PackageContents Primary => PackageKinds.Primary(Entry.Contents);
+}

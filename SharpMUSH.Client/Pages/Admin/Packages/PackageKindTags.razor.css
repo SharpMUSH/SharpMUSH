@@ -1,0 +1,22 @@
+.pkg-kind-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    padding: 0 8px 0 6px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--kind-color);
+    background: color-mix(in srgb, var(--kind-color) 14%, transparent);
+}
+
+.pkg-kind-tag ::deep .mud-icon-root { font-size: 14px; }
+
+.pkg-kind-tag--softcode { --kind-color: var(--accent); }
+.pkg-kind-tag--wiki { --kind-color: var(--success); }
+.pkg-kind-tag--application { --kind-color: var(--info); }
+.pkg-kind-tag--plugin { --kind-color: var(--special); }
+.pkg-kind-tag--ui { --kind-color: var(--info); }
+.pkg-kind-tag--bridge { --kind-color: var(--warn); }

@@ -73,7 +73,7 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category, 1.15 grants, 1.16 title, 1.17 wiki properties, 1.18 text, decimal and date wiki properties, 1.19 function invocation limits)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category, 1.15 grants, 1.16 title, 1.17 wiki properties, 1.18 text, decimal and date wiki properties, 1.19 function invocation limits, 1.20 subcategory and bridge)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
 title: "Bulletin Boards"        # required from format "1.16" — the name people choose the package by; ≤60 chars
 version: 2.4.1                  # required — semantic version
@@ -83,6 +83,8 @@ license: MIT                    # optional — SPDX expression recommended
 homepage: https://example.com   # optional
 keywords: [bbs, boards]         # optional — up to 5, feeds browse/search
 category: Community             # optional (format "1.10", quoted) — the group the setup wizard lists it under
+subcategory: Boards             # optional (format "1.20") — the group within the category the package library lists it under
+bridge: false                   # optional (format "1.20") — true for a package that joins two others, both in depends
 convention_prefix: BBS_         # optional — advisory attr prefix, not enforced
 requires_server: ">=0.1"        # optional — the lowest SharpMUSH version it runs on
 verified_server: "2.0"          # optional — the newest SharpMUSH version it was tested on (format 1.6)
@@ -753,6 +755,29 @@ The review screen shows the limit as the object's `WIREFUNCEVAL` attribute,
 handled as for any other attribute. An attach (`target:`) object cannot declare
 one, and a manifest cannot write `WIREFUNCEVAL` itself. Below 1.19 the key is
 ignored with a warning.
+
+## Subcategory and bridges (format 1.20)
+
+`subcategory:` names a group within the category: the package library (Admin →
+Packages → Browse) lists a category's packages under a heading for each
+subcategory, so a repository of game systems keeps its Fate packages together.
+`bridge: true` marks a package that joins two others, both listed in `depends:`;
+the library lists it under the first of them the same repository holds and names
+both. A bridge with fewer than two dependencies is refused; below 1.20 both keys
+are ignored with a warning.
+
+```yaml
+format: "1.20"
+package: sheet-fate-help
+category: Game System
+subcategory: Fate
+bridge: true
+depends:
+  - package: sheet-fate
+    version: ">=1.0"
+  - package: plus-help
+    version: ">=1.0"
+```
 
 ## Application packages (`kind: application`)
 

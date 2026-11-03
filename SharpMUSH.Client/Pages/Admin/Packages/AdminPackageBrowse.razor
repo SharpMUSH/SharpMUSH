@@ -1,5 +1,7 @@
 @page "/admin/packages/browse"
 @attribute [Authorize(Policy = "packages.admin")]
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Resources
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.API
 @using SharpMUSH.Library.DiscriminatedUnions
@@ -7,6 +9,7 @@
 @inject PackagesAdminService Packages
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
+@implements IDisposable
 @inject IStringLocalizer<SharedResource> Loc
 
 <AdminPageTitle Page="@Loc["PkgBrowseHeading"]" />
@@ -51,60 +54,74 @@
 
     @if (_snapshot is not null)
     {
-        <div class="pkg-snapshot-meta">
-            @Loc["PkgSnapshotAt", _snapshot.Url, _snapshot.HeadCommit[..Math.Min(10, _snapshot.HeadCommit.Length)]]
-        </div>
-        <div class="pkg-grid">
-            @foreach (var entry in _snapshot.Packages)
-            {
-                <KitCard Title="@(entry.PackageId ?? entry.Path)">
-                    <Controls>
-                        <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" title="@Loc["PkgShowReadme", entry.PackageId ?? entry.Path]" aria-label="@Loc["PkgShowReadme", entry.PackageId ?? entry.Path]"
-                                       OnClick="@(() => ShowReadmeAsync(entry))" />
-                    </Controls>
-                    <ChildContent>
-                    <div class="pkg-card-body">
-                        @if (entry.PackageId is { } id && _installed.TryGetValue(id, out var installed))
+        var groups = Groups();
+        <KitCard>
+            <div class="lib-filters">
+                <div class="lib-search">
+                    <MudIcon Icon="@Icons.Material.Filled.Search" Class="lib-search-icon" />
+                    <input name="library-search" type="search" placeholder="@Loc["PkgSearchPlaceholder"]" aria-label="@Loc["PkgSearchPlaceholder"]"
+                           value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
+                </div>
+                <div class="lib-chips" role="group" aria-label="@Loc["PkgBrowseKindFilter"]">
+                    <span class="lib-chips-label">@Loc["PkgBrowseKindFilter"]</span>
+                    <button type="button" class="lib-chip @(_kind == PackageContents.None ? "active" : null)" aria-pressed="@(_kind == PackageContents.None ? "true" : "false")"
+                            @onclick="@(() => _kind = PackageContents.None)">@Loc["PkgBrowseAnyKind"]</button>
+                    @foreach (var kind in KindsListed)
+                    {
+                        <button type="button" class="lib-chip lib-chip--@kind.ToString().ToLowerInvariant() @(_kind == kind ? "active" : null)" aria-pressed="@(_kind == kind ? "true" : "false")"
+                                @onclick="@(() => _kind = kind)">
+                            <MudIcon Icon="@PackageKinds.Icon(kind)" Size="Size.Small" aria-hidden="true" />
+                            @PackageKinds.Name(kind, Loc)
+                        </button>
+                    }
+                </div>
+            </div>
+            <nav class="lib-categories" aria-label="@Loc["PkgBrowseCategories"]">
+                <button type="button" class="lib-category @(_category is null ? "active" : null)" aria-pressed="@(_category is null ? "true" : "false")"
+                        @onclick="@(() => _category = null)">
+                    @Loc["PkgBrowseAllCategories"] <span class="lib-count">@groups.Sum(g => g.Count)</span>
+                </button>
+                @foreach (var group in groups)
+                {
+                    <button type="button" class="lib-category @(_category == group.Title ? "active" : null)" aria-pressed="@(_category == group.Title ? "true" : "false")"
+                            @onclick="@(() => _category = group.Title)">
+                        @group.Title <span class="lib-count">@group.Count</span>
+                    </button>
+                }
+            </nav>
+            <div class="pkg-snapshot-meta">
+                @Loc["PkgSnapshotAt", _snapshot.Url, _snapshot.HeadCommit[..Math.Min(10, _snapshot.HeadCommit.Length)]]
+            </div>
+        </KitCard>
+
+        var shown = groups.Where(g => _category is null || g.Title == _category).ToList();
+        @if (shown.Count == 0)
+        {
+            <EmptyState>@Loc["PkgNoSearchMatch"]</EmptyState>
+        }
+        @foreach (var group in shown)
+        {
+            <KitCard Title="@group.Title" @key="group.Title">
+                <Controls>
+                    <span class="lib-group-count">@Loc.Plural("PkgBrowsePackageCount", "count", group.Count)</span>
+                </Controls>
+                <ChildContent>
+                    @foreach (var sub in group.Subcategories)
+                    {
+                        @if (sub.Title is { } subTitle)
                         {
-                            <div class="pkg-installed-marker">
-                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" aria-hidden="true" />
-                                <span>@Loc["PkgBrowseInstalled", installed.Version]</span>
-                            </div>
-                            @if (!string.Equals(installed.SourceRepo, _snapshot.Url, StringComparison.Ordinal)
-                                || !string.Equals(installed.SourcePath ?? "", entry.Path, StringComparison.Ordinal))
+                            <h3 class="lib-subcategory">@subTitle <span class="lib-count">@sub.Count</span></h3>
+                        }
+                        <div class="lib-rows">
+                            @foreach (var family in sub.Families)
                             {
-                                <div class="pkg-card-note">@Loc["PkgBrowseInstalledOrigin", installed.SourceRepo, string.IsNullOrEmpty(installed.SourcePath) ? "/" : installed.SourcePath]</div>
+                                @Family(family)
                             }
-                        }
-                        <div class="pkg-card-desc">@(entry.Description ?? Loc["PkgNoDescription"])</div>
-                        @if (entry.PackageId is null)
-                        {
-                            <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">@Loc["PkgManifestParseFailed"]</MudAlert>
-                        }
-                        <div class="pkg-card-row">
-                            <MudSelect T="string" Value="@SelectedVersion(entry)" ValueChanged="@(v => _selectedVersions[entry.Path] = v)"
-                                       Label="@Loc["PkgVersionLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="pkg-version-select">
-                                @foreach (var version in entry.Versions)
-                                {
-                                    <MudSelectItem Value="@version.Version">@version.Version</MudSelectItem>
-                                }
-                                <MudSelectItem Value="@DevChannel">@Loc["PkgDevChannelOption", entry.Version ?? "tip"]</MudSelectItem>
-                            </MudSelect>
-                            <MudButton Class="pkg-btn-primary" Variant="Variant.Filled" Size="Size.Small"
-                                       Disabled="@(entry.PackageId is null)" OnClick="@(() => QueueInstall(entry))">@Loc["PkgBatchQueueInstall"]</MudButton>
-                            <MudButton Size="Size.Small" OnClick="@(() => GoToReview(entry))">@Loc["PkgReviewInstall"]</MudButton>
                         </div>
-                        @if (entry.Versions.Count == 0)
-                        {
-                            <div class="pkg-card-note">
-                                @Loc["PkgNoReleaseTags"]
-                            </div>
-                        }
-                    </div>
-                    </ChildContent>
-                </KitCard>
-            }
-        </div>
+                    }
+                </ChildContent>
+            </KitCard>
+        }
     }
     <PackageBatchQueue />
 </div>
@@ -112,7 +129,7 @@
 <PackageReadmeDialog @ref="_readme" />
 
 @code {
-    private const string DevChannel = "__dev__";
+    private const string DevChannel = LibraryPackageRow.DevChannel;
 
     private IReadOnlyList<PackageRemoteRecord>? _remotes;
     private PackageRemoteRecord? _remoteRecord;
@@ -124,6 +141,94 @@
     private ApiFailure? _installedFailure;
 
     private PackageReadmeDialog? _readme;
+
+    private string _search = string.Empty;
+    private PackageContents _kind = PackageContents.None;
+    private string? _category;
+    private readonly HashSet<string> _expanded = new(StringComparer.Ordinal);
+
+    private static readonly IReadOnlyList<PackageContents> KindsListed =
+        [PackageContents.Softcode, PackageContents.Wiki, PackageContents.Application, PackageContents.Plugin];
+
+    private RenderFragment Family(PackageLibraryFamily family) => __builder =>
+    {
+        <div class="lib-family" @key="family.Package.Path">
+            @LibraryRow(family.Package)
+            @if (family.AddOns.Count > 0)
+            {
+                var open = Expanded(family);
+                <button type="button" class="lib-addons-toggle" aria-expanded="@(open ? "true" : "false")"
+                        @onclick="@(() => Toggle(family))">
+                    <MudIcon Icon="@(open ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)" Size="Size.Small" aria-hidden="true" />
+                    @Loc.Plural("PkgBrowseAddOns", "count", family.AddOns.Count)
+                    @if (!open)
+                    {
+                        <span class="lib-addons-names">@string.Join(" · ", family.AddOns.Select(AddOnName))</span>
+                    }
+                </button>
+                @if (open)
+                {
+                    <div class="lib-addons">
+                        @foreach (var addOn in family.AddOns)
+                        {
+                            <div @key="addOn.Path">@LibraryRow(addOn)</div>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    };
+
+    private RenderFragment LibraryRow(PackageRepoEntry entry) => __builder =>
+    {
+        <LibraryPackageRow Entry="@entry" SnapshotUrl="@_snapshot?.Url"
+                           Installed="@(entry.PackageId is { } id && _installed.TryGetValue(id, out var record) ? record : null)"
+                           Queued="@Queued(entry)" Version="@SelectedVersion(entry)"
+                           VersionChanged="@(v => SelectVersion(entry, v))"
+                           OnQueue="@(() => QueueInstall(entry))"
+                           OnUnqueue="@(() => Unqueue(entry))"
+                           OnReview="@(() => GoToReview(entry))"
+                           OnReadme="@(() => ShowReadmeAsync(entry))" />
+    };
+
+    private void Unqueue(PackageRepoEntry entry)
+    {
+        if (Queued(entry)?.ClientIntentId is { } id) Packages.Batch.Remove(id);
+    }
+
+    private IReadOnlyList<PackageLibraryGroup> Groups() => PackageLibraryGroups.For(
+        (_snapshot?.Packages ?? []).Where(e => (_kind == PackageContents.None || e.Contents.HasFlag(_kind))
+            && PackageLibraryGroups.Matches(e, _search)).ToList(),
+        Loc["AdmSetupPkgGroupUncategorized"]);
+
+    /// <summary>An add-on's name in its family's summary line: its title past the base's, as "+help topics" for "Fate sheet: +help topics".</summary>
+    private static string AddOnName(PackageRepoEntry addOn)
+        => PackageLibraryGroups.Name(addOn) is var name && name.IndexOf(": ", StringComparison.Ordinal) is var colon and > 0
+            ? name[(colon + 2)..]
+            : name;
+
+    private bool Expanded(PackageLibraryFamily family)
+        => !string.IsNullOrWhiteSpace(_search) || _kind != PackageContents.None || _expanded.Contains(family.Package.Path);
+
+    private void Toggle(PackageLibraryFamily family)
+    {
+        if (!_expanded.Remove(family.Package.Path)) _expanded.Add(family.Package.Path);
+    }
+
+    private PackageBatchIntent? Queued(PackageRepoEntry entry)
+        => entry.PackageId is { } id
+            ? Packages.Batch.Intents.FirstOrDefault(i => i.Action == PackageBatchAction.Install && string.Equals(i.TargetId, id, StringComparison.OrdinalIgnoreCase))
+            : null;
+
+    private void SelectVersion(PackageRepoEntry entry, string version)
+    {
+        _selectedVersions[entry.Path] = version;
+        if (Queued(entry) is not null) QueueInstall(entry);
+    }
+
+    protected override void OnInitialized() => Packages.Batch.Changed += OnBatchChanged;
+    private void OnBatchChanged() => InvokeAsync(StateHasChanged);
+    public void Dispose() => Packages.Batch.Changed -= OnBatchChanged;
 
     protected override async Task OnInitializedAsync()
     {

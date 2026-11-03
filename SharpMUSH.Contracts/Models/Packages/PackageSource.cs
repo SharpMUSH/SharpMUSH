@@ -12,12 +12,31 @@ public sealed record PackageVersionTag(string Version, string TagName, string Co
 /// <param name="Version">Manifest version at HEAD (the dev channel), or null.</param>
 /// <param name="Description">Manifest description at HEAD, or null.</param>
 /// <param name="Versions">Released versions (tags), newest first.</param>
+/// <param name="Title">Manifest <c>title:</c> at HEAD, or null.</param>
+/// <param name="Category">Manifest <c>category:</c> at HEAD, or null.</param>
+/// <param name="Subcategory">Manifest <c>subcategory:</c> at HEAD, or null.</param>
+/// <param name="Contents">What the package ships at HEAD.</param>
+/// <param name="Bridge">Whether the manifest at HEAD marks the package a bridge.</param>
+/// <param name="DependsOn">The ids the manifest at HEAD depends on, in manifest order; empty when unparsable.</param>
 public sealed record PackageRepoEntry(
 	string Path,
 	string? PackageId,
 	string? Version,
 	string? Description,
-	IReadOnlyList<PackageVersionTag> Versions);
+	IReadOnlyList<PackageVersionTag> Versions,
+	string? Title = null,
+	string? Category = null,
+	string? Subcategory = null,
+	PackageContents Contents = PackageContents.None,
+	bool Bridge = false,
+	IReadOnlyList<string>? DependsOn = null)
+{
+	/// <summary>The entry for a package whose manifest parsed.</summary>
+	public static PackageRepoEntry From(string path, PackageManifest manifest, IReadOnlyList<PackageVersionTag> versions) =>
+		new(path, manifest.Name, manifest.Version.ToString(), manifest.Description, versions,
+			manifest.Title, manifest.Category, manifest.Subcategory, manifest.Contents, manifest.Bridge,
+			[.. manifest.Dependencies.Select(d => d.PackageId)]);
+}
 
 /// <summary>The state of a remote repo after a refresh (clone or fetch).</summary>
 /// <param name="RemoteName">The configured remote's name.</param>
