@@ -16,7 +16,21 @@
 
 <div class="help-page">
     <PlainPageHeader Title="@Loc["Help"]" Description="@Loc["AdmHelpSubtitle"]" />
-    <p class="help-guide-entry"><a href="/welcome">@Loc["GuideHelpIndexEntry"]</a> @Loc["GuideHelpIndexDescription"]</p>
+    @* The three places a new player starts, each named for what it opens, and the game's own guide pages. *@
+    <nav class="help-start" aria-label="@Loc["NavHelpStartHere"]">
+        <a class="help-start-item" href="/welcome">
+            <span class="help-start-name">@Loc["GuideHelpIndexEntry"]</span>
+            <span class="help-start-sub">@Loc["NavHelpLearnSub"]</span>
+        </a>
+        @foreach (var (topic, name, sub) in StartTopics())
+        {
+            <a class="help-start-item" href="/help/@Uri.EscapeDataString(topic)">
+                <span class="help-start-name">@name</span>
+                <span class="help-start-sub">@sub</span>
+            </a>
+        }
+    </nav>
+    <SharpMUSH.Client.Components.Onboarding.GameGuideLinks />
 
     @if (_loading)
     {
@@ -89,6 +103,20 @@
 </div>
 
 @code {
+    private static readonly (string Topic, string NameKey, string SubKey)[] StartTopicKeys =
+    [
+        ("getting started", "NavHelpGettingStarted", "NavHelpGettingStartedSub"),
+        ("newbie", "NavHelpNewbie", "NavHelpNewbieSub"),
+    ];
+
+    // Only the topics this game's help files have.
+    private IEnumerable<(string Topic, string Name, string Sub)> StartTopics() =>
+        _index is null ? []
+            : StartTopicKeys.SelectMany(start => _index.Topics
+                .Where(topic => string.Equals(topic, start.Topic, StringComparison.OrdinalIgnoreCase))
+                .Take(1)
+                .Select(topic => (topic, Loc[start.NameKey].Value, Loc[start.SubKey].Value)));
+
     private GameHelpIndex? _index;
     private GameHelpIndex? _adminIndex;
     private string? _error;

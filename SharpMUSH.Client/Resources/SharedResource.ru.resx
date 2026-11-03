@@ -5082,10 +5082,10 @@
     <value>Оглавление справки</value>
   </data>
   <data name="NavHelpGettingStarted" xml:space="preserve">
-    <value>С чего начать</value>
+    <value>Знакомство с командами</value>
   </data>
   <data name="NavHelpNewbie" xml:space="preserve">
-    <value>Впервые в MUSH</value>
+    <value>Как читать справку</value>
   </data>
   <data name="NavHelpTopics" xml:space="preserve">
     <value>Темы</value>
@@ -7452,4 +7452,9 @@
   <data name="NavMapKeptInside" xml:space="preserve">
     <value>Оставлена на картинке, в {0}, {1}.</value>
   </data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>Об этой игре</value></data>
+  <data name="NavHelpStartHere" xml:space="preserve"><value>Начните здесь</value></data>
+  <data name="NavHelpLearnSub" xml:space="preserve"><value>Пошаговое знакомство: как присоединиться и играть.</value></data>
+  <data name="NavHelpGettingStartedSub" xml:space="preserve"><value>Перемещение, разговор, каналы и почта.</value></data>
+  <data name="NavHelpNewbieSub" xml:space="preserve"><value>Что значат [ ] и &lt; &gt; в команде.</value></data>
 </root>

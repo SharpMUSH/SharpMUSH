@@ -5082,10 +5082,10 @@
     <value>Spis pomocy</value>
   </data>
   <data name="NavHelpGettingStarted" xml:space="preserve">
-    <value>Pierwsze kroki</value>
+    <value>Przewodnik po poleceniach</value>
   </data>
   <data name="NavHelpNewbie" xml:space="preserve">
-    <value>Nowy w MUSH</value>
+    <value>Jak czytać pomoc</value>
   </data>
   <data name="NavHelpTopics" xml:space="preserve">
     <value>Tematy</value>
@@ -7452,4 +7452,9 @@
   <data name="NavMapKeptInside" xml:space="preserve">
     <value>Zatrzymano w obrazie, w {0}, {1}.</value>
   </data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>O tej grze</value></data>
+  <data name="NavHelpStartHere" xml:space="preserve"><value>Zacznij tutaj</value></data>
+  <data name="NavHelpLearnSub" xml:space="preserve"><value>Przewodnik po dołączaniu i grze.</value></data>
+  <data name="NavHelpGettingStartedSub" xml:space="preserve"><value>Poruszanie się, rozmowa, kanały i poczta.</value></data>
+  <data name="NavHelpNewbieSub" xml:space="preserve"><value>Co oznaczają [ ] i &lt; &gt; w poleceniu.</value></data>
 </root>

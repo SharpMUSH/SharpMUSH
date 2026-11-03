@@ -5082,10 +5082,10 @@
     <value>Súgó tartalomjegyzéke</value>
   </data>
   <data name="NavHelpGettingStarted" xml:space="preserve">
-    <value>Első lépések</value>
+    <value>Parancsok bemutatása</value>
   </data>
   <data name="NavHelpNewbie" xml:space="preserve">
-    <value>Új a MUSH-ban</value>
+    <value>A súgó olvasása</value>
   </data>
   <data name="NavHelpTopics" xml:space="preserve">
     <value>Témák</value>
@@ -7452,4 +7452,9 @@
   <data name="NavMapKeptInside" xml:space="preserve">
     <value>A képen belül tartva, itt: {0}, {1}.</value>
   </data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>A játékról</value></data>
+  <data name="NavHelpStartHere" xml:space="preserve"><value>Kezdje itt</value></data>
+  <data name="NavHelpLearnSub" xml:space="preserve"><value>Vezetett bemutató a csatlakozásról és a játékról.</value></data>
+  <data name="NavHelpGettingStartedSub" xml:space="preserve"><value>Mozgás, beszéd, csatornák és levelezés.</value></data>
+  <data name="NavHelpNewbieSub" xml:space="preserve"><value>Mit jelent a [ ] és a &lt; &gt; egy parancsban.</value></data>
 </root>

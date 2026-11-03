@@ -5082,10 +5082,10 @@
     <value>Indexul ajutorului</value>
   </data>
   <data name="NavHelpGettingStarted" xml:space="preserve">
-    <value>Primii pași</value>
+    <value>Turul comenzilor</value>
   </data>
   <data name="NavHelpNewbie" xml:space="preserve">
-    <value>Nou în MUSH</value>
+    <value>Cum citești ajutorul</value>
   </data>
   <data name="NavHelpTopics" xml:space="preserve">
     <value>Subiecte</value>
@@ -7452,4 +7452,9 @@
   <data name="NavMapKeptInside" xml:space="preserve">
     <value>Păstrată în imagine, la {0}, {1}.</value>
   </data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>Despre acest joc</value></data>
+  <data name="NavHelpStartHere" xml:space="preserve"><value>Începe aici</value></data>
+  <data name="NavHelpLearnSub" xml:space="preserve"><value>Un tur ghidat despre alăturare și joc.</value></data>
+  <data name="NavHelpGettingStartedSub" xml:space="preserve"><value>Deplasare, conversație, canale și poștă.</value></data>
+  <data name="NavHelpNewbieSub" xml:space="preserve"><value>Ce înseamnă [ ] și &lt; &gt; într-o comandă.</value></data>
 </root>

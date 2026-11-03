@@ -1,0 +1,47 @@
+@using SharpMUSH.Library.Models.Portal.Onboarding
+@inject ServerInfoService Info
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+@* The game's configured welcome, rules and character-guide pages, under their own titles. *@
+@if (_about.Count > 0)
+{
+    <p class="journey-about">@Loc["NavJourneyAbout"]:
+        @foreach (var link in _about)
+        {
+            <a href="@link.Url">@link.Title</a>
+        }
+    </p>
+}
+
+@code {
+    private IReadOnlyList<GuideLink> _about = [];
+    // Each load takes a number; a load that finishes after a newer one started is dropped.
+    private int _load;
+    private bool _disposed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Info.Changed += OnServerInfoChanged;
+        await LoadAsync(++_load);
+    }
+
+    private void OnServerInfoChanged() => _ = InvokeAsync(() => _disposed ? Task.CompletedTask : LoadAsync(++_load));
+
+    private async Task LoadAsync(int load)
+    {
+        _about = [];
+        StateHasChanged();
+        var presentation = await Info.OnboardingAsync();
+        if (_disposed || load != _load) return;
+        _about = presentation is null ? []
+            : new[] { presentation.Welcome, presentation.Rules, presentation.CharacterGuide }.OfType<GuideLink>().ToArray();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        Info.Changed -= OnServerInfoChanged;
+    }
+}
