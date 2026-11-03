@@ -70,14 +70,19 @@ public sealed class ObjectRelationMemo(IMediator mediator, ObjectVersions versio
 
 	public Task<ObjectGrants> GrantsAsync(int number, bool isPlayer, Func<CancellationToken, Task<ObjectGrants>> read,
 		CancellationToken cancellationToken)
-	{
-		var version = versions.Of(number);
-		var grantsTable = versions.OfTag(CacheTags.Grants);
-		return _grants.TryGetValue(number, out var known)
-				&& known.Version == version && known.GrantsTable == grantsTable && known.IsPlayer == isPlayer
-			? known.Grants
-			: ReadGrantsAsync(number, isPlayer, version, grantsTable, read, cancellationToken);
-	}
+		=> KnownGrants(number, isPlayer)
+			?? ReadGrantsAsync(number, isPlayer, versions.Of(number), versions.OfTag(CacheTags.Grants), read, cancellationToken);
+
+	/// <summary>
+	/// The kept grants while they stand, or null when they must be read. A caller asks this before building the
+	/// reader <see cref="GrantsAsync"/> takes, so a hit allocates nothing.
+	/// </summary>
+	public Task<ObjectGrants>? KnownGrants(int number, bool isPlayer)
+		=> _grants.TryGetValue(number, out var known)
+			&& known.Version == versions.Of(number) && known.GrantsTable == versions.OfTag(CacheTags.Grants)
+			&& known.IsPlayer == isPlayer
+				? known.Grants
+				: null;
 
 	private async Task<ObjectGrants> ReadGrantsAsync(int number, bool isPlayer, long version, long grantsTable,
 		Func<CancellationToken, Task<ObjectGrants>> read, CancellationToken cancellationToken)
@@ -107,9 +112,15 @@ public sealed class ObjectRelationMemo(IMediator mediator, ObjectVersions versio
 		CancellationToken cancellationToken)
 		=> RefAsync(_owners, number, read, cancellationToken);
 
+	/// <summary>The kept owner while it stands, or null; see <see cref="KnownGrants"/>.</summary>
+	public Task<SharpPlayer>? KnownOwner(int number) => Known<SharpPlayer>(_owners, number);
+
 	public Task<AnySharpContainer> LocationAsync(int number, Func<CancellationToken, Task<AnySharpContainer>> read,
 		CancellationToken cancellationToken)
 		=> RefAsync(_locations, number, read, cancellationToken);
+
+	/// <summary>The kept location while it stands, or null; see <see cref="KnownGrants"/>.</summary>
+	public Task<AnySharpContainer>? KnownLocation(int number) => Known<AnySharpContainer>(_locations, number);
 
 	/// <summary>
 	/// Every lock lookup walks the parent chain, the type ancestor's included, so an <c>@lock/interact</c> nobody set
@@ -124,6 +135,12 @@ public sealed class ObjectRelationMemo(IMediator mediator, ObjectVersions versio
 			? NoParent
 			: RefAsync(_parents, number, ct => ReadParentAsync(number, version, read, ct), cancellationToken);
 	}
+
+	/// <summary>The kept parent, or the lack of one, while it stands, or null; see <see cref="KnownGrants"/>.</summary>
+	public Task<AnyOptionalSharpObject>? KnownParent(int number)
+		=> _parentless.TryGetValue(number, out var parentlessAt) && parentlessAt == versions.Of(number)
+			? NoParent
+			: Known<AnyOptionalSharpObject>(_parents, number);
 
 	private async Task<AnyOptionalSharpObject> ReadParentAsync(int number, long version,
 		Func<CancellationToken, Task<AnyOptionalSharpObject>> read, CancellationToken cancellationToken)
@@ -142,6 +159,12 @@ public sealed class ObjectRelationMemo(IMediator mediator, ObjectVersions versio
 			? kept
 			: ResolveAsync(table, number, version, known, read, cancellationToken);
 	}
+
+	private Task<T>? Known<T>(ConcurrentDictionary<int, RefEntry> table, int number)
+		=> table.TryGetValue(number, out var known) && known.Version == versions.Of(number)
+			&& known.Value is Task<T> kept && versions.Of(known.Ref.Number) == known.RefVersion
+				? kept
+				: null;
 
 	private async Task<T> ResolveAsync<T>(ConcurrentDictionary<int, RefEntry> table, int number, long version,
 		RefEntry? known, Func<CancellationToken, Task<T>> read, CancellationToken cancellationToken) where T : IObjectShaped<T>

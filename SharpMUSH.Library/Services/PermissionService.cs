@@ -221,11 +221,10 @@ public class PermissionService(
 			return false;
 
 		// mortal_dark hides from non-privileged viewers regardless of ownership
-		if (attribute.Length > 0 && attribute.Any(isMortalDark)
-				&& !await AttributeViewMemo.PrivilegedAsync(memo, viewer, async () => viewer.IsGod() || await viewer.IsWizard()))
+		if (AnyOf(attribute, isMortalDark) && !await AttributeViewMemo.PrivilegedAsync(memo, viewer, IsPrivilegedAsync))
 			return false;
 
-		if (await AttributeViewMemo.CanExamineAsync(memo, viewer, target, () => CanExamine(viewer, target)))
+		if (await AttributeViewMemo.CanExamineAsync(memo, viewer, target, _canExamine ??= CanExamine))
 			return true;
 
 		if (attribute.Length == 0)
@@ -234,11 +233,32 @@ public class PermissionService(
 		// PennMUSH attrib.c:305-310 - AF_Nearby overrides AF_Visual's grant when the viewer
 		// could not look at the target (can_look_at, hdrs/mushdb.h:104). Only pay for the
 		// nearby/location lookups when some level of the path actually carries the flag.
-		var canLook = attribute.Any(isNearby)
-			&& await AttributeViewMemo.CanLookAtAsync(memo, viewer, target, () => CanLookAt(viewer, target));
+		var canLook = AnyOf(attribute, isNearby)
+			&& await AttributeViewMemo.CanLookAtAsync(memo, viewer, target, _canLookAt ??= CanLookAt);
 
-		return attribute.All(attr => isVisual(attr) && (!isNearby(attr) || canLook));
+		foreach (var attr in attribute)
+		{
+			if (!isVisual(attr) || (isNearby(attr) && !canLook)) return false;
+		}
+
+		return true;
 	}
+
+	private static bool AnyOf<T>(T[] attribute, Func<T, bool> test)
+	{
+		foreach (var attr in attribute)
+		{
+			if (test(attr)) return true;
+		}
+
+		return false;
+	}
+
+	private static async ValueTask<bool> IsPrivilegedAsync(AnySharpObject viewer) => viewer.IsGod() || await viewer.IsWizard();
+
+	// Built once: a method group made into a delegate is a new delegate every time it is passed.
+	private Func<AnySharpObject, AnySharpObject, ValueTask<bool>>? _canExamine;
+	private Func<AnySharpObject, AnySharpObject, ValueTask<bool>>? _canLookAt;
 
 	/// <summary>
 	/// PennMUSH's <c>can_look_at</c> (<c>hdrs/mushdb.h:104</c>): whether <paramref name="viewer"/>

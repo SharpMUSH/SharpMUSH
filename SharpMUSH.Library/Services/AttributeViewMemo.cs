@@ -21,29 +21,43 @@ public sealed class AttributeViewMemo
 	private Dictionary<(DBRef Viewer, DBRef Target), bool>? _look;
 
 	/// <summary>Whether <paramref name="viewer"/> is privileged, asked once per <paramref name="memo"/>; without one, asked now.</summary>
-	internal static ValueTask<bool> PrivilegedAsync(AttributeViewMemo? memo, AnySharpObject viewer, Func<ValueTask<bool>> compute)
-		=> memo is null ? compute() : RememberAsync(memo._privileged ??= [], viewer.Object().DBRef, compute);
+	internal static ValueTask<bool> PrivilegedAsync(AttributeViewMemo? memo, AnySharpObject viewer,
+		Func<AnySharpObject, ValueTask<bool>> compute)
+		=> memo is null ? compute(viewer) : RememberAsync(memo._privileged ??= [], viewer.Object().DBRef, viewer, compute);
 
 	/// <summary>Whether <paramref name="viewer"/> may examine <paramref name="target"/>, asked once per <paramref name="memo"/>.</summary>
 	internal static ValueTask<bool> CanExamineAsync(AttributeViewMemo? memo, AnySharpObject viewer, AnySharpObject target,
-		Func<ValueTask<bool>> compute)
-		=> memo is null ? compute() : RememberAsync(memo._examine ??= [], (viewer.Object().DBRef, target.Object().DBRef), compute);
+		Func<AnySharpObject, AnySharpObject, ValueTask<bool>> compute)
+		=> memo is null ? compute(viewer, target) : RememberAsync(memo._examine ??= [], viewer, target, compute);
 
 	/// <summary>Whether <paramref name="viewer"/> could look at <paramref name="target"/>, asked once per <paramref name="memo"/>.</summary>
 	internal static ValueTask<bool> CanLookAtAsync(AttributeViewMemo? memo, AnySharpObject viewer, AnySharpObject target,
-		Func<ValueTask<bool>> compute)
-		=> memo is null ? compute() : RememberAsync(memo._look ??= [], (viewer.Object().DBRef, target.Object().DBRef), compute);
+		Func<AnySharpObject, AnySharpObject, ValueTask<bool>> compute)
+		=> memo is null ? compute(viewer, target) : RememberAsync(memo._look ??= [], viewer, target, compute);
 
-	private static async ValueTask<bool> RememberAsync<TKey>(Dictionary<TKey, bool> answers, TKey key,
-		Func<ValueTask<bool>> compute)
-		where TKey : notnull
+	private static async ValueTask<bool> RememberAsync(Dictionary<DBRef, bool> answers, DBRef key, AnySharpObject viewer,
+		Func<AnySharpObject, ValueTask<bool>> compute)
 	{
 		if (answers.TryGetValue(key, out var known))
 		{
 			return known;
 		}
 
-		var answer = await compute();
+		var answer = await compute(viewer);
+		answers[key] = answer;
+		return answer;
+	}
+
+	private static async ValueTask<bool> RememberAsync(Dictionary<(DBRef Viewer, DBRef Target), bool> answers,
+		AnySharpObject viewer, AnySharpObject target, Func<AnySharpObject, AnySharpObject, ValueTask<bool>> compute)
+	{
+		var key = (viewer.Object().DBRef, target.Object().DBRef);
+		if (answers.TryGetValue(key, out var known))
+		{
+			return known;
+		}
+
+		var answer = await compute(viewer, target);
 		answers[key] = answer;
 		return answer;
 	}

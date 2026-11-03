@@ -289,7 +289,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		using var budgetScope = budget.Enter();
 		if (budget.IsExpired) return (new CallState(ExecutionBudget.Error) { HadErrors = true }, true);
 		budget.ThrowIfExceeded();
-		if (!parser.State.IsEmpty) parser = parser.Push(parser.CurrentState with { ExecutionBudget = budget });
+		if (!parser.State.IsEmpty && !ReferenceEquals(parser.CurrentState.ExecutionBudget, budget))
+			parser = parser.Push(parser.CurrentState with { ExecutionBudget = budget });
 
 		var plainText = text.ToPlainText();
 

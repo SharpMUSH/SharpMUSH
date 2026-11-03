@@ -22,8 +22,20 @@ public static class GamePowers
 	/// <param name="Description">What holding it allows, in English (also the role editor's text).</param>
 	public sealed record Power(string Name, string[] Aliases, string? Role, string Description)
 	{
+		/// <summary>The power's name.</summary>
+		/// <remarks>A copy made with another name works out its own <see cref="Scope"/>.</remarks>
+		public string Name
+		{
+			get;
+			init
+			{
+				field = value;
+				Scope = PortalPermission.GamePower(value);
+			}
+		} = Name;
+
 		/// <summary>The scope that backs the power.</summary>
-		public string Scope => PortalPermission.GamePower(Name);
+		public string Scope { get; private set; } = PortalPermission.GamePower(Name);
 
 		/// <summary>The resource key stem for the role editor's label and description.</summary>
 		public string ResourceKey => "EnumPermPower" + string.Concat(Name.Split('_')
@@ -76,8 +88,23 @@ public static class GamePowers
 		new("Unkillable", [], null, "Cannot be killed."),
 	];
 
+	// Every power check asks Find first, so a name is one lookup. The first power a name or alias answers to wins.
+	private static readonly Dictionary<string, Power> ByNameOrAlias = Index();
+
+	private static Dictionary<string, Power> Index()
+	{
+		var index = new Dictionary<string, Power>(StringComparer.OrdinalIgnoreCase);
+		foreach (var power in All)
+		{
+			index.TryAdd(power.Name, power);
+			foreach (var alias in power.Aliases) index.TryAdd(alias, power);
+		}
+
+		return index;
+	}
+
 	/// <summary>The power <paramref name="nameOrAlias"/> names, if it is one of these.</summary>
-	public static Power? Find(string nameOrAlias) => All.FirstOrDefault(power => power.AnswersTo(nameOrAlias));
+	public static Power? Find(string nameOrAlias) => ByNameOrAlias.GetValueOrDefault(nameOrAlias);
 
 	/// <summary>The power a scope backs, if it backs one.</summary>
 	public static Power? ForScope(string scope)
@@ -110,7 +137,15 @@ public static class RoleFlags
 
 	/// <summary>The role-backed flag named <paramref name="name"/>, if it is one.</summary>
 	public static Flag? Find(string name)
-		=> All.FirstOrDefault(flag => string.Equals(flag.Name, name, StringComparison.OrdinalIgnoreCase));
+	{
+		// Every flag check asks this first; a loop over the two allocates nothing.
+		for (var i = 0; i < All.Count; i++)
+		{
+			if (string.Equals(All[i].Name, name, StringComparison.OrdinalIgnoreCase)) return All[i];
+		}
+
+		return null;
+	}
 
 	/// <summary>The flag a role stands for, if it stands for one.</summary>
 	public static Flag? ForRole(string slug)

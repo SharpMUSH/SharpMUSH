@@ -316,7 +316,11 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> HasPower(this SharpObject obj, string power, CancellationToken cancellationToken)
 		=> GamePowers.Find(power) is { } gamePower
 			? (await obj.GrantsAsync(cancellationToken)).Shows(gamePower.Scope)
-			: await obj.Powers.Value.AnyAsync(x => x.AnswersTo(power), cancellationToken);
+			: await HasStoredPower(obj, power, cancellationToken);
+
+	// Apart from HasPower: the lambda's closure would be allocated on every call to the method that holds it.
+	private static ValueTask<bool> HasStoredPower(SharpObject obj, string power, CancellationToken cancellationToken)
+		=> obj.Powers.Value.AnyAsync(x => x.AnswersTo(power), cancellationToken);
 
 	/// <summary>
 	/// The powers the object shows, as <c>powers()</c> and examine list them: each built-in power whose
@@ -546,7 +550,7 @@ public static partial class HelperFunctions
 	/// of its questions answers as the per-read helper here does.
 	/// </summary>
 	public static async ValueTask<ObjectFlagSet> ReadFlagsAsync(this SharpObject obj, CancellationToken cancellationToken)
-		=> new(obj.DBRef, await obj.FlagsNowAsync(cancellationToken), await obj.GrantsAsync(cancellationToken));
+		=> ObjectFlagSet.Of(obj.DBRef, await obj.FlagsNowAsync(cancellationToken), await obj.GrantsAsync(cancellationToken));
 
 	public static ValueTask<ObjectFlagSet> ReadFlagsAsync(this SharpObject obj)
 		=> obj.ReadFlagsAsync(ExecutionBudget.CurrentToken);

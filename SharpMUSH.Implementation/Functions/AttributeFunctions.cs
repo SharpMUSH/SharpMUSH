@@ -1208,11 +1208,8 @@ public partial class Functions
 			.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
 			.ToDictionary();
 
-		return await AttributeService.CallAttributeFunctionAsync(parser.Push(parser.CurrentState with
-		{
-			Arguments = arguments,
-			EnvironmentRegisters = new Dictionary<string, CallState>(arguments)
-		}), AttributeFunction.Of(executor, found));
+		return await AttributeService.CallAttributeFunctionAsync(parser, AttributeFunction.Of(executor, found),
+			arguments, new Dictionary<string, CallState>(arguments));
 	}
 
 	[SharpFunction(Name = "ulambda", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular, ParameterNames = ["parameters", "expression", "arguments..."])]

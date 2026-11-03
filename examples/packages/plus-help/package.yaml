@@ -1,7 +1,7 @@
 format: "1.16"
 package: plus-help
 title: "+help"
-version: 1.9.1
+version: 1.9.2
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT
@@ -292,10 +292,17 @@ objects:
         flags: [funsyntax]
       # A source with no topics is not listed: the game's own is empty until someone writes a topic,
       # and an empty row is worse than no row.
-      # %0 records — the registered sources that actually have topics
+      # no arguments — the registered sources that actually have a topic the reader may read
       FUN`GET`LIVESOURCES:
         value: |-
-          trim(squish(iter(u(%!/FUN`GET`SOURCES),if(words(u(%!/FUN`GET`OF,%0,%i0)),%i0),%b,%b)))
+          trim(squish(iter(u(%!/FUN`GET`SOURCES),if(u(%!/FUN`IS`SOURCELIVE,%i0),%i0),%b,%b)))
+        flags: [funsyntax]
+      # Whether FUN`SOURCE`RECORDS would give a source any record, asked without building them: the
+      # walk stops at the first topic the reader may read.
+      # %0 a source — whether it has one
+      FUN`IS`SOURCELIVE:
+        value: |-
+          t(words(iter(u(%!/FUN`SOURCE`OBJECTS,%0),if(cand(isdbref(%i0),u(%!/FUN`IS`OBJECTREADABLE,%i0)),[setq(failed_paths,u(%!/FUN`GET`FAILEDPATHS,%i0))][iter(lattr(%i0/HELP`**),if(cand(strlen(get(%i1/%i0)),not(u(%!/FUN`IS`UNDERPATHS,rest(%i0,`),%q<failed_paths>))),x[ibreak(2)]),%b,%b)]),%b,%b)))
         flags: [funsyntax]
       # What a reader typed, as a topic name: lower case, and a command typed as one ("+scene" or
       # "+scene/join") read as the topic it names, its switch a word of the topic ("scene join").
@@ -413,10 +420,12 @@ objects:
       # game overrides the shipped text by writing its own with +help/write and nothing new is
       # needed to let it. Below it, what this game actually has installed — no counts, because a
       # reader choosing where to look is not helped by knowing one source has four topics.
-      # %0 every record — the whole front page
+      # It never builds every record: "index" is a plain name (FUN`GET`NAMED), and a source is listed
+      # once one topic of it is readable (FUN`IS`SOURCELIVE).
+      # no arguments — the whole front page
       FUN`DISPLAY`INDEX:
         value: |-
-          box(if(words(setr(index_records,u(%!/FUN`GET`FOUND,%0,index))),rendermarkdowncustom(u(%!/FUN`RECORD`TEXT,%q<index_records>),%!,u(%!/FUN`GET`BODYWIDTH))%r)[rule(Available help)]%r[u(%!/FUN`DISPLAY`SOURCEGRID,u(%!/FUN`GET`LIVESOURCES,%0))],Help,,u(%!/FUN`GET`FRAME))%r[u(%!/FUN`DISPLAY`SYNTAX)]
+          box(if(words(setr(index_records,u(%!/FUN`GET`RESOLVED,u(%!/FUN`GET`NAMED,index)))),rendermarkdowncustom(u(%!/FUN`RECORD`TEXT,%q<index_records>),%!,u(%!/FUN`GET`BODYWIDTH))%r)[rule(Available help)]%r[u(%!/FUN`DISPLAY`SOURCEGRID,u(%!/FUN`GET`LIVESOURCES))],Help,,u(%!/FUN`GET`FRAME))%r[u(%!/FUN`DISPLAY`SYNTAX)]
         flags: [funsyntax]
       # named: title · list the records · page · pages how many · head the command and its switches · tail
       # what follows them. The next page is head/<n> tail.
@@ -604,7 +613,7 @@ objects:
       # Regex patterns: a non-capturing group is written "(?\:" — a bare colon would end the pattern.
       CMD`INDEX:
         value: |-
-          $^\+help\s*$:@pemit %#=u(%!/FUN`DISPLAY`INDEX,u(%!/FUN`GET`RECORDS))
+          $^\+help\s*$:@pemit %#=u(%!/FUN`DISPLAY`INDEX)
         flags: [regexp, cmdsyntax]
       # A page of several matches is asked for as +help/<n> <topic>, through CMD`SWITCH.
       CMD`TOPIC:

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using SharpMUSH.Library.Authorization;
 
 namespace SharpMUSH.Library.Models;
@@ -20,6 +21,24 @@ public sealed class ObjectFlagSet
 	private HashSet<string>? _names;
 	private HashSet<string>? _namesAndAliases;
 	private HashSet<string>? _symbols;
+
+	// The set last built from each flags array. The relation memo hands back the same array and grants while the
+	// object stands, so a permission check that reads an object's flags many times builds the set once.
+	private static readonly ConditionalWeakTable<SharpObjectFlag[], ObjectFlagSet> Built = new();
+
+	/// <summary>
+	/// The set for <paramref name="flags"/> and <paramref name="grants"/>: the one last built from that same array
+	/// and grants instance when there is one, which answers alike since neither changes once read.
+	/// </summary>
+	public static ObjectFlagSet Of(DBRef owner, SharpObjectFlag[] flags, ObjectGrants grants)
+	{
+		if (Built.TryGetValue(flags, out var built) && built.Object == owner && ReferenceEquals(built.Grants, grants))
+			return built;
+
+		built = new ObjectFlagSet(owner, flags, grants);
+		Built.AddOrUpdate(flags, built);
+		return built;
+	}
 
 	public ObjectFlagSet(DBRef owner, IReadOnlyList<SharpObjectFlag> flags, ObjectGrants grants)
 	{

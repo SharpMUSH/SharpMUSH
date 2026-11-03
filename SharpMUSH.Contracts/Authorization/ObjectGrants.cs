@@ -126,17 +126,30 @@ public sealed class ObjectGrants
 	/// The slugs of the held roles that guard their holders (<see cref="PortalPermission.ProtectRole"/>), each read on
 	/// the role itself: an override on the object or the account neither adds a guard nor lifts one.
 	/// </summary>
-	public IEnumerable<string> GuardedRoles => Roles
+	public IEnumerable<string> GuardedRoles => Guarded;
+
+	// Worked out once: every control check asks it of the target, and the roles never change.
+	private string[] Guarded => _guarded ??= Roles
 		.Where(held => PermissionResolver.StateOf(held.Role.Permissions, PortalPermission.ProtectRole) == PermissionState.Allow)
 		.Select(held => held.Role.Slug)
-		.Distinct(StringComparer.OrdinalIgnoreCase);
+		.Distinct(StringComparer.OrdinalIgnoreCase)
+		.ToArray();
+
+	private string[]? _guarded;
 
 	/// <summary>
 	/// Whether these grants pass every guard <paramref name="target"/>'s roles set: a
 	/// <see cref="PortalPermission.ControlRole"/> for each of its <see cref="GuardedRoles"/>.
 	/// </summary>
 	public bool PassesGuardsOf(ObjectGrants target)
-		=> target.GuardedRoles.All(slug => Has(PortalPermission.ControlRole(slug)));
+	{
+		foreach (var slug in target.Guarded)
+		{
+			if (!Has(PortalPermission.ControlRole(slug))) return false;
+		}
+
+		return true;
+	}
 
 	/// <summary>
 	/// The spelling <see cref="Has"/> expects for <paramref name="scope"/>, matched without regard to case:
