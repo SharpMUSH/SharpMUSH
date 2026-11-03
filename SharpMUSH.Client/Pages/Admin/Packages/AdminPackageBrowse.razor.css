@@ -5,13 +5,6 @@
     flex-wrap: wrap;
     padding: 14px 16px;
 }
-.pkg-snapshot-meta {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    color: var(--text-faint);
-    padding: 0 16px 12px;
-    overflow-wrap: anywhere;
-}
 .pkg-toolbar ::deep .pkg-btn-primary {
     background: var(--accent);
     color: var(--accent-on);

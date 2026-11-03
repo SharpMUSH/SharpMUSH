@@ -2561,10 +2561,6 @@
     <value>Pakete suchen…</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgSnapshotAt" xml:space="preserve">
-    <value>{0} bei {1}</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgSoftcodePackages" xml:space="preserve">
     <value>Softcode-Pakete</value>
     <comment>MT</comment>

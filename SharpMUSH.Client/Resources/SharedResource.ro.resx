@@ -2561,10 +2561,6 @@
     <value>Căutare pachete…</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgSnapshotAt" xml:space="preserve">
-    <value>{0} la {1}</value>
-    <comment>MT — assumed {1} is a commit/ref the snapshot was taken at</comment>
-  </data>
   <data name="PkgSoftcodePackages" xml:space="preserve">
     <value>Pachete softcode</value>
     <comment>MT</comment>

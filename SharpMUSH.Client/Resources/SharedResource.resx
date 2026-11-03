@@ -1614,9 +1614,6 @@
   <data name="PkgUnreviewedSource" xml:space="preserve">
     <value>This source has not been reviewed. Inspect all code on the review screen before applying.</value>
   </data>
-  <data name="PkgSnapshotAt" xml:space="preserve">
-    <value>{0} at {1}</value>
-  </data>
   <data name="PkgNoDescription" xml:space="preserve">
     <value>(no description)</value>
   </data>

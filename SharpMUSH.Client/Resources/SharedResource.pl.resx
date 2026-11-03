@@ -2561,10 +2561,6 @@
     <value>Szukaj pakietów…</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgSnapshotAt" xml:space="preserve">
-    <value>{0} — {1}</value>
-    <comment>MT — "at" replaced by a dash: a Polish preposition here would demand a case for {1} (a commit/timestamp) that cannot be controlled</comment>
-  </data>
   <data name="PkgSoftcodePackages" xml:space="preserve">
     <value>Pakiety softcode</value>
     <comment>MT — "softcode" kept per glossary</comment>
