@@ -1,0 +1,5 @@
+.journey-about {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: .25rem .5rem;
+}

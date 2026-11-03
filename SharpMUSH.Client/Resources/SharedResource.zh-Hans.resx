@@ -7452,4 +7452,5 @@
   <data name="NavMapKeptInside" xml:space="preserve">
     <value>已保持在图片内，位于 {0}, {1}。</value>
   </data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>关于本游戏</value></data>
 </root>

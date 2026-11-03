@@ -7452,4 +7452,5 @@
   <data name="NavMapKeptInside" xml:space="preserve">
     <value>Holdt inde i billedet, ved {0}, {1}.</value>
   </data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>Om dette spil</value></data>
 </root>

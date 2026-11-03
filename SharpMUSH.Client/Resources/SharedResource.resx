@@ -11069,4 +11069,5 @@
   <data name="PkgBrowseCategories" xml:space="preserve">
     <value>Categories</value>
   </data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>About this game</value></data>
 </root>

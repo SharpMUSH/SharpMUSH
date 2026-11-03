@@ -117,6 +117,22 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 			() => handler.SessionReads);
 	}
 
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task ClaimAsksForTheCharacterPassword(bool claim)
+	{
+		SeedLoggedIn(true);
+		Services.GetRequiredService<NavigationManager>().NavigateTo(claim ? "/characters/claim" : "/characters/new");
+		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
+		if (claim)
+			await Assert.That(cut.FindAll("label").Any(label => label.TextContent.Contains("AuthCharacterPassword", StringComparison.Ordinal))).IsTrue();
+		else
+			await Assert.That(cut.Find("a[href='/characters/claim']").TextContent).IsEqualTo("NavClaimInstead");
+		await Assert.That(cut.FindAll("a[href='/account']")).IsNotEmpty();
+		await Assert.That(cut.Find("h1").TextContent).IsEqualTo(claim ? "NavClaimACharacter" : "NavCreateACharacter");
+	}
+
 	private static Task ClickCreate(IRenderedComponent<SharpMUSH.Client.Pages.CharacterCreate> cut)
 		=> cut.FindAll("button").First(b => b.TextContent.Trim() == "NavCreateCharacter").ClickAsync();
 
