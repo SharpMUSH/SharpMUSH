@@ -12,7 +12,7 @@
 <AdminPageTitle Page="@Loc["PkgBatchReview"]" />
 <div class="page-stack page-stack--padded pkg-batch-review">
     <PlainPageHeader Title="@Loc["PkgBatchReview"]" Description="@Loc["PkgBatchDescription"]" />
-    <PackageBatchQueue Busy="@(_busy || Running || Packages.Batch.AdmissionBlocked)" />
+    <PackageBatchQueue Busy="@(_busy || Running || Packages.Batch.AdmissionBlocked)" ShowReviewLink="false" />
     @if (Packages.Batch.AdmissionPending)
     {
         <MudAlert Severity="Severity.Info" role="status" aria-live="polite">@Loc["PkgBatchAdmissionPending"]</MudAlert>
@@ -37,33 +37,48 @@
     {
         <KitCard Title="@Loc["PkgBatchResults"]">
             <div class="pkg-batch-body" role="status" aria-live="polite" aria-atomic="true">
-                <MudText>@Loc[$"PkgBatchRun{run.State}"]</MudText>
-                @if (run.Message is { } message) { <MudText>@message</MudText> }
-                <ol>
-                    @foreach (var step in run.Steps)
+                <MudAlert Severity="@RunSeverity(run.State)" Dense="true" Class="mb-3">
+                    <div><strong>@Loc[$"PkgBatchRun{run.State}"]</strong>@if (run.Message is { } message) {<text>: @message</text>}</div>
+                </MudAlert>
+                <ol class="pkg-batch-list pkg-batch-steps">
+                    @foreach (var (step, index) in run.Steps.Select((s, i) => (s, i)))
                     {
-                        <li><strong>@Loc[PackageBatchQueue.ActionKey(step.Intent.Action)] @step.Intent.TargetId</strong>
-                            <span>@Loc[$"PkgBatchStep{step.State}"]</span>
-                            @if (step.Message is { } note) { <p>@note</p> }
+                        <li class="pkg-batch-item pkg-batch-step">
+                            <span class="pkg-batch-step-number" aria-hidden="true">@(index + 1)</span>
+                            <div class="pkg-batch-item-main">
+                                <div class="pkg-batch-item-head">
+                                    <span class="@PackageBatchQueue.ActionClass(step.Intent.Action)">@Loc[PackageBatchQueue.ActionKey(step.Intent.Action)]</span>
+                                    <span class="pkg-batch-name">@step.Intent.TargetId</span>
+                                    <span class="@($"pkg-batch-state pkg-batch-state--{step.State.ToString().ToLowerInvariant()}")">@Loc[$"PkgBatchStep{step.State}"]</span>
+                                </div>
+                                @if (step.Message is { } note) { <div class="pkg-batch-meta"><span>@note</span></div> }
+                                @if (step.Plugin is { } plugin)
+                                {
+                                    <div class="pkg-batch-meta">
+                                        <span>@Loc[plugin.Enabled ? "PkgPluginTurnedOn" : "PkgPluginTurnedOff", plugin.Name]</span>
+                                        <span>@Loc[PluginStateKey(plugin.Status)]</span>
+                                        @if (plugin.Pending != SharpMUSH.Library.Models.Packages.PluginPendingChange.None)
+                                        { <span>@Loc[plugin.Pending == SharpMUSH.Library.Models.Packages.PluginPendingChange.Starts ? "PkgPluginStartsAtRestart" : "PkgPluginStopsAtRestartShort"]</span> }
+                                    </div>
+                                }
+                            </div>
                             @if (step.ReviewUrl is { } url && SafeReviewUrl(url))
                             {
-                                <MudButton Variant="Variant.Text" Disabled="@(_busy || Running)" OnClick="@(() => ReviewFailedStepAsync(step))">@Loc["PkgReview"]</MudButton>
-                            }
-                            @if (step.Plugin is { } plugin)
-                            {
-                                <p>@Loc[plugin.Enabled ? "PkgPluginTurnedOn" : "PkgPluginTurnedOff", plugin.Name]
-                                    <span>@Loc[PluginStateKey(plugin.Status)]</span>
-                                    @if (plugin.Pending != SharpMUSH.Library.Models.Packages.PluginPendingChange.None)
-                                    { <span>@Loc[plugin.Pending == SharpMUSH.Library.Models.Packages.PluginPendingChange.Starts ? "PkgPluginStartsAtRestart" : "PkgPluginStopsAtRestartShort"]</span> }
-                                </p>
+                                <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@(_busy || Running)" OnClick="@(() => ReviewFailedStepAsync(step))">@Loc["PkgReview"]</MudButton>
                             }
                         </li>
                     }
                 </ol>
                 @if (!Running)
                 {
-                    <MudButton Disabled="@_busy" OnClick="@ReviewRemainingAsync">@Loc["PkgBatchReviewRemaining"]</MudButton>
-                    <MudButton Disabled="@_busy" OnClick="@RefreshRunAsync">@Loc["PkgBatchRefreshStatus"]</MudButton>
+                    <div class="pkg-batch-actions">
+                        <MudButton Variant="Variant.Text" Disabled="@_busy" OnClick="@RefreshRunAsync">@Loc["PkgBatchRefreshStatus"]</MudButton>
+                        @if (Packages.Batch.Intents.Count > 0)
+                        {
+                            <MudButton Class="pkg-batch-review-again" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                                       Disabled="@(_busy || Packages.Batch.AdmissionBlocked)" OnClick="@ReviewRemainingAsync">@Loc["PkgBatchReviewAgain"]</MudButton>
+                        }
+                    </div>
                 }
             </div>
         </KitCard>
@@ -93,51 +108,63 @@
         }
         <KitCard Title="@Loc["PkgBatchOrderedChanges"]">
             <div class="pkg-batch-body">
-                <ol>
-                    @foreach (var step in plan.Steps)
+                <ol class="pkg-batch-list pkg-batch-steps">
+                    @foreach (var (step, index) in plan.Steps.Select((s, i) => (s, i)))
                     {
-                        <li @key="step.StepId">
-                            <strong>@Loc[PackageBatchQueue.ActionKey(step.Intent.Action)] @step.Intent.TargetId</strong>
-                            <p>@step.Reason</p>
-                            @if (step.Plugin is { } currentPlugin)
-                            {
-                                <p>@Loc[PluginStateKey(currentPlugin.Status)]
-                                    @if (currentPlugin.Pending != SharpMUSH.Library.Models.Packages.PluginPendingChange.None)
-                                    { <span>@Loc[currentPlugin.Pending == SharpMUSH.Library.Models.Packages.PluginPendingChange.Starts ? "PkgPluginStartsAtRestart" : "PkgPluginStopsAtRestartShort"]</span> }
-                                </p>
-                            }
-                            else
-                            {
-                            <p>@Loc["PkgBatchCurrentState", step.InstalledVersion ?? Loc["PkgBatchNotInstalled"]]
-                                @if (step.ResolvedVersion is { } version) { <span> / @version</span> }
-                                @if (step.Commit is { } commit) { <span> / @commit</span> }
-                            </p>
-                            }
-                            @if (step.Intent.Source is { } source)
-                            { <p>@source.Remote / @source.Path / @(source.Version ?? Loc["PkgDevChannelOption", "tip"])</p> }
+                        <li @key="step.StepId" class="pkg-batch-item pkg-batch-step">
+                            <span class="pkg-batch-step-number" aria-hidden="true">@(index + 1)</span>
+                            <div class="pkg-batch-item-main">
+                            <div class="pkg-batch-item-head">
+                                <span class="@PackageBatchQueue.ActionClass(step.Intent.Action)">@Loc[PackageBatchQueue.ActionKey(step.Intent.Action)]</span>
+                                <span class="pkg-batch-name">@step.Intent.TargetId</span>
+                                @if (step.Plugin is { } currentPlugin)
+                                {
+                                    <span class="pkg-batch-version">@Loc[PluginStateKey(currentPlugin.Status)]
+                                        @if (currentPlugin.Pending != SharpMUSH.Library.Models.Packages.PluginPendingChange.None)
+                                        { <span> · @Loc[currentPlugin.Pending == SharpMUSH.Library.Models.Packages.PluginPendingChange.Starts ? "PkgPluginStartsAtRestart" : "PkgPluginStopsAtRestartShort"]</span> }
+                                    </span>
+                                }
+                                else if (step.ResolvedVersion is { } version)
+                                {
+                                    <span class="pkg-batch-version">@(step.InstalledVersion ?? Loc["PkgBatchNotInstalled"]) → @version</span>
+                                }
+                                else
+                                {
+                                    <span class="pkg-batch-version">@Loc["PkgBatchCurrentState", step.InstalledVersion ?? Loc["PkgBatchNotInstalled"]]</span>
+                                }
+                                @if (step.Commit is { } commit)
+                                {
+                                    <code class="pkg-batch-commit" title="@commit">@(commit.Length > 7 ? commit[..7] : commit)</code>
+                                }
+                            </div>
+                            <div class="pkg-batch-meta">
+                                <span>@step.Reason</span>
+                                @if (step.Intent.Source is { } source)
+                                { <span>@source.Remote · @source.Path · @(source.Version ?? Loc["PkgDevChannelOption", "tip"])</span> }
+                                @if (step.Review is { } counted)
+                                {
+                                    <span>@string.Join(" · ", Counts(counted))</span>
+                                }
+                            </div>
                             @if (step.RequiresRestart)
-                            { <MudAlert Severity="Severity.Info">@Loc["PkgBatchRestartBoundary"]</MudAlert> }
-
-                            @if (step.Review is { } content)
-                            {
-                                <p>@Loc["PkgObjectsCount", content.Changeset.Objects.Count] /
-                                    @Loc["PkgAttributesCount", content.Changeset.Attributes.Count] /
-                                    @Loc["PkgWikiPagesCount", content.Changeset.Wiki?.Count ?? 0]</p>
-                                <details>
-                                    <summary>@Loc["PkgReview"]</summary>
-                                    <ul>
-                                        @foreach (var obj in content.Changeset.Objects)
-                                        { <li>@obj.Action: @obj.Ref — @obj.Name</li> }
-                                        @foreach (var attributeChange in content.Changeset.Attributes)
-                                        { <li>@attributeChange.Action: @attributeChange.TargetRef / @attributeChange.Attribute</li> }
-                                        @foreach (var item in content.Changeset.Wiki ?? [])
-                                        { <li>@item.Action: @item.Page</li> }
-                                    </ul>
-                                </details>
-                            }
-                            @if (step.Intent.Action == PackageBatchAction.Install && step.Intent.Source is not null)
-                            {
-                                <div class="pkg-batch-step-review">
+                            { <MudAlert Severity="Severity.Info" Dense="true">@Loc["PkgBatchRestartBoundary"]</MudAlert> }
+                            <div class="pkg-batch-step-review">
+                                @if (step.Review is { } content)
+                                {
+                                    <details class="pkg-batch-details">
+                                        <summary>@Loc["PkgReview"]</summary>
+                                        <ul>
+                                            @foreach (var obj in content.Changeset.Objects)
+                                            { <li>@obj.Action: @obj.Ref — @obj.Name</li> }
+                                            @foreach (var attributeChange in content.Changeset.Attributes)
+                                            { <li>@attributeChange.Action: @attributeChange.TargetRef / @attributeChange.Attribute</li> }
+                                            @foreach (var item in content.Changeset.Wiki ?? [])
+                                            { <li>@item.Action: @item.Page</li> }
+                                        </ul>
+                                    </details>
+                                }
+                                @if (step.Intent.Action == PackageBatchAction.Install && step.Intent.Source is not null)
+                                {
                                     @if (step.Review is { } choices && NeedsChoices(choices) && !Packages.Batch.IsReviewed(step.StepId))
                                     {
                                         <MudAlert Severity="Severity.Warning" Dense="true">@Loc["PkgBatchReviewChoicesNeeded"]</MudAlert>
@@ -151,13 +178,14 @@
                                         }
                                         <MudLink Href="@ReviewLink(step)" Typo="Typo.body2">@Loc["PkgBatchReviewOptional"]</MudLink>
                                     }
-                                </div>
-                            }
+                                }
+                            </div>
                             @if (step.Intent.Action == PackageBatchAction.Uninstall && Packages.Batch.ReviewFor(step.StepId)?.ConfirmUninstall != true)
                             {
                                 <MudCheckBox T="bool" Value="false" ValueChanged="@(value => ConfirmUninstallAsync(step, value))"
                                              Disabled="@(_busy || Running)" Label="@Loc["PkgBatchConfirmUninstall", step.Intent.TargetId]" />
                             }
+                            </div>
                         </li>
                     }
                 </ol>
@@ -169,9 +197,12 @@
             </div>
         </KitCard>
     }
-    else if (!Running && !Packages.Batch.AdmissionBlocked && Packages.Batch.Intents.Count > 0)
+    else if (_run is null && !Running && !Packages.Batch.AdmissionBlocked && Packages.Batch.Intents.Count > 0)
     {
-        <MudButton Disabled="@_busy" OnClick="@PlanAsync">@Loc["PkgBatchRefreshReview"]</MudButton>
+        <div class="pkg-batch-actions">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                       Disabled="@_busy" OnClick="@PlanAsync">@Loc["PkgBatchReviewAgain"]</MudButton>
+        </div>
     }
 </div>
 
@@ -358,6 +389,22 @@
         _run = null;
         Packages.Batch.Run = null;
         await PlanAsync();
+    }
+
+    private static Severity RunSeverity(PackageBatchRunState state) => state switch
+    {
+        PackageBatchRunState.Completed => Severity.Success,
+        PackageBatchRunState.Failed or PackageBatchRunState.Cancelled or PackageBatchRunState.Unknown => Severity.Error,
+        PackageBatchRunState.Partial or PackageBatchRunState.AwaitingRestart => Severity.Warning,
+        _ => Severity.Info
+    };
+
+    /// <summary>What an install writes, leaving out the kinds it writes none of.</summary>
+    private IEnumerable<string> Counts(PlanResponse review)
+    {
+        if (review.Changeset.Objects.Count > 0) yield return Loc["PkgObjectsCount", review.Changeset.Objects.Count];
+        if (review.Changeset.Attributes.Count > 0) yield return Loc["PkgAttributesCount", review.Changeset.Attributes.Count];
+        if (review.Changeset.Wiki?.Count is > 0 and var pages) yield return Loc["PkgWikiPagesCount", pages];
     }
 
     private static bool NeedsChoices(PlanResponse review) =>

@@ -1,7 +1,33 @@
 .pkg-batch-queue { padding: 14px 16px; overflow-wrap: anywhere; }
-.pkg-batch-queue ul { margin: 0 0 0.75rem; padding: 0; list-style: none; }
-.pkg-batch-queue li { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: space-between; }
-.pkg-batch-queue li > span { min-width: 0; flex: 1 1 14rem; }
-.pkg-batch-queue li + li { margin-top: 0.75rem; }
-.pkg-batch-source { display: block; }
-.pkg-batch-queue small { display: block; color: var(--text-dim); }
+.pkg-batch-queue .pkg-batch-list { margin-bottom: 0.75rem; }
+
+/* One change in the queue or the reviewed order: action label, package, version, then a muted meta line. */
+.pkg-batch-list { margin: 0; padding: 0; list-style: none; }
+.pkg-batch-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 10px 0;
+    border-top: 1px solid var(--border-soft);
+}
+.pkg-batch-item:first-child { border-top: 0; padding-top: 0; }
+.pkg-batch-item-main { flex: 1; min-width: 0; }
+.pkg-batch-item-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; }
+.pkg-batch-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.pkg-batch-version { font-size: 13px; color: var(--text-dim); }
+.pkg-batch-commit { font-family: var(--font-mono, monospace); font-size: 12px; color: var(--text-faint); }
+.pkg-batch-meta { display: flex; flex-wrap: wrap; gap: 0.15rem 0.75rem; margin-top: 2px; font-size: 12px; color: var(--text-faint); }
+.pkg-batch-action {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--action-color);
+    background: color-mix(in srgb, var(--action-color) 14%, transparent);
+}
+.pkg-batch-action--install { --action-color: var(--success); }
+.pkg-batch-action--uninstall { --action-color: var(--danger); }
+.pkg-batch-action--plugin { --action-color: var(--special); }

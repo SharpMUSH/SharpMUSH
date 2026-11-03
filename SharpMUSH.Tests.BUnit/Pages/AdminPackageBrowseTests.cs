@@ -90,6 +90,33 @@ public class AdminPackageBrowseTests : BunitContext
 		await Assert.That(cut.Markup).Contains("PkgReviewInstall");
 	}
 
+	[Test]
+	public async Task Queueing_a_bridge_queues_what_it_joins_that_is_neither_installed_nor_queued()
+	{
+		api.Packages =
+		[
+			new("sheet", "sheet", "1.0.0", "A sheet", [new("1.0.0", "sheet/v1.0.0", "abc123")], Category: "Game System", Subcategory: "Fate",
+				DependsOn: ["dice"]),
+			new("chargen", "chargen", "1.0.0", "Chargen", [new("1.0.0", "chargen/v1.0.0", "abc123")]),
+			new("sheet-chargen", "sheet-chargen", "1.0.0", "Bridge", [new("1.0.0", "sheet-chargen/v1.0.0", "abc123")], Category: "Game System",
+				Subcategory: "Fate", Bridge: true, DependsOn: ["sheet", "chargen"])
+		];
+		api.Catalogue = [new("dice", "dice", "1.0.0", "Dice", [])];
+		api.Installed = [Installed("1.0.0", Repo, "chargen") with { Package = Installed("1.0.0", Repo, "chargen").Package with { Id = "chargen" } }];
+		var cut = RenderBrowse();
+		await cut.FindAll(".lib-addons-toggle").Single().ClickAsync();
+		var bridge = cut.FindComponents<LibraryPackageRow>().Single(r => r.Instance.Entry.PackageId == "sheet-chargen");
+		await bridge.InvokeAsync(() => bridge.Instance.OnQueue.InvokeAsync());
+		var packages = Services.GetRequiredService<PackagesAdminService>();
+		await Assert.That(packages.Batch.Intents.Select(i => i.TargetId)).IsEquivalentTo(["dice", "sheet", "sheet-chargen"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(packages.Batch.Intents.Single(i => i.TargetId == "sheet").Source?.Version).IsEqualTo("1.0.0");
+		await Assert.That(packages.Batch.Intents.Single(i => i.TargetId == "dice").Source).IsEqualTo(new PackageBatchSource("bundled", "dice"))
+			.Because("a dependency this remote does not list comes from the bundled catalogue");
+		await Assert.That(packages.Batch.PrerequisiteReason(packages.Batch.Intents.Single(i => i.TargetId == "dice").ClientIntentId!))
+			.IsEqualTo("PkgBatchNeededBy(sheet-chargen)");
+		await Assert.That(packages.Batch.PrerequisiteReason(packages.Batch.Intents.Single(i => i.TargetId == "sheet-chargen").ClientIntentId!)).IsNull();
+	}
+
 	[After(Test)]
 	public void DisposeClient() => client.Dispose();
 
@@ -109,6 +136,8 @@ public class AdminPackageBrowseTests : BunitContext
 		public IReadOnlyList<InstalledPackageDto> Installed { get; set; } = [];
 		public bool FailInstalled { get; set; }
 		public string? PackageId { get; set; } = "tools";
+		public IReadOnlyList<PackageRepoEntry>? Packages { get; set; }
+		public IReadOnlyList<PackageRepoEntry> Catalogue { get; set; } = [];
 
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
@@ -117,7 +146,8 @@ public class AdminPackageBrowseTests : BunitContext
 			{
 				"/api/packages/remotes" => Json(new[] { new PackageRemoteRecord("official", Repo, PackageRemoteTrust.Official, null) }),
 				"/api/packages/remotes/official/browse" => Json(new PackageRepoSnapshot("official", Repo, "abc123",
-					[new("tools", PackageId, "1.1.0", "Useful tools", [new("1.0.0", "tools/v1.0.0", "abc123")])])),
+					Packages ?? [new("tools", PackageId, "1.1.0", "Useful tools", [new("1.0.0", "tools/v1.0.0", "abc123")])])),
+				"/api/packages/remotes/bundled/browse" => Json(new PackageRepoSnapshot("bundled", "bundled", "abc123", Catalogue)),
 				"/api/packages" when FailInstalled => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
 				{ Content = new StringContent("Test installed status failure") },
 				"/api/packages" => Json(Installed),

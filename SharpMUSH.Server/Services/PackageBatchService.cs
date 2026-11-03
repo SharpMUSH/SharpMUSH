@@ -340,7 +340,8 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 					var matching = remotes.Where(r => Same(r.Url, hint.Repo) && (hint.Branch is null || Same(r.Branch ?? "", hint.Branch))).ToArray();
 					if (matching.Length == 1) next = new(matching[0].Name, hint.Path ?? "");
 				}
-				else if (BundledPackages.Contains(dependency.PackageId)) next = new(BundledPackages.RemoteName, dependency.PackageId);
+				// A hint naming a repository this game has no remote for falls back to the bundled copy, as one with no hint does.
+				if (next is null && BundledPackages.Contains(dependency.PackageId)) next = new(BundledPackages.RemoteName, dependency.PackageId);
 				if (next is not null) pending.Enqueue(new(dependency.PackageId, PackageBatchAction.Install, next));
 			}
 		}

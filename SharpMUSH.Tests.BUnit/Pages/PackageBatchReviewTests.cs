@@ -375,9 +375,27 @@ public class PackageBatchReviewTests : BunitContext, IAsyncDisposable
 			[new("a", packages.Batch.Intents[0], PackageBatchStepState.Completed),
 			new("b", packages.Batch.Intents[1], PackageBatchStepState.AwaitingRestart)]);
 		var host = Render<MudHarness>(p => p.AddChildContent<PackageBatchReview>());
-		await host.FindAll("button").Single(b => b.TextContent.Contains("PkgBatchReviewRemaining")).ClickAsync();
+		await host.FindAll("button").Single(b => b.TextContent.Contains("PkgBatchReviewAgain")).ClickAsync();
 		await Assert.That(handler.Plans.Last().Intents.Select(i => i.TargetId).ToList()).IsEquivalentTo(["b"]);
 		await Assert.That(handler.Applies).IsEqualTo(0);
+	}
+
+	/// <summary>A batch refused before any step ran offers one way on: a new review of the same changes.</summary>
+	[Test]
+	public async Task A_refused_batch_can_be_reviewed_again()
+	{
+		packages.Batch.Queue(new("b", PackageBatchAction.Install, new("official", "b")));
+		packages.Batch.Run = new("run", PackageBatchRunState.Failed,
+			[new("b", packages.Batch.Intents[0], PackageBatchStepState.Unrun)], "New commits reached the source of b after the review.");
+		var host = Render<MudHarness>(p => p.AddChildContent<PackageBatchReview>());
+		await Assert.That(host.FindAll("a").Any(a => a.TextContent.Trim() == "PkgBatchReview")).IsFalse()
+			.Because("the queue card's review link would lead back to this page");
+		var before = handler.Plans.Count;
+		await host.FindAll("button").Single(b => b.TextContent.Trim() == "PkgBatchReviewAgain").ClickAsync();
+		await Assert.That(handler.Plans.Count).IsEqualTo(before + 1);
+		await Assert.That(handler.Plans.Last().Intents.Select(i => i.TargetId).ToList()).IsEquivalentTo(["b"]);
+		await Assert.That(packages.Batch.Run).IsNull();
+		await Assert.That(host.Markup).DoesNotContain("PkgBatchRunFailed");
 	}
 
 	[Test]
