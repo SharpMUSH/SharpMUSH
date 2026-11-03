@@ -125,9 +125,9 @@ public static class PackageDependencyGraph
 		var queue = new Queue<string>([id]);
 		while (queue.TryDequeue(out var current))
 		{
-			foreach (var other in next[current])
+			foreach (var other in next[current].Where(o => !string.Equals(o, id, StringComparison.OrdinalIgnoreCase)))
 			{
-				if (!string.Equals(other, id, StringComparison.OrdinalIgnoreCase) && seen.Add(other)) queue.Enqueue(other);
+				if (seen.Add(other)) queue.Enqueue(other);
 			}
 		}
 
@@ -218,9 +218,8 @@ public static class PackageDependencyGraph
 			if (columns.TryGetValue(id, out var known)) return known;
 			open.Add(id);
 			var column = 0;
-			foreach (var dependency in needs[id])
+			foreach (var dependency in needs[id].Where(d => !open.Contains(d)))
 			{
-				if (open.Contains(dependency)) continue;
 				column = Math.Max(column, Column(dependency) + 1);
 			}
 
