@@ -139,6 +139,13 @@ permissions) and `roles:`. The reference is
 - **Text, decimal and date wiki properties (format 1.18).** A `wiki_properties:` type of `text`,
   `decimal` or `date` needs format 1.18, and an earlier format refuses it.
 
+- **Function invocation limits (format 1.19).** A created object's `function_invocation_limit:`
+  is read as the engine's internal `WIREFUNCEVAL` attribute (`<limit> 1`, flags `no_command`,
+  `no_clone`, `internal`), the value `@livewire/funceval` and `/funcover` write, so the plan, the
+  review screen, the three-way merge, rollback and removal are the attribute model's. The writer
+  turns it back into the key. A manifest may not name `WIREFUNCEVAL` as an attribute, and an
+  attach object may not declare the key.
+
 ### Configuration options (format 1.3)
 
 `settings:` maps an option name, as `@config` lists it, to a value or, for a dbref option, one

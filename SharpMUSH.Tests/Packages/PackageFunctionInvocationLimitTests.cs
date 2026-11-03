@@ -24,6 +24,7 @@ public class PackageFunctionInvocationLimitTests
 		=> $$"""
 			format: {{format}}
 			package: {{id}}
+			title: Heavy Package
 			version: "{{version}}"
 			objects:
 			  - ref: core
@@ -81,6 +82,7 @@ public class PackageFunctionInvocationLimitTests
 		var failure = Parse($$$"""
 			format: "1.19"
 			package: {{{FreshId()}}}
+			title: Heavy Package
 			version: "1.0"
 			objects:
 			  - ref: handler

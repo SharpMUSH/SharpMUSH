@@ -53,12 +53,13 @@ public partial class PackageManifestService : IPackageManifestService
 	private static readonly IReadOnlySet<string> KnownObjectKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
 		"ref", "type", "name", "target", "parent", "location", "destination", "previous_refs",
-		"flags", "powers", "locks", "attributes"
+		"flags", "powers", "locks", "attributes", FunctionInvocationLimitKey
 	};
 
 	private static readonly IReadOnlySet<string> AttachForbiddenKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
-		"type", "name", "parent", "location", "destination", "previous_refs", "flags", "powers", "locks"
+		"type", "name", "parent", "location", "destination", "previous_refs", "flags", "powers", "locks",
+		FunctionInvocationLimitKey
 	};
 
 	private const int MaxPackageIdLength = 64;
@@ -173,7 +174,7 @@ public partial class PackageManifestService : IPackageManifestService
 		// requirement/forbidden checks on the declared kind.
 		var contentPack = doc.GetValueOrDefault("wiki") is List<object> { Count: > 0 } && !doc.ContainsKey("objects");
 		var objects = kind == PackageKind.Softcode
-			? contentPack ? [] : ReadObjects(doc, issues)
+			? contentPack ? [] : ReadObjects(doc, format, issues)
 			: ReadNoObjects(doc, kind, issues);
 		// Legacy manifest scalars retain their original parsing contract. Only new option
 		// declarations infer unquoted scalar types, so malformed permissions cannot lose their gate.
@@ -1316,7 +1317,7 @@ public partial class PackageManifestService : IPackageManifestService
 	private static bool ContainsRef(string value) => value.Contains("{{", StringComparison.Ordinal);
 
 	private static IReadOnlyList<PackageObjectSpec> ReadObjects(
-		Dictionary<string, object?> doc, List<PackageManifestIssue> issues)
+		Dictionary<string, object?> doc, PackageFormatVersion format, List<PackageManifestIssue> issues)
 	{
 		var objects = new List<PackageObjectSpec>();
 		if (!doc.TryGetValue("objects", out var node) || node is null)
@@ -1430,7 +1431,7 @@ public partial class PackageManifestService : IPackageManifestService
 			var flags = ReadStringList(obj, "flags", issues);
 			var powers = ReadStringList(obj, "powers", issues);
 			var locks = ReadStringMap(obj, "locks", path, issues);
-			var attributes = ReadAttributes(obj, path, issues);
+			var attributes = WithFunctionInvocationLimit(ReadAttributes(obj, path, issues), obj, path, format, issues);
 
 			objects.Add(new PackageObjectSpec(
 				refName, type, objectName.Trim(), null, parent, location, destination, previousRefs,
@@ -1566,6 +1567,13 @@ public partial class PackageManifestService : IPackageManifestService
 			{
 				issues.Add(PackageManifestIssue.Error(path,
 					"The PM` attribute tree is reserved for the package engine (ref indirection, decision 20.21)."));
+				continue;
+			}
+
+			if (attrName.Equals(LiveWire.AttributeName, StringComparison.OrdinalIgnoreCase))
+			{
+				issues.Add(PackageManifestIssue.Error(path,
+					$"{LiveWire.AttributeName} is the engine's; give the object '{FunctionInvocationLimitKey}:' instead."));
 				continue;
 			}
 

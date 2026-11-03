@@ -28,7 +28,7 @@ The limit follows whose code is running, but the count is shared by the whole co
 
 Output: code on `#21` may now make 100000 function calls in one command. `@livewire/list #21` shows both values.
 
-RhostMUSH's `/queuemax` switch is not supported.
+A package sets the same limit with `function_invocation_limit:` in its `package.yaml`. RhostMUSH's `/queuemax` switch is not supported.
 
 ::: seealso
 - [livewire()]

@@ -500,7 +500,7 @@ public static class PackageManifestWriter
 			if (obj.Target is { } target)
 			{
 				yaml.Append("    target: ").AppendLine(Scalar(target.ToString()));
-				WriteAttributes(yaml, obj.Attributes);
+				WriteAttributes(yaml, WithoutLiveWire(obj.Attributes));
 				continue;
 			}
 
@@ -534,9 +534,24 @@ public static class PackageManifestWriter
 				}
 			}
 
-			WriteAttributes(yaml, obj.Attributes);
+			// The engine's own limit attribute is read back from function_invocation_limit:, never as an attribute.
+			if (obj.Attributes.TryGetValue(LiveWire.AttributeName, out var wire)
+				&& LiveWire.Parse(wire.Value) is { Limit: > 0 } limit)
+			{
+				yaml.Append("    ").Append(PackageManifestService.FunctionInvocationLimitKey).Append(": ")
+					.AppendLine(limit.Limit.ToString(System.Globalization.CultureInfo.InvariantCulture));
+			}
+
+			WriteAttributes(yaml, WithoutLiveWire(obj.Attributes));
 		}
 	}
+
+	private static IReadOnlyDictionary<string, PackageAttributeSpec> WithoutLiveWire(
+		IReadOnlyDictionary<string, PackageAttributeSpec> attributes)
+		=> attributes.Keys.Any(name => name.Equals(LiveWire.AttributeName, StringComparison.OrdinalIgnoreCase))
+			? attributes.Where(a => !a.Key.Equals(LiveWire.AttributeName, StringComparison.OrdinalIgnoreCase))
+				.ToDictionary(a => a.Key, a => a.Value, StringComparer.OrdinalIgnoreCase)
+			: attributes;
 
 	private static void WriteAttributes(StringBuilder yaml, IReadOnlyDictionary<string, PackageAttributeSpec> attributes)
 	{
