@@ -422,7 +422,7 @@ public static class RhostNameTables
 		[RealityAttribute] = "the reality levels, imported as the object's reality layers", [247] = ServerState, [249] = ServerState,
 		[TagsAttribute] = "the tags that name the object, imported as tags",
 		[InlineStart] = ServerState + " (connection counts)", [InlineStart + 1] = ServerState + " (connection record)",
-		[InlineStart + 3] = ServerState, [InlineStart + 4] = ServerState, [InlineStart + 6] = ServerState,
+		[InlineStart + 4] = ServerState, [InlineStart + 6] = ServerState,
 	}.ToFrozenDictionary();
 
 	/// <summary>User attributes RhostMUSH writes for itself, by name.</summary>
@@ -442,7 +442,7 @@ public static class RhostNameTables
 		[1] = "OSUCCESS", [2] = "OFAILURE", [3] = "FAILURE", [4] = "SUCCESS", [6] = "DESCRIBE", [12] = "ASUCCESS",
 		[13] = "AFAILURE", [21] = "APAYMENT", [22] = "OPAYMENT", [23] = "PAYMENT", [32] = "IDESCRIBE", [36] = "ADESCRIBE",
 		[37] = "ODESCRIBE", [156] = "REGISTERED_EMAIL", [177] = "LASTPAGED", [193] = "MAILSIGNATURE",
-		[220] = "MONIKER",
+		[220] = "MONIKER", [InlineStart + 3] = LiveWire.AttributeName,
 	}.ToFrozenDictionary();
 
 	/// <summary>The built-in lock attributes that become SharpMUSH locks, under SharpMUSH's lock names.</summary>

@@ -162,6 +162,8 @@ public static class AttributeEntrySeed
 		("WM", []), ("WN", []), ("WO", []), ("WP", []), ("WQ", []), ("WR", []),
 		("WS", []), ("WT", []), ("WU", []), ("WV", []), ("WW", []), ("WX", []),
 		("WY", []), ("WZ", []),
+		// @livewire/funceval's per-object function invocation limit (LiveWire): only the engine writes it.
+		("WIREFUNCEVAL", ["no_command","no_clone","internal"]),
 		("XA", []), ("XB", []), ("XC", []), ("XD", []), ("XE", []), ("XF", []),
 		("XG", []), ("XH", []), ("XI", []), ("XJ", []), ("XK", []), ("XL", []),
 		("XM", []), ("XN", []), ("XO", []), ("XP", []), ("XQ", []), ("XR", []),

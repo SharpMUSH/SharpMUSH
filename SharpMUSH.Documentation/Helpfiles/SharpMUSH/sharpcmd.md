@@ -72,14 +72,14 @@ These '@' commands are only usable by wizards or privileged players:
 | [@boot]         | [@chownall]     | [@chzoneall]    | [@comment]      | [@dbck]         |
 | [@disable]      | [@dump]         | [@enable]       | [@feed]         | [@flag]         |
 | [@hide]         | [@hook]         | [@http]         | [@kick]         | [@leveldefault] |
-| [@log]          | [@logwipe]      | [@mapsql]       | [@motd]         | [@newpassword]  |
-| [@package]      | [@pcreate]      | [@permission]   | [@plugin]       | [@poll]         |
-| [@poor]         | [@power]        | [@purge]        | [@push]         | [@quota]        |
-| [@readcache]    | [@reality]      | [@rejectmotd]   | [@respond]      | [@role]         |
-| [@rxlevel]      | [@secret]       | [@shutdown]     | [@sitelock]     | [@slave]        |
-| [@snapshot]     | [@sql]          | [@squota]       | [@storage]      | [@suggest]      |
-| [@tag]          | [@txlevel]      | [@uptime]       | [@wall]         | [@wizmotd]      |
-| [@wizwall]      | [cd]            | [ch]            | [cv]            |                 |
+| [@livewire]     | [@log]          | [@logwipe]      | [@mapsql]       | [@motd]         |
+| [@newpassword]  | [@package]      | [@pcreate]      | [@permission]   | [@plugin]       |
+| [@poll]         | [@poor]         | [@power]        | [@purge]        | [@push]         |
+| [@quota]        | [@readcache]    | [@reality]      | [@rejectmotd]   | [@respond]      |
+| [@role]         | [@rxlevel]      | [@secret]       | [@shutdown]     | [@sitelock]     |
+| [@slave]        | [@snapshot]     | [@sql]          | [@squota]       | [@storage]      |
+| [@suggest]      | [@tag]          | [@txlevel]      | [@uptime]       | [@wall]         |
+| [@wizmotd]      | [@wizwall]      | [cd]            | [ch]            | [cv]            |
 
 # }
 "}" is a special prefix which can be used before any command. It causes the MUSH to show debug information when evaluating that command (the same as if you had the DEBUG flag set), and for any $-commands which are triggered by the command.

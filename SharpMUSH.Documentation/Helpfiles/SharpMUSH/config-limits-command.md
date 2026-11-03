@@ -58,7 +58,7 @@ Limits and other constants.
 ## Evaluation and queue limits
 
 - `function_recursion_limit=<number>`: The depth to which softcode functions can call more functions.
-- `function_invocation_limit=<number>`: The maximum number of softcode functions that can be called in one command.
+- `function_invocation_limit=<number>`: The maximum number of softcode functions that can be called in one command. [@livewire] gives one object, or one owner's objects, a limit of its own.
 - `guest_output_limit=<number>`: The most characters one function may produce while a guest's input is evaluated, from 1024 to 5242880; 65536 by default. Everyone else may produce 5242880.
 - `guest_paycheck=<number>`: How many pennies guests get each day.
 - `max_guest_pennies=<number>`: The maximum pennies a guest can have.
