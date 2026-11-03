@@ -337,4 +337,102 @@ public class FeedStoreTests
 		await _db.DeleteFeedAsync("radio", "99.1");
 		await Assert.That(await _db.GetFeedUsageAsync()).IsEmpty();
 	}
+
+	private static readonly MString Styled = MarkupText.Concat([MarkupText.Plain("calling "), MarkupText.Wrap(AnsiMarkup.Create(bold: true), "ALL"), MarkupText.Plain(" units")]);
+
+	private static MString Delivered(MString text) => MarkupText.Concat([MarkupText.Wrap(AnsiMarkup.Create(foreground: new AnsiColor.Standard(1, false)), "<Ops>"), MarkupText.Plain(" Ann says, \""), text, MarkupText.Plain("\"")]);
+
+	private FeedMessageRecord StoredRecord(long id) => _db.Store.Read(tx =>
+	{
+		tx.TryGet(Tables.FeedMessageId, Keys.Dbref(id), out var key);
+		tx.TryGet(Tables.FeedMessage, key, out var bytes);
+		return Codec.Deserialize<FeedMessageRecord>(bytes);
+	});
+
+	/// <summary>
+	/// A delivered line that holds its message is stored as what surrounds the message, and comes back whole, markup
+	/// and all; one that does not is stored as itself.
+	/// </summary>
+	[Test]
+	public async Task ALine_IsStoredAroundItsMessage_AndComesBackWhole()
+	{
+		var ann = await NewPlayer("Ann");
+		await _db.AppendFeedMessageAsync(Line(1, ann, "") with { Text = Styled, Line = Delivered(Styled) }, Keep());
+		var reworded = MarkupText.Plain("Ann radios something else entirely.");
+		await _db.AppendFeedMessageAsync(Line(2, ann, "") with { Text = Styled, Line = reworded }, Keep());
+
+		var around = StoredRecord(1);
+		await Assert.That(around.Line).IsNull();
+		await Assert.That(around.LineBefore).IsNotNull();
+		await Assert.That(StoredRecord(2).Line).IsNotNull().Because("the line does not hold the message");
+
+		var lines = await _db.GetFeedMessagesAsync("radio", "101.5", 0, 0);
+		await Assert.That(MarkupTextSerializer.Serialize(lines[0].Line!)).IsEqualTo(MarkupTextSerializer.Serialize(Delivered(Styled)));
+		await Assert.That(MarkupTextSerializer.Serialize(lines[0].Text)).IsEqualTo(MarkupTextSerializer.Serialize(Styled));
+		await Assert.That(MarkupTextSerializer.Serialize(lines[1].Line!)).IsEqualTo(MarkupTextSerializer.Serialize(reworded));
+	}
+
+	/// <summary>Fields left out when empty or the same as the speaker's come back as they were sent.</summary>
+	[Test]
+	public async Task ALine_KeepsEveryField()
+	{
+		var ann = await NewPlayer("Ann");
+		var bob = await NewPlayer("Bob");
+		var sent = new SharpFeedMessage(1, "radio", "101.5", At, new DBRef(-1), "Mercutio", bob, "Bob", ann, "Hall é",
+			FeedStyles.Pose, MarkupText.Plain("waves <hi> & \"bye\""), "[D] Mercutio", null, "seeall",
+			new ExternalFeedIdentity("discord", "1234", "Mercutio", "https://cdn.example/a.png"), "#5");
+		await _db.AppendFeedMessageAsync(sent, Keep());
+		await _db.AppendFeedMessageAsync(Line(2, ann, "plain"), Keep());
+
+		var lines = await _db.GetFeedMessagesAsync("radio", "101.5", 0, 0);
+		await Assert.That(lines[0] with { Text = MarkupText.Empty }).IsEqualTo(sent with { Text = MarkupText.Empty });
+		await Assert.That(lines[0].Text.ToPlainText()).IsEqualTo("waves <hi> & \"bye\"");
+		await Assert.That(lines[1].Executor).IsEqualTo(ann);
+		await Assert.That(lines[1].ExecutorName).IsEqualTo("Ann");
+		await Assert.That(lines[1].Line).IsNull();
+		await Assert.That(lines[1].DisplayName).IsEqualTo("");
+	}
+
+	/// <summary>
+	/// A line written in the long form, every property named in full and its markup an escaped string, is rewritten in
+	/// the short form by the migration, reads back the same, and the feed's stored size follows it.
+	/// </summary>
+	[Test]
+	public async Task Migration_RewritesLongLines()
+	{
+		var ann = await NewPlayer("Ann");
+		await _db.AppendFeedMessageAsync(Line(1, ann, "seed"), Keep());
+		var key = _db.Store.Read(tx => tx.Range(Tables.FeedMessage, []).Single().Key);
+		var text = MarkupTextSerializer.Serialize(Styled);
+		var line = MarkupTextSerializer.Serialize(Delivered(Styled));
+		var old = new System.Text.Json.Nodes.JsonObject
+		{
+			["Id"] = 1, ["AtMs"] = At.ToUnixTimeMilliseconds(), ["Speaker"] = ann.ToString(), ["SpeakerName"] = "Ann",
+			["Executor"] = ann.ToString(), ["ExecutorName"] = "Ann", ["LocationName"] = "", ["Style"] = "say",
+			["Text"] = text, ["DisplayName"] = "", ["Line"] = line, ["Audience"] = "", ["Picture"] = "",
+			["Bytes"] = 77, ["StoredBytes"] = 900
+		};
+		await _db.Store.WriteAsync(tx =>
+		{
+			tx.Put(Tables.FeedMessage, key, System.Text.Encoding.UTF8.GetBytes(old.ToJsonString()));
+			tx.TryGet(Tables.Feed, Keys.Concat(Keys.Str("radio"), Keys.Sep, Keys.Str("101.5")), out var feedBytes);
+			var feed = Codec.Deserialize<FeedRecord>(feedBytes);
+			tx.Put(Tables.Feed, Keys.Concat(Keys.Str("radio"), Keys.Sep, Keys.Str("101.5")), Codec.Serialize(feed with { Bytes = 77, StoredBytes = 900 }));
+			tx.Delete(Tables.Meta, Keys.Str("mig:" + LightningDatabase.FeedLineMigrationId));
+		});
+
+		await _db.Migrate();
+
+		var record = StoredRecord(1);
+		await Assert.That(record.Text).IsEqualTo(text);
+		await Assert.That(record.Line).IsNull();
+		await Assert.That(record.Bytes).IsEqualTo(77);
+		var message = (await _db.GetFeedMessageAsync(1)).Expect<SharpFeedMessage>();
+		await Assert.That(MarkupTextSerializer.Serialize(message.Line!)).IsEqualTo(line);
+		await Assert.That(message.Executor).IsEqualTo(ann);
+		var after = (await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>();
+		await Assert.That(after.StoredBytes).IsEqualTo(record.StoredBytes);
+		await Assert.That(after.StoredBytes).IsLessThan(900);
+		await Assert.That(after.Bytes).IsEqualTo(77);
+	}
 }

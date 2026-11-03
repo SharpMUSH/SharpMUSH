@@ -227,30 +227,11 @@ public partial class LightningDatabase
 	public async ValueTask AppendFeedMessageAsync(SharpFeedMessage message, FeedSettings limits,
 		CancellationToken cancellationToken = default)
 	{
-		var text = MarkupTextSerializer.Serialize(message.Text);
-		var record = new FeedMessageRecord
-		{
-			Id = message.Id,
-			AtMs = message.At.ToUnixTimeMilliseconds(),
-			Speaker = message.Speaker.ToString(),
-			SpeakerName = message.SpeakerName,
-			Executor = message.Executor.ToString(),
-			ExecutorName = message.ExecutorName,
-			Location = message.Location?.ToString(),
-			LocationName = message.LocationName,
-			Style = message.Style,
-			Text = text,
-			DisplayName = message.DisplayName,
-			Line = message.Line is { } line ? MarkupTextSerializer.Serialize(line) : null,
-			Audience = message.Audience,
-			ExternalIdentity = message.ExternalIdentity,
-			Picture = message.Picture,
-			Bytes = Keys.Str(text).Length
-		};
+		var record = ToRecord(message);
 
 		var key = MessageKey(message.Kind, message.Key, message.Id);
 		var idKey = Keys.Dbref(message.Id);
-		record = record with { StoredBytes = Codec.Serialize(record).Length + key.Length + idKey.Length + key.Length };
+		record = Measured(record, key);
 
 		await Store.WriteAsync(tx =>
 		{
@@ -504,11 +485,94 @@ public partial class LightningDatabase
 			record.LastId, record.StoredBytes);
 
 	private static SharpFeedMessage ToMessage(string kind, string key, FeedMessageRecord record)
-		=> new(record.Id, kind, key, DateTimeOffset.FromUnixTimeMilliseconds(record.AtMs), record.ExternalIdentity is null ? DBRef.Parse(record.Speaker) : new DBRef(-1),
-			record.SpeakerName, DBRef.Parse(record.Executor), record.ExecutorName,
-			record.Location is null ? null : DBRef.Parse(record.Location), record.LocationName, record.Style, MarkupTextSerializer.Deserialize(record.Text), record.DisplayName,
-			record.Line is null ? null : MarkupTextSerializer.Deserialize(record.Line), record.Audience, record.ExternalIdentity,
-			record.Picture);
+	{
+		var text = MarkupTextSerializer.Deserialize(record.Text);
+		var speaker = record.ExternalIdentity is null ? DBRef.Parse(record.Speaker) : new DBRef(-1);
+		var speakerName = record.SpeakerName ?? "";
+		var line = record switch
+		{
+			{ Line: { } whole } => MarkupTextSerializer.Deserialize(whole),
+			{ LineBefore: null, LineAfter: null } => null,
+			_ => MarkupText.Concat([Markup(record.LineBefore), text, Markup(record.LineAfter)])
+		};
+		var identity = record.ExternalIdentity is { } external
+			? new ExternalFeedIdentity(external.Provider, external.Subject, external.Name, external.Picture ?? "")
+			: null;
+		return new(record.Id, kind, key, DateTimeOffset.FromUnixTimeMilliseconds(record.AtMs), speaker, speakerName,
+			record.Executor is null ? DBRef.Parse(record.Speaker) : DBRef.Parse(record.Executor), record.ExecutorName ?? speakerName,
+			record.Location is null ? null : DBRef.Parse(record.Location), record.LocationName ?? "", record.Style ?? "", text,
+			record.DisplayName ?? "", line, record.Audience ?? "", identity, record.Picture ?? "");
+
+		static MarkupText Markup(string? json) => json is null ? MarkupText.Empty : MarkupTextSerializer.Deserialize(json);
+	}
+
+	/// <summary>
+	/// <paramref name="message"/> as it is stored, short of <see cref="FeedMessageRecord.StoredBytes"/>: empty fields and
+	/// an executor that is the speaker left out, and the delivered line kept as what surrounds the message when that
+	/// rebuilds it exactly.
+	/// </summary>
+	internal static FeedMessageRecord ToRecord(SharpFeedMessage message)
+	{
+		var text = MarkupTextSerializer.Serialize(message.Text);
+		var record = Fields(message) with { Text = text, Bytes = Keys.Str(text).Length };
+		return message.Line is { } line ? WithLine(record, message.Text, line, MarkupTextSerializer.Serialize(line)) : record;
+	}
+
+	/// <summary>Every field of <paramref name="message"/> but its markup and its sizes.</summary>
+	private static FeedMessageRecord Fields(SharpFeedMessage message)
+	{
+		var speaker = message.Speaker.ToString();
+		var executor = message.Executor.ToString();
+		return new FeedMessageRecord
+		{
+			Id = message.Id,
+			AtMs = message.At.ToUnixTimeMilliseconds(),
+			Speaker = speaker,
+			SpeakerName = Stored(message.SpeakerName),
+			Executor = executor == speaker ? null : executor,
+			ExecutorName = message.ExecutorName == message.SpeakerName ? null : message.ExecutorName,
+			Location = message.Location?.ToString(),
+			LocationName = Stored(message.LocationName),
+			Style = Stored(message.Style),
+			DisplayName = Stored(message.DisplayName),
+			Audience = Stored(message.Audience),
+			ExternalIdentity = message.ExternalIdentity is { } external
+				? new FeedIdentityRecord
+				{
+					Provider = external.Provider, Subject = external.Subject, Name = external.Name, Picture = Stored(external.Picture)
+				}
+				: null,
+			Picture = Stored(message.Picture)
+		};
+
+		static string? Stored(string value) => value.Length == 0 ? null : value;
+	}
+
+	/// <summary>The record with its <see cref="FeedMessageRecord.StoredBytes"/>: itself, its key, and its id index entry (the id, and the key again).</summary>
+	private static FeedMessageRecord Measured(FeedMessageRecord record, byte[] key)
+		=> record with { StoredBytes = Codec.Serialize(record).Length + key.Length + sizeof(long) + key.Length };
+
+	/// <summary>
+	/// Keeps <paramref name="line"/> as the parts before and after <paramref name="text"/> when the line holds the
+	/// message as one piece, markup and all, and as <paramref name="whole"/>, its serialized form, otherwise. The split
+	/// is kept only when putting the parts back together serializes to exactly <paramref name="whole"/>.
+	/// </summary>
+	private static FeedMessageRecord WithLine(FeedMessageRecord record, MString text, MString line, string whole)
+	{
+		var at = text.Length == 0 ? -1 : line.Text.LastIndexOf(text.Text, StringComparison.Ordinal);
+		if (at < 0) return record with { Line = whole };
+
+		var before = line.Substring(0, at);
+		var after = line.Substring(at + text.Length);
+		var rebuilt = MarkupTextSerializer.Serialize(MarkupText.Concat([before, text, after]));
+		if (!string.Equals(rebuilt, whole, StringComparison.Ordinal)) return record with { Line = whole };
+
+		return record with
+		{
+			LineBefore = MarkupTextSerializer.Serialize(before),
+			LineAfter = after.Length == 0 ? null : MarkupTextSerializer.Serialize(after)
+		};
+	}
 
 	private static FeedSettings ToSettings(FeedSettingsRecord record)
 		=> new(record.MaxMessages, record.MaxBytes, record.MaxLength,

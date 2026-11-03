@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
@@ -39,6 +40,7 @@ namespace SharpMUSH.Database.Lightning.Store;
 [JsonSerializable(typeof(FeedRecord))]
 [JsonSerializable(typeof(FeedMemberRecord))]
 [JsonSerializable(typeof(FeedMessageRecord))]
+[JsonSerializable(typeof(FeedIdentityRecord))]
 [JsonSerializable(typeof(AuditRecord))]
 [JsonSerializable(typeof(RollRecord))]
 [JsonSerializable(typeof(ActivityPlayerRecord))]
@@ -69,9 +71,21 @@ internal partial class LightningJsonContext : JsonSerializerContext;
 
 public static class Codec
 {
+	/// <summary>
+	/// <see cref="LightningJsonContext"/>'s options, writing text as literal UTF-8: the default encoder escapes
+	/// <c>"</c>, <c>&lt;</c>, <c>&gt;</c>, <c>&amp;</c>, <c>'</c>, <c>+</c> and every non-ASCII character as six-byte
+	/// <c>\uXXXX</c> sequences, for embedding in HTML. These bytes go to the store, never into a page.
+	/// </summary>
+	private static readonly LightningJsonContext Context = new(new JsonSerializerOptions
+	{
+		DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+		WriteIndented = false,
+		Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+	});
+
 	public static byte[] Serialize<T>(T value)
-		=> JsonSerializer.SerializeToUtf8Bytes(value, (JsonTypeInfo<T>)LightningJsonContext.Default.GetTypeInfo(typeof(T))!);
+		=> JsonSerializer.SerializeToUtf8Bytes(value, (JsonTypeInfo<T>)Context.GetTypeInfo(typeof(T))!);
 
 	public static T Deserialize<T>(ReadOnlySpan<byte> bytes)
-		=> JsonSerializer.Deserialize(bytes, (JsonTypeInfo<T>)LightningJsonContext.Default.GetTypeInfo(typeof(T))!)!;
+		=> JsonSerializer.Deserialize(bytes, (JsonTypeInfo<T>)Context.GetTypeInfo(typeof(T))!)!;
 }
