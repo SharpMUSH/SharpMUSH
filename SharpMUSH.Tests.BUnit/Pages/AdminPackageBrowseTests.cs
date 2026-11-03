@@ -43,7 +43,7 @@ public class AdminPackageBrowseTests : BunitContext
 	{
 		api.Installed = [Installed(version, repo, path)];
 		var cut = RenderBrowse();
-		await Assert.That(cut.Find(".pkg-installed-marker").TextContent).Contains($"PkgBrowseInstalled({version})");
+		await Assert.That(cut.Find(".lib-installed").TextContent).Contains($"PkgBrowseInstalled({version})");
 		await Assert.That(cut.Markup.Contains("PkgBrowseInstalledOrigin")).IsEqualTo(differentOrigin);
 		if (differentOrigin)
 			await Assert.That(cut.Markup).Contains($"PkgBrowseInstalledOrigin({repo}, {path})");
@@ -60,7 +60,7 @@ public class AdminPackageBrowseTests : BunitContext
 		api.Installed = [Installed("1.0.0", Repo, "tools") with { Package = Installed("1.0.0", Repo, "tools").Package with { Id = packageId is null ? "tools" : "another-package" } }];
 		api.PackageId = packageId;
 		var cut = RenderBrowse();
-		await Assert.That(cut.FindAll(".pkg-installed-marker")).IsEmpty();
+		await Assert.That(cut.FindAll(".lib-installed")).IsEmpty();
 		if (packageId is null)
 			await Assert.That(cut.Markup).Contains("PkgManifestParseFailed");
 	}
@@ -69,11 +69,11 @@ public class AdminPackageBrowseTests : BunitContext
 	public async Task Refresh_reloads_installed_state()
 	{
 		var cut = RenderBrowse();
-		await Assert.That(cut.FindAll(".pkg-installed-marker")).IsEmpty();
+		await Assert.That(cut.FindAll(".lib-installed")).IsEmpty();
 		api.Installed = [Installed("0.9.0", Repo, "tools")];
 		await cut.FindAll("button").Single(b => b.TextContent == "PkgRefreshAndBrowse").ClickAsync();
-		cut.WaitForAssertion(() => cut.Find(".pkg-installed-marker"));
-		await Assert.That(cut.Find(".pkg-installed-marker").TextContent).Contains("PkgBrowseInstalled(0.9.0)");
+		cut.WaitForAssertion(() => cut.Find(".lib-installed"));
+		await Assert.That(cut.Find(".lib-installed").TextContent).Contains("PkgBrowseInstalled(0.9.0)");
 	}
 
 	[Test]
@@ -84,7 +84,7 @@ public class AdminPackageBrowseTests : BunitContext
 		api.FailInstalled = true;
 		await cut.FindAll("button").Single(b => b.TextContent == "PkgRefreshAndBrowse").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".pkg-installed-warning"));
-		await Assert.That(cut.FindAll(".pkg-installed-marker")).IsEmpty();
+		await Assert.That(cut.FindAll(".lib-installed")).IsEmpty();
 		await Assert.That(cut.Find(".pkg-installed-warning").TextContent).Contains("PkgBrowseInstalledUnavailable");
 		await Assert.That(cut.Markup).Contains("Test installed status failure");
 		await Assert.That(cut.Markup).Contains("PkgReviewInstall");
@@ -97,7 +97,7 @@ public class AdminPackageBrowseTests : BunitContext
 	{
 		var host = Render<MudHarness>(p => p.AddChildContent<AdminPackageBrowse>());
 		var cut = host.FindComponent<AdminPackageBrowse>();
-		cut.WaitForAssertion(() => cut.Find(".pkg-card-body"));
+		cut.WaitForAssertion(() => cut.Find(".lib-row"));
 		return cut;
 	}
 

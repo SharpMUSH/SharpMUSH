@@ -231,7 +231,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 
 	/// <summary>The README buttons were labelled with a literal English "README" in every locale.</summary>
 	[Test]
-	[Arguments("Pages/Admin/Packages/AdminPackageBrowse.razor")]
+	[Arguments("Pages/Admin/Packages/LibraryPackageRow.razor")]
 	[Arguments("Pages/Admin/Packages/AdminPackageRemotes.razor")]
 	public async Task TheReadmeButtons_AreLocalised(string file)
 	{
