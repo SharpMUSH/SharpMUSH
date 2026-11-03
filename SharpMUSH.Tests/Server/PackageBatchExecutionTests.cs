@@ -431,6 +431,18 @@ public class PackageBatchExecutionTests
 	private static PluginStatusDto Plugin(string id) => new(id, id, "1", null, PluginOrigin.BuiltIn,
 		PluginBootStatus.Disabled, null, false, PluginPendingChange.None, false, null, 0, 0, []);
 
+	/// <summary>A dependency whose source hint names a repository the game has no remote for is offered from the bundled catalogue.</summary>
+	[Test]
+	public async Task ADependencyHintedAtAnUnconfiguredRepositoryIsOfferedFromTheBundledCatalogue()
+	{
+		using var f = new Fixture();
+		f.Manifests["bridge"] = "package: bridge\nversion: 1.0.0\nobjects:\n  - ref: root\n    name: Example\n    type: thing\n"
+			+ "depends:\n  - package: http-handler\n    version: '>=1.0'\n    source:\n      repo: https://github.com/SharpMUSH/SharpMUSH\n"
+			+ "      path: examples/packages/http-handler/\n      branch: main\n";
+		var plan = (await f.Service.PlanAsync(new([Install("bridge")]), Actor)).Expect<PackageBatchPlanResponse>();
+		await Assert.That(plan.Proposals.Select(p => p.Intent.Source)).IsEquivalentTo(new PackageBatchSource?[] { new(BundledPackages.RemoteName, "http-handler") });
+	}
+
 	private sealed class Fixture : IDisposable
 	{
 		public PackageRemoteRecord Remote = new("test", "https://example.test/repo", PackageRemoteTrust.Unknown, "main");

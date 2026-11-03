@@ -9594,9 +9594,6 @@
   <data name="PkgBatchRemoveNamed" xml:space="preserve">
     <value>Remove queued change for {0}</value>
   </data>
-  <data name="PkgBatchRemove" xml:space="preserve">
-    <value>Remove</value>
-  </data>
   <data name="PkgBatchReview" xml:space="preserve">
     <value>Review queued changes</value>
   </data>
@@ -9647,6 +9644,12 @@
   </data>
   <data name="PkgBatchExpires" xml:space="preserve">
     <value>Review expires: {0}</value>
+  </data>
+  <data name="PkgBatchReviewAgain" xml:space="preserve">
+    <value>Review again</value>
+  </data>
+  <data name="PkgBatchNeededBy" xml:space="preserve">
+    <value>needed by {0}</value>
   </data>
   <data name="PkgBatchRefreshReview" xml:space="preserve">
     <value>Refresh review</value>

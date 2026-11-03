@@ -138,6 +138,9 @@
     private readonly Dictionary<string, string> _selectedVersions = new();
     private bool _busy;
     private IReadOnlyDictionary<string, InstalledPackageRecord> _installed = new Dictionary<string, InstalledPackageRecord>();
+
+    /// <summary>The bundled catalogue, read the first time a bridge needs a package this remote does not list.</summary>
+    private PackageRepoSnapshot? _catalogue;
     private ApiFailure? _installedFailure;
 
     private PackageReadmeDialog? _readme;
@@ -215,15 +218,12 @@
         if (!_expanded.Remove(family.Package.Path)) _expanded.Add(family.Package.Path);
     }
 
-    private PackageBatchIntent? Queued(PackageRepoEntry entry)
-        => entry.PackageId is { } id
-            ? Packages.Batch.Intents.FirstOrDefault(i => i.Action == PackageBatchAction.Install && string.Equals(i.TargetId, id, StringComparison.OrdinalIgnoreCase))
-            : null;
+    private PackageBatchIntent? Queued(PackageRepoEntry entry) => entry.PackageId is { } id ? Queued(id) : null;
 
-    private void SelectVersion(PackageRepoEntry entry, string version)
+    private async Task SelectVersion(PackageRepoEntry entry, string version)
     {
         _selectedVersions[entry.Path] = version;
-        if (Queued(entry) is not null) QueueInstall(entry);
+        if (Queued(entry) is not null) await QueueInstall(entry);
     }
 
     protected override void OnInitialized() => Packages.Batch.Changed += OnBatchChanged;
@@ -257,6 +257,7 @@
     {
         _busy = true;
         _snapshot = null;
+        _catalogue = null;
         _installed = new Dictionary<string, InstalledPackageRecord>();
         _installedFailure = null;
         try
@@ -294,13 +295,49 @@
         => _readme?.ShowAsync(entry.PackageId ?? entry.Path, () => Packages.GetRemoteReadmeAsync(_selectedRemote, entry.Path))
             ?? Task.CompletedTask;
 
-    private void QueueInstall(PackageRepoEntry entry)
+    private async Task QueueInstall(PackageRepoEntry entry)
     {
         if (entry.PackageId is null) return;
-        var version = SelectedVersion(entry);
-        Packages.Batch.Queue(new(entry.PackageId, PackageBatchAction.Install,
-            new(_selectedRemote, entry.Path, version == DevChannel ? null : version)));
+        if (entry.Bridge && _installedFailure is null)
+            await QueueMissingDependenciesAsync(entry, entry.PackageId, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { entry.PackageId });
+        Packages.Batch.Queue(new(entry.PackageId, PackageBatchAction.Install, Source(_selectedRemote, entry)));
     }
+
+    /// <summary>
+    /// Queues what a bridge joins, and what those need in turn, that is neither installed nor queued: from this remote
+    /// when it lists the package, otherwise from the bundled catalogue. Dependencies are queued before what needs them.
+    /// </summary>
+    private async Task QueueMissingDependenciesAsync(PackageRepoEntry entry, string bridge, HashSet<string> seen)
+    {
+        foreach (var id in entry.DependsOn ?? [])
+        {
+            if (!seen.Add(id) || _installed.ContainsKey(id) || Queued(id) is not null) continue;
+            if (await FindDependencyAsync(id) is not ({ } remote, { } dependency)) continue;
+            await QueueMissingDependenciesAsync(dependency, bridge, seen);
+            Packages.Batch.Queue(new(id, PackageBatchAction.Install, Source(remote, dependency)), Loc["PkgBatchNeededBy", bridge]);
+        }
+    }
+
+    private async Task<(string? Remote, PackageRepoEntry? Entry)> FindDependencyAsync(string id)
+    {
+        if (_snapshot?.Packages.FirstOrDefault(e => Same(e.PackageId, id)) is { } here) return (_selectedRemote, here);
+        if (BundledPackageSource.IsCatalogueRemote(_selectedRemote)) return (null, null);
+        _catalogue ??= await Packages.BrowseAsync(BundledPackageSource.RemoteName) is PackageRepoSnapshot catalogue ? catalogue : null;
+        return _catalogue?.Packages.FirstOrDefault(e => Same(e.PackageId, id)) is { } bundled
+            ? (BundledPackageSource.RemoteName, bundled)
+            : (null, null);
+    }
+
+    private PackageBatchSource Source(string remote, PackageRepoEntry entry)
+    {
+        var version = remote == _selectedRemote ? SelectedVersion(entry) : entry.Versions.FirstOrDefault()?.Version ?? DevChannel;
+        return new(remote, entry.Path, version == DevChannel ? null : version);
+    }
+
+    private PackageBatchIntent? Queued(string id)
+        => Packages.Batch.Intents.FirstOrDefault(i => i.Action == PackageBatchAction.Install && Same(i.TargetId, id));
+
+    private static bool Same(string? a, string? b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 
     private void GoToReview(PackageRepoEntry entry)
     {

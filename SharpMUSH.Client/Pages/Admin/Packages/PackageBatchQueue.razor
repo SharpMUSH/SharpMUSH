@@ -12,39 +12,62 @@
         }
         else
         {
-            <ul>
+            <ul class="pkg-batch-list">
                 @foreach (var intent in Packages.Batch.Intents)
                 {
-                    <li @key="intent.ClientIntentId">
-                        <span><strong>@Loc[ActionKey(intent.Action)]</strong> @intent.TargetId
-                            @if (intent.Source is { } source)
-                            {
-                                <span class="pkg-batch-source">@source.Remote / @source.Path @(source.Version ?? Loc["PkgDevChannelOption", "tip"])</span>
-                            }
-                            @if (Packages.Batch.PrerequisiteReason(intent.ClientIntentId!) is { } reason)
-                            { <small>@Loc["PkgBatchAcceptedPrerequisite"]: @reason</small> }
-                            else { <small>@Loc["PkgBatchRequestedChange"]</small> }
-                            @if (Packages.Batch.Plan?.Steps.FirstOrDefault(s => s.Intent.ClientIntentId == intent.ClientIntentId) is { } step)
-                            {
-                                <small>@Loc["PkgBatchCurrentState", step.InstalledVersion ?? step.Plugin?.Version ?? Loc["PkgBatchNotInstalled"]]</small>
-                            }
-                            else { <small>@Loc["PkgBatchStateCheckedAtReview"]</small> }
-                        </span>
-                        <MudButton Disabled="@(Busy || Packages.Batch.AdmissionBlocked || Packages.Batch.Run?.State is PackageBatchRunState.Pending or PackageBatchRunState.Running)" Size="Size.Small" aria-label="@Loc["PkgBatchRemoveNamed", intent.TargetId]"
-                                   OnClick="@(() => Packages.Batch.Remove(intent.ClientIntentId!))">@Loc["PkgBatchRemove"]</MudButton>
+                    <li @key="intent.ClientIntentId" class="pkg-batch-item">
+                        <div class="pkg-batch-item-main">
+                            <div class="pkg-batch-item-head">
+                                <span class="@ActionClass(intent.Action)">@Loc[ActionKey(intent.Action)]</span>
+                                <span class="pkg-batch-name">@intent.TargetId</span>
+                                @if (Packages.Batch.Plan?.Steps.FirstOrDefault(s => s.Intent.ClientIntentId == intent.ClientIntentId) is { } step)
+                                {
+                                    <span class="pkg-batch-version">@(step.InstalledVersion ?? step.Plugin?.Version ?? Loc["PkgBatchNotInstalled"])@(step.ResolvedVersion is { } to ? $" → {to}" : "")</span>
+                                }
+                            </div>
+                            <div class="pkg-batch-meta">
+                                @if (Packages.Batch.PrerequisiteReason(intent.ClientIntentId!) is { } reason)
+                                { <span>@Loc["PkgBatchAcceptedPrerequisite"]: @reason</span> }
+                                else { <span>@Loc["PkgBatchRequestedChange"]</span> }
+                                @if (intent.Source is { } source)
+                                {
+                                    <span class="pkg-batch-source">@source.Remote · @source.Path · @(source.Version ?? Loc["PkgDevChannelOption", "tip"])</span>
+                                }
+                            </div>
+                        </div>
+                        <MudTooltip Text="@Loc["PkgBatchRemoveNamed", intent.TargetId]">
+                            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                                           Disabled="@(Busy || Packages.Batch.AdmissionBlocked || Packages.Batch.Run?.State is PackageBatchRunState.Pending or PackageBatchRunState.Running)"
+                                           aria-label="@Loc["PkgBatchRemoveNamed", intent.TargetId]"
+                                           OnClick="@(() => Packages.Batch.Remove(intent.ClientIntentId!))" />
+                        </MudTooltip>
                     </li>
                 }
             </ul>
-            <MudButton Variant="Variant.Outlined" Href="/admin/packages/batch">@Loc["PkgBatchReview"]</MudButton>
+            @if (ShowReviewLink)
+            {
+                <MudButton Variant="Variant.Outlined" Href="/admin/packages/batch">@Loc["PkgBatchReview"]</MudButton>
+            }
         }
     </div>
 </KitCard>
 
 @code {
     [Parameter] public bool Busy { get; set; }
+
+    /// <summary>False on the review page itself, where the link would lead back to the same page.</summary>
+    [Parameter] public bool ShowReviewLink { get; set; } = true;
     protected override void OnInitialized() => Packages.Batch.Changed += OnChanged;
     private void OnChanged() => InvokeAsync(StateHasChanged);
     public void Dispose() => Packages.Batch.Changed -= OnChanged;
+    /// <summary>The coloured action label's classes: install green, uninstall red, plugin changes in the plugin colour.</summary>
+    public static string ActionClass(PackageBatchAction action) => "pkg-batch-action pkg-batch-action--" + action switch
+    {
+        PackageBatchAction.Install => "install",
+        PackageBatchAction.Uninstall => "uninstall",
+        _ => "plugin"
+    };
+
     public static string ActionKey(PackageBatchAction action) => action switch
     {
         PackageBatchAction.Install => "PkgInstallHeading",
