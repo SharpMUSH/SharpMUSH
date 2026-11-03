@@ -23,7 +23,7 @@ These topics are for the people who run the game: wizards, royalty and anyone a 
 |           | [@dbck]                       | [object snapshots] |                  |
 | Packages: | [@package]                    | [@plugin]          | [plugin help]    |
 | Server:   | [@shutdown]                   | [@log]             | [@hook]          |
-|           | [recurring jobs]              | [queue budgets]    |                  |
+|           | [recurring jobs]              | [queue budgets]    | [@livewire]      |
 | Other:    | [wiki administration]         | [@channel admin]   |                  |
 |           | [mail administration]         |                    |                  |
 |           | [@reality administration]     | [@tag]             |                  |

@@ -4850,6 +4850,22 @@
     "file": "literal-command.md"
   },
   {
+    "id": "livewire-command",
+    "lookup": "@livewire",
+    "title": "@livewire",
+    "aliases": [],
+    "sections": [],
+    "file": "livewire-command.md"
+  },
+  {
+    "id": "livewire-function",
+    "lookup": "livewire()",
+    "title": "livewire()",
+    "aliases": [],
+    "sections": [],
+    "file": "livewire-function.md"
+  },
+  {
     "id": "localfun",
     "lookup": "localfun",
     "title": "localfun",
