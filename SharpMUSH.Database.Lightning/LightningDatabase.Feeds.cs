@@ -499,7 +499,7 @@ public partial class LightningDatabase
 			? new ExternalFeedIdentity(external.Provider, external.Subject, external.Name, external.Picture ?? "")
 			: null;
 		return new(record.Id, kind, key, DateTimeOffset.FromUnixTimeMilliseconds(record.AtMs), speaker, speakerName,
-			record.Executor is null ? DBRef.Parse(record.Speaker) : DBRef.Parse(record.Executor), record.ExecutorName ?? speakerName,
+			record.Executor is null ? speaker : DBRef.Parse(record.Executor), record.ExecutorName ?? speakerName,
 			record.Location is null ? null : DBRef.Parse(record.Location), record.LocationName ?? "", record.Style ?? "", text,
 			record.DisplayName ?? "", line, record.Audience ?? "", identity, record.Picture ?? "");
 

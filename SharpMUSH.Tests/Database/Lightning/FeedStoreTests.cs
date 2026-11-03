@@ -391,6 +391,14 @@ public class FeedStoreTests
 		await Assert.That(lines[1].ExecutorName).IsEqualTo("Ann");
 		await Assert.That(lines[1].Line).IsNull();
 		await Assert.That(lines[1].DisplayName).IsEqualTo("");
+
+		// An outside speaker whose executor is the same #-1 leaves the executor out, and reads back as #-1.
+		var outside = sent with { Id = 3, Executor = new DBRef(-1), ExecutorName = "Mercutio" };
+		await _db.AppendFeedMessageAsync(outside, Keep());
+		await Assert.That(StoredRecord(3).Executor).IsNull();
+		var read = (await _db.GetFeedMessageAsync(3)).Expect<SharpFeedMessage>();
+		await Assert.That(read.Executor).IsEqualTo(new DBRef(-1));
+		await Assert.That(read.ExecutorName).IsEqualTo("Mercutio");
 	}
 
 	/// <summary>
