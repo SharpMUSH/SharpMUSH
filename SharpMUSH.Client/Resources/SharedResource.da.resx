@@ -3001,7 +3001,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Ikke forbundet til spillet — opret forbindelse for at skrive og modtage poser live.</value>
+    <value>Ikke forbundet til spillet — opret forbindelse for at skrive.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">

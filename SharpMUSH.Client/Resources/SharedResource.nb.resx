@@ -3001,7 +3001,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Ikke tilkoblet spillet — koble til for å poste og motta poser i sanntid.</value>
+    <value>Ikke tilkoblet spillet — koble til for å poste.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">

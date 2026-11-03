@@ -3001,7 +3001,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Inte uppkopplad mot spelet — koppla upp dig för att posta och ta emot poser i realtid.</value>
+    <value>Inte uppkopplad mot spelet — koppla upp dig för att posta.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">

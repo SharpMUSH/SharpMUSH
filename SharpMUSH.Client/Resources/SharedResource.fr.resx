@@ -2089,7 +2089,7 @@
     <value>Voir l'archive</value>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Non connecté au jeu — connectez-vous pour publier et recevoir les poses en direct.</value>
+    <value>Non connecté au jeu — connectez-vous pour publier.</value>
   </data>
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>Ouvert à tous les spectateurs</value>

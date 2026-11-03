@@ -118,9 +118,14 @@ else
                                 @if (SceneHere is { } scene)
                                 {
                                     <div class="play-view play-story @(View == PlayView.Story ? null : "play-view--off")" inert="@(View != PlayView.Story)">
+                                        @* One notice, for the connection whose loss matters most, as SceneLive shows. *@
                                         @if (StoryLiveUnavailable)
                                         {
                                             <div class="play-story-unavailable" role="status">@Loc["RolSceneLiveUnavailable"]</div>
+                                        }
+                                        else if (!PlayTerminal.IsConnected)
+                                        {
+                                            <div class="play-story-unavailable" role="status">@Loc["RolNotConnected"]</div>
                                         }
                                         else if (_storyLiveDown)
                                         {

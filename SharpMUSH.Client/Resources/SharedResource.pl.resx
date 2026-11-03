@@ -3001,7 +3001,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Brak połączenia z grą — należy się połączyć, aby publikować i odbierać pozy na żywo.</value>
+    <value>Brak połączenia z grą — należy się połączyć, aby publikować.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">

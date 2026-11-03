@@ -3001,7 +3001,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Nincs kapcsolat a játékkal — csatlakozzon a pózok küldéséhez és élő fogadásához.</value>
+    <value>Nincs kapcsolat a játékkal — csatlakozzon a pózok küldéséhez.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">
