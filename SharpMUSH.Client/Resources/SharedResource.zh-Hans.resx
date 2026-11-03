@@ -2561,10 +2561,6 @@
     <value>搜索软件包…</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgSnapshotAt" xml:space="preserve">
-    <value>{0}，时间 {1}</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgSoftcodePackages" xml:space="preserve">
     <value>Softcode 软件包</value>
     <comment>MT</comment>

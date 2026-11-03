@@ -2561,10 +2561,6 @@
     <value>Поиск пакетов…</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgSnapshotAt" xml:space="preserve">
-    <value>{0} в {1}</value>
-    <comment>MT — both placeholders are machine values (version / commit or timestamp); only the connective is translated.</comment>
-  </data>
   <data name="PkgSoftcodePackages" xml:space="preserve">
     <value>Пакеты softcode</value>
     <comment>MT — softcode kept untranslated; consistent with AdmPackagesAction.</comment>

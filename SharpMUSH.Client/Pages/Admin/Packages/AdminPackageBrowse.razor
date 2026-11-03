@@ -101,9 +101,6 @@
                     </button>
                 }
             </nav>
-            <div class="pkg-snapshot-meta">
-                @Loc["PkgSnapshotAt", _snapshot.Url, _snapshot.HeadCommit[..Math.Min(10, _snapshot.HeadCommit.Length)]]
-            </div>
         </KitCard>
 
         var shown = groups.Where(g => _category is null || g.Title == _category).ToList();

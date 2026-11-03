@@ -2561,10 +2561,6 @@
     <value>Търсене на пакети…</value>
     <comment>MT — U+2026 ellipsis preserved</comment>
   </data>
-  <data name="PkgSnapshotAt" xml:space="preserve">
-    <value>{0} в {1}</value>
-    <comment>MT — only the preposition is translated; both placeholders are identifiers/timestamps</comment>
-  </data>
   <data name="PkgSoftcodePackages" xml:space="preserve">
     <value>Пакети softcode</value>
     <comment>MT — «softcode» kept per glossary</comment>

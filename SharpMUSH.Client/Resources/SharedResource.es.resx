@@ -2561,10 +2561,6 @@
     <value>Buscar paquetes…</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgSnapshotAt" xml:space="preserve">
-    <value>{0} en {1}</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgSoftcodePackages" xml:space="preserve">
     <value>Paquetes de softcode</value>
     <comment>MT</comment>

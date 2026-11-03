@@ -725,9 +725,6 @@
   <data name="PkgUnreviewedSource" xml:space="preserve">
     <value>Cette source n'a pas été vérifiée. Inspectez tout le code sur l'écran de vérification avant d'appliquer.</value>
   </data>
-  <data name="PkgSnapshotAt" xml:space="preserve">
-    <value>{0} à {1}</value>
-  </data>
   <data name="PkgNoDescription" xml:space="preserve">
     <value>(aucune description)</value>
   </data>

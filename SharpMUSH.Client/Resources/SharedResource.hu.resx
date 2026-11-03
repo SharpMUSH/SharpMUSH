@@ -2561,10 +2561,6 @@
     <value>Csomagok keresése…</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgSnapshotAt" xml:space="preserve">
-    <value>{0} ekkor: {1}</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgSoftcodePackages" xml:space="preserve">
     <value>Softcode csomagok</value>
     <comment>MT</comment>
