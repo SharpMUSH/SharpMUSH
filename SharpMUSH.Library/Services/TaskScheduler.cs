@@ -800,7 +800,11 @@ public partial class TaskScheduler(
 			if (executor is AnySharpObject { IsPlayer: false } thing && await thing.HasFlag("HALT", ExecutionBudget.CurrentToken)) return null;
 		}
 		// Deferred bodies cannot consume the submitting command list's break/include state.
-		return await parser.FromState(state with { ExecutionStack = [], BreakPropagation = null, CommandModifierDepth = 0, InplaceDepth = 0 }).CommandListParse(command);
+		return await parser.FromState(state with
+		{
+			ExecutionStack = [],
+			CommandFrame = state.CommandFrame with { BreakPropagation = null, CommandModifierDepth = 0, InplaceDepth = 0 }
+		}).CommandListParse(command);
 	}
 	private readonly ConcurrentDictionary<long, QueueEntry> _pendingEntries = new();
 
