@@ -57,6 +57,18 @@
         var groups = Groups();
         <KitCard>
             <div class="lib-filters">
+                <div class="lib-chips lib-views" role="group" aria-label="@Loc["PkgViewChoice"]">
+                    <button type="button" class="lib-chip @(_graph ? null : "active")" aria-pressed="@(_graph ? "false" : "true")"
+                            @onclick="@(() => _graph = false)">
+                        <MudIcon Icon="@Icons.Material.Filled.ViewList" Size="Size.Small" aria-hidden="true" />
+                        @Loc["PkgViewList"]
+                    </button>
+                    <button type="button" class="lib-chip @(_graph ? "active" : null)" aria-pressed="@(_graph ? "true" : "false")"
+                            @onclick="@(() => _graph = true)">
+                        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" aria-hidden="true" />
+                        @Loc["PkgViewGraph"]
+                    </button>
+                </div>
                 <div class="lib-search">
                     <MudIcon Icon="@Icons.Material.Filled.Search" Class="lib-search-icon" />
                     <input name="library-search" type="search" placeholder="@Loc["PkgSearchPlaceholder"]" aria-label="@Loc["PkgSearchPlaceholder"]"
@@ -99,28 +111,38 @@
         {
             <EmptyState>@Loc["PkgNoSearchMatch"]</EmptyState>
         }
-        @foreach (var group in shown)
+        else if (_graph)
         {
-            <KitCard Title="@group.Title" @key="group.Title">
-                <Controls>
-                    <span class="lib-group-count">@Loc.Plural("PkgBrowsePackageCount", "count", group.Count)</span>
-                </Controls>
-                <ChildContent>
-                    @foreach (var sub in group.Subcategories)
-                    {
-                        @if (sub.Title is { } subTitle)
-                        {
-                            <h3 class="lib-subcategory">@subTitle <span class="lib-count">@sub.Count</span></h3>
-                        }
-                        <div class="lib-rows">
-                            @foreach (var family in sub.Families)
-                            {
-                                @Family(family)
-                            }
-                        </div>
-                    }
-                </ChildContent>
+            var (nodes, edges) = Graph(shown);
+            <KitCard Title="@Loc["PkgViewGraph"]">
+                <div class="lib-graph"><PackageGraph Nodes="@nodes" Edges="@edges" /></div>
             </KitCard>
+        }
+        else
+        {
+            @foreach (var group in shown)
+            {
+                <KitCard Title="@group.Title" @key="group.Title">
+                    <Controls>
+                        <span class="lib-group-count">@Loc.Plural("PkgBrowsePackageCount", "count", group.Count)</span>
+                    </Controls>
+                    <ChildContent>
+                        @foreach (var sub in group.Subcategories)
+                        {
+                            @if (sub.Title is { } subTitle)
+                            {
+                                <h3 class="lib-subcategory">@subTitle <span class="lib-count">@sub.Count</span></h3>
+                            }
+                            <div class="lib-rows">
+                                @foreach (var family in sub.Families)
+                                {
+                                    @Family(family)
+                                }
+                            </div>
+                        }
+                    </ChildContent>
+                </KitCard>
+            }
         }
     }
     <PackageBatchQueue />
@@ -149,6 +171,7 @@
     private PackageContents _kind = PackageContents.None;
     private string? _category;
     private readonly HashSet<string> _expanded = new(StringComparer.Ordinal);
+    private bool _graph;
 
     private static readonly IReadOnlyList<PackageContents> KindsListed =
         [PackageContents.Softcode, PackageContents.Wiki, PackageContents.Application, PackageContents.Plugin];
@@ -193,6 +216,35 @@
                            OnReview="@(() => GoToReview(entry))"
                            OnReadme="@(() => ShowReadmeAsync(entry))" />
     };
+
+    /// <summary>
+    /// The graph of the packages <paramref name="shown"/> lists, with every package they need: from this remote when
+    /// it lists it, else as installed, queued, or not in this source.
+    /// </summary>
+    private (IReadOnlyList<PackageDependencyGraph.Node>, IReadOnlyList<PackageDependencyGraph.Edge>) Graph(IReadOnlyList<PackageLibraryGroup> shown)
+    {
+        var listed = (_snapshot?.Packages ?? []).Where(e => e.PackageId is not null)
+            .DistinctBy(e => e.PackageId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(e => e.PackageId!, StringComparer.OrdinalIgnoreCase);
+        var edges = listed.Values
+            .SelectMany(e => (e.DependsOn ?? []).Select(d => new PackageDependencyGraph.Edge(e.PackageId!, d)))
+            .ToList();
+        var matched = shown.SelectMany(g => g.Subcategories).SelectMany(s => s.Families)
+            .SelectMany(f => f.AddOns.Prepend(f.Package))
+            .Select(e => e.PackageId).OfType<string>();
+        var nodes = PackageDependencyGraph.WithDependencies(matched, edges)
+            .Select(id => listed.GetValueOrDefault(id) is { } entry
+                ? new PackageDependencyGraph.Node(entry.PackageId!, PackageLibraryGroups.Name(entry), GraphState(entry.PackageId!, listed: true), entry.Bridge)
+                : new PackageDependencyGraph.Node(id, id, GraphState(id, listed: false)))
+            .ToList();
+        return (nodes, edges);
+    }
+
+    private PackageGraphState GraphState(string id, bool listed)
+        => Queued(id) is not null ? PackageGraphState.Queued
+            : _installed.ContainsKey(id) ? PackageGraphState.Installed
+            : listed ? PackageGraphState.Available
+            : PackageGraphState.Missing;
 
     private void Unqueue(PackageRepoEntry entry)
     {

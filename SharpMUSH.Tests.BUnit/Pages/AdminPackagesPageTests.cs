@@ -38,7 +38,13 @@ file sealed class AdminPackagesApiHandler : HttpMessageHandler
 						1),
 					ManagedAttributeCount: 3,
 					ObjectCount: 2,
-					Dependents: [])
+					Dependents: []),
+				new(
+					new InstalledPackageRecord("plus-help", "1.0.0", "https://example.com/help.git", null, "abc123", null, DateTimeOffset.UtcNow, 1),
+					ManagedAttributeCount: 1,
+					ObjectCount: 1,
+					Dependents: ["who-where"],
+					Title: "+help")
 			};
 			var okResponse = new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -138,6 +144,24 @@ public class AdminPackagesPageTests : BunitContext, IAsyncDisposable
 
 		await Assert.That(cut.Markup).Contains("v1.2.0");
 		await Assert.That(cut.Markup).DoesNotContain("@p.Package.Version");
+	}
+
+	[TUnit.Core.Test]
+	public async Task Dependencies_tab_draws_what_each_installed_package_needs()
+	{
+		var host = Render<MudHarness>(p => p.AddChildContent<SharpMUSH.Client.Pages.Admin.Packages.AdminPackages>());
+		host.WaitForAssertion(() => host.Find(".pkg-tab"));
+
+		await host.FindAll(".pkg-tab").Single(t => t.TextContent.Contains("PkgDependencies")).ClickAsync();
+
+		var graph = host.FindComponent<SharpMUSH.Client.Pages.Admin.Packages.PackageGraph>().Instance;
+		await Assert.That(graph.Edges).IsEquivalentTo(new[] { new SharpMUSH.Client.Models.PackageDependencyGraph.Edge("who-where", "plus-help") });
+		await Assert.That(graph.Nodes.Select(n => (n.Label, n.State))).IsEquivalentTo(new[]
+		{
+			("+help", SharpMUSH.Client.Models.PackageGraphState.Installed),
+			("who-where", SharpMUSH.Client.Models.PackageGraphState.Installed),
+		});
+		await Assert.That(host.FindAll(".pkg-graph-edge").Count).IsEqualTo(1);
 	}
 
 	/// <summary>An installed package's README button opens its README, as the server rendered it.</summary>

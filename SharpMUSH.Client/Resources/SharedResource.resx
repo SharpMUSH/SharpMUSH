@@ -9651,6 +9651,45 @@
   <data name="PkgBatchNeededBy" xml:space="preserve">
     <value>needed by {0}</value>
   </data>
+  <data name="PkgGraphHint" xml:space="preserve">
+    <value>Select a package to trace what it needs and what needs it.</value>
+  </data>
+  <data name="PkgGraphEmpty" xml:space="preserve">
+    <value>No package here needs another.</value>
+  </data>
+  <data name="PkgGraphNodeLabel" xml:space="preserve">
+    <value>{0}, {1}. Needs: {2}. Needed by: {3}.</value>
+  </data>
+  <data name="PkgGraphNeeds" xml:space="preserve">
+    <value>Needs</value>
+  </data>
+  <data name="PkgGraphNeededBy" xml:space="preserve">
+    <value>Needed by</value>
+  </data>
+  <data name="PkgGraphNothing" xml:space="preserve">
+    <value>nothing</value>
+  </data>
+  <data name="PkgGraphUnjoined" xml:space="preserve">
+    <value>Needing nothing and needed by nothing:</value>
+  </data>
+  <data name="PkgGraphMissing" xml:space="preserve">
+    <value>Not in this source</value>
+  </data>
+  <data name="PkgGraphAvailable" xml:space="preserve">
+    <value>Available</value>
+  </data>
+  <data name="PkgViewList" xml:space="preserve">
+    <value>List</value>
+  </data>
+  <data name="PkgViewGraph" xml:space="preserve">
+    <value>Dependency graph</value>
+  </data>
+  <data name="PkgViewChoice" xml:space="preserve">
+    <value>How to show the packages</value>
+  </data>
+  <data name="PkgDependencies" xml:space="preserve">
+    <value>Dependencies</value>
+  </data>
   <data name="PkgBatchRefreshReview" xml:space="preserve">
     <value>Refresh review</value>
   </data>

@@ -1,5 +1,6 @@
 @page "/admin/packages"
 @attribute [Authorize(Policy = "packages.admin")]
+@using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.DiscriminatedUnions
 @using SharpMUSH.Library.API
@@ -64,6 +65,10 @@
                     @Loc["PkgPlugins"]
                     <span class="pkg-tab-count">@(_plugins?.Plugins.Count.ToString() ?? "—")</span>
                 </button>
+                <button type="button" class="pkg-tab @(_tab == PkgTab.Dependencies ? "active" : "")" aria-pressed="@(_tab == PkgTab.Dependencies ? "true" : "false")"
+                        @onclick="@(() => _tab = PkgTab.Dependencies)">
+                    @Loc["PkgDependencies"]
+                </button>
                 <div class="pkg-tabs-spacer"></div>
                 <div class="pkg-search">
                     <MudIcon Icon="@Icons.Material.Filled.Search" Class="pkg-search-icon" />
@@ -82,6 +87,11 @@
             else if (_tab == PkgTab.Plugins)
             {
                 @PluginList
+            }
+            else if (_tab == PkgTab.Dependencies)
+            {
+                var (nodes, edges) = Graph();
+                <PackageGraph Nodes="@nodes" Edges="@edges" />
             }
             else if (_installed.Count == 0)
             {
@@ -175,7 +185,7 @@
 </ConfirmDialog>
 
 @code {
-    private enum PkgTab { Installed, Updates, Plugins }
+    private enum PkgTab { Installed, Updates, Plugins, Dependencies }
 
     /// <summary>The largest plugin upload the server accepts (<c>PluginUploadStore.MaxUploadBytes</c>).</summary>
     private const long MaxPluginUploadBytes = 20 * 1024 * 1024;
@@ -248,6 +258,24 @@
                 || p.Title?.Contains(_search, StringComparison.OrdinalIgnoreCase) == true);
         // Listed by what each row is called, its title where it has one.
         return rows.OrderBy(p => p.Title ?? p.Package.Id, StringComparer.CurrentCultureIgnoreCase);
+    }
+
+    /// <summary>The installed packages the search finds, with every installed package they need.</summary>
+    private (IReadOnlyList<PackageDependencyGraph.Node>, IReadOnlyList<PackageDependencyGraph.Edge>) Graph()
+    {
+        var installed = _installed ?? [];
+        var edges = installed
+            .SelectMany(p => p.Dependents.Select(d => new PackageDependencyGraph.Edge(d, p.Package.Id)))
+            .ToList();
+        var shown = PackageDependencyGraph.WithDependencies(FilteredPackages().Select(p => p.Package.Id), edges);
+        var nodes = installed.Where(p => shown.Contains(p.Package.Id))
+            .Select(p => new PackageDependencyGraph.Node(p.Package.Id, p.Title ?? p.Package.Id,
+                Packages.Batch.Intents.Any(i => string.Equals(i.TargetId, p.Package.Id, StringComparison.OrdinalIgnoreCase))
+                    ? PackageGraphState.Queued
+                    : PackageGraphState.Installed,
+                p.Bridge))
+            .ToList();
+        return (nodes, edges);
     }
 
     private PackageReadmeDialog? _readme;

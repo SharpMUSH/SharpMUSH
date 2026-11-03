@@ -1,0 +1,111 @@
+.pkg-graph { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.pkg-graph-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 1rem;
+    font-size: 12px;
+    color: var(--text-dim);
+}
+.pkg-graph-key { display: inline-flex; align-items: center; gap: 0.35rem; }
+.pkg-graph-swatch {
+    width: 14px;
+    height: 10px;
+    border-radius: 3px;
+    border: 2px solid var(--node-color);
+    background: color-mix(in srgb, var(--node-color) 14%, transparent);
+}
+.pkg-graph-key.pkg-graph-node--bridge .pkg-graph-swatch { --node-color: var(--text-dim); border-style: dashed; background: none; }
+.pkg-graph-hint { margin-left: auto; color: var(--text-faint); }
+
+/* The canvas keeps its laid-out size; a graph wider than the card scrolls inside it, never the page. */
+.pkg-graph-scroll {
+    overflow: auto;
+    max-height: 70vh;
+    padding: 4px;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    background: var(--surface-2);
+}
+.pkg-graph-canvas { position: relative; margin: 8px; }
+.pkg-graph-lines { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+.pkg-graph-lines marker path { fill: var(--text-faint); }
+
+.pkg-graph-edge {
+    fill: none;
+    stroke: var(--text-faint);
+    stroke-width: 1.5;
+    opacity: 0.5;
+    transition: opacity var(--motion-fade), stroke var(--motion-fade);
+}
+.pkg-graph-edge--traced { stroke: var(--accent); stroke-width: 2.5; opacity: 1; }
+.pkg-graph-edge--dimmed { opacity: 0.15; }
+
+.pkg-graph-node--installed { --node-color: var(--success); }
+.pkg-graph-node--queued { --node-color: var(--special); }
+.pkg-graph-node--available { --node-color: var(--border); }
+.pkg-graph-node--missing { --node-color: var(--warn); }
+
+.pkg-graph-node {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    gap: 1px;
+    padding: 0 10px;
+    text-align: left;
+    font: inherit;
+    color: var(--text);
+    cursor: pointer;
+    border: 1.5px solid var(--node-color);
+    border-left-width: 4px;
+    border-radius: var(--radius-row, 6px);
+    background: var(--card-bg, var(--surface));
+    transition: opacity var(--motion-fade), box-shadow var(--motion-fade);
+}
+.pkg-graph-node:hover { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
+.pkg-graph-node:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pkg-graph-node--bridge { border-style: dashed; border-left-style: solid; }
+.pkg-graph-node--selected { box-shadow: 0 0 0 3px var(--accent); }
+.pkg-graph-node--dimmed { opacity: 0.35; }
+
+.pkg-graph-name, .pkg-graph-id { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pkg-graph-name { font-size: 13px; font-weight: 600; }
+.pkg-graph-id { font-family: var(--font-mono, monospace); font-size: 11px; color: var(--text-faint); }
+
+.pkg-graph-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 10px 12px;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    overflow-wrap: anywhere;
+}
+.pkg-graph-detail-head { display: flex; align-items: center; gap: 0.5rem; }
+.pkg-graph-detail-state { font-size: 12px; font-weight: 600; color: var(--node-color); }
+.pkg-graph-detail-state.pkg-graph-node--available { color: var(--text-dim); }
+.pkg-graph-relation { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; font-size: 13px; }
+.pkg-graph-relation-label { min-width: 6rem; color: var(--text-dim); }
+.pkg-graph-relation-none { color: var(--text-faint); }
+
+.pkg-graph-unjoined { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; font-size: 12px; }
+.pkg-graph-unjoined-label { margin-right: 0.25rem; color: var(--text-dim); }
+
+.pkg-graph-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    font: inherit;
+    font-size: 12px;
+    color: var(--text);
+    border: 1px solid var(--node-color);
+    border-radius: 11px;
+    background: color-mix(in srgb, var(--node-color) 12%, transparent);
+}
+button.pkg-graph-chip { cursor: pointer; }
+button.pkg-graph-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+

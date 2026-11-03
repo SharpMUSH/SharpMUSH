@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using NSubstitute;
+using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Pages.Admin.Packages;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.API;
@@ -115,6 +116,38 @@ public class AdminPackageBrowseTests : BunitContext
 		await Assert.That(packages.Batch.PrerequisiteReason(packages.Batch.Intents.Single(i => i.TargetId == "dice").ClientIntentId!))
 			.IsEqualTo("PkgBatchNeededBy(sheet-chargen)");
 		await Assert.That(packages.Batch.PrerequisiteReason(packages.Batch.Intents.Single(i => i.TargetId == "sheet-chargen").ClientIntentId!)).IsNull();
+	}
+
+	[Test]
+	public async Task The_dependency_graph_draws_the_listed_packages_with_what_they_need()
+	{
+		api.Packages =
+		[
+			new("sheet", "sheet", "1.0.0", "A sheet", [], Title: "Fate sheet", DependsOn: ["dice"]),
+			new("sheet-help", "sheet-help", "1.0.0", "Bridge", [], Bridge: true, DependsOn: ["sheet", "plus-help"]),
+			new("tools", "tools", "1.0.0", "Tools", [])
+		];
+		api.Installed = [Installed("1.0.0", Repo, "dice") with { Package = Installed("1.0.0", Repo, "dice").Package with { Id = "dice" } }];
+		var cut = RenderBrowse();
+
+		await cut.FindAll(".lib-views .lib-chip")[1].ClickAsync();
+
+		var graph = cut.FindComponent<PackageGraph>().Instance;
+		await Assert.That(graph.Nodes.Select(n => (n.Id, n.State, n.Bridge))).IsEquivalentTo(new[]
+		{
+			("sheet", PackageGraphState.Available, false),
+			("sheet-help", PackageGraphState.Available, true),
+			("tools", PackageGraphState.Available, false),
+			("dice", PackageGraphState.Installed, false),
+			("plus-help", PackageGraphState.Missing, false),
+		});
+		await Assert.That(cut.FindAll(".lib-row")).IsEmpty().Because("the graph replaces the list");
+		await Assert.That(cut.Find(".pkg-graph-node[aria-label^='PkgGraphNodeLabel(Fate sheet,']").ClassList).Contains("pkg-graph-node--available");
+
+		await cut.Find("input[name=library-search]").InputAsync("help");
+		await Assert.That(cut.FindComponent<PackageGraph>().Instance.Nodes.Select(n => n.Id).Order())
+			.IsEquivalentTo(new[] { "dice", "plus-help", "sheet", "sheet-help" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
+			.Because("a filtered graph keeps what its packages need");
 	}
 
 	[After(Test)]

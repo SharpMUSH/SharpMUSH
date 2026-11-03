@@ -1,0 +1,173 @@
+@using SharpMUSH.Client.Models
+@using G = SharpMUSH.Client.Models.PackageDependencyGraph
+@inject IStringLocalizer<SharedResource> Loc
+
+<div class="pkg-graph">
+    <div class="pkg-graph-legend" aria-hidden="true">
+        @foreach (var state in States.Where(s => Nodes.Any(n => n.State == s)))
+        {
+            <span class="pkg-graph-key pkg-graph-node--@StateClass(state)"><span class="pkg-graph-swatch"></span>@StateName(state)</span>
+        }
+        @if (Nodes.Any(n => n.Bridge))
+        {
+            <span class="pkg-graph-key pkg-graph-node--bridge"><span class="pkg-graph-swatch"></span>@Loc["PkgKindBridge"]</span>
+        }
+        <span class="pkg-graph-hint">@Loc["PkgGraphHint"]</span>
+    </div>
+
+    @if (_drawing.Nodes.Count == 0)
+    {
+        <EmptyState>@Loc["PkgGraphEmpty"]</EmptyState>
+    }
+    else
+    {
+        <div class="pkg-graph-scroll">
+            <div class="pkg-graph-canvas" style="@Size(_drawing.Width, _drawing.Height)">
+                <svg class="pkg-graph-lines" width="@Px(_drawing.Width)" height="@Px(_drawing.Height)" aria-hidden="true">
+                    <defs>
+                        <marker id="pkg-graph-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+                            <path d="M 0 0 L 8 4 L 0 8 z" />
+                        </marker>
+                    </defs>
+                    @foreach (var edge in _drawing.Edges)
+                    {
+                        <path class="pkg-graph-edge @EdgeClass(edge.Edge)" d="@edge.Path" marker-end="url(#pkg-graph-arrow)" />
+                    }
+                </svg>
+                @foreach (var placed in _drawing.Nodes)
+                {
+                    var node = placed.Node;
+                    <button type="button" @key="node.Id" class="@NodeClass(node)" style="@Position(placed)"
+                            aria-pressed="@(Same(_selected, node.Id) ? "true" : "false")"
+                            aria-label="@Loc["PkgGraphNodeLabel", node.Label, StateName(node.State), Names(Needs(node.Id)), Names(NeededBy(node.Id))]"
+                            @onclick="@(() => Select(node.Id))">
+                        <span class="pkg-graph-name">@node.Label</span>
+                        <span class="pkg-graph-id">@node.Id</span>
+                    </button>
+                }
+            </div>
+        </div>
+    }
+
+    @if (_selected is { } selected && _nodes.GetValueOrDefault(selected) is { } chosen)
+    {
+        <div class="pkg-graph-detail" aria-live="polite">
+            <div class="pkg-graph-detail-head">
+                <strong>@chosen.Label</strong>
+                <span class="pkg-graph-detail-state pkg-graph-node--@StateClass(chosen.State)">@StateName(chosen.State)</span>
+            </div>
+            @Relation(Loc["PkgGraphNeeds"], Needs(selected))
+            @Relation(Loc["PkgGraphNeededBy"], NeededBy(selected))
+        </div>
+    }
+
+    @if (_drawing.Unjoined.Count > 0)
+    {
+        <div class="pkg-graph-unjoined">
+            <span class="pkg-graph-unjoined-label">@Loc["PkgGraphUnjoined"]</span>
+            @foreach (var node in _drawing.Unjoined)
+            {
+                <span class="pkg-graph-chip pkg-graph-node--@StateClass(node.State)" title="@node.Id">@node.Label</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The packages to draw.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<G.Node> Nodes { get; set; } = [];
+
+    /// <summary>What each package needs.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<G.Edge> Edges { get; set; } = [];
+
+    private static readonly PackageGraphState[] States =
+        [PackageGraphState.Installed, PackageGraphState.Queued, PackageGraphState.Available, PackageGraphState.Missing];
+
+    private G.Drawing _drawing = new([], [], [], 0, 0);
+    private Dictionary<string, G.Node> _nodes = new(StringComparer.OrdinalIgnoreCase);
+    private string? _selected;
+    private IReadOnlySet<string> _upstream = new HashSet<string>();
+    private IReadOnlySet<string> _downstream = new HashSet<string>();
+
+    protected override void OnParametersSet()
+    {
+        _drawing = G.Place(Nodes, Edges);
+        _nodes = Nodes.DistinctBy(n => n.Id, StringComparer.OrdinalIgnoreCase).ToDictionary(n => n.Id, StringComparer.OrdinalIgnoreCase);
+        if (_selected is not null && !_drawing.Nodes.Any(n => Same(n.Node.Id, _selected))) _selected = null;
+        Trace();
+    }
+
+    private void Select(string id)
+    {
+        _selected = Same(_selected, id) ? null : id;
+        Trace();
+    }
+
+    private void Trace()
+    {
+        var edges = _drawing.Edges.Select(e => e.Edge).ToList();
+        _upstream = _selected is null ? new HashSet<string>() : G.Reach(_selected, edges, upstream: true);
+        _downstream = _selected is null ? new HashSet<string>() : G.Reach(_selected, edges, upstream: false);
+    }
+
+    private RenderFragment Relation(string label, IReadOnlyList<G.Node> related) => __builder =>
+    {
+        <div class="pkg-graph-relation">
+            <span class="pkg-graph-relation-label">@label</span>
+            @if (related.Count == 0)
+            {
+                <span class="pkg-graph-relation-none">@Loc["PkgGraphNothing"]</span>
+            }
+            @foreach (var node in related)
+            {
+                <button type="button" class="pkg-graph-chip pkg-graph-node--@StateClass(node.State)" @onclick="@(() => Select(node.Id))">@node.Label</button>
+            }
+        </div>
+    };
+
+    private IReadOnlyList<G.Node> Needs(string id) => Related(_drawing.Edges.Where(e => Same(e.Edge.Dependent, id)).Select(e => e.Edge.Dependency));
+
+    private IReadOnlyList<G.Node> NeededBy(string id) => Related(_drawing.Edges.Where(e => Same(e.Edge.Dependency, id)).Select(e => e.Edge.Dependent));
+
+    private IReadOnlyList<G.Node> Related(IEnumerable<string> ids)
+        => [.. ids.Select(id => _nodes[id]).OrderBy(n => n.Label, StringComparer.CurrentCultureIgnoreCase)];
+
+    private string Names(IReadOnlyList<G.Node> nodes) => nodes.Count == 0 ? Loc["PkgGraphNothing"] : string.Join(", ", nodes.Select(n => n.Label));
+
+    private string NodeClass(G.Node node)
+    {
+        var classes = $"pkg-graph-node pkg-graph-node--{StateClass(node.State)}";
+        if (node.Bridge) classes += " pkg-graph-node--bridge";
+        if (_selected is null) return classes;
+        if (Same(_selected, node.Id)) return classes + " pkg-graph-node--selected";
+        return _upstream.Contains(node.Id) || _downstream.Contains(node.Id) ? classes + " pkg-graph-node--traced" : classes + " pkg-graph-node--dimmed";
+    }
+
+    // An edge lies on the trace when both ends are the selected package or on the same side of it.
+    private string? EdgeClass(G.Edge edge)
+    {
+        if (_selected is null) return null;
+        var up = (Same(edge.Dependent, _selected) || _upstream.Contains(edge.Dependent)) && _upstream.Contains(edge.Dependency);
+        var down = (Same(edge.Dependency, _selected) || _downstream.Contains(edge.Dependency)) && _downstream.Contains(edge.Dependent);
+        return up || down ? "pkg-graph-edge--traced" : "pkg-graph-edge--dimmed";
+    }
+
+    private string StateName(PackageGraphState state) => state switch
+    {
+        PackageGraphState.Installed => Loc["PkgInstalled"],
+        PackageGraphState.Queued => Loc["PkgBatchQueued"],
+        PackageGraphState.Missing => Loc["PkgGraphMissing"],
+        _ => Loc["PkgGraphAvailable"],
+    };
+
+    private static string StateClass(PackageGraphState state) => state.ToString().ToLowerInvariant();
+
+    private static bool Same(string? a, string? b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+
+    private static string Px(double value) => value.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static string Size(double width, double height) => $"width: {Px(width)}px; height: {Px(height)}px;";
+
+    private static string Position(G.PlacedNode node)
+        => $"left: {Px(node.X)}px; top: {Px(node.Y)}px; width: {Px(G.NodeWidth)}px; height: {Px(G.NodeHeight)}px;";
+}
