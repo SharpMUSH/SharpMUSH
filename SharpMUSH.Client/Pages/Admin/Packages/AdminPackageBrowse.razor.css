@@ -9,39 +9,171 @@
     font-family: var(--font-mono);
     font-size: 0.75rem;
     color: var(--text-faint);
-    margin-bottom: -8px;
+    padding: 0 16px 12px;
+    overflow-wrap: anywhere;
 }
-.pkg-grid {
-    display: grid;
-    /* min(360px, 100%) so the track never demands more than the container width —
-       on a phone narrower than 360px it collapses to one column instead of overflowing. */
-    grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr));
-    gap: 14px;
-}
-.pkg-card-body { padding: 14px 16px 16px; }
-.pkg-card-desc { font-size: 13px; color: var(--text-dim); margin-bottom: 0.75rem; }
-.pkg-card-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-.pkg-card-note { font-size: 12px; color: var(--text-faint); margin-top: 0.5rem; overflow-wrap: anywhere; }
-.pkg-toolbar ::deep .pkg-btn-primary,
-.pkg-card-body ::deep .pkg-btn-primary {
+.pkg-toolbar ::deep .pkg-btn-primary {
     background: var(--accent);
     color: var(--accent-on);
 }
-
 .pkg-toolbar ::deep .pkg-remote-select { max-width: 320px; }
-.pkg-card-body ::deep .pkg-version-select { max-width: 220px; }
 
 @container page (max-width: 48rem) {
-    .pkg-toolbar ::deep .pkg-remote-select,
-    .pkg-card-body ::deep .pkg-version-select {
-        max-width: 100%;
-    }
+    .pkg-toolbar ::deep .pkg-remote-select { max-width: 100%; }
 }
 
-.pkg-installed-marker {
+/* Filters: search, what a package ships, and the categories. */
+.lib-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    padding: 14px 16px 10px;
+}
+
+.lib-search {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    margin-bottom: 0.5rem;
+    gap: 0.4375rem;
+    padding: 0.375rem 0.625rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-row);
+    transition: border-color var(--motion-fade);
+    flex: 1 1 220px;
+    max-width: 320px;
+}
+.lib-search:focus-within { border-color: var(--accent); }
+.lib-search ::deep .lib-search-icon { font-size: 1rem; color: var(--text-faint); }
+.lib-search input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font: inherit;
     font-size: 13px;
+    width: 100%;
+}
+.lib-search input::placeholder { color: var(--text-faint); }
+
+.lib-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+}
+.lib-chips-label {
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-right: 0.25rem;
+}
+
+.lib-chip,
+.lib-category {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-height: 28px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: transparent;
+    color: var(--text-dim);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: color var(--motion-fade), border-color var(--motion-fade), background var(--motion-fade);
+}
+.lib-chip ::deep .mud-icon-root { font-size: 15px; }
+.lib-chip:hover,
+.lib-category:hover { color: var(--text); border-color: var(--text-faint); }
+.lib-chip.active,
+.lib-category.active {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: rgba(var(--glow), 0.12);
+}
+
+.lib-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    padding: 0 16px 12px;
+}
+
+.lib-count {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-faint);
+}
+.lib-category.active .lib-count { color: var(--accent); }
+
+.lib-group-count {
+    font-size: 12px;
+    color: var(--text-faint);
+}
+
+/* A subcategory heading inside a category. */
+.lib-subcategory {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 14px 16px 2px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.lib-rows {
+    display: flex;
+    flex-direction: column;
+    padding: 0 12px 8px;
+}
+
+.lib-family { border-top: 1px solid var(--border-soft); }
+.lib-family:first-child { border-top: 0; }
+.lib-family ::deep .pkg-row { border-top: 0; }
+
+/* The bridges under a package: a summary line that opens into indented rows. */
+.lib-addons-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    width: 100%;
+    min-height: 32px;
+    margin: -4px 0 8px;
+    padding: 0 4px 0 36px;
+    border: 0;
+    background: transparent;
+    color: var(--text-dim);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    justify-content: flex-start;
+    cursor: pointer;
+}
+.lib-addons-toggle:hover { color: var(--text); }
+.lib-addons-names {
+    font-weight: 400;
+    color: var(--text-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.lib-addons {
+    margin: 0 0 10px 40px;
+    padding-left: 12px;
+    border-left: 2px solid color-mix(in srgb, var(--warn) 45%, transparent);
+}
+
+@container page (max-width: 48rem) {
+    .lib-search { max-width: 100%; flex-basis: 100%; }
+    .lib-addons { margin-left: 12px; }
+    .lib-addons-toggle { padding-left: 4px; }
 }

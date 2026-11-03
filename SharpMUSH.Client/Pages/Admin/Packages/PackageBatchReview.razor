@@ -137,9 +137,21 @@
                             }
                             @if (step.Intent.Action == PackageBatchAction.Install && step.Intent.Source is not null)
                             {
-                                <MudLink Href="@ReviewLink(step)">@Loc["PkgBatchReviewStep"]</MudLink>
-                                @if (Packages.Batch.IsReviewed(step.StepId))
-                                { <span>@Loc["PkgBatchChoicesSaved"]</span> }
+                                <div class="pkg-batch-step-review">
+                                    @if (step.Review is { } choices && NeedsChoices(choices) && !Packages.Batch.IsReviewed(step.StepId))
+                                    {
+                                        <MudAlert Severity="Severity.Warning" Dense="true">@Loc["PkgBatchReviewChoicesNeeded"]</MudAlert>
+                                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Href="@ReviewLink(step)">@Loc["PkgBatchReviewStep"]</MudButton>
+                                    }
+                                    else
+                                    {
+                                        @if (Packages.Batch.IsReviewed(step.StepId))
+                                        {
+                                            <Pill Tag="true">@Loc["PkgBatchChoicesSaved"]</Pill>
+                                        }
+                                        <MudLink Href="@ReviewLink(step)" Typo="Typo.body2">@Loc["PkgBatchReviewOptional"]</MudLink>
+                                    }
+                                </div>
                             }
                             @if (step.Intent.Action == PackageBatchAction.Uninstall && Packages.Batch.ReviewFor(step.StepId)?.ConfirmUninstall != true)
                             {

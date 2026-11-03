@@ -7905,13 +7905,13 @@
     <value>{0} is off.</value>
   </data>
   <data name="PkgKindSoftcode" xml:space="preserve">
-    <value>Softcode package</value>
+    <value>Softcode</value>
   </data>
   <data name="PkgKindApplication" xml:space="preserve">
-    <value>Application package</value>
+    <value>Application</value>
   </data>
   <data name="PkgKindPlugin" xml:space="preserve">
-    <value>Plugin package</value>
+    <value>Plugin</value>
   </data>
   <data name="PkgPluginShipped" xml:space="preserve">
     <value>Shipped with the server</value>
@@ -9637,10 +9637,10 @@
     <value>A restart may be required. Dependent changes wait until the plugin is running, then need fresh review.</value>
   </data>
   <data name="PkgBatchReviewStep" xml:space="preserve">
-    <value>Configure and review this install</value>
+    <value>Choose this install's settings</value>
   </data>
   <data name="PkgBatchChoicesSaved" xml:space="preserve">
-    <value>Review choices saved in this session</value>
+    <value>Settings chosen</value>
   </data>
   <data name="PkgBatchConfirmUninstall" xml:space="preserve">
     <value>Uninstall {0} and remove its managed package content</value>
@@ -11020,5 +11020,50 @@
   </data>
   <data name="NavMapKeptInside" xml:space="preserve">
     <value>Kept inside the picture, at {0}, {1}.</value>
+  </data>
+  <data name="PkgKindWiki" xml:space="preserve">
+    <value>Wiki pages</value>
+  </data>
+  <data name="PkgKindBridge" xml:space="preserve">
+    <value>Bridge</value>
+  </data>
+  <data name="PkgKindBridgeBetween" xml:space="preserve">
+    <value>Bridge: {0} + {1}</value>
+  </data>
+  <data name="PkgKindBridgeTooltip" xml:space="preserve">
+    <value>A bridge joins two packages and needs both of them installed.</value>
+  </data>
+  <data name="PkgBatchReviewOptional" xml:space="preserve">
+    <value>Full review</value>
+  </data>
+  <data name="PkgBatchReviewChoicesNeeded" xml:space="preserve">
+    <value>This install has settings to choose before it can be applied.</value>
+  </data>
+  <data name="PkgBatchQueued" xml:space="preserve">
+    <value>Queued</value>
+  </data>
+  <data name="PkgBatchQueuedTooltip" xml:space="preserve">
+    <value>Queued to install. Select to take it out of the queue.</value>
+  </data>
+  <data name="PkgBrowseAllCategories" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="PkgBrowseKindFilter" xml:space="preserve">
+    <value>Ships</value>
+  </data>
+  <data name="PkgBrowseAnyKind" xml:space="preserve">
+    <value>Anything</value>
+  </data>
+  <data name="PkgBrowseAddOns" xml:space="preserve">
+    <value>{count, plural, one {# add-on} other {# add-ons}}</value>
+  </data>
+  <data name="PkgBrowsePackageCount" xml:space="preserve">
+    <value>{count, plural, one {# package} other {# packages}}</value>
+  </data>
+  <data name="PkgBrowseNeeds" xml:space="preserve">
+    <value>Needs {0}</value>
+  </data>
+  <data name="PkgBrowseCategories" xml:space="preserve">
+    <value>Categories</value>
   </data>
 </root>

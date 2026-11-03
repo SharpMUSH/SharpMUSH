@@ -517,22 +517,11 @@ public class GitPackageSourceService(
 
 	private PackageRepoEntry BuildEntry(Repository repository, Commit tip, string path)
 	{
-		string? packageId = null;
-		string? version = null;
-		string? description = null;
-
-		var yaml = ReadBlob(tip, ManifestPathFor(path));
-		if (yaml is not null)
-		{
-			if (manifests.ParseManifest(yaml) is ParsedPackageManifest { Manifest: var manifest })
-			{
-				packageId = manifest.Name;
-				version = manifest.Version.ToString();
-				description = manifest.Description;
-			}
-		}
-
-		return new PackageRepoEntry(path, packageId, version, description, CollectVersionTags(repository, path));
+		var versions = CollectVersionTags(repository, path);
+		return ReadBlob(tip, ManifestPathFor(path)) is { } yaml
+			&& manifests.ParseManifest(yaml) is ParsedPackageManifest { Manifest: var manifest }
+			? PackageRepoEntry.From(path, manifest, versions)
+			: new PackageRepoEntry(path, null, null, null, versions);
 	}
 
 	/// <summary>Release tags for a package path, newest version first.</summary>

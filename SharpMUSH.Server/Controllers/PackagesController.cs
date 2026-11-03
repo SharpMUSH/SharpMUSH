@@ -172,6 +172,8 @@ public class PackagesController(
 		var dependents = (await registry.GetAllPackageDependenciesAsync())
 			.OrderBy(d => d.PackageId, StringComparer.Ordinal)
 			.ToLookup(d => d.DependsOnId, d => d.PackageId);
+		var wikiPages = (await registry.GetAllPackageWikiPagesAsync()).CountBy(p => p.PackageId)
+			.ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal);
 		var result = new List<InstalledPackageDto>();
 		foreach (var package in installed)
 		{
@@ -180,7 +182,9 @@ public class PackagesController(
 				await registry.CountManagedAttributesAsync(package.Id),
 				await registry.CountPackageObjectsAsync(package.Id),
 				dependents[package.Id].ToList(),
-				BundledTitle(package)));
+				BundledTitle(package),
+				wikiPages.GetValueOrDefault(package.Id),
+				BundledPackages.IsCatalogueSource(package.SourceRepo) && BundledPackages.All.Any(p => p.PackageId == package.Id && p.Bridge)));
 		}
 
 		return Ok(result);
@@ -497,8 +501,9 @@ public class PackagesController(
 		var entries = BundledPackages.All
 			.Select(descriptor => manifests.ParseManifest(BundledPackages.ManifestYaml(descriptor.PackageId)) switch
 			{
-				ParsedPackageManifest { Manifest: var manifest } => new PackageRepoEntry(descriptor.PackageId,
-					manifest.Name, manifest.Version.ToString(), manifest.Description, []),
+				ParsedPackageManifest { Manifest: var manifest } => PackageRepoEntry.From(descriptor.PackageId, manifest, [])
+					with
+				{ Bridge = manifest.Bridge || descriptor.Bridge },
 				PackageManifestFailure => new PackageRepoEntry(descriptor.PackageId, null, null, null, [])
 			})
 			.ToList();

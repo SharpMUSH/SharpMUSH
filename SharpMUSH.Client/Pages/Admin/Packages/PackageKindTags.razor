@@ -1,0 +1,32 @@
+@using SharpMUSH.Library.Models.Packages
+@inject IStringLocalizer<SharedResource> Loc
+
+@* What a package ships, one tag each, and whether it is a bridge and between which packages. *@
+@if (Bridge)
+{
+    <span class="pkg-kind-tag pkg-kind-tag--bridge" title="@BridgeTitle">
+        <MudIcon Icon="@Icons.Material.Filled.Link" Size="Size.Small" aria-hidden="true" />
+        @(Halves.Count >= 2 ? Loc["PkgKindBridgeBetween", Halves[0], Halves[1]] : Loc["PkgKindBridge"])
+    </span>
+}
+@foreach (var kind in Kinds)
+{
+    <span class="pkg-kind-tag pkg-kind-tag--@kind.ToString().ToLowerInvariant()">
+        <MudIcon Icon="@PackageKinds.Icon(kind)" Size="Size.Small" aria-hidden="true" />
+        @PackageKinds.Name(kind, Loc)
+    </span>
+}
+
+@code {
+    [Parameter] public PackageContents Contents { get; set; }
+    [Parameter] public bool Bridge { get; set; }
+
+    /// <summary>The packages a bridge joins, from its dependencies.</summary>
+    [Parameter] public IReadOnlyList<string>? Joins { get; set; }
+
+    private IReadOnlyList<string> Halves => Joins ?? [];
+
+    private IEnumerable<PackageContents> Kinds => PackageKinds.Order.Where(kind => Contents.HasFlag(kind));
+
+    private string BridgeTitle => Loc["PkgKindBridgeTooltip"];
+}

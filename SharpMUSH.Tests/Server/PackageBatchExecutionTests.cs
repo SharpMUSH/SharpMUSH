@@ -40,6 +40,20 @@ public class PackageBatchExecutionTests
 		var run = await f.Apply(await f.Review([Install("a")]));
 		await Assert.That(f.Applied).IsEmpty();
 		await Assert.That(run.State).IsEqualTo(PackageBatchRunState.Failed);
+		await Assert.That(run.Message).IsEqualTo("Backup refused");
+	}
+
+	[Test]
+	public async Task ANewCommitAfterTheReviewIsNamedInTheRefusal()
+	{
+		using var f = new Fixture(); f.Add("a");
+		var review = await f.Review([Install("a")]);
+		f.Runner.BeforeBody = () => f.Commit = "moved";
+		var run = await f.Apply(review);
+		await Assert.That(f.Applied).IsEmpty();
+		await Assert.That(run.State).IsEqualTo(PackageBatchRunState.Failed);
+		await Assert.That(run.Message)
+			.IsEqualTo("New commits reached the source of a after the review. Nothing was changed; review the batch again.");
 	}
 
 	[Test]
@@ -570,6 +584,7 @@ public class PackageBatchExecutionTests
 				if (BackupEnabled && provenance is not null)
 				{
 					try { await provenance(cancellationToken); AfterProvenance?.Invoke(); }
+					catch (PackageOperationRefusedException refused) { return new PackageOperationRefused(refused.Reason); }
 					catch (Exception) { return new PackageOperationRefused("Provenance refused"); }
 				}
 				if (BackupEnabled) Backups++;

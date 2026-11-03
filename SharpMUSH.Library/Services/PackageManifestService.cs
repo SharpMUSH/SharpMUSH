@@ -25,7 +25,7 @@ public partial class PackageManifestService : IPackageManifestService
 	private static readonly IReadOnlySet<string> KnownManifestKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
 		"format", "package", "title", "version", "authors", "description", "license", "homepage", "keywords",
-		"category", "wiki_collection_name", "wiki_landing_page",
+		"category", "subcategory", "bridge", "wiki_collection_name", "wiki_landing_page",
 		"convention_prefix", "requires_server", "verified_server", "maximum_server", "replaces", "conflicts", "depends", "configure", "objects",
 		"kind", "application", "binaries", "categories", "permissions", "roles", "settings", "locale", "wiki", "plugins",
 		"attributes", "grants", "wiki_properties"
@@ -140,6 +140,7 @@ public partial class PackageManifestService : IPackageManifestService
 		}
 
 		var category = ReadCategory(doc, format, issues);
+		var subcategory = ReadSubcategory(doc, format, issues);
 		var wikiCollectionName = ReadWikiCollectionName(doc, format, issues);
 		var conventionPrefix = OptionalString(doc, "convention_prefix", issues);
 		var requiresServer = ReadConstraintField(doc, "requires_server", issues);
@@ -160,6 +161,7 @@ public partial class PackageManifestService : IPackageManifestService
 				$"'{conflict.PackageId}' is listed in both 'depends' and 'conflicts'."));
 		}
 
+		var bridge = ReadBridge(doc, format, dependencies, issues);
 		var plugins = ReadPlugins(doc, issues);
 
 		var configure = ReadConfigure(doc, issues);
@@ -250,7 +252,9 @@ public partial class PackageManifestService : IPackageManifestService
 		{
 			Title = title,
 			WikiCollectionName = wikiCollectionName,
-			WikiLandingPage = wikiLandingPage
+			WikiLandingPage = wikiLandingPage,
+			Bridge = bridge,
+			Subcategory = subcategory
 		};
 
 		return new ParsedPackageManifest(manifest, issues);

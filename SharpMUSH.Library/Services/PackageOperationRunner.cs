@@ -211,6 +211,11 @@ public sealed class PackageOperationRunner(
 						? new BackupProvenance("pre-package", Operation: operation)
 						: await provenance(cancellationToken);
 				}
+				catch (PackageOperationRefusedException refused)
+				{
+					logger.LogWarning("The package {Operation} was refused before its backup: {Reason}", operation, refused.Reason);
+					return new Finished<T>(new PackageOperationRefused(refused.Reason), []);
+				}
 				catch (Exception exception) when (exception is not OperationCanceledException)
 				{
 					logger.LogError(exception, "The provenance before a package {Operation} could not be resolved.", operation);

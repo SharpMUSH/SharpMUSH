@@ -217,6 +217,7 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 					return new Finished(restartPending ? PackageBatchRunState.AwaitingRestart : PackageBatchRunState.Completed,
 						restartPending ? "A restart is still required. Restart separately, then refresh actual state." : null);
 				}
+				catch (PackageOperationRefusedException refused) { return new Finished(HasCompleted() ? PackageBatchRunState.Partial : PackageBatchRunState.Failed, refused.Reason); }
 				catch (OperationCanceledException) { return new Finished(HasCompleted() ? PackageBatchRunState.Partial : PackageBatchRunState.Cancelled, "Execution stopped; refresh actual state."); }
 				catch (Exception) { return new Finished(HasCompleted() ? PackageBatchRunState.Partial : PackageBatchRunState.Failed, "The batch could not continue. Refresh actual state."); }
 				finally { sources.Payloads.Clear(); } // Release binary snapshots before deferred lifecycle hooks run.
@@ -230,7 +231,7 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 			var finished = outcome switch
 			{
 				PackageOperationRan<Finished> ran => ran.Result,
-				PackageOperationRefused => new Finished(PackageBatchRunState.Failed, "The queue or automatic backup refused the batch; no steps ran.")
+				PackageOperationRefused refused => new Finished(PackageBatchRunState.Failed, refused.Reason)
 			};
 			// A bridge to +help or +config arrives with the package it joins.
 			if (HasCompleted()) await bundled.InstallBridgesAsync(hostToken);
@@ -402,15 +403,45 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 			&& (intents?.Any(i => i.Action is PackageBatchAction.PluginOn or PackageBatchAction.PluginOff) != true
 				|| await capabilities.AuthorizeAsync(actor, PortalPermission.ServerOperate, token));
 
-	private sealed class ReviewChangedException() : Exception("The reviewed state or authority changed.");
 	private async Task<Prepared> RevalidateAsync(PackageBatchReviewSnapshot snapshot, CancellationToken token, ExecutionSources sources)
 	{
 		token.ThrowIfCancellationRequested();
-		if (!await Authorized(snapshot.Actor, token, snapshot.Request.Intents)) throw new ReviewChangedException();
+		if (!await Authorized(snapshot.Actor, token, snapshot.Request.Intents))
+			throw new PackageOperationRefusedException("Your permission changed after the review; nothing was changed.");
 		var current = await PrepareAsync(snapshot.Request, token, sources);
-		if (current.Plan.Blockers.Count > 0 || current.Fingerprint != snapshot.Fingerprint) throw new ReviewChangedException();
+		if (current.Plan.Blockers.Count > 0)
+			throw new PackageOperationRefusedException(
+				$"The batch is blocked now: {string.Join(" ", current.Plan.Blockers.Select(b => b.Message))} Nothing was changed; review it again.");
+		if (current.Fingerprint != snapshot.Fingerprint)
+			throw new PackageOperationRefusedException(
+				$"{ChangedSinceReview(snapshot.Plan, current.Plan)} Nothing was changed; review the batch again.");
 		sources.Frozen = true;
 		return current;
+	}
+
+	/// <summary>What differs between the reviewed plan and the plan now, in words, for a refused batch.</summary>
+	private static string ChangedSinceReview(PackageBatchPlanResponse reviewed, PackageBatchPlanResponse now)
+	{
+		static string Describe(PackageBatchStep step)
+			=> $"{step.Intent.Action} {step.Intent.TargetId}{(step.Intent.Source?.Version is { } version ? " " + version : "")}";
+		var before = reviewed.Steps.Select(Describe).ToArray();
+		var after = now.Steps.Select(Describe).ToArray();
+		if (!before.SequenceEqual(after, StringComparer.Ordinal))
+			return $"The steps changed after the review (now: {string.Join(", ", after)}).";
+		var pairs = reviewed.Steps.Zip(now.Steps).ToArray();
+		var sourceMoved = pairs
+			.Where(pair => pair.First.Commit != pair.Second.Commit || pair.First.ResolvedVersion != pair.Second.ResolvedVersion)
+			.Select(pair => pair.Second.Intent.TargetId)
+			.ToArray();
+		if (sourceMoved.Length > 0)
+			return $"New commits reached the source of {string.Join(", ", sourceMoved)} after the review.";
+		var installed = pairs
+			.Where(pair => pair.First.InstalledVersion != pair.Second.InstalledVersion)
+			.Select(pair => $"{pair.Second.Intent.TargetId} is now {pair.Second.InstalledVersion ?? "not installed"}")
+			.ToArray();
+		return installed.Length > 0
+			? $"Installed packages changed after the review: {string.Join(", ", installed)}."
+			: "The packages, the server version or the install settings changed after the review.";
 	}
 
 	private async Task<Found<PluginStatusDto>> PluginProgressAsync(string id, CancellationToken token)

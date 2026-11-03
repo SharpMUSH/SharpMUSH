@@ -102,6 +102,12 @@ public static class PackageManifestWriter
 		}
 
 		AppendOptional(yaml, "category", manifest.Category);
+		AppendOptional(yaml, "subcategory", manifest.Subcategory);
+		if (manifest.Bridge)
+		{
+			yaml.AppendLine("bridge: true");
+		}
+
 		AppendOptional(yaml, "wiki_collection_name", manifest.WikiCollectionName);
 		if (manifest.WikiLandingPage is { } landing)
 		{

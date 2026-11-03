@@ -35,12 +35,16 @@ public sealed record RemoteRequest(string Name, string Url, string Trust, string
 /// <param name="ObjectCount">How many objects it created.</param>
 /// <param name="Dependents">Installed packages that depend on it (uninstall blocking).</param>
 /// <param name="Title">The name the package is listed under, when the server knows it (a bundled package); else null.</param>
+/// <param name="WikiPageCount">How many wiki pages it installed.</param>
+/// <param name="Bridge">Whether it is a bridge the server knows (a bundled one).</param>
 public sealed record InstalledPackageDto(
 	InstalledPackageRecord Package,
 	int ManagedAttributeCount,
 	int ObjectCount,
 	IReadOnlyList<string> Dependents,
-	string? Title = null);
+	string? Title = null,
+	int WikiPageCount = 0,
+	bool Bridge = false);
 
 /// <summary>One revision in a package's history (snapshot payloads omitted).</summary>
 public sealed record RevisionDto(int Revision, string Kind, string Version, string Commit, DateTimeOffset AppliedAt);

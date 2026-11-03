@@ -18,3 +18,12 @@ public readonly record struct PackageOperationRan<T>(T Result, WorldBackup? Back
 /// taken before it failed. <paramref name="Reason"/> says which, for whoever asked.
 /// </summary>
 public readonly record struct PackageOperationRefused(string Reason);
+
+/// <summary>
+/// Thrown by an operation's provenance, which runs just before its backup, to refuse the operation with
+/// <see cref="Reason"/>: the operation answers <see cref="PackageOperationRefused"/> carrying it.
+/// </summary>
+public sealed class PackageOperationRefusedException(string reason) : Exception(reason)
+{
+	public string Reason { get; } = reason;
+}

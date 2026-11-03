@@ -7,3 +7,5 @@
 @container page (max-width: 48rem) {
     .pkg-batch-actions { flex-direction: column; align-items: stretch; }
 }
+.pkg-batch-step-review { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-top: 0.4rem; }
+.pkg-batch-step-review ::deep .mud-alert { flex-basis: 100%; }
