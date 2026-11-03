@@ -259,12 +259,16 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 
 			var newState = state with
 			{
-				Command = rootCommand,
-				Switches = upperSwitches,
+				// One copy of the command's frame for all four, rather than one per property.
+				CommandFrame = state.CommandFrame with
+				{
+					Command = rootCommand,
+					Switches = upperSwitches,
+					CommandInvoker = definition.Command,
+					CallerArguments = callerArgs.Count > 0 ? callerArgs : null
+				},
 				Arguments = SharpMUSHParserVisitor.NumberedArguments(arguments),
-				CommandInvoker = definition.Command,
-				Function = null,
-				CallerArguments = callerArgs.Count > 0 ? callerArgs : null
+				Function = null
 			};
 
 			Parser = caller.Push(newState);

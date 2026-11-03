@@ -408,7 +408,7 @@ public sealed class CommandText(MString? output = null, MString? printed = null)
 
 /// <summary>
 /// What every frame of one evaluation shares: the register stacks, the invocation counters and limits,
-/// the connection, <c>%c</c>/<c>%u</c>/<c>%></c>/<c>%|</c> and the output limit. A function frame forked
+/// the connection and its typed line, <c>%c</c>/<c>%u</c>/<c>%></c>/<c>%|</c> and the output limit. A function frame forked
 /// with <see cref="ParserState.ForFunction"/> points at its caller's, so a call copies none of it.
 /// </summary>
 /// <remarks>
@@ -469,6 +469,12 @@ public sealed record EvaluationContext
 	/// <inheritdoc cref="ParserState.CommandText"/>
 	public CommandText? CommandText { get; init; }
 
+	/// <inheritdoc cref="ParserState.TypedLine"/>
+	public string? TypedLine { get; init; }
+
+	/// <inheritdoc cref="ParserState.ConnectionSessionId"/>
+	public string? ConnectionSessionId { get; init; }
+
 	/// <inheritdoc cref="ParserState.QueuedOutput"/>
 	public MString? QueuedOutput { get; init; }
 
@@ -492,6 +498,53 @@ public sealed record EvaluationContext
 /// (<see cref="RootFor"/>, <see cref="ForTypedLine"/>, <see cref="ForTrackedEvaluation"/>,
 /// <see cref="ForFunction"/>, <see cref="SnapshotForQueuedAction"/>) plus <c>with</c> for any extras.
 /// </remarks>
+/// <summary>
+/// The values a command sets when it starts and that every frame of it copies unchanged: its name,
+/// switches and <c>@retry</c> invoker, the list's history and break channel, the caller's numbered
+/// arguments, and how deep its modifiers and in-place lists nest. <see cref="ParserState"/> holds one
+/// reference to it, so the frames a command's evaluation makes copy one field instead of nine.
+/// </summary>
+/// <remarks>
+/// Immutable like <see cref="ParserState"/>: a state that sets one of these (<c>with { Switches = … }</c>)
+/// gets a copy of its own. A function frame (<see cref="ParserState.ForFunction"/>) starts from
+/// <see cref="None"/>, as it always started without them.
+/// </remarks>
+public sealed record CommandFrame
+{
+	/// <summary>No command: the frame of a function call, or of an evaluation that runs none.</summary>
+	public static CommandFrame None { get; } = new();
+
+	internal static readonly Func<IMUSHCodeParser, ValueTask<Option<CallState>>> NoCommand
+		= _ => ValueTask.FromResult(new Option<CallState>(new None()));
+
+	/// <inheritdoc cref="ParserState.Command"/>
+	public string? Command { get; init; }
+
+	/// <inheritdoc cref="ParserState.CommandInvoker"/>
+	public Func<IMUSHCodeParser, ValueTask<Option<CallState>>> CommandInvoker { get; init; } = NoCommand;
+
+	/// <inheritdoc cref="ParserState.Switches"/>
+	public IEnumerable<string> Switches { get; init; } = [];
+
+	/// <inheritdoc cref="ParserState.CommandHistory"/>
+	public ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>? CommandHistory { get; init; }
+
+	/// <inheritdoc cref="ParserState.CallerArguments"/>
+	public Dictionary<string, CallState>? CallerArguments { get; init; }
+
+	/// <inheritdoc cref="ParserState.BreakPropagation"/>
+	public BreakPropagation? BreakPropagation { get; init; }
+
+	/// <inheritdoc cref="ParserState.CommandModifierDepth"/>
+	public uint CommandModifierDepth { get; init; }
+
+	/// <inheritdoc cref="ParserState.InplaceDepth"/>
+	public int InplaceDepth { get; init; }
+
+	/// <inheritdoc cref="ParserState.BuiltinCall"/>
+	public FunctionDefinition? BuiltinCall { get; init; }
+}
+
 public partial record ParserState
 {
 	private ParserState() { }
@@ -707,17 +760,110 @@ public partial record ParserState
 	/// <summary>Function name being evaluated.</summary>
 	public string? Function { get; init; }
 
+
+	/// <summary>
+	/// The running command's own values, which its frames copy unchanged. The properties below read and
+	/// set them through it.
+	/// </summary>
+	public CommandFrame CommandFrame { get; init; } = CommandFrame.None;
+
 	/// <summary>Name of the command being evaluated; its text is <see cref="CommandText"/>.</summary>
-	public string? Command { get; init; }
+	public string? Command
+	{
+		get => CommandFrame.Command;
+		init => CommandFrame = CommandFrame with { Command = value };
+	}
 
 	/// <summary>Runs the command being evaluated again (<c>@retry</c>).</summary>
-	public Func<IMUSHCodeParser, ValueTask<Option<CallState>>> CommandInvoker { get; init; } = NoCommand;
-
-	private static readonly Func<IMUSHCodeParser, ValueTask<Option<CallState>>> NoCommand
-		= _ => ValueTask.FromResult(new Option<CallState>(new None()));
+	public Func<IMUSHCodeParser, ValueTask<Option<CallState>>> CommandInvoker
+	{
+		get => CommandFrame.CommandInvoker;
+		init => CommandFrame = CommandFrame with { CommandInvoker = value };
+	}
 
 	/// <summary>Switches for the command being evaluated.</summary>
-	public IEnumerable<string> Switches { get; init; } = [];
+	public IEnumerable<string> Switches
+	{
+		get => CommandFrame.Switches;
+		init => CommandFrame = CommandFrame with { Switches = value };
+	}
+
+	/// <summary>
+	/// Shared mutable stack tracking command invocations (invoker + args) for @retry support. Null outside
+	/// CommandListParse context.
+	/// </summary>
+	public ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>? CommandHistory
+	{
+		get => CommandFrame.CommandHistory;
+		init => CommandFrame = CommandFrame with { CommandHistory = value };
+	}
+
+	/// <summary>
+	/// Saves the caller's numbered arguments (%0-%9) from the enclosing scope before a command
+	/// overwrites Arguments with its own parsed args. Used by @wait/@force to preserve pattern-match
+	/// variables in queued callbacks. Equivalent to PennMUSH's wenv (wild environment).
+	/// </summary>
+	public Dictionary<string, CallState>? CallerArguments
+	{
+		get => CommandFrame.CallerArguments;
+		init => CommandFrame = CommandFrame with { CallerArguments = value };
+	}
+
+	/// <summary>
+	/// Shared, one-shot channel letting a nested command list hand its break to the list that ran it.
+	/// Null everywhere except around a run that wants it (<c>@include</c>).
+	/// </summary>
+	public BreakPropagation? BreakPropagation
+	{
+		get => CommandFrame.BreakPropagation;
+		init => CommandFrame = CommandFrame with { BreakPropagation = value };
+	}
+
+	/// <summary>Synchronous command-modifier nesting, bounded by MaxDepth and reset for independent queued actions.</summary>
+	public uint CommandModifierDepth
+	{
+		get => CommandFrame.CommandModifierDepth;
+		init => CommandFrame = CommandFrame with { CommandModifierDepth = value };
+	}
+
+	/// <summary>
+	/// How many in-place action lists — <c>@include</c>, <c>@trigger</c>, <c>@switch/inplace</c>,
+	/// <c>@dolist/inplace</c>, <c>@break</c>'s action and the like — enclose this one inside its queue
+	/// entry. A list that starts a queue entry of its own starts again from zero.
+	/// </summary>
+	public int InplaceDepth
+	{
+		get => CommandFrame.InplaceDepth;
+		init => CommandFrame = CommandFrame with { InplaceDepth = value };
+	}
+
+	/// <summary>
+	/// The built-in fn() calls, which a user function of the same name does not hide (PennMUSH's
+	/// PE_BUILTINONLY). A function's own frame does not carry it.
+	/// </summary>
+	public FunctionDefinition? BuiltinCall
+	{
+		get => CommandFrame.BuiltinCall;
+		init => CommandFrame = CommandFrame with { BuiltinCall = value };
+	}
+
+	/// <summary>The connection session the evaluation runs for, when there is one.</summary>
+	public string? ConnectionSessionId
+	{
+		get => Context.ConnectionSessionId;
+		init => Context = Context with { ConnectionSessionId = value };
+	}
+
+	/// <summary>
+	/// The line a player typed, as plain text, carried by the states that run it; null for a state that
+	/// did not start from one. Text drawn from it is never kept by the parse cache, since a typed line can
+	/// carry a password.
+	/// </summary>
+	public string? TypedLine
+	{
+		get => Context.TypedLine;
+		init => Context = Context with { TypedLine = value };
+	}
 
 	/// <summary>The arguments to the command or function: %0-%9 by number, and named arguments.</summary>
 	public required Dictionary<string, CallState> Arguments { get; init; }
@@ -734,11 +880,6 @@ public partial record ParserState
 	/// <summary>Parse mode, in case we need to NoParse.</summary>
 	public ParseMode ParseMode { get; init; } = ParseMode.Default;
 
-	/// <summary>
-	/// Shared mutable stack tracking command invocations (invoker + args) for @retry support. Null outside
-	/// CommandListParse context.
-	/// </summary>
-	public ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>? CommandHistory { get; init; }
 
 	/// <summary>
 	/// Bitfield of <see cref="ParserStateFlags"/> values controlling parser behavior.
@@ -748,31 +889,9 @@ public partial record ParserState
 	/// </summary>
 	public ParserStateFlags Flags { get; init; }
 
-	/// <summary>
-	/// Saves the caller's numbered arguments (%0-%9) from the enclosing scope before a command
-	/// overwrites Arguments with its own parsed args. Used by @wait/@force to preserve pattern-match
-	/// variables in queued callbacks. Equivalent to PennMUSH's wenv (wild environment).
-	/// </summary>
-	public Dictionary<string, CallState>? CallerArguments { get; init; }
 
-	/// <summary>
-	/// Shared, one-shot channel letting a nested command list hand its break to the list that ran it.
-	/// Null everywhere except around a run that wants it (<c>@include</c>).
-	/// </summary>
-	public BreakPropagation? BreakPropagation { get; init; }
 
-	/// <summary>The connection session the evaluation runs for, when there is one.</summary>
-	public string? ConnectionSessionId { get; init; }
 
-	/// <summary>Synchronous command-modifier nesting, bounded by MaxDepth and reset for independent queued actions.</summary>
-	public uint CommandModifierDepth { get; init; }
-
-	/// <summary>
-	/// How many in-place action lists — <c>@include</c>, <c>@trigger</c>, <c>@switch/inplace</c>,
-	/// <c>@dolist/inplace</c>, <c>@break</c>'s action and the like — enclose this one inside its queue
-	/// entry. A list that starts a queue entry of its own starts again from zero.
-	/// </summary>
-	public int InplaceDepth { get; init; }
 
 	/// <summary>
 	/// The deepest an in-place action list may nest. PennMUSH's <c>do_entry</c> runs a nested in-place
@@ -787,18 +906,7 @@ public partial record ParserState
 	/// <summary>Restricted evaluation policy retained by nested parser state copies.</summary>
 	public EvaluationRestrictions? Restrictions { get; init; }
 
-	/// <summary>
-	/// The built-in fn() calls, which a user function of the same name does not hide (PennMUSH's
-	/// PE_BUILTINONLY). A function's own frame does not carry it.
-	/// </summary>
-	public FunctionDefinition? BuiltinCall { get; init; }
 
-	/// <summary>
-	/// The line a player typed, as plain text, carried by the states that run it; null for a state that
-	/// did not start from one. Text drawn from it is never kept by the parse cache, since a typed line can
-	/// carry a password.
-	/// </summary>
-	public string? TypedLine { get; init; }
 
 	/// <summary><c>%></c>: the logical output of the last command run in this queue entry.</summary>
 	public MString PipedOutput => CommandText?.Output ?? QueuedOutput ?? MarkupText.Empty;
@@ -859,16 +967,16 @@ public partial record ParserState
 			QueuedPrinted = PrintedOutput
 		},
 		Arguments = SnapshotArguments(Arguments),
-		CallerArguments = CallerArguments is null ? null : SnapshotArguments(CallerArguments),
+		// A queued action runs no command yet; it keeps only the caller's arguments and fn()'s built-in.
+		CommandFrame = CommandFrame is { CallerArguments: null, BuiltinCall: null }
+			? CommandFrame.None
+			: new CommandFrame
+			{
+				CallerArguments = CallerArguments is null ? null : SnapshotArguments(CallerArguments),
+				BuiltinCall = BuiltinCall
+			},
 		Function = null,
 		ParserFunctionDepth = 0,
-		Command = null,
-		CommandInvoker = NoCommand,
-		Switches = [],
-		CommandHistory = null,
-		BreakPropagation = null,
-		CommandModifierDepth = 0,
-		InplaceDepth = 0,
 		ExecutionBudget = null
 	};
 
@@ -984,7 +1092,9 @@ public partial record ParserState
 				RegisterPrivacy = new RegisterPrivacyFlag(),
 				MoveDepth = new InvocationCounter(),
 				CommandText = commandText,
-				OutputLimit = outputLimit
+				OutputLimit = outputLimit,
+				ConnectionSessionId = session,
+				TypedLine = typedLine
 			},
 			ParserFunctionDepth = 0,
 			Arguments = new Dictionary<string, CallState>(),
@@ -992,10 +1102,8 @@ public partial record ParserState
 			Enactor = enactor,
 			Caller = caller,
 			Flags = flags,
-			ConnectionSessionId = session,
 			ExecutionBudget = budget,
-			Restrictions = restrictions,
-			TypedLine = typedLine
+			Restrictions = restrictions
 		};
 
 	/// <summary>
@@ -1011,6 +1119,8 @@ public partial record ParserState
 	/// <param name="arguments">The call's arguments, keyed <c>"0"</c>, <c>"1"</c>, ….</param>
 	public ParserState ForFunction(string function, Dictionary<string, CallState> arguments) => new()
 	{
+		// The context carries the typed line, so its text stays out of the parse cache when the function
+		// parses part of it, and the connection's session for @input.
 		Context = Context,
 		CurrentEvaluation = CurrentEvaluation,
 		ParserFunctionDepth = ParserFunctionDepth + 1,
@@ -1021,10 +1131,6 @@ public partial record ParserState
 		Caller = Caller,
 		ParseMode = ParseMode,
 		Flags = Flags,
-		// Still the same typed line, so its text stays out of the parse cache when the function parses
-		// part of it, and the same connection's session for @input.
-		TypedLine = TypedLine,
-		ConnectionSessionId = ConnectionSessionId,
 		// The same evaluation's budget, so a function that parses again (u(), iter()) enters it as it is
 		// rather than pushing a copy of this frame to carry it.
 		ExecutionBudget = ExecutionBudget,
