@@ -10,6 +10,15 @@ namespace SharpMUSH.Tests.Parser;
 public class ParserStateContextTests
 {
 	[Test]
+	public async Task AStateWithoutACommandHasTheNoOpInvoker()
+	{
+		var root = ParserState.RootFor(new DBRef(7));
+		await Assert.That(root.CommandInvoker is not null).IsTrue();
+		await Assert.That(root.ForFunction("add", []).CommandInvoker is not null).IsTrue();
+		await Assert.That(root.SnapshotForQueuedAction().CommandInvoker is not null).IsTrue();
+	}
+
+	[Test]
 	public async Task AQueuedSnapshotDetachesTheEntireLiveHttpResponseContext()
 	{
 		var response = new HttpResponseContext { ContentType = "application/parent" };

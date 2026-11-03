@@ -511,11 +511,12 @@ public sealed record EvaluationContext
 /// </remarks>
 public sealed record CommandFrame
 {
+	// Declared before None: static initializers run in order, and None's invoker is this one.
+	private static readonly Func<IMUSHCodeParser, ValueTask<Option<CallState>>> NoCommand
+		= _ => ValueTask.FromResult(new Option<CallState>(new None()));
+
 	/// <summary>No command: the frame of a function call, or of an evaluation that runs none.</summary>
 	public static CommandFrame None { get; } = new();
-
-	internal static readonly Func<IMUSHCodeParser, ValueTask<Option<CallState>>> NoCommand
-		= _ => ValueTask.FromResult(new Option<CallState>(new None()));
 
 	/// <inheritdoc cref="ParserState.Command"/>
 	public string? Command { get; init; }
