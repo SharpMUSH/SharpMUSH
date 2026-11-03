@@ -263,8 +263,9 @@ public class PackageBatchReviewTests : BunitContext, IAsyncDisposable
 				await host.FindComponent<PackageBatchReview>().Instance.DisposeAsync();
 				Services.GetRequiredService<NavigationManager>().NavigateTo("/admin/packages/browse?remote=official");
 				host.Render(p => p.AddChildContent<AdminPackageBrowse>());
-				host.WaitForAssertion(() => host.FindAll("button").Single(b => b.TextContent.Trim() == "PkgBatchQueueInstall"));
-				await host.FindAll("button").Single(b => b.TextContent.Trim() == "PkgBatchQueueInstall").ClickAsync();
+				host.WaitForAssertion(() => host.FindAll("button").Single(b => b.TextContent.Trim() == "PkgBatchQueued"));
+				var row = host.FindComponent<LibraryPackageRow>();
+				await row.InvokeAsync(() => row.Instance.VersionChanged.InvokeAsync("1.0.0"));
 				host.Render(p => p.AddChildContent<PackageBatchReview>());
 			}
 			else packages.Batch.Queue(new("tools", PackageBatchAction.Uninstall));
