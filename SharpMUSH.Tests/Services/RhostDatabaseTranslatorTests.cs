@@ -1,5 +1,6 @@
 using SharpMUSH.Configuration;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 
@@ -259,6 +260,21 @@ public class RhostDatabaseTranslatorTests
 
 		await Assert.That(database.Objects[0].Attributes.Select(a => a.Name)).IsEquivalentTo(["AMAIL"]);
 		await Assert.That(database.RoutineNotes.Any(n => n.StartsWith("Attribute ConnInfo: not imported"))).IsTrue();
+	}
+
+	/// <summary><c>@livewire/funceval</c>'s <c>*WireFuncEval</c> comes across as the internal attribute SharpMUSH reads it from.</summary>
+	[Test]
+	public async Task ALiveWiredInvocationLimitIsImported()
+	{
+		var flatfile = RhostFlatfileReader.ReadStrict("+V7\n+S1\n+N256\n"
+			+ "!0\nWizard\n0\n-1\n0\n-1\n\n0\n0\n3\n>2100000003\n100000 1\n<\n"
+			+ RhostFlatfileReader.EndOfDump + "\n");
+
+		var attribute = RhostDatabaseTranslator.Translate(flatfile).Objects[0].Attributes.Single();
+
+		await Assert.That(attribute.Name).IsEqualTo(LiveWire.AttributeName);
+		await Assert.That(attribute.Flags).IsEquivalentTo(LiveWire.AttributeFlags);
+		await Assert.That(LiveWire.Parse(attribute.Value)).IsEqualTo(new LiveWire(100000, true));
 	}
 
 	/// <summary>Without a lock attribute, the header's lock is read, its bare numbers made dbrefs.</summary>

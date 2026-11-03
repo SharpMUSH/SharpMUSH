@@ -73,7 +73,7 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category, 1.15 grants, 1.16 title, 1.17 wiki properties, 1.18 text, decimal and date wiki properties)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category, 1.15 grants, 1.16 title, 1.17 wiki properties, 1.18 text, decimal and date wiki properties, 1.19 function invocation limits)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
 title: "Bulletin Boards"        # required from format "1.16" — the name people choose the package by; ≤60 chars
 version: 2.4.1                  # required — semantic version
@@ -121,6 +121,7 @@ objects:                        # required — at least one object (optional whe
     location: "{{?bbs_storage}}"  # optional for things; required for exits
     previous_refs: [bbs_main]   # optional — retired names of this object (renames)
     flags: [no_command]         # optional — object flags
+    function_invocation_limit: 100000  # optional (format "1.19") — its own function call budget
     locks:                      # optional — lock values by lock type
       use: "{{bbs_parent}}"
     attributes:                 # optional — attributes to set
@@ -726,6 +727,32 @@ package that needs another of the same category is listed under it (`jobs-app`
 under `jobs`), and packages with none come last under Uncategorized. One name, up to 40
 characters. Write the format quoted, `format: "1.10"`, so YAML tools that type
 numbers do not read it as 1.1; below 1.10 `category:` is ignored with a warning.
+
+## Function invocation limits (format 1.19)
+
+`function_invocation_limit:` on an object the package creates gives the code that
+object runs its own budget of function calls per command, in place of the game's
+`function_invocation_limit` (25000 by default). It is what `@livewire/funceval`
+and `/funcover` set by hand: a number from 1 to 1000000000, which applies whether
+it is above or below the game's.
+
+```yaml
+format: "1.19"
+objects:
+  - ref: core
+    type: thing
+    name: PF2e Core
+    function_invocation_limit: 100000
+```
+
+The count of calls is shared by the whole command. When code on one object calls
+into another's (`u({{tables}}/...)`), give that object a limit too.
+
+The review screen shows the limit as the object's `WIREFUNCEVAL` attribute,
+`<limit> 1`, and an upgrade, a rollback and an administrator's change to it are
+handled as for any other attribute. An attach (`target:`) object cannot declare
+one, and a manifest cannot write `WIREFUNCEVAL` itself. Below 1.19 the key is
+ignored with a warning.
 
 ## Application packages (`kind: application`)
 

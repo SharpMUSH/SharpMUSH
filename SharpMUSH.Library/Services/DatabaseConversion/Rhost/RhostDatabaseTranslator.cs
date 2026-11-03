@@ -652,7 +652,9 @@ public static partial class RhostDatabaseTranslator
 		{
 			Name = name,
 			Owner = attribute.Owner,
-			Flags = AttributeFlags(attribute.Flags | definitionFlags, source.DBRef, report),
+			Flags = name == LiveWire.AttributeName
+				? [.. LiveWire.AttributeFlags]
+				: AttributeFlags(attribute.Flags | definitionFlags, source.DBRef, report),
 			Value = value
 		};
 	}

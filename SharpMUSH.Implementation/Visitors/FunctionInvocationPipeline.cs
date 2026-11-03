@@ -83,7 +83,12 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			var contextDepth = context.Depth();
 			limitExceeded = currentState.LimitExceeded!;
 
-			if (currentState.TotalInvocations!.Increment() > configuration.CurrentValue.Limit.FunctionInvocationLimit)
+			// Restricted evaluation reads no objects, so it is held to the game's limit, never an executor's own.
+			var opensRestricted = visitor.BeginsRestrictedEvaluation(context);
+			var gameLimit = configuration.CurrentValue.Limit.FunctionInvocationLimit;
+			if (currentState.TotalInvocations!.Increment() > (isolated || opensRestricted
+					? gameLimit
+					: await InvocationLimitAsync(currentState, gameLimit)))
 				return LimitHit(limitExceeded, ErrorMessages.Returns.Invoke, contextDepth);
 
 			var currentDepth = currentState.CallDepth!.Increment();
@@ -112,7 +117,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 				return new CallState(ErrorMessages.Returns.FunctionDisabled, contextDepth);
 			}
 
-			isolated |= visitor.BeginsRestrictedEvaluation(context);
+			isolated |= opensRestricted;
 			AnySharpObject? executor = null;
 			if (!isolated)
 			{
@@ -300,6 +305,29 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 		limitExceeded.IsExceeded = true;
 		limitExceeded.ErrorMessage ??= error;
 		return new CallState(error, depth);
+	}
+
+	/// <summary>
+	/// The number of function calls this evaluation may make while the current executor's code runs:
+	/// <paramref name="gameLimit"/>, or the executor's (or its owner's) <c>@livewire/funceval</c>. Each
+	/// executor's is read once per evaluation; the count is shared, as RhostMUSH's <c>func_invk_ctr</c> is.
+	/// </summary>
+	private async ValueTask<uint> InvocationLimitAsync(ParserState state, uint gameLimit)
+	{
+		if (state.Executor is not { } executor)
+		{
+			return gameLimit;
+		}
+
+		var counter = state.TotalInvocations!;
+		if (counter.TryGetLimit(executor.Number, gameLimit, out var known))
+		{
+			return known;
+		}
+
+		var limit = await LiveWire.LimitForAsync(services.Mediator, executor, gameLimit, ExecutionBudget.CurrentToken);
+		counter.RememberLimit(executor.Number, gameLimit, limit);
+		return limit;
 	}
 
 	/// <summary>Whether the function's own restriction or the built-in overlay disables it.</summary>

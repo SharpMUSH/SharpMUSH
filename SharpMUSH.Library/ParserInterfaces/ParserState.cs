@@ -132,6 +132,22 @@ public class InvocationCounter
 	/// Decrement the counter and return the new value.
 	/// </summary>
 	public int Decrement() => --Count;
+
+	private Dictionary<(int Executor, uint GameLimit), uint>? _limits;
+
+	/// <summary>
+	/// The invocation limit already found for code <paramref name="executor"/> runs under
+	/// <paramref name="gameLimit"/> (<see cref="Services.LiveWire"/>), read once per evaluation.
+	/// </summary>
+	public bool TryGetLimit(int executor, uint gameLimit, out uint limit)
+	{
+		limit = 0;
+		return _limits?.TryGetValue((executor, gameLimit), out limit) == true;
+	}
+
+	/// <summary>Keeps the limit found for <paramref name="executor"/> for the rest of this evaluation.</summary>
+	public void RememberLimit(int executor, uint gameLimit, uint limit)
+		=> (_limits ??= [])[(executor, gameLimit)] = limit;
 }
 
 /// <summary>
