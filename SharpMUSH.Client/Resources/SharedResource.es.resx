@@ -5082,10 +5082,10 @@
     <value>Índice de la ayuda</value>
   </data>
   <data name="NavHelpGettingStarted" xml:space="preserve">
-    <value>Primeros pasos</value>
+    <value>Recorrido por los comandos</value>
   </data>
   <data name="NavHelpNewbie" xml:space="preserve">
-    <value>Nuevo en los MUSH</value>
+    <value>Cómo leer la ayuda</value>
   </data>
   <data name="NavHelpTopics" xml:space="preserve">
     <value>Temas</value>
@@ -7453,4 +7453,8 @@
     <value>Mantenida dentro de la imagen, en {0}, {1}.</value>
   </data>
   <data name="NavJourneyAbout" xml:space="preserve"><value>Acerca de este juego</value></data>
+  <data name="NavHelpStartHere" xml:space="preserve"><value>Empieza aquí</value></data>
+  <data name="NavHelpLearnSub" xml:space="preserve"><value>Un recorrido guiado para unirse y jugar.</value></data>
+  <data name="NavHelpGettingStartedSub" xml:space="preserve"><value>Moverse, hablar, canales y correo.</value></data>
+  <data name="NavHelpNewbieSub" xml:space="preserve"><value>Qué significan [ ] y &lt; &gt; en un comando.</value></data>
 </root>

@@ -5082,10 +5082,10 @@
     <value>帮助索引</value>
   </data>
   <data name="NavHelpGettingStarted" xml:space="preserve">
-    <value>入门</value>
+    <value>命令导览</value>
   </data>
   <data name="NavHelpNewbie" xml:space="preserve">
-    <value>MUSH 新手</value>
+    <value>阅读帮助文件</value>
   </data>
   <data name="NavHelpTopics" xml:space="preserve">
     <value>主题</value>
@@ -7453,4 +7453,8 @@
     <value>已保持在图片内，位于 {0}, {1}。</value>
   </data>
   <data name="NavJourneyAbout" xml:space="preserve"><value>关于本游戏</value></data>
+  <data name="NavHelpStartHere" xml:space="preserve"><value>从这里开始</value></data>
+  <data name="NavHelpLearnSub" xml:space="preserve"><value>加入与游玩的引导教程。</value></data>
+  <data name="NavHelpGettingStartedSub" xml:space="preserve"><value>移动、交谈、频道和邮件。</value></data>
+  <data name="NavHelpNewbieSub" xml:space="preserve"><value>命令中的 [ ] 和 &lt; &gt; 是什么意思。</value></data>
 </root>

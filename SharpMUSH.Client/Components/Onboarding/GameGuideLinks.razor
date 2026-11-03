@@ -6,12 +6,12 @@
 @* The game's configured welcome, rules and character-guide pages, under their own titles. *@
 @if (_about.Count > 0)
 {
-    <span class="journey-about">@Loc["NavJourneyAbout"]:
+    <p class="journey-about">@Loc["NavJourneyAbout"]:
         @foreach (var link in _about)
         {
             <a href="@link.Url">@link.Title</a>
         }
-    </span>
+    </p>
 }
 
 @code {

@@ -5082,10 +5082,10 @@
     <value>Hilfeübersicht</value>
   </data>
   <data name="NavHelpGettingStarted" xml:space="preserve">
-    <value>Erste Schritte</value>
+    <value>Befehle Schritt für Schritt</value>
   </data>
   <data name="NavHelpNewbie" xml:space="preserve">
-    <value>Neu im MUSH</value>
+    <value>Hilfedateien lesen</value>
   </data>
   <data name="NavHelpTopics" xml:space="preserve">
     <value>Themen</value>
@@ -7453,4 +7453,8 @@
     <value>Im Bild gehalten, bei {0}, {1}.</value>
   </data>
   <data name="NavJourneyAbout" xml:space="preserve"><value>Über dieses Spiel</value></data>
+  <data name="NavHelpStartHere" xml:space="preserve"><value>Hier beginnen</value></data>
+  <data name="NavHelpLearnSub" xml:space="preserve"><value>Eine geführte Tour zum Einstieg und Spielen.</value></data>
+  <data name="NavHelpGettingStartedSub" xml:space="preserve"><value>Bewegen, Sprechen, Kanäle und Post.</value></data>
+  <data name="NavHelpNewbieSub" xml:space="preserve"><value>Was [ ] und &lt; &gt; in einem Befehl bedeuten.</value></data>
 </root>

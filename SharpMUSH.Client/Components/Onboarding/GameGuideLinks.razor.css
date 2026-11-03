@@ -1,5 +1,12 @@
 .journey-about {
-    display: inline-flex;
+    display: flex;
     flex-wrap: wrap;
-    gap: .25rem .5rem;
+    gap: .25rem .75rem;
+    margin: 0;
+}
+
+.journey-about a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: .2em;
 }

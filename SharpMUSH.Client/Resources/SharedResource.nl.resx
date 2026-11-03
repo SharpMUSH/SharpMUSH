@@ -5082,10 +5082,10 @@
     <value>Helpoverzicht</value>
   </data>
   <data name="NavHelpGettingStarted" xml:space="preserve">
-    <value>Aan de slag</value>
+    <value>Rondleiding door commando's</value>
   </data>
   <data name="NavHelpNewbie" xml:space="preserve">
-    <value>Nieuw in MUSH</value>
+    <value>Help lezen</value>
   </data>
   <data name="NavHelpTopics" xml:space="preserve">
     <value>Onderwerpen</value>
@@ -7453,4 +7453,8 @@
     <value>Binnen de afbeelding gehouden, op {0}, {1}.</value>
   </data>
   <data name="NavJourneyAbout" xml:space="preserve"><value>Over dit spel</value></data>
+  <data name="NavHelpStartHere" xml:space="preserve"><value>Begin hier</value></data>
+  <data name="NavHelpLearnSub" xml:space="preserve"><value>Een rondleiding over meedoen en spelen.</value></data>
+  <data name="NavHelpGettingStartedSub" xml:space="preserve"><value>Bewegen, praten, kanalen en post.</value></data>
+  <data name="NavHelpNewbieSub" xml:space="preserve"><value>Wat [ ] en &lt; &gt; in een commando betekenen.</value></data>
 </root>

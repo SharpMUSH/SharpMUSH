@@ -5082,10 +5082,10 @@
     <value>Указател на помощта</value>
   </data>
   <data name="NavHelpGettingStarted" xml:space="preserve">
-    <value>Първи стъпки</value>
+    <value>Обиколка на командите</value>
   </data>
   <data name="NavHelpNewbie" xml:space="preserve">
-    <value>Нови в MUSH</value>
+    <value>Как да четем помощта</value>
   </data>
   <data name="NavHelpTopics" xml:space="preserve">
     <value>Теми</value>
@@ -7453,4 +7453,8 @@
     <value>Задържана в картината, на {0}, {1}.</value>
   </data>
   <data name="NavJourneyAbout" xml:space="preserve"><value>За тази игра</value></data>
+  <data name="NavHelpStartHere" xml:space="preserve"><value>Започнете оттук</value></data>
+  <data name="NavHelpLearnSub" xml:space="preserve"><value>Насочена обиколка за присъединяване и игра.</value></data>
+  <data name="NavHelpGettingStartedSub" xml:space="preserve"><value>Движение, разговор, канали и поща.</value></data>
+  <data name="NavHelpNewbieSub" xml:space="preserve"><value>Какво означават [ ] и &lt; &gt; в команда.</value></data>
 </root>

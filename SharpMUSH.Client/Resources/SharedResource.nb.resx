@@ -5082,10 +5082,10 @@
     <value>Hjelpeoversikt</value>
   </data>
   <data name="NavHelpGettingStarted" xml:space="preserve">
-    <value>Kom i gang</value>
+    <value>Gjennomgang av kommandoer</value>
   </data>
   <data name="NavHelpNewbie" xml:space="preserve">
-    <value>Ny i MUSH</value>
+    <value>Slik leser du hjelpen</value>
   </data>
   <data name="NavHelpTopics" xml:space="preserve">
     <value>Emner</value>
@@ -7453,4 +7453,8 @@
     <value>Holdt inne i bildet, ved {0}, {1}.</value>
   </data>
   <data name="NavJourneyAbout" xml:space="preserve"><value>Om dette spillet</value></data>
+  <data name="NavHelpStartHere" xml:space="preserve"><value>Start her</value></data>
+  <data name="NavHelpLearnSub" xml:space="preserve"><value>En guidet tur i å bli med og spille.</value></data>
+  <data name="NavHelpGettingStartedSub" xml:space="preserve"><value>Bevegelse, samtale, kanaler og post.</value></data>
+  <data name="NavHelpNewbieSub" xml:space="preserve"><value>Hva [ ] og &lt; &gt; i en kommando betyr.</value></data>
 </root>

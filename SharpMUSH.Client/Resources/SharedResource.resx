@@ -4635,10 +4635,10 @@
     <value>Help index</value>
   </data>
   <data name="NavHelpGettingStarted" xml:space="preserve">
-    <value>Getting started</value>
+    <value>Command walkthrough</value>
   </data>
   <data name="NavHelpNewbie" xml:space="preserve">
-    <value>New to MUSHing</value>
+    <value>Reading help files</value>
   </data>
   <data name="NavHelpTopics" xml:space="preserve">
     <value>Topics</value>
@@ -9996,11 +9996,10 @@
   <data name="GuideCharacterRosterUnavailable" xml:space="preserve"><value>We could not load your characters. Retry before creating or claiming one, so we can keep your existing characters and current choice.</value></data>
   <data name="GuideCharacterRosterFailed" xml:space="preserve"><value>Your character is saved, but we could not refresh your character list. Retry to continue with that character; it will not be created again.</value></data>
   <data name="GuidePackagesBundled" xml:space="preserve"><value>Included with this server</value></data>
-  <data name="GuideLoginEntry" xml:space="preserve"><value>New here? Get started with Sharpie</value></data>
-  <data name="GuideQuickstartEntry" xml:space="preserve"><value>Getting started</value></data>
-  <data name="GuideHelpIndexEntry" xml:space="preserve"><value>Getting started with Sharpie</value></data>
-  <data name="GuideHelpIndexDescription" xml:space="preserve"><value>— an optional guide to joining and playing.</value></data>
-  <data name="GuideHelpEntry" xml:space="preserve"><value>Getting started with Sharpie / Change my guide</value></data>
+  <data name="GuideLoginEntry" xml:space="preserve"><value>New here? Learn to play</value></data>
+  <data name="GuideQuickstartEntry" xml:space="preserve"><value>Learn to play</value></data>
+  <data name="GuideHelpIndexEntry" xml:space="preserve"><value>Learn to play</value></data>
+  <data name="GuideHelpEntry" xml:space="preserve"><value>Learn to play / Change my guide</value></data>
   <data name="GuideAdminEntry" xml:space="preserve"><value>Prepare for new players</value></data>
   <data name="GuideAdminDescription" xml:space="preserve"><value>— game introduction and onboarding checklist.</value></data>
   <data name="GuideBackToGame" xml:space="preserve"><value>Back to game</value></data>
@@ -11070,4 +11069,8 @@
     <value>Categories</value>
   </data>
   <data name="NavJourneyAbout" xml:space="preserve"><value>About this game</value></data>
+  <data name="NavHelpStartHere" xml:space="preserve"><value>Start here</value></data>
+  <data name="NavHelpLearnSub" xml:space="preserve"><value>A guided tour of joining and playing.</value></data>
+  <data name="NavHelpGettingStartedSub" xml:space="preserve"><value>Moving, talking, channels and mail.</value></data>
+  <data name="NavHelpNewbieSub" xml:space="preserve"><value>What the [ ] and &lt; &gt; in a command mean.</value></data>
 </root>
