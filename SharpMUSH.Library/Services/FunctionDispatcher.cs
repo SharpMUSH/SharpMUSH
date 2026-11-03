@@ -141,7 +141,7 @@ public static class FunctionDispatcher
 					{
 						// The argument's work is its own, not the function's that asked for it.
 						CallState result;
-						using (InvocationClock.PauseRunning())
+						using (InvocationClock.PauseRunning(localized.Clock))
 							result = await localized.FunctionParse(pair.Value.Message) ?? CallState.Empty;
 						return flags.HasFlag(FunctionFlags.StripAnsi)
 							? result with { Message = result.Message.WithoutVisualMarkup() } : result;

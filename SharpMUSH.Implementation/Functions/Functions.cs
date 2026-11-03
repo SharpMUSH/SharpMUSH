@@ -17,7 +17,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	/// charging its evaluation to the function's own-time metric.</summary>
 	private static async ValueTask<CallState?> ParseRawArgument(IMUSHCodeParser parser, MString text)
 	{
-		using var paused = InvocationClock.PauseRunning();
+		using var paused = InvocationClock.PauseRunning(parser.Clock);
 		return await parser.FunctionParse(text);
 	}
 

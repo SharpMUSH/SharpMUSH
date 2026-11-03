@@ -43,7 +43,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 		var parser = visitor.Parser;
 		var configuration = visitor.Configuration;
 		ExecutionBudget.Current?.ThrowIfExceeded();
-		var clock = InvocationClock.Start();
+		var clock = InvocationClock.Start(parser.Clock);
 		var success = true;
 		// The registered name, never the name as typed: a typed name is free text, and every distinct
 		// label value is a series of its own in Prometheus. Null for prose, which is not a call.
@@ -204,7 +204,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 				return new CallState(limitExceeded.ErrorMessage ?? ErrorMessages.Returns.Invoke, contextDepth);
 			}
 
-			var newParser = parser.Push(currentState.ForFunction(name, SharpMUSHParserVisitor.NumberedArguments(refinedArguments)));
+			var newParser = parser.Push(currentState.ForFunction(name, SharpMUSHParserVisitor.NumberedArguments(refinedArguments)), clock);
 
 			var result = await FunctionDispatcher.InvokeValidatedAsync(newParser,
 				definition, executor,

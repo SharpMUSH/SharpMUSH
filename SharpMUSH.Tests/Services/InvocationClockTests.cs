@@ -21,9 +21,9 @@ public class InvocationClockTests
 		var time = new ManualTime();
 		using var _ = InvocationClock.UseTime(time);
 
-		var outer = InvocationClock.Start();
+		var outer = InvocationClock.Start(null);
 		time.Advance(1);
-		var inner = InvocationClock.Start();
+		var inner = InvocationClock.Start(outer);
 		time.Advance(200);
 		inner.Stop();
 		time.Advance(2);
@@ -35,12 +35,48 @@ public class InvocationClockTests
 	}
 
 	[Test]
+	public async Task ACallOnAFreshParserPausesTheCallRunningInItsFlow()
+	{
+		var time = new ManualTime();
+		using var _ = InvocationClock.UseTime(time);
+
+		var outer = InvocationClock.Start(null);
+		time.Advance(1);
+		var lockAttribute = InvocationClock.Start(null);
+		time.Advance(200);
+		lockAttribute.Stop();
+		time.Advance(2);
+		outer.Stop();
+
+		await Assert.That(lockAttribute.OwnMilliseconds).IsEqualTo(200);
+		await Assert.That(outer.OwnMilliseconds).IsEqualTo(3);
+	}
+
+	[Test]
+	public async Task ACallerThatHasStoppedLeavesTheCallToTheFlow()
+	{
+		var time = new ManualTime();
+		using var _ = InvocationClock.UseTime(time);
+
+		var queued = InvocationClock.Start(null);
+		queued.Stop();
+		var running = InvocationClock.Start(null);
+		var nested = InvocationClock.Start(queued);
+		time.Advance(200);
+		nested.Stop();
+		time.Advance(1);
+		running.Stop();
+
+		await Assert.That(running.OwnMilliseconds).IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task EvaluatingArgumentsPausesTheCall()
 	{
 		var time = new ManualTime();
 		using var _ = InvocationClock.UseTime(time);
 
-		var clock = InvocationClock.Start();
+		var clock = InvocationClock.Start(null);
 		time.Advance(1);
 		using (clock.Pause())
 		{
@@ -62,14 +98,16 @@ public class InvocationClockTests
 		var time = new ManualTime();
 		using var _ = InvocationClock.UseTime(time);
 
-		var command = InvocationClock.Start();
-		using (InvocationClock.PauseRunning())
+		var command = InvocationClock.Start(null);
+		using (InvocationClock.PauseRunning(command))
+			time.Advance(200);
+		using (InvocationClock.PauseRunning(null))
 			time.Advance(200);
 		time.Advance(1);
 		command.Stop();
 
 		await Assert.That(command.OwnMilliseconds).IsEqualTo(1);
-		using (InvocationClock.PauseRunning()) { }
+		using (InvocationClock.PauseRunning(command)) { }
 	}
 
 	[Test]
@@ -78,9 +116,12 @@ public class InvocationClockTests
 		var time = new ManualTime();
 		using var _ = InvocationClock.UseTime(time);
 
-		var outer = InvocationClock.Start();
-		var prose = InvocationClock.Start();
+		var outer = InvocationClock.Start(null);
+		var prose = InvocationClock.Start(outer);
 		prose.Stop();
+		var after = InvocationClock.Start(null);
+		time.Advance(200);
+		after.Stop();
 		time.Advance(200);
 		prose.Stop();
 		outer.Stop();

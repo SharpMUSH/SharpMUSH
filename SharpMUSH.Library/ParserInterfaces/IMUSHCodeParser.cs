@@ -38,6 +38,18 @@ public interface IMUSHCodeParser
 	ValueTask<CallState?> FunctionParse(MString text, bool emitSubstDebug);
 	IMUSHCodeParser Empty();
 	IMUSHCodeParser Push(ParserState state);
+
+	/// <summary>
+	/// <see cref="Push(ParserState)"/>, for a function or command call whose body runs in <paramref name="state"/>:
+	/// <paramref name="clock"/> is that call's, and becomes <see cref="Clock"/>.
+	/// </summary>
+	IMUSHCodeParser Push(ParserState state, InvocationClock clock);
+
+	/// <summary>
+	/// The clock of the function or command call whose body runs with this parser, kept by every parser pushed
+	/// from it; null outside any call. A call nested in it pauses it (<see cref="InvocationClock.Start"/>).
+	/// </summary>
+	InvocationClock? Clock { get; }
 	IMUSHCodeParser FromState(ParserState state);
 	Option<ParserState> StateHistory(uint index);
 
