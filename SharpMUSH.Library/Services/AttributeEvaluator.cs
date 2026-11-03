@@ -62,9 +62,7 @@ internal sealed class AttributeEvaluator(
 
 		return fetched switch
 		{
-			SharpAttribute[] chain => await RunAsOwnerAsync(parser,
-				AttributeFunction.Of(obj, chain.Last()),
-				s => s.ForAttributeArguments(args)),
+			SharpAttribute[] chain => await RunAsOwnerAsync(parser, AttributeFunction.Of(obj, chain[^1]), args, args),
 			None => CallState.Empty,
 			Error<string> error => new CallState(error.Value)
 		};
@@ -80,24 +78,30 @@ internal sealed class AttributeEvaluator(
 		AnySharpObject obj, string attribute, bool parent)
 	{
 		var read = await attributes.GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.Read, parent);
-		if (read is SharpAttribute[] chain
-				&& !await AttributeService.CheckReadAsync(() => permissions.CanExecuteAttribute(executor, obj, chain)))
-		{
-			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		return read;
+		return read is SharpAttribute[] chain
+			&& !await AttributeService.CheckReadAsync(permissions.CanExecuteAttribute(executor, obj, chain))
+				? new Error<string>(ErrorMessages.Returns.PermissionDenied)
+				: read;
 	}
 
 	public ValueTask<CallState> CallAttributeFunctionAsync(IMUSHCodeParser parser, AttributeFunction function)
-		=> RunAsOwnerAsync(parser, function, s => s with { SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(s.Arguments) });
+		=> RunAsOwnerAsync(parser, function, arguments: null, environment: null);
+
+	public ValueTask<CallState> CallAttributeFunctionAsync(IMUSHCodeParser parser, AttributeFunction function,
+		Dictionary<string, CallState> arguments, Dictionary<string, CallState> environment)
+		=> RunAsOwnerAsync(parser, function, arguments, environment);
 
 	/// <summary>
 	/// PennMUSH's <c>call_ufun</c>: the attribute runs as the object it was read from, with the current
 	/// executor as caller.
 	/// </summary>
+	/// <remarks>
+	/// <paramref name="arguments"/> and <paramref name="environment"/> are the call's %0-%9 and its
+	/// environment; null keeps the caller's. The call's frame is made in one copy, so a function that runs
+	/// an attribute per list item pays for one frame per item.
+	/// </remarks>
 	private async ValueTask<CallState> RunAsOwnerAsync(IMUSHCodeParser parser, AttributeFunction function,
-		Func<ParserState, ParserState> withArguments)
+		Dictionary<string, CallState>? arguments, Dictionary<string, CallState>? environment)
 	{
 		var (owner, attributeName, code, dialect) = function;
 
@@ -135,16 +139,10 @@ internal sealed class AttributeEvaluator(
 
 		try
 		{
-			var result = await parser.With(s =>
-					withArguments(s) with
-					{
-						CurrentEvaluation = new DBAttribute(owner.Object().DBRef, attributeName) { Dialect = dialect },
-						Function = attributeName,
-						Executor = owner.Object().DBRef,
-						Caller = s.Executor
-					},
-				async newParser =>
-					await newParser.FunctionParse(code));
+			var ownerRef = owner.Object().DBRef;
+			var frame = parser.CurrentState.ForAttributeCall(arguments, environment,
+				new DBAttribute(ownerRef, attributeName) { Dialect = dialect }, attributeName, ownerRef);
+			var result = await parser.Push(frame).FunctionParse(code);
 
 			return result ?? CallState.Empty;
 		}
@@ -216,7 +214,7 @@ internal sealed class AttributeEvaluator(
 		// executable code, not a database attribute name, and can contain characters
 		// (e.g. '[', ']', '\') that are not valid in attribute names.
 		if (!applyPredicate && !lambdaPredicate &&
-				!await AttributeService.CheckReadAsync(() => validateService.Valid(IValidateService.ValidationType.AttributeName, attribute, new None())))
+				!await AttributeService.CheckReadAsync(validateService.Valid(IValidateService.ValidationType.AttributeName, attribute, new None())))
 		{
 			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}

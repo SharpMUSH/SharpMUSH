@@ -106,6 +106,14 @@ public interface IAttributeService
 	/// <param name="parser">A parser already carrying this call's arguments and registers.</param>
 	ValueTask<CallState> CallAttributeFunctionAsync(IMUSHCodeParser parser, AttributeFunction function);
 
+	/// <summary>
+	/// <see cref="CallAttributeFunctionAsync(IMUSHCodeParser, AttributeFunction)"/> with
+	/// <paramref name="arguments"/> as the call's %0-%9 and <paramref name="environment"/> as its
+	/// environment, set in the call's own frame rather than in one pushed for it.
+	/// </summary>
+	ValueTask<CallState> CallAttributeFunctionAsync(IMUSHCodeParser parser, AttributeFunction function,
+		Dictionary<string, CallState> arguments, Dictionary<string, CallState> environment);
+
 	ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject obj,
 		string attribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false);
 

@@ -77,8 +77,17 @@ public sealed class ExecutionBudget : IDisposable
 	public IDisposable Enter()
 	{
 		var previous = Ambient.Value;
+		// A nested parse re-enters the budget its caller already entered; writing the same value again
+		// would only copy the execution context twice.
+		if (ReferenceEquals(previous, this)) return Unchanged.Instance;
 		Ambient.Value = this;
 		return new Scope(previous);
+	}
+
+	private sealed class Unchanged : IDisposable
+	{
+		public static readonly Unchanged Instance = new();
+		public void Dispose() { }
 	}
 	/// <summary>Links a request lifetime to the current deadline without extending it.
 	/// The scope must remain active until awaited work or stream enumeration settles.</summary>

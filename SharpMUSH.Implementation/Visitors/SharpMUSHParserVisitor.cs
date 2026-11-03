@@ -49,7 +49,8 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	private int _debugNestDepth;
 	private bool _didEmitFunctionDebug;
 	private bool _containsRestrictedWrapper;
-	private readonly Dictionary<IFunctionContext, bool> _restrictedScanResults = new();
+	// Made on the first restricted scan: most parses never run one, and each parse has a visitor of its own.
+	private Dictionary<IFunctionContext, bool>? _restrictedScanResults;
 	internal bool SuppressSubstitutionOnlyDebugTrace => _didEmitFunctionDebug || _containsRestrictedWrapper;
 	private int _braceDepthCounter;
 	private int _suppressFunctionEval;
@@ -469,22 +470,23 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 			ExecutionBudget.Current?.ThrowIfExceeded();
 			if (frame.Node is IFunctionContext function && frame.NextChild == 0)
 			{
-				var found = _restrictedScanResults.TryGetValue(function, out var cached)
+				var scanned = _restrictedScanResults ??= [];
+				var found = scanned.TryGetValue(function, out var cached)
 					? cached : BeginsRestrictedEvaluation(function);
 				if (found)
 				{
 					foreach (var ancestor in pending)
 					{
 						ExecutionBudget.Current?.ThrowIfExceeded();
-						if (ancestor.Node is IFunctionContext ancestorFunction) _restrictedScanResults[ancestorFunction] = true;
+						if (ancestor.Node is IFunctionContext ancestorFunction) scanned[ancestorFunction] = true;
 					}
 					return true;
 				}
-				if (_restrictedScanResults.ContainsKey(function)) { pending.Pop(); continue; }
+				if (scanned.ContainsKey(function)) { pending.Pop(); continue; }
 			}
 			if (frame.NextChild >= frame.Node.ChildCount)
 			{
-				if (frame.Node is IFunctionContext completed) _restrictedScanResults[completed] = false;
+				if (frame.Node is IFunctionContext completed) (_restrictedScanResults ??= [])[completed] = false;
 				pending.Pop();
 				continue;
 			}

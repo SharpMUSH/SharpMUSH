@@ -85,6 +85,10 @@ public class AttributeService(
 	public ValueTask<CallState> CallAttributeFunctionAsync(IMUSHCodeParser parser, AttributeFunction function)
 		=> Evaluator.CallAttributeFunctionAsync(parser, function);
 
+	public ValueTask<CallState> CallAttributeFunctionAsync(IMUSHCodeParser parser, AttributeFunction function,
+		Dictionary<string, CallState> arguments, Dictionary<string, CallState> environment)
+		=> Evaluator.CallAttributeFunctionAsync(parser, function, arguments, environment);
+
 	/// <inheritdoc/>
 	public ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		MString objAndAttribute, Dictionary<string, CallState> args, bool evalParent = true,
@@ -206,7 +210,7 @@ public class AttributeService(
 		cancellationToken.ThrowIfCancellationRequested();
 		var attributePath = attribute.Split('`');
 
-		if (!await CheckReadAsync(() => validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attribute), obj)))
+		if (!await CheckReadAsync(validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attribute), obj)))
 		{
 			return new AttributeRead<T>(null, ErrorMessages.Returns.ObjectAttributeString);
 		}
@@ -216,14 +220,6 @@ public class AttributeService(
 			throw new InvalidOperationException(nameof(IAttributeService.AttributeMode));
 		}
 
-		Func<AnySharpObject, AnySharpObject, T[], ValueTask<bool>> permissionPredicate = mode switch
-		{
-			IAttributeService.AttributeMode.Read => (who, target, path) => CheckReadAsync(() => shape.CanView(who, target, path)),
-			IAttributeService.AttributeMode.Execute => (who, target, path) => CheckReadAsync(() => shape.CanExecute(who, target, path)),
-			IAttributeService.AttributeMode.Set => (who, target, path) => CheckReadAsync(() => shape.CanExecute(who, target, path)),
-			IAttributeService.AttributeMode.SystemSet => (_, _, _) => ValueTask.FromResult(true),
-			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
-		};
 		var permissionFailureType = mode switch
 		{
 			IAttributeService.AttributeMode.Read => ErrorMessages.Returns.AttrPermissions,
@@ -243,15 +239,31 @@ public class AttributeService(
 		}
 
 		var allowed = ReadWalkApplies(mode, result.Attributes, shape.LongNameOf)
-			? await CanReadThroughTargetsAsync(obj, result.Attributes[^1], result.SourceObject, walk,
-				(target, parts) => FetchReadWalkAncestorAsync(target, parts, result.SourceObject, result.Attributes, shape),
-				path => CheckReadAsync(() => shape.CanView(executor, obj, path)), shape.LongNameOf, shape.IsNoInherit)
-			: await permissionPredicate(executor, obj, result.Attributes);
+			? await CanReadThroughTargetsAsync(executor, obj, result, walk, shape)
+			: mode switch
+			{
+				IAttributeService.AttributeMode.Read => await CheckReadAsync(shape.CanView(executor, obj, result.Attributes)),
+				IAttributeService.AttributeMode.Execute or IAttributeService.AttributeMode.Set
+					=> await CheckReadAsync(shape.CanExecute(executor, obj, result.Attributes)),
+				IAttributeService.AttributeMode.SystemSet => true,
+				_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
+			};
 
 		return allowed
 			? new AttributeRead<T>(result.Attributes, null)
 			: new AttributeRead<T>(null, permissionFailureType);
 	}
+
+	/// <summary>
+	/// <see cref="CanReadThroughTargetsAsync{T}(AnySharpObject, T, DBRef, InheritanceWalk?, Func{DBRef, string[], ValueTask{T}}, Func{T[], ValueTask{bool}}, Func{T, string}, Func{T, bool})"/>
+	/// for a read that re-walks its path. Apart from <see cref="ReadAttributeCoreAsync{T}"/> so that the
+	/// closures it needs are built only by the reads that take this branch.
+	/// </summary>
+	private ValueTask<bool> CanReadThroughTargetsAsync<T>(AnySharpObject executor, AnySharpObject obj,
+		ResolvedAttribute<T> result, InheritanceWalk? walk, AttributeReadShape<T> shape) where T : class
+		=> CanReadThroughTargetsAsync(obj, result.Attributes[^1], result.SourceObject, walk,
+			(target, parts) => FetchReadWalkAncestorAsync(target, parts, result.SourceObject, result.Attributes, shape),
+			path => CheckReadAsync(() => shape.CanView(executor, obj, path)), shape.LongNameOf, shape.IsNoInherit);
 
 	/// <summary>
 	/// The reach of <paramref name="obj"/>'s inherited reads: its type ancestor (<c>Ancestor_Parent</c>:
@@ -311,13 +323,35 @@ public class AttributeService(
 	internal static ValueTask<bool> CheckReadAsync(Func<ValueTask<bool>> read)
 		=> CheckReadAsync(read, ExecutionBudget.CurrentToken);
 
-	internal static async ValueTask<bool> CheckReadAsync(Func<ValueTask<bool>> read, CancellationToken token)
+	internal static ValueTask<bool> CheckReadAsync(Func<ValueTask<bool>> read, CancellationToken token)
 	{
 		token.ThrowIfCancellationRequested();
+		return CheckReadAsync(read(), token);
+	}
+
+	/// <summary>
+	/// <see cref="CheckReadAsync(Func{ValueTask{bool}}, CancellationToken)"/> for a check already started, so
+	/// a caller on a hot path builds no closure for it. A check that finished synchronously costs nothing more.
+	/// </summary>
+	internal static ValueTask<bool> CheckReadAsync(ValueTask<bool> pending)
+		=> CheckReadAsync(pending, ExecutionBudget.CurrentToken);
+
+	internal static ValueTask<bool> CheckReadAsync(ValueTask<bool> pending, CancellationToken token)
+	{
 		// Permission/validation APIs include legacy lazy reads without a token parameter.
 		// Bound only this read-only decision; attribute mutations are never detached.
-		var pending = read();
-		var result = pending.IsCompletedSuccessfully ? pending.Result : await pending.AsTask().WaitAsync(token);
+		if (pending.IsCompletedSuccessfully)
+		{
+			token.ThrowIfCancellationRequested();
+			return ValueTask.FromResult(pending.Result);
+		}
+
+		return AwaitReadAsync(pending, token);
+	}
+
+	private static async ValueTask<bool> AwaitReadAsync(ValueTask<bool> pending, CancellationToken token)
+	{
+		var result = await pending.AsTask().WaitAsync(token);
 		token.ThrowIfCancellationRequested();
 		return result;
 	}

@@ -1767,11 +1767,7 @@ public partial class Functions
 	/// </summary>
 	private ValueTask<CallState> CallAttributeWithArgumentsAsync(IMUSHCodeParser parser, AttributeFunction function,
 		Dictionary<string, CallState> arguments)
-		=> AttributeService.CallAttributeFunctionAsync(parser.Push(parser.CurrentState with
-		{
-			Arguments = arguments,
-			EnvironmentRegisters = new Dictionary<string, CallState>(arguments)
-		}), function);
+		=> AttributeService.CallAttributeFunctionAsync(parser, function, arguments, new Dictionary<string, CallState>(arguments));
 
 	/// <summary>An item as %0 and, when <paramref name="withPosition"/>, its position from 1 as %1.</summary>
 	private static Dictionary<string, CallState> ItemArguments(MString item, int position, bool withPosition)
@@ -1800,19 +1796,18 @@ public partial class Functions
 		for (var position = 0; position < list.Length; position++)
 		{
 			var item = list[position];
-			var arguments = ItemArguments(item, position, withPosition);
-			var registers = new Dictionary<string, CallState>(environmentRegisters ?? []);
-			foreach (var (key, value) in arguments)
+			var registers = ItemArguments(item, position, withPosition);
+			if (environmentRegisters is { Count: > 0 })
 			{
-				registers[key] = value;
+				var arguments = registers;
+				registers = new Dictionary<string, CallState>(environmentRegisters);
+				foreach (var (key, value) in arguments)
+				{
+					registers[key] = value;
+				}
 			}
 
-			var newParser = parser.Push(parser.CurrentState with
-			{
-				Arguments = registers,
-				EnvironmentRegisters = registers
-			});
-			results.Add(errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)));
+			results.Add(errors.Record(await AttributeService.CallAttributeFunctionAsync(parser, function, registers, registers)));
 		}
 
 		return results;

@@ -560,6 +560,31 @@ public partial record ParserState
 		}
 	};
 
+	/// <summary>
+	/// The frame an attribute call runs in (PennMUSH's <c>call_ufun</c>): <paramref name="executor"/> runs
+	/// <paramref name="evaluation"/> with this frame's executor as caller, <paramref name="arguments"/> as
+	/// its %0-%9 and <paramref name="environment"/> as its environment (null keeps this frame's). One copy
+	/// of the frame and one of the context, however many of those change.
+	/// </summary>
+	public ParserState ForAttributeCall(Dictionary<string, CallState>? arguments, Dictionary<string, CallState>? environment,
+		DBAttribute evaluation, string function, DBRef executor)
+	{
+		var called = arguments ?? Arguments;
+		return this with
+		{
+			Arguments = called,
+			Context = Context with
+			{
+				EnvironmentRegisters = environment ?? Context.EnvironmentRegisters,
+				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(called)
+			},
+			CurrentEvaluation = evaluation,
+			Function = function,
+			Executor = executor,
+			Caller = Executor
+		};
+	}
+
 	/// <inheritdoc cref="EvaluationContext.Handle"/>
 	public long? Handle
 	{
@@ -1000,6 +1025,9 @@ public partial record ParserState
 		// part of it, and the same connection's session for @input.
 		TypedLine = TypedLine,
 		ConnectionSessionId = ConnectionSessionId,
+		// The same evaluation's budget, so a function that parses again (u(), iter()) enters it as it is
+		// rather than pushing a copy of this frame to carry it.
+		ExecutionBudget = ExecutionBudget,
 		// Same actors, so the same objects: a function body that asks for its executor reuses the
 		// caller's rather than fetching it again.
 		_executorObject = _executorObject,

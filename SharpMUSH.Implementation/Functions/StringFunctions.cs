@@ -1042,11 +1042,8 @@ public partial class Functions
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
 			AttributeFunction function => await ForEachTransformAsync(text, start, end, (character, position) =>
-				AttributeService.CallAttributeFunctionAsync(parser.Push(parser.CurrentState with
-				{
-					Arguments = ForEachEnvironment(character, position),
-					EnvironmentRegisters = ForEachEnvironment(character, position)
-				}), function)),
+				AttributeService.CallAttributeFunctionAsync(parser, function,
+					ForEachEnvironment(character, position), ForEachEnvironment(character, position))),
 			CallState refusal => refusal,
 		};
 	}
