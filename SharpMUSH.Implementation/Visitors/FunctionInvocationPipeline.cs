@@ -83,7 +83,12 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			var contextDepth = context.Depth();
 			limitExceeded = currentState.LimitExceeded!;
 
-			if (currentState.TotalInvocations!.Increment() > await InvocationLimitAsync(currentState, configuration.CurrentValue.Limit.FunctionInvocationLimit))
+			// Restricted evaluation reads no objects, so it is held to the game's limit, never an executor's own.
+			var opensRestricted = visitor.BeginsRestrictedEvaluation(context);
+			var gameLimit = configuration.CurrentValue.Limit.FunctionInvocationLimit;
+			if (currentState.TotalInvocations!.Increment() > (isolated || opensRestricted
+					? gameLimit
+					: await InvocationLimitAsync(currentState, gameLimit)))
 				return LimitHit(limitExceeded, ErrorMessages.Returns.Invoke, contextDepth);
 
 			var currentDepth = currentState.CallDepth!.Increment();
@@ -112,7 +117,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 				return new CallState(ErrorMessages.Returns.FunctionDisabled, contextDepth);
 			}
 
-			isolated |= visitor.BeginsRestrictedEvaluation(context);
+			isolated |= opensRestricted;
 			AnySharpObject? executor = null;
 			if (!isolated)
 			{

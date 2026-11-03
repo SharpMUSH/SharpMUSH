@@ -9,9 +9,9 @@
 -->
 # livewire()
 
-`livewire(funceval, <object>[, <owner too>])`
+`livewire(<kind>[, <object>[, <owner too>]])`
 
-Returns the game's function invocation limit, then the limit and override [@livewire] gave `<object>`. With `<owner too>` true, the owner's limit and override follow. You must control `<object>`. `livewire()` with an empty first argument lists the kinds it knows.
+With `<kind>` `funceval`, returns the game's function invocation limit, then the limit and override [@livewire] gave `<object>`. With `<owner too>` true, the owner's limit and override follow. You must control `<object>`. An empty `<kind>` lists the kinds it knows.
 
 ```sharp
 > think livewire(funceval, #21)
