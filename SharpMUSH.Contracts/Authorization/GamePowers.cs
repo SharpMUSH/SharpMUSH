@@ -22,8 +22,20 @@ public static class GamePowers
 	/// <param name="Description">What holding it allows, in English (also the role editor's text).</param>
 	public sealed record Power(string Name, string[] Aliases, string? Role, string Description)
 	{
+		/// <summary>The power's name.</summary>
+		/// <remarks>A copy made with another name works out its own <see cref="Scope"/>.</remarks>
+		public string Name
+		{
+			get;
+			init
+			{
+				field = value;
+				Scope = PortalPermission.GamePower(value);
+			}
+		} = Name;
+
 		/// <summary>The scope that backs the power.</summary>
-		public string Scope { get; } = PortalPermission.GamePower(Name);
+		public string Scope { get; private set; } = PortalPermission.GamePower(Name);
 
 		/// <summary>The resource key stem for the role editor's label and description.</summary>
 		public string ResourceKey => "EnumPermPower" + string.Concat(Name.Split('_')

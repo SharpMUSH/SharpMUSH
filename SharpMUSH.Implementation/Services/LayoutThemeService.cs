@@ -50,6 +50,9 @@ public partial class LayoutThemeService(IExpandedObjectDataService data) : ILayo
 	/// <summary>How many specs a snapshot remembers; softcode can name any number of them.</summary>
 	private const int ResolvedLimit = 256;
 
+	/// <summary>The longest spec a snapshot remembers; a longer one is resolved on each read.</summary>
+	private const int ResolvedSpecLimit = 1024;
+
 	// One record holds every theme: two changes at once must not each drop the other's.
 	private readonly SemaphoreSlim _writeLock = new(1, 1);
 	private volatile Snapshot _themes = Snapshot.Empty;
@@ -67,7 +70,7 @@ public partial class LayoutThemeService(IExpandedObjectDataService data) : ILayo
 		var themes = _themes;
 		if (themes.Resolved.TryGetValue(spec, out var known)) return known;
 		var resolved = Resolve(spec, themes, allowDisabled: false);
-		if (themes.Resolved.Count < ResolvedLimit) themes.Resolved.TryAdd(spec, resolved);
+		if (spec.Length <= ResolvedSpecLimit && themes.Resolved.Count < ResolvedLimit) themes.Resolved.TryAdd(spec, resolved);
 		return resolved;
 	}
 
