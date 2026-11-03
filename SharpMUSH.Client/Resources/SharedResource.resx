@@ -3238,7 +3238,7 @@
     <value>View archive</value>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Not connected to the game — connect to post and receive live poses.</value>
+    <value>Not connected to the game — connect to post.</value>
   </data>
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>Let anyone watch</value>

@@ -3001,7 +3001,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>未连接到游戏 — 连接后即可发布并实时接收姿态。</value>
+    <value>未连接到游戏 — 连接后即可发布。</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">

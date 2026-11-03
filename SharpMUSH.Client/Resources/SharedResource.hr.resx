@@ -3001,7 +3001,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Niste povezani s igrom — povežite se da biste objavljivali i primali poze uživo.</value>
+    <value>Niste povezani s igrom — povežite se da biste objavljivali.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">

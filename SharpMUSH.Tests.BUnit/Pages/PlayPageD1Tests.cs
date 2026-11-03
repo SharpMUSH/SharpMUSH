@@ -138,6 +138,24 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task TheStory_SaysWhichConnectionIsDown()
+	{
+		var cut = RenderPlay();
+		PushRoom(focus: false);
+		await OpenStory(cut);
+		await cut.InvokeAsync(() => _hub.SetSceneLive(false));
+		cut.WaitForState(() => cut.FindAll(".play-story-unavailable").Any(e => e.TextContent.Contains("Anything you post is still recorded")));
+		await Assert.That(cut.Find(".play-join-btn").HasAttribute("disabled")).IsFalse();
+
+		_play.IsConnected.Returns(false);
+		await cut.InvokeAsync(() => { _play.ConnectionStateChanged += Raise.Event<Action<bool>>(false); });
+		cut.WaitForState(() => cut.FindAll(".play-story-unavailable").Any(e => e.TextContent.Contains("connect to post")));
+		await Assert.That(cut.FindAll(".play-story-unavailable").Count).IsEqualTo(1);
+		await Assert.That(cut.Find(".play-join-btn").HasAttribute("disabled")).IsTrue();
+		await _play.DidNotReceive().SendAsync(Arg.Any<string>());
+	}
+
+	[Test]
 	public async Task TheSidebar_GoesIntoTheShellsSlot()
 	{
 		var cut = RenderPlay();

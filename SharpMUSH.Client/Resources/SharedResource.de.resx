@@ -3001,7 +3001,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Nicht mit dem Spiel verbunden — verbinden Sie sich, um Posen zu senden und live zu empfangen.</value>
+    <value>Nicht mit dem Spiel verbunden — verbinden Sie sich, um Posen zu senden.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">

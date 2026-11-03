@@ -3001,7 +3001,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Нет соединения с игрой — подключитесь, чтобы отправлять позы и получать их в реальном времени.</value>
+    <value>Нет соединения с игрой — подключитесь, чтобы отправлять позы.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">
