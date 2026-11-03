@@ -182,6 +182,28 @@ public class InvocationMetricsTests
 	}
 
 	[Test]
+	public async Task AFunctionsTimeLeavesOutCallsRunOnAParserOfTheirOwn()
+	{
+		// An attribute lock is evaluated on a fresh parser that carries no call's clock; its calls find ELOCK
+		// running in the flow and pause it.
+		var connections = WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+		var created = await TestIsolationHelpers.CreateObjectCommandAsync(WebAppFactoryArg.CommandParser, connections,
+			TestIsolationHelpers.GenerateUniqueName("ClockLock"));
+		var thing = created.Message.ToPlainText();
+		await WebAppFactoryArg.CommandParser.CommandParse(1, connections,
+			MarkupText.Plain($"&CHECK {thing}=[null({Repeated("[add(1,1)]")})]PASS"));
+		await WebAppFactoryArg.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@lock {thing}=CHECK/PASS"));
+
+		string? output = null;
+		var measured = await Measure(async () => output = (await WebAppFactoryArg.CommandParser.FunctionParse(
+			MarkupText.Plain($"[elock({thing},%#)]")))?.Message.ToPlainText());
+
+		await Assert.That(output).IsEqualTo("1");
+		await Assert.That(measured.Count(m => m.Name == "ADD")).IsEqualTo(Calls);
+		await Assert.That(measured.Single(m => m.Name == "ELOCK").Ms).IsLessThan(LeftOut);
+	}
+
+	[Test]
 	public async Task EvaluatingAlreadyParsedTextIsStillTheFunctionsOwnWork()
 	{
 		var measured = await MeasureFunction($"objevals(#1,lit({Repeated("[add(1,1)]")}))");

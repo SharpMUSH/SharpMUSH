@@ -92,6 +92,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 	public IMUSHCodeParser Push(ParserState state) => this with { State = State.Push(state) };
 
+	public IMUSHCodeParser Push(ParserState state, InvocationClock clock)
+		=> this with { State = State.Push(state), Clock = clock };
+
+	public InvocationClock? Clock { get; private init; }
+
 	public MUSHCodeParser(ILogger<MUSHCodeParser> logger,
 		LibraryService<string, FunctionDefinition> functionLibrary,
 		LibraryService<string, CommandDefinition> commandLibrary,

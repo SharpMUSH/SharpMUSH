@@ -41,12 +41,12 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		// The command's clock runs from here, so the work of dispatching it (hooks, switch and lock
 		// checks) is its own and not charged to a command that runs it in place, like @switch.
 		// Evaluating its arguments is not.
-		var clock = InvocationClock.Start();
+		var clock = InvocationClock.Start(prs.Clock);
 		try
 		{
 			Result<CommandArguments> split;
 			using (clock.Pause())
-				split = await services.Arguments.SplitAsync(visitor, prs, src, context, libraryCommandDefinition, rootCommand, noEvalSwitch, singleArgument);
+				split = await services.Arguments.SplitAsync(visitor, prs, src, context, libraryCommandDefinition, clock, rootCommand, noEvalSwitch, singleArgument);
 
 			return split switch
 			{
@@ -77,7 +77,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		// before any hook runs, so /before, /after, the body and later commands all read it as %u.
 		prs.CurrentState.CommandText?.EvaluatedFrom(run.HookInput);
 
-		run.Enter(prs);
+		run.Enter(prs, clock);
 		var dispatchResult = await RunBuiltInAsync(visitor, run, clock);
 		return argumentResults.Preserve(dispatchResult);
 	}
@@ -242,8 +242,11 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			return MarkupText.Concat(MarkupText.Plain(prefix + " "), text);
 		}
 
-		/// <summary>Pushes the command's own state — its name, switches, arguments and registers — onto <paramref name="caller"/>.</summary>
-		public void Enter(IMUSHCodeParser caller)
+		/// <summary>
+		/// Pushes the command's own state — its name, switches, arguments and registers — onto <paramref name="caller"/>,
+		/// with the command's <paramref name="clock"/>.
+		/// </summary>
+		public void Enter(IMUSHCodeParser caller, InvocationClock clock)
 		{
 			// Commands test their switches by name, so the state carries them upper-cased once rather
 			// than as a projection re-run on every lookup.
@@ -267,7 +270,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				CallerArguments = callerArgs.Count > 0 ? callerArgs : null
 			};
 
-			Parser = caller.Push(newState);
+			Parser = caller.Push(newState, clock);
 		}
 
 		/// <summary>
@@ -722,7 +725,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		// set the prefix to "OUTPUTPREFIX" instead of clearing it, and bare SOCKSET asked for an option
 		// and a value instead of reporting the settings. `command` rather than the library name because
 		// realSubtext holds what the player typed, which may be an unambiguous abbreviation of it.
-		return await services.Arguments.SplitAsync(visitor, prs, src, context, librarySocketCommandDefinition, command) switch
+		return await services.Arguments.SplitAsync(visitor, prs, src, context, librarySocketCommandDefinition, prs.Clock, command) switch
 		{
 			CommandArguments argumentResults =>
 				await DispatchSocketCommand(prs, command, librarySocketCommandDefinition, argumentResults),
@@ -761,7 +764,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			}, async modified => await singleLibraryCommandDefinition.Command.Invoke(modified));
 
 		var rest = command[1..];
-		return await services.Arguments.SplitAsync(visitor, prs, src, context, singleLibraryCommandDefinition, singleRootCommand) switch
+		return await services.Arguments.SplitAsync(visitor, prs, src, context, singleLibraryCommandDefinition, prs.Clock, singleRootCommand) switch
 		{
 			CommandArguments argumentResults => await DispatchSingleTokenCommand(prs, singleRootCommand, rest,
 				singleLibraryCommandDefinition, argumentResults),

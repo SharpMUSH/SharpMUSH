@@ -24,11 +24,14 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 	/// <param name="src">The source the command was parsed from.</param>
 	/// <param name="context">The command.</param>
 	/// <param name="libraryCommandDefinition">The command being run.</param>
+	/// <param name="clock">The clock of the call that evaluates a deferred argument when it asks for it, paused
+	/// while it does: the command's own, or for a command that keeps no clock, its caller's.</param>
 	/// <param name="rootCommand">The command name as typed, stripped when the arguments follow it with no space.</param>
 	/// <param name="noEvalSwitch">Whether the command was given <c>/NOEVAL</c>.</param>
 	/// <param name="singleArgument">Whether a switch makes the command take its arguments as one.</param>
 	public async ValueTask<Result<CommandArguments>> SplitAsync(SharpMUSHParserVisitor visitor, IMUSHCodeParser prs,
-		MString src, ICommandContext context, CommandDefinition libraryCommandDefinition, string? rootCommand = null,
+		MString src, ICommandContext context, CommandDefinition libraryCommandDefinition, InvocationClock? clock,
+		string? rootCommand = null,
 		bool noEvalSwitch = false, bool singleArgument = false)
 	{
 		var mode = SplitMode.For(libraryCommandDefinition.Attribute.Behavior, prs.CurrentState.ParseMode, noEvalSwitch,
@@ -67,7 +70,7 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 			return new Error<string>(errorText);
 		}
 
-		return await EvaluateSplitAsync(visitor, prs, mode, parsedArgumentText, argCallState, rawArguments);
+		return await EvaluateSplitAsync(visitor, prs, mode, parsedArgumentText, argCallState, rawArguments, clock);
 	}
 
 	/// <summary>
@@ -225,7 +228,8 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 	/// from or left raw with a deferred evaluation, as <see cref="SplitMode.Defers"/> decides.
 	/// </summary>
 	private async ValueTask<Result<CommandArguments>> EvaluateSplitAsync(SharpMUSHParserVisitor visitor,
-		IMUSHCodeParser prs, SplitMode mode, MString parsedArgumentText, CallState argCallState, MString[] rawArguments)
+		IMUSHCodeParser prs, SplitMode mode, MString parsedArgumentText, CallState argCallState, MString[] rawArguments,
+		InvocationClock? clock)
 	{
 		var argumentResults = new CommandArguments();
 		var arguments = argumentResults.Values;
@@ -269,7 +273,7 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 			// The command evaluates it when it asks for it; that time is the argument's, not the command's.
 			async ValueTask<CallState?> Evaluate()
 			{
-				using (InvocationClock.PauseRunning())
+				using (InvocationClock.PauseRunning(clock))
 					return argumentResults.Record(await prs.FunctionParse(text));
 			}
 

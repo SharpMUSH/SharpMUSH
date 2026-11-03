@@ -688,8 +688,10 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 			// Only strip if the last child is literal text (genericText/beginGenericText)
 			// Function output (brackets) trailing spaces should be preserved within the expression
 			var lastChild = context.GetChild(context.ChildCount - 1);
-			if (lastChild is IGenericTextContext or IBeginGenericTextContext)
-				result = result with { Message = result.Message.Trim(global::MarkupString.TrimType.TrimEnd, " ") };
+			if (lastChild is IGenericTextContext or IBeginGenericTextContext
+					&& result.Message.Trim(global::MarkupString.TrimType.TrimEnd, " ") is var trimmed
+					&& trimmed.Length != result.Message.Length)
+				result = result with { Message = trimmed };
 		}
 
 		return result;
@@ -833,6 +835,8 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 
 	public override async ValueTask<CallState?> VisitGenericText([NotNull] IGenericTextContext context)
 	{
+		if (IsOneToken(context)) return TextState(context, beginsString: false);
+
 		var result = await VisitChildren(context)
 								 ?? new CallState(GetContextText(context), context.Depth());
 		// PE_COMPRESS_SPACES: compress literal space runs to single space. Text after the start of a
@@ -845,24 +849,48 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	public override async ValueTask<CallState?> VisitBeginGenericText(
 		[NotNull] IBeginGenericTextContext context)
 	{
+		if (IsOneToken(context)) return TextState(context, beginsString: true);
+
 		var result = await VisitChildren(context)
 								 ?? new CallState(GetContextText(context), context.Depth());
-		// PE_COMPRESS_SPACES: compress literal space runs to single space.
+		return parser.CurrentState.ParseMode is ParseMode.Default
+			? result with { Message = CompressedAtTheStart(context, result.Message) }
+			: result;
+	}
+
+	/// <summary>A text node that is a single token, not an escape or an ansi run: its text is its source.</summary>
+	private static bool IsOneToken(ISoftcodeContext context)
+		=> context.ChildCount == 1 && context.GetChild(0) is ITerminalNode;
+
+	/// <summary>
+	/// A one-token text node's result, built once: it evaluates (<see cref="CallState.ParsedMessage"/>) to the
+	/// text as written, and carries it compressed as its message.
+	/// </summary>
+	private CallState TextState(ISoftcodeContext context, bool beginsString)
+	{
+		var written = GetContextText(context);
+		var message = parser.CurrentState.ParseMode is not ParseMode.Default ? written
+			: beginsString ? CompressedAtTheStart(context, written)
+			: MushText.CompressSpaces(written);
+		return new CallState(written, context.Depth()) { Message = message };
+	}
+
+	/// <summary>
+	/// PE_COMPRESS_SPACES for the text that starts a string: space runs compressed to one space, and leading
+	/// spaces stripped when this is the first text node of an evaluation string.
+	/// </summary>
+	private static MString CompressedAtTheStart(ISoftcodeContext context, MString text)
+	{
 		// The lexer already eats leading spaces on function args (FUNCHAR WS, COMMAWS WS),
 		// but internal runs within OTHER tokens and top-level/command-arg leading spaces remain.
-		if (parser.CurrentState.ParseMode is ParseMode.Default)
-		{
-			var compressed = MushText.CompressSpaces(result.Message);
-			// Strip leading when this is the FIRST text node in an evaluation string; beginGenericText
-			// only ever starts one. Text later in a string is genericText, whose leading spaces are
-			// meaningful separators: `add(1,2) x` is "3 x".
-			if (context.Parent is IEvaluationStringContext or IExplicitEvaluationStringContext
-					or IBraceExplicitEvaluationStringContext)
-				compressed = compressed.Trim(global::MarkupString.TrimType.TrimStart, " ");
-			return result with { Message = compressed };
-		}
-
-		return result;
+		var compressed = MushText.CompressSpaces(text);
+		// Strip leading when this is the FIRST text node in an evaluation string; beginGenericText
+		// only ever starts one. Text later in a string is genericText, whose leading spaces are
+		// meaningful separators: `add(1,2) x` is "3 x".
+		return context.Parent is IEvaluationStringContext or IExplicitEvaluationStringContext
+			or IBraceExplicitEvaluationStringContext
+			? compressed.Trim(global::MarkupString.TrimType.TrimStart, " ")
+			: compressed;
 	}
 
 	/// <summary>What follows a <c>%</c> that names something: a register, an argument, an itext.</summary>

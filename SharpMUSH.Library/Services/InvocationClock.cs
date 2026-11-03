@@ -12,14 +12,23 @@ namespace SharpMUSH.Library.Services;
 /// function that hands its raw argument text to <c>FunctionParse</c> (<c>uldefault</c>,
 /// <c>localize</c>) pauses the clock around that parse in its current scope. The inclusive time is kept too, for the queue
 /// diagnostics profile, which reports it as such.
+/// <para>
+/// A call's clock travels on the parser its body runs with (<c>IMUSHCodeParser.Clock</c>), so a call
+/// nested in it finds its caller there with no ambient write per call. Code that evaluates on a fresh
+/// parser of its own (an attribute lock, a channel format, a listener's filter) has no such clock, and
+/// finds the call running in this flow instead: the flow keeps one slot, written in place as calls start
+/// and stop, so only the first call in a flow writes the execution context.
+/// </para>
 /// </remarks>
 public sealed class InvocationClock
 {
-	private static readonly AsyncLocal<InvocationClock?> Running = new();
+	private static readonly AsyncLocal<Flow?> CurrentFlow = new();
 	private static readonly AsyncLocal<TimeProvider?> Time = new();
 
 	private readonly TimeProvider _time;
 	private readonly InvocationClock? _caller;
+	private readonly Flow _flow;
+	private readonly InvocationClock? _flowPrevious;
 	private readonly long _started;
 	private long _ownTicks;
 	private long _resumedAt;
@@ -27,10 +36,12 @@ public sealed class InvocationClock
 	private long _stoppedAt;
 	private readonly Lock _gate = new();
 
-	private InvocationClock(InvocationClock? caller)
+	private InvocationClock(InvocationClock? caller, Flow flow)
 	{
 		_time = Time.Value ?? TimeProvider.System;
 		_caller = caller;
+		_flow = flow;
+		_flowPrevious = flow.Running;
 		_started = _resumedAt = _time.GetTimestamp();
 	}
 
@@ -45,21 +56,39 @@ public sealed class InvocationClock
 		return new TimeScope(previous);
 	}
 
-	/// <summary>Starts a call's clock, pausing the clock of the call it runs inside.</summary>
-	public static InvocationClock Start()
+	/// <summary>
+	/// Starts a call's clock, pausing the clock of the call it runs inside: <paramref name="caller"/>, the
+	/// clock on the parser the call was made with, or when that has none (a fresh parser) or it has
+	/// stopped, the call running in this flow.
+	/// </summary>
+	public static InvocationClock Start(InvocationClock? caller)
 	{
-		var caller = Running.Value;
-		caller?.Pause();
-		var clock = new InvocationClock(caller);
-		Running.Value = clock;
+		var flow = CurrentFlow.Value;
+		if (flow is null)
+		{
+			flow = new Flow();
+			CurrentFlow.Value = flow;
+		}
+
+		var running = Running(caller, flow);
+		running?.Pause();
+		var clock = new InvocationClock(running, flow);
+		flow.Running = clock;
 		return clock;
 	}
 
 	/// <summary>
-	/// Pauses the clock of the call running here, if any, until the returned scope is disposed: for a
-	/// deferred argument evaluated by the call it belongs to, which holds no reference to its clock.
+	/// Pauses the clock of the call running here until the returned scope is disposed: <paramref name="clock"/>,
+	/// or the call running in this flow when it is null or stopped. For a deferred argument evaluated by the call
+	/// it belongs to, and for a parse a function runs on its own argument text.
 	/// </summary>
-	public static Paused PauseRunning() => Running.Value?.Pause() ?? default;
+	public static Paused PauseRunning(InvocationClock? clock)
+		=> Running(clock, CurrentFlow.Value)?.Pause() ?? default;
+
+	private static InvocationClock? Running(InvocationClock? clock, Flow? flow)
+		=> clock is { IsStopped: false } ? clock : flow?.Running;
+
+	private bool IsStopped => Volatile.Read(ref _stoppedAt) != 0;
 
 	/// <summary>Pauses this clock until the returned scope is disposed.</summary>
 	public Paused Pause()
@@ -95,7 +124,8 @@ public sealed class InvocationClock
 			if (_pauses == 0) _ownTicks += _stoppedAt - _resumedAt;
 		}
 
-		Running.Value = _caller;
+		// Only the innermost call puts the flow back; one stopping out of turn leaves it be.
+		if (_flow.Running == this) _flow.Running = _flowPrevious;
 		_caller?.Resume();
 	}
 
@@ -120,6 +150,12 @@ public sealed class InvocationClock
 			lock (_gate)
 				return _time.GetElapsedTime(_started, _stoppedAt == 0 ? _time.GetTimestamp() : _stoppedAt).TotalMilliseconds;
 		}
+	}
+
+	/// <summary>The call running in one flow, written in place so a call does not copy the execution context.</summary>
+	private sealed class Flow
+	{
+		public InvocationClock? Running;
 	}
 
 	private sealed class TimeScope(TimeProvider? previous) : IDisposable
