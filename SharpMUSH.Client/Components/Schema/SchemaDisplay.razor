@@ -55,6 +55,14 @@
         @RenderTimeline()
         break;
 
+    case "stats":
+        @RenderStats()
+        break;
+
+    case "chips":
+        @RenderChips()
+        break;
+
     case "graph":
         <SchemaGraph Element="Element" Value="@(Element.SrcField is null ? null : Lookup(Element.SrcField))" />
         break;
@@ -73,7 +81,7 @@
 @code {
     /// <summary>The element kinds this component draws; anything else is the hosting renderer's (fields).</summary>
     public static readonly IReadOnlySet<string> Kinds =
-        new HashSet<string>(["divider", "markdown", "image", "table", "keyvalue", "timeline", "graph", "button"], StringComparer.OrdinalIgnoreCase);
+        new HashSet<string>(["divider", "markdown", "image", "table", "keyvalue", "timeline", "graph", "button", "stats", "chips"], StringComparer.OrdinalIgnoreCase);
 
     [Parameter, EditorRequired] public SchemaElement Element { get; set; } = default!;
 
@@ -150,6 +158,86 @@
         => Element.RowsField is not null && Lookup(Element.RowsField) is { ValueKind: JsonValueKind.Array } rows
             ? rows.EnumerateArray().ToList()
             : [];
+
+    /// <summary>
+    /// A row of stat tiles, one per row of <c>RowsField</c>: <c>label</c> above a large <c>value</c>, an optional
+    /// <c>caption</c> below, coloured by <c>color</c>. A row with a positive <c>max</c> also draws <c>current</c>
+    /// against it: a bar, or one pip per point when <c>pips</c> is true.
+    /// </summary>
+    private RenderFragment RenderStats() => __builder =>
+    {
+        var tiles = Rows().Select(SchemaRendering.ReadStat).Where(t => !string.IsNullOrEmpty(t.Value)).ToList();
+        if (tiles.Count == 0)
+        {
+            @if (!string.IsNullOrWhiteSpace(Element.Empty))
+            {
+                <div class="schema-empty">@Element.Empty</div>
+            }
+            return;
+        }
+
+        <div class="schema-stats">
+            @foreach (var tile in tiles)
+            {
+                <div class="schema-stat" data-tone="@SchemaRendering.ToneName(tile.Color)">
+                    <div class="schema-label">@tile.Label</div>
+                    <div class="schema-stat-value">@tile.Value</div>
+                    @if (tile.Max is > 0 and var max)
+                    {
+                        var current = Math.Clamp(tile.Current ?? 0, 0, max);
+                        @if (tile.Pips)
+                        {
+                            <div class="schema-stat-pips" role="img" aria-label="@($"{current} / {max}")">
+                                @for (var pip = 0; pip < max; pip++)
+                                {
+                                    <span class="schema-stat-pip @(pip < current ? "schema-stat-pip--on" : null)"></span>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <MudProgressLinear Value="@(current * 100.0 / max)" Color="@tile.Color" Rounded="true" Size="Size.Small"
+                                               Class="schema-stat-bar" aria-label="@($"{current} / {max}")" />
+                        }
+                    }
+                    @if (!string.IsNullOrWhiteSpace(tile.Caption))
+                    {
+                        <div class="schema-stat-caption">@tile.Caption</div>
+                    }
+                </div>
+            }
+        </div>
+    };
+
+    /// <summary>
+    /// The chips in <c>SrcField</c>: an array of strings, or of <c>{ text, color }</c>, under the element's
+    /// <c>Label</c> when it has one.
+    /// </summary>
+    private RenderFragment RenderChips() => __builder =>
+    {
+        var chips = SchemaRendering.ReadChips(Element.SrcField is null ? null : Lookup(Element.SrcField));
+        if (chips.Count == 0)
+        {
+            @if (!string.IsNullOrWhiteSpace(Element.Empty))
+            {
+                <div class="schema-empty">@Element.Empty</div>
+            }
+            return;
+        }
+
+        <div class="schema-chip-group">
+            @if (!string.IsNullOrWhiteSpace(Element.Label))
+            {
+                <div class="schema-label">@Element.Label</div>
+            }
+            <div class="schema-chips">
+                @foreach (var chip in chips)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="chip.Color" Class="schema-chip">@chip.Text</MudChip>
+                }
+            </div>
+        </div>
+    };
 
     private RenderFragment RenderTable() => __builder =>
     {

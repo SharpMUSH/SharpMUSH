@@ -37,51 +37,72 @@ else
             <h2 class="schema-title">@_document.Title</h2>
         }
 
-        @foreach (var page in _document.Pages.OrderBy(p => p.Order))
+        @{ var pages = _document.Pages.OrderBy(p => p.Order).ToList(); }
+        @if (_document.IsTabbed && pages.Count > 1)
         {
-            @if (!string.IsNullOrWhiteSpace(page.Title) && _document.Pages.Count > 1)
-            {
-                <h3 class="schema-page-title">@(page.Title)</h3>
-            }
-
-            @foreach (var section in (page.Sections ?? []).OrderBy(s => s.Order))
-            {
-                var elements = VisibleElements(section).ToList();
-                @if (elements.Count > 0)
+            <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pt-3" Class="schema-tabs">
+                @foreach (var page in pages)
                 {
-                    @* D1 §4.4: a section is a card titled with its name. Declared columns are a fixed
-                       grid; undeclared, short fields flow into as many columns as fit (board 25's
-                       Details row) and long content takes the whole row. *@
-                    <KitCard Title="@(string.IsNullOrWhiteSpace(section.Name) ? null : section.Name)" Class="schema-section">
-                        <div class="schema-grid @(section.Columns > 1 ? "schema-grid--cols" : "schema-grid--auto")"
-                             style="@(section.Columns > 1 ? $"--schema-cols:{section.Columns};" : null)">
-                            @foreach (var group in SchemaRendering.GroupButtons(elements))
-                            {
-                                @if (SchemaRendering.IsButton(group[0]))
-                                {
-                                    <div class="schema-cell schema-cell--wide schema-button-row">
-                                        @foreach (var button in group)
-                                        {
-                                            @RenderElement(button)
-                                        }
-                                    </div>
-                                }
-                                else
-                                {
-                                    <div class="schema-cell @(IsWide(group[0]) ? "schema-cell--wide" : null)" style="@SpanStyle(section, group[0])">
-                                        @RenderElement(group[0])
-                                    </div>
-                                }
-                            }
-                        </div>
-                    </KitCard>
+                    <MudTabPanel Text="@(string.IsNullOrWhiteSpace(page.Title) ? page.Key : page.Title)">
+                        @RenderPage(page)
+                    </MudTabPanel>
                 }
+            </MudTabs>
+        }
+        else
+        {
+            @foreach (var page in pages)
+            {
+                @if (!string.IsNullOrWhiteSpace(page.Title) && pages.Count > 1)
+                {
+                    <h3 class="schema-page-title">@(page.Title)</h3>
+                }
+
+                @RenderPage(page)
             }
         }
     </div>
 }
 
 @code {
+    // One page's sections, each a card of its visible elements.
+    private RenderFragment RenderPage(SchemaPage page) => __builder =>
+    {
+        @foreach (var section in (page.Sections ?? []).OrderBy(s => s.Order))
+        {
+            var elements = VisibleElements(section).ToList();
+            @if (elements.Count > 0)
+            {
+                @* D1 §4.4: a section is a card titled with its name. Declared columns are a fixed
+                   grid; undeclared, short fields flow into as many columns as fit (board 25's
+                   Details row) and long content takes the whole row. *@
+                <KitCard Title="@(string.IsNullOrWhiteSpace(section.Name) ? null : section.Name)" Class="schema-section">
+                    <div class="schema-grid @(section.Columns > 1 ? "schema-grid--cols" : "schema-grid--auto")"
+                         style="@(section.Columns > 1 ? $"--schema-cols:{section.Columns};" : null)">
+                        @foreach (var group in SchemaRendering.GroupButtons(elements))
+                        {
+                            @if (SchemaRendering.IsButton(group[0]))
+                            {
+                                <div class="schema-cell schema-cell--wide schema-button-row">
+                                    @foreach (var button in group)
+                                    {
+                                        @RenderElement(button)
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="schema-cell @(IsWide(group[0]) ? "schema-cell--wide" : null)" style="@SpanStyle(section, group[0])">
+                                    @RenderElement(group[0])
+                                </div>
+                            }
+                        }
+                    </div>
+                </KitCard>
+            }
+        }
+    };
+
     [Parameter, EditorRequired] public PortalSchemaDocument? Document { get; set; }
 
     /// <summary>Data values keyed by field key (value + per-viewer visibility), à la the profile API.</summary>

@@ -39,6 +39,7 @@ Each handler ends by emitting JSON:
   "schema_version": 1,
   "title": "Character Generation",
   "data_source": "/http/chargen?objid=...",   // optional
+  "layout": "tabs",               // optional, views only: one tab per page instead of stacked pages
   "pages": [
     {
       "key": "abilities", "title": "Ability Scores", "order": 2,
@@ -72,8 +73,8 @@ removed; a value may hold a comma. Give it a JSON array in the data, and it post
 
 **Display elements (for `view`, also usable in `form`):** `markdown`, `image` (`src_field`),
 `table` (`rows_field` + `columns`), `keyvalue` (`fields`; a value of `{text,link}` is a link),
-`timeline` (`rows_field`), `graph` (`src_field` holding `{nodes,edges}`, `link`, `empty`), `divider`,
-`button`. A form draws them exactly as a view does, so one `form` document can show a ticket's
+`timeline` (`rows_field`), `stats` (`rows_field`), `chips` (`src_field`), `graph` (`src_field` holding
+`{nodes,edges}`, `link`, `empty`), `divider`, `button`. A form draws them exactly as a view does, so one `form` document can show a ticket's
 history above its comment box. Markdown never passes raw HTML through, and links with a scheme
 other than `http`/`https`/`mailto` are dropped.
 
@@ -103,6 +104,21 @@ the viewer move rows within one group, by dragging or with the up and down butto
 Only rows whose `group` is `reorder.group` move. A move dispatches `action` with `values` plus
 `item` (the moved row's `key` field) and `position` (its new place in the group, from 1). The
 route answers with the usual envelope; return `data` so the table redraws in the new order.
+
+**Stat tiles.** `{ "kind": "stats", "rows_field": "defences" }` draws one tile per row: a small
+`label`, a large `value`, an optional `caption` below, and a coloured top edge from `color`. A row
+with a `max` above 0 also draws `current` against it: a bar, or one pip per point when `pips` is
+true. A row with an empty `value` is left out, and `empty` shows when none are left.
+
+```jsonc
+[ { "label": "AC", "value": "21", "caption": "Shield raised +2", "color": "info" },
+  { "label": "HP", "value": "40 / 64", "current": 40, "max": 64, "color": "success" },
+  { "label": "Hero Points", "value": "2", "current": 2, "max": 3, "pips": true, "color": "warning" } ]
+```
+
+**Chips.** `{ "kind": "chips", "src_field": "traits", "label": "Traits", "empty": "None." }` draws the
+datum's array as small chips under `label`. An entry is a string, or `{ "text": "Frightened 1",
+"color": "error" }`; a blank entry is skipped.
 
 **Timelines.** `{ "kind": "timeline", "rows_field": "entries", "empty": "No comments." }` over rows
 like:

@@ -276,6 +276,61 @@ public static partial class SchemaRendering
 			Links: links);
 	}
 
+	/// <summary>
+	/// One stat tile: <c>Label</c> above a large <c>Value</c>, an optional <c>Caption</c> below. A positive
+	/// <c>Max</c> draws <c>Current</c> against it, as pips when <c>Pips</c> is set, else as a bar.
+	/// </summary>
+	public sealed record StatTile(string Label, string Value, string? Caption, Color Color, int? Current, int? Max, bool Pips);
+
+	/// <summary>Reads a stat tile from a data row; a row that is not an object reads as an empty tile.</summary>
+	public static StatTile ReadStat(JsonElement row)
+	{
+		string Text(string name) =>
+			row.ValueKind == JsonValueKind.Object && row.TryGetProperty(name, out var value)
+				? SchemaViewRenderer.ValueToString(value)
+				: string.Empty;
+
+		int? Number(string name) =>
+			int.TryParse(Text(name), NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) ? number : null;
+
+		var caption = Text("caption");
+		return new StatTile(
+			Text("label"),
+			Text("value"),
+			string.IsNullOrWhiteSpace(caption) ? null : caption,
+			ParseColor(Text("color")),
+			Number("current"),
+			Number("max"),
+			IsTrue(row, "pips"));
+	}
+
+	/// <summary>One chip of a chips element.</summary>
+	public sealed record ChipItem(string Text, Color Color);
+
+	/// <summary>
+	/// The chips in a value: an array of strings, or of <c>{ text, color }</c>; a blank entry is skipped and
+	/// anything that is not an array reads as none.
+	/// </summary>
+	public static IReadOnlyList<ChipItem> ReadChips(JsonElement? value)
+	{
+		if (value is not { ValueKind: JsonValueKind.Array } list)
+		{
+			return [];
+		}
+
+		return list.EnumerateArray()
+			.Select(item => item.ValueKind == JsonValueKind.Object
+				? new ChipItem(
+					item.TryGetProperty("text", out var text) ? SchemaViewRenderer.ValueToString(text) : string.Empty,
+					ParseColor(item.TryGetProperty("color", out var color) ? SchemaViewRenderer.ValueToString(color) : null))
+				: new ChipItem(SchemaViewRenderer.ValueToString(item), Color.Default))
+			.Where(chip => !string.IsNullOrWhiteSpace(chip.Text))
+			.ToList();
+	}
+
+	/// <summary>A color's name as the stylesheet keys its tones: <c>primary</c>, <c>warning</c>, and so on.</summary>
+	public static string ToneName(Color color) => color.ToString().ToLowerInvariant();
+
 	/// <summary>True when row field <paramref name="name"/> is JSON true, or a string or number reading 1 or true.</summary>
 	private static bool IsTrue(JsonElement row, string name)
 	{

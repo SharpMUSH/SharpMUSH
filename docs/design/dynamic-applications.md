@@ -89,6 +89,7 @@ One document type, `kind: "form" | "view"`, generalizing the profile schema's
   "schema_version": 1,
   "title": "Character Generation",
   "data_source": "/http/chargen?objid=...",    // optional; view/prefill data endpoint
+  "layout": "tabs",                            // optional; a view's pages as tabs, else stacked
   "pages": [ /* one or more; single-page docs use exactly one page */ ]
 }
 ```
@@ -159,6 +160,8 @@ validator** and returns binding errors in the action response.
                        "empty": "Nothing carried." }
 { "kind": "keyvalue",  "fields": [ "fullname", "alias", "faction" ] }
 { "kind": "timeline",  "rows_field": "entries", "empty": "No comments yet." }
+{ "kind": "stats",     "rows_field": "defences", "empty": "No stats." }
+{ "kind": "chips",     "src_field": "traits", "label": "Traits" }
 { "kind": "divider" }
 { "kind": "button",    "label": "Roll Stats", "action": "roll" }
 ```

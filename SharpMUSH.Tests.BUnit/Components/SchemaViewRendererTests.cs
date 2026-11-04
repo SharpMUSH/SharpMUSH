@@ -63,4 +63,41 @@ public class SchemaViewRendererTests : BunitContext
 		// The invisible field's value and (since it is the only datum on that field) its label must not show.
 		await Assert.That(markup).DoesNotContain("Olorin");
 	}
+
+	private static PortalSchemaDocument TwoPages(string? layout) => new(
+		Kind: "view",
+		SchemaVersion: 1,
+		Title: null,
+		DataSource: null,
+		Pages:
+		[
+			new SchemaPage("sheet", "Sheet", 1, [new SchemaSection(null, 1, null, [new SchemaElement(Kind: "markdown", Value: "First page")])], null, null),
+			new SchemaPage("gear", "Gear", 2, [new SchemaSection(null, 1, null, [new SchemaElement(Kind: "markdown", Value: "Second page")])], null, null),
+		],
+		Actions: null,
+		Layout: layout);
+
+	[TUnit.Core.Test]
+	public async Task A_tabbed_view_shows_one_page_under_a_tab_per_page()
+	{
+		var cut = Render<SchemaViewRenderer>(parameters => parameters.Add(p => p.Document, TwoPages("tabs")));
+
+		var tabs = cut.FindAll(".mud-tab");
+		await Assert.That(tabs.Count).IsEqualTo(2);
+		await Assert.That(tabs[0].TextContent).Contains("Sheet");
+		await Assert.That(tabs[1].TextContent).Contains("Gear");
+		await Assert.That(cut.Markup).Contains("First page");
+		await Assert.That(cut.Markup).DoesNotContain("Second page");
+		await Assert.That(cut.FindAll(".schema-page-title").Count).IsEqualTo(0);
+	}
+
+	[TUnit.Core.Test]
+	public async Task A_view_without_a_layout_stacks_its_pages_under_titles()
+	{
+		var cut = Render<SchemaViewRenderer>(parameters => parameters.Add(p => p.Document, TwoPages(null)));
+
+		await Assert.That(cut.FindAll(".mud-tab").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".schema-page-title").Count).IsEqualTo(2);
+		await Assert.That(cut.Markup).Contains("Second page");
+	}
 }
