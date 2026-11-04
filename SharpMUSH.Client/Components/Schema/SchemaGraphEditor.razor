@@ -713,9 +713,11 @@
         <ol class="graph-outline">
             @* The start marker, so the step a run begins at can be changed without the map. *@
             <li class="@(_selected == EntryKey ? "graph-outline-step graph-outline-step--selected" : "graph-outline-step")">
-                <button type="button" class="graph-outline-head graph-outline-entry" aria-pressed="@(_selected == EntryKey ? "true" : "false")" @onclick="() => Select(EntryKey)">
+                <button type="button" class="graph-outline-head graph-outline-entry" aria-pressed="@(_selected == EntryKey ? "true" : "false")"
+                        aria-label="@Loc["WidGraphEntryLabel", _draft.StartNode?.Label ?? ""]" @onclick="() => Select(EntryKey)">
                     <span class="graph-outline-label">@Loc["WidGraphEntry"]</span>
-                    <span class="graph-outline-kind">@Loc["WidGraphEntryLabel", _draft.StartNode?.Label ?? ""]</span>
+                    <span aria-hidden="true">→</span>
+                    <span>@(_draft.StartNode?.Label)</span>
                 </button>
             </li>
             @foreach (var node in _draft.Order(PortKeys))

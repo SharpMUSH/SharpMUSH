@@ -398,7 +398,8 @@ public class SchemaGraphEditorTests : BunitContext
 		await cut.FindAll(".graph-view-button").Single(b => b.TextContent == "WidGraphOutline").ClickAsync(new());
 		var entry = cut.Find(".graph-outline-entry");
 		await Assert.That(entry.TagName).IsEqualTo("BUTTON");
-		await Assert.That(entry.TextContent).Contains("WidGraphEntryLabel(The gate)");
+		await Assert.That(entry.GetAttribute("aria-label")).IsEqualTo("WidGraphEntryLabel(The gate)");
+		await Assert.That(entry.TextContent).Contains("The gate");
 		await entry.ClickAsync(new());
 		await Assert.That(cut.Find(".graph-outline-entry").GetAttribute("aria-pressed")).IsEqualTo("true");
 		await Assert.That(cut.Find(".graph-inspector").TextContent).Contains("WidGraphEntryHelp");
@@ -409,7 +410,7 @@ public class SchemaGraphEditorTests : BunitContext
 		// The page sends the saved value back, written its own way; the start marker stays selected.
 		cut.Render(p => p.Add(x => x.Value, Parse(JsonSerializer.Serialize(sent, new JsonSerializerOptions { WriteIndented = true }))));
 		await Assert.That(cut.Find(".graph-outline-entry").GetAttribute("aria-pressed")).IsEqualTo("true");
-		await Assert.That(cut.Find(".graph-outline-entry").TextContent).Contains("WidGraphEntryLabel(Lost in the mist)");
+		await Assert.That(cut.Find(".graph-outline-entry").GetAttribute("aria-label")).IsEqualTo("WidGraphEntryLabel(Lost in the mist)");
 	}
 
 	[Test]
