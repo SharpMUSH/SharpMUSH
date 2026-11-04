@@ -55,8 +55,8 @@ public static class PortalSchema
 		foreach (var (name, action) in actions ?? [])
 		{
 			if (action is not JsonObject body) problems.Add($"actions.{name}: not an object");
-			else if (Text(body, "route") is { Length: > 0 } route && !IsRelative(route))
-				problems.Add($"actions.{name}: route \"{route}\" is not relative");
+			else if (Text(body, "route") is { Length: > 0 } route && !OnThisServer(route))
+				problems.Add($"actions.{name}: route \"{route}\" is not on this server");
 		}
 
 		if (root["pages"] is not JsonArray pages)
@@ -202,9 +202,9 @@ public static class PortalSchema
 		else if (fields is not null && !fields.ContainsKey(key)) problems.Add($"{path}: {property} \"{key}\" is not in the data");
 	}
 
-	/// <summary>A route the portal may call: a path on this server, not an address elsewhere.</summary>
-	private static bool IsRelative(string route) =>
-		!route.StartsWith('/') && !route.StartsWith('\\') && !route.Contains("://", StringComparison.Ordinal) && !route.StartsWith("//", StringComparison.Ordinal);
+	/// <summary>A route the portal may call: a path on this server, with or without its leading <c>/</c>, not an address elsewhere.</summary>
+	private static bool OnThisServer(string route) =>
+		!route.StartsWith("//", StringComparison.Ordinal) && !route.Contains('\\') && !route.Contains("://", StringComparison.Ordinal);
 
 	/// <summary>A property's text, empty when it is missing or not a string.</summary>
 	public static string Text(JsonObject node, string property) =>

@@ -38,7 +38,7 @@ public partial class PackageInstallService
 		return changeset with
 		{
 			ManifestIssues = manifestIssues,
-			Notes = [.. changeset.Notes, .. landingNotes],
+			Notes = [.. changeset.Notes, .. landingNotes, .. SchemaNotes(changeset)],
 			Declarations = await PlanDeclarationsAsync(manifest, inputs.Installed, cancellationToken),
 			Settings = await PlanSettingsAsync(inputs, changeset),
 			Wiki = await wiki.PlanAsync(manifest.Name, manifest.Version.ToString(), manifest.WikiPages, DeclaredPermissions(manifest),

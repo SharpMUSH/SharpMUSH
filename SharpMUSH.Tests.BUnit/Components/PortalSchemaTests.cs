@@ -45,7 +45,7 @@ public class PortalSchemaTests
 		await Assert.That(problems).IsEquivalentTo(new[]
 		{
 			"kind: unknown document kind \"sheet\"",
-			"actions.go: route \"https://elsewhere.example/x\" is not relative",
+			"actions.go: route \"https://elsewhere.example/x\" is not on this server",
 			"pages[0]: next names no page \"q\"",
 			"pages[0].sections[0].elements[0]: unknown kind \"gauge2\"",
 			"pages[0].sections[0].elements[1]: unknown field type \"dial\"",

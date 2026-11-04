@@ -109,6 +109,7 @@ public partial class PackageInstallService
 
 		var changeset = planner.ComputeChangeset(inputs);
 		changeset = changeset with { Notes = [.. changeset.Notes, .. WikiLandingNotes(manifest, inputs.Installed)] };
+		changeset = changeset with { Notes = [.. changeset.Notes, .. SchemaNotes(changeset)] };
 
 		if (changeset.IsBlocked)
 		{
