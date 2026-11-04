@@ -330,6 +330,20 @@ public class FeedCompressionTests
 		await Assert.That(DictionaryOf(Values()[^1])).IsEqualTo(LightningDatabase.BundledDictionaryId);
 	}
 
+	/// <summary>An id past the 16 bits a line records names no dictionary, even where its low bits name one.</summary>
+	[Test]
+	[Arguments(-1)]
+	[Arguments(65537)]
+	public async Task AnIdOutsideTheStoredRange_NamesNoDictionary(int outside)
+	{
+		for (var id = 1; id <= Lines; id++) await _db.AppendFeedMessageAsync(ShipLine(id), Keep());
+		await _db.CompactFeedLinesAsync(At);
+		var before = State();
+
+		await Assert.That(await _db.UseFeedDictionaryAsync(outside) is NotFound).IsTrue();
+		await Assert.That(State()).IsEqualTo(before);
+	}
+
 	/// <summary>A dictionary the world never had can't be gone back to, and nothing changes.</summary>
 	[Test]
 	public async Task GoingBackToAnUnknownDictionary_ChangesNothing()

@@ -254,6 +254,8 @@ public partial class LightningDatabase
 	{
 		var known = await Store.WriteAsync(tx =>
 		{
+			// A line records its dictionary in 16 bits, and the key keeps only those.
+			if (id is < 0 or > ushort.MaxValue) return false;
 			if (id != BundledDictionaryId && !tx.TryGet(Tables.Meta, FeedDictionaryKey(id), out _)) return false;
 			// The lines its successor was trained on still count, so the world is not retrained straight away.
 			var state = ReadFeedDictionaryState(tx) ?? new FeedDictionaryRecord { Id = BundledDictionaryId };
