@@ -11182,7 +11182,7 @@
     <value>Object</value>
   </data>
   <data name="LayBldObjectHelp" xml:space="preserve">
-    <value>An object you control: me, a dbref, or a name you can see. The attributes are written there.</value>
+    <value>An object you control: me, or its dbref or objid, such as #12. The attributes are written there.</value>
   </data>
   <data name="LayBldName" xml:space="preserve">
     <value>Name</value>
@@ -11422,10 +11422,10 @@
     <value>Register it in the portal now</value>
   </data>
   <data name="LayBldRegisterPageHelp" xml:space="preserve">
-    <value>Adds it to the Play menu at /apps/&lt;name&gt;, and runs +builder/register. Change its menu and roles under Applications.</value>
+    <value>Adds it to the Play menu at /apps/&lt;name&gt;. Change its menu and roles under Applications.</value>
   </data>
   <data name="LayBldRegisterWidgetHelp" xml:space="preserve">
-    <value>Adds it to the layout editor's palette, and runs +builder/register. Place it under Layout.</value>
+    <value>Adds it to the layout editor's palette. Place it under Layout.</value>
   </data>
   <data name="LayBldSave" xml:space="preserve">
     <value>Save</value>
@@ -11522,5 +11522,8 @@
   </data>
   <data name="LayBldKind_graph" xml:space="preserve">
     <value>Graph</value>
+  </data>
+  <data name="LaySchemaUnknownKind" xml:space="preserve">
+    <value>This portal does not know the element kind "{0}", so it is not drawn. Only staff who manage applications see this.</value>
   </data>
 </root>

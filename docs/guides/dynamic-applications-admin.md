@@ -19,7 +19,7 @@ Both are rendered by the same schema renderer; the only difference is where they
 ## Building one in the portal
 
 **Build & manage → Application builder** (`/build/apps`) makes a form, a sheet or a widget
-step by step, with a live preview, and needs no softcode. It needs the `app-builder` package.
+step by step, with a live preview, and needs no softcode.
 
 1. **Start** — pick a template (blank, character sheet, request form, profile editor), or
    open one saved earlier by its object and name.
@@ -28,12 +28,23 @@ step by step, with a live preview, and needs no softcode. It needs the `app-buil
 3. **Lay it out** — pages, sections and elements in an outline; select one to change it.
 4. **Values** — for each value, the attribute it is read from on the viewed character, and for
    a form, the attribute each field is saved to on whoever sends it.
-5. **Save** — writes `` DATA`APP`<SLUG> `` and its `SOURCES`, `SAVE` and `REQUIRED`
-   attributes on an object you control. With `applications.admin` you can also register it
-   here, which runs `+builder/register` and adds the record described in Part B below.
+5. **Save** — writes these attributes on an object you control (`me`, or its dbref):
 
-The attributes are plain JSON you can also edit by hand. See the `app-builder` package's
-README, or `+help builder`, for what each holds.
+| Attribute | Holds |
+|-----------|-------|
+| ``DATA`APP`<SLUG>`` | The Portal Schema Document |
+| ``DATA`APP`<SLUG>`SOURCES`` | JSON object: field key → attribute read from the viewed character |
+| ``DATA`APP`<SLUG>`SAVE`` | JSON object: field key → attribute written on the sender (forms) |
+| ``DATA`APP`<SLUG>`REQUIRED`` | The keys a sent form must fill, space-separated (forms) |
+
+With `applications.admin`, **Register it in the portal now** adds the record described in
+Part B below, with its routes filled in. The server serves a registered built application
+itself, at `api/built/<slug>/schema`, `/data` and `/act`: each value is read as the viewer,
+so an attribute they could not read with `get()` shows as hidden, and a sent form writes as
+the sender, so it changes only what they could change with `&`. Only an application
+registered this way is served, so nobody can point the routes at another object.
+
+The attributes are plain JSON you can also edit by hand.
 
 ## The two-part setup
 

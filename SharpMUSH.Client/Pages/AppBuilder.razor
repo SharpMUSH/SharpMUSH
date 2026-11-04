@@ -10,13 +10,13 @@
 @using SharpMUSH.Library.Models.Portal.Applications
 @using SharpMUSH.Library.Models.Portal
 @using SharpMUSH.Library.DiscriminatedUnions
-@inject GameCommandService Commands
+@inject BuiltApplicationClient Built
 @inject ApplicationRegistryClient Registry
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
 
 @* The application builder: a guided way to make a form, view or widget without writing its JSON. What it makes is
-   stored as attributes on an object the author controls, and served by the app-builder package's routes. *@
+   stored as attributes on an object the author controls, and served by the server's api/built routes. *@
 
 <PageTitle>@Loc["LayBldTitle"] — <GameName /></PageTitle>
 
@@ -371,25 +371,20 @@
         _busy = true;
         try
         {
-            var attribute = $"DATA`APP`{slug.ToUpperInvariant()}";
-            var answer = await Commands.EvaluateAsync(
-                "json(array,json(string,get(%0/%1)),json(string,get(%0/%1`SOURCES)),json(string,get(%0/%1`SAVE)))", [_object.Trim(), attribute]);
-            if (answer is not PortalCommandResponse { Result: { } result } || JsonNode.Parse(result) is not JsonArray parts
-                || !_draft.LoadStored((string?)parts[0] ?? "", (string?)parts[1], (string?)parts[2]))
+            switch (await Built.OpenAsync(slug, _object.Trim()))
             {
-                Snackbar.Add(Loc["LayBldOpenFailed", slug, _object], Severity.Warning);
-                return;
+                case BuiltSource source when _draft.LoadStored(source.Schema ?? "", source.Sources, source.Save):
+                    _draft.Slug = slug;
+                    _slugTouched = true;
+                    _page = _section = _element = null;
+                    _step = 1;
+                    _reached = 4;
+                    Refresh();
+                    break;
+                default:
+                    Snackbar.Add(Loc["LayBldOpenFailed", slug, _object], Severity.Warning);
+                    break;
             }
-            _draft.Slug = slug;
-            _slugTouched = true;
-            _page = _section = _element = null;
-            _step = 1;
-            _reached = 4;
-            Refresh();
-        }
-        catch (System.Text.Json.JsonException)
-        {
-            Snackbar.Add(Loc["LayBldOpenFailed", slug, _object], Severity.Warning);
         }
         finally
         {
@@ -501,22 +496,19 @@
         _savedLink = null;
         try
         {
-            var target = _object.Trim();
-            // The console evaluates its arguments, which would strip the JSON's brackets and braces, so the values travel
-            // as base64 and decode64() hands them to attrib_set() untouched.
-            var answer = await Commands.EvaluateAsync(
-                "[attrib_set(%0/%1,decode64(%2))][attrib_set(%0/%1`SOURCES,decode64(%3))][attrib_set(%0/%1`SAVE,decode64(%4))][attrib_set(%0/%1`REQUIRED,decode64(%5))]|[objid(%0)]",
-                [target, _draft.BaseAttribute, Base64(_draft.Stored().ToJsonString()), Base64(Sources),
-                 Base64(_draft.IsForm ? SaveMap : ""), Base64(_draft.IsForm ? _draft.RequiredKeys() : "")]);
-            if (answer is not PortalCommandResponse { Result: { } result } || result.Contains("#-1", StringComparison.Ordinal))
+            var request = new BuiltSaveRequest(_object.Trim(), _draft.Stored().ToJsonString(), Sources,
+                _draft.IsForm ? SaveMap : null, _draft.IsForm ? _draft.RequiredKeys() : null);
+            switch (await Built.SaveAsync(_draft.Slug, request))
             {
-                var reason = answer is PortalCommandResponse { Result: { } r } ? r.TrimEnd('|') : Loc["LayBldNoAnswer"].Value;
-                Snackbar.Add(Loc["LayBldSaveFailed", reason], Severity.Error);
-                return;
+                case BuiltSource saved:
+                    var holder = saved.Holder ?? _object.Trim();
+                    _saved = Loc["LayBldSaved", _draft.BaseAttribute, holder];
+                    if (_register) await RegisterAsync(holder);
+                    break;
+                case ApiFailure failure:
+                    Snackbar.Add(Loc["LayBldSaveFailed", failure.Message], Severity.Error);
+                    break;
             }
-            var holder = result[(result.LastIndexOf('|') + 1)..];
-            _saved = Loc["LayBldSaved", _draft.BaseAttribute, holder];
-            if (_register) await RegisterAsync(holder);
         }
         finally
         {
@@ -524,18 +516,10 @@
         }
     }
 
-    private static string Base64(string text) => Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(text));
-
     private async Task RegisterAsync(string holder)
     {
-        var command = await Commands.RunAsync($"+builder/register {_draft.Slug}={holder}");
-        var output = command is PortalCommandResponse { Output: { } lines } ? string.Join(' ', lines) : string.Empty;
-        if (!output.StartsWith("Registered", StringComparison.Ordinal))
-        {
-            Snackbar.Add(Loc["LayBldRegisterFailed", output.Length > 0 ? output : Loc["LayBldNoAnswer"].Value], Severity.Error);
-            return;
-        }
         var existing = await Registry.GetAsync(_draft.Slug);
+        // The server fills in the routes of a built application and checks that the holder is yours and holds it.
         var application = new PortalApplication(
             _draft.Slug,
             string.IsNullOrWhiteSpace(_draft.Title) ? _draft.Slug : _draft.Title.Trim(),
@@ -548,8 +532,10 @@
             _widget ? null : existing?.NavPlacement ?? "Play",
             _widget ? existing?.Zones ?? ["MainContent"] : [],
             existing?.Order ?? 100,
+            RenderKind: ApplicationRenderKind.Built,
             Scope: _widget && _scope != "home" ? _scope : null,
-            Permission: existing?.Permission);
+            Permission: existing?.Permission,
+            Config: System.Text.Json.JsonSerializer.SerializeToElement(new { holder }));
         switch (await Registry.UpsertAsync(application))
         {
             case Success:

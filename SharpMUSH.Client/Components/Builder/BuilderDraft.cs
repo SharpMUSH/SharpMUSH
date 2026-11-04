@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Portal.Applications;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -7,12 +8,12 @@ namespace SharpMUSH.Client.Components.Builder;
 
 /// <summary>
 /// What the application builder is making: a Portal Schema Document held as JSON nodes, so keys the builder has no
-/// input for survive a load and a save, plus the attribute maps the <c>app-builder</c> package reads.
+/// input for survive a load and a save, plus the attribute maps the server's built-application routes read (<c>api/built</c>).
 /// </summary>
 /// <remarks>
 /// Stored on the author's object as <c>DATA`APP`&lt;SLUG&gt;</c> (the document), <c>…`SOURCES</c> (field key to the
 /// attribute read from the viewed character), <c>…`SAVE</c> (field key to the attribute written on the sender) and
-/// <c>…`REQUIRED</c> (the keys a sent form must fill). The builder decides nothing a route relies on: the package
+/// <c>…`REQUIRED</c> (the keys a sent form must fill). The builder decides nothing a route relies on: the server
 /// checks every value again.
 /// </remarks>
 public sealed partial class BuilderDraft
@@ -263,10 +264,13 @@ public sealed partial class BuilderDraft
 		problems.AddRange(Sources.Concat(Save).Where(p => p.Value.Length > 0 && !IsAttribute(p.Value))
 			.Select(p => $"\"{p.Value}\" is not an attribute name."));
 		if (IsForm && !InputFields().Any()) problems.Add("A form needs at least one field.");
+		// What schemacheck() would say, where the checks above have not said it already in plainer words.
+		problems.AddRange(PortalSchema.Check(Stored()).Where(problem => !problem.Contains(" is used twice", StringComparison.Ordinal)
+			&& !problem.Contains(" needs options", StringComparison.Ordinal)));
 		return problems;
 	}
 
-	/// <summary>The document as stored, with the submit action pointed at the package's route.</summary>
+	/// <summary>The document as stored, with the submit action pointed at the server's route.</summary>
 	public JsonObject Stored()
 	{
 		var copy = (JsonObject)Schema.DeepClone();
@@ -288,9 +292,9 @@ public sealed partial class BuilderDraft
 		return copy;
 	}
 
-	public static string SchemaRoute(string slug) => $"http/built/schema?app={slug}";
-	public static string DataRoute(string slug, bool widget) => $"http/built/data?app={slug}" + (widget ? "&objid={objid}" : "");
-	public static string ActRoute(string slug) => $"http/built/act?app={slug}";
+	public static string SchemaRoute(string slug) => $"api/built/{slug}/schema";
+	public static string DataRoute(string slug, bool widget) => $"api/built/{slug}/data" + (widget ? "?objid={objid}" : "");
+	public static string ActRoute(string slug) => $"api/built/{slug}/act";
 
 	/// <summary>A JSON object of the non-empty entries of <paramref name="map"/> whose key the document still reads.</summary>
 	public string MapJson(IReadOnlyDictionary<string, string> map, IEnumerable<string> keys)

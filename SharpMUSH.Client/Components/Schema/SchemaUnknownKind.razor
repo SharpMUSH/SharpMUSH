@@ -1,0 +1,11 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+@* An element whose kind this portal does not know. Staff who can fix the application see which kind it named;
+   everyone else sees nothing, rather than an empty field. *@
+<AuthorizeView Policy="applications.admin">
+    <MudAlert Severity="Severity.Warning" Dense="true" Class="my-1 schema-unknown">@Loc["LaySchemaUnknownKind", Kind]</MudAlert>
+</AuthorizeView>
+
+@code {
+    [Parameter, EditorRequired] public string Kind { get; set; } = string.Empty;
+}

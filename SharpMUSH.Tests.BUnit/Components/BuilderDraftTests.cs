@@ -32,12 +32,12 @@ public class BuilderDraftTests
 	}
 
 	[Test]
-	public async Task A_stored_form_posts_to_the_package_route_and_the_preview_posts_nowhere()
+	public async Task A_stored_form_posts_to_the_server_route_and_the_preview_posts_nowhere()
 	{
 		var draft = FromTemplate("request", "story-ideas");
 
 		var stored = draft.Stored();
-		await Assert.That((string?)stored["actions"]!["submit"]!["route"]).IsEqualTo("http/built/act?app=story-ideas");
+		await Assert.That((string?)stored["actions"]!["submit"]!["route"]).IsEqualTo("api/built/story-ideas/act");
 		await Assert.That(draft.Preview()!.Actions).IsNull();
 		await Assert.That(draft.BaseAttribute).IsEqualTo("DATA`APP`STORY-IDEAS");
 	}

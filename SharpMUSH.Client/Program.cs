@@ -45,6 +45,7 @@ builder.Services.AddScoped<CharacterProfileService>();
 builder.Services.AddScoped<SidebarCollapseService>();
 builder.Services.AddSingleton<SchemaAppService>();
 builder.Services.AddSingleton<ApplicationRegistryClient>();
+builder.Services.AddSingleton<BuiltApplicationClient>();
 builder.Services.AddSingleton<NavLayoutClient>();
 builder.Services.AddScoped<PortalNavigation>();
 // Loads + resolves plugin-shipped compiled Blazor components at runtime (gate-guarded server-side; renders

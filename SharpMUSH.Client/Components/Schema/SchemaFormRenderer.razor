@@ -194,6 +194,9 @@ else
                     <SchemaDisplay Element="element" Data="_data" Actions="_model.Document?.Actions" Busy="_busy" OnAction="Dispatch" />
                 </div>
                 break;
+            case var kind:
+                <SchemaUnknownKind Kind="@kind" />
+                break;
         }
     };
 

@@ -80,8 +80,7 @@
 
 @code {
     /// <summary>The element kinds this component draws; anything else is the hosting renderer's (fields).</summary>
-    public static readonly IReadOnlySet<string> Kinds =
-        new HashSet<string>(["divider", "markdown", "image", "table", "keyvalue", "timeline", "graph", "button", "stats", "chips"], StringComparer.OrdinalIgnoreCase);
+    public static IReadOnlySet<string> Kinds => SharpMUSH.Library.Models.Portal.Applications.PortalSchema.DisplayKinds;
 
     [Parameter, EditorRequired] public SchemaElement Element { get; set; } = default!;
 
