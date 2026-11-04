@@ -201,7 +201,7 @@
 }
 
 .schema-stat {
-	--stat-tone: var(--text);
+	--stat-tone: var(--text-faint);
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
