@@ -16,6 +16,25 @@ There are two flavours:
 
 Both are rendered by the same schema renderer; the only difference is where they appear.
 
+## Building one in the portal
+
+**Build & manage → Application builder** (`/build/apps`) makes a form, a sheet or a widget
+step by step, with a live preview, and needs no softcode. It needs the `app-builder` package.
+
+1. **Start** — pick a template (blank, character sheet, request form, profile editor), or
+   open one saved earlier by its object and name.
+2. **What it is** — its title and name (the slug), whether it is a form or a view, a page or
+   a widget, and for a widget where it shows.
+3. **Lay it out** — pages, sections and elements in an outline; select one to change it.
+4. **Values** — for each value, the attribute it is read from on the viewed character, and for
+   a form, the attribute each field is saved to on whoever sends it.
+5. **Save** — writes `` DATA`APP`<SLUG> `` and its `SOURCES`, `SAVE` and `REQUIRED`
+   attributes on an object you control. With `applications.admin` you can also register it
+   here, which runs `+builder/register` and adds the record described in Part B below.
+
+The attributes are plain JSON you can also edit by hand. See the `app-builder` package's
+README, or `+help builder`, for what each holds.
+
 ## The two-part setup
 
 Standing up an application is always two steps. **Both are required** — installing the

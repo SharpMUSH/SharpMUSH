@@ -1,0 +1,255 @@
+.bld-page {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.bld-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.bld-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--border-soft);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text-dim);
+    font: inherit;
+    cursor: pointer;
+}
+
+.bld-step:disabled {
+    cursor: default;
+    opacity: .5;
+}
+
+.bld-step--on {
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.bld-step-n {
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--surface-2, var(--surface));
+    font-size: .75rem;
+}
+
+.bld-step--on .bld-step-n,
+.bld-step--done .bld-step-n {
+    background: var(--accent);
+    color: var(--on-accent, #fff);
+}
+
+.bld-panel {
+    max-width: 900px;
+}
+
+.bld-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.bld-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px;
+    text-align: left;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+}
+
+.bld-card--on {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+.bld-card-title {
+    font-weight: 600;
+}
+
+.bld-card-text {
+    color: var(--text-dim);
+    font-size: .875rem;
+}
+
+.bld-grid2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+}
+
+::deep .bld-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+::deep .bld-narrow {
+    max-width: 360px;
+}
+
+::deep .bld-mono input,
+.bld-mono {
+    font-family: var(--font-mono);
+}
+
+.bld-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) minmax(240px, 320px) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.bld-outline,
+.bld-inspector,
+.bld-preview {
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 8px;
+    min-width: 0;
+}
+
+.bld-preview {
+    padding: 12px;
+}
+
+.bld-node {
+    display: flex;
+    align-items: center;
+    border-radius: var(--radius);
+}
+
+.bld-node--section {
+    padding-left: 12px;
+}
+
+.bld-node--element {
+    padding-left: 24px;
+}
+
+.bld-node--on {
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.bld-node-name {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 4px;
+    border: 0;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.bld-node-kind {
+    color: var(--text-faint);
+    font-size: .75rem;
+}
+
+.bld-node-tools {
+    display: none;
+}
+
+.bld-node:hover .bld-node-tools,
+.bld-node:focus-within .bld-node-tools,
+.bld-node--on .bld-node-tools {
+    display: inline-flex;
+}
+
+::deep .bld-add {
+    display: block;
+    margin-left: 24px;
+}
+
+::deep .bld-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bld-map {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.bld-map th {
+    text-align: left;
+    font-weight: 600;
+    padding: 4px 8px;
+}
+
+.bld-map td {
+    padding: 2px 8px;
+    vertical-align: middle;
+}
+
+.bld-attrs {
+    margin: 4px 0;
+    padding-left: 20px;
+}
+
+.bld-json pre {
+    max-height: 320px;
+    overflow: auto;
+    padding: 8px;
+    background: var(--surface-2, var(--surface));
+    border-radius: var(--radius);
+    font-family: var(--font-mono);
+    font-size: .8rem;
+}
+
+.bld-problems {
+    margin: 0;
+    padding-left: 18px;
+}
+
+@container page (max-width: 64rem) {
+    .bld-layout {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .bld-preview {
+        grid-column: 1 / -1;
+    }
+}
+
+@container page (max-width: 48rem) {
+    .bld-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .bld-node-tools {
+        display: inline-flex;
+    }
+}

@@ -228,6 +228,10 @@ public static class BundledPackages
 		new("notifications", BundledPackageHandler.Http, InstallAtFirstBoot: false),
 		new("notifications-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("notifications-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: the routes that serve what the portal's application builder makes. A game that
+		// builds nothing needs no object in its master room for it.
+		new("app-builder", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("app-builder-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: a roster is for games with characters to hand out, and +roster is a name a
 		// game may already use. roster-jobs adds applying through the job queue, for a game that wants that.
 		new("roster", BundledPackageHandler.Event, InstallAtFirstBoot: false),

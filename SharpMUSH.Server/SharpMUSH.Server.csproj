@@ -262,6 +262,10 @@
       <Link>BundledPackages\relationships.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.relationships.README.md</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\app-builder\README.md">
+      <Link>BundledPackages\app-builder.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.app-builder.README.md</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\http-handler\README.md">
       <Link>BundledPackages\http-handler.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.http-handler.README.md</LogicalName>
@@ -729,6 +733,14 @@
     <EmbeddedResource Include="..\examples\packages\discord-scenes-config\package.yaml">
       <Link>BundledPackages\discord-scenes-config.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.discord-scenes-config.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\app-builder\package.yaml">
+      <Link>BundledPackages\app-builder.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.app-builder.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\app-builder-help\package.yaml">
+      <Link>BundledPackages\app-builder-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.app-builder-help.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\notifications\package.yaml">
       <Link>BundledPackages\notifications.package.yaml</Link>

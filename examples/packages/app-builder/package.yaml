@@ -1,0 +1,147 @@
+format: "1.16"
+package: app-builder
+title: "Built applications"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Serves the forms, views and widgets made with the portal's application builder. Each one is JSON in attributes on an object its author controls; staff register it with +builder/register, and these routes read and save it, so a built application needs no route code of its own."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [portal, application, builder, form, widget]
+category: Web portal
+requires_server: ">=0.1"
+
+# The routes are children of http-handler's GET and POST verbs.
+depends:
+  - package: http-handler
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/http-handler/
+      branch: main
+
+objects:
+  # What a built application stores, on the object its author picked (the portal builder writes all of them):
+  #   DATA`APP`<SLUG>            the Portal Schema Document
+  #   DATA`APP`<SLUG>`SOURCES    JSON object: field key -> attribute name, read from the viewed character
+  #   DATA`APP`<SLUG>`SAVE       JSON object: field key -> attribute name, written on whoever sends the form
+  #   DATA`APP`<SLUG>`REQUIRED   the keys a sent form must fill, space-separated
+  # This object keeps APP`<SLUG> = the objid of the object holding it, set by +builder/register. A route answers only
+  # for a registered slug, so nobody can point it at another object's attributes.
+  - ref: builder
+    type: thing
+    name: Application Builder
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # ---- commands ---------------------------------------------------------------------
+      CMD`BUILDER: |-
+        $+builder:@pemit %#=u(%!/FUN`LIST)
+      CMD`BUILDER`REGISTER: |-
+        $+builder/register *=*:@assert u(%!/FUN`MAY,%#)=@pemit %#=Permission denied. Registering a built application takes applications.admin.; @assert regmatch(%0,^\[a-z0-9_-\]+$)=@pemit %#=A slug is lower-case letters, digits, _ and -.; @assert isdbref(setr(holder,locate(%#,%1,*)))=@pemit %#=I can't find %1.; @assert controls(%#,%q<holder>)=@pemit %#=Permission denied. You don't control [name(%q<holder>)].; @assert hasattr(%q<holder>,DATA`APP`[ucstr(%0)])=@pemit %#=[name(%q<holder>)] holds no application called %0. Save it from the portal's builder first.; think attrib_set(%!/APP`[ucstr(%0)],objid(%q<holder>)); @pemit %#=Registered %0 on [name(%q<holder>)]. Its routes are http/built/schema?app=%0, http/built/data?app=%0 and http/built/act?app=%0.
+      CMD`BUILDER`UNREGISTER: |-
+        $+builder/unregister *:@assert u(%!/FUN`MAY,%#)=@pemit %#=Permission denied. Unregistering a built application takes applications.admin.; @assert hasattr(%!,APP`[ucstr(%0)])=@pemit %#=No application called %0 is registered.; think attrib_set(%!/APP`[ucstr(%0)]); @pemit %#=Unregistered %0. Its attributes stay where they are.
+      FUN`MAY: |-
+        cor(hasflag(%0,WIZARD),permission(%0,applications.admin))
+      FUN`LIST: |-
+        [if(words(setr(apps,lattr(%!/APP`*))),Built applications:[iter(%q<apps>,%r[lcstr(after(%i0,APP`))] · [name(get(%!/%i0))] ([get(%!/%i0)]))],No built applications are registered. Make one in the portal's builder and register it with +builder/register <slug>=<object>.)]
+
+      # ---- lookups ----------------------------------------------------------------------
+      # The objid holding application %0, while it still holds it; empty otherwise.
+      FUN`HOLDER: |-
+        if(regmatch(%0,^\[a-z0-9_-\]+$),if(hasattr(setr(holder_found,get(%!/APP`[ucstr(%0)])),DATA`APP`[ucstr(%0)]),%q<holder_found>))
+      # key:attribute, one word per entry of the JSON object %1 (json_map's callback).
+      FUN`PAIR: |-
+        %2:%1
+      # A stored value as JSON: an array, object or boolean as it is, a number as a number, anything else as a string.
+      FUN`JSONVAL: |-
+        if(cand(isjson(%0),match(array object boolean,json_query(%0,type))),%0,if(isnum(%0),%0,json(string,%0)))
+      # Field %0 of the posted body in %q<act_body>, as text.
+      FUN`POSTED: |-
+        [setq(posted_raw,json_query(%q<act_body>,get,%0))][switch(%q<posted_raw>,#-*,,null,,"*,json_query(%q<posted_raw>,unescape),%q<posted_raw>)]
+
+      # ---- GET schema -------------------------------------------------------------------
+      WEB`SCHEMA: |-
+        if(strlen(setr(holder,u(%!/FUN`HOLDER,%<app>))),get(%q<holder>/DATA`APP`[ucstr(%<app>)]),u(%!/WEB`SAY,No application called %<app> is built here.))
+      WEB`SAY: |-
+        json(object,kind,"view",schema_version,1,pages,json_array(json(object,key,"main",order,1,sections,json_array(json(object,order,1,elements,json_array(json(object,kind,"markdown",value,json(string,%0)),%r)),%r)),%r))
+
+      # ---- GET data ---------------------------------------------------------------------
+      # Each source is read as the viewer, so an attribute they could not read comes back hidden. objeval() falls back to
+      # this object when it does not control the viewer (God, for one), so such a viewer is read nothing rather than
+      # everything.
+      WEB`DATA: |-
+        [setq(holder,u(%!/FUN`HOLDER,%<app>))][setq(data_viewer,%<viewer>)][setq(data_target,if(isdbref(%<objid>),%<objid>,%<viewer>))][setq(sources,if(strlen(%q<holder>),get(%q<holder>/DATA`APP`[ucstr(%<app>)]`SOURCES)))][json(object,fields,if(cand(isdbref(%q<data_target>),isjson(%q<sources>)),fold(%!/FUN`DATA`ADD,json_map(%!/FUN`PAIR,%q<sources>),lit({})),lit({})))]
+      FUN`DATA`ADD: |-
+        [setq(data_attr,after(%1,:))][setq(data_raw,if(controls(%!,%q<data_viewer>),objeval(%q<data_viewer>,xget(%q<data_target>,%q<data_attr>)),#-1))][json_mod(%0,set,$.[before(%1,:)],json(object,value,u(%!/FUN`JSONVAL,if(strmatch(%q<data_raw>,#-*),,%q<data_raw>)),visible,json(boolean,not(strmatch(%q<data_raw>,#-*)))))]
+
+      # ---- POST act ---------------------------------------------------------------------
+      # Saves each SAVE field on the sender, as the sender: they can only change what they could change with &.
+      WEB`ACT: |-
+        [setq(holder,u(%!/FUN`HOLDER,%<app>))][setq(act_viewer,%<viewer>)][setq(act_body,%<body>)][setq(act_base,DATA`APP`[ucstr(%<app>)])][setq(act_save,if(strlen(%q<holder>),get(%q<holder>/%q<act_base>`SAVE)))][switch(1,not(strlen(%q<holder>)),u(%!/WEB`FAIL,No application called %<app> is built here.),not(isdbref(%q<act_viewer>)),u(%!/WEB`FAIL,Sign in with a character to send this.),not(isjson(%q<act_save>)),u(%!/WEB`FAIL,This application saves nothing.),t(strlen(setr(act_missing,u(%!/FUN`MISSING)))),json(object,ok,json(boolean,false),errors,%q<act_missing>),u(%!/FUN`SAVE))]
+      WEB`FAIL: |-
+        json(object,ok,json(boolean,false),errors,json(object,_global,json(string,%0)))
+      # A JSON object of "Required." for each REQUIRED key the body left empty; empty when none is.
+      FUN`MISSING: |-
+        [setq(act_errors,fold(%!/FUN`MISSING`ADD,get(%q<holder>/%q<act_base>`REQUIRED),lit({})))][if(json_query(%q<act_errors>,size),%q<act_errors>)]
+      FUN`MISSING`ADD: |-
+        if(strlen(u(%!/FUN`POSTED,%1)),%0,json_mod(%0,set,$.%1,json(string,Required.)))
+      FUN`SAVE: |-
+        [setq(act_failed,trim(iter(json_map(%!/FUN`PAIR,%q<act_save>),u(%!/FUN`WRITE,before(%i0,:),after(%i0,:)))))][if(strlen(%q<act_failed>),u(%!/WEB`FAIL,Could not save [itemize(%q<act_failed>)].),json(object,ok,json(boolean,true),message,json(string,Saved.)))]
+      # Writes field %0 into the sender's attribute %1, as the sender; answers %0 when that fails. A sender this object
+      # does not control is refused, since objeval() would otherwise write as this object.
+      FUN`WRITE: |-
+        [setq(write_attr,%1)][setq(write_value,u(%!/FUN`POSTED,%0))][if(cor(not(regmatch(%q<write_attr>,^\[A-Za-z0-9_`.-\]+$)),not(controls(%!,%q<act_viewer>)),strmatch(objeval(%q<act_viewer>,attrib_set(%q<act_viewer>/%q<write_attr>,%q<write_value>)),#-*)),%0)]
+
+  - ref: builder_help
+    type: thing
+    name: Application Builder Help
+    location: "{{builder}}"
+    attributes:
+      HELP: |-
+        Forms, sheets and widgets made in the portal's application builder.
+      HELP`BUILDER: |-
+        The portal's **Application builder** (**Build & manage, Application builder**) makes a form, a sheet or a widget step by step, without writing its JSON by hand. It saves what it makes as attributes on an object you control, and this package serves it to the portal.
+
+        The builder writes these attributes, where `<SLUG>` is the application's name in capitals:
+
+        - `` DATA`APP`<SLUG> ``: the document the portal draws.
+        - `` DATA`APP`<SLUG>`SOURCES ``: which attribute of the viewed character each value is read from.
+        - `` DATA`APP`<SLUG>`SAVE ``: which attribute of the sender each sent field is written to. A form only.
+        - `` DATA`APP`<SLUG>`REQUIRED ``: the fields a sent form must fill. A form only.
+
+        You can edit any of them by hand, and open them again in the builder with **Open a saved one**.
+
+        A value is read as the person looking, so an attribute they could not read with `get()` shows as hidden. A sent form writes as the sender, so it changes only what they could change with `&`.
+
+        - `+builder` lists the registered applications and the object holding each.
+      LOCK`BUILDER`STAFF: |-
+        perm^applications.admin
+      HELP`BUILDER`STAFF: |-
+        An application is served only once it is registered: a route answers for a registered name and no other, so nobody can point one at another object's attributes.
+
+        - `+builder/register <slug>=<object>` registers the application `<slug>` held on `<object>`. You must control the object, and it must already hold `` DATA`APP`<SLUG> ``.
+        - `+builder/unregister <slug>` stops serving it. Its attributes stay where they are.
+
+        Both need the `applications.admin` permission. The builder's **Register it in the portal now** runs `+builder/register` and adds the page or widget under **Admin, Applications**, where you change its menu and roles.
+
+        Its routes are `http/built/schema?app=<slug>`, `http/built/data?app=<slug>` and, for a form, `http/built/act?app=<slug>`.
+
+        Example:
+
+        ```
+        > +builder/register story-ideas=Ideas Board
+        Registered story-ideas on Ideas Board. Its routes are http/built/schema?app=story-ideas, http/built/data?app=story-ideas and http/built/act?app=story-ideas.
+        > +builder
+        Built applications:
+        story-ideas · Ideas Board (#52:1793830588717)
+        ```
+
+  - ref: routes
+    target: "{{$http_handler}}"
+    attributes:
+      GET`BUILT`SCHEMA: |-
+        @respond/type application/json; think uargs({{builder}}/WEB`SCHEMA,viewer,%<viewer>,app,%q<form.app>)
+      GET`BUILT`DATA: |-
+        @respond/type application/json; think uargs({{builder}}/WEB`DATA,viewer,%<viewer>,app,%q<form.app>,objid,%q<form.objid>)
+      POST`BUILT`ACT: |-
+        @respond/type application/json; think uargs({{builder}}/WEB`ACT,viewer,%<viewer>,app,%q<form.app>,body,%<body>)

@@ -459,6 +459,16 @@ packages:
     package: notifications-help
     version: 1.0.0
     description: Registers the notifications topics with +help (requires notifications and plus-help)
+  - path: app-builder/
+    name: Built applications
+    package: app-builder
+    version: 1.0.0
+    description: Serves forms, views and widgets made with the portal's application builder; +builder lists and registers them (requires http-handler)
+  - path: app-builder-help/
+    name: Built applications help
+    package: app-builder-help
+    version: 1.0.0
+    description: Registers the app-builder topics with +help (requires app-builder and plus-help)
   - path: notifications-app/
     name: Notifications in the portal
     package: notifications-app

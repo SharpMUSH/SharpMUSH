@@ -1,0 +1,564 @@
+@page "/build/apps"
+@layout BuildLayout
+@attribute [Authorize(Policy = "softcode.use")]
+@using System.Text.Json.Nodes
+@using SharpMUSH.Client.Components.Builder
+@using SharpMUSH.Client.Components.Kit
+@using SharpMUSH.Client.Components.Schema
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Models.Portal.Applications
+@using SharpMUSH.Library.Models.Portal
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject GameCommandService Commands
+@inject ApplicationRegistryClient Registry
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The application builder: a guided way to make a form, view or widget without writing its JSON. What it makes is
+   stored as attributes on an object the author controls, and served by the app-builder package's routes. *@
+
+<PageTitle>@Loc["LayBldTitle"] — <GameName /></PageTitle>
+
+<div class="bld-page">
+    <header class="bld-head">
+        <MudText Typo="Typo.h5">@Loc["LayBldTitle"]</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["LayBldIntro"]</MudText>
+    </header>
+
+    <ol class="bld-steps" aria-label="@Loc["LayBldStepsLabel"]">
+        @for (var i = 0; i < StepKeys.Length; i++)
+        {
+            var step = i;
+            <li>
+                <button type="button" class="bld-step @(step == _step ? "bld-step--on" : "") @(step < _step ? "bld-step--done" : "")"
+                        aria-current="@(step == _step ? "step" : null)" disabled="@(step > _reached)" @onclick="() => _step = step">
+                    <span class="bld-step-n">@(step + 1)</span> @Loc[StepKeys[step]]
+                </button>
+            </li>
+        }
+    </ol>
+
+    @switch (_step)
+    {
+        case 0:
+            <section class="bld-panel">
+                <MudText Typo="Typo.h6">@Loc["LayBldStepStart"]</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">@Loc["LayBldStartHelp"]</MudText>
+                <div class="bld-cards">
+                    @foreach (var template in BuilderTemplates.All)
+                    {
+                        <button type="button" class="bld-card @(_template == template.Key ? "bld-card--on" : "")" @onclick="() => _template = template.Key">
+                            <span class="bld-card-title">@Loc[template.NameKey]</span>
+                            <span class="bld-card-text">@Loc[template.DescriptionKey]</span>
+                        </button>
+                    }
+                </div>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-3" OnClick="StartFromTemplate">@Loc["LayBldUseTemplate"]</MudButton>
+
+                <MudDivider Class="my-4" />
+                <MudText Typo="Typo.subtitle1">@Loc["LayBldOpenSaved"]</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">@Loc["LayBldOpenSavedHelp"]</MudText>
+                <div class="bld-row">
+                    <MudTextField T="string" @bind-Value="_object" Label="@Loc["LayBldObject"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudTextField T="string" @bind-Value="_openSlug" Label="@Loc["LayBldSlug"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono" />
+                    <MudButton Variant="Variant.Outlined" OnClick="OpenSavedAsync" Disabled="_busy">@Loc["LayBldOpen"]</MudButton>
+                </div>
+            </section>
+            break;
+
+        case 1:
+            <section class="bld-panel">
+                <MudText Typo="Typo.h6">@Loc["LayBldStepKind"]</MudText>
+                <div class="bld-grid2">
+                    <MudTextField T="string" Label="@Loc["LayBldName"]" Variant="Variant.Outlined" HelperText="@Loc["LayBldNameHelp"]"
+                                  Value="_draft.Title" ValueChanged="SetTitle" Immediate="true" />
+                    <MudTextField T="string" Label="@Loc["LayBldSlug"]" Variant="Variant.Outlined" Class="bld-mono"
+                                  HelperText="@Loc["LayBldSlugHelp"]" Value="_draft.Slug" ValueChanged="v => { _draft.Slug = v.Trim().ToLowerInvariant(); _slugTouched = true; }"
+                                  Error="@(!BuilderDraft.IsSlug(_draft.Slug))" ErrorText="@Loc["LayBldSlugBad"]" />
+                </div>
+                <MudText Typo="Typo.subtitle2" Class="mt-3">@Loc["LayBldWhatKind"]</MudText>
+                <MudRadioGroup T="bool" Value="_draft.IsForm" ValueChanged="v => { _draft.IsForm = v; Refresh(); }">
+                    <MudRadio T="bool" Value="false">@Loc["LayBldKindView"]</MudRadio>
+                    <MudRadio T="bool" Value="true">@Loc["LayBldKindForm"]</MudRadio>
+                </MudRadioGroup>
+                <MudText Typo="Typo.subtitle2" Class="mt-3">@Loc["LayBldWhere"]</MudText>
+                <MudRadioGroup T="bool" @bind-Value="_widget">
+                    <MudRadio T="bool" Value="false">@Loc["LayBldWherePage"]</MudRadio>
+                    <MudRadio T="bool" Value="true">@Loc["LayBldWhereWidget"]</MudRadio>
+                </MudRadioGroup>
+                @if (_widget)
+                {
+                    <MudSelect T="string" @bind-Value="_scope" Label="@Loc["LayBldScope"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-narrow"
+                               HelperText="@Loc["LayBldScopeHelp"]">
+                        <MudSelectItem T="string" Value="@("profile")">@Loc["LayBldScopeProfile"]</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("card")">@Loc["LayBldScopeCard"]</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("home")">@Loc["LayBldScopeAny"]</MudSelectItem>
+                    </MudSelect>
+                }
+                @if (!_draft.IsForm && _draft.Pages.Count > 1)
+                {
+                    <MudCheckBox T="bool" Value="_draft.Tabbed" ValueChanged="v => { _draft.Tabbed = v; Refresh(); }" Label="@Loc["LayBldTabs"]" />
+                }
+                @NextButton()
+            </section>
+            break;
+
+        case 2:
+            <section class="bld-layout">
+                <nav class="bld-outline" aria-label="@Loc["LayBldOutline"]">
+                    @foreach (var page in _draft.Pages.OfType<JsonObject>().ToList())
+                    {
+                        <div class="bld-node bld-node--page @(Selected(page) ? "bld-node--on" : "")">
+                            <button type="button" class="bld-node-name" @onclick="() => Select(page, null, null)">
+                                <MudIcon Icon="@Icons.Material.Filled.Article" Size="Size.Small" /> @((string?)page["title"])
+                            </button>
+                            @Tools(_draft.Pages, page)
+                        </div>
+                        @foreach (var section in BuilderDraft.Sections(page).OfType<JsonObject>().ToList())
+                        {
+                            <div class="bld-node bld-node--section @(Selected(section) ? "bld-node--on" : "")">
+                                <button type="button" class="bld-node-name" @onclick="() => Select(page, section, null)">
+                                    <MudIcon Icon="@Icons.Material.Filled.ViewAgenda" Size="Size.Small" /> @SectionName(section)
+                                </button>
+                                @Tools(BuilderDraft.Sections(page), section)
+                            </div>
+                            @foreach (var element in BuilderDraft.Elements(section).OfType<JsonObject>().ToList())
+                            {
+                                <div class="bld-node bld-node--element @(Selected(element) ? "bld-node--on" : "")">
+                                    <button type="button" class="bld-node-name" @onclick="() => Select(page, section, element)">
+                                        <span class="bld-node-kind">@ElementKind(element)</span> @ElementName(element)
+                                    </button>
+                                    @Tools(BuilderDraft.Elements(section), element)
+                                </div>
+                            }
+                            <MudMenu Dense="true" AnchorOrigin="Origin.BottomLeft" Class="bld-add">
+                                <ActivatorContent>
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Add">@Loc["LayBldAddElement"]</MudButton>
+                                </ActivatorContent>
+                                <ChildContent>
+                                    <MudText Typo="Typo.overline" Class="px-4">@Loc["LayBldFields"]</MudText>
+                                    @foreach (var type in BuilderDraft.FieldTypes)
+                                    {
+                                        <MudMenuItem OnClick="() => Add(page, section, type)">@Loc[$"LayBldType_{type}"]</MudMenuItem>
+                                    }
+                                    <MudDivider />
+                                    <MudText Typo="Typo.overline" Class="px-4">@Loc["LayBldDisplays"]</MudText>
+                                    @foreach (var kind in BuilderDraft.DisplayKinds)
+                                    {
+                                        <MudMenuItem OnClick="() => Add(page, section, kind)">@Loc[$"LayBldKind_{kind}"]</MudMenuItem>
+                                    }
+                                </ChildContent>
+                            </MudMenu>
+                        }
+                        <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Add"
+                                   OnClick="() => { Select(page, _draft.AddSection(page), null); Refresh(); }">@Loc["LayBldAddSection"]</MudButton>
+                    }
+                    <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="() => { var page = _draft.AddPage(); Select(page, null, null); Refresh(); }">@Loc["LayBldAddPage"]</MudButton>
+                </nav>
+
+                <div class="bld-inspector">
+                    @if (_element is not null)
+                    {
+                        <BuilderElementSettings Element="_element" Columns="SectionColumns(_section)" OnChanged="Refresh" />
+                    }
+                    else if (_section is not null)
+                    {
+                        <MudText Typo="Typo.overline">@Loc["LayBldSection"]</MudText>
+                        <MudTextField T="string" Label="@Loc["LayBldSectionName"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Value="@((string?)_section["name"])" ValueChanged='v => { _section["name"] = v; Refresh(); }' Immediate="true" />
+                        <MudNumericField T="int" Label="@Loc["LayBldSectionColumns"]" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" Max="4"
+                                         HelperText="@Loc["LayBldSectionColumnsHelp"]" Value="SectionColumns(_section)"
+                                         ValueChanged='v => { if (v <= 1) _section.Remove("columns"); else _section["columns"] = v; Refresh(); }' />
+                    }
+                    else if (_page is not null)
+                    {
+                        <MudText Typo="Typo.overline">@Loc["LayBldPage"]</MudText>
+                        <MudTextField T="string" Label="@Loc["LayBldPageTitle"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Value="@((string?)_page["title"])" ValueChanged='v => { _page["title"] = v; Refresh(); }' Immediate="true" />
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["LayBldPickSomething"]</MudText>
+                    }
+                </div>
+
+                <div class="bld-preview" aria-label="@Loc["LayBldPreview"]">
+                    <MudText Typo="Typo.overline">@Loc["LayBldPreview"]</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mb-2">@Loc["LayBldPreviewHelp"]</MudText>
+                    @if (_preview is not null)
+                    {
+                        <SchemaApplicationHost Document="_preview" Data="_sample" />
+                    }
+                </div>
+            </section>
+            @NextButton()
+            break;
+
+        case 3:
+            <section class="bld-panel">
+                <MudText Typo="Typo.h6">@Loc["LayBldStepValues"]</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">@(_draft.IsForm ? Loc["LayBldValuesFormHelp"] : Loc["LayBldValuesViewHelp"])</MudText>
+                <table class="bld-map">
+                    <thead>
+                        <tr>
+                            <th>@Loc["LayBldKey"]</th>
+                            <th>@Loc["LayBldReadFrom"]</th>
+                            @if (_draft.IsForm)
+                            {
+                                <th>@Loc["LayBldSaveTo"]</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var key in _draft.DataKeys().ToList())
+                        {
+                            var input = _draft.InputFields().Any(f => (string?)f["key"] == key);
+                            <tr>
+                                <td class="bld-mono">@key</td>
+                                <td>
+                                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono" Placeholder="PROFILE`..."
+                                                  Value="@_draft.Sources.GetValueOrDefault(key)" ValueChanged="v => _draft.Sources[key] = v.Trim()"
+                                                  aria-label="@Loc["LayBldReadFromFor", key]" />
+                                </td>
+                                @if (_draft.IsForm)
+                                {
+                                    <td>
+                                        @if (input)
+                                        {
+                                            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono" Placeholder="@DefaultSave(key)"
+                                                          Value="@_draft.Save.GetValueOrDefault(key)" ValueChanged="v => _draft.Save[key] = v.Trim()"
+                                                          aria-label="@Loc["LayBldSaveToFor", key]" />
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (_draft.IsForm)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Text" Class="mt-2" OnClick="FillSaveDefaults">@Loc["LayBldFillSave"]</MudButton>
+                }
+                @NextButton()
+            </section>
+            break;
+
+        case 4:
+            <section class="bld-panel">
+                <MudText Typo="Typo.h6">@Loc["LayBldStepSave"]</MudText>
+                @if (_draft.Problems() is { Count: > 0 } problems)
+                {
+                    <MudAlert Severity="Severity.Warning" Class="my-2">
+                        <ul class="bld-problems">
+                            @foreach (var problem in problems)
+                            {
+                                <li>@problem</li>
+                            }
+                        </ul>
+                    </MudAlert>
+                }
+                <MudTextField T="string" @bind-Value="_object" Label="@Loc["LayBldObject"]" Variant="Variant.Outlined" Class="bld-narrow"
+                              HelperText="@Loc["LayBldObjectHelp"]" />
+                <MudText Typo="Typo.subtitle2" Class="mt-3">@Loc["LayBldWillWrite"]</MudText>
+                <ul class="bld-attrs bld-mono">
+                    <li>@_draft.BaseAttribute</li>
+                    @if (Sources.Length > 0) { <li>@_draft.BaseAttribute`SOURCES</li> }
+                    @if (_draft.IsForm && SaveMap.Length > 0) { <li>@_draft.BaseAttribute`SAVE</li> }
+                    @if (_draft.IsForm && _draft.RequiredKeys().Length > 0) { <li>@_draft.BaseAttribute`REQUIRED</li> }
+                </ul>
+                <details class="bld-json">
+                    <summary>@Loc["LayBldShowJson"]</summary>
+                    <pre>@_draft.Stored().ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true })</pre>
+                </details>
+
+                <AuthorizeView Policy="applications.admin">
+                    <MudCheckBox T="bool" @bind-Value="_register" Label="@Loc["LayBldRegister"]" Class="mt-2" />
+                    @if (_register)
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary d-block">@(_widget ? Loc["LayBldRegisterWidgetHelp"] : Loc["LayBldRegisterPageHelp"])</MudText>
+                    }
+                </AuthorizeView>
+
+                <div class="d-flex gap-2 mt-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@(_busy || _draft.Problems().Count > 0)"
+                               StartIcon="@Icons.Material.Filled.Save">@Loc["LayBldSave"]</MudButton>
+                    @if (_saved is not null)
+                    {
+                        <MudText Typo="Typo.body2" Class="align-self-center">@_saved</MudText>
+                    }
+                </div>
+                @if (_savedLink is not null)
+                {
+                    <MudLink Href="@_savedLink" Class="d-block mt-2">@Loc["LayBldOpenApp"]</MudLink>
+                }
+            </section>
+            break;
+    }
+</div>
+
+@code {
+    private static readonly string[] StepKeys = ["LayBldStepStart", "LayBldStepKind", "LayBldStepLayout", "LayBldStepValues", "LayBldStepSave"];
+
+    private readonly BuilderDraft _draft = new();
+    private int _step;
+    private int _reached;
+    private string _template = "blank";
+    private string _object = "me";
+    private string _openSlug = string.Empty;
+    private bool _widget;
+    private string _scope = "profile";
+    private bool _slugTouched;
+    private bool _register;
+    private bool _busy;
+    private string? _saved;
+    private string? _savedLink;
+
+    private JsonObject? _page;
+    private JsonObject? _section;
+    private JsonObject? _element;
+    private PortalSchemaDocument? _preview;
+    private SchemaData? _sample;
+
+    private string Sources => _draft.MapJson(_draft.Sources, _draft.DataKeys());
+    private string SaveMap => _draft.MapJson(_draft.Save, _draft.InputFields().Select(f => (string)f["key"]!));
+
+    private RenderFragment NextButton() => __builder =>
+    {
+        <div class="d-flex gap-2 mt-4">
+            @if (_step > 0)
+            {
+                <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ChevronLeft" OnClick="() => _step--">@Loc["WidBack"]</MudButton>
+            }
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ChevronRight"
+                       Disabled="@(_step == 1 && !BuilderDraft.IsSlug(_draft.Slug))" OnClick="Next">@Loc["WidNext"]</MudButton>
+        </div>
+    };
+
+    private void Next()
+    {
+        _step++;
+        _reached = Math.Max(_reached, _step);
+        if (_step == 2 && _page is null) Select(_draft.Pages.OfType<JsonObject>().First(), null, null);
+        Refresh();
+    }
+
+    private void StartFromTemplate()
+    {
+        var template = BuilderTemplates.Named(_template);
+        var title = _draft.Title;
+        _draft.Load(template.Document());
+        _draft.Title = title;
+        _draft.Sources.Clear();
+        _draft.Save.Clear();
+        foreach (var (key, value) in template.Sources ?? new Dictionary<string, string>()) _draft.Sources[key] = value;
+        foreach (var (key, value) in template.Save ?? new Dictionary<string, string>()) _draft.Save[key] = value;
+        _page = _section = _element = null;
+        _step = 1;
+        _reached = Math.Max(_reached, 1);
+        Refresh();
+    }
+
+    private async Task OpenSavedAsync()
+    {
+        var slug = _openSlug.Trim().ToLowerInvariant();
+        if (!BuilderDraft.IsSlug(slug))
+        {
+            Snackbar.Add(Loc["LayBldSlugBad"], Severity.Warning);
+            return;
+        }
+        _busy = true;
+        try
+        {
+            var attribute = $"DATA`APP`{slug.ToUpperInvariant()}";
+            var answer = await Commands.EvaluateAsync(
+                "json(array,json(string,get(%0/%1)),json(string,get(%0/%1`SOURCES)),json(string,get(%0/%1`SAVE)))", [_object.Trim(), attribute]);
+            if (answer is not PortalCommandResponse { Result: { } result } || JsonNode.Parse(result) is not JsonArray parts
+                || !_draft.LoadStored((string?)parts[0] ?? "", (string?)parts[1], (string?)parts[2]))
+            {
+                Snackbar.Add(Loc["LayBldOpenFailed", slug, _object], Severity.Warning);
+                return;
+            }
+            _draft.Slug = slug;
+            _slugTouched = true;
+            _page = _section = _element = null;
+            _step = 1;
+            _reached = 4;
+            Refresh();
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            Snackbar.Add(Loc["LayBldOpenFailed", slug, _object], Severity.Warning);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void SetTitle(string title)
+    {
+        _draft.Title = title;
+        if (!_slugTouched) _draft.Slug = BuilderDraft.SlugFrom(title);
+        Refresh();
+    }
+
+    private void Refresh()
+    {
+        _preview = _draft.Preview();
+        _sample = _draft.SampleData();
+        _saved = null;
+        _savedLink = null;
+    }
+
+    private bool Selected(JsonObject node) => ReferenceEquals(node, _element ?? _section ?? _page);
+
+    private void Select(JsonObject page, JsonObject? section, JsonObject? element)
+    {
+        _page = page;
+        _section = section;
+        _element = element;
+    }
+
+    private void Add(JsonObject page, JsonObject section, string type)
+    {
+        Select(page, section, _draft.AddElement(section, type));
+        Refresh();
+    }
+
+    private static int SectionColumns(JsonObject? section) =>
+        section?["columns"] is JsonValue v && v.TryGetValue<int>(out var columns) ? Math.Max(1, columns) : 1;
+
+    private string SectionName(JsonObject section) =>
+        (string?)section["name"] is { Length: > 0 } name ? name : Loc["LayBldUntitledSection"];
+
+    private string ElementKind(JsonObject element) => BuilderDraft.IsField(element)
+        ? Loc[$"LayBldType_{(string?)element["type"] ?? "text"}"]
+        : Loc[$"LayBldKind_{(string?)element["kind"]}"];
+
+    private static string ElementName(JsonObject element) =>
+        (string?)element["label"] ?? (string?)element["key"] ?? (string?)element["src_field"] ?? (string?)element["rows_field"]
+        ?? ((string?)element["value"] is { } text ? (text.Length > 24 ? text[..24] + "…" : text) : "");
+
+    // Up, down and remove for one node of an outline list.
+    private RenderFragment Tools(JsonArray list, JsonObject node) => __builder =>
+    {
+        var index = list.IndexOf(node);
+        <span class="bld-node-tools">
+            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Disabled="@(index <= 0)"
+                           aria-label="@Loc["WidRowsUp"]" OnClick="() => Move(list, node, -1)" />
+            <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Disabled="@(index >= list.Count - 1)"
+                           aria-label="@Loc["WidRowsDown"]" OnClick="() => Move(list, node, 1)" />
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Disabled="@(ReferenceEquals(list, _draft.Pages) && list.Count == 1)"
+                           aria-label="@Loc["WidRowsRemove"]" OnClick="() => Remove(list, node)" />
+        </span>
+    };
+
+    private void Move(JsonArray list, JsonObject node, int by)
+    {
+        var index = list.IndexOf(node);
+        if (index + by < 0 || index + by >= list.Count) return;
+        list.RemoveAt(index);
+        list.Insert(index + by, node);
+        Renumber(list);
+        Refresh();
+    }
+
+    private void Remove(JsonArray list, JsonObject node)
+    {
+        list.Remove(node);
+        Renumber(list);
+        if (Selected(node) || ReferenceEquals(node, _section) || ReferenceEquals(node, _page)) _page = _section = _element = null;
+        Refresh();
+    }
+
+    // Pages and sections carry an order; elements are drawn in array order.
+    private static void Renumber(JsonArray list)
+    {
+        var order = 1;
+        foreach (var item in list.OfType<JsonObject>())
+        {
+            if (item.ContainsKey("order")) item["order"] = order;
+            order++;
+        }
+    }
+
+    private string DefaultSave(string key) => $"APP`{_draft.Slug.ToUpperInvariant()}`{key.ToUpperInvariant()}";
+
+    private void FillSaveDefaults()
+    {
+        foreach (var key in _draft.InputFields().Select(f => (string)f["key"]!))
+        {
+            if (string.IsNullOrWhiteSpace(_draft.Save.GetValueOrDefault(key))) _draft.Save[key] = DefaultSave(key);
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _busy = true;
+        _saved = null;
+        _savedLink = null;
+        try
+        {
+            var target = _object.Trim();
+            // The console evaluates its arguments, which would strip the JSON's brackets and braces, so the values travel
+            // as base64 and decode64() hands them to attrib_set() untouched.
+            var answer = await Commands.EvaluateAsync(
+                "[attrib_set(%0/%1,decode64(%2))][attrib_set(%0/%1`SOURCES,decode64(%3))][attrib_set(%0/%1`SAVE,decode64(%4))][attrib_set(%0/%1`REQUIRED,decode64(%5))]|[objid(%0)]",
+                [target, _draft.BaseAttribute, Base64(_draft.Stored().ToJsonString()), Base64(Sources),
+                 Base64(_draft.IsForm ? SaveMap : ""), Base64(_draft.IsForm ? _draft.RequiredKeys() : "")]);
+            if (answer is not PortalCommandResponse { Result: { } result } || result.Contains("#-1", StringComparison.Ordinal))
+            {
+                var reason = answer is PortalCommandResponse { Result: { } r } ? r.TrimEnd('|') : Loc["LayBldNoAnswer"].Value;
+                Snackbar.Add(Loc["LayBldSaveFailed", reason], Severity.Error);
+                return;
+            }
+            var holder = result[(result.LastIndexOf('|') + 1)..];
+            _saved = Loc["LayBldSaved", _draft.BaseAttribute, holder];
+            if (_register) await RegisterAsync(holder);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static string Base64(string text) => Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(text));
+
+    private async Task RegisterAsync(string holder)
+    {
+        var command = await Commands.RunAsync($"+builder/register {_draft.Slug}={holder}");
+        var output = command is PortalCommandResponse { Output: { } lines } ? string.Join(' ', lines) : string.Empty;
+        if (!output.StartsWith("Registered", StringComparison.Ordinal))
+        {
+            Snackbar.Add(Loc["LayBldRegisterFailed", output.Length > 0 ? output : Loc["LayBldNoAnswer"].Value], Severity.Error);
+            return;
+        }
+        var existing = await Registry.GetAsync(_draft.Slug);
+        var application = new PortalApplication(
+            _draft.Slug,
+            string.IsNullOrWhiteSpace(_draft.Title) ? _draft.Slug : _draft.Title.Trim(),
+            existing?.Icon ?? (_draft.IsForm ? "edit_note" : "article"),
+            _widget ? ApplicationKind.Widget.ToString() : ApplicationKind.Page.ToString(),
+            BuilderDraft.SchemaRoute(_draft.Slug),
+            BuilderDraft.DataRoute(_draft.Slug, _widget),
+            _draft.IsForm ? BuilderDraft.ActRoute(_draft.Slug) : null,
+            existing?.MinimumRole ?? "Player",
+            _widget ? null : existing?.NavPlacement ?? "Play",
+            _widget ? existing?.Zones ?? ["MainContent"] : [],
+            existing?.Order ?? 100,
+            Scope: _widget && _scope != "home" ? _scope : null,
+            Permission: existing?.Permission);
+        switch (await Registry.UpsertAsync(application))
+        {
+            case Success:
+                _savedLink = _widget ? "/admin/layout" : $"/apps/{_draft.Slug}";
+                Snackbar.Add(Loc["LayBldRegistered", _draft.Slug], Severity.Success);
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["LayBldRegisterFailed", failure.Message], Severity.Error);
+                break;
+        }
+    }
+}
