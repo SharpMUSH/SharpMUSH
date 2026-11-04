@@ -106,20 +106,17 @@ public partial class LightningDatabase
 	/// </summary>
 	private readonly ConcurrentDictionary<(long Epoch, int Id), ZstandardDictionary> _feedDictionaries = new();
 
-	private sealed record CurrentFeedDictionary(long Epoch, int Id);
-
-	/// <summary>The dictionary new lines are compressed with, once read, and the epoch of the world it belongs to.</summary>
-	private CurrentFeedDictionary? _currentFeedDictionary;
-
-	/// <summary>A line as stored, compressed with the current dictionary (as JSON in the rare case that is smaller).</summary>
+	/// <summary>
+	/// A line as stored, compressed with the dictionary the transaction sees as current (as JSON in the rare case that is
+	/// smaller). Read in the same write as the line, so a line is never written with a dictionary a later commit replaced.
+	/// </summary>
 	private byte[] EncodeLine(ITx tx, FeedMessageRecord record)
 	{
-		var epoch = Store.Epoch;
-		var current = _currentFeedDictionary is { } known && known.Epoch == epoch
-			? known
-			: _currentFeedDictionary = new CurrentFeedDictionary(epoch, ReadFeedDictionaryState(tx)?.Id ?? BundledDictionaryId);
-		return Compress(Codec.Serialize(record), current.Id, FeedDictionary(tx, current.Id)!);
+		var id = CurrentFeedDictionaryId(tx);
+		return Compress(Codec.Serialize(record), id, FeedDictionary(tx, id)!);
 	}
+
+	private static int CurrentFeedDictionaryId(ITx tx) => ReadFeedDictionaryState(tx)?.Id ?? BundledDictionaryId;
 
 	private static byte[] Compress(byte[] json, int id, ZstandardDictionary dictionary)
 	{
@@ -215,7 +212,6 @@ public partial class LightningDatabase
 				}));
 				return (next, id is not null);
 			}, cancellationToken);
-			_currentFeedDictionary = new CurrentFeedDictionary(Store.Epoch, state.Id);
 		}
 
 		if (state.Complete) return new FeedCompaction(trained, 0);
@@ -225,7 +221,7 @@ public partial class LightningDatabase
 	public ValueTask<FeedDictionaries> GetFeedDictionariesAsync(CancellationToken cancellationToken = default)
 		=> ValueTask.FromResult(Store.Read(tx =>
 		{
-			var current = ReadFeedDictionaryState(tx)?.Id ?? BundledDictionaryId;
+			var current = CurrentFeedDictionaryId(tx);
 			var runs = tx.Range(Tables.Meta, FeedDictionaryRunPrefix)
 				.Select(entry => Codec.Deserialize<FeedDictionaryRunRecord>(entry.Value))
 				.Select(run => new FeedDictionaryRun(DateTimeOffset.FromUnixTimeMilliseconds(run.AtMs), run.Lines, run.SampleLines,
@@ -266,7 +262,6 @@ public partial class LightningDatabase
 		}, cancellationToken);
 		if (!known) return new NotFound();
 
-		_currentFeedDictionary = new CurrentFeedDictionary(Store.Epoch, id);
 		return await RewriteWithAsync(id, cancellationToken);
 	}
 
@@ -398,6 +393,8 @@ public partial class LightningDatabase
 			cancellationToken.ThrowIfCancellationRequested();
 			var (count, last) = await Store.WriteAsync(tx =>
 			{
+				// Another dictionary became current since the pass began; its own pass rewrites the lines.
+				if (CurrentFeedDictionaryId(tx) != id) return (0, (byte[]?)null);
 				var rows = (after is null ? tx.Range(Tables.FeedMessage, []) : tx.RangeFrom(Tables.FeedMessage, [], after, null))
 					.Take(RecompressBatch).ToList();
 				var changed = new Dictionary<(string Kind, string Key), long>();

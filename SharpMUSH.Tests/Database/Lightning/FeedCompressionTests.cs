@@ -308,6 +308,28 @@ public class FeedCompressionTests
 		await Assert.That(ship.Text.ToPlainText()).IsEqualTo(ShipLine(5).Text.ToPlainText());
 	}
 
+	/// <summary>
+	/// A line is compressed with the dictionary its own write sees as current, so a switch committed by an overlapping
+	/// pass is never undone by one that started earlier.
+	/// </summary>
+	[Test]
+	public async Task ALine_UsesTheDictionaryCommittedBeforeIt()
+	{
+		for (var id = 1; id <= Lines; id++) await _db.AppendFeedMessageAsync(ShipLine(id), Keep());
+		await _db.CompactFeedLinesAsync(At);
+		await Assert.That(State()!.Id).IsEqualTo(1);
+
+		var rolledBack = State()! with { Id = LightningDatabase.BundledDictionaryId };
+		await _db.Store.WriteAsync(tx =>
+		{
+			tx.Put(Tables.Meta, Keys.Str("feed.dict"), Codec.Serialize(rolledBack));
+			return true;
+		});
+		await _db.AppendFeedMessageAsync(ShipLine(Lines + 1), Keep());
+
+		await Assert.That(DictionaryOf(Values()[^1])).IsEqualTo(LightningDatabase.BundledDictionaryId);
+	}
+
 	/// <summary>A dictionary the world never had can't be gone back to, and nothing changes.</summary>
 	[Test]
 	public async Task GoingBackToAnUnknownDictionary_ChangesNothing()
