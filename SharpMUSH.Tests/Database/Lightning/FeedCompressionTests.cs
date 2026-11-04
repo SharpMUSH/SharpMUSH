@@ -273,6 +273,48 @@ public class FeedCompressionTests
 		await Assert.That(await StoredTotal()).IsEqualTo(0);
 	}
 
+	/// <summary>A line that can't be read is left as stored by a rewrite, so it can still be read if its dictionary comes back.</summary>
+	[Test]
+	public async Task ALineThatCannotBeRead_IsLeftAsItIsByARewrite()
+	{
+		await _db.AppendFeedMessageAsync(ShipLine(7), Keep());
+		var tampered = await _db.Store.WriteAsync(tx =>
+		{
+			var (key, value) = tx.Range(Tables.FeedMessage, []).Single();
+			value[1] = 0x7F;
+			tx.Put(Tables.FeedMessage, key, value);
+			tx.Put(Tables.Meta, Keys.Str("feed.dict"), Codec.Serialize(new FeedDictionaryRecord { Id = 0 }));
+			return value;
+		});
+
+		var compaction = await _db.CompactFeedLinesAsync();
+
+		await Assert.That(compaction.Rewritten).IsEqualTo(0);
+		await Assert.That(Values().Single()).IsEquivalentTo(tampered);
+	}
+
+	/// <summary>
+	/// A world swapped in under the same store has dictionaries of its own under the same ids, so lines written after the
+	/// swap use its dictionary, not the one the outgoing world had cached.
+	/// </summary>
+	[Test]
+	public async Task AWorldSwappedIn_UsesItsOwnDictionary()
+	{
+		for (var id = 1; id <= Lines; id++) await _db.AppendFeedMessageAsync(ShipLine(id), Keep());
+		await _db.CompactFeedLinesAsync();
+		var incoming = _path + ".incoming";
+		await using (var replacement = Create(incoming)) await replacement.Migrate();
+		_db.Store.SwapDirectory(incoming, _path + ".previous");
+		await _db.Migrate();
+
+		await _db.AppendFeedMessageAsync(ShipLine(1000), Keep());
+
+		await Assert.That(DictionaryOf(Values().Single())).IsEqualTo(LightningDatabase.BundledDictionaryId);
+		var read = (await _db.GetFeedMessageAsync(1000)).Expect<SharpFeedMessage>();
+		await Assert.That(read.Text.ToPlainText()).IsEqualTo(ShipLine(1000).Text.ToPlainText());
+		Directory.Delete(_path + ".previous", recursive: true);
+	}
+
 	/// <summary>A line whose dictionary is gone reads as a line saying so, under its id, rather than failing the read.</summary>
 	[Test]
 	public async Task ALineThatCannotBeRead_ReadsAsSaying()

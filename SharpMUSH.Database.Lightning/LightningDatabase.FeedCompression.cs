@@ -83,17 +83,25 @@ public partial class LightningDatabase
 		return bytes.ToArray();
 	});
 
-	/// <summary>Dictionaries read so far, by id; one is never changed once written, only deleted when no line uses it.</summary>
-	private readonly ConcurrentDictionary<int, ZstandardDictionary> _feedDictionaries = new();
+	/// <summary>
+	/// Dictionaries read so far, by the store's epoch and id: one is never changed once written, only deleted when no
+	/// line uses it, but a world swapped in under the same store has dictionaries of its own under the same ids.
+	/// </summary>
+	private readonly ConcurrentDictionary<(long Epoch, int Id), ZstandardDictionary> _feedDictionaries = new();
 
-	/// <summary>The dictionary new lines are compressed with, once read.</summary>
-	private int? _currentFeedDictionary;
+	private sealed record CurrentFeedDictionary(long Epoch, int Id);
+
+	/// <summary>The dictionary new lines are compressed with, once read, and the epoch of the world it belongs to.</summary>
+	private CurrentFeedDictionary? _currentFeedDictionary;
 
 	/// <summary>A line as stored, compressed with the current dictionary (as JSON in the rare case that is smaller).</summary>
 	private byte[] EncodeLine(ITx tx, FeedMessageRecord record)
 	{
-		var id = _currentFeedDictionary ??= ReadFeedDictionaryState(tx)?.Id ?? BundledDictionaryId;
-		return Compress(Codec.Serialize(record), id, FeedDictionary(tx, id)!);
+		var epoch = Store.Epoch;
+		var current = _currentFeedDictionary is { } known && known.Epoch == epoch
+			? known
+			: _currentFeedDictionary = new CurrentFeedDictionary(epoch, ReadFeedDictionaryState(tx)?.Id ?? BundledDictionaryId);
+		return Compress(Codec.Serialize(record), current.Id, FeedDictionary(tx, current.Id)!);
 	}
 
 	private static byte[] Compress(byte[] json, int id, ZstandardDictionary dictionary)
@@ -115,13 +123,17 @@ public partial class LightningDatabase
 	/// know) reads as a line saying so, under its id from <paramref name="key"/>, rather than failing the read.
 	/// </summary>
 	internal FeedMessageRecord DecodeLine(ITx tx, ReadOnlySpan<byte> key, ReadOnlySpan<byte> value)
+		=> ReadLine(tx, value) ?? UnreadableLine(key);
+
+	/// <summary>A stored line, or null when it cannot be read.</summary>
+	private FeedMessageRecord? ReadLine(ITx tx, ReadOnlySpan<byte> value)
 	{
 		if (value.Length > 0 && value[0] == (byte)'{') return Codec.Deserialize<FeedMessageRecord>(value);
 		return value.Length > 3 && value[0] == CompressedLine
 			&& FeedDictionary(tx, BinaryPrimitives.ReadUInt16BigEndian(value[1..])) is { } dictionary
 			&& Decompress(value[3..], dictionary) is { } json
 				? Codec.Deserialize<FeedMessageRecord>(json)
-				: UnreadableLine(key);
+				: null;
 	}
 
 	private static byte[]? Decompress(ReadOnlySpan<byte> frame, ZstandardDictionary dictionary)
@@ -140,9 +152,10 @@ public partial class LightningDatabase
 	/// <summary>The dictionary <paramref name="id"/>, read the first time it is asked for; null if it is gone.</summary>
 	private ZstandardDictionary? FeedDictionary(ITx tx, int id)
 	{
-		if (_feedDictionaries.TryGetValue(id, out var cached)) return cached;
+		var cacheKey = (Store.Epoch, id);
+		if (_feedDictionaries.TryGetValue(cacheKey, out var cached)) return cached;
 		byte[]? bytes = id == BundledDictionaryId ? BundledFeedDictionary : tx.TryGet(Tables.Meta, FeedDictionaryKey(id), out var stored) ? stored : null;
-		return bytes is null ? null : _feedDictionaries.GetOrAdd(id, _ => ZstandardDictionary.Create(bytes, ZstandardCompressionOptions.DefaultQuality));
+		return bytes is null ? null : _feedDictionaries.GetOrAdd(cacheKey, _ => ZstandardDictionary.Create(bytes, ZstandardCompressionOptions.DefaultQuality));
 	}
 
 	private static FeedDictionaryRecord? ReadFeedDictionaryState(ITx tx)
@@ -178,7 +191,7 @@ public partial class LightningDatabase
 				tx.Put(Tables.Meta, FeedDictionaryStateKey, Codec.Serialize(next));
 				return next;
 			}, cancellationToken);
-			_currentFeedDictionary = state.Id;
+			_currentFeedDictionary = new CurrentFeedDictionary(Store.Epoch, state.Id);
 			trained = better;
 		}
 
@@ -196,7 +209,9 @@ public partial class LightningDatabase
 
 			tx.Put(Tables.Meta, FeedDictionaryStateKey, Codec.Serialize(complete));
 		}, cancellationToken);
-		foreach (var id in _feedDictionaries.Keys.Where(id => id != complete.Id && id != BundledDictionaryId)) _feedDictionaries.TryRemove(id, out _);
+		var epoch = Store.Epoch;
+		foreach (var key in _feedDictionaries.Keys.Where(key => key.Epoch != epoch || key.Id is not BundledDictionaryId && key.Id != complete.Id))
+			_feedDictionaries.TryRemove(key, out _);
 		return new FeedCompaction(trained, rewritten);
 	}
 
@@ -245,12 +260,13 @@ public partial class LightningDatabase
 		var seen = new long[bands];
 		var used = new long[bands];
 		var samples = new List<byte[]>();
-		foreach (var ((key, value), size) in tx.Range(Tables.FeedMessage, []).Zip(sizes))
+		foreach (var ((_, value), size) in tx.Range(Tables.FeedMessage, []).Zip(sizes))
 		{
 			var band = Band(size);
 			if (seen[band]++ % stride[band] != 0 || used[band] + size > budget[band]) continue;
+			if (ReadLine(tx, value) is not { } line) continue;
 			used[band] += size;
-			samples.Add(Codec.Serialize(DecodeLine(tx, key, value)));
+			samples.Add(Codec.Serialize(line));
 		}
 
 		return samples;
@@ -296,7 +312,9 @@ public partial class LightningDatabase
 				var batch = 0;
 				foreach (var (key, value) in rows.Where(row => !MadeWith(row.Value, id)))
 				{
-					var stored = EncodeLine(tx, DecodeLine(tx, key, value));
+					// A line that can't be read stays as it is: rewriting it would store the notice in its place.
+					if (ReadLine(tx, value) is not { } line) continue;
+					var stored = EncodeLine(tx, line);
 					tx.Put(Tables.FeedMessage, key, stored);
 					var feed = SplitFeed(key.AsSpan(0, key.Length - 9));
 					changed[feed] = changed.GetValueOrDefault(feed) + stored.Length - value.Length;
