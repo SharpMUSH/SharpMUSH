@@ -5429,7 +5429,7 @@ public static class SharpieArtCatalog
 		new SharpieArt("sharpie-subgenre-exploration-kemono-player-world", "kemono", "Exploration", "images/sharpie/sharpie-subgenre-exploration-kemono-player-world.webp", 512, 512, "player-world"),
 		new SharpieArt("sharpie-subgenre-exploration-comicbook-player-world", "comicbook", "Exploration", "images/sharpie/sharpie-subgenre-exploration-comicbook-player-world.webp", 512, 512, "player-world"),
 		new SharpieArt("sharpie-science-fiction-comicbook-welcome", "comicbook", "Science Fiction", "images/sharpie/sharpie-science-fiction-comicbook-welcome.webp", 512, 512, "shared-welcome"),
-		new SharpieArt("sharpie-fantasy-chibi-world", "chibi", "Fantasy", "images/sharpie/sharpie-fantasy-chibi-world.webp", 512, 512, "player-world"),
+		new SharpieArt("sharpie-fantasy-chibi-world", "chibi", "Fantasy", "images/sharpie/sharpie-fantasy-chibi-world.png", 1254, 1254, "player-world"),
 		new SharpieArt("sharpie-fantasy-minimalist", "minimalist", "Fantasy", "images/sharpie/sharpie-fantasy-minimalist.webp", 512, 512),
 		new SharpieArt("sharpie-science-fiction-minimalist", "minimalist", "Science Fiction", "images/sharpie/sharpie-science-fiction-minimalist.webp", 512, 512),
 		new SharpieArt("sharpie-minimal-neutral", "minimalist", "neutral", "images/sharpie/sharpie-minimal.svg", 512, 512),
