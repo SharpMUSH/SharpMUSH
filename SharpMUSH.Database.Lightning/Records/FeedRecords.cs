@@ -114,6 +114,19 @@ public sealed record FeedDictionaryRecord
 	public bool Complete { get; init; }
 }
 
+/// <summary>One training run, kept or not, under <c>feed.dictrun:</c> and its number.</summary>
+public sealed record FeedDictionaryRunRecord
+{
+	public long AtMs { get; init; }
+	public long Lines { get; init; }
+	public int SampleLines { get; init; }
+	public int HeldOutLines { get; init; }
+	public long CurrentBytes { get; init; }
+	public long CandidateBytes { get; init; }
+	public int From { get; init; }
+	public int? Kept { get; init; }
+}
+
 /// <summary>Who spoke a line from outside the game (<see cref="SharpMUSH.Library.Models.ExternalFeedIdentity"/>).</summary>
 public sealed record FeedIdentityRecord
 {

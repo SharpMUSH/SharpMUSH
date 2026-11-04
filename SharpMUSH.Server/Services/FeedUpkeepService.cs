@@ -95,7 +95,7 @@ public sealed class FeedUpkeepService : BackgroundService
 
 				try
 				{
-					var compaction = await _mediator.Send(new CompactFeedLinesCommand(), stoppingToken);
+					var compaction = await _mediator.Send(new CompactFeedLinesCommand(_time.GetUtcNow()), stoppingToken);
 					if (compaction.Trained || compaction.Rewritten > 0)
 						_logger.LogInformation("Feed lines compressed: dictionary trained {Trained}, {Lines} line(s) rewritten",
 							compaction.Trained, compaction.Rewritten);

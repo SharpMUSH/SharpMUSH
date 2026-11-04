@@ -59,6 +59,8 @@ public class StorageCommandTests : ServerTestBase
 	[Arguments("@storage")]
 	[Arguments("@storage/history")]
 	[Arguments("@storage/purge")]
+	[Arguments("@storage/dictionaries")]
+	[Arguments("@storage/dictionaries 0")]
 	public async Task AMortalCannotRunIt(string command)
 	{
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
@@ -196,6 +198,19 @@ public class StorageCommandTests : ServerTestBase
 		var report = string.Join("\n", heard);
 		await Assert.That(heard.Any(m => m.Split('\n').Any(line => line.Contains("wiki ") && line.Contains("keep everything")))).IsTrue();
 		await Assert.That(report).Contains("No archive:");
+	}
+
+	[Test]
+	public async Task DictionariesListTheBundledOne_AndRefuseOneThatIsNotThere()
+	{
+		var listing = string.Join("\n", await HeardAfterAsync("@storage/dictionaries"));
+		await Assert.That(listing).Contains("Feed dictionaries").And.Contains("bundled").And.Contains("Training runs");
+
+		var unknown = string.Join("\n", await HeardAfterAsync("@storage/dictionaries 65000"));
+		await Assert.That(unknown).Contains("There is no feed dictionary 65000.");
+
+		var malformed = string.Join("\n", await HeardAfterAsync("@storage/dictionaries newest"));
+		await Assert.That(malformed).Contains("Use @storage/dictionaries <id>");
 	}
 
 	/// <summary>Nothing is configured in the test host, so a pass purges nothing — the default is archival.</summary>

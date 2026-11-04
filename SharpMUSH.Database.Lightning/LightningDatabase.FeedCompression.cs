@@ -4,6 +4,7 @@ using System.IO.Compression;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 
@@ -26,8 +27,13 @@ namespace SharpMUSH.Database.Lightning;
 /// once the world holds <see cref="TrainAtLines"/> lines, and another when it holds <see cref="RetrainGrowth"/> times
 /// the lines the current one was trained on, keeping it only when it compresses the world's lines better by more than
 /// it takes itself (with a small world's lines the bundled dictionary stays); it then
-/// rewrites every line made without the current dictionary, a batch per write, and deletes the world's older
-/// dictionaries once no line uses them.
+/// rewrites every line made without the current dictionary, a batch per write.
+/// </para>
+/// <para>
+/// Every dictionary the world keeps stays in <see cref="Tables.Meta"/> after its lines are rewritten (one is trained
+/// each time the world grows fourfold, so a world of a million lines holds about seven), and every run is logged under
+/// <c>feed.dictrun:</c>, kept or not. A line can always be read whatever happens to a rewrite, the log shows how a
+/// world's compression went, and <see cref="UseFeedDictionaryAsync"/> goes back to an earlier dictionary.
 /// </para>
 /// </summary>
 public partial class LightningDatabase
@@ -70,6 +76,17 @@ public partial class LightningDatabase
 	private static readonly byte[] FeedDictionaryPrefix = Keys.Str("feed.dict:");
 
 	private static byte[] FeedDictionaryKey(int id) => Keys.Concat(FeedDictionaryPrefix, [(byte)(id >> 8), (byte)id]);
+
+	private static readonly byte[] FeedDictionaryRunPrefix = Keys.Str("feed.dictrun:");
+
+	private static byte[] FeedDictionaryRunKey(uint run)
+	{
+		var number = new byte[4];
+		BinaryPrimitives.WriteUInt32BigEndian(number, run);
+		return Keys.Concat(FeedDictionaryRunPrefix, number);
+	}
+
+	private static int FeedDictionaryIdOf(byte[] key) => BinaryPrimitives.ReadUInt16BigEndian(key.AsSpan(FeedDictionaryPrefix.Length));
 
 	/// <summary>The bundled dictionary's bytes, as shipped in this assembly.</summary>
 	internal static byte[] BundledFeedDictionary => BundledDictionaryBytes.Value;
@@ -165,7 +182,7 @@ public partial class LightningDatabase
 	private static bool MadeWith(ReadOnlySpan<byte> value, int id)
 		=> value.Length > 3 && value[0] == CompressedLine && BinaryPrimitives.ReadUInt16BigEndian(value[1..]) == id;
 
-	public async ValueTask<FeedCompaction> CompactFeedLinesAsync(CancellationToken cancellationToken = default)
+	public async ValueTask<FeedCompaction> CompactFeedLinesAsync(DateTimeOffset at, CancellationToken cancellationToken = default)
 	{
 		var (state, lines) = Store.Read(tx => (ReadFeedDictionaryState(tx) ?? new FeedDictionaryRecord { Id = BundledDictionaryId },
 			tx.Range(Tables.Feed, []).Sum(entry => (long)Codec.Deserialize<FeedRecord>(entry.Value).Messages)));
@@ -179,58 +196,133 @@ public partial class LightningDatabase
 			// better than any the world writes later.
 			var held = samples.Where((_, index) => index % HeldOutEvery == 0).ToList();
 			var dictionary = Train(samples.Where((_, index) => index % HeldOutEvery != 0).ToList());
-			var better = dictionary is not null && Store.Read(tx => Better(held, dictionary, FeedDictionary(tx, current.Id)!, lines));
-			state = await Store.WriteAsync(tx =>
+			var (before, after) = Store.Read(tx => Measure(held, dictionary, FeedDictionary(tx, current.Id)!));
+			var better = dictionary is not null && Better(before, after, held.Count, dictionary.Length, lines);
+			(state, trained) = await Store.WriteAsync(tx =>
 			{
 				// Not kept, the lines it was trained on still count, so the next try waits for the world to grow again.
 				var written = ReadFeedDictionaryState(tx) ?? current;
-				var next = better
-					? new FeedDictionaryRecord { Id = written.Id % ushort.MaxValue + 1, Lines = lines }
+				var id = better ? NextFeedDictionaryId(tx) : null;
+				var next = id is { } kept
+					? new FeedDictionaryRecord { Id = kept, Lines = lines }
 					: written with { Lines = lines };
-				if (better) tx.Put(Tables.Meta, FeedDictionaryKey(next.Id), dictionary!);
+				if (id is { } newId) tx.Put(Tables.Meta, FeedDictionaryKey(newId), dictionary!);
 				tx.Put(Tables.Meta, FeedDictionaryStateKey, Codec.Serialize(next));
-				return next;
+				tx.Put(Tables.Meta, FeedDictionaryRunKey(NextFeedDictionaryRun(tx)), Codec.Serialize(new FeedDictionaryRunRecord
+				{
+					AtMs = at.ToUnixTimeMilliseconds(), Lines = lines, SampleLines = samples.Count, HeldOutLines = held.Count,
+					CurrentBytes = before, CandidateBytes = after, From = written.Id, Kept = id
+				}));
+				return (next, id is not null);
 			}, cancellationToken);
 			_currentFeedDictionary = new CurrentFeedDictionary(Store.Epoch, state.Id);
-			trained = better;
 		}
 
 		if (state.Complete) return new FeedCompaction(trained, 0);
+		return new FeedCompaction(trained, await RewriteWithAsync(state.Id, cancellationToken));
+	}
 
-		var rewritten = await RecompressAsync(state.Id, cancellationToken);
-		var complete = state with { Complete = true };
-		await Store.WriteAsync(tx =>
+	public ValueTask<FeedDictionaries> GetFeedDictionariesAsync(CancellationToken cancellationToken = default)
+		=> ValueTask.FromResult(Store.Read(tx =>
 		{
-			var keep = FeedDictionaryKey(complete.Id);
-			foreach (var (key, _) in tx.Range(Tables.Meta, FeedDictionaryPrefix).ToList())
+			var current = ReadFeedDictionaryState(tx)?.Id ?? BundledDictionaryId;
+			var runs = tx.Range(Tables.Meta, FeedDictionaryRunPrefix)
+				.Select(entry => Codec.Deserialize<FeedDictionaryRunRecord>(entry.Value))
+				.Select(run => new FeedDictionaryRun(DateTimeOffset.FromUnixTimeMilliseconds(run.AtMs), run.Lines, run.SampleLines,
+					run.HeldOutLines, run.CurrentBytes, run.CandidateBytes, run.From, run.Kept))
+				.ToList();
+			var used = new Dictionary<int, long>();
+			long uncompressed = 0;
+			foreach (var (_, value) in tx.Range(Tables.FeedMessage, []))
 			{
-				if (!key.AsSpan().SequenceEqual(keep)) tx.Delete(Tables.Meta, key);
+				if (value.Length > 3 && value[0] == CompressedLine)
+				{
+					var id = BinaryPrimitives.ReadUInt16BigEndian(value.AsSpan(1));
+					used[id] = used.GetValueOrDefault(id) + 1;
+				}
+				else uncompressed++;
 			}
 
-			tx.Put(Tables.Meta, FeedDictionaryStateKey, Codec.Serialize(complete));
+			var trainedAt = runs.Where(run => run.Kept is not null).ToDictionary(run => run.Kept!.Value, run => run.At);
+			FeedDictionaryGeneration Generation(int id, int bytes)
+				=> new(id, trainedAt.TryGetValue(id, out var when) ? when : null, bytes, used.GetValueOrDefault(id), id == current);
+			IReadOnlyList<FeedDictionaryGeneration> generations =
+			[
+				Generation(BundledDictionaryId, BundledFeedDictionary.Length),
+				.. tx.Range(Tables.Meta, FeedDictionaryPrefix).Select(entry => Generation(FeedDictionaryIdOf(entry.Key), entry.Value.Length))
+			];
+			return new FeedDictionaries(generations, runs, uncompressed);
+		}));
+
+	public async ValueTask<Found<long>> UseFeedDictionaryAsync(int id, CancellationToken cancellationToken = default)
+	{
+		var known = await Store.WriteAsync(tx =>
+		{
+			if (id != BundledDictionaryId && !tx.TryGet(Tables.Meta, FeedDictionaryKey(id), out _)) return false;
+			// The lines its successor was trained on still count, so the world is not retrained straight away.
+			var state = ReadFeedDictionaryState(tx) ?? new FeedDictionaryRecord { Id = BundledDictionaryId };
+			tx.Put(Tables.Meta, FeedDictionaryStateKey, Codec.Serialize(state with { Id = id, Complete = false }));
+			return true;
+		}, cancellationToken);
+		if (!known) return new NotFound();
+
+		_currentFeedDictionary = new CurrentFeedDictionary(Store.Epoch, id);
+		return await RewriteWithAsync(id, cancellationToken);
+	}
+
+	/// <summary>
+	/// Rewrites every line made without dictionary <paramref name="id"/>, then marks the pass done, unless another
+	/// dictionary became current meanwhile, whose own pass then runs.
+	/// </summary>
+	private async ValueTask<long> RewriteWithAsync(int id, CancellationToken cancellationToken)
+	{
+		var rewritten = await RecompressAsync(id, cancellationToken);
+		await Store.WriteAsync(tx =>
+		{
+			var state = ReadFeedDictionaryState(tx) ?? new FeedDictionaryRecord { Id = BundledDictionaryId };
+			if (state.Id == id)
+				tx.Put(Tables.Meta, FeedDictionaryStateKey, Codec.Serialize(state with { Complete = true }));
+			return true;
 		}, cancellationToken);
 		var epoch = Store.Epoch;
-		foreach (var key in _feedDictionaries.Keys.Where(key => key.Epoch != epoch || key.Id is not BundledDictionaryId && key.Id != complete.Id))
-			_feedDictionaries.TryRemove(key, out _);
-		return new FeedCompaction(trained, rewritten);
+		foreach (var key in _feedDictionaries.Keys.Where(key => key.Epoch != epoch)) _feedDictionaries.TryRemove(key, out _);
+		return rewritten;
 	}
+
+	/// <summary>The next free dictionary id, past every one the world holds; null once the ids run out.</summary>
+	private static int? NextFeedDictionaryId(ITx tx)
+	{
+		var last = tx.RangeReverse(Tables.Meta, FeedDictionaryPrefix).Select(entry => FeedDictionaryIdOf(entry.Key)).FirstOrDefault();
+		return last < ushort.MaxValue ? last + 1 : null;
+	}
+
+	private static uint NextFeedDictionaryRun(ITx tx)
+		=> tx.RangeReverse(Tables.Meta, FeedDictionaryRunPrefix)
+			.Select(entry => BinaryPrimitives.ReadUInt32BigEndian(entry.Key.AsSpan(FeedDictionaryRunPrefix.Length)) + 1)
+			.FirstOrDefault(1u);
 
 	/// <summary>A line's JSON as the store writes it before compressing, for <c>tools/FeedDictionary</c> to train on.</summary>
 	internal static byte[] FeedLineJson(SharpFeedMessage message) => Codec.Serialize(ToRecord(message));
 
 	/// <summary>
-	/// Whether <paramref name="candidate"/> is worth keeping over <paramref name="current"/>: it makes
-	/// <paramref name="samples"/> (lines it was not trained on) at least <see cref="RetrainGainPercent"/> percent smaller, and what that saves across
-	/// the world's <paramref name="lines"/> is more than the dictionary itself takes.
+	/// <paramref name="samples"/> (lines the candidate was not trained on) compressed with <paramref name="current"/>
+	/// and with <paramref name="candidate"/>, in bytes; -1 for the candidate when there is none.
 	/// </summary>
-	private static bool Better(List<byte[]> samples, byte[] candidate, ZstandardDictionary current, long lines)
+	private static (long Before, long After) Measure(List<byte[]> samples, byte[]? candidate, ZstandardDictionary current)
 	{
-		using var trained = ZstandardDictionary.Create(candidate, ZstandardCompressionOptions.DefaultQuality);
 		long Size(ZstandardDictionary dictionary) => samples.Sum(sample => (long)Compress(sample, 1, dictionary).Length);
-		var (before, after) = (Size(current), Size(trained));
-		var saved = (before - after) * lines / samples.Count;
-		return after * 100 <= before * (100 - RetrainGainPercent) && saved > candidate.Length;
+		if (candidate is null) return (Size(current), -1);
+		using var trained = ZstandardDictionary.Create(candidate, ZstandardCompressionOptions.DefaultQuality);
+		return (Size(current), Size(trained));
 	}
+
+	/// <summary>
+	/// Whether a candidate is worth keeping: it makes the held-out lines at least <see cref="RetrainGainPercent"/>
+	/// percent smaller, and what that saves across the world's <paramref name="lines"/> is more than the dictionary's
+	/// own <paramref name="bytes"/>.
+	/// </summary>
+	private static bool Better(long before, long after, int samples, int bytes, long lines)
+		=> samples > 0 && after * 100 <= before * (100 - RetrainGainPercent) && (before - after) * lines / samples > bytes;
 
 	/// <summary>
 	/// Lines as JSON, up to <see cref="TrainingBytes"/>, shared between the <see cref="TrainingBands"/>: each band gets an
