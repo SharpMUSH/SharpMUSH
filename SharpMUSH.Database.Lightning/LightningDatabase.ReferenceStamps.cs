@@ -46,7 +46,7 @@ public partial class LightningDatabase
 	private static Dictionary<string, string> StampLockKeys(ITx tx, IEnumerable<KeyValuePair<string, string>> locks)
 		=> locks.ToDictionary(pair => pair.Key, pair => StampLockKey(tx, pair.Value));
 
-	private static void MigrateReferenceStamps(ITx tx)
+	private void MigrateReferenceStamps(ITx tx)
 	{
 		var marker = Keys.Str("mig:" + ReferenceStampMigrationId);
 		if (tx.TryGet(Tables.Meta, marker, out _)) return;
@@ -97,9 +97,9 @@ public partial class LightningDatabase
 
 		foreach (var (key, value) in tx.Range(Tables.Mail, []).ToList())
 		{
-			var record = Codec.Deserialize<MailRecord>(value);
+			var record = ReadMail(tx, value);
 			if (record.SenderCreationTime is null && ReadObjectHeader(tx, record.Sender) is { } sender)
-				tx.Put(Tables.Mail, key, Codec.Serialize(record with { SenderCreationTime = sender.CreationTime }));
+				PutMail(tx, key, record with { SenderCreationTime = sender.CreationTime });
 		}
 
 		tx.Put(Tables.Meta, marker, Codec.Serialize(new MigrationRecord

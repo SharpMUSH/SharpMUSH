@@ -105,7 +105,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Plugins.World", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Tests.WorldPlugin", "SharpMUSH.Tests.WorldPlugin\SharpMUSH.Tests.WorldPlugin.csproj", "{C99B05C1-1F34-4B2F-8C08-9321001C8827}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FeedDictionary", "tools\FeedDictionary\FeedDictionary.csproj", "{2D7F57DA-B8D6-46CE-A2D4-E7E2FCE901B2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BundledDictionaries", "tools\BundledDictionaries\BundledDictionaries.csproj", "{2D7F57DA-B8D6-46CE-A2D4-E7E2FCE901B2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

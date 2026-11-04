@@ -290,7 +290,7 @@ public partial class LightningDatabase : IAttributeIndexStore
 	/// <summary>
 	/// After a copy's flags change: when <c>internal</c> came or went and its attribute is indexed, lists or unlists it.
 	/// </summary>
-	private static void ReindexAfterFlagChange(ITx tx, long dbref, string longName, bool wasInternal, IReadOnlyCollection<string> flags)
+	private void ReindexAfterFlagChange(ITx tx, long dbref, string longName, bool wasInternal, IReadOnlyCollection<string> flags)
 	{
 		var isInternal = IsInternal(flags);
 		if (wasInternal == isInternal || ReadAttributeEntryRecord(tx, longName)?.Index is not { } index)
@@ -304,7 +304,7 @@ public partial class LightningDatabase : IAttributeIndexStore
 			return;
 		}
 
-		var value = tx.TryGet(Tables.AttrVal, Keys.Attr(dbref, longName), out var bytes) ? bytes : null;
+		var value = ReadAttrVal(tx, Keys.Attr(dbref, longName));
 		IndexCopy(tx, dbref, longName, index, ReadObjectHeader(tx, dbref)?.Type ?? string.Empty, flags,
 			DeserializeValue(value).ToPlainText());
 	}
@@ -408,7 +408,7 @@ public partial class LightningDatabase : IAttributeIndexStore
 					continue;
 				}
 
-				var value = tx.TryGet(Tables.AttrVal, attrKey, out var bytes) ? bytes : null;
+				var value = ReadAttrVal(tx, attrKey);
 				var type = index.Type ?? ReadObjectHeader(tx, dbref)?.Type ?? string.Empty;
 				if (ReplaceParts(tx, dbref, longName,
 						InScope(index, type) && !IsInternal(Codec.Deserialize<AttrMetaRecord>(meta).Flags)
@@ -473,7 +473,7 @@ public partial class LightningDatabase : IAttributeIndexStore
 	/// <c>indexed(&lt;attr&gt;, =, &lt;value&gt;)</c>'s test for one object, the stored value checked when the probe
 	/// reaches the cut.
 	/// </summary>
-	private static bool IndexListsCopy(ITx tx, long dbref, AttributeIndexProbe probe)
+	private bool IndexListsCopy(ITx tx, long dbref, AttributeIndexProbe probe)
 	{
 		if (ReadAttributeEntryRecord(tx, probe.Name) is not { Index: { Ready: true } index }
 			|| !tx.TryGet(Tables.AttrIdxOf, Keys.Attr(dbref, probe.Name.ToUpperInvariant()), out var listed))
@@ -533,7 +533,7 @@ public partial class LightningDatabase : IAttributeIndexStore
 					continue;
 				}
 
-				if (bounds.Any(bound => !bound.Admits(tx, key, dbref, longName, index)))
+				if (bounds.Any(bound => !bound.Admits(this, tx, key, dbref, longName, index)))
 				{
 					continue;
 				}
@@ -576,10 +576,10 @@ public partial class LightningDatabase : IAttributeIndexStore
 	/// </summary>
 	private sealed record IndexBound(byte[] Key, byte[] Part, string Value, Func<int, bool> Holds)
 	{
-		public bool Admits(ITx tx, byte[] key, long dbref, string longName, AttributeIndexRecord index)
+		public bool Admits(LightningDatabase database, ITx tx, byte[] key, long dbref, string longName, AttributeIndexRecord index)
 			=> !key.AsSpan().SequenceEqual(Key)
 				|| (ReachesLimit(Part, index)
-					? StoredValueCompares(tx, dbref, longName, Part, Value, index, Holds)
+					? database.StoredValueCompares(tx, dbref, longName, Part, Value, index, Holds)
 					: Holds(0));
 	}
 
@@ -604,10 +604,10 @@ public partial class LightningDatabase : IAttributeIndexStore
 	/// <paramref name="probe"/> as <paramref name="holds"/> asks, in full: the folded text as UTF-8, the order the index
 	/// keeps up to the cut. Only text is ever cut, so the elements compared are text.
 	/// </summary>
-	private static bool StoredValueCompares(ITx tx, long dbref, string longName, byte[] part, string probe,
+	private bool StoredValueCompares(ITx tx, long dbref, string longName, byte[] part, string probe,
 		AttributeIndexRecord index, Func<int, bool> holds)
 	{
-		if (!tx.TryGet(Tables.AttrVal, Keys.Attr(dbref, longName), out var bytes))
+		if (ReadAttrVal(tx, Keys.Attr(dbref, longName)) is not { } bytes)
 		{
 			return false;
 		}
@@ -666,9 +666,9 @@ public partial class LightningDatabase : IAttributeIndexStore
 	}
 
 	/// <summary>Whether the copy's stored value holds <paramref name="probe"/> in full, for an equality probe that reached the cut.</summary>
-	private static bool StoredValueHolds(ITx tx, long dbref, string longName, string probe, AttributeIndexRecord index,
+	private bool StoredValueHolds(ITx tx, long dbref, string longName, string probe, AttributeIndexRecord index,
 		bool prefix = false)
-		=> tx.TryGet(Tables.AttrVal, Keys.Attr(dbref, longName), out var bytes)
+		=> ReadAttrVal(tx, Keys.Attr(dbref, longName)) is { } bytes
 			&& (prefix
 				? StartsExactly(DeserializeValue(bytes).ToPlainText(), probe, index)
 				: HoldsExactly(DeserializeValue(bytes).ToPlainText(), probe, index));

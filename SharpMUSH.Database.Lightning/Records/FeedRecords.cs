@@ -103,30 +103,6 @@ public sealed record FeedMessageRecord
 	[JsonPropertyName("b")] public long Bytes { get; init; }
 }
 
-/// <summary>
-/// The feed line dictionary new lines are compressed with, in <see cref="Store.Tables.Meta"/> beside the dictionaries
-/// themselves: its id, the lines the world held when it was trained, and whether every line has been rewritten with it.
-/// </summary>
-public sealed record FeedDictionaryRecord
-{
-	public int Id { get; init; }
-	public long Lines { get; init; }
-	public bool Complete { get; init; }
-}
-
-/// <summary>One training run, kept or not, under <c>feed.dictrun:</c> and its number.</summary>
-public sealed record FeedDictionaryRunRecord
-{
-	public long AtMs { get; init; }
-	public long Lines { get; init; }
-	public int SampleLines { get; init; }
-	public int HeldOutLines { get; init; }
-	public long CurrentBytes { get; init; }
-	public long CandidateBytes { get; init; }
-	public int From { get; init; }
-	public int? Kept { get; init; }
-}
-
 /// <summary>Who spoke a line from outside the game (<see cref="SharpMUSH.Library.Models.ExternalFeedIdentity"/>).</summary>
 public sealed record FeedIdentityRecord
 {

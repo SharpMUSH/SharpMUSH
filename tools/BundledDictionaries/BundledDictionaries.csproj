@@ -1,15 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-	<!-- Trains the feed line dictionary that ships with the Lightning provider (Resources/feed-lines-0.zdict). Lines in
-	     every world are compressed with that file, so it is made once and never replaced: a better default is a new file
-	     under a new reserved id. Run it from the repository root with the output path as its argument. -->
+	<!-- Trains a dictionary that ships with the Lightning provider (Resources/*.zdict): feed lines, attribute values or
+	     mail. Values in every world are compressed with those files, so each is made once and never replaced: a better
+	     default is a new file under a new reserved id. Run it from the repository root with the kind and the output path. -->
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net11.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-		<RootNamespace>SharpMUSH.Tools.FeedDictionary</RootNamespace>
+		<RootNamespace>SharpMUSH.Tools.BundledDictionaries</RootNamespace>
 		<IsPackable>false</IsPackable>
 	</PropertyGroup>
 

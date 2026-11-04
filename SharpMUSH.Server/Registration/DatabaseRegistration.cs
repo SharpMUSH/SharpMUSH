@@ -218,6 +218,7 @@ internal static class DatabaseRegistration
 		services.AddSingleton<IPushSubscriptionStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IPageLogStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IFeedStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<ICompressionStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IRecoverListStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IFreeNumberStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IWikiStore>(sp => sp.GetRequiredService<TProvider>());

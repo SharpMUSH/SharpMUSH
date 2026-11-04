@@ -47,9 +47,6 @@ public record CountFeedMessagesQuery(string Kind, string Key, long AfterId) : IQ
 /// <summary>What each kind's feeds hold. See <see cref="IFeedStore.GetFeedUsageAsync"/>.</summary>
 public record GetFeedUsageQuery : IQuery<IReadOnlyList<SharpFeedUsage>>;
 
-/// <summary>The world's compression dictionaries and training runs. See <see cref="IFeedStore.GetFeedDictionariesAsync"/>.</summary>
-public record GetFeedDictionariesQuery : IQuery<FeedDictionaries>;
-
 public record GetFeedMessageQuery(long Id) : IQuery<Found<SharpFeedMessage>>;
 
 /// <summary>The taps on <paramref name="Kind"/> (or on <c>*</c>), or every tap when null.</summary>

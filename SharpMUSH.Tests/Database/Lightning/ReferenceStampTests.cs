@@ -99,7 +99,7 @@ public class ReferenceStampTests : LightningDatabaseFixture
 			}));
 			foreach (var (mailKey, value) in tx.Range(Tables.Mail, []).ToList())
 			{
-				tx.Put(Tables.Mail, mailKey, Codec.Serialize(Codec.Deserialize<MailRecord>(value) with { SenderCreationTime = null }));
+				Db.PutMail(tx, mailKey, Db.ReadMail(tx, value) with { SenderCreationTime = null });
 			}
 
 			tx.Delete(Tables.Meta, Keys.Str("mig:" + LightningDatabase.ReferenceStampMigrationId));

@@ -92,19 +92,6 @@ public sealed class FeedUpkeepService : BackgroundService
 					// The next tick tries again; a line past its age is still dropped on the feed's next write.
 					_logger.LogError(ex, "Feed max_age upkeep failed");
 				}
-
-				try
-				{
-					var compaction = await _mediator.Send(new CompactFeedLinesCommand(_time.GetUtcNow()), stoppingToken);
-					if (compaction.Trained || compaction.Rewritten > 0)
-						_logger.LogInformation("Feed lines compressed: dictionary trained {Trained}, {Lines} line(s) rewritten",
-							compaction.Trained, compaction.Rewritten);
-				}
-				catch (Exception ex) when (ex is not OperationCanceledException)
-				{
-					// The next tick tries again; lines already stored stay readable as they are.
-					_logger.LogError(ex, "Feed line compression failed");
-				}
 			}
 		}
 		catch (OperationCanceledException)
