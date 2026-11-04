@@ -548,7 +548,8 @@ public class DutiesIntegrationTests
 			// A reviewer at a terminal, to see the same duty in game.
 			var staff = await Player("DuWebSta");
 			await God($"@role/assign #{staff.DbRef.Number}=duty-reviewer");
-			var id = NewId();
+			// Routing must preserve a legitimate trailing b while trimming path slashes.
+			var id = NewId() + "b";
 
 			// Every page and its data parse; the home page offers to write one.
 			var home = await GetAsync(author, "schema?at=");
@@ -560,6 +561,14 @@ public class DutiesIntegrationTests
 			// A save writes the graph; the data reads it back the way the page posted it.
 			var saved = await ActAsync(author, "act", Draft("save", id, "The Lantern Road"));
 			await Assert.That(saved["ok"]!.GetValue<bool>()).IsTrue().Because(saved.ToJsonString());
+			foreach (var path in new[] { id, $"/{id}/" })
+			{
+				await Assert.That((await GetAsync(author, $"schema?at={path}"))["title"]!.GetValue<string>())
+					.IsEqualTo("The Lantern Road");
+				var routed = await GetAsync(author, $"data?at={path}");
+				await Assert.That(routed["fields"]?["duty"]?["value"]?.GetValue<string>())
+					.IsEqualTo(id).Because(routed.ToJsonString());
+			}
 			var data = (await GetAsync(author, $"data?at={id}"))["fields"]!;
 			var steps = data["steps"]!["value"]!;
 			await Assert.That(steps["start"]!.GetValue<string>()).IsEqualTo("gate");
