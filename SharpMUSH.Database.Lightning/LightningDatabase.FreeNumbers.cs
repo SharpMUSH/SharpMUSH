@@ -67,7 +67,8 @@ public partial class LightningDatabase
 		await foreach (var (key, value) in Store.RangeAsync(Tables.AttrVal, [], FreeNumberPage, cancellationToken))
 		{
 			var (holder, attribute) = Keys.ParseAttr(key);
-			foreach (var number in BareNumbers(Keys.ReadStr(value)).Where(numbers.Contains).Distinct())
+			var json = IsCompressed(value) ? Store.Read(tx => DecodeValue(tx, AttributeValues, value)) ?? [] : value;
+			foreach (var number in BareNumbers(Keys.ReadStr(json)).Where(numbers.Contains).Distinct())
 			{
 				yield return new NumberReference((int)holder, attribute, number);
 			}

@@ -8,7 +8,7 @@
     {"id": "panel", "heading": "The storage panel", "lookup": "@storage panel"},
     {"id": "history", "heading": "History kept in the world", "lookup": "@storage history", "aliases": ["@storage/history"]},
     {"id": "purge", "heading": "Purging history", "lookup": "@storage purge", "aliases": ["@storage/purge"]},
-    {"id": "dictionaries", "heading": "Feed line dictionaries", "lookup": "@storage dictionaries", "aliases": ["@storage/dictionaries"]}
+    {"id": "dictionaries", "heading": "Compression dictionaries", "lookup": "@storage dictionaries", "aliases": ["@storage/dictionaries"]}
   ]
 }
 -->
@@ -18,14 +18,14 @@
 `@storage/history`<br>
 `@storage/purge`<br>
 `@storage/backups [<page>]`<br>
-`@storage/dictionaries [<id>]`
+`@storage/dictionaries [<kind> [<id>]]`
 
 Wizard-only. Reports where the world's disk goes, and what the version histories inside it hold. This is a SharpMUSH command; PennMUSH keeps its database in memory and has no file to report on.
 
 - [@storage panel]: the bars and figures `@storage` shows, and why the file never shrinks
 - [@storage history]: the kinds of history the world keeps
 - [@storage purge]: running a retention pass, and what a policy never removes
-- [@storage dictionaries]: how feed lines are compressed, and going back to an earlier dictionary
+- [@storage dictionaries]: how feed lines, attributes and mail are compressed, and going back to an earlier dictionary
 
 `@storage/backups` lists the backup copies on disk, a page at a time, the same as `@backup/list`. `@storage/backups` and `@storage/dictionaries` are the only forms of `@storage` that take an argument.
 
@@ -74,16 +74,17 @@ The policy is set on the server, not with `@config`. **The default keeps everyth
 
 Undo stops at the oldest version that survives. A wiki rollback can only go back to a revision that survives. The policy for each kind is set on the server with `SHARPMUSH_HISTORY_<KIND>_MAX_AGE` (how old a record may get, such as `365d`) and, for `WIKI` and `SCENE_EDITS`, `SHARPMUSH_HISTORY_<KIND>_KEEP` (how many of the newest versions always stay). The kind is written in capitals with `_` for `.`, such as `SCENE_DELETED`, and `SHARPMUSH_HISTORY_INTERVAL` runs a pass on a schedule.
 
-## Feed line dictionaries
+## Compression dictionaries
 
 `@storage/dictionaries`<br>
-`@storage/dictionaries <id>`
+`@storage/dictionaries <kind>`<br>
+`@storage/dictionaries <kind> <id>`
 
-Feed lines are stored compressed with a zstd dictionary. Dictionary 0 ships with the server. At 100 lines, and each time the world grows fourfold, the hourly feed upkeep trains one from the world's own lines. It is kept only when it makes lines it was not trained on at least 3% smaller and saves more than its own size; the lines are then rewritten with it. Every dictionary stays in the world, so every line stays readable.
+Feed lines, attribute values and mail are stored compressed with zstd dictionaries; the kinds are `feed`, `attributes` and `mail`, and each has its own. Values under 64 bytes, and attribute values of that size are most of them, are stored as they are. Dictionary 0 of each kind ships with the server. At 100 values of a kind, and each time they grow fourfold, the hourly upkeep trains one from the world's own. It is kept only when it makes values it was not trained on at least 3% smaller and saves more than its own size; the values are then rewritten with it. Every dictionary stays in the world, so every value stays readable.
 
-`@storage/dictionaries` lists each dictionary (id, when trained, size, lines using it, the one **in use**), the lines stored uncompressed, and the last 10 training runs: lines held, lines read, bytes per line before and after, and whether it was kept.
+`@storage/dictionaries` sums up each kind: the dictionary in use, how many are kept, and the values compressed and stored as they are. `@storage/dictionaries <kind>` lists that kind's dictionaries (id, when trained, size, values using it) and its last 10 training runs: values held and read, bytes per value before and after, and whether it was kept.
 
-`@storage/dictionaries <id>` goes back to dictionary `<id>`: new lines use it, and every line is rewritten with it before the command answers. Later dictionaries stay, and the next one trained takes a new id. Only a line's size depends on its dictionary, never its text.
+`@storage/dictionaries <kind> <id>` goes back to dictionary `<id>`: new values use it, and every value is rewritten with it before the command answers. Later dictionaries stay. Only a value's size depends on its dictionary, never its text.
 
 ::: seealso
 - [@backup]

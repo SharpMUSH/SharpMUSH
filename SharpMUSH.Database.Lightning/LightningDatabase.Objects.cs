@@ -236,7 +236,7 @@ public partial class LightningDatabase
 	}
 
 	/// <summary>The exit rows themselves, once a dbref has been settled on.</summary>
-	private static DBRef WriteExit(ITx tx, long dbref, string name, string[] aliases, long locKey, long ownerKey,
+	private DBRef WriteExit(ITx tx, long dbref, string name, string[] aliases, long locKey, long ownerKey,
 		long now, long modified)
 	{
 		// The list as SyncAliases would read it back from ALIAS.
@@ -1046,7 +1046,7 @@ public partial class LightningDatabase
 
 			if (tx.TryGet(Tables.Mail, mailIdKey, out var mailBytes))
 			{
-				var mailRecord = Codec.Deserialize<MailRecord>(mailBytes);
+				var mailRecord = ReadMail(tx, mailBytes);
 				tx.Delete(Tables.MailSent, MailSentKey(mailRecord.Sender, mailId));
 				tx.Delete(Tables.MailSentTo, MailSentToKey(mailRecord.Sender, n, mailId));
 			}

@@ -73,24 +73,6 @@ public class PurgeFeedCommandHandler(IFeedStore store) : ICommandHandler<PurgeFe
 		=> store.PurgeFeedAsync(command.Kind, command.Key, command.Before, cancellationToken);
 }
 
-public class CompactFeedLinesCommandHandler(IFeedStore store) : ICommandHandler<CompactFeedLinesCommand, FeedCompaction>
-{
-	public ValueTask<FeedCompaction> Handle(CompactFeedLinesCommand command, CancellationToken cancellationToken)
-		=> store.CompactFeedLinesAsync(command.At, cancellationToken);
-}
-
-public class UseFeedDictionaryCommandHandler(IFeedStore store) : ICommandHandler<UseFeedDictionaryCommand, Found<long>>
-{
-	public ValueTask<Found<long>> Handle(UseFeedDictionaryCommand command, CancellationToken cancellationToken)
-		=> store.UseFeedDictionaryAsync(command.Id, cancellationToken);
-}
-
-public class GetFeedDictionariesQueryHandler(IFeedStore store) : IQueryHandler<GetFeedDictionariesQuery, FeedDictionaries>
-{
-	public ValueTask<FeedDictionaries> Handle(GetFeedDictionariesQuery query, CancellationToken cancellationToken)
-		=> store.GetFeedDictionariesAsync(cancellationToken);
-}
-
 public class DeleteFeedMessageCommandHandler(IFeedStore store) : ICommandHandler<DeleteFeedMessageCommand, bool>
 {
 	public ValueTask<bool> Handle(DeleteFeedMessageCommand command, CancellationToken cancellationToken)

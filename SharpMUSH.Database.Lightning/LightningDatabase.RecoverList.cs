@@ -225,7 +225,7 @@ public partial class LightningDatabase
 			.Where(number => ReadObjectHeader(tx, number)?.Type == DatabaseConstants.TypePlayer);
 
 	/// <summary>Lists a restored object's copies of every indexed attribute, as building the index would have.</summary>
-	private static void ReindexObjectAttributes(ITx tx, long n, string type)
+	private void ReindexObjectAttributes(ITx tx, long n, string type)
 	{
 		foreach (var (_, value) in tx.Range(Tables.AttrEntry, []).ToList())
 		{
@@ -236,7 +236,7 @@ public partial class LightningDatabase
 			var attrKey = Keys.Attr(n, longName);
 			if (!tx.TryGet(Tables.AttrMeta, attrKey, out var meta)) continue;
 
-			var stored = tx.TryGet(Tables.AttrVal, attrKey, out var bytes) ? bytes : null;
+			var stored = ReadAttrVal(tx, attrKey);
 			ReplaceParts(tx, n, longName,
 				InScope(index, type) && !IsInternal(Codec.Deserialize<AttrMetaRecord>(meta).Flags)
 					? PartsOf(DeserializeValue(stored).ToPlainText(), index)

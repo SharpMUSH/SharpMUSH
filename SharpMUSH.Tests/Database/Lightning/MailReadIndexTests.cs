@@ -92,7 +92,7 @@ public class MailReadIndexTests : LightningDatabaseFixture
 		await Db.Store.WriteAsync(tx =>
 		{
 			tx.TryGet(Tables.Mail, key, out var bytes);
-			var row = System.Text.Json.Nodes.JsonNode.Parse(bytes)!.AsObject();
+			var row = System.Text.Json.Nodes.JsonNode.Parse(Db.MailJson(tx, bytes!))!.AsObject();
 			var content = row.First(p => p.Key.Equals("Content", StringComparison.OrdinalIgnoreCase)).Key;
 			row[content] = new System.Text.Json.Nodes.JsonObject { ["not"] = "a body" };
 			tx.Put(Tables.Mail, key, System.Text.Encoding.UTF8.GetBytes(row.ToJsonString()));

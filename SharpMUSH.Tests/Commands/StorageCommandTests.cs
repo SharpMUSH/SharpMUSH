@@ -60,7 +60,8 @@ public class StorageCommandTests : ServerTestBase
 	[Arguments("@storage/history")]
 	[Arguments("@storage/purge")]
 	[Arguments("@storage/dictionaries")]
-	[Arguments("@storage/dictionaries 0")]
+	[Arguments("@storage/dictionaries mail")]
+	[Arguments("@storage/dictionaries attributes 0")]
 	public async Task AMortalCannotRunIt(string command)
 	{
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
@@ -201,16 +202,25 @@ public class StorageCommandTests : ServerTestBase
 	}
 
 	[Test]
-	public async Task DictionariesListTheBundledOne_AndRefuseOneThatIsNotThere()
+	public async Task DictionariesSumUpEveryKind_ListOne_AndRefuseOneThatIsNotThere()
 	{
-		var listing = string.Join("\n", await HeardAfterAsync("@storage/dictionaries"));
-		await Assert.That(listing).Contains("Feed dictionaries").And.Contains("bundled").And.Contains("Training runs");
+		var summary = string.Join("\n", await HeardAfterAsync("@storage/dictionaries"));
+		await Assert.That(summary).Contains("Dictionaries").And.Contains("feed").And.Contains("attributes").And.Contains("mail");
 
-		var unknown = string.Join("\n", await HeardAfterAsync("@storage/dictionaries 65000"));
-		await Assert.That(unknown).Contains("There is no feed dictionary 65000.");
+		foreach (var (kind, title) in new[] { ("feed", "Feed lines"), ("attributes", "Attributes"), ("mail", "Mail") })
+		{
+			var listing = string.Join("\n", await HeardAfterAsync($"@storage/dictionaries {kind}"));
+			await Assert.That(listing).Contains($"{title} dictionaries").And.Contains("bundled").And.Contains("Training runs");
+		}
 
-		var malformed = string.Join("\n", await HeardAfterAsync("@storage/dictionaries newest"));
-		await Assert.That(malformed).Contains("Use @storage/dictionaries <id>");
+		var unknown = string.Join("\n", await HeardAfterAsync("@storage/dictionaries mail 65000"));
+		await Assert.That(unknown).Contains("There is no mail dictionary 65000.");
+
+		var malformed = string.Join("\n", await HeardAfterAsync("@storage/dictionaries attributes newest"));
+		await Assert.That(malformed).Contains("Use @storage/dictionaries attributes <id>");
+
+		var noKind = string.Join("\n", await HeardAfterAsync("@storage/dictionaries 0"));
+		await Assert.That(noKind).Contains("Use @storage/dictionaries [<kind> [<id>]]");
 	}
 
 	/// <summary>Nothing is configured in the test host, so a pass purges nothing — the default is archival.</summary>

@@ -100,6 +100,7 @@ internal static class HostedServiceRegistration
 		services.AddHostedService<Services.HistoryRetentionScheduleService>();
 		services.AddHostedService<Services.StorageCapacityMetrics>();
 		services.AddHostedService<Services.FeedUpkeepService>();
+		services.AddHostedService<Services.CompressionUpkeepService>();
 		services.AddHostedService<Services.WarningCheckService>();
 		services.AddHostedService<Services.WorldBackupScheduleService>();
 		services.AddSingleton<Services.RemoteBackupCoordinator>();

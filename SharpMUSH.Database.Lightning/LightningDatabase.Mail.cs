@@ -57,13 +57,13 @@ public partial class LightningDatabase
 		=> tx.Range(Tables.MailSentTo, Keys.Concat(Keys.Dbref(sender), Keys.Dbref(recipient))).Select(e => TrailingMailId(e.Key));
 
 	/// <summary>Each id's row, skipping an id whose row is missing, as <see cref="ReadIndexedMail"/> does.</summary>
-	private static IEnumerable<(long MailId, MailRecord Record)> MailRows(ITx tx, IEnumerable<long> ids)
+	private IEnumerable<(long MailId, MailRecord Record)> MailRows(ITx tx, IEnumerable<long> ids)
 	{
 		foreach (var mailId in ids)
 		{
 			if (tx.TryGet(Tables.Mail, MailKey(mailId), out var bytes))
 			{
-				yield return (mailId, Codec.Deserialize<MailRecord>(bytes));
+				yield return (mailId, ReadMail(tx, bytes));
 			}
 		}
 	}
@@ -78,7 +78,7 @@ public partial class LightningDatabase
 		foreach (var mailId in ids.Skip(position))
 		{
 			return tx.TryGet(Tables.Mail, MailKey(mailId), out var bytes)
-				? MapRecordToMail(mailId, Codec.Deserialize<MailRecord>(bytes))
+				? MapRecordToMail(mailId, ReadMail(tx, bytes))
 				: null;
 		}
 
@@ -164,7 +164,7 @@ public partial class LightningDatabase
 	{
 		var mailId = TrailingMailId(indexKey);
 		return tx.TryGet(Tables.Mail, MailKey(mailId), out var bytes)
-			? MapRecordToMail(mailId, Codec.Deserialize<MailRecord>(bytes))
+			? MapRecordToMail(mailId, ReadMail(tx, bytes))
 			: null;
 	}
 
@@ -193,7 +193,7 @@ public partial class LightningDatabase
 			foreach (var mailId in MailFolderIds(tx, recipient, folder))
 			{
 				if (!tx.TryGet(Tables.Mail, MailKey(mailId), out var bytes)) continue;
-				var record = Codec.Deserialize<MailSummaryRecord>(bytes);
+				var record = Codec.Deserialize<MailSummaryRecord>(MailJson(tx, bytes));
 				if (!names.TryGetValue((record.Sender, record.SenderCreationTime), out var sender))
 				{
 					sender = ReadMailSender(tx, record.Sender, record.SenderCreationTime)?.Record.Name;
@@ -303,7 +303,7 @@ public partial class LightningDatabase
 				Subject = MarkupTextSerializer.Serialize(mail.Subject)
 			};
 
-			tx.Put(Tables.Mail, MailKey(mailId), Codec.Serialize(record));
+			PutMail(tx, MailKey(mailId), record);
 			tx.Put(Tables.MailBox, MailBoxKey(recipientKey, mailId), []);
 			tx.Put(Tables.MailSent, MailSentKey(senderKey, mailId), []);
 			tx.Put(Tables.MailFolder, MailFolderKey(recipientKey, mail.Folder, mailId), []);
@@ -324,7 +324,7 @@ public partial class LightningDatabase
 				return;
 			}
 
-			var record = Codec.Deserialize<MailRecord>(bytes);
+			var record = ReadMail(tx, bytes);
 
 			// UpdateMailAsync only ever carries one edit.
 			// Reading clears Fresh the way the read confirmation does everywhere else in the engine —
@@ -337,7 +337,7 @@ public partial class LightningDatabase
 				MailUpdate.Urgent urgent => record with { Urgent = urgent.Value }
 			};
 
-			tx.Put(Tables.Mail, MailKey(id), Codec.Serialize(updated));
+			PutMail(tx, MailKey(id), updated);
 		}, cancellationToken);
 	}
 
@@ -352,7 +352,7 @@ public partial class LightningDatabase
 				return;
 			}
 
-			var record = Codec.Deserialize<MailRecord>(bytes);
+			var record = ReadMail(tx, bytes);
 			if (tx.TryGet(Tables.MailBox, MailBoxKey(record.Recipient, id), out _))
 			{
 				AdjustMailCount(tx, record.Recipient, record.Folder, -1);
@@ -375,7 +375,7 @@ public partial class LightningDatabase
 			var moved = MailRows(tx, MailFolderIds(tx, recipient, folder).ToList()).ToList();
 			foreach (var (mailId, record) in moved)
 			{
-				tx.Put(Tables.Mail, MailKey(mailId), Codec.Serialize(record with { Folder = newFolder }));
+				PutMail(tx, MailKey(mailId), record with { Folder = newFolder });
 				tx.Delete(Tables.MailFolder, MailFolderKey(recipient, folder, mailId));
 				tx.Put(Tables.MailFolder, MailFolderKey(recipient, newFolder, mailId), []);
 			}
@@ -399,8 +399,8 @@ public partial class LightningDatabase
 				return;
 			}
 
-			var record = Codec.Deserialize<MailRecord>(bytes);
-			tx.Put(Tables.Mail, MailKey(id), Codec.Serialize(record with { Folder = newFolder }));
+			var record = ReadMail(tx, bytes);
+			PutMail(tx, MailKey(id), record with { Folder = newFolder });
 			if (record.Folder != newFolder && tx.TryGet(Tables.MailBox, MailBoxKey(record.Recipient, id), out _))
 			{
 				AdjustMailCount(tx, record.Recipient, record.Folder, -1);
@@ -419,7 +419,7 @@ public partial class LightningDatabase
 		await foreach (var (key, value) in Store.RangeAsync(Tables.Mail, [], ct: ct))
 		{
 			var mailId = Keys.ReadDbref(key);
-			var record = Codec.Deserialize<MailRecord>(value);
+			var record = ReadMail(value);
 			yield return MapRecordToMail(mailId, record);
 		}
 	}
@@ -431,7 +431,21 @@ public partial class LightningDatabase
 	{
 		await foreach (var (key, value) in Store.RangeAsync(Tables.Mail, [], ct: ct))
 		{
-			yield return new MailRecipient(MailId(Keys.ReadDbref(key)), (int)Codec.Deserialize<MailRecord>(value).Recipient);
+			yield return new MailRecipient(MailId(Keys.ReadDbref(key)), (int)ReadMail(value).Recipient);
 		}
 	}
+
+	/// <summary>A mail row as stored, compressed with the current mail dictionary (see <see cref="MailValues"/>).</summary>
+	internal void PutMail(ITx tx, byte[] key, MailRecord record) => tx.Put(Tables.Mail, key, EncodeValue(tx, MailValues, Codec.Serialize(record)));
+
+	/// <summary>
+	/// A stored mail row as its JSON. One whose dictionary can't decompress it comes back as it is stored, which is
+	/// not JSON, so reading it fails as any damaged row does.
+	/// </summary>
+	internal byte[] MailJson(ITx tx, byte[] stored) => DecodeValue(tx, MailValues, stored) ?? stored;
+
+	internal MailRecord ReadMail(ITx tx, byte[] stored) => Codec.Deserialize<MailRecord>(MailJson(tx, stored));
+
+	/// <summary><see cref="ReadMail(ITx, byte[])"/> outside a transaction, for a row a paged scan handed over.</summary>
+	private MailRecord ReadMail(byte[] stored) => IsCompressed(stored) ? Store.Read(tx => ReadMail(tx, stored)) : Codec.Deserialize<MailRecord>(stored);
 }

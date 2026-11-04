@@ -204,35 +204,3 @@ public sealed record ExternalFeedIdentity(string Provider, string Subject, strin
 {
 	public string DisplayName => $"[{(Provider == "discord" ? "D" : Provider)}] {Name}";
 }
-
-/// <summary>What a pass of <see cref="IFeedStore.CompactFeedLinesAsync"/> did.</summary>
-/// <param name="Trained">Whether it trained a new dictionary.</param>
-/// <param name="Rewritten">How many lines it rewrote with the current dictionary.</param>
-public sealed record FeedCompaction(bool Trained, long Rewritten);
-
-/// <summary>A world's compression dictionaries and its training runs, oldest first. See <see cref="IFeedStore.GetFeedDictionariesAsync"/>.</summary>
-/// <param name="Generations">Every dictionary the world has kept, the bundled one first.</param>
-/// <param name="Runs">Every training run, kept or not.</param>
-/// <param name="Uncompressed">Lines stored as plain JSON: written before compression, or not smaller compressed.</param>
-public sealed record FeedDictionaries(IReadOnlyList<FeedDictionaryGeneration> Generations, IReadOnlyList<FeedDictionaryRun> Runs,
-	long Uncompressed);
-
-/// <summary>One dictionary.</summary>
-/// <param name="Id">Its id; 0 is the one that ships with the server.</param>
-/// <param name="TrainedAt">When the world trained it; null for the bundled one.</param>
-/// <param name="Bytes">Its size.</param>
-/// <param name="Lines">How many stored lines it compresses.</param>
-/// <param name="Current">Whether new lines are compressed with it.</param>
-public sealed record FeedDictionaryGeneration(int Id, DateTimeOffset? TrainedAt, int Bytes, long Lines, bool Current);
-
-/// <summary>One training run.</summary>
-/// <param name="At">When it ran.</param>
-/// <param name="Lines">The lines the world held.</param>
-/// <param name="SampleLines">The lines it read, those it trained on and those held out to judge it on.</param>
-/// <param name="HeldOutLines">The lines held out.</param>
-/// <param name="CurrentBytes">The held-out lines' size with the dictionary in use then.</param>
-/// <param name="CandidateBytes">Their size with the new dictionary; -1 when zstd could not train one.</param>
-/// <param name="From">The dictionary in use then.</param>
-/// <param name="Kept">The id the new dictionary was kept under, or null when it was not kept.</param>
-public sealed record FeedDictionaryRun(DateTimeOffset At, long Lines, int SampleLines, int HeldOutLines, long CurrentBytes,
-	long CandidateBytes, int From, int? Kept);

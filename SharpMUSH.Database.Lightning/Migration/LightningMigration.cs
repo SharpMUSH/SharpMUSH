@@ -44,7 +44,7 @@ public partial class LightningDatabase
 		new(1, ArrivalOrderMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateArrivalOrder, ct)),
 		new(1, AttributeCountMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateAttributeCounts, ct)),
 		new(1, WikiTitleMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateWikiTitles, ct)),
-		new(1, ReferenceStampMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateReferenceStamps, ct)),
+		new(1, ReferenceStampMigrationId, (db, _, ct) => db.Store.WriteAsync(db.MigrateReferenceStamps, ct)),
 		new(1, FreeNumberMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateFreeNumbers, ct)),
 		new(1, FeedLineMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateFeedLines, ct)),
 	];
@@ -391,7 +391,7 @@ public partial class LightningDatabase
 	/// portal image metadata, sets <c>next_dbref</c> to 10 and makes the <c>system</c> wiki namespace
 	/// <c>wiki.admin</c>-only, then pins the <c>character</c> category to the wiki home. Runs once, gated
 	/// by <see cref="InitialMigrationId"/>.</summary>
-	private static void ApplyInitialSeed(ITx tx)
+	private void ApplyInitialSeed(ITx tx)
 	{
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		foreach (var seedObject in InitialObjectSeed.Objects)
@@ -463,7 +463,7 @@ public partial class LightningDatabase
 		}
 	}
 
-	private static void WriteInitialAttribute(ITx tx, long dbref, string longName, string value)
+	private void WriteInitialAttribute(ITx tx, long dbref, string longName, string value)
 		=> WriteAttributePath(tx, dbref, ReadObjectHeader(tx, dbref)?.Type ?? string.Empty, new PreparedAttributeWrite(
 			longName.Split('`'),
 			Keys.Str(MarkupTextSerializer.Serialize(MString.Plain(value))),

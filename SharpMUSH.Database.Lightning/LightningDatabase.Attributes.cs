@@ -135,7 +135,7 @@ public partial class LightningDatabase
 			}
 
 			if (unreadableTrees.Any(root => longName.StartsWith(root + "`", StringComparison.OrdinalIgnoreCase))) continue;
-			var value = Store.Read(tx => tx.TryGet(Tables.AttrVal, key, out var body) ? body : null);
+			var value = Store.Read(tx => ReadAttrVal(tx, key));
 			ReadStats.ValueRead(value?.Length ?? 0);
 			SharpAttribute hydrated;
 			try { hydrated = HydrateAttribute(AttributeFlagDefinitions(), n, longName, ReadAttributeMetadata(meta), value); }
@@ -473,7 +473,7 @@ public partial class LightningDatabase
 	/// is read here for its default flags anyway, so an attribute without an index costs nothing more.
 	/// Answers the leaf's change when its full name is one of <paramref name="watched"/>.
 	/// </summary>
-	private static AttributeWriteOutcome WriteAttributePath(ITx tx, long n, string objectType, PreparedAttributeWrite write,
+	private AttributeWriteOutcome WriteAttributePath(ITx tx, long n, string objectType, PreparedAttributeWrite write,
 		IReadOnlySet<string> watched)
 	{
 		var path = write.Path;
@@ -524,7 +524,7 @@ public partial class LightningDatabase
 					outcome = new WatchedAttributesChanged([new WatchedAttributeChange(longName, previous, write.Source)]);
 				}
 
-				tx.Put(Tables.AttrVal, key, write.Value);
+				tx.Put(Tables.AttrVal, key, EncodeValue(tx, AttributeValues, write.Value));
 				if (entry?.Index is { } index)
 				{
 					IndexCopy(tx, n, longName, index, objectType, flags, write.Source.ToPlainText());
@@ -541,8 +541,8 @@ public partial class LightningDatabase
 	}
 
 	/// <summary>A node's stored value, read inside the write that is about to replace or remove it.</summary>
-	private static MString ReadPreviousValue(ITx tx, byte[] key)
-		=> DeserializeValue(tx.TryGet(Tables.AttrVal, key, out var bytes) ? bytes : null);
+	private MString ReadPreviousValue(ITx tx, byte[] key)
+		=> DeserializeValue(ReadAttrVal(tx, key));
 
 	/// <summary>
 	/// The provider's one full-table write: attribute ownership is stored inside each
@@ -720,7 +720,7 @@ public partial class LightningDatabase
 	/// key order, each with the value it held. Only the watched names are looked up, so a wipe of an unwatched subtree
 	/// reads nothing more.
 	/// </summary>
-	private static AttributeWriteOutcome WatchedRemovals(ITx tx, long n, string longName, IReadOnlySet<string> watched)
+	private AttributeWriteOutcome WatchedRemovals(ITx tx, long n, string longName, IReadOnlySet<string> watched)
 	{
 		if (watched.Count == 0)
 		{
@@ -985,10 +985,21 @@ public partial class LightningDatabase
 
 	private byte[]? ReadAttributeValue(ITx tx, long dbref, string longName)
 	{
-		var value = tx.TryGet(Tables.AttrVal, Keys.Attr(dbref, longName), out var bytes) ? bytes : null;
+		var value = ReadAttrVal(tx, Keys.Attr(dbref, longName));
 		ReadStats.ValueRead(value?.Length ?? 0);
 		return value;
 	}
+
+	/// <summary>
+	/// An attribute's stored value as its JSON (see <see cref="AttributeValues"/>); null when it has none. One whose
+	/// dictionary can't decompress it comes back as it is stored, which no reader takes for JSON, so it reads as an
+	/// unreadable value.
+	/// </summary>
+	private byte[]? ReadAttrVal(ITx tx, byte[] key)
+		=> tx.TryGet(Tables.AttrVal, key, out var stored) ? DecodeValue(tx, AttributeValues, stored) ?? stored : null;
+
+	/// <summary>An attribute value as JSON, as the store writes it before compressing, for <c>tools/BundledDictionaries</c> to train on.</summary>
+	internal static byte[] AttributeValueJson(MString value) => Keys.Str(MarkupTextSerializer.Serialize(value));
 
 	private static MString DeserializeValue(byte[]? value)
 	{
@@ -1267,7 +1278,7 @@ public partial class LightningDatabase
 			}
 		}, ct);
 
-	private static void ApplyFlagChange(ITx tx, long dbref, string longName, AttrMetaRecord meta, Func<List<string>, bool> mutate)
+	private void ApplyFlagChange(ITx tx, long dbref, string longName, AttrMetaRecord meta, Func<List<string>, bool> mutate)
 	{
 		var flags = new List<string>(meta.Flags);
 		if (mutate(flags))
