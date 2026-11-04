@@ -100,9 +100,18 @@ public interface IFeedStore
 	/// <summary>
 	/// Keeps the stored lines small: trains a compression dictionary on the world's lines once there are enough, and a
 	/// new one when they have grown well past what the current one saw, then rewrites the lines made without it.
-	/// Run by the feed upkeep, never on a send.
+	/// Run by the feed upkeep, never on a send. Each training run is logged at <paramref name="at"/>, kept or not.
 	/// </summary>
-	ValueTask<FeedCompaction> CompactFeedLinesAsync(CancellationToken cancellationToken = default);
+	ValueTask<FeedCompaction> CompactFeedLinesAsync(DateTimeOffset at, CancellationToken cancellationToken = default);
+
+	/// <summary>Every compression dictionary the world has kept, how many lines use each, and the log of training runs.</summary>
+	ValueTask<FeedDictionaries> GetFeedDictionariesAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Makes dictionary <paramref name="id"/> the one new lines are compressed with and rewrites every line made with
+	/// another, returning how many were rewritten; NotFound when the world has no such dictionary.
+	/// </summary>
+	ValueTask<Found<long>> UseFeedDictionaryAsync(int id, CancellationToken cancellationToken = default);
 
 	/// <summary>Drops a feed's lines sent before <paramref name="before"/>, or all of them; returns how many went.</summary>
 	ValueTask<int> PurgeFeedAsync(string kind, string key, DateTimeOffset? before,

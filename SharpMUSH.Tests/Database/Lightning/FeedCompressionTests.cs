@@ -4,6 +4,7 @@ using NSubstitute;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services.Interfaces;
@@ -155,14 +156,14 @@ public class FeedCompressionTests
 		await Assert.That(json.All(value => value[0] == (byte)'{')).IsTrue();
 		var jsonTotal = json.Sum(value => (long)value.Length);
 
-		var compaction = await _db.CompactFeedLinesAsync();
+		var compaction = await _db.CompactFeedLinesAsync(At);
 
 		await Assert.That(compaction).IsEqualTo(new FeedCompaction(false, 10));
 		await Assert.That(Values().All(value => DictionaryOf(value) == LightningDatabase.BundledDictionaryId)).IsTrue();
 		await Assert.That(Values().Sum(value => (long)value.Length)).IsLessThan(jsonTotal);
 		await Assert.That(await StoredTotal()).IsEqualTo(OnDisk());
 		await Assert.That(State()).IsEqualTo(new FeedDictionaryRecord { Id = 0, Lines = 0, Complete = true });
-		await Assert.That((await _db.CompactFeedLinesAsync()).Rewritten).IsEqualTo(0).Because("the pass is done");
+		await Assert.That((await _db.CompactFeedLinesAsync(At)).Rewritten).IsEqualTo(0).Because("the pass is done");
 	}
 
 	/// <summary>
@@ -176,7 +177,7 @@ public class FeedCompressionTests
 		foreach (var line in lines) await _db.AppendFeedMessageAsync(line, Keep());
 		var before = await StoredTotal();
 
-		var compaction = await _db.CompactFeedLinesAsync();
+		var compaction = await _db.CompactFeedLinesAsync(At);
 
 		await Assert.That(compaction).IsEqualTo(new FeedCompaction(true, Lines));
 		await Assert.That(State()).IsEqualTo(new FeedDictionaryRecord { Id = 1, Lines = Lines, Complete = true });
@@ -208,7 +209,7 @@ public class FeedCompressionTests
 	{
 		for (var id = 1; id <= LightningDatabase.TrainAtLines; id++) await _db.AppendFeedMessageAsync(NoiseLine(id), Keep());
 
-		var compaction = await _db.CompactFeedLinesAsync();
+		var compaction = await _db.CompactFeedLinesAsync(At);
 
 		await Assert.That(compaction).IsEqualTo(new FeedCompaction(false, 0));
 		await Assert.That(State()).IsEqualTo(new FeedDictionaryRecord { Id = 0, Lines = LightningDatabase.TrainAtLines, Complete = true });
@@ -218,25 +219,105 @@ public class FeedCompressionTests
 
 	/// <summary>
 	/// When the world has grown <see cref="LightningDatabase.RetrainGrowth"/> times past what its dictionary saw and
-	/// its talk has moved on, a new dictionary replaces it, the lines are rewritten, and the old one is deleted.
+	/// its talk has moved on, a new dictionary replaces it and the lines are rewritten; the old one is kept.
 	/// </summary>
 	[Test]
-	public async Task AGrownWorld_ReplacesItsDictionary_AndDropsTheOldOne()
+	public async Task AGrownWorld_ReplacesItsDictionary_AndKeepsTheOldOne()
 	{
 		for (var id = 1; id <= Lines; id++) await _db.AppendFeedMessageAsync(ShipLine(id), Keep());
-		await _db.CompactFeedLinesAsync();
+		await _db.CompactFeedLinesAsync(At);
 		for (var id = 10001; id <= 10000 + Lines * (LightningDatabase.RetrainGrowth - 1); id++)
 			await _db.AppendFeedMessageAsync(TavernLine(id), Keep());
 
-		var compaction = await _db.CompactFeedLinesAsync();
+		var compaction = await _db.CompactFeedLinesAsync(At);
 
 		await Assert.That(compaction.Trained).IsTrue();
 		await Assert.That(State()!.Id).IsEqualTo(2);
-		await Assert.That(WorldDictionaries()).IsEqualTo(1);
+		await Assert.That(WorldDictionaries()).IsEqualTo(2);
 		await Assert.That(Values().All(value => DictionaryOf(value) == 2)).IsTrue();
 		await Assert.That(await StoredTotal()).IsEqualTo(OnDisk());
 		var ship = (await _db.GetFeedMessageAsync(5)).Expect<SharpFeedMessage>();
 		await Assert.That(ship.Text.ToPlainText()).IsEqualTo(ShipLine(5).Text.ToPlainText());
+	}
+
+	/// <summary>
+	/// Every training run is logged, kept or not, and every dictionary the world kept is listed with when it was trained
+	/// and how many lines use it.
+	/// </summary>
+	[Test]
+	public async Task EveryRunIsLogged_AndEveryDictionaryListed()
+	{
+		for (var id = 1; id <= Lines; id++) await _db.AppendFeedMessageAsync(ShipLine(id), Keep());
+		await _db.CompactFeedLinesAsync(At);
+		for (var id = 10001; id <= 10000 + Lines * (LightningDatabase.RetrainGrowth - 1); id++)
+			await _db.AppendFeedMessageAsync(NoiseLine(id), Keep());
+		var later = At.AddDays(30);
+		await _db.CompactFeedLinesAsync(later);
+
+		var dictionaries = await _db.GetFeedDictionariesAsync();
+
+		await Assert.That(dictionaries.Runs.Count).IsEqualTo(2);
+		var (first, second) = (dictionaries.Runs[0], dictionaries.Runs[1]);
+		await Assert.That(first.At).IsEqualTo(At);
+		await Assert.That(first.Lines).IsEqualTo(Lines);
+		await Assert.That(first.From).IsEqualTo(LightningDatabase.BundledDictionaryId);
+		await Assert.That(first.Kept).IsEqualTo(1);
+		await Assert.That(first.CandidateBytes).IsLessThan(first.CurrentBytes);
+		await Assert.That(first.HeldOutLines).IsEqualTo((first.SampleLines + 4) / 5);
+		await Assert.That(second.At).IsEqualTo(later);
+		await Assert.That(second.From).IsEqualTo(1);
+		await Assert.That(second.Lines).IsEqualTo(Lines * LightningDatabase.RetrainGrowth);
+
+		var generations = dictionaries.Generations;
+		await Assert.That(generations.Select(generation => generation.Id)).IsEquivalentTo(second.Kept is { } kept ? [0, 1, kept] : new[] { 0, 1 });
+		await Assert.That(generations[0].TrainedAt).IsNull();
+		await Assert.That(generations[0].Bytes).IsEqualTo(LightningDatabase.BundledFeedDictionary.Length);
+		await Assert.That(generations[1].TrainedAt).IsEqualTo(At);
+		await Assert.That(generations.Single(generation => generation.Current).Id).IsEqualTo(State()!.Id);
+		await Assert.That(generations.Sum(generation => generation.Lines) + dictionaries.Uncompressed).IsEqualTo(Values().Count);
+	}
+
+	/// <summary>
+	/// Going back to an earlier dictionary rewrites the lines with it and leaves the later one in place, and the next
+	/// dictionary trained takes a new id rather than the later one's.
+	/// </summary>
+	[Test]
+	public async Task GoingBack_RewritesTheLines_AndKeepsTheLaterDictionary()
+	{
+		for (var id = 1; id <= Lines; id++) await _db.AppendFeedMessageAsync(ShipLine(id), Keep());
+		await _db.CompactFeedLinesAsync(At);
+		var later = _db.Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Concat(Keys.Str("feed.dict:"), [0, 1]), out var bytes) ? bytes : null);
+
+		var rolled = await _db.UseFeedDictionaryAsync(LightningDatabase.BundledDictionaryId);
+
+		await Assert.That(rolled.Expect<long>()).IsEqualTo(Lines);
+		await Assert.That(Values().All(value => DictionaryOf(value) == LightningDatabase.BundledDictionaryId)).IsTrue();
+		await Assert.That(State()).IsEqualTo(new FeedDictionaryRecord { Id = 0, Lines = Lines, Complete = true });
+		await Assert.That(await StoredTotal()).IsEqualTo(OnDisk());
+		await _db.AppendFeedMessageAsync(ShipLine(Lines + 1), Keep());
+		await Assert.That(DictionaryOf(Values()[^1])).IsEqualTo(LightningDatabase.BundledDictionaryId);
+
+		for (var id = 10001; id <= 10000 + Lines * (LightningDatabase.RetrainGrowth - 1); id++)
+			await _db.AppendFeedMessageAsync(TavernLine(id), Keep());
+		await _db.CompactFeedLinesAsync(At);
+
+		await Assert.That(State()!.Id).IsEqualTo(2);
+		await Assert.That(_db.Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Concat(Keys.Str("feed.dict:"), [0, 1]), out var bytes) ? bytes : null))
+			.IsEquivalentTo(later!);
+		var ship = (await _db.GetFeedMessageAsync(5)).Expect<SharpFeedMessage>();
+		await Assert.That(ship.Text.ToPlainText()).IsEqualTo(ShipLine(5).Text.ToPlainText());
+	}
+
+	/// <summary>A dictionary the world never had can't be gone back to, and nothing changes.</summary>
+	[Test]
+	public async Task GoingBackToAnUnknownDictionary_ChangesNothing()
+	{
+		await _db.AppendFeedMessageAsync(ShipLine(1), Keep());
+		var before = Values().Single();
+
+		await Assert.That(await _db.UseFeedDictionaryAsync(9) is NotFound).IsTrue();
+		await Assert.That(Values().Single()).IsEquivalentTo(before);
+		await Assert.That(State()).IsNull();
 	}
 
 	/// <summary>
@@ -262,7 +343,7 @@ public class FeedCompressionTests
 	public async Task StoredSizes_FollowCompressedLines()
 	{
 		for (var id = 1; id <= Lines; id++) await _db.AppendFeedMessageAsync(ShipLine(id), Keep());
-		await _db.CompactFeedLinesAsync();
+		await _db.CompactFeedLinesAsync(At);
 
 		await _db.DeleteFeedMessageAsync(3);
 		await _db.AppendFeedMessageAsync(ShipLine(Lines + 1), new FeedSettings(50, 0, 0, null, true, "say"));
@@ -287,7 +368,7 @@ public class FeedCompressionTests
 			return value;
 		});
 
-		var compaction = await _db.CompactFeedLinesAsync();
+		var compaction = await _db.CompactFeedLinesAsync(At);
 
 		await Assert.That(compaction.Rewritten).IsEqualTo(0);
 		await Assert.That(Values().Single()).IsEquivalentTo(tampered);
@@ -301,7 +382,7 @@ public class FeedCompressionTests
 	public async Task AWorldSwappedIn_UsesItsOwnDictionary()
 	{
 		for (var id = 1; id <= Lines; id++) await _db.AppendFeedMessageAsync(ShipLine(id), Keep());
-		await _db.CompactFeedLinesAsync();
+		await _db.CompactFeedLinesAsync(At);
 		var incoming = _path + ".incoming";
 		await using (var replacement = Create(incoming)) await replacement.Migrate();
 		_db.Store.SwapDirectory(incoming, _path + ".previous");

@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Commands.Database;
@@ -34,7 +35,10 @@ public record AppendFeedMessageCommand(SharpFeedMessage Message, FeedSettings Li
 public record PurgeFeedCommand(string Kind, string Key, DateTimeOffset? Before) : ICommand<int>;
 
 /// <summary>Compresses the stored lines. See <see cref="IFeedStore.CompactFeedLinesAsync"/>.</summary>
-public record CompactFeedLinesCommand : ICommand<FeedCompaction>;
+public record CompactFeedLinesCommand(DateTimeOffset At) : ICommand<FeedCompaction>;
+
+/// <summary>Switches to an earlier dictionary. See <see cref="IFeedStore.UseFeedDictionaryAsync"/>.</summary>
+public record UseFeedDictionaryCommand(int Id) : ICommand<Found<long>>;
 
 /// <summary>Drops one line. See <see cref="IFeedStore.DeleteFeedMessageAsync"/>.</summary>
 public record DeleteFeedMessageCommand(long Id) : ICommand<bool>;

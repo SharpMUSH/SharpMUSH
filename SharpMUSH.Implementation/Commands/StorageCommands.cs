@@ -1,6 +1,7 @@
 using System.Globalization;
 using MarkupString.Layout;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -24,22 +25,27 @@ public partial class Commands
 	/// allocated for it and the live data inside it, then what a backup run needs and any earlier world
 	/// still on disk. <c>/HISTORY</c> counts the wiki revisions, pose edits and deleted poses the world
 	/// keeps, with the retention policy for each. <c>/PURGE</c> runs a retention pass now, under that
-	/// policy — which, unless the server was configured otherwise, keeps everything.</para>
+	/// policy — which, unless the server was configured otherwise, keeps everything. <c>/DICTIONARIES</c> lists the
+	/// feed line compression dictionaries and their training runs, and with an id goes back to that dictionary.</para>
 	/// </summary>
-	[SharpCommand(Name = "@STORAGE", Switches = ["HISTORY", "PURGE", "BACKUPS"], Behavior = CB.Default,
-		CommandLock = "PERM^server.operate", MinArgs = 0, MaxArgs = 1, ParameterNames = ["page"])]
+	[SharpCommand(Name = "@STORAGE", Switches = ["HISTORY", "PURGE", "BACKUPS", "DICTIONARIES"], Behavior = CB.Default,
+		CommandLock = "PERM^server.operate", MinArgs = 0, MaxArgs = 1, ParameterNames = ["page or id"])]
 	public async ValueTask<Option<CallState>> Storage(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 		var argument = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText() ?? "";
-		if (argument.Length > 0 && !switches.Contains("BACKUPS"))
+		if (argument.Length > 0 && !switches.Contains("BACKUPS") && !switches.Contains("DICTIONARIES"))
 		{
-			await NotifyService.Notify(executor, "Only @storage/backups accepts a page number.");
+			await NotifyService.Notify(executor, "Only @storage/backups and @storage/dictionaries take an argument.");
 			return CallState.Empty;
 		}
 
-		if (switches.Contains("BACKUPS"))
+		if (switches.Contains("DICTIONARIES"))
+		{
+			await (argument.Length > 0 ? UseFeedDictionaryAsync(executor, argument) : FeedDictionariesAsync(executor));
+		}
+		else if (switches.Contains("BACKUPS"))
 		{
 			await BackupInventoryAsync(executor, argument);
 		}
@@ -341,6 +347,85 @@ public partial class Commands
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StorageHistoryArchiveFormat),
 			executor, HistoryRetention.Options.ArchivePath);
+	}
+
+	/// <summary>How many training runs <c>@storage/dictionaries</c> lists, newest last.</summary>
+	private const int FeedDictionaryRunsShown = 10;
+
+	private async ValueTask FeedDictionariesAsync(AnySharpObject executor)
+	{
+		var dictionaries = await Mediator.Send(new GetFeedDictionariesQuery(), ExecutionBudget.CurrentToken);
+		static string When(DateTimeOffset at) => at.UtcDateTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+		static string Count(long value) => value.ToString(CultureInfo.InvariantCulture);
+		static string PerLine(long bytes, int lines) => bytes < 0 || lines == 0 ? "-" : $"{bytes / (double)lines:0.0} B";
+
+		var parts = new List<Block>
+		{
+			ServerLayout.Listing(
+				[
+					new TableColumn(MarkupText.Plain("Id")) { Alignment = Alignment.Right, Wrap = false },
+					new TableColumn(MarkupText.Plain("Trained")) { Wrap = false },
+					new TableColumn(MarkupText.Plain("Size")) { Alignment = Alignment.Right, Wrap = false },
+					new TableColumn(MarkupText.Plain("Lines")) { Alignment = Alignment.Right, Wrap = false },
+					new TableColumn(MarkupText.Plain("")) { Wrap = false },
+				],
+				dictionaries.Generations.Select(generation => (IEnumerable<string>)
+				[
+					Count(generation.Id),
+					generation.TrainedAt is { } at ? When(at) : "bundled",
+					DescribeBytes(generation.Bytes),
+					Count(generation.Lines),
+					generation.Current ? "in use" : "",
+				])),
+			new TextBlock(MarkupText.Plain($"{Count(dictionaries.Uncompressed)} line(s) stored uncompressed.")),
+			new Rule(MarkupText.Plain("Training runs")),
+		};
+
+		if (dictionaries.Runs.Count == 0)
+		{
+			parts.Add(new TextBlock(MarkupText.Plain("None yet: the first runs once the world holds 100 lines.")));
+		}
+		else
+		{
+			// Bytes per held-out line, with the dictionary in use then and with the one trained.
+			parts.Add(ServerLayout.Listing(
+				[
+					new TableColumn(MarkupText.Plain("When")) { Wrap = false },
+					new TableColumn(MarkupText.Plain("Lines")) { Alignment = Alignment.Right, Wrap = false },
+					new TableColumn(MarkupText.Plain("Sample")) { Alignment = Alignment.Right, Wrap = false, Priority = 2 },
+					new TableColumn(MarkupText.Plain("Before")) { Alignment = Alignment.Right, Wrap = false },
+					new TableColumn(MarkupText.Plain("After")) { Alignment = Alignment.Right, Wrap = false },
+					new TableColumn(MarkupText.Plain("Result")) { Wrap = false },
+				],
+				dictionaries.Runs.TakeLast(FeedDictionaryRunsShown).Select(run => (IEnumerable<string>)
+				[
+					When(run.At),
+					Count(run.Lines),
+					Count(run.SampleLines),
+					PerLine(run.CurrentBytes, run.HeldOutLines),
+					PerLine(run.CandidateBytes, run.HeldOutLines),
+					run.Kept is { } kept ? $"kept as {kept}" : run.CandidateBytes < 0 ? "could not train" : "not kept",
+				])));
+		}
+
+		parts.Add(new Rule());
+		parts.Add(new TextBlock(MarkupText.Plain("@storage/dictionaries <id> goes back to an earlier dictionary.")));
+		await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Feed dictionaries"), [.. parts]), 78, HouseLook.Look));
+	}
+
+	private async ValueTask UseFeedDictionaryAsync(AnySharpObject executor, string argument)
+	{
+		if (!int.TryParse(argument, NumberStyles.None, CultureInfo.InvariantCulture, out var id) || id > ushort.MaxValue)
+		{
+			await NotifyService.Notify(executor, "Use @storage/dictionaries <id>, with an id from @storage/dictionaries.");
+			return;
+		}
+
+		await NotifyService.Notify(executor, await Mediator.Send(new UseFeedDictionaryCommand(id), ExecutionBudget.CurrentToken) switch
+		{
+			long rewritten => $"Feed lines now use dictionary {id}: {rewritten} line(s) rewritten.",
+			NotFound => $"There is no feed dictionary {id}. @storage/dictionaries lists them."
+		});
 	}
 
 	/// <summary><see cref="DescribeBytes"/> for a figure that may be unknown (-1).</summary>
