@@ -72,14 +72,19 @@ public class FeedStoreTests
 		await _db.Store.WriteAsync(tx =>
 		{
 			tx.TryGet(Tables.FeedMessage, key, out var bytes);
-			var record = Codec.Deserialize<FeedMessageRecord>(bytes);
-			tx.Put(Tables.FeedMessage, key, Codec.Serialize(record with { Text = raw }));
+			var record = _db.DecodeLine(tx, key, bytes);
+			var tampered = Codec.Serialize(record with { Text = raw });
+			tx.Put(Tables.FeedMessage, key, tampered);
+			// The feed's stored size follows what is on disk, as every write does.
+			var feedKey = Keys.Concat(Keys.Str("radio"), Keys.Sep, Keys.Str("101.5"));
+			tx.TryGet(Tables.Feed, feedKey, out var feedBytes);
+			var feed = Codec.Deserialize<FeedRecord>(feedBytes);
+			tx.Put(Tables.Feed, feedKey, Codec.Serialize(feed with { StoredBytes = feed.StoredBytes + tampered.Length - bytes.Length }));
 		});
 		var shown = (await _db.GetFeedMessageAsync(901)).Expect<SharpFeedMessage>();
 		await Assert.That(shown.Text.ToPlainText()).IsEqualTo("future é");
 		var after = (await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>();
 		await Assert.That(after.Bytes).IsEqualTo(before.Bytes);
-		await Assert.That(after.StoredBytes).IsEqualTo(before.StoredBytes);
 		await _db.DeleteFeedMessageAsync(901);
 		var empty = (await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>();
 		await Assert.That(empty.Bytes).IsEqualTo(0);
@@ -327,9 +332,8 @@ public class FeedStoreTests
 		// Every way a line goes takes its stored size with it.
 		await _db.PurgeFeedAsync("radio", "101.5", null);
 		await _db.AppendFeedMessageAsync(Line(6, ann, "one"), Keep(messages: 1));
-		var one = (await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>().StoredBytes;
 		await _db.AppendFeedMessageAsync(Line(7, ann, "two"), Keep(messages: 1));
-		await Assert.That((await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>().StoredBytes).IsEqualTo(one);
+		await Assert.That((await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>().StoredBytes).IsEqualTo(OnDisk("radio", "101.5"));
 		await _db.PurgeFeedAsync("radio", "101.5", null);
 		await Assert.That((await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>().StoredBytes).IsEqualTo(0);
 
@@ -344,10 +348,21 @@ public class FeedStoreTests
 
 	private FeedMessageRecord StoredRecord(long id) => _db.Store.Read(tx =>
 	{
+		var (key, bytes) = StoredValue(tx, id);
+		return _db.DecodeLine(tx, key, bytes);
+	});
+
+	private static (byte[] Key, byte[] Value) StoredValue(ITx tx, long id)
+	{
 		tx.TryGet(Tables.FeedMessageId, Keys.Dbref(id), out var key);
 		tx.TryGet(Tables.FeedMessage, key, out var bytes);
-		return Codec.Deserialize<FeedMessageRecord>(bytes);
-	});
+		return (key, bytes);
+	}
+
+	/// <summary>What the lines of a feed take on disk: each value, its key, and its id index entry.</summary>
+	private long OnDisk(string kind, string key) => _db.Store.Read(tx =>
+		tx.Range(Tables.FeedMessage, Keys.Concat(Keys.Str(kind), Keys.Sep, Keys.Str(key), Keys.Sep))
+			.Sum(entry => (long)entry.Value.Length + entry.Key.Length * 2 + 8));
 
 	/// <summary>
 	/// A delivered line that holds its message is stored as what surrounds the message, and comes back whole, markup
@@ -439,7 +454,7 @@ public class FeedStoreTests
 		await Assert.That(MarkupTextSerializer.Serialize(message.Line!)).IsEqualTo(line);
 		await Assert.That(message.Executor).IsEqualTo(ann);
 		var after = (await _db.GetFeedAsync("radio", "101.5")).Expect<SharpFeed>();
-		await Assert.That(after.StoredBytes).IsEqualTo(record.StoredBytes);
+		await Assert.That(after.StoredBytes).IsEqualTo(OnDisk("radio", "101.5"));
 		await Assert.That(after.StoredBytes).IsLessThan(900);
 		await Assert.That(after.Bytes).IsEqualTo(77);
 	}

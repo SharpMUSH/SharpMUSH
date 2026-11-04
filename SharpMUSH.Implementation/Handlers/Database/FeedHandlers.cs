@@ -73,6 +73,12 @@ public class PurgeFeedCommandHandler(IFeedStore store) : ICommandHandler<PurgeFe
 		=> store.PurgeFeedAsync(command.Kind, command.Key, command.Before, cancellationToken);
 }
 
+public class CompactFeedLinesCommandHandler(IFeedStore store) : ICommandHandler<CompactFeedLinesCommand, FeedCompaction>
+{
+	public ValueTask<FeedCompaction> Handle(CompactFeedLinesCommand command, CancellationToken cancellationToken)
+		=> store.CompactFeedLinesAsync(cancellationToken);
+}
+
 public class DeleteFeedMessageCommandHandler(IFeedStore store) : ICommandHandler<DeleteFeedMessageCommand, bool>
 {
 	public ValueTask<bool> Handle(DeleteFeedMessageCommand command, CancellationToken cancellationToken)

@@ -41,6 +41,7 @@ namespace SharpMUSH.Database.Lightning.Store;
 [JsonSerializable(typeof(FeedMemberRecord))]
 [JsonSerializable(typeof(FeedMessageRecord))]
 [JsonSerializable(typeof(FeedIdentityRecord))]
+[JsonSerializable(typeof(FeedDictionaryRecord))]
 [JsonSerializable(typeof(AuditRecord))]
 [JsonSerializable(typeof(RollRecord))]
 [JsonSerializable(typeof(ActivityPlayerRecord))]

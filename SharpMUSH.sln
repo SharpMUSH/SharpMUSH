@@ -105,6 +105,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Plugins.World", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Tests.WorldPlugin", "SharpMUSH.Tests.WorldPlugin\SharpMUSH.Tests.WorldPlugin.csproj", "{C99B05C1-1F34-4B2F-8C08-9321001C8827}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FeedDictionary", "tools\FeedDictionary\FeedDictionary.csproj", "{2D7F57DA-B8D6-46CE-A2D4-E7E2FCE901B2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -583,6 +585,18 @@ Global
 		{C99B05C1-1F34-4B2F-8C08-9321001C8827}.Release|x64.Build.0 = Release|Any CPU
 		{C99B05C1-1F34-4B2F-8C08-9321001C8827}.Release|x86.ActiveCfg = Release|Any CPU
 		{C99B05C1-1F34-4B2F-8C08-9321001C8827}.Release|x86.Build.0 = Release|Any CPU
+		{2D7F57DA-B8D6-46CE-A2D4-E7E2FCE901B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2D7F57DA-B8D6-46CE-A2D4-E7E2FCE901B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2D7F57DA-B8D6-46CE-A2D4-E7E2FCE901B2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2D7F57DA-B8D6-46CE-A2D4-E7E2FCE901B2}.Debug|x64.Build.0 = Debug|Any CPU
+		{2D7F57DA-B8D6-46CE-A2D4-E7E2FCE901B2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2D7F57DA-B8D6-46CE-A2D4-E7E2FCE901B2}.Debug|x86.Build.0 = Debug|Any CPU
+		{2D7F57DA-B8D6-46CE-A2D4-E7E2FCE901B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2D7F57DA-B8D6-46CE-A2D4-E7E2FCE901B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2D7F57DA-B8D6-46CE-A2D4-E7E2FCE901B2}.Release|x64.ActiveCfg = Release|Any CPU
+		{2D7F57DA-B8D6-46CE-A2D4-E7E2FCE901B2}.Release|x64.Build.0 = Release|Any CPU
+		{2D7F57DA-B8D6-46CE-A2D4-E7E2FCE901B2}.Release|x86.ActiveCfg = Release|Any CPU
+		{2D7F57DA-B8D6-46CE-A2D4-E7E2FCE901B2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -596,6 +610,7 @@ Global
 		{8FE77FC4-99F3-4AE3-905B-208D691BFF6D} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
 		{2D69C6DF-235C-1D8C-FC84-83147968A59E} = {3EFB08DA-2EA9-FE77-18DF-C4D4293AFD9C}
 		{BE161BD9-54BC-4873-917B-2E61A8DC5C1B} = {2D69C6DF-235C-1D8C-FC84-83147968A59E}
+		{2D7F57DA-B8D6-46CE-A2D4-E7E2FCE901B2} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B7CFA46C-0EA8-4D8A-BE5F-65BFBE0B3DD4}

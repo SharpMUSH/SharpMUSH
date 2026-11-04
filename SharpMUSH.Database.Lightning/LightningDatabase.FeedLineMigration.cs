@@ -23,11 +23,11 @@ public partial class LightningDatabase
 		foreach (var (key, value) in tx.Range(Tables.FeedMessage, []).ToList())
 		{
 			var feed = SplitFeed(key.AsSpan(0, key.Length - 9));
-			var record = JsonNode.Parse(value) is JsonObject old && old.ContainsKey("Id")
-				? Measured(FromLongRecord(feed.Kind, feed.Key, old), key)
-				: Codec.Deserialize<FeedMessageRecord>(value);
-			tx.Put(Tables.FeedMessage, key, Codec.Serialize(record));
-			stored[feed] = stored.GetValueOrDefault(feed) + record.StoredBytes;
+			var line = value.Length > 0 && value[0] == (byte)'{' && JsonNode.Parse(value) is JsonObject old && old.ContainsKey("Id")
+				? Codec.Serialize(FromLongRecord(feed.Kind, feed.Key, old))
+				: value;
+			tx.Put(Tables.FeedMessage, key, line);
+			stored[feed] = stored.GetValueOrDefault(feed) + StoredSize(key, line);
 		}
 
 		foreach (var (key, value) in tx.Range(Tables.Feed, []).ToList())
