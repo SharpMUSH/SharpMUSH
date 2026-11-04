@@ -295,6 +295,9 @@ read-only diagram from `{nodes,edges}` in another field.
   "fields":   { "strength": 14, "dexterity": 9 },   // merged when on_success.merge_fields
   "schema":   { /* a replacement Portal Schema Document */ },
   "data":     { "fields": { "entries": { "value": [ /* rows */ ], "visible": true } } },
+  "data_merge": { "fields": { "hp": { "value": 9 } } },          // laid over the data, key by key
+  "replace":  [ { "section": "spells", "with": { /* a section */ } },
+                { "element": "class", "with": { /* an element */ } } ],
   "redirect": "/character/Gandalf",
   "message":  "Character created."
 }
@@ -306,6 +309,11 @@ read-only diagram from `{nodes,edges}` in another field.
   (post a comment, get an empty box back).
 - A returned **`data` replaces the page's data payload**: tables and timelines redraw in place.
 - A returned **`schema` replaces the whole document** and the portal re-renders.
+- A returned **`replace`** swaps only the sections and elements it names by their `key`; give a section a
+  `"key"` to be named this way. What the player typed stays, so choosing a class can swap the spells section
+  and nothing else moves. A key the page lacks is skipped, with a console line.
+- A returned **`data_merge`** replaces only the data fields it holds; `data` replaces them all. They apply
+  after `replace`, `data` before `data_merge`.
 - A `redirect` to `/apps/...` moves within the portal and reloads that application.
 
 ### Live data

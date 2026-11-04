@@ -74,7 +74,8 @@ public sealed record SchemaSection(
 	int Order,
 	[property: JsonPropertyName("visible_to")] string? VisibleTo,
 	IReadOnlyList<SchemaElement>? Elements,
-	int Columns = 1);
+	int Columns = 1,
+	string? Key = null);
 
 /// <summary>
 /// A single element. <c>Kind</c> discriminates: "field" (an input/value) or a display element
@@ -283,7 +284,15 @@ public sealed record SchemaActionResult(
 	PortalSchemaDocument? Schema,
 	string? Redirect,
 	string? Message,
-	SchemaData? Data = null);
+	SchemaData? Data = null,
+	SchemaData? DataMerge = null,
+	IReadOnlyList<SchemaReplacement>? Replace = null);
+
+/// <summary>
+/// One part of the page an action reply swaps: the section whose <c>key</c> is <c>Section</c>, or the element
+/// whose <c>key</c> is <c>Element</c>, for <c>With</c>. The rest of the page stays as it is.
+/// </summary>
+public sealed record SchemaReplacement(string? Section, string? Element, JsonElement? With);
 
 /// <summary>
 /// An action a display element asks its renderer to dispatch: the action's name, and the values to merge

@@ -187,6 +187,9 @@ else if (_state.Form.GlobalError is { } diagnostic)
         if (token == Guid.Empty) return;
         var result = await Services.GetRequiredService<SchemaAppService>().SubmitAsync(action.Route!, _state.Form.Payload(request.Values), _instance);
         if (_disposed || !_state.Apply(token, action, result, Loc["WidActionFailed"])) return;
+        if (_state.Skipped.Count > 0)
+            Services.GetService<ILogger<SchemaApplicationHost>>()?.LogWarning(
+                "[Schema] The reply to {Action} replaces {Keys}, which this page does not have", request.Action, string.Join(", ", _state.Skipped));
         if (_state.Redirect is { } redirect)
         {
             _state.Retire();
