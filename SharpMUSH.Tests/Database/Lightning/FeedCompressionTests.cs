@@ -241,7 +241,9 @@ public class FeedCompressionTests
 		await _db.DeleteFeedMessageAsync(3);
 		await _db.AppendFeedMessageAsync(ShipLine(Lines + 1), new FeedSettings(50, 0, 0, null, true, "say"));
 		await Assert.That(await StoredTotal()).IsEqualTo(OnDisk());
-		await _db.PurgeFeedAsync("radio", "101.5", null);
+		await _db.RenameFeedAsync("radio", "101.5", "101.5-ship-to-shore");
+		await Assert.That(await StoredTotal()).IsEqualTo(OnDisk()).Because("a renamed line's key is longer");
+		await _db.PurgeFeedAsync("radio", "101.5-ship-to-shore", null);
 		await Assert.That(await StoredTotal()).IsEqualTo(0);
 	}
 

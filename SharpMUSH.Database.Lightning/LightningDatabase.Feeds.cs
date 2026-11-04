@@ -125,11 +125,13 @@ public partial class LightningDatabase
 				: source with { Key = to, Messages = 0, Bytes = 0, StoredBytes = 0, LastId = 0 };
 
 			// A line keeps its id, so the id index only points at its new key, and lines already under the new
-			// key stay in id order with the moved ones.
+			// key stay in id order with the moved ones. Their stored size counts the key, so it is taken again.
+			long moved = 0;
 			foreach (var (oldKey, value) in tx.Range(Tables.FeedMessage, FeedPrefix(kind, from)).ToList())
 			{
 				var id = Keys.ReadDbref(oldKey.AsSpan(oldKey.Length - 8));
 				var newKey = MessageKey(kind, to, id);
+				moved += StoredSize(newKey, value);
 				tx.Delete(Tables.FeedMessage, oldKey);
 				tx.Put(Tables.FeedMessage, newKey, value);
 				tx.Put(Tables.FeedMessageId, Keys.Dbref(id), newKey);
@@ -151,7 +153,7 @@ public partial class LightningDatabase
 			{
 				Messages = target.Messages + source.Messages,
 				Bytes = target.Bytes + source.Bytes,
-				StoredBytes = target.StoredBytes + source.StoredBytes,
+				StoredBytes = target.StoredBytes + moved,
 				LastId = Math.Max(target.LastId, source.LastId)
 			}));
 			return true;
