@@ -47,8 +47,14 @@ public partial class LightningDatabase
 	/// <summary>One sampled line in this many is held out of training, to judge the dictionary on.</summary>
 	private const int HeldOutEvery = 5;
 
-	/// <summary>The most lines read to train a dictionary, taken evenly across the table.</summary>
-	internal const int TrainingSamples = 2000;
+	/// <summary>The most JSON read to train a dictionary: zstd asks for about a hundred times the dictionary's size.</summary>
+	internal const long TrainingBytes = 100L * DictionaryBytes;
+
+	/// <summary>
+	/// Where the length bands that share the training budget start, in bytes of JSON: short lines (emits, short says),
+	/// chat, and long poses.
+	/// </summary>
+	private static readonly int[] TrainingBands = [200, 1000];
 
 	/// <summary>A dictionary's size; measured on chat lines, 16 KiB is where a larger one stops paying for itself.</summary>
 	internal const int DictionaryBytes = 16 * 1024;
@@ -155,7 +161,7 @@ public partial class LightningDatabase
 		if (lines >= TrainAtLines && lines >= state.Lines * RetrainGrowth)
 		{
 			var current = state;
-			var samples = Store.Read(tx => TrainingSet(tx, lines));
+			var samples = Store.Read(TrainingSet);
 			// Judged on lines it was not trained on: a dictionary holds much of what it saw, so the lines it saw compress
 			// better than any the world writes later.
 			var held = samples.Where((_, index) => index % HeldOutEvery == 0).ToList();
@@ -211,16 +217,52 @@ public partial class LightningDatabase
 		return after * 100 <= before * (100 - RetrainGainPercent) && saved > candidate.Length;
 	}
 
-	/// <summary>Up to <see cref="TrainingSamples"/> lines as JSON, taken evenly across the table.</summary>
-	private List<byte[]> TrainingSet(ITx tx, long lines)
+	/// <summary>
+	/// Lines as JSON, up to <see cref="TrainingBytes"/>, shared between the <see cref="TrainingBands"/>: each band gets an
+	/// equal part of the budget (what a small band leaves passes on to the others) and its lines are taken evenly across
+	/// the table. A world of short chat lines still trains on its few long poses, and the other way round.
+	/// </summary>
+	internal List<byte[]> TrainingSet(ITx tx)
 	{
-		var stride = Math.Max(1, (lines + TrainingSamples - 1) / TrainingSamples);
-		return tx.Range(Tables.FeedMessage, [])
-			.Where((_, index) => index % stride == 0)
-			.Take(TrainingSamples)
-			.Select(entry => Codec.Serialize(DecodeLine(tx, entry.Key, entry.Value)))
-			.ToList();
+		var sizes = tx.Range(Tables.FeedMessage, []).Select(entry => JsonLength(entry.Value)).ToList();
+		var bands = TrainingBands.Length + 1;
+		var total = new long[bands];
+		foreach (var size in sizes) total[Band(size)] += size;
+
+		// Smallest band first, so the budget a band can't use goes to the bands that can.
+		var budget = new long[bands];
+		var left = TrainingBytes;
+		var present = Enumerable.Range(0, bands).Where(band => total[band] > 0).OrderBy(band => total[band]).ToList();
+		foreach (var (band, index) in present.Select((band, index) => (band, index)))
+		{
+			budget[band] = Math.Min(total[band], left / (present.Count - index));
+			left -= budget[band];
+		}
+
+		var stride = Enumerable.Range(0, bands)
+			.Select(band => budget[band] == 0 ? long.MaxValue : Math.Max(1, (total[band] + budget[band] - 1) / budget[band]))
+			.ToArray();
+		var seen = new long[bands];
+		var used = new long[bands];
+		var samples = new List<byte[]>();
+		foreach (var ((key, value), size) in tx.Range(Tables.FeedMessage, []).Zip(sizes))
+		{
+			var band = Band(size);
+			if (seen[band]++ % stride[band] != 0 || used[band] + size > budget[band]) continue;
+			used[band] += size;
+			samples.Add(Codec.Serialize(DecodeLine(tx, key, value)));
+		}
+
+		return samples;
 	}
+
+	private static int Band(long size) => TrainingBands.Count(start => size >= start);
+
+	/// <summary>A stored line's length as JSON, from the frame's header when it is compressed.</summary>
+	private static long JsonLength(byte[] value)
+		=> value.Length > 3 && value[0] == CompressedLine && ZstandardDecoder.TryGetMaxDecompressedLength(value.AsSpan(3), out var length)
+			? length
+			: value.Length;
 
 	/// <summary>A dictionary trained on <paramref name="samples"/>, or null when zstd cannot make one of them.</summary>
 	private byte[]? Train(List<byte[]> samples)

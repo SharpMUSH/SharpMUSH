@@ -71,6 +71,14 @@ public class FeedCompressionTests
 			FeedStyles.Pose, MarkupText.Plain(text));
 	}
 
+	/// <summary>A scene pose, several sentences long.</summary>
+	private static SharpFeedMessage PoseLine(long id)
+	{
+		var text = string.Join(" ", Enumerable.Range(0, 12).Select(n => ShipLine(id + n).Text.ToPlainText()));
+		return new SharpFeedMessage(id, "scene", "Bridge", At.AddSeconds(id), Speaker, "Navigator", Speaker, "Navigator", null, "",
+			FeedStyles.Pose, MarkupText.Plain(text));
+	}
+
 	/// <summary>A line of text no dictionary can predict.</summary>
 	private static SharpFeedMessage NoiseLine(long id)
 	{
@@ -229,6 +237,24 @@ public class FeedCompressionTests
 		await Assert.That(await StoredTotal()).IsEqualTo(OnDisk());
 		var ship = (await _db.GetFeedMessageAsync(5)).Expect<SharpFeedMessage>();
 		await Assert.That(ship.Text.ToPlainText()).IsEqualTo(ShipLine(5).Text.ToPlainText());
+	}
+
+	/// <summary>
+	/// A world of short lines that also holds a few long poses trains on all of them: the long ones have a band of the
+	/// budget to themselves rather than the one line in hundreds an even pick would give them.
+	/// </summary>
+	[Test]
+	public async Task Training_TakesLongLinesAsWellAsShortOnes()
+	{
+		var poses = Enumerable.Range(1, 20).Select(id => 100000L + id * 400).ToHashSet();
+		for (var id = 1L; id <= 8000; id++) await _db.AppendFeedMessageAsync(ShipLine(id), Keep());
+		foreach (var id in poses) await _db.AppendFeedMessageAsync(PoseLine(id), Keep());
+
+		var samples = _db.Store.Read(_db.TrainingSet);
+
+		await Assert.That(samples.Sum(sample => (long)sample.Length)).IsLessThanOrEqualTo(LightningDatabase.TrainingBytes);
+		await Assert.That(samples.Count(sample => sample.Length >= 1000)).IsEqualTo(poses.Count);
+		await Assert.That(samples.Count(sample => sample.Length < 1000)).IsGreaterThan(1000);
 	}
 
 	/// <summary>Every way a compressed line goes takes its stored size with it.</summary>
