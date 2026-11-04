@@ -11,6 +11,13 @@ window.sharpmushLayout = {
 	viewportSize: function (element) {
 		return element ? [element.clientWidth, element.clientHeight] : [0, 0];
 	},
+	// Where a point in the window (clientX, clientY) falls in element as drawn, scaled and scrolled: [x, y] from
+	// its top left corner.
+	offsetIn: function (element, clientX, clientY) {
+		if (!element) return null;
+		const box = element.getBoundingClientRect();
+		return [clientX - box.left, clientY - box.top];
+	},
 
 	// The key is data, never a selector. Only a control rendered by this authorized page can match.
 	focusConfigurationOption: function (key) {

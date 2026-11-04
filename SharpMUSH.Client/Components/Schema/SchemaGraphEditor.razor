@@ -154,7 +154,7 @@
         {
             _raw = raw;
             _draft = GraphDraft.Read(Value);
-            if (_draft.Find(_selected) is null) _selected = null;
+            if (_selected != EntryKey && _draft.Find(_selected) is null) _selected = null;
         }
         _guidance = GraphGuidance.Read(Spec, Data);
     }
@@ -358,21 +358,48 @@
 
     // ── Linking by dragging from an outcome's handle under the selected step onto another step. ──
 
-    private (string From, string Port, double X, double Y, double StartX, double StartY)? _linking;
+    // The line is drawn from the bottom of the step (X, Y); the pointer is followed from where it was pressed
+    // (PressX, PressY, on the map) and is what the drop lands on, wherever the handle stands under the step.
+    private (string From, string Port, double X, double Y, double PressX, double PressY, double StartX, double StartY)? _linking;
     private (double X, double Y) _linkEnd;
+    private ElementReference _canvas;
 
-    private void StartLink(PointerEventArgs e, GraphNode node, SchemaGraphPort port, double x, double y)
+    private async Task StartLinkAsync(PointerEventArgs e, GraphNode node, SchemaGraphPort port, double x, double y)
     {
         if (Locked || e.Button != 0) return;
-        _linking = (node.Key, port.Key, x, y, e.ClientX, e.ClientY);
-        _linkEnd = (x, y);
+        await BeginLinkAsync(e, node.Key, port.Key, x, y);
+    }
+
+    private async Task BeginLinkAsync(PointerEventArgs e, string from, string port, double x, double y)
+    {
+        var (pressX, pressY) = await OnMapAsync(e) ?? (x, y);
+        _linking = (from, port, x, y, pressX, pressY, e.ClientX, e.ClientY);
+        _linkEnd = (pressX, pressY);
+    }
+
+    // Where a pointer event is on the map, in the draft's coordinates: its place in the drawn canvas, unscaled,
+    // from the map's origin. Nothing when the page cannot say.
+    private async Task<(double X, double Y)?> OnMapAsync(PointerEventArgs e)
+    {
+        double[]? offset;
+        try
+        {
+            offset = await JS.InvokeAsync<double[]?>("sharpmushLayout.offsetIn", _canvas, e.ClientX, e.ClientY);
+        }
+        catch (JSException)
+        {
+            return null;
+        }
+        if (offset is not [var left, var top]) return null;
+        var (originX, originY, _, _) = Bounds();
+        return (originX + left / _zoom, originY + top / _zoom);
     }
 
     private void Pointer(PointerEventArgs e)
     {
         if (_linking is { } link)
         {
-            _linkEnd = (link.X + (e.ClientX - link.StartX) / _zoom, link.Y + (e.ClientY - link.StartY) / _zoom);
+            _linkEnd = (link.PressX + (e.ClientX - link.StartX) / _zoom, link.PressY + (e.ClientY - link.StartY) / _zoom);
             return;
         }
         Drag(e);
@@ -412,14 +439,11 @@
         _moved = false;
     }
 
-    private void StartEntryLink(PointerEventArgs e)
+    private async Task StartEntryLinkAsync(PointerEventArgs e)
     {
         if (Locked || e.Button != 0) return;
         var (x, y) = _draft.Entry;
-        x += GraphDraft.EntryWidth / 2;
-        y += GraphDraft.EntryHeight;
-        _linking = (EntryKey, "", x, y, e.ClientX, e.ClientY);
-        _linkEnd = (x, y);
+        await BeginLinkAsync(e, EntryKey, "", x + GraphDraft.EntryWidth / 2, y + GraphDraft.EntryHeight);
     }
 
     private void ClickEntry()
@@ -567,7 +591,7 @@
         var stubs = Stubs().ToList();
         <div class="graph-map" @ref="_mapFrame" @onpointermove="Pointer" @onpointerup="PointerUpAsync" @onpointerleave="LeaveAsync">
             <div class="graph-frame" style="@($"width: {Num(width * _zoom)}px; height: {Num(height * _zoom)}px;")">
-            <div class="graph-canvas" style="@($"width: {Num(width)}px; height: {Num(height)}px; transform: scale({Num2(_zoom)});")">
+            <div class="graph-canvas" @ref="_canvas" style="@($"width: {Num(width)}px; height: {Num(height)}px; transform: scale({Num2(_zoom)});")">
                 <svg class="graph-lines" viewBox="@($"{Num(originX)} {Num(originY)} {Num(width)} {Num(height)}")" width="@Num(width)" height="@Num(height)" aria-hidden="true" focusable="false">
                     <defs>
                         @foreach (var token in lines.Select(line => line.Token).Append(null).Distinct())
@@ -615,7 +639,7 @@
                         <div class="graph-handles" style="@($"left: {Num(entryX)}px; top: {Num(entryY + GraphDraft.EntryHeight + 8)}px;")">
                             <button type="button" class="graph-handle graph-handle--linked" tabindex="-1"
                                     title="@Loc["WidGraphDragLink", Loc["WidGraphEntry"]]"
-                                    @onpointerdown="StartEntryLink">@Loc["WidGraphEntry"]</button>
+                                    @onpointerdown="StartEntryLinkAsync">@Loc["WidGraphEntry"]</button>
                         </div>
                     }
                 }
@@ -657,7 +681,7 @@
                             <button type="button" class="@(linked ? "graph-handle graph-handle--linked" : "graph-handle")" tabindex="-1"
                                     style="@(PoseTypeStyle.ToneToken(port.Tone) is { } t ? $"--graph-tone: var({t});" : null)"
                                     title="@Loc["WidGraphDragLink", port.Label ?? port.Key]"
-                                    @onpointerdown="e => StartLink(e, chosen, port, fromX, fromY)">@(port.Label ?? port.Key)</button>
+                                    @onpointerdown="e => StartLinkAsync(e, chosen, port, fromX, fromY)">@(port.Label ?? port.Key)</button>
                         }
                     </div>
                 }
@@ -687,6 +711,13 @@
     private RenderFragment Outline => __builder =>
     {
         <ol class="graph-outline">
+            @* The start marker, so the step a run begins at can be changed without the map. *@
+            <li class="@(_selected == EntryKey ? "graph-outline-step graph-outline-step--selected" : "graph-outline-step")">
+                <button type="button" class="graph-outline-head graph-outline-entry" aria-pressed="@(_selected == EntryKey ? "true" : "false")" @onclick="() => Select(EntryKey)">
+                    <span class="graph-outline-label">@Loc["WidGraphEntry"]</span>
+                    <span class="graph-outline-kind">@Loc["WidGraphEntryLabel", _draft.StartNode?.Label ?? ""]</span>
+                </button>
+            </li>
             @foreach (var node in _draft.Order(PortKeys))
             {
                 var kind = Kind(node.Kind);

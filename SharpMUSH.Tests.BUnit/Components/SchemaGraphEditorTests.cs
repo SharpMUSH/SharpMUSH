@@ -337,6 +337,91 @@ public class SchemaGraphEditorTests : BunitContext
 		await Assert.That(GraphDraft.Read(sent).StartNode?.Key).IsEqualTo("mist");
 	}
 
+	/// <summary>Where the page says a pointer pressed at the client point (0, 0) is in the drawn canvas. The
+	/// Lantern map's origin is (0, -82), so the canvas point (x, y) is the draft point (x, y - 82) at 100%.</summary>
+	private void PressedAt(double left, double top) =>
+		JSInterop.Setup<double[]?>("sharpmushLayout.offsetIn", _ => true).SetResult([left, top]);
+
+	[Test]
+	[Arguments(1.0)]
+	[Arguments(1.1)]
+	public async Task A_dragged_link_lands_on_the_step_under_the_pointer_not_under_its_line(double zoom)
+	{
+		JsonElement? sent = null;
+		var cut = Render<SchemaGraphEditor>(p => p
+			.Add(x => x.Element, Field())
+			.Add(x => x.Value, Parse(Lantern))
+			.Add(x => x.ValueChanged, (JsonElement v) => sent = v));
+		if (zoom > 1) await cut.FindAll("button").Single(b => b.GetAttribute("aria-label") == "WidGraphZoomIn").ClickAsync(new());
+
+		await cut.FindAll(".graph-node").Single(b => b.GetAttribute("data-key") == "bog").ClickAsync(new());
+		// The Fail handle is pressed at (140, 236), right of the line's start under bog at (96, 218). Moved by
+		// (65, 90) on the map the pointer is inside toad (200, 300); the line's start moved as far would be in win.
+		PressedAt(140 * zoom, (236 + 82) * zoom);
+		await cut.FindAll(".graph-handle").Single(b => b.TextContent == "Fail").PointerDownAsync(new() { Button = 0, ClientX = 0, ClientY = 0 });
+		await cut.Find(".graph-map").PointerMoveAsync(new() { ClientX = 65 * zoom, ClientY = 90 * zoom });
+		await Assert.That(cut.Find(".graph-line--pending").GetAttribute("d")).IsEqualTo("M96,218 L205,326");
+		await cut.Find(".graph-map").PointerUpAsync(new());
+
+		await Assert.That(GraphDraft.Read(sent).Targets("bog", "fail").Select(n => n.Key)).IsEquivalentTo(new[] { "toad" });
+	}
+
+	[Test]
+	public async Task The_start_markers_link_lands_on_the_step_under_the_pointer()
+	{
+		JsonElement? sent = null;
+		var cut = Render<SchemaGraphEditor>(p => p
+			.Add(x => x.Element, Field())
+			.Add(x => x.Value, Parse(Lantern))
+			.Add(x => x.ValueChanged, (JsonElement v) => sent = v));
+
+		await cut.Find(".graph-entry").ClickAsync(new());
+		// Pressed at (60, -20), left of the line's start at (96, -30). Moved by (150, 175) the pointer is in mist
+		// (200, 150); the line's start moved as far stands right of it.
+		PressedAt(60, -20 + 82);
+		await cut.Find(".graph-handle").PointerDownAsync(new() { Button = 0, ClientX = 0, ClientY = 0 });
+		await cut.Find(".graph-map").PointerMoveAsync(new() { ClientX = 150, ClientY = 175 });
+		await cut.Find(".graph-map").PointerUpAsync(new());
+
+		await Assert.That(GraphDraft.Read(sent).StartNode?.Key).IsEqualTo("mist");
+	}
+
+	[Test]
+	public async Task The_outline_offers_the_start_marker_so_the_first_step_changes_without_the_map()
+	{
+		JsonElement? sent = null;
+		var cut = Render<SchemaGraphEditor>(p => p
+			.Add(x => x.Element, Field())
+			.Add(x => x.Value, Parse(Lantern))
+			.Add(x => x.ValueChanged, (JsonElement v) => sent = v));
+
+		await cut.FindAll(".graph-view-button").Single(b => b.TextContent == "WidGraphOutline").ClickAsync(new());
+		var entry = cut.Find(".graph-outline-entry");
+		await Assert.That(entry.TagName).IsEqualTo("BUTTON");
+		await Assert.That(entry.TextContent).Contains("WidGraphEntryLabel(The gate)");
+		await entry.ClickAsync(new());
+		await Assert.That(cut.Find(".graph-outline-entry").GetAttribute("aria-pressed")).IsEqualTo("true");
+		await Assert.That(cut.Find(".graph-inspector").TextContent).Contains("WidGraphEntryHelp");
+
+		var select = cut.FindComponent<MudBlazor.MudSelect<string>>();
+		await cut.InvokeAsync(() => select.Instance.ValueChanged.InvokeAsync("mist"));
+		await Assert.That(GraphDraft.Read(sent).StartNode?.Key).IsEqualTo("mist");
+		// The page sends the saved value back, written its own way; the start marker stays selected.
+		cut.Render(p => p.Add(x => x.Value, Parse(JsonSerializer.Serialize(sent, new JsonSerializerOptions { WriteIndented = true }))));
+		await Assert.That(cut.Find(".graph-outline-entry").GetAttribute("aria-pressed")).IsEqualTo("true");
+		await Assert.That(cut.Find(".graph-outline-entry").TextContent).Contains("WidGraphEntryLabel(Lost in the mist)");
+	}
+
+	[Test]
+	public async Task A_read_only_graph_shows_its_start_in_the_outline_without_a_way_to_change_it()
+	{
+		var cut = Render<SchemaGraphEditor>(p => p.Add(x => x.Element, Field(readOnly: true)).Add(x => x.Value, Parse(Lantern)));
+
+		await cut.FindAll(".graph-view-button").Single(b => b.TextContent == "WidGraphOutline").ClickAsync(new());
+		await cut.Find(".graph-outline-entry").ClickAsync(new());
+		await Assert.That(cut.FindComponent<MudBlazor.MudSelect<string>>().Instance.Disabled).IsTrue();
+	}
+
 	[Test]
 	public async Task The_start_marker_stands_above_the_first_step_until_moved_and_tidying_puts_it_back()
 	{
