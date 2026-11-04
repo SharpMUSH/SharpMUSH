@@ -12,6 +12,7 @@
     <InternalsVisibleTo Include="SharpMUSH.Tests" />
     <InternalsVisibleTo Include="SharpMUSH.Tests.Infrastructure" />
     <InternalsVisibleTo Include="WikiSemantics.NativeProbe" />
+    <InternalsVisibleTo Include="FeedDictionary" />
     <InternalsVisibleTo Include="SharpMUSH.Benchmarks" />
   </ItemGroup>
 
@@ -23,6 +24,11 @@
   <ItemGroup>
     <ProjectReference Include="..\SharpMUSH.Database\SharpMUSH.Database.csproj" />
     <ProjectReference Include="..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The feed line dictionary that ships with the server; never replaced (see LightningDatabase.FeedCompression.cs). -->
+    <EmbeddedResource Include="Resources/feed-lines-0.zdict" LogicalName="SharpMUSH.Database.Lightning.feed-lines-0.zdict" />
   </ItemGroup>
 
 </Project>

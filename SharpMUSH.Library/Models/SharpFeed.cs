@@ -204,3 +204,8 @@ public sealed record ExternalFeedIdentity(string Provider, string Subject, strin
 {
 	public string DisplayName => $"[{(Provider == "discord" ? "D" : Provider)}] {Name}";
 }
+
+/// <summary>What a pass of <see cref="IFeedStore.CompactFeedLinesAsync"/> did.</summary>
+/// <param name="Trained">Whether it trained a new dictionary.</param>
+/// <param name="Rewritten">How many lines it rewrote with the current dictionary.</param>
+public sealed record FeedCompaction(bool Trained, long Rewritten);

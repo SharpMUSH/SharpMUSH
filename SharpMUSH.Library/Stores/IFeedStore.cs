@@ -97,6 +97,13 @@ public interface IFeedStore
 
 	ValueTask<Found<SharpFeedMessage>> GetFeedMessageAsync(long id, CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// Keeps the stored lines small: trains a compression dictionary on the world's lines once there are enough, and a
+	/// new one when they have grown well past what the current one saw, then rewrites the lines made without it.
+	/// Run by the feed upkeep, never on a send.
+	/// </summary>
+	ValueTask<FeedCompaction> CompactFeedLinesAsync(CancellationToken cancellationToken = default);
+
 	/// <summary>Drops a feed's lines sent before <paramref name="before"/>, or all of them; returns how many went.</summary>
 	ValueTask<int> PurgeFeedAsync(string kind, string key, DateTimeOffset? before,
 		CancellationToken cancellationToken = default);

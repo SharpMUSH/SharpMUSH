@@ -1,3 +1,4 @@
+using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
@@ -124,11 +125,13 @@ public partial class LightningDatabase
 				: source with { Key = to, Messages = 0, Bytes = 0, StoredBytes = 0, LastId = 0 };
 
 			// A line keeps its id, so the id index only points at its new key, and lines already under the new
-			// key stay in id order with the moved ones.
+			// key stay in id order with the moved ones. Their stored size counts the key, so it is taken again.
+			long moved = 0;
 			foreach (var (oldKey, value) in tx.Range(Tables.FeedMessage, FeedPrefix(kind, from)).ToList())
 			{
-				var id = Codec.Deserialize<FeedMessageRecord>(value).Id;
+				var id = Keys.ReadDbref(oldKey.AsSpan(oldKey.Length - 8));
 				var newKey = MessageKey(kind, to, id);
+				moved += StoredSize(newKey, value);
 				tx.Delete(Tables.FeedMessage, oldKey);
 				tx.Put(Tables.FeedMessage, newKey, value);
 				tx.Put(Tables.FeedMessageId, Keys.Dbref(id), newKey);
@@ -150,7 +153,7 @@ public partial class LightningDatabase
 			{
 				Messages = target.Messages + source.Messages,
 				Bytes = target.Bytes + source.Bytes,
-				StoredBytes = target.StoredBytes + source.StoredBytes,
+				StoredBytes = target.StoredBytes + moved,
 				LastId = Math.Max(target.LastId, source.LastId)
 			}));
 			return true;
@@ -227,41 +230,22 @@ public partial class LightningDatabase
 	public async ValueTask AppendFeedMessageAsync(SharpFeedMessage message, FeedSettings limits,
 		CancellationToken cancellationToken = default)
 	{
-		var text = MarkupTextSerializer.Serialize(message.Text);
-		var record = new FeedMessageRecord
-		{
-			Id = message.Id,
-			AtMs = message.At.ToUnixTimeMilliseconds(),
-			Speaker = message.Speaker.ToString(),
-			SpeakerName = message.SpeakerName,
-			Executor = message.Executor.ToString(),
-			ExecutorName = message.ExecutorName,
-			Location = message.Location?.ToString(),
-			LocationName = message.LocationName,
-			Style = message.Style,
-			Text = text,
-			DisplayName = message.DisplayName,
-			Line = message.Line is { } line ? MarkupTextSerializer.Serialize(line) : null,
-			Audience = message.Audience,
-			ExternalIdentity = message.ExternalIdentity,
-			Picture = message.Picture,
-			Bytes = Keys.Str(text).Length
-		};
+		var record = ToRecord(message);
 
 		var key = MessageKey(message.Kind, message.Key, message.Id);
 		var idKey = Keys.Dbref(message.Id);
-		record = record with { StoredBytes = Codec.Serialize(record).Length + key.Length + idKey.Length + key.Length };
 
 		await Store.WriteAsync(tx =>
 		{
 			var feed = ReadFeed(tx, message.Kind, message.Key);
-			tx.Put(Tables.FeedMessage, key, Codec.Serialize(record));
+			var stored = EncodeLine(tx, record);
+			tx.Put(Tables.FeedMessage, key, stored);
 			tx.Put(Tables.FeedMessageId, idKey, key);
 			feed = feed with
 			{
 				Messages = feed.Messages + 1,
 				Bytes = feed.Bytes + record.Bytes,
-				StoredBytes = feed.StoredBytes + record.StoredBytes,
+				StoredBytes = feed.StoredBytes + StoredSize(key, stored),
 				LastId = Math.Max(feed.LastId, message.Id)
 			};
 
@@ -275,14 +259,14 @@ public partial class LightningDatabase
 			var dropped = new List<(byte[] Key, long Id)>();
 			foreach (var (oldKey, oldValue) in tx.Range(Tables.FeedMessage, FeedPrefix(message.Kind, message.Key)))
 			{
-				var old = Codec.Deserialize<FeedMessageRecord>(oldValue);
+				var old = DecodeLine(tx, oldKey, oldValue);
 				var over = (maxMessages > 0 && feed.Messages > maxMessages)
 					|| (maxBytes > 0 && feed.Bytes > maxBytes)
 					|| (old.Id != record.Id && old.AtMs < cutoff);
 				if (!over) break;
 
 				dropped.Add((oldKey, old.Id));
-				feed = Without(feed, old);
+				feed = Without(feed, old, StoredSize(oldKey, oldValue));
 			}
 
 			foreach (var (oldKey, id) in dropped)
@@ -300,7 +284,7 @@ public partial class LightningDatabase
 	{
 		// Newest first, so only the lines asked for are read, however long the feed has run.
 		var newest = Store.Read(tx => tx.RangeReverse(Tables.FeedMessage, FeedPrefix(kind, key))
-			.Select(entry => Codec.Deserialize<FeedMessageRecord>(entry.Value))
+			.Select(entry => DecodeLine(tx, entry.Key, entry.Value))
 			.TakeWhile(record => record.Id > afterId)
 			.Take(count > 0 ? count : int.MaxValue)
 			.Select(record => ToMessage(kind, key, record))
@@ -343,7 +327,7 @@ public partial class LightningDatabase
 			}
 
 			var (kind, feedKey) = SplitFeed(key.AsSpan(0, key.Length - 9));
-			return ToMessage(kind, feedKey, Codec.Deserialize<FeedMessageRecord>(bytes));
+			return ToMessage(kind, feedKey, DecodeLine(tx, key, bytes));
 		}));
 
 	public async ValueTask<int> PurgeFeedAsync(string kind, string key, DateTimeOffset? before,
@@ -357,12 +341,12 @@ public partial class LightningDatabase
 			var purged = 0;
 			foreach (var (oldKey, oldValue) in tx.Range(Tables.FeedMessage, FeedPrefix(kind, key)).ToList())
 			{
-				var old = Codec.Deserialize<FeedMessageRecord>(oldValue);
+				var old = DecodeLine(tx, oldKey, oldValue);
 				if (old.AtMs >= cutoff) continue;
 
 				tx.Delete(Tables.FeedMessage, oldKey);
 				tx.Delete(Tables.FeedMessageId, Keys.Dbref(old.Id));
-				feed = Without(feed, old);
+				feed = Without(feed, old, StoredSize(oldKey, oldValue));
 				purged++;
 			}
 
@@ -380,7 +364,7 @@ public partial class LightningDatabase
 			}
 
 			var (kind, feedKey) = SplitFeed(key.AsSpan(0, key.Length - 9));
-			var feed = Without(ReadFeed(tx, kind, feedKey), Codec.Deserialize<FeedMessageRecord>(bytes));
+			var feed = Without(ReadFeed(tx, kind, feedKey), DecodeLine(tx, key, bytes), StoredSize(key, bytes));
 			tx.Delete(Tables.FeedMessage, key);
 			tx.Delete(Tables.FeedMessageId, Keys.Dbref(id));
 			tx.Put(Tables.Feed, FeedKey(kind, feedKey), Codec.Serialize(feed));
@@ -426,9 +410,9 @@ public partial class LightningDatabase
 	/// <summary>A feed's lines, members and row.</summary>
 	private static void DeleteFeedRows(ITx tx, string kind, string key)
 	{
-		foreach (var (_, value) in tx.Range(Tables.FeedMessage, FeedPrefix(kind, key)).ToList())
+		foreach (var (lineKey, _) in tx.Range(Tables.FeedMessage, FeedPrefix(kind, key)).ToList())
 		{
-			tx.Delete(Tables.FeedMessageId, Keys.Dbref(Codec.Deserialize<FeedMessageRecord>(value).Id));
+			tx.Delete(Tables.FeedMessageId, lineKey.AsSpan(lineKey.Length - 8));
 		}
 
 		tx.DeletePrefix(Tables.FeedMessage, FeedPrefix(kind, key));
@@ -441,13 +425,16 @@ public partial class LightningDatabase
 		tx.Delete(Tables.Feed, FeedKey(kind, key));
 	}
 
-	/// <summary>A feed's counts with <paramref name="line"/> gone.</summary>
-	private static FeedRecord Without(FeedRecord feed, FeedMessageRecord line) => feed with
+	/// <summary>A feed's counts with <paramref name="line"/>, which took <paramref name="stored"/> bytes, gone.</summary>
+	private static FeedRecord Without(FeedRecord feed, FeedMessageRecord line, long stored) => feed with
 	{
 		Messages = feed.Messages - 1,
 		Bytes = feed.Bytes - line.Bytes,
-		StoredBytes = feed.StoredBytes - line.StoredBytes
+		StoredBytes = feed.StoredBytes - stored
 	};
+
+	/// <summary>What a line takes in the store: its value, its key, and its id index entry (the id, and the key again).</summary>
+	private static long StoredSize(byte[] key, ReadOnlySpan<byte> value) => value.Length + key.Length + sizeof(long) + key.Length;
 
 	private static FeedRecord ReadFeed(ITx tx, string kind, string key)
 		=> tx.TryGet(Tables.Feed, FeedKey(kind, key), out var bytes)
@@ -504,11 +491,93 @@ public partial class LightningDatabase
 			record.LastId, record.StoredBytes);
 
 	private static SharpFeedMessage ToMessage(string kind, string key, FeedMessageRecord record)
-		=> new(record.Id, kind, key, DateTimeOffset.FromUnixTimeMilliseconds(record.AtMs), record.ExternalIdentity is null ? DBRef.Parse(record.Speaker) : new DBRef(-1),
-			record.SpeakerName, DBRef.Parse(record.Executor), record.ExecutorName,
-			record.Location is null ? null : DBRef.Parse(record.Location), record.LocationName, record.Style, MarkupTextSerializer.Deserialize(record.Text), record.DisplayName,
-			record.Line is null ? null : MarkupTextSerializer.Deserialize(record.Line), record.Audience, record.ExternalIdentity,
-			record.Picture);
+	{
+		var text = MarkupTextSerializer.Deserialize(record.Text);
+		var speaker = record.ExternalIdentity is null ? LineRef(record.Speaker) : new DBRef(-1);
+		var speakerName = record.SpeakerName ?? "";
+		var line = record switch
+		{
+			{ Line: { } whole } => MarkupTextSerializer.Deserialize(whole),
+			{ LineBefore: null, LineAfter: null } => null,
+			_ => MarkupText.Concat([Markup(record.LineBefore), text, Markup(record.LineAfter)])
+		};
+		var identity = record.ExternalIdentity is { } external
+			? new ExternalFeedIdentity(external.Provider, external.Subject, external.Name, external.Picture ?? "")
+			: null;
+		return new(record.Id, kind, key, DateTimeOffset.FromUnixTimeMilliseconds(record.AtMs), speaker, speakerName,
+			record.Executor is null ? speaker : LineRef(record.Executor), record.ExecutorName ?? speakerName,
+			record.Location is null ? null : LineRef(record.Location), record.LocationName ?? "", record.Style ?? "", text,
+			record.DisplayName ?? "", line, record.Audience ?? "", identity, record.Picture ?? "");
+
+		// A line read back never fails on a reference it cannot parse (#-1, or a line that could not be read); it names nothing.
+		static DBRef LineRef(string value) => HelperFunctions.ParseDbRef(value) is DBRef parsed ? parsed : new DBRef(-1);
+
+		static MarkupText Markup(string? json) => json is null ? MarkupText.Empty : MarkupTextSerializer.Deserialize(json);
+	}
+
+	/// <summary>
+	/// <paramref name="message"/> as it is stored: empty fields and
+	/// an executor that is the speaker left out, and the delivered line kept as what surrounds the message when that
+	/// rebuilds it exactly.
+	/// </summary>
+	internal static FeedMessageRecord ToRecord(SharpFeedMessage message)
+	{
+		var text = MarkupTextSerializer.Serialize(message.Text);
+		var record = Fields(message) with { Text = text, Bytes = Keys.Str(text).Length };
+		return message.Line is { } line ? WithLine(record, message.Text, line, MarkupTextSerializer.Serialize(line)) : record;
+	}
+
+	/// <summary>Every field of <paramref name="message"/> but its markup and its sizes.</summary>
+	private static FeedMessageRecord Fields(SharpFeedMessage message)
+	{
+		var speaker = message.Speaker.ToString();
+		var executor = message.Executor.ToString();
+		return new FeedMessageRecord
+		{
+			Id = message.Id,
+			AtMs = message.At.ToUnixTimeMilliseconds(),
+			Speaker = speaker,
+			SpeakerName = Stored(message.SpeakerName),
+			Executor = executor == speaker ? null : executor,
+			ExecutorName = message.ExecutorName == message.SpeakerName ? null : message.ExecutorName,
+			Location = message.Location?.ToString(),
+			LocationName = Stored(message.LocationName),
+			Style = Stored(message.Style),
+			DisplayName = Stored(message.DisplayName),
+			Audience = Stored(message.Audience),
+			ExternalIdentity = message.ExternalIdentity is { } external
+				? new FeedIdentityRecord
+				{
+					Provider = external.Provider, Subject = external.Subject, Name = external.Name, Picture = Stored(external.Picture)
+				}
+				: null,
+			Picture = Stored(message.Picture)
+		};
+
+		static string? Stored(string value) => value.Length == 0 ? null : value;
+	}
+
+	/// <summary>
+	/// Keeps <paramref name="line"/> as the parts before and after <paramref name="text"/> when the line holds the
+	/// message as one piece, markup and all, and as <paramref name="whole"/>, its serialized form, otherwise. The split
+	/// is kept only when putting the parts back together serializes to exactly <paramref name="whole"/>.
+	/// </summary>
+	private static FeedMessageRecord WithLine(FeedMessageRecord record, MString text, MString line, string whole)
+	{
+		var at = text.Length == 0 ? -1 : line.Text.LastIndexOf(text.Text, StringComparison.Ordinal);
+		if (at < 0) return record with { Line = whole };
+
+		var before = line.Substring(0, at);
+		var after = line.Substring(at + text.Length);
+		var rebuilt = MarkupTextSerializer.Serialize(MarkupText.Concat([before, text, after]));
+		if (!string.Equals(rebuilt, whole, StringComparison.Ordinal)) return record with { Line = whole };
+
+		return record with
+		{
+			LineBefore = MarkupTextSerializer.Serialize(before),
+			LineAfter = after.Length == 0 ? null : MarkupTextSerializer.Serialize(after)
+		};
+	}
 
 	private static FeedSettings ToSettings(FeedSettingsRecord record)
 		=> new(record.MaxMessages, record.MaxBytes, record.MaxLength,
