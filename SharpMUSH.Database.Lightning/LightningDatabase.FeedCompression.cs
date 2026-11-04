@@ -214,7 +214,7 @@ public partial class LightningDatabase
 	/// <summary>Up to <see cref="TrainingSamples"/> lines as JSON, taken evenly across the table.</summary>
 	private List<byte[]> TrainingSet(ITx tx, long lines)
 	{
-		var stride = Math.Max(1, lines / TrainingSamples);
+		var stride = Math.Max(1, (lines + TrainingSamples - 1) / TrainingSamples);
 		return tx.Range(Tables.FeedMessage, [])
 			.Where((_, index) => index % stride == 0)
 			.Take(TrainingSamples)
