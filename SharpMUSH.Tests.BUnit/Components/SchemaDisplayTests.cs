@@ -131,6 +131,65 @@ public class SchemaDisplayTests : BunitContext
 	}
 
 	[Test]
+	public async Task Stat_tiles_show_label_value_caption_and_tone()
+	{
+		var cut = RenderDisplay(new SchemaElement(Kind: "stats", RowsField: "stats"), Rows("stats", """
+			[{"label":"AC","value":"21","caption":"Shield +2","color":"info"},
+			 {"label":"Blank","value":""}]
+			"""));
+
+		var tiles = cut.FindAll(".schema-stat");
+		await Assert.That(tiles.Count).IsEqualTo(1);
+		await Assert.That(tiles[0].GetAttribute("data-tone")).IsEqualTo("info");
+		await Assert.That(tiles[0].QuerySelector(".schema-stat-value")!.TextContent).IsEqualTo("21");
+		await Assert.That(tiles[0].QuerySelector(".schema-stat-caption")!.TextContent).IsEqualTo("Shield +2");
+	}
+
+	[Test]
+	public async Task A_stat_with_a_max_draws_pips_or_a_bar()
+	{
+		var cut = RenderDisplay(new SchemaElement(Kind: "stats", RowsField: "stats"), Rows("stats", """
+			[{"label":"Hero Points","value":"2","current":2,"max":3,"pips":true},
+			 {"label":"HP","value":"40 / 64","current":"40","max":"64","color":"success"}]
+			"""));
+
+		await Assert.That(cut.FindAll(".schema-stat-pip").Count).IsEqualTo(3);
+		await Assert.That(cut.FindAll(".schema-stat-pip--on").Count).IsEqualTo(2);
+		await Assert.That(cut.FindAll(".mud-progress-linear").Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task Stats_with_no_rows_show_the_empty_text()
+	{
+		var cut = RenderDisplay(new SchemaElement(Kind: "stats", RowsField: "stats", Empty: "No stats."), Rows("stats", "[]"));
+
+		await Assert.That(cut.Find(".schema-empty").TextContent).IsEqualTo("No stats.");
+	}
+
+	[Test]
+	public async Task Chips_read_strings_and_coloured_objects_and_skip_blanks()
+	{
+		var cut = RenderDisplay(new SchemaElement(Kind: "chips", SrcField: "traits", Label: "Traits"), Rows("traits", """
+			["Human", "", {"text":"Frightened 1","color":"error"}]
+			"""));
+
+		var chips = cut.FindAll(".mud-chip");
+		await Assert.That(chips.Count).IsEqualTo(2);
+		await Assert.That(chips[0].TextContent).Contains("Human");
+		await Assert.That(chips[1].ClassName).Contains("error");
+		await Assert.That(cut.Find(".schema-chip-group .schema-label").TextContent).IsEqualTo("Traits");
+	}
+
+	[Test]
+	public async Task Chips_with_nothing_to_show_draw_only_the_empty_text()
+	{
+		var cut = RenderDisplay(new SchemaElement(Kind: "chips", SrcField: "traits", Label: "Traits", Empty: "None."), Rows("traits", "\"x\""));
+
+		await Assert.That(cut.FindAll(".mud-chip").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".schema-empty").TextContent).IsEqualTo("None.");
+	}
+
+	[Test]
 	public async Task A_markdown_timeline_body_renders_markdown_and_escapes_html()
 	{
 		var cut = RenderDisplay(new SchemaElement(Kind: "timeline", RowsField: "entries"), Rows("entries", """

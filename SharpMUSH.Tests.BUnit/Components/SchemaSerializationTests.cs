@@ -97,6 +97,18 @@ public class SchemaSerializationTests
 	}
 
 	[TUnit.Core.Test]
+	public async Task View_layout_tabs_makes_a_tabbed_view_but_not_a_tabbed_form()
+	{
+		var view = JsonSerializer.Deserialize<PortalSchemaDocument>("""{ "kind": "view", "schema_version": 1, "layout": "tabs" }""", SchemaJson.Options);
+		var form = JsonSerializer.Deserialize<PortalSchemaDocument>("""{ "kind": "form", "schema_version": 1, "layout": "tabs" }""", SchemaJson.Options);
+		var plain = JsonSerializer.Deserialize<PortalSchemaDocument>("""{ "kind": "view", "schema_version": 1 }""", SchemaJson.Options);
+
+		await Assert.That(view!.IsTabbed).IsTrue();
+		await Assert.That(form!.IsTabbed).IsFalse();
+		await Assert.That(plain!.IsTabbed).IsFalse();
+	}
+
+	[TUnit.Core.Test]
 	public async Task ActionResult_DeserializesErrorEnvelope()
 	{
 		const string json = """

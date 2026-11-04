@@ -22,17 +22,24 @@ public static class SchemaJson
 	};
 }
 
-/// <summary>The whole schema document. <c>Kind</c> is "form" or "view".</summary>
+/// <summary>
+/// The whole schema document. <c>Kind</c> is "form" or "view". A view's <c>Layout</c> is "tabs" to show its
+/// pages one at a time under a tab strip; otherwise its pages stack.
+/// </summary>
 public sealed record PortalSchemaDocument(
 	string? Kind,
 	int SchemaVersion,
 	string? Title,
 	string? DataSource,
 	IReadOnlyList<SchemaPage>? Pages,
-	IReadOnlyDictionary<string, SchemaAction>? Actions)
+	IReadOnlyDictionary<string, SchemaAction>? Actions,
+	string? Layout = null)
 {
 	/// <summary>True for an input form (vs. a read-only view).</summary>
 	public bool IsForm => string.Equals(Kind, "form", StringComparison.OrdinalIgnoreCase);
+
+	/// <summary>True for a view whose pages are tabs.</summary>
+	public bool IsTabbed => !IsForm && string.Equals(Layout, "tabs", StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>One page of a (possibly multi-step) document.</summary>
@@ -58,7 +65,7 @@ public sealed record SchemaSection(
 
 /// <summary>
 /// A single element. <c>Kind</c> discriminates: "field" (an input/value) or a display element
-/// ("markdown", "image", "table", "keyvalue", "timeline", "graph", "divider", "button"). Unused properties stay null.
+/// ("markdown", "image", "table", "keyvalue", "timeline", "stats", "chips", "graph", "divider", "button"). Unused properties stay null.
 /// </summary>
 /// <remarks>
 /// <c>Empty</c> is a table's or timeline's text for no rows. <c>Confirm</c>, <c>Values</c>, <c>Color</c> and
