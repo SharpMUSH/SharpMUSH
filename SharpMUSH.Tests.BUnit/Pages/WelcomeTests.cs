@@ -42,10 +42,11 @@ public class WelcomeTests : BunitContext
 		{
 			await Assert.That(page.FindAll(".admin-checklist img").Count).IsEqualTo(1);
 			// A topic without its own illustration shows the genre's general one.
-			var illustrated = SharpieArtCatalog.Approved.Any(art => art.Topic == $"administrator-{step}");
+			var illustration = SharpieArtCatalog.Approved.FirstOrDefault(art => art.Topic == $"administrator-{step}"
+				&& art.Theme == "Fantasy" && art.Style == "minimalist"
+				&& art.ThemeKind is null or SharpieArtThemeKind.Genre);
 			var image = page.Find($"[data-art-topic='administrator-{step}'] img");
-			await Assert.That(image.GetAttribute("src")).Contains(illustrated
-				? $"sharpie-fantasy-minimalist-administrator-{step}.webp" : "sharpie-fantasy-minimalist.webp");
+			await Assert.That(image.GetAttribute("src")).Contains(illustration?.Url ?? "images/sharpie/sharpie-fantasy-minimalist.webp");
 			await Assert.That(image.GetAttribute("alt")).IsEqualTo("");
 			await Assert.That(page.Find($"[data-art-topic='administrator-{step}'] details").HasAttribute("open")).IsTrue();
 			await page.InvokeAsync(() => guide.CompleteStepAsync(step));
