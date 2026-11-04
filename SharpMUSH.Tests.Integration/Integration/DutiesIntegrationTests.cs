@@ -120,9 +120,10 @@ public class DutiesIntegrationTests
 
 	/// <summary>Writes a duty: a challenge (gate) with an option anyone can roll and a trained one, a
 	/// narration (hall), and a successful and a failed end, then gets it approved and on the roster.</summary>
-	private async Task WriteAndApproveAsync(TestIsolationHelpers.TestPlayer author, TestIsolationHelpers.TestPlayer reviewer, string id)
+	private async Task WriteAndApproveAsync(TestIsolationHelpers.TestPlayer author, TestIsolationHelpers.TestPlayer reviewer, string id,
+		string title = "The Harbor Fire")
 	{
-		await Assert.That(await Read(author, $"+duty/create {id}=The Harbor Fire")).Contains($"Created {id}.");
+		await Assert.That(await Read(author, $"+duty/create {id}={title}")).Contains($"Created {id}.");
 		await As(author, $"+duty/set {id}/description=Smoke over the docks.");
 		await Assert.That(await Read(author, $"+duty/node {id}/gate=challenge")).Contains($"{id} starts there.");
 		await As(author, $"+duty/node {id}/hall=narration");
@@ -254,15 +255,17 @@ public class DutiesIntegrationTests
 			await God($"@role/assign #{ana.DbRef.Number}=approved");
 			await God($"@role/assign #{ben.DbRef.Number}=approved");
 			var id = NewId();
-			await WriteAndApproveAsync(author, reviewer, id);
+			// A comma in the title stays in the title of every line the duty writes.
+			const string title = "Fire, Smoke, and Ash";
+			await WriteAndApproveAsync(author, reviewer, id, title);
 
 			await Assert.That(await Read(ana, "+duty/scene")).Contains("You are not on a duty.");
 			var started = await Read(ana, $"+duty/start/scene {id}");
-			await Assert.That(started).Contains("You gather a party for The Harbor Fire.").And.Contains("goes into scene");
+			await Assert.That(started).Contains($"You gather a party for {title}.").And.Contains("goes into scene");
 			var scene = (await God($"think [scenefocus(#{ana.DbRef.Number})]")).Trim();
 			await Assert.That(scene).Matches(@"^\d+$");
-			await Assert.That(await God($"think [scene({scene},title)]")).IsEqualTo("The Harbor Fire");
-			await Assert.That(await Read(ana, "+duty/scene")).Contains($"goes into scene {scene}: The Harbor Fire.");
+			await Assert.That(await God($"think [scene({scene},title)]")).IsEqualTo(title);
+			await Assert.That(await Read(ana, "+duty/scene")).Contains($"goes into scene {scene}: {title}.");
 
 			// A member who joins the party joins the scene too.
 			var party = (await As(ben, "+duty")).Split('\n').First(line => line.Contains("+duty/join"));
@@ -281,12 +284,79 @@ public class DutiesIntegrationTests
 			foreach (var pose in poses)
 			{
 				log.Add(await God($"think [scenepose({scene},{pose},content)]"));
+				await Assert.That(await God($"think [scenepose({scene},{pose},showas)]")).IsEqualTo(title);
+				await Assert.That(await God($"think [scenepose({scene},{pose},type)]")).IsEqualTo("narration");
 			}
 			var text = string.Join("\n", log);
-			await Assert.That(text).Contains("set out on The Harbor Fire.").And.Contains("The Gate: A burning gate.")
+			await Assert.That(text).Contains($"set out on {title}.").And.Contains("The Gate: A burning gate.")
 				.And.Contains(" tries ").And.Contains("You force it open. 2 of 2 succeeded.")
 				.And.Contains("A quiet hall.").And.Contains("It ends in success.");
 			await Assert.That(await God($"think [scenepose({scene},{poses[^1]},type)]")).IsEqualTo("narration");
+		}
+		finally
+		{
+			await Installer.UninstallAsync("duties-scene", force: true, CancellationToken.None);
+			await UninstallAsync();
+		}
+	}
+
+	/// <summary>The bridge puts a character in the duty's scene only when they may join scenes, whether they lead
+	/// the party, are in it when it is tied to the scene, or join it later.</summary>
+	[Test]
+	public async Task OnlyCharactersWhoMayJoinScenesAreAddedToADutysScene()
+	{
+		try
+		{
+			await InstallAsync();
+			await ApplyAsync("duties-scene");
+			var author = await Player("DuSjA");
+			var reviewer = await Player("DuSjR");
+			var ana = await Player("DuSjAna");
+			var ben = await Player("DuSjBen");
+			var cara = await Player("DuSjCara");
+			var eve = await Player("DuSjEve");
+			var dan = await Player("DuSjDan");
+			await God($"@role/assign #{reviewer.DbRef.Number}=duty-reviewer");
+			await God($"@role/assign #{ana.DbRef.Number}=approved");
+			await God($"@role/assign #{ben.DbRef.Number}=approved");
+			// dan may make scenes but not join them.
+			var role = $"dusj{Guid.NewGuid():N}"[..14];
+			await God($"@role/create {role}=Staff");
+			await God($"@role/allow {role}=scene.create");
+			await God($"@role/assign #{dan.DbRef.Number}={role}");
+			var id = NewId();
+			await WriteAndApproveAsync(author, reviewer, id);
+			await As(ana, "+scene/create Open Air=Anyone may come.");
+			var scene = (await God($"think [scenefocus(#{ana.DbRef.Number})]")).Trim();
+			await Assert.That(scene).Matches(@"^\d+$");
+			const string denied = "You need the scene.join permission.";
+
+			// A leader who may not join scenes cannot tie the party to one.
+			await As(cara, $"+duty/start {id}");
+			await Assert.That(await Read(cara, $"+duty/scene {scene}")).Contains(denied);
+			await Assert.That(await Read(cara, "+duty/scene")).Contains("Your party is not tied to a scene.");
+			await Assert.That((await God($"think [scenefocus(#{cara.DbRef.Number})]")).Trim()).IsNotEqualTo(scene);
+			await As(cara, "+duty/abandon");
+
+			// Nor make one for it, even with scene.create.
+			var started = await Read(dan, $"+duty/start/scene {id}");
+			await Assert.That(started).Contains(denied).And.DoesNotContain("goes into scene");
+			await Assert.That(await Read(dan, "+duty/scene")).Contains("Your party is not tied to a scene.");
+			await As(dan, "+duty/abandon");
+
+			// A member already in the party when it is tied, and one who joins after, stay out of the scene; an
+			// approved member joins it.
+			await As(ana, $"+duty/start {id}");
+			var party = await LeaderPartyNumberAsync(cara, ana);
+			await As(cara, $"+duty/join {party}");
+			await As(ana, $"+duty/scene {scene}");
+			await Assert.That(string.Join(" ", Notifications.For(cara.DbRef))).Contains($"You are not put in scene {scene}. Permission denied. {denied}");
+			await Assert.That((await God($"think [scenefocus(#{cara.DbRef.Number})]")).Trim()).IsNotEqualTo(scene);
+			await Assert.That(await Read(eve, $"+duty/join {party}")).Contains($"You are not put in scene {scene}.");
+			await Assert.That((await God($"think [scenefocus(#{eve.DbRef.Number})]")).Trim()).IsNotEqualTo(scene);
+			await As(ben, $"+duty/join {party}");
+			await Assert.That((await God($"think [scenefocus(#{ben.DbRef.Number})]")).Trim()).IsEqualTo(scene);
+			await Assert.That((await God($"think [scenefocus(#{ana.DbRef.Number})]")).Trim()).IsEqualTo(scene);
 		}
 		finally
 		{
@@ -663,6 +733,163 @@ public class DutiesIntegrationTests
 			await Assert.That(play["about"]!.GetValue<string>()).IsEqualTo("Follow the lantern through the bog.");
 			await Assert.That(play["explored"]!.GetValue<string>()).IsEqualTo("0%");
 			await Assert.That((await GetAsync(other, "schema?at=")).ToJsonString()).Contains("Duties you can start");
+		}
+		finally
+		{
+			await Installer.UninstallAsync("duties-app", force: true, CancellationToken.None);
+			await UninstallAsync();
+		}
+	}
+
+	/// <summary>What the page posts to save duty <paramref name="id"/> with <paramref name="steps"/>, the graph as the
+	/// page read it back.</summary>
+	private static JsonObject Post(string op, string id, string title, JsonNode steps) => new()
+	{
+		["op"] = op,
+		["duty"] = id,
+		["title"] = title,
+		["description"] = "Follow the lantern through the bog.",
+		["min"] = 1,
+		["max"] = 4,
+		["repeat"] = "every",
+		["steps"] = steps.DeepClone(),
+	};
+
+	private static async Task<JsonNode> StepsAsync(HttpClient http, string id) =>
+		(await GetAsync(http, $"data?at={id}"))["fields"]!["steps"]!["value"]!;
+
+	private static JsonArray RewardsOf(JsonNode steps, string node) =>
+		steps["nodes"]!.AsArray().Single(n => n!["key"]!.GetValue<string>() == node)!["fields"]!["rewards"]!.AsArray();
+
+	private static async Task<string[]> ChangesAsync(HttpClient http, string id) =>
+		[.. (await GetAsync(http, $"data?at={id}"))["fields"]!["changes"]!["value"]!.AsArray()
+			.Select(c => $"{c!["node"]!.GetValue<string>()}:{c["change"]!.GetValue<string>()}")];
+
+	/// <summary>A link's weight and conditions are part of the step it leaves: a draft changing only one of them
+	/// shows that step as changed to the reviewer, and a draft changing nothing shows nothing.</summary>
+	[Test]
+	public async Task TheReviewerSeesAChangeToALinksSettings()
+	{
+		try
+		{
+			await InstallAsync();
+			await ApplyAsync("duties-app");
+			var (author, _) = await SignedInAsync("DuChg");
+			var (reviewer, reviewerDbref) = await SignedInAsync("DuChgRev");
+			await God($"@role/assign #{reviewerDbref}=duty-reviewer");
+			var id = NewId();
+			await ActAsync(author, "act", new { op = "create", new_title = "The Lantern Road", new_id = id });
+			await ActAsync(author, "act", Draft("submit", id, "The Lantern Road"));
+			await Assert.That((await ActAsync(reviewer, "act", new { op = "approve", duty = id }))["message"]!.GetValue<string>()).Contains($"{id} is approved.");
+			var live = await StepsAsync(author, id);
+
+			// Unchanged, as the page posts it back.
+			await Assert.That((await ActAsync(author, "act", Post("save", id, "The Lantern Road", live)))["ok"]!.GetValue<bool>()).IsTrue();
+			await Assert.That(await ChangesAsync(reviewer, id)).IsEmpty();
+			await ActAsync(author, "act", new { op = "discard", duty = id });
+
+			// gate on success to loot: weight 2, needs force.
+			(string Field, JsonNode? Value)[] edits = [("weight", 3), ("min", 1), ("max", 3), ("share", 50), ("requires", null), ("to", "lost"), ("port", "fail")];
+			foreach (var (field, value) in edits)
+			{
+				var steps = live.DeepClone();
+				var link = steps["edges"]!.AsArray().Single(e => e!["to"]!.GetValue<string>() == "loot" && e["from"]!.GetValue<string>() == "gate")!.AsObject();
+				if (value is null) link.Remove(field);
+				else link[field] = value.DeepClone();
+				var saved = await ActAsync(author, "act", Post("save", id, "The Lantern Road", steps));
+				await Assert.That(saved["ok"]!.GetValue<bool>()).IsTrue().Because(saved.ToJsonString());
+				await Assert.That(await ChangesAsync(reviewer, id)).IsEquivalentTo(["gate:changed"]).Because(field);
+				await ActAsync(author, "act", new { op = "discard", duty = id });
+			}
+		}
+		finally
+		{
+			await Installer.UninstallAsync("duties-app", force: true, CancellationToken.None);
+			await UninstallAsync();
+		}
+	}
+
+	/// <summary>A reward keeps its number through the page's saves, so a once-only reward a character has had stays
+	/// had when another reward is removed, and a new reward is not taken for one they had.</summary>
+	[Test]
+	public async Task PortalSavesKeepWhichRewardsACharacterHasHad()
+	{
+		try
+		{
+			await InstallAsync();
+			await ApplyAsync("duties-app");
+			var (author, _) = await SignedInAsync("DuRwd");
+			var (reviewer, reviewerDbref) = await SignedInAsync("DuRwdRev");
+			await God($"@role/assign #{reviewerDbref}=duty-reviewer");
+			var ana = await Player("DuRwdAna");
+			var id = NewId();
+			const string title = "The Lantern Road";
+			await ActAsync(author, "act", new { op = "create", new_title = title, new_id = id });
+			var first = JsonNode.Parse(JsonSerializer.Serialize(new
+			{
+				start = "gate",
+				nodes = new object[]
+				{
+					new { key = "gate", kind = "challenge", label = "The gate", x = 10, y = 10, fields = new
+					{
+						text = "A burning gate.",
+						success = "You force it open.",
+						options = new object[] { new { id = "force", label = "Force it", trait = "win", difficulty = "standard", successes = 1, failures = 1 } },
+						rewards = new object[] { new { kind = "info", repeat = "every", text = "The gate was oiled." } },
+					} },
+					new { key = "hall", kind = "narration", label = "The hall", x = 10, y = 150, fields = new
+					{
+						text = "A quiet hall.",
+						rewards = new object[] { new { kind = "coin", repeat = "once", amount = 5 } },
+					} },
+					new { key = "loot", kind = "end", label = "Loot", x = 10, y = 300, fields = new { result = "success" } },
+					new { key = "lost", kind = "end", label = "Lost", x = 200, y = 300, fields = new { result = "fail" } },
+				},
+				edges = new object[]
+				{
+					new { from = "gate", port = "success", to = "hall" },
+					new { from = "gate", port = "fail", to = "lost" },
+					new { from = "hall", port = "continue", to = "loot" },
+				},
+			}))!;
+			await ActAsync(author, "act", Post("submit", id, title, first));
+			await ActAsync(reviewer, "act", new { op = "approve", duty = id });
+			await ActAsync(reviewer, "act", new { op = "rosteron", duty = id });
+
+			await As(ana, $"+duty/start {id}");
+			await As(ana, "+duty/go");
+			await Assert.That(await Read(ana, "+duty/try force")).Contains("GRANTED coin 5 once at hall");
+			await As(ana, "+duty/go");
+
+			// The gate's reward goes and the hall gets a second coin, after the first. The coin keeps its number
+			// and the new one gets the next.
+			var steps = await StepsAsync(author, id);
+			await Assert.That(RewardsOf(steps, "gate").Select(r => r!["id"]!.GetValue<int>())).IsEquivalentTo([1]);
+			await Assert.That(RewardsOf(steps, "hall").Select(r => r!["id"]!.GetValue<int>())).IsEquivalentTo([2]);
+			RewardsOf(steps, "gate").Clear();
+			RewardsOf(steps, "hall").Add(new JsonObject { ["kind"] = "coin", ["repeat"] = "once", ["amount"] = 7 });
+			await Assert.That((await ActAsync(author, "act", Post("save", id, title, steps)))["ok"]!.GetValue<bool>()).IsTrue();
+			steps = await StepsAsync(author, id);
+			await Assert.That(RewardsOf(steps, "hall").Select(r => $"{r!["id"]}:{r["amount"]}")).IsEquivalentTo(["2:5", "3:7"]);
+
+			// Moved about, each keeps its own number; a number the revision did not have is a new reward.
+			var hall = RewardsOf(steps, "hall");
+			var coin = hall[0]!.DeepClone();
+			hall.RemoveAt(0);
+			hall.Add(coin);
+			hall.Add(new JsonObject { ["id"] = 1, ["kind"] = "coin", ["repeat"] = "once", ["amount"] = 9 });
+			await ActAsync(author, "act", Post("save", id, title, steps));
+			steps = await StepsAsync(author, id);
+			await Assert.That(RewardsOf(steps, "hall").Select(r => $"{r!["id"]}:{r["amount"]}")).IsEquivalentTo(["2:5", "3:7", "4:9"]);
+			await Assert.That((await ActAsync(author, "act", Post("submit", id, title, steps)))["ok"]!.GetValue<bool>()).IsTrue();
+			await ActAsync(reviewer, "act", new { op = "approve", duty = id });
+
+			// The coin ana had stays had; the new ones are given.
+			await As(ana, $"+duty/start {id}");
+			await As(ana, "+duty/go");
+			var again = await Read(ana, "+duty/try force");
+			await Assert.That(again).Contains("GRANTED coin 7 once at hall").And.Contains("GRANTED coin 9 once at hall")
+				.And.DoesNotContain("GRANTED coin 5");
 		}
 		finally
 		{
