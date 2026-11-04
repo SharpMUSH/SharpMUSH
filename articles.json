@@ -14789,6 +14789,14 @@
         "aliases": [
           "@storage/purge"
         ]
+      },
+      {
+        "id": "dictionaries",
+        "lookup": "@storage dictionaries",
+        "heading": "Compression dictionaries",
+        "aliases": [
+          "@storage/dictionaries"
+        ]
       }
     ],
     "file": "storage-command.md"
