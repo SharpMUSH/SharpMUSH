@@ -1,7 +1,7 @@
 format: "1.16"
 package: duties
 title: "Duties"
-version: 1.3.0
+version: 1.3.1
 authors: [SharpMUSH]
 description: "Duties: short adventures a party plays through with +duty, from challenge to challenge. Everyone rolls at each challenge, the outcome picks the way on, and the steps nobody in the party has seen are favoured. Players write duties and submit them, a duty reviewer approves them, and staff choose which approved duties are on the active roster and when. The rolls come from a sheet system's bridge, such as duties-d20 or duties-fate."
 license: MIT
@@ -753,7 +753,7 @@ objects:
       # The editor's steps are one graph field, steps: { start, nodes: [{ key, kind, label, x, y, fields }],
       # edges: [{ from, port, to, weight, min, max, share, requires }] }. A step's fields are text, seen,
       # combine, result, critsuccess, success, partial, fail, critfail, options (rows { id, label, trait,
-      # difficulty, successes, failures, trained, note }) and rewards (rows { kind, repeat, ...details }).
+      # difficulty, successes, failures, trained, note }) and rewards (rows { id, kind, repeat, ...details }, id the reward's number, missing on a new one).
       # Saving rewrites the revision being edited from it, through the same checks +duty applies.
       WEB`JSON`ARRAY: |-
         if(strlen(setr(web_ja,trim(squish(%0,%r),b,%r))),json_array(%q<web_ja>,%r),json_array())
@@ -933,9 +933,9 @@ objects:
       # %0 an option's attribute, %1 its name.
       WEB`OPTION: |-
         json(object,id,json(string,%1),label,json(string,get({{store}}/%0)),trait,json(string,get({{store}}/%0`TRAIT)),difficulty,json(string,get({{store}}/%0`DIFF)),successes,json(number,firstof(get({{store}}/%0`SUCC),1)),failures,json(number,firstof(get({{store}}/%0`FAIL),1)),trained,u(%!/WEB`JSON`BOOLEAN,get({{store}}/%0`TRAINED)),note,json(string,get({{store}}/%0`NOTE)))
-      # %0 a reward's attribute: its details, with its kind and how often it is given.
+      # %0 a reward's attribute: its details, with its number, its kind and how often it is given.
       WEB`REWARD: |-
-        json_mod(if(cand(isjson(setr(web_rd,get({{store}}/%0`DETAILS))),strmatch(json_query(%q<web_rd>,type),object)),%q<web_rd>,json(object)),patch,json(object,kind,json(string,get({{store}}/%0)),repeat,json(string,firstof(get({{store}}/%0`REPEAT),once)),success,json(number,firstof(get({{store}}/%0`SUCCESS),0))))
+        json_mod(if(cand(isjson(setr(web_rd,get({{store}}/%0`DETAILS))),strmatch(json_query(%q<web_rd>,type),object)),%q<web_rd>,json(object)),patch,json(object,id,json(number,last(%0,`)),kind,json(string,get({{store}}/%0)),repeat,json(string,firstof(get({{store}}/%0`REPEAT),once)),success,json(number,firstof(get({{store}}/%0`SUCCESS),0))))
       # %0 a link's attribute: where it leads, with the settings it has.
       WEB`EDGE: |-
         u(%!/WEB`JSON`PUT,u(%!/WEB`JSON`PUT,u(%!/WEB`JSON`PUT,u(%!/WEB`JSON`PUT,u(%!/WEB`JSON`PUT,json(object,from,json(string,get({{store}}/%0)),port,json(string,get({{store}}/%0`PORT)),to,json(string,get({{store}}/%0`TO))),weight,json(number,firstof(get({{store}}/%0`WEIGHT),1)),strlen(get({{store}}/%0`WEIGHT))),min,json(number,firstof(get({{store}}/%0`MIN),0)),strlen(get({{store}}/%0`MIN))),max,json(number,firstof(get({{store}}/%0`MAX),0)),strlen(get({{store}}/%0`MAX))),share,json(number,firstof(get({{store}}/%0`SHARE),0)),strlen(get({{store}}/%0`SHARE))),requires,json(string,get({{store}}/%0`REQ)),strlen(get({{store}}/%0`REQ)))
@@ -952,7 +952,7 @@ objects:
         cond(not(hasattr({{store}},%0`N`%2)),added,comp(u(%!/WEB`SIGNATURE,%0,%2),u(%!/WEB`SIGNATURE,%1,%2)),changed)
       # %0 a root, %1 a step: everything about the step but its place on the map, and where it leads.
       WEB`SIGNATURE: |-
-        setq(web_sp,ucstr(%0`N`%1`))[get({{store}}/%0`N`%1)]|[iter(sort(lattr({{store}}/%0`N`%1`**)),if(not(match(X Y,after(%i0,%q<web_sp>))),[after(%i0,%q<web_sp>)]=[get({{store}}/%i0)]),,|)]|[sort(squish(iter(u(%!/FUN`EDGES,%0),if(strmatch(get({{store}}/%0`E`%i0),%1),[get({{store}}/%0`E`%i0`PORT)]>[get({{store}}/%0`E`%i0`TO)]>[iter(WEIGHT MIN MAX SHARE REQ,get({{store}}/%0`E`%i0`%i0),,>)]),,|),|),a,|)]
+        setq(web_sp,ucstr(%0`N`%1`))[get({{store}}/%0`N`%1)]|[iter(sort(lattr({{store}}/%0`N`%1`**)),if(not(match(X Y,after(%i0,%q<web_sp>))),[after(%i0,%q<web_sp>)]=[get({{store}}/%i0)]),,|)]|[sort(squish(iter(u(%!/FUN`EDGES,%0),if(strmatch(get({{store}}/%0`E`%i0),%1),[get({{store}}/%0`E`%i0`PORT)]>[get({{store}}/%0`E`%i0`TO)]>[iter(WEIGHT MIN MAX SHARE REQ,get({{store}}/%0`E`%i1`%i0),,>)]),,|),|),a,|)]
       # %0 a duty, %1 its root: what +duty/check finds, on the steps it is about.
       WEB`ISSUES: |-
         setqm(pr_prov,u(%!/FUN`PROVIDER),
@@ -1061,9 +1061,11 @@ objects:
         setq(web_ho,json_query(json_query(%q<web_gn>,get,dec(match(%q<web_keys>,%0))),extract,$.fields.options))[t(member(iter(lnum(if(strmatch(json_query(%q<web_ho>,type),array),json_query(%q<web_ho>,size),0)),u(%!/WEB`OPTION`ID,%q<web_ho>,%i0)),%1))]
 
       # Writes the checked post into root: the duty's fields, then its steps and links afresh. A reviewer's
-      # notes stay.
+      # notes stay. A reward keeps the number it was posted with when the revision had a reward by that
+      # number; any other gets a new one. WN only grows, so a removed reward's number, and the claims made
+      # under it, never pass to another.
       INC`WEB`WRITE: |-
-        &%q<root> {{store}}=%q<web_title>; &%q<root>`DESC {{store}}=%q<web_desc>; &%q<root>`REPEAT {{store}}=%q<web_repeat>; &%q<root>`MIN {{store}}=%q<web_min>; &%q<root>`MAX {{store}}=%q<web_max>; &%q<root>`START {{store}}=lcstr(json_query(%q<web_g>,extract,$.start)); @wipe {{store}}/%q<root>`START`*; think setqm(web_sx,json_query(%q<web_g>,extract,$.start_x),web_sy,json_query(%q<web_g>,extract,$.start_y)); @switch/inline cand(isnum(%q<web_sx>),isnum(%q<web_sy>))=1,{&%q<root>`START`X {{store}}=round(%q<web_sx>,0); &%q<root>`START`Y {{store}}=round(%q<web_sy>,0)}; @dolist/inline lattr({{store}}/%q<root>`N`*) lattr({{store}}/%q<root>`E`*)={@wipe {{store}}/##}; &%q<root>`EN {{store}}=%q<web_en>; &%q<root>`WN {{store}}=0; @dolist/inline lnum(%q<web_nn>)={think setq(web_i,##); @include %!/INC`WEB`WRITE`STEP}; @dolist/inline lnum(%q<web_en>)={think setq(web_i,##); @include %!/INC`WEB`WRITE`LINK}
+        &%q<root> {{store}}=%q<web_title>; &%q<root>`DESC {{store}}=%q<web_desc>; &%q<root>`REPEAT {{store}}=%q<web_repeat>; &%q<root>`MIN {{store}}=%q<web_min>; &%q<root>`MAX {{store}}=%q<web_max>; &%q<root>`START {{store}}=lcstr(json_query(%q<web_g>,extract,$.start)); @wipe {{store}}/%q<root>`START`*; think setqm(web_sx,json_query(%q<web_g>,extract,$.start_x),web_sy,json_query(%q<web_g>,extract,$.start_y)); @switch/inline cand(isnum(%q<web_sx>),isnum(%q<web_sy>))=1,{&%q<root>`START`X {{store}}=round(%q<web_sx>,0); &%q<root>`START`Y {{store}}=round(%q<web_sy>,0)}; think setq(web_wold,iter(lattr({{store}}/%q<root>`N`*`W`*),last(%i0,`))); @dolist/inline lattr({{store}}/%q<root>`N`*) lattr({{store}}/%q<root>`E`*)={@wipe {{store}}/##}; &%q<root>`EN {{store}}=%q<web_en>; @dolist/inline lnum(%q<web_nn>)={think setq(web_i,##); @include %!/INC`WEB`WRITE`STEP}; @dolist/inline lnum(%q<web_en>)={think setq(web_i,##); @include %!/INC`WEB`WRITE`LINK}
       INC`WEB`WRITE`STEP: |-
         think setqm(web_n,json_query(%q<web_gn>,get,%q<web_i>),
         web_kind,extract(%q<web_kinds>,inc(%q<web_i>),1),
@@ -1074,7 +1076,7 @@ objects:
         web_opath,%q<web_p>`O`[u(%!/WEB`OPTION`ID,%q<web_wo>,%q<web_j>)]); think setq(web_ot,lcstr(json_query(%q<web_o>,extract,$.trait))); &%q<web_opath> {{store}}=firstof(trim(json_query(%q<web_o>,extract,$.label)),u(%!/FUN`TRAITLABEL,%q<web_ot>),last(%q<web_opath>,`)); &%q<web_opath>`TRAIT {{store}}=%q<web_ot>; &%q<web_opath>`DIFF {{store}}=lcstr(json_query(%q<web_o>,extract,$.difficulty)); &%q<web_opath>`SUCC {{store}}=firstof(json_query(%q<web_o>,extract,$.successes),1); &%q<web_opath>`FAIL {{store}}=firstof(json_query(%q<web_o>,extract,$.failures),1); &%q<web_opath>`TRAINED {{store}}=t(match(true 1,json_query(%q<web_o>,extract,$.trained))); &%q<web_opath>`NOTE {{store}}=json_query(%q<web_o>,extract,$.note)
       INC`WEB`WRITE`REWARD: |-
         think setqm(web_r,json_query(%q<web_wr>,get,%q<web_j>),
-        web_w,inc(firstof(get({{store}}/%q<root>`WN),0))); &%q<root>`WN {{store}}=%q<web_w>; &%q<web_p>`W`%q<web_w> {{store}}=lcstr(json_query(%q<web_r>,extract,$.kind)); &%q<web_p>`W`%q<web_w>`REPEAT {{store}}=lcstr(firstof(json_query(%q<web_r>,extract,$.repeat),once)); &%q<web_p>`W`%q<web_w>`SUCCESS {{store}}=if(gt(firstof(json_query(%q<web_r>,extract,$.success),0),0),json_query(%q<web_r>,extract,$.success)); &%q<web_p>`W`%q<web_w>`DETAILS {{store}}=json_mod(%q<web_r>,patch,json(object,kind,null,repeat,null,success,null))
+        web_wid,json_query(%q<web_r>,extract,$.id)); think setq(web_w,if(cand(isint(%q<web_wid>),member(%q<web_wold>,%q<web_wid>),not(words(lattr({{store}}/%q<root>`N`*`W`%q<web_wid>)))),%q<web_wid>,inc(firstof(get({{store}}/%q<root>`WN),0)))); &%q<root>`WN {{store}}=max(firstof(get({{store}}/%q<root>`WN),0),%q<web_w>); &%q<web_p>`W`%q<web_w> {{store}}=lcstr(json_query(%q<web_r>,extract,$.kind)); &%q<web_p>`W`%q<web_w>`REPEAT {{store}}=lcstr(firstof(json_query(%q<web_r>,extract,$.repeat),once)); &%q<web_p>`W`%q<web_w>`SUCCESS {{store}}=if(gt(firstof(json_query(%q<web_r>,extract,$.success),0),0),json_query(%q<web_r>,extract,$.success)); &%q<web_p>`W`%q<web_w>`DETAILS {{store}}=json_mod(%q<web_r>,patch,json(object,id,null,kind,null,repeat,null,success,null))
       INC`WEB`WRITE`LINK: |-
         think setqm(web_l,json_query(%q<web_ge>,get,%q<web_i>),
         web_lp,%q<root>`E`[inc(%q<web_i>)]); &%q<web_lp> {{store}}=lcstr(json_query(%q<web_l>,extract,$.from)); &%q<web_lp>`PORT {{store}}=lcstr(json_query(%q<web_l>,extract,$.port)); &%q<web_lp>`TO {{store}}=lcstr(json_query(%q<web_l>,extract,$.to)); &%q<web_lp>`WEIGHT {{store}}=json_query(%q<web_l>,extract,$.weight); &%q<web_lp>`MIN {{store}}=json_query(%q<web_l>,extract,$.min); &%q<web_lp>`MAX {{store}}=json_query(%q<web_l>,extract,$.max); &%q<web_lp>`SHARE {{store}}=json_query(%q<web_l>,extract,$.share); &%q<web_lp>`REQ {{store}}=lcstr(json_query(%q<web_l>,extract,$.requires))

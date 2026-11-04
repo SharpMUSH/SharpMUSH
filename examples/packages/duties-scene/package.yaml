@@ -1,7 +1,7 @@
 format: "1.16"
 package: duties-scene
 title: "Duties in scenes"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Ties a Duties party to a scene: +duty/start/scene gathers a party with a new scene, +duty/scene ties the party to one already running, and what happens on the duty goes into the scene as narration."
 license: MIT
@@ -42,16 +42,17 @@ objects:
       # +duty/start/scene <duty>: once the party is gathered, a scene for it, owned by the leader, in the
       # leader's room, titled after the duty with its description as the pitch.
       FLAG`START`SCENE: |-
-        @assert strlen(%<run>); @assert u({{scene/logger}}/FUN`MAY,%<player>,scene.create)=@pemit %<player>=notice(SCENE,u({{scene/logger}}/FUN`DENY,scene.create),error); @assert not(strmatch(setr(ds_scene,scenecreate(loc(%<player>),%<player>,u(%!/FUN`TITLE,%<run>),u(%!/FUN`PITCH,%<run>))),#-1*))=@pemit %<player>=notice(SCENE,%q<ds_scene>,warn); @scene/member %q<ds_scene>/owner=%<player>; @scene/set %q<ds_scene>/status=get({{scene/logger}}/DATA`CONFIG`DEFAULT-STATUS); @trigger {{scene/logger}}/HERE`SYNC=scene(%q<ds_scene>,room); @include/args %!/INC`TIE=scene,%q<ds_scene>,run,%<run>,by,%<player>
+        @assert strlen(%<run>); @assert u({{scene/logger}}/FUN`MAY,%<player>,scene.create)=@pemit %<player>=notice(SCENE,u({{scene/logger}}/FUN`DENY,scene.create),error); @assert u({{scene/logger}}/FUN`MAY,%<player>,scene.join)=@pemit %<player>=notice(SCENE,u({{scene/logger}}/FUN`DENY,scene.join),error); @assert not(strmatch(setr(ds_scene,scenecreate(loc(%<player>),%<player>,u(%!/FUN`TITLE,%<run>),u(%!/FUN`PITCH,%<run>))),#-1*))=@pemit %<player>=notice(SCENE,%q<ds_scene>,warn); @scene/member %q<ds_scene>/owner=%<player>; @scene/set %q<ds_scene>/status=get({{scene/logger}}/DATA`CONFIG`DEFAULT-STATUS); @trigger {{scene/logger}}/HERE`SYNC=scene(%q<ds_scene>,room); @include/args %!/INC`TIE=scene,%q<ds_scene>,run,%<run>,by,%<player>
       # +duty/scene shows the party's scene; +duty/scene <scene> ties the party to it, for the leader.
       DO`SCENE: |-
-        @assert strlen(%<run>)=@pemit %<player>=notice(DUTY,You are not on a duty. +duty lists the ones you can start.,warn); think setq(ds_scene,get(%!/DATA`RUN`%<run>)); @assert strlen(%<arg>)=@pemit %<player>=notice(DUTY,if(strlen(%q<ds_scene>),Your party's duty goes into scene %q<ds_scene>: [scene(%q<ds_scene>,title)].,Your party is not tied to a scene. The leader ties it with +duty/scene <scene>%, or starts with one: +duty/start/scene <duty>.),info); @assert strmatch(get({{duties/store}}/RUN`%<run>`LEADER),objid(%<player>))=@pemit %<player>=notice(DUTY,Only the party's leader can tie it to a scene.,warn); @assert isint(%<arg>)=@pemit %<player>=notice(DUTY,Name the scene by its number: +duty/scene <number>.,warn); @assert not(strmatch(scene(%<arg>,status),#-1*))=@pemit %<player>=notice(SCENE,No such scene: %<arg>,warn); @assert not(match(finished cancelled,scene(%<arg>,status)))=@pemit %<player>=notice(DUTY,Scene %<arg> is over.,warn); @assert not(strmatch(setr(ds_join,scenejoin(%<arg>,%<player>)),#-1*))=@pemit %<player>=notice(SCENE,%q<ds_join>,warn); @include/args %!/INC`TIE=scene,%<arg>,run,%<run>,by,%<player>
+        @assert strlen(%<run>)=@pemit %<player>=notice(DUTY,You are not on a duty. +duty lists the ones you can start.,warn); think setq(ds_scene,get(%!/DATA`RUN`%<run>)); @assert strlen(%<arg>)=@pemit %<player>=notice(DUTY,if(strlen(%q<ds_scene>),Your party's duty goes into scene %q<ds_scene>: [scene(%q<ds_scene>,title)].,Your party is not tied to a scene. The leader ties it with +duty/scene <scene>%, or starts with one: +duty/start/scene <duty>.),info); @assert strmatch(get({{duties/store}}/RUN`%<run>`LEADER),objid(%<player>))=@pemit %<player>=notice(DUTY,Only the party's leader can tie it to a scene.,warn); @assert isint(%<arg>)=@pemit %<player>=notice(DUTY,Name the scene by its number: +duty/scene <number>.,warn); @assert not(strmatch(scene(%<arg>,status),#-1*))=@pemit %<player>=notice(SCENE,No such scene: %<arg>,warn); @assert not(match(finished cancelled,scene(%<arg>,status)))=@pemit %<player>=notice(DUTY,Scene %<arg> is over.,warn); @assert u({{scene/logger}}/FUN`MAY,%<player>,scene.join)=@pemit %<player>=notice(SCENE,u({{scene/logger}}/FUN`DENY,scene.join),error); @assert not(strmatch(setr(ds_join,scenejoin(%<arg>,%<player>)),#-1*))=@pemit %<player>=notice(SCENE,%q<ds_join>,warn); @include/args %!/INC`TIE=scene,%<arg>,run,%<run>,by,%<player>
       # Ties party %<run> to scene %<scene>, written under %<by>, and puts every member in it.
       INC`TIE: |-
         &DATA`RUN`%<run> %!=%<scene>; &DATA`RUN`%<run>`BY %!=objid(%<by>); @dolist/inline get({{duties/store}}/RUN`%<run>`MEMBERS)={@include/nobreak/args %!/INC`ADD=scene,%<scene>,member,##}; @pemit/list get({{duties/store}}/RUN`%<run>`MEMBERS)=notice(DUTY,What happens on [u(%!/FUN`TITLE,%<run>)] goes into scene %<scene>.,ok)
-      # Makes %<member> a member of %<scene> and focuses them on it, so their own poses go there too.
+      # Makes %<member> a member of %<scene> and focuses them on it, so their own poses go there too, when
+      # they may join scenes.
       INC`ADD: |-
-        @assert not(strmatch(setr(ds_joined,scenejoin(%<scene>,%<member>)),#-1*))=@pemit %<member>=notice(SCENE,You could not join scene %<scene>: %q<ds_joined>,warn); @scene/focus %<member>=%<scene>; @context/push %<member>=scene_focus,[json(object,scene,%<scene>)]
+        @assert u({{scene/logger}}/FUN`MAY,%<member>,scene.join)=@pemit %<member>=notice(SCENE,You are not put in scene %<scene>. [u({{scene/logger}}/FUN`DENY,scene.join)],error); @assert not(strmatch(setr(ds_joined,scenejoin(%<scene>,%<member>)),#-1*))=@pemit %<member>=notice(SCENE,You could not join scene %<scene>: %q<ds_joined>,warn); @scene/focus %<member>=%<scene>; @context/push %<member>=scene_focus,[json(object,scene,%<scene>)]
 
       # Duties tells this object what happens to a party: see +help duty extensions.
       ON`DUTIES`JOIN: |-
@@ -61,9 +62,10 @@ objects:
       ON`DUTIES`FINISH: |-
         @assert strlen(setr(ds_scene,get(%!/DATA`RUN`%<run>))); @include/nobreak/args %!/INC`LINE=scene,%q<ds_scene>,run,%<run>,text,%<why>; &DATA`RUN`%<run>`BY %!; &DATA`RUN`%<run> %!
       # One line into the scene as narration, shown under the duty's title. A scene that is paused, finished or
-      # cancelled records nothing.
+      # cancelled records nothing. sceneaddpose() takes each field as its own argument, so a comma in the title
+      # stays in the title.
       INC`LINE: |-
-        @assert not(match(paused finished cancelled,scene(%<scene>,status))); @scene/addpose %<scene>=[get(%!/DATA`RUN`%<run>`BY)],[u(%!/FUN`SHOWAS,%<scene>,%<run>)],[scene(%<scene>,room)],narration,emit,,%<text>
+        @assert not(match(paused finished cancelled,scene(%<scene>,status))); think sceneaddpose(%<scene>,get(%!/DATA`RUN`%<run>`BY),u(%!/FUN`SHOWAS,%<scene>,%<run>),scene(%<scene>,room),narration,emit,,%<text>)
 
       # %0 a run: its duty's title and description, from the revision the party plays.
       FUN`ROOT: |-
