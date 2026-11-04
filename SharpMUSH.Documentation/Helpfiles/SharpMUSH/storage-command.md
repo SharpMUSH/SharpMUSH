@@ -80,11 +80,11 @@ Undo stops at the oldest version that survives. A wiki rollback can only go back
 `@storage/dictionaries <kind>`<br>
 `@storage/dictionaries <kind> <id>`
 
-Feed lines, attribute values and mail are stored compressed with zstd dictionaries; the kinds are `feed`, `attributes` and `mail`, and each has its own. Values under 64 bytes, and attribute values of that size are most of them, are stored as they are. Dictionary 0 of each kind ships with the server. At 100 values of a kind, and each time they grow fourfold, the hourly upkeep trains one from the world's own. It is kept only when it makes values it was not trained on at least 3% smaller and saves more than its own size; the values are then rewritten with it. Every dictionary stays in the world, so every value stays readable.
+Feed lines, attribute values and mail are stored compressed with zstd dictionaries; the kinds are `feed`, `attributes` and `mail`, and each has its own. Attribute values and mail under 64 bytes, which is most attribute values, are stored as they are, as is any value compression would not make smaller. Dictionary 0 of each kind ships with the server. At 100 values of a kind, and each time they grow fourfold, the hourly upkeep trains one from the world's own. It is kept only when it makes values it was not trained on at least 3% smaller and saves more than its own size; the values are then rewritten with it. Every dictionary stays in the world, so every value stays readable.
 
 `@storage/dictionaries` sums up each kind: the dictionary in use, how many are kept, and the values compressed and stored as they are. `@storage/dictionaries <kind>` lists that kind's dictionaries (id, when trained, size, values using it) and its last 10 training runs: values held and read, bytes per value before and after, and whether it was kept.
 
-`@storage/dictionaries <kind> <id>` goes back to dictionary `<id>`: new values use it, and every value is rewritten with it before the command answers. Later dictionaries stay. Only a value's size depends on its dictionary, never its text.
+`@storage/dictionaries <kind> <id>` goes back to dictionary `<id>`: new values use it, and every compressed value is rewritten with it before the command answers. Later dictionaries stay. Only a value's size depends on its dictionary, never its text.
 
 ::: seealso
 - [@backup]

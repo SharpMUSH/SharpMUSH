@@ -161,7 +161,8 @@ public partial class LightningDatabase
 			// Judged on values it was not trained on: a dictionary holds much of what it saw, so the values it saw
 			// compress better than any the world writes later.
 			var held = samples.Where((_, index) => index % HeldOutEvery == 0).ToList();
-			var dictionary = Train(table, samples.Where((_, index) => index % HeldOutEvery != 0).ToList());
+			// Too few long values to train on is a run that keeps nothing: zstd can crash the process on a tiny sample set.
+			var dictionary = eligible >= TrainAtRows ? Train(table, samples.Where((_, index) => index % HeldOutEvery != 0).ToList()) : null;
 			var (before, after) = Store.Read(tx => Measure(held, dictionary, Dictionary(tx, table, current.Id)!));
 			var better = dictionary is not null && Better(before, after, held.Count, dictionary.Length, eligible);
 			(state, trained) = await Store.WriteAsync(tx =>

@@ -50,7 +50,9 @@ var heldOut = values.Skip(cut).ToList();
 using var dictionary = ZstandardDictionary.Train(training.SelectMany(value => value).ToArray(), training.Select(value => value.Length).ToArray(),
 	table.DictionaryBytes);
 var bytes = dictionary.Data.ToArray();
-File.WriteAllBytes(output, bytes);
+// A bundled dictionary is never replaced: worlds hold values written with it.
+using (var file = new FileStream(output, FileMode.CreateNew, FileAccess.Write))
+	file.Write(bytes);
 
 using var check = ZstandardDictionary.Create(bytes, ZstandardCompressionOptions.DefaultQuality);
 var buffer = new byte[1024 * 1024];
