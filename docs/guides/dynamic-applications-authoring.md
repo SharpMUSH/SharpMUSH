@@ -40,6 +40,7 @@ Each handler ends by emitting JSON:
   "title": "Character Generation",
   "data_source": "/http/chargen?objid=...",   // optional
   "layout": "tabs",               // optional, views only: one tab per page instead of stacked pages
+  "refresh": 60,                  // optional, views only: fetch the data again every 60 s while in view (10 at least)
   "pages": [
     {
       "key": "abilities", "title": "Ability Scores", "order": 2,
@@ -306,6 +307,15 @@ read-only diagram from `{nodes,edges}` in another field.
 - A returned **`data` replaces the page's data payload**: tables and timelines redraw in place.
 - A returned **`schema` replaces the whole document** and the portal re-renders.
 - A `redirect` to `/apps/...` moves within the portal and reloads that application.
+
+### Live data
+
+A view with `refresh` fetches its data route again on that timer while its tab is in view. Softcode can
+also ask the open pages to refetch at once with `portalrefresh(<slug>)`, or only the pages showing one
+character with `portalrefresh(<slug>, <object>)`, where the routes name that character with `{objid}`. The
+ask carries no data: each page refetches through its own data route, so the route's permission checks stay
+where they are. A form never refetches, since that would overwrite what the player is typing.
+`portalrefresh()` needs `applications.admin`.
 
 > The `errors` shape is identical to the one the existing admin config form already
 > consumes, so this contract is battle-tested.

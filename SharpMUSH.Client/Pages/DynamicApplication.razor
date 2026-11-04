@@ -85,7 +85,7 @@
     }
     else
     {
-        <SchemaApplicationHost @key="_generation" Document="_schema" Data="_data" />
+        <SchemaApplicationHost @key="_generation" Document="_schema" Data="_data" App="@_app?.Slug" Objid="@_objid" DataUrl="@_dataUrl" />
     }
 </div>
 </AppSectionFrame>
@@ -104,6 +104,8 @@
     private PortalApplication? _app;
     private PortalSchemaDocument? _schema;
     private SchemaData? _data;
+    private string? _objid;
+    private string? _dataUrl;
     private Type? _componentType;
 
     // What the showing page was loaded for: the address (sub-path and query included) and the
@@ -265,7 +267,11 @@
         if (generation != _generation) return;
 
         (_schema, _data, _loadedFrom) = (schema, data, $"{schemaUrl}\n{dataUrl}");
+        (_objid, _dataUrl) = (RoutesName(app, "{objid}") ? objid : null, dataUrl);
     }
+
+    private static bool RoutesName(PortalApplication app, string token) =>
+        app.SchemaUrl.Contains(token, StringComparison.Ordinal) || (app.DataUrl?.Contains(token, StringComparison.Ordinal) ?? false);
 
     /// <summary>
     /// The acting character's objid, or null when this viewer has none (anonymous, an account that

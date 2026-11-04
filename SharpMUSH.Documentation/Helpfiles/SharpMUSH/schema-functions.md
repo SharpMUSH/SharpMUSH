@@ -3,7 +3,7 @@
   "corpus": "help",
   "id": "schema-functions",
   "lookup": "schemarender()",
-  "aliases": ["schemarender", "schemacheck()", "schemacheck", "schema functions"],
+  "aliases": ["schemarender", "schemacheck()", "schemacheck", "portalrefresh", "schema functions"],
   "sections": [
     {
       "id": "options",
@@ -14,6 +14,11 @@
       "id": "check",
       "heading": "Checking a document",
       "lookup": "schemacheck() problems"
+    },
+    {
+      "id": "refresh",
+      "heading": "Refreshing open pages",
+      "lookup": "portalrefresh()"
     },
     {
       "id": "examples",
@@ -27,6 +32,7 @@
 
 `schemarender(<schema>, <data>[, <options>])`
 `schemacheck(<schema>[, <data>])`
+`portalrefresh(<slug>[, <object>])`
 
 A portal view or form drawn in the terminal. `<schema>` is the Portal Schema Document an application serves, and `<data>` is what its data route answers: `{"fields":{"<key>":{"value":...,"visible":...}}}`. The portal draws the same document from the same data, so a sheet is written once.
 
@@ -36,6 +42,7 @@ schemacheck() returns nothing when the document is sound, or one problem per lin
 
 - [schemarender() options]: the page and the width
 - [schemacheck() problems]: what it reports
+- [portalrefresh()]: asking open portal pages to fetch their data again
 - [schemarender() examples]: a finger sheet and a broken one
 
 ::: seealso
@@ -63,6 +70,18 @@ Each problem is `<path>: <problem>`, in document order. schemacheck() reports:
 - a span wider than its section's columns
 
 Given `<data>`, it also names each field an element reads that the data does not hold. A key it does not know is never a problem.
+
+## Refreshing open pages
+
+portalrefresh() asks every portal page that has the application `<slug>` open to fetch its data again, or, given `<object>`, only the pages showing that character. Nothing is sent with it: each page reads its data route again, as the viewer. A form keeps what the player typed and is not refreshed. Asks for the same pages within one second are sent as one. It needs `applications.admin`.
+
+A view can also refresh itself: `"refresh":<seconds>` in the document, 10 or more, while its tab is in view.
+
+```sharp
+> think portalrefresh(sheet,me)
+> think portalrefresh(Not a slug)
+#-1 INVALID APPLICATION SLUG
+```
 
 ## Examples
 

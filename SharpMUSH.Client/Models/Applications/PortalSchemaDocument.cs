@@ -24,7 +24,8 @@ public static class SchemaJson
 
 /// <summary>
 /// The whole schema document. <c>Kind</c> is "form" or "view". A view's <c>Layout</c> is "tabs" to show its
-/// pages one at a time under a tab strip; otherwise its pages stack.
+/// pages one at a time under a tab strip; otherwise its pages stack. A view's <c>Refresh</c> is how many seconds
+/// apart it fetches its data again while it is in view.
 /// </summary>
 public sealed record PortalSchemaDocument(
 	string? Kind,
@@ -33,8 +34,20 @@ public sealed record PortalSchemaDocument(
 	string? DataSource,
 	IReadOnlyList<SchemaPage>? Pages,
 	IReadOnlyDictionary<string, SchemaAction>? Actions,
-	string? Layout = null)
+	string? Layout = null,
+	int? Refresh = null)
 {
+	/// <summary>The least <see cref="Refresh"/> the portal honours, so a view cannot hammer its data route.</summary>
+	public const int MinimumRefreshSeconds = 10;
+
+	/// <summary>
+	/// How often a view fetches its data again while it is in view; null when it does not. A form never does,
+	/// since a refetch would overwrite what the player is typing.
+	/// </summary>
+	public TimeSpan? RefreshEvery => !IsForm && Refresh is > 0 and var seconds
+		? TimeSpan.FromSeconds(Math.Max(seconds, MinimumRefreshSeconds))
+		: null;
+
 	/// <summary>True for an input form (vs. a read-only view).</summary>
 	public bool IsForm => string.Equals(Kind, "form", StringComparison.OrdinalIgnoreCase);
 

@@ -51,6 +51,11 @@ public interface IGameHubConnection : IAsyncDisposable
 	IDisposable On(string methodName, Action handler);
 
 	/// <summary>
+	/// Registers a handler for a hub client method that carries one string (e.g. <c>ReceiveAppRefresh</c>).
+	/// </summary>
+	IDisposable On(string methodName, Action<string> handler);
+
+	/// <summary>
 	/// Raised when the connection drops unexpectedly.
 	/// The exception may be null for a graceful close.
 	/// </summary>

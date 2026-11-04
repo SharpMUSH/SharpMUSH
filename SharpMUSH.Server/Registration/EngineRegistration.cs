@@ -344,6 +344,7 @@ internal static class EngineRegistration
 		// (the only way to reclaim a compiled component assembly loaded into the WASM runtime). Registered
 		// before the PluginManager so its optional IPluginChangeNotifier ctor param resolves.
 		services.AddSingleton<IPluginChangeNotifier, Server.Services.SignalRPluginChangeNotifier>();
+		services.AddSingleton<IPortalApplicationNotifier, Server.Services.SignalRPortalApplicationNotifier>();
 		// C# plugin loader: discovers plugins/ DLLs at boot and registers their [SharpCommand]/[SharpFunction]
 		// into the live command/function libraries with IsSystem=true (see PluginBootstrapService below).
 		services.AddSingleton<IPluginManager, Implementation.Services.PluginManager>();
