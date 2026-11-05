@@ -2,7 +2,7 @@
 
 @* Placeholder text held in a paragraph's place while it loads: lines of the body's height and of uneven
    lengths, so it reads as text, and (with Heading) a wider bar above them for a title. *@
-<div class="@($"kit-skeleton-lines {Class}".Trim())" role="status">
+<div class="@($"kit-skeleton-lines {Class}".Trim())">
     <span class="visually-hidden">@(Label ?? Loc["Loading"])</span>
     @if (Heading)
     {

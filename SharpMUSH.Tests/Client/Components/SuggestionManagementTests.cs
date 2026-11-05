@@ -278,7 +278,7 @@ public class SuggestionManagementTests
 		var cut = ctx.Render<SuggestionManagement>();
 
 		await Assert.That(cut.FindAll(".kit-skeleton-row").Count).IsGreaterThan(0);
-		await Assert.That(cut.FindAll("[role=status]").Count).IsGreaterThan(0);
+		await Assert.That(cut.FindAll(".kit-skeleton-rows .visually-hidden").Count).IsGreaterThan(0);
 	}
 
 	/// <summary>

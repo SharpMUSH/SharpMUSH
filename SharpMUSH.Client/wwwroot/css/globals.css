@@ -27,12 +27,17 @@
 }
 
 /* Loading placeholders: the portal's own (.kit-skeleton, Kit/SkeletonLines and friends) and MudSkeleton, whose
-   wave is MudBlazor's own timing and a black sheen no dark theme shows. A sheen crosses the block once per
-   --duration-sweep; under reduced motion that is zero, an animation of no length shows nothing, and the
-   placeholder stands still. The block keeps the size of what it stands in for, so nothing moves when that arrives. */
+   wave is MudBlazor's own timing and a black sheen no dark theme shows. The block keeps the size of what it stands
+   in for from the start, so nothing moves when that arrives, but it fades in only after --delay-skeleton, so a read
+   that answers sooner shows no placeholder at all. A sheen then crosses it once per --duration-sweep, three times
+   and no more: moving content beside the rest of the page stops within five seconds (WCAG 2.2.2), and a placeholder
+   still there after that is plainly still loading. Under reduced motion --duration-sweep is zero, an animation of no
+   length shows nothing, and the placeholder stands still. */
 .kit-skeleton,
 .mud-skeleton {
 	background-color: var(--skeleton);
+	cursor: progress;
+	animation: kit-skeleton-appear var(--motion-fade) var(--delay-skeleton) both;
 }
 .kit-skeleton,
 .mud-skeleton-wave {
@@ -46,10 +51,13 @@
 	inset: 0;
 	transform: translateX(-100%);
 	background: linear-gradient(90deg, transparent, var(--skeleton-sheen), transparent);
-	animation: kit-skeleton-sweep var(--motion-sweep) infinite;
+	animation: kit-skeleton-sweep var(--motion-sweep) var(--delay-skeleton) 3;
 }
 .mud-skeleton-pulse {
-	animation: kit-skeleton-pulse var(--motion-sweep) infinite;
+	animation: kit-skeleton-appear var(--motion-fade) var(--delay-skeleton) both, kit-skeleton-pulse var(--motion-sweep) var(--delay-skeleton) 3;
+}
+@keyframes kit-skeleton-appear {
+	from { opacity: 0; }
 }
 @keyframes kit-skeleton-sweep {
 	to { transform: translateX(100%); }

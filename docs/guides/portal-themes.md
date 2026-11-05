@@ -262,7 +262,7 @@ a time or curve of its own (`MotionTokenTests` enforces this).
 | `--motion-move` | Something moving or resizing in place (a panel's width, a sliding track) |
 | `--motion-exit` | Something leaving; shorter than it took to arrive |
 | `--motion-spring` | A turn or a switch's thumb: it starts from rest and overshoots a little, so not something arriving or a panel pinned to an edge |
-| `--motion-sweep` | One pass of a loading placeholder's sheen; a loop |
+| `--motion-sweep` | One pass of a loading placeholder's sheen |
 
 `transition: background var(--motion-fade), transform var(--motion-enter);`
 
@@ -274,7 +274,10 @@ that only decorates, like the unread pulse, stops under reduced motion with a ru
 While something loads, a page holds its place with a placeholder of the same size, so the content arrives without
 moving the page: `SkeletonRows` for a list or table (rows of the height that arrives), `SkeletonLines` for text,
 `SkeletonCard` for a card, or the `kit-skeleton` class on a block sized like what it stands for. They are tinted
-`--skeleton` and crossed by a `--skeleton-sheen` once per `--motion-sweep`; under reduced motion they stand still.
+`--skeleton`, fade in only after `--delay-skeleton` (a quicker answer shows none), and are crossed by a
+`--skeleton-sheen` once per `--motion-sweep`, three times, so the movement ends within five seconds (WCAG 2.2.2);
+under reduced motion they stand still. The shapes are `aria-hidden`; a visually hidden "Loading..." stands in for them,
+not a live region.
 A progress bar is for an action the visitor started, not for a page loading.
 
 The Monaco editor paints with its own dark theme whatever the portal's, so its frame reads `--editor-bg`, which no

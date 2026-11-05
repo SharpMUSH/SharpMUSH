@@ -311,8 +311,8 @@
 	--duration-exit: 0.2s;
 	--duration-spring: 0.35s;
 	--duration-linger: 2s;
-	/* One pass of a loading placeholder's sheen (globals.css): a loop, so it is longer than any change of state. Spatial,
-	   so reduced motion zeroes it and the placeholder stands still. */
+	/* One pass of a loading placeholder's sheen (globals.css), which crosses three times; longer than any change of
+	   state. Spatial, so reduced motion zeroes it and the placeholder stands still. */
 	--duration-sweep: 1.6s;
 	--ease-standard: cubic-bezier(0.2, 0, 0, 1);
 	--ease-enter: cubic-bezier(0.05, 0.7, 0.1, 1);
@@ -334,6 +334,9 @@
 	/* How long a panel opened by hovering stays after the pointer leaves, so a path that grazes its edge does
 	   not close it. A wait, not movement, so reduced motion keeps it. */
 	--delay-hover-leave: 0.25s;
+	/* How long a loading placeholder stays invisible: a read that answers sooner never flashes one (its space is held
+	   all the same). A wait, not movement, so reduced motion keeps it. */
+	--delay-skeleton: 0.3s;
 	--font-ui: 'Hanken Grotesk', system-ui, sans-serif;
 	--font-mono: "Cascadia Mono", "DejaVu Sans Mono", monospace;
 	--font-display: 'Hanken Grotesk', system-ui, sans-serif;
