@@ -784,7 +784,7 @@ objects:
 
       # schemas: GET /http/duties/schema?at=<path>
       WEB`SCHEMA: |-
-        setq(web_at,lcstr(trim(%<at>,b,/)))[switch(1,not(cand(strlen(%<viewer>),hastype(%<viewer>,player))),u(%!/WEB`SCHEMA`SAY,Duties,Sign in with a character to write duties.),not(strlen(%q<web_at>)),u(%!/WEB`SCHEMA`HOME,%<viewer>),not(cand(u(%!/FUN`EXISTS,%q<web_at>),u(%!/FUN`CANEDIT,%<viewer>,%q<web_at>))),u(%!/WEB`SCHEMA`SAY,Duties,There is no duty called %q<web_at> that you can change.),u(%!/WEB`SCHEMA`DUTY,%<viewer>,%q<web_at>))]
+        setq(web_at,lcstr(trimpenn(%<at>,/,b)))[switch(1,not(cand(strlen(%<viewer>),hastype(%<viewer>,player))),u(%!/WEB`SCHEMA`SAY,Duties,Sign in with a character to write duties.),not(strlen(%q<web_at>)),u(%!/WEB`SCHEMA`HOME,%<viewer>),not(cand(u(%!/FUN`EXISTS,%q<web_at>),u(%!/FUN`CANEDIT,%<viewer>,%q<web_at>))),u(%!/WEB`SCHEMA`SAY,Duties,There is no duty called %q<web_at> that you can change.),u(%!/WEB`SCHEMA`DUTY,%<viewer>,%q<web_at>))]
       # A page that only says something: title %0, text %1.
       WEB`SCHEMA`SAY: |-
         json_fill(v(DATA`WEB`SAY),/title,%0,/pages/0/sections/0/elements/0/value,%1)
@@ -896,7 +896,7 @@ objects:
 
       # data: GET /http/duties/data?at=<path>, for the page WEB`SCHEMA drew.
       WEB`DATA: |-
-        setq(web_at,lcstr(trim(%<at>,b,/)))[json(object,fields,switch(1,not(cand(strlen(%<viewer>),hastype(%<viewer>,player))),json(object),not(strlen(%q<web_at>)),u(%!/WEB`DATA`HOME,%<viewer>),not(cand(u(%!/FUN`EXISTS,%q<web_at>),u(%!/FUN`CANEDIT,%<viewer>,%q<web_at>))),json(object),u(%!/WEB`DATA`DUTY,%<viewer>,%q<web_at>)))]
+        setq(web_at,lcstr(trimpenn(%<at>,/,b)))[json(object,fields,switch(1,not(cand(strlen(%<viewer>),hastype(%<viewer>,player))),json(object),not(strlen(%q<web_at>)),u(%!/WEB`DATA`HOME,%<viewer>),not(cand(u(%!/FUN`EXISTS,%q<web_at>),u(%!/FUN`CANEDIT,%<viewer>,%q<web_at>))),json(object),u(%!/WEB`DATA`DUTY,%<viewer>,%q<web_at>)))]
       WEB`DATA`HOME: |-
         u(%!/WEB`JSON`OBJECT,u(%!/WEB`JSON`MEMBER,play,u(%!/WEB`PLAYROWS,%0),1)%r[u(%!/WEB`JSON`MEMBER,mine,u(%!/WEB`ROWS,squish(iter(lattr({{store}}/DUTY`*),if(strmatch(get({{store}}/%i0`AUTHOR),objid(%0)),lcstr(last(%i0,`)))))),1)]%r[u(%!/WEB`JSON`MEMBER,review,u(%!/WEB`ROWS,squish(iter(lattr({{store}}/DUTY`*),if(strmatch(get({{store}}/%i0`STATE),submitted),lcstr(last(%i0,`)))))),u(%!/FUN`STAFF,%0))]%r[u(%!/WEB`JSON`MEMBER,approved,u(%!/WEB`ROSTERROWS),u(%!/FUN`STAFF,%0))]%r[u(%!/WEB`JSON`MEMBER,new_id,json(string,),1)]%r[u(%!/WEB`JSON`MEMBER,new_title,json(string,),1)])
       # %0 the viewer: the duties on the active roster, with their progress, as the roster screen has them.
