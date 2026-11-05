@@ -318,10 +318,9 @@ public sealed partial class BuilderDraft
 	public JsonObject Duplicate(JsonArray list, JsonObject node)
 	{
 		var copy = (JsonObject)node.DeepClone();
-		foreach (var element in copy["kind"] is null && copy["sections"] is JsonArray ? AllIn(copy) : copy["elements"] is JsonArray elements ? elements.OfType<JsonObject>() : [copy])
-		{
-			if (IsField(element) && (string?)element["key"] is { Length: > 0 } key) element["key"] = UniqueKey(key);
-		}
+		var inside = copy["kind"] is null && copy["sections"] is JsonArray ? AllIn(copy) : copy["elements"] is JsonArray elements ? elements.OfType<JsonObject>() : [copy];
+		foreach (var element in inside.Where(element => IsField(element) && (string?)element["key"] is { Length: > 0 }).ToList())
+			element["key"] = UniqueKey((string)element["key"]!);
 		if ((string?)copy["key"] is { Length: > 0 } pageKey && copy["sections"] is JsonArray) copy["key"] = $"{pageKey}_copy";
 		list.Insert(list.IndexOf(node) + 1, copy);
 		return copy;
