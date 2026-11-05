@@ -31,12 +31,6 @@ public interface IGameHubClient
 	/// the only way to reclaim a compiled component assembly the WASM runtime may have loaded.
 	/// </summary>
 	Task ReceivePluginsChanged();
-
-	/// <summary>
-	/// Asks the pages that have an application open to fetch its data again: <c>&lt;slug&gt;</c> for every
-	/// copy, <c>&lt;slug&gt;:&lt;objid&gt;</c> for the copies showing one character. No data rides on it.
-	/// </summary>
-	Task ReceiveAppRefresh(string app);
 }
 
 /// <summary>
@@ -51,7 +45,6 @@ public interface IGameHubClient
 ///   JoinRoom     — adds the client to group "room:{roomDbref}"
 ///   LeaveRoom    — removes the client from group "room:{roomDbref}"
 ///   ReportVisibility — whether the tab is in view, for @push (<see cref="IPortalPresence"/>)
-///   JoinApp / LeaveApp — group "app:{slug}" or "app:{slug}:{objid}", told to refetch by portalrefresh()
 ///
 /// Game commands do not go through this hub. The portal runs them with <c>POST api/commands</c>
 /// (<see cref="Controllers.CommandsController"/>), which answers with the command's own output.
@@ -60,7 +53,7 @@ public interface IGameHubClient
 /// plugin's own SceneHub at /hubs/scene; see SharpMUSH.Plugins.Scene/Web. This hub is scene-agnostic.)
 /// </summary>
 [Authorize]
-public partial class GameHub(ILogger<GameHub> logger, HubConnectionRegistry registry, SitelockGuard sitelockGuard,
+public class GameHub(ILogger<GameHub> logger, HubConnectionRegistry registry, SitelockGuard sitelockGuard,
 	IVisibleWorldProjection projection, IPortalPresence presence) : Hub<IGameHubClient>
 {
 	/// <summary>Claim name that carries the authenticated character's dbref.</summary>
@@ -246,33 +239,6 @@ public partial class GameHub(ILogger<GameHub> logger, HubConnectionRegistry regi
 	public static Task BroadcastPluginsChangedAsync(
 		IHubContext<GameHub, IGameHubClient> hubContext) =>
 		hubContext.Clients.All.ReceivePluginsChanged();
-
-	/// <summary>Sends <c>ReceiveAppRefresh</c> to the pages that joined <paramref name="app"/>'s group.</summary>
-	public static Task SendAppRefreshAsync(IHubContext<GameHub, IGameHubClient> hubContext, string app) =>
-		hubContext.Clients.Group(AppGroupName(app)).ReceiveAppRefresh(app);
-
-	/// <summary>The group of the pages showing an application, or one character's copy of it.</summary>
-	public static string AppGroupName(string app) => $"app:{app}";
-
-	/// <summary>
-	/// Adds the calling connection to the group of an open application: <c>&lt;slug&gt;</c>, or
-	/// <c>&lt;slug&gt;:&lt;objid&gt;</c> for the copy showing one character. Joining reveals nothing, since the
-	/// refresh it brings carries no data; the page refetches through its own data route.
-	/// </summary>
-	/// <exception cref="HubException">The argument names no application.</exception>
-	public Task JoinApp(string? app) =>
-		Groups.AddToGroupAsync(Context.ConnectionId, AppGroupName(ParseAppOrThrow(app)), Context.ConnectionAborted);
-
-	/// <summary>Removes the calling connection from an application's group; see <see cref="JoinApp"/>.</summary>
-	/// <exception cref="HubException">The argument names no application.</exception>
-	public Task LeaveApp(string? app) =>
-		Groups.RemoveFromGroupAsync(Context.ConnectionId, AppGroupName(ParseAppOrThrow(app)), Context.ConnectionAborted);
-
-	private static string ParseAppOrThrow(string? app) =>
-		app is not null && AppPattern().IsMatch(app) ? app : throw new HubException("That is not an application.");
-
-	[System.Text.RegularExpressions.GeneratedRegex("^[a-z0-9_-]{1,40}(:#[0-9]+:[0-9]+)?$")]
-	private static partial System.Text.RegularExpressions.Regex AppPattern();
 
 	/// <summary>
 	/// Returns the DBRef claim value for the connection that is currently executing a hub method.

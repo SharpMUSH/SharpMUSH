@@ -176,7 +176,7 @@ builder.Services.AddSingleton<ConnectionStateService>();
 builder.Services.AddSingleton<IConnectionStateService>(sp => sp.GetRequiredService<ConnectionStateService>());
 // Same singleton, exposed for scene group join/leave (client-only control surface).
 builder.Services.AddSingleton<ISceneHubControl>(sp => sp.GetRequiredService<ConnectionStateService>());
-builder.Services.AddSingleton<IAppRefreshControl>(sp => sp.GetRequiredService<ConnectionStateService>());
+builder.Services.AddSingleton<IPortalVisibility>(sp => sp.GetRequiredService<ConnectionStateService>());
 
 builder.Services.AddTransient<AccountSessionBearerHandler>();
 builder.Services.AddScoped<ExternalProviderConfigurationService>();

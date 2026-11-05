@@ -42,15 +42,6 @@ public sealed class FakeGameHubConnection(Exception? onInvoke = null) : IGameHub
 	public IDisposable On(string methodName, Action<SceneEventMessage> handler) => NoopDisposable.Instance;
 	public IDisposable On(string methodName, Action<CharacterMovedMessage> handler) => NoopDisposable.Instance;
 	public IDisposable On(string methodName, Action handler) => NoopDisposable.Instance;
-
-	/// <summary>The string handlers registered, by method, so a test can play the server's call.</summary>
-	public Dictionary<string, Action<string>> StringHandlers { get; } = new(StringComparer.Ordinal);
-
-	public IDisposable On(string methodName, Action<string> handler)
-	{
-		StringHandlers[methodName] = handler;
-		return NoopDisposable.Instance;
-	}
 	public event Func<Exception?, Task>? Closed { add { } remove { } }
 	public event Func<Exception?, Task>? Reconnecting { add { } remove { } }
 	public event Func<string?, Task>? Reconnected { add { } remove { } }

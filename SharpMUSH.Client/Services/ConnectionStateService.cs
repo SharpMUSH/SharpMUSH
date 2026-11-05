@@ -17,7 +17,7 @@ namespace SharpMUSH.Client.Services;
 /// <see cref="IGameHubConnectionFactory"/>), starts a new connection when a start fails or a connection
 /// closes (a game restart can outlast both), and surfaces received messages as events.
 /// </summary>
-public sealed class ConnectionStateService : IConnectionStateService, ISceneHubControl, IAppRefreshControl, IAsyncDisposable
+public sealed class ConnectionStateService : IConnectionStateService, ISceneHubControl, IPortalVisibility, IAsyncDisposable
 {
 	private readonly IGameHubConnectionFactory _factory;
 	private readonly ILogger<ConnectionStateService> _logger;
@@ -47,8 +47,6 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	private bool _visible;
 	// Whether the tab has said yet; until it does, it counts as in view.
 	private bool _visibilityKnown;
-	// The application groups pages hold, with how many pages hold each, so a reconnect joins them again.
-	private readonly Dictionary<string, int> _joinedApps = new(StringComparer.Ordinal);
 
 	/// <summary>How long to wait before each new attempt after a start failed or the hub closed; the last delay
 	/// repeats. Settable for tests.</summary>
@@ -120,8 +118,6 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 
 		_subscriptions.Add(_hub.On("ReceiveCharacterMoved", (CharacterMovedMessage msg) => OnCharacterMoved?.Invoke(msg)));
 
-		_subscriptions.Add(_hub.On("ReceiveAppRefresh", (string app) => OnAppRefresh?.Invoke(app)));
-
 		// Generic plugins-changed signal: the server unloaded/reloaded a plugin DLL. Surface it so the portal
 		// shell can force a hard browser refresh (the only way to reclaim a browser-loaded component assembly).
 		_subscriptions.Add(_hub.On("ReceivePluginsChanged", () =>
@@ -152,7 +148,6 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 			_logger.LogInformation("[ConnectionStateService] Hub reconnected");
 			SetState(SignalRState.Connected);
 			await SendVisibilityAsync();
-			await RejoinAppsAsync();
 			// The server is back. A scene connection still waiting out its own back-off would stay down until its
 			// next attempt, up to 30 s on, with the story saying live poses are not arriving.
 			await ReviveSceneHubAsync();
@@ -163,7 +158,6 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 			await _hub.StartAsync();
 			SetState(SignalRState.Connected);
 			await SendVisibilityAsync();
-			await RejoinAppsAsync();
 
 			// Phase 9: open the separate scene realtime connection (/hubs/scene). Best-effort — a scene-hub
 			// failure must not break the primary game connection; scene pages simply receive no live events.
@@ -440,53 +434,7 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	}
 
 	/// <inheritdoc/>
-	public event Action<string>? OnAppRefresh;
-
-	/// <inheritdoc/>
 	public bool IsVisible => !_visibilityKnown || _visible;
-
-	/// <inheritdoc/>
-	public Task JoinAppAsync(string app)
-	{
-		var held = _joinedApps.GetValueOrDefault(app);
-		_joinedApps[app] = held + 1;
-		return held == 0 ? InvokeAppGroupAsync("JoinApp", app) : Task.CompletedTask;
-	}
-
-	/// <inheritdoc/>
-	public Task LeaveAppAsync(string app)
-	{
-		if (!_joinedApps.TryGetValue(app, out var held)) return Task.CompletedTask;
-		if (held > 1)
-		{
-			_joinedApps[app] = held - 1;
-			return Task.CompletedTask;
-		}
-		_joinedApps.Remove(app);
-		return InvokeAppGroupAsync("LeaveApp", app);
-	}
-
-	private async Task RejoinAppsAsync()
-	{
-		foreach (var app in _joinedApps.Keys.ToArray()) await InvokeAppGroupAsync("JoinApp", app);
-	}
-
-	/// <summary>
-	/// Joins or leaves an app's group on the game connection. Best-effort: with no connection the join waits for
-	/// the next one, and a refusal or a dropped call leaves the page on its own timer.
-	/// </summary>
-	private async Task InvokeAppGroupAsync(string method, string app)
-	{
-		if (_hub is not { State: SignalRState.Connected } hub) return;
-		try
-		{
-			await hub.InvokeAsync(method, app);
-		}
-		catch (Exception ex)
-		{
-			_logger.LogDebug(ex, "[ConnectionStateService] {Method} {App} failed", method, LogSanitizer.Sanitize(app));
-		}
-	}
 
 	/// <summary>Joins every scene this client asked for again, on a connection that has lost them.</summary>
 	private async Task RejoinScenesAsync()

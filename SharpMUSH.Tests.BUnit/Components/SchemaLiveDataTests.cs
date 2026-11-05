@@ -15,7 +15,7 @@ using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 
-/// <summary>A schema page fetches its data again when softcode asks, or on its own timer while in view.</summary>
+/// <summary>A view with <c>refresh</c> fetches its data again on its timer while its tab is in view.</summary>
 public class SchemaLiveDataTests : TrackingBunitContext
 {
 	private sealed class Handler(Func<HttpRequestMessage, HttpResponseMessage> send) : HttpMessageHandler
@@ -23,14 +23,9 @@ public class SchemaLiveDataTests : TrackingBunitContext
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => Task.FromResult(send(request));
 	}
 
-	private sealed class Live : IAppRefreshControl
+	private sealed class Visibility : IPortalVisibility
 	{
-		public List<string> Joined { get; } = [];
-		public event Action<string>? OnAppRefresh;
 		public bool IsVisible { get; set; } = true;
-		public Task JoinAppAsync(string app) { Joined.Add(app); return Task.CompletedTask; }
-		public Task LeaveAppAsync(string app) { Joined.Remove(app); return Task.CompletedTask; }
-		public void Refresh(string app) => OnAppRefresh?.Invoke(app);
 	}
 
 	/// <summary>A clock that moves only when told, for the one timer a page starts.</summary>
@@ -46,7 +41,7 @@ public class SchemaLiveDataTests : TrackingBunitContext
 		public void Tick() => _tick?.Invoke(_state);
 	}
 
-	private readonly Live _live = new();
+	private readonly Visibility _visibility = new();
 	private readonly Clock _clock = new();
 	private int _reads;
 
@@ -63,7 +58,7 @@ public class SchemaLiveDataTests : TrackingBunitContext
 		Services.AddMudServices().AddSingleton(factory)
 			.AddSingleton(sp => new SchemaAppService(factory, NullLogger<SchemaAppService>.Instance))
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
-			.AddSingleton<IAppRefreshControl>(_live)
+			.AddSingleton<IPortalVisibility>(_visibility)
 			.AddSingleton<TimeProvider>(_clock);
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
@@ -74,46 +69,11 @@ public class SchemaLiveDataTests : TrackingBunitContext
 
 	private static SchemaData First => new(new Dictionary<string, SchemaFieldValue> { ["count"] = new(JsonSerializer.SerializeToElement("first")) });
 
-	private IRenderedComponent<SchemaApplicationHost> Open(PortalSchemaDocument document, string? objid = "#5:100")
+	private IRenderedComponent<SchemaApplicationHost> Open(PortalSchemaDocument document)
 	{
 		Configure();
 		return Render<SchemaApplicationHost>(p => p
-			.Add(x => x.Document, document).Add(x => x.Data, First)
-			.Add(x => x.App, "sheet").Add(x => x.Objid, objid).Add(x => x.DataUrl, "api/built/sheet/data"));
-	}
-
-	[Test]
-	public async Task A_page_joins_its_app_and_the_copy_for_its_character_and_leaves_both()
-	{
-		var cut = Open(Sheet("view"));
-		await Assert.That(_live.Joined).IsEquivalentTo(["sheet", "sheet:#5:100"]);
-
-		await DisposeComponentsAsync();
-		await Assert.That(_live.Joined).IsEmpty();
-	}
-
-	[Test]
-	public async Task A_refresh_for_its_app_or_its_character_fetches_the_data_again()
-	{
-		var cut = Open(Sheet("view"));
-
-		_live.Refresh("sheet:#5:100");
-		cut.WaitForState(() => cut.Markup.Contains("read 1"));
-
-		_live.Refresh("sheet");
-		cut.WaitForState(() => cut.Markup.Contains("read 2"));
-	}
-
-	[Test]
-	public async Task A_refresh_for_another_app_or_character_is_ignored()
-	{
-		var cut = Open(Sheet("view"));
-
-		_live.Refresh("sheet:#6:100");
-		_live.Refresh("other");
-
-		await Assert.That(_reads).IsEqualTo(0);
-		await Assert.That(cut.Markup).Contains("first");
+			.Add(x => x.Document, document).Add(x => x.Data, First).Add(x => x.DataUrl, "api/built/sheet/data"));
 	}
 
 	[Test]
@@ -121,7 +81,6 @@ public class SchemaLiveDataTests : TrackingBunitContext
 	{
 		var cut = Open(Sheet("form", refresh: 30));
 
-		_live.Refresh("sheet");
 		_clock.Tick();
 
 		await Assert.That(_reads).IsEqualTo(0);
@@ -135,7 +94,7 @@ public class SchemaLiveDataTests : TrackingBunitContext
 		_clock.Tick();
 		cut.WaitForState(() => cut.Markup.Contains("read 1"));
 
-		_live.IsVisible = false;
+		_visibility.IsVisible = false;
 		_clock.Tick();
 		await Task.Delay(50);
 		await Assert.That(_reads).IsEqualTo(1);

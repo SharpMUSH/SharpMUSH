@@ -30,7 +30,7 @@ else if (_schema is null)
 }
 else
 {
-    <SchemaApplicationHost Document="_schema" Data="_data" QuietWhenEmpty="QuietWhenEmpty" App="@_app" Objid="@_objid" DataUrl="@_dataUrl" />
+    <SchemaApplicationHost Document="_schema" Data="_data" QuietWhenEmpty="QuietWhenEmpty" DataUrl="@_dataUrl" />
 }
 
 @code {
@@ -55,8 +55,6 @@ else
 
     private bool _loading = true;
     private PortalSchemaDocument? _schema;
-    private string? _app;
-    private string? _objid;
     private string? _dataUrl;
     private SchemaData? _data;
 
@@ -93,7 +91,7 @@ else
         _loading = true;
         _schema = null;
         _data = null;
-        (_app, _objid, _dataUrl) = (null, null, null);
+        _dataUrl = null;
         FollowOobPackage(null);
 
         var (schemaUrl, dataUrl, oobPackage) = await ResolveRoutesAsync();
@@ -121,10 +119,7 @@ else
                 {
                     data = await Schema.GetDataAsync(resolvedData) is SchemaData fetched ? fetched : null;
                     if (!Current(generation)) return;
-                    // Only a registered application is reached by portalrefresh(); a widget configured with
-                    // routes of its own has no slug to be reached by.
-                    if (string.IsNullOrWhiteSpace(ConfigString("schemaUrl")))
-                        (_app, _objid, _dataUrl) = (WidgetName, objid, resolvedData);
+                    _dataUrl = resolvedData;
                 }
             }
             _schema = schema;

@@ -1,14 +1,11 @@
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Text.Json.Nodes;
 using MarkupString;
 using MarkupString.Layout;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Library.Attributes;
-using SharpMUSH.Library.Authorization;
-using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models.Portal.Applications;
@@ -62,39 +59,6 @@ public partial class Functions
 		var block = drawing.Document(document, PortalSchema.Text(options, "page"));
 		return ValueTask.FromResult(new CallState(block is null ? MarkupText.Empty : Build(block, cells, fluid)));
 	}
-
-	/// <summary>
-	/// <c>portalrefresh(&lt;slug&gt;[, &lt;object&gt;])</c> — asks the portal pages that have an application
-	/// open to fetch its data again: every copy, or only the copies showing <c>&lt;object&gt;</c>. Nothing
-	/// travels with the ask; each page refetches through its own data route. Needs <c>applications.admin</c>.
-	/// </summary>
-	[SharpFunction(Name = "portalrefresh", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["slug", "object"])]
-	public async ValueTask<CallState> PortalRefresh(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.ApplicationsAdmin)) is PermissionRefusal refused)
-			return refused.Return;
-
-		var slug = Arg(args, 0).ToPlainText().Trim().ToLowerInvariant();
-		if (!ApplicationSlug().IsMatch(slug)) return new CallState(ErrorMessages.Returns.InvalidApplication);
-
-		var target = Arg(args, 1).ToPlainText().Trim();
-		if (target.Length == 0)
-		{
-			await PortalApplications.RefreshAsync(slug, null);
-			return CallState.Empty;
-		}
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, target, LocateFlags.All,
-			async found =>
-			{
-				await PortalApplications.RefreshAsync(slug, found.Object().DBRef.ToString());
-				return CallState.Empty;
-			});
-	}
-
-	[GeneratedRegex("^[a-z0-9_-]{1,40}$")]
-	private static partial Regex ApplicationSlug();
 
 	private static JsonNode? ParseJson(string text)
 	{

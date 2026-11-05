@@ -58,7 +58,6 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	private ILogger<Functions> Logger { get; }
 	private IMessageBus MessageBus { get; }
 	private IActivityReportService ActivityReports { get; }
-	private IPortalApplicationNotifier PortalApplications { get; }
 
 	private readonly FunctionLibraryService _functionLibrary = [];
 
@@ -99,8 +98,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		ITextFileService textFileService,
 		IDidItService didItService,
 		IAccountService accountService,
-		IActivityReportService activityReports,
-		IPortalApplicationNotifier portalApplications)
+		IActivityReportService activityReports)
 	{
 		Logger = logger;
 		Mediator = mediator;
@@ -135,7 +133,6 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		DidItService = didItService;
 		AccountService = accountService;
 		ActivityReports = activityReports;
-		PortalApplications = portalApplications;
 
 		Builtins = Generated.FunctionLibrary.Create(this).ToDictionary(pair => pair.Key, pair =>
 			pair.Value with { RestrictedOperation = RestrictedOperations.Contains(pair.Key) ? pair.Key.ToLowerInvariant() : null });

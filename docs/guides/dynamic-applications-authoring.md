@@ -318,12 +318,9 @@ read-only diagram from `{nodes,edges}` in another field.
 
 ### Live data
 
-A view with `refresh` fetches its data route again on that timer while its tab is in view. Softcode can
-also ask the open pages to refetch at once with `portalrefresh(<slug>)`, or only the pages showing one
-character with `portalrefresh(<slug>, <object>)`, where the routes name that character with `{objid}`. The
-ask carries no data: each page refetches through its own data route, so the route's permission checks stay
-where they are. A form never refetches, since that would overwrite what the player is typing.
-`portalrefresh()` needs `applications.admin`.
+A view with `refresh` fetches its data route again on that timer while its tab is in view, so a count or a
+roster stays current without a reload. A form never refetches, since that would overwrite what the player
+is typing.
 
 > The `errors` shape is identical to the one the existing admin config form already
 > consumes, so this contract is battle-tested.

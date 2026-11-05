@@ -37,13 +37,7 @@ else if (_state.Form.GlobalError is { } diagnostic)
     [Parameter] public SchemaData? Data { get; set; }
     [Parameter] public bool QuietWhenEmpty { get; set; }
 
-    /// <summary>The application's slug, when the page shows a registered one: <c>portalrefresh()</c> reaches it by this.</summary>
-    [Parameter] public string? App { get; set; }
-
-    /// <summary>The character the page shows, when its routes name one: <c>portalrefresh(&lt;slug&gt;, &lt;object&gt;)</c> reaches it.</summary>
-    [Parameter] public string? Objid { get; set; }
-
-    /// <summary>The data route, filled in, that a refresh fetches again. Without one the page never refreshes.</summary>
+    /// <summary>The data route, filled in, that the view's <c>refresh</c> fetches again. Without one it never refreshes.</summary>
     [Parameter] public string? DataUrl { get; set; }
     private readonly SchemaApplicationState _state = new();
     private PortalSchemaDocument? _loadedDocument;
@@ -52,8 +46,7 @@ else if (_state.Form.GlobalError is { } diagnostic)
     private string _locationIdentity = string.Empty;
     private AccountAuthService? _auth;
     private string _instance = Guid.NewGuid().ToString("N");
-    private IAppRefreshControl? _live;
-    private IReadOnlyList<string> _groups = [];
+    private IPortalVisibility? _visibility;
     private CancellationTokenSource? _timer;
     private (TimeSpan? Every, string? Url) _timed;
     private bool _refetching;
@@ -64,8 +57,7 @@ else if (_state.Form.GlobalError is { } diagnostic)
         Nav.LocationChanged += Leaving;
         _auth = Services.GetService<AccountAuthService>();
         if (_auth is not null) _auth.ActiveCharacterChanged += CharacterChanged;
-        _live = Services.GetService<IAppRefreshControl>();
-        if (_live is not null) _live.OnAppRefresh += Refreshed;
+        _visibility = Services.GetService<IPortalVisibility>();
     }
     private void CharacterChanged()
     {
@@ -105,29 +97,7 @@ else if (_state.Form.GlobalError is { } diagnostic)
             _loadedData = Data;
         }
         RevealOption();
-        _ = FollowAsync();
         Time();
-    }
-
-    /// <summary>The app groups this page belongs to: the app, and its copy for the character shown.</summary>
-    private IReadOnlyList<string> Groups() =>
-        string.IsNullOrWhiteSpace(App) || string.IsNullOrWhiteSpace(DataUrl) ? []
-        : string.IsNullOrWhiteSpace(Objid) ? [App] : [App, $"{App}:{Objid}"];
-
-    private async Task FollowAsync()
-    {
-        if (_live is null) return;
-        var wanted = Groups();
-        if (wanted.SequenceEqual(_groups)) return;
-        var left = _groups;
-        _groups = wanted;
-        foreach (var group in left.Except(wanted)) await _live.LeaveAppAsync(group);
-        foreach (var group in wanted.Except(left)) await _live.JoinAppAsync(group);
-    }
-
-    private void Refreshed(string app)
-    {
-        if (_groups.Contains(app)) _ = InvokeAsync(RefetchAsync);
     }
 
     /// <summary>Starts, moves or stops the view's refresh timer to match its document and data route.</summary>
@@ -150,7 +120,7 @@ else if (_state.Form.GlobalError is { } diagnostic)
         {
             while (await ticks.WaitForNextTickAsync(stop))
             {
-                if (_live?.IsVisible ?? true) await InvokeAsync(RefetchAsync);
+                if (_visibility?.IsVisible ?? true) await InvokeAsync(RefetchAsync);
             }
         }
         catch (OperationCanceledException)
@@ -206,8 +176,5 @@ else if (_state.Form.GlobalError is { } diagnostic)
         Nav.LocationChanged -= Leaving;
         if (_auth is not null) _auth.ActiveCharacterChanged -= CharacterChanged;
         _timer?.Cancel();
-        if (_live is null) return;
-        _live.OnAppRefresh -= Refreshed;
-        foreach (var group in _groups) _ = _live.LeaveAppAsync(group);
     }
 }

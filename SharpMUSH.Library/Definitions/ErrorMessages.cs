@@ -241,7 +241,6 @@ public static partial class ErrorMessages
 		public const string InvalidLineWidth = "#-1 INVALID LINE WIDTH";
 		public const string InvalidSchema = "#-1 SCHEMA MUST BE A JSON OBJECT";
 		public const string InvalidSchemaData = "#-1 DATA MUST BE A JSON OBJECT";
-		public const string InvalidApplication = "#-1 INVALID APPLICATION SLUG";
 		public const string InvalidLocation = "#-1 INVALID LOCATION";
 		public const string InvalidLock = "#-1 INVALID LOCK";
 		public const string InvalidObject = "#-1 INVALID OBJECT";
