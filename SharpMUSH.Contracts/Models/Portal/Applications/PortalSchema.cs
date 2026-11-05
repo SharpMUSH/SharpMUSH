@@ -75,11 +75,10 @@ public static class PortalSchema
 				problems.Add($"{pagePath}: not an object");
 				continue;
 			}
-			foreach (var link in (string[])["next", "prev"])
-			{
-				if (Text(page, link) is { Length: > 0 } target && !pageKeys.Contains(target))
-					problems.Add($"{pagePath}: {link} names no page \"{target}\"");
-			}
+			problems.AddRange(((string[])["next", "prev"])
+				.Select(link => (Link: link, Target: Text(page, link)))
+				.Where(link => link.Target is { Length: > 0 } target && !pageKeys.Contains(target))
+				.Select(link => $"{pagePath}: {link.Link} names no page \"{link.Target}\""));
 			if (page["sections"] is not JsonArray sections)
 			{
 				if (page["sections"] is not null) problems.Add($"{pagePath}.sections: not a list");

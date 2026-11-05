@@ -53,7 +53,7 @@ public static class BuilderTemplates
 	}
 
 	private static JsonObject Section(string name, JsonObject[] elements) =>
-		new() { ["name"] = name, ["elements"] = new JsonArray(elements.Select(JsonNode? (e) => e).ToArray()) };
+		new() { ["name"] = name, ["elements"] = new JsonArray([.. elements]) };
 
 	private static JsonObject Field(string key, string label, string type, bool required = false, int? maxLength = null,
 		(string Value, string Label)[]? options = null)

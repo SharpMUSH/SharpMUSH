@@ -376,6 +376,8 @@
                 case BuiltSource source when _draft.LoadStored(source.Schema ?? "", source.Sources, source.Save):
                     _draft.Slug = slug;
                     _slugTouched = true;
+                    // A registered app reopens where it shows, so a re-register keeps it there.
+                    if (await Registry.GetAsync(slug) is { } registered) (_widget, _scope) = BuilderDraft.Placement(registered);
                     _page = _section = _element = null;
                     _step = 1;
                     _reached = 4;
@@ -518,24 +520,8 @@
 
     private async Task RegisterAsync(string holder)
     {
-        var existing = await Registry.GetAsync(_draft.Slug);
         // The server fills in the routes of a built application and checks that the holder is yours and holds it.
-        var application = new PortalApplication(
-            _draft.Slug,
-            string.IsNullOrWhiteSpace(_draft.Title) ? _draft.Slug : _draft.Title.Trim(),
-            existing?.Icon ?? (_draft.IsForm ? "edit_note" : "article"),
-            _widget ? ApplicationKind.Widget.ToString() : ApplicationKind.Page.ToString(),
-            BuilderDraft.SchemaRoute(_draft.Slug),
-            BuilderDraft.DataRoute(_draft.Slug, _widget),
-            _draft.IsForm ? BuilderDraft.ActRoute(_draft.Slug) : null,
-            existing?.MinimumRole ?? "Player",
-            _widget ? null : existing?.NavPlacement ?? "Play",
-            _widget ? existing?.Zones ?? ["MainContent"] : [],
-            existing?.Order ?? 100,
-            RenderKind: ApplicationRenderKind.Built,
-            Scope: _widget && _scope != "home" ? _scope : null,
-            Permission: existing?.Permission,
-            Config: System.Text.Json.JsonSerializer.SerializeToElement(new { holder }));
+        var application = _draft.Registration(holder, _widget, _scope, await Registry.GetAsync(_draft.Slug));
         switch (await Registry.UpsertAsync(application))
         {
             case Success:

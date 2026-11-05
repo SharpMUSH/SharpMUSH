@@ -125,6 +125,8 @@ else if (_state.Form.GlobalError is { } diagnostic)
         }
         catch (OperationCanceledException)
         {
+            // Disposed: the page is gone, so the timer stops.
+            return;
         }
     }
 

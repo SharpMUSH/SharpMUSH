@@ -194,10 +194,8 @@ public sealed partial class BuilderDraft
 		var seen = new HashSet<string>(StringComparer.Ordinal);
 		foreach (var (_, _, element) in AllElements())
 		{
-			foreach (var key in ElementKeys(element))
-			{
-				if (!string.IsNullOrWhiteSpace(key) && seen.Add(key)) yield return key;
-			}
+			foreach (var key in ElementKeys(element).OfType<string>().Where(key => !string.IsNullOrWhiteSpace(key) && seen.Add(key)))
+				yield return key;
 		}
 	}
 
@@ -257,10 +255,7 @@ public sealed partial class BuilderDraft
 			if (OptionTypes.Contains((string?)field["type"] ?? "") && (field["options"] as JsonArray)?.Count is null or 0)
 				problems.Add($"\"{(string?)field["label"] ?? key}\" has no choices.");
 		}
-		foreach (var key in DataKeys().Where(k => !IsKey(k)))
-		{
-			if (!keys.Contains(key)) problems.Add($"The key \"{key}\" is lower-case letters, digits and _.");
-		}
+		problems.AddRange(DataKeys().Where(k => !IsKey(k) && !keys.Contains(k)).Select(k => $"The key \"{k}\" is lower-case letters, digits and _."));
 		problems.AddRange(Sources.Concat(Save).Where(p => p.Value.Length > 0 && !IsAttribute(p.Value))
 			.Select(p => $"\"{p.Value}\" is not an attribute name."));
 		if (IsForm && !InputFields().Any()) problems.Add("A form needs at least one field.");
@@ -295,6 +290,31 @@ public sealed partial class BuilderDraft
 	public static string SchemaRoute(string slug) => $"api/built/{slug}/schema";
 	public static string DataRoute(string slug, bool widget) => $"api/built/{slug}/data" + (widget ? "?objid={objid}" : "");
 	public static string ActRoute(string slug) => $"api/built/{slug}/act";
+
+	/// <summary>Where a registered application shows: as a widget, and on which layout scope (<c>home</c> for any).</summary>
+	public static (bool Widget, string Scope) Placement(PortalApplication registered) =>
+		registered.KindEnum == ApplicationKind.Widget ? (true, registered.Scope ?? "home") : (false, "profile");
+
+	/// <summary>
+	/// The registration this draft sends, held by <paramref name="holder"/>. What the builder has no input for (icon, role,
+	/// navigation, zones, order, permission) comes from <paramref name="existing"/>, so a re-register changes only the draft.
+	/// </summary>
+	public PortalApplication Registration(string holder, bool widget, string scope, PortalApplication? existing) => new(
+		Slug,
+		string.IsNullOrWhiteSpace(Title) ? Slug : Title.Trim(),
+		existing?.Icon ?? (IsForm ? "edit_note" : "article"),
+		widget ? ApplicationKind.Widget.ToString() : ApplicationKind.Page.ToString(),
+		SchemaRoute(Slug),
+		DataRoute(Slug, widget),
+		IsForm ? ActRoute(Slug) : null,
+		existing?.MinimumRole ?? "Player",
+		widget ? null : existing?.NavPlacement ?? "Play",
+		widget ? existing is { Zones.Length: > 0 } ? existing.Zones : ["MainContent"] : [],
+		existing?.Order ?? 100,
+		RenderKind: ApplicationRenderKind.Built,
+		Scope: widget && scope != "home" ? scope : null,
+		Permission: existing?.Permission,
+		Config: JsonSerializer.SerializeToElement(new { holder }));
 
 	/// <summary>A JSON object of the non-empty entries of <paramref name="map"/> whose key the document still reads.</summary>
 	public string MapJson(IReadOnlyDictionary<string, string> map, IEnumerable<string> keys)
@@ -360,9 +380,10 @@ public sealed partial class BuilderDraft
 	private static JsonObject SampleRow(JsonObject table, int n)
 	{
 		var row = new JsonObject();
-		foreach (var column in (table["columns"] as JsonArray ?? []).OfType<JsonObject>())
+		foreach (var column in (table["columns"] as JsonArray ?? []).OfType<JsonObject>().Where(column => (string?)column["key"] is { Length: > 0 }))
 		{
-			if ((string?)column["key"] is { Length: > 0 } key) row[key] = $"{column["label"] ?? key} {n}";
+			var key = (string)column["key"]!;
+			row[key] = $"{column["label"] ?? key} {n}";
 		}
 		return row;
 	}

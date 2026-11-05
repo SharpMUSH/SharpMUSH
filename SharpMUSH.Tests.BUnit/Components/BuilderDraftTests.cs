@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using SharpMUSH.Client.Components.Builder;
+using SharpMUSH.Library.Models.Portal.Applications;
 
 namespace SharpMUSH.Tests.BUnit.Components;
 
@@ -119,5 +120,41 @@ public class BuilderDraftTests
 		var sample = draft.SampleData();
 
 		await Assert.That(sample.Fields!.Keys).IsEquivalentTo(draft.DataKeys().ToArray());
+	}
+
+	[Test]
+	public async Task A_reopened_widget_registers_again_where_it_was_with_only_its_title_changed()
+	{
+		var registered = FromTemplate("sheet", "finger").Registration("#12:345", true, "card", null) with
+		{
+			Zones = ["Sidebar"],
+			Icon = "badge",
+			Order = 7
+		};
+
+		var (widget, scope) = BuilderDraft.Placement(registered);
+		var reopened = FromTemplate("sheet", "finger");
+		reopened.Title = "Finger, again";
+		var again = reopened.Registration("#12:345", widget, scope, registered);
+
+		await Assert.That(again.KindEnum).IsEqualTo(ApplicationKind.Widget);
+		await Assert.That(again.Scope).IsEqualTo("card");
+		await Assert.That(again.Zones).IsEquivalentTo(["Sidebar"]);
+		await Assert.That(again.DataUrl).IsEqualTo("api/built/finger/data?objid={objid}");
+		await Assert.That(again.Icon).IsEqualTo("badge");
+		await Assert.That(again.Order).IsEqualTo(7);
+		await Assert.That(again.DisplayName).IsEqualTo("Finger, again");
+	}
+
+	[Test]
+	public async Task A_widget_for_any_scope_and_a_page_reopen_as_they_were()
+	{
+		var anywhere = FromTemplate("sheet", "finger").Registration("#12:345", true, "home", null);
+		var page = FromTemplate("sheet", "finger").Registration("#12:345", false, "profile", null);
+
+		await Assert.That(anywhere.Scope).IsNull();
+		await Assert.That(BuilderDraft.Placement(anywhere)).IsEqualTo((true, "home"));
+		await Assert.That(BuilderDraft.Placement(page).Widget).IsFalse();
+		await Assert.That(page.DataUrl).IsEqualTo("api/built/finger/data");
 	}
 }
