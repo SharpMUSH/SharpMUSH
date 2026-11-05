@@ -228,7 +228,8 @@ internal static class DatabaseRegistration
 		services.AddSingleton<Implementation.Services.MediatorWikiStore>();
 		services.AddSingleton<IWikiService>(sp => new WikiStoreService(
 			sp.GetRequiredService<Implementation.Services.MediatorWikiStore>(),
-			sp.GetRequiredService<WikiMarkdigPipeline>()));
+			sp.GetRequiredService<WikiMarkdigPipeline>(),
+			sp.GetService<IWikiImageSizes>() ?? NoWikiImageSizes.Instance));
 
 		// Portal subsystems the provider also backs: package registry, layout registry, RBAC roles.
 		services.AddSingleton<IPackageRegistryService>(sp => sp.GetRequiredService<TProvider>());

@@ -13,8 +13,13 @@ namespace SharpMUSH.Library.Services;
 /// In the engine host the store is a Mediator transport to data handlers and provider storage;
 /// standalone previews and provider tests may pass their owned store directly.
 /// </summary>
-public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline renderer) : IWikiService
+public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline renderer, IWikiImageSizes imageSizes) : IWikiService
 {
+	/// <summary>A wiki whose pictures' sizes are unknown: pages render as their Markdown sizes them.</summary>
+	public WikiStoreService(IWikiStore store, WikiMarkdigPipeline renderer) : this(store, renderer, NoWikiImageSizes.Instance)
+	{
+	}
+
 	public Task<Found<WikiPage>> GetBySlugAsync(string slug, WikiNamespace ns = WikiNamespace.Main)
 		=> store.GetPageBySlugAsync(Namespace(ns), WikiHelpers.Slugify(slug));
 
@@ -64,7 +69,7 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 					|| await store.GetPageBySlugAsync(Namespace(WikiNamespace.Category), key) is WikiPage)
 				continue;
 			// A page created meanwhile by someone else wins; its title is the name.
-			if (await store.CreatePageAsync(NewPage(name, Render(string.Empty), authorDbref, WikiNamespace.Category,
+			if (await store.CreatePageAsync(NewPage(name, await RenderAsync(string.Empty), authorDbref, WikiNamespace.Category,
 						WikiHelpers.NormalizeLocaleOrEmpty(sourceLocale), [])) is WikiPage page)
 				created.Add(page);
 		}
@@ -92,7 +97,7 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 		string? editSummary = null)
 		=> SourceLocaleToStamp(sourceLocale) switch
 		{
-			string stampedLocale => await store.CreatePageAsync(NewPage(title, Render(markdown), authorDbref, ns, stampedLocale,
+			string stampedLocale => await store.CreatePageAsync(NewPage(title, await RenderAsync(markdown), authorDbref, ns, stampedLocale,
 				WikiHelpers.NormalizeCategories(categories, ns)) with
 			{ Slug = WikiHelpers.Slugify(slug ?? title) }, editSummary),
 			Error<string> error => error,
@@ -130,8 +135,8 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 		};
 	}
 
-	public Task<Found<WikiPage>> UpdateAsync(string id, string markdown, string editorDbref, string? editSummary = null)
-		=> store.UpdatePageBodyAsync(id, Render(markdown), editorDbref, editSummary, DateTimeOffset.UtcNow);
+	public async Task<Found<WikiPage>> UpdateAsync(string id, string markdown, string editorDbref, string? editSummary = null)
+		=> await store.UpdatePageBodyAsync(id, await RenderAsync(markdown), editorDbref, editSummary, DateTimeOffset.UtcNow);
 
 	public async Task<FoundResult<WikiPage>> SetTitleAsync(string id, string title)
 	{
@@ -267,7 +272,7 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 			return new Error<string>(
 				$"'{normalized}' is the page's source locale; edit the page itself rather than adding a translation.");
 
-		return await store.WriteTranslationAsync(pageId, normalized, title, Render(markdown), editorDbref, editSummary,
+		return await store.WriteTranslationAsync(pageId, normalized, title, await RenderAsync(markdown), editorDbref, editSummary,
 			published, expectedRevisionNumber, DateTimeOffset.UtcNow);
 	}
 
@@ -298,8 +303,8 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 			: WikiHelpers.NormalizeLocaleOrEmpty(locale) is { Length: > 0 } normalized ? normalized
 			: null;
 
-	private WikiBody Render(string markdown)
-		=> new(markdown, renderer.RenderToHtml(markdown), renderer.ExtractPlainText(markdown));
+	private async Task<WikiBody> RenderAsync(string markdown)
+		=> new(markdown, await renderer.RenderToHtmlAsync(markdown, imageSizes), renderer.ExtractPlainText(markdown));
 
 	private static string Namespace(WikiNamespace ns) => ns.ToString().ToLowerInvariant();
 }
