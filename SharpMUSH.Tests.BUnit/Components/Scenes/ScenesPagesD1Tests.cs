@@ -313,7 +313,7 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 		var cut = RenderDetail("S6");
 		cut.WaitForAssertion(() => cut.Find(".scene-detail-not-started"), TimeSpan.FromSeconds(5));
 
-		var when = due.ToLocalTime().ToString("MMM d, yyyy HH:mm");
+		var when = SharpMUSH.Client.Components.Kit.DateDisplay.DateTime(due);
 		await Assert.That(cut.Find(".scene-detail-not-started").TextContent).Contains(when);
 		await Assert.That(cut.Find(".kit-page-head .scene-detail-upcoming")).IsNotNull();
 		await Assert.That(cut.Find(".kit-page-head .scene-detail-due").TextContent).IsEqualTo(when);

@@ -88,7 +88,7 @@ public class ScenePauseTests : TrackingBunitContext
 		var cut = await RenderAsActingAsync(313, "paused", due.ToUnixTimeMilliseconds());
 
 		await Assert.That(cut.Find(".scene-detail-paused").TextContent.Trim()).IsEqualTo("PAUSED");
-		await Assert.That(cut.Find(".scene-detail-scheduled").TextContent).IsEqualTo(due.ToLocalTime().ToString("MMM d, yyyy HH:mm"));
+		await Assert.That(cut.Find(".scene-detail-scheduled").TextContent).IsEqualTo(SharpMUSH.Client.Components.Kit.DateDisplay.DateTime(due));
 
 		Answer("active");
 		_api.Extra["/api/scenes/S1"] = SceneJson.Scene("S1", "Salt Market at Dusk", status: "active");

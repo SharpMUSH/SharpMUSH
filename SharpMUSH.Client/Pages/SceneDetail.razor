@@ -65,14 +65,14 @@
                         }
                         if (scene.ScheduledForUtc is { } due)
                         {
-                            <span class="scene-detail-due">@due.ToLocalTime().ToString("MMM d, yyyy HH:mm")</span>
+                            <span class="scene-detail-due">@DateDisplay.DateTime(due)</span>
                         }
                     }
                     else
                     {
                         <span>@Loc.Plural("RolPoseCount", "count", scene.PoseCount)</span>
                         <span aria-hidden="true">·</span>
-                        <span>@scene.StartedAtUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm")</span>
+                        <span>@DateDisplay.DateTime(scene.StartedAtUtc)</span>
                     }
                 </span>
             </DescriptionContent>
@@ -216,7 +216,7 @@
                 else if (visible.Count == 0 && NotStarted(scene))
                 {
                     <EmptyBox Class="scene-detail-not-started">@(scene.ScheduledForUtc is { } due
-                        ? string.Format(Loc["RolSceneStartsAt"], due.ToLocalTime().ToString("MMM d, yyyy HH:mm"))
+                        ? string.Format(Loc["RolSceneStartsAt"], DateDisplay.DateTime(due))
                         : Loc["RolSceneNotStartedYet"])</EmptyBox>
                 }
                 else if (visible.Count == 0)
@@ -282,12 +282,12 @@
                             @if (!NotStarted(scene))
                             {
                                 <dt>@Loc["NavSceneStarted"]</dt>
-                                <dd>@scene.StartedAtUtc.ToLocalTime().ToString("MMM d, yyyy HH:mm")</dd>
+                                <dd>@DateDisplay.DateTime(scene.StartedAtUtc)</dd>
                             }
                             @if (!scene.IsLive && scene.ScheduledForUtc is { } due)
                             {
                                 <dt>@Loc["NavScenesScheduled"]</dt>
-                                <dd class="scene-detail-scheduled">@due.ToLocalTime().ToString("MMM d, yyyy HH:mm")</dd>
+                                <dd class="scene-detail-scheduled">@DateDisplay.DateTime(due)</dd>
                             }
                             @if (NotStarted(scene))
                             {

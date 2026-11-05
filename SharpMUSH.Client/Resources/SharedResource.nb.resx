@@ -7453,4 +7453,1996 @@
   <data name="NavHelpLearnSub" xml:space="preserve"><value>En guidet tur i å bli med og spille.</value></data>
   <data name="NavHelpGettingStartedSub" xml:space="preserve"><value>Bevegelse, samtale, kanaler og post.</value></data>
   <data name="NavHelpNewbieSub" xml:space="preserve"><value>Hva [ ] og &lt; &gt; i en kommando betyr.</value></data>
+  <data name="GuideAdminChecked" xml:space="preserve">
+    <value>Jeg har kontrollert dette</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminContinue" xml:space="preserve">
+    <value>Fortsett sjekklisten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDashboardLead" xml:space="preserve">
+    <value>Gå gjennom disse før du inviterer noen. Boksen forsvinner når hvert steg er kontrollert eller utsatt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDefer" xml:space="preserve">
+    <value>Utsett</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDeferred" xml:space="preserve">
+    <value>Utsatt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDescription" xml:space="preserve">
+    <value>— spillintroduksjon og sjekkliste for nye spillere.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminEntry" xml:space="preserve">
+    <value>Forbered for nye spillere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminHeading" xml:space="preserve">
+    <value>Forbered for de første spillerne dine</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminIntro" xml:space="preserve">
+    <value>En egen sjekkliste for spillet ditt. Gjør det du kan, utsett det som trenger mer ettertanke, og kom tilbake når du trenger det.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminLoading" xml:space="preserve">
+    <value>Laster inn sjekklisten din…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminPlayerChecked" xml:space="preserve">
+    <value>Jeg har kontrollert med en vanlig spillerkonto</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminPlayingGod" xml:space="preserve">
+    <value>Du spiller #1 akkurat nå. Bytt til stabskarakteren din for det daglige arbeidet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminPreview" xml:space="preserve">
+    <value>Forhåndsvis spillerens reise uten å endre fremdriften din</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminProgress" xml:space="preserve">
+    <value>{0} av {1} ferdig</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminReload" xml:space="preserve">
+    <value>Last inn sjekklisten på nytt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminSummary" xml:space="preserve">
+    <value>{0} kontrollert; {1} utsatt. Spillinnstillingene og pakketillatelsene dine endres ikke av valgene i sjekklisten.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminTitle" xml:space="preserve">
+    <value>Forbered for spillere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminTodo" xml:space="preserve">
+    <value>Å gjøre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminVerified" xml:space="preserve">
+    <value>Kontrollert</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtwork" xml:space="preserve">
+    <value>Sharpie-illustrasjoner</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtworkFull" xml:space="preserve">
+    <value>Fullstendige</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtworkNone" xml:space="preserve">
+    <value>Ingen illustrasjoner</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtworkReduced" xml:space="preserve">
+    <value>Reduserte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideBack" xml:space="preserve">
+    <value>Tilbake</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideBackToGame" xml:space="preserve">
+    <value>Tilbake til spillet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsAudience" xml:space="preserve">
+    <value>Meldinger når alle som lytter på kanalen, ikke bare rommet ditt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsChat" xml:space="preserve">
+    <value>Still spørsmålet ditt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsDescription" xml:space="preserve">
+    <value>Les kanalbeskrivelsen før du blir med. Erstatt NAME med en kanal som spillet viser.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsDiscover" xml:space="preserve">
+    <value>Kanaler knytter folk sammen på tvers av rom. I Spill åpner Bla gjennom kanaler kanaloversikten. Spill har ofte kanaler for nybegynnere, hjelp eller sosialt; navn og tilgangsregler varierer.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsJoin" xml:space="preserve">
+    <value>Bli med i kanalen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsList" xml:space="preserve">
+    <value>Finn en kanal.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsName" xml:space="preserve">
+    <value>Erstatt NAME med en kanal fra listen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsTitle" xml:space="preserve">
+    <value>Finn folk som kan hjelpe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterConnectionFailed" xml:space="preserve">
+    <value>Karakteren din er lagret, men vi kunne ikke koble til spillet. Prøv å koble til på nytt, eller gå tilbake til kontoen din og spill senere.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterOptions" xml:space="preserve">
+    <value>Spillet bestemmer hvilke alternativer som finnes.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterRosterFailed" xml:space="preserve">
+    <value>Karakteren din er lagret, men vi kunne ikke oppdatere karakterlisten din. Prøv igjen for å fortsette med den karakteren; den blir ikke opprettet på nytt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterRosterUnavailable" xml:space="preserve">
+    <value>Vi kunne ikke laste inn karakterene dine. Prøv igjen før du oppretter eller gjør krav på en, slik at vi kan beholde de eksisterende karakterene dine og det nåværende valget.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChoosePath" xml:space="preserve">
+    <value>Velg startpunktet ditt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideClaimCharacter" xml:space="preserve">
+    <value>Gjør krav på karakteren din</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideClose" xml:space="preserve">
+    <value>Lukk guiden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideComingFrom" xml:space="preserve">
+    <value>Hvor kommer du fra?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_list_Audience" xml:space="preserve">
+    <value>Bare du</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_list_Meaning" xml:space="preserve">
+    <value>Finn synlige kanaler</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_on_Audience" xml:space="preserve">
+    <value>Kan varsle kanalen om at du ble med</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_on_Meaning" xml:space="preserve">
+    <value>Bli med i en kanal som tillater deg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_chat_Audience" xml:space="preserve">
+    <value>De som lytter på kanalen, uansett hvor de er</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_chat_Meaning" xml:space="preserve">
+    <value>Snakk i en kanal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_describe_Audience" xml:space="preserve">
+    <value>Alle som ser på deg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_describe_Meaning" xml:space="preserve">
+    <value>Angi hva andre ser når de ser på deg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_Audience" xml:space="preserve">
+    <value>Bare du</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_Meaning" xml:space="preserve">
+    <value>Les hjelp for kommandoer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_say_Audience" xml:space="preserve">
+    <value>Bare du</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_say_Meaning" xml:space="preserve">
+    <value>Les hvordan en bestemt kommando fungerer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_home_Audience" xml:space="preserve">
+    <value>De som er i rommene du forlater og kommer til</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_home_Meaning" xml:space="preserve">
+    <value>Gå hjem igjen hvis du går deg vill</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_inventory_Audience" xml:space="preserve">
+    <value>Bare du</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_inventory_Meaning" xml:space="preserve">
+    <value>List opp det du bærer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_look_Audience" xml:space="preserve">
+    <value>Bare du</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_look_Meaning" xml:space="preserve">
+    <value>Beskriv rommet du er i</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_page_Audience" xml:space="preserve">
+    <value>Én navngitt spiller</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_page_Meaning" xml:space="preserve">
+    <value>Send en privat melding</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_pose_Audience" xml:space="preserve">
+    <value>De som er i rommet ditt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_pose_Meaning" xml:space="preserve">
+    <value>Beskriv hva karakteren din gjør</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_say_Audience" xml:space="preserve">
+    <value>De som er i rommet ditt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_say_Meaning" xml:space="preserve">
+    <value>Snakk som karakteren din</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_who_Audience" xml:space="preserve">
+    <value>Bare du</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_who_Meaning" xml:space="preserve">
+    <value>Se tilkoblede spillere som spillet lar deg se</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCompanionTitle" xml:space="preserve">
+    <value>Med Sharpie: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextAccount" xml:space="preserve">
+    <value>Kontoen og karakteren din</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextCharacter" xml:space="preserve">
+    <value>Den aktive karakteren din er {0}. Kommandoer du sender i spillet, bruker denne karakteren.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextChooseCharacter" xml:space="preserve">
+    <value>Du er logget inn. Velg eller opprett en karakter før du begynner å spille.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextFeatures" xml:space="preserve">
+    <value>Utforsk spillet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextScenes" xml:space="preserve">
+    <value>Scener</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextScenesDescription" xml:space="preserve">
+    <value>Bla gjennom historiene som er tatt opp i spillet. Om du kan bli med i en scene, avhenger av tilgangsreglene dens.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextSignedOut" xml:space="preserve">
+    <value>Du kan lese guiden uten å logge inn. Logg inn når du er klar til å bli med i spillet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextWiki" xml:space="preserve">
+    <value>Wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextWikiDescription" xml:space="preserve">
+    <value>Les om settingen og sidene spillet gjør tilgjengelige for deg.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueAccept" xml:space="preserve">
+    <value>Fortsett den guiden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueBrowser" xml:space="preserve">
+    <value>Fortsett nettleserguiden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueDecline" xml:space="preserve">
+    <value>Behold fremdriften på kontoen min</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueQuestion" xml:space="preserve">
+    <value>Du startet en guide i denne nettleseren før du logget inn. Vil du legge den fremdriften til kontoen din?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCoreReference" xml:space="preserve">
+    <value>Dette er grunnleggende kommandoer. Spill kan tilpasse dem; sjekk i help.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCreateCharacter" xml:space="preserve">
+    <value>Opprett en karakter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideDraftHint" xml:space="preserve">
+    <value>Du velger når det sendes. Et eksisterende utkast blir ikke rørt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorBrowserSave" xml:space="preserve">
+    <value>Nettleseren kunne ikke lagre valget. Det gjelder bare for dette besøket.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorChoice" xml:space="preserve">
+    <value>Det guidevalget er ikke tilgjengelig.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorConflict" xml:space="preserve">
+    <value>Guiden din ble endret i en annen fane. Last inn fremdriften på nytt før du gjør et nytt valg.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorLoad" xml:space="preserve">
+    <value>Kunne ikke laste inn fremdriften i guiden. Prøv igjen for å fortsette.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorSave" xml:space="preserve">
+    <value>Kunne ikke lagre guidevalget. Den tidligere fremdriften din er uendret; prøv igjen når du er tilkoblet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorUnavailable" xml:space="preserve">
+    <value>Spillets guideinformasjon er ikke tilgjengelig. Prøv igjen når forbindelsen er tilbake.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorVersion" xml:space="preserve">
+    <value>Den lagrede guiden bruker en versjon som ikke støttes. Innstillingene dine er beholdt; last inn på nytt etter at klienten er oppdatert.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideFreshCharacter" xml:space="preserve">
+    <value>Begynner du på nytt?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideGameGuides" xml:space="preserve">
+    <value>Spillets guider</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideHelpEntry" xml:space="preserve">
+    <value>Lær å spille / Bytt guide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideHelpIndexEntry" xml:space="preserve">
+    <value>Lær å spille</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideHelpReturn" xml:space="preserve">
+    <value>Du finner alltid guiden under Hjelp.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityAppearance" xml:space="preserve">
+    <value>utseendeinnstillingene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityArtFallback" xml:space="preserve">
+    <value>Viser standard-Sharpie til det finnes illustrasjoner for valgt stil og sjanger.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityArtworkHint" xml:space="preserve">
+    <value>Spillere kan redusere eller skjule illustrasjoner. Spillets logo håndteres separat i</value>
+    <comment>MT — sentence continues into the GuideIdentityAppearance link.</comment>
+  </data>
+  <data name="GuideIdentityCharacterPage" xml:space="preserve">
+    <value>Wikiside med karakterguide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityGenreHint" xml:space="preserve">
+    <value>Velg spillets MSSP-sjanger og undersjanger. Sharpie bruker valgene til illustrasjoner; velg None når ingen passer.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityGenres" xml:space="preserve">
+    <value>Sjanger</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityIntroduction" xml:space="preserve">
+    <value>En kort velkomst for nye spillere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityLabel" xml:space="preserve">
+    <value>Spillintroduksjon</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityLoadEmpty" xml:space="preserve">
+    <value>Ingen guideinnstillinger ble returnert.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityLoading" xml:space="preserve">
+    <value>Laster inn spillets eksisterende innstillinger…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityName" xml:space="preserve">
+    <value>Spillets navn</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityNoArt" xml:space="preserve">
+    <value>Det finnes ingen godkjent illustrasjon for denne stilen ennå. Den skrevne guiden er fortsatt tilgjengelig.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityPreview" xml:space="preserve">
+    <value>Forhåndsvisning av velkomsten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityPreviewLabel" xml:space="preserve">
+    <value>Forhåndsvisning av velkomsten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityRetry" xml:space="preserve">
+    <value>Last inn innstillingene på nytt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityRulesPage" xml:space="preserve">
+    <value>Wikiside med regler</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySave" xml:space="preserve">
+    <value>Lagre spillintroduksjonen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySaveEmpty" xml:space="preserve">
+    <value>Ingen lagrede innstillinger ble returnert.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySaved" xml:space="preserve">
+    <value>Lagret. Den offentlige guiden bruker disse innstillingene.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySaving" xml:space="preserve">
+    <value>Lagrer…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterAdventure" xml:space="preserve">
+    <value>Eventyr</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterAdventureText" xml:space="preserve">
+    <value>Velkommen til {0}. Hvem blir karakteren din? La nysgjerrigheten lede deg inn i en ny historie.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterHint" xml:space="preserve">
+    <value>Velg en mal som erstatter velkomsten over, og rediger den så den blir din egen. Lagre når du er klar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterNewPlayers" xml:space="preserve">
+    <value>Nye spillere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterNewPlayersText" xml:space="preserve">
+    <value>Velkommen til {0}. Ny til tekstbasert rollespill? Begynn med en karakteridé og litt nysgjerrighet. Hver historie begynner et sted.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterRelaxed" xml:space="preserve">
+    <value>Avslappet rollespill</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterRelaxedText" xml:space="preserve">
+    <value>Velkommen til {0}. Ta deg tid til å finne deg til rette, se for deg en karakter og finn en historie du vil fortelle.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterStories" xml:space="preserve">
+    <value>Felles historier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterStoriesText" xml:space="preserve">
+    <value>Velkommen til {0}. Ta med en karakter, del en idé og se for deg historiene vi kan fortelle sammen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarters" xml:space="preserve">
+    <value>Velkomstmaler</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStyle" xml:space="preserve">
+    <value>Sharpie-stil</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySubgenres" xml:space="preserve">
+    <value>Undersjanger</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityThisGame" xml:space="preserve">
+    <value>dette spillet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityVisibility" xml:space="preserve">
+    <value>Wikilenker vises først når serveren har kontrollert synligheten deres og wikileseren.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityWelcomePage" xml:space="preserve">
+    <value>Wikiside med velkomsttekst</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityWikiHint" xml:space="preserve">
+    <value>Bruk namespace/slug. Bare sider som kan leses uten innlogging, vises i den offentlige guiden. La et felt stå tomt for å utelate det.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityYourGame" xml:space="preserve">
+    <value>spillet ditt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideInsertLook" xml:space="preserve">
+    <value>Sett inn look i Kommando</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideInsertUnavailable" xml:space="preserve">
+    <value>Koble til spillet og send eller tøm det eksisterende utkastet ditt først. Ingenting ble endret eller sendt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideInserted" xml:space="preserve">
+    <value>look står i kommandofeltet. Trykk på Send når du er klar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideKnown" xml:space="preserve">
+    <value>Dette kan jeg allerede</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_backups_Action" xml:space="preserve">
+    <value>Eksterne sikkerhetskopier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_backups_Body" xml:space="preserve">
+    <value>Kjør @backup én gang og kontroller at @backup/list viser kopien. Angi SHARPMUSH_BACKUP_INTERVAL slik at kopier tas etter en tidsplan, og oppbevar en kopi utenfor denne maskinen; en kopi på samme disk overlever ikke at disken går tapt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_backups_Title" xml:space="preserve">
+    <value>Ta sikkerhetskopi før du åpner</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_capabilities_Action" xml:space="preserve">
+    <value>Gå gjennom pakker</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_capabilities_Body" xml:space="preserve">
+    <value>Gå gjennom de installerte pakkene dine og hjelpen deres. En generell scene- eller Discord-funksjon beviser ikke at en bestemt softcode-kommando finnes. Pakkeinstallasjon går fortsatt gjennom vanlig gjennomgang og bekreftelse. Hvis Onboarding-pakken er installert, kan du legge til spillets egne steg i +welcome-sjekklisten dens.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_capabilities_Title" xml:space="preserve">
+    <value>Sjekk hva som er installert</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_channels_Body" xml:space="preserve">
+    <value>En ny verden har ingen kanaler, men spillerguiden ber nykommere finne en. Opprett en offentlig kanal for spørsmål, for eksempel @channel/add Newbie=player, og en for administratorer, for eksempel @channel/add Staff=admin, som bare wizard og royalty kan bli med i. Be staben din bli med i den offentlige, så spørsmål blir besvart.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_channels_Title" xml:space="preserve">
+    <value>Åpne kanaler for spørsmål og stab</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_identity_Action" xml:space="preserve">
+    <value>Spillets identitet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_identity_Body" xml:space="preserve">
+    <value>Angi spillets navn, en kort introduksjon, sjanger og Sharpie-stil. La spillets logo være godt synlig. Lagre først når forhåndsvisningen sier det du mener.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_identity_Title" xml:space="preserve">
+    <value>Presenter spillet ditt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_invite_Body" xml:space="preserve">
+    <value>Gå gjennom fullførte og utsatte punkter før du deler lenken til spillet. Å fullføre sjekklisten publiserer ikke spillet, åpner ikke registreringen, installerer ingen pakker og sender ingen invitasjoner.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_invite_Title" xml:space="preserve">
+    <value>Klar når du er det</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_joining_Action" xml:space="preserve">
+    <value>Innstillinger for spillertilgang</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_joining_Body" xml:space="preserve">
+    <value>Gå gjennom registrering, gjestetilgang og karakteropprettelse. Prøv innloggingsveien du har tenkt å dele. Disse innstillingene avgjør hvem som slipper inn; sjekklisten endrer dem ikke.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_joining_Title" xml:space="preserve">
+    <value>Sjekk hvordan spillere blir med</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_messages_Action" xml:space="preserve">
+    <value>Spillmeldinger</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_messages_Body" xml:space="preserve">
+    <value>Tilkoblingsskjermen er det første en MU*-klient viser, og dagens meldinger hilser alle som kobler til. Oppgi spillets navn, fortell hvordan man oppretter en karakter, og fjern tilbud spillet ikke har, for eksempel gjesteinnlogging når det ikke finnes gjestekarakterer.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_messages_Title" xml:space="preserve">
+    <value>Skriv tilkoblingsskjermen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_rules_Action" xml:space="preserve">
+    <value>Åpne wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_rules_Body" xml:space="preserve">
+    <value>Publiser lesbare sider med velkomst, regler og karakterguide, og lenk til dem her. Kontroller dem uten å være logget inn; private sider utelates med vilje fra den offentlige guiden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_rules_Title" xml:space="preserve">
+    <value>Gi spillerne et tydelig startpunkt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_staff-character_Action" xml:space="preserve">
+    <value>Opprett en stabskarakter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_staff-character_Body" xml:space="preserve">
+    <value>Kontoen du gjorde krav på, spiller #1, God. God passerer hver lås og tilgangskontroll, så en feilskrevet @nuke eller en løpsk softcode-løkke som God har ingenting som stopper den. Opprett en egen karakter for det daglige stabsarbeidet, og skriv deretter @set *&lt;name&gt;=WIZARD mens du er tilkoblet som #1. Koble til som #1 bare for det bare God kan gjøre. Gi andre i staben den smaleste rollen som passer jobben deres, for eksempel builder eller moderator, i stedet for wizard.</value>
+    <comment>MT — commands, God, builder, moderator and wizard kept as typed.</comment>
+  </data>
+  <data name="GuideLesson_Administrator_staff-character_Title" xml:space="preserve">
+    <value>Spar #1 til nødstilfeller</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_start-room_Action" xml:space="preserve">
+    <value>Sentrale rom</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_start-room_Body" xml:space="preserve">
+    <value>Nye karakterer starter i rommet player_start, #0 i en ny verden, og look der er det første de leser. Beskriv rommet, gi det tydelige utganger, og fortell nykommere hvor hjelp og regler finnes. Bruk master room, #2 i en ny verden, bare til globale kommandoer: ingen utganger inn dit og ingen spillere der inne.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_start-room_Title" xml:space="preserve">
+    <value>Forbered rommet spillerne kommer til</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_walkthrough_Action" xml:space="preserve">
+    <value>Forhåndsvis spillerguiden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_walkthrough_Body" xml:space="preserve">
+    <value>Prøv å bli med, velge en karakter, look, help og de fire erfaringsveiene med en separat, vanlig konto. En karakter på din egen konto deler kontoens roller, og en forhåndsvisning som administrator kan ikke kontrollere tillatelsene til vanlige spillere.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_walkthrough_Title" xml:space="preserve">
+    <value>Gå inn som en vanlig spiller</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_channels_Body" xml:space="preserve">
+    <value>Finn en hjelpe- eller nybegynnerkanal der du kan stille andre spillere et spørsmål.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_channels_Title" xml:space="preserve">
+    <value>Finn folk som kan hjelpe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_character_Action" xml:space="preserve">
+    <value>Mine karakterer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_character_Body" xml:space="preserve">
+    <value>Bruk den eksisterende karakteren din hvis du har en. Hvis du har spilt dette spillet før, gjør krav på den karakteren i stedet for å lage en kopi. Ellers oppretter du en karakter når spillet tillater det. Kontoen din kan ha flere enn én; velg den du vil spille.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_character_Title" xml:space="preserve">
+    <value>Velg hvem du skal spille</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_continue_Action" xml:space="preserve">
+    <value>Utforsk spillet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_continue_Body" xml:space="preserve">
+    <value>Bruk help for spillets kommandoreferanse, look for å orientere deg, og spillets regler og karakterguide for hva som forventes her. Spør fellesskapet når du trenger en hånd. Du kan hoppe over, lukke eller gå tilbake til hvilken som helst del av guiden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_continue_Title" xml:space="preserve">
+    <value>Du er klar til å utforske</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_place_Body" xml:space="preserve">
+    <value>Se for deg en rollespillserver der karakteren din kan stå i et rom, møte andre karakterer og gå ut gjennom en utgang. Rom beskriver steder i en felles verden; de er ikke Discord-kanaler. Det du sier, når som regel dem som er i rommet ditt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_place_Title" xml:space="preserve">
+    <value>En verden du er med på å skrive</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_sign-in_Action" xml:space="preserve">
+    <value>Logg inn eller registrer deg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_sign-in_Body" xml:space="preserve">
+    <value>Kontoen din er den private innloggingen din. Karakteren din er den andre spillere møter. Logg inn eller registrer deg med alternativene spillet tilbyr; du skriver ikke kontopassordet ditt i spillets kommandofelt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_sign-in_Title" xml:space="preserve">
+    <value>Kontoen din åpner døren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_speak-act_Body" xml:space="preserve">
+    <value>I terminalen snakker say Hello til dem i rommet ditt, og pose waves. beskriver at karakteren din vinker. Historie-visningen, når en scene er tilgjengelig, har også modusene Si, OOC og Emit, som tar teksten din bokstavelig; Kommando kjører spillets syntaks og uttrykk. En page går til én navngitt spiller. Det karakteren din sier og gjør, er in character (IC); prat om spillet eller den virkelige verden er out of character (OOC), så merk det slik spillet ber om, for eksempel med OOC-modusen i Historie. Øvingen her er lokal; sjekk spillets etikette før du snakker på ordentlig.</value>
+    <comment>MT — say Hello / pose waves. / page are commands, kept literal; mode names match NavPlayType*.</comment>
+  </data>
+  <data name="GuideLesson_Discord_speak-act_Title" xml:space="preserve">
+    <value>Vit hvem som hører deg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_useful-action_Body" xml:space="preserve">
+    <value>Kommandoen look ber spillet beskrive hvor du er. Prøv den først i den lokale øvingen. Sett deretter inn look i spillets tomme, tilkoblede kommandofelt (eller Kommando-modus i Historie) og trykk på Send selv. Å sette den inn sender ikke kommandoen og fullfører ikke steget.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_useful-action_Title" xml:space="preserve">
+    <value>Prøv en liten kommando</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_world_Action" xml:space="preserve">
+    <value>Åpne Spill</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_world_Body" xml:space="preserve">
+    <value>Spill åpner en terminal for spillkommandoer. Når en scene er tilgjengelig, gir Historie-visningen en strukturert visning av scenen over samme tilkobling. Sjekk hvilken karakter du bruker og tilkoblingsstatusen. Se etter rombeskrivelsen, hvem som er her, og utgangene. En utgang flytter karakteren din; å lese en beskrivelse gjør det ikke.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_world_Title" xml:space="preserve">
+    <value>Orienter deg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_channels_Body" xml:space="preserve">
+    <value>Finn en hjelpe- eller nybegynnerkanal der du kan stille andre spillere et spørsmål.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_channels_Title" xml:space="preserve">
+    <value>Finn folk som kan hjelpe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_character_Action" xml:space="preserve">
+    <value>Mine karakterer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_character_Body" xml:space="preserve">
+    <value>Bruk den eksisterende karakteren din hvis du har en. Hvis du har spilt dette spillet før, gjør krav på den karakteren i stedet for å lage en kopi. Ellers oppretter du en karakter når spillet tillater det. Kontoen din kan ha flere enn én; velg den du vil spille.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_character_Title" xml:space="preserve">
+    <value>Velg hvem du skal spille</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_continue_Action" xml:space="preserve">
+    <value>Utforsk spillet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_continue_Body" xml:space="preserve">
+    <value>Bruk help for spillets kommandoreferanse, look for å orientere deg, og spillets regler og karakterguide for hva som forventes her. Spør fellesskapet når du trenger en hånd. Du kan hoppe over, lukke eller gå tilbake til hvilken som helst del av guiden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_continue_Title" xml:space="preserve">
+    <value>Du er klar til å utforske</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_place_Body" xml:space="preserve">
+    <value>Utforsk i ditt eget tempo. Guiden er tilgjengelig under Hjelp når du vil ha en kommandoreferanse eller hjelp til å finne frem.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_place_Title" xml:space="preserve">
+    <value>En verden du er med på å skrive</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_sign-in_Action" xml:space="preserve">
+    <value>Logg inn eller registrer deg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_sign-in_Body" xml:space="preserve">
+    <value>Kontoen din er den private innloggingen din. Karakteren din er den andre spillere møter. Logg inn eller registrer deg med alternativene spillet tilbyr; du skriver ikke kontopassordet ditt i spillets kommandofelt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_sign-in_Title" xml:space="preserve">
+    <value>Kontoen din åpner døren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_speak-act_Body" xml:space="preserve">
+    <value>I terminalen snakker say Hello til dem i rommet ditt, og pose waves. beskriver at karakteren din vinker. Historie-visningen, når en scene er tilgjengelig, har også modusene Si, OOC og Emit, som tar teksten din bokstavelig; Kommando kjører spillets syntaks og uttrykk. En page går til én navngitt spiller. Det karakteren din sier og gjør, er in character (IC); prat om spillet eller den virkelige verden er out of character (OOC), så merk det slik spillet ber om, for eksempel med OOC-modusen i Historie. Øvingen her er lokal; sjekk spillets etikette før du snakker på ordentlig.</value>
+    <comment>MT — say Hello / pose waves. / page are commands, kept literal; mode names match NavPlayType*.</comment>
+  </data>
+  <data name="GuideLesson_Explore_speak-act_Title" xml:space="preserve">
+    <value>Vit hvem som hører deg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_useful-action_Body" xml:space="preserve">
+    <value>Kommandoen look ber spillet beskrive hvor du er. Prøv den først i den lokale øvingen. Sett deretter inn look i spillets tomme, tilkoblede kommandofelt (eller Kommando-modus i Historie) og trykk på Send selv. Å sette den inn sender ikke kommandoen og fullfører ikke steget.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_useful-action_Title" xml:space="preserve">
+    <value>Prøv en liten kommando</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_world_Action" xml:space="preserve">
+    <value>Åpne Spill</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_world_Body" xml:space="preserve">
+    <value>Spill åpner en terminal for spillkommandoer. Når en scene er tilgjengelig, gir Historie-visningen en strukturert visning av scenen over samme tilkobling. Sjekk hvilken karakter du bruker og tilkoblingsstatusen. Se etter rombeskrivelsen, hvem som er her, og utgangene. En utgang flytter karakteren din; å lese en beskrivelse gjør det ikke.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_world_Title" xml:space="preserve">
+    <value>Orienter deg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_channels_Body" xml:space="preserve">
+    <value>Finn en hjelpe- eller nybegynnerkanal der du kan stille andre spillere et spørsmål.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_channels_Title" xml:space="preserve">
+    <value>Finn folk som kan hjelpe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_continue_Action" xml:space="preserve">
+    <value>Utforsk spillet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_continue_Body" xml:space="preserve">
+    <value>Valgfrie applikasjoner og pakker varierer fra spill til spill. Bruk delene spillet viser og hjelpen deres; ikke gå ut fra at kommandoer fra et annet SharpMUSH-spill er installert her. Referansen over vanlige kommandoer finnes fortsatt nedenfor. Du kan bytte startpunkt for en fyldigere introduksjon.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_continue_Title" xml:space="preserve">
+    <value>Utforsk spillets tillegg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_place_Body" xml:space="preserve">
+    <value>Behold MUSH-kunnskapen din: rom, utganger, objekter og softcode gjelder fortsatt. Denne korte omvisningen tar for seg nettkontoen, kobling av karakterer og de to visningene i Spill. Kjente kommandoeksempler ligger i den utvidbare referansen; ingen kommandoøving er nødvendig.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_place_Title" xml:space="preserve">
+    <value>Bare det som er nytt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_sign-in_Action" xml:space="preserve">
+    <value>Logg inn eller administrer karakterer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_sign-in_Body" xml:space="preserve">
+    <value>Nettkontoen er atskilt fra passordet til den eksisterende karakteren din i spillet. Logg inn, og gjør deretter krav på en eksisterende karakter i stedet for å opprette den på nytt. Velg en koblet karakter å spille; skriv aldri kontopassordet ditt i kommandofeltet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_sign-in_Title" xml:space="preserve">
+    <value>Én konto, karakterene dine</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_world_Action" xml:space="preserve">
+    <value>Åpne Spill</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_world_Body" xml:space="preserve">
+    <value>Terminal beholder det kjente rullende grensesnittet. Når en scene er tilgjengelig, har Historie egne moduser for Si, OOC, Emit og Kommando. Bruk Kommando for MUSH-syntaks og uttrykk; de andre modusene tar teksten bokstavelig. Å bytte visning beholder samme spilltilkobling. Sjekk valgt karakter før du sender.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_world_Title" xml:space="preserve">
+    <value>Historie eller Terminal: du velger</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_channels_Body" xml:space="preserve">
+    <value>Finn en hjelpe- eller nybegynnerkanal der du kan stille andre spillere et spørsmål.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_channels_Title" xml:space="preserve">
+    <value>Finn folk som kan hjelpe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_character_Action" xml:space="preserve">
+    <value>Mine karakterer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_character_Body" xml:space="preserve">
+    <value>Bruk den eksisterende karakteren din hvis du har en. Hvis du har spilt dette spillet før, gjør krav på den karakteren i stedet for å lage en kopi. Ellers oppretter du en karakter når spillet tillater det. Kontoen din kan ha flere enn én; velg den du vil spille.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_character_Title" xml:space="preserve">
+    <value>Velg hvem du skal spille</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_continue_Action" xml:space="preserve">
+    <value>Utforsk spillet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_continue_Body" xml:space="preserve">
+    <value>Bruk help for spillets kommandoreferanse, look for å orientere deg, og spillets regler og karakterguide for hva som forventes her. Spør fellesskapet når du trenger en hånd. Du kan hoppe over, lukke eller gå tilbake til hvilken som helst del av guiden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_continue_Title" xml:space="preserve">
+    <value>Du er klar til å utforske</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_place_Body" xml:space="preserve">
+    <value>Ta med deg rollespillerfaringen din. Her spiller du en karakter i en vedvarende tekstverden. Rom skaper settingen, utganger knytter steder sammen, og spillerne skriver dialog og handlinger sammen. Les spillets regler før du blir med i en scene.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_place_Title" xml:space="preserve">
+    <value>En verden du er med på å skrive</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Action" xml:space="preserve">
+    <value>Logg inn eller registrer deg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Body" xml:space="preserve">
+    <value>Kontoen din er den private innloggingen din. Karakteren din er den andre spillere møter. Logg inn eller registrer deg med alternativene spillet tilbyr; du skriver ikke kontopassordet ditt i spillets kommandofelt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Title" xml:space="preserve">
+    <value>Kontoen din åpner døren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_speak-act_Body" xml:space="preserve">
+    <value>Som ved et spillbord beskriver du hva karakteren din prøver å gjøre, og gir andre spillere rom til å svare. pose waves. legger til karakterens navn; say Hello snakker til rommet du er i. En privat page når én navngitt spiller. Hold prat utenfor rollen (OOC) tydelig atskilt fra karakterens ord. Bli enige om forventningene til scenen, og les spillets regler om samtykke før du blir med.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_speak-act_Title" xml:space="preserve">
+    <value>Vit hvem som hører deg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_useful-action_Body" xml:space="preserve">
+    <value>Kommandoen look ber spillet beskrive hvor du er. Prøv den først i den lokale øvingen. Sett deretter inn look i spillets tomme, tilkoblede kommandofelt (eller Kommando-modus i Historie) og trykk på Send selv. Å sette den inn sender ikke kommandoen og fullfører ikke steget.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_useful-action_Title" xml:space="preserve">
+    <value>Prøv en liten kommando</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_world_Action" xml:space="preserve">
+    <value>Åpne Spill</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_world_Body" xml:space="preserve">
+    <value>I motsetning til en forumtråd er et rom et sted karakteren din befinner seg nå. Les beskrivelsen og utgangene for å forstå scenen. Når en scene er tilgjengelig, skiller Historie-visningen dialog fra handlinger; Terminal beholder det rullende tekstgrensesnittet. Begge bruker samme karakter og tilkobling.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_world_Title" xml:space="preserve">
+    <value>Orienter deg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLoading" xml:space="preserve">
+    <value>Laster inn guiden din…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLoginEntry" xml:space="preserve">
+    <value>Ny her? Lær å spille</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideMyAccount" xml:space="preserve">
+    <value>Min konto</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideOpenFull" xml:space="preserve">
+    <value>Åpne hele guiden eller bytt startpunkt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideOpenGame" xml:space="preserve">
+    <value>Åpne spillet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideOpenPlay" xml:space="preserve">
+    <value>Åpne Spill og prøv i spillet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesBundled" xml:space="preserve">
+    <value>Følger med denne serveren</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesCheck" xml:space="preserve">
+    <value>Sjekk tilgjengelige kommandoer for {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesEmpty" xml:space="preserve">
+    <value>Det finnes ingen kontrollerte pakkeforslag for denne karakteren her. Andre pakker kan likevel være installert; bruk spillets egen hjelp.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesError" xml:space="preserve">
+    <value>Spillets hjelp er ikke tilgjengelig akkurat nå. Skriv help i spillet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesExplanation" xml:space="preserve">
+    <value>For spillets ekstrafunksjoner, prøv:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesLabel" xml:space="preserve">
+    <value>Pakkekommandoer for karakteren din</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesLoading" xml:space="preserve">
+    <value>Laster inn spillets hjelp…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesReference" xml:space="preserve">
+    <value>Pakkereferanse (åpnes i ny fane)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesVersion" xml:space="preserve">
+    <value>{0}, versjon {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePageTitle" xml:space="preserve">
+    <value>Kom i gang — {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePanelLabel" xml:space="preserve">
+    <value>Kom i gang med Sharpie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathDiscordDetail" xml:space="preserve">
+    <value>Lær om rom, karakterer og kommandoer.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathDiscordTitle" xml:space="preserve">
+    <value>Jeg er vant til Discord</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathExploreDetail" xml:space="preserve">
+    <value>Sett i gang nå. Hjelpen er like ved.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathExploreTitle" xml:space="preserve">
+    <value>Jeg finner ut av det selv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathMushDetail" xml:space="preserve">
+    <value>Se hva som er annerledes i SharpMUSH.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathMushTitle" xml:space="preserve">
+    <value>Jeg kan MUSH</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathRoleplayDetail" xml:space="preserve">
+    <value>Ta med historiene dine inn i en felles verden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathRoleplayTitle" xml:space="preserve">
+    <value>Jeg spiller rollespill andre steder</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeHeading" xml:space="preserve">
+    <value>Prøv her først</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeInvalid" xml:space="preserve">
+    <value>Skriv look i denne øvingen. Ingenting her kjøres i spillet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeLabel" xml:space="preserve">
+    <value>Lokal kommandoøving</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeLocal" xml:space="preserve">
+    <value>Lokal øving — sendes ikke til spillet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeResult" xml:space="preserve">
+    <value>Øvingsrom: en solfylt gårdsplass. Sharpie er her. En buegang fører til en hage. I spillet beskriver look de faktiske omgivelsene dine.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeTry" xml:space="preserve">
+    <value>Prøv lokalt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeType" xml:space="preserve">
+    <value>Skriv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePreviewNotice" xml:space="preserve">
+    <value>Forhåndsvisning av spillerguiden. Valgene her endrer ikke fremdriften din. Test med en vanlig spillerkonto for å kontrollere tillatelser.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideQuickstartEntry" xml:space="preserve">
+    <value>Lær å spille</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReady" xml:space="preserve">
+    <value>Du er klar til å utforske. Du kan komme tilbake hit fra Hjelp når som helst.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideRecoveryTitle" xml:space="preserve">
+    <value>Sharpie-guiden er ikke tilgjengelig — prøv igjen når du vil</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReference" xml:space="preserve">
+    <value>Vanlige kommandoer og hvem som ser dem</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReload" xml:space="preserve">
+    <value>Last inn fremdriften på nytt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReloadProgress" xml:space="preserve">
+    <value>Last inn fremdriften på nytt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideRetryConnection" xml:space="preserve">
+    <value>Prøv å koble til på nytt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideRetryRoster" xml:space="preserve">
+    <value>Last inn karakterlisten på nytt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReturningCharacter" xml:space="preserve">
+    <value>Har du spilt her før?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentity" xml:space="preserve">
+    <value>Presenter spillet ditt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentityLater" xml:space="preserve">
+    <value>Gjør dette senere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentityLead" xml:space="preserve">
+    <value>Gå gjennom identiteten du importerte, eller gi det nye spillet ditt et navn og et innbydende første steg.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentitySave" xml:space="preserve">
+    <value>Lagre og fortsett</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSkip" xml:space="preserve">
+    <value>Hopp over inntil videre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSkipped" xml:space="preserve">
+    <value>Hoppet over</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStepOf" xml:space="preserve">
+    <value>Steg {0} av {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSteps" xml:space="preserve">
+    <value>Guidens steg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStop" xml:space="preserve">
+    <value>Avslutt guiden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStraightToGame" xml:space="preserve">
+    <value>Gå rett til spillet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_anime" xml:space="preserve">
+    <value>Anime-maskot</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_chibi" xml:space="preserve">
+    <value>Chibi-maskot</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_comicbook" xml:space="preserve">
+    <value>Tegneseriemaskot</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_kemono" xml:space="preserve">
+    <value>Kemono-maskot</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_minimalist" xml:space="preserve">
+    <value>Minimalistisk maskot</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_pixel" xml:space="preserve">
+    <value>Pikselmaskot</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideUnderstood" xml:space="preserve">
+    <value>Jeg har kontroll</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideWelcomeChecklist" xml:space="preserve">
+    <value>Spillet har sin egen sjekkliste for å komme i gang. Skriv dette for å se den:</value>
+    <comment>MT — followed by the command to type.</comment>
+  </data>
+  <data name="GuideWelcomeGame" xml:space="preserve">
+    <value>Velkommen til {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideWelcomeIntro" xml:space="preserve">
+    <value>Jeg er Sharpie. Jeg kan hjelpe deg å finne frem fra den første innloggingen til den første scenen din.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideWithSharpie" xml:space="preserve">
+    <value>Med Sharpie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyBlocked" xml:space="preserve">
+    <value>Varsler er blokkert for dette nettstedet. Tillat dem i nettleserens innstillinger for nettstedet, og last deretter inn siden på nytt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyChoose" xml:space="preserve">
+    <value>Velg hva du får varsler om</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceFailed" xml:space="preserve">
+    <value>mislyktes {0} ({1})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceLastSent" xml:space="preserve">
+    <value>sist sendt {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceSince" xml:space="preserve">
+    <value>På siden {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceStale" xml:space="preserve">
+    <value>spillet byttet nøkkel: slå på varsler igjen på den enheten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDevices" xml:space="preserve">
+    <value>Enhetene dine</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDevicesSub" xml:space="preserve">
+    <value>Alle telefoner og datamaskiner med varsler på for denne kontoen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyInstall" xml:space="preserve">
+    <value>Installer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyInstallNote" xml:space="preserve">
+    <value>Installer portalen som en app: den åpnes i sitt eget vindu, og varslene viser navnet dens.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyIntro" xml:space="preserve">
+    <value>Slå på varsler på hver telefon eller datamaskin der du vil ha dem. Spillet avgjør hva som fortjener et varsel, og hver av karakterene dine velger hvilke den får.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyIosHowTo" xml:space="preserve">
+    <value>På iPhone og iPad fungerer varsler bare fra Hjem-skjermen: trykk på Del, deretter Legg til på Hjem-skjerm, og åpne portalen fra det nye symbolet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyNoDevices" xml:space="preserve">
+    <value>Ingen enheter har varsler på ennå.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyOffHere" xml:space="preserve">
+    <value>Varsler er av på denne enheten. Nettleseren ber om tillatelse når du slår dem på.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyOnHere" xml:space="preserve">
+    <value>Varsler er på her ({0}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyPermissionRefused" xml:space="preserve">
+    <value>Nettleseren tillot ikke varsler. Tillat dem for dette nettstedet i nettleserens innstillinger, og prøv igjen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyRemoveDevice" xml:space="preserve">
+    <value>Slå av varsler på {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifySendTest" xml:space="preserve">
+    <value>Send en test</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTestSent" xml:space="preserve">
+    <value>Testen er sendt. Den bør komme frem i løpet av noen sekunder.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyThisDevice" xml:space="preserve">
+    <value>Denne enheten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyThisDeviceTag" xml:space="preserve">
+    <value>Denne enheten</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTurnOff" xml:space="preserve">
+    <value>Slå av</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTurnOn" xml:space="preserve">
+    <value>Slå på</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTurnedOn" xml:space="preserve">
+    <value>Varsler er på for denne enheten.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyUnsupported" xml:space="preserve">
+    <value>Denne nettleseren kan ikke vise varsler fra et nettsted.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyWhat" xml:space="preserve">
+    <value>Hva du får varsler om</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyWhatNote" xml:space="preserve">
+    <value>Pages og ny post varsler deg når du er borte, og viser hvem som sendte dem, men ikke hva de sier. Skriv +notify i spillet for å velge hva som varsler hver karakter, og om teksten vises.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentAllow" xml:space="preserve">
+    <value>Tillat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentAsks" xml:space="preserve">
+    <value>{0} vil opptre som karakteren din</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentCharacter" xml:space="preserve">
+    <value>Appen ville opptre som {0}. Bytt til en annen karakter først hvis du vil tillate den i stedet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentDeny" xml:space="preserve">
+    <value>Avslå</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentReturning" xml:space="preserve">
+    <value>Sender deg tilbake til appen…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentRevoke" xml:space="preserve">
+    <value>Du kan trekke dette tilbake når som helst fra kontosiden din.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentTitle" xml:space="preserve">
+    <value>Tillat en app</value>
+    <comment>MT</comment>
+  </data>
+  <data name="StoryNewPoses" xml:space="preserve">
+    <value>Nye poser</value>
+    <comment>MT</comment>
+  </data>
+  <data name="StoryPoseDeleted" xml:space="preserve">
+    <value>Slettet:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppAsksToChange" xml:space="preserve">
+    <value>{0} vil endre verdenen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppChangesAsCharacter" xml:space="preserve">
+    <value>Hver endring gjøres som din karakter, gjennom spillets egne byggekommandoer.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppConfigUnavailable" xml:space="preserve">
+    <value>Programmets konfigurasjon er utilgjengelig eller må oppdateres.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppHostFailed" xml:space="preserve">
+    <value>Programverten kunne ikke lastes.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppMakeChanges" xml:space="preserve">
+    <value>{count, plural, one {Gjør # endring} other {Gjør # endringer}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_ConversionError" xml:space="preserve">
+    <value>Konverteringsfeil: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_ConversionFailed" xml:space="preserve">
+    <value>Konvertering fra {0} til {1} mislyktes: {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_ConversionNotImplemented" xml:space="preserve">
+    <value>Konvertering til typen {0} er ikke implementert</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidBoolean" xml:space="preserve">
+    <value>Ikke en gyldig boolsk verdi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidDateTime" xml:space="preserve">
+    <value>Ikke en gyldig dato og tid</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidGUID" xml:space="preserve">
+    <value>Ikke en gyldig GUID</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidNumber" xml:space="preserve">
+    <value>Ikke et gyldig tall</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidTimeSpan" xml:space="preserve">
+    <value>Ikke et gyldig tidsrom</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidType" xml:space="preserve">
+    <value>Ikke en gyldig verdi av typen {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_NotValueOf" xml:space="preserve">
+    <value>Ikke en verdi av {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_UnableToConvert" xml:space="preserve">
+    <value>Kan ikke konvertere til {0} fra typen {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HeatMap_Less" xml:space="preserve">
+    <value>Mindre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HeatMap_More" xml:space="preserve">
+    <value>Mer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudAlert_Close" xml:space="preserve">
+    <value>Lukk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_NextMonth" xml:space="preserve">
+    <value>Neste måned {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_NextYear" xml:space="preserve">
+    <value>Neste år {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_Open" xml:space="preserve">
+    <value>Åpne</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_PrevMonth" xml:space="preserve">
+    <value>Forrige måned {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_PrevYear" xml:space="preserve">
+    <value>Forrige år {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBreadcrumbs_Label" xml:space="preserve">
+    <value>Navigasjonssti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudCarousel_Index" xml:space="preserve">
+    <value>Indeks {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudCarousel_Next" xml:space="preserve">
+    <value>Neste</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudCarousel_Previous" xml:space="preserve">
+    <value>Forrige</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudChip_Close" xml:space="preserve">
+    <value>Lukk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_AlphaSlider" xml:space="preserve">
+    <value>Alfaglidebryter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_Close" xml:space="preserve">
+    <value>Lukk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_GridView" xml:space="preserve">
+    <value>Rutenett</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_HideSwatches" xml:space="preserve">
+    <value>Skjul fargeprøver</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_HueSlider" xml:space="preserve">
+    <value>Fargetoneglidebryter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_ModeSwitch" xml:space="preserve">
+    <value>Bytt modus</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_Open" xml:space="preserve">
+    <value>Åpne</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_PaletteView" xml:space="preserve">
+    <value>Palett</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_ShowSwatches" xml:space="preserve">
+    <value>Vis fargeprøver</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_SpectrumView" xml:space="preserve">
+    <value>Spektrum</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_AllItems" xml:space="preserve">
+    <value>Alle</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_FirstPage" xml:space="preserve">
+    <value>Første side</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_InfoFormat" xml:space="preserve">
+    <value>{0}-{1} av {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_LastPage" xml:space="preserve">
+    <value>Siste side</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_NextPage" xml:space="preserve">
+    <value>Neste side</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_PreviousPage" xml:space="preserve">
+    <value>Forrige side</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_RowsPerPage" xml:space="preserve">
+    <value>Rader per side:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_AddFilter" xml:space="preserve">
+    <value>Legg til filter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Apply" xml:space="preserve">
+    <value>Ta i bruk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Cancel" xml:space="preserve">
+    <value>Avbryt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Clear" xml:space="preserve">
+    <value>Tøm</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ClearFilter" xml:space="preserve">
+    <value>Tøm filter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_CollapseAllGroups" xml:space="preserve">
+    <value>Fold sammen alle grupper</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_CollapseGroup" xml:space="preserve">
+    <value>Fold sammen gruppe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Column" xml:space="preserve">
+    <value>Kolonne</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Columns" xml:space="preserve">
+    <value>Kolonner</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Contains" xml:space="preserve">
+    <value>inneholder</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_EndsWith" xml:space="preserve">
+    <value>slutter med</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_EqualSign" xml:space="preserve">
+    <value>=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Equals" xml:space="preserve">
+    <value>er lik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ExpandAllGroups" xml:space="preserve">
+    <value>Utvid alle grupper</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ExpandGroup" xml:space="preserve">
+    <value>Utvid gruppe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_False" xml:space="preserve">
+    <value>usann</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Filter" xml:space="preserve">
+    <value>Filter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_FilterValue" xml:space="preserve">
+    <value>Filterverdi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_GreaterThanOrEqualSign" xml:space="preserve">
+    <value>&gt;=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_GreaterThanSign" xml:space="preserve">
+    <value>&gt;</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Group" xml:space="preserve">
+    <value>Grupper</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Hide" xml:space="preserve">
+    <value>Skjul</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_HideAll" xml:space="preserve">
+    <value>Skjul alle</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Is" xml:space="preserve">
+    <value>er</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsAfter" xml:space="preserve">
+    <value>er etter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsBefore" xml:space="preserve">
+    <value>er før</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsEmpty" xml:space="preserve">
+    <value>er tom</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsNot" xml:space="preserve">
+    <value>er ikke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsNotEmpty" xml:space="preserve">
+    <value>er ikke tom</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsOnOrAfter" xml:space="preserve">
+    <value>er på eller etter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsOnOrBefore" xml:space="preserve">
+    <value>er på eller før</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_LessThanOrEqualSign" xml:space="preserve">
+    <value>&lt;=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_LessThanSign" xml:space="preserve">
+    <value>&lt;</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Loading" xml:space="preserve">
+    <value>Laster…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_MoveDown" xml:space="preserve">
+    <value>Flytt ned</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_MoveUp" xml:space="preserve">
+    <value>Flytt opp</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_NotContains" xml:space="preserve">
+    <value>inneholder ikke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_NotEqualSign" xml:space="preserve">
+    <value>!=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_NotEquals" xml:space="preserve">
+    <value>er ikke lik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_OpenFilters" xml:space="preserve">
+    <value>Åpne filtre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Operator" xml:space="preserve">
+    <value>Operator</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_RefreshData" xml:space="preserve">
+    <value>Oppdater data</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_RemoveFilter" xml:space="preserve">
+    <value>Fjern filter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Save" xml:space="preserve">
+    <value>Lagre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_SelectAllRows" xml:space="preserve">
+    <value>Velg alle rader</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_SelectRow" xml:space="preserve">
+    <value>Velg rad</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ShowAll" xml:space="preserve">
+    <value>Vis alle</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ShowColumnOptions" xml:space="preserve">
+    <value>Kolonnealternativer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Sort" xml:space="preserve">
+    <value>Sorter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_StartsWith" xml:space="preserve">
+    <value>starter med</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ToggleGroupExpansion" xml:space="preserve">
+    <value>Veksle gruppe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_True" xml:space="preserve">
+    <value>sann</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Ungroup" xml:space="preserve">
+    <value>Opphev gruppering</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Unsort" xml:space="preserve">
+    <value>Fjern sortering</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Value" xml:space="preserve">
+    <value>Verdi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDateRangePicker_End" xml:space="preserve">
+    <value>Sluttdato</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDateRangePicker_Start" xml:space="preserve">
+    <value>Startdato</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDialog_Close" xml:space="preserve">
+    <value>Lukk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Cancel" xml:space="preserve">
+    <value>Avbryt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Exit" xml:space="preserve">
+    <value>OK</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Text" xml:space="preserve">
+    <value>Forlate nettstedet? Endringer du har gjort, blir kanskje ikke lagret.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Title" xml:space="preserve">
+    <value>Bekreft navigering</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_Button" xml:space="preserve">
+    <value>Bla gjennom filer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_DragAndDrop" xml:space="preserve">
+    <value>Dra filer hit eller klikk for å bla</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_FileSizeError" xml:space="preserve">
+    <value>Filen «{0}» overskrider maksimal tillatt størrelse på {1} byte.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_MaximumFileCountExceeded" xml:space="preserve">
+    <value>Valgte {0} filer, som overskrider maksimum på {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFormComponent_Required" xml:space="preserve">
+    <value>Påkrevd</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudInput_Clear" xml:space="preserve">
+    <value>Tøm</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudInput_Decrement" xml:space="preserve">
+    <value>Reduser</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudInput_Increment" xml:space="preserve">
+    <value>Øk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudNavGroup_ToggleExpand" xml:space="preserve">
+    <value>Veksle {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPageContentNavigation_NavMenu" xml:space="preserve">
+    <value>Innhold</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_CurrentPage" xml:space="preserve">
+    <value>Gjeldende side {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_FirstPage" xml:space="preserve">
+    <value>Første side</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_LastPage" xml:space="preserve">
+    <value>Siste side</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_NextPage" xml:space="preserve">
+    <value>Neste side</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_PageIndex" xml:space="preserve">
+    <value>Side {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_PreviousPage" xml:space="preserve">
+    <value>Forrige side</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRangeInput_End" xml:space="preserve">
+    <value>Slutt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRangeInput_Start" xml:space="preserve">
+    <value>Start</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRatingItem_Label" xml:space="preserve">
+    <value>Vurdering {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRating_Label" xml:space="preserve">
+    <value>Vurdering</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudSelect_SelectAll" xml:space="preserve">
+    <value>Velg alle</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudSnackbar_Close" xml:space="preserve">
+    <value>Lukk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudSplitPanel_ResizePanels" xml:space="preserve">
+    <value>Endre størrelse på paneler</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Complete" xml:space="preserve">
+    <value>Fullfør</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Next" xml:space="preserve">
+    <value>Neste</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Previous" xml:space="preserve">
+    <value>Forrige</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Reset" xml:space="preserve">
+    <value>Tilbakestill</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Skip" xml:space="preserve">
+    <value>Hopp over</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_FirstPage" xml:space="preserve">
+    <value>Første side</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_LastPage" xml:space="preserve">
+    <value>Siste side</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_NextPage" xml:space="preserve">
+    <value>Neste side</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_PreviousPage" xml:space="preserve">
+    <value>Forrige side</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_CancelEditRow" xml:space="preserve">
+    <value>Avbryt redigering</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_CollapseGroup" xml:space="preserve">
+    <value>Fold sammen gruppe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_CommitRow" xml:space="preserve">
+    <value>Lagre redigering</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_EditRow" xml:space="preserve">
+    <value>Rediger rad</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_ExpandGroup" xml:space="preserve">
+    <value>Utvid gruppe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_Loading" xml:space="preserve">
+    <value>Laster…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_SelectAllRows" xml:space="preserve">
+    <value>Velg alle rader</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_SelectGroup" xml:space="preserve">
+    <value>Velg gruppe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_SelectRow" xml:space="preserve">
+    <value>Velg rad</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_AddTab" xml:space="preserve">
+    <value>Legg til fane</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_CloseTab" xml:space="preserve">
+    <value>Lukk fane</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollDown" xml:space="preserve">
+    <value>Rull faner ned</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollLeft" xml:space="preserve">
+    <value>Rull faner til venstre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollRight" xml:space="preserve">
+    <value>Rull faner til høyre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollUp" xml:space="preserve">
+    <value>Rull faner opp</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTimePicker_Open" xml:space="preserve">
+    <value>Åpne</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTreeView_CollapseItem" xml:space="preserve">
+    <value>Fold sammen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTreeView_ExpandItem" xml:space="preserve">
+    <value>Utvid</value>
+    <comment>MT</comment>
+  </data>
 </root>

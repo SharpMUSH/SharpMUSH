@@ -120,7 +120,7 @@ public class ApplicationEditDialogTests : TrackingBunitContext
 		var provider = await ShowAsync(Weather with { RenderKind = hosted ? ApplicationRenderKind.Hosted : ApplicationRenderKind.Schema });
 		var save = provider.FindAll("button").First(button => button.TextContent.Contains("Save"));
 		await Assert.That(save.HasAttribute("disabled")).IsTrue();
-		await Assert.That(provider.Markup).Contains("Application configuration could not be read");
+		await Assert.That(provider.Markup).Contains("LayAppConfigUnreadable");
 		await save.ClickAsync();
 		await Assert.That(_http.Posted).IsNull();
 	}

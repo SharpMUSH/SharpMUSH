@@ -6763,4 +6763,1996 @@
   <data name="NavHelpLearnSub" xml:space="preserve"><value>Une visite guidée pour rejoindre et jouer.</value></data>
   <data name="NavHelpGettingStartedSub" xml:space="preserve"><value>Se déplacer, parler, canaux et courrier.</value></data>
   <data name="NavHelpNewbieSub" xml:space="preserve"><value>Ce que signifient [ ] et &lt; &gt; dans une commande.</value></data>
+  <data name="GuideAdminChecked" xml:space="preserve">
+    <value>J'ai vérifié</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminContinue" xml:space="preserve">
+    <value>Continuer la liste</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDashboardLead" xml:space="preserve">
+    <value>Traitez ces points avant d'inviter qui que ce soit. Cet encadré disparaît une fois chaque étape vérifiée ou reportée.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDefer" xml:space="preserve">
+    <value>Reporter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDeferred" xml:space="preserve">
+    <value>Reportée</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDescription" xml:space="preserve">
+    <value>— présentation du jeu et liste d'accueil.</value>
+    <comment>MT — fragment following a name or link</comment>
+  </data>
+  <data name="GuideAdminEntry" xml:space="preserve">
+    <value>Se préparer aux nouveaux joueurs</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminHeading" xml:space="preserve">
+    <value>Préparez-vous pour vos premiers joueurs</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminIntro" xml:space="preserve">
+    <value>Une liste de contrôle distincte pour votre jeu. Faites ce que vous pouvez, reportez ce qui demande plus de réflexion et revenez-y quand vous le souhaitez.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminLoading" xml:space="preserve">
+    <value>Chargement de votre liste…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminPlayerChecked" xml:space="preserve">
+    <value>J'ai vérifié avec un compte joueur ordinaire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminPlayingGod" xml:space="preserve">
+    <value>Vous jouez actuellement #1. Passez à votre personnage d'équipe pour le travail courant.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminPreview" xml:space="preserve">
+    <value>Prévisualiser le parcours joueur sans modifier votre progression</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminProgress" xml:space="preserve">
+    <value>{0} sur {1} terminées</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminReload" xml:space="preserve">
+    <value>Recharger la liste</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminSummary" xml:space="preserve">
+    <value>{0} vérifiées ; {1} reportées. Les choix de la liste ne modifient ni les paramètres du jeu ni les permissions des paquets.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminTitle" xml:space="preserve">
+    <value>Se préparer aux joueurs</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminTodo" xml:space="preserve">
+    <value>À faire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminVerified" xml:space="preserve">
+    <value>Vérifiée</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtwork" xml:space="preserve">
+    <value>Illustrations de Sharpie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtworkFull" xml:space="preserve">
+    <value>Complètes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtworkNone" xml:space="preserve">
+    <value>Aucune illustration</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtworkReduced" xml:space="preserve">
+    <value>Réduites</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideBack" xml:space="preserve">
+    <value>Retour</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideBackToGame" xml:space="preserve">
+    <value>Retour au jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsAudience" xml:space="preserve">
+    <value>Les messages atteignent tous ceux qui écoutent le canal, pas seulement votre pièce.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsChat" xml:space="preserve">
+    <value>Posez votre question.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsDescription" xml:space="preserve">
+    <value>Lisez sa description avant de le rejoindre. Remplacez NAME par un canal indiqué par le jeu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsDiscover" xml:space="preserve">
+    <value>Les canaux relient les personnes d'une pièce à l'autre. Dans Jouer, « Parcourir les canaux » ouvre le navigateur de canaux. Les jeux ont souvent des canaux pour débutants, d'aide ou de discussion ; leurs noms et règles d'accès varient.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsJoin" xml:space="preserve">
+    <value>Rejoignez ce canal.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsList" xml:space="preserve">
+    <value>Trouvez un canal.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsName" xml:space="preserve">
+    <value>Remplacez NAME par un canal de la liste.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsTitle" xml:space="preserve">
+    <value>Trouver des personnes qui peuvent aider</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterConnectionFailed" xml:space="preserve">
+    <value>Votre personnage est enregistré, mais la connexion au jeu a échoué. Réessayez la connexion, ou retournez à votre compte et jouez plus tard.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterOptions" xml:space="preserve">
+    <value>Le jeu décide des options disponibles.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterRosterFailed" xml:space="preserve">
+    <value>Votre personnage est enregistré, mais la liste de vos personnages n'a pas pu être actualisée. Réessayez pour continuer avec ce personnage ; il ne sera pas recréé.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterRosterUnavailable" xml:space="preserve">
+    <value>Impossible de charger vos personnages. Réessayez avant d'en créer ou d'en réclamer un, afin de conserver vos personnages existants et votre choix actuel.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChoosePath" xml:space="preserve">
+    <value>Choisissez votre point de départ</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideClaimCharacter" xml:space="preserve">
+    <value>Réclamer votre personnage</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideClose" xml:space="preserve">
+    <value>Fermer le guide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideComingFrom" xml:space="preserve">
+    <value>D'où venez-vous ?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_list_Audience" xml:space="preserve">
+    <value>Vous seul</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_list_Meaning" xml:space="preserve">
+    <value>Découvrir les canaux visibles</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_on_Audience" xml:space="preserve">
+    <value>Peut annoncer votre arrivée sur le canal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_on_Meaning" xml:space="preserve">
+    <value>Rejoindre un canal qui vous y autorise</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_chat_Audience" xml:space="preserve">
+    <value>Ceux qui écoutent ce canal, où qu'ils soient</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_chat_Meaning" xml:space="preserve">
+    <value>Parler sur un canal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_describe_Audience" xml:space="preserve">
+    <value>Quiconque vous regarde</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_describe_Meaning" xml:space="preserve">
+    <value>Définir ce que les autres voient en vous regardant</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_Audience" xml:space="preserve">
+    <value>Vous seul</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_Meaning" xml:space="preserve">
+    <value>Lire l'aide des commandes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_say_Audience" xml:space="preserve">
+    <value>Vous seul</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_say_Meaning" xml:space="preserve">
+    <value>Lire le fonctionnement d'une commande précise</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_home_Audience" xml:space="preserve">
+    <value>Les personnes des pièces que vous quittez et où vous arrivez</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_home_Meaning" xml:space="preserve">
+    <value>Retourner chez vous si vous êtes perdu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_inventory_Audience" xml:space="preserve">
+    <value>Vous seul</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_inventory_Meaning" xml:space="preserve">
+    <value>Lister ce que vous portez</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_look_Audience" xml:space="preserve">
+    <value>Vous seul</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_look_Meaning" xml:space="preserve">
+    <value>Décrire la pièce où vous êtes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_page_Audience" xml:space="preserve">
+    <value>Un joueur nommé</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_page_Meaning" xml:space="preserve">
+    <value>Envoyer un message privé</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_pose_Audience" xml:space="preserve">
+    <value>Les personnes de votre pièce</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_pose_Meaning" xml:space="preserve">
+    <value>Décrire l'action de votre personnage</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_say_Audience" xml:space="preserve">
+    <value>Les personnes de votre pièce</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_say_Meaning" xml:space="preserve">
+    <value>Parler en tant que votre personnage</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_who_Audience" xml:space="preserve">
+    <value>Vous seul</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_who_Meaning" xml:space="preserve">
+    <value>Voir les joueurs connectés que le jeu vous laisse voir</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCompanionTitle" xml:space="preserve">
+    <value>Avec Sharpie : {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextAccount" xml:space="preserve">
+    <value>Votre compte et votre personnage</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextCharacter" xml:space="preserve">
+    <value>Votre personnage actif est {0}. Les commandes que vous envoyez en jeu utilisent ce personnage.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextChooseCharacter" xml:space="preserve">
+    <value>Vous êtes connecté. Choisissez ou créez un personnage avant de rejoindre le jeu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextFeatures" xml:space="preserve">
+    <value>Explorer ce jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextScenes" xml:space="preserve">
+    <value>Scènes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextScenesDescription" xml:space="preserve">
+    <value>Parcourez les histoires enregistrées dans ce jeu. Rejoindre une scène dépend de ses règles d'accès.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextSignedOut" xml:space="preserve">
+    <value>Vous pouvez lire ce guide sans vous connecter. Connectez-vous quand vous êtes prêt à rejoindre le jeu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextWiki" xml:space="preserve">
+    <value>Wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextWikiDescription" xml:space="preserve">
+    <value>Lisez l'univers et les pages que ce jeu met à votre disposition.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueAccept" xml:space="preserve">
+    <value>Continuer ce guide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueBrowser" xml:space="preserve">
+    <value>Continuer le guide du navigateur</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueDecline" xml:space="preserve">
+    <value>Garder la progression du compte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueQuestion" xml:space="preserve">
+    <value>Vous avez commencé un guide dans ce navigateur avant de vous connecter. Ajouter cette progression à votre compte ?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCoreReference" xml:space="preserve">
+    <value>Voici les commandes de base. Les jeux peuvent les personnaliser ; consultez help pour vérifier.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCreateCharacter" xml:space="preserve">
+    <value>Créer un personnage</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideDraftHint" xml:space="preserve">
+    <value>Vous choisissez quand envoyer. Un brouillon existant reste intact.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorBrowserSave" xml:space="preserve">
+    <value>Votre navigateur n'a pas pu enregistrer ce choix. Il ne vaudra que pour cette visite.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorChoice" xml:space="preserve">
+    <value>Ce choix de guide n'est pas disponible.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorConflict" xml:space="preserve">
+    <value>Votre guide a changé dans un autre onglet. Rechargez la progression avant de faire un autre choix.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorLoad" xml:space="preserve">
+    <value>Impossible de charger la progression du guide. Réessayez pour continuer.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorSave" xml:space="preserve">
+    <value>Impossible d'enregistrer ce choix de guide. Votre progression précédente est inchangée ; réessayez une fois connecté.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorUnavailable" xml:space="preserve">
+    <value>Les informations du guide du jeu sont indisponibles. Réessayez quand la connexion reviendra.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorVersion" xml:space="preserve">
+    <value>Ce guide enregistré utilise une version non prise en charge. Vos préférences ont été conservées ; rechargez après la mise à jour du client.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideFreshCharacter" xml:space="preserve">
+    <value>Vous débutez ?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideGameGuides" xml:space="preserve">
+    <value>Les guides de ce jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideHelpEntry" xml:space="preserve">
+    <value>Apprendre à jouer / Changer de guide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideHelpIndexEntry" xml:space="preserve">
+    <value>Apprendre à jouer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideHelpReturn" xml:space="preserve">
+    <value>Vous retrouverez toujours ce guide dans l'Aide.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityAppearance" xml:space="preserve">
+    <value>les paramètres d'apparence</value>
+    <comment>MT — link text completing GuideIdentityArtworkHint</comment>
+  </data>
+  <data name="GuideIdentityArtFallback" xml:space="preserve">
+    <value>Sharpie par défaut affiché en attendant des illustrations pour le style et le genre choisis.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityArtworkHint" xml:space="preserve">
+    <value>Les joueurs peuvent réduire ou masquer les illustrations. Le logo de votre jeu reste à part, dans</value>
+    <comment>MT — fragment; followed by the 'appearance settings' link</comment>
+  </data>
+  <data name="GuideIdentityCharacterPage" xml:space="preserve">
+    <value>Page wiki du guide des personnages</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityGenreHint" xml:space="preserve">
+    <value>Choisissez le genre et le sous-genre MSSP du jeu. Sharpie s'en sert pour ses illustrations ; choisissez None si aucun ne convient.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityGenres" xml:space="preserve">
+    <value>Genre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityIntroduction" xml:space="preserve">
+    <value>Un court mot d'accueil pour les nouveaux joueurs</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityLabel" xml:space="preserve">
+    <value>Présentation du jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityLoadEmpty" xml:space="preserve">
+    <value>Aucun paramètre de guide n'a été renvoyé.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityLoading" xml:space="preserve">
+    <value>Chargement des paramètres actuels du jeu…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityName" xml:space="preserve">
+    <value>Nom du jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityNoArt" xml:space="preserve">
+    <value>Aucune illustration approuvée n'est encore disponible pour ce style. Le guide écrit reste disponible.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityPreview" xml:space="preserve">
+    <value>Aperçu de l'accueil des joueurs</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityPreviewLabel" xml:space="preserve">
+    <value>Aperçu de l'accueil des joueurs</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityRetry" xml:space="preserve">
+    <value>Réessayer les paramètres</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityRulesPage" xml:space="preserve">
+    <value>Page wiki des règles</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySave" xml:space="preserve">
+    <value>Enregistrer la présentation</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySaveEmpty" xml:space="preserve">
+    <value>Aucun paramètre enregistré n'a été renvoyé.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySaved" xml:space="preserve">
+    <value>Enregistré. Le guide public utilise ces paramètres.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySaving" xml:space="preserve">
+    <value>Enregistrement…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterAdventure" xml:space="preserve">
+    <value>Aventure</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterAdventureText" xml:space="preserve">
+    <value>Bienvenue sur {0}. Qui votre personnage deviendra-t-il ? Laissez votre curiosité vous guider vers une nouvelle histoire.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterHint" xml:space="preserve">
+    <value>Choisissez un modèle pour remplacer l'accueil ci-dessus, puis modifiez-le à votre goût. Enregistrez quand vous êtes prêt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterNewPlayers" xml:space="preserve">
+    <value>Nouveaux joueurs</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterNewPlayersText" xml:space="preserve">
+    <value>Bienvenue sur {0}. Le jeu de rôle textuel est nouveau pour vous ? Commencez avec une idée de personnage et un peu de curiosité. Toute histoire commence quelque part.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterRelaxed" xml:space="preserve">
+    <value>Jeu de rôle détendu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterRelaxedText" xml:space="preserve">
+    <value>Bienvenue sur {0}. Prenez le temps de vous installer, imaginez un personnage et trouvez une histoire que vous aimeriez raconter.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterStories" xml:space="preserve">
+    <value>Histoires collaboratives</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterStoriesText" xml:space="preserve">
+    <value>Bienvenue sur {0}. Apportez un personnage, partagez une idée et imaginez les histoires que nous pourrions raconter ensemble.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarters" xml:space="preserve">
+    <value>Modèles d'accueil</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStyle" xml:space="preserve">
+    <value>Style de Sharpie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySubgenres" xml:space="preserve">
+    <value>Sous-genre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityThisGame" xml:space="preserve">
+    <value>ce jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityVisibility" xml:space="preserve">
+    <value>Les liens wiki n'apparaissent qu'après vérification par le serveur de leur visibilité et du lecteur du wiki.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityWelcomePage" xml:space="preserve">
+    <value>Page wiki d'accueil</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityWikiHint" xml:space="preserve">
+    <value>Utilisez namespace/slug. Seules les pages lisibles sans connexion apparaissent dans le guide public. Laissez un champ vide pour l'omettre.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityYourGame" xml:space="preserve">
+    <value>votre jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideInsertLook" xml:space="preserve">
+    <value>Insérer look dans Commande</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideInsertUnavailable" xml:space="preserve">
+    <value>Connectez-vous au jeu et terminez ou effacez d'abord votre brouillon. Rien n'a été modifié ni envoyé.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideInserted" xml:space="preserve">
+    <value>look est dans la zone de commande. Appuyez sur Envoyer quand vous êtes prêt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideKnown" xml:space="preserve">
+    <value>Je connais déjà</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_backups_Action" xml:space="preserve">
+    <value>Sauvegardes distantes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_backups_Body" xml:space="preserve">
+    <value>Lancez @backup une fois et vérifiez que @backup/list affiche la copie. Définissez SHARPMUSH_BACKUP_INTERVAL pour que des copies soient prises régulièrement, et gardez-en une hors de cette machine ; une copie sur le même disque ne survit pas à sa perte.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_backups_Title" xml:space="preserve">
+    <value>Sauvegardez avant d'ouvrir</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_capabilities_Action" xml:space="preserve">
+    <value>Examiner les paquets</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_capabilities_Body" xml:space="preserve">
+    <value>Examinez vos paquets installés et leur propre aide. Une fonctionnalité générale de scène ou Discord ne prouve pas qu'une commande softcode précise existe. L'installation d'un paquet passe toujours par la vérification et la confirmation habituelles. Si le paquet Onboarding est installé, ajoutez les étapes propres à votre jeu à sa liste +welcome.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_capabilities_Title" xml:space="preserve">
+    <value>Vérifier ce qui est installé</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_channels_Body" xml:space="preserve">
+    <value>Un nouveau monde n'a aucun canal, mais le guide joueur invite les nouveaux venus à en trouver un. Créez-en un public pour les questions, par exemple @channel/add Newbie=player, et un pour les administrateurs, par exemple @channel/add Staff=admin, que seuls les wizards et les royalty peuvent rejoindre. Demandez à votre équipe de rejoindre le canal public pour que les questions obtiennent une réponse.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_channels_Title" xml:space="preserve">
+    <value>Ouvrir des canaux pour les questions et l'équipe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_identity_Action" xml:space="preserve">
+    <value>Identité du jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_identity_Body" xml:space="preserve">
+    <value>Définissez le nom du jeu, une courte présentation, le genre et le style de Sharpie. Gardez le logo de votre jeu bien en vue. N'enregistrez que lorsque l'aperçu correspond à ce que vous voulez.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_identity_Title" xml:space="preserve">
+    <value>Présentez votre jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_invite_Body" xml:space="preserve">
+    <value>Passez en revue les éléments terminés et reportés avant de partager le lien de votre jeu. Terminer cette liste ne publie pas le jeu, n'ouvre pas les inscriptions, n'installe aucun paquet et n'envoie aucune invitation.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_invite_Title" xml:space="preserve">
+    <value>Prêt quand vous l'êtes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_joining_Action" xml:space="preserve">
+    <value>Paramètres d'accès des joueurs</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_joining_Body" xml:space="preserve">
+    <value>Vérifiez l'inscription, l'accès invité et la création de personnage. Essayez le chemin de connexion que vous comptez partager. Ces paramètres déterminent qui peut entrer ; la liste ne les modifie pas.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_joining_Title" xml:space="preserve">
+    <value>Vérifier comment les joueurs arrivent</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_messages_Action" xml:space="preserve">
+    <value>Messages du jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_messages_Body" xml:space="preserve">
+    <value>L'écran de connexion est la première chose qu'affiche un client MU*, et les messages du jour accueillent chaque personne qui se connecte. Nommez votre jeu, expliquez comment créer un personnage et retirez les offres que votre jeu ne fait pas, comme les connexions invité s'il n'a pas de personnages invités.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_messages_Title" xml:space="preserve">
+    <value>Rédiger l'écran de connexion</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_rules_Action" xml:space="preserve">
+    <value>Ouvrir le wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_rules_Body" xml:space="preserve">
+    <value>Publiez des pages lisibles d'accueil, de règles et de guide des personnages, puis liez-les ici. Vérifiez-les sans être connecté ; les pages privées sont volontairement omises du guide public.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_rules_Title" xml:space="preserve">
+    <value>Donner aux joueurs un point de départ clair</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_staff-character_Action" xml:space="preserve">
+    <value>Créer un personnage d'équipe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_staff-character_Body" xml:space="preserve">
+    <value>Le compte que vous avez réclamé joue #1, God. God passe tous les verrous et contrôles de permission ; une seule faute de frappe dans @nuke ou une boucle de softcode incontrôlée en tant que God n'a rien pour l'arrêter. Créez votre propre personnage pour le travail d'équipe courant, puis, connecté en tant que #1, tapez @set *&lt;name&gt;=WIZARD. Ne vous connectez en #1 que pour ce que seul God peut faire. Donnez aux autres membres de l'équipe le rôle le plus restreint adapté à leur tâche, comme builder ou moderator, plutôt que wizard.</value>
+    <comment>MT — builder and moderator kept as role names</comment>
+  </data>
+  <data name="GuideLesson_Administrator_staff-character_Title" xml:space="preserve">
+    <value>Gardez #1 pour les urgences</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_start-room_Action" xml:space="preserve">
+    <value>Pièces principales</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_start-room_Body" xml:space="preserve">
+    <value>Les nouveaux personnages commencent dans la pièce player_start, #0 sur un nouveau monde, et look y est la première chose qu'ils lisent. Décrivez-la, donnez-lui des sorties claires et indiquez aux nouveaux venus où trouver l'aide et les règles. Réservez la master room, #2 sur un nouveau monde, aux commandes globales : aucune sortie vers elle et aucun joueur à l'intérieur.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_start-room_Title" xml:space="preserve">
+    <value>Préparer la pièce d'arrivée des joueurs</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_walkthrough_Action" xml:space="preserve">
+    <value>Prévisualiser le guide joueur</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_walkthrough_Body" xml:space="preserve">
+    <value>Essayez de rejoindre le jeu, de choisir un personnage, look, help et les quatre parcours selon l'expérience, avec un compte ordinaire distinct. Un personnage de votre propre compte partage les rôles de ce compte, et un aperçu administrateur ne peut pas vérifier les permissions d'un joueur ordinaire.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_walkthrough_Title" xml:space="preserve">
+    <value>Entrez comme un joueur ordinaire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_channels_Body" xml:space="preserve">
+    <value>Trouvez un canal d'aide ou pour débutants pour poser une question aux autres joueurs.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_channels_Title" xml:space="preserve">
+    <value>Trouver des personnes qui peuvent aider</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_character_Action" xml:space="preserve">
+    <value>Mes personnages</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_character_Body" xml:space="preserve">
+    <value>Utilisez votre personnage existant si vous en avez un. Si vous avez déjà joué à ce jeu, réclamez ce personnage plutôt que d'en créer un doublon. Sinon, créez un personnage quand le jeu le permet. Votre compte peut en contenir plusieurs ; choisissez celui que vous voulez jouer.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_character_Title" xml:space="preserve">
+    <value>Choisissez qui vous allez jouer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_continue_Action" xml:space="preserve">
+    <value>Explorer le jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_continue_Body" xml:space="preserve">
+    <value>Utilisez help pour la référence des commandes du jeu, look pour vous repérer, et les règles et le guide des personnages de ce jeu pour ses attentes propres. Demandez à la communauté quand vous avez besoin d'un coup de main. Vous pouvez passer, fermer ou revenir à n'importe quelle partie de ce guide.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_continue_Title" xml:space="preserve">
+    <value>Vous êtes prêt à explorer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_place_Body" xml:space="preserve">
+    <value>Imaginez un serveur de jeu de rôle où votre personnage peut se tenir dans une pièce, rencontrer d'autres personnages et partir par une sortie. Les pièces décrivent des lieux d'un monde partagé ; ce ne sont pas des salons Discord. Ce que vous dites atteint généralement les personnes de votre pièce.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_place_Title" xml:space="preserve">
+    <value>Un monde que vous aidez à écrire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_sign-in_Action" xml:space="preserve">
+    <value>Se connecter ou s'inscrire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_sign-in_Body" xml:space="preserve">
+    <value>Votre compte est votre identifiant privé. Votre personnage est celui que rencontrent les autres joueurs. Connectez-vous ou inscrivez-vous avec les options proposées par ce jeu ; vous ne tapez pas le mot de passe de votre compte dans la zone de commande du jeu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_sign-in_Title" xml:space="preserve">
+    <value>Votre compte ouvre la porte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_speak-act_Body" xml:space="preserve">
+    <value>Dans le terminal, say Hello parle aux personnes de votre pièce et pose waves. décrit votre personnage qui fait signe de la main. La vue Récit, quand une scène est disponible, propose aussi les modes Dire, HRP et Emit, qui prennent votre texte tel quel ; Commande exécute la syntaxe et les expressions du jeu. Un page s'adresse à un seul joueur nommé. Ce que votre personnage dit et fait est en jeu (IC) ; parler du jeu ou du monde réel est hors personnage (HRP), alors signalez-le comme ce jeu le demande, par exemple avec le mode HRP de Récit. L'entraînement ici est local ; consultez l'étiquette du jeu avant de parler en direct.</value>
+    <comment>MT — say Hello and pose waves. are literal commands, kept in English</comment>
+  </data>
+  <data name="GuideLesson_Discord_speak-act_Title" xml:space="preserve">
+    <value>Sachez qui vous entend</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_useful-action_Body" xml:space="preserve">
+    <value>La commande look demande au jeu de décrire où vous êtes. Essayez-la d'abord en entraînement local. Puis insérez look dans la zone « Commande du jeu », vide et connectée (ou le mode Commande de Récit), et appuyez vous-même sur Envoyer. L'insérer n'envoie rien et ne valide pas cette étape.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_useful-action_Title" xml:space="preserve">
+    <value>Essayez une petite commande</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_world_Action" xml:space="preserve">
+    <value>Ouvrir Jouer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_world_Body" xml:space="preserve">
+    <value>Jouer ouvre un terminal pour les commandes du jeu. Quand une scène est disponible, la vue Récit offre une vue structurée de cette scène sur la même connexion. Vérifiez votre personnage actuel et l'état de la connexion. Repérez la description de la pièce, qui est présent et les sorties. Une sortie déplace votre personnage ; lire une description, non.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_world_Title" xml:space="preserve">
+    <value>Repérez-vous</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_channels_Body" xml:space="preserve">
+    <value>Trouvez un canal d'aide ou pour débutants pour poser une question aux autres joueurs.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_channels_Title" xml:space="preserve">
+    <value>Trouver des personnes qui peuvent aider</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_character_Action" xml:space="preserve">
+    <value>Mes personnages</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_character_Body" xml:space="preserve">
+    <value>Utilisez votre personnage existant si vous en avez un. Si vous avez déjà joué à ce jeu, réclamez ce personnage plutôt que d'en créer un doublon. Sinon, créez un personnage quand le jeu le permet. Votre compte peut en contenir plusieurs ; choisissez celui que vous voulez jouer.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_character_Title" xml:space="preserve">
+    <value>Choisissez qui vous allez jouer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_continue_Action" xml:space="preserve">
+    <value>Explorer le jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_continue_Body" xml:space="preserve">
+    <value>Utilisez help pour la référence des commandes du jeu, look pour vous repérer, et les règles et le guide des personnages de ce jeu pour ses attentes propres. Demandez à la communauté quand vous avez besoin d'un coup de main. Vous pouvez passer, fermer ou revenir à n'importe quelle partie de ce guide.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_continue_Title" xml:space="preserve">
+    <value>Vous êtes prêt à explorer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_place_Body" xml:space="preserve">
+    <value>Explorez à votre rythme. Ce guide reste accessible depuis l'Aide dès que vous voulez une référence des commandes ou un coup de main pour vous orienter.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_place_Title" xml:space="preserve">
+    <value>Un monde que vous aidez à écrire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_sign-in_Action" xml:space="preserve">
+    <value>Se connecter ou s'inscrire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_sign-in_Body" xml:space="preserve">
+    <value>Votre compte est votre identifiant privé. Votre personnage est celui que rencontrent les autres joueurs. Connectez-vous ou inscrivez-vous avec les options proposées par ce jeu ; vous ne tapez pas le mot de passe de votre compte dans la zone de commande du jeu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_sign-in_Title" xml:space="preserve">
+    <value>Votre compte ouvre la porte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_speak-act_Body" xml:space="preserve">
+    <value>Dans le terminal, say Hello parle aux personnes de votre pièce et pose waves. décrit votre personnage qui fait signe de la main. La vue Récit, quand une scène est disponible, propose aussi les modes Dire, HRP et Emit, qui prennent votre texte tel quel ; Commande exécute la syntaxe et les expressions du jeu. Un page s'adresse à un seul joueur nommé. Ce que votre personnage dit et fait est en jeu (IC) ; parler du jeu ou du monde réel est hors personnage (HRP), alors signalez-le comme ce jeu le demande, par exemple avec le mode HRP de Récit. L'entraînement ici est local ; consultez l'étiquette du jeu avant de parler en direct.</value>
+    <comment>MT — say Hello and pose waves. are literal commands, kept in English</comment>
+  </data>
+  <data name="GuideLesson_Explore_speak-act_Title" xml:space="preserve">
+    <value>Sachez qui vous entend</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_useful-action_Body" xml:space="preserve">
+    <value>La commande look demande au jeu de décrire où vous êtes. Essayez-la d'abord en entraînement local. Puis insérez look dans la zone « Commande du jeu », vide et connectée (ou le mode Commande de Récit), et appuyez vous-même sur Envoyer. L'insérer n'envoie rien et ne valide pas cette étape.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_useful-action_Title" xml:space="preserve">
+    <value>Essayez une petite commande</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_world_Action" xml:space="preserve">
+    <value>Ouvrir Jouer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_world_Body" xml:space="preserve">
+    <value>Jouer ouvre un terminal pour les commandes du jeu. Quand une scène est disponible, la vue Récit offre une vue structurée de cette scène sur la même connexion. Vérifiez votre personnage actuel et l'état de la connexion. Repérez la description de la pièce, qui est présent et les sorties. Une sortie déplace votre personnage ; lire une description, non.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_world_Title" xml:space="preserve">
+    <value>Repérez-vous</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_channels_Body" xml:space="preserve">
+    <value>Trouvez un canal d'aide ou pour débutants pour poser une question aux autres joueurs.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_channels_Title" xml:space="preserve">
+    <value>Trouver des personnes qui peuvent aider</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_continue_Action" xml:space="preserve">
+    <value>Explorer le jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_continue_Body" xml:space="preserve">
+    <value>Les applications et paquets optionnels varient selon le jeu. Utilisez les sections que ce jeu propose et leur propre aide ; ne supposez pas que les commandes d'un autre jeu SharpMUSH sont installées ici. La référence des commandes courantes reste disponible ci-dessous. Vous pouvez changer de point de départ pour une introduction plus complète.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_continue_Title" xml:space="preserve">
+    <value>Explorez les ajouts de ce jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_place_Body" xml:space="preserve">
+    <value>Gardez vos acquis de MUSH : pièces, sorties, objets et softcode s'appliquent toujours. Cette courte visite présente le compte web, la liaison des personnages et les deux vues de Jouer. Les exemples de commandes familières restent dans la référence dépliable ; aucun entraînement aux commandes n'est requis.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_place_Title" xml:space="preserve">
+    <value>Juste ce qui change</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_sign-in_Action" xml:space="preserve">
+    <value>Se connecter ou gérer les personnages</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_sign-in_Body" xml:space="preserve">
+    <value>Le compte web est distinct du mot de passe de votre personnage en jeu. Connectez-vous, puis réclamez un personnage existant au lieu de le recréer. Sélectionnez un personnage lié pour jouer ; ne saisissez jamais le mot de passe de votre compte dans la zone de commande.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_sign-in_Title" xml:space="preserve">
+    <value>Un compte, vos personnages</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_world_Action" xml:space="preserve">
+    <value>Ouvrir Jouer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_world_Body" xml:space="preserve">
+    <value>Terminal conserve l'interface défilante habituelle. Quand une scène est disponible, Récit propose des modes distincts Dire, HRP, Emit et Commande. Utilisez Commande pour la syntaxe et les expressions MUSH ; les autres modes prennent le texte tel quel. Changer de vue conserve la même connexion au jeu. Vérifiez le personnage sélectionné avant d'envoyer.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_world_Title" xml:space="preserve">
+    <value>Récit ou Terminal : à vous de choisir</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_channels_Body" xml:space="preserve">
+    <value>Trouvez un canal d'aide ou pour débutants pour poser une question aux autres joueurs.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_channels_Title" xml:space="preserve">
+    <value>Trouver des personnes qui peuvent aider</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_character_Action" xml:space="preserve">
+    <value>Mes personnages</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_character_Body" xml:space="preserve">
+    <value>Utilisez votre personnage existant si vous en avez un. Si vous avez déjà joué à ce jeu, réclamez ce personnage plutôt que d'en créer un doublon. Sinon, créez un personnage quand le jeu le permet. Votre compte peut en contenir plusieurs ; choisissez celui que vous voulez jouer.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_character_Title" xml:space="preserve">
+    <value>Choisissez qui vous allez jouer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_continue_Action" xml:space="preserve">
+    <value>Explorer le jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_continue_Body" xml:space="preserve">
+    <value>Utilisez help pour la référence des commandes du jeu, look pour vous repérer, et les règles et le guide des personnages de ce jeu pour ses attentes propres. Demandez à la communauté quand vous avez besoin d'un coup de main. Vous pouvez passer, fermer ou revenir à n'importe quelle partie de ce guide.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_continue_Title" xml:space="preserve">
+    <value>Vous êtes prêt à explorer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_place_Body" xml:space="preserve">
+    <value>Apportez votre expérience du jeu de rôle. Ici, vous jouez un personnage dans un monde textuel persistant. Les pièces posent le décor, les sorties relient les lieux, et les joueurs écrivent ensemble dialogues et actions. Lisez les règles de ce jeu avant de rejoindre une scène.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_place_Title" xml:space="preserve">
+    <value>Un monde que vous aidez à écrire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Action" xml:space="preserve">
+    <value>Se connecter ou s'inscrire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Body" xml:space="preserve">
+    <value>Votre compte est votre identifiant privé. Votre personnage est celui que rencontrent les autres joueurs. Connectez-vous ou inscrivez-vous avec les options proposées par ce jeu ; vous ne tapez pas le mot de passe de votre compte dans la zone de commande du jeu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Title" xml:space="preserve">
+    <value>Votre compte ouvre la porte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_speak-act_Body" xml:space="preserve">
+    <value>Comme autour d'une table de jeu, décrivez ce que tente votre personnage et laissez aux autres joueurs la place de répondre. pose waves. ajoute le nom de votre personnage ; say Hello parle à la pièce actuelle. Un page privé atteint un joueur nommé. Gardez les échanges hors personnage (HRP) bien séparés des paroles de votre personnage. Mettez-vous d'accord sur les attentes de la scène et lisez les règles de consentement de ce jeu avant de la rejoindre.</value>
+    <comment>MT — say Hello and pose waves. are literal commands, kept in English</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_speak-act_Title" xml:space="preserve">
+    <value>Sachez qui vous entend</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_useful-action_Body" xml:space="preserve">
+    <value>La commande look demande au jeu de décrire où vous êtes. Essayez-la d'abord en entraînement local. Puis insérez look dans la zone « Commande du jeu », vide et connectée (ou le mode Commande de Récit), et appuyez vous-même sur Envoyer. L'insérer n'envoie rien et ne valide pas cette étape.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_useful-action_Title" xml:space="preserve">
+    <value>Essayez une petite commande</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_world_Action" xml:space="preserve">
+    <value>Ouvrir Jouer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_world_Body" xml:space="preserve">
+    <value>Contrairement à un fil de forum, une pièce est un lieu que votre personnage occupe maintenant. Lisez sa description et ses sorties pour planter la scène. Quand une scène est disponible, la vue Récit sépare dialogues et actions ; Terminal garde l'interface de texte défilant. Les deux utilisent le même personnage et la même connexion.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_world_Title" xml:space="preserve">
+    <value>Repérez-vous</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLoading" xml:space="preserve">
+    <value>Chargement de votre guide…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLoginEntry" xml:space="preserve">
+    <value>Nouveau ? Apprenez à jouer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideMyAccount" xml:space="preserve">
+    <value>Mon compte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideOpenFull" xml:space="preserve">
+    <value>Ouvrir le guide complet ou changer de point de départ</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideOpenGame" xml:space="preserve">
+    <value>Ouvrir le jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideOpenPlay" xml:space="preserve">
+    <value>Ouvrir Jouer pour l'essayer en jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesBundled" xml:space="preserve">
+    <value>Inclus avec ce serveur</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesCheck" xml:space="preserve">
+    <value>Voir les commandes disponibles pour {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesEmpty" xml:space="preserve">
+    <value>Aucune suggestion de paquet vérifiée n'est disponible ici pour ce personnage. D'autres paquets peuvent être installés ; utilisez l'aide du jeu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesError" xml:space="preserve">
+    <value>L'aide du jeu est indisponible pour le moment. Tapez help dans le jeu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesExplanation" xml:space="preserve">
+    <value>Pour les fonctionnalités supplémentaires de ce jeu, essayez :</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesLabel" xml:space="preserve">
+    <value>Commandes de paquets pour votre personnage</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesLoading" xml:space="preserve">
+    <value>Chargement de l'aide du jeu…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesReference" xml:space="preserve">
+    <value>Référence du paquet (nouvel onglet)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesVersion" xml:space="preserve">
+    <value>{0}, version {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePageTitle" xml:space="preserve">
+    <value>Premiers pas — {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePanelLabel" xml:space="preserve">
+    <value>Premiers pas avec Sharpie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathDiscordDetail" xml:space="preserve">
+    <value>Découvrez les pièces, les personnages et les commandes.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathDiscordTitle" xml:space="preserve">
+    <value>J'ai l'habitude de Discord</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathExploreDetail" xml:space="preserve">
+    <value>Lancez-vous. L'aide reste à portée de main.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathExploreTitle" xml:space="preserve">
+    <value>Je me débrouille seul</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathMushDetail" xml:space="preserve">
+    <value>Voyez ce qui change dans SharpMUSH.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathMushTitle" xml:space="preserve">
+    <value>Je connais les MUSH</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathRoleplayDetail" xml:space="preserve">
+    <value>Amenez vos histoires dans un monde partagé.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathRoleplayTitle" xml:space="preserve">
+    <value>Je fais du jeu de rôle ailleurs</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeHeading" xml:space="preserve">
+    <value>Essayez d'abord ici</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeInvalid" xml:space="preserve">
+    <value>Pour cet entraînement, saisissez look. Rien ici ne s'exécute dans le jeu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeLabel" xml:space="preserve">
+    <value>Entraînement local aux commandes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeLocal" xml:space="preserve">
+    <value>Entraînement local — rien n'est envoyé au jeu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeResult" xml:space="preserve">
+    <value>Pièce d'entraînement : une cour ensoleillée. Sharpie est là. Une arche mène à un jardin. Dans le jeu, look décrit ce qui vous entoure réellement.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeTry" xml:space="preserve">
+    <value>Essayer en local</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeType" xml:space="preserve">
+    <value>Tapez</value>
+    <comment>MT — imperative verb before a command (Type look)</comment>
+  </data>
+  <data name="GuidePreviewNotice" xml:space="preserve">
+    <value>Aperçu du guide joueur. Ces choix ne modifient pas votre progression. Testez avec un compte joueur ordinaire pour vérifier les permissions.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideQuickstartEntry" xml:space="preserve">
+    <value>Apprendre à jouer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReady" xml:space="preserve">
+    <value>Vous êtes prêt à explorer. Vous pouvez revenir ici depuis l'Aide à tout moment.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideRecoveryTitle" xml:space="preserve">
+    <value>Guide Sharpie indisponible — réessayez quand vous voulez</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReference" xml:space="preserve">
+    <value>Commandes courantes et qui les voit</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReload" xml:space="preserve">
+    <value>Recharger la progression</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReloadProgress" xml:space="preserve">
+    <value>Recharger la progression</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideRetryConnection" xml:space="preserve">
+    <value>Réessayer la connexion</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideRetryRoster" xml:space="preserve">
+    <value>Réessayer la liste des personnages</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReturningCharacter" xml:space="preserve">
+    <value>Déjà joué ici ?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentity" xml:space="preserve">
+    <value>Présentez votre jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentityLater" xml:space="preserve">
+    <value>Configurer plus tard</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentityLead" xml:space="preserve">
+    <value>Vérifiez l'identité importée, ou donnez à votre nouveau jeu un nom et un premier pas accueillant.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentitySave" xml:space="preserve">
+    <value>Enregistrer et continuer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSkip" xml:space="preserve">
+    <value>Passer pour l'instant</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSkipped" xml:space="preserve">
+    <value>Passée</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStepOf" xml:space="preserve">
+    <value>Étape {0} sur {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSteps" xml:space="preserve">
+    <value>Étapes du guide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStop" xml:space="preserve">
+    <value>Arrêter ce guide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStraightToGame" xml:space="preserve">
+    <value>Aller directement au jeu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_anime" xml:space="preserve">
+    <value>Mascotte anime</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_chibi" xml:space="preserve">
+    <value>Mascotte chibi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_comicbook" xml:space="preserve">
+    <value>Mascotte BD</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_kemono" xml:space="preserve">
+    <value>Mascotte kemono</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_minimalist" xml:space="preserve">
+    <value>Mascotte minimaliste</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_pixel" xml:space="preserve">
+    <value>Mascotte pixel art</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideUnderstood" xml:space="preserve">
+    <value>C'est bon pour moi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideWelcomeChecklist" xml:space="preserve">
+    <value>Ce jeu a sa propre liste de démarrage. Pour la voir, tapez</value>
+    <comment>MT — fragment; followed by the command to type</comment>
+  </data>
+  <data name="GuideWelcomeGame" xml:space="preserve">
+    <value>Bienvenue sur {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideWelcomeIntro" xml:space="preserve">
+    <value>Je suis Sharpie. Je peux vous guider de votre première connexion à votre première scène.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideWithSharpie" xml:space="preserve">
+    <value>Avec Sharpie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyBlocked" xml:space="preserve">
+    <value>Les notifications sont bloquées pour ce site. Autorisez-les dans les paramètres du site du navigateur, puis rechargez cette page.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyChoose" xml:space="preserve">
+    <value>Choisissez ce qui vous notifie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceFailed" xml:space="preserve">
+    <value>échec {0} ({1})</value>
+    <comment>MT — lowercase fragment in a device row</comment>
+  </data>
+  <data name="NotifyDeviceLastSent" xml:space="preserve">
+    <value>dernier envoi {0}</value>
+    <comment>MT — lowercase fragment in a device row</comment>
+  </data>
+  <data name="NotifyDeviceSince" xml:space="preserve">
+    <value>Activées depuis {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceStale" xml:space="preserve">
+    <value>le jeu a changé sa clé : réactivez les notifications sur cet appareil</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDevices" xml:space="preserve">
+    <value>Vos appareils</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDevicesSub" xml:space="preserve">
+    <value>Chaque téléphone et ordinateur ayant les notifications activées pour ce compte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyInstall" xml:space="preserve">
+    <value>Installer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyInstallNote" xml:space="preserve">
+    <value>Installez le portail comme une application : il s'ouvre dans sa propre fenêtre et les notifications affichent son nom.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyIntro" xml:space="preserve">
+    <value>Activez les notifications sur chaque téléphone ou ordinateur où vous les voulez. Le jeu décide de ce qui mérite une notification, et chacun de vos personnages choisit celles qu'il reçoit.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyIosHowTo" xml:space="preserve">
+    <value>Sur iPhone et iPad, les notifications ne fonctionnent que depuis l'écran d'accueil : touchez Partager, puis Sur l'écran d'accueil, et ouvrez le portail depuis la nouvelle icône.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyNoDevices" xml:space="preserve">
+    <value>Aucun appareil n'a encore activé les notifications.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyOffHere" xml:space="preserve">
+    <value>Les notifications sont désactivées sur cet appareil. Votre navigateur demandera l'autorisation quand vous les activerez.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyOnHere" xml:space="preserve">
+    <value>Les notifications sont activées ici ({0}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyPermissionRefused" xml:space="preserve">
+    <value>Le navigateur n'a pas autorisé les notifications. Autorisez-les pour ce site dans les paramètres du navigateur, puis réessayez.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyRemoveDevice" xml:space="preserve">
+    <value>Désactiver les notifications sur {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifySendTest" xml:space="preserve">
+    <value>Envoyer un test</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTestSent" xml:space="preserve">
+    <value>Test envoyé. Il devrait arriver dans quelques secondes.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyThisDevice" xml:space="preserve">
+    <value>Cet appareil</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyThisDeviceTag" xml:space="preserve">
+    <value>Cet appareil</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTurnOff" xml:space="preserve">
+    <value>Désactiver</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTurnOn" xml:space="preserve">
+    <value>Activer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTurnedOn" xml:space="preserve">
+    <value>Les notifications sont activées pour cet appareil.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyUnsupported" xml:space="preserve">
+    <value>Ce navigateur ne peut pas afficher les notifications d'un site web.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyWhat" xml:space="preserve">
+    <value>Ce qui vous notifie</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyWhatNote" xml:space="preserve">
+    <value>Les pages et les nouveaux courriers vous notifient en votre absence, en montrant l'expéditeur mais pas le contenu. Tapez +notify dans le jeu pour choisir ce qui notifie chaque personnage, et si le texte s'affiche.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentAllow" xml:space="preserve">
+    <value>Autoriser</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentAsks" xml:space="preserve">
+    <value>{0} souhaite agir au nom de votre personnage</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentCharacter" xml:space="preserve">
+    <value>Elle agirait en tant que {0}. Pour autoriser un autre personnage, passez d'abord à celui-ci.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentDeny" xml:space="preserve">
+    <value>Refuser</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentReturning" xml:space="preserve">
+    <value>Retour à l'application…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentRevoke" xml:space="preserve">
+    <value>Vous pouvez revenir sur ce choix à tout moment depuis la page de votre compte.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentTitle" xml:space="preserve">
+    <value>Autoriser une application</value>
+    <comment>MT</comment>
+  </data>
+  <data name="StoryNewPoses" xml:space="preserve">
+    <value>Nouvelles poses</value>
+    <comment>MT</comment>
+  </data>
+  <data name="StoryPoseDeleted" xml:space="preserve">
+    <value>Supprimée :</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppAsksToChange" xml:space="preserve">
+    <value>{0} demande à modifier le monde</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppChangesAsCharacter" xml:space="preserve">
+    <value>Chaque modification est faite en tant que votre personnage, par les commandes de construction du jeu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppConfigUnavailable" xml:space="preserve">
+    <value>La configuration de l'application est indisponible ou doit être mise à jour.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppHostFailed" xml:space="preserve">
+    <value>L'hôte de l'application n'a pas pu se charger.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppMakeChanges" xml:space="preserve">
+    <value>{count, plural, one {Faire # modification} other {Faire # modifications}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_ConversionError" xml:space="preserve">
+    <value>Erreur de conversion : {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_ConversionFailed" xml:space="preserve">
+    <value>Échec de la conversion de {0} en {1} : {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_ConversionNotImplemented" xml:space="preserve">
+    <value>Conversion vers le type {0} non implémentée</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidBoolean" xml:space="preserve">
+    <value>Valeur booléenne non valide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidDateTime" xml:space="preserve">
+    <value>Date et heure non valides</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidGUID" xml:space="preserve">
+    <value>GUID non valide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidNumber" xml:space="preserve">
+    <value>Nombre non valide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidTimeSpan" xml:space="preserve">
+    <value>Durée non valide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidType" xml:space="preserve">
+    <value>{0} non valide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_NotValueOf" xml:space="preserve">
+    <value>N’est pas une valeur de {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_UnableToConvert" xml:space="preserve">
+    <value>Impossible de convertir en {0} depuis le type {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HeatMap_Less" xml:space="preserve">
+    <value>Moins</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HeatMap_More" xml:space="preserve">
+    <value>Plus</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudAlert_Close" xml:space="preserve">
+    <value>Fermer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_NextMonth" xml:space="preserve">
+    <value>Mois suivant {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_NextYear" xml:space="preserve">
+    <value>Année suivante {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_Open" xml:space="preserve">
+    <value>Ouvrir</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_PrevMonth" xml:space="preserve">
+    <value>Mois précédent {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_PrevYear" xml:space="preserve">
+    <value>Année précédente {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBreadcrumbs_Label" xml:space="preserve">
+    <value>Fil d’Ariane</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudCarousel_Index" xml:space="preserve">
+    <value>Index {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudCarousel_Next" xml:space="preserve">
+    <value>Suivant</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudCarousel_Previous" xml:space="preserve">
+    <value>Précédent</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudChip_Close" xml:space="preserve">
+    <value>Fermer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_AlphaSlider" xml:space="preserve">
+    <value>Curseur alpha</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_Close" xml:space="preserve">
+    <value>Fermer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_GridView" xml:space="preserve">
+    <value>Grille</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_HideSwatches" xml:space="preserve">
+    <value>Masquer le nuancier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_HueSlider" xml:space="preserve">
+    <value>Curseur de teinte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_ModeSwitch" xml:space="preserve">
+    <value>Changer de mode</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_Open" xml:space="preserve">
+    <value>Ouvrir</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_PaletteView" xml:space="preserve">
+    <value>Palette</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_ShowSwatches" xml:space="preserve">
+    <value>Afficher le nuancier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_SpectrumView" xml:space="preserve">
+    <value>Spectre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_AllItems" xml:space="preserve">
+    <value>Tous</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_FirstPage" xml:space="preserve">
+    <value>Première page</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_InfoFormat" xml:space="preserve">
+    <value>{0}-{1} sur {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_LastPage" xml:space="preserve">
+    <value>Dernière page</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_NextPage" xml:space="preserve">
+    <value>Page suivante</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_PreviousPage" xml:space="preserve">
+    <value>Page précédente</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_RowsPerPage" xml:space="preserve">
+    <value>Lignes par page :</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_AddFilter" xml:space="preserve">
+    <value>Ajouter un filtre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Apply" xml:space="preserve">
+    <value>Appliquer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Cancel" xml:space="preserve">
+    <value>Annuler</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Clear" xml:space="preserve">
+    <value>Effacer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ClearFilter" xml:space="preserve">
+    <value>Effacer le filtre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_CollapseAllGroups" xml:space="preserve">
+    <value>Réduire tous les groupes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_CollapseGroup" xml:space="preserve">
+    <value>Réduire le groupe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Column" xml:space="preserve">
+    <value>Colonne</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Columns" xml:space="preserve">
+    <value>Colonnes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Contains" xml:space="preserve">
+    <value>contient</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_EndsWith" xml:space="preserve">
+    <value>se termine par</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_EqualSign" xml:space="preserve">
+    <value>=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Equals" xml:space="preserve">
+    <value>est égal à</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ExpandAllGroups" xml:space="preserve">
+    <value>Développer tous les groupes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ExpandGroup" xml:space="preserve">
+    <value>Développer le groupe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_False" xml:space="preserve">
+    <value>faux</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Filter" xml:space="preserve">
+    <value>Filtre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_FilterValue" xml:space="preserve">
+    <value>Valeur du filtre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_GreaterThanOrEqualSign" xml:space="preserve">
+    <value>&gt;=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_GreaterThanSign" xml:space="preserve">
+    <value>&gt;</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Group" xml:space="preserve">
+    <value>Grouper</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Hide" xml:space="preserve">
+    <value>Masquer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_HideAll" xml:space="preserve">
+    <value>Tout masquer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Is" xml:space="preserve">
+    <value>est</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsAfter" xml:space="preserve">
+    <value>est après</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsBefore" xml:space="preserve">
+    <value>est avant</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsEmpty" xml:space="preserve">
+    <value>est vide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsNot" xml:space="preserve">
+    <value>n’est pas</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsNotEmpty" xml:space="preserve">
+    <value>n’est pas vide</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsOnOrAfter" xml:space="preserve">
+    <value>est le ou après</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsOnOrBefore" xml:space="preserve">
+    <value>est le ou avant</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_LessThanOrEqualSign" xml:space="preserve">
+    <value>&lt;=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_LessThanSign" xml:space="preserve">
+    <value>&lt;</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Loading" xml:space="preserve">
+    <value>Chargement…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_MoveDown" xml:space="preserve">
+    <value>Descendre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_MoveUp" xml:space="preserve">
+    <value>Monter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_NotContains" xml:space="preserve">
+    <value>ne contient pas</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_NotEqualSign" xml:space="preserve">
+    <value>!=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_NotEquals" xml:space="preserve">
+    <value>n’est pas égal à</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_OpenFilters" xml:space="preserve">
+    <value>Ouvrir les filtres</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Operator" xml:space="preserve">
+    <value>Opérateur</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_RefreshData" xml:space="preserve">
+    <value>Actualiser les données</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_RemoveFilter" xml:space="preserve">
+    <value>Retirer le filtre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Save" xml:space="preserve">
+    <value>Enregistrer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_SelectAllRows" xml:space="preserve">
+    <value>Sélectionner toutes les lignes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_SelectRow" xml:space="preserve">
+    <value>Sélectionner la ligne</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ShowAll" xml:space="preserve">
+    <value>Tout afficher</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ShowColumnOptions" xml:space="preserve">
+    <value>Options de colonne</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Sort" xml:space="preserve">
+    <value>Trier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_StartsWith" xml:space="preserve">
+    <value>commence par</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ToggleGroupExpansion" xml:space="preserve">
+    <value>Développer/réduire le groupe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_True" xml:space="preserve">
+    <value>vrai</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Ungroup" xml:space="preserve">
+    <value>Dégrouper</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Unsort" xml:space="preserve">
+    <value>Annuler le tri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Value" xml:space="preserve">
+    <value>Valeur</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDateRangePicker_End" xml:space="preserve">
+    <value>Date de fin</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDateRangePicker_Start" xml:space="preserve">
+    <value>Date de début</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDialog_Close" xml:space="preserve">
+    <value>Fermer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Cancel" xml:space="preserve">
+    <value>Annuler</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Exit" xml:space="preserve">
+    <value>OK</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Text" xml:space="preserve">
+    <value>Quitter le site ? Les modifications que vous avez apportées ne seront peut-être pas enregistrées.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Title" xml:space="preserve">
+    <value>Confirmer la navigation</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_Button" xml:space="preserve">
+    <value>Parcourir les fichiers</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_DragAndDrop" xml:space="preserve">
+    <value>Faites glisser des fichiers ici ou cliquez pour parcourir</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_FileSizeError" xml:space="preserve">
+    <value>Le fichier « {0} » dépasse la taille maximale autorisée de {1} octets.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_MaximumFileCountExceeded" xml:space="preserve">
+    <value>{0} fichiers sélectionnés, ce qui dépasse le maximum de {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFormComponent_Required" xml:space="preserve">
+    <value>Obligatoire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudInput_Clear" xml:space="preserve">
+    <value>Effacer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudInput_Decrement" xml:space="preserve">
+    <value>Diminuer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudInput_Increment" xml:space="preserve">
+    <value>Augmenter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudNavGroup_ToggleExpand" xml:space="preserve">
+    <value>Développer/réduire {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPageContentNavigation_NavMenu" xml:space="preserve">
+    <value>Sommaire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_CurrentPage" xml:space="preserve">
+    <value>Page actuelle {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_FirstPage" xml:space="preserve">
+    <value>Première page</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_LastPage" xml:space="preserve">
+    <value>Dernière page</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_NextPage" xml:space="preserve">
+    <value>Page suivante</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_PageIndex" xml:space="preserve">
+    <value>Page {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_PreviousPage" xml:space="preserve">
+    <value>Page précédente</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRangeInput_End" xml:space="preserve">
+    <value>Fin</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRangeInput_Start" xml:space="preserve">
+    <value>Début</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRatingItem_Label" xml:space="preserve">
+    <value>Note {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRating_Label" xml:space="preserve">
+    <value>Note</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudSelect_SelectAll" xml:space="preserve">
+    <value>Tout sélectionner</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudSnackbar_Close" xml:space="preserve">
+    <value>Fermer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudSplitPanel_ResizePanels" xml:space="preserve">
+    <value>Redimensionner les panneaux</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Complete" xml:space="preserve">
+    <value>Terminer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Next" xml:space="preserve">
+    <value>Suivant</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Previous" xml:space="preserve">
+    <value>Précédent</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Reset" xml:space="preserve">
+    <value>Réinitialiser</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Skip" xml:space="preserve">
+    <value>Passer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_FirstPage" xml:space="preserve">
+    <value>Première page</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_LastPage" xml:space="preserve">
+    <value>Dernière page</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_NextPage" xml:space="preserve">
+    <value>Page suivante</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_PreviousPage" xml:space="preserve">
+    <value>Page précédente</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_CancelEditRow" xml:space="preserve">
+    <value>Annuler la modification</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_CollapseGroup" xml:space="preserve">
+    <value>Réduire le groupe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_CommitRow" xml:space="preserve">
+    <value>Valider la modification</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_EditRow" xml:space="preserve">
+    <value>Modifier la ligne</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_ExpandGroup" xml:space="preserve">
+    <value>Développer le groupe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_Loading" xml:space="preserve">
+    <value>Chargement…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_SelectAllRows" xml:space="preserve">
+    <value>Sélectionner toutes les lignes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_SelectGroup" xml:space="preserve">
+    <value>Sélectionner le groupe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_SelectRow" xml:space="preserve">
+    <value>Sélectionner la ligne</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_AddTab" xml:space="preserve">
+    <value>Ajouter un onglet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_CloseTab" xml:space="preserve">
+    <value>Fermer l’onglet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollDown" xml:space="preserve">
+    <value>Faire défiler les onglets vers le bas</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollLeft" xml:space="preserve">
+    <value>Faire défiler les onglets vers la gauche</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollRight" xml:space="preserve">
+    <value>Faire défiler les onglets vers la droite</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollUp" xml:space="preserve">
+    <value>Faire défiler les onglets vers le haut</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTimePicker_Open" xml:space="preserve">
+    <value>Ouvrir</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTreeView_CollapseItem" xml:space="preserve">
+    <value>Réduire</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTreeView_ExpandItem" xml:space="preserve">
+    <value>Développer</value>
+    <comment>MT</comment>
+  </data>
 </root>

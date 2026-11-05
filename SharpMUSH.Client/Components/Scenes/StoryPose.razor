@@ -257,7 +257,7 @@
 
     private string? NameStyle => SafeColor is { } c ? $"color:{c};" : null;
 
-    private string Time => Pose.CreatedAtUtc.ToLocalTime().ToString("HH:mm");
+    private string Time => DateDisplay.Time(Pose.CreatedAtUtc);
 
     private string CardName => string.IsNullOrWhiteSpace(Pose.ShowAsName) ? Pose.AuthorName : string.Empty;
 

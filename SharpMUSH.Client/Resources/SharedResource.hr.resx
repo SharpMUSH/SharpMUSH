@@ -7453,4 +7453,1996 @@
   <data name="NavHelpLearnSub" xml:space="preserve"><value>Vođeni obilazak pridruživanja i igranja.</value></data>
   <data name="NavHelpGettingStartedSub" xml:space="preserve"><value>Kretanje, razgovor, kanali i pošta.</value></data>
   <data name="NavHelpNewbieSub" xml:space="preserve"><value>Što znače [ ] i &lt; &gt; u naredbi.</value></data>
+  <data name="GuideAdminChecked" xml:space="preserve">
+    <value>Ovo je provjereno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminContinue" xml:space="preserve">
+    <value>Nastavi s popisom za provjeru</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDashboardLead" xml:space="preserve">
+    <value>Prođite kroz ove korake prije nego što ikoga pozovete. Ovaj okvir nestaje kada je svaki korak provjeren ili odgođen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDefer" xml:space="preserve">
+    <value>Odgodi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDeferred" xml:space="preserve">
+    <value>Odgođeno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDescription" xml:space="preserve">
+    <value>— predstavljanje igre i popis za uvođenje igrača.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminEntry" xml:space="preserve">
+    <value>Pripremite se za nove igrače</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminHeading" xml:space="preserve">
+    <value>Pripremite se za prve igrače</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminIntro" xml:space="preserve">
+    <value>Zaseban popis za provjeru za vašu igru. Dovršite što možete, odgodite ono što traži više razmišljanja i vratite se kad god vam zatreba.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminLoading" xml:space="preserve">
+    <value>Učitavanje popisa za provjeru…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminPlayerChecked" xml:space="preserve">
+    <value>Provjereno s običnim igračkim računom</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminPlayingGod" xml:space="preserve">
+    <value>Trenutačno igrate kao #1. Za svakodnevni rad prebacite se na svoj lik osoblja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminPreview" xml:space="preserve">
+    <value>Pregledajte iskustvo igrača bez promjene napretka</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminProgress" xml:space="preserve">
+    <value>Gotovo {0} od {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminReload" xml:space="preserve">
+    <value>Ponovno učitaj popis</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminSummary" xml:space="preserve">
+    <value>Provjereno: {0}; odgođeno: {1}. Odabiri na popisu ne mijenjaju postavke igre ni dopuštenja paketa.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminTitle" xml:space="preserve">
+    <value>Priprema za igrače</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminTodo" xml:space="preserve">
+    <value>Preostalo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminVerified" xml:space="preserve">
+    <value>Provjereno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtwork" xml:space="preserve">
+    <value>Ilustracije Sharpieja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtworkFull" xml:space="preserve">
+    <value>Potpuno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtworkNone" xml:space="preserve">
+    <value>Bez ilustracija</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtworkReduced" xml:space="preserve">
+    <value>Smanjeno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideBack" xml:space="preserve">
+    <value>Natrag</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideBackToGame" xml:space="preserve">
+    <value>Natrag u igru</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsAudience" xml:space="preserve">
+    <value>Poruke dolaze do svih koji slušaju kanal, ne samo do vaše sobe.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsChat" xml:space="preserve">
+    <value>Postavite svoje pitanje.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsDescription" xml:space="preserve">
+    <value>Prije pridruživanja pročitajte njegov opis. Zamijenite NAME kanalom koji prikazuje igra.</value>
+    <comment>MT — NAME kept: placeholder in the command example</comment>
+  </data>
+  <data name="GuideChannelsDiscover" xml:space="preserve">
+    <value>Kanali povezuju ljude u različitim sobama. U odjeljku Igraj gumb Pregledaj kanale otvara preglednik kanala. Igre često imaju kanale za početnike, pomoć ili druženje; njihovi nazivi i pravila pristupa razlikuju se.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsJoin" xml:space="preserve">
+    <value>Pridružite se tom kanalu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsList" xml:space="preserve">
+    <value>Pronađite kanal.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsName" xml:space="preserve">
+    <value>Zamijenite NAME kanalom s popisa.</value>
+    <comment>MT — NAME kept: placeholder in the command example</comment>
+  </data>
+  <data name="GuideChannelsTitle" xml:space="preserve">
+    <value>Pronađite ljude koji mogu pomoći</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterConnectionFailed" xml:space="preserve">
+    <value>Vaš je lik spremljen, ali nismo se uspjeli povezati s igrom. Pokušajte se ponovno povezati ili se vratite na svoj račun i igrajte kasnije.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterOptions" xml:space="preserve">
+    <value>Igra odlučuje koje su mogućnosti dostupne.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterRosterFailed" xml:space="preserve">
+    <value>Vaš je lik spremljen, ali nismo uspjeli osvježiti popis likova. Pokušajte ponovno da biste nastavili s tim likom; neće biti ponovno stvoren.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterRosterUnavailable" xml:space="preserve">
+    <value>Nismo uspjeli učitati vaše likove. Pokušajte ponovno prije stvaranja ili preuzimanja lika kako bismo sačuvali vaše postojeće likove i trenutačni odabir.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChoosePath" xml:space="preserve">
+    <value>Odaberite polazište</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideClaimCharacter" xml:space="preserve">
+    <value>Preuzmite svoj lik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideClose" xml:space="preserve">
+    <value>Zatvori vodič</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideComingFrom" xml:space="preserve">
+    <value>Odakle dolazite?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_list_Audience" xml:space="preserve">
+    <value>Samo vi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_list_Meaning" xml:space="preserve">
+    <value>Otkrijte vidljive kanale</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_on_Audience" xml:space="preserve">
+    <value>Kanalu može objaviti vaše članstvo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_on_Meaning" xml:space="preserve">
+    <value>Pridružite se kanalu koji vam to dopušta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_chat_Audience" xml:space="preserve">
+    <value>Oni koji slušaju taj kanal, gdje god bili</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_chat_Meaning" xml:space="preserve">
+    <value>Razgovarajte na kanalu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_describe_Audience" xml:space="preserve">
+    <value>Svatko tko vas pogleda</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_describe_Meaning" xml:space="preserve">
+    <value>Postavite što drugi vide kad vas pogledaju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_Audience" xml:space="preserve">
+    <value>Samo vi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_Meaning" xml:space="preserve">
+    <value>Čitajte pomoć za naredbe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_say_Audience" xml:space="preserve">
+    <value>Samo vi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_say_Meaning" xml:space="preserve">
+    <value>Pročitajte kako radi određena naredba</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_home_Audience" xml:space="preserve">
+    <value>Ljudi u sobama koje napuštate i u koje stižete</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_home_Meaning" xml:space="preserve">
+    <value>Vratite se kući ako se izgubite</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_inventory_Audience" xml:space="preserve">
+    <value>Samo vi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_inventory_Meaning" xml:space="preserve">
+    <value>Ispišite što nosite</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_look_Audience" xml:space="preserve">
+    <value>Samo vi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_look_Meaning" xml:space="preserve">
+    <value>Opišite trenutačnu sobu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_page_Audience" xml:space="preserve">
+    <value>Jedan imenovani igrač</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_page_Meaning" xml:space="preserve">
+    <value>Pošaljite privatnu poruku</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_pose_Audience" xml:space="preserve">
+    <value>Ljudi u vašoj sobi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_pose_Meaning" xml:space="preserve">
+    <value>Opišite radnju svog lika</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_say_Audience" xml:space="preserve">
+    <value>Ljudi u vašoj sobi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_say_Meaning" xml:space="preserve">
+    <value>Govorite kao svoj lik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_who_Audience" xml:space="preserve">
+    <value>Samo vi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_who_Meaning" xml:space="preserve">
+    <value>Pogledajte povezane igrače koje vam igra dopušta vidjeti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCompanionTitle" xml:space="preserve">
+    <value>Uz Sharpieja: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextAccount" xml:space="preserve">
+    <value>Vaš račun i lik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextCharacter" xml:space="preserve">
+    <value>Vaš je aktivni lik {0}. Naredbe koje šaljete u igri koriste taj lik.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextChooseCharacter" xml:space="preserve">
+    <value>Prijavljeni ste. Odaberite ili stvorite lik prije ulaska u igru.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextFeatures" xml:space="preserve">
+    <value>Istražite ovu igru</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextScenes" xml:space="preserve">
+    <value>Scene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextScenesDescription" xml:space="preserve">
+    <value>Pregledajte priče zabilježene u ovoj igri. Pridruživanje sceni ovisi o njezinim pravilima pristupa.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextSignedOut" xml:space="preserve">
+    <value>Ovaj vodič možete čitati bez prijave. Prijavite se kad budete spremni pridružiti se igri.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextWiki" xml:space="preserve">
+    <value>Wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextWikiDescription" xml:space="preserve">
+    <value>Pročitajte o svijetu igre i stranicama koje vam ova igra stavlja na raspolaganje.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueAccept" xml:space="preserve">
+    <value>Nastavi taj vodič</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueBrowser" xml:space="preserve">
+    <value>Nastavi vodič iz preglednika</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueDecline" xml:space="preserve">
+    <value>Zadrži napredak računa</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueQuestion" xml:space="preserve">
+    <value>Prije prijave započeli ste vodič u ovom pregledniku. Želite li taj napredak u učenju dodati svom računu?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCoreReference" xml:space="preserve">
+    <value>Ovo su osnovne naredbe. Igre ih mogu prilagoditi; provjerite naredbom help.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCreateCharacter" xml:space="preserve">
+    <value>Stvorite lik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideDraftHint" xml:space="preserve">
+    <value>Vi odlučujete kada poslati. Postojeća skica ostaje netaknuta.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorBrowserSave" xml:space="preserve">
+    <value>Vaš preglednik nije mogao spremiti ovaj odabir. Vrijedit će samo za ovaj posjet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorChoice" xml:space="preserve">
+    <value>Taj odabir vodiča nije dostupan.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorConflict" xml:space="preserve">
+    <value>Vaš se vodič promijenio u drugoj kartici. Ponovno učitajte napredak prije novog odabira.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorLoad" xml:space="preserve">
+    <value>Napredak vodiča nije moguće učitati. Pokušajte ponovno za nastavak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorSave" xml:space="preserve">
+    <value>Taj odabir vodiča nije moguće spremiti. Prethodni napredak nije promijenjen; pokušajte ponovno kad budete povezani.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorUnavailable" xml:space="preserve">
+    <value>Podaci o vodiču igre nisu dostupni. Pokušajte ponovno kad se veza vrati.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorVersion" xml:space="preserve">
+    <value>Ovaj spremljeni vodič koristi nepodržanu verziju. Vaše su postavke sačuvane; ponovno učitajte nakon ažuriranja klijenta.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideFreshCharacter" xml:space="preserve">
+    <value>Počinjete ispočetka?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideGameGuides" xml:space="preserve">
+    <value>Vodiči ove igre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideHelpEntry" xml:space="preserve">
+    <value>Naučite igrati / Promijenite vodič</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideHelpIndexEntry" xml:space="preserve">
+    <value>Naučite igrati</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideHelpReturn" xml:space="preserve">
+    <value>Ovaj vodič uvijek možete pronaći u Pomoći.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityAppearance" xml:space="preserve">
+    <value>postavkama izgleda</value>
+    <comment>MT — locative case: completes GuideIdentityArtworkHint ("... u") as link text</comment>
+  </data>
+  <data name="GuideIdentityArtFallback" xml:space="preserve">
+    <value>Prikazuje se zadani Sharpie dok ne budu dostupne ilustracije za odabrani stil i žanr.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityArtworkHint" xml:space="preserve">
+    <value>Igrači mogu smanjiti ili sakriti ilustracije. Logotip vaše igre ostaje zaseban u</value>
+    <comment>MT — sentence fragment; followed by the GuideIdentityAppearance link</comment>
+  </data>
+  <data name="GuideIdentityCharacterPage" xml:space="preserve">
+    <value>Wiki stranica vodiča za likove</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityGenreHint" xml:space="preserve">
+    <value>Odaberite MSSP žanr i podžanr igre. Sharpie te odabire koristi za ilustracije; odaberite None kada nijedno ne odgovara.</value>
+    <comment>MT — None kept: literal MSSP value shown in the select</comment>
+  </data>
+  <data name="GuideIdentityGenres" xml:space="preserve">
+    <value>Žanr</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityIntroduction" xml:space="preserve">
+    <value>Kratka dobrodošlica za nove igrače</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityLabel" xml:space="preserve">
+    <value>Predstavljanje igre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityLoadEmpty" xml:space="preserve">
+    <value>Nisu vraćene postavke vodiča.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityLoading" xml:space="preserve">
+    <value>Učitavanje postojećih postavki igre…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityName" xml:space="preserve">
+    <value>Naziv igre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityNoArt" xml:space="preserve">
+    <value>Za ovaj stil još nema odobrene ilustracije. Pisani vodič i dalje je dostupan.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityPreview" xml:space="preserve">
+    <value>Pregled dobrodošlice za igrače</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityPreviewLabel" xml:space="preserve">
+    <value>Pregled dobrodošlice za igrače</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityRetry" xml:space="preserve">
+    <value>Ponovno učitaj postavke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityRulesPage" xml:space="preserve">
+    <value>Wiki stranica s pravilima</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySave" xml:space="preserve">
+    <value>Spremi predstavljanje igre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySaveEmpty" xml:space="preserve">
+    <value>Nisu vraćene spremljene postavke.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySaved" xml:space="preserve">
+    <value>Spremljeno. Javni vodič koristi ove postavke.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySaving" xml:space="preserve">
+    <value>Spremanje…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterAdventure" xml:space="preserve">
+    <value>Pustolovina</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterAdventureText" xml:space="preserve">
+    <value>Dobro došli u {0}. Tko će postati vaš lik? Neka vas znatiželja povede u novu priču.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterHint" xml:space="preserve">
+    <value>Odaberite predložak kojim ćete zamijeniti gornju dobrodošlicu, a zatim ga uredite po svom. Spremite kad budete spremni.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterNewPlayers" xml:space="preserve">
+    <value>Novi igrači</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterNewPlayersText" xml:space="preserve">
+    <value>Dobro došli u {0}. Novi ste u tekstualnom igranju uloga? Počnite s idejom za lik i malo znatiželje. Svaka priča negdje počinje.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterRelaxed" xml:space="preserve">
+    <value>Opušteno igranje uloga</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterRelaxedText" xml:space="preserve">
+    <value>Dobro došli u {0}. Odvojite trenutak da se smjestite, zamislite lik i pronađite priču koju biste željeli ispričati.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterStories" xml:space="preserve">
+    <value>Zajedničke priče</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterStoriesText" xml:space="preserve">
+    <value>Dobro došli u {0}. Dovedite lik, podijelite ideju i zamislite priče koje bismo mogli zajedno ispričati.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarters" xml:space="preserve">
+    <value>Predlošci dobrodošlice</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStyle" xml:space="preserve">
+    <value>Stil Sharpieja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySubgenres" xml:space="preserve">
+    <value>Podžanr</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityThisGame" xml:space="preserve">
+    <value>ovu igru</value>
+    <comment>MT — accusative: fills {0} in "Dobro došli u {0}"</comment>
+  </data>
+  <data name="GuideIdentityVisibility" xml:space="preserve">
+    <value>Wiki poveznice pojavljuju se tek nakon što poslužitelj provjeri njihovu vidljivost i čitatelja wikija.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityWelcomePage" xml:space="preserve">
+    <value>Wiki stranica dobrodošlice</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityWikiHint" xml:space="preserve">
+    <value>Upotrijebite namespace/slug. U javnom vodiču prikazuju se samo stranice čitljive bez prijave. Ostavite polje prazno da biste ga izostavili.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityYourGame" xml:space="preserve">
+    <value>vašu igru</value>
+    <comment>MT — accusative: fills {0} in GuideWelcomeGame "Dobro došli u {0}"</comment>
+  </data>
+  <data name="GuideInsertLook" xml:space="preserve">
+    <value>Umetni look u Naredbu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideInsertUnavailable" xml:space="preserve">
+    <value>Najprije se povežite s igrom i dovršite ili očistite postojeću skicu. Ništa nije promijenjeno ni poslano.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideInserted" xml:space="preserve">
+    <value>look je u okviru za naredbe. Pritisnite Pošalji kad budete spremni.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideKnown" xml:space="preserve">
+    <value>Ovo već znam</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_backups_Action" xml:space="preserve">
+    <value>Udaljene sigurnosne kopije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_backups_Body" xml:space="preserve">
+    <value>Jednom pokrenite @backup i provjerite prikazuje li @backup/list kopiju. Postavite SHARPMUSH_BACKUP_INTERVAL kako bi se kopije izrađivale prema rasporedu i čuvajte kopiju izvan ovog računala; kopija na istom disku ne preživljava njegov gubitak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_backups_Title" xml:space="preserve">
+    <value>Napravite sigurnosnu kopiju prije otvaranja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_capabilities_Action" xml:space="preserve">
+    <value>Pregledaj pakete</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_capabilities_Body" xml:space="preserve">
+    <value>Pregledajte instalirane pakete i njihovu vlastitu pomoć. Općenita značajka scena ili Discorda ne dokazuje da postoji određena softcode naredba. Instalacija paketa i dalje prolazi uobičajeni pregled i potvrdu. Ako je instaliran paket Onboarding, dodajte korake svoje igre u njegov popis +welcome.</value>
+    <comment>MT — Onboarding kept: package name</comment>
+  </data>
+  <data name="GuideLesson_Administrator_capabilities_Title" xml:space="preserve">
+    <value>Provjerite što je instalirano</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_channels_Body" xml:space="preserve">
+    <value>Novi svijet nema kanala, a vodič za igrače upućuje pridošlice da ga pronađu. Stvorite javni kanal za pitanja, primjerice @channel/add Newbie=player, i jedan za administratore, primjerice @channel/add Staff=admin, kojem se mogu pridružiti samo Wizard i Royalty likovi. Zamolite osoblje da se pridruži javnom kanalu kako bi pitanja dobila odgovor.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_channels_Title" xml:space="preserve">
+    <value>Otvorite kanale za pitanja i osoblje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_identity_Action" xml:space="preserve">
+    <value>Identitet igre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_identity_Body" xml:space="preserve">
+    <value>Postavite naziv igre, kratko predstavljanje, žanr i stil Sharpieja. Neka logotip vaše igre bude istaknut. Spremite tek kad pregled prikazuje ono što namjeravate.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_identity_Title" xml:space="preserve">
+    <value>Predstavite svoju igru</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_invite_Body" xml:space="preserve">
+    <value>Pregledajte dovršene i odgođene stavke prije dijeljenja poveznice na igru. Dovršavanje ovog popisa ne objavljuje igru, ne otvara registraciju, ne instalira pakete niti šalje pozivnice.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_invite_Title" xml:space="preserve">
+    <value>Spremno kad i vi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_joining_Action" xml:space="preserve">
+    <value>Postavke pristupa igrača</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_joining_Body" xml:space="preserve">
+    <value>Pregledajte registraciju, pristup za goste i stvaranje likova. Isprobajte način prijave koji namjeravate dijeliti. Ove postavke određuju tko može ući; popis ih ne mijenja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_joining_Title" xml:space="preserve">
+    <value>Provjerite kako se igrači pridružuju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_messages_Action" xml:space="preserve">
+    <value>Poruke igre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_messages_Body" xml:space="preserve">
+    <value>Zaslon za povezivanje prvo je što MU* klijent prikazuje, a poruke dana pozdravljaju svakoga tko se poveže. Navedite naziv igre, objasnite kako stvoriti lik i uklonite ponude koje vaša igra ne nudi, poput prijave za goste kad nema likova za goste.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_messages_Title" xml:space="preserve">
+    <value>Napišite zaslon za povezivanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_rules_Action" xml:space="preserve">
+    <value>Otvori wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_rules_Body" xml:space="preserve">
+    <value>Objavite čitljive stranice dobrodošlice, pravila i vodiča za likove, a zatim ih ovdje povežite. Provjerite ih dok ste odjavljeni; privatne stranice namjerno su izostavljene iz javnog vodiča.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_rules_Title" xml:space="preserve">
+    <value>Dajte igračima jasno polazište</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_staff-character_Action" xml:space="preserve">
+    <value>Stvori lik za osoblje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_staff-character_Body" xml:space="preserve">
+    <value>Račun koji ste preuzeli igra kao #1, God. God prolazi svaku provjeru zaključavanja i dopuštenja, pa jednu pogrešno upisanu naredbu @nuke ili nekontroliranu softcode petlju pokrenutu kao God ništa ne može zaustaviti. Stvorite vlastiti lik za svakodnevni rad osoblja, a zatim, povezani kao #1, upišite @set *&lt;name&gt;=WIZARD. Kao #1 povezujte se samo za ono što samo God može. Ostalom osoblju dodijelite najužu ulogu koja odgovara njihovu poslu, poput builder ili moderator, umjesto wizard.</value>
+    <comment>MT — builder/moderator/wizard kept as role names</comment>
+  </data>
+  <data name="GuideLesson_Administrator_staff-character_Title" xml:space="preserve">
+    <value>Čuvajte #1 za hitne slučajeve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_start-room_Action" xml:space="preserve">
+    <value>Osnovne sobe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_start-room_Body" xml:space="preserve">
+    <value>Novi likovi počinju u sobi player_start, #0 u novom svijetu, a look ondje prvo je što pročitaju. Opišite je, dajte joj jasne izlaze i recite pridošlicama gdje su pomoć i pravila. Glavnu sobu (master room), #2 u novom svijetu, čuvajte samo za globalne naredbe: bez izlaza u nju i bez igrača unutra.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_start-room_Title" xml:space="preserve">
+    <value>Pripremite sobu u koju igrači stižu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_walkthrough_Action" xml:space="preserve">
+    <value>Pregledaj vodič za igrače</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_walkthrough_Body" xml:space="preserve">
+    <value>S pomoću zasebnog, običnog računa isprobajte pridruživanje, odabir lika, look, help i četiri puta prema prethodnom iskustvu. Lik na vašem vlastitom računu dijeli uloge tog računa, a administratorski pregled ne može provjeriti dopuštenja običnog igrača.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_walkthrough_Title" xml:space="preserve">
+    <value>Uđite kao običan igrač</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_channels_Body" xml:space="preserve">
+    <value>Pronađite kanal za pomoć ili početnike kako biste drugim igračima postavili pitanje.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_channels_Title" xml:space="preserve">
+    <value>Pronađite ljude koji mogu pomoći</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_character_Action" xml:space="preserve">
+    <value>Moji likovi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_character_Body" xml:space="preserve">
+    <value>Upotrijebite postojeći lik ako ga imate. Ako ste već igrali ovu igru, preuzmite taj lik umjesto stvaranja duplikata. U suprotnom stvorite lik kad igra to dopusti. Vaš račun može imati više likova; odaberite onoga kojeg želite igrati.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_character_Title" xml:space="preserve">
+    <value>Odaberite koga ćete igrati</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_continue_Action" xml:space="preserve">
+    <value>Istraži igru</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_continue_Body" xml:space="preserve">
+    <value>Koristite help za pregled naredbi igre, look za ponovnu orijentaciju, a pravila i vodič za likove ove igre za njezina očekivanja. Obratite se zajednici kad vam zatreba pomoć. Bilo koji dio ovog vodiča možete preskočiti, zatvoriti ili mu se vratiti.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_continue_Title" xml:space="preserve">
+    <value>Spremni ste za istraživanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_place_Body" xml:space="preserve">
+    <value>Zamislite poslužitelj za igranje uloga na kojem vaš lik može stajati u sobi, upoznavati druge likove i otići kroz izlaz. Sobe opisuju mjesta u zajedničkom svijetu; one nisu Discord kanali. Ono što kažete obično dolazi do ljudi u vašoj sobi.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_place_Title" xml:space="preserve">
+    <value>Svijet koji pomažete pisati</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_sign-in_Action" xml:space="preserve">
+    <value>Prijavite se ili se registrirajte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_sign-in_Body" xml:space="preserve">
+    <value>Vaš je račun vaša privatna prijava. Vaš je lik onaj kojeg drugi igrači upoznaju. Prijavite se ili registrirajte na načine koje ova igra nudi; lozinku računa ne upisujete u okvir za naredbe igre.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_sign-in_Title" xml:space="preserve">
+    <value>Vaš račun otvara vrata</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_speak-act_Body" xml:space="preserve">
+    <value>U terminalu say Hello govori ljudima u vašoj sobi, a pose waves. opisuje kako vaš lik maše. Prikaz Priča, kad je scena dostupna, nudi i načine Govor, OOC i Emit koji vaš tekst uzimaju doslovno; Naredba izvršava sintaksu i izraze igre. Naredba page cilja jednog imenovanog igrača. Ono što vaš lik govori i čini jest u liku (IC); razgovor o igri ili stvarnom svijetu izvan je lika (OOC), pa ga označite kako ova igra traži, primjerice načinom OOC u Priči. Vježba je ovdje lokalna; prije govora uživo provjerite bonton igre.</value>
+    <comment>MT — say Hello / pose waves. kept: literal commands</comment>
+  </data>
+  <data name="GuideLesson_Discord_speak-act_Title" xml:space="preserve">
+    <value>Znajte tko vas čuje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_useful-action_Body" xml:space="preserve">
+    <value>Naredba look traži od igre da opiše gdje se nalazite. Najprije je isprobajte u lokalnoj vježbi. Zatim umetnite look u prazan, povezan okvir za naredbe igre (ili način Naredba u Priči) i sami pritisnite Pošalji. Umetanje ne šalje naredbu niti dovršava ovaj korak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_useful-action_Title" xml:space="preserve">
+    <value>Isprobajte jednu malu naredbu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_world_Action" xml:space="preserve">
+    <value>Otvori „Igraj”</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_world_Body" xml:space="preserve">
+    <value>Odjeljak Igraj otvara terminal za naredbe igre. Kad je scena dostupna, prikaz Priča nudi strukturirani prikaz te scene na istoj vezi. Provjerite svoj trenutačni lik i stanje veze. Potražite opis sobe, tko je ovdje i izlaze. Izlaz pomiče vaš lik; čitanje opisa ne.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_world_Title" xml:space="preserve">
+    <value>Snađite se</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_channels_Body" xml:space="preserve">
+    <value>Pronađite kanal za pomoć ili početnike kako biste drugim igračima postavili pitanje.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_channels_Title" xml:space="preserve">
+    <value>Pronađite ljude koji mogu pomoći</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_character_Action" xml:space="preserve">
+    <value>Moji likovi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_character_Body" xml:space="preserve">
+    <value>Upotrijebite postojeći lik ako ga imate. Ako ste već igrali ovu igru, preuzmite taj lik umjesto stvaranja duplikata. U suprotnom stvorite lik kad igra to dopusti. Vaš račun može imati više likova; odaberite onoga kojeg želite igrati.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_character_Title" xml:space="preserve">
+    <value>Odaberite koga ćete igrati</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_continue_Action" xml:space="preserve">
+    <value>Istraži igru</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_continue_Body" xml:space="preserve">
+    <value>Koristite help za pregled naredbi igre, look za ponovnu orijentaciju, a pravila i vodič za likove ove igre za njezina očekivanja. Obratite se zajednici kad vam zatreba pomoć. Bilo koji dio ovog vodiča možete preskočiti, zatvoriti ili mu se vratiti.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_continue_Title" xml:space="preserve">
+    <value>Spremni ste za istraživanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_place_Body" xml:space="preserve">
+    <value>Istražujte vlastitim tempom. Ovaj vodič ostaje dostupan u Pomoći kad god trebate pregled naredbi ili pomoć u snalaženju.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_place_Title" xml:space="preserve">
+    <value>Svijet koji pomažete pisati</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_sign-in_Action" xml:space="preserve">
+    <value>Prijavite se ili se registrirajte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_sign-in_Body" xml:space="preserve">
+    <value>Vaš je račun vaša privatna prijava. Vaš je lik onaj kojeg drugi igrači upoznaju. Prijavite se ili registrirajte na načine koje ova igra nudi; lozinku računa ne upisujete u okvir za naredbe igre.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_sign-in_Title" xml:space="preserve">
+    <value>Vaš račun otvara vrata</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_speak-act_Body" xml:space="preserve">
+    <value>U terminalu say Hello govori ljudima u vašoj sobi, a pose waves. opisuje kako vaš lik maše. Prikaz Priča, kad je scena dostupna, nudi i načine Govor, OOC i Emit koji vaš tekst uzimaju doslovno; Naredba izvršava sintaksu i izraze igre. Naredba page cilja jednog imenovanog igrača. Ono što vaš lik govori i čini jest u liku (IC); razgovor o igri ili stvarnom svijetu izvan je lika (OOC), pa ga označite kako ova igra traži, primjerice načinom OOC u Priči. Vježba je ovdje lokalna; prije govora uživo provjerite bonton igre.</value>
+    <comment>MT — say Hello / pose waves. kept: literal commands</comment>
+  </data>
+  <data name="GuideLesson_Explore_speak-act_Title" xml:space="preserve">
+    <value>Znajte tko vas čuje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_useful-action_Body" xml:space="preserve">
+    <value>Naredba look traži od igre da opiše gdje se nalazite. Najprije je isprobajte u lokalnoj vježbi. Zatim umetnite look u prazan, povezan okvir za naredbe igre (ili način Naredba u Priči) i sami pritisnite Pošalji. Umetanje ne šalje naredbu niti dovršava ovaj korak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_useful-action_Title" xml:space="preserve">
+    <value>Isprobajte jednu malu naredbu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_world_Action" xml:space="preserve">
+    <value>Otvori „Igraj”</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_world_Body" xml:space="preserve">
+    <value>Odjeljak Igraj otvara terminal za naredbe igre. Kad je scena dostupna, prikaz Priča nudi strukturirani prikaz te scene na istoj vezi. Provjerite svoj trenutačni lik i stanje veze. Potražite opis sobe, tko je ovdje i izlaze. Izlaz pomiče vaš lik; čitanje opisa ne.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_world_Title" xml:space="preserve">
+    <value>Snađite se</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_channels_Body" xml:space="preserve">
+    <value>Pronađite kanal za pomoć ili početnike kako biste drugim igračima postavili pitanje.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_channels_Title" xml:space="preserve">
+    <value>Pronađite ljude koji mogu pomoći</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_continue_Action" xml:space="preserve">
+    <value>Istraži igru</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_continue_Body" xml:space="preserve">
+    <value>Neobavezne aplikacije i paketi razlikuju se od igre do igre. Koristite odjeljke koje ova igra nudi i njihovu vlastitu pomoć; ne pretpostavljajte da su ovdje instalirane naredbe iz neke druge SharpMUSH igre. Pregled uobičajenih naredbi i dalje je dostupan u nastavku. Za potpuniji uvod možete promijeniti polazište.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_continue_Title" xml:space="preserve">
+    <value>Istražite dodatke ove igre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_place_Body" xml:space="preserve">
+    <value>Zadržite svoje MUSH znanje: sobe, izlazi, objekti i softcode i dalje vrijede. Ovaj kratki obilazak obuhvaća web-račun, povezivanje likova i dva prikaza u odjeljku Igraj. Poznati primjeri naredbi ostaju u proširivom pregledu; vježba naredbi nije potrebna.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_place_Title" xml:space="preserve">
+    <value>Samo novosti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_sign-in_Action" xml:space="preserve">
+    <value>Prijavite se ili upravljajte likovima</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_sign-in_Body" xml:space="preserve">
+    <value>Web-račun odvojen je od postojeće lozinke vašeg lika u igri. Prijavite se, a zatim preuzmite postojeći lik umjesto da ga ponovno stvarate. Odaberite povezani lik za igranje; nikada ne upisujte lozinku računa u uređivač naredbi.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_sign-in_Title" xml:space="preserve">
+    <value>Jedan račun, vaši likovi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_world_Action" xml:space="preserve">
+    <value>Otvori „Igraj”</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_world_Body" xml:space="preserve">
+    <value>Terminal zadržava poznato sučelje s pomicanjem teksta. Kad je scena dostupna, Priča nudi zasebne načine Govor, OOC, Emit i Naredba. Za MUSH sintaksu i izraze koristite Naredbu; ostali načini tekst uzimaju doslovno. Promjena prikaza zadržava istu vezu s igrom. Prije slanja provjerite odabrani lik.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_world_Title" xml:space="preserve">
+    <value>Priča ili Terminal: vi birate</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_channels_Body" xml:space="preserve">
+    <value>Pronađite kanal za pomoć ili početnike kako biste drugim igračima postavili pitanje.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_channels_Title" xml:space="preserve">
+    <value>Pronađite ljude koji mogu pomoći</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_character_Action" xml:space="preserve">
+    <value>Moji likovi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_character_Body" xml:space="preserve">
+    <value>Upotrijebite postojeći lik ako ga imate. Ako ste već igrali ovu igru, preuzmite taj lik umjesto stvaranja duplikata. U suprotnom stvorite lik kad igra to dopusti. Vaš račun može imati više likova; odaberite onoga kojeg želite igrati.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_character_Title" xml:space="preserve">
+    <value>Odaberite koga ćete igrati</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_continue_Action" xml:space="preserve">
+    <value>Istraži igru</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_continue_Body" xml:space="preserve">
+    <value>Koristite help za pregled naredbi igre, look za ponovnu orijentaciju, a pravila i vodič za likove ove igre za njezina očekivanja. Obratite se zajednici kad vam zatreba pomoć. Bilo koji dio ovog vodiča možete preskočiti, zatvoriti ili mu se vratiti.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_continue_Title" xml:space="preserve">
+    <value>Spremni ste za istraživanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_place_Body" xml:space="preserve">
+    <value>Ponesite svoje iskustvo igranja uloga. Ovdje igrate lik u trajnom tekstualnom svijetu. Sobe postavljaju okruženje, izlazi povezuju mjesta, a igrači zajedno pišu dijaloge i radnje. Prije pridruživanja sceni pročitajte pravila ove igre.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_place_Title" xml:space="preserve">
+    <value>Svijet koji pomažete pisati</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Action" xml:space="preserve">
+    <value>Prijavite se ili se registrirajte</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Body" xml:space="preserve">
+    <value>Vaš je račun vaša privatna prijava. Vaš je lik onaj kojeg drugi igrači upoznaju. Prijavite se ili registrirajte na načine koje ova igra nudi; lozinku računa ne upisujete u okvir za naredbe igre.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Title" xml:space="preserve">
+    <value>Vaš račun otvara vrata</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_speak-act_Body" xml:space="preserve">
+    <value>Kao za stolom, opišite što vaš lik pokušava i ostavite drugim igračima prostora za odgovor. pose waves. dodaje ime vašeg lika; say Hello govori trenutačnoj sobi. Privatni page dolazi do imenovanog igrača. Razgovor izvan lika (OOC) jasno odvojite od riječi svog lika. Prije pridruživanja dogovorite očekivanja od scene i pročitajte pravila ove igre o pristanku.</value>
+    <comment>MT — say Hello / pose waves. kept: literal commands</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_speak-act_Title" xml:space="preserve">
+    <value>Znajte tko vas čuje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_useful-action_Body" xml:space="preserve">
+    <value>Naredba look traži od igre da opiše gdje se nalazite. Najprije je isprobajte u lokalnoj vježbi. Zatim umetnite look u prazan, povezan okvir za naredbe igre (ili način Naredba u Priči) i sami pritisnite Pošalji. Umetanje ne šalje naredbu niti dovršava ovaj korak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_useful-action_Title" xml:space="preserve">
+    <value>Isprobajte jednu malu naredbu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_world_Action" xml:space="preserve">
+    <value>Otvori „Igraj”</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_world_Body" xml:space="preserve">
+    <value>Za razliku od teme na forumu, soba je mjesto na kojem se vaš lik upravo nalazi. Pročitajte njezin opis i izlaze kako biste postavili scenu. Kad je scena dostupna, prikaz Priča odvaja dijalog i radnje; Terminal zadržava sučelje s pomicanjem teksta. Oba koriste isti lik i istu vezu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_world_Title" xml:space="preserve">
+    <value>Snađite se</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLoading" xml:space="preserve">
+    <value>Učitavanje vodiča…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLoginEntry" xml:space="preserve">
+    <value>Novi ste ovdje? Naučite igrati</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideMyAccount" xml:space="preserve">
+    <value>Moj račun</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideOpenFull" xml:space="preserve">
+    <value>Otvori cijeli vodič ili promijeni polazište</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideOpenGame" xml:space="preserve">
+    <value>Otvori igru</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideOpenPlay" xml:space="preserve">
+    <value>Otvorite odjeljak Igraj i isprobajte u igri</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesBundled" xml:space="preserve">
+    <value>Uključeno uz ovaj poslužitelj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesCheck" xml:space="preserve">
+    <value>Provjerite dostupne naredbe za {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesEmpty" xml:space="preserve">
+    <value>Ovdje nema provjerenih prijedloga paketa za ovaj lik. Drugi paketi ipak mogu biti instalirani; koristite pomoć same igre.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesError" xml:space="preserve">
+    <value>Pomoć igre trenutačno nije dostupna. Upišite help u igri.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesExplanation" xml:space="preserve">
+    <value>Za dodatne značajke ove igre isprobajte:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesLabel" xml:space="preserve">
+    <value>Naredbe paketa za vaš lik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesLoading" xml:space="preserve">
+    <value>Učitavanje pomoći igre…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesReference" xml:space="preserve">
+    <value>Pregled paketa (otvara novu karticu)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesVersion" xml:space="preserve">
+    <value>{0}, verzija {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePageTitle" xml:space="preserve">
+    <value>Prvi koraci — {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePanelLabel" xml:space="preserve">
+    <value>Prvi koraci uz Sharpieja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathDiscordDetail" xml:space="preserve">
+    <value>Upoznajte sobe, likove i naredbe.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathDiscordTitle" xml:space="preserve">
+    <value>Dolazim s Discorda</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathExploreDetail" xml:space="preserve">
+    <value>Uđite odmah. Pomoć je uvijek pri ruci.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathExploreTitle" xml:space="preserve">
+    <value>Radije ću istraživati na svoju ruku</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathMushDetail" xml:space="preserve">
+    <value>Pogledajte po čemu se razlikuje SharpMUSH.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathMushTitle" xml:space="preserve">
+    <value>Poznajem MUSH igre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathRoleplayDetail" xml:space="preserve">
+    <value>Unesite svoje priče u zajednički svijet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathRoleplayTitle" xml:space="preserve">
+    <value>Igram uloge drugdje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeHeading" xml:space="preserve">
+    <value>Najprije isprobajte ovdje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeInvalid" xml:space="preserve">
+    <value>Za ovu vježbu upišite look. Ovdje se ništa ne izvršava u igri.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeLabel" xml:space="preserve">
+    <value>Lokalna vježba naredbi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeLocal" xml:space="preserve">
+    <value>Lokalna vježba — ne šalje se igri.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeResult" xml:space="preserve">
+    <value>Soba za vježbu: sunčano dvorište. Sharpie je ovdje. Svod vodi u vrt. U igri look opisuje vašu stvarnu okolinu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeTry" xml:space="preserve">
+    <value>Isprobaj lokalno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeType" xml:space="preserve">
+    <value>Upišite</value>
+    <comment>MT — label followed by &lt;code&gt;look&lt;/code&gt;</comment>
+  </data>
+  <data name="GuidePreviewNotice" xml:space="preserve">
+    <value>Pregled vodiča za igrače. Ovi odabiri ne mijenjaju vaš napredak. Za provjeru dopuštenja testirajte s običnim igračkim računom.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideQuickstartEntry" xml:space="preserve">
+    <value>Naučite igrati</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReady" xml:space="preserve">
+    <value>Spremni ste za istraživanje. Ovamo se uvijek možete vratiti iz Pomoći.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideRecoveryTitle" xml:space="preserve">
+    <value>Sharpiejev vodič nije dostupan — pokušajte ponovno kad budete spremni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReference" xml:space="preserve">
+    <value>Uobičajene naredbe i tko ih vidi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReload" xml:space="preserve">
+    <value>Ponovno učitaj napredak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReloadProgress" xml:space="preserve">
+    <value>Ponovno učitaj napredak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideRetryConnection" xml:space="preserve">
+    <value>Ponovno se poveži</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideRetryRoster" xml:space="preserve">
+    <value>Ponovno učitaj popis likova</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReturningCharacter" xml:space="preserve">
+    <value>Već ste igrali ovdje?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentity" xml:space="preserve">
+    <value>Predstavite svoju igru</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentityLater" xml:space="preserve">
+    <value>Postavi kasnije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentityLead" xml:space="preserve">
+    <value>Pregledajte uvezeni identitet ili svojoj novoj igri dajte naziv i prvi korak dobrodošlice.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentitySave" xml:space="preserve">
+    <value>Spremi i nastavi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSkip" xml:space="preserve">
+    <value>Zasad preskoči</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSkipped" xml:space="preserve">
+    <value>Preskočeno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStepOf" xml:space="preserve">
+    <value>Korak {0} od {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSteps" xml:space="preserve">
+    <value>Koraci vodiča</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStop" xml:space="preserve">
+    <value>Zaustavi ovaj vodič</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStraightToGame" xml:space="preserve">
+    <value>Idi izravno u igru</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_anime" xml:space="preserve">
+    <value>Anime maskota</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_chibi" xml:space="preserve">
+    <value>Chibi maskota</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_comicbook" xml:space="preserve">
+    <value>Strip maskota</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_kemono" xml:space="preserve">
+    <value>Kemono maskota</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_minimalist" xml:space="preserve">
+    <value>Minimalistička maskota</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_pixel" xml:space="preserve">
+    <value>Pikselna maskota</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideUnderstood" xml:space="preserve">
+    <value>Razumijem</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideWelcomeChecklist" xml:space="preserve">
+    <value>Ova igra ima vlastiti popis za prve korake. Da biste ga vidjeli, upišite</value>
+    <comment>MT — followed by the command in &lt;code&gt;</comment>
+  </data>
+  <data name="GuideWelcomeGame" xml:space="preserve">
+    <value>Dobro došli u {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideWelcomeIntro" xml:space="preserve">
+    <value>Ja sam Sharpie. Mogu vam pomoći da se snađete od prve prijave do prve scene.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideWithSharpie" xml:space="preserve">
+    <value>Uz Sharpieja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyBlocked" xml:space="preserve">
+    <value>Obavijesti su blokirane za ovo web-mjesto. Dopustite ih u postavkama web-mjesta u pregledniku, a zatim ponovno učitajte ovu stranicu.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyChoose" xml:space="preserve">
+    <value>Odaberite što vas obavještava</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceFailed" xml:space="preserve">
+    <value>neuspjelo {0} ({1})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceLastSent" xml:space="preserve">
+    <value>zadnje slanje {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceSince" xml:space="preserve">
+    <value>Uključeno od {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceStale" xml:space="preserve">
+    <value>igra je promijenila ključ: ponovno uključite obavijesti na tom uređaju</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDevices" xml:space="preserve">
+    <value>Vaši uređaji</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDevicesSub" xml:space="preserve">
+    <value>Svi telefoni i računala s uključenim obavijestima za ovaj račun</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyInstall" xml:space="preserve">
+    <value>Instaliraj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyInstallNote" xml:space="preserve">
+    <value>Instalirajte portal kao aplikaciju: otvara se u vlastitom prozoru, a obavijesti prikazuju njegov naziv.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyIntro" xml:space="preserve">
+    <value>Uključite obavijesti na svakom telefonu ili računalu na kojem ih želite. Igra odlučuje što zaslužuje obavijest, a svaki vaš lik bira koje prima.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyIosHowTo" xml:space="preserve">
+    <value>Na iPhoneu i iPadu obavijesti rade samo s početnog zaslona: dodirnite Dijeli, zatim Dodaj na početni zaslon i otvorite portal s nove ikone.</value>
+    <comment>MT — Share/Add to Home Screen given as iOS shows them in Croatian</comment>
+  </data>
+  <data name="NotifyNoDevices" xml:space="preserve">
+    <value>Nijedan uređaj još nema uključene obavijesti.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyOffHere" xml:space="preserve">
+    <value>Obavijesti su isključene na ovom uređaju. Preglednik će zatražiti dopuštenje kad ih uključite.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyOnHere" xml:space="preserve">
+    <value>Obavijesti su ovdje uključene ({0}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyPermissionRefused" xml:space="preserve">
+    <value>Preglednik nije dopustio obavijesti. Dopustite ih za ovo web-mjesto u postavkama preglednika, a zatim pokušajte ponovno.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyRemoveDevice" xml:space="preserve">
+    <value>Isključi obavijesti na uređaju {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifySendTest" xml:space="preserve">
+    <value>Pošalji probnu obavijest</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTestSent" xml:space="preserve">
+    <value>Probna obavijest poslana. Trebala bi stići za nekoliko sekundi.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyThisDevice" xml:space="preserve">
+    <value>Ovaj uređaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyThisDeviceTag" xml:space="preserve">
+    <value>Ovaj uređaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTurnOff" xml:space="preserve">
+    <value>Isključi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTurnOn" xml:space="preserve">
+    <value>Uključi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTurnedOn" xml:space="preserve">
+    <value>Obavijesti su uključene za ovaj uređaj.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyUnsupported" xml:space="preserve">
+    <value>Ovaj preglednik ne može prikazivati obavijesti s web-mjesta.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyWhat" xml:space="preserve">
+    <value>Što vas obavještava</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyWhatNote" xml:space="preserve">
+    <value>Kad niste prisutni, page poruke i nova pošta šalju vam obavijest s pošiljateljem, ali bez sadržaja. Upišite +notify u igri da biste odabrali što obavještava svaki lik i prikazuje li se tekst.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentAllow" xml:space="preserve">
+    <value>Dopusti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentAsks" xml:space="preserve">
+    <value>{0} želi djelovati kao vaš lik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentCharacter" xml:space="preserve">
+    <value>Djelovala bi kao {0}. Da biste dopustili drugi lik, najprije se prebacite na njega.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentDeny" xml:space="preserve">
+    <value>Odbij</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentReturning" xml:space="preserve">
+    <value>Vraćanje u aplikaciju…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentRevoke" xml:space="preserve">
+    <value>Ovo možete opozvati bilo kada na stranici svog računa.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentTitle" xml:space="preserve">
+    <value>Dopuštanje aplikacije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="StoryNewPoses" xml:space="preserve">
+    <value>Nove poze</value>
+    <comment>MT</comment>
+  </data>
+  <data name="StoryPoseDeleted" xml:space="preserve">
+    <value>Izbrisano:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppAsksToChange" xml:space="preserve">
+    <value>{0} traži izmjenu svijeta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppChangesAsCharacter" xml:space="preserve">
+    <value>Svaka se izmjena radi kao vaš lik, putem igrinih vlastitih naredbi za gradnju.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppConfigUnavailable" xml:space="preserve">
+    <value>Konfiguracija aplikacije nije dostupna ili ju treba ažurirati.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppHostFailed" xml:space="preserve">
+    <value>Domaćin aplikacije nije se mogao učitati.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppMakeChanges" xml:space="preserve">
+    <value>{count, plural, one {Napravi # izmjenu} few {Napravi # izmjene} other {Napravi # izmjena}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_ConversionError" xml:space="preserve">
+    <value>Pogreška pretvorbe: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_ConversionFailed" xml:space="preserve">
+    <value>Pretvorba iz {0} u {1} nije uspjela: {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_ConversionNotImplemented" xml:space="preserve">
+    <value>Pretvorba u tip {0} nije implementirana</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidBoolean" xml:space="preserve">
+    <value>Nije valjana logička vrijednost</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidDateTime" xml:space="preserve">
+    <value>Nije valjan datum i vrijeme</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidGUID" xml:space="preserve">
+    <value>Nije valjan GUID</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidNumber" xml:space="preserve">
+    <value>Nije valjan broj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidTimeSpan" xml:space="preserve">
+    <value>Nije valjano vremensko razdoblje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidType" xml:space="preserve">
+    <value>Nevažeća vrijednost tipa {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_NotValueOf" xml:space="preserve">
+    <value>Nije vrijednost tipa {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_UnableToConvert" xml:space="preserve">
+    <value>Nije moguće pretvoriti u {0} iz tipa {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HeatMap_Less" xml:space="preserve">
+    <value>Manje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HeatMap_More" xml:space="preserve">
+    <value>Više</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudAlert_Close" xml:space="preserve">
+    <value>Zatvori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_NextMonth" xml:space="preserve">
+    <value>Sljedeći mjesec {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_NextYear" xml:space="preserve">
+    <value>Sljedeća godina {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_Open" xml:space="preserve">
+    <value>Otvori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_PrevMonth" xml:space="preserve">
+    <value>Prethodni mjesec {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_PrevYear" xml:space="preserve">
+    <value>Prethodna godina {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBreadcrumbs_Label" xml:space="preserve">
+    <value>Navigacijski put</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudCarousel_Index" xml:space="preserve">
+    <value>Indeks {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudCarousel_Next" xml:space="preserve">
+    <value>Sljedeće</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudCarousel_Previous" xml:space="preserve">
+    <value>Prethodno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudChip_Close" xml:space="preserve">
+    <value>Zatvori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_AlphaSlider" xml:space="preserve">
+    <value>Klizač prozirnosti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_Close" xml:space="preserve">
+    <value>Zatvori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_GridView" xml:space="preserve">
+    <value>Mreža</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_HideSwatches" xml:space="preserve">
+    <value>Sakrij uzorke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_HueSlider" xml:space="preserve">
+    <value>Klizač nijanse</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_ModeSwitch" xml:space="preserve">
+    <value>Promijeni način</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_Open" xml:space="preserve">
+    <value>Otvori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_PaletteView" xml:space="preserve">
+    <value>Paleta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_ShowSwatches" xml:space="preserve">
+    <value>Prikaži uzorke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_SpectrumView" xml:space="preserve">
+    <value>Spektar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_AllItems" xml:space="preserve">
+    <value>Sve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_FirstPage" xml:space="preserve">
+    <value>Prva stranica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_InfoFormat" xml:space="preserve">
+    <value>{0}-{1} od {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_LastPage" xml:space="preserve">
+    <value>Posljednja stranica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_NextPage" xml:space="preserve">
+    <value>Sljedeća stranica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_PreviousPage" xml:space="preserve">
+    <value>Prethodna stranica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_RowsPerPage" xml:space="preserve">
+    <value>Redaka po stranici:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_AddFilter" xml:space="preserve">
+    <value>Dodaj filtar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Apply" xml:space="preserve">
+    <value>Primijeni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Cancel" xml:space="preserve">
+    <value>Odustani</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Clear" xml:space="preserve">
+    <value>Očisti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ClearFilter" xml:space="preserve">
+    <value>Očisti filtar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_CollapseAllGroups" xml:space="preserve">
+    <value>Sažmi sve grupe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_CollapseGroup" xml:space="preserve">
+    <value>Sažmi grupu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Column" xml:space="preserve">
+    <value>Stupac</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Columns" xml:space="preserve">
+    <value>Stupci</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Contains" xml:space="preserve">
+    <value>sadrži</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_EndsWith" xml:space="preserve">
+    <value>završava s</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_EqualSign" xml:space="preserve">
+    <value>=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Equals" xml:space="preserve">
+    <value>jednako</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ExpandAllGroups" xml:space="preserve">
+    <value>Proširi sve grupe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ExpandGroup" xml:space="preserve">
+    <value>Proširi grupu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_False" xml:space="preserve">
+    <value>netočno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Filter" xml:space="preserve">
+    <value>Filtar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_FilterValue" xml:space="preserve">
+    <value>Vrijednost filtra</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_GreaterThanOrEqualSign" xml:space="preserve">
+    <value>&gt;=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_GreaterThanSign" xml:space="preserve">
+    <value>&gt;</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Group" xml:space="preserve">
+    <value>Grupiraj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Hide" xml:space="preserve">
+    <value>Sakrij</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_HideAll" xml:space="preserve">
+    <value>Sakrij sve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Is" xml:space="preserve">
+    <value>je</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsAfter" xml:space="preserve">
+    <value>je nakon</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsBefore" xml:space="preserve">
+    <value>je prije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsEmpty" xml:space="preserve">
+    <value>je prazno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsNot" xml:space="preserve">
+    <value>nije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsNotEmpty" xml:space="preserve">
+    <value>nije prazno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsOnOrAfter" xml:space="preserve">
+    <value>je na dan ili nakon</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsOnOrBefore" xml:space="preserve">
+    <value>je na dan ili prije</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_LessThanOrEqualSign" xml:space="preserve">
+    <value>&lt;=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_LessThanSign" xml:space="preserve">
+    <value>&lt;</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Loading" xml:space="preserve">
+    <value>Učitavanje…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_MoveDown" xml:space="preserve">
+    <value>Pomakni dolje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_MoveUp" xml:space="preserve">
+    <value>Pomakni gore</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_NotContains" xml:space="preserve">
+    <value>ne sadrži</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_NotEqualSign" xml:space="preserve">
+    <value>!=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_NotEquals" xml:space="preserve">
+    <value>nije jednako</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_OpenFilters" xml:space="preserve">
+    <value>Otvori filtre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Operator" xml:space="preserve">
+    <value>Operator</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_RefreshData" xml:space="preserve">
+    <value>Osvježi podatke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_RemoveFilter" xml:space="preserve">
+    <value>Ukloni filtar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Save" xml:space="preserve">
+    <value>Spremi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_SelectAllRows" xml:space="preserve">
+    <value>Odaberi sve retke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_SelectRow" xml:space="preserve">
+    <value>Odaberi redak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ShowAll" xml:space="preserve">
+    <value>Prikaži sve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ShowColumnOptions" xml:space="preserve">
+    <value>Mogućnosti stupca</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Sort" xml:space="preserve">
+    <value>Sortiraj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_StartsWith" xml:space="preserve">
+    <value>počinje s</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ToggleGroupExpansion" xml:space="preserve">
+    <value>Proširi/sažmi grupu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_True" xml:space="preserve">
+    <value>točno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Ungroup" xml:space="preserve">
+    <value>Razgrupiraj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Unsort" xml:space="preserve">
+    <value>Poništi sortiranje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Value" xml:space="preserve">
+    <value>Vrijednost</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDateRangePicker_End" xml:space="preserve">
+    <value>Završni datum</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDateRangePicker_Start" xml:space="preserve">
+    <value>Početni datum</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDialog_Close" xml:space="preserve">
+    <value>Zatvori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Cancel" xml:space="preserve">
+    <value>Odustani</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Exit" xml:space="preserve">
+    <value>U redu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Text" xml:space="preserve">
+    <value>Napustiti stranicu? Promjene koje ste napravili možda neće biti spremljene.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Title" xml:space="preserve">
+    <value>Potvrda napuštanja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_Button" xml:space="preserve">
+    <value>Pregledaj datoteke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_DragAndDrop" xml:space="preserve">
+    <value>Povucite datoteke ovamo ili kliknite za pregledavanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_FileSizeError" xml:space="preserve">
+    <value>Datoteka '{0}' premašuje najveću dopuštenu veličinu od {1} bajtova.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_MaximumFileCountExceeded" xml:space="preserve">
+    <value>Odabrano datoteka: {0}, što premašuje najviše dopuštenih {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFormComponent_Required" xml:space="preserve">
+    <value>Obavezno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudInput_Clear" xml:space="preserve">
+    <value>Očisti</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudInput_Decrement" xml:space="preserve">
+    <value>Smanji</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudInput_Increment" xml:space="preserve">
+    <value>Povećaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudNavGroup_ToggleExpand" xml:space="preserve">
+    <value>Proširi/sažmi: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPageContentNavigation_NavMenu" xml:space="preserve">
+    <value>Sadržaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_CurrentPage" xml:space="preserve">
+    <value>Trenutna stranica {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_FirstPage" xml:space="preserve">
+    <value>Prva stranica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_LastPage" xml:space="preserve">
+    <value>Posljednja stranica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_NextPage" xml:space="preserve">
+    <value>Sljedeća stranica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_PageIndex" xml:space="preserve">
+    <value>Stranica {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_PreviousPage" xml:space="preserve">
+    <value>Prethodna stranica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRangeInput_End" xml:space="preserve">
+    <value>Kraj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRangeInput_Start" xml:space="preserve">
+    <value>Početak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRatingItem_Label" xml:space="preserve">
+    <value>Ocjena {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRating_Label" xml:space="preserve">
+    <value>Ocjena</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudSelect_SelectAll" xml:space="preserve">
+    <value>Odaberi sve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudSnackbar_Close" xml:space="preserve">
+    <value>Zatvori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudSplitPanel_ResizePanels" xml:space="preserve">
+    <value>Promijeni veličinu ploča</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Complete" xml:space="preserve">
+    <value>Završi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Next" xml:space="preserve">
+    <value>Dalje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Previous" xml:space="preserve">
+    <value>Natrag</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Reset" xml:space="preserve">
+    <value>Resetiraj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Skip" xml:space="preserve">
+    <value>Preskoči</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_FirstPage" xml:space="preserve">
+    <value>Prva stranica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_LastPage" xml:space="preserve">
+    <value>Posljednja stranica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_NextPage" xml:space="preserve">
+    <value>Sljedeća stranica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_PreviousPage" xml:space="preserve">
+    <value>Prethodna stranica</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_CancelEditRow" xml:space="preserve">
+    <value>Odustani od uređivanja</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_CollapseGroup" xml:space="preserve">
+    <value>Sažmi grupu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_CommitRow" xml:space="preserve">
+    <value>Potvrdi uređivanje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_EditRow" xml:space="preserve">
+    <value>Uredi redak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_ExpandGroup" xml:space="preserve">
+    <value>Proširi grupu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_Loading" xml:space="preserve">
+    <value>Učitavanje…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_SelectAllRows" xml:space="preserve">
+    <value>Odaberi sve retke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_SelectGroup" xml:space="preserve">
+    <value>Odaberi grupu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_SelectRow" xml:space="preserve">
+    <value>Odaberi redak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_AddTab" xml:space="preserve">
+    <value>Dodaj karticu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_CloseTab" xml:space="preserve">
+    <value>Zatvori karticu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollDown" xml:space="preserve">
+    <value>Pomakni kartice dolje</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollLeft" xml:space="preserve">
+    <value>Pomakni kartice ulijevo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollRight" xml:space="preserve">
+    <value>Pomakni kartice udesno</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollUp" xml:space="preserve">
+    <value>Pomakni kartice gore</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTimePicker_Open" xml:space="preserve">
+    <value>Otvori</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTreeView_CollapseItem" xml:space="preserve">
+    <value>Sažmi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTreeView_ExpandItem" xml:space="preserve">
+    <value>Proširi</value>
+    <comment>MT</comment>
+  </data>
 </root>

@@ -70,7 +70,7 @@ else
                                         <MudIcon Icon="@Icons.Material.Filled.PriorityHigh" Color="Color.Error" Size="Size.Small" Title="@Loc["Urgent"]" />
                                     }
                                     <span class="mail-row-from">@m.From</span>
-                                    <span class="mail-row-date">@m.DateSent.LocalDateTime.ToString("MMM d")</span>
+                                    <span class="mail-row-date">@DateDisplay.MonthDay(m.DateSent)</span>
                                 </span>
                                 <span class="mail-row-subject">@m.Subject</span>
                             </button>
@@ -91,7 +91,7 @@ else
                         <div class="mail-reading-meta">
                             <div class="mail-reading-subject">@_selected.Subject</div>
                             <div class="mail-reading-from">@Loc["From"]: @_selected.From</div>
-                            <div class="mail-reading-date">@_selected.DateSent.LocalDateTime.ToString("dddd, MMMM d yyyy, h:mm tt")</div>
+                            <div class="mail-reading-date">@DateDisplay.LongDateTime(_selected.DateSent)</div>
                         </div>
                     </div>
                     <div class="mail-reading-body">

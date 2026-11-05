@@ -7453,4 +7453,1996 @@
   <data name="NavHelpLearnSub" xml:space="preserve"><value>加入与游玩的引导教程。</value></data>
   <data name="NavHelpGettingStartedSub" xml:space="preserve"><value>移动、交谈、频道和邮件。</value></data>
   <data name="NavHelpNewbieSub" xml:space="preserve"><value>命令中的 [ ] 和 &lt; &gt; 是什么意思。</value></data>
+  <data name="GuideAdminChecked" xml:space="preserve">
+    <value>我已核实</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminContinue" xml:space="preserve">
+    <value>继续清单</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDashboardLead" xml:space="preserve">
+    <value>邀请任何人之前，请先完成这些步骤。每一步都核实或推迟后，此框会自动消失。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDefer" xml:space="preserve">
+    <value>推迟</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDeferred" xml:space="preserve">
+    <value>已推迟</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDescription" xml:space="preserve">
+    <value>— 游戏介绍与新手引导清单。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminEntry" xml:space="preserve">
+    <value>为新玩家做准备</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminHeading" xml:space="preserve">
+    <value>为您的第一批玩家做准备</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminIntro" xml:space="preserve">
+    <value>这是为您的游戏单独准备的清单。能完成的先完成，需要斟酌的先推迟，需要时随时回来。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminLoading" xml:space="preserve">
+    <value>正在加载您的清单…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminPlayerChecked" xml:space="preserve">
+    <value>我已用普通玩家账号检查过</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminPlayingGod" xml:space="preserve">
+    <value>您当前正在扮演 #1。日常工作请切换到您的管理角色。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminPreview" xml:space="preserve">
+    <value>预览玩家流程，不影响您的进度</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminProgress" xml:space="preserve">
+    <value>已完成 {0}/{1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminReload" xml:space="preserve">
+    <value>重新加载清单</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminSummary" xml:space="preserve">
+    <value>已核实 {0} 项；已推迟 {1} 项。清单中的选择不会更改您的游戏设置和软件包权限。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminTitle" xml:space="preserve">
+    <value>为玩家做准备</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminTodo" xml:space="preserve">
+    <value>待办</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminVerified" xml:space="preserve">
+    <value>已核实</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtwork" xml:space="preserve">
+    <value>Sharpie 插图</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtworkFull" xml:space="preserve">
+    <value>完整</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtworkNone" xml:space="preserve">
+    <value>不显示插图</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtworkReduced" xml:space="preserve">
+    <value>精简</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideBack" xml:space="preserve">
+    <value>返回</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideBackToGame" xml:space="preserve">
+    <value>返回游戏</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsAudience" xml:space="preserve">
+    <value>消息会发送给所有收听该频道的人，而不仅是您所在的房间。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsChat" xml:space="preserve">
+    <value>提出您的问题。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsDescription" xml:space="preserve">
+    <value>加入前请先阅读频道说明。将 NAME 替换为游戏中显示的频道。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsDiscover" xml:space="preserve">
+    <value>频道把不同房间的人联系在一起。在“游戏”中，“浏览频道”会打开频道浏览器。游戏通常有新手、帮助或社交频道；名称和访问规则因游戏而异。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsJoin" xml:space="preserve">
+    <value>加入该频道。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsList" xml:space="preserve">
+    <value>查找频道。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsName" xml:space="preserve">
+    <value>将 NAME 替换为列表中的频道。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsTitle" xml:space="preserve">
+    <value>找到能帮忙的人</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterConnectionFailed" xml:space="preserve">
+    <value>您的角色已保存，但无法连接到游戏。请重试连接，或返回账号稍后再玩。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterOptions" xml:space="preserve">
+    <value>可用选项由游戏决定。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterRosterFailed" xml:space="preserve">
+    <value>您的角色已保存，但无法刷新角色列表。请重试以继续使用该角色；它不会被重复创建。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterRosterUnavailable" xml:space="preserve">
+    <value>无法加载您的角色。请在创建或认领角色之前重试，以便保留您现有的角色和当前选择。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChoosePath" xml:space="preserve">
+    <value>选择您的起点</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideClaimCharacter" xml:space="preserve">
+    <value>认领您的角色</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideClose" xml:space="preserve">
+    <value>关闭指南</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideComingFrom" xml:space="preserve">
+    <value>您之前玩过什么？</value>
+    <comment>MT — rendered as 'what have you played before?' — the question asks which background the player comes from.</comment>
+  </data>
+  <data name="GuideCommand_channel_list_Audience" xml:space="preserve">
+    <value>仅您自己</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_list_Meaning" xml:space="preserve">
+    <value>发现可见的频道</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_on_Audience" xml:space="preserve">
+    <value>可能会向频道宣布您已加入</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_on_Meaning" xml:space="preserve">
+    <value>加入允许您进入的频道</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_chat_Audience" xml:space="preserve">
+    <value>收听该频道的人，无论身在何处</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_chat_Meaning" xml:space="preserve">
+    <value>在频道中发言</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_describe_Audience" xml:space="preserve">
+    <value>任何查看您的人</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_describe_Meaning" xml:space="preserve">
+    <value>设置别人查看您时看到的内容</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_Audience" xml:space="preserve">
+    <value>仅您自己</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_Meaning" xml:space="preserve">
+    <value>阅读命令帮助</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_say_Audience" xml:space="preserve">
+    <value>仅您自己</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_say_Meaning" xml:space="preserve">
+    <value>了解某个命令的用法</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_home_Audience" xml:space="preserve">
+    <value>您离开和到达的房间里的人</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_home_Meaning" xml:space="preserve">
+    <value>迷路时回到您的家</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_inventory_Audience" xml:space="preserve">
+    <value>仅您自己</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_inventory_Meaning" xml:space="preserve">
+    <value>列出您携带的物品</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_look_Audience" xml:space="preserve">
+    <value>仅您自己</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_look_Meaning" xml:space="preserve">
+    <value>描述您当前所在的房间</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_page_Audience" xml:space="preserve">
+    <value>一位指定的玩家</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_page_Meaning" xml:space="preserve">
+    <value>发送私信</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_pose_Audience" xml:space="preserve">
+    <value>您所在房间里的人</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_pose_Meaning" xml:space="preserve">
+    <value>描述您角色的动作</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_say_Audience" xml:space="preserve">
+    <value>您所在房间里的人</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_say_Meaning" xml:space="preserve">
+    <value>以您角色的身份说话</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_who_Audience" xml:space="preserve">
+    <value>仅您自己</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_who_Meaning" xml:space="preserve">
+    <value>查看游戏允许您看到的在线玩家</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCompanionTitle" xml:space="preserve">
+    <value>与 Sharpie 同行：{0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextAccount" xml:space="preserve">
+    <value>您的账号和角色</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextCharacter" xml:space="preserve">
+    <value>您当前的角色是 {0}。您在游戏中发送的命令都使用此角色。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextChooseCharacter" xml:space="preserve">
+    <value>您已登录。加入游戏前，请选择或创建一个角色。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextFeatures" xml:space="preserve">
+    <value>探索本游戏</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextScenes" xml:space="preserve">
+    <value>场景</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextScenesDescription" xml:space="preserve">
+    <value>浏览本游戏记录的故事。能否加入某个场景取决于其访问规则。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextSignedOut" xml:space="preserve">
+    <value>无需登录即可阅读本指南。准备好加入游戏时再登录。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextWiki" xml:space="preserve">
+    <value>Wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextWikiDescription" xml:space="preserve">
+    <value>阅读本游戏向您开放的背景设定和页面。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueAccept" xml:space="preserve">
+    <value>继续该指南</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueBrowser" xml:space="preserve">
+    <value>继续浏览器中的指南</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueDecline" xml:space="preserve">
+    <value>保留我账号中的进度</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueQuestion" xml:space="preserve">
+    <value>您在登录前已在此浏览器中开始了一份指南。要将该学习进度添加到您的账号吗？</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCoreReference" xml:space="preserve">
+    <value>这些是核心命令。游戏可以对其进行定制；请以 help 为准。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCreateCharacter" xml:space="preserve">
+    <value>创建角色</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideDraftHint" xml:space="preserve">
+    <value>由您决定何时发送。现有草稿不会被改动。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorBrowserSave" xml:space="preserve">
+    <value>浏览器无法保存此选择，它仅在本次访问中有效。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorChoice" xml:space="preserve">
+    <value>该指南选项不可用。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorConflict" xml:space="preserve">
+    <value>您的指南已在另一个标签页中更改。请先重新加载进度，再做其他选择。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorLoad" xml:space="preserve">
+    <value>无法加载指南进度。请重试以继续。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorSave" xml:space="preserve">
+    <value>无法保存该指南选择。您之前的进度未受影响；连接后请重试。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorUnavailable" xml:space="preserve">
+    <value>游戏的指南信息不可用。连接恢复后请重试。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorVersion" xml:space="preserve">
+    <value>此已保存的指南使用了不受支持的版本。您的偏好设置已保留；请在更新客户端后重新加载。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideFreshCharacter" xml:space="preserve">
+    <value>从头开始？</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideGameGuides" xml:space="preserve">
+    <value>本游戏的指南</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideHelpEntry" xml:space="preserve">
+    <value>学习玩法 / 更换指南</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideHelpIndexEntry" xml:space="preserve">
+    <value>学习玩法</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideHelpReturn" xml:space="preserve">
+    <value>您随时可以在“帮助”中找到本指南。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityAppearance" xml:space="preserve">
+    <value>外观设置</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityArtFallback" xml:space="preserve">
+    <value>在您所选风格和类型的插图就绪之前，先显示默认的 Sharpie。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityArtworkHint" xml:space="preserve">
+    <value>玩家可以精简或隐藏插图。游戏徽标另行设置，见</value>
+    <comment>MT — sentence continues into the GuideIdentityAppearance link.</comment>
+  </data>
+  <data name="GuideIdentityCharacterPage" xml:space="preserve">
+    <value>角色指南 wiki 页面</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityGenreHint" xml:space="preserve">
+    <value>选择游戏的 MSSP 类型和子类型。Sharpie 会根据这些选择显示插图；都不适用时请选“None”。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityGenres" xml:space="preserve">
+    <value>类型</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityIntroduction" xml:space="preserve">
+    <value>给新玩家的简短欢迎语</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityLabel" xml:space="preserve">
+    <value>游戏介绍</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityLoadEmpty" xml:space="preserve">
+    <value>未返回任何指南设置。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityLoading" xml:space="preserve">
+    <value>正在加载游戏的现有设置…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityName" xml:space="preserve">
+    <value>游戏名称</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityNoArt" xml:space="preserve">
+    <value>此风格尚无已审核的插图。文字指南仍可使用。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityPreview" xml:space="preserve">
+    <value>玩家欢迎语预览</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityPreviewLabel" xml:space="preserve">
+    <value>玩家欢迎语预览</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityRetry" xml:space="preserve">
+    <value>重新加载设置</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityRulesPage" xml:space="preserve">
+    <value>规则 wiki 页面</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySave" xml:space="preserve">
+    <value>保存游戏介绍</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySaveEmpty" xml:space="preserve">
+    <value>未返回任何已保存的设置。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySaved" xml:space="preserve">
+    <value>已保存。公开指南将使用这些设置。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySaving" xml:space="preserve">
+    <value>正在保存…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterAdventure" xml:space="preserve">
+    <value>冒险</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterAdventureText" xml:space="preserve">
+    <value>欢迎来到 {0}。您的角色将成为怎样的人？让好奇心带您走进一段新的故事。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterHint" xml:space="preserve">
+    <value>选择一个模板来替换上方的欢迎语，再加以修改，让它成为您自己的。准备好后保存。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterNewPlayers" xml:space="preserve">
+    <value>新玩家</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterNewPlayersText" xml:space="preserve">
+    <value>欢迎来到 {0}。第一次接触文字角色扮演？从一个角色构想和一点好奇心开始吧。每个故事都有一个起点。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterRelaxed" xml:space="preserve">
+    <value>轻松角色扮演</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterRelaxedText" xml:space="preserve">
+    <value>欢迎来到 {0}。花点时间安顿下来，构想一个角色，找到一个您想讲述的故事。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterStories" xml:space="preserve">
+    <value>合作故事</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterStoriesText" xml:space="preserve">
+    <value>欢迎来到 {0}。带上一个角色，分享一个想法，想象我们可以一起讲述的故事。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarters" xml:space="preserve">
+    <value>欢迎语模板</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStyle" xml:space="preserve">
+    <value>Sharpie 风格</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySubgenres" xml:space="preserve">
+    <value>子类型</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityThisGame" xml:space="preserve">
+    <value>本游戏</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityVisibility" xml:space="preserve">
+    <value>只有在服务器检查过可见性和 wiki 阅读器后，wiki 链接才会显示。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityWelcomePage" xml:space="preserve">
+    <value>欢迎 wiki 页面</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityWikiHint" xml:space="preserve">
+    <value>使用 namespace/slug 格式。只有未登录也能阅读的页面才会出现在公开指南中。留空则不显示该项。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityYourGame" xml:space="preserve">
+    <value>您的游戏</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideInsertLook" xml:space="preserve">
+    <value>将 look 插入命令框</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideInsertUnavailable" xml:space="preserve">
+    <value>请先连接到游戏，并发送或清除现有草稿。未做任何更改或发送。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideInserted" xml:space="preserve">
+    <value>look 已在命令框中。准备好后请按“发送”。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideKnown" xml:space="preserve">
+    <value>我已经会了</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_backups_Action" xml:space="preserve">
+    <value>远程备份</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_backups_Body" xml:space="preserve">
+    <value>运行一次 @backup，并确认 @backup/list 中显示了该副本。设置 SHARPMUSH_BACKUP_INTERVAL 以定时备份，并在本机之外保留一份副本；与原数据位于同一磁盘的副本无法在磁盘损坏时幸免。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_backups_Title" xml:space="preserve">
+    <value>开放之前先备份</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_capabilities_Action" xml:space="preserve">
+    <value>检查软件包</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_capabilities_Body" xml:space="preserve">
+    <value>检查已安装的软件包及其自带的帮助。通用的场景或 Discord 功能并不代表某个 softcode 命令一定存在。安装软件包仍需经过常规的审核与确认。如果已安装 Onboarding 软件包，请将游戏自己的步骤添加到其 +welcome 清单中。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_capabilities_Title" xml:space="preserve">
+    <value>检查已安装的内容</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_channels_Body" xml:space="preserve">
+    <value>新世界没有任何频道，但玩家指南会引导新人去找一个。请创建一个用于提问的公开频道，例如 @channel/add Newbie=player，以及一个管理员频道，例如 @channel/add Staff=admin，只有 wizard 和 royalty 可以加入。请您的管理人员加入公开频道，以便问题有人解答。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_channels_Title" xml:space="preserve">
+    <value>开设提问频道和管理频道</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_identity_Action" xml:space="preserve">
+    <value>游戏形象</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_identity_Body" xml:space="preserve">
+    <value>设置游戏名称、简短介绍、类型和 Sharpie 风格。让游戏徽标保持醒目。确认预览符合您的意图后再保存。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_identity_Title" xml:space="preserve">
+    <value>介绍您的游戏</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_invite_Body" xml:space="preserve">
+    <value>分享游戏链接之前，请检查已完成和已推迟的项目。完成此清单不会发布游戏、开放注册、安装软件包或发送邀请。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_invite_Title" xml:space="preserve">
+    <value>随时可以开始</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_joining_Action" xml:space="preserve">
+    <value>玩家访问设置</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_joining_Body" xml:space="preserve">
+    <value>检查注册、访客访问和角色创建设置。试用您打算分享的登录方式。这些设置决定谁能进入；清单不会更改它们。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_joining_Title" xml:space="preserve">
+    <value>检查玩家如何加入</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_messages_Action" xml:space="preserve">
+    <value>游戏消息</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_messages_Body" xml:space="preserve">
+    <value>连接画面是 MU* 客户端显示的第一样东西，而每日消息会向每位连接者问候。写明游戏名称、说明如何创建角色，并删除游戏并不提供的选项，例如没有访客角色时的访客登录。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_messages_Title" xml:space="preserve">
+    <value>编写连接画面</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_rules_Action" xml:space="preserve">
+    <value>打开 wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_rules_Body" xml:space="preserve">
+    <value>发布可公开阅读的欢迎、规则和角色指南页面，然后在此处链接。请在未登录状态下检查；私有页面会被有意排除在公开指南之外。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_rules_Title" xml:space="preserve">
+    <value>给玩家一个清晰的起点</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_staff-character_Action" xml:space="preserve">
+    <value>创建管理角色</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_staff-character_Body" xml:space="preserve">
+    <value>您认领的账号扮演的是 #1，即 God。God 能通过所有锁和权限检查，因此以 God 身份打错一个 @nuke 或运行失控的 softcode 循环，都没有任何东西能阻止。请为日常管理工作创建一个自己的角色，然后以 #1 身份连接并输入 @set *&lt;name&gt;=WIZARD。只有在做唯有 God 才能做的事时才以 #1 连接。给其他管理人员分配最符合其职责的最小角色，例如 builder 或 moderator，而不是 wizard。</value>
+    <comment>MT — commands, God, builder, moderator and wizard kept as typed.</comment>
+  </data>
+  <data name="GuideLesson_Administrator_staff-character_Title" xml:space="preserve">
+    <value>#1 留作紧急用途</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_start-room_Action" xml:space="preserve">
+    <value>核心房间</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_start-room_Body" xml:space="preserve">
+    <value>新角色从 player_start 房间开始（新世界中为 #0），在那里执行 look 是他们读到的第一段内容。请描述这个房间，设置清晰的出口，并告诉新人哪里可以获得帮助、查看规则。master room（新世界中为 #2）只用于全局命令：不要有通往它的出口，里面也不要有玩家。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_start-room_Title" xml:space="preserve">
+    <value>准备玩家到达的房间</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_walkthrough_Action" xml:space="preserve">
+    <value>预览玩家指南</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_walkthrough_Body" xml:space="preserve">
+    <value>使用一个独立的普通账号，试着加入游戏、选择角色、执行 look 和 help，并体验四种熟悉程度路径。您自己账号下的角色会共享该账号的权限组，管理员预览无法验证普通玩家的权限。</value>
+    <comment>MT — 'roles' rendered 权限组, as elsewhere in this locale.</comment>
+  </data>
+  <data name="GuideLesson_Administrator_walkthrough_Title" xml:space="preserve">
+    <value>以普通玩家身份走一遍</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_channels_Body" xml:space="preserve">
+    <value>找到一个帮助或新手频道，向其他玩家提问。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_channels_Title" xml:space="preserve">
+    <value>找到能帮忙的人</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_character_Action" xml:space="preserve">
+    <value>我的角色</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_character_Body" xml:space="preserve">
+    <value>如果已有角色，请直接使用。如果您以前玩过本游戏，请认领那个角色，而不要重复创建。否则，在游戏允许时创建一个角色。您的账号可以拥有多个角色；选择您想扮演的那个。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_character_Title" xml:space="preserve">
+    <value>选择您要扮演的角色</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_continue_Action" xml:space="preserve">
+    <value>探索游戏</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_continue_Body" xml:space="preserve">
+    <value>用 help 查看游戏的命令参考，用 look 重新确认方位，并通过本游戏的规则和角色指南了解它的要求。需要帮助时请向社区求助。您可以跳过、关闭或返回本指南的任何部分。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_continue_Title" xml:space="preserve">
+    <value>您已准备好探索</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_place_Body" xml:space="preserve">
+    <value>想象一个角色扮演服务器：您的角色可以站在房间里，结识其他角色，并通过出口离开。房间描述的是共享世界中的地点，而不是 Discord 频道。您说的话通常会传达给同一房间里的人。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_place_Title" xml:space="preserve">
+    <value>一个由您共同书写的世界</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_sign-in_Action" xml:space="preserve">
+    <value>登录或注册</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_sign-in_Body" xml:space="preserve">
+    <value>账号是您私人的登录凭据；角色是其他玩家见到的您。请使用本游戏提供的方式登录或注册；不要在游戏命令框中输入账号密码。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_sign-in_Title" xml:space="preserve">
+    <value>账号为您打开大门</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_speak-act_Body" xml:space="preserve">
+    <value>在终端中，say Hello 会对房间里的人说话，pose waves. 会描述您的角色在挥手。有场景时，“故事”视图还提供“说”“场外”和“描述”模式，按原样处理您的文字；“命令”模式则执行游戏语法和表达式。page 只发给一位指定的玩家。角色所说所做属于角色内（IC）；谈论游戏或现实世界属于角色外（OOC），请按本游戏要求的方式标注，例如使用“故事”的“场外”模式。这里的练习只在本地进行；正式发言前请先了解游戏礼仪。</value>
+    <comment>MT — say Hello / pose waves. / page are commands, kept literal; mode names match NavPlayType* (说/场外/描述/命令).</comment>
+  </data>
+  <data name="GuideLesson_Discord_speak-act_Title" xml:space="preserve">
+    <value>了解谁能听到您</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_useful-action_Body" xml:space="preserve">
+    <value>look 命令会让游戏描述您所在的位置。请先在本地练习中试一试。然后将 look 插入已连接且为空的游戏命令框（或“故事”中的“命令”模式），并亲自按“发送”。插入本身不会发送命令，也不会完成此步骤。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_useful-action_Title" xml:space="preserve">
+    <value>试一个小命令</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_world_Action" xml:space="preserve">
+    <value>打开“游戏”</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_world_Body" xml:space="preserve">
+    <value>“游戏”会打开一个用于输入游戏命令的终端。有场景时，“故事”视图会在同一连接上以结构化方式呈现该场景。请确认当前角色和连接状态。留意房间描述、在场的人和出口。出口会移动您的角色；阅读描述则不会。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_world_Title" xml:space="preserve">
+    <value>熟悉环境</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_channels_Body" xml:space="preserve">
+    <value>找到一个帮助或新手频道，向其他玩家提问。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_channels_Title" xml:space="preserve">
+    <value>找到能帮忙的人</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_character_Action" xml:space="preserve">
+    <value>我的角色</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_character_Body" xml:space="preserve">
+    <value>如果已有角色，请直接使用。如果您以前玩过本游戏，请认领那个角色，而不要重复创建。否则，在游戏允许时创建一个角色。您的账号可以拥有多个角色；选择您想扮演的那个。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_character_Title" xml:space="preserve">
+    <value>选择您要扮演的角色</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_continue_Action" xml:space="preserve">
+    <value>探索游戏</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_continue_Body" xml:space="preserve">
+    <value>用 help 查看游戏的命令参考，用 look 重新确认方位，并通过本游戏的规则和角色指南了解它的要求。需要帮助时请向社区求助。您可以跳过、关闭或返回本指南的任何部分。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_continue_Title" xml:space="preserve">
+    <value>您已准备好探索</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_place_Body" xml:space="preserve">
+    <value>按您自己的节奏探索。需要命令参考或想找人指路时，随时可以在“帮助”中打开本指南。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_place_Title" xml:space="preserve">
+    <value>一个由您共同书写的世界</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_sign-in_Action" xml:space="preserve">
+    <value>登录或注册</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_sign-in_Body" xml:space="preserve">
+    <value>账号是您私人的登录凭据；角色是其他玩家见到的您。请使用本游戏提供的方式登录或注册；不要在游戏命令框中输入账号密码。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_sign-in_Title" xml:space="preserve">
+    <value>账号为您打开大门</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_speak-act_Body" xml:space="preserve">
+    <value>在终端中，say Hello 会对房间里的人说话，pose waves. 会描述您的角色在挥手。有场景时，“故事”视图还提供“说”“场外”和“描述”模式，按原样处理您的文字；“命令”模式则执行游戏语法和表达式。page 只发给一位指定的玩家。角色所说所做属于角色内（IC）；谈论游戏或现实世界属于角色外（OOC），请按本游戏要求的方式标注，例如使用“故事”的“场外”模式。这里的练习只在本地进行；正式发言前请先了解游戏礼仪。</value>
+    <comment>MT — say Hello / pose waves. / page are commands, kept literal; mode names match NavPlayType* (说/场外/描述/命令).</comment>
+  </data>
+  <data name="GuideLesson_Explore_speak-act_Title" xml:space="preserve">
+    <value>了解谁能听到您</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_useful-action_Body" xml:space="preserve">
+    <value>look 命令会让游戏描述您所在的位置。请先在本地练习中试一试。然后将 look 插入已连接且为空的游戏命令框（或“故事”中的“命令”模式），并亲自按“发送”。插入本身不会发送命令，也不会完成此步骤。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_useful-action_Title" xml:space="preserve">
+    <value>试一个小命令</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_world_Action" xml:space="preserve">
+    <value>打开“游戏”</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_world_Body" xml:space="preserve">
+    <value>“游戏”会打开一个用于输入游戏命令的终端。有场景时，“故事”视图会在同一连接上以结构化方式呈现该场景。请确认当前角色和连接状态。留意房间描述、在场的人和出口。出口会移动您的角色；阅读描述则不会。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_world_Title" xml:space="preserve">
+    <value>熟悉环境</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_channels_Body" xml:space="preserve">
+    <value>找到一个帮助或新手频道，向其他玩家提问。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_channels_Title" xml:space="preserve">
+    <value>找到能帮忙的人</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_continue_Action" xml:space="preserve">
+    <value>探索游戏</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_continue_Body" xml:space="preserve">
+    <value>可选的应用和软件包因游戏而异。请使用本游戏提供的版块及其自带的帮助；不要假定其他 SharpMUSH 游戏的命令在这里也已安装。下方仍保留常用命令参考。您可以更换起点，获取更完整的介绍。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_continue_Title" xml:space="preserve">
+    <value>探索本游戏的扩展功能</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_place_Body" xml:space="preserve">
+    <value>您的 MUSH 经验依然适用：房间、出口、物件和 softcode 照旧。这段简短导览介绍网页账号、角色关联以及“游戏”的两种视图。熟悉的命令示例放在可展开的参考中；无需练习命令。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_place_Title" xml:space="preserve">
+    <value>只看新内容</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_sign-in_Action" xml:space="preserve">
+    <value>登录或管理角色</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_sign-in_Body" xml:space="preserve">
+    <value>网页账号与您现有角色的游戏内密码相互独立。请先登录，然后认领现有角色，而不要重新创建。选择一个已关联的角色来玩；切勿在命令输入框中输入账号密码。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_sign-in_Title" xml:space="preserve">
+    <value>一个账号，多个角色</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_world_Action" xml:space="preserve">
+    <value>打开“游戏”</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_world_Body" xml:space="preserve">
+    <value>“终端”保留了熟悉的滚动界面。有场景时，“故事”提供独立的“说”“场外”“描述”和“命令”模式。MUSH 语法和表达式请使用“命令”；其他模式按原样处理文字。切换视图不会断开游戏连接。发送前请确认所选角色。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_world_Title" xml:space="preserve">
+    <value>“故事”还是“终端”，由您选择</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_channels_Body" xml:space="preserve">
+    <value>找到一个帮助或新手频道，向其他玩家提问。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_channels_Title" xml:space="preserve">
+    <value>找到能帮忙的人</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_character_Action" xml:space="preserve">
+    <value>我的角色</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_character_Body" xml:space="preserve">
+    <value>如果已有角色，请直接使用。如果您以前玩过本游戏，请认领那个角色，而不要重复创建。否则，在游戏允许时创建一个角色。您的账号可以拥有多个角色；选择您想扮演的那个。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_character_Title" xml:space="preserve">
+    <value>选择您要扮演的角色</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_continue_Action" xml:space="preserve">
+    <value>探索游戏</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_continue_Body" xml:space="preserve">
+    <value>用 help 查看游戏的命令参考，用 look 重新确认方位，并通过本游戏的规则和角色指南了解它的要求。需要帮助时请向社区求助。您可以跳过、关闭或返回本指南的任何部分。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_continue_Title" xml:space="preserve">
+    <value>您已准备好探索</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_place_Body" xml:space="preserve">
+    <value>带上您的角色扮演经验。在这里，您将在一个持久的文字世界中扮演一个角色。房间营造场景，出口连接地点，玩家们共同书写对话和行动。加入场景前请阅读本游戏的规则。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_place_Title" xml:space="preserve">
+    <value>一个由您共同书写的世界</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Action" xml:space="preserve">
+    <value>登录或注册</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Body" xml:space="preserve">
+    <value>账号是您私人的登录凭据；角色是其他玩家见到的您。请使用本游戏提供的方式登录或注册；不要在游戏命令框中输入账号密码。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Title" xml:space="preserve">
+    <value>账号为您打开大门</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_speak-act_Body" xml:space="preserve">
+    <value>就像在桌游团中一样，描述您的角色尝试做什么，并给其他玩家留出回应的空间。pose waves. 会在前面加上您角色的名字；say Hello 会对当前房间说话。私密的 page 只发给一位指定的玩家。请把角色外（OOC）的发言与角色的话明确区分开。加入前请就场景预期达成共识，并阅读本游戏的同意规则。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_speak-act_Title" xml:space="preserve">
+    <value>了解谁能听到您</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_useful-action_Body" xml:space="preserve">
+    <value>look 命令会让游戏描述您所在的位置。请先在本地练习中试一试。然后将 look 插入已连接且为空的游戏命令框（或“故事”中的“命令”模式），并亲自按“发送”。插入本身不会发送命令，也不会完成此步骤。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_useful-action_Title" xml:space="preserve">
+    <value>试一个小命令</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_world_Action" xml:space="preserve">
+    <value>打开“游戏”</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_world_Body" xml:space="preserve">
+    <value>与论坛帖子不同，房间是您的角色此刻所在的地方。阅读它的描述和出口来了解场景。有场景时，“故事”视图会将对话和动作分开；“终端”保留滚动的文字界面。两者使用相同的角色和连接。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_world_Title" xml:space="preserve">
+    <value>熟悉环境</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLoading" xml:space="preserve">
+    <value>正在加载您的指南…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLoginEntry" xml:space="preserve">
+    <value>新来的？学习玩法</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideMyAccount" xml:space="preserve">
+    <value>我的账号</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideOpenFull" xml:space="preserve">
+    <value>打开完整指南或更换起点</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideOpenGame" xml:space="preserve">
+    <value>打开游戏</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideOpenPlay" xml:space="preserve">
+    <value>打开“游戏”，在游戏中试试</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesBundled" xml:space="preserve">
+    <value>随本服务器提供</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesCheck" xml:space="preserve">
+    <value>查看 {0} 的可用命令</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesEmpty" xml:space="preserve">
+    <value>这里没有适合此角色的已验证软件包建议。可能仍安装了其他软件包；请使用游戏自带的帮助。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesError" xml:space="preserve">
+    <value>游戏帮助暂时不可用。请在游戏中输入 help。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesExplanation" xml:space="preserve">
+    <value>要使用本游戏的额外功能，请试试：</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesLabel" xml:space="preserve">
+    <value>适用于您角色的软件包命令</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesLoading" xml:space="preserve">
+    <value>正在加载游戏帮助…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesReference" xml:space="preserve">
+    <value>软件包参考（在新标签页中打开）</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesVersion" xml:space="preserve">
+    <value>{0}，版本 {1}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePageTitle" xml:space="preserve">
+    <value>入门 — {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePanelLabel" xml:space="preserve">
+    <value>跟 Sharpie 一起入门</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathDiscordDetail" xml:space="preserve">
+    <value>了解房间、角色和命令。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathDiscordTitle" xml:space="preserve">
+    <value>我习惯用 Discord</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathExploreDetail" xml:space="preserve">
+    <value>直接进入。帮助随时可用。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathExploreTitle" xml:space="preserve">
+    <value>让我自己摸索</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathMushDetail" xml:space="preserve">
+    <value>看看 SharpMUSH 有哪些不同。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathMushTitle" xml:space="preserve">
+    <value>我熟悉 MUSH</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathRoleplayDetail" xml:space="preserve">
+    <value>把您的故事带进一个共享的世界。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathRoleplayTitle" xml:space="preserve">
+    <value>我在别处玩过角色扮演</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeHeading" xml:space="preserve">
+    <value>先在这里试试</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeInvalid" xml:space="preserve">
+    <value>本练习请输入 look。这里的内容不会在游戏中执行。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeLabel" xml:space="preserve">
+    <value>本地命令练习</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeLocal" xml:space="preserve">
+    <value>本地练习 — 不会发送到游戏。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeResult" xml:space="preserve">
+    <value>练习房间：一座洒满阳光的庭院。Sharpie 在这里。一道拱门通往花园。在游戏中，look 会描述您实际所处的环境。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeTry" xml:space="preserve">
+    <value>在本地试试</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeType" xml:space="preserve">
+    <value>输入</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePreviewNotice" xml:space="preserve">
+    <value>玩家指南预览。这些选择不会更改您的进度。请用普通玩家账号测试以验证权限。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideQuickstartEntry" xml:space="preserve">
+    <value>学习玩法</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReady" xml:space="preserve">
+    <value>您已准备好探索。随时可以从“帮助”回到这里。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideRecoveryTitle" xml:space="preserve">
+    <value>Sharpie 指南不可用 — 准备好后请重试</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReference" xml:space="preserve">
+    <value>常用命令及其可见范围</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReload" xml:space="preserve">
+    <value>重新加载进度</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReloadProgress" xml:space="preserve">
+    <value>重新加载进度</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideRetryConnection" xml:space="preserve">
+    <value>重试连接</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideRetryRoster" xml:space="preserve">
+    <value>重新加载角色列表</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReturningCharacter" xml:space="preserve">
+    <value>以前在这里玩过？</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentity" xml:space="preserve">
+    <value>介绍您的游戏</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentityLater" xml:space="preserve">
+    <value>稍后再设置</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentityLead" xml:space="preserve">
+    <value>检查您导入的游戏形象，或为新游戏起个名字，并准备一段热情的开场。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentitySave" xml:space="preserve">
+    <value>保存并继续</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSkip" xml:space="preserve">
+    <value>暂时跳过</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSkipped" xml:space="preserve">
+    <value>已跳过</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStepOf" xml:space="preserve">
+    <value>第 {0} 步，共 {1} 步</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSteps" xml:space="preserve">
+    <value>指南步骤</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStop" xml:space="preserve">
+    <value>停止本指南</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStraightToGame" xml:space="preserve">
+    <value>直接进入游戏</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_anime" xml:space="preserve">
+    <value>动漫风吉祥物</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_chibi" xml:space="preserve">
+    <value>Q 版吉祥物</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_comicbook" xml:space="preserve">
+    <value>美漫风吉祥物</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_kemono" xml:space="preserve">
+    <value>兽系吉祥物</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_minimalist" xml:space="preserve">
+    <value>极简风吉祥物</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_pixel" xml:space="preserve">
+    <value>像素风吉祥物</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideUnderstood" xml:space="preserve">
+    <value>我明白了</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideWelcomeChecklist" xml:space="preserve">
+    <value>本游戏有自己的入门清单。要查看它，请输入</value>
+    <comment>MT — followed by the command to type.</comment>
+  </data>
+  <data name="GuideWelcomeGame" xml:space="preserve">
+    <value>欢迎来到 {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideWelcomeIntro" xml:space="preserve">
+    <value>我是 Sharpie。从您第一次登录到第一个场景，我都可以帮您找到方向。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideWithSharpie" xml:space="preserve">
+    <value>与 Sharpie 同行</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyBlocked" xml:space="preserve">
+    <value>此网站的通知已被阻止。请在浏览器的网站设置中允许通知，然后重新加载此页面。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyChoose" xml:space="preserve">
+    <value>选择通知内容</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceFailed" xml:space="preserve">
+    <value>{0} 失败（{1}）</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceLastSent" xml:space="preserve">
+    <value>上次发送：{0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceSince" xml:space="preserve">
+    <value>自 {0} 起开启</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceStale" xml:space="preserve">
+    <value>游戏更换了密钥：请在该设备上重新开启通知</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDevices" xml:space="preserve">
+    <value>您的设备</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDevicesSub" xml:space="preserve">
+    <value>此账号下所有开启了通知的手机和电脑</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyInstall" xml:space="preserve">
+    <value>安装</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyInstallNote" xml:space="preserve">
+    <value>将门户安装为应用：它会在独立窗口中打开，通知中也会显示它的名称。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyIntro" xml:space="preserve">
+    <value>在每台想接收通知的手机或电脑上分别开启通知。哪些内容值得通知由游戏决定，您的每个角色可以各自选择接收哪些通知。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyIosHowTo" xml:space="preserve">
+    <value>在 iPhone 和 iPad 上，通知只能通过主屏幕使用：点按“共享”，再点按“添加到主屏幕”，然后从新图标打开门户。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyNoDevices" xml:space="preserve">
+    <value>还没有设备开启通知。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyOffHere" xml:space="preserve">
+    <value>此设备上的通知已关闭。开启时浏览器会请求权限。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyOnHere" xml:space="preserve">
+    <value>此处已开启通知（{0}）。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyPermissionRefused" xml:space="preserve">
+    <value>浏览器未允许通知。请在浏览器设置中为此网站允许通知，然后重试。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyRemoveDevice" xml:space="preserve">
+    <value>关闭 {0} 上的通知</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifySendTest" xml:space="preserve">
+    <value>发送测试通知</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTestSent" xml:space="preserve">
+    <value>测试已发送，几秒钟内应会收到。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyThisDevice" xml:space="preserve">
+    <value>此设备</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyThisDeviceTag" xml:space="preserve">
+    <value>此设备</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTurnOff" xml:space="preserve">
+    <value>关闭</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTurnOn" xml:space="preserve">
+    <value>开启</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTurnedOn" xml:space="preserve">
+    <value>此设备已开启通知。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyUnsupported" xml:space="preserve">
+    <value>此浏览器无法显示来自网站的通知。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyWhat" xml:space="preserve">
+    <value>通知内容</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyWhatNote" xml:space="preserve">
+    <value>您不在时，私信和新邮件会通知您，显示发件人但不显示内容。在游戏中输入 +notify 可为每个角色选择通知内容，以及是否显示文字。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentAllow" xml:space="preserve">
+    <value>允许</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentAsks" xml:space="preserve">
+    <value>{0} 想以您的角色身份行事</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentCharacter" xml:space="preserve">
+    <value>它将以 {0} 的身份行事。若要授权其他角色，请先切换到该角色。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentDeny" xml:space="preserve">
+    <value>拒绝</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentReturning" xml:space="preserve">
+    <value>正在返回应用…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentRevoke" xml:space="preserve">
+    <value>您可以随时在账号页面撤销此授权。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentTitle" xml:space="preserve">
+    <value>授权应用</value>
+    <comment>MT</comment>
+  </data>
+  <data name="StoryNewPoses" xml:space="preserve">
+    <value>新动作</value>
+    <comment>MT</comment>
+  </data>
+  <data name="StoryPoseDeleted" xml:space="preserve">
+    <value>已删除：</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppAsksToChange" xml:space="preserve">
+    <value>{0} 请求修改世界</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppChangesAsCharacter" xml:space="preserve">
+    <value>每项更改都以您的角色身份，通过游戏自身的建造命令完成。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppConfigUnavailable" xml:space="preserve">
+    <value>应用配置不可用或需要更新。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppHostFailed" xml:space="preserve">
+    <value>无法加载应用宿主。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppMakeChanges" xml:space="preserve">
+    <value>{count, plural, other {进行 # 项更改}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_ConversionError" xml:space="preserve">
+    <value>转换错误：{0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_ConversionFailed" xml:space="preserve">
+    <value>从 {0} 转换为 {1} 失败：{2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_ConversionNotImplemented" xml:space="preserve">
+    <value>未实现到类型 {0} 的转换</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidBoolean" xml:space="preserve">
+    <value>不是有效的布尔值</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidDateTime" xml:space="preserve">
+    <value>不是有效的日期时间</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidGUID" xml:space="preserve">
+    <value>不是有效的 GUID</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidNumber" xml:space="preserve">
+    <value>不是有效的数字</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidTimeSpan" xml:space="preserve">
+    <value>不是有效的时间间隔</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidType" xml:space="preserve">
+    <value>不是有效的 {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_NotValueOf" xml:space="preserve">
+    <value>不是 {0} 的值</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_UnableToConvert" xml:space="preserve">
+    <value>无法从类型 {1} 转换为 {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HeatMap_Less" xml:space="preserve">
+    <value>较少</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HeatMap_More" xml:space="preserve">
+    <value>较多</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudAlert_Close" xml:space="preserve">
+    <value>关闭</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_NextMonth" xml:space="preserve">
+    <value>下个月 {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_NextYear" xml:space="preserve">
+    <value>下一年 {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_Open" xml:space="preserve">
+    <value>打开</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_PrevMonth" xml:space="preserve">
+    <value>上个月 {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_PrevYear" xml:space="preserve">
+    <value>上一年 {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBreadcrumbs_Label" xml:space="preserve">
+    <value>面包屑导航</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudCarousel_Index" xml:space="preserve">
+    <value>索引 {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudCarousel_Next" xml:space="preserve">
+    <value>下一个</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudCarousel_Previous" xml:space="preserve">
+    <value>上一个</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudChip_Close" xml:space="preserve">
+    <value>关闭</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_AlphaSlider" xml:space="preserve">
+    <value>透明度滑块</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_Close" xml:space="preserve">
+    <value>关闭</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_GridView" xml:space="preserve">
+    <value>网格</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_HideSwatches" xml:space="preserve">
+    <value>隐藏色板</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_HueSlider" xml:space="preserve">
+    <value>色相滑块</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_ModeSwitch" xml:space="preserve">
+    <value>切换模式</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_Open" xml:space="preserve">
+    <value>打开</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_PaletteView" xml:space="preserve">
+    <value>调色板</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_ShowSwatches" xml:space="preserve">
+    <value>显示色板</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_SpectrumView" xml:space="preserve">
+    <value>色谱</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_AllItems" xml:space="preserve">
+    <value>全部</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_FirstPage" xml:space="preserve">
+    <value>第一页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_InfoFormat" xml:space="preserve">
+    <value>第 {0}-{1} 条，共 {2} 条</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_LastPage" xml:space="preserve">
+    <value>最后一页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_NextPage" xml:space="preserve">
+    <value>下一页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_PreviousPage" xml:space="preserve">
+    <value>上一页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_RowsPerPage" xml:space="preserve">
+    <value>每页行数：</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_AddFilter" xml:space="preserve">
+    <value>添加筛选</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Apply" xml:space="preserve">
+    <value>应用</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Cancel" xml:space="preserve">
+    <value>取消</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Clear" xml:space="preserve">
+    <value>清除</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ClearFilter" xml:space="preserve">
+    <value>清除筛选</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_CollapseAllGroups" xml:space="preserve">
+    <value>折叠所有分组</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_CollapseGroup" xml:space="preserve">
+    <value>折叠分组</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Column" xml:space="preserve">
+    <value>列</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Columns" xml:space="preserve">
+    <value>列</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Contains" xml:space="preserve">
+    <value>包含</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_EndsWith" xml:space="preserve">
+    <value>结尾是</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_EqualSign" xml:space="preserve">
+    <value>=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Equals" xml:space="preserve">
+    <value>等于</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ExpandAllGroups" xml:space="preserve">
+    <value>展开所有分组</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ExpandGroup" xml:space="preserve">
+    <value>展开分组</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_False" xml:space="preserve">
+    <value>假</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Filter" xml:space="preserve">
+    <value>筛选</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_FilterValue" xml:space="preserve">
+    <value>筛选值</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_GreaterThanOrEqualSign" xml:space="preserve">
+    <value>&gt;=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_GreaterThanSign" xml:space="preserve">
+    <value>&gt;</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Group" xml:space="preserve">
+    <value>分组</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Hide" xml:space="preserve">
+    <value>隐藏</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_HideAll" xml:space="preserve">
+    <value>全部隐藏</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Is" xml:space="preserve">
+    <value>是</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsAfter" xml:space="preserve">
+    <value>晚于</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsBefore" xml:space="preserve">
+    <value>早于</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsEmpty" xml:space="preserve">
+    <value>为空</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsNot" xml:space="preserve">
+    <value>不是</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsNotEmpty" xml:space="preserve">
+    <value>不为空</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsOnOrAfter" xml:space="preserve">
+    <value>不早于</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsOnOrBefore" xml:space="preserve">
+    <value>不晚于</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_LessThanOrEqualSign" xml:space="preserve">
+    <value>&lt;=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_LessThanSign" xml:space="preserve">
+    <value>&lt;</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Loading" xml:space="preserve">
+    <value>正在加载…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_MoveDown" xml:space="preserve">
+    <value>下移</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_MoveUp" xml:space="preserve">
+    <value>上移</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_NotContains" xml:space="preserve">
+    <value>不包含</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_NotEqualSign" xml:space="preserve">
+    <value>!=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_NotEquals" xml:space="preserve">
+    <value>不等于</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_OpenFilters" xml:space="preserve">
+    <value>打开筛选</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Operator" xml:space="preserve">
+    <value>运算符</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_RefreshData" xml:space="preserve">
+    <value>刷新数据</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_RemoveFilter" xml:space="preserve">
+    <value>移除筛选</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Save" xml:space="preserve">
+    <value>保存</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_SelectAllRows" xml:space="preserve">
+    <value>选择所有行</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_SelectRow" xml:space="preserve">
+    <value>选择行</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ShowAll" xml:space="preserve">
+    <value>全部显示</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ShowColumnOptions" xml:space="preserve">
+    <value>列选项</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Sort" xml:space="preserve">
+    <value>排序</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_StartsWith" xml:space="preserve">
+    <value>开头是</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ToggleGroupExpansion" xml:space="preserve">
+    <value>展开/折叠分组</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_True" xml:space="preserve">
+    <value>真</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Ungroup" xml:space="preserve">
+    <value>取消分组</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Unsort" xml:space="preserve">
+    <value>取消排序</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Value" xml:space="preserve">
+    <value>值</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDateRangePicker_End" xml:space="preserve">
+    <value>结束日期</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDateRangePicker_Start" xml:space="preserve">
+    <value>开始日期</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDialog_Close" xml:space="preserve">
+    <value>关闭</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Cancel" xml:space="preserve">
+    <value>取消</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Exit" xml:space="preserve">
+    <value>确定</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Text" xml:space="preserve">
+    <value>要离开此网站吗？您所做的更改可能不会被保存。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Title" xml:space="preserve">
+    <value>确认离开</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_Button" xml:space="preserve">
+    <value>浏览文件</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_DragAndDrop" xml:space="preserve">
+    <value>将文件拖到此处或点击浏览</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_FileSizeError" xml:space="preserve">
+    <value>文件“{0}”超过了允许的最大大小 {1} 字节。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_MaximumFileCountExceeded" xml:space="preserve">
+    <value>已选择 {0} 个文件，超过了上限 {1} 个</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFormComponent_Required" xml:space="preserve">
+    <value>必填</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudInput_Clear" xml:space="preserve">
+    <value>清除</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudInput_Decrement" xml:space="preserve">
+    <value>减少</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudInput_Increment" xml:space="preserve">
+    <value>增加</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudNavGroup_ToggleExpand" xml:space="preserve">
+    <value>展开/折叠 {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPageContentNavigation_NavMenu" xml:space="preserve">
+    <value>目录</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_CurrentPage" xml:space="preserve">
+    <value>当前第 {0} 页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_FirstPage" xml:space="preserve">
+    <value>第一页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_LastPage" xml:space="preserve">
+    <value>最后一页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_NextPage" xml:space="preserve">
+    <value>下一页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_PageIndex" xml:space="preserve">
+    <value>第 {0} 页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_PreviousPage" xml:space="preserve">
+    <value>上一页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRangeInput_End" xml:space="preserve">
+    <value>结束</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRangeInput_Start" xml:space="preserve">
+    <value>开始</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRatingItem_Label" xml:space="preserve">
+    <value>评分 {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRating_Label" xml:space="preserve">
+    <value>评分</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudSelect_SelectAll" xml:space="preserve">
+    <value>全选</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudSnackbar_Close" xml:space="preserve">
+    <value>关闭</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudSplitPanel_ResizePanels" xml:space="preserve">
+    <value>调整面板大小</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Complete" xml:space="preserve">
+    <value>完成</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Next" xml:space="preserve">
+    <value>下一步</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Previous" xml:space="preserve">
+    <value>上一步</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Reset" xml:space="preserve">
+    <value>重置</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Skip" xml:space="preserve">
+    <value>跳过</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_FirstPage" xml:space="preserve">
+    <value>第一页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_LastPage" xml:space="preserve">
+    <value>最后一页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_NextPage" xml:space="preserve">
+    <value>下一页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_PreviousPage" xml:space="preserve">
+    <value>上一页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_CancelEditRow" xml:space="preserve">
+    <value>取消编辑</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_CollapseGroup" xml:space="preserve">
+    <value>折叠分组</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_CommitRow" xml:space="preserve">
+    <value>提交编辑</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_EditRow" xml:space="preserve">
+    <value>编辑行</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_ExpandGroup" xml:space="preserve">
+    <value>展开分组</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_Loading" xml:space="preserve">
+    <value>正在加载…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_SelectAllRows" xml:space="preserve">
+    <value>选择所有行</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_SelectGroup" xml:space="preserve">
+    <value>选择分组</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_SelectRow" xml:space="preserve">
+    <value>选择行</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_AddTab" xml:space="preserve">
+    <value>添加标签页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_CloseTab" xml:space="preserve">
+    <value>关闭标签页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollDown" xml:space="preserve">
+    <value>向下滚动标签页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollLeft" xml:space="preserve">
+    <value>向左滚动标签页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollRight" xml:space="preserve">
+    <value>向右滚动标签页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollUp" xml:space="preserve">
+    <value>向上滚动标签页</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTimePicker_Open" xml:space="preserve">
+    <value>打开</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTreeView_CollapseItem" xml:space="preserve">
+    <value>折叠</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTreeView_ExpandItem" xml:space="preserve">
+    <value>展开</value>
+    <comment>MT</comment>
+  </data>
 </root>

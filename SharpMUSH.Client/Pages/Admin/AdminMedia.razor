@@ -135,7 +135,7 @@
                                 </TemplateColumn>
                                 <TemplateColumn Title="@Loc["WkColUploaded"]" Sortable="false" CellStyle="width:130px;">
                                     <CellTemplate>
-                                        <span class="adm-media-list-dim">@context.Item.UploadedAt.ToLocalTime().ToString("MMM d, yyyy")</span>
+                                        <span class="adm-media-list-dim">@DateDisplay.Date(context.Item.UploadedAt)</span>
                                     </CellTemplate>
                                 </TemplateColumn>
                                 <TemplateColumn Title="@Loc["WkColUploader"]" Sortable="false">

@@ -97,7 +97,7 @@
                     <div style="min-width:0;">
                         <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
                             <MudText Style="font-size:0.8125rem;font-weight:600;">
-                                @rev.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                                @DateDisplay.DateTime(rev.Timestamp)
                             </MudText>
                             @if (isCurrent)
                             {

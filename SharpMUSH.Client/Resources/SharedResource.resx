@@ -5262,7 +5262,7 @@
     <value>The configuration from {0} was applied before the database.</value>
   </data>
   <data name="AdmSetupHandlerClashes" xml:space="preserve">
-    <value>This object holds something other than what the packages ship in {0} attribute(s) they write. Your values would be kept, so these parts of the packages would run your code instead of theirs:</value>
+    <value>This object holds something other than what the packages ship in {count, plural, one {# attribute} other {# attributes}} they write. Your values would be kept, so these parts of the packages would run your code instead of theirs:</value>
   </data>
   <data name="AdmSetupHandlerClashesMore" xml:space="preserve">
     <value>and {0} more</value>
@@ -8414,7 +8414,7 @@
     <value>What setting up the bot still needs.</value>
   </data>
   <data name="AdmDiscordConnectionAs" xml:space="preserve">
-    <value>Signed in as {0}, in {1} server(s).</value>
+    <value>Signed in as {bot}, {servers, plural, one {in # server} other {in # servers}}.</value>
   </data>
   <data name="AdmDiscordStatusConnected" xml:space="preserve">
     <value>connected</value>
@@ -9232,7 +9232,7 @@
     <value>Registration</value>
   </data>
   <data name="AdmSigninAffected" xml:space="preserve">
-    <value>{0} account(s) have identities in this registration.</value>
+    <value>{count, plural, one {# account has} other {# accounts have}} identities in this registration.</value>
   </data>
   <data name="AdmSigninEnable" xml:space="preserve">
     <value>Enable account sign-in</value>
@@ -11888,5 +11888,650 @@
   </data>
   <data name="LayBldKindHelp_button" xml:space="preserve">
     <value>Something to click.</value>
+  </data>
+  <data name="HostedAppAsksToChange" xml:space="preserve">
+    <value>{0} asks to change the world</value>
+  </data>
+  <data name="HostedAppChangesAsCharacter" xml:space="preserve">
+    <value>Each change is made as your character, through the game's own building commands.</value>
+  </data>
+  <data name="HostedAppMakeChanges" xml:space="preserve">
+    <value>{count, plural, one {Make # change} other {Make # changes}}</value>
+  </data>
+  <data name="HostedAppConfigUnavailable" xml:space="preserve">
+    <value>Application configuration is unavailable or needs updating.</value>
+  </data>
+  <data name="HostedAppHostFailed" xml:space="preserve">
+    <value>Application host could not load.</value>
+  </data>
+  <data name="LayAppConfigUnreadable" xml:space="preserve">
+    <value>Application configuration could not be read. Reopen the editor before saving.</value>
+  </data>
+  <data name="LayAppPlainHtml" xml:space="preserve">
+    <value>Plain HTML/JavaScript package</value>
+  </data>
+  <data name="LayAppDefinitionId" xml:space="preserve">
+    <value>Installed definition ID</value>
+  </data>
+  <data name="LayAppConfigVersion" xml:space="preserve">
+    <value>Config version</value>
+  </data>
+  <data name="LayAppInstanceJson" xml:space="preserve">
+    <value>Instance JSON config</value>
+  </data>
+  <data name="LayAppInstanceJsonInvalid" xml:space="preserve">
+    <value>Instance config must be valid JSON.</value>
+  </data>
+  <data name="Converter_ConversionError" xml:space="preserve">
+    <value>Conversion error: {0}</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="Converter_ConversionFailed" xml:space="preserve">
+    <value>Conversion from {0} to {1} failed: {2}</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="Converter_ConversionNotImplemented" xml:space="preserve">
+    <value>Conversion to type {0} not implemented</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="Converter_InvalidBoolean" xml:space="preserve">
+    <value>Not a valid boolean</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="Converter_InvalidDateTime" xml:space="preserve">
+    <value>Not a valid date time</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="Converter_InvalidGUID" xml:space="preserve">
+    <value>Not a valid GUID</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="Converter_InvalidNumber" xml:space="preserve">
+    <value>Not a valid number</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="Converter_InvalidTimeSpan" xml:space="preserve">
+    <value>Not a valid time span</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="Converter_InvalidType" xml:space="preserve">
+    <value>Not a valid {0}</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="Converter_NotValueOf" xml:space="preserve">
+    <value>Not a value of {0}</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="Converter_UnableToConvert" xml:space="preserve">
+    <value>Unable to convert to {0} from type {1}</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="HeatMap_Less" xml:space="preserve">
+    <value>Less</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="HeatMap_More" xml:space="preserve">
+    <value>More</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudAlert_Close" xml:space="preserve">
+    <value>Close</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudBaseDatePicker_NextMonth" xml:space="preserve">
+    <value>Next month {0}</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudBaseDatePicker_NextYear" xml:space="preserve">
+    <value>Next year {0}</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudBaseDatePicker_Open" xml:space="preserve">
+    <value>Open</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudBaseDatePicker_PrevMonth" xml:space="preserve">
+    <value>Previous month {0}</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudBaseDatePicker_PrevYear" xml:space="preserve">
+    <value>Previous year {0}</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudBreadcrumbs_Label" xml:space="preserve">
+    <value>Breadcrumb</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudCarousel_Index" xml:space="preserve">
+    <value>Index {0}</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudCarousel_Next" xml:space="preserve">
+    <value>Next</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudCarousel_Previous" xml:space="preserve">
+    <value>Previous</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudChip_Close" xml:space="preserve">
+    <value>Close</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudColorPicker_AlphaSlider" xml:space="preserve">
+    <value>Alpha slider</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudColorPicker_Close" xml:space="preserve">
+    <value>Close</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudColorPicker_GridView" xml:space="preserve">
+    <value>Grid</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudColorPicker_HideSwatches" xml:space="preserve">
+    <value>Hide swatches</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudColorPicker_HueSlider" xml:space="preserve">
+    <value>Hue slider</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudColorPicker_ModeSwitch" xml:space="preserve">
+    <value>Switch mode</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudColorPicker_Open" xml:space="preserve">
+    <value>Open</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudColorPicker_PaletteView" xml:space="preserve">
+    <value>Palette</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudColorPicker_ShowSwatches" xml:space="preserve">
+    <value>Show swatches</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudColorPicker_SpectrumView" xml:space="preserve">
+    <value>Spectrum</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGridPager_AllItems" xml:space="preserve">
+    <value>All</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGridPager_FirstPage" xml:space="preserve">
+    <value>First page</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGridPager_InfoFormat" xml:space="preserve">
+    <value>{0}-{1} of {2}</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGridPager_LastPage" xml:space="preserve">
+    <value>Last page</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGridPager_NextPage" xml:space="preserve">
+    <value>Next page</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGridPager_PreviousPage" xml:space="preserve">
+    <value>Previous page</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGridPager_RowsPerPage" xml:space="preserve">
+    <value>Rows per page:</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_AddFilter" xml:space="preserve">
+    <value>Add filter</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Apply" xml:space="preserve">
+    <value>Apply</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Clear" xml:space="preserve">
+    <value>Clear</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_ClearFilter" xml:space="preserve">
+    <value>Clear filter</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_CollapseAllGroups" xml:space="preserve">
+    <value>Collapse all groups</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_CollapseGroup" xml:space="preserve">
+    <value>Collapse group</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Column" xml:space="preserve">
+    <value>Column</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Columns" xml:space="preserve">
+    <value>Columns</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Contains" xml:space="preserve">
+    <value>contains</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_EndsWith" xml:space="preserve">
+    <value>ends with</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_EqualSign" xml:space="preserve">
+    <value>=</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Equals" xml:space="preserve">
+    <value>equals</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_ExpandAllGroups" xml:space="preserve">
+    <value>Expand all groups</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_ExpandGroup" xml:space="preserve">
+    <value>Expand group</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_False" xml:space="preserve">
+    <value>false</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Filter" xml:space="preserve">
+    <value>Filter</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_FilterValue" xml:space="preserve">
+    <value>Filter value</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_GreaterThanOrEqualSign" xml:space="preserve">
+    <value>&gt;=</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_GreaterThanSign" xml:space="preserve">
+    <value>&gt;</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Group" xml:space="preserve">
+    <value>Group</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Hide" xml:space="preserve">
+    <value>Hide</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_HideAll" xml:space="preserve">
+    <value>Hide all</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Is" xml:space="preserve">
+    <value>is</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_IsAfter" xml:space="preserve">
+    <value>is after</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_IsBefore" xml:space="preserve">
+    <value>is before</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_IsEmpty" xml:space="preserve">
+    <value>is empty</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_IsNot" xml:space="preserve">
+    <value>is not</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_IsNotEmpty" xml:space="preserve">
+    <value>is not empty</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_IsOnOrAfter" xml:space="preserve">
+    <value>is on or after</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_IsOnOrBefore" xml:space="preserve">
+    <value>is on or before</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_LessThanOrEqualSign" xml:space="preserve">
+    <value>&lt;=</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_LessThanSign" xml:space="preserve">
+    <value>&lt;</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Loading" xml:space="preserve">
+    <value>Loading…</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_MoveDown" xml:space="preserve">
+    <value>Move down</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_MoveUp" xml:space="preserve">
+    <value>Move up</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_NotContains" xml:space="preserve">
+    <value>not contains</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_NotEqualSign" xml:space="preserve">
+    <value>!=</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_NotEquals" xml:space="preserve">
+    <value>not equals</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_OpenFilters" xml:space="preserve">
+    <value>Open filters</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Operator" xml:space="preserve">
+    <value>Operator</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_RefreshData" xml:space="preserve">
+    <value>Refresh data</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_RemoveFilter" xml:space="preserve">
+    <value>Remove filter</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Save" xml:space="preserve">
+    <value>Save</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_SelectAllRows" xml:space="preserve">
+    <value>Select all rows</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_SelectRow" xml:space="preserve">
+    <value>Select row</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_ShowAll" xml:space="preserve">
+    <value>Show all</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_ShowColumnOptions" xml:space="preserve">
+    <value>Column options</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Sort" xml:space="preserve">
+    <value>Sort</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_StartsWith" xml:space="preserve">
+    <value>starts with</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_ToggleGroupExpansion" xml:space="preserve">
+    <value>Toggle group</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_True" xml:space="preserve">
+    <value>true</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Ungroup" xml:space="preserve">
+    <value>Ungroup</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Unsort" xml:space="preserve">
+    <value>Unsort</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDataGrid_Value" xml:space="preserve">
+    <value>Value</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDateRangePicker_End" xml:space="preserve">
+    <value>End date</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDateRangePicker_Start" xml:space="preserve">
+    <value>Start date</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudDialog_Close" xml:space="preserve">
+    <value>Close</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudExitPrompt_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudExitPrompt_Exit" xml:space="preserve">
+    <value>Ok</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudExitPrompt_Text" xml:space="preserve">
+    <value>Leave site? Changes you made may not be saved.</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudExitPrompt_Title" xml:space="preserve">
+    <value>Confirm Navigation</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudFileUpload_Button" xml:space="preserve">
+    <value>Browse files</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudFileUpload_DragAndDrop" xml:space="preserve">
+    <value>Drag files here or click to browse</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudFileUpload_FileSizeError" xml:space="preserve">
+    <value>File '{0}' exceeds the maximum allowed size of {1} bytes.</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudFileUpload_MaximumFileCountExceeded" xml:space="preserve">
+    <value>Selected {0} files, which exceeds the maximum of {1}</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudFormComponent_Required" xml:space="preserve">
+    <value>Required</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudInput_Clear" xml:space="preserve">
+    <value>Clear</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudInput_Decrement" xml:space="preserve">
+    <value>Decrement</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudInput_Increment" xml:space="preserve">
+    <value>Increment</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudNavGroup_ToggleExpand" xml:space="preserve">
+    <value>Toggle {0}</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudPageContentNavigation_NavMenu" xml:space="preserve">
+    <value>Contents</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudPagination_CurrentPage" xml:space="preserve">
+    <value>Current page {0}</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudPagination_FirstPage" xml:space="preserve">
+    <value>First page</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudPagination_LastPage" xml:space="preserve">
+    <value>Last page</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudPagination_NextPage" xml:space="preserve">
+    <value>Next page</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudPagination_PageIndex" xml:space="preserve">
+    <value>Page {0}</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudPagination_PreviousPage" xml:space="preserve">
+    <value>Previous page</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudRangeInput_End" xml:space="preserve">
+    <value>End</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudRangeInput_Start" xml:space="preserve">
+    <value>Start</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudRatingItem_Label" xml:space="preserve">
+    <value>{0} rating</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudRating_Label" xml:space="preserve">
+    <value>Rating</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudSelect_SelectAll" xml:space="preserve">
+    <value>Select all</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudSnackbar_Close" xml:space="preserve">
+    <value>Close</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudSplitPanel_ResizePanels" xml:space="preserve">
+    <value>Resize panels</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudStepper_Complete" xml:space="preserve">
+    <value>Complete</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudStepper_Next" xml:space="preserve">
+    <value>Next</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudStepper_Previous" xml:space="preserve">
+    <value>Previous</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudStepper_Reset" xml:space="preserve">
+    <value>Reset</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudStepper_Skip" xml:space="preserve">
+    <value>Skip</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTablePager_FirstPage" xml:space="preserve">
+    <value>First page</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTablePager_LastPage" xml:space="preserve">
+    <value>Last page</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTablePager_NextPage" xml:space="preserve">
+    <value>Next page</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTablePager_PreviousPage" xml:space="preserve">
+    <value>Previous page</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTable_CancelEditRow" xml:space="preserve">
+    <value>Cancel edit</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTable_CollapseGroup" xml:space="preserve">
+    <value>Collapse group</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTable_CommitRow" xml:space="preserve">
+    <value>Commit edit</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTable_EditRow" xml:space="preserve">
+    <value>Edit row</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTable_ExpandGroup" xml:space="preserve">
+    <value>Expand group</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTable_Loading" xml:space="preserve">
+    <value>Loading…</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTable_SelectAllRows" xml:space="preserve">
+    <value>Select all rows</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTable_SelectGroup" xml:space="preserve">
+    <value>Select group</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTable_SelectRow" xml:space="preserve">
+    <value>Select row</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTabs_AddTab" xml:space="preserve">
+    <value>Add tab</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTabs_CloseTab" xml:space="preserve">
+    <value>Close tab</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTabs_ScrollDown" xml:space="preserve">
+    <value>Scroll tabs down</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTabs_ScrollLeft" xml:space="preserve">
+    <value>Scroll tabs left</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTabs_ScrollRight" xml:space="preserve">
+    <value>Scroll tabs right</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTabs_ScrollUp" xml:space="preserve">
+    <value>Scroll tabs up</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTimePicker_Open" xml:space="preserve">
+    <value>Open</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTreeView_CollapseItem" xml:space="preserve">
+    <value>Collapse</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="MudTreeView_ExpandItem" xml:space="preserve">
+    <value>Expand</value>
+    <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
   </data>
 </root>

@@ -75,7 +75,7 @@
                                              ImageUrl="@(IsUrl(picture) ? picture : null)"
                                              Fallback="@(persona is null ? NoPicture : null)" />
                             <div class="comm-body">
-                                <div class="comm-meta"><span class="comm-time">@line.Timestamp.ToLocalTime().ToString("HH:mm")</span></div>
+                                <div class="comm-meta"><span class="comm-time">@DateDisplay.Time(line.Timestamp)</span></div>
                                 <div class="comm-text">@Body(line)</div>
                             </div>
                         </div>
@@ -84,7 +84,7 @@
                     {
                         @* An @cemit names nobody: the line alone, as the terminal shows it. *@
                         <div class="comm-emit">
-                            <span class="comm-time">@line.Timestamp.ToLocalTime().ToString("HH:mm")</span>
+                            <span class="comm-time">@DateDisplay.Time(line.Timestamp)</span>
                             <div class="comm-text">@Body(line)</div>
                         </div>
                     }
@@ -96,7 +96,7 @@
                             <div class="comm-body">
                                 <div class="comm-meta">
                                     <span class="comm-name">@line.From</span>
-                                    <span class="comm-time">@line.Timestamp.ToLocalTime().ToString("HH:mm")</span>
+                                    <span class="comm-time">@DateDisplay.Time(line.Timestamp)</span>
                                 </div>
                                 @for (var j = i; j <= end; j++)
                                 {

@@ -6,7 +6,7 @@
 <div class="sharp-terminal-chunk">
     @foreach (var line in Chunk.Lines)
     {
-        <div @key="line" class="@LineClass(line.Source)" title="@line.Timestamp.ToString("HH:mm:ss")">@((Microsoft.AspNetCore.Components.MarkupString)line.Html)</div>
+        <div @key="line" class="@LineClass(line.Source)" title="@line.Timestamp.ToString("T")">@((Microsoft.AspNetCore.Components.MarkupString)line.Html)</div>
     }
 </div>
 

@@ -136,7 +136,9 @@ public class PluralFormatTests
 		["attributes"] = 2,
 		["location"] = "somewhere",
 		["signed"] = "+2",
-		["label"] = "OOC"
+		["label"] = "OOC",
+		["bot"] = "Sharpie",
+		["servers"] = 2
 	};
 
 	/// <summary>The ICU-bearing keys, read from the neutral resource rather than restated here.</summary>

@@ -17,6 +17,6 @@ public static class RelativeTime
 		if (elapsed < TimeSpan.FromHours(1)) return loc.Plural("NavMinutesAgo", "count", (int)elapsed.TotalMinutes);
 		if (elapsed < TimeSpan.FromDays(1)) return loc.Plural("NavHoursAgo", "count", (int)elapsed.TotalHours);
 		if (elapsed < TimeSpan.FromDays(31)) return loc.Plural("NavDaysAgo", "count", (int)elapsed.TotalDays);
-		return when.ToLocalTime().ToString("MMM d, yyyy");
+		return DateDisplay.Date(when);
 	}
 }

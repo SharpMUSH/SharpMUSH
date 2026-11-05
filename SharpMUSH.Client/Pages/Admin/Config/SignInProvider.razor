@@ -22,7 +22,7 @@
         <MudAlert Severity="@(_status.Ready ? Severity.Success : Severity.Info)">@_status.Message</MudAlert>
         <KitCard Title="@Loc["AdmSigninRegistration"]">
             <div class="page-stack">
-                <p>@Loc["AdmSigninRegistration"]: <code>@_status.Settings.RegistrationId</code>. @Loc["AdmSigninAffected",_status.AffectedAccounts]</p>
+                <p>@Loc["AdmSigninRegistration"]: <code>@_status.Settings.RegistrationId</code>. @Loc.Plural("AdmSigninAffected", "count", _status.AffectedAccounts)</p>
                 <MudCheckBox T="bool" @bind-Value="_enabled" Label="@Loc[SignInConfigurationFields.Enabled.LabelResourceKey!]" data-config-option="@SignInConfigurationFields.Enabled.Key" />
                 <MudTextField T="string" @bind-Value="_clientId" Label="@Loc[SignInConfigurationFields.ClientId.LabelResourceKey!]" data-config-option="@SignInConfigurationFields.ClientId.Key" Variant="Variant.Outlined" />
                 <MudTextField T="string" @bind-Value="_origin" Label="@Loc[SignInConfigurationFields.PublicOrigin.LabelResourceKey!]" data-config-option="@SignInConfigurationFields.PublicOrigin.Key" HelperText="@Loc["AdmSigninPublicOriginHelp"]" Variant="Variant.Outlined" />

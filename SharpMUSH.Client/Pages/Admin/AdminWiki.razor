@@ -152,7 +152,7 @@
                     <TemplateColumn Title="@Loc["WikiUpdated"]" Sortable="false">
                         <CellTemplate>
                             <div class="adminwiki-updated">
-                                <span>@context.Item.UpdatedAt.LocalDateTime.ToString("MMM d, yyyy")</span>
+                                <span>@DateDisplay.Date(context.Item.UpdatedAt)</span>
                                 <span class="adminwiki-rev">@string.Format(Loc["WikiRevisionShort"], context.Item.RevisionNumber)</span>
                             </div>
                         </CellTemplate>
