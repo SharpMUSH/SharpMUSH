@@ -63,6 +63,26 @@ public sealed class WikiMarkdigPipeline
 	}
 
 	/// <summary>
+	/// Renders a page as <see cref="RenderToHtml"/> does, giving each picture <paramref name="sizes"/> knows its
+	/// shape, so the page holds its space while it loads. A picture the Markdown sizes itself (<c>{width=20%}</c>)
+	/// keeps the author's size and takes only the shape.
+	/// </summary>
+	public async Task<string> RenderToHtmlAsync(string markdown, IWikiImageSizes sizes, CancellationToken ct = default)
+	{
+		ArgumentNullException.ThrowIfNull(markdown);
+		var document = Markdown.Parse(markdown, _pipeline);
+		foreach (var image in document.Descendants<LinkInline>().Where(l => l.IsImage))
+		{
+			if (image.Url is { Length: > 0 } url && await sizes.FindAsync(url, ct) is ImageSize size)
+			{
+				image.SetData(WikiLinkInlineRenderer.IntrinsicSize, size);
+			}
+		}
+
+		return document.ToHtml(_pipeline);
+	}
+
+	/// <summary>
 	/// Renders a package's README. A README is written for the package's own folder, so a link or image whose
 	/// URL is not absolute (<c>../profile-handler/</c>, <c>docs/setup.md</c>, <c>shot.png</c>) points at a file
 	/// that is not served here: the link becomes its text and the image its description. Absolute

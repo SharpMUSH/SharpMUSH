@@ -59,6 +59,10 @@ plain numbers (pixels) or percentages:
 Only `width`, `height`, and CSS class names (`{.my-class}`) are honoured in
 attribute blocks; anything else is stripped.
 
+A picture uploaded to the wiki, or one this site serves (`/assets/Logo.svg`), needs no
+size: saving the page records its shape, so the page keeps the picture's space
+while it loads. A size you give still wins.
+
 In the game, `@wiki` and `+wiki` show the picture to a client that can draw one
 (the web terminal, MXP, Pueblo), at its pixel size when it has one. An image on a
 line of its own is a figure, as `figure()` draws it. Any other

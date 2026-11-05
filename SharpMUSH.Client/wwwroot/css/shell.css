@@ -1392,8 +1392,11 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 }
 
 /* Only auto-size images that don't carry an explicit height attribute
-   (authors can size via ![alt](src){width=200 height=100}) */
-.wiki-img:not([height]) {
+   (authors can size via ![alt](src){width=200 height=100}). A stored picture carries its own
+   width and height (wiki-img-sized): those give the browser its shape before it loads, and it
+   scales with the column like any other. */
+.wiki-img:not([height]),
+.wiki-img-sized {
     height: auto;
 }
 

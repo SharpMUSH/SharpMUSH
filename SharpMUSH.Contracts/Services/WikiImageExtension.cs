@@ -56,6 +56,22 @@ internal sealed partial class WikiLinkInlineRenderer : HtmlObjectRenderer<LinkIn
 	/// <summary>CSS class applied to every wiki-rendered image.</summary>
 	public const string ImageCssClass = "wiki-img";
 
+	/// <summary>
+	/// Marks a picture whose own size is known (<see cref="WikiMarkdigPipeline.RenderToHtmlAsync"/>). It is written
+	/// with that shape as its <c>aspect-ratio</c>, so the browser reserves its space at whatever width it is shown,
+	/// and, unless the Markdown sizes it, with that width and height and <see cref="IntrinsicCssClass"/>.
+	/// </summary>
+	public static readonly object IntrinsicSize = new();
+
+	/// <summary>A picture carrying its own size, which scales with the column rather than holding a fixed height.</summary>
+	public const string IntrinsicCssClass = "wiki-img-sized";
+
+	/// <summary>The Markdown sets a width or height of its own.</summary>
+	public static bool AuthorSized(LinkInline link) =>
+		link.TryGetAttributes()?.Properties?.Any(p =>
+			string.Equals(p.Key, "width", StringComparison.OrdinalIgnoreCase)
+			|| string.Equals(p.Key, "height", StringComparison.OrdinalIgnoreCase)) == true;
+
 	/// <summary>Dimension values: plain integers ("200") or percentages ("50%").</summary>
 	[GeneratedRegex(@"^\d{1,5}%?$")]
 	private static partial Regex DimensionPattern();
@@ -85,12 +101,37 @@ internal sealed partial class WikiLinkInlineRenderer : HtmlObjectRenderer<LinkIn
 		renderer.Write($" alt=\"");
 		renderer.WriteEscape(alt);
 		renderer.Write("\"");
-		renderer.Write($" class=\"{BuildCssClasses(attributes)}\"");
-		renderer.Write(" loading=\"lazy\"");
-		WriteDimension(renderer, attributes, "width");
-		WriteDimension(renderer, attributes, "height");
+		if (link.GetData(IntrinsicSize) is ImageSize size && !AuthorSized(link))
+		{
+			renderer.Write($" class=\"{BuildCssClasses(attributes)} {IntrinsicCssClass}\"");
+			renderer.Write(" loading=\"lazy\"");
+			renderer.Write($" width=\"{size.Width}\" height=\"{size.Height}\"");
+			WriteShape(renderer, size);
+		}
+		else if (link.GetData(IntrinsicSize) is ImageSize shape)
+		{
+			renderer.Write($" class=\"{BuildCssClasses(attributes)}\"");
+			renderer.Write(" loading=\"lazy\"");
+			WriteDimension(renderer, attributes, "width");
+			WriteDimension(renderer, attributes, "height");
+			WriteShape(renderer, shape);
+		}
+		else
+		{
+			renderer.Write($" class=\"{BuildCssClasses(attributes)}\"");
+			renderer.Write(" loading=\"lazy\"");
+			WriteDimension(renderer, attributes, "width");
+			WriteDimension(renderer, attributes, "height");
+		}
 		renderer.Write(" />");
 	}
+
+	/// <summary>
+	/// The picture's own shape. Written by the renderer from two whole numbers it measured, never from the
+	/// Markdown, so it opens no way to style a page.
+	/// </summary>
+	private static void WriteShape(HtmlRenderer renderer, ImageSize size)
+		=> renderer.Write($" style=\"aspect-ratio: {size.Width} / {size.Height}\"");
 
 	/// <summary>
 	/// Emits <c>width</c>/<c>height</c> from the generic-attributes block when present
