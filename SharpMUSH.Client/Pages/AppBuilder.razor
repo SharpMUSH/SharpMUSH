@@ -485,10 +485,8 @@
 
     private void FillSaveDefaults()
     {
-        foreach (var key in _draft.InputFields().Select(f => (string)f["key"]!))
-        {
-            if (string.IsNullOrWhiteSpace(_draft.Save.GetValueOrDefault(key))) _draft.Save[key] = DefaultSave(key);
-        }
+        foreach (var key in _draft.InputFields().Select(f => (string)f["key"]!).Where(key => string.IsNullOrWhiteSpace(_draft.Save.GetValueOrDefault(key))))
+            _draft.Save[key] = DefaultSave(key);
     }
 
     private async Task SaveAsync()

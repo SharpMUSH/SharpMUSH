@@ -160,10 +160,10 @@ public static class PortalSchema
 					problems.Add($"{path}: keyvalue needs fields");
 					break;
 				}
-				foreach (var name in keys.Select(k => k is JsonValue v && v.TryGetValue<string>(out var s) ? s : null).OfType<string>())
-				{
-					if (fields is not null && !fields.ContainsKey(name)) problems.Add($"{path}: \"{name}\" is not in the data");
-				}
+				if (fields is not null)
+					problems.AddRange(keys.Select(k => k is JsonValue v && v.TryGetValue<string>(out var s) ? s : null)
+						.Where(name => name is not null && !fields.ContainsKey(name))
+						.Select(name => $"{path}: \"{name}\" is not in the data"));
 				break;
 		}
 	}

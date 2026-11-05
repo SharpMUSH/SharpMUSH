@@ -181,12 +181,12 @@ public partial class Functions
 
 		private IEnumerable<Field> KeyValueRows(JsonObject element)
 		{
-			foreach (var key in Strings(element["fields"] as JsonArray))
-			{
-				if (Visible(key) is not { } value) continue;
-				var text = value is JsonObject item ? ValueText(item["text"]) : ValueText(value);
-				if (text.Length > 0) yield return new Field(MarkupText.Plain(key), new TextBlock(MarkupText.Plain(text)));
-			}
+			return Strings(element["fields"] as JsonArray)
+				.Select(key => (Key: key, Value: Visible(key)))
+				.Where(row => row.Value is not null)
+				.Select(row => (row.Key, Text: row.Value is JsonObject item ? ValueText(item["text"]) : ValueText(row.Value)))
+				.Where(row => row.Text.Length > 0)
+				.Select(row => new Field(MarkupText.Plain(row.Key), new TextBlock(MarkupText.Plain(row.Text))));
 		}
 
 		private Block? Markdown(JsonObject element)

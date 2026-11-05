@@ -13,18 +13,13 @@ public partial class PackageInstallService
 	/// template's empty lists are filled at run time, so what it lacks is not a problem; a document softcode
 	/// builds some other way is checked by <c>schemacheck()</c> at run time instead.
 	/// </summary>
-	internal static IEnumerable<string> SchemaNotes(PackageChangeset changeset)
-	{
-		foreach (var change in changeset.Attributes)
-		{
-			if (change.NewValue is not { Length: > 0 } value) continue;
-			foreach (var (document, template) in Documents(value))
-			{
-				foreach (var problem in PortalSchema.Check(document).Where(problem => !template || !problem.Contains(" needs ", StringComparison.Ordinal)))
-					yield return $"Portal document in {change.TargetRef}/{change.Attribute}: {problem}";
-			}
-		}
-	}
+	internal static IEnumerable<string> SchemaNotes(PackageChangeset changeset) =>
+		from change in changeset.Attributes
+		where change.NewValue is { Length: > 0 }
+		from found in Documents(change.NewValue!)
+		from problem in PortalSchema.Check(found.Document)
+		where !found.Template || !problem.Contains(" needs ", StringComparison.Ordinal)
+		select $"Portal document in {change.TargetRef}/{change.Attribute}: {problem}";
 
 	private static IEnumerable<(JsonObject Document, bool Template)> Documents(string value)
 	{
