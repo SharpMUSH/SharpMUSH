@@ -13,15 +13,15 @@ public static partial class SchemaClick
 {
 	/// <summary>
 	/// The command <paramref name="template"/> with each <c>{name}</c> filled from <paramref name="datum"/>, or null when a
-	/// name is not in it, or a value holds anything but letters, digits, spaces and <c>_ . -</c>. A value is data someone
-	/// else may have written, so it may name a thing but never add to the command.
+	/// name is not in it or its value is empty. A line break in a value becomes <c>%r</c>, so one click runs one command, as
+	/// the viewer.
 	/// </summary>
 	public static string? Fill(string template, IReadOnlyDictionary<string, string> datum)
 	{
 		var refused = false;
 		var filled = Placeholder().Replace(template, match =>
 		{
-			if (datum.TryGetValue(match.Groups[1].Value, out var value) && Plain().IsMatch(value)) return value;
+			if (datum.TryGetValue(match.Groups[1].Value, out var value) && value.Length > 0) return LineBreak().Replace(value, "%r");
 			refused = true;
 			return string.Empty;
 		});
@@ -73,9 +73,9 @@ public static partial class SchemaClick
 		return datum;
 	}
 
+	[GeneratedRegex(@"\r\n?|\n")]
+	private static partial Regex LineBreak();
+
 	[GeneratedRegex(@"\{([A-Za-z0-9_]+)\}")]
 	private static partial Regex Placeholder();
-
-	[GeneratedRegex(@"^[A-Za-z0-9 _.\-]+$")]
-	private static partial Regex Plain();
 }

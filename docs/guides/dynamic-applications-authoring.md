@@ -170,9 +170,8 @@ In a `view`, buttons and timeline actions post their `values` alone.
 - `command` is a line run as the viewer's character, exactly as if typed, with `{name}` filled from the clicked
   value. What it prints shows under the element, and the page fetches its data again. A tile, a table row or a
   chip fills from its row's fields, so a row usually carries a `key`; a keyvalue row gives `{key}` (the field
-  name) and `{value}`; a button gives its own `key`, `label` and `values`. A filled value may hold only letters,
-  digits, spaces and `_ . -`, and a value with anything else is not clickable, so data someone else wrote can
-  name a thing but never add to the command.
+  name) and `{value}`; a button gives its own `key`, `label` and `values`. A value that is missing or empty is
+  not clickable, and a line break in a value is sent as `%r`, so one click runs one command.
 - `dialog` is a route answering a small form for the clicked value, fetched with `?key=<key>` and shown in a
   dialog: a roll that needs a choice first (a weapon, a bonus). The form's own actions post the choices, and an
   answer without errors closes the dialog and refetches the page.

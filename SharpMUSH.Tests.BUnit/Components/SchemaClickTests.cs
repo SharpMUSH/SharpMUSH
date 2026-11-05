@@ -20,7 +20,7 @@ namespace SharpMUSH.Tests.BUnit.Components;
 
 /// <summary>
 /// A click on a value sends what the viewer meant: the element's command, filled from the value and run as the viewer,
-/// or its dialog of choices. A value that could add to the command is not clickable.
+/// or its dialog of choices. A value that is missing or empty is not clickable.
 /// </summary>
 public class SchemaClickTests : TrackingBunitContext
 {
@@ -67,12 +67,13 @@ public class SchemaClickTests : TrackingBunitContext
 		new(new Dictionary<string, SchemaFieldValue> { [key] = new(JsonDocument.Parse(json).RootElement.Clone()) });
 
 	[Test]
-	public async Task A_template_fills_from_the_value_and_refuses_what_could_add_to_the_command()
+	public async Task A_template_fills_from_the_value_with_line_breaks_as_percent_r()
 	{
-		var datum = new Dictionary<string, string> { ["key"] = "Strength", ["label"] = "Str", ["bad"] = "x;@pemit me=hi", ["empty"] = "" };
+		var datum = new Dictionary<string, string> { ["key"] = "Strength", ["label"] = "Str", ["name"] = "Thieves' Tools", ["note"] = "one\r\ntwo\nthree", ["empty"] = "" };
 
 		await Assert.That(SchemaClick.Fill("+check {key}", datum)).IsEqualTo("+check Strength");
-		await Assert.That(SchemaClick.Fill("+check {bad}", datum)).IsNull();
+		await Assert.That(SchemaClick.Fill("+use {name}", datum)).IsEqualTo("+use Thieves' Tools");
+		await Assert.That(SchemaClick.Fill("+note {note}", datum)).IsEqualTo("+note one%rtwo%rthree");
 		await Assert.That(SchemaClick.Fill("+check {missing}", datum)).IsNull();
 		await Assert.That(SchemaClick.Fill("+check {empty}", datum)).IsNull();
 		await Assert.That(SchemaClick.Fill("+check [add(1,2)] {key}", datum)).IsEqualTo("+check [add(1,2)] Strength");
@@ -93,7 +94,7 @@ public class SchemaClickTests : TrackingBunitContext
 		var changed = 0;
 		var cut = Render<SchemaDisplay>(p => p
 			.Add(x => x.Element, new SchemaElement(Kind: "stats", RowsField: "abilities", Command: "+check {key}"))
-			.Add(x => x.Data, Data("abilities", """[{"key":"Strength","label":"STR","value":"14"},{"key":"x;y","label":"Odd","value":"1"}]"""))
+			.Add(x => x.Data, Data("abilities", """[{"key":"Strength","label":"STR","value":"14"},{"key":"","label":"","value":"1"}]"""))
 			.Add(x => x.OnChanged, () => changed++));
 
 		var tiles = cut.FindAll(".schema-stat");
