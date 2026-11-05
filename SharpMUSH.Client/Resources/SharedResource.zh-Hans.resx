@@ -7854,7 +7854,7 @@
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenreHint" xml:space="preserve">
-    <value>选择游戏的 MSSP 类型和子类型。Sharpie 会根据这些选择显示插图；都不适用时请选“无”。</value>
+    <value>选择游戏的 MSSP 类型和子类型。Sharpie 会根据这些选择显示插图；都不适用时请选“None”。</value>
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenres" xml:space="preserve">

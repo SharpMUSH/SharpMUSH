@@ -7854,7 +7854,7 @@
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenreHint" xml:space="preserve">
-    <value>Выберите жанр и поджанр игры по MSSP. Sharpie использует их для иллюстраций; если ничего не подходит, выберите «Нет».</value>
+    <value>Выберите жанр и поджанр игры по MSSP. Sharpie использует их для иллюстраций; если ничего не подходит, выберите «None».</value>
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenres" xml:space="preserve">

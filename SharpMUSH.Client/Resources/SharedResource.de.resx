@@ -7854,7 +7854,7 @@
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenreHint" xml:space="preserve">
-    <value>Wählen Sie MSSP-Genre und -Subgenre des Spiels. Sharpie nutzt diese Auswahl für die Grafik; wählen Sie Keines, wenn beides nicht zutrifft.</value>
+    <value>Wählen Sie MSSP-Genre und -Subgenre des Spiels. Sharpie nutzt diese Auswahl für die Grafik; wählen Sie None, wenn beides nicht zutrifft.</value>
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenres" xml:space="preserve">
@@ -8690,7 +8690,7 @@
     <comment>MT</comment>
   </data>
   <data name="NotifyDeviceStale" xml:space="preserve">
-    <value>das Spiel hat seinen Schlüssel geändert: Benachrichtigungen auf diesem Gerät erneut aktivieren</value>
+    <value>das Spiel hat seinen Schlüssel geändert: Benachrichtigungen auf jenem Gerät erneut aktivieren</value>
     <comment>MT</comment>
   </data>
   <data name="NotifyDevices" xml:space="preserve">

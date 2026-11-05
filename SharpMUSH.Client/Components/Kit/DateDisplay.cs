@@ -31,6 +31,14 @@ public static partial class DateDisplay
 		return $"{local.ToString(MediumDatePattern(culture), culture)}, {local.ToString("t", culture)}";
 	}
 
+	/// <summary>"Thursday, November 5, 2026, 4:36 PM" / "Donnerstag, 5. November 2026, 16:36".</summary>
+	public static string LongDateTime(DateTimeOffset when, CultureInfo? culture = null)
+	{
+		culture ??= CultureInfo.CurrentCulture;
+		var local = when.ToLocalTime();
+		return $"{local.ToString("D", culture)}, {local.ToString("t", culture)}";
+	}
+
 	/// <summary>"Nov 5" / "5. Nov.".</summary>
 	public static string MonthDay(DateTimeOffset when, CultureInfo? culture = null)
 	{

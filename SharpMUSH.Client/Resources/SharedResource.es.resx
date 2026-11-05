@@ -7854,7 +7854,7 @@
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenreHint" xml:space="preserve">
-    <value>Elija el género y subgénero MSSP del juego. Sharpie usa esta selección para sus ilustraciones; elija Ninguno si no corresponde ninguno.</value>
+    <value>Elija el género y subgénero MSSP del juego. Sharpie usa esta selección para sus ilustraciones; elija None si no corresponde ninguno.</value>
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenres" xml:space="preserve">

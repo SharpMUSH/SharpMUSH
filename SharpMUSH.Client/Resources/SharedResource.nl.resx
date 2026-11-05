@@ -7854,7 +7854,7 @@
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenreHint" xml:space="preserve">
-    <value>Kies het MSSP-genre en -subgenre van het spel. Sharpie gebruikt deze keuzes voor de afbeeldingen; kies Geen als geen van beide past.</value>
+    <value>Kies het MSSP-genre en -subgenre van het spel. Sharpie gebruikt deze keuzes voor de afbeeldingen; kies None als geen van beide past.</value>
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenres" xml:space="preserve">
@@ -7954,7 +7954,7 @@
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityStarters" xml:space="preserve">
-    <value>Welkomstopzetten</value>
+    <value>Welkomstsjablonen</value>
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityStyle" xml:space="preserve">

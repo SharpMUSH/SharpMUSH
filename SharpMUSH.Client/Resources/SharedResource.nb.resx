@@ -7854,7 +7854,7 @@
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenreHint" xml:space="preserve">
-    <value>Velg spillets MSSP-sjanger og undersjanger. Sharpie bruker valgene til illustrasjoner; velg Ingen når ingen passer.</value>
+    <value>Velg spillets MSSP-sjanger og undersjanger. Sharpie bruker valgene til illustrasjoner; velg None når ingen passer.</value>
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenres" xml:space="preserve">
