@@ -10,20 +10,22 @@
     <MudTextField T="string" Value="@_search" ValueChanged="SearchAsync" DebounceInterval="300" Immediate="true"
                   Placeholder="@Loc["NavLibrarySearch"]" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="kit-library-search" aria-label="@Loc["NavLibrarySearch"]" />
+    @* One status region for the search, mounted empty with it, so each change is read: a region inserted
+       already holding its text is seldom announced. It says what the eye sees without a grid of results. *@
+    <div class="visually-hidden" role="status">@Status</div>
     @if (_loading)
     {
-        <div class="kit-library-grid">
-            <span class="visually-hidden">@Loc["Loading"]</span>
+        <div class="kit-library-grid" aria-hidden="true">
             @for (var i = 0; i < 8; i++) { <div class="kit-skeleton kit-library-skeleton" aria-hidden="true"></div> }
         </div>
     }
     else if (_error is not null)
     {
-        <div class="kit-library-empty">@_error</div>
+        <div class="kit-library-empty" aria-hidden="true">@_error</div>
     }
     else if (Shown.Count == 0)
     {
-        <div class="kit-library-empty">@(string.IsNullOrWhiteSpace(_search) ? Loc["NavLibraryEmpty"] : Loc["NavLibraryNoMatch"])</div>
+        <div class="kit-library-empty" aria-hidden="true">@EmptyText</div>
     }
     else
     {
@@ -69,6 +71,10 @@
 
     /// <summary>Bumped on every search: an answer for an older one is dropped.</summary>
     private int _generation;
+
+    private string EmptyText => string.IsNullOrWhiteSpace(_search) ? Loc["NavLibraryEmpty"] : Loc["NavLibraryNoMatch"];
+
+    private string Status => _loading ? Loc["Loading"] : _error ?? (Shown.Count == 0 ? EmptyText : string.Empty);
 
     private IReadOnlyList<LibraryAssetInfo> Shown =>
         [.. _assets.Where(a => !Exclude.Contains(a.Id) && (ContentTypes is null || ContentTypes.Contains(a.ContentType)))];

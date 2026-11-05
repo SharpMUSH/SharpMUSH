@@ -65,6 +65,14 @@
 @keyframes kit-skeleton-pulse {
 	50% { opacity: 0.4; }
 }
+/* Forced colours replace the placeholder's fill with the page's own, and the shape would vanish. An outline
+   drawn inside it keeps the shape without changing its size. */
+@media (forced-colors: active) {
+	.kit-skeleton, .mud-skeleton {
+		outline: 1px solid GrayText;
+		outline-offset: -1px;
+	}
+}
 
 /* MudBlazor's components move on Material 2's curves and their own durations, and ignore reduced
    motion. These put them on the portal's tokens, which also stills them under reduced motion. */
