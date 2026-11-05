@@ -209,9 +209,8 @@ public static class PortalSchema
 
 	private static void CheckClick(JsonObject element, string kind, string path, List<string> problems)
 	{
-		foreach (var property in (string[])["command", "dialog"])
+		foreach (var property in ((string[])["command", "dialog"]).Where(property => element[property] is not null))
 		{
-			if (element[property] is null) continue;
 			if (Text(element, property) is not { Length: > 0 } value) problems.Add($"{path}: {property} is not text");
 			else if (!ClickableKinds.Contains(kind)) problems.Add($"{path}: a {kind} has no values to click, so {property} does nothing");
 			else if (property == "dialog" && !OnThisServer(value)) problems.Add($"{path}: dialog route \"{value}\" is not on this server");
