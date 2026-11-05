@@ -1,5 +1,7 @@
+using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Controllers;
@@ -20,22 +22,33 @@ public static class CharacterSummaryMapper
 	/// opaque to the client, so the server has to say. Defaults false for callers that don't resolve it.
 	/// <paramref name="ThemeId"/>, <paramref name="Accent"/> and <paramref name="Vision"/> are the character's portal look
 	/// (<see cref="IPortalThemeService.GetAppearanceAsync"/>), so a tab themes itself from the roster it already reads.
+	/// <paramref name="Locale"/> is the character's <c>LOCALE</c> attribute, which <c>@locale</c> and the portal's
+	/// language picker both write, so a tab in a new browser takes the character's language from the roster too.
 	/// </summary>
 	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags, bool IsActing = false,
-		string? ThemeId = null, string? Accent = null, string? Vision = null);
+		string? ThemeId = null, string? Accent = null, string? Vision = null, string? Locale = null);
 
 	/// <param name="themes">Reads each character's look; without it the summaries carry none.</param>
+	/// <param name="mediator">Reads each character's <c>LOCALE</c>; without it the summaries carry none.</param>
 	public static async Task<IReadOnlyList<CharacterSummary>> BuildSummariesAsync(
 		IReadOnlyList<SharpPlayer> characters, CancellationToken ct = default,
-		int? actingKey = null, long? actingCreationTime = null, IPortalThemeService? themes = null) =>
+		int? actingKey = null, long? actingCreationTime = null, IPortalThemeService? themes = null,
+		IMediator? mediator = null) =>
 		await characters.ToAsyncEnumerable()
 			.Select(async (c, innerCt) =>
 			{
 				var look = themes is null ? null : await themes.GetAppearanceAsync(c.Object);
+				var locale = mediator is null ? null : await LocaleAsync(mediator, c.Object.DBRef, innerCt);
 				return new CharacterSummary(c.Object.Key, c.Object.CreationTime, c.Object.Name,
 					string.Join(" ", (await c.Object.ReadFlagsAsync(innerCt)).Flags.Select(f => f.Name)),
 					c.Object.Key == actingKey && c.Object.CreationTime == actingCreationTime,
-					look?.ThemeId, look?.Accent, look?.Vision);
+					look?.ThemeId, look?.Accent, look?.Vision, locale);
 			})
 			.ToListAsync(ct);
+
+	/// <summary>The character's <c>LOCALE</c>, read through the Mediator as <c>@locale</c> reads it, or null when unset.</summary>
+	private static async ValueTask<string?> LocaleAsync(IMediator mediator, DBRef character, CancellationToken ct)
+		=> await mediator.CreateStream(new GetAttributeQuery(character, ["LOCALE"]), ct)
+			.Select(attr => attr.Value.ToPlainText())
+			.FirstOrDefaultAsync(value => !string.IsNullOrWhiteSpace(value), ct);
 }

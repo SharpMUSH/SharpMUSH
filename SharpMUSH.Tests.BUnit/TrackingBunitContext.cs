@@ -65,6 +65,10 @@ public abstract class TrackingBunitContext : BunitContext
 			return new PoseTypeService(factory, sp.GetService<GameCommandService>() ?? new GameCommandService(factory),
 				sp.GetRequiredService<IAccountAuthState>());
 		});
+		Services.TryAddSingleton(sp => new CharacterLanguage(sp.GetRequiredService<IAccountAuthState>(),
+			sp.GetService<GameCommandService>() ?? new GameCommandService(sp.GetService<IHttpClientFactory>() ?? NoServer()),
+			sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(), sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>(),
+			NullLogger<CharacterLanguage>.Instance));
 		Services.TryAddSingleton(sp => new SceneDetailService(sp.GetService<IHttpClientFactory>() ?? NoServer()));
 		Services.TryAddSingleton(sp => new PortalNavigation(
 			sp.GetService<ApplicationRegistryClient>()

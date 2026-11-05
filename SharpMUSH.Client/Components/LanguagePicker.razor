@@ -1,8 +1,6 @@
 @using System.Globalization
 @using SharpMUSH.Client.Resources
-@inject IJSRuntime JSRuntime
-@inject NavigationManager NavigationManager
-@inject ILogger<LanguagePicker> Logger
+@inject CharacterLanguage Language
 @inject IStringLocalizer<SharedResource> Loc
 
 @* The language button and its list. Escape and a click outside close it (PopoverMenu); Up and Down move
@@ -35,7 +33,7 @@
     [Parameter] public Origin AnchorOrigin { get; set; } = Origin.BottomRight;
     [Parameter] public Origin TransformOrigin { get; set; } = Origin.TopRight;
 
-    private string _currentLocale = "en";
+    private readonly string _currentLocale = CharacterLanguage.Current;
     private bool _open;
 
     private void CloseOnEscape(KeyboardEventArgs e)
@@ -49,26 +47,11 @@
         .Select(code => new LanguageOption(code, PortalLocales.DisplayName(code)))
         .ToArray();
 
-    // Program.cs has already read the stored locale and made it the UI culture (resetting a bad tag
-    // to English), so that answer is taken from there rather than read from storage a second time.
-    protected override void OnInitialized()
-        => _currentLocale = CultureInfo.DefaultThreadCurrentUICulture?.Name is { Length: > 0 } name ? name : "en";
-
+    // Program.cs has already set the UI culture from the stored locale; switching stores the new one, sets the
+    // acting character's @locale with it, and reloads.
     private async Task SetLanguageAsync(string locale)
     {
-        if (locale == _currentLocale) return;
-
-        // The culture is read from storage at startup, so a locale that could not be stored would be
-        // lost to the reload below; stay on the current one instead.
-        if (!await JSRuntime.SetItemAsync(BrowserStore.Local, "locale", locale))
-        {
-            Logger.LogWarning("Could not store the locale {Locale}; keeping {Current}", locale, _currentLocale);
-            return;
-        }
-
-        _currentLocale = locale;
-
-        // Reload the app to apply new culture (Blazor WASM requires restart for culture change)
-        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+        _open = false;
+        await Language.ChooseAsync(locale);
     }
 }
