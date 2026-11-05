@@ -1,9 +1,12 @@
 @using System.Text.Json
 @using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Models.Portal
 @inject IDialogService DialogService
 @inject IStringLocalizer<SharedResource> Loc
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject IServiceProvider Services
 
 @* One display element of a Portal Schema Document — markdown, image, table, keyvalue, timeline, graph,
    divider, button — drawn from the data payload. Shared by SchemaViewRenderer and SchemaFormRenderer so a form can
@@ -45,7 +48,7 @@
             {
                 <div class="schema-kv-row">
                     <dt class="schema-label">@key</dt>
-                    <dd class="schema-value">@RenderKeyValue(Lookup(key))</dd>
+                    <dd class="schema-value">@RenderKeyValue(key, Lookup(key))</dd>
                 </div>
             }
         </dl>
@@ -71,11 +74,16 @@
         <MudButton Variant="@SchemaRendering.ParseVariant(Element.Variant)"
                    Color="@SchemaRendering.ParseColor(Element.Color, Color.Secondary)"
                    Class="mb-2 schema-button"
-                   OnClick="@(() => RequestAsync(Element.Action, Element.Values, Element.Confirm, Element.Label))"
-                   Disabled="@(Busy || _pending || !CanDispatch(Element.Action))">
+                   OnClick="@(() => PressAsync())"
+                   Disabled="@(Busy || _pending || !CanPress)">
             @(Element.Label ?? Loc["WidAction"].Value)
         </MudButton>
         break;
+}
+
+@if (_output is { Count: > 0 } output)
+{
+    <pre class="schema-click-output" role="status">@string.Join('\n', output)</pre>
 }
 
 @code {
@@ -95,6 +103,72 @@
 
     /// <summary>Raised, after any confirmation, with the action to dispatch and the values to merge in.</summary>
     [Parameter] public EventCallback<SchemaActionRequest> OnAction { get; set; }
+
+    /// <summary>Raised when a click ran the element's command or its dialog was answered.</summary>
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    /// <summary>What the element's command printed when last clicked, shown under it.</summary>
+    private IReadOnlyList<string>? _output;
+
+    private bool Clicks => Element.Command is { Length: > 0 } || Element.Dialog is { Length: > 0 };
+
+    /// <summary>True when a click on the value <paramref name="datum"/> describes has something to run.</summary>
+    private bool Clickable(IReadOnlyDictionary<string, string> datum) =>
+        Element.Dialog is { Length: > 0 } dialog
+            ? SchemaClick.DialogUrl(dialog, datum.GetValueOrDefault("key")) is not null
+            : Element.Command is { Length: > 0 } command && SchemaClick.Fill(command, datum) is not null;
+
+    private bool CanPress => CanDispatch(Element.Action) || (string.IsNullOrWhiteSpace(Element.Action) && Clickable(SchemaClick.Datum(Element)));
+
+    private Task PressAsync() => CanDispatch(Element.Action)
+        ? RequestAsync(Element.Action, Element.Values, Element.Confirm, Element.Label)
+        : ClickAsync(SchemaClick.Datum(Element));
+
+    /// <summary>
+    /// A click on a value: opens the element's dialog for it, or runs its command as the viewer and shows what that
+    /// printed. Either way the page is told, so it can fetch what changed.
+    /// </summary>
+    private async Task ClickAsync(IReadOnlyDictionary<string, string> datum)
+    {
+        if (_pending || Busy || !Clickable(datum)) return;
+        _pending = true;
+        try
+        {
+            if (Element.Dialog is { Length: > 0 } dialog)
+            {
+                var shown = await DialogService.ShowAsync<SchemaDialog>(datum.GetValueOrDefault("label") ?? Element.Label ?? string.Empty,
+                    new DialogParameters<SchemaDialog> { { x => x.Url, SchemaClick.DialogUrl(dialog, datum.GetValueOrDefault("key"))! } },
+                    new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Small });
+                if (await shown.Result is not { Canceled: false }) return;
+            }
+            else
+            {
+                _output = await Services.GetRequiredService<GameCommandService>().RunAsync(SchemaClick.Fill(Element.Command!, datum)!) switch
+                {
+                    PortalCommandResponse response => response.Output,
+                    ApiFailure failure => [failure.Message],
+                };
+            }
+            await OnChanged.InvokeAsync();
+        }
+        finally
+        {
+            _pending = false;
+        }
+    }
+
+    /// <summary>A value drawn as a button when a click on it has something to run, else as itself.</summary>
+    private RenderFragment Click(IReadOnlyDictionary<string, string> datum, RenderFragment content) => __builder =>
+    {
+        @if (Clicks && Clickable(datum))
+        {
+            <button type="button" class="schema-click" disabled="@(Busy || _pending)" @onclick="@(() => ClickAsync(datum))">@content</button>
+        }
+        else
+        {
+            @content
+        }
+    };
 
     private string Kind => (Element.Kind ?? string.Empty).ToLowerInvariant();
 
@@ -140,7 +214,7 @@
         => !string.IsNullOrEmpty(SchemaRendering.ReadKeyValue(Lookup(key)).Text);
 
     // A keyvalue's value: its text, as a link when it came as { text, link } with a link the portal may follow.
-    private static RenderFragment RenderKeyValue(JsonElement? value) => __builder =>
+    private RenderFragment RenderKeyValue(string key, JsonElement? value) => __builder =>
     {
         var (text, href) = SchemaRendering.ReadKeyValue(value);
         @if (href is not null)
@@ -149,7 +223,7 @@
         }
         else
         {
-            @text
+            @Click(SchemaClick.Datum(key, text), b => b.AddContent(0, text))
         }
     };
 
@@ -165,7 +239,7 @@
     /// </summary>
     private RenderFragment RenderStats() => __builder =>
     {
-        var tiles = Rows().Select(SchemaRendering.ReadStat).Where(t => !string.IsNullOrEmpty(t.Value)).ToList();
+        var tiles = Rows().Select(row => (Tile: SchemaRendering.ReadStat(row), Datum: SchemaClick.Datum(row))).Where(t => !string.IsNullOrEmpty(t.Tile.Value)).ToList();
         if (tiles.Count == 0)
         {
             @if (!string.IsNullOrWhiteSpace(Element.Empty))
@@ -176,9 +250,14 @@
         }
 
         <div class="schema-stats">
-            @foreach (var tile in tiles)
+            @foreach (var (tile, datum) in tiles)
             {
-                <div class="schema-stat" data-tone="@SchemaRendering.ToneName(tile.Color)">
+                var clickable = Clicks && Clickable(datum);
+                <div class="schema-stat @(clickable ? "schema-stat--click" : null)" data-tone="@SchemaRendering.ToneName(tile.Color)"
+                     role="@(clickable ? "button" : null)" tabindex="@(clickable ? "0" : null)"
+                     aria-disabled="@(clickable && (Busy || _pending) ? "true" : null)"
+                     @onclick="@(() => clickable ? ClickAsync(datum) : Task.CompletedTask)"
+                     @onkeydown="@(args => clickable && args.Key is "Enter" or " " ? ClickAsync(datum) : Task.CompletedTask)">
                     <div class="schema-label">@tile.Label</div>
                     <div class="schema-stat-value">@tile.Value</div>
                     @if (tile.Max is > 0 and var max)
@@ -214,7 +293,11 @@
     /// </summary>
     private RenderFragment RenderChips() => __builder =>
     {
-        var chips = SchemaRendering.ReadChips(Element.SrcField is null ? null : Lookup(Element.SrcField));
+        var source = Element.SrcField is null ? null : Lookup(Element.SrcField);
+        var chips = SchemaRendering.ReadChips(source);
+        var data = source is { ValueKind: JsonValueKind.Array } list
+            ? list.EnumerateArray().Select(SchemaClick.Datum).Where(d => !string.IsNullOrWhiteSpace(d.GetValueOrDefault("text"))).ToList()
+            : [];
         if (chips.Count == 0)
         {
             @if (!string.IsNullOrWhiteSpace(Element.Empty))
@@ -230,9 +313,19 @@
                 <div class="schema-label">@Element.Label</div>
             }
             <div class="schema-chips">
-                @foreach (var chip in chips)
+                @for (var i = 0; i < chips.Count; i++)
                 {
-                    <MudChip T="string" Size="Size.Small" Color="chip.Color" Class="schema-chip">@chip.Text</MudChip>
+                    var chip = chips[i];
+                    var datum = i < data.Count ? data[i] : SchemaClick.Datum(JsonSerializer.SerializeToElement(chip.Text));
+                    @if (Clicks && Clickable(datum))
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="chip.Color" Class="schema-chip schema-chip--click"
+                                 Disabled="@(Busy || _pending)" OnClick="@(() => ClickAsync(datum))">@chip.Text</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="chip.Color" Class="schema-chip">@chip.Text</MudChip>
+                    }
                 }
             </div>
         </div>
@@ -291,9 +384,10 @@
                         @ondragend="@(() => _dragging = null)"
                         @ondragover:preventDefault="@reorderable"
                         @ondrop="@(() => DropAsync(rows, index))">
-                        @foreach (var col in Element.Columns)
+                        @for (var c = 0; c < Element.Columns.Count; c++)
                         {
-                            <td>@RenderCell(col, row)</td>
+                            var col = Element.Columns[c];
+                            <td>@(c == 0 ? Click(SchemaClick.Datum(row), RenderCell(col, row)) : RenderCell(col, row))</td>
                         }
                         @if (reorderable)
                         {

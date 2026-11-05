@@ -14,11 +14,11 @@
     }
     @if (document.IsForm)
     {
-        <SchemaFormRenderer Document="document" Data="_state.Data" State="_state.Form" Busy="_state.Busy" ActionHandler="Dispatch" />
+        <SchemaFormRenderer Document="document" Data="_state.Data" State="_state.Form" Busy="_state.Busy" ActionHandler="Dispatch" GameChanged="Refetch" />
     }
     else
     {
-        <SchemaViewRenderer Document="document" Data="_state.Data" Busy="_state.Busy" ActionHandler="Dispatch" QuietWhenEmpty="QuietWhenEmpty" />
+        <SchemaViewRenderer Document="document" Data="_state.Data" Busy="_state.Busy" ActionHandler="Dispatch" QuietWhenEmpty="QuietWhenEmpty" GameChanged="Refetch" />
     }
 }
 
@@ -39,6 +39,9 @@ else if (_state.Form.GlobalError is { } diagnostic)
 
     /// <summary>The data route, filled in, that the view's <c>refresh</c> fetches again. Without one it never refreshes.</summary>
     [Parameter] public string? DataUrl { get; set; }
+
+    /// <summary>Raised when an action is answered without errors, so a dialog holding the page can close.</summary>
+    [Parameter] public EventCallback Answered { get; set; }
     private readonly SchemaApplicationState _state = new();
     private PortalSchemaDocument? _loadedDocument;
     private SchemaData? _loadedData;
@@ -152,6 +155,9 @@ else if (_state.Form.GlobalError is { } diagnostic)
         }
     }
 
+    /// <summary>A click on the page ran something in the game: fetch what it shows again.</summary>
+    private Task Refetch() => InvokeAsync(RefetchAsync);
+
     private async Task Dispatch(SchemaActionRequest request)
     {
         if (_disposed || _state.Form.Action(request.Action) is not { } action) return;
@@ -169,6 +175,7 @@ else if (_state.Form.GlobalError is { } diagnostic)
             return;
         }
         if (_state.Toast is { Length: > 0 } toast) Snackbar.Add(toast, Severity.Success);
+        if (result.Ok) await Answered.InvokeAsync();
     }
 
     public void Dispose()

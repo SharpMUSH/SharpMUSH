@@ -128,6 +128,7 @@ public static class PortalSchema
 			problems.Add($"{path}: span {span} is wider than the section's {columns} columns");
 		CheckAction(element, "triggers_action", path, actions, problems);
 		if (element["reorder"] is JsonObject reorder) CheckAction(reorder, "action", $"{path}.reorder", actions, problems);
+		CheckClick(element, kind, path, problems);
 
 		switch (kind)
 		{
@@ -137,8 +138,10 @@ public static class PortalSchema
 					problems.Add($"{path}: key \"{key}\" is used twice");
 				break;
 			case "button":
-				if (Text(element, "action") is not { Length: > 0 }) problems.Add($"{path}: a button needs an action");
-				else CheckAction(element, "action", path, actions, problems);
+				if (Text(element, "action") is not { Length: > 0 } && Text(element, "command") is not { Length: > 0 } && Text(element, "dialog") is not { Length: > 0 })
+					problems.Add($"{path}: a button needs an action, a command or a dialog");
+				else if (Text(element, "action") is { Length: > 0 })
+					CheckAction(element, "action", path, actions, problems);
 				break;
 			case "table":
 				Reads(element, "rows_field", path, fields, problems);
@@ -201,8 +204,22 @@ public static class PortalSchema
 		else if (fields is not null && !fields.ContainsKey(key)) problems.Add($"{path}: {property} \"{key}\" is not in the data");
 	}
 
+	/// <summary>The kinds whose values a click can run a <c>command</c> or open a <c>dialog</c> on.</summary>
+	public static FrozenSet<string> ClickableKinds { get; } = new[] { "stats", "keyvalue", "chips", "table", "button" }.ToFrozenSet(StringComparer.Ordinal);
+
+	private static void CheckClick(JsonObject element, string kind, string path, List<string> problems)
+	{
+		foreach (var property in (string[])["command", "dialog"])
+		{
+			if (element[property] is null) continue;
+			if (Text(element, property) is not { Length: > 0 } value) problems.Add($"{path}: {property} is not text");
+			else if (!ClickableKinds.Contains(kind)) problems.Add($"{path}: a {kind} has no values to click, so {property} does nothing");
+			else if (property == "dialog" && !OnThisServer(value)) problems.Add($"{path}: dialog route \"{value}\" is not on this server");
+		}
+	}
+
 	/// <summary>A route the portal may call: a path on this server, with or without its leading <c>/</c>, not an address elsewhere.</summary>
-	private static bool OnThisServer(string route) =>
+	public static bool OnThisServer(string route) =>
 		!route.StartsWith("//", StringComparison.Ordinal) && !route.Contains('\\') && !route.Contains("://", StringComparison.Ordinal);
 
 	/// <summary>A property's text, empty when it is missing or not a string.</summary>

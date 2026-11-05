@@ -164,6 +164,29 @@ posted — two buttons can share a route and differ by intent), `color`, and `va
 
 In a `view`, buttons and timeline actions post their `values` alone.
 
+**Clickable values.** A stats tile, a keyvalue row, a chip, a table row or a button may carry `command` or
+`dialog`. A click sends what the player meant and never a number, so a roll is made and kept by the game:
+
+- `command` is a line run as the viewer's character, exactly as if typed, with `{name}` filled from the clicked
+  value. What it prints shows under the element, and the page fetches its data again. A tile, a table row or a
+  chip fills from its row's fields, so a row usually carries a `key`; a keyvalue row gives `{key}` (the field
+  name) and `{value}`; a button gives its own `key`, `label` and `values`. A filled value may hold only letters,
+  digits, spaces and `_ . -`, and a value with anything else is not clickable, so data someone else wrote can
+  name a thing but never add to the command.
+- `dialog` is a route answering a small form for the clicked value, fetched with `?key=<key>` and shown in a
+  dialog: a roll that needs a choice first (a weapon, a bonus). The form's own actions post the choices, and an
+  answer without errors closes the dialog and refetches the page.
+
+```jsonc
+{ "kind": "stats", "rows_field": "abilities", "command": "+check {key}" }
+{ "kind": "table", "rows_field": "weapons", "columns": [ { "key": "name", "label": "Weapon" } ],
+  "dialog": "/http/sheet/attack" }
+```
+
+The command or the dialog's action does the roll in softcode, with `roll()` recording it, so the result is
+the game's to show again (`rollinfo()`) and anyone at the table can check it. A flow too long for a dialog
+belongs on its own page: answer with a `redirect`.
+
 **Fields** may carry `triggers_action`: the action dispatched whenever the value changes — a
 filter select that re-fetches its table:
 

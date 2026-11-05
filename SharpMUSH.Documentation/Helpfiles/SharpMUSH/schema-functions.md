@@ -57,7 +57,8 @@ Each problem is `<path>: <problem>`, in document order. schemacheck() reports:
 - a field with no key, or a key used twice
 - a select, radio or multiselect with no options
 - a table with no columns, or an element with no field to read
-- a button with no action, or an action not among the document's `actions`
+- a button with no action, command or dialog, or an action not among the document's `actions`
+- a `command` or `dialog` on an element with no values to click, or a dialog route that is not on this server
 - an action route that is not on this server
 - a page's `next` or `prev` naming no page
 - a span wider than its section's columns

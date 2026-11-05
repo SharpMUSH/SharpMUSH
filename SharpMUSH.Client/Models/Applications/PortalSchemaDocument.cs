@@ -130,7 +130,11 @@ public sealed record SchemaElement(
 	SchemaGraphSpec? Graph = null,
 	[property: JsonPropertyName("options_from")] string? OptionsFrom = null,
 	[property: JsonPropertyName("item_by")] string? ItemBy = null,
-	[property: JsonPropertyName("item_variants")] IReadOnlyDictionary<string, IReadOnlyList<SchemaElement>>? ItemVariants = null);
+	[property: JsonPropertyName("item_variants")] IReadOnlyDictionary<string, IReadOnlyList<SchemaElement>>? ItemVariants = null,
+	// A click on one of the element's values runs this command as the viewer, filled from the value (SchemaClick).
+	string? Command = null,
+	// A click on one of the element's values opens the form this route answers, in a dialog.
+	string? Dialog = null);
 
 /// <summary>
 /// What a <c>graph</c> field lets its author build: the step kinds, each with the outcomes leaving it and the

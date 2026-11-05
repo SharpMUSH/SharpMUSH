@@ -269,3 +269,49 @@
 .schema-chips ::deep .schema-chip {
 	margin: 0;
 }
+
+/* A value a click runs something on: a command, or a dialog of choices. */
+.schema-click {
+	padding: 0;
+	border: 0;
+	background: none;
+	font: inherit;
+	color: var(--accent);
+	text-align: inherit;
+	cursor: pointer;
+}
+
+.schema-click:hover:not(:disabled),
+.schema-click:focus-visible {
+	text-decoration: underline;
+}
+
+.schema-click:disabled {
+	color: var(--text-dim);
+	cursor: default;
+}
+
+.schema-stat--click {
+	cursor: pointer;
+}
+
+.schema-stat--click:hover,
+.schema-stat--click:focus-visible {
+	outline: 1px solid var(--accent);
+	outline-offset: -1px;
+}
+
+.schema-stat--click[aria-disabled="true"] {
+	cursor: default;
+}
+
+.schema-click-output {
+	margin: 4px 0 8px;
+	padding: 8px 10px;
+	background: var(--surface-2);
+	border-radius: 6px;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
