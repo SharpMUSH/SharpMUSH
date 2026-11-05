@@ -26,6 +26,34 @@ public static class PortalLocales
 	public static IReadOnlyList<string> Codes { get; } = ["en", "bg", "da", "de", "es", "fr", "hr", "hu", "nb", "nl", "pl", "pt-BR", "ro", "ru", "sv", "zh-Hans"];
 
 	/// <summary>
+	/// The portal locale that serves <paramref name="tag"/>, a game <c>LOCALE</c> such as <c>de-DE</c>: the tag
+	/// itself or its nearest parent culture in <see cref="Codes"/> (<c>de-DE</c> is served by <c>de</c>,
+	/// <c>zh-CN</c> by <c>zh-Hans</c>). Null when no portal locale serves it, or the tag is not a culture.
+	/// </summary>
+	public static string? Match(string? tag)
+	{
+		if (string.IsNullOrWhiteSpace(tag)) return null;
+
+		CultureInfo culture;
+		try
+		{
+			culture = CultureInfo.GetCultureInfo(tag.Trim());
+		}
+		catch (CultureNotFoundException)
+		{
+			return null;
+		}
+
+		for (; !string.IsNullOrEmpty(culture.Name); culture = culture.Parent)
+		{
+			if (Codes.FirstOrDefault(code => string.Equals(code, culture.Name, StringComparison.OrdinalIgnoreCase)) is { } code)
+				return code;
+		}
+
+		return null;
+	}
+
+	/// <summary>
 	/// A locale's name in its own language, first character upper-cased ("Français"). Falls back to the
 	/// tag itself for a locale this runtime does not know — not expected for anything in
 	/// <see cref="Codes"/> now that the client loads full ICU data, but the wiki editor accepts free-text

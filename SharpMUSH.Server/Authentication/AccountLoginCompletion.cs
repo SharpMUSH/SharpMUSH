@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Configuration.Options;
@@ -13,7 +14,7 @@ namespace SharpMUSH.Server.Authentication;
 /// <summary>Shared login policy and session/roster issuance for every account credential.</summary>
 public sealed class AccountLoginCompletion(IAccountService accounts, IAccountSessionStore sessions,
  AccountClaimsService claims, IOptionsWrapper<SharpMUSHOptions> options, SitelockGuard sitelocks,
- IPortalThemeService themes, AccountCredentialGate gate)
+ IPortalThemeService themes, AccountCredentialGate gate, IMediator? mediator = null)
 {
 	public Task<IActionResult> CompleteAsync(HttpContext context, SharpAccount account, bool remember,
 	 int? preferredKey = null, long? preferredCreationTime = null, CancellationToken ct = default)
@@ -30,7 +31,7 @@ public sealed class AccountLoginCompletion(IAccountService accounts, IAccountSes
 		 var primary = characters.FirstOrDefault(c => c.Object.Key == preferredKey && c.Object.CreationTime == preferredCreationTime)
 		 ?? ActingCharacterResolver.Primary(characters);
 		 var summaries = await CharacterSummaryMapper.BuildSummariesAsync(characters,
-		 actingKey: primary?.Object.Key, actingCreationTime: primary?.Object.CreationTime, themes: themes);
+		 actingKey: primary?.Object.Key, actingCreationTime: primary?.Object.CreationTime, themes: themes, mediator: mediator);
 		 var role = await claims.ComputeAccountRoleAsync(current.Id!);
 		 var permissions = await claims.ComputeGrantedScopesAsync(current.Id!);
 		 var token = await sessions.CreateTokenAsync(current.Id!, TimeSpan.FromMinutes(15), ip, primary?.Object.Key, primary?.Object.CreationTime);

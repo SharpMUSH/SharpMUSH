@@ -77,7 +77,7 @@ public class AccountController(
 					: null
 				: ActingCharacterResolver.Resolve(await SessionAsync(), characters);
 			var summaries = await CharacterSummaryMapper.BuildSummariesAsync(characters,
-				actingKey: acting?.Object.Key, actingCreationTime: acting?.Object.CreationTime, themes: themes);
+				actingKey: acting?.Object.Key, actingCreationTime: acting?.Object.CreationTime, themes: themes, mediator: mediator);
 			return Ok(summaries);
 		});
 

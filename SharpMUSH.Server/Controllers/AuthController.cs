@@ -323,7 +323,7 @@ public class AuthController(
 	private Task<IActionResult> AccountLoggedInAsync(SharpAccount account, bool remember,
 		int? preferredKey = null, long? preferredCreationTime = null)
 		=> (loginCompletion ?? new AccountLoginCompletion(accountService, accountSessionStore, accountClaims,
-			options, sitelockGuard, themes, CredentialGate))
+			options, sitelockGuard, themes, CredentialGate, mediator))
 			.CompleteAsync(HttpContext, account, remember, preferredKey, preferredCreationTime, HttpContext.RequestAborted);
 
 	/// <summary>Request body for account registration.</summary>

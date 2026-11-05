@@ -127,6 +127,7 @@ builder.Services.AddSingleton<PushInterop>();
 builder.Services.AddSingleton<AccountPushService>();
 builder.Services.AddSingleton<DatabaseConversionService>();
 builder.Services.AddSingleton<ThemeService>();
+builder.Services.AddSingleton<CharacterLanguage>();
 builder.Services.AddSingleton<IThemeService>(sp => sp.GetRequiredService<ThemeService>());
 
 var registry = new WidgetRegistry();
@@ -204,7 +205,7 @@ var app = builder.Build();
 app.Services.AttachPlayTerminalFeeds();
 
 var jsRuntime = app.Services.GetRequiredService<IJSRuntime>();
-var storedLocale = await jsRuntime.GetItemAsync(BrowserStore.Local, "locale");
+var storedLocale = await jsRuntime.GetItemAsync(BrowserStore.Local, CharacterLanguage.StorageKey);
 CultureInfo culture;
 try
 {
@@ -213,10 +214,14 @@ try
 catch (CultureNotFoundException)
 {
 	culture = new CultureInfo("en");
-	await jsRuntime.RemoveItemAsync(BrowserStore.Local, "locale");
+	await jsRuntime.RemoveItemAsync(BrowserStore.Local, CharacterLanguage.StorageKey);
 }
 CultureInfo.DefaultThreadCurrentCulture = culture;
 CultureInfo.DefaultThreadCurrentUICulture = culture;
+
+// Listening before the session is restored, so the character it binds brings its own language: a LOCALE the
+// portal speaks and this tab does not yet switches the portal to it (CharacterLanguage).
+app.Services.GetRequiredService<CharacterLanguage>();
 
 // Restore this tab's account session now, while the runtime renders, rather than when the first
 // authenticated request asks for it. InitAsync caches its task, so every later caller awaits this

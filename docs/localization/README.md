@@ -41,10 +41,15 @@ engine's separate localization layer — telnet/WebSocket messages via
   name and makes every lookup silently echo its key. That was a live bug; the
   extension method's XML doc explains it and
   `SharedResourceLocalizationTests` guards it.
-- The locale comes from `localStorage["locale"]`, written by
-  `Components/LanguagePicker.razor` and read in `Program.cs`, which sets
-  `CultureInfo.DefaultThreadCurrentUICulture` and reloads the app.
-  Blazor WASM cannot change culture without a reload.
+- The locale comes from `localStorage["locale"]`, read in `Program.cs`, which
+  sets `CultureInfo.DefaultThreadCurrentUICulture`. Blazor WASM cannot change
+  culture without a reload, so every switch stores the locale and reloads.
+- The portal and the game share one language per character: the character's
+  `LOCALE` attribute, the one `@locale` sets. `Services/CharacterLanguage.cs`
+  runs `@locale` for the acting character when `Components/LanguagePicker.razor`
+  switches, and switches the tab when the roster's `Locale` for the acting
+  character is a language the portal speaks (`PortalLocales.Match`: `de-DE` is
+  served by `de`). With no character the choice stays in the browser.
 - The picker names languages by `CultureInfo.NativeName` and shows **no flag**.
   A flag is a country and a country is not a language: `es` would have to pick
   Spain over Latin America, `pt-BR`/`pt-PT` are one language and two flags, and
