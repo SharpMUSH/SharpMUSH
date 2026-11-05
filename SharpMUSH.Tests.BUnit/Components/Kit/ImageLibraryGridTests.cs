@@ -45,10 +45,11 @@ public class ImageLibraryGridTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".kit-library-grid[aria-hidden='true'] .kit-skeleton").Count).IsEqualTo(8);
 		var loadingText = loading[0].TextContent.Trim();
 
-		handler.Answer.SetResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+		using var response = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
 		{
 			Content = new StringContent("[]", System.Text.Encoding.UTF8, "application/json")
-		});
+		};
+		handler.Answer.SetResult(response);
 
 		cut.WaitForAssertion(() => cut.Find(".kit-library-empty"));
 		var done = cut.FindAll("[role='status']");
