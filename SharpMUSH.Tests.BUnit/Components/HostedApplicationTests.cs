@@ -81,7 +81,7 @@ public class HostedApplicationTests : TrackingBunitContext
 		await Assert.That(host.Find("[role=dialog]").TextContent).Contains("Dig Tool shed (shed)");
 		await Assert.That(host.Find("[role=dialog]").TextContent).Contains("left as it is");
 		await Assert.That(_requests).DoesNotContain("/api/objects/topology/apply");
-		await host.FindAll("[role=dialog] button").Single(button => button.TextContent.Contains("Make 1 change")).ClickAsync();
+		await host.FindAll("[role=dialog] button").Single(button => button.TextContent.Contains("HostedAppMakeChanges")).ClickAsync();
 		var result = await import;
 		await Assert.That(result.Applied!.Created["shed"]).IsEqualTo("#34");
 		await Assert.That(_requests).Contains("/api/objects/topology/apply");

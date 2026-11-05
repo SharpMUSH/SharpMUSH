@@ -14,7 +14,7 @@
         <div class="application-edit-dialog">
             @if (_configUnavailable)
             {
-                <MudAlert Severity="Severity.Error">Application configuration could not be read. Reopen the editor before saving.</MudAlert>
+                <MudAlert Severity="Severity.Error">@Loc["LayAppConfigUnreadable"]</MudAlert>
             }
             <MudGrid>
                 <MudItem xs="12" sm="6">
@@ -43,13 +43,13 @@
                                   HelperText="@Loc["LayAppPermissionHelper"]" />
                 </MudItem>
                 <MudItem xs="12">
-                    <MudCheckBox T="bool" @bind-Value="_hosted" Label="Plain HTML/JavaScript package" />
+                    <MudCheckBox T="bool" @bind-Value="_hosted" Label="@Loc["LayAppPlainHtml"]" />
                 </MudItem>
                 @if (_hosted)
                 {
-                    <MudItem xs="12" sm="8"><MudTextField @bind-Value="_definitionId" Label="Installed definition ID" Variant="Variant.Outlined" /></MudItem>
-                    <MudItem xs="12" sm="4"><MudNumericField @bind-Value="_configVersion" Label="Config version" Min="1" Variant="Variant.Outlined" /></MudItem>
-                    <MudItem xs="12"><MudTextField @bind-Value="_configJson" Label="Instance JSON config" Lines="8" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12" sm="8"><MudTextField @bind-Value="_definitionId" Label="@Loc["LayAppDefinitionId"]" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12" sm="4"><MudNumericField @bind-Value="_configVersion" Label="@Loc["LayAppConfigVersion"]" Min="1" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12"><MudTextField @bind-Value="_configJson" Label="@Loc["LayAppInstanceJson"]" Lines="8" Variant="Variant.Outlined" /></MudItem>
                 }
                 <MudItem xs="12">
                     <MudTextField @bind-Value="_schemaUrl" Label="@Loc["LayAppSchemaUrl"]" Required="@(!_hosted)" Disabled="_hosted" Variant="Variant.Outlined"
@@ -196,12 +196,12 @@
             return;
         }
 
-        if (_configurationLoading || _configUnavailable) { Snackbar.Add("Application configuration could not be read. Reopen the editor before saving.", Severity.Error); return; }
+        if (_configurationLoading || _configUnavailable) { Snackbar.Add(Loc["LayAppConfigUnreadable"], Severity.Error); return; }
         JsonElement? config = null;
         if (_hosted)
         {
             try { using var document = JsonDocument.Parse(_configJson); config = document.RootElement.Clone(); }
-            catch (JsonException) { Snackbar.Add("Instance config must be valid JSON.", Severity.Warning); return; }
+            catch (JsonException) { Snackbar.Add(Loc["LayAppInstanceJsonInvalid"], Severity.Warning); return; }
             _kind = ApplicationKind.Page;
         }
         _saving = true;

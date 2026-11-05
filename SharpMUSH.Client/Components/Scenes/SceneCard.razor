@@ -95,6 +95,6 @@
     /// <summary>When a scene not yet running is due; otherwise how long since anything happened in it.</summary>
     private string When =>
         !Scene.IsLive && Scene.ScheduledForUtc is { } due && due > DateTimeOffset.UtcNow
-            ? string.Format(Loc["NavSceneScheduledFor"], due.ToLocalTime().ToString("MMM d, HH:mm"))
+            ? string.Format(Loc["NavSceneScheduledFor"], DateDisplay.MonthDayTime(due))
             : Loc.Format(Scene.LastActivityAtUtc);
 }

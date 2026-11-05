@@ -7453,4 +7453,1996 @@
   <data name="NavHelpLearnSub" xml:space="preserve"><value>Vezetett bemutató a csatlakozásról és a játékról.</value></data>
   <data name="NavHelpGettingStartedSub" xml:space="preserve"><value>Mozgás, beszéd, csatornák és levelezés.</value></data>
   <data name="NavHelpNewbieSub" xml:space="preserve"><value>Mit jelent a [ ] és a &lt; &gt; egy parancsban.</value></data>
+  <data name="GuideAdminChecked" xml:space="preserve">
+    <value>Ezt ellenőriztem</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminContinue" xml:space="preserve">
+    <value>Az ellenőrzőlista folytatása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDashboardLead" xml:space="preserve">
+    <value>Mielőtt bárkit meghívna, haladjon végig ezeken. Ez a doboz eltűnik, amint minden lépés ellenőrizve vagy elhalasztva van.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDefer" xml:space="preserve">
+    <value>Elhalasztás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDeferred" xml:space="preserve">
+    <value>Elhalasztva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminDescription" xml:space="preserve">
+    <value>— a játék bemutatása és a kezdő ellenőrzőlista.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminEntry" xml:space="preserve">
+    <value>Felkészülés az új játékosokra</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminHeading" xml:space="preserve">
+    <value>Felkészülés az első játékosokra</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminIntro" xml:space="preserve">
+    <value>Külön ellenőrzőlista a játékához. Végezze el, amit tud, halassza el, amin még gondolkodni kell, és térjen vissza, amikor szüksége van rá.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminLoading" xml:space="preserve">
+    <value>Az ellenőrzőlista betöltése…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminPlayerChecked" xml:space="preserve">
+    <value>Ellenőriztem egy átlagos játékosfiókkal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminPlayingGod" xml:space="preserve">
+    <value>Jelenleg a #1-es karakterrel játszik. A mindennapi munkához váltson a stábkarakterére.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminPreview" xml:space="preserve">
+    <value>A játékosok útjának előnézete a haladás módosítása nélkül</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminProgress" xml:space="preserve">
+    <value>{1} lépésből {0} kész</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminReload" xml:space="preserve">
+    <value>Ellenőrzőlista újratöltése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminSummary" xml:space="preserve">
+    <value>Ellenőrizve: {0}; elhalasztva: {1}. Az ellenőrzőlistán hozott döntések nem módosítják a játék beállításait és a csomagok jogosultságait.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminTitle" xml:space="preserve">
+    <value>Felkészülés a játékosokra</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminTodo" xml:space="preserve">
+    <value>Teendő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideAdminVerified" xml:space="preserve">
+    <value>Ellenőrizve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtwork" xml:space="preserve">
+    <value>Sharpie-illusztrációk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtworkFull" xml:space="preserve">
+    <value>Teljes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtworkNone" xml:space="preserve">
+    <value>Nincs illusztráció</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideArtworkReduced" xml:space="preserve">
+    <value>Csökkentett</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideBack" xml:space="preserve">
+    <value>Vissza</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideBackToGame" xml:space="preserve">
+    <value>Vissza a játékhoz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsAudience" xml:space="preserve">
+    <value>Az üzenetek mindenkihez eljutnak, aki a csatornát hallgatja, nem csak a szobájában lévőkhöz.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsChat" xml:space="preserve">
+    <value>Tegye fel a kérdését.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsDescription" xml:space="preserve">
+    <value>Csatlakozás előtt olvassa el a leírását. Cserélje le a NAME szót a játék által megjelenített csatornára.</value>
+    <comment>MT — NAME kept: placeholder in the command example</comment>
+  </data>
+  <data name="GuideChannelsDiscover" xml:space="preserve">
+    <value>A csatornák szobákon átívelően kötik össze az embereket. A Játék nézetben a Csatornák böngészése gomb nyitja meg a csatornaböngészőt. A játékokban gyakran vannak kezdő-, súgó- vagy társalgócsatornák; ezek neve és hozzáférési szabályai eltérők.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsJoin" xml:space="preserve">
+    <value>Csatlakozzon ahhoz a csatornához.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsList" xml:space="preserve">
+    <value>Keressen egy csatornát.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChannelsName" xml:space="preserve">
+    <value>Cserélje le a NAME szót egy csatornára a listából.</value>
+    <comment>MT — NAME kept: placeholder in the command example</comment>
+  </data>
+  <data name="GuideChannelsTitle" xml:space="preserve">
+    <value>Keressen segítőket</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterConnectionFailed" xml:space="preserve">
+    <value>A karakterét mentettük, de nem sikerült csatlakozni a játékhoz. Próbálja újra a csatlakozást, vagy térjen vissza a fiókjához, és játsszon később.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterOptions" xml:space="preserve">
+    <value>A játék dönti el, mely lehetőségek érhetők el.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterRosterFailed" xml:space="preserve">
+    <value>A karakterét mentettük, de nem sikerült frissíteni a karakterlistát. Próbálja újra, hogy azzal a karakterrel folytassa; nem jön létre még egyszer.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCharacterRosterUnavailable" xml:space="preserve">
+    <value>Nem sikerült betölteni a karaktereit. Próbálja újra, mielőtt létrehozna vagy birtokba venne egyet, hogy megőrizhessük a meglévő karaktereit és a jelenlegi választását.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideChoosePath" xml:space="preserve">
+    <value>Válassza ki a kiindulópontját</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideClaimCharacter" xml:space="preserve">
+    <value>Vegye birtokba a karakterét</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideClose" xml:space="preserve">
+    <value>Útmutató bezárása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideComingFrom" xml:space="preserve">
+    <value>Honnan érkezik?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_list_Audience" xml:space="preserve">
+    <value>Csak Ön</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_list_Meaning" xml:space="preserve">
+    <value>Látható csatornák felfedezése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_on_Audience" xml:space="preserve">
+    <value>Bejelentheti a csatornán a tagságát</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_channel_on_Meaning" xml:space="preserve">
+    <value>Csatlakozás egy csatornához, amely engedi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_chat_Audience" xml:space="preserve">
+    <value>A csatornát hallgatók, bárhol is vannak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_chat_Meaning" xml:space="preserve">
+    <value>Beszélgetés egy csatornán</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_describe_Audience" xml:space="preserve">
+    <value>Bárki, aki megnézi Önt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_describe_Meaning" xml:space="preserve">
+    <value>Annak beállítása, mit látnak mások, amikor megnézik Önt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_Audience" xml:space="preserve">
+    <value>Csak Ön</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_Meaning" xml:space="preserve">
+    <value>A parancsok súgójának olvasása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_say_Audience" xml:space="preserve">
+    <value>Csak Ön</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_help_say_Meaning" xml:space="preserve">
+    <value>Egy adott parancs működésének elolvasása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_home_Audience" xml:space="preserve">
+    <value>Akik az elhagyott és az elért szobában vannak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_home_Meaning" xml:space="preserve">
+    <value>Visszatérés az otthonába, ha eltéved</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_inventory_Audience" xml:space="preserve">
+    <value>Csak Ön</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_inventory_Meaning" xml:space="preserve">
+    <value>A magánál lévő tárgyak listája</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_look_Audience" xml:space="preserve">
+    <value>Csak Ön</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_look_Meaning" xml:space="preserve">
+    <value>Az aktuális szoba leírása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_page_Audience" xml:space="preserve">
+    <value>Egy megnevezett játékos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_page_Meaning" xml:space="preserve">
+    <value>Privát üzenet küldése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_pose_Audience" xml:space="preserve">
+    <value>A szobájában lévők</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_pose_Meaning" xml:space="preserve">
+    <value>A karaktere cselekvésének leírása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_say_Audience" xml:space="preserve">
+    <value>A szobájában lévők</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_say_Meaning" xml:space="preserve">
+    <value>Beszéd a karaktere nevében</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_who_Audience" xml:space="preserve">
+    <value>Csak Ön</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCommand_who_Meaning" xml:space="preserve">
+    <value>A bejelentkezett játékosok, akiket a játék megmutat Önnek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCompanionTitle" xml:space="preserve">
+    <value>Sharpie-val: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextAccount" xml:space="preserve">
+    <value>Fiókja és karaktere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextCharacter" xml:space="preserve">
+    <value>Aktív karaktere: {0}. A játékban küldött parancsai ezt a karaktert használják.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextChooseCharacter" xml:space="preserve">
+    <value>Bejelentkezett. A játékba lépés előtt válasszon vagy hozzon létre egy karaktert.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextFeatures" xml:space="preserve">
+    <value>Fedezze fel ezt a játékot</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextScenes" xml:space="preserve">
+    <value>Jelenetek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextScenesDescription" xml:space="preserve">
+    <value>Böngéssze a játékban rögzített történeteket. Egy jelenethez való csatlakozás a hozzáférési szabályaitól függ.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextSignedOut" xml:space="preserve">
+    <value>Ezt az útmutatót bejelentkezés nélkül is olvashatja. Jelentkezzen be, amikor készen áll a játékba lépésre.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextWiki" xml:space="preserve">
+    <value>Wiki</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContextWikiDescription" xml:space="preserve">
+    <value>Ismerje meg a játék világát és azokat az oldalakat, amelyeket a játék elérhetővé tesz Önnek.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueAccept" xml:space="preserve">
+    <value>Annak az útmutatónak a folytatása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueBrowser" xml:space="preserve">
+    <value>A böngészős útmutató folytatása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueDecline" xml:space="preserve">
+    <value>A fiókom haladásának megtartása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideContinueQuestion" xml:space="preserve">
+    <value>Bejelentkezés előtt elkezdett egy útmutatót ebben a böngészőben. Hozzáadja ezt a tanulási haladást a fiókjához?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCoreReference" xml:space="preserve">
+    <value>Ezek alapparancsok. A játékok testre szabhatják őket; a help paranccsal ellenőrizheti.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideCreateCharacter" xml:space="preserve">
+    <value>Karakter létrehozása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideDraftHint" xml:space="preserve">
+    <value>Ön dönti el, mikor küldi el. A meglévő piszkozat érintetlen marad.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorBrowserSave" xml:space="preserve">
+    <value>A böngészője nem tudta menteni ezt a választást. Csak erre a látogatásra lesz érvényes.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorChoice" xml:space="preserve">
+    <value>Ez az útmutató-választás nem érhető el.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorConflict" xml:space="preserve">
+    <value>Az útmutatója egy másik lapon megváltozott. Töltse újra a haladást, mielőtt újabb választást tenne.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorLoad" xml:space="preserve">
+    <value>Nem sikerült betölteni az útmutató haladását. A folytatáshoz próbálja újra.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorSave" xml:space="preserve">
+    <value>Nem sikerült menteni ezt az útmutató-választást. A korábbi haladása változatlan; próbálja újra, amikor van kapcsolat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorUnavailable" xml:space="preserve">
+    <value>A játék útmutató-adatai nem érhetők el. Próbálja újra, amikor helyreáll a kapcsolat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideErrorVersion" xml:space="preserve">
+    <value>Ez a mentett útmutató nem támogatott verziót használ. A beállításait megőriztük; a kliens frissítése után töltse újra.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideFreshCharacter" xml:space="preserve">
+    <value>Most kezdi?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideGameGuides" xml:space="preserve">
+    <value>A játék útmutatói</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideHelpEntry" xml:space="preserve">
+    <value>Ismerkedés a játékkal / Útmutató módosítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideHelpIndexEntry" xml:space="preserve">
+    <value>Ismerkedés a játékkal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideHelpReturn" xml:space="preserve">
+    <value>Ezt az útmutatót mindig megtalálja a Súgóban.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityAppearance" xml:space="preserve">
+    <value>megjelenési beállítások</value>
+    <comment>MT — link text following GuideIdentityArtworkHint ("... itt:")</comment>
+  </data>
+  <data name="GuideIdentityArtFallback" xml:space="preserve">
+    <value>Az alapértelmezett Sharpie látható, amíg el nem készülnek a választott stílushoz és műfajhoz tartozó illusztrációk.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityArtworkHint" xml:space="preserve">
+    <value>A játékosok csökkenthetik vagy elrejthetik az illusztrációkat. A játék logója külön kezelhető itt:</value>
+    <comment>MT — sentence fragment; followed by the GuideIdentityAppearance link</comment>
+  </data>
+  <data name="GuideIdentityCharacterPage" xml:space="preserve">
+    <value>Karakterútmutató wiki-oldal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityGenreHint" xml:space="preserve">
+    <value>Válassza ki a játék MSSP-műfaját és -alműfaját. Sharpie ezeket használja az illusztrációkhoz; ha egyik sem illik, válassza a None értéket.</value>
+    <comment>MT — None kept: literal MSSP value shown in the select</comment>
+  </data>
+  <data name="GuideIdentityGenres" xml:space="preserve">
+    <value>Műfaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityIntroduction" xml:space="preserve">
+    <value>Rövid üdvözlés az új játékosoknak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityLabel" xml:space="preserve">
+    <value>A játék bemutatása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityLoadEmpty" xml:space="preserve">
+    <value>Nem érkeztek útmutató-beállítások.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityLoading" xml:space="preserve">
+    <value>A játék meglévő beállításainak betöltése…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityName" xml:space="preserve">
+    <value>A játék neve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityNoArt" xml:space="preserve">
+    <value>Ehhez a stílushoz még nincs jóváhagyott illusztráció. Az írott útmutató továbbra is elérhető.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityPreview" xml:space="preserve">
+    <value>A játékosüdvözlés előnézete</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityPreviewLabel" xml:space="preserve">
+    <value>A játékosüdvözlés előnézete</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityRetry" xml:space="preserve">
+    <value>Beállítások újratöltése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityRulesPage" xml:space="preserve">
+    <value>Szabályzat wiki-oldala</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySave" xml:space="preserve">
+    <value>A játék bemutatásának mentése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySaveEmpty" xml:space="preserve">
+    <value>Nem érkeztek mentett beállítások.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySaved" xml:space="preserve">
+    <value>Mentve. A nyilvános útmutató ezeket a beállításokat használja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySaving" xml:space="preserve">
+    <value>Mentés…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterAdventure" xml:space="preserve">
+    <value>Kaland</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterAdventureText" xml:space="preserve">
+    <value>{0} köszönti Önt. Kivé válik majd a karaktere? Hagyja, hogy a kíváncsisága vezesse egy új történetbe.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterHint" xml:space="preserve">
+    <value>Válasszon egy kezdőszöveget a fenti üdvözlés lecseréléséhez, majd szerkessze a saját ízlése szerint. Ha kész, mentse.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterNewPlayers" xml:space="preserve">
+    <value>Új játékosok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterNewPlayersText" xml:space="preserve">
+    <value>{0} köszönti Önt. Új a szöveges szerepjátékban? Kezdje egy karakterötlettel és egy kis kíváncsisággal. Minden történet elkezdődik valahol.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterRelaxed" xml:space="preserve">
+    <value>Kötetlen szerepjáték</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterRelaxedText" xml:space="preserve">
+    <value>{0} köszönti Önt. Szánjon egy percet a berendezkedésre, képzeljen el egy karaktert, és találjon egy történetet, amelyet szívesen elmesélne.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterStories" xml:space="preserve">
+    <value>Közös történetek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarterStoriesText" xml:space="preserve">
+    <value>{0} köszönti Önt. Hozzon egy karaktert, ossza meg egy ötletét, és képzelje el, milyen történeteket mesélhetnénk el együtt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStarters" xml:space="preserve">
+    <value>Üdvözlő kezdőszövegek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityStyle" xml:space="preserve">
+    <value>Sharpie stílusa</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentitySubgenres" xml:space="preserve">
+    <value>Alműfaj</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityThisGame" xml:space="preserve">
+    <value>Ez a játék</value>
+    <comment>MT — capitalized: fills {0} at sentence start in "{0} köszönti Önt"</comment>
+  </data>
+  <data name="GuideIdentityVisibility" xml:space="preserve">
+    <value>A wiki-hivatkozások csak azután jelennek meg, hogy a kiszolgáló ellenőrizte a láthatóságukat és a wiki olvasóját.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityWelcomePage" xml:space="preserve">
+    <value>Üdvözlő wiki-oldal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityWikiHint" xml:space="preserve">
+    <value>Használja a namespace/slug formát. A nyilvános útmutatóban csak a bejelentkezés nélkül olvasható oldalak jelennek meg. Ha egy mezőt üresen hagy, kimarad.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityYourGame" xml:space="preserve">
+    <value>Az Ön játéka</value>
+    <comment>MT — capitalized: fills {0} at sentence start in GuideWelcomeGame "{0} köszönti Önt"</comment>
+  </data>
+  <data name="GuideInsertLook" xml:space="preserve">
+    <value>look beillesztése a Parancs mezőbe</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideInsertUnavailable" xml:space="preserve">
+    <value>Előbb csatlakozzon a játékhoz, és fejezze be vagy törölje a meglévő piszkozatát. Semmi sem változott, és semmit sem küldtünk el.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideInserted" xml:space="preserve">
+    <value>A look a parancsmezőben van. Nyomja meg a Küldés gombot, amikor készen áll.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideKnown" xml:space="preserve">
+    <value>Ezt már tudom</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_backups_Action" xml:space="preserve">
+    <value>Távoli biztonsági mentések</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_backups_Body" xml:space="preserve">
+    <value>Futtassa egyszer a @backup parancsot, és ellenőrizze, hogy a @backup/list megjeleníti-e a másolatot. Állítsa be a SHARPMUSH_BACKUP_INTERVAL értékét, hogy a másolatok ütemezetten készüljenek, és tartson egy másolatot ezen a gépen kívül is; az ugyanazon a lemezen lévő másolat nem éli túl a lemez elvesztését.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_backups_Title" xml:space="preserve">
+    <value>Készítsen mentést a megnyitás előtt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_capabilities_Action" xml:space="preserve">
+    <value>Csomagok áttekintése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_capabilities_Body" xml:space="preserve">
+    <value>Tekintse át a telepített csomagokat és azok saját súgóját. Egy általános jelenet- vagy Discord-funkció nem bizonyítja, hogy egy adott softcode parancs létezik. A csomagtelepítés továbbra is a szokásos áttekintéssel és megerősítéssel jár. Ha az Onboarding csomag telepítve van, adja hozzá a játéka saját lépéseit a +welcome ellenőrzőlistájához.</value>
+    <comment>MT — Onboarding kept: package name</comment>
+  </data>
+  <data name="GuideLesson_Administrator_capabilities_Title" xml:space="preserve">
+    <value>Ellenőrizze, mi van telepítve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_channels_Body" xml:space="preserve">
+    <value>Egy új világban nincsenek csatornák, a játékosútmutató viszont arra kéri az újonnan érkezőket, hogy keressenek egyet. Hozzon létre egy nyilvánosat a kérdéseknek, például @channel/add Newbie=player, és egyet a rendszergazdáknak, például @channel/add Staff=admin, amelyhez csak Wizard és Royalty szintű karakterek csatlakozhatnak. Kérje meg a stábot, hogy csatlakozzon a nyilvánoshoz, hogy a kérdések választ kapjanak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_channels_Title" xml:space="preserve">
+    <value>Nyisson csatornákat a kérdéseknek és a stábnak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_identity_Action" xml:space="preserve">
+    <value>A játék arculata</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_identity_Body" xml:space="preserve">
+    <value>Adja meg a játék nevét, egy rövid bemutatást, a műfajt és Sharpie stílusát. A játék logója maradjon hangsúlyos. Csak akkor mentsen, ha az előnézet azt mutatja, amit szeretne.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_identity_Title" xml:space="preserve">
+    <value>Mutassa be a játékát</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_invite_Body" xml:space="preserve">
+    <value>Mielőtt megosztaná a játék hivatkozását, tekintse át az elvégzett és az elhalasztott tételeket. Az ellenőrzőlista befejezése nem teszi közzé a játékot, nem nyitja meg a regisztrációt, nem telepít csomagokat és nem küld meghívókat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_invite_Title" xml:space="preserve">
+    <value>Készen állunk, amikor Ön is</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_joining_Action" xml:space="preserve">
+    <value>Játékos-hozzáférési beállítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_joining_Body" xml:space="preserve">
+    <value>Tekintse át a regisztrációt, a vendéghozzáférést és a karakterlétrehozást. Próbálja ki azt a bejelentkezési útvonalat, amelyet meg szeretne osztani. Ezek a beállítások határozzák meg, ki léphet be; az ellenőrzőlista nem módosítja őket.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_joining_Title" xml:space="preserve">
+    <value>Ellenőrizze, hogyan csatlakoznak a játékosok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_messages_Action" xml:space="preserve">
+    <value>A játék üzenetei</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_messages_Body" xml:space="preserve">
+    <value>A csatlakozási képernyő az első, amit egy MU* kliens megjelenít, a nap üzenetei pedig mindenkit üdvözölnek, aki csatlakozik. Nevezze meg a játékát, írja le, hogyan lehet karaktert létrehozni, és távolítsa el azokat az ajánlatokat, amelyeket a játéka nem kínál, például a vendégbejelentkezést, ha nincsenek vendégkarakterek.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_messages_Title" xml:space="preserve">
+    <value>Írja meg a csatlakozási képernyőt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_rules_Action" xml:space="preserve">
+    <value>Wiki megnyitása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_rules_Body" xml:space="preserve">
+    <value>Tegyen közzé olvasható üdvözlő, szabályzat- és karakterútmutató-oldalakat, majd kapcsolja össze őket itt. Kijelentkezve ellenőrizze őket; a privát oldalak szándékosan kimaradnak a nyilvános útmutatóból.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_rules_Title" xml:space="preserve">
+    <value>Adjon világos kiindulópontot a játékosoknak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_staff-character_Action" xml:space="preserve">
+    <value>Stábkarakter létrehozása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_staff-character_Body" xml:space="preserve">
+    <value>Az Ön által birtokba vett fiók a #1-es karaktert, God-ot játssza. God minden zárolás- és jogosultság-ellenőrzésen átjut, így ha God-ként elgépel egy @nuke parancsot, vagy elszabadul egy softcode-ciklus, semmi sem állítja meg. Hozzon létre saját karaktert a mindennapi stábmunkához, majd #1-ként csatlakozva írja be: @set *&lt;name&gt;=WIZARD. #1-ként csak ahhoz csatlakozzon, amit kizárólag God tehet meg. A többi stábtagnak a feladatához illő legszűkebb szerepkört adja, például builder vagy moderator, ne wizard.</value>
+    <comment>MT — builder/moderator/wizard kept as role names</comment>
+  </data>
+  <data name="GuideLesson_Administrator_staff-character_Title" xml:space="preserve">
+    <value>A #1-et tartsa meg vészhelyzetekre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_start-room_Action" xml:space="preserve">
+    <value>Alapszobák</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_start-room_Body" xml:space="preserve">
+    <value>Az új karakterek a player_start szobában kezdenek (új világban ez a #0), és az ott kiadott look az első, amit elolvasnak. Írja le a szobát, adjon neki egyértelmű kijáratokat, és mondja meg az újonnan érkezőknek, hol találnak segítséget és a szabályokat. A master roomot (új világban a #2) tartsa meg kizárólag a globális parancsoknak: ne vezessen bele kijárat, és ne legyenek benne játékosok.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_start-room_Title" xml:space="preserve">
+    <value>Készítse elő a szobát, ahová a játékosok érkeznek</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_walkthrough_Action" xml:space="preserve">
+    <value>Játékosútmutató előnézete</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_walkthrough_Body" xml:space="preserve">
+    <value>Egy külön, átlagos fiókkal próbálja ki a csatlakozást, a karakterválasztást, a look és a help parancsot, valamint a négy, előismeret szerinti utat. A saját fiókjához tartozó karakter osztozik a fiók szerepköreiben, és a rendszergazdai előnézet nem tudja ellenőrizni az átlagos játékosok jogosultságait.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Administrator_walkthrough_Title" xml:space="preserve">
+    <value>Lépjen be átlagos játékosként</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_channels_Body" xml:space="preserve">
+    <value>Keressen egy súgó- vagy kezdőcsatornát, ahol kérdést tehet fel a többi játékosnak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_channels_Title" xml:space="preserve">
+    <value>Keressen segítőket</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_character_Action" xml:space="preserve">
+    <value>Karaktereim</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_character_Body" xml:space="preserve">
+    <value>Használja a meglévő karakterét, ha van. Ha korábban már játszott ezzel a játékkal, vegye birtokba azt a karaktert ahelyett, hogy másodpéldányt hozna létre. Egyébként hozzon létre egy karaktert, amikor a játék engedi. A fiókjához több karakter is tartozhat; válassza ki azt, amellyel játszani szeretne.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_character_Title" xml:space="preserve">
+    <value>Válassza ki, kivel játszik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_continue_Action" xml:space="preserve">
+    <value>A játék felfedezése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_continue_Body" xml:space="preserve">
+    <value>A játék parancsreferenciájához használja a help, a tájékozódáshoz a look parancsot, a játék saját elvárásaihoz pedig a szabályzatát és a karakterútmutatóját. Ha segítségre van szüksége, forduljon a közösséghez. Az útmutató bármely részét kihagyhatja, bezárhatja, vagy visszatérhet hozzá.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_continue_Title" xml:space="preserve">
+    <value>Készen áll a felfedezésre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_place_Body" xml:space="preserve">
+    <value>Képzeljen el egy szerepjátékszervert, ahol a karaktere egy szobában állhat, más karakterekkel találkozhat, és egy kijáraton át távozhat. A szobák egy közös világ helyszíneit írják le; nem Discord-csatornák. Amit mond, az általában a szobájában lévőkhöz jut el.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_place_Title" xml:space="preserve">
+    <value>Világ, amelyet Ön is ír</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_sign-in_Action" xml:space="preserve">
+    <value>Bejelentkezés vagy regisztráció</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_sign-in_Body" xml:space="preserve">
+    <value>A fiókja a privát bejelentkezése. A karaktere az, akivel a többi játékos találkozik. Jelentkezzen be vagy regisztráljon a játék által kínált lehetőségekkel; a fiókja jelszavát nem a játék parancsmezőjébe kell beírnia.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_sign-in_Title" xml:space="preserve">
+    <value>A fiókja nyitja meg az ajtót</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_speak-act_Body" xml:space="preserve">
+    <value>A terminálban a say Hello a szobájában lévőkhöz szól, a pose waves. pedig leírja, hogy a karaktere integet. A Történet nézet, ha elérhető jelenet, Beszéd, OOC és Emit módot is kínál, amelyek szó szerint kezelik a szöveget; a Parancs mód a játék szintaxisát és kifejezéseit futtatja. A page egyetlen megnevezett játékosnak szól. Amit a karaktere mond és tesz, az karakteren belüli (IC); a játékról vagy a valós világról szóló beszélgetés karakteren kívüli (OOC), ezért jelölje úgy, ahogy a játék kéri, például a Történet OOC módjával. Itt a gyakorlás helyi; mielőtt élőben megszólalna, nézze meg a játék illemszabályait.</value>
+    <comment>MT — say Hello / pose waves. kept: literal commands</comment>
+  </data>
+  <data name="GuideLesson_Discord_speak-act_Title" xml:space="preserve">
+    <value>Tudja meg, ki hallja Önt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_useful-action_Body" xml:space="preserve">
+    <value>A look parancs megkéri a játékot, hogy írja le, hol van. Először próbálja ki a helyi gyakorlásban. Ezután illessze be a look parancsot az üres, csatlakoztatott játékparancs-mezőbe (vagy a Történet Parancs módjába), és saját maga nyomja meg a Küldés gombot. A beillesztés nem küldi el a parancsot, és nem teljesíti ezt a lépést.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_useful-action_Title" xml:space="preserve">
+    <value>Próbáljon ki egy egyszerű parancsot</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_world_Action" xml:space="preserve">
+    <value>Játék megnyitása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_world_Body" xml:space="preserve">
+    <value>A Játék egy terminált nyit a játék parancsaihoz. Ha elérhető jelenet, a Történet nézet ugyanazon a kapcsolaton strukturáltan mutatja azt a jelenetet. Ellenőrizze az aktuális karakterét és a kapcsolat állapotát. Keresse meg a szoba leírását, azt, hogy ki van itt, és a kijáratokat. Egy kijárat mozgatja a karakterét; egy leírás elolvasása nem.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Discord_world_Title" xml:space="preserve">
+    <value>Tájékozódjon</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_channels_Body" xml:space="preserve">
+    <value>Keressen egy súgó- vagy kezdőcsatornát, ahol kérdést tehet fel a többi játékosnak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_channels_Title" xml:space="preserve">
+    <value>Keressen segítőket</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_character_Action" xml:space="preserve">
+    <value>Karaktereim</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_character_Body" xml:space="preserve">
+    <value>Használja a meglévő karakterét, ha van. Ha korábban már játszott ezzel a játékkal, vegye birtokba azt a karaktert ahelyett, hogy másodpéldányt hozna létre. Egyébként hozzon létre egy karaktert, amikor a játék engedi. A fiókjához több karakter is tartozhat; válassza ki azt, amellyel játszani szeretne.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_character_Title" xml:space="preserve">
+    <value>Válassza ki, kivel játszik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_continue_Action" xml:space="preserve">
+    <value>A játék felfedezése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_continue_Body" xml:space="preserve">
+    <value>A játék parancsreferenciájához használja a help, a tájékozódáshoz a look parancsot, a játék saját elvárásaihoz pedig a szabályzatát és a karakterútmutatóját. Ha segítségre van szüksége, forduljon a közösséghez. Az útmutató bármely részét kihagyhatja, bezárhatja, vagy visszatérhet hozzá.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_continue_Title" xml:space="preserve">
+    <value>Készen áll a felfedezésre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_place_Body" xml:space="preserve">
+    <value>Fedezzen fel a saját tempójában. Ez az útmutató a Súgóból mindig elérhető, ha parancsreferenciára vagy útbaigazításra van szüksége.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_place_Title" xml:space="preserve">
+    <value>Világ, amelyet Ön is ír</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_sign-in_Action" xml:space="preserve">
+    <value>Bejelentkezés vagy regisztráció</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_sign-in_Body" xml:space="preserve">
+    <value>A fiókja a privát bejelentkezése. A karaktere az, akivel a többi játékos találkozik. Jelentkezzen be vagy regisztráljon a játék által kínált lehetőségekkel; a fiókja jelszavát nem a játék parancsmezőjébe kell beírnia.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_sign-in_Title" xml:space="preserve">
+    <value>A fiókja nyitja meg az ajtót</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_speak-act_Body" xml:space="preserve">
+    <value>A terminálban a say Hello a szobájában lévőkhöz szól, a pose waves. pedig leírja, hogy a karaktere integet. A Történet nézet, ha elérhető jelenet, Beszéd, OOC és Emit módot is kínál, amelyek szó szerint kezelik a szöveget; a Parancs mód a játék szintaxisát és kifejezéseit futtatja. A page egyetlen megnevezett játékosnak szól. Amit a karaktere mond és tesz, az karakteren belüli (IC); a játékról vagy a valós világról szóló beszélgetés karakteren kívüli (OOC), ezért jelölje úgy, ahogy a játék kéri, például a Történet OOC módjával. Itt a gyakorlás helyi; mielőtt élőben megszólalna, nézze meg a játék illemszabályait.</value>
+    <comment>MT — say Hello / pose waves. kept: literal commands</comment>
+  </data>
+  <data name="GuideLesson_Explore_speak-act_Title" xml:space="preserve">
+    <value>Tudja meg, ki hallja Önt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_useful-action_Body" xml:space="preserve">
+    <value>A look parancs megkéri a játékot, hogy írja le, hol van. Először próbálja ki a helyi gyakorlásban. Ezután illessze be a look parancsot az üres, csatlakoztatott játékparancs-mezőbe (vagy a Történet Parancs módjába), és saját maga nyomja meg a Küldés gombot. A beillesztés nem küldi el a parancsot, és nem teljesíti ezt a lépést.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_useful-action_Title" xml:space="preserve">
+    <value>Próbáljon ki egy egyszerű parancsot</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_world_Action" xml:space="preserve">
+    <value>Játék megnyitása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_world_Body" xml:space="preserve">
+    <value>A Játék egy terminált nyit a játék parancsaihoz. Ha elérhető jelenet, a Történet nézet ugyanazon a kapcsolaton strukturáltan mutatja azt a jelenetet. Ellenőrizze az aktuális karakterét és a kapcsolat állapotát. Keresse meg a szoba leírását, azt, hogy ki van itt, és a kijáratokat. Egy kijárat mozgatja a karakterét; egy leírás elolvasása nem.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Explore_world_Title" xml:space="preserve">
+    <value>Tájékozódjon</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_channels_Body" xml:space="preserve">
+    <value>Keressen egy súgó- vagy kezdőcsatornát, ahol kérdést tehet fel a többi játékosnak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_channels_Title" xml:space="preserve">
+    <value>Keressen segítőket</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_continue_Action" xml:space="preserve">
+    <value>A játék felfedezése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_continue_Body" xml:space="preserve">
+    <value>Az opcionális alkalmazások és csomagok játékonként eltérnek. Használja a játék által elérhetővé tett részeket és azok saját súgóját; ne feltételezze, hogy egy másik SharpMUSH játék parancsai itt is telepítve vannak. Az általános parancsok referenciája lent továbbra is elérhető. Bővebb bevezetőért módosíthatja a kiindulópontját.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_continue_Title" xml:space="preserve">
+    <value>Fedezze fel a játék kiegészítéseit</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_place_Body" xml:space="preserve">
+    <value>MUSH-tudása továbbra is érvényes: a szobák, a kijáratok, az objektumok és a softcode ugyanúgy működnek. Ez a rövid bemutató a webes fiókot, a karakterek összekapcsolását és a Játék két nézetét ismerteti. Az ismerős parancspéldák a lenyitható referenciában maradnak; parancsgyakorlásra nincs szükség.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_place_Title" xml:space="preserve">
+    <value>Csak az újdonságok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_sign-in_Action" xml:space="preserve">
+    <value>Bejelentkezés vagy karakterek kezelése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_sign-in_Body" xml:space="preserve">
+    <value>A webes fiók független a meglévő, játékon belüli karakterjelszavától. Jelentkezzen be, majd vegye birtokba a meglévő karakterét ahelyett, hogy újra létrehozná. Válasszon egy összekapcsolt karaktert a játékhoz; a fiókja jelszavát soha ne írja be a parancsszerkesztőbe.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_sign-in_Title" xml:space="preserve">
+    <value>Egy fiók, az Ön karakterei</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_world_Action" xml:space="preserve">
+    <value>Játék megnyitása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_world_Body" xml:space="preserve">
+    <value>A Terminál megtartja a megszokott görgetős felületet. Ha elérhető jelenet, a Történet külön Beszéd, OOC, Emit és Parancs módot kínál. A MUSH-szintaxishoz és -kifejezésekhez a Parancs módot használja; a többi mód szó szerint kezeli a szöveget. A nézetváltás megtartja ugyanazt a játékkapcsolatot. Küldés előtt ellenőrizze a kiválasztott karakterét.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_Mush_world_Title" xml:space="preserve">
+    <value>Történet vagy Terminál: Ön dönt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_channels_Body" xml:space="preserve">
+    <value>Keressen egy súgó- vagy kezdőcsatornát, ahol kérdést tehet fel a többi játékosnak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_channels_Title" xml:space="preserve">
+    <value>Keressen segítőket</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_character_Action" xml:space="preserve">
+    <value>Karaktereim</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_character_Body" xml:space="preserve">
+    <value>Használja a meglévő karakterét, ha van. Ha korábban már játszott ezzel a játékkal, vegye birtokba azt a karaktert ahelyett, hogy másodpéldányt hozna létre. Egyébként hozzon létre egy karaktert, amikor a játék engedi. A fiókjához több karakter is tartozhat; válassza ki azt, amellyel játszani szeretne.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_character_Title" xml:space="preserve">
+    <value>Válassza ki, kivel játszik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_continue_Action" xml:space="preserve">
+    <value>A játék felfedezése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_continue_Body" xml:space="preserve">
+    <value>A játék parancsreferenciájához használja a help, a tájékozódáshoz a look parancsot, a játék saját elvárásaihoz pedig a szabályzatát és a karakterútmutatóját. Ha segítségre van szüksége, forduljon a közösséghez. Az útmutató bármely részét kihagyhatja, bezárhatja, vagy visszatérhet hozzá.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_continue_Title" xml:space="preserve">
+    <value>Készen áll a felfedezésre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_place_Body" xml:space="preserve">
+    <value>Hozza magával a szerepjátékos tapasztalatát. Itt egy karaktert játszik egy állandó szöveges világban. A szobák teremtik meg a helyszínt, a kijáratok kötik össze a helyeket, a játékosok pedig együtt írják a párbeszédeket és a cselekvéseket. Mielőtt csatlakozna egy jelenethez, olvassa el a játék szabályait.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_place_Title" xml:space="preserve">
+    <value>Világ, amelyet Ön is ír</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Action" xml:space="preserve">
+    <value>Bejelentkezés vagy regisztráció</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Body" xml:space="preserve">
+    <value>A fiókja a privát bejelentkezése. A karaktere az, akivel a többi játékos találkozik. Jelentkezzen be vagy regisztráljon a játék által kínált lehetőségekkel; a fiókja jelszavát nem a játék parancsmezőjébe kell beírnia.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Title" xml:space="preserve">
+    <value>A fiókja nyitja meg az ajtót</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_speak-act_Body" xml:space="preserve">
+    <value>Ahogy egy asztali játékban, írja le, mivel próbálkozik a karaktere, és hagyjon teret a többi játékosnak a válaszra. A pose waves. a karaktere nevét is hozzáteszi; a say Hello az aktuális szobához szól. Egy privát page egy megnevezett játékoshoz jut el. A karakteren kívüli (OOC) beszélgetést jelölje a karaktere szavaitól elkülönítve. Csatlakozás előtt egyeztessék a jelenettel kapcsolatos elvárásokat, és olvassa el a játék beleegyezésre vonatkozó szabályait.</value>
+    <comment>MT — say Hello / pose waves. kept: literal commands</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_speak-act_Title" xml:space="preserve">
+    <value>Tudja meg, ki hallja Önt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_useful-action_Body" xml:space="preserve">
+    <value>A look parancs megkéri a játékot, hogy írja le, hol van. Először próbálja ki a helyi gyakorlásban. Ezután illessze be a look parancsot az üres, csatlakoztatott játékparancs-mezőbe (vagy a Történet Parancs módjába), és saját maga nyomja meg a Küldés gombot. A beillesztés nem küldi el a parancsot, és nem teljesíti ezt a lépést.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_useful-action_Title" xml:space="preserve">
+    <value>Próbáljon ki egy egyszerű parancsot</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_world_Action" xml:space="preserve">
+    <value>Játék megnyitása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_world_Body" xml:space="preserve">
+    <value>Egy fórumtémával ellentétben a szoba olyan hely, ahol a karaktere éppen most tartózkodik. A jelenet felvázolásához olvassa el a leírását és a kijáratait. Ha elérhető jelenet, a Történet nézet elválasztja a párbeszédet és a cselekvéseket; a Terminál megtartja a görgetős szöveges felületet. Mindkettő ugyanazt a karaktert és kapcsolatot használja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLesson_OtherRoleplay_world_Title" xml:space="preserve">
+    <value>Tájékozódjon</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLoading" xml:space="preserve">
+    <value>Az útmutató betöltése…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideLoginEntry" xml:space="preserve">
+    <value>Új itt? Ismerkedjen meg a játékkal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideMyAccount" xml:space="preserve">
+    <value>Saját fiók</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideOpenFull" xml:space="preserve">
+    <value>A teljes útmutató megnyitása vagy a kiindulópont módosítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideOpenGame" xml:space="preserve">
+    <value>A játék megnyitása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideOpenPlay" xml:space="preserve">
+    <value>Nyissa meg a Játék nézetet, és próbálja ki a játékban</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesBundled" xml:space="preserve">
+    <value>A kiszolgálóhoz mellékelve</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesCheck" xml:space="preserve">
+    <value>Elérhető parancsok ellenőrzése ehhez: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesEmpty" xml:space="preserve">
+    <value>Ehhez a karakterhez itt nincs ellenőrzött csomagjavaslat. Más csomagok attól még telepítve lehetnek; használja a játék saját súgóját.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesError" xml:space="preserve">
+    <value>A játék súgója jelenleg nem érhető el. Írja be a játékban: help.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesExplanation" xml:space="preserve">
+    <value>A játék további funkcióihoz próbálja ki:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesLabel" xml:space="preserve">
+    <value>Csomagparancsok a karakteréhez</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesLoading" xml:space="preserve">
+    <value>A játék súgójának betöltése…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesReference" xml:space="preserve">
+    <value>Csomagreferencia (új lapon nyílik meg)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePackagesVersion" xml:space="preserve">
+    <value>{0}, {1} verzió</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePageTitle" xml:space="preserve">
+    <value>Első lépések — {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePanelLabel" xml:space="preserve">
+    <value>Első lépések Sharpie-val</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathDiscordDetail" xml:space="preserve">
+    <value>Ismerje meg a szobákat, a karaktereket és a parancsokat.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathDiscordTitle" xml:space="preserve">
+    <value>Discordhoz vagyok szokva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathExploreDetail" xml:space="preserve">
+    <value>Vágjon bele most. A segítség mindig kéznél van.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathExploreTitle" xml:space="preserve">
+    <value>Inkább magam jövök rá</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathMushDetail" xml:space="preserve">
+    <value>Nézze meg, miben más a SharpMUSH.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathMushTitle" xml:space="preserve">
+    <value>Ismerem a MUSH játékokat</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathRoleplayDetail" xml:space="preserve">
+    <value>Hozza el a történeteit egy közös világba.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePathRoleplayTitle" xml:space="preserve">
+    <value>Máshol játszom szerepjátékot</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeHeading" xml:space="preserve">
+    <value>Előbb próbálja ki itt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeInvalid" xml:space="preserve">
+    <value>Ehhez a gyakorláshoz írja be: look. Itt semmi sem fut a játékon.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeLabel" xml:space="preserve">
+    <value>Helyi parancsgyakorlás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeLocal" xml:space="preserve">
+    <value>Helyi gyakorlás — nem kerül elküldésre a játéknak.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeResult" xml:space="preserve">
+    <value>Gyakorlószoba: napfényes udvar. Sharpie itt van. Egy boltív egy kertbe vezet. A játékban a look a tényleges környezetét írja le.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeTry" xml:space="preserve">
+    <value>Kipróbálás helyben</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuidePracticeType" xml:space="preserve">
+    <value>Írja be:</value>
+    <comment>MT — label followed by &lt;code&gt;look&lt;/code&gt;</comment>
+  </data>
+  <data name="GuidePreviewNotice" xml:space="preserve">
+    <value>Játékosútmutató-előnézet. Ezek a választások nem módosítják a haladását. A jogosultságok ellenőrzéséhez teszteljen egy átlagos játékosfiókkal.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideQuickstartEntry" xml:space="preserve">
+    <value>Ismerkedés a játékkal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReady" xml:space="preserve">
+    <value>Készen áll a felfedezésre. A Súgóból bármikor visszatérhet ide.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideRecoveryTitle" xml:space="preserve">
+    <value>Sharpie útmutatója nem érhető el — próbálja újra, amikor készen áll</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReference" xml:space="preserve">
+    <value>Gyakori parancsok, és hogy ki látja őket</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReload" xml:space="preserve">
+    <value>Haladás újratöltése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReloadProgress" xml:space="preserve">
+    <value>Haladás újratöltése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideRetryConnection" xml:space="preserve">
+    <value>Csatlakozás újrapróbálása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideRetryRoster" xml:space="preserve">
+    <value>Karakterlista újratöltése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideReturningCharacter" xml:space="preserve">
+    <value>Játszott már itt?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentity" xml:space="preserve">
+    <value>Mutassa be a játékát</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentityLater" xml:space="preserve">
+    <value>Beállítás később</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentityLead" xml:space="preserve">
+    <value>Tekintse át az importált arculatot, vagy adjon nevet és barátságos első lépést az új játékának.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSetupIdentitySave" xml:space="preserve">
+    <value>Mentés és folytatás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSkip" xml:space="preserve">
+    <value>Kihagyás egyelőre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSkipped" xml:space="preserve">
+    <value>Kihagyva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStepOf" xml:space="preserve">
+    <value>{0}/{1}. lépés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideSteps" xml:space="preserve">
+    <value>Az útmutató lépései</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStop" xml:space="preserve">
+    <value>Az útmutató leállítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStraightToGame" xml:space="preserve">
+    <value>Egyenesen a játékba</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_anime" xml:space="preserve">
+    <value>Anime kabala</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_chibi" xml:space="preserve">
+    <value>Chibi kabala</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_comicbook" xml:space="preserve">
+    <value>Képregényes kabala</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_kemono" xml:space="preserve">
+    <value>Kemono kabala</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_minimalist" xml:space="preserve">
+    <value>Minimalista kabala</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideStyle_pixel" xml:space="preserve">
+    <value>Pixeles kabala</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideUnderstood" xml:space="preserve">
+    <value>Értem</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideWelcomeChecklist" xml:space="preserve">
+    <value>Ennek a játéknak saját kezdő ellenőrzőlistája van. Megtekintéséhez írja be:</value>
+    <comment>MT — followed by the command in &lt;code&gt;</comment>
+  </data>
+  <data name="GuideWelcomeGame" xml:space="preserve">
+    <value>{0} köszönti Önt</value>
+    <comment>MT — rephrased as "{0} greets you" so {0} needs no suffix or article</comment>
+  </data>
+  <data name="GuideWelcomeIntro" xml:space="preserve">
+    <value>Sharpie vagyok. Segíthetek eligazodni az első bejelentkezéstől az első jelenetig.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GuideWithSharpie" xml:space="preserve">
+    <value>Sharpie-val</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyBlocked" xml:space="preserve">
+    <value>Az értesítések le vannak tiltva ezen a webhelyen. Engedélyezze őket a böngésző webhely-beállításaiban, majd töltse újra az oldalt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyChoose" xml:space="preserve">
+    <value>Válassza ki, miről kapjon értesítést</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceFailed" xml:space="preserve">
+    <value>sikertelen: {0} ({1})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceLastSent" xml:space="preserve">
+    <value>utoljára küldve: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceSince" xml:space="preserve">
+    <value>Bekapcsolva: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDeviceStale" xml:space="preserve">
+    <value>a játék kulcsot váltott: kapcsolja be újra az értesítéseket azon az eszközön</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDevices" xml:space="preserve">
+    <value>Az Ön eszközei</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyDevicesSub" xml:space="preserve">
+    <value>Minden telefon és számítógép, amelyen be vannak kapcsolva az értesítések ehhez a fiókhoz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyInstall" xml:space="preserve">
+    <value>Telepítés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyInstallNote" xml:space="preserve">
+    <value>Telepítse a portált alkalmazásként: saját ablakban nyílik meg, és az értesítések a nevét mutatják.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyIntro" xml:space="preserve">
+    <value>Kapcsolja be az értesítéseket minden olyan telefonon vagy számítógépen, ahol szeretné. A játék dönti el, mi érdemel értesítést, és minden karaktere maga választja ki, melyeket kapja meg.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyIosHowTo" xml:space="preserve">
+    <value>iPhone-on és iPaden az értesítések csak a főképernyőről működnek: koppintson a Megosztás, majd a Főképernyőhöz adás lehetőségre, és nyissa meg a portált az új ikonról.</value>
+    <comment>MT — Share/Add to Home Screen given as iOS shows them in Hungarian</comment>
+  </data>
+  <data name="NotifyNoDevices" xml:space="preserve">
+    <value>Még egyetlen eszközön sincsenek bekapcsolva az értesítések.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyOffHere" xml:space="preserve">
+    <value>Az értesítések ki vannak kapcsolva ezen az eszközön. Bekapcsoláskor a böngésző engedélyt kér.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyOnHere" xml:space="preserve">
+    <value>Az értesítések itt be vannak kapcsolva ({0}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyPermissionRefused" xml:space="preserve">
+    <value>A böngésző nem engedélyezte az értesítéseket. Engedélyezze őket ehhez a webhelyhez a böngésző beállításaiban, majd próbálja újra.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyRemoveDevice" xml:space="preserve">
+    <value>Értesítések kikapcsolása ezen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifySendTest" xml:space="preserve">
+    <value>Teszt küldése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTestSent" xml:space="preserve">
+    <value>Teszt elküldve. Néhány másodpercen belül meg kell érkeznie.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyThisDevice" xml:space="preserve">
+    <value>Ez az eszköz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyThisDeviceTag" xml:space="preserve">
+    <value>Ez az eszköz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTurnOff" xml:space="preserve">
+    <value>Kikapcsolás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTurnOn" xml:space="preserve">
+    <value>Bekapcsolás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyTurnedOn" xml:space="preserve">
+    <value>Az értesítések be vannak kapcsolva ezen az eszközön.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyUnsupported" xml:space="preserve">
+    <value>Ez a böngésző nem tud értesítéseket megjeleníteni webhelyekről.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyWhat" xml:space="preserve">
+    <value>Miről kap értesítést</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotifyWhatNote" xml:space="preserve">
+    <value>Ha távol van, a page üzenetekről és az új levelekről értesítést kap, amely a feladót mutatja, a tartalmat nem. Írja be a játékban a +notify parancsot, hogy kiválassza, miről kapjon értesítést az egyes karaktere, és megjelenjen-e a szöveg.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentAllow" xml:space="preserve">
+    <value>Engedélyezés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentAsks" xml:space="preserve">
+    <value>{0} az Ön karaktereként szeretne eljárni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentCharacter" xml:space="preserve">
+    <value>{0} nevében járna el. Másik karakter engedélyezéséhez előbb váltson arra.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentDeny" xml:space="preserve">
+    <value>Elutasítás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentReturning" xml:space="preserve">
+    <value>Visszatérés az alkalmazásba…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentRevoke" xml:space="preserve">
+    <value>Ezt bármikor visszavonhatja a fiókja oldalán.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="OAuthConsentTitle" xml:space="preserve">
+    <value>Alkalmazás engedélyezése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="StoryNewPoses" xml:space="preserve">
+    <value>Új pózok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="StoryPoseDeleted" xml:space="preserve">
+    <value>Törölve:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppAsksToChange" xml:space="preserve">
+    <value>{0} módosítani szeretné a világot</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppChangesAsCharacter" xml:space="preserve">
+    <value>Minden módosítás az Ön karaktereként történik, a játék saját építőparancsaival.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppConfigUnavailable" xml:space="preserve">
+    <value>Az alkalmazás konfigurációja nem érhető el, vagy frissíteni kell.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppHostFailed" xml:space="preserve">
+    <value>Az alkalmazás gazdája nem tudott betöltődni.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HostedAppMakeChanges" xml:space="preserve">
+    <value>{count, plural, one {# módosítás végrehajtása} other {# módosítás végrehajtása}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_ConversionError" xml:space="preserve">
+    <value>Átalakítási hiba: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_ConversionFailed" xml:space="preserve">
+    <value>A(z) {0} → {1} átalakítás sikertelen: {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_ConversionNotImplemented" xml:space="preserve">
+    <value>A(z) {0} típusra való átalakítás nincs megvalósítva</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidBoolean" xml:space="preserve">
+    <value>Érvénytelen logikai érték</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidDateTime" xml:space="preserve">
+    <value>Érvénytelen dátum és idő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidGUID" xml:space="preserve">
+    <value>Érvénytelen GUID</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidNumber" xml:space="preserve">
+    <value>Érvénytelen szám</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidTimeSpan" xml:space="preserve">
+    <value>Érvénytelen időtartam</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_InvalidType" xml:space="preserve">
+    <value>Érvénytelen {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_NotValueOf" xml:space="preserve">
+    <value>Nem {0} típusú érték</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Converter_UnableToConvert" xml:space="preserve">
+    <value>Nem alakítható át {0} típusra a(z) {1} típusból</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HeatMap_Less" xml:space="preserve">
+    <value>Kevesebb</value>
+    <comment>MT</comment>
+  </data>
+  <data name="HeatMap_More" xml:space="preserve">
+    <value>Több</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudAlert_Close" xml:space="preserve">
+    <value>Bezárás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_NextMonth" xml:space="preserve">
+    <value>Következő hónap {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_NextYear" xml:space="preserve">
+    <value>Következő év {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_Open" xml:space="preserve">
+    <value>Megnyitás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_PrevMonth" xml:space="preserve">
+    <value>Előző hónap {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBaseDatePicker_PrevYear" xml:space="preserve">
+    <value>Előző év {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudBreadcrumbs_Label" xml:space="preserve">
+    <value>Navigációs útvonal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudCarousel_Index" xml:space="preserve">
+    <value>{0}. elem</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudCarousel_Next" xml:space="preserve">
+    <value>Következő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudCarousel_Previous" xml:space="preserve">
+    <value>Előző</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudChip_Close" xml:space="preserve">
+    <value>Bezárás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_AlphaSlider" xml:space="preserve">
+    <value>Átlátszóság csúszka</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_Close" xml:space="preserve">
+    <value>Bezárás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_GridView" xml:space="preserve">
+    <value>Rács</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_HideSwatches" xml:space="preserve">
+    <value>Színminták elrejtése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_HueSlider" xml:space="preserve">
+    <value>Színárnyalat csúszka</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_ModeSwitch" xml:space="preserve">
+    <value>Módváltás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_Open" xml:space="preserve">
+    <value>Megnyitás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_PaletteView" xml:space="preserve">
+    <value>Paletta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_ShowSwatches" xml:space="preserve">
+    <value>Színminták megjelenítése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudColorPicker_SpectrumView" xml:space="preserve">
+    <value>Spektrum</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_AllItems" xml:space="preserve">
+    <value>Összes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_FirstPage" xml:space="preserve">
+    <value>Első oldal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_InfoFormat" xml:space="preserve">
+    <value>{0}-{1} / {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_LastPage" xml:space="preserve">
+    <value>Utolsó oldal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_NextPage" xml:space="preserve">
+    <value>Következő oldal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_PreviousPage" xml:space="preserve">
+    <value>Előző oldal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGridPager_RowsPerPage" xml:space="preserve">
+    <value>Sorok oldalanként:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_AddFilter" xml:space="preserve">
+    <value>Szűrő hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Apply" xml:space="preserve">
+    <value>Alkalmaz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Cancel" xml:space="preserve">
+    <value>Mégse</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Clear" xml:space="preserve">
+    <value>Törlés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ClearFilter" xml:space="preserve">
+    <value>Szűrő törlése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_CollapseAllGroups" xml:space="preserve">
+    <value>Összes csoport összecsukása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_CollapseGroup" xml:space="preserve">
+    <value>Csoport összecsukása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Column" xml:space="preserve">
+    <value>Oszlop</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Columns" xml:space="preserve">
+    <value>Oszlopok</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Contains" xml:space="preserve">
+    <value>tartalmazza</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_EndsWith" xml:space="preserve">
+    <value>végződése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_EqualSign" xml:space="preserve">
+    <value>=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Equals" xml:space="preserve">
+    <value>egyenlő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ExpandAllGroups" xml:space="preserve">
+    <value>Összes csoport kibontása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ExpandGroup" xml:space="preserve">
+    <value>Csoport kibontása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_False" xml:space="preserve">
+    <value>hamis</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Filter" xml:space="preserve">
+    <value>Szűrő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_FilterValue" xml:space="preserve">
+    <value>Szűrőérték</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_GreaterThanOrEqualSign" xml:space="preserve">
+    <value>&gt;=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_GreaterThanSign" xml:space="preserve">
+    <value>&gt;</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Group" xml:space="preserve">
+    <value>Csoportosítás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Hide" xml:space="preserve">
+    <value>Elrejtés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_HideAll" xml:space="preserve">
+    <value>Összes elrejtése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Is" xml:space="preserve">
+    <value>egyenlő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsAfter" xml:space="preserve">
+    <value>későbbi mint</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsBefore" xml:space="preserve">
+    <value>korábbi mint</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsEmpty" xml:space="preserve">
+    <value>üres</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsNot" xml:space="preserve">
+    <value>nem egyenlő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsNotEmpty" xml:space="preserve">
+    <value>nem üres</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsOnOrAfter" xml:space="preserve">
+    <value>aznap vagy később</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_IsOnOrBefore" xml:space="preserve">
+    <value>aznap vagy korábban</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_LessThanOrEqualSign" xml:space="preserve">
+    <value>&lt;=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_LessThanSign" xml:space="preserve">
+    <value>&lt;</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Loading" xml:space="preserve">
+    <value>Betöltés…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_MoveDown" xml:space="preserve">
+    <value>Mozgatás le</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_MoveUp" xml:space="preserve">
+    <value>Mozgatás fel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_NotContains" xml:space="preserve">
+    <value>nem tartalmazza</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_NotEqualSign" xml:space="preserve">
+    <value>!=</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_NotEquals" xml:space="preserve">
+    <value>nem egyenlő</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_OpenFilters" xml:space="preserve">
+    <value>Szűrők megnyitása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Operator" xml:space="preserve">
+    <value>Operátor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_RefreshData" xml:space="preserve">
+    <value>Adatok frissítése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_RemoveFilter" xml:space="preserve">
+    <value>Szűrő eltávolítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Save" xml:space="preserve">
+    <value>Mentés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_SelectAllRows" xml:space="preserve">
+    <value>Összes sor kijelölése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_SelectRow" xml:space="preserve">
+    <value>Sor kijelölése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ShowAll" xml:space="preserve">
+    <value>Összes megjelenítése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ShowColumnOptions" xml:space="preserve">
+    <value>Oszlopbeállítások</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Sort" xml:space="preserve">
+    <value>Rendezés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_StartsWith" xml:space="preserve">
+    <value>kezdete</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_ToggleGroupExpansion" xml:space="preserve">
+    <value>Csoport kibontása/összecsukása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_True" xml:space="preserve">
+    <value>igaz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Ungroup" xml:space="preserve">
+    <value>Csoportosítás megszüntetése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Unsort" xml:space="preserve">
+    <value>Rendezés megszüntetése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDataGrid_Value" xml:space="preserve">
+    <value>Érték</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDateRangePicker_End" xml:space="preserve">
+    <value>Záró dátum</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDateRangePicker_Start" xml:space="preserve">
+    <value>Kezdő dátum</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudDialog_Close" xml:space="preserve">
+    <value>Bezárás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Cancel" xml:space="preserve">
+    <value>Mégse</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Exit" xml:space="preserve">
+    <value>OK</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Text" xml:space="preserve">
+    <value>Elhagyja az oldalt? Az elvégzett módosítások elveszhetnek.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudExitPrompt_Title" xml:space="preserve">
+    <value>Navigáció megerősítése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_Button" xml:space="preserve">
+    <value>Fájlok tallózása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_DragAndDrop" xml:space="preserve">
+    <value>Húzza ide a fájlokat, vagy kattintson a tallózáshoz</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_FileSizeError" xml:space="preserve">
+    <value>A(z) '{0}' fájl meghaladja a megengedett legnagyobb méretet ({1} bájt).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFileUpload_MaximumFileCountExceeded" xml:space="preserve">
+    <value>{0} fájl kijelölve, ez meghaladja a megengedett {1} darabot</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudFormComponent_Required" xml:space="preserve">
+    <value>Kötelező</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudInput_Clear" xml:space="preserve">
+    <value>Törlés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudInput_Decrement" xml:space="preserve">
+    <value>Csökkentés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudInput_Increment" xml:space="preserve">
+    <value>Növelés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudNavGroup_ToggleExpand" xml:space="preserve">
+    <value>{0} kibontása/összecsukása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPageContentNavigation_NavMenu" xml:space="preserve">
+    <value>Tartalom</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_CurrentPage" xml:space="preserve">
+    <value>Jelenlegi oldal: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_FirstPage" xml:space="preserve">
+    <value>Első oldal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_LastPage" xml:space="preserve">
+    <value>Utolsó oldal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_NextPage" xml:space="preserve">
+    <value>Következő oldal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_PageIndex" xml:space="preserve">
+    <value>{0}. oldal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudPagination_PreviousPage" xml:space="preserve">
+    <value>Előző oldal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRangeInput_End" xml:space="preserve">
+    <value>Vége</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRangeInput_Start" xml:space="preserve">
+    <value>Kezdet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRatingItem_Label" xml:space="preserve">
+    <value>{0} értékelés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudRating_Label" xml:space="preserve">
+    <value>Értékelés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudSelect_SelectAll" xml:space="preserve">
+    <value>Összes kijelölése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudSnackbar_Close" xml:space="preserve">
+    <value>Bezárás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudSplitPanel_ResizePanels" xml:space="preserve">
+    <value>Panelek átméretezése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Complete" xml:space="preserve">
+    <value>Befejezés</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Next" xml:space="preserve">
+    <value>Tovább</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Previous" xml:space="preserve">
+    <value>Vissza</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Reset" xml:space="preserve">
+    <value>Visszaállítás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudStepper_Skip" xml:space="preserve">
+    <value>Kihagyás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_FirstPage" xml:space="preserve">
+    <value>Első oldal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_LastPage" xml:space="preserve">
+    <value>Utolsó oldal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_NextPage" xml:space="preserve">
+    <value>Következő oldal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTablePager_PreviousPage" xml:space="preserve">
+    <value>Előző oldal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_CancelEditRow" xml:space="preserve">
+    <value>Szerkesztés megszakítása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_CollapseGroup" xml:space="preserve">
+    <value>Csoport összecsukása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_CommitRow" xml:space="preserve">
+    <value>Szerkesztés véglegesítése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_EditRow" xml:space="preserve">
+    <value>Sor szerkesztése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_ExpandGroup" xml:space="preserve">
+    <value>Csoport kibontása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_Loading" xml:space="preserve">
+    <value>Betöltés…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_SelectAllRows" xml:space="preserve">
+    <value>Összes sor kijelölése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_SelectGroup" xml:space="preserve">
+    <value>Csoport kijelölése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTable_SelectRow" xml:space="preserve">
+    <value>Sor kijelölése</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_AddTab" xml:space="preserve">
+    <value>Lap hozzáadása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_CloseTab" xml:space="preserve">
+    <value>Lap bezárása</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollDown" xml:space="preserve">
+    <value>Lapok görgetése le</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollLeft" xml:space="preserve">
+    <value>Lapok görgetése balra</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollRight" xml:space="preserve">
+    <value>Lapok görgetése jobbra</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTabs_ScrollUp" xml:space="preserve">
+    <value>Lapok görgetése fel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTimePicker_Open" xml:space="preserve">
+    <value>Megnyitás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTreeView_CollapseItem" xml:space="preserve">
+    <value>Összecsukás</value>
+    <comment>MT</comment>
+  </data>
+  <data name="MudTreeView_ExpandItem" xml:space="preserve">
+    <value>Kibontás</value>
+    <comment>MT</comment>
+  </data>
 </root>

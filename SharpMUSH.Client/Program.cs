@@ -34,6 +34,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddSharedResourceLocalization();
 builder.Services.AddMudServices();
+builder.Services.AddLocalizationInterceptor<PortalMudLocalizationInterceptor>();
 builder.Services.AddLogging();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<WikiMarkdigPipeline>();

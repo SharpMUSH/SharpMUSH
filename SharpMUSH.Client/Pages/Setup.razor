@@ -200,7 +200,7 @@
                         @if (choice.Mode is Keep or HandlerModes.Use && choice.Clashes is { Count: > 0 } clashes)
                         {
                             <div class="setup-handler-clashes" role="alert">
-                                <p>@Loc["AdmSetupHandlerClashes", clashes.Count]</p>
+                                <p>@Loc.Plural("AdmSetupHandlerClashes", "count", clashes.Count)</p>
                                 <ul>
                                     @foreach (var clash in clashes.Take(ClashesShown))
                                     {

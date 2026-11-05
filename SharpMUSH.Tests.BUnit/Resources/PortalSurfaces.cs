@@ -33,6 +33,14 @@ internal static class PortalSurfaces
 		["Lay"] = "staff: layout and application administration",
 		["Pkg"] = "staff: softcode package manager",
 		["Enum"] = "mixed: permission labels and enum display names",
+		["Guide"] = "player-facing: in-portal guide and onboarding",
+		["Notify"] = "player-facing: push notification settings",
+		["OAuthConsent"] = "player-facing: app consent page",
+		["Story"] = "player-facing: story reader",
+		["HostedApp"] = "player-facing: package-hosted applications",
+		["Mud"] = "player-facing: MudBlazor component text and screen-reader labels",
+		["Converter_"] = "player-facing: MudBlazor component text and screen-reader labels",
+		["HeatMap_"] = "player-facing: MudBlazor component text and screen-reader labels",
 	};
 
 	/// <summary>

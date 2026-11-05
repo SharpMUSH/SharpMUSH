@@ -73,7 +73,7 @@ public class SceneCardTests : TrackingBunitContext
 	{
 		var due = DateTimeOffset.UtcNow.AddDays(3);
 		var cut = Render<SceneCard>(p => p.Add(x => x.Scene, Scene("new", scheduledFor: due.ToUnixTimeMilliseconds())));
-		await Assert.That(cut.Find(".scene-card-meta").TextContent).Contains($"Scheduled for {due.ToLocalTime():MMM d, HH:mm}");
+		await Assert.That(cut.Find(".scene-card-meta").TextContent).Contains($"Scheduled for {SharpMUSH.Client.Components.Kit.DateDisplay.MonthDayTime(due)}");
 	}
 
 	[Test]

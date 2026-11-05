@@ -12,10 +12,12 @@ engine's separate localization layer — telnet/WebSocket messages via
 
 ## Current state
 
-- **1122 English keys** in `SharpMUSH.Client/Resources/SharedResource.resx`.
-- **All fifteen translations are complete** — 1122/1122 keys each. Every one is
-  machine-drafted: every value carries an `MT` comment marking that no human has
-  read it. `grep -c '<comment>MT' SharpMUSH.Client/Resources/SharedResource.de.resx`
+- English keys live in `SharpMUSH.Client/Resources/SharedResource.resx`. Every
+  player-facing key is translated in all fifteen locales; staff keys are partly
+  translated. `python3 tools/i18n/extract_untranslated.py <locale> --stats`
+  prints the counts per surface.
+- Every translation is machine-drafted: each value carries an `MT` comment
+  marking that no human has read it. `grep -c '<comment>MT' SharpMUSH.Client/Resources/SharedResource.de.resx`
   is the review worklist for a given locale.
 - **All sixteen locales are declared** — `PortalLocales.Codes` and
   `SatelliteResourceLanguages` in `SharpMUSH.Client.csproj`, kept in step by
@@ -24,7 +26,15 @@ engine's separate localization layer — telnet/WebSocket messages via
 - The client loads **full ICU** (`BlazorWebAssemblyLoadAllGlobalizationData`),
   so `CultureInfo` works for every locale, not only the declared ones.
 - `DeclaredLocaleCoverageTests` fails if a declared locale is missing any
-  **player-facing** key (267 of the 1122). Staff surfaces may lag.
+  **player-facing** key. Staff surfaces may lag.
+- MudBlazor's own text (pagers, pickers, screen-reader labels, converter errors)
+  is in the same resx under MudBlazor's key names, served by
+  `PortalMudLocalizationInterceptor`. `MudBlazorTextTests` fails if a MudBlazor
+  upgrade ships a key the resx lacks.
+- Dates and times shown to readers go through `DateDisplay`
+  (`SharpMUSH.Client/Components/Kit`), which writes them in the reader's
+  culture. Technical timestamps (backups, package revisions, UTC lines) keep
+  fixed ISO patterns.
 - Lookup goes through `IStringLocalizer<SharedResource>`, registered by
   `AddSharedResourceLocalization()` in `SharpMUSH.Client/Resources/LocalizationServiceCollectionExtensions.cs`.
   **`ResourcesPath` must stay unset** — setting it double-roots the manifest
@@ -49,21 +59,21 @@ Chinese for community size.
 
 | Tag | Language | Penn evidence | ICU shard | Portal status |
 |---|---|---|---|---|
-| `de` | German | 653 strings | EFIGS | **done — 1122/1122** |
-| `es` | Spanish | 855 | EFIGS | **done — 1122/1122** |
-| `fr` | French | 977 | EFIGS | **done — 1122/1122** |
-| `bg` | Bulgarian | 527 | no_CJK | **done — 1122/1122** |
-| `da` | Danish | 557 | no_CJK | **done — 1122/1122** |
-| `hr` | Croatian | 1597 — deepest of any locale | no_CJK | **done — 1122/1122** |
-| `hu` | Hungarian | 1020 | no_CJK | **done — 1122/1122** |
-| `nb` | Norwegian Bokmål | 1468 (as `no_NO`) | no_CJK | **done — 1122/1122** |
-| `nl` | Dutch | 1572 | no_CJK | **done — 1122/1122** |
-| `pl` | Polish | 1313 | no_CJK | **done — 1122/1122** |
-| `pt-BR` | Portuguese (Brazil) | 261 | no_CJK | **done — 1122/1122** |
-| `ro` | Romanian | 186 | no_CJK | **done — 1122/1122** |
-| `ru` | Russian | 52 — barely started | no_CJK | **done — 1122/1122** |
-| `sv` | Swedish | 960 | no_CJK | **done — 1122/1122** |
-| `zh-Hans` | Chinese (Simplified) | 68 (as `zh_CN`) | CJK | **done — 1122/1122** |
+| `de` | German | 653 strings | EFIGS | player-facing done |
+| `es` | Spanish | 855 | EFIGS | player-facing done |
+| `fr` | French | 977 | EFIGS | player-facing done |
+| `bg` | Bulgarian | 527 | no_CJK | player-facing done |
+| `da` | Danish | 557 | no_CJK | player-facing done |
+| `hr` | Croatian | 1597 — deepest of any locale | no_CJK | player-facing done |
+| `hu` | Hungarian | 1020 | no_CJK | player-facing done |
+| `nb` | Norwegian Bokmål | 1468 (as `no_NO`) | no_CJK | player-facing done |
+| `nl` | Dutch | 1572 | no_CJK | player-facing done |
+| `pl` | Polish | 1313 | no_CJK | player-facing done |
+| `pt-BR` | Portuguese (Brazil) | 261 | no_CJK | player-facing done |
+| `ro` | Romanian | 186 | no_CJK | player-facing done |
+| `ru` | Russian | 52 — barely started | no_CJK | player-facing done |
+| `sv` | Swedish | 960 | no_CJK | player-facing done |
+| `zh-Hans` | Chinese (Simplified) | 68 (as `zh_CN`) | CJK | player-facing done |
 
 Fifteen locales. Two tag choices differ deliberately from Penn's filenames:
 

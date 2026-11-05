@@ -530,7 +530,7 @@
     }
 
     private string ConnectionLine(DiscordConnectionView connection) => connection.BotName is { } bot
-        ? string.Format(Loc["AdmDiscordConnectionAs"], bot, connection.Guilds)
+        ? Loc.Plural("AdmDiscordConnectionAs", "bot", bot, "servers", connection.Guilds)
         : Loc["AdmDiscordConnectionSub"];
 
     private string StatusLabel(string status) => status switch

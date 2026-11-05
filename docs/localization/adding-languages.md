@@ -118,7 +118,7 @@ Sequence the locales by risk, not alphabetically:
 4. Everything else in any order. By this point the mechanism is proven and the
    remaining work is volume.
 
-**All fifteen are done** — 1122/1122 keys each, machine-drafted, every value
+**All fifteen are done** for player-facing keys, machine-drafted, every value
 carrying an `MT` comment because no human has read them.
 
 ## Step 5 — Add the guard test per locale
@@ -127,8 +127,8 @@ carrying an `MT` comment because no human has read them.
 takes its cases from `PortalLocales.Codes`, so a locale added to the picker is
 gated automatically — nothing to write per locale.
 
-It gates **player-facing keys only** (267 of 1122). Staff surfaces are two-thirds
-of the strings and the least urgent, so they are allowed to lag; that is the
+It gates **player-facing keys only**. Staff surfaces are most of the strings and
+the least urgent, so they are allowed to lag; that is the
 honest position, not a concession. The split is derived from the key-prefix map
 in `tools/i18n/extract_untranslated.py`, mirrored in `PortalSurfaces` because the
 tooling is Python, and `PortalSurfacesTests` parses that Python at test time and
@@ -160,6 +160,8 @@ latter matters because a value containing `{0}` renders through `string.Format`
 against `CurrentCulture`.
 
 ## Step 6 — Wire the validator into CI
+
+**Done.** `_dotnet-build-test.yml` runs it on every build:
 
 ```yaml
 - name: Validate resource files
@@ -218,14 +220,14 @@ weight; rarer hanzi fall through to the system CJK font rather than rendering to
 ## Optional: split the resx by surface
 
 Not required, and less compelling now that an LLM does the drafting rather than a
-volunteer facing one 1122-key file. Still worth it for two reasons:
+volunteer facing one large file. Still worth it for two reasons:
 
 - It makes step 5's `PlayerFacingKeys` a file rather than a prefix heuristic.
 - It lets a locale be *completely* translated for players while staff strings lag,
   which is a shippable state rather than an embarrassing one.
 
-Split `SharedResource` (267 player-facing keys) from `AdminResource` (856 staff
-and mixed keys), following the existing prefix boundaries. `AddSharedResourceLocalization()`
+Split `SharedResource` (player-facing keys) from `AdminResource` (staff and
+mixed keys), following the existing prefix boundaries. `AddSharedResourceLocalization()`
 registers both; `Loc` injections in admin pages switch to
 `IStringLocalizer<AdminResource>`. Mechanical, but it touches every admin page, so
 it deserves its own PR.

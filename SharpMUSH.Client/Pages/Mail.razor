@@ -70,7 +70,7 @@ else
                                         <MudIcon Icon="@Icons.Material.Filled.PriorityHigh" Color="Color.Error" Size="Size.Small" Title="@Loc["Urgent"]" />
                                     }
                                     <span class="mail-row-from">@m.From</span>
-                                    <span class="mail-row-date">@m.DateSent.LocalDateTime.ToString("MMM d")</span>
+                                    <span class="mail-row-date">@DateDisplay.MonthDay(m.DateSent)</span>
                                 </span>
                                 <span class="mail-row-subject">@m.Subject</span>
                             </button>

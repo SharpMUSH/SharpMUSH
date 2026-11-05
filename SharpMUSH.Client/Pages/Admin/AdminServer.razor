@@ -43,7 +43,7 @@
                        Value="@status.Version" Sub="@Loc["AdmServerBuild", status.BuildId]" />
         </AdminStats>
 
-        <p class="adm-server-note">@Loc["AdmServerUpdated", _readAt.ToString("HH:mm:ss")]</p>
+        <p class="adm-server-note">@Loc["AdmServerUpdated", DateDisplay.TimeWithSeconds(_readAt)]</p>
     </LoadState>
 </div>
 

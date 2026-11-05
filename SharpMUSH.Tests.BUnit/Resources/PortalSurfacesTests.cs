@@ -53,8 +53,8 @@ public class PortalSurfacesTests
 	[Test]
 	public async Task An_unprefixed_key_falls_back_to_the_configuration_surface()
 	{
-		await Assert.That(PortalSurfaces.SurfaceOf("MudTheme")).IsEqualTo(PortalSurfaces.Default);
-		await Assert.That(PortalSurfaces.IsPlayerFacing("MudTheme")).IsFalse();
+		await Assert.That(PortalSurfaces.SurfaceOf("SnapshotsTitle")).IsEqualTo(PortalSurfaces.Default);
+		await Assert.That(PortalSurfaces.IsPlayerFacing("SnapshotsTitle")).IsFalse();
 	}
 
 	[Test]
