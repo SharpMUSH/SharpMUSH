@@ -83,6 +83,7 @@ The l-prefixed forms take their items as one list instead of an argument each, f
 | [BULLETS()] | a bulleted or numbered list |
 | [GRID()] | short items in as many columns as fit |
 | [DATATABLE()], [LDATATABLE()] and [DATACOLUMNS()] | a table that gives way on a narrow screen, given by rows or by columns |
+| [SCHEMARENDER()] | a portal view or form, from the same document and data |
 | [GRADIENT()] | text shaded through colours |
 | [BADGE()] | a coloured status tag |
 | [TONE()] | text in a theme colour, which each reader sees in their own theme |

@@ -186,6 +186,7 @@ internal static class EngineRegistration
 		services.AddSingleton<StaffLevelService>();
 		services.AddSingleton<IGameFeatureReader>(sp => sp.GetRequiredService<GameFeatureService>());
 		services.AddScoped<OnboardingPresentationService>();
+		services.AddScoped<Services.BuiltApplicationRegistration>();
 		services.AddScoped<OnboardingCapabilityService>();
 		services.AddScoped<AdministratorChecklistDetector>();
 		services.AddScoped<IOnboardingCommandProbe, OnboardingCommandProbe>();

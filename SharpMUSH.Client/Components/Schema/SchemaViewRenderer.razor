@@ -113,6 +113,9 @@ else
 
     [Parameter] public EventCallback<SchemaActionRequest> ActionHandler { get; set; }
     [Parameter] public bool Busy { get; set; }
+
+    /// <summary>Raised when a click ran a command or a dialog was answered: the game may have changed what the page shows.</summary>
+    [Parameter] public EventCallback GameChanged { get; set; }
     private PortalSchemaDocument? _document => Document;
     private SchemaData? _data => Data;
     private bool _busy => Busy;
@@ -179,7 +182,7 @@ else
         switch ((element.Kind ?? "field").ToLowerInvariant())
         {
             case var kind when SchemaDisplay.Kinds.Contains(kind):
-                <SchemaDisplay Element="element" Data="_data" Actions="_document?.Actions" Busy="_busy" OnAction="DispatchAsync" />
+                <SchemaDisplay Element="element" Data="_data" Actions="_document?.Actions" Busy="_busy" OnAction="DispatchAsync" OnChanged="GameChanged" />
                 break;
 
             case "field" when string.Equals(element.Type, "graph", StringComparison.OrdinalIgnoreCase):
@@ -193,6 +196,10 @@ else
                                        Value="@(element.Key is not null ? Lookup(element.Key) : null)"
                                        Data="_data" Busy="_busy" OnAction="DispatchAsync" />
                 </div>
+                break;
+
+            case var kind when kind != "field":
+                <SchemaUnknownKind Kind="@kind" />
                 break;
 
             default:

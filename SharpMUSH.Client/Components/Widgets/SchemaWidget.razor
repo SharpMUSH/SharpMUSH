@@ -30,7 +30,7 @@ else if (_schema is null)
 }
 else
 {
-    <SchemaApplicationHost Document="_schema" Data="_data" QuietWhenEmpty="QuietWhenEmpty" />
+    <SchemaApplicationHost Document="_schema" Data="_data" QuietWhenEmpty="QuietWhenEmpty" DataUrl="@_dataUrl" />
 }
 
 @code {
@@ -55,6 +55,7 @@ else
 
     private bool _loading = true;
     private PortalSchemaDocument? _schema;
+    private string? _dataUrl;
     private SchemaData? _data;
 
     /// <summary>The OOB package this widget's data follows, or null when its data comes from a route.</summary>
@@ -90,6 +91,7 @@ else
         _loading = true;
         _schema = null;
         _data = null;
+        _dataUrl = null;
         FollowOobPackage(null);
 
         var (schemaUrl, dataUrl, oobPackage) = await ResolveRoutesAsync();
@@ -117,6 +119,7 @@ else
                 {
                     data = await Schema.GetDataAsync(resolvedData) is SchemaData fetched ? fetched : null;
                     if (!Current(generation)) return;
+                    _dataUrl = resolvedData;
                 }
             }
             _schema = schema;

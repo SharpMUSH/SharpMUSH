@@ -85,7 +85,7 @@
     }
     else
     {
-        <SchemaApplicationHost @key="_generation" Document="_schema" Data="_data" />
+        <SchemaApplicationHost @key="_generation" Document="_schema" Data="_data" DataUrl="@_dataUrl" />
     }
 </div>
 </AppSectionFrame>
@@ -104,6 +104,7 @@
     private PortalApplication? _app;
     private PortalSchemaDocument? _schema;
     private SchemaData? _data;
+    private string? _dataUrl;
     private Type? _componentType;
 
     // What the showing page was loaded for: the address (sub-path and query included) and the
@@ -264,7 +265,7 @@
         var data = dataRead is not null && await dataRead is SchemaData payload ? payload : null;
         if (generation != _generation) return;
 
-        (_schema, _data, _loadedFrom) = (schema, data, $"{schemaUrl}\n{dataUrl}");
+        (_schema, _data, _loadedFrom, _dataUrl) = (schema, data, $"{schemaUrl}\n{dataUrl}", dataUrl);
     }
 
     /// <summary>

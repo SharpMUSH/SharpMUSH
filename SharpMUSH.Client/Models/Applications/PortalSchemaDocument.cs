@@ -24,7 +24,8 @@ public static class SchemaJson
 
 /// <summary>
 /// The whole schema document. <c>Kind</c> is "form" or "view". A view's <c>Layout</c> is "tabs" to show its
-/// pages one at a time under a tab strip; otherwise its pages stack.
+/// pages one at a time under a tab strip; otherwise its pages stack. A view's <c>Refresh</c> is how many seconds
+/// apart it fetches its data again while it is in view.
 /// </summary>
 public sealed record PortalSchemaDocument(
 	string? Kind,
@@ -33,8 +34,20 @@ public sealed record PortalSchemaDocument(
 	string? DataSource,
 	IReadOnlyList<SchemaPage>? Pages,
 	IReadOnlyDictionary<string, SchemaAction>? Actions,
-	string? Layout = null)
+	string? Layout = null,
+	int? Refresh = null)
 {
+	/// <summary>The least <see cref="Refresh"/> the portal honours, so a view cannot hammer its data route.</summary>
+	public const int MinimumRefreshSeconds = 10;
+
+	/// <summary>
+	/// How often a view fetches its data again while it is in view; null when it does not. A form never does,
+	/// since a refetch would overwrite what the player is typing.
+	/// </summary>
+	public TimeSpan? RefreshEvery => !IsForm && Refresh is > 0 and var seconds
+		? TimeSpan.FromSeconds(Math.Max(seconds, MinimumRefreshSeconds))
+		: null;
+
 	/// <summary>True for an input form (vs. a read-only view).</summary>
 	public bool IsForm => string.Equals(Kind, "form", StringComparison.OrdinalIgnoreCase);
 
@@ -61,7 +74,8 @@ public sealed record SchemaSection(
 	int Order,
 	[property: JsonPropertyName("visible_to")] string? VisibleTo,
 	IReadOnlyList<SchemaElement>? Elements,
-	int Columns = 1);
+	int Columns = 1,
+	string? Key = null);
 
 /// <summary>
 /// A single element. <c>Kind</c> discriminates: "field" (an input/value) or a display element
@@ -116,7 +130,11 @@ public sealed record SchemaElement(
 	SchemaGraphSpec? Graph = null,
 	[property: JsonPropertyName("options_from")] string? OptionsFrom = null,
 	[property: JsonPropertyName("item_by")] string? ItemBy = null,
-	[property: JsonPropertyName("item_variants")] IReadOnlyDictionary<string, IReadOnlyList<SchemaElement>>? ItemVariants = null);
+	[property: JsonPropertyName("item_variants")] IReadOnlyDictionary<string, IReadOnlyList<SchemaElement>>? ItemVariants = null,
+	// A click on one of the element's values runs this command as the viewer, filled from the value (SchemaClick).
+	string? Command = null,
+	// A click on one of the element's values opens the form this route answers, in a dialog.
+	string? Dialog = null);
 
 /// <summary>
 /// What a <c>graph</c> field lets its author build: the step kinds, each with the outcomes leaving it and the
@@ -270,7 +288,15 @@ public sealed record SchemaActionResult(
 	PortalSchemaDocument? Schema,
 	string? Redirect,
 	string? Message,
-	SchemaData? Data = null);
+	SchemaData? Data = null,
+	SchemaData? DataMerge = null,
+	IReadOnlyList<SchemaReplacement>? Replace = null);
+
+/// <summary>
+/// One part of the page an action reply swaps: the section whose <c>key</c> is <c>Section</c>, or the element
+/// whose <c>key</c> is <c>Element</c>, for <c>With</c>. The rest of the page stays as it is.
+/// </summary>
+public sealed record SchemaReplacement(string? Section, string? Element, JsonElement? With);
 
 /// <summary>
 /// An action a display element asks its renderer to dispatch: the action's name, and the values to merge

@@ -17,7 +17,7 @@ namespace SharpMUSH.Client.Services;
 /// <see cref="IGameHubConnectionFactory"/>), starts a new connection when a start fails or a connection
 /// closes (a game restart can outlast both), and surfaces received messages as events.
 /// </summary>
-public sealed class ConnectionStateService : IConnectionStateService, ISceneHubControl, IAsyncDisposable
+public sealed class ConnectionStateService : IConnectionStateService, ISceneHubControl, IPortalVisibility, IAsyncDisposable
 {
 	private readonly IGameHubConnectionFactory _factory;
 	private readonly ILogger<ConnectionStateService> _logger;
@@ -45,6 +45,8 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	// Whether this tab is in view, as last reported by the page (PushInterop); the hub is told on every connect.
 	// Out of view until the page says otherwise, so a page that never reports cannot hold every @push back.
 	private bool _visible;
+	// Whether the tab has said yet; until it does, it counts as in view.
+	private bool _visibilityKnown;
 
 	/// <summary>How long to wait before each new attempt after a start failed or the hub closed; the last delay
 	/// repeats. Settable for tests.</summary>
@@ -212,6 +214,7 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	public Task ReportVisibilityAsync(bool visible)
 	{
 		_visible = visible;
+		_visibilityKnown = true;
 		return SendVisibilityAsync();
 	}
 
@@ -429,6 +432,9 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		}
 		await ConnectSceneHubAsync();
 	}
+
+	/// <inheritdoc/>
+	public bool IsVisible => !_visibilityKnown || _visible;
 
 	/// <summary>Joins every scene this client asked for again, on a connection that has lost them.</summary>
 	private async Task RejoinScenesAsync()

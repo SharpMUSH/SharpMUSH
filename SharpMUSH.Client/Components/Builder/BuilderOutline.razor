@@ -1,0 +1,240 @@
+@using System.Text.Json.Nodes
+@using SharpMUSH.Client.Components.Kit
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The draft's pages, sections and elements as nested lists. Each row selects its node; its move and more buttons
+   stay in the tab order on every row (they show on hover and focus), and a row can be dragged within its own list.
+   A row with a problem carries a dot and says so to a screen reader. *@
+
+<nav class="bld-outline" aria-labelledby="bld-outline-h">
+    <div class="bld-outline-head">
+        <h2 id="bld-outline-h" class="bld-pane-title">@Loc["LayBldOutline"]</h2>
+    </div>
+    <ul class="bld-tree">
+        @foreach (var page in Draft.Pages.OfType<JsonObject>().ToList())
+        {
+            <li>
+                @Row(Draft.Pages, page, Icons.Material.Filled.Article, null, (string?)page["title"] ?? "", () => Select(page, null, null), Draft.Pages.Count > 1)
+                <ul>
+                    @foreach (var section in BuilderDraft.Sections(page).OfType<JsonObject>().ToList())
+                    {
+                        <li>
+                            @Row(BuilderDraft.Sections(page), section, Icons.Material.Filled.ViewAgenda, null, SectionName(section), () => Select(page, section, null), true)
+                            <ul>
+                                @foreach (var element in BuilderDraft.Elements(section).OfType<JsonObject>().ToList())
+                                {
+                                    <li>@Row(BuilderDraft.Elements(section), element, null, KindName(element), ElementName(element), () => Select(page, section, element), true)</li>
+                                }
+                                <li class="bld-tree-add">
+                                    <BuilderAddPalette Label="@Loc["LayBldAddTo", SectionName(section)]" OnPick="type => AddAsync(page, section, type)" />
+                                </li>
+                            </ul>
+                        </li>
+                    }
+                    <li class="bld-tree-add">
+                        <button type="button" class="bld-link-button" @onclick="() => AddSectionAsync(page)">
+                            <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" /> @Loc["LayBldAddSection"]
+                        </button>
+                    </li>
+                </ul>
+            </li>
+        }
+        <li class="bld-tree-add">
+            <button type="button" class="bld-link-button" @onclick="AddPageAsync">
+                <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" /> @Loc["LayBldAddPage"]
+            </button>
+        </li>
+    </ul>
+
+    @if (Issues.Count > 0)
+    {
+        <div class="bld-issues" role="region" aria-label="@Loc["LayBldToFix", Issues.Count]">
+            <p class="bld-issues-title">@Loc["LayBldToFix", Issues.Count]</p>
+            <ul>
+                @foreach (var issue in Issues)
+                {
+                    <li>
+                        @if (issue.Node is { } node)
+                        {
+                            <button type="button" class="bld-link-button bld-link-button--warn" @onclick="() => SelectNode(node)">@issue.Text</button>
+                        }
+                        else
+                        {
+                            @issue.Text
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+</nav>
+
+@code {
+    [Parameter, EditorRequired] public BuilderDraft Draft { get; set; } = default!;
+
+    /// <summary>The node the inspector shows.</summary>
+    [Parameter] public JsonObject? Selected { get; set; }
+
+    /// <summary>The layout's problems; a node any of them names carries a dot.</summary>
+    [Parameter] public IReadOnlyList<BuilderIssue> Issues { get; set; } = [];
+
+    /// <summary>A node was chosen: its page, and its section and element when it is one.</summary>
+    [Parameter] public EventCallback<(JsonObject Page, JsonObject? Section, JsonObject? Element)> OnSelect { get; set; }
+
+    /// <summary>The draft changed.</summary>
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    /// <summary>A node was removed, with the name it went by, so the page can offer to undo it.</summary>
+    [Parameter] public EventCallback<string> OnRemoved { get; set; }
+
+    private JsonArray? _dragList;
+    private JsonObject? _dragNode;
+    private JsonObject? _menuFor;
+
+    private RenderFragment Row(JsonArray list, JsonObject node, string? icon, string? kind, string name, Func<Task> select, bool removable) => __builder =>
+    {
+        var index = list.IndexOf(node);
+        var selected = ReferenceEquals(node, Selected);
+        var problems = Issues.Count(issue => ReferenceEquals(issue.Node, node));
+        var label = string.IsNullOrWhiteSpace(name) ? Loc["LayBldUnnamed"].Value : name;
+        <div class="bld-row-node @(selected ? "bld-row-node--on" : "")" draggable="true"
+             @ondragstart="() => { _dragList = list; _dragNode = node; }"
+             @ondragend="() => { _dragList = null; _dragNode = null; }"
+             @ondragover:preventDefault="true" @ondrop="() => DropAsync(list, node)">
+            <span class="bld-grip" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.DragIndicator" Size="Size.Small" /></span>
+            <button type="button" class="bld-row-name" aria-current="@(selected ? "true" : null)" @onclick="select">
+                @if (icon is not null)
+                {
+                    <MudIcon Icon="@icon" Size="Size.Small" />
+                }
+                @if (kind is not null)
+                {
+                    <span class="bld-row-kind">@kind</span>
+                }
+                <span class="bld-row-label">@label</span>
+                @if (problems > 0)
+                {
+                    <span class="bld-dot" title="@Loc["LayBldHasProblems", problems]"></span>
+                    <span class="visually-hidden">@Loc["LayBldHasProblems", problems]</span>
+                }
+            </button>
+            <span class="bld-row-tools">
+                <button type="button" class="bld-icon-button" disabled="@(index <= 0)" aria-label="@Loc["LayBldMoveUp", label]"
+                        @onclick="() => MoveAsync(list, node, -1)"><MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" /></button>
+                <button type="button" class="bld-icon-button" disabled="@(index >= list.Count - 1)" aria-label="@Loc["LayBldMoveDown", label]"
+                        @onclick="() => MoveAsync(list, node, 1)"><MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" /></button>
+                <PopoverMenu Open="ReferenceEquals(_menuFor, node)" OpenChanged="open => _menuFor = open ? node : null" ArrowKeys="true">
+                    <Activator>
+                        <button type="button" class="bld-icon-button" aria-label="@Loc["LayBldMoreFor", label]" aria-haspopup="menu"
+                                aria-expanded="@(ReferenceEquals(_menuFor, node) ? "true" : "false")"
+                                @onclick="() => _menuFor = ReferenceEquals(_menuFor, node) ? null : node">
+                            <MudIcon Icon="@Icons.Material.Filled.MoreHoriz" Size="Size.Small" />
+                        </button>
+                    </Activator>
+                    <ChildContent>
+                        <div class="bld-menu" role="menu">
+                            <button type="button" role="menuitem" @onclick="() => DuplicateAsync(list, node)">
+                                <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" /> @Loc["LayBldDuplicate"]
+                            </button>
+                            <button type="button" role="menuitem" disabled="@(!removable)" @onclick="() => RemoveAsync(list, node, label)">
+                                <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Size="Size.Small" /> @Loc["LayBldDelete"]
+                            </button>
+                        </div>
+                    </ChildContent>
+                </PopoverMenu>
+            </span>
+        </div>
+    };
+
+    private Task Select(JsonObject page, JsonObject? section, JsonObject? element) => OnSelect.InvokeAsync((page, section, element));
+
+    private Task SelectNode(JsonObject node)
+    {
+        var (page, section, element) = Draft.At(Draft.PathOf(node));
+        return page is null ? Task.CompletedTask : Select(page, section, element);
+    }
+
+    private async Task AddAsync(JsonObject page, JsonObject section, string type)
+    {
+        var element = Draft.AddElement(section, type);
+        await OnChanged.InvokeAsync();
+        await Select(page, section, element);
+    }
+
+    private async Task AddSectionAsync(JsonObject page)
+    {
+        var section = Draft.AddSection(page);
+        await OnChanged.InvokeAsync();
+        await Select(page, section, null);
+    }
+
+    private async Task AddPageAsync()
+    {
+        var page = Draft.AddPage();
+        await OnChanged.InvokeAsync();
+        await Select(page, null, null);
+    }
+
+    private async Task MoveAsync(JsonArray list, JsonObject node, int by)
+    {
+        var index = list.IndexOf(node);
+        if (index + by < 0 || index + by >= list.Count) return;
+        list.RemoveAt(index);
+        list.Insert(index + by, node);
+        Renumber(list);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task DropAsync(JsonArray list, JsonObject target)
+    {
+        if (!ReferenceEquals(list, _dragList) || _dragNode is not { } node || ReferenceEquals(node, target)) return;
+        var to = list.IndexOf(target);
+        list.Remove(node);
+        list.Insert(to, node);
+        Renumber(list);
+        _dragList = null;
+        _dragNode = null;
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task DuplicateAsync(JsonArray list, JsonObject node)
+    {
+        _menuFor = null;
+        var copy = Draft.Duplicate(list, node);
+        Renumber(list);
+        await OnChanged.InvokeAsync();
+        await SelectNode(copy);
+    }
+
+    private async Task RemoveAsync(JsonArray list, JsonObject node, string label)
+    {
+        _menuFor = null;
+        list.Remove(node);
+        Renumber(list);
+        await OnChanged.InvokeAsync();
+        await OnRemoved.InvokeAsync(label);
+    }
+
+    // Pages and sections carry an order; elements are drawn in array order.
+    private static void Renumber(JsonArray list)
+    {
+        var order = 1;
+        foreach (var item in list.OfType<JsonObject>())
+        {
+            if (item.ContainsKey("order")) item["order"] = order;
+            order++;
+        }
+    }
+
+    private string SectionName(JsonObject section) =>
+        (string?)section["name"] is { Length: > 0 } name ? name : Loc["LayBldUntitledSection"];
+
+    private string KindName(JsonObject element) => BuilderDraft.IsField(element)
+        ? Loc[$"LayBldType_{(string?)element["type"] ?? "text"}"]
+        : Loc[$"LayBldKind_{(string?)element["kind"]}"];
+
+    private static string ElementName(JsonObject element) =>
+        (string?)element["label"] ?? (string?)element["key"] ?? (string?)element["src_field"] ?? (string?)element["rows_field"]
+        ?? (element["fields"] is JsonArray { Count: > 0 } fields ? string.Join(", ", fields.Select(f => (string?)f)) : null)
+        ?? ((string?)element["value"] is { } text ? (text.Length > 24 ? text[..24] + "…" : text) : "");
+}

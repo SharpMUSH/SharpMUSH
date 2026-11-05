@@ -1,3 +1,5 @@
+using SharpMUSH.Server.Services;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Applications;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
@@ -98,15 +100,16 @@ public class ApplicationsController(
 
 	[HttpPost]
 	[Authorize(Policy = PortalPermission.ApplicationsAdmin)]
-	public async Task<IActionResult> Upsert([FromBody] ApplicationDto dto)
+	public async Task<IActionResult> Upsert([FromBody] ApplicationDto dto, [FromServices] BuiltApplicationRegistration? builtRegistration = null)
 	{
 		if (dto.ConfigurationTile is { } tile && (!tile.HasSafeRoute() || !tile.HasValidOptions() || string.IsNullOrWhiteSpace(tile.Id)
 			|| string.IsNullOrWhiteSpace(tile.Title) || string.IsNullOrWhiteSpace(tile.Permission)))
 			return BadRequest(new { error = "Configuration tiles require an id, title, permission and canonical local /admin/ or /apps/ route." });
 
 		var hosted = string.Equals(dto.RenderKind, ApplicationRenderKind.Hosted, StringComparison.OrdinalIgnoreCase);
+		var built = string.Equals(dto.RenderKind, ApplicationRenderKind.Built, StringComparison.OrdinalIgnoreCase);
 		if (string.IsNullOrWhiteSpace(dto.Slug) || string.IsNullOrWhiteSpace(dto.DisplayName)
-			|| (!hosted && string.IsNullOrWhiteSpace(dto.SchemaUrl)))
+			|| (!hosted && !built && string.IsNullOrWhiteSpace(dto.SchemaUrl)))
 		{
 			return BadRequest(new { error = "Slug, display name, and schema URL are required." });
 		}
@@ -123,10 +126,32 @@ public class ApplicationsController(
 
 		// Validate the schema endpoint returns parseable JSON before persisting — the same defensive
 		// stance the client's SchemaAppService takes, but enforced server-side at registration time.
-		var (ok, reason) = hosted ? (true, string.Empty) : await ValidateSchemaEndpointAsync(dto.SchemaUrl!);
+		var (ok, reason) = hosted || built ? (true, string.Empty) : await ValidateSchemaEndpointAsync(dto.SchemaUrl!);
 		if (!ok)
 		{
 			return BadRequest(new { error = $"Schema endpoint validation failed: {reason}" });
+		}
+
+		// A built application's routes are the server's own; its record only names the object holding it, which the
+		// registering character must control and which must already hold the document.
+		JsonElement? builtConfig = null;
+		if (built)
+		{
+			if (builtRegistration is null) return BadRequest(new { error = "This server cannot register built applications." });
+			switch (await builtRegistration.CheckAsync(User, dto.Slug.Trim(), dto.Config, HttpContext.RequestAborted))
+			{
+				case JsonElement config:
+					builtConfig = config;
+					break;
+				case Error<string> error:
+					return BadRequest(new { error = error.Value });
+			}
+			dto = dto with
+			{
+				SchemaUrl = BuiltApplicationRegistration.SchemaRoute(dto.Slug.Trim()),
+				DataUrl = BuiltApplicationRegistration.DataRoute(dto.Slug.Trim(), kind == ApplicationKind.Widget),
+				SubmitRoute = BuiltApplicationRegistration.ActRoute(dto.Slug.Trim()),
+			};
 		}
 
 		if (hosted)
@@ -146,8 +171,9 @@ public class ApplicationsController(
 			? existing.OwningPackage
 			: null;
 
-		var renderKind = hosted ? ApplicationRenderKind.Hosted : string.Equals(dto.RenderKind, ApplicationRenderKind.Component, StringComparison.OrdinalIgnoreCase)
-			? ApplicationRenderKind.Component
+		var renderKind = hosted ? ApplicationRenderKind.Hosted
+			: built ? ApplicationRenderKind.Built
+			: string.Equals(dto.RenderKind, ApplicationRenderKind.Component, StringComparison.OrdinalIgnoreCase) ? ApplicationRenderKind.Component
 			: ApplicationRenderKind.Schema;
 
 		var application = new RegisteredApplication(
@@ -172,7 +198,7 @@ public class ApplicationsController(
 			string.IsNullOrWhiteSpace(dto.NavUrl) ? null : dto.NavUrl.Trim(),
 			hosted ? dto.DefinitionId : null,
 			dto.ConfigVersion,
-			hosted ? dto.Config?.Clone() : null,
+			hosted ? dto.Config?.Clone() : builtConfig,
 			dto.ConfigurationTile);
 
 		await registry.UpsertApplicationAsync(application);

@@ -89,7 +89,7 @@ public class BuildNavCatalogTests : BunitContext
 	{
 		_auth.SetAuthorized("wizard");
 		_auth.SetPolicies("softcode.use", "config.admin", "players.view");
-		await Assert.That(await VisibleHrefs()).IsEquivalentTo(new[] { "/admin", "/softcode", "/admin/characters", "/admin/guests", "/admin/activity", "/admin/suggestions", "/admin/messages", "/admin/config" },
+		await Assert.That(await VisibleHrefs()).IsEquivalentTo(new[] { "/admin", "/softcode", "/build/apps", "/admin/characters", "/admin/guests", "/admin/activity", "/admin/suggestions", "/admin/messages", "/admin/config" },
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
@@ -99,7 +99,7 @@ public class BuildNavCatalogTests : BunitContext
 	{
 		_auth.SetAuthorized("builder");
 		_auth.SetPolicies("softcode.use", "jobs.manage");
-		await Assert.That(await VisibleHrefs()).IsEquivalentTo(new[] { "/softcode", "/admin/jobs" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(await VisibleHrefs()).IsEquivalentTo(new[] { "/softcode", "/build/apps", "/admin/jobs" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
 	[Test]

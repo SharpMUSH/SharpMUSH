@@ -13,6 +13,9 @@ public sealed class SchemaApplicationState
 	public string? Redirect { get; private set; }
 	public string? Toast { get; private set; }
 
+	/// <summary>The keys the last reply's <c>replace</c> named that the page does not have.</summary>
+	public IReadOnlyList<string> Skipped { get; private set; } = [];
+
 	/// <summary>Starts an unrelated document instance; nothing from the old actor or record survives.</summary>
 	public void Load(PortalSchemaDocument? document, SchemaData? data)
 	{
@@ -65,10 +68,24 @@ public sealed class SchemaApplicationState
 			if (result.Fields is not null && (action.OnSuccess?.ResetFields.Any == true || action.OnSuccess?.MergeFields == true))
 				Form.MergeFields(result.Fields);
 		}
+		// A replaced schema starts the document again (below); otherwise replace swaps keyed parts, then data
+		// replaces the data and data_merge lays fields over it.
+		Skipped = [];
+		if (result.Schema is null && result.Replace is { Count: > 0 } replacements && Document is { } current)
+		{
+			var (patched, skipped) = SchemaPatch.Replace(current, replacements);
+			Form.Swap(patched);
+			Skipped = skipped;
+		}
 		if (result.Data is not null)
 		{
 			Data = result.Data;
 			Form.ApplyData(result.Data);
+		}
+		if (result.DataMerge is { } merge)
+		{
+			Data = SchemaPatch.Merge(Data, merge);
+			Form.ApplyData(merge);
 		}
 		// Old display data is not prefill for a reset: only this response's data is authoritative.
 		if (result.Schema is not null || (result.Ok && action.OnSuccess?.ResetFields.Any == true))

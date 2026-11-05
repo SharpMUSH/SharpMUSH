@@ -1,0 +1,76 @@
+/* The palette opens in a popover, outside the builder page, so it is styled here. */
+
+.bld-add-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 32px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: var(--radius);
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    font-size: .8125rem;
+    cursor: pointer;
+}
+
+.bld-add-button:hover {
+    background: var(--surface-2);
+}
+
+.bld-palette {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: min(320px, calc(100vw - 32px));
+    max-height: min(480px, 70vh);
+    padding: 8px;
+    overflow: auto;
+}
+
+.bld-palette-group {
+    margin: 8px 6px 2px;
+    color: var(--text-dim);
+    font-size: .6875rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.bld-palette-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    min-height: 44px;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: var(--radius);
+    background: none;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.bld-palette-item:hover,
+.bld-palette-item:focus-visible {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.bld-palette-name {
+    font-size: .875rem;
+    font-weight: 600;
+}
+
+.bld-palette-help {
+    color: var(--text-dim);
+    font-size: .75rem;
+}
+
+.bld-palette-none {
+    margin: 8px 6px;
+    color: var(--text-dim);
+    font-size: .8125rem;
+}

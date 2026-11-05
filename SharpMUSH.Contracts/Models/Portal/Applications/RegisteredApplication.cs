@@ -109,4 +109,10 @@ public static class ApplicationRenderKind
 
 	/// <summary>Render a trusted plain UI package in the reusable Razor host.</summary>
 	public const string Hosted = "Hosted";
+
+	/// <summary>
+	/// Render through the generic schema renderer from the portal builder's attributes, which the server serves at
+	/// <c>api/built/{slug}</c>. The record's <c>Config</c> names the object holding them: <c>{"holder":"#12:345"}</c>.
+	/// </summary>
+	public const string Built = "Built";
 }

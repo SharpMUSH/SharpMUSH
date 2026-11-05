@@ -14,11 +14,11 @@
     }
     @if (document.IsForm)
     {
-        <SchemaFormRenderer Document="document" Data="_state.Data" State="_state.Form" Busy="_state.Busy" ActionHandler="Dispatch" />
+        <SchemaFormRenderer Document="document" Data="_state.Data" State="_state.Form" Busy="_state.Busy" ActionHandler="Dispatch" GameChanged="Refetch" />
     }
     else
     {
-        <SchemaViewRenderer Document="document" Data="_state.Data" Busy="_state.Busy" ActionHandler="Dispatch" QuietWhenEmpty="QuietWhenEmpty" />
+        <SchemaViewRenderer Document="document" Data="_state.Data" Busy="_state.Busy" ActionHandler="Dispatch" QuietWhenEmpty="QuietWhenEmpty" GameChanged="Refetch" />
     }
 }
 
@@ -36,6 +36,12 @@ else if (_state.Form.GlobalError is { } diagnostic)
     [Parameter] public PortalSchemaDocument? Document { get; set; }
     [Parameter] public SchemaData? Data { get; set; }
     [Parameter] public bool QuietWhenEmpty { get; set; }
+
+    /// <summary>The data route, filled in, that the view's <c>refresh</c> fetches again. Without one it never refreshes.</summary>
+    [Parameter] public string? DataUrl { get; set; }
+
+    /// <summary>Raised when an action is answered without errors, so a dialog holding the page can close.</summary>
+    [Parameter] public EventCallback Answered { get; set; }
     private readonly SchemaApplicationState _state = new();
     private PortalSchemaDocument? _loadedDocument;
     private SchemaData? _loadedData;
@@ -43,6 +49,10 @@ else if (_state.Form.GlobalError is { } diagnostic)
     private string _locationIdentity = string.Empty;
     private AccountAuthService? _auth;
     private string _instance = Guid.NewGuid().ToString("N");
+    private IPortalVisibility? _visibility;
+    private CancellationTokenSource? _timer;
+    private (TimeSpan? Every, string? Url) _timed;
+    private bool _refetching;
 
     protected override void OnInitialized()
     {
@@ -50,6 +60,7 @@ else if (_state.Form.GlobalError is { } diagnostic)
         Nav.LocationChanged += Leaving;
         _auth = Services.GetService<AccountAuthService>();
         if (_auth is not null) _auth.ActiveCharacterChanged += CharacterChanged;
+        _visibility = Services.GetService<IPortalVisibility>();
     }
     private void CharacterChanged()
     {
@@ -89,7 +100,63 @@ else if (_state.Form.GlobalError is { } diagnostic)
             _loadedData = Data;
         }
         RevealOption();
+        Time();
     }
+
+    /// <summary>Starts, moves or stops the view's refresh timer to match its document and data route.</summary>
+    private void Time()
+    {
+        var timed = (Document?.RefreshEvery, DataUrl);
+        if (timed == _timed) return;
+        _timed = timed;
+        _timer?.Cancel();
+        _timer = null;
+        if (timed is not ({ } every, { Length: > 0 })) return;
+        _timer = new CancellationTokenSource();
+        _ = TickAsync(every, _timer.Token);
+    }
+
+    private async Task TickAsync(TimeSpan every, CancellationToken stop)
+    {
+        using var ticks = new PeriodicTimer(every, Services.GetService<TimeProvider>() ?? TimeProvider.System);
+        try
+        {
+            while (await ticks.WaitForNextTickAsync(stop))
+            {
+                if (_visibility?.IsVisible ?? true) await InvokeAsync(RefetchAsync);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Disposed: the page is gone, so the timer stops.
+            return;
+        }
+    }
+
+    /// <summary>
+    /// Fetches the data route again and shows what it answers. A form keeps what the player typed, so only a view
+    /// refetches; so does nothing while an action is on its way, or another refetch is.
+    /// </summary>
+    private async Task RefetchAsync()
+    {
+        if (_disposed || _refetching || _state.Busy || _state.Document is not { IsForm: false } || DataUrl is not { Length: > 0 } url) return;
+        _refetching = true;
+        try
+        {
+            if (await Services.GetRequiredService<SchemaAppService>().GetDataAsync(url) is SchemaData data && !_disposed && !_state.Busy)
+            {
+                _state.UpdateData(data);
+                StateHasChanged();
+            }
+        }
+        finally
+        {
+            _refetching = false;
+        }
+    }
+
+    /// <summary>A click on the page ran something in the game: fetch what it shows again.</summary>
+    private Task Refetch() => InvokeAsync(RefetchAsync);
 
     private async Task Dispatch(SchemaActionRequest request)
     {
@@ -98,6 +165,9 @@ else if (_state.Form.GlobalError is { } diagnostic)
         if (token == Guid.Empty) return;
         var result = await Services.GetRequiredService<SchemaAppService>().SubmitAsync(action.Route!, _state.Form.Payload(request.Values), _instance);
         if (_disposed || !_state.Apply(token, action, result, Loc["WidActionFailed"])) return;
+        if (_state.Skipped.Count > 0)
+            Services.GetService<ILogger<SchemaApplicationHost>>()?.LogWarning(
+                "[Schema] The reply to {Action} replaces {Keys}, which this page does not have", request.Action, string.Join(", ", _state.Skipped));
         if (_state.Redirect is { } redirect)
         {
             _state.Retire();
@@ -105,6 +175,7 @@ else if (_state.Form.GlobalError is { } diagnostic)
             return;
         }
         if (_state.Toast is { Length: > 0 } toast) Snackbar.Add(toast, Severity.Success);
+        if (result.Ok) await Answered.InvokeAsync();
     }
 
     public void Dispose()
@@ -113,5 +184,6 @@ else if (_state.Form.GlobalError is { } diagnostic)
         _state.Retire();
         Nav.LocationChanged -= Leaving;
         if (_auth is not null) _auth.ActiveCharacterChanged -= CharacterChanged;
+        _timer?.Cancel();
     }
 }

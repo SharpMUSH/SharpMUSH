@@ -40,6 +40,7 @@ Each handler ends by emitting JSON:
   "title": "Character Generation",
   "data_source": "/http/chargen?objid=...",   // optional
   "layout": "tabs",               // optional, views only: one tab per page instead of stacked pages
+  "refresh": 60,                  // optional, views only: fetch the data again every 60 s while in view (10 at least)
   "pages": [
     {
       "key": "abilities", "title": "Ability Scores", "order": 2,
@@ -162,6 +163,28 @@ posted — two buttons can share a route and differ by intent), `color`, and `va
 ```
 
 In a `view`, buttons and timeline actions post their `values` alone.
+
+**Clickable values.** A stats tile, a keyvalue row, a chip, a table row or a button may carry `command` or
+`dialog`. A click sends what the player meant and never a number, so a roll is made and kept by the game:
+
+- `command` is a line run as the viewer's character, exactly as if typed, with `{name}` filled from the clicked
+  value. What it prints shows under the element, and the page fetches its data again. A tile, a table row or a
+  chip fills from its row's fields, so a row usually carries a `key`; a keyvalue row gives `{key}` (the field
+  name) and `{value}`; a button gives its own `key`, `label` and `values`. A value that is missing or empty is
+  not clickable, and a line break in a value is sent as `%r`, so one click runs one command.
+- `dialog` is a route answering a small form for the clicked value, fetched with `?key=<key>` and shown in a
+  dialog: a roll that needs a choice first (a weapon, a bonus). The form's own actions post the choices, and an
+  answer without errors closes the dialog and refetches the page.
+
+```jsonc
+{ "kind": "stats", "rows_field": "abilities", "command": "+check {key}" }
+{ "kind": "table", "rows_field": "weapons", "columns": [ { "key": "name", "label": "Weapon" } ],
+  "dialog": "/http/sheet/attack" }
+```
+
+The command or the dialog's action does the roll in softcode, with `roll()` recording it, so the result is
+the game's to show again (`rollinfo()`) and anyone at the table can check it. A flow too long for a dialog
+belongs on its own page: answer with a `redirect`.
 
 **Fields** may carry `triggers_action`: the action dispatched whenever the value changes — a
 filter select that re-fetches its table:
@@ -294,6 +317,9 @@ read-only diagram from `{nodes,edges}` in another field.
   "fields":   { "strength": 14, "dexterity": 9 },   // merged when on_success.merge_fields
   "schema":   { /* a replacement Portal Schema Document */ },
   "data":     { "fields": { "entries": { "value": [ /* rows */ ], "visible": true } } },
+  "data_merge": { "fields": { "hp": { "value": 9 } } },          // laid over the data, key by key
+  "replace":  [ { "section": "spells", "with": { /* a section */ } },
+                { "element": "class", "with": { /* an element */ } } ],
   "redirect": "/character/Gandalf",
   "message":  "Character created."
 }
@@ -305,7 +331,18 @@ read-only diagram from `{nodes,edges}` in another field.
   (post a comment, get an empty box back).
 - A returned **`data` replaces the page's data payload**: tables and timelines redraw in place.
 - A returned **`schema` replaces the whole document** and the portal re-renders.
+- A returned **`replace`** swaps only the sections and elements it names by their `key`; give a section a
+  `"key"` to be named this way. What the player typed stays, so choosing a class can swap the spells section
+  and nothing else moves. A key the page lacks is skipped, with a console line.
+- A returned **`data_merge`** replaces only the data fields it holds; `data` replaces them all. They apply
+  after `replace`, `data` before `data_merge`.
 - A `redirect` to `/apps/...` moves within the portal and reloads that application.
+
+### Live data
+
+A view with `refresh` fetches its data route again on that timer while its tab is in view, so a count or a
+roster stays current without a reload. A form never refetches, since that would overwrite what the player
+is typing.
 
 > The `errors` shape is identical to the one the existing admin config form already
 > consumes, so this contract is battle-tested.

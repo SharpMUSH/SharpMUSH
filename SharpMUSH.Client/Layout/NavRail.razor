@@ -149,7 +149,7 @@
 
     /// <summary>The Build &amp; manage section: its catalogue pages and its applications.</summary>
     private bool IsBuildSection =>
-        IsUnder("/admin") || IsUnder("/softcode") || _buildApps.Any(a => IsUnder($"/apps/{a.Slug}"));
+        IsUnder("/admin") || IsUnder("/softcode") || IsUnder("/build") || _buildApps.Any(a => IsUnder($"/apps/{a.Slug}"));
 
     protected override void OnInitialized()
     {

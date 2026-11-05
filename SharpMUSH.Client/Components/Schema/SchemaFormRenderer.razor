@@ -124,6 +124,9 @@ else
     [Parameter] public SchemaFormModel? State { get; set; }
     [Parameter] public EventCallback<SchemaActionRequest> ActionHandler { get; set; }
     [Parameter] public bool Busy { get; set; }
+
+    /// <summary>Raised when a click ran a command or a dialog was answered: the game may have changed what the page shows.</summary>
+    [Parameter] public EventCallback GameChanged { get; set; }
     private SchemaData? _data => Data;
     private SchemaFormModel _model => State ?? throw new InvalidOperationException("The schema host must supply form state.");
     private MudForm? _form;
@@ -174,7 +177,7 @@ else
         <div class="d-flex flex-wrap gap-2 schema-button-row">
             @foreach (var element in group)
             {
-                <SchemaDisplay Element="element" Data="_data" Actions="_model.Document?.Actions" Busy="_busy" OnAction="Dispatch" />
+                <SchemaDisplay Element="element" Data="_data" Actions="_model.Document?.Actions" Busy="_busy" OnAction="Dispatch" OnChanged="GameChanged" />
             }
         </div>
     };
@@ -191,8 +194,11 @@ else
                 break;
             case var kind when SchemaDisplay.Kinds.Contains(kind):
                 <div class="mb-2">
-                    <SchemaDisplay Element="element" Data="_data" Actions="_model.Document?.Actions" Busy="_busy" OnAction="Dispatch" />
+                    <SchemaDisplay Element="element" Data="_data" Actions="_model.Document?.Actions" Busy="_busy" OnAction="Dispatch" OnChanged="GameChanged" />
                 </div>
+                break;
+            case var kind:
+                <SchemaUnknownKind Kind="@kind" />
                 break;
         }
     };

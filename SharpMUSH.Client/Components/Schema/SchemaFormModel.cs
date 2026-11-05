@@ -71,6 +71,17 @@ public sealed class SchemaFormModel
 		}
 	}
 
+	/// <summary>
+	/// Shows <paramref name="document"/> in place of the current one on the same page, keeping what was typed;
+	/// a field it adds starts from its default.
+	/// </summary>
+	public void Swap(PortalSchemaDocument document)
+	{
+		var page = PageIndex;
+		Load(document, null);
+		PageIndex = Math.Clamp(page, 0, Math.Max(0, PageCount - 1));
+	}
+
 	/// <summary>Reveals a declared visible field without changing the form's draft values.</summary>
 	public bool ShowOption(string key)
 	{

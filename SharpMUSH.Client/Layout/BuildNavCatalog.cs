@@ -86,6 +86,7 @@ public static class BuildNavCatalog
 	public static IReadOnlyList<Entry> All { get; } =
 	[
 		new("/softcode", Icons.Material.Filled.Code, "SoftcodeEditor", "AdmCardSoftcode", Group.Build, ["softcode.use"]),
+		new("/build/apps", Icons.Material.Filled.DashboardCustomize, "LayBldTitle", "LayBldCard", Group.Build, ["softcode.use"]),
 		new("/admin/snapshots", Icons.Material.Filled.History, "SnapshotsTitle", "AdmCardSnapshots", Group.Build, [], Roles: ["Wizard", "God"]),
 		new("/admin/jobs", Icons.Material.Filled.Schedule, "JobsTitle", "AdmCardJobs", Group.Build, ["jobs.manage"]),
 		new("/admin/diagnostics", Icons.Material.Filled.QueryStats, "DiagTitle", "AdmCardDiagnostics", Group.Build, ["queue.inspect"]),

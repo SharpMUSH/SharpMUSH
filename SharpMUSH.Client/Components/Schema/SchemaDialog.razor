@@ -1,0 +1,63 @@
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Services
+@inject SchemaAppService Schemas
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The small form an element's dialog route answers for a clicked value: a roll that needs a choice first.
+   Its own actions post its choices; softcode resolves each against its own sheet. An answer without errors
+   closes the dialog. *@
+
+<MudDialog>
+    <DialogContent>
+        @if (_document is { } document)
+        {
+            <SchemaApplicationHost Document="document" Data="_data" Answered="Answered" />
+        }
+        else if (_failure is { } failure)
+        {
+            <div role="alert">@failure</div>
+        }
+        else
+        {
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">@Loc["Cancel"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    /// <summary>The dialog route, with the clicked value's key in its query (<see cref="SchemaClick.DialogUrl"/>).</summary>
+    [Parameter, EditorRequired] public string Url { get; set; } = string.Empty;
+
+    private PortalSchemaDocument? _document;
+    private SchemaData? _data;
+    private string? _failure;
+
+    protected override async Task OnInitializedAsync()
+    {
+        switch (await Schemas.GetSchemaAsync(Url))
+        {
+            case PortalSchemaDocument document:
+                // The host refuses a document of another version or kind, with the reason.
+                if (document.DataSource is { Length: > 0 } source
+                    && SharpMUSH.Library.Models.Portal.Applications.PortalSchema.OnThisServer(source)
+                    && await Schemas.GetDataAsync(source.TrimStart('/')) is SchemaData data)
+                {
+                    _data = data;
+                }
+                _document = document;
+                break;
+            case ApiFailure failure:
+                _failure = failure.Message;
+                break;
+        }
+    }
+
+    private void Answered() => MudDialog.Close(DialogResult.Ok(true));
+
+    private void Cancel() => MudDialog.Cancel();
+}

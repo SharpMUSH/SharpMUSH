@@ -16,6 +16,51 @@ There are two flavours:
 
 Both are rendered by the same schema renderer; the only difference is where they appear.
 
+## Building one in the portal
+
+**Build & manage → Application builder** (`/build/apps`) makes a form, a sheet or a widget
+step by step, with a live preview, and needs no softcode. Every change can be undone and
+redone from its bar, and the draft is kept in the browser until it is saved.
+
+1. **Start** — pick a template (blank, character sheet, request form, profile editor), or
+   reopen one of your apps. The list shows the apps your character holds and the registered
+   ones; **Open a saved one** takes any object and name. A draft you left unsaved is offered
+   to resume.
+2. **What it is** — its title and name (the slug), whether it is a form or a view, a page or
+   a widget, and for a widget where it shows.
+3. **Lay it out** — pages, sections and elements in an outline. Add an element from the
+   palette under each section, drag a row or use its arrows to move it, and its **⋯** menu to
+   duplicate or delete it. Select one to change it in its settings: what it shows, its rules
+   (required, limits), what a click on it does (a command, with the clicked value put in by
+   `{value}`, `{label}` or a column's key, or a dialog), and its width in the section. A
+   field's key follows its label until you change the key yourself. The preview draws the
+   draft at a page's, a widget's or a phone's width, with made-up values or with what the
+   attributes hold on your own character. A row that has a problem carries a dot, and the
+   problems are listed under the outline.
+4. **Values** — for each value, the attribute it is read from on the viewed character, with
+   what that attribute holds on your character now, and for a form, the attribute each field
+   is saved to on whoever sends it (the same one unless you untick **Save to the same
+   attribute**).
+5. **Save** — lists what still stops the save, with a link to the step that fixes it, checks
+   that you control the object, and writes these attributes on it (`me`, or its dbref), each
+   marked new or replacing what is there:
+
+| Attribute | Holds |
+|-----------|-------|
+| ``DATA`APP`<SLUG>`` | The Portal Schema Document |
+| ``DATA`APP`<SLUG>`SOURCES`` | JSON object: field key → attribute read from the viewed character |
+| ``DATA`APP`<SLUG>`SAVE`` | JSON object: field key → attribute written on the sender (forms) |
+| ``DATA`APP`<SLUG>`REQUIRED`` | The keys a sent form must fill, space-separated (forms) |
+
+With `applications.admin`, **Show it as a page** (or **as a widget**) adds the record described in
+Part B below, with its routes filled in. The server serves a registered built application
+itself, at `api/built/<slug>/schema`, `/data` and `/act`: each value is read as the viewer,
+so an attribute they could not read with `get()` shows as hidden, and a sent form writes as
+the sender, so it changes only what they could change with `&`. Only an application
+registered this way is served, so nobody can point the routes at another object.
+
+The attributes are plain JSON you can also edit by hand.
+
 ## The two-part setup
 
 Standing up an application is always two steps. **Both are required** — installing the

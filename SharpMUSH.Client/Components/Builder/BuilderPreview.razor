@@ -1,0 +1,111 @@
+@using SharpMUSH.Client.Components.Schema
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject BuiltApplicationClient Built
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The draft drawn as it will look: at a page's width, a widget's or a phone's, with made-up values or with what
+   the attributes it reads hold on the author's own character. Nothing in it can post. *@
+
+<section class="bld-preview" aria-labelledby="bld-preview-h">
+    <div class="bld-preview-bar">
+        <h2 id="bld-preview-h" class="bld-pane-title">@Loc["LayBldPreview"]</h2>
+        <div class="bld-segmented" role="radiogroup" aria-label="@Loc["LayBldPreviewWidth"]">
+            @foreach (var width in Widths)
+            {
+                <button type="button" role="radio" aria-checked="@(width == _width ? "true" : "false")"
+                        class="bld-segment @(width == _width ? "bld-segment--on" : "")" @onclick="() => _width = width">@Loc[$"LayBldWidth_{width}"]</button>
+            }
+        </div>
+        <MudSwitch T="bool" Value="_real" ValueChanged="SetRealAsync" Color="Color.Primary" Label="@Loc["LayBldRealValues"]" />
+    </div>
+    <div class="bld-preview-stage">
+        <div class="bld-preview-frame bld-preview-frame--@_width">
+            @if (_real && _loading)
+            {
+                <BuilderSkeleton Rows="5" Height="20" />
+                <span class="visually-hidden" role="status">@Loc["LayBldLoadingValues"]</span>
+            }
+            else if (Document is not null)
+            {
+                <SchemaApplicationHost Document="Document" Data="@(_real ? _values ?? Sample : Sample)" />
+            }
+        </div>
+        <p class="bld-note">@(_real ? _failure ?? Loc["LayBldRealValuesHelp"] : Loc["LayBldPreviewHelp"])</p>
+    </div>
+</section>
+
+@code {
+    private static readonly string[] Widths = ["page", "widget", "phone"];
+
+    /// <summary>The document as the preview draws it (no actions).</summary>
+    [Parameter] public PortalSchemaDocument? Document { get; set; }
+
+    /// <summary>Made-up values for every key.</summary>
+    [Parameter] public SchemaData? Sample { get; set; }
+
+    /// <summary>Key → attribute, read from the author's character when the real-values switch is on.</summary>
+    [Parameter] public IReadOnlyDictionary<string, string> Sources { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>Starts at a widget's width.</summary>
+    [Parameter] public bool Widget { get; set; }
+
+    private string _width = "page";
+    private bool _widthSet;
+    private bool _real;
+    private bool _loading;
+    private SchemaData? _values;
+    private string? _failure;
+    private string _readFor = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!_widthSet)
+        {
+            _width = Widget ? "widget" : "page";
+            _widthSet = true;
+        }
+        if (_real) await ReadAsync();
+    }
+
+    private async Task SetRealAsync(bool real)
+    {
+        _real = real;
+        if (real) await ReadAsync();
+    }
+
+    // Reads again only when the map changed, so typing elsewhere does not refetch.
+    private async Task ReadAsync()
+    {
+        var map = Sources.Where(p => BuilderDraft.IsAttribute(p.Value)).ToDictionary(p => p.Key, p => p.Value);
+        var signature = string.Join('\n', map.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => $"{p.Key}={p.Value}"));
+        if (signature == _readFor && _values is not null) return;
+        _readFor = signature;
+        _loading = true;
+        _failure = null;
+        StateHasChanged();
+        switch (await Built.ValuesAsync(null, map))
+        {
+            case SchemaData data:
+                _values = Merge(data);
+                break;
+            case ApiFailure failure:
+                _values = null;
+                _failure = failure.Message;
+                break;
+        }
+        _loading = false;
+    }
+
+    // An attribute that holds nothing keeps its made-up value, so the preview still shows the element's shape.
+    private SchemaData Merge(SchemaData real)
+    {
+        var fields = new Dictionary<string, SchemaFieldValue>(Sample?.Fields ?? new Dictionary<string, SchemaFieldValue>(), StringComparer.Ordinal);
+        foreach (var (key, value) in real.Fields ?? new Dictionary<string, SchemaFieldValue>())
+        {
+            if (value.Value is { } v && SchemaViewRenderer.ValueToString(v).Length > 0) fields[key] = value;
+        }
+        return new SchemaData(fields);
+    }
+}

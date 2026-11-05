@@ -1,0 +1,1001 @@
+@page "/build/apps"
+@layout BuildLayout
+@attribute [Authorize(Policy = "softcode.use")]
+@using System.Text.Json
+@using System.Text.Json.Nodes
+@using System.Text.RegularExpressions
+@using SharpMUSH.Client.Components.Builder
+@using SharpMUSH.Client.Components.Kit
+@using SharpMUSH.Client.Components.Schema
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Models.Portal.Applications
+@using SharpMUSH.Library.Models.Portal
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject BuiltApplicationClient Built
+@inject ApplicationRegistryClient Registry
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The application builder: a guided way to make a form, view or widget without writing its JSON. What it makes is
+   stored as attributes on an object the author controls, and served by the server's api/built routes. The draft is
+   kept in this browser as it changes, so a reload or a closed tab loses nothing; every change can be undone. *@
+
+<PageTitle>@Loc["LayBldTitle"] — <GameName /></PageTitle>
+
+<div class="bld-page">
+    <header class="bld-bar">
+        @if (_step > 0)
+        {
+            <button type="button" class="bld-back" @onclick="() => GoTo(0)">
+                <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Small" /> @Loc["LayBldYourApps"]
+            </button>
+        }
+        <div class="bld-bar-title">
+            <h1>@(_step > 0 && _draft.Title is { Length: > 0 } title ? title : Loc["LayBldTitle"])</h1>
+            @if (_step > 0)
+            {
+                <p class="bld-bar-sub">
+                    @if (BuilderDraft.IsSlug(_draft.Slug))
+                    {
+                        <span class="bld-address bld-mono">/apps/@_draft.Slug</span>
+                    }
+                    <span>@(_savedAt is null ? Loc["LayBldDraftKept"] : Loc["LayBldDraftSaved", _savedAt])</span>
+                </p>
+            }
+            else
+            {
+                <p class="bld-bar-sub">@Loc["LayBldIntro"]</p>
+            }
+        </div>
+        @if (_step > 0)
+        {
+            <div class="bld-bar-tools">
+                <button type="button" class="bld-icon-button bld-icon-button--framed" aria-label="@Loc["LayBldUndo"]" title="@Loc["LayBldUndo"]"
+                        disabled="@(!CanUndo)" @onclick="Undo"><MudIcon Icon="@Icons.Material.Filled.Undo" Size="Size.Small" /></button>
+                <button type="button" class="bld-icon-button bld-icon-button--framed" aria-label="@Loc["LayBldRedo"]" title="@Loc["LayBldRedo"]"
+                        disabled="@(!CanRedo)" @onclick="Redo"><MudIcon Icon="@Icons.Material.Filled.Redo" Size="Size.Small" /></button>
+                @if (_step < 4)
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ChevronRight"
+                               Disabled="@(_step == 1 && !BuilderDraft.IsSlug(_draft.Slug))" OnClick="Next">@Loc["LayBldNextTo", Loc[StepKeys[_step + 1]]]</MudButton>
+                }
+            </div>
+        }
+    </header>
+
+    @if (_step > 0)
+    {
+        <nav aria-label="@Loc["LayBldStepsLabel"]">
+            <ol class="bld-steps">
+                @for (var i = 1; i < StepKeys.Length; i++)
+                {
+                    var step = i;
+                    var count = Issues.Count(issue => issue.Step == step);
+                    <li>
+                        <button type="button" class="bld-step @(step == _step ? "bld-step--on" : "") @(step < _step && count == 0 ? "bld-step--done" : "")"
+                                aria-current="@(step == _step ? "step" : null)" disabled="@(step > _reached)" @onclick="() => GoTo(step)">
+                            @if (step < _step && count == 0)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" />
+                            }
+                            else
+                            {
+                                <span class="bld-step-n">@step</span>
+                            }
+                            @Loc[StepKeys[step]]
+                            @if (count > 0)
+                            {
+                                <span class="bld-badge">@Loc["LayBldToFixShort", count]</span>
+                            }
+                        </button>
+                    </li>
+                }
+            </ol>
+        </nav>
+    }
+
+    @switch (_step)
+    {
+        case 0:
+            @StartStep()
+            break;
+        case 1:
+            @KindStep()
+            break;
+        case 2:
+            @LayoutStep()
+            break;
+        case 3:
+            @ValuesStep()
+            break;
+        case 4:
+            @SaveStep()
+            break;
+    }
+</div>
+
+@code {
+    private static readonly string[] StepKeys = ["LayBldStepStart", "LayBldStepKind", "LayBldStepLayout", "LayBldStepValues", "LayBldStepSave"];
+    private const string DraftKey = "sharpmush.builder.draft";
+
+    private readonly BuilderDraft _draft = new();
+    private int _step;
+    private int _reached;
+    private string _object = "me";
+    private string _openSlug = string.Empty;
+    private bool _widget;
+    private string _scope = "profile";
+    private bool _slugTouched;
+    private bool _register = true;
+    private bool _busy;
+    private string? _savedAt;
+    private string? _savedLink;
+    private string? _savedHolder;
+
+    private JsonObject? _page;
+    private JsonObject? _section;
+    private JsonObject? _element;
+    private string _pane = "outline";
+    private PortalSchemaDocument? _preview;
+    private SchemaData? _sample;
+    private IReadOnlyList<BuilderIssue> _issues = [];
+
+    // Undo: every state the draft has been in, the one shown at _at. Changes in quick succession (typing) share one.
+    private readonly List<string> _history = [];
+    private int _at = -1;
+    private DateTime _lastPush;
+
+    // Start: the author's apps, and a draft left in this browser.
+    private IReadOnlyList<AppRow>? _apps;
+    private string? _appsFailure;
+    private StoredDraft? _left;
+
+    // Values: what each source attribute holds on the author's character now.
+    private SchemaData? _now;
+    private bool _nowLoading;
+    private readonly HashSet<string> _saveDiffers = new(StringComparer.Ordinal);
+
+    // Save: the object to save on, as the server sees it.
+    private BuiltShelf? _shelf;
+    private string? _shelfFailure;
+    private bool _shelfLoading;
+    private string _shelfFor = string.Empty;
+
+    private IReadOnlyList<BuilderIssue> Issues => _issues;
+    private bool CanUndo => _at > 0;
+    private bool CanRedo => _at >= 0 && _at < _history.Count - 1;
+
+    private Dictionary<string, string> EffectiveSave() => _draft.InputFields()
+        .Select(f => (string)f["key"]!)
+        .ToDictionary(key => key, key => _saveDiffers.Contains(key) ? _draft.Save.GetValueOrDefault(key, "") : _draft.Sources.GetValueOrDefault(key, ""), StringComparer.Ordinal);
+
+    private string Sources => _draft.MapJson(_draft.Sources, _draft.DataKeys());
+    private string SaveMap => _draft.MapJson(EffectiveSave(), _draft.InputFields().Select(f => (string)f["key"]!));
+
+    /// <summary>One of the author's apps on the start page: where it is held, and whether the portal shows it.</summary>
+    private sealed record AppRow(string Slug, string Title, string Kind, string Holder, string HolderName, PortalApplication? Registered);
+
+    /// <summary>What is kept in this browser while the author works.</summary>
+    private sealed record StoredDraft(string Snapshot, int Step, int Reached, bool Widget, string Scope, string Object, string Title, string Kept);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _left = await ReadLeftDraftAsync();
+        await LoadAppsAsync();
+    }
+
+
+    // ---------------------------------------------------------------- start
+
+    private RenderFragment StartStep() => __builder =>
+    {
+        @if (_left is { } left)
+        {
+            <div class="bld-banner" role="note">
+                <MudIcon Icon="@Icons.Material.Filled.Restore" Size="Size.Small" />
+                <span>@Loc["LayBldLeftDraft", left.Title is { Length: > 0 } t ? t : Loc["LayBldUnnamed"].Value, left.Kept]</span>
+                <button type="button" class="bld-link-button" @onclick="ResumeLeft">@Loc["LayBldResume"]</button>
+                <button type="button" class="bld-link-button bld-link-button--quiet" @onclick="DiscardLeftAsync">@Loc["LayBldDiscard"]</button>
+            </div>
+        }
+        <div class="bld-start">
+            <section class="bld-start-new" aria-labelledby="bld-new-h">
+                <h2 id="bld-new-h" class="bld-h2">@Loc["LayBldStartNew"]</h2>
+                <p class="bld-note">@Loc["LayBldStartHelp"]</p>
+                <div class="bld-cards">
+                    @foreach (var template in BuilderTemplates.All)
+                    {
+                        <button type="button" class="bld-card" @onclick="() => StartFromTemplate(template.Key)">
+                            <span class="bld-card-sketch bld-card-sketch--@template.Key" aria-hidden="true">
+                                <span></span><span></span><span></span>
+                            </span>
+                            <span class="bld-card-title">@Loc[template.NameKey]</span>
+                            <span class="bld-card-text">@Loc[template.DescriptionKey]</span>
+                        </button>
+                    }
+                </div>
+            </section>
+
+            <section class="bld-start-mine" aria-labelledby="bld-mine-h" aria-busy="@(_apps is null ? "true" : "false")">
+                <h2 id="bld-mine-h" class="bld-h2">@Loc["LayBldYourApps"]</h2>
+                @if (_apps is null)
+                {
+                    <BuilderSkeleton Rows="6" Height="18" />
+                    <span class="visually-hidden" role="status">@Loc["LayBldLoadingApps"]</span>
+                }
+                else if (_apps.Count == 0)
+                {
+                    <p class="bld-note">@(_appsFailure ?? Loc["LayBldNoApps"])</p>
+                }
+                else
+                {
+                    <ul class="bld-apps">
+                        @foreach (var app in _apps)
+                        {
+                            <li>
+                                <div class="bld-app-text">
+                                    <span class="bld-app-name">@app.Title</span>
+                                    <span class="bld-note">@AppLine(app)</span>
+                                </div>
+                                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" Disabled="_busy"
+                                           OnClick="() => OpenSavedAsync(app.Slug, app.Holder)" aria-label="@Loc["LayBldEditApp", app.Title]">@Loc["LayBldEdit"]</MudButton>
+                            </li>
+                        }
+                    </ul>
+                }
+                <details class="bld-open-by">
+                    <summary>@Loc["LayBldOpenSaved"]</summary>
+                    <div class="bld-row">
+                        <MudTextField T="string" @bind-Value="_object" Label="@Loc["LayBldObject"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        <MudTextField T="string" @bind-Value="_openSlug" Label="@Loc["LayBldSlug"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono" />
+                        <MudButton Variant="Variant.Outlined" OnClick="() => OpenSavedAsync(_openSlug.Trim().ToLowerInvariant(), _object.Trim())" Disabled="_busy">@Loc["LayBldOpen"]</MudButton>
+                    </div>
+                </details>
+            </section>
+        </div>
+    };
+
+    private string AppLine(AppRow app)
+    {
+        var kind = string.Equals(app.Kind, "form", StringComparison.OrdinalIgnoreCase) ? Loc["LayBldKindFormShort"] : Loc["LayBldKindViewShort"];
+        var where = app.Registered is null ? Loc["LayBldNotShown"].Value
+            : app.Registered.KindEnum == ApplicationKind.Widget ? Loc["LayBldShownWidget"].Value : Loc["LayBldShownPage"].Value;
+        return Loc["LayBldAppLine", kind, where, app.HolderName];
+    }
+
+    private async Task LoadAppsAsync()
+    {
+        var rows = new Dictionary<(string, string), AppRow>();
+        var registered = (await Registry.ListAsync())
+            .Where(app => string.Equals(app.RenderKind, ApplicationRenderKind.Built, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        switch (await Built.ShelfAsync("me"))
+        {
+            case BuiltShelf shelf:
+                foreach (var app in shelf.Apps)
+                {
+                    rows[(app.Slug, shelf.Holder)] = new AppRow(app.Slug, app.Title, app.Kind, shelf.Holder, shelf.Name,
+                        registered.FirstOrDefault(r => r.Slug == app.Slug && HolderOf(r) == shelf.Holder));
+                }
+                break;
+            case ApiFailure failure:
+                _appsFailure = failure.Message;
+                break;
+        }
+        // Registered apps held elsewhere, which the author may still be able to open.
+        foreach (var app in registered.Where(app => HolderOf(app) is { } holder && !rows.ContainsKey((app.Slug, holder))))
+        {
+            var holder = HolderOf(app)!;
+            rows[(app.Slug, holder)] = new AppRow(app.Slug, app.DisplayName, app.SubmitRoute is null ? "view" : "form", holder, holder, app);
+        }
+        _apps = [.. rows.Values.OrderBy(row => row.Title, StringComparer.CurrentCultureIgnoreCase)];
+    }
+
+    private static string? HolderOf(PortalApplication app) =>
+        app.Config is { ValueKind: JsonValueKind.Object } config && config.TryGetProperty("holder", out var holder) && holder.ValueKind == JsonValueKind.String
+            ? holder.GetString()
+            : null;
+
+    private void StartFromTemplate(string key)
+    {
+        var template = BuilderTemplates.Named(key);
+        _draft.Load(template.Document());
+        _draft.Title = template.Key == "blank" ? string.Empty : Loc[template.NameKey];
+        _draft.Slug = BuilderDraft.SlugFrom(_draft.Title);
+        _slugTouched = false;
+        _draft.Sources.Clear();
+        _draft.Save.Clear();
+        foreach (var (k, value) in template.Sources ?? new Dictionary<string, string>()) _draft.Sources[k] = value;
+        foreach (var (k, value) in template.Save ?? new Dictionary<string, string>()) _draft.Save[k] = value;
+        Begin(1, 1);
+    }
+
+    private async Task OpenSavedAsync(string slug, string holder)
+    {
+        if (!BuilderDraft.IsSlug(slug))
+        {
+            Snackbar.Add(Loc["LayBldSlugBad"], Severity.Warning);
+            return;
+        }
+        _busy = true;
+        try
+        {
+            switch (await Built.OpenAsync(slug, holder))
+            {
+                case BuiltSource source when _draft.LoadStored(source.Schema ?? "", source.Sources, source.Save):
+                    _draft.Slug = slug;
+                    _slugTouched = true;
+                    _object = source.Holder ?? holder;
+                    // A registered app reopens where it shows, so a re-register keeps it there.
+                    if (await Registry.GetAsync(slug) is { } registered) (_widget, _scope) = BuilderDraft.Placement(registered);
+                    Begin(2, 4);
+                    break;
+                default:
+                    Snackbar.Add(Loc["LayBldOpenFailed", slug, holder], Severity.Warning);
+                    break;
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    // A fresh start on a loaded draft: its own history, nothing selected, the save maps read as they are.
+    private void Begin(int step, int reached)
+    {
+        _history.Clear();
+        _at = -1;
+        _page = _section = _element = null;
+        _saveDiffers.Clear();
+        foreach (var (key, save) in _draft.Save.Where(p => p.Value.Length > 0 && p.Value != _draft.Sources.GetValueOrDefault(p.Key))) _saveDiffers.Add(key);
+        _step = step;
+        _reached = reached;
+        _savedAt = null;
+        _savedLink = null;
+        if (_step == 2) SelectFirst();
+        Changed();
+    }
+
+    private void ResumeLeft()
+    {
+        if (_left is not { } left || !_draft.Restore(left.Snapshot)) return;
+        _widget = left.Widget;
+        _scope = left.Scope;
+        _object = left.Object;
+        _slugTouched = true;
+        Begin(Math.Clamp(left.Step, 1, 4), Math.Clamp(left.Reached, 1, 4));
+        _left = null;
+    }
+
+    private async Task DiscardLeftAsync()
+    {
+        _left = null;
+        await ForgetDraftAsync();
+    }
+
+    // ---------------------------------------------------------------- what it is
+
+    private RenderFragment KindStep() => __builder =>
+    {
+        <section class="bld-panel">
+            <h2 class="bld-h2">@Loc["LayBldStepKind"]</h2>
+            <div class="bld-grid2">
+                <MudTextField T="string" Label="@Loc["LayBldName"]" Variant="Variant.Outlined" HelperText="@Loc["LayBldNameHelp"]"
+                              Value="_draft.Title" ValueChanged="SetTitle" Immediate="true" />
+                <MudTextField T="string" Label="@Loc["LayBldSlug"]" Variant="Variant.Outlined" Class="bld-mono"
+                              HelperText="@(BuilderDraft.IsSlug(_draft.Slug) ? Loc["LayBldSlugAt", _draft.Slug] : Loc["LayBldSlugHelp"])"
+                              Value="_draft.Slug" ValueChanged="v => { _draft.Slug = v.Trim().ToLowerInvariant(); _slugTouched = true; Changed(); }"
+                              Error="@(!BuilderDraft.IsSlug(_draft.Slug))" ErrorText="@Loc["LayBldSlugBad"]" Immediate="true" />
+            </div>
+            <fieldset class="bld-fieldset">
+                <legend>@Loc["LayBldWhatKind"]</legend>
+                <MudRadioGroup T="bool" Value="_draft.IsForm" ValueChanged="v => { _draft.IsForm = v; Changed(); }">
+                    <MudRadio T="bool" Value="false">@Loc["LayBldKindView"]</MudRadio>
+                    <MudRadio T="bool" Value="true">@Loc["LayBldKindForm"]</MudRadio>
+                </MudRadioGroup>
+            </fieldset>
+            <fieldset class="bld-fieldset">
+                <legend>@Loc["LayBldWhere"]</legend>
+                <MudRadioGroup T="bool" Value="_widget" ValueChanged="v => { _widget = v; Changed(); }">
+                    <MudRadio T="bool" Value="false">@Loc["LayBldWherePage"]</MudRadio>
+                    <MudRadio T="bool" Value="true">@Loc["LayBldWhereWidget"]</MudRadio>
+                </MudRadioGroup>
+                @if (_widget)
+                {
+                    <MudSelect T="string" Value="_scope" ValueChanged="v => { _scope = v; Changed(); }" Label="@Loc["LayBldScope"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-narrow"
+                               HelperText="@Loc["LayBldScopeHelp"]">
+                        <MudSelectItem T="string" Value="@("profile")">@Loc["LayBldScopeProfile"]</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("card")">@Loc["LayBldScopeCard"]</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("home")">@Loc["LayBldScopeAny"]</MudSelectItem>
+                    </MudSelect>
+                }
+            </fieldset>
+            @if (!_draft.IsForm && _draft.Pages.Count > 1)
+            {
+                <MudCheckBox T="bool" Value="_draft.Tabbed" ValueChanged="v => { _draft.Tabbed = v; Changed(); }" Label="@Loc["LayBldTabs"]" />
+            }
+        </section>
+    };
+
+    private void SetTitle(string title)
+    {
+        _draft.Title = title;
+        if (!_slugTouched) _draft.Slug = BuilderDraft.SlugFrom(title);
+        Changed();
+    }
+
+    // ---------------------------------------------------------------- layout
+
+    private RenderFragment LayoutStep() => __builder =>
+    {
+        <div class="bld-panes" role="tablist" aria-label="@Loc["LayBldPanes"]">
+            @foreach (var pane in (string[])["outline", "settings", "preview"])
+            {
+                <button type="button" role="tab" aria-selected="@(pane == _pane ? "true" : "false")"
+                        class="bld-segment @(pane == _pane ? "bld-segment--on" : "")" @onclick="() => _pane = pane">@Loc[$"LayBldPane_{pane}"]</button>
+            }
+        </div>
+        <section class="bld-layout bld-layout--@_pane">
+            <div class="bld-layout-outline">
+                <BuilderOutline Draft="_draft" Selected="SelectedNode" Issues="Issues.Where(i => i.Step == BuilderIssue.LayoutStep).ToList()"
+                                OnSelect="OnSelect" OnChanged="Changed" OnRemoved="Removed" />
+            </div>
+            <div class="bld-layout-settings bld-inspector">
+                @if (_element is not null)
+                {
+                    <BuilderElementSettings Element="_element" Draft="_draft" Columns="SectionColumns(_section)" Sample="_sample"
+                                            Problems="@(Issues.Where(i => ReferenceEquals(i.Node, _element)).Select(i => i.Text).ToList())" OnChanged="Changed" />
+                }
+                else if (_section is not null)
+                {
+                    <p class="bld-settings-kind">@Loc["LayBldSection"]</p>
+                    <MudTextField T="string" Label="@Loc["LayBldSectionName"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Value="@((string?)_section["name"])" ValueChanged='v => { _section["name"] = v; Changed(); }' Immediate="true" />
+                    <MudNumericField T="int" Label="@Loc["LayBldSectionColumns"]" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" Max="4"
+                                     HelperText="@Loc["LayBldSectionColumnsHelp"]" Value="SectionColumns(_section)"
+                                     ValueChanged='v => { if (v <= 1) _section.Remove("columns"); else _section["columns"] = v; Changed(); }' />
+                }
+                else if (_page is not null)
+                {
+                    <p class="bld-settings-kind">@Loc["LayBldPage"]</p>
+                    <MudTextField T="string" Label="@Loc["LayBldPageTitle"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Value="@((string?)_page["title"])" ValueChanged='v => { _page["title"] = v; Changed(); }' Immediate="true" />
+                }
+                else
+                {
+                    <p class="bld-note">@Loc["LayBldPickSomething"]</p>
+                }
+            </div>
+            <div class="bld-layout-preview">
+                <BuilderPreview Document="_preview" Sample="_sample" Sources="_draft.Sources" Widget="_widget" />
+            </div>
+        </section>
+    };
+
+    private JsonObject? SelectedNode => _element ?? _section ?? _page;
+
+    private void OnSelect((JsonObject Page, JsonObject? Section, JsonObject? Element) node)
+    {
+        (_page, _section, _element) = node;
+        if (_pane == "outline") _pane = "settings";
+    }
+
+    private void SelectFirst()
+    {
+        if (_draft.Pages.OfType<JsonObject>().FirstOrDefault() is { } page) (_page, _section, _element) = (page, null, null);
+    }
+
+    private void Removed(string name)
+    {
+        if (SelectedNode is { } node && _draft.PathOf(node).Page < 0) _page = _section = _element = null;
+        Snackbar.Add(Loc["LayBldDeleted", name], Severity.Normal, config =>
+        {
+            config.Action = Loc["LayBldUndo"];
+            config.ActionColor = Color.Primary;
+            config.OnClick = _ => InvokeAsync(() =>
+            {
+                Undo();
+                StateHasChanged();
+            });
+        });
+    }
+
+    private static int SectionColumns(JsonObject? section) =>
+        section?["columns"] is JsonValue v && v.TryGetValue<int>(out var columns) ? Math.Max(1, columns) : 1;
+
+    // ---------------------------------------------------------------- values
+
+    private RenderFragment ValuesStep() => __builder =>
+    {
+        var keys = _draft.DataKeys().ToList();
+        var inputs = _draft.InputFields().Select(f => (string)f["key"]!).ToHashSet(StringComparer.Ordinal);
+        <section class="bld-panel bld-panel--wide">
+            <h2 class="bld-h2">@Loc["LayBldStepValues"]</h2>
+            <p class="bld-note">@(_draft.IsForm ? Loc["LayBldValuesFormHelp"] : Loc["LayBldValuesViewHelp"])</p>
+            <div class="bld-table-wrap">
+                <table class="bld-map">
+                    <caption class="visually-hidden">@Loc["LayBldStepValues"]</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">@Loc["LayBldKey"]</th>
+                            <th scope="col">@Loc["LayBldReadFrom"]</th>
+                            @if (_draft.IsForm)
+                            {
+                                <th scope="col">@Loc["LayBldSaveTo"]</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var key in keys)
+                        {
+                            var source = _draft.Sources.GetValueOrDefault(key, "");
+                            <tr>
+                                <th scope="row">
+                                    <span class="bld-mono bld-key-name">@key</span>
+                                    <span class="bld-note">@KeyUse(key)</span>
+                                </th>
+                                <td>
+                                    @AttributeInput(source, Loc["LayBldReadFromFor", key], v => SetSource(key, v))
+                                    @Now(key, source)
+                                </td>
+                                @if (_draft.IsForm)
+                                {
+                                    <td>
+                                        @if (inputs.Contains(key))
+                                        {
+                                            <MudCheckBox T="bool" Value="@(!_saveDiffers.Contains(key))" Label="@Loc["LayBldSameAttribute"]"
+                                                         ValueChanged="same => SetSame(key, same)" />
+                                            @if (_saveDiffers.Contains(key))
+                                            {
+                                                @AttributeInput(_draft.Save.GetValueOrDefault(key, ""), Loc["LayBldSaveToFor", key], v => { _draft.Save[key] = v; Changed(); })
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="bld-note">@Loc["LayBldShownOnly"]</span>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="bld-values-foot">
+                <span class="bld-note">@Loc["LayBldBacktick"]</span>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="FillSources">@Loc["LayBldFillEmpty", DefaultSource("<key>")]</MudButton>
+            </div>
+        </section>
+    };
+
+    private RenderFragment AttributeInput(string value, string label, Action<string> set) => __builder =>
+    {
+        var bad = value.Length > 0 && !BuilderDraft.IsAttribute(value);
+        var suggestion = bad ? Suggest(value) : null;
+        <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono" Placeholder="PROFILE`..."
+                      Value="@value" ValueChanged="v => set(v.Trim())" aria-label="@label"
+                      Error="bad" ErrorText="@Loc["LayBldAttributeBad"]" />
+        @if (suggestion is { Length: > 0 })
+        {
+            <button type="button" class="bld-link-button" @onclick="() => set(suggestion)">@Loc["LayBldDidYouMean", suggestion]</button>
+        }
+    };
+
+    private RenderFragment Now(string key, string source) => __builder =>
+    {
+        if (source.Length == 0 || !BuilderDraft.IsAttribute(source)) return;
+        if (_nowLoading)
+        {
+            <BuilderSkeleton Rows="1" Height="12" Class="bld-now-skel" />
+            return;
+        }
+        var datum = _now?.Fields?.GetValueOrDefault(key);
+        var text = datum?.Value is { } v ? SchemaViewRenderer.ValueToString(v) : "";
+        <span class="bld-note bld-now">
+            @(datum is { Visible: false } ? Loc["LayBldNowHidden"] : text.Length == 0 ? Loc["LayBldNowEmpty"] : Loc["LayBldNow", Shorten(text)])
+        </span>
+    };
+
+    private static string Shorten(string text) => text.Length > 60 ? text[..60] + "…" : text;
+
+    private static string Suggest(string value)
+    {
+        var fixedName = Regex.Replace(value.Trim(), "[^A-Za-z0-9_`.-]+", "_").Trim('_', '`').ToUpperInvariant();
+        fixedName = Regex.Replace(fixedName, "`{2,}", "`");
+        return BuilderDraft.IsAttribute(fixedName) ? fixedName : string.Empty;
+    }
+
+    private string KeyUse(string key)
+    {
+        foreach (var (_, _, element) in _draft.AllElements())
+        {
+            if (BuilderDraft.IsField(element) && (string?)element["key"] == key)
+                return $"{Loc[$"LayBldType_{(string?)element["type"] ?? "text"}"]} · {(string?)element["label"] ?? key}";
+            if ((string?)element["src_field"] == key || (string?)element["rows_field"] == key || (element["fields"] as JsonArray)?.Any(n => (string?)n == key) == true)
+                return Loc[$"LayBldKind_{(string?)element["kind"]}"];
+        }
+        return string.Empty;
+    }
+
+    private void SetSource(string key, string value)
+    {
+        _draft.Sources[key] = value;
+        Changed();
+        _ = LoadNowAsync();
+    }
+
+    private void SetSame(string key, bool same)
+    {
+        if (same) _saveDiffers.Remove(key);
+        else
+        {
+            _saveDiffers.Add(key);
+            if (string.IsNullOrEmpty(_draft.Save.GetValueOrDefault(key))) _draft.Save[key] = _draft.Sources.GetValueOrDefault(key, "");
+        }
+        Changed();
+    }
+
+    private string DefaultSource(string key) => $"APP`{_draft.Slug.ToUpperInvariant()}`{key.ToUpperInvariant()}";
+
+    private void FillSources()
+    {
+        foreach (var key in _draft.DataKeys().Where(key => string.IsNullOrWhiteSpace(_draft.Sources.GetValueOrDefault(key))).ToList())
+            _draft.Sources[key] = DefaultSource(key);
+        Changed();
+        _ = LoadNowAsync();
+    }
+
+    private async Task LoadNowAsync()
+    {
+        var map = _draft.Sources.Where(p => BuilderDraft.IsAttribute(p.Value)).ToDictionary(p => p.Key, p => p.Value);
+        _nowLoading = true;
+        StateHasChanged();
+        _now = await Built.ValuesAsync(null, map) is SchemaData now ? now : null;
+        _nowLoading = false;
+        StateHasChanged();
+    }
+
+    // ---------------------------------------------------------------- save
+
+    private RenderFragment SaveStep() => __builder =>
+    {
+        var stored = _shelf?.Apps.FirstOrDefault(app => app.Slug == _draft.Slug);
+        <div class="bld-save">
+            <div class="bld-save-main">
+                <section class="bld-card-panel" aria-labelledby="bld-checks-h">
+                    <h2 id="bld-checks-h" class="bld-h3">@Loc["LayBldChecks"]</h2>
+                    <ul class="bld-checks">
+                        @if (Issues.Count == 0)
+                        {
+                            <li class="bld-check bld-check--ok"><MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" /> @Loc["LayBldNoProblems"]</li>
+                        }
+                        @foreach (var issue in Issues)
+                        {
+                            <li class="bld-check bld-check--warn">
+                                <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Size="Size.Small" />
+                                <span>@issue.Text <button type="button" class="bld-link-button" @onclick="() => GoToIssue(issue)">@Loc["LayBldGoTo", Loc[StepKeys[issue.Step]]]</button></span>
+                            </li>
+                        }
+                    </ul>
+                </section>
+
+                <section class="bld-card-panel" aria-labelledby="bld-where-h" aria-busy="@(_shelfLoading ? "true" : "false")">
+                    <h2 id="bld-where-h" class="bld-h3">@Loc["LayBldKeptOn"]</h2>
+                    <div class="bld-object">
+                        <MudTextField T="string" Value="_object" ValueChanged="SetObject" Immediate="true" DebounceInterval="400"
+                                      Label="@Loc["LayBldObject"]" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="@Loc["LayBldObjectHelp"]" />
+                        <div class="bld-object-state" role="status">
+                            @if (_shelfLoading)
+                            {
+                                <BuilderSkeleton Rows="1" Height="20" />
+                                <span class="visually-hidden">@Loc["LayBldChecking"]</span>
+                            }
+                            else if (_shelf is { } shelf)
+                            {
+                                <span class="@(shelf.Controls ? "bld-ok" : "bld-warn")">
+                                    <MudIcon Icon="@(shelf.Controls ? Icons.Material.Filled.Check : Icons.Material.Filled.Block)" Size="Size.Small" />
+                                    @(shelf.Controls ? Loc["LayBldYouControl", $"{shelf.Name}({shelf.Holder})"] : Loc["LayBldNotYours", $"{shelf.Name}({shelf.Holder})"])
+                                </span>
+                            }
+                            else if (_shelfFailure is { } failure)
+                            {
+                                <span class="bld-warn"><MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" /> @failure</span>
+                            }
+                        </div>
+                    </div>
+                    <table class="bld-attrs">
+                        <caption>@Loc["LayBldWillWrite"]</caption>
+                        <tbody>
+                            @foreach (var (name, leaf, write) in Attributes())
+                            {
+                                <tr>
+                                    <td class="bld-mono">@name</td>
+                                    <td>
+                                        @if (_shelfLoading)
+                                        {
+                                            <BuilderSkeleton Rows="1" Height="12" />
+                                        }
+                                        else
+                                        {
+                                            var exists = stored is not null && (leaf is null || stored.Parts.Contains(leaf));
+                                            <span class="bld-tag @(exists ? "bld-tag--warn" : "")">
+                                                @(!write ? Loc["LayBldAttrCleared"] : exists ? Loc["LayBldAttrReplaces"] : Loc["LayBldAttrNew"])
+                                            </span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <details class="bld-json">
+                        <summary>@Loc["LayBldShowJson"]</summary>
+                        <pre>@_draft.Stored().ToJsonString(new JsonSerializerOptions { WriteIndented = true })</pre>
+                    </details>
+                </section>
+            </div>
+
+            <section class="bld-card-panel bld-save-side" aria-labelledby="bld-publish-h">
+                <h2 id="bld-publish-h" class="bld-h3">@Loc["LayBldShowInPortal"]</h2>
+                <AuthorizeView Policy="applications.admin">
+                    <Authorized>
+                        <MudRadioGroup T="bool" @bind-Value="_register" Class="bld-choices">
+                            <MudRadio T="bool" Value="true">
+                                <span class="bld-choice"><strong>@(_widget ? Loc["LayBldRegisterWidget"] : Loc["LayBldRegisterPage"])</strong>
+                                    <span class="bld-note">@(_widget ? Loc["LayBldRegisterWidgetHelp"] : Loc["LayBldRegisterPageHelp", _draft.Slug])</span></span>
+                            </MudRadio>
+                            <MudRadio T="bool" Value="false">
+                                <span class="bld-choice"><strong>@Loc["LayBldOnlySave"]</strong><span class="bld-note">@Loc["LayBldOnlySaveHelp"]</span></span>
+                            </MudRadio>
+                        </MudRadioGroup>
+                    </Authorized>
+                    <NotAuthorized>
+                        <p class="bld-note">@Loc["LayBldRegisterAsk"]</p>
+                    </NotAuthorized>
+                </AuthorizeView>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" OnClick="SaveAsync"
+                           Disabled="@(_busy || Issues.Count > 0 || _shelf is { Controls: false })" StartIcon="@Icons.Material.Filled.Save">
+                    @(_register && Registrar ? Loc["LayBldSaveAndShow"] : Loc["LayBldSave"])
+                </MudButton>
+                @if (_savedHolder is not null)
+                {
+                    <div class="bld-saved" role="status">
+                        <p class="bld-ok"><MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" /> @Loc["LayBldSaved", _draft.BaseAttribute, _savedHolder]</p>
+                        <div class="bld-row">
+                            @if (_savedLink is not null)
+                            {
+                                <MudButton Href="@_savedLink" Variant="Variant.Outlined" Color="Color.Primary">@Loc["LayBldOpenApp"]</MudButton>
+                                <MudButton Variant="Variant.Text" OnClick="CopyAddressAsync">@Loc["LayBldCopyAddress"]</MudButton>
+                            }
+                            <MudButton Variant="Variant.Text" OnClick="() => GoTo(2)">@Loc["LayBldKeepEditing"]</MudButton>
+                        </div>
+                    </div>
+                }
+            </section>
+        </div>
+    };
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+    private bool _registrar;
+    private bool Registrar => _registrar;
+
+    private IEnumerable<(string Name, string? Leaf, bool Write)> Attributes()
+    {
+        yield return (_draft.BaseAttribute, null, true);
+        yield return ($"{_draft.BaseAttribute}`SOURCES", "SOURCES", Sources.Length > 0);
+        if (_draft.IsForm) yield return ($"{_draft.BaseAttribute}`SAVE", "SAVE", SaveMap.Length > 0);
+        if (_draft.IsForm) yield return ($"{_draft.BaseAttribute}`REQUIRED", "REQUIRED", _draft.RequiredKeys().Length > 0);
+    }
+
+    private void GoToIssue(BuilderIssue issue)
+    {
+        GoTo(issue.Step);
+        if (issue.Node is { } node && _draft.At(_draft.PathOf(node)) is ({ } page, var section, var element))
+        {
+            (_page, _section, _element) = (page, section, element);
+            _pane = "settings";
+        }
+    }
+
+    private async Task SetObject(string value)
+    {
+        _object = value;
+        await LoadShelfAsync();
+    }
+
+    private async Task LoadShelfAsync()
+    {
+        var holder = _object.Trim();
+        if (holder == _shelfFor && (_shelf is not null || _shelfFailure is not null)) return;
+        _shelfFor = holder;
+        _shelfLoading = true;
+        _shelf = null;
+        _shelfFailure = null;
+        StateHasChanged();
+        ApiResult<BuiltShelf> found = holder.Length == 0 ? new ApiFailure(ApiFailureKind.Unexpected, Loc["LayBldObjectHelp"]) : await Built.ShelfAsync(holder);
+        switch (found)
+        {
+            case BuiltShelf shelf:
+                _shelf = shelf;
+                break;
+            case ApiFailure failure:
+                _shelfFailure = failure.Message;
+                break;
+        }
+        _shelfLoading = false;
+        // Also run without awaiting on entering the step, so it asks for its own render.
+        StateHasChanged();
+    }
+
+    private async Task SaveAsync()
+    {
+        _busy = true;
+        _savedHolder = null;
+        _savedLink = null;
+        try
+        {
+            var request = new BuiltSaveRequest(_object.Trim(), _draft.Stored().ToJsonString(), Sources,
+                _draft.IsForm ? SaveMap : null, _draft.IsForm ? _draft.RequiredKeys() : null);
+            switch (await Built.SaveAsync(_draft.Slug, request))
+            {
+                case BuiltSource saved:
+                    _savedHolder = saved.Holder ?? _object.Trim();
+                    _savedAt = DateTime.Now.ToShortTimeString();
+                    if (_register && Registrar) await RegisterAsync(_savedHolder);
+                    _shelfFor = string.Empty;
+                    await LoadShelfAsync();
+                    await ForgetDraftAsync();
+                    break;
+                case ApiFailure failure:
+                    Snackbar.Add(Loc["LayBldSaveFailed", failure.Message], Severity.Error);
+                    break;
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task RegisterAsync(string holder)
+    {
+        // The server fills in the routes of a built application and checks that the holder is yours and holds it.
+        var application = _draft.Registration(holder, _widget, _scope, await Registry.GetAsync(_draft.Slug));
+        switch (await Registry.UpsertAsync(application))
+        {
+            case Success:
+                _savedLink = _widget ? "/admin/layout" : $"/apps/{_draft.Slug}";
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["LayBldRegisterFailed", failure.Message], Severity.Error);
+                break;
+        }
+    }
+
+    private async Task CopyAddressAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", new Uri(new Uri(Navigation.BaseUri), _savedLink ?? "").ToString());
+            Snackbar.Add(Loc["LayBldCopied"], Severity.Success);
+        }
+        catch (JSException)
+        {
+            Snackbar.Add(Loc["LayBldCopyFailed"], Severity.Warning);
+        }
+    }
+
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (AuthState is not null)
+        {
+            var user = (await AuthState).User;
+            _registrar = (await AuthorizationService.AuthorizeAsync(user, "applications.admin")).Succeeded;
+        }
+    }
+
+    [Inject] private IAuthorizationService AuthorizationService { get; set; } = default!;
+
+    // ---------------------------------------------------------------- moving between steps, undo, keeping the draft
+
+    private void Next() => GoTo(_step + 1);
+
+    private void GoTo(int step)
+    {
+        _step = Math.Clamp(step, 0, 4);
+        _reached = Math.Max(_reached, _step);
+        if (_step == 0) _ = LoadAppsAsync();
+        if (_step == 2 && _page is null) SelectFirst();
+        if (_step == 3) _ = LoadNowAsync();
+        if (_step == 4) _ = LoadShelfAsync();
+        _ = KeepDraftAsync();
+    }
+
+    /// <summary>After any change: the preview, the problems, a new undo state and the copy kept in this browser.</summary>
+    private void Changed()
+    {
+        _preview = _draft.Preview();
+        _sample = _draft.SampleData();
+        _issues = _draft.Issues();
+        _savedHolder = null;
+        _savedLink = null;
+
+        var snapshot = _draft.Snapshot();
+        if (_at >= 0 && _history[_at] == snapshot) return;
+        var now = DateTime.UtcNow;
+        if (_at == _history.Count - 1 && _at > 0 && now - _lastPush < TimeSpan.FromMilliseconds(800))
+        {
+            _history[_at] = snapshot;
+        }
+        else
+        {
+            _history.RemoveRange(_at + 1, _history.Count - _at - 1);
+            _history.Add(snapshot);
+            if (_history.Count > 100) _history.RemoveAt(0);
+            _at = _history.Count - 1;
+        }
+        _lastPush = now;
+        _ = KeepDraftAsync();
+    }
+
+    private void Undo() => Travel(-1);
+
+    private void Redo() => Travel(1);
+
+    private void Travel(int by)
+    {
+        if (_at + by < 0 || _at + by >= _history.Count) return;
+        var path = _draft.PathOf(SelectedNode);
+        _at += by;
+        _draft.Restore(_history[_at]);
+        (_page, _section, _element) = _draft.At(path);
+        _preview = _draft.Preview();
+        _sample = _draft.SampleData();
+        _issues = _draft.Issues();
+        _lastPush = DateTime.MinValue;
+        _ = KeepDraftAsync();
+    }
+
+    private async Task KeepDraftAsync()
+    {
+        if (_step == 0 || _at < 0) return;
+        var kept = new StoredDraft(_history[_at], _step, _reached, _widget, _scope, _object, _draft.Title, DateTime.Now.ToShortTimeString());
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", DraftKey, JsonSerializer.Serialize(kept));
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+            // No storage (a private window, a test): the draft lives only in this tab.
+        }
+    }
+
+    private async Task<StoredDraft?> ReadLeftDraftAsync()
+    {
+        try
+        {
+            var text = await JS.InvokeAsync<string?>("localStorage.getItem", DraftKey);
+            return string.IsNullOrEmpty(text) ? null : JsonSerializer.Deserialize<StoredDraft>(text);
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or JsonException)
+        {
+            return null;
+        }
+    }
+
+    private async Task ForgetDraftAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.removeItem", DraftKey);
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+            // Nothing was kept.
+        }
+    }
+}

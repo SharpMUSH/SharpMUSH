@@ -11109,4 +11109,784 @@
   <data name="NavHelpLearnSub" xml:space="preserve"><value>A guided tour of joining and playing.</value></data>
   <data name="NavHelpGettingStartedSub" xml:space="preserve"><value>Moving, talking, channels and mail.</value></data>
   <data name="NavHelpNewbieSub" xml:space="preserve"><value>What the [ ] and &lt; &gt; in a command mean.</value></data>
+  <data name="LayBldTitle" xml:space="preserve">
+    <value>Application builder</value>
+  </data>
+  <data name="LayBldCard" xml:space="preserve">
+    <value>Make a form, sheet or widget step by step, and keep it in an attribute.</value>
+  </data>
+  <data name="LayBldIntro" xml:space="preserve">
+    <value>Make a form, a sheet or a widget step by step. It is kept as JSON in an attribute on an object you control, and you can edit that attribute by hand too.</value>
+  </data>
+  <data name="LayBldStepsLabel" xml:space="preserve">
+    <value>Steps</value>
+  </data>
+  <data name="LayBldStepStart" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="LayBldStepKind" xml:space="preserve">
+    <value>What it is</value>
+  </data>
+  <data name="LayBldStepLayout" xml:space="preserve">
+    <value>Lay it out</value>
+  </data>
+  <data name="LayBldStepValues" xml:space="preserve">
+    <value>Values</value>
+  </data>
+  <data name="LayBldStepSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="LayBldStartHelp" xml:space="preserve">
+    <value>Pick a starting point. You can change everything in it later.</value>
+  </data>
+  <data name="LayBldUseTemplate" xml:space="preserve">
+    <value>Start from this</value>
+  </data>
+  <data name="LayBldTplBlank" xml:space="preserve">
+    <value>Blank</value>
+  </data>
+  <data name="LayBldTplBlankHelp" xml:space="preserve">
+    <value>One empty page to fill in yourself.</value>
+  </data>
+  <data name="LayBldTplSheet" xml:space="preserve">
+    <value>Character sheet</value>
+  </data>
+  <data name="LayBldTplSheetHelp" xml:space="preserve">
+    <value>A read-only sheet: a few details, traits as chips and scores as tiles.</value>
+  </data>
+  <data name="LayBldTplRequest" xml:space="preserve">
+    <value>Request form</value>
+  </data>
+  <data name="LayBldTplRequestHelp" xml:space="preserve">
+    <value>A form players fill in and send: a subject, a kind and details.</value>
+  </data>
+  <data name="LayBldTplProfile" xml:space="preserve">
+    <value>Profile editor</value>
+  </data>
+  <data name="LayBldTplProfileHelp" xml:space="preserve">
+    <value>A form that shows a character's profile values and saves their changes.</value>
+  </data>
+  <data name="LayBldOpenSaved" xml:space="preserve">
+    <value>Open a saved one</value>
+  </data>
+  <data name="LayBldOpenSavedHelp" xml:space="preserve">
+    <value>Give the object holding it and its address name.</value>
+  </data>
+  <data name="LayBldOpen" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="LayBldOpenFailed" xml:space="preserve">
+    <value>{1} holds no application called {0}, or you cannot read it.</value>
+  </data>
+  <data name="LayBldObject" xml:space="preserve">
+    <value>Object</value>
+  </data>
+  <data name="LayBldObjectHelp" xml:space="preserve">
+    <value>An object you control: me, or its dbref or objid, such as #12. The attributes are written there.</value>
+  </data>
+  <data name="LayBldName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="LayBldNameHelp" xml:space="preserve">
+    <value>Shown as its title and in the menu.</value>
+  </data>
+  <data name="LayBldSlug" xml:space="preserve">
+    <value>Address name</value>
+  </data>
+  <data name="LayBldSlugHelp" xml:space="preserve">
+    <value>Lower-case letters, digits, _ and -. It becomes /apps/&lt;name&gt; and the attribute DATA`APP`&lt;NAME&gt;.</value>
+  </data>
+  <data name="LayBldSlugBad" xml:space="preserve">
+    <value>Use lower-case letters, digits, _ and -.</value>
+  </data>
+  <data name="LayBldWhatKind" xml:space="preserve">
+    <value>What do people do with it?</value>
+  </data>
+  <data name="LayBldKindView" xml:space="preserve">
+    <value>Read it (a view, like a sheet or a list)</value>
+  </data>
+  <data name="LayBldKindForm" xml:space="preserve">
+    <value>Fill it in and send it (a form)</value>
+  </data>
+  <data name="LayBldWhere" xml:space="preserve">
+    <value>Where does it go?</value>
+  </data>
+  <data name="LayBldWherePage" xml:space="preserve">
+    <value>Its own page in the portal menu</value>
+  </data>
+  <data name="LayBldWhereWidget" xml:space="preserve">
+    <value>A widget placed on other pages</value>
+  </data>
+  <data name="LayBldScope" xml:space="preserve">
+    <value>Pages it can go on</value>
+  </data>
+  <data name="LayBldScopeHelp" xml:space="preserve">
+    <value>A profile or card widget shows the character being looked at.</value>
+  </data>
+  <data name="LayBldScopeProfile" xml:space="preserve">
+    <value>Character profiles</value>
+  </data>
+  <data name="LayBldScopeCard" xml:space="preserve">
+    <value>Name cards</value>
+  </data>
+  <data name="LayBldScopeAny" xml:space="preserve">
+    <value>Any layout</value>
+  </data>
+  <data name="LayBldTabs" xml:space="preserve">
+    <value>Show the pages as tabs</value>
+  </data>
+  <data name="LayBldOutline" xml:space="preserve">
+    <value>Outline</value>
+  </data>
+  <data name="LayBldAddElement" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="LayBldAddSection" xml:space="preserve">
+    <value>Add a section</value>
+  </data>
+  <data name="LayBldAddPage" xml:space="preserve">
+    <value>Add a page</value>
+  </data>
+  <data name="LayBldFields" xml:space="preserve">
+    <value>Inputs</value>
+  </data>
+  <data name="LayBldDisplays" xml:space="preserve">
+    <value>Display</value>
+  </data>
+  <data name="LayBldSection" xml:space="preserve">
+    <value>Section</value>
+  </data>
+  <data name="LayBldSectionName" xml:space="preserve">
+    <value>Heading</value>
+  </data>
+  <data name="LayBldSectionColumns" xml:space="preserve">
+    <value>Columns</value>
+  </data>
+  <data name="LayBldSectionColumnsHelp" xml:space="preserve">
+    <value>Above 1, the section's elements sit side by side (one column on a phone).</value>
+  </data>
+  <data name="LayBldUntitledSection" xml:space="preserve">
+    <value>Section</value>
+  </data>
+  <data name="LayBldPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="LayBldPageTitle" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="LayBldPickSomething" xml:space="preserve">
+    <value>Pick a page, section or element in the outline to change it.</value>
+  </data>
+  <data name="LayBldPreview" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="LayBldPreviewHelp" xml:space="preserve">
+    <value>Drawn with made-up values. Buttons do nothing here.</value>
+  </data>
+  <data name="LayBldLabel" xml:space="preserve">
+    <value>Label</value>
+  </data>
+  <data name="LayBldKey" xml:space="preserve">
+    <value>Key</value>
+  </data>
+  <data name="LayBldKeyHelp" xml:space="preserve">
+    <value>Names the value: lower-case letters, digits and _.</value>
+  </data>
+  <data name="LayBldKeyBad" xml:space="preserve">
+    <value>Use lower-case letters, digits and _.</value>
+  </data>
+  <data name="LayBldType" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="LayBldHelpText" xml:space="preserve">
+    <value>Help text</value>
+  </data>
+  <data name="LayBldRequired" xml:space="preserve">
+    <value>Must be filled in</value>
+  </data>
+  <data name="LayBldMin" xml:space="preserve">
+    <value>Lowest</value>
+  </data>
+  <data name="LayBldMax" xml:space="preserve">
+    <value>Highest</value>
+  </data>
+  <data name="LayBldMaxLength" xml:space="preserve">
+    <value>Longest (characters)</value>
+  </data>
+  <data name="LayBldChoices" xml:space="preserve">
+    <value>Choices</value>
+  </data>
+  <data name="LayBldChoiceValue" xml:space="preserve">
+    <value>Stored as</value>
+  </data>
+  <data name="LayBldChoiceLabel" xml:space="preserve">
+    <value>Shown as</value>
+  </data>
+  <data name="LayBldColumns" xml:space="preserve">
+    <value>Columns</value>
+  </data>
+  <data name="LayBldColumnKey" xml:space="preserve">
+    <value>Key in each row</value>
+  </data>
+  <data name="LayBldColumnLabel" xml:space="preserve">
+    <value>Heading</value>
+  </data>
+  <data name="LayBldAddRow" xml:space="preserve">
+    <value>Add one</value>
+  </data>
+  <data name="LayBldRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="LayBldText" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="LayBldTextHelp" xml:space="preserve">
+    <value>Markdown: **bold**, *italic*, [links](https://example.com), lists.</value>
+  </data>
+  <data name="LayBldValueKeys" xml:space="preserve">
+    <value>Values shown</value>
+  </data>
+  <data name="LayBldValueKeysHelp" xml:space="preserve">
+    <value>One key a line; each is a label and its value.</value>
+  </data>
+  <data name="LayBldDataKey" xml:space="preserve">
+    <value>Key of its value</value>
+  </data>
+  <data name="LayBldDataKeyHelp_stats" xml:space="preserve">
+    <value>The value is a JSON list of tiles: label, value, and optionally current, max, pips and color.</value>
+  </data>
+  <data name="LayBldDataKeyHelp_chips" xml:space="preserve">
+    <value>The value is a JSON list of words, or of {text, color}.</value>
+  </data>
+  <data name="LayBldDataKeyHelp_table" xml:space="preserve">
+    <value>The value is a JSON list of rows, each an object with the columns' keys.</value>
+  </data>
+  <data name="LayBldDataKeyHelp_timeline" xml:space="preserve">
+    <value>The value is a JSON list of entries: author, time (seconds) and body.</value>
+  </data>
+  <data name="LayBldDataKeyHelp_image" xml:space="preserve">
+    <value>The value is the picture's address.</value>
+  </data>
+  <data name="LayBldAlt" xml:space="preserve">
+    <value>Description for screen readers</value>
+  </data>
+  <data name="LayBldEmpty" xml:space="preserve">
+    <value>Text when there is nothing</value>
+  </data>
+  <data name="LayBldConfirm" xml:space="preserve">
+    <value>Ask first</value>
+  </data>
+  <data name="LayBldConfirmHelp" xml:space="preserve">
+    <value>A question asked before it sends; empty sends at once.</value>
+  </data>
+  <data name="LayBldButtonHelp" xml:space="preserve">
+    <value>Sends the form, as its Submit button does.</value>
+  </data>
+  <data name="LayBldDividerHelp" xml:space="preserve">
+    <value>A line between the elements above and below.</value>
+  </data>
+  <data name="LayBldKeptAsIs" xml:space="preserve">
+    <value>The builder has no settings for this element. It is kept as it is; change it in the attribute.</value>
+  </data>
+  <data name="LayBldSpan" xml:space="preserve">
+    <value>Columns it takes</value>
+  </data>
+  <data name="LayBldValuesViewHelp" xml:space="preserve">
+    <value>Each value is read from an attribute on the character being looked at (or the viewer, on a page of its own). The viewer only sees what they could read themselves. Leave a value empty to show nothing there.</value>
+  </data>
+  <data name="LayBldValuesFormHelp" xml:space="preserve">
+    <value>Read from: the attribute that fills the field in when the form opens. Save to: the attribute a sent form writes on the sender. People can only change their own attributes, and only those they could set with &amp;.</value>
+  </data>
+  <data name="LayBldReadFrom" xml:space="preserve">
+    <value>Read from</value>
+  </data>
+  <data name="LayBldReadFromFor" xml:space="preserve">
+    <value>Attribute {0} is read from</value>
+  </data>
+  <data name="LayBldSaveTo" xml:space="preserve">
+    <value>Save to</value>
+  </data>
+  <data name="LayBldSaveToFor" xml:space="preserve">
+    <value>Attribute {0} is saved to</value>
+  </data>
+  <data name="LayBldFillSave" xml:space="preserve">
+    <value>Fill in the empty Save to cells</value>
+  </data>
+  <data name="LayBldWillWrite" xml:space="preserve">
+    <value>It writes these attributes</value>
+  </data>
+  <data name="LayBldShowJson" xml:space="preserve">
+    <value>Show the JSON</value>
+  </data>
+  <data name="LayBldRegister" xml:space="preserve">
+    <value>Register it in the portal now</value>
+  </data>
+  <data name="LayBldRegisterPageHelp" xml:space="preserve">
+    <value>Adds it to the Play menu at /apps/{0}. Change its menu and roles under Applications.</value>
+  </data>
+  <data name="LayBldRegisterWidgetHelp" xml:space="preserve">
+    <value>Adds it to the layout editor's palette. Place it under Layout.</value>
+  </data>
+  <data name="LayBldSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="LayBldSaved" xml:space="preserve">
+    <value>Saved to {0} on {1}.</value>
+  </data>
+  <data name="LayBldSaveFailed" xml:space="preserve">
+    <value>Not saved: {0}</value>
+  </data>
+  <data name="LayBldNoAnswer" xml:space="preserve">
+    <value>the game did not answer.</value>
+  </data>
+  <data name="LayBldRegistered" xml:space="preserve">
+    <value>{0} is registered.</value>
+  </data>
+  <data name="LayBldRegisterFailed" xml:space="preserve">
+    <value>Not registered: {0}</value>
+  </data>
+  <data name="LayBldOpenApp" xml:space="preserve">
+    <value>Open it</value>
+  </data>
+  <data name="LayBldType_text" xml:space="preserve">
+    <value>Short text</value>
+  </data>
+  <data name="LayBldType_textarea" xml:space="preserve">
+    <value>Long text</value>
+  </data>
+  <data name="LayBldType_mstring" xml:space="preserve">
+    <value>Coloured text</value>
+  </data>
+  <data name="LayBldType_number" xml:space="preserve">
+    <value>Number</value>
+  </data>
+  <data name="LayBldType_slider" xml:space="preserve">
+    <value>Slider</value>
+  </data>
+  <data name="LayBldType_boolean" xml:space="preserve">
+    <value>Yes or no</value>
+  </data>
+  <data name="LayBldType_select" xml:space="preserve">
+    <value>Pick one (list)</value>
+  </data>
+  <data name="LayBldType_radio" xml:space="preserve">
+    <value>Pick one (buttons)</value>
+  </data>
+  <data name="LayBldType_multiselect" xml:space="preserve">
+    <value>Pick several</value>
+  </data>
+  <data name="LayBldType_list" xml:space="preserve">
+    <value>List of words</value>
+  </data>
+  <data name="LayBldType_date" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="LayBldType_hidden" xml:space="preserve">
+    <value>Hidden value</value>
+  </data>
+  <data name="LayBldType_rows" xml:space="preserve">
+    <value>Rows</value>
+  </data>
+  <data name="LayBldType_graph" xml:space="preserve">
+    <value>Graph</value>
+  </data>
+  <data name="LayBldType_computed" xml:space="preserve">
+    <value>Computed</value>
+  </data>
+  <data name="LayBldKind_markdown" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="LayBldKind_keyvalue" xml:space="preserve">
+    <value>Labelled values</value>
+  </data>
+  <data name="LayBldKind_stats" xml:space="preserve">
+    <value>Stat tiles</value>
+  </data>
+  <data name="LayBldKind_chips" xml:space="preserve">
+    <value>Chips</value>
+  </data>
+  <data name="LayBldKind_table" xml:space="preserve">
+    <value>Table</value>
+  </data>
+  <data name="LayBldKind_timeline" xml:space="preserve">
+    <value>Timeline</value>
+  </data>
+  <data name="LayBldKind_image" xml:space="preserve">
+    <value>Picture</value>
+  </data>
+  <data name="LayBldKind_divider" xml:space="preserve">
+    <value>Divider</value>
+  </data>
+  <data name="LayBldKind_button" xml:space="preserve">
+    <value>Button</value>
+  </data>
+  <data name="LayBldKind_graph" xml:space="preserve">
+    <value>Graph</value>
+  </data>
+  <data name="LaySchemaUnknownKind" xml:space="preserve">
+    <value>This portal does not know the element kind "{0}", so it is not drawn. Only staff who manage applications see this.</value>
+  </data>
+  <data name="LayBldAddTo" xml:space="preserve">
+    <value>Add to {0}</value>
+  </data>
+  <data name="LayBldAppLine" xml:space="preserve">
+    <value>{0} · {1} · on {2}</value>
+  </data>
+  <data name="LayBldAskFor" xml:space="preserve">
+    <value>Ask for</value>
+  </data>
+  <data name="LayBldShow" xml:space="preserve">
+    <value>Show</value>
+  </data>
+  <data name="LayBldKeep" xml:space="preserve">
+    <value>Keep</value>
+  </data>
+  <data name="LayBldAttrCleared" xml:space="preserve">
+    <value>cleared</value>
+  </data>
+  <data name="LayBldAttrNew" xml:space="preserve">
+    <value>new</value>
+  </data>
+  <data name="LayBldAttrReplaces" xml:space="preserve">
+    <value>replaces</value>
+  </data>
+  <data name="LayBldAttributeBad" xml:space="preserve">
+    <value>Use letters, digits and _ . - with ` between parts.</value>
+  </data>
+  <data name="LayBldBacktick" xml:space="preserve">
+    <value>Parts of an attribute name are joined with `.</value>
+  </data>
+  <data name="LayBldChecking" xml:space="preserve">
+    <value>Checking</value>
+  </data>
+  <data name="LayBldChecks" xml:space="preserve">
+    <value>Checks</value>
+  </data>
+  <data name="LayBldClickCommand" xml:space="preserve">
+    <value>Run a command</value>
+  </data>
+  <data name="LayBldClickDialog" xml:space="preserve">
+    <value>Open a dialog</value>
+  </data>
+  <data name="LayBldClickNothing" xml:space="preserve">
+    <value>Nothing</value>
+  </data>
+  <data name="LayBldClickSends" xml:space="preserve">
+    <value>Send the form</value>
+  </data>
+  <data name="LayBldCommand" xml:space="preserve">
+    <value>Command</value>
+  </data>
+  <data name="LayBldCommandHelp" xml:space="preserve">
+    <value>Runs as the reader. {value} is the clicked value; {label} its label.</value>
+  </data>
+  <data name="LayBldCopied" xml:space="preserve">
+    <value>Address copied.</value>
+  </data>
+  <data name="LayBldCopyAddress" xml:space="preserve">
+    <value>Copy address</value>
+  </data>
+  <data name="LayBldCopyFailed" xml:space="preserve">
+    <value>The address could not be copied.</value>
+  </data>
+  <data name="LayBldDelete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="LayBldDeleted" xml:space="preserve">
+    <value>{0} deleted.</value>
+  </data>
+  <data name="LayBldDialog" xml:space="preserve">
+    <value>Dialog address</value>
+  </data>
+  <data name="LayBldDialogBad" xml:space="preserve">
+    <value>Use an address on this server, starting with /.</value>
+  </data>
+  <data name="LayBldDialogHelp" xml:space="preserve">
+    <value>A page of this portal, such as /apps/notes.</value>
+  </data>
+  <data name="LayBldDidYouMean" xml:space="preserve">
+    <value>Did you mean {0}?</value>
+  </data>
+  <data name="LayBldDiscard" xml:space="preserve">
+    <value>Discard</value>
+  </data>
+  <data name="LayBldDraftKept" xml:space="preserve">
+    <value>Draft kept in this browser</value>
+  </data>
+  <data name="LayBldDraftSaved" xml:space="preserve">
+    <value>Saved at {0}</value>
+  </data>
+  <data name="LayBldDuplicate" xml:space="preserve">
+    <value>Duplicate</value>
+  </data>
+  <data name="LayBldEdit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="LayBldEditApp" xml:space="preserve">
+    <value>Edit {0}</value>
+  </data>
+  <data name="LayBldExample" xml:space="preserve">
+    <value>Example</value>
+  </data>
+  <data name="LayBldExampleNone" xml:space="preserve">
+    <value>Clicking {0} sends nothing: it has no value.</value>
+  </data>
+  <data name="LayBldExampleRuns" xml:space="preserve">
+    <value>Clicking {0} runs:</value>
+  </data>
+  <data name="LayBldFillEmpty" xml:space="preserve">
+    <value>Fill empty ones with {0}</value>
+  </data>
+  <data name="LayBldFind" xml:space="preserve">
+    <value>Find</value>
+  </data>
+  <data name="LayBldFindNone" xml:space="preserve">
+    <value>Nothing matches.</value>
+  </data>
+  <data name="LayBldGoTo" xml:space="preserve">
+    <value>Go to {0}</value>
+  </data>
+  <data name="LayBldHasProblems" xml:space="preserve">
+    <value>{0} to fix</value>
+  </data>
+  <data name="LayBldInsertValue" xml:space="preserve">
+    <value>Insert:</value>
+  </data>
+  <data name="LayBldKeepEditing" xml:space="preserve">
+    <value>Keep editing</value>
+  </data>
+  <data name="LayBldKeptOn" xml:space="preserve">
+    <value>Kept on</value>
+  </data>
+  <data name="LayBldKeyFollows" xml:space="preserve">
+    <value>Follows the label</value>
+  </data>
+  <data name="LayBldKeyRelink" xml:space="preserve">
+    <value>Follow the label again</value>
+  </data>
+  <data name="LayBldKindFormShort" xml:space="preserve">
+    <value>Form</value>
+  </data>
+  <data name="LayBldKindViewShort" xml:space="preserve">
+    <value>View</value>
+  </data>
+  <data name="LayBldLeftDraft" xml:space="preserve">
+    <value>You left {0} unsaved ({1}).</value>
+  </data>
+  <data name="LayBldLoadingApps" xml:space="preserve">
+    <value>Loading your apps</value>
+  </data>
+  <data name="LayBldLoadingValues" xml:space="preserve">
+    <value>Loading values</value>
+  </data>
+  <data name="LayBldMoreFor" xml:space="preserve">
+    <value>More for {0}</value>
+  </data>
+  <data name="LayBldMoveDown" xml:space="preserve">
+    <value>Move {0} down</value>
+  </data>
+  <data name="LayBldMoveUp" xml:space="preserve">
+    <value>Move {0} up</value>
+  </data>
+  <data name="LayBldNextTo" xml:space="preserve">
+    <value>Next: {0}</value>
+  </data>
+  <data name="LayBldNoApps" xml:space="preserve">
+    <value>You have no apps yet.</value>
+  </data>
+  <data name="LayBldNoProblems" xml:space="preserve">
+    <value>Nothing to fix.</value>
+  </data>
+  <data name="LayBldNotShown" xml:space="preserve">
+    <value>not in the portal</value>
+  </data>
+  <data name="LayBldNotYours" xml:space="preserve">
+    <value>{0} is not yours. Saving needs an object you control.</value>
+  </data>
+  <data name="LayBldNow" xml:space="preserve">
+    <value>Now: {0}</value>
+  </data>
+  <data name="LayBldNowEmpty" xml:space="preserve">
+    <value>Now: empty</value>
+  </data>
+  <data name="LayBldNowHidden" xml:space="preserve">
+    <value>Now: hidden from you</value>
+  </data>
+  <data name="LayBldOnlySave" xml:space="preserve">
+    <value>Only save it</value>
+  </data>
+  <data name="LayBldOnlySaveHelp" xml:space="preserve">
+    <value>Keep it on the object. Staff can show it later.</value>
+  </data>
+  <data name="LayBldPanes" xml:space="preserve">
+    <value>Editor panes</value>
+  </data>
+  <data name="LayBldPane_outline" xml:space="preserve">
+    <value>Outline</value>
+  </data>
+  <data name="LayBldPane_settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="LayBldPane_preview" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="LayBldPreviewWidth" xml:space="preserve">
+    <value>Preview width</value>
+  </data>
+  <data name="LayBldWidth_page" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="LayBldWidth_widget" xml:space="preserve">
+    <value>Widget</value>
+  </data>
+  <data name="LayBldWidth_phone" xml:space="preserve">
+    <value>Phone</value>
+  </data>
+  <data name="LayBldRealValues" xml:space="preserve">
+    <value>Real values</value>
+  </data>
+  <data name="LayBldRealValuesHelp" xml:space="preserve">
+    <value>Your own values, read from the attributes. Buttons do nothing here.</value>
+  </data>
+  <data name="LayBldRedo" xml:space="preserve">
+    <value>Redo</value>
+  </data>
+  <data name="LayBldRegisterAsk" xml:space="preserve">
+    <value>Only staff who manage applications can show it in the portal. Save it, then ask them.</value>
+  </data>
+  <data name="LayBldRegisterPage" xml:space="preserve">
+    <value>Show it as a page</value>
+  </data>
+  <data name="LayBldRegisterWidget" xml:space="preserve">
+    <value>Show it as a widget</value>
+  </data>
+  <data name="LayBldRemoveRow" xml:space="preserve">
+    <value>Remove {0}</value>
+  </data>
+  <data name="LayBldResume" xml:space="preserve">
+    <value>Resume</value>
+  </data>
+  <data name="LayBldSameAttribute" xml:space="preserve">
+    <value>Save to the same attribute</value>
+  </data>
+  <data name="LayBldSaveAndShow" xml:space="preserve">
+    <value>Save and show</value>
+  </data>
+  <data name="LayBldSettings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="LayBldShowEmpty" xml:space="preserve">
+    <value>Show when empty</value>
+  </data>
+  <data name="LayBldShowInPortal" xml:space="preserve">
+    <value>Show in the portal</value>
+  </data>
+  <data name="LayBldShownOnly" xml:space="preserve">
+    <value>Shown only</value>
+  </data>
+  <data name="LayBldShownPage" xml:space="preserve">
+    <value>a page</value>
+  </data>
+  <data name="LayBldShownWidget" xml:space="preserve">
+    <value>a widget</value>
+  </data>
+  <data name="LayBldSlugAt" xml:space="preserve">
+    <value>Saved as DATA`APP`{0}</value>
+  </data>
+  <data name="LayBldStartNew" xml:space="preserve">
+    <value>Start a new app</value>
+  </data>
+  <data name="LayBldTab_content" xml:space="preserve">
+    <value>Content</value>
+  </data>
+  <data name="LayBldTab_rules" xml:space="preserve">
+    <value>Rules</value>
+  </data>
+  <data name="LayBldTab_click" xml:space="preserve">
+    <value>When clicked</value>
+  </data>
+  <data name="LayBldTab_layout" xml:space="preserve">
+    <value>Layout</value>
+  </data>
+  <data name="LayBldToFix" xml:space="preserve">
+    <value>{0} to fix</value>
+  </data>
+  <data name="LayBldToFixShort" xml:space="preserve">
+    <value>{0}</value>
+  </data>
+  <data name="LayBldUndo" xml:space="preserve">
+    <value>Undo</value>
+  </data>
+  <data name="LayBldUnnamed" xml:space="preserve">
+    <value>Unnamed</value>
+  </data>
+  <data name="LayBldYouControl" xml:space="preserve">
+    <value>You control {0}.</value>
+  </data>
+  <data name="LayBldYourApps" xml:space="preserve">
+    <value>Your apps</value>
+  </data>
+  <data name="LayBldTypeHelp_text" xml:space="preserve">
+    <value>One line, such as a name.</value>
+  </data>
+  <data name="LayBldTypeHelp_textarea" xml:space="preserve">
+    <value>Several lines, such as a description.</value>
+  </data>
+  <data name="LayBldTypeHelp_mstring" xml:space="preserve">
+    <value>Text that can carry colour.</value>
+  </data>
+  <data name="LayBldTypeHelp_number" xml:space="preserve">
+    <value>A whole or decimal number.</value>
+  </data>
+  <data name="LayBldTypeHelp_slider" xml:space="preserve">
+    <value>A number picked on a scale.</value>
+  </data>
+  <data name="LayBldTypeHelp_boolean" xml:space="preserve">
+    <value>A switch that is on or off.</value>
+  </data>
+  <data name="LayBldTypeHelp_select" xml:space="preserve">
+    <value>One choice from a dropdown.</value>
+  </data>
+  <data name="LayBldTypeHelp_radio" xml:space="preserve">
+    <value>One choice, all shown at once.</value>
+  </data>
+  <data name="LayBldTypeHelp_multiselect" xml:space="preserve">
+    <value>Any number of choices.</value>
+  </data>
+  <data name="LayBldTypeHelp_list" xml:space="preserve">
+    <value>Words the reader types in, one by one.</value>
+  </data>
+  <data name="LayBldTypeHelp_date" xml:space="preserve">
+    <value>A day picked on a calendar.</value>
+  </data>
+  <data name="LayBldTypeHelp_hidden" xml:space="preserve">
+    <value>A value sent with the form that the reader does not see.</value>
+  </data>
+  <data name="LayBldKindHelp_markdown" xml:space="preserve">
+    <value>Words you write, with headings and links.</value>
+  </data>
+  <data name="LayBldKindHelp_keyvalue" xml:space="preserve">
+    <value>Labels with a value beside each.</value>
+  </data>
+  <data name="LayBldKindHelp_stats" xml:space="preserve">
+    <value>Numbers in tiles, such as scores.</value>
+  </data>
+  <data name="LayBldKindHelp_chips" xml:space="preserve">
+    <value>Short tags in a row.</value>
+  </data>
+  <data name="LayBldKindHelp_table" xml:space="preserve">
+    <value>Rows and columns.</value>
+  </data>
+  <data name="LayBldKindHelp_timeline" xml:space="preserve">
+    <value>Dated entries in order.</value>
+  </data>
+  <data name="LayBldKindHelp_image" xml:space="preserve">
+    <value>A picture from a web address.</value>
+  </data>
+  <data name="LayBldKindHelp_divider" xml:space="preserve">
+    <value>A line between parts.</value>
+  </data>
+  <data name="LayBldKindHelp_button" xml:space="preserve">
+    <value>Something to click.</value>
+  </data>
 </root>
