@@ -7397,6 +7397,38 @@
     "file": "rxlevel-function.md"
   },
   {
+    "id": "schema-functions",
+    "lookup": "schemarender()",
+    "title": "schemarender()",
+    "aliases": [
+      "schemarender",
+      "schemacheck()",
+      "schemacheck",
+      "schema functions"
+    ],
+    "sections": [
+      {
+        "id": "options",
+        "lookup": "schemarender() options",
+        "heading": "Options",
+        "aliases": []
+      },
+      {
+        "id": "check",
+        "lookup": "schemacheck() problems",
+        "heading": "Checking a document",
+        "aliases": []
+      },
+      {
+        "id": "examples",
+        "lookup": "schemarender() examples",
+        "heading": "Examples",
+        "aliases": []
+      }
+    ],
+    "file": "schema-functions.md"
+  },
+  {
     "id": "screenreader-support",
     "lookup": "screenreader support",
     "title": "Screen Reader Support",
