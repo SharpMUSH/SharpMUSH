@@ -771,8 +771,6 @@
 	transform: rotate(180deg);
 }
 
-}
-
 /* ── Terminal ── */
 .sharp-terminal-container {
     display: flex;
@@ -1960,3 +1958,26 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	.boot-rail { display: none; }
 	.boot-topbar { display: flex; }
 	.boot-bottomnav { display: block; }
+}
+
+/* A phone held sideways: the header is a rail down the left edge, as SHORT LANDSCAPE above makes it. */
+@media (max-width: 760px) and (orientation: landscape) and (max-height: 32rem),
+	(pointer: coarse) and (orientation: landscape) and (max-height: 32rem) {
+	.boot-topbar {
+		position: fixed;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: calc(56px + env(safe-area-inset-left));
+		height: auto;
+		flex-direction: column;
+		padding: max(8px, env(safe-area-inset-top)) 0 max(8px, env(safe-area-inset-bottom)) env(safe-area-inset-left);
+		border-bottom: 0;
+		border-right: 1px solid var(--border-soft);
+		box-sizing: border-box;
+	}
+	.boot-col {
+		box-sizing: border-box;
+		padding-left: calc(56px + env(safe-area-inset-left));
+	}
+}

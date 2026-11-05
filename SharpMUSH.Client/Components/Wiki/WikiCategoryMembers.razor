@@ -13,6 +13,7 @@
     @if (_loading)
     {
         <div class="wiki-cat-grid">
+            <span class="visually-hidden">@Loc["Loading"]</span>
             @for (var i = 0; i < 6; i++) { <SkeletonCard Height="124" /> }
         </div>
     }
