@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using SharpMUSH.Client.Resources;
+using SharpMUSH.Library.Models.Portal;
 
 namespace SharpMUSH.Client.Services;
 
@@ -43,18 +44,27 @@ public sealed class CharacterLanguage : IDisposable
 
 	/// <summary>
 	/// Switches the portal to <paramref name="locale"/> and reloads. With an acting character it is set first with
-	/// <c>@locale</c>, so the game speaks it too and another browser finds it; if the game refuses, nothing changes,
-	/// since the next load would take the character's old language back. False when the language did not change.
+	/// <c>@locale</c>, so the game speaks it too and another browser finds it. The character's <c>LOCALE</c> is read
+	/// back in the same queue entry: a refusal (a restriction, a hook) still answers 200 with its message, and only
+	/// the stored value says whether the game took it. If it did not, nothing changes, since the next load would take
+	/// the character's old language back. False when the language did not change.
 	/// </summary>
 	public async Task<bool> ChooseAsync(string locale)
 	{
 		if (locale == Current) return false;
 
-		if (_account.ActiveCharacter is { } character
-			&& await _commands.RunAsync($"@locale {locale}") is ApiFailure failure)
+		if (_account.ActiveCharacter is { } character)
 		{
-			_logger.LogWarning("Could not set {Character}'s locale to {Locale}: {Reason}", character.Name, locale, failure.Message);
-			return false;
+			var stored = await _commands.RunAsync($"@locale {locale}", "get(%#/LOCALE)") switch
+			{
+				PortalCommandResponse response => PortalLocales.Match(response.Result) == locale ? null : string.Join(" ", response.Output),
+				ApiFailure failure => failure.Message,
+			};
+			if (stored is not null)
+			{
+				_logger.LogWarning("Could not set {Character}'s locale to {Locale}: {Reason}", character.Name, locale, stored);
+				return false;
+			}
 		}
 
 		return await SwitchAsync(locale);

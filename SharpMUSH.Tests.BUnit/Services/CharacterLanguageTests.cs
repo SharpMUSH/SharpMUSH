@@ -52,6 +52,7 @@ public class CharacterLanguageTests : TrackingBunitContext
 		await Assert.That(await language.ChooseAsync("de")).IsTrue();
 
 		await Assert.That(_commands.Sent).IsEquivalentTo(["@locale de"]);
+		await Assert.That(_commands.Results).IsEquivalentTo(["get(%#/LOCALE)"]).Because("the stored LOCALE says whether the game took it");
 		await Assert.That(Stored()).IsEquivalentTo(["de"]);
 		await Assert.That(Reloaded).IsTrue();
 	}
@@ -66,6 +67,19 @@ public class CharacterLanguageTests : TrackingBunitContext
 		await Assert.That(await language.ChooseAsync("de")).IsFalse();
 
 		await Assert.That(Stored()).IsEmpty().Because("the next load would take the character's old language back");
+		await Assert.That(Reloaded).IsFalse();
+	}
+
+	[Test]
+	public async Task A_locale_the_game_did_not_store_leaves_the_portal_as_it_was()
+	{
+		using var culture = CultureScope.For("en");
+		_commands.Refuse = true;
+		var language = Arrange(Sailor());
+
+		await Assert.That(await language.ChooseAsync("de")).IsFalse();
+
+		await Assert.That(Stored()).IsEmpty().Because("a restriction refuses @locale with a 200 and its message");
 		await Assert.That(Reloaded).IsFalse();
 	}
 
@@ -131,7 +145,11 @@ public class CharacterLanguageTests : TrackingBunitContext
 	private sealed class CommandsHandler : HttpMessageHandler
 	{
 		public HttpStatusCode Status { get; set; } = HttpStatusCode.OK;
+
+		/// <summary>Answers as a refused command does: 200, a message, and the old LOCALE read back.</summary>
+		public bool Refuse { get; set; }
 		public List<string> Sent { get; } = [];
+		public List<string?> Results { get; } = [];
 
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
@@ -140,7 +158,11 @@ public class CharacterLanguageTests : TrackingBunitContext
 				return new HttpResponseMessage(Status);
 
 			Sent.Add(sent!.Command);
-			return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new PortalCommandResponse(["Locale set to de."], null, false)) };
+			var response = Refuse
+				? new PortalCommandResponse(["Permission denied."], "", false)
+				: new PortalCommandResponse(["Locale set."], sent.Command["@locale ".Length..], false);
+			Results.Add(sent.Result);
+			return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(response) };
 		}
 	}
 }
