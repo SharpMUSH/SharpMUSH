@@ -45,11 +45,7 @@
 
     @if (_loading)
     {
-        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
-        @for (var i = 0; i < 5; i++)
-        {
-            <MudSkeleton Height="52px" Class="mb-1" />
-        }
+        <SkeletonRows Count="5" Height="52" Gap="4" />
     }
     else if (_revisions.Count == 0)
     {

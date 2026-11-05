@@ -66,7 +66,7 @@
             <ChildContent>
                 @if (_loading)
                 {
-                    <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+                    <SkeletonRows Count="3" Height="52" Gap="6" />
                 }
                 else if (_clients.Count == 0)
                 {

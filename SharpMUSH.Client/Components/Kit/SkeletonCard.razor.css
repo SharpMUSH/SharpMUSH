@@ -1,3 +1,4 @@
+/* The card's own surface and edge rather than the placeholder tint; the sheen still crosses it. */
 .kit-skeleton-card {
 	border-radius: var(--radius-card);
 	background: var(--surface);

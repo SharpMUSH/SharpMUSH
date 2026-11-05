@@ -1,7 +1,6 @@
 @typeparam TValue where TValue : class
-@* A section that reads something before it can show it: the error above, then a progress bar while
-   it loads, what stands in when nothing came back, the empty state, or the content for what did.
-   Everything it shows by default is what the admin pages wrote out by hand before it. *@
+@* A section that reads something before it can show it: the error above, then placeholder rows in its
+   place while it loads, what stands in when nothing came back, the empty state, or the content for what did. *@
 @if (Error is not null)
 {
     <MudAlert Severity="Severity.Error" Dense="true" Class="@ErrorClass">@Error</MudAlert>
@@ -15,7 +14,7 @@
     }
     else
     {
-        <MudProgressLinear Indeterminate="true" Color="ProgressColor" />
+        <SkeletonRows Count="LoadingRows" Height="LoadingRowHeight" />
     }
 }
 else if (Value is null)
@@ -35,14 +34,19 @@ else
     /// <summary>What was read; null until it has been, or when it could not be.</summary>
     [Parameter] public TValue? Value { get; set; }
 
-    /// <summary>Shows the progress bar in place of everything else.</summary>
+    /// <summary>Shows the placeholder rows in place of everything else.</summary>
     [Parameter] public bool Loading { get; set; }
 
     /// <summary>The failure shown above the section; leave it unset when <see cref="Missing"/> reports it.</summary>
     [Parameter] public string? Error { get; set; }
 
     [Parameter] public string? ErrorClass { get; set; }
-    [Parameter] public Color ProgressColor { get; set; } = Color.Default;
+
+    /// <summary>How many placeholder rows hold the section's place while it loads.</summary>
+    [Parameter] public int LoadingRows { get; set; } = 4;
+
+    /// <summary>The height of a placeholder row, in pixels: that of a row of what arrives.</summary>
+    [Parameter] public int LoadingRowHeight { get; set; } = 44;
 
     /// <summary>Whether what was read has nothing to show, so <see cref="Empty"/> shows instead.</summary>
     [Parameter] public Func<TValue, bool>? IsEmpty { get; set; }
@@ -53,6 +57,6 @@ else
     /// <summary>What shows when loading is over and nothing was read; <see cref="Empty"/> when unset.</summary>
     [Parameter] public RenderFragment? Missing { get; set; }
 
-    /// <summary>Replaces the default progress bar.</summary>
+    /// <summary>Replaces the default placeholder rows.</summary>
     [Parameter] public RenderFragment? LoadingContent { get; set; }
 }

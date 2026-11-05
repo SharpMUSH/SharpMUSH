@@ -1,4 +1,5 @@
 @using SharpMUSH.Client.Pages
+@using System.Reflection
 @inject IStringLocalizer<SharedResource> Loc
 <ThemeProvider>
     @* Offers a reload when the game was deployed under this tab; above the router, so every layout has it. *@
@@ -6,7 +7,16 @@
     <CascadingAuthenticationState>
         <Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(NotFound)">
             <Found Context="routeData">
-                <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                @* The sign-in check is a round trip on a cold load. While it runs the router shows Authorizing in
+                   DefaultLayout, so that is the page's own outer layout (a page that names one never uses it
+                   otherwise): the sign-in pages keep their own shell, and the rest hold the page's shape. *@
+                <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@RootLayout(routeData.PageType)">
+                    <Authorizing>
+                        @if (RootLayout(routeData.PageType) == typeof(MainLayout))
+                        {
+                            <RouteSkeleton Section="RouteSkeleton.InSection(routeData.PageType)" />
+                        }
+                    </Authorizing>
                     <NotAuthorized>
                         @if (context.User.Identity?.IsAuthenticated != true)
                         {
@@ -34,3 +44,17 @@
         </Router>
     </CascadingAuthenticationState>
 </ThemeProvider>
+
+@code {
+    /// <summary>The outermost layout a page sits in: MainLayout, or OnboardingLayout for the sign-in pages.</summary>
+    private static Type RootLayout(Type page)
+    {
+        var layout = page.GetCustomAttribute<LayoutAttribute>()?.LayoutType ?? typeof(MainLayout);
+        while (layout.GetCustomAttribute<LayoutAttribute>()?.LayoutType is { } outer)
+        {
+            layout = outer;
+        }
+
+        return layout;
+    }
+}

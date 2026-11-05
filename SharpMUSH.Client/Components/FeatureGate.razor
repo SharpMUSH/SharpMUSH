@@ -4,12 +4,17 @@
 @* Renders its content only while the game has the optional application Feature on (api/server-info's
    Features) — a link, a widget or a page that has nothing behind it otherwise. Nothing renders until the
    answer is in, so a link to an application the game does not have never flashes up first. Otherwise, if
-   given, renders once the answer is "off": a page says why it is empty where a link just disappears. *@
+   given, renders once the answer is "off": a page says why it is empty where a link just disappears. A page
+   can hold its place with Pending until the answer is in. *@
 @if (_enabled)
 {
     @ChildContent
 }
-else if (_known && Otherwise is not null)
+else if (!_known)
+{
+    @Pending
+}
+else if (Otherwise is not null)
 {
     @Otherwise
 }
@@ -22,6 +27,9 @@ else if (_known && Otherwise is not null)
 
     /// <summary>What to show instead once the game is known not to have <see cref="Feature"/>.</summary>
     [Parameter] public RenderFragment? Otherwise { get; set; }
+
+    /// <summary>What holds the place until the game's features are known; nothing when unset.</summary>
+    [Parameter] public RenderFragment? Pending { get; set; }
 
     private bool _enabled;
     private bool _known;

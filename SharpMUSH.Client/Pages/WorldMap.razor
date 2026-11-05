@@ -20,6 +20,7 @@
    on also shows the way there, as one walk line to paste into any client or to walk from here. The map follows the
    character as it moves, to another map when it leaves this one. *@
 <FeatureGate Feature="@GameFeatures.WorldMap">
+<Pending><RouteSkeleton /></Pending>
 <ChildContent>
 <div class="map-page">
     <PlainPageHeader Title="@(_layout?.Map.Map.Name ?? Loc["NavWorldMap"].Value)" Kicker="@(_layout is null ? null : Loc["NavWorldMap"].Value)"

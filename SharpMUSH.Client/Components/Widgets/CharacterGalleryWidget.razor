@@ -24,7 +24,11 @@
         <ChildContent>
             @if (_loading)
             {
-                <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                <div class="kit-skeleton gallery-hero gallery-skeleton"><span class="visually-hidden">@Loc["Loading"]</span></div>
+                <div class="gallery-small" aria-hidden="true">
+                    <div class="kit-skeleton gallery-small-tile gallery-skeleton"></div>
+                    <div class="kit-skeleton gallery-small-tile gallery-skeleton"></div>
+                </div>
             }
             else if (_error is not null)
             {

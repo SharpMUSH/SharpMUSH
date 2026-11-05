@@ -15,7 +15,7 @@
     }
     @if (_loading)
     {
-        <MudProgressLinear Indeterminate="true" />
+        <SkeletonRows Count="3" Height="56" Gap="8" />
     }
     else if (_status is not null)
     {

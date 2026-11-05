@@ -19,7 +19,10 @@
     @if (_loading)
     {
         <PageTitle>@Loc["RolScene"] — <GameName /></PageTitle>
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        <div class="scene-detail-skeleton">
+            <SkeletonLines Heading="true" Lines="1" />
+            <SkeletonRows Count="5" Height="96" Gap="12" />
+        </div>
     }
     else if (_error is not null)
     {

@@ -19,12 +19,14 @@
 
 @* Nothing to watch on a game with the Scene System off: say so instead of failing to load. *@
 <FeatureGate Feature="@GameFeatures.Scenes">
+<Pending><RouteSkeleton /></Pending>
 <ChildContent>
 
 @if (_loading)
 {
     <div style="padding:var(--cpad);">
-        <MudProgressLinear Indeterminate="true" />
+        <SkeletonLines Heading="true" Lines="1" />
+        <SkeletonRows Count="5" Height="72" Gap="10" />
     </div>
 }
 else if (_error is not null)

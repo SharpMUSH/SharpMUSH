@@ -112,3 +112,8 @@
 .gallery-upload {
 	margin-top: 10px;
 }
+
+/* The cover and two small tiles held at their sizes while the gallery loads; nothing to open yet. */
+.gallery-skeleton {
+	cursor: progress;
+}

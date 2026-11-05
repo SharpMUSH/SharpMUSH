@@ -16,7 +16,7 @@
     <ChildContent>
         @if (_properties is null)
         {
-            <MudProgressLinear Indeterminate="true" Color="Color.Primary" Size="Size.Small" />
+            <SkeletonRows Count="4" Height="44" Gap="6" />
         }
         else if (_properties.Count == 0)
         {

@@ -22,6 +22,55 @@
 		--duration-enter: 0s;
 		--duration-exit: 0s;
 		--duration-spring: 0s;
+		--duration-sweep: 0s;
+	}
+}
+
+/* Loading placeholders: the portal's own (.kit-skeleton, Kit/SkeletonLines and friends) and MudSkeleton, whose
+   wave is MudBlazor's own timing and a black sheen no dark theme shows. The block keeps the size of what it stands
+   in for from the start, so nothing moves when that arrives, but it fades in only after --delay-skeleton, so a read
+   that answers sooner shows no placeholder at all. A sheen then crosses it once per --duration-sweep, three times
+   and no more: moving content beside the rest of the page stops within five seconds (WCAG 2.2.2), and a placeholder
+   still there after that is plainly still loading. Under reduced motion --duration-sweep is zero, an animation of no
+   length shows nothing, and the placeholder stands still. */
+.kit-skeleton,
+.mud-skeleton {
+	background-color: var(--skeleton);
+	cursor: progress;
+	animation: kit-skeleton-appear var(--motion-fade) var(--delay-skeleton) both;
+}
+.kit-skeleton,
+.mud-skeleton-wave {
+	position: relative;
+	overflow: hidden;
+}
+.kit-skeleton::after,
+.mud-skeleton-wave::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	transform: translateX(-100%);
+	background: linear-gradient(90deg, transparent, var(--skeleton-sheen), transparent);
+	animation: kit-skeleton-sweep var(--motion-sweep) var(--delay-skeleton) 3;
+}
+.mud-skeleton-pulse {
+	animation: kit-skeleton-appear var(--motion-fade) var(--delay-skeleton) both, kit-skeleton-pulse var(--motion-sweep) var(--delay-skeleton) 3;
+}
+@keyframes kit-skeleton-appear {
+	from { opacity: 0; }
+}
+@keyframes kit-skeleton-sweep {
+	to { transform: translateX(100%); }
+}
+@keyframes kit-skeleton-pulse {
+	50% { opacity: 0.4; }
+}
+/* Forced colours replace the placeholder's fill with the page's own, and the shape would vanish. An outline
+   drawn inside it keeps the shape without changing its size. */
+@media (forced-colors: active) {
+	.kit-skeleton, .mud-skeleton {
+		outline: 1px solid GrayText;
+		outline-offset: -1px;
 	}
 }
 

@@ -34,7 +34,9 @@
 
     @if (_loading)
     {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        <KitCard>
+            <SkeletonLines Heading="true" Lines="8" />
+        </KitCard>
     }
     else if (_index is null)
     {

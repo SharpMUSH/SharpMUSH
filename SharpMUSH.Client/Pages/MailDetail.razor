@@ -29,7 +29,9 @@
 
     @if (_loading)
     {
-        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        <KitCard Class="md-card">
+            <SkeletonLines Lines="6" />
+        </KitCard>
     }
     else if (_message is null)
     {

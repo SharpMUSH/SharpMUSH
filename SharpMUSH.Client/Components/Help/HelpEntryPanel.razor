@@ -11,7 +11,7 @@
 
 @if (_loading)
 {
-    <MudProgressLinear Indeterminate="true" />
+    <SkeletonLines Heading="true" Lines="8" />
 }
 else if (_error is not null)
 {
