@@ -260,7 +260,7 @@ public class SuggestionManagementTests
 	}
 
 	[Test]
-	public async Task SuggestionManagement_LoadingState_ShowsProgressIndicator()
+	public async Task SuggestionManagement_LoadingState_HoldsPlaceholderRows()
 	{
 		// Declared before the context so it is disposed after it. This request is still in flight at
 		// teardown; disposing the client first cancels the delay, and the continuation would call
@@ -277,8 +277,8 @@ public class SuggestionManagementTests
 
 		var cut = ctx.Render<SuggestionManagement>();
 
-		var progressIndicator = cut.FindAll(".mud-progress-circular");
-		await Assert.That(progressIndicator.Count).IsGreaterThan(0);
+		await Assert.That(cut.FindAll(".kit-skeleton-row").Count).IsGreaterThan(0);
+		await Assert.That(cut.FindAll("[role=status]").Count).IsGreaterThan(0);
 	}
 
 	/// <summary>
