@@ -1,0 +1,40 @@
+/* The section sidebar's head and its links (Kit/SidebarRow), at their sizes. */
+.kit-route-skeleton-side {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 18px 12px;
+}
+
+.kit-route-skeleton-side-head {
+	width: 60%;
+	height: 22px;
+	margin: 0 0 14px 6px;
+	border-radius: 6px;
+}
+
+.kit-route-skeleton-side-row {
+	height: 34px;
+	border-radius: var(--radius-row);
+}
+
+/* The page's own padding, then PlainPageHeader's title and lede above a card. */
+.kit-route-skeleton {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: var(--main-pad);
+}
+
+.kit-route-skeleton-title {
+	width: min(16rem, 60%);
+	height: 30px;
+	border-radius: 6px;
+}
+
+.kit-route-skeleton-sub {
+	width: min(28rem, 85%);
+	height: 14px;
+	margin-bottom: 14px;
+	border-radius: 4px;
+}

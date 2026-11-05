@@ -48,8 +48,7 @@
             <div class="adm-media-body">
                 @if (_isLoading)
                 {
-                    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
-                    @for (var i = 0; i < 4; i++) { <MudSkeleton Height="80px" Class="mb-2" /> }
+                    <SkeletonRows Count="4" Height="80" Gap="8" />
                 }
                 else if (FilteredAssets.Count == 0)
                 {

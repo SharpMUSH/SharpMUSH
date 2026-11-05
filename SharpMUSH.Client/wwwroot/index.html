@@ -61,12 +61,34 @@
 </head>
 
 <body>
+    <!-- The shell's outline while the runtime starts (shell.css, "Boot placeholder"): the rail or the touch header and tab
+         bar where they will be, and a page's heading and card, in the theme this browser last used. The first render
+         replaces it with the shell in the same places. -->
     <div id="app">
-        <div style="position: fixed; height: 100%; width: 100%; margin: 0; background-color: var(--mud-palette-appbar-background); background-image: var(--mud-palette-navbar-gradient); ">
-            <div style="display: flex; justify-content: center; align-items:center; height:100%; width:100%;">
-                <div class="b-demo-loading">
-                    <img src="assets/Logo.svg" style="height: 500px;"  alt="Logo"/>
+        <div class="boot-shell" role="status">
+            <span class="visually-hidden">Loading...</span>
+            <div class="boot-rail" aria-hidden="true">
+                <div class="kit-skeleton boot-rail-logo"></div>
+                <div class="boot-rail-sep"></div>
+                <div class="kit-skeleton boot-rail-item"></div>
+                <div class="kit-skeleton boot-rail-item"></div>
+                <div class="kit-skeleton boot-rail-item"></div>
+                <div class="kit-skeleton boot-rail-item"></div>
+                <div class="kit-skeleton boot-rail-item"></div>
+            </div>
+            <div class="boot-col" aria-hidden="true">
+                <div class="boot-topbar"><div class="kit-skeleton boot-topbar-mark"></div></div>
+                <div class="boot-page">
+                    <div class="kit-skeleton boot-title"></div>
+                    <div class="kit-skeleton boot-sub"></div>
+                    <div class="boot-card">
+                        <div class="kit-skeleton boot-line" style="width:96%"></div>
+                        <div class="kit-skeleton boot-line" style="width:100%"></div>
+                        <div class="kit-skeleton boot-line" style="width:88%"></div>
+                        <div class="kit-skeleton boot-line" style="width:72%"></div>
+                    </div>
                 </div>
+                <div class="boot-bottomnav"></div>
             </div>
         </div>
     </div>

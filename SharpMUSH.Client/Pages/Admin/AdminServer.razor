@@ -13,7 +13,7 @@
     <PlainPageHeader Kicker="@Loc["AdmGroupServer"]" Title="@Loc["AdmServerTitle"]" Description="@Loc["AdmServerDescription"]" />
 
     <LoadState TValue="AdminServerStatus" Value="_status" Loading="@(_status is null && _error is null)" Error="@_error" ErrorClass="adm-server-error"
-               ProgressColor="Color.Primary" Context="status">
+               Context="status">
         <AdminStats>
             <AdminStat Key="ready" Icon="@(status.Ready ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.HourglassTop)"
                        Label="@Loc["AdmServerReadiness"]" Warn="@(!status.Ready)"

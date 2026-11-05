@@ -1,0 +1,31 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Placeholder text held in a paragraph's place while it loads: lines of the body's height and of uneven
+   lengths, so it reads as text, and (with Heading) a wider bar above them for a title. *@
+<div class="@($"kit-skeleton-lines {Class}".Trim())" role="status">
+    <span class="visually-hidden">@(Label ?? Loc["Loading"])</span>
+    @if (Heading)
+    {
+        <div class="kit-skeleton kit-skeleton-heading" aria-hidden="true"></div>
+    }
+    @for (var i = 0; i < Lines; i++)
+    {
+        <div class="kit-skeleton kit-skeleton-line" style="@($"width:{Widths[i % Widths.Length]}%")" aria-hidden="true"></div>
+    }
+</div>
+
+@code {
+    // Uneven, and the last of a run short, as a paragraph's lines are.
+    private static readonly int[] Widths = [96, 100, 88, 93, 72, 98, 84, 60];
+
+    /// <summary>How many lines of text to hold.</summary>
+    [Parameter] public int Lines { get; set; } = 4;
+
+    /// <summary>Holds a heading's place above the lines.</summary>
+    [Parameter] public bool Heading { get; set; }
+
+    /// <summary>What a screen reader hears; "Loading..." when unset.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+}

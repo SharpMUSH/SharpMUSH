@@ -43,7 +43,7 @@
     <div style="flex:1;overflow-y:auto;min-height:0;padding:0.375rem;">
         @if (_loading)
         {
-            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+            <SkeletonRows Count="6" Height="32" Gap="4" />
         }
         else if (_groups.Count == 0)
         {

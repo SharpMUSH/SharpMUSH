@@ -240,3 +240,10 @@
 .scene-calendar a:hover {
 	text-decoration: underline;
 }
+
+/* The header, then poses' places, while the scene loads. */
+.scene-detail-skeleton {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}

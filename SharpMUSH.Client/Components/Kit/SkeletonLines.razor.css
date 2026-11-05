@@ -1,0 +1,19 @@
+/* One line of body text is about 1.5rem tall: a 0.75rem bar and the space around it. */
+.kit-skeleton-lines {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	padding-block: 0.375rem;
+}
+
+.kit-skeleton-heading {
+	width: 45%;
+	height: 1.5rem;
+	margin-bottom: 0.5rem;
+	border-radius: 6px;
+}
+
+.kit-skeleton-line {
+	height: 0.75rem;
+	border-radius: 4px;
+}

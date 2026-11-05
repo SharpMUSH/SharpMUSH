@@ -19,7 +19,7 @@
             <div class="pkg-card-body">
                 @if (_remotes is null)
                 {
-                    <MudProgressLinear Indeterminate="true" />
+                    <SkeletonRows Count="2" Height="48" Gap="6" />
                 }
                 else
                 {
@@ -81,7 +81,7 @@
                 </MudText>
                 @if (_community is null)
                 {
-                    <MudProgressLinear Indeterminate="true" />
+                    <SkeletonRows Count="3" Height="48" Gap="6" />
                 }
                 else
                 {

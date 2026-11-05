@@ -22,7 +22,7 @@
 
         @if (_loading)
         {
-            <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+            <SkeletonRows Count="4" Height="56" Gap="8" />
         }
         else if (_forbidden)
         {

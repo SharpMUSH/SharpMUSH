@@ -22,7 +22,40 @@
 		--duration-enter: 0s;
 		--duration-exit: 0s;
 		--duration-spring: 0s;
+		--duration-sweep: 0s;
 	}
+}
+
+/* Loading placeholders: the portal's own (.kit-skeleton, Kit/SkeletonLines and friends) and MudSkeleton, whose
+   wave is MudBlazor's own timing and a black sheen no dark theme shows. A sheen crosses the block once per
+   --duration-sweep; under reduced motion that is zero, an animation of no length shows nothing, and the
+   placeholder stands still. The block keeps the size of what it stands in for, so nothing moves when that arrives. */
+.kit-skeleton,
+.mud-skeleton {
+	background-color: var(--skeleton);
+}
+.kit-skeleton,
+.mud-skeleton-wave {
+	position: relative;
+	overflow: hidden;
+}
+.kit-skeleton::after,
+.mud-skeleton-wave::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	transform: translateX(-100%);
+	background: linear-gradient(90deg, transparent, var(--skeleton-sheen), transparent);
+	animation: kit-skeleton-sweep var(--motion-sweep) infinite;
+}
+.mud-skeleton-pulse {
+	animation: kit-skeleton-pulse var(--motion-sweep) infinite;
+}
+@keyframes kit-skeleton-sweep {
+	to { transform: translateX(100%); }
+}
+@keyframes kit-skeleton-pulse {
+	50% { opacity: 0.4; }
 }
 
 /* MudBlazor's components move on Material 2's curves and their own durations, and ignore reduced

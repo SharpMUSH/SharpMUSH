@@ -18,9 +18,7 @@
 
     @if (_isLoading)
     {
-        <div class="sugg-loading">
-            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
-        </div>
+        <SkeletonRows Count="4" Height="64" Gap="8" />
     }
     else if (_categories == null || !_categories.Any())
     {

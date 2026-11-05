@@ -12,10 +12,8 @@
 <div class="wiki-recent">
     <PlainPageHeader Kicker="@Loc["Wiki"]" Title="@Loc["NavWikiRecentChanges"]" Description="@Loc["NavWikiRecentDesc"]" />
 
-    <LoadState TValue="IReadOnlyList<WikiPageSummary>" Value="_pages" Loading="_loading" IsEmpty="pages => pages.Count == 0" Context="pages">
-        <LoadingContent>
-            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Style="height:2px;" />
-        </LoadingContent>
+    <LoadState TValue="IReadOnlyList<WikiPageSummary>" Value="_pages" Loading="_loading" IsEmpty="pages => pages.Count == 0" Context="pages"
+               LoadingRows="8">
         <Missing>
             <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
         </Missing>

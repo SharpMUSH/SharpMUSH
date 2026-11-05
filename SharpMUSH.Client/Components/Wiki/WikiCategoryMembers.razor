@@ -12,7 +12,9 @@
 <div class="wiki-cat">
     @if (_loading)
     {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Style="height:2px;" />
+        <div class="wiki-cat-grid">
+            @for (var i = 0; i < 6; i++) { <SkeletonCard Height="124" /> }
+        </div>
     }
     else if (_failed)
     {

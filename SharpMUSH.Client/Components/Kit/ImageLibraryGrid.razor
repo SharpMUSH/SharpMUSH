@@ -12,7 +12,10 @@
                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="kit-library-search" aria-label="@Loc["NavLibrarySearch"]" />
     @if (_loading)
     {
-        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        <div class="kit-library-grid" role="status">
+            <span class="visually-hidden">@Loc["Loading"]</span>
+            @for (var i = 0; i < 8; i++) { <div class="kit-skeleton kit-library-skeleton" aria-hidden="true"></div> }
+        </div>
     }
     else if (_error is not null)
     {

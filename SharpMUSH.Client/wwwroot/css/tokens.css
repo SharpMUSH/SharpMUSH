@@ -311,6 +311,9 @@
 	--duration-exit: 0.2s;
 	--duration-spring: 0.35s;
 	--duration-linger: 2s;
+	/* One pass of a loading placeholder's sheen (globals.css): a loop, so it is longer than any change of state. Spatial,
+	   so reduced motion zeroes it and the placeholder stands still. */
+	--duration-sweep: 1.6s;
 	--ease-standard: cubic-bezier(0.2, 0, 0, 1);
 	--ease-enter: cubic-bezier(0.05, 0.7, 0.1, 1);
 	--ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15);
@@ -323,6 +326,11 @@
 	--motion-move: var(--duration-enter) var(--ease-standard);
 	--motion-exit: var(--duration-exit) var(--ease-exit);
 	--motion-spring: var(--duration-spring) var(--ease-spring);
+	--motion-sweep: var(--duration-sweep) var(--ease-standard);
+	/* A loading placeholder (globals.css .kit-skeleton): a tint of the text colour, so it reads on every theme, light or
+	   dark, and the sheen that crosses it. */
+	--skeleton: color-mix(in srgb, var(--text) 9%, transparent);
+	--skeleton-sheen: color-mix(in srgb, var(--text) 8%, transparent);
 	/* How long a panel opened by hovering stays after the pointer leaves, so a path that grazes its edge does
 	   not close it. A wait, not movement, so reduced motion keeps it. */
 	--delay-hover-leave: 0.25s;

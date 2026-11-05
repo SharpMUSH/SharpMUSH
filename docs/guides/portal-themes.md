@@ -262,13 +262,20 @@ a time or curve of its own (`MotionTokenTests` enforces this).
 | `--motion-move` | Something moving or resizing in place (a panel's width, a sliding track) |
 | `--motion-exit` | Something leaving; shorter than it took to arrive |
 | `--motion-spring` | A turn or a switch's thumb: it starts from rest and overshoots a little, so not something arriving or a panel pinned to an edge |
+| `--motion-sweep` | One pass of a loading placeholder's sheen; a loop |
 
 `transition: background var(--motion-fade), transform var(--motion-enter);`
 
-Under reduced motion `globals.css` sets `--duration-enter`, `--duration-exit` and `--duration-spring` to zero,
-so nothing moves; colour changes still fade, since they move nothing. A loop (`infinite`) keeps its own timing; one
+Under reduced motion `globals.css` sets `--duration-enter`, `--duration-exit`, `--duration-spring` and
+`--duration-sweep` to zero, so nothing moves; colour changes still fade, since they move nothing. A loop (`infinite`) keeps its own timing; one
 that only decorates, like the unread pulse, stops under reduced motion with a rule of its own. Script that scrolls checks `(prefers-reduced-motion: reduce)` before asking for
 `behavior: 'smooth'`.
+
+While something loads, a page holds its place with a placeholder of the same size, so the content arrives without
+moving the page: `SkeletonRows` for a list or table (rows of the height that arrives), `SkeletonLines` for text,
+`SkeletonCard` for a card, or the `kit-skeleton` class on a block sized like what it stands for. They are tinted
+`--skeleton` and crossed by a `--skeleton-sheen` once per `--motion-sweep`; under reduced motion they stand still.
+A progress bar is for an action the visitor started, not for a page loading.
 
 The Monaco editor paints with its own dark theme whatever the portal's, so its frame reads `--editor-bg`, which no
 theme derives.

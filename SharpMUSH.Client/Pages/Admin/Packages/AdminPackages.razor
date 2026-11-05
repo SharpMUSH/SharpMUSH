@@ -81,8 +81,7 @@
         <div class="pkg-body">
             @if (_installed is null)
             {
-                <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
-                @for (var i = 0; i < 4; i++) { <MudSkeleton Height="64px" Class="mb-2" /> }
+                <SkeletonRows Count="4" Height="64" Gap="8" />
             }
             else if (_tab == PkgTab.Plugins)
             {
@@ -132,7 +131,7 @@
     <DialogContent>
         @if (_revisions is null)
         {
-            <MudProgressLinear Indeterminate="true" />
+            <SkeletonRows Count="4" Height="40" Gap="4" />
         }
         else
         {

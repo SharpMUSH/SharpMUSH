@@ -89,6 +89,39 @@ public class FeatureGateTests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find("a[href='/scenes']"));
 	}
 
+	/// <summary>
+	/// A page in a section (ScenesLayout) holds its place with Pending while the answer is out; without it the
+	/// shell's sidebar column closed and opened again and the page moved across twice.
+	/// </summary>
+	[Test]
+	public async Task ShowsPending_UntilTheAnswerIsIn()
+	{
+		var info = new SlowServerInfo();
+		Services.AddSingleton<ServerInfoService>(info);
+		RenderFragment pending = b => b.AddMarkupContent(0, "<div class=\"pending\"></div>");
+
+		var cut = Render<FeatureGate>(p => p
+			.Add(x => x.Feature, GameFeatures.Scenes)
+			.Add(x => x.ChildContent, Link)
+			.Add(x => x.Otherwise, Notice)
+			.Add(x => x.Pending, pending));
+		await Assert.That(cut.FindAll("div.pending").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("a[href='/scenes']").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll("p.off").Count).IsEqualTo(0);
+
+		info.Answer.SetResult(true);
+
+		cut.WaitForAssertion(() => cut.Find("a[href='/scenes']"));
+		await Assert.That(cut.FindAll("div.pending").Count).IsEqualTo(0);
+	}
+
+	private sealed class SlowServerInfo() : ServerInfoService(null!)
+	{
+		public TaskCompletionSource<bool> Answer { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+		public override Task<bool> HasFeatureAsync(string feature) => Answer.Task;
+	}
+
 	private sealed class SwitchableServerInfo() : ServerInfoService(null!)
 	{
 		public bool Scenes { get; set; }

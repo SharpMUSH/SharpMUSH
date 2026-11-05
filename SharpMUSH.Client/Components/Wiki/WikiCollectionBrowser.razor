@@ -79,7 +79,7 @@
     }
     else if (_loading)
     {
-        <MudProgressLinear Indeterminate="true" aria-label="@Loc["NavWikiBrowse"]" />
+        <SkeletonRows Count="8" Height="40" Gap="12" Label="@Loc["NavWikiBrowse"]" />
     }
     else if (_rows is { } rows)
     {

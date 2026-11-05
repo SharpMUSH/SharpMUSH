@@ -1,0 +1,8 @@
+.kit-skeleton-rows {
+	display: flex;
+	flex-direction: column;
+}
+
+.kit-skeleton-row {
+	border-radius: var(--radius-row);
+}

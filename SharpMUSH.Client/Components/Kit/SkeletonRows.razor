@@ -1,0 +1,27 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Placeholder rows held in a list's or a table's place while it loads, each the height of the row it stands
+   for, so the rows that arrive take the space these held instead of pushing the page down. *@
+<div class="@($"kit-skeleton-rows {Class}".Trim())" role="status" style="@($"gap:{Gap}px")">
+    <span class="visually-hidden">@(Label ?? Loc["Loading"])</span>
+    @for (var i = 0; i < Count; i++)
+    {
+        <div class="kit-skeleton kit-skeleton-row" style="@($"height:{Height}px")" aria-hidden="true"></div>
+    }
+</div>
+
+@code {
+    /// <summary>How many rows to hold; about as many as usually arrive.</summary>
+    [Parameter] public int Count { get; set; } = 4;
+
+    /// <summary>The height of one row, in pixels.</summary>
+    [Parameter] public int Height { get; set; } = 44;
+
+    /// <summary>The space between rows, in pixels.</summary>
+    [Parameter] public int Gap { get; set; } = 6;
+
+    /// <summary>What a screen reader hears; "Loading..." when unset.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+}

@@ -1,0 +1,42 @@
+@using System.Reflection
+@using Microsoft.AspNetCore.Components.Sections
+@using SharpMUSH.Client.Layout
+
+@* What a page shows while the router waits on the sign-in check (App.razor's Authorizing), or a section
+   waits to learn the game has it (ScenesLayout): the page's
+   heading and a card of text held in their places and, for a page in a section (the Wiki, Help,
+   Settings, ...), its sidebar too. The shell opens the sidebar's column only while one is mounted,
+   so without it the whole page moved across when the section's real sidebar arrived. *@
+@if (Section)
+{
+    <SectionContent SectionName="@PageSidebarSlot.Name">
+        <div class="kit-pagebar kit-route-skeleton-side" aria-hidden="true">
+            <div class="kit-skeleton kit-route-skeleton-side-head"></div>
+            @for (var i = 0; i < 7; i++)
+            {
+                <div class="kit-skeleton kit-route-skeleton-side-row"></div>
+            }
+        </div>
+    </SectionContent>
+}
+<div class="kit-route-skeleton">
+    <div class="kit-skeleton kit-route-skeleton-title" aria-hidden="true"></div>
+    <div class="kit-skeleton kit-route-skeleton-sub" aria-hidden="true"></div>
+    <KitCard>
+        <SkeletonLines Lines="6" />
+    </KitCard>
+</div>
+
+@code {
+    /// <summary>Holds the section sidebar's place too.</summary>
+    [Parameter] public bool Section { get; set; }
+
+    /// <summary>
+    /// Whether a page sits in a section: its layout is one of the section layouts (WikiLayout,
+    /// HelpLayout, ...), each of which sits in MainLayout and puts a sidebar in the shell's slot.
+    /// </summary>
+    public static bool InSection(Type page) =>
+        page.GetCustomAttribute<LayoutAttribute>()?.LayoutType is { } layout
+        && layout != typeof(MainLayout)
+        && layout.GetCustomAttribute<LayoutAttribute>()?.LayoutType == typeof(MainLayout);
+}

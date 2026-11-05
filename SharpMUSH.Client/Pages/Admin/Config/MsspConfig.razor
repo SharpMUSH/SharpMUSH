@@ -20,7 +20,7 @@
         <div class="config-section-content">
             @if (_loading)
             {
-                <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+                <SkeletonRows Count="6" Height="56" Gap="8" />
             }
             else if (_loadError is not null)
             {

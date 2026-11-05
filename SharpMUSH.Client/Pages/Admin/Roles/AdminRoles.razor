@@ -27,7 +27,7 @@
 
     @if (List.Loading)
     {
-        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        <SkeletonRows Count="6" Height="52" Gap="6" />
     }
     else if (_tab == Tab.Roles)
     {
