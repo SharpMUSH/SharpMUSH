@@ -1,127 +1,227 @@
+@using System.Text.Json
 @using System.Text.Json.Nodes
 @using SharpMUSH.Client.Components.Kit
+@using SharpMUSH.Client.Components.Schema
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Library.Models.Portal.Applications
 @inject IStringLocalizer<SharedResource> Loc
 
-@* The settings of one element of the document the builder is making. Every input writes straight into the element's
-   JSON, so keys the builder has no input for stay as they were. *@
+@* The settings of one element of the document the builder is making, in tabs: what it says, the rules a field's
+   answer must keep, what a click on one of its values does, and its place in the section. Every input writes
+   straight into the element's JSON, so keys the builder has no input for stay as they were. *@
 
-@{ var kind = Kind; }
+@{ var kind = Kind; var field = kind == "field"; var type = Str("type"); }
 <div class="bld-settings">
-    <MudText Typo="Typo.overline">@KindLabel(Element)</MudText>
+    <div class="bld-settings-head">
+        <p class="bld-settings-kind">@KindLabel(Element)</p>
+        <h2 class="bld-settings-name">@(Name is { Length: > 0 } name ? name : Loc["LayBldUnnamed"])</h2>
+    </div>
 
-    @if (kind == "field")
+    @if (Problems.Count > 0)
     {
-        <MudTextField T="string" Label="@Loc["LayBldLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense"
-                      Value="@Str("label")" ValueChanged='v => Set("label", v)' Immediate="true" />
-        <MudTextField T="string" Label="@Loc["LayBldKey"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono"
-                      HelperText="@Loc["LayBldKeyHelp"]" Value="@Str("key")" ValueChanged='v => Set("key", v.Trim().ToLowerInvariant())'
-                      Error="@(!BuilderDraft.IsKey(Str("key")))" ErrorText="@Loc["LayBldKeyBad"]" />
-        <MudSelect T="string" Label="@Loc["LayBldType"]" Variant="Variant.Outlined" Margin="Margin.Dense"
-                   Value="@Str("type")" ValueChanged="SetType">
-            @foreach (var type in TypesFor(Str("type")))
+        <ul class="bld-inline-problems" role="alert">
+            @foreach (var problem in Problems)
             {
-                <MudSelectItem T="string" Value="@type">@Loc[$"LayBldType_{type}"]</MudSelectItem>
+                <li>@problem</li>
             }
-        </MudSelect>
-        <MudTextField T="string" Label="@Loc["LayBldHelpText"]" Variant="Variant.Outlined" Margin="Margin.Dense"
-                      Value="@Str("help")" ValueChanged='v => SetOrRemove("help", v)' />
-        @if (Str("type") != "hidden")
-        {
-            <MudCheckBox T="bool" Label="@Loc["LayBldRequired"]" Value="@(Rule<bool>("required"))" ValueChanged='v => SetRule("required", v ? true : null)' />
-        }
-        @if (Str("type") is "number" or "slider")
-        {
-            <div class="bld-row">
-                <MudNumericField T="double?" Label="@Loc["LayBldMin"]" Variant="Variant.Outlined" Margin="Margin.Dense"
-                                 Value="@(Rule<double?>("min"))" ValueChanged='v => SetRule("min", v)' />
-                <MudNumericField T="double?" Label="@Loc["LayBldMax"]" Variant="Variant.Outlined" Margin="Margin.Dense"
-                                 Value="@(Rule<double?>("max"))" ValueChanged='v => SetRule("max", v)' />
-            </div>
-        }
-        @if (Str("type") is "text" or "textarea" or "mstring")
-        {
-            <MudNumericField T="int?" Label="@Loc["LayBldMaxLength"]" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1"
-                             Value="@(Rule<int?>("max_length"))" ValueChanged='v => SetRule("max_length", v)' />
-        }
-        @if (BuilderDraft.OptionTypes.Contains(Str("type")))
-        {
-            <MudText Typo="Typo.body2" Class="mt-2">@Loc["LayBldChoices"]</MudText>
-            @PairRows("options", "value", "label", Loc["LayBldChoiceValue"], Loc["LayBldChoiceLabel"])
-        }
-    }
-    else if (kind == "markdown")
-    {
-        <MudTextField T="string" Label="@Loc["LayBldText"]" Variant="Variant.Outlined" Lines="6" HelperText="@Loc["LayBldTextHelp"]"
-                      Value="@Str("value")" ValueChanged='v => Set("value", v)' Immediate="true" DebounceInterval="300" />
-    }
-    else if (kind == "keyvalue")
-    {
-        <ListEditor Label="@Loc["LayBldValueKeys"]" Help="@Loc["LayBldValueKeysHelp"]" Mono="true"
-                    Items="@(Strings("fields"))" ItemsChanged="SetFields" Normalize="s => s.Trim().ToLowerInvariant()" />
-    }
-    else if (kind is "stats" or "chips" or "table" or "timeline" or "image")
-    {
-        var field = kind is "chips" or "image" ? "src_field" : "rows_field";
-        <MudTextField T="string" Label="@Loc["LayBldDataKey"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono"
-                      HelperText="@Loc[$"LayBldDataKeyHelp_{kind}"]" Value="@Str(field)" ValueChanged="v => Set(field, v.Trim().ToLowerInvariant())"
-                      Error="@(!BuilderDraft.IsKey(Str(field)))" ErrorText="@Loc["LayBldKeyBad"]" />
-        @if (kind == "chips")
-        {
-            <MudTextField T="string" Label="@Loc["LayBldLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Value="@Str("label")" ValueChanged='v => SetOrRemove("label", v)' />
-        }
-        @if (kind == "image")
-        {
-            <MudTextField T="string" Label="@Loc["LayBldAlt"]" Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Value="@Str("alt")" ValueChanged='v => SetOrRemove("alt", v)' />
-        }
-        @if (kind != "image")
-        {
-            <MudTextField T="string" Label="@Loc["LayBldEmpty"]" Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Value="@Str("empty")" ValueChanged='v => SetOrRemove("empty", v)' />
-        }
-        @if (kind == "table")
-        {
-            <MudText Typo="Typo.body2" Class="mt-2">@Loc["LayBldColumns"]</MudText>
-            @PairRows("columns", "key", "label", Loc["LayBldColumnKey"], Loc["LayBldColumnLabel"])
-        }
-    }
-    else if (kind == "button")
-    {
-        <MudTextField T="string" Label="@Loc["LayBldLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense"
-                      Value="@Str("label")" ValueChanged='v => Set("label", v)' />
-        <MudTextField T="string" Label="@Loc["LayBldConfirm"]" Variant="Variant.Outlined" Margin="Margin.Dense"
-                      HelperText="@Loc["LayBldConfirmHelp"]" Value="@Str("confirm")" ValueChanged='v => SetOrRemove("confirm", v)' />
-        <MudText Typo="Typo.caption" Class="mud-text-secondary">@Loc["LayBldButtonHelp"]</MudText>
-    }
-    else if (kind == "divider")
-    {
-        <MudText Typo="Typo.caption" Class="mud-text-secondary">@Loc["LayBldDividerHelp"]</MudText>
-    }
-    else
-    {
-        <MudText Typo="Typo.caption" Class="mud-text-secondary">@Loc["LayBldKeptAsIs"]</MudText>
+        </ul>
     }
 
-    @if (Columns > 1 && kind != "divider")
-    {
-        <MudNumericField T="int" Label="@Loc["LayBldSpan"]" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" Max="@Columns"
-                         Value="@Span"
-                         ValueChanged='v => { if (v <= 1) Element.Remove("span"); else Element["span"] = v; Changed(); }' />
-    }
+    <div class="bld-tabs" role="tablist" aria-label="@Loc["LayBldSettings"]">
+        @foreach (var tab in Tabs)
+        {
+            <button type="button" role="tab" id="bld-tab-@tab" aria-selected="@(tab == Tab ? "true" : "false")" aria-controls="bld-tabpanel"
+                    tabindex="@(tab == Tab ? "0" : "-1")" class="bld-tab @(tab == Tab ? "bld-tab--on" : "")"
+                    @onclick="() => _tab = tab" @onkeydown="e => TabKey(e, tab)">@Loc[$"LayBldTab_{tab}"]</button>
+        }
+    </div>
+
+    <div class="bld-tabpanel" role="tabpanel" id="bld-tabpanel" aria-labelledby="bld-tab-@Tab">
+        @switch (Tab)
+        {
+            case "content" when field:
+                <MudTextField T="string" Label="@Loc["LayBldLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Value="@Str("label")" ValueChanged="SetLabel" Immediate="true" />
+                <div class="bld-key">
+                    <MudTextField T="string" Label="@Loc["LayBldKey"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono"
+                                  HelperText="@Loc["LayBldKeyHelp"]" Value="@Str("key")" ValueChanged='v => Set("key", v.Trim().ToLowerInvariant())'
+                                  Error="@(!BuilderDraft.IsKey(Str("key")))" ErrorText="@Loc["LayBldKeyBad"]" Immediate="true" />
+                    @if (BuilderDraft.KeyFollowsLabel(Element))
+                    {
+                        <span class="bld-key-link"><MudIcon Icon="@Icons.Material.Filled.Link" Size="Size.Small" /> @Loc["LayBldKeyFollows"]</span>
+                    }
+                    else
+                    {
+                        <button type="button" class="bld-link-button" @onclick="RelinkKey">@Loc["LayBldKeyRelink"]</button>
+                    }
+                </div>
+                <MudSelect T="string" Label="@Loc["LayBldType"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Value="@type" ValueChanged="SetType">
+                    @foreach (var choice in TypesFor(type))
+                    {
+                        <MudSelectItem T="string" Value="@choice">@Loc[$"LayBldType_{choice}"]</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudTextField T="string" Label="@Loc["LayBldHelpText"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Value="@Str("help")" ValueChanged='v => SetOrRemove("help", v)' />
+                @if (BuilderDraft.OptionTypes.Contains(type))
+                {
+                    <p class="bld-sub">@Loc["LayBldChoices"]</p>
+                    @PairRows("options", "value", "label", Loc["LayBldChoiceValue"], Loc["LayBldChoiceLabel"])
+                }
+                break;
+
+            case "content" when kind == "markdown":
+                <MudTextField T="string" Label="@Loc["LayBldText"]" Variant="Variant.Outlined" Lines="6" HelperText="@Loc["LayBldTextHelp"]"
+                              Value="@Str("value")" ValueChanged='v => Set("value", v)' Immediate="true" DebounceInterval="300" />
+                break;
+
+            case "content" when kind == "keyvalue":
+                <ListEditor Label="@Loc["LayBldValueKeys"]" Help="@Loc["LayBldValueKeysHelp"]" Mono="true"
+                            Items="@(Strings("fields"))" ItemsChanged="SetFields" Normalize="s => s.Trim().ToLowerInvariant()" />
+                break;
+
+            case "content" when kind is "stats" or "chips" or "table" or "timeline" or "image":
+                var source = kind is "chips" or "image" ? "src_field" : "rows_field";
+                <MudTextField T="string" Label="@Loc["LayBldDataKey"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono"
+                              HelperText="@Loc[$"LayBldDataKeyHelp_{kind}"]" Value="@Str(source)" ValueChanged="v => Set(source, v.Trim().ToLowerInvariant())"
+                              Error="@(!BuilderDraft.IsKey(Str(source)))" ErrorText="@Loc["LayBldKeyBad"]" Immediate="true" />
+                @if (kind == "chips")
+                {
+                    <MudTextField T="string" Label="@Loc["LayBldLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Value="@Str("label")" ValueChanged='v => SetOrRemove("label", v)' />
+                }
+                @if (kind == "image")
+                {
+                    <MudTextField T="string" Label="@Loc["LayBldAlt"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Value="@Str("alt")" ValueChanged='v => SetOrRemove("alt", v)' />
+                }
+                @if (kind != "image")
+                {
+                    <MudTextField T="string" Label="@Loc["LayBldEmpty"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Value="@Str("empty")" ValueChanged='v => SetOrRemove("empty", v)' />
+                }
+                @if (kind == "table")
+                {
+                    <p class="bld-sub">@Loc["LayBldColumns"]</p>
+                    @PairRows("columns", "key", "label", Loc["LayBldColumnKey"], Loc["LayBldColumnLabel"])
+                }
+                break;
+
+            case "content" when kind == "button":
+                <MudTextField T="string" Label="@Loc["LayBldLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Value="@Str("label")" ValueChanged='v => Set("label", v)' Immediate="true" />
+                <MudTextField T="string" Label="@Loc["LayBldConfirm"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              HelperText="@Loc["LayBldConfirmHelp"]" Value="@Str("confirm")" ValueChanged='v => SetOrRemove("confirm", v)' />
+                break;
+
+            case "content" when kind == "divider":
+                <p class="bld-note">@Loc["LayBldDividerHelp"]</p>
+                break;
+
+            case "content":
+                <p class="bld-note">@Loc["LayBldKeptAsIs"]</p>
+                break;
+
+            case "rules":
+                <MudCheckBox T="bool" Label="@Loc["LayBldRequired"]" Value="@(Rule<bool>("required"))" ValueChanged='v => SetRule("required", v ? true : null)' />
+                @if (type is "number" or "slider")
+                {
+                    <div class="bld-row">
+                        <MudNumericField T="double?" Label="@Loc["LayBldMin"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                         Value="@(Rule<double?>("min"))" ValueChanged='v => SetRule("min", v)' />
+                        <MudNumericField T="double?" Label="@Loc["LayBldMax"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                         Value="@(Rule<double?>("max"))" ValueChanged='v => SetRule("max", v)' />
+                    </div>
+                }
+                @if (type is "text" or "textarea" or "mstring")
+                {
+                    <MudNumericField T="int?" Label="@Loc["LayBldMaxLength"]" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1"
+                                     Value="@(Rule<int?>("max_length"))" ValueChanged='v => SetRule("max_length", v)' />
+                }
+                break;
+
+            case "click":
+                @Click()
+                break;
+
+            case "layout":
+                @if (Columns > 1)
+                {
+                    <MudNumericField T="int" Label="@Loc["LayBldSpan"]" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" Max="@Columns"
+                                     Value="@Span" ValueChanged='v => { if (v <= 1) Element.Remove("span"); else Element["span"] = v; Changed(); }' />
+                }
+                @if (field && !IsForm)
+                {
+                    <MudCheckBox T="bool" Label="@Loc["LayBldShowEmpty"]" Value="@(Element["show_when_empty"] is not JsonValue v || !v.TryGetValue<bool>(out var shown) || shown)"
+                                 ValueChanged='v => { if (v) Element.Remove("show_when_empty"); else Element["show_when_empty"] = false; Changed(); }' />
+                }
+                break;
+        }
+    </div>
 </div>
 
 @code {
     [Parameter, EditorRequired] public JsonObject Element { get; set; } = default!;
 
+    /// <summary>The draft the element belongs to: a new label renames the key only to one no other element uses.</summary>
+    [Parameter, EditorRequired] public BuilderDraft Draft { get; set; } = default!;
+
     /// <summary>How many columns the element's section has; above one, the element can take several.</summary>
     [Parameter] public int Columns { get; set; } = 1;
 
+    /// <summary>What is wrong with this element, as the page lists it.</summary>
+    [Parameter] public IReadOnlyList<string> Problems { get; set; } = [];
+
+    /// <summary>The preview's values, for the example a click setting shows.</summary>
+    [Parameter] public SchemaData? Sample { get; set; }
+
     [Parameter] public EventCallback OnChanged { get; set; }
 
-    private int Span => Element["span"] is JsonValue value && value.TryGetValue<int>(out var span) ? span : 1;
+    private string _tab = "content";
+    private JsonObject? _shown;
+
+    private bool IsForm => Draft.IsForm;
 
     private string Kind => (string?)Element["kind"] ?? "field";
+
+    private string Name => (string?)Element["label"] ?? (string?)Element["key"] ?? (string?)Element["src_field"] ?? (string?)Element["rows_field"] ?? string.Empty;
+
+    /// <summary>The tabs this element has: content always; rules for an answer; a click for a kind with values to click; layout when there is a choice.</summary>
+    private IReadOnlyList<string> Tabs
+    {
+        get
+        {
+            var tabs = new List<string> { "content" };
+            if (Kind == "field" && Str("type") != "hidden") tabs.Add("rules");
+            if (PortalSchema.ClickableKinds.Contains(Kind)) tabs.Add("click");
+            if (Columns > 1 || (Kind == "field" && !IsForm)) tabs.Add("layout");
+            return tabs;
+        }
+    }
+
+    private string Tab => Tabs.Contains(_tab) ? _tab : "content";
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_shown, Element)) return;
+        _shown = Element;
+        _tab = "content";
+    }
+
+    // Left and Right move along the tabs, as the ARIA tabs pattern has it.
+    private void TabKey(KeyboardEventArgs e, string tab)
+    {
+        var index = Tabs.ToList().IndexOf(tab);
+        _tab = e.Key switch
+        {
+            "ArrowRight" => Tabs[(index + 1) % Tabs.Count],
+            "ArrowLeft" => Tabs[(index + Tabs.Count - 1) % Tabs.Count],
+            "Home" => Tabs[0],
+            "End" => Tabs[^1],
+            _ => _tab,
+        };
+    }
 
     /// <summary>The name the palette gives <paramref name="element"/>'s kind or field type.</summary>
     public string KindLabel(JsonObject element) => BuilderDraft.IsField(element)
@@ -132,6 +232,8 @@
     private static IEnumerable<string> TypesFor(string current) =>
         BuilderDraft.FieldTypes.Contains(current) || string.IsNullOrEmpty(current) ? BuilderDraft.FieldTypes : [.. BuilderDraft.FieldTypes, current];
 
+    private int Span => Element["span"] is JsonValue value && value.TryGetValue<int>(out var span) ? span : 1;
+
     private string Str(string key) => Element[key] is JsonValue v && v.TryGetValue<string>(out var s) ? s : string.Empty;
 
     private IReadOnlyList<string> Strings(string key) =>
@@ -139,6 +241,20 @@
 
     private T? Rule<T>(string key) =>
         Element["validation"] is JsonObject rules && rules[key] is JsonValue v && v.TryGetValue<T>(out var value) ? value : default;
+
+    private Task SetLabel(string label)
+    {
+        Draft.SetLabel(Element, label);
+        return Changed();
+    }
+
+    private Task RelinkKey()
+    {
+        var key = BuilderDraft.KeyFrom(Str("label"));
+        if (key.Length == 0) return Task.CompletedTask;
+        Element["key"] = Draft.DataKeys().Contains(key) ? Draft.UniqueKey(key) : key;
+        return Changed();
+    }
 
     private Task Set(string key, string value)
     {
@@ -185,6 +301,109 @@
 
     private Task Changed() => OnChanged.InvokeAsync();
 
+    // What a click on one of the element's values does: nothing (a button sends its form), a command, or a dialog.
+    private string ClickMode => Element.ContainsKey("command") ? "command" : Element.ContainsKey("dialog") ? "dialog" : "none";
+
+    private Task SetClickMode(string mode)
+    {
+        var template = Str("command");
+        var route = Str("dialog");
+        Element.Remove("command");
+        Element.Remove("dialog");
+        switch (mode)
+        {
+            case "command":
+                Element["command"] = template.Length > 0 ? template : $"+look {{{BuilderDraft.ClickNames(Element).FirstOrDefault() ?? "key"}}}";
+                if (Kind == "button") Element.Remove("action");
+                break;
+            case "dialog":
+                Element["dialog"] = route.Length > 0 ? route : "/http/";
+                if (Kind == "button") Element.Remove("action");
+                break;
+            default:
+                if (Kind == "button" && IsForm) Element["action"] = "submit";
+                break;
+        }
+        return Changed();
+    }
+
+    private Task Insert(string name) => Set("command", $"{Str("command").TrimEnd()} {{{name}}}".TrimStart());
+
+    private RenderFragment Click() => __builder =>
+    {
+        var mode = ClickMode;
+        <MudRadioGroup T="string" Value="mode" ValueChanged="SetClickMode" Class="bld-radios">
+            <MudRadio T="string" Value="@("none")">@(Kind == "button" && IsForm ? Loc["LayBldClickSends"] : Loc["LayBldClickNothing"])</MudRadio>
+            <MudRadio T="string" Value="@("command")">@Loc["LayBldClickCommand"]</MudRadio>
+            <MudRadio T="string" Value="@("dialog")">@Loc["LayBldClickDialog"]</MudRadio>
+        </MudRadioGroup>
+        @if (mode == "command")
+        {
+            <MudTextField T="string" Label="@Loc["LayBldCommand"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono"
+                          HelperText="@Loc["LayBldCommandHelp"]" Value="@Str("command")" ValueChanged='v => Set("command", v)' Immediate="true" />
+            <div class="bld-insert">
+                <span>@Loc["LayBldInsertValue"]</span>
+                @foreach (var name in BuilderDraft.ClickNames(Element))
+                {
+                    <button type="button" class="bld-chip-button" @onclick="() => Insert(name)">{@name}</button>
+                }
+            </div>
+            @if (Example() is var (shown, filled))
+            {
+                <div class="bld-example" aria-live="polite">
+                    <p class="bld-note">@Loc["LayBldExample"]</p>
+                    @if (filled is not null)
+                    {
+                        <p>@Loc["LayBldExampleRuns", shown]</p>
+                        <code class="bld-mono">@filled</code>
+                    }
+                    else
+                    {
+                        <p>@Loc["LayBldExampleNone", shown]</p>
+                    }
+                </div>
+            }
+        }
+        else if (mode == "dialog")
+        {
+            <MudTextField T="string" Label="@Loc["LayBldDialog"]" Variant="Variant.Outlined" Margin="Margin.Dense" Class="bld-mono"
+                          HelperText="@Loc["LayBldDialogHelp"]" Value="@Str("dialog")" ValueChanged='v => Set("dialog", v.Trim())' Immediate="true"
+                          Error="@(!PortalSchema.OnThisServer(Str("dialog")))" ErrorText="@Loc["LayBldDialogBad"]" />
+        }
+    };
+
+    /// <summary>The first sample value the element shows, and the command a click on it would run (null when it fills nothing).</summary>
+    private (string Shown, string? Filled)? Example()
+    {
+        if (FirstDatum() is not { } datum) return null;
+        var shown = datum.GetValueOrDefault("label") ?? datum.GetValueOrDefault("key") ?? string.Empty;
+        return (shown, SchemaClick.Fill(Str("command"), datum));
+    }
+
+    private IReadOnlyDictionary<string, string>? FirstDatum()
+    {
+        if (Kind == "button")
+        {
+            var datum = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (Str("key") is { Length: > 0 } key) datum["key"] = key;
+            if (Str("label") is { Length: > 0 } label) datum["label"] = label;
+            return datum.Count > 0 ? datum : null;
+        }
+        if (Kind == "keyvalue")
+        {
+            return Strings("fields").FirstOrDefault() is { } first && Value(first) is { } value
+                ? SchemaClick.Datum(first, SchemaViewRenderer.ValueToString(value))
+                : null;
+        }
+        var source = Kind == "chips" ? Str("src_field") : Str("rows_field");
+        return Value(source) is { ValueKind: JsonValueKind.Array } rows && rows.GetArrayLength() > 0
+            ? SchemaClick.Datum(rows[0])
+            : null;
+    }
+
+    private JsonElement? Value(string key) =>
+        Sample?.Fields is { } fields && fields.TryGetValue(key, out var datum) && datum.Value is { } value ? value : null;
+
     private Task AddPair(string arrayKey, string first, string second)
     {
         if (Element[arrayKey] is not JsonArray array)
@@ -211,7 +430,7 @@
                                   Value="@((string?)row[first])" ValueChanged="v => { row[first] = v; Changed(); }" />
                     <MudTextField T="string" Label="@secondLabel" Variant="Variant.Outlined" Margin="Margin.Dense"
                                   Value="@((string?)row[second])" ValueChanged="v => { row[second] = v; Changed(); }" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@Loc["LayBldRemove"]"
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@Loc["LayBldRemoveRow", (string?)row[second] ?? (string?)row[first] ?? ""]"
                                    OnClick="() => { (Element[arrayKey] as JsonArray)?.RemoveAt(index); Changed(); }" />
                 </div>
             }

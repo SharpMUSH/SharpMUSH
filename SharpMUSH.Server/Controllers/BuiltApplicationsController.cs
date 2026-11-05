@@ -41,6 +41,8 @@ namespace SharpMUSH.Server.Controllers;
 ///   POST api/built/{slug}/act               — checks REQUIRED, then writes each SAVE field on the sender
 ///   GET  api/built/{slug}/source?object=    — the four attributes, for the builder to open (read as the caller)
 ///   PUT  api/built/{slug}/source            — writes them on an object the caller controls
+///   GET  api/built?object=                  — the applications an object holds, and whether the caller controls it
+///   POST api/built/values                   — what a map of key → attribute reads, as the caller, from an object
 /// </remarks>
 [ApiController]
 [Route("api/built")]
@@ -50,7 +52,8 @@ public partial class BuiltApplicationsController(
 	IAttributeService attributes,
 	IApplicationRegistryService registry,
 	IRealityPolicy reality,
-	IVisibleWorldProjection projection) : ControllerBase
+	IVisibleWorldProjection projection,
+	IPermissionService permissions) : ControllerBase
 {
 	/// <summary>The four attributes a built application keeps, as the builder sends and reads them.</summary>
 	public sealed record BuiltSource(string? Schema, string? Sources, string? Save, string? Required, string? Holder = null);
@@ -61,6 +64,17 @@ public partial class BuiltApplicationsController(
 	/// <summary>A save refused for its document: one line per problem, as <c>schemacheck()</c> words them.</summary>
 	public sealed record SaveProblems(IReadOnlyList<string> Problems);
 
+	/// <summary>An object the builder can save on, as the caller sees it, and the applications it holds.</summary>
+	public sealed record BuiltShelf(string Holder, string Name, bool Controls, IReadOnlyList<BuiltEntry> Apps);
+
+	/// <summary>One application on an object: its slug, title and kind, and which of its leaves (<c>SOURCES</c>, <c>SAVE</c>, <c>REQUIRED</c>) are set.</summary>
+	public sealed record BuiltEntry(string Slug, string Title, string Kind, IReadOnlyList<string> Parts);
+
+	/// <summary>A map of key → attribute to read from an object (<c>me</c> when none is named).</summary>
+	public sealed record ValuesRequest(string? Object, IReadOnlyDictionary<string, string> Sources);
+
+	private static readonly string[] Leaves = ["SOURCES", "SAVE", "REQUIRED"];
+
 	[GeneratedRegex("^[a-z0-9_-]{1,40}$")]
 	public static partial Regex SlugPattern();
 
@@ -69,6 +83,44 @@ public partial class BuiltApplicationsController(
 
 	/// <summary>The attribute that holds application <paramref name="slug"/>'s document.</summary>
 	public static string BaseAttribute(string slug) => $"DATA`APP`{slug.ToUpperInvariant()}";
+
+	[HttpGet]
+	public async Task<IActionResult> Shelf([FromQuery] string? @object, CancellationToken ct)
+	{
+		if (await ViewerAsync(ct) is not { } caller) return Unauthorized();
+		if (await FindAsync(caller, @object ?? "me", ct) is not { } holder) return NotFound(new ApiErrorDto($"I can't find {@object}."));
+
+		var stored = await attributes.GetAttributePatternAsync(caller, holder, "^DATA`APP`[^`]+(`(SOURCES|SAVE|REQUIRED))?$",
+			checkParents: false, IAttributeService.AttributePatternMode.Regex) is SharpAttribute[] found
+			? found.ToDictionary(attribute => attribute.LongName, attribute => attribute.Value.ToPlainText(), StringComparer.OrdinalIgnoreCase)
+			: [];
+		var apps = stored.Keys
+			.Where(name => name.Count(c => c == '`') == 2)
+			.Select(name => name["DATA`APP`".Length..].ToLowerInvariant())
+			.Where(slug => SlugPattern().IsMatch(slug))
+			.Order(StringComparer.Ordinal)
+			.Select(slug => Entry(slug, stored))
+			.ToList();
+		return Ok(new BuiltShelf(holder.Object().DBRef.ToString(), holder.Object().Name, await permissions.Controls(caller, holder), apps));
+	}
+
+	[HttpPost("values")]
+	public async Task<IActionResult> Values([FromBody] ValuesRequest request, CancellationToken ct)
+	{
+		if (await ViewerAsync(ct) is not { } caller) return Unauthorized();
+		if (await FindAsync(caller, request.Object ?? "me", ct) is not { } target) return NotFound(new ApiErrorDto($"I can't find {request.Object}."));
+		return Ok(new JsonObject { ["fields"] = await ReadFieldsAsync(caller, target, request.Sources.Select(pair => (pair.Key, pair.Value)).ToList()) });
+	}
+
+	/// <summary>An application on a holder, from its stored attributes: its title and kind from the document.</summary>
+	private static BuiltEntry Entry(string slug, IReadOnlyDictionary<string, string> stored)
+	{
+		var name = BaseAttribute(slug);
+		var document = Parse(stored.GetValueOrDefault(name)) as JsonObject;
+		var title = (string?)(document?["title"] as JsonValue) is { Length: > 0 } text ? text : slug;
+		var kind = (string?)(document?["kind"] as JsonValue) ?? "view";
+		return new BuiltEntry(slug, title, kind, [.. Leaves.Where(leaf => stored.ContainsKey($"{name}`{leaf}"))]);
+	}
 
 	[HttpGet("{slug}/schema")]
 	public async Task<IActionResult> Schema(string slug, CancellationToken ct)
@@ -82,15 +134,23 @@ public partial class BuiltApplicationsController(
 	[HttpGet("{slug}/data")]
 	public async Task<IActionResult> Data(string slug, [FromQuery] string? objid, CancellationToken ct)
 	{
-		var fields = new JsonObject();
 		if (await HolderAsync(slug, ct) is not { } holder || await ViewerAsync(ct) is not { } viewer)
-			return Ok(new JsonObject { ["fields"] = fields });
+			return Ok(new JsonObject { ["fields"] = new JsonObject() });
 
 		var target = string.IsNullOrWhiteSpace(objid) ? viewer : await FindAsync(viewer, objid, ct);
 		var sources = Map(await ReadAsync(holder, holder, $"{BaseAttribute(slug)}`SOURCES"));
+		return Ok(new JsonObject { ["fields"] = await ReadFieldsAsync(viewer, target, sources) });
+	}
+
+	/// <summary>
+	/// Each key's attribute read as <paramref name="viewer"/> from <paramref name="target"/>: an attribute they could
+	/// not read with get() comes back hidden.
+	/// </summary>
+	private async Task<JsonObject> ReadFieldsAsync(AnySharpObject viewer, AnySharpObject? target, IReadOnlyList<(string Key, string Attribute)> sources)
+	{
+		var fields = new JsonObject();
 		foreach (var (key, attribute) in sources)
 		{
-			// Read as the viewer: an attribute they could not read with get() comes back hidden.
 			var read = target is null || !AttributePattern().IsMatch(attribute)
 				? null
 				: await attributes.GetAttributeAsync(viewer, target, attribute, IAttributeService.AttributeMode.Read);
@@ -101,7 +161,7 @@ public partial class BuiltApplicationsController(
 				_ => Datum(string.Empty, false),
 			};
 		}
-		return Ok(new JsonObject { ["fields"] = fields });
+		return fields;
 	}
 
 	[HttpPost("{slug}/act")]

@@ -1,0 +1,34 @@
+/* A row's menu opens in a popover, outside the builder page, so it is styled here. */
+
+.bld-menu {
+    display: flex;
+    flex-direction: column;
+    min-width: 160px;
+    padding: 4px;
+}
+
+.bld-menu button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: var(--radius);
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: .875rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.bld-menu button:hover:not(:disabled),
+.bld-menu button:focus-visible {
+    background: var(--surface-2);
+}
+
+.bld-menu button:disabled {
+    opacity: .4;
+    cursor: default;
+}

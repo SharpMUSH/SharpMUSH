@@ -1,0 +1,22 @@
+.bld-skel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.bld-skel-row {
+    height: var(--bld-skel-h, 16px);
+    border-radius: 6px;
+    background: linear-gradient(90deg,
+        color-mix(in srgb, var(--text) 7%, transparent) 0%,
+        color-mix(in srgb, var(--text) 13%, transparent) 50%,
+        color-mix(in srgb, var(--text) 7%, transparent) 100%);
+    background-size: 200% 100%;
+    /* On the enter duration, which reduced motion sets to 0s, so the sweep stands still there. */
+    animation: bld-skel-sweep calc(var(--duration-enter) * 5) ease-in-out infinite;
+}
+
+@keyframes bld-skel-sweep {
+    from { background-position: 100% 0; }
+    to { background-position: -100% 0; }
+}

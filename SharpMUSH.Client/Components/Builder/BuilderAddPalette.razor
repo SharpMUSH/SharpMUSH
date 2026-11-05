@@ -1,0 +1,75 @@
+@using SharpMUSH.Client.Components.Kit
+@inject IStringLocalizer<SharedResource> Loc
+
+@* What can go into a section, grouped as what it asks for and what it shows, each with a line on what it is for,
+   and a filter for when the author knows the name. *@
+
+<PopoverMenu Open="_open" OpenChanged="v => _open = v" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" Class="bld-add">
+    <Activator>
+        <button type="button" class="bld-add-button" aria-expanded="@(_open ? "true" : "false")" aria-haspopup="dialog"
+                @onclick="() => _open = !_open">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" /> @Label
+        </button>
+    </Activator>
+    <ChildContent>
+        <div class="bld-palette" role="dialog" aria-label="@Label">
+            <MudTextField T="string" @bind-Value="_filter" Immediate="true" Placeholder="@Loc["LayBldFind"]" aria-label="@Loc["LayBldFind"]"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" />
+            @{
+                var asks = Matching(BuilderDraft.FieldTypes.Where(t => t != "hidden").Select(t => (t, $"LayBldType_{t}", $"LayBldTypeHelp_{t}")));
+                var shows = Matching(BuilderDraft.DisplayKinds.Select(k => (k, $"LayBldKind_{k}", $"LayBldKindHelp_{k}")));
+                var keeps = Matching([("hidden", "LayBldType_hidden", "LayBldTypeHelp_hidden")]);
+            }
+            @Group(Loc["LayBldAskFor"], asks)
+            @Group(Loc["LayBldShow"], shows)
+            @Group(Loc["LayBldKeep"], keeps)
+            @if (asks.Count + shows.Count + keeps.Count == 0)
+            {
+                <p class="bld-palette-none">@Loc["LayBldFindNone"]</p>
+            }
+        </div>
+    </ChildContent>
+</PopoverMenu>
+
+@code {
+    /// <summary>The add button's text, naming where the new element goes.</summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+
+    /// <summary>A field type or display kind was picked.</summary>
+    [Parameter] public EventCallback<string> OnPick { get; set; }
+
+    private bool _open;
+    private string _filter = string.Empty;
+
+    private List<(string Type, string Name, string Help)> Matching(IEnumerable<(string Type, string Name, string Help)> items) =>
+        items.Where(Matches).ToList();
+
+    private RenderFragment Group(string heading, List<(string Type, string Name, string Help)> shown) => __builder =>
+    {
+        if (shown.Count == 0) return;
+        <p class="bld-palette-group">@heading</p>
+        @foreach (var item in shown)
+        {
+            <button type="button" class="bld-palette-item" @onclick="() => PickAsync(item.Type)">
+                <span class="bld-palette-name">@Loc[item.Name]</span>
+                <span class="bld-palette-help">@Loc[item.Help]</span>
+            </button>
+        }
+    };
+
+    private bool Matches((string Type, string Name, string Help) item)
+    {
+        if (string.IsNullOrWhiteSpace(_filter)) return true;
+        var filter = _filter.Trim();
+        return Loc[item.Name].Value.Contains(filter, StringComparison.CurrentCultureIgnoreCase)
+            || Loc[item.Help].Value.Contains(filter, StringComparison.CurrentCultureIgnoreCase)
+            || item.Type.Contains(filter, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task PickAsync(string type)
+    {
+        _open = false;
+        _filter = string.Empty;
+        await OnPick.InvokeAsync(type);
+    }
+}

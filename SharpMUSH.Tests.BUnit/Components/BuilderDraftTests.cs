@@ -157,4 +157,66 @@ public class BuilderDraftTests
 		await Assert.That(BuilderDraft.Placement(page).Widget).IsFalse();
 		await Assert.That(page.DataUrl).IsEqualTo("api/built/finger/data");
 	}
+
+	[Test]
+	public async Task A_problem_names_the_element_it_is_about_and_the_step_that_fixes_it()
+	{
+		var draft = FromTemplate("request");
+		var kind = (JsonObject)BuilderDraft.Elements(BuilderDraft.Sections((JsonObject)draft.Pages[0]!)[0]!.AsObject())[1]!;
+		kind["options"] = new JsonArray();
+		draft.Sources["subject"] = "not an attribute!";
+
+		var issues = draft.Issues();
+		var choices = issues.Single(issue => issue.Text.Contains("has no choices"));
+		await Assert.That(choices.Node).IsSameReferenceAs(kind);
+		await Assert.That(choices.Step).IsEqualTo(BuilderIssue.LayoutStep);
+		await Assert.That(issues.Single(issue => issue.Text.Contains("not an attribute name")).Step).IsEqualTo(BuilderIssue.ValuesStep);
+	}
+
+	[Test]
+	public async Task A_new_label_renames_a_key_that_follows_it_and_leaves_one_that_does_not()
+	{
+		var draft = FromTemplate("request");
+		var fields = draft.InputFields().ToList();
+		var subject = fields.Single(f => (string?)f["key"] == "subject");
+		var kind = fields.Single(f => (string?)f["key"] == "kind");
+
+		draft.SetLabel(subject, "Your Title");
+		draft.SetLabel(kind, "Topic");
+		draft.SetLabel(fields.Single(f => (string?)f["key"] == "details"), "Your title");
+
+		await Assert.That((string?)subject["key"]).IsEqualTo("your_title");
+		await Assert.That((string?)kind["key"]).IsEqualTo("kind");
+		await Assert.That(draft.InputFields().Select(f => (string)f["key"]!).Distinct().Count()).IsEqualTo(3);
+	}
+
+	[Test]
+	public async Task A_snapshot_restores_the_document_and_its_maps()
+	{
+		var draft = FromTemplate("profile", "about-me");
+		var snapshot = draft.Snapshot();
+		draft.Pages.Clear();
+		draft.Slug = "other";
+		draft.Sources.Clear();
+
+		await Assert.That(draft.Restore(snapshot)).IsTrue();
+		await Assert.That(draft.Slug).IsEqualTo("about-me");
+		await Assert.That(draft.Sources["likes"]).IsEqualTo("PROFILE`LIKES");
+		await Assert.That(draft.InputFields().Count()).IsEqualTo(4);
+		await Assert.That(draft.Restore("not json")).IsFalse();
+		await Assert.That(draft.Slug).IsEqualTo("about-me");
+	}
+
+	[Test]
+	public async Task A_duplicated_section_sits_after_the_original_with_keys_of_its_own()
+	{
+		var draft = FromTemplate("request");
+		var sections = BuilderDraft.Sections((JsonObject)draft.Pages[0]!);
+		var copy = draft.Duplicate(sections, (JsonObject)sections[0]!);
+
+		await Assert.That(sections.IndexOf(copy)).IsEqualTo(1);
+		await Assert.That(draft.InputFields().Select(f => (string)f["key"]!).Distinct().Count()).IsEqualTo(6);
+		await Assert.That(draft.Problems()).IsEmpty();
+		await Assert.That(draft.PathOf(BuilderDraft.Elements(copy)[2]!.AsObject())).IsEqualTo((0, 1, 2));
+	}
 }

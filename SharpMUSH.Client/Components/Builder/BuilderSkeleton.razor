@@ -1,0 +1,22 @@
+@* Grey bars in the shape of what is loading, so the page keeps its size and nothing jumps when the real thing
+   arrives. Hidden from screen readers; the place it holds says it is loading instead. *@
+
+<div class="bld-skel @Class" aria-hidden="true" style="@($"--bld-skel-h:{Height}px")">
+    @for (var i = 0; i < Rows; i++)
+    {
+        <div class="bld-skel-row" style="@($"width:{Width(i)}%")"></div>
+    }
+</div>
+
+@code {
+    /// <summary>How many bars.</summary>
+    [Parameter] public int Rows { get; set; } = 3;
+
+    /// <summary>Each bar's height, in pixels.</summary>
+    [Parameter] public int Height { get; set; } = 16;
+
+    [Parameter] public string? Class { get; set; }
+
+    // Uneven widths read as text; the same widths every time, so a re-render does not flicker.
+    private static int Width(int row) => (row % 3) switch { 0 => 92, 1 => 76, _ => 58 };
+}
