@@ -443,7 +443,7 @@ abc
 
 ## Other servers' attribute names
 
-An import stores a built-in attribute under SharpMUSH's name for it. In code read in a dialect (the `dialect` option, or an attribute's `mux` or `rhost` flag), that server's name means the same attribute wherever an attribute is read or set: `get()`, `u()`, `&`, `@set`, and as an `@`-command. None of these names is a SharpMUSH attribute, so SharpMUSH code is unaffected.
+An import stores a built-in attribute under SharpMUSH's name for it. In code read in a dialect (the `dialect` option, or an attribute's `mux` or `rhost` flag), that server's name means the same attribute wherever an attribute is read or set: `get()`, `u()`, `&`, `@set`, and as an `@`-command. None of these names is a SharpMUSH attribute, so SharpMUSH code is unaffected, and an object's own attribute of that name still comes first.
 
 - `mux`: `KILL`, `OKILL`, `AKILL` are `DEATH`, `ODEATH`, `ADEATH`; `REJECT` is `HAVEN`; `SIGNATURE` is `MAILSIGNATURE`; `FORWARD` is `FORWARDLIST`; `SPEECHFORMAT` is `SPEECHMOD`.
 - `rhost`: `MAILSIG` is `MAILSIGNATURE`; `EMAIL` is `REGISTERED_EMAIL`; `ANSINAME` is `MONIKER`.

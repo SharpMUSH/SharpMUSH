@@ -228,15 +228,18 @@ public partial class Commands
 				continue;
 			}
 
-			// The destination is named in the dialect in force; the copy below writes the name as given.
-			var targetAttrName = SoftcodeDialectScope.AttributeName(string.IsNullOrEmpty(destAttr) ? sourceName : destAttr);
-
 			if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 					executor, executor, destDbref, LocateFlags.All) is not AnySharpObject destObject)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destDbref);
 				continue;
 			}
+
+			// A typed destination is named in the dialect in force; with none, the copy takes the source's name, its
+			// stored one when the typed source name was a dialect alias for it. The copy writes the name as given.
+			var targetAttrName = string.IsNullOrEmpty(destAttr)
+				? SoftcodeDialectScope.Current?.AttributeFor(sourceName) is null ? sourceName : sourceLeaf.LongName ?? sourceName
+				: await Library.Services.AttributeService.DialectNameAsync(Mediator, destObject, destAttr);
 
 			// PennMUSH do_cpattr (src/set.c:751-753) skips a destination that is the source attribute itself:
 			// counting it would let @mvattr clear the only copy.

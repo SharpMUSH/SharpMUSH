@@ -136,6 +136,42 @@ public class SoftcodeDialectAttributeTests : ServerTestBase
 		await Assert.That(await Eval($"u({thing}/FLAGGED)")).IsEqualTo("42 1 ADEATH");
 	}
 
+	/// <summary>An object's own attribute called <c>KILL</c> comes first, for a read and for a write.</summary>
+	[Test]
+	public async Task OwnAttributeOfTheAliasNameComesFirst()
+	{
+		var thing = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("DialectOwn")}"));
+		await Cmd($"&KILL {thing}=native");
+		await Cmd($"&DEATH {thing}=death");
+		await Cmd($"&FLAGGED {thing}=[get(me/kill)]");
+		await Cmd($"@set {thing}/FLAGGED=mux");
+		await Cmd($"&WRITE {thing}=&kill me=rewritten");
+		await Cmd($"@set {thing}/WRITE=mux");
+
+		await Assert.That(await Eval($"u({thing}/FLAGGED)")).IsEqualTo("native");
+		await Cmd($"@trigger {thing}/WRITE");
+		await WebAppFactoryArg.QueueBarrierAsync();
+		await Assert.That(await Eval($"[get({thing}/KILL)]|[get({thing}/DEATH)]")).IsEqualTo("rewritten|death");
+	}
+
+	/// <summary>A pattern match moves the attributes it matched, by their stored names.</summary>
+	[Test]
+	public async Task PatternMoveKeepsStoredNames()
+	{
+		var source = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("DialectSrc")}"));
+		var destination = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("DialectDst")}"));
+		await Cmd($"&KILL {source}=native");
+		await Cmd($"&DEATH {source}=death");
+		await Cmd($"&FLAGGED {source}=@mvattr me/K*={destination}");
+		await Cmd($"@set {source}/FLAGGED=mux");
+
+		await Cmd($"@trigger {source}/FLAGGED");
+		await WebAppFactoryArg.QueueBarrierAsync();
+
+		await Assert.That(await Eval($"[get({destination}/KILL)]|[get({destination}/DEATH)]|[get({source}/KILL)]|[get({source}/DEATH)]"))
+			.IsEqualTo("native|||death");
+	}
+
 	/// <summary><c>@mvattr</c> onto the same attribute under its other name moves nothing, so the value stays.</summary>
 	[Test]
 	public async Task MoveOntoItsOwnAliasKeepsTheValue()

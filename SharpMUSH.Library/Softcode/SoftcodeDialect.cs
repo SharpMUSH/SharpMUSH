@@ -14,10 +14,10 @@ namespace SharpMUSH.Library.Softcode;
 /// still wins over a dialect's.</para>
 /// <para>An attribute's dialect is its attribute flag named for the dialect's <see cref="Key"/>; an
 /// attribute with none, and typed input, read the game's <c>dialect</c> option. A Rhost import sets both.</para>
-/// <para>An attribute alias is different: it is the name the source server and SharpMUSH both have one attribute
-/// under, so in that dialect's code it always means SharpMUSH's attribute, for a read and for a write. No alias is a
-/// name SharpMUSH has an attribute of its own by. <see cref="SoftcodeDialectScope"/> carries the dialect to the
-/// attribute reads and writes a built-in makes.</para>
+/// <para>An attribute alias is the name the source server has SharpMUSH's attribute under, for a read and for a
+/// write. It fills a gap too: an object's own attribute of that name comes first. No alias is a name SharpMUSH has a
+/// standard attribute by. <see cref="SoftcodeDialectScope"/> carries the dialect to the attribute reads and writes a
+/// built-in makes.</para>
 /// </remarks>
 /// <param name="Key">The dialect's name, which is also its attribute flag's (<c>rhost</c>).</param>
 /// <param name="FunctionAliases">A name this dialect calls, and the SharpMUSH function it means.</param>

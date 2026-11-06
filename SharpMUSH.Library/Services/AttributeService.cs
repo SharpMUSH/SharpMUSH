@@ -39,20 +39,20 @@ public class AttributeService(
 	/// <remarks>
 	/// A copy names the attribute as it is stored (<c>@clone</c>, a snapshot restore), so neither this nor the
 	/// <paramref name="creator"/>-taking <c>SetAttributeAsync</c> reads the name in the dialect in force; a caller
-	/// with a name from softcode resolves it first (<see cref="SoftcodeDialectScope.AttributeName"/>).
+	/// with a name from softcode resolves it first (<see cref="DialectNameAsync"/>).
 	/// </remarks>
 	public ValueTask<Result<Success>> SetStoredAttributeAsync(AnySharpObject executor, AnySharpObject obj,
 		string attribute, StoredMarkup value, SharpPlayer? creator = null)
 		=> _writer.SetStoredAttributeAsync(executor, obj, attribute, value, creator);
 
-	public ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj,
+	public async ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj,
 		string attribute, MString value)
-		=> _writer.SetAttributeAsync(executor, obj, SoftcodeDialectScope.AttributeName(attribute), value);
+		=> await _writer.SetAttributeAsync(executor, obj, await DialectNameAsync(mediator, obj, attribute), value);
 
 	/// <inheritdoc/>
-	public ValueTask<Result<WrittenAttribute>> SetAttributeForReportAsync(AnySharpObject executor, AnySharpObject obj,
+	public async ValueTask<Result<WrittenAttribute>> SetAttributeForReportAsync(AnySharpObject executor, AnySharpObject obj,
 		string attribute, MString value)
-		=> _writer.SetAttributeForReportAsync(executor, obj, SoftcodeDialectScope.AttributeName(attribute), value);
+		=> await _writer.SetAttributeForReportAsync(executor, obj, await DialectNameAsync(mediator, obj, attribute), value);
 
 	/// <inheritdoc/>
 	public ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj,
@@ -60,9 +60,9 @@ public class AttributeService(
 		=> _writer.SetAttributeAsync(executor, obj, attribute, value, creator);
 
 	/// <inheritdoc/>
-	public ValueTask<Result<Success>> ClearAttributeAsync(AnySharpObject executor, AnySharpObject obj,
+	public async ValueTask<Result<Success>> ClearAttributeAsync(AnySharpObject executor, AnySharpObject obj,
 		string attributePattern, IAttributeService.AttributePatternMode patternMode)
-		=> _writer.ClearAttributeAsync(executor, obj, DialectPattern(attributePattern, patternMode), patternMode);
+		=> await _writer.ClearAttributeAsync(executor, obj, await DialectPatternAsync(obj, attributePattern, patternMode), patternMode);
 
 	private AttributeEvaluator? _evaluator;
 
@@ -199,7 +199,7 @@ public class AttributeService(
 	private async ValueTask<AttributeRead<T>> ReadAttributeAsync<T>(AnySharpObject executor, AnySharpObject obj,
 		string attribute, IAttributeService.AttributeMode mode, bool parent, AttributeReadShape<T> shape) where T : class
 	{
-		try { return await ReadAttributeCoreAsync(executor, obj, SoftcodeDialectScope.AttributeName(attribute), mode, parent, shape); }
+		try { return await ReadAttributeCoreAsync(executor, obj, await DialectNameAsync(mediator, obj, attribute), mode, parent, shape); }
 		catch (InvalidDataException) { return new AttributeRead<T>(null, "Attribute access metadata is unreadable."); }
 	}
 
@@ -313,11 +313,30 @@ public class AttributeService(
 	}
 
 	/// <summary>
-	/// <paramref name="pattern"/> as the dialect in force names it (<see cref="SoftcodeDialectScope.AttributeName"/>):
+	/// The attribute <paramref name="name"/> means on <paramref name="obj"/> in the dialect in force: the name itself
+	/// when <paramref name="obj"/> has an attribute of that name, else the SharpMUSH attribute the dialect means by
+	/// it (<see cref="SoftcodeDialectScope.AttributeName"/>). An alias fills a gap, as every dialect name does, so a
+	/// name read off the object, or an attribute of that name made in SharpMUSH code, is never moved to another.
+	/// </summary>
+	public static async ValueTask<string> DialectNameAsync(IMediator mediator, AnySharpObject obj, string name)
+	{
+		if (SoftcodeDialectScope.Current?.AttributeFor(name) is not { } target)
+		{
+			return name;
+		}
+
+		return await mediator.CreateStream(new GetLazyAttributeQuery(obj.Object().DBRef, [name]), ExecutionBudget.CurrentToken)
+			.AnyAsync(ExecutionBudget.CurrentToken)
+			? name
+			: target;
+	}
+
+	/// <summary>
+	/// <paramref name="pattern"/> as the dialect in force names it on <paramref name="obj"/> (<see cref="DialectNameAsync"/>):
 	/// an alias is a whole name, so a wildcard pattern that is one is that name, and a regular expression never is.
 	/// </summary>
-	private static string DialectPattern(string pattern, IAttributeService.AttributePatternMode mode)
-		=> mode == IAttributeService.AttributePatternMode.Regex ? pattern : SoftcodeDialectScope.AttributeName(pattern);
+	private ValueTask<string> DialectPatternAsync(AnySharpObject obj, string pattern, IAttributeService.AttributePatternMode mode)
+		=> mode == IAttributeService.AttributePatternMode.Regex ? ValueTask.FromResult(pattern) : DialectNameAsync(mediator, obj, pattern);
 
 	/// <summary>PennMUSH's built-in attribute aliases (<c>attralias</c>, <c>hdrs/atr_tab.h</c>).</summary>
 	public static readonly IReadOnlyDictionary<string, string> StandardAttributeAliases =
@@ -516,7 +535,7 @@ public class AttributeService(
 		bool checkParents,
 		IAttributeService.AttributePatternMode mode)
 	{
-		attributePattern = DialectPattern(attributePattern, mode);
+		attributePattern = await DialectPatternAsync(obj, attributePattern, mode);
 		var token = ExecutionBudget.CurrentToken;
 		var isPrivileged = executor.IsGod() || await executor.IsWizard(token);
 
@@ -954,7 +973,7 @@ public class AttributeService(
 		AnySharpObject obj, string attributePattern,
 		bool checkParents, IAttributeService.AttributePatternMode mode = IAttributeService.AttributePatternMode.Exact)
 	{
-		attributePattern = DialectPattern(attributePattern, mode);
+		attributePattern = await DialectPatternAsync(obj, attributePattern, mode);
 		var token = ExecutionBudget.CurrentToken;
 		token.ThrowIfCancellationRequested();
 		var isPrivileged = executor.IsGod() || await executor.IsWizard(token);
