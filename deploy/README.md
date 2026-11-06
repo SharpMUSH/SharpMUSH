@@ -186,8 +186,9 @@ changes require a deliberate `socketserver` restart, which disconnects its nativ
 WebSocket clients.
 
 If you **don't** use Caddy (e.g. you terminate TLS at a load balancer), remember the browser
-terminal's `/ws` endpoint lives on the connection server (`:4202`), not the main server — you must
-publish `4202` or add an equivalent `/ws` proxy route, in addition to publishing `8080`.
+terminal's `/ws` endpoint lives on the connection server (`:4202`), not the main server. The terminal
+connects to `/ws` on the portal's own address, so your proxy must route that path to `4202`, in
+addition to publishing `8080`.
 
 If you want to front the app with **Cloudflare** instead of Caddy, don't edit this file —
 use `docker-compose.cloudflare.yml` and follow the section below.

@@ -65,8 +65,10 @@ GET /http/profile?objid={objid}
   → Response includes: fields, values, and per-field visibility metadata
 ```
 
-The handler is read-only: it serves no `POST /http/profile`, and the portal has no field editor.
-The profile-handler package decides which fields a profile carries and where each value comes from.
+The handler is read-only: it serves no `POST /http/profile`, and the portal has no editor for the
+handler's fields. The avatar and banner are set through the portal's gallery, which writes the
+`IMAGE` and ``IMAGE`BANNER`` attributes the handler reads. The profile-handler package decides which
+fields a profile carries and where each value comes from.
 
 ### Schema Endpoint Response Shape
 
@@ -215,17 +217,6 @@ The wiki freeform section follows wiki permissions:
   private/unapproved, their wiki page may be hidden from non-staff)
 
 ## Editing Flow
-
-### Structured Fields (via web)
-
-```
-Player clicks "Edit Profile" on their character page
-  → Form rendered from schema (field types determine input widgets)
-  → Player edits fields marked editable_by: "self"
-  → Submit → POST /http/profile?objid={objid} with changed fields (planned)
-  → HTTP handler validates and sets attributes on the game object
-  → NATS event fired → portal cache invalidated → page re-renders
-```
 
 ### Structured Fields (in-game)
 
