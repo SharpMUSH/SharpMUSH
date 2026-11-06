@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Reality;
@@ -29,6 +30,9 @@ public class AttributeViewMemoTests
 		var ownerPlayer = owner.Expect<SharpPlayer>();
 		viewerPlayer.Id = "player-viewer"; ownerPlayer.Id = "player-owner";
 		viewer.Object().Owner = new(_ => Task.FromResult(viewerPlayer));
+		// A VISUAL object's examine lock is asked only of a viewer holding player.examine.
+		var examine = ObjectGrants.For(60, true, [], [], new Dictionary<string, PermissionState> { [PortalPermission.PlayerExamine] = PermissionState.Allow }, null, []);
+		viewer.Object().Grants = new(_ => Task.FromResult(examine));
 		target.Object().Owner = new(_ => Task.FromResult(ownerPlayer));
 		target.Object().Flags = new(() => new[]
 		{
