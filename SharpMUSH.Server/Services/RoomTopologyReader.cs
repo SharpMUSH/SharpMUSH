@@ -20,7 +20,7 @@ public sealed partial class RoomTopologyReader(IMediator mediator, IPermissionSe
 	public const int MaxExits = 500;
 	public const int MaxCandidates = 1000;
 
-	/// <summary>The coordinate attributes gmcp reads by default, and so the ones a builder is most likely to have set.</summary>
+	/// <summary>The coordinate attributes read when an instance names none.</summary>
 	public static readonly IReadOnlyList<string> DefaultCoordinates = ["X", "Y", "Z"];
 
 	/// <summary>
