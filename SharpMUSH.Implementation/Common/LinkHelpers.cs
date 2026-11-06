@@ -544,8 +544,19 @@ public static class LinkHelpers
 			return await RefusedAsync(notifyService, executor, PermissionRefusal.NotControlled(target));
 		}
 
+		// The mark goes on first: a room whose _LINKTYPE cannot be written keeps the drop-to it had.
+		return await attributeService.SetAttributeAsync(executor, target, LinkTypes.Attribute,
+				MarkupText.Plain(LinkTypes.Home)) switch
+		{
+			Error<string> refused => await RefusedAsync(notifyService, executor, refused.Value, refused.Value),
+			_ => await DropsHomeAsync(mediator, notifyService, executor, room)
+		};
+	}
+
+	private static async ValueTask<Result<Success>> DropsHomeAsync(IMediator mediator, INotifyService notifyService,
+		AnySharpObject executor, SharpRoom room)
+	{
 		await mediator.Send(new UnlinkRoomCommand(room));
-		await attributeService.SetAttributeAsync(executor, target, LinkTypes.Attribute, MarkupText.Plain(LinkTypes.Home));
 		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToSet), executor);
 		return new Success();
 	}

@@ -125,14 +125,16 @@ public class ReadForeignConfigTests
 			"hook_obj #12",
 			"hook_cmd look before after",
 			"hook_cmd @pemit permit",
-			"hook_cmd LOOK ignore",
+			"hook_cmd LOOK ignore !before",
+			"hook_cmd @emit before",
+			"hook_cmd @emit !before",
 			"global_error_obj 15");
 
 		await Assert.That(import.Hooks.HookObject).IsEqualTo(12);
 		await Assert.That(import.Hooks.GlobalErrorObject).IsEqualTo(15);
 		await Assert.That(import.Hooks.Commands.Count).IsEqualTo(2);
 		await Assert.That(import.Hooks.Commands[0].Command).IsEqualTo("look");
-		await Assert.That(import.Hooks.Commands[0].Hooks).IsEquivalentTo(["before", "after", "ignore"]);
+		await Assert.That(import.Hooks.Commands[0].Hooks).IsEquivalentTo(["after", "ignore"]);
 		await Assert.That(import.Hooks.Commands[1].Hooks).IsEquivalentTo(["permit"]);
 		await Assert.That(import.Unrecognized).DoesNotContain("hook_cmd").And.DoesNotContain("hook_obj")
 			.And.DoesNotContain("global_error_obj");

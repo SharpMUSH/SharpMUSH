@@ -12,11 +12,12 @@ namespace SharpMUSH.Tests.Services;
 /// <summary>
 /// TinyMUX and RhostMUSH keep a failed lock's messages in attributes of their own (DFAIL, GFAIL, ...). The
 /// import names each as the attribute SharpMUSH's failed lock reads (<see cref="LockMessages"/>), so the
-/// message still shows; TOFAIL has no teleport-out lock to read it and keeps its name.
+/// message still shows; TOFAIL has no teleport-out lock to read it and keeps its name. RhostMUSH never uses
+/// its PFAIL (attribute 78), and the import skips it.
 /// </summary>
 public class ImportedLockFailureAttributeTests
 {
-	public static IEnumerable<(int Mux, int Rhost, LockType Lock, int Which)> Renames()
+	public static IEnumerable<(int Mux, int? Rhost, LockType Lock, int Which)> Renames()
 	{
 		yield return (135, 165, LockType.Drop, 0);
 		yield return (136, 166, LockType.Drop, 1);
@@ -31,19 +32,26 @@ public class ImportedLockFailureAttributeTests
 		yield return (139, 169, LockType.Teleport, 1);
 		yield return (140, 170, LockType.Teleport, 2);
 		yield return (128, RhostNameTables.InlineStart + 2, LockType.Mail, 0);
-		yield return (78, 78, LockType.Page, 0);
+		yield return (78, null, LockType.Page, 0);
 	}
 
 	[Test]
 	[MethodDataSource(nameof(Renames))]
-	public async Task EachMessageGetsTheNameItsLockReads(int mux, int rhost, LockType lockType, int which)
+	public async Task EachMessageGetsTheNameItsLockReads(int mux, int? rhost, LockType lockType, int which)
 	{
 		var (what, owhat, awhat) = LockMessages.FailureAttributes(lockType);
 		var expected = which switch { 0 => what, 1 => owhat, _ => awhat };
 
 		await Assert.That(TinyMuxNames.Attributes[mux]).IsEqualTo(expected);
-		await Assert.That(RhostNameTables.RenamedAttributes[rhost]).IsEqualTo(expected);
+		if (rhost is int rhostNumber)
+		{
+			await Assert.That(RhostNameTables.RenamedAttributes[rhostNumber]).IsEqualTo(expected);
+		}
 	}
+
+	[Test]
+	public async Task RhostsUnusedPageFailureIsSkipped()
+		=> await Assert.That(RhostNameTables.SkippedAttributes.ContainsKey(78)).IsTrue();
 
 	[Test]
 	public async Task TheTeleportOutMessagesKeepTheirNames()

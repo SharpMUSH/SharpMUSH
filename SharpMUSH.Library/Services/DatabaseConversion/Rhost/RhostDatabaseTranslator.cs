@@ -4,6 +4,7 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Services.DatabaseConversion.Softcode;
+using SharpMUSH.Library.Services.Passwords;
 using SharpMUSH.Library.Softcode;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion.Rhost;
@@ -749,7 +750,7 @@ public static partial class RhostDatabaseTranslator
 			_ when stored.StartsWith("$6$", StringComparison.Ordinal) => "SHA-512-crypt" + Rehashed,
 			_ when stored.StartsWith("$5$", StringComparison.Ordinal) => "SHA-256-crypt" + Rehashed,
 			_ when stored.StartsWith("$1$", StringComparison.Ordinal) => "MD5-crypt" + Rehashed,
-			_ when stored.StartsWith("$2", StringComparison.Ordinal) => "bcrypt" + Rehashed,
+			_ when PennMUSHPasswords.IsBcrypt(stored) => "bcrypt" + Rehashed,
 			_ when stored.StartsWith("$SHA1$", StringComparison.OrdinalIgnoreCase) => "TinyMUX SHA-1" + Rehashed,
 			_ when stored.StartsWith('$') => "an unrecognised $-form" + Unchecked,
 			_ when stored.Length == 13 && stored.StartsWith("XX", StringComparison.Ordinal) => "DES crypt" + Rehashed,

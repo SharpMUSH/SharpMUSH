@@ -445,7 +445,7 @@ public static class RhostNameTables
 		[220] = "MONIKER", [InlineStart + 3] = LiveWire.AttributeName,
 		// The lock-failure messages, under the names SharpMUSH's failed locks read (LockMessages). Tofail and
 		// its siblings keep their names: SharpMUSH has no teleport-out lock for them to hang on.
-		[78] = "PAGE_LOCK`FAILURE", [InlineStart + 2] = "MAIL_LOCK`FAILURE", [159] = "GIVE_LOCK`FAILURE",
+		[InlineStart + 2] = "MAIL_LOCK`FAILURE", [159] = "GIVE_LOCK`FAILURE",
 		[160] = "GIVE_LOCK`OFAILURE", [161] = "GIVE_LOCK`AFAILURE", [162] = "RECEIVE_LOCK`FAILURE",
 		[163] = "RECEIVE_LOCK`OFAILURE", [164] = "RECEIVE_LOCK`AFAILURE", [165] = "DROP_LOCK`FAILURE",
 		[166] = "DROP_LOCK`OFAILURE", [167] = "DROP_LOCK`AFAILURE", [168] = "TELEPORT_LOCK`FAILURE",

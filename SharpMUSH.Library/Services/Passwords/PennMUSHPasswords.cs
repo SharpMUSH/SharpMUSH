@@ -139,6 +139,9 @@ internal static partial class PennMUSHPasswords
 	[GeneratedRegex(@"^\$2[abxy]\$(0[4-9]|[12][0-9]|3[01])\$[./A-Za-z0-9]{53}$")]
 	private static partial Regex BcryptPattern();
 
+	/// <summary>Whether <paramref name="stored"/> is a bcrypt value this server can check.</summary>
+	internal static bool IsBcrypt(string stored) => BcryptPattern().IsMatch(stored);
+
 	/// <summary>
 	/// bcrypt, as <c>crypt(3)</c> writes it. Like every bcrypt, it reads only the first 72 bytes of the
 	/// password.

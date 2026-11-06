@@ -125,8 +125,8 @@ public sealed record HookDirectives(int? HookObject, IReadOnlyList<HookCommandDi
 	/// <summary>
 	/// Reads the hook directives among <paramref name="lines"/>, each a directive name and its value. The last
 	/// <c>hook_obj</c> and <c>global_error_obj</c> win, as any repeated directive does; a <c>hook_cmd</c> naming a command
-	/// again adds its hooks to the earlier line's. An object that is not a dbref (<c>#12</c> or <c>12</c>), or is
-	/// negative, names none.
+	/// again adds its hooks to the earlier line's, and a hook written <c>!before</c> takes that hook off. An object
+	/// that is not a dbref (<c>#12</c> or <c>12</c>), or is negative, names none.
 	/// </summary>
 	public static HookDirectives Read(IEnumerable<(string Name, string Value)> lines)
 	{
@@ -150,20 +150,33 @@ public sealed record HookDirectives(int? HookObject, IReadOnlyList<HookCommandDi
 					continue;
 				}
 
-				var hooks = words.Skip(1).Select(word => word.ToLowerInvariant());
 				var earlier = commands.FindIndex(command => command.Command.Equals(words[0], StringComparison.OrdinalIgnoreCase));
+				var hooks = earlier < 0 ? [] : commands[earlier].Hooks.ToList();
+				foreach (var word in words.Skip(1).Select(word => word.ToLowerInvariant()))
+				{
+					// TinyMUX's cf_hook: "!before" takes a hook off that an earlier line put on.
+					if (word is ['!', _, ..])
+					{
+						hooks.Remove(word[1..]);
+					}
+					else if (!hooks.Contains(word))
+					{
+						hooks.Add(word);
+					}
+				}
+
 				if (earlier < 0)
 				{
-					commands.Add(new HookCommandDirective(words[0], [.. hooks.Distinct()]));
+					commands.Add(new HookCommandDirective(words[0], hooks));
 				}
 				else
 				{
-					commands[earlier] = commands[earlier] with { Hooks = [.. commands[earlier].Hooks.Concat(hooks).Distinct()] };
+					commands[earlier] = commands[earlier] with { Hooks = hooks };
 				}
 			}
 		}
 
-		return new HookDirectives(hookObject, commands, errorObject);
+		return new HookDirectives(hookObject, [.. commands.Where(command => command.Hooks.Count > 0)], errorObject);
 	}
 
 	private static int? Dbref(string value)
