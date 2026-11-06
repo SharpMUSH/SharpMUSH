@@ -245,8 +245,9 @@ public sealed class ObjectGrants
 	/// RhostMUSH's NOFORCE at a level stops forcers ranked at or below it. Held otherwise, it shields only from actors
 	/// ranked below this holder, so peers keep what they had.
 	/// </summary>
+	/// <remarks>Only what a role or override allows by name counts: #1's and administrators' blanket grant shields nothing.</remarks>
 	public bool Protects(string scope, int actorRank)
-		=> Explain(scope, actorRank) is { Allowed: true } why && (why.Reach is not null || actorRank < Rank);
+		=> Resolver.Explain(_named, scope, actorRank) is { Allowed: true } why && (why.Reach is not null || actorRank < Rank);
 
 	/// <summary>
 	/// Grants for a context resolved elsewhere (an account in the portal), whose roles' sources are not
