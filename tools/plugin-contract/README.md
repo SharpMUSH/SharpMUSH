@@ -1,7 +1,7 @@
 # Plugin contract check
 
-The plugin contract is the public surface of the `SharpMUSH.Library` package (with the `SharpMUSH.Contracts`,
-`SharpMUSH.Configuration` and `SharpMUSH.Parser.Generated` assemblies it bundles), which C# plugins compile
+The plugin contract is the public surface of the `SharpMUSH.Library` package (with the project assemblies it bundles,
+such as `SharpMUSH.Contracts` and `SharpMUSH.Configuration`), which C# plugins compile
 against. Its version is `PluginContractVersion.Current`, and the loader accepts a plugin built against the same
 or an earlier version with the same major. So within a major the contract may grow, but nothing a plugin could
 bind to may be removed or changed.
@@ -26,12 +26,22 @@ against the old major is then refused at load with a clear reason instead of fai
 
 Adding a member to a public interface counts as a break, because a plugin may implement that interface.
 
+A break cannot be suppressed: the check fails when `SharpMUSH.Library.csproj` or `Directory.Build.*` names a `CP` or
+`PKV` code, or when the project holds a compatibility suppression file.
+
+Additions are not checked. A plugin that uses a member added after 3.0.0 still loads on a 3.0.0 server and fails
+there when it calls it, so a release that adds to the contract bumps the minor, and such a plugin declares that
+minor (`>=3.1`).
+
 ## The baseline
 
 `baseline-commit` holds the commit whose package is the frozen surface; its contract version is read from that
 commit's `PluginContractVersion.cs`. While `PluginContractVersion.Current` has a newer major than the baseline,
 the check passes with a notice. Once the release that ships the new major is tagged, point `baseline-commit` at
 it.
+
+The baseline is packed with its own `global.json`. When the SDK moves to a new major, move `baseline-commit` to a
+commit that builds on it.
 
 Moving `baseline-commit` within the same major accepts every break since the old commit, so a pull request that
 changes it says why.

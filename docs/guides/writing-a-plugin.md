@@ -121,7 +121,8 @@ Place a `plugin.json` next to the built DLL. It drives discovery order and compa
 - `id` — must equal your plugin's runtime `Id`; a plugin whose `Id` differs is not loaded.
 - `minServerVersion` — the plugin contract version range you need. The loader checks it at start and reports
   the plugin as Incompatible when the server does not fit. Within a major version the contract only grows, so a
-  plugin built against 3.0 loads on every 3.x server; a server with another major refuses it.
+  plugin that declares `>=3.0` and uses only what 3.0 has loads on every 3.x server; a server with another major
+  refuses it. A plugin that uses something added in 3.1 declares `>=3.1`.
 - `dependencies` — ids of plugins that must load **before** this one (topologically ordered; cycles are
   detected and skipped).
 - `priority` — tie-break among plugins with no dependency relationship (lower loads first).

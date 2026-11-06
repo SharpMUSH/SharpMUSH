@@ -44,6 +44,13 @@ for project in "$library_project" "$generator_project"; do
 		|| fail "$project has <Version>$version</Version>, but PluginContractVersion.Current is $current. Their majors must match."
 done
 
+# Package validation honours NoWarn and CompatibilitySuppressions.xml, either of which would let a break pass.
+suppressed="$(grep -lE '(CP|PKV)[0-9]{4}' "$library_project" Directory.Build.props Directory.Build.targets 2>/dev/null || true)"
+[[ -z "$suppressed" ]] || fail "$(tr '\n' ' ' <<< "$suppressed")names a package validation code (CP/PKV). A break to the plugin contract cannot be suppressed."
+if compgen -G "SharpMUSH.Library/*.xml" > /dev/null && grep -lq "<Suppression>" SharpMUSH.Library/*.xml 2>/dev/null; then
+	fail "SharpMUSH.Library carries a compatibility suppression file. A break to the plugin contract cannot be suppressed."
+fi
+
 if ! git cat-file -e "$baseline_commit^{commit}" 2>/dev/null; then
 	git fetch --quiet --no-tags --depth=1 origin "$baseline_commit"
 fi
