@@ -5,7 +5,7 @@
 	justify-content: center;
 	max-width: 100vw;
 	max-height: 100dvh;
-	padding: 16px;
+	padding: var(--space-5);
 	box-sizing: border-box;
 	outline: none;
 }
@@ -13,10 +13,10 @@
 .kit-picker-frame {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: var(--space-4);
 	width: min(100%, 40rem);
 	max-height: calc(100dvh - 32px);
-	padding: 16px;
+	padding: var(--space-5);
 	box-sizing: border-box;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-card);
@@ -27,11 +27,11 @@
 .kit-picker-bar {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 }
 
 .kit-picker-title {
-	font-size: 16px;
+	font-size: var(--text-md);
 	font-weight: 600;
 	color: var(--text);
 }
@@ -49,14 +49,14 @@
 
 .kit-picker-label {
 	font-family: var(--font-mono);
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .kit-picker-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-	gap: 8px;
+	gap: var(--space-3);
 }
 
 .kit-picker-item {
@@ -102,9 +102,9 @@
 	justify-content: center;
 	width: 100%;
 	height: 100%;
-	padding: 4px;
+	padding: var(--space-2);
 	box-sizing: border-box;
-	font-size: 11px;
+	font-size: var(--text-xs);
 	color: var(--text-dim);
 	text-align: center;
 	overflow: hidden;

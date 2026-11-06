@@ -731,7 +731,7 @@ public partial class Commands
 			if (suggestionData.Categories[category].Add(word))
 			{
 				await ObjectDataService.SetExpandedServerDataAsync(suggestionData, ignoreNull: true);
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestAddedWordToCategoryFormat), executor, word, category);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestionWordAdded), executor);
 			}
 			else
 			{
@@ -766,7 +766,7 @@ public partial class Commands
 				}
 
 				await ObjectDataService.SetExpandedServerDataAsync(suggestionData, ignoreNull: true);
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestRemovedWordFromCategoryFormat), executor, word, category);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestionWordDeleted), executor);
 			}
 			else
 			{

@@ -1,15 +1,15 @@
 .adm-audit-body {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	padding: 14px 16px 16px;
+	gap: var(--space-4);
+	padding: var(--space-5) var(--space-5) var(--space-5);
 }
 
 .adm-audit-filters {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 12px;
+	gap: var(--space-4);
 }
 
 .adm-audit-filters ::deep .adm-audit-select {
@@ -35,7 +35,7 @@
 .adm-audit-body ::deep .adm-audit-mono,
 .adm-audit-mono {
 	font-family: var(--font-mono);
-	font-size: 12px;
+	font-size: var(--text-sm);
 }
 
 .adm-audit-body ::deep .adm-audit-details {
@@ -44,7 +44,7 @@
 
 .adm-audit-dim {
 	display: block;
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-faint);
 }
 
@@ -75,19 +75,19 @@
 	.adm-audit-body ::deep .adm-audit-table tr {
 		display: block;
 		border-bottom: 1px solid var(--border);
-		padding-block: 0.5rem;
+		padding-block: var(--space-3);
 	}
 
 	.adm-audit-body ::deep .adm-audit-table td {
 		display: grid;
 		grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
-		gap: 0.5rem;
+		gap: var(--space-3);
 		border: none;
 	}
 
 	.adm-audit-body ::deep .adm-audit-table td::before {
 		content: attr(data-label);
 		color: var(--text-dim);
-		font-size: 0.8125rem;
+		font-size: var(--text-sm);
 	}
 }

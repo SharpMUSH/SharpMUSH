@@ -54,7 +54,7 @@
     else
     {
         <div class="wikihist-table">
-        <div style="display:grid;grid-template-columns:36px 36px 1fr 100px 130px 80px 80px;gap:0.25rem;align-items:center;padding:0.375rem 0.625rem;border-bottom:2px solid var(--border);background:var(--surface-3);border-radius:var(--radius) var(--radius) 0 0;">
+        <div style="display:grid;grid-template-columns:36px 36px 1fr 100px 130px 80px 80px;gap:var(--space-2);align-items:center;padding:var(--space-3) var(--space-4);border-bottom:2px solid var(--border);background:var(--surface-3);border-radius:var(--radius) var(--radius) 0 0;">
             <MudText Class="section-kicker" Style="grid-column:1;text-align:center;">@Loc["WkColOld"]</MudText>
             <MudText Class="section-kicker" Style="grid-column:2;text-align:center;">@Loc["WkColNew"]</MudText>
             <MudText Class="section-kicker" Style="grid-column:3;">@Loc["WkColTimestampSummary"]</MudText>
@@ -95,34 +95,34 @@
                     </div>
 
                     <div style="min-width:0;">
-                        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-                            <MudText Style="font-size:0.8125rem;font-weight:600;">
+                        <div style="display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;">
+                            <MudText Style="font-size:var(--text-sm);font-weight:600;">
                                 @DateDisplay.DateTime(rev.Timestamp)
                             </MudText>
                             @if (isCurrent)
                             {
                                 <MudChip T="string" Size="Size.Small" Color="Color.Primary"
-                                         Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">@Loc["WkCurrentRevision"]</MudChip>
+                                         Style="height:18px;font-size:var(--text-xs);padding:0 var(--space-2);">@Loc["WkCurrentRevision"]</MudChip>
                             }
                         </div>
                         @if (!string.IsNullOrWhiteSpace(rev.EditSummary))
                         {
-                            <MudText Style="font-size:0.75rem;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            <MudText Style="font-size:var(--text-sm);color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                                 @rev.EditSummary
                             </MudText>
                         }
                     </div>
 
-                    <div style="display:flex;align-items:center;gap:0.375rem;">
+                    <div style="display:flex;align-items:center;gap:var(--space-3);">
                         <CharacterAvatar Name="@(rev.EditorName ?? rev.EditorDbref)" Character="@rev.EditorDbref"
-                                         Style="width:24px;height:24px;border-radius:50%;font-size:0.6875rem;" />
-                        <MudText Style="font-size:0.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="@rev.EditorDbref">
+                                         Style="width:24px;height:24px;border-radius:50%;font-size:var(--text-xs);" />
+                        <MudText Style="font-size:var(--text-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="@rev.EditorDbref">
                             @(rev.EditorName ?? rev.EditorDbref)
                         </MudText>
                     </div>
 
-                    <div style="display:flex;flex-direction:column;gap:0.125rem;align-items:flex-start;">
-                        <MudText Style="font-size:0.6875rem;color:var(--text-faint);font-family:var(--font-mono);">
+                    <div style="display:flex;flex-direction:column;gap:var(--space-1);align-items:flex-start;">
+                        <MudText Style="font-size:var(--text-xs);color:var(--text-faint);font-family:var(--font-mono);">
                             @rev.MarkdownSource.Length.ToString("N0") B
                         </MudText>
                         @if (deltaBytes != 0)
@@ -134,7 +134,7 @@
                         }
                     </div>
 
-                    <div style="display:flex;gap:0.25rem;align-items:center;justify-content:center;">
+                    <div style="display:flex;gap:var(--space-2);align-items:center;justify-content:center;">
                         <MudTooltip Text="@Loc["WkViewRevision"]">
                             <MudIconButton aria-label="@Loc["WkViewRevision"]" Icon="@Icons.Material.Filled.Visibility" Size="Size.Small"
                                            Href="@WithLang($"/wiki/{Ns}/{Slug}")" />

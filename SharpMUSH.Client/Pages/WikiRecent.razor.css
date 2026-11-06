@@ -1,12 +1,12 @@
 .wiki-recent {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
+	gap: var(--space-5);
 }
 
 .wiki-recent-list {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
-	padding: 8px;
+	gap: var(--space-1);
+	padding: var(--space-3);
 }

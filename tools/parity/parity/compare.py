@@ -63,10 +63,14 @@ def load_allowlist(path: Path, profile: Path = PROFILE) -> list[Entry]:
     data = json.loads(path.read_text(encoding="utf-8"))
     headings = profile_headings(profile)
     out = []
+    ids = set()
     for e in data["entries"]:
         for required in ("id", "scenario", "case", "reason", "tracking", "profile"):
             if not e.get(required):
                 raise ValueError(f"{path}: entry {e.get('id', e)!r} is missing '{required}'")
+        if e["id"] in ids:
+            raise ValueError(f"{path}: entry id {e['id']!r} is used twice")
+        ids.add(e["id"])
         if e.get("step") is not None and not e.get("command"):
             raise ValueError(f"{path}: entry {e['id']!r} names a step, so it needs that step's 'command'")
         if (e.get("sharp") is None) != (e.get("penn") is None):

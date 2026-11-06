@@ -1,27 +1,27 @@
 .config-section {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) var(--aside-w);
-	gap: 14px;
+	gap: var(--space-5);
 	align-items: start;
 }
 
 .config-section-main {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: var(--space-4);
 	min-width: 0;
 }
 
 .config-section-content {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: var(--space-4);
 }
 
 .config-section-aside {
 	display: flex;
 	flex-direction: column;
-	gap: 14px;
+	gap: var(--space-5);
 	position: sticky;
 	top: 12px;
 }
@@ -30,7 +30,7 @@
 .cfg-group {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--space-2);
 	scroll-margin-top: 12px;
 }
 
@@ -43,7 +43,7 @@
 .cfg-unsaved-row {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: var(--space-4);
 	flex-wrap: wrap;
 }
 
@@ -52,17 +52,17 @@
 }
 
 .cfg-unsaved-text {
-	font-size: 14px;
+	font-size: var(--text-base);
 	color: var(--text);
 }
 
 .cfg-count {
 	height: 22px;
-	padding: 0 8px;
+	padding: 0 var(--space-3);
 	border-radius: 11px;
 	background: var(--warn-tint);
 	color: var(--warn);
-	font-size: 12px;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	display: inline-flex;
 	align-items: center;
@@ -76,18 +76,18 @@
 .cfg-toc-list {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-1);
 }
 
 .cfg-toc {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 	height: 28px;
-	padding: 0 8px 0 10px;
+	padding: 0 var(--space-3) 0 var(--space-4);
 	border-left: 2px solid transparent;
 	color: var(--text-dim);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	text-decoration: none;
 	border-radius: 0 6px 6px 0;
 }
@@ -116,7 +116,7 @@
 }
 
 .cfg-toc-count {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 

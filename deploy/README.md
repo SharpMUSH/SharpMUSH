@@ -767,7 +767,7 @@ one, upgrading as it starts; it refuses a world written by a newer server and na
 the log. Rolling an image back after an upgrade that moved the format therefore stops at startup. Run
 the newer image again, or restore a backup taken before the upgrade.
 
-The Caddy `docker-compose.prod.yml` uses `:latest` image names, includes local build definitions and does not run Watchtower. From `deploy/`, a reviewed source update uses `docker compose -f docker-compose.prod.yml up -d --build`; schedule it because recreating the socket owner disconnects players. Labels alone do not install Watchtower. Include any analysis overlay in recreations. The Cloudflare behavior below applies only to `docker-compose.cloudflare.yml`.
+The Caddy `docker-compose.prod.yml` pins one image tag, includes local build definitions and does not run Watchtower. From `deploy/`, a reviewed source update uses `docker compose -f docker-compose.prod.yml up -d --build`; schedule it because recreating the socket owner disconnects players. Labels alone do not install Watchtower. Include any analysis overlay in recreations. The Cloudflare behavior below applies only to `docker-compose.cloudflare.yml`.
 
 
 **The Cloudflare stack updates itself.** Every merge to `main` runs the full test suite and then

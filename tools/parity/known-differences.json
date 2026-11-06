@@ -84,7 +84,7 @@
       "command": "@find Widget"
     },
     {
-      "id": "KD-0011",
+      "id": "KD-0005",
       "scenario": "10-player-commands",
       "case": "obj.create",
       "step": 5,
@@ -492,6 +492,78 @@
       "command": "think mail(*Bob)",
       "sharp": "#-1 PERMISSION DENIED: NOT CONTROLLED",
       "penn": "#-1 PERMISSION DENIED"
+    },
+    {
+      "id": "KD-0043",
+      "scenario": "10-player-commands",
+      "case": "obj.attrs",
+      "step": 0,
+      "reason": "SharpMUSH says why after \"Permission denied.\"; `sharp` and `penn` pin the line so the reason is the only difference accepted.",
+      "tracking": "#2427",
+      "profile": "A refusal says why",
+      "command": "&FOO Widget=bar",
+      "sharp": "Permission denied. You do not control Widget.",
+      "penn": "Permission denied."
+    },
+    {
+      "id": "KD-0044",
+      "scenario": "10-player-commands",
+      "case": "obj.attrs",
+      "step": 2,
+      "reason": "SharpMUSH says why after \"Permission denied.\"; `sharp` and `penn` pin the line so the reason is the only difference accepted.",
+      "tracking": "#2427",
+      "profile": "A refusal says why",
+      "command": "&FOO Widget=",
+      "sharp": "Permission denied. You do not control Widget.",
+      "penn": "Permission denied."
+    },
+    {
+      "id": "KD-0045",
+      "scenario": "10-player-commands",
+      "case": "obj.inventory",
+      "step": 0,
+      "reason": "PennMUSH's do_inventory ends with do_score's \"You have N Pennies.\" (src/look.c:1056, 991); SharpMUSH keeps no penny balance, so there is no line to print. `sharp` and `penn` pin the listing so that line is the only difference accepted.",
+      "tracking": "#1134",
+      "profile": "`money()` is not supported",
+      "command": "inventory",
+      "sharp": "You are carrying:\nWidget",
+      "penn": "You are carrying:\nWidget\nYou have 150 Pennies."
+    },
+    {
+      "id": "KD-0046",
+      "scenario": "10-player-commands",
+      "case": "obj.create",
+      "step": 6,
+      "reason": "Follows from KD-0005: PennMUSH refused the player's @destroy, so Gadget is intact; SharpMUSH destroyed it, so it is GOING and its flags show G. `sharp` and `penn` pin the look so the G is the only difference accepted.",
+      "tracking": "#1134",
+      "profile": "A new game restricts no commands",
+      "command": "look Gadget",
+      "sharp": "Gadget(#NEW1TGn)\nA gleaming gizmo.",
+      "penn": "Gadget(#NEW1Tn)\nA gleaming gizmo."
+    },
+    {
+      "id": "KD-0047",
+      "scenario": "30-softcode",
+      "case": "sc.identity",
+      "step": 1,
+      "reason": "flags() with no argument is list_all_flags' letters (src/fundb.c:518-520); SharpMUSH's SCENE_ROOM flag has the letter S, which PennMUSH does not define. `sharp` and `penn` pin the line so that letter is the only difference accepted.",
+      "tracking": "#1134",
+      "profile": "SharpMUSH-only flags and powers",
+      "command": "think [name(%!)] [hasflag(%#,WIZARD)] [flags()] [type(%#)]",
+      "sharp": "Wiz 1 AAaCxCDbdeFFghHJJjklL^mMm~\"nNNwoOipQrXSZSsxtIUu?vVWZ PLAYER",
+      "penn": "Wiz 1 AAaCxCDbdeFFghHJJjklL^mMm~\"nNNwoOipQrXZSsxtIUu?vVWZ PLAYER"
+    },
+    {
+      "id": "KD-0048",
+      "scenario": "25-requested-dbref",
+      "case": "dbref.holes",
+      "step": 3,
+      "reason": "Making the holes: SharpMUSH keeps a destroyed object on its recover list, so @purge/confirm (SharpMUSH's own switch) removes it, and PennMUSH, which has no recover list, does not know the switch; PennMUSH also returns a deposit SharpMUSH never charged, as it keeps no pennies. `sharp` and `penn` pin the whole step.",
+      "tracking": "#1084",
+      "profile": "A destroyed object's dbref is reused late",
+      "command": "@dolist/inline [v(HOLES)]={@recycle ##;@recycle ##;@purge/confirm ##}",
+      "sharp": "RqA(#NEW1Tn) is scheduled to be destroyed.\nHalted: RqA(#NEW1)\nDestroyed.\nRqA(#NEW1) is gone for good.\nRqB(#NEW2Tn) is scheduled to be destroyed.\nHalted: RqB(#NEW2)\nDestroyed.\nRqB(#NEW2) is gone for good.\nRqC(#NEW3Tn) is scheduled to be destroyed.\nHalted: RqC(#NEW3)\nDestroyed.\nRqC(#NEW3) is gone for good.\nRqD(#NEW4Tn) is scheduled to be destroyed.\nHalted: RqD(#NEW4)\nDestroyed.\nRqD(#NEW4) is gone for good.\nRqE(#NEW5Tn) is scheduled to be destroyed.\nHalted: RqE(#NEW5)\nDestroyed.\nRqE(#NEW5) is gone for good.\nRqF(#NEW6Tn) is scheduled to be destroyed.\nHalted: RqF(#NEW6)\nDestroyed.\nRqF(#NEW6) is gone for good.\nRqG(#NEW7Tn) is scheduled to be destroyed.\nHalted: RqG(#NEW7)\nDestroyed.\nRqG(#NEW7) is gone for good.\nRqH(#NEW8Tn) is scheduled to be destroyed.\nHalted: RqH(#NEW8)\nDestroyed.\nRqH(#NEW8) is gone for good.\nRqI(#NEW9Tn) is scheduled to be destroyed.\nHalted: RqI(#NEW9)\nDestroyed.\nRqI(#NEW9) is gone for good.\nRqJ(#NEW10Tn) is scheduled to be destroyed.\nHalted: RqJ(#NEW10)\nDestroyed.\nRqJ(#NEW10) is gone for good.\nRqK(#NEW11Tn) is scheduled to be destroyed.\nHalted: RqK(#NEW11)\nDestroyed.\nRqK(#NEW11) is gone for good.\nRqL(#NEW12Tn) is scheduled to be destroyed.\nHalted: RqL(#NEW12)\nDestroyed.\nRqL(#NEW12) is gone for good.\nRqM(#NEW13Tn) is scheduled to be destroyed.\nHalted: RqM(#NEW13)\nDestroyed.\nRqM(#NEW13) is gone for good.\nRqN(#NEW14Tn) is scheduled to be destroyed.\nHalted: RqN(#NEW14)\nDestroyed.\nRqN(#NEW14) is gone for good.\nRqO(#NEW15Tn) is scheduled to be destroyed.\nHalted: RqO(#NEW15)\nDestroyed.\nRqO(#NEW15) is gone for good.\nRqP(#NEW16Tn) is scheduled to be destroyed.\nHalted: RqP(#NEW16)\nDestroyed.\nRqP(#NEW16) is gone for good.\nRqQ(#NEW17Tn) is scheduled to be destroyed.\nHalted: RqQ(#NEW17)\nDestroyed.\nRqQ(#NEW17) is gone for good.",
+      "penn": "RqA(#NEW1Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqA(#NEW1TGn).\nHalted: RqA(#NEW1)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqB(#NEW2Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqB(#NEW2TGn).\nHalted: RqB(#NEW2)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqC(#NEW3Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqC(#NEW3TGn).\nHalted: RqC(#NEW3)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqD(#NEW4Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqD(#NEW4TGn).\nHalted: RqD(#NEW4)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqE(#NEW5Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqE(#NEW5TGn).\nHalted: RqE(#NEW5)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqF(#NEW6Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqF(#NEW6TGn).\nHalted: RqF(#NEW6)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqG(#NEW7Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqG(#NEW7TGn).\nHalted: RqG(#NEW7)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqH(#NEW8Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqH(#NEW8TGn).\nHalted: RqH(#NEW8)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqI(#NEW9Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqI(#NEW9TGn).\nHalted: RqI(#NEW9)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqJ(#NEW10Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqJ(#NEW10TGn).\nHalted: RqJ(#NEW10)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqK(#NEW11Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqK(#NEW11TGn).\nHalted: RqK(#NEW11)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqL(#NEW12Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqL(#NEW12TGn).\nHalted: RqL(#NEW12)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqM(#NEW13Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqM(#NEW13TGn).\nHalted: RqM(#NEW13)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqN(#NEW14Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqN(#NEW14TGn).\nHalted: RqN(#NEW14)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqO(#NEW15Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqO(#NEW15TGn).\nHalted: RqO(#NEW15)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqP(#NEW16Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqP(#NEW16TGn).\nHalted: RqP(#NEW16)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqQ(#NEW17Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqQ(#NEW17TGn).\nHalted: RqQ(#NEW17)\nDestroyed.\n@PURGE doesn't know switch CONFIRM."
     }
   ]
 }

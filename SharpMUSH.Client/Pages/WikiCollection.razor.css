@@ -1,5 +1,5 @@
-.wiki-collection-route { min-width: 0; padding: 1.5rem; }
+.wiki-collection-route { min-width: 0; padding: var(--space-6); }
 
 @container page (max-width: 48rem) {
-    .wiki-collection-route { padding: 1rem; }
+    .wiki-collection-route { padding: var(--space-5); }
 }

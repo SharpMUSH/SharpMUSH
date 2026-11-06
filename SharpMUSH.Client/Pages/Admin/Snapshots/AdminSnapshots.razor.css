@@ -1,15 +1,15 @@
 .snapshots-body {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 14px 16px 16px;
+    gap: var(--space-4);
+    padding: var(--space-5) var(--space-5) var(--space-5);
     min-width: 0;
 }
 
 .snapshots-lookup {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-4);
 }
 
 .snapshots pre {
@@ -45,6 +45,6 @@
 
     .snapshots ::deep table {
         min-width: 30rem;
-        font-size: 0.8125rem;
+        font-size: var(--text-sm);
     }
 }

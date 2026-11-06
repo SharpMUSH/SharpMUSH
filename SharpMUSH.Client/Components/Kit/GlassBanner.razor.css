@@ -82,7 +82,7 @@
 	bottom: 64px;
 	overflow: auto;
 	color: var(--text-over-image);
-	font-size: 14px;
+	font-size: var(--text-base);
 	line-height: 1.5;
 	text-shadow: var(--on-image-shadow);
 }
@@ -95,7 +95,7 @@
 	bottom: 14px;
 	display: flex;
 	align-items: flex-end;
-	gap: 16px;
+	gap: var(--space-5);
 	min-width: 0;
 }
 
@@ -115,7 +115,7 @@
 	flex: none;
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 }
 
 /* no image: a gradient on the subject's hue (the profile's fallback) */
@@ -127,7 +127,7 @@
 
 .kit-banner-kicker {
 	font-family: var(--font-mono);
-	font-size: 10px;
+	font-size: var(--text-xs);
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: var(--text-on-image);
@@ -140,7 +140,7 @@
 	font-style: var(--title-style);
 	letter-spacing: var(--title-tracking);
 	text-transform: var(--title-transform);
-	font-size: 17px;
+	font-size: var(--text-md);
 	line-height: 1.25;
 }
 
@@ -162,15 +162,15 @@
 }
 
 .kit-banner-text--hero .kit-banner-title {
-	font-size: 26px;
+	font-size: var(--text-xl);
 }
 
 .kit-banner-text--character .kit-banner-title {
-	font-size: 28px;
+	font-size: var(--text-2xl);
 }
 
 .kit-banner-secondary {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-on-image);
 	margin-top: 2px;
 }
@@ -180,7 +180,7 @@
 	top: 10px;
 	left: 10px;
 	display: flex;
-	gap: 6px;
+	gap: var(--space-3);
 }
 
 .kit-banner-actions {
@@ -188,7 +188,7 @@
 	top: 10px;
 	right: 10px;
 	display: flex;
-	gap: 6px;
+	gap: var(--space-3);
 }
 
 .kit-banner-strip {
@@ -231,8 +231,8 @@
 	inset: 0;
 	display: flex;
 	align-items: center;
-	gap: 10px;
-	padding: 0 6px 0 14px;
+	gap: var(--space-4);
+	padding: 0 var(--space-3) 0 var(--space-5);
 	color: var(--text-over-image);
 	text-shadow: var(--on-image-shadow);
 }
@@ -240,12 +240,12 @@
 .kit-banner-strip-title {
 	margin: 0;
 	font-family: inherit;
-	font-size: 14px;
+	font-size: var(--text-base);
 	font-weight: 700;
 }
 
 .kit-banner-strip-fact {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-on-image);
 }
 
@@ -256,7 +256,7 @@
 @container page (max-width: 48rem) {
 	.kit-banner-foot {
 		flex-wrap: wrap;
-		gap: 10px;
+		gap: var(--space-4);
 	}
 
 	.kit-banner-bottom-actions {

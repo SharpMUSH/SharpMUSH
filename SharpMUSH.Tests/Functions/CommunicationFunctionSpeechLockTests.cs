@@ -119,7 +119,7 @@ public class CommunicationFunctionSpeechLockTests
 		await Command(1, $"@teleport/silent {carrier}={scene.Room}");
 		await Command(1, $"@teleport/silent {scene.Speaker.DbRef}={carrier}");
 		await Command(1, $"@power {scene.Speaker.DbRef}=Can_Spoof");
-		await Assert.That(await Eval(scene.Speaker.Handle, "loc(me)")).IsEqualTo(carrier.ToString());
+		await Assert.That(await Eval(scene.Speaker.Handle, "objid(loc(me))")).IsEqualTo(carrier.ToString());
 		var immediate = Token("roomdefault");
 		await Command(scene.Speaker.Handle, $"@{name} {immediate}");
 		await AssertHeardAsync(carrier, immediate, "default emission targets the immediate carrier");
@@ -247,9 +247,9 @@ public class CommunicationFunctionSpeechLockTests
 		await Command(1, $"@teleport/silent {speaker.DbRef}={room}");
 		await Command(1, $"@teleport/silent {witness.DbRef}={room}");
 
-		await Assert.That(await Eval(speaker.Handle, "loc(me)")).IsEqualTo(room)
+		await Assert.That(await Eval(speaker.Handle, "objid(loc(me))")).IsEqualTo(room)
 			.Because("every assertion below is vacuous unless the speaker actually moved into the room");
-		await Assert.That(await Eval(witness.Handle, "loc(me)")).IsEqualTo(room)
+		await Assert.That(await Eval(witness.Handle, "objid(loc(me))")).IsEqualTo(room)
 			.Because("every assertion below is vacuous unless the witness actually moved into the room");
 
 		return new Scene(speaker, witness, room);
@@ -522,9 +522,9 @@ public class CommunicationFunctionSpeechLockTests
 		await Command(1, $"@teleport/silent {inside.DbRef}={box}");
 		await Command(1, $"@teleport/silent {outside.DbRef}={room}");
 
-		await Assert.That(await Eval(speaker.Handle, "loc(me)")).IsEqualTo(box.ToString())
+		await Assert.That(await Eval(speaker.Handle, "objid(loc(me))")).IsEqualTo(box.ToString())
 			.Because("the nesting assertions are vacuous unless the speaker is inside the box");
-		await Assert.That(await Eval(outside.Handle, "loc(me)")).IsEqualTo(room)
+		await Assert.That(await Eval(outside.Handle, "objid(loc(me))")).IsEqualTo(room)
 			.Because("the nesting assertions are vacuous unless the outside witness is in the room");
 
 		var emitToken = Token("NESTEMIT");

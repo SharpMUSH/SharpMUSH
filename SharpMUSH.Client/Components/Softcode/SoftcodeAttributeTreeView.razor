@@ -21,7 +21,7 @@
                     title="@Loc[isOpen ? "TermCollapseBranch" : "TermExpandBranch", node.Path]"
                     aria-label="@Loc[isOpen ? "TermCollapseBranch" : "TermExpandBranch", node.Path]"
                     @onclick="() => OnToggle.InvokeAsync(node.Path)">
-                <MudIcon Icon="@(isOpen ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)" Style="font-size:0.875rem;" />
+                <MudIcon Icon="@(isOpen ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)" Style="font-size:var(--text-base);" />
             </button>
         }
         else

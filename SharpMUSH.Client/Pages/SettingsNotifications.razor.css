@@ -1,7 +1,7 @@
 .settings-notify-page {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
+	gap: var(--space-5);
 	min-width: 0;
 	max-width: 48rem;
 }
@@ -9,8 +9,8 @@
 .settings-notify-body {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	padding: 16px;
+	gap: var(--space-4);
+	padding: var(--space-5);
 }
 
 .settings-notify-state {
@@ -20,7 +20,7 @@
 
 .settings-notify-note {
 	margin: 0;
-	font-size: 0.8125rem;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
@@ -29,13 +29,13 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 }
 
 .settings-notify-devices {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: var(--space-3);
 	margin: 0;
 	padding: 0;
 	list-style: none;
@@ -44,7 +44,7 @@
 .settings-notify-device {
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	gap: var(--space-4);
 	min-width: 0;
 }
 
@@ -59,17 +59,17 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 	color: var(--text);
 	overflow-wrap: anywhere;
 }
 
 @container page (max-width: 48rem) {
 	.settings-notify-body {
-		padding: 12px;
+		padding: var(--space-4);
 	}
 
 	.settings-notify-device {
-		gap: 8px;
+		gap: var(--space-3);
 	}
 }

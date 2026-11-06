@@ -279,7 +279,7 @@ public class TelDiagnosticTests
 		await Assert.That(errors).IsEmpty()
 			.Because("@tel by name should succeed when both objects are in player's inventory");
 
-		var srcLoc = await Eval($"loc({srcDbref})");
+		var srcLoc = await Eval($"objid(loc({srcDbref}))");
 		TestDiagnostics.WriteLine($"loc({srcDbref}) after @tel = {srcLoc}");
 		await Assert.That(srcLoc).IsEqualTo(dstDbref)
 			.Because("source should now be located inside destination after @tel");

@@ -3,9 +3,9 @@
 	isolation: isolate;
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	gap: var(--space-4);
 	min-width: 0;
-	padding: 16px;
+	padding: var(--space-5);
 	background: var(--card-bg);
 	border: var(--card-border-width) var(--card-border-style) var(--border);
 	border-radius: var(--radius-card);
@@ -27,14 +27,14 @@
 .kit-link-card-body {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-1);
 	flex: 1 1 auto;
 	min-width: 0;
 }
 
 .kit-link-card-title {
 	font-family: var(--font-display);
-	font-size: 15px;
+	font-size: var(--text-base);
 	font-weight: var(--font-title-weight);
 	font-style: var(--title-style);
 	letter-spacing: var(--title-tracking);
@@ -44,7 +44,7 @@
 }
 
 .kit-link-card-desc {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	line-height: 1.45;
 	color: var(--text-dim);
 }
@@ -62,6 +62,6 @@
 
 @container page (max-width: 48rem) {
 	.kit-link-card {
-		padding: 12px 14px;
+		padding: var(--space-4) var(--space-5);
 	}
 }

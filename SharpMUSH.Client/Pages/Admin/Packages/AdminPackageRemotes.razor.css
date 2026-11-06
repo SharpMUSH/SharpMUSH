@@ -1,13 +1,13 @@
 .pkg-cols {
     display: grid;
     grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-    gap: 1rem;
+    gap: var(--space-5);
     align-items: start;
 }
-.pkg-card-body { padding: 14px 16px 16px; }
+.pkg-card-body { padding: var(--space-5) var(--space-5) var(--space-5); }
 .pkg-card-body ::deep .pkg-remotes-table { background: transparent; }
 .pkg-listing {
-    padding: 12px;
+    padding: var(--space-4);
     margin-bottom: 8px;
     background: var(--surface-2);
     border: 1px solid var(--border-soft);
@@ -27,20 +27,20 @@
     .pkg-card-body ::deep .pkg-remotes-table tr {
         display: block;
         border-bottom: 1px solid var(--border-soft);
-        padding-block: 0.5rem;
+        padding-block: var(--space-3);
     }
 
     .pkg-card-body ::deep .pkg-remotes-table td {
         display: grid;
         grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
-        gap: 0.5rem;
+        gap: var(--space-3);
         border: none;
     }
 
     .pkg-card-body ::deep .pkg-remotes-table td::before {
         content: attr(data-label);
         color: var(--text-dim);
-        font-size: 0.8125rem;
+        font-size: var(--text-sm);
     }
 
     .pkg-card-body ::deep .pkg-remotes-table td:last-child {

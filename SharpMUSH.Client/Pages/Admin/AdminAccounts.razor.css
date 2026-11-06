@@ -1,8 +1,8 @@
 .accounts-body {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	padding: 14px 16px 16px;
+	gap: var(--space-4);
+	padding: var(--space-5) var(--space-5) var(--space-5);
 }
 
 .accounts-body ::deep .accounts-table {
@@ -17,20 +17,20 @@
 	.accounts-body ::deep .accounts-table tr {
 		display: block;
 		border-bottom: 1px solid var(--border);
-		padding-block: 0.5rem;
+		padding-block: var(--space-3);
 	}
 
 	.accounts-body ::deep .accounts-table td {
 		display: grid;
 		grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
-		gap: 0.5rem;
+		gap: var(--space-3);
 		border: none;
 	}
 
 	.accounts-body ::deep .accounts-table td::before {
 		content: attr(data-label);
 		color: var(--text-dim);
-		font-size: 0.8125rem;
+		font-size: var(--text-sm);
 	}
 
 	.accounts-body ::deep .accounts-table td:last-child {

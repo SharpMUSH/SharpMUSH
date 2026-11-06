@@ -1,7 +1,7 @@
 .wiki-fact-results-more {
     align-self: flex-start;
     min-height: 44px;
-    padding: .55rem .8rem;
+    padding: var(--space-3) var(--space-4);
     border: 1px solid var(--border);
     border-radius: var(--radius-row);
     background: var(--surface);
@@ -13,7 +13,7 @@
 .wiki-fact-results-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .wiki-fact-results {
     margin: 0;
-    padding-left: 1.2rem;
+    padding-left: var(--space-5);
 }
 .wiki-fact-results a {
     color: var(--accent);
@@ -26,11 +26,11 @@
 .wiki-fact-results-table {
     padding: 0;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: var(--text-sm);
 }
 .wiki-fact-results-table th,
 .wiki-fact-results-table td {
-    padding: 4px 16px 4px 0;
+    padding: var(--space-2) var(--space-5) var(--space-2) 0;
     text-align: left;
     vertical-align: top;
 }

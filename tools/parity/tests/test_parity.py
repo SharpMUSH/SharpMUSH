@@ -265,6 +265,15 @@ class CompareTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 compare.load_allowlist(p, prof)
 
+    def test_an_entry_id_is_used_once(self):
+        with tempfile.TemporaryDirectory() as d:
+            p, prof = Path(d) / "k.json", Path(d) / "p.md"
+            prof.write_text("## p\n")
+            entry = {"id": "KD-1", "scenario": "s", "case": "c", "reason": "r", "tracking": "#1134", "profile": "p"}
+            p.write_text(json.dumps({"entries": [entry, {**entry, "case": "d"}]}))
+            with self.assertRaises(ValueError):
+                compare.load_allowlist(p, prof)
+
     def test_baseline_marks_open_gaps_and_reports_fixed_ones(self):
         r, _, fixed = self.run_compare(self.rec("1"), self.rec("2"), baseline=["s/c#0"])
         self.assertEqual((r[0].status, fixed), (compare.OPEN, []))

@@ -148,13 +148,16 @@ public class ParserBehaviorUnitTests
 	}
 
 	/// <summary>
-	/// A close typo of a real function name gets PennMUSH's "DID YOU MEAN 'X'" hint on the
-	/// bracket-mandatory error (src/parse.c); a name with no near match gets none. Format and
-	/// threshold confirmed against a live PennMUSH server (e.g. <c>[ad(1,2)]</c> → suggests ADD).
+	/// An unknown function gets PennMUSH's "DID YOU MEAN 'X'" hint on the bracket-mandatory error
+	/// (src/parse.c) when spellfix1 finds a name whose phonetic hash agrees in its first five
+	/// characters (suggest_name, src/function.c:189), however far apart the spellings are; otherwise
+	/// none. Each case is what a live PennMUSH answers.
 	/// </summary>
 	[Test]
 	[Arguments("[ad(1,2)]", "#-1 FUNCTION (AD) NOT FOUND DID YOU MEAN 'ADD'")]
 	[Arguments("[xyzzyplughqq(1)]", "#-1 FUNCTION (XYZZYPLUGHQQ) NOT FOUND")]
+	[Arguments("[nosuchfunction(1)]", "#-1 FUNCTION (NOSUCHFUNCTION) NOT FOUND DID YOU MEAN 'MESSAGE'")]
+	[Arguments("[upcstr(abc)]", "#-1 FUNCTION (UPCSTR) NOT FOUND")]
 	public async Task UnknownFunctionSuggestsClosestName(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));

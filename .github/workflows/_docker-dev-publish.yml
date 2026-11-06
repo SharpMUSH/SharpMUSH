@@ -147,6 +147,9 @@ jobs:
           target: edge
           push: true
           pull: true
+          # The Dockerfile's default is the release the deploy files pin; dev builds from :dev.
+          build-args: |
+            SHARPMUSH_IMAGE_TAG=dev
           tags: sharpmush/sharpmush-edge:dev
           labels: |
             org.opencontainers.image.title=SharpMUSH edge
@@ -172,6 +175,9 @@ jobs:
           file: ./deploy/fly/Dockerfile
           push: true
           pull: true
+          # The Dockerfile's default is the release the deploy files pin; dev builds from :dev.
+          build-args: |
+            SHARPMUSH_IMAGE_TAG=dev
           tags: sharpmush/sharpmush-allinone:dev
           labels: |
             org.opencontainers.image.title=SharpMUSH all-in-one

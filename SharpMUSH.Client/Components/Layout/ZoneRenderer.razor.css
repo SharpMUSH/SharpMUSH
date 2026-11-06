@@ -11,7 +11,7 @@
 .zone-grid {
     display: grid;
     grid-template-columns: repeat(12, 1fr);
-    gap: 1rem;
+    gap: var(--space-5);
     align-items: stretch;
 }
 

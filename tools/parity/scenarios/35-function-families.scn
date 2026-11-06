@@ -36,7 +36,12 @@ think [lmath(mul,4294967296 4294967296)] [mul(4294967296,4294967296)]
 think [mean(1,2)] [lmath(mean,1 2)] [median(1,2,3,4)] [lmath(median,1 2 3 4)] [stddev(1,2,3,4)] [lmath(stddev,1 2 3 4)]
 think [mean(1,2,3)] [stddev(5,5)] [stddev(abc)] [median(1.5)] [lmath(min,-0.5 3)] [lmath(max,1.5 2)]
 think [mean(1,a)] [lmath(add,1 a)] [stddev()] [lmath(median,)] [lmath(mean,)]
+# null_eq_zero is off in PennMUSH's mush.cnf and on by default in SharpMUSH (compatibility profile,
+# "Numeric compatibility"); with it off, the one empty argument is not a number (math_median, math_mean).
+think [set(me,OLDNEZ:[config(null_eq_zero)])]
+@config/set null_eq_zero=no
 think [median()] [mean()]
+@config/set null_eq_zero=[v(OLDNEZ)]
 
 ::case ff.perms  both members of a pair apply the same permission check
 ::login alice Alice alicepass

@@ -5,8 +5,8 @@
        wide terminal canvas would push the whole page wider than the viewport. */
     grid-template-columns: minmax(0, 1fr) var(--aside-w);
     grid-template-rows: minmax(0, 1fr);
-    gap: 12px;
-    padding: 16px;
+    gap: var(--space-4);
+    padding: var(--space-5);
     height: 100%;
     overflow: hidden;
     /* The aside's column narrowing to its strip and widening again. */
@@ -17,13 +17,13 @@
    card is what meets the notch and the home indicator: the safe-area insets, 8px at least. */
 .play--focus {
     grid-template-columns: minmax(0, 1fr);
-    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    padding: max(var(--space-3), env(safe-area-inset-top)) max(var(--space-3), env(safe-area-inset-right)) max(var(--space-3), env(safe-area-inset-bottom)) max(var(--space-3), env(safe-area-inset-left));
 }
 
 .play-main {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-4);
     min-width: 0;
     min-height: 0;
 }
@@ -68,11 +68,11 @@
 .play-story-unavailable {
     flex-shrink: 0;
     margin: 8px 16px 0;
-    padding: 8px 12px;
+    padding: var(--space-3) var(--space-4);
     border-radius: 8px;
     background: var(--warn-tint);
     color: var(--warn);
-    font-size: 13px;
+    font-size: var(--text-sm);
 }
 
 /* column-reverse keeps the story anchored at its newest pose as poses arrive. */
@@ -82,17 +82,17 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column-reverse;
-    padding: 8px 16px;
+    padding: var(--space-3) var(--space-5);
 }
 
 .play-terminal {
-    padding: 0 4px;
+    padding: 0 var(--space-2);
 }
 
 .play-aside {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-4);
     position: relative;
     min-height: 0;
     overflow-x: hidden;
@@ -102,7 +102,7 @@
 .play-aside-panels {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-4);
 }
 
 /* The aside's collapse button, in the top right corner of its first card's header (Here, by default), so it
@@ -138,7 +138,7 @@
 }
 
 .play-aside-panels ::deep .kit-card:first-child > .kit-card-head {
-    padding-right: 28px;
+    padding-right: var(--space-7);
 }
 
 .play--aside-collapsed .play-aside-toggle {
@@ -156,7 +156,7 @@
 /* The banner's controls row: in the phone's details sheet (next), and in the banner on a narrow page (below). */
 .play-banner-more {
     display: none;
-    gap: 8px;
+    gap: var(--space-3);
 }
 
 .play-sheet--details .play-banner-more {
@@ -167,17 +167,17 @@
 .play-sheet-site {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-4);
     width: 100%;
     min-height: 44px;
     margin-bottom: 8px;
-    padding: 0 10px;
+    padding: 0 var(--space-4);
     border: 0;
     border-radius: 12px;
     background: var(--surface-3);
     color: var(--text);
     font: inherit;
-    font-size: 14px;
+    font-size: var(--text-base);
     font-weight: 600;
     cursor: pointer;
 }
@@ -190,12 +190,12 @@
 /* Medium: a narrower aside. */
 @container page (max-width: 64rem) {
     .play {
-        padding: 12px;
+        padding: var(--space-4);
         grid-template-columns: minmax(0, 1fr) 168px;
     }
     .play--focus {
         grid-template-columns: minmax(0, 1fr);
-        padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+        padding: max(var(--space-3), env(safe-area-inset-top)) max(var(--space-3), env(safe-area-inset-right)) max(var(--space-3), env(safe-area-inset-bottom)) max(var(--space-3), env(safe-area-inset-left));
     }
 }
 
@@ -204,8 +204,8 @@
     .play {
         grid-template-columns: minmax(0, 1fr);
         grid-template-rows: minmax(0, 1fr);
-        padding: 8px;
-        gap: 8px;
+        padding: var(--space-3);
+        gap: var(--space-3);
     }
     .play-aside {
         display: none;
@@ -236,7 +236,7 @@
         border-radius: 0;
     }
     .play-story-scroll {
-        padding: 6px 10px;
+        padding: var(--space-3) var(--space-4);
     }
 }
 
@@ -259,13 +259,13 @@
    the top. A class rather than a query: a page stylesheet asks its container, and the container is not a size
    container (ResponsiveConventionsTests). Stated after the tiers, so it wins where they also apply. */
 .play--short {
-    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
-    gap: 8px;
+    padding: max(var(--space-3), env(safe-area-inset-top)) max(var(--space-3), env(safe-area-inset-right)) max(var(--space-3), env(safe-area-inset-bottom)) max(var(--space-3), env(safe-area-inset-left));
+    gap: var(--space-3);
 }
 
 .play--short .play-main,
 .play--short .play-aside {
-    gap: 8px;
+    gap: var(--space-3);
 }
 
 /* Focus mode goes edge to edge, clear of the notch and the home indicator, as it does on an upright phone. */
@@ -282,15 +282,15 @@
 /* The header on one line: the room (or scene) beside the name instead of under it, and nothing wraps. */
 .play--short ::deep .scene-card-head {
     flex-wrap: nowrap;
-    gap: 8px;
-    padding-top: 6px;
-    padding-bottom: 6px;
+    gap: var(--space-3);
+    padding-top: var(--space-3);
+    padding-bottom: var(--space-3);
 }
 
 .play--short ::deep .scene-card-titles {
     display: flex;
     align-items: baseline;
-    gap: 8px;
+    gap: var(--space-3);
 }
 
 .play--short ::deep .scene-card-title,
@@ -300,16 +300,16 @@
 }
 
 .play--short ::deep .sharp-terminal-input {
-    padding-top: 6px;
-    padding-bottom: 6px;
+    padding-top: var(--space-3);
+    padding-bottom: var(--space-3);
 }
 
 .play--short .play-story-scroll {
-    padding: 6px 12px;
+    padding: var(--space-3) var(--space-4);
 }
 
 .play--short ::deep .scene-card-foot {
-    padding: 0 8px 8px;
+    padding: 0 var(--space-3) var(--space-3);
 }
 
 /* The composer on one line once it is wide enough for the field to keep its room (focus mode, mostly): the
@@ -326,7 +326,7 @@
 .play-guide-navigation {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--space-3);
     margin-bottom: 20px;
 }
 .play-guide-return {
@@ -337,7 +337,7 @@
     justify-content: center;
     min-height: 44px;
     text-decoration: none;
-    padding: 8px;
+    padding: var(--space-3);
     border: 1px solid var(--accent);
     border-radius: 8px;
     background: var(--surface-3);

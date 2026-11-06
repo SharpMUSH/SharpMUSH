@@ -11,8 +11,8 @@ Railway account's template composer, not from a file in this repository. The pub
 
 ## Template settings
 
-Three services in one project, each from its Docker image's `dev` tag, with automatic image
-updates off. They reach each other on the project's private network, under the names Railway
+Three services in one project, each from its Docker image at the tag named below, with automatic
+image updates off. They reach each other on the project's private network, under the names Railway
 gives them (`<service>.railway.internal`); the `${{...}}` values below are Railway reference
 variables and fill those names in.
 

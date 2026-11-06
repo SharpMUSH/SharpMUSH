@@ -11,13 +11,13 @@
 .active-scene-tiles {
 	display: flex;
 	flex-direction: column;
-	gap: 10px;
+	gap: var(--space-4);
 }
 
 .active-scene-archive {
 	display: inline-block;
 	margin-top: 8px;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	color: var(--accent);
 	text-decoration: none;
@@ -30,11 +30,11 @@
 
 /* in a page's main column: the main card's body is padded here, and the tiles run across it */
 .active-scene-body--main {
-	padding: 12px 16px 16px;
+	padding: var(--space-4) var(--space-5) var(--space-5);
 }
 
 .active-scene-tiles--main {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(min(11rem, 100%), 1fr));
-	gap: 12px;
+	gap: var(--space-4);
 }

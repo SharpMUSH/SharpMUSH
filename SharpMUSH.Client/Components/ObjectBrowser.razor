@@ -9,15 +9,15 @@
     <div class="ob-modes">
         <button type="button" class="ob-mode @(_activeTab == 0 ? "ob-mode--on" : "")"
                 @onclick="LoadMyObjectsAsync" disabled="@_loading">
-            <MudIcon Icon="@Icons.Material.Filled.Person" Style="font-size:0.875rem;" /> @Loc["TermBrowserMine"]
+            <MudIcon Icon="@Icons.Material.Filled.Person" Style="font-size:var(--text-base);" /> @Loc["TermBrowserMine"]
         </button>
         <button type="button" class="ob-mode @(_activeTab == 1 ? "ob-mode--on" : "")"
                 @onclick="@(() => _activeTab = 1)">
-            <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:0.875rem;" /> @Loc["TermBrowserSearch"]
+            <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:var(--text-base);" /> @Loc["TermBrowserSearch"]
         </button>
         <button type="button" class="ob-mode @(_activeTab == 2 ? "ob-mode--on" : "")"
                 @onclick="LoadHereAsync" disabled="@_loading">
-            <MudIcon Icon="@Icons.Material.Filled.Home" Style="font-size:0.875rem;" /> @Loc["TermBrowserHere"]
+            <MudIcon Icon="@Icons.Material.Filled.Home" Style="font-size:var(--text-base);" /> @Loc["TermBrowserHere"]
         </button>
     </div>
 
@@ -25,7 +25,7 @@
     {
         <div class="ob-searchwrap">
             <div class="ob-search">
-                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:0.875rem;color:var(--text-faint);" />
+                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:var(--text-base);color:var(--text-faint);" />
                 <input name="object-search" value="@_searchExpr" @oninput="@(e => _searchExpr = e.Value?.ToString() ?? string.Empty)"
                        @onkeydown="OnSearchExprKeyDown"
                        placeholder="lsearch(me, type, thing)" aria-label="@Loc["TermObjectSearch"]" class="ob-search-input" />
@@ -40,7 +40,7 @@
         <div class="ob-error">@_error</div>
     }
 
-    <div style="flex:1;overflow-y:auto;min-height:0;padding:0.375rem;">
+    <div style="flex:1;overflow-y:auto;min-height:0;padding:var(--space-3);">
         @if (_loading)
         {
             <SkeletonRows Count="6" Height="32" Gap="4" />

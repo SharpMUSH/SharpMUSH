@@ -4,14 +4,14 @@
 }
 
 .quickstart-lead {
-	font-size: 14px;
+	font-size: var(--text-base);
 	font-weight: 700;
 	color: var(--text);
 }
 
 .quickstart-text {
 	margin: 0;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	line-height: 1.5;
 	color: var(--text-dim);
 }
@@ -19,7 +19,7 @@
 .quickstart-links {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-1);
 	margin: 8px -4px 0;
 }
 
@@ -28,15 +28,15 @@
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
-	gap: 10px;
-	padding: 12px 16px 16px;
+	gap: var(--space-4);
+	padding: var(--space-4) var(--space-5) var(--space-5);
 }
 
 .quickstart-links--main {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr));
 	align-self: stretch;
-	gap: 2px 12px;
+	gap: var(--space-1) var(--space-4);
 	margin: 0 -4px;
 }
 
@@ -59,4 +59,9 @@
 .quickstart-links ::deep .kit-row.quickstart-cta .kit-row-icon {
 	background: var(--accent-on);
 	color: var(--accent);
+}
+
+/* In the narrow aside column the ways in are meta-sized, so the longest of them fits on its line. */
+.quickstart-links:not(.quickstart-links--main) ::deep .kit-row {
+	font-size: var(--text-sm);
 }

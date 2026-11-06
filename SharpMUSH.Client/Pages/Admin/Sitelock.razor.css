@@ -1,9 +1,9 @@
 /* the rule list in the header description; the header is a kit component, so anchor on the page root */
 .config-section-page ::deep .kit-page-desc code {
 	font-family: var(--font-mono);
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text);
 	background: var(--surface-2);
 	border-radius: 4px;
-	padding: 1px 5px;
+	padding: var(--space-1) var(--space-2);
 }

@@ -16,10 +16,11 @@ Add these two secrets to your GitHub repository:
 ## How It Works
 
 ### Production Releases
-1. Push a version tag: `git tag v1.0.0 && git push origin v1.0.0`
-2. GitHub Actions automatically builds and pushes:
-   - `sharpmush/sharpmush-server:1.0.0` and `:latest`
-   - `sharpmush/sharpmush-renderer:1.0.0` and `:latest`
+1. Publish a GitHub Release with a new tag `v1.0.0` (Releases → Draft a new release)
+2. GitHub Actions builds and pushes the server, renderer, socketserver, edge and all-in-one images
+   as `:1.0.0`, `:1.0`, `:1` and `:latest`
+3. Open a pull request with `python3 .github/scripts/release_images.py bump 1.0.0`, which moves the
+   deploy files to the new images
 
 ### Dev Builds
 1. Push to main branch: `git push origin main`

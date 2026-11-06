@@ -25,7 +25,7 @@
                                @onchange="e => SetShownAsync(key, e.Value is true)" />
                         @if (PoseTypeStyle.Icon(type.Icon) is { } icon)
                         {
-                            <MudIcon Icon="@icon" Style="font-size:16px;" aria-hidden="true" />
+                            <MudIcon Icon="@icon" Style="font-size:var(--text-md);" aria-hidden="true" />
                         }
                         <span>@type.Label</span>
                     </label>

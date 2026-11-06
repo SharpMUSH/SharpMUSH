@@ -1,10 +1,10 @@
 .gallery-details {
 	display: flex;
 	flex-direction: column;
-	gap: 10px;
+	gap: var(--space-4);
 	width: min(32rem, 100%);
 	margin: 0 auto;
-	padding: 14px;
+	padding: var(--space-5);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-card);
 	background: var(--surface);
@@ -14,20 +14,20 @@
 .gallery-field {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	font-size: 12px;
+	gap: var(--space-2);
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .gallery-field input,
 .gallery-field textarea {
-	padding: 8px 10px;
+	padding: var(--space-3) var(--space-4);
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
 	background: var(--bg);
 	color: var(--text);
 	font: inherit;
-	font-size: 14px;
+	font-size: var(--text-base);
 }
 
 .gallery-field input:focus-visible,
@@ -43,18 +43,18 @@
 .gallery-form-actions {
 	display: flex;
 	justify-content: flex-end;
-	gap: 8px;
+	gap: var(--space-3);
 }
 
 .gallery-details-save,
 .gallery-report-send {
-	padding: 6px 16px;
+	padding: var(--space-3) var(--space-5);
 	border: 0;
 	border-radius: 999px;
 	background: var(--accent);
 	color: var(--accent-on);
 	font: inherit;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	cursor: pointer;
 }
@@ -69,7 +69,7 @@
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
-	gap: 4px;
+	gap: var(--space-2);
 }
 
 .gallery-share small {
@@ -79,13 +79,13 @@
 .gallery-details-cancel,
 .gallery-report-cancel,
 .gallery-share-button {
-	padding: 6px 16px;
+	padding: var(--space-3) var(--space-5);
 	border: 1px solid var(--border);
 	border-radius: 999px;
 	background: transparent;
 	color: var(--text);
 	font: inherit;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	cursor: pointer;
 }

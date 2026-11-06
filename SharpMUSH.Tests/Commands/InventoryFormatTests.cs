@@ -53,4 +53,24 @@ public class InventoryFormatTests
 		var heard = WebAppFactoryArg.Notifications.For(player.DbRef);
 		await Assert.That(heard).DoesNotContain("You are carrying:");
 	}
+
+	/// <summary>
+	/// Without an INVFORMAT each item is unparse_object_myopic (<c>look.c:1053</c>): Name(#dbrefFlags) for what
+	/// the player may examine, the bare name for something someone else owns.
+	/// </summary>
+	[Test]
+	public async Task Listing_ShowsTheDbrefOnlyOfWhatThePlayerMayExamine()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("invown");
+		var (player, parser) = await PlayerCarrying(token);
+		var foreign = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, $"Foreign_{token}");
+		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@tel/silent {foreign}={player.DbRef}"));
+
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("inventory"));
+
+		var lines = WebAppFactoryArg.Notifications.For(player.DbRef).SelectMany(message => message.Split('\n')).ToList();
+		await Assert.That(lines).Contains(line => line.StartsWith($"Thing_{token}(#", StringComparison.Ordinal));
+		await Assert.That(lines).Contains(line => line.StartsWith($"Foreign_{token}", StringComparison.Ordinal) && !line.Contains("(#"));
+	}
 }

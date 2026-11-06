@@ -1,10 +1,10 @@
 .kit-side-search {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 	height: 40px;
 	margin: 0 0 10px;
-	padding: 0 12px;
+	padding: 0 var(--space-4);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-row);
 	background: var(--surface);
@@ -18,7 +18,7 @@
 	background: transparent;
 	color: var(--text);
 	font: inherit;
-	font-size: 14px;
+	font-size: var(--text-base);
 	outline: none;
 }
 

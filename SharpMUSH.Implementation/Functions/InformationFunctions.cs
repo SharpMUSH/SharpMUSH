@@ -706,9 +706,10 @@ public partial class Functions
 
 		if (newName is null)
 		{
-			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-				executor, executor, obj, LocateFlags.All,
-				found => found.Object().Name);
+			// fun_name answers e_notvis for anything match_thing does not find (src/fundb.c:1805-1809).
+			return await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, obj, LocateFlags.All) is AnySharpObject found
+				? found.Object().Name
+				: ErrorMessages.Returns.NotVisible;
 		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
