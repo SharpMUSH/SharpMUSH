@@ -5244,7 +5244,7 @@
     <value>TinyMUX 2.14: upload netmux.sqlite</value>
   </data>
   <data name="AdmImportMuxSqlite" xml:space="preserve">
-    <value>TinyMUX 2.14 runs from game/data/netmux.sqlite, which holds the database, channels and mail. Stop the game first, so everything is written into that file, then upload it on its own as the database, with netmux.conf beside it.</value>
+    <value>TinyMUX 2.14 runs from game/data/netmux.sqlite, which holds the database, channels and mail. Stop the game first, so everything is written into that file, then upload it on its own as the database, with netmux.conf beside it. If netmux.sqlite-wal is still there and not empty, run sqlite3 netmux.sqlite "PRAGMA wal_checkpoint(TRUNCATE);" in game/data first.</value>
   </data>
   <data name="AdmImportMuxUnloadTitle" xml:space="preserve">
     <value>Or write a flatfile</value>

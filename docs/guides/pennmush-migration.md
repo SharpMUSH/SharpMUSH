@@ -46,7 +46,7 @@ The files that go with each format:
 | TinyMUX | the flatfile (versions 1 to 5) | `mail.db` | `comsys.db` in the chat slot |
 | TinyMUX 2.14 | `game/data/netmux.sqlite` | in the database | in the database |
 
-TinyMUX 2.14 keeps the game, its comsys and its mail in `netmux.sqlite`, so that one file is the whole upload. Stop the game before copying it: TinyMUX writes changes to `netmux.sqlite-wal` first, and the import reads only the main file. A mail or chat file given with it is refused. A flatfile from `db_unload` imports the same game.
+TinyMUX 2.14 keeps the game, its comsys and its mail in `netmux.sqlite`, so that one file is the whole upload. TinyMUX writes changes to `netmux.sqlite-wal` first, and the import reads only the main file, so stop the game before copying it. A clean shutdown moves everything into the main file and removes `netmux.sqlite-wal`. If that file is still there and not empty (after a crash, say), make sure nothing has the database open and run `sqlite3 netmux.sqlite "PRAGMA wal_checkpoint(TRUNCATE);"` in `game/data` before copying it. A mail or chat file given with it is refused. To import a flatfile instead, run `./db_unload netmux netmux.flat -C comsys.db -m mail.db` and give `mail.db` and `comsys.db` in the mail and chat slots beside it.
 
 Any of these files may be gzipped, as PennMUSH writes its dumps by default (`outdb.gz`); the import tells a gzipped file from its first bytes and unpacks it, to at most 512 MiB. An upload takes up to 100 MB per file, so compress a larger one first. An import is stopped if it runs longer than ten minutes plus a minute for every 8 MiB of input.
 
