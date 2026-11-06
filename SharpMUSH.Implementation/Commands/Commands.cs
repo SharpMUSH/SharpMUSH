@@ -276,7 +276,10 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 			foreach (var alias in Configuration.CurrentValue.Alias.CommandAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
 			{
-				_commandLibrary.Add(alias, (command.Value, true));
+				if (!_commandLibrary.TryAdd(alias, (command.Value, true)))
+				{
+					Logger.LogWarning("Command alias {Alias} for {Target} is not registered: {Alias} is already a command", alias, command.Key, alias);
+				}
 			}
 		}
 

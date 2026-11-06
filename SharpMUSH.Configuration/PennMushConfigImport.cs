@@ -34,6 +34,13 @@ public record PennMushConfigImport(SharpMUSHOptions Options, IReadOnlyList<strin
 	/// </summary>
 	public IReadOnlyList<string> Unrecognized { get; init; } = [];
 
+	/// <summary>
+	/// The file's alias lines, in the source's own names. A command or function alias joins the game's alias
+	/// options once the engine has checked what it names; a flag or power alias is given to the flag or power by the
+	/// database import.
+	/// </summary>
+	public IReadOnlyList<AliasDirective> Aliases { get; init; } = [];
+
 	/// <summary>A RhostMUSH file's reality levels, which the database import gives the world as reality layers.</summary>
 	public RealityDirectives Reality { get; init; } = RealityDirectives.None;
 

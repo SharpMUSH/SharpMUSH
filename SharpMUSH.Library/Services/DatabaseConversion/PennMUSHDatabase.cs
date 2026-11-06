@@ -52,6 +52,12 @@ public class PennMUSHDatabase
 	public RealityDirectives Reality { get; set; } = RealityDirectives.None;
 
 	/// <summary>
+	/// The flag and power alias lines of the game's configuration file, in the source's own names, which the import
+	/// gives the flags and powers they name. A PennMUSH dump holds its flag aliases in its flag table instead.
+	/// </summary>
+	public List<AliasDirective> ConfiguredAliases { get; set; } = [];
+
+	/// <summary>
 	/// The game's maildb, when one was given alongside the dump; empty otherwise.
 	/// </summary>
 	public PennMUSHMailDatabase Mail { get; set; } = new();

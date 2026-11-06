@@ -143,7 +143,12 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 
 			foreach (var alias in Configuration.CurrentValue.Alias.FunctionAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
 			{
-				_functionLibrary.Add(alias, (command.Value, true));
+				if (!_functionLibrary.TryAdd(alias, (command.Value, true)))
+				{
+					Logger.LogWarning("Function alias {Alias} for {Target} is not registered: {Alias} is already a function", alias, command.Key, alias);
+					continue;
+				}
+
 				_functionLibrary.ReserveSystemName(alias);
 			}
 		}

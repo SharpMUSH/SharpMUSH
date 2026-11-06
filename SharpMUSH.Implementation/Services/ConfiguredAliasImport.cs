@@ -1,0 +1,223 @@
+using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Softcode;
+
+namespace SharpMUSH.Implementation.Services;
+
+/// <summary>
+/// The command and function aliases an imported configuration gives, checked against this engine's commands and
+/// functions, and the lines that could not be carried over with the reason for each.
+/// </summary>
+/// <param name="Commands">The aliases to add, keyed as <see cref="AliasOptions.CommandAliases"/> is.</param>
+/// <param name="Functions">The aliases to add, keyed as <see cref="AliasOptions.FunctionAliases"/> is.</param>
+/// <param name="NotCarried">Each alias or restriction line left out, and why.</param>
+public sealed record ConfiguredAliases(
+	Dictionary<string, string[]> Commands,
+	Dictionary<string, string[]> Functions,
+	IReadOnlyList<string> NotCarried)
+{
+	/// <summary><paramref name="current"/> with these aliases added to the ones it has.</summary>
+	public AliasOptions Over(AliasOptions current)
+		=> new(Merge(current.FunctionAliases, Functions), Merge(current.CommandAliases, Commands));
+
+	private static Dictionary<string, string[]> Merge(Dictionary<string, string[]> now, Dictionary<string, string[]> added)
+	{
+		var merged = new Dictionary<string, string[]>(now, now.Comparer);
+		foreach (var (target, aliases) in added)
+		{
+			var existing = merged.GetValueOrDefault(target) ?? [];
+			merged[target] = [.. existing, .. aliases.Where(alias => !existing.Contains(alias, StringComparer.OrdinalIgnoreCase))];
+		}
+
+		return merged;
+	}
+}
+
+/// <summary>
+/// Turns an imported configuration's command and function alias lines (<see cref="PennMushConfigImport.Aliases"/>)
+/// into aliases of this engine's built-ins, as <see cref="AliasOptions"/> holds them, and says what it could not.
+/// </summary>
+/// <remarks>
+/// <para>A target is found as typed input finds it: a command or function of that name or alias, else the one the
+/// source's dialect means by it (<see cref="SoftcodeDialects"/>). An alias table names only built-ins, so a target
+/// that is a softcode <c>@function</c> or a plugin's is reported, as is one with a switch its command lacks.</para>
+/// <para>An alias that already names its target here, by name, by the dialect or as the abbreviation of a command,
+/// is left out without a note: nothing is lost. One that names something else is reported, and so is a second line
+/// for an alias, which TinyMUX and RhostMUSH refuse while the first stands.</para>
+/// <para>A restriction naming a command or function this engine does not have is reported too; it stays in the
+/// configuration, where it does nothing, as PennMUSH logs and ignores one.</para>
+/// </remarks>
+public sealed class ConfiguredAliasImport(
+	ILibraryProvider<CommandDefinition> commands,
+	ILibraryProvider<FunctionDefinition> functions)
+{
+	public ConfiguredAliases Resolve(PennMushConfigImport import, ConfigurationDialect dialect)
+	{
+		var overlay = dialect switch
+		{
+			ConfigurationDialect.TinyMUX => SoftcodeDialects.Mux,
+			ConfigurationDialect.RhostMUSH => SoftcodeDialects.Rhost,
+			_ => null
+		};
+		var notCarried = new List<string>();
+		var commandAliases = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+		var functionAliases = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+		var claimed = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		var commandLibrary = commands.Get();
+		var functionLibrary = functions.Get();
+
+		foreach (var directive in import.Aliases)
+		{
+			var resolved = directive.Kind switch
+			{
+				AliasKind.Command => Command(directive, overlay, commandLibrary),
+				AliasKind.Function => Function(directive, overlay, functionLibrary),
+				_ => null
+			};
+
+			switch (resolved)
+			{
+				case null:
+					continue;
+				case { Reason: { } reason }:
+					notCarried.Add($"{directive.Line}: {reason}, so it was not carried over.");
+					continue;
+				case { Target: { } target }:
+					var key = $"{directive.Kind}:{directive.Alias}";
+					if (claimed.TryGetValue(key, out var earlier))
+					{
+						if (!earlier.Equals(target, StringComparison.OrdinalIgnoreCase))
+						{
+							notCarried.Add($"{directive.Line}: an earlier line already made {directive.Alias} an alias of {earlier}, so it was not carried over.");
+						}
+
+						continue;
+					}
+
+					claimed[key] = target;
+					var into = directive.Kind == AliasKind.Command ? commandAliases : functionAliases;
+					(into.TryGetValue(target, out var list) ? list : into[target] = []).Add(directive.Alias);
+					continue;
+			}
+		}
+
+		foreach (var name in import.Options.Restriction.CommandRestrictions.Keys.Where(name => !commandLibrary.ContainsKey(name)))
+		{
+			notCarried.Add($"The restriction on {name}: SharpMUSH has no command {name}, so it has no effect.");
+		}
+
+		foreach (var name in import.Options.Restriction.FunctionRestrictions.Keys.Where(name => !functionLibrary.ContainsKey(name)))
+		{
+			notCarried.Add($"The restriction on {name}(): SharpMUSH has no function {name}(), so it has no effect.");
+		}
+
+		return new ConfiguredAliases(
+			commandAliases.ToDictionary(entry => entry.Key, entry => entry.Value.ToArray()),
+			functionAliases.ToDictionary(entry => entry.Key, entry => entry.Value.ToArray()),
+			notCarried);
+	}
+
+	/// <summary>What a line's resolution came to: the alias table key it joins, a reason it does not, or neither when it is already in force.</summary>
+	private sealed record Resolution(string? Target, string? Reason);
+
+	private static readonly Resolution InForce = new(null, null);
+
+	private Resolution Command(AliasDirective directive, SoftcodeDialect? overlay,
+		Library.Services.LibraryService<string, CommandDefinition> library)
+	{
+		var (root, switches) = Split(directive.Target);
+		if (!library.TryGetValue(root, out var found)
+			&& overlay?.CommandFor(root) is { } meant)
+		{
+			var (meantRoot, meantSwitches) = Split(meant);
+			(root, switches) = (meantRoot, [.. meantSwitches, .. switches]);
+			library.TryGetValue(root, out found);
+		}
+
+		if (found.LibraryInformation.Attribute is not { } attribute)
+		{
+			return new Resolution(null, $"SharpMUSH has no command {directive.Target}");
+		}
+
+		if (commands.Builtins.FirstOrDefault(entry => ReferenceEquals(entry.Value.Attribute, attribute)).Key is not { } name)
+		{
+			return new Resolution(null, $"{root} is not a built-in command, and only a built-in takes an alias");
+		}
+
+		string[] wanted = [.. found.LibraryInformation.ImpliedSwitches.Select(s => s.ToUpperInvariant()), .. switches.Select(s => s.ToUpperInvariant())];
+		var known = attribute.Switches ?? [];
+		if (!known.Contains("*") && wanted.FirstOrDefault(s => !known.Contains(s, StringComparer.OrdinalIgnoreCase)) is { } unknown)
+		{
+			return new Resolution(null, $"SharpMUSH's {name} has no /{unknown.ToLowerInvariant()} switch");
+		}
+
+		var target = wanted.Length == 0 ? name : $"{name}/{string.Join('/', wanted)}";
+
+		if (library.TryGetValue(directive.Alias, out var taken))
+		{
+			return ReferenceEquals(taken.LibraryInformation.Attribute, attribute)
+				&& taken.LibraryInformation.ImpliedSwitches.SequenceEqual(wanted, StringComparer.OrdinalIgnoreCase)
+					? InForce
+					: new Resolution(null, $"{directive.Alias} is already SharpMUSH's {taken.LibraryInformation.Attribute.Name}");
+		}
+
+		if (overlay?.CommandFor(directive.Alias) is { } dialectMeaning
+			&& dialectMeaning.Equals(target, StringComparison.OrdinalIgnoreCase))
+		{
+			return InForce;
+		}
+
+		if (wanted.Length == 0
+			&& CommandTrie.For(library).FindAbbreviation(directive.Alias) is { } abbreviated
+			&& ReferenceEquals(abbreviated.Definition.Attribute, attribute)
+			&& abbreviated.Definition.ImpliedSwitches.Length == 0)
+		{
+			return InForce;
+		}
+
+		return new Resolution(target, null);
+	}
+
+	private Resolution Function(AliasDirective directive, SoftcodeDialect? overlay,
+		Library.Services.LibraryService<string, FunctionDefinition> library)
+	{
+		var targetName = directive.Target.TrimEnd('(', ')');
+		if (!library.TryGetValue(targetName, out var found)
+			&& overlay?.FunctionFor(targetName) is { } meant)
+		{
+			library.TryGetValue(meant, out found);
+		}
+
+		if (found.LibraryInformation.Attribute is not { } attribute)
+		{
+			return new Resolution(null, $"SharpMUSH has no function {targetName}()");
+		}
+
+		if (functions.Builtins.FirstOrDefault(entry => ReferenceEquals(entry.Value.Attribute, attribute)).Key is not { } name)
+		{
+			return new Resolution(null, $"{targetName}() is not a built-in function, and only a built-in takes an alias");
+		}
+
+		var alias = directive.Alias.TrimEnd('(', ')');
+		if (library.TryGetValue(alias, out var taken))
+		{
+			return ReferenceEquals(taken.LibraryInformation.Attribute, attribute)
+				? InForce
+				: new Resolution(null, $"{alias}() is already SharpMUSH's {taken.LibraryInformation.Attribute.Name.ToLowerInvariant()}()");
+		}
+
+		return overlay?.FunctionFor(alias) is { } dialectMeaning
+			&& library.TryGetValue(dialectMeaning, out var meaning)
+			&& ReferenceEquals(meaning.LibraryInformation.Attribute, attribute)
+				? InForce
+				: new Resolution(name, null);
+	}
+
+	private static (string Root, string[] Switches) Split(string command)
+	{
+		var parts = command.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+		return parts.Length == 0 ? (command, []) : (parts[0], parts[1..]);
+	}
+}
