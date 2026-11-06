@@ -1858,7 +1858,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
-    <value>— Verbinden, um zu sehen, wer hier ist —</value>
+    <value>Verbinden, um zu sehen, wer hier ist</value>
     <comment>MT — em dashes preserved.</comment>
   </data>
   <data name="NavCreateACharacter" xml:space="preserve">
@@ -1950,7 +1950,7 @@
     <comment>MT — placeholder moved to the front; German puts the route before the verb here.</comment>
   </data>
   <data name="NavNoExitsAvailable" xml:space="preserve">
-    <value>— Keine Ausgänge verfügbar —</value>
+    <value>Keine Ausgänge verfügbar</value>
     <comment>MT — em dashes preserved.</comment>
   </data>
   <data name="NavNotConnected" xml:space="preserve">

@@ -1858,7 +1858,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
-    <value>— 连接后即可查看谁在这里 —</value>
+    <value>连接后即可查看谁在这里</value>
     <comment>MT</comment>
   </data>
   <data name="NavCreateACharacter" xml:space="preserve">
@@ -1950,7 +1950,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavNoExitsAvailable" xml:space="preserve">
-    <value>— 没有可用的出口 —</value>
+    <value>没有可用的出口</value>
     <comment>MT</comment>
   </data>
   <data name="NavNotConnected" xml:space="preserve">

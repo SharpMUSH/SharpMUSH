@@ -43,7 +43,7 @@
 .kit-empty--compact {
 	flex-direction: row;
 	flex-wrap: wrap;
-	align-items: center;
+	align-items: flex-start;
 	gap: 8px;
 	padding: 6px 10px;
 	background: none;
@@ -52,7 +52,7 @@
 
 .kit-empty--compact .kit-empty-icon {
 	width: auto;
-	height: auto;
+	height: 20px; /* one line of the sentence, so the icon sits beside its first line */
 	background: none;
 	color: var(--text-faint);
 }

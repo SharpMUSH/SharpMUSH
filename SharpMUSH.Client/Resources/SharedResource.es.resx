@@ -1858,7 +1858,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
-    <value>— Conéctese para ver quién está aquí —</value>
+    <value>Conéctese para ver quién está aquí</value>
     <comment>MT</comment>
   </data>
   <data name="NavCreateACharacter" xml:space="preserve">
@@ -1950,7 +1950,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavNoExitsAvailable" xml:space="preserve">
-    <value>— No hay salidas disponibles —</value>
+    <value>No hay salidas disponibles</value>
     <comment>MT</comment>
   </data>
   <data name="NavNotConnected" xml:space="preserve">

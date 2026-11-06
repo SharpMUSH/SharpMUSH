@@ -1858,7 +1858,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
-    <value>— Koble til for å se hvem som er her —</value>
+    <value>Koble til for å se hvem som er her</value>
     <comment>MT</comment>
   </data>
   <data name="NavCreateACharacter" xml:space="preserve">
@@ -1950,7 +1950,7 @@
     <comment>MT — {0} is a route.</comment>
   </data>
   <data name="NavNoExitsAvailable" xml:space="preserve">
-    <value>— Ingen tilgjengelige utganger —</value>
+    <value>Ingen tilgjengelige utganger</value>
     <comment>MT</comment>
   </data>
   <data name="NavNotConnected" xml:space="preserve">
