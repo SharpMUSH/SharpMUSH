@@ -598,22 +598,33 @@ public partial class Functions
 	/// As above, with the names handed over as the stream they are read from, for a caller that needs
 	/// only a window of them or their count. The stream is enumerated inside the regexp error handling.
 	/// </summary>
-	private async ValueTask<CallState> AttributePatternAsync(
+	private ValueTask<CallState> AttributePatternAsync(
 		IMUSHCodeParser parser,
 		string calledAs,
 		bool checkParents,
 		IAttributeService.AttributePatternMode mode,
 		Func<IAsyncEnumerable<string>, ValueTask<CallState>> project)
+		=> HelperFunctions.SplitDbRefAndOptionalAttr(parser.CurrentState.Arguments["0"].Message.ToPlainText()) switch
+		{
+			{ Object: var obj, Attribute: var attributePattern } => AttributePatternAsync(parser, obj, attributePattern,
+				checkParents, mode, project),
+			_ => ValueTask.FromResult(
+				new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, calledAs.ToUpperInvariant())))
+		};
+
+	/// <summary>
+	/// As above, for the object <paramref name="obj"/> and the pattern <paramref name="attributePattern"/> given
+	/// apart, every name when there is none.
+	/// </summary>
+	private async ValueTask<CallState> AttributePatternAsync(
+		IMUSHCodeParser parser,
+		string obj,
+		string? attributePattern,
+		bool checkParents,
+		IAttributeService.AttributePatternMode mode,
+		Func<IAsyncEnumerable<string>, ValueTask<CallState>> project)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(
-			parser.CurrentState.Arguments["0"].Message.ToPlainText());
-
-		if (split is not { Object: var obj, Attribute: var attributePattern })
-		{
-			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, calledAs.ToUpperInvariant()));
-		}
-
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, obj, LocateFlags.All,
 			async found =>
