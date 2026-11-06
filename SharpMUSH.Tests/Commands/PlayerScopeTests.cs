@@ -64,7 +64,16 @@ public class PlayerScopeTests : ServerTestBase
 		await Cmd($"@permission/deny {Mortal}=player.commands");
 		await As(_mortal, $"everyday{marker}");
 		await Assert.That(await Eval($"get({Mortal}/RAN)")).IsEmpty();
+		await Assert.That(await As(_mortal, $"with #{thing}=everyday{marker}")).StartsWith("#-1 PERMISSION DENIED");
 		await Cmd($"@permission/clear {Mortal}=player.commands");
+	}
+
+	[Test]
+	public async Task ChatDenyCoversTheCemitFunction()
+	{
+		await Cmd($"@permission/deny {Mortal}=player.chat");
+		await Assert.That(await EvalAs(_mortal.DbRef, "cemit(Public,hi)")).StartsWith("#-1 PERMISSION DENIED");
+		await Cmd($"@permission/clear {Mortal}=player.chat");
 	}
 
 	[Test]
