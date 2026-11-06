@@ -264,4 +264,17 @@ public class PermissionResolverTests
 	{
 		await Assert.That(CustomPermissions.IsValidName(scope)).IsEqualTo(valid);
 	}
+
+	[Test]
+	public async ValueTask EverydayScopes_AreHeldUnlessDenied()
+	{
+		var everyone = Role(BuiltInRoles.EveryoneSlug, 0);
+		await Assert.That(Resolver.Resolve(Context(everyone))).Contains(PortalPermission.PlayerPage);
+		await Assert.That(Resolver.Explain(Context(everyone), PortalPermission.PlayerPage).Reason).IsEqualTo("default-allow");
+		await Assert.That(Resolver.Resolve(Context(everyone, Role("muted", 5, Deny(PortalPermission.PlayerPage)))))
+			.DoesNotContain(PortalPermission.PlayerPage);
+		await Assert.That(Resolver.Resolve(Context(Role(BuiltInRoles.EveryoneSlug, 0, Deny(PortalPermission.PlayerPage)))))
+			.DoesNotContain(PortalPermission.PlayerPage);
+		await Assert.That(Resolver.Resolve(Context(everyone))).DoesNotContain(PortalPermission.WikiEdit);
+	}
 }

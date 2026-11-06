@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using System.Globalization;
 using SharpMUSH.Implementation.Commands.PageCommand;
 using SharpMUSH.Implementation.Common;
@@ -324,9 +325,17 @@ public partial class Commands
 				continue;
 			}
 
+			// player.page, against the recipient's owner, so a reach can let someone page players and not staff.
+			var targetName = recipient.Object().Name;
+			if (!await executor.CanOver(PortalPermission.PlayerPage, recipient))
+			{
+				await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerPage));
+				unable.Add(SafeStringWithSpace(targetName));
+				continue;
+			}
+
 			// speech.c:922-924 computes both gates before reporting either, because the "not connected"
 			// branch below is the one a DARK target's HAVEN or failed lock is reported as.
-			var targetName = recipient.Object().Name;
 			var isHaven = !isOverride && await recipient.HasFlag("HAVEN");
 			var failsLock = !isOverride && !await LockService.Evaluate(LockType.Page, recipient, executor);
 

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Implementation.Services;
@@ -104,6 +105,8 @@ public partial class Functions
 	public async ValueTask<CallState> Create(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await executor.Can(PortalPermission.PlayerCreate))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerCreate));
 		var args = parser.CurrentState.Arguments;
 
 		return await BuildingHelpers.CreateThingAsync(parser, Mediator, RelationshipCycles, Configuration, ValidateService,
@@ -127,6 +130,8 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await executor.Can(PortalPermission.PlayerCreate))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerCreate));
 
 		return await BuildingHelpers.DigAsync(parser, Mediator, RelationshipCycles, Configuration, NotifyService, EventService,
 			PermissionService, LockService, AttributeService, executor, args["0"].Message,
@@ -150,6 +155,8 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await executor.Can(PortalPermission.PlayerCreate))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerCreate));
 
 		var sourceRoom = await executor.Where();
 		if (BuildingHelpers.Argument(args, "2") is { } sourceRoomName)
@@ -242,6 +249,8 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await executor.Can(PortalPermission.PlayerCreate))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerCreate));
 		var preserve = args.TryGetValue("3", out var preserveArg) &&
 			preserveArg.Message.ToPlainText().Equals("preserve", StringComparison.OrdinalIgnoreCase);
 
