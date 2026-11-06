@@ -1,7 +1,7 @@
 -- The interface a SharpMUSH game offers Mudlet when its staff have not set one of their own
 -- (+config mudlet-client/gui-url). Everything it shows comes from the GMCP packages the MUD-kit sends:
 --
---   Room.Info, Room.Players                    the room panel and the map      (gmcp-room)
+--   Room.Info, Room.Players, AddPlayer, RemovePlayer   the room panel and the map  (gmcp-room)
 --   Char.Vitals                                the gauges                      (gmcp-char)
 --   Char.Items.List, Add, Remove               things here and things carried  (gmcp-items)
 --   Comm.Channel.Text                          the chat window                 (gmcp-comm)
@@ -123,6 +123,45 @@ end
 -- ── Room, people and things ───────────────────────────────────────────────
 
 ui.items = { inv = {}, room = {} }
+ui.players = {}
+
+-- Room.Players replaces the list; Room.AddPlayer and Room.RemovePlayer change it while you stay put.
+function ui.onPlayers()
+  ui.players = {}
+  for _, player in ipairs(gmcp.Room.Players or {}) do
+    ui.players[#ui.players + 1] = player
+  end
+  ui.drawRoom()
+end
+
+function ui.dropPlayer(name)
+  for index, player in ipairs(ui.players) do
+    if player.name == name then
+      table.remove(ui.players, index)
+      return
+    end
+  end
+end
+
+function ui.onAddPlayer()
+  local player = gmcp.Room.AddPlayer
+  if type(player) == "table" and player.name then
+    ui.dropPlayer(player.name)
+    ui.players[#ui.players + 1] = player
+    ui.drawRoom()
+  end
+end
+
+function ui.onRemovePlayer()
+  local name = gmcp.Room.RemovePlayer
+  if type(name) == "table" then
+    name = name.name
+  end
+  if name then
+    ui.dropPlayer(tostring(name))
+    ui.drawRoom()
+  end
+end
 
 function ui.drawRoom()
   if not ui.room then
@@ -147,8 +186,7 @@ function ui.drawRoom()
   table.sort(exits)
   ui.line("Exits", exits)
 
-  local here = names(gmcp.Room.Players)
-  ui.line("Here", here)
+  ui.line("Here", names(ui.players))
   ui.line("Things", names(ui.items.room))
   ui.line("Carrying", names(ui.items.inv))
 end
@@ -297,6 +335,9 @@ function ui.mapRoom()
       x = x + 2
     end
     ui.place(id, area, x, y, z)
+  else
+    -- A room first placed from a neighbour's exit took that neighbour's area; its own Room.Info says which it is in.
+    setRoomArea(id, area)
   end
   if coords and coords[1] then
     setRoomCoordinates(id, tonumber(coords[1]), tonumber(coords[2]), tonumber(coords[3]))
@@ -379,7 +420,9 @@ function ui.register()
     ui.handlers[#ui.handlers + 1] = registerAnonymousEventHandler(event, handler)
   end
   on("gmcp.Room.Info", ui.onRoomInfo)
-  on("gmcp.Room.Players", ui.drawRoom)
+  on("gmcp.Room.Players", ui.onPlayers)
+  on("gmcp.Room.AddPlayer", ui.onAddPlayer)
+  on("gmcp.Room.RemovePlayer", ui.onRemovePlayer)
   on("gmcp.Char.Vitals", ui.drawVitals)
   on("gmcp.Char.Items.List", ui.onItemsList)
   on("gmcp.Char.Items.Add", ui.onItemsAdd)
