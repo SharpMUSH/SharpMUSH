@@ -6,7 +6,7 @@
 .toolbar-row {
 	display: flex;
 	align-items: center;
-	gap: 0.75rem;
+	gap: var(--space-4);
 	flex-wrap: wrap;
 }
 
@@ -15,7 +15,7 @@
 .page-stack {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
+	gap: var(--space-5);
 	min-width: 0;
 }
 

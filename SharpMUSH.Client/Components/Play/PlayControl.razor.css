@@ -20,7 +20,7 @@
     background: transparent;
     color: var(--text-dim);
     font: inherit;
-    font-size: 13px;
+    font-size: var(--text-sm);
     font-weight: 600;
     text-decoration: none;
     cursor: pointer;
@@ -32,7 +32,7 @@
 }
 
 .play-conn--connect {
-    padding: 0 14px;
+    padding: 0 var(--space-5);
     background: var(--accent);
     color: var(--accent-on);
 }

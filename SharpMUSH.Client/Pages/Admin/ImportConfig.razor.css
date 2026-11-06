@@ -1,8 +1,8 @@
 .impcfg-body {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	padding: 14px 16px 16px;
+	gap: var(--space-4);
+	padding: var(--space-5) var(--space-5) var(--space-5);
 	min-width: 0;
 }
 
@@ -16,47 +16,47 @@
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: 0.5rem;
+	gap: var(--space-3);
 	min-height: 130px;
 	text-align: center;
 }
 
 .impcfg-dropzone-inner ::deep .impcfg-dropzone-icon {
-	font-size: 2.75rem;
+	font-size: var(--text-3xl);
 	color: var(--accent);
 }
 
 .impcfg-dropzone-title {
-	font-size: 15px;
+	font-size: var(--text-base);
 	font-weight: 700;
 	color: var(--text);
 }
 
 .impcfg-dropzone-hint {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .impcfg-file-row {
 	display: flex;
 	align-items: center;
-	gap: 0.625rem;
+	gap: var(--space-4);
 }
 
 .impcfg-file-row ::deep .impcfg-file-icon {
-	font-size: 1.25rem;
+	font-size: var(--text-lg);
 	color: var(--accent);
 }
 
 .impcfg-file-name {
 	font-family: var(--font-mono);
-	font-size: 14px;
+	font-size: var(--text-base);
 	color: var(--text);
 }
 
 .impcfg-file-size {
 	font-family: var(--font-mono);
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-faint);
 }
 
@@ -69,20 +69,20 @@
 .impcfg-preview-title {
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
+	gap: var(--space-3);
 	color: var(--text);
 }
 
 .impcfg-body ::deep .impcfg-preview-text textarea {
 	font-family: var(--font-mono);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	line-height: 1.5;
 }
 
 .impcfg-actions {
 	display: flex;
 	justify-content: space-between;
-	gap: 0.75rem;
+	gap: var(--space-4);
 	margin-top: 6px;
 }
 

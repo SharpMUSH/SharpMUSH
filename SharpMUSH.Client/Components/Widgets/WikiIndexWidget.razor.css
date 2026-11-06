@@ -6,7 +6,7 @@
 .wiki-index {
 	display: flex;
 	flex-direction: column;
-	gap: 14px;
+	gap: var(--space-5);
 }
 
 /* ── Hero: blurb left, glass search right, inside the banner's secondary slot ── */
@@ -14,13 +14,13 @@
 	display: flex;
 	align-items: flex-end;
 	justify-content: space-between;
-	gap: 16px;
+	gap: var(--space-5);
 }
 
 .wiki-hero-blurb {
 	margin: 0;
 	max-width: 360px;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	line-height: 1.45;
 	color: var(--text-on-image);
 }
@@ -28,10 +28,10 @@
 .wiki-hero-search {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 	width: 280px;
 	height: 40px;
-	padding: 0 12px;
+	padding: 0 var(--space-4);
 	border-radius: 20px;
 	background: var(--glass-bg);
 	backdrop-filter: var(--glass-filter);
@@ -48,7 +48,7 @@
 	background: transparent;
 	color: var(--text);
 	font: inherit;
-	font-size: 14px;
+	font-size: var(--text-base);
 	outline: none;
 	text-shadow: none;
 }
@@ -65,7 +65,7 @@
 .wiki-cat-grid {
 	display: grid;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: 14px;
+	gap: var(--space-5);
 }
 
 .wiki-cat-card {
@@ -100,14 +100,14 @@
 .wiki-cat-body {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
-	padding: 12px 14px 14px;
+	gap: var(--space-3);
+	padding: var(--space-4) var(--space-5) var(--space-5);
 }
 
 .wiki-cat-head {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 }
 
 .wiki-cat-name {
@@ -115,7 +115,7 @@
 	min-width: 0;
 	margin: 0;
 	font-family: var(--font-display);
-	font-size: 15px;
+	font-size: var(--text-base);
 	font-weight: var(--font-title-weight);
 	font-style: var(--title-style);
 	letter-spacing: var(--title-tracking);
@@ -128,26 +128,26 @@
 }
 
 .wiki-cat-count {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .wiki-cat-pages {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-1);
 }
 
 .wiki-cat-page {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 	min-height: 28px;
-	padding: 0 6px;
+	padding: 0 var(--space-3);
 	margin: 0 -6px;
 	border-radius: 6px;
 	color: var(--text);
-	font-size: 14px;
+	font-size: var(--text-base);
 	text-decoration: none;
 }
 
@@ -166,12 +166,12 @@
 
 .wiki-cat-tag {
 	height: 18px;
-	padding: 0 7px;
+	padding: 0 var(--space-3);
 	border-radius: 9px;
 	background: var(--surface-2);
 	color: var(--text-dim);
 	font-family: var(--font-mono);
-	font-size: 10px;
+	font-size: var(--text-xs);
 	letter-spacing: 0.04em;
 	display: inline-flex;
 	align-items: center;
@@ -185,7 +185,7 @@
 
 .wiki-cat-all {
 	margin-top: 4px;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	color: var(--accent);
 	text-decoration: none;
@@ -204,7 +204,7 @@
 
 .wiki-empty-hint {
 	margin-top: 6px;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--text-faint);
 }
 
@@ -235,7 +235,7 @@
 	/* a phone: the hero keeps its title on one line and its search, and drops the blurb, so the
 	   fixed-height banner does not clip the title */
 	.wiki-index ::deep .kit-banner-title {
-		font-size: 20px;
+		font-size: var(--text-lg);
 	}
 
 	.wiki-hero-blurb {
@@ -243,7 +243,7 @@
 	}
 }
 
-.wiki-collections { margin-block: 1.5rem; display: grid; gap: .75rem; }
-.wiki-collection-entry { display: flex; justify-content: space-between; gap: 1rem; padding: .9rem 1rem; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-row); }
+.wiki-collections { margin-block: 1.5rem; display: grid; gap: var(--space-4); }
+.wiki-collection-entry { display: flex; justify-content: space-between; gap: var(--space-5); padding: var(--space-5) var(--space-5); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-row); }
 .wiki-collection-entry:focus-visible, .wiki-browse-all:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .wiki-browse-all { display: inline-block; margin-block: 1rem; }

@@ -99,17 +99,17 @@
         <div class="phosphor-drawer-tools">
             <button type="button" class="phosphor-icon-btn phosphor-pagebar-btn" aria-label="@Loc["NavSectionMenu"]" title="@Loc["NavSectionMenu"]"
                     @onclick="OnSectionMenu">
-                <MudIcon Icon="@Icons.Material.Outlined.ViewSidebar" Style="font-size:1.25rem;" />
+                <MudIcon Icon="@Icons.Material.Outlined.ViewSidebar" Style="font-size:var(--text-lg);" />
             </button>
             <button type="button" class="phosphor-icon-btn" aria-haspopup="dialog" aria-label="@Loc["NavSearchOpen"]" title="@Loc["NavSearchOpen"]"
                     @onclick="OnSearch">
-                <MudIcon Icon="@Icons.Material.Outlined.Search" Style="font-size:1.25rem;" />
+                <MudIcon Icon="@Icons.Material.Outlined.Search" Style="font-size:var(--text-lg);" />
             </button>
             <span class="phosphor-lang"><LanguagePicker /></span>
             <button type="button" class="@($"phosphor-icon-btn{(TerminalOpen ? " phosphor-icon-btn--active" : "")}")"
                     aria-pressed="@(TerminalOpen ? "true" : "false")" aria-label="@Loc["NavCommandTerminal"]"
                     title="@Loc["NavCommandTerminal"]" @onclick="OnToggleTerminal">
-                <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:1.125rem;" />
+                <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:var(--text-md);" />
             </button>
         </div>
     }

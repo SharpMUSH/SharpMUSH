@@ -2,10 +2,10 @@
    classes are reached with ::deep; what opens in a popover is styled in that component's own file. */
 
 .bld-page {
-    padding: 16px;
+    padding: var(--space-5);
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-5);
     min-width: 0;
 }
 
@@ -14,18 +14,18 @@
 .bld-bar {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-4);
     flex-wrap: wrap;
-    padding-bottom: 12px;
+    padding-bottom: var(--space-4);
     border-bottom: 1px solid var(--border-soft);
 }
 
 .bld-back {
     display: inline-flex;
     align-items: center;
-    gap: 2px;
+    gap: var(--space-1);
     min-height: 40px;
-    padding: 0 8px 0 2px;
+    padding: 0 var(--space-3) 0 var(--space-1);
     border: 0;
     border-radius: var(--radius);
     background: none;
@@ -46,7 +46,7 @@
 
 .bld-bar-title h1 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: var(--text-lg);
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -57,14 +57,14 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-3);
     margin: 2px 0 0;
     color: var(--text-dim);
-    font-size: .8125rem;
+    font-size: var(--text-sm);
 }
 
 .bld-address {
-    padding: 1px 6px;
+    padding: var(--space-1) var(--space-3);
     border-radius: 6px;
     background: var(--surface-2);
     color: var(--text);
@@ -73,7 +73,7 @@
 .bld-bar-tools {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-3);
 }
 
 ::deep .bld-icon-button {
@@ -111,7 +111,7 @@
 .bld-steps {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--space-3);
     list-style: none;
     margin: 0;
     padding: 0;
@@ -121,9 +121,9 @@
     display: inline-flex;
     align-items: center;
     white-space: nowrap;
-    gap: 6px;
+    gap: var(--space-3);
     min-height: 36px;
-    padding: 4px 12px 4px 6px;
+    padding: var(--space-2) var(--space-4) var(--space-2) var(--space-3);
     border: 1px solid var(--border-soft);
     border-radius: 999px;
     background: var(--surface);
@@ -154,7 +154,7 @@
     height: 22px;
     border-radius: 50%;
     background: var(--surface-2);
-    font-size: .75rem;
+    font-size: var(--text-sm);
 }
 
 .bld-step--on .bld-step-n {
@@ -168,11 +168,11 @@
 
 .bld-badge {
     min-width: 20px;
-    padding: 0 6px;
+    padding: 0 var(--space-3);
     border-radius: 999px;
     background: var(--warn-tint);
     color: var(--warn);
-    font-size: .75rem;
+    font-size: var(--text-sm);
     font-weight: 600;
     text-align: center;
 }
@@ -181,20 +181,20 @@
 
 ::deep .bld-h2 {
     margin: 0 0 4px;
-    font-size: 1.0625rem;
+    font-size: var(--text-md);
     font-weight: 600;
 }
 
 ::deep .bld-h3 {
     margin: 0 0 8px;
-    font-size: .9375rem;
+    font-size: var(--text-base);
     font-weight: 600;
 }
 
 ::deep .bld-pane-title {
     margin: 0;
     color: var(--text-dim);
-    font-size: .75rem;
+    font-size: var(--text-sm);
     font-weight: 600;
     letter-spacing: .04em;
     text-transform: uppercase;
@@ -203,13 +203,13 @@
 ::deep .bld-note {
     margin: 0;
     color: var(--text-dim);
-    font-size: .8125rem;
+    font-size: var(--text-sm);
 }
 
 ::deep .bld-sub {
     margin: 12px 0 4px;
     font-weight: 600;
-    font-size: .875rem;
+    font-size: var(--text-base);
 }
 
 ::deep .bld-mono input,
@@ -224,14 +224,14 @@
 ::deep .bld-link-button {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--space-2);
     min-height: 32px;
-    padding: 0 4px;
+    padding: 0 var(--space-2);
     border: 0;
     background: none;
     color: var(--accent);
     font: inherit;
-    font-size: .875rem;
+    font-size: var(--text-base);
     cursor: pointer;
     text-decoration: underline;
     text-underline-offset: 2px;
@@ -248,7 +248,7 @@
 
 ::deep .bld-row {
     display: flex;
-    gap: 8px;
+    gap: var(--space-3);
     align-items: center;
     flex-wrap: wrap;
 }
@@ -260,21 +260,21 @@
 ::deep .bld-segmented,
 .bld-panes {
     display: inline-flex;
-    gap: 2px;
-    padding: 3px;
+    gap: var(--space-1);
+    padding: var(--space-2);
     border-radius: var(--radius);
     background: var(--surface-2);
 }
 
 ::deep .bld-segment {
     min-height: 32px;
-    padding: 0 12px;
+    padding: 0 var(--space-4);
     border: 0;
     border-radius: calc(var(--radius) - 2px);
     background: none;
     color: var(--text-dim);
     font: inherit;
-    font-size: .8125rem;
+    font-size: var(--text-sm);
     cursor: pointer;
 }
 
@@ -288,7 +288,7 @@
 ::deep .bld-ok {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-3);
     margin: 0;
     color: var(--success);
 }
@@ -296,17 +296,17 @@
 ::deep .bld-warn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-3);
     color: var(--warn);
 }
 
 ::deep .bld-tag {
     display: inline-block;
-    padding: 0 8px;
+    padding: 0 var(--space-3);
     border-radius: 999px;
     background: var(--surface-2);
     color: var(--text-dim);
-    font-size: .75rem;
+    font-size: var(--text-sm);
 }
 
 ::deep .bld-tag--warn {
@@ -319,9 +319,9 @@
 .bld-banner {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-3);
     flex-wrap: wrap;
-    padding: 8px 12px;
+    padding: var(--space-3) var(--space-4);
     border: 1px solid var(--border-soft);
     border-left: 3px solid var(--accent);
     border-radius: var(--radius);
@@ -335,7 +335,7 @@
 .bld-start {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    gap: 24px;
+    gap: var(--space-6);
     align-items: start;
 }
 
@@ -343,14 +343,14 @@
 .bld-start-mine {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-3);
     min-width: 0;
 }
 
 .bld-cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 10px;
+    gap: var(--space-4);
     margin-top: 4px;
 }
 
@@ -359,8 +359,8 @@
     flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
-    gap: 4px;
-    padding: 12px;
+    gap: var(--space-2);
+    padding: var(--space-4);
     text-align: left;
     border: 1px solid var(--border-soft);
     border-radius: var(--radius);
@@ -381,17 +381,17 @@
 
 .bld-card-text {
     color: var(--text-dim);
-    font-size: .8125rem;
+    font-size: var(--text-sm);
 }
 
 /* A small drawing of what each template starts as. */
 .bld-card-sketch {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: var(--space-2);
     height: 64px;
     margin-bottom: 6px;
-    padding: 10px;
+    padding: var(--space-4);
     border-radius: calc(var(--radius) - 2px);
     background: var(--surface-2);
 }
@@ -452,9 +452,9 @@
 .bld-apps li {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-4);
     min-height: 56px;
-    padding: 6px 12px;
+    padding: var(--space-3) var(--space-4);
 }
 
 .bld-apps li + li {
@@ -478,7 +478,7 @@
 .bld-open-by summary {
     min-height: 32px;
     color: var(--text-dim);
-    font-size: .875rem;
+    font-size: var(--text-base);
     cursor: pointer;
 }
 
@@ -487,7 +487,7 @@
 .bld-panel {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-4);
     max-width: 900px;
 }
 
@@ -498,20 +498,20 @@
 .bld-grid2 {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 12px;
+    gap: var(--space-4);
 }
 
 .bld-fieldset {
     margin: 0;
-    padding: 8px 12px 12px;
+    padding: var(--space-3) var(--space-4) var(--space-4);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius);
 }
 
 .bld-fieldset legend {
-    padding: 0 4px;
+    padding: 0 var(--space-2);
     font-weight: 600;
-    font-size: .875rem;
+    font-size: var(--text-base);
 }
 
 /* ------------------------------------------------------------------ lay it out */
@@ -523,7 +523,7 @@
 .bld-layout {
     display: grid;
     grid-template-columns: minmax(220px, 280px) minmax(260px, 340px) minmax(0, 1fr);
-    gap: 16px;
+    gap: var(--space-5);
     align-items: start;
 }
 
@@ -534,7 +534,7 @@
     border: 1px solid var(--border-soft);
     border-radius: var(--radius);
     background: var(--surface);
-    padding: 10px;
+    padding: var(--space-4);
 }
 
 .bld-layout-outline,
@@ -548,7 +548,7 @@
 ::deep .bld-settings-kind {
     margin: 0 0 8px;
     color: var(--text-dim);
-    font-size: .75rem;
+    font-size: var(--text-sm);
     font-weight: 600;
     letter-spacing: .04em;
     text-transform: uppercase;
@@ -569,7 +569,7 @@
 
 ::deep .bld-tree ul {
     margin-left: 12px;
-    padding-left: 6px;
+    padding-left: var(--space-3);
     border-left: 1px solid var(--border-soft);
 }
 
@@ -577,7 +577,7 @@
     position: relative;
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: var(--space-1);
     min-height: 36px;
     border-radius: var(--radius);
 }
@@ -604,14 +604,14 @@
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-3);
     min-height: 36px;
-    padding: 0 4px;
+    padding: 0 var(--space-2);
     border: 0;
     background: none;
     color: var(--text);
     font: inherit;
-    font-size: .875rem;
+    font-size: var(--text-base);
     text-align: left;
     justify-content: flex-start;
     cursor: pointer;
@@ -619,11 +619,11 @@
 
 ::deep .bld-row-kind {
     flex: none;
-    padding: 0 6px;
+    padding: 0 var(--space-3);
     border-radius: 6px;
     background: var(--surface-2);
     color: var(--text-dim);
-    font-size: .6875rem;
+    font-size: var(--text-xs);
 }
 
 ::deep .bld-row-label {
@@ -663,12 +663,12 @@
 }
 
 ::deep .bld-tree-add {
-    padding: 2px 0;
+    padding: var(--space-1) 0;
 }
 
 ::deep .bld-issues {
     margin-top: 12px;
-    padding: 8px 10px;
+    padding: var(--space-3) var(--space-4);
     border-radius: var(--radius);
     background: var(--warn-tint);
 }
@@ -677,7 +677,7 @@
     margin: 0 0 4px;
     color: var(--warn);
     font-weight: 600;
-    font-size: .8125rem;
+    font-size: var(--text-sm);
 }
 
 ::deep .bld-issues ul {
@@ -691,28 +691,28 @@
 ::deep .bld-settings {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-3);
 }
 
 ::deep .bld-settings-name {
     margin: 0;
-    font-size: 1rem;
+    font-size: var(--text-md);
     font-weight: 600;
     overflow-wrap: anywhere;
 }
 
 ::deep .bld-inline-problems {
     margin: 4px 0;
-    padding: 6px 10px 6px 26px;
+    padding: var(--space-3) var(--space-4) var(--space-3) var(--space-6);
     border-radius: var(--radius);
     background: var(--warn-tint);
     color: var(--warn);
-    font-size: .8125rem;
+    font-size: var(--text-sm);
 }
 
 ::deep .bld-tabs {
     display: flex;
-    gap: 2px;
+    gap: var(--space-1);
     margin: 6px 0 4px;
     border-bottom: 1px solid var(--border-soft);
     overflow-x: auto;
@@ -721,13 +721,13 @@
 ::deep .bld-tab {
     flex: none;
     min-height: 36px;
-    padding: 0 10px;
+    padding: 0 var(--space-4);
     border: 0;
     border-bottom: 2px solid transparent;
     background: none;
     color: var(--text-dim);
     font: inherit;
-    font-size: .8125rem;
+    font-size: var(--text-sm);
     cursor: pointer;
 }
 
@@ -740,47 +740,47 @@
 ::deep .bld-tabpanel {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-3);
 }
 
 ::deep .bld-key {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: var(--space-1);
 }
 
 ::deep .bld-key-link {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--space-2);
     color: var(--text-dim);
-    font-size: .75rem;
+    font-size: var(--text-sm);
 }
 
 ::deep .bld-pairs {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-2);
 }
 
 ::deep .bld-insert {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px;
-    font-size: .8125rem;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
     color: var(--text-dim);
 }
 
 ::deep .bld-chip-button {
     min-height: 28px;
-    padding: 0 8px;
+    padding: 0 var(--space-3);
     border: 1px solid var(--border-soft);
     border-radius: 999px;
     background: var(--surface-2);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: .75rem;
+    font-size: var(--text-sm);
     cursor: pointer;
 }
 
@@ -789,10 +789,10 @@
 }
 
 ::deep .bld-example {
-    padding: 8px 10px;
+    padding: var(--space-3) var(--space-4);
     border-radius: var(--radius);
     background: var(--surface-2);
-    font-size: .8125rem;
+    font-size: var(--text-sm);
 }
 
 ::deep .bld-example p {
@@ -811,7 +811,7 @@
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 8px 12px;
+    gap: var(--space-3) var(--space-4);
     margin-bottom: 10px;
 }
 
@@ -823,8 +823,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
-    padding: 12px;
+    gap: var(--space-3);
+    padding: var(--space-4);
     border-radius: var(--radius);
     background: var(--surface-2);
 }
@@ -832,7 +832,7 @@
 ::deep .bld-preview-frame {
     width: 100%;
     min-height: 160px;
-    padding: 12px;
+    padding: var(--space-4);
     border-radius: var(--radius);
     background: var(--bg);
     box-shadow: var(--shadow);
@@ -864,14 +864,14 @@
 
 .bld-map th,
 .bld-map td {
-    padding: 8px 12px;
+    padding: var(--space-3) var(--space-4);
     text-align: left;
     vertical-align: top;
 }
 
 .bld-map thead th {
     color: var(--text-dim);
-    font-size: .75rem;
+    font-size: var(--text-sm);
     font-weight: 600;
     border-bottom: 1px solid var(--border-soft);
 }
@@ -906,7 +906,7 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: var(--space-3);
 }
 
 /* ------------------------------------------------------------------ save */
@@ -914,7 +914,7 @@
 .bld-save {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
-    gap: 16px;
+    gap: var(--space-5);
     align-items: start;
     max-width: 1100px;
 }
@@ -922,15 +922,15 @@
 .bld-save-main {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-5);
     min-width: 0;
 }
 
 .bld-card-panel {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 14px;
+    gap: var(--space-3);
+    padding: var(--space-5);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius);
     background: var(--surface);
@@ -951,9 +951,9 @@
 .bld-check {
     display: flex;
     align-items: flex-start;
-    gap: 8px;
-    padding: 4px 0;
-    font-size: .875rem;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
+    font-size: var(--text-base);
 }
 
 .bld-check--ok ::deep .mud-icon-root {
@@ -967,45 +967,45 @@
 .bld-object {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-2);
 }
 
 .bld-object-state {
     min-height: 24px;
-    font-size: .875rem;
+    font-size: var(--text-base);
 }
 
 .bld-attrs {
     border-collapse: collapse;
-    font-size: .8125rem;
+    font-size: var(--text-sm);
 }
 
 .bld-attrs caption {
     text-align: left;
     color: var(--text-dim);
-    padding-bottom: 4px;
+    padding-bottom: var(--space-2);
 }
 
 .bld-attrs td {
-    padding: 3px 12px 3px 0;
+    padding: var(--space-2) var(--space-4) var(--space-2) 0;
     vertical-align: middle;
 }
 
 .bld-json summary {
     min-height: 32px;
     color: var(--text-dim);
-    font-size: .875rem;
+    font-size: var(--text-base);
     cursor: pointer;
 }
 
 .bld-json pre {
     max-height: 320px;
     overflow: auto;
-    padding: 8px;
+    padding: var(--space-3);
     background: var(--code-bg, var(--surface-2));
     border-radius: var(--radius);
     font-family: var(--font-mono);
-    font-size: .8rem;
+    font-size: var(--text-sm);
 }
 
 ::deep .bld-choice {
@@ -1016,8 +1016,8 @@
 .bld-saved {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding-top: 8px;
+    gap: var(--space-3);
+    padding-top: var(--space-3);
     border-top: 1px solid var(--border-soft);
 }
 
@@ -1045,11 +1045,11 @@
 /* On a phone the three panes become tabs, one shown at a time. */
 @container page (max-width: 48rem) {
     .bld-page {
-        padding: 12px;
+        padding: var(--space-4);
     }
 
     .bld-bar {
-        gap: 4px 8px;
+        gap: var(--space-2) var(--space-3);
     }
 
     .bld-back {

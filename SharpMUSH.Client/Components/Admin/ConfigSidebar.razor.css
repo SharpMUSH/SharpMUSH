@@ -1,12 +1,12 @@
 .config-side-back {
 	display: flex;
 	align-items: center;
-	gap: 4px;
+	gap: var(--space-2);
 	min-height: 32px;
-	padding: 0 8px;
+	padding: 0 var(--space-3);
 	margin-bottom: 6px;
 	border-radius: var(--radius-row);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 	text-decoration: none;
 }
@@ -21,7 +21,7 @@
 .config-side-tree {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-1);
 }
 
 .config-side-group {
@@ -32,12 +32,12 @@
 .config-side-summary {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 	height: 40px;
-	padding: 0 8px;
+	padding: 0 var(--space-3);
 	border-radius: var(--radius-row);
 	color: var(--text);
-	font-size: 14px;
+	font-size: var(--text-base);
 	cursor: pointer;
 	list-style: none;
 	transition: background var(--motion-fade);
@@ -93,12 +93,12 @@
 .config-side-sections {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
-	padding: 2px 0 6px 20px;
+	gap: var(--space-1);
+	padding: var(--space-1) 0 var(--space-3) var(--space-6);
 }
 
 .config-side-maint {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-1);
 }

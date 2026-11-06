@@ -2,7 +2,7 @@
 	container-type: inline-size;
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: var(--space-4);
 	min-width: 0;
 }
 
@@ -10,20 +10,20 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 12px;
+	gap: var(--space-4);
 }
 
 .char-dir-search {
 	width: 240px;
 	max-width: 100%;
 	height: 36px;
-	padding: 0 14px;
+	padding: 0 var(--space-5);
 	border: 1px solid var(--border);
 	border-radius: 18px;
 	background: var(--surface);
 	color: var(--text);
 	font: inherit;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	outline: none;
 	box-sizing: border-box;
 }
@@ -33,14 +33,14 @@
 }
 
 .char-dir-count {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--text-faint);
 }
 
 .char-dir-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(min(8rem, 100%), 1fr));
-	gap: 12px;
+	gap: var(--space-4);
 }
 
 /* a narrow zone (an aside) gives the search the whole row */

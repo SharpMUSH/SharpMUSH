@@ -1,16 +1,16 @@
 .story-fold {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: var(--space-3);
 	width: 100%;
 	margin: 4px 0;
-	padding: 6px 10px;
+	padding: var(--space-3) var(--space-4);
 	border: 1px dashed var(--border);
 	border-radius: 10px;
 	background: transparent;
 	color: var(--text-dim);
 	font: inherit;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	text-align: left;
 	cursor: pointer;
 }

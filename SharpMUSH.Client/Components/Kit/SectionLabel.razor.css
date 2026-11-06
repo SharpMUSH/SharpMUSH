@@ -1,8 +1,8 @@
 .kit-section-label {
 	font-family: var(--font-mono);
-	font-size: 10px;
+	font-size: var(--text-xs);
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: var(--text-faint);
-	padding: 0 10px 6px;
+	padding: 0 var(--space-4) var(--space-3);
 }

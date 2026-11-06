@@ -6,7 +6,7 @@
     height: 100vh;
     height: 100svh;
     overflow-y: auto;
-    padding: max(12px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+    padding: max(var(--space-4), env(safe-area-inset-top)) var(--space-5) max(var(--space-6), env(safe-area-inset-bottom));
     background: var(--surface);
     text-align: left;
     cursor: default;
@@ -14,13 +14,13 @@
 }
 
 .play-sheet--side {
-    padding-left: max(16px, env(safe-area-inset-left));
+    padding-left: max(var(--space-5), env(safe-area-inset-left));
     border-right: 1px solid var(--border);
     border-radius: 0 18px 18px 0;
 }
 
 .play-sheet--room {
-    padding-right: max(16px, env(safe-area-inset-right));
+    padding-right: max(var(--space-5), env(safe-area-inset-right));
     border-left: 1px solid var(--border);
     border-radius: 18px 0 0 18px;
 }
@@ -31,6 +31,6 @@
     box-sizing: border-box;
     width: 100vw;
     height: auto;
-    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 8px max(8px, env(safe-area-inset-left));
+    padding: max(var(--space-3), env(safe-area-inset-top)) max(var(--space-3), env(safe-area-inset-right)) var(--space-3) max(var(--space-3), env(safe-area-inset-left));
     background: transparent;
 }

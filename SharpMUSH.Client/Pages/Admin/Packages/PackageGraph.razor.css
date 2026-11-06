@@ -1,14 +1,14 @@
-.pkg-graph { display: flex; flex-direction: column; gap: 0.75rem; }
+.pkg-graph { display: flex; flex-direction: column; gap: var(--space-4); }
 
 .pkg-graph-legend {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.35rem 1rem;
-    font-size: 12px;
+    gap: var(--space-2) var(--space-5);
+    font-size: var(--text-sm);
     color: var(--text-dim);
 }
-.pkg-graph-key { display: inline-flex; align-items: center; gap: 0.35rem; }
+.pkg-graph-key { display: inline-flex; align-items: center; gap: var(--space-2); }
 .pkg-graph-swatch {
     width: 14px;
     height: 10px;
@@ -23,7 +23,7 @@
 .pkg-graph-scroll {
     overflow: auto;
     max-height: 70vh;
-    padding: 4px;
+    padding: var(--space-2);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius);
     background: var(--surface-2);
@@ -53,8 +53,8 @@
     flex-direction: column;
     justify-content: center;
     align-items: stretch;
-    gap: 1px;
-    padding: 0 10px;
+    gap: var(--space-1);
+    padding: 0 var(--space-4);
     text-align: left;
     font: inherit;
     color: var(--text);
@@ -72,35 +72,35 @@
 .pkg-graph-node--dimmed { opacity: 0.35; }
 
 .pkg-graph-name, .pkg-graph-id { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.pkg-graph-name { font-size: 13px; font-weight: 600; }
-.pkg-graph-id { font-family: var(--font-mono, monospace); font-size: 11px; color: var(--text-faint); }
+.pkg-graph-name { font-size: var(--text-sm); font-weight: 600; }
+.pkg-graph-id { font-family: var(--font-mono, monospace); font-size: var(--text-xs); color: var(--text-faint); }
 
 .pkg-graph-detail {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
-    padding: 10px 12px;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-4);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius);
     overflow-wrap: anywhere;
 }
-.pkg-graph-detail-head { display: flex; align-items: center; gap: 0.5rem; }
-.pkg-graph-detail-state { font-size: 12px; font-weight: 600; color: var(--node-color); }
+.pkg-graph-detail-head { display: flex; align-items: center; gap: var(--space-3); }
+.pkg-graph-detail-state { font-size: var(--text-sm); font-weight: 600; color: var(--node-color); }
 .pkg-graph-detail-state.pkg-graph-node--available { color: var(--text-dim); }
-.pkg-graph-relation { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; font-size: 13px; }
+.pkg-graph-relation { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--text-sm); }
 .pkg-graph-relation-label { min-width: 6rem; color: var(--text-dim); }
 .pkg-graph-relation-none { color: var(--text-faint); }
 
-.pkg-graph-unjoined { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; font-size: 12px; }
+.pkg-graph-unjoined { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--text-sm); }
 .pkg-graph-unjoined-label { margin-right: 0.25rem; color: var(--text-dim); }
 
 .pkg-graph-chip {
     display: inline-flex;
     align-items: center;
     height: 22px;
-    padding: 0 8px;
+    padding: 0 var(--space-3);
     font: inherit;
-    font-size: 12px;
+    font-size: var(--text-sm);
     color: var(--text);
     border: 1px solid var(--node-color);
     border-radius: 11px;

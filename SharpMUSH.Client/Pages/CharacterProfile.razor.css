@@ -1,7 +1,7 @@
 .char-profile {
 	display: flex;
 	flex-direction: column;
-	gap: 14px;
+	gap: var(--space-5);
 	min-width: 0;
 }
 
@@ -34,14 +34,14 @@
 	justify-content: center;
 	background: linear-gradient(140deg, hsl(var(--portrait-hue) 40% 34%), hsl(var(--portrait-hue) 34% 22%));
 	color: hsl(var(--portrait-hue) 45% 86%);
-	font-size: 34px;
+	font-size: var(--text-2xl);
 	font-weight: 700;
 	line-height: 1;
 	text-shadow: none;
 }
 
 .char-profile-role {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--text-on-image);
 	margin-top: 2px;
 }
@@ -49,7 +49,7 @@
 .char-profile-pills {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 6px;
+	gap: var(--space-3);
 	margin-top: 10px;
 	text-shadow: none;
 }
@@ -68,7 +68,7 @@
 .char-profile-body {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) var(--aside-w);
-	gap: 14px;
+	gap: var(--space-5);
 	align-items: start;
 }
 
@@ -76,23 +76,23 @@
 .char-profile-aside {
 	display: flex;
 	flex-direction: column;
-	gap: 14px;
+	gap: var(--space-5);
 	min-width: 0;
 }
 
 .char-profile-unavailable {
-	padding: 10px 14px;
+	padding: var(--space-4) var(--space-5);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-card);
 	background: var(--surface);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .char-profile-missing {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: var(--space-4);
 }
 
 .char-profile-missing a {
@@ -113,6 +113,6 @@
 		width: 72px;
 		height: 72px;
 		border-radius: 14px;
-		font-size: 24px;
+		font-size: var(--text-xl);
 	}
 }

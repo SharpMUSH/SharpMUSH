@@ -6,8 +6,8 @@
 }
 
 .welcome-text-body {
-	padding: 16px;
-	font-size: 15px;
+	padding: var(--space-5);
+	font-size: var(--text-base);
 	line-height: 1.6;
 	color: var(--text);
 }

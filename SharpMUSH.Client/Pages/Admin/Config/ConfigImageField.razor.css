@@ -2,14 +2,14 @@
 .cfg-image {
 	display: flex;
 	flex-direction: column;
-	gap: 10px;
+	gap: var(--space-4);
 	width: 100%;
 }
 
 .cfg-image-row {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: var(--space-4);
 }
 
 .cfg-image-preview {
@@ -34,13 +34,13 @@
 	width: 100%;
 	min-width: 0;
 	height: 36px;
-	padding: 0 12px;
+	padding: 0 var(--space-4);
 	background: var(--surface-3);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-row);
 	color: var(--text);
 	font: inherit;
-	font-size: 14px;
+	font-size: var(--text-base);
 	box-sizing: border-box;
 }
 
@@ -82,8 +82,8 @@
 .cfg-image-gallery {
 	display: flex;
 	flex-direction: column;
-	gap: 10px;
-	padding: 12px;
+	gap: var(--space-4);
+	padding: var(--space-4);
 	border: 1px solid var(--border-soft);
 	border-radius: var(--radius-row);
 	background: var(--surface-2);
@@ -93,13 +93,13 @@
 	display: flex;
 	align-items: center;
 	flex-wrap: wrap;
-	gap: 10px;
+	gap: var(--space-4);
 }
 
 .cfg-image-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-	gap: 8px;
+	gap: var(--space-3);
 	max-height: 320px;
 	overflow-y: auto;
 }
@@ -108,15 +108,15 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 6px;
+	gap: var(--space-3);
 	min-width: 0;
-	padding: 8px;
+	padding: var(--space-3);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-row);
 	background: var(--surface);
 	color: var(--text-dim);
 	font: inherit;
-	font-size: 11px;
+	font-size: var(--text-xs);
 	cursor: pointer;
 }
 
@@ -141,11 +141,11 @@
 }
 
 .cfg-empty {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--text-faint);
 }
 
 .cfg-row-error {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--link-missing);
 }

@@ -1,21 +1,21 @@
 .adm-msg-source {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	padding: 14px 16px 16px;
+	gap: var(--space-4);
+	padding: var(--space-5) var(--space-5) var(--space-5);
 }
 
 .adm-msg-source-choices {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-	gap: 10px;
+	gap: var(--space-4);
 }
 
 .adm-msg-choice {
 	display: flex;
 	align-items: flex-start;
-	gap: 10px;
-	padding: 10px 12px;
+	gap: var(--space-4);
+	padding: var(--space-4) var(--space-4);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-row);
 	background: var(--surface-2);
@@ -43,7 +43,7 @@
 .adm-msg-choice-text {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-1);
 }
 
 .adm-msg-choice-label {
@@ -52,7 +52,7 @@
 
 .adm-msg-choice-hint,
 .adm-msg-hint {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
@@ -60,29 +60,29 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: baseline;
-	gap: 4px 12px;
-	font-size: 13px;
+	gap: var(--space-2) var(--space-4);
+	font-size: var(--text-sm);
 }
 
 .adm-msg-layout {
 	display: grid;
 	grid-template-columns: 220px minmax(0, 1fr);
-	gap: 16px;
+	gap: var(--space-5);
 	align-items: start;
 }
 
 .adm-msg-list {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--space-2);
 }
 
 .adm-msg-item {
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
-	gap: 4px;
-	padding: 8px 12px;
+	gap: var(--space-2);
+	padding: var(--space-3) var(--space-4);
 	border: 1px solid transparent;
 	border-radius: var(--radius-row);
 	background: transparent;
@@ -115,15 +115,15 @@
 .adm-msg-item-tags {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 4px;
+	gap: var(--space-2);
 }
 
 .adm-msg-tag {
-	padding: 0 6px;
+	padding: 0 var(--space-3);
 	border-radius: 6px;
 	background: var(--surface-3);
 	color: var(--text-dim);
-	font-size: 11px;
+	font-size: var(--text-xs);
 }
 
 .adm-msg-tag--object {
@@ -139,15 +139,15 @@
 .adm-msg-body {
 	display: flex;
 	flex-direction: column;
-	gap: 14px;
-	padding: 14px 16px 16px;
+	gap: var(--space-5);
+	padding: var(--space-5) var(--space-5) var(--space-5);
 	min-width: 0;
 }
 
 .adm-msg-editor {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: var(--space-3);
 	min-width: 0;
 }
 
@@ -156,12 +156,12 @@
 .adm-msg-preview {
 	width: 100%;
 	margin: 0;
-	padding: 10px 12px;
+	padding: var(--space-4) var(--space-4);
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
 	background: var(--surface-3);
 	font-family: var(--font-mono);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	line-height: 1.35;
 	tab-size: 8;
 }
@@ -180,7 +180,7 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 }
 
 .adm-msg-spacer {
@@ -203,12 +203,12 @@
 .adm-msg-preview-block {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: var(--space-3);
 	min-width: 0;
 }
 
 .adm-msg-preview-label {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	color: var(--text-dim);
 }
@@ -233,7 +233,7 @@
 	.adm-msg-list {
 		flex-direction: row;
 		overflow-x: auto;
-		padding-bottom: 4px;
+		padding-bottom: var(--space-2);
 	}
 
 	.adm-msg-item {

@@ -44,7 +44,7 @@
 
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
                                Disabled="_busy" OnClick="LoginAsync" Class="login-submit"
-                               Style="font-weight:600;font-size:0.9375rem;height:42px;">
+                               Style="font-weight:600;font-size:var(--text-base);height:42px;">
                         @if (_busy) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
                         @Loc["AuthSignIn"]
                     </MudButton>
@@ -54,7 +54,7 @@
                         <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true"
                                    Disabled="_busy" OnClick="PasskeyLoginAsync" Class="login-passkey mt-3"
                                    StartIcon="@Icons.Material.Outlined.Key"
-                                   Style="font-weight:600;font-size:0.9375rem;height:42px;">
+                                   Style="font-weight:600;font-size:var(--text-base);height:42px;">
                             @Loc["AuthPasskeySignIn"]
                         </MudButton>
                     }
@@ -86,7 +86,7 @@
 
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
                                Disabled="_busy" OnClick="RegisterAsync" Class="register-submit"
-                               Style="font-weight:600;font-size:0.9375rem;height:42px;">
+                               Style="font-weight:600;font-size:var(--text-base);height:42px;">
                         @if (_busy) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
                         @Loc["AuthCreateAccount"]
                     </MudButton>
@@ -97,7 +97,7 @@
         <SharpMUSH.Client.Components.Settings.ExternalSignInButtons RememberMe="_rememberMe" ReturnPath="@(_returnUrl is { } route && route.StartsWith('/') && !route.StartsWith("//", StringComparison.Ordinal) ? route : "/account")" />
 
         <MudDivider Class="my-3" />
-        <MudText Align="Align.Center" Style="font-size:0.8125rem;color:var(--text-faint);">
+        <MudText Align="Align.Center" Style="font-size:var(--text-sm);color:var(--text-faint);">
             @Loc["AuthConnectDirectly"]
             <MudLink Href="/play" Style="color:var(--accent);">@Loc["AuthTerminalLink"]</MudLink>
         </MudText>

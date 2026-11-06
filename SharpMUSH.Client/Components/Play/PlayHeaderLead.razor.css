@@ -2,7 +2,7 @@
 .play-lead {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--space-2);
 }
 
 .play-menu-btn {
@@ -60,7 +60,7 @@
     height: 100%;
     border-radius: 50%;
     object-fit: cover;
-    font-size: 14px;
+    font-size: var(--text-base);
     font-weight: 700;
 }
 

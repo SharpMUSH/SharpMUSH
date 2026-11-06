@@ -2,16 +2,16 @@
 	display: flex;
 	flex-direction: column;
 	align-items: flex-end;
-	gap: 6px;
+	gap: var(--space-3);
 }
 
 .story-show-menu {
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: flex-end;
-	gap: 4px 14px;
+	gap: var(--space-2) var(--space-5);
 	margin: 0;
-	padding: 8px 12px;
+	padding: var(--space-3) var(--space-4);
 	border: 1px solid var(--border);
 	border-radius: 12px;
 	background: var(--surface-2);
@@ -30,8 +30,8 @@
 .story-show-item {
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
-	font-size: 13px;
+	gap: var(--space-3);
+	font-size: var(--text-sm);
 	color: var(--text);
 	cursor: pointer;
 }
@@ -46,6 +46,6 @@
 }
 
 .story-show-error {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--danger);
 }

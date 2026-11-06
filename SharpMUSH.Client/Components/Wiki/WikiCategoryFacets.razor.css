@@ -1,13 +1,13 @@
 .wiki-facets {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-4);
     margin: 12px 0;
 }
 .wiki-facets-filters {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px 24px;
+    gap: var(--space-4) var(--space-6);
 }
 .wiki-facet {
     min-width: 0;
@@ -19,18 +19,18 @@
     padding: 0;
     margin-bottom: 4px;
     color: var(--text-dim);
-    font-size: 13px;
+    font-size: var(--text-sm);
 }
 .wiki-facet-values {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-3);
 }
 .wiki-facet-value,
 .wiki-facets-clear {
     min-height: 44px;
-    padding: .4rem .7rem;
+    padding: var(--space-3) var(--space-4);
     border: 1px solid var(--border);
     border-radius: var(--radius-row);
     background: var(--surface);
@@ -50,19 +50,19 @@
 .wiki-facet-count {
     margin-left: 4px;
     color: var(--text-faint);
-    font-size: 12px;
+    font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
 }
 .wiki-facet-more,
 .wiki-facets-note {
     margin: 0;
     color: var(--text-faint);
-    font-size: 12px;
+    font-size: var(--text-sm);
 }
 .wiki-facets-summary {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-4);
 }
 .wiki-facets-message { color: var(--danger); }

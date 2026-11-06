@@ -12,7 +12,7 @@
 		"chips tools"
 		"input send";
 	align-items: center;
-	gap: 8px 10px;
+	gap: var(--space-3) var(--space-4);
 }
 
 .composer-chips {
@@ -26,9 +26,9 @@
 	position: relative;
 	height: 26px;
 	min-height: 0;
-	padding: 0 10px;
+	padding: 0 var(--space-4);
 	border-radius: 13px;
-	font-size: 12px;
+	font-size: var(--text-sm);
 }
 
 .composer-chips ::deep .kit-chip::after {
@@ -41,7 +41,7 @@
 	grid-area: tools;
 	display: flex;
 	align-items: center;
-	gap: 4px;
+	gap: var(--space-2);
 }
 
 @container (max-width: 28rem) {
@@ -99,14 +99,14 @@
 	min-width: 0;
 	min-height: 40px;
 	max-height: 160px;
-	padding: 9px 4px;
+	padding: var(--space-3) var(--space-2);
 	resize: none;
 	field-sizing: content;
 	border: 0;
 	background: transparent;
 	color: var(--text);
 	font: inherit;
-	font-size: 15px;
+	font-size: var(--text-base);
 	line-height: 1.45;
 	outline: none;
 }
@@ -124,7 +124,7 @@
 
 .composer-grid ::deep .composer-input--command {
 	font-family: var(--font-mono);
-	font-size: 14px;
+	font-size: var(--text-base);
 }
 
 .composer-send {
@@ -132,7 +132,7 @@
 	align-self: end;
 	justify-self: end;
 	height: 40px;
-	padding: 0 20px;
+	padding: 0 var(--space-6);
 	border: 0;
 	border-radius: 20px;
 	background: var(--accent);

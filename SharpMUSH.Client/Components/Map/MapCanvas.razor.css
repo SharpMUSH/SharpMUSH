@@ -98,13 +98,13 @@
 .map-place-glyph,
 .map-place-badge {
 	fill: var(--text);
-	font-size: 28px;
+	font-size: var(--text-2xl);
 	text-anchor: middle;
 	dominant-baseline: central;
 }
 
 .map-place-badge {
-	font-size: 16px;
+	font-size: var(--text-md);
 	text-anchor: end;
 	dominant-baseline: hanging;
 }
@@ -141,7 +141,7 @@
 
 .map-way-name {
 	fill: var(--text-dim);
-	font-size: 14px;
+	font-size: var(--text-base);
 	dominant-baseline: central;
 	paint-order: stroke;
 	stroke: var(--surface);
@@ -202,16 +202,16 @@
 	position: absolute;
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-1);
 	align-items: center;
 	justify-content: center;
-	padding: 4px 6px;
+	padding: var(--space-2) var(--space-3);
 	border: 0;
 	border-radius: 8px;
 	background: transparent;
 	color: var(--text);
 	/* The name grows and shrinks with the drawing, within what still reads. */
-	font: clamp(11px, calc(13px * var(--map-zoom)), 20px)/1.2 var(--font-ui);
+	font: clamp(var(--text-xs), calc(var(--text-sm) * var(--map-zoom)), var(--text-lg))/1.2 var(--font-ui);
 	text-align: center;
 	overflow: hidden;
 	cursor: pointer;
@@ -257,7 +257,7 @@ span.map-room-icon {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	font-size: clamp(16px, calc(24px * var(--map-zoom)), 36px);
+	font-size: clamp(var(--text-md), calc(var(--text-xl) * var(--map-zoom)), var(--text-2xl));
 }
 
 .map-place-icon {
@@ -273,7 +273,7 @@ span.map-room-icon {
 	display: inline-flex;
 	align-items: center;
 	color: var(--accent);
-	font: 600 12px/1 var(--font-ui);
+	font: 600 var(--text-sm)/1 var(--font-ui);
 }
 
 .map-room-name {
@@ -324,7 +324,7 @@ span.map-room-icon {
 	transform: translateX(-50%);
 	max-width: 160px;
 	width: max-content;
-	padding: 2px 8px;
+	padding: var(--space-1) var(--space-3);
 	border-radius: 8px;
 	background: var(--surface);
 	box-shadow: var(--shadow);
@@ -485,12 +485,12 @@ span.map-room-icon {
 	position: absolute;
 	z-index: 3;
 	transform: translateX(-50%);
-	padding: 2px 10px;
+	padding: var(--space-1) var(--space-4);
 	border: 1px solid var(--border);
 	border-radius: 999px;
 	background: var(--surface-2);
 	color: var(--text);
-	font: 12px/1.5 var(--font-ui);
+	font: var(--text-sm)/1.5 var(--font-ui);
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
 	pointer-events: none;

@@ -3,23 +3,23 @@
 }
 
 .wiki-body-widget ::deep .wiki-body-card .kit-card-body {
-	padding: clamp(0.875rem, 6cqw, 1.25rem) clamp(0.875rem, 6cqw, 1.5rem);
+	padding: clamp(var(--space-5), 6cqw, var(--space-6)) clamp(var(--space-5), 6cqw, var(--space-6));
 }
 
 .wiki-body-widget ::deep .wiki-article-body {
 	max-width: 640px;
-	font-size: 15px;
+	font-size: var(--text-base);
 	line-height: 1.7;
 }
 
 .wiki-body-history {
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
+	gap: var(--space-3);
 	min-height: 28px;
-	padding: 0 8px;
+	padding: 0 var(--space-3);
 	border-radius: var(--radius-row);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 	text-decoration: none;
 }
@@ -28,7 +28,7 @@
 	border: 0;
 	background: none;
 	font: inherit;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	cursor: pointer;
 }
 

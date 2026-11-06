@@ -22,7 +22,7 @@
 
 .schema-graph-edge-label {
 	font-family: var(--font-ui);
-	font-size: 12px;
+	font-size: var(--text-sm);
 	fill: var(--text-dim);
 	text-anchor: middle;
 	dominant-baseline: central;
@@ -45,7 +45,7 @@
 
 .schema-graph-initial {
 	font-family: var(--font-display);
-	font-size: 20px;
+	font-size: var(--text-lg);
 	fill: var(--accent-on);
 	text-anchor: middle;
 	dominant-baseline: central;
@@ -53,7 +53,7 @@
 
 .schema-graph-name {
 	font-family: var(--font-ui);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	fill: var(--text);
 	text-anchor: middle;
 	dominant-baseline: hanging;

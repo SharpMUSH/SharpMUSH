@@ -2,7 +2,7 @@
 .wiki-page {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) var(--aside-w);
-	gap: 14px;
+	gap: var(--space-5);
 	align-items: start;
 }
 
@@ -14,7 +14,7 @@
 .wiki-page-main {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: var(--space-4);
 	min-width: 0;
 }
 
@@ -23,7 +23,7 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: .5rem 1rem;
+	gap: var(--space-3) var(--space-5);
 }
 
 .wiki-journey ::deep .wiki-back {
@@ -40,29 +40,29 @@
 .wiki-page-aside {
 	display: flex;
 	flex-direction: column;
-	gap: 14px;
+	gap: var(--space-5);
 	min-width: 0;
 }
 
 /* ── Body card: a 640px measure at 15px/1.7 ── */
 .wiki-page-main ::deep .wiki-article-card .kit-card-body {
-	padding: 20px 28px 28px;
+	padding: var(--space-6) var(--space-7) var(--space-7);
 }
 
 .wiki-article-body {
 	max-width: 640px;
-	font-size: 15px;
+	font-size: var(--text-base);
 	line-height: 1.7;
 }
 
 .wiki-article-body ::deep h2 {
-	font-size: 18px;
+	font-size: var(--text-md);
 }
 
 /* The author chooses the action and its place in the article. */
 .WikiContent ::deep .wiki-next-step {
 	margin-block: 1.5rem;
-	padding: 1rem 1.25rem;
+	padding: var(--space-5) var(--space-6);
 	border: 1px solid var(--border);
 	border-inline-start: 3px solid var(--accent);
 	border-radius: var(--radius-row);
@@ -101,7 +101,7 @@
 
 .wiki-article-kicker {
 	font-family: var(--font-mono);
-	font-size: 10px;
+	font-size: var(--text-xs);
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: var(--text-faint);
@@ -110,7 +110,7 @@
 .wiki-article-title {
 	margin: 4px 0 12px;
 	font-family: var(--font-display);
-	font-size: 26px;
+	font-size: var(--text-xl);
 	font-weight: 700;
 	color: var(--text);
 }
@@ -119,8 +119,8 @@
 .wiki-lang-chips {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 6px;
-	padding: 0 4px;
+	gap: var(--space-3);
+	padding: 0 var(--space-2);
 }
 
 /* mermaid diagrams inside the body */
@@ -144,6 +144,6 @@
 
 @container page (max-width: 48rem) {
 	.wiki-page-main ::deep .wiki-article-card .kit-card-body {
-		padding: 14px 16px 18px;
+		padding: var(--space-5) var(--space-5) var(--space-5);
 	}
 }
