@@ -1,7 +1,7 @@
 format: "1.16"
 package: availability
 title: "Availability"
-version: 1.5.0
+version: 1.5.1
 authors: [SharpMUSH]
 description: "+avail: when each character is busy or free, as dates, ranges and repeating patterns like an office calendar, and the times a group of players are all free."
 license: MIT
@@ -956,7 +956,7 @@ objects:
 
         Output: `\[AVAIL\] Done: Added 3, busy: Every 2 weeks on Tue, 20:00-22:00.`
 
-        **Privacy.** Your entries are kept on the Availability Calendar, not on your character, so no one who can examine your character reads them. Others see only when you are free or busy; your notes stay yours. Others see each of your characters on its own, with only its own entries, so nothing they see ties your characters together, unless you have listed them in public as yours.
+        **Privacy.** Your entries are kept on the Availability Calendar, not on your character, so no one who can examine your character reads them. Others see only when you are free or busy; your notes stay yours. Others see each of your characters on its own, with only its own entries, so nothing they see ties your characters together.
       HELP`AVAIL`WHEN: |-
         The `<when>` after `+avail/busy` and `+avail/free` is words in any order. Capitals and commas do not matter.
 

@@ -2,9 +2,8 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 @* An installed package: its kind, version, source and update state, and the check, README, history and uninstall actions. *@
-<PackageRow Icon="@(Package.Bridge ? Icons.Material.Filled.Link : PackageKinds.Icon(Main))"
-            Kind="@(Package.Bridge ? "bridge" : Main.ToString().ToLowerInvariant())"
-            IconTitle="@(Package.Bridge ? Loc["PkgKindBridge"] : PackageKinds.Name(Main, Loc))" Name="@(Package.Title ?? Package.Package.Id)"
+<PackageRow Icon="@PackageKinds.Icon(Main)" Kind="@Main.ToString().ToLowerInvariant()" Bridge="@Package.Bridge"
+            IconTitle="@(Package.Bridge ? Loc["PkgKindBridgeOf", PackageKinds.Name(Main, Loc)] : PackageKinds.Name(Main, Loc))" Name="@(Package.Title ?? Package.Package.Id)"
             Id="@(Package.Title is null ? null : Package.Package.Id)">
     <Tags>
         <PackageKindTags Contents="@Contents" Bridge="@Package.Bridge" />

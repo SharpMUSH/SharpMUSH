@@ -177,31 +177,36 @@ public class PackagesController(
 		var result = new List<InstalledPackageDto>();
 		foreach (var package in installed)
 		{
+			var (title, bridge) = BundledListing(package);
 			result.Add(new InstalledPackageDto(
 				package,
 				await registry.CountManagedAttributesAsync(package.Id),
 				await registry.CountPackageObjectsAsync(package.Id),
 				dependents[package.Id].ToList(),
-				BundledTitle(package),
+				title,
 				wikiPages.GetValueOrDefault(package.Id),
-				BundledPackages.IsCatalogueSource(package.SourceRepo) && BundledPackages.All.Any(p => p.PackageId == package.Id && p.Bridge)));
+				bridge));
 		}
 
 		return Ok(result);
 	}
 
-	/// <summary>The title of a package installed from the bundled catalogue, read from its embedded manifest.</summary>
-	private string? BundledTitle(InstalledPackageRecord package) =>
+	/// <summary>
+	/// How a package installed from the bundled catalogue is listed: the title in its embedded manifest, and whether it
+	/// is a bridge, by the server's catalogue or by the manifest's <c>bridge:</c>. A package from elsewhere has neither.
+	/// </summary>
+	private (string? Title, bool Bridge) BundledListing(InstalledPackageRecord package) =>
 		BundledPackages.IsCatalogueSource(package.SourceRepo) && BundledPackages.Contains(package.Id)
-			? BundledTitles.GetOrAdd(package.Id, id => manifests.ParseManifest(BundledPackages.ManifestYaml(id)) switch
+			? BundledListings.GetOrAdd(package.Id, id => manifests.ParseManifest(BundledPackages.ManifestYaml(id)) switch
 			{
-				ParsedPackageManifest parsed => parsed.Manifest.Title,
-				_ => null,
+				ParsedPackageManifest parsed => (parsed.Manifest.Title,
+					parsed.Manifest.Bridge || BundledPackages.All.Any(p => p.PackageId == id && p.Bridge)),
+				_ => (null, BundledPackages.All.Any(p => p.PackageId == id && p.Bridge)),
 			})
-			: null;
+			: (null, false);
 
-	/// <summary>Bundled manifests are compiled into the server, so their titles are read once.</summary>
-	private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string?> BundledTitles =
+	/// <summary>Bundled manifests are compiled into the server, so how each is listed is read once.</summary>
+	private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string? Title, bool Bridge)> BundledListings =
 		new(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>Revision history for an installed package (snapshot payloads omitted).</summary>

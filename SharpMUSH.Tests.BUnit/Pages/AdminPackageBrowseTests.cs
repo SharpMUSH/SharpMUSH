@@ -119,6 +119,24 @@ public class AdminPackageBrowseTests : BunitContext
 	}
 
 	[Test]
+	public async Task A_bridge_keeps_its_kinds_icon_with_a_bridge_badge()
+	{
+		api.Packages =
+		[
+			new("sheet", "sheet", "1.0.0", "A sheet", []),
+			new("sheet-help", "sheet-help", "1.0.0", "Bridge", [], Bridge: true, DependsOn: ["sheet", "plus-help"])
+		];
+		var cut = RenderBrowse();
+		await cut.FindAll(".lib-addons-toggle").Single().ClickAsync();
+
+		var rows = cut.FindComponents<LibraryPackageRow>().ToDictionary(r => r.Instance.Entry.PackageId!);
+		await Assert.That(rows["sheet-help"].Find(".pkg-row-icon").ClassList).Contains("pkg-kind-softcode");
+		await Assert.That(rows["sheet-help"].FindAll(".pkg-row-bridge")).HasCount().EqualTo(1);
+		await Assert.That(rows["sheet-help"].Find(".pkg-row-icon-wrap").GetAttribute("title")).StartsWith("PkgKindBridgeOf(");
+		await Assert.That(rows["sheet"].FindAll(".pkg-row-bridge")).IsEmpty();
+	}
+
+	[Test]
 	public async Task The_dependency_graph_draws_the_listed_packages_with_what_they_need()
 	{
 		api.Packages =

@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: onboarding-chargen
 title: "Onboarding: character applications"
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Joins the checklist to character applications: the Get approved step says where the player's +app application stands and what to do next."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [onboarding, chargen, approval, bridge]
 category: Characters
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. The onboarding package's approval step checks

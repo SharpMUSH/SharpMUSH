@@ -1,7 +1,7 @@
 format: "1.16"
 package: census
 title: "Census"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "+census: counts and lists the game's characters by what staff choose to count, such as theme, gender, role or how long since they were last on, with filters and breakdowns that combine."
 license: MIT
@@ -661,6 +661,3 @@ objects:
         characters, the path, the comparison and the value, and returns the characters it keeps.
         `` KIND`<NAME>`FIND `` gets the path, the comparison and the value, and returns the only characters
         that can match, such as an index lists them, or `#-1` to look at everyone.
-
-        The `census-finger` package is one: its `finger` kind reads a `+finger` field as `+finger` shows it to
-        the reader, and it adds species, age and timezone dimensions.

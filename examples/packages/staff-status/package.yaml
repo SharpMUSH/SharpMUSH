@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: staff-status
 title: "Staff list: +status"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Shows a staff member's +status in +staff, beside whether they are on duty: On duty · LFRP."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [staff, status, bridge]
 category: Community
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. staff runs every FILTER`STAFF`STATUS`<name>

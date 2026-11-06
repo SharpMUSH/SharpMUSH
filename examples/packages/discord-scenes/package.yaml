@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: discord-scenes
 title: "Discord scheduled scenes"
-version: 1.2.0
+version: 1.2.1
 authors: [SharpMUSH]
 description: "Scheduled scenes in the Discord server's Events tab: a scene with a time still to come is published as a Discord event, moved when it is rescheduled, shown as happening when it starts, and ended when it finishes or is cancelled."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [discord, scene, events, schedule]
 category: Community
+bridge: true
 requires_server: ">=0.1"
 
 # The Scene plugin keeps the scenes and raises SCENE`STATUS and SCENE`CHANGE; the Discord plugin runs

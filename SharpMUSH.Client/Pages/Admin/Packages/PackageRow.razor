@@ -1,6 +1,13 @@
-@* One row of the packages page's lists: the kind's icon, the name and its tags, a meta line, and the actions. *@
+@* One row of the packages page's lists: the kind's icon, badged when the package is a bridge, the name and its tags,
+   a meta line, and the actions. *@
 <div class="pkg-row">
-    <MudIcon Icon="@Icon" Class="@($"pkg-row-icon pkg-kind-{Kind}")" Title="@IconTitle" />
+    <span class="pkg-row-icon-wrap" title="@IconTitle">
+        <MudIcon Icon="@Icon" Class="@($"pkg-row-icon pkg-kind-{Kind}")" aria-hidden="true" />
+        @if (Bridge)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.Link" Class="pkg-row-bridge" aria-hidden="true" />
+        }
+    </span>
     <div class="pkg-row-main">
         <div class="pkg-row-tags">
             <span class="pkg-row-name">@Name</span>
@@ -26,6 +33,9 @@
     [Parameter, EditorRequired] public string Kind { get; set; } = string.Empty;
 
     [Parameter] public string? IconTitle { get; set; }
+
+    /// <summary>Whether the package is a bridge, which badges its kind's icon.</summary>
+    [Parameter] public bool Bridge { get; set; }
     [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
 
     /// <summary>The id, beside a <see cref="Name"/> that is a title; null when the name is the id.</summary>
