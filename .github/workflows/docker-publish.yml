@@ -66,6 +66,15 @@ jobs:
             echo "::error::CHANGELOG.md has no '## [$VERSION]' section."
             exit 1
           fi
+          # A manual run carries no release event: read the tag's published release instead.
+          if [[ -z "$PRERELEASE" ]]; then
+            if ! PRERELEASE=$(curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" \
+                "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/tags/v$VERSION" |
+                python3 -c 'import json, sys; print(str(json.load(sys.stdin)["prerelease"]).lower())'); then
+              echo "::error::v$VERSION has no published GitHub Release; publish one instead of running this by hand."
+              exit 1
+            fi
+          fi
           if [[ "$PRERELEASE" == true && "$VERSION" != *-* ]]; then
             echo "::error::A prerelease's tag needs a suffix, like v$VERSION-rc.1, so it cannot move :latest."
             exit 1

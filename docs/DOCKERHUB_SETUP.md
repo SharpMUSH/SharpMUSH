@@ -129,7 +129,7 @@ These images reflect the latest state of the `main` branch, for development and 
 You can also manually trigger either workflow from the GitHub Actions UI:
 
 ### For Releases:
-A manual run publishes a release's images again (after a failed run, say).
+A manual run publishes a release's images again (after a failed run, say). It reads the tag's GitHub Release, so it refuses a tag with no published release and treats a pre-release as one.
 1. Go to **Actions** tab in your repository
 2. Select **Publish Docker Images** workflow
 3. Click **Run workflow**
