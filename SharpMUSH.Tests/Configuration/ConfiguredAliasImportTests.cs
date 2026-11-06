@@ -297,6 +297,25 @@ public class ConfiguredAliasImportTests
 		await Assert.That(resolved.NotCarried).IsEmpty();
 	}
 
+	/// <summary>Restrictions on two dialect names for one built-in add up rather than the first winning.</summary>
+	[Test]
+	public async Task RestrictionsOnNamesForTheSameBuiltInAddUp()
+	{
+		var import = Import() with
+		{
+			Options = SharpMUSHOptions.Default() with
+			{
+				Restriction = new RestrictionOptions(new Dictionary<string, string[]>(),
+					new Dictionary<string, string[]> { ["totmatch"] = ["wizard"], ["totwildmatch"] = ["nobody"] })
+			}
+		};
+
+		var resolved = Aliases.Resolve(import, ConfigurationDialect.RhostMUSH);
+
+		await Assert.That(resolved.FunctionRestrictions.Keys.Single()).IsEqualTo("matchall");
+		await Assert.That(resolved.FunctionRestrictions["matchall"]).IsEquivalentTo(new[] { "wizard", "nobody" });
+	}
+
 	private static AliasDirective Command(string alias, string target) => new(AliasKind.Command, alias, target, $"alias {alias} {target}");
 
 	private static AliasDirective Function(string alias, string target) => new(AliasKind.Function, alias, target, $"function_alias {alias} {target}");

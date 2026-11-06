@@ -144,7 +144,7 @@ public sealed class ConfiguredAliasImport(
 				continue;
 			}
 
-			restrictions.TryAdd(key, restriction);
+			AddUp(restrictions, key, restriction);
 		}
 
 		var newFunctionAliases = functionAliases.Values.SelectMany(aliases => aliases).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -153,11 +153,11 @@ public sealed class ConfiguredAliasImport(
 		{
 			if (functionLibrary.ContainsKey(name) || newFunctionAliases.Contains(name))
 			{
-				functionRestrictions.TryAdd(name, restriction);
+				AddUp(functionRestrictions, name, restriction);
 			}
 			else if (overlay?.FunctionFor(name) is { } meant && functionLibrary.ContainsKey(meant))
 			{
-				functionRestrictions.TryAdd(meant, restriction);
+				AddUp(functionRestrictions, meant, restriction);
 			}
 			else
 			{
@@ -220,6 +220,29 @@ public sealed class ConfiguredAliasImport(
 		var builtins = commands.Builtins.Where(entry => entry.Key.Equals(name, StringComparison.OrdinalIgnoreCase)).Take(1).ToList();
 		command = builtins.Count == 1 ? (builtins[0].Value, true) : default;
 		return builtins.Count == 1;
+	}
+
+	/// <summary>
+	/// Restrictions on names that come to the same built-in add up, as the source's lines do for its separate names:
+	/// the words of both, and the first refusal message.
+	/// </summary>
+	private static void AddUp(Dictionary<string, string[]> restrictions, string key, string[] words)
+	{
+		if (!restrictions.TryGetValue(key, out var earlier))
+		{
+			restrictions[key] = words;
+			return;
+		}
+
+		var (earlierTerms, earlierMessage) = Terms(earlier);
+		var (terms, message) = Terms(words);
+		restrictions[key] = [.. earlierTerms.Union(terms, StringComparer.OrdinalIgnoreCase), .. earlierMessage.Length > 0 ? earlierMessage : message];
+	}
+
+	private static (string[] Terms, string[] Message) Terms(string[] words)
+	{
+		var quote = Array.FindIndex(words, word => word.StartsWith('"'));
+		return quote < 0 ? (words, []) : (words[..quote], words[quote..]);
 	}
 
 	/// <summary>What a line's resolution came to: the alias table key it joins, a reason it does not, or neither when it is already in force.</summary>
