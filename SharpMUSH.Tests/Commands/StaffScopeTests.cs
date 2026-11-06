@@ -84,9 +84,62 @@ public class StaffScopeTests : ServerTestBase
 	[Test]
 	public async Task ChownAllHonoursTheReach()
 	{
-		await Cmd($"@permission/allow #{_mortal.DbRef.Number}=game.chown.any/player");
-		await As(_wizard, $"@create {TestIsolationHelpers.GenerateUniqueName("StaffChown")}");
-		await Assert.That(await As(_mortal, $"@chownall #{_wizard.DbRef.Number}")).StartsWith("#-1 PERMISSION DENIED");
-		await Assert.That(await Eval($"lsearch(#{_wizard.DbRef.Number})")).IsNotEmpty();
+		var other = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "StaffOther");
+		try
+		{
+			await Cmd($"@permission/allow #{_mortal.DbRef.Number}=game.chown.any/player");
+			var wizards = DBRef.Parse(await As(_wizard, $"@create {TestIsolationHelpers.GenerateUniqueName("StaffChown")}")).Number;
+			var players = DBRef.Parse(await As(other, $"@create {TestIsolationHelpers.GenerateUniqueName("StaffChown")}")).Number;
+
+			await Assert.That(await As(_mortal, $"@chownall #{_wizard.DbRef.Number}")).StartsWith("#-1 PERMISSION DENIED");
+			await Assert.That(await Eval($"owner(#{wizards})")).IsEqualTo($"#{_wizard.DbRef.Number}")
+				.Because("a wizard is ranked above the reach");
+
+			await As(_mortal, $"@chownall #{other.DbRef.Number}");
+			await Assert.That(await Eval($"owner(#{players})")).IsEqualTo($"#{_mortal.DbRef.Number}")
+				.Because("a player is within the reach");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(other.Handle);
+		}
+	}
+
+	/// <summary>The privilege strip after a chown asks no permission, so it runs for a holder who controls neither side.</summary>
+	[Test]
+	public async Task ChownAnyStripsWhatItGivesAway()
+	{
+		var other = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "StaffOther");
+		try
+		{
+			var thing = DBRef.Parse(await As(_wizard, $"@create {TestIsolationHelpers.GenerateUniqueName("StaffTrust")}")).Number;
+			await As(_wizard, $"@set #{thing}=TRUST");
+			await Assert.That(await Eval($"hasflag(#{thing},TRUST)")).IsEqualTo("1");
+			await Cmd($"@permission/allow #{_mortal.DbRef.Number}=game.chown.any");
+
+			await As(_mortal, $"@chown #{thing}=#{other.DbRef.Number}");
+
+			await Assert.That(await Eval($"owner(#{thing})")).IsEqualTo($"#{other.DbRef.Number}");
+			await Assert.That(await Eval($"hasflag(#{thing},TRUST)")).IsEqualTo("0");
+			await Assert.That(await Eval($"hasflag(#{thing},HALT)")).IsEqualTo("1");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(other.Handle);
+		}
+	}
+
+	[Test]
+	public async Task NukeAloneDestroysAPlayer()
+	{
+		var victim = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "StaffVictim");
+		await ConnectionService.Disconnect(victim.Handle);
+
+		await As(_mortal, $"@nuke #{victim.DbRef.Number}");
+		await Assert.That(await Eval($"hasflag(#{victim.DbRef.Number},GOING)")).IsEqualTo("0");
+
+		await Cmd($"@permission/allow #{_mortal.DbRef.Number}=game.nuke");
+		await As(_mortal, $"@nuke #{victim.DbRef.Number}");
+		await Assert.That(await Eval($"hasflag(#{victim.DbRef.Number},GOING)")).IsEqualTo("1");
 	}
 }

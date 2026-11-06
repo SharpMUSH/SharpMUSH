@@ -185,10 +185,10 @@ These take parts of a wizard's standing over other players' things, so a role or
 | Permission | Covers |
 |---|---|
 | `game.chown.self` | @chown of another's object to yourself, without carrying it |
-| `game.chown.any` | @chown between any owners, /preserve, @chownall, @chzoneall, @atrchown to anyone; covers `game.chown.self` |
+| `game.chown.any` | @chown between any owners, /preserve, @chownall, @atrchown to anyone; covers `game.chown.self` |
 | `game.nuke` | @destroy and @nuke of players |
-| `game.override` | setting wizard and locked attributes and locks on others' objects |
-| `game.flags.restricted` | setting wizard-only flags, and CHOWN_OK and DESTROY_OK on others' objects |
+| `game.override` | setting wizard and locked attributes and locks on what you control |
+| `game.flags.restricted` | setting wizard-only flags, and CHOWN_OK and DESTROY_OK, on what you control |
 | `game.noforce` | nobody ranked below you may @force you |
 | `game.noboot` | nobody ranked below you may @boot you; no role allows it |
 | `game.override.movement` | passing enter, leave and exit locks; no role allows it |
@@ -197,7 +197,7 @@ Each can carry a reach (see [@permission reach]). On `game.noforce` and `game.no
 
 ## What still needs game.wizard
 
-Everything else a wizard does still needs `game.wizard`: overrides in `examine`, the preserve switches of @link, @clone and @chzone, and every check on whether the target is a wizard. A check that also takes a power, such as @halt with Halt or @sql with SQL_OK, takes that power as before. Any single command can be given its own permission with `@command/restrict <command>=PERM^<permission>`, and a function with `@function/restrict <function>=<permission>`.
+Everything else a wizard does still needs `game.wizard`: overrides in `examine`, @chzoneall, the preserve switches of @link, @clone and @chzone, and every check on whether the target is a wizard. A check that also takes a power, such as @halt with Halt or @sql with SQL_OK, takes that power as before. Any single command can be given its own permission with `@command/restrict <command>=PERM^<permission>`, and a function with `@function/restrict <function>=<permission>`.
 
 A power made with `@power/add` is stored on the object as before.
 
