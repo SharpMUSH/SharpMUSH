@@ -71,6 +71,97 @@ public class MuxFunctionTests : ServerTestBase
 		=> await Assert.That(await Eval(expression)).IsEqualTo(expected);
 
 	[Test]
+	[Arguments("[andbool(1,abc,#5,-3)] [andbool(1,0)] [andbool(1,#-1 NO MATCH)] [andbool()]", "1 0 0 1")]
+	[Arguments("[orbool()] [orbool(0,,#-1,0.000,NaN,-Inf,Ind,0e5)] [orbool(0,x)] [orbool(0,#0)]", "0 0 1 1")]
+	[Arguments("[candbool(0,[setq(0,ran)])][r(0)]", "0")]
+	[Arguments("[candbool(1,[setq(0,ran)]1)][r(0)]", "1ran")]
+	[Arguments("[corbool(1,[setq(0,ran)])][r(0)]", "1")]
+	[Arguments("[corbool(0,[setq(0,ran)])][r(0)]", "0ran")]
+	[Arguments("[israt(.5)][israt(5.)][israt( -5 )][israt(.)][israt(+)][israt(abc)][israt(NaN)][israt(1.2.3)]", "11100000")]
+	[Arguments("[butlast()]|[lrest(a)]|[butlast(a  b   c)]", "||a b")]
+	[Arguments("[delextract(a b c,0,1)] [delextract(a b c,2,0)] [delextract(a b c,5,1)]", "b c a b c a b c")]
+	[Arguments("caplist(it is what it is)", "It is What it Is")]
+	[Arguments("caplist(war AND peace)", "War and Peace")]
+	[Arguments("caplist(alpha|beta,|,-)", "Alpha-Beta")]
+	[Arguments("caplist(1st place)", "1st Place")]
+	[Arguments("lcat(a|b|c,|,)", "abc")]
+	[Arguments("[lband()] [lbor()] [lbxor()] [lband(,|)]", "-1 0 0 -1")]
+	[Arguments("lbor(1 x)", ErrorMessages.Returns.Integers)]
+	[Arguments("[limath(mod,-7 3)] [limath(mod,7 -3)] [limath(div,-7 2)] [limath(sub,10 3 2)]", "2 -2 -3 5")]
+	[Arguments("[limath(min,3 -1 2)] [limath(max,3 -1 2)] [limath(median,3 1 2)] [limath(median,-3 -2)] [limath(add,)]", "-1 3 2 -3 0")]
+	[Arguments("limath(sum,9223372036854775807 1)", "-9223372036854775808")]
+	[Arguments("limath(ADD,1|2,|)", "3")]
+	[Arguments("limath(div,1 0)", ErrorMessages.Returns.DivisionByZero)]
+	[Arguments("limath(foo,1)", ErrorMessages.Returns.UnknownOperation)]
+	[Arguments("[sha1()] [sha1(ansi(r,abc))]", "DA39A3EE5E6B4B0D3255BFEF95601890AFD80709 A9993E364706816ABA3E25717850C26C9CD0D89D")]
+	[Arguments("translate(a%rb%tc,0)", "a b c")]
+	[Arguments("translate(ansi(r,red),s)", "red")]
+	[Arguments("wrapcolumns(one two three four five six,5,2)", "one  four \ntwo  five \nthreesix  ")]
+	[Arguments("wrapcolumns(one two three four five six,5,2,R,<,|,>,1)", "<  one|  two>\n<three| four>\n< five|  six>")]
+	[Arguments("wrapcolumns(abcdefgh,3,1,C)", "abc\ndef\ngh ")]
+	[Arguments("wrapcolumns(ab cd%ref,2,3)", "abcdef")]
+	[Arguments("[iter(a b,inum())] [iter(a b,iter(x y,inum()))]|[inum()]|", "1 2 1 2 1 2||")]
+	public async Task TinyMuxShims(string expression, string expected)
+		=> await Assert.That(await Eval(expression)).IsEqualTo(expected);
+
+	[Test]
+	[Arguments("url_unescape(hello\\%20world)", "hello world")]
+	[Arguments("url_unescape(hello+world)", "hello world")]
+	[Arguments("url_unescape(\\%41\\%42\\%43)", "ABC")]
+	[Arguments("[url_unescape(a\\%2Bb)] [url_unescape(\\%C3\\%A9)]", "a+b é")]
+	[Arguments("[playmem()] [playmem(me)]", "0 0")]
+	public async Task TinyMuxVariants(string expression, string expected)
+		=> await Assert.That(await Eval(expression)).IsEqualTo(expected);
+
+	/// <summary>pfind() answers pmatch()'s answer for a player, and finds a room by dbref where pmatch() does not.</summary>
+	[Test]
+	public async Task PfindMatchesAnyDbref()
+	{
+		await Assert.That(await Eval("pfind(#1)")).IsEqualTo(await Eval("pmatch(#1)"));
+		await Assert.That(await Eval("pfind(#0)")).StartsWith("#0:");
+		await Assert.That(await Eval("pmatch(#0)")).StartsWith("#-1");
+	}
+
+	/// <summary>subeval() runs the substitutions in the text it is given and leaves its function calls as text.</summary>
+	[Test]
+	public async Task SubevalRunsSubstitutionsOnly()
+	{
+		var thing = await Eval($"create({TestIsolationHelpers.GenerateUniqueName("MuxSubeval")})");
+		await Eval($"attrib_set({thing}/TEXT,lit(%# said [add(1,2)] {{x}} at %l))");
+
+		await Assert.That(await Eval($"subeval(get({thing}/TEXT))"))
+			.IsEqualTo($"{await Eval("%#")} said [add(1,2)] {{x}} at %l");
+	}
+
+	/// <summary>The bool family keeps TinyMUX's own test when <c>mux_logic</c> makes and() read numbers.</summary>
+	[Test]
+	public async Task BoolFunctionsIgnoreMuxLogic()
+	{
+		using var _ = TestOptionsOverride.Scope(options => options with
+		{
+			Compatibility = options.Compatibility with { MuxLogic = true, TinyBooleans = true }
+		});
+		await Assert.That(await Eval("[and(1,abc)][andbool(1,abc)][or(abc)][orbool(abc)][cand(1,abc)][candbool(1,abc)]"))
+			.IsEqualTo("010101");
+	}
+
+	[Test]
+	public async Task TranslateWritesSoftcodeForType1()
+		=> await Assert.That(await Eval("translate(ansi(r,red%[x%]),p)")).IsEqualTo(await Eval("decompose(ansi(r,red%[x%]))"));
+
+	[Test]
+	public async Task CaselessRegexAttributeListsTakeTwoArguments()
+	{
+		var thing = await Eval($"create({TestIsolationHelpers.GenerateUniqueName("MuxReglattri")})");
+		await Eval($"[attrib_set({thing}/CMD_GO,1)][attrib_set({thing}/CMD_LOOK,1)][attrib_set({thing}/PLAYER_DATA,1)]");
+
+		await Assert.That(await Eval($"reglattri({thing},^cmd)")).IsEqualTo("CMD_GO CMD_LOOK");
+		await Assert.That(await Eval($"reglattri({thing},_data$)")).IsEqualTo("PLAYER_DATA");
+		await Assert.That(await Eval($"regnattri({thing},^cmd)")).IsEqualTo("2");
+		await Assert.That(await Eval($"reglattri({thing},*)")).IsEqualTo(ErrorMessages.Returns.RegexpInvalid);
+	}
+
+	[Test]
 	public async Task SecsTakesAZoneAndDecimalPlaces()
 	{
 		await Assert.That(await Eval("secs(utc,3)")).Matches(@"^\d+\.\d{3}$");

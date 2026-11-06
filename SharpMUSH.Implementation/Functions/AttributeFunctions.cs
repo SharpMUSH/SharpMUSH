@@ -598,16 +598,26 @@ public partial class Functions
 	/// As above, with the names handed over as the stream they are read from, for a caller that needs
 	/// only a window of them or their count. The stream is enumerated inside the regexp error handling.
 	/// </summary>
-	private async ValueTask<CallState> AttributePatternAsync(
+	private ValueTask<CallState> AttributePatternAsync(
 		IMUSHCodeParser parser,
 		string calledAs,
 		bool checkParents,
 		IAttributeService.AttributePatternMode mode,
 		Func<IAsyncEnumerable<string>, ValueTask<CallState>> project)
+		=> AttributePatternAsync(parser, calledAs, parser.CurrentState.Arguments["0"].Message.ToPlainText(), checkParents,
+			mode, project);
+
+	/// <summary>As above, for <paramref name="objectAndPattern"/> in place of the first argument.</summary>
+	private async ValueTask<CallState> AttributePatternAsync(
+		IMUSHCodeParser parser,
+		string calledAs,
+		string objectAndPattern,
+		bool checkParents,
+		IAttributeService.AttributePatternMode mode,
+		Func<IAsyncEnumerable<string>, ValueTask<CallState>> project)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(
-			parser.CurrentState.Arguments["0"].Message.ToPlainText());
+		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objectAndPattern);
 
 		if (split is not { Object: var obj, Attribute: var attributePattern })
 		{

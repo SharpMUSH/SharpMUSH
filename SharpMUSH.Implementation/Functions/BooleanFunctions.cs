@@ -159,6 +159,56 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>((mux ? trueCount % 2 == 1 : trueCount == 1) ? "1" : "0");
 	}
 
+	/// <summary>
+	/// TinyMUX's <c>andbool()</c>: true when every argument is a TinyMUX BOOLEAN true
+	/// (<see cref="Predicates.MuxBoolean"/>), whatever <c>tiny_booleans</c> and <c>mux_logic</c> say, so
+	/// <c>andbool(1,abc)</c> is 1 where <c>and(1,abc)</c> under <c>mux_logic</c> is 0. <c>andbool()</c> is true; the
+	/// parser hands it one empty argument, so a lone empty argument counts as none.
+	/// </summary>
+	[SharpFunction(Name = "andbool", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
+	public ValueTask<CallState> AndBool(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var arguments = parser.CurrentState.ArgumentsOrdered.Values.Select(argument => argument.Message ?? MarkupText.Empty).ToList();
+		return ValueTask.FromResult(new CallState(arguments is [{ Length: 0 }] || arguments.All(Predicates.MuxBoolean)));
+	}
+
+	/// <summary>TinyMUX's <c>orbool()</c>: <see cref="AndBool"/>'s test, true when any argument passes it.</summary>
+	[SharpFunction(Name = "orbool", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
+	public ValueTask<CallState> OrBool(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ValueTask.FromResult(new CallState(parser.CurrentState.ArgumentsOrdered.Values
+			.Any(argument => Predicates.MuxBoolean(argument.Message ?? MarkupText.Empty))));
+
+	/// <summary>TinyMUX's <c>candbool()</c>: <see cref="AndBool"/>, evaluating the arguments in turn up to the first false one.</summary>
+	[SharpFunction(Name = "candbool", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
+	public ValueTask<CallState> CancellingAndBool(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> EvaluateLazyBoolean(parser, parser.CurrentState.ArgumentsOrdered.Values, all: true, truthy: true, Predicates.MuxBoolean);
+
+	/// <summary>TinyMUX's <c>corbool()</c>: <see cref="OrBool"/>, evaluating the arguments in turn up to the first true one.</summary>
+	[SharpFunction(Name = "corbool", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
+	public ValueTask<CallState> CancellingOrBool(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> EvaluateLazyBoolean(parser, parser.CurrentState.ArgumentsOrdered.Values, all: false, truthy: true, Predicates.MuxBoolean);
+
+	/// <summary>
+	/// TinyMUX's <c>israt()</c>: a decimal number with digits before or after an optional point, an optional
+	/// sign, and blanks around it. An exponent and the words NaN, Inf and Ind are not.
+	/// </summary>
+	[SharpFunction(Name = "israt", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
+	public ValueTask<CallState> IsRational(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ValueTask.FromResult(new CallState(IsRationalText(parser.CurrentState.Arguments["0"].Message?.ToPlainText() ?? string.Empty)));
+
+	private static bool IsRationalText(string text)
+	{
+		var number = text.AsSpan().Trim(" \t\r\n\v\f");
+		if (number is ['+' or '-', .. var rest]) number = rest;
+
+		var point = number.IndexOf('.');
+		var whole = point < 0 ? number : number[..point];
+		var fraction = point < 0 ? [] : number[(point + 1)..];
+		return whole.Length + fraction.Length > 0
+			&& !whole.ContainsAnyExceptInRange('0', '9')
+			&& !fraction.ContainsAnyExceptInRange('0', '9');
+	}
+
 	[SharpFunction(Name = "isdbref", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> IsDbRef(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
