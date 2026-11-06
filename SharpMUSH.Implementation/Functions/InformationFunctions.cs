@@ -783,7 +783,7 @@ public partial class Functions
 	/// PennMUSH's fun_quota (src/wiz.c:1864-1896). It matches a player only, so a thing cannot stand in
 	/// for its owner; it refuses unless <c>Do_Quotas(executor) || See_All(executor) || controls(executor,
 	/// who)</c>, the gate @quota applies at wiz.c:179; and it answers one integer, 99999 for a No_Quota
-	/// holder. Penn's <c>owned + get_current_quota(who)</c> is the player's limit, which SharpMUSH
+	/// or Immortal holder. Penn's <c>owned + get_current_quota(who)</c> is the player's limit, which SharpMUSH
 	/// stores directly as <see cref="SharpPlayer.Quota"/>. Where Penn returns a bare <c>#-1</c> and
 	/// notifies the reason, this returns the reason instead: the match's own error, or
 	/// <c>#-1 PERMISSION DENIED</c>.
@@ -819,7 +819,7 @@ public partial class Functions
 			return PermissionRefusal.NotControlled(player, [.. SeeAllScopes, PortalPermission.GamePower("Quotas")]).Return;
 		}
 
-		return await player.Object.HasPower("No_Quota")
+		return await player.Object.HasPower("No_Quota") || await player.Object.HasPower("Immortal")
 			? new CallState(99999)
 			: new CallState(player.Quota);
 	}

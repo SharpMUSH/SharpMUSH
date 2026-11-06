@@ -291,6 +291,13 @@ public partial class Commands
 			return new None();
 		}
 
+		// A new character holds no Login power, and CREATE puts it straight into play.
+		if (!Configuration.CurrentValue.Net.Logins)
+		{
+			await NotifyLoginsDisabledAsync(handle);
+			return new None();
+		}
+
 		if (!connectionData.Metadata.TryGetValue("AccountId", out var accountId))
 		{
 			await NotifyService.Notify(handle, "Session error: account ID not found.");
@@ -427,6 +434,12 @@ public partial class Commands
 
 		if (await SitelockRefusesPlayerAsync(handle, character))
 		{
+			return new None();
+		}
+
+		if (!Configuration.CurrentValue.Net.Logins && !await PermissionService.CanLogin(new AnySharpObject(character)))
+		{
+			await NotifyLoginsDisabledAsync(handle, new AnySharpObject(character));
 			return new None();
 		}
 
@@ -584,9 +597,8 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// PennMUSH semantics: an account qualifies for login while <c>Net.Logins</c> is disabled
-	/// if ANY linked character is staff (character #1, or WIZARD-flagged). <c>IsWizard()</c>
-	/// already covers character #1 (God), so a single async predicate suffices.
+	/// While <c>Net.Logins</c> is off, an account reaches its menu when any linked character passes PennMUSH's
+	/// <c>Can_Login</c> (a wizard, or a holder of the Login power); PLAY then asks it of the character played.
 	/// </summary>
 	private async ValueTask<bool> AnyCharacterMayLoginAsync(IReadOnlyList<SharpPlayer> characters) =>
 		await characters.ToAsyncEnumerable().AnyAsync(async (character, _) => await PermissionService.CanLogin(new AnySharpObject(character)));
