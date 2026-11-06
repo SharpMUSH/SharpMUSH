@@ -8,9 +8,27 @@
 
 .pkg-row:first-child { border-top: 0; }
 
-.pkg-row ::deep .pkg-row-icon {
+.pkg-row-icon-wrap {
+    position: relative;
+    display: inline-flex;
     flex-shrink: 0;
+}
+
+.pkg-row ::deep .pkg-row-icon {
     color: var(--accent);
+}
+
+/* A bridge keeps its kind's icon and carries a link badge at its lower right. */
+.pkg-row ::deep .pkg-row-bridge {
+    position: absolute;
+    right: -6px;
+    bottom: -6px;
+    width: 16px;
+    height: 16px;
+    padding: 1px;
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--warn);
 }
 
 .pkg-row-main {
@@ -61,4 +79,3 @@
 .pkg-row ::deep .pkg-row-icon.pkg-kind-application { color: var(--info); }
 .pkg-row ::deep .pkg-row-icon.pkg-kind-plugin { color: var(--special); }
 .pkg-row ::deep .pkg-row-icon.pkg-kind-wiki { color: var(--success); }
-.pkg-row ::deep .pkg-row-icon.pkg-kind-bridge { color: var(--warn); }

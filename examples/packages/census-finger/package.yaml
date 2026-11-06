@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: census-finger
 title: "Census: +finger fields"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Lets +census count by +finger fields, such as species, age and timezone, reading each one as +finger shows it to whoever asks."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [census, finger, bridge]
 category: Community
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. census reads a character's value through
@@ -77,3 +78,12 @@ objects:
         everyone
       DIM`TIMEZONE`ORDER: |-
         17
+
+  # The topic, beside the census topics: +help census finger once census-help is installed too.
+  - ref: census_finger_help
+    target: "{{census/census_help}}"
+    attributes:
+      HELP`CENSUS`FINGER: |-
+        `+census` can count by `+finger` fields. Each one is read as `+finger` shows it to you, so a field a player hid counts only for them and for staff who edit profiles.
+
+        Three dimensions use them: species, age and timezone. Staff change or remove them with `+config census/dimensions` like any other.

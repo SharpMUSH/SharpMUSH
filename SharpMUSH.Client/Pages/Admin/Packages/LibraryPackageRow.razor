@@ -4,9 +4,8 @@
 
 @* One package in the remote library: what it ships, its version and install state, and the queue, review and README actions. *@
 <div class="lib-row">
-<PackageRow Icon="@(Entry.Bridge ? Icons.Material.Filled.Link : PackageKinds.Icon(Primary))"
-            Kind="@(Entry.Bridge ? "bridge" : Primary.ToString().ToLowerInvariant())"
-            IconTitle="@(Entry.Bridge ? Loc["PkgKindBridge"] : PackageKinds.Name(Primary, Loc))"
+<PackageRow Icon="@PackageKinds.Icon(Primary)" Kind="@Primary.ToString().ToLowerInvariant()" Bridge="@Entry.Bridge"
+            IconTitle="@(Entry.Bridge ? Loc["PkgKindBridgeOf", PackageKinds.Name(Primary, Loc)] : PackageKinds.Name(Primary, Loc))"
             Name="@PackageLibraryGroups.Name(Entry)"
             Id="@(Entry.Title is null ? null : Entry.PackageId)">
     <Tags>

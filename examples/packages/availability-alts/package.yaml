@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: availability-alts
 title: "Availability: public alts"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Counts the characters an account lists in public with +alts as one person in +avail: their weeks, +avail/find and a scene card's free list all count them together. A hidden alt stays on its own."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [availability, alts, account, bridge]
 category: Community
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. availability counts a reader's own characters

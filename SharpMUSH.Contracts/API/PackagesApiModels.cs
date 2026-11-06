@@ -36,7 +36,7 @@ public sealed record RemoteRequest(string Name, string Url, string Trust, string
 /// <param name="Dependents">Installed packages that depend on it (uninstall blocking).</param>
 /// <param name="Title">The name the package is listed under, when the server knows it (a bundled package); else null.</param>
 /// <param name="WikiPageCount">How many wiki pages it installed.</param>
-/// <param name="Bridge">Whether it is a bridge the server knows (a bundled one).</param>
+/// <param name="Bridge">Whether it is a bridge the server knows (a bundled one, by the catalogue or its manifest).</param>
 public sealed record InstalledPackageDto(
 	InstalledPackageRecord Package,
 	int ManagedAttributeCount,

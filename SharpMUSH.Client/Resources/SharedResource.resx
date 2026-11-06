@@ -11068,6 +11068,9 @@
   <data name="PkgKindBridgeBetween" xml:space="preserve">
     <value>Bridge: {0} + {1}</value>
   </data>
+  <data name="PkgKindBridgeOf" xml:space="preserve">
+    <value>{0}, a bridge</value>
+  </data>
   <data name="PkgKindBridgeTooltip" xml:space="preserve">
     <value>A bridge joins two packages and needs both of them installed.</value>
   </data>

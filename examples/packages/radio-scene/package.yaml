@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: radio-scene
 title: "Radio in scenes"
-version: 1.4.1
+version: 1.4.2
 authors: [SharpMUSH]
 description: "Radio in scenes: +radio/log puts what a player hears on a frequency into the scene they are in. Joins the radio and scene packages through a tap on the radio feed kind."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [radio, scene, logging, feed]
 category: Scenes
+bridge: true
 requires_server: ">=0.1"
 
 # +radio/log writes poses through the Scene plugin, so it installs only while the plugin runs.

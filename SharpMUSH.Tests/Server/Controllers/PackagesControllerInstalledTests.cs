@@ -57,6 +57,38 @@ public class PackagesControllerInstalledTests
 		await registry.DidNotReceive().GetPackageDependentsAsync(Arg.Any<string>());
 		await registry.Received(1).GetAllPackageDependenciesAsync();
 	}
+	/// <summary>
+	/// A bundled package is listed as a bridge when the catalogue installs it as one (availability-help) or its
+	/// manifest says so (availability-alts, which a game installs by choice); a package from elsewhere is not.
+	/// </summary>
+	[Test]
+	public async Task BundledBridgesAreListedAsBridges()
+	{
+		static InstalledPackageRecord Bundled(string id) => Package(id) with { SourceRepo = BundledPackageSource.SourceRepo };
+		var registry = Substitute.For<IPackageRegistryService>();
+		registry.GetInstalledPackagesAsync().Returns([Bundled("availability"), Bundled("availability-help"),
+			Bundled("availability-alts"), Package("census-finger")]);
+		registry.GetAllPackageDependenciesAsync().Returns([]);
+		var source = Substitute.For<IPackageSourceService>();
+		var manifests = new SharpMUSH.Library.Services.PackageManifestService();
+		var directories = PluginPackageFixture.ScratchDirectories();
+		var uploads = new PluginUploadStore(directories, manifests, NullLogger<PluginUploadStore>.Instance);
+		var controller = new PackagesController(registry, source, manifests, Substitute.For<IPackageInstallService>(),
+			Substitute.For<IPackageAuthoringService>(), Substitute.For<IPackageOperationRunner>(), uploads,
+			new PackageManifestResolver(registry, source, manifests, uploads), Substitute.For<IAuditLog>(), new(new(2, 0, 0)),
+			Substitute.For<IBundledPackageBootstrap>());
+
+		var result = (IReadOnlyList<InstalledPackageDto>)((OkObjectResult)(await controller.GetInstalled()).Result!).Value!;
+		PluginPackageFixture.Delete(directories);
+
+		var byId = result.ToDictionary(p => p.Package.Id);
+		await Assert.That(byId["availability"].Bridge).IsFalse();
+		await Assert.That(byId["availability-help"].Bridge).IsTrue();
+		await Assert.That(byId["availability-alts"].Bridge).IsTrue();
+		await Assert.That(byId["availability-alts"].Title).IsEqualTo("Availability: public alts");
+		await Assert.That(byId["census-finger"].Bridge).IsFalse().Because("only a bundled install reads the bundled manifest");
+	}
+
 	[Test]
 	public async Task RemoteTrustAndRemovalWaitForThePackageOperationGate()
 	{

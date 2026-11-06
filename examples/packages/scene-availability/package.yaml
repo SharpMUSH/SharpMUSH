@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: scene-availability
 title: "Availability in scenes"
-version: 2.0.1
+version: 2.0.2
 authors: [SharpMUSH]
 description: "Availability in scenes: +avail/scene finds a time a scene's cast is all free, a scheduled scene's card shows who of its cast is free at its time, and +avail/find offers to book the first time as a scene."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [scene, availability, calendar, schedule, bridge]
 category: Scenes
+bridge: true
 requires_server: ">=0.1"
 
 # +avail/scene and the card read scenes through the Scene plugin's functions, so it installs only while the plugin
