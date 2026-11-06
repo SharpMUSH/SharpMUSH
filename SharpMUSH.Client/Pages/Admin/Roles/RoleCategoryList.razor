@@ -16,7 +16,7 @@
     </div>
     @if (Items.Count == 0)
     {
-        <div class="ra-empty">@Loc["RolCategoryEmpty"]</div>
+        <EmptyState Compact="true" Class="ra-empty" Icon="@Icons.Material.Outlined.Category">@Loc["RolCategoryEmpty"]</EmptyState>
     }
     else
     {

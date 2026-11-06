@@ -95,7 +95,6 @@
 	height: 56px;
 }
 
-.gallery-empty,
 .character-gallery-error {
 	padding: 12px;
 	border: 1px dashed var(--border);

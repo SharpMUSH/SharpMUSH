@@ -52,7 +52,7 @@
             <ChildContent>
                 @if (_entries.Count == 0)
                 {
-                    <p class="config-empty">@Text.Empty</p>
+                    <EmptyState Compact="true" Class="config-empty">@Text.Empty</EmptyState>
                 }
                 else
                 {

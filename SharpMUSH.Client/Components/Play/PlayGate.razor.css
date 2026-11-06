@@ -9,7 +9,7 @@
     padding: var(--cpad);
 }
 
-/* ::deep — the alert element itself is rendered by EmptyState/MudAlert, so it does not carry
+/* ::deep — the element itself is rendered by EmptyState, so it does not carry
    this component's scope attribute even though the class name is passed down from here. */
 .play-gate ::deep .play-gate-card {
     max-width: 30rem;

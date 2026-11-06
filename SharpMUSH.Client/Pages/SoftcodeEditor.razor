@@ -253,10 +253,9 @@
                after its script finishes loading. *@
             @if (_editorAssetsFailed)
             {
-                <EmptyState>
-                    <MudText>@Loc["TermEditorAssetsUnavailable"]</MudText>
-                    <MudButton Variant="Variant.Text" Color="Color.Primary" Class="mt-2"
-                               OnClick="LoadEditorAssetsAsync">@Loc["NavTryAgain"]</MudButton>
+                <EmptyState Failed="true">
+                    <ChildContent>@Loc["TermEditorAssetsUnavailable"]</ChildContent>
+                    <Action><CapsuleButton Icon="@Icons.Material.Outlined.Refresh" OnClick="LoadEditorAssetsAsync">@Loc["NavTryAgain"]</CapsuleButton></Action>
                 </EmptyState>
             }
             else if (!_editorAssetsReady)

@@ -37,15 +37,15 @@
     }
     else if (_error is not null)
     {
-        <EmptyBox Class="char-gallery-failed">@_error</EmptyBox>
+        <EmptyState Class="char-gallery-failed" Failed="true">@_error</EmptyState>
     }
     else if (_items.Count == 0)
     {
-        <EmptyBox Class="char-gallery-none">@Loc["GalleryEmpty"]</EmptyBox>
+        <EmptyState Class="char-gallery-none" Icon="@Icons.Material.Outlined.PhotoLibrary">@Loc["GalleryEmpty"]</EmptyState>
     }
     else if (Shown.Count == 0)
     {
-        <EmptyBox Class="char-gallery-no-match">@Loc["NavGalleryNoMatch"]</EmptyBox>
+        <EmptyState Class="char-gallery-no-match" Icon="@Icons.Material.Outlined.SearchOff">@Loc["NavGalleryNoMatch"]</EmptyState>
     }
     else
     {

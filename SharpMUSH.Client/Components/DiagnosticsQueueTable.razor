@@ -22,7 +22,7 @@
             }
         </tbody>
     </table>
-    @if (Rows.Count == 0) { <p>@Loc["DiagEmpty"]</p> }
+    @if (Rows.Count == 0) { <EmptyState Compact="true" Icon="@Icons.Material.Outlined.CheckCircle">@Loc["DiagEmpty"]</EmptyState> }
 </div>
 
 @code {

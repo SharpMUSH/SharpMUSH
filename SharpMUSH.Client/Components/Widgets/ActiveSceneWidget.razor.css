@@ -14,11 +14,6 @@
 	gap: 10px;
 }
 
-.active-scene-empty {
-	font-size: 13px;
-	color: var(--text-dim);
-}
-
 .active-scene-archive {
 	display: inline-block;
 	margin-top: 8px;

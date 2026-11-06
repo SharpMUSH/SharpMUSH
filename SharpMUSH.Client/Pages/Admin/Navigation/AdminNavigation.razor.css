@@ -110,10 +110,7 @@
 }
 
 .adm-nav-empty {
-	color: var(--text-faint);
-	padding: 8px;
-	border: 1px dashed var(--border);
-	border-radius: var(--radius-row);
+	list-style: none;
 }
 
 .adm-nav-link-form,

@@ -40,7 +40,7 @@ else
     }
     @if (Exits.Count == 0)
     {
-        <div class="exits-empty">@Loc["NavNoExitsAvailable"]</div>
+        <EmptyState Compact="true" Class="exits-empty" Icon="@Icons.Material.Outlined.DoorFront">@Loc["NavNoExitsAvailable"]</EmptyState>
     }
     else
     {

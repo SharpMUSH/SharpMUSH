@@ -1858,7 +1858,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
-    <value>— Povežite se da vidite tko je ovdje —</value>
+    <value>Povežite se da vidite tko je ovdje</value>
     <comment>MT</comment>
   </data>
   <data name="NavCreateACharacter" xml:space="preserve">
@@ -1950,7 +1950,7 @@
     <comment>MT — {0} is a route path, indeclinable</comment>
   </data>
   <data name="NavNoExitsAvailable" xml:space="preserve">
-    <value>— Nema dostupnih izlaza —</value>
+    <value>Nema dostupnih izlaza</value>
     <comment>MT</comment>
   </data>
   <data name="NavNotConnected" xml:space="preserve">

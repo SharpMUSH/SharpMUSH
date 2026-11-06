@@ -57,9 +57,7 @@
             <p><a href="/welcome" @onclick="Close">@Loc["GuideHelpEntry"]</a></p>
             @if (_current is null)
             {
-                <div style="color:var(--text-faint);font-style:italic;font-size:0.8125rem;margin-top:1rem;">
-                    @Loc["TermHelpEmpty"]
-                </div>
+                <EmptyState Compact="true" Icon="@Icons.Material.Outlined.HelpOutline">@Loc["TermHelpEmpty"]</EmptyState>
             }
             else
             {

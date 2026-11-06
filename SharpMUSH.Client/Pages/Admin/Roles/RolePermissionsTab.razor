@@ -20,7 +20,7 @@
     @if (CustomCategories.Count == 0)
     {
         <div class="ra-section">
-            <div class="ra-empty">@Loc["RolCustomEmpty"]</div>
+            <EmptyState Compact="true" Class="ra-empty" Icon="@Icons.Material.Outlined.Category">@Loc["RolCustomEmpty"]</EmptyState>
         </div>
     }
     @foreach (var category in CustomCategories)

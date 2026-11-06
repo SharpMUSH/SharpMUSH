@@ -93,7 +93,7 @@
     <KitCard Title="@Loc["AdmActivityDriftingTitle"]" Sub="@Loc["AdmActivityDriftingSub", _days, _drifting?.Baseline ?? 60, _drifting?.MinimumDays ?? 4]">
         <LoadState TValue="ActivityDrifting" Value="_drifting" Loading="@(_loading && _drifting is null)"
                    IsEmpty="d => d.Players.Count == 0" Context="drifting">
-            <Empty><EmptyBox>@Loc["AdmActivityDriftingEmpty"]</EmptyBox></Empty>
+            <Empty><EmptyState Compact="true">@Loc["AdmActivityDriftingEmpty"]</EmptyState></Empty>
             <ChildContent>
                 <MudTable Items="drifting.Players" Dense="true" Hover="true" Elevation="0" Class="adm-activity-table">
                     <HeaderContent>
@@ -164,7 +164,7 @@
         <KitCard Title="@Loc["AdmActivityRoomsTitle"]" Sub="@Loc["AdmActivityRoomsSub", _days]">
             <LoadState TValue="ActivityRooms" Value="_rooms" Loading="@(_loading && _rooms is null)"
                        IsEmpty="r => r.Used.Count == 0" Context="rooms">
-                <Empty><EmptyBox>@Loc["AdmActivityRoomsEmpty"]</EmptyBox></Empty>
+                <Empty><EmptyState Compact="true">@Loc["AdmActivityRoomsEmpty"]</EmptyState></Empty>
                 <ChildContent>
                     <MudTable Items="rooms.Used" Dense="true" Hover="true" Elevation="0" Class="adm-activity-table">
                         <HeaderContent>
@@ -195,7 +195,7 @@
         <KitCard Title="@Loc["AdmActivityDeadTitle"]" Sub="@Loc["AdmActivityDeadSub", _rooms?.DeadDays ?? 90]">
             <LoadState TValue="ActivityRooms" Value="_rooms" Loading="@(_loading && _rooms is null)"
                        IsEmpty="r => r.Dead.Count == 0" Context="rooms">
-                <Empty><EmptyBox>@Loc["AdmActivityDeadEmpty"]</EmptyBox></Empty>
+                <Empty><EmptyState Compact="true">@Loc["AdmActivityDeadEmpty"]</EmptyState></Empty>
                 <ChildContent>
                     <ul class="adm-activity-dead">
                         @foreach (var room in rooms.Dead)

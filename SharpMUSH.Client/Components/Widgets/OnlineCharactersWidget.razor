@@ -18,7 +18,7 @@
            and saying the latter for the former is the more damaging of the two mistakes. *@
         else if (_characters is null)
         {
-            <div class="online-characters-note">@Loc["WidUnavailable"]</div>
+            <EmptyState Compact="true" Failed="true" Class="online-characters-note">@Loc["WidUnavailable"]</EmptyState>
         }
         else if (_characters is { Count: > 0 })
         {
@@ -36,7 +36,7 @@
         }
         else
         {
-            <div class="online-characters-note">@Loc["WidNobodyConnected"]</div>
+            <EmptyState Compact="true" Class="online-characters-note" Icon="@Icons.Material.Outlined.PeopleOutline">@Loc["WidNobodyConnected"]</EmptyState>
         }
     </KitCard>
 </div>

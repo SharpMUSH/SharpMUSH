@@ -1858,7 +1858,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
-    <value>— Połącz się, aby zobaczyć, kto tu jest —</value>
+    <value>Połącz się, aby zobaczyć, kto tu jest</value>
     <comment>MT</comment>
   </data>
   <data name="NavCreateACharacter" xml:space="preserve">
@@ -1950,7 +1950,7 @@
     <comment>MT — {0} is a route, kept as-is and placed after a preposition that does not inflect it</comment>
   </data>
   <data name="NavNoExitsAvailable" xml:space="preserve">
-    <value>— Brak dostępnych wyjść —</value>
+    <value>Brak dostępnych wyjść</value>
     <comment>MT</comment>
   </data>
   <data name="NavNotConnected" xml:space="preserve">

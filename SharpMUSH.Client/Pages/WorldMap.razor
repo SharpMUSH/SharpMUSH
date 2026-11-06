@@ -53,7 +53,10 @@
 
     @if (AccountAuth.ActiveCharacter is null)
     {
-        <EmptyState Class="map-note">@Loc["NavMapNeedsCharacter"]</EmptyState>
+        <EmptyState Icon="@Icons.Material.Outlined.Map">
+            <ChildContent>@Loc["NavMapNeedsCharacter"]</ChildContent>
+            <Action><CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.PersonAdd" Href="/characters/new">@Loc["NavCreateCharacter"]</CapsuleButton></Action>
+        </EmptyState>
     }
     else
     {
@@ -65,7 +68,7 @@
                 }
                 else if (_maps.Count == 0)
                 {
-                    <p class="map-note">@(_listFailed ? Loc["WidUnavailable"] : Loc["NavMapNone"])</p>
+                    <EmptyState Compact="true" Failed="@_listFailed" Icon="@(_listFailed ? null : Icons.Material.Outlined.Map)">@(_listFailed ? Loc["WidUnavailable"] : Loc["NavMapNone"])</EmptyState>
                 }
                 else
                 {
@@ -95,7 +98,7 @@
                 }
                 else if (_layout is null)
                 {
-                    <EmptyState Class="map-note">@(_missing ? Loc["NavMapMissing"] : Loc["WidUnavailable"])</EmptyState>
+                    <EmptyState Failed="@(!_missing)" Icon="@(_missing ? Icons.Material.Outlined.WrongLocation : null)">@(_missing ? Loc["NavMapMissing"] : Loc["WidUnavailable"])</EmptyState>
                 }
                 else
                 {
@@ -152,7 +155,7 @@
                     }
                     @if (Shown.Rooms.Count == 0 && Shown.Space is null && !_editing)
                     {
-                        <EmptyState Class="map-note">@Loc["NavMapEmpty"]</EmptyState>
+                        <EmptyState Icon="@Icons.Material.Outlined.Map">@Loc["NavMapEmpty"]</EmptyState>
                     }
                     else
                     {
@@ -181,7 +184,7 @@
 </div>
 </ChildContent>
 <Otherwise>
-    <div class="map-page"><EmptyState>@Loc["NavMapNotEnabled"]</EmptyState></div>
+    <div class="map-page"><EmptyState Icon="@Icons.Material.Outlined.Map">@Loc["NavMapNotEnabled"]</EmptyState></div>
 </Otherwise>
 </FeatureGate>
 
@@ -780,7 +783,7 @@
                 }
                 @if (exits.Count == 0)
                 {
-                    <p class="map-note">@Loc["NavMapNoExits"]</p>
+                    <EmptyState Compact="true" Icon="@Icons.Material.Outlined.DoorFront">@Loc["NavMapNoExits"]</EmptyState>
                 }
                 else
                 {

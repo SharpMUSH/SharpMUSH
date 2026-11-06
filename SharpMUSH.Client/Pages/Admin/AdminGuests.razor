@@ -39,10 +39,7 @@
 
             <LoadState TValue="AdminGuestsService.GuestListResponse" Value="_list" Loading="_loading" Error="@_error" IsEmpty="list => list.Guests.Count == 0" Context="list">
                 <Empty>
-                    <div class="adm-players-empty">
-                        <MudIcon Icon="@Icons.Material.Filled.Group" Class="adm-players-empty-icon" />
-                        <div class="adm-players-empty-text">@Loc["AdmGuestsEmpty"]</div>
-                    </div>
+                    <EmptyState Icon="@Icons.Material.Outlined.Group">@Loc["AdmGuestsEmpty"]</EmptyState>
                 </Empty>
                 <ChildContent>
                     <MudTable Items="list.Guests" Dense="true" Hover="true" Elevation="0">

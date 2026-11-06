@@ -17,7 +17,7 @@
                 }
                 else if (Characters.Count == 0)
                 {
-                    <div class="acct-empty">@Loc["AuthNoCharactersLinked"]</div>
+                    <EmptyState Compact="true" Class="acct-empty" Icon="@Icons.Material.Outlined.Groups">@Loc["AuthNoCharactersLinked"]</EmptyState>
                 }
                 else
                 {

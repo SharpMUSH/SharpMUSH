@@ -11,7 +11,7 @@
 {
     @if (!string.IsNullOrWhiteSpace(Element.Empty))
     {
-        <div class="schema-empty">@Element.Empty</div>
+        <EmptyState Compact="true" Class="schema-empty" Icon="@Icons.Material.Outlined.AccountTree">@Element.Empty</EmptyState>
     }
 }
 else

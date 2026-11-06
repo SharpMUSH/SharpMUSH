@@ -3715,13 +3715,13 @@
     <value>Exit focus mode</value>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
-    <value>— Connect to see who's here —</value>
+    <value>Connect to see who's here.</value>
   </data>
   <data name="NavExits" xml:space="preserve">
     <value>Exits</value>
   </data>
   <data name="NavNoExitsAvailable" xml:space="preserve">
-    <value>— No exits available —</value>
+    <value>No exits available.</value>
   </data>
   <data name="NavSettingsAccountDescription" xml:space="preserve">
     <value>Email, password, and login security</value>

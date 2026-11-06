@@ -144,6 +144,25 @@ public class MailPageD1Tests : TrackingBunitContext
 		}, TimeSpan.FromSeconds(5));
 	}
 
+	/// <summary>
+	/// An empty folder is the shared empty state with Compose as its action, and no reading card stands empty beside it:
+	/// the list takes the whole width.
+	/// </summary>
+	[Test]
+	public async Task AnEmptyFolder_OffersCompose_AndHasNoReadingCard()
+	{
+		_mail = SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Install(this);
+		_mail.EmptyInbox();
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/mail");
+		var cut = Render<SharpMUSH.Client.Pages.Mail>();
+		cut.WaitForAssertion(() => cut.Find(".mail-list .kit-empty"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".mail-list .kit-empty-text").TextContent).IsEqualTo("MailEmpty");
+		await Assert.That(cut.Find(".mail-list .kit-empty-action a").GetAttribute("href")).IsEqualTo("/mail/compose");
+		await Assert.That(cut.FindAll(".mail-reading").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".mail-panes").ClassList).Contains("mail-panes--single");
+	}
+
 	[Test]
 	public async Task ThePlainHeader_AListCard_AndAReadingCard()
 	{
