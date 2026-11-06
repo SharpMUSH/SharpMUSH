@@ -73,13 +73,20 @@ dotnet test
 
 The main entrypoint to set as a Startup Project is [`SharpMUSH.Server`](./SharpMUSH.Server).
 
-For full integration, run [`SharpMUSH.SocketServer`](./SharpMUSH.SocketServer), which owns client sockets, and [`SharpMUSH.RenderingWorker`](./SharpMUSH.RenderingWorker), which renders output over a shared Unix socket. The local Compose stack wires all three processes and persistent NATS storage:
+For full integration, run [`SharpMUSH.SocketServer`](./SharpMUSH.SocketServer), which owns client sockets, and [`SharpMUSH.RenderingWorker`](./SharpMUSH.RenderingWorker), which renders output over a shared Unix socket. To run all three in Docker, with NATS, use the Compose files in [`deploy/`](./deploy/README.md). They build the images from your checkout:
 
 ```bash
-docker compose up --build
+cd deploy
+cp .env.example .env    # set SHARPMUSH_DOMAIN (localhost on your own machine)
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-When launching projects separately on Linux, set `Rendering__SocketPath` to the same writable path (for example `/tmp/sharpmush-render.sock`) for both SocketServer and RenderingWorker, and provide `NATS_URL` to SocketServer and the main server. For quick images from Release binaries, use `Dockerfile.socketserver.local` for SocketServer and `Dockerfile.renderingworker.local` for the renderer; mount their shared socket directory.
+When launching projects separately on Linux, set `Rendering__SocketPath` to the same writable path (for example `/tmp/sharpmush-render.sock`) for both SocketServer and RenderingWorker, and provide `NATS_URL` to SocketServer and the main server. To start NATS on its own, on this computer only:
+
+```bash
+docker run -d --name sharpmush-nats -p 127.0.0.1:4222:4222 -v "$PWD/nats.conf:/etc/nats/nats.conf:ro" nats:2-alpine -js -c /etc/nats/nats.conf
+export NATS_URL=nats://localhost:4222
+``` For quick images from Release binaries, use `Dockerfile.socketserver.local` for SocketServer and `Dockerfile.renderingworker.local` for the renderer; mount their shared socket directory.
 
 See [connection updates and recovery](./deploy/connection-updates.md) for migration and restart behavior. The [development Kubernetes manifest](./kubernetes/dev-k8s.yaml) keeps SocketServer and renderer in one Pod: updating either image replaces that Pod and drops sockets. Use the single-host Compose deployment for independent renderer updates that retain client sockets.
 
