@@ -76,8 +76,9 @@ Nothing updates on its own. Take an `@backup` first: going back to an older imag
 because an older server refuses a world a newer one has migrated.
 
 Each part runs the image tag its settings file names, in the `image` line under `[build]`: the
-newest release (`latest`) unless you name one. Running the launch script again deploys the newest
-image of that tag to the server and the renderer. Players stay connected through both restarts. The edge is left running;
+newest release (`latest`) unless you name one. A game launched before the first release names
+`dev`; change it to `latest` to follow releases. Running the launch script again deploys the
+newest image of that tag to the server and the renderer. Players stay connected through both restarts. The edge is left running;
 `--update-edge` (`-UpdateEdge`) deploys it too, which drops everyone connected, so announce a time
 first. One part at a time:
 

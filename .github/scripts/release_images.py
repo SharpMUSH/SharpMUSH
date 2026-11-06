@@ -11,7 +11,7 @@ release's images are published, `bump` moves them in a pull request of its own.
 
 A release vX.Y.Z pushes :X.Y.Z, and moves :X.Y, :X and :latest only while it is the highest
 release under each of them, so publishing 1.0.1 after 1.1.0 leaves :1 and :latest on 1.1.0.
-A prerelease (X.Y.Z-rc.1) pushes its own tag and :dev.
+A prerelease (X.Y.Z-rc.1) pushes its own tag, and :dev when it is main's newest commit.
 """
 import json
 import os
@@ -66,13 +66,17 @@ def stable(version):
     return tuple(int(part) for part in match.groups()) if match else None
 
 
-def tags(version, released):
-    """The tags `version` is pushed under, given the versions already released."""
+def tags(version, released, on_main=True):
+    """The tags `version` is pushed under, given the versions already released.
+
+    A prerelease moves :dev only when it is main's newest commit, so it never takes :dev back
+    behind main.
+    """
     if not SEMVER.match(version):
         raise ValueError(f'{version!r} is not a version like 1.2.3 or 1.2.3-rc.1')
     own = stable(version)
     if own is None:
-        return [version, 'dev']
+        return [version, 'dev'] if on_main else [version]
     others = [v for v in (stable(r) for r in released) if v is not None]
     result = [version]
     if all(v[:2] != own[:2] or v <= own for v in others):
@@ -104,7 +108,7 @@ def released_versions():
 
 
 def write_tags(version):
-    pushed = tags(version, released_versions())
+    pushed = tags(version, released_versions(), os.environ.get('ON_MAIN') == 'true')
     print(f'{version} is pushed as: {", ".join(pushed)}')
     with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
         output.write(f'version={version}\n')
@@ -145,6 +149,14 @@ def problems(root=ROOT):
     result += disagreement(found, set(PINS) - ONE_CLICK, 'pinned')
     result += [f'{path}: pins {tag}; one-click files run {" or ".join(sorted(ONE_CLICK_TAGS))}'
                for path, tag, *_ in found if path in ONE_CLICK and tag not in ONE_CLICK_TAGS]
+    result += [f'{path}: pins {tag}; the exact files pin dev or a release like 1.2.3'
+               for path, tag, *_ in found if path not in ONE_CLICK and tag != 'dev' and stable(tag) is None]
+    if not result:
+        one_click = next(tag for path, tag, *_ in found if path in ONE_CLICK)
+        exact = next(tag for path, tag, *_ in found if path not in ONE_CLICK)
+        if (one_click == 'dev') != (exact == 'dev'):
+            result.append(f'the one-click files name {one_click} and the exact files {exact}: both are dev '
+                          f'until the first release, then latest and that release')
     return result
 
 

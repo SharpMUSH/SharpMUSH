@@ -2,7 +2,7 @@ name: Publish Docker Images
 
 # Publishing a GitHub Release whose tag is vX.Y.Z (Releases > Draft a new release) builds the
 # images at that tag and pushes them as :X.Y.Z, plus :X.Y, :X and :latest while it is the newest
-# release under each (.github/scripts/release_images.py). A prerelease pushes :X.Y.Z-rc.N and :dev.
+# release under each (.github/scripts/release_images.py). A prerelease pushes :X.Y.Z-rc.N, and :dev when it is main's newest commit.
 # Releases with other tags (plugin-nuget/v*, sharpmush-templates/v*) are left to their own workflows.
 on:
   release:
@@ -71,13 +71,21 @@ jobs:
             if ! PRERELEASE=$(curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" \
                 "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/tags/v$VERSION" |
                 python3 -c 'import json, sys; print(str(json.load(sys.stdin)["prerelease"]).lower())'); then
-              echo "::error::v$VERSION has no published GitHub Release; publish one instead of running this by hand."
+              echo "::error::Could not read the GitHub Release for v$VERSION (none is published, or the API call above failed)."
               exit 1
             fi
           fi
           if [[ "$PRERELEASE" == true && "$VERSION" != *-* ]]; then
             echo "::error::A prerelease's tag needs a suffix, like v$VERSION-rc.1, so it cannot move :latest."
             exit 1
+          fi
+          if [[ "$PRERELEASE" != true && "$VERSION" == *-* ]]; then
+            echo "::error::v$VERSION has a prerelease suffix; mark its GitHub Release as a pre-release."
+            exit 1
+          fi
+          # A prerelease moves :dev only from main's newest commit, so :dev never goes behind main.
+          if [[ "$(git ls-remote origin refs/heads/main | cut -f1)" == "$GITHUB_SHA" ]]; then
+            export ON_MAIN=true
           fi
           python3 .github/scripts/release_images.py tags "$VERSION"
 
