@@ -2,6 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Services;
+using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Configuration;
 
@@ -143,6 +145,62 @@ public class ConfiguredAliasImportTests
 		var penn = Aliases.Resolve(import, ConfigurationDialect.PennMUSH);
 		await Assert.That(penn.CommandRestrictions.Keys).Contains("@wizmotd")
 			.Because("PennMUSH's restrict_command replaces the command's restriction there too");
+	}
+
+	/// <summary>
+	/// An alias an earlier import added is in the live table by now, but the options written by this import start
+	/// from SharpMUSH's own, so it is resolved again; only a shipped alias is left out. The table takes an alias the
+	/// configuration gains at once, and a restriction on a function alias made by the same file is not reported.
+	/// </summary>
+	[Test]
+	public async Task AnAliasAnEarlierImportAddedIsKept()
+	{
+		var suffix = Guid.NewGuid().ToString("N")[..8];
+		var commandAlias = $"@swk{suffix}";
+		var functionAlias = $"plusk{suffix}";
+		var registry = (IConfiguredAliasRegistry)WebAppFactoryArg.Services.GetRequiredService<ILibraryProvider<CommandDefinition>>();
+		var functionRegistry = (IConfiguredAliasRegistry)WebAppFactoryArg.Services.GetRequiredService<ILibraryProvider<FunctionDefinition>>();
+		var added = new AliasOptions(
+			new Dictionary<string, string[]> { ["add"] = [functionAlias] },
+			new Dictionary<string, string[]> { ["@SWITCH"] = [commandAlias] });
+
+		await Assert.That(registry.RegisterConfiguredAliases(added)).IsTrue();
+		await Assert.That(functionRegistry.RegisterConfiguredAliases(added)).IsTrue();
+		await Assert.That(registry.RegisterConfiguredAliases(added)).IsFalse()
+			.Because("an alias already there for the same command is left alone");
+
+		var import = Import(Command(commandAlias, "@switch"), Function(functionAlias, "add")) with
+		{
+			Options = SharpMUSHOptions.Default() with
+			{
+				Restriction = new RestrictionOptions(new Dictionary<string, string[]>(),
+					new Dictionary<string, string[]> { [functionAlias] = ["wizard"] })
+			}
+		};
+		var resolved = Aliases.Resolve(import, ConfigurationDialect.TinyMUX);
+
+		await Assert.That(resolved.Commands["@SWITCH"]).IsEquivalentTo(new[] { commandAlias });
+		await Assert.That(resolved.Functions["add"]).IsEquivalentTo(new[] { functionAlias });
+		await Assert.That(resolved.NotCarried).IsEmpty();
+	}
+
+	[Test]
+	public async Task AFunctionRestrictionOnANewAliasIsNotReported()
+	{
+		var alias = $"plusn{Guid.NewGuid().ToString("N")[..8]}";
+		var import = Import(Function(alias, "add")) with
+		{
+			Options = SharpMUSHOptions.Default() with
+			{
+				Restriction = new RestrictionOptions(new Dictionary<string, string[]>(),
+					new Dictionary<string, string[]> { [alias] = ["wizard"] })
+			}
+		};
+
+		var resolved = Aliases.Resolve(import, ConfigurationDialect.TinyMUX);
+
+		await Assert.That(resolved.Functions["add"]).IsEquivalentTo(new[] { alias });
+		await Assert.That(resolved.NotCarried).IsEmpty();
 	}
 
 	private static AliasDirective Command(string alias, string target) => new(AliasKind.Command, alias, target, $"alias {alias} {target}");

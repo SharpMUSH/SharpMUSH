@@ -17,7 +17,8 @@ public class ReadConfigAliasAndAccessTests
 			"command_alias @switch @sw",
 			"function_alias modulo modulus",
 			"attribute_alias DESCRIBE DSC",
-			"command_alias lonely");
+			"command_alias lonely",
+			"function_alias add my_add extra");
 
 		await Assert.That(import.Aliases).IsEquivalentTo(new[]
 		{
@@ -28,6 +29,8 @@ public class ReadConfigAliasAndAccessTests
 			"attribute_alias DESCRIBE DSC: SharpMUSH keeps no per-game attribute aliases, so it was not carried over.");
 		await Assert.That(import.Skipped).Contains(
 			"command_alias lonely: an alias line names a name and what it stands for, so it was not carried over.");
+		await Assert.That(import.Skipped).Contains(
+			"function_alias add my_add extra: an alias is one word, so it was not carried over.");
 		await Assert.That(import.Unrecognized).IsEmpty();
 	}
 
@@ -113,6 +116,26 @@ public class ReadConfigAliasAndAccessTests
 		await Assert.That(import.Skipped).Contains(
 			"access @mail/cc wizard: SharpMUSH restricts a command, not one of its switches, so it was not carried over.");
 		await Assert.That(import.Skipped.Any(line => line.StartsWith("attr_access desc wizard: "))).IsTrue();
+	}
+
+	/// <summary>
+	/// TinyMUX's lines for one command add up, so a later line's words cannot stand once an earlier line saying who
+	/// may use the command was left out: none of the command's lines is carried over, in either order.
+	/// </summary>
+	[Test]
+	public async Task AnAccessLineLeftOutTakesTheCommandsOtherLinesWithIt()
+	{
+		var import = await ImportAsync(ConfigurationDialect.TinyMUX,
+			"access @emit staff",
+			"access @emit no_guest",
+			"access @pemit no_guest",
+			"access @pemit staff");
+
+		var restrictions = import.Options.Restriction.CommandRestrictions;
+		await Assert.That(restrictions.ContainsKey("@emit")).IsFalse();
+		await Assert.That(restrictions.ContainsKey("@pemit")).IsFalse();
+		await Assert.That(import.Skipped.Single(line => line.StartsWith("access @emit no_guest: "))).Contains("an earlier access line for @emit");
+		await Assert.That(import.Skipped.Single(line => line.StartsWith("access @pemit staff: the earlier access lines"))).IsNotNull();
 	}
 
 	/// <summary>

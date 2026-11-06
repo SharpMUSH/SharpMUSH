@@ -88,8 +88,10 @@ public sealed class CommandRestrictionBootstrapService(
 		await _gate.WaitAsync();
 		try
 		{
+			// The aliases first, so a restriction on an alias the same change made finds it.
+			var aliasesAdded = commandLibrary is IConfiguredAliasRegistry registry && registry.RegisterConfiguredAliases(options.CurrentValue.Alias);
 			var configured = options.CurrentValue.Restriction.CommandRestrictions;
-			if (SameRestrictions(configured, _applied))
+			if (!aliasesAdded && SameRestrictions(configured, _applied))
 			{
 				return;
 			}

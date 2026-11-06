@@ -149,7 +149,8 @@ public class CommandRestrictionBootstrapTests
 			NullLogger<ConfiguredFunctionRestrictions>.Instance);
 		var restricted = WithFunctionRestrictions(new() { ["lstats"] = ["noguest"] });
 		var monitor = new ChangingOptions(restricted);
-		using var service = new FunctionRestrictionBootstrapService(applier, monitor, NullLogger<FunctionRestrictionBootstrapService>.Instance);
+		using var service = new FunctionRestrictionBootstrapService(applier,
+			Factory.Services.GetRequiredService<ILibraryProvider<FunctionDefinition>>(), monitor, NullLogger<FunctionRestrictionBootstrapService>.Instance);
 
 		await service.StartAsync(CancellationToken.None);
 		await Assert.That(registry.GetBuiltinRestriction("lstats")).IsEqualTo("noguest");

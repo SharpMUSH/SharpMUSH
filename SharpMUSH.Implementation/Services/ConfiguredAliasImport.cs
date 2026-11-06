@@ -135,7 +135,9 @@ public sealed class ConfiguredAliasImport(
 			restrictions[name] = restriction;
 		}
 
-		foreach (var name in import.Options.Restriction.FunctionRestrictions.Keys.Where(name => !functionLibrary.ContainsKey(name)))
+		var newFunctionAliases = functionAliases.Values.SelectMany(aliases => aliases).ToHashSet(StringComparer.OrdinalIgnoreCase);
+		foreach (var name in import.Options.Restriction.FunctionRestrictions.Keys
+			.Where(name => !functionLibrary.ContainsKey(name) && !newFunctionAliases.Contains(name)))
 		{
 			notCarried.Add($"The restriction on {name}(): SharpMUSH has no function {name}(), so it has no effect.");
 		}
@@ -168,6 +170,17 @@ public sealed class ConfiguredAliasImport(
 	private sealed record Resolution(string? Target, string? Reason);
 
 	private static readonly Resolution InForce = new(null, null);
+
+	/// <summary>
+	/// An alias the live table already has for its target: in force with nothing to keep when it is the built-in's own
+	/// name or one SharpMUSH ships, else one an earlier import or <c>@config</c> added, which the options written now
+	/// have to name again or it is gone after a restart.
+	/// </summary>
+	private static Resolution Kept(Dictionary<string, string[]> shipped, string target, string alias)
+		=> alias.Equals(target, StringComparison.OrdinalIgnoreCase)
+			|| (shipped.TryGetValue(target, out var names) && names.Contains(alias, StringComparer.OrdinalIgnoreCase))
+				? InForce
+				: new Resolution(target, null);
 
 	private Resolution Command(AliasDirective directive, SoftcodeDialect? overlay,
 		Library.Services.LibraryService<string, CommandDefinition> library)
@@ -204,7 +217,7 @@ public sealed class ConfiguredAliasImport(
 		{
 			return ReferenceEquals(taken.LibraryInformation.Attribute, attribute)
 				&& taken.LibraryInformation.ImpliedSwitches.SequenceEqual(wanted, StringComparer.OrdinalIgnoreCase)
-					? InForce
+					? Kept(AliasOptions.Default.CommandAliases, target, directive.Alias)
 					: new Resolution(null, $"{directive.Alias} is already SharpMUSH's {taken.LibraryInformation.Attribute.Name}");
 		}
 
@@ -249,7 +262,7 @@ public sealed class ConfiguredAliasImport(
 		if (library.TryGetValue(alias, out var taken))
 		{
 			return ReferenceEquals(taken.LibraryInformation.Attribute, attribute)
-				? InForce
+				? Kept(AliasOptions.Default.FunctionAliases, name, alias)
 				: new Resolution(null, $"{alias}() is already SharpMUSH's {taken.LibraryInformation.Attribute.Name.ToLowerInvariant()}()");
 		}
 

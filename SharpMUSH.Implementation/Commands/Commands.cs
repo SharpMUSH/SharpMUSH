@@ -14,7 +14,7 @@ using SharpMUSH.Library.Push;
 
 namespace SharpMUSH.Implementation.Commands;
 
-public partial class Commands : ILibraryProvider<CommandDefinition>
+public partial class Commands : ILibraryProvider<CommandDefinition>, IConfiguredAliasRegistry
 {
 	private IMediator Mediator { get; }
 	/// <summary>
@@ -273,17 +273,9 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		foreach (var command in Builtins)
 		{
 			_commandLibrary.Add(command.Key, (command.Value, true));
-
-			foreach (var alias in Configuration.CurrentValue.Alias.CommandAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
-			{
-				if (!_commandLibrary.TryAdd(alias, (command.Value, true)))
-				{
-					Logger.LogWarning("Command alias {Alias} for {Target} is not registered: {Alias} is already a command", alias, command.Key, alias);
-				}
-			}
 		}
 
-		AddSwitchAliases(Configuration.CurrentValue.Alias.CommandAliases);
+		RegisterConfiguredAliases(Configuration.CurrentValue.Alias);
 
 		// Store reference to this command library for @command introspection
 		CommandLibrary = _commandLibrary;
@@ -295,8 +287,9 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	/// command with those switches put before the ones typed. A target whose command or switch does not exist is
 	/// skipped with a warning, as is an alias already taken.
 	/// </summary>
-	private void AddSwitchAliases(Dictionary<string, string[]> aliases)
+	private bool AddSwitchAliases(Dictionary<string, string[]> aliases)
 	{
+		var added = false;
 		foreach (var (target, names) in aliases)
 		{
 			if (SwitchAliasDefinition(target) is not { } definition)
@@ -306,12 +299,48 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 			foreach (var name in names)
 			{
-				if (!_commandLibrary.TryAdd(name, (definition, true)))
-				{
-					Logger.LogWarning("Command alias {Alias} for {Target} is not registered: {Alias} is already a command", name, target, name);
-				}
+				added |= AddAlias(name, target, definition);
 			}
 		}
+
+		return added;
+	}
+
+	/// <summary>
+	/// Adds the configured command aliases, the plain ones and those naming switches, to the live table. Run at
+	/// construction and again whenever the configuration changes (<see cref="IConfiguredAliasRegistry"/>).
+	/// </summary>
+	public bool RegisterConfiguredAliases(AliasOptions aliases)
+	{
+		var added = false;
+		foreach (var command in Builtins)
+		{
+			foreach (var alias in aliases.CommandAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
+			{
+				added |= AddAlias(alias, command.Key, command.Value);
+			}
+		}
+
+		return AddSwitchAliases(aliases.CommandAliases) | added;
+	}
+
+	/// <summary>Adds <paramref name="alias"/> unless it is there already: for the same command and switches it is left alone, for anything else it is logged.</summary>
+	/// <returns>Whether it was added.</returns>
+	private bool AddAlias(string alias, string target, CommandDefinition definition)
+	{
+		if (_commandLibrary.TryAdd(alias, (definition, true)))
+		{
+			return true;
+		}
+
+		if (!(_commandLibrary.TryGetValue(alias, out var existing)
+			&& ReferenceEquals(existing.LibraryInformation.Attribute, definition.Attribute)
+			&& existing.LibraryInformation.ImpliedSwitches.SequenceEqual(definition.ImpliedSwitches, StringComparer.OrdinalIgnoreCase)))
+		{
+			Logger.LogWarning("Command alias {Alias} for {Target} is not registered: {Alias} is already a command", alias, target, alias);
+		}
+
+		return false;
 	}
 
 	/// <summary>The definition an alias of <paramref name="target"/> runs, or <c>null</c> when it names no switch or no such command.</summary>

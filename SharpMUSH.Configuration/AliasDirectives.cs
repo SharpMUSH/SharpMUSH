@@ -98,6 +98,14 @@ public static class AliasDirectives
 				continue;
 			}
 
+			// PennMUSH takes everything after the first name as the alias, so a third word makes a name it refuses;
+			// TinyMUX and RhostMUSH read two words and ignore the rest.
+			if (dialect == ConfigurationDialect.PennMUSH && words.Length > 2)
+			{
+				skipped.Add($"{line.Trim()}: an alias is one word, so it was not carried over.");
+				continue;
+			}
+
 			var (alias, target) = dialect == ConfigurationDialect.PennMUSH ? (words[1], words[0]) : (words[0], words[1]);
 			aliases.Add(new AliasDirective(kind, alias, target, line.Trim()));
 		}

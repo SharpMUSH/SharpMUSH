@@ -2,7 +2,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Services;
 
@@ -22,6 +24,7 @@ namespace SharpMUSH.Server.Services;
 /// </remarks>
 public sealed class FunctionRestrictionBootstrapService(
 	ConfiguredFunctionRestrictions restrictions,
+	ILibraryProvider<FunctionDefinition> functions,
 	IOptionsMonitor<SharpMUSHOptions> options,
 	ILogger<FunctionRestrictionBootstrapService> logger) : IHostedService, IDisposable
 {
@@ -62,8 +65,10 @@ public sealed class FunctionRestrictionBootstrapService(
 	{
 		lock (_gate)
 		{
+			// The aliases first, so a restriction on an alias the same change made finds it.
+			var aliasesAdded = functions is IConfiguredAliasRegistry registry && registry.RegisterConfiguredAliases(options.CurrentValue.Alias);
 			var configured = options.CurrentValue.Restriction.FunctionRestrictions;
-			if (SameRestrictions(configured, _applied))
+			if (!aliasesAdded && SameRestrictions(configured, _applied))
 			{
 				return;
 			}

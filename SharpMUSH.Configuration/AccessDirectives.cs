@@ -138,6 +138,8 @@ public static class AccessDirectives
 		}
 
 		var table = dialect == ConfigurationDialect.RhostMUSH ? RhostMUSH : TinyMUX;
+		var refusedCommands = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		var refusedFunctions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		foreach (var (name, value, line) in lines)
 		{
 			if (NotCarried.TryGetValue(name, out var reason))
@@ -166,13 +168,33 @@ public static class AccessDirectives
 				continue;
 			}
 
-			var carried = Translate(line.Trim(), words[1..], table, isFunction, skipped);
+			var into = isFunction ? functions : commands;
+			var refused = isFunction ? refusedFunctions : refusedCommands;
+			if (refused.Contains(target))
+			{
+				skipped.Add($"{line.Trim()}: an earlier access line for {target} could not be carried over, and this one alone would let in someone the source turns away, so it was not carried over.");
+				continue;
+			}
+
+			var (carried, refusedLine) = Translate(line.Trim(), words[1..], table, isFunction, skipped);
+			if (refusedLine)
+			{
+				// The source's lines for one name add up, so what the others carry would stand without this line's
+				// requirement: none of them is kept.
+				refused.Add(target);
+				if (into.Remove(target))
+				{
+					skipped.Add($"{line.Trim()}: the earlier access lines for {target} were not carried over either, since without this one they would let in someone the source turns away.");
+				}
+
+				continue;
+			}
+
 			if (carried.Count == 0)
 			{
 				continue;
 			}
 
-			var into = isFunction ? functions : commands;
 			var restriction = into.TryGetValue(target, out var earlier) ? earlier : into[target] = [];
 			restriction.AddRange(carried.Where(word => !restriction.Contains(word, StringComparer.OrdinalIgnoreCase)));
 		}
@@ -185,10 +207,10 @@ public static class AccessDirectives
 	}
 
 	/// <summary>
-	/// The SharpMUSH restriction words <paramref name="words"/> become, or none when the line is not carried over;
-	/// what is left out is reported against <paramref name="line"/>.
+	/// The SharpMUSH restriction words <paramref name="words"/> become, and whether the line is refused: it says who
+	/// may use the name and SharpMUSH has none of those words. What is left out is reported against <paramref name="line"/>.
 	/// </summary>
-	private static List<string> Translate(string line, string[] words, Word[] table, bool isFunction, List<string> skipped)
+	private static (List<string> Carried, bool Refused) Translate(string line, string[] words, Word[] table, bool isFunction, List<string> skipped)
 	{
 		var carried = new List<string>();
 		var left = new List<string>();
@@ -223,7 +245,7 @@ public static class AccessDirectives
 		if (grants > 0 && grantsCarried == 0)
 		{
 			skipped.Add($"{line}: SharpMUSH has no restriction for {string.Join(", ", left)}, so it was not carried over and SharpMUSH's own restriction stays.");
-			return [];
+			return ([], true);
 		}
 
 		if (left.Count > 0)
@@ -233,7 +255,7 @@ public static class AccessDirectives
 				: $"{line}: SharpMUSH has no restriction for {string.Join(", ", left)}, so it was not carried over.");
 		}
 
-		return carried;
+		return (carried, false);
 	}
 
 	/// <summary>The word <paramref name="given"/> names, in full or abbreviated to at least its shortest form.</summary>
