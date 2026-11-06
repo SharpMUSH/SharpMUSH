@@ -72,4 +72,69 @@ public class ProtectionFlagTests : ServerTestBase
 			await Assert.That(await EvalAs(_owner.DbRef, $"get(#{thing}/HIDDEN)")).IsEqualTo("shh");
 		}
 	}
+
+	[Test]
+	public async Task NomodifyLeavesTheOwnerAbleToExamine()
+	{
+		var thing = DBRef.Parse(await AsOwner($"@create {TestIsolationHelpers.GenerateUniqueName("Ledger")}")).Number;
+		await AsOwner($"&NOTE #{thing}=kept");
+		await Cmd($"@set #{thing}=NOMODIFY");
+
+		using (Protecting(true))
+		{
+			await Assert.That(await EvalAs(_owner.DbRef, $"get(#{thing}/NOTE)")).IsEqualTo("kept");
+		}
+	}
+
+	[Test]
+	public async Task NomodifyKeepsTheObjectFromChangingItself()
+	{
+		var thing = DBRef.Parse(await AsOwner($"@create {TestIsolationHelpers.GenerateUniqueName("Ledger")}")).Number;
+		await Cmd($"@set #{thing}=NOMODIFY");
+
+		using (Protecting(true))
+		{
+			await EvalAs(new DBRef(thing), "set(me,NOTE:changed)");
+			await Assert.That(await Eval($"get(#{thing}/NOTE)")).IsEmpty();
+		}
+
+		using (Protecting(false))
+		{
+			await EvalAs(new DBRef(thing), "set(me,NOTE:changed)");
+			await Assert.That(await Eval($"get(#{thing}/NOTE)")).IsEqualTo("changed");
+		}
+	}
+
+	[Test]
+	public async Task NoexamineLeavesTheObjectItsOwnAttributes()
+	{
+		var thing = DBRef.Parse(await AsOwner($"@create {TestIsolationHelpers.GenerateUniqueName("Secret")}")).Number;
+		await AsOwner($"&DATA #{thing}=mine");
+		await Cmd($"@set #{thing}=NOEXAMINE");
+
+		using (Protecting(true))
+		{
+			await Assert.That(await EvalAs(new DBRef(thing), "v(DATA)")).IsEqualTo("mine");
+		}
+	}
+
+	[Test]
+	public async Task TheOptionIsReadFromAConfigurationFile()
+	{
+		var path = Path.Combine(Path.GetTempPath(), $"sharpmush-protection-{Guid.NewGuid():N}.cnf");
+		try
+		{
+			await File.WriteAllTextAsync(path, "protection_flags yes\n");
+			var on = SharpMUSH.Configuration.ReadPennMushConfig.Create(path).Compatibility.ProtectionFlags;
+			await File.WriteAllTextAsync(path, string.Empty);
+			var off = SharpMUSH.Configuration.ReadPennMushConfig.Create(path).Compatibility.ProtectionFlags;
+
+			await Assert.That(on).IsTrue();
+			await Assert.That(off).IsFalse();
+		}
+		finally
+		{
+			File.Delete(path);
+		}
+	}
 }

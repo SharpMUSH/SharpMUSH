@@ -286,12 +286,12 @@ public class PermissionService(
 
 		var targetLocation = (await target.Where()).WithExitOption();
 		if (await LocateService.Nearby(viewer, targetLocation)
-				&& (!await targetLocation.IsOpaque() || await Controls(viewer, targetLocation)))
+				&& (!await targetLocation.IsOpaque() || await Oversees(viewer, targetLocation)))
 			return true;
 
 		var viewerLocation = (await viewer.Where()).WithExitOption();
 		return await LocateService.Nearby(viewerLocation, target)
-					 && (!await viewerLocation.IsOpaque() || await Controls(viewer, viewerLocation));
+					 && (!await viewerLocation.IsOpaque() || await Oversees(viewer, viewerLocation));
 	}
 
 	public async ValueTask<bool> CanSee(AnySharpObject viewer, AnySharpObject target)
@@ -336,7 +336,7 @@ public class PermissionService(
 	/// </remarks>
 	public async ValueTask<bool> CanLocate(AnySharpObject who, AnySharpObject what)
 	{
-		if (await Controls(who, what)
+		if (await Oversees(who, what)
 				|| await LocateService.Nearby(who, what)
 				|| await who.IsSee_All())
 		{
@@ -422,6 +422,13 @@ public class PermissionService(
 	}
 
 	public async ValueTask<bool> Controls(AnySharpObject who, AnySharpObject target)
+		=> !await ProtectedFrom(who, target, "NOMODIFY", ExecutionBudget.CurrentToken) && await Oversees(who, target);
+
+	/// <summary>
+	/// Control for reading and finding, which a NOMODIFY target does not take away: only changes are
+	/// <see cref="Controls(AnySharpObject, AnySharpObject)"/>'s.
+	/// </summary>
+	private async ValueTask<bool> Oversees(AnySharpObject who, AnySharpObject target)
 	{
 		var token = ExecutionBudget.CurrentToken;
 		token.ThrowIfCancellationRequested();
@@ -430,9 +437,6 @@ public class PermissionService(
 
 		if (who.Id() == target.Id())
 			return true;
-
-		if (await ProtectedFrom(who, target, "NOMODIFY", token))
-			return false;
 
 		// Each object's flags and grants are read once and asked every question below. Privilege here is
 		// scopes, never role order. First the target's guards: each role it holds that allows protect.role
@@ -511,12 +515,12 @@ public class PermissionService(
 					&& await lockService.Evaluate(LockType.Link, destination, executor)));
 
 	public async ValueTask<bool> CanExamine(AnySharpObject examiner, AnySharpObject examinee)
-		=> !await ProtectedFrom(examiner, examinee, "NOEXAMINE", ExecutionBudget.CurrentToken)
-			&& (examiner.Object().DBRef == examinee.Object().DBRef
-			 || await Controls(examiner, examinee)
-			 || await examiner.IsSee_All()
-			 || (await examinee.IsVisual() && await examiner.CanOver(PortalPermission.PlayerExamine, examinee)
-				 && await lockService.Evaluate(LockType.Examine, examinee, examiner)));
+		=> examiner.Object().DBRef == examinee.Object().DBRef
+			|| (!await ProtectedFrom(examiner, examinee, "NOEXAMINE", ExecutionBudget.CurrentToken)
+				&& (await Oversees(examiner, examinee)
+					|| await examiner.IsSee_All()
+					|| (await examinee.IsVisual() && await examiner.CanOver(PortalPermission.PlayerExamine, examinee)
+						&& await lockService.Evaluate(LockType.Examine, examinee, examiner))));
 
 	/// <summary>
 	/// Whether <paramref name="target"/>'s RhostMUSH and TinyMUX protection <paramref name="flag"/> keeps
@@ -528,7 +532,7 @@ public class PermissionService(
 	/// <inheritdoc />
 	public async ValueTask<bool> CanReadLock(AnySharpObject viewer, AnySharpObject target, LockService.LockFlags lockFlags)
 		=> await viewer.IsSee_All()
-			 || await Controls(viewer, target)
+			 || await Oversees(viewer, target)
 			 || ((await target.IsVisual() || lockFlags.HasFlag(LockService.LockFlags.Visual))
 				 && await lockService.Evaluate(LockType.Examine, target, viewer));
 
@@ -588,8 +592,8 @@ public class PermissionService(
 
 		return await executor.IsSee_All()
 					 || loc.Object().DBRef == executor.Object().DBRef
-					 || await Controls(executor, loc)
-					 || await Controls(executor, thing);
+					 || await Oversees(executor, loc)
+					 || await Oversees(executor, thing);
 	}
 
 	public ValueTask<bool> IsHearer(AnySharpObject obj)
@@ -766,11 +770,11 @@ public class PermissionService(
 		=> await executor.IsWizard() || await executor.HasPower("Can_Spoof");
 
 	public async ValueTask<bool> CanSpoofAs(AnySharpObject executor, AnySharpObject enactor)
-		=> await CanNoSpoof(executor) || await Controls(executor, enactor);
+		=> await CanNoSpoof(executor) || await Oversees(executor, enactor);
 
 	// IsSee_All covers Hasprivs, so it subsumes the Wizard half of Do_Quotas.
 	public async ValueTask<bool> CanSeeQuota(AnySharpObject executor, AnySharpObject player)
 		=> await executor.IsSee_All()
 			|| await executor.HasPower("Quotas")
-			|| await Controls(executor, player);
+			|| await Oversees(executor, player);
 }
