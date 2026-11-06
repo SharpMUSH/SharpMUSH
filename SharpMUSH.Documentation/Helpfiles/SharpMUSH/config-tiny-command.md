@@ -35,6 +35,7 @@ Options that make SharpMUSH behave like TinyMUSH, TinyMUX or RhostMUSH, for code
 - `mux_collation=<boolean>`: Do comp() with no type and sort() with no sort type order text as TinyMUX does, `a A b B`?
 - `mux_queue_functions=<boolean>`: Do trigger() and verb() queue an attribute's actions, as TinyMUX's do? When off they return `#-1 FUNCTION DISABLED`. Importing a TinyMUX database turns it on.
 - `mux_quiet=<boolean>`: Does the /quiet switch of drop, get, give, goto, enter, leave and @teleport do what TinyMUX's does? See [compatibility config]. Importing a TinyMUX database turns it on.
+- `mux_function_caller=<boolean>`: Does a global @function defined without /privileged run as whoever calls it, as on TinyMUX? When off, every @function runs as the object that holds it. See [compatibility config]. Importing a TinyMUX database turns it on.
 - `innermost_tokens=<boolean>`: Do `##` and `#@` name the innermost iter() or @dolist, and `#$` the innermost switch, as in TinyMUX? When off, they name the outermost one they are written in, as in PennMUSH.
 
 ## RhostMUSH options

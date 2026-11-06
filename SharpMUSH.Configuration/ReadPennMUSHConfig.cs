@@ -143,6 +143,7 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(CompatibilityOptions.MuxQueueFunctions)), d.Compatibility.MuxQueueFunctions),
 				Boolean(Get(nameof(CompatibilityOptions.RhostLrooms)), d.Compatibility.RhostLrooms),
 				Boolean(Get(nameof(CompatibilityOptions.MuxQuiet)), d.Compatibility.MuxQuiet),
+				Boolean(Get(nameof(CompatibilityOptions.MuxFunctionCaller)), d.Compatibility.MuxFunctionCaller),
 				Boolean(Get(nameof(CompatibilityOptions.MapsqlSync)), d.Compatibility.MapsqlSync)
 			),
 			Cosmetic = new CosmeticOptions(

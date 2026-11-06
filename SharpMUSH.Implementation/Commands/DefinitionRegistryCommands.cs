@@ -1099,8 +1099,8 @@ public partial class Commands : ICommandRestrictionApplier
 
 		if (switches.Contains("LOCAL")) return await LocalFunctionCommand(parser, executor, switches);
 
-		// TinyMUX's /list is the bare form. Its /privileged changes nothing: a global function always
-		// runs as the object that holds it.
+		// TinyMUX's /list is the bare form. Its /privileged is stored on the function; it matters only
+		// while mux_function_caller is on, when a function defined without it runs as its caller.
 		if (args.Count == 0 || switches.Contains("LIST"))
 		{
 			return await SummarizeFunctionsAsync(parser, executor);
@@ -1530,7 +1530,7 @@ public partial class Commands : ICommandRestrictionApplier
 				}
 
 				return await DefineUserFunctionOnAsync(executor, userFunctionService, functionName, targetObject, attribSpec, minArgs, maxArgs,
-					restriction);
+					restriction, parser.CurrentState.Switches.Contains("PRIVILEGED"));
 			});
 	}
 
@@ -1553,7 +1553,8 @@ public partial class Commands : ICommandRestrictionApplier
 	}
 
 	private async ValueTask<CallState> DefineUserFunctionOnAsync(AnySharpObject executor, IUserDefinedFunctionService userFunctionService,
-		string functionName, AnySharpObject targetObject, string attribSpec, int minArgs, int maxArgs, string? restriction)
+		string functionName, AnySharpObject targetObject, string attribSpec, int minArgs, int maxArgs, string? restriction,
+		bool privileged)
 	{
 		// do_function does not look for the attribute (function.c:1687-1692): it is read, parents
 		// and ancestor included, each time the function is called (parse.c:3048).
@@ -1567,7 +1568,8 @@ public partial class Commands : ICommandRestrictionApplier
 			MaxArgs: maxArgs,
 			Enabled: true,
 			AliasOf: null,
-			Restriction: restriction));
+			Restriction: restriction)
+		{ Privileged = privileged });
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDefinedFormat), executor, functionName, $"#{targetObject.Object().DBRef.Number}/{attributeLongName}");
 		return CallState.Empty;
