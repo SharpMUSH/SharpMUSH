@@ -109,19 +109,13 @@ public static class ZoneHelpers
 				executor);
 		}
 
-		// set.c:472-482, but ahead of the zone change rather than after it.
-		//
-		// PennMUSH strips with clear_flag_internal() and destroy_flag_bitmask(), which ask nobody's
-		// permission, so its one controls() check above is the whole authorization. These go through
-		// IFlagAndPowerService, which checks Controls itself — and Controls reads the object's
-		// *current* zone (PermissionService.Controls, Zone Master Object branch). Once the zone has
-		// moved, an executor who held the object only through the zone it is leaving no longer controls
-		// it, the strip is refused, and @CHZONE reports "Zone changed." over an object that kept every
-		// power. Running the strip first is what keeps the authorization checked at the top of this
-		// method the one that governs it. Nothing below can fail, so the observable order is PennMUSH's.
+		// set.c:472-482, ahead of the zone change. PennMUSH strips with clear_flag_internal() and
+		// destroy_flag_bitmask(), which ask nobody's permission, so the controls() check above is the whole
+		// authorization; PrivilegeHelpers does the same. Nothing below can fail, so the observable order is
+		// PennMUSH's.
 		if (!preserve && !target.IsPlayer)
 		{
-			await PrivilegeHelpers.StripPrivilegeAsync(mediator, flagAndPowerService, executor, target);
+			await PrivilegeHelpers.StripPrivilegeAsync(mediator, target);
 		}
 		else if (noisy)
 		{
