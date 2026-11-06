@@ -885,18 +885,14 @@ one engine process per database until a backplane is configured.
 Admin customizes commands, display, board structure in-game. Engine doesn't
 need to know BBS exists.
 
-### 16.2 HTTP Handler for Read
+### 16.2 HTTP Handler Routes
 
-**Decision:** HTTP handler exposes boards/posts for web display (read-only).
-Same pattern as profiles. Respects board read locks per character.
+**Decision:** The bboards package adds `/http/boards/*` routes to the HTTP
+handler, which the portal's Boards application reads and posts its buttons to.
+Each route acts for the signed-in character through the same softcode and board
+locks as the `+bb` commands. See `forums-bbs.md`.
 
-### 16.3 Terminal for Write
-
-**Decision:** No separate web write API. Posting from web goes through the
-terminal panel (`+bbs/post` command). Softcode handles all validation and
-formatting. Web "New Post" button is a UX shortcut that pre-fills the command.
-
-### 16.4 Post Format
+### 16.3 Post Format
 
 **Decision:** MString (same as mail). Posts can contain ANSI formatting from
 in-game. Rendered via `.Render(MarkupFormat.Html)` on web. Not Markdown.
@@ -1340,7 +1336,7 @@ are a consumer of that API, not part of its surface.
 | widget-system.md                  | Complete  | Zones, IPortalWidget, layout JSON    |
 | search-infrastructure.md          | Complete  | FTS, omnisearch, permission filtering|
 | caching-strategy.md               | Complete  | Event invalidation, cache layers     |
-| forums-bbs.md                     | Complete  | Softcoded BBS, HTTP read, terminal write|
+| forums-bbs.md                     | Complete  | Softcoded BBS, portal routes, locks  |
 | events-calendar.md                | Complete  | Events = scheduled scenes, RSVP      |
 | theme-editor.md                   | Complete  | MudTheme palette, player presets, CSS|
 | custom-widgets.md                 | Complete  | RCL plugins, IPortalWidget, loading  |
