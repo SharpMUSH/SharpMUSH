@@ -33,7 +33,7 @@ public class PluginHelpParityTests
 
 	private static Helpfiles? Own(PluginBase plugin)
 	{
-		var folder = new DirectoryInfo(Path.Combine(TestPaths.RepositoryRoot, plugin.GetType().Assembly.GetName().Name!, "help"));
+		var folder = new DirectoryInfo(Path.Join(TestPaths.RepositoryRoot, plugin.GetType().Assembly.GetName().Name!, "help"));
 		if (!folder.Exists)
 		{
 			return null;
