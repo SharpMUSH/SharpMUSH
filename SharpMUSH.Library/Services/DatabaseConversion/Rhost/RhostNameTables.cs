@@ -32,8 +32,15 @@ public sealed record RhostBitMapping(
 /// <param name="Word">The toggle word, 0-based (2-4 powers, 5-7 depowers).</param>
 /// <param name="Shift">Where its two bits start.</param>
 /// <param name="Name">RhostMUSH's name for it.</param>
-/// <param name="Power">The SharpMUSH power it is, or null for one the import creates under <paramref name="Name"/>.</param>
-public sealed record RhostPowerMapping(int Word, int Shift, string Name, string? Power);
+/// <param name="Scopes">
+/// The permissions it lands on: an allow for a power, a deny for a depower. None means it is not imported, for
+/// <paramref name="Skip"/>.
+/// </param>
+/// <param name="Ranked">
+/// Whether its level bounds whose things it acts on, which the import carries as a reach (<c>help @permission reach</c>).
+/// </param>
+/// <param name="Skip">Why it is not imported, when it lands on nothing.</param>
+public sealed record RhostPowerMapping(int Word, int Shift, string Name, string[] Scopes, bool Ranked, string? Skip = null);
 
 /// <summary>A RhostMUSH attribute flag (<c>AF_*</c>) and the SharpMUSH attribute flag it becomes, if any.</summary>
 public sealed record RhostAttributeFlagMapping(uint Bit, string Name, string? Flag, string? Note = null);
@@ -131,7 +138,7 @@ public static class RhostNameTables
 
 		// Flag word 3.
 		Custom(2, 0x1, "NOCONNECT", true),
-		Custom(2, 0x2, "DPSHIFT", true),
+		Skip(2, 0x2, "DPSHIFT", "read to decide the levels of its depowers"),
 		Custom(2, 0x4, "NOPOSSESS"),
 		Custom(2, 0x8, "COMBAT"),
 		Custom(2, 0x10, "IC"),
@@ -223,47 +230,80 @@ public static class RhostNameTables
 		=> names.Select((name, index) => (word, 1u << index, name)).Where(t => t.name is not null)
 			.Select(t => (t.word, t.Item2, t.name!));
 
-	/// <summary>Every power (toggle words 3-5) and depower (6-8), at its level field.</summary>
+	private const string NeverChecked = "RhostMUSH never checks it";
+	private const string NoApi = "SharpMUSH has no API listener for it to open";
+	private const string NoMoney = "SharpMUSH does not track money";
+	private const string AnsiNames = "anyone may colour a name here";
+	private const string AllCommands = "SharpMUSH takes $-commands away only all together, with player.commands";
+
+	private static string Power(string name) => PortalPermission.GamePower(name);
+
+	/// <summary>A power or depower that acts the same whatever its level.</summary>
+	private static (string, string[], bool, string?) Flat(string name, params string[] scopes) => (name, scopes, false, null);
+
+	/// <summary>A power or depower whose level bounds whose things it acts on.</summary>
+	private static (string, string[], bool, string?) Ranked(string name, params string[] scopes) => (name, scopes, true, null);
+
+	private static (string, string[], bool, string?) Dropped(string name, string reason) => (name, [], false, reason);
+
+	/// <summary>Every power (toggle words 3-5), at its level field, and the permissions it allows.</summary>
 	public static readonly IReadOnlyList<RhostPowerMapping> Powers =
 	[
-		.. Fields(2, [("CHANGE_QUOTAS", "Quotas"), ("CHOWN_ME", null), ("CHOWN_ANYWHERE", null), ("CHOWN_OTHER", null),
-			("WIZ_WHO", null), ("EXAMINE_ALL", "See_All"), ("NOFORCE", null), ("SEE_QUEUE_ALL", "See_Queue"),
-			("FREE_QUOTA", "No_Quota"), ("GRAB_PLAYER", null), ("JOIN_PLAYER", null), ("LONG_FINGERS", "Long_Fingers"),
-			("NO_BOOT", null), ("BOOT", "Boot"), ("STEAL", "DEBIT"), ("SEE_QUEUE", "See_Queue")]),
-		.. Fields(3, [("SHUTDOWN", null), ("TEL_ANYWHERE", "Tport_Anywhere"), ("TEL_ANYTHING", "Tport_Anything"),
-			("PCREATE", "Player_Create"), ("STAT_ANY", "Search"), ("FREE_WALL", "Announce"), ("EXECSCRIPT", null),
-			("FREE_PAGE", null), ("HALT_QUEUE", "Halt"), ("HALT_QUEUE_ALL", "Halt"), ("FORMATTING", null), ("NOKILL", "Unkillable"),
-			("SEARCH_ANY", "Search"), ("SECURITY", null), ("WHO_UNFIND", null), ("WRAITH", null)]),
-		.. Fields(4, [("PURGE", null), ("HIDEBIT", "Hide"), ("NOWHO", "Hide"), ("FULLTEL", "Tport_Anywhere"),
-			("EXAMINE_FULL", "See_All"), ("API", null), ("MONITORAPI", null), ("WIZ_IDLE", "Idle"), ("WIZ_SPOOF", "Can_spoof"),
-			("USE_FREELIST", null), ("ANSINAME", null)]),
+		.. Fields(2, [
+			Flat("CHANGE_QUOTAS", Power("Quotas")), Ranked("CHOWN_ME", PortalPermission.ChownSelf),
+			Flat("CHOWN_ANYWHERE", PortalPermission.ChownSelf), Ranked("CHOWN_OTHER", PortalPermission.ChownAny),
+			Ranked("WIZ_WHO", PortalPermission.PlayersView), Ranked("EXAMINE_ALL", Power("See_All")),
+			Ranked("NOFORCE", PortalPermission.NoForce), Flat("SEE_QUEUE_ALL", Power("See_Queue")), Flat("FREE_QUOTA", Power("No_Quota")),
+			Ranked("GRAB_PLAYER", Power("Tport_Anything")), Ranked("JOIN_PLAYER", Power("Tport_Anywhere")),
+			Flat("LONG_FINGERS", Power("Long_Fingers")), Ranked("NO_BOOT", PortalPermission.NoBoot), Flat("BOOT", Power("Boot")),
+			Ranked("STEAL", Power("DEBIT")), Ranked("SEE_QUEUE", Power("See_Queue"))]),
+		.. Fields(3, [
+			Flat("SHUTDOWN", PortalPermission.ServerOperate), Ranked("TEL_ANYWHERE", Power("Tport_Anywhere")),
+			Ranked("TEL_ANYTHING", Power("Tport_Anything")), Flat("PCREATE", Power("Player_Create")), Ranked("STAT_ANY", Power("Search")),
+			Flat("FREE_WALL", Power("No_Pay")), Dropped("EXECSCRIPT", NeverChecked), Flat("FREE_PAGE", Power("No_Pay")),
+			Ranked("HALT_QUEUE", Power("Halt")), Flat("HALT_QUEUE_ALL", Power("Halt")), Dropped("FORMATTING", NeverChecked),
+			Ranked("NOKILL", Power("Unkillable")), Ranked("SEARCH_ANY", Power("Search")), Ranked("SECURITY", PortalPermission.FlagsRestricted),
+			Ranked("WHO_UNFIND", PortalPermission.PlayersView), Ranked("WRAITH", PortalPermission.OverrideMovement)]),
+		.. Fields(4, [
+			Flat("PURGE", PortalPermission.ServerOperate), Dropped("HIDEBIT", "SharpMUSH cannot hide the roles a player holds"),
+			Flat("NOWHO", Power("Hide")), Flat("FULLTEL", Power("Tport_Anywhere")), Flat("EXAMINE_FULL", Power("See_All")),
+			Dropped("API", NoApi), Dropped("MONITORAPI", NoApi), Flat("WIZ_IDLE", Power("Idle")), Ranked("WIZ_SPOOF", Power("Can_spoof")),
+			Flat("USE_FREELIST", Power("PICK_DBREFS")), Dropped("ANSINAME", AnsiNames)]),
 	];
 
-	/// <summary>Every depower, and the SharpMUSH power it takes away, if there is one.</summary>
+	/// <summary>Every depower (toggle words 6-8), at its level field, and the permissions it denies.</summary>
 	public static readonly IReadOnlyList<RhostPowerMapping> Depowers =
 	[
-		.. Fields(5, [("WALL", "Announce"), ("LONG_FINGERS", "Long_Fingers"), ("STEAL", "DEBIT"), ("CREATE", null),
-			("WIZ_WHO", null), ("CLOAK", null), ("BOOT", "Boot"), ("PAGE", null), ("FORCE", null), ("LOCKS", null), ("COM", null),
-			("COMMAND", null), ("MASTER", null), ("EXAMINE", "See_All"), ("NUKE", null), ("FREE", "No_Pay")]),
-		.. Fields(6, [("OVERRIDE", null), ("TEL_ANYWHERE", "Tport_Anywhere"), ("TEL_ANYTHING", "Tport_Anything"),
-			("PCREATE", "Player_Create"), ("POWER", null), ("QUOTA", null), ("MODIFY", null), ("CHOWN_ME", null),
-			("CHOWN_OTHER", null), ("ABUSE", null), ("UNL_QUOTA", "No_Quota"), ("SEARCH_ANY", "Search"), ("GIVE", null),
-			("RECEIVE", null), ("NOGOLD", null), ("NOSTEAL", null)]),
-		.. Fields(7, [("PASSWORD", null), ("MORTAL_EXAMINE", null), ("PERSONAL_COMMAND", null), ("ANSINAME", null),
-			("DARK", "CAN_DARK")]),
+		.. Fields(5, [
+			Flat("WALL", Power("Announce")), Dropped("LONG_FINGERS", NeverChecked), Ranked("STEAL", Power("DEBIT")),
+			Flat("CREATE", PortalPermission.PlayerCreate), Ranked("WIZ_WHO", PortalPermission.PlayersView),
+			Flat("CLOAK", Power("Hide"), Power("CAN_DARK")), Ranked("BOOT", Power("Boot")), Ranked("PAGE", PortalPermission.PlayerPage),
+			Ranked("FORCE", PortalPermission.PlayerForce), Ranked("LOCKS", PortalPermission.Override), Flat("COM", PortalPermission.PlayerChat),
+			Flat("COMMAND", PortalPermission.PlayerCommands), Dropped("MASTER", AllCommands),
+			Ranked("EXAMINE", PortalPermission.PlayerExamine, Power("See_All")), Ranked("NUKE", PortalPermission.Nuke),
+			Flat("FREE", Power("No_Pay"))]),
+		.. Fields(6, [
+			Flat("OVERRIDE", PortalPermission.Override), Ranked("TEL_ANYWHERE", PortalPermission.PlayerTeleport, Power("Tport_Anywhere")),
+			Ranked("TEL_ANYTHING", PortalPermission.PlayerTeleport, Power("Tport_Anything")), Flat("PCREATE", Power("Player_Create")),
+			Flat("POWER", PortalPermission.RolesAdmin),
+			Dropped("QUOTA", "@quota reads players.moderate here, which covers all moderation; deny it by hand to keep this"),
+			Ranked("MODIFY", PortalPermission.PlayerModify), Ranked("CHOWN_ME", PortalPermission.PlayerChown, PortalPermission.ChownSelf),
+			Ranked("CHOWN_OTHER", PortalPermission.ChownAny), Dropped("ABUSE", AllCommands), Flat("UNL_QUOTA", Power("No_Quota")),
+			Ranked("SEARCH_ANY", Power("Search")), Flat("GIVE", PortalPermission.PlayerGive), Flat("RECEIVE", PortalPermission.PlayerReceive),
+			Dropped("NOGOLD", NoMoney), Dropped("NOSTEAL", NoMoney)]),
+		.. Fields(7, [
+			Flat("PASSWORD", PortalPermission.PlayerPassword), Ranked("MORTAL_EXAMINE", PortalPermission.PlayerExamine),
+			Dropped("PERSONAL_COMMAND", AllCommands), Dropped("ANSINAME", AnsiNames), Flat("DARK", Power("CAN_DARK"))]),
 	];
 
-	private static IEnumerable<RhostPowerMapping> Fields(int word, (string Name, string? Power)[] fields)
-		=> fields.Select((field, index) => new RhostPowerMapping(word, index * 2, field.Name, field.Power));
+	private static IEnumerable<RhostPowerMapping> Fields(int word, (string Name, string[] Scopes, bool Ranked, string? Skip)[] fields)
+		=> fields.Select((field, index) => new RhostPowerMapping(word, index * 2, field.Name, field.Scopes, field.Ranked, field.Skip));
 
-	/// <summary>The level names of a power's two bits, 1 to 3.</summary>
-	public static string PowerLevel(uint level) => level switch
-	{
-		1 => "guildmaster",
-		2 => "architect",
-		3 => "councilor",
-		_ => "none"
-	};
+	/// <summary>The flag word 3 bit that changes how every depower's level is stored on its player.</summary>
+	public const uint DepowerShift = 0x2;
+
+	/// <summary>The staff levels a power or depower is set at, 1 to 3, as the roles that stand for them.</summary>
+	public static readonly IReadOnlyList<string> LevelRoles = ["guildmaster", BuiltInRoles.ArchitectSlug, BuiltInRoles.CouncilorSlug];
 
 	/// <summary>RhostMUSH's attribute flags.</summary>
 	public static readonly IReadOnlyList<RhostAttributeFlagMapping> AttributeFlags =

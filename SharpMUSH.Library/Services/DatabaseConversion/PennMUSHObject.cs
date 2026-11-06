@@ -1,4 +1,5 @@
 using System.Globalization;
+using SharpMUSH.Library.Authorization;
 namespace SharpMUSH.Library.Services.DatabaseConversion;
 
 /// <summary>
@@ -127,10 +128,10 @@ public class PennMUSHObject
 	public List<string> Aliases { get; init; } = [];
 
 	/// <summary>
-	/// Powers the source took away from this object, as SharpMUSH power names. PennMUSH has none; a
-	/// RhostMUSH depower becomes one, and the import denies the power's permission on the object.
+	/// Allows and denies on permission scopes, each with an optional reach: a RhostMUSH power held at a staff level
+	/// becomes an allow reaching that level's role, and a depower a deny. PennMUSH has none.
 	/// </summary>
-	public List<string> DeniedPowers { get; init; } = [];
+	public List<PennMUSHOverride> Overrides { get; init; } = [];
 
 	/// <summary>
 	/// Roles the object holds by slug, beyond those its flags and powers stand for: a RhostMUSH staff level
@@ -182,3 +183,6 @@ public enum PennMUSHObjectType
 	Exit = 2,
 	Player = 3
 }
+
+/// <summary>An allow or deny on <paramref name="Scope"/>, reaching <paramref name="Reach"/> (a role slug) when given.</summary>
+public sealed record PennMUSHOverride(string Scope, PermissionState State, string? Reach = null);
