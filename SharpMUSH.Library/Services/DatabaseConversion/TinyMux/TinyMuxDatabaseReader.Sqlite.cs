@@ -92,12 +92,13 @@ public static partial class TinyMuxDatabaseReader
 	/// <summary>
 	/// The file as a SQLite URI with <c>immutable=1</c>: the copy being imported does not change, so SQLite
 	/// takes no locks and neither reads nor creates the -wal and -shm files beside it. Only the characters a
-	/// SQLite URI path gives a meaning to are escaped (<c>%</c>, <c>?</c>, <c>#</c>); a Windows network path
+	/// SQLite URI path gives a meaning to are escaped (<c>%</c>, <c>?</c>, <c>#</c>, and a backslash left in a name); a Windows network path
 	/// keeps its two leading slashes after an empty authority, which SQLite reads as the path.
 	/// </summary>
 	internal static string ImmutableUri(string fullPath)
 	{
-		var path = fullPath.Replace('\\', '/');
+		// A backslash separates directories only on Windows; elsewhere it is part of a name.
+		var path = Path.DirectorySeparatorChar == '\\' ? fullPath.Replace('\\', '/') : fullPath;
 		var escaped = new StringBuilder(path.Length + 16);
 		foreach (var c in path)
 		{
@@ -106,6 +107,7 @@ public static partial class TinyMuxDatabaseReader
 				'%' => "%25",
 				'?' => "%3F",
 				'#' => "%23",
+				'\\' => "%5C",
 				_ => c.ToString()
 			});
 		}

@@ -178,6 +178,7 @@ public class TinyMuxSqliteImportTests
 	[Test]
 	[Arguments("100%41 done")]
 	[Arguments("what?#now")]
+	[Arguments("back\\slash")]
 	public async Task OpensAPathWithUriCharacters(string directory)
 	{
 		var folder = Path.Join(Path.GetTempPath(), $"{Guid.NewGuid():N} {directory}");
