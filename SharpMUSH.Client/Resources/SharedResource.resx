@@ -5466,7 +5466,7 @@
     <value>Player · Modify others</value>
   </data>
   <data name="EnumPermPlayerModifyDesc" xml:space="preserve">
-    <value>Controls others' objects through a zone, a control lock or INHERIT. Allowed unless a role or override denies it.</value>
+    <value>Controls others' objects through a zone, a control lock or a shared owner. Allowed unless a role or override denies it.</value>
   </data>
   <data name="EnumPermPlayerChown" xml:space="preserve">
     <value>Player · Take objects</value>
