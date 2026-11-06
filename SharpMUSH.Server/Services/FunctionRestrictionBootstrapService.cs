@@ -30,6 +30,7 @@ public sealed class FunctionRestrictionBootstrapService(
 {
 	private readonly Lock _gate = new();
 	private IReadOnlyDictionary<string, string[]> _applied = new Dictionary<string, string[]>();
+	private readonly Dictionary<string, HashSet<string>> _aliasesSeen = new(StringComparer.OrdinalIgnoreCase);
 	private IDisposable? _subscription;
 
 	public Task StartAsync(CancellationToken cancellationToken)
@@ -66,7 +67,15 @@ public sealed class FunctionRestrictionBootstrapService(
 		lock (_gate)
 		{
 			// The aliases first, so a restriction on an alias the same change made finds it.
+			var aliases = options.CurrentValue.Alias.FunctionAliases;
 			var aliasesAdded = functions is IConfiguredAliasRegistry registry && registry.RegisterConfiguredAliases(options.CurrentValue.Alias);
+			// The live table keeps an alias the configuration later drops, until restart, so it stays held to its
+			// function's restriction: every alias any configuration since startup named is passed on.
+			foreach (var (target, names) in aliases)
+			{
+				var seen = _aliasesSeen.TryGetValue(target, out var known) ? known : _aliasesSeen[target] = new(StringComparer.OrdinalIgnoreCase);
+				seen.UnionWith(names);
+			}
 			var configured = options.CurrentValue.Restriction.FunctionRestrictions;
 			if (!aliasesAdded && SameRestrictions(configured, _applied))
 			{
@@ -74,7 +83,7 @@ public sealed class FunctionRestrictionBootstrapService(
 			}
 
 			logger.LogInformation("Applying {Count} configured function restriction(s).", configured.Count);
-			restrictions.Apply(configured, options.CurrentValue.Alias.FunctionAliases);
+			restrictions.Apply(configured, _aliasesSeen.ToDictionary(entry => entry.Key, entry => entry.Value.ToArray(), StringComparer.OrdinalIgnoreCase));
 			_applied = configured;
 		}
 	}

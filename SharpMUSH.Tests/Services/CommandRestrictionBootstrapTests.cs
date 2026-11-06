@@ -165,6 +165,41 @@ public class CommandRestrictionBootstrapTests
 		await Assert.That(registry.GetBuiltinRestriction("lstats")).IsNull().Because("a stopped service no longer listens");
 	}
 
+	/// <summary>
+	/// An alias a configuration change adds works at once and is held to its function's restriction; one a later
+	/// change drops stays in the live table until restart, so it stays held to the restriction then in force.
+	/// </summary>
+	[Test]
+	public async Task AFunctionAliasAddedOnReloadIsHeldToItsFunctionsRestriction()
+	{
+		var functions = Factory.Services.GetRequiredService<ILibraryProvider<FunctionDefinition>>();
+		var alias = $"lstatsr{Guid.NewGuid().ToString("N")[..8]}";
+		var registry = new UserDefinedFunctionService();
+		var applier = new ConfiguredFunctionRestrictions(functions, registry, NullLogger<ConfiguredFunctionRestrictions>.Instance);
+		var monitor = new ChangingOptions(WithFunctionRestrictions([]));
+		using var service = new FunctionRestrictionBootstrapService(applier, functions, monitor,
+			NullLogger<FunctionRestrictionBootstrapService>.Instance);
+		await service.StartAsync(CancellationToken.None);
+
+		var withAlias = WithFunctionRestrictions(new() { ["lstats"] = ["wizard"] });
+		withAlias = withAlias with
+		{
+			Alias = withAlias.Alias with
+			{
+				FunctionAliases = new Dictionary<string, string[]>(withAlias.Alias.FunctionAliases) { ["lstats"] = [alias] }
+			}
+		};
+		await monitor.Change(withAlias);
+		await Assert.That(functions.Get().ContainsKey(alias)).IsTrue();
+		await Assert.That(registry.GetBuiltinRestriction(alias)).IsEqualTo("wizard");
+
+		await monitor.Change(WithFunctionRestrictions(new() { ["lstats"] = ["nobody"] }));
+		await Assert.That(registry.GetBuiltinRestriction(alias)).IsEqualTo("nobody")
+			.Because("the alias is still in the live table");
+
+		await service.StopAsync(CancellationToken.None);
+	}
+
 	private static SharpMUSHOptions WithFunctionRestrictions(Dictionary<string, string[]> restrictions)
 	{
 		var options = SharpMUSHOptions.Default();
