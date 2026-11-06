@@ -13042,14 +13042,6 @@
     "file": "sharpfunc.md"
   },
   {
-    "id": "legacy:websocket_html()",
-    "lookup": "websocket_html()",
-    "title": "websocket_html()",
-    "aliases": [],
-    "sections": [],
-    "file": "sharpfunc.md"
-  },
-  {
     "id": "legacy:isjson()",
     "lookup": "isjson()",
     "title": "isjson()",

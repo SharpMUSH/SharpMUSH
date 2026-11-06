@@ -90,7 +90,7 @@ hi
   `gmcpsupports()`, `exitmap()`: the GMCP modules a client listed in Core.Supports, and a room's exits as JSON for a client's mapper.<br>
   `formq()`, the wiki functions and the scene functions: SharpMUSH subsystems with no PennMUSH counterpart.
 
-One is registered and does nothing yet: `websocket_html()` checks its arguments and returns nothing. Use `oob()` for GMCP. `objmem()` always answers 0.
+There is no `websocket_html()`: HTML for a client is markup in the text, from `wshtml()` or `tagwrap()`, and JSON goes by `oob()`. `objmem()` always answers 0.
 
 ## Functions from TinyMUX and RhostMUSH
 
