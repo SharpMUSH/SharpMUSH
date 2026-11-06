@@ -1,10 +1,10 @@
 -- The interface a SharpMUSH game offers Mudlet when its staff have not set one of their own
--- (+config mudlet-client/gui-url). Everything it shows comes from the GMCP packages the MUD-kit sends:
+-- (+config gmcp-mudlet/gui-url). Everything it shows comes from the gmcp package's modules:
 --
---   Room.Info, Room.Players, AddPlayer, RemovePlayer   the room panel and the map  (gmcp-room)
---   Char.Vitals                                the gauges                      (gmcp-char)
---   Char.Items.List, Add, Remove               things here and things carried  (gmcp-items)
---   Comm.Channel.Text                          the chat window                 (gmcp-comm)
+--   Room.Info, Room.Players, AddPlayer, RemovePlayer   the room panel and the map  (Room)
+--   Char.Vitals                                the gauges                      (Char)
+--   Char.Items.List, Add, Remove               things here and things carried  (Items)
+--   Comm.Channel.Text                          the chat window                 (Comm)
 --
 -- A game that wants its own interface can start from this one: download it from the game's
 -- /mudlet/sharpmush-ui.mpackage, change it in Mudlet, export it under a new name, and set gui-url.

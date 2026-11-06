@@ -94,7 +94,7 @@ public sealed record MapRoomDto(string Id, string Name, double[]? Position, doub
 	public bool Editable { get; init; }
 
 	/// <summary>
-	/// The kind of place the room is: its <c>ENVIRONMENT</c>, the attribute the gmcp-room package sends a MUD client's
+	/// The kind of place the room is: its <c>ENVIRONMENT</c>, the attribute the gmcp package sends a MUD client's
 	/// mapper, in lower case; null when unset. The map's <see cref="MapDto.Legend"/> says how a kind is drawn.
 	/// </summary>
 	public string? Environment { get; init; }

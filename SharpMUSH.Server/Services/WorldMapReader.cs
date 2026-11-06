@@ -31,7 +31,7 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 	public const string PlaceAttribute = "MAP`PLACE";
 	public const string LegendAttribute = "MAP`LEGEND";
 
-	/// <summary>The kind of place a room is: the attribute gmcp-room sends a MUD client's mapper by default.</summary>
+	/// <summary>The kind of place a room is: the attribute gmcp sends a MUD client's mapper by default.</summary>
 	public const string EnvironmentAttribute = "ENVIRONMENT";
 	public const int MaxMaps = 500;
 	public const int MaxRooms = 2000;
@@ -530,7 +530,7 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			: string.Empty;
 
 	/// <summary>
-	/// The numbers in <paramref name="names"/> on <paramref name="target"/>, as gmcp-room reads coordinates: a missing one
+	/// The numbers in <paramref name="names"/> on <paramref name="target"/>, as gmcp reads coordinates: a missing one
 	/// is 0, and with none set, or one that is not a number, there are none.
 	/// </summary>
 	private async Task<double[]?> NumbersAsync(AnySharpObject reader, AnySharpObject target, IReadOnlyList<string> names,

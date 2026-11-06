@@ -20,7 +20,7 @@ public sealed partial class RoomTopologyReader(IMediator mediator, IPermissionSe
 	public const int MaxExits = 500;
 	public const int MaxCandidates = 1000;
 
-	/// <summary>The coordinate attributes gmcp-room reads by default, and so the ones a builder is most likely to have set.</summary>
+	/// <summary>The coordinate attributes gmcp reads by default, and so the ones a builder is most likely to have set.</summary>
 	public static readonly IReadOnlyList<string> DefaultCoordinates = ["X", "Y", "Z"];
 
 	/// <summary>
@@ -180,7 +180,7 @@ public sealed partial class RoomTopologyReader(IMediator mediator, IPermissionSe
 		=> OwnValueAsync(actor, target, "DESCRIBE", ct);
 
 	/// <summary>
-	/// x, y and z as gmcp-room reads them: a missing axis is 0, and a room with none set, or with one that is not a
+	/// x, y and z as gmcp reads them: a missing axis is 0, and a room with none set, or with one that is not a
 	/// number, has no coordinates.
 	/// </summary>
 	private async Task<double[]?> CoordinatesAsync(AnySharpObject actor, AnySharpObject room, IReadOnlyList<string> names,

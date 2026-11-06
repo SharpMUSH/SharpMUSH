@@ -7,8 +7,8 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.Packages;
 
 /// <summary>
-/// The interface mudlet-client offers Mudlet when the game names none: a package Mudlet can install, served to
-/// anyone, whose version is the one mudlet-client sends.
+/// The interface gmcp-mudlet offers Mudlet when the game names none: a package Mudlet can install, served to
+/// anyone, whose version is the one gmcp-mudlet sends.
 /// </summary>
 public class MudletInterfaceTests
 {
@@ -35,10 +35,10 @@ public class MudletInterfaceTests
 	}
 
 	[Test]
-	public async Task ItsVersionIsTheOneMudletClientSends()
+	public async Task ItsVersionIsTheOneGmcpMudletSends()
 	{
 		await Assert.That(MudletInterface.Version).Matches(@"^\d+\.\d+\.\d+$");
-		var manifest = BundledPackages.ManifestYaml("mudlet-client");
+		var manifest = BundledPackages.ManifestYaml("gmcp-mudlet");
 		await Assert.That(manifest).Contains($"FUN`GUI`SHIPPED`VERSION: |-\n        {MudletInterface.Version}\n")
 			.Because("Mudlet installs the interface again only when the version it is sent changes");
 	}

@@ -22,8 +22,7 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
-/// The MUD-kit packages (gmcp-room, gmcp-comm, gmcp-items, gmcp-char, mudlet-client and the mud-kit meta
-/// package), installed from the catalogue and driven the way a game drives them: a player walks through an
+/// The gmcp package (Room, Comm, Char.Items and Char) and its gmcp-mudlet add-on, installed from the catalogue and driven the way a game drives them: a player walks through an
 /// exit, speaks on a channel, picks something up, has a stat changed, or their client says something over
 /// GMCP. What each telnet connection was sent is read off the NATS subject the connection server consumes
 /// GMCP from, up to a probe God sends each watched connection afterwards, so "sent nothing" is an
@@ -33,7 +32,7 @@ namespace SharpMUSH.Tests.Integration;
 /// one event handler every test shares.</para>
 /// </summary>
 [NotInParallel]
-public class MudKitIntegrationTests
+public class GmcpIntegrationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
@@ -133,6 +132,21 @@ public class MudKitIntegrationTests
 		foreach (var package in packages) await WebAppFactoryArg.Services.UninstallWithBridgesAsync(package);
 	}
 
+	/// <summary>
+	/// Uninstalls gmcp and what its install left behind: it watches the default vitals with @attribute/watch, and
+	/// uninstalling runs no softcode, so those watches would otherwise wait for the next change to clean up.
+	/// </summary>
+	private async Task UninstallGmcpAsync()
+	{
+		await UninstallAsync("gmcp");
+		foreach (var attribute in new[] { "HP", "MAXHP", "MP", "MAXMP" })
+		{
+			await God($"@wipe #9/WATCH`{attribute}`GMCP");
+			await God($"@attribute/watch {attribute}=");
+			await God($"@attribute/delete {attribute}");
+		}
+	}
+
 	private async Task<string> PackageObject(string package, string reference) =>
 		(await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync(package))
 		.First(o => o.Ref == reference).Objid;
@@ -146,16 +160,16 @@ public class MudKitIntegrationTests
 	{
 		private readonly NatsConnection _nats;
 		private readonly INatsSub<GMCPOutputMessage> _sub;
-		private readonly MudKitIntegrationTests _test;
+		private readonly GmcpIntegrationTests _test;
 
-		private GmcpWatch(NatsConnection nats, INatsSub<GMCPOutputMessage> sub, MudKitIntegrationTests test)
+		private GmcpWatch(NatsConnection nats, INatsSub<GMCPOutputMessage> sub, GmcpIntegrationTests test)
 		{
 			_nats = nats;
 			_sub = sub;
 			_test = test;
 		}
 
-		public static async Task<GmcpWatch> OpenAsync(MudKitIntegrationTests test)
+		public static async Task<GmcpWatch> OpenAsync(GmcpIntegrationTests test)
 		{
 			var factory = test.WebAppFactoryArg;
 			// What the setup queued is sent before the watch starts.
@@ -222,7 +236,7 @@ public class MudKitIntegrationTests
 	}
 
 	/// <summary>
-	/// The MUD-kit's frames among those sent: GMCP modules are capitalised (Room.Info). room-contents and
+	/// The gmcp packages' frames among those sent: GMCP modules are capitalised (Room.Info). room-contents and
 	/// comm-feed, installed at boot for the portal, send their own lower-case packages (room.contents,
 	/// comm.message) to every GMCP connection too.
 	/// </summary>
@@ -239,14 +253,14 @@ public class MudKitIntegrationTests
 	private static string[] Names(JsonNode? players) =>
 		players is JsonArray array ? array.Select(p => p!["name"]!.GetValue<string>()).ToArray() : [];
 
-	#region gmcp-room
+	#region Room
 
 	[Test]
 	public async Task GmcpRoom_AMoveSendsTheRoomAndTellsBothRooms()
 	{
 		try
 		{
-			await ApplyAsync("gmcp-room");
+			await ApplyAsync("gmcp");
 			var from = await Dig("GrFrom");
 			var to = await Dig("GrTo");
 			await God($"@open North;n={to},South;s,{from}");
@@ -295,7 +309,7 @@ public class MudKitIntegrationTests
 		}
 		finally
 		{
-			await UninstallAsync("gmcp-room");
+			await UninstallGmcpAsync();
 		}
 	}
 
@@ -304,7 +318,7 @@ public class MudKitIntegrationTests
 	{
 		try
 		{
-			await ApplyAsync("gmcp-room");
+			await ApplyAsync("gmcp");
 			var from = await Dig("GdFrom");
 			var to = await Dig("GdTo");
 			await God($"@open East;e={to},West;w,{from}");
@@ -324,7 +338,7 @@ public class MudKitIntegrationTests
 		}
 		finally
 		{
-			await UninstallAsync("gmcp-room");
+			await UninstallGmcpAsync();
 		}
 	}
 
@@ -333,7 +347,7 @@ public class MudKitIntegrationTests
 	{
 		try
 		{
-			await ApplyAsync("gmcp-room");
+			await ApplyAsync("gmcp");
 			var room = await Dig("GcRoom");
 			var player = await ClientAsync("GcPlayer", room);
 			var other = await ClientAsync("GcOther", room);
@@ -358,13 +372,13 @@ public class MudKitIntegrationTests
 		}
 		finally
 		{
-			await UninstallAsync("gmcp-room");
+			await UninstallGmcpAsync();
 		}
 	}
 
 	#endregion
 
-	#region gmcp-comm
+	#region Comm
 
 	private async Task<string> ChannelAsync(string prefix, params Client[] members)
 	{
@@ -379,7 +393,7 @@ public class MudKitIntegrationTests
 	{
 		try
 		{
-			await ApplyAsync("gmcp-comm");
+			await ApplyAsync("gmcp");
 			var room = await Dig("GmRoom");
 			var speaker = await ClientAsync("GmSpeaker", room, "Comm.Channel 1");
 			var reader = await ClientAsync("GmReader", room, screenReader: true);
@@ -408,7 +422,7 @@ public class MudKitIntegrationTests
 		}
 		finally
 		{
-			await UninstallAsync("gmcp-comm");
+			await UninstallGmcpAsync();
 		}
 	}
 
@@ -417,7 +431,7 @@ public class MudKitIntegrationTests
 	{
 		try
 		{
-			await ApplyAsync("gmcp-comm");
+			await ApplyAsync("gmcp");
 			var room = await Dig("GpRoom");
 			var pager = await ClientAsync("GpPager", room);
 			var paged = await ClientAsync("GpPaged", room);
@@ -438,26 +452,26 @@ public class MudKitIntegrationTests
 			var row = list!.Single(c => c!["name"]!.GetValue<string>() == channel)!;
 			await Assert.That(row["command"]!.GetValue<string>()).IsEqualTo($"+{channel.ToLowerInvariant()}");
 
-			await God("+config gmcp-comm/pages=off");
+			await God("+config gmcp/pages=off");
 			var quiet = await watch.SentWhile(() => Run(pager, $"page {paged.Name}=Again."), paged.Handle);
 			await Assert.That(Kit(quiet[paged.Handle])).IsEmpty().Because("the pages setting is off");
 		}
 		finally
 		{
-			await UninstallAsync("gmcp-comm");
+			await UninstallGmcpAsync();
 		}
 	}
 
 	#endregion
 
-	#region gmcp-items
+	#region Char.Items
 
 	[Test]
 	public async Task GmcpItems_ThingsComingAndGoingAreAddedAndRemoved()
 	{
 		try
 		{
-			await ApplyAsync("gmcp-items");
+			await ApplyAsync("gmcp");
 			var room = await Dig("GiRoom");
 			var holder = await ClientAsync("GiHolder", room, "Char.Items 1");
 			var looker = await ClientAsync("GiLooker", room);
@@ -489,13 +503,13 @@ public class MudKitIntegrationTests
 		}
 		finally
 		{
-			await UninstallAsync("gmcp-items");
+			await UninstallGmcpAsync();
 		}
 	}
 
 	#endregion
 
-	#region gmcp-char
+	#region Char
 
 	[Test]
 	public async Task GmcpChar_AWatchedStatSendsVitals_AndStatusFollowsItsSetting()
@@ -506,16 +520,16 @@ public class MudKitIntegrationTests
 		await God("@attribute/watch MAXMP=WATCH`MAXMP`STAFF");
 		try
 		{
-			await ApplyAsync("gmcp-char");
-			var gmcpChar = await PackageObject("gmcp-char", "gmcp_char");
+			await ApplyAsync("gmcp");
+			var gmcpChar = await PackageObject("gmcp", "gmcp");
 			await Assert.That(await Think("attrwatch(HP)")).IsEqualTo("WATCH`HP WATCH`HP`*")
 				.Because("AINSTALL adds HP to the table and watches it with the default pattern");
-			await Assert.That(await Think("hasattr(#9,WATCH`HP`GMCPCHAR)")).IsEqualTo("1");
+			await Assert.That(await Think("hasattr(#9,WATCH`HP`GMCP)")).IsEqualTo("1");
 			await Assert.That((await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetAttributeEntryQuery("MP")))!.DefaultFlags
 				.Select(flag => flag.ToLowerInvariant())).Contains("no_command").Because("an entry the game already has keeps its flags");
 			await Assert.That(await Think("attrwatch(MAXMP)")).IsEqualTo("WATCH`MAXMP`STAFF")
 				.Because("a watch with another pattern belongs to someone else");
-			await Assert.That(await Think("hasattr(#9,WATCH`MAXMP`GMCPCHAR)")).IsEqualTo("0");
+			await Assert.That(await Think("hasattr(#9,WATCH`MAXMP`GMCP)")).IsEqualTo("0");
 			await Assert.That(await Think($"get({gmcpChar}/DATA`FOREIGN)")).IsEqualTo("MAXMP");
 
 			var room = await Dig("GvRoom");
@@ -529,7 +543,7 @@ public class MudKitIntegrationTests
 			await Assert.That(vitals["maxhp"]!.GetValue<int>()).IsEqualTo(40);
 			await Assert.That(vitals.ContainsKey("mp")).IsFalse().Because("an attribute the player lacks is left out");
 
-			await God("+config gmcp-char/status=LEVEL CLASS");
+			await God("+config gmcp/status=LEVEL CLASS");
 			await WebAppFactoryArg.QueueBarrierAsync();
 			await Assert.That(await Think($"get({gmcpChar}/DATA`CONFIG`STATUS)")).IsEqualTo("LEVEL CLASS");
 			await Assert.That(await Think("attrwatch(LEVEL)")).IsEqualTo("WATCH`LEVEL WATCH`LEVEL`*");
@@ -541,6 +555,8 @@ public class MudKitIntegrationTests
 			await Assert.That(body["class"]!.GetValue<string>()).IsEqualTo("Wanderer");
 			await Assert.That(Frames(status[player.Handle], "Char.Vitals")).IsEmpty();
 
+			// Only Char is on, so connecting sends no Char.Items, which a client listing Char also takes.
+			await God("+config gmcp/modules=Char");
 			var connected = await watch.SentWhile(
 				() => Events.TriggerEventAsync(SharpEvents.PlayerConnect, player.DbRef, player.Number, "1", player.Handle.ToString()).AsTask(),
 				player.Handle);
@@ -550,9 +566,9 @@ public class MudKitIntegrationTests
 
 			// Dropping LEVEL and CLASS from status: CLASS has a handler of someone else's, so it stays watched.
 			await God("&WATCH`CLASS`MINE #9=think");
-			await God("+config gmcp-char/status=");
+			await God("+config gmcp/status=");
 			await WebAppFactoryArg.QueueBarrierAsync();
-			await Assert.That(await Think("[hasattr(#9,WATCH`LEVEL`GMCPCHAR)] [hasattr(#9,WATCH`CLASS`GMCPCHAR)]")).IsEqualTo("0 0");
+			await Assert.That(await Think("[hasattr(#9,WATCH`LEVEL`GMCP)] [hasattr(#9,WATCH`CLASS`GMCP)]")).IsEqualTo("0 0");
 			await Assert.That(await Think("attrwatch(LEVEL)")).IsEqualTo(string.Empty)
 				.Because("nothing else answers LEVEL's watch");
 			await Assert.That(await Think("attrwatch(CLASS)")).IsEqualTo("WATCH`CLASS WATCH`CLASS`*")
@@ -560,19 +576,19 @@ public class MudKitIntegrationTests
 			await Assert.That(await Think($"get({gmcpChar}/DATA`WATCHING)")).IsEqualTo("HP MAXHP MP");
 
 			// Uninstalling runs no softcode; the next change to HP finds the package gone and cleans up.
-			await UninstallAsync("gmcp-char");
+			await UninstallAsync("gmcp");
 			await God($"&HP {player.Number}=20");
 			await WebAppFactoryArg.QueueBarrierAsync();
-			await Assert.That(await Think("hasattr(#9,WATCH`HP`GMCPCHAR)")).IsEqualTo("0");
+			await Assert.That(await Think("hasattr(#9,WATCH`HP`GMCP)")).IsEqualTo("0");
 			await Assert.That(await Think("attrwatch(HP)")).IsEqualTo(string.Empty);
 		}
 		finally
 		{
-			await UninstallAsync("gmcp-char");
+			await UninstallAsync("gmcp");
 			await God("&WATCH`CLASS`MINE #9");
 			foreach (var attribute in new[] { "HP", "MAXHP", "MP", "MAXMP", "LEVEL", "CLASS" })
 			{
-				await God($"@wipe #9/WATCH`{attribute}`GMCPCHAR");
+				await God($"@wipe #9/WATCH`{attribute}`GMCP");
 				await God($"@attribute/delete {attribute}");
 			}
 		}
@@ -587,14 +603,14 @@ public class MudKitIntegrationTests
 	{
 		try
 		{
-			await ApplyAsync("gmcp-char");
+			await ApplyAsync("gmcp");
 			var room = await Dig("GvOddRoom");
 			var player = await ClientAsync("GvOdd", room, "Char 1");
 			await God($"&HP {player.Number}=007");
 			await God($"&MAXHP {player.Number}=+40");
 			await God($"&MP {player.Number}=.5");
 
-			var vitals = await Think($"u(#9/FUN`GMCPCHAR`VITALS,{player.Number})");
+			var vitals = await Think($"u(#9/FUN`GMCP`CHAR`VITALS,{player.Number})");
 			var parsed = JsonNode.Parse(vitals)!.AsObject();
 			await Assert.That(parsed["hp"]!.GetValue<decimal>()).IsEqualTo(7m).Because(vitals);
 			await Assert.That(parsed["maxhp"]!.GetValue<decimal>()).IsEqualTo(40m).Because(vitals);
@@ -602,10 +618,10 @@ public class MudKitIntegrationTests
 		}
 		finally
 		{
-			await UninstallAsync("gmcp-char");
+			await UninstallAsync("gmcp");
 			foreach (var attribute in new[] { "HP", "MAXHP", "MP", "MAXMP" })
 			{
-				await God($"@wipe #9/WATCH`{attribute}`GMCPCHAR");
+				await God($"@wipe #9/WATCH`{attribute}`GMCP");
 				await God($"@attribute/delete {attribute}");
 			}
 		}
@@ -613,18 +629,19 @@ public class MudKitIntegrationTests
 
 	#endregion
 
-	#region mudlet-client
+	#region gmcp-mudlet
 
 	[Test]
 	public async Task MudletClient_OffersTheMapOnHello_AndTheInterfaceToWhoeverWantsIt()
 	{
 		try
 		{
-			await ApplyAsync("mudlet-client");
-			await God("+config mudlet-client/gui-url=https://example.org/game.mpackage");
-			await God("+config mudlet-client/gui-version=2.1");
-			await God("+config mudlet-client/map-url=https://example.org/map.xml");
-			await God("+config mudlet-client/discord-invite=https://discord.gg/abcdef");
+			await ApplyAsync("gmcp");
+			await ApplyAsync("gmcp-mudlet");
+			await God("+config gmcp-mudlet/gui-url=https://example.org/game.mpackage");
+			await God("+config gmcp-mudlet/gui-version=2.1");
+			await God("+config gmcp-mudlet/map-url=https://example.org/map.xml");
+			await God("+config gmcp-mudlet/discord-invite=https://discord.gg/abcdef");
 			var room = await Dig("MuRoom");
 			var player = await ClientAsync("MuPlayer", room);
 			var lobby = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService, "telnet", Metadata(null, false));
@@ -656,7 +673,7 @@ public class MudKitIntegrationTests
 				.IsEqualTo($"Playing {player.Name}");
 
 			await Assert.That(await As(player, "+gui off")).Contains("will not be offered");
-			await Assert.That(await Think($"words(lattr({await PackageObject("mudlet-client", "client")}/DATA`GUI-OFF`*))")).IsEqualTo("1");
+			await Assert.That(await Think($"words(lattr({await PackageObject("gmcp-mudlet", "client")}/DATA`GUI-OFF`*))")).IsEqualTo("1");
 			var declined = await watch.SentWhile(ConnectEvent, player.Handle);
 			await Assert.That(Frames(declined[player.Handle], "Client.GUI")).IsEmpty().Because("the player turned +gui off");
 
@@ -677,7 +694,8 @@ public class MudKitIntegrationTests
 		}
 		finally
 		{
-			await UninstallAsync("mudlet-client");
+			await UninstallAsync("gmcp-mudlet");
+			await UninstallGmcpAsync();
 		}
 	}
 
@@ -686,14 +704,15 @@ public class MudKitIntegrationTests
 	{
 		try
 		{
-			await ApplyAsync("mudlet-client");
+			await ApplyAsync("gmcp");
+			await ApplyAsync("gmcp-mudlet");
 			var room = await Dig("MsRoom");
 			var reader = await ClientAsync("MsReader", room, screenReader: true);
 			var sighted = await ClientAsync("MsSighted", room);
 
 			await Assert.That(await As(reader, "+gui")).Contains("no interface package")
 				.Because("the harness sets no mud_url, so the interface the server ships has no address");
-			await God("+config mudlet-client/gui-url=https://example.org/ui.mpackage");
+			await God("+config gmcp-mudlet/gui-url=https://example.org/ui.mpackage");
 
 			var spoken = await As(reader, "+gui");
 			await Assert.That(spoken).Contains("The game's interface for Mudlet is its own, version 1.0, at https://example.org/ui.mpackage.")
@@ -706,7 +725,8 @@ public class MudKitIntegrationTests
 		}
 		finally
 		{
-			await UninstallAsync("mudlet-client");
+			await UninstallAsync("gmcp-mudlet");
+			await UninstallGmcpAsync();
 		}
 	}
 
@@ -715,8 +735,9 @@ public class MudKitIntegrationTests
 	{
 		try
 		{
-			await ApplyAsync("mudlet-client");
-			var client = await PackageObject("mudlet-client", "client");
+			await ApplyAsync("gmcp");
+			await ApplyAsync("gmcp-mudlet");
+			var client = await PackageObject("gmcp-mudlet", "client");
 
 			// The harness sets no mud_url; the address joins the game's with one slash, however it is written.
 			await Assert.That(await Think($"u({client}/FUN`GUI`SHIPPED`AT,https://game.example/)"))
@@ -730,48 +751,65 @@ public class MudKitIntegrationTests
 				.Because("Mudlet installs the shipped interface again only when the version it is sent changes");
 			await Assert.That(await Think($"u({client}/FUN`GUI`SHIPPED)")).IsEqualTo("1");
 
-			await God("+config mudlet-client/gui-url=https://example.org/own.mpackage");
+			await God("+config gmcp-mudlet/gui-url=https://example.org/own.mpackage");
 			await Assert.That(await Think($"u({client}/FUN`GUI`URL)")).IsEqualTo("https://example.org/own.mpackage");
 			await Assert.That(await Think($"u({client}/FUN`GUI`VERSION)")).IsEqualTo("1.0");
-			await God("+config mudlet-client/gui=off");
+			await God("+config gmcp-mudlet/gui=off");
 			await Assert.That(await Think($"u({client}/FUN`GUI`URL)")).IsEqualTo(string.Empty)
 				.Because("gui off offers no interface, the game's own included");
 		}
 		finally
 		{
-			await UninstallAsync("mudlet-client");
+			await UninstallAsync("gmcp-mudlet");
+			await UninstallGmcpAsync();
 		}
 	}
 
 	#endregion
 
-	#region mud-kit
+	#region One package
 
 	[Test]
-	public async Task MudKit_InstallsOnTheFive_AndCarriesTheOverview()
+	public async Task Gmcp_OnePackageCarriesEveryModule_AndTheModulesSettingTurnsOneOff()
 	{
-		string[] five = ["gmcp-room", "gmcp-comm", "gmcp-items", "gmcp-char", "mudlet-client"];
 		try
 		{
-			foreach (var package in five) await ApplyAsync(package);
-			await ApplyAsync("mud-kit");
+			await ApplyAsync("gmcp");
+			await ApplyAsync("gmcp-mudlet");
 
-			var room = await Dig("MkRoom");
-			var reader = await ClientAsync("MkReader", room);
+			var room = await Dig("GoRoom");
+			var reader = await ClientAsync("GoReader", room);
 			var overview = await As(reader, "+help gmcp");
 			await Assert.That(overview).Contains("GMCP").And.Contains("gmcp room").And.Contains("gmcpsupports(me)");
 			await Assert.That(await As(reader, "+help gmcp room")).Contains("Room.Info");
+			await Assert.That(await As(reader, "+help gmcp comm")).Contains("Comm.Channel.Text");
+			await Assert.That(await As(reader, "+help gmcp items")).Contains("Char.Items.List");
 			await Assert.That(await As(reader, "+help gmcp char")).Contains("Char.Vitals");
 			await Assert.That(await As(reader, "+help gui")).Contains("+gui off");
-			await Assert.That(await As(reader, "+config")).Contains("GMCP Room").And.Contains("Mudlet client");
+			await Assert.That(await As(reader, "+config")).Contains("GMCP").And.Contains("Mudlet client");
 
 			var registry = WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>();
-			var managed = (await registry.GetManagedAttributesAsync("gmcp-room")).Select(m => m.Attribute).ToList();
-			await Assert.That(managed).Contains("OBJECT`MOVE`GMCPROOM").And.Contains("PLAYER`CONNECT`GMCPROOM");
+			var managed = (await registry.GetManagedAttributesAsync("gmcp")).Select(m => m.Attribute).ToList();
+			await Assert.That(managed).Contains("OBJECT`MOVE`GMCP").And.Contains("PLAYER`CONNECT`GMCP")
+				.And.Contains("CHANNEL`MESSAGE`GMCP").And.Contains("SOCKET`GMCP`GMCP");
+
+			var from = await Dig("GoFrom");
+			var to = await Dig("GoTo");
+			await God($"@open North;n={to},South;s,{from}");
+			var mover = await ClientAsync("GoMover", from);
+			await using var watch = await GmcpWatch.OpenAsync(this);
+			var both = await watch.SentWhile(() => Run(mover, "north"), mover.Handle);
+			await Assert.That(Kit(both[mover.Handle]).Select(f => f.Module)).Contains("Room.Info").And.Contains("Char.Items.List");
+
+			await God("+config gmcp/modules=Items Char");
+			var itemsOnly = await watch.SentWhile(() => Run(mover, "south"), mover.Handle);
+			await Assert.That(Kit(itemsOnly[mover.Handle]).Select(f => f.Module)).IsEquivalentTo(new[] { "Char.Items.List" })
+				.Because("Room is off, so a move sends only the new room's things");
 		}
 		finally
 		{
-			await UninstallAsync(["mud-kit", .. five.Reverse()]);
+			await UninstallAsync("gmcp-mudlet");
+			await UninstallGmcpAsync();
 		}
 	}
 

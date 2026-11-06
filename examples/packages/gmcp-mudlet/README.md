@@ -1,8 +1,9 @@
-# mudlet-client
+# gmcp-mudlet
 
 Mudlet's own GMCP packages: an interface package (`Client.GUI`), the game's map (`Client.Map`), and
-Mudlet's Discord rich presence (`External.Discord.Info` and `Status`), plus a `+gui` command. Part of
-the MUD-kit.
+Mudlet's Discord rich presence (`External.Discord.Info` and `Status`), plus a `+gui` command. An add-on to
+[`gmcp`](../gmcp/), which sends the standard modules every client reads; this package adds only what
+is Mudlet's own.
 
 ## The interface
 
@@ -13,7 +14,7 @@ player turned off Mudlet's *Allow server to install script packages* preference.
 
 Out of the box the game offers the one the server ships, served at
 `<mud_url>/mudlet/sharpmush-ui.mpackage`. It puts a panel on the right of the game's text, filled from
-the other MUD-kit packages:
+what `gmcp` sends:
 
 | Part | Drawn from |
 |---|---|
@@ -71,10 +72,10 @@ Turning it off is kept on the Mudlet Client object as `` DATA`GUI-OFF`<key> ``, 
 
 The **Mudlet Client** in the master room carries `+gui`, the settings, the help and every function that
 builds and sends a package. It holds the `Send_OOB` power, which lets `oob()` reach connections that are
-not its own, and nothing more. The event handler carries `` SOCKET`GMCP`MUDLETCLIENT `` (Core.Hello,
-External.Discord.Hello and External.Discord.Get) and `` PLAYER`CONNECT`MUDLETCLIENT ``, each one line calling it.
+not its own, and nothing more. The event handler carries `` SOCKET`GMCP`GMCPMUDLET `` (Core.Hello,
+External.Discord.Hello and External.Discord.Get) and `` PLAYER`CONNECT`GMCPMUDLET ``, each one line calling it.
 
-## Settings: `+config mudlet-client`
+## Settings: `+config gmcp-mudlet`
 
 | Setting | Default | What |
 |---|---|---|
