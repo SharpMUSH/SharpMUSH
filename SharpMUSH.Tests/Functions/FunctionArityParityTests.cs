@@ -92,6 +92,7 @@ public class FunctionArityParityTests : ServerTestBase
 		["cor"] = "one argument, tested on its own as in TinyMUX",
 		["xor"] = "one argument, tested on its own as in TinyMUX",
 		["itext"] = "no argument is itext(0), as in TinyMUX",
+		["inum"] = "no argument is inum(0), as in TinyMUX",
 		["lnum"] = "no argument is an empty list, as in TinyMUX",
 		["switch"] = "a default alone, as TinyMUX's switch(x,default) is default",
 		["switchall"] = "a default alone, as TinyMUX's switch(x,default) is default",
