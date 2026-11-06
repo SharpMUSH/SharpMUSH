@@ -26,7 +26,7 @@ Two optional config keys:
 
 | Key | Default | What it does |
 | --- | --- | --- |
-| `coordinates` | `["X","Y","Z"]` | The three attributes each room's position is read from. The `gmcp` package sends a mapper ``MAP`COORDS`X``, ``MAP`COORDS`Y`` and ``MAP`COORDS`Z`` unless its `coordinates` setting names these. |
+| `coordinates` | `["X","Y","Z"]` | The three attributes each room's position is read from. The `gmcp` package reads ``MAP`COORDS`X``, ``MAP`COORDS`Y`` and ``MAP`COORDS`Z`` by default; set this to ``["MAP`COORDS`X","MAP`COORDS`Y","MAP`COORDS`Z"]`` to place rooms where a mapper does. |
 | `warnings` | `["room-desc","exit-unlinked","exit-oneway","exit-multiple","lock-checks"]` | The checks the Checks list shows, by their `@warnings` names. `exit-desc` and `exit-msgs` are there too, off by default. |
 
 ## Coordinates
