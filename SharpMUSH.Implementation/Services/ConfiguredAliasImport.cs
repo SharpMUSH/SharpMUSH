@@ -300,12 +300,6 @@ public sealed class ConfiguredAliasImport(
 					: new Resolution(null, $"{directive.Alias} is already SharpMUSH's {taken.LibraryInformation.Attribute.Name}");
 		}
 
-		if (overlay?.CommandFor(directive.Alias) is { } dialectMeaning
-			&& dialectMeaning.Equals(target, StringComparison.OrdinalIgnoreCase))
-		{
-			return InForce;
-		}
-
 		return new Resolution(target, null);
 	}
 

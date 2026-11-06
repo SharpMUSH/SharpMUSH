@@ -134,6 +134,26 @@ public class ConfiguredAliasImportTests
 		await Assert.That(resolved.NotCarried).IsEmpty();
 	}
 
+	/// <summary>An alias the dialect already gives the same meaning is kept, so a restriction naming it finds it.</summary>
+	[Test]
+	public async Task AnAliasTheDialectAlreadyMeansIsKept()
+	{
+		var import = Import(Command("@sudo", "@force/inplace")) with
+		{
+			Options = SharpMUSHOptions.Default() with
+			{
+				Restriction = new RestrictionOptions(new Dictionary<string, string[]> { ["@sudo"] = ["nobody"] },
+					new Dictionary<string, string[]>())
+			}
+		};
+
+		var resolved = Aliases.Resolve(import, ConfigurationDialect.RhostMUSH);
+
+		await Assert.That(resolved.Commands["@FORCE/INPLACE"]).IsEquivalentTo(new[] { "@sudo" });
+		await Assert.That(resolved.CommandRestrictions.Keys).IsEquivalentTo(new[] { "@sudo" });
+		await Assert.That(resolved.NotCarried).IsEmpty();
+	}
+
 	/// <summary>An alias that is also an abbreviation is kept, so a restriction naming it finds the exact name.</summary>
 	[Test]
 	public async Task AnAliasThatAbbreviatesItsCommandIsKept()
