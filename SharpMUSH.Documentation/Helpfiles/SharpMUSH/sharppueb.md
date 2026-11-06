@@ -44,7 +44,7 @@ HTML Functions are used to output HTML tags to HTML capable users: Pueblo and MX
 |                    |                    |                    |                    |
 |--------------------|--------------------|--------------------|--------------------|
 | [CMDLINK()]        | [ENDTAG()]         | [HTML()]           | [TAG()]            |
-| [TAGWRAP()]        | [WEBSOCKET_HTML()] | [WSHTML()]         |                    |
+| [TAGWRAP()]        | [WSHTML()]         |                    |                    |
 
 Things a client may have that are not tags (a sound, a picture, a pane, a screen to clear) are written once and rendered by each client in its own way. See [MEDIA FUNCTIONS].
 

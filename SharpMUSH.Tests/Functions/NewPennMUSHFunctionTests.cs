@@ -195,23 +195,4 @@ public class NewPennMUSHFunctionTests
 	}
 
 	#endregion
-
-	#region WEBSOCKET Tests
-
-	[Test]
-	public async Task WEBSOCKET_HTML_ReturnsEmpty()
-	{
-		var result = await Parser.EvaluateAsync(MarkupText.Plain("websocket_html(<b>test</b>)"));
-		await Assert.That(result.ToPlainText()).IsEqualTo(string.Empty);
-	}
-
-	[Test]
-	[Arguments("websocket_html(<b>test</b>,NoSuchPlayerForWebsocket)")]
-	public async Task WEBSOCKET_UnknownPlayer_ReturnsNoMatch(string input)
-	{
-		var result = await Parser.EvaluateAsync(MarkupText.Plain(input));
-		await Assert.That(result.ToPlainText()).IsEqualTo("#-1 NO MATCH");
-	}
-
-	#endregion
 }
