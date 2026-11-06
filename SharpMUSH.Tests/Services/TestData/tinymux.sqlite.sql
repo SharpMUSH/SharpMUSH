@@ -1,6 +1,7 @@
 -- The game in tinymux-v5.flat, tinymux.comsys and tinymux.mail, as TinyMUX 2.14 keeps it in netmux.sqlite
 -- (schema version 13). Each object's name is its Name attribute (43) and its money its Money attribute
--- (25); an attribute's own owner and flags are columns. Garbage objects keep their rows.
+-- (25); an attribute's owner and flags are columns, the owner the object's unless set apart (#5's CMD_HELLO), and -1
+-- on #0's Desc, as on a row migrated from schema 2. Garbage objects keep their rows.
 CREATE TABLE objects (dbref INTEGER PRIMARY KEY, location INTEGER NOT NULL DEFAULT -1, contents INTEGER NOT NULL DEFAULT -1,
   exits INTEGER NOT NULL DEFAULT -1, next INTEGER NOT NULL DEFAULT -1, link INTEGER NOT NULL DEFAULT -1, owner INTEGER NOT NULL DEFAULT -1,
   parent INTEGER NOT NULL DEFAULT -1, zone INTEGER NOT NULL DEFAULT -1, pennies INTEGER NOT NULL DEFAULT 0, flags1 INTEGER NOT NULL DEFAULT 0,
@@ -34,53 +35,53 @@ INSERT INTO attrnames VALUES (257, 'SECRET', 12);
 INSERT INTO attrnames VALUES (258, 'GONE', 0);
 
 INSERT INTO objects VALUES (0, -1, 1, 6, -1, -1, 1, -1, -1, 0, 0, 0, 0, 0, 0);
-INSERT INTO attributes (object, attrnum, value) VALUES (0, 43, CAST('Limbo' AS BLOB));
+INSERT INTO attributes VALUES (0, 43, CAST('Limbo' AS BLOB), 1, 0, 1);
 INSERT INTO attributes VALUES (0, 6, CAST('Welcome to Limbo.' AS BLOB), -1, 0, 1);
-INSERT INTO attributes VALUES (0, 218, CAST('Fri Sep 04 12:01:45 2026' AS BLOB), -1, 0, 1);
+INSERT INTO attributes VALUES (0, 218, CAST('Fri Sep 04 12:01:45 2026' AS BLOB), 1, 0, 1);
 INSERT INTO objects VALUES (1, 0, -1, -1, 4, 0, 1, -1, -1, 0, 19, 512, 0, 0, 0);
-INSERT INTO attributes (object, attrnum, value) VALUES (1, 43, CAST('Wizard' AS BLOB));
-INSERT INTO attributes (object, attrnum, value) VALUES (1, 25, CAST('1000' AS BLOB));
-INSERT INTO attributes VALUES (1, 5, CAST('$SHA1$c2FsdHNhbHQ=$WyKNSK++vrJhB7umSoSerjw3hPU=' AS BLOB), -1, 0, 1);
-INSERT INTO attributes VALUES (1, 58, CAST('Wiz' AS BLOB), -1, 0, 1);
-INSERT INTO attributes VALUES (1, 73, CAST('Gone fishing.' AS BLOB), -1, 0, 1);
+INSERT INTO attributes VALUES (1, 43, CAST('Wizard' AS BLOB), 1, 0, 1);
+INSERT INTO attributes VALUES (1, 25, CAST('1000' AS BLOB), 1, 0, 1);
+INSERT INTO attributes VALUES (1, 5, CAST('$SHA1$c2FsdHNhbHQ=$WyKNSK++vrJhB7umSoSerjw3hPU=' AS BLOB), 1, 0, 1);
+INSERT INTO attributes VALUES (1, 58, CAST('Wiz' AS BLOB), 1, 0, 1);
+INSERT INTO attributes VALUES (1, 73, CAST('Gone fishing.' AS BLOB), 1, 0, 1);
 INSERT INTO objects VALUES (2, -1, 3, -1, -1, -1, 1, -1, -1, 0, 0, 0, 0, 0, 0);
-INSERT INTO attributes (object, attrnum, value) VALUES (2, 43, CAST('Master Room' AS BLOB));
+INSERT INTO attributes VALUES (2, 43, CAST('Master Room' AS BLOB), 1, 0, 1);
 INSERT INTO objects VALUES (3, 2, -1, -1, 7, 2, 1, -1, -1, 0, 1, 0, 0, 0, 0);
-INSERT INTO attributes (object, attrnum, value) VALUES (3, 43, CAST('Staff Channel Object' AS BLOB));
-INSERT INTO attributes VALUES (3, 62, CAST('(#1)' AS BLOB), -1, 0, 1);
+INSERT INTO attributes VALUES (3, 43, CAST('Staff Channel Object' AS BLOB), 1, 0, 1);
+INSERT INTO attributes VALUES (3, 62, CAST('(#1)' AS BLOB), 1, 0, 1);
 INSERT INTO objects VALUES (4, 0, -1, -1, 5, 0, 4, -1, -1, 0, 3, 1114112, 0, 162, 1);
-INSERT INTO attributes (object, attrnum, value) VALUES (4, 43, CAST('Builder' AS BLOB));
-INSERT INTO attributes (object, attrnum, value) VALUES (4, 25, CAST('50' AS BLOB));
-INSERT INTO attributes VALUES (4, 5, CAST('$1$saltsalt$ZliGyAN3DciDHEkDboonh/' AS BLOB), -1, 0, 1);
-INSERT INTO attributes VALUES (4, 38, CAST('10' AS BLOB), -1, 0, 1);
-INSERT INTO attributes VALUES (4, 250, CAST('00000003 00000002' AS BLOB), -1, 0, 1);
+INSERT INTO attributes VALUES (4, 43, CAST('Builder' AS BLOB), 4, 0, 1);
+INSERT INTO attributes VALUES (4, 25, CAST('50' AS BLOB), 4, 0, 1);
+INSERT INTO attributes VALUES (4, 5, CAST('$1$saltsalt$ZliGyAN3DciDHEkDboonh/' AS BLOB), 4, 0, 1);
+INSERT INTO attributes VALUES (4, 38, CAST('10' AS BLOB), 4, 0, 1);
+INSERT INTO attributes VALUES (4, 250, CAST('00000003 00000002' AS BLOB), 4, 0, 1);
 INSERT INTO objects VALUES (5, 0, -1, -1, 9, 0, 4, -1, 7, 0, 521, 1, 4194304, 0, 0);
-INSERT INTO attributes (object, attrnum, value) VALUES (5, 43, CAST('Widget' AS BLOB));
-INSERT INTO attributes (object, attrnum, value) VALUES (5, 25, CAST('1' AS BLOB));
-INSERT INTO attributes VALUES (5, 6, CAST('A 󰲇󱡤widget sits here.' AS BLOB), -1, 0, 1);
+INSERT INTO attributes VALUES (5, 43, CAST('Widget' AS BLOB), 4, 0, 1);
+INSERT INTO attributes VALUES (5, 25, CAST('1' AS BLOB), 4, 0, 1);
+INSERT INTO attributes VALUES (5, 6, CAST('A 󰲇󱡤widget sits here.' AS BLOB), 4, 0, 1);
 INSERT INTO attributes VALUES (5, 256, CAST('$hello:@pemit %#=Hi' AS BLOB), 1, 2048, 1);
-INSERT INTO attributes VALUES (5, 257, CAST('hidden' AS BLOB), -1, 0, 1);
-INSERT INTO attributes VALUES (5, 258, CAST('deleted value' AS BLOB), -1, 128, 1);
-INSERT INTO attributes VALUES (5, 42, CAST('(#4)|Desc:*widget*' AS BLOB), -1, 0, 1);
-INSERT INTO attributes VALUES (5, 59, CAST('@(#7)' AS BLOB), -1, 0, 1);
-INSERT INTO attributes VALUES (5, 209, CAST('(#1)' AS BLOB), -1, 0, 1);
-INSERT INTO attributes VALUES (5, 94, CAST('!(#4)' AS BLOB), -1, 0, 1);
-INSERT INTO attributes VALUES (5, 218, CAST('Fri Sep 04 12:01:45 2026' AS BLOB), -1, 0, 1);
-INSERT INTO attributes VALUES (5, 219, CAST('Sat Sep 05 08:30:00.123456 2026' AS BLOB), -1, 0, 1);
+INSERT INTO attributes VALUES (5, 257, CAST('hidden' AS BLOB), 4, 0, 1);
+INSERT INTO attributes VALUES (5, 258, CAST('deleted value' AS BLOB), 4, 128, 1);
+INSERT INTO attributes VALUES (5, 42, CAST('(#4)|Desc:*widget*' AS BLOB), 4, 0, 1);
+INSERT INTO attributes VALUES (5, 59, CAST('@(#7)' AS BLOB), 4, 0, 1);
+INSERT INTO attributes VALUES (5, 209, CAST('(#1)' AS BLOB), 4, 0, 1);
+INSERT INTO attributes VALUES (5, 94, CAST('!(#4)' AS BLOB), 4, 0, 1);
+INSERT INTO attributes VALUES (5, 218, CAST('Fri Sep 04 12:01:45 2026' AS BLOB), 4, 0, 1);
+INSERT INTO attributes VALUES (5, 219, CAST('Sat Sep 05 08:30:00.123456 2026' AS BLOB), 4, 0, 1);
 INSERT INTO objects VALUES (6, 2, -1, 0, -1, -1, 1, -1, -1, 0, 2, 0, 0, 0, 0);
-INSERT INTO attributes (object, attrnum, value) VALUES (6, 43, CAST('North;n' AS BLOB));
-INSERT INTO attributes VALUES (6, 4, CAST('You go %chnorth%cn.' AS BLOB), -1, 0, 1);
+INSERT INTO attributes VALUES (6, 43, CAST('North;n' AS BLOB), 1, 0, 1);
+INSERT INTO attributes VALUES (6, 4, CAST('You go %chnorth%cn.' AS BLOB), 1, 0, 1);
 INSERT INTO objects VALUES (7, 2, -1, -1, -1, 2, 1, -1, -1, 0, 1, 0, 0, 0, 0);
-INSERT INTO attributes (object, attrnum, value) VALUES (7, 43, CAST('Widget Zone' AS BLOB));
-INSERT INTO attributes VALUES (7, 59, CAST('(#4)' AS BLOB), -1, 0, 1);
+INSERT INTO attributes VALUES (7, 43, CAST('Widget Zone' AS BLOB), 1, 0, 1);
+INSERT INTO attributes VALUES (7, 59, CAST('(#4)' AS BLOB), 1, 0, 1);
 INSERT INTO objects VALUES (8, -1, -1, -1, -1, -1, 1, -1, -1, 0, 5, 0, 0, 0, 0);
-INSERT INTO attributes (object, attrnum, value) VALUES (8, 43, CAST('Garbage' AS BLOB));
+INSERT INTO attributes VALUES (8, 43, CAST('Garbage' AS BLOB), 1, 0, 1);
 INSERT INTO objects VALUES (9, 0, -1, -1, 10, 0, 9, -1, -1, 0, -2147483645, 0, 0, 0, 0);
-INSERT INTO attributes (object, attrnum, value) VALUES (9, 43, CAST('Olduser' AS BLOB));
-INSERT INTO attributes VALUES (9, 5, CAST('_J9..CCCCXBrJUJV154M' AS BLOB), -1, 0, 1);
+INSERT INTO attributes VALUES (9, 43, CAST('Olduser' AS BLOB), 9, 0, 1);
+INSERT INTO attributes VALUES (9, 5, CAST('_J9..CCCCXBrJUJV154M' AS BLOB), 9, 0, 1);
 INSERT INTO objects VALUES (10, 0, -1, -1, -1, 0, 10, -1, -1, 0, 3, 0, 0, 65536, 0);
-INSERT INTO attributes (object, attrnum, value) VALUES (10, 43, CAST('Pennuser' AS BLOB));
-INSERT INTO attributes VALUES (10, 5, CAST('$P6H$$1:sha1:02f74188b583621154e382c3e2fcec46ee809845:0' AS BLOB), -1, 0, 1);
+INSERT INTO attributes VALUES (10, 43, CAST('Pennuser' AS BLOB), 10, 0, 1);
+INSERT INTO attributes VALUES (10, 5, CAST('$P6H$$1:sha1:02f74188b583621154e382c3e2fcec46ee809845:0' AS BLOB), 10, 0, 1);
 
 INSERT INTO channels VALUES ('Public', '[Public]', 887, 0, 0, 0, 1, 0, 0, -1);
 INSERT INTO channel_users VALUES ('Public', 1, 1, 1, 0, '');

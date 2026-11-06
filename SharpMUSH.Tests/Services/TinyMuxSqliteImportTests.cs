@@ -104,8 +104,8 @@ public class TinyMuxSqliteImportTests
 	public async Task NameAndMoneyComeFromTheirAttributes()
 	{
 		using var game = Game(sql => sql.Replace(
-			"INSERT INTO attributes (object, attrnum, value) VALUES (4, 25, CAST('50' AS BLOB));",
-			"INSERT INTO attributes (object, attrnum, value) VALUES (4, 25, CAST('1234' AS BLOB));"));
+			"INSERT INTO attributes VALUES (4, 25, CAST('50' AS BLOB), 4, 0, 1);",
+			"INSERT INTO attributes VALUES (4, 25, CAST('1234' AS BLOB), 4, 0, 1);"));
 		var database = await TinyMuxDatabaseReader.ReadSqliteFileAsync(game.Path);
 		var builder = database.Objects.Single(o => o.DBRef == 4);
 
@@ -127,14 +127,14 @@ public class TinyMuxSqliteImportTests
 			INSERT INTO attrnames VALUES (256, 'cmd_hello', 0);
 			INSERT INTO attributes VALUES (0, 43, CAST('Limbo' AS BLOB));
 			INSERT INTO attributes VALUES (1, 43, CAST('Wizard' AS BLOB));
-			INSERT INTO attributes VALUES (0, 256, X'01313A323034383A2468656C6C6F3A4070656D69742025233D4869');
+			INSERT INTO attributes VALUES (0, 256, X'01303A323034383A2468656C6C6F3A4070656D69742025233D4869');
 			""");
 		var database = await TinyMuxDatabaseReader.ReadSqliteFileAsync(game.Path);
 		var hello = database.Objects.Single(o => o.DBRef == 0).Attributes.Single(a => a.Name == "CMD_HELLO");
 
 		await Assert.That(hello.Value).IsEqualTo("$hello:@pemit %#=Hi");
-		// The prefix named #1 as its owner, which is also #0's owner, and the visual flag (0x800).
-		await Assert.That(hello.Owner).IsNull();
+		// The prefix named #0 as its owner, not #0's owner #1, and the visual flag (0x800).
+		await Assert.That(hello.Owner).IsEqualTo(0);
 		await Assert.That(hello.Flags).Contains("visual");
 		await Assert.That(database.Mail.Messages).IsEmpty();
 		await Assert.That(database.Chat.Channels).IsEmpty();
@@ -156,6 +156,46 @@ public class TinyMuxSqliteImportTests
 		await Assert.That(database.Objects.Count).IsEqualTo(10);
 		await Assert.That(File.Exists(game.Path + "-wal")).IsFalse();
 		await Assert.That(File.Exists(game.Path + "-shm")).IsFalse();
+	}
+
+	/// <summary>
+	/// TinyMUX writes the object's owner into every attribute row; that is the default owner, recorded apart
+	/// neither on an attribute nor on a lock, as from a flatfile.
+	/// </summary>
+	[Test]
+	public async Task TheObjectsOwnOwnerIsNotRecordedApart()
+	{
+		using var game = Game();
+		var database = await TinyMuxDatabaseReader.ReadSqliteFileAsync(game.Path);
+		var widget = database.Objects.Single(o => o.DBRef == 5);
+
+		await Assert.That(widget.Locks.Values.Select(l => l.Creator)).All().Satisfy(creator => creator.IsNull());
+		await Assert.That(widget.Attributes.Single(a => a.Name == "CMD_HELLO").Owner).IsEqualTo(1);
+		await Assert.That(widget.Attributes.Where(a => a.Name != "CMD_HELLO").Select(a => a.Owner)).All().Satisfy(owner => owner.IsNull());
+	}
+
+	/// <summary>A path holding characters a SQLite URI gives a meaning to still opens the file it names.</summary>
+	[Test]
+	[Arguments("100%41 done")]
+	[Arguments("what?#now")]
+	public async Task OpensAPathWithUriCharacters(string directory)
+	{
+		var folder = Path.Join(Path.GetTempPath(), $"{Guid.NewGuid():N} {directory}");
+		Directory.CreateDirectory(folder);
+		try
+		{
+			using var game = Game();
+			var copy = Path.Join(folder, "netmux.sqlite");
+			File.Copy(game.Path, copy);
+
+			var database = await TinyMuxDatabaseReader.ReadSqliteFileAsync(copy);
+
+			await Assert.That(database.Objects.Count).IsEqualTo(10);
+		}
+		finally
+		{
+			Directory.Delete(folder, recursive: true);
+		}
 	}
 
 	/// <summary>Mail that cannot be read is the mail's read error; the game is still read.</summary>
@@ -202,6 +242,22 @@ public class TinyMuxSqliteImportTests
 
 		await Assert.That(async () => await preflight.ReadAsync(new DatabaseImportFiles(game.Path, Mail: Fixture("tinymux.mail"))))
 			.Throws<FormatException>().WithMessageContaining("holds its own mail and comsys");
+		await Assert.That(async () => await preflight.ReadAsync(new DatabaseImportFiles(game.Path, Chat: Fixture("tinymux.comsys"))))
+			.Throws<FormatException>().WithMessageContaining("holds its own mail and comsys");
+
+		var chosen = await preflight.ReadAsync(new DatabaseImportFiles(game.Path, Format: DatabaseImportFormat.TinyMUX));
+		await Assert.That(chosen.Objects.Count).IsEqualTo(10);
+	}
+
+	/// <summary>The upload refuses a database whose mail or comsys cannot be read, and says what is wrong.</summary>
+	[Test]
+	public async Task PreflightSaysWhatIsIncomplete()
+	{
+		using var game = Game(sql => sql.Replace("INSERT INTO mail_bodies VALUES (1, 'Thanks!');", ""));
+		var preflight = new DatabaseImportPreflight(new PennMUSHDatabaseParser(NullLogger<PennMUSHDatabaseParser>.Instance));
+
+		await Assert.That(async () => await preflight.ReadAsync(new DatabaseImportFiles(game.Path)))
+			.Throws<FormatException>().WithMessageContaining("names body 1");
 	}
 
 	/// <summary>Through the converter, as the upload endpoint takes it: one file brings the game, its channels and its mail.</summary>

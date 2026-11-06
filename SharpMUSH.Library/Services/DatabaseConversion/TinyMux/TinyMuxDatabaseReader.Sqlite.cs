@@ -75,23 +75,43 @@ public static partial class TinyMuxDatabaseReader
 		{
 			return ReadSqlite(connection, description, cancellationToken);
 		}
-		catch (SqliteException ex)
+		catch (Exception ex) when (ex is SqliteException or InvalidOperationException or InvalidCastException or OverflowException)
 		{
 			throw new FormatException($"{description}: the SQLite database could not be read ({ex.Message})", ex);
 		}
 	}
 
 	private static SqliteConnection OpenReadOnly(string path)
-	{
-		// immutable: the copy being imported does not change, so SQLite takes no locks and neither reads nor
-		// creates the -wal and -shm files beside it.
-		var uri = new Uri(Path.GetFullPath(path)).AbsoluteUri + "?immutable=1";
-		return new SqliteConnection(new SqliteConnectionStringBuilder
+		=> new(new SqliteConnectionStringBuilder
 		{
-			DataSource = uri,
+			DataSource = ImmutableUri(Path.GetFullPath(path)),
 			Mode = SqliteOpenMode.ReadOnly,
 			Pooling = false
 		}.ToString());
+
+	/// <summary>
+	/// The file as a SQLite URI with <c>immutable=1</c>: the copy being imported does not change, so SQLite
+	/// takes no locks and neither reads nor creates the -wal and -shm files beside it. Only the characters a
+	/// SQLite URI path gives a meaning to are escaped (<c>%</c>, <c>?</c>, <c>#</c>); a Windows network path
+	/// keeps its two leading slashes after an empty authority, which SQLite reads as the path.
+	/// </summary>
+	internal static string ImmutableUri(string fullPath)
+	{
+		var path = fullPath.Replace('\\', '/');
+		var escaped = new StringBuilder(path.Length + 16);
+		foreach (var c in path)
+		{
+			escaped.Append(c switch
+			{
+				'%' => "%25",
+				'?' => "%3F",
+				'#' => "%23",
+				_ => c.ToString()
+			});
+		}
+
+		var separator = path.StartsWith('/') ? "" : "/";
+		return $"file://{separator}{escaped}?immutable=1";
 	}
 
 	private static PennMUSHDatabase ReadSqlite(SqliteConnection connection, string description, CancellationToken cancellationToken)
@@ -149,7 +169,7 @@ public static partial class TinyMuxDatabaseReader
 		{
 			return read();
 		}
-		catch (Exception ex) when (ex is FormatException or SqliteException or InvalidCastException)
+		catch (Exception ex) when (ex is FormatException or SqliteException or InvalidOperationException or InvalidCastException or OverflowException)
 		{
 			return new PennMUSHMailDatabase { ReadError = $"the {part} could not be read: {ex.Message}" };
 		}
@@ -162,7 +182,7 @@ public static partial class TinyMuxDatabaseReader
 		{
 			return (read(), null);
 		}
-		catch (Exception ex) when (ex is FormatException or SqliteException or InvalidCastException)
+		catch (Exception ex) when (ex is FormatException or SqliteException or InvalidOperationException or InvalidCastException or OverflowException)
 		{
 			return (null, $"the {part} could not be read: {ex.Message}");
 		}
@@ -285,10 +305,13 @@ public static partial class TinyMuxDatabaseReader
 					continue;
 			}
 
+			// TinyMUX writes the object's owner into the owner column of every attribute it sets; that owner is
+			// the default, as an attribute without a flatfile prefix is, so it is not recorded apart.
 			var rowOwner = reader.GetInt32(3);
 			var rowFlags = reader.GetInt32(4);
+			var attributeOwner = rowOwner >= 0 ? rowOwner : prefixOwner;
 			record.Attributes.Add(new RawAttribute(number, value,
-				rowOwner >= 0 ? rowOwner : prefixOwner,
+				attributeOwner == record.Owner ? -1 : attributeOwner,
 				rowFlags != 0 ? rowFlags : prefixFlags));
 		}
 	}

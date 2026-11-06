@@ -32,6 +32,8 @@ public sealed class DatabaseImportPreflight(PennMUSHDatabaseParser parser)
 			if (files.Mail is not null || files.Chat is not null)
 				throw new FormatException("A TinyMUX SQLite database holds its own mail and comsys; the declared mail or chat input would not be read.");
 			database = await TinyMuxDatabaseReader.ReadSqliteFileAsync(files.Database, cancellationToken);
+			if ((database.Mail.ReadError ?? database.Chat.ReadError) is { } error)
+				throw new FormatException($"The TinyMUX SQLite database is incomplete: {error}. No import will be written.");
 		}
 		else if (dialect == DatabaseDialect.TinyMUX)
 		{
