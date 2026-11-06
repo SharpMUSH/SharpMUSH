@@ -169,25 +169,10 @@ public static class AccessDirectives
 			}
 
 			var into = isFunction ? functions : commands;
-			var refused = isFunction ? refusedFunctions : refusedCommands;
-			if (refused.Contains(target))
-			{
-				skipped.Add($"{line.Trim()}: an earlier access line for {target} could not be carried over, and this one alone would let in someone the source turns away, so it was not carried over.");
-				continue;
-			}
-
 			var (carried, refusedLine) = Translate(line.Trim(), words[1..], table, isFunction, skipped);
 			if (refusedLine)
 			{
-				// The source's lines for one name add up, so what the others carry would stand without this line's
-				// requirement: none of them is kept.
-				refused.Add(target);
-				if (into.Remove(target))
-				{
-					skipped.Add($"{line.Trim()}: the earlier access lines for {target} were not carried over either, since without this one they would let in someone the source turns away.");
-				}
-
-				continue;
+				(isFunction ? refusedFunctions : refusedCommands).Add(target);
 			}
 
 			if (carried.Count == 0)
@@ -199,12 +184,52 @@ public static class AccessDirectives
 			restriction.AddRange(carried.Where(word => !restriction.Contains(word, StringComparer.OrdinalIgnoreCase)));
 		}
 
+		LeaveOnlyClosed(commands, refusedCommands, "access", skipped);
+		LeaveOnlyClosed(functions, refusedFunctions, "function_access", skipped);
 		return (Shape(commands), Shape(functions));
 
 		static Dictionary<string, string[]> Shape(Dictionary<string, List<string>> restrictions)
 			=> restrictions.ToDictionary(entry => entry.Key, entry => new[] { string.Join(' ', entry.Value) },
 				StringComparer.OrdinalIgnoreCase);
 	}
+
+	/// <summary>
+	/// The source's lines for one name add up, so once one of them is refused what the others carry would stand without
+	/// its requirement. Only the words that need nothing else to be safe stay, disabling the name or leaving it to God;
+	/// the rest are reported.
+	/// </summary>
+	private static void LeaveOnlyClosed(Dictionary<string, List<string>> restrictions, HashSet<string> refused,
+		string directive, List<string> skipped)
+	{
+		foreach (var target in refused)
+		{
+			if (!restrictions.TryGetValue(target, out var words))
+			{
+				continue;
+			}
+
+			var closed = words.Where(IsClosed).ToList();
+			var dropped = words.Except(closed, StringComparer.OrdinalIgnoreCase).ToList();
+			if (dropped.Count > 0)
+			{
+				skipped.Add($"The {directive} lines for {target}: {string.Join(' ', dropped)} was not carried over either, " +
+					"since without the line SharpMUSH has no restriction for it would let in someone the source turns away.");
+			}
+
+			if (closed.Count > 0)
+			{
+				restrictions[target] = closed;
+			}
+			else
+			{
+				restrictions.Remove(target);
+			}
+		}
+	}
+
+	/// <summary>Whether <paramref name="word"/> holds whatever else applies: it disables the name or leaves it to God.</summary>
+	private static bool IsClosed(string word)
+		=> word.Equals("nobody", StringComparison.OrdinalIgnoreCase) || word.Equals("god", StringComparison.OrdinalIgnoreCase);
 
 	/// <summary>
 	/// The SharpMUSH restriction words <paramref name="words"/> become, and whether the line is refused: it says who
@@ -244,8 +269,11 @@ public static class AccessDirectives
 
 		if (grants > 0 && grantsCarried == 0)
 		{
-			skipped.Add($"{line}: SharpMUSH has no restriction for {string.Join(", ", left)}, so it was not carried over and SharpMUSH's own restriction stays.");
-			return ([], true);
+			var closed = carried.Where(IsClosed).ToList();
+			skipped.Add(closed.Count > 0
+				? $"{line}: carried over as {string.Join(' ', closed)} only; SharpMUSH has no restriction for {string.Join(", ", left)}."
+				: $"{line}: SharpMUSH has no restriction for {string.Join(", ", left)}, so it was not carried over and SharpMUSH's own restriction stays.");
+			return (closed, true);
 		}
 
 		if (left.Count > 0)

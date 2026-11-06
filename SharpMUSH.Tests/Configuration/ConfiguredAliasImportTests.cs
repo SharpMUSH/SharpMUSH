@@ -203,6 +203,28 @@ public class ConfiguredAliasImportTests
 		await Assert.That(resolved.NotCarried).IsEmpty();
 	}
 
+	/// <summary>
+	/// A restriction on a name the dialect gives a built-in is kept under the built-in's name, since a call by the
+	/// dialect's name runs that built-in and is held to its restriction.
+	/// </summary>
+	[Test]
+	public async Task ARestrictionOnADialectNameIsKeptUnderTheBuiltInsName()
+	{
+		var import = Import() with
+		{
+			Options = SharpMUSHOptions.Default() with
+			{
+				Restriction = new RestrictionOptions(new Dictionary<string, string[]>(),
+					new Dictionary<string, string[]> { ["secs2time"] = ["nobody"] })
+			}
+		};
+
+		var resolved = Aliases.Resolve(import, ConfigurationDialect.TinyMUX);
+
+		await Assert.That(resolved.FunctionRestrictions.Keys.Single()).IsEqualTo("convsecs").Because("TinyMUX's secs2time is convsecs");
+		await Assert.That(resolved.NotCarried).IsEmpty();
+	}
+
 	private static AliasDirective Command(string alias, string target) => new(AliasKind.Command, alias, target, $"alias {alias} {target}");
 
 	private static AliasDirective Function(string alias, string target) => new(AliasKind.Function, alias, target, $"function_alias {alias} {target}");

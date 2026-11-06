@@ -119,23 +119,35 @@ public class ReadConfigAliasAndAccessTests
 	}
 
 	/// <summary>
-	/// TinyMUX's lines for one command add up, so a later line's words cannot stand once an earlier line saying who
-	/// may use the command was left out: none of the command's lines is carried over, in either order.
+	/// TinyMUX's lines for one command add up, so once a line saying who may use the command is left out, the words
+	/// the command's other lines carry cannot stand alone, in either order. Only disabling it or leaving it to God
+	/// holds whatever else applies, so that stays.
 	/// </summary>
 	[Test]
-	public async Task AnAccessLineLeftOutTakesTheCommandsOtherLinesWithIt()
+	public async Task AnAccessLineLeftOutTakesTheCommandsOtherWordsWithIt()
 	{
 		var import = await ImportAsync(ConfigurationDialect.TinyMUX,
 			"access @emit staff",
 			"access @emit no_guest",
 			"access @pemit no_guest",
-			"access @pemit staff");
+			"access @pemit staff",
+			"access @oemit disabled",
+			"access @oemit staff",
+			"access @remit staff",
+			"access @remit disabled",
+			"access @lemit disabled staff");
 
 		var restrictions = import.Options.Restriction.CommandRestrictions;
 		await Assert.That(restrictions.ContainsKey("@emit")).IsFalse();
 		await Assert.That(restrictions.ContainsKey("@pemit")).IsFalse();
-		await Assert.That(import.Skipped.Single(line => line.StartsWith("access @emit no_guest: "))).Contains("an earlier access line for @emit");
-		await Assert.That(import.Skipped.Single(line => line.StartsWith("access @pemit staff: the earlier access lines"))).IsNotNull();
+		await Assert.That(restrictions["@oemit"]).IsEquivalentTo(new[] { "nobody" });
+		await Assert.That(restrictions["@remit"]).IsEquivalentTo(new[] { "nobody" });
+		await Assert.That(restrictions["@lemit"]).IsEquivalentTo(new[] { "nobody" });
+		await Assert.That(import.Skipped).Contains(
+			"The access lines for @emit: noguest was not carried over either, since without the line SharpMUSH has no restriction for it would let in someone the source turns away.");
+		await Assert.That(import.Skipped.Any(line => line.StartsWith("The access lines for @oemit"))).IsFalse()
+			.Because("nothing @oemit's lines carry is left out");
+		await Assert.That(import.Skipped).Contains("access @lemit disabled staff: carried over as nobody only; SharpMUSH has no restriction for staff.");
 	}
 
 	/// <summary>

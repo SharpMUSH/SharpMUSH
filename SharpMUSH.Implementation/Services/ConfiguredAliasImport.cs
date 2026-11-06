@@ -16,11 +16,15 @@ namespace SharpMUSH.Implementation.Services;
 /// The imported command restrictions that stay: every one for a PennMUSH file, and for a TinyMUX or RhostMUSH file
 /// the access lines that cannot leave a command less restricted than it is here.
 /// </param>
+/// <param name="FunctionRestrictions">The imported function restrictions, each under the name this engine knows the function by.</param>
 /// <param name="NotCarried">Each alias or restriction line left out, and why.</param>
+/// <remarks>A restriction on a name the source's dialect gives a built-in (TinyMUX's <c>secs2time</c>) is keyed by
+/// the built-in's name here, since a call by the dialect's name runs it and is held to its restriction.</remarks>
 public sealed record ConfiguredAliases(
 	Dictionary<string, string[]> Commands,
 	Dictionary<string, string[]> Functions,
 	Dictionary<string, string[]> CommandRestrictions,
+	Dictionary<string, string[]> FunctionRestrictions,
 	IReadOnlyList<string> NotCarried)
 {
 	/// <summary><paramref name="current"/> with these aliases added to the ones it has.</summary>
@@ -119,8 +123,15 @@ public sealed class ConfiguredAliasImport(
 		var restrictions = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
 		foreach (var (name, restriction) in import.Options.Restriction.CommandRestrictions)
 		{
+			var key = name;
 			var found = commandLibrary.TryGetValue(name, out var command)
 				|| (aliasTargets.TryGetValue(name, out var target) && commandLibrary.TryGetValue(target, out command));
+			if (!found && overlay?.CommandFor(name) is { } meant && !meant.Contains('/')
+				&& commandLibrary.TryGetValue(meant, out command))
+			{
+				(found, key) = (true, meant);
+			}
+
 			if (!found)
 			{
 				notCarried.Add($"The restriction on {name}: SharpMUSH has no command {name}, so it has no effect.");
@@ -132,20 +143,32 @@ public sealed class ConfiguredAliasImport(
 				continue;
 			}
 
-			restrictions[name] = restriction;
+			restrictions.TryAdd(key, restriction);
 		}
 
 		var newFunctionAliases = functionAliases.Values.SelectMany(aliases => aliases).ToHashSet(StringComparer.OrdinalIgnoreCase);
-		foreach (var name in import.Options.Restriction.FunctionRestrictions.Keys
-			.Where(name => !functionLibrary.ContainsKey(name) && !newFunctionAliases.Contains(name)))
+		var functionRestrictions = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+		foreach (var (name, restriction) in import.Options.Restriction.FunctionRestrictions)
 		{
-			notCarried.Add($"The restriction on {name}(): SharpMUSH has no function {name}(), so it has no effect.");
+			if (functionLibrary.ContainsKey(name) || newFunctionAliases.Contains(name))
+			{
+				functionRestrictions.TryAdd(name, restriction);
+			}
+			else if (overlay?.FunctionFor(name) is { } meant && functionLibrary.ContainsKey(meant))
+			{
+				functionRestrictions.TryAdd(meant, restriction);
+			}
+			else
+			{
+				notCarried.Add($"The restriction on {name}(): SharpMUSH has no function {name}(), so it has no effect.");
+			}
 		}
 
 		return new ConfiguredAliases(
 			commandAliases.ToDictionary(entry => entry.Key, entry => entry.Value.ToArray()),
 			functionAliases.ToDictionary(entry => entry.Key, entry => entry.Value.ToArray()),
 			restrictions,
+			functionRestrictions,
 			notCarried);
 	}
 

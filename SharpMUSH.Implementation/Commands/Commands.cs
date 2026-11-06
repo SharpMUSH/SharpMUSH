@@ -310,18 +310,35 @@ public partial class Commands : ILibraryProvider<CommandDefinition>, IConfigured
 	/// Adds the configured command aliases, the plain ones and those naming switches, to the live table. Run at
 	/// construction and again whenever the configuration changes (<see cref="IConfiguredAliasRegistry"/>).
 	/// </summary>
+	/// <remarks>A command <c>@command/disable</c> or a <c>nobody</c> restriction took out of the table is skipped, so
+	/// this never brings it back under an alias.</remarks>
 	public bool RegisterConfiguredAliases(AliasOptions aliases)
 	{
-		var added = false;
-		foreach (var command in Builtins)
+		lock (_commandTableLock)
 		{
-			foreach (var alias in aliases.CommandAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
+			var added = false;
+			foreach (var command in Builtins)
 			{
-				added |= AddAlias(alias, command.Key, command.Value);
-			}
-		}
+				if (!_commandLibrary.TryGetValue(command.Key, out var live)
+					|| !ReferenceEquals(live.LibraryInformation.Attribute, command.Value.Attribute))
+				{
+					continue;
+				}
 
-		return AddSwitchAliases(aliases.CommandAliases) | added;
+				foreach (var alias in aliases.CommandAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
+				{
+					added |= AddAlias(alias, command.Key, command.Value);
+				}
+			}
+
+			added = AddSwitchAliases(aliases.CommandAliases) | added;
+			if (added)
+			{
+				Implementation.Services.CommandTrie.Invalidate(_commandLibrary);
+			}
+
+			return added;
+		}
 	}
 
 	/// <summary>Adds <paramref name="alias"/> unless it is there already: for the same command and switches it is left alone, for anything else it is logged.</summary>
