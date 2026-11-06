@@ -16,7 +16,7 @@ public partial class Functions
 {
 	/// <summary>
 	/// TinyMUX's <c>pfind()</c>: <c>pmatch()</c>, except that a dbref finds any object, not only a player. A miss
-	/// answers with the error and tells the caller nothing, as TinyMUX's quiet matches do.
+	/// is <c>#-1 NO MATCH</c> and tells the caller nothing, as TinyMUX's quiet matches do.
 	/// </summary>
 	[SharpFunction(Name = "pfind", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["name"])]
@@ -28,12 +28,9 @@ public partial class Functions
 			? await LocateService.Locate(parser, executor, executor, name, LocateFlags.All)
 			: await LocateService.LocatePlayer(parser, executor, executor, name);
 
-		return found switch
-		{
-			AnySharpObject obj => new CallState(obj.Object().DBRef),
-			Error<string> error => new CallState(error.Value),
-			_ => new CallState(ErrorMessages.Returns.NoMatch)
-		};
+		return found is AnySharpObject obj
+			? new CallState(obj.Object().DBRef)
+			: new CallState(ErrorMessages.Returns.NoMatch);
 	}
 
 	/// <summary>

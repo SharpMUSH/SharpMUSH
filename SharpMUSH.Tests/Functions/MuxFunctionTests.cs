@@ -155,7 +155,7 @@ public class MuxFunctionTests : ServerTestBase
 
 		var before = Notifications.CountFor(caller);
 		await Assert.That(await AsCaller("pfind(#99999999)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
-		await Assert.That(await AsCaller($"pfind({token}_Nobody)")).StartsWith("#-1");
+		await Assert.That(await AsCaller($"pfind({token}_Nobody)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
 		await Assert.That(Notifications.CountFor(caller)).IsEqualTo(before);
 
 		await AsCaller($"pmatch({token}_Nobody)");
