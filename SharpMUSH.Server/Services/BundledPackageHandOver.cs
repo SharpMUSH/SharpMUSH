@@ -13,8 +13,9 @@ public static class BundledPackageHandOver
 {
 	/// <summary>
 	/// Hands over each installed package that <paramref name="moved"/> names, came from the catalogue, and this build no
-	/// longer ships. The library is the first configured official remote, or <see cref="OfficialPackageRemote.Url"/>
-	/// when none is configured. Returns the ids handed over.
+	/// longer ships. The library is the first configured official remote, else a configured remote at
+	/// <see cref="OfficialPackageRemote.Url"/>; with neither, that remote is added, because browsing, reviewing and
+	/// applying an upgrade all read a configured remote. Returns the ids handed over.
 	/// </summary>
 	public static async Task<IReadOnlyList<string>> RunAsync(IPackageRegistryService registry,
 		IReadOnlyDictionary<string, string> moved, ILogger logger)
@@ -34,8 +35,7 @@ public static class BundledPackageHandOver
 			return [];
 		}
 
-		var library = (await registry.GetPackageRemotesAsync()).FirstOrDefault(r => r.Trust == PackageRemoteTrust.Official)
-			?.Url ?? OfficialPackageRemote.Url;
+		var library = await LibraryAsync(registry, logger);
 
 		foreach (var package in candidates)
 		{
@@ -46,5 +46,33 @@ public static class BundledPackageHandOver
 		}
 
 		return candidates.Select(package => package.Id).ToList();
+	}
+
+	private static async Task<string> LibraryAsync(IPackageRegistryService registry, ILogger logger)
+	{
+		var remotes = await registry.GetPackageRemotesAsync();
+		if (remotes.FirstOrDefault(r => r.Trust == PackageRemoteTrust.Official) is { } official)
+		{
+			return official.Url;
+		}
+
+		if (remotes.Any(r => string.Equals(r.Url.TrimEnd('/'), OfficialPackageRemote.Url, StringComparison.OrdinalIgnoreCase)))
+		{
+			return OfficialPackageRemote.Url;
+		}
+
+		// A remote of the administrator's own under the library's name is left as it is.
+		if (remotes.Any(r => string.Equals(r.Name, OfficialPackageRemote.Name, StringComparison.OrdinalIgnoreCase)))
+		{
+			logger.LogWarning("The remote {Name} is not the official library; add {Library} as a remote to browse the moved packages' updates.",
+				OfficialPackageRemote.Name, OfficialPackageRemote.Url);
+			return OfficialPackageRemote.Url;
+		}
+
+		await registry.UpsertPackageRemoteAsync(new PackageRemoteRecord(
+			OfficialPackageRemote.Name, OfficialPackageRemote.Url, PackageRemoteTrust.Official, null));
+		logger.LogInformation("Added the official package library {Library} as a remote for the packages that moved there.",
+			OfficialPackageRemote.Url);
+		return OfficialPackageRemote.Url;
 	}
 }

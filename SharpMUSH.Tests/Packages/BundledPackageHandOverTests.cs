@@ -43,6 +43,22 @@ public class BundledPackageHandOverTests
 			SourceRepo = OfficialPackageRemote.Url,
 			SourcePath = "left-pkg"
 		});
+		// Browse, review and apply read configured remotes, so the library is added for the upgrade to be reachable.
+		await registry.Received(1).UpsertPackageRemoteAsync(new PackageRemoteRecord(
+			OfficialPackageRemote.Name, OfficialPackageRemote.Url, PackageRemoteTrust.Official, null));
+	}
+
+	/// <summary>An administrator's remote under the library's name is not overwritten.</summary>
+	[Test]
+	public async Task RemoteUnderTheLibrarysName_IsLeftAlone()
+	{
+		var registry = Registry([Bundled("left-pkg")],
+			new PackageRemoteRecord(OfficialPackageRemote.Name, "https://git.example.org/mine", PackageRemoteTrust.Community, null));
+
+		await BundledPackageHandOver.RunAsync(registry, Moved(("left-pkg", "left-pkg")), NullLogger.Instance);
+
+		await registry.DidNotReceive().UpsertPackageRemoteAsync(Arg.Any<PackageRemoteRecord>());
+		await registry.Received(1).UpsertInstalledPackageAsync(Arg.Is<InstalledPackageRecord>(p => p.SourceRepo == OfficialPackageRemote.Url));
 	}
 
 	/// <summary>The game's own official remote wins, so the update check finds it among the configured remotes.</summary>
@@ -61,6 +77,7 @@ public class BundledPackageHandOverTests
 			SourceRepo = mirror,
 			SourcePath = "games/left-pkg"
 		});
+		await registry.DidNotReceive().UpsertPackageRemoteAsync(Arg.Any<PackageRemoteRecord>());
 	}
 
 	/// <summary>
