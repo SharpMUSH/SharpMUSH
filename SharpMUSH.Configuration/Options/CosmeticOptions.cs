@@ -214,9 +214,10 @@ public record CosmeticOptions(
 		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address. When both this and portal_logo "
 			+ "are empty, the tab shows the SharpMUSH logo. Browsers keep a tab icon for a while, so a change "
 			+ "can take a reload to show.")]
-	string PortalFavicon,
-
-	[property: SharpConfig(
+	string PortalFavicon
+)
+{
+	[SharpConfig(
 		Name = "portal_banner",
 		Category = "Cosmetic",
 		Description = "Wide picture behind the game's name on the portal's Home, wiki and sign-in pages; empty for none",
@@ -227,9 +228,9 @@ public record CosmeticOptions(
 		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address. Shown about four times as wide as it is "
 			+ "tall and cropped to fit, so keep what matters near the middle. Link previews in Discord and other "
 			+ "sites show it too.")]
-	string PortalBanner,
+	public string PortalBanner { get; init; } = "";
 
-	[property: SharpConfig(
+	[SharpConfig(
 		Name = "portal_tagline",
 		Category = "Cosmetic",
 		Description = "One short line under the game's name on the portal and in link previews",
@@ -237,9 +238,9 @@ public record CosmeticOptions(
 		Group = "Portal",
 		Order = 4,
 		Tooltip = "At most 120 characters, such as: Gaslight intrigue in a city that never sleeps.")]
-	string PortalTagline,
+	public string PortalTagline { get; init; } = "";
 
-	[property: SharpConfig(
+	[SharpConfig(
 		Name = "portal_description",
 		Category = "Cosmetic",
 		Description = "Two or three sentences about the game for the portal's Home and sign-in pages and link previews",
@@ -248,8 +249,8 @@ public record CosmeticOptions(
 		Order = 5,
 		Tooltip = "At most 300 characters of plain text. While it is empty, link previews use "
 			+ "onboarding_introduction, the introduction written during setup.")]
-	string PortalDescription
-);
+	public string PortalDescription { get; init; } = "";
+}
 
 /// <summary>What <c>portal_logo</c> and <c>portal_favicon</c> hold, and what the portal shows when they are empty.</summary>
 public static class PortalPicture
