@@ -34,7 +34,8 @@ public static partial class RhostDatabaseTranslator
 	/// <summary>
 	/// The options RhostMUSH softcode needs. It writes literal parentheses unescaped (<c>paren_groups</c>),
 	/// tests <c>and()</c>, <c>or()</c> and <c>xor()</c> arguments by their leading integer (<c>mux_logic</c>), reads <c>trim()</c>, <c>edit()</c>, <c>lattr()</c>, <c>printf()</c>, <c>map()</c>, <c>list()</c>, <c>iter()</c>
-	/// and <c>lrooms()</c> as RhostMUSH defines them, lets only a SIDEFX object run side-effect functions (<c>sidefx_flag</c>), and
+	/// and <c>lrooms()</c> as RhostMUSH defines them, lets only a SIDEFX object run side-effect functions (<c>sidefx_flag</c>), lets NOEXAMINE and NOMODIFY protect
+	/// (<c>protection_flags</c>), and
 	/// reads RhostMUSH's names for functions and commands SharpMUSH has under its own (<c>dialect</c>).
 	/// </summary>
 	public static Dictionary<string, object> CompatibilityOptions() => new(StringComparer.OrdinalIgnoreCase)
@@ -49,6 +50,7 @@ public static partial class RhostDatabaseTranslator
 		["sidefx_flag"] = true,
 		["rhost_list"] = true,
 		["rhost_lrooms"] = true,
+		["protection_flags"] = true,
 		["dialect"] = SoftcodeDialects.Rhost.Key,
 		// RhostMUSH's mail command is mail (see the note Translate gives).
 		["command_aliases"] = new Dictionary<string, string[]> { ["@MAIL"] = ["mail"] }
@@ -136,9 +138,9 @@ public static partial class RhostDatabaseTranslator
 			"(SOFTCOM), which comes across with the objects that hold it; a game built with the hardcoded comsys keeps each " +
 			"player's channels in the CHANNELS attribute, which is imported as an attribute and not turned into channels.");
 		report.Line(ImportWarningKind.Softcode, $"Imported from a {ServerName} flatfile: the import turns on paren_groups, mux_logic, tiny_trim_fun, " +
-			"rhost_edit, rhost_lattr, rhost_printf, rhost_map_args, sidefx_flag, rhost_list and " +
-			"rhost_lrooms, so the imported softcode reads its parentheses, and(), or(), xor(), trim(), edit(), lattr(), " +
-			"printf(), map(), list() and lrooms() the RhostMUSH way and its SIDEFX flags count. " +
+			"rhost_edit, rhost_lattr, rhost_printf, rhost_map_args, sidefx_flag, rhost_list, " +
+			"rhost_lrooms and protection_flags, so the imported softcode reads its parentheses, and(), or(), xor(), trim(), edit(), lattr(), " +
+			"printf(), map(), list() and lrooms() the RhostMUSH way, its SIDEFX flags count and NOEXAMINE and NOMODIFY keep protecting. " +
 			"It sets dialect to rhost and gives every attribute it brings in the rhost attribute flag, so that code reads " +
 			$"{ServerName}'s names for functions and commands SharpMUSH has under its own, such as wildmatch() and @sudo.");
 		MapTotems(database, RhostNameTables.BuiltInTotems, report);
