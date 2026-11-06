@@ -93,7 +93,7 @@ internal sealed class AttributeEvaluator(
 
 	/// <summary>
 	/// PennMUSH's <c>call_ufun</c>: the attribute runs as the object it was read from, with the current
-	/// executor as caller.
+	/// executor as caller. <see cref="AttributeFunction.RunAs"/> runs it as another object instead.
 	/// </summary>
 	/// <remarks>
 	/// <paramref name="arguments"/> and <paramref name="environment"/> are the call's %0-%9 and its
@@ -104,12 +104,13 @@ internal sealed class AttributeEvaluator(
 		Dictionary<string, CallState>? arguments, Dictionary<string, CallState>? environment)
 	{
 		var (owner, attributeName, code, dialect) = function;
+		var runner = function.RunAs ?? owner;
 
 		// PennMUSH: a HALTED object runs none of its softcode. process_expression returns PE_NOTHING for a
 		// halted executor (src/parse.c), so the attribute yields its stored text unevaluated. The HALT flag is
-		// set by @halt and by @chown (to break ownership loops). The code runs as its owner, so the owner's
-		// flag is the one that matters.
-		if (await owner.HasFlag("HALT", ExecutionBudget.CurrentToken))
+		// set by @halt and by @chown (to break ownership loops). The flag that matters is the one on whoever
+		// the code runs as: its owner, or the caller of a TinyMUX-style @function.
+		if (await runner.HasFlag("HALT", ExecutionBudget.CurrentToken))
 		{
 			return new CallState(code);
 		}
@@ -141,7 +142,7 @@ internal sealed class AttributeEvaluator(
 		{
 			var ownerRef = owner.Object().DBRef;
 			var frame = parser.CurrentState.ForAttributeCall(arguments, environment,
-				new DBAttribute(ownerRef, attributeName) { Dialect = dialect }, attributeName, ownerRef);
+				new DBAttribute(ownerRef, attributeName) { Dialect = dialect }, attributeName, runner.Object().DBRef);
 			var result = await parser.Push(frame).FunctionParse(code);
 
 			return result ?? CallState.Empty;

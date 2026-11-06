@@ -44,6 +44,13 @@ public record UserDefinedFunction(
 	/// order, read as <c>%&lt;name&gt;</c>. Empty passes them by position only.
 	/// </summary>
 	public string[] ArgumentNames { get; init; } = [];
+
+	/// <summary>
+	/// Set with <c>@function/privileged</c>: the function runs as <see cref="Object"/>. Without it, a global
+	/// function runs as its caller while <c>mux_function_caller</c> is on; with that option off every global
+	/// function runs as <see cref="Object"/> and this changes nothing.
+	/// </summary>
+	public bool Privileged { get; init; }
 }
 
 /// <summary>

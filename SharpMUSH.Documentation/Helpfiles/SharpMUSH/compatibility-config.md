@@ -61,6 +61,11 @@
       "lookup": "compatibility config tinymux quiet switches mux quiet"
     },
     {
+      "id": "tinymux-function-caller-mux-function-caller",
+      "heading": "TinyMUX @function caller: `mux_function_caller`",
+      "lookup": "compatibility config tinymux function caller mux function caller"
+    },
+    {
       "id": "rhostmush-edit-modes-rhost-edit",
       "heading": "RhostMUSH edit() modes: `rhost_edit`",
       "lookup": "compatibility config rhostmush edit modes rhost edit"
@@ -286,6 +291,21 @@ With it on, `/quiet` does what TinyMUX's does:
 - `enter/quiet` leaves out the object's @enter and @oenter and the @oxleave of where you were; `leave/quiet` leaves out the object's @leave and @oleave and the @oxenter of where you go. Each holds only on an object you control, and the object's action attribute and your @move triad still run.
 - `give/quiet` is a wizard's switch, and leaves out only the default "You gave" and "gave you" notices.
 - `@teleport/quiet` leaves out the @tport triad, @oxtport, and the messages of leaving and arriving, but runs the @move triad.
+
+## TinyMUX @function caller: `mux_function_caller`
+
+Off by default; importing a TinyMUX database turns it on. With it off, a global `@function` runs as the object that holds its attribute, as on PennMUSH, and `/privileged` changes nothing. With it on, a function defined without `/privileged` runs as whoever calls it, with the caller's powers, as on TinyMUX; its attribute is still read from that object. One defined with `/privileged` runs as the object.
+
+```sharp mux_function_caller
+> @create MuxDocCaller
+> &MUXDOC_WHO MuxDocCaller=[type(%!)]
+> @function muxdoc_caller=MuxDocCaller/MUXDOC_WHO
+> think muxdoc_caller()
+PLAYER
+> @function/privileged muxdoc_caller=MuxDocCaller/MUXDOC_WHO
+> think muxdoc_caller()
+THING
+```
 
 ## RhostMUSH edit() modes: `rhost_edit`
 

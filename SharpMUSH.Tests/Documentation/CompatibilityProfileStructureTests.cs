@@ -48,6 +48,7 @@ public class CompatibilityProfileStructureTests
 		["Innermost loop tokens"] = "describes a setting for TinyMUX code; off, the default, matches PennMUSH",
 		["TinyMUX queue functions: `mux_queue_functions`"] = "a TinyMUX setting, off by default; PennMUSH has neither trigger() nor verb()",
 		["TinyMUX quiet switches: `mux_quiet`"] = "a TinyMUX setting, off by default; PennMUSH's commands have no /quiet",
+		["TinyMUX @function caller: `mux_function_caller`"] = "a TinyMUX setting, off by default; off, @function runs as PennMUSH's does",
 		["RhostMUSH edit() modes: `rhost_edit`"] = "a RhostMUSH option; off, edit() is PennMUSH's",
 		["RhostMUSH lattr() arguments: `rhost_lattr`"] = "a RhostMUSH option; off, lattr() is PennMUSH's",
 		["RhostMUSH map() arguments: `rhost_map_args`"] = "a RhostMUSH option; off, map() is PennMUSH's",
