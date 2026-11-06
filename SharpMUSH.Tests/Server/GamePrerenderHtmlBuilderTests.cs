@@ -129,7 +129,8 @@ public class GamePrerenderHtmlBuilderTests
 		await middleware.InvokeAsync(context);
 
 		context.Response.Body.Position = 0;
-		var html = await new StreamReader(context.Response.Body).ReadToEndAsync();
+		using var reader = new StreamReader(context.Response.Body);
+		var html = await reader.ReadToEndAsync();
 		await Assert.That(passedOn).IsFalse();
 		await Assert.That(html).Contains("<title>Gaslight &amp; Rain: Intrigue</title>");
 		cache.DidNotReceive().Set(Arg.Any<string>(), Arg.Any<string>());
