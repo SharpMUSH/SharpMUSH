@@ -1,15 +1,14 @@
 using Mediator;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Services;
 using System.Net;
 using System.Net.Http.Headers;
@@ -20,7 +19,7 @@ using System.Text.Json.Nodes;
 namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
-/// The bundled duties package, installed from the catalogue and driven with typed commands against a sheet
+/// The duties package, installed from the package library checkout and driven with typed commands against a sheet
 /// system written for the test: a player writes a duty and submits it, a duty reviewer returns and approves
 /// it and puts it on the roster, and a party plays it through challenges, rounds, rewards and its end. The
 /// test system's roll is set per character (FATE) or by the trait, so every outcome is known. Not in
@@ -72,21 +71,7 @@ public class DutiesIntegrationTests
 
 	private async Task ApplyAsync(string package)
 	{
-		var controller = new PackagesController(
-			Registry,
-			WebAppFactoryArg.Services.GetRequiredService<IPackageSourceService>(),
-			WebAppFactoryArg.Services.GetRequiredService<IPackageManifestService>(),
-			Installer,
-			WebAppFactoryArg.Services.GetRequiredService<IPackageAuthoringService>(),
-			WebAppFactoryArg.Services.GetRequiredService<IPackageOperationRunner>(),
-			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PackageManifestResolver>(),
-			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>(),
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IBundledPackageBootstrap>());
-		var applied = await controller.Apply(
-			new ApplyRequest(BundledPackages.RemoteName, package, null, null, null), CancellationToken.None);
-		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because($"{package} must install from the catalogue");
+		(await WebAppFactoryArg.Services.ApplyFromLibraryAsync(package)).Expect<PackageApplyResult>();
 		await WebAppFactoryArg.QueueBarrierAsync();
 	}
 
@@ -114,7 +99,14 @@ public class DutiesIntegrationTests
 		await God($"&PROVIDER`TEST {duties}={roller}");
 	}
 
-	private async Task UninstallAsync() => await WebAppFactoryArg.Services.UninstallWithBridgesAsync("duties");
+	/// <summary>Takes duties out with the bridges a test may have added over +help and +config, which the
+	/// packages page would offer to remove with it.</summary>
+	private async Task UninstallAsync()
+	{
+		await Installer.UninstallAsync("duties-help", force: true, CancellationToken.None);
+		await Installer.UninstallAsync("duties-config", force: true, CancellationToken.None);
+		await Installer.UninstallAsync("duties", force: true, CancellationToken.None);
+	}
 
 	private static string NewId() => "d" + Guid.NewGuid().ToString("N")[..10];
 
