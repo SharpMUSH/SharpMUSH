@@ -1,14 +1,14 @@
 .scene-detail-page {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
+	gap: var(--space-5);
 }
 
 .scene-detail-meta {
 	display: inline-flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 4px 8px;
+	gap: var(--space-2) var(--space-3);
 }
 
 .scene-detail-back {
@@ -19,14 +19,14 @@
 .scene-detail-grid {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) var(--aside-w);
-	gap: 14px;
+	gap: var(--space-5);
 	align-items: start;
 }
 
 .scene-detail-main {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: var(--space-4);
 	min-width: 0;
 }
 
@@ -34,7 +34,7 @@
 .scene-detail-filters {
 	display: flex;
 	align-items: flex-start;
-	gap: 12px;
+	gap: var(--space-4);
 	flex-wrap: wrap;
 }
 
@@ -56,7 +56,7 @@
 .scene-detail-about {
 	display: flex;
 	flex-direction: column;
-	gap: 14px;
+	gap: var(--space-5);
 }
 
 /* the fold is for a narrow page only */
@@ -67,16 +67,16 @@
 .scene-detail-log {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	padding: 12px 16px;
+	gap: var(--space-2);
+	padding: var(--space-4) var(--space-5);
 }
 
 .scene-detail-facts {
 	display: grid;
 	grid-template-columns: auto minmax(0, 1fr);
-	gap: 6px 10px;
+	gap: var(--space-3) var(--space-4);
 	margin: 0;
-	font-size: 12px;
+	font-size: var(--text-sm);
 }
 
 .scene-detail-facts dt {
@@ -95,8 +95,8 @@
 	padding: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
-	font-size: 13px;
+	gap: var(--space-3);
+	font-size: var(--text-sm);
 }
 
 /* narrow: the aside comes before the log, folded into one line that names the cast; the log keeps less of
@@ -114,15 +114,15 @@
 	.scene-detail-about-toggle {
 		display: flex;
 		align-items: center;
-		gap: 10px;
+		gap: var(--space-4);
 		width: 100%;
-		padding: 10px 14px;
+		padding: var(--space-4) var(--space-5);
 		border: 1px solid var(--border);
 		border-radius: var(--radius-card);
 		background: var(--surface);
 		color: var(--text);
 		font: inherit;
-		font-size: 13px;
+		font-size: var(--text-sm);
 		text-align: left;
 		cursor: pointer;
 	}
@@ -159,31 +159,31 @@
 	.scene-detail-cast {
 		flex-direction: row;
 		flex-wrap: wrap;
-		gap: 6px 14px;
+		gap: var(--space-3) var(--space-5);
 	}
 
 	.scene-detail-log {
-		padding: 8px 12px;
+		padding: var(--space-3) var(--space-4);
 	}
 }
 
 .scene-pause-form {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
-	padding: 12px 16px 16px;
+	gap: var(--space-3);
+	padding: var(--space-4) var(--space-5) var(--space-5);
 }
 
 .scene-pause-hint {
 	margin: 0;
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-faint);
 }
 
 .scene-pause-when {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 8px 16px;
+	gap: var(--space-3) var(--space-5);
 }
 
 .scene-pause-when ::deep .scene-pause-date,
@@ -193,7 +193,7 @@
 
 .scene-pause-buttons {
 	display: flex;
-	gap: 8px;
+	gap: var(--space-3);
 }
 
 .scene-detail-pitch {
@@ -206,8 +206,8 @@
 .scene-edit-form {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
-	padding: 12px 16px 16px;
+	gap: var(--space-3);
+	padding: var(--space-4) var(--space-5) var(--space-5);
 }
 
 .scene-edit-form ::deep .scene-edit-date,
@@ -218,11 +218,11 @@
 .scene-calendar {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: var(--space-3);
 	margin-top: 12px;
-	padding-top: 10px;
+	padding-top: var(--space-4);
 	border-top: 1px solid var(--border);
-	font-size: 12px;
+	font-size: var(--text-sm);
 }
 
 .scene-calendar-label {
@@ -232,7 +232,7 @@
 .scene-calendar a {
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
+	gap: var(--space-3);
 	color: var(--accent);
 	text-decoration: none;
 }
@@ -245,5 +245,5 @@
 .scene-detail-skeleton {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
+	gap: var(--space-5);
 }

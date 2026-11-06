@@ -31,7 +31,7 @@
             <button type="button" class="sc-console-argbtn sc-console-addarg" @onclick="Console.AddArgument"
                     title="@Loc["TermConsoleAddArgument", $"%{Console.Arguments.Count}"]"
                     aria-label="@Loc["TermConsoleAddArgument", $"%{Console.Arguments.Count}"]">
-                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" />
+                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:var(--text-base);" />
             </button>
         }
         @if (Console.Arguments.Count > 0)
@@ -39,7 +39,7 @@
             <button type="button" class="sc-console-argbtn sc-console-removearg" @onclick="Console.RemoveArgument"
                     title="@Loc["TermConsoleRemoveArgument", $"%{Console.Arguments.Count - 1}"]"
                     aria-label="@Loc["TermConsoleRemoveArgument", $"%{Console.Arguments.Count - 1}"]">
-                <MudIcon Icon="@Icons.Material.Filled.Remove" Style="font-size:0.875rem;" />
+                <MudIcon Icon="@Icons.Material.Filled.Remove" Style="font-size:var(--text-base);" />
             </button>
         }
     </div>
@@ -90,7 +90,7 @@
                aria-label="@Loc["TermConsoleInputPlaceholder"]" />
         <button type="button" class="sc-console-send" @onclick="EvaluateLineAsync"
                 disabled="@Evaluating" title="@Loc["TermConsoleEvaluate"]" aria-label="@Loc["TermConsoleEvaluate"]">
-            <MudIcon Icon="@Icons.Material.Filled.KeyboardReturn" Style="font-size:0.875rem;" />
+            <MudIcon Icon="@Icons.Material.Filled.KeyboardReturn" Style="font-size:var(--text-base);" />
         </button>
     </div>
 </section>

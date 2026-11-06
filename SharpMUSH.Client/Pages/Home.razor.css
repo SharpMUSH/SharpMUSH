@@ -1,7 +1,7 @@
 .home-page {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);
-	gap: 14px;
+	gap: var(--space-5);
 	align-items: start;
 	padding: var(--main-pad);
 }
@@ -14,7 +14,7 @@
 .home-aside {
 	display: flex;
 	flex-direction: column;
-	gap: 14px;
+	gap: var(--space-5);
 	min-width: 0;
 }
 

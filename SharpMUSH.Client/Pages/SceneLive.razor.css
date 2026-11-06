@@ -7,12 +7,12 @@
 
 /* The scene's name leads; the room, the state and the pose count sit above it as the kicker. */
 .scene-live-header {
-    padding: 14px var(--cpad);
+    padding: var(--space-5) var(--cpad);
     border-bottom: 1px solid var(--border);
     background: var(--surface);
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: var(--space-5);
     flex-shrink: 0;
 }
 
@@ -25,20 +25,20 @@
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 6px 8px;
-    font-size: 12px;
+    gap: var(--space-3) var(--space-3);
+    font-size: var(--text-sm);
     color: var(--text-dim);
 }
 
 .scene-live-room {
     display: inline-flex;
     align-items: center;
-    gap: 3px;
+    gap: var(--space-2);
 }
 
 .scene-live-title {
     margin: 4px 0 0;
-    font-size: 20px;
+    font-size: var(--text-lg);
     font-weight: 700;
     line-height: 1.25;
     color: var(--text);
@@ -52,11 +52,11 @@
 /* One line under the header for whichever connection is down; it does not push the story about. */
 .scene-live-banner {
     flex-shrink: 0;
-    padding: 8px var(--cpad);
+    padding: var(--space-3) var(--cpad);
     background: var(--warn-tint);
     border-bottom: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
     color: var(--text);
-    font-size: 13px;
+    font-size: var(--text-sm);
 }
 
 /* column-reverse anchors the story at its newest pose, so a pose that arrives is a pose in view. */
@@ -80,20 +80,20 @@
 }
 
 .scene-live-story {
-    padding: 16px var(--cpad) 24px;
+    padding: var(--space-5) var(--cpad) var(--space-6);
     font-family: var(--font-ui);
 }
 
 .scene-live-compose {
     flex-shrink: 0;
-    padding: 0 var(--cpad) 14px;
+    padding: 0 var(--cpad) var(--space-5);
 }
 
 .scene-live-card {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px 12px 10px;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-4) var(--space-4);
     border: 1px solid var(--border);
     border-radius: 16px;
     background: var(--surface-2);
@@ -114,13 +114,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: var(--space-3);
 }
 
 .scene-live-bar-end {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-3);
     min-width: 0;
 }
 
@@ -128,9 +128,9 @@
 .scene-live-saved {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--space-2);
     min-width: 0;
-    font-size: 12px;
+    font-size: var(--text-sm);
     color: var(--text-dim);
     white-space: nowrap;
 }
@@ -156,13 +156,13 @@
     min-height: calc(3lh + 4px);
     max-height: calc(8lh + 4px);
     field-sizing: content;
-    padding: 2px 2px;
+    padding: var(--space-1) var(--space-1);
     border: 0;
     background: transparent;
     color: var(--text);
     font: inherit;
     font-family: var(--font-ui);
-    font-size: 15px;
+    font-size: var(--text-base);
     line-height: 1.6;
     resize: none;
     outline: none;
@@ -196,32 +196,32 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 12px;
+    gap: var(--space-4);
 }
 
 /* Why the game did not record the last pose: what it told the character, which otherwise reaches only the terminal. */
 .scene-live-refusal {
-    font-size: 13px;
+    font-size: var(--text-sm);
     color: var(--warn);
 }
 
 .scene-live-hint {
-    font-size: 12px;
+    font-size: var(--text-sm);
     color: var(--text-dim);
 }
 
 .scene-live-send {
     height: 34px;
-    padding: 0 16px 0 12px;
+    padding: 0 var(--space-5) 0 var(--space-4);
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-3);
     border: 0;
     border-radius: 17px;
     background: var(--accent);
     color: var(--accent-on);
     font: inherit;
-    font-size: 13px;
+    font-size: var(--text-sm);
     font-weight: 700;
     cursor: pointer;
 }
@@ -243,11 +243,11 @@
     width: calc(100% - 2 * var(--cpad));
     max-width: 72rem;
     box-sizing: border-box;
-    padding: 12px 16px;
+    padding: var(--space-4) var(--space-5);
     border: 1px dashed var(--border);
     border-radius: 16px;
     color: var(--text-dim);
-    font-size: 14px;
+    font-size: var(--text-base);
     text-align: center;
 }
 
@@ -264,7 +264,7 @@
 
 .scene-live-page--keyboard .scene-live-title {
     margin: 0;
-    font-size: 15px;
+    font-size: var(--text-base);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -275,11 +275,11 @@
    mode and the format menu in a row, the field beside a round Send. */
 @container page (max-width: 48rem) {
     .scene-live-header {
-        padding: 10px 14px;
-        gap: 10px;
+        padding: var(--space-4) var(--space-5);
+        gap: var(--space-4);
     }
     .scene-live-title {
-        font-size: 17px;
+        font-size: var(--text-md);
     }
     .scene-live-archive-label,
     .scene-live-hint {
@@ -291,20 +291,20 @@
         justify-content: center;
     }
     .scene-live-banner {
-        padding: 8px 14px;
+        padding: var(--space-3) var(--space-5);
     }
     .scene-live-story {
-        padding: 8px 10px 12px;
+        padding: var(--space-3) var(--space-4) var(--space-4);
     }
 
     .scene-live-story ::deep .story-row--prose {
         display: grid;
         grid-template-columns: auto minmax(0, 1fr);
         align-items: center;
-        column-gap: 10px;
-        row-gap: 6px;
+        column-gap: var(--space-4);
+        row-gap: var(--space-3);
         margin: 8px 0;
-        padding: 12px 14px 14px;
+        padding: var(--space-4) var(--space-5) var(--space-5);
         border: 1px solid var(--border);
         border-radius: 16px;
         background: var(--surface);
@@ -332,7 +332,7 @@
     }
     .scene-live-story ::deep .kit-ooc {
         margin: 0;
-        padding: 12px 14px;
+        padding: var(--space-4) var(--space-5);
         border-radius: 16px;
     }
 
@@ -347,8 +347,8 @@
             "bar bar"
             "field send";
         align-items: end;
-        gap: 6px 8px;
-        padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+        gap: var(--space-3) var(--space-3);
+        padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
         border-width: 1px 0 0;
         border-radius: 18px 18px 0 0;
         background: var(--surface-2);
@@ -375,7 +375,7 @@
         border-radius: 50%;
     }
     .scene-live-send ::deep .mud-icon-root {
-        font-size: 20px;
+        font-size: var(--text-lg);
     }
     .scene-live-send-label,
     .scene-live-saved-label {
@@ -389,7 +389,7 @@
     .scene-live-compose ::deep .scene-live-input {
         min-height: calc(1lh + 20px);
         max-height: calc(6lh + 20px);
-        padding: 10px 12px;
+        padding: var(--space-4) var(--space-4);
         border-radius: 14px;
         background: var(--surface);
     }

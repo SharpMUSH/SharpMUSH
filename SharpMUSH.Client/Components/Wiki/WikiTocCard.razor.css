@@ -1,16 +1,16 @@
 .wiki-toc {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-1);
 }
 
 .wiki-toc a {
 	display: block;
-	padding: 5px 10px;
+	padding: var(--space-2) var(--space-4);
 	border-left: 2px solid transparent;
 	border-radius: 0 6px 6px 0;
 	color: var(--text-dim);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	text-decoration: none;
 }
 
@@ -33,17 +33,17 @@
 .wiki-lang-chips {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 6px;
-	padding: 0 4px;
+	gap: var(--space-3);
+	padding: 0 var(--space-2);
 }
 
 .wiki-lang-chip {
 	height: 26px;
-	padding: 0 10px;
+	padding: 0 var(--space-4);
 	border-radius: 13px;
 	background: var(--surface-2);
 	color: var(--text);
-	font-size: 12px;
+	font-size: var(--text-sm);
 	display: inline-flex;
 	align-items: center;
 	text-decoration: none;

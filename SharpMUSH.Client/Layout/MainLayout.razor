@@ -94,21 +94,21 @@
         <header class="phosphor-topbar">
             <button class="phosphor-icon-btn" @onclick="ToggleMobileNav" aria-expanded="@(_mobileNavOpen ? "true" : "false")"
                     aria-label="@Loc["NavToggleNavigation"]" title="@Loc["NavToggleNavigation"]">
-                <MudIcon Icon="@Icons.Material.Filled.Menu" Style="font-size:1.25rem;" />
+                <MudIcon Icon="@Icons.Material.Filled.Menu" Style="font-size:var(--text-lg);" />
             </button>
             <button class="phosphor-icon-btn phosphor-pagebar-btn" @onclick="TogglePagebar" aria-expanded="@(_pagebarOpen ? "true" : "false")"
                     aria-label="@Loc["NavSectionMenu"]" title="@Loc["NavSectionMenu"]">
-                <MudIcon Icon="@Icons.Material.Outlined.ViewSidebar" Style="font-size:1.25rem;" />
+                <MudIcon Icon="@Icons.Material.Outlined.ViewSidebar" Style="font-size:var(--text-lg);" />
             </button>
             <div style="flex:1;"></div>
             <button class="phosphor-icon-btn" @onclick="OpenPalette" aria-haspopup="dialog" aria-label="@Loc["NavSearchOpen"]" title="@Loc["NavSearchOpen"]">
-                <MudIcon Icon="@Icons.Material.Outlined.Search" Style="font-size:1.25rem;" />
+                <MudIcon Icon="@Icons.Material.Outlined.Search" Style="font-size:var(--text-lg);" />
             </button>
             <span class="phosphor-lang"><LanguagePicker /></span>
             <button class="@($"phosphor-icon-btn{(_terminalOpen ? " phosphor-icon-btn--active" : "")}")"
                     @onclick="ToggleTerminal" aria-pressed="@(_terminalOpen ? "true" : "false")"
                     aria-label="@Loc["NavCommandTerminal"]" title="@Loc["NavCommandTerminal"]">
-                <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:1.125rem;" />
+                <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:var(--text-md);" />
             </button>
         </header>
 
@@ -139,14 +139,14 @@
         @* Always mounted so the command terminal auto-logs in on load; hidden until opened. *@
         <div class="phosphor-terminal" role="region" aria-label="@Loc["NavCommandTerminal"]" style="@(_terminalOpen ? null : "display:none;")">
             <div class="phosphor-terminal-header">
-                <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:0.9375rem;color:var(--accent);margin-right:0.5625rem;" />
-                <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--accent);letter-spacing:0.05em;">@Loc["NavCommandTerminal"]</span>
-                <span style="font-family:var(--font-mono);font-size:0.6875rem;color:var(--text-faint);margin-left:0.5rem;">
+                <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:var(--text-base);color:var(--accent);margin-right:0.5625rem;" />
+                <span style="font-family:var(--font-mono);font-size:var(--text-sm);color:var(--accent);letter-spacing:0.05em;">@Loc["NavCommandTerminal"]</span>
+                <span style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--text-faint);margin-left:0.5rem;">
                     · @(Terminal.IsConnected ? Loc["Connected"] : Loc["Disconnected"])
                 </span>
                 <div style="flex:1;"></div>
                 <button type="button" class="phosphor-icon-btn" @onclick="ToggleTerminal" title="@Loc["NavCloseTerminal"]" aria-label="@Loc["NavCloseTerminal"]">
-                    <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:1.125rem;" />
+                    <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:var(--text-md);" />
                 </button>
             </div>
             <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">

@@ -1,7 +1,7 @@
 .kit-tile {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--space-2);
 	width: 100%;
 	min-width: 0;
 	padding: 0;
@@ -9,7 +9,7 @@
 	background: transparent;
 	color: var(--text);
 	font: inherit;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	text-align: left;
 	text-decoration: none;
 	cursor: pointer;
@@ -51,14 +51,14 @@
 	left: 6px;
 	right: 6px;
 	display: flex;
-	gap: 6px;
+	gap: var(--space-3);
 	pointer-events: none;
 }
 
 .kit-tile-row {
 	display: flex;
 	align-items: baseline;
-	gap: 6px;
+	gap: var(--space-3);
 }
 
 .kit-tile-label {
@@ -70,12 +70,12 @@
 }
 
 .kit-tile-count {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .kit-tile-sub {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 	white-space: nowrap;
 	overflow: hidden;
@@ -86,7 +86,7 @@
 	box-sizing: border-box;
 	min-height: 44px;
 	justify-content: center;
-	padding: 8px 0;
+	padding: var(--space-3) 0;
 }
 
 .kit-tile--text-only .kit-tile-label,

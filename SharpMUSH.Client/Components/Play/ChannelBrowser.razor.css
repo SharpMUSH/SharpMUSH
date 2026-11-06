@@ -1,15 +1,15 @@
 .chan-browse {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
-	padding: 2px 0 6px;
+	gap: var(--space-1);
+	padding: var(--space-1) 0 var(--space-3);
 }
 
 .chan-browse-row {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	padding: 6px 10px;
+	gap: var(--space-3);
+	padding: var(--space-3) var(--space-4);
 	border-radius: 8px;
 }
 
@@ -26,7 +26,7 @@
 
 .chan-browse-name {
 	font-family: var(--font-mono);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -40,7 +40,7 @@
 
 .chan-browse-desc,
 .chan-browse-count {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-faint);
 	overflow: hidden;
 	text-overflow: ellipsis;

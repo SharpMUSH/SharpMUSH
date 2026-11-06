@@ -2,7 +2,7 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 12px;
+	gap: var(--space-4);
 }
 
 .adm-activity-controls ::deep .adm-activity-select {
@@ -13,33 +13,33 @@
 .adm-activity-note {
 	margin: 0;
 	font-family: var(--font-mono);
-	font-size: 11px;
+	font-size: var(--text-xs);
 	color: var(--text-faint);
 }
 
 .adm-activity-note {
-	padding: 8px 16px 12px;
+	padding: var(--space-3) var(--space-5) var(--space-4);
 }
 
 /* The heatmap: 7 rows of 24 cells, one hue from the card's surface to the accent. The cells shrink with
    the card; nothing scrolls sideways on a phone. */
 .adm-activity-heat {
 	display: grid;
-	gap: 2px;
-	padding: 14px 16px 6px;
+	gap: var(--space-1);
+	padding: var(--space-5) var(--space-5) var(--space-3);
 }
 
 .adm-activity-heat-row {
 	display: grid;
 	grid-template-columns: 2.6rem repeat(24, minmax(0, 1fr));
-	gap: 2px;
+	gap: var(--space-1);
 	align-items: center;
 }
 
 .adm-activity-heat-day,
 .adm-activity-heat-hour {
 	font-family: var(--font-mono);
-	font-size: 10px;
+	font-size: var(--text-xs);
 	color: var(--text-faint);
 	white-space: nowrap;
 }
@@ -56,10 +56,10 @@
 .adm-activity-legend {
 	display: flex;
 	align-items: center;
-	gap: 4px;
-	padding: 4px 16px 14px;
+	gap: var(--space-2);
+	padding: var(--space-2) var(--space-5) var(--space-5);
 	font-family: var(--font-mono);
-	font-size: 10px;
+	font-size: var(--text-xs);
 	color: var(--text-faint);
 }
 
@@ -70,7 +70,7 @@
 .adm-activity-pair {
 	display: grid;
 	grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-	gap: 16px;
+	gap: var(--space-5);
 	align-items: start;
 }
 
@@ -93,7 +93,7 @@
 .adm-activity-mono,
 ::deep .adm-activity-mono {
 	font-family: var(--font-mono);
-	font-size: 12px;
+	font-size: var(--text-sm);
 }
 
 .adm-activity-dim,
@@ -110,14 +110,14 @@
 .adm-activity-dead {
 	list-style: none;
 	margin: 0;
-	padding: 8px 16px 12px;
+	padding: var(--space-3) var(--space-5) var(--space-4);
 	display: grid;
-	gap: 6px;
+	gap: var(--space-3);
 }
 
 .adm-activity-dead li {
 	display: flex;
 	justify-content: space-between;
-	gap: 12px;
-	font-size: 13px;
+	gap: var(--space-4);
+	font-size: var(--text-sm);
 }

@@ -1,32 +1,32 @@
 .schema-view {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: var(--space-4);
 	min-width: 0;
 }
 
 /* a main card leaves its body's padding to the content; a schema section's fields sit 16px in */
 .schema-view ::deep .schema-section .kit-card-body {
-	padding: 14px 16px 16px;
+	padding: var(--space-5) var(--space-5) var(--space-5);
 }
 
 .schema-title {
 	margin: 0;
-	font-size: 20px;
+	font-size: var(--text-lg);
 	font-weight: 700;
 	color: var(--text);
 }
 
 .schema-page-title {
 	margin: 4px 0 0;
-	font-size: 15px;
+	font-size: var(--text-base);
 	font-weight: 700;
 	color: var(--text);
 }
 
 .schema-grid {
 	display: grid;
-	gap: 14px 18px;
+	gap: var(--space-5) var(--space-5);
 	min-width: 0;
 }
 
@@ -52,23 +52,23 @@
 .schema-button-row {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 8px;
+	gap: var(--space-3);
 }
 
 .schema-field {
 	display: flex;
 	flex-direction: column;
-	gap: 3px;
+	gap: var(--space-2);
 	min-width: 0;
 }
 
 .schema-label {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .schema-value {
-	font-size: 14px;
+	font-size: var(--text-base);
 	color: var(--text);
 	overflow-wrap: anywhere;
 }

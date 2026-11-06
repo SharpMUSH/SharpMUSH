@@ -9,7 +9,7 @@
 
 .app-kicker {
     font-family: var(--font-mono);
-    font-size: 0.6875rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--accent);
@@ -19,7 +19,7 @@
 .app-title {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 1.625rem;
+    font-size: var(--text-xl);
     font-weight: 600;
     color: var(--text);
     line-height: 1.15;
@@ -31,18 +31,18 @@
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
-    padding: 1.375rem 1.625rem;
+    padding: var(--space-6) var(--space-6);
 }
 
 .app-loading {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: var(--space-4);
 }
 
 .app-loading-text {
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: var(--text-sm);
     letter-spacing: 0.06em;
     color: var(--text-dim);
 }
@@ -53,20 +53,20 @@
     border-left: 3px solid var(--border);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
-    padding: 1rem 1.25rem;
+    padding: var(--space-5) var(--space-6);
     color: var(--text);
     font-family: var(--font-ui);
-    font-size: 0.875rem;
+    font-size: var(--text-base);
     line-height: 1.5;
 }
 
 .app-alert code {
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: var(--text-sm);
     background: var(--surface-2);
     border: 1px solid var(--border-soft);
     border-radius: 4px;
-    padding: 0.0625rem 0.3125rem;
+    padding: var(--space-1) var(--space-2);
     color: var(--text);
 }
 
@@ -95,7 +95,7 @@
     }
 
     .app-title {
-        font-size: 1.375rem;
+        font-size: var(--text-xl);
     }
 
     .app-card {
@@ -103,6 +103,6 @@
     }
 
     .app-alert {
-        padding: 0.875rem var(--cpad-mobile);
+        padding: var(--space-5) var(--cpad-mobile);
     }
 }

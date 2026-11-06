@@ -1,13 +1,13 @@
 .wiki-cat {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
+	gap: var(--space-5);
 }
 
 .wiki-cat-grid {
 	display: grid;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: 14px;
+	gap: var(--space-5);
 }
 
 @container page (max-width: 64rem) {
@@ -25,7 +25,7 @@
 
 .wiki-cat-range { margin: 0; }
 .wiki-cat-range:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-.wiki-cat-paging { display: flex; flex-wrap: wrap; gap: .6rem; }
-.wiki-cat button { min-height: 44px; padding: .55rem .8rem; border: 1px solid var(--border); border-radius: var(--radius-row); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+.wiki-cat-paging { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.wiki-cat button { min-height: 44px; padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-row); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
 .wiki-cat button:disabled { opacity: .5; cursor: default; }
 .wiki-cat button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

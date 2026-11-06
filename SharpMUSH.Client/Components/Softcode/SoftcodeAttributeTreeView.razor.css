@@ -3,7 +3,7 @@
     width: 100%;
     text-align: left;
     display: block;
-    padding: 0.3125rem 0.5rem;
+    padding: var(--space-2) var(--space-3);
     border-radius: var(--radius);
     cursor: pointer;
     border: none;
@@ -21,13 +21,13 @@
 .sc-attr-row1 {
     display: flex;
     align-items: center;
-    gap: 0.4375rem;
+    gap: var(--space-3);
 }
 .sc-attr-name {
     flex: 1;
     min-width: 0;
     font-family: var(--font-mono);
-    font-size: 0.78125rem;
+    font-size: var(--text-sm);
     font-weight: 500;
     color: var(--text-dim);
     white-space: nowrap;
@@ -45,7 +45,7 @@
     --sc-indent: 0.75rem;
     display: flex;
     align-items: center;
-    gap: 0.125rem;
+    gap: var(--space-1);
     padding-left: calc(var(--sc-depth, 0) * var(--sc-indent));
 }
 /* A faint guide marks the branch a nested row belongs to. */
@@ -91,12 +91,12 @@
 }
 .sc-tree-count {
     flex-shrink: 0;
-    padding: 0 0.3125rem;
+    padding: 0 var(--space-2);
     border-radius: 999px;
     background: var(--surface-2);
     color: var(--text-faint);
     font-family: var(--font-mono);
-    font-size: 0.625rem;
+    font-size: var(--text-xs);
     line-height: 1rem;
 }
 .sc-attr-item--bare:disabled {

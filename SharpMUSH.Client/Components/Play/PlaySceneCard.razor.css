@@ -56,8 +56,8 @@
 	container-type: inline-size;
 	display: flex;
 	align-items: center;
-	gap: 12px;
-	padding: 10px 12px 10px 16px;
+	gap: var(--space-4);
+	padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5);
 	border-bottom: 1px solid var(--border);
 	flex-shrink: 0;
 }
@@ -107,7 +107,7 @@
 
 .scene-card-title {
 	margin: 0;
-	font-size: 15px;
+	font-size: var(--text-base);
 	font-weight: 700;
 	white-space: nowrap;
 	overflow: hidden;
@@ -115,7 +115,7 @@
 }
 
 .scene-card-sub {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 	white-space: nowrap;
 	overflow: hidden;
@@ -124,8 +124,8 @@
 
 .scene-card-switch {
 	display: flex;
-	padding: 3px;
-	gap: 2px;
+	padding: var(--space-2);
+	gap: var(--space-1);
 	border-radius: 20px;
 	background: var(--surface-3);
 	flex-shrink: 0;
@@ -198,13 +198,13 @@
 .scene-card-sub--action {
 	display: flex;
 	align-items: center;
-	gap: 2px;
+	gap: var(--space-1);
 	max-width: 100%;
 	padding: 0;
 	border: 0;
 	background: transparent;
 	font: inherit;
-	font-size: 12px;
+	font-size: var(--text-sm);
 	text-align: left;
 	cursor: pointer;
 }
@@ -240,7 +240,7 @@
 
 .scene-card-foot {
 	flex-shrink: 0;
-	padding: 0 12px 12px;
+	padding: 0 var(--space-4) var(--space-4);
 }
 
 /* Narrow: the header wraps rather than squeeze the title to nothing on a 320–360px phone. The name stays
@@ -248,10 +248,10 @@
 @container page (max-width: 48rem) {
 	.scene-card-head {
 		flex-wrap: wrap;
-		gap: 8px;
-		row-gap: 8px;
-		padding-top: 6px;
-		padding-bottom: 6px;
+		gap: var(--space-3);
+		row-gap: var(--space-3);
+		padding-top: var(--space-3);
+		padding-bottom: var(--space-3);
 	}
 
 	/* The two-icon pair costs 80px of a row that the name and the room need; one toggle costs 36. */

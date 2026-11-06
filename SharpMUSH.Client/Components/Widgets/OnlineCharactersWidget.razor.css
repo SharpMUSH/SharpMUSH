@@ -6,7 +6,7 @@
 .online-characters-rows {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-1);
 	margin: 0 -4px;
 }
 
@@ -24,7 +24,7 @@
 .online-characters-all {
 	display: inline-block;
 	margin-top: 8px;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	color: var(--accent);
 	text-decoration: none;
@@ -37,13 +37,13 @@
 
 /* in a page's main column: the main card's body is padded here, the rows run across it */
 .online-characters-widget--main ::deep .kit-card-body {
-	padding: 8px 12px 12px;
+	padding: var(--space-3) var(--space-4) var(--space-4);
 }
 
 .online-characters-rows--main {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr));
-	gap: 2px 12px;
+	gap: var(--space-1) var(--space-4);
 	margin: 0;
 }
 

@@ -1,19 +1,19 @@
 .wiki-facts {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-3);
     margin-top: 12px;
 }
 .wiki-facts-label {
     color: var(--text-faint);
-    font-size: 12px;
+    font-size: var(--text-sm);
 }
 .wiki-facts-list {
     display: grid;
     grid-template-columns: max-content 1fr;
-    gap: 4px 16px;
+    gap: var(--space-2) var(--space-5);
     margin: 0;
-    font-size: 13px;
+    font-size: var(--text-sm);
 }
 .wiki-facts-list dt {
     color: var(--text-dim);
