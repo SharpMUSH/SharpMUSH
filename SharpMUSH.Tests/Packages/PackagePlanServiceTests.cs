@@ -516,7 +516,7 @@ public class PackagePlanServiceTests
 
 	#region Attribute deletions (attr removed from new version)
 
-	private PackageChangeset DroppedAttrChangeset(string? liveValue)
+	private PackageChangeset DroppedAttrChangeset(string? liveValue, IReadOnlyList<ManagedAttributeRecord>? otherManaged = null)
 	{
 		// New version no longer carries FN_GONE.
 		var manifest = Parse(SimpleManifest);
@@ -538,7 +538,7 @@ public class PackagePlanServiceTests
 			["#10:1"] = LiveObject("#10:1", "Thing A", liveAttrs.ToArray())
 		});
 
-		return _service.ComputeChangeset(Inputs(manifest, installed, installedObjects, baselines, live: live));
+		return _service.ComputeChangeset(Inputs(manifest, installed, installedObjects, baselines, otherManaged: otherManaged, live: live));
 	}
 
 	[Test]
@@ -555,6 +555,15 @@ public class PackagePlanServiceTests
 		await Assert.That(attr.Action).IsEqualTo(PackageAttributeAction.Conflict);
 		await Assert.That(attr.Conflict).IsEqualTo(PackageConflictKind.ModifyDelete);
 		await Assert.That(attr.LiveValue).IsEqualTo("customized");
+	}
+
+	[Test]
+	public async Task Dropped_ManagedByAnotherPackage_KeepsTheAttribute()
+	{
+		var attr = DroppedAttrChangeset("base-gone",
+				[new ManagedAttributeRecord("other", "#10:1", "FN_GONE", "base-gone", "h3", "1.0.0")])
+			.Attributes.Single(a => a.Attribute == "FN_GONE");
+		await Assert.That(attr.Action).IsEqualTo(PackageAttributeAction.RemoveBaseline);
 	}
 
 	[Test]

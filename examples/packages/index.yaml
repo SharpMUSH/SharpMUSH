@@ -147,8 +147,8 @@ packages:
   - path: scene-safety/
     name: Scene safety
     package: scene-safety
-    version: 1.4.0
-    description: Lines and veils on the account, a scene owner's anonymous count of where they touch its content warnings, and +safety/pause and /skip for the owner alone (requires scene)
+    version: 1.5.0
+    description: A content warning on scenes, told to whoever joins; lines and veils on the account, a scene owner's anonymous count of where they touch its content warnings, and +safety/pause and /skip for the owner alone (requires scene)
   - path: scene-safety-help/
     name: Scene safety tools help
     package: scene-safety-help

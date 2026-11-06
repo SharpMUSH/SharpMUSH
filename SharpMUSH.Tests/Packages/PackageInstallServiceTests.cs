@@ -289,6 +289,32 @@ public class PackageInstallServiceTests
 		await Assert.That(await ReadAttributeAsync(host, "PM`REFS`SHARED")).IsEqualTo("");
 	}
 
+	/// <summary>An attribute two packages manage stays when the first is uninstalled, and goes with the second.</summary>
+	[Test, NotInParallel]
+	public async Task Uninstall_KeepsAnAttributeAnotherPackageStillManages()
+	{
+		PackageManifest Sharer(string name) => Parse($$$"""
+			package: {{{name}}}
+			version: "1.0"
+			objects:
+			  - ref: shared
+			    target: "{{$room_zero}}"
+			    attributes:
+			      SHARED_DETAIL: "same value"
+			""");
+		var first = Sharer("shared-uninstall-a");
+		var second = Sharer("shared-uninstall-b");
+		var answers = new Dictionary<string, string>();
+		await Assert.That((await ApplyAsync(first, answers)).Value).IsTypeOf<PackageApplyResult>();
+		await Assert.That((await ApplyAsync(second, answers)).Value).IsTypeOf<PackageApplyResult>()
+			.Because("the second package adopts the value the first wrote");
+		var host = await ObjidAsync(0);
+		await Assert.That((await Installer.UninstallAsync(first.Name)).Value).IsTypeOf<Success>();
+		await Assert.That(await ReadAttributeAsync(host, "SHARED_DETAIL")).IsEqualTo("same value");
+		await Assert.That((await Installer.UninstallAsync(second.Name)).Value).IsTypeOf<Success>();
+		await Assert.That(await ReadAttributeAsync(host, "SHARED_DETAIL")).IsEqualTo("");
+	}
+
 	[Test, NotInParallel]
 	[Arguments(false)]
 	[Arguments(true)]

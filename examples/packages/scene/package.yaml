@@ -385,8 +385,7 @@ objects:
       # A scene's details say what it is about beyond its title and pitch: the verse it is set in, the canon it
       # draws on, a content warning, or anything else its owner names. Each is one key of the scene's metadata,
       # which @scene/set writes and scene() reads, so softcode reads a scene's verse as scene(<id>,verse). The game
-      # may list some, one attribute per detail; this package lists none, and scene-verse adds verse, canon and
-      # warning:
+      # may list some, one attribute per detail; this package lists none, and scene-safety adds warning:
       #   DETAIL`<KEY>  JSON the Scene plugin reads: label (its name for people), hint (one line on what goes in
       #                 it), choices (the values it allows; none means any text), many (true when a scene may give
       #                 several, split by |), listed (shown beside the title in +scene lists and on the portal's
@@ -1612,8 +1611,8 @@ objects:
         `+scene/set canon=Marvel|X-Men`. Only the scene's owner, or staff, can set its details.
 
         A game can list the details it uses, with a name and a hint for each, and some only take certain
-        values; `+scene/details` says which. The `scene-verse` package lists a verse, a canon and a content
-        warning; see `+help scene verse` when it is installed.
+        values; `+scene/details` says which. The `scene-safety` package lists a content warning; see
+        `+help scene warning` when it is installed.
 
         ## Finding scenes by detail
 

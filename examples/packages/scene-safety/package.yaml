@@ -1,9 +1,9 @@
 format: "1.16"
 package: scene-safety
 title: "Scene safety tools"
-version: 1.4.0
+version: 1.5.0
 authors: [SharpMUSH]
-description: "Scene safety: lines and veils kept on your account, never shown to anyone, a scene owner's anonymous count of where they touch the scene's content warnings, and +safety/pause or /skip, which reaches only the scene's owner."
+description: "Scene safety: a content warning detail on scenes, told to whoever joins; lines and veils kept on your account, never shown to anyone, a scene owner's anonymous count of where they touch the scene's content warnings, and +safety/pause or /skip, which reaches only the scene's owner."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [scene, safety, consent, content-warning, rp]
@@ -14,8 +14,8 @@ requires_server: ">=0.1"
 # while the plugin runs.
 plugins: [scene]
 
-# The scene package draws the +scene card and the join message, where the summary and a joining player's own
-# warning are added. scene-safety-help and scene-safety-config put the topics into +help and the settings into +config.
+# The scene package draws the +scene card and the join message, where the content warning, the summary and a
+# joining player's own warning are added. scene-safety-help and scene-safety-config put the topics into +help and the settings into +config.
 depends:
   - package: scene
     version: ">=1.7"
@@ -73,7 +73,7 @@ objects:
       DATA`CONFIG`WARNING-DETAIL`PATTERN: |-
         ^[a-z][a-z0-9_-]*$
       DATA`CONFIG`WARNING-DETAIL`DESCRIPTION: |-
-        The scene detail that holds a scene's content warnings, split by |. scene-verse names it warning.
+        The scene detail that holds a scene's content warnings, split by |. This package lists it as warning.
       DATA`CONFIG`WARNING-DETAIL`LABEL: |-
         Warning detail
       DATA`CONFIG`WARNING-DETAIL`EXAMPLE: |-
@@ -319,11 +319,16 @@ objects:
         value: |-
           if(strlen(setr(card_summary,u(%!/FUN`SCENE`SUMMARY,%0))),%r%q<card_summary>)
         flags: [funsyntax]
-      # A filter on joining (scene's JOIN point): %0 the join message, %1 the scene, %2 the player. A player whose
-      # own lines or veils touch the scene's warnings is told which, and how to signal.
+      # A filter on joining (scene's JOIN point): %0 the join message, %1 the scene, %2 the player. The player is
+      # told the scene's content warnings, then which of them touch their own lines or veils, and how to signal.
       FUN`FILTER`JOIN:
         value: |-
-          %0[ulocal(%!/FUN`JOIN`WARN,%1,%2)]
+          %0[ulocal(%!/FUN`JOIN`CONTENT,%1)][ulocal(%!/FUN`JOIN`WARN,%1,%2)]
+        flags: [funsyntax]
+      # %0 a scene: its content warnings on a line of their own, as the Scene Logger shows the detail, or nothing.
+      FUN`JOIN`CONTENT:
+        value: |-
+          setq(join_detail,v(DATA`CONFIG`WARNING-DETAIL))[if(strlen(scene(%0,%q<join_detail>)),%r[notice(SCENE,Content warning: [u({{scene/logger}}/FUN`DETAIL`SHOW,%0,%q<join_detail>)])])]
         flags: [funsyntax]
       # %0 a scene, %1 the player joining it: the warning they are told on a line of its own, or nothing.
       FUN`JOIN`WARN:
@@ -483,15 +488,41 @@ objects:
       SIGNAL: |-
         When each character last sent a pause or skip, in seconds, one leaf per character.
 
-  # The owner's summary on the +scene card, and a joining player's own warning (+help scene filters). They run as
-  # the Scene Logger, which may call the Scene Safety object's functions.
+  # The content warning detail, the owner's summary on the +scene card, and what a joining player is told: the
+  # content warning, and their own lines and veils it touches (+help scene filters). They run as the Scene Logger, which may call the Scene Safety object's functions.
   - ref: scene_filters
     target: "{{scene/logger}}"
     attributes:
+      # The detail, read by the Scene plugin (+help scene details): it follows a scene's title in +scene lists and
+      # shows on the portal's scene cards, before the other details and in the warning colour. It takes several
+      # values, split by |.
+      DETAIL`WARNING: |-
+        {"label":"Content warning","hint":"What a reader may want to know before joining, such as violence. Split several with |.","many":true,"listed":true,"tone":"warning","order":5}
       FILTER`CARD`SAFETY: |-
         u({{safety}}/FUN`FILTER`CARD,%0,%1)
       FILTER`JOIN`SAFETY: |-
         u({{safety}}/FUN`FILTER`JOIN,%0,%1,%2)
+
+  # +help scene warning, a subtopic of +help scene. Bodies are evaluated, so brackets, parentheses and percent
+  # signs are escaped.
+  - ref: warning_help
+    target: "{{scene/scene_help}}"
+    attributes:
+      SEE`SCENE`WARNING: |-
+        scene details|scene join
+      HELP`SCENE`WARNING: |-
+        A scene's **content warning** says what a reader may want to know before joining, such as violence.
+
+        - `+scene/set warning=<warning>|<warning>` — its content warnings, split by `|`
+        - `+scene/list warning=<warning>` — the scenes running now with one; `+scene/old warning=<warning>` the finished ones
+
+        For example:
+
+        `+scene/set warning=Violence`
+
+        Output: `\[SCENE\] Done: Scene 1: Content warning is now Violence.`
+
+        The content warning follows the scene's title in `+scene`, first and in the warning colour, and shows on its card and at the top of its log. Whoever joins the scene is told it as they join. See `+help scene details` for the rest.
 
   # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies are
   # evaluated, so brackets, parentheses and percent signs are escaped.
@@ -540,14 +571,14 @@ objects:
 
         - `+safety/scene \[<id>\]` shows the owner of a scene, for each content warning, how many of the other players have a line or veil touching it. The same count appears on the scene's `+scene` card, for its owner only.
 
-        A line or veil touches a warning when either contains the other as whole words: a line of `Spiders` touches the warning `Spiders and snakes`. The warnings are the scene's `warning` detail \(`+help scene verse`\).
+        A line or veil touches a warning when either contains the other as whole words: a line of `Spiders` touches the warning `Spiders and snakes`. The warnings are the scene's `warning` detail \(`+help scene warning`\).
       LOCK`SAFETY`STAFF: |-
         perm^config.admin
       HELP`SAFETY`STAFF: |-
         Staff who change the game's configuration set these with `+config safety`:
 
         - `topics`: the topics `+safety/topics` suggests, split by `|`. `+config/add safety/topics=Clowns` adds one.
-        - `warning-detail`: the scene detail holding content warnings. `warning`, which scene-verse adds.
+        - `warning-detail`: the scene detail holding content warnings. `warning`, which this package adds.
         - `topic-length`: the longest line or veil. 40.
         - `note-length`: the longest note on a pause or skip. 200; 0 allows none.
         - `signal-wait`: how long a player waits between signals. 60 seconds.

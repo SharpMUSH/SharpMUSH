@@ -164,8 +164,9 @@ public partial class PackageInstallService
 		foreach (var group in (await registry.GetManagedAttributesAsync(packageId))
 			.Where(m => !ownObjids.Contains(m.Objid)).GroupBy(m => m.Objid))
 		{
-			var otherRefs = (await registry.GetManagedAttributesForObjectAsync(group.Key))
-				.Where(a => a.PackageId != packageId && PackageRefIndirection.IsRefAttribute(a.Attribute))
+			// An attribute another package also manages stays: it is still that package's.
+			var otherManaged = (await registry.GetManagedAttributesForObjectAsync(group.Key))
+				.Where(a => a.PackageId != packageId)
 				.Select(a => a.Attribute).ToHashSet(StringComparer.OrdinalIgnoreCase);
 			if (HelperFunctions.ParseDbRef(group.Key) is not DBRef dbref)
 			{
@@ -174,7 +175,7 @@ public partial class PackageInstallService
 
 			// Leaves first: clearing a branch that still has a leaf only empties it, so a branch cleared before its
 			// leaves would stay behind, empty, and conflict with the next install that attaches it.
-			foreach (var managed in group.Where(a => !otherRefs.Contains(a.Attribute))
+			foreach (var managed in group.Where(a => !otherManaged.Contains(a.Attribute))
 				.OrderByDescending(a => a.Attribute.Count(c => c == '`')))
 			{
 				await writes.ClearAttributeAsync(dbref, managed.Attribute.Split('`'), cancellationToken);
