@@ -336,6 +336,25 @@ public class ConfiguredAliasImportTests
 		await Assert.That(resolved.FunctionRestrictions["matchall"]).IsEquivalentTo(new[] { "wizard", "nobody" });
 	}
 
+	/// <summary>When the first of two restrictions that add up carries a refusal message, the second's words go before it.</summary>
+	[Test]
+	public async Task AddingUpKeepsTheRefusalMessageLast()
+	{
+		var import = Import() with
+		{
+			Options = SharpMUSHOptions.Default() with
+			{
+				Restriction = new RestrictionOptions(new Dictionary<string, string[]>(),
+					new Dictionary<string, string[]> { ["totmatch"] = ["wizard \"Staff only"], ["totwildmatch"] = ["nobody"] })
+			}
+		};
+
+		var resolved = Aliases.Resolve(import, ConfigurationDialect.RhostMUSH);
+
+		await Assert.That(resolved.FunctionRestrictions["matchall"]).IsEquivalentTo(new[] { "wizard", "nobody", "\"Staff only" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
 	private static AliasDirective Command(string alias, string target) => new(AliasKind.Command, alias, target, $"alias {alias} {target}");
 
 	private static AliasDirective Function(string alias, string target) => new(AliasKind.Function, alias, target, $"function_alias {alias} {target}");

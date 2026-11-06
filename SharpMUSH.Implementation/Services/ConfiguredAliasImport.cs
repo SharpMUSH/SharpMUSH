@@ -239,10 +239,13 @@ public sealed class ConfiguredAliasImport(
 		restrictions[key] = [.. earlierTerms.Union(terms, StringComparer.OrdinalIgnoreCase), .. earlierMessage.Length > 0 ? earlierMessage : message];
 	}
 
+	/// <summary>A restriction's words and its refusal message, which runs from the first quote to the end.</summary>
 	private static (string[] Terms, string[] Message) Terms(string[] words)
 	{
-		var quote = Array.FindIndex(words, word => word.StartsWith('"'));
-		return quote < 0 ? (words, []) : (words[..quote], words[quote..]);
+		var text = string.Join(' ', words);
+		var quote = text.IndexOf('"');
+		var terms = (quote < 0 ? text : text[..quote]).Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+		return (terms, quote < 0 ? [] : [text[quote..]]);
 	}
 
 	/// <summary>What a line's resolution came to: the alias table key it joins, a reason it does not, or neither when it is already in force.</summary>
