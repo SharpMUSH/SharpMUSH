@@ -104,6 +104,11 @@
       "id": "other-servers-names-dialect",
       "heading": "Other servers' names: `dialect`",
       "lookup": "compatibility config other servers names dialect"
+    },
+    {
+      "id": "other-servers-attribute-names",
+      "heading": "Other servers' attribute names",
+      "lookup": "compatibility config other servers attribute names"
     }
   ]
 }
@@ -436,7 +441,15 @@ Empty by default. With `dialect` set to `rhost`, a function or command SharpMUSH
 abc
 ```
 
-Attribute names follow the dialect too. An import stores a built-in attribute under SharpMUSH's name for it, and the dialect's name for it means that attribute wherever its code reads or sets one: in `get()`, `u()`, `&` and `@set`, and as an `@`-command. Under `mux`: `KILL`, `OKILL` and `AKILL` are `DEATH`, `ODEATH` and `ADEATH`; `REJECT` is `HAVEN`; `SIGNATURE` is `MAILSIGNATURE`; `LASTPAGE` is `LASTPAGED`; `PAY`, `OPAY` and `APAY` are `PAYMENT`, `OPAYMENT` and `APAYMENT`; `ADESC` and `ODESC` are `ADESCRIBE` and `ODESCRIBE`; `FORWARD` is `FORWARDLIST`; `SPEECHFORMAT` is `SPEECHMOD`. Under `rhost`: `PAY`, `OPAY`, `APAY`, `ADESC` and `ODESC` the same, `LASTPAGE` is `LASTPAGED`, `MAILSIG` is `MAILSIGNATURE`, `EMAIL` is `REGISTERED_EMAIL`, and `ANSINAME` is `MONIKER`. Both also read `DESC`, `IDESC`, `SUCC`, `FAIL` and the `A` and `O` forms of the last two as SharpMUSH's longer names. None of these is the name of a SharpMUSH attribute, so SharpMUSH code is unaffected. `@reject` under `mux` sets `HAVEN`.
+## Other servers' attribute names
+
+An import stores a built-in attribute under SharpMUSH's name for it. In code read in a dialect (the `dialect` option, or an attribute's `mux` or `rhost` flag), that server's name means the same attribute wherever an attribute is read or set: `get()`, `u()`, `&`, `@set`, and as an `@`-command. None of these names is a SharpMUSH attribute, so SharpMUSH code is unaffected.
+
+- `mux`: `KILL`, `OKILL`, `AKILL` are `DEATH`, `ODEATH`, `ADEATH`; `REJECT` is `HAVEN`; `SIGNATURE` is `MAILSIGNATURE`; `FORWARD` is `FORWARDLIST`; `SPEECHFORMAT` is `SPEECHMOD`.
+- `rhost`: `MAILSIG` is `MAILSIGNATURE`; `EMAIL` is `REGISTERED_EMAIL`; `ANSINAME` is `MONIKER`.
+- Both: `LASTPAGE` is `LASTPAGED`; `PAY`, `OPAY`, `APAY` are `PAYMENT`, `OPAYMENT`, `APAYMENT`; `DESC`, `ADESC`, `ODESC`, `IDESC` are `DESCRIBE` and its forms; `SUCC` and `FAIL` and their `A` and `O` forms are `SUCCESS` and `FAILURE` and theirs.
+
+Under `mux`, `@reject` sets `HAVEN`.
 
 ```sharp dialect=mux
 > @kill me=Ouch.
