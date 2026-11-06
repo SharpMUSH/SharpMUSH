@@ -41,6 +41,33 @@ jobs:
               exit 1
             }
 
+  # The plugin contract (the SharpMUSH.Library package) may grow within a major version but not break.
+  # Packs the package at tools/plugin-contract/baseline-commit and validates this one against it;
+  # skipped when PluginContractVersion.Current has a newer major than the baseline.
+  plugin-contract:
+    name: plugin-contract
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: |
+            /*
+            !/SharpMUSH.Client/wwwroot/images/sharpie/
+          sparse-checkout-cone-mode: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Build.props
+
+      - name: Check the plugin contract against its baseline
+        run: tools/plugin-contract/check.sh
+
   build:
     runs-on: ubuntu-latest
 
