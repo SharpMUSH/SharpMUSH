@@ -23,12 +23,8 @@ public class LoginReportTests : ServerTestBase
 		return handle;
 	}
 
-	private async Task<long> ConnectAsync(string name, string password, string host = "login.example")
-	{
-		var handle = await RegisterAsync(host);
+	private async Task LogInAsync(long handle, string name, string password) =>
 		await CommandParser.CommandParse(handle, ConnectionService, MarkupText.Plain($"connect \"{name}\" {password}"));
-		return handle;
-	}
 
 	private async Task<(DBRef Player, string Name)> PlayerAsync(string prefix)
 	{
@@ -39,7 +35,8 @@ public class LoginReportTests : ServerTestBase
 	[Test]
 	public async Task AnUnknownName_IsToldThereIsNoSuchPlayer()
 	{
-		var handle = await ConnectAsync(TestIsolationHelpers.GenerateUniqueName("NoOne"), "whatever");
+		var handle = await RegisterAsync("login.example");
+		await LogInAsync(handle, TestIsolationHelpers.GenerateUniqueName("NoOne"), "whatever");
 		try
 		{
 			await Assert.That(Notifications.ForHandle(handle)).Contains("There is no player with that name.");
@@ -54,8 +51,10 @@ public class LoginReportTests : ServerTestBase
 	public async Task AWrongPassword_IsRefused_AndTheNextLoginIsToldWhereItCameFrom()
 	{
 		var (player, name) = await PlayerAsync("FailedLogin");
-		var first = await ConnectAsync(name, Password);
-		var refused = await ConnectAsync(name, "wrong", host: "bad.example");
+		var first = await RegisterAsync("login.example");
+		await LogInAsync(first, name, Password);
+		var refused = await RegisterAsync("bad.example");
+		await LogInAsync(refused, name, "wrong");
 		var second = 0L;
 		try
 		{
@@ -63,7 +62,8 @@ public class LoginReportTests : ServerTestBase
 			await Assert.That(ConnectionService.Get(refused)?.Ref).IsNull();
 
 			var before = Notifications.CountFor(player);
-			second = await ConnectAsync(name, Password);
+			second = await RegisterAsync("login.example");
+			await LogInAsync(second, name, Password);
 			var heard = Notifications.For(player).Skip(before).ToList();
 			await Assert.That(heard).Contains(line => line.StartsWith("Last FAILED connect was from bad.example on ", StringComparison.Ordinal));
 		}
@@ -79,7 +79,8 @@ public class LoginReportTests : ServerTestBase
 	public async Task ALoginWithAnEmptyMailbox_IsToldThereIsNoMail()
 	{
 		var (player, name) = await PlayerAsync("NoMailLogin");
-		var handle = await ConnectAsync(name, Password);
+		var handle = await RegisterAsync("login.example");
+		await LogInAsync(handle, name, Password);
 		try
 		{
 			await Assert.That(Notifications.For(player)).Contains("\nMAIL: You have no mail.");
@@ -95,7 +96,8 @@ public class LoginReportTests : ServerTestBase
 	{
 		var (player, name) = await PlayerAsync("MailLogin");
 		await Cmd($"@mail #{player.Number}=Waiting/Read me when you arrive.");
-		var handle = await ConnectAsync(name, Password);
+		var handle = await RegisterAsync("login.example");
+		await LogInAsync(handle, name, Password);
 		try
 		{
 			var heard = Notifications.For(player);
@@ -115,7 +117,8 @@ public class LoginReportTests : ServerTestBase
 		var name = $"Made_{Guid.NewGuid().ToString("N")[..8]}";
 		await Cmd($"@pcreate {name}={Password}");
 		var player = (await Mediator.CreateStream(new GetPlayerQuery(name)).FirstAsync()).Object.DBRef;
-		var handle = await ConnectAsync(name, Password);
+		var handle = await RegisterAsync("login.example");
+		await LogInAsync(handle, name, Password);
 		try
 		{
 			await Assert.That(Notifications.For(player))
