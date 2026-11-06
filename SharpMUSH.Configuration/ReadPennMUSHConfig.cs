@@ -83,7 +83,8 @@ public static partial class ReadPennMushConfig
 				: Array.Empty<(string, string, string)>())
 			.ToList();
 		var aliases = AliasDirectives.Read(directives, dialect, skipped);
-		var access = AccessDirectives.Read(directives, dialect, skipped);
+		List<string> review = [];
+		var access = AccessDirectives.Read(directives, dialect, skipped, review);
 
 		var d = SharpMUSHOptions.Default();
 
@@ -419,6 +420,7 @@ public static partial class ReadPennMushConfig
 		{
 			Unrecognized = unrecognized,
 			Aliases = aliases,
+			NeedsReview = review.ToHashSet(),
 			Reality = reality,
 			Totems = totems
 		};

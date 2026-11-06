@@ -155,7 +155,7 @@ public static class ImportWorker
 				NeedsAction: true));
 		foreach (var line in configuration.Skipped)
 		{
-			if (line.StartsWith("include ", StringComparison.OrdinalIgnoreCase))
+			if (line.StartsWith("include ", StringComparison.OrdinalIgnoreCase) || configuration.NeedsReview.Contains(line))
 				result.Warnings.Add(new ImportWarning(ImportWarningKind.Configuration, "Configuration: " + line, NeedsAction: true));
 			else
 				result.Notes.Add("Configuration: " + line);

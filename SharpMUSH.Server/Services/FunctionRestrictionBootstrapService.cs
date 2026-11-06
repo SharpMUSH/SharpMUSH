@@ -74,7 +74,7 @@ public sealed class FunctionRestrictionBootstrapService(
 			}
 
 			logger.LogInformation("Applying {Count} configured function restriction(s).", configured.Count);
-			restrictions.Apply(configured);
+			restrictions.Apply(configured, options.CurrentValue.Alias.FunctionAliases);
 			_applied = configured;
 		}
 	}

@@ -41,6 +41,12 @@ public record PennMushConfigImport(SharpMUSHOptions Options, IReadOnlyList<strin
 	/// </summary>
 	public IReadOnlyList<AliasDirective> Aliases { get; init; } = [];
 
+	/// <summary>
+	/// The lines of <see cref="Skipped"/> where the source restricted a command or function more than SharpMUSH can,
+	/// and SharpMUSH's own restriction stays: the import report asks staff to check those.
+	/// </summary>
+	public IReadOnlySet<string> NeedsReview { get; init; } = new HashSet<string>();
+
 	/// <summary>A RhostMUSH file's reality levels, which the database import gives the world as reality layers.</summary>
 	public RealityDirectives Reality { get; init; } = RealityDirectives.None;
 

@@ -148,6 +148,11 @@ public class ReadConfigAliasAndAccessTests
 		await Assert.That(import.Skipped.Any(line => line.StartsWith("The access lines for @oemit"))).IsFalse()
 			.Because("nothing @oemit's lines carry is left out");
 		await Assert.That(import.Skipped).Contains("access @lemit disabled staff: carried over as nobody only; SharpMUSH has no restriction for staff.");
+		await Assert.That(import.NeedsReview).Contains(
+			"access @emit staff: SharpMUSH has no restriction for staff, so it was not carried over and SharpMUSH's own restriction stays.")
+			.Because("the import report asks staff to check a command the source held tighter than SharpMUSH can");
+		await Assert.That(import.NeedsReview.Any(line => line.StartsWith("The access lines for @pemit"))).IsTrue();
+		await Assert.That(import.NeedsReview.Any(line => line.StartsWith("access @oemit disabled"))).IsFalse();
 	}
 
 	/// <summary>

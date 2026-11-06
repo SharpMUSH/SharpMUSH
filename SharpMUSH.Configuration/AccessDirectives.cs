@@ -127,8 +127,11 @@ public static class AccessDirectives
 	/// <see cref="Options.RestrictionOptions"/> holds; each line or word left out is added to <paramref name="skipped"/>.
 	/// A PennMUSH file has none: its <c>restrict_command</c> and <c>restrict_function</c> are read as they are.
 	/// </summary>
+	/// <param name="review">The lines of <paramref name="skipped"/> where SharpMUSH's own restriction stays although the
+	/// source asked for one SharpMUSH cannot give, so staff should look at the command or function.</param>
 	public static (Dictionary<string, string[]> Commands, Dictionary<string, string[]> Functions) Read(
-		IEnumerable<(string Name, string Value, string Line)> lines, ConfigurationDialect dialect, List<string> skipped)
+		IEnumerable<(string Name, string Value, string Line)> lines, ConfigurationDialect dialect, List<string> skipped,
+		List<string> review)
 	{
 		var commands = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 		var functions = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
@@ -169,7 +172,7 @@ public static class AccessDirectives
 			}
 
 			var into = isFunction ? functions : commands;
-			var (carried, refusedLine) = Translate(line.Trim(), words[1..], table, isFunction, skipped);
+			var (carried, refusedLine) = Translate(line.Trim(), words[1..], table, isFunction, skipped, review);
 			if (refusedLine)
 			{
 				(isFunction ? refusedFunctions : refusedCommands).Add(target);
@@ -184,8 +187,8 @@ public static class AccessDirectives
 			restriction.AddRange(carried.Where(word => !restriction.Contains(word, StringComparer.OrdinalIgnoreCase)));
 		}
 
-		LeaveOnlyClosed(commands, refusedCommands, "access", skipped);
-		LeaveOnlyClosed(functions, refusedFunctions, "function_access", skipped);
+		LeaveOnlyClosed(commands, refusedCommands, "access", skipped, review);
+		LeaveOnlyClosed(functions, refusedFunctions, "function_access", skipped, review);
 		return (Shape(commands), Shape(functions));
 
 		static Dictionary<string, string[]> Shape(Dictionary<string, List<string>> restrictions)
@@ -199,7 +202,7 @@ public static class AccessDirectives
 	/// the rest are reported.
 	/// </summary>
 	private static void LeaveOnlyClosed(Dictionary<string, List<string>> restrictions, HashSet<string> refused,
-		string directive, List<string> skipped)
+		string directive, List<string> skipped, List<string> review)
 	{
 		foreach (var target in refused)
 		{
@@ -212,8 +215,10 @@ public static class AccessDirectives
 			var dropped = words.Except(closed, StringComparer.OrdinalIgnoreCase).ToList();
 			if (dropped.Count > 0)
 			{
-				skipped.Add($"The {directive} lines for {target}: {string.Join(' ', dropped)} was not carried over either, " +
-					"since without the line SharpMUSH has no restriction for it would let in someone the source turns away.");
+				var text = $"The {directive} lines for {target}: {string.Join(' ', dropped)} was not carried over either, " +
+					"since without the line SharpMUSH has no restriction for it would let in someone the source turns away.";
+				skipped.Add(text);
+				review.Add(text);
 			}
 
 			if (closed.Count > 0)
@@ -235,7 +240,8 @@ public static class AccessDirectives
 	/// The SharpMUSH restriction words <paramref name="words"/> become, and whether the line is refused: it says who
 	/// may use the name and SharpMUSH has none of those words. What is left out is reported against <paramref name="line"/>.
 	/// </summary>
-	private static (List<string> Carried, bool Refused) Translate(string line, string[] words, Word[] table, bool isFunction, List<string> skipped)
+	private static (List<string> Carried, bool Refused) Translate(string line, string[] words, Word[] table, bool isFunction, List<string> skipped,
+		List<string> review)
 	{
 		var carried = new List<string>();
 		var left = new List<string>();
@@ -270,9 +276,11 @@ public static class AccessDirectives
 		if (grants > 0 && grantsCarried == 0)
 		{
 			var closed = carried.Where(IsClosed).ToList();
-			skipped.Add(closed.Count > 0
+			var text = closed.Count > 0
 				? $"{line}: carried over as {string.Join(' ', closed)} only; SharpMUSH has no restriction for {string.Join(", ", left)}."
-				: $"{line}: SharpMUSH has no restriction for {string.Join(", ", left)}, so it was not carried over and SharpMUSH's own restriction stays.");
+				: $"{line}: SharpMUSH has no restriction for {string.Join(", ", left)}, so it was not carried over and SharpMUSH's own restriction stays.";
+			skipped.Add(text);
+			review.Add(text);
 			return (closed, true);
 		}
 

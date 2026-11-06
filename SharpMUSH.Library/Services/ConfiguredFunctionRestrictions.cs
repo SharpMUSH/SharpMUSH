@@ -47,7 +47,14 @@ public sealed class ConfiguredFunctionRestrictions(
 	private string[] _applied = [];
 
 	/// <param name="restrictions">Function name to its restriction words, as <c>function_restrictions</c> holds them.</param>
-	public void Apply(IReadOnlyDictionary<string, string[]> restrictions)
+	public void Apply(IReadOnlyDictionary<string, string[]> restrictions) => Apply(restrictions, null);
+
+	/// <param name="restrictions">Function name to its restriction words, as <c>function_restrictions</c> holds them.</param>
+	/// <param name="functionAliases">The configured function aliases, as <see cref="SharpMUSH.Configuration.Options.AliasOptions.FunctionAliases"/>
+	/// holds them now; <c>null</c> for the ones read at startup. An alias added since then is held to its function's
+	/// restriction only when it is named here.</param>
+	public void Apply(IReadOnlyDictionary<string, string[]> restrictions,
+		IReadOnlyDictionary<string, string[]>? functionAliases)
 	{
 		lock (_gate)
 		{
@@ -78,7 +85,7 @@ public sealed class ConfiguredFunctionRestrictions(
 				}
 
 				// An alias is the same FUN in PennMUSH, so restricting either restricts both.
-				foreach (var key in NamesOf(library, found.LibraryInformation.Attribute, name))
+				foreach (var key in NamesOf(library, found.LibraryInformation.Attribute, name, functionAliases ?? Configurable.FunctionAliases))
 				{
 					if (!layer.TryGetValue(key, out var list))
 					{
@@ -110,9 +117,10 @@ public sealed class ConfiguredFunctionRestrictions(
 	/// while the library still maps it to the same function. A <c>@function/clone</c> shares the
 	/// definition too, but is a function of its own, as its copy is in PennMUSH.
 	/// </summary>
-	private static IEnumerable<string> NamesOf(LibraryService<string, FunctionDefinition> library, SharpFunctionAttribute attribute, string name)
+	private static IEnumerable<string> NamesOf(LibraryService<string, FunctionDefinition> library, SharpFunctionAttribute attribute,
+		string name, IReadOnlyDictionary<string, string[]> functionAliases)
 	{
-		var aliases = Configurable.FunctionAliases
+		var aliases = functionAliases
 			.Where(entry => entry.Key.Equals(attribute.Name, StringComparison.OrdinalIgnoreCase))
 			.SelectMany(entry => entry.Value);
 
