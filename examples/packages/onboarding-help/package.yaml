@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: onboarding-help
 title: "Onboarding: +help topics"
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Puts the checklist into +help: registers the onboarding package's topics with the +help librarian, and adds a step pointing new players at +help."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [onboarding, help, bridge]
 category: Essentials
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. The onboarding package keeps its topics on its

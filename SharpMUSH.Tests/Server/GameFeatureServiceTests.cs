@@ -240,6 +240,20 @@ public class GameFeatureServiceTests
 		await Assert.That((await game.Features().PackagesAsync()).Single(p => p.Id == "world-map").Recommended).IsFalse();
 	}
 
+	/// <summary>
+	/// +who and +where and the job queue are offered ticked to a new game, and an upgraded game is not given them.
+	/// </summary>
+	[Test]
+	[Arguments("who-where")]
+	[Arguments("jobs")]
+	public async Task WhoWhereAndJobs_AreSuggestedAtSetup(string packageId)
+	{
+		var packages = await new Game().Features().PackagesAsync();
+
+		await Assert.That(packages.Single(p => p.Id == packageId).Recommended).IsTrue();
+		await Assert.That(BundledPackages.All.Single(p => p.PackageId == packageId).InstallAtFirstBoot).IsFalse();
+	}
+
 	[Test]
 	public async Task ASuggestedPackage_UntickedBeforeInstall_IsNotOfferedAgain()
 	{
@@ -290,6 +304,9 @@ public class GameFeatureServiceTests
 		await Assert.That(game.Installed).IsEmpty();
 	}
 
+	/// <summary>The packages the wizard suggests: an apply that leaves them out records each as turned off.</summary>
+	private static readonly string[] UntickedSuggestions = ["jobs", "who-where", "world-map"];
+
 	/// <summary>
 	/// Bootstrap installs the first-boot packages into any game without them, so removing one has to be
 	/// recorded, or the next restart puts it back. Installing it again clears the record.
@@ -302,11 +319,11 @@ public class GameFeatureServiceTests
 
 		await features.ApplyPackagesAsync(["plus-help"], CancellationToken.None);
 		await Assert.That((await game.ServerData.GetExpandedServerDataAsync<DeclinedBundledPackages>())!.PackageIds)
-			.IsEquivalentTo(["scene", "world-map"]);
+			.IsEquivalentTo(["scene", .. UntickedSuggestions]);
 
 		await features.ApplyPackagesAsync(["plus-help", "scene", "scene-help"], CancellationToken.None);
 		await Assert.That((await game.ServerData.GetExpandedServerDataAsync<DeclinedBundledPackages>())!.PackageIds)
-			.IsEquivalentTo(["world-map"]);
+			.IsEquivalentTo(UntickedSuggestions);
 	}
 
 	/// <summary>The wiki reader never installs at first boot, so there is nothing to remember about it.</summary>
@@ -318,7 +335,7 @@ public class GameFeatureServiceTests
 		await game.Features().ApplyPackagesAsync(["plus-help"], CancellationToken.None);
 
 		await Assert.That((await game.ServerData.GetExpandedServerDataAsync<DeclinedBundledPackages>())!.PackageIds)
-			.IsEquivalentTo(["world-map"]);
+			.IsEquivalentTo(UntickedSuggestions);
 	}
 
 	[Test]
@@ -343,7 +360,7 @@ public class GameFeatureServiceTests
 
 		await Assert.That(result is Error<string>).IsTrue();
 		await Assert.That((await game.ServerData.GetExpandedServerDataAsync<DeclinedBundledPackages>())!.PackageIds)
-			.IsEquivalentTo(["world-map"]);
+			.IsEquivalentTo(UntickedSuggestions);
 	}
 
 	[Test]

@@ -822,6 +822,20 @@
       <Link>BundledPackages\world-grid-help.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.world-grid-help.package.yaml</LogicalName>
     </EmbeddedResource>
+    <!-- builder-graph is a UI package: beside its manifest and README it carries the files the portal hosts, which
+         BundledPackages.Files reads by name. -->
+    <EmbeddedResource Include="..\examples\packages\builder-graph\package.yaml">
+      <Link>BundledPackages\builder-graph.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.builder-graph.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\builder-graph\README.md">
+      <Link>BundledPackages\builder-graph.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.builder-graph.README.md</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\builder-graph\ui.json;..\examples\packages\builder-graph\index.html;..\examples\packages\builder-graph\graph.js;..\examples\packages\builder-graph\graph.css">
+      <Link>BundledPackages\builder-graph\%(Filename)%(Extension)</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.builder-graph.files.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
     <!-- The help pages a fresh game's wiki is seeded with. Prose, so it lives in .md files rather
          than in const string literals inside StartupHandler. LogicalName is explicit because the
          file names carry hyphens. -->

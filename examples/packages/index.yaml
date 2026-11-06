@@ -9,7 +9,7 @@ packages:
   - path: builder-graph/
     name: Builder Graph
     package: builder-graph
-    version: 0.3.1
+    version: 0.3.2
     description: Room topology in the reusable HTML/JavaScript host, with coordinates, checks, export, import and drag-to-place
   - path: who-where/
     name: Who/Where
@@ -19,12 +19,12 @@ packages:
   - path: who-where-help/
     name: +who and +where help
     package: who-where-help
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the who-where topics with +help (requires who-where and plus-help)
   - path: who-where-config/
     name: +who and +where settings
     package: who-where-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the who-where settings with +config (requires who-where and plus-config)
   - path: http-handler/
     package: http-handler
@@ -49,12 +49,12 @@ packages:
   - path: chargen-help/
     name: Character applications help
     package: chargen-help
-    version: 1.1.0
+    version: 1.1.1
     description: Registers the chargen topics with +help (requires chargen and plus-help)
   - path: chargen-config/
     name: Character applications settings
     package: chargen-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the chargen settings with +config (requires chargen and plus-config)
   - path: chargen-app/
     package: chargen-app
@@ -74,11 +74,6 @@ packages:
     package: plus-config
     version: 1.2.0
     description: "+config — one command for the settings softcode systems keep for themselves, checked against the type and limits each declares (bundled default)"
-  - path: hello-ui/
-    name: Hello UI
-    package: hello-ui
-    version: 1.0.1
-    description: "Managed DLL package (Phase 4) — a UI plugin: controller + IApplicationSource page under \"Examples\""
   - path: wiki-reader/
     name: Wiki Reader
     package: wiki-reader
@@ -92,12 +87,12 @@ packages:
   - path: jobs-help/
     name: Jobs help
     package: jobs-help
-    version: 1.1.0
+    version: 1.1.1
     description: Registers the jobs topics with +help (requires jobs and plus-help)
   - path: jobs-config/
     name: Jobs settings
     package: jobs-config
-    version: 1.1.0
+    version: 1.1.1
     description: Registers the jobs settings with +config (requires jobs and plus-config)
   - path: jobs-app/
     name: Jobs in the portal
@@ -117,12 +112,12 @@ packages:
   - path: radio-help/
     name: Radio help
     package: radio-help
-    version: 1.1.0
+    version: 1.1.1
     description: Registers the radio topics with +help (requires radio and plus-help)
   - path: radio-config/
     name: Radio settings
     package: radio-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the radio settings with +config (requires radio and plus-config)
   - path: radio-scene/
     name: Radio in scenes
@@ -132,12 +127,12 @@ packages:
   - path: scene-help/
     name: Scene help
     package: scene-help
-    version: 1.0.1
+    version: 1.0.2
     description: Registers the scene topics with +help, and points +scene/help at them (requires scene and plus-help)
   - path: scene-config/
     name: Scene settings
     package: scene-config
-    version: 1.0.1
+    version: 1.0.2
     description: Registers the scene settings with +config, so staff change them with +config scene (requires scene and plus-config)
   - path: scene-here/
     name: Scene here
@@ -157,12 +152,12 @@ packages:
   - path: scene-safety-help/
     name: Scene safety tools help
     package: scene-safety-help
-    version: 1.1.0
+    version: 1.1.1
     description: Registers the scene-safety topics with +help (requires scene-safety and plus-help)
   - path: scene-safety-config/
     name: Scene safety tools settings
     package: scene-safety-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the scene-safety settings with +config (requires scene-safety and plus-config)
   - path: highlights/
     name: Highlights
@@ -172,7 +167,7 @@ packages:
   - path: highlights-config/
     name: Favourite poses and highlights settings
     package: highlights-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the highlights settings with +config (requires highlights and plus-config)
   - path: highlights-app/
     name: Highlights in the portal
@@ -187,12 +182,12 @@ packages:
   - path: bboards-help/
     name: Bulletin boards help
     package: bboards-help
-    version: 1.1.0
+    version: 1.1.1
     description: Registers the bboards topics with +help (requires bboards and plus-help)
   - path: bboards-config/
     name: Bulletin boards settings
     package: bboards-config
-    version: 1.1.0
+    version: 1.1.1
     description: Registers the bboards settings with +config (requires bboards and plus-config)
   - path: bboards-app/
     name: BBoards in the portal
@@ -207,12 +202,12 @@ packages:
   - path: status-help/
     name: Roleplay status help
     package: status-help
-    version: 1.1.0
+    version: 1.1.1
     description: Registers the status topics with +help (requires status and plus-help)
   - path: status-config/
     name: Roleplay status settings
     package: status-config
-    version: 1.1.0
+    version: 1.1.1
     description: Registers the status settings with +config (requires status and plus-config)
   - path: watch/
     name: Watch
@@ -222,12 +217,12 @@ packages:
   - path: watch-help/
     name: Watch list help
     package: watch-help
-    version: 1.1.0
+    version: 1.1.1
     description: Registers the watch topics with +help (requires watch and plus-help)
   - path: watch-config/
     name: Watch list settings
     package: watch-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the watch settings with +config (requires watch and plus-config)
   - path: finger/
     name: Finger
@@ -237,12 +232,12 @@ packages:
   - path: finger-help/
     name: Finger profiles help
     package: finger-help
-    version: 1.1.0
+    version: 1.1.1
     description: Registers the finger topics with +help (requires finger and plus-help)
   - path: finger-config/
     name: Finger profiles settings
     package: finger-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the finger settings with +config (requires finger and plus-config)
   - path: summary/
     name: Summary
@@ -252,12 +247,12 @@ packages:
   - path: summary-help/
     name: Pose summaries help
     package: summary-help
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the summary topics with +help (requires summary and plus-help)
   - path: summary-config/
     name: Pose summaries settings
     package: summary-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the summary settings with +config (requires summary and plus-config)
   - path: staff/
     name: Staff list
@@ -267,12 +262,12 @@ packages:
   - path: staff-help/
     name: Staff list help
     package: staff-help
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the staff topics with +help (requires staff and plus-help)
   - path: staff-config/
     name: Staff list settings
     package: staff-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the staff settings and duties with +config (requires staff and plus-config)
   - path: duties/
     name: Duties
@@ -282,12 +277,12 @@ packages:
   - path: duties-help/
     name: Duties help
     package: duties-help
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the duties topics with +help (requires duties and plus-help)
   - path: duties-config/
     name: Duties settings
     package: duties-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the duties settings and active roster with +config (requires duties and plus-config)
   - path: duties-app/
     name: Duties in the portal
@@ -297,7 +292,7 @@ packages:
   - path: duties-scene/
     name: Duties in scenes
     package: duties-scene
-    version: 1.0.1
+    version: 1.0.2
     description: +duty/start/scene and +duty/scene — a party plays its duty in a scene, and setting out, each step, roll and outcome go into it as narration (requires duties and scene)
   - path: staff-status/
     name: Staff list statuses
@@ -312,12 +307,12 @@ packages:
   - path: census-help/
     name: Census help
     package: census-help
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the census topics with +help (requires census and plus-help)
   - path: census-config/
     name: Census settings
     package: census-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the census settings and dimensions with +config (requires census and plus-config)
   - path: census-finger/
     name: Census +finger fields
@@ -332,12 +327,12 @@ packages:
   - path: time-help/
     name: Time and time zones help
     package: time-help
-    version: 1.1.0
+    version: 1.1.1
     description: Registers the time topics with +help (requires time and plus-help)
   - path: time-config/
     name: Time and time zones settings
     package: time-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the time settings with +config (requires time and plus-config)
   - path: info/
     name: Info Files
@@ -347,12 +342,12 @@ packages:
   - path: info-help/
     name: Info files and journals help
     package: info-help
-    version: 1.1.0
+    version: 1.1.1
     description: Registers the info topics with +help (requires info and plus-help)
   - path: info-config/
     name: Info files and journals settings
     package: info-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the info settings with +config (requires info and plus-config)
   - path: health/
     name: Health
@@ -362,12 +357,12 @@ packages:
   - path: health-help/
     name: Game health help
     package: health-help
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the health topics with +help (requires health and plus-help)
   - path: health-config/
     name: Game health settings
     package: health-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the health settings with +config (requires health and plus-config)
   - path: health-jobs/
     name: Health Staff Load
@@ -382,12 +377,12 @@ packages:
   - path: relationships-help/
     name: Relationships help
     package: relationships-help
-    version: 1.1.0
+    version: 1.1.1
     description: Registers the relationships topics with +help (requires relationships and plus-help)
   - path: relationships-config/
     name: Relationships settings
     package: relationships-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the relationships settings with +config (requires relationships and plus-config)
   - path: relationships-scene/
     name: Relationships Scene
@@ -412,12 +407,12 @@ packages:
   - path: timeline-help/
     name: IC timeline help
     package: timeline-help
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the timeline topics with +help (requires timeline and plus-help)
   - path: timeline-config/
     name: IC timeline settings
     package: timeline-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the timeline settings with +config (requires timeline and plus-config)
   - path: discord/
     name: Discord
@@ -432,7 +427,7 @@ packages:
   - path: discord-channels-help/
     name: Discord channel bridge help
     package: discord-channels-help
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the discord-channels topics with +help (requires discord-channels and plus-help)
   - path: discord-scenes/
     name: Discord Scenes
@@ -442,12 +437,12 @@ packages:
   - path: discord-scenes-help/
     name: Discord scheduled scenes help
     package: discord-scenes-help
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the discord-scenes topics with +help (requires discord-scenes and plus-help)
   - path: discord-scenes-config/
     name: Discord scheduled scenes settings
     package: discord-scenes-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the discord-scenes settings with +config (requires discord-scenes and plus-config)
   - path: notifications/
     name: Notifications
@@ -457,7 +452,7 @@ packages:
   - path: notifications-help/
     name: Push notifications help
     package: notifications-help
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the notifications topics with +help (requires notifications and plus-help)
   - path: notifications-app/
     name: Notifications in the portal
@@ -472,12 +467,12 @@ packages:
   - path: roster-help/
     name: Roster help
     package: roster-help
-    version: 1.1.0
+    version: 1.1.1
     description: Registers the roster topics with +help (requires roster and plus-help)
   - path: roster-config/
     name: Roster settings
     package: roster-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the roster settings with +config (requires roster and plus-config)
   - path: roster-jobs/
     name: Roster applications in jobs
@@ -487,12 +482,12 @@ packages:
   - path: roster-jobs-help/
     name: Roster applications through jobs help
     package: roster-jobs-help
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the roster-jobs topics with +help (requires roster-jobs and plus-help)
   - path: roster-jobs-config/
     name: Roster applications through jobs settings
     package: roster-jobs-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the roster-jobs settings with +config (requires roster-jobs and plus-config)
   - path: availability/
     name: Availability
@@ -502,12 +497,12 @@ packages:
   - path: availability-help/
     name: Availability help
     package: availability-help
-    version: 1.1.0
+    version: 1.1.1
     description: Registers the availability topics with +help (requires availability and plus-help)
   - path: availability-config/
     name: Availability settings
     package: availability-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the availability settings with +config (requires availability and plus-config)
   - path: availability-alts/
     name: Availability with alts
@@ -527,12 +522,12 @@ packages:
   - path: gmcp-help/
     name: GMCP help
     package: gmcp-help
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the gmcp topics with +help (requires gmcp and plus-help)
   - path: gmcp-config/
     name: GMCP settings
     package: gmcp-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the gmcp settings with +config (requires gmcp and plus-config)
   - path: gmcp-mudlet/
     name: GMCP for Mudlet
@@ -542,12 +537,12 @@ packages:
   - path: gmcp-mudlet-help/
     name: GMCP for Mudlet help
     package: gmcp-mudlet-help
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the gmcp-mudlet topics with +help (requires gmcp-mudlet and plus-help)
   - path: gmcp-mudlet-config/
     name: GMCP for Mudlet settings
     package: gmcp-mudlet-config
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the gmcp-mudlet settings with +config (requires gmcp-mudlet and plus-config)
   - path: alts/
     name: Alts
@@ -557,7 +552,7 @@ packages:
   - path: alts-help/
     name: Alts help
     package: alts-help
-    version: 1.1.0
+    version: 1.1.1
     description: Registers the alts topics with +help (requires alts and plus-help)
   - path: onboarding/
     name: Onboarding
@@ -566,11 +561,11 @@ packages:
     description: +welcome — a getting-started checklist shown at login while a step is open; the game chooses the steps, and other packages add their own
   - path: onboarding-help/
     package: onboarding-help
-    version: 1.0.1
+    version: 1.0.2
     description: Bridge — the checklist's topics in +help, and a step pointing new players at +help (requires onboarding and plus-help)
   - path: onboarding-config/
     package: onboarding-config
-    version: 1.1.0
+    version: 1.1.1
     description: Bridge — the checklist's steps and settings in +config onboarding (requires onboarding and plus-config)
   - path: onboarding-chargen/
     package: onboarding-chargen
@@ -584,7 +579,7 @@ packages:
   - path: world-map-help/
     name: World map help
     package: world-map-help
-    version: 1.0.0
+    version: 1.0.1
     description: Registers the world-map topic with +help (requires world-map and plus-help)
   - path: world-grid/
     name: World grid
@@ -594,5 +589,5 @@ packages:
   - path: world-grid-help/
     name: World grid help
     package: world-grid-help
-    version: 1.0.1
+    version: 1.0.2
     description: Registers the world-grid topic with +help (requires world-grid and plus-help)

@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: finger-help
 title: "Finger profiles: +help topics"
-version: 1.1.0
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Puts the Finger profiles topics into +help: registers the finger package's help with the +help librarian, and points its messages at +help."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [finger, help, bridge]
 category: Characters
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. finger keeps its topics on its own help

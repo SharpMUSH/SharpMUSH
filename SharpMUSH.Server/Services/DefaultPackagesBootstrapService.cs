@@ -286,8 +286,11 @@ public class DefaultPackagesBootstrapService(
 			BundledPackages.Descriptor descriptor => BundledPackages.Readme(descriptor, manifest),
 			NotFound => null
 		};
+		// A bundled UI package is this build's own HTML and JavaScript, so the trust confirmation an administrator gives a
+		// UI package from elsewhere is not asked for; the catalogue never carries a compiled plugin.
 		var result = await installer.ApplyAsync(manifest, new PackageApplyRequest(
-			source, new Dictionary<string, string>(), decisions, Readme: readme), cancellationToken);
+				source, new Dictionary<string, string>(), decisions, AllowPluginCode: manifest.Kind is PackageKind.Ui, Readme: readme),
+			cancellationToken, BundledPackages.Files(packageId));
 
 		switch (result)
 		{
