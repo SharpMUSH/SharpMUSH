@@ -125,10 +125,10 @@ public sealed class ConfiguredAliasImport(
 		foreach (var (name, restriction) in import.Options.Restriction.CommandRestrictions)
 		{
 			var key = name;
-			var found = commandLibrary.TryGetValue(name, out var command)
-				|| (aliasTargets.TryGetValue(name, out var target) && commandLibrary.TryGetValue(target, out command));
+			var found = FindCommand(commandLibrary, name, out var command)
+				|| (aliasTargets.TryGetValue(name, out var target) && FindCommand(commandLibrary, target, out command));
 			if (!found && overlay?.CommandFor(name) is { } meant && !meant.Contains('/')
-				&& commandLibrary.TryGetValue(meant, out command))
+				&& FindCommand(commandLibrary, meant, out command))
 			{
 				(found, key) = (true, meant);
 			}
@@ -205,6 +205,23 @@ public sealed class ConfiguredAliasImport(
 			: directive with { Target = earlier + directive.Target[root.Length..] };
 	}
 
+	/// <summary>
+	/// A command in the live table, or a built-in the configuration has disabled, which is out of the table until a change
+	/// re-enables it and is still there to take an alias or a restriction.
+	/// </summary>
+	private bool FindCommand(Library.Services.LibraryService<string, CommandDefinition> library, string name,
+		out (CommandDefinition LibraryInformation, bool IsSystem) command)
+	{
+		if (library.TryGetValue(name, out command))
+		{
+			return true;
+		}
+
+		var builtins = commands.Builtins.Where(entry => entry.Key.Equals(name, StringComparison.OrdinalIgnoreCase)).Take(1).ToList();
+		command = builtins.Count == 1 ? (builtins[0].Value, true) : default;
+		return builtins.Count == 1;
+	}
+
 	/// <summary>What a line's resolution came to: the alias table key it joins, a reason it does not, or neither when it is already in force.</summary>
 	private sealed record Resolution(string? Target, string? Reason);
 
@@ -225,12 +242,12 @@ public sealed class ConfiguredAliasImport(
 		Library.Services.LibraryService<string, CommandDefinition> library)
 	{
 		var (root, switches) = Split(directive.Target);
-		if (!library.TryGetValue(root, out var found)
+		if (!FindCommand(library, root, out var found)
 			&& overlay?.CommandFor(root) is { } meant)
 		{
 			var (meantRoot, meantSwitches) = Split(meant);
 			(root, switches) = (meantRoot, [.. meantSwitches, .. switches]);
-			library.TryGetValue(root, out found);
+			FindCommand(library, root, out found);
 		}
 
 		if (found.LibraryInformation.Attribute is not { } attribute)

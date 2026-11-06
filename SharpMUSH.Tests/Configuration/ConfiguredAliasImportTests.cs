@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Configuration;
@@ -94,6 +96,41 @@ public class ConfiguredAliasImportTests
 
 		await Assert.That(resolved.Commands["@FORCE/INPLACE"]).IsEquivalentTo(new[] { "@qf2", "@qf3" });
 		await Assert.That(resolved.Functions["add"]).IsEquivalentTo(new[] { "plusser", "plusser2" });
+		await Assert.That(resolved.NotCarried).IsEmpty();
+	}
+
+	/// <summary>
+	/// A command the running configuration disables is out of the live table, but an import that names it, to alias it
+	/// or to restrict it, still finds it: the file being applied may be the one that re-enables it.
+	/// </summary>
+	[Test]
+	public async Task ACommandTheGameHasDisabledIsStillFound()
+	{
+		var live = WebAppFactoryArg.Services.GetRequiredService<ILibraryProvider<CommandDefinition>>();
+		var emit = live.Get()["@EMIT"].LibraryInformation.Attribute;
+		var parked = new CommandLibraryService();
+		foreach (var (name, entry) in live.Get().Where(entry => !ReferenceEquals(entry.Value.LibraryInformation.Attribute, emit)))
+		{
+			parked.Add(name, entry);
+		}
+
+		var commands = Substitute.For<ILibraryProvider<CommandDefinition>>();
+		commands.Get().Returns(parked);
+		commands.Builtins.Returns(live.Builtins);
+		var aliases = new ConfiguredAliasImport(commands, WebAppFactoryArg.Services.GetRequiredService<ILibraryProvider<FunctionDefinition>>());
+
+		var import = Import(Command("@em2", "@emit")) with
+		{
+			Options = SharpMUSHOptions.Default() with
+			{
+				Restriction = new RestrictionOptions(new Dictionary<string, string[]> { ["@emit"] = ["noguest"] },
+					new Dictionary<string, string[]>())
+			}
+		};
+		var resolved = aliases.Resolve(import, ConfigurationDialect.PennMUSH);
+
+		await Assert.That(resolved.Commands["@EMIT"]).IsEquivalentTo(new[] { "@em2" });
+		await Assert.That(resolved.CommandRestrictions.Keys).IsEquivalentTo(new[] { "@emit" });
 		await Assert.That(resolved.NotCarried).IsEmpty();
 	}
 
