@@ -97,3 +97,78 @@ public sealed record TotemDirective(string Name, int Slot, uint Value)
 				&& RealityDirectives.Mask(words[2]) is not (null or 0))
 			.Select(words => new TotemDirective(words[0], int.Parse(words[1], CultureInfo.InvariantCulture), RealityDirectives.Mask(words[2]) ?? 0))];
 }
+
+/// <summary>One <c>hook_cmd</c> line: a command and the hooks TinyMUX or RhostMUSH turns on for it at startup.</summary>
+/// <param name="Command">The command, as the file names it.</param>
+/// <param name="Hooks">The hook types, lower-cased: <c>before</c>, <c>after</c>, <c>ignore</c>, <c>permit</c>, <c>igswitch</c>, <c>fail</c>.</param>
+public sealed record HookCommandDirective(string Command, IReadOnlyList<string> Hooks);
+
+/// <summary>
+/// The command hooks of a TinyMUX or RhostMUSH game. Neither server keeps hooks in its database: <c>hook_cmd</c> lines
+/// turn them on at startup, each running the attribute named for it (<c>B_&lt;command&gt;</c> for a before hook) on
+/// the <c>hook_obj</c> object. <c>global_error_obj</c> names the object whose <c>VA</c> is shown in place of
+/// <c>Huh?</c>.
+/// </summary>
+public sealed record HookDirectives(int? HookObject, IReadOnlyList<HookCommandDirective> Commands, int? GlobalErrorObject)
+{
+	public static readonly HookDirectives None = new(null, [], null);
+
+	/// <summary>Whether the file named any hook at all.</summary>
+	public bool Any => HookObject is not null || Commands.Count > 0 || GlobalErrorObject is not null;
+
+	/// <summary>The directives this record reads.</summary>
+	public static bool IsDirective(string name)
+		=> name.Equals("hook_cmd", StringComparison.OrdinalIgnoreCase)
+			|| name.Equals("hook_obj", StringComparison.OrdinalIgnoreCase)
+			|| name.Equals("global_error_obj", StringComparison.OrdinalIgnoreCase);
+
+	/// <summary>
+	/// Reads the hook directives among <paramref name="lines"/>, each a directive name and its value. The last
+	/// <c>hook_obj</c> and <c>global_error_obj</c> win, as any repeated directive does; a <c>hook_cmd</c> naming a command
+	/// again adds its hooks to the earlier line's. An object that is not a dbref (<c>#12</c> or <c>12</c>), or is
+	/// negative, names none.
+	/// </summary>
+	public static HookDirectives Read(IEnumerable<(string Name, string Value)> lines)
+	{
+		int? hookObject = null, errorObject = null;
+		var commands = new List<HookCommandDirective>();
+		foreach (var (name, value) in lines)
+		{
+			if (name.Equals("hook_obj", StringComparison.OrdinalIgnoreCase))
+			{
+				hookObject = Dbref(value);
+			}
+			else if (name.Equals("global_error_obj", StringComparison.OrdinalIgnoreCase))
+			{
+				errorObject = Dbref(value);
+			}
+			else if (name.Equals("hook_cmd", StringComparison.OrdinalIgnoreCase))
+			{
+				var words = value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+				if (words.Length < 2)
+				{
+					continue;
+				}
+
+				var hooks = words.Skip(1).Select(word => word.ToLowerInvariant());
+				var earlier = commands.FindIndex(command => command.Command.Equals(words[0], StringComparison.OrdinalIgnoreCase));
+				if (earlier < 0)
+				{
+					commands.Add(new HookCommandDirective(words[0], [.. hooks.Distinct()]));
+				}
+				else
+				{
+					commands[earlier] = commands[earlier] with { Hooks = [.. commands[earlier].Hooks.Concat(hooks).Distinct()] };
+				}
+			}
+		}
+
+		return new HookDirectives(hookObject, commands, errorObject);
+	}
+
+	private static int? Dbref(string value)
+	{
+		var text = value.Trim().TrimStart('#');
+		return int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var dbref) ? dbref : null;
+	}
+}

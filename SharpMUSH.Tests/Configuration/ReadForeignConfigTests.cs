@@ -114,6 +114,33 @@ public class ReadForeignConfigTests
 		await Assert.That(import.Reality.Default("room", "tx")).IsEqualTo(uint.MaxValue);
 	}
 
+	/// <summary>
+	/// netmux.conf turns command hooks on at startup: hook_obj names the object, each hook_cmd line a command and its
+	/// hooks, and global_error_obj the object standing in for Huh?. None of them is reported as unrecognized.
+	/// </summary>
+	[Test]
+	public async Task TinyMuxHooksAreRead()
+	{
+		var import = await ImportAsync(ConfigurationDialect.TinyMUX,
+			"hook_obj #12",
+			"hook_cmd look before after",
+			"hook_cmd @pemit permit",
+			"hook_cmd LOOK ignore",
+			"global_error_obj 15");
+
+		await Assert.That(import.Hooks.HookObject).IsEqualTo(12);
+		await Assert.That(import.Hooks.GlobalErrorObject).IsEqualTo(15);
+		await Assert.That(import.Hooks.Commands.Count).IsEqualTo(2);
+		await Assert.That(import.Hooks.Commands[0].Command).IsEqualTo("look");
+		await Assert.That(import.Hooks.Commands[0].Hooks).IsEquivalentTo(["before", "after", "ignore"]);
+		await Assert.That(import.Hooks.Commands[1].Hooks).IsEquivalentTo(["permit"]);
+		await Assert.That(import.Unrecognized).DoesNotContain("hook_cmd").And.DoesNotContain("hook_obj")
+			.And.DoesNotContain("global_error_obj");
+
+		var penn = await ImportAsync(ConfigurationDialect.PennMUSH, "hook_obj #12");
+		await Assert.That(penn.Hooks.Any).IsFalse();
+	}
+
 	private static async Task<PennMushConfigImport> ImportAsync(ConfigurationDialect dialect, params string[] more)
 	{
 		var path = Path.Join(Path.GetTempPath(), $"sharpmush-conf-{Guid.NewGuid():N}.conf");

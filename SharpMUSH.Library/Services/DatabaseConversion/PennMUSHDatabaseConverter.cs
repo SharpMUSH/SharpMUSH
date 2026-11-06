@@ -289,6 +289,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			(channelsConverted, channelMembersConverted) = await ImportChannelsAsync(pennDatabase, context, cancellationToken);
 			ReportProgress("Channels imported", 0.97);
 
+			ReportHooks(pennDatabase, context);
+
 			await RetireRecoverListedAsync(pennDatabase, context, cancellationToken);
 			await QuarantineSourceGarbageAsync(context, cancellationToken);
 			await ReinstallPackagesAsync(context);
@@ -2324,6 +2326,74 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			await _mediator.Send(new SetObjectHomeCommand(content, container), cancellationToken);
 		}
+	}
+
+	/// <summary>
+	/// The hook types TinyMUX and RhostMUSH share with SharpMUSH's <c>@hook</c>, and the prefix of the attribute on
+	/// <c>hook_obj</c> each runs (<c>B_LOOK</c> for a before hook on <c>look</c>).
+	/// </summary>
+	private static readonly (string Hook, string Prefix)[] CarriedHooks = [("before", "B"), ("after", "A"), ("ignore", "I")];
+
+	/// <summary>
+	/// A TinyMUX or RhostMUSH game's command hooks (<see cref="HookDirectives"/>). Neither server stores them in its
+	/// database, and neither does SharpMUSH, where a game sets them from an <c>@startup</c>, as in PennMUSH. So the
+	/// report gives the <c>@hook</c> lines that do what the file did, with the objects' numbers in this world, and
+	/// names the hooks SharpMUSH has no form for: <c>permit</c>, <c>igswitch</c> and <c>fail</c>.
+	/// </summary>
+	private static void ReportHooks(PennMUSHDatabase pennDatabase, PennMUSHConversionContext context)
+	{
+		var hooks = pennDatabase.Hooks;
+		if (!hooks.Any)
+		{
+			return;
+		}
+
+		var file = pennDatabase.Dialect == DatabaseDialect.RhostMUSH ? "netrhost.conf" : "netmux.conf";
+		var hookObject = Mapped(hooks.HookObject);
+		if (hooks.Commands.Count > 0)
+		{
+			if (hookObject is null)
+			{
+				context.WarnNeedsAction(ImportWarningKind.Configuration,
+					$"Command hooks: {file} turns on hooks for {string.Join(", ", hooks.Commands.Select(c => c.Command))}, but its hook_obj " +
+					(hooks.HookObject is { } missing ? $"#{missing} is not in the import" : "is not set") + ", so there is nothing for them to run.");
+			}
+			else
+			{
+				var lines = hooks.Commands
+					.SelectMany(command => CarriedHooks.Where(carried => command.Hooks.Contains(carried.Hook))
+						.Select(carried => $"@hook/{carried.Hook} {command.Command}={hookObject},{carried.Prefix}_{command.Command.ToUpperInvariant()}"))
+					.ToList();
+				if (lines.Count > 0)
+				{
+					context.WarnNeedsAction(ImportWarningKind.Configuration,
+						$"Command hooks: {pennDatabase.SourceName} turned these on at startup from {file}. SharpMUSH keeps hooks only while it " +
+						$"runs, so put these lines in a wizard's @startup: {string.Join("; ", lines)}");
+				}
+			}
+
+			var dropped = hooks.Commands
+				.SelectMany(command => command.Hooks.Where(hook => !CarriedHooks.Any(carried => carried.Hook == hook))
+					.Select(hook => $"{command.Command} ({hook})"))
+				.ToList();
+			if (dropped.Count > 0)
+			{
+				context.Warn(ImportWarningKind.Configuration,
+					$"Command hooks with no SharpMUSH form, not carried over: {string.Join(", ", dropped)}");
+			}
+		}
+
+		if (hooks.GlobalErrorObject is { } errorSource)
+		{
+			context.WarnNeedsAction(ImportWarningKind.Configuration, Mapped(errorSource) is { } errorObject
+				? $"global_error_obj: {pennDatabase.SourceName} showed what {errorObject}'s VA evaluates to in place of Huh?. To keep that, " +
+					$"set &HUH_HANDLER {errorObject}=$*:@pemit %#=[u(me/VA,%0)] and put @hook/override huh_command={errorObject},HUH_HANDLER " +
+					"in a wizard's @startup."
+				: $"global_error_obj: #{errorSource} is not in the import, so unmatched commands answer Huh? as usual.");
+		}
+
+		string? Mapped(int? source)
+			=> source is { } number && context.DbrefMapping.TryGetValue(number, out var mapped) ? $"#{mapped.Number}" : null;
 	}
 
 	/// <summary>
