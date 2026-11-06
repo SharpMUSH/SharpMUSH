@@ -82,8 +82,9 @@ public sealed class ConfiguredAliasImport(
 		var commandLibrary = commands.Get();
 		var functionLibrary = functions.Get();
 
-		foreach (var directive in import.Aliases)
+		foreach (var line in import.Aliases)
 		{
+			var directive = ThroughEarlierAlias(line, claimed, commandLibrary, functionLibrary);
 			var resolved = directive.Kind switch
 			{
 				AliasKind.Command => Command(directive, overlay, commandLibrary),
@@ -187,6 +188,21 @@ public sealed class ConfiguredAliasImport(
 		}
 
 		return !string.IsNullOrWhiteSpace(attribute.CommandLock) || attribute.Behavior.HasFlag(CommandBehavior.God);
+	}
+
+	/// <summary>
+	/// A line whose target is an alias an earlier line of the same file made names that alias's target, as it does in
+	/// the source, where the earlier alias is in the table by then. The live table does not have it yet.
+	/// </summary>
+	private static AliasDirective ThroughEarlierAlias(AliasDirective directive, Dictionary<string, string> claimed,
+		Library.Services.LibraryService<string, CommandDefinition> commandLibrary,
+		Library.Services.LibraryService<string, FunctionDefinition> functionLibrary)
+	{
+		var root = directive.Kind == AliasKind.Command ? directive.Target.Split('/')[0] : directive.Target.TrimEnd('(', ')');
+		var live = directive.Kind == AliasKind.Command ? commandLibrary.ContainsKey(root) : functionLibrary.ContainsKey(root);
+		return live || !claimed.TryGetValue($"{directive.Kind}:{root}", out var earlier)
+			? directive
+			: directive with { Target = earlier + directive.Target[root.Length..] };
 	}
 
 	/// <summary>What a line's resolution came to: the alias table key it joins, a reason it does not, or neither when it is already in force.</summary>

@@ -82,6 +82,21 @@ public class ConfiguredAliasImportTests
 		await Assert.That(resolved.NotCarried.Single()).StartsWith("function_alias plusser sub: an earlier line");
 	}
 
+	/// <summary>A line may name an alias an earlier line made; it is an alias of that alias's target, switches and all.</summary>
+	[Test]
+	public async Task AnAliasOfAnEarlierAliasNamesItsTarget()
+	{
+		var resolved = Aliases.Resolve(Import(
+			Command("@qf2", "@force/inplace"),
+			Command("@qf3", "@qf2"),
+			Function("plusser", "add"),
+			Function("plusser2", "plusser")), ConfigurationDialect.TinyMUX);
+
+		await Assert.That(resolved.Commands["@FORCE/INPLACE"]).IsEquivalentTo(new[] { "@qf2", "@qf3" });
+		await Assert.That(resolved.Functions["add"]).IsEquivalentTo(new[] { "plusser", "plusser2" });
+		await Assert.That(resolved.NotCarried).IsEmpty();
+	}
+
 	/// <summary>An alias that is also an abbreviation is kept, so a restriction naming it finds the exact name.</summary>
 	[Test]
 	public async Task AnAliasThatAbbreviatesItsCommandIsKept()
