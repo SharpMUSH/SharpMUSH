@@ -1,6 +1,8 @@
 using System.Text;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -117,6 +119,30 @@ public class LoginReportTests : ServerTestBase
 		{
 			await Assert.That(Notifications.For(player))
 				.Contains(line => line.StartsWith("Last connect was from None on ", StringComparison.Ordinal));
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(handle);
+		}
+	}
+
+	[Test]
+	public async Task ACharacterMadeAtTheConnectScreen_IsToldItsCreationSiteAtFirstLogin()
+	{
+		var handle = await RegisterAsync("maker.example");
+		try
+		{
+			var account = await WebAppFactoryArg.Services.GetRequiredService<IAccountService>()
+				.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("MakerAcct"), null, Password);
+			await ConnectionService.BindAccount(handle, account.Expect<SharpAccount>().Id!);
+			var name = $"Maker{Guid.NewGuid():N}"[..12];
+
+			await CommandParser.CommandParse(handle, ConnectionService, MarkupText.Plain($"create {name} {Password}"));
+
+			await Assert.That(ConnectionService.Get(handle)?.Ref).IsNotNull();
+			var player = ConnectionService.Get(handle)?.Ref ?? default;
+			await Assert.That(Notifications.For(player))
+				.Contains(line => line.StartsWith("Last connect was from maker.example on ", StringComparison.Ordinal));
 		}
 		finally
 		{

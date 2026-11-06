@@ -51,18 +51,18 @@ public class HostNameLookupTests
 	}
 
 	[Test]
-	public async Task ALoginWaitsForTheLookupAlreadyRunning()
+	public async Task ASecondCallWaitsForTheLookupAlreadyRunning()
 	{
 		var answer = new TaskCompletionSource<string?>();
 		var resolver = Substitute.For<IHostNameResolver>();
 		resolver.ResolveAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(new ValueTask<string?>(answer.Task));
 		var (lookup, connections) = Build(useDns: true, resolver);
 
-		var atConnect = lookup.LookUpAsync(Handle);
-		var atLogin = lookup.LookUpAsync(Handle);
-		await Assert.That(atLogin.IsCompleted).IsFalse();
+		var first = lookup.LookUpAsync(Handle);
+		var second = lookup.LookUpAsync(Handle);
+		await Assert.That(second.IsCompleted).IsFalse();
 		answer.SetResult("player.example");
-		await Task.WhenAll(atConnect, atLogin);
+		await Task.WhenAll(first, second);
 
 		await resolver.Received(1).ResolveAsync(Address, Arg.Any<CancellationToken>());
 		connections.Received(1).Update(Handle, "HostName", "player.example");

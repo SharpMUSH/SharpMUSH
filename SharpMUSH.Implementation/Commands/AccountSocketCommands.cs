@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using MarkupString.Layout;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Queries.Database;
@@ -341,6 +342,9 @@ public partial class Commands
 		var playerDbRef = await Mediator.Send(new CreatePlayerCommand(charName, charPassword, defaultHomeDbref, defaultHomeDbref, startingQuota));
 
 		await AccountService.LinkCharacterAsync(accountId, playerDbRef);
+		var connection = ConnectionService.Get(handle);
+		await ConnectRecord.CreatedAsync(Mediator, playerDbRef, connection?.HostName ?? string.Empty,
+			connection?.InternetProtocolAddress ?? string.Empty);
 
 		var playerNode = await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(playerDbRef));
 		if (playerNode is not (AnySharpObject and SharpPlayer foundPlayer))

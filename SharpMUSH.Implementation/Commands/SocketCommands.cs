@@ -946,7 +946,6 @@ public partial class Commands
 		}
 
 		if (await HelperFunctions.GetGod(Mediator) is not SharpPlayer god) return;
-		await HostNames.LookUpAsync(handle);
 		var connection = ConnectionService.Get(handle);
 		await Mediator.Send(new SetAttributeCommand(playerRef, ["LAST"], MarkupText.Plain(ConnectRecord.Now()), god));
 		await Mediator.Send(new SetAttributeCommand(playerRef, ["LASTSITE"],
@@ -1003,7 +1002,6 @@ public partial class Commands
 	private async ValueTask RecordFailedConnectAsync(long handle, SharpPlayer player)
 	{
 		if (await HelperFunctions.GetGod(Mediator) is not SharpPlayer god) return;
-		await HostNames.LookUpAsync(handle);
 		var host = ConnectionService.Get(handle)?.HostName ?? string.Empty;
 		await Mediator.Send(new SetAttributeCommand(player.Object.DBRef, ["LASTFAILED"],
 			MarkupText.Plain($"{host} on {ConnectRecord.Now()}"), god));
