@@ -27,9 +27,6 @@ public sealed class LocalEchoServer : IAsyncInitializer, IAsyncDisposable
 	/// <summary>The server's base URL, without a trailing slash.</summary>
 	public string BaseUrl { get; private set; } = "";
 
-	/// <summary>The host part of <see cref="BaseUrl"/>, as a secret's host list names it.</summary>
-	public string Host => new Uri(BaseUrl).IdnHost;
-
 	public async Task InitializeAsync()
 	{
 		var builder = WebApplication.CreateSlimBuilder();
@@ -67,7 +64,9 @@ public sealed class LocalEchoServer : IAsyncInitializer, IAsyncDisposable
 
 	public async ValueTask DisposeAsync()
 	{
-		if (_app is not null) await _app.DisposeAsync();
+		if (_app is null) return;
+		await _app.StopAsync();
+		await _app.DisposeAsync();
 	}
 
 	private static JsonObject Echo(HttpContext context, string? flag = null)

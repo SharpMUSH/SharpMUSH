@@ -499,7 +499,7 @@ public class HttpCommandTests
 	/// <summary>
 	/// The secret example in <c>help @http</c>: the stored login goes to postman-echo.com as Basic. A secret
 	/// is only ever sent over https, which the loopback echo server in <see cref="HttpEchoTests"/> does not
-	/// serve, so this example's request is checked here and its reply is the site's.
+	/// serve, so only the request this example sends is checked here.
 	/// </summary>
 	[Test]
 	public async Task HelpSecretExampleSendsTheStoredLogin()

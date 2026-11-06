@@ -90,7 +90,7 @@ public class AdminCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@password wrongPassword=newpassPassword"));
 		await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef))
 			.Contains("The old password that you entered was incorrect.");
-		await Assert.That(await Evaluate($"checkpass({player.DbRef},newpassPassword)")).IsEqualTo("0");
+		await Assert.That(await Evaluate($"checkpass({player.DbRef},{TestIsolationHelpers.TestPassword})")).IsEqualTo("1");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@password {TestIsolationHelpers.TestPassword}=newpassPassword"));

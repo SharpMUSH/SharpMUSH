@@ -193,7 +193,7 @@ public class InformationFunctionUnitTests
 	}
 
 	/// <summary>
-	/// hidden() of a connected player, by name and by descriptor, before and after it hides.
+	/// hidden() of a connected player, by name, by dbref and by descriptor, before and after it hides.
 	/// </summary>
 	/// <remarks>
 	/// Was skipped for an intermittent '1': it asked about God, whom other tests in the shared session
@@ -205,11 +205,13 @@ public class InformationFunctionUnitTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services,
 			WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), ConnectionService, "HiddenFn");
 
+		await Assert.That(await Eval($"hidden({player.Name})")).IsEqualTo("0");
 		await Assert.That(await Eval($"hidden({player.DbRef})")).IsEqualTo("0");
 		await Assert.That(await Eval($"hidden({player.Handle})")).IsEqualTo("0");
 
 		ConnectionService.Update(player.Handle, "Hidden", "1");
 
+		await Assert.That(await Eval($"hidden({player.Name})")).IsEqualTo("1");
 		await Assert.That(await Eval($"hidden({player.DbRef})")).IsEqualTo("1");
 		await Assert.That(await Eval($"hidden({player.Handle})")).IsEqualTo("1");
 	}
