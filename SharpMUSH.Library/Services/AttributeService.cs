@@ -36,9 +36,14 @@ public class AttributeService(
 	private readonly AttributeWriter _writer = new(mediator, ps, notifyService, validateService, configuration, serviceProvider);
 
 	/// <inheritdoc/>
+	/// <remarks>
+	/// A copy names the attribute as it is stored (<c>@clone</c>, a snapshot restore), so neither this nor the
+	/// <paramref name="creator"/>-taking <c>SetAttributeAsync</c> reads the name in the dialect in force; a caller
+	/// with a name from softcode resolves it first (<see cref="SoftcodeDialectScope.AttributeName"/>).
+	/// </remarks>
 	public ValueTask<Result<Success>> SetStoredAttributeAsync(AnySharpObject executor, AnySharpObject obj,
 		string attribute, StoredMarkup value, SharpPlayer? creator = null)
-		=> _writer.SetStoredAttributeAsync(executor, obj, SoftcodeDialectScope.AttributeName(attribute), value, creator);
+		=> _writer.SetStoredAttributeAsync(executor, obj, attribute, value, creator);
 
 	public ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj,
 		string attribute, MString value)
@@ -52,7 +57,7 @@ public class AttributeService(
 	/// <inheritdoc/>
 	public ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj,
 		string attribute, MString value, SharpPlayer creator)
-		=> _writer.SetAttributeAsync(executor, obj, SoftcodeDialectScope.AttributeName(attribute), value, creator);
+		=> _writer.SetAttributeAsync(executor, obj, attribute, value, creator);
 
 	/// <inheritdoc/>
 	public ValueTask<Result<Success>> ClearAttributeAsync(AnySharpObject executor, AnySharpObject obj,

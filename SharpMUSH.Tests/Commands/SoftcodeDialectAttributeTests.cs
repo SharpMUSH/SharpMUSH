@@ -136,6 +136,37 @@ public class SoftcodeDialectAttributeTests : ServerTestBase
 		await Assert.That(await Eval($"u({thing}/FLAGGED)")).IsEqualTo("42 1 ADEATH");
 	}
 
+	/// <summary><c>@mvattr</c> onto the same attribute under its other name moves nothing, so the value stays.</summary>
+	[Test]
+	public async Task MoveOntoItsOwnAliasKeepsTheValue()
+	{
+		var thing = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("DialectMove")}"));
+		await Cmd($"&DEATH {thing}=kept");
+		await Cmd($"&FLAGGED {thing}=@mvattr me/death=me/kill");
+		await Cmd($"@set {thing}/FLAGGED=mux");
+
+		await Cmd($"@trigger {thing}/FLAGGED");
+		await WebAppFactoryArg.QueueBarrierAsync();
+
+		await Assert.That(await Eval($"get({thing}/DEATH)")).IsEqualTo("kept");
+	}
+
+	/// <summary>A clone copies attributes by their stored names, so one called <c>KILL</c> stays <c>KILL</c>.</summary>
+	[Test]
+	public async Task CloneInDialectKeepsStoredNames()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("DialectClone");
+		var thing = DBRef.Parse(await Cmd($"@create {name}"));
+		await Cmd($"&KILL {thing}=native");
+		await Cmd($"&DEATH {thing}=death");
+		await Cmd($"&FLAGGED {thing}=[clone(me)]");
+		await Cmd($"@set {thing}/FLAGGED=mux");
+
+		var copy = DBRef.Parse(await Eval($"u({thing}/FLAGGED)"));
+
+		await Assert.That(await Eval($"[get({copy}/KILL)]|[get({copy}/DEATH)]")).IsEqualTo("native|death");
+	}
+
 	/// <summary>TinyMUX's <c>@reject</c> sets the page refusal, not <c>@rejectmotd</c>, which SharpMUSH reads it as.</summary>
 	[Test]
 	public async Task GameDialectSetsAliasedAttributeByCommand()
