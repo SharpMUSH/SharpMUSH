@@ -49,8 +49,16 @@ public class PermissionService(
 	public ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, string lockString)
 		=> lockService.Evaluate(lockString, target, who);
 
-	public ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, LockType lockType)
-		=> lockService.Evaluate(lockType, target, who);
+	/// <remarks>
+	/// <c>game.override.movement</c>, RhostMUSH's WRAITH, passes enter and leave locks on what it reaches.
+	/// </remarks>
+	public async ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, LockType lockType)
+		=> (lockType is LockType.Enter or LockType.Leave && await PassesMovementLock(who, target))
+			|| await lockService.Evaluate(lockType, target, who);
+
+	/// <summary>Whether <paramref name="who"/> holds <c>game.override.movement</c> against <paramref name="target"/>.</summary>
+	private static async ValueTask<bool> PassesMovementLock(AnySharpObject who, AnySharpObject target)
+		=> !who.IsGod() && await who.CanOver(PortalPermission.OverrideMovement, target);
 
 	public async ValueTask<bool> CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
 		=> await CanSetInternal(executor, target, attribute, obeySafe: true);
@@ -121,8 +129,9 @@ public class PermissionService(
 			return false;
 
 		// Wizard(p) bypasses BOTH the AF_Wizard(a) check and the locked-attribute check below
-		// entirely (Cannot_Write_This_Attr's `Wizard(p) || (!AF_Wizard(a) && ...)`).
-		if (await executor.IsWizard())
+		// entirely (Cannot_Write_This_Attr's `Wizard(p) || (!AF_Wizard(a) && ...)`). That half of WIZARD is
+		// game.override here, reaching the target's owner.
+		if (await executor.CanOver(PortalPermission.Override, target))
 			return true;
 
 		// AF_WIZARD: a non-wizard, non-God executor may never write a wizard-flagged
@@ -161,7 +170,7 @@ public class PermissionService(
 		if (executor.IsGod())
 			return true;
 
-		if (await executor.IsWizard() && !finalAttr.IsWizard())
+		if (await executor.CanOver(PortalPermission.Override, target) && !finalAttr.IsWizard())
 			return true;
 
 		if (finalAttr.IsLocked())
@@ -623,7 +632,7 @@ public class PermissionService(
 	{
 		if (!await reality.CanPerceiveAsync(who.Object().DBRef, exit.Object.DBRef)
 				|| !await reality.CanPerceiveAsync(who.Object().DBRef, destination.Object().DBRef)) return false;
-		return await lockService.Evaluate(LockType.Basic, exit, who);
+		return await PassesMovementLock(who, exit) || await lockService.Evaluate(LockType.Basic, exit, who);
 	}
 
 	/// <summary>PennMUSH <c>Chan_Ok_Type</c> — hdrs/extchat.h:196.</summary>
