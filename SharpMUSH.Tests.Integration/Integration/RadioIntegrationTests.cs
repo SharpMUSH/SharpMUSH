@@ -151,6 +151,92 @@ public class RadioIntegrationTests
 	}
 
 	/// <summary>
+	/// A frequency's creator is not tuned in to it, so speaking on it says that, with how to tune in, rather than
+	/// that it does not exist; a rename keeps the frequency, so the warning names it by its new name.
+	/// </summary>
+	[Test]
+	public async Task SpeakingOnAFrequencyYouAreNotTunedInToSaysHowToTuneIn()
+	{
+		try
+		{
+			await InstallAsync();
+			var admin = await Player("RadTuneA", "radio-admin");
+			await As(admin, "+radio/create Radio 1");
+			await Assert.That(await As(admin, "+radio/rename Radio 1=Wild")).Contains("Radio 1 is called Wild now.");
+
+			await Assert.That(await As(admin, "+radio Wild=Stuff")).Contains("You are not tuned in to Wild. +radio/join Wild tunes in.");
+			await Assert.That(await As(admin, ".wild Stuff")).Contains("You are not tuned in to Wild. +radio/join Wild tunes in.");
+			await Assert.That(await As(admin, "+radio Nowhere=Stuff")).Contains("There is no frequency called 'Nowhere'. +radio lists them.");
+
+			await As(admin, "+radio/join Wild");
+			var said = TestIsolationHelpers.GenerateUniqueName("RadTune");
+			await As(admin, $"+radio Wild={said}");
+			await Assert.That(Heard(admin, said)).IsEquivalentTo(new[] { $"<Wild> {admin.Name} says, \"{said}\"" });
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	/// <summary>
+	/// .&lt;frequency&gt; &lt;message&gt; speaks on one of the player's frequencies, named without its spaces or by a
+	/// start that fits only that one. A name typed in full wins over a longer one it begins; a start that fits
+	/// several sends nothing. What follows is never evaluated.
+	/// </summary>
+	[Test]
+	public async Task ADotAliasSpeaksOnAFrequencyByItsNameOrItsStart()
+	{
+		try
+		{
+			await InstallAsync();
+			var admin = await Player("RadDotA", "radio-admin");
+			var ann = await Player("RadDotAnn");
+			var bo = await Player("RadDotBo");
+			foreach (var frequency in new[] { "Wild", "Ops", "Opsec", "Night Watch" })
+			{
+				await As(admin, $"+radio/create {frequency}");
+				await As(ann, $"+radio/join {frequency}");
+				await As(bo, $"+radio/join {frequency}");
+			}
+
+			async Task SpeaksOn(string typed, string frequency)
+			{
+				var said = TestIsolationHelpers.GenerateUniqueName("RadDot");
+				await As(ann, $"{typed} {said}, 50% off [add(1,2)]");
+				await Assert.That(Heard(bo, said)).IsEquivalentTo(new[] { $"<{frequency}> {ann.Name} says, \"{said}, 50% off [add(1,2)]\"" })
+					.Because($"{typed} names {frequency}");
+			}
+
+			await SpeaksOn(".wild", "Wild");
+			await SpeaksOn(".WI", "Wild");
+			await SpeaksOn(".w", "Wild");
+			await SpeaksOn(".ops", "Ops");
+			await SpeaksOn(".opse", "Opsec");
+			await SpeaksOn(".nightwatch", "Night Watch");
+			await SpeaksOn(".n", "Night Watch");
+
+			var posed = TestIsolationHelpers.GenerateUniqueName("RadDotPose");
+			await As(ann, $".w :{posed}");
+			await Assert.That(Heard(bo, posed)).IsEquivalentTo(new[] { $"<Wild> {ann.Name} {posed}" });
+
+			var unsent = TestIsolationHelpers.GenerateUniqueName("RadDotAmbiguous");
+			var ambiguous = await As(ann, $".op {unsent}");
+			await Assert.That(ambiguous).Contains("'.op' could be").And.Contains("Opsec").And.Contains("Type more of it.");
+			await Assert.That(Heard(bo, unsent)).IsEmpty();
+
+			await Assert.That(await As(ann, ".x hello")).Contains("There is no frequency called 'x'. +radio lists them.");
+			await Assert.That(await As(ann, ".* hello")).Contains("There is no frequency called '*'.");
+			await Assert.That(await As(ann, ".wild")).Contains("What do you want to say?");
+			await Assert.That(await As(ann, ".")).Contains(".<frequency> <message> speaks on a frequency you are tuned in to.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	/// <summary>
 	/// A frequency's colour is a theme colour, which tone() paints in each listener's own theme, or ansi()
 	/// codes; the default is the info theme colour.
 	/// </summary>

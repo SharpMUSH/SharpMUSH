@@ -97,6 +97,8 @@ Any command added without both `/noparse` and `/rsnoparse` is provided with a `/
 
 Commands added with `@command/add`, like other standard commands, are always case-insensitive. Until it is hooked, an added command answers "This command has not been implemented."
 
+An added command whose name is one character is a token, like `"` or `:`: what is typed straight after it is its argument. After `@command/add/noparse/rsnoparse .`, typing `.wild hello` runs `. wild hello`, so its hook sees `wild hello`. Built-in tokens and chat aliases (`+<channel>`) are matched first.
+
 ::: seealso
 - [@hook]
 - [restrict]
