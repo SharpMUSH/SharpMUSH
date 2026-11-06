@@ -821,6 +821,7 @@ public partial class Commands
 
 		var hashedPassword = PasswordService.HashPassword(newPassword);
 		await PasswordService.SetPassword(player, hashedPassword);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PasswordChanged), executor);
 
 		return new CallState(string.Empty);
 	}

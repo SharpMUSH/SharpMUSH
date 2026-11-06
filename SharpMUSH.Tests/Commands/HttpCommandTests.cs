@@ -496,6 +496,23 @@ public class HttpCommandTests
 		await Assert.That(run.Handler.Header("Authorization")).IsEqualTo("Basic " + Convert.ToBase64String("user:pass"u8.ToArray()));
 	}
 
+	/// <summary>
+	/// The secret example in <c>help @http</c>: the stored login goes to postman-echo.com as Basic. A secret
+	/// is only ever sent over https, which the loopback echo server in <see cref="HttpEchoTests"/> does not
+	/// serve, so this example's request is checked here and its reply is the site's.
+	/// </summary>
+	[Test]
+	public async Task HelpSecretExampleSendsTheStoredLogin()
+	{
+		var secrets = SecretFor("http.postman.login", "postman:password", "postman-echo.com");
+		var run = await RunHttpAsync("HttpHelpSecret", [], ["https://postman-echo.com/basic-auth",
+			"{\"Authorization\":{\"secret\":\"http.postman.login\",\"scheme\":\"Basic\"}}"], secrets: secrets);
+
+		await Assert.That(run.Handler.Request?.RequestUri?.AbsoluteUri).IsEqualTo("https://postman-echo.com/basic-auth");
+		await Assert.That(run.Handler.Header("Authorization")).IsEqualTo("Basic cG9zdG1hbjpwYXNzd29yZA==");
+		await Assert.That(run.ClientName).IsEqualTo(SharpMUSH.Implementation.Commands.Commands.SecretHttpClient);
+	}
+
 	[Test]
 	public async Task HttpWithoutASecretFollowsRedirects()
 	{

@@ -10,26 +10,27 @@ using System.Diagnostics;
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
-/// Integration tests for the @http command using postman-echo.com endpoints.
+/// Integration tests for the @http command against <see cref="LocalEchoServer"/>, a loopback echo service.
 /// Tests all HTTP verbs (GET, POST, PUT, DELETE, PATCH) and encoding support.
 ///
 /// Isolation strategy: each test generates a unique token (UUID hex) and embeds it
-/// both in the HTTP request (as a query param or body field echoed by postman-echo)
+/// both in the HTTP request (as a query param or body field echoed by the server)
 /// and as a prefix in the callback attribute ("think {token} %0"), so every assertion
 /// can key on a string that is guaranteed to belong to that test's own response.
 /// </summary>
-[Category("External")]
-public class PostmanEchoHttpTests
+public class HttpEchoTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
+
+	[ClassDataSource<LocalEchoServer>(Shared = SharedType.PerClass)]
+	public required LocalEchoServer Echo { get; init; }
 
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
-	private const string PostmanEchoBase = "https://postman-echo.com";
-	private const int MaxWaitSeconds = 60;
+	private const int MaxWaitSeconds = 30;
 
 	/// <summary>
 	/// Generates a unique MUSH attribute name for a test (max 20 uppercase chars).
@@ -39,7 +40,7 @@ public class PostmanEchoHttpTests
 
 	/// <summary>
 	/// Generates a short unique token suitable for use as a query parameter value or
-	/// body field value that will be echoed back in postman-echo responses.
+	/// body field value that will be echoed back in the echo server's responses.
 	/// </summary>
 	private static string GenerateUniqueToken()
 		=> Guid.NewGuid().ToString("N")[..16];
@@ -97,7 +98,7 @@ public class PostmanEchoHttpTests
 		}
 
 		throw new TimeoutException(
-			$"Timed out after {timeoutSeconds}s waiting for expected @http callback notification from postman-echo; heard: "
+			$"Timed out after {timeoutSeconds}s waiting for expected @http callback notification from the echo server; heard: "
 			+ string.Join(" | ", WebAppFactoryArg.Notifications.For(recipient).TakeLast(3)));
 	}
 
@@ -116,13 +117,13 @@ public class PostmanEchoHttpTests
 		var attrName = GenerateAttributeName("HTTPGET");
 		await SetCallbackAttribute(attrName, token);
 
-		// postman-echo echoes the request URL in the response, which includes the unique token.
+		// The server echoes the request URL in the response, which includes the unique token.
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/get?testid={token}"));
+			MarkupText.Plain($"@http #1/{attrName}={Echo.BaseUrl}/get?testid={token}"));
 
 		await WaitForNotify(executor, msg => msg.Contains(token));
 
-		await Assert.That(Announced(executor, msg => msg.Contains(token) && msg.Contains("postman-echo.com/get"))).IsEqualTo(1);
+		await Assert.That(Announced(executor, msg => msg.Contains(token) && msg.Contains($"{Echo.BaseUrl}/get"))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -133,13 +134,13 @@ public class PostmanEchoHttpTests
 		var attrName = GenerateAttributeName("HTTPPOST");
 		await SetCallbackAttribute(attrName, token);
 
-		// postman-echo echoes the form body; the unique token appears in the "form" JSON field.
+		// The server echoes the form body; the unique token appears in the "form" JSON field.
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@http/post #1/{attrName}={PostmanEchoBase}/post,testid={token}"));
+			MarkupText.Plain($"@http/post #1/{attrName}={Echo.BaseUrl}/post,testid={token}"));
 
 		await WaitForNotify(executor, msg => msg.Contains(token));
 
-		await Assert.That(Announced(executor, msg => msg.Contains(token) && msg.Contains("postman-echo.com/post"))).IsEqualTo(1);
+		await Assert.That(Announced(executor, msg => msg.Contains(token) && msg.Contains($"{Echo.BaseUrl}/post"))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -150,13 +151,13 @@ public class PostmanEchoHttpTests
 		var attrName = GenerateAttributeName("HTTPPUT");
 		await SetCallbackAttribute(attrName, token);
 
-		// postman-echo echoes the PUT body; the unique token appears in the "form" JSON field.
+		// The server echoes the PUT body; the unique token appears in the "form" JSON field.
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@http/put #1/{attrName}={PostmanEchoBase}/put,testid={token}"));
+			MarkupText.Plain($"@http/put #1/{attrName}={Echo.BaseUrl}/put,testid={token}"));
 
 		await WaitForNotify(executor, msg => msg.Contains(token));
 
-		await Assert.That(Announced(executor, msg => msg.Contains(token) && msg.Contains("postman-echo.com/put"))).IsEqualTo(1);
+		await Assert.That(Announced(executor, msg => msg.Contains(token) && msg.Contains($"{Echo.BaseUrl}/put"))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -167,13 +168,13 @@ public class PostmanEchoHttpTests
 		var attrName = GenerateAttributeName("HTTPDEL");
 		await SetCallbackAttribute(attrName, token);
 
-		// postman-echo echoes the request URL; the unique token appears in the query args.
+		// The server echoes the request URL; the unique token appears in the query args.
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@http/delete #1/{attrName}={PostmanEchoBase}/delete?testid={token}"));
+			MarkupText.Plain($"@http/delete #1/{attrName}={Echo.BaseUrl}/delete?testid={token}"));
 
 		await WaitForNotify(executor, msg => msg.Contains(token));
 
-		await Assert.That(Announced(executor, msg => msg.Contains(token) && msg.Contains("postman-echo.com/delete"))).IsEqualTo(1);
+		await Assert.That(Announced(executor, msg => msg.Contains(token) && msg.Contains($"{Echo.BaseUrl}/delete"))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -184,13 +185,13 @@ public class PostmanEchoHttpTests
 		var attrName = GenerateAttributeName("HTTPPATCH");
 		await SetCallbackAttribute(attrName, token);
 
-		// postman-echo echoes the PATCH body; the unique token appears in the "form" JSON field.
+		// The server echoes the PATCH body; the unique token appears in the "form" JSON field.
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@http/patch #1/{attrName}={PostmanEchoBase}/patch,testid={token}"));
+			MarkupText.Plain($"@http/patch #1/{attrName}={Echo.BaseUrl}/patch,testid={token}"));
 
 		await WaitForNotify(executor, msg => msg.Contains(token));
 
-		await Assert.That(Announced(executor, msg => msg.Contains(token) && msg.Contains("postman-echo.com/patch"))).IsEqualTo(1);
+		await Assert.That(Announced(executor, msg => msg.Contains(token) && msg.Contains($"{Echo.BaseUrl}/patch"))).IsEqualTo(1);
 	}
 
 	[Test]
@@ -206,7 +207,7 @@ public class PostmanEchoHttpTests
 		// The unique token is prefixed by the callback attribute ("think {token} %0"),
 		// so it appears in the notification regardless of the response body content.
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/gzip"));
+			MarkupText.Plain($"@http #1/{attrName}={Echo.BaseUrl}/gzip"));
 
 		await WaitForNotify(executor, msg =>
 			msg.Contains(token) &&
@@ -228,7 +229,7 @@ public class PostmanEchoHttpTests
 		// The unique token is prefixed by the callback attribute ("think {token} %0"),
 		// so it appears in the notification regardless of the response body content.
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/deflate"));
+			MarkupText.Plain($"@http #1/{attrName}={Echo.BaseUrl}/deflate"));
 
 		await WaitForNotify(executor, msg =>
 			msg.Contains(token) &&
@@ -246,9 +247,9 @@ public class PostmanEchoHttpTests
 		await SetCallbackAttribute(attrName, token);
 
 		// Use the unique token as both the query param key and value so the assertion
-		// is scoped to this test's request. postman-echo echoes query params in "args".
+		// is scoped to this test's request. The server echoes query params in "args".
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/get?{token}={token}"));
+			MarkupText.Plain($"@http #1/{attrName}={Echo.BaseUrl}/get?{token}={token}"));
 
 		await WaitForNotify(executor, msg => msg.Contains(token));
 
@@ -281,14 +282,14 @@ public class PostmanEchoHttpTests
 
 		// A GET's third argument is its headers; text that is not a JSON object is refused before the task is queued.
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MarkupText.Plain($"@http/get me/{attrName}={PostmanEchoBase}/get,{token}"));
+			MarkupText.Plain($"@http/get me/{attrName}={Echo.BaseUrl}/get,{token}"));
 
 		await Assert.That(Announced(player.DbRef, msg => msg == "Headers must be a JSON object of header names and values. Aborting.")).IsEqualTo(1);
 	}
 
 	/// <summary>
-	/// The examples in <c>help @http</c>, run as written by a player of their own, who must hear the
-	/// output the help shows.
+	/// The examples in <c>help @http</c>, run by a player of their own against the echo server in place of
+	/// postman-echo.com, who must hear the output the help shows.
 	/// </summary>
 	[Test]
 	[Arguments("think %<status> [json_query(%0,extract,$.json.bar)] [json_query(%0,extract,$.headers.game)]",
@@ -313,37 +314,10 @@ public class PostmanEchoHttpTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {player.DbRef}=CAN_HTTP"));
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"&SHOW me={show}"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(request));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain(request.Replace("https://postman-echo.com", Echo.BaseUrl)));
 
 		await WaitForNotify(player.DbRef, msg => msg == expected);
-	}
-
-	/// <summary>
-	/// The secret example in <c>help @http</c>, run by God, who may set secrets: the stored login reaches the site
-	/// without passing through softcode.
-	/// </summary>
-	[Test]
-	public async ValueTask HelpSecretExampleLogsIn()
-	{
-		var secret = "http.postman." + string.Concat(TestIsolationHelpers.GenerateUniqueName("l").Where(char.IsAsciiLetterOrDigit)).ToLowerInvariant();
-		var attrName = GenerateAttributeName("SHOWSECRET");
-		var token = GenerateUniqueToken();
-		var secrets = WebAppFactoryArg.Services.GetRequiredService<ISecretStore>();
-		try
-		{
-			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@secret {secret}=postman:password"));
-			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@secret/host {secret}=postman-echo.com"));
-			await SetCallbackAttributeWithContent(attrName, $"think {token} %<status> %0");
-			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
-				$"@http me/{attrName}=https://postman-echo.com/basic-auth,json(object,Authorization,json(object,secret,\"{secret}\",scheme,\"Basic\"))"));
-
-			await WaitForNotify(WebAppFactoryArg.ExecutorDBRef, msg => msg == $"{token} 200 {{\"authenticated\":true}}");
-		}
-		finally
-		{
-			await secrets.ClearAsync(secret);
-			await secrets.SetHostsAsync(secret, []);
-		}
 	}
 
 	[Test]
@@ -357,9 +331,9 @@ public class PostmanEchoHttpTests
 		await SetCallbackAttributeWithContent(attrName, $"think {token} %<status>");
 
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/get?testid={token}"));
+			MarkupText.Plain($"@http #1/{attrName}={Echo.BaseUrl}/get?testid={token}"));
 
-		// The callback should emit "{token} 200" because postman-echo returns 200 OK.
+		// The callback should emit "{token} 200" because the server returns 200 OK.
 		await WaitForNotify(executor, msg =>
 			msg.Contains(token) &&
 			msg.Contains("200"));
@@ -377,9 +351,9 @@ public class PostmanEchoHttpTests
 		// %<status> is the named argument holding the HTTP status code.
 		await SetCallbackAttributeWithContent(attrName, $"think {token} %<status>");
 
-		// postman-echo.com/status/404 deliberately returns a 404 response.
+		// /status/404 deliberately returns a 404 response.
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/status/404"));
+			MarkupText.Plain($"@http #1/{attrName}={Echo.BaseUrl}/status/404"));
 
 		// The callback should emit "{token} 404".
 		await WaitForNotify(executor, msg =>
