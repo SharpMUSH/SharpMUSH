@@ -2,6 +2,7 @@ using Mediator;
 using SharpMUSH.Configuration.Options;
 using MarkupString;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
@@ -302,7 +303,8 @@ public class ConnectionEstablishedConsumer(
 	IConnectionService connectionService,
 	IMessageBus bus,
 	IConnectionStateStore? stateStore = null,
-	IHostNameLookup? hostNames = null)
+	IHostNameLookup? hostNames = null,
+	IOptionsWrapper<SharpMUSHOptions>? options = null)
 	: IMessageConsumer<ConnectionEstablishedMessage>
 {
 	public async Task HandleAsync(ConnectionEstablishedMessage message, CancellationToken cancellationToken = default)
@@ -345,8 +347,28 @@ public class ConnectionEstablishedConsumer(
 
 		if (hostNames is not null)
 		{
-			_ = Task.Run(() => hostNames.LookUpAsync(message.Handle), CancellationToken.None);
+			_ = Task.Run(() => LookUpHostAsync(hostNames, message.Handle), CancellationToken.None);
 		}
+	}
+
+	/// <summary>
+	/// Looks the connection's host up, then drops it when it already logged in from a site whose
+	/// <c>!connect</c> rule names the host it turned out to have: the login's own sitelock check could only
+	/// see the address.
+	/// </summary>
+	private async Task LookUpHostAsync(IHostNameLookup hostNames, long handle)
+	{
+		await hostNames.LookUpAsync(handle);
+		if (options is null
+				|| connectionService.Get(handle) is not { Ref: not null } connection
+				|| connection.HostName == connection.InternetProtocolAddress
+				|| !SitelockMatcher.IsBlocked(options.CurrentValue.SitelockRules.Rules, connection.InternetProtocolAddress,
+					connection.HostName, SitelockMatcher.ConnectFlag))
+		{
+			return;
+		}
+
+		await bus.Publish(new DisconnectConnectionMessage(handle, "Access from your location is restricted."));
 	}
 }
 
