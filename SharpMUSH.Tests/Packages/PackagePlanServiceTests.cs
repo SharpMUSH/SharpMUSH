@@ -558,9 +558,11 @@ public class PackagePlanServiceTests
 	}
 
 	[Test]
-	public async Task Dropped_ManagedByAnotherPackage_KeepsTheAttribute()
+	[Arguments("base-gone")]
+	[Arguments("edited locally")]
+	public async Task Dropped_ManagedByAnotherPackage_KeepsTheAttribute(string liveValue)
 	{
-		var attr = DroppedAttrChangeset("base-gone",
+		var attr = DroppedAttrChangeset(liveValue,
 				[new ManagedAttributeRecord("other", "#10:1", "FN_GONE", "base-gone", "h3", "1.0.0")])
 			.Attributes.Single(a => a.Attribute == "FN_GONE");
 		await Assert.That(attr.Action).IsEqualTo(PackageAttributeAction.RemoveBaseline);

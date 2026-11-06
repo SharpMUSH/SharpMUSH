@@ -315,6 +315,54 @@ public class PackageInstallServiceTests
 		await Assert.That(await ReadAttributeAsync(host, "SHARED_DETAIL")).IsEqualTo("");
 	}
 
+	/// <summary>
+	/// Rolling back to a revision without an attribute another package also manages keeps it; rolling back
+	/// to one that holds a different value for it is refused before any write.
+	/// </summary>
+	[Test, NotInParallel]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task Rollback_ProtectsAnAttributeAnotherPackageStillManages(bool revisionHoldsIt)
+	{
+		var package = revisionHoldsIt ? "shared-rollback-held-a" : "shared-rollback-absent-a";
+		var other = revisionHoldsIt ? "shared-rollback-held-b" : "shared-rollback-absent-b";
+		var attribute = revisionHoldsIt ? "SHARED_ROLLBACK_HELD" : "SHARED_ROLLBACK_ABSENT";
+		var code = $"{attribute}_CODE";
+		var host = await ObjidAsync(0);
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>();
+		foreach (var id in new[] { package, other })
+		{
+			await Registry.UpsertInstalledPackageAsync(new InstalledPackageRecord(id, "1.1.0",
+				Source().Repo, Source().Path, "current", "main", DateTimeOffset.UtcNow, 2));
+			await Registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(id, host, attribute, "shared", "h", "1.1.0"));
+		}
+		await Registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(package, host, code, "current", "h", "1.1.0"));
+		await Database.SetAttributeAsync(new DBRef(0), [code], MarkupText.Plain("current"), pm);
+		await Database.SetAttributeAsync(new DBRef(0), [attribute], MarkupText.Plain("shared"), pm);
+		var snapshot = new PackageRevisionSnapshot("1.0.0", [],
+			revisionHoldsIt
+				? [new PackageRevisionSnapshotAttribute(host, code, "old"), new PackageRevisionSnapshotAttribute(host, attribute, "old")]
+				: [new PackageRevisionSnapshotAttribute(host, code, "old")]);
+		await Registry.AddPackageRevisionAsync(new PackageRevisionRecord(package, 1, PackageRevisionKind.Install,
+			"1.0.0", "old", JsonSerializer.Serialize(snapshot, new JsonSerializerOptions(JsonSerializerDefaults.Web)), "{}", "[]", DateTimeOffset.UtcNow));
+
+		var rolledBack = await Installer.RollbackAsync(package, 1);
+		if (revisionHoldsIt)
+		{
+			await Assert.That(rolledBack.Expect<Error<string>>().Value).Contains("shared");
+			await Assert.That(await ReadAttributeAsync(host, code)).IsEqualTo("current");
+		}
+		else
+		{
+			await Assert.That(rolledBack.Value).IsTypeOf<PackageRollbackResult>();
+			await Assert.That(await ReadAttributeAsync(host, code)).IsEqualTo("old");
+			await Assert.That((await Registry.GetManagedAttributesAsync(package)).Any(a => a.Attribute == attribute)).IsFalse();
+		}
+		await Assert.That(await ReadAttributeAsync(host, attribute)).IsEqualTo("shared");
+		await Assert.That((await Installer.UninstallAsync(package)).Value).IsTypeOf<Success>();
+		await Assert.That((await Installer.UninstallAsync(other)).Value).IsTypeOf<Success>();
+	}
+
 	[Test, NotInParallel]
 	[Arguments(false)]
 	[Arguments(true)]

@@ -524,6 +524,8 @@ objects:
 
         The content warning follows the scene's title in `+scene`, first and in the warning colour, and shows on its card and at the top of its log. Whoever joins the scene is told it as they join. See `+help scene details` for the rest.
 
+        The game may keep content warnings under another detail name, set by staff with `+config safety` (warning-detail). The join notice and `+safety/scene` then read that detail, so set that one in place of `warning`.
+
   # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies are
   # evaluated, so brackets, parentheses and percent signs are escaped.
   - ref: safety_help
