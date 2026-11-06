@@ -13,9 +13,9 @@ public static class BundledPackageHandOver
 {
 	/// <summary>
 	/// Hands over each installed package that <paramref name="moved"/> names, came from the catalogue, and this build no
-	/// longer ships. The library is the first configured official remote, else a configured remote at
-	/// <see cref="OfficialPackageRemote.Url"/>; with neither, that remote is added, because browsing, reviewing and
-	/// applying an upgrade all read a configured remote. Returns the ids handed over.
+	/// longer ships. The library is the configured remote at <see cref="OfficialPackageRemote.Url"/>; without one, that
+	/// remote is added, because browsing, reviewing and applying an upgrade all read a configured remote. Returns the
+	/// ids handed over.
 	/// </summary>
 	public static async Task<IReadOnlyList<string>> RunAsync(IPackageRegistryService registry,
 		IReadOnlyDictionary<string, string> moved, ILogger logger)
@@ -51,14 +51,11 @@ public static class BundledPackageHandOver
 	private static async Task<string> LibraryAsync(IPackageRegistryService registry, ILogger logger)
 	{
 		var remotes = await registry.GetPackageRemotesAsync();
-		if (remotes.FirstOrDefault(r => r.Trust == PackageRemoteTrust.Official) is { } official)
-		{
-			return official.Url;
-		}
 
-		if (remotes.Any(r => string.Equals(r.Url.TrimEnd('/'), OfficialPackageRemote.Url, StringComparison.OrdinalIgnoreCase)))
+		// The stored URL, as written, so the update check and the browse page match the install to this remote.
+		if (remotes.FirstOrDefault(r => OfficialPackageRemote.IsLibrary(r.Url)) is { } configured)
 		{
-			return OfficialPackageRemote.Url;
+			return configured.Url;
 		}
 
 		// A remote of the administrator's own under the library's name is left as it is.

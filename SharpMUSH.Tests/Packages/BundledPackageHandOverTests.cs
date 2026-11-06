@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
 
@@ -61,20 +62,25 @@ public class BundledPackageHandOverTests
 		await registry.Received(1).UpsertInstalledPackageAsync(Arg.Is<InstalledPackageRecord>(p => p.SourceRepo == OfficialPackageRemote.Url));
 	}
 
-	/// <summary>The game's own official remote wins, so the update check finds it among the configured remotes.</summary>
+	/// <summary>
+	/// The library as the game configured it wins, under its stored spelling, so the update check and the browse page
+	/// match the install to it; another official remote of the game's own does not have the moved package.
+	/// </summary>
 	[Test]
-	public async Task MovedPackage_FollowsTheConfiguredOfficialRemote()
+	[Arguments("https://github.com/SharpMUSH/SharpMUSH.Packages.git")]
+	[Arguments("https://github.com/sharpmush/sharpmush.packages/")]
+	[Arguments("https://github.com/SharpMUSH/SharpMUSH-Packages")]
+	public async Task MovedPackage_FollowsTheConfiguredLibrary(string stored)
 	{
-		const string mirror = "https://git.example.org/packages";
 		var registry = Registry([Bundled("left-pkg")],
-			new PackageRemoteRecord("Community", "https://git.example.org/community", PackageRemoteTrust.Community, null),
-			new PackageRemoteRecord("Mirror", mirror, PackageRemoteTrust.Official, "stable"));
+			new PackageRemoteRecord("Ours", "https://git.example.org/ours", PackageRemoteTrust.Official, null),
+			new PackageRemoteRecord("Library", stored, PackageRemoteTrust.Community, "main"));
 
 		await BundledPackageHandOver.RunAsync(registry, Moved(("left-pkg", "games/left-pkg")), NullLogger.Instance);
 
 		await registry.Received(1).UpsertInstalledPackageAsync(Bundled("left-pkg") with
 		{
-			SourceRepo = mirror,
+			SourceRepo = stored,
 			SourcePath = "games/left-pkg"
 		});
 		await registry.DidNotReceive().UpsertPackageRemoteAsync(Arg.Any<PackageRemoteRecord>());
@@ -99,13 +105,23 @@ public class BundledPackageHandOverTests
 		await registry.DidNotReceive().UpsertInstalledPackageAsync(Arg.Any<InstalledPackageRecord>());
 	}
 
+	/// <summary>
+	/// A bridge that stays while its package moves would never install again: bootstrap does not put a bundled bridge
+	/// over a package installed from a remote. A package moves with its bridges.
+	/// </summary>
 	[Test]
-	public async Task MovedPackages_HaveLeftTheCatalogue()
+	public async Task MovedPackages_HaveLeftTheCatalogue_WithTheirBridges()
 	{
+		var manifests = new PackageManifestService();
 		foreach (var (id, path) in BundledPackages.Moved)
 		{
 			await Assert.That(BundledPackages.Contains(id)).IsFalse().Because($"{id} is listed as moved but still ships");
 			await Assert.That(path.Trim('/')).IsNotEmpty();
+			var bridges = BundledPackages.All
+				.Where(p => p.Bridge && BundledPackages.Dependencies(p.PackageId, manifests).Contains(id, StringComparer.OrdinalIgnoreCase))
+				.Select(p => p.PackageId)
+				.ToList();
+			await Assert.That(bridges).IsEmpty().Because($"{id} moved but its bridges {string.Join(", ", bridges)} still ship");
 		}
 	}
 }
