@@ -1,7 +1,7 @@
 format: "1.16"
 package: world-grid
 title: "World grid"
-version: 1.6.0
+version: 1.6.1
 authors: [SharpMUSH]
 description: "Walking a world map the World plugin keeps: direction exits on the map lead from place to place through the rooms it lends them, and a parent describes those rooms from the map's legend. +map, from world-map, draws the places around you."
 license: MIT
@@ -68,7 +68,7 @@ objects:
       # Copied onto each map by +map/exits. ZONE`EXITS, with %0 a room on the map and %1 a viewer, lists the
       # direction exits that lead somewhere from that room for that viewer, leaving out a DARK one the viewer
       # can't see and a way the room has an exit of its own for (by any of its names, in any case). ZONE`EXITS`TO, with %1 one of them, is the room standing where it leads; empty
-      # while none does, and it lends none. look, room-contents and gmcp-room read them.
+      # while none does, and it lends none. look, room-contents and gmcp read them.
       DATA`ZONE: |-
         What +map/exits copies onto a map. One leaf per attribute.
       DATA`ZONE`EXITS: |-

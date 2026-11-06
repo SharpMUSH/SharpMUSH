@@ -228,7 +228,7 @@ public class Program
 				new { status = readiness.HasBeenReady ? "degraded" : "starting", pending = readiness.Pending() },
 				statusCode: StatusCodes.Status503ServiceUnavailable));
 
-		// The interface mudlet-client offers Mudlet when the game names none of its own.
+		// The interface gmcp-mudlet offers Mudlet when the game names none of its own.
 		app.MapMudletInterface();
 
 		// Inbound HTTP to the MUSH: /http/<path> runs the http_handler's <METHOD> attribute as

@@ -243,26 +243,16 @@ public static class BundledPackages
 		new("availability-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("availability-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("scene-availability", BundledPackageHandler.None, InstallAtFirstBoot: false),
-		// Available, not installed: the MUD-kit sends MUD clients such as Mudlet the GMCP packages they draw maps,
-		// gauges, inventories and chat windows from. Each is installed on its own, so a game takes only what it uses;
-		// mud-kit installs all five. Event handlers on the configured event_handler, as room-contents and comm-feed.
-		new("gmcp-room", BundledPackageHandler.Event, InstallAtFirstBoot: false),
-		new("gmcp-room-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		new("gmcp-room-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		new("gmcp-comm", BundledPackageHandler.Event, InstallAtFirstBoot: false),
-		new("gmcp-comm-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		new("gmcp-comm-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		new("gmcp-items", BundledPackageHandler.Event, InstallAtFirstBoot: false),
-		new("gmcp-items-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		new("gmcp-items-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		new("gmcp-char", BundledPackageHandler.Event, InstallAtFirstBoot: false),
-		new("gmcp-char-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		new("gmcp-char-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		new("mudlet-client", BundledPackageHandler.Event, InstallAtFirstBoot: false),
-		new("mudlet-client-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		new("mudlet-client-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		new("mud-kit", BundledPackageHandler.None, InstallAtFirstBoot: false),
-		new("mud-kit-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		// Available, not installed: gmcp sends MUD clients such as Mudlet the standard GMCP modules they draw maps,
+		// gauges, inventories and chat windows from; its modules setting turns each on or off. gmcp-mudlet adds what is
+		// Mudlet's own (its interface, map and Discord presence). Event handlers on the configured event_handler, as
+		// room-contents and comm-feed.
+		new("gmcp", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("gmcp-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("gmcp-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("gmcp-mudlet", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("gmcp-mudlet-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("gmcp-mudlet-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: +alts is a name a game may already use for its own code. It hears PLAYER`UNLINK
 		// on the event handler, so an account forgets a hidden character that leaves it.
 		new("alts", BundledPackageHandler.Event, InstallAtFirstBoot: false),

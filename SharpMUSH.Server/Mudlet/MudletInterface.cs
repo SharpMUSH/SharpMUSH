@@ -11,7 +11,7 @@ namespace SharpMUSH.Server.Mudlet;
 
 /// <summary>
 /// The interface package every game can offer Mudlet without making one: a panel with the room, gauges,
-/// chat and a map, drawn from the GMCP the MUD-kit sends. mudlet-client offers it with <c>Client.GUI</c>
+/// chat and a map, drawn from the GMCP the gmcp package sends. gmcp-mudlet offers it with <c>Client.GUI</c>
 /// when the game's <c>gui-url</c> setting is empty, at <c>&lt;mud_url&gt;</c><see cref="Path"/>.
 /// </summary>
 /// <remarks>
@@ -31,7 +31,7 @@ public static partial class MudletInterface
 	private static readonly Lazy<string> Script = new(() => Read("sharpmush-ui.lua"));
 	private static readonly Lazy<byte[]> Archive = new(Build);
 
-	/// <summary>The version <c>config.lua</c> gives, which mudlet-client sends as Client.GUI's version.</summary>
+	/// <summary>The version <c>config.lua</c> gives, which gmcp-mudlet sends as Client.GUI's version.</summary>
 	public static string Version => VersionPattern().Match(ConfigLua.Value) is { Success: true } match
 		? match.Groups["version"].Value
 		: string.Empty;

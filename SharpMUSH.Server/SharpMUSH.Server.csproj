@@ -256,7 +256,7 @@
       <Link>TextFiles\ahelp\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <!-- The interface mudlet-client offers Mudlet when the game names none of its own (Mudlet/MudletInterface.cs). -->
+    <!-- The interface gmcp-mudlet offers Mudlet when the game names none of its own (Mudlet/MudletInterface.cs). -->
     <EmbeddedResource Include="Mudlet\config.lua;Mudlet\sharpmush-ui.lua">
       <LogicalName>SharpMUSH.Server.Mudlet.%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
@@ -326,29 +326,13 @@
       <Link>BundledPackages\who-where.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.who-where.README.md</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\gmcp-room\README.md">
-      <Link>BundledPackages\gmcp-room.README.md</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-room.README.md</LogicalName>
+    <EmbeddedResource Include="..\examples\packages\gmcp\README.md">
+      <Link>BundledPackages\gmcp.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp.README.md</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\gmcp-comm\README.md">
-      <Link>BundledPackages\gmcp-comm.README.md</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-comm.README.md</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\gmcp-items\README.md">
-      <Link>BundledPackages\gmcp-items.README.md</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-items.README.md</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\gmcp-char\README.md">
-      <Link>BundledPackages\gmcp-char.README.md</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-char.README.md</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\mudlet-client\README.md">
-      <Link>BundledPackages\mudlet-client.README.md</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.mudlet-client.README.md</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\mud-kit\README.md">
-      <Link>BundledPackages\mud-kit.README.md</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.mud-kit.README.md</LogicalName>
+    <EmbeddedResource Include="..\examples\packages\gmcp-mudlet\README.md">
+      <Link>BundledPackages\gmcp-mudlet.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-mudlet.README.md</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\alts\README.md">
       <Link>BundledPackages\alts.README.md</Link>
@@ -790,73 +774,29 @@
       <Link>BundledPackages\scene-availability.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.scene-availability.package.yaml</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\gmcp-room\package.yaml">
-      <Link>BundledPackages\gmcp-room.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-room.package.yaml</LogicalName>
+    <EmbeddedResource Include="..\examples\packages\gmcp\package.yaml">
+      <Link>BundledPackages\gmcp.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp.package.yaml</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\gmcp-room-help\package.yaml">
-      <Link>BundledPackages\gmcp-room-help.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-room-help.package.yaml</LogicalName>
+    <EmbeddedResource Include="..\examples\packages\gmcp-help\package.yaml">
+      <Link>BundledPackages\gmcp-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-help.package.yaml</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\gmcp-room-config\package.yaml">
-      <Link>BundledPackages\gmcp-room-config.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-room-config.package.yaml</LogicalName>
+    <EmbeddedResource Include="..\examples\packages\gmcp-config\package.yaml">
+      <Link>BundledPackages\gmcp-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-config.package.yaml</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\gmcp-comm\package.yaml">
-      <Link>BundledPackages\gmcp-comm.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-comm.package.yaml</LogicalName>
+    <EmbeddedResource Include="..\examples\packages\gmcp-mudlet\package.yaml">
+      <Link>BundledPackages\gmcp-mudlet.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-mudlet.package.yaml</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\gmcp-comm-help\package.yaml">
-      <Link>BundledPackages\gmcp-comm-help.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-comm-help.package.yaml</LogicalName>
+    <EmbeddedResource Include="..\examples\packages\gmcp-mudlet-help\package.yaml">
+      <Link>BundledPackages\gmcp-mudlet-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-mudlet-help.package.yaml</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\gmcp-comm-config\package.yaml">
-      <Link>BundledPackages\gmcp-comm-config.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-comm-config.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\gmcp-items\package.yaml">
-      <Link>BundledPackages\gmcp-items.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-items.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\gmcp-items-help\package.yaml">
-      <Link>BundledPackages\gmcp-items-help.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-items-help.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\gmcp-items-config\package.yaml">
-      <Link>BundledPackages\gmcp-items-config.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-items-config.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\gmcp-char\package.yaml">
-      <Link>BundledPackages\gmcp-char.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-char.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\gmcp-char-help\package.yaml">
-      <Link>BundledPackages\gmcp-char-help.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-char-help.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\gmcp-char-config\package.yaml">
-      <Link>BundledPackages\gmcp-char-config.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-char-config.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\mudlet-client\package.yaml">
-      <Link>BundledPackages\mudlet-client.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.mudlet-client.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\mudlet-client-help\package.yaml">
-      <Link>BundledPackages\mudlet-client-help.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.mudlet-client-help.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\mudlet-client-config\package.yaml">
-      <Link>BundledPackages\mudlet-client-config.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.mudlet-client-config.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\mud-kit\package.yaml">
-      <Link>BundledPackages\mud-kit.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.mud-kit.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\mud-kit-help\package.yaml">
-      <Link>BundledPackages\mud-kit-help.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.mud-kit-help.package.yaml</LogicalName>
+    <EmbeddedResource Include="..\examples\packages\gmcp-mudlet-config\package.yaml">
+      <Link>BundledPackages\gmcp-mudlet-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-mudlet-config.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\alts\package.yaml">
       <Link>BundledPackages\alts.package.yaml</Link>

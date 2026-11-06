@@ -1,24 +1,24 @@
 format: "1.16"
-package: mud-kit-help
-title: "MUD client kit: +help topics"
+package: gmcp-help
+title: "GMCP: +help topics"
 version: 1.0.0
 authors: [SharpMUSH]
-description: "Puts the MUD client kit topics into +help: registers the mud-kit package's help with the +help librarian."
+description: "Puts the GMCP topics into +help: registers the gmcp package's help with the +help librarian."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
-keywords: [mud-kit, help, bridge]
+keywords: [gmcp, help, bridge]
 category: MUD clients
 requires_server: ">=0.1"
 
-# A bridge: it joins two packages that do not know about each other. mud-kit keeps its topics on its own help
+# A bridge: it joins two packages that do not know about each other. gmcp keeps its topics on its own help
 # object, and plus-help reads any object registered with its librarian. This package is only that registration;
 # uninstalling it takes the topics out of +help, and neither package changes.
 depends:
-  - package: mud-kit
-    version: ">=1.1"
+  - package: gmcp
+    version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/mud-kit/
+      path: examples/packages/gmcp/
       branch: main
   - package: plus-help
     version: ">=1.0"
@@ -31,5 +31,5 @@ objects:
   - ref: help_registration
     target: "{{plus-help/librarian}}"
     attributes:
-      SRC`MUD-KIT: |-
-        {{mud-kit/mud_kit_help}}
+      SRC`GMCP: |-
+        {{gmcp/gmcp_help}}

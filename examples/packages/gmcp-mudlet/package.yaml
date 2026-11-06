@@ -1,15 +1,24 @@
 format: "1.16"
-package: mudlet-client
-title: "Mudlet interface"
-version: 1.2.0
+package: gmcp-mudlet
+title: "GMCP for Mudlet"
+version: 1.0.0
 authors: [SharpMUSH]
-description: "Offers Mudlet an interface and the game's map over GMCP (Client.GUI and Client.Map), answers its Discord rich presence (External.Discord.Info and Status), and gives players +gui on and +gui off."
+description: "A gmcp add-on for Mudlet: offers Mudlet an interface and the game's map over GMCP (Client.GUI and Client.Map), answers its Discord rich presence (External.Discord.Info and Status), and gives players +gui on and +gui off."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
-keywords: [gmcp, mudlet, gui, discord, mud-kit]
+keywords: [gmcp, mudlet, gui, discord]
 category: MUD clients
 requires_server: ">=0.1"
 
+# An add-on to gmcp, which sends the standard modules every MUD client reads (Room, Comm, Char.Items, Char).
+# This package adds only what is Mudlet's own, so a game whose players use other clients leaves it out.
+depends:
+  - package: gmcp
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/gmcp/
+      branch: main
 
 # The shapes are Mudlet's, as TelnetNegotiationCore's ClientGui, ClientMap, DiscordInfo and
 # DiscordStatus types write them:
@@ -41,9 +50,9 @@ objects:
     target: "{{$event_handler}}"
     attributes:
       # package is what the client sent; player is whoever is logged in on the descriptor, or nothing.
-      SOCKET`GMCP`MUDLETCLIENT: |-
+      SOCKET`GMCP`GMCPMUDLET: |-
         @assert match(Core.Hello External.Discord.Hello External.Discord.Get,%<package>); think u({{client}}/FUN`HEARD`[ucstr(edit(%<package>,.,`))],%<descriptor>,%<player>)
-      PLAYER`CONNECT`MUDLETCLIENT: |-
+      PLAYER`CONNECT`GMCPMUDLET: |-
         think u({{client}}/FUN`CONNECTED,%<descriptor>,%<objid>)
 
   - ref: client
@@ -52,7 +61,7 @@ objects:
     location: "{{$master_room}}"
     powers: [Send_OOB]
     attributes:
-      # ── Settings: +config mudlet-client ───────────────────────────────────
+      # ── Settings: +config gmcp-mudlet ───────────────────────────────────
       DATA`CONFIG:
         value: |-
           What the game offers Mudlet: its interface, its map and its Discord.
@@ -260,7 +269,7 @@ objects:
       SEE: |-
         Cross-references. One leaf per topic; subtopics come from the tree, not from here.
       SEE`GUI: |-
-        gmcp room|gmcp char|gmcp comm
+        gmcp|gmcp room|gmcp char|gmcp comm
       HELP`GUI: |-
         `+gui` shows whether the game offers **Mudlet** an interface package: windows, gauges and a map drawn from what the game sends over GMCP. A game that has not made one of its own offers the one SharpMUSH ships.
 
@@ -271,7 +280,7 @@ objects:
 
         SharpMUSH's own interface puts a panel on the right of the game's text: the room with its exits, who is here and what you carry; a gauge for each value the game sends with a maximum, such as hp; a chat window for channel lines and pages; and a map drawn as you walk. `interface hide` and `interface show`, typed in Mudlet, take the panel away and bring it back.
 
-        The game can also send Mudlet its **map**, and fill in your **Discord** status with the game's name and the character you play: staff choose with `+config mudlet-client`.
+        The game can also send Mudlet its **map**, and fill in your **Discord** status with the game's name and the character you play: staff choose with `+config gmcp-mudlet`.
       LOCK`GUI`SETUP: |-
         perm^config.admin
       HELP`GUI`SETUP: |-
@@ -283,8 +292,8 @@ objects:
 
         1. Download the shipped one from that address, or start from nothing.
         2. Change it in Mudlet, export it from Mudlet's Package Exporter under a name of your own, and put the file on a web server.
-        3. `+config mudlet-client/gui-url=<address>` offers it instead, and `+config mudlet-client/gui-version=<version>`, changed with each new file, makes Mudlet install it again.
+        3. `+config gmcp-mudlet/gui-url=<address>` offers it instead, and `+config gmcp-mudlet/gui-version=<version>`, changed with each new file, makes Mudlet install it again.
 
-        `+config mudlet-client/gui=off` offers no interface. `+config mudlet-client` lists every setting, the map and Discord ones too.
+        `+config gmcp-mudlet/gui=off` offers no interface. `+config gmcp-mudlet` lists every setting, the map and Discord ones too.
 
         The Discord settings work whether or not an interface is offered: Mudlet asks for them when it connects, and does so only while Discord is running on the player's computer.

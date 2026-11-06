@@ -26,12 +26,12 @@ Two optional config keys:
 
 | Key | Default | What it does |
 | --- | --- | --- |
-| `coordinates` | `["X","Y","Z"]` | The three attributes each room's position is read from, the same ones the `gmcp-room` package sends to a MUD client's mapper. |
+| `coordinates` | `["X","Y","Z"]` | The three attributes each room's position is read from, the same ones the `gmcp` package sends to a MUD client's mapper. |
 | `warnings` | `["room-desc","exit-unlinked","exit-oneway","exit-multiple","lock-checks"]` | The checks the Checks list shows, by their `@warnings` names. `exit-desc` and `exit-msgs` are there too, off by default. |
 
 ## Coordinates
 
-A room with coordinates sits on a grid, x to the east and y to the north, one level (z) at a time; a level picker appears once the rooms span more than one. A missing axis counts as 0, as in `gmcp-room`; a room whose coordinate attributes are all empty, or where one is not a number, has none. Rooms without coordinates are drawn below the grid, grouped by what connects them, with a dashed outline.
+A room with coordinates sits on a grid, x to the east and y to the north, one level (z) at a time; a level picker appears once the rooms span more than one. A missing axis counts as 0, as in `gmcp`; a room whose coordinate attributes are all empty, or where one is not a number, has none. Rooms without coordinates are drawn below the grid, grouped by what connects them, with a dashed outline.
 
 Set them in the game on the room itself:
 

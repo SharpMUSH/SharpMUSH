@@ -1,7 +1,7 @@
 format: "1.16"
 package: world-map
 title: "World map"
-version: 1.4.0
+version: 1.4.1
 authors: [SharpMUSH]
 description: "The World map: every map in the game, drawn from its rooms and exits, in the portal and in the game with +map. A map is an object whose MAP`KIND says how it is drawn (coordinates, compass or graph); a room is on the map that is its zone."
 license: MIT
@@ -381,7 +381,7 @@ objects:
 
         A region uses the legend of the map it is inside for any kind it does not name itself, so one legend on the outermost map covers them all.
 
-        ``ENVIRONMENT`` is the attribute the gmcp-room package sends a MUD client's mapper, so Mudlet colours the same rooms.
+        ``ENVIRONMENT`` is the attribute the gmcp package sends a MUD client's mapper, so Mudlet colours the same rooms.
       HELP`MAP`PICTURES: |-
         A `graph` map can be drawn on a picture. ``MAP`BACKDROP`` holds the picture's address: a path on the game's own site, such as the link of an image in the wiki's image library, or an `https` address. Any other address is not shown. ``MAP`SIZE`W`` and ``MAP`SIZE`H`` are the picture's size in pixels.
 

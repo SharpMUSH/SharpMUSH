@@ -1,0 +1,571 @@
+format: "1.16"
+package: gmcp
+title: "GMCP"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Sends MUD clients such as Mudlet the standard GMCP modules: Room (a mapper and who is here), Comm (channel lines and pages for a chat window), Char.Items (an inventory window) and Char (name, gauges and status). Client-specific add-ons, such as gmcp-mudlet, build on it."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [gmcp, mudlet, mapper, inventory, vitals]
+category: MUD clients
+requires_server: ">=0.1"
+
+# One package for every GMCP module a MUD client reads in Iron Realms' (IRE) shapes, which Mudlet's scripts
+# read and TelnetNegotiationCore's types write. A client's own packages (Mudlet's Client.GUI, Client.Map and
+# External.Discord) are add-ons on top of this one: gmcp-mudlet.
+#
+#   Room.Info          {"num":1234,"hash":"#1234:1761800000","name":"Garden","area":"Town",
+#                       "environment":"garden","coords":"3,4,0","exits":{"North":1235}}
+#   Room.Players       [{"name":"Wren","fullname":"Wren of the Marsh"}]
+#   Room.AddPlayer     {"name":"Wren","fullname":"Wren of the Marsh"}
+#   Room.RemovePlayer  "Wren"
+#   Comm.Channel.Text  {"channel":"Public","talker":"Wren","text":"<Public> Wren says, \"Hi.\""}
+#   Comm.Channel.List  [{"name":"Public","caption":"Public","command":"+public"}]
+#   Char.Items.Inv     client to server, no body: asks for the inventory
+#   Char.Items.Room    client to server, no body: asks for the room's things
+#   Char.Items.List    {"location":"inv","items":[{"id":"1234","name":"a lantern"}]}
+#   Char.Items.Add     {"location":"room","item":{"id":"1234","name":"a lantern"}}
+#   Char.Items.Remove  {"location":"room","item":{"id":"1234","name":"a lantern"}}
+#   Char.Name          {"name":"Wren","fullname":"Wren of the Marsh"}
+#   Char.Vitals        {"hp":25,"maxhp":40,"mp":10,"maxmp":12}
+#   Char.Status        {"name":"Wren","fullname":"Wren of the Marsh","level":3}
+#
+# Room: num, each exit's room and each item's id are dbref numbers, which never change while the object
+# exists. hash names the place for a mapper that keys rooms by it (Mudlet's Carto): a room standing in for a
+# place on a stored map carries the place's id in MAP`PLACE, any other room is its objid. exits is exitmap():
+# the exits the player can see, as look shows them, so this package never works out exit visibility itself; a
+# room on a world map adds the ways its zone lends it (the zone's ZONE`EXITS). coords is left out for a room
+# without coordinates.
+#
+# Comm: the engine decides who received what. CHANNEL`MESSAGE names exactly the members a line was delivered
+# to, and PAGE`MESSAGE exactly the players a page reached, so this package never works out channel or page
+# permissions again. text is the line as the player's terminal shows it, in ANSI colour, or plain for a
+# connection whose client says it is a screen reader (terminfo()).
+#
+# Char.Items: things only. A player is in Room.Players and an exit in Room.Info's exits. A DARK thing in a room
+# is listed only to a player who may see everything; your own inventory lists everything you carry.
+#
+# Char: which attributes are vitals and which are status is the vitals and status settings; an attribute the
+# player does not have is left out. Nothing polls. For each attribute those settings name, the GMCP object (from
+# AINSTALL, AUPDATE, and ACONFIG when +config changes vitals or status):
+#
+#   - adds it to the attribute table with @attribute/access <attribute>=none, only when attrwatch() says it is
+#     not in the table, so an entry the game already has keeps its flags;
+#   - watches it with @attribute/watch <attribute> when it is not watched, which is the default pattern
+#     WATCH`<attribute> WATCH`<attribute>`*;
+#   - copies its handler, TEMPLATE`GMCP`WATCH, to WATCH`<attribute>`GMCP on the event handler.
+#
+# An attribute already watched with some other pattern belongs to another package or to staff: it is left as it
+# is, gets no handler, and is listed in the GMCP object's DATA`FOREIGN. An attribute dropped from the settings
+# loses its WATCH`<attribute>`GMCP, and stops being watched only when it is watched with the default pattern and
+# nothing else is left under WATCH`<attribute> on the event handler. Its table entry stays. The handlers are
+# made at run time because their names come from the settings; uninstalling runs no softcode, so each handler
+# checks that the package is still there when it runs, and if not removes itself and stops the watch as above.
+#
+# The modules setting turns a module off for the whole game. Every send is also oob(..., supported): a client
+# that listed GMCP modules in Core.Supports is sent only those it listed, and one that listed nothing (TinTin++,
+# MUSHclient) is sent all of them. Mudlet lists Room and Char but not Comm; a Mudlet script that wants channel
+# lines adds it: sendGMCP([[Core.Supports.Add ["Comm.Channel 1"] ]]).
+#
+# Three objects. The event handler carries the handlers and the FUN`GMCP`* functions that build the payloads, as
+# room-contents and comm-feed do; they run as the event handler, a wizard, so exitmap() may map a room as the
+# player standing in it. The GMCP object carries the settings and the attribute watching; it is WIZARD because
+# @attribute needs config.admin and the watch handlers go on the event handler, and it runs nothing else. The
+# help is on a separate plain object, because the +help librarian cannot read a privileged object's topics.
+objects:
+  - ref: handler
+    target: "{{$event_handler}}"
+    attributes:
+      # ── Shared ───────────────────────────────────────────────────────────
+      # %0 a setting's name: its value, from the GMCP object.
+      FUN`GMCP`SETTING: |-
+        get({{gmcp}}/DATA`CONFIG`%0)
+      # %0 a module (Room, Comm, Items or Char): whether the modules setting sends it.
+      FUN`GMCP`ON: |-
+        t(match(u(me/FUN`GMCP`SETTING,MODULES),%0))
+      # %0 an object: a connected player, the only thing anything is sent to.
+      FUN`GMCP`VIEWER: |-
+        cand(hastype(%0,player),hasflag(%0,CONNECTED))
+      # %0 an object, %1 the viewer: whether the viewer sees it where it lies or stands. A DARK one is seen only
+      # by itself and by a viewer who may see everything.
+      FUN`GMCP`SEEN: |-
+        cor(not(hasflag(%0,DARK)),strmatch(num(%0),num(%1)),orflags(%1,Wr),haspower(%1,See_All))
+      # %0 a viewer: whether their client says it is a screen reader.
+      FUN`GMCP`SCREENREADER: |-
+        member(terminfo(%0),screenreader)
+      # %0 an object, %1 an attribute's name, or nothing: the attribute's value, never evaluated.
+      FUN`GMCP`READ: |-
+        if(strlen(%1),get(%0/%1))
+      # %0 an object: its dbref's number.
+      FUN`GMCP`NUMBER: |-
+        after(num(%0),#)
+      # %0 a player: the name a client shows in full. The attribute the fullname setting names, else the
+      # player's name.
+      FUN`GMCP`FULLNAME: |-
+        strfirstof(u(me/FUN`GMCP`READ,%0,u(me/FUN`GMCP`SETTING,FULLNAME)),name(%0))
+      # %0 a player: name and fullname, as Room.Players, Room.AddPlayer and Char.Name carry them.
+      FUN`GMCP`NAMES: |-
+        json(object,name,json(string,name(%0)),fullname,json(string,u(me/FUN`GMCP`FULLNAME,%0)))
+
+      # ── Room ─────────────────────────────────────────────────────────────
+      # %0 a room: the connected players in it.
+      FUN`GMCP`ROOM`PRESENT: |-
+        filterbool(me/FUN`GMCP`VIEWER,lplayers(%0))
+      # %0 a room, %1 a player: the connected players there who see the player, the player left out.
+      FUN`GMCP`ROOM`WITNESSES: |-
+        filterbool(me/FUN`GMCP`ROOM`WITNESS,u(me/FUN`GMCP`ROOM`PRESENT,%0),,,%1)
+      # %0 a viewer, %1 a player: whether the viewer is someone else who sees the player.
+      FUN`GMCP`ROOM`WITNESS: |-
+        cand(not(strmatch(num(%0),num(%1))),u(me/FUN`GMCP`SEEN,%1,%0))
+      # %0 a room, %1 the viewer: exitmap(), then each way the room's zone lends it (the zone's ZONE`EXITS, as a
+      # world map sets it) to the room its ZONE`EXITS`TO names, or -2 while none stands there, as exitmap() gives
+      # a variable exit.
+      FUN`GMCP`ROOM`EXITS: |-
+        setq(gmcp_room,%0)[if(hasattr(zone(%0),ZONE`EXITS),fold(me/FUN`GMCP`ROOM`ZONEWAY,u(zone(%0)/ZONE`EXITS,%0,%1),exitmap(%0,%1)),exitmap(%0,%1))]
+      # %0 the exits so far, %1 a way on the zone of the room in %q<gmcp_room>: %0 with the way added.
+      FUN`GMCP`ROOM`ZONEWAY: |-
+        json_mod(%0,patch,json(object,name(%1),json(number,if(isdbref(setr(gmcp_to,u(zone(%q<gmcp_room>)/ZONE`EXITS`TO,%q<gmcp_room>,%1))),after(num(%q<gmcp_to>),#),-2))))
+      # %0 a room: the place it stands for on a stored map, else its objid.
+      FUN`GMCP`ROOM`HASH: |-
+        strfirstof(get(%0/MAP`PLACE),objid(%0))
+      # %0 a room: its area. The attribute the area setting names, else the name of the room's zone, else
+      # nothing.
+      FUN`GMCP`ROOM`AREA: |-
+        strfirstof(u(me/FUN`GMCP`READ,%0,u(me/FUN`GMCP`SETTING,AREA)),if(isdbref(zone(%0)),name(zone(%0))))
+      # %0 a room: the attribute the environment setting names, or nothing.
+      FUN`GMCP`ROOM`ENVIRONMENT: |-
+        u(me/FUN`GMCP`READ,%0,u(me/FUN`GMCP`SETTING,ENVIRONMENT))
+      # %0 a room: x,y,z from the attributes the coordinates setting names, a missing one as 0; empty when the
+      # room has none of them, or one is not a number.
+      FUN`GMCP`ROOM`COORDINATES: |-
+        setq(gmcp_axes,u(me/FUN`GMCP`SETTING,COORDINATES))[if(cand(words(setr(gmcp_set,squish(iter(%q<gmcp_axes>,get(%0/%i0))))),every(me/FUN`GMCP`ROOM`ISNUM,%q<gmcp_set>)),iter(%q<gmcp_axes>,strfirstof(get(%0/%i0),0),,%,))]
+      FUN`GMCP`ROOM`ISNUM: |-
+        isnum(%0)
+      # Room.Info: %0 the room, %1 the viewer. exitmap() lists the exits the viewer sees there.
+      FUN`GMCP`ROOM`INFO: |-
+        json_mod(json(object,num,json(number,u(me/FUN`GMCP`NUMBER,%0)),hash,json(string,u(me/FUN`GMCP`ROOM`HASH,%0)),name,json(string,name(%0)),area,json(string,u(me/FUN`GMCP`ROOM`AREA,%0)),environment,json(string,u(me/FUN`GMCP`ROOM`ENVIRONMENT,%0)),exits,u(me/FUN`GMCP`ROOM`EXITS,%0,%1)),patch,json(object,coords,if(strlen(setr(gmcp_coords,u(me/FUN`GMCP`ROOM`COORDINATES,%0))),json(string,%q<gmcp_coords>),null)))
+      # Room.Players: %0 the room, %1 the viewer. Everyone connected there the viewer sees, the viewer too.
+      FUN`GMCP`ROOM`PLAYERS: |-
+        json_array(iter(filterbool(me/FUN`GMCP`SEEN,u(me/FUN`GMCP`ROOM`PRESENT,%0),,,%1),u(me/FUN`GMCP`NAMES,%i0),,%r),%r)
+      # %0 where to send (a player or one of their descriptors), %1 the viewer, %2 the room: the room as the
+      # viewer sees it. null() keeps oob()'s counts out of the handler's output.
+      FUN`GMCP`ROOM`LOOK: |-
+        null(oob(%0,Room.Info,u(me/FUN`GMCP`ROOM`INFO,%2,%1),supported))[null(oob(%0,Room.Players,u(me/FUN`GMCP`ROOM`PLAYERS,%2,%1),supported))]
+      # %0 a room, %1 a player who arrived there: Room.AddPlayer to the others who see them.
+      FUN`GMCP`ROOM`ARRIVED: |-
+        null(oob(u(me/FUN`GMCP`ROOM`WITNESSES,%0,%1),Room.AddPlayer,u(me/FUN`GMCP`NAMES,%1),supported))
+      # %0 a room, %1 a player who left it: Room.RemovePlayer, their name as Iron Realms sends it, to the others
+      # who saw them.
+      FUN`GMCP`ROOM`LEFT: |-
+        null(oob(u(me/FUN`GMCP`ROOM`WITNESSES,%0,%1),Room.RemovePlayer,json(string,name(%1)),supported))
+      # %0 a connected player who moved, %1 where from, %2 where to.
+      FUN`GMCP`ROOM`MOVE: |-
+        if(u(me/FUN`GMCP`ON,Room),u(me/FUN`GMCP`ROOM`LOOK,%0,%0,%2)[u(me/FUN`GMCP`ROOM`LEFT,%1,%0)][u(me/FUN`GMCP`ROOM`ARRIVED,%2,%0)])
+      # %0 a new descriptor, %1 its player, %2 how many connections they have: the room on the descriptor, and
+      # to the room when it is the first.
+      FUN`GMCP`ROOM`CONNECT: |-
+        if(u(me/FUN`GMCP`ON,Room),u(me/FUN`GMCP`ROOM`LOOK,%0,%1,loc(%1))[if(eq(%2,1),u(me/FUN`GMCP`ROOM`ARRIVED,loc(%1),%1))])
+      # %0 a player whose last connection closed.
+      FUN`GMCP`ROOM`DISCONNECT: |-
+        if(u(me/FUN`GMCP`ON,Room),u(me/FUN`GMCP`ROOM`LEFT,loc(%0),%0))
+
+      # ── Comm ─────────────────────────────────────────────────────────────
+      # A channel line as the terminal shows it, from named arguments: channel, style, name, message. An
+      # @cemit and a connect or disconnect line name nobody.
+      FUN`GMCP`COMM`CHANNELLINE: |-
+        <%<channel>> [switch(%<style>,pose,%<name> %<message>,semipose,%<name>%<message>,emit,%<message>,presence,%<message>,%<name> says%, "%<message>")]
+      # A page as a recipient's terminal shows it, from named arguments: style, name, message.
+      FUN`GMCP`COMM`PAGEIN: |-
+        switch(%<style>,pose,From afar%, %<name> %<message>,semipose,From afar%, %<name>%<message>,%<name> pages: %<message>)
+      # A page as the pager's terminal shows it, from named arguments: style, name (the pager's own), message,
+      # to (the names it reached).
+      FUN`GMCP`COMM`PAGEOUT: |-
+        switch(%<style>,pose,Long distance to %<to>: %<name> %<message>,semipose,Long distance to %<to>: %<name>%<message>,You paged %<to> with '%<message>')
+      # %0 a list of players: their names, as a page lists them.
+      FUN`GMCP`COMM`NAMES: |-
+        itemize(iter(%0,name(%i0),,|),|)
+      # %0 a line, %1 the viewer: the line in ANSI colour, or plain for a screen reader.
+      FUN`GMCP`COMM`SHOWN: |-
+        if(u(me/FUN`GMCP`SCREENREADER,%1),stripansi(%0),render(%0,ansi))
+      # Comm.Channel.Text, from named arguments: channel, talker, line and viewer.
+      FUN`GMCP`COMM`TEXT: |-
+        json(object,channel,json(string,%<channel>),talker,json(string,stripansi(%<talker>)),text,json(string,u(me/FUN`GMCP`COMM`SHOWN,%<line>,%<viewer>)))
+      # One Comm.Channel.List entry: %0 a channel's name.
+      FUN`GMCP`COMM`CHANNEL: |-
+        json(object,name,json(string,%0),caption,json(string,%0),command,json(string,+[lcstr(%0)]))
+      # Comm.Channel.List: %0 the player. channels() with on lists the ones they are on.
+      FUN`GMCP`COMM`LIST: |-
+        json_array(iter(channels(%0,on),u(me/FUN`GMCP`COMM`CHANNEL,%i0),,%r),%r)
+      # %0 the players, %1 the channel, %2 the talker, %3 the line: Comm.Channel.Text to each, built for each so
+      # a screen reader's copy is plain.
+      FUN`GMCP`COMM`SEND: |-
+        null(iter(filterbool(me/FUN`GMCP`VIEWER,%0),oob(%i0,Comm.Channel.Text,uargs(me/FUN`GMCP`COMM`TEXT,channel,%1,talker,%2,line,%3,viewer,%i0),supported)))
+
+      # ── Char.Items ───────────────────────────────────────────────────────
+      # %0 a viewer, %1 a thing: whether the viewer sees it, with the viewer first, for filterbool().
+      FUN`GMCP`ITEMS`WITNESS: |-
+        u(me/FUN`GMCP`SEEN,%1,%0)
+      # %0 a location word (inv or room), %1 the viewer: the things there they see.
+      FUN`GMCP`ITEMS`THINGS: |-
+        if(strmatch(%0,inv),lthings(%1),filterbool(me/FUN`GMCP`SEEN,lthings(loc(%1)),,,%1))
+      # %0 a location word: whether Char.Items is on and, for room, the items-room setting lets it be sent.
+      FUN`GMCP`ITEMS`SENDS: |-
+        cand(u(me/FUN`GMCP`ON,Items),cor(strmatch(%0,inv),u(me/FUN`GMCP`SETTING,ITEMS-ROOM)))
+      # One item: %0 a thing.
+      FUN`GMCP`ITEMS`ITEM: |-
+        json(object,id,json(string,u(me/FUN`GMCP`NUMBER,%0)),name,json(string,name(%0)))
+      # Char.Items.List: %0 the location word, %1 the viewer.
+      FUN`GMCP`ITEMS`LIST: |-
+        json(object,location,json(string,%0),items,json_array(iter(u(me/FUN`GMCP`ITEMS`THINGS,%0,%1),u(me/FUN`GMCP`ITEMS`ITEM,%i0),,%r),%r))
+      # Char.Items.Add or Remove: %0 the location word, %1 the thing.
+      FUN`GMCP`ITEMS`CHANGE: |-
+        json(object,location,json(string,%0),item,u(me/FUN`GMCP`ITEMS`ITEM,%1))
+      # %0 where to send (a player or a descriptor), %1 the viewer, %2 the location word: the list.
+      FUN`GMCP`ITEMS`SENDLIST: |-
+        if(u(me/FUN`GMCP`ITEMS`SENDS,%2),null(oob(%0,Char.Items.List,u(me/FUN`GMCP`ITEMS`LIST,%2,%1),supported)))
+      # %0 Add or Remove, %1 a container the thing left or reached, %2 the thing. A player holding it is sent an
+      # inv change; the connected players in a room who see it, a room change.
+      FUN`GMCP`ITEMS`MOVED: |-
+        switch(type(%1),PLAYER,if(u(me/FUN`GMCP`ITEMS`SENDS,inv),u(me/FUN`GMCP`ITEMS`TELL,%0,inv,%1,%2)),ROOM,if(u(me/FUN`GMCP`ITEMS`SENDS,room),u(me/FUN`GMCP`ITEMS`TELL,%0,room,filterbool(me/FUN`GMCP`ITEMS`WITNESS,u(me/FUN`GMCP`ROOM`PRESENT,%1),,,%2),%2)))
+      # %0 Add or Remove, %1 the location word, %2 the players, %3 the thing.
+      FUN`GMCP`ITEMS`TELL: |-
+        null(oob(%2,Char.Items.%0,u(me/FUN`GMCP`ITEMS`CHANGE,%1,%3),supported))
+
+      # ── Char ─────────────────────────────────────────────────────────────
+      # %0 a value: as JSON, a number when it is one. json(number) writes it as JSON does: 007 as 7, +40 as 40,
+      # .5 as 0.5, each of which isnum() takes but JSON refuses as written. A number json(number) cannot read
+      # (1e5) goes as written, which JSON takes.
+      FUN`GMCP`CHAR`VALUE: |-
+        if(isnum(%0),if(isnum(setr(gmcp_number,json(number,%0))),%q<gmcp_number>,%0),json(string,%0))
+      # fold() step: %0 the object so far, %1 <player>|<attribute>. Adds the attribute under its last name in
+      # lower case (STATS`HP is hp), when the player has it.
+      FUN`GMCP`CHAR`FIELD: |-
+        if(hasattr(setr(gmcp_who,before(%1,|)),setr(gmcp_attr,after(%1,|))),json_mod(%0,set,$.[lcstr(last(%q<gmcp_attr>,`))],u(me/FUN`GMCP`CHAR`VALUE,get(%q<gmcp_who>/%q<gmcp_attr>))),%0)
+      # %0 a player, %1 attributes, %2 the object to start from: the attributes added to it.
+      FUN`GMCP`CHAR`FIELDS: |-
+        fold(me/FUN`GMCP`CHAR`FIELD,iter(%1,%0|%i0),%2)
+      # Char.Vitals: %0 the player.
+      FUN`GMCP`CHAR`VITALS: |-
+        u(me/FUN`GMCP`CHAR`FIELDS,%0,u(me/FUN`GMCP`SETTING,VITALS),json(object))
+      # Char.Status: %0 the player. Their names first, then the status attributes.
+      FUN`GMCP`CHAR`STATUS: |-
+        u(me/FUN`GMCP`CHAR`FIELDS,%0,u(me/FUN`GMCP`SETTING,STATUS),u(me/FUN`GMCP`NAMES,%0))
+      # %0 where to send (a player or a descriptor), %1 the player, %2 which: any of name, vitals and status.
+      FUN`GMCP`CHAR`SEND: |-
+        if(u(me/FUN`GMCP`ON,Char),if(member(%2,name),null(oob(%0,Char.Name,u(me/FUN`GMCP`NAMES,%1),supported)))[if(member(%2,vitals),null(oob(%0,Char.Vitals,u(me/FUN`GMCP`CHAR`VITALS,%1),supported)))][if(member(%2,status),null(oob(%0,Char.Status,u(me/FUN`GMCP`CHAR`STATUS,%1),supported)))])
+      # %0 an attribute: which packages it is in, as FUN`GMCP`CHAR`SEND takes them.
+      FUN`GMCP`CHAR`CHANGED: |-
+        trim(if(match(u(me/FUN`GMCP`SETTING,VITALS),%0),vitals) [if(match(u(me/FUN`GMCP`SETTING,STATUS),%0),status)])
+
+      # ── The handlers ─────────────────────────────────────────────────────
+      # Each reads the event's arguments by name (help event list). A connected player who moved is sent the
+      # room and the things in it, and the rooms they left and reached are told; a thing that moved is taken out
+      # of where it was and added where it went. A player who is not connected is in nobody's Room.Players.
+      OBJECT`MOVE`GMCP: |-
+        think switch(type(%<objid>),PLAYER,if(u(me/FUN`GMCP`VIEWER,%<objid>),u(me/FUN`GMCP`ROOM`MOVE,%<objid>,%<origin>,%<destination>)[u(me/FUN`GMCP`ITEMS`SENDLIST,%<objid>,%<objid>,room)]),THING,u(me/FUN`GMCP`ITEMS`MOVED,Remove,%<origin>,%<objid>)[u(me/FUN`GMCP`ITEMS`MOVED,Add,%<destination>,%<objid>)])
+      # A new connection is sent everything on its own descriptor; the first one also tells the room.
+      PLAYER`CONNECT`GMCP: |-
+        think u(me/FUN`GMCP`ROOM`CONNECT,%<descriptor>,%<objid>,%<connections>)[u(me/FUN`GMCP`ITEMS`SENDLIST,%<descriptor>,%<objid>,inv)][u(me/FUN`GMCP`ITEMS`SENDLIST,%<descriptor>,%<objid>,room)][u(me/FUN`GMCP`CHAR`SEND,%<descriptor>,%<objid>,name vitals status)]
+      # connections is how many the player still has: the last one closing takes them out of the room.
+      PLAYER`DISCONNECT`GMCP: |-
+        @assert eq(%<connections>,0); think u(me/FUN`GMCP`ROOM`DISCONNECT,%<objid>)
+      # recipients are the members the line was delivered to.
+      CHANNEL`MESSAGE`GMCP: |-
+        @assert u(me/FUN`GMCP`ON,Comm); think u(me/FUN`GMCP`COMM`SEND,%<recipients>,%<channel>,%<name>,uargs(me/FUN`GMCP`COMM`CHANNELLINE,channel,%<channel>,style,%<style>,name,%<name>,message,%<message>))
+      # recipients are those the page reached; the pager is sent their own copy, as their terminal shows it.
+      # setdiff() keeps a self-page to the recipient's copy.
+      PAGE`MESSAGE`GMCP: |-
+        @assert cand(u(me/FUN`GMCP`ON,Comm),u(me/FUN`GMCP`SETTING,PAGES)); think u(me/FUN`GMCP`COMM`SEND,%<recipients>,u(me/FUN`GMCP`SETTING,PAGE-CHANNEL),%<name>,uargs(me/FUN`GMCP`COMM`PAGEIN,style,%<style>,name,%<name>,message,%<message>))[u(me/FUN`GMCP`COMM`SEND,setdiff(num(%<speaker>),iter(%<recipients>,num(%i0))),u(me/FUN`GMCP`SETTING,PAGE-CHANNEL),%<name>,uargs(me/FUN`GMCP`COMM`PAGEOUT,style,%<style>,name,name(%<speaker>),message,%<message>,to,u(me/FUN`GMCP`COMM`NAMES,%<recipients>)))]
+      # objid is the player; cause is connect, resume, join, leave, status, rename or delete.
+      PLAYER`CHANNELS`GMCP: |-
+        @assert cand(u(me/FUN`GMCP`ON,Comm),u(me/FUN`GMCP`VIEWER,%<objid>)); think null(oob(%<objid>,Comm.Channel.List,u(me/FUN`GMCP`COMM`LIST,%<objid>),supported))
+      # The client asks: Char.Items.Inv or Char.Items.Room, from a logged-in connection. The answer goes to the
+      # descriptor that asked.
+      SOCKET`GMCP`GMCP: |-
+        @assert cand(strlen(%<player>),match(Char.Items.Inv Char.Items.Room,%<package>)); think u(me/FUN`GMCP`ITEMS`SENDLIST,%<descriptor>,%<player>,switch(%<package>,Char.Items.Inv,inv,room))
+      # A new name is a new Char.Name, and Char.Status carries it too.
+      OBJECT`RENAME`GMCP: |-
+        @assert u(me/FUN`GMCP`VIEWER,%<objid>); think u(me/FUN`GMCP`CHAR`SEND,%<objid>,%<objid>,name status)
+      # What the GMCP object copies to WATCH`<attribute>`GMCP for each attribute it watches. A watch handler gets
+      # %0 the object, %1 the attribute's full name in upper case. A thing's stats have no client to go to. If the
+      # package has been uninstalled (FUN`GMCP`CHAR`SEND is gone), it removes itself, and stops the watch when it
+      # is the default pattern and nothing else is left under WATCH`<attribute>.
+      TEMPLATE`GMCP`WATCH: |-
+        @assert hasattr(me,FUN`GMCP`CHAR`SEND)={@wipe me/WATCH`%1`GMCP; @assert not(comp(attrwatch(%1),WATCH`%1 WATCH`%1`*)); @assert not(words(iter(lattr(me/WATCH`%1) [lattr(me/WATCH`%1`*)],if(strlen(get(me/%i0)),%i0)))); @attribute/watch %1=}; @assert u(me/FUN`GMCP`VIEWER,%0); @assert strlen(setr(gmcp_which,u(me/FUN`GMCP`CHAR`CHANGED,%1))); think u(me/FUN`GMCP`CHAR`SEND,%0,%0,%q<gmcp_which>)
+
+  # ---- settings, and the watching -------------------------------------------
+  # WIZARD for @attribute and for the watch handlers on the event handler. AINSTALL and AUPDATE watch the
+  # named attributes when the package is installed or upgraded, ACONFIG when the vitals or status setting
+  # changes.
+  - ref: gmcp
+    type: thing
+    name: GMCP
+    flags: [WIZARD, no_command]
+    attributes:
+      DATA`CONFIG:
+        value: |-
+          What the game sends MUD clients over GMCP.
+        flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        GMCP
+      DATA`CONFIG`MODULES: |-
+        Room Comm Items Char
+      DATA`CONFIG`MODULES`TYPE: |-
+        list
+      DATA`CONFIG`MODULES`DEFAULT: |-
+        Room Comm Items Char
+      DATA`CONFIG`MODULES`CHOICES: |-
+        Room Comm Items Char
+      DATA`CONFIG`MODULES`DESCRIPTION: |-
+        The GMCP modules the game sends: Room for a mapper and who is here, Comm for channel lines and pages, Items for what a player carries and what lies about, Char for their name, gauges and status.
+      DATA`CONFIG`MODULES`LABEL: |-
+        Modules
+      DATA`CONFIG`MODULES`EXAMPLE: |-
+        Room Char
+      DATA`CONFIG`FULLNAME: |-
+        FULLNAME
+      DATA`CONFIG`FULLNAME`TYPE: |-
+        text
+      DATA`CONFIG`FULLNAME`DEFAULT: |-
+        FULLNAME
+      DATA`CONFIG`FULLNAME`PATTERN: |-
+        ^[^ ]*$
+      DATA`CONFIG`FULLNAME`DESCRIPTION: |-
+        The player attribute holding the name shown in full in Room.Players and Char.Name, such as Wren of the Marsh. A player without it is shown by name.
+      DATA`CONFIG`FULLNAME`LABEL: |-
+        Full name attribute
+      DATA`CONFIG`FULLNAME`EXAMPLE: |-
+        TITLE
+      DATA`CONFIG`AREA: |-
+        AREA
+      DATA`CONFIG`AREA`TYPE: |-
+        text
+      DATA`CONFIG`AREA`DEFAULT: |-
+        AREA
+      DATA`CONFIG`AREA`PATTERN: |-
+        ^[^ ]*$
+      DATA`CONFIG`AREA`DESCRIPTION: |-
+        The room attribute naming the area a mapper groups the room in. A room without it is in its zone's area. Empty uses the zone alone.
+      DATA`CONFIG`AREA`LABEL: |-
+        Area attribute
+      DATA`CONFIG`AREA`EXAMPLE: |-
+        REGION
+      DATA`CONFIG`ENVIRONMENT: |-
+        ENVIRONMENT
+      DATA`CONFIG`ENVIRONMENT`TYPE: |-
+        text
+      DATA`CONFIG`ENVIRONMENT`DEFAULT: |-
+        ENVIRONMENT
+      DATA`CONFIG`ENVIRONMENT`PATTERN: |-
+        ^[^ ]*$
+      DATA`CONFIG`ENVIRONMENT`DESCRIPTION: |-
+        The room attribute holding its terrain, such as forest, which a mapper colours the room by. Empty sends none.
+      DATA`CONFIG`ENVIRONMENT`LABEL: |-
+        Environment attribute
+      DATA`CONFIG`ENVIRONMENT`EXAMPLE: |-
+        TERRAIN
+      DATA`CONFIG`COORDINATES: |-
+        MAP`COORDS`X MAP`COORDS`Y MAP`COORDS`Z
+      DATA`CONFIG`COORDINATES`TYPE: |-
+        list
+      DATA`CONFIG`COORDINATES`DEFAULT: |-
+        MAP`COORDS`X MAP`COORDS`Y MAP`COORDS`Z
+      DATA`CONFIG`COORDINATES`MIN: |-
+        2
+      DATA`CONFIG`COORDINATES`MAX: |-
+        3
+      DATA`CONFIG`COORDINATES`DESCRIPTION: |-
+        The room attributes holding its x, y and z, in that order. A room with none of them is sent no coordinates.
+      DATA`CONFIG`COORDINATES`LABEL: |-
+        Coordinate attributes
+      DATA`CONFIG`COORDINATES`EXAMPLE: |-
+        X Y Z
+      DATA`CONFIG`PAGES: |-
+        1
+      DATA`CONFIG`PAGES`TYPE: |-
+        boolean
+      DATA`CONFIG`PAGES`DEFAULT: |-
+        1
+      DATA`CONFIG`PAGES`DESCRIPTION: |-
+        Whether pages are sent as Comm.Channel.Text too, to the pager and to each player the page reached.
+      DATA`CONFIG`PAGES`LABEL: |-
+        Pages
+      DATA`CONFIG`PAGES`EXAMPLE: |-
+        off
+      DATA`CONFIG`PAGE-CHANNEL: |-
+        page
+      DATA`CONFIG`PAGE-CHANNEL`TYPE: |-
+        text
+      DATA`CONFIG`PAGE-CHANNEL`DEFAULT: |-
+        page
+      DATA`CONFIG`PAGE-CHANNEL`MIN: |-
+        1
+      DATA`CONFIG`PAGE-CHANNEL`MAX: |-
+        30
+      DATA`CONFIG`PAGE-CHANNEL`DESCRIPTION: |-
+        The channel name a page is sent under, which a client's chat window files it by.
+      DATA`CONFIG`PAGE-CHANNEL`LABEL: |-
+        Page channel
+      DATA`CONFIG`PAGE-CHANNEL`EXAMPLE: |-
+        tells
+      DATA`CONFIG`ITEMS-ROOM: |-
+        1
+      DATA`CONFIG`ITEMS-ROOM`TYPE: |-
+        boolean
+      DATA`CONFIG`ITEMS-ROOM`DEFAULT: |-
+        1
+      DATA`CONFIG`ITEMS-ROOM`DESCRIPTION: |-
+        Whether a client is told the things lying in its player's room, or only what they carry.
+      DATA`CONFIG`ITEMS-ROOM`LABEL: |-
+        Room things
+      DATA`CONFIG`ITEMS-ROOM`EXAMPLE: |-
+        off
+      DATA`CONFIG`VITALS: |-
+        HP MAXHP MP MAXMP
+      DATA`CONFIG`VITALS`TYPE: |-
+        list
+      DATA`CONFIG`VITALS`DEFAULT: |-
+        HP MAXHP MP MAXMP
+      DATA`CONFIG`VITALS`PATTERN: |-
+        ^[A-Za-z0-9_`.-]+$
+      DATA`CONFIG`VITALS`DESCRIPTION: |-
+        The player attributes sent as Char.Vitals, which a client draws as gauges: hp and maxhp, mp and maxmp, mv and maxmv.
+      DATA`CONFIG`VITALS`LABEL: |-
+        Vitals
+      DATA`CONFIG`VITALS`EXAMPLE: |-
+        HP MAXHP MV MAXMV
+      DATA`CONFIG`STATUS: ""
+      DATA`CONFIG`STATUS`TYPE: |-
+        list
+      DATA`CONFIG`STATUS`DEFAULT: ""
+      DATA`CONFIG`STATUS`PATTERN: |-
+        ^[A-Za-z0-9_`.-]+$
+      DATA`CONFIG`STATUS`DESCRIPTION: |-
+        The player attributes sent as Char.Status with the player's name, such as their level or class.
+      DATA`CONFIG`STATUS`LABEL: |-
+        Status
+      DATA`CONFIG`STATUS`EXAMPLE: |-
+        LEVEL CLASS RACE
+      # ── Watching ──────────────────────────────────────────────────────────
+      # DATA`WATCHING: the attributes this package has a WATCH`<attribute>`GMCP handler for.
+      # DATA`FOREIGN: those it left alone because they are watched with another pattern.
+      FUN`WATCH`EVENTHANDLER: |-
+        config(event_handler)
+      # The vitals and status attributes, together, upper case.
+      FUN`WATCH`ATTRIBUTES: |-
+        ucstr(setunion(v(DATA`CONFIG`VITALS),v(DATA`CONFIG`STATUS)))
+      # %0 an attribute: the pattern @attribute/watch gives it by default.
+      FUN`WATCH`DEFAULTPATTERN: |-
+        WATCH`%0 WATCH`%0`*
+      # %0 an attribute: 1 when it is watched with the default pattern.
+      FUN`WATCH`ISDEFAULT: |-
+        not(comp(attrwatch(%0),u(%!/FUN`WATCH`DEFAULTPATTERN,%0)))
+      # %0 an attribute: 1 when it is watched with a pattern of someone else's.
+      FUN`WATCH`ISFOREIGN: |-
+        cand(strlen(setr(gmcp_watch,attrwatch(%0))),not(strmatch(%q<gmcp_watch>,#-1*)),not(u(%!/FUN`WATCH`ISDEFAULT,%0)))
+      # %0 an attribute: 1 when the event handler has its WATCH`<attribute>`GMCP.
+      FUN`WATCH`HANDLED: |-
+        hasattr(u(%!/FUN`WATCH`EVENTHANDLER),WATCH`%0`GMCP)
+      # %0 an attribute: the event handler's attributes with a value that its default pattern runs.
+      FUN`WATCH`REMAINING: |-
+        iter(lattr(setr(gmcp_event_handler,u(%!/FUN`WATCH`EVENTHANDLER))/WATCH`%0) [lattr(%q<gmcp_event_handler>/WATCH`%0`*)],if(strlen(get(%q<gmcp_event_handler>/%i0)),%i0))
+      INC`WATCH`ALL: |-
+        @dolist/inline setdiff(v(DATA`WATCHING),u(%!/FUN`WATCH`ATTRIBUTES))=@include/args %!/INC`WATCH`REMOVE=attribute,##; @dolist/inline u(%!/FUN`WATCH`ATTRIBUTES)=@include/args %!/INC`WATCH`ATTRIBUTE=attribute,##,by,%<by>; &DATA`WATCHING %!=filterbool(%!/FUN`WATCH`HANDLED,u(%!/FUN`WATCH`ATTRIBUTES)); &DATA`FOREIGN %!=filterbool(%!/FUN`WATCH`ISFOREIGN,u(%!/FUN`WATCH`ATTRIBUTES))
+      # %<attribute> one attribute: in the table, watched, and handled, unless someone else watches it.
+      # %<by> whoever changed the setting, told when it is left alone; empty at install.
+      INC`WATCH`ATTRIBUTE: |-
+        @if strmatch(attrwatch(%<attribute>),#-1*)={@attribute/access %<attribute>=none}; @if not(strlen(attrwatch(%<attribute>)))={@attribute/watch %<attribute>}; @if u(%!/FUN`WATCH`ISDEFAULT,%<attribute>)={@cpattr u(%!/FUN`WATCH`EVENTHANDLER)/TEMPLATE`GMCP`WATCH=u(%!/FUN`WATCH`EVENTHANDLER)/WATCH`%<attribute>`GMCP}, {@if hasattr(u(%!/FUN`WATCH`EVENTHANDLER),WATCH`%<attribute>`GMCP)={@wipe u(%!/FUN`WATCH`EVENTHANDLER)/WATCH`%<attribute>`GMCP}; @pemit strfirstof(%<by>,%#)=notice(GMCP,%<attribute> is already watched with [attrwatch(%<attribute>)]%, so it is left as it is and its changes are not sent.,warn)}
+      # %<attribute> one attribute no longer named: its handler goes (and the empty WATCH`<attribute> left above
+      # it), and its watch too if it is the default one and nothing else is left that it runs.
+      INC`WATCH`REMOVE: |-
+        @if hasattr(u(%!/FUN`WATCH`EVENTHANDLER),WATCH`%<attribute>`GMCP)={@wipe u(%!/FUN`WATCH`EVENTHANDLER)/WATCH`%<attribute>`GMCP}; @if cand(hasattr(u(%!/FUN`WATCH`EVENTHANDLER),WATCH`%<attribute>),not(hasattrval(u(%!/FUN`WATCH`EVENTHANDLER),WATCH`%<attribute>)),not(words(lattr(u(%!/FUN`WATCH`EVENTHANDLER)/WATCH`%<attribute>`*))))={@wipe u(%!/FUN`WATCH`EVENTHANDLER)/WATCH`%<attribute>}; @if cand(u(%!/FUN`WATCH`ISDEFAULT,%<attribute>),not(words(u(%!/FUN`WATCH`REMAINING,%<attribute>))))={@attribute/watch %<attribute>=}
+      AINSTALL: |-
+        @include %!/INC`WATCH`ALL
+      AUPDATE: |-
+        @include %!/INC`WATCH`ALL
+      # +config triggers this after a change, with %<setting>.
+      ACONFIG: |-
+        @assert match(vitals status,%<setting>); @include %!/INC`WATCH`ALL
+
+  - ref: gmcp_help
+    type: thing
+    name: GMCP Help
+    location: "{{gmcp}}"
+    attributes:
+      HELP: |-
+        What the game tells MUD clients such as Mudlet, over GMCP.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`GMCP`ROOM: |-
+        gmcp items|gmcp char|gmcp comm
+      SEE`GMCP`COMM: |-
+        gmcp room|gmcp char
+      SEE`GMCP`ITEMS: |-
+        gmcp room|gmcp char
+      SEE`GMCP`CHAR: |-
+        gmcp room|gmcp items|gmcp comm
+      HELP`GMCP: |-
+        **GMCP** is how a MUD client such as **Mudlet** is told things apart from the game's text, so it can draw a map, gauges, an inventory window or a chat window. Your client asks for it when it connects; you do nothing.
+
+        This game sends:
+
+        - **Room**: where you are and who is here, for a mapper. `+help gmcp room`
+        - **Comm**: channel lines and pages, for a chat window. `+help gmcp comm`
+        - **Char.Items**: what you carry and what lies about. `+help gmcp items`
+        - **Char**: your name, gauges and status. `+help gmcp char`
+
+        A client that lists the GMCP modules it wants when it connects is sent only those. One that lists none, such as TinTin++ or MUSHclient, is sent everything.
+
+        `terminfo%(me%)` shows `gmcp` when your connection agreed to GMCP, and `gmcpsupports%(me%)` the modules your client listed.
+
+        Staff choose which modules the game sends, and the attributes they read: `+config gmcp`.
+      HELP`GMCP`ROOM: |-
+        A MUD client such as **Mudlet** can draw a map and a list of who is here from the GMCP **Room** package. You do nothing: when you move, connect or someone comes and goes, your client is sent:
+
+        - **Room.Info**: the room's number, name, area, environment, coordinates and the exits you can see, each to the number of the room it leads to.
+        - **Room.Players**: everyone here, you included.
+        - **Room.AddPlayer** and **Room.RemovePlayer**: someone arrived or left.
+
+        A client that lists GMCP modules when it connects is sent these only when it listed `Room`. Mudlet does.
+
+        ## Building for a mapper
+
+        - A room's **area** is its `AREA` attribute, or else the name of its zone.
+        - Its **environment** is its `ENVIRONMENT` attribute, such as `forest`.
+        - Its **coordinates** are its ``MAP`COORDS`X``, ``MAP`COORDS`Y`` and ``MAP`COORDS`Z`` attributes, as the World map reads them. A room with none is sent none.
+        - A player's `FULLNAME` attribute is the name shown in full.
+
+        Staff can name other attributes: `+config gmcp`.
+      HELP`GMCP`COMM: |-
+        A MUD client such as **Mudlet** can keep a chat window apart from the game's text. Each channel line and page you see is also sent to your client as GMCP **Comm.Channel.Text**: the channel, who spoke, and the line as your screen shows it. **Comm.Channel.List** tells it the channels you are on and what to type to speak on each, when you connect and whenever you join or leave one.
+
+        Pages are filed under a channel called `page`, unless staff chose another name.
+
+        A client that lists GMCP modules when it connects is sent these only when it listed `Comm`. Mudlet does not list it by itself: a Mudlet script adds it with
+        `sendGMCP%(%[%[Core.Supports.Add %["Comm.Channel 1"%] %]%]%)`.
+
+        Staff: `+config gmcp`.
+      HELP`GMCP`ITEMS: |-
+        A MUD client such as **Mudlet** can show what you carry and what lies in the room in a window of its own, from the GMCP **Char.Items** package:
+
+        - When you connect, and when your client asks, it is sent **Char.Items.List**: what you carry, and what lies in your room.
+        - When you move, it is sent the things in your new room.
+        - When a thing reaches or leaves your hands or your room, it is sent **Char.Items.Add** or **Char.Items.Remove**.
+
+        Players are not items: your client lists them from the Room package. See `+help gmcp room`.
+
+        Staff: `+config gmcp`.
+      HELP`GMCP`CHAR: |-
+        A MUD client such as **Mudlet** can draw gauges for your health and other stats from the GMCP **Char** package. When you connect, your client is sent:
+
+        - **Char.Name**: your name, and your name in full.
+        - **Char.Vitals**: your health and the like, such as `hp` and `maxhp`, which Mudlet draws as gauges.
+        - **Char.Status**: your name and the game's other stats about you, such as your level.
+
+        Each is sent again the moment one of its stats changes, and Char.Name when you are renamed.
+
+        Which attributes are vitals and which are status is the game's choice: `+config gmcp`. A `FULLNAME` attribute on you is your name in full.
+
+        ## For staff
+
+        The package hears about a change through `@attribute/watch`: each vitals and status attribute is watched (added to the attribute table first when it is not there), and ``WATCH`<attribute>`GMCP`` on the event handler sends the update. An attribute already watched with another pattern is left alone and not sent; the GMCP object's ``DATA`FOREIGN`` lists them. See `help @attribute watch`.
