@@ -846,7 +846,8 @@ public static class BuildingHelpers
 	/// <summary>
 	/// <c>NoQuota(x)</c> (<c>hdrs/mushdb.h:44-47</c>): privileged, or owned by someone privileged, or
 	/// holding No_Quota, or — unless MISTRUSTed, which is what stops an object borrowing its owner's
-	/// exemption — owned by a holder of it.
+	/// exemption — owned by a holder of it. The Immortal power, TinyMUX's and RhostMUSH's IMMORTAL, needs no quota
+	/// either.
 	/// </summary>
 	private static async ValueTask<bool> NoQuotaAsync(AnySharpObject executor, SharpPlayer owner)
 	{
@@ -855,7 +856,8 @@ public static class BuildingHelpers
 		return await executor.IsPriv()
 			|| await ownerObject.IsPriv()
 			|| await executor.HasPower("No_Quota")
-			|| (!await executor.HasFlag("MISTRUST") && await ownerObject.HasPower("No_Quota"));
+			|| await executor.HasPower("Immortal")
+			|| (!await executor.HasFlag("MISTRUST") && (await ownerObject.HasPower("No_Quota") || await ownerObject.HasPower("Immortal")));
 	}
 
 	/// <summary>

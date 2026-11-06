@@ -193,7 +193,7 @@ public partial class Commands
 		if (!Configuration.CurrentValue.Net.Logins)
 		{
 			var linked = await AccountService.GetCharactersAsync(account.Id!);
-			if (!await AnyStaffCharacterAsync(linked))
+			if (!await AnyCharacterMayLoginAsync(linked))
 			{
 				await NotifyLoginsDisabledAsync(handle);
 				return new None();
@@ -588,8 +588,8 @@ public partial class Commands
 	/// if ANY linked character is staff (character #1, or WIZARD-flagged). <c>IsWizard()</c>
 	/// already covers character #1 (God), so a single async predicate suffices.
 	/// </summary>
-	private async ValueTask<bool> AnyStaffCharacterAsync(IReadOnlyList<SharpPlayer> characters) =>
-		await characters.ToAsyncEnumerable().AnyAsync(async (character, _) => await new AnySharpObject(character).IsWizard());
+	private async ValueTask<bool> AnyCharacterMayLoginAsync(IReadOnlyList<SharpPlayer> characters) =>
+		await characters.ToAsyncEnumerable().AnyAsync(async (character, _) => await PermissionService.CanLogin(new AnySharpObject(character)));
 
 	/// <summary>
 	/// Fires SOCKET`CREATEFAIL as a system event, for an account or character the connect screen refused to create.

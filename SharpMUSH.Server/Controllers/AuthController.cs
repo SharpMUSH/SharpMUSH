@@ -152,7 +152,7 @@ public class AuthController(
 
 		if (!options.CurrentValue.Net.Logins)
 		{
-			if (!await new AnySharpObject(player).IsWizard())
+			if (!await new AnySharpObject(player).CanLoginWhileClosed())
 				return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
 		}
 
@@ -471,10 +471,10 @@ public class AuthController(
 
 	/// <summary>
 	/// PennMUSH semantics: an account qualifies for login while <c>Net.Logins</c> is disabled
-	/// if ANY linked character is staff (character #1, or a wizard).
+	/// if ANY linked character may log in then (<c>Can_Login</c>: a wizard, or a holder of the Login power).
 	/// </summary>
 	private async Task<bool> AnyStaffCharacterAsync(IReadOnlyList<SharpPlayer> characters) =>
 		await characters.ToAsyncEnumerable().AnyAsync(async (character, ct) =>
-			await new AnySharpObject(character).IsWizard(ct));
+			await new AnySharpObject(character).CanLoginWhileClosed(ct));
 }
 

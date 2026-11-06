@@ -14,7 +14,7 @@ namespace SharpMUSH.Tests.Commands;
 /// <summary>
 /// Verifies that <c>Net.Logins = false</c> refuses non-staff telnet connections
 /// (<c>connect</c> character path, <c>connect guest</c>) while still allowing staff
-/// (a WIZARD-flagged character) to connect — matching the
+/// (a WIZARD-flagged character, or a holder of the Login power) to connect — matching the
 /// scoped configuration pattern used in <see cref="PlayerCreationConfigTests"/>.
 /// </summary>
 public class LoginsConfigTests
@@ -47,7 +47,7 @@ public class LoginsConfigTests
 
 
 	[Test]
-	public async ValueTask Connect_WhenLoginsDisabled_NonStaffRefused_StaffAllowed()
+	public async ValueTask Connect_WhenLoginsDisabled_NonStaffRefused_StaffAndLoginPowerAllowed()
 	{
 		var defaultHome = new DBRef((int)Configuration.CurrentValue.Database.DefaultHome);
 		var startingQuota = (int)Configuration.CurrentValue.Limit.StartingQuota;
@@ -58,6 +58,9 @@ public class LoginsConfigTests
 		var staff = (await Mediator.Send(new GetObjectNodeQuery(staffId))).Expect<AnySharpObject>();
 		var wizard = await Mediator.Send(new GetObjectFlagQuery("WIZARD"));
 		await Assert.That(await Mediator.Send(new SetObjectFlagCommand(staff, wizard!))).IsTrue();
+		var loginName = TestIsolationHelpers.GenerateUniqueName("LoginsPower");
+		var loginId = await Mediator.Send(new CreatePlayerCommand(loginName, "login-password-1", defaultHome, defaultHome, startingQuota));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power #{loginId.Number}=Login"));
 
 		using var configuration = TestOptionsOverride.Scope(options => options with
 		{
@@ -75,6 +78,11 @@ public class LoginsConfigTests
 		var result = await Parser.CommandParse(staffHandle, ConnectionService, MarkupText.Plain($"connect {staffName} staff-password-1"));
 		await Assert.That((result.Message.ToString()).Contains("#-1")).IsFalse();
 		await Assert.That(ConnectionService.Get(staffHandle)?.Ref?.Number).IsEqualTo(staffId.Number);
+
+		// So can a holder of the Login power (PennMUSH's Can_Login).
+		var loginHandle = await AllocateHandleAsync();
+		await Parser.CommandParse(loginHandle, ConnectionService, MarkupText.Plain($"connect {loginName} login-password-1"));
+		await Assert.That(ConnectionService.Get(loginHandle)?.Ref?.Number).IsEqualTo(loginId.Number);
 
 		// Guest login also refused.
 		var guestHandle = await AllocateHandleAsync();

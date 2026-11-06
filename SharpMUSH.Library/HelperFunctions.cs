@@ -79,6 +79,13 @@ public static partial class HelperFunctions
 	}
 
 	/// <summary>
+	/// PennMUSH <c>Can_Login</c>: may <paramref name="obj"/> connect while logins are off. A wizard, or a holder of
+	/// the Login power.
+	/// </summary>
+	public static async ValueTask<bool> CanLoginWhileClosed(this AnySharpObject obj, CancellationToken cancellationToken = default)
+		=> await obj.IsWizard(cancellationToken) || await obj.HasPower("LOGIN", cancellationToken);
+
+	/// <summary>
 	/// Whether the object holds <paramref name="scope"/>: God, or a role or override allowing it. The
 	/// groups split out of WIZARD (<see cref="PortalPermission.ChatAdmin"/>,
 	/// <see cref="PortalPermission.ServerOperate"/>, <see cref="PortalPermission.PlayersModerate"/>,

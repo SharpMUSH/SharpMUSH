@@ -18,7 +18,7 @@ namespace SharpMUSH.Server.Controllers;
 
 /// <summary>
 /// Account management. Authenticates with the account session bearer (same scheme as
-/// AccountController). Listing accounts and changing their status needs the Wizard role; resetting a
+/// AccountController). Listing accounts and changing their status needs <c>game.wizard</c>; resetting a
 /// password and unlinking a character are moderation and need <c>players.moderate</c>. Both are enforced
 /// server-side per request, independent of the portal UI gate, and every change is audited.
 /// </summary>
@@ -28,7 +28,6 @@ namespace SharpMUSH.Server.Controllers;
 public class AdminAccountsController(
 	IAccountService accountService,
 	IAccountSessionStore accountSessionStore,
-	AccountClaimsService accountClaims,
 	IAdministrativeCapabilityService capabilities,
 	IAuditLog audit,
 	IMediator mediator,
@@ -56,13 +55,14 @@ public class AdminAccountsController(
 			: AuditTargets.Of(AuditTargetKinds.Account, FullId(key));
 	private static string KeyOf(SharpAccount account) => account.Id!.Split('/')[^1];
 
-	/// <summary>Runs <paramref name="action"/> as the administering account when it holds the Wizard role, as the
+	/// <summary>Runs <paramref name="action"/> as the administering account when it holds <c>game.wizard</c>, as the
 	/// accounts page requires for the account list and status changes.</summary>
 	private async Task<IActionResult> AsWizardAsync(Func<string, Task<IActionResult>> action)
 		=> await bearer.ResolveAsync(this) switch
 		{
-			SignedInAccount admin when await IsWizardAsync(admin.Id) => await action(admin.Id),
-			SignedInAccount => StatusCode(StatusCodes.Status403Forbidden, "Wizard role required."),
+			SignedInAccount admin when await capabilities.AuthorizeAsync(new CapabilityActor(admin.Id), PortalPermission.GameWizard)
+				=> await action(admin.Id),
+			SignedInAccount => StatusCode(StatusCodes.Status403Forbidden, "game.wizard required."),
 			ActionResult refused => refused
 		};
 
@@ -76,16 +76,6 @@ public class AdminAccountsController(
 			SignedInAccount => StatusCode(StatusCodes.Status403Forbidden, "players.moderate required."),
 			ActionResult refused => refused
 		};
-
-	/// <summary>The AccountSession handler computed the role claim on this request; another scheme's is recomputed.</summary>
-	private async Task<bool> IsWizardAsync(string accountId)
-	{
-		var role = AccountSessionAuthenticationHandler.TryGetAccount(User, out _, out _)
-			&& Enum.TryParse<PortalRole>(User.FindFirstValue(ClaimTypes.Role), out var claimed)
-				? claimed
-				: await accountClaims.ComputeAccountRoleAsync(accountId);
-		return role >= PortalRole.Wizard;
-	}
 
 	[HttpGet]
 	public Task<IActionResult> List([FromQuery] string? search = null)
