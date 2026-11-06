@@ -108,7 +108,7 @@ public partial class Functions
 	/// The text cut into lines of at most <paramref name="width"/> characters: at the last space that fits, which
 	/// the break uses up, or at the width when no space does. Spaces that would open a line are dropped. The
 	/// positions are found in the plain text and each line is cut from the text once, so a point stays with the
-	/// line it was in: before a dropped space on that line, after the last one on the next.
+	/// line it was in: among the dropped spaces on that line, after the last one on the next.
 	/// </summary>
 	private static List<MString> WrapToWidth(MString text, int width)
 	{
@@ -136,13 +136,26 @@ public partial class Functions
 				while (skip < plain.Length && plain[skip] == ' ') skip++;
 
 				var end = offsets[start + length];
-				lines.Add(paragraph.Substring(textStart, end - textStart));
-				textStart = skip > start + length ? offsets[skip - 1] + 1 : end;
+				var next = skip > start + length ? offsets[skip - 1] + 1 : end;
+				lines.Add(MarkupText.Concat([paragraph.Substring(textStart, end - textStart), .. Carriers(paragraph, end, next)]));
+				textStart = next;
 				start = skip;
 			}
 		}
 
 		return lines;
+	}
+
+	/// <summary>
+	/// The carriers of the points among the dropped spaces from <paramref name="from"/> to <paramref name="to"/>
+	/// in the text: every character there that is not one of those spaces.
+	/// </summary>
+	private static IEnumerable<MString> Carriers(MString text, int from, int to)
+	{
+		for (var index = from; index < to; index++)
+		{
+			if (text.Text[index] != ' ') yield return text.Substring(index, 1);
+		}
 	}
 
 	private static MString JustifyCell(MString cell, int width, char justify)

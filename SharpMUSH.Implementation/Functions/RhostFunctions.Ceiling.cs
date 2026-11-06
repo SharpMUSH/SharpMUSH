@@ -188,31 +188,47 @@ public partial class Functions
 
 	/// <summary>
 	/// <paramref name="code"/> with every bracket and parenthesis escaped, so evaluating it runs its substitutions
-	/// and calls no function, as RhostMUSH's subeval() does. What the code escaped already stays as it was. With
-	/// <paramref name="mux"/>, braces and <c>%l</c> are escaped too, as TinyMUX's <c>subeval()</c> leaves them.
+	/// and calls no function, as RhostMUSH's subeval() does. What the code escaped already stays as it was.
 	/// </summary>
-	private static string SubstitutionsOnly(string code, bool mux = false)
+	private static string SubstitutionsOnly(string code)
+		=> SubstitutionsOnly(MarkupText.Plain(code), mux: false).ToPlainText();
+
+	/// <summary>
+	/// As above, keeping the markup of <paramref name="code"/>: each escape is a backslash put in front of a
+	/// character, so the text between them is cut from the code as it is. With <paramref name="mux"/>, braces and
+	/// <c>%l</c> are escaped too, as TinyMUX's <c>subeval()</c> leaves them.
+	/// </summary>
+	private static MString SubstitutionsOnly(MString code, bool mux)
 	{
-		var escaped = new StringBuilder(code.Length + 8);
-		for (var i = 0; i < code.Length; i++)
+		var raw = code.Text;
+		var parts = new List<MString>();
+		var start = 0;
+		for (var i = 0; i < raw.Length; i++)
 		{
-			var c = code[i];
-			if (mux && c == '%' && i + 1 < code.Length && code[i + 1] is 'l' or 'L')
+			var c = raw[i];
+			if (mux && c == '%' && i + 1 < raw.Length && raw[i + 1] is 'l' or 'L')
 			{
-				escaped.Append("\\%").Append(code[++i]);
+				Escape(i++);
 				continue;
 			}
 
-			if (c is '\\' or '%' && i + 1 < code.Length)
+			if (c is '\\' or '%' && i + 1 < raw.Length)
 			{
-				escaped.Append(c).Append(code[++i]);
+				i++;
 				continue;
 			}
 
-			if (c is '[' or ']' or '(' or ')' || mux && c is '{' or '}') escaped.Append('\\');
-			escaped.Append(c);
+			if (c is '[' or ']' or '(' or ')' || mux && c is '{' or '}') Escape(i);
 		}
 
-		return escaped.ToString();
+		parts.Add(code.Substring(start, raw.Length - start));
+		return MarkupText.Concat(parts);
+
+		void Escape(int at)
+		{
+			parts.Add(code.Substring(start, at - start));
+			parts.Add(MarkupText.Plain("\\"));
+			start = at;
+		}
 	}
 }
