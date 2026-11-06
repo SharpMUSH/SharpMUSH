@@ -41,20 +41,32 @@ def changed_packages(paths):
     return sorted(packages)
 
 
-def check(paths, read_base, read_head):
-    """One line for each changed package whose version did not go up. A package added or removed needs no bump."""
+def check(paths, read_base, read_head, read_target=None):
+    """One line for each changed package whose version did not go up. A package added or removed needs no bump.
+
+    read_base reads the merge-base, where the branch started; read_target reads the base branch as it is now. The
+    head's version has to be newer than both, so two branches that each raise a package to the same version cannot
+    both ship it with different contents.
+    """
     problems = []
     for package in changed_packages(paths):
         manifest = f"{ROOT}{package}/package.yaml"
         before, after = read_base(manifest), read_head(manifest)
         if before is None or after is None:
             continue
-        old, new = manifest_version(before), manifest_version(after)
-        old_key, new_key = version_key(old or ""), version_key(new or "")
+        new = manifest_version(after)
+        new_key = version_key(new or "")
         if new_key is None:
             problems.append(f"{package}: version {new!r} is not a semantic version.")
-        elif old_key is not None and new_key <= old_key:
-            problems.append(f"{package}: changed without a version bump (still {new}; was {old}).")
+            continue
+        olds = [manifest_version(before)]
+        if read_target is not None and (current := read_target(manifest)) is not None:
+            olds.append(manifest_version(current))
+        for old in olds:
+            old_key = version_key(old or "")
+            if old_key is not None and new_key <= old_key:
+                problems.append(f"{package}: changed without a version bump (still {new}; the base has {old}).")
+                break
     return problems
 
 
@@ -70,9 +82,10 @@ def main():
     args = parser.parse_args()
     base = subprocess.run(["git", "merge-base", args.base, args.head], capture_output=True, text=True,
                           check=True).stdout.strip()
-    paths = subprocess.run(["git", "diff", "--name-only", base, args.head, "--", ROOT], capture_output=True,
-                           text=True, check=True).stdout.split()
-    problems = check(paths, lambda p: git_show(base, p), lambda p: git_show(args.head, p))
+    paths = [p for p in subprocess.run(["git", "diff", "-z", "--name-only", base, args.head, "--", ROOT],
+                                       capture_output=True, text=True, check=True).stdout.split("\0") if p]
+    problems = check(paths, lambda p: git_show(base, p), lambda p: git_show(args.head, p),
+                     lambda p: git_show(args.base, p))
     for problem in problems:
         print(f"::error file={ROOT}{problem.split(':')[0]}/package.yaml::{problem}")
     if problems:

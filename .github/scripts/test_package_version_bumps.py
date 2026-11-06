@@ -43,6 +43,12 @@ class PackageVersionBumpTests(unittest.TestCase):
         self.assertLess(version_key("1.0.0-beta.2"), version_key("1.0.0-beta.10"))
         self.assertLess(version_key("0.9.9"), version_key("1.0.0-alpha"))
 
+    def test_version_already_taken_on_the_base_branch_fails(self):
+        path = "examples/packages/demo/package.yaml"
+        problems = check([path], {path: manifest("1.0.0")}.get, {path: manifest("1.0.1")}.get,
+                         {path: manifest("1.0.1")}.get)
+        self.assertEqual(len(problems), 1)
+
     def test_invalid_version_fails(self):
         path = "examples/packages/demo/package.yaml"
         self.assertTrue(self.run_check([path], {path: manifest("1.0.0")}, {path: manifest("next")}))

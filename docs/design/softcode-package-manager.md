@@ -179,8 +179,8 @@ content pack. The reference is `examples/packages/README.md`. The decisions:
 - **Bodies are read once.** `file:` bodies come through `IPackageFileSource` (a git commit, the
   upload folder, a directory for the validators) when the manifest is fetched, through
   `PackageWikiBodies`, strict UTF-8, at most 1 MB each. The plan carries the text, so review and
-  apply see the same pages. The bundled catalogue embeds manifests only and has no file source:
-  no bundled package ships wiki pages.
+  apply see the same pages. The bundled catalogue's file source (`BundledPackages.Files`) reads only
+  the files a bundled UI package embeds (`builder-graph`); no bundled package ships wiki pages.
 - **Links are full.** `PackageWikiLinks` walks each body with the wiki's own Markdig pipeline
   (`WikiLinkInline.Target`) and requires every `[[Target]]` / `[[Display|Target]]` to be
   `Namespace:slug`: a bare or title-cased target is an error naming the file and the link. A
