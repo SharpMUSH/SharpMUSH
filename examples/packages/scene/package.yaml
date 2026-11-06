@@ -5,7 +5,7 @@ version: 1.19.1
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
-homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [scene, rp, logging, capture, hooks]
 category: Scenes
 requires_server: ">=0.1"

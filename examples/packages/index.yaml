@@ -14,7 +14,7 @@ packages:
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.10.1
+    version: 1.10.2
     description: +who by name or idle, or matching a name; +where grouped under a line per location, or sorted by location or name; other packages add a Status column to +who with filters
   - path: who-where-help/
     name: +who and +where help
@@ -28,11 +28,11 @@ packages:
     description: Registers the who-where settings with +config (requires who-where and plus-config)
   - path: http-handler/
     package: http-handler
-    version: 1.0.5
+    version: 1.0.6
     description: Inbound HTTP verb routers (attach mode)
   - path: profile-handler/
     package: profile-handler
-    version: 1.1.1
+    version: 1.1.2
     description: Read-only character directory, online list + profile API (requires http-handler)
   - path: room-contents/
     package: room-contents
@@ -40,7 +40,7 @@ packages:
     description: room.info/room.contents/room.exits OOB v2 pushes, per viewer, for the portal Play page (bundled default)
   - path: comm-feed/
     package: comm-feed
-    version: 1.4.0
+    version: 1.4.1
     description: comm.channels/comm.message/comm.who OOB v2 pushes — channels, pages only to who received them, and live channel member lists — for the portal Play sidebar (bundled default)
   - path: chargen/
     package: chargen
@@ -58,7 +58,7 @@ packages:
     description: Registers the chargen settings with +config (requires chargen and plus-config)
   - path: chargen-app/
     package: chargen-app
-    version: 2.0.2
+    version: 2.0.3
     description: Application package (Area 21) — registers chargen as a portal page at /apps/chargen (requires chargen)
   - path: scene/
     package: scene
@@ -67,7 +67,7 @@ packages:
   - path: plus-help/
     name: "+help"
     package: plus-help
-    version: 1.9.2
+    version: 1.9.3
     description: "+help — aggregates the topics installed packages carry, and keeps the ones the game writes itself (bundled default)"
   - path: plus-config/
     name: "+config"
@@ -97,7 +97,7 @@ packages:
   - path: jobs-app/
     name: Jobs in the portal
     package: jobs-app
-    version: 1.0.4
+    version: 1.0.5
     description: Application package — the job queue as a portal page at /apps/jobs (requires jobs)
   - path: messages/
     name: Messages
@@ -192,7 +192,7 @@ packages:
   - path: bboards-app/
     name: BBoards in the portal
     package: bboards-app
-    version: 1.0.5
+    version: 1.0.6
     description: Registers the bulletin boards as a portal page at /apps/boards (requires bboards)
   - path: status/
     name: Status

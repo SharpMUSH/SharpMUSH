@@ -1,12 +1,12 @@
 format: "1.16"
 package: bboards-app
 title: "Boards in the portal"
-version: 1.0.5
+version: 1.0.6
 kind: application
 authors: [SharpMUSH]
 description: "Registers the bulletin boards (the bboards package) as a portal page at /apps/boards: every board by category, each board's posts, each post with its comments as conversations, and forms to post, comment, reply and edit."
 license: MIT
-homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [portal, application, bboards, boards, forum]
 category: Community
 requires_server: ">=0.1"

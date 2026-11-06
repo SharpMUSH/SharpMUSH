@@ -14,9 +14,11 @@ packages. Every manifest here is parsed by the test suite
 (`SharpMUSH.Tests/Packages/ExamplePackageTests.cs`), so the examples are
 guaranteed to stay in sync with the parser.
 
-These examples are also published as the seed content of the official package
-repo, [SharpMUSH/SharpMUSH-Packages](https://github.com/SharpMUSH/SharpMUSH-Packages),
-which games can add as a remote in the admin panel.
+Packages that do not ship with the server live in the official package
+library, [SharpMUSH/SharpMUSH.Packages](https://github.com/SharpMUSH/SharpMUSH.Packages),
+which games can add as a remote in the admin panel. A package that leaves this
+folder for the library is listed in `BundledPackages.Moved`, and every game that
+installed it from here follows the library from its next start.
 
 ## Example packages
 
@@ -96,8 +98,8 @@ depends:                        # optional — other packages this one requires
   - package: who-where          # full form: adds a source hint (see below)
     version: ">=1.0"
     source:
-      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
-      path: who-where/
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/who-where/
       branch: main
 
 conflicts:                      # optional — cannot be installed alongside
@@ -280,8 +282,8 @@ depends:
   - package: who-where
     version: ">=1.0"            # optional; omit for any release version
     source:                     # optional
-      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
-      path: who-where/          # optional — package directory in a monorepo
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/who-where/  # optional — package directory in a monorepo
       branch: main              # optional — defaults to the remote default
 ```
 
