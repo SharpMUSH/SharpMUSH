@@ -50,18 +50,19 @@ These '@' commands are general utility and programming commands:
 | [@chat]      | [@clist]     | [@clock]     | [@coflags]   | [@command]   |
 | [@config]    | [@context]   | [@cpflags]   | [@cset]      | [@cwho]      |
 | [@decompile] | [@doing]     | [@dolist]    | [@drain]     | [@edit]      |
-| [@emit]      | [@entrances] | [@eval]      | [@find]      | [@force]     |
-| [@function]  | [@gedit]     | [@grep]      | [@halt]      | [@if]        |
-| [@include]   | [@input]     | [@job]       | [@lemit]     | [@list]      |
-| [@listmotd]  | [@locale]    | [@ltag]      | [@mail]      | [@malias]    |
-| [@map]       | [@message]   | [@notify]    | [@nsemit]    | [@nslemit]   |
-| [@nsoemit]   | [@nspemit]   | [@nsprompt]  | [@nsremit]   | [@nszemit]   |
-| [@oemit]     | [@password]  | [@pemit]     | [@pipe]      | [@profile]   |
-| [@prompt]    | [@ps]        | [@queue]     | [@remit]     | [@restart]   |
-| [@retry]     | [@roll]      | [@scan]      | [@search]    | [@select]    |
-| [@sockset]   | [@stats]     | [@sweep]     | [@switch]    | [@teleport]  |
-| [@theme]     | [@trigger]   | [@verb]      | [@version]   | [@wait]      |
-| [@warnings]  | [@wcheck]    | [@whereis]   | [@wiki]      | [@zemit]     |
+| [@emit]      | [@entrances] | [@eval]      | [@find]      | [@folder]    |
+| [@force]     | [@function]  | [@gedit]     | [@grep]      | [@halt]      |
+| [@if]        | [@include]   | [@input]     | [@job]       | [@lemit]     |
+| [@list]      | [@listmotd]  | [@locale]    | [@ltag]      | [@mail]      |
+| [@malias]    | [@map]       | [@message]   | [@notify]    | [@nsemit]    |
+| [@nslemit]   | [@nsoemit]   | [@nspemit]   | [@nsprompt]  | [@nsremit]   |
+| [@nszemit]   | [@oemit]     | [@password]  | [@pemit]     | [@pipe]      |
+| [@profile]   | [@prompt]    | [@ps]        | [@queue]     | [@remit]     |
+| [@restart]   | [@retry]     | [@roll]      | [@rollback]  | [@scan]      |
+| [@search]    | [@select]    | [@sockset]   | [@stats]     | [@sweep]     |
+| [@switch]    | [@teleport]  | [@theme]     | [@trigger]   | [@verb]      |
+| [@version]   | [@wait]      | [@warnings]  | [@wcheck]    | [@whereis]   |
+| [@wiki]      | [@zemit]     |              |              |              |
 
 # @-wizard
 These '@' commands are only usable by wizards or privileged players:
@@ -69,17 +70,18 @@ These '@' commands are only usable by wizards or privileged players:
 |                 |                 |                 |                 |                 |
 |-----------------|-----------------|-----------------|-----------------|-----------------|
 | [@account]      | [@allhalt]      | [@allquota]     | [@ascii]        | [@backup]       |
-| [@boot]         | [@chownall]     | [@chzoneall]    | [@comment]      | [@dbck]         |
-| [@disable]      | [@dump]         | [@enable]       | [@feed]         | [@flag]         |
-| [@hide]         | [@hook]         | [@http]         | [@kick]         | [@leveldefault] |
-| [@livewire]     | [@log]          | [@logwipe]      | [@mapsql]       | [@motd]         |
-| [@newpassword]  | [@package]      | [@pcreate]      | [@permission]   | [@plugin]       |
-| [@poll]         | [@poor]         | [@power]        | [@purge]        | [@push]         |
-| [@quota]        | [@readcache]    | [@reality]      | [@rejectmotd]   | [@respond]      |
-| [@role]         | [@rxlevel]      | [@secret]       | [@shutdown]     | [@sitelock]     |
-| [@slave]        | [@snapshot]     | [@sql]          | [@squota]       | [@storage]      |
-| [@suggest]      | [@tag]          | [@txlevel]      | [@uptime]       | [@wall]         |
-| [@wizmotd]      | [@wizwall]      | [cd]            | [ch]            | [cv]            |
+| [@blacklist]    | [@boot]         | [@chownall]     | [@chzoneall]    | [@comment]      |
+| [@dbck]         | [@disable]      | [@dump]         | [@enable]       | [@feed]         |
+| [@flag]         | [@hide]         | [@hook]         | [@http]         | [@kick]         |
+| [@leveldefault] | [@livewire]     | [@log]          | [@logwipe]      | [@mapsql]       |
+| [@motd]         | [@newpassword]  | [@package]      | [@pcreate]      | [@permission]   |
+| [@plugin]       | [@poll]         | [@poor]         | [@power]        | [@purge]        |
+| [@push]         | [@quota]        | [@readcache]    | [@reality]      | [@rejectmotd]   |
+| [@respond]      | [@role]         | [@rxlevel]      | [@secret]       | [@shutdown]     |
+| [@site]         | [@sitelock]     | [@slave]        | [@snapshot]     | [@sql]          |
+| [@squota]       | [@storage]      | [@suggest]      | [@tag]          | [@txlevel]      |
+| [@uptime]       | [@wall]         | [@wizmotd]      | [@wizwall]      | [cd]            |
+| [ch]            | [cv]            |                 |                 |                 |
 
 # }
 "}" is a special prefix which can be used before any command. It causes the MUSH to show debug information when evaluating that command (the same as if you had the DEBUG flag set), and for any $-commands which are triggered by the command.

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Attributes;
@@ -282,6 +283,15 @@ public partial class Commands
 		// wrapped in the departing player's OUTPUTPREFIX.
 		connection.Metadata.TryRemove("OutputPrefix", out _);
 		connection.Metadata.TryRemove("OutputSuffix", out _);
+		// The session's commands join TOTCMDS now, while the count is still the session's own.
+		try
+		{
+			await TotalCommands.AddSessionAsync(Mediator, connection.Ref.Value, connection.CommandCount);
+		}
+		catch (Exception ex)
+		{
+			Logger?.LogError(ex, "Error adding the session's commands to TOTCMDS for {Player}", connection.Ref);
+		}
 		connection.Metadata["CommandCount"] = "0";
 
 		await ConnectionService.Unbind(handle);

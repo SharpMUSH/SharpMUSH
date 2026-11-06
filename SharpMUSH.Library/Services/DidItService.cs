@@ -305,6 +305,7 @@ public class DidItService(
 				Caller = enactor,
 				Arguments = args,
 				CommandHistory = null,
+				CommandSources = null,
 				BreakPropagation = null,
 				Context = invocation.Context with
 				{

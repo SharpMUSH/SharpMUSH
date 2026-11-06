@@ -105,6 +105,8 @@ public static class SoftcodeDialects
 			["@logrotate"] = "@logwipe/rotate",
 			["@selfboot"] = "@boot/me",
 			["@reclist"] = "@recover",
+			// Its own command, reached only here: a global @site would make @sit ambiguous.
+			["@site"] = "@rhost_site",
 			["folder"] = "@mail/folder",
 			["rpage"] = "page/reply",
 			["rp"] = "page/reply",
@@ -219,6 +221,8 @@ public static class SoftcodeDialects
 			["@extansi"] = "@moniker",
 			["@fi"] = "@find",
 			["@file"] = "@mail/file",
+			// Its own command, reached only here: a global @folder would make @fo ambiguous.
+			["@folder"] = "@mux_folder",
 			["@li"] = "@link",
 			["@lis"] = "@list",
 			["@lo"] = "@lock",

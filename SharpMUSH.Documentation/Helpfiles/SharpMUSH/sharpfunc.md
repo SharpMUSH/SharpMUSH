@@ -72,15 +72,15 @@
 
 |                  |                  |                  |                  |
 |------------------|------------------|------------------|------------------|
-| [ADDRLOG()]      | [CLIENTZONE()]   | [CMDS()]         | [CONN()]         |
-| [CONNLOG()]      | [CONNRECORD()]   | [DOING()]        | [GMCPSUPPORTS()] |
-| [HEIGHT()]       | [HIDDEN()]       | [HOST()]         | [IDLE()]         |
-| [IPADDR()]       | [LPORTS()]       | [LWHO()]         | [LWHOID()]       |
-| [MWHO()]         | [MWHOID()]       | [NMWHO()]        | [NWHO()]         |
-| [PLAYER()]       | [PORTS()]        | [PUEBLO()]       | [RECV()]         |
-| [SENT()]         | [SSL()]          | [TERMINFO()]     | [WIDTH()]        |
-| [XMWHO()]        | [XMWHOID()]      | [XWHO()]         | [XWHOID()]       |
-| [ZMWHO()]        | [ZWHO()]         |                  |                  |
+| [ADDRLOG()]      | [CLIENTZONE()]   | [CLOAK()]        | [CMDS()]         |
+| [CONN()]         | [CONNLOG()]      | [CONNRECORD()]   | [DOING()]        |
+| [GMCPSUPPORTS()] | [HEIGHT()]       | [HIDDEN()]       | [HOST()]         |
+| [IDLE()]         | [IPADDR()]       | [LPORTS()]       | [LWHO()]         |
+| [LWHOID()]       | [MWHO()]         | [MWHOID()]       | [NMWHO()]        |
+| [NWHO()]         | [PLAYER()]       | [PORTS()]        | [PUEBLO()]       |
+| [RECV()]         | [SENT()]         | [SSL()]          | [TERMINFO()]     |
+| [TOTCMDS()]      | [WIDTH()]        | [XMWHO()]        | [XMWHOID()]      |
+| [XWHO()]         | [XWHOID()]       | [ZMWHO()]        | [ZWHO()]         |
 
 # Dbref Functions
   Dbref functions return a dbref or list of dbrefs related to some value on an object.
@@ -117,17 +117,18 @@
 | [GETPIDS()]      | [GLOBALROOM()]   | [HASATTR()]      | [HASATTRP()]     |
 | [HASFLAG()]      | [HASPOWER()]     | [HASROLE()]      | [HASRXLEVEL()]   |
 | [HASTXLEVEL()]   | [HASTYPE()]      | [INAME()]        | [ISAPPROVED()]   |
-| [ISTAG()]        | [LFLAGS()]       | [LISTRLEVELS()]  | [LISTTAGS()]     |
-| [LIVEWIRE()]     | [LLOCKFLAGS()]   | [LOCK()]         | [LOCKFLAGS()]    |
-| [LOCKOWNER()]    | [LOCKS()]        | [LPIDS()]        | [LSTATS()]       |
-| [MONEY()]        | [MONIKER()]      | [MOTD()]         | [MSECS()]        |
-| [MTIME()]        | [MUDNAME()]      | [MUDURL()]       | [NAME()]         |
-| [NATTR()]        | [NEARBY()]       | [OBJID()]        | [OBJMEM()]       |
-| [ORFLAGS()]      | [ORLFLAGS()]     | [ORLPOWERS()]    | [PERMISSION()]   |
-| [PIDINFO()]      | [PLAYERMEM()]    | [PLAYMEM()]      | [POLL()]         |
-| [POWERS()]       | [QUOTA()]        | [RESTARTS()]     | [ROLES()]        |
-| [RXDESC()]       | [RXLEVEL()]      | [TAGMATCH()]     | [TAGREF()]       |
-| [TXLEVEL()]      | [TYPE()]         | [VERSION()]      | [VISIBLE()]      |
+| [ISTAG()]        | [LFLAGS()]       | [LISTCOMMANDS()] | [LISTFLAGS()]    |
+| [LISTRLEVELS()]  | [LISTTAGS()]     | [LIVEWIRE()]     | [LLOCKFLAGS()]   |
+| [LOCK()]         | [LOCKFLAGS()]    | [LOCKOWNER()]    | [LOCKS()]        |
+| [LPIDS()]        | [LSTATS()]       | [MONEY()]        | [MONIKER()]      |
+| [MOTD()]         | [MSECS()]        | [MTIME()]        | [MUDNAME()]      |
+| [MUDURL()]       | [NAME()]         | [NATTR()]        | [NEARBY()]       |
+| [OBJID()]        | [OBJMEM()]       | [ORFLAGS()]      | [ORLFLAGS()]     |
+| [ORLPOWERS()]    | [PERMISSION()]   | [PIDINFO()]      | [PLAYERMEM()]    |
+| [PLAYMEM()]      | [POLL()]         | [POWERS()]       | [QUOTA()]        |
+| [RESTARTS()]     | [ROLES()]        | [RXDESC()]       | [RXLEVEL()]      |
+| [SIZE()]         | [TAGMATCH()]     | [TAGREF()]       | [TXLEVEL()]      |
+| [TYPE()]         | [VATTRCNT()]     | [VERSION()]      | [VISIBLE()]      |
 | [WIZMOTD()]      |                  |                  |                  |
 
 ::: seealso
@@ -262,10 +263,10 @@
 | [SPACE()]                | [SPELLNUM()]             | [SQUISH()]               | [STANDIN()]              |
 | [STRALLOF()]             | [STRCAT()]               | [STRDELETE()]            | [STRDISTANCE()]          |
 | [STRFIRSTOF()]           | [STRINSERT()]            | [STRIP()]                | [STRIPACCENTS()]         |
-| [STRIPANSI()]            | [STRLEN()]               | [STRMATCH()]             | [STRMEM()]               |
-| [STRREPLACE()]           | [SWITCH()]               | [TR()]                   | [TRANSLATE()]            |
-| [TRIM()]                 | [UCSTR()]                | [UNMARK()]               | [URLDECODE()]            |
-| [URLENCODE()]            | [WRAP()]                 |                          |                          |
+| [STRIPANSI()]            | [STRLEN()]               | [STRLENRAW()]            | [STRMATCH()]             |
+| [STRMEM()]               | [STRREPLACE()]           | [SWITCH()]               | [TR()]                   |
+| [TRANSLATE()]            | [TRIM()]                 | [UCSTR()]                | [UNMARK()]               |
+| [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 |                          |
 
 ::: seealso
 - [STRINGS]
