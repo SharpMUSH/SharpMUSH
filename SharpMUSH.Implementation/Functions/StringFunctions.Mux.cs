@@ -141,6 +141,9 @@ public partial class Functions
 				textStart = next;
 				start = skip;
 			}
+
+			// Points after the last visible character, past spaces the last break dropped, end the last line.
+			if (textStart < paragraph.Length) lines[^1] = MarkupText.Concat([lines[^1], .. Carriers(paragraph, textStart, paragraph.Length)]);
 		}
 
 		return lines;

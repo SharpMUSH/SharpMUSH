@@ -118,6 +118,7 @@ public class MuxFunctionTests : ServerTestBase
 	[Arguments("wrapcolumns(ab [sound(chime.wav)]cd,2,1)", "ab\ncd")]
 	[Arguments("wrapcolumns(sound(chime.wav),3,1)", "   ")]
 	[Arguments("wrapcolumns(ab%b[sound(chime.wav)]%bcd,2,1)", "ab\ncd")]
+	[Arguments("wrapcolumns(ab [sound(chime.wav)],2,1)", "ab")]
 	public async Task MuxShimsKeepPoints(string expression, string expected)
 	{
 		var result = (await Parser.FunctionParse(MString.Plain(expression)))!.Message!;
@@ -150,17 +151,33 @@ public class MuxFunctionTests : ServerTestBase
 		var token = TestIsolationHelpers.GenerateUniqueName("MuxPfind");
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>();
 		var caller = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, mediator, token);
+		var room = (await Cmd($"@dig {token}_Room")).Trim().Split(' ')[^1].Trim();
+		await Cmd($"@tel #{caller.Number}={room}");
 		var parser = WebAppFactoryArg.FunctionParserFor(caller);
 		async Task<string> AsCaller(string code) => (await parser.EvaluateAsync(MString.Plain(code))).ToPlainText();
 
 		var before = Notifications.CountFor(caller);
-		await Assert.That(await AsCaller("pfind(#99999999)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
+		await Assert.That(await AsCaller("pfind(#99999999)")).IsEqualTo("#-1");
+		await Assert.That(await AsCaller("pfind(me)")).IsEqualTo(await AsCaller("objid(me)"));
 		await Assert.That(await AsCaller($"pfind({token}_Nobody)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
 		await Assert.That(Notifications.CountFor(caller)).IsEqualTo(before);
 
 		await AsCaller($"pmatch({token}_Nobody)");
 		await Assert.That(Notifications.CountFor(caller)).IsGreaterThan(before);
 	}
+
+	/// <summary>
+	/// subeval() leaves what sits between brackets as written, does not compress spaces, and reads the caller's
+	/// registers.
+	/// </summary>
+	[Test]
+	[Arguments("subeval(lit([%#] [\\x] [a[b]%#]))", "[%#] [\\x] [a[b]%#]")]
+	[Arguments("subeval(a[space(3)]b)", "a   b")]
+	[Arguments("[subeval([space(2)]x)]|", "  x|")]
+	[Arguments("[setq(0,hi)][subeval(lit(%q0 %q0))]", "hi hi")]
+	[Arguments("subeval(lit(a\\ b%b%bc))", "a b  c")]
+	public async Task SubevalMatchesTinyMux(string expression, string expected)
+		=> await Assert.That(await Eval(expression)).IsEqualTo(expected);
 
 	/// <summary>subeval() keeps the colour of the text it is given.</summary>
 	[Test]
@@ -179,7 +196,7 @@ public class MuxFunctionTests : ServerTestBase
 		await Eval($"attrib_set({thing}/TEXT,lit(%# said [add(1,2)] {{x}} at %l))");
 
 		await Assert.That(await Eval($"subeval(get({thing}/TEXT))"))
-			.IsEqualTo($"{await Eval("%#")} said [add(1,2)] {{x}} at %l");
+			.IsEqualTo($"{await Eval("%#")} said [add(1,2)] {{x}} at ");
 	}
 
 	/// <summary>The bool family keeps TinyMUX's own test when <c>mux_logic</c> makes and() read numbers.</summary>
