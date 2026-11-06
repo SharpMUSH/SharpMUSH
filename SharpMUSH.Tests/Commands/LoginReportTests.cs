@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -143,6 +144,39 @@ public class LoginReportTests : ServerTestBase
 			var player = ConnectionService.Get(handle)?.Ref ?? default;
 			await Assert.That(Notifications.For(player))
 				.Contains(line => line.StartsWith("Last connect was from maker.example on ", StringComparison.Ordinal));
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(handle);
+		}
+	}
+
+	[Test]
+	public async Task ALoginWhoseHostIsNamedBeforeItBinds_IsRefusedByAConnectRuleForThatName()
+	{
+		var (_, name) = await PlayerAsync("LockedLogin");
+		var host = $"{TestIsolationHelpers.GenerateUniqueName("locked")}.example".ToLowerInvariant();
+		const string address = "198.51.100.20";
+		var handle = await RegisterAsync(address);
+		// The host-name lookup finishing after the connect screen's sitelock check and before the bind.
+		ConnectionService.ListenState(change =>
+		{
+			if (change.Item1 == handle && change.Item4 == IConnectionService.ConnectionState.LoggedIn)
+				ConnectionService.Update(handle, "HostName", host);
+		});
+		try
+		{
+			using (TestOptionsOverride.Scope(options => options with
+			{
+				SitelockRules = new SitelockRulesOptions(
+					new Dictionary<string, string[]>(options.SitelockRules.Rules) { [host] = ["!connect"] })
+			}))
+			{
+				await CommandParser.CommandParse(handle, ConnectionService, MarkupText.Plain($"connect \"{name}\" {Password}"));
+			}
+
+			await Assert.That(Notifications.ForHandle(handle)).Contains("Access from your location is restricted.");
+			await Assert.That(ConnectionService.Get(handle)).IsNull();
 		}
 		finally
 		{
