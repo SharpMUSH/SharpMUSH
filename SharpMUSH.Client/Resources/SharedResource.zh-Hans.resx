@@ -5450,6 +5450,10 @@
     <value>（范围 {0}）</value>
     <comment>MT</comment>
   </data>
+  <data name="RolAccessUnlessDenied" xml:space="preserve">
+    <value>除非被拒绝，否则允许</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>已保存 {0} 的例外。</value>
     <comment>MT</comment>

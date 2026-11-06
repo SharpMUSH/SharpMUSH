@@ -5450,6 +5450,10 @@
     <value>(rækkevidde {0})</value>
     <comment>MT</comment>
   </data>
+  <data name="RolAccessUnlessDenied" xml:space="preserve">
+    <value>Tilladt, medmindre det nægtes</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Tilsidesættelse for {0} gemt.</value>
     <comment>MT</comment>

@@ -5450,6 +5450,10 @@
     <value>(alcance {0})</value>
     <comment>MT</comment>
   </data>
+  <data name="RolAccessUnlessDenied" xml:space="preserve">
+    <value>Permitido salvo denegación</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Excepción para {0} guardada.</value>
     <comment>MT</comment>
