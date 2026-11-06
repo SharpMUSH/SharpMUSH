@@ -153,10 +153,6 @@ public static partial class HelperFunctions
 	}
 
 	/// <summary>
-	/// <see cref="HasPower(AnySharpObject, string)"/> against <paramref name="target"/>: a built-in power held through
-	/// an override with a reach counts only when the target's owner ranks within it.
-	/// </summary>
-	/// <summary>
 	/// Whether <paramref name="holder"/>'s protective <paramref name="scope"/> shields it from
 	/// <paramref name="actor"/> (<see cref="ObjectGrants.Protects"/>). Nothing shields anything from #1.
 	/// </summary>
@@ -167,6 +163,10 @@ public static partial class HelperFunctions
 		return grants.Protects(scope, await actor.RankAsTargetAsync(ExecutionBudget.CurrentToken));
 	}
 
+	/// <summary>
+	/// <see cref="HasPower(AnySharpObject, string)"/> against <paramref name="target"/>: a built-in power held through
+	/// an override with a reach counts only when the target's owner ranks within it.
+	/// </summary>
 	public static async ValueTask<bool> HasPowerOver(this AnySharpObject obj, string power, AnySharpObject target)
 	{
 		if (GamePowers.Find(power) is not { } gamePower) return await obj.HasPower(power);
