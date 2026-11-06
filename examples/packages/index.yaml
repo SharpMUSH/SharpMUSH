@@ -127,7 +127,7 @@ packages:
   - path: radio-scene/
     name: Radio in scenes
     package: radio-scene
-    version: 1.4.1
+    version: 1.4.2
     description: +radio/log — what a listener hears on a frequency goes into their scene, through a tap on the radio feed kind (requires radio and scene)
   - path: scene-help/
     name: Scene help
@@ -302,12 +302,12 @@ packages:
   - path: staff-status/
     name: Staff list statuses
     package: staff-status
-    version: 1.0.0
+    version: 1.0.1
     description: Shows a staff member's +status beside whether they are on duty in +staff (requires staff and status)
   - path: census/
     name: Census
     package: census
-    version: 1.0.0
+    version: 1.0.1
     description: +census — counts and lists the characters by dimensions staff set in a +config table (attributes, roles, last on, created, account size), with filters and breakdowns that combine
   - path: census-help/
     name: Census help
@@ -322,7 +322,7 @@ packages:
   - path: census-finger/
     name: Census +finger fields
     package: census-finger
-    version: 1.0.0
+    version: 1.0.1
     description: Lets +census count by +finger fields, read as +finger shows them (requires census and finger)
   - path: time/
     name: Time
@@ -372,7 +372,7 @@ packages:
   - path: health-jobs/
     name: Health Staff Load
     package: health-jobs
-    version: 1.0.4
+    version: 1.0.5
     description: +health/staff — open jobs and the oldest waiting on staff, per staffer (requires health and jobs)
   - path: relationships/
     name: Relationships
@@ -437,7 +437,7 @@ packages:
   - path: discord-scenes/
     name: Discord Scenes
     package: discord-scenes
-    version: 1.2.0
+    version: 1.2.1
     description: Scheduled scenes in the Discord server's Events tab, kept in step as they are moved, started, finished or cancelled (requires the Scene and Discord plugins)
   - path: discord-scenes-help/
     name: Discord scheduled scenes help
@@ -497,7 +497,7 @@ packages:
   - path: availability/
     name: Availability
     package: availability
-    version: 1.5.0
+    version: 1.5.1
     description: +avail — when each character is busy or free, as dates and repeating patterns, and the times a group are all free
   - path: availability-help/
     name: Availability help
@@ -512,12 +512,12 @@ packages:
   - path: availability-alts/
     name: Availability with alts
     package: availability-alts
-    version: 1.0.0
+    version: 1.0.1
     description: Counts the characters an account lists in public with +alts as one person in +avail (requires availability and alts)
   - path: scene-availability/
     name: Scene Availability
     package: scene-availability
-    version: 2.0.1
+    version: 2.0.2
     description: A bridge for +avail in scenes — +avail/scene finds a time a scene's cast is all free, and a scheduled scene's card shows who is free at its time
   - path: gmcp-room/
     name: GMCP Room
@@ -629,7 +629,7 @@ packages:
     description: Bridge — the checklist's steps and settings in +config onboarding (requires onboarding and plus-config)
   - path: onboarding-chargen/
     package: onboarding-chargen
-    version: 1.0.1
+    version: 1.0.2
     description: Bridge — the Get approved step says where the player's +app application stands (requires onboarding and chargen)
   - path: world-map/
     name: World map
