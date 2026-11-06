@@ -163,12 +163,11 @@ public partial class Functions
 		{
 			var seesHidden = dbref == executor.Object().DBRef
 				|| await executor.IsWizard() || await executor.IsRoyalty() || await executor.IsSee_All();
-			if (!seesHidden && connections.All(connection => connection.IsHidden))
-			{
-				return new CallState("-1");
-			}
-
-			total += connections.Sum(connection => (long)connection.CommandCount);
+			// A hidden connection's count is left out for a caller who may not see it, so the answer does
+			// not change when a hidden player connects.
+			total += connections
+				.Where(connection => seesHidden || !connection.IsHidden)
+				.Sum(connection => (long)connection.CommandCount);
 		}
 
 		return new CallState(Math.Min(total, 2_000_000_000L));

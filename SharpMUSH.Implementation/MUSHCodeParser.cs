@@ -545,8 +545,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		// Clear DirectInput for the same reason as CommandListParse: this visitor is always
 		// used in a queue/callback context (e.g., @force, @trigger), never for direct player input.
+		// A list's own commands are all @rollback may run again: a fresh stack, emptied on each call.
+		var sources = new ConcurrentStack<MString>();
 		var parserForList = State.IsEmpty ? this : Push(CurrentState with
 		{
+			CommandFrame = CurrentState.CommandFrame with { CommandSources = sources },
 			Flags = CurrentState.Flags & ~ParserStateFlags.DirectInput,
 			CommandText = CurrentState.CommandText ?? CurrentState.NewCommandText(),
 			InplaceDepth = depth
@@ -557,6 +560,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		return async () =>
 		{
 			using var precisionScope = Configurable.UseFloatPrecisionOf(Configuration);
+			sources.Clear();
 			return await visitor.Visit(chatContext);
 		};
 	}

@@ -36,7 +36,7 @@ public partial class Commands
 	/// is true. Afterwards the list goes on with its own <c>%0</c>-<c>%9</c>.
 	/// </summary>
 	[SharpCommand(Name = "@ROLLBACK", Output = CommandOutput.Runs, Switches = ["RETRY", "WAIT", "LABEL"],
-		Behavior = CB.Default | CB.EqSplit | CB.NoParse | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0,
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoParse | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0,
 		ParameterNames = ["count", "arguments..."])]
 	public async ValueTask<Option<CallState>> Rollback(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -546,6 +546,13 @@ public partial class Commands
 					? []
 					: options.Where(option => !removing.Contains(option, StringComparer.OrdinalIgnoreCase)).ToArray();
 				if (left.Length == options.Length) continue;
+
+				// A blacklist whose refusal went goes too, so @blacklist does not list what it no longer refuses.
+				left = left
+					.Where(option => BlacklistKinds.FirstOrDefault(kind => kind.Marker.Equals(option, StringComparison.OrdinalIgnoreCase))
+						is not { Marker: not null } kind
+						|| kind.Options.All(refusal => left.Contains(refusal, StringComparer.OrdinalIgnoreCase)))
+					.ToArray();
 
 				if (left.All(IsBlacklistMarker)) rules.Remove(pattern);
 				else rules[pattern] = left;

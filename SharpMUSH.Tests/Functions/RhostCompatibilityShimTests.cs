@@ -103,7 +103,7 @@ public class RhostCompatibilityShimTests : ServerTestBase
 			// Hidden from a mortal who may not see hidden players.
 			ConnectionService.Update(player.Handle, "Hidden", "1");
 			var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "TotCmdsMortal");
-			await Assert.That(await EvalAs(mortal, $"totcmds({player.DbRef})")).IsEqualTo("-1");
+			await Assert.That(await EvalAs(mortal, $"totcmds({player.DbRef})")).IsEqualTo("100");
 
 			await ConnectionService.Disconnect(player.Handle);
 			disconnected = true;
@@ -186,6 +186,54 @@ public class RhostCompatibilityShimTests : ServerTestBase
 
 			await Assert.That(Heard(actor, token)).IsEquivalentTo(
 				["1-3", "2-3", "1-2", "2-2", "1-1", "2-1", "end-3"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(actor.Handle);
+		}
+	}
+
+	[Test]
+	public async Task RollbackGivesEachArgumentItsOwnRegister()
+	{
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "RollbackArgs");
+		await AloneAsync(actor);
+		var token = TestIsolationHelpers.GenerateUniqueName("ra");
+		var command = TestIsolationHelpers.GenerateUniqueName("racmd");
+		try
+		{
+			await CmdAs(actor.DbRef, actor.Handle,
+				$"&DO me=${command} *:think {token}%0-%1;@rollback 1=[add(%0,1)],[mul(%0,10)]");
+			await CmdAs(actor.DbRef, actor.Handle, $"{command} 2");
+			await WebAppFactoryArg.QueueBarrierAsync();
+
+			await Assert.That(Heard(actor, token)).IsEquivalentTo(
+				["2-", "3-20"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(actor.Handle);
+		}
+	}
+
+	[Test]
+	public async Task RollbackInsideAnInlineListRunsOnlyThatList()
+	{
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "RollbackInline");
+		await AloneAsync(actor);
+		var token = TestIsolationHelpers.GenerateUniqueName("ri");
+		var command = TestIsolationHelpers.GenerateUniqueName("ricmd");
+		try
+		{
+			await CmdAs(actor.DbRef, actor.Handle,
+				$"&DO me=${command}:think {token}outer;@dolist/inline a b={{think {token}%i0;@rollback 5}};think {token}end");
+			await CmdAs(actor.DbRef, actor.Handle, command);
+			await WebAppFactoryArg.QueueBarrierAsync();
+
+			await Assert.That(Heard(actor, token)).IsEquivalentTo(
+				["outer", "a", "a", "b", "b", "end"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		}
 		finally
 		{
@@ -376,6 +424,31 @@ public class RhostSiteCommandTests : ServerTestBase
 		finally
 		{
 			await Cmd($"@sitelock/remove {address}");
+		}
+	}
+
+	[Test]
+	public async Task SiteTakesTheBlacklistEntryWithTheRefusal()
+	{
+		var address = TestAddress();
+		var network = $"{address}/32";
+		try
+		{
+			await Cmd($"@blacklist/add {address}");
+			await Cmd($"@blacklist/add/noguest {address}");
+			using (TestOptionsOverride.Scope(options => options with
+			{
+				Compatibility = options.Compatibility with { Dialect = "rhost" }
+			}))
+			{
+				await Cmd($"@site/forbid {address}=/32");
+			}
+
+			await Assert.That(Rules[network]).IsEquivalentTo(["blacklist_noguest", "!guest"]);
+		}
+		finally
+		{
+			await Cmd($"@sitelock/remove {network}");
 		}
 	}
 
