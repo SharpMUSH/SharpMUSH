@@ -27,7 +27,7 @@ public class ServerInfoController(IOptionsWrapper<SharpMUSHOptions> options, IGa
 	/// <param name="Logo">The <c>portal_logo</c> option; empty for the SharpMUSH logo.</param>
 	/// <param name="Banner">The <c>portal_banner</c> option; empty for none.</param>
 	/// <param name="Tagline">The <c>portal_tagline</c> option.</param>
-	/// <param name="Description">The <c>portal_description</c> option, else <c>onboarding_introduction</c>.</param>
+	/// <param name="Description">The <c>portal_description</c> option.</param>
 	public record ServerInfoResponse(bool GuestsEnabled, string MudName, IReadOnlyList<string> Features, string BuildId,
 		string ImageHosts, string ImageHostList, string Logo, OnboardingPresentation? Onboarding = null,
 		string Banner = "", string Tagline = "", string Description = "");
@@ -43,7 +43,7 @@ public class ServerInfoController(IOptionsWrapper<SharpMUSHOptions> options, IGa
 			await features.EnabledAsync(), build.Id,
 			cosmetic.ImageHosts ?? "any", cosmetic.ImageHostList ?? string.Empty,
 			cosmetic.PortalLogo?.Trim() ?? string.Empty, await onboarding.PublicAsync(ct),
-			PortalIdentity.Banner(cosmetic) ?? string.Empty, PortalIdentity.Tagline(cosmetic), PortalIdentity.Description(current)));
+			PortalIdentity.Banner(cosmetic) ?? string.Empty, PortalIdentity.Tagline(cosmetic), PortalIdentity.Description(cosmetic)));
 	}
 
 	/// <summary>

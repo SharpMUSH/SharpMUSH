@@ -246,8 +246,8 @@ public record CosmeticOptions(
 		ValidationPattern = PortalIdentity.DescriptionPattern,
 		Group = "Portal",
 		Order = 5,
-		Tooltip = "At most 300 characters of plain text. Empty uses onboarding_introduction, the introduction "
-			+ "written during setup.")]
+		Tooltip = "At most 300 characters of plain text. While it is empty, link previews use "
+			+ "onboarding_introduction, the introduction written during setup.")]
 	string PortalDescription
 );
 
@@ -282,8 +282,11 @@ public static class PortalIdentity
 	/// <summary><c>portal_tagline</c>, or empty.</summary>
 	public static string Tagline(CosmeticOptions cosmetic) => NonEmpty(cosmetic.PortalTagline) ?? "";
 
-	/// <summary><c>portal_description</c>, else <c>onboarding_introduction</c>, else empty.</summary>
-	public static string Description(SharpMUSHOptions options) =>
+	/// <summary><c>portal_description</c>, or empty. The portal shows only this: Home already shows the introduction.</summary>
+	public static string Description(CosmeticOptions cosmetic) => NonEmpty(cosmetic.PortalDescription) ?? "";
+
+	/// <summary>What a link preview describes the game with: <c>portal_description</c>, else <c>onboarding_introduction</c>.</summary>
+	public static string PreviewDescription(SharpMUSHOptions options) =>
 		NonEmpty(options.Cosmetic.PortalDescription) ?? NonEmpty(options.Onboarding?.Introduction) ?? "";
 
 	private static string? NonEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

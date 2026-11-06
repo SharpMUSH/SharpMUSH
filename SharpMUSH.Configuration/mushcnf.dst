@@ -983,8 +983,8 @@ image_hosts any
 # portal_tagline Gaslight intrigue in a city that never sleeps.
 
 # Two or three sentences, at most 300 characters, about the game for the
-# portal's Home and sign-in pages and link previews. Empty uses
-# onboarding_introduction.
+# portal's Home and sign-in pages and link previews. While it is empty,
+# link previews use onboarding_introduction.
 # portal_description Players run the guilds of a rain-soaked city.
 
 # Should object names be restricted to just ascii characters, or can

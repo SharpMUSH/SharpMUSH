@@ -57,7 +57,7 @@ More cosmetic options.
 - `portal_favicon=<string>`: The web portal's browser tab icon, given the same way. Empty uses portal_logo, or the SharpMUSH logo when that is empty too. A browser keeps a tab icon for a while, so a change can take a reload to show.
 - `portal_banner=<string>`: A wide picture behind the game's name on the portal's Home, wiki and sign-in pages, given the same way. It is cropped to fit, about four times as wide as it is tall, and link previews show it too. Empty shows none.
 - `portal_tagline=<string>`: One line of at most 120 characters, shown under the game's name on the portal and in link previews.
-- `portal_description=<string>`: Two or three sentences, at most 300 characters, about the game, for the portal's Home and sign-in pages and link previews. Empty uses onboarding_introduction.
+- `portal_description=<string>`: Two or three sentences, at most 300 characters, about the game, for the portal's Home and sign-in pages and link previews. While it is empty, link previews use onboarding_introduction.
 
 ## Layouts
 

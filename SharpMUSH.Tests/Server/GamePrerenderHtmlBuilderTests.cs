@@ -79,6 +79,14 @@ public class GamePrerenderHtmlBuilderTests
 	}
 
 	[Test]
+	public async Task EveryScene_IsCanonicallyTheSceneList()
+	{
+		var html = GamePrerenderHtmlBuilder.GenerateGamePrerenderHtml(Options(), Base, "/scenes/42/live");
+
+		await Assert.That(html).Contains("<link rel=\"canonical\" href=\"https://game.example/scenes\" />");
+	}
+
+	[Test]
 	[Arguments("/", true)]
 	[Arguments("/characters", true)]
 	[Arguments("/scenes/", true)]

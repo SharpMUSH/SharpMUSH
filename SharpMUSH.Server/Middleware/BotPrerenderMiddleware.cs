@@ -65,10 +65,6 @@ public sealed class BotPrerenderMiddleware(
 		var wikiService = scope.ServiceProvider.GetRequiredService<IWikiService>();
 		var localization = scope.ServiceProvider.GetRequiredService<IWikiLocalizationService>();
 
-		// A prerender is anonymous, bot-facing output: it serves what a logged-out reader may see, so neither a
-		// draft nor a page whose read requirements the everyone role does not meet reaches a crawler. The check
-		// runs before the cache is read: a requirement or a role can change from places that do not clear the
-		// cache (@wiki/require, @role), and a page closed since it was cached must stop being served at once.
 		var options = scope.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue;
 
 		// The game's own card for Home and the portal's public lists. Not cached: it is built from the options alone,
@@ -80,6 +76,11 @@ public sealed class BotPrerenderMiddleware(
 		}
 
 		var siteName = string.IsNullOrWhiteSpace(options.Net.MudName) ? "SharpMUSH" : options.Net.MudName.Trim();
+
+		// A prerender is anonymous, bot-facing output: it serves what a logged-out reader may see, so neither a
+		// draft nor a page whose read requirements the everyone role does not meet reaches a crawler. The check
+		// runs before the cache is read: a requirement or a role can change from places that do not clear the
+		// cache (@wiki/require, @role), and a page closed since it was cached must stop being served at once.
 		var page = await AnonymousPageAsync(scope.ServiceProvider, wikiService, path, context.RequestAborted);
 		if (page is null && IsWikiPath(path))
 		{

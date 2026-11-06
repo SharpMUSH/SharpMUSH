@@ -19,7 +19,7 @@
    every category. Search reads ?q= from the address and submits a paginated search across all collections. *@
 <div class="wiki-index-container">
     <div class="wiki-index">
-        <GlassBanner Title="@Loc["NavWikiHeroTitle"]" Kicker="@string.Format(Loc["NavWikiHeroKicker"], Loc["AppTitle"])" ImageUrl="@(_banner ?? _heroImage)"
+        <GlassBanner Title="@Loc["NavWikiHeroTitle"]" Kicker="@string.Format(Loc["NavWikiHeroKicker"], Loc["AppTitle"])" ImageUrl="@(ImageUrlPolicy.IsRenderable(_banner) ? _banner : _heroImage)"
                      Height="180" TitleSize="hero" HeadingLevel="1" Minimisable="false">
             <Secondary>
                 <div class="wiki-hero-row">

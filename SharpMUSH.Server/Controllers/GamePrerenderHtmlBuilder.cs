@@ -34,12 +34,13 @@ public static class GamePrerenderHtmlBuilder
 	{
 		var name = string.IsNullOrWhiteSpace(options.Net.MudName) ? "SharpMUSH" : options.Net.MudName.Trim();
 		var tagline = PortalIdentity.Tagline(options.Cosmetic);
-		var description = PortalIdentity.Description(options);
+		var description = PortalIdentity.PreviewDescription(options);
 		var summary = description.Length > 0 ? description : tagline;
 		var banner = PortalIdentity.Banner(options.Cosmetic);
 		var image = Absolute(baseUrl, banner ?? NonEmpty(options.Cosmetic.PortalLogo) ?? DefaultImage);
 		var title = tagline.Length > 0 ? $"{name}: {tagline}" : name;
-		var url = $"{baseUrl}{path}";
+		// A scene's own address has no card of its own yet, so every scene is one page to a crawler: the list.
+		var url = $"{baseUrl}{(path.StartsWith("/scenes/", StringComparison.OrdinalIgnoreCase) ? "/scenes" : path)}";
 
 		var sb = new StringBuilder();
 		sb.AppendLine("<!DOCTYPE html>");

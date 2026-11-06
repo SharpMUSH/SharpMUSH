@@ -128,12 +128,13 @@ public class ServerInfoControllerTests
 	}
 
 	[Test]
-	public async Task Get_ReportsTheSetupIntroduction_WhenTheGameHasNoDescription()
+	public async Task Get_LeavesTheSetupIntroductionOut_WhenTheGameHasNoDescription()
 	{
 		var result = await MakeController(guestsEnabled: true, introduction: "Welcome, traveller.").Get();
 
 		var response = (ServerInfoController.ServerInfoResponse)((OkObjectResult)result).Value!;
-		await Assert.That(response.Description).IsEqualTo("Welcome, traveller.");
+		await Assert.That(response.Description).IsEmpty()
+			.Because("the starter Home page already opens with the introduction; the hero would repeat it");
 		await Assert.That(response.Banner).IsEmpty();
 		await Assert.That(response.Tagline).IsEmpty();
 	}
