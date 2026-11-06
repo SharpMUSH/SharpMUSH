@@ -75,7 +75,11 @@ public static class ImportWorker
 					await options.UpdateAsync(current =>
 					{
 						var imported = configuration.Over(current);
-						return imported with { Alias = resolved.Over(imported.Alias) };
+						return imported with
+						{
+							Alias = resolved.Over(imported.Alias),
+							Restriction = imported.Restriction with { CommandRestrictions = resolved.CommandRestrictions }
+						};
 					}, deadline.Token);
 					await mediator.Send(new SetExpandedServerDataCommand(nameof(MushCnfObjectReferences), MushCnfObjectReferences.From(configuration)), deadline.Token);
 					foreach (var (name, value) in configuration.Secrets)

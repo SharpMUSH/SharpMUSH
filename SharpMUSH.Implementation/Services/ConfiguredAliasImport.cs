@@ -12,10 +12,15 @@ namespace SharpMUSH.Implementation.Services;
 /// </summary>
 /// <param name="Commands">The aliases to add, keyed as <see cref="AliasOptions.CommandAliases"/> is.</param>
 /// <param name="Functions">The aliases to add, keyed as <see cref="AliasOptions.FunctionAliases"/> is.</param>
+/// <param name="CommandRestrictions">
+/// The imported command restrictions that stay: every one for a PennMUSH file, and for a TinyMUX or RhostMUSH file
+/// the access lines that cannot leave a command less restricted than it is here.
+/// </param>
 /// <param name="NotCarried">Each alias or restriction line left out, and why.</param>
 public sealed record ConfiguredAliases(
 	Dictionary<string, string[]> Commands,
 	Dictionary<string, string[]> Functions,
+	Dictionary<string, string[]> CommandRestrictions,
 	IReadOnlyList<string> NotCarried)
 {
 	/// <summary><paramref name="current"/> with these aliases added to the ones it has.</summary>
@@ -47,7 +52,12 @@ public sealed record ConfiguredAliases(
 /// is left out without a note: nothing is lost. One that names something else is reported, and so is a second line
 /// for an alias, which TinyMUX and RhostMUSH refuse while the first stands.</para>
 /// <para>A restriction naming a command or function this engine does not have is reported too; it stays in the
-/// configuration, where it does nothing, as PennMUSH logs and ignores one.</para>
+/// configuration, where it does nothing, as PennMUSH logs and ignores one. A restriction on an alias the same file
+/// makes is checked against the command the alias names.</para>
+/// <para>A TinyMUX or RhostMUSH access line adds its words to what the command already required there, while a
+/// SharpMUSH restriction takes the place of the command's own. So an access line stays only where that cannot open
+/// the command further: on a command with no lock of its own here, or when it disables the command or leaves it to
+/// God. Any other is reported, and the command keeps SharpMUSH's restriction.</para>
 /// </remarks>
 public sealed class ConfiguredAliasImport(
 	ILibraryProvider<CommandDefinition> commands,
@@ -103,9 +113,26 @@ public sealed class ConfiguredAliasImport(
 			}
 		}
 
-		foreach (var name in import.Options.Restriction.CommandRestrictions.Keys.Where(name => !commandLibrary.ContainsKey(name)))
+		var aliasTargets = commandAliases
+			.SelectMany(entry => entry.Value.Select(alias => (Alias: alias, Target: entry.Key.Split('/')[0])))
+			.ToDictionary(entry => entry.Alias, entry => entry.Target, StringComparer.OrdinalIgnoreCase);
+		var restrictions = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+		foreach (var (name, restriction) in import.Options.Restriction.CommandRestrictions)
 		{
-			notCarried.Add($"The restriction on {name}: SharpMUSH has no command {name}, so it has no effect.");
+			var found = commandLibrary.TryGetValue(name, out var command)
+				|| (aliasTargets.TryGetValue(name, out var target) && commandLibrary.TryGetValue(target, out command));
+			if (!found)
+			{
+				notCarried.Add($"The restriction on {name}: SharpMUSH has no command {name}, so it has no effect.");
+			}
+			else if (dialect != ConfigurationDialect.PennMUSH && WidensCommand(command.LibraryInformation.Attribute, restriction[0]))
+			{
+				notCarried.Add($"The restriction on {name} ({restriction[0]}): SharpMUSH's {command.LibraryInformation.Attribute.Name} has a restriction of its own, " +
+					"which this one would replace rather than add to, so it was not carried over and SharpMUSH's stays.");
+				continue;
+			}
+
+			restrictions[name] = restriction;
 		}
 
 		foreach (var name in import.Options.Restriction.FunctionRestrictions.Keys.Where(name => !functionLibrary.ContainsKey(name)))
@@ -116,7 +143,25 @@ public sealed class ConfiguredAliasImport(
 		return new ConfiguredAliases(
 			commandAliases.ToDictionary(entry => entry.Key, entry => entry.Value.ToArray()),
 			functionAliases.ToDictionary(entry => entry.Key, entry => entry.Value.ToArray()),
+			restrictions,
 			notCarried);
+	}
+
+	/// <summary>
+	/// Whether <paramref name="restriction"/>, put in place of <paramref name="attribute"/>'s own, could let in someone
+	/// the command turns away now: it can unless the command has no lock and is not God's alone, or the words disable
+	/// it or leave it to God.
+	/// </summary>
+	private static bool WidensCommand(Library.Attributes.SharpCommandAttribute attribute, string restriction)
+	{
+		var words = restriction.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		if (words.Any(word => word.Equals("nobody", StringComparison.OrdinalIgnoreCase)
+				|| word.Equals("god", StringComparison.OrdinalIgnoreCase)))
+		{
+			return false;
+		}
+
+		return !string.IsNullOrWhiteSpace(attribute.CommandLock) || attribute.Behavior.HasFlag(CommandBehavior.God);
 	}
 
 	/// <summary>What a line's resolution came to: the alias table key it joins, a reason it does not, or neither when it is already in force.</summary>

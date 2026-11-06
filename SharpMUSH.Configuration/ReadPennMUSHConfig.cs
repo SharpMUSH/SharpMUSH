@@ -607,8 +607,11 @@ public static partial class ReadPennMushConfig
 	{
 		foreach (var (name, restriction) in access)
 		{
+			// The words go before an earlier line's quoted message, which runs to the end.
 			restrictions[name] = restrictions.TryGetValue(name, out var earlier)
-				? [$"{earlier[0]} {restriction[0]}"]
+				? [earlier[0].IndexOf('"') is var quote and >= 0
+					? $"{earlier[0][..quote].TrimEnd()} {restriction[0]} {earlier[0][quote..]}"
+					: $"{earlier[0]} {restriction[0]}"]
 				: restriction;
 		}
 

@@ -113,6 +113,38 @@ public class ConfiguredAliasImportTests
 		});
 	}
 
+	/// <summary>
+	/// A TinyMUX access line adds to the command's own requirements there, but a SharpMUSH restriction replaces the
+	/// command's lock. So one on a command with a lock of its own here is not carried over unless it disables the
+	/// command or leaves it to God; one on an open command, or on an alias the same file makes, stays.
+	/// </summary>
+	[Test]
+	public async Task AnAccessLineThatWouldReplaceACommandsOwnLockIsNotCarried()
+	{
+		var import = Import(Command("@em2", "@emit")) with
+		{
+			Options = SharpMUSHOptions.Default() with
+			{
+				Restriction = new RestrictionOptions(new Dictionary<string, string[]>
+				{
+					["@wizmotd"] = ["noguest"],
+					["@emit"] = ["wizard"],
+					["@em2"] = ["wizard"],
+					["@motd"] = ["nobody"]
+				}, new Dictionary<string, string[]>())
+			}
+		};
+
+		var resolved = Aliases.Resolve(import, ConfigurationDialect.TinyMUX);
+
+		await Assert.That(resolved.CommandRestrictions.Keys).IsEquivalentTo(new[] { "@emit", "@em2", "@motd" });
+		await Assert.That(resolved.NotCarried.Single()).StartsWith("The restriction on @wizmotd (noguest): SharpMUSH's @WIZMOTD has a restriction of its own");
+
+		var penn = Aliases.Resolve(import, ConfigurationDialect.PennMUSH);
+		await Assert.That(penn.CommandRestrictions.Keys).Contains("@wizmotd")
+			.Because("PennMUSH's restrict_command replaces the command's restriction there too");
+	}
+
 	private static AliasDirective Command(string alias, string target) => new(AliasKind.Command, alias, target, $"alias {alias} {target}");
 
 	private static AliasDirective Function(string alias, string target) => new(AliasKind.Function, alias, target, $"function_alias {alias} {target}");
