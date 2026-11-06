@@ -86,6 +86,11 @@
       "lookup": "compatibility config rhostmush lrooms depth rhost lrooms"
     },
     {
+      "id": "protection-flags-protection-flags",
+      "heading": "Protection flags: `protection_flags`",
+      "lookup": "compatibility config protection flags noexamine nomodify"
+    },
+    {
       "id": "rhostmush-map-arguments-rhost-map-args",
       "heading": "RhostMUSH map() arguments: `rhost_map_args`",
       "lookup": "compatibility config rhostmush map arguments rhost map args"
@@ -379,6 +384,20 @@ With `rhost_lrooms` off, lrooms() takes a depth from 0 to 50, and a depth of 0 l
 ```sharp rhost_lrooms
 > think [setq(a,num(dig(RhostdocA)))][setq(b,num(dig(RhostdocB)))][setq(c,num(dig(RhostdocC)))][null(open(RhostdocAB,%qb,%qa),open(RhostdocBC,%qc,%qb))][words(lrooms(%qa,0))]
 2
+```
+
+## Protection flags: `protection_flags`
+
+Off by default; meant for a game moved from RhostMUSH or TinyMUX, whose imports turn it on and bring the NOEXAMINE and NOMODIFY flags with them.
+
+With `protection_flags` on, nobody below wizard and royalty may examine or @decompile an object set NOEXAMINE, and nobody below them may change an object set NOMODIFY, its owner included. Off, the two flags do nothing.
+
+A wizard sets the flag; then its owner, a player, tries to change it:
+
+```sharp unchecked
+> @set Ledger=NOMODIFY
+> &NOTE Ledger=hello
+#-1 NO PERMISSION TO SET ATTRIBUTE
 ```
 
 ## RhostMUSH map() arguments: `rhost_map_args`
