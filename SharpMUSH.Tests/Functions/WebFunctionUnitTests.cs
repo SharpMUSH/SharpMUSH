@@ -193,6 +193,19 @@ public class WebFunctionUnitTests
 		await Assert.That(result).IsEqualTo("wsjson(x)");
 	}
 
+	/// <summary>
+	/// websocket_html() is gone: HTML for a client is markup in the text, from <c>wshtml()</c> or
+	/// <c>tagwrap()</c>, and JSON goes by <c>oob()</c>.
+	/// </summary>
+	[Test]
+	public async Task WebsocketHtmlIsNotAFunction()
+	{
+		await Assert.That(RegistryInventory.Functions.Select(f => f.Name))
+			.DoesNotContain("websocket_html", StringComparer.OrdinalIgnoreCase);
+		var result = (await Parser.EvaluateAsync(MarkupText.Plain("websocket_html(x)"))).ToPlainText();
+		await Assert.That(result).IsEqualTo("websocket_html(x)");
+	}
+
 	[Test]
 	[Arguments("oob(test)", "")]
 	public async Task Oob(string str, string expected)

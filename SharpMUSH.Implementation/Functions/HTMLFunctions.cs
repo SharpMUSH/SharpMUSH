@@ -11,7 +11,6 @@ using SharpMUSH.Library.Services.Interfaces;
 using MarkupString;
 using MarkupString.Ansi;
 using MarkupString.Html;
-using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -157,37 +156,6 @@ public partial class Functions
 	/// </summary>
 	private static HtmlMarkup AnyElement(string tagName, IReadOnlyList<HtmlAttribute> attributes)
 		=> HtmlMarkup.Tag(tagName, [.. attributes]);
-
-	[SharpFunction(Name = "WEBSOCKET_HTML", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,
-		ParameterNames = ["html", "player"])]
-	public async ValueTask<CallState> WebSocketHTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var htmlContent = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg)
-				&& await LocateService.LocateAndNotifyIfInvalidWithCallState(
-					parser,
-					executor,
-					executor,
-					targetArg.Message.ToPlainText(),
-					PlayersPreference | AbsoluteMatch) is Error<CallState> error)
-		{
-			return error.Value;
-		}
-
-		// TODO: Actual websocket/out-of-band HTML communication is planned for future release.
-		// 
-		// Full implementation requirements:
-		// 1. Add websocket support to ConnectionService
-		// 2. Implement HTML rendering capability detection
-		// 3. Add HTML sanitization to prevent security issues
-		// 4. Support rich HTML features for web-based MUSH clients
-		//
-		// When implemented, this will send HTML through OOB channel
-		// Placeholder - returns empty string as OOB data doesn't display in-band
-		return CallState.Empty;
-	}
 
 	/// <summary>
 	/// <c>sound(&lt;file&gt;[, &lt;volume&gt;[, &lt;repeats&gt;]])</c> — plays a sound effect. The file is
