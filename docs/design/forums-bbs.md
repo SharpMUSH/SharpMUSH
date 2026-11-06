@@ -39,8 +39,11 @@ GET  /http/boards/nav                → the sidebar's board list
 POST /http/boards/act                → a button on the page: post, comment, edit, pin, follow, ...
 ```
 
-Each route runs as the signed-in character (`%<viewer>`). Reading and writing from the portal run
-the same softcode as the commands, so the portal knows no command syntax and repeats no checks.
+The HTTP handler hands each route the signed-in character as `%<viewer>`. The schema and nav
+routes pass it to the BBoards object's functions; the data and act routes `@force` the WIZARD
+BBoards object, which does the work for that character. Either way the code checks `%<viewer>`
+against the same locks the commands use, so the portal knows no command syntax and repeats no
+checks.
 
 ## Permissions
 

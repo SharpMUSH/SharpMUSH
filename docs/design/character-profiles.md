@@ -66,7 +66,7 @@ GET /http/profile?objid={objid}
 ```
 
 The handler is read-only: it serves no `POST /http/profile`, and the portal has no field editor.
-A character's profile fields are attributes, set in the game.
+The profile-handler package decides which fields a profile carries and where each value comes from.
 
 ### Schema Endpoint Response Shape
 
