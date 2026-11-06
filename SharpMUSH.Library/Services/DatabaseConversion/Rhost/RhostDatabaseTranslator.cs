@@ -521,7 +521,7 @@ public static partial class RhostDatabaseTranslator
 	}
 
 	/// <summary>
-	/// The object's powers as allows and its depowers as denies, on the permissions each lands on. A power's level is
+	/// The object's powers as allows, and its depowers and restricting flags as denies, on the permissions each lands on. A power's level is
 	/// the staff level whose role its reach names, so it acts on what that level and those below own. A depower's
 	/// level works the other way: its deny reaches that level and those above, or everyone at its lowest setting. A
 	/// scope that takes no reach holds at every rank. Two on one scope keep the wider, and a deny beats an allow.
@@ -555,6 +555,22 @@ public static partial class RhostDatabaseTranslator
 			var level = shifted ? stored : stored - 1;
 			Land(depower, PermissionState.Deny, depower.Ranked && level > 0 ? RhostNameTables.LevelRoles[(int)level - 1] : null, landed,
 				source.DBRef, report);
+		}
+
+		foreach (var (bit, name, denies) in RhostNameTables.RestrictingBits)
+		{
+			if ((source.Flags[1] & bit) == 0)
+			{
+				continue;
+			}
+
+			foreach (var scope in denies)
+			{
+				var deny = new PennMUSHOverride(scope, PermissionState.Deny);
+				landed[scope] = landed.TryGetValue(scope, out var held) ? Wider(held, deny) : deny;
+			}
+
+			report.Note(ImportWarningKind.Flags, $"Flag {name}: also imported as a deny on {string.Join(" and ", denies)}", source.DBRef);
 		}
 
 		return [.. landed.Values];

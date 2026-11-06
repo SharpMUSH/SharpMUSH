@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services.DatabaseConversion.Softcode;
 using SharpMUSH.Library.Softcode;
 
@@ -514,6 +515,9 @@ public static partial class TinyMuxDatabaseReader
 				Flags = flagNames,
 				Powers = [.. flagPowers, .. powerNames],
 				Permissions = permissions,
+				Overrides = flagNames.Contains("SLAVE", StringComparer.OrdinalIgnoreCase)
+					? [.. RestrictingFlags.Slave.Select(scope => new PennMUSHOverride(scope, PermissionState.Deny))]
+					: [],
 				CreationTime = created,
 				ModificationTime = modified,
 				Attributes = attributes,
@@ -647,8 +651,7 @@ public static partial class TinyMuxDatabaseReader
 
 			if (flags.Contains("SLAVE", StringComparer.OrdinalIgnoreCase))
 			{
-				Tally(ImportWarningKind.Flags, "SLAVE kept as a custom flag, but SharpMUSH does not stop a SLAVE player from building or " +
-					"changing anything: restrict them another way", raw.DBRef);
+				Tally(ImportWarningKind.Flags, $"Flag SLAVE: also imported as a deny on {string.Join(" and ", RestrictingFlags.Slave)}", raw.DBRef);
 			}
 
 			return ([.. flags.Distinct(StringComparer.OrdinalIgnoreCase)], powers);

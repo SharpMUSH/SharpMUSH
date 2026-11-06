@@ -203,7 +203,9 @@ public class RhostDatabaseTranslatorTests
 	}
 
 	/// <summary>A player with these power (toggle words 3-5) and depower (6-8) fields, set as (word, shift, stored value).</summary>
-	private static string Mapped(bool shifted, params (int Word, int Shift, uint Value)[] fields)
+	private static string Mapped(bool shifted, params (int Word, int Shift, uint Value)[] fields) => Mapped(0, shifted, fields);
+
+	private static string Mapped(uint flags2, bool shifted, params (int Word, int Shift, uint Value)[] fields)
 	{
 		var toggles = new uint[8];
 		foreach (var (word, shift, value) in fields)
@@ -211,7 +213,7 @@ public class RhostDatabaseTranslatorTests
 			toggles[word] |= value << shift;
 		}
 
-		var source = new RhostFlatfileObject { DBRef = 5, Name = "Powered", Flags = [0, 0, shifted ? RhostNameTables.DepowerShift : 0, 0], Toggles = toggles };
+		var source = new RhostFlatfileObject { DBRef = 5, Name = "Powered", Flags = [0, flags2, shifted ? RhostNameTables.DepowerShift : 0, 0], Toggles = toggles };
 		return Overrides(RhostDatabaseTranslator.MapPowers(source, new RhostDatabaseTranslator.Report()));
 	}
 
@@ -235,6 +237,11 @@ public class RhostDatabaseTranslatorTests
 		// GIVE keeps no reach: RhostMUSH's runs toward lower ranks, which a deny cannot.
 		await Assert.That(Mapped(false, (6, 24, 3))).IsEqualTo("-player.give");
 	}
+
+	[Test]
+	public async Task SlaveDeniesWhatChangesTheDatabase()
+		=> await Assert.That(Mapped(0x80000000, false, (2, 14, 2)))
+			.IsEqualTo("+game.see_queue -player.create -player.modify -player.chown -player.force -player.password");
 
 	[Test]
 	public async Task ADepowerBeatsThePowerItTakes()

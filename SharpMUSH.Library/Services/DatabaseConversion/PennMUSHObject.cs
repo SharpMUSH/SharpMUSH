@@ -186,3 +186,20 @@ public enum PennMUSHObjectType
 
 /// <summary>An allow or deny on <paramref name="Scope"/>, reaching <paramref name="Reach"/> (a role slug) when given.</summary>
 public sealed record PennMUSHOverride(string Scope, PermissionState State, string? Reach = null);
+
+/// <summary>What the restricting player flags RhostMUSH and TinyMUX share take away here, as denies on the player.</summary>
+public static class RestrictingFlags
+{
+	/// <summary>
+	/// SLAVE: the player may run no command that changes the database. Here it loses building, the control that does not
+	/// come from owning, taking things, @force and @password; it still changes what it owns.
+	/// </summary>
+	public static readonly IReadOnlyList<string> Slave =
+	[
+		PortalPermission.PlayerCreate, PortalPermission.PlayerModify, PortalPermission.PlayerChown, PortalPermission.PlayerForce,
+		PortalPermission.PlayerPassword
+	];
+
+	/// <summary>RhostMUSH's FUBAR: the player may only pose and say. Here it loses every everyday permission.</summary>
+	public static readonly IReadOnlyList<string> Fubar = [.. PortalPermission.AllowedUnlessDenied.Order(StringComparer.Ordinal)];
+}

@@ -119,7 +119,7 @@ public static class RhostNameTables
 		Custom(1, 0x4000, "SCLOAK", true),
 		Custom(1, 0x8000, "CLOAK", true),
 		Custom(1, 0x10000, "FUBAR", true),
-		Custom(1, 0x20000, "INDESTRUCTABLE", true),
+		Flag(1, 0x20000, "INDESTRUCTABLE", "SAFE"),
 		Custom(1, 0x40000, "NO_YELL", true),
 		Same(1, 0x80000, "NO_TEL"),
 		Power(1, 0x100000, "FREE", "No_Pay"),
@@ -298,6 +298,13 @@ public static class RhostNameTables
 
 	private static IEnumerable<RhostPowerMapping> Fields(int word, (string Name, string[] Scopes, bool Ranked, string? Skip)[] fields)
 		=> fields.Select((field, index) => new RhostPowerMapping(word, index * 2, field.Name, field.Scopes, field.Ranked, field.Skip));
+
+	/// <summary>The flag word 2 bits whose flags also take permissions away (<see cref="RestrictingFlags"/>).</summary>
+	public static readonly IReadOnlyList<(uint Bit, string Name, IReadOnlyList<string> Denies)> RestrictingBits =
+	[
+		(0x10000, "FUBAR", RestrictingFlags.Fubar),
+		(0x80000000, "SLAVE", RestrictingFlags.Slave),
+	];
 
 	/// <summary>The flag word 3 bit that changes how every depower's level is stored on its player.</summary>
 	public const uint DepowerShift = 0x2;
