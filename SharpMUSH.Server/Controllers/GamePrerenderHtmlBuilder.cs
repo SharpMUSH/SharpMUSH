@@ -37,7 +37,7 @@ public static class GamePrerenderHtmlBuilder
 		var description = PortalIdentity.PreviewDescription(options);
 		var summary = description.Length > 0 ? description : tagline;
 		var banner = PortalIdentity.Banner(options.Cosmetic);
-		var image = Absolute(baseUrl, banner ?? NonEmpty(options.Cosmetic.PortalLogo) ?? DefaultImage);
+		var image = Absolute(baseUrl, Previewable(banner) ?? Previewable(NonEmpty(options.Cosmetic.PortalLogo)) ?? DefaultImage);
 		var title = tagline.Length > 0 ? $"{name}: {tagline}" : name;
 		// A scene's own address has no card of its own yet, so every scene is one page to a crawler: the list.
 		var url = $"{baseUrl}{(path.StartsWith("/scenes/", StringComparison.OrdinalIgnoreCase) ? "/scenes" : path)}";
@@ -78,6 +78,10 @@ public static class GamePrerenderHtmlBuilder
 	private static string Shorten(string text) => text.Length > 200 ? text[..200].TrimEnd() + "…" : text;
 
 	private static string Encode(string text) => HttpUtility.HtmlEncode(text);
+
+	/// <summary>The picture, unless it is an SVG, which link previews do not show.</summary>
+	private static string? Previewable(string? picture) =>
+		picture is not null && picture.Split('?', '#')[0].EndsWith(".svg", StringComparison.OrdinalIgnoreCase) ? null : picture;
 
 	private static string? NonEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

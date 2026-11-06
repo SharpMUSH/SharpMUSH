@@ -79,6 +79,14 @@ public class GamePrerenderHtmlBuilderTests
 	}
 
 	[Test]
+	public async Task AnSvgLogo_GivesWayToTheSharpMUSHPng()
+	{
+		var html = GamePrerenderHtmlBuilder.GenerateGamePrerenderHtml(Options(logo: "/api/wiki-assets/crest.SVG?v=2"), Base, "/");
+
+		await Assert.That(html).Contains($"<meta property=\"og:image\" content=\"{Base}{GamePrerenderHtmlBuilder.DefaultImage}\" />");
+	}
+
+	[Test]
 	public async Task EveryScene_IsCanonicallyTheSceneList()
 	{
 		var html = GamePrerenderHtmlBuilder.GenerateGamePrerenderHtml(Options(), Base, "/scenes/42/live");
