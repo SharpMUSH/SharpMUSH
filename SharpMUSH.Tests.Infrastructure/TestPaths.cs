@@ -19,12 +19,12 @@ public static class TestPaths
 	/// </summary>
 	public static string PackageLibrary =>
 		Environment.GetEnvironmentVariable("SHARPMUSH_PACKAGES_PATH") is { Length: > 0 } configured
-			? File.Exists(Path.Combine(configured, "index.yaml"))
+			? File.Exists(Path.Join(configured, "index.yaml"))
 				? configured
 				: throw new DirectoryNotFoundException($"SHARPMUSH_PACKAGES_PATH is {configured}, which holds no index.yaml.")
 			: new[] { "SharpMUSH.Packages", "sharpmush.packages" }
-				.Select(name => Path.Combine(Path.GetDirectoryName(RepositoryRoot)!, name))
-				.FirstOrDefault(dir => File.Exists(Path.Combine(dir, "index.yaml")))
+				.Select(name => Path.Join(Path.GetDirectoryName(RepositoryRoot)!, name))
+				.FirstOrDefault(dir => File.Exists(Path.Join(dir, "index.yaml")))
 			?? throw new DirectoryNotFoundException(
 				"No package library checkout: clone SharpMUSH/SharpMUSH.Packages beside this repository or set SHARPMUSH_PACKAGES_PATH.");
 

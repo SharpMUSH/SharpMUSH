@@ -25,8 +25,8 @@ public static class PackageTestExtensions
 	/// </summary>
 	public static async Task<Result<PackageApplyResult>> ApplyFromLibraryAsync(this IServiceProvider services, string packageId)
 	{
-		var directory = Path.Combine(TestPaths.PackageLibrary, packageId);
-		if (services.GetRequiredService<IPackageManifestService>().ParseManifest(await File.ReadAllTextAsync(Path.Combine(directory, "package.yaml")))
+		var directory = Path.Join(TestPaths.PackageLibrary, packageId);
+		if (services.GetRequiredService<IPackageManifestService>().ParseManifest(await File.ReadAllTextAsync(Path.Join(directory, "package.yaml")))
 			is not ParsedPackageManifest parsed)
 		{
 			return new Error<string>($"{packageId}/package.yaml in the package library does not parse.");
