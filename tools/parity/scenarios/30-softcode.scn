@@ -93,6 +93,9 @@ think [name(%!)] [hasflag(%#,WIZARD)] [flags()] [type(%#)]
 think [nosuchfunction(1)]
 think [add()] [strlen()] [mid(abc)]
 think [get(nothing/nothing)] [name(#9999)] [loc(#9999)]
+# spellfix's KN/GN, WR, DJ/DG and TCH rules see only lower-case letters, and an unknown function's
+# name is upper-cased before it is looked up (parse.c), so the two hashes below differ.
+think [knife(1)] [soundex(knight,phone)] [soundex(KNIGHT,phone)]
 
 ::case sc.wshtml-default  wshtml() takes PennMUSH's <default string> (#1282)
 think [wshtml(<b>x</b>,x)]

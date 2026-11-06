@@ -8,13 +8,15 @@ public static class Spellfix
 {
 	/// <summary>
 	/// Compute the phonetic hash using SQLite's spellfix1 algorithm (used by PennMUSH).
-	/// Maps characters to phonetic classes, omits vowels beside R/L, deduplicates.
+	/// Maps characters to phonetic classes, omits vowels beside R/L, deduplicates. Letters of either
+	/// case share a class, but the KN/GN, WR, DJ/DG and TCH rules apply to lower-case letters only,
+	/// as in phoneticHash (src/spellfix.c:204).
 	/// </summary>
 	public static string PhoneticHash(string input)
 	{
 		if (string.IsNullOrEmpty(input)) return "";
 
-		var word = input.ToLowerInvariant();
+		var word = input;
 		var result = new System.Text.StringBuilder();
 		var length = word.Length;
 
@@ -27,6 +29,7 @@ public static class Spellfix
 		// midClass lookup (H, W, Y differ in initClass)
 		int MidClass(char ch) => ch switch
 		{
+			>= 'A' and <= 'Z' => MidClass((char)(ch + 32)),
 			>= 'a' and <= 'z' => ch switch
 			{
 				'a' or 'e' or 'i' or 'o' or 'u' or 'y' => VOWEL,
@@ -45,17 +48,17 @@ public static class Spellfix
 			_ => OTHER
 		};
 
-		// initClass: same as midClass except H→SILENT, W→B, Y→Y (not VOWEL)
+		// initClass: same as midClass except Y→Y (not VOWEL) and the apostrophe→OTHER (not SILENT)
 		int InitClass(char ch) => ch switch
 		{
-			'y' => Y,
-			'h' => SILENT,
+			'y' or 'Y' => Y,
+			'\'' => OTHER,
 			_ => MidClass(ch)
 		};
 
 		// Drop initial GN/KN
 		int start = 0;
-		if (length >= 2 && (word[0] == 'g' || word[0] == 'k') && word[1] == 'n')
+		if (length > 2 && (word[0] == 'g' || word[0] == 'k') && word[1] == 'n')
 		{
 			start = 1;
 		}

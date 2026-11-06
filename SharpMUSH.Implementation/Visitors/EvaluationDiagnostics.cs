@@ -147,5 +147,5 @@ internal sealed class EvaluationDiagnostics(EvaluationServices services)
 	/// </summary>
 	public static string? SuggestFunctionName(string name,
 		LibraryService<string, FunctionDefinition> functions)
-		=> Spellfix.Match(functions.Select(function => function.Key), name, limit: 1, scope: 5).FirstOrDefault();
+		=> Spellfix.Match(functions.Select(function => function.Key), name.ToUpperInvariant(), limit: 1, scope: 5).FirstOrDefault();
 }

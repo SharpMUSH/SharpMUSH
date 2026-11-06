@@ -41,6 +41,8 @@ public class SoundFunctionUnitTests
 	[Arguments("soundex(fred,phone)", "BRD")]
 	[Arguments("soundex(phred,phone)", "BRD")]
 	[Arguments("soundex(afford,phone)", "ABRD")]
+	[Arguments("soundex(knight,phone)", "MACD")]
+	[Arguments("soundex(KNIGHT,phone)", "CMACD")]
 	public async Task SoundexPhone(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
