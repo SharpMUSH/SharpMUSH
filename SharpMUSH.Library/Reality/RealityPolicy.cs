@@ -70,7 +70,8 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 			return configuration with
 			{
 				Layers = [.. configuration.Layers],
-				Aliases = configuration.Aliases is null ? null : new(configuration.Aliases)
+				Aliases = configuration.Aliases is null ? null : new(configuration.Aliases),
+				Descriptions = configuration.Descriptions is null ? null : new(configuration.Descriptions)
 			};
 		}
 		finally { configurationGate.Release(); }
@@ -86,7 +87,8 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 			configuration = value with
 			{
 				Layers = [.. value.Layers],
-				Aliases = value.Aliases is null ? null : new(value.Aliases)
+				Aliases = value.Aliases is null ? null : new(value.Aliases),
+				Descriptions = value.Descriptions is null ? null : new(value.Descriptions)
 			};
 		}
 		finally { configurationGate.Release(); }
@@ -140,7 +142,12 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 				.Select(alias => (Name: alias.Key.ToLowerInvariant(), Layer: alias.Value.ToLowerInvariant()))
 				.Where(alias => ValidLayerName(alias.Name) && layers.Contains(alias.Layer) && !layers.Contains(alias.Name))
 				.DistinctBy(alias => alias.Name)
-				.ToDictionary(alias => alias.Name, alias => alias.Layer)
+				.ToDictionary(alias => alias.Name, alias => alias.Layer),
+			Descriptions = value.Descriptions?
+				.Select(description => (Layer: description.Key.ToLowerInvariant(), Attribute: description.Value.Trim().ToUpperInvariant()))
+				.Where(description => layers.Contains(description.Layer) && description.Attribute.Length > 0)
+				.DistinctBy(description => description.Layer)
+				.ToDictionary(description => description.Layer, description => description.Attribute)
 		};
 	}
 
