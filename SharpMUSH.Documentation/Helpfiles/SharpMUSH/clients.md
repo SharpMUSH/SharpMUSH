@@ -26,4 +26,4 @@ These are some clients in wide use. SharpMUSH's developers do not make them, and
 | TinTin++ | Linux, macOS, Windows | https://tintin.mudhalla.net |
 | TinyFugue | Linux, macOS | https://tinyfugue.sourceforge.net |
 
-Mudlet also draws what the game sends it over GMCP, such as a map and gauges: see [gmcp].
+Mudlet also draws what the game sends it over GMCP, such as a map and gauges: see [gmcp]. A game running the MUD-kit offers Mudlet an interface package, which Mudlet installs: a panel with the room, gauges, chat and a map. `+help gui` says which one and how to turn it off.

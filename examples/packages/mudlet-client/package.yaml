@@ -1,9 +1,9 @@
 format: "1.16"
 package: mudlet-client
 title: "Mudlet interface"
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
-description: "Offers Mudlet the game's own interface and map over GMCP (Client.GUI and Client.Map), answers its Discord rich presence (External.Discord.Info and Status), and gives players +gui on and +gui off."
+description: "Offers Mudlet an interface and the game's map over GMCP (Client.GUI and Client.Map), answers its Discord rich presence (External.Discord.Info and Status), and gives players +gui on and +gui off."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [gmcp, mudlet, gui, discord, mud-kit]
@@ -27,7 +27,9 @@ requires_server: ">=0.1"
 #     says Core.Hello before anyone logs in, so this is where a player's +gui off is honoured.
 #   - External.Discord.Hello: External.Discord.Info and Status. External.Discord.Get: Status.
 #
-# A URL or id the settings leave empty is not sent. The Discord packages go through
+# The interface is the one gui-url names or, while that is empty, the one the server ships at
+# <mud_url>/mudlet/sharpmush-ui.mpackage (SharpMUSH.Server/Mudlet). The gui setting turns both off.
+# Any other URL or id the settings leave empty is not sent. The Discord packages go through
 # oob(..., supported). Client.GUI and Client.Map do not: Mudlet never lists Client in Core.Supports,
 # and the script that would add it lives in the very interface being offered (see README.md).
 #
@@ -57,6 +59,18 @@ objects:
         flags: [no_command]
       DATA`CONFIG`LABEL: |-
         Mudlet client
+      DATA`CONFIG`GUI: |-
+        1
+      DATA`CONFIG`GUI`TYPE: |-
+        boolean
+      DATA`CONFIG`GUI`DEFAULT: |-
+        1
+      DATA`CONFIG`GUI`DESCRIPTION: |-
+        Whether Mudlet is offered an interface at all: the one gui-url names, or the one the server ships when gui-url is empty.
+      DATA`CONFIG`GUI`LABEL: |-
+        Offer an interface
+      DATA`CONFIG`GUI`EXAMPLE: |-
+        off
       DATA`CONFIG`GUI-URL: ""
       DATA`CONFIG`GUI-URL`TYPE: |-
         text
@@ -64,7 +78,7 @@ objects:
       DATA`CONFIG`GUI-URL`PATTERN: |-
         ^(https?://\S+)?$
       DATA`CONFIG`GUI-URL`DESCRIPTION: |-
-        Where Mudlet downloads the game's interface package (.mpackage), offered with Client.GUI. Empty offers none.
+        Where Mudlet downloads the game's own interface package (.mpackage), offered with Client.GUI. Empty offers the interface the server ships, from mud_url.
       DATA`CONFIG`GUI-URL`LABEL: |-
         Interface package
       DATA`CONFIG`GUI-URL`EXAMPLE: |-
@@ -80,7 +94,7 @@ objects:
       DATA`CONFIG`GUI-VERSION`MAX: |-
         20
       DATA`CONFIG`GUI-VERSION`DESCRIPTION: |-
-        The interface package's version. Mudlet installs it again when this changes, so change it with each new package.
+        The version of the package gui-url names. Mudlet installs it again when this changes, so change it with each new package. The server's own interface carries its own version.
       DATA`CONFIG`GUI-VERSION`LABEL: |-
         Interface version
       DATA`CONFIG`GUI-VERSION`EXAMPLE: |-
@@ -157,7 +171,7 @@ objects:
       CMD`GUI`SWITCH: |-
         $+gui *:@assert match(on off,%0)=@pemit %#=notice(GUI,+gui on offers you the game's interface when you connect%, +gui off stops it.,warn); @include %!/INC`GUI`[ucstr(%0)]
       INC`GUI`ON: |-
-        @assert strlen(v(DATA`CONFIG`GUI-URL))=@pemit %#=notice(GUI,This game has no interface package for Mudlet.,warn); &DATA`GUI-OFF`[u(%!/FUN`DATA`KEY,%#)] %!; @pemit %#=notice(GUI,u(%!/FUN`TEXT`ON,u(%!/FUN`SEND`GUI,%#)),ok)
+        @assert strlen(u(%!/FUN`GUI`URL))=@pemit %#=notice(GUI,This game has no interface package for Mudlet.,warn); &DATA`GUI-OFF`[u(%!/FUN`DATA`KEY,%#)] %!; @pemit %#=notice(GUI,u(%!/FUN`TEXT`ON,u(%!/FUN`SEND`GUI,%#)),ok)
       INC`GUI`OFF: |-
         &DATA`GUI-OFF`[u(%!/FUN`DATA`KEY,%#)] %!=1; @pemit %#=notice(GUI,Your client will not be offered the game's interface when you connect. +gui on offers it again.,ok)
 
@@ -165,16 +179,33 @@ objects:
       # %0 a player: the key their choice is kept under, their objid as an attribute name (#12:345 is 12-345).
       FUN`DATA`KEY: |-
         edit(objid(%0),#,,:,-)
+      # The interface offered: gui-url, or the server's own while gui-url is empty. Nothing when the gui setting is
+      # off, or when the server's own is wanted and mud_url is not a web address.
+      FUN`GUI`URL: |-
+        if(v(DATA`CONFIG`GUI),strfirstof(v(DATA`CONFIG`GUI-URL),u(%!/FUN`GUI`SHIPPED`URL)))
+      FUN`GUI`VERSION: |-
+        if(strlen(v(DATA`CONFIG`GUI-URL)),v(DATA`CONFIG`GUI-VERSION),u(%!/FUN`GUI`SHIPPED`VERSION))
+      # Whether the interface offered is the one the server ships.
+      FUN`GUI`SHIPPED: |-
+        cand(v(DATA`CONFIG`GUI),not(strlen(v(DATA`CONFIG`GUI-URL))))
+      FUN`GUI`SHIPPED`URL: |-
+        u(%!/FUN`GUI`SHIPPED`AT,config(mud_url))
+      # %0 a web address: where its server serves the interface, with one slash between however it is written.
+      FUN`GUI`SHIPPED`AT: |-
+        if(regmatchi(%0,^https?://.),[regedit(%0,/+$,)]/mudlet/sharpmush-ui.mpackage)
+      # The version in SharpMUSH.Server/Mudlet/config.lua; a test holds the two together.
+      FUN`GUI`SHIPPED`VERSION: |-
+        1.0.0
       # %0 a player: whether they want Client.GUI, and there is one to offer.
       FUN`GUI`WANTED: |-
-        cand(strlen(v(DATA`CONFIG`GUI-URL)),not(hasattr(%!,DATA`GUI-OFF`[u(%!/FUN`DATA`KEY,%0)])))
+        cand(strlen(u(%!/FUN`GUI`URL)),not(hasattr(%!,DATA`GUI-OFF`[u(%!/FUN`DATA`KEY,%0)])))
       # %0 a player: whether their client says it is a screen reader.
       FUN`CLIENT`SCREENREADER: |-
         member(terminfo(%0),screenreader)
 
       # ── Payloads ─────────────────────────────────────────────────────────
       FUN`PAYLOAD`GUI: |-
-        json(object,version,json(string,v(DATA`CONFIG`GUI-VERSION)),url,json(string,v(DATA`CONFIG`GUI-URL)))
+        json(object,version,json(string,u(%!/FUN`GUI`VERSION)),url,json(string,u(%!/FUN`GUI`URL)))
       FUN`PAYLOAD`MAP: |-
         json(object,url,json(string,v(DATA`CONFIG`MAP-URL)))
       # A setting as a JSON string, or null when it is empty, so a json_mod() patch leaves it out.
@@ -217,11 +248,11 @@ objects:
       # +gui: %0 the player. A screen reader is told in two sentences; anyone else sees the fields, and
       # the package's URL on a line of its own below them, where it copies whole.
       FUN`DISPLAY`STATUS: |-
-        if(strlen(v(DATA`CONFIG`GUI-URL)),if(u(%!/FUN`CLIENT`SCREENREADER,%0),u(%!/FUN`DISPLAY`PLAIN,%0),u(%!/FUN`DISPLAY`BOX,%0)),notice(GUI,This game has no interface package for Mudlet.))
+        if(strlen(u(%!/FUN`GUI`URL)),if(u(%!/FUN`CLIENT`SCREENREADER,%0),u(%!/FUN`DISPLAY`PLAIN,%0),u(%!/FUN`DISPLAY`BOX,%0)),notice(GUI,This game has no interface package for Mudlet.))
       FUN`DISPLAY`PLAIN: |-
-        The game's interface for Mudlet is version [v(DATA`CONFIG`GUI-VERSION)], at [v(DATA`CONFIG`GUI-URL)]. [if(u(%!/FUN`GUI`WANTED,%0),It is offered to you when you connect. +gui off stops that.,You turned it off. +gui on offers it again.)]
+        The game's interface for Mudlet is [if(u(%!/FUN`GUI`SHIPPED),the one SharpMUSH ships%,,its own%,)] version [u(%!/FUN`GUI`VERSION)], at [u(%!/FUN`GUI`URL)]. [if(u(%!/FUN`GUI`WANTED,%0),It is offered to you when you connect. +gui off stops that.,You turned it off. +gui on offers it again.)]
       FUN`DISPLAY`BOX: |-
-        box(fields(,Version,v(DATA`CONFIG`GUI-VERSION),Offered,if(u(%!/FUN`GUI`WANTED,%0),tone(success,when you connect),tone(muted,no%, you turned it off)),Map,strfirstof(v(DATA`CONFIG`MAP-URL),tone(muted,none)))%r[rule()]%r[tone(muted,+gui on and +gui off choose whether it is offered.)],Mudlet interface)%rPackage: [v(DATA`CONFIG`GUI-URL)]
+        box(fields(,Interface,if(u(%!/FUN`GUI`SHIPPED),SharpMUSH's own,the game's own),Version,u(%!/FUN`GUI`VERSION),Offered,if(u(%!/FUN`GUI`WANTED,%0),tone(success,when you connect),tone(muted,no%, you turned it off)),Map,strfirstof(v(DATA`CONFIG`MAP-URL),tone(muted,none)))%r[rule()]%r[tone(muted,+gui on and +gui off choose whether it is offered.)],Mudlet interface)%rPackage: [u(%!/FUN`GUI`URL)]
 
       # ---- help -----------------------------------------------------------
       HELP: |-
@@ -229,13 +260,31 @@ objects:
       SEE: |-
         Cross-references. One leaf per topic; subtopics come from the tree, not from here.
       SEE`GUI: |-
-        gmcp room|gmcp char
+        gmcp room|gmcp char|gmcp comm
       HELP`GUI: |-
-        `+gui` shows whether the game offers **Mudlet** an interface package of its own: windows, gauges and a map drawn from what the game sends over GMCP.
+        `+gui` shows whether the game offers **Mudlet** an interface package: windows, gauges and a map drawn from what the game sends over GMCP. A game that has not made one of its own offers the one SharpMUSH ships.
 
         - `+gui on` offers it to your client each time you connect, and offers it now. This is how it starts.
         - `+gui off` stops offering it. An interface Mudlet already installed stays until you remove it in Mudlet's Package Manager.
 
-        Mudlet asks before it installs a package, and installs it again when the game's version changes.
+        Mudlet installs the package when the game offers it, and again when its version changes, unless its preference *Allow server to install script packages* is off.
+
+        SharpMUSH's own interface puts a panel on the right of the game's text: the room with its exits, who is here and what you carry; a gauge for each value the game sends with a maximum, such as hp; a chat window for channel lines and pages; and a map drawn as you walk. `interface hide` and `interface show`, typed in Mudlet, take the panel away and bring it back.
 
         The game can also send Mudlet its **map**, and fill in your **Discord** status with the game's name and the character you play: staff choose with `+config mudlet-client`.
+      LOCK`GUI`SETUP: |-
+        perm^config.admin
+      HELP`GUI`SETUP: |-
+        An **interface package** is a Mudlet package (a `.mpackage` file: a zip of Lua scripts and their settings) that draws the game's own windows inside Mudlet. Mudlet downloads it from the address the game sends with `Client.GUI`, and installs it.
+
+        With nothing set, the game offers the interface SharpMUSH ships, from `<mud_url>/mudlet/sharpmush-ui.mpackage`. It needs `mud_url` (`@config mud_url`) to be the game's web address, which setup fills in.
+
+        To offer your own:
+
+        1. Download the shipped one from that address, or start from nothing.
+        2. Change it in Mudlet, export it from Mudlet's Package Exporter under a name of your own, and put the file on a web server.
+        3. `+config mudlet-client/gui-url=<address>` offers it instead, and `+config mudlet-client/gui-version=<version>`, changed with each new file, makes Mudlet install it again.
+
+        `+config mudlet-client/gui=off` offers no interface. `+config mudlet-client` lists every setting, the map and Discord ones too.
+
+        The Discord settings work whether or not an interface is offered: Mudlet asks for them when it connects, and does so only while Discord is running on the player's computer.
