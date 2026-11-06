@@ -18,12 +18,15 @@ public static class TestPaths
 	/// repository. CI checks the library out and sets the variable.
 	/// </summary>
 	public static string PackageLibrary =>
-		new[] { Environment.GetEnvironmentVariable("SHARPMUSH_PACKAGES_PATH") }
-			.Concat(new[] { "SharpMUSH.Packages", "sharpmush.packages" }
-				.Select(name => Path.Combine(Path.GetDirectoryName(RepositoryRoot)!, name)))
-			.FirstOrDefault(dir => !string.IsNullOrEmpty(dir) && File.Exists(Path.Combine(dir, "index.yaml")))
-		?? throw new DirectoryNotFoundException(
-			"No package library checkout: clone SharpMUSH/SharpMUSH.Packages beside this repository or set SHARPMUSH_PACKAGES_PATH.");
+		Environment.GetEnvironmentVariable("SHARPMUSH_PACKAGES_PATH") is { Length: > 0 } configured
+			? File.Exists(Path.Combine(configured, "index.yaml"))
+				? configured
+				: throw new DirectoryNotFoundException($"SHARPMUSH_PACKAGES_PATH is {configured}, which holds no index.yaml.")
+			: new[] { "SharpMUSH.Packages", "sharpmush.packages" }
+				.Select(name => Path.Combine(Path.GetDirectoryName(RepositoryRoot)!, name))
+				.FirstOrDefault(dir => File.Exists(Path.Combine(dir, "index.yaml")))
+			?? throw new DirectoryNotFoundException(
+				"No package library checkout: clone SharpMUSH/SharpMUSH.Packages beside this repository or set SHARPMUSH_PACKAGES_PATH.");
 
 	/// <summary>The shipped helpfile tree — the same directory the server indexes at startup.</summary>
 	public static DirectoryInfo Helpfiles =>

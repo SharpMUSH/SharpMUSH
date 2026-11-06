@@ -99,13 +99,14 @@ public class DutiesIntegrationTests
 		await God($"&PROVIDER`TEST {duties}={roller}");
 	}
 
-	/// <summary>Takes duties out with the bridges a test may have added over +help and +config, which the
-	/// packages page would offer to remove with it.</summary>
+	/// <summary>Takes duties out with every add-on a test may have installed over it, so none is left naming
+	/// its destroyed objects.</summary>
 	private async Task UninstallAsync()
 	{
-		await Installer.UninstallAsync("duties-help", force: true, CancellationToken.None);
-		await Installer.UninstallAsync("duties-config", force: true, CancellationToken.None);
-		await Installer.UninstallAsync("duties", force: true, CancellationToken.None);
+		foreach (var id in new[] { "duties-scene", "duties-app", "duties-help", "duties-config", "duties" })
+		{
+			await Installer.UninstallAsync(id, force: true, CancellationToken.None);
+		}
 	}
 
 	private static string NewId() => "d" + Guid.NewGuid().ToString("N")[..10];
