@@ -123,7 +123,7 @@
 		<Content Include="Services\TestData\RhostNative\**\*">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
-		<Content Include="Services\TestData\*.outdb;Services\TestData\*.maildb;Services\TestData\*.chatdb;Services\TestData\*.flat;Services\TestData\*.mail;Services\TestData\*.folder;Services\TestData\*.comsys">
+		<Content Include="Services\TestData\*.outdb;Services\TestData\*.maildb;Services\TestData\*.chatdb;Services\TestData\*.flat;Services\TestData\*.mail;Services\TestData\*.folder;Services\TestData\*.comsys;Services\TestData\*.sql">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
 		<None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\*.md">

@@ -740,7 +740,7 @@
     <value>Import PennMUSH, RhostMUSH or TinyMUX Database</value>
   </data>
   <data name="ImportDatabaseDescription" xml:space="preserve">
-    <value>Upload a PennMUSH database, a RhostMUSH flatfile written with @dump/flat, or a TinyMUX flatfile, to convert and import into SharpMUSH. The format is told from the file unless you choose one. The conversion process will create all objects, establish relationships, and set attributes and locks.</value>
+    <value>Upload a PennMUSH database, a RhostMUSH flatfile written with @dump/flat, or a TinyMUX flatfile or netmux.sqlite, to convert and import into SharpMUSH. The format is told from the file unless you choose one. The conversion process will create all objects, establish relationships, and set attributes and locks.</value>
   </data>
   <data name="DropDatabaseFile" xml:space="preserve">
     <value>Drop the database file here or click</value>
@@ -5193,7 +5193,7 @@
     <value>A Boards page in the portal where players read boards, follow conversations, and post, comment and reply.</value>
   </data>
   <data name="AdmImportDatabaseFormats" xml:space="preserve">
-    <value>A PennMUSH outdb or a TinyMUX or RhostMUSH flatfile, plain or gzip (.gz), up to 100 MB</value>
+    <value>A PennMUSH outdb, a TinyMUX or RhostMUSH flatfile, or TinyMUX's netmux.sqlite, plain or gzip (.gz), up to 100 MB</value>
   </data>
   <data name="AdmImportConfigAuto" xml:space="preserve">
     <value>Configuration (mush.cnf, netmux.conf or netrhost.conf, recommended)</value>
@@ -5240,8 +5240,14 @@
   <data name="AdmImportMuxGuideTitle" xml:space="preserve">
     <value>TinyMUX: which files to upload</value>
   </data>
+  <data name="AdmImportMuxSqliteTitle" xml:space="preserve">
+    <value>TinyMUX 2.14: upload netmux.sqlite</value>
+  </data>
+  <data name="AdmImportMuxSqlite" xml:space="preserve">
+    <value>TinyMUX 2.14 runs from game/data/netmux.sqlite, which holds the database, channels and mail. Stop the game first, so everything is written into that file, then upload it on its own as the database, with netmux.conf beside it.</value>
+  </data>
   <data name="AdmImportMuxUnloadTitle" xml:space="preserve">
-    <value>Write a flatfile</value>
+    <value>Or write a flatfile</value>
   </data>
   <data name="AdmImportMuxUnload" xml:space="preserve">
     <value>Stop the game, then run db_unload from its game/data directory. It writes the database, channels and mail as flatfiles.</value>
@@ -5252,8 +5258,11 @@
   <data name="AdmImportMuxFilesTitle" xml:space="preserve">
     <value>Upload the files</value>
   </data>
+  <data name="AdmImportGuideMuxSqlite" xml:space="preserve">
+    <value>the database, channels and mail together (TinyMUX 2.14; upload it alone)</value>
+  </data>
   <data name="AdmImportMuxIncludes" xml:space="preserve">
-    <value>The import does not follow include lines (alias.conf, compat.conf), and the report lists each one it passed over. Paste the included files' lines into netmux.conf to keep their settings. The flatfile, mail.db and comsys.db may be gzipped to fit under 100 MB.</value>
+    <value>The import does not follow include lines (alias.conf, compat.conf), and the report lists each one it passed over. Paste the included files' lines into netmux.conf to keep their settings. The flatfile, mail.db, comsys.db and netmux.sqlite may be gzipped to fit under 100 MB.</value>
   </data>
   <data name="AdmImportConfigHint" xml:space="preserve">
     <value>Give the source game's configuration file if you have it. It is applied first, so the master room, player start, ancestors and handlers are your game's; without it the game keeps SharpMUSH's defaults.</value>
