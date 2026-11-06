@@ -157,7 +157,7 @@ public static class PortalPermission
 	public const string PlayerExamine = "player.examine";
 
 	/// <summary>
-	/// Controls others' objects through a zone, a control lock or INHERIT: the control that does
+	/// Controls others' objects through a zone, a control lock or a shared owner: the control that does
 	/// not come from owning the object. Allowed unless denied.
 	/// </summary>
 	public const string PlayerModify = "player.modify";

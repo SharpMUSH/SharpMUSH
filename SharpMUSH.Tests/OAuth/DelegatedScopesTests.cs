@@ -35,6 +35,8 @@ public class DelegatedScopesTests
 	[Arguments(PortalPermission.SnapshotCapture)]
 	[Arguments(PortalPermission.JobsManageOwn)]
 	[Arguments(PortalPermission.QueueControlOwn)]
+	[Arguments(PortalPermission.PlayerPage)]
+	[Arguments(PortalPermission.PlayerCommands)]
 	public async Task APlayersOwnWork_ComesWithCommands_NotAStaffGroup(string permission)
 	{
 		await Assert.That(DelegatedScopes.ScopeOf(permission)).IsEqualTo(DelegatedScopes.Commands);
