@@ -81,9 +81,9 @@ public interface IPermissionResolver
 /// <summary>
 /// How far an override goes: the role whose priority bounds the targets it applies to. An Allow with a reach applies
 /// to targets ranked at or below the role, so a power held at <c>councilor</c> acts on what holders of councilor or a
-/// lower role own and never on a wizard's. A Deny with a reach applies to targets ranked at or above the role, so a
-/// royalty denied <c>game.tport_anything</c> with reach <c>wizard</c> may teleport what players own and not what
-/// wizards own. Outside its reach an override is Inherit, and the layers below it decide.
+/// lower role own and never on a wizard's. A Deny with a reach applies to targets ranked at or above the role, so an
+/// object denied <c>game.tport_anything</c> with reach <c>wizard</c>, whose account allows it, may teleport what
+/// players own and not what wizards own. Outside its reach an override is Inherit, and the layers below it decide.
 /// </summary>
 /// <param name="Role">The slug of the role the reach names.</param>
 /// <param name="Priority">That role's priority; <see cref="int.MinValue"/> when no role has the slug, so an Allow

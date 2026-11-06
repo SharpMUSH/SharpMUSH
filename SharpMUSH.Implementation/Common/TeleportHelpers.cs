@@ -214,8 +214,8 @@ public static class TeleportHelpers
 		// Tel_Anywhere (hdrs/mushdb.h:17) waives the restrictions on WHERE something may go;
 		// Tel_Anything (hdrs/mushdb.h:19) waives the restrictions on WHAT may be moved. Each is
 		// Hasprivs — Wizard or Royalty — or the matching power (SharpMUSH.Database/Seed/PowerSeed.cs:50-51).
-		// A power held with a reach (as a RhostMUSH import sets them) counts against the destination's owner for
-		// Tport_Anywhere and the victim's owner for Tport_Anything, as RhostMUSH ranks TEL_ANYWHERE and TEL_ANYTHING.
+		// A power held with a reach counts against the destination's owner for Tport_Anywhere and the victim's
+		// owner for Tport_Anything, as RhostMUSH ranks TEL_ANYWHERE and TEL_ANYTHING. Hasprivs needs neither power.
 		var hasPrivs = await executor.IsWizard() || await executor.IsRoyalty();
 		var telAnywhere = hasPrivs || await executor.HasPowerOver("Tport_Anywhere", destinationContainer.WithExitOption());
 		var telAnything = hasPrivs || await executor.HasPowerOver("Tport_Anything", target);

@@ -1709,7 +1709,7 @@ public class MovementParityTests
 	}
 
 	/// <summary>
-	/// A <c>Tport_Anything</c> held with a reach, as a RhostMUSH import sets TEL_ANYTHING at a level, moves what holders
+	/// A <c>Tport_Anything</c> held with a reach (RhostMUSH's TEL_ANYTHING at a level) moves what holders
 	/// of that role or a lower one own, and not what #1 owns.
 	/// </summary>
 	[Test]

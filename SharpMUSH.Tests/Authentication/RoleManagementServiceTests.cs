@@ -453,6 +453,7 @@ public class RoleManagementServiceTests
 		await Refused(world.Service.SetOverridesAsync(A("mod"), "pl", [tport], PermissionState.Allow, "moderator"), RoleRefusalKind.Forbidden);
 		await Accepted(world.Service.SetOverridesAsync(A("mod"), "pl", [tport], PermissionState.Allow, BuiltInRoles.PlayerSlug));
 		await Assert.That((await world.Registry.GetAccountReachesAsync("pl"))[tport]).IsEqualTo(BuiltInRoles.PlayerSlug);
+		await Refused(world.Service.SaveRoleAsync(A("mod"), Draft("tp", 14, tport)), RoleRefusalKind.Forbidden);
 	}
 
 	[Test]

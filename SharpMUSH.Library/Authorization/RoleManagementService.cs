@@ -214,7 +214,7 @@ public sealed partial class RoleManagementService(
 					: $"No custom permission named '{name}'.");
 			var me = (await ActorGrantsAsync(actor, ct)).Context;
 			if (Unauthorized(me) is { } refusal) return refusal;
-			if (!RoleHierarchy.CanGrant(resolver.Resolve(me), name))
+			if (!RoleHierarchy.CanGrant(HeldAmong(me, []), name))
 				return Refuse<Success>(RoleRefusalKind.Forbidden, $"You cannot remove a permission you could not grant: {name}.");
 
 			await registry.RemoveCustomPermissionAsync(name);
@@ -569,12 +569,28 @@ public sealed partial class RoleManagementService(
 	/// held only when resolved for its role, and the role may not exist yet (a role created with its own pass). God's
 	/// pass is resolved always: holding it is how <see cref="RoleHierarchy.CanGrant"/> knows the owner.
 	/// </summary>
-	private IReadOnlySet<string> HeldAmong(PermissionContext me, IEnumerable<string> scopes)
-		=> resolver.Resolve(me with
+	/// <remarks>
+	/// A scope that takes a reach is held only as far as the actor holds it against a target ranked
+	/// <paramref name="rank"/>; by default above every role, so an Allow held up to one role does not count as held
+	/// for a grant with no reach, through an override or a role.
+	/// </remarks>
+	private IReadOnlySet<string> HeldAmong(PermissionContext me, IEnumerable<string> scopes, int rank = int.MaxValue)
+	{
+		var held = resolver.Resolve(me with
 		{
 			ControlScopes = me.ControlScopes.Concat(scopes.Where(PortalPermission.IsControlRole))
 				.Append(PortalPermission.ControlRole(BuiltInRoles.GodSlug)).ToHashSet(StringComparer.OrdinalIgnoreCase)
 		});
+		if (!me.HasReaches || me.IsOwner) return held;
+		var ranked = new HashSet<string>(held, StringComparer.Ordinal);
+		foreach (var scope in PortalPermission.ReachableScopes)
+		{
+			if (resolver.Allows(me, scope, rank)) ranked.Add(scope);
+			else ranked.Remove(scope);
+		}
+
+		return ranked;
+	}
 
 	/// <summary>
 	/// The refusal for giving a guarded role whose guard the actor does not pass, or null: its holder would be out of
@@ -597,9 +613,8 @@ public sealed partial class RoleManagementService(
 	private RoleOutcome<Success>? Unheld(PermissionContext me, IEnumerable<string> scopes, SharpRole reached)
 	{
 		var asked = scopes.ToArray();
-		var held = HeldAmong(me, asked);
-		var unheld = asked.Where(scope => !RoleHierarchy.CanGrant(held, scope)
-			|| (me.HasReaches && PortalPermission.TakesReach(scope) && !me.IsOwner && !resolver.Allows(me, scope, reached.Priority))).ToArray();
+		var held = HeldAmong(me, asked, reached.Priority);
+		var unheld = asked.Where(scope => !RoleHierarchy.CanGrant(held, scope)).ToArray();
 		return unheld.Length > 0
 			? Refuse<Success>(RoleRefusalKind.Forbidden, $"You cannot grant what you do not hold: {string.Join(", ", unheld)}.")
 			: null;

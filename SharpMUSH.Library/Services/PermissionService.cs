@@ -433,9 +433,9 @@ public class PermissionService(
 			return false;
 
 		// control.all held through an override with a reach controls only what that reach covers.
-		if (whoFlags.ControlsAll
-				&& (whoFlags.IsGod || !whoFlags.Grants.Context.HasReaches
-					|| whoFlags.Grants.Has(PortalPermission.ControlAll, await target.RankAsTargetAsync(token))))
+		if (whoFlags.IsGod || !whoFlags.Grants.Context.HasReaches
+				? whoFlags.ControlsAll
+				: whoFlags.Grants.Has(PortalPermission.ControlAll, await target.RankAsTargetAsync(token)))
 			return true;
 
 		if (whoFlags.IsMistrust)
