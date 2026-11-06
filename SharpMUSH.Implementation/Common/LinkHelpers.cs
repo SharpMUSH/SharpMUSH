@@ -100,7 +100,7 @@ public static class LinkHelpers
 			SharpPlayer player => await HomedAsync(parser, mediator, notifyService, locateService,
 				permissionService, executor, target, player, destinationName),
 			SharpRoom room => await DroppedToAsync(parser, mediator, notifyService, locateService, permissionService,
-				executor, target, room, destinationName),
+				attributeService, executor, target, room, destinationName),
 			_ => await RefusedAsync(notifyService, executor, ErrorMessages.Returns.InvalidObjectType,
 				ErrorMessages.Notifications.InvalidObjectTypeForLinking)
 		};
@@ -193,9 +193,10 @@ public static class LinkHelpers
 					executor, target.Object().DBRef.Number, ledTo);
 				return new Success();
 
-			// create.c:278-282.
+			// create.c:278-282. A drop-to of HOME lives in _LINKTYPE, so it goes too.
 			case SharpRoom room:
 				await mediator.Send(new UnlinkRoomCommand(room));
+				await ClearDropsHomeAsync(attributeService, executor, target);
 				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToRemoved),
 					executor);
 				return new Success();
@@ -494,7 +495,8 @@ public static class LinkHelpers
 
 	/// <summary>
 	/// <c>do_link</c>'s <c>TYPE_ROOM</c> branch (<c>src/create.c:416-436</c>): a drop-to must be a
-	/// room, and setting one needs control of the room being linked. The function asked for neither.
+	/// room or <c>HOME</c> (<c>parse_linkable_room</c>), and setting one needs control of the room being
+	/// linked. The function asked for neither.
 	/// </summary>
 	private static async ValueTask<Result<Success>> DroppedToAsync(
 		IMUSHCodeParser parser,
@@ -502,17 +504,61 @@ public static class LinkHelpers
 		INotifyService notifyService,
 		ILocateService locateService,
 		IPermissionService permissionService,
+		IAttributeService attributeService,
 		AnySharpObject executor,
 		AnySharpObject target,
 		SharpRoom room,
 		string destinationName)
 	{
+		if (destinationName.Equals(LinkTypes.Home, StringComparison.InvariantCultureIgnoreCase))
+		{
+			return await DroppedHomeAsync(mediator, notifyService, permissionService, attributeService, executor,
+				target, room);
+		}
+
 		return await LocatedAsync(parser, locateService, executor, destinationName) switch
 		{
-			AnySharpObject destination => await DroppedToRoomAsync(mediator, notifyService, permissionService, executor,
-				target, room, destination),
+			AnySharpObject destination => await DroppedToRoomAsync(mediator, notifyService, permissionService,
+				attributeService, executor, target, room, destination),
 			Error<string> unmatched => unmatched
 		};
+	}
+
+	/// <summary>
+	/// A drop-to of <c>HOME</c> (<c>create.c:417</c>, where <c>parse_linkable_room</c> answers
+	/// <c>HOME</c>): what is dropped in the room goes to its own home. Recorded in <c>_LINKTYPE</c>,
+	/// with no drop-to relation, as a home-linked exit is.
+	/// </summary>
+	private static async ValueTask<Result<Success>> DroppedHomeAsync(
+		IMediator mediator,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		IAttributeService attributeService,
+		AnySharpObject executor,
+		AnySharpObject target,
+		SharpRoom room)
+	{
+		// create.c:424.
+		if (!await permissionService.Controls(executor, target))
+		{
+			return await RefusedAsync(notifyService, executor, PermissionRefusal.NotControlled(target));
+		}
+
+		await mediator.Send(new UnlinkRoomCommand(room));
+		await attributeService.SetAttributeAsync(executor, target, LinkTypes.Attribute, MarkupText.Plain(LinkTypes.Home));
+		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToSet), executor);
+		return new Success();
+	}
+
+	/// <summary>Takes a drop-to of <c>HOME</c> off a room, when it has one.</summary>
+	private static async ValueTask ClearDropsHomeAsync(IAttributeService attributeService, AnySharpObject executor,
+		AnySharpObject room)
+	{
+		if (await attributeService.GetAttributeAsync(executor, room, LinkTypes.Attribute,
+				IAttributeService.AttributeMode.Read, false) is SharpAttribute[] { Length: > 0 })
+		{
+			await attributeService.SetAttributeAsync(executor, room, LinkTypes.Attribute, MarkupText.Empty);
+		}
 	}
 
 	/// <inheritdoc cref="DroppedToAsync"/>
@@ -520,6 +566,7 @@ public static class LinkHelpers
 		IMediator mediator,
 		INotifyService notifyService,
 		IPermissionService permissionService,
+		IAttributeService attributeService,
 		AnySharpObject executor,
 		AnySharpObject target,
 		SharpRoom room,
@@ -539,6 +586,7 @@ public static class LinkHelpers
 		}
 
 		await mediator.Send(new LinkRoomCommand(room, destinationRoom));
+		await ClearDropsHomeAsync(attributeService, executor, target);
 		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToSet), executor);
 		return new Success();
 	}

@@ -25,6 +25,8 @@ namespace SharpMUSH.Library.Services.Passwords;
 ///   <c>crypt(3)</c> may have written it.</item>
 ///   <item>BSDi extended DES, <c>_CCCCSSSSHHHHHHHHHHH</c>: what a TinyMUX game's <c>crypt(3)</c> may have
 ///   written.</item>
+///   <item>bcrypt, <c>$2a$</c>, <c>$2b$</c>, <c>$2x$</c> or <c>$2y$</c>: what a RhostMUSH game's
+///   <c>crypt(3)</c> may have written.</item>
 ///   <item>A TinyMUX password, <c>$ALGO$SALT$HASH</c> (<c>check_mux_password</c>).</item>
 ///   <item>Plaintext.</item>
 /// </list>
@@ -45,6 +47,7 @@ internal static partial class PennMUSHPasswords
 				|| ShaCrypt.Verify(stored, bytes)
 				|| Md5Crypt.Verify(stored, bytes)
 				|| MatchesExtendedDes(stored, bytes)
+				|| MatchesBcrypt(stored, attempt)
 				|| MatchesMux(stored, bytes)
 				|| MatchesPlaintext(stored, bytes);
 		}
@@ -128,6 +131,34 @@ internal static partial class PennMUSHPasswords
 		=> stored.Length == 13 && !stored.AsSpan().ContainsAnyExcept(CryptAlphabet);
 
 	private const string CryptAlphabet = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+	/// <summary>
+	/// Whether the value has bcrypt's shape: <c>$2</c>, a variant letter, <c>$</c>, a cost from 04 to 31,
+	/// <c>$</c>, then 22 characters of salt and 31 of hash.
+	/// </summary>
+	[GeneratedRegex(@"^\$2[abxy]\$(0[4-9]|[12][0-9]|3[01])\$[./A-Za-z0-9]{53}$")]
+	private static partial Regex BcryptPattern();
+
+	/// <summary>
+	/// bcrypt, as <c>crypt(3)</c> writes it. Like every bcrypt, it reads only the first 72 bytes of the
+	/// password.
+	/// </summary>
+	private static bool MatchesBcrypt(string stored, string attempt)
+	{
+		if (!BcryptPattern().IsMatch(stored))
+		{
+			return false;
+		}
+
+		try
+		{
+			return BCrypt.Net.BCrypt.Verify(attempt, stored);
+		}
+		catch (Exception error) when (error is BCrypt.Net.SaltParseException or ArgumentException)
+		{
+			return false;
+		}
+	}
 
 	/// <summary>
 	/// <c>$ALGO$SALT$HASH</c>. PennMUSH digests the salt as the base64 text it is stored as, followed

@@ -124,12 +124,12 @@ public partial class LightningDatabase
 	/// The Library model for one mail row. The sender is resolved only when someone asks for
 	/// <see cref="SharpMail.From"/>, in a read of its own: a listing of a mailbox mostly wants the rows, and
 	/// a sender that has been destroyed since resolves to <see cref="None"/> either way, as does whatever
-	/// holds its number now.
+	/// holds its number now. An anonymous mail resolves to <see cref="None"/> too.
 	/// </summary>
 	private SharpMail MapRecordToMail(long mailId, MailRecord record)
 	{
 		var sender = record.Sender;
-		var stamp = record.SenderCreationTime;
+		var stamp = record.Anonymous ? null : record.SenderCreationTime;
 		return new SharpMail
 		{
 			Id = MailId(mailId),
@@ -143,6 +143,7 @@ public partial class LightningDatabase
 			Folder = record.Folder,
 			Content = MarkupTextSerializer.Deserialize(record.Content),
 			Subject = MarkupTextSerializer.Deserialize(record.Subject),
+			Anonymous = record.Anonymous,
 			From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(LoadMailSender(sender, stamp)))
 		};
 	}
@@ -194,14 +195,15 @@ public partial class LightningDatabase
 			{
 				if (!tx.TryGet(Tables.Mail, MailKey(mailId), out var bytes)) continue;
 				var record = Codec.Deserialize<MailSummaryRecord>(MailJson(tx, bytes));
-				if (!names.TryGetValue((record.Sender, record.SenderCreationTime), out var sender))
+				string? sender = null;
+				if (!record.Anonymous && !names.TryGetValue((record.Sender, record.SenderCreationTime), out sender))
 				{
 					sender = ReadMailSender(tx, record.Sender, record.SenderCreationTime)?.Record.Name;
 					names[(record.Sender, record.SenderCreationTime)] = sender;
 				}
 
 				list.Add(new MailSummary(MailId(mailId), DateTimeOffset.FromUnixTimeMilliseconds(record.DateSent), record.Read,
-					record.Urgent, record.Folder, MarkupTextSerializer.Deserialize(record.Subject), sender));
+					record.Urgent, record.Folder, MarkupTextSerializer.Deserialize(record.Subject), sender, record.Anonymous));
 			}
 
 			return list;
@@ -300,7 +302,8 @@ public partial class LightningDatabase
 				Cleared = mail.Cleared,
 				Folder = mail.Folder,
 				Content = MarkupTextSerializer.Serialize(mail.Content),
-				Subject = MarkupTextSerializer.Serialize(mail.Subject)
+				Subject = MarkupTextSerializer.Serialize(mail.Subject),
+				Anonymous = mail.Anonymous
 			};
 
 			PutMail(tx, MailKey(mailId), record);

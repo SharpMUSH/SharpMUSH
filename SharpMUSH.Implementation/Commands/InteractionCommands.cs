@@ -206,7 +206,8 @@ public partial class Commands
 
 		if (location is SharpRoom room && !await location.WithExitOption().HasFlag("STICKY"))
 		{
-			var dropTo = await room.Location.WithCancellation(CancellationToken.None);
+			// A drop-to of HOME sends the object to its own home (safe_tel resolving HOME).
+			var dropTo = await LinkTypes.DropToForAsync(Mediator, room, content);
 
 			// The drop-to lock is evaluated against the room with the OBJECT as the one being tested,
 			// not the dropper (move.c:754).

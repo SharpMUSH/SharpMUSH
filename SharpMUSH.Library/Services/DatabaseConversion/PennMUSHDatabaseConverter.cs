@@ -1571,6 +1571,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		await SetZoneAsync(pennObj, sharpObj, context, cancellationToken);
 		await SetOwnerAsync(pennObj, sharpObj, context, cancellationToken);
 		await SetHomeOrDropToAsync(pennObj, sharpObj, context, cancellationToken);
+		await SetLinkTypeAsync(pennObj, sharpObj, context, cancellationToken);
 		await SetFlagsAsync(pennObj, sharpObj, context, cancellationToken);
 		await SetPowersAsync(pennObj, sharpObj, context, cancellationToken);
 		await DenyPowersAsync(pennObj, sharpObj, context, cancellationToken);
@@ -1885,6 +1886,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				Folder = message.Folder == 0 ? "INBOX" : names.GetValueOrDefault(message.Folder, $"{message.Folder}"),
 				Content = MarkupString.Ansi.AnsiEscapeParser.Parse(message.Body),
 				Subject = MarkupString.Ansi.AnsiEscapeParser.Parse(message.Subject),
+				Anonymous = message.IsAnonymous,
 				From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(from.WithNoneOption()))
 			}), cancellationToken);
 			imported++;
@@ -2321,6 +2323,35 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		else if (target.AsOptionalContent is AnySharpContent content)
 		{
 			await _mediator.Send(new SetObjectHomeCommand(content, container), cancellationToken);
+		}
+	}
+
+	/// <summary>
+	/// An exit leading HOME or with a variable destination, and a room whose drop-to is HOME: the source keeps
+	/// these as the pseudo-dbrefs <c>HOME</c> (-3) and <c>AMBIGUOUS</c> (-2) in the link field, and SharpMUSH
+	/// keeps them in <see cref="LinkTypes.Attribute"/>, as <c>@link</c> writes it. Runs after the owner is set,
+	/// so the attribute is the owner's.
+	/// </summary>
+	private async Task SetLinkTypeAsync(PennMUSHObject pennObj, AnySharpObject target,
+		PennMUSHConversionContext context, CancellationToken cancellationToken)
+	{
+		var keyword = (pennObj.Type, pennObj.Link) switch
+		{
+			(PennMUSHObjectType.Exit or PennMUSHObjectType.Room, LinkTypes.HomeDbref) => LinkTypes.Home,
+			(PennMUSHObjectType.Exit, LinkTypes.VariableDbref) => LinkTypes.Variable,
+			_ => null
+		};
+		if (keyword is null)
+		{
+			return;
+		}
+
+		var owner = await target.Object().Owner.WithCancellation(cancellationToken);
+		var write = new AttributeWrite([LinkTypes.Attribute], MString.Plain(keyword), owner, []);
+		if (!await _mediator.Send(new SetAttributesCommand(target.Object().DBRef, [write]), cancellationToken))
+		{
+			context.Warn(ImportWarningKind.Objects,
+				$"{(target.IsRoom ? "Drop-to" : "Destination")} {keyword.ToUpperInvariant()} of #{pennObj.DBRef} was not imported: the store refused it");
 		}
 	}
 
