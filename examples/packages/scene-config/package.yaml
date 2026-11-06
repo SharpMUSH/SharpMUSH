@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: scene-config
 title: "Scene System: +config settings"
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Puts the scene settings into +config: registers the Scene Logger with the +config registry, so staff see and change them with +config scene."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [scene, config, settings, bridge]
 category: Scenes
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. The scene package declares its settings

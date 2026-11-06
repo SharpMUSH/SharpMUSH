@@ -19,10 +19,9 @@ namespace SharpMUSH.Tests.Plugins;
 ///   (slug <c>hello-ui</c>, a Page in the novel "Examples" NavBar section, schema/data routes pointing at
 ///   its own controller);</item>
 ///   <item>the app surfaces through the registry overlay (<see cref="PluginApplicationRegistryDecorator"/>)
-///   exactly as the booting server would expose it on <c>/api/applications</c>;</item>
-///   <item>its <c>examples/packages/hello-ui/package.yaml</c> parses as a valid <c>kind: plugin</c> manifest
-///   carrying the DLL with a SHA-256 per file.</item>
+///   exactly as the booting server would expose it on <c>/api/applications</c>.</item>
 /// </list>
+/// The plugin-package manifest that carries the DLL is a teaching example in the SharpMUSH Guide repository.
 /// </summary>
 public class HelloUiPluginPackageExampleTests
 {
@@ -82,40 +81,6 @@ public class HelloUiPluginPackageExampleTests
 		{
 			loaded.Loader.Dispose();
 		}
-	}
-
-	[Test]
-	public async Task ExamplePackageManifest_IsAValidManagedPackage()
-	{
-		var manifestPath = ManifestPath();
-		var result = new PackageManifestService().ParseManifest(await File.ReadAllTextAsync(manifestPath));
-
-		var parsed = result.Expect<ParsedPackageManifest>($"{manifestPath} must parse as a valid manifest");
-
-		var manifest = parsed.Manifest;
-		await Assert.That(manifest.Name).IsEqualTo(AppSlug);
-		await Assert.That(manifest.Binary).IsNotNull()
-			.Because("a kind: plugin package must carry a binaries block");
-		await Assert.That(manifest.Binary!.Files.Any(f =>
-			f.FileName.Equals("HelloUiPlugin.dll", StringComparison.OrdinalIgnoreCase))).IsTrue();
-		await Assert.That(manifest.Binary.Files.All(f => f.Sha256.Length == 64)).IsTrue();
-	}
-
-	private static string ManifestPath()
-	{
-		var dir = new DirectoryInfo(AppContext.BaseDirectory);
-		while (dir is not null)
-		{
-			var candidate = Path.Combine(dir.FullName, "examples", "packages", "hello-ui", "package.yaml");
-			if (File.Exists(candidate))
-			{
-				return candidate;
-			}
-
-			dir = dir.Parent!;
-		}
-
-		throw new FileNotFoundException("Could not locate examples/packages/hello-ui/package.yaml above the test directory.");
 	}
 
 	/// <summary>An empty <see cref="IApplicationRegistryService"/> inner — proves the plugin overlay alone surfaces the app.</summary>

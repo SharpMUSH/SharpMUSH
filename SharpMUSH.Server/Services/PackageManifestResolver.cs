@@ -72,15 +72,20 @@ public sealed class PackageManifestResolver(IPackageRegistryService registry, IP
 			&& !string.Equals(requested.Version, manifest.Version.ToString(), StringComparison.OrdinalIgnoreCase))
 			return new PackageManifestResolutionFailure(404, $"This server ships {manifest.Name} v{manifest.Version}; the catalogue has no other versions.");
 		var binary = manifest.Kind is PackageKind.Plugin or PackageKind.Ui;
-		if (catalogue && binary) return new PackageManifestResolutionFailure(400, "A plugin package cannot be installed from the bundled catalogue.");
+		if (catalogue && manifest.Kind is PackageKind.Plugin)
+			return new PackageManifestResolutionFailure(400, "A plugin package cannot be installed from the bundled catalogue.");
 
 		IPackageFileSource? files = null;
-		if (upload)
+		if (catalogue)
+		{
+			files = BundledPackages.Files(manifest.Name);
+		}
+		else if (upload)
 		{
 			files = uploads.Files(requested.Path);
 			if (files is null) return MissingUpload();
 		}
-		else if (!catalogue)
+		else
 		{
 			switch (await source.GetFileSourceAsync(remote, requested.Path, fetched.Commit, cancellationToken))
 			{

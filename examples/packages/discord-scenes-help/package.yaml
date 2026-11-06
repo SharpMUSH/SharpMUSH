@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: discord-scenes-help
 title: "Discord scheduled scenes: +help topics"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the Discord scheduled scenes topics into +help: registers the discord-scenes package's help with the +help librarian."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [discord-scenes, help, bridge]
 category: Community
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. discord-scenes keeps its topics on its own help

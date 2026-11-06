@@ -93,6 +93,32 @@ public class PackageManifestResolverTests
 		await Assert.That(failure.StatusCode).IsEqualTo(404);
 	}
 
+	/// <summary>
+	/// The catalogue's UI package resolves with the files the server embeds, and those files deploy through the same
+	/// installer a UI package from a remote uses.
+	/// </summary>
+	[Test]
+	public async Task CatalogueUiPackageResolvesWithItsEmbeddedFilesAndDeploys()
+	{
+		using var f = new Fixture();
+		var found = (await f.Resolver.ResolveAsync(new(BundledPackages.RemoteName, "builder-graph"), false, CancellationToken.None))
+			.Expect<ResolvedPackageManifest>();
+		await Assert.That(found.Manifest.Kind).IsEqualTo(PackageKind.Ui);
+		await Assert.That(found.BinaryBytes).IsGreaterThan(0L);
+
+		var directories = PluginPackageFixture.ScratchDirectories();
+		try
+		{
+			var installer = new PluginPackageInstaller(Substitute.For<IPluginManager>(), new(true), directories,
+				NullLogger<PluginPackageInstaller>.Instance);
+			var request = new PackageApplyRequest(new(BundledPackages.SourceRepo, found.ApplyPath, BundledPackages.SourceCommit, null),
+				new Dictionary<string, string>(), [], AllowPluginCode: true);
+			await Assert.That(await installer.DeployAsync(found.Manifest, request, found.Files!) is IReadOnlyList<string>).IsTrue();
+			await Assert.That(await new Library.Applications.UiPackageStore(directories).GetAsync("builder-graph")).IsNotNull();
+		}
+		finally { PluginPackageFixture.Delete(directories); }
+	}
+
 	[Test]
 	public async Task BinarySnapshotAndFingerprintBindActualBytes()
 	{

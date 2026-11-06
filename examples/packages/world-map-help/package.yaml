@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: world-map-help
 title: "World map: +help topics"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the World map topics into +help: registers the world-map package's help with the +help librarian."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [world-map, help, bridge]
 category: Building
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: world-map keeps its topic on its own Map Guide, and plus-help reads any object registered with its

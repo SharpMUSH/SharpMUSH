@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: duties-scene
 title: "Duties in scenes"
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Ties a Duties party to a scene: +duty/start/scene gathers a party with a new scene, +duty/scene ties the party to one already running, and what happens on the duty goes into the scene as narration."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [duties, scene, logging, bridge]
 category: Scenes
+bridge: true
 requires_server: ">=0.1"
 
 # It makes scenes and writes poses through the Scene plugin, so it installs only while the plugin runs.

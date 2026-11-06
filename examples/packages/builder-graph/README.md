@@ -2,7 +2,7 @@
 
 A map of a set of rooms for builders: where each room sits, where each exit leads, and what `@wcheck` would say about them, with an export of the rooms as a file you can keep and diff, and an import that builds what you change in it. One reusable definition, several independently configured page applications. This package carries HTML, CSS and classic JavaScript, with no DLL, Node server, world objects or softcode.
 
-The normal owner package workflow can stage a ZIP containing `package.yaml`, `ui.json`, `index.html`, `graph.js` and `graph.css`, all at the top level. Review/apply uses the existing packages administration permission and trust confirmation. This example is not automatically installed. The existing `allow_browser_code` setting controls whether hosted applications and their assets are available. No setting is changed by this package.
+It ships with the server under Building and is not installed automatically: install it from the bundled catalogue on the Packages page, which asks for the same trust confirmation as any UI package, or tick it in the setup wizard. A copy can also be staged as a ZIP containing `package.yaml`, `ui.json`, `index.html`, `graph.js` and `graph.css`, all at the top level. Review/apply uses the existing packages administration permission. The existing `allow_browser_code` setting controls whether hosted applications and their assets are available. No setting is changed by this package.
 
 After installing the definition in a test environment, create two applications in `/admin/applications`. Select **Plain HTML/JavaScript package**, use definition ID `builder-graph`, config version `1`, and give each application a unique slug and its own config:
 

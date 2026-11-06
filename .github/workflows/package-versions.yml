@@ -1,0 +1,29 @@
+name: Package versions
+
+on:
+  pull_request:
+    paths:
+      - 'examples/packages/**'
+      - '.github/scripts/package_version_bumps.py'
+      - '.github/workflows/package-versions.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  version-bump:
+    name: Changed packages raise their version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test the check
+        working-directory: .github/scripts
+        run: python3 -m unittest test_package_version_bumps -v
+      - name: Compare each changed package with the base branch
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 .github/scripts/package_version_bumps.py --base "$BASE_SHA" --head "$HEAD_SHA"

@@ -100,9 +100,10 @@ public static class BundledPackages
 		// Available, not installed: +wiki lands an object in the master room, and a game that
 		// never asked for a wiki front end should not find one there after an upgrade.
 		new("wiki-reader", BundledPackageHandler.None, InstallAtFirstBoot: false),
-		// Available, not installed: the job queue adds +job, +request and their kin, and its portal
-		// page is a separate application package so a game can run the queue in-game only.
-		new("jobs", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		// Suggested at setup, not installed at first boot: the job queue adds +job, +request and their kin, which a
+		// running game may already have under those names. Its portal page is a separate application package so a game
+		// can run the queue in-game only.
+		new("jobs", BundledPackageHandler.Http, InstallAtFirstBoot: false, SuggestAtSetup: true),
 		new("jobs-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("jobs-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("jobs-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
@@ -145,8 +146,9 @@ public static class BundledPackages
 		new("bboards-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("bboards-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("bboards-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
-		// Available, not installed: +who and +where are names a game may already use for its own code.
-		new("who-where", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Suggested at setup, not installed at first boot: +who and +where are names a running game may already use for
+		// its own code.
+		new("who-where", BundledPackageHandler.None, InstallAtFirstBoot: false, SuggestAtSetup: true),
 		new("who-where-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("who-where-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: +status is a name a game may already use for its own code. A status shows in
@@ -266,6 +268,9 @@ public static class BundledPackages
 		new("world-map-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("world-grid", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("world-grid-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		// Available, not installed: the builder's room graph, a UI package (HTML and JavaScript the portal hosts) that a
+		// game turns into a page by creating an application over it.
+		new("builder-graph", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
 
 	/// <summary>
@@ -383,6 +388,34 @@ public static class BundledPackages
 			{ PackageId: not null } descriptor => descriptor,
 			_ => new NotFound()
 		};
+
+	/// <summary>
+	/// The files a bundled package carries beside its manifest, such as a UI package's HTML and scripts, read from the
+	/// resources this build embeds as <c>SharpMUSH.Server.BundledPackages.&lt;id&gt;.files.&lt;name&gt;</c>.
+	/// </summary>
+	public static IPackageFileSource Files(string packageId) => new EmbeddedFiles(packageId);
+
+	private sealed class EmbeddedFiles(string packageId) : IPackageFileSource
+	{
+		public async Task<byte[]?> ReadFileAsync(string path, CancellationToken cancellationToken = default)
+		{
+			if (PackageFilePath.Normalize(path) is not { } normalized || normalized.Contains('/'))
+			{
+				return null;
+			}
+
+			await using var stream = Assembly.GetExecutingAssembly()
+				.GetManifestResourceStream($"SharpMUSH.Server.BundledPackages.{packageId}.files.{normalized}");
+			if (stream is null)
+			{
+				return null;
+			}
+
+			using var buffer = new MemoryStream();
+			await stream.CopyToAsync(buffer, cancellationToken);
+			return buffer.ToArray();
+		}
+	}
 
 	/// <summary>The raw YAML of one bundled package manifest (embedded resource).</summary>
 	public static string ManifestYaml(string packageId)

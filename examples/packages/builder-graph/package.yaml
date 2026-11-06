@@ -1,10 +1,11 @@
 format: "1.16"
 package: builder-graph
 title: "Builder graph"
-version: 0.3.1
+version: 0.3.2
 kind: ui
 authors: [SharpMUSH]
 description: Builder topology in the reusable HTML/JavaScript host, with coordinates, checks, export, import and drag-to-place.
+category: Building
 binaries:
   min_server_version: ">=3.0"
   files:

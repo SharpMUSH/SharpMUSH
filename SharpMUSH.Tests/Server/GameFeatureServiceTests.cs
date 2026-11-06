@@ -240,6 +240,20 @@ public class GameFeatureServiceTests
 		await Assert.That((await game.Features().PackagesAsync()).Single(p => p.Id == "world-map").Recommended).IsFalse();
 	}
 
+	/// <summary>
+	/// +who and +where and the job queue are offered ticked to a new game, and an upgraded game is not given them.
+	/// </summary>
+	[Test]
+	[Arguments("who-where")]
+	[Arguments("jobs")]
+	public async Task WhoWhereAndJobs_AreSuggestedAtSetup(string packageId)
+	{
+		var packages = await new Game().Features().PackagesAsync();
+
+		await Assert.That(packages.Single(p => p.Id == packageId).Recommended).IsTrue();
+		await Assert.That(BundledPackages.All.Single(p => p.PackageId == packageId).InstallAtFirstBoot).IsFalse();
+	}
+
 	[Test]
 	public async Task ASuggestedPackage_UntickedBeforeInstall_IsNotOfferedAgain()
 	{
