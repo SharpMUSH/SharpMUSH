@@ -114,10 +114,6 @@
 	margin: 8px 0 4px;
 }
 
-.graph-empty {
-	padding: 24px 16px;
-}
-
 /* The map: steps over the lines that join them, on a dotted ground that scrolls both ways. */
 .graph-map {
 	overflow: auto;

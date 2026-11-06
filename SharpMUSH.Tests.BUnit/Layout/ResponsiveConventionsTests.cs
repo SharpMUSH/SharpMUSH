@@ -94,6 +94,8 @@ public class ResponsiveConventionsTests
 			"a chip row above <AdminKeyValueList>, which carries the tiers; the chips wrap on their own",
 		["Pages/Admin/Sitelock.razor.css"] =
 			"styles only the code list in the kit header; <AdminKeyValueList> carries the tiers",
+		["Pages/Admin/SuggestionManagement.razor.css"] =
+			"a single column of expansion panels and chip rows that wrap on their own; the empty state is <EmptyState>",
 		["Pages/ScenesActive.razor.css"] =
 			"a single column of scene cards at the page's full width; <SceneCard> reflows against its own container",
 		["Pages/Register.razor.css"] =

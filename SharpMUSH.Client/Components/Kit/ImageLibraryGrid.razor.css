@@ -4,14 +4,6 @@
 	gap: 8px;
 }
 
-.kit-library-empty {
-	padding: 24px 16px;
-	border: 1px dashed var(--border);
-	border-radius: var(--radius-card);
-	color: var(--text-dim);
-	text-align: center;
-}
-
 .kit-library-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));

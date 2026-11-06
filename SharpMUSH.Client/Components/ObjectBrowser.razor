@@ -47,7 +47,7 @@
         }
         else if (_groups.Count == 0)
         {
-            <div class="ob-empty">@Loc["TermBrowserNoObjects"]</div>
+            <EmptyState Compact="true" Class="ob-empty" Icon="@Icons.Material.Outlined.Category">@Loc["TermBrowserNoObjects"]</EmptyState>
         }
         else
         {

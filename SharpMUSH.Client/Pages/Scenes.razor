@@ -134,7 +134,7 @@
     }
     else if (_filter == ScenesFilter.Mine && _acting is null)
     {
-        <EmptyBox Class="scenes-mine-none">@Loc["NavScenesMineNone"]</EmptyBox>
+        <EmptyState Class="scenes-mine-none" Icon="@Icons.Material.Outlined.PersonOutline">@Loc["NavScenesMineNone"]</EmptyState>
     }
     else if (_error is not null)
     {
@@ -142,7 +142,16 @@
     }
     else if (_scenes is null || _scenes.Count == 0)
     {
-        <EmptyBox>@Loc["ResNoScenesFound"]</EmptyBox>
+        <EmptyState Class="scenes-none" Icon="@Icons.Material.Outlined.TheaterComedy">
+            <ChildContent>@Loc["ResNoScenesFound"]</ChildContent>
+            <Action>
+                @if (_acting is not null && _mayCreate != false && !_starting && !_scheduling)
+                {
+                    <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add"
+                                   OnClick="@(() => { _starting = true; _scheduledNote = null; })">@Loc["RolStartScene"]</CapsuleButton>
+                }
+            </Action>
+        </EmptyState>
     }
     else if (_filter == ScenesFilter.Scheduled)
     {

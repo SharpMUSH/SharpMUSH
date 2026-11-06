@@ -21,11 +21,6 @@
 	flex-shrink: 0;
 }
 
-.online-characters-note {
-	font-size: 13px;
-	color: var(--text-faint);
-}
-
 .online-characters-all {
 	display: inline-block;
 	margin-top: 8px;

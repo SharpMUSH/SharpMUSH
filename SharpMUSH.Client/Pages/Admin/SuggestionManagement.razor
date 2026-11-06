@@ -23,10 +23,7 @@
     else if (_categories == null || !_categories.Any())
     {
         <KitCard>
-            <div class="sugg-empty">
-                <MudIcon Icon="@Icons.Material.Filled.Spellcheck" Class="sugg-empty-icon" />
-                <div class="sugg-empty-text">@Loc["NoSuggestionCategories"]</div>
-            </div>
+            <EmptyState Class="sugg-empty" Icon="@Icons.Material.Outlined.Spellcheck">@Loc["NoSuggestionCategories"]</EmptyState>
         </KitCard>
     }
 
@@ -100,9 +97,7 @@
                                         }
                                         else
                                         {
-                                            <MudAlert Severity="Severity.Info" Dense="true">
-                                                @Loc["NoWordsInCategory"]
-                                            </MudAlert>
+                                            <EmptyState Compact="true" Icon="@Icons.Material.Outlined.Spellcheck">@Loc["NoWordsInCategory"]</EmptyState>
                                         }
                                     </MudStack>
                                 </div>

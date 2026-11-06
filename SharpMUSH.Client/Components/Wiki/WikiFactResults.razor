@@ -16,7 +16,7 @@ else if (_pages is { } pages)
 {
     @if (pages.Count == 0 && _next is null)
     {
-        <EmptyState>@Loc["WkFactSearchNone"]</EmptyState>
+        <EmptyState Icon="@Icons.Material.Outlined.SearchOff">@Loc["WkFactSearchNone"]</EmptyState>
     }
     @if (_show.Count == 0)
     {

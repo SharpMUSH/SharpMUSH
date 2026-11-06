@@ -1,22 +1,3 @@
-.sugg-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    padding: 56px 24px;
-    text-align: center;
-}
-
-.sugg-empty ::deep .sugg-empty-icon {
-    font-size: 40px;
-    color: var(--text-faint);
-}
-
-.sugg-empty-text {
-    font-size: 13px;
-    color: var(--text-dim);
-}
-
 .sugg-panels {
     padding: 6px 8px 8px;
 }
@@ -70,14 +51,4 @@
     border-color: rgba(var(--glow), 0.3);
     color: var(--accent);
     border-radius: 99px;
-}
-
-@container page (max-width: 48rem) {
-    .sugg-empty {
-        padding: 40px 20px;
-    }
-
-    .sugg-empty ::deep .sugg-empty-icon {
-        font-size: 32px;
-    }
 }

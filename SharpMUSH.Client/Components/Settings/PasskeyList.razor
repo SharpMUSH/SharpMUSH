@@ -20,7 +20,7 @@
             }
             else if (State.Passkeys.Count == 0)
             {
-                <div class="acct-empty">@Loc["AuthPasskeysNone"]</div>
+                <EmptyState Compact="true" Class="acct-empty" Icon="@Icons.Material.Outlined.Key">@Loc["AuthPasskeysNone"]</EmptyState>
             }
             else
             {

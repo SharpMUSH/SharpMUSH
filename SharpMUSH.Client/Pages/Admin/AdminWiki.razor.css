@@ -264,12 +264,6 @@
 	text-align: center;
 }
 
-.adminwiki-empty {
-	padding: 1rem;
-	font-size: 0.8125rem;
-	color: var(--text-dim);
-}
-
 /* Permissions card: each rule is a tile; the editors inside are their own */
 .adminwiki-requirements-grid {
 	display: grid;

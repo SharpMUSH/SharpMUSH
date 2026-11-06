@@ -202,15 +202,6 @@
 	background: var(--surface-2);
 }
 
-.wiki-empty {
-	padding: 24px 16px;
-	text-align: center;
-	color: var(--text-dim);
-	background: var(--surface);
-	border: 1px solid var(--border);
-	border-radius: var(--radius-card);
-}
-
 .wiki-empty-hint {
 	margin-top: 6px;
 	font-size: 13px;

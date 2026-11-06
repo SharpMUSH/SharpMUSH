@@ -28,7 +28,7 @@
 
     @if (Lookup.LookedUp && Lookup.Account is null)
     {
-        <AdminEmptyDetail Prefix="ra" Icon="@Icons.Material.Filled.PersonOff" Text="@Loc["RolNoAccountFound", Lookup.Name]" />
+        <EmptyState Class="ra-empty-detail" Icon="@Icons.Material.Outlined.PersonOff">@Loc["RolNoAccountFound", Lookup.Name]</EmptyState>
     }
     else if (Lookup.Account is { } account)
     {
@@ -117,7 +117,7 @@
     }
     else
     {
-        <AdminEmptyDetail Prefix="ra" Icon="@Icons.Material.Filled.ManageAccounts" Text="@Loc["RolSearchAccountPrompt"]" />
+        <EmptyState Class="ra-empty-detail" Icon="@Icons.Material.Outlined.ManageAccounts">@Loc["RolSearchAccountPrompt"]</EmptyState>
     }
 </KitCard>
 

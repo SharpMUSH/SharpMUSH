@@ -37,7 +37,7 @@
     <SidebarGroup Class="char-side-online" Label="@Loc["NavCharOnlineNow"]">
         @if (_online is { Count: 0 } && !Collapsed)
         {
-            <SidebarNote>@Loc["NavCharNoneOnline"]</SidebarNote>
+            <EmptyState Compact="true" Icon="@Icons.Material.Outlined.PeopleOutline">@Loc["NavCharNoneOnline"]</EmptyState>
         }
         @foreach (var r in (_online ?? []).Take(OnlineShown))
         {

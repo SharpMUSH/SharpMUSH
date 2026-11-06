@@ -106,7 +106,7 @@
         <div class="adm-mod-body">
             <LoadState TValue="AdminBansResponse" Value="_bans" Loading="@(_bans is null)" Error="@_error" IsEmpty="bans => bans.Bans.Count == 0" Context="bans">
                 <Empty>
-                    <EmptyBox>@Loc["AdmModerationNoBans"]</EmptyBox>
+                    <EmptyState Compact="true" Icon="@Icons.Material.Outlined.Gavel">@Loc["AdmModerationNoBans"]</EmptyState>
                 </Empty>
                 <ChildContent>
                     <MudTable Items="bans.Bans" Dense="true" Hover="true" Elevation="0" Class="adm-mod-table">
@@ -166,7 +166,7 @@
             }
             else if (_bans is not null)
             {
-                <EmptyBox>@Loc["AdmModerationNoHosts"]</EmptyBox>
+                <EmptyState Compact="true" Icon="@Icons.Material.Outlined.Dns">@Loc["AdmModerationNoHosts"]</EmptyState>
             }
         </div>
     </KitCard>

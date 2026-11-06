@@ -50,6 +50,9 @@ public sealed class MailApiFake : HttpMessageHandler
 
 	public MailApiFake() => Auth.ActiveCharacter.Returns(First);
 
+	/// <summary>Empties the inbox, before the page first reads it.</summary>
+	public void EmptyInbox() => _inbox = [];
+
 	/// <summary>
 	/// The tab switches to another character. The server binds every later request to the new one, so
 	/// from here on it answers with that character's mailbox — folders INBOX and PLOTS, one unread

@@ -40,7 +40,7 @@
             <LoadState Value="_entries" Loading="@(_loading && _entries.Count == 0)" Error="@_error"
                        IsEmpty="entries => entries.Count == 0" Context="entries">
                 <Empty>
-                    <EmptyBox>@Loc["AdmAuditEmpty"]</EmptyBox>
+                    <EmptyState Icon="@Icons.Material.Outlined.History">@Loc["AdmAuditEmpty"]</EmptyState>
                 </Empty>
                 <ChildContent>
                     <MudTable Items="entries" Dense="true" Hover="true" Elevation="0" Class="adm-audit-table">

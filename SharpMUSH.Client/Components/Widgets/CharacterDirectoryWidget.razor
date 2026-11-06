@@ -33,11 +33,11 @@
     {
         @* The roster could not be read at all. "No characters found" would be a claim about the
            game rather than about this request. *@
-        <EmptyBox>@Loc["WidUnavailable"]</EmptyBox>
+        <EmptyState Compact="true" Failed="true">@Loc["WidUnavailable"]</EmptyState>
     }
     else if (Filtered.Count == 0)
     {
-        <EmptyBox>@Loc["NoCharactersFound"]</EmptyBox>
+        <EmptyState Compact="true" Icon="@Icons.Material.Outlined.Groups">@Loc["NoCharactersFound"]</EmptyState>
     }
     else
     {

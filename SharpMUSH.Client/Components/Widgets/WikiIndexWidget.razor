@@ -52,7 +52,7 @@
         <a class="wiki-browse-all" href="@WikiLocaleLinks.WithLocale("/wiki/collections/game", _locale)">@Loc["WikiBrowseAllCategories"]</a>
         @if (_loadFailed)
         {
-            <div class="wiki-empty" role="alert">@Loc["WikiLoadFailed"]</div>
+            <EmptyState Class="wiki-empty" role="alert" Failed="true">@Loc["WikiLoadFailed"]</EmptyState>
         }
         else if (Searching)
         {
@@ -69,7 +69,7 @@
         }
         else if (FilteredGroups.Count == 0)
         {
-            <div class="wiki-empty">
+            <EmptyState Class="wiki-empty" Icon="@(Searching ? Icons.Material.Outlined.SearchOff : Icons.Material.Outlined.Article)">
                 @(!Searching ? ((_navigation?.Total ?? 0) == 0 ? Loc["NavWikiNoPages"] : Loc["NavWikiNoPinned"]) : string.Format(Loc["NavWikiNoMatches"], _search))
                 @if (!Searching && (_navigation?.Total ?? 0) > 0)
                 {
@@ -79,7 +79,7 @@
                         </Authorized>
                     </AuthorizeView>
                 }
-            </div>
+            </EmptyState>
         }
         else
         {

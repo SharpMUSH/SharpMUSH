@@ -34,6 +34,14 @@
 	gap: 12px;
 }
 
+.mail-panes--single {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.mail-list-body ::deep .mail-list-empty {
+	margin: 16px;
+}
+
 .mail-panes ::deep .mail-list,
 .mail-panes ::deep .mail-reading {
 	min-height: 0;

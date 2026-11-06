@@ -25,7 +25,7 @@
             @Group(Loc["LayBldKeep"], keeps)
             @if (asks.Count + shows.Count + keeps.Count == 0)
             {
-                <p class="bld-palette-none">@Loc["LayBldFindNone"]</p>
+                <EmptyState Compact="true" Class="bld-palette-none" Icon="@Icons.Material.Outlined.SearchOff">@Loc["LayBldFindNone"]</EmptyState>
             }
         </div>
     </ChildContent>

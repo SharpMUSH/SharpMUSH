@@ -90,7 +90,7 @@
                                 }
                                 @if (group.Items.Count == 0)
                                 {
-                                    <li class="adm-nav-empty">@Loc["AdmNavGroupEmpty"]</li>
+                                    <li class="adm-nav-empty"><EmptyState Compact="true">@Loc["AdmNavGroupEmpty"]</EmptyState></li>
                                 }
                             </ul>
                             @if (_linkFor == id)
@@ -136,7 +136,7 @@
                         }
                         @if (_draft.Hidden.Count == 0)
                         {
-                            <li class="adm-nav-empty">@Loc["AdmNavHiddenEmpty"]</li>
+                            <li class="adm-nav-empty"><EmptyState Compact="true">@Loc["AdmNavHiddenEmpty"]</EmptyState></li>
                         }
                     </ul>
                 </KitCard>

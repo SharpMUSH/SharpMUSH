@@ -215,13 +215,13 @@
                 }
                 else if (visible.Count == 0 && NotStarted(scene))
                 {
-                    <EmptyBox Class="scene-detail-not-started">@(scene.ScheduledForUtc is { } due
+                    <EmptyState Class="scene-detail-not-started" Icon="@Icons.Material.Outlined.Schedule">@(scene.ScheduledForUtc is { } due
                         ? string.Format(Loc["RolSceneStartsAt"], DateDisplay.DateTime(due))
-                        : Loc["RolSceneNotStartedYet"])</EmptyBox>
+                        : Loc["RolSceneNotStartedYet"])</EmptyState>
                 }
                 else if (visible.Count == 0)
                 {
-                    <EmptyBox>@Loc["RolNoPoses"]</EmptyBox>
+                    <EmptyState Icon="@Icons.Material.Outlined.ChatBubbleOutline">@Loc["RolNoPoses"]</EmptyState>
                 }
                 else
                 {

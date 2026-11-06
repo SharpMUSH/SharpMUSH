@@ -28,7 +28,7 @@
         @Pager
         @if (batch.Total == 0)
         {
-            <EmptyState Class="wiki-cat-empty">@Loc["NavWikiCategoryEmpty"]</EmptyState>
+            <EmptyState Class="wiki-cat-empty" Icon="@Icons.Material.Outlined.FolderOpen">@Loc["NavWikiCategoryEmpty"]</EmptyState>
         }
         <div class="wiki-cat-grid">
             @foreach (var entry in batch.Pages)

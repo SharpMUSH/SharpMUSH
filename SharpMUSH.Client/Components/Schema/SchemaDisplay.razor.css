@@ -39,12 +39,6 @@
 	margin: 0;
 }
 
-.schema-empty {
-	font-size: 14px;
-	color: var(--text-dim);
-	padding: 8px 0;
-}
-
 .schema-link {
 	color: var(--accent);
 	text-decoration: none;

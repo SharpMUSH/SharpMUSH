@@ -68,9 +68,3 @@
     color: var(--text-dim);
     font-size: .75rem;
 }
-
-.bld-palette-none {
-    margin: 8px 6px;
-    color: var(--text-dim);
-    font-size: .8125rem;
-}

@@ -28,7 +28,10 @@
     }
     else if (_scenes.Count == 0)
     {
-        <EmptyBox>@Loc["WidNoActiveScenes"]</EmptyBox>
+        <EmptyState Icon="@Icons.Material.Outlined.TheaterComedy">
+            <ChildContent>@Loc["WidNoActiveScenes"]</ChildContent>
+            <Action><CapsuleButton Icon="@Icons.Material.Outlined.CalendarMonth" Href="@ScenesFilter.Href(ScenesFilter.Scheduled)">@Loc["NavScenesScheduled"]</CapsuleButton></Action>
+        </EmptyState>
     }
     else
     {

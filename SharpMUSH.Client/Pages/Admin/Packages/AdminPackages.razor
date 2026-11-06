@@ -94,8 +94,9 @@
             }
             else if (_installed.Count == 0)
             {
-                <EmptyState>
-                    @Loc["PkgNoneInstalled"]
+                <EmptyState Icon="@Icons.Material.Outlined.Inventory2">
+                    <ChildContent>@Loc["PkgNoneInstalled"]</ChildContent>
+                    <Action><CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Search" Href="/admin/packages/browse">@Loc["PkgBrowse"]</CapsuleButton></Action>
                 </EmptyState>
             }
             else
@@ -103,7 +104,7 @@
                 var visible = FilteredPackages().ToList();
                 if (visible.Count == 0)
                 {
-                    <EmptyState>
+                    <EmptyState Icon="@(_tab == PkgTab.Updates ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.SearchOff)">
                         @(_tab == PkgTab.Updates ? Loc["PkgNoUpdatesAvailable"] : Loc["PkgNoSearchMatch"])
                     </EmptyState>
                 }
@@ -198,7 +199,7 @@
     {
         if (_plugins is null)
         {
-            <EmptyState>@Loc["PkgPluginsUnavailable"]</EmptyState>
+            <EmptyState Failed="true">@Loc["PkgPluginsUnavailable"]</EmptyState>
         }
         else if (_restarting)
         {
@@ -221,7 +222,7 @@
 
         if (_plugins is { Plugins.Count: 0 })
         {
-            <EmptyState>@Loc["PkgNoPlugins"]</EmptyState>
+            <EmptyState Icon="@Icons.Material.Outlined.Extension">@Loc["PkgNoPlugins"]</EmptyState>
         }
         else if (_plugins is not null)
         {

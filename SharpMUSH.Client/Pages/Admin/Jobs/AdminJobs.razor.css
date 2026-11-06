@@ -27,12 +27,6 @@
 	min-width: 0;
 }
 
-.jobs-empty {
-	margin: 0;
-	font-size: 13px;
-	color: var(--text-dim);
-}
-
 .jobs-entry {
 	display: grid;
 	gap: 0.4rem;

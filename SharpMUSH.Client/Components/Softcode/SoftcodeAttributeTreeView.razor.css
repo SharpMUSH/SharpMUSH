@@ -103,14 +103,6 @@
     cursor: default;
 }
 /* Nothing to list: no attributes, or none matching the filter. */
-.sc-tree-empty {
-    padding: 0.75rem;
-    color: var(--text-faint);
-    font-size: 0.75rem;
-    text-align: center;
-    font-family: var(--font-mono);
-}
-
 /* Mobile: rows a finger can hit. */
 @container page (max-width: 48rem) {
     /* Finger-sized fold controls; the tree rows themselves already are. */

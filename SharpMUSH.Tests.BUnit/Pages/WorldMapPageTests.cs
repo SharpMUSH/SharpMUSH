@@ -604,8 +604,9 @@ public class WorldMapPageTests : TrackingBunitContext
 
 		var cut = Render<SharpMUSH.Client.Pages.WorldMap>();
 
-		cut.WaitForAssertion(() => cut.Find(".map-note"));
-		await Assert.That(cut.Markup).Contains("NavMapNeedsCharacter");
+		cut.WaitForAssertion(() => cut.Find(".kit-empty"));
+		await Assert.That(cut.Find(".kit-empty-text").TextContent).IsEqualTo("NavMapNeedsCharacter");
+		await Assert.That(cut.Find(".kit-empty-action a").GetAttribute("href")).IsEqualTo("/characters/new");
 		await Assert.That(cut.FindAll(".map-tree")).IsEmpty();
 	}
 

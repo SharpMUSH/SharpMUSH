@@ -106,11 +106,6 @@
 	gap: 10px;
 }
 
-.comm-empty {
-	color: var(--text-faint);
-	font-style: italic;
-}
-
 .comm-unlogged {
 	color: var(--text-faint);
 	font-size: 0.85em;
@@ -302,12 +297,6 @@
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
 	color: var(--text-dim);
-}
-
-.comm-members-empty {
-	font-size: 13px;
-	color: var(--text-faint);
-	font-style: italic;
 }
 
 .comm-members-list {

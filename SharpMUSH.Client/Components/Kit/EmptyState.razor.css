@@ -1,0 +1,72 @@
+.kit-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 12px;
+	padding: 32px 24px;
+	border-radius: var(--radius-card);
+	background: var(--surface-2);
+	color: var(--text-dim);
+	text-align: center;
+}
+
+.kit-empty-icon {
+	width: 48px;
+	height: 48px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	background: rgba(var(--glow), 0.10);
+	color: var(--accent);
+}
+
+.kit-empty-icon ::deep .mud-icon-root {
+	font-size: 24px;
+}
+
+.kit-empty--failed .kit-empty-icon {
+	background: var(--warn-tint);
+	color: var(--warn);
+}
+
+.kit-empty-text {
+	max-width: 32rem;
+	font-size: 14px;
+	line-height: 1.5;
+}
+
+.kit-empty-action {
+	margin-top: 4px;
+}
+
+.kit-empty--compact {
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 10px;
+	background: none;
+	text-align: start;
+}
+
+.kit-empty--compact .kit-empty-icon {
+	width: auto;
+	height: auto;
+	background: none;
+	color: var(--text-faint);
+}
+
+.kit-empty--compact .kit-empty-icon ::deep .mud-icon-root {
+	font-size: 16px;
+}
+
+.kit-empty--compact .kit-empty-text {
+	flex: 1 1 0;
+	min-width: 0;
+	font-size: 13px;
+}
+
+.kit-empty--compact .kit-empty-action {
+	margin-top: 0;
+}
