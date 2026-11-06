@@ -203,7 +203,8 @@ public partial class LightningDatabase
 				}
 
 				list.Add(new MailSummary(MailId(mailId), DateTimeOffset.FromUnixTimeMilliseconds(record.DateSent), record.Read,
-					record.Urgent, record.Folder, MarkupTextSerializer.Deserialize(record.Subject), sender, record.Anonymous));
+					record.Urgent, record.Folder, MarkupTextSerializer.Deserialize(record.Subject), sender)
+				{ Anonymous = record.Anonymous });
 			}
 
 			return list;
