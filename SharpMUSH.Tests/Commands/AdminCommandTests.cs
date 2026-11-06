@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library.Definitions;
@@ -16,6 +17,7 @@ public class AdminCommandTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	/// <summary>
 	/// PennMUSH src/wiz.c <c>do_pcreate</c> ends with
@@ -70,32 +72,55 @@ public class AdminCommandTests
 			NotifyService, nameof(ErrorMessages.Notifications.NewPasswordChangedByFormat), victim)).IsTrue();
 	}
 
+	/// <summary>
+	/// PennMUSH src/player.c <c>do_password</c>: a wrong old password is refused with
+	/// <c>The old password that you entered was incorrect.</c> and changes nothing; the right one is
+	/// answered <c>You have changed your password.</c>
+	/// </summary>
+	/// <remarks>
+	/// Was skipped for "state pollution from other tests": it changed God's password and read God's
+	/// notifications. It now changes the password of a player it creates and reads that player's.
+	/// </remarks>
 	[Test]
-	[Category("TestInfrastructure")]
-	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask PasswordCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@password oldpassPassword=newpassPassword"));
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "Pw");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessageEquals(msg, "Password changed.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@password wrongPassword=newpassPassword"));
+		await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef))
+			.Contains("The old password that you entered was incorrect.");
+		await Assert.That(await Evaluate($"checkpass({player.DbRef},{TestIsolationHelpers.TestPassword})")).IsEqualTo("1");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@password {TestIsolationHelpers.TestPassword}=newpassPassword"));
+		await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef)).Contains("You have changed your password.");
+		await Assert.That(await Evaluate($"checkpass({player.DbRef},newpassPassword)")).IsEqualTo("1");
 	}
 
+	/// <summary>
+	/// <c>@poor &lt;player&gt;</c> sets that player's quota to 0 and tells both sides.
+	/// </summary>
+	/// <remarks>
+	/// Was skipped for "state pollution from other tests": it named a fixed #1001, which another test
+	/// may or may not have created, and accepted either of two answers. It now names a player it
+	/// creates.
+	/// </remarks>
 	[Test]
-	[Category("TestInfrastructure")]
-	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask PoorCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@poor #1001"));
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "Poor");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "The quota system is disabled") ||
-				TestHelpers.MessageEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@poor {player.DbRef}"));
+
+		await Assert.That(WebAppFactoryArg.Notifications.For(WebAppFactoryArg.ExecutorDBRef))
+			.Contains($"{player.Name} has been set to poor status (quota: 0).");
+		await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef))
+			.Contains($"Your building quota has been set to 0 by {await Evaluate("name(#1)")}.");
+		await Assert.That(await Evaluate($"quota({player.DbRef})")).IsEqualTo("0");
 	}
+
+	private async Task<string> Evaluate(string expression)
+		=> (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 }

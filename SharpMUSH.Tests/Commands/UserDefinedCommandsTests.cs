@@ -278,21 +278,32 @@ public class UserDefinedCommandsTests
 		await ExpectHeardOnce($"{token}: north", obj, INotifyService.NotificationType.Emit);
 	}
 
+	/// <summary>
+	/// Setting a $-command attribute takes effect on the next typed line: a new attribute is matched, and a
+	/// changed one runs its new action, not a cached copy of the old one.
+	/// </summary>
+	/// <remarks>
+	/// Was skipped as "needs investigation": it set fixed <c>$test</c> and <c>$test2</c> patterns on God,
+	/// which any other test's <c>test</c> could also match. It now uses patterns and an object of its own.
+	/// </remarks>
 	[Test]
-	[Category("TestInfrastructure")]
-	[Skip("Test needs investigation - unrelated to communication commands")]
 	public async Task SetAndResetCacheTest()
 	{
-		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("&cmd`setandresetcache #1=$test:@pemit #1=Value 1 received"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("test"));
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcCache");
+		var token = TestIsolationHelpers.GenerateUniqueName("ucache");
 
-		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("&cmd`setandresetcache #1=$test2:@pemit #1=Value 2 received"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("test2"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&CMD`ONE {obj}=${token}:@emit {token} one"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(token));
+		await ExpectHeardOnce($"{token} one", obj, INotifyService.NotificationType.Emit);
 
-		await ExpectHeardOnce("Value 1 received", WebAppFactoryArg.ExecutorDBRef, INotifyService.NotificationType.Announce);
-		await ExpectHeardOnce("Value 2 received", WebAppFactoryArg.ExecutorDBRef, INotifyService.NotificationType.Announce);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&CMD`TWO {obj}=${token}2:@emit {token} two"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}2"));
+		await ExpectHeardOnce($"{token} two", obj, INotifyService.NotificationType.Emit);
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&CMD`ONE {obj}=${token}:@emit {token} changed"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(token));
+		await ExpectHeardOnce($"{token} changed", obj, INotifyService.NotificationType.Emit);
+		await ExpectHeardOnce($"{token} one", obj, INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>

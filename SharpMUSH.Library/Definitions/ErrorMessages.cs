@@ -1492,7 +1492,9 @@ public static partial class ErrorMessages
 		public const string MailBadArguments = "MAIL: Bad arguments to @mail. See 'help @mail' for usage.";
 
 		public const string PasswordOnlyPlayersHavePasswords = "Only players have passwords.";
-		public const string PasswordInvalid = "Invalid password.";
+		// do_password (pennmush/src/player.c).
+		public const string PasswordInvalid = "The old password that you entered was incorrect.";
+		public const string PasswordChanged = "You have changed your password.";
 
 		// @scan's section headings and match lines, verbatim from do_scan (pennmush/src/game.c:1890-1996)
 		// and confirmed against a live PennMUSH 1.8.8. A heading prints whether or not its section

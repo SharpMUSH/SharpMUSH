@@ -192,14 +192,28 @@ public class InformationFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// hidden() of a connected player, by name, by dbref and by descriptor, before and after it hides.
+	/// </summary>
+	/// <remarks>
+	/// Was skipped for an intermittent '1': it asked about God, whom other tests in the shared session
+	/// hide and set DARK. It now asks about a player of its own.
+	/// </remarks>
 	[Test]
-	[Arguments("hidden(%#)", "0")]
-	[Category("TestInfrastructure")]
-	[Skip("Test infrastructure issue - intermittent failure, returns '1' instead of '0'")]
-	public async Task Hidden(string str, string expected)
+	public async Task Hidden()
 	{
-		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services,
+			WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), ConnectionService, "HiddenFn");
+
+		await Assert.That(await Eval($"hidden({player.Name})")).IsEqualTo("0");
+		await Assert.That(await Eval($"hidden({player.DbRef})")).IsEqualTo("0");
+		await Assert.That(await Eval($"hidden({player.Handle})")).IsEqualTo("0");
+
+		ConnectionService.Update(player.Handle, "Hidden", "1");
+
+		await Assert.That(await Eval($"hidden({player.Name})")).IsEqualTo("1");
+		await Assert.That(await Eval($"hidden({player.DbRef})")).IsEqualTo("1");
+		await Assert.That(await Eval($"hidden({player.Handle})")).IsEqualTo("1");
 	}
 
 	[Test]
