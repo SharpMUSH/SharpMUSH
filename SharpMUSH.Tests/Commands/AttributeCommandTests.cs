@@ -46,6 +46,31 @@ public class AttributeCommandTests
 		await Assert.That(attr.IsAttribute).IsTrue();
 	}
 
+	/// <summary>
+	/// <c>match_controlled</c> refuses an object the player does not control before anything is set or
+	/// cleared (<c>src/cmds.c:1786</c>), and says so as @set does.
+	/// </summary>
+	[Test]
+	[Arguments("=refused")]
+	[Arguments("=")]
+	public async ValueTask SetAttributeOnAnUncontrolledObjectIsRefused(string value)
+	{
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrForeign");
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "SetAttrMortal");
+		var attribute = TestIsolationHelpers.GenerateUniqueName("FOREIGN").ToUpperInvariant();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{attribute} {objDbRef}=kept"));
+
+		await WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle)
+			.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"&{attribute} {objDbRef}{value}"));
+
+		await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef))
+			.Contains($"Permission denied. You do not control {obj.Object().Name}.");
+		var attr = await AttributeService.GetAttributeAsync(obj, obj, attribute, IAttributeService.AttributeMode.Read, false);
+		await Assert.That(attr is SharpAttribute[] { Length: > 0 } stored && stored[^1].Value.ToPlainText() == "kept").IsTrue();
+	}
+
 	[Test]
 	public async ValueTask SetAttributeEmpty()
 	{

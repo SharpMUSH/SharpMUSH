@@ -39,6 +39,21 @@ public class FlagFunctionUnitTests
 		await Assert.That(names).Contains("WIZARD");
 	}
 
+	// They are list_all_flags (src/flags.c:2994): sorted by name, and never the internal GOING flags,
+	// which only the server sets.
+	[Test]
+	public async Task FlagsAndLflags_WithNoArgument_LeaveOutInternalFlags()
+	{
+		var symbols = (await Parser.FunctionParse(MarkupText.Plain("flags()")))?.Message.ToPlainText();
+		var names = (await Parser.FunctionParse(MarkupText.Plain("lflags()")))?.Message.ToPlainText()
+			.Split(' ') ?? [];
+
+		await Assert.That(names).DoesNotContain("GOING");
+		await Assert.That(names).DoesNotContain("GOING_TWICE");
+		await Assert.That(names).IsEquivalentTo(names.Order(StringComparer.Ordinal), TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(symbols).DoesNotContain("G");
+	}
+
 	[Test]
 	[Arguments("orlflags(%#,PLAYER WIZARD)", "1")]
 	public async Task Orlflags(string str, string expected)

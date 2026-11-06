@@ -1617,15 +1617,13 @@ public static partial class ErrorMessages
 		public const string NoSuggestionCategoriesDefined = "No suggestion categories defined.";
 		public const string SuggestAddUsage = "Usage: @suggest/add <category>=<word>";
 		public const string SuggestCategoryAndWordCannotBeEmpty = "Category and word cannot be empty.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SuggestAddedWordToCategoryFormat = "Added '{0}' to category '{1}'.";
+		public const string SuggestionWordAdded = "Suggestion vocabulary word added.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SuggestWordAlreadyExistsFormat = "Word '{0}' already exists in category '{1}'.";
 		public const string SuggestDeleteUsage = "Usage: @suggest/delete <category>=<word>";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SuggestCategoryDoesNotExistFormat = "Category '{0}' does not exist.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SuggestRemovedWordFromCategoryFormat = "Removed '{0}' from category '{1}'.";
+		public const string SuggestionWordDeleted = "Suggestion vocabulary word deleted.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SuggestWordNotFoundInCategoryFormat = "Word '{0}' not found in category '{1}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

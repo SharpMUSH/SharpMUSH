@@ -272,8 +272,10 @@ public partial class Functions
 		var arg0 = (parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message ?? MarkupText.Empty).ToPlainText();
 		if (arg0.Length == 0)
 		{
-			var flags = Mediator.CreateStream(new GetAllObjectFlagsQuery());
-			return string.Concat(await flags.Select(x => x.Symbol).ToArrayAsync());
+			var flags = await Mediator.CreateStream(new GetAllObjectFlagsQuery())
+				.Select(f => (f.Name, f.Symbol, f.SetPermissions, f.Disabled)).ToArrayAsync();
+			var lister = await parser.CurrentState.KnownExecutorObject(Mediator);
+			return FlagListHelpers.Letters(flags, lister.IsGod(), await lister.IsPriv());
 		}
 
 		var dbrefAndAttr = HelperFunctions.SplitDbRefAndOptionalAttr(arg0);
@@ -326,28 +328,22 @@ public partial class Functions
 	private async ValueTask<CallState> GetAttributeValueAsync(IMUSHCodeParser parser, string dbref, string attribute)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			dbref,
-			LocateFlags.All,
-			async x =>
-			{
-				var maybeAttr = await AttributeService.GetAttributeAsync(
-					executor,
-					x,
-					attribute,
-					mode: IAttributeService.AttributeMode.Read,
-					parent: true);
-
-				return maybeAttr switch
-				{
-					SharpAttribute[] chain => new CallState(chain.Last().Value),
-					None => await MissingAttributeGetResultAsync(executor, x, attribute),
-					Error<string> error => new CallState(error.Value)
-				};
-			});
+		// Both answer e_notvis for anything match_thing does not find (src/fundb.c:274-277, 290-293).
+		return await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, LocateFlags.All) switch
+		{
+			AnySharpObject found => await ReadAttributeAsync(executor, found, attribute),
+			_ => new CallState(ErrorMessages.Returns.NotVisible)
+		};
 	}
+
+	private async ValueTask<CallState> ReadAttributeAsync(AnySharpObject executor, AnySharpObject found, string attribute)
+		=> await AttributeService.GetAttributeAsync(executor, found, attribute,
+				mode: IAttributeService.AttributeMode.Read, parent: true) switch
+		{
+			SharpAttribute[] chain => new CallState(chain.Last().Value),
+			None => await MissingAttributeGetResultAsync(executor, found, attribute),
+			Error<string> error => new CallState(error.Value)
+		};
 
 	/// <summary>
 	/// What <c>get()</c>/<c>xget()</c> return when the attribute is not set: PennMUSH's
@@ -694,8 +690,10 @@ public partial class Functions
 		var arg0 = (parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message ?? MarkupText.Empty).ToPlainText();
 		if (arg0.Length == 0)
 		{
-			var flags = Mediator.CreateStream(new GetAllObjectFlagsQuery());
-			return string.Join(" ", await flags.Select(x => x.Name).ToArrayAsync());
+			var flags = await Mediator.CreateStream(new GetAllObjectFlagsQuery())
+				.Select(f => (f.Name, f.Symbol, f.SetPermissions, f.Disabled)).ToArrayAsync();
+			var lister = await parser.CurrentState.KnownExecutorObject(Mediator);
+			return FlagListHelpers.Names(flags, lister.IsGod(), await lister.IsPriv());
 		}
 
 		var dbrefAndAttr = HelperFunctions.SplitDbRefAndOptionalAttr(arg0);

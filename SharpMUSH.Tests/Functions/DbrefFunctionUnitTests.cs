@@ -19,8 +19,21 @@ public class DbrefFunctionUnitTests
 	[Test]
 	public async Task Loc()
 	{
+		// fun_loc writes safe_dbref: the dbref, not the objid.
 		var result = await Parser.EvaluateAsync(MarkupText.Plain("loc(%#)"));
-		await Assert.That(result.ToPlainText()).StartsWith("#0:");
+		await Assert.That(result.ToPlainText()).IsEqualTo("#0");
+	}
+
+	/// <summary>fun_loc answers a bare #-1 for a miss; fun_name and fun_get answer e_notvis (src/fundb.c).</summary>
+	[Test]
+	[Arguments("loc(#999999)", "#-1")]
+	[Arguments("name(#999999)", ErrorMessages.Returns.NotVisible)]
+	[Arguments("get(#999999/DESC)", ErrorMessages.Returns.NotVisible)]
+	[Arguments("xget(#999999,DESC)", ErrorMessages.Returns.NotVisible)]
+	public async Task MissesAnswerAsPennMUSH(string call, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(call));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -34,7 +47,7 @@ public class DbrefFunctionUnitTests
 	public async Task Home()
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain("home(%#)"));
-		await Assert.That(result.ToPlainText()).StartsWith("#0:");
+		await Assert.That(result.ToPlainText()).IsEqualTo("#0");
 	}
 
 	[Test]
@@ -42,7 +55,7 @@ public class DbrefFunctionUnitTests
 	{
 		// loc() on a room is its drop-to, or says it has none.
 		var result = await Parser.EvaluateAsync(MarkupText.Plain("loc(%l)"));
-		await Assert.That(result.ToPlainText()).Matches("^(#[0-9]+:[0-9]+|#-1 NO DROP-TO)$");
+		await Assert.That(result.ToPlainText()).Matches("^(#[0-9]+|#-1 NO DROP-TO)$");
 	}
 
 	[Test]
@@ -50,7 +63,7 @@ public class DbrefFunctionUnitTests
 	{
 		// home() on a room is its drop-to, or says it has none.
 		var result = await Parser.EvaluateAsync(MarkupText.Plain("home(%l)"));
-		await Assert.That(result.ToPlainText()).Matches("^(#[0-9]+:[0-9]+|#-1 NO DROP-TO)$");
+		await Assert.That(result.ToPlainText()).Matches("^(#[0-9]+|#-1 NO DROP-TO)$");
 	}
 
 
@@ -449,7 +462,8 @@ public class DbrefFunctionUnitTests
 
 		var result = await Parser.EvaluateAsync(MarkupText.Plain($"loc({exitDbRef})"));
 
-		await Assert.That(result.ToPlainText()).IsEqualTo(destDbRef);
+		// @dig answers the objid; loc() the dbref alone.
+		await Assert.That(result.ToPlainText()).IsEqualTo($"#{DBRef.Parse(destDbRef).Number}");
 	}
 
 	/// <summary>
