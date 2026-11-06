@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -141,83 +142,10 @@ internal sealed class EvaluationDiagnostics(EvaluationServices services)
 	}
 
 	/// <summary>
-	/// The known function name closest to <paramref name="name"/>, for PennMUSH's
-	/// "DID YOU MEAN 'X'" hint on an unknown function inside <c>[...]</c> (src/parse.c). Returns the
-	/// nearest library name within a small edit distance — <c>min(2, max(1, len/3))</c>: 1 for names
-	/// up to 5 characters, 2 for longer, never more than 2 — so short typos do not match everything,
-	/// or null if nothing is close enough. Only ever suggests names that exist, so at worst a
-	/// suggestion is missed, never wrong.
+	/// PennMUSH's <c>suggest_name(name, "FUNCTIONS")</c> (src/function.c:189): the one spellfix1 match
+	/// at scope 5 among the function names, or null. Only names that exist are suggested.
 	/// </summary>
 	public static string? SuggestFunctionName(string name,
 		LibraryService<string, FunctionDefinition> functions)
-	{
-		var typed = name.ToLowerInvariant();
-		var budget = Math.Min(2, Math.Max(1, typed.Length / 3));
-
-		string? best = null;
-		var bestDistance = int.MaxValue;
-		foreach (var (candidate, _) in functions)
-		{
-			// FunctionLibrary is case-insensitive but does not normalise its stored keys, so a key
-			// can be any case (built-ins are lower-case, but a user-registered alias need not be).
-			// Lower-case it for the otherwise case-sensitive distance comparison. This is the
-			// unknown-function error path, so the per-candidate allocation is not on a hot path.
-			var lower = candidate.ToLowerInvariant();
-			var distance = LevenshteinWithin(typed, lower, budget);
-			if (distance < 0)
-			{
-				continue;
-			}
-
-			// Closest wins; ties break alphabetically for a stable suggestion.
-			if (distance < bestDistance || (distance == bestDistance && (best is null || string.CompareOrdinal(lower, best) < 0)))
-			{
-				best = lower;
-				bestDistance = distance;
-			}
-		}
-
-		return best;
-	}
-
-	/// <summary>
-	/// Levenshtein edit distance between <paramref name="a"/> and <paramref name="b"/>, returning
-	/// -1 as soon as it is known to exceed <paramref name="max"/> (a length gap alone can decide
-	/// this without any work). Bounding the search keeps the per-candidate cost tiny.
-	/// </summary>
-	private static int LevenshteinWithin(string a, string b, int max)
-	{
-		if (Math.Abs(a.Length - b.Length) > max)
-		{
-			return -1;
-		}
-
-		var previous = new int[b.Length + 1];
-		var current = new int[b.Length + 1];
-		for (var j = 0; j <= b.Length; j++)
-		{
-			previous[j] = j;
-		}
-
-		for (var i = 1; i <= a.Length; i++)
-		{
-			current[0] = i;
-			var rowMin = current[0];
-			for (var j = 1; j <= b.Length; j++)
-			{
-				var cost = a[i - 1] == b[j - 1] ? 0 : 1;
-				current[j] = Math.Min(Math.Min(current[j - 1] + 1, previous[j] + 1), previous[j - 1] + cost);
-				rowMin = Math.Min(rowMin, current[j]);
-			}
-
-			if (rowMin > max)
-			{
-				return -1;
-			}
-
-			(previous, current) = (current, previous);
-		}
-
-		return previous[b.Length] <= max ? previous[b.Length] : -1;
-	}
+		=> Spellfix.Match(functions.Select(function => function.Key), name.ToUpperInvariant(), limit: 1, scope: 5).FirstOrDefault();
 }

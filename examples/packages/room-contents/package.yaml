@@ -1,7 +1,7 @@
 format: "1.16"
 package: room-contents
 title: "Room feed"
-version: 1.3.0
+version: 1.3.1
 authors: [SharpMUSH]
 description: "Pushes room.info / room.contents / room.exits OOB v2 updates, built per viewer, to a room's connected occupants — the data source for the portal's Play page."
 license: MIT
@@ -225,9 +225,9 @@ objects:
       # caller's registers on this engine, so a register set here is visible in
       # every helper the handler calls afterwards. Occupants are gathered with
       # the handler itself as the viewer (it is a wizard, so nothing is hidden
-      # from it); each real viewer filters that set down. lcon(), lexits() and
-      # loc() answer OBJIDS (#12:1790741308439) here, so every key goes through
-      # num(): a register name cannot hold the colon.
+      # from it); each real viewer filters that set down. lcon() and lexits()
+      # answer OBJIDS (#12:1790741308439) here, so every key goes through num():
+      # a register name cannot hold the colon.
       FUN`ROOMCONTENTS`PREPARE: |-
         null(setq(mover,if(cand(strmatch(num(loc(%#)),num(%0)),u(me/FUN`ROOMCONTENTS`VIEWER,%#)),num(%#))),iter(filter(me/FUN`ROOMCONTENTS`WHOVISIBLE,lcon(%0),,,%!),setq(occupant_row_[rest(num(%i0),#)],u(me/FUN`ROOMCONTENTS`WHOBASE,%i0))),iter(u(me/FUN`ROOMCONTENTS`EXITS,%0,%!),setq(exit_row_[rest(num(%i0),#)],u(me/FUN`ROOMCONTENTS`EXITBASE,%i0),exit_preview_[rest(num(%i0),#)],u(me/FUN`ROOMCONTENTS`EXITDESTINATION,%i0))),setq(room_info_[rest(num(%0),#)],u(me/FUN`ROOMCONTENTS`INFOBASE,%0)))
 

@@ -112,7 +112,7 @@ PennMUSH has none of these. `pack()` and `unpack()` come from TinyMUX and RhostM
 **A choice.**
 
 **PennMUSH** has no `SCENE_ROOM`, `SIDEFX` or `TRUECOLOR` flag and no `See_OOB`, `Send_Image` or `Unkillable` power.<br>
-**SharpMUSH** defines all six, so `@list flags`, `@list powers`, `list(flags)` and `list(powers)` name them among PennMUSH's own, in the same sorted, comma-separated line.<br>
+**SharpMUSH** defines all six, so `@list flags`, `@list powers`, `list(flags)` and `list(powers)` name them among PennMUSH's own, in the same sorted, comma-separated line. `flags()` and `lflags()` with no argument list them too; `SCENE_ROOM`'s letter is `S`.<br>
 **Why.** `SCENE_ROOM` belongs to the scene plugin and `TRUECOLOR` marks a client that takes 24-bit colour; `SIDEFX` lets an object call side-effect functions when the `sidefx_flag` option is on, as on RhostMUSH; `Send_Image` lets a character show pictures without the rest of `Send_OOB`, and the approved role holds it; `See_OOB` and `Unkillable` are reserved for SharpMUSH subsystems. An imported PennMUSH database has none of them set.<br>
 **Workaround.** None needed for imported code: nothing PennMUSH wrote can set or test a name it never had. Code that walks `list(flags)` should expect names it does not know, as it already must for a game's own `@flag/add` flags.
 

@@ -17,36 +17,12 @@
    "command": "Alice alicepass"
   },
   {
-   "key": "00-login/login.player#2",
-   "command": "think [loc(%#)]"
-  },
-  {
    "key": "00-login/login.unknown#0",
    "command": "Nobody whatever"
   },
   {
    "key": "05-import/import.players#0",
    "command": "Wiz wizpass"
-  },
-  {
-   "key": "05-import/import.things#2",
-   "command": "think [loc(first(lcon(*Alice)))=loc(*Alice)] [owner(first(lcon(*Alice)))=owner(*Alice)]"
-  },
-  {
-   "key": "10-player-commands/obj.attrs#0",
-   "command": "&FOO Widget=bar"
-  },
-  {
-   "key": "10-player-commands/obj.attrs#2",
-   "command": "&FOO Widget="
-  },
-  {
-   "key": "10-player-commands/obj.create#6",
-   "command": "look Gadget"
-  },
-  {
-   "key": "10-player-commands/obj.inventory#0",
-   "command": "inventory"
   },
   {
    "key": "10-player-commands/perm.ufun#0",
@@ -113,10 +89,6 @@
    "command": "Wiz wizpass"
   },
   {
-   "key": "25-requested-dbref/dbref.holes#3",
-   "command": "@dolist/inline [v(HOLES)]={@recycle ##;@recycle ##;@purge/confirm ##}"
-  },
-  {
    "key": "25-requested-dbref/dbref.mortal#1",
    "command": "Alice alicepass"
   },
@@ -129,22 +101,6 @@
    "command": "Alice alicepass"
   },
   {
-   "key": "30-softcode/sc.control#4",
-   "command": "think [setq(0,outer)][ulocal(#lambda/setq(0,inner)%%q0,x)] [r(0)]"
-  },
-  {
-   "key": "30-softcode/sc.errors#0",
-   "command": "think [nosuchfunction(1)]"
-  },
-  {
-   "key": "30-softcode/sc.errors#2",
-   "command": "think [get(nothing/nothing)] [name(#9999)] [loc(#9999)]"
-  },
-  {
-   "key": "30-softcode/sc.identity#1",
-   "command": "think [name(%!)] [hasflag(%#,WIZARD)] [flags()] [type(%#)]"
-  },
-  {
    "key": "30-softcode/sc.login#0",
    "command": "Wiz wizpass"
   },
@@ -153,20 +109,8 @@
    "command": "Bob bobpass"
   },
   {
-   "key": "30-softcode/sc.strings#1",
-   "command": "think [upcstr(abc)] [lcstr(ABC)] [capstr(abc def)] [trim(  a b  )] [trim(xxaxx,x,b)]"
-  },
-  {
-   "key": "30-softcode/sc.suggest#0",
-   "command": "@dolist/inline dog cat bird bard beard board birds=@suggest/add paritypets=##"
-  },
-  {
    "key": "35-function-families/ff.login#0",
    "command": "Wiz wizpass"
-  },
-  {
-   "key": "35-function-families/ff.numeric#6",
-   "command": "think [median()] [mean()]"
   },
   {
    "key": "35-function-families/ff.perms#0",

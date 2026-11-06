@@ -81,10 +81,9 @@ public class SceneServiceIntegrationTests
 
 	/// <summary>
 	/// <c>scene(&lt;id&gt;, room)</c> answers with an objid, not a bare dbref, so it can be compared
-	/// against <c>loc()</c> — which is what any "is the poser standing in this scene's room?" test has
-	/// to do. The two spellings did not match: <c>loc()</c> carries the creation stamp and this did
-	/// not, so such a comparison was quietly always false. Objid is also the project's rule for a
-	/// stored reference, since a bare dbref number gets recycled.
+	/// against <c>objid(loc())</c> — which is what any "is the poser standing in this scene's room?"
+	/// test has to do. Objid is the project's rule for a stored reference, since a bare dbref number
+	/// gets recycled.
 	///
 	/// <para>Note the deliberate asymmetry with <c>owner</c>/<c>starter</c>, which stay bare: the
 	/// package's own <c>FUN`OWNS</c> compares <c>scene(&lt;id&gt;,owner)</c> against <c>%#</c>, which

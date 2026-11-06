@@ -96,7 +96,7 @@ public class MuxCommandTests : ServerTestBase
 		await Assert.That(Notifications.For(God).Skip(before).Any(line => line.Contains(message))).IsFalse();
 
 		await Cmd($"get/quiet {thing}");
-		await Assert.That(await Eval($"loc({thing})")).IsEqualTo(God.ToString());
+		await Assert.That(await Eval($"objid(loc({thing}))")).IsEqualTo(God.ToString());
 		await Assert.That(Notifications.For(God).Skip(before).Any(line => line.Contains(message))).IsFalse();
 	}
 
@@ -117,7 +117,7 @@ public class MuxCommandTests : ServerTestBase
 		await WebAppFactoryArg.QueueBarrierAsync();
 
 		var heard = Notifications.For(God).Skip(before).ToArray();
-		await Assert.That(await Eval($"loc({thing})")).IsEqualTo(God.ToString());
+		await Assert.That(await Eval($"objid(loc({thing}))")).IsEqualTo(God.ToString());
 		await Assert.That(heard.Any(line => line.Contains(dropped))).IsTrue();
 		await Assert.That(heard.Any(line => line.Contains(taken))).IsTrue();
 		await Assert.That(heard.Any(line => line.Contains(action))).IsFalse();
@@ -157,7 +157,7 @@ public class MuxCommandTests : ServerTestBase
 		await Cmd($"give/quiet {player.DbRef}={thing}");
 		await WebAppFactoryArg.QueueBarrierAsync();
 
-		await Assert.That(await Eval($"loc({thing})")).IsEqualTo(player.DbRef.ToString());
+		await Assert.That(await Eval($"objid(loc({thing}))")).IsEqualTo(player.DbRef.ToString());
 		await Assert.That(Notifications.For(God).Skip(godBefore).Any(line => line.Contains(name))).IsFalse();
 		await Assert.That(Notifications.For(player.DbRef).Skip(playerBefore).Any(line => line.Contains(name))).IsFalse();
 	}

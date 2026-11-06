@@ -126,10 +126,10 @@ These were learned the hard way; the handler relies on all of them:
    `r()`. Each helper falls back to building its base on the spot
    (`strfirstof(r(...), u(...))`) so it also works called alone.
 
-4. **`lcon()`, `lexits()`, `loc()` and `filter()` answer objids**, as
-   `#12:1790741308439`, not bare dbrefs. A register name cannot hold the
-   colon, and `member(lcon(%0),%#)` never matches a bare `%#`: every key and
-   every comparison goes through `num()`.
+4. **`lcon()`, `lexits()` and `filter()` answer objids**, as
+   `#12:1790741308439`, not bare dbrefs, while `loc()` answers a bare dbref. A
+   register name cannot hold the colon, and `member(lcon(%0),%#)` never matches
+   a bare `%#`: every key and every comparison goes through `num()`.
 
 5. **Build JSON arrays with `json_array()`, not `json(array, iter(...))`.**
    `json(array, …)` takes each element as a *separate* argument, so feeding it

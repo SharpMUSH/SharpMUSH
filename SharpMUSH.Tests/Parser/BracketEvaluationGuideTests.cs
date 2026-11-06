@@ -56,7 +56,7 @@ public class BracketEvaluationGuideTests : ServerTestBase
 	[Arguments("Last(minute) changes are fine", "minute changes are fine")]
 	[Arguments("\\Last(minute) changes are fine", "Last(minute) changes are fine")]
 	[Arguments("Smile(s) all round", "Smile(s) all round")]
-	[Arguments("[smile(s)]", "#-1 FUNCTION (SMILE) NOT FOUND")]
+	[Arguments("[smile(s)]", "#-1 FUNCTION (SMILE) NOT FOUND DID YOU MEAN 'CNAME'")]
 	public async Task Evaluates(string code, string expected)
 		=> await Assert.That(await Eval(code)).IsEqualTo(expected);
 

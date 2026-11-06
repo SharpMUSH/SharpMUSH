@@ -987,15 +987,15 @@ public partial class Commands
 		var perceive = await ObserveRealityAsync(parser, executor);
 		var contents = container.Content(Mediator).Where((item, ct) => perceive(item.Object().DBRef, ct));
 
-		// PennMUSH do_inventory (look.c:1027): own inventory shows Name(#dbrefFlags), or the bare name to a
-		// MYOPIC player.
-		var flagView = await FlagView.ForAsync(executor, ConnectionService);
+		// PennMUSH do_inventory (look.c:1027, 1053) lists each item through unparse_object_myopic: Name(#dbrefFlags)
+		// when the player may see the dbref (real_unparse, src/unparse.c:118), else the bare name, which is
+		// also all a MYOPIC player sees.
 		var myopic = await executor.IsMyopic();
 		var carried = await contents.ToListAsync(ExecutionBudget.CurrentToken);
 		var items = await carried.ToAsyncEnumerable()
 			.Select((AnySharpContent item, CancellationToken _) => myopic
 				? ValueTask.FromResult(item.Object().Name)
-				: MessageFormatting.FormatObjectWithDbref(item.Object(), flagView))
+				: MessageFormatting.UnparseObjectAsync(PermissionService, executor, item.WithRoomOption(), ConnectionService))
 			.ToListAsync(ExecutionBudget.CurrentToken);
 
 		// look.c do_inventory: an INVFORMAT replaces the whole listing, evaluated by the player with %0 the
