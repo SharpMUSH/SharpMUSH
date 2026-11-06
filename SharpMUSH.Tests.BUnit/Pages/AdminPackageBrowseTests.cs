@@ -54,6 +54,39 @@ public class AdminPackageBrowseTests : BunitContext
 	}
 
 	[Test]
+	[Arguments(null, "PkgBatchQueueInstall")]
+	[Arguments("1.0.0", "PkgBatchQueueReinstall")]
+	[Arguments("0.9.0", "PkgBatchQueueChange(1.0.0)")]
+	public async Task The_queue_button_says_what_queueing_does_to_an_installed_package(string? installed, string label)
+	{
+		api.Installed = installed is null ? [] : [Installed(installed, Repo, "tools")];
+		var cut = RenderBrowse();
+		await Assert.That(cut.Find(".lib-row .pkg-btn-primary").TextContent.Trim()).IsEqualTo(label);
+	}
+
+	[Test]
+	public async Task Needed_packages_are_marked_installed_or_missing()
+	{
+		api.Packages = [new("tools", "tools", "1.0.0", "Tools", [], DependsOn: ["dice", "plus-help"])];
+		api.Installed = [Installed("1.0.0", Repo, "dice") with { Package = Installed("1.0.0", Repo, "dice").Package with { Id = "dice" } }];
+		var cut = RenderBrowse();
+		var needs = cut.FindAll(".lib-need").ToDictionary(n => n.TextContent.Trim());
+		await Assert.That(needs.Keys).IsEquivalentTo(["dice", "plus-help"]);
+		await Assert.That(needs["dice"].ClassList).DoesNotContain("lib-need--missing");
+		await Assert.That(needs["plus-help"].ClassList).Contains("lib-need--missing");
+		await Assert.That(needs["plus-help"].GetAttribute("title")).IsEqualTo("PkgBrowseNeedMissing(plus-help)");
+	}
+
+	[Test]
+	public async Task Needed_packages_are_not_called_missing_when_the_installed_list_failed()
+	{
+		api.Packages = [new("tools", "tools", "1.0.0", "Tools", [], DependsOn: ["dice"])];
+		api.FailInstalled = true;
+		var cut = RenderBrowse();
+		await Assert.That(cut.Find(".lib-need").ClassList).DoesNotContain("lib-need--missing");
+	}
+
+	[Test]
 	[Arguments("tools")]
 	[Arguments(null)]
 	public async Task Uninstalled_and_unparseable_entries_have_no_installed_marker(string? packageId)

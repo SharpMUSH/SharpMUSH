@@ -206,6 +206,7 @@
     {
         <LibraryPackageRow Entry="@entry" SnapshotUrl="@_snapshot?.Url"
                            Installed="@(entry.PackageId is { } id && _installed.TryGetValue(id, out var record) ? record : null)"
+                           InstalledPackages="@(_installedFailure is null ? _installed : null)"
                            Queued="@Queued(entry)" Version="@SelectedVersion(entry)"
                            VersionChanged="@(v => SelectVersion(entry, v))"
                            OnQueue="@(() => QueueInstall(entry))"
