@@ -259,8 +259,9 @@ format number; the world is stamped with the last one (`WorldFormat`) and a serv
 Every migration before the first release is format 1. `WorldFormatTests` fail a migration that records a `mig:` marker
 without an entry, or a format that goes back or skips a number.
 `UpgradePathTests` open every world kept in `SharpMUSH.Tests/Database/Lightning/UpgradePath/Worlds` (one per released
-format, `format-1` from 1.0.0) with the current build and check it reads back what that release wrote; a release
-that brings a new format adds its world there (see that folder's README).
+format) with the current build and check it reads back what that release wrote; a release that brings a new format
+adds its world there. `format-1` was written by main before 1.0.0 and is written again from the v1.0.0 tag (see
+that folder's README).
 
 ### Authentication Architecture
 

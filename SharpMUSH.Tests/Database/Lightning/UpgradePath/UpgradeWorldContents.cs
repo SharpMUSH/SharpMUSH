@@ -17,8 +17,10 @@ namespace SharpMUSH.Tests.Database.Lightning.UpgradePath;
 /// record's stored shape that no migration carries shows up here as a value that no longer reads back.
 /// </summary>
 /// <remarks>
-/// A new kind of stored data belongs in a fixture written by the release that first stores it: adding it to
-/// <see cref="VerifyAsync"/> for an older world fails, because that world never held it.
+/// A new kind of stored data belongs in a fixture written by the release that first stores it: checking it in
+/// <see cref="VerifyAsync"/> for an older world fails, because that world never held it. Give the check the kept
+/// world's format and make it only for worlds of that format or newer; do the same for a value a migration
+/// deliberately changes.
 /// </remarks>
 internal static class UpgradeWorldContents
 {

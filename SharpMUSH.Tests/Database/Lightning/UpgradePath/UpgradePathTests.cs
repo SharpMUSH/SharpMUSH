@@ -52,9 +52,11 @@ public class UpgradePathTests
 		var formats = Worlds().Select(FormatOf).ToArray();
 
 		await Assert.That(formats).Contains(1)
-			.Because("1.0.0 writes format 1, and every later server has to open a 1.0.0 world");
+			.Because("1.0.0 writes format 1, and every later server has to open a world it wrote");
 		await Assert.That(formats.All(format => format <= LightningDatabase.WorldFormat)).IsTrue()
 			.Because("a kept world is written by a released server, never one newer than this build");
+		await Assert.That(Enumerable.Range(1, LightningDatabase.WorldFormat - 1).Except(formats)).IsEmpty()
+			.Because("every format older than this build's was released, so its world is kept; only this build's own may still be unreleased");
 	}
 
 	[Test]
@@ -86,7 +88,7 @@ public class UpgradePathTests
 
 			await Assert.That(db.Store.Read(LightningDatabase.ReadWorldFormat)).IsEqualTo(LightningDatabase.WorldFormat);
 			await Assert.That(await db.GetObjectCountAsync()).IsEqualTo(UpgradeWorldContents.ObjectCount)
-				.Because("a migration neither adds nor drops objects");
+				.Because("no migration so far adds or drops objects; one that does changes this count for the worlds it runs on");
 			await UpgradeWorldContents.VerifyAsync(db);
 
 			await db.DisposeAsync();
@@ -142,9 +144,15 @@ public class UpgradeWorldFixtureWriter
 		try
 		{
 			Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-			await using var input = File.OpenRead(Path.Join(copy, "data.mdb"));
-			await using var output = new GZipStream(File.Create(target), CompressionLevel.SmallestSize);
-			await input.CopyToAsync(output);
+			// Written beside the target and moved into place once complete, so a failed write leaves no partial world.
+			var partial = target + ".partial";
+			await using (var input = File.OpenRead(Path.Join(copy, "data.mdb")))
+			await using (var output = new GZipStream(File.Create(partial), CompressionLevel.SmallestSize))
+			{
+				await input.CopyToAsync(output);
+			}
+
+			File.Move(partial, target, overwrite: true);
 		}
 		finally
 		{
