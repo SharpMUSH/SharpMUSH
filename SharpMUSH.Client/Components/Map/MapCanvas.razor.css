@@ -389,11 +389,31 @@ span.map-room-icon {
 	cursor: default;
 }
 
-/* A place is one small cell: its name breaks between words, a word too long for it is hyphenated, and what does not fit ends in an ellipsis. */
+/* Stored places have an explicit cell-sized box. Keep labels within its usable interior;
+   small fitted hexagons have room for only one line, while zoomed cells retain two. */
+.map-room--place {
+	container: map-place / size;
+}
+
 .map-room--place .map-room-name {
-	overflow-wrap: normal;
+	min-width: 0;
+	max-width: 100%;
+	overflow-wrap: anywhere;
 	hyphens: auto;
 	-webkit-line-clamp: 2;
+}
+
+@container map-place (height < 30px) {
+	.map-room--place .map-room-icon {
+		display: none;
+	}
+
+	.map-room-name {
+		flex-shrink: 0;
+		display: block;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
 }
 
 /* Editing a picture: the picture is the board. What lies past its edge is shaded, and the edge is drawn. */

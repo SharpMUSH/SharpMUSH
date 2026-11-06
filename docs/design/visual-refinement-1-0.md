@@ -19,6 +19,7 @@ Baseline: `cfa5af9013`, reviewed on 2026-11-06 in parallel player, administratio
 | Wiki image metadata and account recovery content lacked readable presentation | Image-safe metadata foregrounds and consistent recovery-card padding |
 | Native editor controls overlapped and save feedback inherited its dark canvas | Wrapping toolbar, shrinkable breadcrumbs and an opaque portal-themed status surface |
 | Mermaid dark connectors faded against light portal surfaces | Fixed dark diagram canvas paired with its SVG palette and edge labels, preserving readability across theme changes |
+| Stored terrain labels clipped at both sides of small fitted hex cells | Cell-scoped layout contains labels and uses one complete ellipsized line at small sizes, retaining full accessible names |
 
 The graph package is version 0.3.2 with updated asset checksums. Its existing iframe sandbox and host review boundary remain intact.
 
@@ -29,6 +30,7 @@ The continuation uses a fresh, isolated Production-auth world with real account 
 - Real browser sign-in, gateway connection, `think Visual terminal journey verified`, and rendered response succeeded.
 - A scene pose submitted through the real composer appeared in a second browser through `/hubs/scene`: one matching frame, zero observer navigation or scene/pose refetch, sender draft cleared.
 - Real mail entry, saved status, browser reload, restored content, discard and populated message reading succeeded.
+- Six final stored-terrain captures (square, flat-hex and pointy-hex at desktop/mobile widths) had no document overflow or page errors. Small labels remain contained; zoom exposes their full text, and selecting the named cell opens its place details.
 - Final published native editor saved and reloaded `add(6,7)`; toolbar overlap/clipping counts were zero, save feedback was readable and mobile panes did not overflow. No loader or CSS overrides were used. Mermaid rendered actual SVG at both widths; final dark canvas was visually accepted.
 - Forty populated player captures cover ten routes at 1280 and 390 pixels in Daylight and Phosphor: profile/gallery, wiki article/editor/history/diff, mail/list/compose and scene/archive/live. No document overflow or page exceptions were observed. Representative screenshots received direct visual inspection.
 - Seven-theme audit covers 21 desktop, 320px and 200%-root-text scenarios. Final initial sweep: no page overflow, no measured solid-background contrast failures, no active animations under reduced motion; ArrowRight moved appearance selection. Complex image/scrim backgrounds are explicitly excluded from automated contrast calculations.
@@ -66,14 +68,15 @@ All bundled dependencies were installed through supported APIs. The first-party 
 | builder-graph | Real sandbox bootstrap, 3 rooms/2 exits, keyboard staging and host consent at both widths | No world mutation applied |
 | hello-ui | Real plugin controller-driven fields/table at both widths | Read-only example |
 | world-map/native editor | Actual 3-room graph and ArrowRight staging at both widths | Review/apply not exercised |
+| world-grid | Stored square, flat-hex and pointy-hex maps with legend, closed river cells, named-place selection and wall; desktop/mobile | Movement/locks and exhaustive terrain editing not exercised |
 
 Terminal-only packages are represented by their actual help/profile/scene/room/job output and the component inventory; this report does not claim every softcode command was visually exercised. Server, database, messaging and renderer projects have no standalone web UI; their user-facing contracts were exercised through the real journeys.
 
 ## Verification
 
-Final integrated component run: **3,473 passed**, zero failures. Final editor-focused follow-up: **31 passed**. Client JavaScript: **145 passed**; rendered shared-shell regressions: **6 passed**; actual Mermaid palette regressions: **2 passed**, with sampled node/edge/title text at 10.171:1. Graph keyboard behavior and the live host consent path were also checked. Builds use the pinned .NET 11 RC2 SDK and disk-backed workspace scratch.
+Final integrated component run: **3,473 passed**, zero failures. Final editor-focused follow-up: **31 passed**. Client JavaScript: **145 passed**; rendered shared-shell regressions: **6 passed**; actual Mermaid palette regressions: **2 passed**, with sampled node/edge/title text at 10.171:1; stored terrain label regression: **1 passed**. Resource validation passes all gates. Graph keyboard behavior and the live host consent path were also checked. Builds use the pinned .NET 11 RC2 SDK and disk-backed workspace scratch.
 
-Commands: `dotnet run --project SharpMUSH.Tests.BUnit`; direct execution of every `tools/client-tests/*.test.mjs`; `node --test tools/responsive-sweep/shared-shell.test.mjs tools/responsive-sweep/mermaid-contrast.test.mjs`; client publish; `git diff --check`. New behavior received independent code review, including fixes for stale-send cleanup and actual story-background contrast.
+Commands: `dotnet run --project SharpMUSH.Tests.BUnit`; direct execution of every `tools/client-tests/*.test.mjs`; `node --test tools/responsive-sweep/shared-shell.test.mjs tools/responsive-sweep/mermaid-contrast.test.mjs tools/responsive-sweep/map-label.test.mjs`; client publish; `git diff --check`. New behavior received independent code review, including fixes for stale-send cleanup and actual story-background contrast.
 
 These are local functional/visual and laboratory checks. No field LCP/INP/CLS result, exhaustive assistive-technology certification, every-package/every-theme cross product, or provider-backed duty run is claimed. The published audit client is Debug; production payload performance is not inferred from its load time.
 
@@ -109,6 +112,9 @@ wizard package executors. Use ordinary linked characters for applications, prefe
 - [Native editor save feedback](images/visual-refinement-1-0/softcode-saved-desktop.png)
 - [Mobile editor](images/visual-refinement-1-0/softcode-mobile.png)
 - [Mobile Mermaid diagram](images/visual-refinement-1-0/mermaid-mobile.png)
+- [Square terrain map](images/visual-refinement-1-0/terrain-square-desktop.png)
+- [Fitted pointy-hex labels](images/visual-refinement-1-0/terrain-pointy-mobile.png)
+- [Zoomed pointy-hex labels](images/visual-refinement-1-0/terrain-pointy-zoomed-mobile.png)
 
 ## Research basis
 
@@ -117,4 +123,4 @@ wizard package executors. Use ordinary linked characters for applications, prefe
 - [WAI radio keyboard pattern](https://www.w3.org/WAI/ARIA/apg/patterns/radio/).
 - [Web Vitals](https://web.dev/articles/vitals): field p75 targets LCP ≤2.5s, INP ≤200ms and CLS ≤0.1. Field measurements are outside this evidence.
 
-The Goal remains active through final acceptance, committed changes, draft PR and CI/review follow-through. Merge and deployment are not authorized.
+Changes and evidence are committed in [draft PR #2557](https://github.com/SharpMUSH/SharpMUSH/pull/2557). The Goal remains active through CI/review follow-through. Merge and deployment are not authorized.

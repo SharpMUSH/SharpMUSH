@@ -237,7 +237,7 @@
     "published Mermaid SVG desktop and mobile"
   ],
   "pending": [
-    "draft PR and CI/review"
+    "CI/review follow-through on PR2557"
   ],
   "focused_editor": {
     "passed": 31,
@@ -255,5 +255,26 @@
     "mobile_overflow": false,
     "save_reload_verified": true,
     "visual_overrides": false
+  },
+  "terrain_label_browser": {
+    "passed": 1,
+    "failed": 0
+  },
+  "resource_validation": "all gates passed",
+  "world_grid": {
+    "modes": [
+      "square",
+      "flat-hex",
+      "pointy-hex"
+    ],
+    "captures": 6,
+    "widths": [
+      1280,
+      390
+    ],
+    "page_errors": 0,
+    "document_overflow": 0,
+    "named_place_selection": true,
+    "movement_locks_exercised": false
   }
 }
