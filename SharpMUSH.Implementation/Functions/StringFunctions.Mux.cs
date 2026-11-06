@@ -85,7 +85,7 @@ public partial class Functions
 		// Each row is its borders and cells; rows are joined by line breaks. A row is measured first, so the
 		// product cannot overflow.
 		var rowLength = left.Length + right.Length + (long)columnCount * width + (columnCount - 1L) * middle.Length;
-		if (FunctionLimits.ExceedsOutput(parser.CurrentState, rowLength)
+		if (rowCount > 0 && FunctionLimits.ExceedsOutput(parser.CurrentState, rowLength)
 			|| FunctionLimits.ExceedsOutput(parser.CurrentState, rowCount * rowLength + Math.Max(0, rowCount - 1)))
 		{
 			return ValueTask.FromResult(FunctionLimits.RejectOutput(parser.CurrentState));

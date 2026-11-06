@@ -103,6 +103,7 @@ public class MuxFunctionTests : ServerTestBase
 	[Arguments("wrapcolumns(abcdefgh,3,1,C)", "abc\ndef\ngh ")]
 	[Arguments("wrapcolumns(ab cd%ref,2,3)", "abcdef")]
 	[Arguments("strlen(wrapcolumns(repeat(ab%b,100000),2,1))", "299999")]
+	[Arguments("[wrapcolumns(,5000,2)]|", "|")]
 	[Arguments("wrapcolumns(a,1,2000000,L,,repeat(x,1000))", ErrorMessages.Returns.OutputTooLarge)]
 	[Arguments("wrapcolumns(repeat(a,8000),1,1,L,repeat(x,8000))", ErrorMessages.Returns.OutputTooLarge)]
 	[Arguments("[iter(a b,inum())] [iter(a b,iter(x y,inum()))]|[inum()]|", "1 2 1 2 1 2||")]
