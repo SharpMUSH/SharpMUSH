@@ -71,7 +71,7 @@ public static class TinyMuxMailReader
 			var bodyText = bodies.TryGetValue(body, out var found)
 				? found
 				: throw reader.Error($"a message to #{to} names body {body}, which the file does not have");
-			mail.Messages.Add(new PennMUSHMailMessage(to, from, 0, PennTime(time), subject, bodyText, flags));
+			mail.Messages.Add(Message(to, from, time, subject, bodyText, flags));
 		}
 
 		if (reader.ReadLine() == "*** Begin MALIAS ***")
@@ -99,11 +99,21 @@ public static class TinyMuxMailReader
 				list.Add(reader.ReadInt());
 			}
 
-			var privileges = owner == godPlayer
-				? (int)MailAliasPrivileges.Everyone
-				: (int)(MailAliasPrivileges.Owner | MailAliasPrivileges.Admin);
-			mail.Aliases.Add(new PennMUSHMailAlias(owner, name.TrimStart('*'), aliasDescription, privileges, privileges, list));
+			mail.Aliases.Add(Alias(owner, name, aliasDescription, list, godPlayer));
 		}
+	}
+
+	/// <summary>A delivered message as TinyMUX stores one, its time sent as TinyMUX writes it.</summary>
+	internal static PennMUSHMailMessage Message(int to, int from, string time, string subject, string body, int flags)
+		=> new(to, from, 0, PennTime(time), subject, body, flags);
+
+	/// <summary>A mail alias: one owned by God may be used and seen by everyone, any other only by its owner and staff.</summary>
+	internal static PennMUSHMailAlias Alias(int owner, string name, string description, List<int> members, int godPlayer)
+	{
+		var privileges = owner == godPlayer
+			? (int)MailAliasPrivileges.Everyone
+			: (int)(MailAliasPrivileges.Owner | MailAliasPrivileges.Admin);
+		return new PennMUSHMailAlias(owner, name.TrimStart('*'), description, privileges, privileges, members);
 	}
 
 	private static string Field(string? line, string prefix)

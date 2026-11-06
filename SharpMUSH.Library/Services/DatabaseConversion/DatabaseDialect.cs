@@ -1,5 +1,6 @@
 using System.Globalization;
 using SharpMUSH.Library.Services.DatabaseConversion.Rhost;
+using SharpMUSH.Library.Services.DatabaseConversion.TinyMux;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion;
 
@@ -35,7 +36,7 @@ public enum DatabaseImportFormat
 	/// <summary>A RhostMUSH flatfile, as <c>@dump/flat</c> writes it.</summary>
 	RhostMUSH,
 
-	/// <summary>A TinyMUX flatfile, as <c>db_unload</c> or <c>@dump/flat</c> writes it.</summary>
+	/// <summary>A TinyMUX flatfile, as <c>db_unload</c> or <c>@dump/flat</c> writes it, or TinyMUX 2.14's <c>netmux.sqlite</c>.</summary>
 	TinyMUX
 }
 
@@ -62,7 +63,8 @@ public static class DatabaseImportFormats
 /// <summary>
 /// The files one import reads: the database, and whatever came with it. Which side files mean anything
 /// depends on the format: a PennMUSH import reads a maildb and a chatdb, a RhostMUSH import its mail
-/// dump and the folder dump that goes with it, a TinyMUX import its <c>mail.db</c> and <c>comsys.db</c>.
+/// dump and the folder dump that goes with it, a TinyMUX flatfile import its <c>mail.db</c> and <c>comsys.db</c>.
+/// A TinyMUX SQLite database holds its mail and comsys itself and takes neither.
 /// </summary>
 /// <param name="Database">The database file.</param>
 /// <param name="Mail">A PennMUSH maildb, RhostMUSH's <c>.dump.mail</c> from <c>wmail/unload</c>, or TinyMUX's
@@ -77,7 +79,10 @@ public sealed record DatabaseImportFiles(
 	string? MailFolders = null,
 	DatabaseImportFormat Format = DatabaseImportFormat.Auto);
 
-/// <summary>Tells a PennMUSH outdb, a RhostMUSH flatfile and a TinyMUX flatfile apart by the lines they start with.</summary>
+/// <summary>
+/// Tells a PennMUSH outdb, a RhostMUSH flatfile and a TinyMUX flatfile apart by the lines they start with,
+/// and a TinyMUX SQLite database by its header.
+/// </summary>
 public static class DatabaseFormatSniffer
 {
 	/// <summary>
@@ -107,9 +112,14 @@ public static class DatabaseFormatSniffer
 			: DatabaseDialect.PennMUSH;
 	}
 
-	/// <summary>The format of the file at <paramref name="path"/>.</summary>
+	/// <summary>The format of the file at <paramref name="path"/>. A SQLite database is TinyMUX's, the only server read here that writes one.</summary>
 	public static DatabaseDialect SniffFile(string path)
 	{
+		if (TinyMuxDatabaseReader.IsSqlite(path))
+		{
+			return DatabaseDialect.TinyMUX;
+		}
+
 		using var reader = new StreamReader(path, RhostFlatfileReader.FileEncoding);
 		return Sniff(reader);
 	}

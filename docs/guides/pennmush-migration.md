@@ -1,6 +1,6 @@
 # Migrating a PennMUSH, RhostMUSH or TinyMUX world
 
-SharpMUSH can import a PennMUSH flatfile and, optionally, the world's `mush.cnf`, mail database (`maildb`), and chat database (`chatdb`). It can also import a RhostMUSH flatfile with its mail dumps, or a TinyMUX flatfile with its `mail.db` and `comsys.db`; see [Importing from RhostMUSH or TinyMUX](#importing-from-rhostmush-or-tinymux) for what those imports carry over and what they leave behind. Everything below applies to all three; where it names a PennMUSH file, use the matching file from your server.
+SharpMUSH can import a PennMUSH flatfile and, optionally, the world's `mush.cnf`, mail database (`maildb`), and chat database (`chatdb`). It can also import a RhostMUSH flatfile with its mail dumps, or a TinyMUX flatfile with its `mail.db` and `comsys.db`, or the `netmux.sqlite` TinyMUX 2.14 runs from; see [Importing from RhostMUSH or TinyMUX](#importing-from-rhostmush-or-tinymux) for what those imports carry over and what they leave behind. Everything below applies to all three; where it names a PennMUSH file, use the matching file from your server.
 
 Import is one-way. Keep the original PennMUSH installation and its immutable pre-cutover backup until the SharpMUSH world has passed its observation period. Never treat a successful upload as proof that the game is ready for players.
 
@@ -35,7 +35,7 @@ The parity harness in [`tools/parity/README.md`](../../tools/parity/README.md) e
 
 ## Importing from RhostMUSH or TinyMUX
 
-The import page and the start-up import read three formats. Each is told from the file's first lines: a TinyMUX flatfile starts `+X`, and a PennMUSH outdb and a RhostMUSH flatfile both start `+V` and differ in the line after it. If the guess is wrong, choose the format yourself: the page has a format choice, the upload API takes a `format` field (`auto`, `pennmush`, `rhostmush` or `tinymux`), and a start-up import reads `PENNMUSH_DATABASE_FORMAT` beside `PENNMUSH_DATABASE_PATH`.
+The import page and the start-up import read three formats. Each is told from the file's first lines: a TinyMUX flatfile starts `+X`, TinyMUX's `netmux.sqlite` starts `SQLite format 3`, and a PennMUSH outdb and a RhostMUSH flatfile both start `+V` and differ in the line after it. If the guess is wrong, choose the format yourself: the page has a format choice, the upload API takes a `format` field (`auto`, `pennmush`, `rhostmush` or `tinymux`), and a start-up import reads `PENNMUSH_DATABASE_FORMAT` beside `PENNMUSH_DATABASE_PATH`.
 
 The files that go with each format:
 
@@ -44,6 +44,9 @@ The files that go with each format:
 | PennMUSH | the outdb | `maildb` | `chatdb` |
 | RhostMUSH | the flatfile `@dump/flat` writes | `.dump.mail` from `wmail/unload`, with its `.dump.folder` in the mail-folders slot | none: see below |
 | TinyMUX | the flatfile (versions 1 to 5) | `mail.db` | `comsys.db` in the chat slot |
+| TinyMUX 2.14 | `game/data/netmux.sqlite` | in the database | in the database |
+
+TinyMUX 2.14 keeps the game, its comsys and its mail in `netmux.sqlite`, so that one file is the whole upload. TinyMUX writes changes to `netmux.sqlite-wal` first, and the import reads only the main file, so stop the game before copying it. A clean shutdown moves everything into the main file and removes `netmux.sqlite-wal`. If that file is still there and not empty (after a crash, say), make sure nothing has the database open and run `sqlite3 netmux.sqlite "PRAGMA wal_checkpoint(TRUNCATE);"` in `game/data` before copying it. A mail or chat file given with it is refused. To import a flatfile instead, run `./db_unload netmux netmux.flat -C comsys.db -m mail.db` and give `mail.db` and `comsys.db` in the mail and chat slots beside it.
 
 Any of these files may be gzipped, as PennMUSH writes its dumps by default (`outdb.gz`); the import tells a gzipped file from its first bytes and unpacks it, to at most 512 MiB. An upload takes up to 100 MB per file, so compress a larger one first. An import is stopped if it runs longer than ten minutes plus a minute for every 8 MiB of input.
 
