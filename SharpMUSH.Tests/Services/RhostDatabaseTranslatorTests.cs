@@ -213,7 +213,7 @@ public class RhostDatabaseTranslatorTests
 			toggles[word] |= value << shift;
 		}
 
-		var source = new RhostFlatfileObject { DBRef = 5, Name = "Powered", Flags = [0, flags2, shifted ? RhostNameTables.DepowerShift : 0, 0], Toggles = toggles };
+		var source = new RhostFlatfileObject { DBRef = 5, Name = "Powered", Flags = [(uint)RhostObjectType.Player, flags2, shifted ? RhostNameTables.DepowerShift : 0, 0], Toggles = toggles };
 		return Overrides(RhostDatabaseTranslator.MapPowers(source, new RhostDatabaseTranslator.Report()));
 	}
 
@@ -242,6 +242,12 @@ public class RhostDatabaseTranslatorTests
 	public async Task SlaveDeniesWhatChangesTheDatabase()
 		=> await Assert.That(Mapped(0x80000000, false, (2, 14, 2)))
 			.IsEqualTo("+game.see_queue -player.create -player.modify -player.chown -player.force -player.password");
+
+	[Test]
+	public async Task ADepowerWithAReachStillReplacesAPowerOnItsPermission()
+		// FULLTEL, and TEL_ANYWHERE taken away at architect.
+		=> await Assert.That(Mapped(false, (4, 6, 1), (6, 2, 3)))
+			.IsEqualTo("-game.tport_anywhere/architect -player.teleport/architect");
 
 	[Test]
 	public async Task ADepowerBeatsThePowerItTakes()

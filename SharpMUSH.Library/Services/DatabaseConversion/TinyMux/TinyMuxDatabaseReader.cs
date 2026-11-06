@@ -515,7 +515,7 @@ public static partial class TinyMuxDatabaseReader
 				Flags = flagNames,
 				Powers = [.. flagPowers, .. powerNames],
 				Permissions = permissions,
-				Overrides = flagNames.Contains("SLAVE", StringComparer.OrdinalIgnoreCase)
+				Overrides = type == PennMUSHObjectType.Player && flagNames.Contains("SLAVE", StringComparer.OrdinalIgnoreCase)
 					? [.. RestrictingFlags.Slave.Select(scope => new PennMUSHOverride(scope, PermissionState.Deny))]
 					: [],
 				CreationTime = created,
@@ -649,7 +649,7 @@ public static partial class TinyMuxDatabaseReader
 				}
 			}
 
-			if (flags.Contains("SLAVE", StringComparer.OrdinalIgnoreCase))
+			if ((raw.Flags1 & TinyMuxNames.TypeMask) == TinyMuxNames.TypePlayer && flags.Contains("SLAVE", StringComparer.OrdinalIgnoreCase))
 			{
 				Tally(ImportWarningKind.Flags, $"Flag SLAVE: also imported as a deny on {string.Join(" and ", RestrictingFlags.Slave)}", raw.DBRef);
 			}

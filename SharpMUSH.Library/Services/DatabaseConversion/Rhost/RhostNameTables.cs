@@ -119,7 +119,7 @@ public static class RhostNameTables
 		Custom(1, 0x4000, "SCLOAK", true),
 		Custom(1, 0x8000, "CLOAK", true),
 		Custom(1, 0x10000, "FUBAR", true),
-		Flag(1, 0x20000, "INDESTRUCTABLE", "SAFE"),
+		new(1, 0x20000, "INDESTRUCTABLE", ["SAFE"], [], Custom: "INDESTRUCTABLE", StaffOnly: true),
 		Custom(1, 0x40000, "NO_YELL", true),
 		Same(1, 0x80000, "NO_TEL"),
 		Power(1, 0x100000, "FREE", "No_Pay"),

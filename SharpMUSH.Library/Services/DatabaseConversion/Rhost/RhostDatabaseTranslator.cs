@@ -559,7 +559,7 @@ public static partial class RhostDatabaseTranslator
 
 		foreach (var (bit, name, denies) in RhostNameTables.RestrictingBits)
 		{
-			if ((source.Flags[1] & bit) == 0)
+			if (source.Type != RhostObjectType.Player || (source.Flags[1] & bit) == 0)
 			{
 				continue;
 			}
@@ -589,7 +589,15 @@ public static partial class RhostDatabaseTranslator
 		foreach (var scope in mapping.Scopes)
 		{
 			var next = new PennMUSHOverride(scope, state, reach is not null && PortalPermission.TakesReach(scope) ? reach : null);
-			landed[scope] = landed.TryGetValue(scope, out var held) ? Wider(held, next) : next;
+			if (landed.TryGetValue(scope, out var held) && held.State != next.State
+					&& (held.State == PermissionState.Deny ? held : next) is { Reach: { } kept })
+			{
+				// One override per scope: the deny stays, and outside its reach the roles decide, not the power.
+				report.Note(ImportWarningKind.Powers, $"Power and depower both on {scope}: only the deny, reaching {kept}, is kept, so " +
+					$"the power no longer applies below {kept}; give it back there by hand if it should", dbref, needsAction: true);
+			}
+
+			landed[scope] = held is null ? next : Wider(held, next);
 		}
 
 		var unreached = reach is null ? [] : mapping.Scopes.Where(scope => !PortalPermission.TakesReach(scope)).ToArray();
