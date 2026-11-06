@@ -1228,6 +1228,9 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
+		if (!await executor.Can(PortalPermission.PlayerCommands))
+			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.PlayerCommands);
+
 		var targetName = args["0"].Message.ToPlainText();
 		var command = arg1.Message;
 

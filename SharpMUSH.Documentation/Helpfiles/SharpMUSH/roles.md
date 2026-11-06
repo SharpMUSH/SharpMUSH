@@ -205,17 +205,17 @@ Every object holds these unless a role or override denies them, so nobody notice
 
 | Permission | Covers |
 |---|---|
-| `player.page` | page, checked against each recipient |
+| `player.page` | page, checked against each recipient; takes a reach |
 | `player.create` | @create, @dig, @open, @clone and their functions |
-| `player.give` | give, checked against the recipient |
+| `player.give` | give, checked against the recipient; takes a reach |
 | `player.receive` | being given things |
 | `player.force` | @force |
 | `player.chat` | @channel, @chat, @cemit and channel aliases |
 | `player.commands` | `$`-commands |
-| `player.examine` | examining others' VISUAL objects |
-| `player.modify` | control through a zone, a control lock or a shared owner |
-| `player.chown` | taking CHOWN_OK objects |
-| `player.teleport` | @teleport by control or JUMP_OK |
+| `player.examine` | examining others' VISUAL objects; takes a reach |
+| `player.modify` | control through a zone, a control lock or a shared owner; takes a reach |
+| `player.chown` | taking CHOWN_OK objects; takes a reach |
+| `player.teleport` | @teleport by control or JUMP_OK; takes a reach |
 | `player.password` | @password |
 
 A role that denies one takes it from everyone holding that role, even if another role leaves it alone.
