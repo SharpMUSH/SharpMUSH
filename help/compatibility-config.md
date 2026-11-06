@@ -104,6 +104,11 @@
       "id": "other-servers-names-dialect",
       "heading": "Other servers' names: `dialect`",
       "lookup": "compatibility config other servers names dialect"
+    },
+    {
+      "id": "other-servers-attribute-names",
+      "heading": "Other servers' attribute names",
+      "lookup": "compatibility config other servers attribute names"
     }
   ]
 }
@@ -434,4 +439,21 @@ Empty by default. With `dialect` set to `rhost`, a function or command SharpMUSH
 ```sharp dialect=mux
 > think strtrunc(abcdef,3)
 abc
+```
+
+## Other servers' attribute names
+
+An import stores a built-in attribute under SharpMUSH's name for it. In code read in a dialect (the `dialect` option, or an attribute's `mux` or `rhost` flag), that server's name means the same attribute wherever an attribute is read or set: `get()`, `u()`, `&`, `@set`, and as an `@`-command. None of these names is a SharpMUSH attribute, so SharpMUSH code is unaffected, and an object's own attribute of that name still comes first.
+
+- `mux`: `KILL`, `OKILL`, `AKILL` are `DEATH`, `ODEATH`, `ADEATH`; `REJECT` is `HAVEN`; `SIGNATURE` is `MAILSIGNATURE`; `FORWARD` is `FORWARDLIST`; `SPEECHFORMAT` is `SPEECHMOD`.
+- `rhost`: `MAILSIG` is `MAILSIGNATURE`; `EMAIL` is `REGISTERED_EMAIL`; `ANSINAME` is `MONIKER`.
+- Both: `LASTPAGE` is `LASTPAGED`; `PAY`, `OPAY`, `APAY` are `PAYMENT`, `OPAYMENT`, `APAYMENT`; `DESC`, `ADESC`, `ODESC`, `IDESC` are `DESCRIBE` and its forms; `SUCC` and `FAIL` and their `A` and `O` forms are `SUCCESS` and `FAILURE` and theirs.
+
+Under `mux`, `@reject` sets `HAVEN`.
+
+```sharp dialect=mux
+> @kill me=Ouch.
+> think get(me/death) - [get(me/kill)]
+Ouch. - Ouch.
+> &death me
 ```

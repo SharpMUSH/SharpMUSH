@@ -1584,6 +1584,12 @@
         "lookup": "compatibility config other servers names dialect",
         "heading": "Other servers\u0027 names: \u0060dialect\u0060",
         "aliases": []
+      },
+      {
+        "id": "other-servers-attribute-names",
+        "lookup": "compatibility config other servers attribute names",
+        "heading": "Other servers\u0027 attribute names",
+        "aliases": []
       }
     ],
     "file": "compatibility-config.md"
