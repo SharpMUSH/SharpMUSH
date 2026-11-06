@@ -10,6 +10,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Softcode;
 using static SharpMUSHParser;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -75,7 +76,8 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 			return new None();
 		}
 
-		var potentialAttrName = rootCommand[1..].ToUpperInvariant();
+		// The dialect in force may name the attribute otherwise (TinyMUX's @kill is @death).
+		var potentialAttrName = SoftcodeDialectScope.AttributeName(rootCommand[1..]).ToUpperInvariant();
 		if (string.IsNullOrEmpty(potentialAttrName))
 		{
 			return new None();

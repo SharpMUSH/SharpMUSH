@@ -7,6 +7,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Softcode;
 
 namespace SharpMUSH.Library.Services;
 
@@ -141,8 +142,11 @@ internal sealed class AttributeEvaluator(
 		try
 		{
 			var ownerRef = owner.Object().DBRef;
-			var frame = parser.CurrentState.ForAttributeCall(arguments, environment,
-				new DBAttribute(ownerRef, attributeName) { Dialect = dialect }, attributeName, runner.Object().DBRef);
+			var evaluation = new DBAttribute(ownerRef, attributeName) { Dialect = dialect };
+			var frame = parser.CurrentState.ForAttributeCall(arguments, environment, evaluation, attributeName, runner.Object().DBRef);
+			// The body names attributes in its own dialect, substitutions such as %=<NAME> included.
+			using var dialectScope = SoftcodeDialectScope.Enter(
+				SoftcodeDialects.InForce(evaluation, configuration.CurrentValue.Compatibility.Dialect));
 			var result = await parser.Push(frame).FunctionParse(code);
 
 			return result ?? CallState.Empty;
