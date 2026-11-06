@@ -5,9 +5,8 @@ apps, one per image: the edge (`sharpmush/sharpmush-edge`), the game server
 (`sharpmush/sharpmush-server`) and the renderer (`sharpmush/sharpmush-renderer`). `Dockerfile`
 builds the edge from the published socket server image, NATS and Caddy, and `start.sh` starts its
 processes and stops the container if any of them stops. Its last stage, the all-in-one
-(`sharpmush/sharpmush-allinone`), adds the server and the renderer, for a game run as one app. Each
-release publishes the images under its version and the settings files name that version, so
-launching needs no checkout. Railway runs the same three images (`deploy/railway/`).
+(`sharpmush/sharpmush-allinone`), adds the server and the renderer, for a game run as one app. CI
+publishes the images and the settings files name their tag, so launching needs no checkout. Railway runs the same three images (`deploy/railway/`).
 
 ## Images
 
@@ -76,8 +75,8 @@ to `my-game.fly.dev` on port 4201. `SHARPMUSH_GUARD=off` in the edge's `[env]` s
 Nothing updates on its own. Take an `@backup` first: going back to an older image needs it,
 because an older server refuses a world a newer one has migrated.
 
-Each part runs the release its settings file names, in the `image` line under `[build]`. To
-update, change that version in each settings file and run the launch script again: it deploys the
+Each part runs the image tag its settings file names, in the `image` line under `[build]`. To
+update, change that tag in each settings file and run the launch script again: it deploys the
 server and the renderer. Players stay connected through both restarts. The edge is left running;
 `--update-edge` (`-UpdateEdge`) deploys it too, which drops everyone connected, so announce a time
 first. One part at a time:

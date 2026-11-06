@@ -62,13 +62,12 @@ This is a DockerHub access token (not your password) that allows GitHub Actions 
 
 ### Releases
 
-A release is cut in the GitHub UI, never by pushing a tag. Before it:
+A release is cut in the GitHub UI, never by pushing a tag. Before it, on `main`:
 
-- `CHANGELOG.md` has a `## [1.0.0]` section (the workflow refuses a release without one).
+- `CHANGELOG.md` has a `## [1.0.0]` section. The images are built after the release is published,
+  so a missing section leaves a published release with no images until a manual run.
 - `SharpMUSHVersion` in `Directory.Build.props` names the version, so builds from the tagged commit
   agree with the images.
-- Every deploy file pins the version. `python3 .github/scripts/release_images.py check` lists any
-  that does not; CI runs it on every build, and the release refuses to publish until they agree.
 
 Then, under **Releases → Draft a new release**, create the tag `v1.0.0` on `main`, write the notes,
 and press **Publish release**. A release candidate gets a tag with a suffix (`v1.1.0-rc.1`) and
@@ -95,8 +94,18 @@ release they cover. For `v1.2.3`:
 So a `v1.0.4` fix published after `v1.1.0` moves `1.0` but leaves `1` and `latest` on `1.1.0`. A
 pre-release pushes only its own tag (`1.1.0-rc.1`).
 
-Deploy files pin the exact version, never `latest`, `1` or `1.2`: a game runs the release it was
-deployed with until its operator changes the version.
+#### After the release
+
+Deploy files pin one exact image tag, never `latest`, `1` or `1.2`: a game runs what it was
+deployed with until its operator changes the tag. New games are deployed from the files on `main`,
+so the pins move only once the release's images exist. When the workflow has finished, open a pull
+request with:
+
+```bash
+python3 .github/scripts/release_images.py bump 1.0.0
+```
+
+CI fails a build whose deploy files name different tags (`release_images.py check`).
 
 ### Dev Build (Main Branch Pushes)
 

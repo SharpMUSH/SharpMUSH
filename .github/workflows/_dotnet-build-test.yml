@@ -71,8 +71,8 @@ jobs:
       - name: Test release image tags
         run: python3 -m unittest discover -s .github/scripts -p test_release_images.py -v
 
-      # A new game is deployed with the version the deploy files pin; it must be the engine's version.
-      - name: Check deploy files pin the engine version
+      # Every deploy file names the same image tag, so one bump after a release moves them all.
+      - name: Check deploy files pin one image tag
         run: python3 .github/scripts/release_images.py check
 
       - name: Restore dependencies

@@ -12,11 +12,6 @@ on:
 permissions:
   contents: read
 
-# Two releases published close together push one after the other, so the moving tags end on the newer.
-concurrency:
-  group: docker-publish
-  cancel-in-progress: false
-
 jobs:
   build-and-test:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'v')
@@ -25,6 +20,11 @@ jobs:
   build-and-push:
     needs: [build-and-test]
     runs-on: ubuntu-latest
+    # Two releases published close together push one after the other, so the moving tags end on the
+    # newer. Set on the job, so releases this workflow skips never join the queue.
+    concurrency:
+      group: docker-publish
+      cancel-in-progress: false
 
     steps:
       - name: Checkout code
@@ -67,8 +67,6 @@ jobs:
             echo "::error::A prerelease's tag needs a suffix, like v$VERSION-rc.1, so it cannot move :latest."
             exit 1
           fi
-          # A release is what new games are deployed with, so the deploy files at its tag must pin it.
-          if [[ "$VERSION" != *-* ]]; then python3 .github/scripts/release_images.py check "$VERSION"; fi
           python3 .github/scripts/release_images.py tags "$VERSION"
 
       - name: Build and push SharpMUSH Server
@@ -175,4 +173,9 @@ jobs:
             done
             echo ""
             echo "Replacing the socketserver or edge image drops live connections."
+            if [[ " $SUFFIXES " == *" latest "* ]]; then
+              echo ""
+              echo "Next: open a pull request that moves the deploy files to this release:"
+              echo "\`python3 .github/scripts/release_images.py bump ${SUFFIXES%% *}\`"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"

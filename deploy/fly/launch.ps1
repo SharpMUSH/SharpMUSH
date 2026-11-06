@@ -10,7 +10,7 @@
 # directory, downloaded the first time.
 #
 # Safe to run again: it creates only what is missing, then deploys the server and the renderer at
-# the release their settings files name, which drops nobody. The edge is deployed the first time,
+# the image tag their settings files name, which drops nobody. The edge is deployed the first time,
 # and again only with -UpdateEdge, which drops everyone connected.
 #
 # -Single runs the game as one app, <game>, with its settings in <game>.fly.toml: cheaper, but every

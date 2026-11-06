@@ -3,9 +3,9 @@
 # deploys with it. The app name and region come from launch.sh's arguments.
 
 # Every deploy restarts the machine, dropping connected players. Nothing deploys on its own: the game
-# stays on the release named here until you change it.
+# stays on the image tag named here until you change it.
 [build]
-  image = "sharpmush/sharpmush-allinone:1.0.0"
+  image = "sharpmush/sharpmush-allinone:dev"
 
 [env]
   # Set to your own domain once it points at the app (fly certs add <domain>); the setup link in the

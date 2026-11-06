@@ -89,6 +89,6 @@ timer off. `SHARPMUSH_GUARD=off` skips the guard.
 - **DigitalOcean.** Submit the snapshot in the Marketplace Vendor Portal. Name 4 GB as the
   recommended size (2 GB works). The build already runs DigitalOcean's `90-cleanup.sh` and
   `99-img-check.sh`. Rebuild and resubmit for each release.
-- **Image tag.** A new game runs the release `install.sh` names (`DEFAULT_IMAGE_TAG`), and keeps
-  it when `sharpmush-configure` runs again. `SHARPMUSH_IMAGE_TAG` (the Packer variable
+- **Image tag.** A new game runs the tag `install.sh` names (`DEFAULT_IMAGE_TAG`), and keeps it
+  when the installer or `sharpmush-configure` runs again. `SHARPMUSH_IMAGE_TAG` (the Packer variable
   `image_tag`) picks another.

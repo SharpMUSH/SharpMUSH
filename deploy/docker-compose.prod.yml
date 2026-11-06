@@ -49,7 +49,7 @@ services:
     build:
       context: ../
       dockerfile: SharpMUSH.SocketServer/Dockerfile
-    image: sharpmush/sharpmush-socketserver:1.0.0
+    image: sharpmush/sharpmush-socketserver:dev
     container_name: sharpmush-socketserver
     # Deliberately NOT a watchtower target. This service owns every telnet and /ws kernel socket,
     # so recreating it disconnects everyone who is logged in — which is the one thing the split
@@ -92,7 +92,7 @@ services:
       context: ../
       dockerfile: SharpMUSH.RenderingWorker/Dockerfile
     container_name: sharpmush-renderer
-    image: sharpmush/sharpmush-renderer:1.0.0
+    image: sharpmush/sharpmush-renderer:dev
     stop_grace_period: 60s
     labels:
       - com.centurylinklabs.watchtower.enable=true
@@ -111,7 +111,7 @@ services:
     build:
       context: ../
       dockerfile: Dockerfile
-    image: sharpmush/sharpmush-server:1.0.0
+    image: sharpmush/sharpmush-server:dev
     container_name: sharpmush-server
     # Safe to update unattended: the engine going down and coming back sends players a restart
     # notice and leaves the socket owner — and so their connections — untouched.

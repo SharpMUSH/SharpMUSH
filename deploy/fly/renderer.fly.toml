@@ -5,7 +5,7 @@
 #
 # Deploying this app restarts the renderer without dropping anyone.
 [build]
-  image = "sharpmush/sharpmush-renderer:1.0.0"
+  image = "sharpmush/sharpmush-renderer:dev"
 
 [env]
   # The renderer listens on this address's port.

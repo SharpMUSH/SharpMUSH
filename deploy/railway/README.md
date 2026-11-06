@@ -11,12 +11,12 @@ Railway account's template composer, not from a file in this repository. The pub
 
 ## Template settings
 
-Three services in one project, each from its Docker image at the release version, with automatic
+Three services in one project, each from its Docker image at the tag named below, with automatic
 image updates off. They reach each other on the project's private network, under the names Railway
 gives them (`<service>.railway.internal`); the `${{...}}` values below are Railway reference
 variables and fill those names in.
 
-`edge`, from `sharpmush/sharpmush-edge:1.0.0`, the only public service:
+`edge`, from `sharpmush/sharpmush-edge:dev`, the only public service:
 
 | Setting | Value |
 |---|---|
@@ -29,7 +29,7 @@ variables and fill those names in.
 | TCP proxy | port `4201` |
 | Healthcheck path | none |
 
-`server`, from `sharpmush/sharpmush-server:1.0.0`, with the world:
+`server`, from `sharpmush/sharpmush-server:dev`, with the world:
 
 | Setting | Value |
 |---|---|
@@ -45,7 +45,7 @@ variables and fill those names in.
 | Volume | mounted at `/data` |
 | Public networking | none |
 
-`renderer`, from `sharpmush/sharpmush-renderer:1.0.0`:
+`renderer`, from `sharpmush/sharpmush-renderer:dev`:
 
 | Setting | Value |
 |---|---|
