@@ -63,12 +63,10 @@ GET /http/profile?objid={objid}
   → Returns structured field values for that character (addressed by stable objid)
   → Viewer identity passed via JWT (determines visibility)
   → Response includes: fields, values, and per-field visibility metadata
-
-POST /http/profile?objid={objid}   (PLANNED — not yet implemented)
-  → Would update structured fields from a web editor
-  → Handler validates permissions and stores (sets attributes on character)
-  → Profile editing is currently out of scope; the handler is read-only today
 ```
+
+The handler is read-only: it serves no `POST /http/profile`, and the portal has no field editor.
+A character's profile fields are attributes, set in the game.
 
 ### Schema Endpoint Response Shape
 

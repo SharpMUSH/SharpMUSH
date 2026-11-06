@@ -131,16 +131,17 @@ the connection server holds them.
 ### Pointing the in-browser terminal at the right place
 
 The portal's web terminal connects to a **WebSocket** endpoint, `/ws`, which is served by the
-**connection server** (`:4202`), *not* the main server. The `Caddyfile` already routes
-`https://<your-domain>/ws` to the connection server for you, so in the portal set the terminal's
-**Server URI** to:
+**connection server** (`:4202`), *not* the main server. The terminal has no address setting: it
+connects to `/ws` on the address the portal was loaded from, so a portal at
+`https://<your-domain>` uses:
 
 ```
 wss://<your-domain>/ws
 ```
 
-(Same origin, so no mixed-content or CORS issues.) The default `ws://localhost:4202/ws` is for
-local development only — over HTTPS a browser will refuse a plaintext `ws://` connection.
+The `Caddyfile` already routes `https://<your-domain>/ws` to the connection server. A proxy of your
+own must route that same path there. A portal opened on `localhost` connects to
+`ws://localhost:4202/ws`, the connection server in local development.
 
 ### Passkeys
 
@@ -294,12 +295,9 @@ This is the part the Zero Trust dashboard is for. It does **not** touch telnet.
    - **Service type:** `HTTP`
    - **URL:** `socketserver:4202`
 
-   Then set the portal's terminal **Server URI** to `wss://mush.example.com/ws` (same origin —
-   no mixed-content). WebSockets traverse the tunnel with no extra config.
-
-   > Alternative: instead of a path route, use a dedicated hostname — add
-   > `ws.mush.example.com` → `HTTP` → `socketserver:4202` and point the Server URI at
-   > `wss://ws.mush.example.com/ws`. Either works; the path route keeps everything same-origin.
+   The portal's terminal connects to `wss://mush.example.com/ws`, the `/ws` path on the portal's
+   own address, so this route must be a path on the portal's hostname, not a hostname of its own.
+   WebSockets traverse the tunnel with no extra config.
 
 ### Part B — the telnet side (plain DNS, no Zero Trust involved)
 

@@ -170,18 +170,9 @@ All use existing `portal.scene.live` subject. No new NATS subject needed.
 
 ## Web RSVP
 
-RSVP from web triggers the same game action as the in-game command:
-
-```
-POST /http/scene/42/rsvp          (PLANNED — not yet implemented)
-  → { character_id: "#42", status: "attending" }
-  → HTTP handler executes RSVP logic
-  → NATS event published
-  → Web UI updates in real-time
-```
-
-RSVP is simple enough to go through HTTP handler directly (no need to route
-through terminal for a one-field toggle).
+The portal has no RSVP control, and the scene package serves no RSVP route. A
+player RSVPs in the game with `+scene/rsvp <id>` (or `+scene/tag <id>`), which
+adds them to the scene's `attending` role.
 
 ## Why Not a Separate Events System
 
