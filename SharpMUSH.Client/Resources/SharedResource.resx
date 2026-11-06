@@ -5370,7 +5370,7 @@
     <value>Game · Give anything to anyone</value>
   </data>
   <data name="EnumPermChownAnyDesc" xml:space="preserve">
-    <value>@chown between any owners, @chown/preserve, @chownall, @chzoneall, and @atrchown to anyone. Covers taking others' objects.</value>
+    <value>@chown between any owners, @chown/preserve, @chownall, and @atrchown to anyone. Covers taking others' objects.</value>
   </data>
   <data name="EnumPermNuke" xml:space="preserve">
     <value>Game · Destroy players</value>
@@ -5394,7 +5394,7 @@
     <value>Game · Set restricted flags</value>
   </data>
   <data name="EnumPermFlagsRestrictedDesc" xml:space="preserve">
-    <value>Sets the flags only wizards may set, and CHOWN_OK and DESTROY_OK on what others own.</value>
+    <value>Sets the flags only wizards may set, and CHOWN_OK and DESTROY_OK, on what it controls.</value>
   </data>
   <data name="EnumPermNoForce" xml:space="preserve">
     <value>Game · Cannot be forced</value>

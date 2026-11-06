@@ -98,8 +98,8 @@ public static class PortalPermission
 	public const string ChownSelf = "game.chown.self";
 
 	/// <summary>
-	/// Gives anything to anyone with <c>@chown</c>, and <c>@chown/preserve</c>, <c>@chownall</c>, <c>@chzoneall</c> and
-	/// <c>@atrchown</c> to anyone. Covers <see cref="ChownSelf"/>. RhostMUSH's CHOWN_OTHER. <c>game.wizard</c> covers it.
+	/// Gives anything to anyone with <c>@chown</c>, and <c>@chown/preserve</c>, <c>@chownall</c> and <c>@atrchown</c>
+	/// to anyone. Covers <see cref="ChownSelf"/>. RhostMUSH's CHOWN_OTHER. <c>game.wizard</c> covers it.
 	/// </summary>
 	public const string ChownAny = "game.chown.any";
 

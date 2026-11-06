@@ -119,7 +119,7 @@ public partial class Commands
 	/// </summary>
 	private async ValueTask ResetForNewOwnerAsync(AnySharpObject executor, AnySharpObject obj, SharpObject newOwner)
 	{
-		await PrivilegeHelpers.ResetForNewOwnerAsync(Mediator, FlagAndPowerService, executor, obj);
+		await PrivilegeHelpers.ResetForNewOwnerAsync(Mediator, obj);
 		await HaltQueuesAsync(obj, newOwner);
 	}
 
@@ -292,7 +292,7 @@ public partial class Commands
 	/// destination's <c>@lock/chzone</c>, the cycle walk, <c>check_zone_lock</c>'s default lock and the
 	/// already-in-that-zone skip all apply here as they do to <c>@CHZONE</c>.
 	/// </remarks>
-	[SharpCommand(Name = "@CHZONEALL", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit, CommandLock = "PERM^game.chown.any",
+	[SharpCommand(Name = "@CHZONEALL", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD",
 		MinArgs = 1, MaxArgs = 2, ParameterNames = ["old-zone", "new-zone"])]
 	public async ValueTask<Option<CallState>> ChangeZoneAll(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -318,10 +318,6 @@ public partial class Commands
 						notifyMessage: ErrorMessages.Notifications.MustBePlayer,
 						shouldNotify: true);
 				}
-
-				// The command lock asked for game.chown.any at no rank; a reach is judged against the player here.
-				if (!await executor.CanOver(PortalPermission.ChownAny, player))
-					return await NotifyService.PermissionDenied(executor, PermissionRefusal.NotControlled(player, PortalPermission.ChownAny));
 
 				// wiz.c:1032-1035: unlike @CHZONE, an empty right-hand side here is a usage error and not
 				// "none" — only the literal word unzones.

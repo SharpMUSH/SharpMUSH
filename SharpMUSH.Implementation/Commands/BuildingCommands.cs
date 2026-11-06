@@ -393,6 +393,12 @@ public partial class Commands
 			return true;
 		}
 
+		// game.nuke is the whole of the permission to destroy a player; the player guards below still apply.
+		if (obj.IsPlayer && await executor.CanOver(PortalPermission.Nuke, obj))
+		{
+			return true;
+		}
+
 		if (obj is SharpExit exit)
 		{
 			if (await exit.Home.WithCancellation(CancellationToken.None) is AnySharpContainer destination
