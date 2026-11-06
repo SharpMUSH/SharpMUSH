@@ -185,4 +185,13 @@ public record CompatibilityOptions(
 		Group = "PennMUSH Compatibility",
 		Order = 3)]
 	bool MapsqlSync
-);
+)
+{
+	[SharpConfig(
+		Name = "protection_flags",
+		Category = "Compatibility",
+		Description = "The NOEXAMINE and NOMODIFY flags protect what holds them, as in RhostMUSH and TinyMUX: below wizard and royalty, nobody examines or @decompiles a NOEXAMINE object, and nobody, its owner included, changes a NOMODIFY one. Importing a RhostMUSH or TinyMUX database turns it on",
+		Group = "RhostMUSH Compatibility",
+		Order = 9)]
+	public bool ProtectionFlags { get; init; }
+}

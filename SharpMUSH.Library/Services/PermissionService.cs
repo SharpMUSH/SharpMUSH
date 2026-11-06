@@ -431,6 +431,9 @@ public class PermissionService(
 		if (who.Id() == target.Id())
 			return true;
 
+		if (await ProtectedFrom(who, target, "NOMODIFY", token))
+			return false;
+
 		// Each object's flags and grants are read once and asked every question below. Privilege here is
 		// scopes, never role order. First the target's guards: each role it holds that allows protect.role
 		// refuses a who without control.role.<that role>. They are PennMUSH's God(what) (only #1 passes god's),
@@ -508,11 +511,19 @@ public class PermissionService(
 					&& await lockService.Evaluate(LockType.Link, destination, executor)));
 
 	public async ValueTask<bool> CanExamine(AnySharpObject examiner, AnySharpObject examinee)
-		=> examiner.Object().DBRef == examinee.Object().DBRef
+		=> !await ProtectedFrom(examiner, examinee, "NOEXAMINE", ExecutionBudget.CurrentToken)
+			&& (examiner.Object().DBRef == examinee.Object().DBRef
 			 || await Controls(examiner, examinee)
 			 || await examiner.IsSee_All()
 			 || (await examinee.IsVisual() && await examiner.CanOver(PortalPermission.PlayerExamine, examinee)
-				 && await lockService.Evaluate(LockType.Examine, examinee, examiner));
+				 && await lockService.Evaluate(LockType.Examine, examinee, examiner)));
+
+	/// <summary>
+	/// Whether <paramref name="target"/>'s RhostMUSH and TinyMUX protection <paramref name="flag"/> keeps
+	/// <paramref name="who"/> out (<c>protection_flags</c>): wizards and royalty pass it.
+	/// </summary>
+	private async ValueTask<bool> ProtectedFrom(AnySharpObject who, AnySharpObject target, string flag, CancellationToken token)
+		=> options.CurrentValue.Compatibility.ProtectionFlags && await target.HasFlag(flag, token) && !await who.IsPriv(token);
 
 	/// <inheritdoc />
 	public async ValueTask<bool> CanReadLock(AnySharpObject viewer, AnySharpObject target, LockService.LockFlags lockFlags)
