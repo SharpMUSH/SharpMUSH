@@ -51,7 +51,14 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		// leaves the #-1 error it failed with, or nothing.
 		var commandText = visitor.Parser.CurrentState.CommandText;
 		var outputVersion = commandText?.OutputVersion;
-		var result = await DispatchCommandAsync(visitor, src, context);
+		// The attribute names the command reads and writes are the dialect's (SoftcodeDialectScope).
+		Option<CallState> result;
+		using (SoftcodeDialectScope.Enter(SoftcodeDialects.InForce(visitor.Parser.CurrentState.CurrentEvaluation,
+			visitor.Configuration.CurrentValue.Compatibility.Dialect)))
+		{
+			result = await DispatchCommandAsync(visitor, src, context);
+		}
+
 		if (commandText is not null && commandText.OutputVersion == outputVersion)
 		{
 			commandText.SetOutput(result is CallState { Message: { } message } && message.ToPlainText().StartsWith("#-1", StringComparison.Ordinal)
@@ -161,6 +168,15 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 
 			// Step 4: Check if we are setting an attribute: &... -- we're just treating this as a Single Token Command for now.
 			// Who would rely on a room alias being & anyway?
+			// Step 5: an @-command the dialect in force names an attribute by sets it (TinyMUX's @kill sets DEATH),
+			// before the name is read as an abbreviation; a command spelled that way still comes first.
+			if (context.evaluationString() != null && IsDialectAttributeCommand(parser, command)
+					&& await services.StandardAttributes.TryRunAsync(parser, src, context, command) is { } dialectAttribute
+					&& dialectAttribute.IsSome())
+			{
+				return dialectAttribute;
+			}
+
 			// Step 5: Check @COMMAND in command library
 			var builtIn = FindBuiltIn(parser, command, visitor.Configuration.CurrentValue.Compatibility.Dialect);
 			if (builtIn.Definition is CommandDefinition definition)
@@ -627,6 +643,15 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			? new BuiltInLookup(rootCommand, [.. definition.ImpliedSwitches, .. switches], definition)
 			: new BuiltInLookup(rootCommand, switches, null);
 	}
+
+	/// <summary>
+	/// Whether <paramref name="command"/> is <c>@</c> and an attribute alias of the dialect in force
+	/// (<see cref="SoftcodeDialectScope"/>), with no switches and no command of that exact name.
+	/// </summary>
+	private static bool IsDialectAttributeCommand(IMUSHCodeParser parser, string command)
+		=> command.Length > 1 && command[0] == '@' && !command.Contains('/')
+			&& SoftcodeDialectScope.Current?.AttributeFor(command[1..]) is not null
+			&& CommandTrie.For(parser.CommandLibrary).FindExact(command) is null;
 
 	/// <summary>
 	/// The command the dialect in force means by <paramref name="rootCommand"/>, with the switches the alias

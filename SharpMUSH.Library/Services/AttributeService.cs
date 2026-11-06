@@ -11,6 +11,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Runtime.CompilerServices;
 using SharpMUSH.Library.Common;
+using SharpMUSH.Library.Softcode;
 
 namespace SharpMUSH.Library.Services;
 
@@ -37,26 +38,26 @@ public class AttributeService(
 	/// <inheritdoc/>
 	public ValueTask<Result<Success>> SetStoredAttributeAsync(AnySharpObject executor, AnySharpObject obj,
 		string attribute, StoredMarkup value, SharpPlayer? creator = null)
-		=> _writer.SetStoredAttributeAsync(executor, obj, attribute, value, creator);
+		=> _writer.SetStoredAttributeAsync(executor, obj, SoftcodeDialectScope.AttributeName(attribute), value, creator);
 
 	public ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj,
 		string attribute, MString value)
-		=> _writer.SetAttributeAsync(executor, obj, attribute, value);
+		=> _writer.SetAttributeAsync(executor, obj, SoftcodeDialectScope.AttributeName(attribute), value);
 
 	/// <inheritdoc/>
 	public ValueTask<Result<WrittenAttribute>> SetAttributeForReportAsync(AnySharpObject executor, AnySharpObject obj,
 		string attribute, MString value)
-		=> _writer.SetAttributeForReportAsync(executor, obj, attribute, value);
+		=> _writer.SetAttributeForReportAsync(executor, obj, SoftcodeDialectScope.AttributeName(attribute), value);
 
 	/// <inheritdoc/>
 	public ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj,
 		string attribute, MString value, SharpPlayer creator)
-		=> _writer.SetAttributeAsync(executor, obj, attribute, value, creator);
+		=> _writer.SetAttributeAsync(executor, obj, SoftcodeDialectScope.AttributeName(attribute), value, creator);
 
 	/// <inheritdoc/>
 	public ValueTask<Result<Success>> ClearAttributeAsync(AnySharpObject executor, AnySharpObject obj,
 		string attributePattern, IAttributeService.AttributePatternMode patternMode)
-		=> _writer.ClearAttributeAsync(executor, obj, attributePattern, patternMode);
+		=> _writer.ClearAttributeAsync(executor, obj, DialectPattern(attributePattern, patternMode), patternMode);
 
 	private AttributeEvaluator? _evaluator;
 
@@ -193,7 +194,7 @@ public class AttributeService(
 	private async ValueTask<AttributeRead<T>> ReadAttributeAsync<T>(AnySharpObject executor, AnySharpObject obj,
 		string attribute, IAttributeService.AttributeMode mode, bool parent, AttributeReadShape<T> shape) where T : class
 	{
-		try { return await ReadAttributeCoreAsync(executor, obj, attribute, mode, parent, shape); }
+		try { return await ReadAttributeCoreAsync(executor, obj, SoftcodeDialectScope.AttributeName(attribute), mode, parent, shape); }
 		catch (InvalidDataException) { return new AttributeRead<T>(null, "Attribute access metadata is unreadable."); }
 	}
 
@@ -305,6 +306,13 @@ public class AttributeService(
 		token.ThrowIfCancellationRequested();
 		return targets;
 	}
+
+	/// <summary>
+	/// <paramref name="pattern"/> as the dialect in force names it (<see cref="SoftcodeDialectScope.AttributeName"/>):
+	/// an alias is a whole name, so a wildcard pattern that is one is that name, and a regular expression never is.
+	/// </summary>
+	private static string DialectPattern(string pattern, IAttributeService.AttributePatternMode mode)
+		=> mode == IAttributeService.AttributePatternMode.Regex ? pattern : SoftcodeDialectScope.AttributeName(pattern);
 
 	/// <summary>PennMUSH's built-in attribute aliases (<c>attralias</c>, <c>hdrs/atr_tab.h</c>).</summary>
 	public static readonly IReadOnlyDictionary<string, string> StandardAttributeAliases =
@@ -503,6 +511,7 @@ public class AttributeService(
 		bool checkParents,
 		IAttributeService.AttributePatternMode mode)
 	{
+		attributePattern = DialectPattern(attributePattern, mode);
 		var token = ExecutionBudget.CurrentToken;
 		var isPrivileged = executor.IsGod() || await executor.IsWizard(token);
 
@@ -940,6 +949,7 @@ public class AttributeService(
 		AnySharpObject obj, string attributePattern,
 		bool checkParents, IAttributeService.AttributePatternMode mode = IAttributeService.AttributePatternMode.Exact)
 	{
+		attributePattern = DialectPattern(attributePattern, mode);
 		var token = ExecutionBudget.CurrentToken;
 		token.ThrowIfCancellationRequested();
 		var isPrivileged = executor.IsGod() || await executor.IsWizard(token);

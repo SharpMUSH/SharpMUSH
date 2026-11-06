@@ -45,6 +45,9 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 		var parser = visitor.Parser;
 		var configuration = visitor.Configuration;
 		ExecutionBudget.Current?.ThrowIfExceeded();
+		// The attribute names the function reads and writes are the dialect's (SoftcodeDialectScope).
+		using var dialect = SoftcodeDialectScope.Enter(
+			SoftcodeDialects.InForce(parser.CurrentState.CurrentEvaluation, configuration.CurrentValue.Compatibility.Dialect));
 		var clock = InvocationClock.Start(parser.Clock);
 		var success = true;
 		// The registered name, never the name as typed: a typed name is free text, and every distinct

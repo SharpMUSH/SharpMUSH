@@ -435,3 +435,12 @@ Empty by default. With `dialect` set to `rhost`, a function or command SharpMUSH
 > think strtrunc(abcdef,3)
 abc
 ```
+
+Attribute names follow the dialect too. An import stores a built-in attribute under SharpMUSH's name for it, and the dialect's name for it means that attribute wherever its code reads or sets one: in `get()`, `u()`, `&` and `@set`, and as an `@`-command. Under `mux`: `KILL`, `OKILL` and `AKILL` are `DEATH`, `ODEATH` and `ADEATH`; `REJECT` is `HAVEN`; `SIGNATURE` is `MAILSIGNATURE`; `LASTPAGE` is `LASTPAGED`; `PAY`, `OPAY` and `APAY` are `PAYMENT`, `OPAYMENT` and `APAYMENT`; `ADESC` and `ODESC` are `ADESCRIBE` and `ODESCRIBE`; `FORWARD` is `FORWARDLIST`; `SPEECHFORMAT` is `SPEECHMOD`. Under `rhost`: `PAY`, `OPAY`, `APAY`, `ADESC` and `ODESC` the same, `LASTPAGE` is `LASTPAGED`, `MAILSIG` is `MAILSIGNATURE`, `EMAIL` is `REGISTERED_EMAIL`, and `ANSINAME` is `MONIKER`. Both also read `DESC`, `IDESC`, `SUCC`, `FAIL` and the `A` and `O` forms of the last two as SharpMUSH's longer names. None of these is the name of a SharpMUSH attribute, so SharpMUSH code is unaffected. `@reject` under `mux` sets `HAVEN`.
+
+```sharp dialect=mux
+> @kill me=Ouch.
+> think get(me/death) - [get(me/kill)]
+Ouch. - Ouch.
+> &death me
+```
