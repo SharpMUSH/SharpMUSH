@@ -274,6 +274,15 @@ public static class BundledPackages
 	];
 
 	/// <summary>
+	/// Packages that left this catalogue for the official remote library, by id, each with its folder in that library.
+	/// An id goes here in the same change that removes it from <see cref="All"/>: bootstrap then re-points every game's
+	/// install of it at the library (<see cref="BundledPackageHandOver"/>), so the package manager keeps offering its
+	/// updates instead of reporting a package nothing ships any more.
+	/// </summary>
+	public static readonly IReadOnlyDictionary<string, string> Moved =
+		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+	/// <summary>
 	/// Reserved remote name for the catalogue. Never stored in <c>sys_remotes</c> — the packages
 	/// API synthesizes it into the remote list and resolves it from embedded resources. Defined in
 	/// <see cref="BundledPackageSource"/> because the portal has to recognise it too.

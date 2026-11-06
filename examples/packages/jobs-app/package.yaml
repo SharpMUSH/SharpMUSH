@@ -1,12 +1,12 @@
 format: "1.16"
 package: jobs-app
 title: "Jobs in the portal"
-version: 1.0.4
+version: 1.0.5
 kind: application
 authors: [SharpMUSH]
 description: "Registers the job queue (the jobs package) as a portal page at /apps/jobs: the queue, each job's conversation with its staff buttons, and a new-request form."
 license: MIT
-homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [portal, application, jobs, requests, tickets]
 category: Staff
 requires_server: ">=0.1"
@@ -18,8 +18,9 @@ depends:
   - package: jobs
     version: ">=1.6"
     source:
-      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
-      path: jobs/
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/jobs/
+      branch: main
 
 # Every player may open it: players file and follow their own requests there, and staff work
 # the buckets they hold the permission for. {path} is what follows /apps/jobs/ (a job number, "new",

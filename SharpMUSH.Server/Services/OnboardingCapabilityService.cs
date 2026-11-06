@@ -58,7 +58,7 @@ public sealed class OnboardingCapabilityService(IPackageRegistryService registry
 	{
 		var repo = package.SourceRepo.TrimEnd('/');
 		if (repo.EndsWith(".git", StringComparison.OrdinalIgnoreCase)) repo = repo[..^4];
-		if (!repo.Equals("https://github.com/SharpMUSH/SharpMUSH-Packages", StringComparison.OrdinalIgnoreCase)
+		if (!repo.Equals(SharpMUSH.Library.Models.Packages.OfficialPackageRemote.Url, StringComparison.OrdinalIgnoreCase)
 			&& !repo.Equals("https://github.com/SharpMUSH/SharpMUSH", StringComparison.OrdinalIgnoreCase)) return null;
 		if (package.InstalledCommit.Length != 40 || !package.InstalledCommit.All(Uri.IsHexDigit)) return null;
 		var path = package.SourcePath;

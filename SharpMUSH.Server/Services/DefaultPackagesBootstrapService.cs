@@ -36,6 +36,10 @@ public class DefaultPackagesBootstrapService(
 {
 	public async Task StartAsync(CancellationToken cancellationToken)
 	{
+		// Not gated by SHARPMUSH_BOOTSTRAP_BUNDLED_PACKAGES: it installs nothing, and a package that left the image
+		// must reach its new home whether or not this boot installs the bundled ones.
+		await BundledPackageHandOver.RunAsync(registry, BundledPackages.Moved, logger);
+
 		// Bundled packages can be turned off (SHARPMUSH_BOOTSTRAP_BUNDLED_PACKAGES=false) so a host can run
 		// the bare engine without the bundled softcode — notably generic unit tests, which must not inherit
 		// a package's server-global @hook/override capture (e.g. scene's @EMIT hook). Unset/anything-else
