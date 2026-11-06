@@ -61,6 +61,11 @@
       "lookup": "compatibility config tinymux quiet switches mux quiet"
     },
     {
+      "id": "tinymux-function-caller-mux-function-caller",
+      "heading": "TinyMUX @function caller: `mux_function_caller`",
+      "lookup": "compatibility config tinymux function caller mux function caller"
+    },
+    {
       "id": "rhostmush-edit-modes-rhost-edit",
       "heading": "RhostMUSH edit() modes: `rhost_edit`",
       "lookup": "compatibility config rhostmush edit modes rhost edit"
@@ -287,6 +292,21 @@ With it on, `/quiet` does what TinyMUX's does:
 - `give/quiet` is a wizard's switch, and leaves out only the default "You gave" and "gave you" notices.
 - `@teleport/quiet` leaves out the @tport triad, @oxtport, and the messages of leaving and arriving, but runs the @move triad.
 
+## TinyMUX @function caller: `mux_function_caller`
+
+Off by default; importing a TinyMUX database turns it on. With it off, a global `@function` runs as the object that holds its attribute, as on PennMUSH, and `/privileged` changes nothing. With it on, a function defined without `/privileged` runs as whoever calls it, with the caller's powers, as on TinyMUX; its attribute is still read from that object. One defined with `/privileged` runs as the object.
+
+```sharp mux_function_caller
+> @create MuxDocCaller
+> &MUXDOC_WHO MuxDocCaller=[type(%!)]
+> @function muxdoc_caller=MuxDocCaller/MUXDOC_WHO
+> think muxdoc_caller()
+PLAYER
+> @function/privileged muxdoc_caller=MuxDocCaller/MUXDOC_WHO
+> think muxdoc_caller()
+THING
+```
+
 ## RhostMUSH edit() modes: `rhost_edit`
 
 Off by default; meant for a game moved from RhostMUSH.
@@ -404,7 +424,7 @@ ok
 
 ## Other servers' names: `dialect`
 
-Empty by default. With `dialect` set to `rhost`, a function or command SharpMUSH has no name for is looked up among RhostMUSH's names for one it has, in typed input and in any attribute without a dialect flag of its own: `wildmatch()` runs `match()`, `@sudo` runs `@force/inplace`, `@pe` runs `@pemit`. Set to `mux`, the names are TinyMUX's: `strtrunc()` runs `left()`, `iadd()` runs `add()`, `@qmail` runs `@mail/quick`. SharpMUSH's names, including the abbreviations it accepts, and the game's `@function`s always come first. Importing a RhostMUSH or TinyMUX database sets it, and sets the `rhost` or `mux` attribute flag on every attribute it brings in, so imported code keeps reading its server's names if the option is later emptied. See [attribute flags dialect].
+Empty by default. With `dialect` set to `rhost`, a function or command SharpMUSH has no name for is looked up among RhostMUSH's names for one it has, in typed input and in any attribute without a dialect flag of its own: `wildmatch()` runs `match()`, `@sudo` runs `@force/inplace`, `@pe` runs `@pemit`. Set to `mux`, the names are TinyMUX's: `strtrunc()` runs `left()`, `iadd()` runs `add()`, `@qmail` runs `@mail/quick`, `@reject` sets HAVEN. SharpMUSH's full names and the game's `@function`s always come first; a dialect's name comes before a SharpMUSH abbreviation, so under `mux` `@reject` is not `@rejectmotd`. A TinyMUX command SharpMUSH has no command for, where SharpMUSH would read its name as something else (`@fe`, `@last`), answers `Huh?` unless a `$`-command takes it. Importing a RhostMUSH or TinyMUX database sets it, and sets the `rhost` or `mux` attribute flag on every attribute it brings in, so imported code keeps reading its server's names if the option is later emptied. See [attribute flags dialect].
 
 ```sharp dialect=rhost
 > think wildmatch(a b c,b)

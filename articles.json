@@ -1494,6 +1494,12 @@
         "aliases": []
       },
       {
+        "id": "tinymux-function-caller-mux-function-caller",
+        "lookup": "compatibility config tinymux function caller mux function caller",
+        "heading": "TinyMUX @function caller: \u0060mux_function_caller\u0060",
+        "aliases": []
+      },
+      {
         "id": "rhostmush-edit-modes-rhost-edit",
         "lookup": "compatibility config rhostmush edit modes rhost edit",
         "heading": "RhostMUSH edit() modes: \u0060rhost_edit\u0060",

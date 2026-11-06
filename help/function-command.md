@@ -71,7 +71,7 @@ Otherwise, this command defines a global function with the name `<function name>
 - /builtin or /restore, to remove the @function of that name and turn the built-in back on. `@function/restore *` removes every @function not marked with /preserve.
 - /preserve, to mark a @function so `@function/restore *` keeps it.
 - /list, to list the @functions, as `@function` alone does.
-- /privileged, accepted for TinyMUX code. It changes nothing: a @function always runs as the object that holds it.
+- /privileged, for TinyMUX code: with the `mux_function_caller` @config option on, a function defined with it runs as the object that holds it, and one defined without it runs as whoever calls it. With the option off it changes nothing. See [@function definition permissions].
 
 `@function/alias` creates an alias for the @function `<function name>` so that it can also be called as `<alias>`; it cannot alias a built-in or another alias. `@function/clone` creates a new copy of `<function name>`, a built-in or a @function, named `<clone>`, which works the same initially but can be restricted separately.
 
@@ -80,6 +80,8 @@ Otherwise, this command defines a global function with the name `<function name>
 Defining a global function, and every switch that changes one, needs the `config.admin` permission or the Functions power. `<object>` must also be something that the player using the @function command controls.
 
 A function defined using @function works just like any of the normal MUSH functions, from the user's perspective. The functions are executed by the object, with its powers.
+
+With the `mux_function_caller` @config option on, as after a TinyMUX database import, a function defined without /privileged is executed by whoever calls it, with the caller's powers, as on TinyMUX: `%!` and `me` are the caller. Its attribute is still read from `<object>`. A function defined with /privileged is executed by the object. See [compatibility config].
 
 Functions defined via @function should follow the format used by UFUN() - %0 is the first argument passed, %1 is the second argument passed, and so forth. `@function/args` also passes them under names of their own; see [@function named arguments]. Optional third and fourth arguments to @function can be used to set a parser-enforced number of arguments for the function. A negative maximum is treated as the same number without its sign.
 
