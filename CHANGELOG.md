@@ -1,6 +1,6 @@
 # Changelog
 
-SharpMUSH's releases, newest first. Each tag `vX.Y.Z` publishes the Docker images and must have a section here.
+SharpMUSH's releases, newest first. Each GitHub Release tagged `vX.Y.Z` publishes the Docker images and must have a section here.
 
 Two version numbers matter:
 
