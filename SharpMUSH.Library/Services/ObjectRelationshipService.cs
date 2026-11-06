@@ -93,6 +93,11 @@ public class ObjectRelationshipService(
 			return PermissionRefusal.NotControlledNorFlag(obj, "CHOWN_OK");
 		}
 
+		if (!await executor.CanOver(PortalPermission.PlayerChown, obj))
+		{
+			return PermissionRefusal.Needs(PortalPermission.PlayerChown);
+		}
+
 		return await permissionService.PassesLock(executor, obj, LockType.ChOwn)
 			? new Success()
 			: PermissionRefusal.Lock(obj, "ChOwn");

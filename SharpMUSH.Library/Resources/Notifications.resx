@@ -225,6 +225,9 @@
   <data name="PermissionDeniedShielded" xml:space="preserve">
     <value>Permission denied. {0} holds {1}.</value>
   </data>
+  <data name="PermissionDeniedNotReceiving" xml:space="preserve">
+    <value>Permission denied. {0} may not be given things.</value>
+  </data>
   <data name="PermissionDeniedLinkedExit" xml:space="preserve">
     <value>Permission denied. You do not control {0}, and it already leads somewhere.</value>
   </data>
