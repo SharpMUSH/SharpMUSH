@@ -146,7 +146,7 @@ def problems(root=ROOT):
     named = {path for path, *_ in found}
     result = [f'{path}: names no image tag' for path in PINS if path not in named]
     result += disagreement(found, ONE_CLICK, 'one-click')
-    result += disagreement(found, set(PINS) - ONE_CLICK, 'pinned')
+    result += disagreement(found, set(PINS) - ONE_CLICK, 'exact')
     result += [f'{path}: pins {tag}; one-click files run {" or ".join(sorted(ONE_CLICK_TAGS))}'
                for path, tag, *_ in found if path in ONE_CLICK and tag not in ONE_CLICK_TAGS]
     result += [f'{path}: pins {tag}; the exact files pin dev or a release like 1.2.3'

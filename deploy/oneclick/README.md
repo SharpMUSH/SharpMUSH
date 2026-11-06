@@ -91,4 +91,5 @@ timer off. `SHARPMUSH_GUARD=off` skips the guard.
   `99-img-check.sh`. Rebuild and resubmit for each release.
 - **Image tag.** A new game runs the tag `install.sh` names (`DEFAULT_IMAGE_TAG`), and keeps it
   when the installer or `sharpmush-configure` runs again. `SHARPMUSH_IMAGE_TAG` (the Packer variable
-  `image_tag`) picks another.
+  `image_tag`) picks another. A game installed before the first release runs `dev`; to follow
+  releases, run `SHARPMUSH_IMAGE_TAG=latest sharpmush-configure` on it.

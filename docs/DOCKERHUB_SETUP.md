@@ -93,8 +93,9 @@ release they cover. For `v1.2.3`:
 | `latest` | no release is newer |
 
 So a `v1.0.4` fix published after `v1.1.0` moves `1.0` but leaves `1` and `latest` on `1.1.0`. A
-pre-release pushes its own tag (`1.1.0-rc.1`), and `dev` when its commit is the newest on `main`, so
-`dev` never goes behind `main`.
+pre-release pushes its own tag (`1.1.0-rc.1`), and `dev` when its commit is the newest on `main`
+as the run starts. A merge while it builds can leave `dev` one commit behind until the next merge
+publishes again.
 
 #### After the release
 
