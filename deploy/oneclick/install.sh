@@ -12,7 +12,8 @@
 #   SHARPMUSH_TELNET_HOST     The telnet record the API token creates (default telnet.<domain>). Also
 #                             the name TLS telnet (4203) is served under; without it, the domain's,
 #                             and none behind a tunnel, whose domain points at Cloudflare.
-#   SHARPMUSH_IMAGE_TAG       Image tag to run (default dev).
+#   SHARPMUSH_IMAGE_TAG       Image tag to run (default DEFAULT_IMAGE_TAG below, the release this
+#                             script ships with). A later run keeps the tag the game already runs.
 #   SHARPMUSH_GUARD           "off" serves the portal and telnet to everyone before /setup is done.
 #   RESTIC_REPOSITORY, RESTIC_PASSWORD, B2_ACCOUNT_ID, B2_ACCOUNT_KEY, AWS_ACCESS_KEY_ID,
 #   AWS_SECRET_ACCESS_KEY     Nightly encrypted backups (deploy/README.md, "Backups").
@@ -28,6 +29,8 @@ set -euo pipefail
 
 SHARPMUSH_DIR=${SHARPMUSH_DIR:-/opt/sharpmush}
 SOURCE_REF=${SHARPMUSH_SOURCE_REF:-main}
+# The release a new game runs. Bumped with each release; see .github/scripts/release_images.py.
+DEFAULT_IMAGE_TAG=1.0.0
 SOURCE_URL="https://raw.githubusercontent.com/SharpMUSH/SharpMUSH/${SOURCE_REF}"
 # Where this script's own files are; nowhere when it was piped in from curl.
 HERE=/nonexistent
@@ -151,8 +154,8 @@ open_firewall() {
 }
 
 pull_images() {
-	log "Pulling images (tag ${SHARPMUSH_IMAGE_TAG:-dev})"
-	(cd "$SHARPMUSH_DIR" && SHARPMUSH_SITE=:80 SHARPMUSH_IMAGE_TAG=${SHARPMUSH_IMAGE_TAG:-dev} \
+	log "Pulling images (tag ${SHARPMUSH_IMAGE_TAG:-$DEFAULT_IMAGE_TAG})"
+	(cd "$SHARPMUSH_DIR" && SHARPMUSH_SITE=:80 SHARPMUSH_IMAGE_TAG=${SHARPMUSH_IMAGE_TAG:-$DEFAULT_IMAGE_TAG} \
 		docker compose --profile cloudflare --profile backup pull --quiet)
 }
 
@@ -348,7 +351,7 @@ SHARPMUSH_HTTPS_BIND=${SHARPMUSH_HTTPS_BIND}
 SHARPMUSH_TELNET_BIND=${SHARPMUSH_TELNET_BIND}
 SHARPMUSH_TELNET_HOST=${SHARPMUSH_TELNET_HOST:-}
 SHARPMUSH_TELNET_TLS_HOST=${SHARPMUSH_TELNET_TLS_HOST}
-SHARPMUSH_IMAGE_TAG=${SHARPMUSH_IMAGE_TAG:-dev}
+SHARPMUSH_IMAGE_TAG=${SHARPMUSH_IMAGE_TAG:-$DEFAULT_IMAGE_TAG}
 SHARPMUSH_GUARD=${SHARPMUSH_GUARD:-on}
 CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
 COMPOSE_PROFILES=${profiles}

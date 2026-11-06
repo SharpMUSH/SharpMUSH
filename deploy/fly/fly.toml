@@ -2,11 +2,10 @@
 # launch.sh saves this file as <app>.fly.toml, creates the app, its volume and IP addresses, then
 # deploys with it. The app name and region come from launch.sh's arguments.
 
-# Every deploy pulls the newest build of this tag and restarts the machine, dropping connected
-# players. Nothing deploys on its own. Once SharpMUSH has releases, a release tag
-# (sharpmush-allinone:1.0.0) holds the game on one version until you change it here.
+# Every deploy restarts the machine, dropping connected players. Nothing deploys on its own: the game
+# stays on the release named here until you change it.
 [build]
-  image = "sharpmush/sharpmush-allinone:dev"
+  image = "sharpmush/sharpmush-allinone:1.0.0"
 
 [env]
   # Set to your own domain once it points at the app (fly certs add <domain>); the setup link in the

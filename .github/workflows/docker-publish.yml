@@ -1,16 +1,25 @@
 name: Publish Docker Images
 
+# Publishing a GitHub Release whose tag is vX.Y.Z (Releases > Draft a new release) builds the
+# images at that tag and pushes them as :X.Y.Z, plus :X.Y, :X and :latest while it is the newest
+# release under each (.github/scripts/release_images.py). A prerelease pushes only :X.Y.Z-rc.N.
+# Releases with other tags (plugin-nuget/v*, sharpmush-templates/v*) are left to their own workflows.
 on:
-  push:
-    tags:
-      - 'v*.*.*'  # Triggers on version tags like v1.0.0, v2.1.3, etc.
-  workflow_dispatch:  # Allow manual triggering
+  release:
+    types: [published]
+  workflow_dispatch:  # Run on a v* tag to publish that release again
 
 permissions:
   contents: read
 
+# Two releases published close together push one after the other, so the moving tags end on the newer.
+concurrency:
+  group: docker-publish
+  cancel-in-progress: false
+
 jobs:
   build-and-test:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'v')
     uses: ./.github/workflows/_dotnet-build-test.yml
 
   build-and-push:
@@ -38,9 +47,12 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # The tag is the version: v1.0.0 builds 1.0.0 (passed into the server as SharpMUSHVersion, which
-      # version(), @version and MSSP report). A manual run must be started on a tag too.
-      - name: Extract version from tag
+      # version(), @version and MSSP report). A release event checks out its tag; a manual run must be
+      # started on one.
+      - name: Read version from tag
         id: meta
+        env:
+          PRERELEASE: ${{ github.event.release.prerelease }}
         run: |
           if [[ "$GITHUB_REF" != refs/tags/v* ]]; then
             echo "::error::Run this workflow on a v* tag; $GITHUB_REF is not one."
@@ -51,10 +63,13 @@ jobs:
             echo "::error::CHANGELOG.md has no '## [$VERSION]' section."
             exit 1
           fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          # A prerelease (1.0.0-rc.1) does not move :latest.
-          if [[ "$VERSION" == *-* ]]; then echo "latest=false" >> "$GITHUB_OUTPUT"; else echo "latest=true" >> "$GITHUB_OUTPUT"; fi
-          echo "Building version: $VERSION"
+          if [[ "$PRERELEASE" == true && "$VERSION" != *-* ]]; then
+            echo "::error::A prerelease's tag needs a suffix, like v$VERSION-rc.1, so it cannot move :latest."
+            exit 1
+          fi
+          # A release is what new games are deployed with, so the deploy files at its tag must pin it.
+          if [[ "$VERSION" != *-* ]]; then python3 .github/scripts/release_images.py check "$VERSION"; fi
+          python3 .github/scripts/release_images.py tags "$VERSION"
 
       - name: Build and push SharpMUSH Server
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
@@ -65,9 +80,7 @@ jobs:
           push: true
           build-args: |
             SHARPMUSH_VERSION=${{ steps.meta.outputs.version }}
-          tags: |
-            sharpmush/sharpmush-server:${{ steps.meta.outputs.version }}
-            ${{ steps.meta.outputs.latest == 'true' && 'sharpmush/sharpmush-server:latest' || '' }}
+          tags: ${{ steps.meta.outputs.server }}
           labels: |
             org.opencontainers.image.title=SharpMUSH Server
             org.opencontainers.image.description=Modern MUSH server implementation
@@ -84,9 +97,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           file: ./SharpMUSH.RenderingWorker/Dockerfile
           push: true
-          tags: |
-            sharpmush/sharpmush-renderer:${{ steps.meta.outputs.version }}
-            ${{ steps.meta.outputs.latest == 'true' && 'sharpmush/sharpmush-renderer:latest' || '' }}
+          tags: ${{ steps.meta.outputs.renderer }}
           labels: |
             org.opencontainers.image.title=SharpMUSH Renderer
             org.opencontainers.image.description=Rendering worker for SharpMUSH
@@ -103,9 +114,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           file: ./SharpMUSH.SocketServer/Dockerfile
           push: true
-          tags: |
-            sharpmush/sharpmush-socketserver:${{ steps.meta.outputs.version }}
-            ${{ steps.meta.outputs.latest == 'true' && 'sharpmush/sharpmush-socketserver:latest' || '' }}
+          tags: ${{ steps.meta.outputs.socketserver }}
           labels: |
             org.opencontainers.image.title=SharpMUSH SocketServer
             org.opencontainers.image.description=Stable socket owner for SharpMUSH
@@ -126,9 +135,7 @@ jobs:
           pull: true
           build-args: |
             SHARPMUSH_IMAGE_TAG=${{ steps.meta.outputs.version }}
-          tags: |
-            sharpmush/sharpmush-edge:${{ steps.meta.outputs.version }}
-            ${{ steps.meta.outputs.latest == 'true' && 'sharpmush/sharpmush-edge:latest' || '' }}
+          tags: ${{ steps.meta.outputs.edge }}
           labels: |
             org.opencontainers.image.title=SharpMUSH edge
             org.opencontainers.image.description=Caddy, NATS and the socket server, for split one-container hosts
@@ -146,9 +153,7 @@ jobs:
           pull: true
           build-args: |
             SHARPMUSH_IMAGE_TAG=${{ steps.meta.outputs.version }}
-          tags: |
-            sharpmush/sharpmush-allinone:${{ steps.meta.outputs.version }}
-            ${{ steps.meta.outputs.latest == 'true' && 'sharpmush/sharpmush-allinone:latest' || '' }}
+          tags: ${{ steps.meta.outputs.allinone }}
           labels: |
             org.opencontainers.image.title=SharpMUSH all-in-one
             org.opencontainers.image.description=SharpMUSH in one container, for one-container hosts
@@ -158,28 +163,16 @@ jobs:
 
       - name: Summary
         env:
-          VERSION: ${{ steps.meta.outputs.version }}
+          SUFFIXES: ${{ steps.meta.outputs.suffixes }}
         run: |
-          echo "## 🐳 Docker Images Published" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Successfully built and pushed images to DockerHub:" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### SharpMUSH Server" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`sharpmush/sharpmush-server:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`sharpmush/sharpmush-server:latest\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### Renderer" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`sharpmush/sharpmush-renderer:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`sharpmush/sharpmush-renderer:latest\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### SocketServer — replacement drops live connections" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`sharpmush/sharpmush-socketserver:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`sharpmush/sharpmush-socketserver:latest\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### Edge — replacement drops live connections" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`sharpmush/sharpmush-edge:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`sharpmush/sharpmush-edge:latest\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### All-in-one" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`sharpmush/sharpmush-allinone:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- \`sharpmush/sharpmush-allinone:latest\`" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "## Docker images published"
+            echo ""
+            for image in server renderer socketserver edge allinone; do
+              line="- \`sharpmush/sharpmush-$image\`:"
+              for tag in $SUFFIXES; do line="$line \`$tag\`"; done
+              echo "$line"
+            done
+            echo ""
+            echo "Replacing the socketserver or edge image drops live connections."
+          } >> "$GITHUB_STEP_SUMMARY"

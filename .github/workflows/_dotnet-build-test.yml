@@ -68,6 +68,13 @@ jobs:
       - name: Test isolated test artifact packaging
         run: python3 -m unittest discover -s .github/scripts -p test_pack_test_build.py -v
 
+      - name: Test release image tags
+        run: python3 -m unittest discover -s .github/scripts -p test_release_images.py -v
+
+      # A new game is deployed with the version the deploy files pin; it must be the engine's version.
+      - name: Check deploy files pin the engine version
+        run: python3 .github/scripts/release_images.py check
+
       - name: Restore dependencies
         run: dotnet restore
 

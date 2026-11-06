@@ -5,7 +5,7 @@
 # Deploying this app restarts the edge and drops connected players, so launch.sh deploys it only
 # when asked (--update-edge). The server and renderer update without dropping anyone.
 [build]
-  image = "sharpmush/sharpmush-edge:dev"
+  image = "sharpmush/sharpmush-edge:1.0.0"
 
 [env]
   # Set to your own domain once it points at the app (fly certs add <domain>); the setup link in the
