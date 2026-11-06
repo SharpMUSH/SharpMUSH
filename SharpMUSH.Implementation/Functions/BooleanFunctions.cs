@@ -162,15 +162,29 @@ public partial class Functions
 	/// <summary>
 	/// TinyMUX's <c>andbool()</c>: true when every argument is a TinyMUX BOOLEAN true
 	/// (<see cref="Predicates.MuxBoolean"/>), whatever <c>tiny_booleans</c> and <c>mux_logic</c> say, so
-	/// <c>andbool(1,abc)</c> is 1 where <c>and(1,abc)</c> under <c>mux_logic</c> is 0. <c>andbool()</c> is true; the
-	/// parser hands it one empty argument, so a lone empty argument counts as none.
+	/// <c>andbool(1,abc)</c> is 1 where <c>and(1,abc)</c> under <c>mux_logic</c> is 0. Every argument is
+	/// evaluated. <c>andbool()</c> is true; the parser hands it one empty argument, which is told apart from one
+	/// that evaluates to nothing, such as <c>andbool(null(x))</c>, by reading it before it is evaluated.
 	/// </summary>
-	[SharpFunction(Name = "andbool", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
-	public ValueTask<CallState> AndBool(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "andbool", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
+	public async ValueTask<CallState> AndBool(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arguments = parser.CurrentState.ArgumentsOrdered.Values.Select(argument => argument.Message ?? MarkupText.Empty).ToList();
-		return ValueTask.FromResult(new CallState(arguments is [{ Length: 0 }] || arguments.All(Predicates.MuxBoolean)));
+		if (IsEmptyCall(parser)) return new CallState(true);
+
+		var (result, hadErrors) = (true, false);
+		foreach (var argument in parser.CurrentState.ArgumentsOrdered.Values)
+		{
+			var parsed = await ParseRawArgument(parser, argument.Message) ?? CallState.Empty;
+			hadErrors |= parsed.HadErrors;
+			result &= Predicates.MuxBoolean(parsed.Message ?? MarkupText.Empty);
+		}
+
+		return new CallState(result) { HadErrors = hadErrors };
 	}
+
+	/// <summary>A call written with nothing between its parentheses, for a function that takes its arguments unevaluated.</summary>
+	private static bool IsEmptyCall(IMUSHCodeParser parser)
+		=> parser.CurrentState.ArgumentsOrdered.Values.ToList() is [var only] && (only.Message?.Length ?? 0) == 0;
 
 	/// <summary>TinyMUX's <c>orbool()</c>: <see cref="AndBool"/>'s test, true when any argument passes it.</summary>
 	[SharpFunction(Name = "orbool", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
@@ -181,7 +195,9 @@ public partial class Functions
 	/// <summary>TinyMUX's <c>candbool()</c>: <see cref="AndBool"/>, evaluating the arguments in turn up to the first false one.</summary>
 	[SharpFunction(Name = "candbool", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> CancellingAndBool(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> EvaluateLazyBoolean(parser, parser.CurrentState.ArgumentsOrdered.Values, all: true, truthy: true, Predicates.MuxBoolean);
+		=> IsEmptyCall(parser)
+			? ValueTask.FromResult(new CallState(true))
+			: EvaluateLazyBoolean(parser, parser.CurrentState.ArgumentsOrdered.Values, all: true, truthy: true, Predicates.MuxBoolean);
 
 	/// <summary>TinyMUX's <c>corbool()</c>: <see cref="OrBool"/>, evaluating the arguments in turn up to the first true one.</summary>
 	[SharpFunction(Name = "corbool", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]

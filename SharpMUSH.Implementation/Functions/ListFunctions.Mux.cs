@@ -67,7 +67,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delimiter = ArgHelpers.Delimiter(args, 1);
-		var separator = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, delimiter);
+		var separator = MuxOutputSeparator(args, 2, delimiter);
 		var words = MushText.SplitList(delimiter, args["0"].Message ?? MarkupText.Empty);
 
 		var titled = words.Select((word, index) =>
@@ -77,11 +77,38 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(MarkupText.Join(separator, titled)));
 	}
 
-	/// <summary>The word with its first character in capitals when that character is a letter.</summary>
+	/// <summary>
+	/// The word with its first visible character in capitals when that character is a letter. A point's carrier
+	/// before it stays where it is, and a word of points alone comes back as it was.
+	/// </summary>
 	private static MString CapitaliseFirstLetter(MString word)
-		=> word.Length > 0 && char.IsLetter(word.ToPlainText()[0])
-			? MarkupText.Concat(word.Substring(0, 1).Apply(text => text.ToUpperInvariant()), word.Substring(1, word.Length - 1))
-			: word;
+	{
+		var plain = word.ToPlainText();
+		if (plain is not [var first, ..] || !char.IsLetter(first)) return word;
+
+		var at = VisibleOffsets(word, plain)[0];
+		return MarkupText.Concat([word.Substring(0, at), word.Substring(at, 1).Apply(text => text.ToUpperInvariant()),
+			word.Substring(at + 1, word.Length - at - 1)]);
+	}
+
+	/// <summary>
+	/// Where in <see cref="MarkupText.Text"/> each visible character of <paramref name="plain"/>, the text's
+	/// <see cref="MarkupText.ToPlainText"/>, sits, counting the carriers of points before it, and last the text's
+	/// length.
+	/// </summary>
+	private static int[] VisibleOffsets(MString text, string plain)
+	{
+		var raw = text.Text;
+		var offsets = new int[plain.Length + 1];
+		var seen = 0;
+		for (var index = 0; index < raw.Length && seen < plain.Length; index++)
+		{
+			if (raw[index] == plain[seen]) offsets[seen++] = index;
+		}
+
+		offsets[plain.Length] = raw.Length;
+		return offsets;
+	}
 
 	/// <summary>
 	/// TinyMUX's <c>lcat()</c>: the words of the list joined by the output separator, which is nothing unless one
@@ -93,7 +120,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delimiter = ArgHelpers.Delimiter(args, 1);
-		var separator = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Empty);
+		var separator = MuxOutputSeparator(args, 2, MarkupText.Empty);
 		return ValueTask.FromResult(new CallState(MarkupText.Join(separator,
 			MushText.SplitList(delimiter, args["0"].Message ?? MarkupText.Empty))));
 	}

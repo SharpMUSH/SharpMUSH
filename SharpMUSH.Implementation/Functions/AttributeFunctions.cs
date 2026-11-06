@@ -604,26 +604,27 @@ public partial class Functions
 		bool checkParents,
 		IAttributeService.AttributePatternMode mode,
 		Func<IAsyncEnumerable<string>, ValueTask<CallState>> project)
-		=> AttributePatternAsync(parser, calledAs, parser.CurrentState.Arguments["0"].Message.ToPlainText(), checkParents,
-			mode, project);
+		=> HelperFunctions.SplitDbRefAndOptionalAttr(parser.CurrentState.Arguments["0"].Message.ToPlainText()) switch
+		{
+			{ Object: var obj, Attribute: var attributePattern } => AttributePatternAsync(parser, obj, attributePattern,
+				checkParents, mode, project),
+			_ => ValueTask.FromResult(
+				new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, calledAs.ToUpperInvariant())))
+		};
 
-	/// <summary>As above, for <paramref name="objectAndPattern"/> in place of the first argument.</summary>
+	/// <summary>
+	/// As above, for the object <paramref name="obj"/> and the pattern <paramref name="attributePattern"/> given
+	/// apart, every name when there is none.
+	/// </summary>
 	private async ValueTask<CallState> AttributePatternAsync(
 		IMUSHCodeParser parser,
-		string calledAs,
-		string objectAndPattern,
+		string obj,
+		string? attributePattern,
 		bool checkParents,
 		IAttributeService.AttributePatternMode mode,
 		Func<IAsyncEnumerable<string>, ValueTask<CallState>> project)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objectAndPattern);
-
-		if (split is not { Object: var obj, Attribute: var attributePattern })
-		{
-			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, calledAs.ToUpperInvariant()));
-		}
-
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, obj, LocateFlags.All,
 			async found =>

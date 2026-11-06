@@ -232,20 +232,22 @@ public partial class Functions
 	/// </summary>
 	[SharpFunction(Name = "reglattri", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["object", "regexp"])]
 	public ValueTask<CallState> RegularExpressionListAttributeCaseless(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
-		=> AttributePatternAsync(parser, attribute.Name, MuxObjectAndPattern(parser), false,
+		=> AttributePatternAsync(parser, MuxRegexpObject(parser), MuxRegexp(parser), false,
 			IAttributeService.AttributePatternMode.Regex, async names => new CallState(
 				string.Join(" ", await names.ToArrayAsync(ExecutionBudget.CurrentToken))));
 
 	/// <summary>TinyMUX's <c>regnattri()</c>: how many names <see cref="RegularExpressionListAttributeCaseless"/> lists.</summary>
 	[SharpFunction(Name = "regnattri", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["object", "regexp"])]
 	public ValueTask<CallState> RegularExpressionNumberAttributesCaseless(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
-		=> AttributePatternAsync(parser, attribute.Name, MuxObjectAndPattern(parser), false,
+		=> AttributePatternAsync(parser, MuxRegexpObject(parser), MuxRegexp(parser), false,
 			IAttributeService.AttributePatternMode.Regex,
 			async names => new CallState(await names.CountAsync(ExecutionBudget.CurrentToken)));
 
-	/// <summary>The TinyMUX two-argument form as the <c>object/pattern</c> PennMUSH's take.</summary>
-	private static string MuxObjectAndPattern(IMUSHCodeParser parser)
-		=> $"{parser.CurrentState.Arguments["0"].Message.ToPlainText()}/{parser.CurrentState.Arguments["1"].Message.ToPlainText()}";
+	private static string MuxRegexpObject(IMUSHCodeParser parser) => parser.CurrentState.Arguments["0"].Message.ToPlainText();
+
+	/// <summary>The TinyMUX form's regular expression, given apart from the object so it may hold any character.</summary>
+	private static string? MuxRegexp(IMUSHCodeParser parser)
+		=> parser.CurrentState.Arguments["1"].Message.ToPlainText() is { Length: > 0 } pattern ? pattern : null;
 
 	[SharpFunction(Name = "regxattr", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
 	public ValueTask<CallState> RegularExpressionNumberRangeAttributes(IMUSHCodeParser parser, SharpFunctionAttribute attribute)

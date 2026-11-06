@@ -517,7 +517,7 @@ public class AttributeService(
 		}
 
 		var attributes = mediator.CreateStream(
-			new GetAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode), token);
+			new GetAttributesQuery(obj.Object().DBRef, StoredNamePattern(attributePattern, mode), checkParents, mode), token);
 
 		var results = InChainOrder(await attributes.ToArrayAsync(token),
 			static x => x.SourceObject, static x => x.Attribute.LongName);
@@ -567,6 +567,14 @@ public class AttributeService(
 
 		return permitted.ToArray();
 	}
+
+	/// <summary>
+	/// The pattern as the store matches it against upper-case names. A regular expression is matched without
+	/// regard to case and goes as written: upper-casing it would turn <c>\d</c>, <c>\w</c> and <c>\s</c> into
+	/// their opposites.
+	/// </summary>
+	private static string StoredNamePattern(string pattern, IAttributeService.AttributePatternMode mode)
+		=> mode is IAttributeService.AttributePatternMode.Regex ? pattern : pattern.ToUpper();
 
 	/// <summary>
 	/// Whether <paramref name="pattern"/> takes PennMUSH's literal fast path in <c>atr_iter_get</c>
@@ -977,7 +985,7 @@ public class AttributeService(
 		}
 
 		var attributes = mediator.CreateStream(
-			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode), budget.Token);
+			new GetLazyAttributesQuery(obj.Object().DBRef, StoredNamePattern(attributePattern, mode), checkParents, mode), budget.Token);
 		// Privilege skips the ancestor walk but never the leaf's own internal flag.
 		return isPrivileged
 			? PrivilegedLazyAttributes(attributes, budget.Token)

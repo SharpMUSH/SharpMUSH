@@ -24,7 +24,7 @@
 
 andbool() returns 1 when every argument is true, and orbool() returns 1 when at least one is. candbool() and corbool() do the same, but evaluate their arguments one at a time and stop as soon as the answer is known, so later arguments may never run.
 
-These read each argument as TinyMUX reads a boolean, whatever the `tiny_booleans` and `mux_logic` @config options say. False is an empty or blank string, a number equal to zero, `NaN`, `Inf` or `Ind`, and anything starting with `#-`. Everything else is true, including negative numbers, dbrefs and words. With no arguments, andbool() is 1 and orbool() is 0.
+These read each argument as TinyMUX reads a boolean, whatever the `tiny_booleans` and `mux_logic` @config options say. False is an empty or blank string, a number equal to zero, `NaN`, `Inf` or `Ind`, and anything starting with `#-`. Everything else is true, including negative numbers, dbrefs and words. With no arguments, andbool() and candbool() are 1, and orbool() and corbool() are 0. An argument that evaluates to nothing is false.
 
 These functions come from TinyMUX.
 

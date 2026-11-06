@@ -13,7 +13,7 @@
 
 `lcat(<list>[, <delimiter>[, <osep>]])`
 
-Joins the words of *<list>* into one string. *<delimiter>* separates the words, a space by default. *<osep>* goes between them, and is nothing unless you give one.
+Joins the words of *<list>* into one string. *<delimiter>* separates the words, a space by default. *<osep>* goes between them, and is nothing unless you give one. An *<osep>* of `@@` is nothing too.
 
 This function comes from TinyMUX.
 

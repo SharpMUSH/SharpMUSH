@@ -73,6 +73,7 @@ public class MuxFunctionTests : ServerTestBase
 	[Test]
 	[Arguments("[andbool(1,abc,#5,-3)] [andbool(1,0)] [andbool(1,#-1 NO MATCH)] [andbool()]", "1 0 0 1")]
 	[Arguments("[orbool()] [orbool(0,,#-1,0.000,NaN,-Inf,Ind,0e5)] [orbool(0,x)] [orbool(0,#0)]", "0 0 1 1")]
+	[Arguments("[andbool(null(x))] [andbool(1,null(x))] [candbool()] [candbool(null(x))] [corbool()]", "0 0 1 0 0")]
 	[Arguments("[candbool(0,[setq(0,ran)])][r(0)]", "0")]
 	[Arguments("[candbool(1,[setq(0,ran)]1)][r(0)]", "1ran")]
 	[Arguments("[corbool(1,[setq(0,ran)])][r(0)]", "1")]
@@ -85,6 +86,7 @@ public class MuxFunctionTests : ServerTestBase
 	[Arguments("caplist(alpha|beta,|,-)", "Alpha-Beta")]
 	[Arguments("caplist(1st place)", "1st Place")]
 	[Arguments("lcat(a|b|c,|,)", "abc")]
+	[Arguments("[lcat(a b c,,@@)]|[caplist(a b,,@@)]|[lcat(a b,,-)]", "abc|AB|a-b")]
 	[Arguments("[lband()] [lbor()] [lbxor()] [lband(,|)]", "-1 0 0 -1")]
 	[Arguments("lbor(1 x)", ErrorMessages.Returns.Integers)]
 	[Arguments("[limath(mod,-7 3)] [limath(mod,7 -3)] [limath(div,-7 2)] [limath(sub,10 3 2)]", "2 -2 -3 5")]
@@ -100,9 +102,25 @@ public class MuxFunctionTests : ServerTestBase
 	[Arguments("wrapcolumns(one two three four five six,5,2,R,<,|,>,1)", "<  one|  two>\n<three| four>\n< five|  six>")]
 	[Arguments("wrapcolumns(abcdefgh,3,1,C)", "abc\ndef\ngh ")]
 	[Arguments("wrapcolumns(ab cd%ref,2,3)", "abcdef")]
+	[Arguments("strlen(wrapcolumns(repeat(ab%b,100000),2,1))", "299999")]
+	[Arguments("wrapcolumns(a,1,2000000,L,,repeat(x,1000))", ErrorMessages.Returns.OutputTooLarge)]
+	[Arguments("wrapcolumns(repeat(a,8000),1,1,L,repeat(x,8000))", ErrorMessages.Returns.OutputTooLarge)]
 	[Arguments("[iter(a b,inum())] [iter(a b,iter(x y,inum()))]|[inum()]|", "1 2 1 2 1 2||")]
 	public async Task TinyMuxShims(string expression, string expected)
 		=> await Assert.That(await Eval(expression)).IsEqualTo(expected);
+
+	[Test]
+	[Arguments("caplist([sound(chime.wav)]alpha beta)", "Alpha Beta")]
+	[Arguments("caplist(sound(chime.wav))", "")]
+	[Arguments("wrapcolumns([sound(chime.wav)]abc,3,1)", "abc")]
+	[Arguments("wrapcolumns(ab [sound(chime.wav)]cd,2,1)", "ab\ncd")]
+	[Arguments("wrapcolumns(sound(chime.wav),3,1)", "   ")]
+	public async Task MuxShimsKeepPoints(string expression, string expected)
+	{
+		var result = (await Parser.FunctionParse(MString.Plain(expression)))!.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(result.Text.Length - result.ToPlainText().Length).IsEqualTo(1);
+	}
 
 	[Test]
 	[Arguments("url_unescape(hello\\%20world)", "hello world")]
@@ -158,6 +176,8 @@ public class MuxFunctionTests : ServerTestBase
 		await Assert.That(await Eval($"reglattri({thing},^cmd)")).IsEqualTo("CMD_GO CMD_LOOK");
 		await Assert.That(await Eval($"reglattri({thing},_data$)")).IsEqualTo("PLAYER_DATA");
 		await Assert.That(await Eval($"regnattri({thing},^cmd)")).IsEqualTo("2");
+		await Assert.That(await Eval($"[attrib_set({thing}/CMD_42,1)][reglattri({thing},^cmd_\\\\d+$)]")).IsEqualTo("CMD_42");
+		await Assert.That(await Eval($"reglattri({thing},go|look)")).IsEqualTo("CMD_GO CMD_LOOK");
 		await Assert.That(await Eval($"reglattri({thing},*)")).IsEqualTo(ErrorMessages.Returns.RegexpInvalid);
 	}
 

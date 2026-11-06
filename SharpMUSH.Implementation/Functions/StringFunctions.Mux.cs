@@ -82,7 +82,11 @@ public partial class Functions
 
 		var lines = WrapToWidth(Argument(0), width);
 		var rowCount = (lines.Count + columnCount - 1) / columnCount;
-		if (FunctionLimits.ExceedsOutput(parser.CurrentState, (long)rowCount * columnCount * width))
+		// Each row is its borders and cells; rows are joined by line breaks. A row is measured first, so the
+		// product cannot overflow.
+		var rowLength = left.Length + right.Length + (long)columnCount * width + (columnCount - 1L) * middle.Length;
+		if (FunctionLimits.ExceedsOutput(parser.CurrentState, rowLength)
+			|| FunctionLimits.ExceedsOutput(parser.CurrentState, rowCount * rowLength + Math.Max(0, rowCount - 1)))
 		{
 			return ValueTask.FromResult(FunctionLimits.RejectOutput(parser.CurrentState));
 		}
@@ -102,27 +106,39 @@ public partial class Functions
 
 	/// <summary>
 	/// The text cut into lines of at most <paramref name="width"/> characters: at the last space that fits, which
-	/// the break uses up, or at the width when no space does. Spaces that would open a line are dropped.
+	/// the break uses up, or at the width when no space does. Spaces that would open a line are dropped. The
+	/// positions are found in the plain text and each line is cut from the text once, so a point stays with the
+	/// line it was in: before a dropped space on that line, after the last one on the next.
 	/// </summary>
 	private static List<MString> WrapToWidth(MString text, int width)
 	{
 		var lines = new List<MString>();
 		foreach (var paragraph in MushText.SplitList(MarkupText.Plain("\n"), text))
 		{
-			var rest = paragraph;
-			while (rest.Length > 0)
+			var plain = paragraph.ToPlainText();
+			if (plain.Length == 0)
 			{
-				var plain = rest.ToPlainText();
-				var (length, advance) = plain.Length <= width
-					? (plain.Length, plain.Length)
-					: plain.LastIndexOf(' ', width) is > 0 and var space
-						? (space, space + 1)
+				if (paragraph.Length > 0) lines.Add(paragraph);
+				continue;
+			}
+
+			var offsets = VisibleOffsets(paragraph, plain);
+			var (start, textStart) = (0, 0);
+			while (start < plain.Length)
+			{
+				var (length, advance) = plain.Length - start <= width
+					? (plain.Length - start, plain.Length - start)
+					: plain.LastIndexOf(' ', start + width, width + 1) is var space && space > start
+						? (space - start, space - start + 1)
 						: (width, width);
 
-				lines.Add(rest.Substring(0, length));
-				var skip = advance;
+				var skip = start + advance;
 				while (skip < plain.Length && plain[skip] == ' ') skip++;
-				rest = rest.Substring(skip, plain.Length - skip);
+
+				var end = offsets[start + length];
+				lines.Add(paragraph.Substring(textStart, end - textStart));
+				textStart = skip > start + length ? offsets[skip - 1] + 1 : end;
+				start = skip;
 			}
 		}
 
