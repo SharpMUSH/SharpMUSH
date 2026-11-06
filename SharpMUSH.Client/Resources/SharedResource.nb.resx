@@ -5450,6 +5450,10 @@
     <value>(rekkevidde {0})</value>
     <comment>MT</comment>
   </data>
+  <data name="RolAccessUnlessDenied" xml:space="preserve">
+    <value>Tillatt med mindre det nektes</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Unntak for {0} lagret.</value>
     <comment>MT</comment>

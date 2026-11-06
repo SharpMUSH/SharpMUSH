@@ -5450,6 +5450,10 @@
     <value>(doseg {0})</value>
     <comment>MT</comment>
   </data>
+  <data name="RolAccessUnlessDenied" xml:space="preserve">
+    <value>Dopušteno ako nije zabranjeno</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Iznimka za {0} je spremljena.</value>
     <comment>MT</comment>

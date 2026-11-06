@@ -5450,6 +5450,10 @@
     <value>(охват: {0})</value>
     <comment>MT</comment>
   </data>
+  <data name="RolAccessUnlessDenied" xml:space="preserve">
+    <value>Разрешено, если не запрещено</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Исключение для {0} сохранено.</value>
     <comment>MT</comment>

@@ -5450,6 +5450,10 @@
     <value>(rază {0})</value>
     <comment>MT</comment>
   </data>
+  <data name="RolAccessUnlessDenied" xml:space="preserve">
+    <value>Permis dacă nu este refuzat</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Excepția pentru {0} a fost salvată.</value>
     <comment>MT</comment>
