@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Text;
-using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
@@ -29,7 +28,7 @@ public class HostNameLookupTests
 		var defaults = ReadPennMushConfig.Create("Configuration/Testfile/mushcnf.dst");
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		options.CurrentValue.Returns(defaults with { Net = defaults.Net with { UseDns = useDns } });
-		return (new HostNameLookup(connections, options, resolver, NullLogger<HostNameLookup>.Instance), connections);
+		return (new HostNameLookup(connections, options, resolver), connections);
 	}
 
 	private static IHostNameResolver Resolving(string name)

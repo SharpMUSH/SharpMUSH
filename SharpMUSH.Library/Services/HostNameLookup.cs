@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -9,8 +8,7 @@ namespace SharpMUSH.Library.Services;
 public sealed class HostNameLookup(
 	IConnectionService connections,
 	IOptionsWrapper<SharpMUSHOptions> configuration,
-	IHostNameResolver resolver,
-	ILogger<HostNameLookup> logger) : IHostNameLookup
+	IHostNameResolver resolver) : IHostNameLookup
 {
 	/// <summary>Set on a connection once its address has been looked up, found or not.</summary>
 	public const string LookedUpMetadata = "HostNameLookedUp";
@@ -42,10 +40,6 @@ public sealed class HostNameLookup(
 				if (name is not null) connections.Update(handle, "HostName", name);
 				connections.Update(handle, LookedUpMetadata, "1");
 			}
-		}
-		catch (Exception ex)
-		{
-			logger.LogWarning(ex, "Could not look up the host of {Address} for handle {Handle}", address, handle);
 		}
 		finally
 		{
