@@ -9,10 +9,12 @@ namespace SharpMUSH.Library.Services;
 /// (deleted) by token, account, or origin IP for immediate ban enforcement.
 /// </summary>
 public sealed class DatabaseAccountSessionStore(ISessionRecordStore database, AccountCredentialGate? credentialGate = null,
-	IEnumerable<IAccountCredentialRevocation>? revocations = null, TimeProvider? clock = null) : IAccountSessionStore
+	IEnumerable<IAccountCredentialRevocation>? revocations = null) : IAccountSessionStore
 {
 	private readonly AccountCredentialGate _credentials = credentialGate ?? new();
-	private readonly TimeProvider _clock = clock ?? TimeProvider.System;
+
+	/// <summary>The clock expiries are read and written against; a test replaces it to move time without waiting.</summary>
+	public TimeProvider Clock { get; init; } = TimeProvider.System;
 	private readonly IEnumerable<IAccountCredentialRevocation> _revocations = revocations ?? [];
 
 	/// <summary>
@@ -52,7 +54,7 @@ public sealed class DatabaseAccountSessionStore(ISessionRecordStore database, Ac
 			Token = token,
 			AccountId = accountId,
 			OriginIp = originIp,
-			ExpiryUnixMs = _clock.GetUtcNow().Add(ttl).ToUnixTimeMilliseconds(),
+			ExpiryUnixMs = Clock.GetUtcNow().Add(ttl).ToUnixTimeMilliseconds(),
 			TtlMs = (long)ttl.TotalMilliseconds,
 			CharacterKey = characterKey,
 			CharacterCreationTime = characterCreationTime,
@@ -67,7 +69,7 @@ public sealed class DatabaseAccountSessionStore(ISessionRecordStore database, Ac
 	public async Task<Found<IAccountSessionStore.SessionIdentity>> InspectAsync(string token, CancellationToken ct = default)
 	{
 		var session = await database.GetSessionAsync(token, ct);
-		return session is { Remembered: false } && _clock.GetUtcNow().ToUnixTimeMilliseconds() < session.ExpiryUnixMs
+		return session is { Remembered: false } && Clock.GetUtcNow().ToUnixTimeMilliseconds() < session.ExpiryUnixMs
 			? new IAccountSessionStore.SessionIdentity(session.AccountId, session.CharacterKey, session.CharacterCreationTime)
 			: new NotFound();
 	}
@@ -75,7 +77,7 @@ public sealed class DatabaseAccountSessionStore(ISessionRecordStore database, Ac
 	public async Task<Found<IAccountSessionStore.SessionIdentity>> InspectDigestAsync(string sessionDigest, CancellationToken ct = default)
 		=> await database.GetSessionAuthorityByDigestAsync(sessionDigest, ct) switch
 		{
-			AccountSessionAuthority { Remembered: false } authority when _clock.GetUtcNow().ToUnixTimeMilliseconds() < authority.ExpiryUnixMs
+			AccountSessionAuthority { Remembered: false } authority when Clock.GetUtcNow().ToUnixTimeMilliseconds() < authority.ExpiryUnixMs
 				=> new IAccountSessionStore.SessionIdentity(authority.AccountId, authority.CharacterKey, authority.CharacterCreationTime),
 			_ => new NotFound()
 		};
@@ -92,7 +94,7 @@ public sealed class DatabaseAccountSessionStore(ISessionRecordStore database, Ac
 		var s = await database.GetSessionAsync(token, ct);
 		if (s is null || s.Remembered != remembered) return null;
 
-		var now = _clock.GetUtcNow().ToUnixTimeMilliseconds();
+		var now = Clock.GetUtcNow().ToUnixTimeMilliseconds();
 		// ExpiryUnixMs is the instant the session expires at, not the last instant it is usable.
 		if (now >= s.ExpiryUnixMs)
 		{
@@ -150,7 +152,7 @@ public sealed class DatabaseAccountSessionStore(ISessionRecordStore database, Ac
 	/// </summary>
 	public async Task<IAccountSessionStore.SessionSweep> SweepExpiredAsync(int maxCount, CancellationToken ct = default)
 	{
-		var now = _clock.GetUtcNow().ToUnixTimeMilliseconds();
+		var now = Clock.GetUtcNow().ToUnixTimeMilliseconds();
 		var deleted = await database.DeleteExpiredSessionsAsync(now, maxCount, ct);
 		var remaining = await database.CountExpiredSessionsAsync(now, ct);
 		return new IAccountSessionStore.SessionSweep(deleted, remaining);

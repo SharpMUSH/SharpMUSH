@@ -108,7 +108,7 @@ public class SessionConcurrencyTests(ServerWebAppFactory factory)
 	public async Task RollingWindow_StillSlides_PastTheOriginalExpiry()
 	{
 		var clock = new Clock();
-		var store = new DatabaseAccountSessionStore(Db, clock: clock);
+		var store = new DatabaseAccountSessionStore(Db) { Clock = clock };
 		var accountId = await CreateAccountAsync("rolling");
 		var ttl = TimeSpan.FromSeconds(2);
 		var token = await store.CreateTokenAsync(accountId, ttl, "203.0.113.71");
@@ -137,7 +137,7 @@ public class SessionConcurrencyTests(ServerWebAppFactory factory)
 	public async Task ExpiredSession_IsRejectedAndDeleted()
 	{
 		var clock = new Clock();
-		var store = new DatabaseAccountSessionStore(Db, clock: clock);
+		var store = new DatabaseAccountSessionStore(Db) { Clock = clock };
 		var accountId = await CreateAccountAsync("expiry");
 		var token = await store.CreateTokenAsync(accountId, TimeSpan.FromMilliseconds(150), "203.0.113.72");
 		try
