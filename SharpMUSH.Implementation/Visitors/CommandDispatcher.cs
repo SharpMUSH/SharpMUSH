@@ -132,6 +132,10 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 				return await ComsysAliasAsync(parser, comsysAlias, context, src);
 			}
 
+			// A one-character command added with @command/add is a token: `.wild hello` runs `. wild hello`.
+			if (AddedTokenCommand(parser, command) is { } addedToken)
+				return await RedispatchAsync(parser, MarkupText.Concat(MarkupText.Plain(addedToken + " "), tokenText.Substring(1)));
+
 			if (TryFindSingleTokenCommand(parser, command, out var singleTokenCommand))
 				return await services.Commands.SingleTokenAsync(visitor, parser, src, context, command, tokenText,
 					singleTokenCommand);
@@ -540,6 +544,21 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		{
 			await services.NotifyService.NotifyLocalized(parser.CurrentState.Handle.Value, key, args);
 		}
+	}
+
+	/// <summary>
+	/// The one-character command added with <c>@command/add</c> that the line's first character names, when something
+	/// is glued to it; <see langword="null"/> otherwise. A one-character alias of a longer command (<c>l</c> for
+	/// <c>LOOK</c>) is not a token, and built-in tokens are single-token commands, not rewritten.
+	/// </summary>
+	private static string? AddedTokenCommand(IMUSHCodeParser parser, string command)
+	{
+		if (command.Length < 2) return null;
+		return parser.CommandLibrary.TryGetAlternateValue(command.AsSpan(0, 1), out var candidate)
+			&& candidate.LibraryInformation.Attribute is { Name.Length: 1 } attribute
+			&& !attribute.Behavior.HasFlag(CommandBehavior.SingleToken)
+				? command[..1]
+				: null;
 	}
 
 	/// <summary>A single-token command (<c>&amp;</c>, <c>]</c>, ...) the line's first character names.</summary>

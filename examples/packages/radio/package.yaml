@@ -1,7 +1,7 @@
 format: "1.16"
 package: radio
 title: "Radio"
-version: 1.7.0
+version: 1.8.0
 authors: [SharpMUSH]
 description: "Radio: +radio frequencies players tune in to, speak on and recall, with moderators, admins and their own locks. Built on @feed: the engine keeps each frequency's lines and listeners; this package keeps the names, lists and rules."
 license: MIT
@@ -46,7 +46,8 @@ objects:
   # The radio: the @feed kind's owner, so its attributes are the kind's tie-ins, and the command object.
   # WIZARD because it defines the feed kind and adds the +radio command and its hook.
   # +radio is an @hook/override/inline target of a command STARTUP adds with /noparse/rsnoparse, so what a
-  # player types reaches the code as typed and nothing a player wrote is evaluated.
+  # player types reaches the code as typed and nothing a player wrote is evaluated. So is `.`, the short alias:
+  # a one-character added command is a token, so `.wild hello` runs `. wild hello`.
   #
   # What the engine keeps, per frequency: the feed radio/<id> (its lines within its limits, who is tuned
   # in, who is gagged). What this object keeps, in attributes: everything that is only how +radio works.
@@ -206,6 +207,11 @@ objects:
         value: |-
           $(?is)^\+radio(/\S*)?(?\: +(.*))?$: think u({{radio}}/FUN`COMMAND`PARSE,%1,%2); @include {{radio}}/INC`COMMAND`CHECK; @include %q<extension_object>/INC`%q<cmd_route>
         flags: [REGEXP]
+      # .<frequency> <message>: %1 the frequency as typed and %2 the message.
+      CMD`DOT:
+        value: |-
+          $(?is)^\.(?\: +(\S+))?(?\: +(.*))?$: think u({{radio}}/FUN`DOT`PARSE,%1,%2); @include {{radio}}/INC`DOT
+        flags: [REGEXP]
       # %0 the switches and %1 what follows, as typed. Sets cmd_switches (every switch, lower case), cmd_page (a last
       # switch of digits, the page asked for), cmd_switch (the switches without it), cmd_argument, cmd_equals (1 when
       # it has an =), cmd_left and cmd_right (either side of the =), cmd_route (the INC` routine to run) and
@@ -222,6 +228,12 @@ objects:
         cmd_left,trim(before(%q<cmd_argument>,=)),
         cmd_right,trim(after(%q<cmd_argument>,=)),
         cmd_route,ucstr(firstof(%q<cmd_switch>,if(%q<cmd_equals>,SEND,if(strlen(%q<cmd_argument>),USAGE,LIST)))),
+        viewer_key,u({{radio}}/FUN`KEY,%#))
+      # %0 the frequency and %1 the message after a `.`, as typed. Sets cmd_alias, cmd_right (the message, as
+      # INC`SEND`LINE reads it) and viewer_key.
+      FUN`DOT`PARSE: |-
+        setqm(cmd_alias,trim(%0),
+        cmd_right,trim(%1),
         viewer_key,u({{radio}}/FUN`KEY,%#))
       # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
       # radio-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
@@ -250,6 +262,18 @@ objects:
       FUN`FIND: |-
         setqm(find_exact,squish(iter(%1,if(strmatch(get({{radio}}/DATA`FREQUENCY`%i0`NAME),%0),%i0))),
         find_prefix,squish(iter(%1,if(strmatch(get({{radio}}/DATA`FREQUENCY`%i0`NAME),%0*),%i0))))[cond(eq(words(%q<find_exact>),1),%q<find_exact>,eq(words(%q<find_prefix>),1),%q<find_prefix>,words(%q<find_prefix>),#-2,#-1)]
+      # %0 a short alias as typed after a `.`, %1 the ids to look in: the id whose name, without its spaces, it is,
+      # else the one such name it begins, else #-2 when it begins several and #-1 when none. Only letters, digits,
+      # dots and dashes are looked up, so nothing typed is read as a wildcard.
+      FUN`FIND`ALIAS: |-
+        setqm(alias_exact,if(regmatch(%0,^\[A-Za-z0-9.-\]+$),squish(iter(%1,if(strmatch(edit(u({{radio}}/FUN`NAME,%i0),%b,),%0),%i0)))),
+        alias_prefix,u({{radio}}/FUN`ALIAS`MATCHES,%0,%1))[cond(eq(words(%q<alias_exact>),1),%q<alias_exact>,eq(words(%q<alias_prefix>),1),%q<alias_prefix>,words(%q<alias_prefix>),#-2,#-1)]
+      # %0 a short alias, %1 the ids to look in: the ids whose name, without its spaces, begins with it.
+      FUN`ALIAS`MATCHES: |-
+        if(regmatch(%0,^\[A-Za-z0-9.-\]+$),squish(iter(%1,if(strmatch(edit(u({{radio}}/FUN`NAME,%i0),%b,),%0*),%i0))))
+      # %0 what was typed, %1 what it finds among every frequency: why it is not one the player is tuned in to.
+      FUN`NOT`JOINED: |-
+        cond(isint(%1),You are not tuned in to [u({{radio}}/FUN`NAME,%1)]. +radio/join [u({{radio}}/FUN`NAME,%1)] tunes in.,strmatch(%1,#-2),You are not tuned in to a frequency called '%0'. +radio lists them.,There is no frequency called '%0'. +radio lists them.)
       # %0 what was typed: the objid of the player it names, or nothing.
       FUN`PLAYER: |-
         if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
@@ -334,7 +358,7 @@ objects:
       INC`NEED`ANY: |-
         think setq(frequency_id,u({{radio}}/FUN`FIND,%q<cmd_left>,u({{radio}}/FUN`IDS))); @assert strlen(%q<cmd_left>)=@pemit %#=notice(RADIO,Which frequency?,warn); @assert not(strmatch(%q<frequency_id>,#-2))=@pemit %#=notice(RADIO,'%q<cmd_left>' begins more than one frequency's name. Type more of it.,warn); @assert isint(%q<frequency_id>)=@pemit %#=notice(RADIO,There is no frequency called '%q<cmd_left>'.,warn)
       INC`NEED`JOINED: |-
-        think setq(frequency_id,u({{radio}}/FUN`FIND,%q<cmd_left>,u({{radio}}/FUN`JOINED,%#))); @assert strlen(%q<cmd_left>)=@pemit %#=notice(RADIO,Which frequency?,warn); @assert not(strmatch(%q<frequency_id>,#-2))=@pemit %#=notice(RADIO,'%q<cmd_left>' begins more than one of your frequencies. Type more of it.,warn); @assert isint(%q<frequency_id>)=@pemit %#=notice(RADIO,You are not tuned in to a frequency called '%q<cmd_left>'. +radio lists them.,warn)
+        think setq(frequency_id,u({{radio}}/FUN`FIND,%q<cmd_left>,u({{radio}}/FUN`JOINED,%#))); @assert strlen(%q<cmd_left>)=@pemit %#=notice(RADIO,Which frequency?,warn); @assert not(strmatch(%q<frequency_id>,#-2))=@pemit %#=notice(RADIO,'%q<cmd_left>' begins more than one of your frequencies. Type more of it.,warn); @assert isint(%q<frequency_id>)=@pemit %#=notice(RADIO,u({{radio}}/FUN`NOT`JOINED,%q<cmd_left>,u({{radio}}/FUN`FIND,%q<cmd_left>,u({{radio}}/FUN`IDS))),warn)
       INC`NEED`MOD: |-
         @include {{radio}}/INC`NEED`ANY; @assert u({{radio}}/FUN`IS`MOD,%q<frequency_id>,%#)=@pemit %#=notice(RADIO,Only a moderator of [u({{radio}}/FUN`NAME,%q<frequency_id>)] can do that.,error)
       INC`NEED`ADMIN: |-
@@ -346,7 +370,14 @@ objects:
       FUN`SCREEN`LIST: |-
         setq(page_ids,extract(%q<listed_ids>,inc(mul(dec(%q<page_number>),%q<page_size>)),%q<page_size>))[rule(Radio)]%r[datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r3),grow,json(string,%r%r%r1)),[tone(strong,Frequency)]%r[iter(%q<page_ids>,u({{radio}}/FUN`NAME,%i0),,%r)],[tone(strong,Category)]%r[iter(%q<page_ids>,firstof(get({{radio}}/DATA`FREQUENCY`%i0`CATEGORY),-),,%r)],[tone(strong,You)]%r[iter(%q<page_ids>,u({{radio}}/FUN`STATE,%i0,%#),,%r)],[tone(strong,About)]%r[iter(%q<page_ids>,firstof(edit(get({{radio}}/DATA`FREQUENCY`%i0`DESC),%r,%b),-),,%r)])]%r[rule(+radio/join <frequency> tunes in[u({{radio}}/FUN`PAGE`FOOTER,+radio/[inc(%q<page_number>)] for the next)])]
       INC`SEND: |-
-        @include {{radio}}/INC`NEED`JOINED; @assert u({{radio}}/FUN`CAN`TALK,%q<frequency_id>,%#)=@pemit %#=notice(RADIO,You may not speak on [u({{radio}}/FUN`NAME,%q<frequency_id>)].,error); @assert strlen(%q<cmd_right>)=@pemit %#=notice(RADIO,What do you want to say?,warn); @assert cor(not(feedinfo(radio/%q<frequency_id>,max_length)),lte(strlen(%q<cmd_right>),feedinfo(radio/%q<frequency_id>,max_length)))=@pemit %#=notice(RADIO,[u({{radio}}/FUN`NAME,%q<frequency_id>)] takes messages of up to [feedinfo(radio/%q<frequency_id>,max_length)] characters.,warn); think setq(alterego,get({{radio}}/DATA`PLAYER`%q<viewer_key>`ALTEREGO`%q<frequency_id>)); @if strlen(%q<alterego>)={@feed/send/as radio/%q<frequency_id>=%q<alterego>/%q<cmd_right>},{@feed/send radio/%q<frequency_id>=%q<cmd_right>}
+        @include {{radio}}/INC`NEED`JOINED; @include {{radio}}/INC`SEND`LINE
+      # .<frequency> <message>: the frequency is the one of the player's whose name, without spaces, is or begins
+      # with what was typed; a start that fits several sends nothing and names them.
+      INC`DOT: |-
+        @assert strlen(%q<cmd_alias>)=@pemit %#=notice(RADIO,.<frequency> <message> speaks on a frequency you are tuned in to.,warn); think setq(frequency_id,u({{radio}}/FUN`FIND`ALIAS,%q<cmd_alias>,u({{radio}}/FUN`JOINED,%#))); @assert not(strmatch(%q<frequency_id>,#-2))=@pemit %#=notice(RADIO,'.%q<cmd_alias>' could be [itemize(iter(u({{radio}}/FUN`ALIAS`MATCHES,%q<cmd_alias>,u({{radio}}/FUN`JOINED,%#)),u({{radio}}/FUN`NAME,%i0),%b,|),|,or)]. Type more of it.,warn); @assert isint(%q<frequency_id>)=@pemit %#=notice(RADIO,u({{radio}}/FUN`NOT`JOINED,%q<cmd_alias>,u({{radio}}/FUN`FIND`ALIAS,%q<cmd_alias>,u({{radio}}/FUN`IDS))),warn); @include {{radio}}/INC`SEND`LINE
+      # Speaks %q<cmd_right> on %q<frequency_id>, which the player is tuned in to.
+      INC`SEND`LINE: |-
+        @assert u({{radio}}/FUN`CAN`TALK,%q<frequency_id>,%#)=@pemit %#=notice(RADIO,You may not speak on [u({{radio}}/FUN`NAME,%q<frequency_id>)].,error); @assert strlen(%q<cmd_right>)=@pemit %#=notice(RADIO,What do you want to say?,warn); @assert cor(not(feedinfo(radio/%q<frequency_id>,max_length)),lte(strlen(%q<cmd_right>),feedinfo(radio/%q<frequency_id>,max_length)))=@pemit %#=notice(RADIO,[u({{radio}}/FUN`NAME,%q<frequency_id>)] takes messages of up to [feedinfo(radio/%q<frequency_id>,max_length)] characters.,warn); think setq(alterego,get({{radio}}/DATA`PLAYER`%q<viewer_key>`ALTEREGO`%q<frequency_id>)); @if strlen(%q<alterego>)={@feed/send/as radio/%q<frequency_id>=%q<alterego>/%q<cmd_right>},{@feed/send radio/%q<frequency_id>=%q<cmd_right>}
       INC`JOIN: |-
         @include {{radio}}/INC`NEED`ANY; @assert not(feedmember(radio/%q<frequency_id>,%#))=@pemit %#=notice(RADIO,You are already tuned in to [u({{radio}}/FUN`NAME,%q<frequency_id>)].,warn); @assert u({{radio}}/FUN`CAN`JOIN,%q<frequency_id>,%#)=@pemit %#=notice(RADIO,You may not tune in to [u({{radio}}/FUN`NAME,%q<frequency_id>)].,error); @feed/join radio/%q<frequency_id>=%#; @pemit %#=notice(RADIO,You tune in to [u({{radio}}/FUN`NAME,%q<frequency_id>)].,ok)
       INC`LEAVE: |-
@@ -441,7 +472,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot. Defining the kind
       # again changes nothing.
       STARTUP: |-
-        @feed/define radio={{radio}}; @feed/describe radio=The +radio frequencies.; @command/add/noparse/rsnoparse +radio; @hook/override/inline +radio={{radio}},CMD`RADIO
+        @feed/define radio={{radio}}; @feed/describe radio=The +radio frequencies.; @command/add/noparse/rsnoparse +radio; @hook/override/inline +radio={{radio}},CMD`RADIO; @command/add/noparse/rsnoparse .; @hook/override/inline .={{radio}},CMD`DOT
       AINSTALL: |-
         @teleport {{radio}}=#2; @trigger {{radio}}/STARTUP
 
@@ -472,6 +503,18 @@ objects:
         - `+radio/examine <frequency>` shows a frequency, who is listening, and your settings on it.
 
         You only have to type enough of a frequency's name to tell it from the others you are tuned in to: `+radio pol=Unit 4, respond.`
+
+        ## Short aliases
+
+        `.<frequency> <message>` speaks on a frequency you are tuned in to, the way `+<channel>` does on a channel. Type its name without the spaces, or enough of the start of it to tell it from your other frequencies: on Wild and Police, `.wild`, `.wi` and `.w` all mean Wild.
+
+        A name typed in full wins: `.ops` is Ops even when you are on Opsec too. A start that fits more than one sends nothing and says which it could be: `'.op' could be Ops or Opsec.`
+
+        Example:
+
+        `.w :waves.`
+
+        Output: `<Wild> Grave waves.`
 
         ## Your settings
 
