@@ -20,6 +20,7 @@ using SharpMUSH.Server.Registration;
 using SharpMUSH.Server.Logging;
 
 using SharpMUSH.Server.Middleware;
+using SharpMUSH.Server.Mudlet;
 using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Server;
@@ -226,6 +227,9 @@ public class Program
 			: Results.Json(
 				new { status = readiness.HasBeenReady ? "degraded" : "starting", pending = readiness.Pending() },
 				statusCode: StatusCodes.Status503ServiceUnavailable));
+
+		// The interface mudlet-client offers Mudlet when the game names none of its own.
+		app.MapMudletInterface();
 
 		// Inbound HTTP to the MUSH: /http/<path> runs the http_handler's <METHOD> attribute as
 		// commands, PennMUSH-style (see help sharphttp). Prefixed (rather than a catch-all) so it

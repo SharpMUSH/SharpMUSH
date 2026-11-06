@@ -256,6 +256,10 @@
       <Link>TextFiles\ahelp\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- The interface mudlet-client offers Mudlet when the game names none of its own (Mudlet/MudletInterface.cs). -->
+    <EmbeddedResource Include="Mudlet\config.lua;Mudlet\sharpmush-ui.lua">
+      <LogicalName>SharpMUSH.Server.Mudlet.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
     <!-- The READMEs of the bundled packages that have one: the Packages page shows them
          (BundledPackages.Readme). A bundled package without one gets a README written from its manifest. -->
     <EmbeddedResource Include="..\examples\packages\relationships\README.md">

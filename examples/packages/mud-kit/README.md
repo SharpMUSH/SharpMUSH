@@ -33,7 +33,8 @@ so a game takes only what it uses.
 
 Mudlet's `Core.Supports` list is `Char`, `Char.Skills`, `Char.Items`, `Room`, `IRE.Rift`,
 `IRE.Composer`, `External.Discord` and `Client.Media`. A stock Mudlet that has sent its list is
-therefore not sent `Comm.*` until a script adds it (the game's interface package is the place):
+therefore not sent `Comm.*` until a script adds it. The interface the server ships does (see
+[`mudlet-client`](../mudlet-client/)); a game's own interface package is the place for it too:
 
 ```lua
 sendGMCP([[Core.Supports.Add ["Comm.Channel 1"] ]])

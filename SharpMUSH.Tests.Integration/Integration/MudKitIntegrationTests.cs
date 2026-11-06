@@ -16,6 +16,7 @@ using SharpMUSH.Library.Utilities;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.NATS;
 using SharpMUSH.Server.Controllers;
+using SharpMUSH.Server.Mudlet;
 using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Tests.Integration;
@@ -690,17 +691,51 @@ public class MudKitIntegrationTests
 			var reader = await ClientAsync("MsReader", room, screenReader: true);
 			var sighted = await ClientAsync("MsSighted", room);
 
-			await Assert.That(await As(reader, "+gui")).Contains("no interface package");
+			await Assert.That(await As(reader, "+gui")).Contains("no interface package")
+				.Because("the harness sets no mud_url, so the interface the server ships has no address");
 			await God("+config mudlet-client/gui-url=https://example.org/ui.mpackage");
 
 			var spoken = await As(reader, "+gui");
-			await Assert.That(spoken).Contains("The game's interface for Mudlet is version 1.0, at https://example.org/ui.mpackage.")
+			await Assert.That(spoken).Contains("The game's interface for Mudlet is its own, version 1.0, at https://example.org/ui.mpackage.")
 				.And.Contains("It is offered to you when you connect.");
 			var drawn = await As(sighted, "+gui");
 			await Assert.That(drawn).Contains("Mudlet interface").And.Contains("when you connect")
 				.And.Contains("Package: https://example.org/ui.mpackage")
 				.And.DoesNotContain("The game's interface for Mudlet is version");
 			await Assert.That(await As(sighted, "+gui maybe")).Contains("+gui on offers you");
+		}
+		finally
+		{
+			await UninstallAsync("mudlet-client");
+		}
+	}
+
+	[Test]
+	public async Task MudletClient_OffersTheShippedInterfaceWhenTheGameNamesNone()
+	{
+		try
+		{
+			await ApplyAsync("mudlet-client");
+			var client = await PackageObject("mudlet-client", "client");
+
+			// The harness sets no mud_url; the address joins the game's with one slash, however it is written.
+			await Assert.That(await Think($"u({client}/FUN`GUI`SHIPPED`AT,https://game.example/)"))
+				.IsEqualTo($"https://game.example{MudletInterface.Path}");
+			await Assert.That(await Think($"u({client}/FUN`GUI`SHIPPED`AT,https://game.example)"))
+				.IsEqualTo($"https://game.example{MudletInterface.Path}");
+			await Assert.That(await Think($"u({client}/FUN`GUI`SHIPPED`AT,game.example)")).IsEqualTo(string.Empty)
+				.Because("Mudlet can only download from a web address");
+
+			await Assert.That(await Think($"u({client}/FUN`GUI`VERSION)")).IsEqualTo(MudletInterface.Version)
+				.Because("Mudlet installs the shipped interface again only when the version it is sent changes");
+			await Assert.That(await Think($"u({client}/FUN`GUI`SHIPPED)")).IsEqualTo("1");
+
+			await God("+config mudlet-client/gui-url=https://example.org/own.mpackage");
+			await Assert.That(await Think($"u({client}/FUN`GUI`URL)")).IsEqualTo("https://example.org/own.mpackage");
+			await Assert.That(await Think($"u({client}/FUN`GUI`VERSION)")).IsEqualTo("1.0");
+			await God("+config mudlet-client/gui=off");
+			await Assert.That(await Think($"u({client}/FUN`GUI`URL)")).IsEqualTo(string.Empty)
+				.Because("gui off offers no interface, the game's own included");
 		}
 		finally
 		{
