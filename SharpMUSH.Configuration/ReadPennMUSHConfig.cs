@@ -153,7 +153,10 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(CompatibilityOptions.MuxQuiet)), d.Compatibility.MuxQuiet),
 				Boolean(Get(nameof(CompatibilityOptions.MuxFunctionCaller)), d.Compatibility.MuxFunctionCaller),
 				Boolean(Get(nameof(CompatibilityOptions.MapsqlSync)), d.Compatibility.MapsqlSync)
-			),
+			)
+			{
+				ProtectionFlags = Boolean(Get(nameof(CompatibilityOptions.ProtectionFlags)), d.Compatibility.ProtectionFlags)
+			},
 			Cosmetic = new CosmeticOptions(
 				RequiredString(Get(nameof(CosmeticOptions.MoneySingular)), d.Cosmetic.MoneySingular).Trim(),
 				RequiredString(Get(nameof(CosmeticOptions.MoneyPlural)), d.Cosmetic.MoneyPlural).Trim(),
