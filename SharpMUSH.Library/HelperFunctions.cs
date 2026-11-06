@@ -122,6 +122,42 @@ public static partial class HelperFunctions
 		return IsGod(obj) || await obj.IsWizard(cancellationToken) || await obj.IsRoyalty(cancellationToken);
 	}
 
+	/// <summary>
+	/// The rank <paramref name="target"/> has as the target of a check (<see cref="OverrideReach.RankOf"/>): its owner's
+	/// <see cref="ObjectGrants.Rank"/>, read without any delegation or ceiling the owner is acting under.
+	/// </summary>
+	public static async ValueTask<int> RankAsTargetAsync(this AnySharpObject target, CancellationToken cancellationToken)
+	{
+		SharpObject owner = (await target.Object().Owner.WithCancellation(cancellationToken)).Object;
+		return (await owner.Grants.WithCancellation(cancellationToken)).Rank;
+	}
+
+	/// <summary>
+	/// <see cref="Can"/> against <paramref name="target"/>: an override with a reach (<see cref="OverrideReach"/>)
+	/// counts only when the target's owner ranks within it.
+	/// </summary>
+	public static async ValueTask<bool> CanOver(this AnySharpObject obj, string scope, AnySharpObject target)
+	{
+		if (obj.IsGod()) return true;
+		var grants = await obj.GrantsAsync(ExecutionBudget.CurrentToken);
+		return grants.Context.HasReaches
+			? grants.Has(scope, await target.RankAsTargetAsync(ExecutionBudget.CurrentToken))
+			: grants.Has(scope);
+	}
+
+	/// <summary>
+	/// <see cref="HasPower(AnySharpObject, string)"/> against <paramref name="target"/>: a built-in power held through
+	/// an override with a reach counts only when the target's owner ranks within it.
+	/// </summary>
+	public static async ValueTask<bool> HasPowerOver(this AnySharpObject obj, string power, AnySharpObject target)
+	{
+		if (GamePowers.Find(power) is not { } gamePower) return await obj.HasPower(power);
+		var grants = await obj.GrantsAsync(ExecutionBudget.CurrentToken);
+		return grants.Context.HasReaches
+			? grants.Shows(gamePower.Scope, await target.RankAsTargetAsync(ExecutionBudget.CurrentToken))
+			: grants.Shows(gamePower.Scope);
+	}
+
 	public static async ValueTask<bool> IsSee_All(this AnySharpObject obj)
 		=> await IsPriv(obj) || await obj.HasPower("See_All");
 

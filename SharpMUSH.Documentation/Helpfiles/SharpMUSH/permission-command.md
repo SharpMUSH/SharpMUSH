@@ -11,6 +11,11 @@
       "lookup": "@permission overrides"
     },
     {
+      "id": "permission-reach",
+      "heading": "Reach",
+      "lookup": "@permission reach"
+    },
+    {
       "id": "permission-custom",
       "heading": "Custom permissions",
       "lookup": "@permission define"
@@ -37,8 +42,8 @@
 
 `@permission[/list]`<br>
 `@permission[/info] <permission>`<br>
-`@permission/allow[/account] <object>=<permission> [<permission> ...]`<br>
-`@permission/deny[/account] <object>=<permission> [<permission> ...]`<br>
+`@permission/allow[/account] <object>=<permission> [<permission> ...][/<role>]`<br>
+`@permission/deny[/account] <object>=<permission> [<permission> ...][/<role>]`<br>
 `@permission/clear[/account] <object>=<permission> [<permission> ...]`<br>
 `@permission/define <permission>=<category>[/<description>]`<br>
 `@permission/undefine <permission>`<br>
@@ -67,6 +72,27 @@ An override cannot touch `administrator`, and nothing overrides a role that allo
 > @permission/deny Twink=wiki.edit media.upload
 > @permission/clear Twink=wiki.edit
 > @permission/allow/account Ariel=wiki.delete
+```
+
+## Reach
+
+A role after a `/` gives an override a reach: it applies only to some targets, by the priority of the roles their owners hold. A target ranks as the highest-priority role its owner holds, leaving out `everyone`; a player with no staff role ranks as `player`.
+
+- An Allow with a reach applies to targets ranked at or below the role. `@permission/allow Kim=game.tport_anything/councilor` lets Kim teleport what players, guildmasters, architects and councilors own, and nothing a wizard owns.
+- A Deny with a reach applies to targets ranked at or above the role. `@permission/deny Ana=game.tport_anything/wizard` stops Ana, a royalty, teleporting what wizards own, and leaves the rest of what royalty may teleport alone.
+- Outside its reach an override does nothing, and the object's other settings decide: its account's override, then its roles.
+
+A check that has no target, such as whether an object may use a command at all, ranks the target as `player`. A reach never lets anything past a guarded role (see [roles guards]). `examine` and `@role/info` show an override with a reach as `<permission>/<role>`. Clearing an override clears its reach.
+
+A RhostMUSH import gives each power held at guildmaster, architect or councilor level, and each depower set at a level, a reach.
+
+### Examples
+
+```sharp
+> @permission/allow Kim=game.tport_anything/councilor
+> @permission/deny Ana=game.tport_anything/wizard
+> examine Kim
+Output: Overrides: +game.tport_anything/councilor
 ```
 
 ## Custom permissions

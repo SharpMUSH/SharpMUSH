@@ -104,6 +104,25 @@ public class RoleCommandTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task AnOverrideCarriesAReach()
+	{
+		await Assert.That(await As(_wizard, $"@permission/allow {_mortal.Name}=game.tport_anything/Moderator"))
+			.Contains("reaching moderator");
+		await Assert.That(await As(_wizard, $"@role/player {_mortal.Name}")).Contains("game.tport_anything/moderator");
+		var before = WebAppFactoryArg.Notifications.CountFor(_wizard.DbRef);
+		await As(_wizard, $"examine {_mortal.Name}");
+		await Assert.That(string.Join("\n", WebAppFactoryArg.Notifications.For(_wizard.DbRef).Skip(before)))
+			.Contains("Overrides: +game.tport_anything/moderator");
+		await Assert.That(await As(_wizard, $"@permission/allow {_mortal.Name}=game.tport_anything/nosuchrole"))
+			.Contains("No role named 'nosuchrole' to reach.");
+		await Assert.That(await As(_wizard, $"@permission/clear {_mortal.Name}=game.tport_anything/moderator"))
+			.Contains("Clearing an override clears its reach too");
+
+		await As(_wizard, $"@permission/clear {_mortal.Name}=game.tport_anything");
+		await Assert.That(await As(_wizard, $"@role/player {_mortal.Name}")).DoesNotContain("game.tport_anything/");
+	}
+
+	[Test]
 	public async Task MortalsCannotManageRoles()
 	{
 		await Assert.That(await As(_mortal, $"@role/assign {_wizard.Name}=helper")).Contains("roles.admin");

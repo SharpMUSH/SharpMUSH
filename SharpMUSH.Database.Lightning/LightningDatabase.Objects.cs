@@ -1021,6 +1021,7 @@ public partial class LightningDatabase
 
 		// Permission overrides set on it; its role assignments are an edge pair, cleared below.
 		tx.Delete(Tables.ObjPermission, key);
+		tx.Delete(Tables.ObjPermissionReach, key);
 
 		// A character's read markers (dbref + 0x00 + scope).
 		tx.DeletePrefix(Tables.ReadMarker, Keys.Composite(n, ""));

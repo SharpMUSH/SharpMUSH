@@ -87,9 +87,11 @@ public interface IRoleManagementService
 
 	/// <summary>
 	/// Sets per-account overrides, all or none: every scope is checked before any is written.
-	/// <see cref="PermissionState.Inherit"/> clears them.
+	/// <see cref="PermissionState.Inherit"/> clears them. <paramref name="reach"/> names the role bounding the targets
+	/// they apply to (<see cref="OverrideReach"/>), or is null for every target.
 	/// </summary>
-	Task<RoleOutcome<Success>> SetOverridesAsync(RoleActor actor, string accountId, IReadOnlyCollection<string> scopes, PermissionState state, CancellationToken ct = default);
+	Task<RoleOutcome<Success>> SetOverridesAsync(RoleActor actor, string accountId, IReadOnlyCollection<string> scopes, PermissionState state,
+		string? reach = null, CancellationToken ct = default);
 
 	/// <summary>Gives a game object a role.</summary>
 	Task<RoleOutcome<Success>> AssignToObjectAsync(RoleActor actor, AnySharpObject target, string slug, CancellationToken ct = default);
@@ -98,7 +100,8 @@ public interface IRoleManagementService
 	Task<RoleOutcome<Success>> UnassignFromObjectAsync(RoleActor actor, AnySharpObject target, string slug, CancellationToken ct = default);
 
 	/// <summary>Sets overrides on a game object, all or none, as <see cref="SetOverridesAsync"/> does for accounts.</summary>
-	Task<RoleOutcome<Success>> SetObjectOverridesAsync(RoleActor actor, AnySharpObject target, IReadOnlyCollection<string> scopes, PermissionState state, CancellationToken ct = default);
+	Task<RoleOutcome<Success>> SetObjectOverridesAsync(RoleActor actor, AnySharpObject target, IReadOnlyCollection<string> scopes, PermissionState state,
+		string? reach = null, CancellationToken ct = default);
 
 	/// <summary>
 	/// Defines a custom permission (<see cref="CustomPermission"/>), or changes its category and
@@ -312,12 +315,14 @@ public sealed partial class RoleManagementService(
 	public Task<RoleOutcome<Success>> UnassignAsync(RoleActor actor, string accountId, string slug, CancellationToken ct = default)
 		=> ChangeAssignmentAsync(actor, accountId, slug, assign: false, ct);
 
-	public Task<RoleOutcome<Success>> SetOverridesAsync(RoleActor actor, string accountId, IReadOnlyCollection<string> scopes, PermissionState state, CancellationToken ct = default)
+	public Task<RoleOutcome<Success>> SetOverridesAsync(RoleActor actor, string accountId, IReadOnlyCollection<string> scopes, PermissionState state,
+		string? reach = null, CancellationToken ct = default)
 		=> Gated(async () =>
 		{
 			var custom = await CustomScopesAsync(ct);
 			if (OverrideScopes(scopes, state, custom) is not List<string> canonical)
 				return OverrideRefusal(scopes, state, custom);
+			if (await ReachAsync(reach, state, ct) is not string reachSlug) return await ReachRefusalAsync(reach, ct);
 
 			var me = (await ActorGrantsAsync(actor, ct)).Context;
 			if (Unauthorized(me) is { } refusal) return refusal;
@@ -326,7 +331,7 @@ public sealed partial class RoleManagementService(
 			if (state == PermissionState.Allow && Unheld(me, canonical) is { } unheld) return unheld;
 
 			foreach (var scope in canonical.Distinct())
-				await registry.SetAccountOverrideAsync(target, scope, state);
+				await registry.SetAccountOverrideAsync(target, scope, state, NoReach(reachSlug));
 			await invalidator.InvalidateAsync(target, ct);
 			return new Success();
 		}, ct);
@@ -399,12 +404,14 @@ public sealed partial class RoleManagementService(
 			return new Success();
 		}, ct);
 
-	public Task<RoleOutcome<Success>> SetObjectOverridesAsync(RoleActor actor, AnySharpObject target, IReadOnlyCollection<string> scopes, PermissionState state, CancellationToken ct = default)
+	public Task<RoleOutcome<Success>> SetObjectOverridesAsync(RoleActor actor, AnySharpObject target, IReadOnlyCollection<string> scopes, PermissionState state,
+		string? reach = null, CancellationToken ct = default)
 		=> Gated(async () =>
 		{
 			var custom = await CustomScopesAsync(ct);
 			if (OverrideScopes(scopes, state, custom) is not List<string> canonical)
 				return OverrideRefusal(scopes, state, custom);
+			if (await ReachAsync(reach, state, ct) is not string reachSlug) return await ReachRefusalAsync(reach, ct);
 
 			var me = (await ActorGrantsAsync(actor, ct)).Context;
 			if (Unauthorized(me) is { } refusal) return refusal;
@@ -413,10 +420,28 @@ public sealed partial class RoleManagementService(
 			if (state == PermissionState.Allow && Unheld(me, canonical) is { } unheld) return unheld;
 
 			foreach (var scope in canonical.Distinct())
-				await registry.SetObjectOverrideAsync(target.Object().Key, scope, state);
+				await registry.SetObjectOverrideAsync(target.Object().Key, scope, state, NoReach(reachSlug));
 			await ObjectChangedAsync(target, ct);
 			return new Success();
 		}, ct);
+
+	/// <summary>
+	/// The slug of the role an override's reach names, or the empty string for no reach. Null when the reach names no
+	/// role, or when it is given with <see cref="PermissionState.Inherit"/>, which clears the override and its reach.
+	/// </summary>
+	private async Task<string?> ReachAsync(string? reach, PermissionState state, CancellationToken ct)
+	{
+		if (string.IsNullOrWhiteSpace(reach)) return "";
+		if (state == PermissionState.Inherit) return null;
+		return await FindRoleAsync(reach, ct) is SharpRole role ? role.Slug : null;
+	}
+
+	private async Task<RoleOutcome<Success>> ReachRefusalAsync(string? reach, CancellationToken ct)
+		=> await FindRoleAsync(reach ?? "", ct) is SharpRole
+			? Refuse<Success>(RoleRefusalKind.Invalid, "Clearing an override clears its reach too; give no reach.")
+			: Refuse<Success>(RoleRefusalKind.NotFound, $"No role named '{reach?.Trim()}' to reach.");
+
+	private static string? NoReach(string slug) => slug.Length == 0 ? null : slug;
 
 	/// <summary>What the actor holds, read fresh: a game object's own grants, or the account's context.</summary>
 	private async Task<ObjectGrants> ActorGrantsAsync(RoleActor actor, CancellationToken ct) => actor switch

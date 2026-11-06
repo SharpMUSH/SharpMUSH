@@ -87,7 +87,7 @@ public partial class LightningDatabase
 				|| IdentityPlayer(target).CreationTime != (rollback ? mapping.OriginalCreationTime : mapping.ImportedCreationTime)))
 			throw new InvalidDataException("The explicit import character mapping no longer identifies the same players.");
 
-		TableDef[] retained = [Tables.Account, Tables.AccountBan, Tables.AccountPermission, Tables.AccountRole,
+		TableDef[] retained = [Tables.Account, Tables.AccountBan, Tables.AccountPermission, Tables.AccountPermissionReach, Tables.AccountRole,
 			Tables.AccountPasskey, Tables.ExternalIdentity, Tables.OnboardingProgress];
 		TableDef[] cleared = [Tables.AccountEmail, Tables.AccountUser, Tables.AccountPasskeyByAccount,
 			Tables.ExternalIdentityByAccount, Tables.AccountChar.Forward, Tables.AccountChar.Reverse,
@@ -112,7 +112,7 @@ public partial class LightningDatabase
 		}
 		target.Put(Tables.Meta, Keys.Str("next_account_id"), Keys.Dbref(nextId));
 
-		foreach (var table in new[] { Tables.AccountBan, Tables.AccountPermission, Tables.AccountRole })
+		foreach (var table in new[] { Tables.AccountBan, Tables.AccountPermission, Tables.AccountPermissionReach, Tables.AccountRole })
 			foreach (var row in target.Range(table, [])) RequireAccount(target, Keys.ReadStr(row.Key));
 		foreach (var row in target.Range(Tables.AccountRole, []))
 		{

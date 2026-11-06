@@ -1709,6 +1709,37 @@ public class MovementParityTests
 	}
 
 	/// <summary>
+	/// A <c>Tport_Anything</c> held with a reach, as a RhostMUSH import sets TEL_ANYTHING at a level, moves what holders
+	/// of that role or a lower one own, and not what #1 owns.
+	/// </summary>
+	[Test]
+	public async ValueTask TportAnythingWithAReachMovesOnlyWhatItReaches()
+	{
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ReachMover");
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ReachOwner");
+		var room = await Dig("ReachRoom");
+		var destination = await OpenRoom("ReachDest");
+		var godsBox = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "ReachGodBox");
+		var playersBox = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "ReachPlayerBox");
+
+		await God($"@chown {playersBox}={owner.DbRef}");
+		await God($"@teleport/silent {godsBox}={room}");
+		await God($"@teleport/silent {playersBox}={room}");
+		await God($"@teleport/silent {mover.DbRef}={room}");
+		await God($"@permission/allow {mover.DbRef}=game.tport_anything/moderator");
+
+		await Teleport(mover.Handle, Via.Command, godsBox.ToString(), destination);
+		await Teleport(mover.Handle, Via.Command, playersBox.ToString(), destination);
+
+		await Assert.That(await LocationOf(godsBox.ToString())).IsEqualTo(BareDbref(room))
+			.Because("#1 ranks above moderator, out of the power's reach");
+		await Assert.That(await LocationOf(playersBox.ToString())).IsEqualTo(BareDbref(destination))
+			.Because("a player with no staff role ranks below moderator");
+	}
+
+	/// <summary>
 	/// <c>wiz.c:572</c>: a FIXED player moves nothing, including themselves. FIXED is read on the
 	/// OWNER (<c>hdrs/dbdefs.h:84</c>), and the teleport path read it nowhere at all.
 	/// </summary>
