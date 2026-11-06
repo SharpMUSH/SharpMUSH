@@ -48,6 +48,8 @@ think [get(EventSink/DROPTO_BY)]
 @mail Bob=Filed/Where does this go?
 ::as bob
 &MAILFILTER me
+# The folder SharpMUSH made goes again, so later files see one mailbox on both servers.
+@dolist/inline 1=@mail/clear 1:1;@mail/purge
 
 ::case choice.mail-forwardlist  an empty MAILFORWARDLIST is no list
 ::as bob

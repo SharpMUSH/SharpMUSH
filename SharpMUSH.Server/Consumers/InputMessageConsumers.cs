@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Configuration.Options;
 using MarkupString;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Definitions;
@@ -292,11 +293,18 @@ public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger, IConnectionS
 /// <summary>
 /// Consumes connection established messages from NATS JetStream
 /// </summary>
+/// <remarks>
+/// A connection that arrives with its address as its host is looked up while <c>use_dns</c> is on, as PennMUSH's
+/// <c>info_slave</c> looks one up, and its host becomes the name the address resolves to. The lookup runs beside
+/// the connection rather than ahead of it, so a slow resolver holds up nobody's connect screen.
+/// </remarks>
 public class ConnectionEstablishedConsumer(
 	ILogger<ConnectionEstablishedConsumer> logger,
 	IConnectionService connectionService,
 	IMessageBus bus,
-	IConnectionStateStore? stateStore = null)
+	IConnectionStateStore? stateStore = null,
+	IOptionsWrapper<SharpMUSHOptions>? configuration = null,
+	IHostNameResolver? hostNames = null)
 	: IMessageConsumer<ConnectionEstablishedMessage>
 {
 	public async Task HandleAsync(ConnectionEstablishedMessage message, CancellationToken cancellationToken = default)
@@ -336,6 +344,28 @@ public class ConnectionEstablishedConsumer(
 				{ ConnectionEstablishedMessage.OrderedPromptsMetadata, message.OrderedPrompts ? "1" : "0" },
 				{ ConnectionEstablishedMessage.SignInMetadata, message.SignIn ? "1" : "0" }
 			}));
+
+		if (hostNames is not null && configuration?.CurrentValue.Net.UseDns == true && message.Hostname == message.IpAddress)
+		{
+			_ = Task.Run(() => ResolveHostNameAsync(hostNames, message.Handle, message.IpAddress), CancellationToken.None);
+		}
+	}
+
+	/// <summary>Records the name <paramref name="address"/> resolves to as the host of a connection still on it.</summary>
+	internal async Task ResolveHostNameAsync(IHostNameResolver resolver, long handle, string address)
+	{
+		try
+		{
+			if (await resolver.ResolveAsync(address) is { } name
+					&& connectionService.Get(handle) is { InternetProtocolAddress: var current } && current == address)
+			{
+				connectionService.Update(handle, "HostName", name);
+			}
+		}
+		catch (Exception ex)
+		{
+			logger.LogWarning(ex, "Could not look up the host of {Address} for handle {Handle}", address, handle);
+		}
 	}
 }
 

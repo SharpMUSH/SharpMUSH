@@ -1,7 +1,9 @@
 ﻿using DotNext.Collections.Generic;
 using System.Globalization;
 using System.Net;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
@@ -35,6 +37,9 @@ public partial class Commands
 
 	/// <summary>Wide enough that no column of a listing is ever left out; each line ends at its last character.</summary>
 	private const int ListingCells = 200;
+
+	/// <summary>What a connect naming no player is told (<c>connect_player</c>, <c>src/player.c</c>).</summary>
+	private const string NoSuchPlayer = "There is no player with that name.";
 
 	/// <summary>
 	/// PennMUSH's <c>dump_users</c> columns (<c>src/bsd.c</c>), one cell apart, so the listing reads
@@ -368,7 +373,7 @@ public partial class Commands
 		if (nameItems.Count != 1)
 		{
 			await TriggerLoginFailAsync(handle, ipAddress, "invalid player name", "#-1", username);
-			await NotifyService.Notify(handle, "Could not find that player.");
+			await NotifyService.Notify(handle, NoSuchPlayer);
 			return new CallState(ErrorMessages.Returns.PlayerNotFound);
 		}
 
@@ -383,7 +388,7 @@ public partial class Commands
 		if (foundDB is null)
 		{
 			await TriggerLoginFailAsync(handle, ipAddress, "player not found", "#-1", username);
-			await NotifyService.Notify(handle, "Could not find that player.");
+			await NotifyService.Notify(handle, NoSuchPlayer);
 			return new CallState(ErrorMessages.Returns.PlayerNotFound);
 		}
 
@@ -433,8 +438,9 @@ public partial class Commands
 
 		if (!validPassword && !string.IsNullOrEmpty(foundDB.PasswordHash))
 		{
+			await RecordFailedConnectAsync(handle, foundDB);
 			await TriggerLoginFailAsync(handle, ipAddress, "invalid password", $"#{foundDB.Object.Key}", foundDB.Object.Name);
-			await NotifyService.Notify(handle, "Invalid Password.");
+			await NotifyService.Notify(handle, "That is not the correct password.");
 			return new CallState(ErrorMessages.Returns.InvalidPassword);
 		}
 
@@ -541,7 +547,7 @@ public partial class Commands
 		var playerNode = await Mediator.Send(new GetObjectNodeQuery(playerDbRef.Value));
 		if (playerNode is not (AnySharpObject and SharpPlayer foundPlayer))
 		{
-			await NotifyService.Notify(handle, "Could not find that player.");
+			await NotifyService.Notify(handle, NoSuchPlayer);
 			return new CallState(ErrorMessages.Returns.PlayerNotFound);
 		}
 
@@ -848,6 +854,12 @@ public partial class Commands
 		using (LoginOutput.To(playerRef, handle))
 		{
 			await CheckLastAsync(handle, player, isGuest);
+			// check_connect's queue_eol: a blank line on this connection before the mail report.
+			await NotifyService.Notify(handle, " ");
+			if (await parser.ServiceProvider.GetRequiredService<ICommandPermission>().CanRunAsync(new AnySharpObject(player), "@MAIL"))
+			{
+				await CheckAllMailAsync(player);
+			}
 		}
 
 		// The player's own channel list, which a fresh connection has not been sent yet.
@@ -934,14 +946,69 @@ public partial class Commands
 
 		if (await HelperFunctions.GetGod(Mediator) is not SharpPlayer god) return;
 		var connection = ConnectionService.Get(handle);
-		var now = DateTimeOffset.UtcNow.ToLocalTime().ToString("ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture);
-		await Mediator.Send(new SetAttributeCommand(playerRef, ["LAST"], MarkupText.Plain(now), god));
+		await Mediator.Send(new SetAttributeCommand(playerRef, ["LAST"], MarkupText.Plain(ConnectTime()), god));
 		await Mediator.Send(new SetAttributeCommand(playerRef, ["LASTSITE"],
 			MarkupText.Plain(connection?.HostName ?? string.Empty), god));
 		await Mediator.Send(new SetAttributeCommand(playerRef, ["LASTIP"],
 			MarkupText.Plain(connection?.InternetProtocolAddress ?? string.Empty), god));
 		await Mediator.Send(new SetAttributeCommand(playerRef, ["LASTFAILED"], MarkupText.Plain(" "), god));
 	}
+
+	/// <summary>
+	/// PennMUSH <c>check_all_mail</c> (<c>src/extmail.c</c>), run at login when the player may use <c>@mail</c>: one
+	/// line for each folder holding mail, in folder order, with a warning when the inbox is within five messages of
+	/// the player's limit, or a line saying there is no mail at all.
+	/// </summary>
+	private async ValueTask CheckAllMailAsync(SharpPlayer player)
+	{
+		var folders = await MailFolders.LoadAsync(ObjectDataService, player);
+		var counts = (await Mediator.CreateStream(new GetAllMailListQuery(player)).ToArrayAsync())
+			.Select(mail => (Number: folders.NumberOf(mail.Folder) is int number ? number : -1, Mail: mail))
+			.Where(entry => entry.Number >= 0)
+			.GroupBy(entry => entry.Number, entry => entry.Mail)
+			.Select(folder => (Number: folder.Key, Mail: folder.ToArray()))
+			.OrderBy(folder => folder.Number)
+			.ToArray();
+
+		if (counts.Length == 0)
+		{
+			// Penn's "\nMAIL: You have no mail.\n": a line's own trailing newline is not sent, so the blank line after
+			// it is a line of its own.
+			await NotifyService.Notify(player.Object.DBRef, "\nMAIL: You have no mail.");
+			await NotifyService.Notify(player.Object.DBRef, " ");
+			return;
+		}
+
+		foreach (var (number, mail) in counts)
+		{
+			var unread = mail.Count(message => !message.Cleared && !message.Read);
+			var cleared = mail.Count(message => message.Cleared);
+			await NotifyService.Notify(player.Object.DBRef,
+				$"MAIL: {mail.Length} messages in folder {number} [{folders.DisplayName(number)}] ({unread} unread, {cleared} cleared).");
+
+			if (number == 0 && await MailDelivery.MailLimitAsync(AttributeService, Configuration, player) is var limit
+					&& mail.Length + 5 > limit)
+			{
+				await NotifyService.Notify(player.Object.DBRef, $"MAIL: Warning! Limit on inbox messages is {limit}!");
+			}
+		}
+	}
+
+	/// <summary>
+	/// PennMUSH <c>check_lastfailed</c> (<c>src/player.c</c>): a wrong password records where it came from and when in
+	/// <c>LASTFAILED</c>, which the next login reports. God's write, as <see cref="CheckLastAsync"/>'s are.
+	/// </summary>
+	private async ValueTask RecordFailedConnectAsync(long handle, SharpPlayer player)
+	{
+		if (await HelperFunctions.GetGod(Mediator) is not SharpPlayer god) return;
+		var host = ConnectionService.Get(handle)?.HostName ?? string.Empty;
+		await Mediator.Send(new SetAttributeCommand(player.Object.DBRef, ["LASTFAILED"],
+			MarkupText.Plain($"{host} on {ConnectTime()}"), god));
+	}
+
+	/// <summary>The time a connect is recorded at, as PennMUSH's <c>show_time</c> writes it.</summary>
+	private static string ConnectTime()
+		=> DateTimeOffset.UtcNow.ToLocalTime().ToString("ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture);
 
 	/// <summary>An attribute's plain value on the object itself (Penn's <c>atr_get_noparent</c>), or null.</summary>
 	private async ValueTask<string?> PlainAttributeAsync(DBRef dbref, string name)

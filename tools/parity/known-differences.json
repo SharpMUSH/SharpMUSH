@@ -52,6 +52,18 @@
       "command": "@mail Bob=Filed/Where does this go?"
     },
     {
+      "id": "KD-0049",
+      "scenario": "40-compat-choices",
+      "case": "choice.mail-folder",
+      "step": 5,
+      "reason": "The case clears the message SharpMUSH filed in the folder it made; PennMUSH made no folder 1, so it finds nothing to clear. `sharp` and `penn` pin both lines.",
+      "tracking": "#1134",
+      "profile": "Folders are named freely and created on delivery",
+      "command": "@dolist/inline 1=@mail/clear 1:1;@mail/purge",
+      "sharp": "Mail 1 updated.\nMAIL: Mailbox purged.",
+      "penn": "MAIL: You don't have any matching messages!\nMAIL: Mailbox purged."
+    },
+    {
       "id": "KD-0007",
       "scenario": "40-compat-choices",
       "case": "choice.mail-forwardlist",

@@ -461,7 +461,9 @@ public partial class TelnetServer
 			await server._connectionService.RegisterAsync(
 				handle,
 				remoteIp,
-				connection.RemoteEndPoint?.ToString() ?? remoteIp,
+				// The host is the address too, port left off, as a WebSocket connection's is; the engine looks its name
+				// up while use_dns is on.
+				remoteIp,
 				"telnet",
 				WriteOutputAsync,
 				WritePromptAsync,

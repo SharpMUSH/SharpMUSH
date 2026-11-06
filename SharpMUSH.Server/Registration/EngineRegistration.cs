@@ -139,6 +139,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IQueueControlService, QueueControlService>();
 		services.AddSingleton<ILoginFailureTracker, LoginFailureTracker>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
+		services.AddSingleton<IHostNameResolver, DnsHostNameResolver>();
 		services.AddSingleton<IInputSessionService, InputSessionService>();
 		services.AddSingleton<ApplicationDraftService>();
 		// The command palette: each character's context stack in memory, what a typed line used pushed
