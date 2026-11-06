@@ -1,7 +1,11 @@
+import io
+import json
+import os
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import release_images
 
@@ -32,6 +36,22 @@ class TagTests(unittest.TestCase):
         for version in ('v1.0.0', '1.0', 'main', '1.0.0+build'):
             with self.subTest(version=version), self.assertRaises(ValueError):
                 release_images.tags(version, [])
+
+
+class ReleasedVersionTests(unittest.TestCase):
+    def test_only_published_stable_v_releases_count(self):
+        page = [
+            {'tag_name': 'v1.0.0', 'draft': False, 'prerelease': False},
+            {'tag_name': 'v2.0.0', 'draft': False, 'prerelease': True},
+            {'tag_name': 'v1.1.0', 'draft': True, 'prerelease': False},
+            {'tag_name': 'plugin-nuget/v3.0.0', 'draft': False, 'prerelease': False},
+        ]
+        env = {'GITHUB_TOKEN': 't', 'GITHUB_REPOSITORY': 'o/r', 'GITHUB_API_URL': 'https://api.example'}
+        with patch.dict(os.environ, env), \
+                patch('urllib.request.urlopen', return_value=io.BytesIO(json.dumps(page).encode())) as urlopen:
+            self.assertEqual(release_images.released_versions(), ['1.0.0'])
+        self.assertEqual(urlopen.call_args[0][0].full_url,
+                         'https://api.example/repos/o/r/releases?per_page=100&page=1')
 
 
 class PinTests(unittest.TestCase):

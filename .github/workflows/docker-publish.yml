@@ -20,8 +20,10 @@ jobs:
   build-and-push:
     needs: [build-and-test]
     runs-on: ubuntu-latest
-    # Two releases published close together push one after the other, so the moving tags end on the
-    # newer. Set on the job, so releases this workflow skips never join the queue.
+    # Releases published close together push one after the other, so the moving tags end on the
+    # newest. GitHub keeps one run waiting per group: a third release published while one runs and
+    # one waits replaces the waiting one, which then needs a manual run on its tag. Set on the job,
+    # so releases this workflow skips never join the queue.
     concurrency:
       group: docker-publish
       cancel-in-progress: false
@@ -53,6 +55,7 @@ jobs:
         id: meta
         env:
           PRERELEASE: ${{ github.event.release.prerelease }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           if [[ "$GITHUB_REF" != refs/tags/v* ]]; then
             echo "::error::Run this workflow on a v* tag; $GITHUB_REF is not one."

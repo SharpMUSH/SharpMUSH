@@ -105,7 +105,12 @@ request with:
 python3 .github/scripts/release_images.py bump 1.0.0
 ```
 
-CI fails a build whose deploy files name different tags (`release_images.py check`).
+CI fails a build whose deploy files name different tags (`release_images.py check`). The Railway
+template lives in Railway's template composer, not in this repository: set its three services'
+images to the new tag there too.
+
+Which shorter tags move is decided from the repository's published GitHub Releases, not its git
+tags, so a stray `vX.Y.Z` tag or a refused pre-release does not hold `latest` back.
 
 ### Dev Build (Main Branch Pushes)
 

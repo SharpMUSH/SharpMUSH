@@ -11,10 +11,11 @@ A release vX.Y.Z pushes :X.Y.Z, and moves :X.Y, :X and :latest only while it is 
 release under each of them, so publishing 1.0.1 after 1.1.0 leaves :1 and :latest on 1.1.0.
 A prerelease (X.Y.Z-rc.1) pushes only its own tag.
 """
+import json
 import os
 import re
-import subprocess
 import sys
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -74,10 +75,22 @@ def tags(version, released):
 
 
 def released_versions():
-    """The versions of every vX.Y.Z tag on origin."""
-    out = subprocess.run(['git', 'ls-remote', '--tags', '--refs', 'origin', 'refs/tags/v*'],
-                         check=True, capture_output=True, text=True).stdout
-    return [line.rsplit('refs/tags/v', 1)[1] for line in out.splitlines() if 'refs/tags/v' in line]
+    """The versions of the repository's published, non-prerelease vX.Y.Z GitHub Releases.
+
+    Releases, not tags: a stray tag, or one left by a refused prerelease, must not hold :latest back.
+    """
+    api = os.environ.get('GITHUB_API_URL', 'https://api.github.com')
+    headers = {'Accept': 'application/vnd.github+json', 'Authorization': f'Bearer {os.environ["GITHUB_TOKEN"]}'}
+    versions, page = [], 1
+    while True:
+        url = f'{api}/repos/{os.environ["GITHUB_REPOSITORY"]}/releases?per_page=100&page={page}'
+        with urllib.request.urlopen(urllib.request.Request(url, headers=headers)) as response:
+            batch = json.load(response)
+        versions += [r['tag_name'][1:] for r in batch
+                     if not r['draft'] and not r['prerelease'] and r['tag_name'].startswith('v')]
+        if len(batch) < 100:
+            return versions
+        page += 1
 
 
 def write_tags(version):
