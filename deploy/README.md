@@ -24,7 +24,7 @@ separate, optional overlay for either stack:
 | `sharpmush.service` | Optional systemd unit — brings the stack up from the compose file on boot |
 | `.env.example` | Template for secrets/config — copy to `.env` and fill in |
 | `.gitignore` | Keeps your real `.env` out of git |
-| `../nats.conf` | NATS server config (repo root, shared with the dev stack). Sets `max_payload` to 6 MB — a server-level limit with no CLI flag, so it has to come from a file — and JetStream's total storage budget (`max_file_store`, 6 GB). Both compose files bind-mount it. Stream budgets: `docs/design/messaging-retention.md`. |
+| `../nats.conf` | NATS server config (repo root). Sets `max_payload` to 6 MB — a server-level limit with no CLI flag, so it has to come from a file — and JetStream's total storage budget (`max_file_store`, 6 GB). Both compose files bind-mount it. Stream budgets: `docs/design/messaging-retention.md`. |
 | `README.md` | This file |
 
 ## First-time setup

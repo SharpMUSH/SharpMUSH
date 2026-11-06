@@ -59,10 +59,11 @@ The test framework is **TUnit** (not xUnit or MSTest). The `--treenode-filter` f
 
 ## Running the Server
 
-The startup project is `SharpMUSH.Server`. For full operation, also run `SharpMUSH.SocketServer` (client sockets) and `SharpMUSH.RenderingWorker` (output rendering). The compose stack runs all three on the embedded `lightning` provider with NATS, and is what `deploy/` ships to production:
+The startup project is `SharpMUSH.Server`. For full operation, also run `SharpMUSH.SocketServer` (client sockets) and `SharpMUSH.RenderingWorker` (output rendering). The Compose files in `deploy/` run all three on the embedded `lightning` provider with NATS; there is no Compose file at the repository root:
 
 ```bash
-docker compose up -d
+cd deploy && cp .env.example .env    # set SHARPMUSH_DOMAIN
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 The `lightning` provider is embedded and needs no Docker for the database itself — it

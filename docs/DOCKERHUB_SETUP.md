@@ -101,7 +101,7 @@ Every push to `main` updates:
 - `sharpmush/sharpmush-server:dev`
 - `sharpmush/sharpmush-renderer:dev`
 
-These images reflect the latest state of the `main` branch and are used by `docker-compose-hub.yml` for development/testing purposes.
+These images reflect the latest state of the `main` branch, for development and testing.
 
 ## Manual Triggering
 
