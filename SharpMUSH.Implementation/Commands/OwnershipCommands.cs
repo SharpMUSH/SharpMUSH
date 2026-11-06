@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -54,13 +55,13 @@ public partial class Commands
 			return await NotifyService.PermissionDenied(executor, refusal);
 		}
 
-		if (obj is SharpThing thing && !await executor.IsPriv()
+		if (obj is SharpThing thing && !await executor.IsPriv() && !await executor.Can(PortalPermission.ChownSelf)
 			&& (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef != executor.Object().DBRef)
 		{
 			return await Refused(nameof(ErrorMessages.Notifications.MustCarryToChown));
 		}
 
-		if (preserve && !await executor.IsWizard())
+		if (preserve && !await executor.Can(PortalPermission.ChownAny))
 		{
 			return await Refused(nameof(ErrorMessages.Notifications.ChownPreserveIsForWizards));
 		}
@@ -173,7 +174,7 @@ public partial class Commands
 		};
 
 	[SharpCommand(Name = "@CHOWNALL", Switches = ["PRESERVE", "THINGS", "ROOMS", "EXITS"],
-		Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD", MinArgs = 1, MaxArgs = 2, ParameterNames = ["old-owner", "new-owner"])]
+		Behavior = CB.Default | CB.EqSplit, CommandLock = "PERM^game.chown.any", MinArgs = 1, MaxArgs = 2, ParameterNames = ["old-owner", "new-owner"])]
 	public async ValueTask<Option<CallState>> Chown(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -285,7 +286,7 @@ public partial class Commands
 	/// destination's <c>@lock/chzone</c>, the cycle walk, <c>check_zone_lock</c>'s default lock and the
 	/// already-in-that-zone skip all apply here as they do to <c>@CHZONE</c>.
 	/// </remarks>
-	[SharpCommand(Name = "@CHZONEALL", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD",
+	[SharpCommand(Name = "@CHZONEALL", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit, CommandLock = "PERM^game.chown.any",
 		MinArgs = 1, MaxArgs = 2, ParameterNames = ["old-zone", "new-zone"])]
 	public async ValueTask<Option<CallState>> ChangeZoneAll(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{

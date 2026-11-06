@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Common;
@@ -265,8 +266,8 @@ public partial class Commands
 					shouldNotify: true);
 			}
 
-			// Only a wizard can destroy a player.
-			if (!await executor.IsWizard())
+			// Only a holder of game.nuke can destroy a player, and with a reach only one it reaches.
+			if (!await executor.CanOver(PortalPermission.Nuke, obj))
 			{
 				return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,

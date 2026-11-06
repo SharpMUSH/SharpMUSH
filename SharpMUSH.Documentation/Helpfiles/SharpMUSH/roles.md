@@ -46,6 +46,11 @@
       "lookup": "roles wizard"
     },
     {
+      "id": "roles-staff",
+      "heading": "Staff permissions",
+      "lookup": "roles staff"
+    },
+    {
       "id": "roles-wizard-only",
       "heading": "What still needs game.wizard",
       "lookup": "roles wizard only"
@@ -173,9 +178,26 @@ Being a wizard (`game.wizard`) is split into groups, so a custom role can hand o
 | `wiki.admin` | wiki requirements (setting them, and skipping them), protecting and publishing pages; see [wiki permissions] |
 | `server.operate` | @shutdown, @dump, @dbck, @purge, @readcache, @backup, @storage, @log, @slave, @kick, @uptime details |
 
+## Staff permissions
+
+These take parts of a wizard's standing over other players' things, so a role or an override can give one without `game.wizard`. The `wizard` role allows all but the last.
+
+| Permission | Covers |
+|---|---|
+| `game.chown.self` | @chown of another's object to yourself, without carrying it |
+| `game.chown.any` | @chown between any owners, /preserve, @chownall, @chzoneall, @atrchown to anyone; covers `game.chown.self` |
+| `game.nuke` | @destroy and @nuke of players |
+| `game.override` | setting wizard and locked attributes and locks on others' objects |
+| `game.flags.restricted` | setting wizard-only flags, and CHOWN_OK and DESTROY_OK on others' objects |
+| `game.noforce` | nobody ranked below you may @force you |
+| `game.noboot` | nobody ranked below you may @boot you |
+| `game.override.movement` | passing enter, leave and exit locks |
+
+Each can carry a reach (see [@permission reach]). On `game.noforce` and `game.noboot` a reach names who is kept out: with reach `architect`, nobody ranked at or below architect may force you.
+
 ## What still needs game.wizard
 
-Everything else a wizard does still needs `game.wizard`: wizard attributes, overrides in `examine` and `@destroy`, the preserve switches, @chownall and @chzoneall, and every check on whether the target is a wizard. A check that also takes a power, such as @halt with Halt or @sql with SQL_OK, takes that power as before. Any single command can be given its own permission with `@command/restrict <command>=PERM^<permission>`, and a function with `@function/restrict <function>=<permission>`.
+Everything else a wizard does still needs `game.wizard`: overrides in `examine`, the preserve switches other than @chown's, and every check on whether the target is a wizard. A check that also takes a power, such as @halt with Halt or @sql with SQL_OK, takes that power as before. Any single command can be given its own permission with `@command/restrict <command>=PERM^<permission>`, and a function with `@function/restrict <function>=<permission>`.
 
 A power made with `@power/add` is stored on the object as before.
 
