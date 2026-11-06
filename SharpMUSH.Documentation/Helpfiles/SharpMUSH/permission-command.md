@@ -76,23 +76,21 @@ An override cannot touch `administrator`, and nothing overrides a role that allo
 
 ## Reach
 
-A role after a `/` gives an override a reach: it applies only to some targets, by the priority of the roles their owners hold. A target ranks as the highest-priority role its owner holds, leaving out `everyone`; a player with no staff role ranks as `player`.
+A role after a `/` gives an override a reach: it applies only to targets whose owners rank within it. A target ranks as the highest-priority role its owner holds, leaving out `everyone`; a player with no staff role ranks as `player`.
 
-- An Allow with a reach applies to targets ranked at or below the role. `@permission/allow Kim=game.tport_anything/councilor` lets Kim teleport what players, guildmasters, architects and councilors own, and nothing a wizard owns.
-- A Deny with a reach applies to targets ranked at or above the role. `@permission/deny Ana=game.tport_anything/wizard` stops Ana, a royalty, teleporting what wizards own, and leaves the rest of what royalty may teleport alone.
-- Outside its reach an override does nothing, and the object's other settings decide: its account's override, then its roles.
+- An Allow with a reach applies to targets ranked at or below the role. `@permission/allow Kim=game.tport_anything/moderator` lets Kim teleport what players and moderators own, and nothing a wizard owns.
+- A Deny with a reach applies to targets ranked at or above the role. `@permission/deny Ana=game.tport_anything/wizard` stops Ana teleporting what wizards own, and leaves the rest alone.
+- Outside its reach an override does nothing: the account's override decides, then the roles.
 
-A check that has no target, such as whether an object may use a command at all, ranks the target as `player`. A reach never lets anything past a guarded role (see [roles guards]). `examine` and `@role/info` show an override with a reach as `<permission>/<role>`. Clearing an override clears its reach.
-
-A RhostMUSH import gives each power held at guildmaster, architect or councilor level, and each depower set at a level, a reach.
+Only `control.all`, `game.tport_anything` and `game.tport_anywhere` take a reach. A check with no target ranks it as `player`. A reach naming a role that was deleted allows nothing and denies everything. Granting an Allow with a reach needs that permission at the reach's rank. `examine` shows a reach as `<permission>/<role>`; clearing an override clears it.
 
 ### Examples
 
 ```sharp
-> @permission/allow Kim=game.tport_anything/councilor
+> @permission/allow Kim=game.tport_anything/moderator
 > @permission/deny Ana=game.tport_anything/wizard
 > examine Kim
-Output: Overrides: +game.tport_anything/councilor
+Output: Overrides: +game.tport_anything/moderator
 ```
 
 ## Custom permissions

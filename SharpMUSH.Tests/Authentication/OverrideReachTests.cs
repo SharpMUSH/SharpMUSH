@@ -100,6 +100,7 @@ public class OverrideReachTests
 		};
 		await Assert.That(Resolver.Allows(context, PortalPermission.WikiEdit, Player.Priority)).IsTrue();
 		await Assert.That(Resolver.Allows(context, PortalPermission.WikiEdit, Wizard.Priority)).IsFalse();
+		await Assert.That(Resolver.Explain(context, PortalPermission.WikiEdit, Player.Priority).Reach).IsEqualTo(BuiltInRoles.PlayerSlug);
 	}
 
 	[Test]

@@ -327,7 +327,7 @@ public partial class Commands
 	private static string ScopeList(IReadOnlyDictionary<string, PermissionState> permissions, PermissionState state)
 		=> Joined(permissions.Where(p => p.Value == state).Select(p => p.Key));
 
-	/// <summary>The overrides in <paramref name="state"/>, each with its reach after a slash: <c>game.chown.any/councilor</c>.</summary>
+	/// <summary>The overrides in <paramref name="state"/>, each with its reach after a slash: <c>game.tport_anything/moderator</c>.</summary>
 	private static string ScopeList(IReadOnlyDictionary<string, PermissionState> permissions, PermissionState state,
 		IReadOnlyDictionary<string, OverrideReach> reaches)
 		=> Joined(permissions.Where(p => p.Value == state).Select(p => ObjectGrantsDisplay.WithReach(p.Key, reaches)));

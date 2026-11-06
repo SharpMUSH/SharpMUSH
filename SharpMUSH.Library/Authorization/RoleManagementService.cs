@@ -322,16 +322,17 @@ public sealed partial class RoleManagementService(
 			var custom = await CustomScopesAsync(ct);
 			if (OverrideScopes(scopes, state, custom) is not List<string> canonical)
 				return OverrideRefusal(scopes, state, custom);
-			if (await ReachAsync(reach, state, ct) is not string reachSlug) return await ReachRefusalAsync(reach, ct);
 
 			var me = (await ActorGrantsAsync(actor, ct)).Context;
 			if (Unauthorized(me) is { } refusal) return refusal;
+			if (await ReachAsync(reach, state, ct) is not SharpRole reached) return await ReachRefusalAsync(reach, ct);
+			if (Unreachable(canonical, reached) is { } unreachable) return unreachable;
 			if (await TargetAsync(actor, me, accountId, ct) is not string target)
 				return await TargetRefusalAsync(actor, me, accountId, ct);
-			if (state == PermissionState.Allow && Unheld(me, canonical) is { } unheld) return unheld;
+			if (state == PermissionState.Allow && Unheld(me, canonical, reached) is { } unheld) return unheld;
 
 			foreach (var scope in canonical.Distinct())
-				await registry.SetAccountOverrideAsync(target, scope, state, NoReach(reachSlug));
+				await registry.SetAccountOverrideAsync(target, scope, state, NoReach(reached));
 			await invalidator.InvalidateAsync(target, ct);
 			return new Success();
 		}, ct);
@@ -411,29 +412,30 @@ public sealed partial class RoleManagementService(
 			var custom = await CustomScopesAsync(ct);
 			if (OverrideScopes(scopes, state, custom) is not List<string> canonical)
 				return OverrideRefusal(scopes, state, custom);
-			if (await ReachAsync(reach, state, ct) is not string reachSlug) return await ReachRefusalAsync(reach, ct);
 
 			var me = (await ActorGrantsAsync(actor, ct)).Context;
 			if (Unauthorized(me) is { } refusal) return refusal;
+			if (await ReachAsync(reach, state, ct) is not SharpRole reached) return await ReachRefusalAsync(reach, ct);
+			if (Unreachable(canonical, reached) is { } unreachable) return unreachable;
 			var ownPowers = canonical.All(scope => GamePowers.ForScope(scope) is not null) && IsWizardActingOnItself(actor, me, target);
 			if (!ownPowers && await ObjectTargetRefusalAsync(actor, me, target, ct) is { } targetRefusal) return targetRefusal;
-			if (state == PermissionState.Allow && Unheld(me, canonical) is { } unheld) return unheld;
+			if (state == PermissionState.Allow && Unheld(me, canonical, reached) is { } unheld) return unheld;
 
 			foreach (var scope in canonical.Distinct())
-				await registry.SetObjectOverrideAsync(target.Object().Key, scope, state, NoReach(reachSlug));
+				await registry.SetObjectOverrideAsync(target.Object().Key, scope, state, NoReach(reached));
 			await ObjectChangedAsync(target, ct);
 			return new Success();
 		}, ct);
 
 	/// <summary>
-	/// The slug of the role an override's reach names, or the empty string for no reach. Null when the reach names no
+	/// The role an override's reach names, or <see cref="NoReachRole"/> for no reach. NotFound when the reach names no
 	/// role, or when it is given with <see cref="PermissionState.Inherit"/>, which clears the override and its reach.
 	/// </summary>
-	private async Task<string?> ReachAsync(string? reach, PermissionState state, CancellationToken ct)
+	private async Task<Found<SharpRole>> ReachAsync(string? reach, PermissionState state, CancellationToken ct)
 	{
-		if (string.IsNullOrWhiteSpace(reach)) return "";
-		if (state == PermissionState.Inherit) return null;
-		return await FindRoleAsync(reach, ct) is SharpRole role ? role.Slug : null;
+		if (string.IsNullOrWhiteSpace(reach)) return NoReachRole;
+		if (state == PermissionState.Inherit) return new NotFound();
+		return await FindRoleAsync(reach, ct);
 	}
 
 	private async Task<RoleOutcome<Success>> ReachRefusalAsync(string? reach, CancellationToken ct)
@@ -441,7 +443,17 @@ public sealed partial class RoleManagementService(
 			? Refuse<Success>(RoleRefusalKind.Invalid, "Clearing an override clears its reach too; give no reach.")
 			: Refuse<Success>(RoleRefusalKind.NotFound, $"No role named '{reach?.Trim()}' to reach.");
 
-	private static string? NoReach(string slug) => slug.Length == 0 ? null : slug;
+	/// <summary>Stands for an override with no reach: it ranks above every role, so granting it needs the scope unbounded.</summary>
+	private static readonly SharpRole NoReachRole = new() { Slug = "", Name = "", Priority = int.MaxValue, Permissions = new Dictionary<string, PermissionState>() };
+
+	private static string? NoReach(SharpRole reached) => reached.Slug.Length == 0 ? null : reached.Slug;
+
+	/// <summary>The refusal for a reach on a scope whose checks have no target to rank, or null.</summary>
+	private static RoleOutcome<Success>? Unreachable(IEnumerable<string> scopes, SharpRole reached)
+		=> reached.Slug.Length == 0 || scopes.All(PortalPermission.TakesReach)
+			? null
+			: Refuse<Success>(RoleRefusalKind.Invalid,
+				$"Only {string.Join(", ", PortalPermission.ReachableScopes)} take a reach.");
 
 	/// <summary>What the actor holds, read fresh: a game object's own grants, or the account's context.</summary>
 	private async Task<ObjectGrants> ActorGrantsAsync(RoleActor actor, CancellationToken ct) => actor switch
@@ -577,12 +589,17 @@ public sealed partial class RoleManagementService(
 			: Refuse<Success>(RoleRefusalKind.Forbidden, $"{role.Name} guards its holders and you do not pass its guard, so you cannot give it.");
 	}
 
-	/// <summary>The refusal for allowing scopes the actor may not grant, or null when it may grant them all.</summary>
-	private RoleOutcome<Success>? Unheld(PermissionContext me, IEnumerable<string> scopes)
+	/// <summary>
+	/// The refusal for allowing scopes the actor may not grant, or null when it may grant them all. The override reaches
+	/// <paramref name="reached"/>: an actor whose own overrides have a reach must hold each scope at that rank, so an
+	/// override held up to one role cannot grant one that reaches higher.
+	/// </summary>
+	private RoleOutcome<Success>? Unheld(PermissionContext me, IEnumerable<string> scopes, SharpRole reached)
 	{
 		var asked = scopes.ToArray();
 		var held = HeldAmong(me, asked);
-		var unheld = asked.Where(scope => !RoleHierarchy.CanGrant(held, scope)).ToArray();
+		var unheld = asked.Where(scope => !RoleHierarchy.CanGrant(held, scope)
+			|| (me.HasReaches && PortalPermission.TakesReach(scope) && !me.IsOwner && !resolver.Allows(me, scope, reached.Priority))).ToArray();
 		return unheld.Length > 0
 			? Refuse<Success>(RoleRefusalKind.Forbidden, $"You cannot grant what you do not hold: {string.Join(", ", unheld)}.")
 			: null;

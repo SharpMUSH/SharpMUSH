@@ -321,7 +321,23 @@ public partial class LightningDatabase
 				if (StateOf(value, scope) is { } state) objects[(int)Keys.ReadDbref(key)] = state;
 			}
 
-			return new PermissionOverrideHolders(accounts, objects);
+			var accountReaches = new Dictionary<string, string>(StringComparer.Ordinal);
+			foreach (var (key, _) in tx.Range(Tables.AccountPermissionReach, []))
+			{
+				var id = $"node_accounts/{Keys.ReadStr(key)}";
+				if (accounts.ContainsKey(id) && ReadReaches(tx, Tables.AccountPermissionReach, key).TryGetValue(scope, out var reach))
+					accountReaches[id] = reach;
+			}
+
+			var objectReaches = new Dictionary<int, string>();
+			foreach (var (key, _) in tx.Range(Tables.ObjPermissionReach, []))
+			{
+				var number = (int)Keys.ReadDbref(key);
+				if (objects.ContainsKey(number) && ReadReaches(tx, Tables.ObjPermissionReach, key).TryGetValue(scope, out var reach))
+					objectReaches[number] = reach;
+			}
+
+			return new PermissionOverrideHolders(accounts, objects) { AccountReaches = accountReaches, ObjectReaches = objectReaches };
 		}));
 	}
 

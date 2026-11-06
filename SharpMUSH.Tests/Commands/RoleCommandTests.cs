@@ -123,6 +123,19 @@ public class RoleCommandTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task ControlAllWithAReachControlsOnlyWhatItReaches()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("WizThing");
+		await As(_wizard, $"@create {name}");
+		await Assert.That(await As(_wizard, $"@permission/allow {_mortal.Name}=control.all/player")).Contains("reaching player");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"controls(*{_mortal.Name},*{_unlinked.Name})")).IsEqualTo("1");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"controls(*{_mortal.Name},{name})")).IsEqualTo("0");
+		await As(_wizard, $"@permission/clear {_mortal.Name}=control.all");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"controls(*{_mortal.Name},*{_unlinked.Name})")).IsEqualTo("0");
+		await Assert.That(await As(_wizard, $"@permission/allow {_mortal.Name}=wiki.delete/player")).Contains("take a reach");
+	}
+
+	[Test]
 	public async Task MortalsCannotManageRoles()
 	{
 		await Assert.That(await As(_mortal, $"@role/assign {_wizard.Name}=helper")).Contains("roles.admin");

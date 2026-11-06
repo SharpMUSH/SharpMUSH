@@ -441,4 +441,27 @@ public class RoleManagementServiceTests
 		await Assert.That(role.Permissions.Keys).IsEquivalentTo([PortalPermission.WikiEdit]);
 		await Assert.That(await world.Registry.GetAccountOverridesAsync("pl")).IsEmpty();
 	}
+
+	[Test]
+	public async Task AnOverrideHeldUpToARoleGrantsNoFurther()
+	{
+		var world = Build();
+		var tport = PortalPermission.GamePower("Tport_Anything");
+		await Accepted(world.Service.SetOverridesAsync(A("owner"), "mod", [tport], PermissionState.Allow, "helper"));
+
+		await Refused(world.Service.SetOverridesAsync(A("mod"), "pl", [tport], PermissionState.Allow), RoleRefusalKind.Forbidden);
+		await Refused(world.Service.SetOverridesAsync(A("mod"), "pl", [tport], PermissionState.Allow, "moderator"), RoleRefusalKind.Forbidden);
+		await Accepted(world.Service.SetOverridesAsync(A("mod"), "pl", [tport], PermissionState.Allow, BuiltInRoles.PlayerSlug));
+		await Assert.That((await world.Registry.GetAccountReachesAsync("pl"))[tport]).IsEqualTo(BuiltInRoles.PlayerSlug);
+	}
+
+	[Test]
+	public async Task OnlyScopesActingOnATargetTakeAReach()
+	{
+		var world = Build();
+		var refusal = await Refused(world.Service.SetOverridesAsync(A("owner"), "pl", [PortalPermission.WikiDelete], PermissionState.Allow, "moderator"),
+			RoleRefusalKind.Invalid);
+		await Assert.That(refusal.Message).Contains("take a reach");
+		await Accepted(world.Service.SetOverridesAsync(A("owner"), "pl", [PortalPermission.ControlAll], PermissionState.Deny, "moderator"));
+	}
 }

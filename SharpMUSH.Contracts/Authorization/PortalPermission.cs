@@ -119,6 +119,23 @@ public static class PortalPermission
 	/// <summary>The scope backing a PennMUSH power, e.g. <c>game.see_all</c> for See_All.</summary>
 	public static string GamePower(string power) => "game." + power.ToLowerInvariant();
 
+	/// <summary>
+	/// The scopes whose checks act on a target and read an override's reach (<see cref="OverrideReach"/>). An override
+	/// on any other scope is refused a reach, since nothing would honour it.
+	/// </summary>
+	private static readonly IReadOnlySet<string> ReachScopes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+	{
+		ControlAll,
+		GamePower("Tport_Anything"),
+		GamePower("Tport_Anywhere"),
+	};
+
+	/// <summary>Whether an override of <paramref name="scope"/> may carry a reach: whether its checks read one.</summary>
+	public static bool TakesReach(string scope) => ReachScopes.Contains(scope);
+
+	/// <summary>Every scope that takes a reach, in catalog order.</summary>
+	public static IEnumerable<string> ReachableScopes => AllScopes.Where(TakesReach);
+
 	/// <summary>True for the in-game scopes: <c>game.*</c>, <see cref="ControlAll"/>, <see cref="ProtectRole"/> and each <see cref="ControlRole"/>.</summary>
 	public static bool IsGameScope(string scope) => GameScopes.Contains(scope) || IsControlRole(scope);
 

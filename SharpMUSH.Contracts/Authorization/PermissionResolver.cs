@@ -82,8 +82,8 @@ public interface IPermissionResolver
 /// How far an override goes: the role whose priority bounds the targets it applies to. An Allow with a reach applies
 /// to targets ranked at or below the role, so a power held at <c>councilor</c> acts on what holders of councilor or a
 /// lower role own and never on a wizard's. A Deny with a reach applies to targets ranked at or above the role, so a
-/// player denied <c>player.page</c> with reach <c>guildmaster</c> may page players and not staff. Outside its reach an
-/// override is Inherit, and the layers below it decide. RhostMUSH's power and depower levels are reaches.
+/// royalty denied <c>game.tport_anything</c> with reach <c>wizard</c> may teleport what players own and not what
+/// wizards own. Outside its reach an override is Inherit, and the layers below it decide.
 /// </summary>
 /// <param name="Role">The slug of the role the reach names.</param>
 /// <param name="Priority">That role's priority; <see cref="int.MinValue"/> when no role has the slug, so an Allow
@@ -241,14 +241,14 @@ public sealed class PermissionResolver : IPermissionResolver
 
 		switch (OverrideStateOf(context.ObjectOverrides, context.ObjectReaches, scope, targetRank))
 		{
-			case PermissionState.Allow: return new(true, null, [], "object-allow") { Reach = ReachOf(context.ObjectReaches, scope) };
-			case PermissionState.Deny: return new(false, null, [], "object-deny") { Reach = ReachOf(context.ObjectReaches, scope) };
+			case PermissionState.Allow: return new(true, null, [], "object-allow") { Reach = ReachDeciding(context.ObjectOverrides, context.ObjectReaches, scope, targetRank, PermissionState.Allow) };
+			case PermissionState.Deny: return new(false, null, [], "object-deny") { Reach = ReachDeciding(context.ObjectOverrides, context.ObjectReaches, scope, targetRank, PermissionState.Deny) };
 		}
 
 		switch (OverrideStateOf(context.Overrides, context.Reaches, scope, targetRank))
 		{
-			case PermissionState.Allow: return new(true, null, [], "account-allow") { Reach = ReachOf(context.Reaches, scope) };
-			case PermissionState.Deny: return new(false, null, [], "account-deny") { Reach = ReachOf(context.Reaches, scope) };
+			case PermissionState.Allow: return new(true, null, [], "account-allow") { Reach = ReachDeciding(context.Overrides, context.Reaches, scope, targetRank, PermissionState.Allow) };
+			case PermissionState.Deny: return new(false, null, [], "account-deny") { Reach = ReachDeciding(context.Overrides, context.Reaches, scope, targetRank, PermissionState.Deny) };
 		}
 
 		var everyone = context.Roles.Where(BuiltInRoles.IsEveryone).ToArray();
@@ -312,9 +312,25 @@ public sealed class PermissionResolver : IPermissionResolver
 		return denied ? PermissionState.Deny : PermissionState.Inherit;
 	}
 
-	/// <summary>The role an override's reach names for <paramref name="scope"/>, or null for none.</summary>
-	private static string? ReachOf(IReadOnlyDictionary<string, OverrideReach> reaches, string scope)
-		=> reaches.TryGetValue(scope, out var reach) ? reach.Role : null;
+	/// <summary>
+	/// The role named by the reach of the override that gave the layer its <paramref name="decided"/> stance on
+	/// <paramref name="scope"/>, which may be an umbrella's; null when that override has no reach.
+	/// </summary>
+	private static string? ReachDeciding(IReadOnlyDictionary<string, PermissionState> overrides,
+		IReadOnlyDictionary<string, OverrideReach> reaches, string scope, int targetRank, PermissionState decided)
+	{
+		if (reaches.Count == 0) return null;
+		if (ExplicitState(overrides, scope) == decided)
+		{
+			if (!reaches.TryGetValue(scope, out var reach)) return null;
+			if (reach.Covers(decided, targetRank)) return reach.Role;
+		}
+
+		foreach (var parent in PortalPermission.ParentsOf(scope))
+			if (OverrideStateOf(overrides, reaches, parent, targetRank) == decided)
+				return ReachDeciding(overrides, reaches, parent, targetRank, decided);
+		return null;
+	}
 
 	/// <summary>The first entry naming <paramref name="scope"/> in any case, or Inherit.</summary>
 	private static PermissionState ExplicitState(IReadOnlyDictionary<string, PermissionState> permissions, string scope)
