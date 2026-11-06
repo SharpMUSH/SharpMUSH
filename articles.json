@@ -190,6 +190,22 @@
     "file": "align.md"
   },
   {
+    "id": "andbool-function",
+    "lookup": "andbool()",
+    "title": "andbool()",
+    "aliases": [
+      "ORBOOL()",
+      "CANDBOOL()",
+      "CORBOOL()",
+      "andbool",
+      "orbool",
+      "candbool",
+      "corbool"
+    ],
+    "sections": [],
+    "file": "andbool-function.md"
+  },
+  {
     "id": "anonymous-attributes",
     "lookup": "anonymous attributes",
     "title": "Anonymous Attributes",
@@ -686,6 +702,18 @@
     "file": "bullets-function.md"
   },
   {
+    "id": "butlast-function",
+    "lookup": "butlast()",
+    "title": "butlast()",
+    "aliases": [
+      "LREST()",
+      "butlast",
+      "lrest"
+    ],
+    "sections": [],
+    "file": "butlast-function.md"
+  },
+  {
     "id": "cansee-function",
     "lookup": "cansee()",
     "title": "cansee()",
@@ -729,6 +757,16 @@
       }
     ],
     "file": "capabilities.md"
+  },
+  {
+    "id": "caplist-function",
+    "lookup": "caplist()",
+    "title": "caplist()",
+    "aliases": [
+      "caplist"
+    ],
+    "sections": [],
+    "file": "caplist-function.md"
   },
   {
     "id": "center-function",
@@ -2435,6 +2473,16 @@
     "file": "decompile-command.md"
   },
   {
+    "id": "delextract-function",
+    "lookup": "delextract()",
+    "title": "delextract()",
+    "aliases": [
+      "delextract"
+    ],
+    "sections": [],
+    "file": "delextract-function.md"
+  },
+  {
     "id": "destroy-command",
     "lookup": "@destroy",
     "title": "@destroy",
@@ -4128,6 +4176,16 @@
     "file": "isdbref-function.md"
   },
   {
+    "id": "israt-function",
+    "lookup": "israt()",
+    "title": "israt()",
+    "aliases": [
+      "israt"
+    ],
+    "sections": [],
+    "file": "israt-function.md"
+  },
+  {
     "id": "iter-function",
     "lookup": "iter()",
     "title": "iter()",
@@ -4705,6 +4763,40 @@
       }
     ],
     "file": "layout.md"
+  },
+  {
+    "id": "lband-function",
+    "lookup": "lband()",
+    "title": "lband()",
+    "aliases": [
+      "LBOR()",
+      "LBXOR()",
+      "lband",
+      "lbor",
+      "lbxor"
+    ],
+    "sections": [],
+    "file": "lband-function.md"
+  },
+  {
+    "id": "lcat-function",
+    "lookup": "lcat()",
+    "title": "lcat()",
+    "aliases": [
+      "lcat"
+    ],
+    "sections": [],
+    "file": "lcat-function.md"
+  },
+  {
+    "id": "limath-function",
+    "lookup": "limath()",
+    "title": "limath()",
+    "aliases": [
+      "limath"
+    ],
+    "sections": [],
+    "file": "limath-function.md"
   },
   {
     "id": "list-command",
@@ -5991,6 +6083,16 @@
     "file": "permission-command.md"
   },
   {
+    "id": "pfind-function",
+    "lookup": "pfind()",
+    "title": "pfind()",
+    "aliases": [
+      "pfind"
+    ],
+    "sections": [],
+    "file": "pfind-function.md"
+  },
+  {
     "id": "pfun-function",
     "lookup": "pfun()",
     "title": "pfun()",
@@ -6055,6 +6157,16 @@
       }
     ],
     "file": "player-events.md"
+  },
+  {
+    "id": "playmem-function",
+    "lookup": "playmem()",
+    "title": "playmem()",
+    "aliases": [
+      "playmem"
+    ],
+    "sections": [],
+    "file": "playmem-function.md"
   },
   {
     "id": "plugin-command",
@@ -6625,6 +6737,18 @@
       }
     ],
     "file": "registers.md"
+  },
+  {
+    "id": "reglattri-function",
+    "lookup": "reglattri()",
+    "title": "reglattri()",
+    "aliases": [
+      "REGNATTRI()",
+      "reglattri",
+      "regnattri"
+    ],
+    "sections": [],
+    "file": "reglattri-function.md"
   },
   {
     "id": "reglmatch-function",
@@ -7753,6 +7877,14 @@
       }
     ],
     "file": "setqm-function.md"
+  },
+  {
+    "id": "sha1-function",
+    "lookup": "sha1()",
+    "title": "sha1()",
+    "aliases": [],
+    "sections": [],
+    "file": "sha1-function.md"
   },
   {
     "id": "legacy:Chat",
@@ -14869,6 +15001,16 @@
     "file": "strfunc-function.md"
   },
   {
+    "id": "subeval-function",
+    "lookup": "subeval()",
+    "title": "subeval()",
+    "aliases": [
+      "subeval"
+    ],
+    "sections": [],
+    "file": "subeval-function.md"
+  },
+  {
     "id": "substitutions",
     "lookup": "substitutions",
     "title": "Substitutions",
@@ -15312,6 +15454,16 @@
     "file": "topics.md"
   },
   {
+    "id": "translate-function",
+    "lookup": "translate()",
+    "title": "translate()",
+    "aliases": [
+      "translate"
+    ],
+    "sections": [],
+    "file": "translate-function.md"
+  },
+  {
     "id": "tree-function",
     "lookup": "tree()",
     "title": "tree()",
@@ -15506,6 +15658,16 @@
       }
     ],
     "file": "uptime-command.md"
+  },
+  {
+    "id": "url-unescape-function",
+    "lookup": "url_unescape()",
+    "title": "url_unescape()",
+    "aliases": [
+      "url_unescape"
+    ],
+    "sections": [],
+    "file": "url-unescape-function.md"
   },
   {
     "id": "valid-function",
@@ -16001,6 +16163,16 @@
       }
     ],
     "file": "wrap-function.md"
+  },
+  {
+    "id": "wrapcolumns-function",
+    "lookup": "wrapcolumns()",
+    "title": "wrapcolumns()",
+    "aliases": [
+      "wrapcolumns"
+    ],
+    "sections": [],
+    "file": "wrapcolumns-function.md"
   },
   {
     "id": "wshtml-function",
