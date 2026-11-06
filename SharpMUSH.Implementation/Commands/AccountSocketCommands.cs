@@ -357,9 +357,7 @@ public partial class Commands
 		await EventService.TriggerEventAsync(SharpEvents.PlayerCreate, null, playerDbRef.ToString(), charName, "create",
 			handle.ToString(), "");
 
-		// The character was created a line ago, so this is its first ever entry into play: it gets
-		// the first-login greeting, not "Welcome back".
-		await ConnectionService.Bind(handle, playerDbRef, firstLogin: true);
+		await ConnectionService.Bind(handle, playerDbRef);
 
 		// announce_connect for a new player (src/bsd.c:5912): wizards hear of a SUSPECT one.
 		if (await created.HasFlag("SUSPECT"))

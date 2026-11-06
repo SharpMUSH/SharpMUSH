@@ -1067,11 +1067,6 @@ public static partial class ErrorMessages
 		public const string OpenedExit = "Opened exit {0}";
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string WelcomeBackFormat = "Welcome back, {0}!";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string WelcomeFirstLoginFormat = "Welcome, {0}! This is your first time connecting.";
-
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CannotNameObjectFormat = "You cannot name that object {0}.";
 		public const string InvalidPasswordText = "That password is not a valid password.";
 		public const string InvalidPasswordForCommand = "Invalid password.";
