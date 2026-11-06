@@ -9597,6 +9597,15 @@
   <data name="PkgBatchQueueInstall" xml:space="preserve">
     <value>Queue install</value>
   </data>
+  <data name="PkgBatchQueueReinstall" xml:space="preserve">
+    <value>Queue reinstall</value>
+  </data>
+  <data name="PkgBatchQueueChange" xml:space="preserve">
+    <value>Queue change to v{0}</value>
+  </data>
+  <data name="PkgBatchQueueChangeTip" xml:space="preserve">
+    <value>Queue change to branch tip</value>
+  </data>
   <data name="PkgBatchDescription" xml:space="preserve">
     <value>Review the ordered changes before applying. Completed steps stay applied if a later step fails.</value>
   </data>
@@ -11101,8 +11110,11 @@
   <data name="PkgBrowsePackageCount" xml:space="preserve">
     <value>{count, plural, one {# package} other {# packages}}</value>
   </data>
-  <data name="PkgBrowseNeeds" xml:space="preserve">
-    <value>Needs {0}</value>
+  <data name="PkgBrowseNeedsLabel" xml:space="preserve">
+    <value>Needs</value>
+  </data>
+  <data name="PkgBrowseNeedMissing" xml:space="preserve">
+    <value>{0} is not installed</value>
   </data>
   <data name="PkgBrowseCategories" xml:space="preserve">
     <value>Categories</value>

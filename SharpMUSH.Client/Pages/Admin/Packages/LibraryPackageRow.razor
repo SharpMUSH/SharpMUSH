@@ -26,7 +26,21 @@
         <span class="lib-desc">@(Entry.Description ?? Loc["PkgNoDescription"])</span>
         @if (!Entry.Bridge && Entry.DependsOn is { Count: > 0 } needs)
         {
-            <span>@Loc["PkgBrowseNeeds", string.Join(", ", needs)]</span>
+            <span class="lib-needs">
+                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" aria-hidden="true" />
+                @Loc["PkgBrowseNeedsLabel"]
+                @foreach (var need in needs)
+                {
+                    var missing = InstalledPackages is { } installed && !installed.ContainsKey(need);
+                    <span class="lib-need @(missing ? "lib-need--missing" : null)" title="@(missing ? Loc["PkgBrowseNeedMissing", need].Value : null)">
+                        @if (InstalledPackages?.ContainsKey(need) == true)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" aria-hidden="true" />
+                        }
+                        @need
+                    </span>
+                }
+            </span>
         }
         @if (Installed is not null && (!string.Equals(Installed.SourceRepo, SnapshotUrl, StringComparison.Ordinal)
             || !string.Equals(Installed.SourcePath ?? "", Entry.Path, StringComparison.Ordinal)))
@@ -60,8 +74,8 @@
         }
         else
         {
-            <MudButton Class="pkg-btn-primary" Variant="Variant.Filled" Size="Size.Small" StartIcon="@Icons.Material.Filled.AddToQueue"
-                       aria-pressed="false" Disabled="@(Entry.PackageId is null)" OnClick="@OnQueue">@Loc["PkgBatchQueueInstall"]</MudButton>
+            <MudButton Class="pkg-btn-primary" Variant="Variant.Filled" Size="Size.Small" StartIcon="@QueueIcon"
+                       aria-pressed="false" Disabled="@(Entry.PackageId is null)" OnClick="@OnQueue">@QueueLabel</MudButton>
         }
         <MudButton Size="Size.Small" OnClick="@OnReview">@Loc["PkgReviewInstall"]</MudButton>
         <MudTooltip Text="@Loc["PkgShowReadme", Entry.PackageId ?? Entry.Path]">
@@ -83,6 +97,9 @@
 
     [Parameter] public InstalledPackageRecord? Installed { get; set; }
 
+    /// <summary>Every installed package by id, to mark which of its dependencies are missing; null when that is not known.</summary>
+    [Parameter] public IReadOnlyDictionary<string, InstalledPackageRecord>? InstalledPackages { get; set; }
+
     /// <summary>The queued install of this package, or null when it is not queued.</summary>
     [Parameter] public PackageBatchIntent? Queued { get; set; }
 
@@ -94,4 +111,15 @@
     [Parameter] public EventCallback OnReadme { get; set; }
 
     private PackageContents Primary => PackageKinds.Primary(Entry.Contents);
+
+    /// <summary>The version the chosen one installs: the tag, or the branch tip's manifest version.</summary>
+    private string? Target => Version == DevChannel ? Entry.Version : Version;
+
+    /// <summary>Queueing an installed package installs it again: the same version is a reinstall, another one a change of version.</summary>
+    private string QueueLabel => Installed is null ? Loc["PkgBatchQueueInstall"]
+        : Target == Installed.Version ? Loc["PkgBatchQueueReinstall"]
+        : Target is { } target ? Loc["PkgBatchQueueChange", target]
+        : Loc["PkgBatchQueueChangeTip"];
+
+    private string QueueIcon => Installed is null ? Icons.Material.Filled.AddToQueue : Icons.Material.Filled.Sync;
 }
