@@ -1242,6 +1242,12 @@
         ]
       },
       {
+        "id": "tokens",
+        "lookup": "@command tokens",
+        "heading": "Token commands",
+        "aliases": []
+      },
+      {
         "id": "examples",
         "lookup": "@command examples",
         "heading": "Added command example",
