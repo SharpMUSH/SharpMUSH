@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Antlr4.Runtime.Misc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -790,6 +791,9 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		IAsyncEnumerable<AnySharpObject> PerceivedCandidates(IAsyncEnumerable<AnySharpObject> candidates)
 			=> candidates.Where((candidate, _) => perceive(candidate.Object().DBRef, ExecutionBudget.CurrentToken));
 
+		// player.commands: denied, exits still work and $-commands are never matched.
+		var runsCommands = await executorObject.Can(PortalPermission.PlayerCommands);
+
 		for (var scope = CommandScope.Nearby; scope <= CommandScope.MasterRoom; scope++)
 		{
 			if (await RemoteExitAsync(visitor, executorObject, scope, evaluatedCommandText.ToPlainText().Trim()) is SharpExit exit)
@@ -797,7 +801,8 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 				return await CommandInvocationPipeline.GoAsync(parser, exit, evaluatedCommandText.ToPlainText().Trim());
 			}
 
-			if (await CommandScopes.CandidatesIn(services.Mediator, scope, executorObject, visitor.Configuration)
+			if (!runsCommands
+					|| await CommandScopes.CandidatesIn(services.Mediator, scope, executorObject, visitor.Configuration)
 					is not IAsyncEnumerable<AnySharpObject> candidates)
 			{
 				continue;

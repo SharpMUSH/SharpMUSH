@@ -5414,6 +5414,78 @@
   <data name="EnumPermServerOperateDesc" xml:space="preserve">
     <value>Runs server operations in game: @shutdown, @dump, @dbck, @purge, @backup, @storage, @log and @uptime details.</value>
   </data>
+  <data name="EnumPermPlayerPage" xml:space="preserve">
+    <value>Player · Page</value>
+  </data>
+  <data name="EnumPermPlayerPageDesc" xml:space="preserve">
+    <value>Sends pages. Checked against each recipient, so a reach can allow paging players and not staff. Allowed unless a role or override denies it.</value>
+  </data>
+  <data name="EnumPermPlayerCreate" xml:space="preserve">
+    <value>Player · Build</value>
+  </data>
+  <data name="EnumPermPlayerCreateDesc" xml:space="preserve">
+    <value>Creates objects, rooms and exits with @create, @dig, @open and @clone. Allowed unless a role or override denies it.</value>
+  </data>
+  <data name="EnumPermPlayerGive" xml:space="preserve">
+    <value>Player · Give</value>
+  </data>
+  <data name="EnumPermPlayerGiveDesc" xml:space="preserve">
+    <value>Gives money and things with give. Allowed unless a role or override denies it.</value>
+  </data>
+  <data name="EnumPermPlayerReceive" xml:space="preserve">
+    <value>Player · Receive</value>
+  </data>
+  <data name="EnumPermPlayerReceiveDesc" xml:space="preserve">
+    <value>Is given money and things. Allowed unless a role or override denies it.</value>
+  </data>
+  <data name="EnumPermPlayerForce" xml:space="preserve">
+    <value>Player · Force</value>
+  </data>
+  <data name="EnumPermPlayerForceDesc" xml:space="preserve">
+    <value>Uses @force on what it controls. Allowed unless a role or override denies it.</value>
+  </data>
+  <data name="EnumPermPlayerChat" xml:space="preserve">
+    <value>Player · Chat</value>
+  </data>
+  <data name="EnumPermPlayerChatDesc" xml:space="preserve">
+    <value>Uses channels. Allowed unless a role or override denies it.</value>
+  </data>
+  <data name="EnumPermPlayerCommands" xml:space="preserve">
+    <value>Player · $-commands</value>
+  </data>
+  <data name="EnumPermPlayerCommandsDesc" xml:space="preserve">
+    <value>Runs $-commands. Allowed unless a role or override denies it.</value>
+  </data>
+  <data name="EnumPermPlayerExamine" xml:space="preserve">
+    <value>Player · Examine others</value>
+  </data>
+  <data name="EnumPermPlayerExamineDesc" xml:space="preserve">
+    <value>Examines VISUAL objects others own. Allowed unless a role or override denies it.</value>
+  </data>
+  <data name="EnumPermPlayerModify" xml:space="preserve">
+    <value>Player · Modify others</value>
+  </data>
+  <data name="EnumPermPlayerModifyDesc" xml:space="preserve">
+    <value>Controls others' objects through a zone, a control lock or INHERIT. Allowed unless a role or override denies it.</value>
+  </data>
+  <data name="EnumPermPlayerChown" xml:space="preserve">
+    <value>Player · Take objects</value>
+  </data>
+  <data name="EnumPermPlayerChownDesc" xml:space="preserve">
+    <value>Takes CHOWN_OK objects with @chown. Allowed unless a role or override denies it.</value>
+  </data>
+  <data name="EnumPermPlayerTeleport" xml:space="preserve">
+    <value>Player · Teleport</value>
+  </data>
+  <data name="EnumPermPlayerTeleportDesc" xml:space="preserve">
+    <value>Uses @teleport by control or JUMP_OK. Allowed unless a role or override denies it.</value>
+  </data>
+  <data name="EnumPermPlayerPassword" xml:space="preserve">
+    <value>Player · Password</value>
+  </data>
+  <data name="EnumPermPlayerPasswordDesc" xml:space="preserve">
+    <value>Changes its own password. Allowed unless a role or override denies it.</value>
+  </data>
   <data name="EnumPermControlAll" xml:space="preserve">
     <value>Game · Control everything</value>
   </data>
@@ -6220,6 +6292,9 @@
   </data>
   <data name="RolAccessNoRole" xml:space="preserve">
     <value>No role allows it</value>
+  </data>
+  <data name="RolAccessUnlessDenied" xml:space="preserve">
+    <value>Allowed unless denied</value>
   </data>
   <data name="RolAccessUnknown" xml:space="preserve">
     <value>Unknown permission</value>
