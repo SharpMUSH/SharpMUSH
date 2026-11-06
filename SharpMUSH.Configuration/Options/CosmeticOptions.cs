@@ -214,7 +214,41 @@ public record CosmeticOptions(
 		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address. When both this and portal_logo "
 			+ "are empty, the tab shows the SharpMUSH logo. Browsers keep a tab icon for a while, so a change "
 			+ "can take a reload to show.")]
-	string PortalFavicon
+	string PortalFavicon,
+
+	[property: SharpConfig(
+		Name = "portal_banner",
+		Category = "Cosmetic",
+		Description = "Wide picture behind the game's name on the portal's Home, wiki and sign-in pages; empty for none",
+		ValidationPattern = PortalPicture.Pattern,
+		Image = true,
+		Group = "Portal",
+		Order = 3,
+		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address. Shown about four times as wide as it is "
+			+ "tall and cropped to fit, so keep what matters near the middle. Link previews in Discord and other "
+			+ "sites show it too.")]
+	string PortalBanner,
+
+	[property: SharpConfig(
+		Name = "portal_tagline",
+		Category = "Cosmetic",
+		Description = "One short line under the game's name on the portal and in link previews",
+		ValidationPattern = PortalIdentity.TaglinePattern,
+		Group = "Portal",
+		Order = 4,
+		Tooltip = "At most 120 characters, such as: Gaslight intrigue in a city that never sleeps.")]
+	string PortalTagline,
+
+	[property: SharpConfig(
+		Name = "portal_description",
+		Category = "Cosmetic",
+		Description = "Two or three sentences about the game for the portal's Home and sign-in pages and link previews",
+		ValidationPattern = PortalIdentity.DescriptionPattern,
+		Group = "Portal",
+		Order = 5,
+		Tooltip = "At most 300 characters of plain text. Empty uses onboarding_introduction, the introduction "
+			+ "written during setup.")]
+	string PortalDescription
 );
 
 /// <summary>What <c>portal_logo</c> and <c>portal_favicon</c> hold, and what the portal shows when they are empty.</summary>
@@ -229,6 +263,28 @@ public static class PortalPicture
 	/// <summary>The tab icon for the configured pictures: the favicon, else the logo, else the SharpMUSH logo.</summary>
 	public static string Favicon(CosmeticOptions cosmetic) =>
 		NonEmpty(cosmetic.PortalFavicon) ?? NonEmpty(cosmetic.PortalLogo) ?? DefaultLogo;
+
+	private static string? NonEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}
+
+/// <summary>The game's identity in the portal: its banner, tagline and description.</summary>
+public static class PortalIdentity
+{
+	/// <summary>One line of at most 120 characters, or empty.</summary>
+	public const string TaglinePattern = @"^[^\r\n]{0,120}$";
+
+	/// <summary>At most 300 characters, or empty.</summary>
+	public const string DescriptionPattern = @"^[\s\S]{0,300}$";
+
+	/// <summary><c>portal_banner</c>, or null when it is empty.</summary>
+	public static string? Banner(CosmeticOptions cosmetic) => NonEmpty(cosmetic.PortalBanner);
+
+	/// <summary><c>portal_tagline</c>, or empty.</summary>
+	public static string Tagline(CosmeticOptions cosmetic) => NonEmpty(cosmetic.PortalTagline) ?? "";
+
+	/// <summary><c>portal_description</c>, else <c>onboarding_introduction</c>, else empty.</summary>
+	public static string Description(SharpMUSHOptions options) =>
+		NonEmpty(options.Cosmetic.PortalDescription) ?? NonEmpty(options.Onboarding?.Introduction) ?? "";
 
 	private static string? NonEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

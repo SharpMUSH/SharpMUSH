@@ -25,13 +25,22 @@ public class ServerInfoControllerTests
 		=> new OptionsService(Substitute.For<ISharpDatabase>(), []).Create(string.Empty);
 
 	private static ServerInfoController MakeController(bool guestsEnabled, string mudName = "SharpMUSH",
-		IReadOnlyList<string>? features = null, string logo = "", string favicon = "")
+		IReadOnlyList<string>? features = null, string logo = "", string favicon = "", string banner = "",
+		string tagline = "", string description = "", string introduction = "")
 	{
 		var options = DefaultOptions();
 		options = options with
 		{
 			Net = options.Net with { Guests = guestsEnabled, MudName = mudName },
-			Cosmetic = options.Cosmetic with { PortalLogo = logo, PortalFavicon = favicon }
+			Cosmetic = options.Cosmetic with
+			{
+				PortalLogo = logo,
+				PortalFavicon = favicon,
+				PortalBanner = banner,
+				PortalTagline = tagline,
+				PortalDescription = description
+			},
+			Onboarding = options.Onboarding with { Introduction = introduction }
 		};
 
 		var wrapper = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
@@ -104,6 +113,29 @@ public class ServerInfoControllerTests
 
 		var response = (ServerInfoController.ServerInfoResponse)((OkObjectResult)result).Value!;
 		await Assert.That(response.Logo).IsEqualTo("/api/wiki-assets/a/logo.png");
+	}
+
+	[Test]
+	public async Task Get_ReportsTheGamesBannerTaglineAndDescription()
+	{
+		var result = await MakeController(guestsEnabled: true, banner: " /api/wiki-assets/a/banner.png ",
+			tagline: "Gaslight intrigue", description: "Players run the guilds.", introduction: "Welcome, traveller.").Get();
+
+		var response = (ServerInfoController.ServerInfoResponse)((OkObjectResult)result).Value!;
+		await Assert.That(response.Banner).IsEqualTo("/api/wiki-assets/a/banner.png");
+		await Assert.That(response.Tagline).IsEqualTo("Gaslight intrigue");
+		await Assert.That(response.Description).IsEqualTo("Players run the guilds.");
+	}
+
+	[Test]
+	public async Task Get_ReportsTheSetupIntroduction_WhenTheGameHasNoDescription()
+	{
+		var result = await MakeController(guestsEnabled: true, introduction: "Welcome, traveller.").Get();
+
+		var response = (ServerInfoController.ServerInfoResponse)((OkObjectResult)result).Value!;
+		await Assert.That(response.Description).IsEqualTo("Welcome, traveller.");
+		await Assert.That(response.Banner).IsEmpty();
+		await Assert.That(response.Tagline).IsEmpty();
 	}
 
 	[Test]

@@ -24,3 +24,10 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 }
+
+.home-section-title {
+	margin: var(--space-2) 0 0;
+	font-family: var(--font-display);
+	font-weight: var(--font-title-weight);
+	font-size: var(--text-md);
+}

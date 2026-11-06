@@ -55,6 +55,9 @@ More cosmetic options.
 - `image_host_list=<string>`: The hosts image_hosts allows or blocks, separated by spaces, such as `i.imgur.com *.example.com`. A `*.` entry covers every subdomain.
 - `portal_logo=<string>`: The picture at the top left of the web portal: a media upload (`/api/wiki-assets/...`) or an http or https address. It is shown square, 26 pixels across. Empty shows the SharpMUSH logo.
 - `portal_favicon=<string>`: The web portal's browser tab icon, given the same way. Empty uses portal_logo, or the SharpMUSH logo when that is empty too. A browser keeps a tab icon for a while, so a change can take a reload to show.
+- `portal_banner=<string>`: A wide picture behind the game's name on the portal's Home, wiki and sign-in pages, given the same way. It is cropped to fit, about four times as wide as it is tall, and link previews show it too. Empty shows none.
+- `portal_tagline=<string>`: One line of at most 120 characters, shown under the game's name on the portal and in link previews.
+- `portal_description=<string>`: Two or three sentences, at most 300 characters, about the game, for the portal's Home and sign-in pages and link previews. Empty uses onboarding_introduction.
 
 ## Layouts
 

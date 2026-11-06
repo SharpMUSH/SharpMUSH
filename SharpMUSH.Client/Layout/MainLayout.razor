@@ -89,8 +89,8 @@
 
     <div class="phosphor-content-col">
 
-        @* Touch chrome keeps a slim header: the drawer, this section's panel, search, the language and
-           the terminal. A desktop has no top bar in D1 (Q1): those live in the rail. *@
+        @* Touch chrome keeps a slim header: the drawer, this section's panel, the game's logo and name (a link
+           to Home), search, the language and the terminal. A desktop has no top bar in D1 (Q1): those live in the rail. *@
         <header class="phosphor-topbar">
             <button class="phosphor-icon-btn" @onclick="ToggleMobileNav" aria-expanded="@(_mobileNavOpen ? "true" : "false")"
                     aria-label="@Loc["NavToggleNavigation"]" title="@Loc["NavToggleNavigation"]">
@@ -100,7 +100,10 @@
                     aria-label="@Loc["NavSectionMenu"]" title="@Loc["NavSectionMenu"]">
                 <MudIcon Icon="@Icons.Material.Outlined.ViewSidebar" Style="font-size:var(--text-lg);" />
             </button>
-            <div style="flex:1;"></div>
+            <a class="phosphor-topbar-game" href="/">
+                <GameLogo Size="22" />
+                <span class="phosphor-topbar-name"><GameName /></span>
+            </a>
             <button class="phosphor-icon-btn" @onclick="OpenPalette" aria-haspopup="dialog" aria-label="@Loc["NavSearchOpen"]" title="@Loc["NavSearchOpen"]">
                 <MudIcon Icon="@Icons.Material.Outlined.Search" Style="font-size:var(--text-lg);" />
             </button>

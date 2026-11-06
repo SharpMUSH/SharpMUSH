@@ -169,7 +169,10 @@ public static partial class ReadPennMushConfig
 				RequiredString(Get(nameof(CosmeticOptions.ImageHosts)), d.Cosmetic.ImageHosts).Trim().ToLowerInvariant(),
 				String(Get(nameof(CosmeticOptions.ImageHostList)), d.Cosmetic.ImageHostList)?.Trim() ?? string.Empty,
 				String(Get(nameof(CosmeticOptions.PortalLogo)), d.Cosmetic.PortalLogo)?.Trim() ?? string.Empty,
-				String(Get(nameof(CosmeticOptions.PortalFavicon)), d.Cosmetic.PortalFavicon)?.Trim() ?? string.Empty
+				String(Get(nameof(CosmeticOptions.PortalFavicon)), d.Cosmetic.PortalFavicon)?.Trim() ?? string.Empty,
+				String(Get(nameof(CosmeticOptions.PortalBanner)), d.Cosmetic.PortalBanner)?.Trim() ?? string.Empty,
+				String(Get(nameof(CosmeticOptions.PortalTagline)), d.Cosmetic.PortalTagline)?.Trim() ?? string.Empty,
+				String(Get(nameof(CosmeticOptions.PortalDescription)), d.Cosmetic.PortalDescription)?.Trim() ?? string.Empty
 			),
 			Cost = new CostOptions(
 				UnsignedInteger(Get(nameof(CostOptions.ObjectCost)), d.Cost.ObjectCost),
