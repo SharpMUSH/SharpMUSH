@@ -398,6 +398,15 @@ public partial class Commands
 			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
+		// RhostMUSH's NO_BOOT: game.noboot shields its holder from booters it reaches.
+		foreach (var connection in targets)
+		{
+			if (connection.Ref is not { } booted || booted.Number == executorRef.Number) continue;
+			if (await Mediator.Send(new GetObjectNodeQuery(booted)) is AnySharpObject bootedObject
+				&& await bootedObject.ShieldedFrom(PortalPermission.NoBoot, executor))
+				return await NotifyService.PermissionDenied(executor, PermissionRefusal.Shielded(bootedObject, PortalPermission.NoBoot));
+		}
+
 		foreach (var handle in targetHandles)
 		{
 			if (ConnectionService.Get(handle)?.Ref is { } booted && booted.Number != executorRef.Number

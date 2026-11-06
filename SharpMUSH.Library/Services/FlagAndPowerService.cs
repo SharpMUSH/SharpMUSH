@@ -583,13 +583,14 @@ public class FlagAndPowerService(
 	private static async ValueTask<bool> HasFlagPermission(AnySharpObject executor, AnySharpObject obj, string permission) =>
 		permission.ToLowerInvariant() switch
 		{
-			// F_INHERIT: Wizard(player) || (Inheritable(player) && Owns(player, thing))
-			"trusted" => await executor.IsWizard()
+			// F_INHERIT: Wizard(player) || (Inheritable(player) && Owns(player, thing)). That half of WIZARD is
+			// game.flags.restricted here, reaching the target's owner.
+			"trusted" => await executor.CanOver(PortalPermission.FlagsRestricted, obj)
 				|| (await executor.Inheritable() && await executor.Owns(obj)),
 			// F_ROYAL: Hasprivs(player) = IsPriv
 			"royalty" => await executor.IsPriv(),
-			// F_WIZARD: Wizard(player)
-			"wizard" => await executor.IsWizard(),
+			// F_WIZARD: Wizard(player), game.flags.restricted here
+			"wizard" => await executor.CanOver(PortalPermission.FlagsRestricted, obj),
 			// F_GOD: God(player)
 			"god" => executor.IsGod(),
 			_ => await executor.HasFlag(permission) || await executor.HasPower(permission)
@@ -627,13 +628,13 @@ public class FlagAndPowerService(
 		if (obj.IsGod() && !executor.IsGod())
 			return PermissionRefusal.GodOnly();
 
-		// CHOWN_OK and DESTROY_OK: must own the target or be Wizard
+		// CHOWN_OK and DESTROY_OK: must own the target or hold game.flags.restricted
 		if (flagName is "CHOWN_OK" or "DESTROY_OK")
 		{
-			return await executor.Owns(obj) || await executor.IsWizard()
+			return await executor.Owns(obj) || await executor.CanOver(PortalPermission.FlagsRestricted, obj)
 				? new Success()
 				: new PermissionRefusal(nameof(Definitions.ErrorMessages.Notifications.PermissionDeniedNotOwnerNeeds),
-					Definitions.ErrorMessages.Notifications.PermissionDeniedNotOwnerNeeds, obj.Object().Name, PortalPermission.GameWizard);
+					Definitions.ErrorMessages.Notifications.PermissionDeniedNotOwnerNeeds, obj.Object().Name, PortalPermission.FlagsRestricted);
 		}
 
 		// Can't gag wizards/God, but can ungag them
