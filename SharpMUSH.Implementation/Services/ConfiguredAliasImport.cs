@@ -250,14 +250,6 @@ public sealed class ConfiguredAliasImport(
 			return InForce;
 		}
 
-		if (wanted.Length == 0
-			&& CommandTrie.For(library).FindAbbreviation(directive.Alias) is { } abbreviated
-			&& ReferenceEquals(abbreviated.Definition.Attribute, attribute)
-			&& abbreviated.Definition.ImpliedSwitches.Length == 0)
-		{
-			return InForce;
-		}
-
 		return new Resolution(target, null);
 	}
 

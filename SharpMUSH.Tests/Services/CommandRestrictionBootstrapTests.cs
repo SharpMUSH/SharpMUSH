@@ -136,6 +136,30 @@ public class CommandRestrictionBootstrapTests
 	}
 
 	/// <summary>
+	/// A change that re-enables a command and gives it an alias registers the alias once the command is back,
+	/// since a parked command takes no alias, and applies the restrictions again so one naming the alias finds it.
+	/// </summary>
+	[Test]
+	public async Task AnAliasOfACommandTheChangeReEnablesIsRegisteredAfterIt()
+	{
+		var library = Substitute.For<ILibraryProvider<CommandDefinition>, ICommandRestrictionApplier, IConfiguredAliasRegistry>();
+		var calls = new List<string>();
+		_ = ((ICommandRestrictionApplier)library).ApplyConfiguredRestrictionsAsync(Arg.Do<IReadOnlyDictionary<string, string[]>>(_ => calls.Add("apply")));
+		((IConfiguredAliasRegistry)library).RegisterConfiguredAliases(Arg.Any<AliasOptions>())
+			.Returns(_ => { calls.Add("aliases"); return calls.Count(call => call == "aliases") == 2; });
+
+		var monitor = new ChangingOptions(WithRestrictions(new() { ["@EMIT"] = ["nobody"] }));
+		using var service = new CommandRestrictionBootstrapService(library, monitor, NullLogger<CommandRestrictionBootstrapService>.Instance);
+		await service.StartAsync(CancellationToken.None);
+		calls.Clear();
+
+		await monitor.Change(WithRestrictions(new() { ["@em2"] = ["wizard"] }));
+
+		await Assert.That(calls).IsEquivalentTo(new[] { "aliases", "apply", "aliases", "apply" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await service.StopAsync(CancellationToken.None);
+	}
+
+	/// <summary>
 	/// <c>function_restrictions</c> reaches the function table at boot and again when it changes, and
 	/// removing an entry loosens the function. Driven with its own registry and options monitor, so the
 	/// shared host's function table keeps its own restrictions.

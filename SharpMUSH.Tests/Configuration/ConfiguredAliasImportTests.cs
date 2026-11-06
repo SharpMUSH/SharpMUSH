@@ -82,6 +82,26 @@ public class ConfiguredAliasImportTests
 		await Assert.That(resolved.NotCarried.Single()).StartsWith("function_alias plusser sub: an earlier line");
 	}
 
+	/// <summary>An alias that is also an abbreviation is kept, so a restriction naming it finds the exact name.</summary>
+	[Test]
+	public async Task AnAliasThatAbbreviatesItsCommandIsKept()
+	{
+		var import = Import(Command("@emi", "@emit")) with
+		{
+			Options = SharpMUSHOptions.Default() with
+			{
+				Restriction = new RestrictionOptions(new Dictionary<string, string[]> { ["@emi"] = ["nobody"] },
+					new Dictionary<string, string[]>())
+			}
+		};
+
+		var resolved = Aliases.Resolve(import, ConfigurationDialect.TinyMUX);
+
+		await Assert.That(resolved.Commands["@EMIT"]).IsEquivalentTo(new[] { "@emi" });
+		await Assert.That(resolved.CommandRestrictions.Keys).IsEquivalentTo(new[] { "@emi" });
+		await Assert.That(resolved.NotCarried).IsEmpty();
+	}
+
 	[Test]
 	public async Task TheAliasesJoinTheOnesTheGameHas()
 	{

@@ -97,7 +97,15 @@ public sealed class CommandRestrictionBootstrapService(
 			}
 
 			logger.LogInformation("Applying {Count} configured command restriction(s).", configured.Count);
-			await ((ICommandRestrictionApplier)commandLibrary).ApplyConfiguredRestrictionsAsync(configured);
+			var applier = (ICommandRestrictionApplier)commandLibrary;
+			await applier.ApplyConfiguredRestrictionsAsync(configured);
+			// A command the change re-enabled was parked when its aliases were registered; they join it now, and are
+			// held to a restriction naming them.
+			if (commandLibrary is IConfiguredAliasRegistry again && again.RegisterConfiguredAliases(options.CurrentValue.Alias))
+			{
+				await applier.ApplyConfiguredRestrictionsAsync(configured);
+			}
+
 			_applied = configured;
 		}
 		finally
