@@ -258,6 +258,9 @@ A change to what the Lightning provider stores is a new entry at the end of `Lig
 format number; the world is stamped with the last one (`WorldFormat`) and a server refuses a world stamped newer than its own.
 Every migration before the first release is format 1. `WorldFormatTests` fail a migration that records a `mig:` marker
 without an entry, or a format that goes back or skips a number.
+`UpgradePathTests` open every world kept in `SharpMUSH.Tests/Database/Lightning/UpgradePath/Worlds` (one per released
+format, `format-1` from 1.0.0) with the current build and check it reads back what that release wrote; a release
+that brings a new format adds its world there (see that folder's README).
 
 ### Authentication Architecture
 
