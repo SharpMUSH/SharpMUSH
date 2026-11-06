@@ -1,7 +1,6 @@
 ﻿using DotNext.Collections.Generic;
 using System.Globalization;
 using System.Net;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Implementation.Common;
@@ -462,6 +461,8 @@ public partial class Commands
 		if (!Configuration.CurrentValue.Net.Logins
 			&& !await new AnySharpObject(foundDB).IsWizard())
 		{
+			// check_connect records a connect logins_disabled refuses as a failed one (src/bsd.c).
+			await RecordFailedConnectAsync(handle, foundDB);
 			await NotifyLoginsDisabledAsync(handle, new AnySharpObject(foundDB));
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
@@ -856,7 +857,7 @@ public partial class Commands
 			await CheckLastAsync(handle, player, isGuest);
 			// check_connect's queue_eol: a blank line on this connection before the mail report.
 			await NotifyService.Notify(handle, " ");
-			if (await parser.ServiceProvider.GetRequiredService<ICommandPermission>().CanRunAsync(new AnySharpObject(player), "@MAIL"))
+			if (await CommandPermission.Value.CanRunAsync(new AnySharpObject(player), "@MAIL"))
 			{
 				await CheckAllMailAsync(player);
 			}
@@ -945,8 +946,9 @@ public partial class Commands
 		}
 
 		if (await HelperFunctions.GetGod(Mediator) is not SharpPlayer god) return;
+		await HostNames.LookUpAsync(handle);
 		var connection = ConnectionService.Get(handle);
-		await Mediator.Send(new SetAttributeCommand(playerRef, ["LAST"], MarkupText.Plain(ConnectTime()), god));
+		await Mediator.Send(new SetAttributeCommand(playerRef, ["LAST"], MarkupText.Plain(ConnectRecord.Now()), god));
 		await Mediator.Send(new SetAttributeCommand(playerRef, ["LASTSITE"],
 			MarkupText.Plain(connection?.HostName ?? string.Empty), god));
 		await Mediator.Send(new SetAttributeCommand(playerRef, ["LASTIP"],
@@ -995,20 +997,17 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// PennMUSH <c>check_lastfailed</c> (<c>src/player.c</c>): a wrong password records where it came from and when in
-	/// <c>LASTFAILED</c>, which the next login reports. God's write, as <see cref="CheckLastAsync"/>'s are.
+	/// PennMUSH <c>check_lastfailed</c> (<c>src/player.c</c>): a wrong password, or a login refused while logins are
+	/// disabled, records where it came from and when in <c>LASTFAILED</c>, which the next login reports. God's write, as <see cref="CheckLastAsync"/>'s are.
 	/// </summary>
 	private async ValueTask RecordFailedConnectAsync(long handle, SharpPlayer player)
 	{
 		if (await HelperFunctions.GetGod(Mediator) is not SharpPlayer god) return;
+		await HostNames.LookUpAsync(handle);
 		var host = ConnectionService.Get(handle)?.HostName ?? string.Empty;
 		await Mediator.Send(new SetAttributeCommand(player.Object.DBRef, ["LASTFAILED"],
-			MarkupText.Plain($"{host} on {ConnectTime()}"), god));
+			MarkupText.Plain($"{host} on {ConnectRecord.Now()}"), god));
 	}
-
-	/// <summary>The time a connect is recorded at, as PennMUSH's <c>show_time</c> writes it.</summary>
-	private static string ConnectTime()
-		=> DateTimeOffset.UtcNow.ToLocalTime().ToString("ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture);
 
 	/// <summary>An attribute's plain value on the object itself (Penn's <c>atr_get_noparent</c>), or null.</summary>
 	private async ValueTask<string?> PlainAttributeAsync(DBRef dbref, string name)

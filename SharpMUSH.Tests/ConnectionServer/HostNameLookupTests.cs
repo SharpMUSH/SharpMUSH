@@ -4,10 +4,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Messaging.Abstractions;
-using SharpMUSH.Messaging.Messages;
-using SharpMUSH.Server.Consumers;
 
 namespace SharpMUSH.Tests.ConnectionServer;
 
@@ -18,20 +16,20 @@ namespace SharpMUSH.Tests.ConnectionServer;
 public class HostNameLookupTests
 {
 	private const long Handle = 9101;
+	private const string Address = "203.0.113.5";
 
-	private static (ConnectionEstablishedConsumer Consumer, IConnectionService Connections) Build(bool useDns, IHostNameResolver resolver,
-		string address = "203.0.113.5")
+	private static (HostNameLookup Lookup, IConnectionService Connections) Build(bool useDns, IHostNameResolver resolver,
+		string host = Address)
 	{
 		var connections = Substitute.For<IConnectionService>();
 		connections.Get(Handle).Returns(new IConnectionService.ConnectionData(Handle, null,
 			IConnectionService.ConnectionState.Connected, _ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
 			() => Encoding.UTF8, new ConcurrentDictionary<string, string>(
-				new Dictionary<string, string> { ["InternetProtocolAddress"] = address })));
+				new Dictionary<string, string> { ["InternetProtocolAddress"] = Address, ["HostName"] = host })));
 		var defaults = ReadPennMushConfig.Create("Configuration/Testfile/mushcnf.dst");
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		options.CurrentValue.Returns(defaults with { Net = defaults.Net with { UseDns = useDns } });
-		return (new ConnectionEstablishedConsumer(NullLogger<ConnectionEstablishedConsumer>.Instance, connections,
-			Substitute.For<IMessageBus>(), configuration: options, hostNames: resolver), connections);
+		return (new HostNameLookup(connections, options, resolver, NullLogger<HostNameLookup>.Instance), connections);
 	}
 
 	private static IHostNameResolver Resolving(string name)
@@ -44,34 +42,51 @@ public class HostNameLookupTests
 	[Test]
 	public async Task AnAddressAsHost_BecomesTheNameItResolvesTo()
 	{
-		var (consumer, connections) = Build(useDns: true, Resolving("player.example"));
+		var (lookup, connections) = Build(useDns: true, Resolving("player.example"));
 
-		await consumer.HandleAsync(new ConnectionEstablishedMessage(Handle, "203.0.113.5", "203.0.113.5", "telnet", DateTimeOffset.UnixEpoch));
+		await lookup.LookUpAsync(Handle);
 
-		await Assert.That(() => connections.ReceivedCalls()
-				.Any(call => call.GetMethodInfo().Name == nameof(IConnectionService.Update)
-					&& call.GetArguments() is [Handle, "HostName", "player.example"]))
-			.WaitsFor(updated => updated.IsTrue(), timeout: TimeSpan.FromSeconds(5), pollingInterval: TimeSpan.FromMilliseconds(20));
+		connections.Received(1).Update(Handle, "HostName", "player.example");
+		connections.Received(1).Update(Handle, HostNameLookup.LookedUpMetadata, "1");
+	}
+
+	[Test]
+	public async Task ALoginWaitsForTheLookupAlreadyRunning()
+	{
+		var answer = new TaskCompletionSource<string?>();
+		var resolver = Substitute.For<IHostNameResolver>();
+		resolver.ResolveAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(new ValueTask<string?>(answer.Task));
+		var (lookup, connections) = Build(useDns: true, resolver);
+
+		var atConnect = lookup.LookUpAsync(Handle);
+		var atLogin = lookup.LookUpAsync(Handle);
+		await Assert.That(atLogin.IsCompleted).IsFalse();
+		answer.SetResult("player.example");
+		await Task.WhenAll(atConnect, atLogin);
+
+		await resolver.Received(1).ResolveAsync(Address, Arg.Any<CancellationToken>());
+		connections.Received(1).Update(Handle, "HostName", "player.example");
 	}
 
 	[Test]
 	public async Task WithUseDnsOff_TheAddressStaysTheHost()
 	{
 		var resolver = Resolving("player.example");
-		var (consumer, _) = Build(useDns: false, resolver);
+		var (lookup, connections) = Build(useDns: false, resolver);
 
-		await consumer.HandleAsync(new ConnectionEstablishedMessage(Handle, "203.0.113.5", "203.0.113.5", "telnet", DateTimeOffset.UnixEpoch));
+		await lookup.LookUpAsync(Handle);
 
 		await resolver.DidNotReceive().ResolveAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+		connections.DidNotReceive().Update(Handle, "HostName", Arg.Any<string>());
 	}
 
 	[Test]
 	public async Task AHostTheSocketAlreadyNamed_IsNotLookedUp()
 	{
 		var resolver = Resolving("player.example");
-		var (consumer, _) = Build(useDns: true, resolver);
+		var (lookup, _) = Build(useDns: true, resolver, host: "named.example");
 
-		await consumer.HandleAsync(new ConnectionEstablishedMessage(Handle, "203.0.113.5", "named.example", "telnet", DateTimeOffset.UnixEpoch));
+		await lookup.LookUpAsync(Handle);
 
 		await resolver.DidNotReceive().ResolveAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}

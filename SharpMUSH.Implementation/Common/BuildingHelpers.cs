@@ -140,14 +140,16 @@ public static class BuildingHelpers
 	}
 
 	/// <summary>
-	/// The end of PennMUSH's <c>do_pcreate</c> (<c>src/wiz.c:140-144</c>): the creator is told the new
+	/// The end of PennMUSH's <c>do_pcreate</c> (<c>src/wiz.c:140-144</c>): the creation is recorded as the
+	/// player's last connect (<see cref="ConnectRecord.CreatedAsync"/>), the creator is told the new
 	/// player's dbref and password, and <c>PLAYER`CREATE</c> is queued. <c>@pcreate</c> and
 	/// <c>pcreate()</c> (<c>src/fundb.c:2140</c>) both end here.
 	/// </summary>
 	/// <remarks>Like <see cref="AnnounceCreatedAsync"/>, callers run this once the requested-dbref gate is released.</remarks>
-	public static async ValueTask AnnouncePlayerCreatedAsync(IMUSHCodeParser parser, INotifyService notifyService,
+	public static async ValueTask AnnouncePlayerCreatedAsync(IMUSHCodeParser parser, IMediator mediator, INotifyService notifyService,
 		IEventService eventService, AnySharpObject executor, string name, string password, DBRef player)
 	{
+		await ConnectRecord.CreatedAsync(mediator, player);
 		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreatedFormat), executor,
 			name, player.Number, password);
 

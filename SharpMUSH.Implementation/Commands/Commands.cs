@@ -36,6 +36,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	private IOttStore OttStore { get; }
 	private NativeLoginService NativeLogins { get; }
 	private ILoginFailureTracker LoginFailures { get; }
+	private IHostNameLookup HostNames { get; }
+	private Lazy<ICommandPermission> CommandPermission { get; }
 	private IAccountService AccountService { get; }
 	private IAccountSessionStore AccountSessionStore { get; }
 	private IExpandedObjectDataService ObjectDataService { get; }
@@ -200,7 +202,9 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ILibraryProvider<FunctionDefinition> functions,
 		NativeLoginService nativeLogins,
 		ILoginFailureTracker loginFailures,
-		IPipeOutputCapture pipeOutputCapture)
+		IPipeOutputCapture pipeOutputCapture,
+		IHostNameLookup hostNames,
+		Lazy<ICommandPermission> commandPermission)
 	{
 		Mediator = mediator;
 		RelationshipCycles = relationshipCycles;
@@ -217,6 +221,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		OttStore = ottStore;
 		NativeLogins = nativeLogins;
 		LoginFailures = loginFailures;
+		HostNames = hostNames;
+		CommandPermission = commandPermission;
 		AccountService = accountService;
 		AccountSessionStore = accountSessionStore;
 		ObjectDataService = objectDataService;

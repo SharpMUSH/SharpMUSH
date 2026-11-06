@@ -63,29 +63,13 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		await RecordCreatedConnectAsync(player);
-
 		// PennMUSH src/wiz.c do_pcreate ends with this notify — including the password, which the wizard
 		// has to be able to pass on to the new player and just typed anyway — and PLAYER`CREATE.
-		await BuildingHelpers.AnnouncePlayerCreatedAsync(parser, NotifyService, EventService, executor,
+		await BuildingHelpers.AnnouncePlayerCreatedAsync(parser, Mediator, NotifyService, EventService, executor,
 			name, password, player);
 		await Audit.RecordAsync(executor, AuditActions.PlayerCreate, new AuditTarget(AuditTargetKinds.Character, player.ToString(), name));
 
 		return new CallState(player.ToString());
-	}
-
-	/// <summary>
-	/// PennMUSH <c>make_player</c> (<c>src/player.c</c>) records a new player's creation as its last connect, from
-	/// <c>None</c> for <c>@pcreate</c> (<c>src/wiz.c</c>), so the first login reports it as any later one does.
-	/// God's writes, as <see cref="CheckLastAsync"/>'s are.
-	/// </summary>
-	private async ValueTask RecordCreatedConnectAsync(DBRef player)
-	{
-		if (await HelperFunctions.GetGod(Mediator) is not SharpPlayer god) return;
-		await Mediator.Send(new SetAttributeCommand(player, ["LAST"], MarkupText.Plain(ConnectTime()), god));
-		await Mediator.Send(new SetAttributeCommand(player, ["LASTSITE"], MarkupText.Plain("None"), god));
-		await Mediator.Send(new SetAttributeCommand(player, ["LASTIP"], MarkupText.Plain("None"), god));
-		await Mediator.Send(new SetAttributeCommand(player, ["LASTFAILED"], MarkupText.Plain(" "), god));
 	}
 
 	/// <summary>
