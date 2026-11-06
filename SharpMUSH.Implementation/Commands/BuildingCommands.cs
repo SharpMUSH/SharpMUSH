@@ -43,6 +43,8 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await executor.Can(PortalPermission.PlayerCreate))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerCreate));
 		var args = parser.CurrentState.Arguments;
 
 		return await BuildingHelpers.CreateThingAsync(parser, Mediator, RelationshipCycles, Configuration, ValidateService,
@@ -724,6 +726,8 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await executor.Can(PortalPermission.PlayerCreate))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerCreate));
 		var args = parser.CurrentState.Arguments;
 
 		return await BuildingHelpers.DigAsync(parser, Mediator, RelationshipCycles, Configuration, NotifyService, EventService,
@@ -764,6 +768,8 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await executor.Can(PortalPermission.PlayerCreate))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerCreate));
 		var args = parser.CurrentState.Arguments;
 
 		var sourceRoom = await executor.Where();
@@ -864,6 +870,8 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await executor.Can(PortalPermission.PlayerCreate))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerCreate));
 		var args = parser.CurrentState.Arguments;
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
 

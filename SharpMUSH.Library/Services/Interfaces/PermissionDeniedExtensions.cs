@@ -104,6 +104,7 @@ public sealed record PermissionRefusal(string Key, string Format, params object[
 		nameof(ErrorMessages.Notifications.PermissionDeniedFlagRestricted) => $"{Arg(0)} NEEDS {Alternatives(1)}",
 		nameof(ErrorMessages.Notifications.PermissionDeniedGagWizard) => "WIZARD",
 		nameof(ErrorMessages.Notifications.PermissionDeniedShielded) => $"TARGET HOLDS {Arg(1)}",
+		nameof(ErrorMessages.Notifications.PermissionDeniedNotReceiving) => "NOT RECEIVING",
 		nameof(ErrorMessages.Notifications.PermissionDeniedLinkedExit) => "NOT CONTROLLED, ALREADY LINKED",
 		nameof(ErrorMessages.Notifications.PermissionDeniedExamine) => "CANNOT EXAMINE",
 		nameof(ErrorMessages.Notifications.PermissionDeniedLocate) => "CANNOT LOCATE",
@@ -125,6 +126,10 @@ public sealed record PermissionRefusal(string Key, string Format, params object[
 	public static PermissionRefusal Shielded(AnySharpObject target, string scope)
 		=> new(nameof(ErrorMessages.Notifications.PermissionDeniedShielded), ErrorMessages.Notifications.PermissionDeniedShielded,
 			target.Object().Name, scope);
+	/// <summary><paramref name="recipient"/> is denied <c>player.receive</c>.</summary>
+	public static PermissionRefusal NotReceiving(AnySharpObject recipient)
+		=> new(nameof(ErrorMessages.Notifications.PermissionDeniedNotReceiving), ErrorMessages.Notifications.PermissionDeniedNotReceiving,
+			recipient.Object().Name);
 
 	public static PermissionRefusal GodOnly()
 		=> new(nameof(ErrorMessages.Notifications.PermissionDeniedGodOnly), ErrorMessages.Notifications.PermissionDeniedGodOnly);

@@ -51,6 +51,11 @@
       "lookup": "roles staff"
     },
     {
+      "id": "roles-everyday",
+      "heading": "Everyday permissions",
+      "lookup": "roles everyday"
+    },
+    {
       "id": "roles-wizard-only",
       "heading": "What still needs game.wizard",
       "lookup": "roles wizard only"
@@ -194,6 +199,26 @@ These take parts of a wizard's standing over other players' things, so a role or
 | `game.override.movement` | passing enter, leave and exit locks; no role allows it |
 
 Each can carry a reach (see [@permission reach]). On `game.noforce` and `game.noboot` a reach names who is kept out: with reach `architect`, nobody ranked at or below architect may force you.
+## Everyday permissions
+
+Every object holds these unless a role or override denies them, so nobody notices them until one is taken away. They let staff mute one thing precisely: `@permission/deny Twink=player.page` stops Twink paging, and `@permission/deny Twink=player.page/helper` stops Twink paging staff only.
+
+| Permission | Covers |
+|---|---|
+| `player.page` | page, checked against each recipient |
+| `player.create` | @create, @dig, @open, @clone and their functions |
+| `player.give` | give, checked against the recipient |
+| `player.receive` | being given things |
+| `player.force` | @force |
+| `player.chat` | @channel, @chat, @cemit and channel aliases |
+| `player.commands` | `$`-commands |
+| `player.examine` | examining others' VISUAL objects |
+| `player.modify` | control through a zone, a control lock or a shared owner |
+| `player.chown` | taking CHOWN_OK objects |
+| `player.teleport` | @teleport by control or JUMP_OK |
+| `player.password` | @password |
+
+A role that denies one takes it from everyone holding that role, even if another role leaves it alone.
 
 ## What still needs game.wizard
 

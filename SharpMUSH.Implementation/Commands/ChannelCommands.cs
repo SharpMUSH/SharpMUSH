@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using MarkupString.Layout;
 using SharpMUSH.Configuration;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
@@ -42,6 +43,8 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> EmitOnChannel(IMUSHCodeParser parser, bool spoof)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await executor.Can(PortalPermission.PlayerChat))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerChat));
 		var arg0 = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message;
 		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message;
 
@@ -66,6 +69,8 @@ public partial class Commands
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await executor.Can(PortalPermission.PlayerChat))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerChat));
 
 		if (!arg0Check || !arg1Check)
 		{
@@ -475,6 +480,8 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await executor.Can(PortalPermission.PlayerChat))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerChat));
 
 		// /quiet only pairs with /list or /recall — it is invalid alongside anything else.
 		if (switches.Contains("QUIET") && !switches.Contains("LIST") && !switches.Contains("RECALL"))
