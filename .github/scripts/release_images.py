@@ -1,15 +1,17 @@
-"""Image tags for a release, and the image tag the deploy files pin.
+"""Image tags for a release, and the image tags the deploy files name.
 
     release_images.py tags <version>   writes each image's tag list to $GITHUB_OUTPUT
-    release_images.py check            fails unless every deploy file pins one and the same tag
-    release_images.py bump <version>   moves every deploy file's pin to <version>
+    release_images.py check            fails unless the deploy files agree (see below)
+    release_images.py bump <version>   moves the pinned files to <version>, one-click files to latest
 
-New games are deployed from the files on main, so they pin only images that exist: after a
-release's images are published, `bump` moves the pins to it in a pull request of its own.
+The one-click files (one-click VPS, Fly, Railway) run :latest, the newest release; until the
+first release's images exist they run :dev. The other deploy files pin one exact release. New
+games are deployed from the files on main, so they name only images that exist: after a
+release's images are published, `bump` moves them in a pull request of its own.
 
 A release vX.Y.Z pushes :X.Y.Z, and moves :X.Y, :X and :latest only while it is the highest
 release under each of them, so publishing 1.0.1 after 1.1.0 leaves :1 and :latest on 1.1.0.
-A prerelease (X.Y.Z-rc.1) pushes only its own tag.
+A prerelease (X.Y.Z-rc.1) pushes its own tag and :dev.
 """
 import json
 import os
@@ -49,6 +51,14 @@ PINS = {
     'deploy/fly/renderer.fly.toml': [rf'image = "sharpmush/sharpmush-renderer:{TAG}"'],
     'deploy/railway/README.md': [rf'`sharpmush/sharpmush-[a-z]+:{TAG}`'],
 }
+# The files a one-click game is launched from. They follow the newest release (:latest), or :dev
+# before there is one; the rest pin one exact release.
+ONE_CLICK = {
+    'deploy/oneclick/compose.yml', 'deploy/oneclick/install.sh', 'deploy/oneclick/digitalocean/sharpmush.pkr.hcl',
+    'deploy/fly/fly.toml', 'deploy/fly/edge.fly.toml', 'deploy/fly/server.fly.toml', 'deploy/fly/renderer.fly.toml',
+    'deploy/railway/README.md',
+}
+ONE_CLICK_TAGS = {'dev', 'latest'}
 
 
 def stable(version):
@@ -62,7 +72,7 @@ def tags(version, released):
         raise ValueError(f'{version!r} is not a version like 1.2.3 or 1.2.3-rc.1')
     own = stable(version)
     if own is None:
-        return [version]
+        return [version, 'dev']
     others = [v for v in (stable(r) for r in released) if v is not None]
     result = [version]
     if all(v[:2] != own[:2] or v <= own for v in others):
@@ -116,21 +126,30 @@ def pins(root=ROOT):
     return found
 
 
+def disagreement(found, paths, label):
+    """The problems of one group of files, which must all name one tag."""
+    tags = sorted({tag for path, tag, *_ in found if path in paths})
+    if len(tags) <= 1:
+        return []
+    named = sorted({path for path, *_ in found if path in paths}, key=list(PINS).index)
+    return [f'the {label} files name different tags ({", ".join(tags)}); they must agree'] + [
+        f'{path}: pins {", ".join(sorted({t for p, t, *_ in found if p == path}))}' for path in named]
+
+
 def problems(root=ROOT):
-    """What is wrong with the pins: a file that names no tag, or files that disagree."""
+    """What is wrong with the pins: a file that names no tag, or a group whose files disagree."""
     found = pins(root)
     named = {path for path, *_ in found}
     result = [f'{path}: names no image tag' for path in PINS if path not in named]
-    tags = sorted({tag for _, tag, *_ in found})
-    if len(tags) > 1:
-        result.extend(f'{path}: pins {", ".join(sorted({t for p, t, *_ in found if p == path}))}'
-                      for path in PINS if path in named)
-        result.insert(0, f'the deploy files pin different tags ({", ".join(tags)}); they must agree')
+    result += disagreement(found, ONE_CLICK, 'one-click')
+    result += disagreement(found, set(PINS) - ONE_CLICK, 'pinned')
+    result += [f'{path}: pins {tag}; one-click files run {" or ".join(sorted(ONE_CLICK_TAGS))}'
+               for path, tag, *_ in found if path in ONE_CLICK and tag not in ONE_CLICK_TAGS]
     return result
 
 
 def bump(version, root=ROOT):
-    """Rewrites every pin to `version`."""
+    """Moves the pinned files to `version` and the one-click files to latest."""
     if stable(version) is None:
         raise ValueError(f'{version!r} is not a release like 1.2.3')
     by_path = {}
@@ -139,8 +158,9 @@ def bump(version, root=ROOT):
     for path, spans in by_path.items():
         file = root / path
         text = file.read_text(encoding='utf-8')
+        tag = 'latest' if path in ONE_CLICK else version
         for a, b in sorted(spans, reverse=True):
-            text = text[:a] + version + text[b:]
+            text = text[:a] + tag + text[b:]
         file.write_text(text, encoding='utf-8')
 
 
@@ -153,11 +173,11 @@ def main(argv):
         for problem in found:
             print(f'::error::{problem}')
         if not found:
-            print(f'Every deploy file pins {pins()[0][1]}.')
+            print('The deploy files agree.')
         return 1 if found else 0
     if len(argv) == 2 and argv[0] == 'bump':
         bump(argv[1])
-        print(f'Every deploy file now pins {argv[1]}.')
+        print(f'The pinned deploy files now name {argv[1]}, the one-click files latest.')
         return 0
     print(__doc__, file=sys.stderr)
     return 2

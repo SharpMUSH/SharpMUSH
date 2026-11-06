@@ -75,9 +75,9 @@ to `my-game.fly.dev` on port 4201. `SHARPMUSH_GUARD=off` in the edge's `[env]` s
 Nothing updates on its own. Take an `@backup` first: going back to an older image needs it,
 because an older server refuses a world a newer one has migrated.
 
-Each part runs the image tag its settings file names, in the `image` line under `[build]`. To
-update, change that tag in each settings file and run the launch script again: it deploys the
-server and the renderer. Players stay connected through both restarts. The edge is left running;
+Each part runs the image tag its settings file names, in the `image` line under `[build]`: the
+newest release (`latest`) unless you name one. Running the launch script again deploys the newest
+image of that tag to the server and the renderer. Players stay connected through both restarts. The edge is left running;
 `--update-edge` (`-UpdateEdge`) deploys it too, which drops everyone connected, so announce a time
 first. One part at a time:
 

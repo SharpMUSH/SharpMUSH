@@ -2,7 +2,7 @@ name: Publish Docker Images
 
 # Publishing a GitHub Release whose tag is vX.Y.Z (Releases > Draft a new release) builds the
 # images at that tag and pushes them as :X.Y.Z, plus :X.Y, :X and :latest while it is the newest
-# release under each (.github/scripts/release_images.py). A prerelease pushes only :X.Y.Z-rc.N.
+# release under each (.github/scripts/release_images.py). A prerelease pushes :X.Y.Z-rc.N and :dev.
 # Releases with other tags (plugin-nuget/v*, sharpmush-templates/v*) are left to their own workflows.
 on:
   release:

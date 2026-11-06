@@ -92,22 +92,25 @@ release they cover. For `v1.2.3`:
 | `latest` | no release is newer |
 
 So a `v1.0.4` fix published after `v1.1.0` moves `1.0` but leaves `1` and `latest` on `1.1.0`. A
-pre-release pushes only its own tag (`1.1.0-rc.1`).
+pre-release pushes its own tag (`1.1.0-rc.1`) and `dev`.
 
 #### After the release
 
-Deploy files pin one exact image tag, never `latest`, `1` or `1.2`: a game runs what it was
-deployed with until its operator changes the tag. New games are deployed from the files on `main`,
-so the pins move only once the release's images exist. When the workflow has finished, open a pull
+The one-click files (`deploy/oneclick/`, the Fly settings files, the Railway settings) run
+`latest`, so a one-click game is launched on the newest release. The other deploy files
+(`docker-compose.prod.yml`, the Fly Dockerfile's base tag) pin one exact release. Until the first
+release's images exist, both run `dev`. New games are deployed from the files on `main`, so the
+files move only once the release's images exist. When the workflow has finished, open a pull
 request with:
 
 ```bash
 python3 .github/scripts/release_images.py bump 1.0.0
 ```
 
-CI fails a build whose deploy files name different tags (`release_images.py check`). The Railway
-template lives in Railway's template composer, not in this repository: set its three services'
-images to the new tag there too.
+It pins the release in the exact files and moves the one-click files to `latest`; after the
+first release only the exact files change. CI fails a build whose one-click files or exact files
+disagree among themselves (`release_images.py check`). The Railway template lives in Railway's
+template composer, not in this repository: set its three services' images to `latest` there once.
 
 Which shorter tags move is decided from the repository's published GitHub Releases, not its git
 tags, so a stray `vX.Y.Z` tag or a refused pre-release does not hold `latest` back.

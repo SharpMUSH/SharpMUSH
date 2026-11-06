@@ -26,8 +26,8 @@ class TagTests(unittest.TestCase):
     def test_republishing_the_newest_release_keeps_its_tags(self):
         self.assertEqual(release_images.tags('1.0.0', ['1.0.0']), ['1.0.0', '1.0', '1', 'latest'])
 
-    def test_prerelease_pushes_only_its_own_tag(self):
-        self.assertEqual(release_images.tags('1.1.0-rc.1', ['1.0.0']), ['1.1.0-rc.1'])
+    def test_prerelease_pushes_its_own_tag_and_dev(self):
+        self.assertEqual(release_images.tags('1.1.0-rc.1', ['1.0.0']), ['1.1.0-rc.1', 'dev'])
 
     def test_prereleases_do_not_hold_back_a_release(self):
         self.assertEqual(release_images.tags('1.1.0', ['1.0.0', '1.2.0-rc.1']), ['1.1.0', '1.1', '1', 'latest'])
@@ -62,8 +62,8 @@ class PinTests(unittest.TestCase):
             (self.root / path).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(release_images.ROOT / path, self.root / path)
 
-    def tag(self):
-        return release_images.pins(self.root)[0][1]
+    def tag(self, path='deploy/fly/server.fly.toml'):
+        return next(tag for p, tag, *_ in release_images.pins(self.root) if p == path)
 
     def test_repository_pins_one_tag(self):
         self.assertEqual(release_images.problems(self.root), [])
@@ -74,10 +74,17 @@ class PinTests(unittest.TestCase):
 
     def test_one_stale_pin_is_reported(self):
         toml = self.root / 'deploy/fly/server.fly.toml'
-        toml.write_text(toml.read_text(encoding='utf-8').replace(f':{self.tag()}"', ':9.9.9"'), encoding='utf-8')
+        toml.write_text(toml.read_text(encoding='utf-8').replace(f':{self.tag()}"', ':latest"'), encoding='utf-8')
         found = release_images.problems(self.root)
-        self.assertIn('deploy/fly/server.fly.toml: pins 9.9.9', found)
-        self.assertTrue(found[0].startswith('the deploy files pin different tags'))
+        self.assertIn('deploy/fly/server.fly.toml: pins latest', found)
+        self.assertTrue(found[0].startswith('the one-click files name different tags'))
+
+    def test_one_click_files_name_only_dev_or_latest(self):
+        release_images.bump('1.0.0', self.root)
+        toml = self.root / 'deploy/fly/fly.toml'
+        toml.write_text(toml.read_text(encoding='utf-8').replace(':latest"', ':1.0.0"'), encoding='utf-8')
+        self.assertIn('deploy/fly/fly.toml: pins 1.0.0; one-click files run dev or latest',
+                      release_images.problems(self.root))
 
     def test_an_image_written_another_way_is_still_checked(self):
         compose = self.root / 'deploy/oneclick/compose.yml'
@@ -89,12 +96,13 @@ class PinTests(unittest.TestCase):
         (self.root / 'deploy/fly/Dockerfile').write_text('FROM scratch\n', encoding='utf-8')
         self.assertIn('deploy/fly/Dockerfile: names no image tag', release_images.problems(self.root))
 
-    def test_bump_moves_every_pin(self):
+    def test_bump_pins_the_release_and_points_one_click_at_latest(self):
         before = len(release_images.pins(self.root))
         release_images.bump('2.3.4', self.root)
         after = release_images.pins(self.root)
         self.assertEqual(len(after), before)
-        self.assertEqual({tag for _, tag, *_ in after}, {'2.3.4'})
+        self.assertEqual({tag for p, tag, *_ in after if p in release_images.ONE_CLICK}, {'latest'})
+        self.assertEqual({tag for p, tag, *_ in after if p not in release_images.ONE_CLICK}, {'2.3.4'})
         self.assertEqual(release_images.problems(self.root), [])
 
     def test_bump_refuses_a_prerelease(self):
