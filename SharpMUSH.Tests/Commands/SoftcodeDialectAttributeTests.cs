@@ -61,7 +61,11 @@ public class SoftcodeDialectAttributeTests : ServerTestBase
 		await Assert.That(entries).Contains(alias.Target);
 		await Assert.That(alias.Target).IsEqualTo(alias.Target.ToUpperInvariant());
 		await Assert.That(entries.Contains(alias.Name)).IsFalse();
-		await Assert.That(dialect.CommandFor("@" + alias.Name)).IsNull();
+		// A command alias of the same name, if the dialect has one, sets the same attribute (mux @reject is @haven).
+		if (dialect.CommandFor("@" + alias.Name) is { } command)
+		{
+			await Assert.That(command).IsEqualTo("@" + alias.Target, StringComparer.OrdinalIgnoreCase);
+		}
 	}
 
 	[Test]
