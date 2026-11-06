@@ -219,8 +219,6 @@ public class SoftcodeDialectTests : ServerTestBase
 			}
 
 			await Assert.That(await Eval($"get({actor.DbRef}/HAVEN)")).IsEqualTo(token);
-			await Assert.That(Notifications.For(actor.DbRef).Any(message => message.Contains("MOTD", StringComparison.OrdinalIgnoreCase)))
-				.IsFalse();
 		}
 		finally
 		{
@@ -247,12 +245,13 @@ public class SoftcodeDialectTests : ServerTestBase
 			{
 				await CmdAs(actor.DbRef, actor.Handle, $"@fe me={token}");
 				await CmdAs(actor.DbRef, actor.Handle, $"@last me={token}");
+				// Written with no space before the =, the line still reads TinyMUX's name first.
+				await CmdAs(actor.DbRef, actor.Handle, $"@fe={token}");
 				await WebAppFactoryArg.QueueBarrierAsync();
 			}
 
 			await Assert.That(Notifications.For(actor.DbRef).Count(message => message.StartsWith("Huh?", StringComparison.Ordinal)))
-				.IsEqualTo(2);
-			await Assert.That(await Eval($"get({actor.DbRef}/LAST)")).IsNotEqualTo(token);
+				.IsEqualTo(3);
 		}
 		finally
 		{

@@ -611,6 +611,10 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			if (equalsIndex > 0)
 			{
 				var commandPart = rootCommand[..equalsIndex];
+				if (trie.FindExact(commandPart) is null
+						&& DialectCommand(parser, trie, gameDialect, commandPart, switches) is { } dialectPart)
+					return dialectPart;
+
 				matchResult = trie.FindAbbreviation(commandPart);
 				if (matchResult != null)
 				{
