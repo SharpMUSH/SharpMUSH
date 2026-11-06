@@ -154,6 +154,21 @@ public class SoftcodeDialectAttributeTests : ServerTestBase
 		await Assert.That(await Eval($"[get({thing}/KILL)]|[get({thing}/DEATH)]")).IsEqualTo("rewritten|death");
 	}
 
+	/// <summary>A lock key names attributes as stored, whatever dialect checks it.</summary>
+	[Test]
+	public async Task LockKeyIgnoresTheCheckingDialect()
+	{
+		var gate = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("DialectGate")}"));
+		var unlocker = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("DialectKey")}"));
+		await Cmd($"&DEATH {unlocker}=yes");
+		await Cmd($"@lock/use {gate}=KILL:yes");
+		await Cmd($"&FLAGGED {gate}=[elock(me/use,{unlocker})]");
+		await Cmd($"@set {gate}/FLAGGED=mux");
+
+		await Assert.That(await Eval($"elock({gate}/use,{unlocker})")).IsEqualTo("0");
+		await Assert.That(await Eval($"u({gate}/FLAGGED)")).IsEqualTo("0");
+	}
+
 	/// <summary>A pattern match moves the attributes it matched, by their stored names.</summary>
 	[Test]
 	public async Task PatternMoveKeepsStoredNames()
