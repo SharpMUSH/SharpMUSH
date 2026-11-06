@@ -11,6 +11,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.DatabaseConversion;
@@ -85,6 +86,14 @@ public static class ImportWorker
 							}
 						};
 					}, deadline.Token);
+					// This host runs no hosted services, so nothing else puts the aliases in its tables before the scan below.
+					var written = (await options.CurrentAsync()).Alias;
+					foreach (var registry in new object[]
+						{
+							services.GetRequiredService<ILibraryProvider<CommandDefinition>>(),
+							services.GetRequiredService<ILibraryProvider<FunctionDefinition>>()
+						}.OfType<IConfiguredAliasRegistry>())
+						registry.RegisterConfiguredAliases(written);
 					await mediator.Send(new SetExpandedServerDataCommand(nameof(MushCnfObjectReferences), MushCnfObjectReferences.From(configuration)), deadline.Token);
 					foreach (var (name, value) in configuration.Secrets)
 						if (await secrets.SetAsync(name, value, new SecretAuthor("import:" + session.Id, "Database import"), deadline.Token) is Error<string>)
