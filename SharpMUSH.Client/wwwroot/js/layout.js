@@ -226,6 +226,40 @@ window.sharpmushLayout = {
 		});
 	},
 
+	// Custom radio buttons keep native radio keyboard behavior. Resync after Blazor renders
+	// an async appearance save, without moving focus away from another control the user chose.
+	radioKeys: function (container) {
+		if (!container) return;
+		const items = group => Array.from(group.querySelectorAll('[role="radio"]'))
+			.filter(item => item.closest('[role="radiogroup"]') === group && !item.disabled);
+		for (const group of container.querySelectorAll('[role="radiogroup"]')) {
+			const radios = items(group);
+			const selected = radios.find(item => item.getAttribute('aria-checked') === 'true') || radios[0];
+			for (const radio of radios) radio.tabIndex = radio === selected ? 0 : -1;
+		}
+		if (container._radioFocus && !container._radioFocus.disabled) {
+			if (document.activeElement === document.body) container._radioFocus.focus();
+			container._radioFocus = null;
+		}
+		if (container._radioKeys) return;
+		container._radioKeys = true;
+		container.addEventListener('keydown', event => {
+			if (event.altKey || event.ctrlKey || event.metaKey || !['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+			const radio = event.target.closest('[role="radio"]');
+			const group = radio?.closest('[role="radiogroup"]');
+			if (!group || !container.contains(group)) return;
+			const radios = items(group);
+			const at = radios.indexOf(radio);
+			if (at < 0) return;
+			event.preventDefault();
+			const next = event.key === 'Home' ? 0 : event.key === 'End' ? radios.length - 1
+				: ['ArrowRight', 'ArrowDown'].includes(event.key) ? (at + 1) % radios.length : (at + radios.length - 1) % radios.length;
+			container._radioFocus = radios[next];
+			radios[next].focus();
+			radios[next].click();
+		});
+	},
+
 	// A popover of actions (the account panel): Up and Down move between its controls, Home and End go to
 	// the first and last, wrapping round. Only controls outside an inert part count, so a hidden level is
 	// skipped. Installed once per element.

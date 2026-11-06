@@ -66,7 +66,7 @@
          replaces it with the shell in the same places. -->
     <div id="app">
         <div class="boot-shell">
-            <span class="visually-hidden">Loading...</span>
+            <span class="visually-hidden" role="status">Loading...</span>
             <div class="boot-rail" aria-hidden="true">
                 <div class="kit-skeleton boot-rail-logo"></div>
                 <div class="boot-rail-sep"></div>
@@ -100,10 +100,10 @@
         .insecure-origin p { margin-block: 0 0.75rem; }
     </style>
 
-    <div id="blazor-error-ui">
+    <div id="blazor-error-ui" role="alert">
         An unhandled error has occurred.
         <a href="." class="reload">Reload</a>
-        <span class="dismiss">🗙</span>
+        <button type="button" class="dismiss" aria-label="Dismiss error">&#215;</button>
     </div>
 
     <!-- Third-party JS that Blazor components invoke via JSInterop must be loaded BEFORE

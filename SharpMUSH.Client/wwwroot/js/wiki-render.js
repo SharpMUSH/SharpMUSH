@@ -88,7 +88,10 @@
                         window.mermaid.initialize({
                             startOnLoad: false,
                             securityLevel: "strict", // no HTML labels / click handlers in diagrams
-                            theme: "dark"            // matches the portal's dark surfaces
+                            // Pair with the fixed diagram canvas in WikiDisplay.razor.css. SVGs retain
+                            // their palette when the reader switches the surrounding portal theme.
+                            theme: "dark",
+                            themeVariables: { background: "#1f2020", edgeLabelBackground: "#1f2020" }
                         });
                     }
                     await window.mermaid.run({ querySelector: selector });

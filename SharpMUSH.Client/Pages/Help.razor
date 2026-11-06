@@ -41,6 +41,7 @@
     else if (_index is null)
     {
         <MudAlert Severity="Severity.Error" Dense="true">@Loc["HelpLoadFailed"] @_error</MudAlert>
+        <div><CapsuleButton Class="help-retry" OnClick="LoadHelpAsync">@Loc["Retry"]</CapsuleButton></div>
     }
     else
     {
@@ -85,6 +86,7 @@
                 @if (_adminError is not null)
                 {
                     <MudAlert Severity="Severity.Error" Dense="true" Class="help-admin">@Loc["HelpLoadFailed"] @_adminError</MudAlert>
+                    <div><CapsuleButton Class="help-retry" OnClick="LoadHelpAsync">@Loc["Retry"]</CapsuleButton></div>
                 }
                 else if (_adminIndex is { Topics.Count: > 0 })
                 {
@@ -141,7 +143,14 @@
     {
         Nav.LocationChanged += OnLocationChanged;
         _filter = HelpQuery.From(Nav.Uri);
+        await LoadHelpAsync();
+    }
 
+    private async Task LoadHelpAsync()
+    {
+        _loading = true;
+        _adminIndex = null;
+        _adminError = null;
         var result = await HelpFiles.GetIndexAsync();
         (_index, _error) = result switch
         {

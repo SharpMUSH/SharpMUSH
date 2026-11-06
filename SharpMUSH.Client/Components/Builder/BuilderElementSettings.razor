@@ -30,7 +30,7 @@
     <div class="bld-tabs" role="tablist" aria-label="@Loc["LayBldSettings"]">
         @foreach (var tab in Tabs)
         {
-            <button type="button" role="tab" id="bld-tab-@tab" aria-selected="@(tab == Tab ? "true" : "false")" aria-controls="bld-tabpanel"
+            <button @ref="_tabButtons[tab]" type="button" role="tab" id="bld-tab-@tab" aria-selected="@(tab == Tab ? "true" : "false")" aria-controls="bld-tabpanel"
                     tabindex="@(tab == Tab ? "0" : "-1")" class="bld-tab @(tab == Tab ? "bld-tab--on" : "")"
                     @onclick="() => _tab = tab" @onkeydown="e => TabKey(e, tab)">@Loc[$"LayBldTab_{tab}"]</button>
         }
@@ -179,6 +179,7 @@
     [Parameter] public EventCallback OnChanged { get; set; }
 
     private string _tab = "content";
+    private readonly Dictionary<string, ElementReference> _tabButtons = [];
     private JsonObject? _shown;
 
     private bool IsForm => Draft.IsForm;
@@ -210,8 +211,9 @@
     }
 
     // Left and Right move along the tabs, as the ARIA tabs pattern has it.
-    private void TabKey(KeyboardEventArgs e, string tab)
+    private async Task TabKey(KeyboardEventArgs e, string tab)
     {
+        if (e.Key is not ("ArrowRight" or "ArrowLeft" or "Home" or "End")) return;
         var index = Tabs.ToList().IndexOf(tab);
         _tab = e.Key switch
         {
@@ -221,6 +223,7 @@
             "End" => Tabs[^1],
             _ => _tab,
         };
+        await _tabButtons[_tab].FocusAsync();
     }
 
     /// <summary>The name the palette gives <paramref name="element"/>'s kind or field type.</summary>

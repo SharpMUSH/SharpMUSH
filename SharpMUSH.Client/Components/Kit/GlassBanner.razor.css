@@ -82,7 +82,7 @@
 	bottom: 64px;
 	overflow: auto;
 	color: var(--text-over-image);
-	font-size: 14px;
+	font-size: 0.875rem;
 	line-height: 1.5;
 	text-shadow: var(--on-image-shadow);
 }
@@ -127,20 +127,21 @@
 
 .kit-banner-kicker {
 	font-family: var(--font-mono);
-	font-size: 10px;
+	font-size: 0.75rem;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: var(--text-on-image);
 }
 
 .kit-banner-title {
+	overflow-wrap: anywhere;
 	margin: 0;
 	font-family: var(--font-display);
 	font-weight: var(--font-title-weight);
 	font-style: var(--title-style);
 	letter-spacing: var(--title-tracking);
 	text-transform: var(--title-transform);
-	font-size: 17px;
+	font-size: 1.0625rem;
 	line-height: 1.25;
 }
 
@@ -162,15 +163,17 @@
 }
 
 .kit-banner-text--hero .kit-banner-title {
-	font-size: 26px;
+	overflow-wrap: anywhere;
+	font-size: 1.625rem;
 }
 
 .kit-banner-text--character .kit-banner-title {
-	font-size: 28px;
+	overflow-wrap: anywhere;
+	font-size: 1.75rem;
 }
 
 .kit-banner-secondary {
-	font-size: 12px;
+	font-size: 0.75rem;
 	color: var(--text-on-image);
 	margin-top: 2px;
 }
@@ -240,12 +243,12 @@
 .kit-banner-strip-title {
 	margin: 0;
 	font-family: inherit;
-	font-size: 14px;
+	font-size: 0.875rem;
 	font-weight: 700;
 }
 
 .kit-banner-strip-fact {
-	font-size: 12px;
+	font-size: 0.75rem;
 	color: var(--text-on-image);
 }
 

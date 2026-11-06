@@ -17,6 +17,16 @@
 <div class="page-stack page-stack--padded pkg-page">
     <PlainPageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["PkgBrowseHeading"]" Description="@Loc["PkgBrowseDescription"]" />
 
+    @if (_remotesFailure is not null)
+    {
+        <MudAlert Severity="Severity.Error" Class="pkg-remotes-error" role="alert">@_remotesFailure.Message</MudAlert>
+        <CapsuleButton Class="pkg-remotes-retry" OnClick="LoadRemotesAsync" Icon="@Icons.Material.Filled.Refresh">@Loc["Refresh"]</CapsuleButton>
+    }
+    else if (_remotes is null)
+    {
+        <MudProgressLinear Indeterminate="true" aria-label="@Loc["Loading"]" />
+    }
+
     <KitCard>
     <div class="pkg-toolbar">
         <MudSelect T="string" @bind-Value="_selectedRemote" Label="@Loc["PkgRemoteLabel"]" Variant="Variant.Outlined"
@@ -151,6 +161,7 @@
     private const string DevChannel = LibraryPackageRow.DevChannel;
 
     private IReadOnlyList<PackageRemoteRecord>? _remotes;
+    private ApiFailure? _remotesFailure;
     private PackageRemoteRecord? _remoteRecord;
     private string _selectedRemote = "";
     private PackageRepoSnapshot? _snapshot;
@@ -280,19 +291,31 @@
     private void OnBatchChanged() => InvokeAsync(StateHasChanged);
     public void Dispose() => Packages.Batch.Changed -= OnBatchChanged;
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync() => LoadRemotesAsync();
+
+    private async Task LoadRemotesAsync()
     {
-        _remotes = await Packages.GetRemotesAsync() is IReadOnlyList<PackageRemoteRecord> remotes ? remotes : [];
+        _remotesFailure = null;
+        _remotes = null;
+        switch (await Packages.GetRemotesAsync())
+        {
+            case IReadOnlyList<PackageRemoteRecord> remotes:
+                _remotes = remotes;
+                break;
+            case ApiFailure failure:
+                _remotesFailure = failure;
+                return;
+        }
 
         var uri = Nav.ToAbsoluteUri(Nav.Uri);
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
         var preset = query["remote"];
-        if (!string.IsNullOrEmpty(preset) && _remotes.Any(r => r.Name == preset))
+        if (!string.IsNullOrEmpty(preset) && _remotes is not null && _remotes.Any(r => r.Name == preset))
         {
             _selectedRemote = preset;
             await BrowseAsync();
         }
-        else if (_remotes.Count == 1)
+        else if (_remotes is { Count: 1 })
         {
             _selectedRemote = _remotes[0].Name;
         }

@@ -47,18 +47,18 @@
     </AdminStats>
 
     <KitCard>
-        @if (_installed is not null)
+        @if (_installed is not null || _installedFailure is not null || _plugins is not null)
         {
             <div class="pkg-tabs">
                 <button type="button" class="pkg-tab @(_tab == PkgTab.Installed ? "active" : "")" aria-pressed="@(_tab == PkgTab.Installed ? "true" : "false")"
                         @onclick="@(() => _tab = PkgTab.Installed)">
                     @Loc["PkgInstalled"]
-                    <span class="pkg-tab-count">@_installed.Count</span>
+                    <span class="pkg-tab-count">@(_installed?.Count.ToString() ?? "—")</span>
                 </button>
                 <button type="button" class="pkg-tab @(_tab == PkgTab.Updates ? "active" : "")" aria-pressed="@(_tab == PkgTab.Updates ? "true" : "false")"
                         @onclick="@(() => _tab = PkgTab.Updates)">
                     @Loc["PkgUpdates"]
-                    <span class="pkg-tab-count">@updatesAvailable</span>
+                    <span class="pkg-tab-count">@(_installed is null ? "—" : updatesAvailable.ToString())</span>
                 </button>
                 <button type="button" class="pkg-tab @(_tab == PkgTab.Plugins ? "active" : "")" aria-pressed="@(_tab == PkgTab.Plugins ? "true" : "false")"
                         @onclick="@(() => _tab = PkgTab.Plugins)">
@@ -79,13 +79,18 @@
         }
 
         <div class="pkg-body">
-            @if (_installed is null)
-            {
-                <SkeletonRows Count="4" Height="64" Gap="8" />
-            }
-            else if (_tab == PkgTab.Plugins)
+            @if (_tab == PkgTab.Plugins)
             {
                 @PluginList
+            }
+            else if (_installedFailure is not null)
+            {
+                <MudAlert Severity="Severity.Error" Class="pkg-installed-error" role="alert">@_installedFailure.Message</MudAlert>
+                <CapsuleButton Class="pkg-installed-retry" OnClick="ReloadAsync" Icon="@Icons.Material.Filled.Refresh">@Loc["Refresh"]</CapsuleButton>
+            }
+            else if (_installed is null)
+            {
+                <SkeletonRows Count="4" Height="64" Gap="8" />
             }
             else if (_tab == PkgTab.Dependencies)
             {
@@ -292,8 +297,11 @@
 
     protected override async Task OnInitializedAsync() => await ReloadAsync();
 
+    private ApiFailure? _installedFailure;
+
     private async Task ReloadAsync()
     {
+        _installedFailure = null;
         _installed = await Packages.GetInstalledAsync() switch
         {
             IReadOnlyList<InstalledPackageDto> packages => packages,
@@ -310,10 +318,10 @@
 
         await ReloadPluginsAsync();
 
-        IReadOnlyList<InstalledPackageDto> Failed(ApiFailure failure)
+        IReadOnlyList<InstalledPackageDto>? Failed(ApiFailure failure)
         {
-            Snackbar.Add(failure.Message, Severity.Error);
-            return [];
+            _installedFailure = failure;
+            return null;
         }
     }
 

@@ -176,6 +176,7 @@ public class DynamicApplicationPageTests : TrackingBunitContext, IAsyncDisposabl
 		// The point of the finding: not a silent empty result after an impossible request.
 		await Assert.That(cut.Markup).DoesNotContain("WidNothingToDisplay");
 		await Assert.That(cut.Find("a.app-alert-link").GetAttribute("href")).IsEqualTo("/login");
+		await Assert.That(cut.Find("[role='alert']").TextContent).Contains("NavApplicationNeedsCharacter");
 		await Assert.That(_requests.Any(r => r.StartsWith("/http/profile?", StringComparison.Ordinal))).IsFalse()
 			.Because("a route whose token cannot be filled must not be fetched at all");
 	}

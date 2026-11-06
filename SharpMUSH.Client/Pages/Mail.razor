@@ -38,10 +38,10 @@ else
 
         <div class="mail-panes">
             <KitCard Class="mail-list" Title="@_folder" Sub="@(_messages.Count > 0 ? Loc.Plural("NavMailMessageCount", "count", _messages.Count) : null)">
-                <div class="mail-list-body">
+                <div class="mail-list-body" aria-busy="@(_loading ? "true" : "false")">
                     @if (_loading)
                     {
-                        <div class="mail-note">
+                        <div class="mail-note" role="status" aria-label="@Loc["Loading"]">
                             @for (var i = 0; i < 5; i++) { <MudSkeleton Height="52px" Class="mb-1" /> }
                         </div>
                     }
@@ -94,7 +94,7 @@ else
                             <div class="mail-reading-date">@DateDisplay.LongDateTime(_selected.DateSent)</div>
                         </div>
                     </div>
-                    <div class="mail-reading-body">
+                    <div class="mail-reading-body" aria-busy="@(_bodyLoading ? "true" : "false")">
                         @if (_bodyLoading)
                         {
                             <MudSkeleton Height="18px" Class="mb-1" />

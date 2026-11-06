@@ -35,6 +35,22 @@ public class CharactersPageD1Tests : TrackingBunitContext
 		cut.FindAll(".char-grid .kit-portrait .kit-portrait-label").Select(e => e.TextContent).ToList();
 
 	[Test]
+	public async Task Retry_ReplacesFailureWithDirectory_AndKeepsSearch()
+	{
+		var roster = _fake.Characters;
+		_fake.Characters = "invalid JSON";
+		var cut = RenderAt("/characters?q=ilsa");
+		await Assert.That(cut.FindAll(".char-grid .kit-portrait").Count).IsEqualTo(0);
+
+		_fake.Characters = roster;
+		await cut.Find(".char-retry").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".char-grid .kit-portrait"));
+
+		await Assert.That(Names(cut)).IsEquivalentTo(new[] { "Ilsa Varn" });
+		await Assert.That(cut.Find(".char-filter").GetAttribute("value")).IsEqualTo("ilsa");
+	}
+
+	[Test]
 	public async Task TheDirectory_IsAPlainHeaderAndPortraitTiles()
 	{
 		var cut = RenderAt("/characters");

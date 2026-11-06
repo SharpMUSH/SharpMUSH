@@ -25,11 +25,11 @@
         <MudTabs @bind-ActivePanelIndex="_tabIndex" Elevation="0" Rounded="true" Centered="true" Class="mb-3">
             <MudTabPanel Text="@Loc["AuthSignIn"]">
                 <div class="pa-0 pt-3">
-                    <MudTextField id="login-username" @bind-Value="_loginIdentifier" Label="@Loc["AuthUsernameOrEmail"]"
+                    <MudTextField id="login-username" autocomplete="username" @bind-Value="_loginIdentifier" Label="@Loc["AuthUsernameOrEmail"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
                                   Disabled="_busy" Immediate="true" OnKeyDown="OnKeyDown" />
-                    <MudTextField id="login-password" @bind-Value="_loginPassword" Label="@Loc["AuthPassword"]"
+                    <MudTextField id="login-password" autocomplete="current-password" @bind-Value="_loginPassword" Label="@Loc["AuthPassword"]"
                                   InputType="InputType.Password"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
@@ -63,15 +63,15 @@
 
             <MudTabPanel Text="@Loc["AuthRegister"]">
                 <div class="pa-0 pt-3">
-                    <MudTextField @bind-Value="_regUsername" Label="@Loc["AuthUsername"]"
+                    <MudTextField autocomplete="username" @bind-Value="_regUsername" Label="@Loc["AuthUsername"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
                                   Disabled="_busy" Immediate="true" OnKeyDown="OnRegisterKeyDown" />
-                    <MudTextField @bind-Value="_regEmail" Label="@Loc["AuthEmailOptional"]"
+                    <MudTextField autocomplete="email" InputType="InputType.Email" @bind-Value="_regEmail" Label="@Loc["AuthEmailOptional"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email"
                                   Disabled="_busy" Immediate="true" OnKeyDown="OnRegisterKeyDown" />
-                    <MudTextField @bind-Value="_regPassword" Label="@Loc["AuthPassword"]"
+                    <MudTextField autocomplete="new-password" @bind-Value="_regPassword" Label="@Loc["AuthPassword"]"
                                   InputType="InputType.Password" HelperText="@Loc["AuthPasswordTooShort"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"

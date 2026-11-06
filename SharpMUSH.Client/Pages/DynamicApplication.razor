@@ -25,20 +25,20 @@
 
     @if (_loading)
     {
-        <div class="app-card app-loading">
+        <div class="app-card app-loading" role="status">
             <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
             <span class="app-loading-text">@Loc["NavLoadingApplication"]</span>
         </div>
     }
     else if (_app is null)
     {
-        <div class="app-alert app-alert-warning">
+        <div class="app-alert app-alert-warning" role="alert">
             @Loc["NavNoApplicationRegistered", $"/apps/{Slug}"]
         </div>
     }
     else if (!_authorized)
     {
-        <div class="app-alert app-alert-error">
+        <div class="app-alert app-alert-error" role="alert">
             @Loc["NavNoApplicationAccess"]
         </div>
     }
@@ -48,7 +48,7 @@
            can fill it. Rendering the schema anyway is what produced the reported bug: the page
            fetched /http/profile?objid=%7Bobjid%7D with the placeholder intact and reported the
            inevitable empty answer as "Nothing to display." Say what is actually missing instead. *@
-        <div class="app-alert app-alert-warning">
+        <div class="app-alert app-alert-warning" role="alert">
             @Loc["NavApplicationNeedsCharacter"]
             @if (AccountAuth.IsLoggedIn)
             {
@@ -72,14 +72,14 @@
         }
         else
         {
-            <div class="app-alert app-alert-error">
+            <div class="app-alert app-alert-error" role="alert">
                 @Loc["NavApplicationComponentLoadFailed"]
             </div>
         }
     }
     else if (_schema is null)
     {
-        <div class="app-alert app-alert-error">
+        <div class="app-alert app-alert-error" role="alert">
             @Loc["NavApplicationSchemaLoadFailed", _app.SchemaUrl]
         </div>
     }

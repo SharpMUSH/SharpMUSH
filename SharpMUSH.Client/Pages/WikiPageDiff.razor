@@ -15,11 +15,13 @@
             <div class="wikidiff-toggle">
                 <button type="button"
                         class="@($"wikidiff-toggle-btn{(_mode == "unified" ? " active" : "")}")"
+                        aria-pressed="@(_mode == "unified" ? "true" : "false")"
                         @onclick="@(() => _mode = "unified")">
                     @Loc["WkDiffUnified"]
                 </button>
                 <button type="button"
                         class="@($"wikidiff-toggle-btn{(_mode == "split" ? " active" : "")}")"
+                        aria-pressed="@(_mode == "split" ? "true" : "false")"
                         @onclick="@(() => _mode = "split")">
                     @Loc["WkDiffSideBySide"]
                 </button>

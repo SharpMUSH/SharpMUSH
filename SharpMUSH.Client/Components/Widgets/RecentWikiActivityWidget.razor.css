@@ -8,7 +8,8 @@
 	height: 100%;
 }
 
-.recent-wiki-empty {
+.recent-wiki-empty,
+.recent-wiki-error {
 	font-size: 13px;
 	color: var(--text-faint);
 }

@@ -13,6 +13,7 @@
 }
 
 .md-head {
+	overflow-wrap: anywhere;
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
@@ -35,6 +36,7 @@
 }
 
 .md-body {
+	overflow-wrap: anywhere;
 	padding: 16px;
 	white-space: pre-wrap;
 	font-family: var(--font-mono);
@@ -46,6 +48,7 @@
 /* Narrow: long monospace tokens wrap rather than forcing a horizontal scroll. */
 @container page (max-width: 48rem) {
 	.md-body {
+	overflow-wrap: anywhere;
 		overflow-wrap: anywhere;
 		word-break: break-word;
 	}

@@ -10,7 +10,9 @@
 @* The theme's look is one data attribute per part (data-texture, data-frame-marks, ...) on <html>, which the
    rules in css/themes/ match. They sit on <html> rather than on an element here so that a theme's own stylesheet,
    whose :root rule is unlayered, wins over the parts it changes. *@
-@ChildContent
+<CascadingValue Value="ThemeService.Current">
+    @ChildContent
+</CascadingValue>
 
 @code {
     [Parameter]

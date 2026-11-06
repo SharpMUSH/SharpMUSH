@@ -9,7 +9,7 @@ packages:
   - path: builder-graph/
     name: Builder Graph
     package: builder-graph
-    version: 0.3.1
+    version: 0.3.2
     description: Room topology in the reusable HTML/JavaScript host, with coordinates, checks, export, import and drag-to-place
   - path: who-where/
     name: Who/Where

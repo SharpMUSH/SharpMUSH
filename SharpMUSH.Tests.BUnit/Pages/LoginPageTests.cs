@@ -60,6 +60,15 @@ public class LoginPageRenderTests : BunitContext
 	}
 
 	[TUnit.Core.Test]
+	public async Task Login_IdentifiesCredentialsForPasswordManagers()
+	{
+		SeedServices();
+		var cut = Render<SharpMUSH.Client.Pages.Login>();
+		await Assert.That(cut.Find("input[autocomplete='username']")).IsNotNull();
+		await Assert.That(cut.Find("input[autocomplete='current-password']").GetAttribute("type")).IsEqualTo("password");
+	}
+
+	[TUnit.Core.Test]
 	public async Task Login_RendersSingleCard_NoHeroMarketingPanel()
 	{
 		SeedServices();

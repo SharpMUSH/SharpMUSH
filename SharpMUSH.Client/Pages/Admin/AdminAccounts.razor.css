@@ -41,3 +41,7 @@
 		content: none;
 	}
 }
+
+.accounts-proof > p {
+	margin: 0;
+}

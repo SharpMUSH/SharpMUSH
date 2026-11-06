@@ -8,6 +8,9 @@
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
+@inject IAccountAuthState AccountAuth
+@using System.Text.Json
+@implements IDisposable
 
 <PageTitle>@Loc["ComposeMail"] — <GameName /></PageTitle>
 
@@ -20,22 +23,32 @@
 
     <KitCard Class="mc-card">
         <div class="mc-fields">
-            <MudTextField @bind-Value="_to" Label="@Loc["To"]" Variant="Variant.Outlined" InputId="mc-to"
+            <MudTextField @bind-Value="_to" @bind-Value:after="SaveDraftAsync" Immediate="true" Disabled="@(_sending || _restoring)" Label="@Loc["To"]" Variant="Variant.Outlined" InputId="mc-to"
                           Margin="Margin.Dense" Class="mc-field" Required="true" />
-            <MudTextField @bind-Value="_subject" Label="@Loc["Subject"]" Variant="Variant.Outlined"
+            <MudTextField @bind-Value="_subject" @bind-Value:after="SaveDraftAsync" Immediate="true" Disabled="@(_sending || _restoring)" Label="@Loc["Subject"]" Variant="Variant.Outlined"
                           Margin="Margin.Dense" Class="mc-field" />
-            <MudTextField @bind-Value="_body" Label="@Loc["Message"]" Variant="Variant.Outlined" InputId="mc-body"
+            <MudTextField @bind-Value="_body" @bind-Value:after="SaveDraftAsync" Immediate="true" Disabled="@(_sending || _restoring)" Label="@Loc["Message"]" Variant="Variant.Outlined" InputId="mc-body"
                           Lines="10" Margin="Margin.Dense" Class="mc-field" />
         </div>
     </KitCard>
 
+    @if (_sentDraftClearFailed)
+    {
+        <MudAlert Severity="Severity.Warning" role="status">@Loc["MailDraftClearFailed"]</MudAlert>
+    }
+    else if (_draftSaved is { } saved)
+    {
+        <p class="mc-draft-status" role="status">@Loc[saved ? "MailDraftSaved" : "MailDraftUnavailable"]</p>
+    }
+
     <BottomBar Class="mc-actions">
         <div class="mc-bar">
-            <MudCheckBox @bind-Value="_urgent" Label="@Loc["Urgent"]" Color="Color.Error" Dense="true" />
+            <MudCheckBox @bind-Value="_urgent" @bind-Value:after="SaveDraftAsync" Disabled="@(_sending || _restoring)" Label="@Loc["Urgent"]" Color="Color.Error" Dense="true" />
             <span class="mc-spacer"></span>
+            <CapsuleButton Class="mc-discard" OnClick="DiscardAsync" Disabled="@(_sending || _restoring || !HasDraft)">@Loc["MailDraftDiscard"]</CapsuleButton>
             <CapsuleButton Href="/mail" Disabled="_sending">@Loc["Cancel"]</CapsuleButton>
             <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Send" OnClick="SendAsync"
-                           Disabled="@(_sending || string.IsNullOrWhiteSpace(_to))">@Loc["Send"]</CapsuleButton>
+                           Disabled="@(_sending || _restoring || string.IsNullOrWhiteSpace(_to))">@Loc["Send"]</CapsuleButton>
         </div>
     </BottomBar>
 </div>
@@ -51,19 +64,123 @@
     private bool _urgent;
     private bool _sending;
 
-    /// <summary>The address the form was last filled from; a re-render at the same one keeps what was typed.</summary>
-    private (string? To, string? Subject, string? Draft)? _filledFrom;
+    // A mail draft belongs to this tab, account, character and compose address. SceneDraftSync also
+    // writes to the scene server; mail deliberately reuses only its BrowserStorage foundation.
+    private sealed record Draft(string To, string Subject, string Body, bool Urgent);
+    private string? _draftKey;
+    private bool _restoring;
+    private bool? _draftSaved;
+    private bool _sentDraftClearFailed;
+    private bool HasDraft => _to.Length > 0 || _subject.Length > 0 || _body.Length > 0 || _urgent || _draftSaved is true || _sentDraftClearFailed;
+    private long _generation;
+    private bool _disposed;
+    // Shared across remounts so a completed send cannot delete a newer editor's copy.
+    private static readonly SemaphoreSlim _storageGate = new(1);
+    private (string? Username, int? Number, long? Created, string? To, string? Subject, string? Forward)? _identity;
 
-    protected override void OnParametersSet()
+    protected override void OnInitialized()
     {
-        // Mirror the query params each navigation so a prior reply's recipient/subject
-        // never persists when the user opens a blank compose form. A draft is taken once, so the
-        // same address must not refill (and blank) the form.
-        if (_filledFrom == (ToQuery, SubjectQuery, DraftQuery)) return;
-        _filledFrom = (ToQuery, SubjectQuery, DraftQuery);
-        _to = string.IsNullOrWhiteSpace(ToQuery) ? string.Empty : ToQuery!;
-        _subject = string.IsNullOrWhiteSpace(SubjectQuery) ? string.Empty : SubjectQuery!;
-        _body = DraftQuery is { Length: > 0 } draft && Mail.TakeDraft(draft) is string staged ? staged : string.Empty;
+        AccountAuth.ActiveCharacterChanged += IdentityChanged;
+        AccountAuth.AuthStateChanged += IdentityChanged;
+    }
+
+    private void IdentityChanged() => _ = InvokeAsync(async () => { await RestoreAsync(); StateHasChanged(); });
+
+    protected override Task OnParametersSetAsync() => RestoreAsync();
+
+    private async Task RestoreAsync()
+    {
+        var actor = AccountAuth.ActiveCharacter;
+        var identity = (AccountAuth.Username, actor?.DbrefNumber, actor?.CreationTime, ToQuery, SubjectQuery, DraftQuery);
+        if (_identity == identity) return;
+        _identity = identity;
+        var generation = ++_generation;
+        _restoring = true;
+        _draftSaved = null;
+        _sentDraftClearFailed = false;
+        _draftKey = actor is not null && AccountAuth.Username is { Length: > 0 } username
+            ? "mail.draft." + Uri.EscapeDataString(JsonSerializer.Serialize(new object?[]
+                { username, actor.DbrefNumber, actor.CreationTime, ToQuery, SubjectQuery, DraftQuery }))
+            : null;
+        _to = ToQuery ?? string.Empty;
+        _subject = SubjectQuery ?? string.Empty;
+        _body = string.Empty;
+        _urgent = false;
+        var key = _draftKey;
+        if (key is not null)
+        {
+            await _storageGate.WaitAsync();
+            string? json;
+            try { json = await JS.GetItemAsync(BrowserStore.Session, key); }
+            finally { _storageGate.Release(); }
+            if (_disposed || generation != _generation) return;
+            try
+            {
+                if (json is { Length: > 0 } && JsonSerializer.Deserialize<Draft>(json) is { } draft)
+                {
+                    (_to, _subject, _body, _urgent) = (draft.To ?? "", draft.Subject ?? "", draft.Body ?? "", draft.Urgent);
+                    _draftSaved = true;
+                }
+            }
+            catch (JsonException) { /* An invalid browser copy does not prevent composing. */ }
+        }
+        if (_draftSaved is null && DraftQuery is { Length: > 0 } forward && Mail.TakeDraft(forward) is string staged)
+            _body = staged;
+        _restoring = false;
+        if (_body.Length > 0 && _draftSaved is null) await SaveDraftAsync();
+    }
+
+    private async Task SaveDraftAsync()
+    {
+        if (_restoring || _disposed || _draftKey is not { } key) return;
+        var draft = new Draft(_to, _subject, _body, _urgent);
+        var generation = _generation;
+        await _storageGate.WaitAsync();
+        try
+        {
+            var saved = await JS.SetItemAsync(BrowserStore.Session, key, JsonSerializer.Serialize(draft));
+            if (!_disposed && generation == _generation)
+            {
+                _draftSaved = saved;
+                if (saved) _sentDraftClearFailed = false;
+            }
+        }
+        finally { _storageGate.Release(); }
+    }
+
+    private async Task<bool> ClearDraftAsync(string? key, Draft? sent = null)
+    {
+        if (key is null) return true;
+        await _storageGate.WaitAsync();
+        try
+        {
+            if (sent is not null && await JS.InvokeAsync<string?>("sessionStorage.getItem", key) != JsonSerializer.Serialize(sent))
+                return true;
+            return await JS.RemoveItemAsync(BrowserStore.Session, key);
+        }
+        catch (JSException) { return false; }
+        finally { _storageGate.Release(); }
+    }
+
+    private async Task DiscardAsync()
+    {
+        var generation = _generation;
+        _restoring = true;
+        var cleared = await ClearDraftAsync(_draftKey);
+        if (_disposed || generation != _generation) return;
+        _restoring = false;
+        if (!cleared) { _draftSaved = false; return; }
+        (_to, _subject, _body, _urgent) = (string.Empty, string.Empty, string.Empty, false);
+        _draftSaved = null;
+        _sentDraftClearFailed = false;
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        ++_generation;
+        AccountAuth.ActiveCharacterChanged -= IdentityChanged;
+        AccountAuth.AuthStateChanged -= IdentityChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -82,14 +199,28 @@
 
     private async Task SendAsync()
     {
+        if (_sending || _restoring) return;
         _sending = true;
-        var result = await Mail.SendAsync(_to.Trim(), _subject, _body, _urgent);
-        _sending = false;
+        var generation = _generation;
+        var key = _draftKey;
+        var sent = new Draft(_to, _subject, _body, _urgent);
+        ApiResult<Success> result;
+        try { result = await Mail.SendAsync(_to.Trim(), _subject, _body, _urgent); }
+        finally { _sending = false; }
+        var cleared = result is not Success || await ClearDraftAsync(key, sent);
+        if (_disposed || generation != _generation) return;
 
         switch (result)
         {
             case Success:
                 Snackbar.Add(Loc["MailSent"], Severity.Success);
+                if (!cleared)
+                {
+                    (_to, _subject, _body, _urgent) = (string.Empty, string.Empty, string.Empty, false);
+                    _draftSaved = null;
+                    _sentDraftClearFailed = true;
+                    return;
+                }
                 Nav.NavigateTo("/mail");
                 break;
             case ApiFailure failure:
