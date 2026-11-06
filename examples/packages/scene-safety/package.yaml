@@ -267,10 +267,10 @@ objects:
         flags: [funsyntax]
 
       # ---- a scene's summary, for its owner --------------------------------------------
-      # %0 a scene: its content warnings, split by |.
+      # %0 a scene: its content warnings, split by |, or nothing when the detail is unset and the game does not list it.
       FUN`SCENE`WARNINGS:
         value: |-
-          squish(scene(%0,v(DATA`CONFIG`WARNING-DETAIL)),|)
+          squish(if(strmatch(setr(scene_warnings,scene(%0,v(DATA`CONFIG`WARNING-DETAIL))),#-*),,%q<scene_warnings>),|)
         flags: [funsyntax]
       # %0 a scene, %1 a player: 1 when they own it.
       FUN`SCENE`OWNS:
@@ -328,7 +328,7 @@ objects:
       # %0 a scene: its content warnings on a line of their own, as the Scene Logger shows the detail, or nothing.
       FUN`JOIN`CONTENT:
         value: |-
-          setq(join_detail,v(DATA`CONFIG`WARNING-DETAIL))[if(strlen(scene(%0,%q<join_detail>)),%r[notice(SCENE,Content warning: [u({{scene/logger}}/FUN`DETAIL`SHOW,%0,%q<join_detail>)])])]
+          if(strlen(u(%!/FUN`SCENE`WARNINGS,%0)),%r[notice(SCENE,Content warning: [u({{scene/logger}}/FUN`DETAIL`SHOW,%0,v(DATA`CONFIG`WARNING-DETAIL))])])
         flags: [funsyntax]
       # %0 a scene, %1 the player joining it: the warning they are told on a line of its own, or nothing.
       FUN`JOIN`WARN:

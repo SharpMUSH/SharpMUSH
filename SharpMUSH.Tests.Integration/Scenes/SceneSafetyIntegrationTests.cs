@@ -174,6 +174,13 @@ public class SceneSafetyIntegrationTests
 
 			await Assert.That(await As(lined, "+safety/skip")).Contains("You signalled a moment ago.");
 			await Assert.That(await As(owner, "+safety/pause")).Contains($"You run scene {scene}, so the call is yours.");
+
+			// A warning detail the game does not list reads as no warning until it is set.
+			await God($"&DATA`CONFIG`WARNING-DETAIL {safety}=cw");
+			await Assert.That(await Eval($"u({safety}/FUN`SCENE`WARNINGS,{scene})")).IsEmpty();
+			await Assert.That(await Eval($"u({safety}/FUN`JOIN`CONTENT,{scene})")).IsEmpty();
+			await As(owner, "+scene/set cw=Clowns");
+			await Assert.That(await Eval($"u({safety}/FUN`JOIN`CONTENT,{scene})")).Contains("Content warning: Clowns");
 		}
 		finally
 		{
