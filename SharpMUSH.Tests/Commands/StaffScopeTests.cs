@@ -68,4 +68,25 @@ public class StaffScopeTests : ServerTestBase
 		await As(_mortal, $"enter #{number}");
 		await Assert.That(await Eval($"loc(#{_mortal.DbRef.Number})")).StartsWith($"#{number}:");
 	}
+
+	[Test]
+	public async Task GameWizardCoversTheStaffPermissions()
+	{
+		await Assert.That(await Eval($"permission(#{_wizard.DbRef.Number},game.nuke)")).IsEqualTo("1");
+		await Assert.That(await Eval($"permission(#{_wizard.DbRef.Number},game.noboot)")).IsEqualTo("0");
+		await Cmd($"@permission/deny #{_wizard.DbRef.Number}=game.wizard");
+		await Assert.That(await Eval($"permission(#{_wizard.DbRef.Number},game.nuke)")).IsEqualTo("0");
+		await Assert.That(await Eval($"permission(#{_wizard.DbRef.Number},game.chown.self)")).IsEqualTo("0");
+		await Cmd($"@permission/clear #{_wizard.DbRef.Number}=game.wizard");
+		await Assert.That(await Eval($"permission(#{_wizard.DbRef.Number},game.nuke)")).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task ChownAllHonoursTheReach()
+	{
+		await Cmd($"@permission/allow #{_mortal.DbRef.Number}=game.chown.any/player");
+		await As(_wizard, $"@create {TestIsolationHelpers.GenerateUniqueName("StaffChown")}");
+		await Assert.That(await As(_mortal, $"@chownall #{_wizard.DbRef.Number}")).StartsWith("#-1 PERMISSION DENIED");
+		await Assert.That(await Eval($"lsearch(#{_wizard.DbRef.Number})")).IsNotEmpty();
+	}
 }

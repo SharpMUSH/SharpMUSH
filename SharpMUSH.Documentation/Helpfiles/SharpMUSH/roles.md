@@ -91,7 +91,7 @@ Priority does not decide any of this, and it does not decide control. It only or
 
 ## Umbrella permissions and taking one away
 
-Some permissions are umbrellas over narrower ones: `wiki.admin` covers `wiki.read`, `wiki.drafts`, `wiki.create`, `wiki.edit` and `wiki.delete`; `media.admin` covers `media.upload`; `players.moderate` covers `players.view`; and `jobs.manage`, `queue.inspect` and `queue.control` cover their `.own` versions. A role or override that sets the umbrella but leaves the narrower permission alone applies the umbrella's setting to it. A setting on the narrower permission itself always wins within the same role.
+Some permissions are umbrellas over narrower ones: `wiki.admin` covers `wiki.read`, `wiki.drafts`, `wiki.create`, `wiki.edit` and `wiki.delete`; `media.admin` covers `media.upload`; `players.moderate` covers `players.view`; `game.wizard` covers six of the staff permissions in [roles staff]; `game.chown.any` covers `game.chown.self`; and `jobs.manage`, `queue.inspect` and `queue.control` cover their `.own` versions. A role or override that sets the umbrella but leaves the narrower permission alone applies the umbrella's setting to it. A setting on the narrower permission itself always wins within the same role.
 
 To take a permission away from one object, use an override (`@permission/deny`). To take it away from a group, leave it off the roles they hold rather than adding a Deny role on top, because any other role's Allow wins.
 
@@ -180,7 +180,7 @@ Being a wizard (`game.wizard`) is split into groups, so a custom role can hand o
 
 ## Staff permissions
 
-These take parts of a wizard's standing over other players' things, so a role or an override can give one without `game.wizard`. The `wizard` role allows all but the last.
+These take parts of a wizard's standing over other players' things, so a role or an override can give one without `game.wizard`. `game.wizard` covers the first six, so taking it away takes them too.
 
 | Permission | Covers |
 |---|---|
@@ -190,14 +190,14 @@ These take parts of a wizard's standing over other players' things, so a role or
 | `game.override` | setting wizard and locked attributes and locks on others' objects |
 | `game.flags.restricted` | setting wizard-only flags, and CHOWN_OK and DESTROY_OK on others' objects |
 | `game.noforce` | nobody ranked below you may @force you |
-| `game.noboot` | nobody ranked below you may @boot you |
-| `game.override.movement` | passing enter, leave and exit locks |
+| `game.noboot` | nobody ranked below you may @boot you; no role allows it |
+| `game.override.movement` | passing enter, leave and exit locks; no role allows it |
 
 Each can carry a reach (see [@permission reach]). On `game.noforce` and `game.noboot` a reach names who is kept out: with reach `architect`, nobody ranked at or below architect may force you.
 
 ## What still needs game.wizard
 
-Everything else a wizard does still needs `game.wizard`: overrides in `examine`, the preserve switches other than @chown's, and every check on whether the target is a wizard. A check that also takes a power, such as @halt with Halt or @sql with SQL_OK, takes that power as before. Any single command can be given its own permission with `@command/restrict <command>=PERM^<permission>`, and a function with `@function/restrict <function>=<permission>`.
+Everything else a wizard does still needs `game.wizard`: overrides in `examine`, the preserve switches of @link, @clone and @chzone, and every check on whether the target is a wizard. A check that also takes a power, such as @halt with Halt or @sql with SQL_OK, takes that power as before. Any single command can be given its own permission with `@command/restrict <command>=PERM^<permission>`, and a function with `@function/restrict <function>=<permission>`.
 
 A power made with `@power/add` is stored on the object as before.
 

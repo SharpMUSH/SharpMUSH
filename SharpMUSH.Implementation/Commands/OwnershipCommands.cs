@@ -55,13 +55,13 @@ public partial class Commands
 			return await NotifyService.PermissionDenied(executor, refusal);
 		}
 
-		if (obj is SharpThing thing && !await executor.IsPriv() && !await executor.Can(PortalPermission.ChownSelf)
+		if (obj is SharpThing thing && !await executor.IsPriv() && !await executor.CanOver(PortalPermission.ChownSelf, obj)
 			&& (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef != executor.Object().DBRef)
 		{
 			return await Refused(nameof(ErrorMessages.Notifications.MustCarryToChown));
 		}
 
-		if (preserve && !await executor.Can(PortalPermission.ChownAny))
+		if (preserve && !await executor.CanOver(PortalPermission.ChownAny, obj))
 		{
 			return await Refused(nameof(ErrorMessages.Notifications.ChownPreserveIsForWizards));
 		}
@@ -215,6 +215,12 @@ public partial class Commands
 			}
 		}
 
+		// The command lock asked for game.chown.any at no rank; a reach is judged against both owners here.
+		if (!await executor.CanOver(PortalPermission.ChownAny, new AnySharpObject(oldOwner)))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.NotControlled(new AnySharpObject(oldOwner), PortalPermission.ChownAny));
+		if (!await executor.CanOver(PortalPermission.ChownAny, newOwner))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.NotControlled(newOwner, PortalPermission.ChownAny));
+
 		var chownThings = switches.Contains("THINGS") || (!switches.Contains("ROOMS") && !switches.Contains("EXITS"));
 		var chownRooms = switches.Contains("ROOMS") || (!switches.Contains("THINGS") && !switches.Contains("EXITS"));
 		var chownExits = switches.Contains("EXITS") || (!switches.Contains("THINGS") && !switches.Contains("ROOMS"));
@@ -312,6 +318,10 @@ public partial class Commands
 						notifyMessage: ErrorMessages.Notifications.MustBePlayer,
 						shouldNotify: true);
 				}
+
+				// The command lock asked for game.chown.any at no rank; a reach is judged against the player here.
+				if (!await executor.CanOver(PortalPermission.ChownAny, player))
+					return await NotifyService.PermissionDenied(executor, PermissionRefusal.NotControlled(player, PortalPermission.ChownAny));
 
 				// wiz.c:1032-1035: unlike @CHZONE, an empty right-hand side here is a usage error and not
 				// "none" — only the literal word unzones.

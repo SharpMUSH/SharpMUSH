@@ -82,7 +82,7 @@ public class ObjectRelationshipService(
 
 		if (obj is SharpThing thing
 				&& (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef != executor.Object().DBRef
-				&& !await executor.Can(PortalPermission.ChownSelf))
+				&& !await executor.CanOver(PortalPermission.ChownSelf, obj))
 		{
 			return new PermissionRefusal(nameof(Definitions.ErrorMessages.Notifications.PermissionDeniedChownCarry),
 				Definitions.ErrorMessages.Notifications.PermissionDeniedChownCarry, obj.Object().Name);
