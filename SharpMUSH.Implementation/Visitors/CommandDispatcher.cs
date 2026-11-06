@@ -172,7 +172,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			// Step 6: Check @attribute setting
 			// Standard attributes (e.g., DESCRIBE) can be set using @attrname object=value syntax
 			// This supports prefix matching when the attribute has the "prefixmatch" flag
-			if (builtIn.RootCommand.StartsWith('@') && context.evaluationString() != null)
+			if (builtIn.SetsAttribute && builtIn.RootCommand.StartsWith('@') && context.evaluationString() != null)
 			{
 				var attrCommandResult = await services.StandardAttributes.TryRunAsync(parser, src, context, builtIn.RootCommand);
 				if (attrCommandResult.IsSome())
@@ -573,13 +573,16 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 
 	/// <summary>
 	/// The command name split into its root and switches, and the built-in the root abbreviates, when
-	/// there is one.
+	/// there is one. <paramref name="SetsAttribute"/> is false for a name that may not fall back to setting
+	/// an attribute of that name.
 	/// </summary>
-	private readonly record struct BuiltInLookup(string RootCommand, string[] Switches, CommandDefinition? Definition);
+	private readonly record struct BuiltInLookup(string RootCommand, string[] Switches, CommandDefinition? Definition,
+		bool SetsAttribute = true);
 
 	/// <summary>
 	/// The built-in <paramref name="command"/> names: one spelled that way, else the one the dialect in force
-	/// means by it (<see cref="SoftcodeDialects"/>), else the one it abbreviates.
+	/// means by it (<see cref="SoftcodeDialects"/>), else the one it abbreviates. A command the dialect has and
+	/// SharpMUSH lacks names none, and sets no attribute.
 	/// </summary>
 	private static BuiltInLookup FindBuiltIn(IMUSHCodeParser parser, string command, string? gameDialect)
 	{
@@ -608,6 +611,10 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			if (equalsIndex > 0)
 			{
 				var commandPart = rootCommand[..equalsIndex];
+				if (trie.FindExact(commandPart) is null
+						&& DialectCommand(parser, trie, gameDialect, commandPart, switches) is { } dialectPart)
+					return dialectPart;
+
 				matchResult = trie.FindAbbreviation(commandPart);
 				if (matchResult != null)
 				{
@@ -623,18 +630,24 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 
 	/// <summary>
 	/// The command the dialect in force means by <paramref name="rootCommand"/>, with the switches the alias
-	/// carries ahead of the typed <paramref name="switches"/>, or null when it means none.
+	/// carries ahead of the typed <paramref name="switches"/>; the <c>@attribute</c> command it means, which
+	/// names no built-in; a lookup naming nothing for a command the dialect has and SharpMUSH lacks; or null
+	/// when the dialect gives the name no meaning.
 	/// </summary>
 	private static BuiltInLookup? DialectCommand(IMUSHCodeParser parser, CommandTrie trie, string? gameDialect,
 		string rootCommand, string[] switches)
 	{
-		if (SoftcodeDialects.InForce(parser.CurrentState.CurrentEvaluation, gameDialect)?.CommandFor(rootCommand) is not { } target)
+		var dialect = SoftcodeDialects.InForce(parser.CurrentState.CurrentEvaluation, gameDialect);
+		if (dialect?.Lacks(rootCommand) is true)
+			return new BuiltInLookup(rootCommand, switches, null, SetsAttribute: false);
+
+		if (dialect?.CommandFor(rootCommand) is not { } target)
 			return null;
 
 		var parts = target.Split('/');
 		return trie.FindExact(parts[0]) is { } definition
 			? new BuiltInLookup(rootCommand, [.. definition.ImpliedSwitches, .. parts[1..], .. switches], definition)
-			: null;
+			: new BuiltInLookup(parts[0], [.. parts[1..], .. switches], null);
 	}
 
 	/// <summary>

@@ -18,17 +18,28 @@ namespace SharpMUSH.Library.Softcode;
 /// <param name="Key">The dialect's name, which is also its attribute flag's (<c>rhost</c>).</param>
 /// <param name="FunctionAliases">A name this dialect calls, and the SharpMUSH function it means.</param>
 /// <param name="CommandAliases">A command name this dialect types, and the SharpMUSH command it means, with
-/// switches when the meaning takes them (<c>@force/inplace</c>).</param>
+/// switches when the meaning takes them (<c>@force/inplace</c>), or the <c>@attribute</c> command that sets the
+/// attribute it means (<c>@haven</c>).</param>
 public sealed record SoftcodeDialect(
 	string Key,
 	IReadOnlyDictionary<string, string> FunctionAliases,
 	IReadOnlyDictionary<string, string> CommandAliases)
 {
+	/// <summary>
+	/// Commands this dialect has and SharpMUSH does not, under a name SharpMUSH would read as something else:
+	/// TinyMUX's <c>@fe</c> is its <c>@femit</c>, not SharpMUSH's <c>@feed</c>, and its <c>@last</c> lists logins
+	/// rather than setting LAST. Such a line goes to <c>$</c>-commands and then <c>Huh?</c>.
+	/// </summary>
+	public IReadOnlySet<string> UnsupportedCommands { get; init; } = new HashSet<string>();
+
 	/// <summary>The SharpMUSH function <paramref name="name"/> means in this dialect, if it is one of its aliases.</summary>
 	public string? FunctionFor(string name) => FunctionAliases.GetValueOrDefault(name);
 
 	/// <summary>The SharpMUSH command, with any switches, <paramref name="name"/> means in this dialect.</summary>
 	public string? CommandFor(string name) => CommandAliases.GetValueOrDefault(name);
+
+	/// <summary>Whether <paramref name="name"/> is a command of this dialect's that SharpMUSH lacks.</summary>
+	public bool Lacks(string name) => UnsupportedCommands.Contains(name);
 }
 
 /// <summary>The dialects SharpMUSH reads, and which one is in force where.</summary>
@@ -131,8 +142,9 @@ public static class SoftcodeDialects
 		});
 
 	/// <summary>
-	/// TinyMUX. The function names are its 2.12 renames and its <c>alias.conf</c> function aliases; the command names
-	/// are its <c>alias.conf</c> entries that SharpMUSH has no command for or reads as another command's abbreviation.
+	/// TinyMUX. The function names are its 2.12 renames, its <c>alias.conf</c> function aliases and its own names for
+	/// functions SharpMUSH has; the command names are its commands and <c>alias.conf</c> entries that SharpMUSH has
+	/// under another name, has no command for, or reads as another command's abbreviation.
 	/// The same rule as <see cref="Rhost"/>: an entry takes the same arguments and gives the same result.
 	/// </summary>
 	public static readonly SoftcodeDialect Mux = new("mux",
@@ -156,10 +168,12 @@ public static class SoftcodeDialects
 			["secs2time"] = "convsecs",
 			["strtrunc"] = "left",
 			["time2secs"] = "convtime",
+			["url_escape"] = "urlencode",
 			["who"] = "lwho"
 		},
 		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
 		{
+			["@admin"] = "@config/set",
 			["@ansiname"] = "@moniker",
 			["@ch"] = "@chown",
 			["@cho"] = "@chown",
@@ -174,11 +188,14 @@ public static class SoftcodeDialects
 			["@lo"] = "@lock",
 			["@loc"] = "@lock",
 			["@nameaccent"] = "@moniker",
+			["@nemit"] = "@emit/noeval",
 			["@nfy"] = "@notify",
+			["@npemit"] = "@pemit/noeval",
 			["@pe"] = "@pemit",
 			["@q"] = "@quota",
 			["@qmail"] = "@mail/quick",
 			["@qu"] = "@quota",
+			["@reject"] = "@haven",
 			["@send"] = "@mail/send",
 			["@st"] = "@stats",
 			["b"] = "examine/brief",
@@ -195,8 +212,12 @@ public static class SoftcodeDialects
 			["thr"] = "drop",
 			["thro"] = "drop",
 			["throw"] = "drop",
+			["train"] = "teach",
 			["u"] = "use"
-		});
+		})
+	{
+		UnsupportedCommands = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "@fe", "@last" }
+	};
 
 	/// <summary>Every dialect, by key.</summary>
 	public static readonly IReadOnlyDictionary<string, SoftcodeDialect> All =
