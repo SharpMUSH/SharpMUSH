@@ -547,15 +547,16 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	}
 
 	/// <summary>
-	/// The one-character command added with <c>@command/add</c> (or <c>/alias</c>) that the line's first character
-	/// names, when something is glued to it; <see langword="null"/> otherwise. Built-in tokens are single-token
-	/// commands and are not rewritten.
+	/// The one-character command added with <c>@command/add</c> that the line's first character names, when something
+	/// is glued to it; <see langword="null"/> otherwise. A one-character alias of a longer command (<c>l</c> for
+	/// <c>LOOK</c>) is not a token, and built-in tokens are single-token commands, not rewritten.
 	/// </summary>
 	private static string? AddedTokenCommand(IMUSHCodeParser parser, string command)
 	{
 		if (command.Length < 2) return null;
 		return parser.CommandLibrary.TryGetAlternateValue(command.AsSpan(0, 1), out var candidate)
-			&& !candidate.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SingleToken)
+			&& candidate.LibraryInformation.Attribute is { Name.Length: 1 } attribute
+			&& !attribute.Behavior.HasFlag(CommandBehavior.SingleToken)
 				? command[..1]
 				: null;
 	}

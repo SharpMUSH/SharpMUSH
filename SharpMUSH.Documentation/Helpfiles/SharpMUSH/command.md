@@ -15,6 +15,7 @@
       "lookup": "@command added commands",
       "aliases": ["@command/add"]
     },
+    {"id": "tokens", "heading": "Token commands", "lookup": "@command tokens"},
     {
       "id": "examples",
       "heading": "Added command example",
@@ -45,6 +46,7 @@ With no switches, @command shows all sorts of interesting information about how 
 - [@command arguments]: naming a command's arguments for its hooks
 - [@command permanent changes]: configuration options, and commands that cannot be disabled
 - [@command added commands]: new commands with `/add`, and how they parse
+- [@command tokens]: one-character added commands, typed glued to their argument
 - [@command examples]: an added command hooked to a $-command
 
 ## Aliases, clones and switches
@@ -97,12 +99,27 @@ Any command added without both `/noparse` and `/rsnoparse` is provided with a `/
 
 Commands added with `@command/add`, like other standard commands, are always case-insensitive. Until it is hooked, an added command answers "This command has not been implemented."
 
-An added command whose name is one character is a token, like `"` or `:`: what is typed straight after it is its argument. After `@command/add/noparse/rsnoparse .`, typing `.wild hello` runs `. wild hello`, so its hook sees `wild hello`. Built-in tokens and chat aliases (`+<channel>`) are matched first.
-
 ::: seealso
 - [@hook]
 - [restrict]
 - [evaluation order]
+:::
+
+## Token commands
+
+An added command whose name is one character is a token, like `"` or `:`: what is typed straight after it is its argument. Built-in tokens and chat aliases (`+<channel>`) are matched first. A one-character alias of a longer command, such as `l` for `look`, is not a token.
+
+```sharp
+> @command/add/noparse/rsnoparse .
+> @hook/override/inline .=radio,cmd`dot
+> .wild hello
+```
+
+`.wild hello` runs `. wild hello`, so the hook's pattern sees `. wild hello`.
+
+::: seealso
+- [@command added commands]
+- [@hook]
 :::
 
 ## Added command example
