@@ -159,6 +159,7 @@ public class MuxFunctionTests : ServerTestBase
 		var before = Notifications.CountFor(caller);
 		await Assert.That(await AsCaller("pfind(#99999999)")).IsEqualTo("#-1");
 		await Assert.That(await AsCaller("pfind(me)")).IsEqualTo(await AsCaller("objid(me)"));
+		await Assert.That(await AsCaller("pfind(*me)")).IsEqualTo(await AsCaller("objid(me)"));
 		await Assert.That(await AsCaller($"pfind({token}_Nobody)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
 		await Assert.That(Notifications.CountFor(caller)).IsEqualTo(before);
 
@@ -176,6 +177,13 @@ public class MuxFunctionTests : ServerTestBase
 	[Arguments("[subeval([space(2)]x)]|", "  x|")]
 	[Arguments("[setq(0,hi)][subeval(lit(%q0 %q0))]", "hi hi")]
 	[Arguments("subeval(lit(a\\ b%b%bc))", "a b  c")]
+	[Arguments("subeval(lit([a\\]%#] [x%] %#]))", "[a\\]%#] [x%] %#]")]
+	[Arguments("subeval(\\[[chr(123)]\\]\\} \\%#\\])", "[{]} %#]")]
+	[Arguments("subeval(a [chr(123)]\\%#)", "a {#1}")]
+	[Arguments("subeval(a \\[b [chr(123)]c)", "a [b {c}]")]
+	[Arguments("[subeval(lit(%q<1 >))]|", "|")]
+	[Arguments("subeval(lit(%b%ba%b%bb%b%b))|", "  a  b  |")]
+	[Arguments("subeval(lit({%#} add(%#,1)))", "{#1} add(#1,1)")]
 	public async Task SubevalMatchesTinyMux(string expression, string expected)
 		=> await Assert.That(await Eval(expression)).IsEqualTo(expected);
 

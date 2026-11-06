@@ -16,7 +16,7 @@ public partial class Functions
 {
 	/// <summary>
 	/// TinyMUX's <c>pfind()</c>: <c>pmatch()</c>, except that a dbref finds any object, not only a player, and
-	/// <c>me</c> is the caller. It tells the caller nothing, as TinyMUX's quiet matches do: a dbref that matches
+	/// <c>me</c> is the caller, and a leading <c>*</c> is dropped. It tells the caller nothing, as TinyMUX's quiet matches do: a dbref that matches
 	/// nothing is <c>#-1</c>, a name <c>#-1 NO MATCH</c>.
 	/// </summary>
 	[SharpFunction(Name = "pfind", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -24,6 +24,7 @@ public partial class Functions
 	public async ValueTask<CallState> PlayerFind(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var name = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		if (name.StartsWith('*')) name = name[1..];
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (name.StartsWith('#'))
 		{
@@ -66,66 +67,58 @@ public partial class Functions
 		=> new(await SubstitutionsEvaluated(parser, parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty));
 
 	/// <summary>
-	/// <paramref name="code"/> with its substitutions and escapes evaluated and nothing else. Each run of words is
-	/// evaluated apart, with its brackets, parentheses and braces escaped and everything between brackets escaped
-	/// as well, and the spaces between runs are kept as they are, so the parser has none to compress. The text
-	/// between escapes is cut from the code as it is, which keeps its markup.
+	/// <paramref name="code"/> with its substitutions and escapes evaluated and nothing else, in one parse. Spaces,
+	/// brackets, parentheses and braces are escaped, and so is every character between brackets, where a brace group
+	/// or a <c>\x</c> or <c>%x</c> pair does not close the bracket. A bracket or brace left open is closed at the end,
+	/// as TinyMUX writes it. The text between escapes is cut from the code as it is, which keeps its markup.
 	/// </summary>
 	private static async ValueTask<MString> SubstitutionsEvaluated(IMUSHCodeParser parser, MString code)
 	{
 		var raw = code.Text;
-		var output = new List<MString>();
-		var word = new List<MString>();
-		var (start, depth) = (0, 0);
+		var parts = new List<MString>();
+		var open = new Stack<char>();
+		var start = 0;
 
 		for (var i = 0; i < raw.Length; i++)
 		{
 			var c = raw[i];
-			if (c == ' ')
+			var pair = c is '\\' or '%' && i + 1 < raw.Length;
+			if (open.Contains(']'))
 			{
-				await EndWord(i);
-				var end = i;
-				while (end < raw.Length && raw[end] == ' ') end++;
-				output.Add(code.Substring(i, end - i));
-				(start, i) = (end, end - 1);
-			}
-			else if (depth > 0)
-			{
-				if (c is '%' or '\\' or '[' or ']' or '(' or ')' or '{' or '}') Escape(i);
-				depth += c switch { '[' => 1, ']' => -1, _ => 0 };
+				Escape(i);
+				if (pair) Escape(++i);
+				else if (c is '[' or '{') open.Push(c == '[' ? ']' : '}');
+				else if (c is ']' or '}' && open.Peek() == c) open.Pop();
 			}
 			else if (c == '%' && i + 1 < raw.Length && raw[i + 1] is 'l' or 'L')
 			{
-				word.Add(code.Substring(start, i - start));
+				parts.Add(code.Substring(start, i - start));
 				start = ++i + 1;
 			}
-			else if (c is '\\' or '%' && i + 1 < raw.Length)
+			else if (pair)
 			{
-				i++;
+				var name = raw[i + 1] == '<' ? i + 1 : raw[i + 1] is 'q' or 'Q' && i + 2 < raw.Length && raw[i + 2] == '<' ? i + 2 : -1;
+				var close = name < 0 || c != '%' ? -1 : raw.IndexOf('>', name);
+				i = close < 0 ? i + 1 : close;
 			}
-			else if (c is '[' or ']' or '(' or ')' or '{' or '}')
+			else if (c is ' ' or '[' or ']' or '(' or ')' or '{' or '}')
 			{
 				Escape(i);
-				if (c == '[') depth++;
+				if (c is '[' or '{') open.Push(c == '[' ? ']' : '}');
+				else if (c == '}' && open.Count > 0) open.Pop();
 			}
 		}
 
-		await EndWord(raw.Length);
-		return MarkupText.Concat(output);
+		parts.Add(code.Substring(start, raw.Length - start));
+		parts.Add(MarkupText.Plain("[]"));
+		var result = (await parser.FunctionParse(MarkupText.Concat([MarkupText.Plain("[]"), .. parts])))?.Message ?? MarkupText.Empty;
+		return open.Count == 0 ? result : MarkupText.Concat([result, MarkupText.Plain(string.Concat(open))]);
 
 		void Escape(int at)
 		{
-			word.Add(code.Substring(start, at - start));
-			word.Add(MarkupText.Plain("\\"));
+			parts.Add(code.Substring(start, at - start));
+			parts.Add(MarkupText.Plain("\\"));
 			start = at;
-		}
-
-		async ValueTask EndWord(int end)
-		{
-			word.Add(code.Substring(start, end - start));
-			var text = MarkupText.Concat(word);
-			word.Clear();
-			output.Add(text.ToPlainText().Length == 0 ? text : (await parser.FunctionParse(text))?.Message ?? MarkupText.Empty);
 		}
 	}
 
