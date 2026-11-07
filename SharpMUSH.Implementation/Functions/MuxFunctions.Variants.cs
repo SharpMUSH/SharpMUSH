@@ -1,3 +1,4 @@
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -16,7 +17,8 @@ public partial class Functions
 {
 	/// <summary>
 	/// TinyMUX's <c>pfind()</c>: <c>pmatch()</c>, except that a dbref finds any object, not only a player, and
-	/// <c>me</c> is the caller, and a leading <c>*</c> is dropped. It tells the caller nothing, as TinyMUX's quiet matches do: a dbref that matches
+	/// <c>me</c> is the caller, and a leading <c>*</c> is dropped, after which a dbref finds only a player unless the
+	/// caller is God. It tells the caller nothing, as TinyMUX's quiet matches do: a dbref that matches
 	/// nothing is <c>#-1</c>, a name <c>#-1 NO MATCH</c>.
 	/// </summary>
 	[SharpFunction(Name = "pfind", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -24,13 +26,16 @@ public partial class Functions
 	public async ValueTask<CallState> PlayerFind(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var name = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		if (name.StartsWith('*')) name = name[1..];
+		var starred = name.StartsWith('*');
+		if (starred) name = name[1..];
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (name.StartsWith('#'))
 		{
-			return await LocateService.Locate(parser, executor, executor, name, LocateFlags.All) is AnySharpObject obj
-				? new CallState(obj.Object().DBRef)
-				: new CallState("#-1");
+			return await LocateService.Locate(parser, executor, executor, name, LocateFlags.All) switch
+			{
+				AnySharpObject obj when !starred || obj.IsPlayer || executor.IsGod() => new CallState(obj.Object().DBRef),
+				_ => new CallState(starred ? ErrorMessages.Returns.NoMatch : "#-1")
+			};
 		}
 
 		return await LocateService.LocateConnectionTarget(parser, executor, executor, name) is AnySharpObject player
@@ -67,14 +72,20 @@ public partial class Functions
 		=> new(await SubstitutionsEvaluated(parser, parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty));
 
 	/// <summary>
-	/// <paramref name="code"/> with its substitutions and escapes evaluated and nothing else, in one parse. Spaces,
-	/// brackets, parentheses and braces are escaped, and so is every character between brackets, where a brace group
-	/// or a <c>\x</c> or <c>%x</c> pair does not close the bracket. A bracket or brace left open is closed at the end,
-	/// as TinyMUX writes it. The text between escapes is cut from the code as it is, which keeps its markup.
+	/// <paramref name="code"/> with its substitutions and escapes evaluated and nothing else, read as TinyMUX's
+	/// scanner reads it. Spaces, brackets, parentheses and braces are escaped, and so is every character between
+	/// brackets, where a brace group or a <c>\x</c>, <c>%x</c> or <c>%qx</c> token does not close the bracket. A
+	/// bracket or brace left open is closed at the end. <c>%q&lt;</c> or <c>%=&lt;</c> whose name does not close
+	/// before one of <c>}])[{,</c> stays as written, and <c>%&lt;</c> and <c>%*&lt;</c>, which TinyMUX does not have,
+	/// lose their <c>%</c>. The text between points is parsed once each, wrapped in <c>[]</c> so the parser keeps its
+	/// leading and trailing spaces; the points and the text between escapes are cut from the code as they are, which
+	/// keeps their markup.
 	/// </summary>
 	private static async ValueTask<MString> SubstitutionsEvaluated(IMUSHCodeParser parser, MString code)
 	{
 		var raw = code.Text;
+		var point = Points(code);
+		var output = new List<MString>();
 		var parts = new List<MString>();
 		var open = new Stack<char>();
 		var start = 0;
@@ -82,24 +93,64 @@ public partial class Functions
 		for (var i = 0; i < raw.Length; i++)
 		{
 			var c = raw[i];
-			var pair = c is '\\' or '%' && i + 1 < raw.Length;
-			if (open.Contains(']'))
+			char? next = i + 1 < raw.Length && !point[i + 1] ? raw[i + 1] : null;
+			if (point[i])
+			{
+				await Flush(i);
+				output.Add(code.Substring(i, 1));
+				start = i + 1;
+			}
+			else if (open.Contains(']'))
 			{
 				Escape(i);
-				if (pair) Escape(++i);
+				if (c is '\\' or '%' && next is not null)
+				{
+					Escape(++i);
+					if (c == '%' && raw[i] is 'q' or 'Q' or 'c' or 'C' or 'x' or 'X' or 'v' or 'V' or 'i' or 'I'
+							&& i + 1 < raw.Length && !point[i + 1]) Escape(++i);
+				}
 				else if (c is '[' or '{') open.Push(c == '[' ? ']' : '}');
 				else if (c is ']' or '}' && open.Peek() == c) open.Pop();
 			}
-			else if (c == '%' && i + 1 < raw.Length && raw[i + 1] is 'l' or 'L')
+			else if (c == '%' && next is 'l' or 'L')
 			{
-				parts.Add(code.Substring(start, i - start));
-				start = ++i + 1;
+				Cut(i, 2);
+				i++;
 			}
-			else if (pair)
+			else if (c == '%' && (next == '<' || next == '*' && At(i + 2) == '<'))
 			{
-				var name = raw[i + 1] == '<' ? i + 1 : raw[i + 1] is 'q' or 'Q' && i + 2 < raw.Length && raw[i + 2] == '<' ? i + 2 : -1;
-				var close = name < 0 || c != '%' ? -1 : raw.IndexOf('>', name);
-				i = close < 0 ? i + 1 : close;
+				Cut(i, 1);
+			}
+			else if (c == '%' && next is 'q' or 'Q' or '=' && At(i + 2) == '<')
+			{
+				var end = i + 3;
+				while (At(end) is { } x && x is not ('>' or '}' or ')' or ']' or '[' or '{' or ',')) end++;
+				if (At(end) != '>')
+				{
+					Escape(i);
+					i++;
+				}
+				else if (end == i + 3)
+				{
+					Cut(i, 4);
+					i = end;
+				}
+				else
+				{
+					i = end;
+				}
+			}
+			else if (c is '\\' or '%' && next is not null)
+			{
+				i++;
+			}
+			else if (c == '%')
+			{
+				Escape(i);
+			}
+			else if (c == '\\')
+			{
+				Cut(i, 1);
 			}
 			else if (c is ' ' or '[' or ']' or '(' or ')' or '{' or '}')
 			{
@@ -109,10 +160,11 @@ public partial class Functions
 			}
 		}
 
-		parts.Add(code.Substring(start, raw.Length - start));
-		parts.Add(MarkupText.Plain("[]"));
-		var result = (await parser.FunctionParse(MarkupText.Concat([MarkupText.Plain("[]"), .. parts])))?.Message ?? MarkupText.Empty;
-		return open.Count == 0 ? result : MarkupText.Concat([result, MarkupText.Plain(string.Concat(open))]);
+		await Flush(raw.Length);
+		if (open.Count > 0) output.Add(MarkupText.Plain(string.Concat(open)));
+		return MarkupText.Concat(output);
+
+		char? At(int at) => at < raw.Length && !point[at] ? raw[at] : null;
 
 		void Escape(int at)
 		{
@@ -120,6 +172,36 @@ public partial class Functions
 			parts.Add(MarkupText.Plain("\\"));
 			start = at;
 		}
+
+		void Cut(int at, int length)
+		{
+			parts.Add(code.Substring(start, at - start));
+			start = at + length;
+		}
+
+		async ValueTask Flush(int end)
+		{
+			parts.Add(code.Substring(start, end - start));
+			var text = MarkupText.Concat(parts);
+			parts.Clear();
+			if (text.Text.Length == 0) return;
+			var parsed = await parser.FunctionParse(MarkupText.Concat([MarkupText.Plain("[]"), text, MarkupText.Plain("[]")]));
+			output.Add(parsed?.Message ?? MarkupText.Empty);
+		}
+	}
+
+	/// <summary>Which characters of <paramref name="text"/> carry a point, the ones its plain text leaves out.</summary>
+	private static bool[] Points(MString text)
+	{
+		var (raw, plain) = (text.Text, text.ToPlainText());
+		var point = new bool[raw.Length];
+		for (int i = 0, j = 0; i < raw.Length; i++)
+		{
+			if (j < plain.Length && raw[i] == plain[j]) j++;
+			else point[i] = true;
+		}
+
+		return point;
 	}
 
 	/// <summary>

@@ -119,6 +119,11 @@ public class MuxFunctionTests : ServerTestBase
 	[Arguments("wrapcolumns(sound(chime.wav),3,1)", "   ")]
 	[Arguments("wrapcolumns(ab%b[sound(chime.wav)]%bcd,2,1)", "ab\ncd")]
 	[Arguments("wrapcolumns(ab [sound(chime.wav)],2,1)", "ab")]
+	[Arguments("subeval(a[sound(chime.wav)]\\%#b)", "a#1b")]
+	[Arguments("subeval(%b[sound(chime.wav)]%b)", "  ")]
+	[Arguments("subeval(\\[[sound(chime.wav)]\\])", "[]")]
+	[Arguments("subeval(\\%\\%[sound(chime.wav)])", "%")]
+	[Arguments("subeval(sound(chime.wav))", "")]
 	public async Task MuxShimsKeepPoints(string expression, string expected)
 	{
 		var result = (await Parser.FunctionParse(MString.Plain(expression)))!.Message!;
@@ -160,6 +165,8 @@ public class MuxFunctionTests : ServerTestBase
 		await Assert.That(await AsCaller("pfind(#99999999)")).IsEqualTo("#-1");
 		await Assert.That(await AsCaller("pfind(me)")).IsEqualTo(await AsCaller("objid(me)"));
 		await Assert.That(await AsCaller("pfind(*me)")).IsEqualTo(await AsCaller("objid(me)"));
+		await Assert.That(await AsCaller("pfind(*#0)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
+		await Assert.That(await AsCaller($"pfind(*#{caller.Number})")).IsEqualTo(await AsCaller("objid(me)"));
 		await Assert.That(await AsCaller($"pfind({token}_Nobody)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
 		await Assert.That(Notifications.CountFor(caller)).IsEqualTo(before);
 
@@ -184,6 +191,14 @@ public class MuxFunctionTests : ServerTestBase
 	[Arguments("[subeval(lit(%q<1 >))]|", "|")]
 	[Arguments("subeval(lit(%b%ba%b%bb%b%b))|", "  a  b  |")]
 	[Arguments("subeval(lit({%#} add(%#,1)))", "{#1} add(#1,1)")]
+	[Arguments("[subeval(lit(%q<[setq(z,LEAK)]>))][r(z)]", "%q<[setq(z,LEAK)]>")]
+	[Arguments("[setq(0,\\%q<>)][subeval(%q0)]|", "|")]
+	[Arguments("subeval(lit(%<a b> %*<c>))", "<a b> *<c>")]
+	[Arguments("[setq(0,\\%q<f\\(x\\)> \\%=<a\\,b>)][subeval(%q0)]", "%q<f(x)> %=<a,b>")]
+	[Arguments("[setq(0,abc\\%)][subeval(%q0)]|", "abc%|")]
+	[Arguments("[setq(0,abc\\\\)][subeval(%q0)]|", "abc|")]
+	[Arguments("[setq(0,\\{\\%)][subeval(%q0)]", "{%}")]
+	[Arguments("subeval(lit([%q]%#]))", "[%q]%#]")]
 	public async Task SubevalMatchesTinyMux(string expression, string expected)
 		=> await Assert.That(await Eval(expression)).IsEqualTo(expected);
 
