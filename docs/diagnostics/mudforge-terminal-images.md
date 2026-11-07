@@ -5,7 +5,7 @@
 1. MarkupString 2.27.1 contains the companion change: an unsupported MXP IMAGE delegates to the
    configured ANSI picture emitter. Supported MXP elements remain MXP; disabled graphics or
    missing pixels retain the text art.
-2. `MarkupStringVersion` in `Directory.Build.props` is pinned to 2.27.1. Restore and test the
+2. `MarkupStringVersion` in `Directory.Build.props` is pinned to 2.27.2. Restore and test the
    published packages once NuGet propagation finishes before shipping this renderer change.
    Initial local validation used all five packages built together as `2.25.1-mudforge2`, via an
    MSBuild property override; that version was a local test artifact, not a published dependency.
@@ -57,8 +57,8 @@ wait for decoding to settle before judging a blank panel.
 SharpMUSH preserves unanswered Sixel probes as unknown, separately from explicit negative device
 attributes, just as it does for Kitty. A missing reply must not erase a known terminal profile.
 The companion MarkupString refinement recognizes MUDFORGE's verified still iTerm2/Sixel support
-and uses an adaptive Sixel palette. Those refinements require a new package release and SharpMUSH
-version update before production gains them; 2.27.1 remains the current dependency here.
+and uses an adaptive Sixel palette. Those refinements ship in MarkupString 2.27.2, now pinned by this branch.
+Production gains them after this SharpMUSH update is merged, published and deployed.
 Graphics remains opt-in (`SOCKSET graphics=auto` or a specific method); naming a terminal does not
 enable pictures by itself. No TNC change is needed.
 
@@ -73,3 +73,26 @@ font/zoom changes. The named profile does not repair that missing feedback chann
 - SharpMUSH: 88 rendering tests and 79 output-renderer tests passed against published MarkupString 2.27.1.
   WebP tests cover exact RGBA bytes including alpha, malformed input, direct local fetching, and
   WebP-to-Sixel/iTerm2 output with MXP active and IMAGE unsupported.
+
+## Automatic probing and evidence
+
+`SOCKSET graphics=auto` (including `on` and `yes`) now requests the existing TNC terminal probes.
+`detect` remains an explicit re-probe alias. The same option handler serves `@SOCKSET`.
+The command does not wait for replies and ordinary input is not blocked. A terminal can answer
+without Enter; selecting `auto` again reissues the queries. Explicit methods and `off` do not probe.
+
+`SOCKSET` separates the selected output method from each protocol's evidence. Positive or negative
+probe results take precedence over profile assumptions. Profiles are labelled `unconfirmed`, and
+missing evidence is `unknown`; neither a manual override nor a terminal name is reported as proof.
+A previously received answer remains the last observed evidence until another answer replaces it.
+Cell dimensions are reported separately. A client with an unrecognized name can select Sixel or
+Kitty through a protocol reply; iTerm2 image capability has no equivalent probe here.
+
+A future explicit capability advertisement should use an agreed, versioned client/server contract,
+including protocol support, animation, payload limits and cell dimensions. GMCP is a possible
+transport, not an implemented standard in this change. Keep that work separate from client identity;
+validate bounds and handle capability changes before adding renderer selection based on it.
+
+Validation of automatic probing against all five published MarkupString 2.27.2 packages:
+27 capability/option tests, 41 socket-command tests, 88 rendering tests and 79 output-renderer tests
+passed. The radio-table fixture was regenerated with the package's renderer; its HTML is unchanged.

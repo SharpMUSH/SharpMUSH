@@ -678,6 +678,23 @@ public static class SocketOptions
 	internal const string TelnetKey = "TELNET";
 	internal const string OutputFormatKey = "OUTPUT_FORMAT";
 
+	/// <summary>Capability evidence, independent of the player's selected output method.</summary>
+	public static string GraphicsEvidence(IReadOnlyDictionary<string, string> metadata, TerminalFeatures feature)
+	{
+		var probe = TerminalFeatureReader.ProbeOf(metadata);
+		var answer = feature switch
+		{
+			TerminalFeatures.KittyGraphics => probe?.KittyGraphics,
+			TerminalFeatures.Sixel => probe?.Sixel,
+			_ => null
+		};
+		if (answer is { } supported) return supported ? "supported (terminal reply)" : "unsupported (terminal reply)";
+		var terminal = TerminalFeatureReader.TerminalOf(metadata);
+		return terminal is not null && terminal.Features.HasFlag(feature)
+			? $"unconfirmed ({terminal.Name} profile)"
+			: "unknown (no reply recorded)";
+	}
+
 	/// <summary>
 	/// The settings report: PennMUSH's rows, as labelled values in a panel. Like PennMUSH it omits the
 	/// prefix/suffix rows entirely when they are unset.
@@ -750,6 +767,12 @@ public static class SocketOptions
 			TerminalGraphics.Auto => $"auto ({TerminalFeatureReader.GraphicsName(features)})",
 			var method => method
 		});
+		Row("Kitty support", GraphicsEvidence(connection.Metadata, TerminalFeatures.KittyGraphics));
+		Row("iTerm2 support", GraphicsEvidence(connection.Metadata, TerminalFeatures.InlineImages));
+		Row("Sixel support", GraphicsEvidence(connection.Metadata, TerminalFeatures.Sixel));
+		var probe = TerminalFeatureReader.ProbeOf(connection.Metadata);
+		Row("Cell pixels", probe is { CellWidth: > 0, CellHeight: > 0 }
+			? $"{probe.CellWidth}x{probe.CellHeight} (terminal reply)" : "unknown (no reply recorded)");
 		Row("Animation", OnOff(features.HasFlag(TerminalFeatures.MovingPictures)));
 		var terminal = TerminalFeatureReader.TerminalOf(connection.Metadata);
 		Row("Terminal", connection.Metadata.ContainsKey(TerminalFeatureReader.TerminalKey)
@@ -771,7 +794,7 @@ public static class SocketOptions
 	/// caller can render it in the reader's locale. The socket <c>SOCKSET</c> answers a descriptor and
 	/// <c>@sockset</c> answers an object; both go through <c>NotifyLocalized</c>.
 	/// </summary>
-	/// <param name="Probe">The option asks the terminal what it can draw (<c>graphics=detect</c>).</param>
+	/// <param name="Probe">The option asks the terminal what it can draw (<c>graphics=auto</c> or <c>detect</c>).</param>
 	/// <param name="Pueblo">The option set the Pueblo flag, which the socket owner has to act on.</param>
 	/// <param name="Telnet">The option set the telnet flag, which the socket owner has to act on.</param>
 	public readonly record struct SocksetResult(string Key, object[] Arguments, bool Probe = false,
@@ -994,8 +1017,8 @@ public static class SocketOptions
 			return SocksetResult.Of(setKey, setting);
 		}
 
-		// Pictures are off until set. A method pins how they are drawn; auto leaves it to the terminal; detect
-		// does too, and also asks the terminal, whose answer comes back with the player's next line.
+		// Pictures are off until set. Explicit methods pin output; auto and detect request capabilities.
+		// TNC processes replies immediately, independently of command-line submission.
 		SocksetResult SetGraphics(string newValue)
 		{
 			var setting = newValue.Trim().ToLowerInvariant() switch
@@ -1022,7 +1045,7 @@ public static class SocketOptions
 					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetGraphicsDetecting)) with { Probe = true };
 				default:
 					connection.Metadata[TerminalFeatureReader.GraphicsKey] = setting;
-					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetGraphicsSetFormat), setting);
+					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetGraphicsSetFormat), setting) with { Probe = setting == TerminalGraphics.Auto };
 			}
 		}
 

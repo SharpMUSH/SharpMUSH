@@ -117,7 +117,7 @@ public partial class TelnetServer
 				// RFC 1091 terminal type: the only way a client names itself over plain telnet, and what
 				// terminfo() reports as the client. Without it every connection is "unknown".
 				.AddPlugin(terminalTypeProtocol)
-				// Asks the terminal what it can draw, only when the player asks for it (SOCKSET graphics=detect):
+				// Asks the terminal what it can draw, when the player selects automatic graphics (SOCKSET graphics=auto/detect):
 				// a client in line mode echoes the answers, so asking unprompted would print them at everyone.
 				.AddPlugin<TerminalQueryProtocol>().OnTerminalReport(report =>
 					OnTerminalReportAsync(new TerminalProbeResult(report.KittyGraphics, report.Sixel,
