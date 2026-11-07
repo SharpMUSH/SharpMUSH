@@ -69,6 +69,10 @@ Only one host ever opens a given database. A host variant that needs a different
 
 `tools/parity/run.sh` replays the same scripted telnet sessions (DB import, login, player/admin commands, softcode) against a reference PennMUSH built from `pennmush/` and against SharpMUSH, and reports every output difference. Each parity fix adds a case to `tools/parity/scenarios/`. See `tools/parity/README.md` (normalization rules, known-differences allowlist, baseline).
 
+## Plugin Contract
+
+The public surface of the `SharpMUSH.Library` package is the plugin contract, `PluginContractVersion.Current` (3.0.0). Within a major it may only grow: CI's `plugin-contract` job (`tools/plugin-contract/check.sh`) fails a PR that removes or changes a public member, or adds a member to a public interface, without bumping the major. Keep the old member beside the new one instead. See `tools/plugin-contract/README.md`.
+
 ## Running the Server
 
 The startup project is `SharpMUSH.Server`. For full operation, also run `SharpMUSH.SocketServer` (client sockets) and `SharpMUSH.RenderingWorker` (output rendering). The Compose files in `deploy/` run all three on the embedded `lightning` provider with NATS; there is no Compose file at the repository root:

@@ -321,6 +321,10 @@ binaries:
 
 `min_server_version` is checked against `PluginContractVersion.Current` (a `PackageVersion` in
 `SharpMUSH.Library/Plugins/PluginContractVersion.cs`, tracking the shared contract surface plugins bind to).
+Within a major the surface only grows: CI's `plugin-contract` job validates the `SharpMUSH.Library` package
+against the one at `tools/plugin-contract/baseline-commit` and fails a breaking change that does not bump the
+major (`tools/plugin-contract/README.md`).
+
 File names are constrained to bare names so they deposit flat into `<installed plugins>/<id>/`.
 
 The carried `plugin.json` must be listed in `binaries.files`, and its `id` must equal the package id. A
