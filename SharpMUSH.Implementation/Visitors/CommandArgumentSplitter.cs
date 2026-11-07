@@ -1,4 +1,3 @@
-using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -33,21 +32,8 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 	public async ValueTask<Result<CommandArguments>> SplitAsync(SharpMUSHParserVisitor visitor, IMUSHCodeParser prs,
 		MString src, ICommandContext context, CommandDefinition libraryCommandDefinition, InvocationClock? clock,
 		string? rootCommand = null,
-		bool noEvalSwitch = false, bool singleArgument = false, PortalCommandTemplate? template = null)
+		bool noEvalSwitch = false, bool singleArgument = false)
 	{
-		if (template is not null)
-		{
-			// No data is present during parsing/evaluation. These whitelisted commands take one
-			// text argument; both evaluated and noeval modes receive a constant CallState afterwards.
-			var text = ArgumentText(CommandSubtext(src, context), rootCommand) ?? MarkupText.Empty;
-			var evaluated = template.NoEval ? new CallState(text) : await prs.FunctionParse(text);
-			var bound = new CommandArguments();
-			if (!template.TryBind(evaluated?.Message ?? MarkupText.Empty, prs.CurrentState.OutputLimit, out var literal))
-				return new Error<string>(ErrorMessages.Returns.OutputTooLarge);
-			bound.Values.Add(new CallState(literal)
-			{ HadErrors = evaluated?.HadErrors == true });
-			return bound;
-		}
 		var mode = SplitMode.For(libraryCommandDefinition.Attribute.Behavior, prs.CurrentState.ParseMode, noEvalSwitch,
 			singleArgument);
 		var newNoParseParser = prs.Push(prs.CurrentState with
@@ -384,12 +370,10 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 	/// Tells the handle that typed the command why its arguments would not split, and runs nothing. Shared by
 	/// every command pattern that splits arguments.
 	/// </summary>
-	public async ValueTask<Option<CallState>> RefuseAsync(IMUSHCodeParser prs, string reason, bool reportToExecutor = false)
+	public async ValueTask<Option<CallState>> RefuseAsync(IMUSHCodeParser prs, string reason)
 	{
 		if (prs.CurrentState.Handle.HasValue)
 			await services.NotifyService.Notify(prs.CurrentState.Handle.Value, reason);
-		else if (reportToExecutor && prs.CurrentState.Executor is { } executor)
-			await services.NotifyService.Notify(executor, reason);
 		return new CallState(reason) { HadErrors = true };
 	}
 

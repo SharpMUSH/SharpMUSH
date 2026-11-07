@@ -65,9 +65,6 @@ public class CommandsController(
 		// One line: a newline would make the second line part of the first command's argument, not a command.
 		if (request.Command.AsSpan().ContainsAny('\r', '\n')) return BadRequest("A command is one line.");
 
-		if (request.Data is not null && !PortalCommandTemplate.TryCreate(request.Command, request.Data, out _, out var templateError))
-			return BadRequest(templateError);
-
 		DBRef? pinned = null;
 		if (request.Character is not null && !DBRef.TryParse(request.Character, out pinned))
 			return BadRequest("The character must be an objid.");

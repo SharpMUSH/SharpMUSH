@@ -1,4 +1,3 @@
-using SharpMUSH.Library.Models.Portal;
 using Mediator;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -565,9 +564,6 @@ public sealed record CommandFrame
 
 public partial record ParserState
 {
-	/// <summary>One-shot literal bindings for the initial portal template dispatch only.</summary>
-	public PortalCommandTemplate? PortalTemplate { get; init; }
-
 	private ParserState() { }
 
 	/// <summary>What this frame shares with the rest of its evaluation.</summary>

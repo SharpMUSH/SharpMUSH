@@ -116,7 +116,7 @@
     private bool Clickable(IReadOnlyDictionary<string, string> datum) =>
         Element.Dialog is { Length: > 0 } dialog
             ? SchemaClick.DialogUrl(dialog, datum.GetValueOrDefault("key")) is not null
-            : Element.Command is { Length: > 0 } command && SchemaClick.Prepare(command, datum) is not null;
+            : Element.Command is { Length: > 0 } command && SchemaClick.Fill(command, datum) is not null;
 
     private bool CanPress => CanDispatch(Element.Action) || (string.IsNullOrWhiteSpace(Element.Action) && Clickable(SchemaClick.Datum(Element)));
 
@@ -143,7 +143,7 @@
             }
             else
             {
-                _output = await Services.GetRequiredService<GameCommandService>().RunAsync(SchemaClick.Prepare(Element.Command!, datum)!) switch
+                _output = await Services.GetRequiredService<GameCommandService>().RunAsync(SchemaClick.Fill(Element.Command!, datum)!) switch
                 {
                     PortalCommandResponse response => response.Output,
                     ApiFailure failure => [failure.Message],

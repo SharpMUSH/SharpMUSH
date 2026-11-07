@@ -165,26 +165,13 @@ posted — two buttons can share a route and differ by intent), `color`, and `va
 In a `view`, buttons and timeline actions post their `values` alone.
 
 **Clickable values.** A stats tile, a keyvalue row, a chip, a table row or a button may carry `command` or
-`dialog`. A click sends what the player meant and never a number, so a roll is made and kept by the game:
+`dialog`. A click can ask the game to make and record a roll, or run another action the author defines:
 
-- `command` is a template run as the viewer's character, with literal `{name}` data taken from the clicked
+- `command` is a line run as the viewer's character, exactly as if typed, with `{name}` filled from the clicked
   value. What it prints shows under the element, and the page fetches its data again. A tile, a table row or a
   chip fills from its row's fields, so a row usually carries a `key`; a keyvalue row gives `{key}` (the field
   name) and `{value}`; a button gives its own `key`, `label` and `values`. A value that is missing or empty is
-  not clickable. Line breaks are preserved as data (CRLF and CR normalize to LF).
-  Supported commands are `think`, `say`, `pose`, and `semipose` (optionally `/noeval`), plus custom
-  `+commands`. Placeholders must be top-level text, separated from adjacent words by whitespace or
-  `= , : / - . ;`. For example, `+check [add(1,2)] {key}` evaluates the author's expression while
-  keeping the clicked key literal. `think/noeval {value}` keeps the data literal too.
-  Placeholders in command names, switches, brackets, braces, parentheses, escapes, and deferred
-  command bodies are refused. Other built-ins and aliases are not supported by this bounded mode.
-  Template `%` substitutions must be inside an explicit bracket expression; data may contain any `%`.
-  Use a custom `+command` for more involved actions. Its captured data is literal on arrival; explicitly
-  evaluating that data later (for example with `s(%0)`, or executing it as a new command body) is a separate trust decision by the author.
-  Unsupported templates are not clickable and direct template requests are refused by the server.
-  Existing applications using unsupported placements must update their templates. Commands with no
-  placeholders retain the ordinary typed-command path. In a template, `%c` reads the original template
-  source, including `{name}` placeholders; it does not expose the clicked values or internal slots.
+  not clickable, and a line break in a value is sent as `%r`, so one click runs one command.
 - `dialog` is a route answering a small form for the clicked value, fetched with `?key=<key>` and shown in a
   dialog: a roll that needs a choice first (a weapon, a bonus). The form's own actions post the choices, and an
   answer without errors closes the dialog and refetches the page.
@@ -198,6 +185,53 @@ In a `view`, buttons and timeline actions post their `values` alone.
 The command or the dialog's action does the roll in softcode, with `roll()` recording it, so the result is
 the game's to show again (`rollinfo()`) and anyone at the table can check it. A flow too long for a dialog
 belongs on its own page: answer with a `redirect`.
+
+**Command expressions and trust.** The application author controls what a click runs.
+The portal fills `{name}` placeholders as text before sending the command to the game.
+Inserted values keep the command's normal MUSH evaluation rules, including expressions
+and percent substitutions. They are not automatically escaped or made literal. Authors
+may intentionally use expressions in these values; deciding which sources to trust is
+part of building the application.
+
+For example, this inventory table displays an item name but uses its ID in the command:
+
+```json
+{
+  "kind": "table",
+  "rows_field": "gear",
+  "columns": [{ "key": "name", "label": "Item" }],
+  "command": "+use {id}"
+}
+```
+
+With a data row `{"id":"rope","name":"Rope"}`, clicking **Rope** sends `+use rope`.
+If the row instead contains `{"id":"[add(1,2)]","name":"Rope"}`, the same visible
+**Rope** sends `+use [add(1,2)]`. Normal evaluation produces `+use 3` before
+matching the game's custom command. The game must provide `+use`; it is an example,
+not a built-in inventory command. A built-in example is `think Total: {value}`:
+a value of `[add(1,2)]` produces `think Total: [add(1,2)]` and prints `Total: 3`.
+
+The click starts as the viewer's active character, not the character whose profile is
+being viewed or the owner of the data. If another player can edit a source value used
+in the command, their expression can therefore be evaluated with the clicking
+character's permissions. Side effects still require the engine's normal permissions
+and configuration. This depends on the application's actual sources and who may edit
+them; a read-only, trusted source does not give another player that control. A row's
+ID can be used even when only its name is displayed. Attribute visibility controls
+what the viewer may read, not whether that text is safe to evaluate.
+
+When designing a click:
+- Decide which template and source values may contain code, and control who may edit them.
+- If you intend a plain identifier, generate it from trusted data or validate it before
+  inserting it into the command. Validation inside a custom command is too late to
+  prevent expressions already evaluated before command matching.
+- For free-form input, consider a form or dialog action that posts structured values,
+  then check the viewer's permissions and validate those values in the handler.
+  Posting JSON does not make a handler safe if it later evaluates the supplied text.
+- Normal command evaluation controls, such as `/noeval` where supported, still apply.
+  They are not a guarantee about later softcode: explicitly re-evaluating received
+  text with `s()` or executing a player-writable attribute with `u()` is another
+  author-controlled evaluation step, under that handler's execution context.
 
 **Fields** may carry `triggers_action`: the action dispatched whenever the value changes — a
 filter select that re-fetches its table:

@@ -377,7 +377,7 @@
     {
         if (FirstDatum() is not { } datum) return null;
         var shown = datum.GetValueOrDefault("label") ?? datum.GetValueOrDefault("key") ?? string.Empty;
-        return (shown, SchemaClick.Prepare(Str("command"), datum) is null ? null : SchemaClick.Preview(Str("command"), datum));
+        return (shown, SchemaClick.Fill(Str("command"), datum));
     }
 
     private IReadOnlyDictionary<string, string>? FirstDatum()

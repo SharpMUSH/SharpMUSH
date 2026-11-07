@@ -1,5 +1,4 @@
-using SharpMUSH.Library.Models.Portal;
-using SharpMUSH.Library.Definitions;
+﻿using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
@@ -34,8 +33,6 @@ public interface IMUSHCodeParser
 	/// (not split on semicolons, a matched <c>$</c>-command run in place), but with no connection handle.
 	/// </summary>
 	ValueTask<CallState> CommandParse(DBRef player, MString text);
-	ValueTask<CallState> TemplateCommandParse(DBRef player, PortalCommandTemplate template)
-		=> throw new NotSupportedException("Literal command templates are not supported by this parser.");
 	ValueTask<CallState?> CommandSingleArgParse(MString text);
 	ValueTask<CallState?> FunctionParse(MString text);
 	ValueTask<CallState?> FunctionParse(MString text, bool emitSubstDebug);

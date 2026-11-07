@@ -19,12 +19,7 @@ namespace SharpMUSH.Library.Models.Portal;
 /// runs only while the session is still bound to that character, and is refused with 409 otherwise,
 /// so a flow of several requests stays with the character it started as.
 /// </param>
-public record PortalCommandRequest(string Command, string? Result = null, string? Character = null)
-{
-	/// <summary>When supplied, Command is a bounded template; these values are bound literally after parsing.
-	/// Null preserves the ordinary typed-command API.</summary>
-	public IReadOnlyDictionary<string, string>? Data { get; init; }
-}
+public record PortalCommandRequest(string Command, string? Result = null, string? Character = null);
 
 /// <summary>What a portal command answered.</summary>
 /// <param name="Output">

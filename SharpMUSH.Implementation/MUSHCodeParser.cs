@@ -1,5 +1,4 @@
-using SharpMUSH.Library.Models.Portal;
-using Antlr4.Runtime;
+﻿using Antlr4.Runtime;
 using Antlr4.Runtime.Atn;
 using Antlr4.Runtime.Misc;
 using Mediator;
@@ -607,15 +606,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// not split on semicolons and a <c>$</c>-command it matches runs in place — with no handle, so
 	/// nothing answers a descriptor that does not exist.
 	/// </summary>
-	public ValueTask<CallState> CommandParse(DBRef player, MString text) => PortalCommandParse(player, text, null);
-
-	public ValueTask<CallState> TemplateCommandParse(DBRef player, PortalCommandTemplate template)
-		=> PortalCommandParse(player, MarkupText.Plain(template.Source), template);
-
-	private async ValueTask<CallState> PortalCommandParse(DBRef player, MString text, PortalCommandTemplate? template)
+	public async ValueTask<CallState> CommandParse(DBRef player, MString text)
 	{
 		var outputLimit = await OutputLimitForAsync(player);
-		var newParser = Push(ParserState.ForTypedLine(player, handle: null, session: null, outputLimit, text.ToPlainText()) with { PortalTemplate = template });
+		var newParser = Push(ParserState.ForTypedLine(player, handle: null, session: null, outputLimit, text.ToPlainText()));
 		var result = await ParseInternal(text, p => p.StartSingleCommandString(), nameof(CommandParse), newParser);
 		if (result is { IsParseFailure: true, Message: { } failure })
 		{

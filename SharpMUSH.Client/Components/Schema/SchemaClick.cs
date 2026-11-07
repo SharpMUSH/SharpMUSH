@@ -1,4 +1,3 @@
-using SharpMUSH.Library.Models.Portal;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using SharpMUSH.Client.Models.Applications;
@@ -6,24 +5,18 @@ using SharpMUSH.Client.Models.Applications;
 namespace SharpMUSH.Client.Components.Schema;
 
 /// <summary>
-/// Prepares a command template with separate literal data, or the address of its dialog.
-/// The command runs as the viewer; the server owns any calculation or side effect.
+/// What a click on a value sends: the element's <c>command</c> filled from the clicked value, or the address of its
+/// <c>dialog</c>. A click carries what the viewer meant and nothing more: the command runs as the viewer, exactly as if
+/// typed, and every number it rolls or reads stays with the server.
 /// </summary>
 public static partial class SchemaClick
 {
-	/// <summary>Keep template code separate from clicked data. Unsupported contexts are not clickable.</summary>
-	public static PortalCommandRequest? Prepare(string template, IReadOnlyDictionary<string, string> datum)
-		=> !string.IsNullOrWhiteSpace(template) && !Placeholder().IsMatch(template)
-			? new(template)
-			: PortalCommandTemplate.TryCreate(template, datum, out _, out _)
-			? new(template) { Data = datum } : null;
-
 	/// <summary>
-	/// Display-only preview, never executable source. The template <paramref name="template"/> with each <c>{name}</c> filled from <paramref name="datum"/>, or null when a
-	/// name is not in it or its value is empty. Line breaks are displayed as <c>%r</c>.
-	/// Execution must use <see cref="Prepare"/>; the preview does not carry data provenance.
+	/// The command <paramref name="template"/> with each <c>{name}</c> filled from <paramref name="datum"/>, or null when a
+	/// name is not in it or its value is empty. A line break in a value becomes <c>%r</c>, so one click runs one command, as
+	/// the viewer.
 	/// </summary>
-	public static string? Preview(string template, IReadOnlyDictionary<string, string> datum)
+	public static string? Fill(string template, IReadOnlyDictionary<string, string> datum)
 	{
 		var refused = false;
 		var filled = Placeholder().Replace(template, match =>
