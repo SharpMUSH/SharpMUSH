@@ -89,8 +89,8 @@ jobs:
             exit 1
           fi
           echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
-          # move-dev queues only for main's newest commit, so a prerelease of an older one never
-          # replaces a main build waiting for the dev lock.
+          # Avoid queueing prereleases already behind main. This is only an early filter:
+          # main can advance during the image builds, so move-dev checks again under the lock.
           if [[ "$PRERELEASE" == true ]]; then
             if ! MAIN=$(git ls-remote --exit-code origin refs/heads/main); then
               echo "::error::Could not read main's head from origin."
@@ -216,10 +216,11 @@ jobs:
   # A prerelease of main's newest commit becomes :dev. This job holds the dev pipeline's lock
   # (docker-dev.yml's publish job), so a main build never writes :dev, or assembles the all-in-one
   # image from the :dev bases, while this moves them; and it checks main's head inside the lock, so
-  # :dev never goes back behind main. Only one job waits per group: a main build that queues behind
-  # this one replaces it, which is right, since that build is newer; if this one replaces a waiting
-  # main build of a newer commit, the next push to main publishes it (docker_dev.py compares :dev's
-  # revision). Each move copies the manifest on Docker Hub; nothing is rebuilt.
+  # a stale prerelease cannot overwrite a newer main build. Retain pending jobs so a delayed
+  # prerelease cannot evict the newest main publication before discovering it is stale.
+  # GitHub allows 100 pending jobs; arrivals beyond that cap need a manual rerun.
+  # Keep this policy in sync with docker-dev.yml publish. Each move copies the manifest
+  # on Docker Hub; nothing is rebuilt.
   move-dev:
     needs: [build-and-push]
     if: needs.build-and-push.outputs.prerelease == 'true' && needs.build-and-push.outputs.on_main == 'true'
@@ -227,6 +228,7 @@ jobs:
     concurrency:
       group: docker-dev-refs/heads/main
       cancel-in-progress: false
+      queue: max
     steps:
       - name: Log in to DockerHub
         uses: docker/login-action@v4
@@ -246,7 +248,7 @@ jobs:
             "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/commits/main" |
             python3 -c 'import json, sys; print(json.load(sys.stdin)["sha"])')
           if [[ "$MAIN" != "$GITHUB_SHA" ]]; then
-            echo "main moved to $MAIN after v$VERSION ($GITHUB_SHA) was published; :dev stays on main's build." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "main moved to $MAIN after v$VERSION ($GITHUB_SHA) was published; skipping prerelease promotion without changing :dev." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           for image in server renderer socketserver edge allinone; do
