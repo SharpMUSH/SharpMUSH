@@ -119,7 +119,7 @@ public class CommandLoggingTests
 	[Arguments("@newpasswordTypo Bob secret", "@newpasswordTypo **********")]
 	[Arguments("@pcreateTypo Bob secret", "@pcreateTypo **********")]
 	public async Task PasswordsAreStarredOut(string command, string logged)
-		=> await Assert.That(CommandDispatcher.PasswordFilter(command)).IsEqualTo(logged);
+		=> await Assert.That(CommandDispatcher.RedactCommandForLogging(command)).IsEqualTo(logged);
 
 	[Test]
 	[Arguments("  @PaS old=new", "@PASSWORD", "  @PaS ***=***")]
@@ -144,7 +144,7 @@ public class CommandLoggingTests
 	[Arguments("  @parent Bob=Alice", "@PARENT", "  @parent Bob=Alice")]
 	[Arguments("think @password old=new", "THINK", "think @password old=new")]
 	public async Task ResolvedPasswordArgumentsAreStarredOut(string command, string resolvedCommand, string logged)
-		=> await Assert.That(CommandDispatcher.PasswordFilter(command, resolvedCommand)).IsEqualTo(logged);
+		=> await Assert.That(CommandDispatcher.RedactCommandForLogging(command, resolvedCommand)).IsEqualTo(logged);
 
 	public static IEnumerable<(string Command, string CanonicalCommand, bool Suspect, string LeadingSpace)> PasswordCommandCases()
 	{

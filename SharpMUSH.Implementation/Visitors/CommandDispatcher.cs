@@ -307,7 +307,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		{
 			visitor.Logger.LogInformation("CMD: {Suspect} {Executor} in {Location}: {Command}",
 				suspect ? "SUSPECT" : "", Unparse(executor.Object()), Unparse(location),
-				PasswordFilter(commandText.ToPlainText(), resolvedCommand));
+				RedactCommandForLogging(commandText.ToPlainText(), resolvedCommand));
 		}
 	}
 
@@ -321,7 +321,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	/// masked because a malformed command can still contain a password. The regex fallback retains
 	/// redaction for unrecognized or disabled password-command spellings that were already filtered.
 	/// </summary>
-	internal static string PasswordFilter(string command, string? resolvedCommand = null)
+	internal static string RedactCommandForLogging(string command, string? resolvedCommand = null)
 	{
 		var changesOwnPassword = string.Equals(resolvedCommand, "@PASSWORD", StringComparison.OrdinalIgnoreCase);
 		if (changesOwnPassword
