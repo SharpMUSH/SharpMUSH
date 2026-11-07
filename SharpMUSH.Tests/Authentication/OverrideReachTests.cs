@@ -145,4 +145,18 @@ public class OverrideReachTests
 		await Assert.That(capped.Has(Scope, Player.Priority)).IsTrue();
 		await Assert.That(capped.Has(Scope, Wizard.Priority)).IsFalse();
 	}
+
+	[Test]
+	public async ValueTask ObjectGrants_WithinScopes_KeepTheAllowReach()
+	{
+		var guest = Role(BuiltInRoles.GuestSlug, 0);
+		var grants = ObjectGrants.For(7, true, [.. World, guest], [], new Dictionary<string, PermissionState> { [Scope] = PermissionState.Allow },
+			null, [], new Dictionary<string, string> { [Scope] = BuiltInRoles.GuestSlug });
+		var game = grants.Within([SharpMUSH.Library.OAuth.DelegatedScopes.Game]);
+		var content = grants.Within([SharpMUSH.Library.OAuth.DelegatedScopes.Content]);
+		await Assert.That(grants.Has(Scope)).IsFalse();
+		await Assert.That(game.Has(Scope, guest.Priority)).IsTrue();
+		await Assert.That(game.Has(Scope, Player.Priority)).IsFalse();
+		await Assert.That(content.Has(Scope, guest.Priority)).IsFalse();
+	}
 }

@@ -465,4 +465,19 @@ public class RoleManagementServiceTests
 		await Assert.That(refusal.Message).Contains("take a reach");
 		await Accepted(world.Service.SetOverridesAsync(A("owner"), "pl", [PortalPermission.ControlAll], PermissionState.Deny, "moderator"));
 	}
+
+	[Test]
+	public async Task RaisingAReachedRolePastWhatTheEditorHoldsIsRefused()
+	{
+		var world = Build();
+		var tport = PortalPermission.GamePower("Tport_Anything");
+		await Accepted(world.Service.SaveRoleAsync(A("owner"), Draft("cadet", 5)));
+		await Accepted(world.Service.SetOverridesAsync(A("owner"), "pl", [tport], PermissionState.Allow, "cadet"));
+		await Accepted(world.Service.SetOverridesAsync(A("owner"), "mod", [tport], PermissionState.Allow, "helper"));
+
+		await Accepted(world.Service.SaveRoleAsync(A("mod"), Draft("cadet", 11)));
+		var refusal = await Refused(world.Service.SaveRoleAsync(A("mod"), Draft("cadet", 20)), RoleRefusalKind.Forbidden);
+		await Assert.That(refusal.Message).Contains("widens");
+		await Accepted(world.Service.SaveRoleAsync(A("owner"), Draft("cadet", 20)));
+	}
 }

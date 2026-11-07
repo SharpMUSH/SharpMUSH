@@ -61,7 +61,8 @@ public sealed class ObjectGrants
 		_shown = Resolver.Resolve(_named);
 	}
 
-	private ObjectGrants(ObjectGrants capped, IReadOnlySet<string> granted, IReadOnlySet<string> shown)
+	private ObjectGrants(ObjectGrants capped, IReadOnlySet<string> granted, IReadOnlySet<string> shown,
+		Func<string, int, bool> ranked, Func<string, int, bool> rankedShown)
 	{
 		Roles = capped.Roles;
 		Context = capped.Context with { IsOwner = false };
@@ -69,7 +70,8 @@ public sealed class ObjectGrants
 		Granted = granted;
 		_shown = shown;
 		_named = Named(Context);
-		_derived = true;
+		_ranked = ranked;
+		_rankedShown = rankedShown;
 	}
 
 	/// <summary>What a role or override allows by name: the owner's blanket grant and administrator roles left out.</summary>
@@ -83,9 +85,11 @@ public sealed class ObjectGrants
 
 	/// <summary>
 	/// Capped by <see cref="Within"/> or <see cref="AtMost"/>: <see cref="Granted"/> is no longer what the context alone
-	/// resolves to, so a check against a target also needs the unranked grant.
+	/// resolves to, so a check against a target asks the cap at the target's rank. Null when not capped.
 	/// </summary>
-	private readonly bool _derived;
+	private readonly Func<string, int, bool>? _ranked;
+
+	private readonly Func<string, int, bool>? _rankedShown;
 
 	/// <summary>
 	/// These grants as an app holding <paramref name="scopes"/> sees them while it acts as the object: only the
@@ -96,7 +100,12 @@ public sealed class ObjectGrants
 		=> IsOwner && OAuth.DelegatedScopes.HasEveryGroup(scopes)
 			? this
 			: new ObjectGrants(this, OAuth.DelegatedScopes.Cap(Granted, scopes, _customCategories),
-				OAuth.DelegatedScopes.Cap(_shown, scopes, _customCategories));
+				OAuth.DelegatedScopes.Cap(_shown, scopes, _customCategories),
+				(scope, rank) => Covered(scopes, scope) && Has(scope, rank),
+				(scope, rank) => Covered(scopes, scope) && Shows(scope, rank));
+
+	private bool Covered(IReadOnlyCollection<string> scopes, string permission)
+		=> OAuth.DelegatedScopes.Covers(scopes, permission, _customCategories.GetValueOrDefault(permission));
 
 	/// <summary>
 	/// These grants under a privilege ceiling at <paramref name="priority"/>: only what is granted both now and by the
@@ -114,7 +123,9 @@ public sealed class ObjectGrants
 		};
 		var lowered = new ObjectGrants(Roles.Where(held => context.Roles.Contains(held.Role)).ToArray(), context, _customCategories);
 		return new ObjectGrants(lowered, Granted.Where(lowered.Granted.Contains).ToHashSet(StringComparer.Ordinal),
-			_shown.Where(lowered._shown.Contains).ToHashSet(StringComparer.Ordinal));
+			_shown.Where(lowered._shown.Contains).ToHashSet(StringComparer.Ordinal),
+			(scope, rank) => Has(scope, rank) && lowered.Has(scope, rank),
+			(scope, rank) => Shows(scope, rank) && lowered.Shows(scope, rank));
 	}
 
 	/// <summary>The reaches of the overrides that are set; a reach left behind by a cleared override is ignored.</summary>
@@ -157,7 +168,7 @@ public sealed class ObjectGrants
 	public bool Has(string scope, int targetRank)
 		=> !Context.HasReaches
 			? Has(scope)
-			: (!_derived || Has(scope)) && Resolver.Allows(Context, scope, targetRank);
+			: _ranked?.Invoke(scope, targetRank) ?? Resolver.Allows(Context, scope, targetRank);
 
 	/// <summary><see cref="Shows(string)"/> against <paramref name="target"/>; see <see cref="Has(string, ObjectGrants)"/>.</summary>
 	public bool Shows(string scope, ObjectGrants target) => Shows(scope, target.Rank);
@@ -166,7 +177,7 @@ public sealed class ObjectGrants
 	public bool Shows(string scope, int targetRank)
 		=> !Context.HasReaches
 			? Shows(scope)
-			: (!_derived || Shows(scope)) && Resolver.Allows(_named, scope, targetRank);
+			: _rankedShown?.Invoke(scope, targetRank) ?? Resolver.Allows(_named, scope, targetRank);
 
 	/// <summary>
 	/// This holder's rank as the target of a check (<see cref="OverrideReach.RankOf"/>): the highest priority among

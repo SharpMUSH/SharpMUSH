@@ -187,7 +187,11 @@ internal sealed class InMemoryRoleRegistry : IRoleRegistryService
 	public Task<PermissionOverrideHolders> GetOverridesOfAsync(string scope, CancellationToken cancellationToken = default)
 		=> Task.FromResult(new PermissionOverrideHolders(
 			_overrides.Where(o => o.Value.ContainsKey(scope)).ToDictionary(o => o.Key, o => o.Value[scope]),
-			_objectOverrides.Where(o => o.Value.ContainsKey(scope)).ToDictionary(o => o.Key, o => o.Value[scope])));
+			_objectOverrides.Where(o => o.Value.ContainsKey(scope)).ToDictionary(o => o.Key, o => o.Value[scope]))
+		{
+			AccountReaches = _reaches.Where(r => r.Value.ContainsKey(scope)).ToDictionary(r => r.Key, r => r.Value[scope]),
+			ObjectReaches = _objectReaches.Where(r => r.Value.ContainsKey(scope)).ToDictionary(r => r.Key, r => r.Value[scope])
+		});
 
 	public Task RemoveCustomPermissionAsync(string scope)
 	{

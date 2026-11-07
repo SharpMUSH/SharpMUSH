@@ -114,13 +114,20 @@ public partial class LightningDatabase
 
 		foreach (var table in new[] { Tables.AccountBan, Tables.AccountPermission, Tables.AccountPermissionReach, Tables.AccountRole })
 			foreach (var row in target.Range(table, [])) RequireAccount(target, Keys.ReadStr(row.Key));
-		foreach (var row in target.Range(Tables.AccountRole, []))
+		// The roles the accounts hold, and those their overrides reach: a reach means what its role's priority says, so the
+		// role goes with it. A reach whose role the source world no longer has reaches nothing in either world.
+		var held = target.Range(Tables.AccountRole, []).Select(row => row.Value).ToList();
+		var reached = target.Range(Tables.AccountPermissionReach, [])
+			.SelectMany(row => Codec.Deserialize<Dictionary<string, string>>(row.Value).Values)
+			.Select(Keys.Str)
+			.Where(key => source.TryGet(Tables.Role, key, out _));
+		foreach (var roleKey in held.Concat(reached).DistinctBy(Convert.ToHexString).ToList())
 		{
-			if (!source.TryGet(Tables.Role, row.Value, out var bytes)) throw new InvalidDataException("An account role definition is missing.");
+			if (!source.TryGet(Tables.Role, roleKey, out var bytes)) throw new InvalidDataException("An account role definition is missing.");
 			var role = Codec.Deserialize<RoleRecord>(bytes);
-			if (role.Slug != Keys.ReadStr(row.Value)) throw new InvalidDataException("An account role definition does not match its key.");
-			if (target.TryGet(Tables.Role, row.Value, out var existingBytes)
-				&& target.Dups(Tables.ObjRole.Reverse, row.Value).Any())
+			if (role.Slug != Keys.ReadStr(roleKey)) throw new InvalidDataException("An account role definition does not match its key.");
+			if (target.TryGet(Tables.Role, roleKey, out var existingBytes)
+				&& target.Dups(Tables.ObjRole.Reverse, roleKey).Any())
 			{
 				var existing = Codec.Deserialize<RoleRecord>(existingBytes);
 				if (existing.Priority != role.Priority || existing.IsSystem != role.IsSystem
@@ -129,7 +136,7 @@ public partial class LightningDatabase
 					throw new InvalidDataException("An account role conflicts with authority assigned to imported objects.");
 			}
 			foreach (var scope in role.Permissions.Keys) CopyIdentityPermission(source, target, scope);
-			target.Put(Tables.Role, row.Value, bytes);
+			target.Put(Tables.Role, roleKey, bytes);
 			if (!string.IsNullOrEmpty(role.Category))
 			{
 				var categoryKey = Keys.Lower(role.Category);

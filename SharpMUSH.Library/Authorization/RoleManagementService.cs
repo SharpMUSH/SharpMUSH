@@ -620,6 +620,29 @@ public sealed partial class RoleManagementService(
 			: null;
 	}
 
+	/// <summary>
+	/// The refusal for moving a role from <paramref name="before"/> to a higher <paramref name="after"/> while an override's
+	/// reach names it, unless the actor holds that permission at the new rank. A reach reads its role's priority when it
+	/// is checked, so raising the role widens every such override as granting a wider one would; a role made again under
+	/// a deleted one's slug raises it from nothing.
+	/// </summary>
+	private async Task<RoleOutcome<SharpRole>?> WidenedReachAsync(PermissionContext me, string slug, int before, int after,
+		CancellationToken ct)
+	{
+		if (after <= before) return null;
+		foreach (var scope in PortalPermission.ReachableScopes)
+		{
+			var holders = await registry.GetOverridesOfAsync(scope, ct);
+			var named = holders.AccountReaches.Values.Concat(holders.ObjectReaches.Values)
+				.Any(reach => string.Equals(reach, slug, StringComparison.OrdinalIgnoreCase));
+			if (named && !RoleHierarchy.CanGrant(HeldAmong(me, [scope], after), scope))
+				return Refuse<SharpRole>(RoleRefusalKind.Forbidden,
+					$"Overrides of {scope} reach {slug}; raising it to priority {after} widens them past what you hold.");
+		}
+
+		return null;
+	}
+
 	private async Task<RoleOutcome<SharpRole>> SaveCoreAsync(RoleActor actor, RoleDraft draft, CancellationToken ct)
 	{
 		var slug = draft.Slug.Trim();
@@ -660,6 +683,7 @@ public sealed partial class RoleManagementService(
 			HeldAmong(me, permissions.Keys));
 		if (unheld.Count > 0)
 			return Refuse<SharpRole>(RoleRefusalKind.Forbidden, $"You cannot grant what you do not hold: {string.Join(", ", unheld)}.");
+		if (await WidenedReachAsync(me, slug, existing?.Priority ?? int.MinValue, draft.Priority, ct) is { } widened) return widened;
 
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var role = new SharpRole
