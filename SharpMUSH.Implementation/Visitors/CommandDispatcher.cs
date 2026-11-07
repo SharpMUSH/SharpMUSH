@@ -99,7 +99,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			if (TryFindSocketCommand(parser, command, out var socketCommand))
 				return await services.Commands.SocketAsync(visitor, parser, src, context, command, socketCommand);
 
-			await LogCommandAsync(visitor, commandText);
+			await LogCommandAsync(visitor, commandText, command);
 
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is long handle)
 			{
@@ -280,7 +280,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	/// <c>log_commands</c> is on, and always a SUSPECT executor's, unless the executor is NO_LOG.
 	/// Socket commands are not logged, as in Penn. Passwords are starred out first.
 	/// </summary>
-	private async ValueTask LogCommandAsync(SharpMUSHParserVisitor visitor, MString commandText)
+	private async ValueTask LogCommandAsync(SharpMUSHParserVisitor visitor, MString commandText, string command)
 	{
 		var parser = visitor.Parser;
 		if (await parser.CurrentState.ExecutorObject(services.Mediator) is not AnySharpObject executor)
@@ -290,12 +290,15 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		if (!(visitor.Configuration.CurrentValue.Log.LogCommands || suspect) || await executor.HasFlag("NO_LOG"))
 			return;
 
+		// Resolve the built-in name using dispatch's lookup rules, including abbreviations and aliases.
+		var resolvedCommand = FindBuiltIn(parser, command, visitor.Configuration.CurrentValue.Compatibility.Dialect)
+			.Definition?.Attribute?.Name;
 		var location = (await executor.Where()).Object();
 		using (visitor.Logger.BeginScope(new Dictionary<string, string> { ["Category"] = "Command" }))
 		{
 			visitor.Logger.LogInformation("CMD: {Suspect} {Executor} in {Location}: {Command}",
 				suspect ? "SUSPECT" : "", Unparse(executor.Object()), Unparse(location),
-				PasswordFilter(commandText.ToPlainText()));
+				PasswordFilter(commandText.ToPlainText(), resolvedCommand));
 		}
 	}
 
@@ -304,10 +307,32 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	/// <summary>
 	/// PennMUSH's <c>passwd_filter</c> (<c>src/game.c:1053</c>): <c>@password old=new</c> keeps the
 	/// command and stars out both passwords; <c>@newpassword</c> and <c>@pcreate</c> star out what
-	/// follows the <c>=</c>. Leading whitespace is accepted as in command dispatch and kept in the log.
+	/// follows the <c>=</c>. The resolved name covers every accepted abbreviation and alias without
+	/// changing the typed name or leading whitespace. The regex fallback retains redaction for
+	/// unrecognized or disabled password-command spellings that were already filtered.
 	/// </summary>
-	internal static string PasswordFilter(string command)
+	internal static string PasswordFilter(string command, string? resolvedCommand = null)
 	{
+		var changesOwnPassword = string.Equals(resolvedCommand, "@PASSWORD", StringComparison.OrdinalIgnoreCase);
+		if (changesOwnPassword
+			|| string.Equals(resolvedCommand, "@NEWPASSWORD", StringComparison.OrdinalIgnoreCase)
+			|| string.Equals(resolvedCommand, "@PCREATE", StringComparison.OrdinalIgnoreCase))
+		{
+			var equals = command.IndexOf('=');
+			if (equals < 0) return command;
+
+			var right = new string('*', command.Length - equals - 1);
+			if (!changesOwnPassword) return $"{command[..(equals + 1)]}{right}";
+
+			var argumentStart = 0;
+			while (argumentStart < equals && char.IsWhiteSpace(command[argumentStart])) argumentStart++;
+			while (argumentStart < equals && !char.IsWhiteSpace(command[argumentStart])) argumentStart++;
+			// Keep the first separator; all remaining argument text is secret, including extra spaces.
+			// No-space forms such as @pas=new have an empty left side and start at the '=' itself.
+			if (argumentStart < equals) argumentStart++;
+			return $"{command[..argumentStart]}{new string('*', equals - argumentStart)}={right}";
+		}
+
 		var password = PasswordCommand().Match(command);
 		if (password.Success)
 			return $"{password.Groups[1].Value} {new string('*', password.Groups[2].Length)}={new string('*', password.Groups[3].Length)}";

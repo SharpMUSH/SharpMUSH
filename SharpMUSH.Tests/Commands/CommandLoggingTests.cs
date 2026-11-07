@@ -113,13 +113,66 @@ public class CommandLoggingTests
 		=> await Assert.That(CommandDispatcher.PasswordFilter(command)).IsEqualTo(logged);
 
 	[Test]
+	[Arguments("  @PaS old=new", "@PASSWORD", "  @PaS ***=***")]
+	[Arguments("\t @alias old pass=new=pass", "@password", "\t @alias ********=********")]
+	[Arguments("@pas  old=new", "@PASSWORD", "@pas ****=***")]
+	[Arguments("@pas\told=new", "@PASSWORD", "@pas\t***=***")]
+	[Arguments("@pas=secret", "@PASSWORD", "@pas=******")]
+	[Arguments("@pas =", "@PASSWORD", "@pas =")]
+	[Arguments("@pc=secret", "@PCREATE", "@pc=******")]
+	[Arguments("  @Pc Bob=new=pass", "@PCREATE", "  @Pc Bob=********")]
+	[Arguments("@alias/noeval Bob=secret", "@NEWPASSWORD", "@alias/noeval Bob=******")]
+	[Arguments("@ne Bob=first\nsecond", "@NEWPASSWORD", "@ne Bob=************")]
+	[Arguments("@pas old", "@PASSWORD", "@pas old")]
+	[Arguments("  @parent Bob=Alice", "@PARENT", "  @parent Bob=Alice")]
+	[Arguments("think @password old=new", "THINK", "think @password old=new")]
+	public async Task ResolvedPasswordArgumentsAreStarredOut(string command, string resolvedCommand, string logged)
+		=> await Assert.That(CommandDispatcher.PasswordFilter(command, resolvedCommand)).IsEqualTo(logged);
+
+	public static IEnumerable<(string Command, string CanonicalCommand, bool Suspect, string LeadingSpace)> PasswordCommandCases()
+	{
+		foreach (var (canonical, minimum) in new[] { ("@password", 4), ("@newpassword", 3), ("@pcreate", 3) })
+		{
+			for (var length = minimum; length <= canonical.Length; length++)
+			{
+				foreach (var suspect in new[] { false, true })
+				{
+					yield return (canonical[..length], canonical, suspect, "");
+					yield return (canonical[..length], canonical, suspect, "  ");
+				}
+			}
+		}
+	}
+
+	[Test]
+	[MethodDataSource(nameof(PasswordCommandCases))]
+	public async Task PasswordCommandsAreRedactedInCommandLog(string command, string canonicalCommand, bool suspect, string leadingSpace)
+		=> await AssertPasswordCommandIsRedacted(command, canonicalCommand, suspect, leadingSpace);
+
+	[Test]
+	[NotInParallel] // temporarily adds an alias to the shared command library
 	[Arguments("@password", false)]
 	[Arguments("@password", true)]
 	[Arguments("@newpassword", false)]
 	[Arguments("@newpassword", true)]
 	[Arguments("@pcreate", false)]
 	[Arguments("@pcreate", true)]
-	public async Task LeadingSpacePasswordsAreRedactedInCommandLog(string command, bool suspect)
+	public async Task PasswordAliasesAreRedactedInCommandLog(string canonicalCommand, bool suspect)
+	{
+		var alias = "@LogPw" + Guid.NewGuid().ToString("N");
+		var library = WebAppFactoryArg.CommandParser.CommandLibrary;
+		library.Add(alias.ToUpperInvariant(), library[canonicalCommand.ToUpperInvariant()]);
+		try
+		{
+			await AssertPasswordCommandIsRedacted(alias, canonicalCommand, suspect, "  ");
+		}
+		finally
+		{
+			library.Remove(alias.ToUpperInvariant());
+		}
+	}
+
+	private async Task AssertPasswordCommandIsRedacted(string command, string canonicalCommand, bool suspect, string leadingSpace)
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "LogPassword");
@@ -134,15 +187,15 @@ public class CommandLoggingTests
 			const string newPassword = "SyntheticLogPassword2581";
 			var oldPassword = TestIsolationHelpers.TestPassword;
 			var createdName = "LogPw" + Guid.NewGuid().ToString("N")[..10];
-			var left = command switch
+			var left = canonicalCommand switch
 			{
 				"@password" => oldPassword,
 				"@newpassword" => $"#{player.DbRef.Number}",
 				_ => createdName
 			};
-			var loggedLeft = command == "@password" ? new string('*', oldPassword.Length) : left;
-			var input = $"  {command} {left}={newPassword}";
-			var expected = $"  {command} {loggedLeft}={new string('*', newPassword.Length)}";
+			var loggedLeft = canonicalCommand == "@password" ? new string('*', oldPassword.Length) : left;
+			var input = $"{leadingSpace}{command} {left}={newPassword}";
+			var expected = $"{leadingSpace}{command} {loggedLeft}={new string('*', newPassword.Length)}";
 			using var logCommands = TestOptionsOverride.Scope(options => options with
 			{
 				Log = options.Log with { LogCommands = !suspect }
@@ -152,16 +205,16 @@ public class CommandLoggingTests
 				.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(input)));
 			var prefix = $"CMD: {(suspect ? "SUSPECT" : "")} {player.Name}(#{player.DbRef.Number}) in ";
 			var entries = captured.Where(e => e.Category == "Command" && e.Message.StartsWith(prefix)).ToArray();
+			// Every spelling must actually execute, not merely reach a refusal that was logged.
+			var target = canonicalCommand == "@pcreate" ? $"*{createdName}" : $"#{player.DbRef.Number}";
+			var verified = await WebAppFactoryArg.FunctionParser.FunctionParse(
+				MarkupText.Plain($"checkpass({target},{newPassword})"));
+			await Assert.That(verified!.Message.ToPlainText()).IsEqualTo("1");
+
 			await Assert.That(entries.Length).IsEqualTo(1);
 			await Assert.That(entries[0].Message).StartsWith(prefix);
 			await Assert.That(entries[0].Message).EndsWith($": {expected}");
 			await Assert.That(entries.Any(e => e.Message.Contains(oldPassword) || e.Message.Contains(newPassword))).IsFalse();
-
-			// The leading-space input must actually execute, not merely reach a refusal that was logged.
-			var target = command == "@pcreate" ? $"*{createdName}" : $"#{player.DbRef.Number}";
-			var verified = await WebAppFactoryArg.FunctionParser.FunctionParse(
-				MarkupText.Plain($"checkpass({target},{newPassword})"));
-			await Assert.That(verified!.Message.ToPlainText()).IsEqualTo("1");
 		}
 		finally
 		{
