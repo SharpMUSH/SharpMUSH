@@ -36,6 +36,18 @@ public class TerminalFeatureReaderTests
 	}
 
 	[Test]
+	public async Task UnansweredSixelProbePreservesKnownCapabilities()
+	{
+		var metadata = new Dictionary<string, string>
+		{
+			[TerminalFeatureReader.ProbeSixelKey] = "",
+			[TerminalFeatureReader.ProbeVersionKey] = "foot"
+		};
+		var probe = TerminalFeatureReader.ProbeOf(metadata);
+		await Assert.That(Detected(["FOOT"], probe).HasFlag(TerminalFeatures.Sixel)).IsTrue();
+	}
+
+	[Test]
 	public async Task Detect_ReadsLinksFromTheNameAndMtts()
 	{
 		await Assert.That(Detected(["XTERM-KITTY"]) & Links).IsEqualTo(TerminalFeatures.Hyperlinks);
@@ -128,7 +140,7 @@ public class TerminalFeatureReaderTests
 			.IsEqualTo(TerminalFeatures.KittyGraphics | TerminalFeatures.BlockArt);
 		await Assert.That(TerminalFeatureReader.TerminalOf(metadata)).IsEqualTo(TerminalProfile.Kitty);
 		await Assert.That(TerminalFeatureReader.ProbeOf(metadata))
-			.IsEqualTo(new TerminalProbeResult(true, false, null, 9, 18));
+			.IsEqualTo(new TerminalProbeResult(true, null, null, 9, 18));
 		await Assert.That(TerminalFeatureReader.GraphicsName(TerminalFeatures.Sixel | TerminalFeatures.BlockArt))
 			.IsEqualTo(TerminalGraphics.Sixel);
 	}
@@ -140,13 +152,13 @@ public class TerminalFeatureReaderTests
 		var metadata = new Dictionary<string, string>
 		{
 			[TerminalFeatureReader.ProbeKittyKey] = "",
-			[TerminalFeatureReader.ProbeSixelKey] = "0",
+			[TerminalFeatureReader.ProbeSixelKey] = "",
 			[TerminalFeatureReader.ProbeVersionKey] = "",
 			[TerminalFeatureReader.ProbeCellSizeKey] = ""
 		};
 
 		await Assert.That(TerminalFeatureReader.ProbeOf(metadata))
-			.IsEqualTo(new TerminalProbeResult(null, false, null, 0, 0));
+			.IsEqualTo(new TerminalProbeResult(null, null, null, 0, 0));
 		await Assert.That(TerminalFeatureReader.For(metadata)).IsEqualTo(TerminalFeatures.None);
 	}
 }

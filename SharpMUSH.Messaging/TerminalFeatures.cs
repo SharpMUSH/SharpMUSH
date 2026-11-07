@@ -7,11 +7,11 @@ namespace SharpMUSH.Library.Utilities;
 
 /// <summary>What a terminal answered when it was asked (<c>SOCKSET graphics=detect</c>).</summary>
 /// <param name="KittyGraphics">Whether it answered the Kitty graphics query; null when that was not settled.</param>
-/// <param name="Sixel">Whether its device attributes list sixel.</param>
+/// <param name="Sixel">Whether its device attributes list sixel; null when no answer arrived.</param>
 /// <param name="Version">What it calls itself in reply to XTVERSION, or null.</param>
 /// <param name="CellWidth">Its character cell's width in pixels, or zero when it did not say.</param>
 /// <param name="CellHeight">Its character cell's height in pixels, or zero when it did not say.</param>
-public sealed record TerminalProbeResult(bool? KittyGraphics, bool Sixel, string? Version, int CellWidth, int CellHeight);
+public sealed record TerminalProbeResult(bool? KittyGraphics, bool? Sixel, string? Version, int CellWidth, int CellHeight);
 
 /// <summary>
 /// What the player set with <c>SOCKSET</c> about their terminal. Links are worked out from the terminal unless
@@ -192,8 +192,8 @@ public static class TerminalFeatureReader
 	/// <summary>
 	/// What the terminal can do: what <paramref name="terminal"/> is known for, corrected by what it answered in
 	/// <paramref name="probe"/>. A Kitty or sixel answer wins over the name, since a terminal that has the
-	/// protocol and did not answer is reached through something that does not pass it on, such as a
-	/// multiplexer. Half-block art is any UTF-8 terminal's.
+	/// protocol may explicitly report it disabled. An unanswered query preserves known capabilities.
+	/// Half-block art is any UTF-8 terminal's.
 	/// </summary>
 	public static TerminalFeatures Detect(TerminalProfile? terminal, IReadOnlyList<string> terminalTypes, TerminalProbeResult? probe)
 	{
@@ -205,7 +205,7 @@ public static class TerminalFeatureReader
 
 		if (probe is not null)
 		{
-			features = Set(features, TerminalFeatures.Sixel, probe.Sixel);
+			if (probe.Sixel is { } sixel) features = Set(features, TerminalFeatures.Sixel, sixel);
 			if (probe.KittyGraphics is { } kitty) features = Set(features, TerminalFeatures.KittyGraphics, kitty);
 		}
 
@@ -287,7 +287,7 @@ public static class TerminalFeatureReader
 		var size = metadata.GetValueOrDefault(ProbeCellSizeKey, "").Split('x');
 		var width = size.Length == 2 && int.TryParse(size[0], out var w) ? w : 0;
 		var height = size.Length == 2 && int.TryParse(size[1], out var h) ? h : 0;
-		return new TerminalProbeResult(kitty is null ? null : kitty == "1", sixel == "1", version, width, height);
+		return new TerminalProbeResult(kitty is null ? null : kitty == "1", sixel is null or "" ? null : sixel == "1", version, width, height);
 	}
 
 	/// <summary>A yes/no pin stored under <paramref name="key"/>, or null for none.</summary>

@@ -120,7 +120,7 @@ public partial class TelnetServer
 				// Asks the terminal what it can draw, only when the player asks for it (SOCKSET graphics=detect):
 				// a client in line mode echoes the answers, so asking unprompted would print them at everyone.
 				.AddPlugin<TerminalQueryProtocol>().OnTerminalReport(report =>
-					OnTerminalReportAsync(new TerminalProbeResult(report.KittyGraphics, report.Sixel == true,
+					OnTerminalReportAsync(new TerminalProbeResult(report.KittyGraphics, report.Sixel,
 						report.Version, report.CellWidth ?? 0, report.CellHeight ?? 0)));
 
 		// The handshake itself — the hello, consuming PUEBLOCLIENT, and the start sequence that moves the
