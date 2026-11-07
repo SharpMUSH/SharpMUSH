@@ -1,7 +1,7 @@
 format: "1.16"
 package: chargen
 title: "Character applications"
-version: 2.7.0
+version: 2.7.1
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
@@ -478,6 +478,12 @@ objects:
         value: |-
           setq(text_chapters,u(%!/FUN`APP`CHAPTERS,%0,%1,%2))[if(words(%q<text_chapters>),iter(%q<text_chapters>,u(%!/FUN`APP`CHAPTER`TEXT,%0,%1,%2,%i0),%b,%r%r),if(strlen(%2),get(%0/CHARGEN`ROUND`%2`%1)))]
         flags: [funsyntax]
+      # A historical single-attribute answer has no chapter identities. Compare it as a whole field
+      # rather than showing its absent chapter 1 as empty against a newer chaptered draft or round.
+      FUN`APP`LEGACY`ROUND:
+        value: |-
+          cand(strlen(%2),hasattr(%0,CHARGEN`ROUND`%2`%1),not(words(u(%!/FUN`APP`CHAPTERS,%0,%1,%2))))
+        flags: [funsyntax]
       FUN`SLOT`FIELD:
         value: |-
           before(%0,.)
@@ -744,7 +750,7 @@ objects:
       FUN`DISPLAY`DIFF`FIELD:
         value: |-
           setqm(diff_objid,get({{store}}/APP`%0),
-          diff_chapters,if(u(%!/FUN`FIELD`CHAPTERED,%1),filterbool(%!/FUN`DIFF`CHAPTER`DIFFERS,sort(setunion(u(%!/FUN`APP`CHAPTERS,%q<diff_objid>,%1,%2),u(%!/FUN`APP`CHAPTERS,%q<diff_objid>,%1,%3)),m),,,%q<diff_objid>,%1,%2,%3)))[if(words(%q<diff_chapters>),iter(%q<diff_chapters>,u(%!/FUN`DISPLAY`DIFF`BLOCK,%1.%i0,u(%!/FUN`APP`CHAPTER`TEXT,%q<diff_objid>,%1,%2,%i0),u(%!/FUN`APP`CHAPTER`TEXT,%q<diff_objid>,%1,%3,%i0)),%b,%r),u(%!/FUN`DISPLAY`DIFF`BLOCK,%1,u(%!/FUN`APP`VALUE,%0,%1,%2),u(%!/FUN`APP`VALUE,%0,%1,%3)))]
+          diff_chapters,if(cand(u(%!/FUN`FIELD`CHAPTERED,%1),not(u(%!/FUN`APP`LEGACY`ROUND,%q<diff_objid>,%1,%2)),not(u(%!/FUN`APP`LEGACY`ROUND,%q<diff_objid>,%1,%3))),filterbool(%!/FUN`DIFF`CHAPTER`DIFFERS,sort(setunion(u(%!/FUN`APP`CHAPTERS,%q<diff_objid>,%1,%2),u(%!/FUN`APP`CHAPTERS,%q<diff_objid>,%1,%3)),m),,,%q<diff_objid>,%1,%2,%3)))[if(words(%q<diff_chapters>),iter(%q<diff_chapters>,u(%!/FUN`DISPLAY`DIFF`BLOCK,%1.%i0,u(%!/FUN`APP`CHAPTER`TEXT,%q<diff_objid>,%1,%2,%i0),u(%!/FUN`APP`CHAPTER`TEXT,%q<diff_objid>,%1,%3,%i0)),%b,%r),u(%!/FUN`DISPLAY`DIFF`BLOCK,%1,u(%!/FUN`APP`VALUE,%0,%1,%2),u(%!/FUN`APP`VALUE,%0,%1,%3)))]
         flags: [funsyntax]
       # %0 a chapter, %1 a character, %2 a field in chapters, %3 and %4 two rounds: 1 when the chapter differs.
       FUN`DIFF`CHAPTER`DIFFERS:
@@ -1585,9 +1591,22 @@ objects:
         value: |-
           @trigger %!/STARTUP
         flags: [cmdsyntax]
+      # The qualified Create target proves this was the old default, not an adopted custom BG* mapping.
       AUPDATE:
         value: |-
-          @trigger %!/STARTUP
+          @trigger %!/STARTUP; @assert member(%<created_attributes>,store/FIELD`BACKGROUND`ATTRIBUTE); @include/nobreak %!/INC`MIGRATE`BACKGROUND
+        flags: [cmdsyntax]
+      # Only a proven upgrade from the old single-attribute default can safely restore its draft.
+      # On 2.3+ an absent BG1 may be an intentional deletion; unknown provenance must not guess either.
+      INC`MIGRATE`BACKGROUND:
+        value: |-
+          @assert strlen(%<from_version>); think setqm(migrate_major,first(%<from_version>,.),migrate_minor,extract(%<from_version>,2,1,.)); @assert cand(isint(%q<migrate_major>),isint(%q<migrate_minor>),cor(lt(%q<migrate_major>,2),cand(eq(%q<migrate_major>,2),lt(%q<migrate_minor>,3)))); @assert not(comp(u(%!/FUN`FIELD`ATTRIBUTE,BACKGROUND),BG*)); @dolist u(%!/FUN`APP`KEYS)={@include/nobreak/args %!/INC`MIGRATE`BACKGROUND`ONE=character,get({{store}}/APP`##)}
+        flags: [cmdsyntax]
+      # %<character>: an applicant's retained objid. Keep even an explicitly empty BG1, other chapters,
+      # the original BACKGROUND and every submitted round. get() never evaluates the author's text.
+      INC`MIGRATE`BACKGROUND`ONE:
+        value: |-
+          @assert not(comp(u(%!/FUN`FIELD`ATTRIBUTE,BACKGROUND),BG*)); @assert isdbref(%<character>); @assert cand(not(hasattr(%<character>,BG1)),strlen(get(%<character>/BACKGROUND))); &BG1 %<character>=get(%<character>/BACKGROUND); @set %<character>/BG1=wizard
         flags: [cmdsyntax]
 
   # Applications and the form. Inside the Chargen object, so no player can reach it, and no_command, so nothing

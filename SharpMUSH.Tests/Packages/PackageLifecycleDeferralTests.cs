@@ -22,4 +22,31 @@ public class PackageLifecycleDeferralTests
 			&& collected.Hooks[0] == new PackageLifecycleHook("#1", "AINSTALL")).IsTrue();
 		await Assert.That(PackageLifecycleDeferral.TryDefer("#3", "AINSTALL")).IsFalse();
 	}
+
+	[Test]
+	public async Task RetainedHooksKeepEachCommittedVersionPair()
+	{
+		var first = new PackageLifecycleHook("#123", "AUPDATE")
+		{
+			FromVersion = "2.2.0",
+			ToVersion = "2.8.0",
+			CreatedAttributes = "store/FIELD`BACKGROUND`ATTRIBUTE"
+		};
+		var second = new PackageLifecycleHook("#123", "AUPDATE")
+		{
+			FromVersion = "2.8.0",
+			ToVersion = "2.9.0"
+		};
+		var collected = await PackageLifecycleDeferral.CollectAsync(() =>
+		{
+			PackageLifecycleDeferral.TryDefer(first);
+			PackageLifecycleDeferral.TryDefer(second);
+			return Task.FromResult(true);
+		});
+		await Assert.That(collected.Hooks).IsEquivalentTo(new[] { first, second });
+		await Assert.That(collected.Hooks[0].FromVersion).IsEqualTo("2.2.0");
+		await Assert.That(collected.Hooks[0].CreatedAttributes).IsEqualTo("store/FIELD`BACKGROUND`ATTRIBUTE");
+		await Assert.That(collected.Hooks[1].ToVersion).IsEqualTo("2.9.0");
+	}
+
 }

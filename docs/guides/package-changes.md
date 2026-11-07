@@ -15,3 +15,27 @@ One automatic pre-package backup precedes the batch when backups are enabled. Th
 Plugin registration, enabled state and running state are separate. Enabling or disabling a plugin can require a server restart. A restart boundary does not claim that code was hot-loaded or unloaded. Restart when instructed, refresh actual state and create a fresh review for dependent work.
 
 Run progress belongs to the server process. If progress is lost, expired or unknown, refresh installed packages and plugin state before retrying. An unknown result does not mean that no changes happened. Do not repeat an old plan on the assumption that completed steps were undone.
+
+## Version-aware lifecycle hooks
+
+The built-in package runner supplies `%<from_version>` and `%<to_version>` to `AINSTALL` and
+`AUPDATE`, captured from the changeset that actually committed. `from_version` is empty on a
+first install. The same values travel with hooks deferred by the package operation queue; they
+are not looked up from the currently installed revision when the hook runs. Manual triggers
+and legacy single-object runner calls do not supply version provenance.
+
+`%<created_attributes>` lists the attributes this apply newly created across the package,
+separated by spaces and qualified as `ref/ATTRIBUTE`: the manifest object ref, a slash, and the
+upper-case attribute name. For example, ``store/FIELD`BACKGROUND`ATTRIBUTE`` identifies a new
+mapping on the `store` object, not on the object running the hook. Every hook receives the same
+captured list. Adopted preexisting values, updates, and locally retained or deleted attributes
+are excluded. A privileged hook can therefore distinguish a newly introduced default on its
+data store from an explicit customization that already had the same value, without granting
+the store additional privileges. Manual and legacy calls do not supply the list.
+
+A data migration must guard against an empty or unsupported source version, preserve explicit
+configuration and existing destination data, and be safe to repeat. An unknown source version
+is not evidence that old data needs migration. When old draft text cannot be distinguished from
+text deliberately cleared after an earlier upgrade, offer explicit administrator recovery rather
+than silently restoring it. Lifecycle hooks run after commit: a hook failure does not roll back
+the package apply, so check the migration's actual results before reporting success.

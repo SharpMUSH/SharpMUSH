@@ -57,9 +57,21 @@ public class PackageLifecycleRunner(
 			}
 		}
 
+		// An adopted value already existed, even if it equals the new package default. Qualify
+		// genuine creates by manifest ref so a privileged hook can safely migrate another package
+		// object's data without granting that data object permission to invoke privileged code.
+		var createdAttributes = string.Join(" ", changeset.Attributes
+			.Where(change => change.Action == PackageAttributeAction.Create && change.LiveValue is null)
+			.Select(change => $"{change.TargetRef}/{change.Attribute.ToUpperInvariant()}")
+			.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal));
 		foreach (var objid in objids)
 		{
-			await RunLifecycleAsync(objid, attribute, cancellationToken);
+			await RunLifecycleAsync(new PackageLifecycleHook(objid, attribute)
+			{
+				FromVersion = changeset.FromVersion,
+				ToVersion = changeset.ToVersion,
+				CreatedAttributes = createdAttributes
+			}, cancellationToken);
 		}
 	}
 
@@ -68,9 +80,19 @@ public class PackageLifecycleRunner(
 		=> await RunObservedLifecycleAsync(objId, attribute, cancellationToken);
 
 	/// <inheritdoc />
-	public async Task<PackageLifecycleOutcome> RunObservedLifecycleAsync(string objId, string attribute, CancellationToken cancellationToken = default)
+	public Task<PackageLifecycleOutcome> RunObservedLifecycleAsync(string objId, string attribute, CancellationToken cancellationToken = default)
+		=> RunObservedLifecycleAsync(new PackageLifecycleHook(objId, attribute), cancellationToken);
+
+	/// <inheritdoc />
+	public async Task RunLifecycleAsync(PackageLifecycleHook hook, CancellationToken cancellationToken = default)
+		=> await RunObservedLifecycleAsync(hook, cancellationToken);
+
+	/// <inheritdoc />
+	public async Task<PackageLifecycleOutcome> RunObservedLifecycleAsync(PackageLifecycleHook hook, CancellationToken cancellationToken = default)
 	{
-		if (PackageLifecycleDeferral.TryDefer(objId, attribute)) return PackageLifecycleOutcome.Deferred;
+		var objId = hook.ObjId;
+		var attribute = hook.Attribute;
+		if (PackageLifecycleDeferral.TryDefer(hook)) return PackageLifecycleOutcome.Deferred;
 		var parent = ExecutionBudget.Current;
 		try
 		{
@@ -79,7 +101,7 @@ public class PackageLifecycleRunner(
 			using var configured = parent is null
 				? ExecutionBudget.FromMilliseconds(options.CurrentValue.Limit.QueueEntryCpuTime, cancellationToken) : null;
 			using var scope = configured is not null ? configured.Enter() : ExecutionBudget.EnterLinked(cancellationToken);
-			return await RunGuardedAsync(objId, attribute, parent);
+			return await RunGuardedAsync(hook, parent);
 		}
 		catch (OperationCanceledException exception) { return ReportFailure(exception, objId, attribute, CancellationOutcome(parent)); }
 		catch (Exception exception)
@@ -105,8 +127,10 @@ public class PackageLifecycleRunner(
 			? PackageLifecycleOutcome.ExecutionLimit : PackageLifecycleOutcome.Cancelled;
 
 	// Classify while the linked/owned budget is still alive, before the caller restores its parent.
-	private async Task<PackageLifecycleOutcome> RunGuardedAsync(string objId, string attribute, ExecutionBudget? parent)
+	private async Task<PackageLifecycleOutcome> RunGuardedAsync(PackageLifecycleHook hook, ExecutionBudget? parent)
 	{
+		var objId = hook.ObjId;
+		var attribute = hook.Attribute;
 		try
 		{
 			CheckBudget(parent);
@@ -122,7 +146,17 @@ public class PackageLifecycleRunner(
 			CheckBudget(parent);
 			if (foundTarget is not AnySharpObject target)
 				return PackageLifecycleOutcome.MissingTarget;
-			var basedParser = parser.Push(ParserState.RootFor(god.Object().DBRef));
+			// These values belong to this committed apply, not to whatever revision is installed when
+			// a deferred hook finally runs. Manual/legacy calls have no version provenance.
+			var state = ParserState.RootFor(god.Object().DBRef);
+			if (hook.ToVersion is not null)
+				state = state.ForAttributeArguments(new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase)
+				{
+					["from_version"] = new(hook.FromVersion ?? string.Empty),
+					["to_version"] = new(hook.ToVersion),
+					["created_attributes"] = new(hook.CreatedAttributes)
+				});
+			var basedParser = parser.Push(state);
 			var verdict = await StartupAttributeRunner.RunObjectAttributeObservedAsync(basedParser, attributeService, target, attribute, god);
 			// The parser can return a deadline failure instead of throwing; cancellation wins over
 			// its ordinary verdict. Check the original deadline too when a linked timer races it.

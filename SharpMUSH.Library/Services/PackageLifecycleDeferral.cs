@@ -1,7 +1,14 @@
 namespace SharpMUSH.Library.Services;
 
-/// <summary>One lifecycle attribute (<c>AINSTALL</c>, <c>AUPDATE</c>) to run on one package object.</summary>
-public sealed record PackageLifecycleHook(string ObjId, string Attribute);
+/// <summary>One lifecycle attribute (<c>AINSTALL</c>, <c>AUPDATE</c>) to run on one package object.
+/// Versions and ref/ATTRIBUTE create targets come from the committed changeset; a null ToVersion
+/// denotes a legacy invocation without provenance.</summary>
+public sealed record PackageLifecycleHook(string ObjId, string Attribute)
+{
+	public string? FromVersion { get; init; }
+	public string? ToVersion { get; init; }
+	public string CreatedAttributes { get; init; } = string.Empty;
+}
 
 /// <summary>
 /// Holds back an apply's lifecycle hooks while it runs as a queue entry (#1332). Each collected
@@ -65,7 +72,11 @@ public static class PackageLifecycleDeferral
 	/// A collection closes after its actual body completes; late work cannot change its frozen list.
 	/// </summary>
 	public static bool TryDefer(string objId, string attribute)
-		=> Pending.Value?.TryAdd(new PackageLifecycleHook(objId, attribute)) ?? false;
+		=> TryDefer(new PackageLifecycleHook(objId, attribute));
+
+	/// <summary>Retains the committed apply's version provenance with its deferred hook.</summary>
+	public static bool TryDefer(PackageLifecycleHook hook)
+		=> Pending.Value?.TryAdd(hook) ?? false;
 
 	private static async Task<T> InvokeAsync<T>(Func<Task<T>> operation)
 		=> await (operation() ?? throw new InvalidOperationException("The package operation returned no completion."));
