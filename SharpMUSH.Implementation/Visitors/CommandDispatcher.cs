@@ -304,7 +304,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	/// <summary>
 	/// PennMUSH's <c>passwd_filter</c> (<c>src/game.c:1053</c>): <c>@password old=new</c> keeps the
 	/// command and stars out both passwords; <c>@newpassword</c> and <c>@pcreate</c> star out what
-	/// follows the <c>=</c>.
+	/// follows the <c>=</c>. Leading whitespace is accepted as in command dispatch and kept in the log.
 	/// </summary>
 	internal static string PasswordFilter(string command)
 	{
@@ -318,10 +318,10 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			: command;
 	}
 
-	[GeneratedRegex(@"^(@pass.*?)\s([^=]*)=(.*)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+	[GeneratedRegex(@"^(\s*@pass.*?)\s([^=]*)=(.*)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
 	private static partial Regex PasswordCommand();
 
-	[GeneratedRegex(@"^(@(?:newp|pcreate)[^=]*)=(.*)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+	[GeneratedRegex(@"^(\s*@(?:newp|pcreate)[^=]*)=(.*)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
 	private static partial Regex NewPasswordCommand();
 
 	/// <summary>

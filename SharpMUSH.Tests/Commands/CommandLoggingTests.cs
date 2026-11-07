@@ -100,9 +100,105 @@ public class CommandLoggingTests
 	[Arguments("@password old pass=new", "@password ********=***")]
 	[Arguments("@newpassword Bob=secret", "@newpassword Bob=******")]
 	[Arguments("@pcreate Bob=pw", "@pcreate Bob=**")]
+	[Arguments(" @password old pass=new", " @password ********=***")]
+	[Arguments("  @newpassword Bob=secret", "  @newpassword Bob=******")]
+	[Arguments("  @pcreate Bob=pw", "  @pcreate Bob=**")]
+	[Arguments("\t @PaSs old=new", "\t @PaSs ***=***")]
+	[Arguments("\t@NeWp Bob=pw", "\t@NeWp Bob=**")]
+	[Arguments("\t@PcReAtE Bob=pw", "\t@PcReAtE Bob=**")]
 	[Arguments("think @password", "think @password")]
+	[Arguments("  think @password old=new", "  think @password old=new")]
+	[Arguments(" \t ", " \t ")]
 	public async Task PasswordsAreStarredOut(string command, string logged)
 		=> await Assert.That(CommandDispatcher.PasswordFilter(command)).IsEqualTo(logged);
+
+	[Test]
+	[Arguments("@password", false)]
+	[Arguments("@password", true)]
+	[Arguments("@newpassword", false)]
+	[Arguments("@newpassword", true)]
+	[Arguments("@pcreate", false)]
+	[Arguments("@pcreate", true)]
+	public async Task LeadingSpacePasswordsAreRedactedInCommandLog(string command, bool suspect)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LogPassword");
+		try
+		{
+			await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService,
+				MarkupText.Plain($"@set #{player.DbRef.Number}=WIZARD"));
+			if (suspect)
+				await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService,
+					MarkupText.Plain($"@set #{player.DbRef.Number}=SUSPECT"));
+
+			const string newPassword = "SyntheticLogPassword2581";
+			var oldPassword = TestIsolationHelpers.TestPassword;
+			var createdName = "LogPw" + Guid.NewGuid().ToString("N")[..10];
+			var left = command switch
+			{
+				"@password" => oldPassword,
+				"@newpassword" => $"#{player.DbRef.Number}",
+				_ => createdName
+			};
+			var loggedLeft = command == "@password" ? new string('*', oldPassword.Length) : left;
+			var input = $"  {command} {left}={newPassword}";
+			var expected = $"  {command} {loggedLeft}={new string('*', newPassword.Length)}";
+			using var logCommands = TestOptionsOverride.Scope(options => options with
+			{
+				Log = options.Log with { LogCommands = !suspect }
+			});
+
+			var captured = await CaptureAsync(() => WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle)
+				.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(input)));
+			var prefix = $"CMD: {(suspect ? "SUSPECT" : "")} {player.Name}(#{player.DbRef.Number}) in ";
+			var entries = captured.Where(e => e.Category == "Command" && e.Message.StartsWith(prefix)).ToArray();
+			await Assert.That(entries.Length).IsEqualTo(1);
+			await Assert.That(entries[0].Message).StartsWith(prefix);
+			await Assert.That(entries[0].Message).EndsWith($": {expected}");
+			await Assert.That(entries.Any(e => e.Message.Contains(oldPassword) || e.Message.Contains(newPassword))).IsFalse();
+
+			// The leading-space input must actually execute, not merely reach a refusal that was logged.
+			var target = command == "@pcreate" ? $"*{createdName}" : $"#{player.DbRef.Number}";
+			var verified = await WebAppFactoryArg.FunctionParser.FunctionParse(
+				MarkupText.Plain($"checkpass({target},{newPassword})"));
+			await Assert.That(verified!.Message.ToPlainText()).IsEqualTo("1");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(player.Handle);
+		}
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task OrdinaryLeadingSpaceCommandIsLoggedUnchanged(bool suspect)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LogSpaces");
+		try
+		{
+			if (suspect)
+				await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService,
+					MarkupText.Plain($"@set #{player.DbRef.Number}=SUSPECT"));
+			var input = $"  think {TestIsolationHelpers.GenerateUniqueName("unchanged")} @password";
+			using var logCommands = TestOptionsOverride.Scope(options => options with
+			{
+				Log = options.Log with { LogCommands = !suspect }
+			});
+
+			var captured = await CaptureAsync(() => WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle)
+				.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(input)));
+			var prefix = $"CMD: {(suspect ? "SUSPECT" : "")} {player.Name}(#{player.DbRef.Number}) in ";
+			var entries = captured.Where(e => e.Category == "Command" && e.Message.StartsWith(prefix)).ToArray();
+			await Assert.That(entries.Length).IsEqualTo(1);
+			await Assert.That(entries[0].Message).EndsWith($": {input}");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(player.Handle);
+		}
+	}
 
 	private async Task<(string Category, string Message)[]> CaptureAsync(Func<ValueTask<CallState>> run)
 	{
