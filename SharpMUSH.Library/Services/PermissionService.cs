@@ -458,10 +458,8 @@ public class PermissionService(
 		if (targetInheritable || target.IsPlayer)
 			return false;
 
-		// player.modify: the control below does not come from owning the target, and a deny takes it away.
-		if (!(whoFlags.Grants.Context.HasReaches
-				? whoFlags.Grants.Has(PortalPermission.PlayerModify, await target.RankAsTargetAsync(token))
-				: whoFlags.Grants.Has(PortalPermission.PlayerModify)))
+		// player.modify: the control below does not come from owning the target, and a deny, on who or its owner, takes it away.
+		if (!await who.CanOver(PortalPermission.PlayerModify, target))
 			return false;
 
 		// Zone Master Object (ZMO) control

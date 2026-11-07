@@ -468,6 +468,10 @@ public partial class Commands
 		return new CallState(string.Empty);
 	}
 
+	/// <summary>The @channel switches that only list channels or stop the player hearing one.</summary>
+	private static readonly HashSet<string> ListensOnly = new(StringComparer.OrdinalIgnoreCase)
+		{ "LIST", "WHAT", "WHO", "QUIET", "GAG", "MUTE", "HIDE", "OFF", "LEAVE" };
+
 	[SharpCommand(Name = "@CHANNEL",
 		Switches =
 		[
@@ -480,7 +484,8 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		if (!await executor.Can(PortalPermission.PlayerChat))
+		// Without player.chat a player can still look at channels and stop hearing them, but not join or run one.
+		if (!switches.All(ListensOnly.Contains) && !await executor.Can(PortalPermission.PlayerChat))
 			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerChat));
 
 		// /quiet only pairs with /list or /recall — it is invalid alongside anything else.

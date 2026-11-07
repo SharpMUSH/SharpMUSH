@@ -201,7 +201,7 @@ These take parts of a wizard's standing over other players' things, so a role or
 Each can carry a reach (see [@permission reach]). On `game.noforce` and `game.noboot` a reach names who is kept out: with reach `architect`, nobody ranked at or below architect may force you.
 ## Everyday permissions
 
-Every object holds these unless a role or override denies them, so nobody notices them until one is taken away. They let staff mute one thing precisely: `@permission/deny Twink=player.page` stops Twink paging, and `@permission/deny Twink=player.page/helper` stops Twink paging staff only.
+Every object holds these unless a role or override denies them, so nobody notices them until one is taken away. One denied to a player is denied to everything the player owns as well. They let staff mute one thing precisely: `@permission/deny Twink=player.page` stops Twink paging, and `@permission/deny Twink=player.page/helper` stops Twink paging staff only.
 
 | Permission | Covers |
 |---|---|
@@ -210,12 +210,12 @@ Every object holds these unless a role or override denies them, so nobody notice
 | `player.give` | give, checked against the recipient; takes a reach |
 | `player.receive` | being given things |
 | `player.force` | @force |
-| `player.chat` | @channel, @chat, @cemit and channel aliases |
+| `player.chat` | @chat, @cemit, channel aliases, and joining or running a channel; without it a player can still list, gag, mute, hide and leave channels |
 | `player.commands` | `$`-commands |
 | `player.examine` | examining others' VISUAL objects; takes a reach |
-| `player.modify` | control through a zone, a control lock or a shared owner; takes a reach |
+| `player.modify` | control through a zone, a control lock or a SHARED player; takes a reach |
 | `player.chown` | taking CHOWN_OK objects; takes a reach |
-| `player.teleport` | @teleport by control or JUMP_OK; takes a reach |
+| `player.teleport` | @teleport by control or JUMP_OK; takes a reach, measured on what is moved |
 | `player.password` | @password |
 
 A role that denies one takes it from everyone holding that role, even if another role leaves it alone.
