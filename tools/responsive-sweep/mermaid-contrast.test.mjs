@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright-core';
 
 const root = new URL('../../SharpMUSH.Client/', import.meta.url);
+const tokens = readFileSync(new URL('wwwroot/css/tokens.css', root), 'utf8');
 const css = readFileSync(new URL('Components/WikiDisplay.razor.css', root), 'utf8').replaceAll('::deep', '');
 const mermaid = readFileSync(new URL('wwwroot/js/mermaid.min.js', root), 'utf8');
 const renderer = readFileSync(new URL('wwwroot/js/wiki-render.js', root), 'utf8');
@@ -13,7 +14,7 @@ for (const background of ['#ffffff', '#111314']) {
         const browser = await chromium.launch();
         try {
             const page = await browser.newPage({ viewport: { width: 320, height: 800 } });
-            await page.setContent(`<style>body { margin: 0; background: ${background}; } ${css}</style>
+            await page.setContent(`<style>${tokens} body { margin: 0; background: ${background}; } ${css}</style>
                 <div class="WikiContent"><pre class="mermaid">---
  title: Readable title
 ---

@@ -472,6 +472,9 @@
 	/* Monaco paints with its own dark theme (mush-monaco.js 'mush-dark') whatever the portal's, so the
 	   editor's frame matches that, not the theme. */
 	--editor-bg: #1a1a2e;
+	/* Mermaid retains its dark SVG palette after portal theme changes; its canvas must match. */
+	--mermaid-bg: #1f2020;
+	--mermaid-text: #e6e6e6;
 
 	/* ── depth ── */
 	--shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.4);  /* menus, popovers, drawers */
