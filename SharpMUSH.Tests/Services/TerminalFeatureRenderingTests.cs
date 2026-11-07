@@ -26,6 +26,9 @@ public class TerminalFeatureRenderingTests
 	private static readonly byte[] MovingGif = Convert.FromBase64String(
 		"R0lGODlhBAACAIEAAP8AAAAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQACgAAACwAAAAABAACAAAIBwABCBwoMCAAIfkEARkAAQAsAAAAAAQAAgCBAAD/AAAAAAAAAAAACAcAAQgcKDAgADs=");
 
+	private static readonly byte[] WebP = Convert.FromBase64String(
+		"UklGRh4AAABXRUJQVlA4TBIAAAAvAQAAEA8Q87//D/wPBxnR/wA=");
+
 	private const string KittyStart = "\u001b_G";
 	private const string KittyPlaceholder = "\U0010EEEE";
 
@@ -50,6 +53,35 @@ public class TerminalFeatureRenderingTests
 
 	private static async Task<string> RenderAsync(MarkupOutputRenderer renderer, string markup, RenderContext context) =>
 		Encoding.UTF8.GetString((await renderer.RenderAsync(markup, context)).Data);
+
+	[Test]
+	public async Task WebPDecodesToStraightRgba()
+	{
+		var picture = TerminalPictureStore.Decode(WebP);
+		await Assert.That(picture.Width).IsEqualTo(2);
+		await Assert.That(picture.Height).IsEqualTo(1);
+		await Assert.That(picture.Rgba.Span.SequenceEqual(new byte[] { 255, 0, 0, 128, 0, 0, 255, 255 })).IsTrue();
+	}
+
+	[Test]
+	public async Task InvalidWebPIsRejected()
+	{
+		await Assert.That(() => TerminalPictureStore.Decode(WebP[..20])).Throws<InvalidDataException>();
+	}
+
+	[Test]
+	[Arguments(TerminalGraphics.Iterm2, "\u001b]1337;")]
+	[Arguments(TerminalGraphics.Sixel, "\u001bP")]
+	public async Task MxpWithoutImageFallsBackToTerminalGraphics(string graphics, string sequence)
+	{
+		using var store = new TerminalPictureStore(null, 1 << 20, NullLogger<TerminalPictureStore>.Instance,
+			new PictureHandler(HttpStatusCode.OK, WebP));
+		var renderer = new MarkupOutputRenderer(store, new ConnectionPictures());
+		var context = Context(new ProtocolCapabilities(Format: OutputFormat.Mxp, MxpSupported: "SOUND", SupportsTruecolor: true,
+			Pins: new TerminalPins(Graphics: graphics)));
+		var output = await RenderAsync(renderer, FigureMarkup("https://pictures.example/cat.webp"), context);
+		await Assert.That(output).Contains(sequence).And.DoesNotContain("<IMAGE");
+	}
 
 	[Test]
 	public async Task Kitty_SendsThePictureOnceThenOnlyItsPlaceholders()
@@ -145,7 +177,7 @@ public class TerminalFeatureRenderingTests
 	public async Task OnlyTheGamesExactOrigin_IsFetchedWithoutTheGuard()
 	{
 		var guarded = new PictureHandler(HttpStatusCode.OK);
-		var local = new PictureHandler(HttpStatusCode.OK);
+		var local = new PictureHandler(HttpStatusCode.OK, WebP);
 		using var store = new TerminalPictureStore("http://game.example:8080/", 1 << 20,
 			NullLogger<TerminalPictureStore>.Instance, guarded, local);
 
@@ -163,18 +195,18 @@ public class TerminalFeatureRenderingTests
 		await Assert.That(guarded.Requests).IsEqualTo(3).Because("another scheme or port is someone else's server");
 	}
 
-	/// <summary>A picture of the game's that StbImageSharp cannot decode is fetched converted to PNG.</summary>
+	/// <summary>A game WebP is decoded directly, without requiring the portal's PNG endpoint.</summary>
 	[Test]
-	public async Task AGameWebpPicture_IsFetchedAsPng()
+	public async Task AGameWebpPicture_IsFetchedDirectly()
 	{
-		var local = new PictureHandler(HttpStatusCode.OK);
+		var local = new PictureHandler(HttpStatusCode.OK, WebP);
 		using var store = new TerminalPictureStore("http://game.example:8080/", 1 << 20,
 			NullLogger<TerminalPictureStore>.Instance, new PictureHandler(HttpStatusCode.OK), local);
 
 		store.TryGet("/assets/cat.webp", out _, out var pending);
 		if (pending is not null) await pending;
 
-		await Assert.That(local.LastAddress?.AbsoluteUri).IsEqualTo("http://game.example:8080/pictures/png/assets/cat.webp.png");
+		await Assert.That(local.LastAddress?.AbsoluteUri).IsEqualTo("http://game.example:8080/assets/cat.webp");
 		await Assert.That(store.TryGet("/assets/cat.webp", out var picture, out _)).IsTrue();
 		await Assert.That(picture).IsNotNull();
 	}

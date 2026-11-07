@@ -97,7 +97,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 		if (connection.Capabilities.Format == OutputFormat.Mxp && MxpDrawsImages(connection.Capabilities.MxpSupported))
 			return new RenderPictureSource(pictureStore, new ConnectionPictures.Sent());
 
-		if (connectionPictures is null || connection.Capabilities.Format != OutputFormat.Ansi
+		if (connectionPictures is null || connection.Capabilities.Format is not (OutputFormat.Ansi or OutputFormat.Mxp)
 			|| (connection.Capabilities.Features & TerminalFeatures.Pictures) == 0)
 			return null;
 
@@ -128,7 +128,8 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 		var ansi = AnsiOptionsFor(connection.Capabilities, depth, pictures);
 		// A notice()'s lead without its brackets for a screen reader, and without its tags for everyone.
 		var cells = ansi.Pictures is null ? null : PictureCellsFor(ansi);
-		var fetchesItself = connection.Capabilities.Format is OutputFormat.Mxp or OutputFormat.Pueblo;
+		var fetchesItself = connection.Capabilities.Format == OutputFormat.Pueblo
+			|| connection.Capabilities.Format == OutputFormat.Mxp && MxpDrawsImages(connection.Capabilities.MxpSupported);
 		if (fetchesItself && cells is not null)
 		{
 			// No cells kept for a picture the client cannot fetch, so its figure keeps the art.
@@ -157,7 +158,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 		var text = connection.Capabilities.Format switch
 		{
 			OutputFormat.Pueblo => ms.Render(MarkupFormat.Pueblo, WireFor(depth)),
-			OutputFormat.Mxp => ms.Render(MarkupFormat.Mxp, MxpWireFor(connection.Capabilities.MxpSupported, depth)),
+			OutputFormat.Mxp => ms.Render(MarkupFormat.Mxp, MxpWireFor(connection.Capabilities.MxpSupported, depth).WithAnsiOutput(ansi)),
 			// The ANSI render for everything else, which maps a command link or a tagwrap() span to its
 			// ANSI equivalent, or to plain text when it has none. A client that negotiated neither
 			// Pueblo nor MXP must never see a literal tag.
@@ -262,9 +263,11 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 	/// </summary>
 	private static AnsiOutputOptions AnsiOptionsFor(ProtocolCapabilities capabilities, AnsiColorDepth depth,
 		RenderPictureSource? pictures) =>
-		new(depth, capabilities.Format == OutputFormat.Ansi ? capabilities.Features : TerminalFeatures.None)
+		new(depth, capabilities.Format == OutputFormat.Ansi
+			|| capabilities.Format == OutputFormat.Mxp && !MxpDrawsImages(capabilities.MxpSupported)
+			? capabilities.Features : TerminalFeatures.None)
 		{
-			Terminal = capabilities.Format == OutputFormat.Ansi ? capabilities.Terminal : null,
+			Terminal = capabilities.Terminal,
 			Pictures = pictures,
 			CellWidth = capabilities.CellWidth > 0 ? capabilities.CellWidth : 10,
 			CellHeight = capabilities.CellHeight > 0 ? capabilities.CellHeight : 20
