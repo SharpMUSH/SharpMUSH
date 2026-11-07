@@ -116,7 +116,7 @@ public static class PortalStartupPage
 			main{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.25rem;text-align:center;padding:1rem;box-sizing:border-box;background:radial-gradient(ellipse at center,rgba(0,245,183,.12),transparent 60%)}
 			img{width:6rem;height:6rem}
 			h1{margin:0;font-size:1.75rem;font-weight:600;color:#00f5b7}
-			p{margin:0;color:#9aa3ab}
+			p{margin:0;color:#aaa298}
 			.spin{width:2.5rem;height:2.5rem;border:3px solid rgba(0,245,183,.25);border-top-color:#00f5b7;border-radius:50%;animation:s 1s linear infinite}
 			@keyframes s{to{transform:rotate(360deg)}}
 			@media (prefers-reduced-motion:reduce){.spin{animation:none}}

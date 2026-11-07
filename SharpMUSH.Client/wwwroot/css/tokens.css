@@ -369,7 +369,7 @@
 	/* Kickers: the small capitals over a tile, a panel or a field. In the body face, so a label reads as a label, not code. */
 	--font-kicker: var(--font-ui);
 	--kicker-tracking: 0.12em;
-	/* ── theme parts: Phosphor's look. The rules in css/themes/ set these per part (data-texture,
+	/* ── theme parts: the look with every part at its first choice (ThemeStyles.Defaults). The rules in css/themes/ set these per part (data-texture,
 	   data-frame-marks, ...); a Custom theme's stylesheet can set any of them. See docs/guides/portal-themes.md. ── */
 	--font-title-weight: 700;
 	--texture: none;                /* page texture: gradient layers, then drawn layers (masks) in the theme's colours */
@@ -555,7 +555,13 @@
 /* A light theme's elevation: a shallower shadow, warmed toward the paper, under a white top edge. */
 [data-scheme="light"] {
 	--elev-1: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 2px rgba(60, 40, 20, 0.06), 0 8px 24px -10px rgba(60, 40, 20, 0.18);
-	--logo-inner: oklch(from var(--accent) calc(l + 0.14) c h);
+	--logo-inner: color-mix(in srgb, var(--accent) 70%, #ffffff);
+}
+/* Where relative colour is understood, a lighter step of the accent itself, which keeps its saturation. */
+@supports (color: oklch(from red l c h)) {
+	[data-scheme="light"] {
+		--logo-inner: oklch(from var(--accent) calc(l + 0.14) c h);
+	}
 }
 
 /* A card's background: the frame's gradient layers over the surface. Worked out again wherever a theme's

@@ -160,6 +160,15 @@ public static partial class ThemeStylesheet
 		["font-title-weight"] = "700",
 		["font-kicker"] = "var(--font-ui)",
 		["kicker-tracking"] = "0.12em",
+		["elev-1"] = "inset 0 1px 0 rgba(255, 240, 220, 0.05), 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 28px -8px rgba(0, 0, 0, 0.6)",
+		["logo-inner"] = "color-mix(in srgb, var(--accent) 70%, var(--text))",
+	};
+
+	// tokens.css's [data-scheme="light"] values, for a light theme.
+	private static readonly IReadOnlyDictionary<string, string> LightSheetDefaults = new Dictionary<string, string>
+	{
+		["elev-1"] = "inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 2px rgba(60, 40, 20, 0.06), 0 8px 24px -10px rgba(60, 40, 20, 0.18)",
+		["logo-inner"] = "oklch(from var(--accent) calc(l + 0.14) c h)",
 	};
 
 	/// <summary>
@@ -330,7 +339,9 @@ public static partial class ThemeStylesheet
 			css.Append(CultureInfo.InvariantCulture, $"\t/* {group} */\n");
 			foreach (var (name, what) in properties)
 			{
-				var value = theme.Tokens.TryGetValue(name, out var set) ? set : SheetDefaults.GetValueOrDefault(name);
+				var value = theme.Tokens.TryGetValue(name, out var set) ? set
+					: !theme.Dark && LightSheetDefaults.TryGetValue(name, out var light) ? light
+					: SheetDefaults.GetValueOrDefault(name);
 				css.Append(CultureInfo.InvariantCulture, $"\t/* {what} */\n");
 				// A part's variables are set by the rules under the theme's parts, below; name them here.
 				css.Append(value is null || value.Length > 120 || value.Contains("*/", StringComparison.Ordinal)

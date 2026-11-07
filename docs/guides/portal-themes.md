@@ -48,7 +48,7 @@ surface `surface-2`, foreground `text`, primary `accent`, secondary `accent-2` (
 until it reaches 3:1 (primary, muted) or 4.5:1 (the rest) against `bg`. A new built-in portal theme needs one too:
 `PortedLayoutThemeTests` fails until it has it. The genres keep MarkupString's genre layout themes. `sharpmush`,
 Phosphor's teal on black, is the game's default `layout_theme`. Every genre
-theme has a texture, a card frame and a title face no other theme uses
+theme has a texture, a card frame and a title face no other genre uses
 (`ThemeResolverTests.EachGenreHasATextureAndFrameOfItsOwn`); the colour vision themes keep Phosphor's or Daylight's.
 
 ### How the colour vision sets were picked
