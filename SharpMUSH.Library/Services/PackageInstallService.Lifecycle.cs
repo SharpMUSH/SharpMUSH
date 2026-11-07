@@ -164,8 +164,9 @@ public partial class PackageInstallService
 		foreach (var group in (await registry.GetManagedAttributesAsync(packageId))
 			.Where(m => !ownObjids.Contains(m.Objid)).GroupBy(m => m.Objid))
 		{
-			var otherRefs = (await registry.GetManagedAttributesForObjectAsync(group.Key))
-				.Where(a => a.PackageId != packageId && PackageRefIndirection.IsRefAttribute(a.Attribute))
+			// An attribute another package also manages stays: it is still that package's.
+			var otherManaged = (await registry.GetManagedAttributesForObjectAsync(group.Key))
+				.Where(a => a.PackageId != packageId)
 				.Select(a => a.Attribute).ToHashSet(StringComparer.OrdinalIgnoreCase);
 			if (HelperFunctions.ParseDbRef(group.Key) is not DBRef dbref)
 			{
@@ -174,7 +175,7 @@ public partial class PackageInstallService
 
 			// Leaves first: clearing a branch that still has a leaf only empties it, so a branch cleared before its
 			// leaves would stay behind, empty, and conflict with the next install that attaches it.
-			foreach (var managed in group.Where(a => !otherRefs.Contains(a.Attribute))
+			foreach (var managed in group.Where(a => !otherManaged.Contains(a.Attribute))
 				.OrderByDescending(a => a.Attribute.Count(c => c == '`')))
 			{
 				await writes.ClearAttributeAsync(dbref, managed.Attribute.Split('`'), cancellationToken);
@@ -304,20 +305,20 @@ public partial class PackageInstallService
 		}
 
 		var managedAttributes = await registry.GetManagedAttributesAsync(packageId);
-		var sharedRefs = new HashSet<(string Objid, string Attribute)>();
+		var sharedAttributes = new HashSet<(string Objid, string Attribute)>();
 		foreach (var objid in snapshot.Attributes.Select(a => a.Objid)
 			.Concat(managedAttributes.Select(a => a.Objid)).Distinct(StringComparer.Ordinal))
 		{
 			foreach (var shared in (await registry.GetManagedAttributesForObjectAsync(objid))
-				.Where(a => a.PackageId != packageId && PackageRefIndirection.IsRefAttribute(a.Attribute)))
+				.Where(a => a.PackageId != packageId))
 			{
-				sharedRefs.Add((objid, shared.Attribute.ToUpperInvariant()));
+				sharedAttributes.Add((objid, shared.Attribute.ToUpperInvariant()));
 			}
 		}
 
-		// Validate shared legacy restores before writing even the first snapshot attribute.
-		// A rollback must not redirect another package's code to our historical resolution.
-		foreach (var attribute in snapshot.Attributes.Where(a => sharedRefs.Contains((a.Objid, a.Attribute.ToUpperInvariant()))))
+		// Validate restores of attributes another package also manages before writing even the first one.
+		// A rollback must not change what another package relies on, such as a ref to our historical resolution.
+		foreach (var attribute in snapshot.Attributes.Where(a => sharedAttributes.Contains((a.Objid, a.Attribute.ToUpperInvariant()))))
 		{
 			if (HelperFunctions.ParseDbRef(attribute.Objid) is not DBRef dbref
 				|| (await database.GetObjectNodeAsync(dbref, cancellationToken)).IsNone)
@@ -335,7 +336,7 @@ public partial class PackageInstallService
 		return await PlanObjectRollbackAsync(packageId, revision, snapshot, cancellationToken) switch
 		{
 			ObjectRollback objects => await RestoreRevisionAsync(
-				writes, installed, record, snapshot, managedAttributes, sharedRefs, objects, cancellationToken),
+				writes, installed, record, snapshot, managedAttributes, sharedAttributes, objects, cancellationToken),
 			Error<string> error => error
 		};
 	}
@@ -410,7 +411,7 @@ public partial class PackageInstallService
 		PackageRevisionRecord record,
 		PackageRevisionSnapshot snapshot,
 		IReadOnlyList<ManagedAttributeRecord> managedAttributes,
-		HashSet<(string Objid, string Attribute)> sharedRefs,
+		HashSet<(string Objid, string Attribute)> sharedAttributes,
 		ObjectRollback objects,
 		CancellationToken cancellationToken)
 	{
@@ -456,7 +457,7 @@ public partial class PackageInstallService
 		foreach (var managed in managedAttributes
 			.Where(m => !restoredKeys.Contains((m.Objid, m.Attribute.ToUpperInvariant()))))
 		{
-			var shared = sharedRefs.Contains((managed.Objid, managed.Attribute.ToUpperInvariant()));
+			var shared = sharedAttributes.Contains((managed.Objid, managed.Attribute.ToUpperInvariant()));
 			if (HelperFunctions.ParseDbRef(managed.Objid) is DBRef dbref && !shared)
 			{
 				await writes.ClearAttributeAsync(dbref, managed.Attribute.Split('`'), cancellationToken);
@@ -464,7 +465,7 @@ public partial class PackageInstallService
 
 			await writes.RemoveManagedAttributeAsync(packageId, managed.Objid, managed.Attribute);
 			notes.Add(shared
-				? $"Released ownership of shared ref {managed.Objid}/{managed.Attribute}; its value was retained."
+				? $"Released ownership of shared attribute {managed.Objid}/{managed.Attribute}; its value was retained."
 				: $"Removed {managed.Objid}/{managed.Attribute} (not present in revision {revision}).");
 		}
 
