@@ -21,6 +21,9 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	private static readonly string[] IncomingPageContextFlags = ["wizard", "locked", "no_clone", "prefixmatch"];
+	// What a page writes: the flags a reply trusts, plus internal so the engine-owned context is no attribute
+	// anyone sees. PennMUSH has no LASTPAGER, and examine lists what Penn's would.
+	private static readonly string[] WrittenPageContextFlags = [.. IncomingPageContextFlags, "internal"];
 
 	[SharpCommand(Name = "@@", Output = CommandOutput.Passthrough, Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["comment"])]
 	public ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -377,9 +380,9 @@ public partial class Commands
 				_ => throw new InvalidOperationException("God (#1) must be a player.")
 			};
 			var contextFlags = await Mediator.CreateStream(new GetAttributeFlagsQuery())
-				.Where(flag => IncomingPageContextFlags.Contains(flag.Name, StringComparer.OrdinalIgnoreCase))
+				.Where(flag => WrittenPageContextFlags.Contains(flag.Name, StringComparer.OrdinalIgnoreCase))
 				.ToArrayAsync();
-			if (contextFlags.Select(flag => flag.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != IncomingPageContextFlags.Length)
+			if (contextFlags.Select(flag => flag.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != WrittenPageContextFlags.Length)
 			{
 				await NotifyService.Notify(executor, "Unable to establish protected incoming page context.", executor);
 				return CallState.Empty;

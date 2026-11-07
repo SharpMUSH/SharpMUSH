@@ -38,6 +38,12 @@ public class UtilityCommandTests
 
 	private static string NameRow(TestIsolationHelpers.TestPlayer player) => $"{player.Name}(#{player.DbRef.Number}";
 
+	private async Task<DBRef> CreateThingAsync(TestIsolationHelpers.TestPlayer owner, string name)
+	{
+		var created = await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@create {name}"));
+		return DBRef.Parse(created.Message.ToPlainText());
+	}
+
 	[Test]
 	public async ValueTask ThinkBasic()
 	{
@@ -164,21 +170,25 @@ public class UtilityCommandTests
 	}
 
 	[Test]
-	public async ValueTask ExamineObject_HeaderContainsLastModified()
+	public async ValueTask ExamineThing_HeaderContainsLastModification()
 	{
 		var testPlayer = await CreateWizardAsync("ExamLastMod");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine me"));
+		var thing = await CreateThingAsync(testPlayer, TestIsolationHelpers.GenerateUniqueName("ExamLastModThing"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"examine {thing}"));
 
-		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Last modified:", StringComparison.Ordinal))).Count().IsEqualTo(1);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Last Modification:", StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
-	public async ValueTask ExaminePlayer_HeaderContainsQuota()
+	public async ValueTask ExaminePlayer_HeaderShowsChannelsAndNoModificationOrQuota()
 	{
-		var testPlayer = await CreateWizardAsync("ExamQuota");
+		// look.c:857-865: a player gets channel_description, and neither a modification time nor a quota line.
+		var testPlayer = await CreateWizardAsync("ExamPlayerHeader");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine me"));
 
-		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Quota:", StringComparison.Ordinal))).Count().IsEqualTo(1);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("\nChannels: *NONE*\n", StringComparison.Ordinal))).Count().IsEqualTo(1);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Last Modification:", StringComparison.Ordinal))).Count().IsEqualTo(0);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Quota:", StringComparison.Ordinal))).Count().IsEqualTo(0);
 	}
 
 	[Test]
@@ -199,12 +209,13 @@ public class UtilityCommandTests
 	}
 
 	[Test]
-	public async ValueTask ExamineObject_BriefSwitch_AlsoShowsLastModified()
+	public async ValueTask ExamineThing_BriefSwitch_AlsoShowsLastModification()
 	{
 		var testPlayer = await CreateWizardAsync("ExamBriefMod");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine/brief me"));
+		var thing = await CreateThingAsync(testPlayer, TestIsolationHelpers.GenerateUniqueName("ExamBriefModThing"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"examine/brief {thing}"));
 
-		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Last modified:", StringComparison.Ordinal))).Count().IsEqualTo(1);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Last Modification:", StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
