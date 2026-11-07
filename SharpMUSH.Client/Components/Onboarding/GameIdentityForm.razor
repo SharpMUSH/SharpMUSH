@@ -29,10 +29,21 @@
                     @if (!MsspCatalog.Find("GENRE")!.Choices.Contains(_genres)) { <option value="@_genres" disabled>@_genres</option> }
                     @foreach (var choice in MsspCatalog.Find("GENRE")!.Choices) { <option value="@choice">@choice</option> }
                 </select></div>
-                <div><label for="guide-subgenres">@Loc["GuideIdentitySubgenres"]</label><select id="guide-subgenres" @bind="_subgenres" @bind:after="SubgenreChanged">
-                    @if (!MsspCatalog.Find("SUBGENRE")!.Choices.Contains(_subgenres)) { <option value="@_subgenres" disabled>@_subgenres</option> }
-                    @foreach (var choice in MsspCatalog.Find("SUBGENRE")!.Choices) { <option value="@choice">@choice</option> }
-                </select></div>
+                <div>
+                    <label for="guide-subgenres">@Loc["GuideIdentitySubgenres"]</label>
+                    <input id="guide-subgenres" list="guide-subgenre-suggestions" maxlength="@MsspCatalog.MaxValueLength"
+                           aria-describedby="@(HasCustomSubgenre ? "guide-subgenre-custom" : null)"
+                           @bind="_subgenres" @bind:event="oninput" @bind:after="SubgenreChanged" />
+                    <datalist id="guide-subgenre-suggestions">
+                        @foreach (var choice in MsspCatalog.Find("SUBGENRE")!.Choices) { <option value="@choice"></option> }
+                    </datalist>
+                    <div role="status">
+                        @if (HasCustomSubgenre)
+                        {
+                            <p id="guide-subgenre-custom" class="identity-advisory">@Loc["GuideIdentityCustomSubgenre"]</p>
+                        }
+                    </div>
+                </div>
             </div>
             <p>@Loc["GuideIdentityGenreHint"]</p>
             <label for="guide-art-style">@Loc["GuideIdentityStyle"]</label>
@@ -73,6 +84,8 @@
     private string _name = "", _introduction = "", _genres = "", _subgenres = "", _welcome = "", _rules = "", _character = "", _style = "minimalist", _override = "";
     private string[] _storedGenres = [], _storedSubgenres = [];
     private bool _genreChanged, _subgenreChanged;
+    private bool HasCustomSubgenre => (_subgenreChanged ? new[] { _subgenres } : _storedSubgenres)
+        .Any(value => !string.IsNullOrWhiteSpace(value) && !MsspCatalog.Find("SUBGENRE")!.Choices.Contains(value));
     private SharpieArt? PreviewArt => SharpieArtCatalog.Resolve(_style, _genres, _subgenres, _override, GuideImagery.Full, SharpieArtMoment.Welcome);
     private bool _loaded, _busy, _saved;
     private string? _error;
@@ -104,7 +117,7 @@
     private void SubgenreChanged() { _subgenreChanged = true; MarkDirty(); }
     private void AcceptGenres(OnboardingSettings settings)
     {
-        // The select's label is only a display value; it must never replace an untouched array.
+        // The fields' labels are display values; they must never replace untouched arrays.
         _storedGenres = [.. settings.Genres]; _storedSubgenres = [.. settings.Subgenres];
         _genres = _storedGenres.Length == 0 ? "None" : string.Join(" / ", _storedGenres);
         _subgenres = _storedSubgenres.Length == 0 ? "None" : string.Join(" / ", _storedSubgenres);

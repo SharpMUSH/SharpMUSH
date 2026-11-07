@@ -7870,7 +7870,7 @@
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenreHint" xml:space="preserve">
-    <value>Выберите жанр и поджанр игры по MSSP. Sharpie использует их для иллюстраций; если ничего не подходит, выберите «None».</value>
+    <value>Выберите жанр игры для MSSP. Выберите предложенный поджанр или введите свой. Sharpie использует эти значения для иллюстраций; выберите None, если ни один вариант не подходит.</value>
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenres" xml:space="preserve">
@@ -9460,5 +9460,8 @@
   <data name="MudTreeView_ExpandItem" xml:space="preserve">
     <value>Развернуть</value>
     <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityCustomSubgenre" xml:space="preserve">
+    <value>Этого поджанра нет в списке предложений MSSP. Можно использовать собственные значения.</value>
   </data>
 </root>

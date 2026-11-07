@@ -132,10 +132,11 @@ public class OnboardingSettingsControllerTests
 	}
 
 	[Test]
-	[Arguments("New custom value")]
+	[Arguments("")]
+	[Arguments("   ")]
 	[Arguments("High Fantasy\nCyberpunk")]
 	[Arguments("Space Opera\tInjected")]
-	public async Task RetainingMetadataDoesNotAllowNewUnlistedValues(string subgenres)
+	public async Task RetainingMetadataDoesNotAllowBlankMultipleOrControlValues(string subgenres)
 	{
 		var original = SharpMUSHOptions.Default() with { Mssp = new(new Dictionary<string, string[]> { ["SUBGENRE"] = ["Space Opera"] }) };
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
@@ -143,6 +144,72 @@ public class OnboardingSettingsControllerTests
 		var writer = Substitute.For<IConfigOptionWriter>();
 		var controller = new OnboardingSettingsController(options, writer, Substitute.For<IAuditLog>());
 		await Assert.That(await controller.Put(Request with { Subgenres = subgenres.Split('\n') }, default)).IsTypeOf<BadRequestObjectResult>();
+		await writer.DidNotReceive().UpdateAsync(Arg.Any<Func<SharpMUSHOptions, SharpMUSHOptions>>(), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	[Arguments("Space Opera")]
+	[Arguments("Space Opera / Detective")]
+	[Arguments("宇宙冒険")]
+	[Arguments("High Fantasy")]
+	public async Task NewCustomOrSuggestedSubgenreReplacesOnlyThatField(string subgenre)
+	{
+		var original = SharpMUSHOptions.Default() with
+		{
+			Mssp = new(new Dictionary<string, string[]> { ["genre"] = ["Custom genre"], ["subgenre"] = ["Cyberpunk", "Gothic"], ["CONTACT"] = ["staff@example.org"] })
+		};
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(original);
+		var writer = Substitute.For<IConfigOptionWriter>();
+		SharpMUSHOptions? saved = null;
+		writer.UpdateAsync(Arg.Any<Func<SharpMUSHOptions, SharpMUSHOptions>>(), Arg.Any<CancellationToken>())
+			.Returns(call => { saved = call.Arg<Func<SharpMUSHOptions, SharpMUSHOptions>>()(original); return saved; });
+		var controller = new OnboardingSettingsController(options, writer, Substitute.For<IAuditLog>())
+		{ ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
+		var request = Request with { Genres = ["Custom genre"], Subgenres = [subgenre] };
+		var result = await controller.Put(request, default);
+		await Assert.That(result).IsTypeOf<OkObjectResult>();
+		await Assert.That(((OnboardingSettings)((OkObjectResult)result).Value!).Subgenres).IsEquivalentTo(new[] { subgenre });
+		await Assert.That(saved!.Mssp.Variables["SUBGENRE"]).IsEquivalentTo(new[] { subgenre });
+		await Assert.That(saved.Mssp.Variables.ContainsKey("subgenre")).IsFalse();
+		await Assert.That(saved.Mssp.Variables["genre"]).IsEquivalentTo(new[] { "Custom genre" });
+		await Assert.That(saved.Mssp.Variables["CONTACT"]).IsEquivalentTo(new[] { "staff@example.org" });
+	}
+
+	[Test]
+	[Arguments(512, true)]
+	[Arguments(513, false)]
+	public async Task NewSubgenreKeepsTheMsspLengthLimit(int length, bool accepted)
+	{
+		var original = SharpMUSHOptions.Default();
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(original);
+		var writer = Substitute.For<IConfigOptionWriter>();
+		writer.UpdateAsync(Arg.Any<Func<SharpMUSHOptions, SharpMUSHOptions>>(), Arg.Any<CancellationToken>())
+			.Returns(call => call.Arg<Func<SharpMUSHOptions, SharpMUSHOptions>>()(original));
+		var controller = new OnboardingSettingsController(options, writer, Substitute.For<IAuditLog>())
+		{ ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
+		var result = await controller.Put(Request with { Subgenres = [new string('x', length)] }, default);
+		await Assert.That(result is OkObjectResult).IsEqualTo(accepted);
+		if (!accepted)
+		{
+			await Assert.That(result).IsTypeOf<BadRequestObjectResult>();
+			await writer.DidNotReceive().UpdateAsync(Arg.Any<Func<SharpMUSHOptions, SharpMUSHOptions>>(), Arg.Any<CancellationToken>());
+		}
+	}
+
+	[Test]
+	[Arguments("\n")]
+	[Arguments("\r")]
+	[Arguments("\0")]
+	public async Task NewScalarSubgenreCannotContainControlCharacters(string control)
+	{
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(SharpMUSHOptions.Default());
+		var writer = Substitute.For<IConfigOptionWriter>();
+		var controller = new OnboardingSettingsController(options, writer, Substitute.For<IAuditLog>());
+		var result = await controller.Put(Request with { Subgenres = ["Space" + control + "Western"] }, default);
+		await Assert.That(result).IsTypeOf<BadRequestObjectResult>();
 		await writer.DidNotReceive().UpdateAsync(Arg.Any<Func<SharpMUSHOptions, SharpMUSHOptions>>(), Arg.Any<CancellationToken>());
 	}
 

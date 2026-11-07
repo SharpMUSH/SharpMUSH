@@ -17,8 +17,7 @@ public class SetupIdentityTests : BunitContext
 	[Arguments("Fantasy\nHorror", "High Fantasy")]
 	[Arguments("Unlisted genre", "High Fantasy")]
 	[Arguments("Fantasy", "High Fantasy\nCyberpunk")]
-	[Arguments("Fantasy", "Unlisted subgenre")]
-	public async Task SettingsRejectNewNonCatalogOrMultipleChoices(string genres, string subgenres)
+	public async Task SettingsRejectNewNonCatalogGenresOrMultipleChoices(string genres, string subgenres)
 	{
 		var writer = NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConfigOptionWriter>();
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
@@ -101,7 +100,7 @@ public class SetupIdentityTests : BunitContext
 		await form.Find(".identity-save").ClickAsync();
 		await Assert.That(handler.Saved!.Genres).IsEquivalentTo(new[] { "Horror" });
 		await Assert.That(handler.Saved.Subgenres).IsEquivalentTo(new[] { "Space Opera", "Cyberpunk" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
-		await form.Find("#guide-subgenres").ChangeAsync("None");
+		await form.Find("#guide-subgenres").InputAsync("None");
 		await form.Find(".identity-save").ClickAsync();
 		await form.Find("#guide-introduction").InputAsync("After replacing the subgenre");
 		await form.Find(".identity-save").ClickAsync();
@@ -137,17 +136,71 @@ public class SetupIdentityTests : BunitContext
 		Services.AddLocalization();
 		var form = Render<GameIdentityForm>();
 		form.WaitForElement("#guide-subgenres");
-		await form.Find("#guide-subgenres").ChangeAsync("High Fantasy");
+		await form.Find("#guide-subgenres").InputAsync("Space Western");
 		await form.Find(".identity-save").ClickAsync();
 		await Assert.That(form.FindAll("[role=alert]").Count).IsEqualTo(1);
 		await form.Find(".identity-save").ClickAsync();
 		await Assert.That(handler.Saved!.Genres).IsEquivalentTo(new[] { "Custom genre", "Horror" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
-		await Assert.That(handler.Saved.Subgenres).IsEquivalentTo(new[] { "High Fantasy" });
+		await Assert.That(handler.Saved.Subgenres).IsEquivalentTo(new[] { "Space Western" });
 		await Assert.That(form.FindAll("[role=alert]").Count).IsEqualTo(0);
 		await form.Find("#guide-introduction").InputAsync("After retrying");
 		await form.Find(".identity-save").ClickAsync();
 		await Assert.That(handler.Saved!.Genres).IsEquivalentTo(new[] { "Custom genre", "Horror" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
-		await Assert.That(handler.Saved.Subgenres).IsEquivalentTo(new[] { "High Fantasy" });
+		await Assert.That(handler.Saved.Subgenres).IsEquivalentTo(new[] { "Space Western" });
+	}
+
+	[Test]
+	public async Task CustomSubgenreNoticeIsAdvisoryAndTheValueSurvivesSavesAndReload()
+	{
+		using var handler = new Handler();
+		handler.Settings = handler.Settings with { Genres = ["Custom genre", "Horror"] };
+		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
+		Services.AddSingleton<ServerInfoService>();
+		Services.AddLocalization();
+		var form = Render<GameIdentityForm>();
+		var input = form.WaitForElement("#guide-subgenres");
+		await Assert.That(input.TagName).IsEqualTo("INPUT");
+		await Assert.That(input.GetAttribute("maxlength")).IsEqualTo("512");
+		await Assert.That(input.GetAttribute("list")).IsEqualTo("guide-subgenre-suggestions");
+		await Assert.That(form.FindAll("#guide-subgenre-suggestions option").Select(option => option.GetAttribute("value"))).Contains("High Fantasy");
+		await Assert.That(form.FindAll("#guide-subgenre-custom").Count).IsEqualTo(0);
+		await input.InputAsync("Space Opera / Detective");
+		await Assert.That(form.Find("#guide-subgenre-custom").TextContent).Contains("Custom values are allowed");
+		await Assert.That(input.GetAttribute("aria-describedby")).IsEqualTo("guide-subgenre-custom");
+		await Assert.That(form.FindAll("[role=alert]").Count).IsEqualTo(0);
+		await Assert.That(form.Find(".identity-save").GetAttribute("aria-disabled")).IsEqualTo("false");
+		await form.Find(".identity-save").ClickAsync();
+		await Assert.That(handler.Saved!.Subgenres).IsEquivalentTo(new[] { "Space Opera / Detective" });
+		await Assert.That(handler.Saved.Genres).IsEquivalentTo(new[] { "Custom genre", "Horror" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await form.Find("#guide-introduction").InputAsync("An unrelated edit after saving");
+		await form.Find(".identity-save").ClickAsync();
+		await Assert.That(handler.Saved!.Subgenres).IsEquivalentTo(new[] { "Space Opera / Detective" });
+		form.Dispose();
+		var reloaded = Render<GameIdentityForm>();
+		input = reloaded.WaitForElement("#guide-subgenres");
+		await Assert.That(input.GetAttribute("value")).IsEqualTo("Space Opera / Detective");
+		await Assert.That(reloaded.FindAll("#guide-subgenre-custom").Count).IsEqualTo(1);
+		await input.InputAsync("High Fantasy");
+		await Assert.That(reloaded.FindAll("#guide-subgenre-custom").Count).IsEqualTo(0);
+		await Assert.That(input.GetAttribute("aria-describedby")).IsNull();
+		await reloaded.Find(".identity-save").ClickAsync();
+		await Assert.That(handler.Saved!.Subgenres).IsEquivalentTo(new[] { "High Fantasy" });
+	}
+
+	[Test]
+	[Arguments("High Fantasy\nCyberpunk", false)]
+	[Arguments("Space Opera\nCyberpunk", true)]
+	[Arguments("", false)]
+	public async Task CustomSubgenreNoticeChecksStoredValuesRatherThanTheirJoinedLabel(string subgenres, bool expectedNotice)
+	{
+		using var handler = new Handler();
+		handler.Settings = handler.Settings with { Subgenres = subgenres == "" ? [] : subgenres.Split('\n') };
+		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
+		Services.AddSingleton<ServerInfoService>();
+		Services.AddLocalization();
+		var form = Render<GameIdentityForm>();
+		form.WaitForElement("#guide-subgenres");
+		await Assert.That(form.FindAll("#guide-subgenre-custom").Count > 0).IsEqualTo(expectedNotice);
 	}
 	private sealed class Factory(HttpMessageHandler handler) : IHttpClientFactory
 	{
@@ -180,7 +233,7 @@ public class SetupIdentityTests : BunitContext
 		var form = Render<GameIdentityForm>();
 		form.WaitForElement("#guide-game-name");
 		await Assert.That(form.Find("#guide-genres").TagName).IsEqualTo("SELECT");
-		await Assert.That(form.Find("#guide-subgenres").TagName).IsEqualTo("SELECT");
+		await Assert.That(form.Find("#guide-subgenres").TagName).IsEqualTo("INPUT");
 		await Assert.That(form.FindAll("#guide-genres option").Select(option => option.TextContent)).Contains("Science Fiction");
 		await Assert.That(form.Find("#guide-game-name").GetAttribute("value")).IsEqualTo("Imported world");
 		await Assert.That(handler.Writes).IsEqualTo(0);

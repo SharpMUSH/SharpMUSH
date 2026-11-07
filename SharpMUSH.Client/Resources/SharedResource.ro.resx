@@ -7870,7 +7870,7 @@
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenreHint" xml:space="preserve">
-    <value>Alegeți genul și subgenul MSSP ale jocului. Sharpie folosește aceste selecții pentru ilustrații; alegeți None când niciunul nu se potrivește.</value>
+    <value>Alegeți genul MSSP al jocului. Selectați un subgen sugerat sau introduceți unul propriu. Sharpie folosește aceste valori pentru ilustrații; alegeți None dacă niciunul nu se aplică.</value>
     <comment>MT — None kept: literal MSSP value shown in the select</comment>
   </data>
   <data name="GuideIdentityGenres" xml:space="preserve">
@@ -9460,5 +9460,8 @@
   <data name="MudTreeView_ExpandItem" xml:space="preserve">
     <value>Extindere</value>
     <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityCustomSubgenre" xml:space="preserve">
+    <value>Acest subgen nu se află în lista de sugestii MSSP. Sunt permise valori personalizate.</value>
   </data>
 </root>

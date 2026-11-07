@@ -34,7 +34,7 @@ public sealed class OnboardingSettingsController(IOptionsWrapper<SharpMUSHOption
 		var saved = await writer.UpdateAsync(current =>
 		{
 			// Leave untouched metadata in the writer's current snapshot, including its original values
-			// and spelling. Only an explicit new catalog choice replaces a field.
+			// and spelling. Only an explicit new choice or custom subgenre replaces a field.
 			var variables = current.Mssp.Variables.Where(pair => (keepGenres || !string.Equals(pair.Key, "GENRE", StringComparison.OrdinalIgnoreCase))
 				&& (keepSubgenres || !string.Equals(pair.Key, "SUBGENRE", StringComparison.OrdinalIgnoreCase))).ToDictionary(pair => pair.Key, pair => pair.Value);
 			if (!keepGenres) variables["GENRE"] = [.. request.Genres];
@@ -58,7 +58,7 @@ public sealed class OnboardingSettingsController(IOptionsWrapper<SharpMUSHOption
 	private static bool Valid(OnboardingSettings settings, SharpMUSHOptions current)
 		=> Text(settings.MudName, 128) && !string.IsNullOrWhiteSpace(settings.MudName)
 			&& settings.Introduction is { Length: <= 1000 } && !settings.Introduction.Any(c => char.IsControl(c) && c is not '\n' and not '\r' and not '\t')
-			&& ChoiceOrUnchanged("GENRE", settings.Genres, current) && ChoiceOrUnchanged("SUBGENRE", settings.Subgenres, current)
+			&& ChoiceOrUnchanged("GENRE", settings.Genres, current) && SubgenreOrUnchanged(settings.Subgenres, current)
 			&& Page(settings.WelcomePage) && Page(settings.RulesPage) && Page(settings.CharacterGuidePage)
 			&& SharpieArtCatalog.Styles.Contains(settings.ArtStyle)
 			&& (settings.ArtOverrideId == "" || SharpieArtCatalog.Approved.Any(art => art.Id == settings.ArtOverrideId && art.Style == settings.ArtStyle));
@@ -67,6 +67,9 @@ public sealed class OnboardingSettingsController(IOptionsWrapper<SharpMUSHOption
 	private static bool ChoiceOrUnchanged(string variable, string[]? values, SharpMUSHOptions current)
 		=> values is not null && (values.SequenceEqual(ValuesOf(current, variable))
 			|| values is { Length: 1 } && MsspCatalog.Find(variable)!.Choices.Contains(values[0]));
+	private static bool SubgenreOrUnchanged(string[]? values, SharpMUSHOptions current)
+		=> values is not null && (values.SequenceEqual(ValuesOf(current, "SUBGENRE"))
+			|| values is { Length: 1 } && Text(values[0], MsspCatalog.MaxValueLength) && !string.IsNullOrWhiteSpace(values[0]));
 	private static bool Page(string? value) => value == "" || OnboardingPresentationService.TryPage(value, out _, out _);
 	private static string[] ValuesOf(SharpMUSHOptions current, string key) => current.Mssp.Variables
 		.FirstOrDefault(pair => string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase)).Value ?? [];
