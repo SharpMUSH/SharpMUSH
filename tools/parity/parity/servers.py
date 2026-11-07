@@ -183,6 +183,10 @@ class PennMush:
                 line = f"port {self.port}"
             elif line.startswith("ssl_port "):
                 line = "ssl_port 0"
+            elif line.startswith("paycheck "):
+                # check_last pays a player on a login whose date differs from LAST's (player.c),
+                # so a run that crosses midnight would change every penny balance it prints.
+                line = "paycheck 0"
             lines.append(line)
         cnf.write_text("\n".join(lines) + "\n", encoding="utf-8")
         # --disable-socket-quota: netmud allows a connection 100 commands then 1 per second (a
