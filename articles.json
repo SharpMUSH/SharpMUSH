@@ -637,6 +637,14 @@
     "file": "bit-locks.md"
   },
   {
+    "id": "blacklist-command",
+    "lookup": "@blacklist",
+    "title": "@blacklist",
+    "aliases": [],
+    "sections": [],
+    "file": "blacklist-command.md"
+  },
+  {
     "id": "boolean-values",
     "lookup": "boolean values",
     "title": "Boolean Values",
@@ -1172,6 +1180,16 @@
       }
     ],
     "file": "clients.md"
+  },
+  {
+    "id": "cloak-function",
+    "lookup": "cloak()",
+    "title": "cloak()",
+    "aliases": [
+      "cloak"
+    ],
+    "sections": [],
+    "file": "cloak-function.md"
   },
   {
     "id": "clone-command",
@@ -3242,6 +3260,16 @@
     "file": "fold-function.md"
   },
   {
+    "id": "folder-command",
+    "lookup": "@folder",
+    "title": "@folder",
+    "aliases": [
+      "@mux_folder"
+    ],
+    "sections": [],
+    "file": "folder-command.md"
+  },
+  {
     "id": "force-command",
     "lookup": "@force",
     "title": "@force",
@@ -4937,6 +4965,16 @@
     "file": "list-separators.md"
   },
   {
+    "id": "listcommands-function",
+    "lookup": "listcommands()",
+    "title": "listcommands()",
+    "aliases": [
+      "listcommands"
+    ],
+    "sections": [],
+    "file": "listcommands-function.md"
+  },
+  {
     "id": "listdiff-function",
     "lookup": "listdiff()",
     "title": "listdiff()",
@@ -4995,6 +5033,16 @@
       }
     ],
     "file": "listening.md"
+  },
+  {
+    "id": "listflags-function",
+    "lookup": "listflags()",
+    "title": "listflags()",
+    "aliases": [
+      "listflags"
+    ],
+    "sections": [],
+    "file": "listflags-function.md"
   },
   {
     "id": "literal-command",
@@ -5269,6 +5317,14 @@
     "file": "look.md"
   },
   {
+    "id": "lpage-command",
+    "lookup": "lpage",
+    "title": "lpage",
+    "aliases": [],
+    "sections": [],
+    "file": "lpage-command.md"
+  },
+  {
     "id": "lsearch-function",
     "lookup": "lsearch()",
     "title": "lsearch()",
@@ -5344,6 +5400,16 @@
       }
     ],
     "file": "mail-other.md"
+  },
+  {
+    "id": "mailalias-function",
+    "lookup": "mailalias()",
+    "title": "mailalias()",
+    "aliases": [
+      "mailalias"
+    ],
+    "sections": [],
+    "file": "mailalias-function.md"
   },
   {
     "id": "malias-command",
@@ -5655,6 +5721,14 @@
       }
     ],
     "file": "movement.md"
+  },
+  {
+    "id": "mrpage-command",
+    "lookup": "mrpage",
+    "title": "mrpage",
+    "aliases": [],
+    "sections": [],
+    "file": "mrpage-command.md"
   },
   {
     "id": "munge-function",
@@ -7589,6 +7663,14 @@
       }
     ],
     "file": "roll-records.md"
+  },
+  {
+    "id": "rollback-command",
+    "lookup": "@rollback",
+    "title": "@rollback",
+    "aliases": [],
+    "sections": [],
+    "file": "rollback-command.md"
   },
   {
     "id": "rollinfo-function",
@@ -14771,6 +14853,16 @@
     "file": "sharpwiki.md"
   },
   {
+    "id": "site-command",
+    "lookup": "@site",
+    "title": "@site",
+    "aliases": [
+      "@rhost_site"
+    ],
+    "sections": [],
+    "file": "site-command.md"
+  },
+  {
     "id": "sitelock-command",
     "lookup": "@sitelock",
     "title": "@sitelock",
@@ -14804,6 +14896,16 @@
       }
     ],
     "file": "sitelock-command.md"
+  },
+  {
+    "id": "size-function",
+    "lookup": "size()",
+    "title": "size()",
+    "aliases": [
+      "size"
+    ],
+    "sections": [],
+    "file": "size-function.md"
   },
   {
     "id": "object-snapshots",
@@ -15161,6 +15263,16 @@
     ],
     "sections": [],
     "file": "strfunc-function.md"
+  },
+  {
+    "id": "strlenraw-function",
+    "lookup": "strlenraw()",
+    "title": "strlenraw()",
+    "aliases": [
+      "strlenraw"
+    ],
+    "sections": [],
+    "file": "strlenraw-function.md"
   },
   {
     "id": "subeval-function",
@@ -15632,6 +15744,16 @@
     "file": "topics.md"
   },
   {
+    "id": "totcmds-function",
+    "lookup": "totcmds()",
+    "title": "totcmds()",
+    "aliases": [
+      "totcmds"
+    ],
+    "sections": [],
+    "file": "totcmds-function.md"
+  },
+  {
     "id": "totmember-function",
     "lookup": "totmember()",
     "title": "totmember()",
@@ -15895,6 +16017,16 @@
       }
     ],
     "file": "valid-function.md"
+  },
+  {
+    "id": "vattrcnt-function",
+    "lookup": "vattrcnt()",
+    "title": "vattrcnt()",
+    "aliases": [
+      "vattrcnt"
+    ],
+    "sections": [],
+    "file": "vattrcnt-function.md"
   },
   {
     "id": "verb-command",
