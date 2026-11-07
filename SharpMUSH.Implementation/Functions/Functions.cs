@@ -11,7 +11,7 @@ using SharpMUSH.Messaging.Abstractions;
 
 namespace SharpMUSH.Implementation.Functions;
 
-public partial class Functions : ILibraryProvider<FunctionDefinition>
+public partial class Functions : ILibraryProvider<FunctionDefinition>, IConfiguredAliasRegistry
 {
 	/// <summary>Evaluate an argument in this function's current (possibly localized) scope without
 	/// charging its evaluation to the function's own-time metric.</summary>
@@ -140,13 +140,41 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		{
 			_functionLibrary.Add(command.Key, (command.Value, true));
 			_functionLibrary.ReserveSystemName(command.Key);
+		}
 
-			foreach (var alias in Configuration.CurrentValue.Alias.FunctionAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
+		RegisterConfiguredAliases(Configuration.CurrentValue.Alias);
+	}
+
+	/// <summary>
+	/// Adds the configured function aliases to the live table. Run at construction and again whenever the
+	/// configuration changes (<see cref="IConfiguredAliasRegistry"/>). An alias already there for the same built-in
+	/// is left alone; one taken by anything else is logged.
+	/// </summary>
+	public bool RegisterConfiguredAliases(AliasOptions aliases)
+	{
+		var added = false;
+		foreach (var command in Builtins)
+		{
+			foreach (var alias in aliases.FunctionAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
 			{
-				_functionLibrary.Add(alias, (command.Value, true));
-				_functionLibrary.ReserveSystemName(alias);
+				if (_functionLibrary.TryAdd(alias, (command.Value, true)))
+				{
+					_functionLibrary.ReserveSystemName(alias);
+					added = true;
+					continue;
+				}
+
+				if (_functionLibrary.TryGetValue(alias, out var existing)
+					&& ReferenceEquals(existing.LibraryInformation.Attribute, command.Value.Attribute))
+				{
+					continue;
+				}
+
+				Logger.LogWarning("Function alias {Alias} for {Target} is not registered: {Alias} is already a function", alias, command.Key, alias);
 			}
 		}
+
+		return added;
 	}
 
 	/// <summary>
