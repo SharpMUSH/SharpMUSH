@@ -82,7 +82,7 @@ A role after a `/` gives an override a reach: it applies only to targets whose o
 - A Deny with a reach applies to targets ranked at or above the role. If Ana's account allows `game.tport_anything`, `@permission/deny Ana=game.tport_anything/wizard` stops Ana teleporting what wizards own, and leaves the rest alone.
 - Outside its reach an override does nothing: the account's override decides, then the roles.
 
-Only `control.all`, `game.tport_anything` and `game.tport_anywhere` take a reach. Wizards and royalty teleport anything anywhere without the powers, so a reach does not limit them. A check with no target ranks it as `player`. A reach naming a role that was deleted allows nothing and denies everything. Granting an Allow with a reach needs that permission at the reach's rank. `examine` shows a reach as `<permission>/<role>`; clearing an override clears it.
+Only permissions that act on a target take a reach: `control.all`, the teleport powers and the staff permissions of [roles staff]. Wizards and royalty teleport without the powers, so a reach does not limit them. A check with no target ranks it as `player`. A reach naming a deleted role allows nothing and denies everything. Granting an Allow with a reach needs that permission at the reach's rank. `examine` shows a reach as `<permission>/<role>`.
 
 ### Examples
 

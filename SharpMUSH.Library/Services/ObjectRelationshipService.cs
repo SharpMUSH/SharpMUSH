@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -33,7 +34,8 @@ public class ObjectRelationshipService(
 	}
 
 	/// <summary>
-	/// PennMUSH's <c>chown_ok</c> (<c>src/set.c:243-290</c>). A wizard may give anything to anyone.
+	/// PennMUSH's <c>chown_ok</c> (<c>src/set.c:243-290</c>). A holder of <c>game.chown.any</c> may give anything to
+	/// anyone, and a holder of <c>game.chown.self</c> take anything for its owner.
 	/// Anyone else must control <paramref name="newOwner"/>, or it must be a Zone Master (SHARED) whose
 	/// zone lock they pass; and then they must own <paramref name="obj"/>, or control its owner while
 	/// that owner passes the Zone Master's lock, or <paramref name="obj"/> must be CHOWN_OK, carried if
@@ -44,12 +46,21 @@ public class ObjectRelationshipService(
 
 	public async ValueTask<Permission> ChownPermission(AnySharpObject executor, AnySharpObject obj, SharpPlayer newOwner)
 	{
-		if (await executor.IsWizard())
+		var receiver = new AnySharpObject(newOwner);
+
+		// game.chown.any gives anything to anyone; game.chown.self takes anything for the executor's own owner. Each
+		// reaches the object's owner (and game.chown.any the new owner) as RhostMUSH ranks CHOWN_OTHER and CHOWN_ME.
+		if (await executor.CanOver(PortalPermission.ChownAny, obj) && await executor.CanOver(PortalPermission.ChownAny, receiver))
 		{
 			return new Success();
 		}
 
-		var receiver = new AnySharpObject(newOwner);
+		var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+		if (executorOwner.Object.DBRef == newOwner.Object.DBRef && await executor.CanOver(PortalPermission.ChownSelf, obj))
+		{
+			return new Success();
+		}
+
 		var zoneMaster = await receiver.HasFlag("SHARED");
 		if (!await permissionService.Controls(executor, receiver)
 			&& !(zoneMaster && await permissionService.PassesLock(executor, receiver, LockType.Zone)))
@@ -70,7 +81,8 @@ public class ObjectRelationshipService(
 		}
 
 		if (obj is SharpThing thing
-				&& (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef != executor.Object().DBRef)
+				&& (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef != executor.Object().DBRef
+				&& !await executor.CanOver(PortalPermission.ChownSelf, obj))
 		{
 			return new PermissionRefusal(nameof(Definitions.ErrorMessages.Notifications.PermissionDeniedChownCarry),
 				Definitions.ErrorMessages.Notifications.PermissionDeniedChownCarry, obj.Object().Name);

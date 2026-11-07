@@ -635,6 +635,7 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedFlagRestricted = "Permission denied. The {0} flag is restricted to: {1}.";
 		public const string PermissionDeniedGagWizard = "Permission denied. A wizard cannot be gagged.";
+		public const string PermissionDeniedShielded = "Permission denied. {0} holds {1}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedLinkedExit = "Permission denied. You do not control {0}, and it already leads somewhere.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

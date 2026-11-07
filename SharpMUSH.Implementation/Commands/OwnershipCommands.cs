@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -54,13 +55,13 @@ public partial class Commands
 			return await NotifyService.PermissionDenied(executor, refusal);
 		}
 
-		if (obj is SharpThing thing && !await executor.IsPriv()
+		if (obj is SharpThing thing && !await executor.IsPriv() && !await executor.CanOver(PortalPermission.ChownSelf, obj)
 			&& (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef != executor.Object().DBRef)
 		{
 			return await Refused(nameof(ErrorMessages.Notifications.MustCarryToChown));
 		}
 
-		if (preserve && !await executor.IsWizard())
+		if (preserve && !await executor.CanOver(PortalPermission.ChownAny, obj))
 		{
 			return await Refused(nameof(ErrorMessages.Notifications.ChownPreserveIsForWizards));
 		}
@@ -118,7 +119,7 @@ public partial class Commands
 	/// </summary>
 	private async ValueTask ResetForNewOwnerAsync(AnySharpObject executor, AnySharpObject obj, SharpObject newOwner)
 	{
-		await PrivilegeHelpers.ResetForNewOwnerAsync(Mediator, FlagAndPowerService, executor, obj);
+		await PrivilegeHelpers.ResetForNewOwnerAsync(Mediator, obj);
 		await HaltQueuesAsync(obj, newOwner);
 	}
 
@@ -173,7 +174,7 @@ public partial class Commands
 		};
 
 	[SharpCommand(Name = "@CHOWNALL", Switches = ["PRESERVE", "THINGS", "ROOMS", "EXITS"],
-		Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD", MinArgs = 1, MaxArgs = 2, ParameterNames = ["old-owner", "new-owner"])]
+		Behavior = CB.Default | CB.EqSplit, CommandLock = "PERM^game.chown.any", MinArgs = 1, MaxArgs = 2, ParameterNames = ["old-owner", "new-owner"])]
 	public async ValueTask<Option<CallState>> Chown(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -213,6 +214,12 @@ public partial class Commands
 					return error.Value;
 			}
 		}
+
+		// The command lock asked for game.chown.any at no rank; a reach is judged against both owners here.
+		if (!await executor.CanOver(PortalPermission.ChownAny, new AnySharpObject(oldOwner)))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.NotControlled(new AnySharpObject(oldOwner), PortalPermission.ChownAny));
+		if (!await executor.CanOver(PortalPermission.ChownAny, newOwner))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.NotControlled(newOwner, PortalPermission.ChownAny));
 
 		var chownThings = switches.Contains("THINGS") || (!switches.Contains("ROOMS") && !switches.Contains("EXITS"));
 		var chownRooms = switches.Contains("ROOMS") || (!switches.Contains("THINGS") && !switches.Contains("EXITS"));

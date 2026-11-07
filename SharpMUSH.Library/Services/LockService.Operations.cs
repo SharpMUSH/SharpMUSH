@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -138,7 +139,7 @@ public partial class LockService
 		if (!await permissions.Value.Controls(executor, target)) return Refused(ErrorMessages.Notifications.PermissionDeniedLockNotControlled);
 		if (executor.IsGod()) return new Success();
 		if (target.IsGod()) return Refused(ErrorMessages.Notifications.PermissionDeniedLockOfGod);
-		if (await executor.IsWizard()) return new Success();
+		if (await executor.CanOver(PortalPermission.Override, target)) return new Success();
 		if (data.Flags.HasFlag(LockFlags.Wizard)) return Refused(ErrorMessages.Notifications.PermissionDeniedLockWizard);
 		var owner = await target.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 		if (data.Flags.HasFlag(LockFlags.Owner) && executor.Object().DBRef != owner.Object.DBRef)
