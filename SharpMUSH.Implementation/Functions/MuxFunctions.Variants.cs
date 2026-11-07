@@ -1,8 +1,10 @@
+using System.Globalization;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -41,8 +43,9 @@ public partial class Functions
 		player = player.TrimStart('*');
 		var found = player.Length == 0 || player != player.Trim() ? null
 			: player.StartsWith('#')
-				? long.TryParse(player[1..], out _)
-					&& await LocateService.Locate(parser, executor, executor, player, LocateFlags.All) is AnySharpObject obj
+				? long.TryParse(player[1..], NumberStyles.AllowLeadingWhite | NumberStyles.AllowLeadingSign,
+						CultureInfo.InvariantCulture, out var number)
+					&& await LocateService.Locate(parser, executor, executor, $"#{number}", LocateFlags.All) is AnySharpObject obj
 					&& (obj.IsPlayer || executor.IsGod()) ? obj : null
 				: await LocateService.Locate(parser, executor, executor, player, PlayerNameFlags) is AnySharpObject match
 					&& match.IsPlayer ? match : null;
@@ -81,7 +84,18 @@ public partial class Functions
 	/// </summary>
 	[SharpFunction(Name = "subeval", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public async ValueTask<CallState> SubstitutionEvaluate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> new(await SubstitutionsEvaluated(parser, parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty));
+		=> new(await SubstitutionsEvaluated(parser, parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty,
+			ExecutorAttribute));
+
+	/// <summary>The executor's attribute <paramref name="name"/> as <c>%=&lt;name&gt;</c> reads it, or nothing.</summary>
+	private async ValueTask<MString> ExecutorAttribute(IMUSHCodeParser parser, string name)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		return await AttributeService.GetAttributeAsync(executor, executor, name, IAttributeService.AttributeMode.Read)
+			is SharpAttribute[] attribute
+			? attribute.Last().Value
+			: MarkupText.Empty;
+	}
 
 	/// <summary>
 	/// <paramref name="code"/> read token by token as TinyMUX's scanner reads it (<c>ast_scan.rl</c>), with each
@@ -90,7 +104,8 @@ public partial class Functions
 	/// open is closed at the end. A substitution SharpMUSH also has is evaluated alone by the parser and takes the
 	/// markup of the text it replaces; the rest is cut from the code, which keeps its markup and its points.
 	/// </summary>
-	private static async ValueTask<MString> SubstitutionsEvaluated(IMUSHCodeParser parser, MString code)
+	private static async ValueTask<MString> SubstitutionsEvaluated(IMUSHCodeParser parser, MString code,
+		Func<IMUSHCodeParser, string, ValueTask<MString>> attribute)
 	{
 		var raw = code.Text;
 		var point = Points(code);
@@ -110,7 +125,7 @@ public partial class Functions
 			else
 			{
 				output.Add(code.Substring(start, i - start));
-				output.Add(c == '\\' ? code.Substring(i + 1, length - 1) : await Substituted(parser, code, point, i, length));
+				output.Add(c == '\\' ? code.Substring(i + 1, length - 1) : await Substituted(parser, code, point, i, length, attribute));
 				start = i + length;
 			}
 
@@ -163,7 +178,7 @@ public partial class Functions
 	/// what SharpMUSH's own substitution gives.
 	/// </summary>
 	private static async ValueTask<MString> Substituted(IMUSHCodeParser parser, MString code, bool[] point, int at,
-		int length)
+		int length, Func<IMUSHCodeParser, string, ValueTask<MString>> attribute)
 	{
 		var token = code.Text.Substring(at, length);
 		if (length == 1) return code.Substring(at, 1);
@@ -174,14 +189,14 @@ public partial class Functions
 		var letter = char.ToUpperInvariant(token[1]);
 		var asWritten = length >= 3 && (letter is 'C' or 'X' && point[at + 2]
 			|| token[2] == '<' && token[^1] != '>' && (letter is 'Q' or 'C' or 'X' || letter == '=' && length >= 4));
-		var value = await TokenValue(parser, code, point, at, length);
+		var value = await TokenValue(parser, code, point, at, length, attribute);
 		return asWritten ? value
 			: MarkupText.Concat([value, .. Enumerable.Range(at, length).Where(index => point[index]).Select(index => code.Substring(index, 1))]);
 	}
 
 	/// <summary><see cref="Substituted"/>'s value for a token whose second character is not a point.</summary>
 	private static async ValueTask<MString> TokenValue(IMUSHCodeParser parser, MString code, bool[] point, int at,
-		int length)
+		int length, Func<IMUSHCodeParser, string, ValueTask<MString>> attribute)
 	{
 		var token = code.Text.Substring(at, length);
 		var named = length >= 3 && token[2] == '<';
@@ -198,7 +213,9 @@ public partial class Functions
 				: MarkupText.Empty,
 			'Q' => length == 3 && char.IsAsciiLetterOrDigit(token[2]) ? await Evaluated(parser, code, at, length) : MarkupText.Empty,
 			'=' when named && length >= 4 => !closed ? code.Substring(at, length)
-				: AttributeName().IsMatch(name) ? await Evaluated(parser, code, at, length) : MarkupText.Empty,
+				: AttributeName().IsMatch(name)
+					? Styled(code, at, length, await attribute(parser, name))
+					: MarkupText.Empty,
 			'=' or 'L' => MarkupText.Empty,
 			'C' or 'X' when named && !closed => code.Substring(at, length),
 			'C' or 'X' when length == 3 && point[at + 2] => code.Substring(at + 2, 1),
@@ -210,15 +227,24 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// The substitution token at <paramref name="at"/> evaluated alone, in the markup of the text it replaces: the
-	/// value is inserted after the token's first character, where it takes that character's markup, and the token is
-	/// then removed around it.
+	/// The substitution token at <paramref name="at"/> (or <paramref name="written"/> in its place) evaluated alone
+	/// by the parser, in the markup of the text it replaces.
 	/// </summary>
 	private static async ValueTask<MString> Evaluated(IMUSHCodeParser parser, MString code, int at, int length,
 		string? written = null)
 	{
+		var value = (await parser.FunctionParse(MarkupText.Plain(written ?? code.Text.Substring(at, length))))?.Message
+			?? MarkupText.Empty;
+		return Styled(code, at, length, value);
+	}
+
+	/// <summary>
+	/// <paramref name="value"/> in the markup of the token it replaces: inserted after the token's first character,
+	/// where it takes that character's markup, with the token then removed around it.
+	/// </summary>
+	private static MString Styled(MString code, int at, int length, MString value)
+	{
 		var token = code.Substring(at, length);
-		var value = (await parser.FunctionParse(MarkupText.Plain(written ?? token.Text)))?.Message ?? MarkupText.Empty;
 		return value.Text.Length == 0 ? value
 			: token.Insert(1, value).Remove(1 + value.Text.Length, length - 1).Remove(0, 1);
 	}
@@ -247,8 +273,11 @@ public partial class Functions
 		return point;
 	}
 
-	/// <summary>An attribute name as <c>%=&lt;name&gt;</c> reads one.</summary>
-	[System.Text.RegularExpressions.GeneratedRegex(@"^[A-Za-z_][A-Za-z0-9_\-.`']*$")]
+	/// <summary>
+	/// An attribute name as <c>%=&lt;name&gt;</c> reads one: TinyMUX's <c>mux_isattrnameinitial</c> for the first
+	/// character and <c>mux_isattrname</c> for the rest.
+	/// </summary>
+	[System.Text.RegularExpressions.GeneratedRegex(@"^[#.A-Za-z_~\p{L}][!#$&'()+\-./0-9<=>?@A-Za-z^_`~\p{L}]*$")]
 	private static partial System.Text.RegularExpressions.Regex AttributeName();
 
 	/// <summary>

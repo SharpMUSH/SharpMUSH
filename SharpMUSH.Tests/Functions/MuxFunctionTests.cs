@@ -162,6 +162,18 @@ public class MuxFunctionTests : ServerTestBase
 		await Assert.That(await Eval($"u({thing}/FN,zero,one)")).IsEqualTo("one|one|one||zero");
 	}
 
+	/// <summary>subeval() reads <c>%=&lt;name&gt;</c> for any name TinyMUX allows, and gives nothing for one it does not.</summary>
+	[Test]
+	public async Task SubevalReadsAttributeNamesAsTinyMux()
+	{
+		var thing = await Eval($"create({TestIsolationHelpers.GenerateUniqueName("MuxSubevalAttr")})");
+		await Eval($"attrib_set({thing}/A?B,qmark)");
+		await Eval($"attrib_set({thing}/A#B,hash)");
+		await Eval($"attrib_set({thing}/TXT,\\%=<A?B>|\\%=<A#B>|\\%=<A\\(B>|\\%=<A=B>|\\%=<A<B>|\\%=<1A%%B>)");
+		await Eval($"attrib_set({thing}/FN,lit(subeval(v(TXT))))");
+		await Assert.That(await Eval($"u({thing}/FN)")).IsEqualTo("qmark|hash||||");
+	}
+
 	/// <summary>pfind(me) is the caller whatever it is, as TinyMUX's lookup_player has it.</summary>
 	[Test]
 	public async Task PfindMeFindsAThing()
@@ -190,6 +202,7 @@ public class MuxFunctionTests : ServerTestBase
 		await Assert.That(await AsCaller("pfind(*me)")).IsEqualTo(await AsCaller("objid(me)"));
 		await Assert.That(await AsCaller("pfind(*%bme)")).IsEqualTo(await AsCaller("objid(me)"));
 		await Assert.That(await AsCaller("pfind(**me)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
+		await Assert.That(await AsCaller($"pfind(*#+{caller.Number})")).IsEqualTo(await AsCaller("objid(me)"));
 		await Assert.That(await AsCaller("pfind(*#0)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
 		await Assert.That(await AsCaller($"pfind(*#{caller.Number})")).IsEqualTo(await AsCaller("objid(me)"));
 		await Assert.That(await AsCaller($"pfind({token}_Nobody)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
