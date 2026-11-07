@@ -105,10 +105,11 @@ public class BuildNavCatalogTests : BunitContext
 	[Test]
 	[Arguments("Wizard")]
 	[Arguments("God")]
-	public async Task Accounts_FollowTheWizardRole(string role)
+	public async Task Accounts_FollowGameWizard(string role)
 	{
 		_auth.SetAuthorized("wizard");
 		_auth.SetRoles(role);
+		_auth.SetPolicies("game.wizard");
 		await Assert.That(await VisibleHrefs()).IsEquivalentTo(new[] { "/admin", "/admin/snapshots", "/admin/accounts" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
@@ -133,7 +134,7 @@ public class BuildNavCatalogTests : BunitContext
 		await Assert.That(BuildNavCatalog.MayOpenOverview(User())).IsFalse();
 		await Assert.That(BuildNavCatalog.MayOpenOverview(User(new Claim("perm", "softcode.use"), new Claim("perm", "jobs.manage.own")))).IsFalse();
 		await Assert.That(BuildNavCatalog.MayOpenOverview(User(new Claim("perm", "players.view")))).IsTrue();
-		await Assert.That(BuildNavCatalog.MayOpenOverview(User(new Claim(ClaimTypes.Role, "Wizard")))).IsTrue();
+		await Assert.That(BuildNavCatalog.MayOpenOverview(User(new Claim("perm", "game.wizard")))).IsTrue();
 
 		var gate = typeof(SharpMUSH.Client.Pages.Admin.Dashboard).GetCustomAttributes(typeof(AuthorizeAttribute), true)
 			.Cast<AuthorizeAttribute>().Single();

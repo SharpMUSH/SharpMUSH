@@ -91,7 +91,7 @@ public static class BuildNavCatalog
 		new("/admin/jobs", Icons.Material.Filled.Schedule, "JobsTitle", "AdmCardJobs", Group.Build, ["jobs.manage"]),
 		new("/admin/diagnostics", Icons.Material.Filled.QueryStats, "DiagTitle", "AdmCardDiagnostics", Group.Build, ["queue.inspect"]),
 
-		new("/admin/accounts", Icons.Material.Filled.ManageAccounts, "AdmAccountsTitle", "AdmCardAccounts", Group.People, [], Roles: ["Wizard", "God"]),
+		new("/admin/accounts", Icons.Material.Filled.ManageAccounts, "AdmAccountsTitle", "AdmCardAccounts", Group.People, ["game.wizard"]),
 		new("/admin/characters", Icons.Material.Filled.Person, "Characters", "AdmCardCharacters", Group.People, ["players.view"]),
 		new("/admin/guests", Icons.Material.Filled.Group, "AdmGuestsTitle", "AdmCardGuests", Group.People, ["players.view"]),
 		new("/admin/activity", Icons.Material.Filled.Insights, "AdmActivityTitle", "AdmCardActivity", Group.People, ["players.view"]),

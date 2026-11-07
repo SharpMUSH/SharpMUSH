@@ -454,7 +454,7 @@ public partial class Commands
 		}
 
 		if (!Configuration.CurrentValue.Net.Logins
-			&& !await new AnySharpObject(foundDB).IsWizard())
+			&& !await PermissionService.CanLogin(new AnySharpObject(foundDB)))
 		{
 			await NotifyLoginsDisabledAsync(handle, new AnySharpObject(foundDB));
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -553,7 +553,7 @@ public partial class Commands
 		}
 
 		if (!Configuration.CurrentValue.Net.Logins
-			&& !await new AnySharpObject(foundPlayer).IsWizard())
+			&& !await PermissionService.CanLogin(new AnySharpObject(foundPlayer)))
 		{
 			await NotifyLoginsDisabledAsync(handle, new AnySharpObject(foundPlayer));
 			return new CallState(ErrorMessages.Returns.PermissionDenied);

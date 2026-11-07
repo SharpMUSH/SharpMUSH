@@ -310,8 +310,8 @@ public class PermissionService(
 	public async ValueTask<bool> CanHide(AnySharpObject executor)
 		=> await executor.IsPriv() || await executor.HasPower("HIDE");
 
-	public async ValueTask<bool> CanLogin(AnySharpObject executor)
-		=> await executor.IsPriv() || await executor.HasPower("LOGIN");
+	public ValueTask<bool> CanLogin(AnySharpObject executor)
+		=> executor.CanLoginWhileClosed(ExecutionBudget.CurrentToken);
 
 	public async ValueTask<bool> CanIdle(AnySharpObject executor)
 		=> await executor.IsPriv() || await executor.HasPower("IDLE");

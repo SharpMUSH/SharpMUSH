@@ -193,7 +193,7 @@ public partial class Commands
 		if (!Configuration.CurrentValue.Net.Logins)
 		{
 			var linked = await AccountService.GetCharactersAsync(account.Id!);
-			if (!await AnyStaffCharacterAsync(linked))
+			if (!await AnyCharacterMayLoginAsync(linked))
 			{
 				await NotifyLoginsDisabledAsync(handle);
 				return new None();
@@ -288,6 +288,13 @@ public partial class Commands
 		{
 			await TriggerCreateFailAsync(handle, "creation disabled", "");
 			await NotifyPlayerCreationDisabledAsync(handle);
+			return new None();
+		}
+
+		// A new character holds no Login power, and CREATE puts it straight into play.
+		if (!Configuration.CurrentValue.Net.Logins)
+		{
+			await NotifyLoginsDisabledAsync(handle);
 			return new None();
 		}
 
@@ -427,6 +434,12 @@ public partial class Commands
 
 		if (await SitelockRefusesPlayerAsync(handle, character))
 		{
+			return new None();
+		}
+
+		if (!Configuration.CurrentValue.Net.Logins && !await PermissionService.CanLogin(new AnySharpObject(character)))
+		{
+			await NotifyLoginsDisabledAsync(handle, new AnySharpObject(character));
 			return new None();
 		}
 
@@ -584,12 +597,11 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// PennMUSH semantics: an account qualifies for login while <c>Net.Logins</c> is disabled
-	/// if ANY linked character is staff (character #1, or WIZARD-flagged). <c>IsWizard()</c>
-	/// already covers character #1 (God), so a single async predicate suffices.
+	/// While <c>Net.Logins</c> is off, an account reaches its menu when any linked character passes PennMUSH's
+	/// <c>Can_Login</c> (a wizard, or a holder of the Login power); PLAY then asks it of the character played.
 	/// </summary>
-	private async ValueTask<bool> AnyStaffCharacterAsync(IReadOnlyList<SharpPlayer> characters) =>
-		await characters.ToAsyncEnumerable().AnyAsync(async (character, _) => await new AnySharpObject(character).IsWizard());
+	private async ValueTask<bool> AnyCharacterMayLoginAsync(IReadOnlyList<SharpPlayer> characters) =>
+		await characters.ToAsyncEnumerable().AnyAsync(async (character, _) => await PermissionService.CanLogin(new AnySharpObject(character)));
 
 	/// <summary>
 	/// Fires SOCKET`CREATEFAIL as a system event, for an account or character the connect screen refused to create.
