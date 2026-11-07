@@ -124,6 +124,7 @@ public class MuxFunctionTests : ServerTestBase
 	[Arguments("subeval(\\[[sound(chime.wav)]\\])", "[]")]
 	[Arguments("subeval(\\%\\%[sound(chime.wav)])", "%")]
 	[Arguments("subeval(sound(chime.wav))", "")]
+	[Arguments("subeval(\\%[beep()]x)", "x")]
 	public async Task MuxShimsKeepPoints(string expression, string expected)
 	{
 		var result = (await Parser.FunctionParse(MString.Plain(expression)))!.Message!;
@@ -147,6 +148,16 @@ public class MuxFunctionTests : ServerTestBase
 		await Assert.That(await Eval("pfind(#1)")).IsEqualTo(await Eval("pmatch(#1)"));
 		await Assert.That(await Eval("pfind(#0)")).StartsWith("#0:");
 		await Assert.That(await Eval("pmatch(#0)")).StartsWith("#-1");
+	}
+
+	/// <summary>pfind(me) is the caller whatever it is, as TinyMUX's lookup_player has it.</summary>
+	[Test]
+	public async Task PfindMeFindsAThing()
+	{
+		var thing = await Eval($"create({TestIsolationHelpers.GenerateUniqueName("MuxPfindMe")})");
+		await Eval($"attrib_set({thing}/FN,lit([pfind(me)] [pfind(*me)] [pfind(**me)]))");
+		var objid = await Eval($"objid({thing})");
+		await Assert.That(await Eval($"u({thing}/FN)")).IsEqualTo($"{objid} {objid} {ErrorMessages.Returns.NoMatch}");
 	}
 
 	/// <summary>pfind() answers a miss with the error alone, as TinyMUX's quiet matches do; pmatch() tells the caller.</summary>
@@ -199,6 +210,16 @@ public class MuxFunctionTests : ServerTestBase
 	[Arguments("[setq(0,abc\\\\)][subeval(%q0)]|", "abc|")]
 	[Arguments("[setq(0,\\{\\%)][subeval(%q0)]", "{%}")]
 	[Arguments("subeval(lit([%q]%#]))", "[%q]%#]")]
+	[Arguments("[setq(0,\\%\\q\\<\\a\\(\\b\\>)][subeval(%q0)]", "")]
+	[Arguments("[setq(0,\\%\\q\\<\\a\\%\\>)][subeval(%q0)]", "")]
+	[Arguments("[setq(0,\\%\\q\\[\\a\\b\\c\\])][subeval(%q0)]", "abc]")]
+	[Arguments("[setq(0,\\a\\%\\q\\ \\b)][subeval(%q0)]", "ab")]
+	[Arguments("[setq(0,\\[\\%\\v\\]\\x)][subeval(%q0)]", "[%v]x")]
+	[Arguments("[setq(0,\\[\\%\\v\\{\\a\\]\\x)][subeval(%q0)]", "[%v{a]x}]")]
+	[Arguments("[setq(0,\\a\\%\\=\\<)][subeval(%q0)]", "a")]
+	[Arguments("[setq(0,\\[\\%\\q\\<\\a\\\\\\]\\b)][subeval(%q0)]", "[%q<a\\]b")]
+	[Arguments("[setq(0,\\%\\i)][subeval(%q0)]", "")]
+	[Arguments("[setq(ab,X)][setq(1,ab)][setq(0,\\%\\q\\<\\%\\q\\1\\>)][subeval(%q0)]|", "|")]
 	public async Task SubevalMatchesTinyMux(string expression, string expected)
 		=> await Assert.That(await Eval(expression)).IsEqualTo(expected);
 
@@ -209,6 +230,10 @@ public class MuxFunctionTests : ServerTestBase
 		var result = (await Parser.FunctionParse(MString.Plain("subeval(ansi(r,red [lit(\\[x\\])]))")))!.Message!;
 		var expected = (await Parser.FunctionParse(MString.Plain("ansi(r,red \\[x\\])")))!.Message!;
 		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo(expected.Render(MarkupFormat.Ansi));
+
+		var substituted = (await Parser.FunctionParse(MString.Plain("subeval(ansi(r,lit(%b%bx)))")))!.Message!;
+		var red = (await Parser.FunctionParse(MString.Plain("ansi(r,%b%bx)")))!.Message!;
+		await Assert.That(substituted.Render(MarkupFormat.Ansi)).IsEqualTo(red.Render(MarkupFormat.Ansi));
 	}
 
 	/// <summary>subeval() runs the substitutions in the text it is given and leaves its function calls as text.</summary>

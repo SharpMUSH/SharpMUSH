@@ -16,30 +16,38 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	/// <summary>
-	/// TinyMUX's <c>pfind()</c>: <c>pmatch()</c>, except that a dbref finds any object, not only a player, and
-	/// <c>me</c> is the caller, and a leading <c>*</c> is dropped, after which a dbref finds only a player unless the
-	/// caller is God. It tells the caller nothing, as TinyMUX's quiet matches do: a dbref that matches
-	/// nothing is <c>#-1</c>, a name <c>#-1 NO MATCH</c>.
+	/// TinyMUX's <c>pfind()</c>: <c>pmatch()</c>, except that a dbref finds any object, not only a player. It tells the
+	/// caller nothing, as TinyMUX's quiet matches do: a dbref that matches nothing is <c>#-1</c>. Anything else goes
+	/// through TinyMUX's <c>lookup_player</c>: one <c>*</c> is dropped, <c>me</c> is the caller whatever it is, any
+	/// further <c>*</c> are dropped, a <c>#</c> and a number find a player (any object for God), and a name finds the
+	/// player of that name or a connected one it begins. A miss is <c>#-1 NO MATCH</c>.
 	/// </summary>
 	[SharpFunction(Name = "pfind", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["name"])]
 	public async ValueTask<CallState> PlayerFind(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var name = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var starred = name.StartsWith('*');
-		if (starred) name = name[1..];
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (name.StartsWith('#'))
 		{
-			return await LocateService.Locate(parser, executor, executor, name, LocateFlags.All) switch
-			{
-				AnySharpObject obj when !starred || obj.IsPlayer || executor.IsGod() => new CallState(obj.Object().DBRef),
-				_ => new CallState(starred ? ErrorMessages.Returns.NoMatch : "#-1")
-			};
+			return await LocateService.Locate(parser, executor, executor, name, LocateFlags.All) is AnySharpObject thing
+				? new CallState(thing.Object().DBRef)
+				: new CallState("#-1");
 		}
 
-		return await LocateService.LocateConnectionTarget(parser, executor, executor, name) is AnySharpObject player
-			? new CallState(player.Object().DBRef)
+		var player = name.StartsWith('*') ? name[1..] : name;
+		if (player.Equals("me", StringComparison.OrdinalIgnoreCase)) return new CallState(executor.Object().DBRef);
+
+		player = player.TrimStart('*');
+		var found = player.Length == 0 || player != player.Trim() ? null
+			: player.StartsWith('#')
+				? long.TryParse(player[1..], out _)
+					&& await LocateService.Locate(parser, executor, executor, player, LocateFlags.All) is AnySharpObject obj
+					&& (obj.IsPlayer || executor.IsGod()) ? obj : null
+				: await LocateService.LocateConnectionTarget(parser, executor, executor, player) is AnySharpObject match
+					&& match.IsPlayer ? match : null;
+		return found is { } result
+			? new CallState(result.Object().DBRef)
 			: new CallState(ErrorMessages.Returns.NoMatch);
 	}
 
@@ -72,122 +80,126 @@ public partial class Functions
 		=> new(await SubstitutionsEvaluated(parser, parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty));
 
 	/// <summary>
-	/// <paramref name="code"/> with its substitutions and escapes evaluated and nothing else, read as TinyMUX's
-	/// scanner reads it. Spaces, brackets, parentheses and braces are escaped, and so is every character between
-	/// brackets, where a brace group or a <c>\x</c>, <c>%x</c> or <c>%qx</c> token does not close the bracket. A
-	/// bracket or brace left open is closed at the end. <c>%q&lt;</c> or <c>%=&lt;</c> whose name does not close
-	/// before one of <c>}])[{,</c> stays as written, and <c>%&lt;</c> and <c>%*&lt;</c>, which TinyMUX does not have,
-	/// lose their <c>%</c>. The text between points is parsed once each, wrapped in <c>[]</c> so the parser keeps its
-	/// leading and trailing spaces; the points and the text between escapes are cut from the code as they are, which
-	/// keeps their markup.
+	/// <paramref name="code"/> read token by token as TinyMUX's scanner reads it (<c>ast_scan.rl</c>), with each
+	/// substitution and escape replaced as TinyMUX's <c>ast_eval_subst</c> replaces it and everything else written as
+	/// it is. A bracket and what it holds stay as written, a brace group's contents are evaluated, and a group left
+	/// open is closed at the end. A substitution SharpMUSH also has is evaluated alone by the parser and takes the
+	/// markup of the text it replaces; the rest is cut from the code, which keeps its markup and its points.
 	/// </summary>
 	private static async ValueTask<MString> SubstitutionsEvaluated(IMUSHCodeParser parser, MString code)
 	{
 		var raw = code.Text;
 		var point = Points(code);
 		var output = new List<MString>();
-		var parts = new List<MString>();
 		var open = new Stack<char>();
 		var start = 0;
 
-		for (var i = 0; i < raw.Length; i++)
+		for (var i = 0; i < raw.Length;)
 		{
-			var c = raw[i];
-			char? next = i + 1 < raw.Length && !point[i + 1] ? raw[i + 1] : null;
-			if (point[i])
+			var c = point[i] ? '\0' : raw[i];
+			var length = TokenLength(raw, point, i);
+			if (open.Contains(']') || c is not ('%' or '\\' or '#') || length == 1 && c == '#')
 			{
-				await Flush(i);
-				output.Add(code.Substring(i, 1));
-				start = i + 1;
-			}
-			else if (open.Contains(']'))
-			{
-				Escape(i);
-				if (c is '\\' or '%' && next is not null)
-				{
-					Escape(++i);
-					if (c == '%' && raw[i] is 'q' or 'Q' or 'c' or 'C' or 'x' or 'X' or 'v' or 'V' or 'i' or 'I'
-							&& i + 1 < raw.Length && !point[i + 1]) Escape(++i);
-				}
-				else if (c is '[' or '{') open.Push(c == '[' ? ']' : '}');
-				else if (c is ']' or '}' && open.Peek() == c) open.Pop();
-			}
-			else if (c == '%' && next is 'l' or 'L')
-			{
-				Cut(i, 2);
-				i++;
-			}
-			else if (c == '%' && (next == '<' || next == '*' && At(i + 2) == '<'))
-			{
-				Cut(i, 1);
-			}
-			else if (c == '%' && next is 'q' or 'Q' or '=' && At(i + 2) == '<')
-			{
-				var end = i + 3;
-				while (At(end) is { } x && x is not ('>' or '}' or ')' or ']' or '[' or '{' or ',')) end++;
-				if (At(end) != '>')
-				{
-					Escape(i);
-					i++;
-				}
-				else if (end == i + 3)
-				{
-					Cut(i, 4);
-					i = end;
-				}
-				else
-				{
-					i = end;
-				}
-			}
-			else if (c is '\\' or '%' && next is not null)
-			{
-				i++;
-			}
-			else if (c == '%')
-			{
-				Escape(i);
-			}
-			else if (c == '\\')
-			{
-				Cut(i, 1);
-			}
-			else if (c is ' ' or '[' or ']' or '(' or ')' or '{' or '}')
-			{
-				Escape(i);
 				if (c is '[' or '{') open.Push(c == '[' ? ']' : '}');
-				else if (c == '}' && open.Count > 0) open.Pop();
+				else if (c is ']' or '}' && open.Count > 0 && open.Peek() == c) open.Pop();
 			}
+			else
+			{
+				output.Add(code.Substring(start, i - start));
+				output.Add(c == '\\' ? code.Substring(i + 1, length - 1) : await Substituted(parser, code, point, i, length));
+				start = i + length;
+			}
+
+			i += length;
 		}
 
-		await Flush(raw.Length);
+		output.Add(code.Substring(start, raw.Length - start));
 		if (open.Count > 0) output.Add(MarkupText.Plain(string.Concat(open)));
 		return MarkupText.Concat(output);
+	}
 
-		char? At(int at) => at < raw.Length && !point[at] ? raw[at] : null;
-
-		void Escape(int at)
+	/// <summary>How long the token at <paramref name="at"/> is, by TinyMUX's scanner rules.</summary>
+	private static int TokenLength(string raw, bool[] point, int at)
+	{
+		char? At(int index) => index < raw.Length && !point[index] ? raw[index] : null;
+		var (first, second, third) = (At(at), At(at + 1), At(at + 2));
+		var hasSecond = at + 1 < raw.Length;
+		var hasThird = at + 2 < raw.Length;
+		switch (first)
 		{
-			parts.Add(code.Substring(start, at - start));
-			parts.Add(MarkupText.Plain("\\"));
-			start = at;
+			case '\\':
+				return hasSecond ? 2 : 1;
+			case '#':
+				return second is '#' or '@' or '$' ? 2 : 1;
+			case '%' when !hasSecond:
+				return 1;
+			case '%' when second is 'q' or 'Q' or 'c' or 'C' or 'x' or 'X' or '=' && third == '<':
+				var end = at + 3;
+				while (end < raw.Length && (point[end] || raw[end] is not ('>' or '}' or ')' or ']' or '[' or '{' or ','))) end++;
+				return end < raw.Length && raw[end] == '>' ? end + 1 - at : end - at;
+			case '%' when second is >= '0' and <= '9':
+				return 2;
+			case '%' when second is 'q' or 'Q' or 'c' or 'C' or 'x' or 'X':
+				return hasThird ? 3 : 2;
+			case '%' when second is 'v' or 'V' && char.IsAsciiLetter(third ?? '\0'):
+				return 3;
+			case '%' when second is 'i' or 'I' && char.IsAsciiDigit(third ?? '\0'):
+				return 3;
+			case '%':
+				return 2;
+			default:
+				return 1;
 		}
+	}
 
-		void Cut(int at, int length)
-		{
-			parts.Add(code.Substring(start, at - start));
-			start = at + length;
-		}
+	/// <summary>
+	/// What the substitution token of <paramref name="length"/> characters at <paramref name="at"/> gives, as
+	/// TinyMUX's <c>ast_eval_subst</c> decides it: nothing for an empty or malformed register or attribute name, the
+	/// token as written for an unclosed name, the character itself for a letter TinyMUX does not know, and otherwise
+	/// what SharpMUSH's own substitution gives.
+	/// </summary>
+	private static async ValueTask<MString> Substituted(IMUSHCodeParser parser, MString code, bool[] point, int at,
+		int length)
+	{
+		var token = code.Text.Substring(at, length);
+		if (length == 1) return code.Substring(at, 1);
+		if (token[0] == '#') return await Evaluated(parser, code, at, length);
+		if (point[at + 1]) return code.Substring(at + 1, 1);
 
-		async ValueTask Flush(int end)
+		var named = length >= 3 && token[2] == '<';
+		var closed = named && length >= 4 && token[^1] == '>';
+		var name = closed ? token[3..^1] : string.Empty;
+		return char.ToUpperInvariant(token[1]) switch
 		{
-			parts.Add(code.Substring(start, end - start));
-			var text = MarkupText.Concat(parts);
-			parts.Clear();
-			if (text.Text.Length == 0) return;
-			var parsed = await parser.FunctionParse(MarkupText.Concat([MarkupText.Plain("[]"), text, MarkupText.Plain("[]")]));
-			output.Add(parsed?.Message ?? MarkupText.Empty);
-		}
+			'Q' when named => !closed ? code.Substring(at, length)
+				: name.Length > 0 && name.All(x => char.IsAsciiLetterOrDigit(x) || x == '_') ? await Evaluated(parser, code, at, length)
+				: MarkupText.Empty,
+			'Q' => length == 3 && char.IsAsciiLetterOrDigit(token[2]) ? await Evaluated(parser, code, at, length) : MarkupText.Empty,
+			'=' when named && length >= 4 => !closed ? code.Substring(at, length)
+				: name.Length > 0 && (char.IsAsciiDigit(name[0]) ? name.All(char.IsAsciiDigit) : AttributeName().IsMatch(name))
+					? await Evaluated(parser, code, at, length)
+					: MarkupText.Empty,
+			'=' or 'L' => MarkupText.Empty,
+			'C' or 'X' when named && !closed => code.Substring(at, length),
+			'C' or 'X' when length == 3 && point[at + 2] => code.Substring(at + 2, 1),
+			'V' or 'I' or 'C' or 'X' => length == 3 ? await Evaluated(parser, code, at, length) : MarkupText.Empty,
+			>= '0' and <= '9' or '#' or '!' or '@' or '%' or 'R' or 'B' or 'T' or 'N' or 'S' or 'P' or 'O' or 'A' or 'M' or 'K'
+				or '|' or '+' or ':' => await Evaluated(parser, code, at, length),
+			_ => code.Substring(at + 1, 1)
+		};
+	}
+
+	/// <summary>
+	/// The substitution token at <paramref name="at"/> evaluated alone, in the markup of the text it replaces: the
+	/// value is inserted after the token's first character, where it takes that character's markup, and the token is
+	/// then removed around it.
+	/// </summary>
+	private static async ValueTask<MString> Evaluated(IMUSHCodeParser parser, MString code, int at, int length)
+	{
+		var token = code.Substring(at, length);
+		var value = (await parser.FunctionParse(MarkupText.Plain(token.Text)))?.Message ?? MarkupText.Empty;
+		return value.Text.Length == 0 ? value
+			: token.Insert(1, value).Remove(1 + value.Text.Length, length - 1).Remove(0, 1);
 	}
 
 	/// <summary>Which characters of <paramref name="text"/> carry a point, the ones its plain text leaves out.</summary>
@@ -203,6 +215,10 @@ public partial class Functions
 
 		return point;
 	}
+
+	/// <summary>An attribute name as <c>%=&lt;name&gt;</c> reads one.</summary>
+	[System.Text.RegularExpressions.GeneratedRegex(@"^[A-Za-z_][A-Za-z0-9_\-.`']*$")]
+	private static partial System.Text.RegularExpressions.Regex AttributeName();
 
 	/// <summary>
 	/// TinyMUX's <c>url_unescape()</c>: each <c>%XX</c> becomes the byte it names, read as UTF-8, and each
