@@ -2,8 +2,8 @@
 # launch.sh saves this file as <app>.fly.toml, creates the app, its volume and IP addresses, then
 # deploys with it. The app name and region come from launch.sh's arguments.
 
-# Every deploy restarts the machine, dropping connected players. Nothing deploys on its own: the game
-# stays on the image tag named here until you change it.
+# Every deploy pulls the newest image of the tag named here and restarts the machine, dropping
+# connected players. Nothing deploys on its own.
 [build]
   image = "sharpmush/sharpmush-allinone:dev"
 
