@@ -217,9 +217,10 @@ Mail functions work with @mail.
 
 |                 |                 |                 |                 |
 |-----------------|-----------------|-----------------|-----------------|
-| [FOLDERSTATS()] | [MAIL()]        | [MAILDSTATS()]  | [MAILFROM()]    |
-| [MAILFSTATS()]  | [MAILLIST()]    | [MAILSEND()]    | [MAILSTATS()]   |
-| [MAILSTATUS()]  | [MAILSUBJECT()] | [MAILTIME()]    | [MALIAS()]      |
+| [FOLDERSTATS()] | [MAIL()]        | [MAILALIAS()]   | [MAILDSTATS()]  |
+| [MAILFROM()]    | [MAILFSTATS()]  | [MAILLIST()]    | [MAILSEND()]    |
+| [MAILSTATS()]   | [MAILSTATUS()]  | [MAILSUBJECT()] | [MAILTIME()]    |
+| [MALIAS()]      |                 |                 |                 |
 
 # folderstats()
 

@@ -21,10 +21,10 @@ Help is available for the following MUSH commands:
 | [dismiss]   | [DOING]     | [drop]      | [empty]     | [enter]     |
 | [events]    | [examine]   | [follow]    | [get]       | [give]      |
 | [go]        | [help]      | [home]      | [inventory] | [leave]     |
-| [LOGOUT]    | [look]      | [move]      | [news]      | [page]      |
-| [pose]      | [QUIT]      | [read]      | [say]       | [score]     |
-| [teach]     | [think]     | [unfollow]  | [use]       | [walk]      |
-| [whisper]   | [WHO]       | [with]      |             |             |
+| [LOGOUT]    | [look]      | [lpage]     | [move]      | [mrpage]    |
+| [news]      | [page]      | [pose]      | [QUIT]      | [read]      |
+| [say]       | [score]     | [teach]     | [think]     | [unfollow]  |
+| [use]       | [walk]      | [whisper]   | [WHO]       | [with]      |
 | ["]         | [:]         | [;]         | [+]         | [&]         |
 | [~]         | [}]         |             |             |             |
 

@@ -546,6 +546,9 @@ public sealed record CommandFrame
 	/// <inheritdoc cref="ParserState.CommandHistory"/>
 	public ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>? CommandHistory { get; init; }
 
+	/// <inheritdoc cref="ParserState.CommandSources"/>
+	public ConcurrentStack<MString>? CommandSources { get; init; }
+
 	/// <inheritdoc cref="ParserState.CallerArguments"/>
 	public Dictionary<string, CallState>? CallerArguments { get; init; }
 
@@ -813,6 +816,16 @@ public partial record ParserState
 	{
 		get => CommandFrame.CommandHistory;
 		init => CommandFrame = CommandFrame with { CommandHistory = value };
+	}
+
+	/// <summary>
+	/// The text of each command the current command list has started, the latest on top, for
+	/// <c>@rollback</c> to run again. Shared like <see cref="CommandHistory"/>, and null where it is.
+	/// </summary>
+	public ConcurrentStack<MString>? CommandSources
+	{
+		get => CommandFrame.CommandSources;
+		init => CommandFrame = CommandFrame with { CommandSources = value };
 	}
 
 	/// <summary>

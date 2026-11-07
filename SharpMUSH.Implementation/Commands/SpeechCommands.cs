@@ -25,6 +25,30 @@ public partial class Commands
 	// anyone sees. PennMUSH has no LASTPAGER, and examine lists what Penn's would.
 	private static readonly string[] WrittenPageContextFlags = [.. IncomingPageContextFlags, "internal"];
 
+	/// <summary>On a page's recipient: its sender and everyone it reached, for <c>mrpage</c>.</summary>
+	private const string IncomingPageGroupAttribute = "LASTPAGEGROUP";
+
+	/// <summary>
+	/// The text of the executor's own <paramref name="attribute"/>, one of the incoming page context
+	/// attributes the engine writes, or null when there is none or it cannot be trusted. Read without
+	/// inheritance; legacy INTERNAL and MORTAL_DARK flags stay, and public attribute permissions must not hide
+	/// engine state. Nothing from the value is used until its metadata, owner and protection are trusted.
+	/// </summary>
+	private async ValueTask<string?> IncomingPageContextAsync(AnySharpObject executor, string attribute)
+	{
+		var found = await Mediator.CreateStream(new GetAttributeQuery(executor.Object().DBRef, [attribute]))
+			.SingleOrDefaultAsync();
+		if (found is null || found.IsUnreadable || found.IsMetadataUnreadable) return null;
+
+		var owner = await found.Owner.WithCancellation(ExecutionBudget.CurrentToken);
+		var flags = found.Flags.Select(flag => flag.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+		// A legacy custom attribute may predate the protected definition. Never trust its old text.
+		if (owner?.Object.Key != 1 || !flags.IsSupersetOf(IncomingPageContextFlags)) return null;
+
+		var context = found.Value.ToPlainText();
+		return string.IsNullOrWhiteSpace(context) ? null : context;
+	}
+
 	[SharpCommand(Name = "@@", Output = CommandOutput.Passthrough, Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["comment"])]
 	public ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> ValueTask.FromResult(new Option<CallState>(CallState.Empty));
@@ -85,14 +109,52 @@ public partial class Commands
 	[SharpCommand(Name = "PAGE", Switches = ["LIST", "NOEVAL", "PORT", "OVERRIDE", "RECALL", "CONVERSATIONS", "TIMESTAMPS", "REPLY"],
 		SingleArgumentSwitches = ["REPLY"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["player-list", "message"])]
-	public async ValueTask<Option<CallState>> Page(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public ValueTask<Option<CallState>> Page(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> PageAsync(parser, parser.CurrentState.Switches.Contains("REPLY") ? PageSource.Reply : PageSource.Typed);
+
+	/// <summary>
+	/// RhostMUSH's <c>lpage &lt;message&gt;</c>: pages the message to whoever the executor last paged. The whole
+	/// argument is the message, <c>=</c> and all. <c>/noansi</c> is accepted and changes nothing.
+	/// </summary>
+	[SharpCommand(Name = "LPAGE", Switches = ["NOANSI"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 1,
+		ParameterNames = ["message"])]
+	public ValueTask<Option<CallState>> LastPage(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> PageAsync(parser, PageSource.Last);
+
+	/// <summary>
+	/// RhostMUSH's <c>mrpage &lt;message&gt;</c>: replies to everyone in the last page the executor received,
+	/// the sender and its other recipients. The whole argument is the message. <c>/noansi</c> is accepted
+	/// and changes nothing.
+	/// </summary>
+	[SharpCommand(Name = "MRPAGE", Switches = ["NOANSI"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 1,
+		ParameterNames = ["message"])]
+	public ValueTask<Option<CallState>> ReplyAllPage(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> PageAsync(parser, PageSource.ReplyAll);
+
+	/// <summary>Where a page's recipients come from.</summary>
+	private enum PageSource
+	{
+		/// <summary>Named before <c>=</c>, or the last ones paged when there is no <c>=</c>.</summary>
+		Typed,
+
+		/// <summary><c>page/reply</c>: whoever last paged the executor.</summary>
+		Reply,
+
+		/// <summary><c>lpage</c>: whoever the executor last paged.</summary>
+		Last,
+
+		/// <summary><c>mrpage</c>: the last page's sender and everyone else it reached.</summary>
+		ReplyAll
+	}
+
+	private async ValueTask<Option<CallState>> PageAsync(IMUSHCodeParser parser, PageSource source)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var isNoEval = parser.CurrentState.Switches.Contains("NOEVAL");
 		var isOverride = parser.CurrentState.Switches.Contains("OVERRIDE");
 		var isList = parser.CurrentState.Switches.Contains("LIST");
-		var isReply = parser.CurrentState.Switches.Contains("REPLY");
+		var isReply = source == PageSource.Reply;
 		if (isReply && parser.CurrentState.Switches.Any(value => value is "LIST" or "RECALL" or "CONVERSATIONS" or "TIMESTAMPS" or "PORT"))
 		{
 			await NotifyService.Notify(executor, "The /reply switch cannot be combined with /list, /recall, /conversations, /timestamps, or /port.", executor);
@@ -166,7 +228,7 @@ public partial class Commands
 		var first = isNoEval
 			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
-		var hasEquals = !isReply && args.Count > 1;
+		var hasEquals = source == PageSource.Typed && args.Count > 1;
 		var messageArg = hasEquals
 			? isNoEval
 				? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Empty)
@@ -180,28 +242,28 @@ public partial class Commands
 		}
 
 		string recipientsText;
-		if (isReply)
+		if (source == PageSource.ReplyAll)
 		{
-			// Read only this executor's fixed engine-owned context, without inheritance. Legacy INTERNAL
-			// and MORTAL_DARK flags remain intact; public attribute permissions must not hide engine state.
-			// Nothing from the value is used or exposed until its metadata, owner and protection are trusted.
-			var attribute = await Mediator.CreateStream(new GetAttributeQuery(executor.Object().DBRef, ["LASTPAGER"]))
-				.SingleOrDefaultAsync();
-			if (attribute is null || attribute.IsUnreadable || attribute.IsMetadataUnreadable)
+			// Everyone the last incoming page named, as dbrefs of the incarnation that was paged, less the
+			// executor. Trusted only when the engine wrote it, as LASTPAGER is below.
+			var others = (await IncomingPageContextAsync(executor, IncomingPageGroupAttribute) ?? string.Empty)
+				.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+				.Select(text => DBRef.TryParse(text, out var parsed) ? parsed : null)
+				.OfType<DBRef>()
+				.Where(dbref => dbref.CreationMilliseconds is not null && dbref.Number != executor.Object().DBRef.Number)
+				.Select(dbref => dbref.ToString())
+				.ToArray();
+			if (others.Length == 0)
 			{
 				await NotifyService.Notify(executor, "No one has paged you yet.", executor);
 				return CallState.Empty;
 			}
-			var owner = await attribute.Owner.WithCancellation(ExecutionBudget.CurrentToken);
-			var flags = attribute.Flags.Select(flag => flag.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-			// A legacy custom LASTPAGER may predate the protected definition. Never trust its old text.
-			if (owner?.Object.Key != 1 || !flags.IsSupersetOf(IncomingPageContextFlags))
-			{
-				await NotifyService.Notify(executor, "No one has paged you yet.", executor);
-				return CallState.Empty;
-			}
-			var context = attribute.Value.ToPlainText();
-			if (string.IsNullOrWhiteSpace(context))
+
+			recipientsText = string.Join(' ', others);
+		}
+		else if (isReply)
+		{
+			if (await IncomingPageContextAsync(executor, "LASTPAGER") is not { } context)
 			{
 				await NotifyService.Notify(executor, "No one has paged you yet.", executor);
 				return CallState.Empty;
@@ -410,6 +472,8 @@ public partial class Commands
 					outPageFormatArgs, outgoingDefault));
 			await NotifyService.Notify(executor, outgoing, executor);
 
+			var pageGroup = string.Join(' ',
+				new[] { executor.Object().DBRef.ToString() }.Concat(successfulRecipients.Select(r => r.Object().DBRef.ToString())));
 			foreach (var recipient in successfulRecipients)
 			{
 				var pageFormatArgs = PageFormatArguments(
@@ -429,8 +493,12 @@ public partial class Commands
 				// Replace legacy text and establish its protection/owner in the same transaction. This internal
 				// context deliberately uses the batch's watch bypass: arbitrary legacy custom watches are not
 				// part of paging. Outgoing LASTPAGED and PAGE`MESSAGE keep their existing paths.
+				// The page's whole company, the sender first, is what mrpage replies to.
 				if (!await Mediator.Send(new SetAttributesCommand(recipient.Object().DBRef,
-					[new AttributeWrite(["LASTPAGER"], MarkupText.Plain(executor.Object().DBRef.ToString()), contextOwner, contextFlags)])))
+					[
+						new AttributeWrite(["LASTPAGER"], MarkupText.Plain(executor.Object().DBRef.ToString()), contextOwner, contextFlags),
+						new AttributeWrite([IncomingPageGroupAttribute], MarkupText.Plain(pageGroup), contextOwner, contextFlags)
+					])))
 					await NotifyService.Notify(executor, "Unable to remember the incoming page sender.", executor);
 			}
 
