@@ -40,7 +40,7 @@ public static partial class TinyMuxDatabaseReader
 	/// <summary>
 	/// The options TinyMUX softcode needs. MUX tests and/or/xor numerically, cuts justified text, collates,
 	/// runs list() as a loop, reads ##/#@/#$ from the innermost loop, trims before characters and reads
-	/// non-numbers as 0, runs trigger() and verb(), keeps TinyMUX's /quiet switches, and runs a global @function without /privileged as its caller; it allows 500 levels of recursion and 32 KB values. It reads TinyMUX's names for
+	/// non-numbers as 0, runs trigger() and verb(), keeps TinyMUX's /quiet switches, runs a global @function without /privileged as its caller and lets NOEXAMINE and NOMODIFY protect; it allows 500 levels of recursion and 32 KB values. It reads TinyMUX's names for
 	/// functions and commands SharpMUSH has under its own (<c>dialect</c>).
 	/// </summary>
 	public static Dictionary<string, object> CompatibilityOptions() => new(StringComparer.OrdinalIgnoreCase)
@@ -57,6 +57,7 @@ public static partial class TinyMuxDatabaseReader
 		["mux_queue_functions"] = true,
 		["mux_quiet"] = true,
 		["mux_function_caller"] = true,
+		["protection_flags"] = true,
 		["function_recursion_limit"] = 500u,
 		["dialect"] = SoftcodeDialects.Mux.Key
 	};
@@ -777,8 +778,8 @@ public static partial class TinyMuxDatabaseReader
 			var notes = _database.ImportNotes;
 			notes.Add(new ImportWarning(ImportWarningKind.Softcode,
 				$"Imported from a TinyMUX {file.Source}: the import turns on paren_groups, mux_logic, mux_justify, mux_collation, " +
-				"rhost_list, innermost_tokens, tiny_trim_fun, tiny_math, null_eq_zero, mux_queue_functions, mux_quiet and mux_function_caller, and raises function_recursion_limit to 500, " +
-				"as TinyMUX softcode expects."));
+				"rhost_list, innermost_tokens, tiny_trim_fun, tiny_math, null_eq_zero, mux_queue_functions, mux_quiet, mux_function_caller and protection_flags, and raises function_recursion_limit to 500, " +
+				"as TinyMUX softcode expects, and so NOEXAMINE and NOMODIFY keep protecting what holds them."));
 			notes.Add(new ImportWarning(ImportWarningKind.Softcode,
 				"The import sets dialect to mux and gives every attribute it brings in the mux attribute flag, so that code " +
 				"reads TinyMUX's names for functions and commands SharpMUSH has under its own, such as strtrunc() and @qmail."));
