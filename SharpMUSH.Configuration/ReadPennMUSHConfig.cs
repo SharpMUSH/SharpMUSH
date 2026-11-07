@@ -396,6 +396,7 @@ public static partial class ReadPennMushConfig
 				&& !name.Equals("mssp", StringComparison.OrdinalIgnoreCase)
 				&& !(dialect != ConfigurationDialect.PennMUSH && RealityDirectives.IsDirective(name))
 				&& !(dialect == ConfigurationDialect.RhostMUSH && name.Equals("totem_add", StringComparison.OrdinalIgnoreCase))
+				&& !(dialect != ConfigurationDialect.PennMUSH && HookDirectives.IsDirective(name))
 				&& !PennMushConfigImport.SecretDirectives.ContainsKey(name))
 			.Distinct(StringComparer.OrdinalIgnoreCase)
 			.ToList();
@@ -410,13 +411,20 @@ public static partial class ReadPennMushConfig
 		var totems = dialect == ConfigurationDialect.RhostMUSH
 			? TotemDirective.Read(text.SelectMany(line => DirectiveName(line) is { } name ? [(name, DirectiveValue(line))] : Array.Empty<(string, string)>()))
 			: [];
+		// TinyMUX and RhostMUSH turn their command hooks on from here; the database import reports them.
+		var hooks = dialect != ConfigurationDialect.PennMUSH
+			? HookDirectives.Read(text.SelectMany(line => DirectiveName(line) is { } name && HookDirectives.IsDirective(name)
+				? [(name, DirectiveValue(line))]
+				: Array.Empty<(string, string)>()))
+			: HookDirectives.None;
 
 		return new PennMushConfigImport(work, skipped, named,
 			secrets.Where(secret => secret.Value.Length > 0).ToDictionary(StringComparer.Ordinal))
 		{
 			Unrecognized = unrecognized,
 			Reality = reality,
-			Totems = totems
+			Totems = totems,
+			Hooks = hooks
 		};
 
 		string Get(string key) => configDictionary[propertyDictionary[key]];

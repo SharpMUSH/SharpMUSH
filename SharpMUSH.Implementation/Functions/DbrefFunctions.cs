@@ -77,11 +77,13 @@ public partial class Functions
 		}
 	}
 
-	/// <summary>A room's location is its drop-to, which is usually unset.</summary>
-	private static async ValueTask<CallState> DropToAsync(SharpRoom room)
-		=> (await room.Location.WithCancellation(CancellationToken.None)).Object() is { } dropTo
-			? PlainDbref(dropTo.DBRef)
-			: ErrorMessages.Returns.NoDropTo;
+	/// <summary>A room's location is its drop-to, which is usually unset, and <c>#-3</c> when it is HOME.</summary>
+	private async ValueTask<CallState> DropToAsync(SharpRoom room)
+		=> await LinkTypes.DropsHomeAsync(Mediator, room)
+			? ErrorMessages.Returns.HomeDestination
+			: (await room.Location.WithCancellation(CancellationToken.None)).Object() is { } dropTo
+				? PlainDbref(dropTo.DBRef)
+				: ErrorMessages.Returns.NoDropTo;
 
 	/// <summary>PennMUSH's <c>safe_dbref</c>: <c>#&lt;number&gt;</c>, never the objid.</summary>
 	private static CallState PlainDbref(DBRef dbref) => new(new DBRef(dbref.Number).ToString());

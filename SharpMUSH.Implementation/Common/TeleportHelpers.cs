@@ -79,13 +79,13 @@ public static class TeleportHelpers
 	/// The attribute SharpMUSH records an exit's HOME/AMBIGUOUS linkage in, and the two values it
 	/// takes. <c>@link</c>, <c>link()</c> and <c>loc()</c> write and read the same three.
 	/// </summary>
-	public const string AttrLinkType = "_LINKTYPE";
+	public const string AttrLinkType = LinkTypes.Attribute;
 
 	/// <inheritdoc cref="AttrLinkType"/>
-	public const string LinkTypeVariable = "variable";
+	public const string LinkTypeVariable = LinkTypes.Variable;
 
 	/// <inheritdoc cref="AttrLinkType"/>
-	public const string LinkTypeHome = "home";
+	public const string LinkTypeHome = LinkTypes.Home;
 
 	/// <summary>
 	/// PennMUSH <c>do_teleport</c> (<c>src/wiz.c:359</c>). The destination is resolved once for the

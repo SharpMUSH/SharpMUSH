@@ -242,8 +242,8 @@ public static class TinyMuxComsysReader
 
 		if (aliasCount > 0)
 		{
-			Note($"{aliasCount} comsys alias(es) imported as CHANALIAS` attributes, which addcom, delcom and comlist use; " +
-				"the comsys administration commands (@ccreate, @cset, allcom, clearcom ...) are not available");
+			Note($"{aliasCount} comsys alias(es) imported as CHANALIAS` attributes, which addcom, delcom, comlist, allcom and " +
+				"clearcom use");
 		}
 	}
 

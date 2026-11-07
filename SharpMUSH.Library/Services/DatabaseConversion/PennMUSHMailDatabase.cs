@@ -84,4 +84,10 @@ public record PennMUSHMailMessage(
 
 	/// <summary><c>Folder(m)</c>: <c>(read &amp; ~M_FMASK) &gt;&gt; 8</c>.</summary>
 	public int Folder => (Flags & 0x0F00) >> 8;
+
+	/// <summary>
+	/// Sent anonymously (RhostMUSH): the recipient is not shown who sent it. PennMUSH has no such mail, so a
+	/// PennMUSH maildb never sets it.
+	/// </summary>
+	public bool IsAnonymous { get; init; }
 }
