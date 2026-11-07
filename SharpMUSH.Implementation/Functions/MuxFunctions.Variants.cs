@@ -32,7 +32,9 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (name.StartsWith('#'))
 		{
-			return await LocateService.Locate(parser, executor, executor, name, LocateFlags.All) is AnySharpObject thing
+			// match_thing_quiet trims the name, and parse_dbref allows spaces around the number.
+			var dbref = Number(name[1..]) is { } at ? $"#{at}" : name.Trim();
+			return await LocateService.Locate(parser, executor, executor, dbref, LocateFlags.All) is AnySharpObject thing
 				? new CallState(thing.Object().DBRef)
 				: new CallState("#-1");
 		}
@@ -41,18 +43,22 @@ public partial class Functions
 		if (player.Trim().Equals("me", StringComparison.OrdinalIgnoreCase)) return new CallState(executor.Object().DBRef);
 
 		player = player.TrimStart('*');
-		var found = player.Length == 0 || player != player.Trim() ? null
-			: player.StartsWith('#')
-				? long.TryParse(player[1..], NumberStyles.AllowLeadingWhite | NumberStyles.AllowLeadingSign,
-						CultureInfo.InvariantCulture, out var number)
-					&& await LocateService.Locate(parser, executor, executor, $"#{number}", LocateFlags.All) is AnySharpObject obj
-					&& (obj.IsPlayer || executor.IsGod()) ? obj : null
-				: await LocateService.Locate(parser, executor, executor, player, PlayerNameFlags) is AnySharpObject match
-					&& match.IsPlayer ? match : null;
+		var found = player.StartsWith('#')
+			? Number(player[1..]) is { } number
+				&& await LocateService.Locate(parser, executor, executor, $"#{number}", LocateFlags.All) is AnySharpObject obj
+				&& (obj.IsPlayer || executor.IsGod()) ? obj : null
+			: player.Length == 0 || player != player.Trim() ? null
+			: await LocateService.Locate(parser, executor, executor, player, PlayerNameFlags) is AnySharpObject match
+				&& match.IsPlayer ? match : null;
 		return found is { } result
 			? new CallState(result.Object().DBRef)
 			: new CallState(ErrorMessages.Returns.NoMatch);
 	}
+
+	/// <summary>A dbref's number as TinyMUX's <c>is_integer</c> reads it: a sign and spaces around it allowed.</summary>
+	private static long? Number(string text)
+		=> long.TryParse(text, NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite | NumberStyles.AllowLeadingSign,
+			CultureInfo.InvariantCulture, out var number) ? number : null;
 
 	/// <summary>A player's name as <c>lookup_player</c> reads it, where <c>me</c> is only a name.</summary>
 	private const LocateFlags PlayerNameFlags = LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference
@@ -275,9 +281,9 @@ public partial class Functions
 
 	/// <summary>
 	/// An attribute name as <c>%=&lt;name&gt;</c> reads one: TinyMUX's <c>mux_isattrnameinitial</c> for the first
-	/// character and <c>mux_isattrname</c> for the rest.
+	/// character and <c>mux_isattrname</c> for the rest, taking its letters beyond ASCII from Latin-1 only.
 	/// </summary>
-	[System.Text.RegularExpressions.GeneratedRegex(@"^[#.A-Za-z_~\p{L}][!#$&'()+\-./0-9<=>?@A-Za-z^_`~\p{L}]*$")]
+	[System.Text.RegularExpressions.GeneratedRegex(@"^[#.A-Za-z_~\u00AA\u00B5\u00BA\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF][!#$&'()+\-./0-9<=>?@A-Za-z^_`~\u00AA\u00B5\u00BA\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF]*$")]
 	private static partial System.Text.RegularExpressions.Regex AttributeName();
 
 	/// <summary>

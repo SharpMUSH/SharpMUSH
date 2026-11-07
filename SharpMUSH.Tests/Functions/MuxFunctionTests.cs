@@ -203,6 +203,8 @@ public class MuxFunctionTests : ServerTestBase
 		await Assert.That(await AsCaller("pfind(*%bme)")).IsEqualTo(await AsCaller("objid(me)"));
 		await Assert.That(await AsCaller("pfind(**me)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
 		await Assert.That(await AsCaller($"pfind(*#+{caller.Number})")).IsEqualTo(await AsCaller("objid(me)"));
+		await Assert.That(await AsCaller($"pfind(*#{caller.Number}%b)")).IsEqualTo(await AsCaller("objid(me)"));
+		await Assert.That(await AsCaller($"pfind(#%b{caller.Number}%b)")).IsEqualTo(await AsCaller("objid(me)"));
 		await Assert.That(await AsCaller("pfind(*#0)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
 		await Assert.That(await AsCaller($"pfind(*#{caller.Number})")).IsEqualTo(await AsCaller("objid(me)"));
 		await Assert.That(await AsCaller($"pfind({token}_Nobody)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
