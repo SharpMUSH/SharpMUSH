@@ -148,6 +148,29 @@
     "file": "administration.md"
   },
   {
+    "id": "aindex-function",
+    "lookup": "aindex()",
+    "title": "aindex()",
+    "aliases": [
+      "aindex",
+      "aiindex()",
+      "aiindex",
+      "iindex()",
+      "iindex",
+      "rindex()",
+      "rindex"
+    ],
+    "sections": [
+      {
+        "id": "aindex-examples",
+        "lookup": "aindex examples",
+        "heading": "Examples",
+        "aliases": []
+      }
+    ],
+    "file": "aindex-function.md"
+  },
+  {
     "id": "align",
     "lookup": "align()",
     "title": "align()",
@@ -204,6 +227,22 @@
     ],
     "sections": [],
     "file": "andbool-function.md"
+  },
+  {
+    "id": "andchr-function",
+    "lookup": "andchr()",
+    "title": "andchr()",
+    "aliases": [
+      "andchr",
+      "orchr()",
+      "orchr",
+      "xorchr()",
+      "xorchr",
+      "notchr()",
+      "notchr"
+    ],
+    "sections": [],
+    "file": "andchr-function.md"
   },
   {
     "id": "anonymous-attributes",
@@ -2339,6 +2378,23 @@
       }
     ],
     "file": "cpattr-command.md"
+  },
+  {
+    "id": "creplace-function",
+    "lookup": "creplace()",
+    "title": "creplace()",
+    "aliases": [
+      "creplace"
+    ],
+    "sections": [
+      {
+        "id": "creplace-examples",
+        "lookup": "creplace examples",
+        "heading": "Examples",
+        "aliases": []
+      }
+    ],
+    "file": "creplace-function.md"
   },
   {
     "id": "database",
@@ -5413,6 +5469,16 @@
     "file": "mapsql-function.md"
   },
   {
+    "id": "mask-function",
+    "lookup": "mask()",
+    "title": "mask()",
+    "aliases": [
+      "mask"
+    ],
+    "sections": [],
+    "file": "mask-function.md"
+  },
+  {
     "id": "message-command",
     "lookup": "@message",
     "title": "@message",
@@ -5802,6 +5868,16 @@
     "file": "nsiter-function.md"
   },
   {
+    "id": "numpos-function",
+    "lookup": "numpos()",
+    "title": "numpos()",
+    "aliases": [
+      "numpos"
+    ],
+    "sections": [],
+    "file": "numpos-function.md"
+  },
+  {
     "id": "oemit-command",
     "lookup": "@oemit",
     "title": "@oemit",
@@ -6020,6 +6096,43 @@
       }
     ],
     "file": "parent.md"
+  },
+  {
+    "id": "parents-function",
+    "lookup": "parents()",
+    "title": "parents()",
+    "aliases": [],
+    "sections": [],
+    "file": "parents-function.md"
+  },
+  {
+    "id": "parsestr-function",
+    "lookup": "parsestr()",
+    "title": "parsestr()",
+    "aliases": [
+      "parsestr"
+    ],
+    "sections": [
+      {
+        "id": "parsestr-arguments",
+        "lookup": "parsestr arguments",
+        "heading": "Arguments",
+        "aliases": []
+      },
+      {
+        "id": "parsestr-speech",
+        "lookup": "parsestr speech",
+        "heading": "Speech",
+        "aliases": []
+      },
+      {
+        "id": "parsestr-examples",
+        "lookup": "parsestr examples",
+        "heading": "Examples",
+        "aliases": []
+      }
+    ],
+    "file": "parsestr-function.md"
   },
   {
     "id": "pemit-command",
@@ -7503,6 +7616,23 @@
     "file": "rule-function.md"
   },
   {
+    "id": "rxdesc-function",
+    "lookup": "rxdesc()",
+    "title": "rxdesc()",
+    "aliases": [
+      "rxdesc"
+    ],
+    "sections": [
+      {
+        "id": "rxdesc-layer",
+        "lookup": "rxdesc layer",
+        "heading": "One layer",
+        "aliases": []
+      }
+    ],
+    "file": "rxdesc-function.md"
+  },
+  {
     "id": "rxlevel-command",
     "lookup": "@rxlevel",
     "title": "@rxlevel",
@@ -7724,6 +7854,16 @@
       }
     ],
     "file": "secret-command.md"
+  },
+  {
+    "id": "securex-function",
+    "lookup": "securex()",
+    "title": "securex()",
+    "aliases": [
+      "securex"
+    ],
+    "sections": [],
+    "file": "securex-function.md"
   },
   {
     "id": "legacy:Security",
@@ -14976,6 +15116,16 @@
     "file": "storage-command.md"
   },
   {
+    "id": "str-function",
+    "lookup": "str()",
+    "title": "str()",
+    "aliases": [
+      "str"
+    ],
+    "sections": [],
+    "file": "str-function.md"
+  },
+  {
     "id": "strdistance-function",
     "lookup": "strdistance()",
     "title": "strdistance()",
@@ -15424,6 +15574,22 @@
     "file": "tinymux-forms.md"
   },
   {
+    "id": "tobin-function",
+    "lookup": "tobin()",
+    "title": "tobin()",
+    "aliases": [
+      "tobin",
+      "tooct()",
+      "tooct",
+      "todec()",
+      "todec",
+      "tohex()",
+      "tohex"
+    ],
+    "sections": [],
+    "file": "tobin-function.md"
+  },
+  {
     "id": "tone-function",
     "lookup": "tone()",
     "title": "tone()",
@@ -15458,6 +15624,26 @@
       }
     ],
     "file": "topics.md"
+  },
+  {
+    "id": "totmember-function",
+    "lookup": "totmember()",
+    "title": "totmember()",
+    "aliases": [
+      "totmember"
+    ],
+    "sections": [],
+    "file": "totmember-function.md"
+  },
+  {
+    "id": "totpos-function",
+    "lookup": "totpos()",
+    "title": "totpos()",
+    "aliases": [
+      "totpos"
+    ],
+    "sections": [],
+    "file": "totpos-function.md"
   },
   {
     "id": "translate-function",
