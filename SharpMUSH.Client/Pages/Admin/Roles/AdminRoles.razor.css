@@ -293,6 +293,7 @@
     cursor: pointer; font-size: var(--text-md); line-height: 1; padding: 0 var(--space-1);
 }
 .roleadmin ::deep .ra-chip-x:hover { color: var(--danger); }
+.roleadmin ::deep .ra-chip-reach { color: var(--text-faint); }
 .roleadmin ::deep .ra-add-chip {
     display: inline-flex; align-items: center; gap: var(--space-3);
     font-family: var(--font-ui); font-size: var(--text-sm);

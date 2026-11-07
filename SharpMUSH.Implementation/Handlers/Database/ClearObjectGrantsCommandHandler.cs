@@ -31,8 +31,9 @@ public class CopyObjectGrantsCommandHandler(IRoleRegistryService roles) : IComma
 		foreach (var slug in held)
 			await roles.AssignRoleToObjectAsync(target, slug);
 		var overrides = await roles.GetObjectOverridesAsync(source, cancellationToken);
+		var reaches = await roles.GetObjectReachesAsync(source, cancellationToken);
 		foreach (var (scope, state) in overrides)
-			await roles.SetObjectOverrideAsync(target, scope, state);
+			await roles.SetObjectOverrideAsync(target, scope, state, reaches.GetValueOrDefault(scope));
 		return held.Count > 0 || overrides.Count > 0;
 	}
 }

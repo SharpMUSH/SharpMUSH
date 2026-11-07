@@ -74,6 +74,8 @@ public static class Tables
 	public static readonly TableDef AccountRole = TableDef.Index("e.acct.role", duplicates: true);
 	/// <summary>Account key → its per-account permission overrides (scope → state), one record per account.</summary>
 	public static readonly TableDef AccountPermission = TableDef.Node("acct.perm");
+	/// <summary>Account key → the reach of each of its overrides that has one (scope → role slug), one record per account.</summary>
+	public static readonly TableDef AccountPermissionReach = TableDef.Node("acct.perm.reach");
 	/// <summary>Account key → its ban (reason, who, when, until when); absent when the account is not banned.</summary>
 	public static readonly TableDef AccountBan = TableDef.Node("acct.ban");
 	/// <summary>SHA-256 of a passkey's credential id → the passkey; see <c>LightningDatabase.Passkeys.cs</c>.</summary>
@@ -86,6 +88,8 @@ public static class Tables
 	public static readonly TableDef PushSubscriptionByAccount = TableDef.Index("push.sub.acct", duplicates: true);
 	/// <summary>Object dbref → the permission overrides set on it (scope → state), one record per object.</summary>
 	public static readonly TableDef ObjPermission = TableDef.Node("obj.perm");
+	/// <summary>Object dbref → the reach of each of its overrides that has one (scope → role slug), one record per object.</summary>
+	public static readonly TableDef ObjPermissionReach = TableDef.Node("obj.perm.reach");
 	public static readonly TableDef Session = TableDef.Node("session");
 	/// <summary>SHA-256 token digest to token-free session authority, updated with the session in the same transaction.</summary>
 	public static readonly TableDef SessionDigest = TableDef.Node("session.digest");

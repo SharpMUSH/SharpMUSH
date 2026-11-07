@@ -81,7 +81,10 @@ public sealed class AdministrativeCapabilityService(
 		var custom = await registry.GetCustomPermissionsAsync(ct);
 		var accountGrants = new AccountGrants(
 			await registry.GetRolesForAccountAsync(account.Id, ct),
-			await registry.GetAccountOverridesAsync(account.Id, ct));
+			await registry.GetAccountOverridesAsync(account.Id, ct))
+		{
+			Reaches = await registry.GetAccountReachesAsync(account.Id, ct)
+		};
 
 		if (actor.ActiveCharacter is { } active)
 		{
@@ -92,7 +95,7 @@ public sealed class AdministrativeCapabilityService(
 			return ObjectGrants.For(number, true, all,
 				await registry.GetObjectRolesAsync(number, ct),
 				await registry.GetObjectOverridesAsync(number, ct),
-				accountGrants, custom).Context;
+				accountGrants, custom, await registry.GetObjectReachesAsync(number, ct)).Context;
 		}
 
 		var characterRoles = new List<IReadOnlyList<string>>();
@@ -124,6 +127,10 @@ public sealed class AdministrativeCapabilityService(
 		var owner = characters.Any(c => c.Object.Key == 1);
 		if (owner) Hold(BuiltInRoles.GodSlug);
 
-		return new PermissionContext(held.Values.ToArray(), account.Overrides, owner);
+		return new PermissionContext(held.Values.ToArray(), account.Overrides, owner)
+		{
+			Reaches = OverrideReach.Of(account.Reaches.Where(entry => account.Overrides.ContainsKey(entry.Key))
+				.ToDictionary(StringComparer.OrdinalIgnoreCase), all)
+		};
 	}
 }

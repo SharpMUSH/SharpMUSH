@@ -65,9 +65,11 @@ public class RolesController(
 		string? Email,
 		string Status,
 		string[] RoleSlugs,
-		Dictionary<string, string> Overrides);
+		Dictionary<string, string> Overrides,
+		Dictionary<string, string> Reaches);
 
-	public record OverrideDto(string Scope, string State);
+	/// <summary>One override to set. <see cref="Reach"/> names the role bounding the targets it applies to, or is null for every target.</summary>
+	public record OverrideDto(string Scope, string State, string? Reach = null);
 
 	public record CustomPermissionDto(string Scope, string Category, string Description);
 
@@ -135,13 +137,15 @@ public class RolesController(
 
 		var assigned = await roles.GetRolesForAccountAsync(account.Id);
 		var overrides = await roles.GetAccountOverridesAsync(account.Id);
+		var reaches = await roles.GetAccountReachesAsync(account.Id);
 		return Ok(new AccountRolesDto(
 			KeyOf(account.Id),
 			account.Username,
 			account.Email,
 			account.Status.ToString(),
 			assigned.Select(r => r.Slug).ToArray(),
-			overrides.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString())));
+			overrides.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString()),
+			reaches.Where(kvp => overrides.ContainsKey(kvp.Key)).ToDictionary(kvp => kvp.Key, kvp => kvp.Value)));
 	}
 
 	[HttpPost("account/{key}/{slug}")]
@@ -178,7 +182,7 @@ public class RolesController(
 		if (Actor() is not { } actor) return Forbid();
 		if (!Enum.TryParse<PermissionState>(dto.State, true, out var state) || !Enum.IsDefined(state))
 			return BadRequest(new { error = $"Invalid permission state: {dto.State}" });
-		return await management.SetOverridesAsync(actor, FullId(key), [dto.Scope], state, HttpContext.RequestAborted) switch
+		return await management.SetOverridesAsync(actor, FullId(key), [dto.Scope], state, dto.Reach, HttpContext.RequestAborted) switch
 		{
 			Success => Ok(),
 			RoleRefusal refusal => Refused(refusal)
