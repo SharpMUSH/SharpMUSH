@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Portal;
 using Antlr4.Runtime.Misc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -95,6 +96,24 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 				RecordConnectionActivity(parser, command);
 
 			if (await RefuseHaltedExecutor(parser)) return new None();
+
+			// Template requests deliberately skip token aliases, exits, attribute setters and deferred
+			// commands. Only the explicitly supported dispatch paths may receive literal data.
+			if (parser.CurrentState.PortalTemplate is { } template && template.Claim())
+			{
+				parser.CurrentState.CommandText?.Begin(MarkupText.Plain(template.Template));
+				await LogCommandAsync(visitor, MarkupText.Plain(template.Template));
+				var selected = FindBuiltIn(parser, command, visitor.Configuration.CurrentValue.Compatibility.Dialect);
+				if (template.IsCustom && selected.Definition is null)
+					return await DispatchUnmatchedAsync(visitor, src, commandText,
+						await parser.CurrentState.KnownExecutorObject(services.Mediator), template);
+				if (!template.IsCustom && selected.Definition is CommandDefinition safe
+					&& safe.Attribute.Name.Equals(template.Command.Split('/')[0], StringComparison.OrdinalIgnoreCase)
+					&& safe.Attribute.Name.ToUpperInvariant() is "THINK" or "SAY" or "POSE" or "SEMIPOSE")
+					return await services.Commands.InternalAsync(visitor, parser, src, context, selected.RootCommand,
+						selected.Switches, safe, template);
+				return await services.Arguments.RefuseAsync(parser, "#-1 UNSUPPORTED COMMAND TEMPLATE", true);
+			}
 
 			if (TryFindSocketCommand(parser, command, out var socketCommand))
 				return await services.Commands.SocketAsync(visitor, parser, src, context, command, socketCommand);
@@ -681,7 +700,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	/// answers.
 	/// </summary>
 	private async ValueTask<Option<CallState>> DispatchUnmatchedAsync(SharpMUSHParserVisitor visitor, MString src,
-		MString commandText, AnySharpObject executorObject)
+		MString commandText, AnySharpObject executorObject, PortalCommandTemplate? template = null)
 	{
 		var parser = visitor.Parser;
 
@@ -698,11 +717,17 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		// (Steps 1-8 above), so a built-in never pays for this evaluation.
 		var evaluatedCommandResult = await parser.FunctionParse(commandText);
 		var evaluatedCommandText = evaluatedCommandResult?.Message ?? commandText;
+		if (template is not null)
+		{
+			if (!template.TryBind(evaluatedCommandText, parser.CurrentState.OutputLimit, out var literal))
+				return await services.Arguments.RefuseAsync(parser, ErrorMessages.Returns.OutputTooLarge, true);
+			evaluatedCommandText = literal;
+		}
 		// game.c records this line as %u before looking for a $-command, so the caller keeps it
 		// whether a $-command, HUH_COMMAND or its hook ends up handling the command.
 		parser.CurrentState.CommandText?.Evaluated = evaluatedCommandText;
 
-		if (await MoveAliasCommandAsync(parser, evaluatedCommandText.ToPlainText().Trim(), executorObject) is { } moveCommand)
+		if (template is null && await MoveAliasCommandAsync(parser, evaluatedCommandText.ToPlainText().Trim(), executorObject) is { } moveCommand)
 		{
 			var moved = await parser.CommandParse(MarkupText.Plain(moveCommand));
 			return moved.HadErrors ? moved : CallState.Empty;
@@ -714,6 +739,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		{
 			Option<CallState> ran => ran,
 			NotFound when await ReportLockFailuresAsync(parser, executorObject, lockFailures) => CallState.Empty,
+			NotFound when template is not null => await services.Arguments.RefuseAsync(parser, "#-1 NO MATCHING CUSTOM COMMAND", true),
 			NotFound => await RunHuhCommandAsync(parser, src)
 		};
 

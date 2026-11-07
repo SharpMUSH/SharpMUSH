@@ -13,6 +13,9 @@ namespace SharpMUSH.Client.Services;
 /// </remarks>
 public class GameCommandService(IHttpClientFactory httpClientFactory)
 {
+	public Task<ApiResult<PortalCommandResponse>> RunAsync(PortalCommandRequest request) =>
+		Client.PostApiAsync<PortalCommandRequest, PortalCommandResponse>("api/commands", request, "The server returned no command result.");
+
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 
 	/// <summary>

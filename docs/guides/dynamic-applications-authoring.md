@@ -167,11 +167,24 @@ In a `view`, buttons and timeline actions post their `values` alone.
 **Clickable values.** A stats tile, a keyvalue row, a chip, a table row or a button may carry `command` or
 `dialog`. A click sends what the player meant and never a number, so a roll is made and kept by the game:
 
-- `command` is a line run as the viewer's character, exactly as if typed, with `{name}` filled from the clicked
+- `command` is a template run as the viewer's character, with literal `{name}` data taken from the clicked
   value. What it prints shows under the element, and the page fetches its data again. A tile, a table row or a
   chip fills from its row's fields, so a row usually carries a `key`; a keyvalue row gives `{key}` (the field
   name) and `{value}`; a button gives its own `key`, `label` and `values`. A value that is missing or empty is
-  not clickable, and a line break in a value is sent as `%r`, so one click runs one command.
+  not clickable. Line breaks are preserved as data (CRLF and CR normalize to LF).
+  Supported commands are `think`, `say`, `pose`, and `semipose` (optionally `/noeval`), plus custom
+  `+commands`. Placeholders must be top-level text, separated from adjacent words by whitespace or
+  `= , : / - . ;`. For example, `+check [add(1,2)] {key}` evaluates the author's expression while
+  keeping the clicked key literal. `think/noeval {value}` keeps the data literal too.
+  Placeholders in command names, switches, brackets, braces, parentheses, escapes, and deferred
+  command bodies are refused. Other built-ins and aliases are not supported by this bounded mode.
+  Template `%` substitutions must be inside an explicit bracket expression; data may contain any `%`.
+  Use a custom `+command` for more involved actions. Its captured data is literal on arrival; explicitly
+  evaluating that data later (for example with `s(%0)`, or executing it as a new command body) is a separate trust decision by the author.
+  Unsupported templates are not clickable and direct template requests are refused by the server.
+  Existing applications using unsupported placements must update their templates. Commands with no
+  placeholders retain the ordinary typed-command path. In a template, `%c` reads the original template
+  source, including `{name}` placeholders; it does not expose the clicked values or internal slots.
 - `dialog` is a route answering a small form for the clicked value, fetched with `?key=<key>` and shown in a
   dialog: a roll that needs a choice first (a weapon, a bonus). The form's own actions post the choices, and an
   answer without errors closes the dialog and refetches the page.

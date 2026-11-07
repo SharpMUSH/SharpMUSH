@@ -71,12 +71,12 @@ public class SchemaClickTests : TrackingBunitContext
 	{
 		var datum = new Dictionary<string, string> { ["key"] = "Strength", ["label"] = "Str", ["name"] = "Thieves' Tools", ["note"] = "one\r\ntwo\nthree", ["empty"] = "" };
 
-		await Assert.That(SchemaClick.Fill("+check {key}", datum)).IsEqualTo("+check Strength");
-		await Assert.That(SchemaClick.Fill("+use {name}", datum)).IsEqualTo("+use Thieves' Tools");
-		await Assert.That(SchemaClick.Fill("+note {note}", datum)).IsEqualTo("+note one%rtwo%rthree");
-		await Assert.That(SchemaClick.Fill("+check {missing}", datum)).IsNull();
-		await Assert.That(SchemaClick.Fill("+check {empty}", datum)).IsNull();
-		await Assert.That(SchemaClick.Fill("+check [add(1,2)] {key}", datum)).IsEqualTo("+check [add(1,2)] Strength");
+		await Assert.That(SchemaClick.Preview("+check {key}", datum)).IsEqualTo("+check Strength");
+		await Assert.That(SchemaClick.Preview("+use {name}", datum)).IsEqualTo("+use Thieves' Tools");
+		await Assert.That(SchemaClick.Preview("+note {note}", datum)).IsEqualTo("+note one%rtwo%rthree");
+		await Assert.That(SchemaClick.Preview("+check {missing}", datum)).IsNull();
+		await Assert.That(SchemaClick.Preview("+check {empty}", datum)).IsNull();
+		await Assert.That(SchemaClick.Preview("+check [add(1,2)] {key}", datum)).IsEqualTo("+check [add(1,2)] Strength");
 	}
 
 	[Test]
@@ -105,7 +105,8 @@ public class SchemaClickTests : TrackingBunitContext
 		cut.WaitForState(() => cut.FindAll(".schema-click-output").Any(o => o.TextContent.Contains("14 (roll 3f2a)")));
 
 		var command = _requests.Single(r => r.Path == "/api/commands");
-		await Assert.That(JsonNode.Parse(command.Body!)!["command"]!.GetValue<string>()).IsEqualTo("+check Strength");
+		await Assert.That(JsonNode.Parse(command.Body!)!["command"]!.GetValue<string>()).IsEqualTo("+check {key}");
+		await Assert.That(JsonNode.Parse(command.Body!)!["data"]!["key"]!.GetValue<string>()).IsEqualTo("Strength");
 		await Assert.That(changed).IsEqualTo(1);
 	}
 
@@ -129,7 +130,21 @@ public class SchemaClickTests : TrackingBunitContext
 
 		table.WaitForState(() => { lock (_requests) return _requests.Count(r => r.Path == "/api/commands") == 3; });
 		var sent = _requests.Where(r => r.Path == "/api/commands").Select(r => JsonNode.Parse(r.Body!)!["command"]!.GetValue<string>());
-		await Assert.That(sent).IsEquivalentTo(["+check Perception", "+check Stealth", "+use rope"]);
+		await Assert.That(sent).IsEquivalentTo(["+check {key}", "+check {text}", "+use {id}"]);
+	}
+
+	[Test]
+	public async Task A_hidden_row_value_is_sent_separately_from_template_source()
+	{
+		var cut = Render<SchemaDisplay>(p => p
+			.Add(x => x.Element, new SchemaElement(Kind: "table", RowsField: "gear",
+				Columns: [new SchemaColumn("name", "Item")], Command: "+use {id}"))
+			.Add(x => x.Data, Data("gear", """[{"id":"[add(20,22)] %n","name":"Rope"}]""")));
+		await cut.Find("td button.schema-click").ClickAsync(new());
+		cut.WaitForState(() => { lock (_requests) return _requests.Any(r => r.Path == "/api/commands"); });
+		var sent = JsonNode.Parse(_requests.Single(r => r.Path == "/api/commands").Body!)!;
+		await Assert.That(sent["command"]!.GetValue<string>()).IsEqualTo("+use {id}");
+		await Assert.That(sent["data"]!["id"]!.GetValue<string>()).IsEqualTo("[add(20,22)] %n");
 	}
 
 	[Test]
@@ -141,7 +156,7 @@ public class SchemaClickTests : TrackingBunitContext
 		await cut.Find("button").ClickAsync(new());
 
 		cut.WaitForState(() => cut.FindAll(".schema-click-output").Count > 0);
-		await Assert.That(JsonNode.Parse(_requests.Single(r => r.Path == "/api/commands").Body!)!["command"]!.GetValue<string>()).IsEqualTo("+init initiative");
+		await Assert.That(JsonNode.Parse(_requests.Single(r => r.Path == "/api/commands").Body!)!["command"]!.GetValue<string>()).IsEqualTo("+init {key}");
 	}
 
 	[Test]
