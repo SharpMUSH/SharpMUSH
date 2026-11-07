@@ -168,7 +168,7 @@ public static partial class ThemeStylesheet
 	private static readonly IReadOnlyDictionary<string, string> LightSheetDefaults = new Dictionary<string, string>
 	{
 		["elev-1"] = "inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 2px rgba(60, 40, 20, 0.06), 0 8px 24px -10px rgba(60, 40, 20, 0.18)",
-		["logo-inner"] = "oklch(from var(--accent) calc(l + 0.14) c h)",
+		["logo-inner"] = "color-mix(in srgb, var(--accent) 70%, #ffffff)",
 	};
 
 	/// <summary>
