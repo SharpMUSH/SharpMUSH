@@ -1,0 +1,40 @@
+@using SharpMUSH.Client.Services
+@inject ServerInfoService ServerInfo
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+@* The sign-in page's head: the game's portal_banner as a strip, its logo and name, and its tagline. The rest of
+   the brand (the guide link) is the page's own, passed as ChildContent. *@
+<div class="login-brand">
+    @if (_identity.Banner is { } banner && ImageUrlPolicy.IsRenderable(banner))
+    {
+        <img class="login-banner" src="@ApiUrl.Resolve(banner)" alt="" />
+    }
+    <GameLogo Size="44" Class="login-logo" />
+    <h1 class="login-brand-title">@Loc["AppTitle"]</h1>
+    @if (_identity.Tagline is { } tagline)
+    {
+        <p class="login-tagline">@tagline</p>
+    }
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private GameIdentity _identity = new(string.Empty, null, null, null);
+
+    protected override async Task OnInitializedAsync()
+    {
+        ServerInfo.Changed += OnServerInfoChanged;
+        _identity = await ServerInfo.IdentityAsync();
+    }
+
+    private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
+    {
+        _identity = await ServerInfo.IdentityAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => ServerInfo.Changed -= OnServerInfoChanged;
+}

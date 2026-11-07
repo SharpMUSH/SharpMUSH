@@ -10,15 +10,16 @@
 @inject NavigationManager Nav
 @inject IAccountAuthState AccountAuth
 @inject IStringLocalizer<SharedResource> Loc
+@inject ServerInfoService ServerInfo
 @implements IDisposable
 
-@* D1 §6.1 wiki home (board 21): a glass hero (the home page's image, a search field, New page for
+@* D1 §6.1 wiki home (board 21): a glass hero (the game's portal_banner, else the home page's image, a search field, New page for
    creators) and category cards — a cover, the name and count, the top three pages with draft and
    locked tags, and "All N pages". Only the categories staff pinned get a card; a search looks through
    every category. Search reads ?q= from the address and submits a paginated search across all collections. *@
 <div class="wiki-index-container">
     <div class="wiki-index">
-        <GlassBanner Title="@Loc["NavWikiHeroTitle"]" Kicker="@string.Format(Loc["NavWikiHeroKicker"], Loc["AppTitle"])" ImageUrl="@_heroImage"
+        <GlassBanner Title="@Loc["NavWikiHeroTitle"]" Kicker="@string.Format(Loc["NavWikiHeroKicker"], Loc["AppTitle"])" ImageUrl="@(ImageUrlPolicy.IsRenderable(_banner) ? _banner : _heroImage)"
                      Height="180" TitleSize="hero" HeadingLevel="1" Minimisable="false">
             <Secondary>
                 <div class="wiki-hero-row">
@@ -154,6 +155,9 @@
     private string? _browseCategory;
     private int _browseSkip;
     private string? _heroImage;
+
+    /// <summary>The game's portal_banner, which the hero shows in place of the home page's image.</summary>
+    private string? _banner;
     private IReadOnlyList<WikiPageSummary> _pages = [];
 
     /// <summary>The keys of the categories pinned to the wiki home: the only ones with a card unless searching.</summary>
@@ -178,9 +182,17 @@
         Nav.LocationChanged += OnLocationChanged;
         AccountAuth.AuthStateChanged += OnReaderChanged;
         AccountAuth.ActiveCharacterChanged += OnReaderChanged;
+        ServerInfo.Changed += OnServerInfoChanged;
         ReadQuery();
+        _banner = (await ServerInfo.IdentityAsync()).Banner;
         await LoadAsync();
     }
+
+    private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
+    {
+        _banner = (await ServerInfo.IdentityAsync()).Banner;
+        StateHasChanged();
+    });
 
     private async Task LoadAsync()
     {
@@ -300,5 +312,6 @@
         Nav.LocationChanged -= OnLocationChanged;
         AccountAuth.AuthStateChanged -= OnReaderChanged;
         AccountAuth.ActiveCharacterChanged -= OnReaderChanged;
+        ServerInfo.Changed -= OnServerInfoChanged;
     }
 }

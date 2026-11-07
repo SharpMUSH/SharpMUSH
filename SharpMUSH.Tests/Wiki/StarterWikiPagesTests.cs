@@ -36,13 +36,16 @@ public class StarterWikiPagesTests
 		await Assert.That(html).DoesNotContain("data-directive=\"recent\"");
 	}
 
-	/// <summary>Home opens with the logo, so the front page and the wiki route show it as the banner.</summary>
+	/// <summary>
+	/// Home carries no picture of its own: the portal's Home shows the game's banner and logo above it, and the
+	/// wiki's hero shows portal_banner. A SharpMUSH logo here would stand over the game's own.
+	/// </summary>
 	[Test]
-	public async Task Home_OpensWithTheBannerImage()
+	public async Task Home_HasNoLeadImage()
 	{
 		var html = new WikiMarkdigPipeline().RenderToHtml(StarterWikiPages.Home);
 
-		await Assert.That(WikiImages.LeadImageUrl(html)).IsEqualTo("/assets/Logo.svg");
+		await Assert.That(WikiImages.LeadImageUrl(html)).IsNull();
 		await Assert.That(html).Contains("<div class=\"center\">");
 	}
 

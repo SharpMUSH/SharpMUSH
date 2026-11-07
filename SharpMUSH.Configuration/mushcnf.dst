@@ -974,6 +974,19 @@ image_hosts any
 # SharpMUSH logo when that is empty too.
 # portal_favicon /api/wiki-assets/<id>/favicon.png
 
+# A wide picture behind the game's name on the portal's Home, wiki and
+# sign-in pages, and in link previews. Empty shows none.
+# portal_banner /api/wiki-assets/<id>/banner.png
+
+# One short line, at most 120 characters, under the game's name on the
+# portal and in link previews.
+# portal_tagline Gaslight intrigue in a city that never sleeps.
+
+# Two or three sentences, at most 300 characters, about the game for the
+# portal's Home and sign-in pages and link previews. While it is empty,
+# link previews use onboarding_introduction.
+# portal_description Players run the guilds of a rain-soaked city.
+
 # Should object names be restricted to just ascii characters, or can
 # non-ascii (Accented letters, for example) be used as well if the
 # mush'es locale permits? Not reccomended except for

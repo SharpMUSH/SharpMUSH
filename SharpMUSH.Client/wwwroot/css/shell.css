@@ -48,6 +48,33 @@
 	z-index: 5;
 }
 
+/* The game's logo and name, a link to Home. It takes the room between the left and right buttons and
+   shortens the name with an ellipsis when that room runs out. */
+.phosphor-topbar-game {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	color: var(--text);
+	text-decoration: none;
+}
+
+.phosphor-topbar-game > svg,
+.phosphor-topbar-game > img {
+	flex: none;
+}
+
+.phosphor-topbar-name {
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	font-family: var(--font-display);
+	font-weight: var(--font-title-weight);
+	font-size: var(--text-base);
+}
+
 /* ── Topbar icon buttons (menu, terminal, close) ── */
 .phosphor-icon-btn {
 	width: 38px;
@@ -1735,6 +1762,13 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 		border-bottom: 0;
 		border-right: 1px solid var(--border-soft);
 	}
+	/* A column of icons: the logo stays, the name has no room. The link still takes the spare height, which
+	   keeps search, language and terminal at the foot of the column. */
+	.phosphor-topbar-game {
+		flex-direction: column;
+		padding-top: var(--space-3);
+	}
+	.phosphor-topbar-name { display: none; }
 	.phosphor-shell {
 		--touch-rail-w: 56px;
 	}
