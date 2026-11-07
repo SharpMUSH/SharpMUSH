@@ -292,13 +292,15 @@ This is the part the Zero Trust dashboard is for. It does **not** touch telnet.
    its own Public Hostname entry. Add a route and make sure it sits **above** the catch-all from
    step 3 (Cloudflare matches top-to-bottom):
    - **Subdomain/domain:** `mush.example.com`
-   - **Path:** `ws`  *(matches `/ws`)*
+   - **Path:** `^/ws(/|$)`  *(matches `/ws` and `/ws/...` only)*
    - **Service type:** `HTTP`
    - **URL:** `socketserver:4202`
 
    The portal's terminal connects to `wss://mush.example.com/ws`, the `/ws` path on the portal's
    own address, so this route must be a path on the portal's hostname, not a hostname of its own.
-   WebSockets traverse the tunnel with no extra config.
+   Cloudflare reads the path as a regular expression that can match anywhere in the path, so a bare
+   `ws` would also send pages such as `/wiki/News` to the connection server. Keep the `^` and the
+   `(/|$)`. WebSockets traverse the tunnel with no extra config.
 
 ### Part B — the telnet side (plain DNS, no Zero Trust involved)
 
