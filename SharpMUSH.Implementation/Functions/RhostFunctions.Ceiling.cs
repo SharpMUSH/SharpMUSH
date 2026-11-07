@@ -188,28 +188,21 @@ public partial class Functions
 
 	/// <summary>
 	/// <paramref name="code"/> with every bracket and parenthesis escaped, so evaluating it runs its substitutions
-	/// and calls no function, as RhostMUSH's subeval() does. What the code escaped already stays as it was. With
-	/// <paramref name="mux"/>, braces and <c>%l</c> are escaped too, as TinyMUX's <c>subeval()</c> leaves them.
+	/// and calls no function, as RhostMUSH's subeval() does. What the code escaped already stays as it was.
 	/// </summary>
-	private static string SubstitutionsOnly(string code, bool mux = false)
+	private static string SubstitutionsOnly(string code)
 	{
 		var escaped = new StringBuilder(code.Length + 8);
 		for (var i = 0; i < code.Length; i++)
 		{
 			var c = code[i];
-			if (mux && c == '%' && i + 1 < code.Length && code[i + 1] is 'l' or 'L')
-			{
-				escaped.Append("\\%").Append(code[++i]);
-				continue;
-			}
-
 			if (c is '\\' or '%' && i + 1 < code.Length)
 			{
 				escaped.Append(c).Append(code[++i]);
 				continue;
 			}
 
-			if (c is '[' or ']' or '(' or ')' || mux && c is '{' or '}') escaped.Append('\\');
+			if (c is '[' or ']' or '(' or ')') escaped.Append('\\');
 			escaped.Append(c);
 		}
 
