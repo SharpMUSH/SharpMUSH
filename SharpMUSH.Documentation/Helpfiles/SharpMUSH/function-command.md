@@ -69,7 +69,7 @@ Otherwise, this command defines a global function with the name `<function name>
 - /delete, to remove a user-defined or cloned function, or allow a built-in function to be overriden by a user-defined one.
 - /restrict, to change the restriction flags on an existing function.
 - /builtin or /restore, to remove the @function of that name and turn the built-in back on. `@function/restore *` removes every @function not marked with /preserve.
-- /preserve, to mark a @function so `@function/restore *` keeps it.
+- /preserve, to mark a @function so `@function/restore *` keeps it. With a definition after `=`, it is TinyMUX's: it defines the function with `localize`.
 - /list, to list the @functions, as `@function` alone does.
 - /privileged, for TinyMUX code: with the `mux_function_caller` @config option on, a function defined with it runs as the object that holds it, and one defined without it runs as whoever calls it. With the option off it changes nothing. See [@function definition permissions].
 
