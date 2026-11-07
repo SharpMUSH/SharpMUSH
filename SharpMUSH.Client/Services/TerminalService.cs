@@ -1,6 +1,5 @@
 using System.Net.WebSockets;
 using System.Text.Json;
-using MarkupString.Ansi;
 using SharpMUSH.Client.Models;
 using SharpMUSH.Library.Logging;
 
@@ -334,17 +333,9 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 				return;
 
 			default:
-				// Plain text (banners / pre-markup server text): legacy line-by-line, ANSI-stripped.
-				var text = message.AsSpan();
-				foreach (var range in text.Split('\n'))
-				{
-					var raw = text[range].TrimEnd('\r');
-					if (raw.IsEmpty)
-						continue;
-					var line = AnsiEscapeParser.Parse(raw.ToString()).ToPlainText();
-					if (line.Length > 0)
-						AddLine(line, TerminalLineSource.Server);
-				}
+				// Plain text (banners / pre-markup server text): its ANSI is decoded and shown, line by line.
+				foreach (var line in TerminalFrameRenderer.DecodePlainText(message))
+					AddLine(line.Plain, line.Html, TerminalLineSource.Server);
 				return;
 		}
 	}
