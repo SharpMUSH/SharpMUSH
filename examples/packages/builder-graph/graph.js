@@ -45,10 +45,13 @@
         const list = document.getElementById('checks'); list.replaceChildren();
         document.getElementById('check-count').textContent = findings.length ? `${findings.length}` : 'none';
         for (const finding of findings) {
-            const li = item(`${finding.subject.name} (${finding.subject.dbref}): ${finding.message}`, 'finding');
-            li.tabIndex = 0; li.dataset.warning = finding.name;
-            li.onclick = () => select(finding.room);
-            li.onkeydown = event => { if (event.key === 'Enter') select(finding.room); };
+            const li = item('');
+            const button = document.createElement('button');
+            button.type = 'button'; button.className = 'finding';
+            button.textContent = `${finding.subject.name} (${finding.subject.dbref}): ${finding.message}`;
+            button.dataset.warning = finding.name;
+            button.onclick = () => select(finding.room);
+            li.append(button);
             list.append(li);
         }
     }
@@ -59,7 +62,13 @@
         if (coordsOf(room) && levelOf(room) !== Number(levels.value)) { levels.value = String(levelOf(room)); render(); return; }
         document.getElementById('selection').textContent = `${room.name} (${room.dbref})`
             + (coordsOf(room) ? ` at ${coordsOf(room).join(', ')}` : ' · no coordinates') + (moves.has(id) ? ' · moved, not saved' : '');
-        for (const node of drawing.querySelectorAll('.node')) node.classList.toggle('selected', node.dataset.id === id);
+        document.getElementById('position-form').hidden = false;
+        const position = coordsOf(room) ?? [0, 0, Number(levels.value) || 0];
+        for (const [index, axis] of ['x', 'y', 'z'].entries()) document.getElementById(`position-${axis}`).value = position[index];
+        for (const node of drawing.querySelectorAll('.node')) {
+            node.classList.toggle('selected', node.dataset.id === id);
+            node.setAttribute('aria-pressed', node.dataset.id === id ? 'true' : 'false');
+        }
         const list = document.getElementById('exits'); list.replaceChildren();
         for (const exit of graph.exits.filter(e => e.source === id)) {
             const destination = exit.destination ? roomById(exit.destination) : null;
@@ -167,6 +176,7 @@
         document.getElementById('status').textContent = `${graph.rooms.length} readable rooms · ${placed} placed · ${graph.exits.length} exits${graph.truncated ? ' · result truncated' : ''}`;
         if (selected && positions.has(selected)) select(selected);
         else {
+            document.getElementById('position-form').hidden = true;
             document.getElementById('selection').textContent = 'Select a room to inspect its exits.';
             document.getElementById('exits').replaceChildren();
         }
@@ -302,6 +312,26 @@
         let rooms;
         try { rooms = JSON.parse(await file.text()); } catch { status(`${file.name} is not JSON.`); return; }
         apply(rooms, `the changes in ${file.name}`);
+    };
+    document.getElementById('position-stage').onclick = () => {
+        if (!graph || !selected) return;
+        const inputs = ['x', 'y', 'z'].map(axis => document.getElementById(`position-${axis}`));
+        const cell = inputs.map(input => Number(input.value));
+        if (inputs.some(input => input.value === '') || cell.some(value => !Number.isInteger(value) || value < -2147483648 || value > 2147483647)) {
+            status('Enter a whole number from −2147483648 to 2147483647 for each coordinate.');
+            return;
+        }
+        const room = roomById(selected);
+        if (room.coordinates && cell.every((value, index) => value === room.coordinates[index])) moves.delete(selected);
+        else moves.set(selected, cell);
+        showLevels(); levels.value = String(cell[2]); render();
+        status(moves.has(selected) ? `Position staged for ${room.name}. Use Save positions to review and apply.` : `Original position restored for ${room.name}.`);
+    };
+    document.getElementById('position-form').onkeydown = event => {
+        if (event.key === 'Enter' && event.target.tagName === 'INPUT') {
+            event.preventDefault();
+            document.getElementById('position-stage').click();
+        }
     };
     document.getElementById('save').onclick = () => {
         if (channel && moves.size) apply(documentOf([...moves].map(([id, coordinates]) => ({ id, coordinates }))), 'the new positions');

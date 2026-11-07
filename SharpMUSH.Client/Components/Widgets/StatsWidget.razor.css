@@ -35,9 +35,8 @@
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: var(--text-faint);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+	line-height: 1.5;
+	overflow-wrap: anywhere;
 }
 
 .stats-tile-value {

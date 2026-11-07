@@ -13,6 +13,7 @@
 }
 
 .md-head {
+	overflow-wrap: anywhere;
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
@@ -35,6 +36,7 @@
 }
 
 .md-body {
+	overflow-wrap: anywhere;
 	padding: var(--space-5);
 	white-space: pre-wrap;
 	font-family: var(--font-mono);

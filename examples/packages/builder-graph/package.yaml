@@ -1,7 +1,7 @@
 format: "1.16"
 package: builder-graph
 title: "Builder graph"
-version: 0.3.2
+version: 0.3.3
 kind: ui
 authors: [SharpMUSH]
 description: Builder topology in the reusable HTML/JavaScript host, with coordinates, checks, export, import and drag-to-place.
@@ -12,8 +12,8 @@ binaries:
     - file: ui.json
       sha256: ca8d7de593a16bf150bc0a57665cad77385f05d27d8fda63bc333fde6f8939f7
     - file: index.html
-      sha256: dcd17006342429509cdd639c017692ef9a84dfe5f177a0d1b0226fd42e1303e9
+      sha256: 11cf8e605bd2c98dfddd1ae1404ac6f0f947528106b8bfedd765fc01016fe04b
     - file: graph.js
-      sha256: 54ce2a2c6fe8b390653977fbd9539e52c68687c28366beb98f13d21b9fbe9dea
+      sha256: 40b97da4ab9578c109265eb8e76b2adf0a64a8bb0dd46e214b04c6ddc6f2d75b
     - file: graph.css
-      sha256: af7f1151cd7cc8d222fdb5fe9f66be3a1c6f7972f420c1489d5fa023783edce4
+      sha256: 093627491131b75ec8bc1ce53bbde00d2f97e71a1de42f6c76481353d09cd923

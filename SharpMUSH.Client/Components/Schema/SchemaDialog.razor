@@ -19,7 +19,9 @@
         }
         else
         {
-            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+            <div role="status" aria-label="@Loc["Loading"]">
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+            </div>
         }
     </DialogContent>
     <DialogActions>

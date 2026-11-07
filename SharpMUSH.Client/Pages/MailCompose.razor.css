@@ -45,3 +45,10 @@
 		height: 0;
 	}
 }
+
+.mc-draft-status {
+	margin: 0;
+	font-size: var(--text-sm);
+	color: var(--text-dim);
+	overflow-wrap: anywhere;
+}

@@ -12570,4 +12570,19 @@
     <value>Expand</value>
     <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
   </data>
+  <data name="Retry" xml:space="preserve">
+    <value>Try again</value>
+  </data>
+  <data name="MailDraftSaved" xml:space="preserve">
+    <value>Draft saved in this tab.</value>
+  </data>
+  <data name="MailDraftUnavailable" xml:space="preserve">
+    <value>This tab could not save your draft. Keep this page open until you send it.</value>
+  </data>
+  <data name="MailDraftDiscard" xml:space="preserve">
+    <value>Discard draft</value>
+  </data>
+  <data name="MailDraftClearFailed" xml:space="preserve">
+    <value>The message was sent, but this tab could not remove its saved draft. Do not send it again.</value>
+  </data>
 </root>

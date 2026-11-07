@@ -12,6 +12,7 @@
 }
 
 .mail-note {
+	overflow-wrap: anywhere;
 	padding: var(--space-5) var(--space-5);
 	font-size: var(--text-sm);
 	color: var(--text-dim);
@@ -188,6 +189,7 @@
 }
 
 .mail-reading-meta {
+	overflow-wrap: anywhere;
 	flex: 1 1 auto;
 	min-width: 0;
 }
@@ -217,6 +219,7 @@
 }
 
 .mail-reading-text {
+	overflow-wrap: anywhere;
 	white-space: pre-wrap;
 	font-family: var(--font-mono);
 	font-size: var(--text-sm);

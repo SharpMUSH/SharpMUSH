@@ -63,6 +63,32 @@ public class HelpFailureTests : TrackingBunitContext
 		};
 
 	[TUnit.Core.Test]
+	public async Task Index_RetryRecovers_WithoutLosingQueryFilter()
+	{
+		var recovered = false;
+		AddHelpServices(() => recovered
+			? new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = new StringContent(
+					"""{"corpus":"help","topic":"help","html":"<p>Index.</p>","topics":["newbie","mail"]}""",
+					Encoding.UTF8, "application/json")
+			}
+			: Unavailable());
+		this.AddAuthorization();
+		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/help?q=newbie");
+		var cut = Render<SharpMUSH.Client.Pages.Help>();
+		cut.WaitForAssertion(() => cut.Find(".help-retry"));
+
+		recovered = true;
+		await cut.Find(".help-retry").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".help-topic-list a"));
+
+		await Assert.That(cut.FindAll(".help-topic-list a").Count).IsEqualTo(1);
+		await Assert.That(cut.Find(".help-topic-list a").TextContent).IsEqualTo("newbie");
+		await Assert.That(cut.FindAll(".mud-alert").Count).IsEqualTo(0);
+	}
+
+	[TUnit.Core.Test]
 	public async Task Index_SaysWhyTheServerDidNotAnswer()
 	{
 		AddHelpServices(Unavailable);

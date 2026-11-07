@@ -87,11 +87,11 @@
 
 /* meta line under the title: "Last edited by X · when · anyone can edit" */
 .wiki-meta-sep {
-	color: var(--text-faint);
+	color: var(--text-on-image);
 }
 
 .wiki-meta-edit {
-	color: var(--text-dim);
+	color: var(--text-on-image);
 }
 
 /* ── Embedded article (a biography on a profile): the pre-D1 frame, no chrome ── */
@@ -123,8 +123,12 @@
 	padding: 0 var(--space-2);
 }
 
-/* mermaid diagrams inside the body */
+/* Mermaid owns a fixed dark palette; keep its canvas paired with that palette even in light portal themes. */
 .WikiContent ::deep .mermaid {
+	background: var(--mermaid-bg);
+	color: var(--mermaid-text);
+	padding: var(--space-5);
+	border-radius: var(--radius);
 	display: flex;
 	justify-content: center;
 	margin: 1rem 0;

@@ -830,6 +830,8 @@
 }
 
 ::deep .bld-preview-frame {
+    /* Preview content must query the simulated viewport, not the builder's desktop page. */
+    container: page / inline-size;
     width: 100%;
     min-height: 160px;
     padding: var(--space-4);

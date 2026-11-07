@@ -16,14 +16,16 @@ using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
-file sealed class AdminPackagesApiHandler : HttpMessageHandler
+internal sealed class AdminPackagesApiHandler : HttpMessageHandler
 {
+	public bool FailInstalled { get; set; }
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
 		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
 
 		if (request.Method == HttpMethod.Get && path == "api/packages")
 		{
+			if (FailInstalled) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
 			var installed = new List<InstalledPackageDto>
 			{
 				new(
@@ -53,6 +55,9 @@ file sealed class AdminPackagesApiHandler : HttpMessageHandler
 			return Task.FromResult(okResponse);
 		}
 
+		if (request.Method == HttpMethod.Get && path == "api/packages/plugins")
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new PluginsResponse([], true, false)) });
+
 		if (request.Method == HttpMethod.Get && path == "api/packages/who-where/readme")
 		{
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
@@ -68,9 +73,9 @@ file sealed class AdminPackagesApiHandler : HttpMessageHandler
 
 file static class AdminPackagesTestServices
 {
-	public static HttpClient AddAdminPackagesTestServices(this BunitContext ctx)
+	public static HttpClient AddAdminPackagesTestServices(this BunitContext ctx, AdminPackagesApiHandler? handler = null)
 	{
-		var apiClient = new HttpClient(new AdminPackagesApiHandler())
+		var apiClient = new HttpClient(handler ?? new AdminPackagesApiHandler())
 		{
 			BaseAddress = new Uri("https://localhost:8081/")
 		};
@@ -97,6 +102,7 @@ file static class AdminPackagesTestServices
 public class AdminPackagesPageTests : BunitContext, IAsyncDisposable
 {
 	private readonly HttpClient ownedHttpClient;
+	private readonly AdminPackagesApiHandler api = new();
 	private BunitAuthorizationContext Auth { get; }
 
 	public AdminPackagesPageTests()
@@ -104,7 +110,33 @@ public class AdminPackagesPageTests : BunitContext, IAsyncDisposable
 		Auth = this.AddAuthorization();
 		Auth.SetAuthorized("headwiz");
 		Auth.SetPolicies(PortalPermission.PackagesAdmin);
-		ownedHttpClient = this.AddAdminPackagesTestServices();
+		ownedHttpClient = this.AddAdminPackagesTestServices(api);
+	}
+
+	[TUnit.Core.Test]
+	public async Task Successful_plugin_inventory_remains_accessible_when_softcode_inventory_fails()
+	{
+		api.FailInstalled = true;
+		var host = Render<MudHarness>(p => p.AddChildContent<SharpMUSH.Client.Pages.Admin.Packages.AdminPackages>());
+		host.WaitForAssertion(() => host.Find(".pkg-installed-error"));
+		await host.FindAll(".pkg-tab").Single(button => button.TextContent.Contains("PkgPlugins")).ClickAsync();
+		await Assert.That(host.Markup).Contains("PkgNoPlugins");
+		await Assert.That(host.FindAll(".pkg-installed-error")).IsEmpty();
+		await host.FindAll(".pkg-tab").Single(button => button.TextContent.Contains("PkgInstalled")).ClickAsync();
+		await Assert.That(host.FindAll(".pkg-installed-error")).HasCount().EqualTo(1);
+	}
+
+	[TUnit.Core.Test]
+	public async Task Failed_inventory_is_not_reported_as_no_installed_packages_and_can_retry()
+	{
+		api.FailInstalled = true;
+		var host = Render<MudHarness>(p => p.AddChildContent<SharpMUSH.Client.Pages.Admin.Packages.AdminPackages>());
+		host.WaitForAssertion(() => host.Find(".pkg-installed-error"));
+		await Assert.That(host.Markup).DoesNotContain("PkgNoneInstalled");
+		api.FailInstalled = false;
+		await host.Find(".pkg-installed-retry").ClickAsync();
+		host.WaitForAssertion(() => host.Find(".pkg-row"));
+		await Assert.That(host.FindAll(".pkg-installed-error")).IsEmpty();
 	}
 
 	[TUnit.Core.Test]
