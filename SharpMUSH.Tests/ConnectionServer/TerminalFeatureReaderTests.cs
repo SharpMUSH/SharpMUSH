@@ -13,6 +13,7 @@ namespace SharpMUSH.Tests.ConnectionServer;
 /// </summary>
 public class TerminalFeatureReaderTests
 {
+	/// <summary>Automatic aliases request probes; explicit choices preserve their selected method without probing.</summary>
 	[Test]
 	[Arguments("auto", true)]
 	[Arguments("on", true)]
@@ -31,6 +32,7 @@ public class TerminalFeatureReaderTests
 			.IsEqualTo(probes ? "auto" : value == "off" ? null : value);
 	}
 
+	/// <summary>An unlisted terminal can establish Sixel support through replies while manual overrides remain independent.</summary>
 	[Test]
 	public async Task UnknownTerminalCanUseProbedSixelWithoutAProfile()
 	{
@@ -49,6 +51,7 @@ public class TerminalFeatureReaderTests
 		await Assert.That(TerminalFeatureReader.For(metadata).HasFlag(TerminalFeatures.Sixel)).IsTrue();
 	}
 
+	/// <summary>Diagnostics distinguish direct replies, profile assumptions and missing evidence.</summary>
 	[Test]
 	public async Task CapabilityEvidenceDistinguishesProfilesAndSilence()
 	{
@@ -80,6 +83,7 @@ public class TerminalFeatureReaderTests
 	public async Task Identify_ReadsTheTerminalName(string name, string? id) =>
 		await Assert.That(TerminalFeatureReader.Identify([name], null, null)?.Id).IsEqualTo(id);
 
+	/// <summary>The published MudForge profile survives silence without enabling graphics by default.</summary>
 	[Test]
 	public async Task MudForgeAutoGraphicsSurvivesUnansweredQueriesButRemainsOptIn()
 	{
@@ -111,6 +115,7 @@ public class TerminalFeatureReaderTests
 		await Assert.That(TerminalFeatureReader.Identify(["XTERM-KITTY"], null, "no-such-terminal")).IsEqualTo(TerminalProfile.Kitty);
 	}
 
+	/// <summary>A missing Sixel reply preserves known capabilities rather than recording a rejection.</summary>
 	[Test]
 	public async Task UnansweredSixelProbePreservesKnownCapabilities()
 	{
