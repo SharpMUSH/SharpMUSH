@@ -258,6 +258,6 @@ public class ThemeStylesheetTests
 			await Assert.That(theme.Token(name)).IsEqualTo(hex).Because(name);
 		}
 
-		await Assert.That(theme.Token("code-bg")).IsEqualTo("#090a0b");
+		await Assert.That(theme.Token("code-bg")).IsEqualTo("#0c0b0a");
 	}
 }

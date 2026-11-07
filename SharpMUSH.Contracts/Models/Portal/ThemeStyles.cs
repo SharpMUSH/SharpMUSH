@@ -113,6 +113,7 @@ public static class ThemeStyles
 		["elbow"] = new("elbow", "none", "none"),
 		["plating"] = new("plating", "none", "none"),
 		["chrome-armor"] = new("chrome-armor", "outset", "chrome-armor"),
+		["lifted"] = new("lifted", "line", "lifted"),
 	};
 
 	public static readonly IReadOnlyDictionary<string, OrnamentSet> Ornaments = new Dictionary<string, OrnamentSet>

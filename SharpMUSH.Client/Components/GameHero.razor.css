@@ -6,7 +6,7 @@
 	align-items: flex-end;
 	border-radius: var(--radius-card);
 	border: var(--card-border-width) var(--card-border-style) var(--border);
-	background: var(--card-bg);
+	background: var(--hero-marks), var(--card-bg);
 	box-shadow: var(--card-shadow);
 }
 

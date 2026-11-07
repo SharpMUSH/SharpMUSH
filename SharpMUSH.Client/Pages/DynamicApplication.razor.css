@@ -8,9 +8,9 @@
 }
 
 .app-kicker {
-    font-family: var(--font-mono);
+    font-family: var(--font-kicker);
     font-size: var(--text-xs);
-    letter-spacing: 0.18em;
+    letter-spacing: var(--kicker-tracking);
     text-transform: uppercase;
     color: var(--accent);
     margin-bottom: 0.5rem;

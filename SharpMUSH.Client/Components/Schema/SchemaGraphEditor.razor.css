@@ -102,7 +102,7 @@
 .graph-inspector-kind,
 .graph-node-kind,
 .graph-outline-kind {
-	font: 600 var(--text-xs) var(--font-mono);
+	font: 600 var(--text-xs) var(--font-kicker);
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
 	color: var(--graph-tone, var(--text-dim));

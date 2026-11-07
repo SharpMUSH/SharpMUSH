@@ -7619,6 +7619,9 @@
   <data name="AdmThemeStyleFrameChromeArmor" xml:space="preserve">
     <value>Chrome armour</value>
   </data>
+  <data name="AdmThemeStyleFrameLifted" xml:space="preserve">
+    <value>Lifted</value>
+  </data>
   <data name="AdmThemeStyleOrnamentTwinkle" xml:space="preserve">
     <value>Twinkles</value>
   </data>

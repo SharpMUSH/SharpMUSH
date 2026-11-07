@@ -115,12 +115,15 @@ public static partial class ThemeStylesheet
 			("card-border-style", "A card's border style."),
 			("card-border-width", "A card's border width."),
 			("card-shadow", "A card's shadow."),
+			("elev-1", "The shadow a lifted card stands on."),
 			("shadow", "The general raised shadow."),
 		]),
 		("Type", [
 			("font-ui", "Body and controls."),
 			("font-display", "Titles."),
 			("font-mono", "The terminal and code."),
+			("font-kicker", "The small uppercase labels over tiles, panels and fields."),
+			("kicker-tracking", "Their letter spacing."),
 			("font-title-weight", "Titles' weight."),
 			("title-transform", "Titles' case: none or uppercase."),
 			("title-tracking", "Titles' letter spacing."),
@@ -137,6 +140,8 @@ public static partial class ThemeStylesheet
 			("texture-mask-border", "The same, filled with the border colour."),
 			("card-marks", "Gradient layers drawn on every card, over its surface."),
 			("card-mask-text", "A drawing on every card filled with the text colour; -accent, -accent-2, -accent-3, -border and -grain likewise."),
+			("hero-marks", "Gradient layers drawn on the Home hero, over its card."),
+			("logo-inner", "The SharpMUSH mark's two inner strokes; its body is the accent."),
 			("ornament-before", "A glyph before page titles."),
 			("ornament-after", "A glyph after page titles."),
 			("title-underline", "The rule under page titles."),
@@ -153,6 +158,8 @@ public static partial class ThemeStylesheet
 		["radius-row"] = "10px",
 		["font-mono"] = "\"Cascadia Mono\", \"DejaVu Sans Mono\", monospace",
 		["font-title-weight"] = "700",
+		["font-kicker"] = "var(--font-ui)",
+		["kicker-tracking"] = "0.12em",
 	};
 
 	/// <summary>

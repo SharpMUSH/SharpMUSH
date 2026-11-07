@@ -92,8 +92,8 @@ public class DesignTokensTests
 	[Test]
 	public async Task TextFaintMeetsAa()
 	{
-		await Assert.That(Tokens()).Contains("--text-faint: #7d8790")
-			.Because("#5f6870 is 3.38:1 on --bg; the small labels it is used on need 4.5:1");
+		await Assert.That(Tokens()).Contains("--text-faint: #90887e")
+			.Because("the small labels it is used on need 4.5:1, on --surface-2 (#211e1c) too");
 	}
 
 	[Test]

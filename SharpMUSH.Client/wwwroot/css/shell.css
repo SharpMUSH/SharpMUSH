@@ -583,9 +583,9 @@
 	display: none;
 }
 .nav-group-label {
-	font-family: var(--font-mono);
+	font-family: var(--font-kicker);
 	font-size: var(--text-xs);
-	letter-spacing: 0.16em;
+	letter-spacing: var(--kicker-tracking);
 	text-transform: uppercase;
 	color: var(--text-faint);
 	padding: var(--space-2) var(--space-4) var(--space-3);
