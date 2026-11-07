@@ -26,11 +26,8 @@ class TagTests(unittest.TestCase):
     def test_republishing_the_newest_release_keeps_its_tags(self):
         self.assertEqual(release_images.tags('1.0.0', ['1.0.0']), ['1.0.0', '1.0', '1', 'latest'])
 
-    def test_prerelease_pushes_its_own_tag_and_dev(self):
-        self.assertEqual(release_images.tags('1.1.0-rc.1', ['1.0.0']), ['1.1.0-rc.1', 'dev'])
-
-    def test_prerelease_behind_main_leaves_dev(self):
-        self.assertEqual(release_images.tags('1.1.0-rc.1', ['1.0.0'], on_main=False), ['1.1.0-rc.1'])
+    def test_prerelease_pushes_only_its_own_tag(self):
+        self.assertEqual(release_images.tags('1.1.0-rc.1', ['1.0.0']), ['1.1.0-rc.1'])
 
     def test_prereleases_do_not_hold_back_a_release(self):
         self.assertEqual(release_images.tags('1.1.0', ['1.0.0', '1.2.0-rc.1']), ['1.1.0', '1.1', '1', 'latest'])

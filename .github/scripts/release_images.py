@@ -11,7 +11,8 @@ release's images are published, `bump` moves them in a pull request of its own.
 
 A release vX.Y.Z pushes :X.Y.Z, and moves :X.Y, :X and :latest only while it is the highest
 release under each of them, so publishing 1.0.1 after 1.1.0 leaves :1 and :latest on 1.1.0.
-A prerelease (X.Y.Z-rc.1) pushes its own tag, and :dev when it is main's newest commit.
+A prerelease (X.Y.Z-rc.1) pushes its own tag. docker-publish.yml then points :dev at it when it is
+main's newest commit, holding the dev pipeline's lock so the two never write :dev at once.
 """
 import json
 import os
@@ -66,17 +67,13 @@ def stable(version):
     return tuple(int(part) for part in match.groups()) if match else None
 
 
-def tags(version, released, on_main=True):
-    """The tags `version` is pushed under, given the versions already released.
-
-    A prerelease moves :dev only when it is main's newest commit, so it never takes :dev back
-    behind main.
-    """
+def tags(version, released):
+    """The tags `version` is pushed under, given the versions already released."""
     if not SEMVER.match(version):
         raise ValueError(f'{version!r} is not a version like 1.2.3 or 1.2.3-rc.1')
     own = stable(version)
     if own is None:
-        return [version, 'dev'] if on_main else [version]
+        return [version]
     others = [v for v in (stable(r) for r in released) if v is not None]
     result = [version]
     if all(v[:2] != own[:2] or v <= own for v in others):
@@ -108,7 +105,7 @@ def released_versions():
 
 
 def write_tags(version):
-    pushed = tags(version, released_versions(), os.environ.get('ON_MAIN') == 'true')
+    pushed = tags(version, released_versions())
     print(f'{version} is pushed as: {", ".join(pushed)}')
     with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
         output.write(f'version={version}\n')
