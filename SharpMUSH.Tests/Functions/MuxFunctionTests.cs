@@ -125,6 +125,8 @@ public class MuxFunctionTests : ServerTestBase
 	[Arguments("subeval(\\%\\%[sound(chime.wav)])", "%")]
 	[Arguments("subeval(sound(chime.wav))", "")]
 	[Arguments("subeval(\\%[beep()]x)", "x")]
+	[Arguments("subeval(\\%q[beep()]x)", "x")]
+	[Arguments("subeval(\\%=<a[beep()]>x)", "x")]
 	public async Task MuxShimsKeepPoints(string expression, string expected)
 	{
 		var result = (await Parser.FunctionParse(MString.Plain(expression)))!.Message!;
@@ -148,6 +150,16 @@ public class MuxFunctionTests : ServerTestBase
 		await Assert.That(await Eval("pfind(#1)")).IsEqualTo(await Eval("pmatch(#1)"));
 		await Assert.That(await Eval("pfind(#0)")).StartsWith("#0:");
 		await Assert.That(await Eval("pmatch(#0)")).StartsWith("#-1");
+	}
+
+	/// <summary>subeval() reads <c>%=&lt;n&gt;</c> as TinyMUX does: up to three digits, the rest of the name ignored.</summary>
+	[Test]
+	public async Task SubevalReadsArgumentNumbersAsTinyMux()
+	{
+		var thing = await Eval($"create({TestIsolationHelpers.GenerateUniqueName("MuxSubevalArgs")})");
+		await Eval($"attrib_set({thing}/TXT,\\%=<1a>|\\%=<01>|\\%=<001>|\\%=<0001>|\\%=<0>)");
+		await Eval($"attrib_set({thing}/FN,lit(subeval(v(TXT))))");
+		await Assert.That(await Eval($"u({thing}/FN,zero,one)")).IsEqualTo("one|one|one||zero");
 	}
 
 	/// <summary>pfind(me) is the caller whatever it is, as TinyMUX's lookup_player has it.</summary>
@@ -176,6 +188,8 @@ public class MuxFunctionTests : ServerTestBase
 		await Assert.That(await AsCaller("pfind(#99999999)")).IsEqualTo("#-1");
 		await Assert.That(await AsCaller("pfind(me)")).IsEqualTo(await AsCaller("objid(me)"));
 		await Assert.That(await AsCaller("pfind(*me)")).IsEqualTo(await AsCaller("objid(me)"));
+		await Assert.That(await AsCaller("pfind(*%bme)")).IsEqualTo(await AsCaller("objid(me)"));
+		await Assert.That(await AsCaller("pfind(**me)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
 		await Assert.That(await AsCaller("pfind(*#0)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
 		await Assert.That(await AsCaller($"pfind(*#{caller.Number})")).IsEqualTo(await AsCaller("objid(me)"));
 		await Assert.That(await AsCaller($"pfind({token}_Nobody)")).IsEqualTo(ErrorMessages.Returns.NoMatch);

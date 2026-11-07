@@ -36,7 +36,7 @@ public partial class Functions
 		}
 
 		var player = name.StartsWith('*') ? name[1..] : name;
-		if (player.Equals("me", StringComparison.OrdinalIgnoreCase)) return new CallState(executor.Object().DBRef);
+		if (player.Trim().Equals("me", StringComparison.OrdinalIgnoreCase)) return new CallState(executor.Object().DBRef);
 
 		player = player.TrimStart('*');
 		var found = player.Length == 0 || player != player.Trim() ? null
@@ -44,12 +44,16 @@ public partial class Functions
 				? long.TryParse(player[1..], out _)
 					&& await LocateService.Locate(parser, executor, executor, player, LocateFlags.All) is AnySharpObject obj
 					&& (obj.IsPlayer || executor.IsGod()) ? obj : null
-				: await LocateService.LocateConnectionTarget(parser, executor, executor, player) is AnySharpObject match
+				: await LocateService.Locate(parser, executor, executor, player, PlayerNameFlags) is AnySharpObject match
 					&& match.IsPlayer ? match : null;
 		return found is { } result
 			? new CallState(result.Object().DBRef)
 			: new CallState(ErrorMessages.Returns.NoMatch);
 	}
+
+	/// <summary>A player's name as <c>lookup_player</c> reads it, where <c>me</c> is only a name.</summary>
+	private const LocateFlags PlayerNameFlags = LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference
+		| LocateFlags.EnglishStyleMatching | LocateFlags.MatchOptionalWildCardForPlayerName;
 
 	/// <summary>
 	/// TinyMUX's <c>playmem()</c>: <c>playermem()</c> with the player optional, the executor when it is left out,
@@ -166,19 +170,35 @@ public partial class Functions
 		if (token[0] == '#') return await Evaluated(parser, code, at, length);
 		if (point[at + 1]) return code.Substring(at + 1, 1);
 
+		// A token written out as it stands keeps its points; any other gives them after its value.
+		var letter = char.ToUpperInvariant(token[1]);
+		var asWritten = length >= 3 && (letter is 'C' or 'X' && point[at + 2]
+			|| token[2] == '<' && token[^1] != '>' && (letter is 'Q' or 'C' or 'X' || letter == '=' && length >= 4));
+		var value = await TokenValue(parser, code, point, at, length);
+		return asWritten ? value
+			: MarkupText.Concat([value, .. Enumerable.Range(at, length).Where(index => point[index]).Select(index => code.Substring(index, 1))]);
+	}
+
+	/// <summary><see cref="Substituted"/>'s value for a token whose second character is not a point.</summary>
+	private static async ValueTask<MString> TokenValue(IMUSHCodeParser parser, MString code, bool[] point, int at,
+		int length)
+	{
+		var token = code.Text.Substring(at, length);
 		var named = length >= 3 && token[2] == '<';
 		var closed = named && length >= 4 && token[^1] == '>';
 		var name = closed ? token[3..^1] : string.Empty;
 		return char.ToUpperInvariant(token[1]) switch
 		{
 			'Q' when named => !closed ? code.Substring(at, length)
-				: name.Length > 0 && name.All(x => char.IsAsciiLetterOrDigit(x) || x == '_') ? await Evaluated(parser, code, at, length)
+				: name.Length is > 0 and <= 32 && name.All(x => char.IsAsciiLetterOrDigit(x) || x == '_')
+					? await Evaluated(parser, code, at, length)
+					: MarkupText.Empty,
+			'=' when closed && name.Length > 0 && char.IsAsciiDigit(name[0]) => ArgumentNumber(name) is { } number
+				? await Evaluated(parser, code, at, length, $"%=<{number}>")
 				: MarkupText.Empty,
 			'Q' => length == 3 && char.IsAsciiLetterOrDigit(token[2]) ? await Evaluated(parser, code, at, length) : MarkupText.Empty,
 			'=' when named && length >= 4 => !closed ? code.Substring(at, length)
-				: name.Length > 0 && (char.IsAsciiDigit(name[0]) ? name.All(char.IsAsciiDigit) : AttributeName().IsMatch(name))
-					? await Evaluated(parser, code, at, length)
-					: MarkupText.Empty,
+				: AttributeName().IsMatch(name) ? await Evaluated(parser, code, at, length) : MarkupText.Empty,
 			'=' or 'L' => MarkupText.Empty,
 			'C' or 'X' when named && !closed => code.Substring(at, length),
 			'C' or 'X' when length == 3 && point[at + 2] => code.Substring(at + 2, 1),
@@ -194,12 +214,23 @@ public partial class Functions
 	/// value is inserted after the token's first character, where it takes that character's markup, and the token is
 	/// then removed around it.
 	/// </summary>
-	private static async ValueTask<MString> Evaluated(IMUSHCodeParser parser, MString code, int at, int length)
+	private static async ValueTask<MString> Evaluated(IMUSHCodeParser parser, MString code, int at, int length,
+		string? written = null)
 	{
 		var token = code.Substring(at, length);
-		var value = (await parser.FunctionParse(MarkupText.Plain(token.Text)))?.Message ?? MarkupText.Empty;
+		var value = (await parser.FunctionParse(MarkupText.Plain(written ?? token.Text)))?.Message ?? MarkupText.Empty;
 		return value.Text.Length == 0 ? value
 			: token.Insert(1, value).Remove(1 + value.Text.Length, length - 1).Remove(0, 1);
+	}
+
+	/// <summary>
+	/// The argument <c>%=&lt;name&gt;</c> names, as TinyMUX reads it: its first one to three digits, and none when a
+	/// fourth digit follows.
+	/// </summary>
+	private static int? ArgumentNumber(string name)
+	{
+		var digits = name.TakeWhile(char.IsAsciiDigit).Count();
+		return digits > 3 ? null : int.Parse(name[..digits]);
 	}
 
 	/// <summary>Which characters of <paramref name="text"/> carry a point, the ones its plain text leaves out.</summary>
