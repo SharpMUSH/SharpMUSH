@@ -23,7 +23,7 @@ namespace SharpMUSH.Tests.Integration;
 /// commands it adds are global, and another test's install would replace the store.
 /// </summary>
 [NotInParallel]
-public class ChargenIntegrationTests
+public partial class ChargenIntegrationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }

@@ -278,6 +278,10 @@
       <Link>BundledPackages\room-contents.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.room-contents.README.md</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\chargen\README.md">
+      <Link>BundledPackages\chargen.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.chargen.README.md</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\chargen-app\README.md">
       <Link>BundledPackages\chargen-app.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.chargen-app.README.md</LogicalName>

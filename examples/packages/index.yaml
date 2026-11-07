@@ -44,7 +44,7 @@ packages:
     description: comm.channels/comm.message/comm.who OOB v2 pushes — channels, pages only to who received them, and live channel member lists — for the portal Play sidebar (bundled default)
   - path: chargen/
     package: chargen
-    version: 2.7.0
+    version: 2.7.1
     description: Character applications reviewed as drafts, with comments per section, rounds, a public queue and an optional cap (requires http-handler)
   - path: chargen-help/
     name: Character applications help

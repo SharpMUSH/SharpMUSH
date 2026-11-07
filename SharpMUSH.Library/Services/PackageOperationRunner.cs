@@ -269,8 +269,11 @@ public sealed class PackageOperationRunner(
 						try
 						{
 							if (lifecycle is IPackageLifecycleObserver observer)
-								Volatile.Write(ref outcome, (int)await observer.RunObservedLifecycleAsync(hook.ObjId, hook.Attribute, ExecutionBudget.CurrentToken));
-							else await lifecycle.RunLifecycleAsync(hook.ObjId, hook.Attribute, ExecutionBudget.CurrentToken);
+								Volatile.Write(ref outcome, (int)await (hook.ToVersion is null
+									? observer.RunObservedLifecycleAsync(hook.ObjId, hook.Attribute, ExecutionBudget.CurrentToken)
+									: observer.RunObservedLifecycleAsync(hook, ExecutionBudget.CurrentToken)));
+							else if (hook.ToVersion is null) await lifecycle.RunLifecycleAsync(hook.ObjId, hook.Attribute, ExecutionBudget.CurrentToken);
+							else await lifecycle.RunLifecycleAsync(hook, ExecutionBudget.CurrentToken);
 						}
 						catch (OperationCanceledException) { Volatile.Write(ref outcome, (int)PackageLifecycleOutcome.Cancelled); throw; }
 						catch (Exception) { Volatile.Write(ref outcome, (int)PackageLifecycleOutcome.Failed); throw; }

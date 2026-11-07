@@ -12,4 +12,8 @@ public interface IPackageLifecycleObserver
 	/// failures not represented by that verdict need independent observation before settlement.
 	/// </summary>
 	Task<PackageLifecycleOutcome> RunObservedLifecycleAsync(string objId, string attribute, CancellationToken cancellationToken = default);
+
+	/// <summary>Observes a retained hook without losing the committed apply's version provenance.</summary>
+	Task<PackageLifecycleOutcome> RunObservedLifecycleAsync(PackageLifecycleHook hook, CancellationToken cancellationToken = default)
+		=> RunObservedLifecycleAsync(hook.ObjId, hook.Attribute, cancellationToken);
 }

@@ -158,4 +158,114 @@ public class PackageLifecycleHooksTests(ServerWebAppFactory factory)
 
 		await Assert.That((await Installer.UninstallAsync(pkg)).Value).IsTypeOf<Success>();
 	}
+
+	[Test, NotInParallel]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task Upgrade_PassesCommittedVersionsToLifecycle(bool deferred)
+	{
+		var pkg = UniquePackageId();
+		var answers = new Dictionary<string, string>();
+		string VersionedManifest(string version) => Manifest(pkg, version).Replace(
+			"&UPDATE_MARKER me=updated",
+			"&UPDATE_MARKER me=updated; &FROM_VERSION me=%<from_version>; &TO_VERSION me=%<to_version>");
+		var install = Applied(await Installer.ApplyAsync(Parse(VersionedManifest("2.2.0")),
+			new PackageApplyRequest(Source(pkg), answers, [])));
+		var objid = install.CreatedObjects["marker"];
+		try
+		{
+			var manifest = Parse(VersionedManifest("2.8.0"));
+			var request = new PackageApplyRequest(Source(pkg, "commit-2"), answers, []);
+			if (deferred)
+			{
+				var operations = factory.Services.GetRequiredService<IPackageOperationRunner>();
+				var outcome = await operations.RunAsync("apply", token => Installer.ApplyAsync(manifest, request, token));
+				Applied(outcome.Expect<PackageOperationRan<Result<PackageApplyResult>>>().Result);
+			}
+			else Applied(await Installer.ApplyAsync(manifest, request));
+
+			await Assert.That(await ReadAttributeAsync(objid, "FROM_VERSION")).IsEqualTo("2.2.0");
+			await Assert.That(await ReadAttributeAsync(objid, "TO_VERSION")).IsEqualTo("2.8.0");
+
+			// A manual invocation must not infer a source version from the installed revision.
+			await factory.Services.GetRequiredService<IPackageLifecycleRunner>().RunLifecycleAsync(objid, "AUPDATE");
+			await Assert.That(await ReadAttributeAsync(objid, "FROM_VERSION")).IsEqualTo("");
+			await Assert.That(await ReadAttributeAsync(objid, "TO_VERSION")).IsEqualTo("");
+		}
+		finally
+		{
+			await Installer.UninstallAsync(pkg);
+		}
+	}
+
+	[Test, NotInParallel]
+	public async Task DeferredUpgrades_KeepTheirOwnVersionsAfterAnotherApplyCommits()
+	{
+		var pkg = UniquePackageId();
+		var answers = new Dictionary<string, string>();
+		string VersionedManifest(string version) => Manifest(pkg, version).Replace(
+			"&UPDATE_MARKER me=updated",
+			"&UPDATE_MARKER me=updated; &VERSION_TRACE me=v(VERSION_TRACE)%<from_version>:%<to_version>|");
+		var install = Applied(await Installer.ApplyAsync(Parse(VersionedManifest("2.2.0")),
+			new PackageApplyRequest(Source(pkg), answers, [])));
+		var objid = install.CreatedObjects["marker"];
+		try
+		{
+			var operations = factory.Services.GetRequiredService<IPackageOperationRunner>();
+			var outcome = await operations.RunAsync("apply", async token =>
+			{
+				foreach (var version in new[] { "2.8.0", "2.9.0" })
+					Applied(await Installer.ApplyAsync(Parse(VersionedManifest(version)),
+						new PackageApplyRequest(Source(pkg, version), answers, []), token));
+				return true;
+			});
+			await Assert.That(outcome.Expect<PackageOperationRan<bool>>().Result).IsTrue();
+			await Assert.That(await ReadAttributeAsync(objid, "VERSION_TRACE"))
+				.IsEqualTo("2.2.0:2.8.0|2.8.0:2.9.0|");
+		}
+		finally
+		{
+			await Installer.UninstallAsync(pkg);
+		}
+	}
+
+
+	[Test, NotInParallel]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task Upgrade_CreatedAttributesExcludeAdoptedAndExistingValues(bool deferred)
+	{
+		var pkg = UniquePackageId();
+		var answers = new Dictionary<string, string>();
+		string VersionedManifest(string version) => Manifest(pkg, version).Replace(
+			"&UPDATE_MARKER me=updated",
+			"&UPDATE_MARKER me=updated; &CREATED_ATTRS me=%<created_attributes>");
+		var install = Applied(await Installer.ApplyAsync(Parse(VersionedManifest("2.2.0")),
+			new PackageApplyRequest(Source(pkg), answers, [])));
+		var objid = install.CreatedObjects["marker"];
+		try
+		{
+			var mediator = factory.Services.GetRequiredService<Mediator.IMediator>();
+			var god = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(new DBRef(1))))
+				.Expect<AnySharpObject>().Expect<SharpPlayer>();
+			await Database.SetAttributeAsync(DBRef.Parse(objid), ["ADOPTED"], MarkupText.Plain("same"), god);
+			var manifest = Parse(VersionedManifest("2.8.0") + "\n      CREATED: new\n      ADOPTED: same\n"
+				+ "  - ref: other\n    type: thing\n    name: Other\n    attributes:\n      FOREIGN: new\n");
+			var request = new PackageApplyRequest(Source(pkg, "commit-2"), answers, []);
+			if (deferred)
+			{
+				var outcome = await factory.Services.GetRequiredService<IPackageOperationRunner>()
+					.RunAsync("apply", token => Installer.ApplyAsync(manifest, request, token));
+				Applied(outcome.Expect<PackageOperationRan<Result<PackageApplyResult>>>().Result);
+			}
+			else Applied(await Installer.ApplyAsync(manifest, request));
+
+			await Assert.That(await ReadAttributeAsync(objid, "CREATED_ATTRS")).IsEqualTo("marker/CREATED other/FOREIGN");
+		}
+		finally
+		{
+			await Installer.UninstallAsync(pkg);
+		}
+	}
+
 }

@@ -46,4 +46,11 @@ public interface IPackageLifecycleRunner
 	/// <param name="attribute">The lifecycle attribute name (e.g. <c>AINSTALL</c>).</param>
 	/// <param name="cancellationToken">Cancellation token.</param>
 	Task RunLifecycleAsync(string objId, string attribute, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Runs a retained hook with the committed apply's version provenance. The built-in runner supplies
+	/// named from_version and to_version arguments; a legacy implementation may ignore the provenance.
+	/// </summary>
+	Task RunLifecycleAsync(PackageLifecycleHook hook, CancellationToken cancellationToken = default)
+		=> RunLifecycleAsync(hook.ObjId, hook.Attribute, cancellationToken);
 }
