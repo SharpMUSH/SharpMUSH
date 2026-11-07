@@ -357,9 +357,15 @@ two independent defects.
 `npm test` in this directory runs the standalone Chromium table regression, without
 a running game. It checks the rendered radio table against the portal CSS, including
 whole headers beside a growing About column and prose wrapping at narrow widths.
-The fixture preserves the HTML emitted by MarkupString 2.22.1 at 78 columns; its
-small stylesheet includes the relevant `LayoutCss.Fixed` rules from that version.
-Update both when the renderer changes its table markup or CSS.
+The fixture preserves the HTML emitted by the pinned MarkupString at 78 columns.
+Regenerate it after changing `MarkupStringVersion`, from the repository root:
+
+```bash
+dotnet run --project tools/ClientData -- --radio-fixture tools/responsive-sweep/fixtures/radio-table.html
+```
+
+The generator records the renderer's actual version alongside its HTML. The standalone
+stylesheet is a subset of the layout rules; CI always supplies the generated current stylesheet.
 
 Use disk-backed temporary storage for Chromium, for example:
 
