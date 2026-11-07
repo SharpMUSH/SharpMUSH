@@ -1858,7 +1858,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
-    <value>— Koble til for å se hvem som er her —</value>
+    <value>Koble til for å se hvem som er her</value>
     <comment>MT</comment>
   </data>
   <data name="NavCreateACharacter" xml:space="preserve">
@@ -1950,7 +1950,7 @@
     <comment>MT — {0} is a route.</comment>
   </data>
   <data name="NavNoExitsAvailable" xml:space="preserve">
-    <value>— Ingen tilgjengelige utganger —</value>
+    <value>Ingen tilgjengelige utganger</value>
     <comment>MT</comment>
   </data>
   <data name="NavNotConnected" xml:space="preserve">
@@ -5432,6 +5432,22 @@
   </data>
   <data name="RolOverridesHelp" xml:space="preserve">
     <value>Et unntak på denne kontoen slår alle rollene dens.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReach" xml:space="preserve">
+    <value>Rekkevidde</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachEveryone" xml:space="preserve">
+    <value>Ethvert mål</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachUpTo" xml:space="preserve">
+    <value>Rekkevidde {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReaching" xml:space="preserve">
+    <value>(rekkevidde {0})</value>
     <comment>MT</comment>
   </data>
   <data name="RolOverrideSaved" xml:space="preserve">

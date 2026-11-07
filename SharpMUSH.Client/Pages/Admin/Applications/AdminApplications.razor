@@ -52,7 +52,7 @@
 
                 @if (Filtered.Count == 0)
                 {
-                    <div class="aa-empty-list">@Loc["LayAppsNoMatch"]</div>
+                    <EmptyState Compact="true" Class="aa-empty-list" Icon="@Icons.Material.Outlined.SearchOff">@Loc["LayAppsNoMatch"]</EmptyState>
                 }
                 @foreach (var a in Filtered)
                 {
@@ -73,8 +73,10 @@
             <Detail>
                 @if (List.Selected is not { } selected)
                 {
-                    <AdminEmptyDetail Prefix="aa" Icon="@Icons.Material.Filled.Apps" Text="@Loc["LayAppsEmptyDetail"]"
-                                      ActionText="@Loc["LayAppsRegister"]" OnAction="@(() => Edit(null))" />
+                    <EmptyState Class="aa-empty-detail" Icon="@Icons.Material.Outlined.Apps">
+                        <ChildContent>@Loc["LayAppsEmptyDetail"]</ChildContent>
+                        <Action><CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add" OnClick="@(() => Edit(null))">@Loc["LayAppsRegister"]</CapsuleButton></Action>
+                    </EmptyState>
                 }
                 else
                 {

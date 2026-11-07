@@ -565,6 +565,65 @@ public class MovementParityTests
 	}
 
 	/// <summary>
+	/// A drop-to of <c>HOME</c> (<c>@link here=home</c>, PennMUSH's <c>Location(room) == HOME</c>):
+	/// <c>send_contents</c>' <c>safe_tel</c> resolves HOME for each item, so the vacated STICKY room
+	/// sends each thing to its own home. <c>loc()</c> of the room answers <c>#-3</c>.
+	/// </summary>
+	[Test]
+	public async ValueTask AVacatedStickyRoomDroppingHomeSendsEachThingHome()
+	{
+		var room = await Dig("HomeDropToRoom");
+		var luggageHome = await Dig("HomeDropToLuggageHome");
+		var leavingFor = await Dig("HomeDropToExitRoom");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {room}=STICKY"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@link {room}=home"));
+		await Assert.That(await LocationOf(room)).StartsWith("#-3");
+
+		var luggage = await TestIsolationHelpers.CreateTestThingAsync(
+			GodParser, ConnectionService, "HomeDropToLuggage");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@link {luggage}={luggageHome}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {luggage}={room}"));
+
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HomeDropToMover");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={room}"));
+
+		await MoveService.EnterRoom(GodParser, (await Node(mover.DbRef)).AsOptionalContent.Expect<AnySharpContent>(),
+			(await Node(leavingFor)).AsOptionalContainer.Expect<AnySharpContainer>(), noMoveMsgs: true, mover.DbRef, "test");
+
+		await Assert.That(await LocationOf(luggage.ToString())).IsEqualTo(BareDbref(luggageHome));
+	}
+
+	/// <summary>
+	/// <c>do_drop</c> (<c>move.c:751-755</c>) in a room whose drop-to is <c>HOME</c>: the thing goes to its
+	/// own home. <c>@unlink</c> takes the HOME drop-to off again (<c>create.c:278-282</c>).
+	/// </summary>
+	[Test]
+	public async ValueTask DroppingInARoomDroppingHomeSendsTheThingHome()
+	{
+		var room = await Dig("DropHomeRoom");
+		var thingHome = await Dig("DropHomeThingHome");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@link {room}=home"));
+
+		var dropper = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DropHomeDropper");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {dropper.DbRef}={room}"));
+		var thingName = TestIsolationHelpers.GenerateUniqueName("DropHomeThing");
+		var created = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {thingName}"));
+		var thing = created.Message.ToPlainText().Trim();
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@link {thing}={thingHome}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {thing}={dropper.DbRef}"));
+
+		await GodParser.CommandParse(dropper.Handle, ConnectionService, MarkupText.Plain($"drop {thingName}"));
+
+		await Assert.That(await LocationOf(thing)).IsEqualTo(BareDbref(thingHome));
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@unlink {room}"));
+		await Assert.That(await LocationOf(room)).IsEqualTo(ErrorMessages.Returns.NoDropTo);
+	}
+
+	/// <summary>
 	/// The same room without its STICKY flag keeps what is left in it (<c>move.c:272</c> tests
 	/// <c>Sticky(old)</c> before <c>maybe_dropto</c> is reached at all).
 	/// </summary>
@@ -1706,6 +1765,37 @@ public class MovementParityTests
 
 		await Assert.That(await LocationOf(box.ToString())).IsEqualTo(BareDbref(destination))
 			.Because("Tel_Anything is the whole of tport_control_ok for a holder");
+	}
+
+	/// <summary>
+	/// A <c>Tport_Anything</c> held with a reach (RhostMUSH's TEL_ANYTHING at a level) moves what holders
+	/// of that role or a lower one own, and not what #1 owns.
+	/// </summary>
+	[Test]
+	public async ValueTask TportAnythingWithAReachMovesOnlyWhatItReaches()
+	{
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ReachMover");
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ReachOwner");
+		var room = await Dig("ReachRoom");
+		var destination = await OpenRoom("ReachDest");
+		var godsBox = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "ReachGodBox");
+		var playersBox = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "ReachPlayerBox");
+
+		await God($"@chown {playersBox}={owner.DbRef}");
+		await God($"@teleport/silent {godsBox}={room}");
+		await God($"@teleport/silent {playersBox}={room}");
+		await God($"@teleport/silent {mover.DbRef}={room}");
+		await God($"@permission/allow {mover.DbRef}=game.tport_anything/moderator");
+
+		await Teleport(mover.Handle, Via.Command, godsBox.ToString(), destination);
+		await Teleport(mover.Handle, Via.Command, playersBox.ToString(), destination);
+
+		await Assert.That(await LocationOf(godsBox.ToString())).IsEqualTo(BareDbref(room))
+			.Because("#1 ranks above moderator, out of the power's reach");
+		await Assert.That(await LocationOf(playersBox.ToString())).IsEqualTo(BareDbref(destination))
+			.Because("a player with no staff role ranks below moderator");
 	}
 
 	/// <summary>

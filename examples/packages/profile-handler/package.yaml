@@ -1,11 +1,11 @@
 format: "1.16"
 package: profile-handler
 title: "Character directory"
-version: 1.1.1
+version: 1.1.2
 authors: [SharpMUSH]
 description: "Read-only character directory, online list, and profile API, served through the HTTP verb routers."
 license: MIT
-homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [http, api, profile, portal]
 category: Web portal
 requires_server: ">=0.1"
@@ -17,8 +17,9 @@ depends:
   - package: http-handler
     version: ">=1.0"
     source:
-      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
-      path: http-handler/
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/http-handler/
+      branch: main
 
 objects:
   - ref: handler

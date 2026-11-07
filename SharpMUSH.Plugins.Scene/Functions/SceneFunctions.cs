@@ -121,10 +121,10 @@ public static class SceneFunctions
 			"ownername" => new CallState(scene.OwnerName),
 			"starter" => new CallState(scene.StarterDbref ?? string.Empty),
 			"startername" => new CallState(scene.StarterName),
-			// Objid, unlike owner/starter above. A caller asking where a scene is asks in order to
-			// compare against loc(), which carries the creation stamp — a bare dbref could never match
-			// it, so any such comparison was quietly always false. owner/starter stay bare because the
-			// scene package's FUN`OWNS compares them against %#, which is the short form.
+			// Objid, unlike owner/starter above: a stored room reference keeps its creation stamp so a
+			// recycled dbref cannot match it. Compare it against objid(loc(...)), since loc() answers
+			// with the bare dbref. owner/starter stay bare because the scene package's FUN`OWNS
+			// compares them against %#, which is the short form.
 			"room" => new CallState(await SceneLocate.ObjIdOrSelfAsync(parser, scene.RoomDbref)),
 			"roomname" => new CallState(scene.RoomName),
 			"details" => new CallState(string.Join(" ", DetailKeys(scene, await SceneLogger.DetailsAsync(parser.ServiceProvider)))),

@@ -135,7 +135,7 @@ public class SchemaGraphTests : BunitContext
 	{
 		var cut = RenderGraph("""{"nodes":[{"id":"a","label":"A","focus":true}],"edges":[]}""", empty: "No relationships yet.");
 
-		await Assert.That(cut.FindAll("svg").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".schema-graph-svg").Count).IsEqualTo(0);
 		await Assert.That(cut.Find(".schema-empty").TextContent).IsEqualTo("No relationships yet.");
 	}
 

@@ -39,7 +39,7 @@ public class FunctionPermissionTests
 	public async Task WizardOnlyFunction_AllowsWizard()
 	{
 		var parser = WebAppFactoryArg.FunctionParser;
-		var result = await parser.FunctionParse(MarkupText.Plain("pcreate(TestWiz,password)"));
+		var result = await parser.FunctionParse(MarkupText.Plain("html(b)"));
 
 		await Assert.That(result?.Message.ToPlainText()).DoesNotContain("PERMISSION DENIED");
 	}
@@ -56,7 +56,7 @@ public class FunctionPermissionTests
 
 		var parser = CreateParserWithExecutor(player);
 
-		var result = await parser.FunctionParse(MarkupText.Plain("pcreate(AnotherPlayer,password)"));
+		var result = await parser.FunctionParse(MarkupText.Plain("html(b)"));
 
 		await Assert.That(result?.Message.ToPlainText()).Contains("PERMISSION DENIED");
 	}

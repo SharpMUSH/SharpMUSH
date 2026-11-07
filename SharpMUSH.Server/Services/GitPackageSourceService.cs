@@ -117,18 +117,22 @@ public class GitPackageSourceService(
 				updateAvailable = latestVersion.CompareTo(installedVersion) > 0;
 			}
 
+			// A package handed over from the bundled catalogue was installed from the server image, not from a commit
+			// of this repo: it has no tag to have moved, and nothing here says how far its copy is from the tip.
+			var fromCatalogue = installed.InstalledCommit == BundledPackageSource.SourceCommit;
+
 			// Moved-tag trust check: the tag for the installed version must
 			// still point at the commit we installed from.
 			var installedTag = repository.Tags[TagNameFor(path, installed.Version)];
 			var installedTagCommit = (installedTag?.PeeledTarget as Commit)?.Sha;
-			var tagMoved = installedTagCommit is not null && installedTagCommit != installed.InstalledCommit;
+			var tagMoved = !fromCatalogue && installedTagCommit is not null && installedTagCommit != installed.InstalledCommit;
 
 			// Dev-channel signal: anything under the path changed since install?
 			var pathChanged = false;
-			var installedCommit = repository.Lookup<Commit>(installed.InstalledCommit);
+			var installedCommit = fromCatalogue ? null : repository.Lookup<Commit>(installed.InstalledCommit);
 			if (installedCommit is null)
 			{
-				// History rewritten or commit unreachable — surface as changed.
+				// History rewritten, commit unreachable, or handed over from the catalogue — surface as changed.
 				pathChanged = true;
 			}
 			else if (installedCommit.Sha != tip.Sha)

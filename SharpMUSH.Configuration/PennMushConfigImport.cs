@@ -53,6 +53,9 @@ public record PennMushConfigImport(SharpMUSHOptions Options, IReadOnlyList<strin
 	/// <summary>The totems a RhostMUSH file defines, which the database import turns into flags.</summary>
 	public IReadOnlyList<TotemDirective> Totems { get; init; } = [];
 
+	/// <summary>A TinyMUX or RhostMUSH file's command hooks, which the database import reports.</summary>
+	public HookDirectives Hooks { get; init; } = HookDirectives.None;
+
 	/// <summary>Whether the file gave <paramref name="name"/> (a configuration name) a value.</summary>
 	public bool Sets(string name) => Named.Contains(name);
 

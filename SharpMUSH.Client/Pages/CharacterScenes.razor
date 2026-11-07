@@ -34,7 +34,7 @@
 
     @if (_missing)
     {
-        <EmptyBox Class="char-scenes-missing">@string.Format(Loc["NavCharNotFound"], Name)</EmptyBox>
+        <EmptyState Class="char-scenes-missing" Icon="@Icons.Material.Outlined.PersonSearch">@string.Format(Loc["NavCharNotFound"], Name)</EmptyState>
     }
     else if (_loading && _scenes.Count == 0)
     {
@@ -47,11 +47,11 @@
     }
     else if (_failed && _scenes.Count == 0)
     {
-        <EmptyBox Class="char-scenes-failed">@Loc["WidUnavailable"]</EmptyBox>
+        <EmptyState Class="char-scenes-failed" Failed="true">@Loc["WidUnavailable"]</EmptyState>
     }
     else if (_scenes.Count == 0)
     {
-        <EmptyBox Class="char-scenes-none">@Loc["ResNoScenesFound"]</EmptyBox>
+        <EmptyState Class="char-scenes-none" Icon="@Icons.Material.Outlined.TheaterComedy">@Loc["ResNoScenesFound"]</EmptyState>
     }
     else
     {

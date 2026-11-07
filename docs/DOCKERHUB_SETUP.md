@@ -6,10 +6,13 @@ This guide explains how to set up automatic Docker image publishing to DockerHub
 
 The repository has two Docker publishing workflows:
 
-### 1. Production Releases (version tags)
-Automatically builds and publishes Docker images to DockerHub whenever a new version tag is pushed. The workflow builds two images:
-- `sharpmush/sharpmush-server` - The main SharpMUSH server
-- `sharpmush/sharpmush-renderer` - The rendering worker
+### 1. Releases
+Publishing a GitHub Release tagged `vX.Y.Z` builds and publishes the images at that tag:
+- `sharpmush/sharpmush-server` - the game server and the web portal
+- `sharpmush/sharpmush-renderer` - the rendering worker
+- `sharpmush/sharpmush-socketserver` - the socket owner
+- `sharpmush/sharpmush-edge` - Caddy, NATS and the socket owner, for split one-container hosts
+- `sharpmush/sharpmush-allinone` - everything in one container
 
 ### 2. Dev Builds (main branch)
 Automatically builds and publishes Docker images with the `dev` tag on every push to the `main` branch:
@@ -57,39 +60,57 @@ This is a DockerHub access token (not your password) that allows GitHub Actions 
 
 ## How to Trigger Builds
 
-### Production Release Build (Version Tags)
+### Releases
 
-The production workflow automatically runs when you push a version tag to the repository. Here's how to create and push a version tag:
+A release is cut in the GitHub UI, never by pushing a tag. Before it, on `main`:
 
-#### Creating a Version Tag
+- `CHANGELOG.md` has a `## [1.0.0]` section. The images are built after the release is published,
+  so a missing section leaves a published release with no images until a manual run.
+- `SharpMUSHVersion` in `Directory.Build.props` names the version, so builds from the tagged commit
+  agree with the images.
 
-The tag sets the version. Before tagging, make sure `CHANGELOG.md` has a `## [1.0.0]` section for it (the workflow refuses a tag without one) and that `SharpMUSHVersion` in `Directory.Build.props` names the same version, so builds from the tagged commit agree with the images.
+Then, under **Releases → Draft a new release**, create the tag `v1.0.0` on `main`, write the notes,
+and press **Publish release**. A release candidate gets a tag with a suffix (`v1.1.0-rc.1`) and
+**Set as a pre-release**; the workflow refuses a pre-release whose tag has no suffix.
+
+The tag sets the version: the workflow tags the images with it and builds the server with it, so
+`version()`, `@version` and MSSP report it. This is the engine's version. The plugin NuGets
+(`SharpMUSH.Library`, `SharpMUSH.Implementation.Generated`) carry the plugin contract version and
+are released apart, with a release tagged `plugin-nuget/vX.Y.Z`; the template pack with one tagged
+`sharpmush-templates/vX.Y.Z`. Each publish workflow ignores the others' releases.
+
+#### What Gets Published
+
+Each image is pushed under the release's version and the shorter tags that point at the newest
+release they cover. For `v1.2.3`:
+
+| Tag | Moves when |
+|---|---|
+| `1.2.3` | always |
+| `1.2` | no `1.2.x` release is newer |
+| `1` | no `1.x.y` release is newer |
+| `latest` | no release is newer |
+
+So a `v1.0.4` fix published after `v1.1.0` moves `1.0` but leaves `1` and `latest` on `1.1.0`. A
+pre-release pushes only its own tag (`1.1.0-rc.1`).
+
+#### After the release
+
+Deploy files pin one exact image tag, never `latest`, `1` or `1.2`: a game runs what it was
+deployed with until its operator changes the tag. New games are deployed from the files on `main`,
+so the pins move only once the release's images exist. When the workflow has finished, open a pull
+request with:
 
 ```bash
-# Create a new version tag (e.g., v1.0.0)
-git tag v1.0.0
-
-# Push the tag to GitHub
-git push origin v1.0.0
+python3 .github/scripts/release_images.py bump 1.0.0
 ```
 
-#### Version Tag Format
+CI fails a build whose deploy files name different tags (`release_images.py check`). The Railway
+template lives in Railway's template composer, not in this repository: set its three services'
+images to the new tag there too.
 
-- Tags must follow the format: `v*.*.*` (e.g., `v1.0.0`, `v2.1.3`, `v1.1.0-rc.1`)
-- The workflow extracts the version number, tags the Docker images with it, and builds the server with it, so `version()`, `@version` and MSSP report it
-- This is the engine's version. The plugin NuGets (`SharpMUSH.Library`, `SharpMUSH.Implementation.Generated`) carry the plugin contract version and are released apart, with a `plugin-nuget/v*` tag
-
-#### What Gets Published (Version Tags)
-
-When you push a tag like `v1.0.0`, the workflow will publish:
-- `sharpmush/sharpmush-server:1.0.0`
-- `sharpmush/sharpmush-server:latest`
-- `sharpmush/sharpmush-renderer:1.0.0`
-- `sharpmush/sharpmush-renderer:latest`
-- `sharpmush/sharpmush-socketserver:1.0.0`
-- `sharpmush/sharpmush-socketserver:latest`
-
-A prerelease tag (one with a `-`, such as `v1.1.0-rc.1`) publishes only the versioned images; `latest` stays on the last release.
+Which shorter tags move is decided from the repository's published GitHub Releases, not its git
+tags, so a stray `vX.Y.Z` tag or a refused pre-release does not hold `latest` back.
 
 ### Dev Build (Main Branch Pushes)
 
@@ -101,17 +122,18 @@ Every push to `main` updates:
 - `sharpmush/sharpmush-server:dev`
 - `sharpmush/sharpmush-renderer:dev`
 
-These images reflect the latest state of the `main` branch and are used by `docker-compose-hub.yml` for development/testing purposes.
+These images reflect the latest state of the `main` branch, for development and testing.
 
 ## Manual Triggering
 
 You can also manually trigger either workflow from the GitHub Actions UI:
 
-### For Production Releases:
+### For Releases:
+A manual run publishes a release's images again (after a failed run, say).
 1. Go to **Actions** tab in your repository
 2. Select **Publish Docker Images** workflow
 3. Click **Run workflow**
-4. Select a `v*` tag (the workflow refuses a branch) and click **Run workflow**
+4. Select the release's `v*` tag (the workflow refuses a branch) and click **Run workflow**
 
 ### For Dev Builds:
 1. Go to **Actions** tab in your repository
@@ -122,7 +144,7 @@ You can also manually trigger either workflow from the GitHub Actions UI:
 ## Verifying the Workflow
 
 After setting up the secrets:
-1. Push a release tag as described above, or run the workflow manually on an existing one
+1. Publish a release as described above, or run the workflow manually on an existing one's tag
 2. Go to the **Actions** tab in your repository
 3. You should see the **Publish Docker Images** workflow running
 4. Once complete, verify the images are on DockerHub at:

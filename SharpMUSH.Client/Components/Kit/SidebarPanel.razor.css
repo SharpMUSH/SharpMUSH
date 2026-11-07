@@ -1,12 +1,12 @@
 .kit-side {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-1);
 	min-height: 100%;
-	padding: 12px 8px;
+	padding: var(--space-4) var(--space-3);
 	box-sizing: border-box;
 }
 
 .kit-side--collapsed {
-	padding: 12px 4px;
+	padding: var(--space-4) var(--space-2);
 }

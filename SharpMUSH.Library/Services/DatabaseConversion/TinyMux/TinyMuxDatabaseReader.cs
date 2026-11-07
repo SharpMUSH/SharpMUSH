@@ -39,7 +39,7 @@ public static partial class TinyMuxDatabaseReader
 	/// <summary>
 	/// The options TinyMUX softcode needs. MUX tests and/or/xor numerically, cuts justified text, collates,
 	/// runs list() as a loop, reads ##/#@/#$ from the innermost loop, trims before characters and reads
-	/// non-numbers as 0, runs trigger() and verb(), and keeps TinyMUX's /quiet switches; it allows 500 levels of recursion and 32 KB values. It reads TinyMUX's names for
+	/// non-numbers as 0, runs trigger() and verb(), keeps TinyMUX's /quiet switches, and runs a global @function without /privileged as its caller; it allows 500 levels of recursion and 32 KB values. It reads TinyMUX's names for
 	/// functions and commands SharpMUSH has under its own (<c>dialect</c>).
 	/// </summary>
 	public static Dictionary<string, object> CompatibilityOptions() => new(StringComparer.OrdinalIgnoreCase)
@@ -55,6 +55,7 @@ public static partial class TinyMuxDatabaseReader
 		["null_eq_zero"] = true,
 		["mux_queue_functions"] = true,
 		["mux_quiet"] = true,
+		["mux_function_caller"] = true,
 		["function_recursion_limit"] = 500u,
 		["dialect"] = SoftcodeDialects.Mux.Key
 	};
@@ -133,16 +134,24 @@ public static partial class TinyMuxDatabaseReader
 		stream.Position = start;
 		using var text = new StreamReader(stream, TinyMuxFlatfileReader.EncodingFor(version <= 2), false, 65536, leaveOpen: true);
 		var reader = new TinyMuxFlatfileReader(text, description);
-		var file = new RawFile(version, features);
+		var file = new RawFile(version, features, FlatfileSource);
 		ReadRecords(reader, file, cancellationToken);
 		return new Mapper(file).Map();
 	}
 
-	/// <summary>The file as written, before anything is named.</summary>
-	private sealed class RawFile(int version, uint features)
+	/// <summary>What a flatfile import calls its source in the notes.</summary>
+	private const string FlatfileSource = "flatfile";
+
+	/// <summary>The game as stored, before anything is named.</summary>
+	/// <param name="version">The flatfile version, which decides how colour reads; a SQLite database reads as version 5.</param>
+	/// <param name="features">The flatfile header's feature bits; none for a SQLite database.</param>
+	/// <param name="source">What the notes call the source: <c>flatfile</c> or <c>SQLite database</c>.</param>
+	private sealed class RawFile(int version, uint features, string source)
 	{
 		public int Version { get; } = version;
 		public uint Features { get; } = features;
+		public string Source { get; } = source;
+		public string Description { get; init; } = $"TinyMUX flatfile version {version}";
 		public bool ReadsName => (Features & DatabaseFlag) == 0 || (Features & AttributeNameFlag) == 0;
 		public bool ReadsHeaderLock => (Features & AttributeKeyFlag) == 0;
 		public bool ReadsMoney => (Features & AttributeMoneyFlag) == 0;
@@ -170,8 +179,11 @@ public static partial class TinyMuxDatabaseReader
 		public uint Flags3 { get; set; }
 		public uint Powers1 { get; set; }
 		public uint Powers2 { get; set; }
-		public List<(int Number, string Value)> Attributes { get; } = [];
+		public List<RawAttribute> Attributes { get; } = [];
 	}
+
+	/// <summary>One attribute value, with its own owner (-1 for the object's owner) and flags.</summary>
+	private readonly record struct RawAttribute(int Number, string Value, int Owner, int Flags);
 
 	private static void ReadRecords(TinyMuxFlatfileReader reader, RawFile file, CancellationToken cancellationToken)
 	{
@@ -293,7 +305,8 @@ public static partial class TinyMuxDatabaseReader
 					var value = reader.ReadString();
 					if (number > 0)
 					{
-						record.Attributes.Add((number, value));
+						var (owner, flags, text) = DecodeInfo(value);
+						record.Attributes.Add(new RawAttribute(number, text, owner, flags));
 					}
 
 					break;
@@ -311,13 +324,30 @@ public static partial class TinyMuxDatabaseReader
 	}
 
 	/// <summary>
+	/// Splits <c>\x01owner:flags:value</c>. A value without that prefix belongs to the object's owner
+	/// and has no flags of its own.
+	/// </summary>
+	private static (int Owner, int Flags, string Value) DecodeInfo(string stored)
+	{
+		var match = InfoPrefix().Match(stored);
+		return match.Success
+			? (int.Parse(match.Groups["owner"].ValueSpan, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture),
+				int.Parse(match.Groups["flags"].ValueSpan, NumberStyles.None, CultureInfo.InvariantCulture),
+				stored[match.Length..])
+			: (-1, 0, stored);
+	}
+
+	[GeneratedRegex(@"^\x01(?<owner>-?\d+):(?<flags>\d+):")]
+	private static partial Regex InfoPrefix();
+
+	/// <summary>
 	/// Names everything in a <see cref="RawFile"/>, building the model and the notes about it.
 	/// </summary>
 	private sealed partial class Mapper(RawFile file)
 	{
 		private readonly PennMUSHDatabase _database = new()
 		{
-			Version = $"TinyMUX flatfile version {file.Version}",
+			Version = file.Description,
 			Configuration = { [FlatfileVersionKey] = file.Version.ToString(CultureInfo.InvariantCulture) },
 			Dialect = DatabaseDialect.TinyMUX,
 			SourceOptions = CompatibilityOptions(),
@@ -392,9 +422,8 @@ public static partial class TinyMuxDatabaseReader
 				locks["Basic"] = TinyMuxLockKey.Write(headerLock, AttributeNameOf, note => Tally(ImportWarningKind.Locks, note, raw.DBRef));
 			}
 
-			foreach (var (number, stored) in raw.Attributes)
+			foreach (var (number, value, owner, instanceFlags) in raw.Attributes)
 			{
-				var (owner, instanceFlags, value) = DecodeInfo(stored);
 				var flags = instanceFlags | (number >= TinyMuxNames.FirstUserAttribute
 					&& file.UserAttributes.TryGetValue(number, out var definition) ? definition.Flags : 0);
 
@@ -435,8 +464,8 @@ public static partial class TinyMuxDatabaseReader
 
 				if (AttributeNameOf(number) is not { } name)
 				{
-					Tally(ImportWarningKind.Attributes, $"Attribute number {number} not imported: the flatfile does not name it " +
-						"(TinyMUX warns of this when a backup was taken from a running game)", raw.DBRef);
+					Tally(ImportWarningKind.Attributes, $"Attribute number {number} not imported: the {file.Source} does not name it" +
+						(file.Source == FlatfileSource ? " (TinyMUX warns of this when a backup was taken from a running game)" : ""), raw.DBRef);
 					continue;
 				}
 
@@ -506,23 +535,6 @@ public static partial class TinyMuxDatabaseReader
 			=> number >= TinyMuxNames.FirstUserAttribute
 				? file.UserAttributes.TryGetValue(number, out var user) ? user.Name : null
 				: TinyMuxNames.Attributes.GetValueOrDefault(number);
-
-		/// <summary>
-		/// Splits <c>\x01owner:flags:value</c>. A value without that prefix belongs to the object's owner
-		/// and has no flags of its own.
-		/// </summary>
-		private static (int Owner, int Flags, string Value) DecodeInfo(string stored)
-		{
-			var match = InfoPrefix().Match(stored);
-			return match.Success
-				? (int.Parse(match.Groups["owner"].ValueSpan, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture),
-					int.Parse(match.Groups["flags"].ValueSpan, NumberStyles.None, CultureInfo.InvariantCulture),
-					stored[match.Length..])
-				: (-1, 0, stored);
-		}
-
-		[GeneratedRegex(@"^\x01(?<owner>-?\d+):(?<flags>\d+):")]
-		private static partial Regex InfoPrefix();
 
 		private List<string> AttributeFlagNames(int flags, string name, int dbref)
 		{
@@ -761,8 +773,8 @@ public static partial class TinyMuxDatabaseReader
 		{
 			var notes = _database.ImportNotes;
 			notes.Add(new ImportWarning(ImportWarningKind.Softcode,
-				"Imported from a TinyMUX flatfile: the import turns on paren_groups, mux_logic, mux_justify, mux_collation, " +
-				"rhost_list, innermost_tokens, tiny_trim_fun, tiny_math, null_eq_zero, mux_queue_functions and mux_quiet, and raises function_recursion_limit to 500, " +
+				$"Imported from a TinyMUX {file.Source}: the import turns on paren_groups, mux_logic, mux_justify, mux_collation, " +
+				"rhost_list, innermost_tokens, tiny_trim_fun, tiny_math, null_eq_zero, mux_queue_functions, mux_quiet and mux_function_caller, and raises function_recursion_limit to 500, " +
 				"as TinyMUX softcode expects."));
 			notes.Add(new ImportWarning(ImportWarningKind.Softcode,
 				"The import sets dialect to mux and gives every attribute it brings in the mux attribute flag, so that code " +

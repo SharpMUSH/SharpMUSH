@@ -5,6 +5,21 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 public class SharpieArtThemeTests
 {
 	[Test]
+	public async Task NoSubgenreKeepsTheSelectedGenreAcrossStylesAndTopics()
+	{
+		var errors = new List<string>();
+		foreach (var genre in new[] { "Fantasy", "Science Fiction", "Historical", "Horror", "Modern", "Mystery", "Romance", "Spiritual", "Adult" })
+			foreach (var style in SharpieArtCatalog.Styles)
+				foreach (var topic in SharpieArtCatalog.Approved.Select(art => art.Topic).OfType<string>().Distinct())
+				{
+					var art = SharpieArtCatalog.Resolve(style, genre, "None", null, GuideImagery.Full, topic: topic);
+					if (art?.Theme != genre || art.Style != style || art.Topic != topic)
+						errors.Add($"{genre}/{style}/{topic}: selected {art?.Id}");
+				}
+		await Assert.That(errors).IsEmpty();
+	}
+
+	[Test]
 	public async Task SameNamedGenreAndSubgenreSelectTheirOwnArtwork()
 	{
 		var genre = new SharpieArt("genre-none", "pixel", "None", "genre.png", 100, 100, "player-world", SharpieArtThemeKind.Genre);

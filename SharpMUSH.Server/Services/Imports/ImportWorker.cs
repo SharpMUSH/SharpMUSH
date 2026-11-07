@@ -51,6 +51,7 @@ public static class ImportWorker
 			if (configuration is not null)
 			{
 				source.Reality = configuration.Reality;
+				source.Hooks = configuration.Hooks;
 				source.ConfiguredAliases = [.. configuration.Aliases.Where(alias => alias.Kind is AliasKind.Flag or AliasKind.Power)];
 				RhostDatabaseTranslator.MapTotems(source, configuration.Totems);
 			}

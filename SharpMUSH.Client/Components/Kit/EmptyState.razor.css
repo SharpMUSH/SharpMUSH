@@ -1,0 +1,72 @@
+.kit-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--space-4);
+	padding: var(--space-7) var(--space-6);
+	border-radius: var(--radius-card);
+	background: var(--surface-2);
+	color: var(--text-dim);
+	text-align: center;
+}
+
+.kit-empty-icon {
+	width: 48px;
+	height: 48px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	background: rgba(var(--glow), 0.10);
+	color: var(--accent);
+}
+
+.kit-empty-icon ::deep .mud-icon-root {
+	font-size: var(--text-xl);
+}
+
+.kit-empty--failed .kit-empty-icon {
+	background: var(--warn-tint);
+	color: var(--warn);
+}
+
+.kit-empty-text {
+	max-width: 32rem;
+	font-size: var(--text-base);
+	line-height: 1.5;
+}
+
+.kit-empty-action {
+	margin-top: 4px;
+}
+
+.kit-empty--compact {
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: var(--space-3);
+	padding: var(--space-3) var(--space-4);
+	background: none;
+	text-align: start;
+}
+
+.kit-empty--compact .kit-empty-icon {
+	width: auto;
+	height: 20px; /* one line of the sentence, so the icon sits beside its first line */
+	background: none;
+	color: var(--text-faint);
+}
+
+.kit-empty--compact .kit-empty-icon ::deep .mud-icon-root {
+	font-size: var(--text-md);
+}
+
+.kit-empty--compact .kit-empty-text {
+	flex: 1 1 0;
+	min-width: 0;
+	font-size: var(--text-sm);
+}
+
+.kit-empty--compact .kit-empty-action {
+	margin-top: 0;
+}

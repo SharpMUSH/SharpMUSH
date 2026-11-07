@@ -96,3 +96,7 @@ think maillist()
 @mail/fwd 1=99
 @mail/fwd bogus=Bob
 @mail/fwd 1
+
+::case mail.login-report  a login reports each folder holding mail, and how much of it is unread
+::logout alice
+::login alice2 Alice alicepass

@@ -1,4 +1,6 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -43,6 +45,9 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 		var parser = visitor.Parser;
 		var configuration = visitor.Configuration;
 		ExecutionBudget.Current?.ThrowIfExceeded();
+		// The attribute names the function reads and writes are the dialect's (SoftcodeDialectScope).
+		using var dialect = SoftcodeDialectScope.Enter(
+			SoftcodeDialects.InForce(parser.CurrentState.CurrentEvaluation, configuration.CurrentValue.Compatibility.Dialect));
 		var clock = InvocationClock.Start(parser.Clock);
 		var success = true;
 		// The registered name, never the name as typed: a typed name is free text, and every distinct
@@ -519,6 +524,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 		var target = entry.Object;
 		var attributeName = entry.Attribute;
 		var argumentNames = entry.ArgumentNames;
+		var privileged = entry.Privileged;
 
 		return new FunctionDefinition(attribute, async invokedParser =>
 		{
@@ -529,8 +535,9 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 
 			// @function never checked the attribute was there (function.c:1687-1692); the call does, with
 			// atr_get, so a parent's or the ancestor's copy serves (parse.c:3048-3059).
-			if (await services.AttributeService.GetAttributeAsync(targetObject, targetObject, attributeName,
-					IAttributeService.AttributeMode.Read, parent: true) is None)
+			var stored = await services.AttributeService.GetAttributeAsync(targetObject, targetObject, attributeName,
+				IAttributeService.AttributeMode.Read, parent: true);
+			if (stored is None)
 			{
 				return new CallState(string.Format(ErrorMessages.Returns.UserFunctionMissingAttribute,
 					name.ToUpperInvariant(), $"#{targetObject.Object().DBRef.Number}", attributeName));
@@ -551,6 +558,14 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 				return new CallState(refused.Value);
 			}
 
+			// TinyMUX: a function defined without /privileged is read from the object that holds it, as
+			// that object, and evaluated as the caller (mux_function_caller).
+			if (stored is SharpAttribute[] chain && await RunsAsCallerAsync(invokedParser, privileged) is AnySharpObject caller)
+			{
+				return await services.AttributeService.CallAttributeFunctionAsync(invokedParser,
+					AttributeFunction.Of(targetObject, chain[^1]) with { RunAs = caller }, args, args);
+			}
+
 			// A global @function runs *as the backing object, with its powers* (PennMUSH semantics):
 			// the attribute is read and evaluated with the function object's permissions, not the
 			// caller's, so a player who lacks read access to the object can still call the function.
@@ -566,4 +581,13 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			return result;
 		});
 	}
+
+	/// <summary>
+	/// The caller a global function runs as: with <c>mux_function_caller</c> on, a function defined without
+	/// <c>/privileged</c> runs as whoever calls it. Otherwise <see cref="None"/>, and it runs as its object.
+	/// </summary>
+	private async ValueTask<AnyOptionalSharpObject> RunsAsCallerAsync(IMUSHCodeParser parser, bool privileged)
+		=> !privileged && parser.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Compatibility.MuxFunctionCaller
+			? await parser.CurrentState.ExecutorObject(services.Mediator)
+			: new None();
 }

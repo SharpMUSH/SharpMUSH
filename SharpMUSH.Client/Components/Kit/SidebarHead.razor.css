@@ -1,19 +1,19 @@
 .kit-side-head {
-	padding: 4px 10px 12px;
+	padding: var(--space-2) var(--space-4) var(--space-4);
 }
 
 .kit-side-title {
-	font-size: 18px;
+	font-size: var(--text-md);
 	font-weight: 700;
 	color: var(--text);
 }
 
 .kit-side-sub {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 	margin-top: 2px;
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: var(--space-3);
 	flex-wrap: wrap;
 }

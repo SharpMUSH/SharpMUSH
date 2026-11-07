@@ -37,12 +37,13 @@
 }
 
 .kit-pagebar ::deep .kit-side-head {
-	padding-right: 52px;
+	padding-right: var(--space-8);
 }
 
-/* collapsed: the button leads the 62px strip, the sidebar's leads follow under it */
+/* collapsed: the button leads the strip, the sidebar's leads follow under it */
 .kit-pagebar--collapsed {
-	padding-top: 62px;
+	--pagebar-strip: 62px;
+	padding-top: var(--pagebar-strip);
 }
 
 .kit-pagebar--collapsed .kit-pagebar-toggle {

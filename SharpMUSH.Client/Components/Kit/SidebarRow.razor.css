@@ -1,15 +1,15 @@
 .kit-row {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 	width: 100%;
-	padding: 0 8px;
+	padding: 0 var(--space-3);
 	border: 0;
 	border-radius: var(--radius-row);
 	background: transparent;
 	color: var(--text);
 	font: inherit;
-	font-size: 14px;
+	font-size: var(--text-base);
 	text-align: left;
 	text-decoration: none;
 	cursor: pointer;
@@ -33,7 +33,7 @@
 
 .kit-row--channel {
 	height: 36px;
-	padding: 0 10px;
+	padding: 0 var(--space-4);
 	color: var(--text-dim);
 }
 
@@ -41,7 +41,7 @@
 
 .kit-row--mono .kit-row-label {
 	font-family: var(--font-mono);
-	font-size: 12px;
+	font-size: var(--text-sm);
 }
 
 .kit-row--unread {
@@ -105,7 +105,7 @@
 	justify-content: center;
 	background: var(--surface-2);
 	color: var(--text-dim);
-	font-size: 11px;
+	font-size: var(--text-xs);
 	font-weight: 700;
 }
 
@@ -127,7 +127,7 @@
 .kit-row-hash {
 	width: 14px;
 	font-family: var(--font-mono);
-	font-size: 15px;
+	font-size: var(--text-base);
 	color: var(--text-faint);
 }
 
@@ -142,15 +142,15 @@
 .kit-row--two-line {
 	height: auto;
 	min-height: 44px;
-	padding-top: 6px;
-	padding-bottom: 6px;
+	padding-top: var(--space-3);
+	padding-bottom: var(--space-3);
 }
 
 .kit-row--wrap-label {
 	height: auto;
 	min-height: 44px;
-	padding-top: 7px;
-	padding-bottom: 7px;
+	padding-top: var(--space-3);
+	padding-bottom: var(--space-3);
 }
 
 .kit-row--wrap-label .kit-row-label {
@@ -165,7 +165,7 @@
 	min-width: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 1px;
+	gap: var(--space-1);
 }
 
 .kit-row-text .kit-row-label {
@@ -173,7 +173,7 @@
 }
 
 .kit-row-sub {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 	white-space: nowrap;
 	overflow: hidden;
@@ -183,24 +183,24 @@
 .kit-row-trail {
 	margin-left: auto;
 	flex-shrink: 0;
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 	white-space: nowrap;
 }
 
 .kit-row-count {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .kit-row-unread {
 	height: 18px;
 	min-width: 18px;
-	padding: 0 6px;
+	padding: 0 var(--space-3);
 	border-radius: 9px;
 	background: var(--accent);
 	color: var(--accent-on);
-	font-size: 11px;
+	font-size: var(--text-xs);
 	font-weight: 700;
 	display: inline-flex;
 	align-items: center;
@@ -229,7 +229,7 @@
 	background: var(--surface-2);
 	display: grid;
 	place-items: center;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	font-weight: 700;
 }
 

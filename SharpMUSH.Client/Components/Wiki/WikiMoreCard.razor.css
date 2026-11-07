@@ -1,6 +1,6 @@
 .wiki-more-all {
 	display: inline-block;
-	font-size: 12px;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	color: var(--accent);
 	text-decoration: none;

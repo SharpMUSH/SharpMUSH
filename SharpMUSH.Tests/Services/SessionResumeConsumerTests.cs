@@ -97,7 +97,7 @@ public class SessionResumeConsumerTests
 		await h.AssertResponse(true);
 		await Assert.That(h.Current.InternetProtocolAddress).IsEqualTo("127.0.0.2");
 		await h.Connections.DidNotReceive().BindAccount(Arg.Any<long>(), Arg.Any<string>());
-		await h.Connections.DidNotReceive().Bind(Arg.Any<long>(), Arg.Any<DBRef>(), Arg.Any<bool>());
+		await h.Connections.DidNotReceive().Bind(Arg.Any<long>(), Arg.Any<DBRef>());
 	}
 
 	[Test]

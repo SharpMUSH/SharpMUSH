@@ -175,6 +175,58 @@ public class BundledPackagesTests
 	}
 
 	/// <summary>
+	/// A package the catalogue installs as a bridge says so in its manifest (format 1.20 <c>bridge: true</c>), so the
+	/// package library groups it under its package as it does a bridge from a remote. A manifest may call itself a
+	/// bridge without the catalogue installing it on its own, as onboarding-chargen does.
+	/// </summary>
+	[Test]
+	public async Task EveryBridge_SaysSoInItsManifest()
+	{
+		foreach (var descriptor in BundledPackages.All.Where(d => d.Bridge))
+		{
+			var manifest = _manifests.ParseManifest(BundledPackages.ManifestYaml(descriptor.PackageId))
+				.Expect<ParsedPackageManifest>($"bundled manifest '{descriptor.PackageId}' must parse").Manifest;
+			await Assert.That(manifest.Bridge).IsTrue()
+				.Because($"{descriptor.PackageId} installs as a bridge, so its manifest must say bridge: true");
+		}
+	}
+
+	/// <summary>
+	/// A bundled UI package carries its page's files in the server, each one the bytes its manifest's checksum names.
+	/// </summary>
+	[Test]
+	public async Task BuilderGraph_ShipsEveryFileItsManifestLists()
+	{
+		var manifest = _manifests.ParseManifest(BundledPackages.ManifestYaml("builder-graph")).Expect<ParsedPackageManifest>().Manifest;
+		await Assert.That(manifest.Kind).IsEqualTo(PackageKind.Ui);
+		await Assert.That(manifest.Category).IsEqualTo("Building");
+
+		var files = BundledPackages.Files("builder-graph");
+		foreach (var file in manifest.Binary!.Files)
+		{
+			var bytes = await files.ReadFileAsync(file.FileName);
+			await Assert.That(bytes).IsNotNull().Because($"{file.FileName} must be embedded");
+			await Assert.That(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes!))).IsEqualTo(file.Sha256);
+		}
+
+		await Assert.That(await files.ReadFileAsync("../builder-graph/ui.json")).IsNull();
+		await Assert.That(await files.ReadFileAsync("package.yaml")).IsNull();
+	}
+
+	/// <summary>
+	/// Only a UI package's files are embedded: a compiled plugin never ships in the catalogue.
+	/// </summary>
+	[Test]
+	public async Task NoBundledPackage_IsAPlugin()
+	{
+		foreach (var descriptor in BundledPackages.All)
+		{
+			var manifest = _manifests.ParseManifest(BundledPackages.ManifestYaml(descriptor.PackageId)).Expect<ParsedPackageManifest>().Manifest;
+			await Assert.That(manifest.Kind).IsNotEqualTo(PackageKind.Plugin).Because($"{descriptor.PackageId} must not be a plugin package");
+		}
+	}
+
+	/// <summary>
 	/// wiki-reader is the first available-not-installed package: it ships in the image so an admin
 	/// can install it offline, but it puts a +wiki object in the master room, which no game should
 	/// get without asking for it.

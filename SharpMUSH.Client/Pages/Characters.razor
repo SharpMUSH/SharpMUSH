@@ -39,11 +39,11 @@
     {
         @* The directory request failed. "No characters found" would state something about the game
            that this page has no evidence for. *@
-        <EmptyBox Class="char-empty">@Loc["WidUnavailable"]</EmptyBox>
+        <EmptyState Class="char-empty" Failed="true">@Loc["WidUnavailable"]</EmptyState>
     }
     else if (Filtered.Count == 0)
     {
-        <EmptyBox Class="char-empty">@Loc["NoCharactersFound"]</EmptyBox>
+        <EmptyState Class="char-empty" Icon="@(string.IsNullOrWhiteSpace(_search) ? Icons.Material.Outlined.Groups : Icons.Material.Outlined.SearchOff)">@Loc["NoCharactersFound"]</EmptyState>
     }
     else
     {

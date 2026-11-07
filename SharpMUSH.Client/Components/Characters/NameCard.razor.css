@@ -6,10 +6,10 @@
 	width: min(20rem, calc(100vw - 32px));
 	max-height: min(36rem, 80vh);
 	overflow-y: auto;
-	padding: 14px 16px;
+	padding: var(--space-5) var(--space-5);
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: var(--space-4);
 	background: var(--card-bg, var(--bg));
 	color: var(--text);
 	border: 1px solid var(--border);
@@ -20,7 +20,7 @@
 .name-card-head {
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	gap: var(--space-4);
 }
 
 .name-card-head ::deep .name-card-portrait {
@@ -33,7 +33,7 @@
 
 .name-card-name {
 	font-family: var(--font-display);
-	font-size: 18px;
+	font-size: var(--text-md);
 	font-weight: var(--font-title-weight, 600);
 	color: var(--text);
 	text-decoration: none;

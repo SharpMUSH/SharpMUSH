@@ -5459,10 +5459,16 @@ public static class SharpieArtCatalog
 		SharpieArt? Find(string? theme, SharpieArtThemeKind kind, string? targetTopic) => approved.FirstOrDefault(art => art.Style == family
 			&& (art.ThemeKind is null || art.ThemeKind == kind)
 			&& art.Topic == targetTopic && string.Equals(art.Theme, theme, StringComparison.OrdinalIgnoreCase));
+		// MSSP's "None" subgenre means no specialization of the selected genre.
+		var preferGenre = !string.IsNullOrWhiteSpace(genre)
+			&& !string.Equals(genre, "None", StringComparison.OrdinalIgnoreCase)
+			&& string.Equals(subgenre, "None", StringComparison.OrdinalIgnoreCase);
+		SharpieArt? FindTheme(string? targetTopic) => preferGenre
+			? Find(genre, SharpieArtThemeKind.Genre, targetTopic) ?? Find(subgenre, SharpieArtThemeKind.Subgenre, targetTopic)
+			: Find(subgenre, SharpieArtThemeKind.Subgenre, targetTopic) ?? Find(genre, SharpieArtThemeKind.Genre, targetTopic);
 		return approved.FirstOrDefault(art => art.Id == overrideId && art.Style == family && (art.Topic is null || art.Topic == requestedTopic))
-			?? (requestedTopic is null ? null : Find(subgenre, SharpieArtThemeKind.Subgenre, requestedTopic) ?? Find(genre, SharpieArtThemeKind.Genre, requestedTopic))
-			?? Find(subgenre, SharpieArtThemeKind.Subgenre, null)
-			?? Find(genre, SharpieArtThemeKind.Genre, null)
+			?? (requestedTopic is null ? null : FindTheme(requestedTopic))
+			?? FindTheme(null)
 			?? approved.FirstOrDefault(art => art.Id == neutralId && art.Topic is null);
 	}
 }

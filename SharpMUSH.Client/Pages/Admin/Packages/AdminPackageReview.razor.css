@@ -3,13 +3,13 @@
 .pkg-review {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-4);
     padding: var(--main-pad);
     min-width: 0;
 }
 
 .pkg-review-body {
-    padding: 14px 16px 16px;
+    padding: var(--space-5) var(--space-5) var(--space-5);
     min-width: 0;
 }
 
@@ -23,20 +23,20 @@
     .pkg-review-body ::deep .pkg-objects-table tr {
         display: block;
         border-bottom: 1px solid var(--border-soft);
-        padding-block: 0.5rem;
+        padding-block: var(--space-3);
     }
 
     .pkg-review-body ::deep .pkg-objects-table td {
         display: grid;
         grid-template-columns: minmax(0, 6rem) minmax(0, 1fr);
-        gap: 0.5rem;
+        gap: var(--space-3);
         border: none;
     }
 
     .pkg-review-body ::deep .pkg-objects-table td::before {
         content: attr(data-label);
         color: var(--text-dim);
-        font-size: 0.8125rem;
+        font-size: var(--text-sm);
     }
 
     .pkg-review ::deep .flex-row { flex-wrap: wrap; }
@@ -51,12 +51,12 @@
 .pkg-lock-conflict {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-3);
 }
 
 .pkg-lock-conflict + .pkg-lock-conflict {
     margin-top: 16px;
-    padding-top: 16px;
+    padding-top: var(--space-5);
     border-top: 1px solid var(--border-soft);
 }
 

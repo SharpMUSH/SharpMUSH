@@ -8,6 +8,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Softcode;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using SharpMUSH.Library.Utilities;
 using System.Collections.Immutable;
@@ -227,8 +228,6 @@ public partial class Commands
 				continue;
 			}
 
-			var targetAttrName = string.IsNullOrEmpty(destAttr) ? sourceName : destAttr;
-
 			if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 					executor, executor, destDbref, LocateFlags.All) is not AnySharpObject destObject)
 			{
@@ -236,10 +235,17 @@ public partial class Commands
 				continue;
 			}
 
+			// A typed destination is named in the dialect in force; with none, the copy takes the source's name, its
+			// stored one when the typed source name was a dialect alias for it. The copy writes the name as given.
+			var targetAttrName = string.IsNullOrEmpty(destAttr)
+				? SoftcodeDialectScope.Current?.AttributeFor(sourceName) is null ? sourceName : sourceLeaf.LongName ?? sourceName
+				: await Library.Services.AttributeService.DialectNameAsync(Mediator, destObject, destAttr);
+
 			// PennMUSH do_cpattr (src/set.c:751-753) skips a destination that is the source attribute itself:
 			// counting it would let @mvattr clear the only copy.
 			if (destObject.Object().DBRef == sourceObject.Object().DBRef
-				&& targetAttrName.Equals(sourceName, StringComparison.OrdinalIgnoreCase))
+				&& (targetAttrName.Equals(sourceName, StringComparison.OrdinalIgnoreCase)
+					|| targetAttrName.Equals(sourceLeaf.LongName, StringComparison.OrdinalIgnoreCase)))
 			{
 				continue;
 			}

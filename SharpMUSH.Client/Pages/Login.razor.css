@@ -8,33 +8,10 @@
     padding: var(--cpad);
 }
 
-.login-brand {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1.25rem;
-    text-align: center;
-}
-
-.login-logo {
-    height: 44px;
-    opacity: 0.95;
-}
-
-.login-brand-title {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: 1.375rem;
-    font-weight: 700;
-    color: var(--text);
-    line-height: 1.15;
-}
-
 ::deep .login-card {
     width: 100%;
     max-width: 380px;
-    padding: 1.5rem 1.75rem;
+    padding: var(--space-6);
     border-radius: var(--radius-lg);
     background: var(--surface);
     border: 1px solid var(--border);
@@ -43,21 +20,12 @@
 /* Unnamed: under OnboardingLayout there is no .phosphor-page, so these query .onboarding-shell. */
 @container (max-width: 48rem) {
     .login-page {
-        padding: 1rem;
+        padding: var(--space-5);
         min-height: 100vh;
         min-height: 100svh;
     }
     ::deep .login-card {
-        padding: 1.25rem 1.125rem;
-    }
-}
-
-@container (max-height: 700px) {
-    .login-brand {
-        margin-bottom: 0.75rem;
-    }
-    .login-logo {
-        height: 34px;
+        padding: var(--space-6) var(--space-5);
     }
 }
 

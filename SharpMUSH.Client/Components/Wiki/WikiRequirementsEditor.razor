@@ -91,7 +91,7 @@
     }
     else if (Set is null || Set.Required.Values.All(scopes => scopes.Count == 0))
     {
-        <p class="wiki-req-none">@Loc["WikiRequirementsNone"]</p>
+        <EmptyState Compact="true" Class="wiki-req-none" Icon="@Icons.Material.Outlined.LockOpen">@Loc["WikiRequirementsNone"]</EmptyState>
     }
     else
     {

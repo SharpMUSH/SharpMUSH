@@ -28,7 +28,7 @@
                 <div class="kit-picker-label">@Loc["NavPickerFromGallery"]</div>
                 @if (Items.Count == 0)
                 {
-                    <div class="kit-picker-empty">@Loc["NavPickerGalleryEmpty"]</div>
+                    <EmptyState Compact="true" Class="kit-picker-empty" Icon="@Icons.Material.Outlined.PhotoLibrary">@Loc["NavPickerGalleryEmpty"]</EmptyState>
                 }
                 else
                 {

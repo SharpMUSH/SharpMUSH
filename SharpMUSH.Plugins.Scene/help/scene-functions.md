@@ -43,7 +43,7 @@ One field of a scene; `status` when no field is given.
 - `public`, `istemp`: 1 or 0
 - `scheduledfor`, `startedat`, `lastactivityat`: UTC milliseconds; `scheduledfor` is empty when the scene has no time
 - `owner`, `starter`: dbrefs; `ownername`, `startername`: names
-- `room`: the room's objid, to compare with [loc()]; `roomname`: its name
+- `room`: the room's objid, to compare with [objid()] of [loc()]; `roomname`: its name
 - `joinpolicy`: `open` unless set; `playercap`: 0 (no cap) unless set
 - `details`: the keys of the details the scene has a value for, the game's in their order and then any others, leaving out hidden ones
 - `tags`: every tag the scene's poses carry, once each, deleted poses left out

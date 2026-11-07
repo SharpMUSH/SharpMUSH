@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: who-where-help
 title: "+who and +where: +help topics"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the +who and +where topics into +help: registers the who-where package's help with the +help librarian."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [who-where, help, bridge]
 category: Community
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. who-where keeps its topics on its own help

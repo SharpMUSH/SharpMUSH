@@ -32,7 +32,7 @@
             <LoadState TValue="AdminCharacterPage" Value="_page" Loading="@(_loading && _page is null)" Error="@_error"
                        IsEmpty="page => page.Characters.Count == 0" Context="page">
                 <Empty>
-                    <EmptyBox>@Loc["AdmCharactersEmpty"]</EmptyBox>
+                    <EmptyState Icon="@Icons.Material.Outlined.Groups">@Loc["AdmCharactersEmpty"]</EmptyState>
                 </Empty>
                 <ChildContent>
                     <div class="adm-chars-total">@Loc["AdmCharactersTotal", page.Total]</div>

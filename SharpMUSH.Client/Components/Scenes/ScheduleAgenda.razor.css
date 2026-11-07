@@ -1,13 +1,13 @@
 .schedule-agenda {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
+	gap: var(--space-5);
 }
 
 .schedule-day {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: var(--space-3);
 }
 
 /* the day stays in view while its scenes scroll under it */
@@ -16,10 +16,10 @@
 	top: 0;
 	z-index: 1;
 	margin: 0;
-	padding: 6px 0;
+	padding: var(--space-3) 0;
 	background: color-mix(in srgb, var(--bg) 85%, transparent);
 	backdrop-filter: blur(8px);
-	font-size: 12px;
+	font-size: var(--text-sm);
 	font-weight: 700;
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
@@ -29,7 +29,7 @@
 .schedule-rows {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
-	gap: 12px;
+	gap: var(--space-4);
 	margin: 0;
 	padding: 0;
 	list-style: none;
@@ -40,8 +40,8 @@
 	position: relative;
 	display: flex;
 	align-items: flex-start;
-	gap: 14px;
-	padding: 14px 16px;
+	gap: var(--space-5);
+	padding: var(--space-5) var(--space-5);
 	background: var(--surface);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-card);
@@ -56,11 +56,11 @@
 .schedule-time {
 	flex: 0 0 auto;
 	min-width: 5.5rem;
-	padding: 6px 8px;
+	padding: var(--space-3) var(--space-3);
 	border-radius: 8px;
 	background: var(--surface-2);
 	font-family: var(--font-mono);
-	font-size: 14px;
+	font-size: var(--text-base);
 	font-weight: 700;
 	text-align: center;
 	color: var(--accent);
@@ -74,13 +74,13 @@
 .schedule-top {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 	min-width: 0;
 }
 
 .schedule-title {
 	min-width: 0;
-	font-size: 15px;
+	font-size: var(--text-base);
 	font-weight: 700;
 	color: var(--text);
 	text-decoration: none;
@@ -105,7 +105,7 @@
 .schedule-pitch {
 	display: -webkit-box;
 	margin: 6px 0 0;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	line-height: 1.45;
 	color: var(--text-dim);
 	overflow: hidden;
@@ -117,6 +117,6 @@
 
 .schedule-meta {
 	margin-top: 8px;
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }

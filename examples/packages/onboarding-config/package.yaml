@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: onboarding-config
 title: "Onboarding: +config settings"
-version: 1.1.0
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Puts the checklist's settings into +config: registers the Onboarding object with the +config registry, so staff choose the steps and when the list shows with +config onboarding."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [onboarding, config, settings, bridge]
 category: Essentials
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. The onboarding package declares its settings on

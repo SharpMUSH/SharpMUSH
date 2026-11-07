@@ -13,8 +13,8 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 8px;
-	padding: 8px 12px;
+	gap: var(--space-3);
+	padding: var(--space-3) var(--space-4);
 	border-bottom: 1px solid var(--border);
 }
 
@@ -24,15 +24,15 @@
 
 .graph-views {
 	display: inline-flex;
-	gap: 2px;
-	padding: 2px;
+	gap: var(--space-1);
+	padding: var(--space-1);
 	border-radius: 6px;
 	background: var(--surface-2);
 }
 
 .graph-view-button {
-	font: 600 12px var(--font-ui);
-	padding: 4px 10px;
+	font: 600 var(--text-sm) var(--font-ui);
+	padding: var(--space-2) var(--space-4);
 	border: 0;
 	border-radius: 4px;
 	background: transparent;
@@ -49,7 +49,7 @@
 .graph-add {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 6px;
+	gap: var(--space-3);
 }
 
 ::deep .graph-add-button {
@@ -78,9 +78,9 @@
 .graph-inspector {
 	overflow-y: auto;
 	border-left: 1px solid var(--border);
-	padding: 12px;
+	padding: var(--space-4);
 	display: grid;
-	gap: 8px;
+	gap: var(--space-3);
 	align-content: start;
 	min-width: 0;
 }
@@ -96,26 +96,22 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 8px;
+	gap: var(--space-3);
 }
 
 .graph-inspector-kind,
 .graph-node-kind,
 .graph-outline-kind {
-	font: 600 11px var(--font-mono);
+	font: 600 var(--text-xs) var(--font-mono);
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
 	color: var(--graph-tone, var(--text-dim));
 }
 
 .graph-heading {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	margin: 8px 0 4px;
-}
-
-.graph-empty {
-	padding: 24px 16px;
 }
 
 /* The map: steps over the lines that join them, on a dotted ground that scrolls both ways. */
@@ -148,7 +144,7 @@
 }
 
 .graph-line-label {
-	font: 600 10.5px var(--font-mono);
+	font: 600 var(--text-xs) var(--font-mono);
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
 	text-anchor: middle;
@@ -168,8 +164,8 @@
 	display: grid;
 	align-content: start;
 	justify-items: start;
-	gap: 2px;
-	padding: 8px 10px;
+	gap: var(--space-1);
+	padding: var(--space-3) var(--space-4);
 	text-align: start;
 	font: inherit;
 	color: var(--text);
@@ -245,7 +241,7 @@
 
 .graph-node-label {
 	font-weight: 600;
-	font-size: 13.5px;
+	font-size: var(--text-sm);
 	line-height: 1.3;
 	overflow: hidden;
 	display: -webkit-box;
@@ -259,10 +255,10 @@
 	right: -7px;
 	min-width: 18px;
 	height: 18px;
-	padding: 0 4px;
+	padding: 0 var(--space-2);
 	box-sizing: border-box;
 	border-radius: 9px;
-	font: 700 11px/18px var(--font-mono);
+	font: 700 var(--text-xs)/18px var(--font-mono);
 	text-align: center;
 	color: var(--bg);
 }
@@ -295,7 +291,7 @@
 .graph-outline-step {
 	border-bottom: 1px solid var(--border);
 	border-left: 3px solid var(--graph-tone, var(--text-dim));
-	padding: 8px 12px;
+	padding: var(--space-3) var(--space-4);
 }
 
 .graph-outline-step--selected {
@@ -307,7 +303,7 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: baseline;
-	gap: 8px;
+	gap: var(--space-3);
 	cursor: pointer;
 	width: 100%;
 }
@@ -319,7 +315,7 @@
 .graph-outline-ports li {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 6px;
+	gap: var(--space-3);
 	align-items: baseline;
 }
 
@@ -328,13 +324,13 @@
 	margin: 4px 0 0;
 	padding: 0;
 	display: grid;
-	gap: 2px;
-	font-size: 13px;
+	gap: var(--space-1);
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .graph-port {
-	font: 600 10.5px var(--font-mono);
+	font: 600 var(--text-xs) var(--font-mono);
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
 }
@@ -344,7 +340,7 @@
 }
 
 .graph-change {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	margin: 0;
 }
 
@@ -359,7 +355,7 @@
 /* Guidance, under the map and on the selected step. */
 .graph-guidance {
 	border-top: 1px solid var(--border);
-	padding: 10px 12px;
+	padding: var(--space-4) var(--space-4);
 }
 
 .graph-guidance ul,
@@ -368,7 +364,7 @@ ul.graph-guidance {
 	margin: 0;
 	padding: 0;
 	display: grid;
-	gap: 4px;
+	gap: var(--space-2);
 }
 
 ul.graph-guidance--step {
@@ -379,12 +375,12 @@ ul.graph-guidance--step {
 .graph-issue {
 	display: grid;
 	grid-template-columns: 14px minmax(0, 1fr);
-	gap: 6px;
-	font-size: 13px;
+	gap: var(--space-3);
+	font-size: var(--text-sm);
 }
 
 .graph-issue-mark {
-	font: 700 12px var(--font-mono);
+	font: 700 var(--text-sm) var(--font-mono);
 	text-align: center;
 }
 
@@ -410,16 +406,16 @@ ul.graph-guidance--step {
 
 .graph-note {
 	display: grid;
-	gap: 2px;
-	padding: 8px 10px;
+	gap: var(--space-1);
+	padding: var(--space-3) var(--space-4);
 	border: 1px solid var(--border);
 	border-radius: 6px;
 	background: var(--surface-2);
-	font-size: 13px;
+	font-size: var(--text-sm);
 }
 
 .graph-note-author {
-	font: 11px var(--font-mono);
+	font: var(--text-xs) var(--font-mono);
 	color: var(--text-faint);
 }
 
@@ -466,7 +462,7 @@ ul.graph-guidance--step {
 /* An outcome that may lead to several steps. */
 .graph-pool {
 	display: grid;
-	gap: 4px;
+	gap: var(--space-2);
 	margin-bottom: 8px;
 }
 
@@ -479,28 +475,28 @@ ul.graph-guidance--step {
 	margin: 0;
 	padding: 0;
 	display: grid;
-	gap: 4px;
+	gap: var(--space-2);
 }
 
 .graph-pool-row {
 	display: grid;
-	gap: 4px;
-	padding: 4px 4px 0 8px;
+	gap: var(--space-2);
+	padding: var(--space-2) var(--space-2) 0 var(--space-3);
 	border-left: 2px solid var(--graph-tone, var(--border));
-	font-size: 13px;
+	font-size: var(--text-sm);
 }
 
 .graph-pool-head {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto;
 	align-items: center;
-	gap: 6px;
+	gap: var(--space-3);
 }
 
 .graph-edge-fields {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-	gap: 0 8px;
+	gap: 0 var(--space-3);
 }
 
 .graph-pool-label {
@@ -526,11 +522,11 @@ ul.graph-guidance--step {
 
 .graph-zoom-level {
 	min-width: 44px;
-	padding: 2px 4px;
+	padding: var(--space-1) var(--space-2);
 	border: 0;
 	background: transparent;
 	color: var(--text-dim);
-	font: 600 12px var(--font-mono);
+	font: 600 var(--text-sm) var(--font-mono);
 	cursor: pointer;
 }
 
@@ -563,17 +559,17 @@ ul.graph-guidance--step {
 	position: absolute;
 	display: flex;
 	flex-wrap: wrap;
-	gap: 4px;
+	gap: var(--space-2);
 	width: calc(var(--graph-node-width) * 1.6);
 }
 
 .graph-handle {
-	padding: 2px 8px;
+	padding: var(--space-1) var(--space-3);
 	border: 1px dashed var(--graph-tone, var(--text-dim));
 	border-radius: 999px;
 	background: var(--surface);
 	color: var(--graph-tone, var(--text-dim));
-	font: 600 10.5px var(--font-mono);
+	font: 600 var(--text-xs) var(--font-mono);
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
 	white-space: nowrap;

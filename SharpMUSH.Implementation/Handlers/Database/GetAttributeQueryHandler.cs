@@ -62,7 +62,7 @@ public class GetAttributesQueryHandler(
 			IAttributeService.AttributePatternMode.Wildcard =>
 				database.GetAttributesAsync(dbref, request.Pattern.ToUpper(), cancellationToken),
 			IAttributeService.AttributePatternMode.Regex =>
-				database.GetAttributesByRegexAsync(dbref, request.Pattern.ToUpper(), cancellationToken),
+				database.GetAttributesByRegexAsync(dbref, request.Pattern, cancellationToken),
 			_ => database.GetAttributesAsync(dbref, request.Pattern.ToUpper(), cancellationToken)
 		};
 }
@@ -108,7 +108,7 @@ public class GetLazyAttributesQueryHandler(
 			IAttributeService.AttributePatternMode.Wildcard =>
 				database.GetLazyAttributesAsync(dbref, request.Pattern.ToUpper(), cancellationToken),
 			IAttributeService.AttributePatternMode.Regex =>
-				database.GetLazyAttributesByRegexAsync(dbref, request.Pattern.ToUpper(), cancellationToken),
+				database.GetLazyAttributesByRegexAsync(dbref, request.Pattern, cancellationToken),
 			_ => database.GetLazyAttributesAsync(dbref, request.Pattern.ToUpper(), cancellationToken)
 		};
 }

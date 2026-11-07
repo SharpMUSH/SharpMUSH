@@ -1,7 +1,7 @@
 .oauth-page {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-5);
     min-width: 0;
     max-width: 40rem;
     margin: 0 auto;
@@ -10,8 +10,8 @@
 .oauth-card {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 18px 18px 20px;
+    gap: var(--space-4);
+    padding: var(--space-5) var(--space-5) var(--space-6);
 }
 
 .oauth-card p {
@@ -20,7 +20,7 @@
 
 .oauth-title {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: var(--text-lg);
     font-weight: 600;
 }
 
@@ -37,7 +37,7 @@
 .oauth-scopes {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--space-3);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -46,7 +46,7 @@
 .oauth-scope {
     display: flex;
     flex-direction: column;
-    padding: 0.625rem 0.75rem;
+    padding: var(--space-4) var(--space-4);
     border: 1px solid var(--border);
     border-radius: var(--radius);
 }
@@ -57,17 +57,17 @@
 
 .oauth-scope-detail {
     color: var(--text-dim);
-    font-size: 0.875rem;
+    font-size: var(--text-base);
 }
 
 .oauth-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-3);
 }
 
 .oauth-allow,
 .oauth-deny {
-    padding: 0.5rem 1rem;
+    padding: var(--space-3) var(--space-5);
     border-radius: var(--radius);
     font-weight: 600;
     cursor: pointer;

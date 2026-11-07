@@ -1,0 +1,37 @@
+@* What a list, grid or pane shows in its place when it has nothing to show, or could not be read: an icon,
+   one sentence, and at most one action that gives it something (New scene, Try again). Every empty list in
+   the portal is this component. Compact is the inline form, for a sidebar or a list inside a card. *@
+@* One line on purpose: whitespace between the elements would become the root's text. *@
+<div class="@Css" data-empty="@(Failed ? "failed" : "empty")" @attributes="Attributes"><span class="kit-empty-icon" aria-hidden="true"><MudIcon Icon="@(Icon ?? DefaultIcon)" /></span><div class="kit-empty-text">@ChildContent</div>@if (Action is not null) {<div class="kit-empty-action">@Action</div>}</div>
+
+@code {
+    /// <summary>The one sentence that says what is missing, or why.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The icon for what would be listed; an empty tray, or a broken cloud when <see cref="Failed"/>.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>The one action that gives the list something, usually a <c>CapsuleButton</c>.</summary>
+    [Parameter] public RenderFragment? Action { get; set; }
+
+    /// <summary>The list could not be read, rather than having nothing in it.</summary>
+    [Parameter] public bool Failed { get; set; }
+
+    /// <summary>The inline form: a small icon beside the sentence, for sidebars and lists inside cards.</summary>
+    [Parameter] public bool Compact { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Other attributes for the root element (an id, aria-hidden where a live region already says it).</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? Attributes { get; set; }
+
+    private string DefaultIcon => Failed ? Icons.Material.Outlined.CloudOff : Icons.Material.Outlined.Inbox;
+
+    private string Css => string.Join(' ', new[]
+    {
+        "kit-empty",
+        Compact ? "kit-empty--compact" : null,
+        Failed ? "kit-empty--failed" : null,
+        Class
+    }.Where(c => !string.IsNullOrWhiteSpace(c)));
+}

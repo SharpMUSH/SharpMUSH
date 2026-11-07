@@ -193,6 +193,33 @@ public class SceneWebComposeIntegrationTests
 	}
 
 	/// <summary>
+	/// A web OOC line from inside the scene's room passes that room's Speech lock first, as a typed
+	/// <c>ooc</c> does: refused, it is neither heard nor recorded.
+	/// </summary>
+	[Test]
+	public async Task WebComposeOoc_InTheScenesRoom_HonoursItsSpeechLock()
+	{
+		await PutLoggerInMasterRoomAsync();
+
+		var (owner, ownerHandle) = await CreatePlayerAsync($"Lock{Tag}");
+		var yard = (await God1($"@dig Lock Yard {Tag}")).Message.ToPlainText()?.Trim() ?? string.Empty;
+		var yardRef = yard.Split(' ').First(t => t.StartsWith('#'));
+		await God1($"@tel {owner}={yardRef}");
+
+		await RunAs(ownerHandle, $"+scene/create Lock Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(owner)})");
+		await God1($"@lock/speech {yardRef}=#1");
+		var before = await Eval($"words(sceneposes({sceneId}))");
+		var line = TestIsolationHelpers.GenerateUniqueName("hush");
+
+		var heard = await RunAs(ownerHandle, $"+scene/ooc {sceneId}={line}");
+
+		await Assert.That(heard.Any(m => m.Contains("You may not speak there!", StringComparison.Ordinal))).IsTrue();
+		await Assert.That(heard.Any(m => m.Contains(line, StringComparison.Ordinal))).IsFalse();
+		await Assert.That(await Eval($"words(sceneposes({sceneId}))")).IsEqualTo(before);
+	}
+
+	/// <summary>
 	/// The mode selector's other options render exactly as the built-in commands do, so a pose composed
 	/// on the web and one typed in a terminal are indistinguishable in the archive.
 	/// </summary>

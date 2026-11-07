@@ -17,7 +17,7 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 {
 	public record ServerInfoResponse(bool GuestsEnabled, string MudName, IReadOnlyList<string>? Features = null,
 		string? BuildId = null, string? ImageHosts = null, string? ImageHostList = null, string? Logo = null,
-		OnboardingPresentation? Onboarding = null);
+		OnboardingPresentation? Onboarding = null, string? Banner = null, string? Tagline = null, string? Description = null);
 
 	public virtual async Task<OnboardingPresentation?> OnboardingAsync() => (await FetchAsync()).Onboarding;
 
@@ -97,6 +97,18 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 	/// </summary>
 	public virtual async Task<string?> CurrentBuildIdAsync() => (await FetchCoreAsync())?.BuildId;
 
+	/// <summary>
+	/// The game's identity in the portal (<c>portal_banner</c>, <c>portal_tagline</c>, <c>portal_description</c>):
+	/// each null when it is empty. On a fetch failure all three are null.
+	/// </summary>
+	public virtual async Task<GameIdentity> IdentityAsync()
+	{
+		var info = await FetchAsync();
+		return new(info.MudName, NonEmpty(info.Banner), NonEmpty(info.Tagline), NonEmpty(info.Description));
+	}
+
+	private static string? NonEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
 	/// <summary>Raised after <see cref="Refresh"/>: what a reader asked before may have changed.</summary>
 	public event Action? Changed;
 
@@ -150,6 +162,9 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 		before.GuestsEnabled != now.GuestsEnabled
 		|| before.MudName != now.MudName
 		|| before.Logo != now.Logo
+		|| before.Banner != now.Banner
+		|| before.Tagline != now.Tagline
+		|| before.Description != now.Description
 		|| before.Onboarding != now.Onboarding
 		|| !(before.Features ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(now.Features ?? []);
 
@@ -161,3 +176,6 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 		return info with { MudName = string.IsNullOrWhiteSpace(info.MudName) ? DefaultMudName : info.MudName };
 	}
 }
+
+/// <summary>What the portal shows as the game's own face: its name, and its banner, tagline and description when set.</summary>
+public sealed record GameIdentity(string Name, string? Banner, string? Tagline, string? Description);

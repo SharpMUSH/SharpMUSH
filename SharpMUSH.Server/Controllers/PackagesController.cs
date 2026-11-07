@@ -36,9 +36,6 @@ public class PackagesController(
 	EngineVersion engine,
 	IBundledPackageBootstrap bundled) : ControllerBase
 {
-	/// <summary>The canonical official repo, used when no official remote is configured yet.</summary>
-	public const string DefaultOfficialRepoUrl = "https://github.com/SharpMUSH/SharpMUSH-Packages";
-
 	private static readonly WikiMarkdigPipeline Markdown = new();
 
 	/// <summary>
@@ -54,7 +51,7 @@ public class PackagesController(
 	/// <summary>
 	/// Lists accepted community repos: aggregates the <c>community/</c>
 	/// listing folders of every configured official remote (falling back to
-	/// the canonical SharpMUSH-Packages repo when none is configured).
+	/// the SharpMUSH.Packages library when none is configured).
 	/// </summary>
 	[HttpGet("community")]
 	public async Task<ActionResult<CommunityReposResponse>> GetCommunityRepos(CancellationToken cancellationToken) =>
@@ -67,7 +64,7 @@ public class PackagesController(
 		if (officials.Count == 0)
 		{
 			officials.Add(new PackageRemoteRecord(
-				"SharpMUSH Official", DefaultOfficialRepoUrl, PackageRemoteTrust.Official, null));
+				OfficialPackageRemote.Name, OfficialPackageRemote.Url, PackageRemoteTrust.Official, null));
 		}
 
 		var configuredUrls = remotes.Select(r => r.Url).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -559,7 +556,8 @@ public class PackagesController(
 	/// </summary>
 	private PackageUpdateInfo CatalogueUpdateInfo(InstalledPackageRecord installed)
 	{
-		// Installed from an older build's catalogue and no longer shipped: nothing to compare against.
+		// Installed from an older build's catalogue and no longer shipped, without having moved to the official
+		// remote (bootstrap hands a moved one over, see BundledPackages.Moved): nothing to compare against.
 		if (!BundledPackages.Contains(installed.Id))
 		{
 			return new PackageUpdateInfo(installed.Version, null, null, false, false, false);

@@ -1,18 +1,18 @@
 .kit-chips {
 	display: flex;
-	gap: 6px;
+	gap: var(--space-3);
 	flex-wrap: wrap;
 }
 
 .kit-chip {
 	height: 30px;
-	padding: 0 12px;
+	padding: 0 var(--space-4);
 	border: 0;
 	border-radius: 15px;
 	background: var(--border);
 	color: var(--text);
 	font: inherit;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	cursor: pointer;
 	transition: background var(--motion-fade);
 }

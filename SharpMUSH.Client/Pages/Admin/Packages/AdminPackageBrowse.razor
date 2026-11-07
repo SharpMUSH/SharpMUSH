@@ -106,7 +106,7 @@
         var shown = groups.Where(g => _category is null || g.Title == _category).ToList();
         @if (shown.Count == 0)
         {
-            <EmptyState>@Loc["PkgNoSearchMatch"]</EmptyState>
+            <EmptyState Icon="@Icons.Material.Outlined.SearchOff">@Loc["PkgNoSearchMatch"]</EmptyState>
         }
         else if (_graph)
         {

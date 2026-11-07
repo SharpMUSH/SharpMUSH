@@ -48,6 +48,7 @@ public partial class LightningDatabase
 				Powers = tx.Dups(Tables.ObjPower.Forward, key).Select(value => Keys.ReadStr(value)).ToArray(),
 				Roles = tx.Dups(Tables.ObjRole.Forward, key).Select(value => Keys.ReadStr(value)).ToArray(),
 				Permissions = tx.TryGet(Tables.ObjPermission, key, out var permissions) ? permissions : null,
+				PermissionReaches = tx.TryGet(Tables.ObjPermissionReach, key, out var reaches) ? reaches : null,
 				Account = tx.TryGet(Tables.AccountChar.Reverse, key, out var account) ? Keys.ReadStr(account) : null,
 				DestroyedBy = destroyedBy?.ToString(),
 				DestroyedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
@@ -129,6 +130,7 @@ public partial class LightningDatabase
 			foreach (var power in entry.Powers) PutMembershipEdge(Tables.ObjPower, tx, n, power);
 			foreach (var role in entry.Roles) AddObjectRole(tx, n, role);
 			if (entry.Permissions is { } permissions) tx.Put(Tables.ObjPermission, key, permissions);
+			if (entry.PermissionReaches is { } reaches) tx.Put(Tables.ObjPermissionReach, key, reaches);
 			if (restore.RelinkAccount && entry.Account is { } account && tx.TryGet(Tables.Account, Keys.Str(account), out _))
 			{
 				tx.Put(Tables.AccountChar.Forward, Keys.Str(account), key);

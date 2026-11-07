@@ -64,7 +64,7 @@
     <SidebarGroup Class="scenes-side-live" Label="@Loc["NavScenesLive"]">
         @if (_live is { Count: 0 } && !Collapsed)
         {
-            <SidebarNote>@Loc["WidNoActiveScenes"]</SidebarNote>
+            <EmptyState Compact="true" Icon="@Icons.Material.Outlined.TheaterComedy">@Loc["WidNoActiveScenes"]</EmptyState>
         }
         @foreach (var scene in (_live ?? []).Take(LiveShown))
         {

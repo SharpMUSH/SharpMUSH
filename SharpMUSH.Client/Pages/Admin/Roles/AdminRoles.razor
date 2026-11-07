@@ -60,8 +60,10 @@
             <Detail>
                 @if (List.Selected is not { } editing)
                 {
-                    <AdminEmptyDetail Prefix="ra" Icon="@Icons.Material.Filled.Shield" Text="@Loc["RolSelectOrCreate"]"
-                                      ActionText="@Loc["RolNewRole"]" OnAction="NewRole" />
+                    <EmptyState Class="ra-empty-detail" Icon="@Icons.Material.Outlined.Shield">
+                        <ChildContent>@Loc["RolSelectOrCreate"]</ChildContent>
+                        <Action><CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add" OnClick="NewRole">@Loc["RolNewRole"]</CapsuleButton></Action>
+                    </EmptyState>
                 }
                 else
                 {

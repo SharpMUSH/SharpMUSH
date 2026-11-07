@@ -1,18 +1,18 @@
 /* A sub-line that wraps on a phone still clears the card's edge. */
 .calendar-feed-wrap ::deep .kit-card-head {
-    padding-block: 10px;
+    padding-block: var(--space-4);
 }
 
 .calendar-feed-body {
-    padding: 14px 16px 16px;
+    padding: var(--space-5) var(--space-5) var(--space-5);
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: var(--space-5);
 }
 
 .calendar-feed-head {
     margin: 0 0 4px;
-    font-size: 14px;
+    font-size: var(--text-base);
     font-weight: 700;
     color: var(--text);
 }
@@ -20,7 +20,7 @@
 .calendar-feed-text,
 .calendar-feed-note {
     margin: 0 0 8px;
-    font-size: 13px;
+    font-size: var(--text-sm);
     color: var(--text-dim);
 }
 
@@ -33,21 +33,21 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-3);
 }
 
 .calendar-feed-url {
     flex: 1 1 18rem;
     min-width: 0;
     height: 36px;
-    padding: 0 12px;
+    padding: 0 var(--space-4);
     border: 1px solid var(--border);
     border-radius: 10px;
     background: var(--surface-2);
     color: var(--text);
     font: inherit;
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: var(--text-sm);
 }
 
 .calendar-feed-url:focus-visible {
@@ -58,6 +58,6 @@
 .calendar-feed-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--space-3);
     margin-top: 10px;
 }

@@ -2,8 +2,8 @@
 .kit-route-skeleton-side {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
-	padding: 18px 12px;
+	gap: var(--space-3);
+	padding: var(--space-5) var(--space-4);
 }
 
 .kit-route-skeleton-side-head {
@@ -22,7 +22,7 @@
 .kit-route-skeleton {
 	display: flex;
 	flex-direction: column;
-	gap: 10px;
+	gap: var(--space-4);
 	padding: var(--main-pad);
 }
 

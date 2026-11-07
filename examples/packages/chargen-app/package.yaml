@@ -1,12 +1,12 @@
 format: "1.16"
 package: chargen-app
 title: "Character applications in the portal"
-version: 2.0.2
+version: 2.0.3
 kind: application
 authors: [SharpMUSH]
 description: "Registers character applications (the chargen package) as a portal page at /apps/chargen: the applicant's own application as a form, and for reviewers the queue, the waitlist and each application with its comments and what changed."
 license: MIT
-homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [portal, application, form, chargen, review]
 category: Characters
 requires_server: ">=0.1"
@@ -18,8 +18,9 @@ depends:
   - package: chargen
     version: ">=2.0"
     source:
-      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
-      path: chargen/
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/chargen/
+      branch: main
 
 # The installing admin chooses who may open the application, players by default. A {{?configure}} ref in an
 # application field is prompted at review and substituted at apply, exactly like refs in attribute values.

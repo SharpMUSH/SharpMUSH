@@ -1,10 +1,10 @@
 .schema-label {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .schema-value {
-	font-size: 14px;
+	font-size: var(--text-base);
 	color: var(--text);
 	overflow-wrap: anywhere;
 }
@@ -24,25 +24,19 @@
 .schema-kv {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-	gap: 14px 18px;
+	gap: var(--space-5) var(--space-5);
 	margin: 0;
 }
 
 .schema-kv-row {
 	display: flex;
 	flex-direction: column;
-	gap: 3px;
+	gap: var(--space-2);
 	min-width: 0;
 }
 
 .schema-kv-row dd {
 	margin: 0;
-}
-
-.schema-empty {
-	font-size: 14px;
-	color: var(--text-dim);
-	padding: 8px 0;
 }
 
 .schema-link {
@@ -60,13 +54,13 @@
 	padding: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: var(--space-4);
 	min-width: 0;
 }
 
 .schema-timeline-entry {
 	border-left: 2px solid var(--border);
-	padding: 2px 0 2px 12px;
+	padding: var(--space-1) 0 var(--space-1) var(--space-4);
 	min-width: 0;
 }
 
@@ -74,34 +68,34 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 4px 10px;
+	gap: var(--space-2) var(--space-4);
 	margin-bottom: 4px;
 }
 
 .schema-timeline-author {
-	font-size: 14px;
+	font-size: var(--text-base);
 	font-weight: 600;
 	color: var(--text);
 }
 
 .schema-timeline-time {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .schema-timeline-body {
-	font-size: 14px;
+	font-size: var(--text-base);
 	color: var(--text);
 	overflow-wrap: anywhere;
 }
 
 .schema-timeline-code {
 	margin: 0;
-	padding: 8px 10px;
+	padding: var(--space-3) var(--space-4);
 	background: var(--surface-2);
 	border-radius: 6px;
 	font-family: var(--font-mono);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	white-space: pre-wrap;
 }
 
@@ -109,14 +103,14 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 4px;
+	gap: var(--space-2);
 	margin-top: 2px;
 }
 
 /* A link beside the action buttons, the size of their text. */
 .schema-timeline-link {
-	padding: 0 8px;
-	font-size: 13px;
+	padding: 0 var(--space-3);
+	font-size: var(--text-sm);
 }
 
 /* A conversation: rows sharing a group read as one thread, the first at the margin and its replies
@@ -128,13 +122,13 @@
 
 .schema-timeline-entry--reply {
 	margin-left: 22px;
-	padding-left: 12px;
+	padding-left: var(--space-4);
 	border-left: 2px solid var(--border);
 }
 
 .schema-timeline-entry--starts {
 	border-top: 1px solid var(--border);
-	padding-top: 12px;
+	padding-top: var(--space-4);
 }
 
 .schema-timeline-entry--unread.schema-timeline-entry--reply,
@@ -143,26 +137,26 @@
 }
 
 .schema-timeline-replyto {
-	font-size: 11px;
+	font-size: var(--text-xs);
 	color: var(--text-dim);
 	background: var(--surface-2);
 	border-radius: 4px;
-	padding: 1px 6px;
+	padding: var(--space-1) var(--space-3);
 }
 
 .schema-timeline-new {
-	font-size: 11px;
+	font-size: var(--text-xs);
 	font-weight: 600;
 	color: var(--accent-on);
 	background: var(--accent);
 	border-radius: 8px;
-	padding: 0 7px;
+	padding: 0 var(--space-3);
 }
 
 .schema-timeline-more {
 	display: inline-block;
 	margin-top: 4px;
-	font-size: 13px;
+	font-size: var(--text-sm);
 }
 
 .schema-markup {
@@ -172,7 +166,7 @@
 
 /* a table's row groups (Pinned, Newest) and the rows staff may put in order */
 .schema-table-group th {
-	font-size: 11px;
+	font-size: var(--text-xs);
 	font-weight: 600;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
@@ -197,16 +191,16 @@
 .schema-stats {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
-	gap: 10px;
+	gap: var(--space-4);
 }
 
 .schema-stat {
 	--stat-tone: var(--text-faint);
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--space-2);
 	min-width: 0;
-	padding: 10px 12px;
+	padding: var(--space-4) var(--space-4);
 	border: 1px solid var(--border);
 	border-top: 3px solid var(--stat-tone);
 	border-radius: 10px;
@@ -222,7 +216,7 @@
 .schema-stat[data-tone="error"] { --stat-tone: var(--danger); }
 
 .schema-stat-value {
-	font-size: 26px;
+	font-size: var(--text-xl);
 	font-weight: 600;
 	line-height: 1.1;
 	color: var(--text);
@@ -231,7 +225,7 @@
 }
 
 .schema-stat-caption {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-faint);
 	overflow-wrap: anywhere;
 }
@@ -239,7 +233,7 @@
 .schema-stat-pips {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 4px;
+	gap: var(--space-2);
 }
 
 .schema-stat-pip {
@@ -256,14 +250,14 @@
 .schema-chip-group {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--space-2);
 	min-width: 0;
 }
 
 .schema-chips {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 4px;
+	gap: var(--space-2);
 }
 
 .schema-chips ::deep .schema-chip {
@@ -307,11 +301,11 @@
 
 .schema-click-output {
 	margin: 4px 0 8px;
-	padding: 8px 10px;
+	padding: var(--space-3) var(--space-4);
 	background: var(--surface-2);
 	border-radius: 6px;
 	font-family: var(--font-mono);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 }

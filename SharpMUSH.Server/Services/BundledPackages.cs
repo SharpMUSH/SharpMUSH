@@ -100,9 +100,10 @@ public static class BundledPackages
 		// Available, not installed: +wiki lands an object in the master room, and a game that
 		// never asked for a wiki front end should not find one there after an upgrade.
 		new("wiki-reader", BundledPackageHandler.None, InstallAtFirstBoot: false),
-		// Available, not installed: the job queue adds +job, +request and their kin, and its portal
-		// page is a separate application package so a game can run the queue in-game only.
-		new("jobs", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		// Suggested at setup, not installed at first boot: the job queue adds +job, +request and their kin, which a
+		// running game may already have under those names. Its portal page is a separate application package so a game
+		// can run the queue in-game only.
+		new("jobs", BundledPackageHandler.Http, InstallAtFirstBoot: false, SuggestAtSetup: true),
 		new("jobs-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("jobs-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("jobs-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
@@ -145,8 +146,9 @@ public static class BundledPackages
 		new("bboards-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("bboards-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("bboards-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
-		// Available, not installed: +who and +where are names a game may already use for its own code.
-		new("who-where", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Suggested at setup, not installed at first boot: +who and +where are names a running game may already use for
+		// its own code.
+		new("who-where", BundledPackageHandler.None, InstallAtFirstBoot: false, SuggestAtSetup: true),
 		new("who-where-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("who-where-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: +status is a name a game may already use for its own code. A status shows in
@@ -170,12 +172,6 @@ public static class BundledPackages
 		new("staff", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("staff-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("staff-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		// Available, not installed: +duty is a name a game may already use, and it needs a sheet system bridge.
-		new("duties", BundledPackageHandler.Http, InstallAtFirstBoot: false),
-		new("duties-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		new("duties-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		new("duties-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
-		new("duties-scene", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: joins staff and status, so +staff shows each staff member's +status.
 		new("staff-status", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +census is a name a game may already use for its own code.
@@ -266,7 +262,26 @@ public static class BundledPackages
 		new("world-map-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("world-grid", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("world-grid-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		// Available, not installed: the builder's room graph, a UI package (HTML and JavaScript the portal hosts) that a
+		// game turns into a page by creating an application over it.
+		new("builder-graph", BundledPackageHandler.None, InstallAtFirstBoot: false),
 	];
+
+	/// <summary>
+	/// Packages that left this catalogue for the official remote library, by id, each with its folder in that library.
+	/// An id goes here in the same change that removes it from <see cref="All"/>: bootstrap then re-points every game's
+	/// install of it at the library (<see cref="BundledPackageHandOver"/>), so the package manager keeps offering its
+	/// updates instead of reporting a package nothing ships any more.
+	/// </summary>
+	public static readonly IReadOnlyDictionary<string, string> Moved =
+		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+		{
+			["duties"] = "duties",
+			["duties-help"] = "duties-help",
+			["duties-config"] = "duties-config",
+			["duties-app"] = "duties-app",
+			["duties-scene"] = "duties-scene",
+		};
 
 	/// <summary>
 	/// Reserved remote name for the catalogue. Never stored in <c>sys_remotes</c> — the packages
@@ -383,6 +398,34 @@ public static class BundledPackages
 			{ PackageId: not null } descriptor => descriptor,
 			_ => new NotFound()
 		};
+
+	/// <summary>
+	/// The files a bundled package carries beside its manifest, such as a UI package's HTML and scripts, read from the
+	/// resources this build embeds as <c>SharpMUSH.Server.BundledPackages.&lt;id&gt;.files.&lt;name&gt;</c>.
+	/// </summary>
+	public static IPackageFileSource Files(string packageId) => new EmbeddedFiles(packageId);
+
+	private sealed class EmbeddedFiles(string packageId) : IPackageFileSource
+	{
+		public async Task<byte[]?> ReadFileAsync(string path, CancellationToken cancellationToken = default)
+		{
+			if (PackageFilePath.Normalize(path) is not { } normalized || normalized.Contains('/'))
+			{
+				return null;
+			}
+
+			await using var stream = Assembly.GetExecutingAssembly()
+				.GetManifestResourceStream($"SharpMUSH.Server.BundledPackages.{packageId}.files.{normalized}");
+			if (stream is null)
+			{
+				return null;
+			}
+
+			using var buffer = new MemoryStream();
+			await stream.CopyToAsync(buffer, cancellationToken);
+			return buffer.ToArray();
+		}
+	}
 
 	/// <summary>The raw YAML of one bundled package manifest (embedded resource).</summary>
 	public static string ManifestYaml(string packageId)

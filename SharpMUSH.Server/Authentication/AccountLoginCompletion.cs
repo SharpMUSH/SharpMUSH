@@ -26,7 +26,7 @@ public sealed class AccountLoginCompletion(IAccountService accounts, IAccountSes
 		 if (sitelocks.IsBlocked(ip, "", SitelockGuard.Connect))
 			 return new ObjectResult("Access from your location is restricted.") { StatusCode = 403 };
 		 var characters = await accounts.GetCharactersAsync(current.Id!, ct);
-		 if (!options.CurrentValue.Net.Logins && !await characters.ToAsyncEnumerable().AnyAsync(async (character, token) => await new AnySharpObject(character).IsWizard(token), ct))
+		 if (!options.CurrentValue.Net.Logins && !await characters.ToAsyncEnumerable().AnyAsync(async (character, token) => await new AnySharpObject(character).CanLoginWhileClosed(token), ct))
 			 return new ObjectResult("Logins are disabled.") { StatusCode = 403 };
 		 var primary = characters.FirstOrDefault(c => c.Object.Key == preferredKey && c.Object.CreationTime == preferredCreationTime)
 		 ?? ActingCharacterResolver.Primary(characters);

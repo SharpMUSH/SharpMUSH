@@ -138,19 +138,20 @@ public partial class Commands
 					RoleRefusal refusal => refusal.Message
 				};
 			default:
-				if (await ScopesAsync(parser, right) is not string[] scopes) return await UnknownScopeAsync(parser, right);
+				var (named, reach) = ScopesAndReach(right);
+				if (await ScopesAsync(parser, named) is not string[] scopes) return await UnknownScopeAsync(parser, named);
 				var state = StateOf(operation);
-				var changed = $"{StateWord(state)} {string.Join(", ", scopes)}";
+				var changed = $"{StateWord(state)} {string.Join(", ", scopes)}{(reach is null ? "" : $", reaching {reach.ToLowerInvariant()}")}";
 				if (onAccount)
 					return await RoleAccountAsync(parser, executor, left) switch
 					{
-						(SharpPlayer player, SharpAccount account) => Done(await management.SetOverridesAsync(actor, account.Id!, scopes, state, ct),
+						(SharpPlayer player, SharpAccount account) => Done(await management.SetOverridesAsync(actor, account.Id!, scopes, state, reach, ct),
 							_ => $"{player.Object.Name} (account {account.Username}): {changed}."),
 						_ => $"No player named '{left}' with an account."
 					};
 				return await RoleTargetAsync(parser, executor, left) switch
 				{
-					AnySharpObject target => Done(await management.SetObjectOverridesAsync(actor, target, scopes, state, ct),
+					AnySharpObject target => Done(await management.SetObjectOverridesAsync(actor, target, scopes, state, reach, ct),
 						_ => $"{target.Object().Name}: {changed}."),
 					Error<string> error => error.Value
 				};
@@ -192,6 +193,18 @@ public partial class Commands
 			},
 			_ => Done(await management.DeleteCategoryAsync(actor, kind, left, ct), _ => $"{noun} {left} deleted.")
 		};
+	}
+
+	/// <summary>
+	/// <c>&lt;permissions&gt;[/&lt;role&gt;]</c>: the permissions, and the role an override's reach names after the
+	/// slash (<see cref="OverrideReach"/>), or null for none.
+	/// </summary>
+	private static (string Scopes, string? Reach) ScopesAndReach(string value)
+	{
+		var slash = value.LastIndexOf('/');
+		if (slash < 0) return (value, null);
+		var reach = value[(slash + 1)..].Trim();
+		return (value[..slash].Trim(), reach.Length == 0 ? null : reach);
 	}
 
 	/// <summary>The space-separated permissions in <paramref name="value"/>, or null when one is not a permission the game has.</summary>

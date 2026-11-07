@@ -25,17 +25,26 @@ public class ServerInfoController(IOptionsWrapper<SharpMUSHOptions> options, IGa
 	/// <param name="ImageHosts">The <c>image_hosts</c> option, which the portal holds layout pictures to.</param>
 	/// <param name="ImageHostList">The <c>image_host_list</c> option.</param>
 	/// <param name="Logo">The <c>portal_logo</c> option; empty for the SharpMUSH logo.</param>
+	/// <param name="Banner">The <c>portal_banner</c> option; empty for none.</param>
+	/// <param name="Tagline">The <c>portal_tagline</c> option.</param>
+	/// <param name="Description">The <c>portal_description</c> option.</param>
 	public record ServerInfoResponse(bool GuestsEnabled, string MudName, IReadOnlyList<string> Features, string BuildId,
-		string ImageHosts, string ImageHostList, string Logo, OnboardingPresentation? Onboarding = null);
+		string ImageHosts, string ImageHostList, string Logo, OnboardingPresentation? Onboarding = null,
+		string Banner = "", string Tagline = "", string Description = "");
 
 	// Not rate-limited: every portal page load asks for this before it renders, and it reads options values,
 	// the installed-package registry and the (cached) guest roster. A limiter here only ever delayed the portal's boot.
 	[HttpGet]
 	public async Task<IActionResult> Get(CancellationToken ct = default)
-		=> Ok(new ServerInfoResponse(await guests.CanLogInAsync(ct), options.CurrentValue.Net.MudName,
+	{
+		var current = options.CurrentValue;
+		var cosmetic = current.Cosmetic;
+		return Ok(new ServerInfoResponse(await guests.CanLogInAsync(ct), current.Net.MudName,
 			await features.EnabledAsync(), build.Id,
-			options.CurrentValue.Cosmetic.ImageHosts ?? "any", options.CurrentValue.Cosmetic.ImageHostList ?? string.Empty,
-			options.CurrentValue.Cosmetic.PortalLogo?.Trim() ?? string.Empty, await onboarding.PublicAsync(ct)));
+			cosmetic.ImageHosts ?? "any", cosmetic.ImageHostList ?? string.Empty,
+			cosmetic.PortalLogo?.Trim() ?? string.Empty, await onboarding.PublicAsync(ct),
+			PortalIdentity.Banner(cosmetic) ?? string.Empty, PortalIdentity.Tagline(cosmetic), PortalIdentity.Description(cosmetic)));
+	}
 
 	/// <summary>
 	/// The portal's tab icon (<c>portal_favicon</c>, else <c>portal_logo</c>, else the SharpMUSH logo), as a

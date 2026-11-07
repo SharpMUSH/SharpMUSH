@@ -206,7 +206,7 @@ public static partial class MailDelivery
 		};
 
 		if (await services.Mediator.Send(new SendMailCommand(sender.Object(), target, mail,
-					await MailLimitAsync(services, target))) is not AdmittedMail admission)
+					await MailLimitAsync(services.Attributes, services.Configuration, target))) is not AdmittedMail admission)
 		{
 			if (!silent)
 			{
@@ -298,12 +298,13 @@ public static partial class MailDelivery
 	/// <c>mail_limit</c> (<c>extmail.c:1534</c>): the recipient's MAILQUOTA, parents included, when it is a
 	/// positive integer, capped at <see cref="QuotaCeiling"/>; otherwise the configured <c>mail_limit</c>.
 	/// </summary>
-	private static async ValueTask<long> MailLimitAsync(Services services, SharpPlayer target)
+	public static async ValueTask<long> MailLimitAsync(IAttributeService attributes,
+		IOptionsWrapper<SharpMUSHOptions> configuration, SharpPlayer target)
 	{
-		var configured = services.Configuration.CurrentValue.Limit.MailLimit;
+		var configured = configuration.CurrentValue.Limit.MailLimit;
 		var owner = new AnySharpObject(target);
 
-		return await services.Attributes.GetAttributeAsync(owner, owner, "MAILQUOTA",
+		return await attributes.GetAttributeAsync(owner, owner, "MAILQUOTA",
 				IAttributeService.AttributeMode.Read, parent: true) is SharpAttribute[] chain
 			&& int.TryParse(chain.Last().Value.ToPlainText(), NumberStyles.Integer, CultureInfo.InvariantCulture,
 				out var quota)

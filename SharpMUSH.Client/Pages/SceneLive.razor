@@ -64,7 +64,7 @@ else
                         <Pill Tag="true" Class="scene-live-status">@Loc["RolPausedBadge"]</Pill>
                     }
                     <span class="scene-live-room">
-                        <MudIcon Icon="@Icons.Material.Outlined.Place" Style="font-size:15px;" />@scene.RoomName
+                        <MudIcon Icon="@Icons.Material.Outlined.Place" Style="font-size:var(--text-base);" />@scene.RoomName
                     </span>
                     <span class="scene-live-dot" aria-hidden="true">·</span>
                     <span class="scene-live-count" data-count="@scene.PoseCount">@Loc.Plural("RolPoseCount", "count", scene.PoseCount)</span>
@@ -121,7 +121,7 @@ else
                         {
                             @* Where the draft is: on the server for this character's other devices, or only here. *@
                             <span class="scene-live-saved" data-state="@_sync?.State" title="@saved">
-                                <MudIcon Icon="@SavedIcon" Style="font-size:16px;" aria-hidden="true" /><span class="scene-live-saved-label">@saved</span>
+                                <MudIcon Icon="@SavedIcon" Style="font-size:var(--text-md);" aria-hidden="true" /><span class="scene-live-saved-label">@saved</span>
                             </span>
                         }
                         @if (_field is not null)
@@ -145,7 +145,7 @@ else
                     <div class="scene-live-foot">
                         <span class="scene-live-hint">@Loc["RolComposeSendHint"]</span>
                         <button type="button" class="scene-live-send" disabled="@(!CanSend)" @onclick="SendFromButtonAsync">
-                            <MudIcon Icon="@Icons.Material.Filled.Send" Style="font-size:16px;" aria-hidden="true" /><span class="scene-live-send-label">@Loc["Send"]</span>
+                            <MudIcon Icon="@Icons.Material.Filled.Send" Style="font-size:var(--text-md);" aria-hidden="true" /><span class="scene-live-send-label">@Loc["Send"]</span>
                         </button>
                     </div>
                 </div>

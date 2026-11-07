@@ -11,7 +11,7 @@
 
 .charcreate-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-3);
     margin-top: 1.25rem;
 }
 

@@ -119,7 +119,7 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 		});
 
 		await Assert.That(cut.Markup).Contains("NavPlayNeedsCharacter");
-		await Assert.That(cut.Find("a.mud-button-root").GetAttribute("href")).IsEqualTo("/characters/new");
+		await Assert.That(cut.Find(".kit-empty-action a").GetAttribute("href")).IsEqualTo("/characters/new");
 	}
 
 	[Test]
@@ -201,7 +201,7 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 
 		await Assert.That(cut.Markup).DoesNotContain("NavPlayNeedsCharacter");
 		await Assert.That(cut.FindAll(".play")).IsEmpty();
-		await Assert.That(cut.Find("button.mud-button-root").TextContent).Contains("NavTryAgain");
+		await Assert.That(cut.Find(".kit-empty-action button").TextContent).Contains("NavTryAgain");
 	}
 
 	[Test]
@@ -217,7 +217,7 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 				throw new InvalidOperationException("failure state not rendered yet");
 		});
 
-		await cut.Find("button.mud-button-root").ClickAsync();
+		await cut.Find(".kit-empty-action button").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{

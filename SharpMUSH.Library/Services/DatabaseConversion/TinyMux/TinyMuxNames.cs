@@ -342,12 +342,17 @@ public static class TinyMuxNames
 			[51] = "OLEAVE", [52] = "ALEAVE", [53] = "OENTER", [54] = "OXLEAVE", [55] = "MOVE", [56] = "OMOVE",
 			[57] = "AMOVE", [AliasAttribute] = "ALIAS", [64] = "EALIAS", [65] = "LALIAS", [66] = "EFAIL",
 			[67] = "OEFAIL", [68] = "AEFAIL", [69] = "LFAIL", [70] = "OLFAIL", [71] = "ALFAIL", [72] = "HAVEN",
-			[73] = "AWAY", [74] = "IDLE", [75] = "UFAIL", [76] = "OUFAIL", [77] = "AUFAIL", [78] = "PFAIL",
+			[73] = "AWAY", [74] = "IDLE", [75] = "UFAIL", [76] = "OUFAIL", [77] = "AUFAIL", [78] = "PAGE_LOCK`FAILURE",
 			[79] = "TPORT", [80] = "OTPORT", [81] = "OXTPORT", [82] = "ATPORT", [88] = "LASTSITE",
 			[89] = "INPREFIX", [90] = "PREFIX", [91] = "INFILTER", [92] = "FILTER", [95] = "FORWARDLIST",
-			[96] = "MAILFOLDERS", [128] = "MFAIL", [129] = "GFAIL", [130] = "OGFAIL", [131] = "AGFAIL",
-			[132] = "RFAIL", [133] = "ORFAIL", [134] = "ARFAIL", [135] = "DFAIL", [136] = "ODFAIL", [137] = "ADFAIL",
-			[138] = "TFAIL", [139] = "OTFAIL", [140] = "ATFAIL", [141] = "TOFAIL", [142] = "OTOFAIL",
+			[96] = "MAILFOLDERS",
+			// The lock-failure messages, under the names SharpMUSH's failed locks read (LockMessages). TOFAIL
+			// keeps its name: SharpMUSH has no teleport-out lock for it to hang on.
+			[128] = "MAIL_LOCK`FAILURE", [129] = "GIVE_LOCK`FAILURE", [130] = "GIVE_LOCK`OFAILURE",
+			[131] = "GIVE_LOCK`AFAILURE", [132] = "RECEIVE_LOCK`FAILURE", [133] = "RECEIVE_LOCK`OFAILURE",
+			[134] = "RECEIVE_LOCK`AFAILURE", [135] = "DROP_LOCK`FAILURE", [136] = "DROP_LOCK`OFAILURE",
+			[137] = "DROP_LOCK`AFAILURE", [138] = "TELEPORT_LOCK`FAILURE", [139] = "TELEPORT_LOCK`OFAILURE",
+			[140] = "TELEPORT_LOCK`AFAILURE", [141] = "TOFAIL", [142] = "OTOFAIL",
 			[143] = "ATOFAIL", [144] = "LASTIP", [145] = "UMBRADESC", [146] = "WRAITHDESC", [147] = "FAEDESC",
 			[148] = "MATRIXDESC", [149] = "COMJOIN", [150] = "COMLEAVE", [151] = "COMON", [152] = "COMOFF",
 			[199] = "MONIKER", [200] = "LASTPAGED", [201] = "MAILSUCC", [202] = "AMAIL", [203] = "MAILSIGNATURE",
@@ -376,7 +381,12 @@ public static class TinyMuxNames
 		["SUCC"] = "SUCCESS", ["OSUCC"] = "OSUCCESS", ["ASUCC"] = "ASUCCESS", ["FAIL"] = "FAILURE",
 		["OFAIL"] = "OFAILURE", ["AFAIL"] = "AFAILURE", ["SIGNATURE"] = "MAILSIGNATURE", ["PAY"] = "PAYMENT",
 		["OPAY"] = "OPAYMENT", ["APAY"] = "APAYMENT", ["LASTPAGE"] = "LASTPAGED", ["KILL"] = "DEATH",
-		["OKILL"] = "ODEATH", ["AKILL"] = "ADEATH", ["REJECT"] = "HAVEN",
+		["OKILL"] = "ODEATH", ["AKILL"] = "ADEATH", ["REJECT"] = "HAVEN", ["PFAIL"] = "PAGE_LOCK`FAILURE",
+		["MFAIL"] = "MAIL_LOCK`FAILURE", ["GFAIL"] = "GIVE_LOCK`FAILURE", ["OGFAIL"] = "GIVE_LOCK`OFAILURE",
+		["AGFAIL"] = "GIVE_LOCK`AFAILURE", ["RFAIL"] = "RECEIVE_LOCK`FAILURE", ["ORFAIL"] = "RECEIVE_LOCK`OFAILURE",
+		["ARFAIL"] = "RECEIVE_LOCK`AFAILURE", ["DFAIL"] = "DROP_LOCK`FAILURE", ["ODFAIL"] = "DROP_LOCK`OFAILURE",
+		["ADFAIL"] = "DROP_LOCK`AFAILURE", ["TFAIL"] = "TELEPORT_LOCK`FAILURE", ["OTFAIL"] = "TELEPORT_LOCK`OFAILURE",
+		["ATFAIL"] = "TELEPORT_LOCK`AFAILURE",
 	}.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>The SharpMUSH name of an attribute a TinyMUX lock key or definition names.</summary>

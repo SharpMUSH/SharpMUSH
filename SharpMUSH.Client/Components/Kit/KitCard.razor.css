@@ -14,8 +14,8 @@
 	min-height: 52px;
 	display: flex;
 	align-items: center;
-	gap: 12px;
-	padding: 0 16px;
+	gap: var(--space-4);
+	padding: 0 var(--space-5);
 	border-bottom: 1px solid var(--border-soft);
 }
 
@@ -26,7 +26,7 @@
 
 .kit-card-title {
 	font-family: var(--font-display);
-	font-size: 15px;
+	font-size: var(--text-base);
 	font-weight: var(--font-title-weight);
 	font-style: var(--title-style);
 	letter-spacing: var(--title-tracking);
@@ -36,7 +36,7 @@
 }
 
 .kit-card-sub {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 	margin-top: 1px;
 }
@@ -44,7 +44,7 @@
 .kit-card-controls {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 }
 
 .kit-card-body {
@@ -52,8 +52,8 @@
 }
 
 .kit-card--aside {
-	padding: 12px;
-	gap: 10px;
+	padding: var(--space-4);
+	gap: var(--space-4);
 }
 
 .kit-card--aside .kit-card-head {
@@ -63,5 +63,5 @@
 }
 
 .kit-card--aside .kit-card-title {
-	font-size: 13px;
+	font-size: var(--text-sm);
 }

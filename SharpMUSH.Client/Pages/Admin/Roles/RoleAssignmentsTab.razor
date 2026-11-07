@@ -28,7 +28,7 @@
 
     @if (Lookup.LookedUp && Lookup.Account is null)
     {
-        <AdminEmptyDetail Prefix="ra" Icon="@Icons.Material.Filled.PersonOff" Text="@Loc["RolNoAccountFound", Lookup.Name]" />
+        <EmptyState Class="ra-empty-detail" Icon="@Icons.Material.Outlined.PersonOff">@Loc["RolNoAccountFound", Lookup.Name]</EmptyState>
     }
     else if (Lookup.Account is { } account)
     {
@@ -78,6 +78,10 @@
                         var sc = scope;
                         <span class="ra-chip">
                             @Loc[state == "Allow" ? "RolAllow" : "RolDeny"]: @sc
+                            @if (account.Reaches?.GetValueOrDefault(sc) is { } reach)
+                            {
+                                <span class="ra-chip-reach">@Loc["RolOverrideReaching", RoleName(reach)]</span>
+                            }
                             <button type="button" class="ra-chip-x" title="@Loc["RolClearOverride"]" aria-label="@Loc["RolClearOverride"]"
                                     @onclick="@(() => SetOverrideAsync(sc, "Inherit"))">×</button>
                         </span>
@@ -89,6 +93,14 @@
                         @foreach (var scope in OverridableScopes)
                         {
                             <option value="@scope">@scope</option>
+                        }
+                    </select>
+                    <select name="override-reach" class="ra-input" aria-label="@Loc["RolOverrideReach"]" value="@Lookup.OverrideReach"
+                            @onchange="@(e => Lookup.OverrideReach = e.Value?.ToString() ?? string.Empty)">
+                        <option value="">@Loc["RolReachEveryone"]</option>
+                        @foreach (var role in Roles)
+                        {
+                            <option value="@role.Slug">@Loc["RolReachUpTo", role.Name]</option>
                         }
                     </select>
                     <button type="button" class="ra-btn" @onclick="@(() => SetOverrideAsync(Lookup.OverrideScope, "Allow"))">@Loc["RolAllow"]</button>
@@ -117,7 +129,7 @@
     }
     else
     {
-        <AdminEmptyDetail Prefix="ra" Icon="@Icons.Material.Filled.ManageAccounts" Text="@Loc["RolSearchAccountPrompt"]" />
+        <EmptyState Class="ra-empty-detail" Icon="@Icons.Material.Outlined.ManageAccounts">@Loc["RolSearchAccountPrompt"]</EmptyState>
     }
 </KitCard>
 
@@ -130,6 +142,9 @@
 
     /// <summary>The scopes an account override may name.</summary>
     [Parameter, EditorRequired] public IReadOnlyList<string> OverridableScopes { get; set; } = [];
+
+    /// <summary>The name of the role with this slug, or the slug when the game has no such role.</summary>
+    private string RoleName(string slug) => Roles.FirstOrDefault(r => r.Slug == slug)?.Name ?? slug;
 
     /// <summary>The roles the account does not hold that can be given by hand.</summary>
     private List<PortalRoleModel> Assignable(AccountRolesModel account) =>
@@ -191,7 +206,8 @@
     {
         if (Lookup.Account is null || string.IsNullOrEmpty(scope)) return;
 
-        switch (await RoleRegistry.SetOverrideAsync(Lookup.Account.AccountKey, scope, state))
+        var reach = state == "Inherit" || Lookup.OverrideReach.Length == 0 ? null : Lookup.OverrideReach;
+        switch (await RoleRegistry.SetOverrideAsync(Lookup.Account.AccountKey, scope, state, reach))
         {
             case Success:
                 Snackbar.Add(Loc["RolOverrideSaved", scope], Severity.Success);

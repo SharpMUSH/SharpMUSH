@@ -1,6 +1,8 @@
 using Mediator;
+using SharpMUSH.Configuration.Options;
 using MarkupString;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
@@ -292,11 +294,17 @@ public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger, IConnectionS
 /// <summary>
 /// Consumes connection established messages from NATS JetStream
 /// </summary>
+/// <remarks>
+/// The connection's host is looked up (<see cref="IHostNameLookup"/>) beside the connection rather than ahead of
+/// it, so a slow resolver holds up nobody's connect screen; a login waits for the lookup.
+/// </remarks>
 public class ConnectionEstablishedConsumer(
 	ILogger<ConnectionEstablishedConsumer> logger,
 	IConnectionService connectionService,
 	IMessageBus bus,
-	IConnectionStateStore? stateStore = null)
+	IConnectionStateStore? stateStore = null,
+	IHostNameLookup? hostNames = null,
+	IOptionsWrapper<SharpMUSHOptions>? options = null)
 	: IMessageConsumer<ConnectionEstablishedMessage>
 {
 	public async Task HandleAsync(ConnectionEstablishedMessage message, CancellationToken cancellationToken = default)
@@ -336,6 +344,31 @@ public class ConnectionEstablishedConsumer(
 				{ ConnectionEstablishedMessage.OrderedPromptsMetadata, message.OrderedPrompts ? "1" : "0" },
 				{ ConnectionEstablishedMessage.SignInMetadata, message.SignIn ? "1" : "0" }
 			}));
+
+		if (hostNames is not null)
+		{
+			_ = Task.Run(() => LookUpHostAsync(hostNames, message.Handle), CancellationToken.None);
+		}
+	}
+
+	/// <summary>
+	/// Looks the connection's host up, then drops it when it already logged in from a site whose
+	/// <c>!connect</c> rule names the host it turned out to have: the login's own sitelock check could only
+	/// see the address.
+	/// </summary>
+	private async Task LookUpHostAsync(IHostNameLookup hostNames, long handle)
+	{
+		await hostNames.LookUpAsync(handle);
+		if (options is null
+				|| connectionService.Get(handle) is not { Ref: not null } connection
+				|| connection.HostName == connection.InternetProtocolAddress
+				|| !SitelockMatcher.IsBlocked(options.CurrentValue.SitelockRules.Rules, connection.InternetProtocolAddress,
+					connection.HostName, SitelockMatcher.ConnectFlag))
+		{
+			return;
+		}
+
+		await bus.Publish(new DisconnectConnectionMessage(handle, "Access from your location is restricted."));
 	}
 }
 

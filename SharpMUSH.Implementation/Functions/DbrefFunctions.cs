@@ -34,15 +34,18 @@ public partial class Functions
 
 		return locateResult switch
 		{
-			Error<CallState> error => error.Value,
+			// fun_loc answers a bare #-1 for anything match_thing does not find (src/fundb.c:1457-1461).
+			Error<CallState> => new CallState(ErrorMessages.Returns.Nothing),
 			// fun_loc (src/fundb.c:1458) answers only for what the executor may locate.
 			AnySharpObject found when !await PermissionService.CanLocate(executor, found)
 				=> PermissionRefusal.Locate(arg0).ReturnText,
-			AnySharpObject and SharpPlayer player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+			// safe_dbref: the number alone, never the objid.
+			AnySharpObject and SharpPlayer player => PlainDbref((await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef),
 			AnySharpObject and SharpRoom room => await DropToAsync(room),
 			AnySharpObject and SharpExit exit => await ExitLocation(exit),
-			AnySharpObject and SharpThing thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
+			AnySharpObject and SharpThing thing => PlainDbref((await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef)
 		};
+
 
 		async ValueTask<CallState> ExitLocation(SharpExit exit)
 		{
@@ -69,15 +72,21 @@ public partial class Functions
 			var destination = await exit.Home.WithCancellation(CancellationToken.None);
 
 			return destination is AnySharpContainer found
-				? found.Object().DBRef
+				? PlainDbref(found.Object().DBRef)
 				: ErrorMessages.Returns.NotLinked;
 		}
 	}
 
-	/// <summary>A room's location is its drop-to, which is usually unset.</summary>
-	private static async ValueTask<CallState> DropToAsync(SharpRoom room)
-		=> (await room.Location.WithCancellation(CancellationToken.None)).Object()?.DBRef.ToString()
-			 ?? ErrorMessages.Returns.NoDropTo;
+	/// <summary>A room's location is its drop-to, which is usually unset, and <c>#-3</c> when it is HOME.</summary>
+	private async ValueTask<CallState> DropToAsync(SharpRoom room)
+		=> await LinkTypes.DropsHomeAsync(Mediator, room)
+			? ErrorMessages.Returns.HomeDestination
+			: (await room.Location.WithCancellation(CancellationToken.None)).Object() is { } dropTo
+				? PlainDbref(dropTo.DBRef)
+				: ErrorMessages.Returns.NoDropTo;
+
+	/// <summary>PennMUSH's <c>safe_dbref</c>: <c>#&lt;number&gt;</c>, never the objid.</summary>
+	private static CallState PlainDbref(DBRef dbref) => new(new DBRef(dbref.Number).ToString());
 
 	/// <summary>
 	/// PennMUSH's <c>fun_lsearch</c> called as <c>CHILDREN</c> (<c>src/wiz.c</c>): <c>lsearch()</c> with
@@ -329,11 +338,11 @@ public partial class Functions
 			// fun_home (src/fundb.c:1670) answers only for what the executor may examine.
 			AnySharpObject found when !await PermissionService.CanExamine(executor, found)
 				=> PermissionRefusal.Examine(found).ReturnText,
-			AnySharpObject and SharpPlayer player => (await player.Home.WithCancellation(CancellationToken.None)).Object().DBRef,
+			AnySharpObject and SharpPlayer player => PlainDbref((await player.Home.WithCancellation(CancellationToken.None)).Object().DBRef),
 			AnySharpObject and SharpRoom room => await DropToAsync(room),
 			// PennMUSH fun_home (fundb.c:1672) returns Source() for an exit — the room it sits in.
-			AnySharpObject and SharpExit exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-			AnySharpObject and SharpThing thing => (await thing.Home.WithCancellation(CancellationToken.None)).Object().DBRef
+			AnySharpObject and SharpExit exit => PlainDbref((await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef),
+			AnySharpObject and SharpThing thing => PlainDbref((await thing.Home.WithCancellation(CancellationToken.None)).Object().DBRef)
 		};
 	}
 

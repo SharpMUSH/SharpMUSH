@@ -66,7 +66,7 @@
                     {
                         <div class="le-zone" id="@ZoneElementId(zone)">
                             <div class="le-zone-head">
-                                <MudIcon Icon="@ZoneIcon(zone)" Style="font-size:0.875rem;color:var(--accent);" />
+                                <MudIcon Icon="@ZoneIcon(zone)" Style="font-size:var(--text-base);color:var(--accent);" />
                                 <span>@Loc[zone.ResourceKey()]</span>
                                 <span class="le-zone-hint">@(IsGridZone(zone) ? Loc["LayGridZoneHint"] : Loc["LayFlowZoneHint"])</span>
                             </div>
@@ -81,7 +81,7 @@
             </ChildContent>
             <ItemRenderer>
                 <div class="le-item @(context.IsTemplate ? "le-item--template" : "") @(ReferenceEquals(context, _resizing) ? "le-item--resizing" : "")">
-                    <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Class="le-item-grip" Style="font-size:0.875rem;color:var(--text-faint);" />
+                    <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Class="le-item-grip" Style="font-size:var(--text-base);color:var(--text-faint);" />
                     <span class="le-item-name">@context.DisplayName</span>
                     @if (!context.IsTemplate)
                     {
@@ -92,24 +92,24 @@
                         }
                         @if (context.Config is not null)
                         {
-                            <MudIcon Icon="@Icons.Material.Filled.Tune" Style="font-size:0.75rem;color:var(--accent);" Title="@Loc["LayHasConfig"]" />
+                            <MudIcon Icon="@Icons.Material.Filled.Tune" Style="font-size:var(--text-sm);color:var(--accent);" Title="@Loc["LayHasConfig"]" />
                         }
                         @* Dragging is never the only way to reorder: these are the keyboard and touch path. *@
                         <button type="button" class="le-item-btn le-item-btn--up" title="@Loc["LayMoveUp"]"
                                 disabled="@(!CanMove(context, -1))"
                                 @onclick="@(() => MoveBy(context, -1))" @onclick:stopPropagation="true">
-                            <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowUp" Style="font-size:0.8125rem;" />
+                            <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowUp" Style="font-size:var(--text-sm);" />
                         </button>
                         <button type="button" class="le-item-btn le-item-btn--down" title="@Loc["LayMoveDown"]"
                                 disabled="@(!CanMove(context, 1))"
                                 @onclick="@(() => MoveBy(context, 1))" @onclick:stopPropagation="true">
-                            <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Style="font-size:0.8125rem;" />
+                            <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Style="font-size:var(--text-sm);" />
                         </button>
                         <button type="button" class="le-item-btn" title="@Loc["LayConfigure"]" @onclick="@(() => EditConfigAsync(context))" @onclick:stopPropagation="true">
-                            <MudIcon Icon="@Icons.Material.Filled.Settings" Style="font-size:0.8125rem;" />
+                            <MudIcon Icon="@Icons.Material.Filled.Settings" Style="font-size:var(--text-sm);" />
                         </button>
                         <button type="button" class="le-item-btn le-item-btn--danger" title="@Loc["LayRemove"]" @onclick="@(() => Remove(context))" @onclick:stopPropagation="true">
-                            <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:0.8125rem;" />
+                            <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:var(--text-sm);" />
                         </button>
                         @if (IsGridZoneName(context.Zone))
                         {
@@ -151,7 +151,7 @@
             var preview = Preview;
             <div class="le-preview">
                 <div class="le-preview-head">
-                    <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:0.875rem;color:var(--accent);" />
+                    <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:var(--text-base);color:var(--accent);" />
                     <span>@Loc["LayLivePreview"]</span>
                     <span class="le-preview-note">
                         @Loc["LayPreviewNote"]@(Scope == LayoutScopes.Profile ? Loc["LayPreviewNoteProfile"].Value : string.Empty)

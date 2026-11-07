@@ -30,10 +30,7 @@ public class StaffAccountRecoveryTests
 			Arg.Any<CancellationToken>()).Returns(true);
 		accounts.SetPasswordAsync("node_accounts/target", "temporary-password", true, Arg.Any<CancellationToken>())
 			.Returns(new ValueTask<Result<Success>>(new Success()));
-		using var cache = new FusionCache(new FusionCacheOptions());
-		var claims = new AccountClaimsService(capabilities, cache, new AccountClaimsInvalidator(cache, new ObjectVersions()),
-			NullLogger<AccountClaimsService>.Instance);
-		var controller = new AdminAccountsController(accounts, sessions, claims, capabilities,
+		var controller = new AdminAccountsController(accounts, sessions, capabilities,
 			Substitute.For<IAuditLog>(), Substitute.For<IMediator>(), new BearerAccountResolver(sessions, accounts),
 			NullLogger<AdminAccountsController>.Instance)
 		{
@@ -165,8 +162,7 @@ public class StaffAccountRecoveryTests
 			capabilities.GetContextAsync(new CapabilityActor(fixture.Actor.Id!), Arg.Any<CancellationToken>()).Returns(new PermissionContext([manager], new Dictionary<string, PermissionState>(), false));
 			var mediator = Substitute.For<IMediator>(); var catalog = new ExternalProviderCatalog(mediator, Substitute.For<ISecretStore>(), Substitute.For<IHostEnvironment>(), gate);
 			var security = new AccountSecurityService(new(fixture.Accounts, fixture.Sessions, Substitute.For<IPasswordService>(), fixture.proofs, gate), fixture.Accounts, fixture.Sessions, fixture.Enforcer, mediator, catalog);
-			var claims = new AccountClaimsService(capabilities, fixture.cache, new AccountClaimsInvalidator(fixture.cache, new ObjectVersions()), NullLogger<AccountClaimsService>.Instance);
-			fixture.Controller = new(fixture.Accounts, fixture.Sessions, claims, capabilities, fixture.Audit, mediator, new(fixture.Sessions, fixture.Accounts), NullLogger<AdminAccountsController>.Instance, security, new(fixture.Accounts, fixture.Registry, capabilities))
+			fixture.Controller = new(fixture.Accounts, fixture.Sessions, capabilities, fixture.Audit, mediator, new(fixture.Sessions, fixture.Accounts), NullLogger<AdminAccountsController>.Instance, security, new(fixture.Accounts, fixture.Registry, capabilities))
 			{ ControllerContext = new() { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, fixture.Actor.Id!)], AccountSessionAuthenticationHandler.SchemeName)) } } };
 			fixture.Controller.Request.Headers.Authorization = "Bearer " + fixture.Source;
 			return fixture;

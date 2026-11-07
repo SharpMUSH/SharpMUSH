@@ -1,0 +1,50 @@
+@using SharpMUSH.Client.Services
+@inject ServerInfoService ServerInfo
+@implements IDisposable
+
+@* The game's own face at the top of Home: portal_banner behind the name, portal_logo beside it, portal_tagline
+   and portal_description under it. Without a banner the card is the theme's own surface and marks. The text
+   is in the flow, so a long description makes the hero taller instead of running off its top. *@
+<header class="@(_identity.Banner is { } banner && ImageUrlPolicy.IsRenderable(banner) ? "game-hero game-hero--image" : "game-hero")">
+    @if (_identity.Banner is { } image && ImageUrlPolicy.IsRenderable(image))
+    {
+        <img class="game-hero-img" src="@ApiUrl.Resolve(image)" alt="" />
+        <span class="game-hero-scrim" aria-hidden="true"></span>
+    }
+    else
+    {
+        <ThemeMarks />
+    }
+    <div class="game-hero-body">
+        <span class="game-hero-logo"><GameLogo Size="56" /></span>
+        <div class="game-hero-text">
+            <h1 class="game-hero-name">@_identity.Name</h1>
+            @if (_identity.Tagline is { } tagline)
+            {
+                <p class="game-hero-tagline">@tagline</p>
+            }
+            @if (_identity.Description is { } description)
+            {
+                <p class="game-hero-description">@description</p>
+            }
+        </div>
+    </div>
+</header>
+
+@code {
+    private GameIdentity _identity = new(string.Empty, null, null, null);
+
+    protected override async Task OnInitializedAsync()
+    {
+        ServerInfo.Changed += OnServerInfoChanged;
+        _identity = await ServerInfo.IdentityAsync();
+    }
+
+    private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
+    {
+        _identity = await ServerInfo.IdentityAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => ServerInfo.Changed -= OnServerInfoChanged;
+}

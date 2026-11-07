@@ -467,4 +467,88 @@ public class UserDefinedFunctionTests
 
 		await Assert.That(await Eval($"[setq(a,outer)][{clone}(a,inner)]-%qa")).IsEqualTo("inner-outer");
 	}
+
+	private static IDisposable FunctionCaller(bool on)
+		=> TestOptionsOverride.Scope(options => options with
+		{
+			Compatibility = options.Compatibility with { MuxFunctionCaller = on }
+		});
+
+	/// <summary>Defines a function on a new object whose attribute answers who runs it; returns its name and the object.</summary>
+	private async Task<(string Function, string Holder)> DefineWhoRunsFunction(string switches = "")
+	{
+		var fn = $"who{U()}";
+		var attr = $"WHO{U()}";
+		var holder = await Eval($"create(UDFHolder{U()})");
+		await Cmd($"&{attr} {holder}=%!");
+		await Cmd($"@function{switches} {fn}={holder},{attr}");
+		return (fn, holder);
+	}
+
+	/// <summary>PennMUSH, and the default: a global function runs as the object that holds it.</summary>
+	[Test]
+	public async ValueTask AGlobalFunctionRunsAsItsHolderByDefault()
+	{
+		var (fn, holder) = await DefineWhoRunsFunction();
+		var player = await NewNonWizardPlayer();
+
+		using (FunctionCaller(false))
+		{
+			await Assert.That(await EvalAs(player, $"{fn}()")).IsEqualTo(holder);
+		}
+	}
+
+	/// <summary>TinyMUX: with <c>mux_function_caller</c> on, a function defined without /privileged runs as its caller.</summary>
+	[Test]
+	public async ValueTask WithMuxFunctionCallerAnUnprivilegedFunctionRunsAsItsCaller()
+	{
+		var (fn, _) = await DefineWhoRunsFunction();
+		var player = await NewNonWizardPlayer();
+
+		using (FunctionCaller(true))
+		{
+			await Assert.That(await EvalAs(player, $"{fn}()")).IsEqualTo($"#{player.Number}");
+		}
+	}
+
+	/// <summary>TinyMUX: /privileged runs the function as the object that holds it.</summary>
+	[Test]
+	public async ValueTask WithMuxFunctionCallerAPrivilegedFunctionRunsAsItsHolder()
+	{
+		var (fn, holder) = await DefineWhoRunsFunction("/privileged");
+		var player = await NewNonWizardPlayer();
+
+		using (FunctionCaller(true))
+		{
+			await Assert.That(await EvalAs(player, $"{fn}()")).IsEqualTo(holder);
+		}
+
+		await Assert.That(Registry.Get(fn)!.Privileged).IsTrue();
+	}
+
+	/// <summary>
+	/// Run as the caller, the function has only the caller's permissions: it cannot read an attribute the
+	/// caller cannot, though the object that holds it can.
+	/// </summary>
+	[Test]
+	public async ValueTask AFunctionRunAsItsCallerHasTheCallersPermissions()
+	{
+		var fn = $"peek{U()}";
+		var attr = $"PEEK{U()}";
+		var holder = await Eval($"create(UDFHolder{U()})");
+		await Cmd($"&SECRET {holder}=hidden");
+		await Cmd($"&{attr} {holder}=[get({holder}/SECRET)]");
+		await Cmd($"@function {fn}={holder},{attr}");
+		var player = await NewNonWizardPlayer();
+
+		using (FunctionCaller(false))
+		{
+			await Assert.That(await EvalAs(player, $"{fn}()")).IsEqualTo("hidden");
+		}
+
+		using (FunctionCaller(true))
+		{
+			await Assert.That(await EvalAs(player, $"{fn}()")).IsNotEqualTo("hidden");
+		}
+	}
 }

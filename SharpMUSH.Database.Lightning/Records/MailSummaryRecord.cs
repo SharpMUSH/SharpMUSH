@@ -13,4 +13,5 @@ public sealed record MailSummaryRecord
 	public bool Urgent { get; init; }
 	public string Folder { get; init; } = "";
 	public string Subject { get; init; } = "";
+	public bool Anonymous { get; init; }
 }

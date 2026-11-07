@@ -244,7 +244,7 @@
         {
             @if (!string.IsNullOrWhiteSpace(Element.Empty))
             {
-                <div class="schema-empty">@Element.Empty</div>
+                <EmptyState Compact="true" Class="schema-empty">@Element.Empty</EmptyState>
             }
             return;
         }
@@ -302,7 +302,7 @@
         {
             @if (!string.IsNullOrWhiteSpace(Element.Empty))
             {
-                <div class="schema-empty">@Element.Empty</div>
+                <EmptyState Compact="true" Class="schema-empty">@Element.Empty</EmptyState>
             }
             return;
         }
@@ -343,7 +343,7 @@
         {
             @if (!string.IsNullOrWhiteSpace(Element.Empty))
             {
-                <div class="schema-empty">@Element.Empty</div>
+                <EmptyState Compact="true" Class="schema-empty">@Element.Empty</EmptyState>
             }
             return;
         }
@@ -509,7 +509,7 @@
         {
             @if (!string.IsNullOrWhiteSpace(Element.Empty))
             {
-                <div class="schema-empty">@Element.Empty</div>
+                <EmptyState Compact="true" Class="schema-empty">@Element.Empty</EmptyState>
             }
             return;
         }

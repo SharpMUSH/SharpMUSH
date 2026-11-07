@@ -1,27 +1,27 @@
 .adm-discord-empty,
 .adm-discord-hint {
 	margin: 0;
-	padding: 14px 16px 16px;
-	font-size: 13px;
+	padding: var(--space-5) var(--space-5) var(--space-5);
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .adm-discord-hint {
-	padding-top: 4px;
+	padding-top: var(--space-2);
 }
 
 /* the setup checklist: a tick or a ring, the step, and what to do next */
 .adm-discord-steps {
 	list-style: none;
 	margin: 0;
-	padding: 8px 16px 4px;
+	padding: var(--space-3) var(--space-5) var(--space-2);
 }
 
 .adm-discord-step {
 	display: flex;
 	align-items: flex-start;
-	gap: 10px;
-	padding: 6px 0;
+	gap: var(--space-4);
+	padding: var(--space-3) 0;
 }
 
 .adm-discord-step ::deep .adm-discord-step-icon {
@@ -37,12 +37,12 @@
 .adm-discord-step-text {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-1);
 	min-width: 0;
 }
 
 .adm-discord-step-title {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	color: var(--text);
 }
@@ -50,17 +50,17 @@
 .adm-discord-bans {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
-	padding: 8px 16px 0;
+	gap: var(--space-1);
+	padding: var(--space-3) var(--space-5) 0;
 }
 
 .adm-discord-actions {
 	display: flex;
 	align-items: center;
-	gap: 16px;
+	gap: var(--space-5);
 	flex-wrap: wrap;
-	padding: 8px 16px 16px;
-	font-size: 13px;
+	padding: var(--space-3) var(--space-5) var(--space-5);
+	font-size: var(--text-sm);
 }
 
 .adm-discord-actions ::deep .adm-discord-reconnect {
@@ -77,8 +77,8 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 12px;
-	padding: 10px 12px 10px 16px;
+	gap: var(--space-4);
+	padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5);
 }
 
 .adm-discord-row:not(:first-child) {
@@ -89,16 +89,16 @@
 	display: flex;
 	flex: 1 1 auto;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-1);
 	min-width: 0;
 }
 
 .adm-discord-row-head {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 	flex-wrap: wrap;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--text);
 }
 
@@ -116,7 +116,7 @@
 }
 
 .adm-discord-sub {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 	overflow-wrap: anywhere;
 }
@@ -131,14 +131,14 @@
 
 .adm-discord-missing {
 	margin-left: 6px;
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .adm-discord-row-actions {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 	flex-shrink: 0;
 }
 
@@ -151,8 +151,8 @@
 .adm-discord-form {
 	display: flex;
 	align-items: center;
-	gap: 12px;
-	padding: 14px 16px 16px;
+	gap: var(--space-4);
+	padding: var(--space-5) var(--space-5) var(--space-5);
 	min-width: 0;
 	flex-wrap: wrap;
 }

@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: gmcp-mudlet-help
 title: "GMCP for Mudlet: +help topics"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the GMCP for Mudlet topics into +help: registers the gmcp-mudlet package's help with the +help librarian."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [gmcp-mudlet, help, bridge]
 category: MUD clients
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. gmcp-mudlet keeps its topics on its own help

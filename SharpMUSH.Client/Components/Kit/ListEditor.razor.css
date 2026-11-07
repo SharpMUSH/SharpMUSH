@@ -1,12 +1,12 @@
 .list-editor {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--space-2);
 	min-width: 0;
 }
 
 .list-editor-label {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
@@ -15,9 +15,9 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 6px;
+	gap: var(--space-3);
 	min-height: 40px;
-	padding: 6px 6px 6px 10px;
+	padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-row);
 	background: var(--surface);
@@ -32,13 +32,13 @@
 .list-editor-chip {
 	display: inline-flex;
 	align-items: center;
-	gap: 2px;
+	gap: var(--space-1);
 	height: 26px;
-	padding: 0 2px 0 10px;
+	padding: 0 var(--space-1) 0 var(--space-4);
 	border-radius: 13px;
 	background: var(--surface-2);
 	color: var(--text);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	max-width: 100%;
 	overflow-wrap: anywhere;
 }
@@ -52,7 +52,7 @@
 	border-radius: 12px;
 	background: transparent;
 	color: inherit;
-	font-size: 16px;
+	font-size: var(--text-md);
 	line-height: 1;
 	cursor: pointer;
 	opacity: 0.7;
@@ -80,7 +80,7 @@
 	background: transparent;
 	color: var(--text);
 	font: inherit;
-	font-size: 14px;
+	font-size: var(--text-base);
 }
 
 .list-editor-chip--mono,
@@ -93,6 +93,6 @@
 }
 
 .list-editor-help {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }

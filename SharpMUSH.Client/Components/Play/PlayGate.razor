@@ -9,19 +9,15 @@
             <MudProgressCircular Size="Size.Small" Indeterminate="true" />
             break;
         case PlayGateState.RosterFailed:
-            <EmptyState Class="play-gate-card">
-                <MudText>@Loc["NavPlayRosterUnavailable"]</MudText>
-                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="OnRetry" Class="mt-2">
-                    @Loc["NavTryAgain"]
-                </MudButton>
+            <EmptyState Class="play-gate-card" Failed="true">
+                <ChildContent>@Loc["NavPlayRosterUnavailable"]</ChildContent>
+                <Action><CapsuleButton Icon="@Icons.Material.Outlined.Refresh" OnClick="OnRetry">@Loc["NavTryAgain"]</CapsuleButton></Action>
             </EmptyState>
             break;
         case PlayGateState.NeedsCharacter:
-            <EmptyState Class="play-gate-card">
-                <MudText>@Loc["NavPlayNeedsCharacter"]</MudText>
-                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/characters/new" Class="mt-2">
-                    @Loc["NavCreateCharacter"]
-                </MudButton>
+            <EmptyState Class="play-gate-card" Icon="@Icons.Material.Outlined.PersonAdd">
+                <ChildContent>@Loc["NavPlayNeedsCharacter"]</ChildContent>
+                <Action><CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.PersonAdd" Href="/characters/new">@Loc["NavCreateCharacter"]</CapsuleButton></Action>
             </EmptyState>
             break;
     }

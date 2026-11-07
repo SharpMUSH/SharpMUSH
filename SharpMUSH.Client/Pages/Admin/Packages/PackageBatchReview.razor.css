@@ -1,13 +1,13 @@
 .pkg-batch-review { min-width: 0; }
-.pkg-batch-body { padding: 14px 16px; overflow-wrap: anywhere; }
-.pkg-batch-body ol:not(.pkg-batch-list), .pkg-batch-body ul:not(.pkg-batch-list) { padding-left: 1.5rem; }
+.pkg-batch-body { padding: var(--space-5) var(--space-5); overflow-wrap: anywhere; }
+.pkg-batch-body ol:not(.pkg-batch-list), .pkg-batch-body ul:not(.pkg-batch-list) { padding-left: var(--space-6); }
 .pkg-batch-body li:not(.pkg-batch-item) { margin-bottom: 0.5rem; }
 .pkg-batch-body p { margin: 0.4rem 0; }
-.pkg-batch-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.pkg-batch-actions { display: flex; flex-wrap: wrap; gap: var(--space-4); }
 @container page (max-width: 48rem) {
     .pkg-batch-actions { flex-direction: column; align-items: stretch; }
 }
-.pkg-batch-step-review { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-top: 0.4rem; }
+.pkg-batch-step-review { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-4); margin-top: 0.4rem; }
 .pkg-batch-step-review ::deep .mud-alert { flex-basis: 100%; }
 
 /* One change in the queue or the reviewed order: action label, package, version, then a muted meta line. */
@@ -15,24 +15,24 @@
 .pkg-batch-item {
     display: flex;
     align-items: flex-start;
-    gap: 0.75rem;
-    padding: 10px 0;
+    gap: var(--space-4);
+    padding: var(--space-4) 0;
     border-top: 1px solid var(--border-soft);
 }
 .pkg-batch-item:first-child { border-top: 0; padding-top: 0; }
 .pkg-batch-item-main { flex: 1; min-width: 0; }
-.pkg-batch-item-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; }
-.pkg-batch-name { font-size: 14px; font-weight: 600; color: var(--text); }
-.pkg-batch-version { font-size: 13px; color: var(--text-dim); }
-.pkg-batch-commit { font-family: var(--font-mono, monospace); font-size: 12px; color: var(--text-faint); }
-.pkg-batch-meta { display: flex; flex-wrap: wrap; gap: 0.15rem 0.75rem; margin-top: 2px; font-size: 12px; color: var(--text-faint); }
+.pkg-batch-item-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.pkg-batch-name { font-size: var(--text-base); font-weight: 600; color: var(--text); }
+.pkg-batch-version { font-size: var(--text-sm); color: var(--text-dim); }
+.pkg-batch-commit { font-family: var(--font-mono, monospace); font-size: var(--text-sm); color: var(--text-faint); }
+.pkg-batch-meta { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin-top: 2px; font-size: var(--text-sm); color: var(--text-faint); }
 .pkg-batch-action {
     display: inline-flex;
     align-items: center;
     height: 20px;
-    padding: 0 8px;
+    padding: 0 var(--space-3);
     border-radius: 10px;
-    font-size: 12px;
+    font-size: var(--text-sm);
     font-weight: 600;
     color: var(--action-color);
     background: color-mix(in srgb, var(--action-color) 14%, transparent);
@@ -49,15 +49,15 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    font-size: 12px;
+    font-size: var(--text-sm);
     font-weight: 600;
     color: var(--text-dim);
     background: var(--surface-2);
 }
 .pkg-batch-step .pkg-batch-step-review:empty { display: none; }
-.pkg-batch-details summary { cursor: pointer; font-size: 13px; color: var(--text-dim); }
-.pkg-batch-details ul { margin: 0.4rem 0 0; font-size: 12px; }
-.pkg-batch-state { font-size: 12px; font-weight: 600; color: var(--text-dim); }
+.pkg-batch-details summary { cursor: pointer; font-size: var(--text-sm); color: var(--text-dim); }
+.pkg-batch-details ul { margin: 0.4rem 0 0; font-size: var(--text-sm); }
+.pkg-batch-state { font-size: var(--text-sm); font-weight: 600; color: var(--text-dim); }
 .pkg-batch-state--completed { color: var(--success); }
 .pkg-batch-state--failed, .pkg-batch-state--cancelled, .pkg-batch-state--unknown { color: var(--danger); }
 .pkg-batch-state--needsreview, .pkg-batch-state--awaitingrestart { color: var(--warn); }

@@ -1858,7 +1858,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
-    <value>— Verbinden, um zu sehen, wer hier ist —</value>
+    <value>Verbinden, um zu sehen, wer hier ist</value>
     <comment>MT — em dashes preserved.</comment>
   </data>
   <data name="NavCreateACharacter" xml:space="preserve">
@@ -1950,7 +1950,7 @@
     <comment>MT — placeholder moved to the front; German puts the route before the verb here.</comment>
   </data>
   <data name="NavNoExitsAvailable" xml:space="preserve">
-    <value>— Keine Ausgänge verfügbar —</value>
+    <value>Keine Ausgänge verfügbar</value>
     <comment>MT — em dashes preserved.</comment>
   </data>
   <data name="NavNotConnected" xml:space="preserve">
@@ -5432,6 +5432,22 @@
   </data>
   <data name="RolOverridesHelp" xml:space="preserve">
     <value>Eine Ausnahme für dieses Konto schlägt jede seiner Rollen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReach" xml:space="preserve">
+    <value>Reichweite</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachEveryone" xml:space="preserve">
+    <value>Jedes Ziel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachUpTo" xml:space="preserve">
+    <value>Reichweite {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReaching" xml:space="preserve">
+    <value>(Reichweite {0})</value>
     <comment>MT</comment>
   </data>
   <data name="RolOverrideSaved" xml:space="preserve">

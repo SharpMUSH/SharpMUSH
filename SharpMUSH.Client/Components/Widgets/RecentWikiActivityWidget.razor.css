@@ -8,18 +8,13 @@
 	height: 100%;
 }
 
-.recent-wiki-empty {
-	font-size: 13px;
-	color: var(--text-faint);
-}
-
 /* in a page's main column the main card's body is padded here */
 .recent-wiki-widget--main ::deep .kit-card-body {
-	padding: 8px 12px 12px;
+	padding: var(--space-3) var(--space-4) var(--space-4);
 }
 
 .recent-wiki-all {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	color: var(--accent);
 	text-decoration: none;

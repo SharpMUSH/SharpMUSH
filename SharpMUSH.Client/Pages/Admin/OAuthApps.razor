@@ -70,7 +70,7 @@
                 }
                 else if (_clients.Count == 0)
                 {
-                    <p class="oauth-empty">@Loc["OAuthAdmNone"]</p>
+                    <EmptyState Compact="true" Class="oauth-empty" Icon="@Icons.Material.Outlined.Apps">@Loc["OAuthAdmNone"]</EmptyState>
                 }
                 else
                 {

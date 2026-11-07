@@ -19,7 +19,11 @@ public enum RoleSource
 public sealed record HeldRole(SharpRole Role, RoleSource Source);
 
 /// <summary>An account's own roles and overrides, as they reach a character linked to it.</summary>
-public sealed record AccountGrants(IReadOnlyCollection<SharpRole> Roles, IReadOnlyDictionary<string, PermissionState> Overrides);
+public sealed record AccountGrants(IReadOnlyCollection<SharpRole> Roles, IReadOnlyDictionary<string, PermissionState> Overrides)
+{
+	/// <summary>The reach of each account override that has one: scope → role slug (<see cref="OverrideReach"/>).</summary>
+	public IReadOnlyDictionary<string, string> Reaches { get; init; } = new Dictionary<string, string>();
+}
 
 /// <summary>
 /// What one game object is granted: its roles and where each comes from, the overrides on it and on
@@ -53,23 +57,39 @@ public sealed class ObjectGrants
 		Context = context;
 		_customCategories = customCategories ?? new Dictionary<string, string>();
 		Granted = Resolver.Resolve(context);
-		// What a role or override allows by name: the owner's blanket grant and administrator roles left out.
-		var named = context with
-		{
-			IsOwner = false,
-			Roles = context.Roles.Where(r => PermissionResolver.StateOf(r.Permissions, PortalPermission.Administrator) != PermissionState.Allow).ToArray()
-		};
-		_shown = Resolver.Resolve(named);
+		_named = Named(context);
+		_shown = Resolver.Resolve(_named);
 	}
 
-	private ObjectGrants(ObjectGrants capped, IReadOnlySet<string> granted, IReadOnlySet<string> shown)
+	private ObjectGrants(ObjectGrants capped, IReadOnlySet<string> granted, IReadOnlySet<string> shown,
+		Func<string, int, bool> ranked, Func<string, int, bool> rankedShown)
 	{
 		Roles = capped.Roles;
 		Context = capped.Context with { IsOwner = false };
 		_customCategories = capped._customCategories;
 		Granted = granted;
 		_shown = shown;
+		_named = Named(Context);
+		_ranked = ranked;
+		_rankedShown = rankedShown;
 	}
+
+	/// <summary>What a role or override allows by name: the owner's blanket grant and administrator roles left out.</summary>
+	private static PermissionContext Named(PermissionContext context) => context with
+	{
+		IsOwner = false,
+		Roles = context.Roles.Where(r => PermissionResolver.StateOf(r.Permissions, PortalPermission.Administrator) != PermissionState.Allow).ToArray()
+	};
+
+	private readonly PermissionContext _named;
+
+	/// <summary>
+	/// Capped by <see cref="Within"/> or <see cref="AtMost"/>: <see cref="Granted"/> is no longer what the context alone
+	/// resolves to, so a check against a target asks the cap at the target's rank. Null when not capped.
+	/// </summary>
+	private readonly Func<string, int, bool>? _ranked;
+
+	private readonly Func<string, int, bool>? _rankedShown;
 
 	/// <summary>
 	/// These grants as an app holding <paramref name="scopes"/> sees them while it acts as the object: only the
@@ -80,7 +100,12 @@ public sealed class ObjectGrants
 		=> IsOwner && OAuth.DelegatedScopes.HasEveryGroup(scopes)
 			? this
 			: new ObjectGrants(this, OAuth.DelegatedScopes.Cap(Granted, scopes, _customCategories),
-				OAuth.DelegatedScopes.Cap(_shown, scopes, _customCategories));
+				OAuth.DelegatedScopes.Cap(_shown, scopes, _customCategories),
+				(scope, rank) => Covered(scopes, scope) && Has(scope, rank),
+				(scope, rank) => Covered(scopes, scope) && Shows(scope, rank));
+
+	private bool Covered(IReadOnlyCollection<string> scopes, string permission)
+		=> OAuth.DelegatedScopes.Covers(scopes, permission, _customCategories.GetValueOrDefault(permission));
 
 	/// <summary>
 	/// These grants under a privilege ceiling at <paramref name="priority"/>: only what is granted both now and by the
@@ -98,8 +123,18 @@ public sealed class ObjectGrants
 		};
 		var lowered = new ObjectGrants(Roles.Where(held => context.Roles.Contains(held.Role)).ToArray(), context, _customCategories);
 		return new ObjectGrants(lowered, Granted.Where(lowered.Granted.Contains).ToHashSet(StringComparer.Ordinal),
-			_shown.Where(lowered._shown.Contains).ToHashSet(StringComparer.Ordinal));
+			_shown.Where(lowered._shown.Contains).ToHashSet(StringComparer.Ordinal),
+			(scope, rank) => Has(scope, rank) && lowered.Has(scope, rank),
+			(scope, rank) => Shows(scope, rank) && lowered.Shows(scope, rank));
 	}
+
+	/// <summary>The reaches of the overrides that are set; a reach left behind by a cleared override is ignored.</summary>
+	private static IReadOnlyDictionary<string, string> Reached(IReadOnlyDictionary<string, string>? reaches,
+		IReadOnlyDictionary<string, PermissionState>? overrides)
+		=> reaches is not { Count: > 0 } || overrides is null
+			? new Dictionary<string, string>()
+			: reaches.Where(entry => overrides.Keys.Contains(entry.Key, StringComparer.OrdinalIgnoreCase))
+				.ToDictionary(StringComparer.OrdinalIgnoreCase);
 
 	private static Dictionary<string, PermissionState> Denials(IReadOnlyDictionary<string, PermissionState> overrides)
 		=> overrides.Where(entry => entry.Value == PermissionState.Deny).ToDictionary(StringComparer.OrdinalIgnoreCase);
@@ -121,6 +156,36 @@ public sealed class ObjectGrants
 
 	/// <summary>Whether <paramref name="scope"/> is granted.</summary>
 	public bool Has(string scope) => Granted.Contains(scope);
+
+	/// <summary>
+	/// Whether <paramref name="scope"/> is granted against <paramref name="target"/>, the owner of what the check acts
+	/// on: <see cref="Has(string)"/>, with each override that has a reach (<see cref="OverrideReach"/>) applied only when
+	/// the target's <see cref="Rank"/> is within it.
+	/// </summary>
+	public bool Has(string scope, ObjectGrants target) => Has(scope, target.Rank);
+
+	/// <summary><see cref="Has(string, ObjectGrants)"/> against a target ranked <paramref name="targetRank"/>.</summary>
+	public bool Has(string scope, int targetRank)
+		=> !Context.HasReaches
+			? Has(scope)
+			: _ranked?.Invoke(scope, targetRank) ?? Resolver.Allows(Context, scope, targetRank);
+
+	/// <summary><see cref="Shows(string)"/> against <paramref name="target"/>; see <see cref="Has(string, ObjectGrants)"/>.</summary>
+	public bool Shows(string scope, ObjectGrants target) => Shows(scope, target.Rank);
+
+	/// <summary><see cref="Shows(string)"/> against a target ranked <paramref name="targetRank"/>.</summary>
+	public bool Shows(string scope, int targetRank)
+		=> !Context.HasReaches
+			? Shows(scope)
+			: _rankedShown?.Invoke(scope, targetRank) ?? Resolver.Allows(_named, scope, targetRank);
+
+	/// <summary>
+	/// This holder's rank as the target of a check (<see cref="OverrideReach.RankOf"/>): the highest priority among
+	/// its roles, <c>everyone</c> left out.
+	/// </summary>
+	public int Rank => _rank ??= OverrideReach.RankOf(Context.Roles);
+
+	private int? _rank;
 
 	/// <summary>
 	/// The slugs of the held roles that guard their holders (<see cref="PortalPermission.ProtectRole"/>), each read on
@@ -171,6 +236,9 @@ public sealed class ObjectGrants
 	/// <summary>Why <paramref name="scope"/> is granted or refused.</summary>
 	public PermissionExplanation Explain(string scope) => Resolver.Explain(Context, scope);
 
+	/// <summary>Why <paramref name="scope"/> is granted or refused against a target ranked <paramref name="targetRank"/>.</summary>
+	public PermissionExplanation Explain(string scope, int targetRank) => Resolver.Explain(Context, scope, targetRank);
+
 	/// <summary>
 	/// Grants for a context resolved elsewhere (an account in the portal), whose roles' sources are not
 	/// known; each is reported as <see cref="RoleSource.Account"/>.
@@ -186,9 +254,10 @@ public sealed class ObjectGrants
 	/// <param name="objectOverrides">The overrides set on the object.</param>
 	/// <param name="account">The linked account's grants, when the object is a character on an active account.</param>
 	/// <param name="custom">The custom permissions the world defines.</param>
+	/// <param name="objectReaches">The reach of each object override that has one: scope → role slug.</param>
 	public static ObjectGrants For(int number, bool isPlayer, IReadOnlyCollection<SharpRole> roles,
 		IEnumerable<string> objectRoles, IReadOnlyDictionary<string, PermissionState> objectOverrides, AccountGrants? account,
-		IEnumerable<CustomPermission> custom)
+		IEnumerable<CustomPermission> custom, IReadOnlyDictionary<string, string>? objectReaches = null)
 	{
 		var defined = custom.DistinctBy(p => p.Scope, StringComparer.OrdinalIgnoreCase).ToArray();
 		var bySlug = roles.ToDictionary(r => r.Slug, StringComparer.OrdinalIgnoreCase);
@@ -213,6 +282,8 @@ public sealed class ObjectGrants
 			owner)
 		{
 			ObjectOverrides = objectOverrides,
+			ObjectReaches = OverrideReach.Of(Reached(objectReaches, objectOverrides), roles),
+			Reaches = OverrideReach.Of(Reached(account?.Reaches, account?.Overrides), roles),
 			CustomScopes = defined.Select(p => p.Scope).ToHashSet(StringComparer.OrdinalIgnoreCase),
 			ControlScopes = roles.Select(r => PortalPermission.ControlRole(r.Slug)).ToHashSet(StringComparer.OrdinalIgnoreCase)
 		};

@@ -1,13 +1,13 @@
 .char-scenes-page {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
+	gap: var(--space-5);
 }
 
 .char-scenes-list {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: var(--space-4);
 }
 
 .char-scenes-back {
@@ -23,13 +23,13 @@
 	width: 240px;
 	max-width: 100%;
 	height: 36px;
-	padding: 0 14px;
+	padding: 0 var(--space-5);
 	border: 1px solid var(--border);
 	border-radius: 18px;
 	background: var(--surface);
 	color: var(--text);
 	font: inherit;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	outline: none;
 	box-sizing: border-box;
 }
@@ -51,12 +51,12 @@
 .char-scenes-dated {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: var(--space-3);
 }
 
 .char-scenes-date {
 	color: var(--text);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	font-weight: 600;
 }
 

@@ -1,25 +1,25 @@
 .adm-char-body {
-	padding: 14px 16px 16px;
+	padding: var(--space-5) var(--space-5) var(--space-5);
 }
 
 .adm-char-grid {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 16px;
+	gap: var(--space-5);
 	align-items: start;
 }
 
 .adm-char-facts {
 	display: grid;
 	grid-template-columns: minmax(0, 10rem) minmax(0, 1fr);
-	gap: 8px 12px;
+	gap: var(--space-3) var(--space-4);
 	margin: 0;
-	padding: 14px 16px 16px;
+	padding: var(--space-5) var(--space-5) var(--space-5);
 }
 
 .adm-char-facts dt {
 	color: var(--text-dim);
-	font-size: 0.8125rem;
+	font-size: var(--text-sm);
 }
 
 .adm-char-facts dd {
@@ -29,12 +29,12 @@
 
 .adm-char-mono {
 	font-family: var(--font-mono);
-	font-size: 12px;
+	font-size: var(--text-sm);
 }
 
 .adm-char-dim {
 	margin-inline-start: 6px;
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-faint);
 }
 
@@ -45,7 +45,7 @@
 
 	.adm-char-facts {
 		grid-template-columns: minmax(0, 1fr);
-		gap: 2px;
+		gap: var(--space-1);
 	}
 
 	.adm-char-facts dd {
@@ -57,7 +57,7 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 	margin-top: 8px;
 }
 
@@ -69,12 +69,12 @@
 .adm-char-role-add {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 4px;
+	gap: var(--space-2);
 	margin-top: 8px;
 }
 
 .adm-char-role-help {
 	margin-top: 4px;
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-faint);
 }

@@ -101,8 +101,9 @@
                         <span class="dbimport-file-size">(@($"{_selectedFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
                     </div>
 
-                    @* Told from the file's first lines unless chosen: a TinyMUX flatfile starts +X, and a
-                       PennMUSH outdb and a RhostMUSH flatfile both start +V, with what follows telling them apart. *@
+                    @* Told from the file's first lines unless chosen: a TinyMUX flatfile starts +X, a TinyMUX
+                       netmux.sqlite "SQLite format 3", and a PennMUSH outdb and a RhostMUSH flatfile both start +V,
+                       with what follows telling them apart. *@
                     <SectionLabel Class="dbimport-label">@Loc["AdmImportFormat"]</SectionLabel>
                     <MudRadioGroup T="string" Class="dbimport-format" @bind-Value="_format">
                         <MudRadio T="string" Value="@("auto")">@Loc["AdmImportFormatAuto"]</MudRadio>

@@ -13,16 +13,16 @@
     <div class="wiki-edit">
         <div class="wiki-edit-header">
             <button type="button" class="wiki-edit-cancel" @onclick="OnCancel">
-                <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:0.9375rem;" /> @Loc["Cancel"]
+                <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:var(--text-base);" /> @Loc["Cancel"]
             </button>
             <div style="flex:1;"></div>
             <span class="wiki-edit-mode">
-                <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:0.875rem;color:var(--accent);" /> @Loc["WkEditLivePreview"]
+                <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:var(--text-base);color:var(--accent);" /> @Loc["WkEditLivePreview"]
             </span>
         </div>
 
         <div class="wiki-edit-localerow">
-            <MudIcon Icon="@Icons.Material.Filled.Language" Style="font-size:0.875rem;color:var(--text-faint);" />
+            <MudIcon Icon="@Icons.Material.Filled.Language" Style="font-size:var(--text-base);color:var(--text-faint);" />
             <MudSelect T="string"
                        Value="@SelectedLocale"
                        ValueChanged="@SelectLocaleAsync"
@@ -62,17 +62,17 @@
             <button type="button" title="@Loc["WkItalic"]" @onclick="@(() => Wrap("*", "*", false))"><i>I</i></button>
             <button type="button" title="@Loc["WkHeading"]" @onclick="@(() => Wrap("## ", "", true))"><b>H</b></button>
             <button type="button" title="@Loc["WkListItem"]" @onclick="@(() => Wrap("- ", "", true))">
-                <MudIcon Icon="@Icons.Material.Filled.FormatListBulleted" Style="font-size:0.9375rem;" />
+                <MudIcon Icon="@Icons.Material.Filled.FormatListBulleted" Style="font-size:var(--text-base);" />
             </button>
             <button type="button" title="@Loc["WkQuote"]" @onclick="@(() => Wrap("> ", "", true))">
-                <MudIcon Icon="@Icons.Material.Filled.FormatQuote" Style="font-size:0.9375rem;" />
+                <MudIcon Icon="@Icons.Material.Filled.FormatQuote" Style="font-size:var(--text-base);" />
             </button>
             <button type="button" title="@Loc["WkLink"]" @onclick="@(() => Wrap("[", "](https://)", false))">
-                <MudIcon Icon="@Icons.Material.Filled.Link" Style="font-size:0.9375rem;" />
+                <MudIcon Icon="@Icons.Material.Filled.Link" Style="font-size:var(--text-base);" />
             </button>
             <div class="wiki-edit-tooldiv"></div>
             <button type="button" title="@Loc["WkInsertImage"]" @onclick="@(() => _showAssetPicker = !_showAssetPicker)">
-                <MudIcon Icon="@Icons.Material.Filled.Image" Style="font-size:0.9375rem;" />
+                <MudIcon Icon="@Icons.Material.Filled.Image" Style="font-size:var(--text-base);" />
             </button>
             <div style="flex:1;"></div>
             <span class="wiki-edit-md">Markdown</span>
@@ -146,20 +146,20 @@
         @if (IsTranslation)
         {
             <div class="wiki-edit-inherited">
-                <MudIcon Icon="@Icons.Material.Filled.Info" Style="font-size:0.75rem;" />
+                <MudIcon Icon="@Icons.Material.Filled.Info" Style="font-size:var(--text-sm);" />
                 <span>@Loc["WkInheritedFromSource"]</span>
             </div>
         }
 
         <div class="wiki-edit-savebar toolbar-row">
             <div class="wiki-edit-summary">
-                <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:0.875rem;color:var(--text-faint);" />
+                <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:var(--text-base);color:var(--text-faint);" />
                 <input name="summary" value="@_summary" @oninput="@(e => _summary = e.Value?.ToString() ?? string.Empty)"
                        placeholder="@Loc["WkSummaryPlaceholder"]" aria-label="@Loc["WkSummaryLabel"]" />
             </div>
             <button type="button" class="wiki-edit-minor" @onclick="@(() => _minor = !_minor)">
                 <span class="wiki-edit-check @(_minor ? "on" : "")">
-                    @if (_minor) { <MudIcon Icon="@Icons.Material.Filled.Check" Style="font-size:0.6875rem;color:var(--accent-on);" /> }
+                    @if (_minor) { <MudIcon Icon="@Icons.Material.Filled.Check" Style="font-size:var(--text-xs);color:var(--accent-on);" /> }
                 </span>
                 @Loc["WkMinorEdit"]
             </button>
@@ -169,7 +169,7 @@
             <div class="wiki-edit-savediv"></div>
             <button type="button" class="wiki-btn" @onclick="OnCancel" disabled="@_saving">@Loc["WkDiscard"]</button>
             <button type="button" class="wiki-edit-publish" @onclick="HandleSave" disabled="@_saving">
-                <MudIcon Icon="@Icons.Material.Filled.Check" Style="font-size:0.875rem;" />
+                <MudIcon Icon="@Icons.Material.Filled.Check" Style="font-size:var(--text-base);" />
                 @(_saving ? Loc["Saving"] : Loc["WkPublishChanges"])
             </button>
         </div>

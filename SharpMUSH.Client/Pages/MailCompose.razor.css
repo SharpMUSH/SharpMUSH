@@ -1,7 +1,7 @@
 .mail-compose-page {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
+	gap: var(--space-5);
 	min-width: 0;
 	max-width: 48rem;
 }
@@ -9,8 +9,8 @@
 .mc-fields {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	padding: 16px;
+	gap: var(--space-4);
+	padding: var(--space-5);
 }
 
 .mc-fields ::deep .mc-field .mud-input-outlined-border {
@@ -31,7 +31,7 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 8px;
+	gap: var(--space-3);
 }
 
 .mc-spacer {

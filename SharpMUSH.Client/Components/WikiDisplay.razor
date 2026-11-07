@@ -508,7 +508,7 @@ else
         @if (ShowFallbackNotice)
         {
             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="mb-2">
-                <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;">
                     <span>
                         @string.Format(Loc["WikiFallbackNotice"],
                             PortalLocales.DisplayName(Article!.RequestedLocale),

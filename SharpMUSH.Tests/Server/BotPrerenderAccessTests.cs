@@ -56,6 +56,9 @@ public class BotPrerenderAccessTests
 		var monitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
 		monitor.CurrentValue.Returns(TestSharpMushOptions.Create());
 		var services = new ServiceCollection();
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(TestSharpMushOptions.Create());
+		services.AddSingleton(options);
 		services.AddSingleton<IWikiService>(wiki);
 		services.AddSingleton<IWikiLocalizationService>(new WikiLocalizationService(
 			wiki, new WikiLocaleResolver(monitor), NullLogger<WikiLocalizationService>.Instance));

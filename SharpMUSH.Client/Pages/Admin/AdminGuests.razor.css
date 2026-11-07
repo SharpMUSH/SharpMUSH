@@ -1,15 +1,15 @@
 .adm-players-body {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	padding: 14px 16px 16px;
+	gap: var(--space-4);
+	padding: var(--space-5) var(--space-5) var(--space-5);
 }
 
 .adm-players-form {
 	display: flex;
 	align-items: center;
 	flex-wrap: wrap;
-	gap: 12px;
+	gap: var(--space-4);
 }
 
 .adm-players-form ::deep .adm-players-name {
@@ -17,7 +17,7 @@
 }
 
 .adm-players-max {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-faint);
 }
 
@@ -25,32 +25,9 @@
 	background: transparent;
 }
 
-.adm-players-empty {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 12px;
-	padding: 40px 24px;
-	text-align: center;
-}
-
-.adm-players-empty ::deep .adm-players-empty-icon {
-	font-size: 40px;
-	color: var(--text-faint);
-}
-
-.adm-players-empty-text {
-	font-size: 13px;
-	color: var(--text-dim);
-}
-
 @container page (max-width: 48rem) {
 	.adm-players-form ::deep .adm-players-name {
 		max-width: none;
 		flex: 1 1 100%;
-	}
-
-	.adm-players-empty {
-		padding: 28px 20px;
 	}
 }

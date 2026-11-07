@@ -255,7 +255,7 @@ public class AdminCharactersPagesTests : TrackingBunitContext
 		_api.Bodies["api/admin/audit"] = """{"entries":[],"next":null}""";
 		var cut = RenderPage<AuditLog>();
 
-		cut.WaitForAssertion(() => cut.Find(".kit-empty-box"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find(".kit-empty"), TimeSpan.FromSeconds(5));
 		await Assert.That(_api.Requested).Contains("GET api/admin/audit?text=%237%3A1700000000000&limit=50");
 	}
 

@@ -252,6 +252,25 @@ reads as dark text on a light theme's surface or the reverse. Use the variables 
 are fine, as is a fallback inside `var()`. `ThemeVariableTests.NoComponentStylesheetWritesAColourOfItsOwn` enforces
 this; a new colour belongs in `tokens.css` and, when it must follow the theme, in `ThemeResolver.Derive`.
 
+Sizes are the same: every `font-size` (and the size in a `font` shorthand), `padding` and `gap` is a step of the
+type or space scale in `tokens.css`, never a length of its own (`SizeTokenTests` enforces this, in stylesheets and
+in `style` attributes). A size relative to the text around it (`em`, `%`) is allowed.
+
+| Type step | Size | For |
+|---|---|---|
+| `--text-xs` | 11px | Badges, kickers, mono labels |
+| `--text-sm` | 13px | Meta text: dates, counts, the line under a title |
+| `--text-base` | 15px | Body text, rows, buttons |
+| `--text-md` | 17px | A card or section title |
+| `--text-lg` | 20px | A panel heading |
+| `--text-xl` | 24px | A page title |
+| `--text-2xl` | 32px | A hero title |
+| `--text-3xl` | 44px | A display figure |
+
+The space scale is `--space-1` (2px) to `--space-8` (48px): 2, 4, 8, 12, 16, 24, 32 and 48px. The terminal keeps
+its own `--text-terminal`, since the terminal fits its columns around it. The sizes are rem, so a reader's browser
+font size scales the whole portal.
+
 Motion is the same: a transition or animation names what changes and takes one of the pairs in `tokens.css`, never
 a time or curve of its own (`MotionTokenTests` enforces this).
 

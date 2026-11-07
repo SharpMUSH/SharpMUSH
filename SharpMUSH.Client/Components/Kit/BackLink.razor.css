@@ -1,10 +1,10 @@
 .kit-back {
 	display: inline-flex;
 	align-items: center;
-	gap: 4px;
+	gap: var(--space-2);
 	align-self: flex-start;
 	margin-bottom: 16px;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 	text-decoration: none;
 }
@@ -15,5 +15,5 @@
 }
 
 .kit-back ::deep .kit-back-icon {
-	font-size: 14px;
+	font-size: var(--text-base);
 }

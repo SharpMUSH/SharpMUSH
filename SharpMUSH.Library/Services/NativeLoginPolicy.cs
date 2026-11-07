@@ -15,6 +15,6 @@ public sealed class NativeLoginPolicy(IMediator mediator, IOptionsWrapper<SharpM
 	{
 		if (SitelockMatcher.IsBlocked(configuration.CurrentValue.SitelockRules.Rules, ip, hostName, SitelockMatcher.ConnectFlag)) return false;
 		if (await mediator.Send(new GetObjectNodeQuery(character), cancellationToken) is not (AnySharpObject and SharpPlayer player)) return false;
-		return configuration.CurrentValue.Net.Logins || await new AnySharpObject(player).IsWizard();
+		return configuration.CurrentValue.Net.Logins || await new AnySharpObject(player).CanLoginWhileClosed(cancellationToken);
 	}
 }

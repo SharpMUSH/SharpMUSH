@@ -39,6 +39,19 @@ def run_setup(target: Target, commands: list[str]) -> list[str]:
     return log
 
 
+def run_site_setup(target: Target, commands: list[str]) -> list[str]:
+    """Runs one server's own site settings as God, after the import; returns the transcript lines for the log."""
+    s = Session("site", target.host, target.port, target.prefix)
+    s.read_banner()
+    s.send("connect %s %s" % GOD)
+    log = [s.sync_finish(s.sync_start())]
+    for c in commands:
+        s.send(c)
+        log.append(f"> {c}\n" + s.sync_finish(s.sync_start()))
+    s.close()
+    return log
+
+
 _DBREF = re.compile(r"#(\d+)(?::\d+)?")  # anchors need the number only; scenarios compare the full form
 
 

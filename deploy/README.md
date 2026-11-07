@@ -24,7 +24,7 @@ separate, optional overlay for either stack:
 | `sharpmush.service` | Optional systemd unit — brings the stack up from the compose file on boot |
 | `.env.example` | Template for secrets/config — copy to `.env` and fill in |
 | `.gitignore` | Keeps your real `.env` out of git |
-| `../nats.conf` | NATS server config (repo root, shared with the dev stack). Sets `max_payload` to 6 MB — a server-level limit with no CLI flag, so it has to come from a file — and JetStream's total storage budget (`max_file_store`, 6 GB). Both compose files bind-mount it. Stream budgets: `docs/design/messaging-retention.md`. |
+| `../nats.conf` | NATS server config (repo root). Sets `max_payload` to 6 MB — a server-level limit with no CLI flag, so it has to come from a file — and JetStream's total storage budget (`max_file_store`, 6 GB). Both compose files bind-mount it. Stream budgets: `docs/design/messaging-retention.md`. |
 | `README.md` | This file |
 
 ## First-time setup
@@ -131,16 +131,17 @@ the connection server holds them.
 ### Pointing the in-browser terminal at the right place
 
 The portal's web terminal connects to a **WebSocket** endpoint, `/ws`, which is served by the
-**connection server** (`:4202`), *not* the main server. The `Caddyfile` already routes
-`https://<your-domain>/ws` to the connection server for you, so in the portal set the terminal's
-**Server URI** to:
+**connection server** (`:4202`), *not* the main server. The terminal has no address setting: it
+connects to `/ws` on the address the portal was loaded from, so a portal at
+`https://<your-domain>` uses:
 
 ```
 wss://<your-domain>/ws
 ```
 
-(Same origin, so no mixed-content or CORS issues.) The default `ws://localhost:4202/ws` is for
-local development only — over HTTPS a browser will refuse a plaintext `ws://` connection.
+The `Caddyfile` already routes `https://<your-domain>/ws` to the connection server. A proxy of your
+own must route that same path there. A portal opened on `localhost` connects to
+`ws://localhost:4202/ws`, the connection server in local development.
 
 ### Passkeys
 
@@ -185,8 +186,9 @@ changes require a deliberate `socketserver` restart, which disconnects its nativ
 WebSocket clients.
 
 If you **don't** use Caddy (e.g. you terminate TLS at a load balancer), remember the browser
-terminal's `/ws` endpoint lives on the connection server (`:4202`), not the main server — you must
-publish `4202` or add an equivalent `/ws` proxy route, in addition to publishing `8080`.
+terminal's `/ws` endpoint lives on the connection server (`:4202`), not the main server. The terminal
+connects to `/ws` on the portal's own address, so your proxy must route that path to `4202`, in
+addition to publishing `8080`.
 
 If you want to front the app with **Cloudflare** instead of Caddy, don't edit this file —
 use `docker-compose.cloudflare.yml` and follow the section below.
@@ -294,12 +296,9 @@ This is the part the Zero Trust dashboard is for. It does **not** touch telnet.
    - **Service type:** `HTTP`
    - **URL:** `socketserver:4202`
 
-   Then set the portal's terminal **Server URI** to `wss://mush.example.com/ws` (same origin —
-   no mixed-content). WebSockets traverse the tunnel with no extra config.
-
-   > Alternative: instead of a path route, use a dedicated hostname — add
-   > `ws.mush.example.com` → `HTTP` → `socketserver:4202` and point the Server URI at
-   > `wss://ws.mush.example.com/ws`. Either works; the path route keeps everything same-origin.
+   The portal's terminal connects to `wss://mush.example.com/ws`, the `/ws` path on the portal's
+   own address, so this route must be a path on the portal's hostname, not a hostname of its own.
+   WebSockets traverse the tunnel with no extra config.
 
 ### Part B — the telnet side (plain DNS, no Zero Trust involved)
 
@@ -768,7 +767,7 @@ one, upgrading as it starts; it refuses a world written by a newer server and na
 the log. Rolling an image back after an upgrade that moved the format therefore stops at startup. Run
 the newer image again, or restore a backup taken before the upgrade.
 
-The Caddy `docker-compose.prod.yml` uses `:latest` image names, includes local build definitions and does not run Watchtower. From `deploy/`, a reviewed source update uses `docker compose -f docker-compose.prod.yml up -d --build`; schedule it because recreating the socket owner disconnects players. Labels alone do not install Watchtower. Include any analysis overlay in recreations. The Cloudflare behavior below applies only to `docker-compose.cloudflare.yml`.
+The Caddy `docker-compose.prod.yml` pins one image tag, includes local build definitions and does not run Watchtower. From `deploy/`, a reviewed source update uses `docker compose -f docker-compose.prod.yml up -d --build`; schedule it because recreating the socket owner disconnects players. Labels alone do not install Watchtower. Include any analysis overlay in recreations. The Cloudflare behavior below applies only to `docker-compose.cloudflare.yml`.
 
 
 **The Cloudflare stack updates itself.** Every merge to `main` runs the full test suite and then

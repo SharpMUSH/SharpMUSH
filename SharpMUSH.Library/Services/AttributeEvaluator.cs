@@ -7,6 +7,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Softcode;
 
 namespace SharpMUSH.Library.Services;
 
@@ -93,7 +94,7 @@ internal sealed class AttributeEvaluator(
 
 	/// <summary>
 	/// PennMUSH's <c>call_ufun</c>: the attribute runs as the object it was read from, with the current
-	/// executor as caller.
+	/// executor as caller. <see cref="AttributeFunction.RunAs"/> runs it as another object instead.
 	/// </summary>
 	/// <remarks>
 	/// <paramref name="arguments"/> and <paramref name="environment"/> are the call's %0-%9 and its
@@ -104,12 +105,13 @@ internal sealed class AttributeEvaluator(
 		Dictionary<string, CallState>? arguments, Dictionary<string, CallState>? environment)
 	{
 		var (owner, attributeName, code, dialect) = function;
+		var runner = function.RunAs ?? owner;
 
 		// PennMUSH: a HALTED object runs none of its softcode. process_expression returns PE_NOTHING for a
 		// halted executor (src/parse.c), so the attribute yields its stored text unevaluated. The HALT flag is
-		// set by @halt and by @chown (to break ownership loops). The code runs as its owner, so the owner's
-		// flag is the one that matters.
-		if (await owner.HasFlag("HALT", ExecutionBudget.CurrentToken))
+		// set by @halt and by @chown (to break ownership loops). The flag that matters is the one on whoever
+		// the code runs as: its owner, or the caller of a TinyMUX-style @function.
+		if (await runner.HasFlag("HALT", ExecutionBudget.CurrentToken))
 		{
 			return new CallState(code);
 		}
@@ -140,8 +142,11 @@ internal sealed class AttributeEvaluator(
 		try
 		{
 			var ownerRef = owner.Object().DBRef;
-			var frame = parser.CurrentState.ForAttributeCall(arguments, environment,
-				new DBAttribute(ownerRef, attributeName) { Dialect = dialect }, attributeName, ownerRef);
+			var evaluation = new DBAttribute(ownerRef, attributeName) { Dialect = dialect };
+			var frame = parser.CurrentState.ForAttributeCall(arguments, environment, evaluation, attributeName, runner.Object().DBRef);
+			// The body names attributes in its own dialect, substitutions such as %=<NAME> included.
+			using var dialectScope = SoftcodeDialectScope.Enter(
+				SoftcodeDialects.InForce(evaluation, configuration.CurrentValue.Compatibility.Dialect));
 			var result = await parser.Push(frame).FunctionParse(code);
 
 			return result ?? CallState.Empty;

@@ -37,7 +37,7 @@ public partial class Commands
 					policyNotified = true;
 					return false;
 				}
-				if (!Configuration.CurrentValue.Net.Logins && !await new AnySharpObject(player).IsWizard())
+				if (!Configuration.CurrentValue.Net.Logins && !await PermissionService.CanLogin(new AnySharpObject(player)))
 				{
 					await NotifyLoginsDisabledAsync(handle, new AnySharpObject(player));
 					policyNotified = true;
