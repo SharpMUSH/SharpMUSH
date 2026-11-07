@@ -22,8 +22,8 @@ Pictures in the game (such as those placed with figure()) are shown as their tex
 
 ## Drawing methods
 
-- auto: the best way your terminal has. SharpMUSH picks from what your terminal can do (see [TERMINAL]): kitty first, then iterm2, then sixel, then blocks. A terminal it does not know gets blocks. Also accepted as 'on'.
-- detect: like auto, and also asks your terminal what it can draw and what it is. The answer arrives with the next line you send, so send any command afterwards. Use this when your terminal does not say which it is.
+- auto: asks the terminal for its capabilities and chooses a drawing method (see [TERMINAL]): kitty first, then iterm2, then sixel, then blocks. Replies take priority over client-profile assumptions. An unknown client can use Sixel or Kitty when it answers the probes; without evidence it gets blocks. Also accepted as 'on' or 'yes'.
+- detect: selects auto and explicitly requests another probe. Replies are processed immediately, without Enter or another command. Setting auto again also repeats the probe. A silent client remains unknown; silence is not a rejection.
 - kitty: the Kitty graphics protocol (kitty, Ghostty, Rio). The picture is sent once per connection and drawn in its cells as text, so it scrolls and wraps like text.
 - iterm2: iTerm2 inline images (iTerm2, WezTerm, Konsole, mintty, Visual Studio Code, Rio, mlterm).
 - sixel: sixel graphics (foot, WezTerm, iTerm2, Konsole, Windows Terminal, mintty, Contour, mlterm, xterm started with sixel support).
@@ -33,6 +33,8 @@ Pictures in the game (such as those placed with figure()) are shown as their tex
 ## How pictures are shown
 
 Kitty pictures and half blocks are only sent to a connection receiving UTF-8. A connection identified as a screen reader always receives the picture's description instead. SOCKSET shows the method in use, as "auto (<method>)" for auto, and terminfo() includes it.
+
+SOCKSET also shows separate evidence for Kitty, iTerm2 and Sixel: supported or unsupported from a terminal reply, an unconfirmed client-profile assumption, or unknown when no reply is recorded. Cell pixels shows the reported geometry when available. These describe capabilities, independently of your graphics override; selecting a method manually does not prove support. iTerm2 image support currently relies on a profile or a manual choice because its image protocol has no equivalent capability acknowledgement.
 
 While pictures are off, a picture is written as its address, which you can open and which some clients show as a picture of their own. A figure with text art shows its art. A screen reader gets the picture's description instead; SOCKSET alttext=on asks for descriptions, and alttext=off for addresses, either way. The game's own pictures have an address only once mud_url is set.
 
