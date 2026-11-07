@@ -62,8 +62,8 @@ public class TinyMuxDatabaseReaderTests
 			.And.Contains("KEY").And.Contains("MARKER0");
 		await Assert.That(Object(database, 4).Flags).Contains("XTERM256").And.Contains("STAFF");
 		await Assert.That(Object(database, 9).Flags).Contains("TERSE");
-		await Assert.That(Object(database, 4).Powers).Contains("See_All").And.Contains("chown_anything").And.Contains("Builder");
-		await Assert.That(Object(database, 4).Permissions).IsEquivalentTo(["control.all"]);
+		await Assert.That(Object(database, 4).Powers).Contains("See_All").And.Contains("Builder");
+		await Assert.That(Object(database, 4).Permissions).IsEquivalentTo(["game.chown.any", "control.all"]);
 		await Assert.That(Object(database, 10).Permissions).IsEquivalentTo(["server.operate"]);
 	}
 
@@ -74,7 +74,7 @@ public class TinyMuxDatabaseReaderTests
 		var database = await ReadV5();
 
 		await Assert.That(database.FlagDefinitions.Select(f => f.Name)).IsEquivalentTo(["KEY", "STAFF", "MARKER0"]);
-		await Assert.That(database.PowerDefinitions.Select(p => p.Name)).IsEquivalentTo(["chown_anything"]);
+		await Assert.That(database.PowerDefinitions).IsEmpty();
 	}
 
 	[Test]

@@ -120,7 +120,6 @@ public static partial class RhostDatabaseTranslator
 			SourceOptions = CompatibilityOptions(),
 			Objects = objects,
 			FlagDefinitions = definitions.Flags,
-			PowerDefinitions = definitions.Powers,
 			Roles = [.. BuiltInRoles.RhostLevels],
 			GodPlayer = 1
 		};
@@ -176,10 +175,9 @@ public static partial class RhostDatabaseTranslator
 
 		var flags = new List<string>();
 		var powers = new List<string>();
-		var denied = new List<string>();
 		var roles = new List<string>();
 		MapBits(source, flags, definitions, powers, roles, report);
-		MapPowers(source, powers, denied, definitions, report);
+		var overrides = MapPowers(source, report);
 
 		var (location, exits, link) = Fields(source, objectType, report);
 		var zone = Zone(source, byNumber, report);
@@ -266,7 +264,7 @@ public static partial class RhostDatabaseTranslator
 			Zone = zone,
 			Flags = flags,
 			Powers = powers,
-			DeniedPowers = denied,
+			Overrides = overrides,
 			Roles = roles,
 			Reality = reality,
 			Totems = totems,
@@ -522,9 +520,15 @@ public static partial class RhostDatabaseTranslator
 			: $"{kind} {bit.Name}: imported as {string.Join(" and ", parts)}";
 	}
 
-	private static void MapPowers(RhostFlatfileObject source, List<string> powers, List<string> denied, Definitions definitions,
-		Report report)
+	/// <summary>
+	/// The object's powers as allows, and its depowers and restricting flags as denies, on the permissions each lands on. A power's level is
+	/// the staff level whose role its reach names, so it acts on what that level and those below own. A depower's
+	/// level works the other way: its deny reaches that level and those above, or everyone at its lowest setting. A
+	/// scope that takes no reach holds at every rank. Two on one scope keep the wider, and a deny beats an allow.
+	/// </summary>
+	internal static List<PennMUSHOverride> MapPowers(RhostFlatfileObject source, Report report)
 	{
+		var landed = new Dictionary<string, PennMUSHOverride>(StringComparer.OrdinalIgnoreCase);
 		foreach (var power in RhostNameTables.Powers)
 		{
 			var level = (source.Toggles[power.Word] >> power.Shift) & 0x3;
@@ -533,43 +537,93 @@ public static partial class RhostDatabaseTranslator
 				continue;
 			}
 
-			var name = power.Power ?? power.Name;
-			if (power.Power is null)
-			{
-				definitions.Power(power.Name);
-			}
-
-			if (!powers.Contains(name, StringComparer.OrdinalIgnoreCase))
-			{
-				powers.Add(name);
-			}
-
-			report.Note(ImportWarningKind.Powers, power.Power is null
-				? $"Power {power.Name}: imported as a power of its own, {power.Name}"
-				: $"Power {power.Name}: imported as the {power.Power} power", source.DBRef);
-			report.Note(ImportWarningKind.Powers, $"Power levels: {ServerName} grants a power at a level (guildmaster, architect, councilor); a " +
-				"SharpMUSH power is held or not, so each is imported as held whatever its level", source.DBRef);
+			Land(power, PermissionState.Allow, power.Ranked ? RhostNameTables.LevelRoles[(int)level - 1] : null, landed, source.DBRef,
+				report);
 		}
 
+		// RhostMUSH stores a depower's level one higher than it is, unless the player's DPSHIFT flag is set, which setting
+		// any depower at councilor turns on. Either way this reads each level as RhostMUSH itself does.
+		var shifted = (source.Flags[2] & RhostNameTables.DepowerShift) != 0;
 		foreach (var depower in RhostNameTables.Depowers)
 		{
-			var level = (source.Toggles[depower.Word] >> depower.Shift) & 0x3;
-			if (level == 0)
+			var stored = (source.Toggles[depower.Word] >> depower.Shift) & 0x3;
+			if (stored == 0)
 			{
 				continue;
 			}
 
-			if (depower.Power is { } taken)
-			{
-				denied.Add(taken);
-				report.Note(ImportWarningKind.Powers, $"Depower {depower.Name}: imported as a deny on the {taken} power's permission", source.DBRef);
-			}
-			else
-			{
-				report.Note(ImportWarningKind.Powers, $"Depower {depower.Name}: dropped, as SharpMUSH has no power it takes away", source.DBRef);
-			}
+			var level = shifted ? stored : stored - 1;
+			Land(depower, PermissionState.Deny, depower.Ranked && level > 0 ? RhostNameTables.LevelRoles[(int)level - 1] : null, landed,
+				source.DBRef, report);
 		}
+
+		foreach (var (bit, name, denies) in RhostNameTables.RestrictingBits)
+		{
+			if (source.Type != RhostObjectType.Player || (source.Flags[1] & bit) == 0)
+			{
+				continue;
+			}
+
+			foreach (var scope in denies)
+			{
+				var deny = new PennMUSHOverride(scope, PermissionState.Deny);
+				landed[scope] = landed.TryGetValue(scope, out var held) ? Wider(held, deny) : deny;
+			}
+
+			report.Note(ImportWarningKind.Flags, $"Flag {name}: also imported as a deny on {string.Join(" and ", denies)}", source.DBRef);
+		}
+
+		return [.. landed.Values];
 	}
+
+	private static void Land(RhostPowerMapping mapping, PermissionState state, string? reach,
+		Dictionary<string, PennMUSHOverride> landed, int dbref, Report report)
+	{
+		var kind = state == PermissionState.Allow ? "Power" : "Depower";
+		if (mapping.Scopes.Length == 0)
+		{
+			report.Note(ImportWarningKind.Powers, $"{kind} {mapping.Name}: dropped, as {mapping.Skip}", dbref);
+			return;
+		}
+
+		foreach (var scope in mapping.Scopes)
+		{
+			var next = new PennMUSHOverride(scope, state, reach is not null && PortalPermission.TakesReach(scope) ? reach : null);
+			if (landed.TryGetValue(scope, out var held) && held.State != next.State
+					&& (held.State == PermissionState.Deny ? held : next) is { Reach: { } kept })
+			{
+				// One override per scope: the deny stays, and outside its reach the roles decide, not the power.
+				report.Note(ImportWarningKind.Powers, $"Power and depower both on {scope}: only the deny, reaching {kept}, is kept, so " +
+					$"the power no longer applies below {kept}; give it back there by hand if it should", dbref, needsAction: true);
+			}
+
+			landed[scope] = held is null ? next : Wider(held, next);
+		}
+
+		var unreached = reach is null ? [] : mapping.Scopes.Where(scope => !PortalPermission.TakesReach(scope)).ToArray();
+		var how = reach is null
+			? mapping.Ranked && state == PermissionState.Deny ? ", at every rank" : ""
+			: unreached.Length == 0
+				? $", reaching {reach}"
+				: unreached.Length == mapping.Scopes.Length
+					? $"; held at {reach} in {ServerName}, but no reach can bound it here, so it holds at every rank"
+					: $", reaching {reach}; {string.Join(" and ", unreached)} takes no reach, so it holds at every rank";
+		report.Note(ImportWarningKind.Powers,
+			$"{kind} {mapping.Name}: imported as {(state == PermissionState.Allow ? "an allow" : "a deny")} on {string.Join(" and ", mapping.Scopes)}{how}",
+			dbref);
+	}
+
+	/// <summary>Of two overrides on one scope, the one that does more: a deny, else the one with the wider reach.</summary>
+	private static PennMUSHOverride Wider(PennMUSHOverride held, PennMUSHOverride next)
+		=> (held, next) switch
+		{
+			_ when held.State != next.State => held.State == PermissionState.Deny ? held : next,
+			({ Reach: null }, _) => held,
+			(_, { Reach: null }) => next,
+			_ => (Rank(next.Reach!) > Rank(held.Reach!)) == (next.State == PermissionState.Allow) ? next : held,
+		};
+
+	private static int Rank(string level) => RhostNameTables.LevelRoles.ToList().IndexOf(level);
 
 	/// <summary>One attribute as the import writes it, or null for one that is not imported.</summary>
 	private static PennMUSHAttribute? Attribute(RhostFlatfileAttribute attribute, RhostFlatfileObject source,
@@ -767,11 +821,10 @@ public static partial class RhostDatabaseTranslator
 			: mail.Folders.Where(f => f.Value.Count > 0).ToDictionary(f => f.Key,
 				f => string.Join(" ", f.Value.OrderBy(v => v.Key).Select(v => $"{v.Key}:{v.Value}:{v.Key}")));
 
-	/// <summary>The flags and powers of its own the import defines, each once.</summary>
+	/// <summary>The flags of its own the import defines, each once.</summary>
 	private sealed class Definitions
 	{
 		public List<PennMUSHFlagDefinition> Flags { get; } = [];
-		public List<PennMUSHFlagDefinition> Powers { get; } = [];
 
 		public void Flag(string name, bool staffOnly)
 		{
@@ -783,20 +836,10 @@ public static partial class RhostDatabaseTranslator
 			string[] perms = staffOnly ? ["wizard"] : [];
 			Flags.Add(new PennMUSHFlagDefinition { Name = name, SetPermissions = [.. perms], UnsetPermissions = [.. perms] });
 		}
-
-		public void Power(string name)
-		{
-			if (Powers.Any(p => p.Name == name))
-			{
-				return;
-			}
-
-			Powers.Add(new PennMUSHFlagDefinition { Name = name, SetPermissions = ["wizard"], UnsetPermissions = ["wizard"] });
-		}
 	}
 
 	/// <summary>The notes: single lines, and decisions gathered with the objects they touched.</summary>
-	private sealed class Report
+	internal sealed class Report
 	{
 		private readonly SortedDictionary<string, (ImportWarningKind Kind, bool NeedsAction, List<int> Dbrefs)> _decisions =
 			new(StringComparer.Ordinal);
