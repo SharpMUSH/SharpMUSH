@@ -7870,7 +7870,7 @@
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenreHint" xml:space="preserve">
-    <value>Odaberite MSSP žanr i podžanr igre. Sharpie te odabire koristi za ilustracije; odaberite None kada nijedno ne odgovara.</value>
+    <value>Odaberite MSSP žanr igre. Odaberite predloženi podžanr ili unesite vlastiti. Sharpie koristi ove vrijednosti za ilustracije; odaberite None ako nijedan nije primjenjiv.</value>
     <comment>MT — None kept: literal MSSP value shown in the select</comment>
   </data>
   <data name="GuideIdentityGenres" xml:space="preserve">
@@ -9460,5 +9460,8 @@
   <data name="MudTreeView_ExpandItem" xml:space="preserve">
     <value>Proširi</value>
     <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityCustomSubgenre" xml:space="preserve">
+    <value>Ovaj podžanr nije na popisu prijedloga MSSP-a. Prilagođene vrijednosti su dopuštene.</value>
   </data>
 </root>
