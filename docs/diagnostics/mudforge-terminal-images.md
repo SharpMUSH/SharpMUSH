@@ -2,13 +2,13 @@
 
 ## Changes and release order
 
-1. Release the companion MarkupString change: an unsupported MXP IMAGE delegates to the
+1. MarkupString 2.27.1 contains the companion change: an unsupported MXP IMAGE delegates to the
    configured ANSI picture emitter. Supported MXP elements remain MXP; disabled graphics or
    missing pixels retain the text art.
-2. Update `MarkupStringVersion` in `Directory.Build.props` to that released version, then ship
-   this renderer change. The checked-in 2.25.0 pin does not contain the fallback. Local validation
-   used all five packages built together as `2.25.1-mudforge2`, via an MSBuild property override;
-   that version is a local test artifact, not a published dependency.
+2. `MarkupStringVersion` in `Directory.Build.props` is pinned to 2.27.1. Restore and test the
+   published packages once NuGet propagation finishes before shipping this renderer change.
+   Initial local validation used all five packages built together as `2.25.1-mudforge2`, via an
+   MSBuild property override; that version was a local test artifact, not a published dependency.
 3. No TNC prerequisite: terminal replies without CR/LF were fixed in TNC 4.5.2; current SharpMUSH
    already consumes 4.6.1. Do not use ECHO negotiation as a graphics-capability signal.
 
