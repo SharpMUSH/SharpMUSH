@@ -14,7 +14,7 @@ namespace SharpMUSH.Server.Controllers;
 public class ManifestController(IOptionsWrapper<SharpMUSHOptions> options) : ControllerBase
 {
 	/// <summary>The default theme's page colour (<c>--bg</c> in <c>css/tokens.css</c>), behind the app while it starts.</summary>
-	public const string BackgroundColour = "#0e0f11";
+	public const string BackgroundColour = "#121110";
 
 	/// <summary>The longest name an installed app is shown under on a home screen before it is cut.</summary>
 	public const int ShortNameLength = 12;

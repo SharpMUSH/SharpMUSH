@@ -311,3 +311,12 @@
 		linear-gradient(var(--accent-3), var(--accent-3)) left 0 bottom 0 / 8px 30px no-repeat;
 	--card-mask-accent: url(/themes/drawings/frames/elbow-accent.svg) left top / 60px 60px no-repeat;
 }
+/* Lifted: cards stand off the page on the theme's elevation shadow (--elev-1, tokens.css); the
+   Home hero catches a glow of the accent and the warning colour. */
+[data-frame-marks="lifted"] {
+	--hero-marks: radial-gradient(90% 140% at 0% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%),
+		radial-gradient(70% 120% at 100% 100%, color-mix(in srgb, var(--warn) 8%, transparent), transparent 60%);
+}
+[data-frame-shadow="lifted"] {
+	--card-shadow: var(--elev-1);
+}

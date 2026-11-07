@@ -139,7 +139,7 @@
 .wikidiff-split-col { min-width: 0; }
 .wikidiff-split-head {
     padding: var(--space-3) var(--space-4);
-    font-family: var(--font-mono);
+    font-family: var(--font-kicker);
     font-size: var(--text-xs);
     letter-spacing: 0.08em;
     text-transform: uppercase;

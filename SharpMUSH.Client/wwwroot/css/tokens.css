@@ -265,16 +265,16 @@
 }
 
 :root {
-	/* ── Phosphor Refined design tokens ── */
-	--bg: #0e0f11;
-	--surface: #16181b;
-	--surface-2: #1c1f23;
-	--surface-3: #101113;
-	--text: #e9edf0;
-	--text-dim: #9aa3ab;
-	--text-faint: #7d8790;
-	--border: #262a2f;
-	--border-soft: #1d2024;
+	/* ── Phosphor design tokens (BuiltInThemes.Phosphor) ── */
+	--bg: #121110;
+	--surface: #191716;
+	--surface-2: #211e1c;
+	--surface-3: #161412;
+	--text: #efebe5;
+	--text-dim: #aaa298;
+	--text-faint: #90887e;
+	--border: #322d28;
+	--border-soft: #272320;
 	--accent: #00f5b7;
 	--accent-dim: rgb(0,191,143);
 	--accent-on: #03150f;
@@ -366,7 +366,10 @@
 	--font-ui: 'Hanken Grotesk', system-ui, sans-serif;
 	--font-mono: "Cascadia Mono", "DejaVu Sans Mono", monospace;
 	--font-display: 'Hanken Grotesk', system-ui, sans-serif;
-	/* ── theme parts: Phosphor's look. The rules in css/themes/ set these per part (data-texture,
+	/* Kickers: the small capitals over a tile, a panel or a field. In the body face, so a label reads as a label, not code. */
+	--font-kicker: var(--font-ui);
+	--kicker-tracking: 0.12em;
+	/* ── theme parts: the look with every part at its first choice (ThemeStyles.Defaults). The rules in css/themes/ set these per part (data-texture,
 	   data-frame-marks, ...); a Custom theme's stylesheet can set any of them. See docs/guides/portal-themes.md. ── */
 	--font-title-weight: 700;
 	--texture: none;                /* page texture: gradient layers, then drawn layers (masks) in the theme's colours */
@@ -412,18 +415,23 @@
 	--card-border-style: solid;
 	--card-border-width: 1px;
 	--card-shadow: none;
+	--hero-marks: var(--no-drawing); /* the frame's layers over the Home hero, which is a card (frames.css "lifted") */
+	/* Elevation: a card standing off the page, its top edge catching the light. Dark here; [data-scheme="light"] below. */
+	--elev-1: inset 0 1px 0 rgba(255, 240, 220, 0.05), 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 28px -8px rgba(0, 0, 0, 0.6);
+	/* The SharpMUSH mark: its body in the accent, its two inner strokes in this, so it keeps an edge on any surface. */
+	--logo-inner: color-mix(in srgb, var(--accent) 70%, var(--text));
 	--accent-2: #ff8a8a;            /* decorative colours for drawings only; a theme without them gets --link-missing and --warn */
 	--accent-3: #ffb454;
 	--accent-hue: 163;              /* the accent's hue in degrees, for picture tones that tint toward it */
 	--shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 4px 16px rgba(0,0,0,0.4);
-	--mud-palette-background-gradient: radial-gradient(120% 100% at 80% -10%, #16181c 0%, #0e0f11 55%);
-	--mud-palette-navbar-gradient: linear-gradient(90deg, #101113 0%, #0d0e10 100%);
+	--mud-palette-background-gradient: radial-gradient(120% 100% at 80% -10%, #181615 0%, #121110 55%);
+	--mud-palette-navbar-gradient: linear-gradient(90deg, #161412 0%, #11100e 100%);
 
 	/* ── D1 · Commons Dark additions (docs/design/d1/README.md §2) ── */
 
 	/* ── surfaces ── */
-	--rail-bg: #0a0b0c;             /* icon rail, darker than --surface-3 (page sidebar) */
-	--rail-ink: #9aa3ab;            /* rail icons: --text-dim, moved until it reads 4.5:1 on --rail-bg */
+	--rail-bg: #0c0b0a;             /* icon rail, darker than --surface-3 (page sidebar) */
+	--rail-ink: #aaa298;            /* rail icons: --text-dim, moved until it reads 4.5:1 on --rail-bg */
 
 	/* ── text roles ── */
 	--text-over-image: #e9edf0;     /* primary lines and glass controls over banner images; not themed, as the scrim under them is always dark */
@@ -444,7 +452,7 @@
 
 	/* ── tone() (ToneMarkup; shell.css .tone-*) ── */
 	--tone-tertiary: #ffb454;       /* the third decorative colour, readable */
-	--highlight: #114d40;           /* behind marked text: the surface tinted with the accent, text still 4.5:1 on it */
+	--highlight: #134c3d;           /* behind marked text: the surface tinted with the accent, text still 4.5:1 on it */
 	/* hues (ThemeResolver.HueColors), readable on the surfaces, the same in every colour vision */
 	--hue-red: #f07178;
 	--hue-green: #c3e88d;
@@ -468,22 +476,22 @@
 	--ms-ansi-12: #a1bfff;
 	--ms-ansi-13: #d5adef;
 	--ms-ansi-14: #a6e6ff;
-	--ms-ansi-bg-1: #a14f54;
-	--ms-ansi-bg-2: #5f7149;
-	--ms-ansi-bg-3: #7a643a;
-	--ms-ansi-bg-4: #4e6494;
-	--ms-ansi-bg-5: #7d5e93;
-	--ms-ansi-bg-6: #456c7c;
-	--ms-ansi-bg-9: #8c585c;
-	--ms-ansi-bg-10: #5c684e;
-	--ms-ansi-bg-11: #7a694a;
-	--ms-ansi-bg-12: #586788;
-	--ms-ansi-bg-13: #725e80;
-	--ms-ansi-bg-14: #4b6570;
+	--ms-ansi-bg-1: #a24f54;
+	--ms-ansi-bg-2: #596742;
+	--ms-ansi-bg-3: #7d6539;
+	--ms-ansi-bg-4: #506593;
+	--ms-ansi-bg-5: #7f5e93;
+	--ms-ansi-bg-6: #486d7c;
+	--ms-ansi-bg-9: #8e595c;
+	--ms-ansi-bg-10: #5f694e;
+	--ms-ansi-bg-11: #716143;
+	--ms-ansi-bg-12: #5a6888;
+	--ms-ansi-bg-13: #745f80;
+	--ms-ansi-bg-14: #4d6670;
 
 	/* ── code and syntax (ThemeResolver.SyntaxColors): help, the softcode console, highlighted softcode ── */
-	--code-bg: #090a0b;
-	--code-text: #e9edf0;
+	--code-bg: #0c0b0a;
+	--code-text: #efebe5;
 	--syntax-command: #c792ea;      /* $-command patterns */
 	--syntax-function: #82aaff;
 	--syntax-substitution: #f78c6c; /* %-substitutions */
@@ -542,6 +550,18 @@
 	/* ── name mentions (README §4.8): set --name per mention; the viewer's own name uses --accent ── */
 	--mention-offset: 3px;
 	--mention-alpha: 50%;
+}
+
+/* A light theme's elevation: a shallower shadow, warmed toward the paper, under a white top edge. */
+[data-scheme="light"] {
+	--elev-1: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 2px rgba(60, 40, 20, 0.06), 0 8px 24px -10px rgba(60, 40, 20, 0.18);
+	--logo-inner: color-mix(in srgb, var(--accent) 70%, #ffffff);
+}
+/* Where relative colour is understood, a lighter step of the accent itself, which keeps its saturation. */
+@supports (color: oklch(from red l c h)) {
+	[data-scheme="light"] {
+		--logo-inner: oklch(from var(--accent) calc(l + 0.14) c h);
+	}
 }
 
 /* A card's background: the frame's gradient layers over the surface. Worked out again wherever a theme's
@@ -616,11 +636,11 @@
 	filter: brightness(1.08);
 }
 
-/* ── Section kicker (mono uppercase labels — stat tiles, panel headers, meta fields) ── */
+/* ── Section kicker (uppercase labels in --font-kicker — stat tiles, panel headers, meta fields) ── */
 .section-kicker {
-	font-family: var(--font-mono);
+	font-family: var(--font-kicker);
 	font-size: var(--text-xs);
-	letter-spacing: 0.16em;
+	letter-spacing: var(--kicker-tracking);
 	text-transform: uppercase;
 	color: var(--text-faint);
 }

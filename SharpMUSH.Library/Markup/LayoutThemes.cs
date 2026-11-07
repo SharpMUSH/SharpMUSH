@@ -42,8 +42,8 @@ public static class LayoutThemes
 	public static IReadOnlyList<ThemePalette> Own { get; } =
 	[
 		SharpMUSH,
-		Ported("phosphor", ThemeMode.Dark, ["#0e0f11", "#1c1f23", "#e9edf0", "#00f5b7", "#e9edf0", "#ffb454", "#7d8790", "#6cde9a", "#ffb454", "#e57373", "#5aa9ff"]),
-		Ported("daylight", ThemeMode.Light, ["#f3f4f6", "#eef0f3", "#14181c", "#00775f", "#14181c", "#8f5300", "#5f6872", "#387350", "#8f5300", "#a05050", "#3a6ca3"]),
+		Ported("phosphor", ThemeMode.Dark, ["#121110", "#211e1c", "#efebe5", "#00f5b7", "#efebe5", "#ffb454", "#90887e", "#6cde9a", "#ffb454", "#e57373", "#5aa9ff"]),
+		Ported("daylight", ThemeMode.Light, ["#f6f4ef", "#f3f0e9", "#1c1915", "#00775f", "#1c1915", "#8f5300", "#655d54", "#387350", "#8f5300", "#a05050", "#3a6ca3"]),
 		Ported("magical-girl", ThemeMode.Light, ["#fcedf7", "#f9eafa", "#2e1538", "#b8157a", "#7e5cb9", "#8f4b00", "#6b5279", "#387350", "#8f4b00", "#9c4e4e", "#38699e"]),
 		Ported("shojo", ThemeMode.Light, ["#fdf8f1", "#fbf3ea", "#2b2226", "#0f6f73", "#ab5851", "#815fbd", "#695a60", "#3a7853", "#8f4b00", "#a55353", "#3a6ca3"]),
 		Ported("idol", ThemeMode.Dark, ["#0c0a1d", "#1c163f", "#f4efff", "#ff58a8", "#36e2ff", "#ffde4a", "#9e94c4", "#6cde9a", "#ffd84a", "#e57373", "#5aa9ff"]),

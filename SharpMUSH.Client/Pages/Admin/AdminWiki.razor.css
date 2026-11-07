@@ -283,7 +283,7 @@
 }
 
 .adminwiki-dialog-kicker {
-	font-family: var(--font-mono);
+	font-family: var(--font-kicker);
 	font-size: var(--text-xs);
 	font-weight: 400;
 	letter-spacing: 0.08em;

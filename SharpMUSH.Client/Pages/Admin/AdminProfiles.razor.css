@@ -21,9 +21,9 @@
 
 .adm-profiles-status-label {
 	min-width: 110px;
-	font-family: var(--font-mono);
+	font-family: var(--font-kicker);
 	font-size: var(--text-xs);
-	letter-spacing: 0.12em;
+	letter-spacing: var(--kicker-tracking);
 	text-transform: uppercase;
 	color: var(--text-faint);
 }
@@ -37,9 +37,9 @@
 	display: flex;
 	justify-content: space-between;
 	padding: var(--space-4) var(--space-5);
-	font-family: var(--font-mono);
+	font-family: var(--font-kicker);
 	font-size: var(--text-xs);
-	letter-spacing: 0.12em;
+	letter-spacing: var(--kicker-tracking);
 	text-transform: uppercase;
 	color: var(--text-faint);
 	border-bottom: 1px solid var(--border-soft);

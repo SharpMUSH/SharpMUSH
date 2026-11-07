@@ -62,7 +62,7 @@
 	padding: var(--space-1) var(--space-3);
 	border: 1px solid var(--border);
 	border-radius: 9px;
-	font-family: var(--font-mono);
+	font-family: var(--font-kicker);
 	font-size: var(--text-xs);
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
@@ -148,10 +148,10 @@
 
 .adm-theme-group-title {
 	margin: 0;
-	font-family: var(--font-mono);
+	font-family: var(--font-kicker);
 	font-size: var(--text-xs);
 	font-weight: 400;
-	letter-spacing: 0.16em;
+	letter-spacing: var(--kicker-tracking);
 	text-transform: uppercase;
 	color: var(--text-faint);
 }
