@@ -61,6 +61,21 @@ public class RhostPrintfFormatterTests
 	public async Task WrappedWithAnIndent(string format, string value, string expected)
 		=> await Assert.That(Format(format, value)).IsEqualTo(expected);
 
+	/// <summary>
+	/// <c>;N+W;</c>: the rows after the first are W wider, so an indent of N takes nothing from the text when W
+	/// is N. Worked out from RhostMUSH's help and source; no live server answered these.
+	/// </summary>
+	[Test]
+	[Arguments("<$-10|\";4+4;s>", "aaaa bbbb cccc dddd eeee ffff", "<aaaa bbbb >\n     cccc dddd \n     eeee ffff ")]
+	[Arguments("<$-10|\";4+2;s>", "aaaa bbbb cccc dddd", "<aaaa bbbb >\n     cccc    \n     dddd    ")]
+	[Arguments("<$-10|\";4.1+4;s>", "aaaa bbbb cccc dddd eeee ffff", "<aaaa bbbb >\n cccc dddd     \n     eeee ffff ")]
+	public async Task WrappedWithAWidenedIndent(string format, string value, string expected)
+		=> await Assert.That(Format(format, value)).IsEqualTo(expected);
+
+	[Test]
+	public async Task AWidenedIndentKeepsTheFieldsAfterItOnTheFirstRow()
+		=> await Assert.That(Format("<$-10|\";4+4;s|$-2s>", "aaaa bbbb cccc dddd", "X")).IsEqualTo("<aaaa bbbb |X >\n     cccc dddd ");
+
 	private static string Format(string format, params string[] values)
 		=> RhostPrintfFormatter.TryFormat(MarkupText.Plain(format), values.Select(MarkupText.Plain).ToArray(),
 			out var result, out var error)

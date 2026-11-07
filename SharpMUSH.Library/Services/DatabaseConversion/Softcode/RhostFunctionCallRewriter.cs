@@ -50,6 +50,14 @@ public static class RhostFunctionCallRewriter
 		},
 		// RhostMUSH's tag() looks a tag up; SharpMUSH's tag() writes an HTML tag.
 		["tag"] = args => args.Length == 1 ? $"tagref({args[0]})" : null,
+		// PennMUSH's edit() with several from/to pairs, one pair at a time; edit() with more than three
+		// arguments is RhostMUSH's under rhost_edit. pedit() leaves out a last from with no to; medit() takes
+		// none.
+		["pedit"] = args => args.Length >= 3 ? EditChain(args[..(args.Length - (args.Length - 1) % 2)]) : null,
+		["medit"] = args => args.Length >= 3 && args.Length % 2 == 1 ? EditChain(args) : null,
+		// Seconds since 1970 of the first start and of the last restart.
+		["startsecs"] = args => args is [] or [""] ? "convtime(starttime())" : null,
+		["rebootsecs"] = args => args is [] or [""] ? "convtime(restarttime())" : null,
 		["lnum2"] = args => args.Length == 1 ? $"lnum({args[0]})" : NumberRange(args),
 		// Each flag an argument of its own, !FLAG allowed, as andlflags() and orlflags() take them in a list.
 		["andflag"] = args => args.Length >= 2 ? $"andlflags({args[0]},{FlagList(args[1..])})" : null,
@@ -130,6 +138,18 @@ public static class RhostFunctionCallRewriter
 		var last = direction == "-" ? Math.Max(first % step, first - span) : first + span;
 		if (last > int.MaxValue) return null;
 		return step == 1 ? $"lnum({first},{last})" : $"lnum({first},{last},%b,{step})";
+	}
+
+	/// <summary><c>edit()</c> of the first argument with each from/to pair after it, in order.</summary>
+	private static string EditChain(string[] args)
+	{
+		var edited = args[0];
+		for (var i = 1; i + 1 < args.Length; i += 2)
+		{
+			edited = $"edit({edited},{args[i]},{args[i + 1]})";
+		}
+
+		return edited;
 	}
 
 	/// <summary>The object of an argument that is just a <c>bittype()</c> call, bracketed or not: <c>me</c> when it names none.</summary>

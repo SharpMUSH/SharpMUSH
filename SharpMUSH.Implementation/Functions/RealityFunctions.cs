@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -54,6 +55,66 @@ public partial class Functions
 	public ValueTask<CallState> ChkReality(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> BothAsync(parser, async (viewer, target) =>
 			await Reality(parser).CanPerceiveAsync(viewer.Object, target.Object, ExecutionBudget.CurrentToken));
+
+	/// <summary>
+	/// rxdesc(): the description attribute of each layer an object you control receives, as RhostMUSH's rxdesc() lists
+	/// what its levels describe things with; or, given <c>desc</c>, <c>adesc</c>, <c>value</c> or <c>hex</c> and a
+	/// layer, that layer's description attribute, the attribute its description action is read from, or its bit.
+	/// </summary>
+	[SharpFunction(Name = "rxdesc", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["object", "layer"])]
+	public async ValueTask<CallState> RxDesc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var config = await Reality(parser).ConfigurationAsync(ExecutionBudget.CurrentToken);
+		if (!parser.CurrentState.Arguments.TryGetValue("1", out var layerArgument))
+		{
+			return await ProfileAsync(parser, "0") switch
+			{
+				ObjectReality profile => new CallState(string.Join(' ', config.Layers
+					.Where(layer => profile.Receive.Contains(layer, StringComparer.OrdinalIgnoreCase))
+					.Select(config.DescriptionOf))),
+				CallState refusal => refusal
+			};
+		}
+
+		var subargument = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var name = layerArgument.Message.ToPlainText();
+		var kind = subargument.ToLowerInvariant();
+		if (kind is not ("desc" or "adesc" or "value" or "hex"))
+		{
+			return new CallState($"#-1 UNRECOGNIZED SUBARG '{subargument}' FOR FUNCTION RXDESC");
+		}
+
+		var layer = name.Trim().Length == 0 ? null : await VisibleLayerAsync(parser, config, name.Trim());
+		return kind switch
+		{
+			"desc" => new CallState(layer is null ? "#-1" : config.DescriptionOf(layer)),
+			"adesc" => new CallState(layer is null ? "#-1"
+				: config.DescriptionOf(layer) is "DESCRIBE" ? "ADESCRIBE" : config.DescriptionOf(layer) + "_ADESC"),
+			"value" => new CallState(layer is null ? "0" : LayerBit(config, layer).ToString(CultureInfo.InvariantCulture)),
+			_ => new CallState(layer is null ? "0x00000000" : $"0x{LayerBit(config, layer):X8}")
+		};
+	}
+
+	/// <summary>A layer's bit, by its place among the configured layers: 1 for the first, 2 for the next.</summary>
+	private static uint LayerBit(RealityConfiguration config, string layer) => 1u << Array.IndexOf(config.Layers, layer);
+
+	/// <summary>
+	/// The first configured layer whose name or alias starts with <paramref name="name"/> and that the executor may
+	/// ask about: one it receives, or any when it holds the guildmaster role or one above it.
+	/// </summary>
+	private async ValueTask<string?> VisibleLayerAsync(IMUSHCodeParser parser, RealityConfiguration config, string name)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var receives = (await Reality(parser).ReadObjectAsync(executor.Object().DBRef, ExecutionBudget.CurrentToken))?.Receive ?? [];
+		var staff = await RolePriorityOrBuiltInAsync(parser, "guildmaster") is { } priority
+			&& await executor.GrantsAsync(ExecutionBudget.CurrentToken) is var grants
+			&& (grants.IsOwner || grants.Roles.Any(held => held.Role.Priority >= priority));
+		return config.Layers.FirstOrDefault(layer =>
+			(staff || receives.Contains(layer, StringComparer.OrdinalIgnoreCase))
+			&& (layer.StartsWith(name, StringComparison.OrdinalIgnoreCase)
+				|| (config.Aliases ?? []).Any(alias => alias.Value == layer && alias.Key.StartsWith(name, StringComparison.OrdinalIgnoreCase))));
+	}
 
 	/// <summary>Answers <paramref name="answer"/> for the viewer and target arguments, or the first refusal.</summary>
 	private async ValueTask<CallState> BothAsync(IMUSHCodeParser parser,

@@ -33,6 +33,15 @@ public class RhostFunctionCallRewriterTests
 	[Arguments("sort(randmatch(this@test@this@this@test,*this*,@))", "1 3 4")]
 	[Arguments("-[chomp(%rthis is a test%r)]-", "-this is a test-")]
 	[Arguments("-[chomp(%rthis is a test%r,r)]-", "-\nthis is a test-")]
+	[Arguments("pedit(This is a test,is,x)", "Thx x a test")]
+	[Arguments("pedit(Atlantic,^,Trans)", "TransAtlantic")]
+	[Arguments("pedit(Atlantic,$,!)", "Atlantic!")]
+	[Arguments("pedit(This is a test,is,was,was,were)", "Thwere were a test")]
+	[Arguments("pedit(abc,a,x,b)", "xbc")]
+	[Arguments("medit(This is a test,is,x,test,moo,moo,bread)", "Thx x a bread")]
+	[Arguments("medit(abc,a,b,b,c)", "ccc")]
+	[Arguments("eq(startsecs(),convtime(starttime()))", "1")]
+	[Arguments("[isint(rebootsecs())] [gte(rebootsecs(),startsecs())]", "1 1")]
 	[Arguments("lnum2(5)", "0 1 2 3 4")]
 	[Arguments("lnum2(10,5,+)", "5 6 7 8 9 10 11 12 13 14")]
 	[Arguments("lnum2(10,5,+,2)", "5 7 9 11 13 15 17 19 21 23")]
@@ -103,6 +112,18 @@ public class RhostFunctionCallRewriterTests
 		await Assert.That(result.Notes).IsEquivalentTo([
 			"lnum2() with 3 argument(s) left as written: SharpMUSH has no lnum2()",
 			"xnor() with 1 argument(s) left as written: SharpMUSH has no xnor()"
+		]);
+	}
+
+	[Test]
+	public async Task MultiPairEditsAreEditsInOrder()
+	{
+		var result = RhostSoftcodeRewriter.Rewrite("think [pedit(%0,a,b,c,d)] [medit(%0,a,b,c)]");
+
+		await Assert.That(result.Text).IsEqualTo("think [edit(edit(%0,a,b),c,d)] [medit(%0,a,b,c)]");
+		await Assert.That(result.Notes).IsEquivalentTo([
+			"pedit() written as edit()",
+			"medit() with 4 argument(s) left as written: SharpMUSH has no medit()"
 		]);
 	}
 

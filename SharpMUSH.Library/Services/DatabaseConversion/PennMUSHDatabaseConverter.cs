@@ -2489,11 +2489,20 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			}
 		}
 
+		// The attribute each level describes things with, for rxdesc(): the first level on a layer names it.
+		var levelDescriptions = new Dictionary<string, string>(config.Descriptions ?? []);
+		foreach (var level in levels.Where(level => level.DescriptionAttribute is { Length: > 0 } attribute
+			&& !attribute.Equals("DESC", StringComparison.OrdinalIgnoreCase)))
+		{
+			if (layers.TryGetValue(level.Value, out var layer)) levelDescriptions.TryAdd(layer, level.DescriptionAttribute!);
+		}
+
 		await _reality.SaveConfigurationAsync(config with
 		{
 			Layers = [.. config.Layers, .. added],
 			Enabled = config.Enabled || inUse,
-			Aliases = aliases
+			Aliases = aliases,
+			Descriptions = levelDescriptions.Count > 0 ? levelDescriptions : null
 		}, cancellationToken);
 		context.Notes.Add($"Reality: {layers.Count} reality level bit(s) imported as layers ({string.Join(", ", layers.Values)}); " +
 			$"{written} object(s) given layers of their own{(inUse ? ", and reality turned on" : "")}");
