@@ -287,6 +287,7 @@ public partial class Commands
 					Arguments = new Dictionary<string, CallState>(),
 					CallerArguments = null,
 					CommandHistory = null,
+					CommandSources = null,
 					BreakPropagation = null,
 					Context = parser.CurrentState.Context with
 					{
