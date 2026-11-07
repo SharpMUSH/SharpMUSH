@@ -117,6 +117,7 @@ It pins the release in the exact files and moves the one-click files to `latest`
 first release only the exact files change. CI fails a build whose one-click files or exact files
 disagree among themselves (`release_images.py check`). The Railway template lives in Railway's
 template composer, not in this repository: set its three services' images to `latest` there once.
+A DigitalOcean snapshot keeps the tag it was built with, so rebuild and resubmit it after the bump.
 
 Which shorter tags move is decided from the repository's published GitHub Releases, not its git
 tags, so a stray `vX.Y.Z` tag or a refused pre-release does not hold `latest` back.

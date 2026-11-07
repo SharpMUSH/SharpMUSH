@@ -91,8 +91,14 @@ jobs:
           echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
           # move-dev queues only for main's newest commit, so a prerelease of an older one never
           # replaces a main build waiting for the dev lock.
-          if [[ "$(git ls-remote origin refs/heads/main | cut -f1)" == "$GITHUB_SHA" ]]; then
-            echo "on_main=true" >> "$GITHUB_OUTPUT"
+          if [[ "$PRERELEASE" == true ]]; then
+            if ! MAIN=$(git ls-remote --exit-code origin refs/heads/main); then
+              echo "::error::Could not read main's head from origin."
+              exit 1
+            fi
+            if [[ "${MAIN%%[[:space:]]*}" == "$GITHUB_SHA" ]]; then
+              echo "on_main=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
           python3 .github/scripts/release_images.py tags "$VERSION"
 
