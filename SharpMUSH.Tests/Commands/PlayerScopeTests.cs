@@ -84,4 +84,23 @@ public class PlayerScopeTests : ServerTestBase
 		await Assert.That(await As(_mortal, "@force me=think hi")).StartsWith("#-1 PERMISSION DENIED");
 		await Cmd($"@permission/clear {Mortal}=player.password player.force");
 	}
+
+	[Test]
+	public async Task ADenyOnAPlayerHoldsForWhatItOwns()
+	{
+		var thing = DBRef.Parse(await As(_mortal, $"@create {TestIsolationHelpers.GenerateUniqueName("Owned")}"));
+		await Assert.That(await EvalAs(thing, $"create({TestIsolationHelpers.GenerateUniqueName("ByThing")})")).StartsWith("#");
+		await Cmd($"@permission/deny {Mortal}=player.create");
+		await Assert.That(await EvalAs(thing, $"create({TestIsolationHelpers.GenerateUniqueName("ByThing")})")).StartsWith("#-1 PERMISSION DENIED");
+		await Cmd($"@permission/clear {Mortal}=player.create");
+	}
+
+	[Test]
+	public async Task AChatDenyStillLetsAPlayerStopListening()
+	{
+		await Cmd($"@permission/deny {Mortal}=player.chat");
+		await Assert.That(await As(_mortal, "@channel/gag Public")).DoesNotStartWith("#-1 PERMISSION DENIED");
+		await Assert.That(await As(_mortal, "@channel/on Public")).StartsWith("#-1 PERMISSION DENIED");
+		await Cmd($"@permission/clear {Mortal}=player.chat");
+	}
 }
