@@ -5,14 +5,14 @@
 .stats-tiles {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
-	gap: 12px;
+	gap: var(--space-4);
 }
 
 .stats-tile {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	padding: 12px 14px;
+	gap: var(--space-2);
+	padding: var(--space-4) var(--space-5);
 	background: var(--surface);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-card);
@@ -31,7 +31,7 @@
 
 .stats-tile-label {
 	font-family: var(--font-mono);
-	font-size: 0.6875rem;
+	font-size: var(--text-xs);
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: var(--text-faint);
@@ -40,7 +40,7 @@
 }
 
 .stats-tile-value {
-	font-size: 1.5rem;
+	font-size: var(--text-xl);
 	font-weight: 700;
 	line-height: 1.2;
 	color: var(--accent);

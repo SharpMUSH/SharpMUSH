@@ -169,7 +169,7 @@ public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 	{
 		Auth.SetAuthorized("headwiz");
 		Auth.SetClaims(new Claim(ClaimTypes.Role, "Wizard"));
-		Auth.SetPolicies("softcode.use", "players.view", "roles.admin");
+		Auth.SetPolicies("softcode.use", "players.view", "roles.admin", "game.wizard");
 
 		var cut = RenderNav();
 

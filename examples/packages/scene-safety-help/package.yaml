@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: scene-safety-help
 title: "Scene safety tools: +help topics"
-version: 1.1.0
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Puts the Scene safety tools topics into +help: registers the scene-safety package's help with the +help librarian, and points its messages at +help."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [scene-safety, help, bridge]
 category: Scenes
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. scene-safety keeps its topics on its own help

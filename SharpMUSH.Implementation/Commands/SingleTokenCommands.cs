@@ -83,6 +83,13 @@ public partial class Commands
 			executor,
 			args["1"].Message.ToPlainText(), LocateFlags.All, async realLocated =>
 			{
+				// match_controlled refuses an object the executor does not control before anything is
+				// read or written (src/cmds.c:1786), with @set's refusal.
+				if (await PermissionService.Check(executor, Requires.ControlOf(realLocated)) is PermissionRefusal refused)
+				{
+					return await NotifyService.PermissionDenied(executor, refused);
+				}
+
 				if (!args.TryGetValue("2", out var tmpContents)
 					|| (!Configuration.CurrentValue.Attribute.EmptyAttributes
 						&& string.IsNullOrEmpty(tmpContents.Message.ToPlainText())))

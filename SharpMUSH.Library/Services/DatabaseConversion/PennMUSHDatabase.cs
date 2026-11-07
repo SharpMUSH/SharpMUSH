@@ -51,6 +51,9 @@ public class PennMUSHDatabase
 	/// </summary>
 	public RealityDirectives Reality { get; set; } = RealityDirectives.None;
 
+	/// <summary>The source's command hooks, from its TinyMUX or RhostMUSH configuration file (<see cref="HookDirectives"/>).</summary>
+	public HookDirectives Hooks { get; set; } = HookDirectives.None;
+
 	/// <summary>
 	/// The game's maildb, when one was given alongside the dump; empty otherwise.
 	/// </summary>

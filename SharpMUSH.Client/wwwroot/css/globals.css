@@ -5,7 +5,7 @@
 	position: fixed;
 	inset: auto 0 0;
 	z-index: 9999;
-	padding: 1rem 4rem max(1rem, env(safe-area-inset-bottom)) 1rem;
+	padding: var(--space-5) calc(2 * var(--space-7)) max(var(--space-5), env(safe-area-inset-bottom)) var(--space-5);
 	background: var(--surface);
 	color: var(--text);
 	border-top: 2px solid var(--accent);
@@ -34,7 +34,7 @@
 	border-radius: var(--radius);
 	background: var(--surface-2);
 	color: var(--text);
-	font-size: 1.5rem;
+	font-size: var(--text-xl);
 	cursor: pointer;
 }
 

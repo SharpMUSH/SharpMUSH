@@ -281,18 +281,42 @@
 	--glow: 0,245,183;
 	--radius: 9px;
 	--radius-lg: 14px;
-	--cpad: 1.875rem;
+	/* Type scale. Every font-size in the portal is one of these, or relative to its parent (em, %): body text is
+	   --text-base, meta text (dates, counts, captions under a title) --text-sm, and --text-xs is kept for badges,
+	   kickers and mono labels. rem, so the reader's browser font size scales all of it. SizeTokenTests fails a
+	   stylesheet that writes a size of its own. */
+	--text-xs: 0.6875rem;    /* 11px */
+	--text-sm: 0.8125rem;    /* 13px */
+	--text-base: 0.9375rem;  /* 15px */
+	--text-md: 1.0625rem;    /* 17px */
+	--text-lg: 1.25rem;      /* 20px */
+	--text-xl: 1.5rem;       /* 24px */
+	--text-2xl: 2rem;        /* 32px */
+	--text-3xl: 2.75rem;     /* 44px */
+	/* The terminal's base size. terminalMetrics.js measures the character grid from it and fits the columns
+	   around it, so it is the terminal's own and not a step of the scale. */
+	--text-terminal: 0.84375rem;
+	/* Space scale, for padding and gap: a 4px grid with a 2px step for hairline insets. */
+	--space-1: 0.125rem;     /* 2px */
+	--space-2: 0.25rem;      /* 4px */
+	--space-3: 0.5rem;       /* 8px */
+	--space-4: 0.75rem;      /* 12px */
+	--space-5: 1rem;         /* 16px */
+	--space-6: 1.5rem;       /* 24px */
+	--space-7: 2rem;         /* 32px */
+	--space-8: 3rem;         /* 48px */
+	--cpad: var(--space-7);
 	--nav-letterspacing: 0.01em;
 	/* Documentation only: the mobile breakpoint. CSS media queries can't read a
 	   custom property in their condition, so every @media uses the literal 760px —
 	   keep them in sync with this value (and with sharpmushLayout.isNarrow in layout.js). */
 	--mobile-bp: 760px;
 	/* Container padding to use inside mobile (<=760px) media queries — tighter than the
-	   desktop --cpad (1.875rem) without depending on the density-compact toggle. Pages
+	   desktop --cpad without depending on the density-compact toggle. Pages
 	   should prefer var(--cpad-mobile) over a hardcoded 1rem in their @media blocks.
 	   Sizing is rem (16px root) so type + spacing honor the user's browser font size;
 	   borders, shadows, fixed dimensions, radii, and breakpoints stay px. */
-	--cpad-mobile: 1rem;
+	--cpad-mobile: var(--space-5);
 	/* Documentation only: a @container condition cannot read a custom property. */
 	--tier-narrow: 48rem;
 	--tier-medium: 64rem;
@@ -300,6 +324,8 @@
 	/* Zero until shell.css raises it while the fixed touch bottom nav is on screen; a scoped
 	   stylesheet reads it instead of repeating that media query. */
 	--bottomnav-clearance: 0px;
+	/* The command-terminal drawer's height on a wide screen; the content column keeps that much clear under it. */
+	--terminal-drawer-height: 300px;
 	/* Motion, after Material 3's easing and duration tokens; the spring has the damping of its Expressive
 	   default spatial spring (0.8). A rule names what moves and takes one of the --motion-* pairs:
 	   --motion-fade for an effect (colour, background, border, opacity, filter, shadow); for a spatial
@@ -565,27 +591,27 @@
 .not-authorized-card h1 {
 	margin: 0 0 0.5rem;
 	font-family: var(--font-display);
-	font-size: 1.5rem;
+	font-size: var(--text-xl);
 	font-weight: 600;
 	color: var(--text);
 }
 .not-authorized-card p {
 	margin: 0 0 1.25rem;
 	font-family: var(--font-ui);
-	font-size: 0.875rem;
+	font-size: var(--text-base);
 	color: var(--text-dim);
 }
 .not-authorized-home {
 	display: inline-flex;
 	align-items: center;
-	gap: 0.375rem;
-	padding: 0.5625rem 1rem;
+	gap: var(--space-3);
+	padding: var(--space-3) var(--space-5);
 	border-radius: var(--radius);
 	background: var(--accent);
 	color: var(--accent-on);
 	text-decoration: none;
 	font-family: var(--font-ui);
-	font-size: 0.8125rem;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	transition: filter var(--motion-fade);
 }
@@ -596,7 +622,7 @@
 /* ── Section kicker (mono uppercase labels — stat tiles, panel headers, meta fields) ── */
 .section-kicker {
 	font-family: var(--font-mono);
-	font-size: 0.625rem;
+	font-size: var(--text-xs);
 	letter-spacing: 0.16em;
 	text-transform: uppercase;
 	color: var(--text-faint);
@@ -604,7 +630,7 @@
 
 /* ── Density compact toggle ── */
 .density-compact {
-	--cpad: 1rem;
+	--cpad: var(--space-5);
 }
 
 /* Prevent mobile browsers (notably Chrome on Android) from auto-inflating

@@ -1,9 +1,9 @@
 .adm-stat {
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	gap: var(--space-4);
 	min-width: 0;
-	padding: 14px 16px;
+	padding: var(--space-5) var(--space-5);
 	background: var(--surface);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-card);
@@ -31,7 +31,7 @@
 }
 
 .adm-stat-value {
-	font-size: 22px;
+	font-size: var(--text-xl);
 	font-weight: 700;
 	line-height: 1.1;
 	color: var(--text);
@@ -41,13 +41,13 @@
 .adm-stat-label {
 	margin-top: 2px;
 	font-family: var(--font-mono);
-	font-size: 10px;
+	font-size: var(--text-xs);
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: var(--text-faint);
 }
 
 .adm-stat-sub {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }

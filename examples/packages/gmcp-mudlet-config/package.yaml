@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: gmcp-mudlet-config
 title: "GMCP for Mudlet: +config settings"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the GMCP for Mudlet settings into +config: registers them with the +config registry, so staff see and change them with +config gmcp-mudlet."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [gmcp-mudlet, config, bridge]
 category: MUD clients
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. gmcp-mudlet declares its settings as

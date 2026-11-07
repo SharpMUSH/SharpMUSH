@@ -36,7 +36,7 @@
             }
             else if (_items.Count == 0)
             {
-                <div class="gallery-empty">@Loc["GalleryEmpty"]</div>
+                <EmptyState Compact="true" Class="gallery-empty" Icon="@Icons.Material.Outlined.PhotoLibrary">@Loc["GalleryEmpty"]</EmptyState>
             }
             else
             {

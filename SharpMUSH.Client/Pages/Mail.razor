@@ -19,12 +19,10 @@
 {
     <div class="mail-page">
         <PlainPageHeader Title="@Loc["Mail"]" />
-        <KitCard Class="mail-needs-character">
-            <div class="mail-note">
-                <p>@Loc["MailNeedsCharacter"]</p>
-                <CapsuleButton Href="/characters" Icon="@Icons.Material.Outlined.Groups">@Loc["Characters"]</CapsuleButton>
-            </div>
-        </KitCard>
+        <EmptyState Class="mail-needs-character" Icon="@Icons.Material.Outlined.Mail">
+            <ChildContent>@Loc["MailNeedsCharacter"]</ChildContent>
+            <Action><CapsuleButton Href="/characters" Icon="@Icons.Material.Outlined.Groups">@Loc["Characters"]</CapsuleButton></Action>
+        </EmptyState>
     </div>
 }
 else
@@ -36,7 +34,7 @@ else
             </Actions>
         </PlainPageHeader>
 
-        <div class="mail-panes">
+        <div class="mail-panes @(FolderEmpty ? "mail-panes--single" : null)">
             <KitCard Class="mail-list" Title="@_folder" Sub="@(_messages.Count > 0 ? Loc.Plural("NavMailMessageCount", "count", _messages.Count) : null)">
                 <div class="mail-list-body" aria-busy="@(_loading ? "true" : "false")">
                     @if (_loading)
@@ -51,7 +49,10 @@ else
                     }
                     else if (_messages.Count == 0)
                     {
-                        <div class="mail-note mail-list-empty">@Loc["MailEmpty"]</div>
+                        <EmptyState Class="mail-list-empty" Icon="@Icons.Material.Outlined.Inbox">
+                            <ChildContent>@Loc["MailEmpty"]</ChildContent>
+                            <Action><CapsuleButton Primary="true" Href="/mail/compose" Icon="@Icons.Material.Outlined.Edit">@Loc["Compose"]</CapsuleButton></Action>
+                        </EmptyState>
                     }
                     else
                     {
@@ -79,47 +80,50 @@ else
                 </div>
             </KitCard>
 
-            <KitCard Class="@(_selected is null ? "mail-reading mail-reading--empty" : "mail-reading")">
-                @if (_selected is null)
-                {
-                    <div class="mail-reading-none">@Loc["NavMailSelectMessage"]</div>
-                }
-                else
-                {
-                    <div class="mail-reading-head">
-                        <CharacterAvatar Class="mail-avatar mail-reading-avatar" Name="@_selected.From" Character="@_selected.From" />
-                        <div class="mail-reading-meta">
-                            <div class="mail-reading-subject">@_selected.Subject</div>
-                            <div class="mail-reading-from">@Loc["From"]: @_selected.From</div>
-                            <div class="mail-reading-date">@DateDisplay.LongDateTime(_selected.DateSent)</div>
+            @if (!FolderEmpty)
+            {
+                <KitCard Class="@(_selected is null ? "mail-reading mail-reading--empty" : "mail-reading")">
+                    @if (_selected is null)
+                    {
+                        <div class="mail-reading-none">@Loc["NavMailSelectMessage"]</div>
+                    }
+                    else
+                    {
+                        <div class="mail-reading-head">
+                            <CharacterAvatar Class="mail-avatar mail-reading-avatar" Name="@_selected.From" Character="@_selected.From" />
+                            <div class="mail-reading-meta">
+                                <div class="mail-reading-subject">@_selected.Subject</div>
+                                <div class="mail-reading-from">@Loc["From"]: @_selected.From</div>
+                                <div class="mail-reading-date">@DateDisplay.LongDateTime(_selected.DateSent)</div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="mail-reading-body" aria-busy="@(_bodyLoading ? "true" : "false")">
-                        @if (_bodyLoading)
-                        {
-                            <MudSkeleton Height="18px" Class="mb-1" />
-                            <MudSkeleton Height="18px" Width="80%" Class="mb-1" />
-                            <MudSkeleton Height="18px" Width="60%" />
-                        }
-                        else if (_body is null)
-                        {
-                            <div class="mail-reading-missing">@(_bodyError ?? Loc["MailNotFound"])</div>
-                        }
-                        else
-                        {
-                            <div class="mail-reading-text">@_body</div>
-                        }
-                    </div>
-                    <div class="mail-reading-actions">
-                        <CapsuleButton Class="mail-reply" Href="@ReplyHref(_selected)" Icon="@Icons.Material.Outlined.Reply">@Loc["Reply"]</CapsuleButton>
-                        @if (_body is not null)
-                        {
-                            <CapsuleButton Class="mail-forward" OnClick="@(() => Forward(_selected, _body))" Icon="@Icons.Material.Outlined.Forward">@Loc["NavMailForward"]</CapsuleButton>
-                        }
-                        <CapsuleButton Class="mail-open" Href="@DetailHref(_selected)" Icon="@Icons.Material.Outlined.OpenInFull">@Loc["NavMailReadFullMessage"]</CapsuleButton>
-                    </div>
-                }
-            </KitCard>
+                        <div class="mail-reading-body" aria-busy="@(_bodyLoading ? "true" : "false")">
+                            @if (_bodyLoading)
+                            {
+                                <MudSkeleton Height="18px" Class="mb-1" />
+                                <MudSkeleton Height="18px" Width="80%" Class="mb-1" />
+                                <MudSkeleton Height="18px" Width="60%" />
+                            }
+                            else if (_body is null)
+                            {
+                                <div class="mail-reading-missing">@(_bodyError ?? Loc["MailNotFound"])</div>
+                            }
+                            else
+                            {
+                                <div class="mail-reading-text">@_body</div>
+                            }
+                        </div>
+                        <div class="mail-reading-actions">
+                            <CapsuleButton Class="mail-reply" Href="@ReplyHref(_selected)" Icon="@Icons.Material.Outlined.Reply">@Loc["Reply"]</CapsuleButton>
+                            @if (_body is not null)
+                            {
+                                <CapsuleButton Class="mail-forward" OnClick="@(() => Forward(_selected, _body))" Icon="@Icons.Material.Outlined.Forward">@Loc["NavMailForward"]</CapsuleButton>
+                            }
+                            <CapsuleButton Class="mail-open" Href="@DetailHref(_selected)" Icon="@Icons.Material.Outlined.OpenInFull">@Loc["NavMailReadFullMessage"]</CapsuleButton>
+                        </div>
+                    }
+                </KitCard>
+            }
         </div>
     </div>
 }
@@ -137,6 +141,9 @@ else
     private string? _listError;
     private bool _bodyLoading;
     private bool _loading;
+
+    /// <summary>The folder has nothing in it, so the list takes the whole width and no reading card stands empty beside it.</summary>
+    private bool FolderEmpty => !_loading && _listError is null && _messages.Count == 0 && _selected is null;
 
     /// <summary>The folder whose list is on screen (or loading); a query change reloads.</summary>
     private string? _loadedFolder;

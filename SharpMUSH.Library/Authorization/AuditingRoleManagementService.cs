@@ -53,11 +53,11 @@ public sealed class AuditingRoleManagementService(
 	}
 
 	public async Task<RoleOutcome<Success>> SetOverridesAsync(RoleActor actor, string accountId, IReadOnlyCollection<string> scopes,
-		PermissionState state, CancellationToken ct = default)
+		PermissionState state, string? reach = null, CancellationToken ct = default)
 	{
-		var outcome = await inner.SetOverridesAsync(actor, accountId, scopes, state, ct);
+		var outcome = await inner.SetOverridesAsync(actor, accountId, scopes, state, reach, ct);
 		if (outcome is Success)
-			await RecordAsync(actor, AuditActions.RoleOverride, await AccountTargetAsync(accountId, ct), Describe(scopes, state), ct);
+			await RecordAsync(actor, AuditActions.RoleOverride, await AccountTargetAsync(accountId, ct), Describe(scopes, state, reach), ct);
 		return outcome;
 	}
 
@@ -78,10 +78,10 @@ public sealed class AuditingRoleManagementService(
 	}
 
 	public async Task<RoleOutcome<Success>> SetObjectOverridesAsync(RoleActor actor, AnySharpObject target,
-		IReadOnlyCollection<string> scopes, PermissionState state, CancellationToken ct = default)
+		IReadOnlyCollection<string> scopes, PermissionState state, string? reach = null, CancellationToken ct = default)
 	{
-		var outcome = await inner.SetObjectOverridesAsync(actor, target, scopes, state, ct);
-		if (outcome is Success) await RecordAsync(actor, AuditActions.RoleOverride, AuditTargets.Of(target), Describe(scopes, state), ct);
+		var outcome = await inner.SetObjectOverridesAsync(actor, target, scopes, state, reach, ct);
+		if (outcome is Success) await RecordAsync(actor, AuditActions.RoleOverride, AuditTargets.Of(target), Describe(scopes, state, reach), ct);
 		return outcome;
 	}
 
@@ -155,6 +155,6 @@ public sealed class AuditingRoleManagementService(
 		=> $"priority {draft.Priority}; "
 			+ string.Join(", ", draft.Permissions.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => $"{p.Key}={p.Value}"));
 
-	private static string Describe(IReadOnlyCollection<string> scopes, PermissionState state)
-		=> $"{state}: {string.Join(", ", scopes)}";
+	private static string Describe(IReadOnlyCollection<string> scopes, PermissionState state, string? reach)
+		=> $"{state}: {string.Join(", ", scopes)}{(string.IsNullOrWhiteSpace(reach) ? "" : $" (reach {reach.Trim().ToLowerInvariant()})")}";
 }

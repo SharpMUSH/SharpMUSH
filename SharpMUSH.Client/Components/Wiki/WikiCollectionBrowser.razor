@@ -86,7 +86,7 @@
         <p class="wiki-collection-range" aria-live="polite">@string.Format(Loc["WikiPageRange"], rows.Total == 0 ? 0 : _state.Skip + 1, Math.Min((long)_state.Skip + rows.Pages.Count, rows.Total), rows.Total)</p>
         @if (rows.Total == 0)
         {
-            <div class="wiki-empty">@(string.IsNullOrWhiteSpace(_state.Search) ? Loc["NavWikiNoPages"] : string.Format(Loc["NavWikiNoMatches"], _state.Search))</div>
+            <EmptyState Class="wiki-empty" Icon="@(string.IsNullOrWhiteSpace(_state.Search) ? Icons.Material.Outlined.Article : Icons.Material.Outlined.SearchOff)">@(string.IsNullOrWhiteSpace(_state.Search) ? Loc["NavWikiNoPages"] : string.Format(Loc["NavWikiNoMatches"], _state.Search))</EmptyState>
         }
         <div class="wiki-collection-pages">
             @foreach (var article in rows.Pages)

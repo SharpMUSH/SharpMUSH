@@ -1,6 +1,6 @@
 # Changelog
 
-SharpMUSH's releases, newest first. Each tag `vX.Y.Z` publishes the Docker images and must have a section here.
+SharpMUSH's releases, newest first. Each GitHub Release tagged `vX.Y.Z` publishes the Docker images and must have a section here.
 
 Two version numbers matter:
 
@@ -16,7 +16,7 @@ The first release. Plugin contract 3.0.0. World format 1.
 - A MUSH server on .NET 11 that aims at PennMUSH compatibility: the softcode parser, commands, functions, flags, locks, attributes, zones, parents, the queue, `@mail` and channels.
 - Imports a PennMUSH database and its `mush.cnf` from the setup wizard. Colour codes that cannot be converted safely are removed, with a warning. Differences from PennMUSH are listed in `help pennmush compatibility`.
 - Stores the world in an embedded LMDB database (the `lightning` provider): one directory per world, no database server to run. `@backup` copies a live world without stopping it; `@storage` reports space and history retention.
-- Three processes: the game server, a socket server that owns client connections and keeps them across game server restarts, and a rendering worker. NATS connects them. `docker compose up -d` runs the set.
+- Three processes: the game server, a socket server that owns client connections and keeps them across game server restarts, and a rendering worker. NATS connects them. The Compose files in `deploy/` run the set.
 - Telnet with TTYPE, CHARSET, MSSP, GMCP, MXP and Pueblo; WebSocket clients; ASCII output for clients without UTF-8, and a screen-reader mode.
 - Styled text is MarkupString, rendered for each client's protocol and width. Listings and panels follow the game's `layout_border` and `layout_theme`.
 - Roles and permissions in place of fixed wizard and royalty bits, managed with `@role`. Secrets are stored encrypted and never readable from softcode.

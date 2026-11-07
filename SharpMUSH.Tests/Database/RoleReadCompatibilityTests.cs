@@ -36,13 +36,15 @@ public class RoleReadCompatibilityTests
 		public Task<IReadOnlyList<SharpRole>> GetRolesForAccountAsync(string accountId, CancellationToken token = default) => throw new NotSupportedException();
 		public Task<IReadOnlyList<string>> GetAccountIdsForRoleAsync(string slug) => throw new NotSupportedException();
 		public Task<IReadOnlyDictionary<string, PermissionState>> GetAccountOverridesAsync(string accountId, CancellationToken token = default) => throw new NotSupportedException();
-		public Task SetAccountOverrideAsync(string accountId, string scope, PermissionState state) => throw new NotSupportedException();
+		public Task SetAccountOverrideAsync(string accountId, string scope, PermissionState state, string? reach = null) => throw new NotSupportedException();
+		public Task<IReadOnlyDictionary<string, string>> GetAccountReachesAsync(string accountId, CancellationToken token = default) => throw new NotSupportedException();
 		public Task<IReadOnlyList<string>> GetObjectRolesAsync(int number, CancellationToken token = default) => throw new NotSupportedException();
 		public Task AssignRoleToObjectAsync(int number, string slug) => throw new NotSupportedException();
 		public Task RemoveRoleFromObjectAsync(int number, string slug) => throw new NotSupportedException();
 		public Task<IReadOnlyList<int>> GetObjectsForRoleAsync(string slug, CancellationToken token = default) => throw new NotSupportedException();
 		public Task<IReadOnlyDictionary<string, PermissionState>> GetObjectOverridesAsync(int number, CancellationToken token = default) => throw new NotSupportedException();
-		public Task SetObjectOverrideAsync(int number, string scope, PermissionState state) => throw new NotSupportedException();
+		public Task SetObjectOverrideAsync(int number, string scope, PermissionState state, string? reach = null) => throw new NotSupportedException();
+		public Task<IReadOnlyDictionary<string, string>> GetObjectReachesAsync(int number, CancellationToken token = default) => throw new NotSupportedException();
 		public Task<IReadOnlyList<CustomPermission>> GetCustomPermissionsAsync(CancellationToken token = default) => throw new NotSupportedException();
 		public Task UpsertCustomPermissionAsync(CustomPermission permission) => throw new NotSupportedException();
 		public Task<PermissionOverrideHolders> GetOverridesOfAsync(string scope, CancellationToken token = default) => throw new NotSupportedException();

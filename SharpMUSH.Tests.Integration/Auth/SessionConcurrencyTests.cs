@@ -96,11 +96,19 @@ public class SessionConcurrencyTests(ServerWebAppFactory factory)
 				+ string.Join(" | ", failures.Select(f => $"{f.Item1}: {f.Item2}")));
 	}
 
-	// This real-clock window must not compete with unrelated authentication work for the credential gate.
-	[Test, NotInParallel]
+	/// <summary>A clock that moves only when the test moves it. It starts a day ahead of the real one, so
+	/// nothing reading the real clock (the expired-session sweep) can find these sessions expired.</summary>
+	private sealed class Clock : TimeProvider
+	{
+		public DateTimeOffset Now { get; set; } = DateTimeOffset.UtcNow.AddDays(1);
+		public override DateTimeOffset GetUtcNow() => Now;
+	}
+
+	[Test]
 	public async Task RollingWindow_StillSlides_PastTheOriginalExpiry()
 	{
-		var store = new DatabaseAccountSessionStore(Db);
+		var clock = new Clock();
+		var store = new DatabaseAccountSessionStore(Db) { Clock = clock };
 		var accountId = await CreateAccountAsync("rolling");
 		var ttl = TimeSpan.FromSeconds(2);
 		var token = await store.CreateTokenAsync(accountId, ttl, "203.0.113.71");
@@ -111,11 +119,11 @@ public class SessionConcurrencyTests(ServerWebAppFactory factory)
 			// Steady use across the whole original window, then past its end.
 			for (var i = 0; i < 12; i++)
 			{
-				await Task.Delay(250);
+				clock.Now += TimeSpan.FromMilliseconds(250);
 				await Assert.That((await store.ValidateAsync(token))?.AccountId).IsEqualTo(accountId);
 			}
 
-			await Assert.That(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()).IsGreaterThan(originalExpiry)
+			await Assert.That(clock.Now.ToUnixTimeMilliseconds()).IsGreaterThan(originalExpiry)
 				.Because("the test must actually outlive the session's original expiry for this to prove anything");
 			await Assert.That((await Db.GetSessionAsync(token))!.ExpiryUnixMs).IsGreaterThan(originalExpiry);
 		}
@@ -128,14 +136,15 @@ public class SessionConcurrencyTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task ExpiredSession_IsRejectedAndDeleted()
 	{
-		var store = new DatabaseAccountSessionStore(Db);
+		var clock = new Clock();
+		var store = new DatabaseAccountSessionStore(Db) { Clock = clock };
 		var accountId = await CreateAccountAsync("expiry");
 		var token = await store.CreateTokenAsync(accountId, TimeSpan.FromMilliseconds(150), "203.0.113.72");
 		try
 		{
 			await Assert.That(await Db.GetSessionAsync(token)).IsNotNull();
 
-			await Task.Delay(500);
+			clock.Now += TimeSpan.FromMilliseconds(150);
 
 			await Assert.That(await store.ValidateAsync(token)).IsNull();
 			await Assert.That(await Db.GetSessionAsync(token)).IsNull();

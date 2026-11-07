@@ -1,27 +1,27 @@
 .cfg-chips {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 6px;
+	gap: var(--space-3);
 	align-items: center;
 	min-height: 30px;
 }
 
 .cfg-empty {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--text-faint);
 }
 
 .cfg-chip {
 	display: inline-flex;
 	align-items: center;
-	gap: 4px;
+	gap: var(--space-2);
 	height: 26px;
-	padding: 0 4px 0 10px;
+	padding: 0 var(--space-2) 0 var(--space-4);
 	border-radius: 13px;
 	background: var(--surface-2);
 	color: var(--text);
 	font-family: var(--font-mono);
-	font-size: 12px;
+	font-size: var(--text-sm);
 }
 
 .cfg-chip--changed {
@@ -36,7 +36,7 @@
 	border-radius: 12px;
 	background: transparent;
 	color: inherit;
-	font-size: 15px;
+	font-size: var(--text-base);
 	line-height: 1;
 	cursor: pointer;
 	opacity: 0.7;

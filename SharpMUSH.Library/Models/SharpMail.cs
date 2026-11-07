@@ -17,5 +17,11 @@ public class SharpMail
 	public required string Folder { get; set; }
 	public required MString Content { get; set; }
 	public required MString Subject { get; set; }
+
+	/// <summary>
+	/// Sent anonymously, as a RhostMUSH game could: the message keeps its sender (who still finds it among
+	/// the mail they sent), but reading it answers no sender, so the recipient is never shown who it was.
+	/// </summary>
+	public bool Anonymous { get; set; }
 	[JsonIgnore] public required AsyncLazy<AnyOptionalSharpObject> From { get; set; }
 }

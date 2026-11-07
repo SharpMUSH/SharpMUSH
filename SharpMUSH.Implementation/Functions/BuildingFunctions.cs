@@ -20,13 +20,19 @@ public partial class Functions
 	/// <remarks>
 	/// <c>fun_pcreate</c> (<c>src/fundb.c:2129-2141</c>) hands <c>args[2]</c> to <c>do_pcreate</c>, which
 	/// settles it through <c>make_first_free_wrapper</c> before the name and the password
-	/// (<c>src/wiz.c:120</c>).
+	/// (<c>src/wiz.c:120</c>). do_pcreate refuses anyone who is not Create_Player, a wizard or a holder of the
+	/// Player_Create power (<c>src/wiz.c:113-116</c>), as <c>@pcreate</c> does.
 	/// </remarks>
-	[SharpFunction(Name = "pcreate", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.WizardOnly)]
+	[SharpFunction(Name = "pcreate", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
 	public async ValueTask<CallState> PCreate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
+		if (!await executor.IsWizard() && !await executor.HasPower("Player_Create"))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoPowerOverBodyAndMind), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 
 		var result = await BuildingHelpers.WithRequestedDbrefsAsync(Mediator, NotifyService, executor,
 			[BuildingHelpers.Argument(args, "2")],
@@ -36,7 +42,7 @@ public partial class Functions
 		// function does too: fun_pcreate is nothing but a call to it.
 		if (result is DBRef player)
 		{
-			await BuildingHelpers.AnnouncePlayerCreatedAsync(parser, NotifyService, EventService, executor,
+			await BuildingHelpers.AnnouncePlayerCreatedAsync(parser, Mediator, NotifyService, EventService, executor,
 				args["0"].Message.ToPlainText(), args["1"].Message.ToPlainText(), player);
 		}
 

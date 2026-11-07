@@ -171,6 +171,14 @@ public record CompatibilityOptions(
 	bool MuxQuiet,
 
 	[property: SharpConfig(
+		Name = "mux_function_caller",
+		Category = "Compatibility",
+		Description = "A global @function defined without /privileged runs as whoever calls it, as on TinyMUX: %! and me are the caller, with the caller's permissions. One defined with /privileged runs as the object that holds it. Off, every global @function runs as the object that holds it, as on PennMUSH. Importing a TinyMUX database turns it on",
+		Group = "TinyMUX Compatibility",
+		Order = 7)]
+	bool MuxFunctionCaller,
+
+	[property: SharpConfig(
 		Name = "mapsql_sync",
 		Category = "Compatibility",
 		Description = "@mapsql runs its query inside the command, as PennMUSH does, so every row is queued before anything queued after the command; the game waits while the query runs. Off, the query runs while the game goes on and each row is queued as it arrives. A PennMUSH database import turns it on",

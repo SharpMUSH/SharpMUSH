@@ -29,7 +29,7 @@ else
         <MudPaper Outlined="true" Class="pa-4 mb-3" role="dialog" aria-labelledby="@(_frameId + "-confirm")">
             <MudText Typo="Typo.h6" id="@(_frameId + "-confirm")">@Loc["HostedAppAsksToChange", Title]</MudText>
             <MudText Typo="Typo.body2" Class="mb-2">@Loc["HostedAppChangesAsCharacter"]</MudText>
-            <ul class="mb-2" style="padding-inline-start:1.5rem;">
+            <ul class="mb-2" style="padding-inline-start:var(--space-6);">
                 @foreach (var step in plan.Steps)
                 {
                     <li>@step.Summary</li>
@@ -51,7 +51,7 @@ else
         <MudPaper Outlined="true" Class="pa-4 mb-3" role="dialog" aria-labelledby="@(_frameId + "-consent")">
             <MudText Typo="Typo.h6" id="@(_frameId + "-consent")">@Loc["OAuthConsentAsks", consent.App.Name]</MudText>
             <MudText Typo="Typo.body2" Class="mb-2">@Loc["OAuthConsentCharacter", consent.Character]</MudText>
-            <ul class="mb-2" style="padding-inline-start:1.5rem;">
+            <ul class="mb-2" style="padding-inline-start:var(--space-6);">
                 @foreach (var scope in OAuthScopeText.Shown(consent.Scopes))
                 {
                     <li><strong>@OAuthScopeText.Name(Loc, scope, _scopeViews)</strong> @OAuthScopeText.Detail(Loc, scope, _scopeViews)</li>

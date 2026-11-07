@@ -3,6 +3,7 @@ using NSubstitute;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services.Interfaces;
@@ -246,4 +247,21 @@ public class ImportIdentityTransferTests
 		await Assert.That((await previous.GetAccountByUsernameAsync("original"))?.PasswordHash).IsEqualTo("original-password");
 	}
 
+	[Test]
+	public async Task AnOverridesReachedRoleTravelsWithTheAccount()
+	{
+		var (journal, session) = await Prepare();
+		string accountId;
+		await using (var source = Open(journal.LiveWorldPath))
+		{
+			accountId = (await source.CreateAccountAsync("owner", null, "password")).Id!;
+			await source.Store.WriteAsync(tx => tx.Put(Tables.Role, Keys.Str("cadet"), Codec.Serialize(new RoleRecord { Slug = "cadet", Priority = 5 })));
+			await source.SetAccountOverrideAsync(accountId, "game.tport_anything", PermissionState.Allow, "cadet");
+		}
+		journal.RequestPromotion(session.Id);
+		journal.ApplyPendingBeforeHostConstruction();
+		await using var promoted = Open(journal.LiveWorldPath);
+		await Assert.That((await promoted.GetAccountReachesAsync(accountId))["game.tport_anything"]).IsEqualTo("cadet");
+		await Assert.That(await promoted.GetRoleAsync("cadet") is SharpRole { Priority: 5 }).IsTrue();
+	}
 }

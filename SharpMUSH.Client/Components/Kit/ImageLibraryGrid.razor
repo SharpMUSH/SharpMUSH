@@ -21,11 +21,11 @@
     }
     else if (_error is not null)
     {
-        <div class="kit-library-empty" aria-hidden="true">@_error</div>
+        <EmptyState Class="kit-library-empty" aria-hidden="true" Failed="true">@_error</EmptyState>
     }
     else if (Shown.Count == 0)
     {
-        <div class="kit-library-empty" aria-hidden="true">@EmptyText</div>
+        <EmptyState Class="kit-library-empty" aria-hidden="true" Icon="@(string.IsNullOrWhiteSpace(_search) ? Icons.Material.Outlined.PermMedia : Icons.Material.Outlined.SearchOff)">@EmptyText</EmptyState>
     }
     else
     {

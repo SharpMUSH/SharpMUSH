@@ -256,7 +256,7 @@
 
                 @if (!PackageGroups.Any())
                 {
-                    <p class="setup-pkg-none">@Loc["AdmSetupPkgNoMatch", _search.Trim()]</p>
+                    <EmptyState Compact="true" Class="setup-pkg-none" Icon="@Icons.Material.Outlined.SearchOff">@Loc["AdmSetupPkgNoMatch", _search.Trim()]</EmptyState>
                 }
 
                 @foreach (var group in PackageGroups)

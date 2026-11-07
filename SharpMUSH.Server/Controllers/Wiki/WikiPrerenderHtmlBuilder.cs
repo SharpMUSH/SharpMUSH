@@ -49,6 +49,7 @@ public static class WikiPrerenderHtmlBuilder
 		sb.AppendLine($"  <title>{title}</title>");
 		sb.AppendLine($"  <link rel=\"canonical\" href=\"{canonical}\" />");
 		AppendAlternates(sb, canonicalUrl, alternateLocales, defaultLocale);
+		sb.AppendLine($"  <meta property=\"og:site_name\" content=\"{HttpUtility.HtmlEncode(siteName)}\" />");
 		sb.AppendLine($"  <meta property=\"og:title\" content=\"{ogTitle}\" />");
 		sb.AppendLine($"  <meta property=\"og:description\" content=\"{ogDesc}\" />");
 		sb.AppendLine($"  <meta property=\"og:type\" content=\"article\" />");
@@ -137,6 +138,7 @@ public static class WikiPrerenderHtmlBuilder
 		sb.AppendLine($"  <title>{title}</title>");
 		sb.AppendLine($"  <link rel=\"canonical\" href=\"{canonical}\" />");
 		AppendAlternates(sb, canonicalUrl, alternateLocales, defaultLocale);
+		sb.AppendLine($"  <meta property=\"og:site_name\" content=\"{HttpUtility.HtmlEncode(siteName)}\" />");
 		sb.AppendLine($"  <meta property=\"og:title\" content=\"{ogTitle}\" />");
 		sb.AppendLine($"  <meta property=\"og:description\" content=\"{ogDesc}\" />");
 		sb.AppendLine($"  <meta property=\"og:type\" content=\"profile\" />");

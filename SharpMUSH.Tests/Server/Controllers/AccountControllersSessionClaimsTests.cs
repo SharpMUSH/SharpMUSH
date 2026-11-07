@@ -114,28 +114,24 @@ public class AccountControllersSessionClaimsTests
 	}
 
 	private static AdminAccountsController Admin(IAccountService accounts, IAccountSessionStore sessions, ClaimsPrincipal user,
-		FusionCache cache)
-	{
-		var claims = new AccountClaimsService(
-			Substitute.For<IAdministrativeCapabilityService>(), cache, new AccountClaimsInvalidator(cache, new ObjectVersions()), NullLogger<AccountClaimsService>.Instance);
-		return new AdminAccountsController(accounts, sessions, claims, Substitute.For<IAdministrativeCapabilityService>(),
-			Substitute.For<IAuditLog>(), Substitute.For<IMediator>(), new BearerAccountResolver(sessions, accounts),
-			NullLogger<AdminAccountsController>.Instance)
+		IAdministrativeCapabilityService capabilities)
+		=> new(accounts, sessions, capabilities, Substitute.For<IAuditLog>(), Substitute.For<IMediator>(),
+			new BearerAccountResolver(sessions, accounts), NullLogger<AdminAccountsController>.Instance)
 		{ ControllerContext = Context(user, "token") };
-	}
 
+	/// <summary>The account list needs <c>game.wizard</c>, which a role grants and an override can take away.</summary>
 	[Test]
-	[Arguments(PortalRole.Player, false)]
-	[Arguments(PortalRole.Wizard, true)]
-	[Arguments(PortalRole.God, true)]
-	public async Task AdminAccountsReadsTheRoleClaim(PortalRole role, bool admitted)
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task AdminAccountsNeedsGameWizard(bool admitted)
 	{
 		var accounts = Substitute.For<IAccountService>();
 		var sessions = Substitute.For<IAccountSessionStore>();
 		accounts.GetAllAccountsAsync(Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpAccount>>([]));
+		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
+		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), PortalPermission.GameWizard, Arg.Any<CancellationToken>()).Returns(admitted);
 
-		using var cache = new FusionCache(new Microsoft.Extensions.Options.OptionsWrapper<FusionCacheOptions>(new FusionCacheOptions()));
-		var result = await Admin(accounts, sessions, Principal(AccountSessionAuthenticationHandler.SchemeName, role), cache).List();
+		var result = await Admin(accounts, sessions, Principal(AccountSessionAuthenticationHandler.SchemeName, PortalRole.Player), capabilities).List();
 
 		await Assert.That(result is OkObjectResult).IsEqualTo(admitted);
 		await sessions.DidNotReceive().ValidateAsync(Arg.Any<string>());

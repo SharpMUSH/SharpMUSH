@@ -55,6 +55,10 @@ SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING=true dotnet run --project SharpMUSH.Tests
 SHARPMUSH_ENABLE_TEST_TELEMETRY=true dotnet run --project SharpMUSH.Tests
 ```
 
+Tests of packages that live in the official library (duties) install them from a checkout of
+SharpMUSH/SharpMUSH.Packages: `SHARPMUSH_PACKAGES_PATH`, else a `SharpMUSH.Packages` clone beside this
+repository (`TestPaths.PackageLibrary`).
+
 The test framework is **TUnit** (not xUnit or MSTest). The `--treenode-filter` format is `/<assembly>/<namespace>/<class>/<method>` with `*` wildcards.
 
 **Tests share one world and one `NotifyService` substitute, and run in parallel.** A test that asserts what someone heard (or didn't hear) creates that receiver in a room of its own, not `DefaultHome`. It reads output through `TestHelpers.NotificationRecorder` (`Notifications` on the factory), matched on a unique string from `TestIsolationHelpers.GenerateUniqueName` (socket handles from `GenerateUniqueHandle`), never by position or "last line". It never calls `ClearReceivedCalls()` or `Received()` on the shared substitute.
@@ -67,10 +71,11 @@ Only one host ever opens a given database. A host variant that needs a different
 
 ## Running the Server
 
-The startup project is `SharpMUSH.Server`. For full operation, also run `SharpMUSH.SocketServer` (client sockets) and `SharpMUSH.RenderingWorker` (output rendering). The compose stack runs all three on the embedded `lightning` provider with NATS, and is what `deploy/` ships to production:
+The startup project is `SharpMUSH.Server`. For full operation, also run `SharpMUSH.SocketServer` (client sockets) and `SharpMUSH.RenderingWorker` (output rendering). The Compose files in `deploy/` run all three on the embedded `lightning` provider with NATS; there is no Compose file at the repository root:
 
 ```bash
-docker compose up -d
+cd deploy && cp .env.example .env    # set SHARPMUSH_DOMAIN
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 The `lightning` provider is embedded and needs no Docker for the database itself — it
@@ -258,6 +263,10 @@ A change to what the Lightning provider stores is a new entry at the end of `Lig
 format number; the world is stamped with the last one (`WorldFormat`) and a server refuses a world stamped newer than its own.
 Every migration before the first release is format 1. `WorldFormatTests` fail a migration that records a `mig:` marker
 without an entry, or a format that goes back or skips a number.
+`UpgradePathTests` open every world kept in `SharpMUSH.Tests/Database/Lightning/UpgradePath/Worlds` (one per released
+format) with the current build and check it reads back what that release wrote; a release that brings a new format
+adds its world there. `format-1` was written by main before 1.0.0 and is written again from the v1.0.0 tag (see
+that folder's README).
 
 ### Authentication Architecture
 

@@ -232,24 +232,29 @@ public static class ResolvedThemeExtensions
 			return palette;
 		}
 
+		// Sizes are the type scale in tokens.css (--text-*), so MudBlazor's text matches the portal's own.
 		var typography = new Typography
 		{
 			Default = new DefaultTypography
 			{
 				FontFamily = UiFontFamily,
-				FontSize = "14px",
+				FontSize = "var(--text-base)",
 				FontWeight = "400",
 				LineHeight = "1.5",
 			},
-			H1 = new H1Typography { FontFamily = DisplayFontFamily, FontWeight = "600" },
-			H2 = new H2Typography { FontFamily = DisplayFontFamily, FontWeight = "600" },
-			H3 = new H3Typography { FontFamily = DisplayFontFamily, FontWeight = "600" },
-			H4 = new H4Typography { FontFamily = DisplayFontFamily, FontWeight = "600" },
-			H5 = new H5Typography { FontFamily = DisplayFontFamily, FontWeight = "600" },
-			H6 = new H6Typography { FontFamily = DisplayFontFamily, FontWeight = "600" },
-			Button = new ButtonTypography { FontFamily = UiFontFamily, FontWeight = "500", TextTransform = "none" },
-			Caption = new CaptionTypography { FontFamily = MonoFontFamily, FontSize = "11px" },
-			Overline = new OverlineTypography { FontFamily = MonoFontFamily },
+			H1 = new H1Typography { FontFamily = DisplayFontFamily, FontWeight = "600", FontSize = "var(--text-3xl)" },
+			H2 = new H2Typography { FontFamily = DisplayFontFamily, FontWeight = "600", FontSize = "var(--text-3xl)" },
+			H3 = new H3Typography { FontFamily = DisplayFontFamily, FontWeight = "600", FontSize = "var(--text-3xl)" },
+			H4 = new H4Typography { FontFamily = DisplayFontFamily, FontWeight = "600", FontSize = "var(--text-2xl)" },
+			H5 = new H5Typography { FontFamily = DisplayFontFamily, FontWeight = "600", FontSize = "var(--text-xl)" },
+			H6 = new H6Typography { FontFamily = DisplayFontFamily, FontWeight = "600", FontSize = "var(--text-lg)" },
+			Subtitle1 = new Subtitle1Typography { FontSize = "var(--text-md)" },
+			Subtitle2 = new Subtitle2Typography { FontSize = "var(--text-base)" },
+			Body1 = new Body1Typography { FontSize = "var(--text-base)" },
+			Body2 = new Body2Typography { FontSize = "var(--text-base)" },
+			Button = new ButtonTypography { FontFamily = UiFontFamily, FontWeight = "500", TextTransform = "none", FontSize = "var(--text-base)" },
+			Caption = new CaptionTypography { FontFamily = MonoFontFamily, FontSize = "var(--text-xs)" },
+			Overline = new OverlineTypography { FontFamily = MonoFontFamily, FontSize = "var(--text-xs)" },
 		};
 
 		var layout = new LayoutProperties

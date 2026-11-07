@@ -1858,7 +1858,7 @@
     <comment>MT — lower-case as in the English source.</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
-    <value>— Подключитесь, чтобы увидеть, кто здесь —</value>
+    <value>Подключитесь, чтобы увидеть, кто здесь</value>
     <comment>MT — em dashes preserved.</comment>
   </data>
   <data name="NavCreateACharacter" xml:space="preserve">
@@ -1950,7 +1950,7 @@
     <comment>MT — {0} is a route; placed at the end after «по адресу» so it needs no inflection.</comment>
   </data>
   <data name="NavNoExitsAvailable" xml:space="preserve">
-    <value>— Нет доступных выходов —</value>
+    <value>Нет доступных выходов</value>
     <comment>MT</comment>
   </data>
   <data name="NavNotConnected" xml:space="preserve">
@@ -5432,6 +5432,22 @@
   </data>
   <data name="RolOverridesHelp" xml:space="preserve">
     <value>Исключение для этой учётной записи сильнее всех её ролей.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReach" xml:space="preserve">
+    <value>Охват</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachEveryone" xml:space="preserve">
+    <value>Любая цель</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachUpTo" xml:space="preserve">
+    <value>Охват: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReaching" xml:space="preserve">
+    <value>(охват: {0})</value>
     <comment>MT</comment>
   </data>
   <data name="RolOverrideSaved" xml:space="preserve">

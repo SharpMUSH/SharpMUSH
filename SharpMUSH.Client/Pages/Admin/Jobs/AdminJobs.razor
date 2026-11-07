@@ -40,7 +40,7 @@
                     <AuthorizeView Policy="jobs.manage"><Authorized>
                         <MudCheckBox @bind-Value="_all" Label="@Loc["JobsAll"]" />
                     </Authorized></AuthorizeView>
-                    @if (_jobs.Length == 0) { <p class="jobs-empty">@Loc["JobsEmpty"]</p> }
+                    @if (_jobs.Length == 0) { <EmptyState Class="jobs-empty" Icon="@Icons.Material.Outlined.WorkOutline">@Loc["JobsEmpty"]</EmptyState> }
                     @foreach (var job in _jobs)
                     {
                         <article class="jobs-entry" @key="job.Id">

@@ -1,9 +1,9 @@
 .pkg-toolbar {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--space-4);
     flex-wrap: wrap;
-    padding: 14px 16px;
+    padding: var(--space-5) var(--space-5);
 }
 .pkg-toolbar ::deep .pkg-btn-primary {
     background: var(--accent);
@@ -20,15 +20,15 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.75rem 1rem;
-    padding: 14px 16px 10px;
+    gap: var(--space-4) var(--space-5);
+    padding: var(--space-5) var(--space-5) var(--space-4);
 }
 
 .lib-search {
     display: flex;
     align-items: center;
-    gap: 0.4375rem;
-    padding: 0.375rem 0.625rem;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
     background: var(--surface-2);
     border: 1px solid var(--border);
     border-radius: var(--radius-row);
@@ -37,14 +37,14 @@
     max-width: 320px;
 }
 .lib-search:focus-within { border-color: var(--accent); }
-.lib-search ::deep .lib-search-icon { font-size: 1rem; color: var(--text-faint); }
+.lib-search ::deep .lib-search-icon { font-size: var(--text-md); color: var(--text-faint); }
 .lib-search input {
     background: transparent;
     border: none;
     outline: none;
     color: var(--text);
     font: inherit;
-    font-size: 13px;
+    font-size: var(--text-sm);
     width: 100%;
 }
 .lib-search input::placeholder { color: var(--text-faint); }
@@ -53,10 +53,10 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.375rem;
+    gap: var(--space-3);
 }
 .lib-chips-label {
-    font-size: 12px;
+    font-size: var(--text-sm);
     color: var(--text-faint);
     margin-right: 0.25rem;
 }
@@ -65,19 +65,19 @@
 .lib-category {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: var(--space-2);
     min-height: 28px;
-    padding: 0 10px;
+    padding: 0 var(--space-4);
     border: 1px solid var(--border);
     border-radius: 14px;
     background: transparent;
     color: var(--text-dim);
     font: inherit;
-    font-size: 13px;
+    font-size: var(--text-sm);
     cursor: pointer;
     transition: color var(--motion-fade), border-color var(--motion-fade), background var(--motion-fade);
 }
-.lib-chip ::deep .mud-icon-root { font-size: 15px; }
+.lib-chip ::deep .mud-icon-root { font-size: var(--text-base); }
 .lib-chip:hover,
 .lib-category:hover { color: var(--text); border-color: var(--text-faint); }
 .lib-chip.active,
@@ -90,19 +90,19 @@
 .lib-categories {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.375rem;
-    padding: 0 16px 12px;
+    gap: var(--space-3);
+    padding: 0 var(--space-5) var(--space-4);
 }
 
 .lib-count {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--text-xs);
     color: var(--text-faint);
 }
 .lib-category.active .lib-count { color: var(--accent); }
 
 .lib-group-count {
-    font-size: 12px;
+    font-size: var(--text-sm);
     color: var(--text-faint);
 }
 
@@ -110,10 +110,10 @@
 .lib-subcategory {
     display: flex;
     align-items: baseline;
-    gap: 0.5rem;
+    gap: var(--space-3);
     margin: 0;
-    padding: 14px 16px 2px;
-    font-size: 12px;
+    padding: var(--space-5) var(--space-5) var(--space-1);
+    font-size: var(--text-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -123,7 +123,7 @@
 .lib-rows {
     display: flex;
     flex-direction: column;
-    padding: 0 12px 8px;
+    padding: 0 var(--space-4) var(--space-3);
 }
 
 .lib-family { border-top: 1px solid var(--border-soft); }
@@ -134,16 +134,16 @@
 .lib-addons-toggle {
     display: flex;
     align-items: center;
-    gap: 0.375rem;
+    gap: var(--space-3);
     width: 100%;
     min-height: 32px;
     margin: -4px 0 8px;
-    padding: 0 4px 0 36px;
+    padding: 0 var(--space-2) 0 var(--space-7);
     border: 0;
     background: transparent;
     color: var(--text-dim);
     font: inherit;
-    font-size: 12px;
+    font-size: var(--text-sm);
     font-weight: 600;
     text-align: left;
     justify-content: flex-start;
@@ -161,15 +161,15 @@
 
 .lib-addons {
     margin: 0 0 10px 40px;
-    padding-left: 12px;
+    padding-left: var(--space-4);
     border-left: 2px solid color-mix(in srgb, var(--warn) 45%, transparent);
 }
 
 @container page (max-width: 48rem) {
     .lib-search { max-width: 100%; flex-basis: 100%; }
     .lib-addons { margin-left: 12px; }
-    .lib-addons-toggle { padding-left: 4px; }
+    .lib-addons-toggle { padding-left: var(--space-2); }
 }
 
 /* The dependency graph, in place of the list. */
-.lib-graph { padding: 14px 16px; }
+.lib-graph { padding: var(--space-5) var(--space-5); }

@@ -19,11 +19,11 @@
         }
         else if (_partners is null)
         {
-            <div class="often-plays-empty">@Loc["WidUnavailable"]</div>
+            <EmptyState Compact="true" Failed="true" Class="often-plays-empty">@Loc["WidUnavailable"]</EmptyState>
         }
         else if (_partners.Count == 0)
         {
-            <div class="often-plays-empty">@Loc["NavNoPartnersYet"]</div>
+            <EmptyState Compact="true" Class="often-plays-empty" Icon="@Icons.Material.Outlined.PeopleOutline">@Loc["NavNoPartnersYet"]</EmptyState>
         }
         else
         {

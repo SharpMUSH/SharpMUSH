@@ -95,11 +95,7 @@ public interface IConnectionService
 	/// <summary>
 	/// Binds a handle to a character and moves it to <see cref="ConnectionState.LoggedIn"/>.
 	/// </summary>
-	/// <param name="firstLogin">
-	/// True when the character was just created and is entering play for the very first time, so
-	/// the greeting can welcome it rather than welcome it "back".
-	/// </param>
-	ValueTask Bind(long handle, DBRef player, bool firstLogin = false);
+	ValueTask Bind(long handle, DBRef player);
 
 	/// <summary>Checks local authority after the publication fence is acquired, immediately before the binding changes.</summary>
 	/// <remarks>The non-throwing commit signal runs after local binding and index replacement, before fallible publication.</remarks>

@@ -86,6 +86,7 @@ public partial class Commands
 		yield return FunctionEnabledLabel(fn.Enabled);
 		if (fn.AliasOf is { } target) yield return MarkupText.Plain($"alias of {target}");
 		if (fn.Preserved) yield return MarkupText.Plain("preserved");
+		if (fn.Privileged) yield return MarkupText.Plain("privileged");
 		if (!string.IsNullOrWhiteSpace(fn.Restriction)) yield return MarkupText.Plain($"restricted: {fn.Restriction}");
 	}
 

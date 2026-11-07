@@ -1,24 +1,5 @@
-.sugg-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    padding: 56px 24px;
-    text-align: center;
-}
-
-.sugg-empty ::deep .sugg-empty-icon {
-    font-size: 40px;
-    color: var(--text-faint);
-}
-
-.sugg-empty-text {
-    font-size: 13px;
-    color: var(--text-dim);
-}
-
 .sugg-panels {
-    padding: 6px 8px 8px;
+    padding: var(--space-3) var(--space-3) var(--space-3);
 }
 
 .sugg-panels ::deep .mud-expand-panel {
@@ -28,7 +9,7 @@
 .sugg-panel-title {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-3);
     width: 100%;
 }
 
@@ -42,20 +23,20 @@
 }
 
 .sugg-panel-inner {
-    padding: 14px;
+    padding: var(--space-5);
     background: var(--surface-2);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-tile);
 }
 
 .sugg-panel-inner ::deep .sugg-words-label {
-    padding: 4px 0 0;
+    padding: var(--space-2) 0 0;
 }
 
 .sugg-words-box {
     max-height: 400px;
     overflow-y: auto;
-    padding: 10px;
+    padding: var(--space-4);
     background: var(--surface-3);
     border: 1px solid var(--border);
     border-radius: var(--radius-row);
@@ -70,14 +51,4 @@
     border-color: rgba(var(--glow), 0.3);
     color: var(--accent);
     border-radius: 99px;
-}
-
-@container page (max-width: 48rem) {
-    .sugg-empty {
-        padding: 40px 20px;
-    }
-
-    .sugg-empty ::deep .sugg-empty-icon {
-        font-size: 32px;
-    }
 }

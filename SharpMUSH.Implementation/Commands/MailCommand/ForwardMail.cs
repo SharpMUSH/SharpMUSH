@@ -128,6 +128,12 @@ public static class ForwardMail
 				return new AnyOptionalSharpObject(new None());
 			}
 
+			if (replyTo.Anonymous)
+			{
+				await notifyService.Notify(executor, "MAIL: You can't reply to anonymous mail.", executor);
+				return new AnyOptionalSharpObject(new None());
+			}
+
 			return await replyTo.From.WithCancellation(CancellationToken.None);
 		}
 

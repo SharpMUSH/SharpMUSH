@@ -4,7 +4,7 @@
 
 .remote-backups-page ::deep .remote-backups-actions {
     flex-wrap: wrap;
-    gap: 0.75rem;
+    gap: var(--space-4);
 }
 
 .remote-backups-page ::deep .remote-backups-snapshot {

@@ -1,11 +1,11 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.19.0
+version: 1.19.2
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
-homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [scene, rp, logging, capture, hooks]
 category: Scenes
 requires_server: ">=0.1"
@@ -385,8 +385,7 @@ objects:
       # A scene's details say what it is about beyond its title and pitch: the verse it is set in, the canon it
       # draws on, a content warning, or anything else its owner names. Each is one key of the scene's metadata,
       # which @scene/set writes and scene() reads, so softcode reads a scene's verse as scene(<id>,verse). The game
-      # may list some, one attribute per detail; this package lists none, and scene-verse adds verse, canon and
-      # warning:
+      # may list some, one attribute per detail; this package lists none, and scene-safety adds warning:
       #   DETAIL`<KEY>  JSON the Scene plugin reads: label (its name for people), hint (one line on what goes in
       #                 it), choices (the values it allows; none means any text), many (true when a scene may give
       #                 several, split by |), listed (shown beside the title in +scene lists and on the portal's
@@ -621,10 +620,9 @@ objects:
       # for different reasons: `\,` inside @scene/addpose's argument list, and `[chr(44)]` inside
       # @message's RHS, which is CB.RSArgs and splits on commas BEFORE evaluating each argument.
       #
-      # The co-location test compares loc(%#) against scene(<id>,room) directly, which works because
-      # scene(...,room) answers with an objid -- the same spelling loc() uses. It did not always: it
-      # returned a bare dbref, so the comparison was quietly always false and the room emit never
-      # fired for anyone.
+      # The co-location test compares objid(loc(%#)) against scene(<id>,room), which answers with an
+      # objid. loc() answers with a bare dbref, as PennMUSH's does, so comparing it directly would be
+      # always false and the room emit would never fire.
       #
       # Reading the scene at all is gated by the same visibility rule the REST and hub surfaces use
       # (public, or the caller owns or belongs to it), because the existence guard goes through
@@ -650,22 +648,22 @@ objects:
         @assert not(strmatch(setr(join_result,scenejoin(%<scene>,%#)),#-1*))=@pemit %#=notice(SCENE,%q<join_result>,warn); @scene/focus %#=%<scene>; @context/push %#=scene_focus,[json(object,scene,%<scene>)]; think setq(scene_id,%<scene>)[setq(room_id,scene(%<scene>,room))][setq(poser_name,u(%!/FUN`POSER,%<scene>,%#))]
       CMD`WEB`EMIT:
         value: |-
-          $(?is)^\+scene/em(?\:i(?\:t)?)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @include/args %!/INC`WEB`ENTER=scene,%1; @scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,emit,,%2; @if strmatch(loc(%#),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,IC,verb,EMIT,self,,words,%2,line,%2,heard,%2,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>}
+          $(?is)^\+scene/em(?\:i(?\:t)?)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @include/args %!/INC`WEB`ENTER=scene,%1; @scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,emit,,%2; @if strmatch(objid(loc(%#)),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,IC,verb,EMIT,self,,words,%2,line,%2,heard,%2,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>}
         flags: [REGEXP]
 
       CMD`WEB`POSE:
         value: |-
-          $(?is)^\+scene/pos(?\:e)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @include/args %!/INC`WEB`ENTER=scene,%1; @scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,pose,,%q<poser_name> %2; @if strmatch(loc(%#),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,IC,verb,POSE,self,,words,%2,line,%q<poser_name> %2,heard,%q<poser_name> %2,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>}
+          $(?is)^\+scene/pos(?\:e)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @include/args %!/INC`WEB`ENTER=scene,%1; @scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,pose,,%q<poser_name> %2; @if strmatch(objid(loc(%#)),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,IC,verb,POSE,self,,words,%2,line,%q<poser_name> %2,heard,%q<poser_name> %2,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>}
         flags: [REGEXP]
 
       CMD`WEB`SAY:
         value: |-
-          $(?is)^\+scene/sa(?\:y)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @include/args %!/INC`WEB`ENTER=scene,%1; @scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,say,,%q<poser_name> says\, "%2"; @if strmatch(loc(%#),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,IC,verb,SAY,self,You say[chr(44)] "%2",words,%2,line,%q<poser_name> says[chr(44)] "%2",heard,%q<poser_name> says[chr(44)] "%2",hearers,[iter(lcon(%q<room_id>),if(strmatch(before(%i0,:),%#),,%i0))],scene,%q<scene_id>,room,%q<room_id>}
+          $(?is)^\+scene/sa(?\:y)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @include/args %!/INC`WEB`ENTER=scene,%1; @scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,say,,%q<poser_name> says\, "%2"; @if strmatch(objid(loc(%#)),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,IC,verb,SAY,self,You say[chr(44)] "%2",words,%2,line,%q<poser_name> says[chr(44)] "%2",heard,%q<poser_name> says[chr(44)] "%2",hearers,[iter(lcon(%q<room_id>),if(strmatch(before(%i0,:),%#),,%i0))],scene,%q<scene_id>,room,%q<room_id>}
         flags: [REGEXP]
 
       CMD`WEB`SEMIPOSE:
         value: |-
-          $(?is)^\+scene/sem(?\:i(?\:p(?\:o(?\:s(?\:e)?)?)?)?)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @include/args %!/INC`WEB`ENTER=scene,%1; @scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,semipose,,%q<poser_name>%2; @if strmatch(loc(%#),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,IC,verb,SEMIPOSE,self,,words,%2,line,%q<poser_name>%2,heard,%q<poser_name>%2,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>}
+          $(?is)^\+scene/sem(?\:i(?\:p(?\:o(?\:s(?\:e)?)?)?)?)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @include/args %!/INC`WEB`ENTER=scene,%1; @scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,semipose,,%q<poser_name>%2; @if strmatch(objid(loc(%#)),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,IC,verb,SEMIPOSE,self,,words,%2,line,%q<poser_name>%2,heard,%q<poser_name>%2,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>}
         flags: [REGEXP]
 
       # Out of character, into this scene. The room hears what the `ooc` command would have it hear
@@ -676,14 +674,14 @@ objects:
       # speaker is standing in it. The `;` is spelled chr(59) because a bare one ends the command.
       CMD`WEB`OOC:
         value: |-
-          $(?is)^\+scene/oo(?\:c)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @assert not(hasflag(%#,GAGGED))=@pemit %#=notice(SCENE,You cannot speak while gagged.,error); @assert cor(not(strmatch(loc(%#),scene(%1,room))),elock(scene(%1,room)/Speech,%#))=@pemit %#=notice(SCENE,You may not speak there!,error); @assert strlen(trim(switch(left(%2,1),:,delete(%2,0,1),chr(59),delete(%2,0,1),%2)))=@pemit %#=notice(SCENE,OOC: What do you want to say?,warn); @include/args %!/INC`WEB`ENTER=scene,%1; think setq(ooc_line,switch(left(%2,1),:,name(%#) [delete(%2,0,1)],chr(59),name(%#)[delete(%2,0,1)],name(%#): %2)); @scene/addpose %q<scene_id>=%#,,%q<room_id>,ooc,ooc,,%q<ooc_line>; @if strmatch(loc(%#),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,OOC,verb,OOC,self,,words,%2,line,%q<ooc_line>,heard,<OOC> %q<ooc_line>,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>}
+          $(?is)^\+scene/oo(?\:c)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @assert not(hasflag(%#,GAGGED))=@pemit %#=notice(SCENE,You cannot speak while gagged.,error); @assert cor(not(strmatch(objid(loc(%#)),scene(%1,room))),elock(scene(%1,room)/Speech,%#))=@pemit %#=notice(SCENE,You may not speak there!,error); @assert strlen(trim(switch(left(%2,1),:,delete(%2,0,1),chr(59),delete(%2,0,1),%2)))=@pemit %#=notice(SCENE,OOC: What do you want to say?,warn); @include/args %!/INC`WEB`ENTER=scene,%1; think setq(ooc_line,switch(left(%2,1),:,name(%#) [delete(%2,0,1)],chr(59),name(%#)[delete(%2,0,1)],name(%#): %2)); @scene/addpose %q<scene_id>=%#,,%q<room_id>,ooc,ooc,,%q<ooc_line>; @if strmatch(objid(loc(%#)),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,OOC,verb,OOC,self,,words,%2,line,%q<ooc_line>,heard,<OOC> %q<ooc_line>,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>}
         flags: [REGEXP]
 
       # Narration: the scene's world speaking rather than a character, recorded as the narration type. It is an
       # emit as the room hears it; the type's FORMAT draws it.
       CMD`WEB`NARRATE:
         value: |-
-          $(?is)^\+scene/n(?\:a(?\:r(?\:r(?\:a(?\:t(?\:e)?)?)?)?)?)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @include/args %!/INC`WEB`ENTER=scene,%1; @scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,narration,emit,,%2; @if strmatch(loc(%#),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,NARRATION,verb,NARRATE,self,,words,%2,line,%2,heard,%2,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>}
+          $(?is)^\+scene/n(?\:a(?\:r(?\:r(?\:a(?\:t(?\:e)?)?)?)?)?)? (.*?)=(.*?)$: @include/args %!/INC`WEB`CHECK=scene,%1; @include/args %!/INC`WEB`ENTER=scene,%1; @scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,narration,emit,,%2; @if strmatch(objid(loc(%#)),%q<room_id>)={@include/args %!/INC`CAPTURE`LINE=type,NARRATION,verb,NARRATE,self,,words,%2,line,%2,heard,%2,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>}
         flags: [REGEXP]
 
       # ---- create / lifecycle ---------------------------------------------------
@@ -1613,8 +1611,8 @@ objects:
         `+scene/set canon=Marvel|X-Men`. Only the scene's owner, or staff, can set its details.
 
         A game can list the details it uses, with a name and a hint for each, and some only take certain
-        values; `+scene/details` says which. The `scene-verse` package lists a verse, a canon and a content
-        warning; see `+help scene verse` when it is installed.
+        values; `+scene/details` says which. The `scene-safety` package lists a content warning; see
+        `+help scene warning` when it is installed.
 
         ## Finding scenes by detail
 

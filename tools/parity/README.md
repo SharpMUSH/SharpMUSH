@@ -37,7 +37,9 @@ free ports, and torn down afterwards, so runs neither collide with each other no
    thing with attributes. `@dump` writes a flatfile.
 3. **SharpMUSH** (`nats-server` + `Server` + `ConnectionServer` renderer + `SocketServer`) starts and
    **imports that flatfile** through `PENNMUSH_DATABASE_PATH`, the DB-import path. Both servers now
-   hold the same world, and the import is exercised on every run.
+   hold the same world, and the import is exercised on every run. `world/sharpmush-site.mush` then runs on
+   SharpMUSH as God: with no `messages_object`, it shows the stored texts of its messages
+   (`SharpMUSH.Library/Messages/*.txt`), as PennMUSH shows its `txt/` files.
 4. Every `scenarios/*.scn` (alphabetical, sharing that world) is replayed against each server.
 5. Transcripts are normalized, compared step by step, and reported.
 
@@ -119,7 +121,7 @@ Only genuinely non-deterministic or purely presentational output is normalized.
 | `ansi` | ANSI escape sequences removed | SharpMUSH colours names/headers where PennMUSH sends plain text; colour negotiation is not what is compared (a colour-preserving mode is a follow-up) |
 | `timestamp` | `Thu Sep 24 16:59:11 2026` → `<TIMESTAMP>` | wall clock |
 | `trailing-ws` | trailing spaces/tabs and trailing blank lines dropped | |
-| `site-text` | on login steps, each server's `connect.txt`, `motd.txt`, `wizmotd.txt` text removed | site content, not behaviour |
+| `site-text` | on login steps, each server's `connect.txt`, `motd.txt`, `wizmotd.txt` text removed (SharpMUSH's from `SharpMUSH.Library/Messages/`, with `noaccount.txt`) | site content, not behaviour |
 | `dbref` | fixture objects mapped to PennMUSH's dbrefs (anchors in `world/setup.mush`); dbrefs of objects created during a scenario become `#NEW<k>` by order of first appearance, numbered afresh in each scenario file (so a dbref shown on only one side cannot shift the numbering of later scenarios); an object first shown in an earlier file keeps its label as `#NEW<k>@<scenario>`; `#12:1790269900000` objids keep their form, the creation time becomes `<CTIME>`; any other SharpMUSH dbref is one of its own system objects and becomes `#S<n>` | dbref allocation and creation time are not behaviour. The import offset is visible in the report's anchor table, not hidden |
 
 Not normalized, on purpose: flag letter order, whether a dbref is shown, error wording, message

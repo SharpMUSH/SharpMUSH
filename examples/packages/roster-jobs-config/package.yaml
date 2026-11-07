@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: roster-jobs-config
 title: "Roster applications through jobs: +config settings"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the Roster applications through jobs settings into +config: registers them with the +config registry, so staff see and change them with +config roster-jobs."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [roster-jobs, config, bridge]
 category: Characters
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. roster-jobs declares its settings as

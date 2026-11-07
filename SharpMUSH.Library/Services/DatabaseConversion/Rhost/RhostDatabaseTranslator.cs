@@ -1,8 +1,10 @@
 using System.Globalization;
 using SharpMUSH.Configuration;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Definitions;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Services.DatabaseConversion.Softcode;
+using SharpMUSH.Library.Services.Passwords;
 using SharpMUSH.Library.Softcode;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion.Rhost;
@@ -26,9 +28,6 @@ public static partial class RhostDatabaseTranslator
 {
 	/// <summary>The longest value SharpMUSH's own softcode buffers expect; a longer one is noted.</summary>
 	private const int LongValue = 8192;
-
-	/// <summary>RhostMUSH's HOME, in a link field.</summary>
-	private const int Home = -3;
 
 	private const string ServerName = "RhostMUSH";
 
@@ -304,23 +303,15 @@ public static partial class RhostDatabaseTranslator
 		switch (type)
 		{
 			case PennMUSHObjectType.Exit:
-				if (source.Location == Home)
+				// HOME and a variable destination (AMBIGUOUS) carry over as they are; the converter records them.
+				if (source.Location < -1 && source.Location is not (LinkTypes.HomeDbref or LinkTypes.VariableDbref))
 				{
-					report.Note(ImportWarningKind.Objects, "Exits that lead HOME left unlinked, as a PennMUSH import leaves them", source.DBRef);
-				}
-				else if (source.Location < -1)
-				{
-					report.Note(ImportWarningKind.Objects, "Exits with a variable destination left unlinked", source.DBRef);
+					report.Note(ImportWarningKind.Objects, "Exits whose destination is not an object, HOME or variable left unlinked", source.DBRef);
 				}
 
 				return (source.Exits, -1, source.Location);
 
 			case PennMUSHObjectType.Room:
-				if (source.Link == Home)
-				{
-					report.Note(ImportWarningKind.Objects, "Rooms whose drop-to is HOME: the drop-to is not imported", source.DBRef);
-				}
-
 				return (-1, source.Exits, source.Link);
 
 			default:
@@ -759,7 +750,7 @@ public static partial class RhostDatabaseTranslator
 			_ when stored.StartsWith("$6$", StringComparison.Ordinal) => "SHA-512-crypt" + Rehashed,
 			_ when stored.StartsWith("$5$", StringComparison.Ordinal) => "SHA-256-crypt" + Rehashed,
 			_ when stored.StartsWith("$1$", StringComparison.Ordinal) => "MD5-crypt" + Rehashed,
-			_ when stored.StartsWith("$2", StringComparison.Ordinal) => "bcrypt" + Unchecked,
+			_ when PennMUSHPasswords.IsBcrypt(stored) => "bcrypt" + Rehashed,
 			_ when stored.StartsWith("$SHA1$", StringComparison.OrdinalIgnoreCase) => "TinyMUX SHA-1" + Rehashed,
 			_ when stored.StartsWith('$') => "an unrecognised $-form" + Unchecked,
 			_ when stored.Length == 13 && stored.StartsWith("XX", StringComparison.Ordinal) => "DES crypt" + Rehashed,

@@ -3,27 +3,27 @@ name: Publish Templates NuGet
 # Packs and pushes the SharpMUSH.Templates `dotnet new` template pack (sharpmush-softcode /
 # sharpmush-application / sharpmush-plugin) so authors can `dotnet new install SharpMUSH.Templates`.
 #
-# Keyless via NuGet Trusted Publishing (OIDC) — no long-lived API key. Triggered by a tag like
-# sharpmush-templates/v1.0.0; the version after the slash+v becomes the package version. Versioned
-# INDEPENDENTLY of the contract packages (SharpMUSH.Library / SharpMUSH.Implementation.Generated),
-# so the templates can ship on their own cadence.
+# Keyless via NuGet Trusted Publishing (OIDC) — no long-lived API key. Triggered by publishing a
+# GitHub Release tagged like sharpmush-templates/v1.0.0; the version after the slash+v becomes the
+# package version. Versioned INDEPENDENTLY of the contract packages (SharpMUSH.Library /
+# SharpMUSH.Implementation.Generated), so the templates can ship on their own cadence.
 #
 # Requires (one-time): a nuget.org Trusted Publishing policy bound to this workflow file
 #   owner=SharpMUSH, repository=SharpMUSH, workflow file=publish-templates.yml
-# plus the NUGET_USER secret (nuget.org profile name). Must be on the default branch for the tag
-# trigger to fire.
+# plus the NUGET_USER secret (nuget.org profile name). The release runs this file as it is at the
+# release's tag.
 
 on:
-  push:
-    tags:
-      - 'sharpmush-templates/v*'  # e.g. sharpmush-templates/v1.0.0
-  workflow_dispatch:               # manual run uses the csproj <Version>
+  release:
+    types: [published]  # a GitHub Release tagged sharpmush-templates/v1.0.0, say
+  workflow_dispatch:    # a manual run uses the csproj <Version>
 
 permissions:
   contents: read
 
 jobs:
   pack-and-push:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'sharpmush-templates/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read    # checkout

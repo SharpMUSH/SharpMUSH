@@ -3,7 +3,7 @@ using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 
 // Validates a package repo: index.yaml (when present) and every package.yaml.
-// Used by SharpMUSH-Packages CI. Exit 0 = clean; exit 1 = any error, or any
+// Used by SharpMUSH.Packages CI. Exit 0 = clean; exit 1 = any error, or any
 // warning when --strict is given (the official repo runs strict).
 //
 // Usage: PackageValidator <repo-root> [--strict]

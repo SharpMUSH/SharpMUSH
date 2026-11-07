@@ -31,16 +31,14 @@
             }
             else
             {
-                <div class="active-scene-empty">
-                    @if (_error is not null)
-                    {
-                        <span class="active-scene-widget-error">@_error</span>
-                    }
-                    else
-                    {
-                        <span>@Loc["WidNoActiveScenes"]</span>
-                    }
-                </div>
+                @if (_error is not null)
+                {
+                    <EmptyState Compact="true" Failed="true" Class="active-scene-empty active-scene-widget-error">@_error</EmptyState>
+                }
+                else
+                {
+                    <EmptyState Compact="true" Class="active-scene-empty" Icon="@Icons.Material.Outlined.TheaterComedy">@Loc["WidNoActiveScenes"]</EmptyState>
+                }
                 @if (!InMain)
                 {
                     <a class="active-scene-archive" href="/scenes">@Loc["WidBrowseArchive"]</a>

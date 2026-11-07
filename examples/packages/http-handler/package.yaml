@@ -1,11 +1,11 @@
 format: "1.16"
 package: http-handler
 title: "HTTP routes"
-version: 1.0.5
+version: 1.0.6
 authors: [SharpMUSH]
 description: "Inbound HTTP verb routers (GET/POST/…) for the configured http_handler object."
 license: MIT
-homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [http, api, router]
 category: Web portal
 requires_server: ">=0.1"

@@ -17,9 +17,9 @@
 # Setup:
 #   1. In the Cloudflare Zero Trust dashboard, create a Tunnel, copy its token into
 #      CLOUDFLARE_TUNNEL_TOKEN in .env.
-#   2. Add a Public Hostname on that tunnel:  mush.example.com  ->  http://sharpmush-server:8080
-#      (add a second one for the websocket gateway if you route it via the domain:
-#       ws.mush.example.com -> http://socketserver:4202)
+#   2. Add a Public Hostname on that tunnel:  mush.example.com  ->  http://sharpmush-server:8080,
+#      and above it mush.example.com, path ws -> http://socketserver:4202 for the browser terminal,
+#      which connects to /ws on the portal's own address.
 #   3. Add a DNS-only A/AAAA record for telnet -> this host's IP.
 #   4. docker compose -f deploy/docker-compose.cloudflare.yml up -d --build
 

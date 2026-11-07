@@ -18,4 +18,11 @@ public sealed record CustomPermission(string Scope, string Category, string Desc
 /// <param name="Objects">Object number → its setting.</param>
 public sealed record PermissionOverrideHolders(
 	IReadOnlyDictionary<string, PermissionState> Accounts,
-	IReadOnlyDictionary<int, PermissionState> Objects);
+	IReadOnlyDictionary<int, PermissionState> Objects)
+{
+	/// <summary>Account id → the role its override's reach names, for those that have one.</summary>
+	public IReadOnlyDictionary<string, string> AccountReaches { get; init; } = new Dictionary<string, string>();
+
+	/// <summary>Object number → the role its override's reach names, for those that have one.</summary>
+	public IReadOnlyDictionary<int, string> ObjectReaches { get; init; } = new Dictionary<int, string>();
+}

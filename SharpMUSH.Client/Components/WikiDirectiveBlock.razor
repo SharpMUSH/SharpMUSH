@@ -14,7 +14,7 @@
         }
         @if (_pages.Count == 0)
         {
-            <p class="wiki-directive-empty"><em>@Loc["WkDirectiveNoPages"]</em></p>
+            <EmptyState Compact="true" Class="wiki-directive-empty" Icon="@Icons.Material.Outlined.Article">@Loc["WkDirectiveNoPages"]</EmptyState>
         }
         else
         {

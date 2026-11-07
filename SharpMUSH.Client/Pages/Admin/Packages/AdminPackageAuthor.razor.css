@@ -4,14 +4,14 @@
     min-width: 0;
 }
 .pkg-external {
-    padding: 12px;
+    padding: var(--space-4);
     margin-bottom: 8px;
     background: var(--surface-2);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-tile);
 }
 .pkg-export-yaml { max-height: 480px; }
-.pkg-card-body { padding: 14px 16px 16px; }
+.pkg-card-body { padding: var(--space-5) var(--space-5) var(--space-5); }
 .pkg-card-body ::deep .pkg-btn-primary {
     background: var(--accent);
     color: var(--accent-on);

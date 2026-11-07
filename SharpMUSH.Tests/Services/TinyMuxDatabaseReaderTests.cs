@@ -167,6 +167,7 @@ public class TinyMuxDatabaseReaderTests
 		await Assert.That(database.SourceOptions["mux_logic"] is true).IsTrue();
 		await Assert.That(database.SourceOptions["rhost_list"] is true).IsTrue();
 		await Assert.That(database.SourceOptions["innermost_tokens"] is true).IsTrue();
+		await Assert.That(database.SourceOptions["mux_function_caller"] is true).IsTrue();
 		await Assert.That(database.SourceOptions["function_recursion_limit"]).IsEqualTo(500u);
 		await Assert.That(database.SourceOptions.ContainsKey("http_qregisters")).IsFalse();
 		await Assert.That(database.SharesPipingSubstitutions).IsTrue();

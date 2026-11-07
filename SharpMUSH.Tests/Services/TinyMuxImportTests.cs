@@ -140,6 +140,7 @@ public class TinyMuxImportTests
 		await Assert.That(stored.Compatibility.RhostList).IsTrue();
 		await Assert.That(stored.Compatibility.InnermostTokens).IsTrue();
 		await Assert.That(stored.Compatibility.ParenGroups).IsTrue();
+		await Assert.That(stored.Compatibility.MuxFunctionCaller).IsTrue();
 		await Assert.That(stored.Limit.FunctionRecursionLimit).IsGreaterThanOrEqualTo(500u);
 
 		var staff = await world.Mediator.Send(new GetChannelQuery("Staff")) ?? throw new InvalidOperationException("No Staff channel");

@@ -26,7 +26,7 @@
     }
     else if (!_loading && _poses.Count == 0)
     {
-        <div class="story-empty">@Loc["RolWaitingForActivity"]</div>
+        <EmptyState Class="story-empty" Icon="@Icons.Material.Outlined.HourglassEmpty">@Loc["RolWaitingForActivity"]</EmptyState>
     }
     @foreach (var entry in StoryFolds.Fold(_poses, PoseTypes.For, key => PoseTypes.IsHidden(key, Context), _revealed))
     {

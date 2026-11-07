@@ -62,11 +62,11 @@
                 <div class="help-topics">
                     @if (_index.Topics.Count == 0)
                     {
-                        <p class="help-empty">@Loc["HelpNoTopics"]</p>
+                        <EmptyState Class="help-empty" Icon="@Icons.Material.Outlined.HelpOutline">@Loc["HelpNoTopics"]</EmptyState>
                     }
                     else if (Filtered.Count == 0)
                     {
-                        <p class="help-empty">@Loc["HelpNoTopicsMatch"]</p>
+                        <EmptyState Class="help-empty" Icon="@Icons.Material.Outlined.SearchOff">@Loc["HelpNoTopicsMatch"]</EmptyState>
                     }
                     else
                     {

@@ -1,12 +1,12 @@
 .adm-media-body {
-	padding: 14px 16px 16px;
+	padding: var(--space-5) var(--space-5) var(--space-5);
 	min-width: 0;
 }
 
 .adm-media-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
-	gap: 12px;
+	gap: var(--space-4);
 }
 
 .adm-media-card {
@@ -40,16 +40,16 @@
 }
 
 .adm-media-thumb ::deep .adm-media-kind-icon {
-	font-size: 48px;
+	font-size: var(--text-3xl);
 	color: var(--text-faint);
 }
 
 .adm-media-card-body {
-	padding: 8px 10px;
+	padding: var(--space-3) var(--space-4);
 }
 
 .adm-media-name {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text);
 	white-space: nowrap;
 	overflow: hidden;
@@ -63,7 +63,7 @@
 .adm-media-sharing-form {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: var(--space-3);
 }
 
 .adm-media-card-foot {
@@ -74,13 +74,13 @@
 }
 
 .adm-media-size {
-	font-size: 11px;
+	font-size: var(--text-xs);
 	color: var(--text-faint);
 }
 
 .adm-media-actions {
 	display: inline-flex;
-	gap: 2px;
+	gap: var(--space-1);
 }
 
 .adm-media-list {
@@ -100,17 +100,17 @@
 }
 
 .adm-media-list-name {
-	font-size: 13px;
+	font-size: var(--text-sm);
 }
 
 .adm-media-list-mono {
 	font-family: var(--font-mono);
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-faint);
 }
 
 .adm-media-list-dim {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
@@ -118,7 +118,7 @@
 @container page (max-width: 48rem) {
 	.adm-media ::deep .kit-card-head {
 		flex-wrap: wrap;
-		padding-block: 8px;
+		padding-block: var(--space-3);
 	}
 
 	.adm-media ::deep .kit-card-controls {

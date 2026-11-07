@@ -2556,13 +2556,13 @@
     <value>Quitter le mode concentration</value>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
-    <value>— Connectez-vous pour voir qui est là —</value>
+    <value>Connectez-vous pour voir qui est là</value>
   </data>
   <data name="NavExits" xml:space="preserve">
     <value>Sorties</value>
   </data>
   <data name="NavNoExitsAvailable" xml:space="preserve">
-    <value>— Aucune sortie disponible —</value>
+    <value>Aucune sortie disponible</value>
   </data>
   <data name="NavSettingsAccountDescription" xml:space="preserve">
     <value>E-mail, mot de passe et sécurité de connexion</value>
@@ -4742,6 +4742,22 @@
   </data>
   <data name="RolOverridesHelp" xml:space="preserve">
     <value>Une exception sur ce compte l'emporte sur tous ses rôles.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReach" xml:space="preserve">
+    <value>Portée</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachEveryone" xml:space="preserve">
+    <value>Toute cible</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachUpTo" xml:space="preserve">
+    <value>Portée {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReaching" xml:space="preserve">
+    <value>(portée {0})</value>
     <comment>MT</comment>
   </data>
   <data name="RolOverrideSaved" xml:space="preserve">

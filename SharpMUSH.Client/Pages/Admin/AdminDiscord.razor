@@ -84,7 +84,7 @@
                 <ChildContent>
                     @if (_channels.Count == 0)
                     {
-                        <p class="adm-discord-empty">@Loc["AdmDiscordChannelsNone"]</p>
+                        <EmptyState Compact="true" Class="adm-discord-empty" Icon="@Icons.Material.Outlined.Tag">@Loc["AdmDiscordChannelsNone"]</EmptyState>
                     }
                     else
                     {
@@ -182,7 +182,7 @@
                 <ChildContent>
                     @if (_roles is not { Mappings: [_, ..] mappings })
                     {
-                        <p class="adm-discord-empty">@Loc["AdmDiscordRolesNone"]</p>
+                        <EmptyState Compact="true" Class="adm-discord-empty" Icon="@Icons.Material.Outlined.Shield">@Loc["AdmDiscordRolesNone"]</EmptyState>
                     }
                     else
                     {
@@ -268,7 +268,7 @@
                 <ChildContent>
                     @if (_roles is not { Drift: [_, ..] drift })
                     {
-                        <p class="adm-discord-empty">@Loc["AdmDiscordDriftNone"]</p>
+                        <EmptyState Compact="true" Class="adm-discord-empty" Icon="@Icons.Material.Outlined.CheckCircle">@Loc["AdmDiscordDriftNone"]</EmptyState>
                     }
                     else
                     {
@@ -307,7 +307,7 @@
                     </div>
                     @if (_members.Count == 0)
                     {
-                        <p class="adm-discord-empty">@Loc[string.IsNullOrEmpty(_search) ? "AdmDiscordMembersNone" : "AdmDiscordMembersNoMatch"]</p>
+                        <EmptyState Compact="true" Class="adm-discord-empty" Icon="@(string.IsNullOrEmpty(_search) ? Icons.Material.Outlined.PeopleOutline : Icons.Material.Outlined.SearchOff)">@Loc[string.IsNullOrEmpty(_search) ? "AdmDiscordMembersNone" : "AdmDiscordMembersNoMatch"]</EmptyState>
                     }
                     else
                     {
@@ -349,7 +349,10 @@
     <Otherwise>
         <div class="page-stack page-stack--padded adm-discord">
             <PlainPageHeader Kicker="@Loc["AdmGroupServer"]" Title="@Loc["AdmDiscordTitle"]" Description="@Loc["AdmDiscordDescription"]" />
-            <EmptyState>@Loc["AdmDiscordNotInstalled"] <a href="/admin/packages">@Loc["PkgPackages"]</a></EmptyState>
+            <EmptyState Icon="@Icons.Material.Outlined.Extension">
+                <ChildContent>@Loc["AdmDiscordNotInstalled"]</ChildContent>
+                <Action><CapsuleButton Icon="@Icons.Material.Outlined.Extension" Href="/admin/packages">@Loc["PkgPackages"]</CapsuleButton></Action>
+            </EmptyState>
         </div>
     </Otherwise>
 </FeatureGate>

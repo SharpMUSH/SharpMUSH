@@ -1,5 +1,5 @@
 .sharp-terminal-output {
-    padding: 0.75rem 1rem;
+    padding: var(--space-4) var(--space-5);
 }
 
 /* The jump button floats over the output's bottom edge, above the input line when there is one. */
@@ -14,16 +14,16 @@
     z-index: 2;
     display: none;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-3);
     height: 32px;
-    padding: 0 12px;
+    padding: 0 var(--space-4);
     border: 1px solid var(--border);
     border-radius: 16px;
     background: var(--surface-2);
     color: var(--text);
     font: inherit;
     font-family: var(--font-ui);
-    font-size: 12px;
+    font-size: var(--text-sm);
     font-weight: 600;
     box-shadow: var(--shadow);
     cursor: pointer;
@@ -62,12 +62,12 @@
 .sharp-terminal-earlier-bar {
     display: flex;
     justify-content: center;
-    padding: 6px 0 10px;
+    padding: var(--space-3) 0 var(--space-4);
 }
 
 .sharp-terminal-earlier-btn {
     height: 28px;
-    padding: 0 12px;
+    padding: 0 var(--space-4);
     border: 1px solid var(--border);
     border-radius: 14px;
     background: var(--surface-2);
@@ -89,7 +89,7 @@
 /* The prompt the game is waiting on, between the output and the input line: the output's type, on the input
    bar's surface, so it reads as the last line of the output that stays put. */
 .sharp-terminal-prompt {
-    padding: 0.375rem 1rem;
+    padding: var(--space-3) var(--space-5);
     background: var(--surface);
     border-top: 1px solid var(--border-soft);
     color: var(--text);

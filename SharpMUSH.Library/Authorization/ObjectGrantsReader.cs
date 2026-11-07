@@ -32,10 +32,13 @@ public static class ObjectGrantsReader
 		{
 			account = new AccountGrants(
 				await roles.GetRolesForAccountAsync(accountId, cancellationToken),
-				await roles.GetAccountOverridesAsync(accountId, cancellationToken));
+				await roles.GetAccountOverridesAsync(accountId, cancellationToken))
+			{
+				Reaches = await roles.GetAccountReachesAsync(accountId, cancellationToken)
+			};
 		}
 
 		return ObjectGrants.For(number, isPlayer, all, objectRoles, objectOverrides, account,
-			await roles.GetCustomPermissionsAsync(cancellationToken));
+			await roles.GetCustomPermissionsAsync(cancellationToken), await roles.GetObjectReachesAsync(number, cancellationToken));
 	}
 }

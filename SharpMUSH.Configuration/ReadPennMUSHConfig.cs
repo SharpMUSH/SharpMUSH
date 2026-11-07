@@ -143,6 +143,7 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(CompatibilityOptions.MuxQueueFunctions)), d.Compatibility.MuxQueueFunctions),
 				Boolean(Get(nameof(CompatibilityOptions.RhostLrooms)), d.Compatibility.RhostLrooms),
 				Boolean(Get(nameof(CompatibilityOptions.MuxQuiet)), d.Compatibility.MuxQuiet),
+				Boolean(Get(nameof(CompatibilityOptions.MuxFunctionCaller)), d.Compatibility.MuxFunctionCaller),
 				Boolean(Get(nameof(CompatibilityOptions.MapsqlSync)), d.Compatibility.MapsqlSync)
 			),
 			Cosmetic = new CosmeticOptions(
@@ -169,7 +170,12 @@ public static partial class ReadPennMushConfig
 				String(Get(nameof(CosmeticOptions.ImageHostList)), d.Cosmetic.ImageHostList)?.Trim() ?? string.Empty,
 				String(Get(nameof(CosmeticOptions.PortalLogo)), d.Cosmetic.PortalLogo)?.Trim() ?? string.Empty,
 				String(Get(nameof(CosmeticOptions.PortalFavicon)), d.Cosmetic.PortalFavicon)?.Trim() ?? string.Empty
-			),
+			)
+			{
+				PortalBanner = String(Get(nameof(CosmeticOptions.PortalBanner)), d.Cosmetic.PortalBanner)?.Trim() ?? string.Empty,
+				PortalTagline = String(Get(nameof(CosmeticOptions.PortalTagline)), d.Cosmetic.PortalTagline)?.Trim() ?? string.Empty,
+				PortalDescription = String(Get(nameof(CosmeticOptions.PortalDescription)), d.Cosmetic.PortalDescription)?.Trim() ?? string.Empty
+			},
 			Cost = new CostOptions(
 				UnsignedInteger(Get(nameof(CostOptions.ObjectCost)), d.Cost.ObjectCost),
 				UnsignedInteger(Get(nameof(CostOptions.ExitCost)), d.Cost.ExitCost),
@@ -390,6 +396,7 @@ public static partial class ReadPennMushConfig
 				&& !name.Equals("mssp", StringComparison.OrdinalIgnoreCase)
 				&& !(dialect != ConfigurationDialect.PennMUSH && RealityDirectives.IsDirective(name))
 				&& !(dialect == ConfigurationDialect.RhostMUSH && name.Equals("totem_add", StringComparison.OrdinalIgnoreCase))
+				&& !(dialect != ConfigurationDialect.PennMUSH && HookDirectives.IsDirective(name))
 				&& !PennMushConfigImport.SecretDirectives.ContainsKey(name))
 			.Distinct(StringComparer.OrdinalIgnoreCase)
 			.ToList();
@@ -404,13 +411,20 @@ public static partial class ReadPennMushConfig
 		var totems = dialect == ConfigurationDialect.RhostMUSH
 			? TotemDirective.Read(text.SelectMany(line => DirectiveName(line) is { } name ? [(name, DirectiveValue(line))] : Array.Empty<(string, string)>()))
 			: [];
+		// TinyMUX and RhostMUSH turn their command hooks on from here; the database import reports them.
+		var hooks = dialect != ConfigurationDialect.PennMUSH
+			? HookDirectives.Read(text.SelectMany(line => DirectiveName(line) is { } name && HookDirectives.IsDirective(name)
+				? [(name, DirectiveValue(line))]
+				: Array.Empty<(string, string)>()))
+			: HookDirectives.None;
 
 		return new PennMushConfigImport(work, skipped, named,
 			secrets.Where(secret => secret.Value.Length > 0).ToDictionary(StringComparer.Ordinal))
 		{
 			Unrecognized = unrecognized,
 			Reality = reality,
-			Totems = totems
+			Totems = totems,
+			Hooks = hooks
 		};
 
 		string Get(string key) => configDictionary[propertyDictionary[key]];

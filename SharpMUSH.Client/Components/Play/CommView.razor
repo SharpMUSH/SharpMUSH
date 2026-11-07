@@ -52,7 +52,7 @@
                 }
                 @if (_lines.Count == 0)
                 {
-                    <div class="comm-empty">@Loc["NavPlayNothingYet"]</div>
+                    <EmptyState Compact="true" Class="comm-empty" Icon="@Icons.Material.Outlined.ChatBubbleOutline">@Loc["NavPlayNothingYet"]</EmptyState>
                 }
                 @for (var i = 0; i < _lines.Count; i++)
                 {
@@ -116,7 +116,7 @@
                     <div class="comm-members-head">@Loc["NavPlayMembersOnline", members.Count]</div>
                     @if (members.Count == 0)
                     {
-                        <div class="comm-members-empty">@Loc["NavPlayNobodyOn"]</div>
+                        <EmptyState Compact="true" Class="comm-members-empty" Icon="@Icons.Material.Outlined.PeopleOutline">@Loc["NavPlayNobodyOn"]</EmptyState>
                     }
                     <ul class="comm-members-list">
                         @foreach (var member in members)

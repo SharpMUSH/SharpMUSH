@@ -120,7 +120,7 @@ public partial class LightningDatabase
 			overrides.ToDictionary(kvp => kvp.Key, kvp => (PermissionState)kvp.Value, StringComparer.OrdinalIgnoreCase));
 	}
 
-	public async Task SetAccountOverrideAsync(string accountId, string scope, PermissionState state)
+	public async Task SetAccountOverrideAsync(string accountId, string scope, PermissionState state, string? reach = null)
 	{
 		var key = ParseAccountId(accountId);
 		await Store.WriteAsync(tx =>
@@ -130,8 +130,31 @@ public partial class LightningDatabase
 			else overrides[scope] = (int)state;
 			if (overrides.Count == 0) tx.Delete(Tables.AccountPermission, Keys.Str(key));
 			else tx.Put(Tables.AccountPermission, Keys.Str(key), Codec.Serialize(overrides));
+			WriteReach(tx, Tables.AccountPermissionReach, Keys.Str(key), scope, state == PermissionState.Inherit ? null : reach);
 		});
 	}
+
+	public Task<IReadOnlyDictionary<string, string>> GetAccountReachesAsync(string accountId, CancellationToken cancellationToken = default)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var key = Keys.Str(ParseAccountId(accountId));
+		return Task.FromResult<IReadOnlyDictionary<string, string>>(Store.Read(tx => ReadReaches(tx, Tables.AccountPermissionReach, key)));
+	}
+
+	/// <summary>Sets or clears the reach of one override in the reach record under <paramref name="key"/>.</summary>
+	internal static void WriteReach(ITx tx, TableDef table, byte[] key, string scope, string? reach)
+	{
+		var reaches = ReadReaches(tx, table, key);
+		if (reach is null) reaches.Remove(scope);
+		else reaches[scope] = reach.ToLowerInvariant();
+		if (reaches.Count == 0) tx.Delete(table, key);
+		else tx.Put(table, key, Codec.Serialize(reaches));
+	}
+
+	internal static Dictionary<string, string> ReadReaches(ITx tx, TableDef table, byte[] key)
+		=> tx.TryGet(table, key, out var bytes)
+			? new Dictionary<string, string>(Codec.Deserialize<Dictionary<string, string>>(bytes), StringComparer.OrdinalIgnoreCase)
+			: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
 	private static Dictionary<string, int> ReadOverrides(ITx tx, string accountKey)
 		=> tx.TryGet(Tables.AccountPermission, Keys.Str(accountKey), out var bytes)
@@ -183,16 +206,24 @@ public partial class LightningDatabase
 			overrides.ToDictionary(kvp => kvp.Key, kvp => (PermissionState)kvp.Value, StringComparer.OrdinalIgnoreCase));
 	}
 
-	public async Task SetObjectOverrideAsync(int number, string scope, PermissionState state)
-		=> await Store.WriteAsync(tx => WriteObjectOverride(tx, number, scope, state));
+	public async Task SetObjectOverrideAsync(int number, string scope, PermissionState state, string? reach = null)
+		=> await Store.WriteAsync(tx => WriteObjectOverride(tx, number, scope, state, reach));
 
-	internal static void WriteObjectOverride(ITx tx, long number, string scope, PermissionState state)
+	internal static void WriteObjectOverride(ITx tx, long number, string scope, PermissionState state, string? reach = null)
 	{
 		var overrides = ReadObjectOverrides(tx, number);
 		if (state == PermissionState.Inherit) overrides.Remove(scope);
 		else overrides[scope] = (int)state;
 		if (overrides.Count == 0) tx.Delete(Tables.ObjPermission, Keys.Dbref(number));
 		else tx.Put(Tables.ObjPermission, Keys.Dbref(number), Codec.Serialize(overrides));
+		WriteReach(tx, Tables.ObjPermissionReach, Keys.Dbref(number), scope, state == PermissionState.Inherit ? null : reach);
+	}
+
+	public Task<IReadOnlyDictionary<string, string>> GetObjectReachesAsync(int number, CancellationToken cancellationToken = default)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		return Task.FromResult<IReadOnlyDictionary<string, string>>(
+			Store.Read(tx => ReadReaches(tx, Tables.ObjPermissionReach, Keys.Dbref(number))));
 	}
 
 	internal static Dictionary<string, int> ReadObjectOverrides(ITx tx, long number)
@@ -290,7 +321,23 @@ public partial class LightningDatabase
 				if (StateOf(value, scope) is { } state) objects[(int)Keys.ReadDbref(key)] = state;
 			}
 
-			return new PermissionOverrideHolders(accounts, objects);
+			var accountReaches = new Dictionary<string, string>(StringComparer.Ordinal);
+			foreach (var (key, _) in tx.Range(Tables.AccountPermissionReach, []))
+			{
+				var id = $"node_accounts/{Keys.ReadStr(key)}";
+				if (accounts.ContainsKey(id) && ReadReaches(tx, Tables.AccountPermissionReach, key).TryGetValue(scope, out var reach))
+					accountReaches[id] = reach;
+			}
+
+			var objectReaches = new Dictionary<int, string>();
+			foreach (var (key, _) in tx.Range(Tables.ObjPermissionReach, []))
+			{
+				var number = (int)Keys.ReadDbref(key);
+				if (objects.ContainsKey(number) && ReadReaches(tx, Tables.ObjPermissionReach, key).TryGetValue(scope, out var reach))
+					objectReaches[number] = reach;
+			}
+
+			return new PermissionOverrideHolders(accounts, objects) { AccountReaches = accountReaches, ObjectReaches = objectReaches };
 		}));
 	}
 
@@ -319,5 +366,9 @@ public partial class LightningDatabase
 					if (overrides.Count == 0) tx.Delete(table, key);
 					else tx.Put(table, key, Codec.Serialize(overrides));
 				}
+
+			foreach (var table in new[] { Tables.AccountPermissionReach, Tables.ObjPermissionReach })
+				foreach (var (key, _) in tx.Range(table, []).ToList())
+					WriteReach(tx, table, key, scope, null);
 		});
 }

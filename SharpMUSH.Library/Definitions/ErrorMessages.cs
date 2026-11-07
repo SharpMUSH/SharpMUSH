@@ -1067,11 +1067,6 @@ public static partial class ErrorMessages
 		public const string OpenedExit = "Opened exit {0}";
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string WelcomeBackFormat = "Welcome back, {0}!";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string WelcomeFirstLoginFormat = "Welcome, {0}! This is your first time connecting.";
-
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CannotNameObjectFormat = "You cannot name that object {0}.";
 		public const string InvalidPasswordText = "That password is not a valid password.";
 		public const string InvalidPasswordForCommand = "Invalid password.";
@@ -1492,7 +1487,9 @@ public static partial class ErrorMessages
 		public const string MailBadArguments = "MAIL: Bad arguments to @mail. See 'help @mail' for usage.";
 
 		public const string PasswordOnlyPlayersHavePasswords = "Only players have passwords.";
-		public const string PasswordInvalid = "Invalid password.";
+		// do_password (pennmush/src/player.c).
+		public const string PasswordInvalid = "The old password that you entered was incorrect.";
+		public const string PasswordChanged = "You have changed your password.";
 
 		// @scan's section headings and match lines, verbatim from do_scan (pennmush/src/game.c:1890-1996)
 		// and confirmed against a live PennMUSH 1.8.8. A heading prints whether or not its section
@@ -1617,15 +1614,13 @@ public static partial class ErrorMessages
 		public const string NoSuggestionCategoriesDefined = "No suggestion categories defined.";
 		public const string SuggestAddUsage = "Usage: @suggest/add <category>=<word>";
 		public const string SuggestCategoryAndWordCannotBeEmpty = "Category and word cannot be empty.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SuggestAddedWordToCategoryFormat = "Added '{0}' to category '{1}'.";
+		public const string SuggestionWordAdded = "Suggestion vocabulary word added.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SuggestWordAlreadyExistsFormat = "Word '{0}' already exists in category '{1}'.";
 		public const string SuggestDeleteUsage = "Usage: @suggest/delete <category>=<word>";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SuggestCategoryDoesNotExistFormat = "Category '{0}' does not exist.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SuggestRemovedWordFromCategoryFormat = "Removed '{0}' from category '{1}'.";
+		public const string SuggestionWordDeleted = "Suggestion vocabulary word deleted.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SuggestWordNotFoundInCategoryFormat = "Word '{0}' not found in category '{1}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

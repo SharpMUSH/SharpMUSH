@@ -41,7 +41,7 @@
     {
         <FeatureGate Feature="@GameFeatures.Scenes">
             <SectionLabel>@Loc["NavPlayScenes"]</SectionLabel>
-            <SidebarNote Class="play-side-empty play-side-scene-empty">@Loc["NavPlayScenesEmpty"]</SidebarNote>
+            <EmptyState Compact="true" Class="play-side-empty play-side-scene-empty" Icon="@Icons.Material.Outlined.TheaterComedy">@Loc["NavPlayScenesEmpty"]</EmptyState>
         </FeatureGate>
     }
     @if (!Collapsed)
@@ -73,7 +73,7 @@
     }
     else if (!Collapsed)
     {
-        <SidebarNote Class="play-side-empty play-side-channels-empty">@Loc["NavPlayChannelsEmpty"]</SidebarNote>
+        <EmptyState Compact="true" Class="play-side-empty play-side-channels-empty" Icon="@Icons.Material.Outlined.Forum">@Loc["NavPlayChannelsEmpty"]</EmptyState>
     }
     @if (Feed.Conversations.Count > 0)
     {
@@ -97,7 +97,7 @@
     else if (!Collapsed)
     {
         <SectionLabel>@Loc["NavPlayPages"]</SectionLabel>
-        <SidebarNote Class="play-side-empty play-side-pages-empty">@WithCommands(Loc["NavPlayPagesEmpty"])</SidebarNote>
+        <EmptyState Compact="true" Class="play-side-empty play-side-pages-empty" Icon="@Icons.Material.Outlined.Chat">@WithCommands(Loc["NavPlayPagesEmpty"])</EmptyState>
     }
     @if (_apps.Count > 0)
     {

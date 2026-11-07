@@ -4,12 +4,13 @@ import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright-core';
 
 const read = path => readFileSync(new URL(`../../SharpMUSH.Client/${path}`, import.meta.url), 'utf8');
+const tokens = read('wwwroot/css/tokens.css');
 
 test('mobile bottom navigation contains its labels at 200 percent text size', async () => {
     const browser = await chromium.launch();
     try {
         const page = await browser.newPage({ viewport: { width: 320, height: 900 } });
-        await page.setContent(`<style>html {font-size:32px;} * {box-sizing:border-box;} .mud-icon-root {width:1em;height:1em;flex-shrink:0;}
+        await page.setContent(`<style>${tokens} html {font-size:32px;} * {box-sizing:border-box;} .mud-icon-root {width:1em;height:1em;flex-shrink:0;fill:currentColor;}
             ${read('wwwroot/css/shell.css')}</style>
             <div class="phosphor-shell phosphor-shell--bottomnav"><nav class="phosphor-bottomnav">
             ${['Home', 'Play', 'Wiki', 'Characters', 'Menu'].map(name => `<button class="phosphor-bottomtab"><svg class="mud-icon-root phosphor-bottomtab-icon" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" /></svg><span class="phosphor-bottomtab-label">${name}</span></button>`).join('')}
@@ -19,6 +20,7 @@ test('mobile bottom navigation contains its labels at 200 percent text size', as
             labels: [...nav.querySelectorAll('.phosphor-bottomtab-label')].map(el => { const range = document.createRange(); range.selectNodeContents(el); return range.getBoundingClientRect().toJSON(); })
         }));
         assert.ok(bounds.labels.every(label => label.top >= bounds.bar.top && label.bottom <= bounds.bar.bottom), 'enlarged labels remain inside the visible navigation');
+        if (process.env.SHELL_AUDIT_OUTPUT) await page.screenshot({ path: `${process.env.SHELL_AUDIT_OUTPUT}/navigation-200.png` });
     } finally {
         await browser.close();
     }
@@ -28,7 +30,7 @@ test('theme radio groups use one tab stop and arrow keys select and wrap', async
     const browser = await chromium.launch();
     try {
         const page = await browser.newPage();
-        await page.setContent(`<div id="settings"><div role="radiogroup">
+        await page.setContent(`<style>${tokens}</style><div id="settings"><div role="radiogroup">
             <button role="radio" aria-checked="true">Phosphor</button>
             <button role="radio" aria-checked="false" disabled>Unavailable</button>
             <button role="radio" aria-checked="false">Daylight</button>
@@ -69,7 +71,7 @@ test('phone and widget schema previews reflow independently of the desktop page'
         const grid = `<div class="schema-view"><div class="schema-grid schema-grid--cols" style="--schema-cols:3">
             <div class="schema-cell" style="--schema-span:2">Character name</div>
             <div class="schema-cell">Description</div><div class="schema-cell">Status</div></div></div>`;
-        await page.setContent(`<style>body { margin:0; } * { box-sizing:border-box; }
+        await page.setContent(`<style>${tokens} body { margin:0; } * { box-sizing:border-box; }
             .desktop-page { container:page / inline-size; width:1200px; } ${css}</style>
             <main class="desktop-page"><div class="bld-preview-frame">${grid}</div></main>`);
         const frame = page.locator('.bld-preview-frame');
@@ -90,7 +92,7 @@ test('boot error stays hidden until failure and its dismissal is keyboard operab
     try {
         const page = await browser.newPage({ viewport: { width: 320, height: 568 } });
         const error = read('wwwroot/index.html').match(/<div id="blazor-error-ui"[\s\S]*?<\/div>/)[0];
-        await page.setContent(`<style>${read('wwwroot/css/tokens.css')}${read('wwwroot/css/globals.css')}</style>${error}`);
+        await page.setContent(`<style>${tokens}${read('wwwroot/css/globals.css')}</style>${error}`);
         assert.equal(await page.locator('#blazor-error-ui').isVisible(), false);
         // Blazor's existing hook reveals the bar and attaches dismissal to .dismiss.
         await page.evaluate(() => {
@@ -115,8 +117,8 @@ test('shared card header wraps long titles and controls at narrow widths with en
     const browser = await chromium.launch();
     try {
         const page = await browser.newPage({ viewport: { width: 320, height: 568 } });
-        await page.setContent(`<style>
-            html { font-size: 32px; } body { margin: 16px; } * { box-sizing: border-box; }
+        await page.setContent(`<style>${tokens}
+            html { font-size: 32px; } body { margin: 16px; font-family: var(--font-ui); } * { box-sizing: border-box; }
             button { font: inherit; } ${read('Components/Kit/KitCard.razor.css')}
             </style><section class="kit-card"><header class="kit-card-head">
             <div class="kit-card-titles"><div class="kit-card-title">Averylongunbrokencommunitytitle</div>
@@ -125,6 +127,9 @@ test('shared card header wraps long titles and controls at narrow widths with en
             </header></section>`);
         const extent = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, width: innerWidth }));
         assert.ok(extent.scroll <= extent.width, 'shared card must not cause horizontal page overflow');
+        assert.equal(await page.locator('.kit-card-title').evaluate(el => getComputedStyle(el).fontSize), '30px', 'title uses the real rem-based text-base token at 200 percent');
+        assert.equal(await page.locator('.kit-card-sub').evaluate(el => getComputedStyle(el).fontSize), '26px', 'subtitle uses the real rem-based text-sm token at 200 percent');
+        if (process.env.SHELL_AUDIT_OUTPUT) await page.screenshot({ path: `${process.env.SHELL_AUDIT_OUTPUT}/card-200.png` });
         const controls = await page.locator('button').all();
         for (const button of controls) assert.ok(await button.isVisible());
     } finally {
@@ -136,7 +141,7 @@ test('mobile terminal connection controls remain above fixed navigation', async 
     const browser = await chromium.launch();
     try {
         const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-        await page.setContent(`<style>${read('wwwroot/css/tokens.css')}${read('wwwroot/css/shell.css')}
+        await page.setContent(`<style>${tokens}${read('wwwroot/css/shell.css')}
           body{margin:0} .phosphor-content-col{position:relative;height:100vh}
           </style><div class="phosphor-shell phosphor-shell--bottomnav"><div class="phosphor-content-col">
           <section class="phosphor-terminal"><div style="flex:1"></div><button id="connect">Connect</button></section>

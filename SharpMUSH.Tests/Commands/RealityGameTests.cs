@@ -308,6 +308,45 @@ public class RealityGameTests
 	}
 
 	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
+	public async Task RxDescNamesEachLayersDescriptionAttribute()
+	{
+		var policy = Get<RealityPolicy>();
+		var original = await policy.ConfigurationAsync();
+		var objects = Get<IObjectStore>();
+		var mediator = Get<IMediator>();
+		var god = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+		var home = await god.Location.WithCancellation(default);
+		var thing = (await mediator.Send(new CreateThingCommand("rxdesc thing", home, god, home))).ToString();
+		var mortal = await mediator.Send(new CreatePlayerCommand($"Rx{Guid.NewGuid():N}"[..20], "password", new DBRef(0), new DBRef(0), 100));
+		var asGod = Factory.CommandParser.FromState(ParserState.RootFor(god.Object.DBRef));
+		var asMortal = Factory.CommandParser.FromState(ParserState.RootFor(mortal));
+		async Task<string> Eval(IMUSHCodeParser parser, string code) => (await parser.EvaluateAsync(MarkupText.Plain(code))).ToPlainText();
+		try
+		{
+			await policy.SaveConfigurationAsync(new(1, false, ["normal", "ghost", "dream"], new() { ["special"] = "ghost" })
+			{ Descriptions = new() { ["ghost"] = "SPECIAL" } }, default);
+			await asGod.CommandListParse(MarkupText.Plain($"@rxlevel {thing}=ghost dream"));
+
+			await Assert.That(await Eval(asGod, $"rxdesc({thing})")).IsEqualTo("DESCRIBE SPECIAL DESCRIBE");
+			await Assert.That(await Eval(asGod, "rxdesc(desc,spec)")).IsEqualTo("SPECIAL");
+			await Assert.That(await Eval(asGod, "rxdesc(adesc,ghost)")).IsEqualTo("SPECIAL_ADESC");
+			await Assert.That(await Eval(asGod, "rxdesc(adesc,normal)")).IsEqualTo("ADESCRIBE");
+			await Assert.That(await Eval(asGod, "rxdesc(value,dream)")).IsEqualTo("4");
+			await Assert.That(await Eval(asGod, "rxdesc(hex,gh)")).IsEqualTo("0x00000002");
+			await Assert.That(await Eval(asGod, "rxdesc(desc,nowhere)")).IsEqualTo("#-1");
+			await Assert.That(await Eval(asGod, "rxdesc(value,)")).IsEqualTo("0");
+			await Assert.That(await Eval(asGod, "rxdesc(size,normal)")).IsEqualTo("#-1 UNRECOGNIZED SUBARG 'size' FOR FUNCTION RXDESC");
+
+			// Someone who is not staff asks only about the layers they receive, and only about what they control.
+			await Assert.That(await Eval(asMortal, "rxdesc(desc,normal)")).IsEqualTo("DESCRIBE");
+			await Assert.That(await Eval(asMortal, "rxdesc(desc,ghost)")).IsEqualTo("#-1");
+			await Assert.That(await Eval(asMortal, "rxdesc(hex,ghost)")).IsEqualTo("0x00000000");
+			await Assert.That(await Eval(asMortal, $"rxdesc({thing})")).StartsWith("#-1");
+		}
+		finally { await policy.SaveConfigurationAsync(original, default); }
+	}
+
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	public async Task RealityLevelsSetAndReadLayersByNameOrAlias()
 	{
 		var policy = Get<RealityPolicy>();

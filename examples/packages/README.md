@@ -14,9 +14,11 @@ packages. Every manifest here is parsed by the test suite
 (`SharpMUSH.Tests/Packages/ExamplePackageTests.cs`), so the examples are
 guaranteed to stay in sync with the parser.
 
-These examples are also published as the seed content of the official package
-repo, [SharpMUSH/SharpMUSH-Packages](https://github.com/SharpMUSH/SharpMUSH-Packages),
-which games can add as a remote in the admin panel.
+Packages that do not ship with the server live in the official package
+library, [SharpMUSH/SharpMUSH.Packages](https://github.com/SharpMUSH/SharpMUSH.Packages),
+which games can add as a remote in the admin panel. A package that leaves this
+folder for the library is listed in `BundledPackages.Moved`, and every game that
+installed it from here follows the library from its next start.
 
 ## Example packages
 
@@ -28,11 +30,9 @@ SharpMUSH.Guide repository, under `Examples/Packages/`.
 | [`who-where/`](who-where/) | Multiple objects, internal refs, parents, flags, attribute trees (``CMD`WHO``, ``FUN`WHERE`<SWITCH>``), and ``FILTER`WHO`STATUS`` filters that let other packages add a Status column to `+who` |
 | [`chargen-app/`](chargen-app/) | An application package (`kind: application`): registers a portal page, depends on a softcode package, configurable role |
 | [`jobs/`](jobs/) + [`jobs-app/`](jobs-app/) | A full softcode system: commands added with `@command/add` and `@hook/override/inline`, roles and permissions declared by the package, per-object hooks, +help topics, and a Dynamic Application driven by the same code |
-| [`radio/`](radio/) | A system built on `@feed`: the engine keeps each frequency's lines, listeners and gags; the package keeps names, lists, locks, titles and alteregos in its own attributes, and formats each listener's copy with ``FEED`RADIO`FORMAT``; another package adds a switch through ``EXT`<switch>`` |
-| [`radio-scene/`](radio-scene/) | A package that joins two others: a tap on the radio feed kind logs what a listener hears into their scene, and it adds `+radio/log` by attaching ``EXT`LOG`` to the radio (requires radio and scene) |
 | [`scene-help/`](scene-help/) + [`scene-config/`](scene-config/) | Bridges: `scene` keeps its `+help` topics and its settings as its own data and depends on nothing, and each bridge is the one registration that shows them to `+help` or `+config`, so a game without either still runs scenes. Every package with topics or settings has the same pair, named `<package>-help` and `<package>-config` (`jobs-help`, `bboards-config`, ...), and the server installs a bundled one wherever both of its halves are |
 | [`scene-here/`](scene-here/) | Pushes `scene_here` onto a player's context stack as they enter a room with a scene running, so the command palette offers that scene's commands with its number filled in (requires scene and the event handler) |
-| [`scene-verse/`](scene-verse/) | Extends another package's output without editing it: scene details on the Scene Logger, and ``FILTER`<point>`<name>`` attributes that `+scene` runs with `chain()` over what it shows (requires scene) |
+| [`scene-safety/`](scene-safety/) | Extends another package's output without editing it: a scene detail on the Scene Logger, and ``FILTER`<point>`<name>`` attributes that `+scene` runs with `chain()` over what it shows (requires scene) |
 | [`highlights/`](highlights/) + [`highlights-app/`](highlights-app/) | A package that keeps its own data beside another's: favourite poses in a store of its own, commands attached to the Scene Logger, a ``FILTER`POSE`RULE`` filter, settings on `+config`, and a portal page whose routes check what the viewer may read, since a route runs as a wizard (requires scene) |
 | [`bboards/`](bboards/) | Nested bulletin boards kept entirely in attributes: positional post numbers with a guard against a number that moved, comments and replies under a post, board locks for reading, posting and moderating, an `@input` reader, and the boards created by its `AINSTALL` rather than declared as objects |
 | [`bboards-app/`](bboards-app/) | The bulletin boards as a portal page: conversations drawn as threads, pinned posts reordered by dragging, and every write running the same routine the typed command does, as the viewer |
@@ -96,8 +96,8 @@ depends:                        # optional — other packages this one requires
   - package: who-where          # full form: adds a source hint (see below)
     version: ">=1.0"
     source:
-      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
-      path: who-where/
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/who-where/
       branch: main
 
 conflicts:                      # optional — cannot be installed alongside
@@ -280,8 +280,8 @@ depends:
   - package: who-where
     version: ">=1.0"            # optional; omit for any release version
     source:                     # optional
-      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
-      path: who-where/          # optional — package directory in a monorepo
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/who-where/  # optional — package directory in a monorepo
       branch: main              # optional — defaults to the remote default
 ```
 

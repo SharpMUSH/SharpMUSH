@@ -62,7 +62,7 @@
 
                 @if (PoseTypes.Types.Count == 0)
                 {
-                    <EmptyBox Class="adm-pose-none">@Loc["AdmPoseTypesNone"]</EmptyBox>
+                    <EmptyState Class="adm-pose-none" Icon="@Icons.Material.Outlined.FormatQuote">@Loc["AdmPoseTypesNone"]</EmptyState>
                 }
 
                 @foreach (var type in PoseTypes.Types)

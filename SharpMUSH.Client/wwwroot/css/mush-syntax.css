@@ -3,9 +3,9 @@
     background: var(--code-bg);
     color: var(--code-text);
     border-radius: 4px;
-    padding: 0.5rem 0.625rem;
+    padding: var(--space-3) var(--space-4);
     font-family: var(--font-mono);
-    font-size: 0.8rem;
+    font-size: var(--text-sm);
     white-space: pre-wrap;
     word-break: break-all;
     max-height: 280px;

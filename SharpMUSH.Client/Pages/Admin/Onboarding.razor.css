@@ -1,24 +1,24 @@
-.admin-onboarding { max-width: 56rem; margin: auto; padding: clamp(1rem, 3vw, 2.5rem); color: var(--text); }
-.admin-onboarding h1 { font-size: 2rem; }
+.admin-onboarding { max-width: 56rem; margin: auto; padding: clamp(var(--space-5), 3vw, var(--space-8)); color: var(--text); }
+.admin-onboarding h1 { font-size: var(--text-2xl); }
 .admin-onboarding p { line-height: 1.65; max-width: 70ch; margin-block: .75rem; }
-.admin-checklist { margin-top: 2rem; padding-left: 1.5rem; }
-.admin-checklist li { border-top: 1px solid var(--border); padding: 1.25rem 0; display: flow-root; }
+.admin-checklist { margin-top: 2rem; padding-left: var(--space-6); }
+.admin-checklist li { border-top: 1px solid var(--border); padding: var(--space-6) 0; display: flow-root; }
 .admin-topic-mascot { float: right; width: 7rem; height: 7rem; object-fit: contain; margin: 0 0 1rem 1.25rem; }
 .admin-topic-mascot-reduced { width: 2.5rem; height: 2.5rem; }
 .admin-checklist summary { cursor: pointer; }
-.admin-checklist h2 { display: inline; margin: 0 .75rem 0 0; font-size: 1.25rem; }
-.admin-checklist .admin-check-handled { padding: .6rem 0; }
+.admin-checklist h2 { display: inline; margin: 0 .75rem 0 0; font-size: var(--text-lg); }
+.admin-checklist .admin-check-handled { padding: var(--space-3) 0; }
 .admin-check-handled summary { color: var(--text-dim); }
-.admin-check-handled h2 { font-size: 1rem; font-weight: 600; }
+.admin-check-handled h2 { font-size: var(--text-md); font-weight: 600; }
 .admin-onboarding a:not([class]) { color: var(--accent); text-decoration: underline; text-underline-offset: .2em; }
-.admin-check-actions { display: flex; flex-wrap: wrap; gap: .65rem; margin-top: .75rem; }
-.admin-check-actions button { padding: .7rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
-.admin-check-state { font-size: .875rem; font-weight: 650; }
-.admin-check-warning { padding: .6rem .8rem; border-left: 3px solid var(--warn); background: var(--warn-tint); border-radius: 4px; }
+.admin-check-actions { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-top: .75rem; }
+.admin-check-actions button { padding: var(--space-4); color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
+.admin-check-state { font-size: var(--text-base); font-weight: 650; }
+.admin-check-warning { padding: var(--space-3) var(--space-4); border-left: 3px solid var(--warn); background: var(--warn-tint); border-radius: 4px; }
 .admin-onboarding :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
 @container page (max-width: 48rem) {
-    .admin-onboarding { padding: 1rem; }
+    .admin-onboarding { padding: var(--space-5); }
     .admin-check-actions { flex-direction: column; align-items: stretch; }
     .admin-topic-mascot:not(.admin-topic-mascot-reduced) { width: 5rem; height: 5rem; margin-left: .75rem; }
 }

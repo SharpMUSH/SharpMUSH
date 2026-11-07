@@ -326,7 +326,7 @@
         @if (Pose.WasEdited)
         {
             <span class="story-edited" title="@Loc.Plural("RolEditedTimes", "count", Pose.EditCount - 1)">
-                <MudIcon Icon="@Icons.Material.Outlined.Edit" Style="font-size:11px;" />@Loc["RolEditedBadge"]
+                <MudIcon Icon="@Icons.Material.Outlined.Edit" Style="font-size:var(--text-xs);" />@Loc["RolEditedBadge"]
             </span>
         }
     };
@@ -336,7 +336,7 @@
         @if (CanEdit)
         {
             <button type="button" class="story-edit-btn" aria-label="@Loc["RolEditPose"]" title="@Loc["RolEditPose"]" @onclick="StartEdit">
-                <MudIcon Icon="@Icons.Material.Outlined.Edit" Style="font-size:14px;" /><span>@Loc["RolEditPose"]</span>
+                <MudIcon Icon="@Icons.Material.Outlined.Edit" Style="font-size:var(--text-base);" /><span>@Loc["RolEditPose"]</span>
             </button>
         }
     };
@@ -373,7 +373,7 @@
     {
         @if (PoseTypeStyle.Icon(Type.Icon) is { } icon)
         {
-            <MudIcon Class="story-type-icon" Icon="@icon" Style="font-size:14px;" aria-hidden="true" />
+            <MudIcon Class="story-type-icon" Icon="@icon" Style="font-size:var(--text-base);" aria-hidden="true" />
         }
     };
 

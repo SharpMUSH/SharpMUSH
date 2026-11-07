@@ -41,7 +41,7 @@ public class OnboardingCapabilityTests
 		var registry = Substitute.For<IPackageRegistryService>();
 		var probe = Substitute.For<IOnboardingCommandProbe>();
 		var package = new InstalledPackageRecord("plus-help", condition == "unsupported" ? "99.0.0" : version,
-			"https://github.com/SharpMUSH/SharpMUSH-Packages", "plus-help", new string('a', 40), null,
+			"https://github.com/SharpMUSH/SharpMUSH.Packages", "plus-help", new string('a', 40), null,
 			DateTimeOffset.UtcNow, 1);
 		package = condition switch
 		{
@@ -72,7 +72,7 @@ public class OnboardingCapabilityTests
 			await Assert.That(result[0].InstalledVersion).IsEqualTo(version);
 			await Assert.That(result[0].Command).IsEqualTo("+help");
 			if (condition == "bundled") await Assert.That(result[0].HelpUrl).IsNull();
-			else await Assert.That(result[0].HelpUrl).IsEqualTo("https://github.com/SharpMUSH/SharpMUSH-Packages/blob/" + new string('a', 40) + "/plus-help/package.yaml");
+			else await Assert.That(result[0].HelpUrl).IsEqualTo("https://github.com/SharpMUSH/SharpMUSH.Packages/blob/" + new string('a', 40) + "/plus-help/package.yaml");
 		}
 	}
 

@@ -2,9 +2,9 @@
 .wiki-req {
 	display: flex;
 	flex-direction: column;
-	gap: 0.625rem;
+	gap: var(--space-4);
 	min-width: 0;
-	padding: 0.75rem 0.875rem;
+	padding: var(--space-4) var(--space-5);
 	border: 1px solid var(--border-soft);
 	border-radius: var(--radius-row);
 	background: var(--surface-2);
@@ -17,7 +17,7 @@
 .wiki-req-head {
 	display: flex;
 	align-items: flex-start;
-	gap: 0.5rem;
+	gap: var(--space-3);
 }
 
 .wiki-req-titles {
@@ -25,12 +25,12 @@
 	min-width: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 0.125rem;
+	gap: var(--space-1);
 }
 
 .wiki-req-kicker {
 	font-family: var(--font-mono);
-	font-size: 0.625rem;
+	font-size: var(--text-xs);
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
 	color: var(--text-faint);
@@ -38,17 +38,16 @@
 
 .wiki-req-title {
 	margin: 0;
-	font-size: 0.9375rem;
+	font-size: var(--text-base);
 	font-weight: 600;
 	color: var(--text);
 	overflow-wrap: anywhere;
 }
 
 .wiki-req-sub,
-.wiki-req-help,
-.wiki-req-none {
+.wiki-req-help {
 	margin: 0;
-	font-size: 0.75rem;
+	font-size: var(--text-sm);
 	line-height: 1.4;
 	color: var(--text-dim);
 }
@@ -61,9 +60,9 @@
 	display: grid;
 	grid-template-columns: auto 1fr;
 	align-items: center;
-	gap: 0.375rem 0.75rem;
+	gap: var(--space-3) var(--space-4);
 	margin: 0;
-	font-size: 0.8125rem;
+	font-size: var(--text-sm);
 }
 
 .wiki-req-list dt {
@@ -74,33 +73,33 @@
 	margin: 0;
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.25rem;
+	gap: var(--space-2);
 }
 
 .wiki-req-actions {
 	display: flex;
 	justify-content: flex-end;
 	align-items: center;
-	gap: 0.5rem;
-	padding-top: 0.625rem;
+	gap: var(--space-3);
+	padding-top: var(--space-4);
 	border-top: 1px solid var(--border-soft);
 }
 
 .wiki-req-field {
 	display: flex;
 	flex-direction: column;
-	gap: 0.25rem;
+	gap: var(--space-2);
 }
 
 .wiki-req-label {
-	font-size: 0.75rem;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .wiki-req-chips {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.25rem;
+	gap: var(--space-2);
 }
 
 .wiki-req-option {
@@ -110,18 +109,18 @@
 }
 
 .wiki-req-option-name {
-	font-size: 0.8125rem;
+	font-size: var(--text-sm);
 	color: var(--text);
 }
 
 .wiki-req-option-scope {
 	font-family: var(--font-mono);
-	font-size: 0.6875rem;
+	font-size: var(--text-xs);
 	color: var(--text-faint);
 }
 
 .wiki-req-option-desc {
-	font-size: 0.75rem;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
@@ -129,32 +128,32 @@
 .wiki-req-define {
 	display: flex;
 	align-items: center;
-	gap: 0.375rem;
-	padding: 0.5rem 1rem;
+	gap: var(--space-3);
+	padding: var(--space-3) var(--space-5);
 	border-top: 1px solid var(--border-soft);
 	color: var(--accent);
-	font-size: 0.8125rem;
+	font-size: var(--text-sm);
 	text-decoration: none;
 }
 
 .wiki-req-chip {
 	display: inline-flex;
 	align-items: center;
-	gap: 0.125rem;
-	padding: 0 0 0 0.5rem;
+	gap: var(--space-1);
+	padding: 0 0 0 var(--space-3);
 	border: 1px solid var(--border);
 	border-radius: 99px;
 	font-family: var(--font-mono);
-	font-size: 0.75rem;
+	font-size: var(--text-sm);
 	color: var(--text);
 }
 
 .wiki-req-chip ::deep .wiki-req-chip-x {
-	padding: 0.125rem;
+	padding: var(--space-1);
 }
 
 .wiki-req-chip ::deep .wiki-req-chip-x svg {
-	font-size: 0.875rem;
+	font-size: var(--text-base);
 }
 
 .wiki-req-actions-start {
@@ -163,5 +162,5 @@
 
 .wiki-req-actions-start .wiki-req-define {
 	border-top: none;
-	padding: 0.25rem 0;
+	padding: var(--space-2) 0;
 }

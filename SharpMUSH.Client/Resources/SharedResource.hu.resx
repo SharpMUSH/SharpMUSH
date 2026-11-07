@@ -1858,7 +1858,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
-    <value>— Csatlakozzon, hogy lássa, ki van itt —</value>
+    <value>Csatlakozzon, hogy lássa, ki van itt</value>
     <comment>MT</comment>
   </data>
   <data name="NavCreateACharacter" xml:space="preserve">
@@ -1950,7 +1950,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavNoExitsAvailable" xml:space="preserve">
-    <value>— Nincs elérhető kijárat —</value>
+    <value>Nincs elérhető kijárat</value>
     <comment>MT</comment>
   </data>
   <data name="NavNotConnected" xml:space="preserve">
@@ -5432,6 +5432,22 @@
   </data>
   <data name="RolOverridesHelp" xml:space="preserve">
     <value>A fiók kivétele minden szerepkörét felülírja.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReach" xml:space="preserve">
+    <value>Hatókör</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachEveryone" xml:space="preserve">
+    <value>Bármely cél</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachUpTo" xml:space="preserve">
+    <value>Hatókör: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReaching" xml:space="preserve">
+    <value>(hatókör: {0})</value>
     <comment>MT</comment>
   </data>
   <data name="RolOverrideSaved" xml:space="preserve">

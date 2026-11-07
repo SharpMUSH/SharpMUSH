@@ -1,8 +1,8 @@
 .dbimport-body {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	padding: 14px 16px 16px;
+	gap: var(--space-4);
+	padding: var(--space-5) var(--space-5) var(--space-5);
 }
 
 /* the drop zone is a KitCard, so its root carries the card's scope, not this page's */
@@ -15,28 +15,28 @@
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: 0.5rem;
+	gap: var(--space-3);
 	min-height: 140px;
 }
 
 .dbimport-dropzone-inner ::deep .dbimport-dropzone-icon {
-	font-size: 2.75rem;
+	font-size: var(--text-3xl);
 	color: var(--accent);
 }
 
 .dbimport-dropzone-title {
-	font-size: 15px;
+	font-size: var(--text-base);
 	font-weight: 700;
 	color: var(--text);
 }
 
 .dbimport-dropzone-hint {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .dbimport-body ::deep .dbimport-label {
-	padding: 6px 0 0;
+	padding: var(--space-3) 0 0;
 }
 
 .dbimport-body ::deep .dbimport-label-error {
@@ -51,19 +51,19 @@
 .dbimport-rewrites {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--space-2);
 	margin-top: 8px;
 }
 
 .dbimport-rewrite-note {
 	cursor: pointer;
 	font-family: var(--font-mono);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	overflow-wrap: anywhere;
 }
 
 .dbimport-rewrite-label {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	margin: 8px 0 2px 16px;
 	opacity: 0.75;
 }
@@ -72,16 +72,16 @@
 	background: var(--surface-2);
 	border-radius: 4px;
 	font-family: var(--font-mono);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	margin: 0 0 0 16px;
-	padding: 6px 8px;
+	padding: var(--space-3) var(--space-3);
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 }
 
 /* Said in place of the file row while no mush.cnf is chosen: what leaving it out means. */
 .dbimport-config-hint {
-	font-size: 13px;
+	font-size: var(--text-sm);
 	line-height: 1.5;
 	color: var(--text-dim);
 }
@@ -89,29 +89,29 @@
 .dbimport-file-row {
 	display: flex;
 	align-items: center;
-	gap: 0.625rem;
+	gap: var(--space-4);
 }
 
 .dbimport-file-row ::deep .dbimport-file-icon {
-	font-size: 1.25rem;
+	font-size: var(--text-lg);
 	color: var(--accent);
 }
 
 .dbimport-file-name {
-	font-size: 14px;
+	font-size: var(--text-base);
 	color: var(--text);
 }
 
 .dbimport-file-size {
 	font-family: var(--font-mono);
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-faint);
 }
 
 .dbimport-actions {
 	display: flex;
 	justify-content: space-between;
-	gap: 0.75rem;
+	gap: var(--space-4);
 	margin-top: 6px;
 }
 
@@ -126,21 +126,21 @@
 .dbimport-progress-caption {
 	text-align: center;
 	font-family: var(--font-mono);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .dbimport-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
-	gap: 12px;
+	gap: var(--space-4);
 }
 
 .dbimport-tile {
 	background: var(--surface-2);
 	border: 1px solid var(--border-soft);
 	border-radius: var(--radius-tile);
-	padding: 12px 14px;
+	padding: var(--space-4) var(--space-5);
 }
 
 .dbimport-tile-wide {
@@ -150,21 +150,21 @@
 .dbimport-stat-list {
 	display: flex;
 	flex-direction: column;
-	gap: 0.5rem;
+	gap: var(--space-3);
 }
 
 .dbimport-stat {
 	display: flex;
 	justify-content: space-between;
 	align-items: baseline;
-	gap: 0.75rem;
-	font-size: 13px;
+	gap: var(--space-4);
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .dbimport-stat strong {
 	font-family: var(--font-mono);
-	font-size: 14px;
+	font-size: var(--text-base);
 	font-weight: 600;
 	color: var(--text);
 }
@@ -172,7 +172,7 @@
 /* Routine notes, folded away under the warnings. */
 .dbimport-notes-summary {
 	cursor: pointer;
-	font-size: 12px;
+	font-size: var(--text-sm);
 	font-weight: 700;
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
@@ -185,8 +185,8 @@
 
 .dbimport-note-list {
 	margin: 8px 0 0;
-	padding-left: 18px;
-	font-size: 13px;
+	padding-left: var(--space-5);
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 	overflow-wrap: anywhere;
 }
@@ -195,21 +195,21 @@
 .dbimport-sessions {
 	display: flex;
 	flex-direction: column;
-	padding: 6px 8px 10px;
+	padding: var(--space-3) var(--space-3) var(--space-4);
 }
 
 .dbimport-session {
 	display: grid;
 	grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
-	gap: 12px;
+	gap: var(--space-4);
 	align-items: baseline;
-	padding: 8px;
+	padding: var(--space-3);
 	border: 0;
 	border-radius: var(--radius-tile);
 	background: none;
 	color: var(--text-dim);
 	font: inherit;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	text-align: left;
 	cursor: pointer;
 }
@@ -227,13 +227,13 @@
 
 .dbimport-session-started {
 	font-family: var(--font-mono);
-	font-size: 12px;
+	font-size: var(--text-sm);
 }
 
 @container page (max-width: 48rem) {
 	.dbimport-session {
 		grid-template-columns: minmax(0, 1fr) auto;
-		gap: 2px 12px;
+		gap: var(--space-1) var(--space-4);
 	}
 
 	.dbimport-file-row {
@@ -261,15 +261,15 @@
 
 .dbimport-warning-kind {
 	margin: 0;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	color: var(--text);
 }
 
 .dbimport-warning-list {
 	margin: 4px 0 0;
-	padding-left: 18px;
-	font-size: 13px;
+	padding-left: var(--space-5);
+	font-size: var(--text-sm);
 	color: var(--warn);
 	overflow-wrap: anywhere;
 }
@@ -280,10 +280,10 @@
 
 .dbimport-needs-action {
 	margin-right: 6px;
-	padding: 0 6px;
+	padding: 0 var(--space-3);
 	border: 1px solid var(--warn);
 	border-radius: 4px;
-	font-size: 11px;
+	font-size: var(--text-xs);
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: .04em;

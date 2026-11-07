@@ -725,12 +725,20 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(depth > 0 ? depth - 1 : -1));
 	}
 
-	[SharpFunction(Name = "inum", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
+	[SharpFunction(Name = "inum", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
 	public ValueTask<CallState> IterationNumber(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var levelArg = args["0"].Message.ToPlainText();
+		var levelArg = args.Count == 0 ? string.Empty : args["0"].Message.ToPlainText();
 		var maxCount = parser.CurrentState.IterationRegisters.Count;
+
+		// inum() is TinyMUX's inum(0), and empty outside a loop, as itext() is.
+		if (levelArg.Length == 0)
+		{
+			return ValueTask.FromResult(maxCount == 0
+				? new CallState(MarkupText.Empty)
+				: new CallState(parser.CurrentState.IterationRegisters.First().Iteration));
+		}
 
 		if (levelArg.Equals("L", StringComparison.OrdinalIgnoreCase))
 		{

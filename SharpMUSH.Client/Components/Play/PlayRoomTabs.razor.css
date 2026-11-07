@@ -1,7 +1,7 @@
 .play-sheet-tabs {
     display: flex;
-    padding: 4px;
-    gap: 4px;
+    padding: var(--space-2);
+    gap: var(--space-2);
     margin-bottom: 12px;
     border-radius: 14px;
     background: var(--surface-3);
@@ -15,7 +15,7 @@
     background: transparent;
     color: var(--text-dim);
     font: inherit;
-    font-size: 14px;
+    font-size: var(--text-base);
     font-weight: 600;
     cursor: pointer;
 }

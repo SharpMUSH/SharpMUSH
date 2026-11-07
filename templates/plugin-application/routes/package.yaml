@@ -15,8 +15,9 @@ depends:
   - package: http-handler
     version: ">=1.0"
     source:
-      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
-      path: http-handler/
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/http-handler/
+      branch: main
 
 # Attach mode: this package manages route attributes on the existing
 # http_handler object ({{$http_handler}}, #4 by default). It creates nothing.

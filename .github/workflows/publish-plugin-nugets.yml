@@ -4,20 +4,21 @@ name: Publish Plugin NuGets
 #   - SharpMUSH.Library                  (the plugin contract surface)
 #   - SharpMUSH.Implementation.Generated (the [SharpCommand]/[SharpFunction] source-generator analyzer)
 #
-# Triggered by a tag like plugin-nuget/v1.0.0. The version after the slash+v is used as the
-# package version, so it should match PluginContractVersion.Current / the csproj <Version>.
+# Triggered by publishing a GitHub Release tagged like plugin-nuget/v1.0.0. The version after the
+# slash+v is used as the package version, so it should match PluginContractVersion.Current / the
+# csproj <Version>.
 
 on:
-  push:
-    tags:
-      - 'plugin-nuget/v*'  # e.g. plugin-nuget/v1.0.0
-  workflow_dispatch:       # Allow manual triggering (uses the csproj <Version>)
+  release:
+    types: [published]  # a GitHub Release tagged plugin-nuget/v1.0.0, say
+  workflow_dispatch:    # a manual run uses the csproj <Version>
 
 permissions:
   contents: read
 
 jobs:
   pack-and-push:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'plugin-nuget/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read    # checkout

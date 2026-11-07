@@ -6,6 +6,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Messaging.Messages;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -35,6 +36,28 @@ public partial class Commands
 
 		LogSitelockRefusal(player.Object.Name, ipAddress, hostName);
 		await NotifyService.Notify(handle, "Access from your location is restricted.");
+		return true;
+	}
+
+	/// <summary>
+	/// The <c>!connect</c> check again, once the login is bound: the connect screen's check ran against the host
+	/// the connection had then, and a host-name lookup can finish between it and the bind. A lookup that finishes
+	/// after the bind is handled where the lookup ends. A refused login is told so and dropped.
+	/// </summary>
+	private async ValueTask<bool> HostLocksOutLoginAsync(long handle, SharpPlayer player)
+	{
+		var (ipAddress, hostName) = ConnectionOrigin(handle);
+		if (hostName == ipAddress
+				|| !SitelockMatcher.IsBlocked(Configuration.CurrentValue.SitelockRules.Rules, ipAddress, hostName,
+					SitelockMatcher.ConnectFlag))
+		{
+			return false;
+		}
+
+		LogSitelockRefusal(player.Object.Name, ipAddress, hostName);
+		await NotifyService.Notify(handle, "Access from your location is restricted.");
+		await ConnectionService.Disconnect(handle);
+		await MessageBus.Publish(new DisconnectConnectionMessage(handle, "Access from your location is restricted."));
 		return true;
 	}
 

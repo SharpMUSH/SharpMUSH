@@ -1,14 +1,14 @@
 .mail-detail-page {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
+	gap: var(--space-5);
 	min-width: 0;
 	max-width: 56rem;
 }
 
 .md-missing {
-	padding: 16px;
-	font-size: 14px;
+	padding: var(--space-5);
+	font-size: var(--text-base);
 	color: var(--text-dim);
 }
 
@@ -17,10 +17,10 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 8px 12px;
-	padding: 14px 16px;
+	gap: var(--space-3) var(--space-4);
+	padding: var(--space-5) var(--space-5);
 	border-bottom: 1px solid var(--border-soft);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
@@ -31,16 +31,16 @@
 
 .md-date {
 	margin-left: auto;
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-faint);
 }
 
 .md-body {
 	overflow-wrap: anywhere;
-	padding: 16px;
+	padding: var(--space-5);
 	white-space: pre-wrap;
 	font-family: var(--font-mono);
-	font-size: 13px;
+	font-size: var(--text-sm);
 	line-height: 1.6;
 	color: var(--text);
 }
@@ -48,7 +48,6 @@
 /* Narrow: long monospace tokens wrap rather than forcing a horizontal scroll. */
 @container page (max-width: 48rem) {
 	.md-body {
-	overflow-wrap: anywhere;
 		overflow-wrap: anywhere;
 		word-break: break-word;
 	}

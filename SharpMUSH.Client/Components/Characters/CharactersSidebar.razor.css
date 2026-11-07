@@ -2,10 +2,10 @@
 .char-side-create {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: var(--space-3);
 	min-height: 32px;
-	padding: 0 10px;
-	font-size: 13px;
+	padding: 0 var(--space-4);
+	font-size: var(--text-sm);
 	font-weight: 600;
 	color: var(--accent);
 	text-decoration: none;

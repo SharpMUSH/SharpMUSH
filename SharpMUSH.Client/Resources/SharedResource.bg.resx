@@ -1858,7 +1858,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
-    <value>— Свържете се, за да видите кой е тук —</value>
+    <value>Свържете се, за да видите кой е тук</value>
     <comment>MT</comment>
   </data>
   <data name="NavCreateACharacter" xml:space="preserve">
@@ -1950,7 +1950,7 @@
     <comment>MT — {0} is a route</comment>
   </data>
   <data name="NavNoExitsAvailable" xml:space="preserve">
-    <value>— Няма налични изходи —</value>
+    <value>Няма налични изходи</value>
     <comment>MT</comment>
   </data>
   <data name="NavNotConnected" xml:space="preserve">
@@ -5432,6 +5432,22 @@
   </data>
   <data name="RolOverridesHelp" xml:space="preserve">
     <value>Изключение за този акаунт е по-силно от всяка негова роля.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReach" xml:space="preserve">
+    <value>Обхват</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachEveryone" xml:space="preserve">
+    <value>Всяка цел</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachUpTo" xml:space="preserve">
+    <value>Обхват {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReaching" xml:space="preserve">
+    <value>(обхват {0})</value>
     <comment>MT</comment>
   </data>
   <data name="RolOverrideSaved" xml:space="preserve">

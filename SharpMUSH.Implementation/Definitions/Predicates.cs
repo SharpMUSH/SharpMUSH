@@ -70,6 +70,40 @@ public static class Predicates
 	}
 
 	public static bool Falsy(MString text, bool tinyBooleans = false) => !Truthy(text, tinyBooleans);
+
+	/// <summary>
+	/// TinyMUX's BOOLEAN value, which <c>andbool()</c> and its family read whatever <c>tiny_booleans</c> and
+	/// <c>mux_logic</c> say: false for an empty or blank string, a number equal to zero, NaN, Ind or an
+	/// infinity, and anything starting <c>#-</c>; true for everything else, negative numbers, dbrefs and
+	/// words included.
+	/// </summary>
+	public static bool MuxBoolean(MString text)
+	{
+		var plain = text.ToPlainText();
+		if (plain.StartsWith('#')) return !plain.StartsWith("#-", StringComparison.Ordinal);
+
+		var trimmed = plain.AsSpan().Trim(" \t\r\n\v\f");
+		if (trimmed.IsEmpty) return false;
+
+		var unsigned = trimmed[0] is '+' or '-' ? trimmed[1..] : trimmed;
+		if (unsigned.Equals("NaN", StringComparison.OrdinalIgnoreCase)
+			|| unsigned.Equals("Ind", StringComparison.OrdinalIgnoreCase)
+			|| unsigned.Equals("Inf", StringComparison.OrdinalIgnoreCase))
+		{
+			return false;
+		}
+
+		// A number is false when every digit of it is 0; .NET's own words for the specials are text here.
+		const NumberStyles numeric = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint | NumberStyles.AllowExponent;
+		if (unsigned.Length > 0 && (char.IsAsciiDigit(unsigned[0]) || unsigned[0] == '.')
+			&& double.TryParse(trimmed, numeric, CultureInfo.InvariantCulture, out _))
+		{
+			var exponent = unsigned.IndexOfAny('e', 'E');
+			return (exponent >= 0 ? unsigned[..exponent] : unsigned).ContainsAnyInRange('1', '9');
+		}
+
+		return true;
+	}
 }
 
 public static class PredicateExtensions

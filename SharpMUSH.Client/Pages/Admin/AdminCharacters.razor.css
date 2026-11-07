@@ -1,15 +1,15 @@
 .adm-chars-body {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	padding: 14px 16px 16px;
+	gap: var(--space-4);
+	padding: var(--space-5) var(--space-5) var(--space-5);
 }
 
 .adm-chars-filters {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 12px;
+	gap: var(--space-4);
 }
 
 .adm-chars-filters ::deep .adm-chars-search {
@@ -22,7 +22,7 @@
 }
 
 .adm-chars-total {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-faint);
 }
 
@@ -41,13 +41,13 @@
 
 .adm-chars-dbref {
 	margin-inline-start: 6px;
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-faint);
 }
 
 .adm-chars-body ::deep .adm-chars-flags {
 	font-family: var(--font-mono, monospace);
-	font-size: 12px;
+	font-size: var(--text-sm);
 	overflow-wrap: anywhere;
 }
 
@@ -68,19 +68,19 @@
 	.adm-chars-body ::deep .adm-chars-table tr {
 		display: block;
 		border-bottom: 1px solid var(--border);
-		padding-block: 0.5rem;
+		padding-block: var(--space-3);
 	}
 
 	.adm-chars-body ::deep .adm-chars-table td {
 		display: grid;
 		grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
-		gap: 0.5rem;
+		gap: var(--space-3);
 		border: none;
 	}
 
 	.adm-chars-body ::deep .adm-chars-table td::before {
 		content: attr(data-label);
 		color: var(--text-dim);
-		font-size: 0.8125rem;
+		font-size: var(--text-sm);
 	}
 }

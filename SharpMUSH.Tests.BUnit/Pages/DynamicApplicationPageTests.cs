@@ -319,6 +319,8 @@ public class DynamicApplicationTopbarTests : TrackingBunitContext, IAsyncDisposa
 
 		await Assert.That(cut.FindAll("nav.phosphor-rail").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll(".phosphor-topbar-title").Count).IsEqualTo(0);
+		// The touch header names the game instead, as a link to Home.
+		await Assert.That(cut.Find(".phosphor-topbar a.phosphor-topbar-game").GetAttribute("href")).IsEqualTo("/");
 		await Assert.That(cut.FindAll("aside.phosphor-pagebar").Count).IsEqualTo(1);
 	}
 }

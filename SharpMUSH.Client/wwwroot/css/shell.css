@@ -38,14 +38,41 @@
 	flex-shrink: 0;
 	display: none; /* touch chrome only (README §10 Q1: no desktop top bar) */
 	align-items: center;
-	gap: 0.625rem;
-	padding: 0 1rem;
+	gap: var(--space-4);
+	padding: 0 var(--space-5);
 	border-bottom: 1px solid var(--border-soft);
 	background: color-mix(in srgb, var(--surface-3) 80%, transparent);
 	backdrop-filter: blur(8px);
 	-webkit-backdrop-filter: blur(8px);
 	position: relative;
 	z-index: 5;
+}
+
+/* The game's logo and name, a link to Home. It takes the room between the left and right buttons and
+   shortens the name with an ellipsis when that room runs out. */
+.phosphor-topbar-game {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	color: var(--text);
+	text-decoration: none;
+}
+
+.phosphor-topbar-game > svg,
+.phosphor-topbar-game > img {
+	flex: none;
+}
+
+.phosphor-topbar-name {
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	font-family: var(--font-display);
+	font-weight: var(--font-title-weight);
+	font-size: var(--text-base);
 }
 
 /* ── Topbar icon buttons (menu, terminal, close) ── */
@@ -78,9 +105,9 @@
 	flex-shrink: 0;
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
+	gap: var(--space-3);
 	min-height: 44px;
-	padding: 0.375rem 1rem;
+	padding: var(--space-3) var(--space-5);
 	border-bottom: 1px solid var(--border-soft);
 	background: var(--surface-3);
 }
@@ -92,10 +119,10 @@
 	overflow-y: auto;
 }
 /* When the command-terminal drawer is open, reserve its height so content isn't
-   hidden beneath it. The drawer is a fixed 300px on desktop and 70svh on mobile
+   hidden beneath it. The drawer is a fixed --terminal-drawer-height on desktop and 70svh on mobile
    (see the mobile block), and this offset tracks both. */
 .phosphor-main--terminal {
-	padding-bottom: 18.75rem;
+	padding-bottom: var(--terminal-drawer-height);
 }
 
 /* The page takes the whole content column at every width, so a page's left edge always sits against the
@@ -118,8 +145,8 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 6px;
-	padding: 14px 0;
+	gap: var(--space-3);
+	padding: var(--space-5) 0;
 	box-sizing: border-box;
 	background: var(--rail-bg);
 	border-right: 1px solid var(--border-soft);
@@ -167,7 +194,7 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 6px;
+	gap: var(--space-3);
 }
 
 /* The groups take the rail's room between the logo and its tools and scroll when they need more, as Discord's
@@ -177,7 +204,7 @@
 	flex: 1 1 0;
 	min-height: 0;
 	align-self: stretch;
-	padding: 4px 0;
+	padding: var(--space-2) 0;
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	scrollbar-width: thin;
@@ -223,7 +250,7 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 4px;
+	gap: var(--space-2);
 }
 
 /* A pop-out's button with no icon of its own: its first four destinations' icons, two by two. */
@@ -231,29 +258,29 @@
 	display: grid;
 	grid-template-columns: repeat(2, 14px);
 	grid-auto-rows: 14px;
-	gap: 3px;
+	gap: var(--space-2);
 }
 
 .phosphor-rail-flyout-grid .mud-icon-root {
 	width: 14px;
 	height: 14px;
-	font-size: 14px;
+	font-size: var(--text-base);
 }
 
 /* The pop-out's list, beside the rail. */
 .phosphor-rail-flyout-panel {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-1);
 	min-width: 12rem;
 	max-height: 70vh;
 	overflow-y: auto;
-	padding: 0.375rem;
+	padding: var(--space-3);
 }
 
 .phosphor-rail-flyout-title {
-	padding: 0.375rem 0.625rem 0.25rem;
-	font-size: 0.6875rem;
+	padding: var(--space-3) var(--space-4) var(--space-2);
+	font-size: var(--text-xs);
 	font-weight: 600;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
@@ -266,18 +293,18 @@
 	padding: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--space-1);
 }
 
 .phosphor-rail-flyout-item {
 	display: flex;
 	align-items: center;
-	gap: 0.625rem;
+	gap: var(--space-4);
 	min-height: 2.25rem;
-	padding: 0 0.625rem;
+	padding: 0 var(--space-4);
 	border-radius: var(--radius);
 	color: var(--text);
-	font-size: 0.875rem;
+	font-size: var(--text-base);
 	text-decoration: none;
 	transition: background var(--motion-fade), color var(--motion-fade);
 }
@@ -298,7 +325,7 @@
 }
 
 .phosphor-rail-group + .phosphor-rail-group {
-	padding-top: 6px;
+	padding-top: var(--space-3);
 	border-top: 1px solid color-mix(in srgb, var(--rail-ink) 30%, transparent);
 }
 
@@ -307,7 +334,7 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-size: 0.5625rem;
+	font-size: var(--text-xs);
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
 	color: var(--rail-ink);
@@ -372,7 +399,7 @@
 
 /* the account in the rail is the avatar alone */
 .phosphor-profile-wrap--compact {
-	padding: 4px 0 0;
+	padding: var(--space-2) 0 0;
 	border-top: 0;
 }
 
@@ -436,7 +463,7 @@
 	flex-shrink: 0;
 	border-top: 1px solid var(--border-soft);
 	background: var(--surface);
-	padding: 0.5rem 1rem;
+	padding: var(--space-3) var(--space-5);
 }
 
 /* ── Terminal drawer: slides up over the bottom of the content column ── */
@@ -445,7 +472,7 @@
 	left: 0;
 	right: 0;
 	bottom: 0;
-	height: 300px;
+	height: var(--terminal-drawer-height);
 	display: flex;
 	flex-direction: column;
 	background: var(--surface);
@@ -456,7 +483,7 @@
 .phosphor-terminal-header {
 	display: flex;
 	align-items: center;
-	padding: 0.25rem 0.75rem;
+	padding: var(--space-2) var(--space-4);
 	background: var(--surface-3);
 	border-bottom: 1px solid var(--border);
 	flex-shrink: 0;
@@ -479,7 +506,7 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 8px 16px;
+	gap: var(--space-3) var(--space-5);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -506,8 +533,8 @@
 	flex-shrink: 0;
 	display: flex;
 	align-items: center;
-	gap: 0.6875rem;
-	padding: 0 1.125rem;
+	gap: var(--space-4);
+	padding: 0 var(--space-5);
 	cursor: pointer;
 	text-decoration: none;
 }
@@ -523,14 +550,14 @@
 .phosphor-brand {
 	font-family: var(--font-display);
 	font-weight: 700;
-	font-size: 0.9375rem;
+	font-size: var(--text-base);
 	letter-spacing: 0.02em;
 	color: var(--text);
 	white-space: nowrap;
 }
 .phosphor-brand-tag {
 	font-family: var(--font-mono);
-	font-size: 0.65625rem;
+	font-size: var(--text-xs);
 	color: var(--text-faint);
 	letter-spacing: 0.08em;
 	white-space: nowrap;
@@ -540,7 +567,7 @@
 .phosphor-nav {
 	flex: 1;
 	overflow-y: auto;
-	padding: 0.375rem 0.625rem;
+	padding: var(--space-3) var(--space-4);
 }
 .nav-group {
 	margin-bottom: 0.875rem;
@@ -557,11 +584,11 @@
 }
 .nav-group-label {
 	font-family: var(--font-mono);
-	font-size: 0.625rem;
+	font-size: var(--text-xs);
 	letter-spacing: 0.16em;
 	text-transform: uppercase;
 	color: var(--text-faint);
-	padding: 0.25rem 0.625rem 0.4375rem;
+	padding: var(--space-2) var(--space-4) var(--space-3);
 	pointer-events: none;
 	user-select: none;
 }
@@ -575,7 +602,7 @@
 	justify-content: space-between;
 	width: 100%;
 	min-height: 2.75rem;
-	padding: 0 0.625rem 0 0;
+	padding: 0 var(--space-4) 0 0;
 	border: 0;
 	border-radius: var(--radius);
 	background: none;
@@ -585,14 +612,14 @@
 	text-align: left;
 }
 .nav-group-toggle .nav-group-label {
-	padding-bottom: 0.25rem;
+	padding-bottom: var(--space-2);
 }
 .nav-group-toggle:focus-visible {
 	outline: 2px solid var(--accent);
 	outline-offset: -2px;
 }
 .nav-group-chevron {
-	font-size: 1.125rem;
+	font-size: var(--text-md);
 	transition: transform var(--motion-spring);
 }
 .nav-group-toggle[aria-expanded="true"] .nav-group-chevron {
@@ -603,13 +630,13 @@
 .phosphor-nav-link {
 	display: flex;
 	align-items: center;
-	gap: 0.6875rem;
-	padding: 0.5625rem 0.625rem;
+	gap: var(--space-4);
+	padding: var(--space-3) var(--space-4);
 	margin-bottom: 0.125rem;
 	border-radius: var(--radius);
 	color: var(--text-dim);
 	font-family: var(--font-ui);
-	font-size: 0.84375rem;
+	font-size: var(--text-sm);
 	font-weight: 500;
 	letter-spacing: var(--nav-letterspacing);
 	text-decoration: none;
@@ -667,7 +694,7 @@
 	box-shadow: 0 0 8px rgba(var(--glow), 0.7);
 }
 .phosphor-nav-icon {
-	font-size: 1.125rem;
+	font-size: var(--text-md);
 	width: 18px;
 	height: 18px;
 	flex-shrink: 0;
@@ -681,12 +708,12 @@
 }
 .phosphor-sidebar--collapsed .phosphor-nav-link {
 	justify-content: center;
-	padding: 0.625rem 0;
+	padding: var(--space-4) 0;
 }
 
 /* ── Bottom profile card ── */
 .phosphor-profile-wrap {
-	padding: 0.625rem;
+	padding: var(--space-4);
 	border-top: 1px solid var(--border-soft);
 	flex-shrink: 0;
 	position: relative;
@@ -694,9 +721,9 @@
 .phosphor-profile-card {
 	display: flex;
 	align-items: center;
-	gap: 0.625rem;
+	gap: var(--space-4);
 	width: 100%;
-	padding: 0.5rem 0.5625rem;
+	padding: var(--space-3) var(--space-3);
 	background: var(--surface-2);
 	border: 1px solid var(--border-soft);
 	border-radius: var(--radius);
@@ -709,7 +736,7 @@
 }
 .phosphor-sidebar--collapsed .phosphor-profile-card {
 	justify-content: center;
-	padding: 0.5rem 0;
+	padding: var(--space-3) 0;
 }
 .phosphor-avatar-wrap {
 	position: relative;
@@ -723,7 +750,7 @@
 	border-radius: var(--radius);
 	display: grid;
 	place-items: center;
-	font-size: 0.6875rem;
+	font-size: var(--text-xs);
 	font-weight: 600;
 	font-family: var(--font-ui);
 	letter-spacing: 0.02em;
@@ -747,7 +774,7 @@
 }
 .phosphor-profile-name {
 	font-family: var(--font-ui);
-	font-size: 0.78125rem;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	color: var(--text);
 	white-space: nowrap;
@@ -756,12 +783,12 @@
 }
 .phosphor-profile-sub {
 	font-family: var(--font-mono);
-	font-size: 0.65625rem;
+	font-size: var(--text-xs);
 	color: var(--text-faint);
 	white-space: nowrap;
 }
 .phosphor-profile-chevron {
-	font-size: 1rem;
+	font-size: var(--text-md);
 	flex-shrink: 0;
 	color: var(--text-faint);
 	transition: transform var(--motion-spring), color var(--motion-fade);
@@ -797,7 +824,7 @@
 
 .terminal-line {
     line-height: 1.6;
-    padding: 0.0625rem 0;
+    padding: var(--space-1) 0;
 }
 
 /* A terminal renders its lines in chunks of a hundred (TerminalChunkView). The browser skips laying out and
@@ -832,8 +859,8 @@
 .sharp-terminal-connbar {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.375rem 0.625rem;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
     background: var(--surface);
     border-top: 1px solid var(--border-soft);
 }
@@ -841,8 +868,8 @@
 .sharp-terminal-input {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.625rem 0.875rem;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5);
     background: var(--surface);
     border-top: 1px solid var(--border-soft);
 }
@@ -850,7 +877,7 @@
 .term-prompt {
     color: var(--accent);
     font-family: var(--font-mono);
-    font-size: 0.875rem;
+    font-size: var(--text-base);
     font-weight: 700;
     flex-shrink: 0;
     line-height: 1;
@@ -864,7 +891,7 @@
     outline: none;
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 0.84375rem;
+    font-size: var(--text-sm);
     caret-color: var(--accent);
 }
 
@@ -1039,7 +1066,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
     background-color: var(--surface-3);
     border-bottom: 1px solid var(--border);
     color: var(--text-dim);
-    font-size: 0.6875rem;
+    font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -1058,7 +1085,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 /* ── HelpDrawer markdown rendering ── */
 .mush-help-md {
     font-family: Consolas, 'Courier New', monospace;
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
     line-height: 1.6;
     color: var(--text);
 }
@@ -1067,14 +1094,14 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
     background: var(--code-bg);
     border: 1px solid var(--border);
     border-radius: 4px;
-    padding: 0.5rem 0.75rem;
+    padding: var(--space-3) var(--space-4);
     overflow-x: auto;
     white-space: pre;
 }
 .mush-help-md code {
     background: color-mix(in srgb, var(--text) 7%, transparent);
     border-radius: 3px;
-    padding: 0.0625rem 0.25rem;
+    padding: var(--space-1) var(--space-2);
     font-family: inherit;
     font-size: 0.92em;
     color: var(--syntax-string);
@@ -1097,12 +1124,12 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
     margin: 0.75rem 0 0.375rem;
 }
 .mush-help-md ul, .mush-help-md ol {
-    padding-left: 1.25rem;
+    padding-left: var(--space-6);
     margin: 0 0 0.5rem;
 }
 .mush-help-md blockquote {
     border-left: 3px solid var(--border);
-    padding-left: 0.625rem;
+    padding-left: var(--space-4);
     color: var(--text-faint);
     margin: 0 0 0.5rem;
 }
@@ -1200,7 +1227,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 .WikiContent .mud-card-content code {
     background: color-mix(in srgb, var(--text) 7%, transparent);
     border-radius: 3px;
-    padding: 0.0625rem 0.3125rem;
+    padding: var(--space-1) var(--space-2);
     font-family: Consolas, 'Courier New', monospace;
     font-size: 0.9em;
 }
@@ -1209,7 +1236,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
     background: var(--code-bg);
     border: 1px solid var(--border);
     border-radius: 4px;
-    padding: 0.625rem 0.875rem;
+    padding: var(--space-4) var(--space-5);
     overflow-x: auto;
     margin: 0 0 1em;
 }
@@ -1250,7 +1277,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 .WikiContent .mud-card-content th,
 .WikiContent .mud-card-content td {
     border: 1px solid var(--border);
-    padding: 0.375rem 0.75rem;
+    padding: var(--space-3) var(--space-4);
     text-align: left;
 }
 
@@ -1301,7 +1328,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 .md-flex {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: var(--space-5);
     margin: 0 0 1em;
 }
 
@@ -1309,10 +1336,10 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 .md-flex.md-nowrap { flex-wrap: nowrap; }
 /* N × 0.5rem; HtmlFlexItemRenderer.BasisCss takes the same sizes out of a row for a percentage basis. */
 .md-flex.md-gap-0 { gap: 0; }
-.md-flex.md-gap-1 { gap: 0.5rem; }
-.md-flex.md-gap-2 { gap: 1rem; }
-.md-flex.md-gap-3 { gap: 1.5rem; }
-.md-flex.md-gap-4 { gap: 2rem; }
+.md-flex.md-gap-1 { gap: var(--space-3); }
+.md-flex.md-gap-2 { gap: var(--space-5); }
+.md-flex.md-gap-3 { gap: var(--space-6); }
+.md-flex.md-gap-4 { gap: var(--space-7); }
 .md-flex.md-align-start { align-items: flex-start; }
 .md-flex.md-align-center { align-items: center; }
 .md-flex.md-align-end { align-items: flex-end; }
@@ -1440,9 +1467,9 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 }
 .phosphor-tabsheet-title {
 	margin: 0 0 0.5rem;
-	padding: 0 0.5rem;
+	padding: 0 var(--space-3);
 	font-family: var(--font-ui);
-	font-size: 0.75rem;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
@@ -1453,14 +1480,14 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	margin: 0;
 	padding: 0;
 	display: grid;
-	gap: 0.125rem;
+	gap: var(--space-1);
 }
 .phosphor-tabsheet-item {
 	display: flex;
 	align-items: center;
-	gap: 0.75rem;
+	gap: var(--space-4);
 	min-height: 2.75rem;
-	padding: 0 0.75rem;
+	padding: 0 var(--space-4);
 	border-radius: 0.75rem;
 	color: var(--text);
 	text-decoration: none;
@@ -1480,7 +1507,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	color: var(--accent);
 }
 .phosphor-tabsheet-icon {
-	font-size: 1.25rem;
+	font-size: var(--text-lg);
 }
 
 /* ── Hybrid bottom navigation (mobile only; hidden here, shown in the @media block).
@@ -1495,7 +1522,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: 0.125rem;
+	gap: var(--space-1);
 	background: transparent;
 	border: none;
 	cursor: pointer;
@@ -1505,14 +1532,14 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	transition: color var(--motion-fade);
 }
 .phosphor-bottomtab-icon {
-	font-size: 1.375rem;
+	font-size: var(--text-xl);
 }
 .phosphor-bottomtab-label {
 	max-width: 100%;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-size: 0.65625rem;
+	font-size: var(--text-xs);
 	letter-spacing: 0.02em;
 }
 .phosphor-bottomtab--on {
@@ -1548,7 +1575,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	align-items: center;
 	justify-content: space-around;
 	flex-shrink: 0;
-	padding: 0.5rem 0.75rem;
+	padding: var(--space-3) var(--space-4);
 	border-top: 1px solid var(--border-soft);
 }
 
@@ -1558,7 +1585,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 @media (max-width: 760px) {
 
 	/* A condensed header: the search is an icon, and the language stays (a phone has no other). */
-	.phosphor-topbar { gap: 0.375rem; padding: 0 0.625rem; }
+	.phosphor-topbar { gap: var(--space-3); padding: 0 var(--space-4); }
 }
 
 /* ══ TOUCH CHROME: the nav becomes an off-canvas drawer + a bottom tab bar. Applies to
@@ -1649,7 +1676,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 		z-index: 1001;
 		max-height: 70svh;
 		overflow-y: auto;
-		padding: 1rem 0.75rem calc(1rem + env(safe-area-inset-bottom));
+		padding: var(--space-5) var(--space-4) calc(var(--space-5) + env(safe-area-inset-bottom));
 		background: var(--surface-3);
 		border-top: 1px solid var(--border-soft);
 		border-radius: 1rem 1rem 0 0;
@@ -1707,7 +1734,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 		padding-bottom: var(--bottomnav-clearance);
 	}
 	/* Keep the drawer's connection controls above navigation and reserve both heights
-	   in the page content (instead of the 300px desktop drawer value).
+	   in the page content (instead of the desktop --terminal-drawer-height).
 	   Listed after the bar rule so it wins at equal specificity. */
 	.phosphor-main--terminal,
 	.phosphor-shell--bottomnav .phosphor-main--terminal {
@@ -1731,11 +1758,18 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 		width: calc(var(--touch-rail-w) + env(safe-area-inset-left));
 		height: auto;
 		flex-direction: column;
-		gap: 4px;
-		padding: max(8px, env(safe-area-inset-top)) 0 max(8px, env(safe-area-inset-bottom)) env(safe-area-inset-left);
+		gap: var(--space-2);
+		padding: max(var(--space-3), env(safe-area-inset-top)) 0 max(var(--space-3), env(safe-area-inset-bottom)) env(safe-area-inset-left);
 		border-bottom: 0;
 		border-right: 1px solid var(--border-soft);
 	}
+	/* A column of icons: the logo stays, the name has no room. The link still takes the spare height, which
+	   keeps search, language and terminal at the foot of the column. */
+	.phosphor-topbar-game {
+		flex-direction: column;
+		padding-top: var(--space-3);
+	}
+	.phosphor-topbar-name { display: none; }
 	.phosphor-shell {
 		--touch-rail-w: 56px;
 	}
@@ -1765,22 +1799,22 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-3);
     margin-top: 12px;
 }
 
 .wiki-catlinks-label {
     color: var(--text-faint);
-    font-size: 12px;
+    font-size: var(--text-sm);
 }
 
 .wiki-catlink {
     height: 26px;
-    padding: 0 10px;
+    padding: 0 var(--space-4);
     border-radius: 13px;
     background: var(--surface-2);
     color: var(--text);
-    font-size: 12px;
+    font-size: var(--text-sm);
     display: inline-flex;
     align-items: center;
     text-decoration: none;
@@ -1801,12 +1835,12 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	left: 0.5rem;
 	z-index: 2000;
 	display: flex;
-	gap: 0.5rem;
+	gap: var(--space-3);
 }
 .skip-link {
 	position: absolute;
 	left: -10000px;
-	padding: 0.5rem 0.875rem;
+	padding: var(--space-3) var(--space-5);
 	border-radius: var(--radius);
 	background: var(--accent);
 	color: var(--accent-on);
@@ -1868,8 +1902,8 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 6px;
-	padding: 14px 0;
+	gap: var(--space-3);
+	padding: var(--space-5) 0;
 	box-sizing: border-box;
 	background: var(--rail-bg);
 	border-right: 1px solid var(--border-soft);
@@ -1907,7 +1941,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 .boot-topbar {
 	height: var(--topbar-h);
 	align-items: center;
-	padding: 0 1rem;
+	padding: 0 var(--space-5);
 	border-bottom: 1px solid var(--border-soft);
 }
 
@@ -1926,7 +1960,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 .boot-page {
 	display: flex;
 	flex-direction: column;
-	gap: 10px;
+	gap: var(--space-4);
 	padding: var(--main-pad);
 }
 
@@ -1946,8 +1980,8 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 .boot-card {
 	display: flex;
 	flex-direction: column;
-	gap: 0.75rem;
-	padding: 1.25rem;
+	gap: var(--space-4);
+	padding: var(--space-6);
 	border-radius: var(--radius-card);
 	background: var(--surface);
 	border: 1px solid var(--border-soft);
@@ -1975,13 +2009,13 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 		width: calc(56px + env(safe-area-inset-left));
 		height: auto;
 		flex-direction: column;
-		padding: max(8px, env(safe-area-inset-top)) 0 max(8px, env(safe-area-inset-bottom)) env(safe-area-inset-left);
+		padding: max(var(--space-3), env(safe-area-inset-top)) 0 max(var(--space-3), env(safe-area-inset-bottom)) env(safe-area-inset-left);
 		border-bottom: 0;
 		border-right: 1px solid var(--border-soft);
 		box-sizing: border-box;
 	}
 	.boot-col {
 		box-sizing: border-box;
-		padding-left: calc(56px + env(safe-area-inset-left));
+		padding-left: calc(var(--space-8) + env(safe-area-inset-left));
 	}
 }

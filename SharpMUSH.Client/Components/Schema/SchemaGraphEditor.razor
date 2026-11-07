@@ -54,7 +54,7 @@
         <div class="graph-main">
             @if (_draft.Nodes.Count == 0)
             {
-                <div class="schema-empty graph-empty">@(Element.Empty ?? Loc["WidGraphEmpty"].Value)</div>
+                <EmptyState Compact="true" Class="schema-empty graph-empty" Icon="@Icons.Material.Outlined.AccountTree">@(Element.Empty ?? Loc["WidGraphEmpty"].Value)</EmptyState>
             }
             else
             {

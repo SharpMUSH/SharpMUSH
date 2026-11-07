@@ -1,6 +1,6 @@
 {
   "baseline": "cfa5af9013",
-  "date": "2026-11-06",
+  "date": "2026-11-07",
   "initial_pass": {
     "baseline": "cfa5af9013",
     "date": "2026-11-06",
@@ -183,7 +183,7 @@
     ]
   },
   "bunit": {
-    "passed": 3473,
+    "passed": 3488,
     "failed": 0
   },
   "client_js": {
@@ -276,5 +276,26 @@
     "document_overflow": 0,
     "named_place_selection": true,
     "movement_locks_exercised": false
+  },
+  "main_integration": {
+    "target": "759957c688ca7f63920bf7582fb3873e220d2354",
+    "runtime_rerun": "passed",
+    "screenshot_provenance": "Pre-integration isolated runtime; retained duties installation, not a fresh official-library install.",
+    "moved_package_families": [
+      "duties",
+      "radio",
+      "scene-verse"
+    ],
+    "builder_graph_version": "0.3.3",
+    "player_captures": 40,
+    "page_errors": 0,
+    "horizontal_overflow": 0,
+    "editor_save_reload": "passed",
+    "terrain_fitted_zoomed_selection": "passed",
+    "independent_visual_review": "passed",
+    "rendered_regressions": 9,
+    "client_js_test_files": 12,
+    "resource_validation": "passed",
+    "server_and_client_publish": "passed"
   }
 }

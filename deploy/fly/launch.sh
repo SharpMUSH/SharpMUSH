@@ -10,9 +10,9 @@
 # volume; and <game>-renderer. Their settings live in <game>.edge.fly.toml, <game>.server.fly.toml
 # and <game>.renderer.fly.toml in the current directory, downloaded the first time.
 #
-# Safe to run again: it creates only what is missing, then deploys the newest image to the server
-# and the renderer, which drops nobody. The edge is deployed the first time, and again only with
-# --update-edge, which drops everyone connected.
+# Safe to run again: it creates only what is missing, then deploys the server and the renderer at
+# the image tag their settings files name, which drops nobody. The edge is deployed the first time,
+# and again only with --update-edge, which drops everyone connected.
 #
 # --single runs the game as one app, <game>, with its settings in <game>.fly.toml: cheaper, but
 # every update drops everyone connected. A game launched that way stays that way when run again.

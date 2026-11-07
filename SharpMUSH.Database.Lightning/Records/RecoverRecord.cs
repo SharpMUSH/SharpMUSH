@@ -18,6 +18,8 @@ public sealed record RecoverRecord
 	public string[] Roles { get; init; } = [];
 	/// <summary>The object's permission overrides, as <c>Tables.ObjPermission</c> held them.</summary>
 	public byte[]? Permissions { get; init; }
+	/// <summary>The stored reaches of those overrides (<c>obj.perm.reach</c>), when any has one.</summary>
+	public byte[]? PermissionReaches { get; init; }
 	/// <summary>The key of the account a character was linked to.</summary>
 	public string? Account { get; init; }
 	public string? DestroyedBy { get; init; }

@@ -21,7 +21,10 @@
 
     @if (AccountAuth.Characters.Count == 0)
     {
-        <EmptyBox>@Loc["NavThemeNoCharacters"]</EmptyBox>
+        <EmptyState Icon="@Icons.Material.Outlined.Palette">
+            <ChildContent>@Loc["NavThemeNoCharacters"]</ChildContent>
+            <Action><CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.PersonAdd" Href="/characters/new">@Loc["NavCreateCharacter"]</CapsuleButton></Action>
+        </EmptyState>
     }
     else
     {

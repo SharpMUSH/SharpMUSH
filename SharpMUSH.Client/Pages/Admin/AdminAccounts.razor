@@ -1,5 +1,5 @@
 @page "/admin/accounts"
-@attribute [Authorize(Roles = "Wizard,God")]
+@attribute [Authorize(Policy = "game.wizard")]
 @using SharpMUSH.Library.DiscriminatedUnions
 @using SharpMUSH.Library.Models
 @using SharpMUSH.Client.Components.Settings

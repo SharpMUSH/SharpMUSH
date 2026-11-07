@@ -310,8 +310,8 @@ public class PermissionService(
 	public async ValueTask<bool> CanHide(AnySharpObject executor)
 		=> await executor.IsPriv() || await executor.HasPower("HIDE");
 
-	public async ValueTask<bool> CanLogin(AnySharpObject executor)
-		=> await executor.IsPriv() || await executor.HasPower("LOGIN");
+	public ValueTask<bool> CanLogin(AnySharpObject executor)
+		=> executor.CanLoginWhileClosed(ExecutionBudget.CurrentToken);
 
 	public async ValueTask<bool> CanIdle(AnySharpObject executor)
 		=> await executor.IsPriv() || await executor.HasPower("IDLE");
@@ -432,7 +432,10 @@ public class PermissionService(
 		if (!whoFlags.PassesGuardsOf(targetFlags))
 			return false;
 
-		if (whoFlags.ControlsAll)
+		// control.all held through an override with a reach controls only what that reach covers.
+		if (whoFlags.IsGod || !whoFlags.Grants.Context.HasReaches
+				? whoFlags.ControlsAll
+				: whoFlags.Grants.Has(PortalPermission.ControlAll, await target.RankAsTargetAsync(token)))
 			return true;
 
 		if (whoFlags.IsMistrust)

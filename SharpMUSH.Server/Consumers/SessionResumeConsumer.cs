@@ -97,7 +97,7 @@ public sealed class SessionResumeConsumer(
 		var guest = player is not null && await GuestCharacters.IsGuestAsync(player);
 		if (guest && (!options.Net.Guests || SitelockMatcher.IsBlocked(options.SitelockRules.Rules,
 			request.IpAddress, request.Hostname, SitelockMatcher.GuestFlag))) return false;
-		if (!options.Net.Logins && (guest || player is null || !await new AnySharpObject(player).IsWizard()))
+		if (!options.Net.Logins && (guest || player is null || !await new AnySharpObject(player).CanLoginWhileClosed()))
 			return false;
 
 		// Authorization never binds a player or emits a second login event. Reconciliation owns that state.

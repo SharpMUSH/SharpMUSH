@@ -4,7 +4,7 @@
 	flex: none;
 	width: 72px;
 	height: 48px;
-	padding: 6px;
+	padding: var(--space-3);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-row);
 	background: var(--bg);
@@ -18,8 +18,8 @@
 	grid-template-columns: auto 1fr;
 	grid-template-rows: 1fr auto;
 	align-items: center;
-	gap: 2px 5px;
-	padding: 2px 5px 4px;
+	gap: var(--space-1) var(--space-2);
+	padding: var(--space-1) var(--space-2) var(--space-2);
 	border: min(var(--card-border-width), 2px) var(--card-border-style) var(--border);
 	border-radius: min(var(--radius-card), 8px);
 	background: var(--card-bg);
@@ -30,7 +30,7 @@
 	font-family: var(--font-display);
 	font-weight: var(--font-title-weight);
 	font-style: var(--title-style);
-	font-size: 15px;
+	font-size: var(--text-base);
 	line-height: 1;
 	color: var(--text);
 }

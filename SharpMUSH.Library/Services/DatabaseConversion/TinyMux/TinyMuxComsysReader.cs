@@ -90,27 +90,37 @@ public static class TinyMuxComsysReader
 				var state = Numbers(reader, version >= 5 ? 4 : 3);
 				var titleLine = reader.ReadLine() ?? string.Empty;
 				var title = titleLine.StartsWith("t:", StringComparison.Ordinal) ? titleLine[2..] : string.Empty;
-				users.Add(new PennMUSHChannelUser(state[0],
-					(version >= 5 && state[3] != 0 ? UserQuiet : 0)
-					| (state[1] == 0 ? TinyMuxUserOff : 0)
-					| (state[2] == 0 ? TinyMuxTitlesOff : 0),
-					title));
+				users.Add(User(state[0], state[1] != 0, state[2] != 0, version >= 5 && state[3] != 0, title));
 			}
 
-			chat.Channels.Add(new PennMUSHChannel(
-				Name: TinyMuxColour.Strip(name),
-				Description: header,
-				Flags: numbers[0],
-				Creator: numbers[4],
-				Cost: numbers[3],
-				Buffer: 0,
-				Mogrifier: numbers[7],
-				Locks: [],
-				Users: users));
+			chat.Channels.Add(Channel(name, header, type: numbers[0], charge: numbers[3], chargeWho: numbers[4],
+				channelObject: numbers[7], users));
 		}
 
 		return new Comsys(chat, aliases);
 	}
+
+	/// <summary>A channel as TinyMUX stores it, before <see cref="Apply"/> names its bits.</summary>
+	internal static PennMUSHChannel Channel(string name, string header, int type, int charge, int chargeWho,
+		int channelObject, List<PennMUSHChannelUser> users)
+		=> new(
+			Name: TinyMuxColour.Strip(name),
+			Description: header,
+			Flags: type,
+			Creator: chargeWho,
+			Cost: charge,
+			Buffer: 0,
+			Mogrifier: channelObject,
+			Locks: [],
+			Users: users);
+
+	/// <summary>A member as TinyMUX stores one: whether the channel is on, comtitles shown, joins and leaves gagged.</summary>
+	internal static PennMUSHChannelUser User(int who, bool on, bool titlesShown, bool gagged, string title)
+		=> new(who,
+			(gagged ? UserQuiet : 0)
+			| (on ? 0 : TinyMuxUserOff)
+			| (titlesShown ? 0 : TinyMuxTitlesOff),
+			title);
 
 	/// <summary>Marks, cleared again by <see cref="Apply"/>, for a user who had the channel off or titles hidden.</summary>
 	private const int TinyMuxUserOff = 0x10000;
@@ -217,7 +227,7 @@ public static class TinyMuxComsysReader
 		{
 			if (!objects.TryGetValue(who, out var holder))
 			{
-				Note($"Channel aliases of #{who} not imported: it is not in the flatfile");
+				Note($"Channel aliases of #{who} not imported: no such object was imported");
 				continue;
 			}
 
@@ -232,8 +242,8 @@ public static class TinyMuxComsysReader
 
 		if (aliasCount > 0)
 		{
-			Note($"{aliasCount} comsys alias(es) imported as CHANALIAS` attributes, which addcom, delcom and comlist use; " +
-				"the comsys administration commands (@ccreate, @cset, allcom, clearcom ...) are not available");
+			Note($"{aliasCount} comsys alias(es) imported as CHANALIAS` attributes, which addcom, delcom, comlist, allcom and " +
+				"clearcom use");
 		}
 	}
 

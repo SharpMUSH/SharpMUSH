@@ -51,7 +51,14 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		// leaves the #-1 error it failed with, or nothing.
 		var commandText = visitor.Parser.CurrentState.CommandText;
 		var outputVersion = commandText?.OutputVersion;
-		var result = await DispatchCommandAsync(visitor, src, context);
+		// The attribute names the command reads and writes are the dialect's (SoftcodeDialectScope).
+		Option<CallState> result;
+		using (SoftcodeDialectScope.Enter(SoftcodeDialects.InForce(visitor.Parser.CurrentState.CurrentEvaluation,
+			visitor.Configuration.CurrentValue.Compatibility.Dialect)))
+		{
+			result = await DispatchCommandAsync(visitor, src, context);
+		}
+
 		if (commandText is not null && commandText.OutputVersion == outputVersion)
 		{
 			commandText.SetOutput(result is CallState { Message: { } message } && message.ToPlainText().StartsWith("#-1", StringComparison.Ordinal)
@@ -161,6 +168,15 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 
 			// Step 4: Check if we are setting an attribute: &... -- we're just treating this as a Single Token Command for now.
 			// Who would rely on a room alias being & anyway?
+			// Step 5: an @-command the dialect in force names an attribute by sets it (TinyMUX's @kill sets DEATH),
+			// before the name is read as an abbreviation; a command spelled that way still comes first.
+			if (context.evaluationString() != null && IsDialectAttributeCommand(parser, command)
+					&& await services.StandardAttributes.TryRunAsync(parser, src, context, command) is { } dialectAttribute
+					&& dialectAttribute.IsSome())
+			{
+				return dialectAttribute;
+			}
+
 			// Step 5: Check @COMMAND in command library
 			var builtIn = FindBuiltIn(parser, command, visitor.Configuration.CurrentValue.Compatibility.Dialect);
 			if (builtIn.Definition is CommandDefinition definition)
@@ -172,7 +188,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			// Step 6: Check @attribute setting
 			// Standard attributes (e.g., DESCRIBE) can be set using @attrname object=value syntax
 			// This supports prefix matching when the attribute has the "prefixmatch" flag
-			if (builtIn.RootCommand.StartsWith('@') && context.evaluationString() != null)
+			if (builtIn.SetsAttribute && builtIn.RootCommand.StartsWith('@') && context.evaluationString() != null)
 			{
 				var attrCommandResult = await services.StandardAttributes.TryRunAsync(parser, src, context, builtIn.RootCommand);
 				if (attrCommandResult.IsSome())
@@ -573,13 +589,16 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 
 	/// <summary>
 	/// The command name split into its root and switches, and the built-in the root abbreviates, when
-	/// there is one.
+	/// there is one. <paramref name="SetsAttribute"/> is false for a name that may not fall back to setting
+	/// an attribute of that name.
 	/// </summary>
-	private readonly record struct BuiltInLookup(string RootCommand, string[] Switches, CommandDefinition? Definition);
+	private readonly record struct BuiltInLookup(string RootCommand, string[] Switches, CommandDefinition? Definition,
+		bool SetsAttribute = true);
 
 	/// <summary>
 	/// The built-in <paramref name="command"/> names: one spelled that way, else the one the dialect in force
-	/// means by it (<see cref="SoftcodeDialects"/>), else the one it abbreviates.
+	/// means by it (<see cref="SoftcodeDialects"/>), else the one it abbreviates. A command the dialect has and
+	/// SharpMUSH lacks names none, and sets no attribute.
 	/// </summary>
 	private static BuiltInLookup FindBuiltIn(IMUSHCodeParser parser, string command, string? gameDialect)
 	{
@@ -608,6 +627,10 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			if (equalsIndex > 0)
 			{
 				var commandPart = rootCommand[..equalsIndex];
+				if (trie.FindExact(commandPart) is null
+						&& DialectCommand(parser, trie, gameDialect, commandPart, switches) is { } dialectPart)
+					return dialectPart;
+
 				matchResult = trie.FindAbbreviation(commandPart);
 				if (matchResult != null)
 				{
@@ -622,19 +645,34 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	}
 
 	/// <summary>
+	/// Whether <paramref name="command"/> is <c>@</c> and an attribute alias of the dialect in force
+	/// (<see cref="SoftcodeDialectScope"/>), with no switches and no command of that exact name.
+	/// </summary>
+	private static bool IsDialectAttributeCommand(IMUSHCodeParser parser, string command)
+		=> command.Length > 1 && command[0] == '@' && !command.Contains('/')
+			&& SoftcodeDialectScope.Current?.AttributeFor(command[1..]) is not null
+			&& CommandTrie.For(parser.CommandLibrary).FindExact(command) is null;
+
+	/// <summary>
 	/// The command the dialect in force means by <paramref name="rootCommand"/>, with the switches the alias
-	/// carries ahead of the typed <paramref name="switches"/>, or null when it means none.
+	/// carries ahead of the typed <paramref name="switches"/>; the <c>@attribute</c> command it means, which
+	/// names no built-in; a lookup naming nothing for a command the dialect has and SharpMUSH lacks; or null
+	/// when the dialect gives the name no meaning.
 	/// </summary>
 	private static BuiltInLookup? DialectCommand(IMUSHCodeParser parser, CommandTrie trie, string? gameDialect,
 		string rootCommand, string[] switches)
 	{
-		if (SoftcodeDialects.InForce(parser.CurrentState.CurrentEvaluation, gameDialect)?.CommandFor(rootCommand) is not { } target)
+		var dialect = SoftcodeDialects.InForce(parser.CurrentState.CurrentEvaluation, gameDialect);
+		if (dialect?.Lacks(rootCommand) is true)
+			return new BuiltInLookup(rootCommand, switches, null, SetsAttribute: false);
+
+		if (dialect?.CommandFor(rootCommand) is not { } target)
 			return null;
 
 		var parts = target.Split('/');
 		return trie.FindExact(parts[0]) is { } definition
 			? new BuiltInLookup(rootCommand, [.. definition.ImpliedSwitches, .. parts[1..], .. switches], definition)
-			: null;
+			: new BuiltInLookup(parts[0], [.. parts[1..], .. switches], null);
 	}
 
 	/// <summary>

@@ -12,7 +12,7 @@
 <div class="chan-browse" role="group" aria-label="@Loc["NavPlayChannelsBrowse"]">
     @if (Feed.Channels.Count == 0)
     {
-        <SidebarNote Class="chan-browse-none">@Loc["NavPlayChannelsNone"]</SidebarNote>
+        <EmptyState Compact="true" Class="chan-browse-none" Icon="@Icons.Material.Outlined.Forum">@Loc["NavPlayChannelsNone"]</EmptyState>
     }
     @foreach (var listed in Feed.Channels)
     {

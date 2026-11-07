@@ -21,7 +21,7 @@ Baseline: `cfa5af9013`, reviewed on 2026-11-06 in parallel player, administratio
 | Mermaid dark connectors faded against light portal surfaces | Fixed dark diagram canvas paired with its SVG palette and edge labels, preserving readability across theme changes |
 | Stored terrain labels clipped at both sides of small fitted hex cells | Cell-scoped layout contains labels and uses one complete ellipsized line at small sizes, retaining full accessible names |
 
-The graph package is version 0.3.2 with updated asset checksums. Its existing iframe sandbox and host review boundary remain intact.
+The graph package is version 0.3.3 with updated asset checksums. Its existing iframe sandbox and host review boundary remain intact.
 
 ## Runtime and acceptance evidence
 
@@ -54,7 +54,7 @@ Exact component and route inventory: [historical first-pass ledger](visual-refin
 
 ## Installed package coverage
 
-All bundled dependencies were installed through supported APIs. The first-party hello-ui plugin was locally built, hash-verified, installed and loaded by restarting only the isolated server. Hosted graph required the explicit browser-code opt-in in that world; omission from the catalogue before opt-in was expected policy. God is protected from package attribute writes, so player workflows use ordinary QACompanion/QAObserver fixtures.
+All dependencies used for these captures were installed through supported APIs from the pre-integration bundled catalogue. The first-party hello-ui plugin was locally built, hash-verified, installed and loaded by restarting only the isolated server. Hosted graph required the explicit browser-code opt-in in that world; omission from the catalogue before opt-in was expected policy. God is protected from package attribute writes, so player workflows use ordinary QACompanion/QAObserver fixtures.
 
 | Surface | Populated evidence | Limit |
 | --- | --- | --- |
@@ -63,18 +63,20 @@ All bundled dependencies were installed through supported APIs. The first-party 
 | bboards-app | Root/nested boards and long-title post, desktop/mobile | Reply action not exercised |
 | highlights-app | Real secondary-character pose and favourite, desktop/mobile | Take-back button not exercised |
 | notifications-app | Ordinary-character kinds/preferences, desktop/mobile | Preference save/reload verified; OS push not requested |
-| duties-app | Draft narration/end graph, editor and provider warning, desktop/mobile | Active party/roll requires a configured sheet provider; not accepted |
+| duties-app (now in the official package library) | Draft narration/end graph, editor and provider warning from the retained isolated installation, desktop/mobile | Active party/roll requires a configured sheet provider; not accepted |
 | relationships-app/card | Confirmed reciprocal Colleague profiles and actual scene name-card | Touch users have profile destination; no mobile hover claim |
 | builder-graph | Real sandbox bootstrap, 3 rooms/2 exits, keyboard staging and host consent at both widths | No world mutation applied |
 | hello-ui | Real plugin controller-driven fields/table at both widths | Read-only example |
 | world-map/native editor | Actual 3-room graph and ArrowRight staging at both widths | Review/apply not exercised |
 | world-grid | Stored square, flat-hex and pointy-hex maps with legend, closed river cells, named-place selection and wall; desktop/mobile | Movement/locks and exhaustive terrain editing not exercised |
 
+Integration with main `759957c688` moves the duties family, radio family and scene-verse to the official `SharpMUSH/SharpMUSH.Packages` library. `BundledPackages.Moved` redirects existing installations; these packages are no longer bundled in this checkout. The captures above retain their pre-integration provenance, including duties; they do not verify a fresh library installation. The integrated runtime was republished and checked again: 40 populated captures across Daylight/Phosphor and desktop/mobile, zero page errors or document overflow; native editor save/reload and fitted/zoomed terrain labels passed independent visual review. These checks use the retained isolated world, not a fresh official-library installation.
+
 Terminal-only packages are represented by their actual help/profile/scene/room/job output and the component inventory; this report does not claim every softcode command was visually exercised. Server, database, messaging and renderer projects have no standalone web UI; their user-facing contracts were exercised through the real journeys.
 
 ## Verification
 
-Final integrated component run: **3,473 passed**, zero failures. Final editor-focused follow-up: **31 passed**. Client JavaScript: **145 passed**; rendered shared-shell regressions: **6 passed**; actual Mermaid palette regressions: **2 passed**, with sampled node/edge/title text at 10.171:1; stored terrain label regression: **1 passed**. Resource validation passes all gates. Graph keyboard behavior and the live host consent path were also checked. Builds use the pinned .NET 11 RC2 SDK and disk-backed workspace scratch.
+Final integrated component run after merging main `759957c688`: **3,488 passed**, zero failures. Final editor-focused follow-up: **31 passed**. Client JavaScript: **145 passed**; rendered shared-shell regressions: **6 passed**; actual Mermaid palette regressions: **2 passed**, with sampled node/edge/title text at 10.171:1; stored terrain label regression: **1 passed**. Resource validation passes all gates. Graph keyboard behavior and the live host consent path were also checked. Builds use the pinned .NET 11 RC2 SDK and disk-backed workspace scratch.
 
 Commands: `dotnet run --project SharpMUSH.Tests.BUnit`; direct execution of every `tools/client-tests/*.test.mjs`; `node --test tools/responsive-sweep/shared-shell.test.mjs tools/responsive-sweep/mermaid-contrast.test.mjs tools/responsive-sweep/map-label.test.mjs`; client publish; `git diff --check`. New behavior received independent code review, including fixes for stale-send cleanup and actual story-background contrast.
 
@@ -98,6 +100,19 @@ use real account sessions, and install first-party fixtures through package plan
 client republish, refresh the manifest and restart the server so its endpoint mappings match.
 Do not derive player-package acceptance from God: its protected attributes cannot be written by
 wizard package executors. Use ordinary linked characters for applications, preferences and relationships.
+
+## Integration verification (2026-11-07)
+
+The current main introduces a shared type/spacing scale and revised empty states. Conflict resolution preserves those updates together with the reflow and recovery changes. Browser fixtures now load the actual tokens; all nine rendered regressions pass. The complete component suite, all 12 client JavaScript test files, both publishes and resource validation pass. Builder-graph is 0.3.3 because main independently published 0.3.2; all four checksums match.
+
+Fresh integration screenshots:
+
+- [Mobile mail](images/visual-refinement-1-0/integrated-mail-mobile.png)
+- [Desktop editor save](images/visual-refinement-1-0/integrated-editor-desktop.png)
+- [Mobile editor](images/visual-refinement-1-0/integrated-editor-mobile.png)
+- [Fitted terrain labels](images/visual-refinement-1-0/integrated-terrain-mobile.png)
+
+Earlier screenshots below retain their original pre-integration provenance.
 
 ## Selected screenshots
 

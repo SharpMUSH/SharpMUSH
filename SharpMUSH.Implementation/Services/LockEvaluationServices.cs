@@ -6,6 +6,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Softcode;
 
 namespace SharpMUSH.Implementation.Services;
 
@@ -25,9 +26,16 @@ public sealed class LockEvaluationServices(
 	public ValueTask<AnyOptionalSharpObjectOrError> LocateAsync(AnySharpObject looker, AnySharpObject executor, string name, LocateFlags flags)
 		=> locate.Value.Locate(parser.Value, looker, executor, name, flags);
 
-	public ValueTask<OptionalSharpAttributeOrError> GetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute,
+	/// <remarks>
+	/// A lock key names attributes as they are stored, so the dialect of the code that checks the lock never moves
+	/// one to another name (<see cref="SoftcodeDialectScope"/>).
+	/// </remarks>
+	public async ValueTask<OptionalSharpAttributeOrError> GetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute,
 		IAttributeService.AttributeMode mode, bool parent = true)
-		=> attributes.Value.GetAttributeAsync(executor, obj, attribute, mode, parent);
+	{
+		using var dialect = SoftcodeDialectScope.Enter(null);
+		return await attributes.Value.GetAttributeAsync(executor, obj, attribute, mode, parent);
+	}
 
 	/// <remarks>
 	/// An evaluation that throws returns <see cref="LockEvaluationFailure"/>, not a value: a failure
@@ -51,6 +59,8 @@ public sealed class LockEvaluationServices(
 				Restrictions = EvaluationRestrictions.Current
 			});
 
+			// The key's attribute name is stored, not the checking code's (see GetAttributeAsync).
+			using var dialect = SoftcodeDialectScope.Enter(null);
 			var result = await attributes.Value.EvaluateAttributeFunctionAsync(
 				evalParser,
 				unlocker,

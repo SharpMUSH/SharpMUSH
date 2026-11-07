@@ -1,7 +1,7 @@
 .wiki-index-page {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) var(--aside-w);
-	gap: 14px;
+	gap: var(--space-5);
 	align-items: start;
 }
 
@@ -17,7 +17,7 @@
 .wiki-index-aside {
 	display: flex;
 	flex-direction: column;
-	gap: 14px;
+	gap: var(--space-5);
 	min-width: 0;
 }
 

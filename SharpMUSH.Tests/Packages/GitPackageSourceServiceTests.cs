@@ -243,4 +243,23 @@ public class GitPackageSourceServiceTests
 		// Restore the tag for any later assertions.
 		Git("tag", "-f", "who-where/v1.0.0", v1Commit);
 	}
+
+	/// <summary>
+	/// An install handed over from the bundled catalogue records no commit of this repo: its update check offers the
+	/// library's newer release and flags the path as changed, and does not call the installed version's tag moved.
+	/// </summary>
+	[Test, NotInParallel(nameof(GitPackageSourceServiceTests))]
+	public async Task CheckForUpdate_HandedOverFromTheCatalogue_OffersTheLibrarysRelease()
+	{
+		var service = NewService();
+		var handedOver = new InstalledPackageRecord(
+			"who-where", "1.0.0", RepoDir, "who-where", BundledPackageSource.SourceCommit, null,
+			new DateTimeOffset(2026, 6, 12, 0, 0, 0, TimeSpan.Zero), 1);
+
+		var info = (await service.CheckForUpdateAsync(Remote, handedOver)).Expect<PackageUpdateInfo>();
+
+		await Assert.That(info.UpdateAvailable).IsTrue();
+		await Assert.That(info.PathChangedAtHead).IsTrue();
+		await Assert.That(info.InstalledTagMoved).IsFalse();
+	}
 }

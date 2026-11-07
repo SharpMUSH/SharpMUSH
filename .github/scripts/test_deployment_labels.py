@@ -12,8 +12,6 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 
 COMPOSE_FILES = [
-    "docker-compose.yml",
-    "docker-compose-hub.yml",
     "deploy/docker-compose.prod.yml",
     "deploy/docker-compose.cloudflare.yml",
 ]

@@ -1,11 +1,11 @@
 # Development-only Kubernetes example. SocketServer and renderer share a Pod for their Unix socket.
 # Any Pod rollout, including a renderer image change, replaces SocketServer and drops client sockets.
 # Container crash/restart alone can recover through the shared emptyDir; this is not an independent
-# renderer rollout topology. Use the supplied single-host Compose stack for that guarantee.
+# renderer rollout topology. Use the single-host Compose stack in deploy/ for that guarantee.
 # Keep replicas=1: shared connection state currently supports only one socket owner.
 # NATS server config. max_payload is a server-level limit with no command-line flag, so it
 # can only come from a config file — see ../nats.conf, which this mirrors for the compose
-# stacks. Left at the 1 MB default, a single @wiki page of syntax-highlighted markup
+# files in deploy/. Left at the 1 MB default, a single @wiki page of syntax-highlighted markup
 # serialises past it and the publish fails with NatsPayloadTooLargeException.
 apiVersion: v1
 kind: ConfigMap

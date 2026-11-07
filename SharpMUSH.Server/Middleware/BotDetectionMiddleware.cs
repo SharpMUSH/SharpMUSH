@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using SharpMUSH.Server.Controllers;
 
 namespace SharpMUSH.Server.Middleware;
 
@@ -43,7 +44,9 @@ public sealed class BotDetectionMiddleware(RequestDelegate next)
 		if (isBot)
 		{
 			var path = context.Request.Path.Value ?? "/";
-			if (AuthenticatedPrefixes.Any(prefix => path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+			// A scene or Play link gets the game's own card (BotPrerenderMiddleware), which shows nothing of the page.
+			if (!GamePrerenderHtmlBuilder.IsGamePath(path)
+				&& AuthenticatedPrefixes.Any(prefix => path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
 			{
 				// Bots must not see authenticated content – even a live scene detail or settings page.
 				context.Response.StatusCode = StatusCodes.Status403Forbidden;

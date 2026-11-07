@@ -1858,7 +1858,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
-    <value>— Połącz się, aby zobaczyć, kto tu jest —</value>
+    <value>Połącz się, aby zobaczyć, kto tu jest</value>
     <comment>MT</comment>
   </data>
   <data name="NavCreateACharacter" xml:space="preserve">
@@ -1950,7 +1950,7 @@
     <comment>MT — {0} is a route, kept as-is and placed after a preposition that does not inflect it</comment>
   </data>
   <data name="NavNoExitsAvailable" xml:space="preserve">
-    <value>— Brak dostępnych wyjść —</value>
+    <value>Brak dostępnych wyjść</value>
     <comment>MT</comment>
   </data>
   <data name="NavNotConnected" xml:space="preserve">
@@ -5432,6 +5432,22 @@
   </data>
   <data name="RolOverridesHelp" xml:space="preserve">
     <value>Wyjątek na tym koncie ma pierwszeństwo przed wszystkimi jego rolami.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReach" xml:space="preserve">
+    <value>Zasięg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachEveryone" xml:space="preserve">
+    <value>Każdy cel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachUpTo" xml:space="preserve">
+    <value>Zasięg {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReaching" xml:space="preserve">
+    <value>(zasięg {0})</value>
     <comment>MT</comment>
   </data>
   <data name="RolOverrideSaved" xml:space="preserve">

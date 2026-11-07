@@ -27,11 +27,11 @@
             }
             else if (_scenes is null)
             {
-                <div class="recent-scenes-empty">@Loc["WidUnavailable"]</div>
+                <EmptyState Compact="true" Failed="true" Class="recent-scenes-empty">@Loc["WidUnavailable"]</EmptyState>
             }
             else if (_scenes.Count == 0)
             {
-                <div class="recent-scenes-empty">@Loc["NavNoScenesYet"]</div>
+                <EmptyState Compact="true" Class="recent-scenes-empty" Icon="@Icons.Material.Outlined.TheaterComedy">@Loc["NavNoScenesYet"]</EmptyState>
             }
             else
             {

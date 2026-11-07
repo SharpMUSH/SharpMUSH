@@ -13,8 +13,8 @@
 .comm-head {
 	display: flex;
 	align-items: center;
-	gap: 12px;
-	padding: 10px 12px 10px 16px;
+	gap: var(--space-4);
+	padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5);
 	border-bottom: 1px solid var(--border);
 	flex-shrink: 0;
 }
@@ -26,7 +26,7 @@
 
 .comm-title {
 	margin: 0;
-	font-size: 15px;
+	font-size: var(--text-base);
 	font-weight: 700;
 	white-space: nowrap;
 	overflow: hidden;
@@ -34,7 +34,7 @@
 }
 
 .comm-sub {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
@@ -59,14 +59,14 @@
 	height: 36px;
 	display: flex;
 	align-items: center;
-	gap: 6px;
-	padding: 0 10px;
+	gap: var(--space-3);
+	padding: 0 var(--space-4);
 	border: 0;
 	border-radius: 10px;
 	background: transparent;
 	color: var(--text-dim);
 	font: inherit;
-	font-size: 13px;
+	font-size: var(--text-sm);
 	cursor: pointer;
 }
 
@@ -97,18 +97,13 @@
 	overflow-y: auto;
 	display: flex;
 	flex-direction: column-reverse;
-	padding: 8px 20px;
+	padding: var(--space-3) var(--space-6);
 }
 
 .comm-lines {
 	display: flex;
 	flex-direction: column;
-	gap: 10px;
-}
-
-.comm-empty {
-	color: var(--text-faint);
-	font-style: italic;
+	gap: var(--space-4);
 }
 
 .comm-unlogged {
@@ -121,8 +116,8 @@
 .comm-new {
 	display: flex;
 	align-items: center;
-	gap: 10px;
-	font-size: 12px;
+	gap: var(--space-4);
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
@@ -148,7 +143,7 @@
 
 .comm-group {
 	display: flex;
-	gap: 12px;
+	gap: var(--space-4);
 }
 
 ::deep .comm-avatar {
@@ -167,7 +162,7 @@
 ::deep .comm-avatar--initials {
 	display: grid;
 	place-items: center;
-	font-size: 12px;
+	font-size: var(--text-sm);
 	font-weight: 700;
 }
 
@@ -175,7 +170,7 @@
 .comm-emit {
 	display: flex;
 	align-items: baseline;
-	gap: 12px;
+	gap: var(--space-4);
 }
 
 .comm-emit .comm-time {
@@ -197,21 +192,21 @@
 .comm-meta {
 	display: flex;
 	align-items: baseline;
-	gap: 8px;
+	gap: var(--space-3);
 }
 
 .comm-name {
-	font-size: 14px;
+	font-size: var(--text-base);
 	font-weight: 700;
 }
 
 .comm-time {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	color: var(--text-dim);
 }
 
 .comm-text {
-	font-size: 15px;
+	font-size: var(--text-base);
 	line-height: 1.6;
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
@@ -219,13 +214,13 @@
 
 .comm-compose {
 	flex-shrink: 0;
-	padding: 0 12px 12px;
+	padding: 0 var(--space-4) var(--space-4);
 }
 
 .comm-compose-row {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: var(--space-4);
 }
 
 .comm-input {
@@ -236,7 +231,7 @@
 	background: transparent;
 	color: var(--text);
 	font: inherit;
-	font-size: 15px;
+	font-size: var(--text-base);
 	outline: none;
 }
 
@@ -246,7 +241,7 @@
 
 .comm-send {
 	height: 40px;
-	padding: 0 20px;
+	padding: 0 var(--space-6);
 	border: 0;
 	border-radius: 20px;
 	background: var(--accent);
@@ -268,8 +263,8 @@
 	flex-shrink: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
-	padding: 12px;
+	gap: var(--space-3);
+	padding: var(--space-4);
 	border-left: 1px solid var(--border);
 	overflow-y: auto;
 }
@@ -297,17 +292,11 @@
 }
 
 .comm-members-head {
-	font-size: 12px;
+	font-size: var(--text-sm);
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
 	color: var(--text-dim);
-}
-
-.comm-members-empty {
-	font-size: 13px;
-	color: var(--text-faint);
-	font-style: italic;
 }
 
 .comm-members-list {
@@ -316,24 +305,24 @@
 	padding: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: var(--space-3);
 }
 
 .comm-member {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: var(--space-4);
 	min-width: 0;
 }
 
 ::deep .comm-avatar--small {
 	width: 28px;
 	height: 28px;
-	font-size: 11px;
+	font-size: var(--text-xs);
 }
 
 .comm-member-name {
-	font-size: 14px;
+	font-size: var(--text-base);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;

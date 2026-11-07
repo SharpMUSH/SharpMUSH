@@ -54,13 +54,11 @@
             }
             else if (!_categoryProperties.Any())
             {
-                <KitCard>
-                    <MudAlert Severity="Severity.Info">
-                        @string.Format(Loc["NoPropertiesFound"], CategoryTitle)
-                        <br />
-                        <small>@Loc["NoPropertiesHint"]</small>
-                    </MudAlert>
-                </KitCard>
+                <EmptyState Icon="@Icons.Material.Outlined.Tune">
+                    @string.Format(Loc["NoPropertiesFound"], CategoryTitle)
+                    <br />
+                    <small>@Loc["NoPropertiesHint"]</small>
+                </EmptyState>
             }
             else if (NonEmptyGroups.Count == 0)
             {

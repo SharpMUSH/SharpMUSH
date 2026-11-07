@@ -16,10 +16,15 @@ public partial class PennMUSHDatabaseConverter
 	/// <summary>
 	/// Reads a TinyMUX flatfile and its companions into the model: the game's mail and channels are its
 	/// <c>mail.db</c> (<see cref="DatabaseImportFiles.Mail"/>) and <c>comsys.db</c>
-	/// (<see cref="DatabaseImportFiles.Chat"/>).
+	/// (<see cref="DatabaseImportFiles.Chat"/>). A TinyMUX 2.14 SQLite database holds all three.
 	/// </summary>
 	private async Task<PennMUSHDatabase> ReadTinyMuxAsync(DatabaseImportFiles files, CancellationToken cancellationToken)
 	{
+		if (TinyMuxDatabaseReader.IsSqlite(files.Database))
+		{
+			return await ReadTinyMuxSqliteAsync(files, cancellationToken);
+		}
+
 		var databaseFilePath = files.Database;
 		var mailDatabaseFilePath = files.Mail;
 		var chatDatabaseFilePath = files.Chat;
@@ -60,6 +65,31 @@ public partial class PennMUSHDatabaseConverter
 			database.ImportNotes.Add(new ImportWarning(ImportWarningKind.Mail,
 				"The mail folder file that came with the TinyMUX flatfile was not read: " +
 				"the folder file is RhostMUSH's, and a TinyMUX import reads only mail.db."));
+		}
+
+		return database;
+	}
+
+	/// <summary>Reads TinyMUX 2.14's <c>netmux.sqlite</c>, which holds the game, its mail and its comsys; side files are not read.</summary>
+	private async Task<PennMUSHDatabase> ReadTinyMuxSqliteAsync(DatabaseImportFiles files, CancellationToken cancellationToken)
+	{
+		_logger.LogInformation("Reading a TinyMUX SQLite database: {FilePath}", files.Database);
+		var database = await TinyMuxDatabaseReader.ReadSqliteFileAsync(files.Database, cancellationToken);
+		foreach (var (file, kind) in new[] { (files.Mail, ImportWarningKind.Mail), (files.Chat, ImportWarningKind.Channels), (files.MailFolders, ImportWarningKind.Mail) })
+		{
+			if (string.IsNullOrEmpty(file)) continue;
+			database.ImportNotes.Add(new ImportWarning(kind,
+				$"{Path.GetFileName(file)} was not read: the TinyMUX SQLite database holds the game's mail and comsys itself."));
+		}
+
+		if (database.Mail.ReadError is { } mailError)
+		{
+			_logger.LogWarning("Could not read the TinyMUX mail from {FilePath}: {Error}", files.Database, mailError);
+		}
+
+		if (database.Chat.ReadError is { } chatError)
+		{
+			_logger.LogWarning("Could not read the TinyMUX comsys from {FilePath}: {Error}", files.Database, chatError);
 		}
 
 		return database;
