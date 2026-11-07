@@ -32,7 +32,7 @@ namespace SharpMUSH.Tests.Integration.Portal;
 /// </summary>
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 [NotInParallel(nameof(PortalCommandApiTests))]
-public class PortalCommandApiTests(ServerWebAppFactory factory)
+public partial class PortalCommandApiTests(ServerWebAppFactory factory)
 {
 	private IMediator Mediator => factory.Services.GetRequiredService<IMediator>();
 

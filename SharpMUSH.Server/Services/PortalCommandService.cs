@@ -196,6 +196,9 @@ public sealed class PortalCommandService(
 
 	private async ValueTask<Result<PortalCommandResponse>> ExecuteAsync(DBRef actor, DelegatedApp? app, PortalCommandRequest request)
 	{
+		PortalCommandTemplate? template = null;
+		if (request.Data is not null && !PortalCommandTemplate.TryCreate(request.Command, request.Data, out template, out var error))
+			return new Error<string>(error);
 		var transcript = new CommandTranscript(FunctionLimits.MaxOutputCodeUnits);
 		string? result = null;
 		using var sender = DelegatedApp.Begin(app);
@@ -204,7 +207,9 @@ public sealed class PortalCommandService(
 			CallState ran;
 			using (outputCapture.BeginCapture(actor.Number, transcript))
 			{
-				ran = await parser.CommandParse(actor, MarkupText.Plain(request.Command));
+				ran = template is null
+					? await parser.CommandParse(actor, MarkupText.Plain(request.Command))
+					: await parser.TemplateCommandParse(actor, template);
 			}
 
 			if (!string.IsNullOrWhiteSpace(request.Result) && !BudgetExpired())

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Implementation.Handlers.Database;
 using SharpMUSH.Implementation.Services;
@@ -33,7 +34,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 	/// </summary>
 	public async ValueTask<Option<CallState>> InternalAsync(SharpMUSHParserVisitor visitor, IMUSHCodeParser prs,
 		MString src, ICommandContext context, string rootCommand, string[] switches,
-		CommandDefinition libraryCommandDefinition)
+		CommandDefinition libraryCommandDefinition, PortalCommandTemplate? template = null)
 	{
 		var noEvalSwitch = Array.Exists(switches, s => s.Equals("NOEVAL", StringComparison.OrdinalIgnoreCase));
 		var singleArgument = switches.Any(s => libraryCommandDefinition.Attribute.SingleArgumentSwitches.Contains(s, StringComparer.OrdinalIgnoreCase));
@@ -46,13 +47,13 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		{
 			Result<CommandArguments> split;
 			using (clock.Pause())
-				split = await services.Arguments.SplitAsync(visitor, prs, src, context, libraryCommandDefinition, clock, rootCommand, noEvalSwitch, singleArgument);
+				split = await services.Arguments.SplitAsync(visitor, prs, src, context, libraryCommandDefinition, clock, rootCommand, noEvalSwitch, singleArgument, template);
 
 			return split switch
 			{
-				CommandArguments argumentResults => await DispatchInternalCommand(visitor, prs, src, rootCommand, switches,
+				CommandArguments argumentResults => await DispatchInternalCommand(visitor, prs, template is null ? src : MarkupText.Plain(template.Template), rootCommand, switches,
 					libraryCommandDefinition, singleArgument, argumentResults, clock),
-				Error<string> splitError => await services.Arguments.RefuseAsync(prs, splitError.Value),
+				Error<string> splitError => await services.Arguments.RefuseAsync(prs, splitError.Value, template is not null),
 			};
 		}
 		finally
