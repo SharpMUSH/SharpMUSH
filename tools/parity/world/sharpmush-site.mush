@@ -1,0 +1,4 @@
+# SharpMUSH's own site settings, run as God after the import (the world itself comes from setup.mush).
+# With no messages_object, SharpMUSH shows the stored texts of its messages (SharpMUSH.Library/Messages/*.txt),
+# as PennMUSH shows its txt/ files, and the site-text rule removes both from login steps.
+@config/set messages_object=#-1

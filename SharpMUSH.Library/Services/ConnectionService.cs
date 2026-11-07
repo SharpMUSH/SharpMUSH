@@ -129,15 +129,15 @@ public class ConnectionService(
 	public void ListenState(Action<(long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler) =>
 		ImmutableInterlocked.Update(ref _handlers, handlers => handlers.Add(handler));
 
-	public async ValueTask Bind(long handle, DBRef player, bool firstLogin = false)
+	public async ValueTask Bind(long handle, DBRef player)
 	{
-		await BindCoreAsync(handle, player, firstLogin, null);
+		await BindCoreAsync(handle, player, null);
 	}
 
 	public ValueTask<bool> BindAuthorizedAsync(long handle, DBRef player, Func<Task<bool>> authorize, Action? onCommitted = null)
-		=> BindCoreAsync(handle, player, false, authorize, onCommitted);
+		=> BindCoreAsync(handle, player, authorize, onCommitted);
 
-	private async ValueTask<bool> BindCoreAsync(long handle, DBRef player, bool firstLogin, Func<Task<bool>>? authorize, Action? onCommitted = null)
+	private async ValueTask<bool> BindCoreAsync(long handle, DBRef player, Func<Task<bool>>? authorize, Action? onCommitted = null)
 	{
 		var get = Get(handle);
 		if (get is null || authorize is not null && get.Ref is not null) return false;
@@ -161,7 +161,7 @@ public class ConnectionService(
 		UpdateConnectionMetrics();
 
 		await publisher.Publish(new ConnectionStateChangeNotification(handle, player, get.State,
-			IConnectionService.ConnectionState.LoggedIn, firstLogin));
+			IConnectionService.ConnectionState.LoggedIn));
 		return true;
 	}
 

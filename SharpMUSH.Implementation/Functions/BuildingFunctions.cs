@@ -42,7 +42,7 @@ public partial class Functions
 		// function does too: fun_pcreate is nothing but a call to it.
 		if (result is DBRef player)
 		{
-			await BuildingHelpers.AnnouncePlayerCreatedAsync(parser, NotifyService, EventService, executor,
+			await BuildingHelpers.AnnouncePlayerCreatedAsync(parser, Mediator, NotifyService, EventService, executor,
 				args["0"].Message.ToPlainText(), args["1"].Message.ToPlainText(), player);
 		}
 

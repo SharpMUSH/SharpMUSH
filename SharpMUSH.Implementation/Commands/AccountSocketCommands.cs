@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using MarkupString.Layout;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Queries.Database;
@@ -348,6 +349,9 @@ public partial class Commands
 		var playerDbRef = await Mediator.Send(new CreatePlayerCommand(charName, charPassword, defaultHomeDbref, defaultHomeDbref, startingQuota));
 
 		await AccountService.LinkCharacterAsync(accountId, playerDbRef);
+		var connection = ConnectionService.Get(handle);
+		await ConnectRecord.CreatedAsync(Mediator, playerDbRef, connection?.HostName ?? string.Empty,
+			connection?.InternetProtocolAddress ?? string.Empty);
 
 		var playerNode = await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(playerDbRef));
 		if (playerNode is not (AnySharpObject and SharpPlayer foundPlayer))
@@ -364,9 +368,7 @@ public partial class Commands
 		await EventService.TriggerEventAsync(SharpEvents.PlayerCreate, null, playerDbRef.ToString(), charName, "create",
 			handle.ToString(), "");
 
-		// The character was created a line ago, so this is its first ever entry into play: it gets
-		// the first-login greeting, not "Welcome back".
-		await ConnectionService.Bind(handle, playerDbRef, firstLogin: true);
+		await ConnectionService.Bind(handle, playerDbRef);
 
 		// announce_connect for a new player (src/bsd.c:5912): wizards hear of a SUSPECT one.
 		if (await created.HasFlag("SUSPECT"))
