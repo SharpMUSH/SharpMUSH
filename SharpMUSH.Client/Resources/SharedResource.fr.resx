@@ -4760,6 +4760,10 @@
     <value>(portée {0})</value>
     <comment>MT</comment>
   </data>
+  <data name="RolAccessUnlessDenied" xml:space="preserve">
+    <value>Autorisé sauf refus</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Exception pour {0} enregistrée.</value>
     <comment>MT</comment>

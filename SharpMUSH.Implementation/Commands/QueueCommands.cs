@@ -931,6 +931,8 @@ public partial class Commands
 		var objArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty);
 		var cmdListArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Empty);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await executor.Can(PortalPermission.PlayerForce))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerForce));
 
 		// RSBrace preserves outer braces during argument parsing (PennMUSH CS_BRACES).
 		// Strip them here before execution (PennMUSH PE_COMMAND_BRACES equivalent).

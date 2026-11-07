@@ -5450,6 +5450,10 @@
     <value>(zasięg {0})</value>
     <comment>MT</comment>
   </data>
+  <data name="RolAccessUnlessDenied" xml:space="preserve">
+    <value>Dozwolone, chyba że odmówiono</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Zapisano wyjątek dla {0}.</value>
     <comment>MT</comment>

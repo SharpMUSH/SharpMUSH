@@ -458,6 +458,10 @@ public class PermissionService(
 		if (targetInheritable || target.IsPlayer)
 			return false;
 
+		// player.modify: the control below does not come from owning the target, and a deny, on who or its owner, takes it away.
+		if (!await who.CanOver(PortalPermission.PlayerModify, target))
+			return false;
+
 		// Zone Master Object (ZMO) control
 		// If zone_control_zmp_only is false, check if target has a zone and if who passes the Zone_Lock
 		if (!options.CurrentValue.Database.ZoneControlZmpOnly)
@@ -507,7 +511,8 @@ public class PermissionService(
 		=> examiner.Object().DBRef == examinee.Object().DBRef
 			 || await Controls(examiner, examinee)
 			 || await examiner.IsSee_All()
-			 || (await examinee.IsVisual() && await lockService.Evaluate(LockType.Examine, examinee, examiner));
+			 || (await examinee.IsVisual() && await examiner.CanOver(PortalPermission.PlayerExamine, examinee)
+				 && await lockService.Evaluate(LockType.Examine, examinee, examiner));
 
 	/// <inheritdoc />
 	public async ValueTask<bool> CanReadLock(AnySharpObject viewer, AnySharpObject target, LockService.LockFlags lockFlags)

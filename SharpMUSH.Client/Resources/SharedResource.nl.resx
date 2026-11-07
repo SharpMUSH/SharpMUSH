@@ -5450,6 +5450,10 @@
     <value>(bereik {0})</value>
     <comment>MT</comment>
   </data>
+  <data name="RolAccessUnlessDenied" xml:space="preserve">
+    <value>Toegestaan tenzij geweigerd</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Uitzondering voor {0} opgeslagen.</value>
     <comment>MT</comment>

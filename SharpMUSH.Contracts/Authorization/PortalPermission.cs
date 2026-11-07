@@ -132,6 +132,54 @@ public static class PortalPermission
 	/// RhostMUSH's NO_BOOT. No role allows it by default.
 	/// </summary>
 	public const string NoBoot = "game.noboot";
+	/// <summary>Sends a page; checked against each recipient. Allowed unless denied (<see cref="AllowedUnlessDenied"/>).</summary>
+	public const string PlayerPage = "player.page";
+
+	/// <summary>Builds: @create, @dig, @open, @clone and their functions. Allowed unless denied.</summary>
+	public const string PlayerCreate = "player.create";
+
+	/// <summary>Gives money or things with give. Allowed unless denied.</summary>
+	public const string PlayerGive = "player.give";
+
+	/// <summary>Is given money or things; checked on the receiver. Allowed unless denied.</summary>
+	public const string PlayerReceive = "player.receive";
+
+	/// <summary>@forces what it controls. Allowed unless denied.</summary>
+	public const string PlayerForce = "player.force";
+
+	/// <summary>Uses channels: @channel, @chat, @cemit and channel aliases. Allowed unless denied.</summary>
+	public const string PlayerChat = "player.chat";
+
+	/// <summary>Runs <c>$</c>-commands. Allowed unless denied.</summary>
+	public const string PlayerCommands = "player.commands";
+
+	/// <summary>Examines others' VISUAL objects. Allowed unless denied.</summary>
+	public const string PlayerExamine = "player.examine";
+
+	/// <summary>
+	/// Controls others' objects through a zone, a control lock or a shared owner: the control that does
+	/// not come from owning the object. Allowed unless denied.
+	/// </summary>
+	public const string PlayerModify = "player.modify";
+
+	/// <summary>Takes CHOWN_OK objects with @chown. Allowed unless denied.</summary>
+	public const string PlayerChown = "player.chown";
+
+	/// <summary>@teleports by control or JUMP_OK. Allowed unless denied.</summary>
+	public const string PlayerTeleport = "player.teleport";
+
+	/// <summary>Changes its own password with @password. Allowed unless denied.</summary>
+	public const string PlayerPassword = "player.password";
+
+	/// <summary>
+	/// The everyday scopes: granted to every object unless a role or override denies them, so nobody notices them until
+	/// a deny takes one away. They exist so that a RhostMUSH depower, or staff muting someone, has something precise to deny.
+	/// </summary>
+	public static readonly IReadOnlySet<string> AllowedUnlessDenied = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+	{
+		PlayerPage, PlayerCreate, PlayerGive, PlayerReceive, PlayerForce, PlayerChat, PlayerCommands, PlayerExamine,
+		PlayerModify, PlayerChown, PlayerTeleport, PlayerPassword,
+	};
 
 	/// <summary>Controls every object except the owner's, whoever owns it (the wizard half of PennMUSH <c>controls()</c>).</summary>
 	public const string ControlAll = "control.all";
@@ -175,6 +223,12 @@ public static class PortalPermission
 		NoForce,
 		NoBoot,
 		OverrideMovement,
+		PlayerPage,
+		PlayerGive,
+		PlayerExamine,
+		PlayerModify,
+		PlayerChown,
+		PlayerTeleport,
 	};
 
 	/// <summary>Whether an override of <paramref name="scope"/> may carry a reach: whether its checks read one.</summary>
@@ -250,6 +304,18 @@ public static class PortalPermission
 		new(FlagsRestricted, "EnumPermFlagsRestricted", GroupGame, "EnumPermFlagsRestrictedDesc"),
 		new(NoForce, "EnumPermNoForce", GroupGame, "EnumPermNoForceDesc"),
 		new(NoBoot, "EnumPermNoBoot", GroupGame, "EnumPermNoBootDesc"),
+		new(PlayerPage, "EnumPermPlayerPage", GroupGame, "EnumPermPlayerPageDesc"),
+		new(PlayerCreate, "EnumPermPlayerCreate", GroupGame, "EnumPermPlayerCreateDesc"),
+		new(PlayerGive, "EnumPermPlayerGive", GroupGame, "EnumPermPlayerGiveDesc"),
+		new(PlayerReceive, "EnumPermPlayerReceive", GroupGame, "EnumPermPlayerReceiveDesc"),
+		new(PlayerForce, "EnumPermPlayerForce", GroupGame, "EnumPermPlayerForceDesc"),
+		new(PlayerChat, "EnumPermPlayerChat", GroupGame, "EnumPermPlayerChatDesc"),
+		new(PlayerCommands, "EnumPermPlayerCommands", GroupGame, "EnumPermPlayerCommandsDesc"),
+		new(PlayerExamine, "EnumPermPlayerExamine", GroupGame, "EnumPermPlayerExamineDesc"),
+		new(PlayerModify, "EnumPermPlayerModify", GroupGame, "EnumPermPlayerModifyDesc"),
+		new(PlayerChown, "EnumPermPlayerChown", GroupGame, "EnumPermPlayerChownDesc"),
+		new(PlayerTeleport, "EnumPermPlayerTeleport", GroupGame, "EnumPermPlayerTeleportDesc"),
+		new(PlayerPassword, "EnumPermPlayerPassword", GroupGame, "EnumPermPlayerPasswordDesc"),
 		.. GamePowers.All.Select(power => new Definition(power.Scope, power.ResourceKey, GroupGame, power.ResourceKey + "Desc")),
 	];
 
