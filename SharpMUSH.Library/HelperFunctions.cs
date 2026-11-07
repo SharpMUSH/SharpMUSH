@@ -154,12 +154,13 @@ public static partial class HelperFunctions
 
 	/// <summary>
 	/// Whether <paramref name="holder"/>'s protective <paramref name="scope"/> shields it from
-	/// <paramref name="actor"/> (<see cref="ObjectGrants.Protects"/>). Nothing shields anything from #1.
+	/// <paramref name="actor"/> (<see cref="ObjectGrants.Protects"/>). Nothing shields anything from #1. The holder's own
+	/// grants decide, never lowered by a privilege ceiling or an app acting as it: those limit what it does, not what is done to it.
 	/// </summary>
 	public static async ValueTask<bool> ShieldedFrom(this AnySharpObject holder, string scope, AnySharpObject actor)
 	{
 		if (actor.IsGod()) return false;
-		var grants = await holder.GrantsAsync(ExecutionBudget.CurrentToken);
+		var grants = await holder.Object().Grants.WithCancellation(ExecutionBudget.CurrentToken);
 		return grants.Protects(scope, await actor.RankAsTargetAsync(ExecutionBudget.CurrentToken));
 	}
 
