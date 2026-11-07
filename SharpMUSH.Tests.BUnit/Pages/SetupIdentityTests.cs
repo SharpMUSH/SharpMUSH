@@ -2,6 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Client.Components.Onboarding;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Models.Portal.Onboarding;
@@ -15,11 +18,13 @@ public class SetupIdentityTests : BunitContext
 	[Arguments("Unlisted genre", "High Fantasy")]
 	[Arguments("Fantasy", "High Fantasy\nCyberpunk")]
 	[Arguments("Fantasy", "Unlisted subgenre")]
-	public async Task SettingsRejectNonCatalogOrMultipleChoices(string genres, string subgenres)
+	public async Task SettingsRejectNewNonCatalogOrMultipleChoices(string genres, string subgenres)
 	{
 		var writer = NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConfigOptionWriter>();
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(SharpMUSHOptions.Default());
 		var controller = new SharpMUSH.Server.Controllers.OnboardingSettingsController(
-			NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>(),
+			options,
 			writer, NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IAuditLog>());
 		var request = new OnboardingSettings("Test", genres.Split('\n'), subgenres.Split('\n'), "", "", "", "", "minimalist", "");
 		await Assert.That(await controller.Put(request, default)).IsTypeOf<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>();
@@ -30,12 +35,119 @@ public class SetupIdentityTests : BunitContext
 		public int Writes;
 		public OnboardingSettings? Saved;
 		public TaskCompletionSource? PendingSave;
+		public OnboardingSettings Settings = new("Imported world", ["Fantasy"], ["High Fantasy"], "An existing introduction", "", "", "", "chibi", "");
+		public OnboardingSettings? SaveResponse;
+		public bool FailNextSave;
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
-			var result = new OnboardingSettings("Imported world", ["Fantasy"], ["High Fantasy"], "An existing introduction", "", "", "", "chibi", "");
-			if (request.Method == HttpMethod.Put) { Writes++; result = (await request.Content!.ReadFromJsonAsync<OnboardingSettings>(cancellationToken))!; Saved = result; if (PendingSave is not null) await PendingSave.Task; }
+			var result = Settings;
+			if (request.Method == HttpMethod.Put)
+			{
+				Writes++;
+				result = (await request.Content!.ReadFromJsonAsync<OnboardingSettings>(cancellationToken))!;
+				Saved = result;
+				if (PendingSave is not null) await PendingSave.Task;
+				if (FailNextSave)
+				{
+					FailNextSave = false;
+					return new(HttpStatusCode.BadRequest) { Content = JsonContent.Create("Save failed") };
+				}
+				result = SaveResponse ?? result;
+				Settings = result;
+			}
 			return new(HttpStatusCode.OK) { Content = JsonContent.Create(result) };
 		}
+	}
+
+	[Test]
+	[Arguments("Fantasy", "Space Opera")]
+	[Arguments("Fantasy", "High Fantasy\nCyberpunk")]
+	[Arguments("Custom genre", "Space Opera / Detective")]
+	[Arguments("Fantasy\nHorror", "Space Opera\nCyberpunk")]
+	[Arguments("", "")]
+	public async Task UnrelatedIdentityEditsPreserveStoredMetadataAcrossSaves(string genres, string subgenres)
+	{
+		using var handler = new Handler();
+		var expectedGenres = genres == "" ? Array.Empty<string>() : genres.Split('\n');
+		var expectedSubgenres = subgenres == "" ? Array.Empty<string>() : subgenres.Split('\n');
+		handler.Settings = handler.Settings with { Genres = expectedGenres, Subgenres = expectedSubgenres };
+		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
+		Services.AddSingleton<ServerInfoService>();
+		Services.AddLocalization();
+		var form = Render<GameIdentityForm>();
+		form.WaitForElement("#guide-game-name");
+		await form.Find("#guide-game-name").InputAsync("Renamed world");
+		await form.Find(".identity-save").ClickAsync();
+		await Assert.That(handler.Saved!.Genres).IsEquivalentTo(expectedGenres, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(handler.Saved.Subgenres).IsEquivalentTo(expectedSubgenres, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await form.Find("#guide-introduction").InputAsync("A new introduction");
+		await form.Find(".identity-save").ClickAsync();
+		await Assert.That(handler.Saved!.Genres).IsEquivalentTo(expectedGenres, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(handler.Saved.Subgenres).IsEquivalentTo(expectedSubgenres, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(handler.Writes).IsEqualTo(2);
+	}
+
+	[Test]
+	public async Task ExplicitSelectorChangesReplaceOnlyThatFieldAndStaySaved()
+	{
+		using var handler = new Handler();
+		handler.Settings = handler.Settings with { Genres = ["Custom genre"], Subgenres = ["Space Opera", "Cyberpunk"] };
+		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
+		Services.AddSingleton<ServerInfoService>();
+		Services.AddLocalization();
+		var form = Render<GameIdentityForm>();
+		form.WaitForElement("#guide-genres");
+		await form.Find("#guide-genres").ChangeAsync("Horror");
+		await form.Find(".identity-save").ClickAsync();
+		await Assert.That(handler.Saved!.Genres).IsEquivalentTo(new[] { "Horror" });
+		await Assert.That(handler.Saved.Subgenres).IsEquivalentTo(new[] { "Space Opera", "Cyberpunk" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await form.Find("#guide-subgenres").ChangeAsync("None");
+		await form.Find(".identity-save").ClickAsync();
+		await form.Find("#guide-introduction").InputAsync("After replacing the subgenre");
+		await form.Find(".identity-save").ClickAsync();
+		await Assert.That(handler.Saved!.Genres).IsEquivalentTo(new[] { "Horror" });
+		await Assert.That(handler.Saved.Subgenres).IsEquivalentTo(new[] { "None" });
+	}
+
+	[Test]
+	public async Task LaterSavesUseMetadataReturnedByTheServer()
+	{
+		using var handler = new Handler();
+		handler.SaveResponse = handler.Settings with { Subgenres = ["Space Opera", "Cyberpunk"] };
+		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
+		Services.AddSingleton<ServerInfoService>();
+		Services.AddLocalization();
+		var form = Render<GameIdentityForm>();
+		form.WaitForElement("#guide-game-name");
+		await form.Find("#guide-game-name").InputAsync("Renamed world");
+		await form.Find(".identity-save").ClickAsync();
+		await Assert.That(form.Find("#guide-subgenres").GetAttribute("value")).IsEqualTo("Space Opera / Cyberpunk");
+		await form.Find("#guide-introduction").InputAsync("New introduction");
+		await form.Find(".identity-save").ClickAsync();
+		await Assert.That(handler.Saved!.Subgenres).IsEquivalentTo(new[] { "Space Opera", "Cyberpunk" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task FailedSubgenreSaveRetainsTheChoiceAndUntouchedGenreForRetry()
+	{
+		using var handler = new Handler { FailNextSave = true };
+		handler.Settings = handler.Settings with { Genres = ["Custom genre", "Horror"], Subgenres = ["Space Opera"] };
+		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
+		Services.AddSingleton<ServerInfoService>();
+		Services.AddLocalization();
+		var form = Render<GameIdentityForm>();
+		form.WaitForElement("#guide-subgenres");
+		await form.Find("#guide-subgenres").ChangeAsync("High Fantasy");
+		await form.Find(".identity-save").ClickAsync();
+		await Assert.That(form.FindAll("[role=alert]").Count).IsEqualTo(1);
+		await form.Find(".identity-save").ClickAsync();
+		await Assert.That(handler.Saved!.Genres).IsEquivalentTo(new[] { "Custom genre", "Horror" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(handler.Saved.Subgenres).IsEquivalentTo(new[] { "High Fantasy" });
+		await Assert.That(form.FindAll("[role=alert]").Count).IsEqualTo(0);
+		await form.Find("#guide-introduction").InputAsync("After retrying");
+		await form.Find(".identity-save").ClickAsync();
+		await Assert.That(handler.Saved!.Genres).IsEquivalentTo(new[] { "Custom genre", "Horror" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(handler.Saved.Subgenres).IsEquivalentTo(new[] { "High Fantasy" });
 	}
 	private sealed class Factory(HttpMessageHandler handler) : IHttpClientFactory
 	{
