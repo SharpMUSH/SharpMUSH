@@ -62,11 +62,11 @@ public class StaffScopeTests : ServerTestBase
 		await As(_wizard, $"@tel #{number}={room}");
 
 		await As(_mortal, $"enter #{number}");
-		await Assert.That(await Eval($"loc(#{_mortal.DbRef.Number})")).DoesNotStartWith($"#{number}:");
+		await Assert.That(await Eval($"loc(#{_mortal.DbRef.Number})")).IsEqualTo(room);
 
 		await As(_wizard, $"@permission/allow {_mortal.Name}=game.override.movement");
 		await As(_mortal, $"enter #{number}");
-		await Assert.That(await Eval($"loc(#{_mortal.DbRef.Number})")).StartsWith($"#{number}:");
+		await Assert.That(await Eval($"loc(#{_mortal.DbRef.Number})")).IsEqualTo($"#{number}");
 	}
 
 	[Test]
