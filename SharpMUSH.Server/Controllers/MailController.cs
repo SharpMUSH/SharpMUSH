@@ -65,7 +65,7 @@ public class MailController(
 		{
 			list.Add(new MailSummaryDto(
 				number++,
-				mail.SenderName ?? UnknownSender,
+				mail.Anonymous ? AnonymousSender : mail.SenderName ?? UnknownSender,
 				mail.Subject.ToPlainText(),
 				mail.DateSent,
 				mail.Read,
@@ -201,8 +201,12 @@ public class MailController(
 
 	private const string UnknownSender = "(unknown)";
 
+	private const string AnonymousSender = "(anonymous)";
+
 	private static async Task<string> FromNameAsync(SharpMail mail)
-		=> (await mail.From.WithCancellation(CancellationToken.None)).Object()?.Name ?? UnknownSender;
+		=> mail.Anonymous
+			? AnonymousSender
+			: (await mail.From.WithCancellation(CancellationToken.None)).Object()?.Name ?? UnknownSender;
 
 	/// <summary>
 	/// Resolves the character this request acts as, re-checked against its current account link.

@@ -89,11 +89,14 @@ public class RoleRegistryClient(IHttpClientFactory httpClientFactory, ILogger<Ro
 	public Task<ApiResult<Success>> RemoveFromObjectAsync(int dbref, long created, string slug) =>
 		Client.DeleteApiAsync($"api/roles/object/{dbref}/{Uri.EscapeDataString(slug)}?created={created}");
 
-	/// <summary>Sets one per-account override (<c>Allow</c>, <c>Deny</c>, or <c>Inherit</c> to clear it).</summary>
-	public Task<ApiResult<Success>> SetOverrideAsync(string accountKey, string scope, string state) =>
-		Client.PutApiAsync($"api/roles/account/{Uri.EscapeDataString(accountKey)}/overrides", new OverrideRequest(scope, state));
+	/// <summary>
+	/// Sets one per-account override (<c>Allow</c>, <c>Deny</c>, or <c>Inherit</c> to clear it). <paramref name="reach"/>
+	/// names the role bounding the targets it applies to, or is null for every target.
+	/// </summary>
+	public Task<ApiResult<Success>> SetOverrideAsync(string accountKey, string scope, string state, string? reach = null) =>
+		Client.PutApiAsync($"api/roles/account/{Uri.EscapeDataString(accountKey)}/overrides", new OverrideRequest(scope, state, reach));
 
-	private sealed record OverrideRequest(string Scope, string State);
+	private sealed record OverrideRequest(string Scope, string State, string? Reach);
 
 	/// <summary>The custom permissions the game defines, or none when unavailable.</summary>
 	public async Task<IReadOnlyList<CustomPermission>> ListCustomPermissionsAsync()

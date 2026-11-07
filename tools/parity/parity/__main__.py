@@ -99,6 +99,9 @@ def main(argv=None) -> int:
         print("[parity] starting SharpMUSH and importing the flatfile")
         sharp.start(flatfile)
         starget = runner.Target("SharpMUSH", "127.0.0.1", sharp.port, "PSYNCs", echo.url)
+        site_cmds, _ = world.load_setup(HERE / "world" / "sharpmush-site.mush")
+        (work / "logs" / "sharpmush-site-transcript.txt").write_text(
+            "\n".join(world.run_site_setup(starget, site_cmds)), encoding="utf-8")
 
         p_anchor, p_free = world.resolve_anchors(ptarget, anchors)
         s_anchor, s_free = world.resolve_anchors(starget, anchors)
@@ -115,9 +118,10 @@ def main(argv=None) -> int:
         pcanon = world.canonicalizer(p_anchor, p_anchor, p_free)
         scanon = world.canonicalizer(s_anchor, p_anchor, s_free, foreign_tag="S")
         def site(d: Path):
-            return [(d / n).read_text(encoding="utf-8", errors="replace") for n in ("connect.txt", "motd.txt", "wizmotd.txt") if (d / n).exists()]
+            names = ("connect.txt", "motd.txt", "wizmotd.txt", "noaccount.txt")
+            return [(d / n).read_text(encoding="utf-8", errors="replace") for n in names if (d / n).exists()]
         results, stale, fixed = cmp.compare(all_p, all_s, pcanon, scanon, allowlist,
-                                     site(penn.game / "txt"), site(REPO / "SharpMUSH.Server"), baseline)
+                                     site(penn.game / "txt"), site(REPO / "SharpMUSH.Library" / "Messages"), baseline)
         orphans = cmp.orphaned(baseline, allowlist, results)
         not_run = []
         if any(wanted.values()):

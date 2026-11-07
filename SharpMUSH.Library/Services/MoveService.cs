@@ -407,7 +407,12 @@ public class MoveService(
 					&& await oldContainer.WithExitOption().HasFlag("STICKY")
 					&& await IsDropper(mover))
 			{
-				if (await oldRoom.Location.WithCancellation(CancellationToken.None) is AnySharpContainer dropTo)
+				// A drop-to of HOME sends each item to its own home (send_contents' safe_tel resolving HOME).
+				if (await LinkTypes.DropsHomeAsync(mediator, oldRoom))
+				{
+					await MaybeDropTo(parser, oldContainer, null, enactor);
+				}
+				else if (await oldRoom.Location.WithCancellation(CancellationToken.None) is AnySharpContainer dropTo)
 				{
 					await MaybeDropTo(parser, oldContainer, dropTo, enactor);
 				}
@@ -500,18 +505,18 @@ public class MoveService(
 
 	/// <summary>
 	/// PennMUSH <c>maybe_dropto</c> (<c>src/move.c:203</c>) together with the <c>send_contents</c>
-	/// (<c>src/move.c:173</c>) it tail-calls.
+	/// (<c>src/move.c:173</c>) it tail-calls. A null <paramref name="dropTo"/> is a drop-to of <c>HOME</c>.
 	/// </summary>
 	private async ValueTask MaybeDropTo(
 		IMUSHCodeParser parser,
 		AnySharpContainer room,
-		AnySharpContainer dropTo,
+		AnySharpContainer? dropTo,
 		DBRef enactor)
 	{
 		// move.c:207-210: a room dropping to itself, or something that is not a room, keeps its
 		// contents. The caller has already established the room half; both are kept here so this
 		// reads as maybe_dropto does.
-		if (dropTo.Object().DBRef.Equals(room.Object().DBRef) || !room.IsRoom)
+		if (dropTo?.Object().DBRef.Equals(room.Object().DBRef) == true || !room.IsRoom)
 		{
 			return;
 		}
@@ -542,10 +547,11 @@ public class MoveService(
 				continue;
 			}
 
-			// move.c:187: a STICKY object goes home instead of through the drop-to.
+			// move.c:187: a STICKY object goes home instead of through the drop-to, and so does
+			// everything when the drop-to is HOME.
 			var destination = dropTo;
 
-			if (await thing.HasFlag("STICKY"))
+			if (destination is null || await thing.HasFlag("STICKY"))
 			{
 				if (await content.Home() is not AnySharpContainer home)
 				{

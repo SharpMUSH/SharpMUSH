@@ -87,12 +87,27 @@ internal sealed class InMemoryRoleRegistry : IRoleRegistryService
 		=> Task.FromResult<IReadOnlyDictionary<string, PermissionState>>(
 			_overrides.TryGetValue(accountId, out var overrides) ? new Dictionary<string, PermissionState>(overrides) : new Dictionary<string, PermissionState>());
 
-	public Task SetAccountOverrideAsync(string accountId, string scope, PermissionState state)
+	public Task SetAccountOverrideAsync(string accountId, string scope, PermissionState state, string? reach = null)
 	{
 		if (!_overrides.TryGetValue(accountId, out var overrides)) _overrides[accountId] = overrides = new(StringComparer.OrdinalIgnoreCase);
 		if (state == PermissionState.Inherit) overrides.Remove(scope);
 		else overrides[scope] = state;
+		SetReach(_reaches, accountId, scope, state == PermissionState.Inherit ? null : reach);
 		return Task.CompletedTask;
+	}
+
+	public Task<IReadOnlyDictionary<string, string>> GetAccountReachesAsync(string accountId, CancellationToken cancellationToken = default)
+		=> Task.FromResult<IReadOnlyDictionary<string, string>>(
+			_reaches.TryGetValue(accountId, out var reaches) ? new Dictionary<string, string>(reaches) : new Dictionary<string, string>());
+
+	private readonly Dictionary<string, Dictionary<string, string>> _reaches = new();
+	private readonly Dictionary<int, Dictionary<string, string>> _objectReaches = new();
+
+	private static void SetReach<TKey>(Dictionary<TKey, Dictionary<string, string>> all, TKey key, string scope, string? reach) where TKey : notnull
+	{
+		if (!all.TryGetValue(key, out var reaches)) all[key] = reaches = new(StringComparer.OrdinalIgnoreCase);
+		if (reach is null) reaches.Remove(scope);
+		else reaches[scope] = reach;
 	}
 
 	public Task<IReadOnlyList<string>> GetObjectRolesAsync(int number, CancellationToken cancellationToken = default)
@@ -118,13 +133,18 @@ internal sealed class InMemoryRoleRegistry : IRoleRegistryService
 		=> Task.FromResult<IReadOnlyDictionary<string, PermissionState>>(
 			_objectOverrides.TryGetValue(number, out var overrides) ? new Dictionary<string, PermissionState>(overrides) : new Dictionary<string, PermissionState>());
 
-	public Task SetObjectOverrideAsync(int number, string scope, PermissionState state)
+	public Task SetObjectOverrideAsync(int number, string scope, PermissionState state, string? reach = null)
 	{
 		if (!_objectOverrides.TryGetValue(number, out var overrides)) _objectOverrides[number] = overrides = new(StringComparer.OrdinalIgnoreCase);
 		if (state == PermissionState.Inherit) overrides.Remove(scope);
 		else overrides[scope] = state;
+		SetReach(_objectReaches, number, scope, state == PermissionState.Inherit ? null : reach);
 		return Task.CompletedTask;
 	}
+
+	public Task<IReadOnlyDictionary<string, string>> GetObjectReachesAsync(int number, CancellationToken cancellationToken = default)
+		=> Task.FromResult<IReadOnlyDictionary<string, string>>(
+			_objectReaches.TryGetValue(number, out var reaches) ? new Dictionary<string, string>(reaches) : new Dictionary<string, string>());
 
 	public Task<IReadOnlyList<CustomPermission>> GetCustomPermissionsAsync(CancellationToken cancellationToken = default)
 		=> Task.FromResult<IReadOnlyList<CustomPermission>>(_custom.Values.OrderBy(p => p.Scope, StringComparer.Ordinal).ToList());
@@ -167,7 +187,11 @@ internal sealed class InMemoryRoleRegistry : IRoleRegistryService
 	public Task<PermissionOverrideHolders> GetOverridesOfAsync(string scope, CancellationToken cancellationToken = default)
 		=> Task.FromResult(new PermissionOverrideHolders(
 			_overrides.Where(o => o.Value.ContainsKey(scope)).ToDictionary(o => o.Key, o => o.Value[scope]),
-			_objectOverrides.Where(o => o.Value.ContainsKey(scope)).ToDictionary(o => o.Key, o => o.Value[scope])));
+			_objectOverrides.Where(o => o.Value.ContainsKey(scope)).ToDictionary(o => o.Key, o => o.Value[scope]))
+		{
+			AccountReaches = _reaches.Where(r => r.Value.ContainsKey(scope)).ToDictionary(r => r.Key, r => r.Value[scope]),
+			ObjectReaches = _objectReaches.Where(r => r.Value.ContainsKey(scope)).ToDictionary(r => r.Key, r => r.Value[scope])
+		});
 
 	public Task RemoveCustomPermissionAsync(string scope)
 	{

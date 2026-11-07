@@ -172,9 +172,9 @@ public partial class Commands
 			.. account is null ? [] : new[] { ("Account", MarkupText.Plain(account.Username)) },
 			.. !grants.IsOwner ? [] : new[] { ("Owner", MarkupText.Plain("yes, and holds every permission")) },
 			("Roles", MarkupText.Plain($"{(roles.Length > 0 ? string.Join(", ", roles) : "none")}, plus everyone")),
-			("Overrides", MarkupText.Plain($"allow {ScopeList(grants.Context.ObjectOverrides, PermissionState.Allow)}; deny {ScopeList(grants.Context.ObjectOverrides, PermissionState.Deny)}")),
-			.. account is null ? [] : new[] { ("Account overrides", MarkupText.Plain($"allow {ScopeList(grants.Context.Overrides, PermissionState.Allow)}; deny {ScopeList(grants.Context.Overrides, PermissionState.Deny)}")) },
-			("Holds", MarkupText.Plain(Joined(scopes.Where(grants.Has)))),
+			("Overrides", MarkupText.Plain($"allow {ScopeList(grants.Context.ObjectOverrides, PermissionState.Allow, grants.Context.ObjectReaches)}; deny {ScopeList(grants.Context.ObjectOverrides, PermissionState.Deny, grants.Context.ObjectReaches)}")),
+			.. account is null ? [] : new[] { ("Account overrides", MarkupText.Plain($"allow {ScopeList(grants.Context.Overrides, PermissionState.Allow, grants.Context.Reaches)}; deny {ScopeList(grants.Context.Overrides, PermissionState.Deny, grants.Context.Reaches)}")) },
+			("Holds", MarkupText.Plain(Joined(scopes.Where(scope => grants.Has(scope))))),
 			("Lacks", MarkupText.Plain(Joined(scopes.Where(scope => !grants.Has(scope))))),
 		];
 		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain(target.Object().Name), ServerLayout.KeyValues(fields)), 78, parser.HouseLook());
@@ -326,6 +326,11 @@ public partial class Commands
 
 	private static string ScopeList(IReadOnlyDictionary<string, PermissionState> permissions, PermissionState state)
 		=> Joined(permissions.Where(p => p.Value == state).Select(p => p.Key));
+
+	/// <summary>The overrides in <paramref name="state"/>, each with its reach after a slash: <c>game.tport_anything/moderator</c>.</summary>
+	private static string ScopeList(IReadOnlyDictionary<string, PermissionState> permissions, PermissionState state,
+		IReadOnlyDictionary<string, OverrideReach> reaches)
+		=> Joined(permissions.Where(p => p.Value == state).Select(p => ObjectGrantsDisplay.WithReach(p.Key, reaches)));
 
 	private static string Joined(IEnumerable<string> items)
 	{

@@ -5434,6 +5434,22 @@
     <value>O excepție pe acest cont are întâietate față de toate rolurile lui.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolOverrideReach" xml:space="preserve">
+    <value>Rază</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachEveryone" xml:space="preserve">
+    <value>Orice țintă</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachUpTo" xml:space="preserve">
+    <value>Rază {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReaching" xml:space="preserve">
+    <value>(rază {0})</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Excepția pentru {0} a fost salvată.</value>
     <comment>MT</comment>

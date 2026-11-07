@@ -370,13 +370,24 @@ public class AdminPagesD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task Dashboard_OffersAccountsToWizards()
+	public async Task Dashboard_OffersAccountsToGameWizard()
+	{
+		Auth.SetPolicies("players.view", "game.wizard");
+		var cut = RenderPage(typeof(Dashboard));
+
+		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card[href='/admin/accounts']"), TimeSpan.FromSeconds(5));
+	}
+
+	/// <summary>The accounts page follows the permission the server checks, not the Wizard role's name.</summary>
+	[Test]
+	public async Task Dashboard_HidesAccountsFromAWizardDeniedGameWizard()
 	{
 		Auth.SetPolicies("players.view");
 		Auth.SetRoles("Wizard");
 		var cut = RenderPage(typeof(Dashboard));
 
-		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card[href='/admin/accounts']"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card[href='/admin/characters']"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("a.adm-dash-card[href='/admin/accounts']").Count).IsEqualTo(0);
 	}
 
 	/// <summary>

@@ -26,4 +26,6 @@ public sealed record MailRecord
 	public string Folder { get; init; } = "";
 	public string Content { get; init; } = "";
 	public string Subject { get; init; } = "";
+	/// <summary>Sent anonymously: the row keeps <see cref="Sender"/>, but a read answers no sender.</summary>
+	public bool Anonymous { get; init; }
 }

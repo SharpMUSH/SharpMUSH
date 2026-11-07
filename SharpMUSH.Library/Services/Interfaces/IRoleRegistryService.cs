@@ -52,8 +52,14 @@ public interface IRoleRegistryService
 	/// </summary>
 	Task<IReadOnlyDictionary<string, PermissionState>> GetAccountOverridesAsync(string accountId, CancellationToken cancellationToken = default);
 
-	/// <summary>Sets one per-account override; <see cref="PermissionState.Inherit"/> removes it.</summary>
-	Task SetAccountOverrideAsync(string accountId, string scope, PermissionState state);
+	/// <summary>
+	/// Sets one per-account override; <see cref="PermissionState.Inherit"/> removes it. <paramref name="reach"/> is the
+	/// slug of the role bounding the targets it applies to (<see cref="OverrideReach"/>), or null for every target.
+	/// </summary>
+	Task SetAccountOverrideAsync(string accountId, string scope, PermissionState state, string? reach = null);
+
+	/// <summary>The reach of each of an account's overrides that has one: scope → role slug.</summary>
+	Task<IReadOnlyDictionary<string, string>> GetAccountReachesAsync(string accountId, CancellationToken cancellationToken = default);
 
 	/// <summary>The role slugs assigned to the object with dbref number <paramref name="number"/>.</summary>
 	Task<IReadOnlyList<string>> GetObjectRolesAsync(int number, CancellationToken cancellationToken = default);
@@ -73,8 +79,14 @@ public interface IRoleRegistryService
 	/// </summary>
 	Task<IReadOnlyDictionary<string, PermissionState>> GetObjectOverridesAsync(int number, CancellationToken cancellationToken = default);
 
-	/// <summary>Sets one override on an object; <see cref="PermissionState.Inherit"/> removes it.</summary>
-	Task SetObjectOverrideAsync(int number, string scope, PermissionState state);
+	/// <summary>
+	/// Sets one override on an object; <see cref="PermissionState.Inherit"/> removes it. <paramref name="reach"/> is the
+	/// slug of the role bounding the targets it applies to (<see cref="OverrideReach"/>), or null for every target.
+	/// </summary>
+	Task SetObjectOverrideAsync(int number, string scope, PermissionState state, string? reach = null);
+
+	/// <summary>The reach of each of an object's overrides that has one: scope → role slug.</summary>
+	Task<IReadOnlyDictionary<string, string>> GetObjectReachesAsync(int number, CancellationToken cancellationToken = default);
 
 	/// <summary>The custom permissions the world defines, ordered by scope.</summary>
 	Task<IReadOnlyList<CustomPermission>> GetCustomPermissionsAsync(CancellationToken cancellationToken = default);

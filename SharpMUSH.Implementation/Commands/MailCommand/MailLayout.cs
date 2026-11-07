@@ -11,12 +11,21 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 internal static class MailLayout
 {
 	/// <summary>
+	/// Who a message is shown as from: <c>Anonymous</c> for anonymous mail, and PennMUSH's <c>!Purged!</c>
+	/// (<c>get_sender</c>, <c>src/extmail.c</c>) when the sender no longer exists.
+	/// </summary>
+	public static async ValueTask<string> SenderName(SharpMail mail)
+		=> mail.Anonymous
+			? "Anonymous"
+			: (await mail.From.WithCancellation(CancellationToken.None)).Object()?.Name ?? "!Purged!";
+
+	/// <summary>
 	/// <paramref name="mail"/> in a section titled <paramref name="title"/>: who sent it, when, its status and
 	/// subject over a divider, then the message itself.
 	/// </summary>
 	public static async ValueTask<MString> Message(LayoutTheme look, SharpMail mail, string title)
 	{
-		var from = (await mail.From.WithCancellation(CancellationToken.None)).Object()!.Name;
+		var from = await SenderName(mail);
 		var status = string.Join(", ", new[]
 		{
 			mail.Read ? "Read" : "Unread",

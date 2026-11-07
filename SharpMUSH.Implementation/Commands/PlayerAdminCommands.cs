@@ -65,7 +65,7 @@ public partial class Commands
 
 		// PennMUSH src/wiz.c do_pcreate ends with this notify — including the password, which the wizard
 		// has to be able to pass on to the new player and just typed anyway — and PLAYER`CREATE.
-		await BuildingHelpers.AnnouncePlayerCreatedAsync(parser, NotifyService, EventService, executor,
+		await BuildingHelpers.AnnouncePlayerCreatedAsync(parser, Mediator, NotifyService, EventService, executor,
 			name, password, player);
 		await Audit.RecordAsync(executor, AuditActions.PlayerCreate, new AuditTarget(AuditTargetKinds.Character, player.ToString(), name));
 

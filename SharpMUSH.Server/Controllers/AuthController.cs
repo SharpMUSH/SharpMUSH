@@ -103,15 +103,15 @@ public class AuthController(
 
 			var characters = await accountService.GetCharactersAsync(accountId);
 
-			if (!options.CurrentValue.Net.Logins && !await AnyStaffCharacterAsync(characters))
-				return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
-
 			var character = characters.FirstOrDefault(c => c.Object.Key == request.CharacterKey.Value);
 			if (character is null)
 			{
 				logger.LogInformation("OTT via account session: character #{Key} not linked to the requesting account", request.CharacterKey.Value);
 				return Unauthorized("Character is not linked to this account.");
 			}
+
+			if (!await MayLoginAsync(character))
+				return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
 
 			var charRef = new DBRef(character.Object.Key, character.Object.CreationTime);
 			const int sessionTtl = 60;
@@ -152,7 +152,7 @@ public class AuthController(
 
 		if (!options.CurrentValue.Net.Logins)
 		{
-			if (!await new AnySharpObject(player).IsWizard())
+			if (!await new AnySharpObject(player).CanLoginWhileClosed())
 				return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
 		}
 
@@ -209,13 +209,13 @@ public class AuthController(
 
 					var characters = await accountService.GetCharactersAsync(accountId);
 
-					if (!options.CurrentValue.Net.Logins && !await AnyStaffCharacterAsync(characters))
-						return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
-
 					var character = characters.FirstOrDefault(c =>
 						c.Object.Key == request.CharacterKey && c.Object.CreationTime == request.CharacterCreationTime);
 					if (character is null)
 						return Unauthorized("Character is not linked to this account.");
+
+					if (!await MayLoginAsync(character))
+						return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
 
 					const int ttl = 60;
 					var ott = await ottStore.CreateTokenAsync(new DBRef(character.Object.Key, character.Object.CreationTime), TimeSpan.FromSeconds(ttl));
@@ -471,10 +471,11 @@ public class AuthController(
 
 	/// <summary>
 	/// PennMUSH semantics: an account qualifies for login while <c>Net.Logins</c> is disabled
-	/// if ANY linked character is staff (character #1, or a wizard).
+	/// if ANY linked character may log in then (<c>Can_Login</c>: a wizard, or a holder of the Login power).
 	/// </summary>
-	private async Task<bool> AnyStaffCharacterAsync(IReadOnlyList<SharpPlayer> characters) =>
-		await characters.ToAsyncEnumerable().AnyAsync(async (character, ct) =>
-			await new AnySharpObject(character).IsWizard(ct));
+	/// <summary>PennMUSH <c>Can_Login</c> for the character a token is minted for: logins are on, or it may log in while they are off.</summary>
+	private async Task<bool> MayLoginAsync(SharpPlayer character) =>
+		options.CurrentValue.Net.Logins
+		|| await new AnySharpObject(character).CanLoginWhileClosed(HttpContext.RequestAborted);
 }
 

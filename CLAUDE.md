@@ -55,6 +55,10 @@ SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING=true dotnet run --project SharpMUSH.Tests
 SHARPMUSH_ENABLE_TEST_TELEMETRY=true dotnet run --project SharpMUSH.Tests
 ```
 
+Tests of packages that live in the official library (duties) install them from a checkout of
+SharpMUSH/SharpMUSH.Packages: `SHARPMUSH_PACKAGES_PATH`, else a `SharpMUSH.Packages` clone beside this
+repository (`TestPaths.PackageLibrary`).
+
 The test framework is **TUnit** (not xUnit or MSTest). The `--treenode-filter` format is `/<assembly>/<namespace>/<class>/<method>` with `*` wildcards.
 
 **Tests share one world and one `NotifyService` substitute, and run in parallel.** A test that asserts what someone heard (or didn't hear) creates that receiver in a room of its own, not `DefaultHome`. It reads output through `TestHelpers.NotificationRecorder` (`Notifications` on the factory), matched on a unique string from `TestIsolationHelpers.GenerateUniqueName` (socket handles from `GenerateUniqueHandle`), never by position or "last line". It never calls `ClearReceivedCalls()` or `Received()` on the shared substitute.

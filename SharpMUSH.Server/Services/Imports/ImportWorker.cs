@@ -48,6 +48,7 @@ public static class ImportWorker
 			if (configuration is not null)
 			{
 				source.Reality = configuration.Reality;
+				source.Hooks = configuration.Hooks;
 				RhostDatabaseTranslator.MapTotems(source, configuration.Totems);
 			}
 			ConversionResult result;

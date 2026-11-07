@@ -8,6 +8,12 @@ namespace SharpMUSH.Library.Reality;
 /// </param>
 public sealed record RealityConfiguration(int Version, bool Enabled, string[] Layers, Dictionary<string, string>? Aliases = null)
 {
+	/// <summary>
+	/// The attribute that describes things on a layer, each to its layer, as an imported game's levels named them
+	/// (RhostMUSH's <c>rxdesc()</c> reads it). A layer with none uses <c>DESCRIBE</c>. Null when there are none.
+	/// </summary>
+	public Dictionary<string, string>? Descriptions { get; init; }
+
 	public static RealityConfiguration Default => new(1, false, ["normal"]);
 
 	/// <summary>The layer <paramref name="name"/> names, itself or through an alias, or null when it names none.</summary>
@@ -18,6 +24,9 @@ public sealed record RealityConfiguration(int Version, bool Enabled, string[] La
 			: Aliases?.GetValueOrDefault(lower) is { } aliased && Layers.Contains(aliased) ? aliased
 			: null;
 	}
+
+	/// <summary>The attribute that describes things on <paramref name="layer"/>.</summary>
+	public string DescriptionOf(string layer) => Descriptions?.GetValueOrDefault(layer) ?? "DESCRIBE";
 }
 
 public sealed record ObjectReality(int Version, DBRef Object, string[] Receive, string[] Transmit,

@@ -5434,6 +5434,22 @@
     <value>此账户上的例外优先于它的所有角色。</value>
     <comment>MT</comment>
   </data>
+  <data name="RolOverrideReach" xml:space="preserve">
+    <value>范围</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachEveryone" xml:space="preserve">
+    <value>所有目标</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachUpTo" xml:space="preserve">
+    <value>范围 {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReaching" xml:space="preserve">
+    <value>（范围 {0}）</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>已保存 {0} 的例外。</value>
     <comment>MT</comment>

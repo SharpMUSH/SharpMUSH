@@ -1,5 +1,6 @@
 using SharpMUSH.Database.Seed;
 using SharpMUSH.Implementation.Services;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 using SharpMUSH.Library.Services.DatabaseConversion.TinyMux;
@@ -56,6 +57,9 @@ public class SoftcodeDialectAttributeTests : ServerTestBase
 	public async Task AliasNamesAStandardAttributeAndIsNotOne(AttributeAlias alias)
 	{
 		var entries = AttributeEntrySeed.Entries.Select(entry => entry.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+		// A failed lock's messages are standard too, though no entry is seeded for them (LockMessages).
+		entries.UnionWith(Enum.GetValues<LockType>().Select(LockMessages.FailureAttributes)
+			.SelectMany(names => new[] { names.What, names.OWhat, names.AWhat }));
 		var dialect = SoftcodeDialects.All[alias.Dialect];
 
 		await Assert.That(entries).Contains(alias.Target);

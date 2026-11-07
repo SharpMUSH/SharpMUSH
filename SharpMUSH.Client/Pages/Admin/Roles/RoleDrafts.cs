@@ -51,6 +51,9 @@ public sealed class RoleAccountLookup
 	public bool LookedUp { get; set; }
 	public AccountRolesModel? Account { get; set; }
 	public string OverrideScope { get; set; } = PortalPermission.AllScopes[0];
+
+	/// <summary>The role a new override's reach names, or empty for every target.</summary>
+	public string OverrideReach { get; set; } = "";
 }
 
 /// <summary>A role's colour as the page paints it: the faint text colour when it has none.</summary>

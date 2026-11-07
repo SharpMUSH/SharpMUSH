@@ -5,14 +5,15 @@
 
 <PageTitle>@Loc["Home"] — <GameName /></PageTitle>
 
-@* D1 §6.5 home (boards 30, 31): the plain header over the admin-composed "home" scope. Its
+@* D1 §6.5 home (boards 30, 31): the game's own hero (GameHero) over the admin-composed "home" scope. Its
    MainContent is the main column (stats, the home wiki page, live scenes, recent wiki changes by
    default) and its RightSidebar zone is the aside (online now, getting started), rendered inside
    the page as the wiki home and the profile do. Admins recompose both in the layout editor; a
    layout with nothing in the aside zone (one saved before the zone existed) has no aside at all. *@
 <div class="home-page @(_hasAside ? "home-page--aside" : null)">
     <div class="page-stack home-main">
-        <PlainPageHeader Title="@Loc["HomeWhatsHappening"]" />
+        <GameHero />
+        <h2 class="home-section-title">@Loc["HomeWhatsHappening"]</h2>
         <ScopedZone Scope="@LayoutScopes.Home" Zone="WidgetZone.MainContent" />
     </div>
     @if (_hasAside)

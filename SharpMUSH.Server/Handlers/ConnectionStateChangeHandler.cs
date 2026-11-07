@@ -18,9 +18,7 @@ namespace SharpMUSH.Server.Handlers;
 public class ConnectionStateChangeHandler(
 	ILogger<ConnectionStateChangeHandler> logger,
 	IConnectionService connectionService,
-	INotifyService notifyService,
 	IAttributeStore attributes,
-	IObjectStore objects,
 	IMessageBus messageBus)
 	: INotificationHandler<ConnectionStateChangeNotification>
 {
@@ -70,11 +68,6 @@ public class ConnectionStateChangeHandler(
 							}
 						}
 					}
-
-					await GreetAsync(notification, cancellationToken);
-
-					logger.LogInformation("[{ConnectionId}] Successfully sent login message to handle {Handle}",
-						connectionId, notification.Handle);
 					break;
 
 				case IConnectionService.ConnectionState.Disconnected:
@@ -93,42 +86,5 @@ public class ConnectionStateChangeHandler(
 			logger.LogError(ex, "[{ConnectionId}] Error handling connection state change for handle {Handle}",
 				connectionId, notification.Handle);
 		}
-	}
-
-	/// <summary>
-	/// The first line of every session. It is addressed to the player by NAME — passing the
-	/// <see cref="DBRef"/> straight in as the format argument rendered its <c>ToString()</c>, so
-	/// players were greeted with "Welcome back, #12:1786227218582!". A character that has just been
-	/// created and walked straight into play has never been here, so it is welcomed rather than
-	/// welcomed back. So is one created anywhere else, such as the portal: it has no <c>LAST</c> yet, the
-	/// attribute every login records once this greeting has gone out.
-	/// </summary>
-	private async ValueTask GreetAsync(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
-	{
-		var name = await ResolveNameAsync(notification.PlayerRef, cancellationToken);
-		if (name is null)
-		{
-			// Better to say nothing than to greet somebody by database key.
-			logger.LogWarning("Could not resolve a name for {Ref} on handle {Handle}; skipping the greeting",
-				notification.PlayerRef, notification.Handle);
-			return;
-		}
-
-		var firstLogin = notification.FirstLogin || notification.PlayerRef is { } player
-			&& !await attributes.GetAttributeAsync(player, ["LAST"], cancellationToken).AnyAsync(cancellationToken);
-		var key = firstLogin
-			? nameof(ErrorMessages.Notifications.WelcomeFirstLoginFormat)
-			: nameof(ErrorMessages.Notifications.WelcomeBackFormat);
-
-		await notifyService.NotifyLocalized(notification.Handle, key, name);
-	}
-
-	private async ValueTask<string?> ResolveNameAsync(DBRef? playerRef, CancellationToken cancellationToken)
-	{
-		if (!playerRef.HasValue) return null;
-
-		return await objects.GetObjectNodeAsync(playerRef.Value, cancellationToken) is AnySharpObject player
-			? player.Object().Name
-			: null;
 	}
 }

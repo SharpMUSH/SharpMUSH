@@ -403,9 +403,9 @@ Off by default; meant for a game moved from RhostMUSH. With `rhost_printf` off, 
 - `-` aligns left, `^` centres and `_` spreads the words across the width; the default is right. Giving two of these is an error.
 - `+` never cuts the value, and `*` cuts from its start rather than its end.
 - `|` wraps the value onto further rows at the width, and `|"` wraps at a space where it can. `&` starts a new row at each line of the value. Further rows show the text between fields as spaces.
-- `:<character>:` pads with that character rather than a space.
-- `.` leaves out a blank last row. `!` leaves out an empty field and the text after it.
-- The less common codes (`@ < > ' `` ` `` # / ;`) are read as on RhostMUSH as well.
+- `:<character>:` pads with that character rather than a space. `.` leaves out a blank last row, and `!` an empty field and the text after it.
+- With `|"`, `;N.n+W;` indents wrapped rows N spaces (4 by default) after n further rows, and widens every row after the first by W.
+- The less common codes (`@ < > ' `` ` `` # /`) are read as on RhostMUSH as well.
 
 ```sharp rhost_printf
 > think printf(|$-5s|$5s|,ab,cd)
