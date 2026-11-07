@@ -1461,7 +1461,7 @@ Most often, @link is used to link or relink an exit to a destination room. In or
 
 If the destination of an exit is "variable", its destination is determined at the time of travel by the attribute DESTINATION on the exit, which is evaluated like a U()-function. You must have permission to link to whatever the DESTINATION evaluates to in order for the exit to work. If there's no DESTINATION attribute, the EXITTO attribute is also tried.
 
-If the destination is "home", those who travel through the exit will be sent to their homes.
+If the destination is "home", those who travel through the exit will be sent to their homes. A room linked to "home" sends whatever is dropped in it to that object's own home.
 
 LINK_OK objects can also be used as semaphores, and any object can be @parented to them.
 

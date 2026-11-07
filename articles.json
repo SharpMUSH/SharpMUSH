@@ -6179,6 +6179,12 @@
         "aliases": []
       },
       {
+        "id": "permission-reach",
+        "lookup": "@permission reach",
+        "heading": "Reach",
+        "aliases": []
+      },
+      {
         "id": "permission-custom",
         "lookup": "@permission define",
         "heading": "Custom permissions",
