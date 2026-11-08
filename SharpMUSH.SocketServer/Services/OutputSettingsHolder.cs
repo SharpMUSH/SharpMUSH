@@ -15,6 +15,11 @@ public sealed class OutputSettingsHolder
 
 	private long _keepAliveTicks = DefaultKeepAlive.Ticks;
 
+	private volatile int _maxPictureColumns = 200;
+	private volatile int _maxPictureRows = 100;
+	public int MaxPictureColumns => _maxPictureColumns;
+	public int MaxPictureRows => _maxPictureRows;
+
 	private volatile bool _pueblo;
 	private volatile uint _negotiationWaitMilliseconds = 400;
 
@@ -46,6 +51,8 @@ public sealed class OutputSettingsHolder
 	{
 		_asciiTranslations = message.AsciiTranslations ?? new Dictionary<string, string>();
 		_pueblo = message.Pueblo;
+		_maxPictureColumns = message.MaxPictureColumns;
+		_maxPictureRows = message.MaxPictureRows;
 		_negotiationWaitMilliseconds = message.NegotiationWaitMilliseconds;
 		if (message.KeepAliveSeconds > 0)
 		{

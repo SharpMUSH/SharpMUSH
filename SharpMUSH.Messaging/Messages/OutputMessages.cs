@@ -112,7 +112,8 @@ public record MSSPReportMessage(MSSPVariable[] Variables);
 /// </param>
 /// <param name="NegotiationWaitMilliseconds">The game's <c>negotiation_wait_ms</c> setting for new telnet connections.</param>
 public record OutputSettingsMessage(IReadOnlyDictionary<string, string> AsciiTranslations, string? MediaBaseUrl = null,
-	uint KeepAliveSeconds = 0, bool Pueblo = false, uint NegotiationWaitMilliseconds = 400);
+	uint KeepAliveSeconds = 0, bool Pueblo = false, uint NegotiationWaitMilliseconds = 400,
+	int MaxPictureColumns = 200, int MaxPictureRows = 100);
 
 /// <summary>
 /// Message sent from MainProcess to ConnectionServer to update player output preferences for a connection

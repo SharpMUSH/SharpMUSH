@@ -256,6 +256,30 @@ public class TerminalFeatureRenderingTests
 	}
 
 	[Test]
+	[Arguments(200, 100, 300, "W=200c H=100c")]
+	[Arguments(120, 80, 300, "W=120c H=60c")]
+	[Arguments(200, 40, 300, "W=80c H=40c")]
+	[Arguments(200, 100, 100, "W=100c H=50c")]
+	public async Task Mxp_LargeFigureRespectsConfiguredBoundsAndClientWidth(int columns, int rows, int width, string expected)
+	{
+		using var bitmap = new SkiaSharp.SKBitmap(4000, 4000);
+		bitmap.Erase(SkiaSharp.SKColors.Red);
+		using var encoded = bitmap.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100);
+		using var store = new TerminalPictureStore(null, 128L << 20, NullLogger<TerminalPictureStore>.Instance,
+			new PictureHandler(HttpStatusCode.OK, encoded.ToArray()));
+		var renderer = new MarkupOutputRenderer(store, new ConnectionPictures());
+		var markup = MarkupTextSerializer.Serialize(ServerLayout.Build(
+			new Figure(new ImageMarkup("https://pictures.example/large.png", "large"), MarkupText.Empty),
+			300, ServerLayout.DefaultLook));
+		var text = await RenderAsync(renderer, markup, Context(new ProtocolCapabilities(Format: OutputFormat.Mxp, Width: width)) with
+		{
+			MaxPictureColumns = columns,
+			MaxPictureRows = rows
+		});
+		await Assert.That(text).Contains(expected);
+	}
+
+	[Test]
 	public async Task Mxp_AClientThatDoesNotDrawImages_FetchesNothing()
 	{
 		var handler = new PictureHandler(HttpStatusCode.OK, WidePng);
