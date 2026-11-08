@@ -3595,6 +3595,12 @@
         "lookup": "graphics display",
         "heading": "How pictures are shown",
         "aliases": []
+      },
+      {
+        "id": "detection",
+        "lookup": "graphics detection",
+        "heading": "Capability evidence",
+        "aliases": []
       }
     ],
     "file": "graphics.md"
