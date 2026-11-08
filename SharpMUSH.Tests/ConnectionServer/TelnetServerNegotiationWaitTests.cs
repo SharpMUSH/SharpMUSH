@@ -14,7 +14,6 @@ namespace SharpMUSH.Tests.ConnectionServer;
 /// </summary>
 public partial class TelnetServerNegotiationTests
 {
-	private static readonly ConnectionServerOptions WaitsForNegotiation = new() { NegotiationWaitMilliseconds = 60_000 };
 
 	private static NSubstitute.Core.ICall? Registration(IConnectionServerService service) =>
 		service.ReceivedCalls().SingleOrDefault(call => call.GetMethodInfo().Name == nameof(IConnectionServerService.RegisterAsync));
@@ -36,7 +35,7 @@ public partial class TelnetServerNegotiationTests
 	public async Task CancelledStartupDoesNotRegisterConnection()
 	{
 		var service = Substitute.For<IConnectionServerService>();
-		var (toServer, fromServer, handler, _, cts) = StartServer(WaitsForNegotiation, service);
+		var (toServer, fromServer, handler, _, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 60_000);
 		using var cancellation = cts;
 		try
 		{
@@ -58,7 +57,7 @@ public partial class TelnetServerNegotiationTests
 	public async Task MxpSupport_IsRequestedBeforeRegistration()
 	{
 		var service = Substitute.For<IConnectionServerService>();
-		var (toServer, fromServer, handler, _, cts) = StartServer(WaitsForNegotiation, service);
+		var (toServer, fromServer, handler, _, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 60_000);
 		using var serverCancellation = cts;
 		try
 		{
@@ -93,7 +92,7 @@ public partial class TelnetServerNegotiationTests
 				if (updated.Probe is { } probe) reports.Add(probe);
 				return true;
 			});
-		var (toServer, fromServer, handler, published, cts) = StartServer(WaitsForNegotiation, service);
+		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 60_000);
 		using var serverCancellation = cts;
 		try
 		{
@@ -116,7 +115,7 @@ public partial class TelnetServerNegotiationTests
 	public async Task GraphicsProbe_PrecedesRegistration()
 	{
 		var service = Substitute.For<IConnectionServerService>();
-		var (toServer, fromServer, handler, _, cts) = StartServer(WaitsForNegotiation, service);
+		var (toServer, fromServer, handler, _, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 60_000);
 		using var serverCancellation = cts;
 		try
 		{
@@ -139,7 +138,7 @@ public partial class TelnetServerNegotiationTests
 	public async Task NegotiatingClient_RegistersWithWhatItSaid()
 	{
 		var service = Substitute.For<IConnectionServerService>();
-		var (toServer, fromServer, handler, _, cts) = StartServer(new ConnectionServerOptions { NegotiationWaitMilliseconds = 500 }, service);
+		var (toServer, fromServer, handler, _, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 500);
 		using var serverCancellation = cts;
 		try
 		{
@@ -168,7 +167,7 @@ public partial class TelnetServerNegotiationTests
 	public async Task SilentClient_RegistersWhenItTypesALine()
 	{
 		var service = Substitute.For<IConnectionServerService>();
-		var (toServer, fromServer, handler, published, cts) = StartServer(WaitsForNegotiation, service);
+		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 60_000);
 		using var serverCancellation = cts;
 		try
 		{
