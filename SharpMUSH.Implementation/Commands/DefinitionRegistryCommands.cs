@@ -1121,7 +1121,7 @@ public partial class Commands : ICommandRestrictionApplier
 		}
 
 		var rightSide = args.GetValueOrDefault("1")?.Message.ToPlainText();
-		return FunctionActionSwitches.FirstOrDefault(switches.Contains) switch
+		return FunctionAction(switches, rightSide) switch
 		{
 			"ALIAS" => await AliasFunctionAsync(executor, userFunctionService, functionName, rightSide),
 			"CLONE" => await CloneFunctionAsync(executor, userFunctionService, functionName, rightSide),
@@ -1143,6 +1143,29 @@ public partial class Commands : ICommandRestrictionApplier
 	/// </summary>
 	private static readonly string[] FunctionActionSwitches =
 		["ALIAS", "CLONE", "RESTRICT", "BUILTIN", "PRESERVE", "RESTORE", "DELETE", "DISABLE", "ENABLE", "ARGS"];
+
+	/// <summary>
+	/// The action switch <c>@function</c> runs, or null to define or describe the function. A /preserve
+	/// that names an object is TinyMUX's, which defines the function and keeps the caller's registers
+	/// (see <see cref="DefinitionRestriction"/>); PennMUSH's /preserve takes a name alone.
+	/// </summary>
+	private static string? FunctionAction(string[] switches, string? rightSide)
+		=> FunctionActionSwitches.FirstOrDefault(switches.Contains) switch
+		{
+			"PRESERVE" when !string.IsNullOrEmpty(rightSide) => null,
+			var action => action
+		};
+
+	/// <summary>
+	/// The restriction a new function is defined with: the words of the fifth argument, and
+	/// <c>localize</c> for TinyMUX's /preserve, which saves and restores the registers around each call.
+	/// </summary>
+	private static string? DefinitionRestriction(string? words, bool preserve)
+		=> string.Join(' ', new[] { words, preserve ? "localize" : null }.Where(word => !string.IsNullOrWhiteSpace(word))) switch
+		{
+			"" => null,
+			var restriction => restriction
+		};
 
 	/// <summary>
 	/// <c>@function</c> with no arguments: every global user-defined function, with where it lives for whoever
@@ -1517,9 +1540,8 @@ public partial class Commands : ICommandRestrictionApplier
 		}
 
 		var (minArgs, maxArgs) = UserFunctionArgumentBounds(parser.CurrentState.Arguments);
-		var restriction = parser.CurrentState.Arguments.GetValueOrDefault("5")?.Message.ToPlainText() is { Length: > 0 } words
-			? words
-			: null;
+		var restriction = DefinitionRestriction(parser.CurrentState.Arguments.GetValueOrDefault("5")?.Message.ToPlainText(),
+			parser.CurrentState.Switches.Contains("PRESERVE"));
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objSpec, LocateFlags.All, async targetObject =>
