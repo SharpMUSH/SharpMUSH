@@ -355,20 +355,20 @@ public partial class TelnetServer
 			if (readTask.IsCompleted) return InitialNegotiationEnd.ConnectionClosed;
 			if (limit <= TimeSpan.Zero) return InitialNegotiationEnd.DeadlineElapsed;
 
-			// TNC's WaitForInitialNegotiationAsync also ends on application input. That is useful
-			// for interactive clients, but would let saved login commands race MXP SUPPORT here.
-			using var timer = CancellationTokenSource.CreateLinkedTokenSource(ct);
+			// TNC owns the deadline and input policy; the gateway additionally observes transport EOF.
+			using var waitingLifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
+			var waiting = _telnet!.WaitForInitialNegotiationAsync(limit, waitingLifetime.Token,
+				endOnApplicationInput: false).AsTask();
 			try
 			{
-				await Task.WhenAny(readTask, Task.Delay(limit, timer.Token));
+				await Task.WhenAny(readTask, waiting);
 				if (ct.IsCancellationRequested) return InitialNegotiationEnd.Cancelled;
-				return readTask.IsCompleted
-					? InitialNegotiationEnd.ConnectionClosed
-					: InitialNegotiationEnd.DeadlineElapsed;
+				return readTask.IsCompleted ? InitialNegotiationEnd.ConnectionClosed : await waiting;
 			}
 			finally
 			{
-				await timer.CancelAsync();
+				await waitingLifetime.CancelAsync();
+				await waiting;
 			}
 		}
 
