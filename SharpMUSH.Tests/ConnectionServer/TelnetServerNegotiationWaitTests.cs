@@ -221,10 +221,10 @@ public partial class TelnetServerNegotiationTests
 	}
 
 	[Test]
-	public async Task SilentClient_ReleasesQueuedInputAtDeadline()
+	public async Task ClientWithoutCapabilityReplies_KeepsInputQueued()
 	{
 		var service = Substitute.For<IConnectionServerService>();
-		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 1000);
+		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 60_000);
 		using var serverCancellation = cts;
 		try
 		{
@@ -240,7 +240,25 @@ public partial class TelnetServerNegotiationTests
 			TelnetInputMessage[] earlyInput;
 			lock (published) earlyInput = [.. published.OfType<TelnetInputMessage>()];
 			await Assert.That(earlyInput).IsEmpty();
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
 
+	[Test]
+	public async Task SilentClient_ReleasesQueuedInputAtDeadline()
+	{
+		var service = Substitute.For<IConnectionServerService>();
+		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 1000);
+		using var serverCancellation = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, WILL, CHARSET));
+			await WriteAsync(toServer, "look\r\n"u8.ToArray());
 			var input = await WaitForPublishedAsync<TelnetInputMessage>(published);
 			await Assert.That(input?.Input).IsEqualTo("look");
 			await Assert.That((await RegisteredCapabilitiesAsync(service)).OutputCharset).IsEqualTo(TerminalCharsets.Ascii);
