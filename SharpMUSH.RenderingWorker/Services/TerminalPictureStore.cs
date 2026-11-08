@@ -127,6 +127,10 @@ public sealed class TerminalPictureStore : IDisposable
 		return picture is not null;
 	}
 
+	internal (int Width, int Height)? OriginalSize(string source) =>
+		Resolve(source) is { } address && _entries.TryGetValue(address.AbsoluteUri, out var entry)
+			&& entry.Picture is not null ? entry.OriginalSize : null;
+
 	/// <summary>The address <paramref name="source"/> names, or null for one that is never fetched.</summary>
 	private Uri? Resolve(string source)
 	{
@@ -162,7 +166,8 @@ public sealed class TerminalPictureStore : IDisposable
 
 			await using var stream = await response.Content.ReadAsStreamAsync();
 			var bytes = await ReadBoundedAsync(stream);
-			var picture = Decode(bytes);
+			var picture = Decode(bytes, out var originalSize);
+			entry.OriginalSize = originalSize;
 			entry.Picture = picture;
 			Interlocked.Add(ref _bytes, SizeOf(picture));
 			Trim();
@@ -195,10 +200,12 @@ public sealed class TerminalPictureStore : IDisposable
 	/// the file. WebP, PNG, JPEG, GIF, BMP, TGA and PSD read; anything else throws. A GIF of more than one frame is a
 	/// moving picture (<see cref="DecodeMoving"/>).
 	/// </summary>
-	public static TerminalPicture Decode(byte[] bytes)
+	public static TerminalPicture Decode(byte[] bytes) => Decode(bytes, out _);
+
+	private static TerminalPicture Decode(byte[] bytes, out (int Width, int Height) originalSize)
 	{
 		if (bytes.AsSpan().StartsWith("RIFF"u8) && bytes.Length >= 12 && bytes.AsSpan(8, 4).SequenceEqual("WEBP"u8))
-			return DecodeWebP(bytes);
+			return DecodeWebP(bytes, out originalSize);
 
 		using var stream = new MemoryStream(bytes, writable: false);
 		var info = ImageInfo.FromStream(stream)
@@ -206,6 +213,7 @@ public sealed class TerminalPictureStore : IDisposable
 		if (info.Width is <= 0 or > MaxDecodedSide || info.Height is <= 0 or > MaxDecodedSide)
 			throw new InvalidDataException($"A {info.Width}x{info.Height} picture is over {MaxDecodedSide} pixels a side.");
 
+		originalSize = (info.Width, info.Height);
 		var key = Convert.ToHexString(SHA256.HashData(bytes), 0, 16);
 		if (IsGif(bytes) && DecodeMoving(bytes, key) is { } moving) return moving;
 
@@ -214,11 +222,12 @@ public sealed class TerminalPictureStore : IDisposable
 		return new TerminalPicture(key, width, height, rgba);
 	}
 
-	private static TerminalPicture DecodeWebP(byte[] bytes)
+	private static TerminalPicture DecodeWebP(byte[] bytes, out (int Width, int Height) originalSize)
 	{
 		using var data = SKData.CreateCopy(bytes);
 		using var codec = SKCodec.Create(data) ?? throw new InvalidDataException("Invalid WebP image.");
 		var size = codec.Info;
+		originalSize = (size.Width, size.Height);
 		if (size.Width is <= 0 or > MaxDecodedSide || size.Height is <= 0 or > MaxDecodedSide)
 			throw new InvalidDataException($"A {size.Width}x{size.Height} picture is over {MaxDecodedSide} pixels a side.");
 		using var bitmap = new SKBitmap(size.Width, size.Height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
@@ -406,6 +415,7 @@ public sealed class TerminalPictureStore : IDisposable
 	private sealed class Entry
 	{
 		public volatile TerminalPicture? Picture;
+		public (int Width, int Height) OriginalSize;
 		public Task? Fetch;
 		public long LastUsed;
 		public long FailedAt;

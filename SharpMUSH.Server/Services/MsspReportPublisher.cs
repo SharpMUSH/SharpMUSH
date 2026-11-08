@@ -83,11 +83,13 @@ public sealed class MsspReportPublisher(
 			var keepAlive = options.CurrentValue.Limit.KeepaliveTimeout;
 			var pueblo = options.CurrentValue.Net.Pueblo;
 			var negotiationWait = options.CurrentValue.Net.NegotiationWaitMilliseconds;
-			var settings = AsciiTranslations.Fingerprint(translations) + '\n' + mediaBaseUrl + '\n' + keepAlive + '\n' + pueblo + '\n' + negotiationWait;
+			var pictureColumns = options.CurrentValue.Cosmetic.MaxPictureColumns;
+			var pictureRows = options.CurrentValue.Cosmetic.MaxPictureRows;
+			var settings = AsciiTranslations.Fingerprint(translations) + '\n' + mediaBaseUrl + '\n' + keepAlive + '\n' + pueblo + '\n' + negotiationWait + '\n' + pictureColumns + '\n' + pictureRows;
 			if (force || settings != _lastSettings)
 			{
 				await bus.Publish(new OutputSettingsMessage(new Dictionary<string, string>(translations, StringComparer.Ordinal),
-					mediaBaseUrl, keepAlive, pueblo, negotiationWait), ct);
+					mediaBaseUrl, keepAlive, pueblo, negotiationWait, pictureColumns, pictureRows), ct);
 				_lastSettings = settings;
 			}
 
