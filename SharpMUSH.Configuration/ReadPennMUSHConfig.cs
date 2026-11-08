@@ -78,6 +78,14 @@ public static partial class ReadPennMushConfig
 				: value;
 		}
 
+		var directives = text.SelectMany(line => DirectiveName(line) is { } name
+				? [(name, DirectiveValue(line), line)]
+				: Array.Empty<(string, string, string)>())
+			.ToList();
+		var aliases = AliasDirectives.Read(directives, dialect, skipped);
+		List<string> review = [];
+		var access = AccessDirectives.Read(directives, dialect, skipped, review);
+
 		var d = SharpMUSHOptions.Default();
 
 		var work = new SharpMUSHOptions()
@@ -323,8 +331,8 @@ public static partial class ReadPennMushConfig
 			),
 			Alias = d.Alias,
 			Restriction = new RestrictionOptions(
-				CommandRestrictions: Restrictions("restrict_command", text, skipped),
-				FunctionRestrictions: Restrictions("restrict_function", text, skipped)
+				CommandRestrictions: WithAccess(Restrictions("restrict_command", text, skipped), access.Commands),
+				FunctionRestrictions: WithAccess(Restrictions("restrict_function", text, skipped), access.Functions)
 			),
 			// The two the default seeds with examples start empty for an import: the game being
 			// imported brings its own names.cnf and access.cnf, and seeding a PennMUSH game with
@@ -400,7 +408,9 @@ public static partial class ReadPennMushConfig
 				&& !(dialect != ConfigurationDialect.PennMUSH && RealityDirectives.IsDirective(name))
 				&& !(dialect == ConfigurationDialect.RhostMUSH && name.Equals("totem_add", StringComparison.OrdinalIgnoreCase))
 				&& !(dialect != ConfigurationDialect.PennMUSH && HookDirectives.IsDirective(name))
-				&& !PennMushConfigImport.SecretDirectives.ContainsKey(name))
+				&& !PennMushConfigImport.SecretDirectives.ContainsKey(name)
+				&& !AliasDirectives.IsDirective(name, dialect)
+				&& !AccessDirectives.IsDirective(name, dialect))
 			.Distinct(StringComparer.OrdinalIgnoreCase)
 			.ToList();
 
@@ -425,6 +435,8 @@ public static partial class ReadPennMushConfig
 			secrets.Where(secret => secret.Value.Length > 0).ToDictionary(StringComparer.Ordinal))
 		{
 			Unrecognized = unrecognized,
+			Aliases = aliases,
+			NeedsReview = review.ToHashSet(),
 			Reality = reality,
 			Totems = totems,
 			Hooks = hooks
@@ -603,6 +615,26 @@ public static partial class ReadPennMushConfig
 		}
 
 		return result;
+	}
+
+	/// <summary>
+	/// <paramref name="restrictions"/> with the restrictions <paramref name="access"/> lines carry: a name both give
+	/// keeps the words of each, as a TinyMUX or RhostMUSH access line adds its words to the name's.
+	/// </summary>
+	private static Dictionary<string, string[]> WithAccess(Dictionary<string, string[]> restrictions,
+		Dictionary<string, string[]> access)
+	{
+		foreach (var (name, restriction) in access)
+		{
+			// The words go before an earlier line's quoted message, which runs to the end.
+			restrictions[name] = restrictions.TryGetValue(name, out var earlier)
+				? [earlier[0].IndexOf('"') is var quote and >= 0
+					? $"{earlier[0][..quote].TrimEnd()} {restriction[0]} {earlier[0][quote..]}"
+					: $"{earlier[0]} {restriction[0]}"]
+				: restriction;
+		}
+
+		return restrictions;
 	}
 
 	/// <summary>
