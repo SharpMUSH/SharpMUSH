@@ -46,6 +46,11 @@
     <CompilerVisibleProperty Include="SharpMUSHVersion" />
   </ItemGroup>
 
+  <!-- Keep the engine and its shared cache contracts on the same FusionCache release. -->
+  <PropertyGroup>
+    <FusionCacheVersion>2.9.0</FusionCacheVersion>
+  </PropertyGroup>
+
   <!-- Keep the runner, assertions, generators, and ASP.NET integration on one release. -->
   <PropertyGroup>
     <TUnitVersion>1.66.27</TUnitVersion>
