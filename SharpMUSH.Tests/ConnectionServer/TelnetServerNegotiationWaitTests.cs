@@ -232,6 +232,15 @@ public partial class TelnetServerNegotiationTests
 			await Assert.That(Registration(service)).IsNull();
 			await WriteAsync(toServer, "look\r\n"u8.ToArray());
 
+			// Refusing an unknown option proves the preceding command was consumed without
+			// answering any capability probes or completing initial negotiation.
+			await WriteAsync(toServer, IAC, DO, 200);
+			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, (byte)TelnetNegotiationCore.Models.Trigger.WONT, 200));
+			await Assert.That(Registration(service)).IsNull();
+			TelnetInputMessage[] earlyInput;
+			lock (published) earlyInput = [.. published.OfType<TelnetInputMessage>()];
+			await Assert.That(earlyInput).IsEmpty();
+
 			var input = await WaitForPublishedAsync<TelnetInputMessage>(published);
 			await Assert.That(input?.Input).IsEqualTo("look");
 			await Assert.That((await RegisteredCapabilitiesAsync(service)).OutputCharset).IsEqualTo(TerminalCharsets.Ascii);
