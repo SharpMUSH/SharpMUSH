@@ -118,10 +118,13 @@ against both explicit tag removal and the existing object-key invalidation stamp
 tag after loading the source does not grant it a newer start epoch. Unrelated tag changes do not
 expire an entry.
 
-The key-invalidated object node keeps its original representation, identity and fail-safe policy.
-Every removal of `object:#N` bumps its count before and after removal; `QueryCachingBehavior`
-compares the count after its store and removes the entry if the count moved. The comparison is
-after the store, so the removal follows that store in every interleaving.
+The key-invalidated object node retains the same node instance and fail-safe policy inside a
+factory-start certificate too. Its `obj:#N` tag belongs only to that certificate, not to
+FusionCache's tags. A post-write reader can join a pre-write factory before it completes; its own
+starting count is already current, so a caller-local count comparison cannot certify that answer.
+The stored certificate rejects it, and the joining reader calls the handler once directly.
+Every removal of `object:#N`, including removal of a stale fill after its store, bumps its count
+before and after removal. The original factory caller may still return the snapshot it read.
 
 An answer kept outside the cache is checked against the same versions. `ObjectRelationMemo` keeps
 each object's grants, flags, owner and location until the object's version moves, or for grants

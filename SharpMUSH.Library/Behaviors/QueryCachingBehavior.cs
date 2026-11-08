@@ -39,38 +39,40 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache, Objec
 	private async ValueTask<TResponse> HandleObjectAsync(TRequest message, MessageHandlerDelegate<TRequest, TResponse> next,
 		CancellationToken cancellationToken)
 	{
-		// A key-invalidated object entry carries no tag stamp, so a write that lands while the factory
-		// runs would leave the stored entry pre-write. The version is read before and compared after
-		// the store: the removal then happens after the store in every interleaving (see ObjectVersions).
+		// The certificate belongs to the factory, not the caller waiting for it. A reader arriving
+		// after a completed write can still join a pre-write factory inside FusionCache's key lock.
+		// Its own starting version is already current, so comparing only that version misses the
+		// stale answer. Keep the object tag in the certificate only: adding it to FusionCache tags
+		// would disable the object profile's fail-safe and eager refresh.
 		var number = 0;
 		var versioned = message.Profile == CacheEntryProfile.Object
 										&& CacheKeys.TryParseObjectNumber(message.CacheKey, out number);
-		var before = versioned ? versions.Of(number) : 0;
-
-		// The factory runs under FusionCache's token, which carries the profile's hard timeout, so
-		// a hung database call is cut loose from the command rather than holding its key lock.
-		var value = await cache.GetOrSetAsync<TResponse>(message.CacheKey,
+		CachedValue<TResponse>? produced = null;
+		var stored = await cache.GetOrSetAsync<CachedValue<TResponse>>(message.CacheKey,
 			async (ctx, ct) =>
 			{
+				var epoch = versions.Epoch;
 				var result = await next(message, ct);
 				EmbeddedObjectTags.Apply(ctx, message, result);
-				return result;
+				return produced = new CachedValue<TResponse>(result, epoch,
+					versioned ? [CacheKeys.ObjectTag(number)] : []);
 			},
 			options: CacheEntryProfiles.For(message.Profile),
 			tags: message.CacheTags.Length > 0 ? message.CacheTags : null,
 			token: cancellationToken);
 
-		if (versioned && versions.Of(number) != before)
+		if (!stored.IsCurrent(versions))
 		{
-			// The version moves on both sides of this removal, as a write's does. A caller that joined this
-			// factory after the write's own moves got the pre-write value under the current version, and an
-			// answer kept outside the cache from it (ObjectRelationMemo) must not stand past this removal.
+			// Move the version on both sides so ObjectRelationMemo cannot retain an answer from
+			// this stale fill. Only its original reader may keep the snapshot it actually read;
+			// joining callers read the handler once directly, without another cache retry loop.
 			versions.Bump(number);
 			await cache.RemoveAsync(message.CacheKey, token: CancellationToken.None);
 			versions.Bump(number);
+			if (!ReferenceEquals(stored, produced)) return await next(message, cancellationToken);
 		}
 
-		return value;
+		return stored.Value;
 	}
 
 	private async ValueTask<TResponse> HandleValueAsync(TRequest message, MessageHandlerDelegate<TRequest, TResponse> next,
