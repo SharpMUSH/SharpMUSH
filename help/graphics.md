@@ -16,7 +16,7 @@
 `SOCKSET graphics=<value>`<br>
 `@SOCKSET [me|<descriptor>]=graphics,<value>`
 
-Pictures in the game (such as those placed with figure()) are shown as their text art until you turn pictures on. They are off by default because only you can see whether your terminal shows them: a terminal reached through tmux, screen or an ssh hop, or one with images turned off in its settings, may not, even when SharpMUSH knows it can. The graphics setting says how your terminal draws a picture.
+New telnet connections start with graphics=auto. SharpMUSH asks about terminal graphics and MXP support before the connect screen, allowing up to `negotiation_wait_ms` milliseconds for replies (a Net game option, default 400). Set it to 0 to skip the wait. A complete input line ends the wait early; changes apply to new connections. Late replies update later output. Use SOCKSET graphics=off to request text instead; manual method choices override detection. Client profiles remain assumptions: a proxy or disabled image setting can prevent rendering.
 
 - [graphics methods]: the values, from auto and detect to kitty, sixel and off
 - [graphics display]: UTF-8, screen readers, layout, fetching and moving pictures
@@ -30,7 +30,7 @@ Pictures in the game (such as those placed with figure()) are shown as their tex
 - iterm2: iTerm2 inline images (iTerm2, WezTerm, Konsole, mintty, Visual Studio Code, Rio, mlterm).
 - sixel: sixel graphics (foot, WezTerm, iTerm2, Konsole, Windows Terminal, mintty, Contour, mlterm, xterm started with sixel support).
 - blocks: coloured half-block characters, two pixels to a cell. Any UTF-8 terminal with colour shows these.
-- off: the text art (the default).
+- off: text art or the image address.
 
 ## How pictures are shown
 
