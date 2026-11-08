@@ -312,7 +312,8 @@ public static partial class ReadPennMushConfig
 				String(Get(nameof(NetOptions.SqlUsername)), d.Net.SqlUsername),
 				Boolean(Get(nameof(NetOptions.JsonUnsafeUnescape)), d.Net.JsonUnsafeUnescape),
 				Boolean(Get(nameof(NetOptions.SslRequireClientCert)), d.Net.SslRequireClientCert),
-				String(Get(nameof(NetOptions.MediaBaseUrl)), d.Net.MediaBaseUrl)
+				String(Get(nameof(NetOptions.MediaBaseUrl)), d.Net.MediaBaseUrl),
+				UnsignedInteger(Get(nameof(NetOptions.NegotiationWaitMilliseconds)), d.Net.NegotiationWaitMilliseconds)
 			),
 			Debug = new DebugOptions(
 				Boolean(Get(nameof(DebugOptions.DebugSharpParser)), d.Debug.DebugSharpParser),

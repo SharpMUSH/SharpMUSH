@@ -76,24 +76,4 @@ public class ConnectionServerOptions
 	/// </summary>
 	public bool MxpEnabled { get; set; } = true;
 
-	/// <summary>
-	/// How long to wait for a client's answer to the <c>&lt;SUPPORT&gt;</c> question MXP mode opens with,
-	/// in milliseconds. A client is under no obligation to reply, and an element it never answered about
-	/// is one it does not get — so this is how long a connection waits before its first output can carry
-	/// a sound or a picture.
-	/// <para>
-	/// Zero asks and does not wait: what the client has said by then, usually nothing, is recorded at
-	/// once, so every element stays withheld until an answer arrives. Override via appsettings.json "ConnectionServer:MxpSupportTimeoutMilliseconds".
-	/// </para>
-	/// </summary>
-	public int MxpSupportTimeoutMilliseconds { get; set; } = 2000;
-
-	/// <summary>
-	/// How long a new telnet connection waits, in milliseconds, for the client to report its terminal types and
-	/// agree a character set before the game sends the connect screen, so the screen is drawn for what the
-	/// client can show. A client that finishes sooner, or types a line, stops the wait; one that answers
-	/// nothing waits all of it. Zero sends the connect screen at once. Override via appsettings.json
-	/// "ConnectionServer:NegotiationWaitMilliseconds".
-	/// </summary>
-	public int NegotiationWaitMilliseconds { get; set; } = 1000;
 }

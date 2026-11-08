@@ -31,6 +31,23 @@ public class ConnectionIncarnationTests
 				["ConnectionType"] = "websocket"
 			}));
 
+	/// <summary>Initial graphics are available during engine registration, including legacy connections.</summary>
+	[Test]
+	[Arguments("auto", "auto")]
+	[Arguments(null, "off")]
+	public async Task EstablishedGraphicsPolicyIsAvailableBeforeWelcome(string? policy, string expected)
+	{
+		var service = Substitute.For<IConnectionService>();
+		var consumer = new ConnectionEstablishedConsumer(NullLogger<ConnectionEstablishedConsumer>.Instance,
+			service, Substitute.For<IMessageBus>());
+		await consumer.HandleAsync(new ConnectionEstablishedMessage(Handle, "127.0.0.1", "localhost", "telnet",
+			DateTimeOffset.UtcNow)
+		{ InitialGraphics = policy });
+		var call = service.ReceivedCalls().Single(call => call.GetMethodInfo().Name == "Register");
+		var metadata = (System.Collections.Concurrent.ConcurrentDictionary<string, string>)call.GetArguments()[7]!;
+		await Assert.That(metadata["GRAPHICS"]).IsEqualTo(expected);
+	}
+
 	[Test]
 	public async Task NewSocketCannotInheritLiveEngineBindingAfterOwnerRestart()
 	{
