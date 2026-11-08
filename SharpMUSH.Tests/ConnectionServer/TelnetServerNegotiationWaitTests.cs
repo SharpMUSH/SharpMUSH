@@ -32,6 +32,27 @@ public partial class TelnetServerNegotiationTests
 		return (ProtocolCapabilities)call.GetArguments()[9]!;
 	}
 
+	[Test]
+	public async Task CancelledStartupDoesNotRegisterConnection()
+	{
+		var service = Substitute.For<IConnectionServerService>();
+		var (toServer, fromServer, handler, _, cts) = StartServer(WaitsForNegotiation, service);
+		using var cancellation = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, bytes => Encoding.ASCII.GetString(bytes).Contains("\u001b[c"));
+			await cts.CancelAsync();
+			await handler.WaitAsync(Timeout);
+			await Assert.That(Registration(service)).IsNull();
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
 	/// <summary>MXP SUPPORT must be asked and retained before the welcome can render.</summary>
 	[Test]
 	public async Task MxpSupport_IsRequestedBeforeRegistration()

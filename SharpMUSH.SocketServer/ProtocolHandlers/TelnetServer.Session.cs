@@ -348,11 +348,10 @@ public partial class TelnetServer
 		/// CHARSET does not imply MXP SUPPORT, GMCP modules or terminal queries have finished.
 		/// Typed input ends the wait; late protocol replies continue updating the connection.
 		/// </summary>
-		public async ValueTask WaitForNegotiationAsync(TimeSpan limit)
-		{
-			if (_telnet is { } telnet)
-				await telnet.WaitForInitialNegotiationAsync(limit < TimeSpan.Zero ? TimeSpan.Zero : limit, ct);
-		}
+		public ValueTask<InitialNegotiationEnd> WaitForNegotiationAsync(TimeSpan limit) =>
+			_telnet is { } telnet
+				? telnet.WaitForInitialNegotiationAsync(limit < TimeSpan.Zero ? TimeSpan.Zero : limit, ct)
+				: ValueTask.FromResult(InitialNegotiationEnd.ConnectionClosed);
 
 		/// <summary>What the connection registers with: what negotiation has said by then, else ASCII.</summary>
 		private ProtocolCapabilities RegisteredCapabilities()
