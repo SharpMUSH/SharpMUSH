@@ -89,10 +89,10 @@ public class ConnectionServerOptions
 	public int MxpSupportTimeoutMilliseconds { get; set; } = 2000;
 
 	/// <summary>
-	/// How long a new telnet connection waits, in milliseconds, for the client to report its terminal types and
-	/// agree a character set before the game sends the connect screen, so the screen is drawn for what the
-	/// client can show. A client that finishes sooner, or types a line, stops the wait; one that answers
-	/// nothing waits all of it. Zero sends the connect screen at once. Override via appsettings.json
+	/// How long a new telnet connection waits, in milliseconds, for initial protocol replies, including MXP support and
+	/// terminal graphics, before the game sends the connect screen, so the screen is drawn for what the
+	/// client can show. Typing a line stops the wait; otherwise every protocol gets the full window.
+	/// Zero sends the connect screen at once. Override via appsettings.json
 	/// "ConnectionServer:NegotiationWaitMilliseconds".
 	/// </summary>
 	public int NegotiationWaitMilliseconds { get; set; } = 1000;

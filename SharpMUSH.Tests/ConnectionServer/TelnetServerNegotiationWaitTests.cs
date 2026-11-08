@@ -32,11 +32,93 @@ public partial class TelnetServerNegotiationTests
 		return (ProtocolCapabilities)call.GetArguments()[9]!;
 	}
 
+	/// <summary>MXP SUPPORT must be asked and retained before the welcome can render.</summary>
+	[Test]
+	public async Task MxpSupport_IsRequestedBeforeRegistration()
+	{
+		var service = Substitute.For<IConnectionServerService>();
+		var (toServer, fromServer, handler, _, cts) = StartServer(WaitsForNegotiation, service);
+		using var serverCancellation = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, WILL, MXP));
+			await WriteAsync(toServer, IAC, DO, MXP);
+			await ReadUntilAsync(fromServer, bytes => Encoding.ASCII.GetString(bytes).Contains("<SUPPORT "));
+			await Assert.That(Registration(service)).IsNull();
+			await WriteAsync(toServer, Encoding.ASCII.GetBytes("\u001b[1z<SUPPORTS +IMAGE -FRAME>\r\n"));
+			await WriteAsync(toServer, "\r\n"u8.ToArray());
+			var capabilities = await RegisteredCapabilitiesAsync(service);
+			await Assert.That(capabilities.Format).IsEqualTo(OutputFormat.Mxp);
+			await Assert.That(capabilities.MxpSupported).Contains("IMAGE");
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	/// <summary>Flushing partial reports cannot overwrite the complete snapshot used by the welcome.</summary>
+	[Test]
+	public async Task HeldTerminalReportsDoNotRegressInitialCapabilities()
+	{
+		var service = Substitute.For<IConnectionServerService>();
+		var reports = new List<TerminalProbeResult>();
+		service.UpdateCapabilities(Arg.Any<long>(), Arg.Any<Func<ProtocolCapabilities, ProtocolCapabilities>>())
+			.Returns(call =>
+			{
+				var updated = call.Arg<Func<ProtocolCapabilities, ProtocolCapabilities>>()(new ProtocolCapabilities());
+				if (updated.Probe is { } probe) reports.Add(probe);
+				return true;
+			});
+		var (toServer, fromServer, handler, published, cts) = StartServer(WaitsForNegotiation, service);
+		using var serverCancellation = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, bytes => Encoding.ASCII.GetString(bytes).Contains("\u001b[c"));
+			await WriteAsync(toServer, "\u001b[6;17;8t\u001b[?62;4clook\r\n"u8.ToArray());
+			await WaitForPublishedAsync<TelnetInputMessage>(published);
+			await Assert.That(reports.Count).IsGreaterThanOrEqualTo(2);
+			await Assert.That(reports.All(report => report.Sixel == true && report.CellWidth == 8)).IsTrue();
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	/// <summary>Terminal queries are sent while registration is held, and their reply seeds the first render.</summary>
+	[Test]
+	public async Task GraphicsProbe_PrecedesRegistration()
+	{
+		var service = Substitute.For<IConnectionServerService>();
+		var (toServer, fromServer, handler, _, cts) = StartServer(WaitsForNegotiation, service);
+		using var serverCancellation = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, bytes => Encoding.ASCII.GetString(bytes).Contains("\u001b[c"));
+			await Assert.That(Registration(service)).IsNull();
+			await WriteAsync(toServer, "\u001b[?62;4clook\r\n"u8.ToArray());
+			var capabilities = await RegisteredCapabilitiesAsync(service);
+			await Assert.That(capabilities.Probe?.Sixel).IsTrue();
+			await Assert.That(capabilities.Pins?.Graphics).IsEqualTo(TerminalGraphics.Auto);
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
 	[Test]
 	public async Task NegotiatingClient_RegistersWithWhatItSaid()
 	{
 		var service = Substitute.For<IConnectionServerService>();
-		var (toServer, fromServer, handler, _, cts) = StartServer(WaitsForNegotiation, service);
+		var (toServer, fromServer, handler, _, cts) = StartServer(new ConnectionServerOptions { NegotiationWaitMilliseconds = 500 }, service);
 		using var serverCancellation = cts;
 		try
 		{

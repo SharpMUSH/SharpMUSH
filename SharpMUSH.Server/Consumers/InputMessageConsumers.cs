@@ -342,7 +342,8 @@ public class ConnectionEstablishedConsumer(
 				// accept time from the transport, so it is known before the connection can ask.
 				{ "SSL", message.IsSecure ? "1" : "0" },
 				{ ConnectionEstablishedMessage.OrderedPromptsMetadata, message.OrderedPrompts ? "1" : "0" },
-				{ ConnectionEstablishedMessage.SignInMetadata, message.SignIn ? "1" : "0" }
+				{ ConnectionEstablishedMessage.SignInMetadata, message.SignIn ? "1" : "0" },
+				{ TerminalFeatureReader.GraphicsKey, message.InitialGraphics ?? TerminalGraphics.Off }
 			}));
 
 		if (hostNames is not null)
