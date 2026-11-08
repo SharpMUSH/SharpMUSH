@@ -30,7 +30,8 @@ public partial class SpeechTransformationTests
 	{
 		var actor = await Player();
 		var suffix = Guid.NewGuid().ToString("N")[..12];
-		await Admin($"@name {actor.DbRef}=A{suffix}");
+		var renamed = await Admin($"@name {actor.DbRef}=A{suffix}");
+		await Assert.That(renamed.Message.ToPlainText()).IsEqualTo(actor.DbRef.ToString());
 		var parser = Factory.CommandParser;
 		await Assert.That((await parser.EvaluateAsync(MarkupText.Plain($"accname({actor.DbRef})"))).ToPlainText())
 			.IsEqualTo("A" + suffix);

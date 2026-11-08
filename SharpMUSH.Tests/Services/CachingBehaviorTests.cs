@@ -80,11 +80,11 @@ public class CachingBehaviorTests
 		// Retries guard against the whole-tag sweeps other tests' commands carry, as in the contents
 		// test below.
 		var cacheKey = SharpMUSH.Library.Definitions.CacheKeys.Object(dbRef);
-		var cached = await Cache.TryGetAsync<AnyOptionalSharpObject>(cacheKey);
+		var cached = await Cache.TryGetAsync<CachedValue<AnyOptionalSharpObject>>(cacheKey);
 		for (var retry = 0; !cached.HasValue && retry < 10; retry++)
 		{
 			result1 = await mediator.Send(new GetObjectNodeQuery(dbRef));
-			cached = await Cache.TryGetAsync<AnyOptionalSharpObject>(cacheKey);
+			cached = await Cache.TryGetAsync<CachedValue<AnyOptionalSharpObject>>(cacheKey);
 		}
 
 		await Assert.That(cached.HasValue).IsTrue();
