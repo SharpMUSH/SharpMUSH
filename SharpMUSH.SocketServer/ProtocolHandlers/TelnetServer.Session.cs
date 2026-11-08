@@ -346,12 +346,31 @@ public partial class TelnetServer
 		/// <summary>
 		/// Gives all initial protocols one bounded window before the welcome. Finishing TTYPE or
 		/// CHARSET does not imply MXP SUPPORT, GMCP modules or terminal queries have finished.
-		/// Typed input ends the wait; late protocol replies continue updating the connection.
+		/// Early input is held until registration: an automatic login is not a capability reply.
+		/// Only the deadline, cancellation or the transport ending may release this window.
 		/// </summary>
-		public ValueTask<InitialNegotiationEnd> WaitForNegotiationAsync(TimeSpan limit) =>
-			_telnet is { } telnet
-				? telnet.WaitForInitialNegotiationAsync(limit < TimeSpan.Zero ? TimeSpan.Zero : limit, ct)
-				: ValueTask.FromResult(InitialNegotiationEnd.ConnectionClosed);
+		public async ValueTask<InitialNegotiationEnd> WaitForNegotiationAsync(TimeSpan limit, Task readTask)
+		{
+			if (ct.IsCancellationRequested) return InitialNegotiationEnd.Cancelled;
+			if (readTask.IsCompleted) return InitialNegotiationEnd.ConnectionClosed;
+			if (limit <= TimeSpan.Zero) return InitialNegotiationEnd.DeadlineElapsed;
+
+			// TNC's WaitForInitialNegotiationAsync also ends on application input. That is useful
+			// for interactive clients, but would let saved login commands race MXP SUPPORT here.
+			using var timer = CancellationTokenSource.CreateLinkedTokenSource(ct);
+			try
+			{
+				await Task.WhenAny(readTask, Task.Delay(limit, timer.Token));
+				if (ct.IsCancellationRequested) return InitialNegotiationEnd.Cancelled;
+				return readTask.IsCompleted
+					? InitialNegotiationEnd.ConnectionClosed
+					: InitialNegotiationEnd.DeadlineElapsed;
+			}
+			finally
+			{
+				await timer.CancelAsync();
+			}
+		}
 
 		/// <summary>What the connection registers with: what negotiation has said by then, else ASCII.</summary>
 		private ProtocolCapabilities RegisteredCapabilities()

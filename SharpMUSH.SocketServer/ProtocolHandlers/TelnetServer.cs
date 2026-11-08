@@ -135,7 +135,7 @@ public partial class TelnetServer : ConnectionHandler
 			// The read loop is already running by now, so a fast client could have negotiated in the gap
 			// above and found nothing to sample. Re-sampling here closes it without needing a lock.
 			await session.AnnounceTelnetIfNegotiatedAsync();
-			var negotiationEnd = await session.WaitForNegotiationAsync(TimeSpan.FromMilliseconds(_settings?.NegotiationWaitMilliseconds ?? 400));
+			var negotiationEnd = await session.WaitForNegotiationAsync(TimeSpan.FromMilliseconds(_settings?.NegotiationWaitMilliseconds ?? 400), readTask);
 			if (negotiationEnd is InitialNegotiationEnd.Cancelled or InitialNegotiationEnd.ConnectionClosed)
 				return;
 			await session.RegisterAsync();
