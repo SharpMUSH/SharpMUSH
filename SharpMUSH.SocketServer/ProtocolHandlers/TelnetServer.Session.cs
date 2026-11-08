@@ -57,7 +57,6 @@ public partial class TelnetServer
 		private volatile OutputFormat _negotiatedFormat = OutputFormat.Ansi;
 		private volatile TerminalProbeResult? _probe;
 		private volatile bool _gmcpAgreed;
-		private readonly TaskCompletionSource _inputReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
 		public async ValueTask<TelnetInterpreter> BuildInterpreterAsync()
 		{
@@ -121,9 +120,9 @@ public partial class TelnetServer
 				// terminfo() reports as the client. Without it every connection is "unknown".
 				.AddPlugin(terminalTypeProtocol)
 				// Replies to initial terminal queries and later SOCKSET graphics=auto/detect requests.
-				.AddPlugin<TerminalQueryProtocol>().OnTerminalReport(report =>
+				.AddPlugin(new TerminalQueryProtocol().ProbeOnStart().OnTerminalReport(report =>
 					OnTerminalReportAsync(new TerminalProbeResult(report.KittyGraphics, report.Sixel,
-						report.Version, report.CellWidth ?? 0, report.CellHeight ?? 0)));
+						report.Version, report.CellWidth ?? 0, report.CellHeight ?? 0))));
 
 		// The handshake itself — the hello, consuming PUEBLOCLIENT, and the start sequence that moves the
 		// client into HTML mode — is TelnetNegotiationCore's. What is left here is the part that is this
@@ -138,6 +137,7 @@ public partial class TelnetServer
 			!server._options.MxpEnabled
 				? builder
 				: builder.AddPlugin<MXPProtocol>()
+					.QuerySupportOnStart(MxpRegistration.Elements.ToArray())
 					// Registered with the plugin rather than when the question goes out: a client can answer
 					// the moment MXP mode starts, and the reply must never arrive before anything is listening.
 					.OnMxpSupports(_ => held.PublishAsync(() =>
@@ -178,8 +178,7 @@ public partial class TelnetServer
 
 		private async ValueTask OnSubmitAsync(string input)
 		{
-			// By the time a client has sent a line, whatever it was going to negotiate has settled.
-			_inputReceived.TrySetResult();
+			// Sample current protocol state; later replies can still refine it.
 			await AnnounceTelnetIfNegotiatedAsync();
 
 			// Held like the negotiation messages: a client that types as soon as it connects can
@@ -351,11 +350,8 @@ public partial class TelnetServer
 		/// </summary>
 		public async Task WaitForNegotiationAsync(TimeSpan limit)
 		{
-			if (_telnet?.PluginManager?.GetPlugin<TerminalQueryProtocol>() is { } queries)
-				await queries.ProbeAsync();
-			if (limit > TimeSpan.Zero)
-				await Task.WhenAny(_inputReceived.Task, Task.Delay(limit, ct));
-			ct.ThrowIfCancellationRequested();
+			if (_telnet is { } telnet)
+				await telnet.WaitForInitialNegotiationAsync(limit < TimeSpan.Zero ? TimeSpan.Zero : limit, ct);
 		}
 
 		/// <summary>What the connection registers with: what negotiation has said by then, else ASCII.</summary>
@@ -412,7 +408,6 @@ public partial class TelnetServer
 		private async ValueTask OnMxpEnabledAsync()
 		{
 			_negotiatedFormat = _negotiatedFormat.Negotiate(OutputFormat.Mxp);
-			server.StartAskingWhatMxpClientRenders(handle, _telnet, ct);
 			await AnnounceTelnetIfNegotiatedAsync();
 
 			// Held like every other capability: MXP usually starts before the connection is registered.

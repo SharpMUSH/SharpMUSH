@@ -589,10 +589,9 @@ public partial class TelnetServerNegotiationTests
 				return true;
 			});
 
-		// A deadline past the test's own, so a loop stalled until the deadline fails here rather than
-		// recording the answer late.
+		// Register immediately: later SUPPORT replies must still reach the capability callback.
 		var (toServer, fromServer, handler, _, cancellation) = StartServer(
-			new ConnectionServerOptions { MxpSupportTimeoutMilliseconds = 60_000, NegotiationWaitMilliseconds = 0 }, connectionService);
+			new ConnectionServerOptions { NegotiationWaitMilliseconds = 0 }, connectionService);
 		using var cts = cancellation;
 		try
 		{
@@ -652,7 +651,7 @@ public partial class TelnetServerNegotiationTests
 			});
 
 		var (toServer, fromServer, handler, _, cancellation) = StartServer(
-			new ConnectionServerOptions { MxpSupportTimeoutMilliseconds = 60_000, NegotiationWaitMilliseconds = 0 }, connectionService);
+			new ConnectionServerOptions { NegotiationWaitMilliseconds = 0 }, connectionService);
 		using var cts = cancellation;
 		try
 		{
@@ -723,19 +722,19 @@ public partial class TelnetServerNegotiationTests
 			});
 
 		var (toServer, fromServer, handler, published, cts) = StartServer(
-			new ConnectionServerOptions { MxpSupportTimeoutMilliseconds = 60_000 }, connectionService);
+			new ConnectionServerOptions(), connectionService);
 		try
 		{
 			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, MXP));
 			await registrationStarted.Task.WaitAsync(Timeout);
 			await WriteAsync(toServer, IAC, DO, MXP);
-			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, SB, MXP, IAC, SE));
+			await ReadUntilAsync(fromServer, seen =>
+				Contains(seen, IAC, SB, MXP, IAC, SE) && Encoding.ASCII.GetString(seen).Contains("<SUPPORT "));
 
 			// Longer than a retry against the unregistered handle would have waited.
 			await Task.Delay(ConnectionRetryPolicy.MaxAttempts * ConnectionRetryPolicy.Delay * 2);
 			releaseRegistration.TrySetResult();
 
-			await ReadUntilAsync(fromServer, seen => Encoding.ASCII.GetString(seen).Contains("<SUPPORT "));
 			await Assert.That(await WaitForPublishedAsync<MxpNegotiatedMessage>(published)).IsNotNull();
 
 			ProtocolCapabilities seen;

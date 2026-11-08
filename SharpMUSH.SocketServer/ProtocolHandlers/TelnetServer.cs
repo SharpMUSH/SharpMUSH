@@ -300,55 +300,8 @@ public partial class TelnetServer : ConnectionHandler
 	}
 
 	/// <summary>
-	/// Asks the client which of the elements this server writes it can render, and records the answer on
-	/// the connection so the renderer sends it nothing else.
-	/// </summary>
-	/// <remarks>
-	/// <para>MXP has this exchange for a reason: a client that cannot open a frame is better off with
-	/// the text that would have gone in it than with a tag it shows to the player. The answer belongs to
-	/// one connection, so it is kept with that connection's capabilities.</para>
-	/// <para><b>Not awaited from the callback that starts it.</b> That callback runs inside the
-	/// interpreter's processing of the bytes that began MXP mode, and the read loop is waiting for that
-	/// processing to finish — so waiting here for a reply that can only arrive through the next read
-	/// would stall the loop until the deadline and then record silence from a client that had answered
-	/// at once. The question is asked on a task of its own, leaving the loop free to deliver the
-	/// answer.</para>
-	/// <para>A client need not answer. What is waited for is the answer to this question, and what is
-	/// recorded is what came back — an element nobody answered about is one the client does not get,
-	/// which is the safe way round. An answer after the deadline is recorded when it lands, through the
-	/// handler registered with the plugin, and governs everything sent after it.</para>
-	/// </remarks>
-	private void StartAskingWhatMxpClientRenders(long handle, TelnetInterpreter? interpreter, CancellationToken cancellationToken)
-	{
-		if (interpreter?.PluginManager?.GetPlugin<MXPProtocol>() is not { } mxp) return;
-
-		_ = Task.Run(async () =>
-		{
-			try
-			{
-				await mxp.RequestSupportAsync(
-					TimeSpan.FromMilliseconds(Math.Max(0, _options.MxpSupportTimeoutMilliseconds)),
-					MxpRegistration.Elements.ToArray());
-
-				if (!cancellationToken.IsCancellationRequested) RecordMxpSupport(handle, interpreter);
-			}
-			catch (OperationCanceledException)
-			{
-				// The connection went away while the question was outstanding.
-			}
-			catch (Exception ex)
-			{
-				// Broad on purpose: nothing awaits this task, so whatever the plugin or a closing pipe
-				// throws would otherwise go unobserved, and none of it should reach the connection.
-				_logger.LogDebug(ex, "Asking handle {Handle} what MXP it renders failed", handle);
-			}
-		}, cancellationToken);
-	}
-
-	/// <summary>
 	/// Writes what the client has said it renders onto the connection: the elements it named, of those
-	/// it was asked about. Called both when a reply lands and when the wait for one runs out, and either
-	/// may be first.
+	/// it was asked about. Updated whenever a reply arrives, including after registration.
 	/// </summary>
 	private void RecordMxpSupport(long handle, TelnetInterpreter? interpreter)
 	{
