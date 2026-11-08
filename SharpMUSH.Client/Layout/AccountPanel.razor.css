@@ -117,7 +117,7 @@
     border: none;
     border-radius: var(--radius);
     color: var(--text-dim);
-    font-family: var(--font-mono);
+    font-family: var(--font-kicker);
     font-size: var(--text-xs);
     letter-spacing: 0.06em;
     text-transform: uppercase;

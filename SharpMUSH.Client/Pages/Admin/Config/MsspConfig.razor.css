@@ -175,7 +175,7 @@
 }
 
 .cfg-row-changed {
-	font-family: var(--font-mono);
+	font-family: var(--font-kicker);
 	font-size: var(--text-xs);
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
@@ -186,7 +186,7 @@
 }
 
 .cfg-row-unused {
-	font-family: var(--font-mono);
+	font-family: var(--font-kicker);
 	font-size: var(--text-xs);
 	letter-spacing: 0.04em;
 	text-transform: uppercase;

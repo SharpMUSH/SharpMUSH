@@ -92,7 +92,7 @@
 }
 .aa-card-sub { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-faint); }
 .aa-kind {
-    font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: 0.04em; text-transform: uppercase;
+    font-family: var(--font-kicker); font-size: var(--text-xs); letter-spacing: 0.04em; text-transform: uppercase;
     padding: var(--space-1) var(--space-3); border-radius: 99px; flex-shrink: 0;
 }
 .aa-kind--page { background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success); }
@@ -100,7 +100,7 @@
 .aa-kind--form { background: color-mix(in srgb, var(--special) 12%, transparent); color: var(--special); }
 .aa-kind--other { background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text-dim); }
 .aa-role {
-    font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: 0.04em; text-transform: uppercase;
+    font-family: var(--font-kicker); font-size: var(--text-xs); letter-spacing: 0.04em; text-transform: uppercase;
     padding: var(--space-1) var(--space-3); border-radius: 99px; color: var(--text-dim);
     background: var(--surface-2); border: 1px solid var(--border);
 }
@@ -143,7 +143,7 @@
 .aa-meta { padding: var(--space-5) var(--space-5); border-left: 1px solid var(--border-soft); min-width: 0; }
 .aa-meta:first-child { border-left: none; }
 .aa-meta-label {
-    font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase;
+    font-family: var(--font-kicker); font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase;
     color: var(--text-faint); margin-bottom: 0.375rem;
 }
 .aa-meta-val {
@@ -154,7 +154,7 @@
 .aa-section { padding: var(--space-5) var(--space-6); border-bottom: 1px solid var(--border-soft); }
 .aa-section:last-child { border-bottom: none; }
 .aa-section-label {
-    font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: 0.1em; text-transform: uppercase;
+    font-family: var(--font-kicker); font-size: var(--text-xs); letter-spacing: 0.1em; text-transform: uppercase;
     color: var(--text-faint); margin-bottom: 0.625rem;
 }
 .aa-chips { display: flex; gap: var(--space-3); flex-wrap: wrap; }

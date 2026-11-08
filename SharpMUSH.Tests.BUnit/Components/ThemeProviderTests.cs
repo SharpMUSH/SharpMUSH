@@ -102,7 +102,7 @@ public class ThemeProviderTests : BunitContext
 			if (applied.Count != 2) throw new InvalidOperationException($"{applied.Count} calls");
 		});
 		var parts = JSInterop.Invocations["sharpmushLayout.applyThemeParts"].Select(i => (IReadOnlyDictionary<string, string>)i.Arguments[0]!).ToList();
-		await Assert.That(parts[0][ThemeStyles.Texture]).IsEqualTo("none");
+		await Assert.That(parts[0][ThemeStyles.Texture]).IsEqualTo("grain");
 		await Assert.That(parts[1][ThemeStyles.Texture]).IsEqualTo("parchment");
 		await Assert.That(parts[1][ThemeStyles.Scheme]).IsEqualTo("light");
 	}

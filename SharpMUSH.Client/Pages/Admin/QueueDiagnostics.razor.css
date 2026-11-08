@@ -9,7 +9,7 @@
 .diag-page ::deep table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .diag-page ::deep th,
 .diag-page ::deep td { padding: var(--space-3); text-align: left; border-bottom: 1px solid var(--border-soft); white-space: nowrap; }
-.diag-page ::deep th { font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); }
+.diag-page ::deep th { font-family: var(--font-kicker); font-size: var(--text-xs); letter-spacing: var(--kicker-tracking); text-transform: uppercase; color: var(--text-faint); }
 
 button, select, input {
     color: var(--text);
