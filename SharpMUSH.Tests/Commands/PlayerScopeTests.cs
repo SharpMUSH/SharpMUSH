@@ -42,7 +42,7 @@ public class PlayerScopeTests : ServerTestBase
 		await Assert.That(await As(_mortal, $"@create {TestIsolationHelpers.GenerateUniqueName("Denied")}")).StartsWith("#-1 PERMISSION DENIED");
 		await Assert.That(await EvalAs(_mortal.DbRef, "create(Denied)")).StartsWith("#-1 PERMISSION DENIED");
 		await Cmd($"@permission/clear {Mortal}=player.create");
-		await Assert.That(await As(_mortal, $"@create {TestIsolationHelpers.GenerateUniqueName("Allowed")}")).StartsWith("#");
+		await Assert.That(DBRef.Parse(await As(_mortal, $"@create {TestIsolationHelpers.GenerateUniqueName("Allowed")}")).Number).IsGreaterThanOrEqualTo(0);
 	}
 
 	[Test]
@@ -89,7 +89,7 @@ public class PlayerScopeTests : ServerTestBase
 	public async Task ADenyOnAPlayerHoldsForWhatItOwns()
 	{
 		var thing = DBRef.Parse(await As(_mortal, $"@create {TestIsolationHelpers.GenerateUniqueName("Owned")}"));
-		await Assert.That(await EvalAs(thing, $"create({TestIsolationHelpers.GenerateUniqueName("ByThing")})")).StartsWith("#");
+		await Assert.That(DBRef.Parse(await EvalAs(thing, $"create({TestIsolationHelpers.GenerateUniqueName("ByThing")})")).Number).IsGreaterThanOrEqualTo(0);
 		await Cmd($"@permission/deny {Mortal}=player.create");
 		await Assert.That(await EvalAs(thing, $"create({TestIsolationHelpers.GenerateUniqueName("ByThing")})")).StartsWith("#-1 PERMISSION DENIED");
 		await Cmd($"@permission/clear {Mortal}=player.create");
