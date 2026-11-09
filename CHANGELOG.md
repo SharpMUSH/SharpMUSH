@@ -35,4 +35,6 @@ The first release. Plugin contract 3.0.0. World format 1.
 - A world is stamped with its format. A server refuses a world stamped newer than its own.
 - Requires the .NET 11 runtime. The Docker images carry it.
 
+## [0.9.0] - Intial Commit
+
 [1.0.0]: https://github.com/SharpMUSH/SharpMUSH/releases/tag/v1.0.0
