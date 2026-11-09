@@ -90,7 +90,7 @@ For each permission, the first of these that applies decides:
 4. If its account has an override for it (`@permission/allow/account`), that override decides.
 5. If any role held allows it, it is held. A Deny on one role never cancels an Allow on another, whatever their priorities.
 6. If a role held denies it, it is not held, even when the `everyone` role allows it.
-7. Otherwise, the `everyone` role decides. A permission nobody allows is denied.
+7. Otherwise, the `everyone` role decides. The everyday permissions in [roles everyday] are allowed by default for holders of `everyone` when no role, including `everyone`, denies them. Other permissions nobody allows are denied.
 
 Priority does not decide any of this, and it does not decide control. It only orders roles for management: you can manage only roles, objects and accounts below your own highest role.
 
@@ -98,7 +98,7 @@ Priority does not decide any of this, and it does not decide control. It only or
 
 Some permissions are umbrellas over narrower ones: `wiki.admin` covers `wiki.read`, `wiki.drafts`, `wiki.create`, `wiki.edit` and `wiki.delete`; `media.admin` covers `media.upload`; `players.moderate` covers `players.view`; `game.wizard` covers six of the staff permissions in [roles staff]; `game.chown.any` covers `game.chown.self`; and `jobs.manage`, `queue.inspect` and `queue.control` cover their `.own` versions. A role or override that sets the umbrella but leaves the narrower permission alone applies the umbrella's setting to it. A setting on the narrower permission itself always wins within the same role.
 
-To take a permission away from one object, use an override (`@permission/deny`). To take it away from a group, leave it off the roles they hold rather than adding a Deny role on top, because any other role's Allow wins.
+To take a permission away from one object, use an override (`@permission/deny`). For a permission that requires an Allow, take it away from a group by leaving it off the roles they hold rather than adding a Deny role on top, because any other role's Allow wins. Everyday permissions are different: leaving one unset keeps its default Allow. Restrict one with a role Deny while removing any other role's explicit Allow, or use an object or account override.
 
 ## Roles a new game starts with
 
