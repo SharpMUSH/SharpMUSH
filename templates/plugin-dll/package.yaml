@@ -21,8 +21,9 @@ keywords: [plugin, dll]
 # bytes are what this manifest committed to), not trust.
 binaries:
   # The plugin/server contract version your DLL was built against. The installer
-  # refuses a package built for a newer contract than the target server provides.
-  min_server_version: ">=1.1"
+  # refuses a package built for a newer contract than the target server provides,
+  # or for another major.
+  min_server_version: ">=3.0"
   files:
     # file: = a FLAT name (no path separators, no '..'). Each deposits directly
     # into the plugin's folder. sha256: = the 64-hex digest of the built bytes.
