@@ -582,7 +582,8 @@ public static partial class RhostDatabaseTranslator
 		var kind = state == PermissionState.Allow ? "Power" : "Depower";
 		if (mapping.Scopes.Length == 0)
 		{
-			report.Note(ImportWarningKind.Powers, $"{kind} {mapping.Name}: dropped, as {mapping.Skip}", dbref);
+			report.Note(ImportWarningKind.Powers, $"{kind} {mapping.Name}: dropped, as {mapping.Skip}", dbref,
+				needsAction: state == PermissionState.Deny);
 			return;
 		}
 

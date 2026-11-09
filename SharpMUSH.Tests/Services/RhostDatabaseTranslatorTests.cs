@@ -287,6 +287,26 @@ public class RhostDatabaseTranslatorTests
 		await Assert.That(note.NeedsAction).IsEqualTo(!deny);
 	}
 
+	/// <summary>Dropping a depower loses a source restriction and requires review; dropping a power does not.</summary>
+	[Test]
+	[Arguments("MASTER", true)]
+	[Arguments("ABUSE", true)]
+	[Arguments("PERSONAL_COMMAND", true)]
+	[Arguments("QUOTA", true)]
+	[Arguments("EXECSCRIPT", false)]
+	public async Task DroppedDepowersRequireAction(string name, bool deny)
+	{
+		var mapping = (deny ? RhostNameTables.Depowers : RhostNameTables.Powers).Single(m => m.Name == name);
+		var toggles = new uint[8];
+		toggles[mapping.Word] = 1u << mapping.Shift;
+		var source = new RhostFlatfileObject { DBRef = 5, Name = "Restricted", Flags = [(uint)RhostObjectType.Player, 0, 0, 0], Toggles = toggles };
+		var report = new RhostDatabaseTranslator.Report();
+		report.Line(ImportWarningKind.Powers, "Test import");
+		RhostDatabaseTranslator.MapPowers(source, report);
+		var note = report.Finish().Single(n => n.Text.Contains($"{name}: dropped"));
+		await Assert.That(note.NeedsAction).IsEqualTo(deny);
+	}
+
 	[Test]
 	public async Task AttributesTakeSharpMUSHsNamesAndFlags()
 	{
