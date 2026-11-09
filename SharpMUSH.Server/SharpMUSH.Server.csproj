@@ -430,26 +430,6 @@
       <Link>BundledPackages\messages.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.messages.package.yaml</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\radio\package.yaml">
-      <Link>BundledPackages\radio.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.radio.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\radio-help\package.yaml">
-      <Link>BundledPackages\radio-help.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.radio-help.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\radio-config\package.yaml">
-      <Link>BundledPackages\radio-config.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.radio-config.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\radio-scene\package.yaml">
-      <Link>BundledPackages\radio-scene.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.radio-scene.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\scene-verse\package.yaml">
-      <Link>BundledPackages\scene-verse.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.scene-verse.package.yaml</LogicalName>
-    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\scene-here\package.yaml">
       <Link>BundledPackages\scene-here.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.scene-here.package.yaml</LogicalName>

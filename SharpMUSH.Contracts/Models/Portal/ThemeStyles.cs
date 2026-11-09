@@ -113,6 +113,7 @@ public static class ThemeStyles
 		["elbow"] = new("elbow", "none", "none"),
 		["plating"] = new("plating", "none", "none"),
 		["chrome-armor"] = new("chrome-armor", "outset", "chrome-armor"),
+		["lifted"] = new("lifted", "line", "lifted"),
 	};
 
 	public static readonly IReadOnlyDictionary<string, OrnamentSet> Ornaments = new Dictionary<string, OrnamentSet>
@@ -223,7 +224,7 @@ public static class ThemeStyles
 		EffectColor, EffectShadow,
 	];
 
-	/// <summary>Phosphor's look: what any setting or part a theme leaves out falls back to.</summary>
+	/// <summary>Each setting's and part's first choice: what any one a theme leaves out falls back to.</summary>
 	public static readonly IReadOnlyDictionary<string, string> Defaults = Choices.ToDictionary(c => c.Key, c => c.Value[0]);
 
 	public static bool IsValid(string key, string? value) => Choices.TryGetValue(key, out var choices) && value is not null && choices.Contains(value);

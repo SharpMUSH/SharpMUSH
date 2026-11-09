@@ -7754,6 +7754,9 @@
   <data name="AdmThemeStyleFrameChromeArmor" xml:space="preserve">
     <value>Chrome armour</value>
   </data>
+  <data name="AdmThemeStyleFrameLifted" xml:space="preserve">
+    <value>Lifted</value>
+  </data>
   <data name="AdmThemeStyleOrnamentTwinkle" xml:space="preserve">
     <value>Twinkles</value>
   </data>
@@ -10145,7 +10148,7 @@
   <data name="GuideIdentityIntroduction" xml:space="preserve"><value>A short welcome for new players</value></data>
   <data name="GuideIdentityGenres" xml:space="preserve"><value>Genre</value></data>
   <data name="GuideIdentitySubgenres" xml:space="preserve"><value>Subgenre</value></data>
-  <data name="GuideIdentityGenreHint" xml:space="preserve"><value>Choose the game's MSSP genre and subgenre. Sharpie uses these selections for artwork; choose None when neither applies.</value></data>
+  <data name="GuideIdentityGenreHint" xml:space="preserve"><value>Choose the game's MSSP genre. Pick a suggested subgenre or enter your own. Sharpie uses these values for artwork; choose None when neither applies.</value></data>
   <data name="GuideIdentityStyle" xml:space="preserve"><value>Sharpie style</value></data>
   <data name="GuideIdentityAppearance" xml:space="preserve"><value>appearance settings</value></data>
   <data name="GuideIdentityWelcomePage" xml:space="preserve"><value>Welcome wiki page</value></data>
@@ -12692,5 +12695,23 @@
   <data name="MudTreeView_ExpandItem" xml:space="preserve">
     <value>Expand</value>
     <comment>MudBlazor component text, served through PortalMudLocalizationInterceptor</comment>
+  </data>
+  <data name="Retry" xml:space="preserve">
+    <value>Try again</value>
+  </data>
+  <data name="MailDraftSaved" xml:space="preserve">
+    <value>Draft saved in this tab.</value>
+  </data>
+  <data name="MailDraftUnavailable" xml:space="preserve">
+    <value>This tab could not save your draft. Keep this page open until you send it.</value>
+  </data>
+  <data name="MailDraftDiscard" xml:space="preserve">
+    <value>Discard draft</value>
+  </data>
+  <data name="MailDraftClearFailed" xml:space="preserve">
+    <value>The message was sent, but this tab could not remove its saved draft. Do not send it again.</value>
+  </data>
+  <data name="GuideIdentityCustomSubgenre" xml:space="preserve">
+    <value>This subgenre is not in MSSP's suggested list. Custom values are allowed.</value>
   </data>
 </root>

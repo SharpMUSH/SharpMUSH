@@ -78,5 +78,8 @@ public record NetOptions(
 	bool SslRequireClientCert,
 
 	[property: SharpConfig(Name = "media_base_url", Category = "Net", Description = "Web address a GMCP client such as Mudlet fetches the game's sounds and music from, when sound() or music() names a file rather than a full address. Sent as Client.Media.Default when a client agrees to GMCP; empty sends nothing", Group = "Network Protocol", Order = 7)]
-	string? MediaBaseUrl
+	string? MediaBaseUrl,
+
+	[property: SharpConfig(Name = "negotiation_wait_ms", Category = "Net", Description = "Maximum wait in milliseconds for initial client protocol replies before registration and the connect screen; early login commands are queued during this window. 0 skips waiting. Applies to new telnet connections", Group = "Network Protocol", Order = 8, Min = 0, Max = 60000)]
+	uint NegotiationWaitMilliseconds
 );

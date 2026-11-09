@@ -748,6 +748,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		await ImportPowerDefinitionsAsync(pennDatabase.PowerDefinitions, context, cancellationToken);
 		await ImportAttributeDefinitionsAsync(pennDatabase, context, cancellationToken);
 		await ImportRolesAsync(pennDatabase.Roles, context, cancellationToken);
+		await ImportConfiguredAliasesAsync(pennDatabase, context, cancellationToken);
 	}
 
 	/// <summary>

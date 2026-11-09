@@ -282,6 +282,7 @@ public partial class Commands
 				Caller = actor.Object().DBRef,
 				Arguments = stackArgs,
 				CommandHistory = null,
+				CommandSources = null,
 				BreakPropagation = null,
 				Context = invocation.Context with
 				{

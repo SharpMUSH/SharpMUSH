@@ -7874,7 +7874,7 @@
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenreHint" xml:space="preserve">
-    <value>Vælg spillets MSSP-genre og -undergenre. Sharpie bruger disse valg til grafikken; vælg None, hvis ingen af dem passer.</value>
+    <value>Vælg spillets MSSP-genre. Vælg en foreslået undergenre, eller skriv din egen. Sharpie bruger disse værdier til illustrationer; vælg None, hvis ingen passer.</value>
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenres" xml:space="preserve">
@@ -9464,5 +9464,8 @@
   <data name="MudTreeView_ExpandItem" xml:space="preserve">
     <value>Udvid</value>
     <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityCustomSubgenre" xml:space="preserve">
+    <value>Denne undergenre findes ikke på MSSP's liste over forslag. Egne værdier er tilladt.</value>
   </data>
 </root>

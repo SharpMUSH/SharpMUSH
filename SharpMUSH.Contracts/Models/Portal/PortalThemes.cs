@@ -134,43 +134,55 @@ public static class BuiltInThemes
 	public const string PhosphorId = "phosphor";
 	public const string DaylightId = "daylight";
 
-	/// <summary>The portal's original dark look; <c>tokens.css</c> carries the same values.</summary>
+	/// <summary>
+	/// The portal's dark look: the phosphor accent on warm charcoal, titles in Space Grotesk, a faint grain, and cards
+	/// lifted off the page. <c>tokens.css</c> carries the same colours.
+	/// </summary>
 	public static readonly PortalTheme Phosphor = new(PhosphorId, "Phosphor", Dark: true, Published: true,
-		new Dictionary<string, string>
+		WithEmberStyle(new Dictionary<string, string>
 		{
-			[ThemeTokens.Background] = "#0e0f11",
-			[ThemeTokens.Surface] = "#16181b",
-			[ThemeTokens.Surface2] = "#1c1f23",
-			[ThemeTokens.Surface3] = "#101113",
-			[ThemeTokens.Rail] = "#0a0b0c",
-			[ThemeTokens.Text] = "#e9edf0",
-			[ThemeTokens.TextDim] = "#9aa3ab",
-			[ThemeTokens.TextFaint] = "#7d8790",
-			[ThemeTokens.Border] = "#262a2f",
-			[ThemeTokens.BorderSoft] = "#1d2024",
+			[ThemeTokens.Background] = "#121110",
+			[ThemeTokens.Surface] = "#191716",
+			[ThemeTokens.Surface2] = "#211e1c",
+			[ThemeTokens.Surface3] = "#161412",
+			[ThemeTokens.Rail] = "#0c0b0a",
+			[ThemeTokens.Text] = "#efebe5",
+			[ThemeTokens.TextDim] = "#aaa298",
+			[ThemeTokens.TextFaint] = "#90887e",
+			[ThemeTokens.Border] = "#322d28",
+			[ThemeTokens.BorderSoft] = "#272320",
 			[ThemeTokens.Accent] = "#00f5b7",
 			[ThemeTokens.Warn] = "#ffb454",
 			[ThemeTokens.LinkMissing] = "#ff8a8a",
-		}, BuiltIn: true);
+		}), BuiltIn: true);
 
-	/// <summary>A light theme, so a game has one to start from and the portal is exercised in both modes.</summary>
+	/// <summary>The light look, Phosphor's on warm paper, so a game has one to start from and the portal is exercised in both modes.</summary>
 	public static readonly PortalTheme Daylight = new(DaylightId, "Daylight", Dark: false, Published: true,
-		new Dictionary<string, string>
+		WithEmberStyle(new Dictionary<string, string>
 		{
-			[ThemeTokens.Background] = "#f3f4f6",
+			[ThemeTokens.Background] = "#f6f4ef",
 			[ThemeTokens.Surface] = "#ffffff",
-			[ThemeTokens.Surface2] = "#eef0f3",
-			[ThemeTokens.Surface3] = "#e9ecef",
-			[ThemeTokens.Rail] = "#e1e5e9",
-			[ThemeTokens.Text] = "#14181c",
-			[ThemeTokens.TextDim] = "#4a535c",
-			[ThemeTokens.TextFaint] = "#5f6872",
-			[ThemeTokens.Border] = "#d2d8de",
-			[ThemeTokens.BorderSoft] = "#e3e7eb",
+			[ThemeTokens.Surface2] = "#f3f0e9",
+			[ThemeTokens.Surface3] = "#f0ebe5",
+			[ThemeTokens.Rail] = "#e6dfd3",
+			[ThemeTokens.Text] = "#1c1915",
+			[ThemeTokens.TextDim] = "#524b43",
+			[ThemeTokens.TextFaint] = "#655d54",
+			[ThemeTokens.Border] = "#dcd4c8",
+			[ThemeTokens.BorderSoft] = "#e8e1d6",
 			[ThemeTokens.Accent] = "#00775f",
 			[ThemeTokens.Warn] = "#8f5300",
 			[ThemeTokens.LinkMissing] = "#c0362c",
-		}, BuiltIn: true);
+		}), BuiltIn: true);
+
+	/// <summary>Phosphor's and Daylight's look beyond colour: Space Grotesk titles, grain, lifted cards.</summary>
+	private static Dictionary<string, string> WithEmberStyle(Dictionary<string, string> tokens)
+	{
+		tokens[ThemeStyles.FontDisplay] = "space";
+		tokens[ThemeStyles.Texture] = "grain";
+		tokens[ThemeStyles.Frame] = "lifted";
+		return tokens;
+	}
 
 	// One theme per MSSP genre (MsspCatalog's GENRE choices, less "None"; Romance covers Adult too), with the ids the
 	// telnet layout themes use, so a game's portal theme and layout_theme can share one name. Colours are listed in

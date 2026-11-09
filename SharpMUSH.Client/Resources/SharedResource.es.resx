@@ -7874,7 +7874,7 @@
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenreHint" xml:space="preserve">
-    <value>Elija el género y subgénero MSSP del juego. Sharpie usa esta selección para sus ilustraciones; elija None si no corresponde ninguno.</value>
+    <value>Elija el género MSSP del juego. Seleccione un subgénero sugerido o escriba uno propio. Sharpie usa estos valores para sus ilustraciones; elija None si no corresponde ninguno.</value>
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenres" xml:space="preserve">
@@ -9464,5 +9464,8 @@
   <data name="MudTreeView_ExpandItem" xml:space="preserve">
     <value>Expandir</value>
     <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityCustomSubgenre" xml:space="preserve">
+    <value>Este subgénero no está en la lista de sugerencias de MSSP. Se permiten valores personalizados.</value>
   </data>
 </root>

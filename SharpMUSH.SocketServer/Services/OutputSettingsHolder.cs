@@ -15,7 +15,13 @@ public sealed class OutputSettingsHolder
 
 	private long _keepAliveTicks = DefaultKeepAlive.Ticks;
 
+	private volatile int _maxPictureColumns = 200;
+	private volatile int _maxPictureRows = 100;
+	public int MaxPictureColumns => _maxPictureColumns;
+	public int MaxPictureRows => _maxPictureRows;
+
 	private volatile bool _pueblo;
+	private volatile uint _negotiationWaitMilliseconds = 400;
 
 	private readonly TaskCompletionSource _received = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -34,6 +40,9 @@ public sealed class OutputSettingsHolder
 	/// <summary><c>pueblo</c>: whether a new telnet connection is sent the Pueblo hello; false until the main process says.</summary>
 	public bool Pueblo => _pueblo;
 
+	/// <summary>The game's <c>negotiation_wait_ms</c> setting; 400 ms until settings arrive.</summary>
+	public uint NegotiationWaitMilliseconds => _negotiationWaitMilliseconds;
+
 	/// <summary>Completes when the first settings from the main process arrive.</summary>
 	public Task Received => _received.Task;
 
@@ -42,6 +51,9 @@ public sealed class OutputSettingsHolder
 	{
 		_asciiTranslations = message.AsciiTranslations ?? new Dictionary<string, string>();
 		_pueblo = message.Pueblo;
+		_maxPictureColumns = message.MaxPictureColumns;
+		_maxPictureRows = message.MaxPictureRows;
+		_negotiationWaitMilliseconds = message.NegotiationWaitMilliseconds;
 		if (message.KeepAliveSeconds > 0)
 		{
 			Interlocked.Exchange(ref _keepAliveTicks, TimeSpan.FromSeconds(message.KeepAliveSeconds).Ticks);

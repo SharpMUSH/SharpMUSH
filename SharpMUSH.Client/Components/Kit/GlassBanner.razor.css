@@ -134,14 +134,15 @@
 }
 
 .kit-banner-kicker {
-	font-family: var(--font-mono);
+	font-family: var(--font-kicker);
 	font-size: var(--text-xs);
-	letter-spacing: 0.12em;
+	letter-spacing: var(--kicker-tracking);
 	text-transform: uppercase;
 	color: var(--text-on-image);
 }
 
 .kit-banner-title {
+	overflow-wrap: anywhere;
 	margin: 0;
 	font-family: var(--font-display);
 	font-weight: var(--font-title-weight);
@@ -170,10 +171,12 @@
 }
 
 .kit-banner-text--hero .kit-banner-title {
+	overflow-wrap: anywhere;
 	font-size: var(--text-xl);
 }
 
 .kit-banner-text--character .kit-banner-title {
+	overflow-wrap: anywhere;
 	font-size: var(--text-2xl);
 }
 

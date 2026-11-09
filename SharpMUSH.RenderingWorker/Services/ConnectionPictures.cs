@@ -83,6 +83,8 @@ internal sealed class RenderPictureSource(TerminalPictureStore store, Connection
 		return false;
 	}
 
+	public (int Width, int Height)? OriginalSize(ImageMarkup image) => store.OriginalSize(image.Source);
+
 	public bool MarkTransmitted(uint imageId) => !sent.Contains(imageId) && _transmitted.Add(imageId);
 
 	/// <summary>Records the images this render sent as held by the terminal.</summary>

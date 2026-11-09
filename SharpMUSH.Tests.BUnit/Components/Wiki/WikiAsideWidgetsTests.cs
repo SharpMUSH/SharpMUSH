@@ -29,6 +29,19 @@ public class WikiAsideWidgetsTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task RecentWikiActivity_FailureIsNotReportedAsNoActivity()
+	{
+		var client = Track(new HttpClient(new SceneListHandler("invalid JSON")) { BaseAddress = new Uri("https://localhost:8081/") });
+		var factory = Substitute.For<IHttpClientFactory>();
+		factory.CreateClient(Arg.Any<string>()).Returns(client);
+		Services.AddSingleton(new WikiService(factory, NullLogger<WikiService>.Instance));
+		var cut = Render<RecentWikiActivityWidget>();
+		cut.WaitForAssertion(() => cut.Find(".recent-wiki-error"));
+		await Assert.That(cut.FindAll(".recent-wiki-empty").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".recent-wiki-error").TextContent).IsNotEmpty();
+	}
+
+	[Test]
 	public async Task RecentWikiActivity_IsAnAsideCardOfRows_WithThumbnailEditorAndWhen()
 	{
 		var cut = Render<RecentWikiActivityWidget>();

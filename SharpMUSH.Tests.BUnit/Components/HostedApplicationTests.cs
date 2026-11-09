@@ -18,15 +18,28 @@ public class HostedApplicationTests : TrackingBunitContext
 	private readonly ConcurrentQueue<string> _requests = new();
 	private readonly ConcurrentQueue<TrackedResponse> _responses = new();
 
-	private void Setup(bool available = true)
+	private void Setup(bool available = true, Task? pending = null)
 	{
-		var http = Track(new HttpClient(new Handler(_requests, _responses, available)) { BaseAddress = new Uri("https://api.test/") });
+		var http = Track(new HttpClient(new Handler(_requests, _responses, available, pending)) { BaseAddress = new Uri("https://api.test/") });
 		var factory = Substitute.For<IHttpClientFactory>(); factory.CreateClient("api").Returns(http);
 		Services.AddSingleton(factory);
 		Services.AddSingleton<ConnectedAppsService>();
 		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		var module = JSInterop.SetupModule("./js/hosted-app.mjs");
 		module.SetupModule("mount", _ => true).Mode = JSRuntimeMode.Loose;
+	}
+
+	[Test]
+	public async Task PendingBootstrapShowsLoadingUntilTheFrameCanMount()
+	{
+		var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		Setup(pending: ready.Task);
+		var host = Render<HostedApplication>(p => p.Add(c => c.Slug, "east"));
+		await Assert.That(host.Find("[role=status]").TextContent).Contains("NavLoadingApplication");
+		await Assert.That(host.FindAll("iframe").Count).IsEqualTo(0);
+		ready.SetResult();
+		host.WaitForAssertion(() => host.Find("iframe"));
+		await Assert.That(host.FindAll("[role=status]").Count).IsEqualTo(0);
 	}
 
 	[Test]
@@ -102,10 +115,11 @@ public class HostedApplicationTests : TrackingBunitContext
 		await Assert.That(_requests).DoesNotContain("/api/objects/topology/apply");
 	}
 
-	private sealed class Handler(ConcurrentQueue<string> requests, ConcurrentQueue<TrackedResponse> responses, bool available) : HttpMessageHandler
+	private sealed class Handler(ConcurrentQueue<string> requests, ConcurrentQueue<TrackedResponse> responses, bool available, Task? pending) : HttpMessageHandler
 	{
-		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 		{
+			if (pending is not null) await pending.WaitAsync(ct);
 			requests.Enqueue(request.RequestUri!.PathAndQuery);
 			// SendAsync transfers ownership to HttpClient; disposing here would return an unusable response.
 			var response = new TrackedResponse(available ? HttpStatusCode.OK : HttpStatusCode.Forbidden, request.RequestUri.AbsolutePath)
@@ -121,7 +135,7 @@ public class HostedApplicationTests : TrackingBunitContext
 					: JsonContent.Create(new { instanceId = request.RequestUri.AbsolutePath.Split('/')[3], configVersion = 1, config = new { rooms = new[] { 10 } }, entryUrl = "api/ui/graph-proof/assets/index.html" })
 			};
 			responses.Enqueue(response);
-			return Task.FromResult<HttpResponseMessage>(response);
+			return response;
 		}
 	}
 

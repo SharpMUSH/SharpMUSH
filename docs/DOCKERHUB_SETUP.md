@@ -71,7 +71,8 @@ A release is cut in the GitHub UI, never by pushing a tag. Before it, on `main`:
 
 Then, under **Releases → Draft a new release**, create the tag `v1.0.0` on `main`, write the notes,
 and press **Publish release**. A release candidate gets a tag with a suffix (`v1.1.0-rc.1`) and
-**Set as a pre-release**; the workflow refuses a pre-release whose tag has no suffix.
+**Set as a pre-release**; the workflow refuses a pre-release whose tag has no suffix, and a
+release whose tag has one.
 
 The tag sets the version: the workflow tags the images with it and builds the server with it, so
 `version()`, `@version` and MSSP report it. This is the engine's version. The plugin NuGets
@@ -92,22 +93,31 @@ release they cover. For `v1.2.3`:
 | `latest` | no release is newer |
 
 So a `v1.0.4` fix published after `v1.1.0` moves `1.0` but leaves `1` and `latest` on `1.1.0`. A
-pre-release pushes only its own tag (`1.1.0-rc.1`).
+pre-release pushes its own tag (`1.1.0-rc.1`). When its commit is still the newest on `main` once
+its images are built, `dev` is moved to it too, while no dev build is running, so `dev` never goes
+behind `main`. A merge in that moment can leave `dev` one commit behind until the next merge
+publishes again.
 
 #### After the release
 
-Deploy files pin one exact image tag, never `latest`, `1` or `1.2`: a game runs what it was
-deployed with until its operator changes the tag. New games are deployed from the files on `main`,
-so the pins move only once the release's images exist. When the workflow has finished, open a pull
+The one-click files (`deploy/oneclick/`, the Fly settings files, the Railway settings) run
+`latest`, so a one-click game is launched on the newest release. A one-click VPS game then updates
+its server and renderer to each new release by itself, major releases included (watchtower); a Fly
+or Railway game takes it when its operator deploys again. The other deploy files
+(`docker-compose.prod.yml`, the Fly Dockerfile's base tag) pin one exact release. Until the first
+release's images exist, both run `dev`. New games are deployed from the files on `main`, so the
+files move only once the release's images exist. When the workflow has finished, open a pull
 request with:
 
 ```bash
 python3 .github/scripts/release_images.py bump 1.0.0
 ```
 
-CI fails a build whose deploy files name different tags (`release_images.py check`). The Railway
-template lives in Railway's template composer, not in this repository: set its three services'
-images to the new tag there too.
+It pins the release in the exact files and moves the one-click files to `latest`; after the
+first release only the exact files change. CI fails a build whose one-click files or exact files
+disagree among themselves (`release_images.py check`). The Railway template lives in Railway's
+template composer, not in this repository: set its three services' images to `latest` there once.
+A DigitalOcean snapshot keeps the tag it was built with, so rebuild and resubmit it after the bump.
 
 Which shorter tags move is decided from the repository's published GitHub Releases, not its git
 tags, so a stray `vX.Y.Z` tag or a refused pre-release does not hold `latest` back.
@@ -122,14 +132,15 @@ Every push to `main` updates:
 - `sharpmush/sharpmush-server:dev`
 - `sharpmush/sharpmush-renderer:dev`
 
-These images reflect the latest state of the `main` branch, for development and testing.
+These images reflect the latest state of the `main` branch, or a pre-release cut from it, for
+development and testing.
 
 ## Manual Triggering
 
 You can also manually trigger either workflow from the GitHub Actions UI:
 
 ### For Releases:
-A manual run publishes a release's images again (after a failed run, say).
+A manual run publishes a release's images again (after a failed run, say). It reads the tag's GitHub Release, so it refuses a tag with no published release and treats a pre-release as one.
 1. Go to **Actions** tab in your repository
 2. Select **Publish Docker Images** workflow
 3. Click **Run workflow**

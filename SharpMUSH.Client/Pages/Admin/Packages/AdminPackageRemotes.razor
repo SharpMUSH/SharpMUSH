@@ -17,7 +17,12 @@
     <div>
         <KitCard Title="@Loc["PkgConfiguredRemotes"]">
             <div class="pkg-card-body">
-                @if (_remotes is null)
+                @if (_remotesFailure is not null)
+                {
+                    <MudAlert Severity="Severity.Error" Class="pkg-remotes-error" role="alert">@_remotesFailure.Message</MudAlert>
+                    <CapsuleButton Class="pkg-remotes-retry" OnClick="ReloadRemotesAsync" Icon="@Icons.Material.Filled.Refresh">@Loc["Refresh"]</CapsuleButton>
+                }
+                else if (_remotes is null)
                 {
                     <SkeletonRows Count="2" Height="48" Gap="6" />
                 }
@@ -79,7 +84,12 @@
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
                     @Loc["PkgCommunityDirectoryHint"]
                 </MudText>
-                @if (_community is null)
+                @if (_communityFailure is not null)
+                {
+                    <MudAlert Severity="Severity.Error" Class="pkg-community-error" role="alert">@_communityFailure.Message</MudAlert>
+                    <CapsuleButton Class="pkg-community-retry" OnClick="LoadCommunityAsync" Icon="@Icons.Material.Filled.Refresh">@Loc["Refresh"]</CapsuleButton>
+                }
+                else if (_community is null)
                 {
                     <SkeletonRows Count="3" Height="48" Gap="6" />
                 }
@@ -129,6 +139,8 @@
 @code {
     private IReadOnlyList<PackageRemoteRecord>? _remotes;
     private CommunityReposResponse? _community;
+    private ApiFailure? _remotesFailure;
+    private ApiFailure? _communityFailure;
     private bool _busy;
 
     private string _newName = "";
@@ -147,7 +159,16 @@
     private async Task LoadCommunityAsync()
     {
         _community = null;
-        _community = await Packages.GetCommunityReposAsync() is CommunityReposResponse community ? community : null;
+        _communityFailure = null;
+        switch (await Packages.GetCommunityReposAsync())
+        {
+            case CommunityReposResponse community:
+                _community = community;
+                break;
+            case ApiFailure failure:
+                _communityFailure = failure;
+                break;
+        }
     }
 
     private async Task AddRemoteAsync()
@@ -209,17 +230,23 @@
     private Task ShowReadmeAsync(CommunityRepoListing listing)
         => _readme?.ShowAsync(listing.Name, () => Packages.GetCommunityReadmeAsync(listing.Url)) ?? Task.CompletedTask;
 
-    /// <summary>The remote list, or an empty one with the reason reported.</summary>
-    private async Task<IReadOnlyList<PackageRemoteRecord>> Remotes() =>
-        await Packages.GetRemotesAsync() switch
+    private async Task ReloadRemotesAsync() => _remotes = await Remotes();
+
+    /// <summary>Keep a failed read separate from a successfully empty remote list.</summary>
+    private async Task<IReadOnlyList<PackageRemoteRecord>?> Remotes()
+    {
+        _remotesFailure = null;
+        _remotes = null;
+        return await Packages.GetRemotesAsync() switch
         {
             IReadOnlyList<PackageRemoteRecord> remotes => remotes,
             ApiFailure failure => Failed(failure)
         };
+    }
 
-    private IReadOnlyList<PackageRemoteRecord> Failed(ApiFailure failure)
+    private IReadOnlyList<PackageRemoteRecord>? Failed(ApiFailure failure)
     {
-        Snackbar.Add(failure.Message, Severity.Error);
-        return [];
+        _remotesFailure = failure;
+        return null;
     }
 }

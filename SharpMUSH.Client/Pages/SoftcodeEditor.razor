@@ -283,7 +283,7 @@
 
         @if (_saveMessage is not null)
         {
-            <MudAlert Severity="@_saveSeverity" Dense="true" ShowCloseIcon="true"
+            <MudAlert Severity="@_saveSeverity" Dense="true" ShowCloseIcon="true" Class="sc-save-feedback"
                       CloseIconClicked="() => _saveMessage = null" Style="flex-shrink:0;">
                 @_saveMessage
             </MudAlert>

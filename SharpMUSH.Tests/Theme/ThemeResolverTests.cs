@@ -35,7 +35,7 @@ public class ThemeResolverTests
 		await Assert.That(theme.Token("glow")).IsEqualTo("0,245,183");
 		await Assert.That(theme.AccentAdjusted).IsFalse();
 		await Assert.That(theme.Css).StartsWith(":root{color-scheme:dark;");
-		await Assert.That(theme.Css).Contains("--bg:#0e0f11;");
+		await Assert.That(theme.Css).Contains("--bg:#121110;");
 	}
 
 	[Test]
@@ -168,13 +168,14 @@ public class ThemeResolverTests
 	}
 
 	[Test]
-	public async Task PhosphorsPartsAreTheDefaultsTokensCssShips()
+	public async Task PhosphorIsSpaceGroteskTitlesGrainAndLiftedCardsOverTheDefaults()
 	{
 		var theme = ThemeResolver.Resolve(BuiltInThemes.Phosphor);
 
-		await Assert.That(theme.Parts[ThemeStyles.FontDisplay]).IsEqualTo("ui");
-		await Assert.That(theme.Parts[ThemeStyles.Texture]).IsEqualTo("none");
-		await Assert.That(theme.Parts[ThemeStyles.FrameMarks]).IsEqualTo("none");
+		await Assert.That(theme.Parts[ThemeStyles.FontDisplay]).IsEqualTo("space");
+		await Assert.That(theme.Parts[ThemeStyles.Texture]).IsEqualTo("grain");
+		await Assert.That(theme.Parts[ThemeStyles.FrameMarks]).IsEqualTo("lifted");
+		await Assert.That(theme.Parts[ThemeStyles.FrameShadow]).IsEqualTo("lifted");
 		await Assert.That(theme.Parts[ThemeStyles.FrameEdge]).IsEqualTo("line");
 		await Assert.That(theme.Parts[ThemeStyles.OrnamentGlyphs]).IsEqualTo("none");
 		await Assert.That(theme.Parts[ThemeStyles.EffectColor]).IsEqualTo("text");

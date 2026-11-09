@@ -86,6 +86,22 @@ public class WikiHistoryLocaleTests : TrackingBunitContext
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
+	[Test]
+	public async Task DiffMode_AnnouncesSelectedView()
+	{
+		NavigateTo("/wiki/main/dragons/diff?from=1&to=2");
+		var cut = Render<SharpMUSH.Client.Pages.WikiPageDiff>(p => p
+			.Add(c => c.Ns, "main")
+			.Add(c => c.Slug, "dragons"));
+		var buttons = cut.FindAll(".wikidiff-toggle-btn");
+		await Assert.That(buttons[0].GetAttribute("aria-pressed")).IsEqualTo("true");
+		await Assert.That(buttons[1].GetAttribute("aria-pressed")).IsEqualTo("false");
+		await buttons[1].ClickAsync();
+		buttons = cut.FindAll(".wikidiff-toggle-btn");
+		await Assert.That(buttons[0].GetAttribute("aria-pressed")).IsEqualTo("false");
+		await Assert.That(buttons[1].GetAttribute("aria-pressed")).IsEqualTo("true");
+	}
+
 	// bUnit refuses to set a [SupplyParameterFromQuery] parameter directly, which is the right call: the
 	// query string is the thing under test here, so it has to arrive through the NavigationManager the way
 	// a real navigation delivers it.

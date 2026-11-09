@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Concurrent;
 using System.Text;
 using Mediator;
@@ -41,7 +42,8 @@ public class ConnectScreenSignInTests
 			})));
 		var messages = Substitute.For<IGameMessageService>();
 		var handler = new ConnectionStateEventHandler(connections, Substitute.For<IEventService>(),
-			Substitute.For<INotifyService>(), Substitute.For<IMediator>(), Substitute.For<IConnectionAnnounceService>(), messages);
+			Substitute.For<INotifyService>(), Substitute.For<IMediator>(), Substitute.For<IConnectionAnnounceService>(), messages,
+			NullLogger<ConnectionStateEventHandler>.Instance);
 
 		await handler.Handle(new ConnectionStateChangeNotification(handle, null, from,
 			IConnectionService.ConnectionState.Connected), CancellationToken.None);

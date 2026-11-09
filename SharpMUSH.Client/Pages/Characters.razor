@@ -28,7 +28,7 @@
 
     @if (_loading)
     {
-        <div class="char-grid" aria-busy="true">
+        <div class="char-grid" aria-busy="true" aria-label="@Loc["Loading"]">
             @for (var i = 0; i < 8; i++)
             {
                 <SkeletonCard Height="150" />
@@ -39,7 +39,10 @@
     {
         @* The directory request failed. "No characters found" would state something about the game
            that this page has no evidence for. *@
-        <EmptyState Class="char-empty" Failed="true">@Loc["WidUnavailable"]</EmptyState>
+        <EmptyState Class="char-empty" Failed="true">
+            <ChildContent><p role="status">@Loc["WidUnavailable"]</p></ChildContent>
+            <Action><CapsuleButton Class="char-retry" OnClick="LoadDirectoryAsync">@Loc["Retry"]</CapsuleButton></Action>
+        </EmptyState>
     }
     else if (Filtered.Count == 0)
     {
@@ -106,6 +109,13 @@
     {
         Nav.LocationChanged += OnLocationChanged;
         ReadQuery();
+        await LoadDirectoryAsync();
+    }
+
+    private async Task LoadDirectoryAsync()
+    {
+        _loading = true;
+        _onlineObjids.Clear();
         var all = Directory.ListAsync();
         var online = Directory.ListOnlineAsync();
         var result = await all;

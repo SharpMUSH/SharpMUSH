@@ -11,17 +11,19 @@
 }
 
 .kit-card-head {
-	min-height: 52px;
+	min-height: 3.25rem;
+	flex-wrap: wrap;
 	display: flex;
 	align-items: center;
 	gap: var(--space-4);
-	padding: 0 var(--space-5);
+	padding: var(--space-4) var(--space-5);
 	border-bottom: 1px solid var(--border-soft);
 }
 
 .kit-card-titles {
-	flex: 1 1 auto;
+	flex: 1 1 12rem;
 	min-width: 0;
+	overflow-wrap: anywhere;
 }
 
 .kit-card-title {
@@ -43,6 +45,9 @@
 
 .kit-card-controls {
 	display: flex;
+	flex-wrap: wrap;
+	min-width: 0;
+	max-width: 100%;
 	align-items: center;
 	gap: var(--space-3);
 }

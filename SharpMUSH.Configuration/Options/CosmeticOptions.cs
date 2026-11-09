@@ -250,6 +250,12 @@ public record CosmeticOptions(
 		Tooltip = "At most 300 characters of plain text. While it is empty, link previews use "
 			+ "onboarding_introduction, the introduction written during setup.")]
 	public string PortalDescription { get; init; } = "";
+	[SharpConfig(Name = "max_picture_columns", Category = "Cosmetic", Description = "Maximum width in character cells for telnet and MXP figures", Group = "Pictures", Min = 1, Max = 2000)]
+	public int MaxPictureColumns { get; init; } = 200;
+
+	[SharpConfig(Name = "max_picture_rows", Category = "Cosmetic", Description = "Maximum height in character cells for telnet and MXP figures; preserves aspect ratio", Group = "Pictures", Min = 1, Max = 1000)]
+	public int MaxPictureRows { get; init; } = 100;
+
 }
 
 /// <summary>What <c>portal_logo</c> and <c>portal_favicon</c> hold, and what the portal shows when they are empty.</summary>

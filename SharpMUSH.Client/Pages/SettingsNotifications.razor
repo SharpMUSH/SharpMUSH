@@ -34,6 +34,14 @@
             {
                 <p class="settings-notify-note" data-state="denied">@Loc["NotifyBlocked"]</p>
             }
+            else if (_devicesError is not null)
+            {
+                <p class="settings-notify-note" data-state="unavailable">@_devicesError</p>
+            }
+            else if (_devices is null)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" aria-label="@Loc["Loading"]" />
+            }
             else if (ThisDevice is { } own)
             {
                 <p class="settings-notify-state" data-state="on">@Loc["NotifyOnHere", own.Device]</p>
@@ -62,7 +70,12 @@
 
     <KitCard Title="@Loc["NotifyDevices"]" Sub="@Loc["NotifyDevicesSub"]">
         <div class="settings-notify-body">
-            @if (_devices is null)
+            @if (_devicesError is not null)
+            {
+                <MudAlert Severity="Severity.Error" Class="settings-notify-device-error" role="alert">@_devicesError</MudAlert>
+                <CapsuleButton Class="settings-notify-retry" Icon="@Icons.Material.Outlined.Refresh" Disabled="_busy" OnClick="RetryAsync">@Loc["Refresh"]</CapsuleButton>
+            }
+            else if (_devices is null)
             {
                 <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
             }
@@ -124,6 +137,7 @@
     private IReadOnlyList<PushDeviceResponse>? _devices;
     private bool _busy;
     private string? _error;
+    private string? _devicesError;
     private string? _message;
 
     /// <summary>This browser's entry, when it is subscribed and the account holds it with the current key.</summary>
@@ -136,8 +150,12 @@
         await RefreshAsync();
     }
 
+    private Task RetryAsync() => RunAsync(RefreshAsync);
+
     private async Task RefreshAsync()
     {
+        _devicesError = null;
+        _devices = null;
         _browser = await Push.BrowserStateAsync();
         _devices = await Push.DevicesAsync() switch
         {
@@ -146,10 +164,10 @@
         };
     }
 
-    private IReadOnlyList<PushDeviceResponse> Failed(ApiFailure failure)
+    private IReadOnlyList<PushDeviceResponse>? Failed(ApiFailure failure)
     {
-        _error = failure.Message;
-        return [];
+        _devicesError = failure.Message;
+        return null;
     }
 
     private string Describe(PushDeviceResponse device)

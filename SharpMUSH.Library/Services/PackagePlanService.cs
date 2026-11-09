@@ -370,12 +370,12 @@ public class PackagePlanService : IPackagePlanService
 					&& codeValue.Contains($"[v({baseline.Attribute})]", StringComparison.OrdinalIgnoreCase));
 
 			// Legacy attached refs may still be recalled by another package or locally
-			// edited code. Retire our ownership without deleting the shared leaf.
+			// edited code, and any attribute another package also manages is still that package's.
+			// Retire our ownership without deleting the shared leaf.
 			if ((isLegacyRef && (!ownedObjids.Contains(baseline.Objid)
 					|| legacyRefKeys.Contains((baseline.Objid, baseline.Attribute.ToUpperInvariant())) || recalledByLocalCode))
-				|| (PackageRefIndirection.IsRefAttribute(baseline.Attribute)
-					&& inputs.OtherManagedAttributes.Any(a => a.PackageId != inputs.Manifest.Name && a.Objid == baseline.Objid
-						&& a.Attribute.Equals(baseline.Attribute, StringComparison.OrdinalIgnoreCase))))
+				|| inputs.OtherManagedAttributes.Any(a => a.PackageId != inputs.Manifest.Name && a.Objid == baseline.Objid
+					&& a.Attribute.Equals(baseline.Attribute, StringComparison.OrdinalIgnoreCase)))
 			{
 				changes.Add(new PackageAttributeChange(targetRef, baseline.Objid, baseline.Attribute,
 					PackageAttributeAction.RemoveBaseline, BaseValue: baseline.BaselineValue, LiveValue: liveValue));

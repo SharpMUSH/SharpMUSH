@@ -17,7 +17,7 @@ namespace SharpMUSH.Tests.Integration.Scenes;
 
 /// <summary>
 /// Scene details: <c>+scene/set</c> writing any detail, the <c>DETAIL`&lt;KEY&gt;</c> catalogue on the Scene Logger,
-/// where details show, the list filters, the <c>FILTER`&lt;POINT&gt;`&lt;NAME&gt;</c> chains, the scene-verse package,
+/// where details show, the list filters, the <c>FILTER`&lt;POINT&gt;`&lt;NAME&gt;</c> chains, scene-safety's content warning,
 /// and <c>+scene/mark</c> on one pose. Not in parallel: the catalogue and the filters are the game's, one for every test.
 /// </summary>
 [NotInParallel]
@@ -182,48 +182,42 @@ public class SceneDetailIntegrationTests
 	}
 
 	[Test]
-	public async Task The_scene_verse_package_names_verse_canon_and_a_content_warning()
+	public async Task The_scene_safety_package_names_a_content_warning()
 	{
-		var room = await RoomAsync("VerseRoom");
-		var owner = await PlayerAsync("VerOwner", room);
-		var joiner = await PlayerAsync("VerJoin", room);
-		var verse = TestIsolationHelpers.GenerateUniqueName("Verse");
+		var room = await RoomAsync("WarnRoom");
+		var owner = await PlayerAsync("WarnOwner", room);
+		var joiner = await PlayerAsync("WarnJoin", room);
+		var warning = TestIsolationHelpers.GenerateUniqueName("Warning");
 		string scene;
 		try
 		{
-			await InstallAsync("scene-verse");
+			await InstallAsync("scene-safety");
 			var logger = await LoggerAsync();
-			await Assert.That((await Eval("scenedetail()")).Split(' ').Take(3))
-				.IsEquivalentTo(new[] { "warning", "verse", "canon" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
+			await Assert.That((await Eval("scenedetail()")).Split(' ').First()).IsEqualTo("warning")
 				.Because("the content warning comes first, so it is read first");
 			await Assert.That(await Eval("scenedetail(warning)")).IsEqualTo("Content warning");
 			await Assert.That(await Eval("scenedetail(warning,tone)")).IsEqualTo("warning");
-			await Assert.That(await Eval("scenedetail(verse,tone)")).IsEmpty();
 			await Assert.That(await Html($"u({logger}/FUN`DETAIL`PAINT,warning,Violence)")).IsEqualTo(await Html("tone(warning,Violence)"))
 				.Because("a detail's values show in its tone");
-			await Assert.That(await Html($"u({logger}/FUN`DETAIL`PAINT,verse,Marvel)")).IsEqualTo(await Html("Marvel"));
-			await Assert.That(await Eval("scenedetail(canon,many)")).IsEqualTo("1");
-			await Assert.That(await Eval("scenedetail(canon,value, Marvel | X-Men |)")).IsEqualTo("Marvel|X-Men");
+			await Assert.That(await Eval("scenedetail(warning,many)")).IsEqualTo("1");
+			await Assert.That(await Eval("scenedetail(warning,value, Gore | Violence |)")).IsEqualTo("Gore|Violence");
 
 			scene = await SceneAsync(owner);
-			await Assert.That(await Eval($"scene({scene},verse)")).IsEmpty().Because("a listed detail reads empty until it is set");
-			await As(owner, $"+scene/set verse={verse}");
-			await Assert.That(await As(owner, "+scene/set warning=Violence")).Contains("Content warning is now Violence.");
+			await Assert.That(await Eval($"scene({scene},warning)")).IsEmpty().Because("a listed detail reads empty until it is set");
+			await Assert.That(await As(owner, $"+scene/set warning={warning}")).Contains($"Content warning is now {warning}.");
 
-			var listed = await As(joiner, $"+scene/list verse={verse}");
-			await Assert.That(listed).Contains(verse).And.Contains("Violence").Because("the verse and the warning follow the title");
-			await Assert.That(await As(joiner, $"+scene/join {scene}")).Contains("Content warning: Violence");
-			var verses = await As(joiner, "+scene/verses");
-			await Assert.That(verses).Contains("Verses played now").And.Contains(verse).And.Contains("+scene/list verse=<verse>");
-			await Assert.That(await As(joiner, "+help scene verse")).Contains("+scene/verses");
+			await Assert.That(await As(joiner, $"+scene/list warning={warning}")).Contains(warning)
+				.Because("the warning follows the title");
+			await Assert.That(await As(joiner, $"+scene/join {scene}")).Contains($"Content warning: {warning}");
+			await Assert.That(await As(joiner, "+help scene warning")).Contains("+scene/set warning=");
 		}
 		finally
 		{
-			await Installer.UninstallAsync("scene-verse", force: true, CancellationToken.None);
+			await WebAppFactoryArg.Services.UninstallWithBridgesAsync("scene-safety");
 		}
 
-		await Assert.That(await Eval("scenedetail()")).IsEmpty().Because("uninstalling scene-verse takes its details away");
-		await Assert.That(await Eval($"scene({scene},verse)")).IsEqualTo(verse).Because("scenes keep the values they were given");
+		await Assert.That(await Eval("scenedetail()")).IsEmpty().Because("uninstalling scene-safety takes its detail away");
+		await Assert.That(await Eval($"scene({scene},warning)")).IsEqualTo(warning).Because("scenes keep the values they were given");
 		await Assert.That(await As(joiner, $"+scene/join {scene}")).DoesNotContain("Content warning");
 	}
 

@@ -160,12 +160,12 @@ public class GameFeatureServiceTests
 		// The Discord and World plugins are not loaded here either; their packages are someone else's test.
 		await Assert.That(packages.Where(p => !p.Available && !p.Id.StartsWith("discord", StringComparison.Ordinal)
 				&& !p.Id.StartsWith("world-grid", StringComparison.Ordinal)).Select(p => p.Id))
-			.IsEquivalentTo(["scene", "scene-help", "scene-config", "scene-verse", "scene-safety", "scene-safety-help", "scene-safety-config",
-				"radio-scene", "timeline", "timeline-help", "timeline-config", "highlights", "highlights-app", "highlights-config",
+			.IsEquivalentTo(["scene", "scene-help", "scene-config", "scene-safety", "scene-safety-help", "scene-safety-config",
+				"timeline", "timeline-help", "timeline-config", "highlights", "highlights-app", "highlights-config",
 				"scene-availability", "scene-here", "relationships-scene"])
 			.Because("highlights-app and the scene bridges call no plugin themselves, but the packages they join do");
 		await Assert.That(new Game().Features().PackagesOver("scene"))
-			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline", "highlights", "relationships-scene", "discord-scenes", "scene-availability"]);
+			.IsEquivalentTo(["scene", "scene-safety", "timeline", "highlights", "relationships-scene", "discord-scenes", "scene-availability"]);
 	}
 
 	/// <summary>

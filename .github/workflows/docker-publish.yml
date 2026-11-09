@@ -2,7 +2,8 @@ name: Publish Docker Images
 
 # Publishing a GitHub Release whose tag is vX.Y.Z (Releases > Draft a new release) builds the
 # images at that tag and pushes them as :X.Y.Z, plus :X.Y, :X and :latest while it is the newest
-# release under each (.github/scripts/release_images.py). A prerelease pushes only :X.Y.Z-rc.N.
+# release under each (.github/scripts/release_images.py). A prerelease pushes :X.Y.Z-rc.N, and
+# move-dev then points :dev at it when it is main's newest commit.
 # Releases with other tags (plugin-nuget/v*, sharpmush-templates/v*) are left to their own workflows.
 on:
   release:
@@ -20,6 +21,10 @@ jobs:
   build-and-push:
     needs: [build-and-test]
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+      on_main: ${{ steps.meta.outputs.on_main }}
     # Releases published close together push one after the other, so the moving tags end on the
     # newest. GitHub keeps one run waiting per group: a third release published while one runs and
     # one waits replaces the waiting one, which then needs a manual run on its tag. Set on the job,
@@ -66,9 +71,34 @@ jobs:
             echo "::error::CHANGELOG.md has no '## [$VERSION]' section."
             exit 1
           fi
+          # A manual run carries no release event: read the tag's published release instead.
+          if [[ -z "$PRERELEASE" ]]; then
+            if ! PRERELEASE=$(curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" \
+                "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/tags/v$VERSION" |
+                python3 -c 'import json, sys; print(str(json.load(sys.stdin)["prerelease"]).lower())'); then
+              echo "::error::Could not read the GitHub Release for v$VERSION (none is published, or the API call above failed)."
+              exit 1
+            fi
+          fi
           if [[ "$PRERELEASE" == true && "$VERSION" != *-* ]]; then
             echo "::error::A prerelease's tag needs a suffix, like v$VERSION-rc.1, so it cannot move :latest."
             exit 1
+          fi
+          if [[ "$PRERELEASE" != true && "$VERSION" == *-* ]]; then
+            echo "::error::v$VERSION has a prerelease suffix; mark its GitHub Release as a pre-release."
+            exit 1
+          fi
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+          # Avoid queueing prereleases already behind main. This is only an early filter:
+          # main can advance during the image builds, so move-dev checks again under the lock.
+          if [[ "$PRERELEASE" == true ]]; then
+            if ! MAIN=$(git ls-remote --exit-code origin refs/heads/main); then
+              echo "::error::Could not read main's head from origin."
+              exit 1
+            fi
+            if [[ "${MAIN%%[[:space:]]*}" == "$GITHUB_SHA" ]]; then
+              echo "on_main=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
           python3 .github/scripts/release_images.py tags "$VERSION"
 
@@ -182,3 +212,46 @@ jobs:
               echo "\`python3 .github/scripts/release_images.py bump ${SUFFIXES%% *}\`"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # A prerelease of main's newest commit becomes :dev. This job holds the dev pipeline's lock
+  # (docker-dev.yml's publish job), so a main build never writes :dev, or assembles the all-in-one
+  # image from the :dev bases, while this moves them; and it checks main's head inside the lock, so
+  # a stale prerelease cannot overwrite a newer main build. Retain pending jobs so a delayed
+  # prerelease cannot evict the newest main publication before discovering it is stale.
+  # GitHub allows 100 pending jobs; arrivals beyond that cap need a manual rerun.
+  # Keep this policy in sync with docker-dev.yml publish. Each move copies the manifest
+  # on Docker Hub; nothing is rebuilt.
+  move-dev:
+    needs: [build-and-push]
+    if: needs.build-and-push.outputs.prerelease == 'true' && needs.build-and-push.outputs.on_main == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: docker-dev-refs/heads/main
+      cancel-in-progress: false
+      queue: max
+    steps:
+      - name: Log in to DockerHub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Point :dev at the prerelease
+        env:
+          VERSION: ${{ needs.build-and-push.outputs.version }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          MAIN=$(curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/commits/main" |
+            python3 -c 'import json, sys; print(json.load(sys.stdin)["sha"])')
+          if [[ "$MAIN" != "$GITHUB_SHA" ]]; then
+            echo "main moved to $MAIN after v$VERSION ($GITHUB_SHA) was published; skipping prerelease promotion without changing :dev." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          for image in server renderer socketserver edge allinone; do
+            docker buildx imagetools create -t "sharpmush/sharpmush-$image:dev" "sharpmush/sharpmush-$image:$VERSION"
+          done
+          echo "\`:dev\` now names $VERSION on every image." >> "$GITHUB_STEP_SUMMARY"

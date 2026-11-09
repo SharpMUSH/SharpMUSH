@@ -100,7 +100,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			if (TryFindSocketCommand(parser, command, out var socketCommand))
 				return await services.Commands.SocketAsync(visitor, parser, src, context, command, socketCommand);
 
-			await LogCommandAsync(visitor, commandText);
+			await LogCommandAsync(visitor, commandText, command);
 
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is long handle)
 			{
@@ -281,7 +281,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	/// <c>log_commands</c> is on, and always a SUSPECT executor's, unless the executor is NO_LOG.
 	/// Socket commands are not logged, as in Penn. Passwords are starred out first.
 	/// </summary>
-	private async ValueTask LogCommandAsync(SharpMUSHParserVisitor visitor, MString commandText)
+	private async ValueTask LogCommandAsync(SharpMUSHParserVisitor visitor, MString commandText, string command)
 	{
 		var parser = visitor.Parser;
 		if (await parser.CurrentState.ExecutorObject(services.Mediator) is not AnySharpObject executor)
@@ -291,12 +291,24 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		if (!(visitor.Configuration.CurrentValue.Log.LogCommands || suspect) || await executor.HasFlag("NO_LOG"))
 			return;
 
+		// Resolve the built-in name using dispatch's lookup rules, including abbreviations and aliases.
+		var dialect = visitor.Configuration.CurrentValue.Compatibility.Dialect;
+		var resolvedCommand = FindBuiltIn(parser, command, dialect).Definition?.Attribute?.Name;
+		if (resolvedCommand is null)
+		{
+			// Dispatch splits on literal spaces. For logging only, also recognize a password command
+			// followed by a tab or newline so a malformed attempt cannot expose its arguments.
+			var tokenEnd = 0;
+			while (tokenEnd < command.Length && !char.IsWhiteSpace(command[tokenEnd])) tokenEnd++;
+			if (tokenEnd < command.Length)
+				resolvedCommand = FindBuiltIn(parser, command[..tokenEnd], dialect).Definition?.Attribute?.Name;
+		}
 		var location = (await executor.Where()).Object();
 		using (visitor.Logger.BeginScope(new Dictionary<string, string> { ["Category"] = "Command" }))
 		{
 			visitor.Logger.LogInformation("CMD: {Suspect} {Executor} in {Location}: {Command}",
 				suspect ? "SUSPECT" : "", Unparse(executor.Object()), Unparse(location),
-				PasswordFilter(commandText.ToPlainText()));
+				RedactCommandForLogging(commandText.ToPlainText(), resolvedCommand));
 		}
 	}
 
@@ -305,24 +317,54 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	/// <summary>
 	/// PennMUSH's <c>passwd_filter</c> (<c>src/game.c:1053</c>): <c>@password old=new</c> keeps the
 	/// command and stars out both passwords; <c>@newpassword</c> and <c>@pcreate</c> star out what
-	/// follows the <c>=</c>.
+	/// follows the <c>=</c>. The resolved name covers every accepted abbreviation and alias without
+	/// changing the typed name or leading whitespace. Without an equals sign, all argument text is
+	/// masked because a malformed command can still contain a password. The regex fallback retains
+	/// redaction for unrecognized or disabled password-command spellings that were already filtered.
 	/// </summary>
-	internal static string PasswordFilter(string command)
+	internal static string RedactCommandForLogging(string command, string? resolvedCommand = null)
 	{
+		var changesOwnPassword = string.Equals(resolvedCommand, "@PASSWORD", StringComparison.OrdinalIgnoreCase);
+		if (changesOwnPassword
+			|| string.Equals(resolvedCommand, "@NEWPASSWORD", StringComparison.OrdinalIgnoreCase)
+			|| string.Equals(resolvedCommand, "@PCREATE", StringComparison.OrdinalIgnoreCase))
+		{
+			var equals = command.IndexOf('=');
+			var leftEnd = equals < 0 ? command.Length : equals;
+			var right = equals < 0 ? "" : new string('*', command.Length - equals - 1);
+			if (equals >= 0 && !changesOwnPassword) return $"{command[..(equals + 1)]}{right}";
+
+			var argumentStart = 0;
+			while (argumentStart < leftEnd && char.IsWhiteSpace(command[argumentStart])) argumentStart++;
+			while (argumentStart < leftEnd && !char.IsWhiteSpace(command[argumentStart])) argumentStart++;
+			// Keep the first separator; all remaining argument text is secret, including extra spaces.
+			// No-space forms such as @pas=new have an empty left side and start at the '=' itself.
+			if (argumentStart < leftEnd) argumentStart++;
+			var left = $"{command[..argumentStart]}{new string('*', leftEnd - argumentStart)}";
+			return equals < 0 ? left : $"{left}={right}";
+		}
+
 		var password = PasswordCommand().Match(command);
 		if (password.Success)
 			return $"{password.Groups[1].Value} {new string('*', password.Groups[2].Length)}={new string('*', password.Groups[3].Length)}";
 
 		var newPassword = NewPasswordCommand().Match(command);
-		return newPassword.Success
-			? $"{newPassword.Groups[1].Value}={new string('*', newPassword.Groups[2].Length)}"
+		if (newPassword.Success)
+			return $"{newPassword.Groups[1].Value}={new string('*', newPassword.Groups[2].Length)}";
+
+		var unfinished = UnfinishedPasswordCommand().Match(command);
+		return unfinished.Success
+			? $"{unfinished.Groups[1].Value}{new string('*', unfinished.Groups[2].Length)}"
 			: command;
 	}
 
-	[GeneratedRegex(@"^(@pass.*?)\s([^=]*)=(.*)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+	[GeneratedRegex(@"^(\s*@(?:pass|newp|pcreate)\S*\s)(.*)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+	private static partial Regex UnfinishedPasswordCommand();
+
+	[GeneratedRegex(@"^(\s*@pass.*?)\s([^=]*)=(.*)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
 	private static partial Regex PasswordCommand();
 
-	[GeneratedRegex(@"^(@(?:newp|pcreate)[^=]*)=(.*)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+	[GeneratedRegex(@"^(\s*@(?:newp|pcreate)[^=]*)=(.*)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
 	private static partial Regex NewPasswordCommand();
 
 	/// <summary>

@@ -82,6 +82,27 @@ public class ImportPreviewWorkerTests
 	}
 
 	/// <summary>
+	/// A call to a function alias the uploaded configuration makes is not reported as a missing function: the preview
+	/// checks the softcode against the configuration it will promote.
+	/// </summary>
+	[Test]
+	public async Task ACallToAnAliasTheConfigurationMakesIsNotReportedMissing()
+	{
+		var (journal, source, _) = await SetupAsync();
+		var text = await File.ReadAllTextAsync(source);
+		await Assert.That(text).Contains("A shiny widget%r");
+		await File.WriteAllTextAsync(source, text.Replace("A shiny widget%r", "A shiny widget [plussrx(1,2)] [nosuchfnx(1)]%r"));
+		var coordinator = new ImportPreviewCoordinator(journal, NullLogger<ImportPreviewCoordinator>.Instance);
+		var preview = await coordinator.PreviewAsync(new DatabaseImportFiles(source, Format: DatabaseImportFormat.RhostMUSH),
+			"function_alias plussrx add");
+		await Assert.That(preview.Failure).IsNull();
+		var warnings = preview.Result!.Warnings.Texts().ToList();
+		await Assert.That(warnings).Contains(warning => warning.StartsWith("Softcode: nosuchfnx()"))
+			.Because("a function nothing names is still reported");
+		await Assert.That(warnings).DoesNotContain(warning => warning.StartsWith("Softcode: plussrx()"));
+	}
+
+	/// <summary>
 	/// A gzipped dump, as PennMUSH writes by default, previews as the plain one does, and the configuration lines the
 	/// import could not carry over are in the report: the include it did not follow as a warning, the directive
 	/// SharpMUSH has no option for as a note.

@@ -583,9 +583,9 @@
 	display: none;
 }
 .nav-group-label {
-	font-family: var(--font-mono);
+	font-family: var(--font-kicker);
 	font-size: var(--text-xs);
-	letter-spacing: 0.16em;
+	letter-spacing: var(--kicker-tracking);
 	text-transform: uppercase;
 	color: var(--text-faint);
 	padding: var(--space-2) var(--space-4) var(--space-3);
@@ -1704,6 +1704,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	/* Bottom command-terminal drawer: svh keeps the input row on-screen under the
 	   address bar without resizing on scroll. */
 	.phosphor-terminal {
+		bottom: var(--bottomnav-clearance, 0px);
 		height: 70vh;
 		height: 70svh;
 		max-height: 70svh;
@@ -1717,7 +1718,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 		right: 0;
 		bottom: 0;
 		z-index: 40;
-		height: 58px;
+		height: calc(3.625rem + env(safe-area-inset-bottom));
 		padding-bottom: env(safe-area-inset-bottom);
 		background: color-mix(in srgb, var(--surface-3) 92%, transparent);
 		backdrop-filter: blur(10px);
@@ -1732,13 +1733,13 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	.phosphor-shell--bottomnav .phosphor-main {
 		padding-bottom: var(--bottomnav-clearance);
 	}
-	/* When the terminal drawer is open it grows to 70svh and covers the bottom bar,
-	   so the content offset must match the drawer (not the desktop --terminal-drawer-height).
+	/* Keep the drawer's connection controls above navigation and reserve both heights
+	   in the page content (instead of the desktop --terminal-drawer-height).
 	   Listed after the bar rule so it wins at equal specificity. */
 	.phosphor-main--terminal,
 	.phosphor-shell--bottomnav .phosphor-main--terminal {
-		padding-bottom: 70vh;
-		padding-bottom: 70svh;
+		padding-bottom: calc(70vh + var(--bottomnav-clearance, 0px));
+		padding-bottom: calc(70svh + var(--bottomnav-clearance, 0px));
 	}
 }
 
@@ -1951,7 +1952,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 }
 
 .boot-bottomnav {
-	height: 58px;
+	height: calc(3.625rem + env(safe-area-inset-bottom));
 	margin-top: auto;
 	border-top: 1px solid var(--border-soft);
 }

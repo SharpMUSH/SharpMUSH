@@ -41,6 +41,7 @@
 
 .sc-editor-toolbar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-3);
     flex-shrink: 0;
@@ -48,6 +49,11 @@
     padding: var(--space-3) var(--space-5);
     border-bottom: 1px solid var(--border-soft);
     background: var(--surface-3);
+}
+
+/* Status messages use portal colours rather than inheriting Monaco's dark code canvas. */
+.sc-pane-editor ::deep .sc-save-feedback {
+    background: var(--surface);
 }
 
 /* ── Pane bodies ── */
@@ -217,7 +223,7 @@
 
 
 /* ── Toolbar breadcrumb: &FOO`BAR`BAZ, with each branch a link to that attribute ── */
-/* Only the attribute path gives way when the toolbar runs short; the buttons keep their size. */
+/* Controls keep their size and wrap when the editor pane is narrow. */
 .sc-editor-toolbar ::deep > * {
     flex-shrink: 0;
 }
@@ -225,8 +231,10 @@
     font-size: var(--text-sm);
     color: var(--text-faint);
 }
-.sc-crumbs {
+.sc-editor-toolbar > .sc-crumbs {
     flex-shrink: 1;
+    max-width: 100%;
+    overflow: hidden;
 }
 .sc-crumb-obj {
     max-width: 10rem;
@@ -359,5 +367,5 @@
         display: none;
     }
     /* The editor toolbar has many controls — let them wrap instead of clipping. */
-    .sc-editor-toolbar { flex-wrap: wrap; min-height: 0; }
+    .sc-editor-toolbar { min-height: 0; }
 }

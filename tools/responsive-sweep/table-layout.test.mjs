@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright-core';
 
-// Radio's four-column table, rendered by MarkupString 2.21.0 at 78 cells. Frequency
+// Radio's four-column table, rendered by the pinned MarkupString at 78 cells. Frequency
 // and You are nowrap; About grows. Keep the percentage colgroup: dropping it masks
 // the inherited word-break bug by changing the table's sizing algorithm.
 const radio = readFileSync(new URL('./fixtures/radio-table.html', import.meta.url), 'utf8');
