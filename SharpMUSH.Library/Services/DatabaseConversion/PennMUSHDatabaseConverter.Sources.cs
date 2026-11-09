@@ -186,7 +186,7 @@ public partial class PennMUSHDatabaseConverter
 		CancellationToken cancellationToken)
 	{
 		var holders = source.Objects
-			.Where(o => (o.Permissions.Count > 0 || o.Overrides.Count > 0) && context.DbrefMapping.ContainsKey(o.DBRef))
+			.Where(o => (o.Permissions.Count > 0 || o.Overrides.Count > 0 || o.DeniedPowers.Count > 0) && context.DbrefMapping.ContainsKey(o.DBRef))
 			.ToList();
 		if (holders.Count == 0) return;
 
@@ -218,6 +218,18 @@ public partial class PennMUSHDatabaseConverter
 
 				await _roleRegistry.Value.SetObjectOverrideAsync(number, scope, state, effectiveReach);
 			}
+			// Legacy plugin-provided denies run last so a new allow cannot undo a restriction.
+			foreach (var name in holder.DeniedPowers)
+			{
+				if (GamePowers.Find(name) is not { } power)
+				{
+					context.NoteUnconverted(ImportWarningKind.Powers, $"Depower of {name}, which is not a SharpMUSH power", holder.DBRef);
+					continue;
+				}
+
+				await _roleRegistry.Value.SetObjectOverrideAsync(number, power.Scope, PermissionState.Deny);
+			}
+
 		}
 
 		await _mediator.Send(new InvalidateGrantsCommand(null), cancellationToken);

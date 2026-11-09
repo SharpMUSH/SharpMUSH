@@ -13,6 +13,20 @@ namespace SharpMUSH.Tests.Services;
 /// </summary>
 public class RhostDatabaseTranslatorTests
 {
+	/// <summary>Existing plugins retain the single-power constructor, property, and deconstruction.</summary>
+	[Test]
+	public async Task LegacyPowerMappingRemainsUsable()
+	{
+		var mapping = new RhostPowerMapping(2, 4, "BOOT", "Boot");
+		var (word, shift, name, power) = mapping;
+		await Assert.That((word, shift, name, power)).IsEqualTo((2, 4, "BOOT", "Boot"));
+		await Assert.That(mapping.Scopes).IsEquivalentTo(new[] { GamePowers.Find("Boot")!.Scope });
+		await Assert.That((mapping with { Power = "Search" }).Power).IsEqualTo("Search");
+		await Assert.That(new RhostPowerMapping(2, 4, "CUSTOM", null).Power).IsNull();
+		await Assert.That(Enumerable.Range(0, 5).Select(level => RhostNameTables.PowerLevel((uint)level)))
+			.IsEquivalentTo(new[] { "none", "guildmaster", "architect", "councilor", "none" });
+	}
+
 	private static async Task<PennMUSHDatabase> TranslateAsync()
 		=> await RhostDatabaseTranslator.ReadAsync(RhostFlatfileReaderTests.FlatfilePath, RhostFlatfileReaderTests.MailPath,
 			RhostFlatfileReaderTests.FolderPath);

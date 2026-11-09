@@ -40,7 +40,22 @@ public sealed record RhostBitMapping(
 /// Whether its level bounds whose things it acts on, which the import carries as a reach (<c>help @permission reach</c>).
 /// </param>
 /// <param name="Skip">Why it is not imported, when it lands on nothing.</param>
-public sealed record RhostPowerMapping(int Word, int Shift, string Name, string[] Scopes, bool Ranked, string? Skip = null);
+public sealed record RhostPowerMapping(int Word, int Shift, string Name, string[] Scopes, bool Ranked, string? Skip = null)
+{
+	/// <summary>Constructs the legacy single-power representation retained for existing plugins.</summary>
+	public RhostPowerMapping(int Word, int Shift, string Name, string? Power)
+		: this(Word, Shift, Name, GamePowers.Find(Power ?? Name) is { } power ? [power.Scope] : [], false)
+	{
+		this.Power = Power;
+	}
+
+	/// <summary>The legacy single-power view. Use Scopes for complete permission mappings, including depowers.</summary>
+	public string? Power { get; init; } = Scopes.Select(GamePowers.ForScope).FirstOrDefault(power => power is not null)?.Name;
+
+	/// <summary>Deconstructs the legacy single-power representation for existing plugins.</summary>
+	public void Deconstruct(out int Word, out int Shift, out string Name, out string? Power)
+		=> (Word, Shift, Name, Power) = (this.Word, this.Shift, this.Name, this.Power);
+}
 
 /// <summary>A RhostMUSH attribute flag (<c>AF_*</c>) and the SharpMUSH attribute flag it becomes, if any.</summary>
 public sealed record RhostAttributeFlagMapping(uint Bit, string Name, string? Flag, string? Note = null);
@@ -298,6 +313,15 @@ public static class RhostNameTables
 
 	private static IEnumerable<RhostPowerMapping> Fields(int word, (string Name, string[] Scopes, bool Ranked, string? Skip)[] fields)
 		=> fields.Select((field, index) => new RhostPowerMapping(word, index * 2, field.Name, field.Scopes, field.Ranked, field.Skip));
+
+	/// <summary>The legacy display names of a power's two-bit level, retained for existing plugins.</summary>
+	public static string PowerLevel(uint level) => level switch
+	{
+		1 => "guildmaster",
+		2 => "architect",
+		3 => "councilor",
+		_ => "none"
+	};
 
 	/// <summary>The flag word 2 bits whose flags also take permissions away (<see cref="RestrictingFlags"/>).</summary>
 	public static readonly IReadOnlyList<(uint Bit, string Name, IReadOnlyList<string> Denies)> RestrictingBits =

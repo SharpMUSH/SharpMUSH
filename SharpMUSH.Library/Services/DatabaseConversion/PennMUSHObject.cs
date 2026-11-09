@@ -133,6 +133,10 @@ public class PennMUSHObject
 	/// </summary>
 	public List<PennMUSHOverride> Overrides { get; init; } = [];
 
+	/// <summary>Legacy power-name denies supplied by plugins. Imports still apply them; new readers use Overrides.</summary>
+	public List<string> DeniedPowers { get; init; } = [];
+
+
 	/// <summary>
 	/// Roles the object holds by slug, beyond those its flags and powers stand for: a RhostMUSH staff level
 	/// becomes one, from <see cref="PennMUSHDatabase.Roles"/>.
