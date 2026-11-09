@@ -589,7 +589,7 @@ public static partial class RhostDatabaseTranslator
 		foreach (var scope in mapping.Scopes)
 		{
 			var next = new PennMUSHOverride(scope, state, reach is not null && PortalPermission.TakesReach(scope) ? reach : null);
-			if (landed.TryGetValue(scope, out var held) && held.State != next.State
+			if (landed.TryGetValue(scope, out var held) && held is not null && held.State != next.State
 					&& (held.State == PermissionState.Deny ? held : next) is { Reach: { } kept })
 			{
 				// One override per scope: the deny stays, and outside its reach the roles decide, not the power.
@@ -610,7 +610,7 @@ public static partial class RhostDatabaseTranslator
 					: $", reaching {reach}; {string.Join(" and ", unreached)} takes no reach, so it holds at every rank";
 		report.Note(ImportWarningKind.Powers,
 			$"{kind} {mapping.Name}: imported as {(state == PermissionState.Allow ? "an allow" : "a deny")} on {string.Join(" and ", mapping.Scopes)}{how}",
-			dbref);
+			dbref, needsAction: state == PermissionState.Allow && unreached.Length > 0);
 	}
 
 	/// <summary>Of two overrides on one scope, the one that does more: a deny, else the one with the wider reach.</summary>

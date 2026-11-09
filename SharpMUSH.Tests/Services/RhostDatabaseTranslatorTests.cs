@@ -253,6 +253,40 @@ public class RhostDatabaseTranslatorTests
 	public async Task ADepowerBeatsThePowerItTakes()
 		=> await Assert.That(Mapped(false, (3, 2, 1), (6, 2, 1))).IsEqualTo("-game.tport_anywhere -player.teleport");
 
+	/// <summary>Two allows retain the higher rank; two denies retain the lower, wider rank.</summary>
+	[Test]
+	public async Task SameStateOverridesKeepTheWiderReach()
+	{
+		await Assert.That(Mapped(false, (3, 2, 1), (2, 20, 3))).IsEqualTo("+game.tport_anywhere/councilor");
+		await Assert.That(Mapped(false, (6, 2, 2), (6, 4, 3))).Contains("-player.teleport/guildmaster");
+	}
+
+	/// <summary>FUBAR denies every everyday permission without a reach.</summary>
+	[Test]
+	public async Task FubarDeniesEverydayPermissions()
+	{
+		var actual = Mapped(0x10000, false).Split(' ');
+		await Assert.That(actual).IsEquivalentTo(PortalPermission.AllowedUnlessDenied.Select(scope => $"-{scope}"));
+	}
+
+	/// <summary>A ranked allow widened to all targets needs staff action; a widened deny remains informational.</summary>
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task DroppedReachRequiresActionOnlyForAllows(bool deny)
+	{
+		var toggles = new uint[8];
+		// EXAMINE_ALL and EXAMINE both map to game.see_all, which cannot take a reach.
+		var mapping = (deny ? RhostNameTables.Depowers : RhostNameTables.Powers).Single(m => m.Name == (deny ? "EXAMINE" : "EXAMINE_ALL"));
+		toggles[mapping.Word] = 2u << mapping.Shift;
+		var source = new RhostFlatfileObject { DBRef = 5, Name = "Powered", Flags = [(uint)RhostObjectType.Player, 0, 0, 0], Toggles = toggles };
+		var report = new RhostDatabaseTranslator.Report();
+		report.Line(ImportWarningKind.Powers, "Test import");
+		RhostDatabaseTranslator.MapPowers(source, report);
+		var note = report.Finish().Single(n => n.Text.Contains("takes no reach") || n.Text.Contains("no reach can bound it"));
+		await Assert.That(note.NeedsAction).IsEqualTo(!deny);
+	}
+
 	[Test]
 	public async Task AttributesTakeSharpMUSHsNamesAndFlags()
 	{

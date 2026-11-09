@@ -208,14 +208,15 @@ public partial class PennMUSHDatabaseConverter
 
 			foreach (var (scope, state, reach) in holder.Overrides)
 			{
+				var effectiveReach = reach;
 				if (reach is not null && !roles.Contains(reach))
 				{
 					context.NoteUnconverted(ImportWarningKind.Powers, $"Reach {reach} on {scope}, a role this game does not have, so it reaches player",
 						holder.DBRef);
+					effectiveReach = BuiltInRoles.PlayerSlug;
 				}
 
-				await _roleRegistry.Value.SetObjectOverrideAsync(number, scope, state,
-					reach is null || roles.Contains(reach) ? reach : BuiltInRoles.PlayerSlug);
+				await _roleRegistry.Value.SetObjectOverrideAsync(number, scope, state, effectiveReach);
 			}
 		}
 

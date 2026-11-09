@@ -1,4 +1,5 @@
 using System.Text;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.DatabaseConversion.TinyMux;
 
@@ -65,6 +66,24 @@ public class TinyMuxDatabaseReaderTests
 		await Assert.That(Object(database, 4).Powers).Contains("See_All").And.Contains("Builder");
 		await Assert.That(Object(database, 4).Permissions).IsEquivalentTo(["game.chown.any", "control.all"]);
 		await Assert.That(Object(database, 10).Permissions).IsEquivalentTo(["server.operate"]);
+	}
+
+	/// <summary>SLAVE restricts players, not other object types, and reports the added denies.</summary>
+	[Test]
+	[Arguments(3, true)]
+	[Arguments(1, false)]
+	public async Task SlaveOverridesApplyOnlyToPlayers(int type, bool player)
+	{
+		var text = $"+X996101\n!5\n\"Slave\"\n-1\n-1\n-1\n-1\n-1\n-1\n5\n-1\n0\n{type}\n2147483648\n0\n0\n0\n<\n***END OF DUMP***\n";
+		using var stream = new MemoryStream(Encoding.UTF8.GetBytes(text));
+		var database = TinyMuxDatabaseReader.Read(stream);
+		var obj = Object(database, 5);
+		await Assert.That(obj.Flags).Contains("SLAVE");
+		await Assert.That(obj.Overrides.Select(o => o.Scope)).IsEquivalentTo(player
+			? new[] { "player.create", "player.modify", "player.chown", "player.force", "player.password" }
+			: Array.Empty<string>());
+		await Assert.That(obj.Overrides.All(o => o.State == PermissionState.Deny && o.Reach is null)).IsTrue();
+		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Flag SLAVE: also imported as a deny"))).IsEqualTo(player);
 	}
 
 	/// <summary>Only the custom definitions some object uses are created.</summary>
