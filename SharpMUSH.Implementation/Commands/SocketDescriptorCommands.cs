@@ -685,7 +685,7 @@ public static class SocketOptions
 		var answer = feature switch
 		{
 			TerminalFeatures.KittyGraphics => probe?.KittyGraphics,
-			TerminalFeatures.Sixel => probe?.Sixel,
+			TerminalFeatures.Sixel => probe?.SixelReply,
 			_ => null
 		};
 		if (answer is { } supported) return supported ? "supported (terminal reply)" : "unsupported (terminal reply)";
