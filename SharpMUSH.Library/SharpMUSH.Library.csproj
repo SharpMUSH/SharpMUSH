@@ -89,7 +89,7 @@
 
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="1.9.0" />
-    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
     <PackageReference Include="DotNext" Version="6.12.1" />
     <PackageReference Include="Markdig" Version="1.6.0" />
     <PackageReference Include="DotNext.Threading" Version="6.12.1" />

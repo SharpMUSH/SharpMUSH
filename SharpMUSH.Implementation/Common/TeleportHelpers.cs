@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Configuration;
 using Mediator;
 using SharpMUSH.Configuration.Options;
@@ -219,6 +220,13 @@ public static class TeleportHelpers
 		var hasPrivs = await executor.IsWizard() || await executor.IsRoyalty();
 		var telAnywhere = hasPrivs || await executor.HasPowerOver("Tport_Anywhere", destinationContainer.WithExitOption());
 		var telAnything = hasPrivs || await executor.HasPowerOver("Tport_Anything", target);
+
+		// player.teleport: a teleport that only control or JUMP_OK allows. The powers and Hasprivs do not need it.
+		if (!telAnywhere && !telAnything && !await executor.CanOver(PortalPermission.PlayerTeleport, target))
+		{
+			await services.NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerTeleport));
+			return;
+		}
 
 		// wiz.c:442: without Tel_Anywhere, another player is not a destination at all — the
 		// /INSIDE question below only arises for someone who could have gone there.

@@ -1,5 +1,6 @@
 ﻿using SharpMUSH.Implementation.Common;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Definitions;
@@ -135,6 +136,8 @@ public partial class Functions
 	private async ValueTask<CallState> EmitOnChannel(IMUSHCodeParser parser, bool spoof)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await executor.Can(PortalPermission.PlayerChat))
+			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.PlayerChat);
 
 		return await ChannelEmit.Handle(PermissionService, ChannelPermissions, Mediator, NotifyService, executor,
 			parser.CurrentState.Arguments["0"].Message,

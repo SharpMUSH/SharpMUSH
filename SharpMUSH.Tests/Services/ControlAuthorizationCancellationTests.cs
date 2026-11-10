@@ -53,6 +53,9 @@ public class ControlAuthorizationCancellationTests
 			await Task.Delay(Timeout.Infinite, linked.Token);
 			throw new InvalidOperationException("Blocked authorization read must cancel.");
 		}
+		// The zone and SHARED paths need player.modify, which an object with no roles does not hold.
+		var modify = ObjectGrants.For(40, true, [], [], new Dictionary<string, PermissionState> { [PortalPermission.PlayerModify] = PermissionState.Allow }, null, []);
+		actor.Object().Grants = new(_ => Task.FromResult(modify));
 		var flagReads = 0;
 		async IAsyncEnumerable<SharpObjectFlag> Flags([EnumeratorCancellation] CancellationToken token = default)
 		{
