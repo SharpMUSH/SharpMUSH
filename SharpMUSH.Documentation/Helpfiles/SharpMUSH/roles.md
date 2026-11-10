@@ -219,7 +219,7 @@ Every object holds these unless a role or override denies them, so nobody notice
 | `player.teleport` | @teleport by control or JUMP_OK; takes a reach, measured on what is moved |
 | `player.password` | @password |
 
-A role's Deny takes one from everyone holding that role, unless another role or an override allows it.
+A role's Deny takes one from everyone holding that role, unless an override or a role other than `everyone` allows it.
 
 ## What still needs game.wizard
 
