@@ -106,6 +106,7 @@ public sealed record PermissionRefusal(string Key, string Format, params object[
 		nameof(ErrorMessages.Notifications.PermissionDeniedShielded) => $"TARGET HOLDS {Arg(1)}",
 		nameof(ErrorMessages.Notifications.PermissionDeniedNotReceiving) => "NOT RECEIVING",
 		nameof(ErrorMessages.Notifications.PermissionDeniedLinkedExit) => "NOT CONTROLLED, ALREADY LINKED",
+		nameof(ErrorMessages.Notifications.PermissionDeniedNoModify) => "NOMODIFY",
 		nameof(ErrorMessages.Notifications.PermissionDeniedExamine) => "CANNOT EXAMINE",
 		nameof(ErrorMessages.Notifications.PermissionDeniedLocate) => "CANNOT LOCATE",
 		nameof(ErrorMessages.Notifications.PermissionDeniedCannotUse) => $"CANNOT USE {Arg(0)}",

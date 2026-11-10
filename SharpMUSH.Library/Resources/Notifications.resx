@@ -231,6 +231,9 @@
   <data name="PermissionDeniedLinkedExit" xml:space="preserve">
     <value>Permission denied. You do not control {0}, and it already leads somewhere.</value>
   </data>
+  <data name="PermissionDeniedNoModify" xml:space="preserve">
+    <value>Permission denied. {0} is set NOMODIFY.</value>
+  </data>
   <data name="PermissionDeniedAliasMembers" xml:space="preserve">
     <value>Permission denied. {0} does not show its members to you.</value>
   </data>
