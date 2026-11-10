@@ -1,16 +1,3 @@
 {
- "steps": [
-  {
-   "key": "20-admin-commands/admin.search#2",
-   "command": "@stats"
-  },
-  {
-   "key": "20-admin-commands/admin.wizard#3",
-   "command": "examine *Alice"
-  },
-  {
-   "key": "36-decompose/dc.colours#2",
-   "command": "think [decompose(ansi(#ff0000,x))]|[decompose(ansi(/#00ff00,x))]|[decompose(ansi(#ff0000/#0000ff,x))]|[decompose(ansi(+red,x))]"
-  }
- ]
+ "steps": []
 }

@@ -7,7 +7,8 @@ namespace SharpMUSH.Library.Plugins;
 /// <c>binaries.min_server_version</c> is checked against (Phase 4). It tracks the
 /// shared contract surface in <c>SharpMUSH.Library</c> that plugin DLLs bind to,
 /// so a package built for a newer contract is refused on an older server rather
-/// than failing obscurely at load. Bumped when the plugin contract changes.
+/// than failing obscurely at load. Within a major the contract only grows; a breaking change bumps the major
+/// (<c>tools/plugin-contract/check.sh</c>, run in CI, fails one that does not).
 /// </summary>
 public static class PluginContractVersion
 {

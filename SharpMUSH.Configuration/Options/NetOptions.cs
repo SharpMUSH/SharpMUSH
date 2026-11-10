@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace SharpMUSH.Configuration.Options;
 
 /// <remarks>
@@ -7,6 +9,7 @@ namespace SharpMUSH.Configuration.Options;
 /// from a PennMUSH <c>mush.cnf</c> got <c>true</c>. The schema reads <c>Default()</c> now (#1246), so an
 /// omitted argument is a compile error instead.
 /// </remarks>
+[method: JsonConstructor]
 public record NetOptions(
 	[property: SharpConfig(Name = "mud_name", Category = "Net", Description = "Name of your MUSH as displayed to players", Group = "General", Order = 1)]
 	string MudName,
@@ -82,4 +85,88 @@ public record NetOptions(
 
 	[property: SharpConfig(Name = "negotiation_wait_ms", Category = "Net", Description = "Maximum wait in milliseconds for initial client protocol replies before registration and the connect screen; early login commands are queued during this window. 0 skips waiting. Applies to new telnet connections", Group = "Network Protocol", Order = 8, Min = 0, Max = 60000)]
 	uint NegotiationWaitMilliseconds
-);
+)
+{
+	/// <summary>The constructor published with plugin contract 3.0.0.</summary>
+	public NetOptions(
+		string MudName,
+		string? MudUrl,
+		string? IpAddr,
+		string? SslIpAddr,
+		uint Port,
+		uint SslPort,
+		uint PortalPort,
+		uint SslPortalPort,
+		string SocketFile,
+		bool UseWebsockets,
+		string? WebsocketUrl,
+		bool UseDns,
+		bool Logins,
+		bool PlayerCreation,
+		bool Guests,
+		bool Pueblo,
+		bool Mxp,
+		string? SqlPlatform,
+		string? SqlHost,
+		string? SqlDatabase,
+		string? SqlUsername,
+		bool JsonUnsafeUnescape,
+		bool SslRequireClientCert,
+		string? MediaBaseUrl)
+		: this(MudName, MudUrl, IpAddr, SslIpAddr, Port, SslPort, PortalPort, SslPortalPort, SocketFile, UseWebsockets, WebsocketUrl, UseDns, Logins, PlayerCreation, Guests, Pueblo, Mxp, SqlPlatform, SqlHost, SqlDatabase, SqlUsername, JsonUnsafeUnescape, SslRequireClientCert, MediaBaseUrl, 400)
+	{
+	}
+
+	/// <summary>The deconstruction published with plugin contract 3.0.0.</summary>
+	public void Deconstruct(
+		out string mudName,
+		out string? mudUrl,
+		out string? ipAddr,
+		out string? sslIpAddr,
+		out uint port,
+		out uint sslPort,
+		out uint portalPort,
+		out uint sslPortalPort,
+		out string socketFile,
+		out bool useWebsockets,
+		out string? websocketUrl,
+		out bool useDns,
+		out bool logins,
+		out bool playerCreation,
+		out bool guests,
+		out bool pueblo,
+		out bool mxp,
+		out string? sqlPlatform,
+		out string? sqlHost,
+		out string? sqlDatabase,
+		out string? sqlUsername,
+		out bool jsonUnsafeUnescape,
+		out bool sslRequireClientCert,
+		out string? mediaBaseUrl)
+	{
+		mudName = MudName;
+		mudUrl = MudUrl;
+		ipAddr = IpAddr;
+		sslIpAddr = SslIpAddr;
+		port = Port;
+		sslPort = SslPort;
+		portalPort = PortalPort;
+		sslPortalPort = SslPortalPort;
+		socketFile = SocketFile;
+		useWebsockets = UseWebsockets;
+		websocketUrl = WebsocketUrl;
+		useDns = UseDns;
+		logins = Logins;
+		playerCreation = PlayerCreation;
+		guests = Guests;
+		pueblo = Pueblo;
+		mxp = Mxp;
+		sqlPlatform = SqlPlatform;
+		sqlHost = SqlHost;
+		sqlDatabase = SqlDatabase;
+		sqlUsername = SqlUsername;
+		jsonUnsafeUnescape = JsonUnsafeUnescape;
+		sslRequireClientCert = SslRequireClientCert;
+		mediaBaseUrl = MediaBaseUrl;
+	}
+}

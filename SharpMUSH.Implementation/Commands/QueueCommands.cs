@@ -994,6 +994,10 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
+		// RhostMUSH's NOFORCE: game.noforce shields its holder from forcers it reaches.
+		if (await found.ShieldedFrom(PortalPermission.NoForce, executor))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Shielded(found, PortalPermission.NoForce));
+
 		if (Configuration.CurrentValue.Log.LogForces)
 			await LogForceAsync(executor, found, cmdListArg);
 
