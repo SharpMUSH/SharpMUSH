@@ -361,6 +361,51 @@ public class ProfileBannerTests : TrackingBunitContext
 		await Assert.That(cut.FindAll("[role='dialog']").Count).IsEqualTo(0);
 	}
 
+	/// <summary>
+	/// The browser reads an uploaded file through the input it was chosen in. The picker holds that input,
+	/// so it stays open, and cannot be closed, until the upload is answered; closing it first left the read
+	/// with no input to read from.
+	/// </summary>
+	[Test]
+	public async Task AnUploadedAvatar_KeepsThePickerOpenUntilItIsSent()
+	{
+		await SignInAsTomasAsync();
+		_fake.Extra[TomasProfile] = """{"character":"Tomas Reyes","objid":"#312:1","dbref":"#312","fields":{}}""";
+		_fake.Extra["/api/profile/Tomas%20Reyes/gallery"] = "[]";
+		_fake.Extra["POST /api/profile/Tomas%20Reyes/gallery?use=avatar"] = """
+			[{"assetId":"n","fileName":"new.png","url":"/api/wiki-assets/n/new.png","caption":null,"order":0,"isIcon":true,"isBanner":false}]
+			""";
+		var held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var posted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		_fake.OnRequest = async request =>
+		{
+			if (request.Method != HttpMethod.Post) return;
+			posted.TrySetResult();
+			await held.Task;
+		};
+
+		var cut = RenderProfile();
+		cut.WaitForAssertion(() => cut.Find(".char-profile-change-avatar"), TimeSpan.FromSeconds(5));
+		await cut.Find(".char-profile-change-avatar").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find("[role='dialog'] .kit-picker-upload"), TimeSpan.FromSeconds(5));
+
+		var input = cut.FindComponent<InputFile>();
+		var upload = Task.Run(() => input
+			.UploadFiles(InputFileContent.CreateFromBinary([0x89, 0x50, 0x4E, 0x47], "new.png", contentType: "image/png")));
+		await posted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll("[role='dialog']").Count).IsEqualTo(1).Because("the upload is still being sent");
+		await Assert.That(cut.FindComponents<InputFile>().Count).IsGreaterThan(0);
+		await cut.Find(".kit-picker-close").ClickAsync();
+		await Assert.That(cut.FindAll("[role='dialog']").Count).IsEqualTo(1).Because("closing waits for the upload");
+
+		held.SetResult();
+		await upload;
+		cut.WaitForAssertion(() => cut.Find(".kit-banner-lead img.char-profile-portrait"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".kit-banner-lead img.char-profile-portrait").GetAttribute("src")).IsEqualTo("/api/wiki-assets/n/new.png");
+		await Assert.That(cut.FindAll("[role='dialog']").Count).IsEqualTo(0);
+	}
+
 	[Test]
 	public async Task ThePicker_MarksTheCurrentBanner()
 	{

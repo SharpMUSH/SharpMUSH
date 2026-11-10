@@ -5,7 +5,9 @@
    images already in the gallery, or pick one from the shared image library, which is used without
    being copied. A modal over the page like the image viewer; Escape or a click outside closes it.
    The image in that role now is marked and pressed. An image with a warning cannot take either role,
-   which shows without a click, so it is offered covered and disabled. *@
+   which shows without a click, so it is offered covered and disabled.
+   An uploaded file is read through the file input it was chosen in, which leaves the page with the
+   picker, so the picker stays open until the upload is answered. *@
 @if (Open)
 {
     <MudOverlay Visible="true" LockScroll="true" OnClick="CloseAsync" Class="kit-picker-overlay" Style="@ScrimStyle">
@@ -16,11 +18,11 @@
             <div class="kit-picker-bar">
                 <span class="kit-picker-title">@Title</span>
                 <span class="kit-picker-spacer"></span>
-                <CapsuleButton Class="kit-picker-close" Icon="@Icons.Material.Outlined.Close" AriaLabel="@Loc["NavViewerClose"]" OnClick="CloseAsync" />
+                <CapsuleButton Class="kit-picker-close" Icon="@Icons.Material.Outlined.Close" AriaLabel="@Loc["NavViewerClose"]" Disabled="_uploading" OnClick="CloseAsync" />
             </div>
             <MudFileUpload T="IBrowserFile" FilesChanged="UploadAsync" Accept="image/*" MaximumFileCount="1" MaxFileSize="GalleryService.MaxUploadBytes" Class="kit-picker-upload">
                 <CustomContent>
-                    <CapsuleButton Class="kit-picker-upload-button" Primary="true" Icon="@Icons.Material.Outlined.FileUpload" Disabled="Busy" OnClick="@context.OpenFilePickerAsync">@Loc["NavPickerUpload"]</CapsuleButton>
+                    <CapsuleButton Class="kit-picker-upload-button" Primary="true" Icon="@Icons.Material.Outlined.FileUpload" Disabled="Locked" OnClick="@context.OpenFilePickerAsync">@Loc["NavPickerUpload"]</CapsuleButton>
                 </CustomContent>
             </MudFileUpload>
             @if (ShowGallery)
@@ -38,7 +40,7 @@
                             var current = item.AssetId == SelectedAssetId;
                             <button type="button" class="@($"kit-picker-item{(current ? " kit-picker-item--current" : "")}{(item.Warning is null ? "" : " kit-picker-item--covered")}")"
                                     aria-pressed="@(current ? "true" : "false")" aria-label="@(item.Warning is { } label ? Loc["NavGalleryWarningLabel", label].Value : item.Caption ?? item.AssetId)"
-                                    disabled="@(Busy || item.Warning is not null)" @onclick="@(() => PickAsync(item))">
+                                    disabled="@(Locked || item.Warning is not null)" @onclick="@(() => PickAsync(item))">
                                 @if (item.Warning is { } warning)
                                 {
                                     <span class="kit-picker-cover">@warning</span>
@@ -53,7 +55,7 @@
                 }
             }
             <div class="kit-picker-label">@Loc["NavPickerFromLibrary"]</div>
-            <ImageLibraryGrid Exclude="@InGallery" ContentTypes="@GalleryTypes" Disabled="Busy" OnPick="PickLibraryAsync" />
+            <ImageLibraryGrid Exclude="@InGallery" ContentTypes="@GalleryTypes" Disabled="Locked" OnPick="PickLibraryAsync" />
         </div>
         </MudFocusTrap>
     </div>
@@ -76,7 +78,7 @@
     /// <summary>A write is running; the choices wait for it.</summary>
     [Parameter] public bool Busy { get; set; }
 
-    /// <summary>A new file was chosen. The picker closes first.</summary>
+    /// <summary>A new file was chosen. The picker closes once the upload is answered.</summary>
     [Parameter] public EventCallback<IBrowserFile> OnUpload { get; set; }
 
     /// <summary>An image already in the gallery was chosen. The picker closes first.</summary>
@@ -96,11 +98,24 @@
 
     private const string ScrimStyle = "background: rgba(var(--scrim-ink), 0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);";
 
+    /// <summary>An upload is reading the chosen file; the picker cannot close under it.</summary>
+    private bool _uploading;
+
+    private bool Locked => Busy || _uploading;
+
     private async Task UploadAsync(IBrowserFile? file)
     {
         if (file is null) return;
-        await CloseAsync();
-        await OnUpload.InvokeAsync(file);
+        _uploading = true;
+        try
+        {
+            await OnUpload.InvokeAsync(file);
+        }
+        finally
+        {
+            _uploading = false;
+            await CloseAsync();
+        }
     }
 
     private async Task PickAsync(GalleryEntry item)
@@ -115,7 +130,7 @@
         await OnPickLibrary.InvokeAsync(asset);
     }
 
-    private Task CloseAsync() => OpenChanged.InvokeAsync(false);
+    private Task CloseAsync() => _uploading ? Task.CompletedTask : OpenChanged.InvokeAsync(false);
 
     private async Task OnKeyDownAsync(KeyboardEventArgs e)
     {
