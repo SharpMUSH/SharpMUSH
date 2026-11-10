@@ -184,6 +184,10 @@ class PennMush:
             elif line.startswith("ssl_port "):
                 line = "ssl_port 0"
             lines.append(line)
+        # A fixture created before midnight can first log in after midnight, when Penn's
+        # check_last() grants its daily salary. Keep the initial balance deterministic without
+        # weakening the exact inventory known-difference pin. Last assignment wins in Penn.
+        lines.append("paycheck 0")
         cnf.write_text("\n".join(lines) + "\n", encoding="utf-8")
         # --disable-socket-quota: netmud allows a connection 100 commands then 1 per second (a
         # compile-time constant); sentinel traffic exhausts that and stalls a session mid-scenario.
