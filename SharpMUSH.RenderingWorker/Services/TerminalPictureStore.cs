@@ -20,7 +20,8 @@ namespace SharpMUSH.RenderingWorker.Services;
 /// allowed is fetched from this process, so the fetch refuses any address that resolves to this machine or
 /// a private network: a player's picture must not be a way to reach the services next to the game. The
 /// game's own pictures, at relative addresses, are fetched from <c>Rendering:ImageBaseAddress</c> when it
-/// is set, and are text art when it is not.
+/// is set; when it is not, from the game's web address (<c>mud_url</c>), through the same guard, as an MXP or
+/// Pueblo client fetches them; and are text art when there is neither.
 /// </para>
 /// <para>
 /// Pictures are kept by address, each with a key that is a hash of its pixels, so the same picture at two
@@ -98,11 +99,19 @@ public sealed class TerminalPictureStore : IDisposable
 	/// The picture at <paramref name="source"/>, when it is held. When it is not, a fetch is started and
 	/// <paramref name="pending"/> is what completes when it ends, or null for an address that is never fetched.
 	/// </summary>
-	public bool TryGet(string source, out TerminalPicture? picture, out Task? pending)
+	public bool TryGet(string source, out TerminalPicture? picture, out Task? pending) =>
+		TryGet(source, null, out picture, out pending);
+
+	/// <summary>
+	/// The picture at <paramref name="source"/>, a relative one read at <paramref name="website"/> (the game's
+	/// <c>mud_url</c>) when <c>Rendering:ImageBaseAddress</c> is unset. When it is not held, a fetch is started
+	/// and <paramref name="pending"/> is what completes when it ends, or null for an address that is never fetched.
+	/// </summary>
+	public bool TryGet(string source, string? website, out TerminalPicture? picture, out Task? pending)
 	{
 		pending = null;
 		picture = null;
-		if (Resolve(source) is not { } address) return false;
+		if (Resolve(source, website) is not { } address) return false;
 
 		var entry = _entries.GetOrAdd(address.AbsoluteUri, _ => new Entry());
 		entry.LastUsed = Environment.TickCount64;
@@ -127,23 +136,29 @@ public sealed class TerminalPictureStore : IDisposable
 		return picture is not null;
 	}
 
-	internal (int Width, int Height)? OriginalSize(string source) =>
-		Resolve(source) is { } address && _entries.TryGetValue(address.AbsoluteUri, out var entry)
+	internal (int Width, int Height)? OriginalSize(string source, string? website = null) =>
+		Resolve(source, website) is { } address && _entries.TryGetValue(address.AbsoluteUri, out var entry)
 			&& entry.Picture is not null ? entry.OriginalSize : null;
 
 	/// <summary>The address <paramref name="source"/> names, or null for one that is never fetched.</summary>
-	private Uri? Resolve(string source)
+	private Uri? Resolve(string source, string? website)
 	{
 		if (string.IsNullOrWhiteSpace(source)) return null;
 		// A path from the root is relative here; on Unix Uri would read it as an absolute file address.
 		if (!source.StartsWith('/') && Uri.TryCreate(source, UriKind.Absolute, out var absolute))
 			return absolute.Scheme is "http" or "https" ? absolute : null;
 		// Relative: one of the game's own pictures, which is fetched only from where the game says they are.
-		if (_baseAddress is null || source.StartsWith("//", StringComparison.Ordinal)) return null;
+		if (source.StartsWith("//", StringComparison.Ordinal)) return null;
 		// WebP is decoded here; retain the portal conversion for other unsupported formats.
 		var readable = Path.GetExtension(source.Trim()).Equals(".webp", StringComparison.OrdinalIgnoreCase)
 			? source : PngPictures.Readable(source);
-		return Uri.TryCreate(_baseAddress, readable, out var local) && IsGameOrigin(local) ? local : null;
+		if (_baseAddress is not null)
+			return Uri.TryCreate(_baseAddress, readable, out var local) && IsGameOrigin(local) ? local : null;
+		// Else the game's public web address, fetched like any other picture: through the guard.
+		return Uri.TryCreate(website?.Trim(), UriKind.Absolute, out var site) && site.Scheme is "http" or "https"
+			&& Uri.TryCreate(site, readable, out var published) && published.Scheme is "http" or "https"
+				? published
+				: null;
 	}
 
 	/// <summary>

@@ -83,6 +83,59 @@ public class TerminalFeatureRenderingTests
 		await Assert.That(output).Contains(sequence).And.DoesNotContain("<IMAGE");
 	}
 
+	/// <summary>
+	/// MudForge on a one-click install: MXP without IMAGE, so the terminal draws the game's own picture, and no
+	/// <c>Rendering:ImageBaseAddress</c>. The picture is fetched from the game's web address.
+	/// </summary>
+	[Test]
+	[Arguments(TerminalGraphics.Iterm2, "\u001b]1337;")]
+	[Arguments(TerminalGraphics.Sixel, "\u001bP")]
+	public async Task MxpWithoutImage_DrawsTheGamesOwnPictureFromItsWebsite(string graphics, string sequence)
+	{
+		var guarded = new PictureHandler(HttpStatusCode.OK, WebP);
+		using var store = new TerminalPictureStore(null, 1 << 20, NullLogger<TerminalPictureStore>.Instance, guarded);
+		var renderer = new MarkupOutputRenderer(store, new ConnectionPictures());
+		var context = new RenderContext("telnet", new ProtocolCapabilities(Format: OutputFormat.Mxp, MxpSupported: "SOUND",
+			SupportsTruecolor: true, Pins: new TerminalPins(Graphics: graphics)), null, Handle: 7, SessionId: "s",
+			Website: "https://game.example");
+
+		var output = await RenderAsync(renderer, FigureMarkup("/assets/cat.webp"), context);
+
+		await Assert.That(output).Contains(sequence).And.DoesNotContain("<IMAGE");
+		await Assert.That(guarded.LastAddress?.AbsoluteUri).IsEqualTo("https://game.example/assets/cat.webp");
+	}
+
+	[Test]
+	public async Task ARelativeAddress_IsFetchedFromTheWebsiteThroughTheGuard()
+	{
+		var guarded = new PictureHandler(HttpStatusCode.OK);
+		using var store = new TerminalPictureStore(null, 1 << 20, NullLogger<TerminalPictureStore>.Instance, guarded);
+
+		store.TryGet("/assets/cat.png", "https://game.example/", out _, out var pending);
+		if (pending is not null) await pending;
+
+		await Assert.That(guarded.LastAddress?.AbsoluteUri).IsEqualTo("https://game.example/assets/cat.png");
+		await Assert.That(store.TryGet("/assets/cat.png", "https://game.example/", out var picture, out _)).IsTrue();
+		await Assert.That(picture).IsNotNull();
+		await Assert.That(store.TryGet("//elsewhere.example/cat.png", "https://game.example/", out _, out var other)).IsFalse();
+		await Assert.That(other is null).IsTrue().Because("\"//host\" names another host, not one of the game's pictures");
+	}
+
+	[Test]
+	public async Task TheImageBaseAddress_WinsOverTheWebsite()
+	{
+		var guarded = new PictureHandler(HttpStatusCode.OK);
+		var local = new PictureHandler(HttpStatusCode.OK);
+		using var store = new TerminalPictureStore("http://game.internal:8080/", 1 << 20,
+			NullLogger<TerminalPictureStore>.Instance, guarded, local);
+
+		store.TryGet("/assets/cat.png", "https://game.example/", out _, out var pending);
+		if (pending is not null) await pending;
+
+		await Assert.That(local.LastAddress?.AbsoluteUri).IsEqualTo("http://game.internal:8080/assets/cat.png");
+		await Assert.That(guarded.Requests).IsEqualTo(0);
+	}
+
 	[Test]
 	public async Task Kitty_SendsThePictureOnceThenOnlyItsPlaceholders()
 	{

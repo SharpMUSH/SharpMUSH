@@ -69,7 +69,8 @@ public sealed class ConnectionPictures
 /// thrown away because a picture arrived in the meantime must not leave the terminal thought to hold an
 /// image it was never sent.
 /// </summary>
-internal sealed class RenderPictureSource(TerminalPictureStore store, ConnectionPictures.Sent sent) : ITerminalPictureSource
+internal sealed class RenderPictureSource(TerminalPictureStore store, ConnectionPictures.Sent sent, string? website = null)
+	: ITerminalPictureSource
 {
 	private readonly HashSet<uint> _transmitted = [];
 
@@ -78,12 +79,12 @@ internal sealed class RenderPictureSource(TerminalPictureStore store, Connection
 
 	public bool TryGetPicture(ImageMarkup image, [NotNullWhen(true)] out TerminalPicture? picture)
 	{
-		if (store.TryGet(image.Source, out picture, out var pending) && picture is not null) return true;
+		if (store.TryGet(image.Source, website, out picture, out var pending) && picture is not null) return true;
 		if (pending is not null) Pending.Add(pending);
 		return false;
 	}
 
-	public (int Width, int Height)? OriginalSize(ImageMarkup image) => store.OriginalSize(image.Source);
+	public (int Width, int Height)? OriginalSize(ImageMarkup image) => store.OriginalSize(image.Source, website);
 
 	public bool MarkTransmitted(uint imageId) => !sent.Contains(imageId) && _transmitted.Add(imageId);
 
