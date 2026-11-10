@@ -1478,6 +1478,12 @@
         "aliases": []
       },
       {
+        "id": "config-listings-are-drawn-as-titled-boxes",
+        "lookup": "compatibility commands config listings are drawn as titled boxes",
+        "heading": "\u0060@config\u0060 listings are drawn as titled boxes",
+        "aliases": []
+      },
+      {
         "id": "command-restrictions-reapplies-without-a-restart",
         "lookup": "compatibility commands command restrictions reapplies without a restart",
         "heading": "\u0060command_restrictions\u0060 reapplies without a restart",
@@ -2024,6 +2030,12 @@
     "title": "@config",
     "aliases": [],
     "sections": [
+      {
+        "id": "listing",
+        "lookup": "@config listing",
+        "heading": "Listing options",
+        "aliases": []
+      },
       {
         "id": "set",
         "lookup": "@config set",
