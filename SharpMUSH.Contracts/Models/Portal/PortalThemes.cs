@@ -363,7 +363,10 @@ public static class BuiltInThemes
 		ProtanDark, ProtanLight, DeutanDark, DeutanLight, TritanDark, TritanLight, MonoDark, MonoLight,
 	];
 
-	/// <summary>A colour vision theme: Phosphor or Daylight with its own accent, warning and missing-link colours.</summary>
+	/// <summary>
+	/// A colour vision theme: Phosphor or Daylight with its own accent, warning and missing-link colours, and no grain.
+	/// Its colours reach 4.5:1 against the flat surfaces only, so nothing may be drawn between them and the text.
+	/// </summary>
 	private static PortalTheme Vision(string vision, string name, bool dark, string accent, string warn, string linkMissing)
 	{
 		var tokens = new Dictionary<string, string>((dark ? Phosphor : Daylight).Tokens)
@@ -373,6 +376,7 @@ public static class BuiltInThemes
 			[ThemeTokens.LinkMissing] = linkMissing,
 			[ThemeVision.Key] = vision,
 		};
+		tokens.Remove(ThemeStyles.Texture);
 		return new PortalTheme($"{vision}-{(dark ? "dark" : "light")}", name, dark, Published: true, tokens, BuiltIn: true);
 	}
 

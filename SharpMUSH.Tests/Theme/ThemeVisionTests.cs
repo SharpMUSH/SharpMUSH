@@ -92,6 +92,17 @@ public class ThemeVisionTests
 	}
 
 	[Test]
+	[MethodDataSource(nameof(VisionThemeIds))]
+	public async Task AVisionThemeDrawsNoTextureUnderItsText(string id)
+	{
+		// The contrast check measures the flat surfaces. Phosphor's grain lightens a dark card by up to 5% of the text
+		// colour, which takes Tritan Dark's missing-page link below 4.5:1.
+		var theme = ThemeResolver.Resolve(BuiltIn(id));
+
+		await Assert.That(theme.Style[ThemeStyles.Texture]).IsEqualTo("none");
+	}
+
+	[Test]
 	public async Task TheTypicalColoursRunTogetherForAProtanReader()
 	{
 		// What the vision themes are for: the typical set does not pass the check above.
