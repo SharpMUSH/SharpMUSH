@@ -154,6 +154,15 @@ public class ConfigCommandTests
 		await Assert.That(shown[0]).DoesNotContain("System.");
 	}
 
+	/// <summary>The category listing also shows the set a fixed-set option takes, under its value.</summary>
+	[Test]
+	public async ValueTask ConfigCommand_Category_ListsChoices()
+	{
+		var shown = string.Join('\n', await AsWizard("@config Cosmetic"));
+
+		await Assert.That(shown).Contains("One of: any, allow, block, off");
+	}
+
 	/// <summary>The category listing shows a mapping option's entries as labelled values of their own.</summary>
 	[Test]
 	[Arguments("Alias", "@attrlock")]
