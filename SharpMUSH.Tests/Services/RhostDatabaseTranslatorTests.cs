@@ -13,6 +13,20 @@ namespace SharpMUSH.Tests.Services;
 /// </summary>
 public class RhostDatabaseTranslatorTests
 {
+	/// <summary>Existing plugins retain the single-power constructor, property, and deconstruction.</summary>
+	[Test]
+	public async Task LegacyPowerMappingRemainsUsable()
+	{
+		var mapping = new RhostPowerMapping(2, 4, "BOOT", "Boot");
+		var (word, shift, name, power) = mapping;
+		await Assert.That((word, shift, name, power)).IsEqualTo((2, 4, "BOOT", "Boot"));
+		await Assert.That(mapping.Scopes).IsEquivalentTo(new[] { GamePowers.Find("Boot")!.Scope });
+		await Assert.That((mapping with { Power = "Search" }).Power).IsEqualTo("Search");
+		await Assert.That(new RhostPowerMapping(2, 4, "CUSTOM", null).Power).IsNull();
+		await Assert.That(Enumerable.Range(0, 5).Select(level => RhostNameTables.PowerLevel((uint)level)))
+			.IsEquivalentTo(new[] { "none", "guildmaster", "architect", "councilor", "none" });
+	}
+
 	private static async Task<PennMUSHDatabase> TranslateAsync()
 		=> await RhostDatabaseTranslator.ReadAsync(RhostFlatfileReaderTests.FlatfilePath, RhostFlatfileReaderTests.MailPath,
 			RhostFlatfileReaderTests.FolderPath);
@@ -186,17 +200,125 @@ public class RhostDatabaseTranslatorTests
 			.IsTrue();
 	}
 
+	/// <summary>An object's overrides as <c>@permission</c> lists them: <c>+scope/reach</c> or <c>-scope</c>, in order.</summary>
+	private static string Overrides(IEnumerable<PennMUSHOverride> overrides)
+		=> string.Join(" ", overrides.Select(o => $"{(o.State == PermissionState.Allow ? "+" : "-")}{o.Scope}{(o.Reach is null ? "" : "/" + o.Reach)}"));
+
 	/// <summary>A power at any level is held; one SharpMUSH lacks is created; a depower is a deny.</summary>
 	[Test]
 	public async Task PowersAndDepowers()
 	{
 		var database = await TranslateAsync();
 
-		await Assert.That(Object(database, 3).Powers).Contains("Boot");
-		await Assert.That(Object(database, 4).Powers).Contains("See_Queue");
-		await Assert.That(Object(database, 4).DeniedPowers).IsEquivalentTo(["See_All"]);
-		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Depower NUKE: dropped"))).IsTrue();
-		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Power levels:"))).IsTrue();
+		await Assert.That(Overrides(Object(database, 3).Overrides)).IsEqualTo("+game.boot");
+		await Assert.That(Overrides(Object(database, 4).Overrides)).IsEqualTo("+game.see_queue -player.examine -game.see_all -game.nuke");
+		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Depower NUKE: imported as a deny on game.nuke, at every rank")))
+			.IsTrue();
+	}
+
+	/// <summary>A player with these power (toggle words 3-5) and depower (6-8) fields, set as (word, shift, stored value).</summary>
+	private static string Mapped(bool shifted, params (int Word, int Shift, uint Value)[] fields) => Mapped(0, shifted, fields);
+
+	private static string Mapped(uint flags2, bool shifted, params (int Word, int Shift, uint Value)[] fields)
+	{
+		var toggles = new uint[8];
+		foreach (var (word, shift, value) in fields)
+		{
+			toggles[word] |= value << shift;
+		}
+
+		var source = new RhostFlatfileObject { DBRef = 5, Name = "Powered", Flags = [(uint)RhostObjectType.Player, flags2, shifted ? RhostNameTables.DepowerShift : 0, 0], Toggles = toggles };
+		return Overrides(RhostDatabaseTranslator.MapPowers(source, new RhostDatabaseTranslator.Report()));
+	}
+
+	[Test]
+	public async Task APowersLevelIsItsReach()
+	{
+		// CHOWN_OTHER at councilor; EXAMINE_ALL at architect, on a permission that takes no reach.
+		await Assert.That(Mapped(false, (2, 6, 3), (2, 10, 2))).IsEqualTo("+game.chown.any/councilor +game.see_all");
+		// CHOWN_ME at guildmaster and CHOWN_ANYWHERE, which has no level, land on one permission: the wider stays.
+		await Assert.That(Mapped(false, (2, 2, 1), (2, 4, 1))).IsEqualTo("+game.chown.self");
+	}
+
+	[Test]
+	public async Task ADepowersLevelIsReadThroughDpshift()
+	{
+		// PAGE stored as 2: guildmaster, or architect on a player whose DPSHIFT is set.
+		await Assert.That(Mapped(false, (5, 14, 2))).IsEqualTo("-player.page/guildmaster");
+		await Assert.That(Mapped(true, (5, 14, 2))).IsEqualTo("-player.page/architect");
+		// Stored as 1 it is RhostMUSH's lowest setting, which takes paging away entirely.
+		await Assert.That(Mapped(false, (5, 14, 1))).IsEqualTo("-player.page");
+		// GIVE keeps no reach: RhostMUSH's runs toward lower ranks, which a deny cannot.
+		await Assert.That(Mapped(false, (6, 24, 3))).IsEqualTo("-player.give");
+	}
+
+	[Test]
+	public async Task SlaveDeniesWhatChangesTheDatabase()
+		=> await Assert.That(Mapped(0x80000000, false, (2, 14, 2)))
+			.IsEqualTo("+game.see_queue -player.create -player.modify -player.chown -player.force -player.password");
+
+	[Test]
+	public async Task ADepowerWithAReachStillReplacesAPowerOnItsPermission()
+		// FULLTEL, and TEL_ANYWHERE taken away at architect.
+		=> await Assert.That(Mapped(false, (4, 6, 1), (6, 2, 3)))
+			.IsEqualTo("-game.tport_anywhere/architect -player.teleport/architect");
+
+	[Test]
+	public async Task ADepowerBeatsThePowerItTakes()
+		=> await Assert.That(Mapped(false, (3, 2, 1), (6, 2, 1))).IsEqualTo("-game.tport_anywhere -player.teleport");
+
+	/// <summary>Two allows retain the higher rank; two denies retain the lower, wider rank.</summary>
+	[Test]
+	public async Task SameStateOverridesKeepTheWiderReach()
+	{
+		await Assert.That(Mapped(false, (3, 2, 1), (2, 20, 3))).IsEqualTo("+game.tport_anywhere/councilor");
+		await Assert.That(Mapped(false, (6, 2, 2), (6, 4, 3))).Contains("-player.teleport/guildmaster");
+	}
+
+	/// <summary>FUBAR denies every everyday permission without a reach.</summary>
+	[Test]
+	public async Task FubarDeniesEverydayPermissions()
+	{
+		var actual = Mapped(0x10000, false).Split(' ');
+		await Assert.That(actual).IsEquivalentTo(PortalPermission.AllowedUnlessDenied.Select(scope => $"-{scope}"));
+	}
+
+	/// <summary>A ranked allow widened to all targets needs staff action; a widened deny remains informational.</summary>
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task DroppedReachRequiresActionOnlyForAllows(bool deny)
+	{
+		var toggles = new uint[8];
+		// EXAMINE_ALL and EXAMINE both map to game.see_all, which cannot take a reach.
+		var mapping = (deny ? RhostNameTables.Depowers : RhostNameTables.Powers).Single(m => m.Name == (deny ? "EXAMINE" : "EXAMINE_ALL"));
+		toggles[mapping.Word] = 2u << mapping.Shift;
+		var source = new RhostFlatfileObject { DBRef = 5, Name = "Powered", Flags = [(uint)RhostObjectType.Player, 0, 0, 0], Toggles = toggles };
+		var report = new RhostDatabaseTranslator.Report();
+		report.Line(ImportWarningKind.Powers, "Test import");
+		RhostDatabaseTranslator.MapPowers(source, report);
+		var note = report.Finish().Single(n => n.Text.Contains("takes no reach") || n.Text.Contains("no reach can bound it"));
+		await Assert.That(note.NeedsAction).IsEqualTo(!deny);
+	}
+
+	/// <summary>Dropping a depower loses a source restriction and requires review; dropping a power does not.</summary>
+	[Test]
+	[Arguments("MASTER", true)]
+	[Arguments("ABUSE", true)]
+	[Arguments("PERSONAL_COMMAND", true)]
+	[Arguments("QUOTA", true)]
+	[Arguments("EXECSCRIPT", false)]
+	public async Task DroppedDepowersRequireAction(string name, bool deny)
+	{
+		var mapping = (deny ? RhostNameTables.Depowers : RhostNameTables.Powers).Single(m => m.Name == name);
+		var toggles = new uint[8];
+		toggles[mapping.Word] = 1u << mapping.Shift;
+		var source = new RhostFlatfileObject { DBRef = 5, Name = "Restricted", Flags = [(uint)RhostObjectType.Player, 0, 0, 0], Toggles = toggles };
+		var report = new RhostDatabaseTranslator.Report();
+		report.Line(ImportWarningKind.Powers, "Test import");
+		RhostDatabaseTranslator.MapPowers(source, report);
+		var note = report.Finish().Single(n => n.Text.Contains($"{name}: dropped"));
+		await Assert.That(note.NeedsAction).IsEqualTo(deny);
 	}
 
 	[Test]

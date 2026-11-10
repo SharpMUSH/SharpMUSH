@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using SharpMUSH.Library.Authorization;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion.TinyMux;
 
@@ -120,7 +121,7 @@ public static class TinyMuxNames
 		[0x2000] = Same("ALONE"),
 		[0x4000] = As("NOEXAMINE", "NO_EXAMINE"),
 		[0x8000] = Same("NOMODIFY"),
-		[0x10000] = Same("INDESTRUCTIBLE"),
+		[0x10000] = As("INDESTRUCTIBLE", "SAFE", "INDESTRUCTIBLE"),
 		[0x20000] = Same("NOEVAL"),
 		[0x40000] = Same("NAVIGABLE"),
 		[0x400000] = Same("MARKER0"),
@@ -192,14 +193,14 @@ public static class TinyMuxNames
 	public static readonly FrozenDictionary<uint, PowerMapping> Powers1 = new Dictionary<uint, PowerMapping>
 	{
 		[0x1] = new("quota", "Quotas"),
-		[0x2] = new("chown_anything", "chown_anything"),
+		[0x2] = new("chown_anything", Permission: PortalPermission.ChownAny),
 		[0x4] = new("announce", "Announce"),
 		[0x8] = new("boot", "Boot"),
 		[0x10] = new("halt", "Halt"),
 		[0x20] = new("control_all", Permission: "control.all"),
-		[0x40] = new("expanded_who", "expanded_who"),
+		[0x40] = new("expanded_who", Permission: PortalPermission.PlayersView),
 		[0x80] = new("see_all", "See_All"),
-		[0x100] = new("find_unfindable", "find_unfindable"),
+		[0x100] = new("find_unfindable", Permission: PortalPermission.PlayersView),
 		[0x200] = new("free_money", "No_Pay"),
 		[0x400] = new("free_quota", "No_Quota"),
 		[0x800] = new("hide", "Hide"),
@@ -212,13 +213,13 @@ public static class TinyMuxNames
 		[0x40000] = new("dark", "CAN_DARK"),
 		[0x80000] = new("comm_all", "Chat_Privs"),
 		[0x100000] = new("see_queue", "See_Queue"),
-		[0x200000] = new("see_hidden", "see_hidden"),
+		[0x200000] = new("see_hidden", Permission: PortalPermission.PlayersView),
 		[0x400000] = new("monitor", "monitor"),
 		[0x800000] = new("poll", "Poll"),
 		[0x1000000] = new("no_destroy", "no_destroy"),
 		[0x2000000] = new("guest", "Guest"),
-		[0x4000000] = new("pass_locks", "pass_locks"),
-		[0x8000000] = new("stat_any", "stat_any"),
+		[0x4000000] = new("pass_locks", Permission: PortalPermission.Override),
+		[0x8000000] = new("stat_any", "Search"),
 		[0x10000000] = new("steal_money", "DEBIT"),
 		[0x20000000] = new("tel_anywhere", "Tport_Anywhere"),
 		[0x40000000] = new("tel_anything", "Tport_Anything"),
@@ -238,8 +239,7 @@ public static class TinyMuxNames
 	/// </summary>
 	public static readonly PennMUSHFlagDefinition[] CustomPowers =
 	[
-		.. new[] { "chown_anything", "expanded_who", "find_unfindable", "prog", "see_hidden", "monitor", "no_destroy",
-				"pass_locks", "stat_any", "no_mail_expire" }
+		.. new[] { "prog", "monitor", "no_destroy", "no_mail_expire" }
 			.Select(name => Custom(name, "", perms: ["wizard"]))
 	];
 

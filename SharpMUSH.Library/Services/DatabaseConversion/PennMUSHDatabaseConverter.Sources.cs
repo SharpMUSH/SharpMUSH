@@ -177,30 +177,59 @@ public partial class PennMUSHDatabaseConverter
 	}
 
 	/// <summary>
-	/// Grants each object the permission scopes its source privileges became
-	/// (<see cref="PennMUSHObject.Permissions"/>), as allow overrides on the object.
+	/// Grants each object the permission scopes its source privileges became (<see cref="PennMUSHObject.Permissions"/>),
+	/// as allow overrides on the object, and writes the allows and denies its source powers and depowers became
+	/// (<see cref="PennMUSHObject.Overrides"/>). A reach naming a role this world lacks reaches <c>player</c> instead,
+	/// what the role's holders would rank as without it.
 	/// </summary>
 	private async Task GrantPermissionsAsync(PennMUSHDatabase source, PennMUSHConversionContext context,
 		CancellationToken cancellationToken)
 	{
 		var holders = source.Objects
-			.Where(o => o.Permissions.Count > 0 && context.DbrefMapping.ContainsKey(o.DBRef))
+			.Where(o => (o.Permissions.Count > 0 || o.Overrides.Count > 0 || o.DeniedPowers.Count > 0) && context.DbrefMapping.ContainsKey(o.DBRef))
 			.ToList();
 		if (holders.Count == 0) return;
 
 		if (_roleRegistry is null)
 		{
 			context.WarnNeedsAction(ImportWarningKind.Powers, $"Permissions were not granted to {string.Join(" ", holders.Select(o => $"#{o.DBRef}"))}: " +
-				"no role store is available to this import; grant them with @role.");
+				"no role store is available to this import; grant them with @permission.");
 			return;
 		}
 
+		var roles = (await _roleRegistry.Value.GetRolesAsync(cancellationToken)).Select(role => role.Slug).ToHashSet(StringComparer.OrdinalIgnoreCase);
 		foreach (var holder in holders)
 		{
+			var number = context.DbrefMapping[holder.DBRef].Number;
 			foreach (var scope in holder.Permissions.Distinct(StringComparer.Ordinal))
 			{
-				await _roleRegistry.Value.SetObjectOverrideAsync(context.DbrefMapping[holder.DBRef].Number, scope, PermissionState.Allow);
+				await _roleRegistry.Value.SetObjectOverrideAsync(number, scope, PermissionState.Allow);
 			}
+
+			foreach (var (scope, state, reach) in holder.Overrides)
+			{
+				var effectiveReach = reach;
+				if (reach is not null && !roles.Contains(reach))
+				{
+					context.NoteUnconverted(ImportWarningKind.Powers, $"Reach {reach} on {scope}, a role this game does not have, so it reaches player",
+						holder.DBRef);
+					effectiveReach = BuiltInRoles.PlayerSlug;
+				}
+
+				await _roleRegistry.Value.SetObjectOverrideAsync(number, scope, state, effectiveReach);
+			}
+			// Legacy plugin-provided denies run last so a new allow cannot undo a restriction.
+			foreach (var name in holder.DeniedPowers)
+			{
+				if (GamePowers.Find(name) is not { } power)
+				{
+					context.NoteUnconverted(ImportWarningKind.Powers, $"Depower of {name}, which is not a SharpMUSH power", holder.DBRef);
+					continue;
+				}
+
+				await _roleRegistry.Value.SetObjectOverrideAsync(number, power.Scope, PermissionState.Deny);
+			}
+
 		}
 
 		await _mediator.Send(new InvalidateGrantsCommand(null), cancellationToken);
