@@ -31,6 +31,11 @@ public partial class Commands
 					policyNotified = true;
 					return false;
 				}
+				if (await NoConnectRefusesAsync(handle, player))
+				{
+					policyNotified = true;
+					return false;
+				}
 				if (await AccountRefusalAsync(character) is { } refusal)
 				{
 					await NotifyService.Notify(handle, refusal);

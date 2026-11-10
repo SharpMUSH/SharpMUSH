@@ -86,6 +86,23 @@ public static partial class HelperFunctions
 		=> await obj.IsWizard(cancellationToken) || await obj.HasPower("LOGIN", cancellationToken);
 
 	/// <summary>
+	/// Under <c>protection_flags</c>, RhostMUSH's NOCONNECT keeps a player from connecting. God is never
+	/// kept out.
+	/// </summary>
+	public static async ValueTask<bool> IsNoConnect(this AnySharpObject player, SharpMUSHOptions options,
+		CancellationToken cancellationToken = default)
+		=> options.Compatibility.ProtectionFlags && !player.IsGod() && await player.HasFlag("NOCONNECT", cancellationToken);
+
+	/// <summary>
+	/// Whether a player may connect or act from the portal now: logins are on or it may log in while they are off
+	/// (<see cref="CanLoginWhileClosed"/>), and it is not kept out by NOCONNECT (<see cref="IsNoConnect"/>).
+	/// </summary>
+	public static async ValueTask<bool> MayConnect(this AnySharpObject player, SharpMUSHOptions options,
+		CancellationToken cancellationToken = default)
+		=> (options.Net.Logins || await player.CanLoginWhileClosed(cancellationToken))
+			&& !await player.IsNoConnect(options, cancellationToken);
+
+	/// <summary>
 	/// Whether the object holds <paramref name="scope"/>: God, or a role or override allowing it. The
 	/// groups split out of WIZARD (<see cref="PortalPermission.ChatAdmin"/>,
 	/// <see cref="PortalPermission.ServerOperate"/>, <see cref="PortalPermission.PlayersModerate"/>,

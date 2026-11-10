@@ -40,6 +40,20 @@ public partial class Commands
 	}
 
 	/// <summary>
+	/// Under <c>protection_flags</c>, a player set NOCONNECT is refused at the connect screen, as in RhostMUSH.
+	/// </summary>
+	private async ValueTask<bool> NoConnectRefusesAsync(long handle, SharpPlayer player)
+	{
+		if (!await new AnySharpObject(player).IsNoConnect(Configuration.CurrentValue))
+		{
+			return false;
+		}
+
+		await NotifyService.Notify(handle, "That character may not connect.");
+		return true;
+	}
+
+	/// <summary>
 	/// The <c>!connect</c> check again, once the login is bound: the connect screen's check ran against the host
 	/// the connection had then, and a host-name lookup can finish between it and the bind. A lookup that finishes
 	/// after the bind is handled where the lookup ends. A refused login is told so and dropped.

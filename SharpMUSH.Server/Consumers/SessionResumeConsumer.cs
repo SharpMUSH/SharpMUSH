@@ -99,6 +99,7 @@ public sealed class SessionResumeConsumer(
 			request.IpAddress, request.Hostname, SitelockMatcher.GuestFlag))) return false;
 		if (!options.Net.Logins && (guest || player is null || !await new AnySharpObject(player).CanLoginWhileClosed()))
 			return false;
+		if (player is not null && await new AnySharpObject(player).IsNoConnect(options, ct)) return false;
 
 		// Authorization never binds a player or emits a second login event. Reconciliation owns that state.
 		if (!await store.TryUpdateTransportAsync(request.Handle, request.SessionId, persisted.PlayerObjid,

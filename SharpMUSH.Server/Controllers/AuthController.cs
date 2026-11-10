@@ -111,7 +111,7 @@ public class AuthController(
 			}
 
 			if (!await MayLoginAsync(character))
-				return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
+				return StatusCode(StatusCodes.Status403Forbidden, "This character may not log in now.");
 
 			var charRef = new DBRef(character.Object.Key, character.Object.CreationTime);
 			const int sessionTtl = 60;
@@ -150,11 +150,8 @@ public class AuthController(
 			logger.LogInformation("Rehashed legacy password for player #{Key} via OTT login", player.Object.Key);
 		}
 
-		if (!options.CurrentValue.Net.Logins)
-		{
-			if (!await new AnySharpObject(player).CanLoginWhileClosed())
-				return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
-		}
+		if (!await new AnySharpObject(player).MayConnect(options.CurrentValue, HttpContext.RequestAborted))
+			return StatusCode(StatusCodes.Status403Forbidden, "This character may not log in now.");
 
 		const int ttlSeconds = 60;
 		var playerRef = new DBRef(player.Object.Key, player.Object.CreationTime);
@@ -215,7 +212,7 @@ public class AuthController(
 						return Unauthorized("Character is not linked to this account.");
 
 					if (!await MayLoginAsync(character))
-						return StatusCode(StatusCodes.Status403Forbidden, "Logins are disabled.");
+						return StatusCode(StatusCodes.Status403Forbidden, "This character may not log in now.");
 
 					const int ttl = 60;
 					var ott = await ottStore.CreateTokenAsync(new DBRef(character.Object.Key, character.Object.CreationTime), TimeSpan.FromSeconds(ttl));
@@ -475,7 +472,6 @@ public class AuthController(
 	/// </summary>
 	/// <summary>PennMUSH <c>Can_Login</c> for the character a token is minted for: logins are on, or it may log in while they are off.</summary>
 	private async Task<bool> MayLoginAsync(SharpPlayer character) =>
-		options.CurrentValue.Net.Logins
-		|| await new AnySharpObject(character).CanLoginWhileClosed(HttpContext.RequestAborted);
+		await new AnySharpObject(character).MayConnect(options.CurrentValue, HttpContext.RequestAborted);
 }
 
