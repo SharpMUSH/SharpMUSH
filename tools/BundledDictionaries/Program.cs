@@ -47,9 +47,8 @@ values = [.. values.Where(value => value.Length >= table.MinBytes)];
 var cut = values.Count * 4 / 5;
 var training = values.Take(cut).ToList();
 var heldOut = values.Skip(cut).ToList();
-using var dictionary = ZstandardDictionary.Train(training.SelectMany(value => value).ToArray(), training.Select(value => value.Length).ToArray(),
+var bytes = ZstandardDictionary.Train(training.SelectMany(value => value).ToArray(), training.Select(value => value.Length).ToArray(),
 	table.DictionaryBytes);
-var bytes = dictionary.Data.ToArray();
 // A bundled dictionary is never replaced: worlds hold values written with it.
 using (var file = new FileStream(output, FileMode.CreateNew, FileAccess.Write))
 	file.Write(bytes);

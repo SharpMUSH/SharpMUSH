@@ -29,10 +29,9 @@ inputs:
     default: "11.0.x"
   dotnet-quality:
     description: >-
-      Build quality of that SDK (daily, signed, validated, preview, ga). Defaults to 'preview'
-      while the tool targets a .NET release that has not reached GA.
+      Build quality of that SDK (daily, signed, validated, preview, ga).
     required: false
-    default: "preview"
+    default: "ga"
 
 runs:
   using: composite
