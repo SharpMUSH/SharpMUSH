@@ -114,8 +114,8 @@
         finally
         {
             _uploading = false;
+            await CloseAsync();
         }
-        await CloseAsync();
     }
 
     private async Task PickAsync(GalleryEntry item)
