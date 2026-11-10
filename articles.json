@@ -7488,6 +7488,12 @@
         "aliases": []
       },
       {
+        "id": "roles-everyday",
+        "lookup": "roles everyday",
+        "heading": "Everyday permissions",
+        "aliases": []
+      },
+      {
         "id": "roles-wizard-only",
         "lookup": "roles wizard only",
         "heading": "What still needs game.wizard",
