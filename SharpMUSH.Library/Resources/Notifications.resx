@@ -2047,6 +2047,9 @@
   <data name="ConfigOptionsInCategoryFormat" xml:space="preserve">
     <value>Configuration: {0}</value>
   </data>
+  <data name="ConfigOptionValueFormat" xml:space="preserve">
+    <value> {0,-40} {1}</value>
+  </data>
   <data name="ConfigOptionsMatchingFormat" xml:space="preserve">
     <value>Configuration options matching '{0}'</value>
   </data>
