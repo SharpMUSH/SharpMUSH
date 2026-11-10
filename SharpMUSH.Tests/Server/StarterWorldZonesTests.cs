@@ -50,4 +50,19 @@ public class StarterWorldZonesTests : ServerTestBase
 
 		await Assert.That(await Eval($"elock({way},{player})")).IsEqualTo("1");
 	}
+
+	/// <summary>Zoning the arrival room keeps its powers: Room Zero shows its picture through Send_Image.</summary>
+	[Test]
+	public async Task TheArrivalRoomKeepsItsPowers()
+	{
+		var arrival = (await Cmd($"@dig {TestIsolationHelpers.GenerateUniqueName("Arrival")}")).Split(':')[0];
+		var tutorial = (await Cmd($"@dig {TestIsolationHelpers.GenerateUniqueName("Tutorial")}")).Split(':')[0];
+		await Cmd($"@power {arrival}=Send_Image");
+
+		var failures = await StarterWorld.ZonesAsync(arrival, tutorial, CancellationToken.None);
+
+		await Assert.That(failures).IsEmpty();
+		await Assert.That(await Eval($"name(zone({arrival}))")).IsEqualTo("OOC");
+		await Assert.That(await Eval($"haspower({arrival},Send_Image)")).IsEqualTo("1");
+	}
 }

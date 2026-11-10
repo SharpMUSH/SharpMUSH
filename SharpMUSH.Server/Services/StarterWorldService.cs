@@ -185,10 +185,14 @@ public sealed partial class StarterWorldService(
 		return failures;
 	}
 
-	/// <summary>Puts <paramref name="target"/> in <paramref name="zone"/> with <c>@chzone</c>, and says whether it is there.</summary>
+	/// <summary>
+	/// Puts <paramref name="target"/> in <paramref name="zone"/> with <c>@chzone/preserve</c>, and says whether it is
+	/// there. Without <c>/preserve</c> the zone change strips the room's powers, and the arrival room is Room Zero, whose
+	/// Send_Image shows its picture.
+	/// </summary>
 	private async Task<bool> ZoneAsync(string target, string zone, CancellationToken ct)
 	{
-		await RunAsync("@CHZONE", target, zone);
+		await RunAsync("@CHZONE", ["PRESERVE"], target, zone);
 		return await ObjectAsync(target, ct) is { } found
 			&& await found.Object().Zone.WithCancellation(ct) is AnySharpObject set
 			&& $"#{set.Object().DBRef.Number}" == zone;
