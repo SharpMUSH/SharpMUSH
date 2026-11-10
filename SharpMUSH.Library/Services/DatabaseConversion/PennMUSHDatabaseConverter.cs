@@ -1577,7 +1577,6 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		await SetLinkTypeAsync(pennObj, sharpObj, context, cancellationToken);
 		await SetFlagsAsync(pennObj, sharpObj, context, cancellationToken);
 		await SetPowersAsync(pennObj, sharpObj, context, cancellationToken);
-		await DenyPowersAsync(pennObj, sharpObj, context, cancellationToken);
 		await AssignRolesAsync(pennObj, sharpObj, context, cancellationToken);
 		await SetWarningsAsync(pennObj, sharpObj, context, cancellationToken);
 	}
@@ -2474,39 +2473,6 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				await _mediator.Send(new SetObjectPowerCommand(target, power), cancellationToken);
 			}
 		}
-	}
-
-	/// <summary>
-	/// Takes away the powers the source took from the object (a RhostMUSH depower): a deny on each power's
-	/// permission, which outweighs every role the object holds. Written straight to the role registry, as
-	/// the loader writes everything else, with no actor to check; the object's grants are then reread.
-	/// </summary>
-	private async Task DenyPowersAsync(PennMUSHObject pennObj, AnySharpObject target, PennMUSHConversionContext context,
-		CancellationToken cancellationToken)
-	{
-		if (pennObj.DeniedPowers.Count == 0)
-		{
-			return;
-		}
-
-		if (_roleRegistry is null)
-		{
-			context.NoteUnconverted(ImportWarningKind.Powers, "Depowers, which need the role registry this import runs without", pennObj.DBRef);
-			return;
-		}
-
-		foreach (var name in pennObj.DeniedPowers)
-		{
-			if (GamePowers.Find(name) is not { } power)
-			{
-				context.NoteUnconverted(ImportWarningKind.Powers, $"Depower of {name}, which is not a SharpMUSH power", pennObj.DBRef);
-				continue;
-			}
-
-			await _roleRegistry.Value.SetObjectOverrideAsync(target.Object().Key, power.Scope, PermissionState.Deny);
-		}
-
-		await _mediator.Send(new InvalidateGrantsCommand(target.Object().Key), cancellationToken);
 	}
 
 	/// <summary>

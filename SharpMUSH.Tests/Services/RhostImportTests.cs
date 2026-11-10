@@ -304,6 +304,22 @@ public class RhostImportTests
 	private static DatabaseImportFiles Files()
 		=> new(RhostFlatfileReaderTests.FlatfilePath, RhostFlatfileReaderTests.MailPath, null, RhostFlatfileReaderTests.FolderPath);
 
+	/// <summary>A legacy plugin's named power deny remains effective, even alongside a new allow override.</summary>
+	[Test]
+	public async Task LegacyDeniedPowersStillRestrictImportedObjects()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var database = await RhostDatabaseTranslator.ReadAsync(RhostFlatfileReaderTests.FlatfilePath, null, null);
+		var alice = database.Objects.First(o => o.Name == "Alice");
+		alice.DeniedPowers.Add("Boot");
+		alice.Overrides.Add(new PennMUSHOverride(GamePowers.Find("Boot")!.Scope, PermissionState.Allow));
+		var result = await world.Converter.ConvertDatabaseAsync(database);
+		await Assert.That(result.Errors).IsEmpty();
+		var imported = await FindAsync(world, "Alice");
+		var grants = await imported.Object().Grants.WithCancellation(CancellationToken.None);
+		await Assert.That(grants.Context.ObjectOverrides[GamePowers.Find("Boot")!.Scope]).IsEqualTo(PermissionState.Deny);
+	}
+
 	private static async Task<IsolatedImportWorld> ImportAsync()
 	{
 		var world = await IsolatedImportWorld.CreateAsync();

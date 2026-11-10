@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -502,5 +503,45 @@ public class PennMUSHDatabaseConverterTests
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(result.IsSuccessful).IsTrue();
 		await Assert.That(result.Warnings.Texts()).Contains(warning => warning.Contains("paren_groups"));
+	}
+
+	/// <summary>
+	/// A depower that fails to write, after an allow on the same object already has, aborts the import. An aborted
+	/// conversion never becomes a Ready preview, so a world missing a restriction its source had cannot be promoted.
+	/// </summary>
+	[Test]
+	public async ValueTask AFailedDenyAfterAnAllowAbortsTheImport()
+	{
+		var roles = Substitute.For<IRoleRegistryService>();
+		roles.GetRolesAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
+		roles.SetObjectOverrideAsync(Arg.Any<int>(), Arg.Any<string>(), PermissionState.Deny, Arg.Any<string?>())
+			.Returns(_ => Task.FromException(new InvalidOperationException("override store unavailable")));
+		await using var world = await IsolatedImportWorld.CreateAsync(services =>
+		{
+			services.RemoveAll<IPennMUSHDatabaseConverter>();
+			services.AddSingleton<IPennMUSHDatabaseConverter>(provider => new PennMUSHDatabaseConverter(
+				provider.GetRequiredService<PennMUSHDatabaseParser>(), provider.GetRequiredService<IMediator>(),
+				provider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(), NullLogger<PennMUSHDatabaseConverter>.Instance,
+				roleRegistry: new Lazy<IRoleRegistryService>(() => roles)));
+		});
+
+		var result = await world.Converter.ConvertDatabaseAsync(new PennMUSHDatabase
+		{
+			Version = "Test Version",
+			Objects =
+			[
+				new PennMUSHObject { DBRef = 0, Name = "Room Zero", Type = PennMUSHObjectType.Room },
+				new PennMUSHObject
+				{
+					DBRef = 1, Name = "Player One", Type = PennMUSHObjectType.Player,
+					Overrides = [new PennMUSHOverride("game.see_all", PermissionState.Allow), new PennMUSHOverride("player.page", PermissionState.Deny)]
+				}
+			]
+		});
+
+		await roles.Received(1).SetObjectOverrideAsync(Arg.Any<int>(), "game.see_all", PermissionState.Allow, Arg.Any<string?>());
+		await Assert.That(result.Aborted).IsTrue();
+		await Assert.That(result.IsSuccessful).IsFalse();
+		await Assert.That(result.Errors).Contains(error => error.Contains("override store unavailable"));
 	}
 }
