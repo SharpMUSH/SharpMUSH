@@ -199,7 +199,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 	private const string FeedKind = "bench";
 
 	/// <summary>
-	/// The bundled radio package's line (examples/packages/radio, <c>{{radio}}</c> as <c>me</c>), on God, for
+	/// The radio package's line (radio/ in SharpMUSH.Packages, <c>{{radio}}</c> as <c>me</c>), on God, for
 	/// <c>feed-format</c> and <c>radio-line</c>. Copy it again when the package changes.
 	/// </summary>
 	private static readonly Dictionary<string, string> RadioLine = new()

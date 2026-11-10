@@ -296,7 +296,8 @@ public record SharpMUSHOptions
 			SslRequireClientCert: false,
 			UseDns: true,
 			UseWebsockets: true,
-			WebsocketUrl: "/wsclient"
+			WebsocketUrl: "/wsclient",
+			NegotiationWaitMilliseconds: 400
 		),
 		Alias = AliasOptions.Default,
 		Restriction = new RestrictionOptions(

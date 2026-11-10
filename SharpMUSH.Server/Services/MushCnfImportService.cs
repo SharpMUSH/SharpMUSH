@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -27,7 +28,8 @@ public class MushCnfImportService(
 	IConfigOptionWriter config,
 	IExpandedDataStore database,
 	ISecretStore secrets,
-	ILogger<MushCnfImportService> logger)
+	ILogger<MushCnfImportService> logger,
+	ConfiguredAliasImport? aliases = null)
 {
 	/// <summary>
 	/// Reads <paramref name="content"/>. An uploaded <c>mush.cnf</c> arrives alone: its include lines are not
@@ -62,7 +64,17 @@ public class MushCnfImportService(
 	public async Task<MushCnfApplied> ApplyAsync(PennMushConfigImport import, SecretAuthor author,
 		CancellationToken cancellationToken = default)
 	{
-		var imported = await config.UpdateAsync(import.Over, cancellationToken);
+		var added = aliases?.Resolve(import, ConfigurationDialect.PennMUSH);
+		foreach (var line in added?.NotCarried ?? [])
+		{
+			logger.LogWarning("Configuration import did not carry over: {Line}", line);
+		}
+
+		var imported = await config.UpdateAsync(current =>
+		{
+			var over = import.Over(current);
+			return added is null ? over : over with { Alias = added.Over(over.Alias) };
+		}, cancellationToken);
 		await database.SetExpandedServerData(nameof(MushCnfObjectReferences), MushCnfObjectReferences.From(import),
 			cancellationToken);
 		var stored = new List<string>();

@@ -53,8 +53,10 @@ public class RhostDatabaseTranslatorTests
 
 		var home = Object(database, 8);
 		await Assert.That(home.Location).IsEqualTo(6);
-		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Exits that lead HOME left unlinked") && n.Contains("#8")))
-			.IsTrue();
+		// HOME carries over as the pseudo-dbref, which the converter records as _LINKTYPE.
+		await Assert.That(home.Link).IsEqualTo(-3);
+		await Assert.That(database.ImportNotes.Texts().Any(n => n.Contains("left unlinked") && n.Contains("#8")))
+			.IsFalse();
 	}
 
 	/// <summary>
@@ -316,14 +318,15 @@ public class RhostDatabaseTranslatorTests
 	}
 
 	[Test]
-	public async Task PasswordsSharpMUSHCannotCheckNeedAction_AndThoseItRehashesDoNot()
+	public async Task PasswordsSharpMUSHChecksAndRehashesNeedNoAction()
 	{
 		var database = await TranslateAsync();
 
 		var bcrypt = database.ImportNotes.Single(n => n.Text.StartsWith("Passwords stored as bcrypt"));
 		var des = database.ImportNotes.Single(n => n.Text.StartsWith("Passwords stored as DES crypt"));
 		await Assert.That(bcrypt.Kind).IsEqualTo(ImportWarningKind.Players);
-		await Assert.That(bcrypt.NeedsAction).IsTrue();
+		await Assert.That(bcrypt.NeedsAction).IsFalse();
+		await Assert.That(bcrypt.Text).Contains("rehashed at its next login");
 		await Assert.That(des.Kind).IsEqualTo(ImportWarningKind.Players);
 		await Assert.That(des.NeedsAction).IsFalse();
 	}

@@ -14,7 +14,6 @@ namespace SharpMUSH.Tests.ConnectionServer;
 /// </summary>
 public partial class TelnetServerNegotiationTests
 {
-	private static readonly ConnectionServerOptions WaitsForNegotiation = new() { NegotiationWaitMilliseconds = 60_000 };
 
 	private static NSubstitute.Core.ICall? Registration(IConnectionServerService service) =>
 		service.ReceivedCalls().SingleOrDefault(call => call.GetMethodInfo().Name == nameof(IConnectionServerService.RegisterAsync));
@@ -33,10 +32,170 @@ public partial class TelnetServerNegotiationTests
 	}
 
 	[Test]
+	public async Task AutoLoginBeforeNegotiation_DoesNotReleaseRegistrationOrInput()
+	{
+		var service = Substitute.For<IConnectionServerService>();
+		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 1000);
+		using var cancellation = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, WILL, MXP));
+			await WriteAsync(toServer, "connect guest\r\nlook\r\n"u8.ToArray());
+			// A subsequent protocol round-trip proves the parser has consumed the preceding login.
+			await WriteAsync(toServer, IAC, DO, MXP);
+			await ReadUntilAsync(fromServer, bytes => Encoding.ASCII.GetString(bytes).Contains("<SUPPORT "));
+			await Task.Delay(100);
+			await Assert.That(Registration(service)).IsNull();
+			TelnetInputMessage[] earlyInput;
+			lock (published) earlyInput = [.. published.OfType<TelnetInputMessage>()];
+			await Assert.That(earlyInput).IsEmpty();
+			await WriteAsync(toServer, "\u001b[1z<SUPPORTS +IMAGE -FRAME>\r\n\u001b[?62;4c"u8.ToArray());
+			var capabilities = await RegisteredCapabilitiesAsync(service);
+			await Assert.That(capabilities.MxpSupported).Contains("IMAGE");
+			await Assert.That(capabilities.Probe?.Sixel).IsTrue();
+			var inputs = await WaitForInputsAsync(published, 2);
+			await Assert.That(inputs.Length).IsEqualTo(2);
+			await Assert.That(inputs[0].Input).IsEqualTo("connect guest");
+			await Assert.That(inputs[1].Input).IsEqualTo("look");
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	[Test]
+	public async Task CancelledStartupDoesNotRegisterConnection()
+	{
+		var service = Substitute.For<IConnectionServerService>();
+		var (toServer, fromServer, handler, _, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 60_000);
+		using var cancellation = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, bytes => Encoding.ASCII.GetString(bytes).Contains("\u001b[c"));
+			await cts.CancelAsync();
+			await handler.WaitAsync(Timeout);
+			await Assert.That(Registration(service)).IsNull();
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	[Test]
+	public async Task DisconnectedStartupDoesNotRegisterOrReplayAutoLogin()
+	{
+		var service = Substitute.For<IConnectionServerService>();
+		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 60_000);
+		using var cancellation = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, WILL, MXP));
+			await WriteAsync(toServer, "connect guest\r\n"u8.ToArray());
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+			await Assert.That(Registration(service)).IsNull();
+			await Assert.That(published.OfType<TelnetInputMessage>()).IsEmpty();
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	/// <summary>MXP SUPPORT must be asked and retained before the welcome can render.</summary>
+	[Test]
+	public async Task MxpSupport_IsRequestedBeforeRegistration()
+	{
+		var service = Substitute.For<IConnectionServerService>();
+		var (toServer, fromServer, handler, _, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 1000);
+		using var serverCancellation = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, WILL, MXP));
+			await WriteAsync(toServer, IAC, DO, MXP);
+			await ReadUntilAsync(fromServer, bytes => Encoding.ASCII.GetString(bytes).Contains("<SUPPORT "));
+			await Assert.That(Registration(service)).IsNull();
+			await WriteAsync(toServer, Encoding.ASCII.GetBytes("\u001b[1z<SUPPORTS +IMAGE -FRAME>\r\n"));
+			await WriteAsync(toServer, "\r\n"u8.ToArray());
+			var capabilities = await RegisteredCapabilitiesAsync(service);
+			await Assert.That(capabilities.Format).IsEqualTo(OutputFormat.Mxp);
+			await Assert.That(capabilities.MxpSupported).Contains("IMAGE");
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	/// <summary>Flushing partial reports cannot overwrite the complete snapshot used by the welcome.</summary>
+	[Test]
+	public async Task HeldTerminalReportsDoNotRegressInitialCapabilities()
+	{
+		var service = Substitute.For<IConnectionServerService>();
+		var reports = new List<TerminalProbeResult>();
+		service.UpdateCapabilities(Arg.Any<long>(), Arg.Any<Func<ProtocolCapabilities, ProtocolCapabilities>>())
+			.Returns(call =>
+			{
+				var updated = call.Arg<Func<ProtocolCapabilities, ProtocolCapabilities>>()(new ProtocolCapabilities());
+				if (updated.Probe is { } probe) reports.Add(probe);
+				return true;
+			});
+		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 1000);
+		using var serverCancellation = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, bytes => Encoding.ASCII.GetString(bytes).Contains("\u001b[c"));
+			await WriteAsync(toServer, "\u001b[6;17;8t\u001b[?62;4clook\r\n"u8.ToArray());
+			await WaitForPublishedAsync<TelnetInputMessage>(published);
+			await Assert.That(reports.Count).IsGreaterThanOrEqualTo(2);
+			await Assert.That(reports.All(report => report.Sixel == true && report.CellWidth == 8)).IsTrue();
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	/// <summary>Terminal queries are sent while registration is held, and their reply seeds the first render.</summary>
+	[Test]
+	public async Task GraphicsProbe_PrecedesRegistration()
+	{
+		var service = Substitute.For<IConnectionServerService>();
+		var (toServer, fromServer, handler, _, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 1000);
+		using var serverCancellation = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, bytes => Encoding.ASCII.GetString(bytes).Contains("\u001b[c"));
+			await Assert.That(Registration(service)).IsNull();
+			await WriteAsync(toServer, "\u001b[?62;4clook\r\n"u8.ToArray());
+			var capabilities = await RegisteredCapabilitiesAsync(service);
+			await Assert.That(capabilities.Probe?.Sixel).IsTrue();
+			await Assert.That(capabilities.Pins?.Graphics).IsEqualTo(TerminalGraphics.Auto);
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	[Test]
 	public async Task NegotiatingClient_RegistersWithWhatItSaid()
 	{
 		var service = Substitute.For<IConnectionServerService>();
-		var (toServer, fromServer, handler, _, cts) = StartServer(WaitsForNegotiation, service);
+		var (toServer, fromServer, handler, _, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 500);
 		using var serverCancellation = cts;
 		try
 		{
@@ -62,10 +221,10 @@ public partial class TelnetServerNegotiationTests
 	}
 
 	[Test]
-	public async Task SilentClient_RegistersWhenItTypesALine()
+	public async Task ClientWithoutCapabilityReplies_KeepsInputQueued()
 	{
 		var service = Substitute.For<IConnectionServerService>();
-		var (toServer, fromServer, handler, published, cts) = StartServer(WaitsForNegotiation, service);
+		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 60_000);
 		using var serverCancellation = cts;
 		try
 		{
@@ -73,6 +232,33 @@ public partial class TelnetServerNegotiationTests
 			await Assert.That(Registration(service)).IsNull();
 			await WriteAsync(toServer, "look\r\n"u8.ToArray());
 
+			// Refusing an unknown option proves the preceding command was consumed without
+			// answering any capability probes or completing initial negotiation.
+			await WriteAsync(toServer, IAC, DO, 200);
+			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, (byte)TelnetNegotiationCore.Models.Trigger.WONT, 200));
+			await Assert.That(Registration(service)).IsNull();
+			TelnetInputMessage[] earlyInput;
+			lock (published) earlyInput = [.. published.OfType<TelnetInputMessage>()];
+			await Assert.That(earlyInput).IsEmpty();
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	[Test]
+	public async Task SilentClient_ReleasesQueuedInputAtDeadline()
+	{
+		var service = Substitute.For<IConnectionServerService>();
+		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 1000);
+		using var serverCancellation = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, WILL, CHARSET));
+			await WriteAsync(toServer, "look\r\n"u8.ToArray());
 			var input = await WaitForPublishedAsync<TelnetInputMessage>(published);
 			await Assert.That(input?.Input).IsEqualTo("look");
 			await Assert.That((await RegisteredCapabilitiesAsync(service)).OutputCharset).IsEqualTo(TerminalCharsets.Ascii);

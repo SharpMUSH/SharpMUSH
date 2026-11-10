@@ -2,13 +2,14 @@
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.DiscriminatedUnions
+@inject IJSRuntime JS
 @inject BuiltApplicationClient Built
 @inject IStringLocalizer<SharedResource> Loc
 
 @* The draft drawn as it will look: at a page's width, a widget's or a phone's, with made-up values or with what
    the attributes it reads hold on the author's own character. Nothing in it can post. *@
 
-<section class="bld-preview" aria-labelledby="bld-preview-h">
+<section @ref="_root" class="bld-preview" aria-labelledby="bld-preview-h">
     <div class="bld-preview-bar">
         <h2 id="bld-preview-h" class="bld-pane-title">@Loc["LayBldPreview"]</h2>
         <div class="bld-segmented" role="radiogroup" aria-label="@Loc["LayBldPreviewWidth"]">
@@ -37,6 +38,14 @@
 </section>
 
 @code {
+    private ElementReference _root;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try { await JS.InvokeVoidAsync("sharpmushLayout.radioKeys", _root); }
+        catch (JSException) { /* Native buttons remain usable when the optional keyboard helper is unavailable. */ }
+    }
+
     private static readonly string[] Widths = ["page", "widget", "phone"];
 
     /// <summary>The document as the preview draws it (no actions).</summary>

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
@@ -15,7 +16,9 @@ namespace SharpMUSH.Server.Middleware;
 /// Intercepts requests flagged as bot traffic and serves pre-rendered HTML.
 /// Must run AFTER <see cref="BotDetectionMiddleware"/> (which sets IsBot in Items).
 ///
-/// For public wiki/character/scene routes:
+/// For Home and the portal's public lists (<see cref="GamePrerenderHtmlBuilder.IsGamePath"/>): the game's own card.
+///
+/// For public wiki/character routes:
 ///   1. Check pre-render cache; serve cached HTML if present.
 ///   2. Otherwise, look up the page via IWikiService, render to HTML, cache, serve.
 ///   3. Include canonical link + OpenGraph meta tags.
@@ -62,6 +65,18 @@ public sealed class BotPrerenderMiddleware(
 		var wikiService = scope.ServiceProvider.GetRequiredService<IWikiService>();
 		var localization = scope.ServiceProvider.GetRequiredService<IWikiLocalizationService>();
 
+		var options = scope.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue;
+
+		// The game's own card for Home and the portal's public lists. Not cached: it is built from the options alone,
+		// and a cached copy would go on showing a banner or tagline the game has since changed.
+		if (GamePrerenderHtmlBuilder.IsGamePath(path))
+		{
+			await WriteHtmlResponse(context, GamePrerenderHtmlBuilder.GenerateGamePrerenderHtml(options, canonicalBase, path));
+			return;
+		}
+
+		var siteName = string.IsNullOrWhiteSpace(options.Net.MudName) ? "SharpMUSH" : options.Net.MudName.Trim();
+
 		// A prerender is anonymous, bot-facing output: it serves what a logged-out reader may see, so neither a
 		// draft nor a page whose read requirements the everyone role does not meet reaches a crawler. The check
 		// runs before the cache is read: a requirement or a role can change from places that do not clear the
@@ -89,7 +104,8 @@ public sealed class BotPrerenderMiddleware(
 				await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
 				$"{canonicalBase}{WikiRoutes.WikiPathFor(page.Namespace, page.Slug)}",
 				await localization.GetVisibleLocalesAsync(page, includeDrafts: false),
-				localization.DefaultLocale);
+				localization.DefaultLocale,
+				siteName);
 		}
 		else if (page is not null)
 		{
@@ -97,7 +113,8 @@ public sealed class BotPrerenderMiddleware(
 				await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
 				$"{canonicalBase}/character/{path["/character/".Length..].Trim('/')}",
 				await localization.GetVisibleLocalesAsync(page, includeDrafts: false),
-				localization.DefaultLocale);
+				localization.DefaultLocale,
+				siteName);
 		}
 		else if (path.StartsWith("/help/", StringComparison.OrdinalIgnoreCase))
 		{

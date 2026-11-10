@@ -16,11 +16,6 @@
 	text-align: center;
 }
 
-.setup-logo {
-	height: 48px;
-	opacity: 0.95;
-}
-
 .setup-brand-title {
 	margin: 0;
 	font-family: var(--font-display);
@@ -56,9 +51,9 @@
 }
 
 .setup-kicker {
-	font-family: var(--font-mono);
+	font-family: var(--font-kicker);
 	font-size: var(--text-xs);
-	letter-spacing: 0.18em;
+	letter-spacing: var(--kicker-tracking);
 	text-transform: uppercase;
 	color: var(--accent);
 	margin-bottom: 0.5rem;
@@ -247,9 +242,9 @@
 
 .setup-group-title {
 	margin-top: 0.5rem;
-	font-family: var(--font-mono);
+	font-family: var(--font-kicker);
 	font-size: var(--text-xs);
-	letter-spacing: 0.12em;
+	letter-spacing: var(--kicker-tracking);
 	text-transform: uppercase;
 	color: var(--text-dim);
 }

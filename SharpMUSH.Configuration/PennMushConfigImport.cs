@@ -34,11 +34,27 @@ public record PennMushConfigImport(SharpMUSHOptions Options, IReadOnlyList<strin
 	/// </summary>
 	public IReadOnlyList<string> Unrecognized { get; init; } = [];
 
+	/// <summary>
+	/// The file's alias lines, in the source's own names. A command or function alias joins the game's alias
+	/// options once the engine has checked what it names; a flag or power alias is given to the flag or power by the
+	/// database import.
+	/// </summary>
+	public IReadOnlyList<AliasDirective> Aliases { get; init; } = [];
+
+	/// <summary>
+	/// The lines of <see cref="Skipped"/> where the source restricted a command or function more than SharpMUSH can,
+	/// and SharpMUSH's own restriction stays: the import report asks staff to check those.
+	/// </summary>
+	public IReadOnlySet<string> NeedsReview { get; init; } = new HashSet<string>();
+
 	/// <summary>A RhostMUSH file's reality levels, which the database import gives the world as reality layers.</summary>
 	public RealityDirectives Reality { get; init; } = RealityDirectives.None;
 
 	/// <summary>The totems a RhostMUSH file defines, which the database import turns into flags.</summary>
 	public IReadOnlyList<TotemDirective> Totems { get; init; } = [];
+
+	/// <summary>A TinyMUX or RhostMUSH file's command hooks, which the database import reports.</summary>
+	public HookDirectives Hooks { get; init; } = HookDirectives.None;
 
 	/// <summary>Whether the file gave <paramref name="name"/> (a configuration name) a value.</summary>
 	public bool Sets(string name) => Named.Contains(name);

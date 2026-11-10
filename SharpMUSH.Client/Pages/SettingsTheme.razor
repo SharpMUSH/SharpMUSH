@@ -6,6 +6,7 @@
 @inject AccountAuthService AccountAuth
 @inject IThemeService Themes
 @inject ISnackbar Snackbar
+@inject IJSRuntime JS
 
 @* Each of the account's characters with its own colour vision, theme and accent. The look is stored with the character, so
    it follows the player to every device, and the acting character's is the one the portal wears. An accent
@@ -15,7 +16,7 @@
 
 <PageTitle>@Loc["NavTheme"] — @Loc["Settings"] — <GameName /></PageTitle>
 
-<div class="settings-theme-page">
+<div class="settings-theme-page" @ref="_root">
     <PlainPageHeader Kicker="@Loc["Settings"]" Title="@Loc["NavTheme"]" Description="@Loc["NavThemeIntro"]" />
 
     @if (AccountAuth.Characters.Count == 0)
@@ -113,7 +114,20 @@
 </div>
 
 @code {
+    private ElementReference _root;
     private readonly HashSet<int> _saving = [];
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("sharpmushLayout.radioKeys", _root);
+        }
+        catch (JSException)
+        {
+            // Without the helper every native button remains reachable with Tab and Space.
+        }
+    }
 
     private IEnumerable<AccountAuthService.CharacterSummary> Ordered =>
         AccountAuth.Characters.OrderByDescending(c => c.IsActing).ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase);

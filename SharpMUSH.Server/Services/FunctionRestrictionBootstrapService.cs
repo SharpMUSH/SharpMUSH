@@ -2,7 +2,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Services;
 
@@ -22,11 +24,13 @@ namespace SharpMUSH.Server.Services;
 /// </remarks>
 public sealed class FunctionRestrictionBootstrapService(
 	ConfiguredFunctionRestrictions restrictions,
+	ILibraryProvider<FunctionDefinition> functions,
 	IOptionsMonitor<SharpMUSHOptions> options,
 	ILogger<FunctionRestrictionBootstrapService> logger) : IHostedService, IDisposable
 {
 	private readonly Lock _gate = new();
 	private IReadOnlyDictionary<string, string[]> _applied = new Dictionary<string, string[]>();
+	private readonly Dictionary<string, HashSet<string>> _aliasesSeen = new(StringComparer.OrdinalIgnoreCase);
 	private IDisposable? _subscription;
 
 	public Task StartAsync(CancellationToken cancellationToken)
@@ -62,14 +66,24 @@ public sealed class FunctionRestrictionBootstrapService(
 	{
 		lock (_gate)
 		{
+			// The aliases first, so a restriction on an alias the same change made finds it.
+			var aliases = options.CurrentValue.Alias.FunctionAliases;
+			var aliasesAdded = functions is IConfiguredAliasRegistry registry && registry.RegisterConfiguredAliases(options.CurrentValue.Alias);
+			// The live table keeps an alias the configuration later drops, until restart, so it stays held to its
+			// function's restriction: every alias any configuration since startup named is passed on.
+			foreach (var (target, names) in aliases)
+			{
+				var seen = _aliasesSeen.TryGetValue(target, out var known) ? known : _aliasesSeen[target] = new(StringComparer.OrdinalIgnoreCase);
+				seen.UnionWith(names);
+			}
 			var configured = options.CurrentValue.Restriction.FunctionRestrictions;
-			if (SameRestrictions(configured, _applied))
+			if (!aliasesAdded && SameRestrictions(configured, _applied))
 			{
 				return;
 			}
 
 			logger.LogInformation("Applying {Count} configured function restriction(s).", configured.Count);
-			restrictions.Apply(configured);
+			restrictions.Apply(configured, _aliasesSeen.ToDictionary(entry => entry.Key, entry => entry.Value.ToArray(), StringComparer.OrdinalIgnoreCase));
 			_applied = configured;
 		}
 	}

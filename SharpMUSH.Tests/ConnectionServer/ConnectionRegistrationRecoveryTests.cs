@@ -13,6 +13,23 @@ namespace SharpMUSH.Tests.ConnectionServer;
 
 public class ConnectionRegistrationRecoveryTests
 {
+	/// <summary>The durable record and initial event carry the graphics policy before any welcome output.</summary>
+	[Test]
+	public async Task InitialGraphicsPolicySurvivesRegistration()
+	{
+		var store = Substitute.For<IConnectionStateStore>();
+		var bus = Substitute.For<IMessageBus>();
+		var service = new ConnectionServerService(NullLogger<ConnectionServerService>.Instance, bus, store);
+		await service.RegisterAsync(42, "127.0.0.1", "localhost", "telnet",
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, () => { },
+			capabilities: new SharpMUSH.SocketServer.Models.ProtocolCapabilities(
+				Pins: new SharpMUSH.Library.Utilities.TerminalPins(Graphics: "auto")));
+		await bus.Received(1).Publish(Arg.Is<ConnectionEstablishedMessage>(message => message.InitialGraphics == "auto"),
+			Arg.Any<CancellationToken>());
+		await store.Received(1).SetConnectionAsync(42,
+			Arg.Is<ConnectionStateData>(data => data.Metadata["GRAPHICS"] == "auto"), Arg.Any<CancellationToken>());
+	}
+
 	[Test]
 	public async Task TransientPersistenceFailureRecoversBeforePublishingEstablished()
 	{

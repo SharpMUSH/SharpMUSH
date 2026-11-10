@@ -79,7 +79,7 @@ public static class ListMail
 			mail.Forwarded ? "F" : "",
 			mail.Cleared ? "C" : "",
 			mail.Tagged ? "+" : "");
-		var from = (await mail.From.WithCancellation(CancellationToken.None)).Object()!.Name;
+		var from = await MailLayout.SenderName(mail);
 		return
 		[
 			MarkupText.Plain((index + 1).ToString(CultureInfo.InvariantCulture)),

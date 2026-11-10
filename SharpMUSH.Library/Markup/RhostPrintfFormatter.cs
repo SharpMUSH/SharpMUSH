@@ -84,7 +84,10 @@ public static class RhostPrintfFormatter
 				// The wrap is done here, so the indent and the cell limit are too.
 				value = WordWrap(columnFormat.MaxCells > 0 && value.Length > columnFormat.MaxCells ? value.Substring(0, columnFormat.MaxCells) : value,
 					columnFormat.Width, columnFormat.Indent);
-				columnFormat = columnFormat with { Indent = default, MaxCells = 0 };
+				// The indent is in the wrapped lines already. What is left for the layout is the +W widening,
+				// which RhostMUSH gives every row after the first, however late the indent starts.
+				var widened = columnFormat.Indent.Widen > 0 ? new Indent(0, 1, columnFormat.Indent.Widen) : default;
+				columnFormat = columnFormat with { Indent = widened, MaxCells = 0 };
 			}
 
 			if (field.MultiLine && IsMultiLine(value, columnFormat)) multiLineSuppress.Add(columnFormat.SuppressBlankLast);
@@ -142,7 +145,8 @@ public static class RhostPrintfFormatter
 
 		int CellWidth(LayoutCell cell) => cell switch
 		{
-			LayoutColumn column => column.Format.Width,
+			// A widened column's later rows are that much wider; rows before the widening are narrower anyway.
+			LayoutColumn column => column.Format.Width + column.Format.Indent.Widen,
 			LayoutSeparator separator => separator.Text.DisplayWidth,
 			_ => 0
 		};
@@ -167,6 +171,8 @@ public static class RhostPrintfFormatter
 	/// With an <paramref name="indent"/>, every line after a break at a space has the indent taken off its
 	/// width, whether or not it is indented yet, as RhostMUSH counts it; after a cut, only an indented line
 	/// does, and so does an indented line after a newline. The indent's spaces start at <see cref="Indent.FromLine"/>.
+	/// The <c>+W</c> widening gives a line after a break at a space <see cref="Indent.Widen"/> more cells; the
+	/// column is that much wider from its second row on.
 	/// </remarks>
 	private static MarkupText WordWrap(MarkupText value, int width, Indent indent)
 	{
@@ -191,7 +197,7 @@ public static class RhostPrintfFormatter
 				{
 					lines.Add(rest.Substring(0, room));
 					rest = rest.Substring(room);
-					room = lines.Count >= indent.FromLine ? Math.Max(1, width - amount) : width;
+					room = lines.Count >= firstIndented ? Math.Max(1, width - amount) : width;
 				}
 			}
 

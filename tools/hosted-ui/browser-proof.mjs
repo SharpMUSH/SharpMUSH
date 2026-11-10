@@ -1,12 +1,14 @@
 // Offline browser proof: intercepted HTTPS requests only; no listener, server or game connection.
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const root = resolve(import.meta.dirname, '../..');
 const packageRoot = resolve(root, 'examples/packages/builder-graph');
+const output = resolve(process.env.BUILDER_PROOF_OUTPUT || resolve(root, 'work/visual-refinement/builder-graph'));
+await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 try {
     const page = await browser.newPage({ viewport: { width: 1300, height: 1000 } });
@@ -52,7 +54,22 @@ try {
     await east.locator('.node[data-id="#10"]').click();
     assert.match(await east.locator('#exits').textContent(), /generated.*dynamic/);
     assert.deepEqual(errors, []);
-    await page.screenshot({ path: '/tmp/builder-host-proof.png', fullPage: true });
+    await east.locator('.node').first().focus();
+    await page.keyboard.press('Enter');
+    await east.locator('#position-x').fill('4');
+    await east.locator('#position-y').fill('-2');
+    await east.locator('#position-z').fill('0');
+    await east.locator('#position-z').press('Enter');
+    assert.match(await east.locator('#status').textContent(), /Position staged/);
+    assert.equal(await east.locator('#save').isVisible(), true);
+    assert.equal(await page.evaluate(() => window.readCounts.east), 1, 'staging stays local');
+    await page.screenshot({ path: resolve(output, 'builder-host-proof.png'), fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    assert.equal(await east.locator('body').evaluate(body => body.scrollWidth <= innerWidth), true, 'graph fits narrow frame');
+    await page.screenshot({ path: resolve(output, 'builder-host-mobile.png'), fullPage: true });
+    await east.locator('#position-form').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: resolve(output, 'builder-host-mobile-inspector.png'), fullPage: true });
+    await page.setViewportSize({ width: 1300, height: 1000 });
     // Commit a replacement document while its load event is held back, then finish an old read.
     // WindowProxy-based replies would reach the replacement even before navigation's load event.
     await page.evaluate(() => { window.holdResponse = true; });
@@ -81,5 +98,5 @@ try {
     await page.waitForTimeout(50);
     assert.equal(await preload.locator('#ready').evaluate(() => window.received.length), 0);
     assert.equal(await page.evaluate(() => window.preloadReads), 0);
-    console.log('PASS: two opaque-origin frames, independent configs/graphs, directed parallel links, self-loop, disconnected room and unresolved dynamic exit; no browser errors; replacement documents receive no config or pending reply, including a redirect before first load.');
+    console.log('PASS: keyboard coordinate staging, narrow-frame layout, two opaque-origin frames, independent configs/graphs, directed parallel links, self-loop, disconnected room and unresolved dynamic exit; no browser errors; replacement documents receive no config or pending reply, including a redirect before first load.');
 } finally { await browser.close(); }

@@ -8,7 +8,8 @@ namespace SharpMUSH.Tests.BUnit;
 /// A <see cref="ServerInfoService"/> that returns fixed server facts without any HTTP, so component
 /// tests can pin whether the "play as guest" affordance is offered, what game name the brand shows,
 /// which optional applications the game has on (a new game's, unless given), the game's portal_logo (none,
-/// unless given), its onboarding presentation (none, unless given), and one portal build that
+/// unless given), its onboarding presentation (none, unless given), its banner, tagline and description (none,
+/// unless given in <see cref="Identity"/>), and one portal build that
 /// never changes. Passes a null factory to the base since the overridden methods never touch it.
 /// </summary>
 public sealed class StubServerInfoService(bool guestsEnabled, string gameName = "SharpMUSH",
@@ -17,6 +18,12 @@ public sealed class StubServerInfoService(bool guestsEnabled, string gameName = 
 	public override Task<OnboardingPresentation?> OnboardingAsync() => Task.FromResult(onboarding);
 
 	public override Task<string?> LogoAsync() => Task.FromResult(logo);
+
+	/// <summary>The banner, tagline and description <see cref="IdentityAsync"/> answers with; settable per test.</summary>
+	public (string? Banner, string? Tagline, string? Description) Identity { get; set; }
+
+	public override Task<GameIdentity> IdentityAsync() =>
+		Task.FromResult(new GameIdentity(gameName, Identity.Banner, Identity.Tagline, Identity.Description));
 
 	public override Task<bool> GuestLoginsEnabledAsync() => Task.FromResult(guestsEnabled);
 

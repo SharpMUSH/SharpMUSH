@@ -691,6 +691,17 @@ public static class MailAliases
 	}
 
 	/// <summary>
+	/// RhostMUSH's <c>mailalias()</c>: the members of <paramref name="name"/>, with or without its
+	/// <c>+</c>, as space-separated dbrefs, or null when there is no such alias. Only wizards call it, so
+	/// every alias is found and every member list shown.
+	/// </summary>
+	public static async ValueTask<string?> MembersAsync(Services services, string name)
+	{
+		var alias = await FindAsync(services, null, name.StartsWith(Token) ? name : $"{Token}{name}");
+		return alias is null ? null : string.Join(" ", alias.Members.Select(member => $"#{member}"));
+	}
+
+	/// <summary>
 	/// The list parser do_malias_create, _set, _add and _remove share: space-separated, with a double-quoted
 	/// run taken whole.
 	/// </summary>

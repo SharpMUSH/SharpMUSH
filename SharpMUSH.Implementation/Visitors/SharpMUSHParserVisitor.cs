@@ -969,6 +969,9 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 			return await VisitChildren(context) ?? new CallState(context.GetText());
 		}
 
+		// The text as written, for @rollback to run again with new arguments.
+		parser.CurrentState.CommandSources?.Push(GetContextText(context));
+
 		var result = await _services.Dispatcher.DispatchAsync(this, source, context);
 		return result is CallState callState ? callState : CallState.Empty;
 	}

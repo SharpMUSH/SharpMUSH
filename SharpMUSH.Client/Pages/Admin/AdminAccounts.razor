@@ -1,5 +1,5 @@
 @page "/admin/accounts"
-@attribute [Authorize(Roles = "Wizard,God")]
+@attribute [Authorize(Policy = "game.wizard")]
 @using SharpMUSH.Library.DiscriminatedUnions
 @using SharpMUSH.Library.Models
 @using SharpMUSH.Client.Components.Settings
@@ -13,11 +13,13 @@
     <PlainPageHeader Kicker="@Loc["AdmGroupPeople"]" Title="@Loc["AdmAccountsTitle"]" />
 
     <KitCard Title="@Loc["AdmStaffRecoveryProof"]">
-        @if (_proofGrant is null)
-        {
-            <RecentAccountProofPrompt @key="_proofVersion" Operation="AccountSecurityOperation.StaffRecovery" ReturnPath="/admin/accounts" OnProved="StaffProved" />
-        }
-        <p>@Loc["AdmStaffRecoveryChooseAgain"]</p>
+        <div class="accounts-body accounts-proof">
+            @if (_proofGrant is null)
+            {
+                <RecentAccountProofPrompt @key="_proofVersion" Operation="AccountSecurityOperation.StaffRecovery" ReturnPath="/admin/accounts" OnProved="StaffProved" />
+            }
+            <p>@Loc["AdmStaffRecoveryChooseAgain"]</p>
+        </div>
     </KitCard>
     <KitCard>
         <div class="accounts-body">

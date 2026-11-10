@@ -551,4 +551,37 @@ public class UserDefinedFunctionTests
 			await Assert.That(await EvalAs(player, $"{fn}()")).IsNotEqualTo("hidden");
 		}
 	}
+
+	/// <summary>
+	/// TinyMUX's <c>@function/preserve</c> takes a definition and keeps the caller's registers; with
+	/// <c>/privileged</c> beside it, the function is still defined and stored as privileged.
+	/// </summary>
+	[Test]
+	public async ValueTask PreserveWithADefinitionDefinesALocalizedFunction()
+	{
+		var fn = $"pres{U()}";
+		var attr = $"PRES{U()}";
+		await Cmd($"&{attr} me=[setq(a,inner)]%qa");
+		await Cmd($"@function/preserve/privileged {fn}=me/{attr}");
+
+		await Assert.That(await Eval($"[setq(a,outer)][{fn}()]-%qa")).IsEqualTo("inner-outer");
+		var defined = Registry.Get(fn)!;
+		await Assert.That(defined.Privileged).IsTrue();
+		await Assert.That(defined.Restriction).IsEqualTo("localize");
+		await Assert.That(defined.Preserved).IsFalse();
+	}
+
+	/// <summary>PennMUSH's <c>@function/preserve &lt;name&gt;</c>, with no definition, still marks the function.</summary>
+	[Test]
+	public async ValueTask PreserveWithANameAloneMarksTheFunction()
+	{
+		var fn = $"mark{U()}";
+		var attr = $"MARK{U()}";
+		await Cmd($"&{attr} me=1");
+		await Cmd($"@function {fn}=me/{attr}");
+		await Cmd($"@function/preserve {fn}");
+
+		await Assert.That(Registry.Get(fn)!.Preserved).IsTrue();
+		await Assert.That(Registry.Get(fn)!.Restriction).IsNull();
+	}
 }

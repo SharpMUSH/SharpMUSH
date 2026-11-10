@@ -90,7 +90,10 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 				? exact
 				: await BestStandardAttributeMatchAsync(potentialAttrName);
 
-		if (matchedEntry == null)
+		// A dialect alias names its attribute even when no entry is seeded for it: a failed lock's message, as
+		// TinyMUX's @dfail sets DROP_LOCK`FAILURE.
+		if ((matchedEntry?.Name ?? SoftcodeDialectScope.Current?.AttributeFor(rootCommand[1..])?.ToUpperInvariant())
+				is not { } attributeName)
 		{
 			return new None();
 		}
@@ -98,7 +101,7 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 		var evalString = context.evaluationString();
 		if (evalString == null || evalString.IsEmpty)
 		{
-			return await _writer.UsageAsync(prs, matchedEntry.Name);
+			return await _writer.UsageAsync(prs, attributeName);
 		}
 
 		var fullText = src.Substring(evalString.Start.StartIndex, evalString.Stop.StopIndex - evalString.Start.StartIndex + 1);
@@ -117,17 +120,17 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 		// command_isattr makes this ATTRIB_SET/<attribute>. The value is stored as written here, so
 		// that is also what %u shows; evaluating it for %u alone would run it when the command does not.
 		prs.CurrentState.CommandText?.EvaluatedFrom(() => spaceIndex == -1
-			? MarkupText.Plain($"ATTRIB_SET/{matchedEntry.Name}")
-			: MarkupText.Concat(MarkupText.Plain($"ATTRIB_SET/{matchedEntry.Name} "),
+			? MarkupText.Plain($"ATTRIB_SET/{attributeName}")
+			: MarkupText.Concat(MarkupText.Plain($"ATTRIB_SET/{attributeName} "),
 				fullText.Substring(spaceIndex + 1, fullText.Length - spaceIndex - 1)));
 
 		if (spaceIndex == -1)
 		{
-			return await _writer.UsageAsync(prs, matchedEntry.Name);
+			return await _writer.UsageAsync(prs, attributeName);
 		}
 
 		var argsText = fullText.Substring(spaceIndex + 1, fullText.Length - spaceIndex - 1);
-		return await _writer.WriteAsync(prs, argsText, matchedEntry.Name);
+		return await _writer.WriteAsync(prs, argsText, attributeName);
 	}
 }
 

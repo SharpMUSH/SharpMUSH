@@ -38,6 +38,9 @@ public class RhostPasswordTests
 	[Arguments("$1$abc$9dV135Rc3U8Xbm2DxadgF0", "MD5-crypt")]
 	[Arguments("XXuOowDRD5rnE", "DES crypt with RhostMUSH's fixed salt")]
 	[Arguments("hunter2", "plaintext")]
+	[Arguments("$2a$04$QA5jKFwHjzY9RyNrJR0uIOYeVNJpmGBiVJn2Q2AgFQNRq2QFP4.Va", "bcrypt $2a$")]
+	[Arguments("$2b$04$z/R2OUmvmWagltsnP81p8e8LHDckcUaw/TlG411CTfxZNC0do.De2", "bcrypt $2b$")]
+	[Arguments("$2y$04$z/R2OUmvmWagltsnP81p8e8LHDckcUaw/TlG411CTfxZNC0do.De2", "bcrypt $2y$, glibc's spelling of $2b$")]
 	public async Task AStoredFormOpensTheCharacterAndIsRehashed(string stored, string form)
 	{
 		await Assert.That(Service.PasswordIsValid("hunter2", stored)).IsTrue().Because(form);
@@ -56,10 +59,18 @@ public class RhostPasswordTests
 		await Assert.That(Service.NeedsRehash(stored)).IsTrue();
 	}
 
-	/// <summary>bcrypt is not checked: no password opens it, and the import reports the players who have one.</summary>
+	/// <summary>A published bcrypt vector (OpenBSD's, as John the Ripper carries it), so the check is not only against itself.</summary>
 	[Test]
-	public async Task BcryptOpensNothing()
+	public async Task BcryptMatchesAPublishedVector()
+	{
+		await Assert.That(Service.PasswordIsValid("U*U", "$2a$05$CCCCCCCCCCCCCCCCCCCCC.E5YPO9kmyuRGyh0XouQYb4YMJKvyOeW")).IsTrue();
+	}
+
+	/// <summary>A value shaped like bcrypt whose salt does not decode opens nothing and does not throw.</summary>
+	[Test]
+	public async Task AMalformedBcryptOpensNothing()
 	{
 		await Assert.That(Service.PasswordIsValid("hunter2", "$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ01234")).IsFalse();
+		await Assert.That(Service.PasswordIsValid("hunter2", "$2a$99$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ01234")).IsFalse();
 	}
 }

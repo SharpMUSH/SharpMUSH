@@ -5434,6 +5434,22 @@
     <value>Een uitzondering op dit account gaat boven al zijn rollen.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolOverrideReach" xml:space="preserve">
+    <value>Bereik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachEveryone" xml:space="preserve">
+    <value>Elk doel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachUpTo" xml:space="preserve">
+    <value>Bereik {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReaching" xml:space="preserve">
+    <value>(bereik {0})</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Uitzondering voor {0} opgeslagen.</value>
     <comment>MT</comment>
@@ -7854,7 +7870,7 @@
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenreHint" xml:space="preserve">
-    <value>Kies het MSSP-genre en -subgenre van het spel. Sharpie gebruikt deze keuzes voor de afbeeldingen; kies None als geen van beide past.</value>
+    <value>Kies het MSSP-genre van het spel. Kies een voorgesteld subgenre of voer zelf een subgenre in. Sharpie gebruikt deze waarden voor de afbeeldingen; kies None als geen van beide past.</value>
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenres" xml:space="preserve">
@@ -9444,5 +9460,8 @@
   <data name="MudTreeView_ExpandItem" xml:space="preserve">
     <value>Uitvouwen</value>
     <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityCustomSubgenre" xml:space="preserve">
+    <value>Dit subgenre staat niet in de MSSP-lijst met suggesties. Eigen waarden zijn toegestaan.</value>
   </data>
 </root>

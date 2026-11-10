@@ -54,7 +54,7 @@ public class CacheCoherenceTests
 
 		await Assert.That(served).IsEqualTo("pre-write")
 			.Because("the caller that raced the write gets the answer the database gave it");
-		await Assert.That((await cache.TryGetAsync<string>(CacheKeys.Object(7))).HasValue).IsFalse()
+		await Assert.That((await cache.TryGetAsync<CachedValue<string>>(CacheKeys.Object(7))).HasValue).IsFalse()
 			.Because("but the entry stored from that answer is removed after the store, so nobody else does");
 		await Assert.That(versions.Of(7)).IsEqualTo(3)
 			.Because("the removal moves the version on both sides, so a caller that joined the factory after the write cannot keep the pre-write value");
@@ -68,7 +68,7 @@ public class CacheCoherenceTests
 
 		await behaviour.Handle(new ObjectProbeQuery(7), (_, _) => ValueTask.FromResult("current"), CancellationToken.None);
 
-		await Assert.That((await cache.TryGetAsync<string>(CacheKeys.Object(7))).Value).IsEqualTo("current");
+		await Assert.That((await cache.TryGetAsync<CachedValue<string>>(CacheKeys.Object(7))).Value.Value).IsEqualTo("current");
 	}
 
 	private sealed record ContentsProbeQuery : IStreamQuery<AnySharpContent>, ICacheable

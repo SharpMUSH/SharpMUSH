@@ -83,6 +83,9 @@ public record ConnectionEstablishedMessage(
 	/// </summary>
 	public bool OrderedPrompts { get; init; }
 
+	/// <summary>Initial graphics policy chosen by the socket owner before the welcome; null for legacy owners.</summary>
+	public string? InitialGraphics { get; init; }
+
 	/// <summary>Connection metadata key recording <see cref="OrderedPrompts"/> ("1" or "0").</summary>
 	public const string OrderedPromptsMetadata = "OrderedPrompts";
 

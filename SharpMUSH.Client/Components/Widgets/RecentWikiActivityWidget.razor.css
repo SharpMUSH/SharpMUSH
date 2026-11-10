@@ -8,6 +8,11 @@
 	height: 100%;
 }
 
+.recent-wiki-error {
+	font-size: var(--text-sm);
+	color: var(--text-faint);
+}
+
 /* in a page's main column the main card's body is padded here */
 .recent-wiki-widget--main ::deep .kit-card-body {
 	padding: var(--space-3) var(--space-4) var(--space-4);

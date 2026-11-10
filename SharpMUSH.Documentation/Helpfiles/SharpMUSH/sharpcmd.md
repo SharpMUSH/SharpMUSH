@@ -50,18 +50,19 @@ These '@' commands are general utility and programming commands:
 | [@chat]      | [@clist]     | [@clock]     | [@coflags]   | [@command]   |
 | [@config]    | [@context]   | [@cpflags]   | [@cset]      | [@cwho]      |
 | [@decompile] | [@doing]     | [@dolist]    | [@drain]     | [@edit]      |
-| [@emit]      | [@entrances] | [@eval]      | [@find]      | [@force]     |
-| [@function]  | [@gedit]     | [@grep]      | [@halt]      | [@if]        |
-| [@include]   | [@input]     | [@job]       | [@lemit]     | [@list]      |
-| [@listmotd]  | [@locale]    | [@ltag]      | [@mail]      | [@malias]    |
-| [@map]       | [@message]   | [@notify]    | [@nsemit]    | [@nslemit]   |
-| [@nsoemit]   | [@nspemit]   | [@nsprompt]  | [@nsremit]   | [@nszemit]   |
-| [@oemit]     | [@password]  | [@pemit]     | [@pipe]      | [@profile]   |
-| [@prompt]    | [@ps]        | [@queue]     | [@remit]     | [@restart]   |
-| [@retry]     | [@roll]      | [@scan]      | [@search]    | [@select]    |
-| [@sockset]   | [@stats]     | [@sweep]     | [@switch]    | [@teleport]  |
-| [@theme]     | [@trigger]   | [@verb]      | [@version]   | [@wait]      |
-| [@warnings]  | [@wcheck]    | [@whereis]   | [@wiki]      | [@zemit]     |
+| [@emit]      | [@entrances] | [@eval]      | [@find]      | [@folder]    |
+| [@force]     | [@function]  | [@gedit]     | [@grep]      | [@halt]      |
+| [@if]        | [@include]   | [@input]     | [@job]       | [@lemit]     |
+| [@list]      | [@listmotd]  | [@locale]    | [@ltag]      | [@mail]      |
+| [@malias]    | [@map]       | [@message]   | [@notify]    | [@nsemit]    |
+| [@nslemit]   | [@nsoemit]   | [@nspemit]   | [@nsprompt]  | [@nsremit]   |
+| [@nszemit]   | [@oemit]     | [@password]  | [@pemit]     | [@pipe]      |
+| [@profile]   | [@prompt]    | [@ps]        | [@queue]     | [@remit]     |
+| [@restart]   | [@retry]     | [@roll]      | [@rollback]  | [@scan]      |
+| [@search]    | [@select]    | [@sockset]   | [@stats]     | [@sweep]     |
+| [@switch]    | [@teleport]  | [@theme]     | [@trigger]   | [@verb]      |
+| [@version]   | [@wait]      | [@warnings]  | [@wcheck]    | [@whereis]   |
+| [@wiki]      | [@zemit]     |              |              |              |
 
 # @-wizard
 These '@' commands are only usable by wizards or privileged players:
@@ -69,17 +70,18 @@ These '@' commands are only usable by wizards or privileged players:
 |                 |                 |                 |                 |                 |
 |-----------------|-----------------|-----------------|-----------------|-----------------|
 | [@account]      | [@allhalt]      | [@allquota]     | [@ascii]        | [@backup]       |
-| [@boot]         | [@chownall]     | [@chzoneall]    | [@comment]      | [@dbck]         |
-| [@disable]      | [@dump]         | [@enable]       | [@feed]         | [@flag]         |
-| [@hide]         | [@hook]         | [@http]         | [@kick]         | [@leveldefault] |
-| [@livewire]     | [@log]          | [@logwipe]      | [@mapsql]       | [@motd]         |
-| [@newpassword]  | [@package]      | [@pcreate]      | [@permission]   | [@plugin]       |
-| [@poll]         | [@poor]         | [@power]        | [@purge]        | [@push]         |
-| [@quota]        | [@readcache]    | [@reality]      | [@rejectmotd]   | [@respond]      |
-| [@role]         | [@rxlevel]      | [@secret]       | [@shutdown]     | [@sitelock]     |
-| [@slave]        | [@snapshot]     | [@sql]          | [@squota]       | [@storage]      |
-| [@suggest]      | [@tag]          | [@txlevel]      | [@uptime]       | [@wall]         |
-| [@wizmotd]      | [@wizwall]      | [cd]            | [ch]            | [cv]            |
+| [@blacklist]    | [@boot]         | [@chownall]     | [@chzoneall]    | [@comment]      |
+| [@dbck]         | [@disable]      | [@dump]         | [@enable]       | [@feed]         |
+| [@flag]         | [@hide]         | [@hook]         | [@http]         | [@kick]         |
+| [@leveldefault] | [@livewire]     | [@log]          | [@logwipe]      | [@mapsql]       |
+| [@motd]         | [@newpassword]  | [@package]      | [@pcreate]      | [@permission]   |
+| [@plugin]       | [@poll]         | [@poor]         | [@power]        | [@purge]        |
+| [@push]         | [@quota]        | [@readcache]    | [@reality]      | [@rejectmotd]   |
+| [@respond]      | [@role]         | [@rxlevel]      | [@secret]       | [@shutdown]     |
+| [@site]         | [@sitelock]     | [@slave]        | [@snapshot]     | [@sql]          |
+| [@squota]       | [@storage]      | [@suggest]      | [@tag]          | [@txlevel]      |
+| [@uptime]       | [@wall]         | [@wizmotd]      | [@wizwall]      | [cd]            |
+| [ch]            | [cv]            |                 |                 |                 |
 
 # }
 "}" is a special prefix which can be used before any command. It causes the MUSH to show debug information when evaluating that command (the same as if you had the DEBUG flag set), and for any $-commands which are triggered by the command.
@@ -1457,7 +1459,7 @@ Most often, @link is used to link or relink an exit to a destination room. In or
 
 If the destination of an exit is "variable", its destination is determined at the time of travel by the attribute DESTINATION on the exit, which is evaluated like a U()-function. You must have permission to link to whatever the DESTINATION evaluates to in order for the exit to work. If there's no DESTINATION attribute, the EXITTO attribute is also tried.
 
-If the destination is "home", those who travel through the exit will be sent to their homes.
+If the destination is "home", those who travel through the exit will be sent to their homes. A room linked to "home" sends whatever is dropped in it to that object's own home.
 
 LINK_OK objects can also be used as semaphores, and any object can be @parented to them.
 
@@ -2119,7 +2121,7 @@ Animation set to 'on'
 `SOCKSET terminal=<name|auto>`<br>
 `@SOCKSET [me|<descriptor>]=terminal,<name|auto>`
 
-SharpMUSH works out which terminal you use from the terminal type your client reports, or from its answer when you use 'SOCKSET graphics=detect'. That decides which links are sent (see [HYPERLINKS]) and, once pictures are on, how they are drawn (see [GRAPHICS]). Most clients report a generic type such as xterm-256color, which names no terminal.
+SharpMUSH works out which terminal you use from the terminal type your client reports, or from its answer when you use 'SOCKSET graphics=auto' or 'SOCKSET graphics=detect'. That decides which links are sent (see [HYPERLINKS]) and, once pictures are on, how they are drawn (see [GRAPHICS]). Most clients report a generic type such as xterm-256color, which names no terminal.
 
 Naming your terminal here tells SharpMUSH what it is, for one that does not say (Windows Terminal never does). 'auto' goes back to what your client reported. SOCKSET shows the terminal in use, as "auto (<terminal>)" when you have not named one.
 

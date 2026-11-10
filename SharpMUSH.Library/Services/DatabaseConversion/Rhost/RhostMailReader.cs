@@ -233,13 +233,14 @@ public static class RhostMailReader
 				_ => 0
 			};
 			if (char.ToUpperInvariant(status[0]) == 'S') saved++;
-			if (char.IsLower(status[1])) anonymous++;
+			var isAnonymous = char.IsLower(status[1]);
+			if (isAnonymous) anonymous++;
 			if (char.ToUpperInvariant(status[2]) == 'F') flags |= 0x80;
 
 			var folder = placement.GetValueOrDefault((to, index)).Folder;
 			flags |= folder << 8;
 
-			messages.Add(new PennMUSHMailMessage(to, from, 0, AsctimeOf(sent), subject, body, flags));
+			messages.Add(new PennMUSHMailMessage(to, from, 0, AsctimeOf(sent), subject, body, flags) { IsAnonymous = isAnonymous });
 		}
 
 		if (saved > 0)
@@ -249,7 +250,7 @@ public static class RhostMailReader
 
 		if (anonymous > 0)
 		{
-			notes.Add($"{anonymous} mail message(s) were sent anonymously; SharpMUSH shows their sender.");
+			notes.Add($"{anonymous} mail message(s) were sent anonymously; they stay anonymous to their recipients.");
 		}
 
 		if (missingBodies > 0)

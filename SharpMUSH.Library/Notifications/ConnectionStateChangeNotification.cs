@@ -8,11 +8,6 @@ namespace SharpMUSH.Library.Notifications;
 /// <summary>
 /// Notification published when a connection state changes.
 /// </summary>
-/// <param name="FirstLogin">
-/// True when this transition to <see cref="IConnectionService.ConnectionState.LoggedIn"/> is the
-/// character's entry into play immediately after it was created, so it can be greeted as new
-/// rather than welcomed "back" to a game it has never seen.
-/// </param>
 /// <param name="RemainingConnections">
 /// For a QUIT-driven <see cref="ConnectionService.Disconnect"/> only: the player's remaining
 /// play connection count (portal-class connections are not counted), computed atomically with the
@@ -33,6 +28,5 @@ public record ConnectionStateChangeNotification(
 	DBRef? PlayerRef,
 	IConnectionService.ConnectionState OldState,
 	IConnectionService.ConnectionState NewState,
-	bool FirstLogin = false,
 	int? RemainingConnections = null,
 	IConnectionService.ConnectionData? FormerConnection = null) : INotification;

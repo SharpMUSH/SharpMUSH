@@ -55,6 +55,10 @@ SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING=true dotnet run --project SharpMUSH.Tests
 SHARPMUSH_ENABLE_TEST_TELEMETRY=true dotnet run --project SharpMUSH.Tests
 ```
 
+Tests of packages that live in the official library (duties) install them from a checkout of
+SharpMUSH/SharpMUSH.Packages: `SHARPMUSH_PACKAGES_PATH`, else a `SharpMUSH.Packages` clone beside this
+repository (`TestPaths.PackageLibrary`).
+
 The test framework is **TUnit** (not xUnit or MSTest). The `--treenode-filter` format is `/<assembly>/<namespace>/<class>/<method>` with `*` wildcards.
 
 **Tests share one world and one `NotifyService` substitute, and run in parallel.** A test that asserts what someone heard (or didn't hear) creates that receiver in a room of its own, not `DefaultHome`. It reads output through `TestHelpers.NotificationRecorder` (`Notifications` on the factory), matched on a unique string from `TestIsolationHelpers.GenerateUniqueName` (socket handles from `GenerateUniqueHandle`), never by position or "last line". It never calls `ClearReceivedCalls()` or `Received()` on the shared substitute.
@@ -64,6 +68,10 @@ Only one host ever opens a given database. A host variant that needs a different
 ## PennMUSH Parity Harness
 
 `tools/parity/run.sh` replays the same scripted telnet sessions (DB import, login, player/admin commands, softcode) against a reference PennMUSH built from `pennmush/` and against SharpMUSH, and reports every output difference. Each parity fix adds a case to `tools/parity/scenarios/`. See `tools/parity/README.md` (normalization rules, known-differences allowlist, baseline).
+
+## Plugin Contract
+
+The public surface of the `SharpMUSH.Library` package is the plugin contract, `PluginContractVersion.Current` (3.0.0). Within a major it may only grow: CI's `plugin-contract` job (`tools/plugin-contract/check.sh`) fails a PR that removes or changes a public member, or adds a member to a public interface, without bumping the major. Keep the old member beside the new one instead. See `tools/plugin-contract/README.md`.
 
 ## Running the Server
 

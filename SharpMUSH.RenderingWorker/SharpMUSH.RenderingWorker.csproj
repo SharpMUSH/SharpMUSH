@@ -18,6 +18,8 @@
     <PackageReference Include="MarkupString.Html" Version="$(MarkupStringVersion)" />
     <PackageReference Include="MarkupString.Mxp" Version="$(MarkupStringVersion)" />
     <PackageReference Include="MarkupString.Pueblo" Version="$(MarkupStringVersion)" />
+    <PackageReference Include="SkiaSharp" Version="4.153.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1" />
     <PackageReference Include="StbImageSharp" Version="2.30.15" />
   </ItemGroup>
 </Project>

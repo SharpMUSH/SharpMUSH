@@ -139,6 +139,8 @@ internal static class EngineRegistration
 		services.AddSingleton<IQueueControlService, QueueControlService>();
 		services.AddSingleton<ILoginFailureTracker, LoginFailureTracker>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
+		services.AddSingleton<IHostNameResolver, DnsHostNameResolver>();
+		services.AddSingleton<IHostNameLookup, HostNameLookup>();
 		services.AddSingleton<IInputSessionService, InputSessionService>();
 		services.AddSingleton<ApplicationDraftService>();
 		// The command palette: each character's context stack in memory, what a typed line used pushed
@@ -192,6 +194,7 @@ internal static class EngineRegistration
 		services.AddScoped<IOnboardingCommandProbe, OnboardingCommandProbe>();
 		services.AddSingleton<HandlerSetupService>();
 		services.AddSingleton<MushCnfImportService>();
+		services.AddSingleton<Implementation.Services.ConfiguredAliasImport>();
 		// Secrets the server holds for itself, encrypted with the Data Protection key ring; a plugin
 		// declares the ones it reads with a SecretDefinition singleton of its own.
 		services.AddSingleton(_ => SecretStoreOptions.FromEnvironment());

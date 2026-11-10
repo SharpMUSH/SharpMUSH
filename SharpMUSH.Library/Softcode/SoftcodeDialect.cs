@@ -105,6 +105,8 @@ public static class SoftcodeDialects
 			["@logrotate"] = "@logwipe/rotate",
 			["@selfboot"] = "@boot/me",
 			["@reclist"] = "@recover",
+			// Its own command, reached only here: a global @site would make @sit ambiguous.
+			["@site"] = "@rhost_site",
 			["folder"] = "@mail/folder",
 			["rpage"] = "page/reply",
 			["rp"] = "page/reply",
@@ -173,7 +175,21 @@ public static class SoftcodeDialects
 			["OPAY"] = "OPAYMENT",
 			["OSUCC"] = "OSUCCESS",
 			["PAY"] = "PAYMENT",
-			["SUCC"] = "SUCCESS"
+			["SUCC"] = "SUCCESS",
+			// The failed-lock messages, under the names a failed lock reads (LockMessages).
+			["ADFAIL"] = "DROP_LOCK`AFAILURE",
+			["AGFAIL"] = "GIVE_LOCK`AFAILURE",
+			["ARFAIL"] = "RECEIVE_LOCK`AFAILURE",
+			["ATFAIL"] = "TELEPORT_LOCK`AFAILURE",
+			["DFAIL"] = "DROP_LOCK`FAILURE",
+			["GFAIL"] = "GIVE_LOCK`FAILURE",
+			["MFAIL"] = "MAIL_LOCK`FAILURE",
+			["ODFAIL"] = "DROP_LOCK`OFAILURE",
+			["OGFAIL"] = "GIVE_LOCK`OFAILURE",
+			["ORFAIL"] = "RECEIVE_LOCK`OFAILURE",
+			["OTFAIL"] = "TELEPORT_LOCK`OFAILURE",
+			["RFAIL"] = "RECEIVE_LOCK`FAILURE",
+			["TFAIL"] = "TELEPORT_LOCK`FAILURE"
 		}
 	};
 
@@ -219,6 +235,8 @@ public static class SoftcodeDialects
 			["@extansi"] = "@moniker",
 			["@fi"] = "@find",
 			["@file"] = "@mail/file",
+			// Its own command, reached only here: a global @folder would make @fo ambiguous.
+			["@folder"] = "@mux_folder",
 			["@li"] = "@link",
 			["@lis"] = "@list",
 			["@lo"] = "@lock",
@@ -277,7 +295,22 @@ public static class SoftcodeDialects
 			["REJECT"] = "HAVEN",
 			["SIGNATURE"] = "MAILSIGNATURE",
 			["SPEECHFORMAT"] = "SPEECHMOD",
-			["SUCC"] = "SUCCESS"
+			["SUCC"] = "SUCCESS",
+			// The failed-lock messages, under the names a failed lock reads (LockMessages).
+			["ADFAIL"] = "DROP_LOCK`AFAILURE",
+			["AGFAIL"] = "GIVE_LOCK`AFAILURE",
+			["ARFAIL"] = "RECEIVE_LOCK`AFAILURE",
+			["ATFAIL"] = "TELEPORT_LOCK`AFAILURE",
+			["DFAIL"] = "DROP_LOCK`FAILURE",
+			["GFAIL"] = "GIVE_LOCK`FAILURE",
+			["MFAIL"] = "MAIL_LOCK`FAILURE",
+			["ODFAIL"] = "DROP_LOCK`OFAILURE",
+			["OGFAIL"] = "GIVE_LOCK`OFAILURE",
+			["ORFAIL"] = "RECEIVE_LOCK`OFAILURE",
+			["OTFAIL"] = "TELEPORT_LOCK`OFAILURE",
+			["PFAIL"] = "PAGE_LOCK`FAILURE",
+			["RFAIL"] = "RECEIVE_LOCK`FAILURE",
+			["TFAIL"] = "TELEPORT_LOCK`FAILURE"
 		}
 	};
 

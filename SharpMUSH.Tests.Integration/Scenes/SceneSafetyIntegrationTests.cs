@@ -19,7 +19,7 @@ namespace SharpMUSH.Tests.Integration.Scenes;
 /// <c>@scene/notice</c>, the hook that tells one member of a scene and nobody else, and the scene-safety package
 /// built on it: lines and veils a player keeps to themselves, the warning a joining player gets, the owner's
 /// anonymous summary, and the pause signal that reaches the owner without the sender's name. Not in parallel:
-/// scene-verse's details and the logger's filters are the game's, one for every test.
+/// the logger's details and filters are the game's, one for every test.
 /// </summary>
 [NotInParallel]
 public class SceneSafetyIntegrationTests
@@ -129,7 +129,6 @@ public class SceneSafetyIntegrationTests
 	public async Task Scene_safety_warns_a_joiner_summarises_for_the_owner_and_signals_without_a_name()
 	{
 		await LoggerAsync();
-		await InstallAsync("scene-verse");
 		await InstallAsync("scene-safety");
 		try
 		{
@@ -149,8 +148,12 @@ public class SceneSafetyIntegrationTests
 			var safety = (await registry.GetPackageObjectsAsync("scene-safety")).Single(o => o.Ref == "safety").Objid;
 			await Assert.That(await Eval($"u({safety}/FUN`SCENE`KEYS,{scene})")).IsEmpty();
 
-			await Assert.That(await As(lined, $"+scene/join {scene}"))
-				.Contains("This scene's content warnings touch your lines: Spiders and snakes.");
+			var joined = await As(lined, $"+scene/join {scene}");
+			await Assert.That(joined).Contains("This scene's content warnings touch your lines: Spiders and snakes.")
+				.And.Contains("Content warning: Spiders and snakes");
+			await Assert.That(joined.IndexOf("Content warning:", StringComparison.Ordinal))
+				.IsLessThan(joined.IndexOf("touch your lines", StringComparison.Ordinal))
+				.Because("everyone is told the scene's warnings, then which of them touch their own lines");
 			await Assert.That(await As(veiled, $"+scene/join {scene}")).Contains("They touch your veils: Gore.");
 
 			await Assert.That(await As(lined, $"+safety/scene {scene}")).Contains($"Only scene {scene}'s owner sees its summary.");
@@ -171,11 +174,17 @@ public class SceneSafetyIntegrationTests
 
 			await Assert.That(await As(lined, "+safety/skip")).Contains("You signalled a moment ago.");
 			await Assert.That(await As(owner, "+safety/pause")).Contains($"You run scene {scene}, so the call is yours.");
+
+			// A warning detail the game does not list reads as no warning until it is set.
+			await God($"&DATA`CONFIG`WARNING-DETAIL {safety}=cw");
+			await Assert.That(await Eval($"u({safety}/FUN`SCENE`WARNINGS,{scene})")).IsEmpty();
+			await Assert.That(await Eval($"u({safety}/FUN`JOIN`CONTENT,{scene})")).IsEmpty();
+			await As(owner, "+scene/set cw=Clowns");
+			await Assert.That(await Eval($"u({safety}/FUN`JOIN`CONTENT,{scene})")).Contains("Content warning: Clowns");
 		}
 		finally
 		{
 			await WebAppFactoryArg.Services.UninstallWithBridgesAsync("scene-safety");
-			await Installer.UninstallAsync("scene-verse", force: true, CancellationToken.None);
 		}
 	}
 }

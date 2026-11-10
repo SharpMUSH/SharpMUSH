@@ -306,18 +306,6 @@
       <Link>BundledPackages\staff.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.staff.README.md</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\duties\README.md">
-      <Link>BundledPackages\duties.README.md</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.duties.README.md</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\duties-app\README.md">
-      <Link>BundledPackages\duties-app.README.md</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.duties-app.README.md</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\duties-scene\README.md">
-      <Link>BundledPackages\duties-scene.README.md</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.duties-scene.README.md</LogicalName>
-    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\census\README.md">
       <Link>BundledPackages\census.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.census.README.md</LogicalName>
@@ -442,26 +430,6 @@
       <Link>BundledPackages\messages.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.messages.package.yaml</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\radio\package.yaml">
-      <Link>BundledPackages\radio.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.radio.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\radio-help\package.yaml">
-      <Link>BundledPackages\radio-help.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.radio-help.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\radio-config\package.yaml">
-      <Link>BundledPackages\radio-config.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.radio-config.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\radio-scene\package.yaml">
-      <Link>BundledPackages\radio-scene.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.radio-scene.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\scene-verse\package.yaml">
-      <Link>BundledPackages\scene-verse.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.scene-verse.package.yaml</LogicalName>
-    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\scene-here\package.yaml">
       <Link>BundledPackages\scene-here.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.scene-here.package.yaml</LogicalName>
@@ -577,26 +545,6 @@
     <EmbeddedResource Include="..\examples\packages\staff-config\package.yaml">
       <Link>BundledPackages\staff-config.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.staff-config.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\duties\package.yaml">
-      <Link>BundledPackages\duties.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.duties.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\duties-help\package.yaml">
-      <Link>BundledPackages\duties-help.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.duties-help.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\duties-config\package.yaml">
-      <Link>BundledPackages\duties-config.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.duties-config.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\duties-app\package.yaml">
-      <Link>BundledPackages\duties-app.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.duties-app.package.yaml</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\duties-scene\package.yaml">
-      <Link>BundledPackages\duties-scene.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.duties-scene.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\staff-status\package.yaml">
       <Link>BundledPackages\staff-status.package.yaml</Link>

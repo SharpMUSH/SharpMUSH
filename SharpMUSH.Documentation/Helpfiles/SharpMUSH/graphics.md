@@ -6,7 +6,8 @@
   "aliases": [],
   "sections": [
     {"id": "methods", "heading": "Drawing methods", "lookup": "graphics methods"},
-    {"id": "display", "heading": "How pictures are shown", "lookup": "graphics display"}
+    {"id": "display", "heading": "How pictures are shown", "lookup": "graphics display"},
+    {"id": "detection", "heading": "Capability evidence", "lookup": "graphics detection"}
   ]
 }
 -->
@@ -15,20 +16,21 @@
 `SOCKSET graphics=<value>`<br>
 `@SOCKSET [me|<descriptor>]=graphics,<value>`
 
-Pictures in the game (such as those placed with figure()) are shown as their text art until you turn pictures on. They are off by default because only you can see whether your terminal shows them: a terminal reached through tmux, screen or an ssh hop, or one with images turned off in its settings, may not, even when SharpMUSH knows it can. The graphics setting says how your terminal draws a picture.
+New telnet connections start with graphics=auto. SharpMUSH asks about terminal graphics and MXP support before the connect screen, allowing up to `negotiation_wait_ms` milliseconds for replies (a Net game option, default 400). Set it to 0 to skip the wait. A complete input line ends the wait early; changes apply to new connections. Late replies update later output. Use SOCKSET graphics=off to request text instead; manual method choices override detection. Client profiles remain assumptions: a proxy or disabled image setting can prevent rendering.
 
 - [graphics methods]: the values, from auto and detect to kitty, sixel and off
 - [graphics display]: UTF-8, screen readers, layout, fetching and moving pictures
+- [graphics detection]: terminal replies, profile assumptions and cell dimensions
 
 ## Drawing methods
 
-- auto: the best way your terminal has. SharpMUSH picks from what your terminal can do (see [TERMINAL]): kitty first, then iterm2, then sixel, then blocks. A terminal it does not know gets blocks. Also accepted as 'on'.
-- detect: like auto, and also asks your terminal what it can draw and what it is. The answer arrives with the next line you send, so send any command afterwards. Use this when your terminal does not say which it is.
+- auto: asks the terminal for its capabilities and chooses a drawing method (see [TERMINAL]): kitty first, then iterm2, then sixel, then blocks. Replies take priority over client-profile assumptions. An unknown client can use Sixel or Kitty when it answers the probes; without evidence it gets blocks. Also accepted as 'on' or 'yes'.
+- detect: selects auto and explicitly requests another probe. Replies are processed immediately, without Enter or another command. Setting auto again also repeats the probe. A silent client remains unknown; silence is not a rejection.
 - kitty: the Kitty graphics protocol (kitty, Ghostty, Rio). The picture is sent once per connection and drawn in its cells as text, so it scrolls and wraps like text.
 - iterm2: iTerm2 inline images (iTerm2, WezTerm, Konsole, mintty, Visual Studio Code, Rio, mlterm).
 - sixel: sixel graphics (foot, WezTerm, iTerm2, Konsole, Windows Terminal, mintty, Contour, mlterm, xterm started with sixel support).
 - blocks: coloured half-block characters, two pixels to a cell. Any UTF-8 terminal with colour shows these.
-- off: the text art (the default).
+- off: text art or the image address.
 
 ## How pictures are shown
 
@@ -43,6 +45,12 @@ Example:
 > SOCKSET graphics=auto
 Graphics set to 'auto'
 ```
+
+## Capability evidence
+
+SOCKSET also shows separate evidence for Kitty, iTerm2 and Sixel: supported or unsupported from a terminal reply, an unconfirmed client-profile assumption, or unknown when no reply is recorded. Cell pixels shows the reported geometry when available. These describe capabilities, independently of your graphics override; selecting a method manually does not prove support. iTerm2 image support currently relies on a profile or a manual choice because its image protocol has no equivalent capability acknowledgement.
+
+Use [graphics methods] to select auto or request another probe.
 
 ::: seealso
 - [@SOCKSET]

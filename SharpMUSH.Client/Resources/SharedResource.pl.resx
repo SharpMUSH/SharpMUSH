@@ -5434,6 +5434,22 @@
     <value>Wyjątek na tym koncie ma pierwszeństwo przed wszystkimi jego rolami.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolOverrideReach" xml:space="preserve">
+    <value>Zasięg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachEveryone" xml:space="preserve">
+    <value>Każdy cel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachUpTo" xml:space="preserve">
+    <value>Zasięg {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReaching" xml:space="preserve">
+    <value>(zasięg {0})</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Zapisano wyjątek dla {0}.</value>
     <comment>MT</comment>
@@ -7854,7 +7870,7 @@
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenreHint" xml:space="preserve">
-    <value>Wybierz gatunek i podgatunek gry według MSSP. Sharpie używa ich do grafik; jeśli nic nie pasuje, wybierz „None”.</value>
+    <value>Wybierz gatunek gry dla MSSP. Wybierz sugerowany podgatunek lub wpisz własny. Sharpie używa tych wartości do ilustracji; wybierz None, jeśli żaden nie pasuje.</value>
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenres" xml:space="preserve">
@@ -9444,5 +9460,8 @@
   <data name="MudTreeView_ExpandItem" xml:space="preserve">
     <value>Rozwiń</value>
     <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityCustomSubgenre" xml:space="preserve">
+    <value>Tego podgatunku nie ma na liście propozycji MSSP. Własne wartości są dozwolone.</value>
   </data>
 </root>

@@ -5,6 +5,8 @@ using MudBlazor.Extensions;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components;
+using SharpMUSH.Client.Services;
+using ThemeColor = SharpMUSH.Library.Models.Portal.ThemeColor;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -17,6 +19,23 @@ namespace SharpMUSH.Tests.BUnit.Components;
 /// </summary>
 public class ThemeProviderTests : BunitContext
 {
+	[TUnit.Core.Test]
+	public async Task FilledSemanticControlsHaveReadableTextInLightAndDarkThemes()
+	{
+		foreach (var definition in new[] { BuiltInThemes.Phosphor, BuiltInThemes.Daylight })
+		{
+			var mud = ThemeResolver.Resolve(definition).ToMudTheme();
+			foreach (var palette in new Palette[] { mud.PaletteLight, mud.PaletteDark })
+			{
+				var pairs = new[] { (palette.Success, palette.SuccessContrastText), (palette.Error, palette.ErrorContrastText),
+					(palette.Warning, palette.WarningContrastText), (palette.Info, palette.InfoContrastText),
+					(palette.Secondary, palette.SecondaryContrastText), (palette.Tertiary, palette.TertiaryContrastText) };
+				foreach (var (background, foreground) in pairs)
+					await Assert.That(ThemeColor.Contrast(new(background.R, background.G, background.B), new(foreground.R, foreground.G, foreground.B))).IsGreaterThanOrEqualTo(4.5);
+			}
+		}
+	}
+
 	private sealed class Holder
 	{
 		public ResolvedTheme Theme { get; set; } = ThemeResolver.Resolve(BuiltInThemes.Phosphor);
@@ -83,7 +102,7 @@ public class ThemeProviderTests : BunitContext
 			if (applied.Count != 2) throw new InvalidOperationException($"{applied.Count} calls");
 		});
 		var parts = JSInterop.Invocations["sharpmushLayout.applyThemeParts"].Select(i => (IReadOnlyDictionary<string, string>)i.Arguments[0]!).ToList();
-		await Assert.That(parts[0][ThemeStyles.Texture]).IsEqualTo("none");
+		await Assert.That(parts[0][ThemeStyles.Texture]).IsEqualTo("grain");
 		await Assert.That(parts[1][ThemeStyles.Texture]).IsEqualTo("parchment");
 		await Assert.That(parts[1][ThemeStyles.Scheme]).IsEqualTo("light");
 	}

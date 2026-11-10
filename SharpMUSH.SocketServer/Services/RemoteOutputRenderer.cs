@@ -39,7 +39,8 @@ public sealed class RemoteOutputRenderer : IMarkupOutputRenderer, IOutputTransfo
 			new RenderContext(connection.ConnectionType, connection.Capabilities, connection.Preferences,
 				connection.Handle, connection.SessionId, _mssp?.Website,
 				// Only a connection that is not sent UTF-8 uses them.
-				connection.Capabilities.Utf8 ? null : _settings?.AsciiTranslations), prompt), ct);
+				connection.Capabilities.Utf8 ? null : _settings?.AsciiTranslations,
+				_settings?.MaxPictureColumns ?? 200, _settings?.MaxPictureRows ?? 100), prompt), ct);
 
 	public async ValueTask<byte[]> TransformAsync(byte[] rawOutput, ProtocolCapabilities capabilities,
 		CancellationToken ct = default) =>

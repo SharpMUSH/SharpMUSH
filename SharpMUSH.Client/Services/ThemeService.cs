@@ -4,6 +4,7 @@ using MudBlazor;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Services.Interfaces;
+using ThemeColor = SharpMUSH.Library.Models.Portal.ThemeColor;
 
 namespace SharpMUSH.Client.Services;
 
@@ -189,6 +190,12 @@ public static class ResolvedThemeExtensions
 
 	public static MudTheme ToMudTheme(this ResolvedTheme theme)
 	{
+		static string Ink(MudBlazor.Utilities.MudColor color)
+		{
+			var background = new ThemeColor(color.R, color.G, color.B);
+			return ThemeColor.Contrast(ThemeColor.White, background) > ThemeColor.Contrast(ThemeColor.Black, background)
+				? ThemeColor.White.Hex : ThemeColor.Black.Hex;
+		}
 		var t = theme.Tokens;
 		Palette Fill(Palette palette)
 		{
@@ -216,7 +223,12 @@ public static class ResolvedThemeExtensions
 			palette.TableLines = t[ThemeTokens.Border];
 			palette.Divider = t[ThemeTokens.BorderSoft];
 			palette.PrimaryContrastText = t["accent-on"];
-			palette.SecondaryContrastText = t["accent-on"];
+			palette.SecondaryContrastText = Ink(palette.Secondary);
+			palette.TertiaryContrastText = Ink(palette.Tertiary);
+			palette.SuccessContrastText = Ink(palette.Success);
+			palette.ErrorContrastText = Ink(palette.Error);
+			palette.WarningContrastText = Ink(palette.Warning);
+			palette.InfoContrastText = Ink(palette.Info);
 			return palette;
 		}
 

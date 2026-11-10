@@ -97,7 +97,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 		if (connection.Capabilities.Format == OutputFormat.Mxp && MxpDrawsImages(connection.Capabilities.MxpSupported))
 			return new RenderPictureSource(pictureStore, new ConnectionPictures.Sent());
 
-		if (connectionPictures is null || connection.Capabilities.Format != OutputFormat.Ansi
+		if (connectionPictures is null || connection.Capabilities.Format is not (OutputFormat.Ansi or OutputFormat.Mxp)
 			|| (connection.Capabilities.Features & TerminalFeatures.Pictures) == 0)
 			return null;
 
@@ -127,8 +127,9 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 		var depth = ColorDepthFor(connection.Capabilities, connection.Preferences);
 		var ansi = AnsiOptionsFor(connection.Capabilities, depth, pictures);
 		// A notice()'s lead without its brackets for a screen reader, and without its tags for everyone.
-		var cells = ansi.Pictures is null ? null : PictureCellsFor(ansi);
-		var fetchesItself = connection.Capabilities.Format is OutputFormat.Mxp or OutputFormat.Pueblo;
+		var cells = ansi.Pictures is null ? null : PictureCellsFor(ansi, connection.MaxPictureColumns, connection.MaxPictureRows);
+		var fetchesItself = connection.Capabilities.Format == OutputFormat.Pueblo
+			|| connection.Capabilities.Format == OutputFormat.Mxp && MxpDrawsImages(connection.Capabilities.MxpSupported);
 		if (fetchesItself && cells is not null)
 		{
 			// No cells kept for a picture the client cannot fetch, so its figure keeps the art.
@@ -157,7 +158,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 		var text = connection.Capabilities.Format switch
 		{
 			OutputFormat.Pueblo => ms.Render(MarkupFormat.Pueblo, WireFor(depth)),
-			OutputFormat.Mxp => ms.Render(MarkupFormat.Mxp, MxpWireFor(connection.Capabilities.MxpSupported, depth)),
+			OutputFormat.Mxp => ms.Render(MarkupFormat.Mxp, MxpWireFor(connection.Capabilities.MxpSupported, depth).WithAnsiOutput(ansi)),
 			// The ANSI render for everything else, which maps a command link or a tagwrap() span to its
 			// ANSI equivalent, or to plain text when it has none. A client that negotiated neither
 			// Pueblo nor MXP must never see a literal tag.
@@ -232,28 +233,26 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 		return BlockLayout.Relayout(text, capabilities.Width, context);
 	}
 
-	/// <summary>The most cells a picture is drawn over, each way, however wide the space it is given.</summary>
-	public const int MaxPictureColumns = 60;
-
-	public const int MaxPictureRows = 30;
-
 	/// <summary>
 	/// The cells a figure's picture takes for a client that draws it: none for a picture not held (the
 	/// figure keeps its text art), otherwise as wide as it was asked for, but no wider than the picture is
-	/// at one pixel a pixel or than <see cref="MaxPictureColumns"/>, and short enough to keep within
-	/// <see cref="MaxPictureRows"/> at its own shape.
+	/// at one pixel a pixel or than the configured column limit, and short enough to keep within
+	/// the configured row limit at its own shape.
 	/// </summary>
-	private static Func<ImageMarkup, int, PictureCells?> PictureCellsFor(AnsiOutputOptions options) => (image, columns) =>
+	private static Func<ImageMarkup, int, PictureCells?> PictureCellsFor(AnsiOutputOptions options, int maxColumns, int maxRows) => (image, columns) =>
 	{
 		if (columns <= 0 || options.Pictures is not { } source || !source.TryGetPicture(image, out var picture)) return null;
 
-		var natural = Math.Max(1, (picture.Width + options.CellWidth - 1) / options.CellWidth);
-		var cells = PictureCells.Fit(picture.Width, picture.Height, Math.Min(Math.Min(columns, natural), MaxPictureColumns),
+		maxColumns = Math.Clamp(maxColumns, 1, 2000);
+		maxRows = Math.Clamp(maxRows, 1, 1000);
+		var size = (source as RenderPictureSource)?.OriginalSize(image) ?? (picture.Width, picture.Height);
+		var natural = Math.Max(1, (size.Width + options.CellWidth - 1) / options.CellWidth);
+		var cells = PictureCells.Fit(size.Width, size.Height, Math.Min(Math.Min(columns, natural), maxColumns),
 			options.CellWidth, options.CellHeight);
-		if (cells.Rows <= MaxPictureRows) return cells;
+		if (cells.Rows <= maxRows) return cells;
 
-		var narrower = Math.Max(1, cells.Columns * MaxPictureRows / cells.Rows);
-		return PictureCells.Fit(picture.Width, picture.Height, narrower, options.CellWidth, options.CellHeight);
+		var narrower = (int)Math.Floor((double)maxRows * size.Width * options.CellHeight / ((double)size.Height * options.CellWidth));
+		return narrower < 1 ? null : PictureCells.Fit(size.Width, size.Height, narrower, options.CellWidth, options.CellHeight);
 	};
 
 	/// <summary>
@@ -262,9 +261,11 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 	/// </summary>
 	private static AnsiOutputOptions AnsiOptionsFor(ProtocolCapabilities capabilities, AnsiColorDepth depth,
 		RenderPictureSource? pictures) =>
-		new(depth, capabilities.Format == OutputFormat.Ansi ? capabilities.Features : TerminalFeatures.None)
+		new(depth, capabilities.Format == OutputFormat.Ansi
+			|| capabilities.Format == OutputFormat.Mxp && !MxpDrawsImages(capabilities.MxpSupported)
+			? capabilities.Features : TerminalFeatures.None)
 		{
-			Terminal = capabilities.Format == OutputFormat.Ansi ? capabilities.Terminal : null,
+			Terminal = capabilities.Terminal,
 			Pictures = pictures,
 			CellWidth = capabilities.CellWidth > 0 ? capabilities.CellWidth : 10,
 			CellHeight = capabilities.CellHeight > 0 ? capabilities.CellHeight : 20

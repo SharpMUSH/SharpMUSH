@@ -29,7 +29,9 @@ stored with the character (`CharacterAppearance.Vision`) like the theme and acce
 
 `BuiltInThemes.All` (`SharpMUSH.Contracts/Models/Portal/PortalThemes.cs`):
 
-- **Phosphor** (dark) and **Daylight** (light), the plain looks.
+- **Phosphor** (dark) and **Daylight** (light), the default looks: the phosphor accent on warm charcoal or warm
+  paper, titles in Space Grotesk, a fine grain, and the `lifted` frame (cards on an elevation shadow, a glow on the
+  Home hero).
 - One per MSSP genre, with the ids the telnet layout themes use: `fantasy`, `historical`, `horror`, `modern`,
   `mystery`, `romance`, `science-fiction`, `spiritual`.
 - Anime: `magical-girl`, `shojo`, `idol`, `slice-of-life`, `shonen`, `sports`, `mechmachine`, `real-robot`, `super-robot`, `isekai`, `yokai`.
@@ -46,8 +48,8 @@ surface `surface-2`, foreground `text`, primary `accent`, secondary `accent-2` (
 until it reaches 3:1 (primary, muted) or 4.5:1 (the rest) against `bg`. A new built-in portal theme needs one too:
 `PortedLayoutThemeTests` fails until it has it. The genres keep MarkupString's genre layout themes. `sharpmush`,
 Phosphor's teal on black, is the game's default `layout_theme`. Every genre
-theme has a texture, a card frame and a title face no other theme uses
-(`ThemeResolverTests.EachGenreHasATextureAndFrameOfItsOwn`); the colour vision themes keep the plain look.
+theme has a texture, a card frame and a title face no other genre uses
+(`ThemeResolverTests.EachGenreHasATextureAndFrameOfItsOwn`); the colour vision themes keep Phosphor's or Daylight's.
 
 ### How the colour vision sets were picked
 
@@ -201,9 +203,9 @@ the sign to double it.
 | Accent | `--accent`, `--accent-dim`, `--accent-on` (text on an accent fill), `--accent-2`, `--accent-3` (decorative, drawings only) |
 | Status | `--warn`, `--link-missing`, `--danger`, `--success`, `--info`, `--special` |
 | Syntax | `--syntax-command`, `--syntax-function`, `--syntax-substitution`, `--syntax-dbref`, `--syntax-reference`, `--syntax-at-command`, `--syntax-danger` (softcode); `--syntax-string`, `--syntax-link`, `--syntax-heading`, `--syntax-emphasis` (help) |
-| Shape | `--radius`, `--radius-lg`, `--radius-card`, `--radius-row`, `--card-border-style`, `--card-border-width`, `--card-shadow`, `--shadow` |
-| Type | `--font-ui`, `--font-display`, `--font-mono`, `--font-title-weight`, `--title-transform`, `--title-tracking`, `--title-style` |
-| Decoration | `--texture`, `--texture-size`, `--texture-opacity`, `--texture-mask-<colour>` and `--texture-ink-<colour>` (colour: `text`, `accent`, `accent-2`, `accent-3`, `border`), `--card-marks`, `--card-mask-<colour>` and `--card-ink-<colour>` (also `grain`), `--ornament-before`, `--ornament-after`, `--title-underline`, `--title-underline-height`, `--title-underline-pad`, `--title-shadow`, `--image-filter` |
+| Shape | `--radius`, `--radius-lg`, `--radius-card`, `--radius-row`, `--card-border-style`, `--card-border-width`, `--card-shadow`, `--elev-1` (a lifted card's shadow), `--shadow` |
+| Type | `--font-ui`, `--font-display`, `--font-mono`, `--font-kicker` (the small uppercase labels), `--kicker-tracking`, `--font-title-weight`, `--title-transform`, `--title-tracking`, `--title-style` |
+| Decoration | `--texture`, `--texture-size`, `--texture-opacity`, `--texture-mask-<colour>` and `--texture-ink-<colour>` (colour: `text`, `accent`, `accent-2`, `accent-3`, `border`), `--card-marks`, `--hero-marks` (over the Home hero), `--card-mask-<colour>` and `--card-ink-<colour>` (also `grain`), `--logo-inner` (the SharpMUSH mark's inner strokes), `--ornament-before`, `--ornament-after`, `--title-underline`, `--title-underline-height`, `--title-underline-pad`, `--title-shadow`, `--image-filter` |
 
 `ThemeStylesheet.Variables` is the list the starter is written from.
 

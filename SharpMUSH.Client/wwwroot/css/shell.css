@@ -48,6 +48,33 @@
 	z-index: 5;
 }
 
+/* The game's logo and name, a link to Home. It takes the room between the left and right buttons and
+   shortens the name with an ellipsis when that room runs out. */
+.phosphor-topbar-game {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	color: var(--text);
+	text-decoration: none;
+}
+
+.phosphor-topbar-game > svg,
+.phosphor-topbar-game > img {
+	flex: none;
+}
+
+.phosphor-topbar-name {
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	font-family: var(--font-display);
+	font-weight: var(--font-title-weight);
+	font-size: var(--text-base);
+}
+
 /* ── Topbar icon buttons (menu, terminal, close) ── */
 .phosphor-icon-btn {
 	width: 38px;
@@ -556,9 +583,9 @@
 	display: none;
 }
 .nav-group-label {
-	font-family: var(--font-mono);
+	font-family: var(--font-kicker);
 	font-size: var(--text-xs);
-	letter-spacing: 0.16em;
+	letter-spacing: var(--kicker-tracking);
 	text-transform: uppercase;
 	color: var(--text-faint);
 	padding: var(--space-2) var(--space-4) var(--space-3);
@@ -1677,6 +1704,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	/* Bottom command-terminal drawer: svh keeps the input row on-screen under the
 	   address bar without resizing on scroll. */
 	.phosphor-terminal {
+		bottom: var(--bottomnav-clearance, 0px);
 		height: 70vh;
 		height: 70svh;
 		max-height: 70svh;
@@ -1690,7 +1718,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 		right: 0;
 		bottom: 0;
 		z-index: 40;
-		height: 58px;
+		height: calc(3.625rem + env(safe-area-inset-bottom));
 		padding-bottom: env(safe-area-inset-bottom);
 		background: color-mix(in srgb, var(--surface-3) 92%, transparent);
 		backdrop-filter: blur(10px);
@@ -1705,13 +1733,13 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	.phosphor-shell--bottomnav .phosphor-main {
 		padding-bottom: var(--bottomnav-clearance);
 	}
-	/* When the terminal drawer is open it grows to 70svh and covers the bottom bar,
-	   so the content offset must match the drawer (not the desktop --terminal-drawer-height).
+	/* Keep the drawer's connection controls above navigation and reserve both heights
+	   in the page content (instead of the desktop --terminal-drawer-height).
 	   Listed after the bar rule so it wins at equal specificity. */
 	.phosphor-main--terminal,
 	.phosphor-shell--bottomnav .phosphor-main--terminal {
-		padding-bottom: 70vh;
-		padding-bottom: 70svh;
+		padding-bottom: calc(70vh + var(--bottomnav-clearance, 0px));
+		padding-bottom: calc(70svh + var(--bottomnav-clearance, 0px));
 	}
 }
 
@@ -1735,6 +1763,13 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 		border-bottom: 0;
 		border-right: 1px solid var(--border-soft);
 	}
+	/* A column of icons: the logo stays, the name has no room. The link still takes the spare height, which
+	   keeps search, language and terminal at the foot of the column. */
+	.phosphor-topbar-game {
+		flex-direction: column;
+		padding-top: var(--space-3);
+	}
+	.phosphor-topbar-name { display: none; }
 	.phosphor-shell {
 		--touch-rail-w: 56px;
 	}
@@ -1917,7 +1952,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 }
 
 .boot-bottomnav {
-	height: 58px;
+	height: calc(3.625rem + env(safe-area-inset-bottom));
 	margin-top: auto;
 	border-top: 1px solid var(--border-soft);
 }

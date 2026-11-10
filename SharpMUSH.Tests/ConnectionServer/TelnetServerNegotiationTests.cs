@@ -240,8 +240,12 @@ public partial class TelnetServerNegotiationTests
 			Func<object, Task>? beforePublish = null,
 			Action<IReadOnlyList<object>>? afterPublish = null,
 			OutputSettingsHolder? settings = null,
-			ConnectionTrafficCounters? traffic = null)
+			ConnectionTrafficCounters? traffic = null,
+			uint negotiationWaitMilliseconds = 0)
 	{
+		settings ??= new OutputSettingsHolder();
+		settings.Replace(new OutputSettingsMessage(settings.AsciiTranslations, settings.MediaBaseUrl,
+			Pueblo: settings.Pueblo, NegotiationWaitMilliseconds: negotiationWaitMilliseconds));
 		var clientToServer = new Pipe();
 		var serverToClient = new Pipe();
 		var cts = new CancellationTokenSource();
@@ -273,7 +277,7 @@ public partial class TelnetServerNegotiationTests
 			descriptors,
 			new ServerBuilderFactory(),
 			// Registration is immediate unless a test is about the wait for negotiation.
-			options ?? new ConnectionServerOptions { NegotiationWaitMilliseconds = 0 },
+			options ?? new ConnectionServerOptions(),
 			new MsspReportHolder(),
 			new TerminalProbes(),
 			settings,
@@ -589,10 +593,9 @@ public partial class TelnetServerNegotiationTests
 				return true;
 			});
 
-		// A deadline past the test's own, so a loop stalled until the deadline fails here rather than
-		// recording the answer late.
+		// Register immediately: later SUPPORT replies must still reach the capability callback.
 		var (toServer, fromServer, handler, _, cancellation) = StartServer(
-			new ConnectionServerOptions { MxpSupportTimeoutMilliseconds = 60_000, NegotiationWaitMilliseconds = 0 }, connectionService);
+			new ConnectionServerOptions(), connectionService);
 		using var cts = cancellation;
 		try
 		{
@@ -652,7 +655,7 @@ public partial class TelnetServerNegotiationTests
 			});
 
 		var (toServer, fromServer, handler, _, cancellation) = StartServer(
-			new ConnectionServerOptions { MxpSupportTimeoutMilliseconds = 60_000, NegotiationWaitMilliseconds = 0 }, connectionService);
+			new ConnectionServerOptions(), connectionService);
 		using var cts = cancellation;
 		try
 		{
@@ -723,19 +726,19 @@ public partial class TelnetServerNegotiationTests
 			});
 
 		var (toServer, fromServer, handler, published, cts) = StartServer(
-			new ConnectionServerOptions { MxpSupportTimeoutMilliseconds = 60_000 }, connectionService);
+			new ConnectionServerOptions(), connectionService);
 		try
 		{
 			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, MXP));
 			await registrationStarted.Task.WaitAsync(Timeout);
 			await WriteAsync(toServer, IAC, DO, MXP);
-			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, SB, MXP, IAC, SE));
+			await ReadUntilAsync(fromServer, seen =>
+				Contains(seen, IAC, SB, MXP, IAC, SE) && Encoding.ASCII.GetString(seen).Contains("<SUPPORT "));
 
 			// Longer than a retry against the unregistered handle would have waited.
 			await Task.Delay(ConnectionRetryPolicy.MaxAttempts * ConnectionRetryPolicy.Delay * 2);
 			releaseRegistration.TrySetResult();
 
-			await ReadUntilAsync(fromServer, seen => Encoding.ASCII.GetString(seen).Contains("<SUPPORT "));
 			await Assert.That(await WaitForPublishedAsync<MxpNegotiatedMessage>(published)).IsNotNull();
 
 			ProtocolCapabilities seen;

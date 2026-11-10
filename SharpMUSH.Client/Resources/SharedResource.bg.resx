@@ -5434,6 +5434,22 @@
     <value>Изключение за този акаунт е по-силно от всяка негова роля.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolOverrideReach" xml:space="preserve">
+    <value>Обхват</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachEveryone" xml:space="preserve">
+    <value>Всяка цел</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachUpTo" xml:space="preserve">
+    <value>Обхват {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReaching" xml:space="preserve">
+    <value>(обхват {0})</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Изключението за {0} е запазено.</value>
     <comment>MT</comment>
@@ -7854,7 +7870,7 @@
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenreHint" xml:space="preserve">
-    <value>Изберете MSSP жанр и поджанр на играта. Sharpie ги използва за илюстрациите; изберете None, ако нищо не подхожда.</value>
+    <value>Изберете MSSP жанра на играта. Изберете предложен поджанр или въведете свой. Sharpie използва тези стойности за илюстрациите; изберете None, ако никоя не е приложима.</value>
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenres" xml:space="preserve">
@@ -9444,5 +9460,8 @@
   <data name="MudTreeView_ExpandItem" xml:space="preserve">
     <value>Разгъни</value>
     <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityCustomSubgenre" xml:space="preserve">
+    <value>Този поджанр не е в списъка с предложения на MSSP. Разрешени са собствени стойности.</value>
   </data>
 </root>

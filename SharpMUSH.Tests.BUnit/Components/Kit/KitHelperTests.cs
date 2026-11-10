@@ -1,9 +1,34 @@
 using SharpMUSH.Client.Components.Kit;
+using SharpMUSH.Library.Models.Portal;
+using ThemeColor = SharpMUSH.Library.Models.Portal.ThemeColor;
 
 namespace SharpMUSH.Tests.BUnit.Components.Kit;
 
 public class KitHelperTests
 {
+	[Test]
+	public async Task NameColor_FitsBothDesktopAndMobilePoseSurfaces()
+	{
+		var color = ThemeColor.Parse(NameColor.Readable("#5aa9ff", "#ffffff", "#eeeeee")!);
+		await Assert.That(ThemeColor.Contrast(color, ThemeColor.Parse("#ffffff"))).IsGreaterThanOrEqualTo(4.5);
+		await Assert.That(ThemeColor.Contrast(color, ThemeColor.Parse("#eeeeee"))).IsGreaterThanOrEqualTo(4.5);
+	}
+
+	[Test]
+	[Arguments("#5aa9ff", "#ebe7fb")]
+	[Arguments("#ffb454", "#ffffff")]
+	[Arguments("#222222", "#16181b")]
+	[Arguments("#00aa88", "#887766")]
+	public async Task NameColor_FitsTheActualSurface(string color, string background)
+	{
+		var readable = NameColor.Readable(color, background)!;
+		await Assert.That(ThemeColor.Contrast(ThemeColor.Parse(readable), ThemeColor.Parse(background))).IsGreaterThanOrEqualTo(4.5);
+	}
+
+	[Test]
+	public async Task NameColor_KeepsAnAlreadyReadableHue()
+		=> await Assert.That(NameColor.Readable("#5aa9ff", "#16181b")).IsEqualTo("#5aa9ff");
+
 	[Test]
 	[Arguments("/api/wiki-assets/abc/x.jpg", true)]
 	[Arguments("https://cdn.example/x.jpg", true)]

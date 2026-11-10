@@ -403,9 +403,9 @@ Off by default; meant for a game moved from RhostMUSH. With `rhost_printf` off, 
 - `-` aligns left, `^` centres and `_` spreads the words across the width; the default is right. Giving two of these is an error.
 - `+` never cuts the value, and `*` cuts from its start rather than its end.
 - `|` wraps the value onto further rows at the width, and `|"` wraps at a space where it can. `&` starts a new row at each line of the value. Further rows show the text between fields as spaces.
-- `:<character>:` pads with that character rather than a space.
-- `.` leaves out a blank last row. `!` leaves out an empty field and the text after it.
-- The less common codes (`@ < > ' `` ` `` # / ;`) are read as on RhostMUSH as well.
+- `:<character>:` pads with that character rather than a space. `.` leaves out a blank last row, and `!` an empty field and the text after it.
+- With `|"`, `;N.n+W;` indents wrapped rows N spaces (4 by default) after n further rows, and widens every row after the first by W.
+- The less common codes (`@ < > ' `` ` `` # /`) are read as on RhostMUSH as well.
 
 ```sharp rhost_printf
 > think printf(|$-5s|$5s|,ab,cd)
@@ -429,7 +429,7 @@ ok
 
 ## Other servers' names: `dialect`
 
-Empty by default. With `dialect` set to `rhost`, a function or command SharpMUSH has no name for is looked up among RhostMUSH's names for one it has, in typed input and in any attribute without a dialect flag of its own: `wildmatch()` runs `match()`, `@sudo` runs `@force/inplace`, `@pe` runs `@pemit`. Set to `mux`, the names are TinyMUX's: `strtrunc()` runs `left()`, `iadd()` runs `add()`, `@qmail` runs `@mail/quick`, `@reject` sets HAVEN. SharpMUSH's full names and the game's `@function`s always come first; a dialect's name comes before a SharpMUSH abbreviation, so under `mux` `@reject` is not `@rejectmotd`. A TinyMUX command SharpMUSH has no command for, where SharpMUSH would read its name as something else (`@fe`, `@last`), answers `Huh?` unless a `$`-command takes it. Importing a RhostMUSH or TinyMUX database sets it, and sets the `rhost` or `mux` attribute flag on every attribute it brings in, so imported code keeps reading its server's names if the option is later emptied. See [attribute flags dialect].
+Empty by default. With `dialect` set to `rhost`, a function or command SharpMUSH has no name for is looked up among RhostMUSH's names for one it has, in typed input and in any attribute without a dialect flag of its own: `wildmatch()` runs `match()`, `@sudo` runs `@force/inplace`, `@pe` runs `@pemit`. Set to `mux`, the names are TinyMUX's: `strtrunc()` runs `left()`, `iadd()` runs `add()`, `@qmail` runs `@mail/quick`, `@reject` sets HAVEN. SharpMUSH's full names and the game's `@function`s always come first; a dialect's name comes before a SharpMUSH abbreviation, so under `mux` `@reject` is not `@rejectmotd`. Two commands are reached only this way, because a global name would change an abbreviation PennMUSH players type: `@site` under `rhost` (see [@site]) and `@folder` under `mux` (see [@folder]). A TinyMUX command SharpMUSH has no command for, where SharpMUSH would read its name as something else (`@fe`, `@last`), answers `Huh?` unless a `$`-command takes it. Importing a RhostMUSH or TinyMUX database sets it, and sets the `rhost` or `mux` attribute flag on every attribute it brings in, so imported code keeps reading its server's names if the option is later emptied. See [attribute flags dialect].
 
 ```sharp dialect=rhost
 > think wildmatch(a b c,b)

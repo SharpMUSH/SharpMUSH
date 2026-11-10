@@ -26,6 +26,18 @@ public sealed record PermissionContext(
 	public IReadOnlyDictionary<string, PermissionState> ObjectOverrides { get; init; } = new Dictionary<string, PermissionState>();
 
 	/// <summary>
+	/// The reach of each object override that has one (<see cref="OverrideReach"/>), by scope. An override without an
+	/// entry here reaches every target.
+	/// </summary>
+	public IReadOnlyDictionary<string, OverrideReach> ObjectReaches { get; init; } = OverrideReach.None;
+
+	/// <summary>The reach of each account override that has one, by scope; see <see cref="ObjectReaches"/>.</summary>
+	public IReadOnlyDictionary<string, OverrideReach> Reaches { get; init; } = OverrideReach.None;
+
+	/// <summary>Whether any override has a reach, so a check against a target can differ from <see cref="IPermissionResolver.Resolve"/>.</summary>
+	public bool HasReaches => ObjectReaches.Count > 0 || Reaches.Count > 0;
+
+	/// <summary>
 	/// The custom permissions the world defines (<see cref="CustomPermission"/>). They resolve like the
 	/// built-in scopes; a scope that is neither is refused, so a role still naming a removed one grants nothing.
 	/// </summary>
@@ -54,6 +66,67 @@ public interface IPermissionResolver
 
 	/// <summary>Whether <paramref name="context"/> holds <paramref name="scope"/>, and which layer decided it.</summary>
 	PermissionExplanation Explain(PermissionContext context, string scope);
+
+	/// <summary>
+	/// Whether <paramref name="context"/> holds <paramref name="scope"/> against a target ranked
+	/// <paramref name="targetRank"/> (<see cref="OverrideReach.RankOf"/>): <see cref="Resolve"/>'s answer, with each
+	/// override that has a reach applied only when the target is within it.
+	/// </summary>
+	bool Allows(PermissionContext context, string scope, int targetRank);
+
+	/// <summary><see cref="Explain(PermissionContext, string)"/> against a target ranked <paramref name="targetRank"/>.</summary>
+	PermissionExplanation Explain(PermissionContext context, string scope, int targetRank);
+}
+
+/// <summary>
+/// How far an override goes: the role whose priority bounds the targets it applies to. An Allow with a reach applies
+/// to targets ranked at or below the role, so a power held at <c>councilor</c> acts on what holders of councilor or a
+/// lower role own and never on a wizard's. A Deny with a reach applies to targets ranked at or above the role, so an
+/// object denied <c>game.tport_anything</c> with reach <c>wizard</c>, whose account allows it, may teleport what
+/// players own and not what wizards own. Outside its reach an override is Inherit, and the layers below it decide.
+/// </summary>
+/// <param name="Role">The slug of the role the reach names.</param>
+/// <param name="Priority">That role's priority; <see cref="int.MinValue"/> when no role has the slug, so an Allow
+/// reaches nothing and a Deny reaches everything.</param>
+public sealed record OverrideReach(string Role, int Priority)
+{
+	/// <summary>No reaches.</summary>
+	public static readonly IReadOnlyDictionary<string, OverrideReach> None = new Dictionary<string, OverrideReach>(StringComparer.OrdinalIgnoreCase);
+
+	/// <summary>
+	/// The rank a check with no target is made against: a player holding no staff role. An Allow reaching any staff
+	/// role applies, and a Deny reaching a staff role does not.
+	/// </summary>
+	public const int Unranked = (int)PortalRole.Player;
+
+	/// <summary>
+	/// A target's rank: the highest priority among the roles held, <c>everyone</c> left out, or
+	/// <see cref="PortalRole.Guest"/>'s for none. The target is the owner of what a check acts on.
+	/// </summary>
+	public static int RankOf(IEnumerable<SharpRole> roles)
+	{
+		var rank = (int)PortalRole.Guest;
+		foreach (var role in roles)
+			if (!BuiltInRoles.IsEveryone(role) && role.Priority > rank) rank = role.Priority;
+		return rank;
+	}
+
+	/// <summary>
+	/// The reaches <paramref name="reaches"/> names (scope → role slug), each with the priority of its role in
+	/// <paramref name="roles"/>.
+	/// </summary>
+	public static IReadOnlyDictionary<string, OverrideReach> Of(IReadOnlyDictionary<string, string> reaches, IEnumerable<SharpRole> roles)
+	{
+		if (reaches.Count == 0) return None;
+		var priorities = roles.ToDictionary(r => r.Slug, r => r.Priority, StringComparer.OrdinalIgnoreCase);
+		return reaches.ToDictionary(entry => entry.Key,
+			entry => new OverrideReach(entry.Value.ToLowerInvariant(), priorities.TryGetValue(entry.Value, out var priority) ? priority : int.MinValue),
+			StringComparer.OrdinalIgnoreCase);
+	}
+
+	/// <summary>Whether an override in state <paramref name="state"/> with this reach applies to a target ranked <paramref name="rank"/>.</summary>
+	public bool Covers(PermissionState state, int rank)
+		=> state == PermissionState.Allow ? rank <= Priority : rank >= Priority;
 }
 
 /// <summary>
@@ -107,16 +180,26 @@ public sealed class PermissionResolver : IPermissionResolver
 		return false;
 	}
 
-	/// <summary><see cref="Explain"/>'s verdict below the owner and administrator rules, for a scope the context knows.</summary>
-	private static bool Allows(PermissionContext context, string scope)
+	public bool Allows(PermissionContext context, string scope, int targetRank)
 	{
-		switch (StateOf(context.ObjectOverrides, scope))
+		if (!context.Knows(scope) || (PortalPermission.IsControlRole(scope) && !context.ControlScopes.Contains(scope))) return false;
+		if (context.IsOwner) return true;
+		if (OwnerOnly(scope)) return false;
+		return HoldsAdministrator(context.Roles) || Below(context, scope, targetRank);
+	}
+
+	private static bool Allows(PermissionContext context, string scope) => Below(context, scope, OverrideReach.Unranked);
+
+	/// <summary><see cref="Explain"/>'s verdict below the owner and administrator rules, for a scope the context knows.</summary>
+	private static bool Below(PermissionContext context, string scope, int targetRank)
+	{
+		switch (OverrideStateOf(context.ObjectOverrides, context.ObjectReaches, scope, targetRank))
 		{
 			case PermissionState.Allow: return true;
 			case PermissionState.Deny: return false;
 		}
 
-		switch (StateOf(context.Overrides, scope))
+		switch (OverrideStateOf(context.Overrides, context.Reaches, scope, targetRank))
 		{
 			case PermissionState.Allow: return true;
 			case PermissionState.Deny: return false;
@@ -139,6 +222,9 @@ public sealed class PermissionResolver : IPermissionResolver
 	}
 
 	public PermissionExplanation Explain(PermissionContext context, string scope)
+		=> Explain(context, scope, OverrideReach.Unranked);
+
+	public PermissionExplanation Explain(PermissionContext context, string scope, int targetRank)
 	{
 		if (!context.Knows(scope) || (PortalPermission.IsControlRole(scope) && !context.ControlScopes.Contains(scope)))
 			return new(false, null, [], "unknown-scope");
@@ -153,16 +239,16 @@ public sealed class PermissionResolver : IPermissionResolver
 		if (administrators.Length > 0)
 			return Decided(true, administrators, "administrator");
 
-		switch (StateOf(context.ObjectOverrides, scope))
+		switch (OverrideStateOf(context.ObjectOverrides, context.ObjectReaches, scope, targetRank))
 		{
-			case PermissionState.Allow: return new(true, null, [], "object-allow");
-			case PermissionState.Deny: return new(false, null, [], "object-deny");
+			case PermissionState.Allow: return new(true, null, [], "object-allow") { Reach = ReachDeciding(context.ObjectOverrides, context.ObjectReaches, scope, targetRank, PermissionState.Allow) };
+			case PermissionState.Deny: return new(false, null, [], "object-deny") { Reach = ReachDeciding(context.ObjectOverrides, context.ObjectReaches, scope, targetRank, PermissionState.Deny) };
 		}
 
-		switch (StateOf(context.Overrides, scope))
+		switch (OverrideStateOf(context.Overrides, context.Reaches, scope, targetRank))
 		{
-			case PermissionState.Allow: return new(true, null, [], "account-allow");
-			case PermissionState.Deny: return new(false, null, [], "account-deny");
+			case PermissionState.Allow: return new(true, null, [], "account-allow") { Reach = ReachDeciding(context.Overrides, context.Reaches, scope, targetRank, PermissionState.Allow) };
+			case PermissionState.Deny: return new(false, null, [], "account-deny") { Reach = ReachDeciding(context.Overrides, context.Reaches, scope, targetRank, PermissionState.Deny) };
 		}
 
 		var everyone = context.Roles.Where(BuiltInRoles.IsEveryone).ToArray();
@@ -200,6 +286,52 @@ public sealed class PermissionResolver : IPermissionResolver
 		return denied ? PermissionState.Deny : PermissionState.Inherit;
 	}
 
+	/// <summary>
+	/// An override layer's stance on <paramref name="scope"/> against a target ranked <paramref name="targetRank"/>:
+	/// <see cref="StateOf"/>, with an override whose reach (<paramref name="reaches"/>) leaves the target out read as
+	/// Inherit, so an umbrella override, or the next layer, decides instead.
+	/// </summary>
+	public static PermissionState OverrideStateOf(IReadOnlyDictionary<string, PermissionState> overrides,
+		IReadOnlyDictionary<string, OverrideReach> reaches, string scope, int targetRank)
+	{
+		if (reaches.Count == 0) return StateOf(overrides, scope);
+		var explicitState = ExplicitState(overrides, scope);
+		if (explicitState != PermissionState.Inherit
+			&& (!reaches.TryGetValue(scope, out var reach) || reach.Covers(explicitState, targetRank)))
+			return explicitState;
+		var denied = false;
+		foreach (var parent in PortalPermission.ParentsOf(scope))
+		{
+			switch (OverrideStateOf(overrides, reaches, parent, targetRank))
+			{
+				case PermissionState.Allow: return PermissionState.Allow;
+				case PermissionState.Deny: denied = true; break;
+			}
+		}
+
+		return denied ? PermissionState.Deny : PermissionState.Inherit;
+	}
+
+	/// <summary>
+	/// The role named by the reach of the override that gave the layer its <paramref name="decided"/> stance on
+	/// <paramref name="scope"/>, which may be an umbrella's; null when that override has no reach.
+	/// </summary>
+	private static string? ReachDeciding(IReadOnlyDictionary<string, PermissionState> overrides,
+		IReadOnlyDictionary<string, OverrideReach> reaches, string scope, int targetRank, PermissionState decided)
+	{
+		if (reaches.Count == 0) return null;
+		if (ExplicitState(overrides, scope) == decided)
+		{
+			if (!reaches.TryGetValue(scope, out var reach)) return null;
+			if (reach.Covers(decided, targetRank)) return reach.Role;
+		}
+
+		foreach (var parent in PortalPermission.ParentsOf(scope))
+			if (OverrideStateOf(overrides, reaches, parent, targetRank) == decided)
+				return ReachDeciding(overrides, reaches, parent, targetRank, decided);
+		return null;
+	}
+
 	/// <summary>The first entry naming <paramref name="scope"/> in any case, or Inherit.</summary>
 	private static PermissionState ExplicitState(IReadOnlyDictionary<string, PermissionState> permissions, string scope)
 	{
@@ -219,4 +351,8 @@ public sealed class PermissionResolver : IPermissionResolver
 /// <c>account-deny</c>, <c>role-allow</c>,
 /// <c>role-deny</c>, <c>everyone-allow</c>, <c>default-deny</c>, <c>owner-only</c> or <c>unknown-scope</c>.
 /// </summary>
-public sealed record PermissionExplanation(bool Allowed, int? Priority, string[] Roles, string Reason);
+public sealed record PermissionExplanation(bool Allowed, int? Priority, string[] Roles, string Reason)
+{
+	/// <summary>The role the deciding override's reach names, when an override with a reach decided.</summary>
+	public string? Reach { get; init; }
+}

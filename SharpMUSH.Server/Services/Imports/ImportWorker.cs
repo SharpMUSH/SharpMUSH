@@ -6,10 +6,12 @@ using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Parsing;
+using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.DatabaseConversion;
@@ -38,18 +40,22 @@ public static class ImportWorker
 					throw new IOException("Import worker inputs must belong to its private session.");
 			var source = await new DatabaseImportPreflight(new PennMUSHDatabaseParser(NullLogger<PennMUSHDatabaseParser>.Instance))
 				.ReadAsync(request.Files, deadline.Token);
+			var dialect = source.Dialect switch
+			{
+				DatabaseDialect.TinyMUX => ConfigurationDialect.TinyMUX,
+				DatabaseDialect.RhostMUSH => ConfigurationDialect.RhostMUSH,
+				_ => ConfigurationDialect.PennMUSH
+			};
 			var configuration = File.Exists(session.ConfigurationPath)
-				? ReadPennMushConfig.Import(session.ConfigurationPath, followIncludes: false, source.Dialect switch
-				{
-					DatabaseDialect.TinyMUX => ConfigurationDialect.TinyMUX,
-					DatabaseDialect.RhostMUSH => ConfigurationDialect.RhostMUSH,
-					_ => ConfigurationDialect.PennMUSH
-				}) : null;
+				? ReadPennMushConfig.Import(session.ConfigurationPath, followIncludes: false, dialect) : null;
 			if (configuration is not null)
 			{
 				source.Reality = configuration.Reality;
+				source.Hooks = configuration.Hooks;
+				source.ConfiguredAliases = [.. configuration.Aliases.Where(alias => alias.Kind is AliasKind.Flag or AliasKind.Power)];
 				RhostDatabaseTranslator.MapTotems(source, configuration.Totems);
 			}
+			ConfiguredAliases? aliases = null;
 			ConversionResult result;
 			var host = await new IsolatedImportHostFactory().CreateAsync(session, deadline.Token);
 			try
@@ -66,7 +72,29 @@ public static class ImportWorker
 				}
 				if (configuration is not null)
 				{
-					await options.UpdateAsync(configuration.Over, deadline.Token);
+					aliases = services.GetRequiredService<ConfiguredAliasImport>().Resolve(configuration, dialect);
+					var resolved = aliases;
+					await options.UpdateAsync(current =>
+					{
+						var imported = configuration.Over(current);
+						return imported with
+						{
+							Alias = resolved.Over(imported.Alias),
+							Restriction = imported.Restriction with
+							{
+								CommandRestrictions = resolved.CommandRestrictions,
+								FunctionRestrictions = resolved.FunctionRestrictions
+							}
+						};
+					}, deadline.Token);
+					// This host runs no hosted services, so nothing else puts the aliases in its tables before the scan below.
+					var written = (await options.CurrentAsync()).Alias;
+					foreach (var registry in new object[]
+						{
+							services.GetRequiredService<ILibraryProvider<CommandDefinition>>(),
+							services.GetRequiredService<ILibraryProvider<FunctionDefinition>>()
+						}.OfType<IConfiguredAliasRegistry>())
+						registry.RegisterConfiguredAliases(written);
 					await mediator.Send(new SetExpandedServerDataCommand(nameof(MushCnfObjectReferences), MushCnfObjectReferences.From(configuration)), deadline.Token);
 					foreach (var (name, value) in configuration.Secrets)
 						if (await secrets.SetAsync(name, value, new SecretAuthor("import:" + session.Id, "Database import"), deadline.Token) is Error<string>)
@@ -85,7 +113,7 @@ public static class ImportWorker
 				await ImportedCallScan.ReportAsync(mediator, parser.FunctionLibrary,
 					new SoftcodeSyntaxAnalyzer(parser.FunctionLibrary, services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()),
 					(await options.CurrentAsync()).Compatibility.Dialect, result, deadline.Token);
-				if (configuration is not null) ReportConfiguration(configuration, result);
+				if (configuration is not null) ReportConfiguration(configuration, aliases, result);
 				journal.Save(session with { State = ImportSessionState.Validating, Result = result });
 				if (await mediator.Send(new GetObjectCountQuery(), deadline.Token) < result.TotalObjects)
 					throw new IOException("The staged object count is below the conversion's reported count.");
@@ -129,7 +157,7 @@ public static class ImportWorker
 	/// since its settings are lost unless they are pasted into the file, and so is a file that set nothing (another
 	/// of the game's files given in its place); the rest, and the directives SharpMUSH has no option for, are notes.
 	/// </summary>
-	private static void ReportConfiguration(PennMushConfigImport configuration, ConversionResult result)
+	private static void ReportConfiguration(PennMushConfigImport configuration, ConfiguredAliases? aliases, ConversionResult result)
 	{
 		if (configuration.Named.Count == 0 && configuration.Secrets.Count == 0)
 			result.Warnings.Add(new ImportWarning(ImportWarningKind.Configuration,
@@ -137,11 +165,13 @@ public static class ImportWorker
 				NeedsAction: true));
 		foreach (var line in configuration.Skipped)
 		{
-			if (line.StartsWith("include ", StringComparison.OrdinalIgnoreCase))
+			if (line.StartsWith("include ", StringComparison.OrdinalIgnoreCase) || configuration.NeedsReview.Contains(line))
 				result.Warnings.Add(new ImportWarning(ImportWarningKind.Configuration, "Configuration: " + line, NeedsAction: true));
 			else
 				result.Notes.Add("Configuration: " + line);
 		}
+		foreach (var line in aliases?.NotCarried ?? [])
+			result.Notes.Add("Configuration: " + line);
 		if (configuration.Unrecognized.Count > 0)
 			result.Notes.Add($"Configuration: {configuration.Unrecognized.Count} directive(s) SharpMUSH has no option for, not carried over: {string.Join(", ", configuration.Unrecognized)}.");
 	}

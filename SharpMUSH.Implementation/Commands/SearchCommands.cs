@@ -752,7 +752,10 @@ public partial class Commands
 
 		foreach (var (scope, state) in grants.Context.ObjectOverrides.OrderBy(o => o.Key, StringComparer.Ordinal))
 		{
-			run.Add(state == PermissionState.Allow && GamePowers.ForScope(scope) is { } power
+			var reach = grants.Context.ObjectReaches.GetValueOrDefault(scope);
+			run.Add(reach is not null
+				? $"@permission/{(state == PermissionState.Allow ? "allow" : "deny")} {objectRef}={scope}/{reach.Role}"
+				: state == PermissionState.Allow && GamePowers.ForScope(scope) is { } power
 				? $"@power {objectRef}={power.Name}"
 				: $"@role/{(state == PermissionState.Allow ? "allow" : "deny")} {objectRef}={scope}");
 		}

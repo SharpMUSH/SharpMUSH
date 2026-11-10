@@ -1,6 +1,7 @@
 using MarkupString.Ansi;
 using SharpMUSH.Library.Markup;
 using StbImageSharp;
+using SkiaSharp;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
@@ -126,6 +127,10 @@ public sealed class TerminalPictureStore : IDisposable
 		return picture is not null;
 	}
 
+	internal (int Width, int Height)? OriginalSize(string source) =>
+		Resolve(source) is { } address && _entries.TryGetValue(address.AbsoluteUri, out var entry)
+			&& entry.Picture is not null ? entry.OriginalSize : null;
+
 	/// <summary>The address <paramref name="source"/> names, or null for one that is never fetched.</summary>
 	private Uri? Resolve(string source)
 	{
@@ -135,8 +140,10 @@ public sealed class TerminalPictureStore : IDisposable
 			return absolute.Scheme is "http" or "https" ? absolute : null;
 		// Relative: one of the game's own pictures, which is fetched only from where the game says they are.
 		if (_baseAddress is null || source.StartsWith("//", StringComparison.Ordinal)) return null;
-		// One this renderer cannot decode (WebP) is fetched as PNG.
-		return Uri.TryCreate(_baseAddress, PngPictures.Readable(source), out var local) && IsGameOrigin(local) ? local : null;
+		// WebP is decoded here; retain the portal conversion for other unsupported formats.
+		var readable = Path.GetExtension(source.Trim()).Equals(".webp", StringComparison.OrdinalIgnoreCase)
+			? source : PngPictures.Readable(source);
+		return Uri.TryCreate(_baseAddress, readable, out var local) && IsGameOrigin(local) ? local : null;
 	}
 
 	/// <summary>
@@ -159,7 +166,8 @@ public sealed class TerminalPictureStore : IDisposable
 
 			await using var stream = await response.Content.ReadAsStreamAsync();
 			var bytes = await ReadBoundedAsync(stream);
-			var picture = Decode(bytes);
+			var picture = Decode(bytes, out var originalSize);
+			entry.OriginalSize = originalSize;
 			entry.Picture = picture;
 			Interlocked.Add(ref _bytes, SizeOf(picture));
 			Trim();
@@ -189,23 +197,44 @@ public sealed class TerminalPictureStore : IDisposable
 
 	/// <summary>
 	/// <paramref name="bytes"/> decoded to RGBA and shrunk to <see cref="MaxStoredSide"/>, keyed by a hash of
-	/// the file. PNG, JPEG, GIF, BMP, TGA and PSD read; anything else throws. A GIF of more than one frame is a
+	/// the file. WebP, PNG, JPEG, GIF, BMP, TGA and PSD read; anything else throws. A GIF of more than one frame is a
 	/// moving picture (<see cref="DecodeMoving"/>).
 	/// </summary>
-	public static TerminalPicture Decode(byte[] bytes)
+	public static TerminalPicture Decode(byte[] bytes) => Decode(bytes, out _);
+
+	private static TerminalPicture Decode(byte[] bytes, out (int Width, int Height) originalSize)
 	{
+		if (bytes.AsSpan().StartsWith("RIFF"u8) && bytes.Length >= 12 && bytes.AsSpan(8, 4).SequenceEqual("WEBP"u8))
+			return DecodeWebP(bytes, out originalSize);
+
 		using var stream = new MemoryStream(bytes, writable: false);
 		var info = ImageInfo.FromStream(stream)
 			?? throw new InvalidDataException("Not a picture this server reads.");
 		if (info.Width is <= 0 or > MaxDecodedSide || info.Height is <= 0 or > MaxDecodedSide)
 			throw new InvalidDataException($"A {info.Width}x{info.Height} picture is over {MaxDecodedSide} pixels a side.");
 
+		originalSize = (info.Width, info.Height);
 		var key = Convert.ToHexString(SHA256.HashData(bytes), 0, 16);
 		if (IsGif(bytes) && DecodeMoving(bytes, key) is { } moving) return moving;
 
 		var image = ImageResult.FromMemory(bytes, ColorComponents.RedGreenBlueAlpha);
 		var (width, height, rgba) = Shrink(image.Width, image.Height, image.Data, MaxStoredSide);
 		return new TerminalPicture(key, width, height, rgba);
+	}
+
+	private static TerminalPicture DecodeWebP(byte[] bytes, out (int Width, int Height) originalSize)
+	{
+		using var data = SKData.CreateCopy(bytes);
+		using var codec = SKCodec.Create(data) ?? throw new InvalidDataException("Invalid WebP image.");
+		var size = codec.Info;
+		originalSize = (size.Width, size.Height);
+		if (size.Width is <= 0 or > MaxDecodedSide || size.Height is <= 0 or > MaxDecodedSide)
+			throw new InvalidDataException($"A {size.Width}x{size.Height} picture is over {MaxDecodedSide} pixels a side.");
+		using var bitmap = new SKBitmap(size.Width, size.Height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
+		if (codec.GetPixels(bitmap.Info, bitmap.GetPixels()) != SKCodecResult.Success)
+			throw new InvalidDataException("Incomplete WebP image.");
+		var (width, height, rgba) = Shrink(size.Width, size.Height, bitmap.Bytes, MaxStoredSide);
+		return new TerminalPicture(Convert.ToHexString(SHA256.HashData(bytes), 0, 16), width, height, rgba);
 	}
 
 	/// <summary>The bytes of pixels <paramref name="picture"/> holds: every frame of a moving one.</summary>
@@ -386,6 +415,7 @@ public sealed class TerminalPictureStore : IDisposable
 	private sealed class Entry
 	{
 		public volatile TerminalPicture? Picture;
+		public (int Width, int Height) OriginalSize;
 		public Task? Fetch;
 		public long LastUsed;
 		public long FailedAt;

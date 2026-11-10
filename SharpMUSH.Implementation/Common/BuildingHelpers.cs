@@ -140,14 +140,16 @@ public static class BuildingHelpers
 	}
 
 	/// <summary>
-	/// The end of PennMUSH's <c>do_pcreate</c> (<c>src/wiz.c:140-144</c>): the creator is told the new
+	/// The end of PennMUSH's <c>do_pcreate</c> (<c>src/wiz.c:140-144</c>): the creation is recorded as the
+	/// player's last connect (<see cref="ConnectRecord.CreatedAsync"/>), the creator is told the new
 	/// player's dbref and password, and <c>PLAYER`CREATE</c> is queued. <c>@pcreate</c> and
 	/// <c>pcreate()</c> (<c>src/fundb.c:2140</c>) both end here.
 	/// </summary>
 	/// <remarks>Like <see cref="AnnounceCreatedAsync"/>, callers run this once the requested-dbref gate is released.</remarks>
-	public static async ValueTask AnnouncePlayerCreatedAsync(IMUSHCodeParser parser, INotifyService notifyService,
+	public static async ValueTask AnnouncePlayerCreatedAsync(IMUSHCodeParser parser, IMediator mediator, INotifyService notifyService,
 		IEventService eventService, AnySharpObject executor, string name, string password, DBRef player)
 	{
+		await ConnectRecord.CreatedAsync(mediator, player);
 		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreatedFormat), executor,
 			name, player.Number, password);
 
@@ -846,7 +848,8 @@ public static class BuildingHelpers
 	/// <summary>
 	/// <c>NoQuota(x)</c> (<c>hdrs/mushdb.h:44-47</c>): privileged, or owned by someone privileged, or
 	/// holding No_Quota, or — unless MISTRUSTed, which is what stops an object borrowing its owner's
-	/// exemption — owned by a holder of it.
+	/// exemption — owned by a holder of it. The Immortal power, TinyMUX's and RhostMUSH's IMMORTAL, needs no quota
+	/// either.
 	/// </summary>
 	private static async ValueTask<bool> NoQuotaAsync(AnySharpObject executor, SharpPlayer owner)
 	{
@@ -855,7 +858,8 @@ public static class BuildingHelpers
 		return await executor.IsPriv()
 			|| await ownerObject.IsPriv()
 			|| await executor.HasPower("No_Quota")
-			|| (!await executor.HasFlag("MISTRUST") && await ownerObject.HasPower("No_Quota"));
+			|| await executor.HasPower("Immortal")
+			|| (!await executor.HasFlag("MISTRUST") && (await ownerObject.HasPower("No_Quota") || await ownerObject.HasPower("Immortal")));
 	}
 
 	/// <summary>

@@ -4744,6 +4744,22 @@
     <value>Une exception sur ce compte l'emporte sur tous ses rôles.</value>
     <comment>MT</comment>
   </data>
+  <data name="RolOverrideReach" xml:space="preserve">
+    <value>Portée</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachEveryone" xml:space="preserve">
+    <value>Toute cible</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolReachUpTo" xml:space="preserve">
+    <value>Portée {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolOverrideReaching" xml:space="preserve">
+    <value>(portée {0})</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>Exception pour {0} enregistrée.</value>
     <comment>MT</comment>
@@ -7164,7 +7180,7 @@
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenreHint" xml:space="preserve">
-    <value>Choisissez le genre et le sous-genre MSSP du jeu. Sharpie s'en sert pour ses illustrations ; choisissez None si aucun ne convient.</value>
+    <value>Choisissez le genre MSSP du jeu. Sélectionnez un sous-genre suggéré ou saisissez le vôtre. Sharpie utilise ces valeurs pour ses illustrations ; choisissez None si aucun ne convient.</value>
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenres" xml:space="preserve">
@@ -8754,5 +8770,8 @@
   <data name="MudTreeView_ExpandItem" xml:space="preserve">
     <value>Développer</value>
     <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityCustomSubgenre" xml:space="preserve">
+    <value>Ce sous-genre ne figure pas dans la liste des suggestions MSSP. Les valeurs personnalisées sont autorisées.</value>
   </data>
 </root>

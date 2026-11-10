@@ -29,7 +29,7 @@
 }
 
 .wiki-req-kicker {
-	font-family: var(--font-mono);
+	font-family: var(--font-kicker);
 	font-size: var(--text-xs);
 	letter-spacing: 0.08em;
 	text-transform: uppercase;

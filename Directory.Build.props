@@ -8,7 +8,7 @@
     MarkupString.Pueblo are the same family, carried only by what renders those dialects.
   -->
   <PropertyGroup>
-    <MarkupStringVersion>2.27.0</MarkupStringVersion>
+    <MarkupStringVersion>2.27.3</MarkupStringVersion>
   </PropertyGroup>
 
   <!--
@@ -18,7 +18,7 @@
     place to look. One property, three references.
   -->
   <PropertyGroup>
-    <TelnetNegotiationCoreVersion>4.6.1</TelnetNegotiationCoreVersion>
+    <TelnetNegotiationCoreVersion>4.8.0</TelnetNegotiationCoreVersion>
   </PropertyGroup>
 
   <!--
@@ -45,6 +45,11 @@
   <ItemGroup>
     <CompilerVisibleProperty Include="SharpMUSHVersion" />
   </ItemGroup>
+
+  <!-- Keep the engine and its shared cache contracts on the same FusionCache release. -->
+  <PropertyGroup>
+    <FusionCacheVersion>2.9.0</FusionCacheVersion>
+  </PropertyGroup>
 
   <!-- Keep the runner, assertions, generators, and ASP.NET integration on one release. -->
   <PropertyGroup>

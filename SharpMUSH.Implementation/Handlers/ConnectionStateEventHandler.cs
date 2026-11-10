@@ -1,4 +1,6 @@
 using Mediator;
+using Microsoft.Extensions.Logging;
+using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -8,6 +10,7 @@ using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Implementation.Services;
 using SharpMUSH.Messaging.Messages;
 
 namespace SharpMUSH.Implementation.Handlers;
@@ -30,7 +33,8 @@ public class ConnectionStateEventHandler(
 	INotifyService notifyService,
 	IMediator mediator,
 	IConnectionAnnounceService connectionAnnounceService,
-	IGameMessageService gameMessages)
+	IGameMessageService gameMessages,
+	ILogger<ConnectionStateEventHandler> logger)
 	: INotificationHandler<ConnectionStateChangeNotification>
 {
 	public async ValueTask Handle(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
@@ -114,6 +118,17 @@ public class ConnectionStateEventHandler(
 				var bytesRecv = connectionData.Metadata.TryGetValue("BytesReceived", out var recv) ? recv : "0";
 				var bytesSent = connectionData.Metadata.TryGetValue("BytesSent", out var sent) ? sent : "0";
 				var commandCount = connectionData.Metadata.TryGetValue("CommandCount", out var count) ? count : "0";
+
+				// A LOGOUT has added its count already, before resetting it for the next login.
+				try
+				{
+					await TotalCommands.AddSessionAsync(mediator, notification.PlayerRef.Value, connectionData.CommandCount);
+				}
+				catch (Exception ex)
+				{
+					// The disconnect events and announcements below matter more than the running total.
+					logger.LogError(ex, "Error adding the session's commands to TOTCMDS for {Player}", notification.PlayerRef.Value);
+				}
 
 				await eventService.TriggerEventAsync(SharpEvents.PlayerDisconnect,
 					notification.PlayerRef.Value, // Enactor is the disconnecting player

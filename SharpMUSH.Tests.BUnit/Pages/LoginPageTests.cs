@@ -44,6 +44,8 @@ public class LoginPageTests
 /// </summary>
 public class LoginPageRenderTests : BunitContext
 {
+	private readonly StubServerInfoService _serverInfo = new(guestsEnabled: true);
+
 	private void SeedServices()
 	{
 		Services
@@ -54,9 +56,33 @@ public class LoginPageRenderTests : BunitContext
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
 				NullLogger<AccountAuthService>.Instance, []))
 			.AddSingleton(Substitute.For<ITerminalService>())
+			.AddSingleton<ServerInfoService>(_serverInfo)
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
+	}
+
+	/// <summary>A configured game's sign-in page carries its banner and tagline over the card.</summary>
+	[TUnit.Core.Test]
+	public async Task Login_ShowsTheGamesBannerAndTagline()
+	{
+		_serverInfo.Identity = ("/api/wiki-assets/a/banner.png", "Intrigue in a city that never sleeps", null);
+		SeedServices();
+		var cut = Render<SharpMUSH.Client.Pages.Login>();
+
+		await Assert.That(cut.Find(".login-brand .login-banner").GetAttribute("src")).EndsWith("/api/wiki-assets/a/banner.png");
+		await Assert.That(cut.Find(".login-brand .login-tagline").TextContent).IsEqualTo("Intrigue in a city that never sleeps");
+		await Assert.That(cut.FindAll("img[src='assets/Logo.svg']").Count).IsEqualTo(0)
+			.Because("the game's own logo (GameLogo) stands there, not the engine's");
+	}
+
+	[TUnit.Core.Test]
+	public async Task Login_IdentifiesCredentialsForPasswordManagers()
+	{
+		SeedServices();
+		var cut = Render<SharpMUSH.Client.Pages.Login>();
+		await Assert.That(cut.Find("input[autocomplete='username']")).IsNotNull();
+		await Assert.That(cut.Find("input[autocomplete='current-password']").GetAttribute("type")).IsEqualTo("password");
 	}
 
 	[TUnit.Core.Test]

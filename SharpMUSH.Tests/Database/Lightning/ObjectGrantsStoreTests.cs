@@ -115,4 +115,26 @@ public class ObjectGrantsStoreTests
 		await Assert.That(await _db.GetObjectOverridesAsync(number)).IsEmpty();
 		await Assert.That(await _db.GetObjectsForRoleAsync("helper")).DoesNotContain(number);
 	}
+
+	[Test]
+	public async Task AnOverridesReachIsStoredClearedAndDeletedWithIt()
+	{
+		var thing = await ThingAsync("Reaching");
+		var number = thing.Object().Key;
+		var scope = PortalPermission.GamePower("Tport_Anything");
+
+		await _db.SetObjectOverrideAsync(number, scope, PermissionState.Allow, "Councilor");
+		await Assert.That((await _db.GetObjectReachesAsync(number))[scope]).IsEqualTo("councilor");
+
+		await _db.SetObjectOverrideAsync(number, scope, PermissionState.Allow);
+		await Assert.That(await _db.GetObjectReachesAsync(number)).IsEmpty();
+
+		await _db.SetObjectOverrideAsync(number, scope, PermissionState.Deny, "wizard");
+		await _db.SetObjectOverrideAsync(number, scope, PermissionState.Inherit, "wizard");
+		await Assert.That(await _db.GetObjectReachesAsync(number)).IsEmpty();
+
+		await _db.SetObjectOverrideAsync(number, scope, PermissionState.Allow, "councilor");
+		await _db.DeleteObjectAsync(thing.Object().DBRef);
+		await Assert.That(await _db.GetObjectReachesAsync(number)).IsEmpty();
+	}
 }

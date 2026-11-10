@@ -201,6 +201,39 @@ public class AdminPackageBrowseTests : BunitContext
 			.Because("a filtered graph keeps what its packages need");
 	}
 
+	[Test]
+	public async Task Remote_failure_stays_visible_until_successful_retry()
+	{
+		api.FailRemotes = true;
+		var host = Render<MudHarness>(p => p.AddChildContent<AdminPackageBrowse>());
+		var cut = host.FindComponent<AdminPackageBrowse>();
+		cut.WaitForAssertion(() => cut.Find(".pkg-remotes-error"));
+		await Assert.That(cut.FindAll(".lib-row")).IsEmpty();
+		api.FailRemotes = false;
+		await cut.Find(".pkg-remotes-retry").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".lib-row"));
+		await Assert.That(cut.FindAll(".pkg-remotes-error")).IsEmpty();
+	}
+
+	[Test]
+	public async Task Remote_management_failures_stop_loading_and_retry_each_source()
+	{
+		api.FailRemotes = true;
+		api.FailCommunity = true;
+		var host = Render<MudHarness>(p => p.AddChildContent<AdminPackageRemotes>());
+		var cut = host.FindComponent<AdminPackageRemotes>();
+		cut.WaitForAssertion(() => cut.Find(".pkg-community-error"));
+		await Assert.That(cut.FindAll(".pkg-remotes-error")).HasCount().EqualTo(1);
+		await Assert.That(cut.Markup).DoesNotContain("PkgNoCommunityRepos");
+		api.FailRemotes = false;
+		api.FailCommunity = false;
+		await cut.Find(".pkg-remotes-retry").ClickAsync();
+		await cut.Find(".pkg-community-retry").ClickAsync();
+		await Assert.That(cut.FindAll(".pkg-remotes-error, .pkg-community-error")).IsEmpty();
+		await Assert.That(cut.Find(".pkg-remotes-table").TextContent).Contains("official");
+		await Assert.That(cut.Markup).Contains("PkgNoCommunityRepos");
+	}
+
 	[After(Test)]
 	public void DisposeClient() => client.Dispose();
 
@@ -219,6 +252,8 @@ public class AdminPackageBrowseTests : BunitContext
 	{
 		public IReadOnlyList<InstalledPackageDto> Installed { get; set; } = [];
 		public bool FailInstalled { get; set; }
+		public bool FailRemotes { get; set; }
+		public bool FailCommunity { get; set; }
 		public string? PackageId { get; set; } = "tools";
 		public IReadOnlyList<PackageRepoEntry>? Packages { get; set; }
 		public IReadOnlyList<PackageRepoEntry> Catalogue { get; set; } = [];
@@ -228,6 +263,9 @@ public class AdminPackageBrowseTests : BunitContext
 			var path = request.RequestUri!.AbsolutePath;
 			return Task.FromResult(path switch
 			{
+				"/api/packages/community" when FailCommunity => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable),
+				"/api/packages/community" => Json(new CommunityReposResponse([], [])),
+				"/api/packages/remotes" when FailRemotes => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable),
 				"/api/packages/remotes" => Json(new[] { new PackageRemoteRecord("official", Repo, PackageRemoteTrust.Official, null) }),
 				"/api/packages/remotes/official/browse" => Json(new PackageRepoSnapshot("official", Repo, "abc123",
 					Packages ?? [new("tools", PackageId, "1.1.0", "Useful tools", [new("1.0.0", "tools/v1.0.0", "abc123")])])),

@@ -119,16 +119,6 @@ public static class BundledPackages
 		// Installed: the stored texts are fixed, so a game renamed after its first boot would still greet players
 		// as SharpMUSH; the Messages object reads mudname() each time it is shown.
 		new("messages", BundledPackageHandler.None, InstallAtFirstBoot: true),
-		// Available, not installed: +radio lands an object in the master room, and is the worked example of
-		// a system built on @feed.
-		new("radio", BundledPackageHandler.None, InstallAtFirstBoot: false),
-		new("radio-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		new("radio-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		// Available, not installed: joins radio and scene, so +radio/log puts a frequency into a scene.
-		new("radio-scene", BundledPackageHandler.None, InstallAtFirstBoot: false),
-		// Available, not installed: the scene package keeps any detail an owner sets, and a game chooses whether
-		// it wants a verse, a canon and content warnings named for it.
-		new("scene-verse", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +safety is a name a game may already use, and a game chooses its own safety tools.
 		new("scene-safety", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("scene-safety-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
@@ -172,12 +162,6 @@ public static class BundledPackages
 		new("staff", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("staff-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("staff-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		// Available, not installed: +duty is a name a game may already use, and it needs a sheet system bridge.
-		new("duties", BundledPackageHandler.Http, InstallAtFirstBoot: false),
-		new("duties-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		new("duties-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		new("duties-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
-		new("duties-scene", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: joins staff and status, so +staff shows each staff member's +status.
 		new("staff-status", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +census is a name a game may already use for its own code.
@@ -280,7 +264,21 @@ public static class BundledPackages
 	/// updates instead of reporting a package nothing ships any more.
 	/// </summary>
 	public static readonly IReadOnlyDictionary<string, string> Moved =
-		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+		{
+			["duties"] = "duties",
+			["duties-help"] = "duties-help",
+			["duties-config"] = "duties-config",
+			["duties-app"] = "duties-app",
+			["duties-scene"] = "duties-scene",
+			// A setting with radios, not every game's.
+			["radio"] = "radio",
+			["radio-help"] = "radio-help",
+			["radio-config"] = "radio-config",
+			["radio-scene"] = "radio-scene",
+			// Verse and canon are multi-fandom conventions; the content warning stayed, in scene-safety.
+			["scene-verse"] = "scene-verse",
+		};
 
 	/// <summary>
 	/// Reserved remote name for the catalogue. Never stored in <c>sys_remotes</c> — the packages

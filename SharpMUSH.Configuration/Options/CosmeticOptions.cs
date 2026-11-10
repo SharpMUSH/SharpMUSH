@@ -215,7 +215,48 @@ public record CosmeticOptions(
 			+ "are empty, the tab shows the SharpMUSH logo. Browsers keep a tab icon for a while, so a change "
 			+ "can take a reload to show.")]
 	string PortalFavicon
-);
+)
+{
+	[SharpConfig(
+		Name = "portal_banner",
+		Category = "Cosmetic",
+		Description = "Wide picture behind the game's name on the portal's Home, wiki and sign-in pages; empty for none",
+		ValidationPattern = PortalPicture.Pattern,
+		Image = true,
+		Group = "Portal",
+		Order = 3,
+		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address. Shown about four times as wide as it is "
+			+ "tall and cropped to fit, so keep what matters near the middle. Link previews in Discord and other "
+			+ "sites show it too.")]
+	public string PortalBanner { get; init; } = "";
+
+	[SharpConfig(
+		Name = "portal_tagline",
+		Category = "Cosmetic",
+		Description = "One short line under the game's name on the portal and in link previews",
+		ValidationPattern = PortalIdentity.TaglinePattern,
+		Group = "Portal",
+		Order = 4,
+		Tooltip = "At most 120 characters, such as: Gaslight intrigue in a city that never sleeps.")]
+	public string PortalTagline { get; init; } = "";
+
+	[SharpConfig(
+		Name = "portal_description",
+		Category = "Cosmetic",
+		Description = "Two or three sentences about the game for the portal's Home and sign-in pages and link previews",
+		ValidationPattern = PortalIdentity.DescriptionPattern,
+		Group = "Portal",
+		Order = 5,
+		Tooltip = "At most 300 characters of plain text. While it is empty, link previews use "
+			+ "onboarding_introduction, the introduction written during setup.")]
+	public string PortalDescription { get; init; } = "";
+	[SharpConfig(Name = "max_picture_columns", Category = "Cosmetic", Description = "Maximum width in character cells for telnet and MXP figures", Group = "Pictures", Min = 1, Max = 2000)]
+	public int MaxPictureColumns { get; init; } = 200;
+
+	[SharpConfig(Name = "max_picture_rows", Category = "Cosmetic", Description = "Maximum height in character cells for telnet and MXP figures; preserves aspect ratio", Group = "Pictures", Min = 1, Max = 1000)]
+	public int MaxPictureRows { get; init; } = 100;
+
+}
 
 /// <summary>What <c>portal_logo</c> and <c>portal_favicon</c> hold, and what the portal shows when they are empty.</summary>
 public static class PortalPicture
@@ -229,6 +270,31 @@ public static class PortalPicture
 	/// <summary>The tab icon for the configured pictures: the favicon, else the logo, else the SharpMUSH logo.</summary>
 	public static string Favicon(CosmeticOptions cosmetic) =>
 		NonEmpty(cosmetic.PortalFavicon) ?? NonEmpty(cosmetic.PortalLogo) ?? DefaultLogo;
+
+	private static string? NonEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}
+
+/// <summary>The game's identity in the portal: its banner, tagline and description.</summary>
+public static class PortalIdentity
+{
+	/// <summary>One line of at most 120 characters, or empty.</summary>
+	public const string TaglinePattern = @"^[^\r\n]{0,120}$";
+
+	/// <summary>At most 300 characters, or empty.</summary>
+	public const string DescriptionPattern = @"^[\s\S]{0,300}$";
+
+	/// <summary><c>portal_banner</c>, or null when it is empty.</summary>
+	public static string? Banner(CosmeticOptions cosmetic) => NonEmpty(cosmetic.PortalBanner);
+
+	/// <summary><c>portal_tagline</c>, or empty.</summary>
+	public static string Tagline(CosmeticOptions cosmetic) => NonEmpty(cosmetic.PortalTagline) ?? "";
+
+	/// <summary><c>portal_description</c>, or empty. The portal shows only this: Home already shows the introduction.</summary>
+	public static string Description(CosmeticOptions cosmetic) => NonEmpty(cosmetic.PortalDescription) ?? "";
+
+	/// <summary>What a link preview describes the game with: <c>portal_description</c>, else <c>onboarding_introduction</c>.</summary>
+	public static string PreviewDescription(SharpMUSHOptions options) =>
+		NonEmpty(options.Cosmetic.PortalDescription) ?? NonEmpty(options.Onboarding?.Introduction) ?? "";
 
 	private static string? NonEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

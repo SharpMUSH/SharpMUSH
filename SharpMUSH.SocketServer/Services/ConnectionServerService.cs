@@ -71,6 +71,7 @@ public class ConnectionServerService(
 						{ "PresenceClass", presenceClass },
 						{ "SessionId", sessionId },
 						{ "SSL", isSecure ? "1" : "0" },
+						{ TerminalFeatureReader.GraphicsKey, capabilities?.Pins?.Graphics ?? TerminalGraphics.Off },
 						{ ConnectionEstablishedMessage.OrderedPromptsMetadata, "1" }
 					}
 				};
@@ -82,7 +83,7 @@ public class ConnectionServerService(
 			// MarkupOutputConsumer writes prompts carried on the output subject, in order with output.
 			var established = new ConnectionEstablishedMessage(handle, ipAddress, hostname,
 				connectionType, connectedAt, presenceClass, isSecure, sessionId)
-			{ OrderedPrompts = true, SignIn = signIn };
+			{ OrderedPrompts = true, SignIn = signIn, InitialGraphics = capabilities?.Pins?.Graphics };
 			publishAttempted = true;
 			// Publication may have succeeded when its acknowledgement was lost. Re-publish the
 			// idempotent event, but never overwrite KV again after the engine can bind a player.

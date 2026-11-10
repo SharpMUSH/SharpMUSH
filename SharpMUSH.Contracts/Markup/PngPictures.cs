@@ -2,9 +2,8 @@ namespace SharpMUSH.Library.Markup;
 
 /// <summary>
 /// The game's own pictures as PNG, for a reader that cannot decode the format they are stored in. An MXP or
-/// Pueblo client reads PNG, JPEG, GIF and BMP (Axmud refuses any other extension), and the terminal
-/// renderer the same, so a WebP picture is sent to them at <c>/pictures/png/&lt;its path&gt;.png</c>, which
-/// the server answers with the picture converted.
+/// Pueblo client reads PNG, JPEG, GIF and BMP (Axmud refuses any other extension), so a WebP picture is sent
+/// to those clients at <c>/pictures/png/&lt;its path&gt;.png</c>, which the server answers with the picture converted.
 /// </summary>
 public static class PngPictures
 {

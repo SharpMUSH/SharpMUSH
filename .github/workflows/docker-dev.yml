@@ -32,11 +32,14 @@ jobs:
 
   publish:
     needs: [quiet-period]
-    # Serialize validation and publication as one unit, retaining only the latest
-    # pending call. This group is separate from the cancellable quiet-period job.
+    # Serialize validation and publication as one unit with prerelease promotion.
+    # Retain pending calls: a delayed prerelease must not cancel a newer main build.
+    # GitHub allows 100 pending jobs; arrivals beyond that cap need a manual rerun.
+    # Keep this policy in sync with docker-publish.yml move-dev.
     concurrency:
       group: docker-dev-${{ github.ref }}
       cancel-in-progress: false
+      queue: max
     uses: ./.github/workflows/_docker-dev-publish.yml
     with:
       publish: ${{ inputs.publish || 'all' }}

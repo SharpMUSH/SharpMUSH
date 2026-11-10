@@ -121,6 +121,25 @@ public class BotDetectionMiddlewareTests
 	}
 
 	[Test]
+	[Arguments("/scenes/42")]
+	[Arguments("/play")]
+	public async Task Request_BotOnAGameCardRoute_PassesThroughToTheCard(string path)
+	{
+		await using var app = await BuildAndStartAsync();
+		using var client = new HttpClient(app.GetTestServer().CreateHandler())
+		{
+			BaseAddress = new Uri("http://localhost")
+		};
+		client.DefaultRequestHeaders.Add("User-Agent", "Discordbot/2.0");
+
+		var response = await client.GetAsync(path);
+		var body = await response.Content.ReadAsStringAsync();
+
+		await Assert.That((int)response.StatusCode).IsEqualTo(200);
+		await Assert.That(body).IsEqualTo("bot");
+	}
+
+	[Test]
 	public async Task Request_BotOnSettingsRoute_Returns403()
 	{
 		await using var app = await BuildAndStartAsync();

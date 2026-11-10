@@ -176,6 +176,7 @@ public class DynamicApplicationPageTests : TrackingBunitContext, IAsyncDisposabl
 		// The point of the finding: not a silent empty result after an impossible request.
 		await Assert.That(cut.Markup).DoesNotContain("WidNothingToDisplay");
 		await Assert.That(cut.Find("a.app-alert-link").GetAttribute("href")).IsEqualTo("/login");
+		await Assert.That(cut.Find("[role='alert']").TextContent).Contains("NavApplicationNeedsCharacter");
 		await Assert.That(_requests.Any(r => r.StartsWith("/http/profile?", StringComparison.Ordinal))).IsFalse()
 			.Because("a route whose token cannot be filled must not be fetched at all");
 	}
@@ -318,6 +319,8 @@ public class DynamicApplicationTopbarTests : TrackingBunitContext, IAsyncDisposa
 
 		await Assert.That(cut.FindAll("nav.phosphor-rail").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll(".phosphor-topbar-title").Count).IsEqualTo(0);
+		// The touch header names the game instead, as a link to Home.
+		await Assert.That(cut.Find(".phosphor-topbar a.phosphor-topbar-game").GetAttribute("href")).IsEqualTo("/");
 		await Assert.That(cut.FindAll("aside.phosphor-pagebar").Count).IsEqualTo(1);
 	}
 }

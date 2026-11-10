@@ -360,12 +360,12 @@ public sealed class PackageDeclarationService(
 		await roles.UpsertCustomPermissionAsync(permission);
 		foreach (var (account, state) in overrides.Accounts)
 		{
-			await roles.SetAccountOverrideAsync(account, permission.Scope, state);
+			await roles.SetAccountOverrideAsync(account, permission.Scope, state, overrides.AccountReaches.GetValueOrDefault(account));
 		}
 
 		foreach (var (number, state) in overrides.Objects)
 		{
-			await roles.SetObjectOverrideAsync(number, permission.Scope, state);
+			await roles.SetObjectOverrideAsync(number, permission.Scope, state, overrides.ObjectReaches.GetValueOrDefault(number));
 		}
 	}
 
