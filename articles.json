@@ -7482,6 +7482,12 @@
         "aliases": []
       },
       {
+        "id": "roles-staff",
+        "lookup": "roles staff",
+        "heading": "Staff permissions",
+        "aliases": []
+      },
+      {
         "id": "roles-wizard-only",
         "lookup": "roles wizard only",
         "heading": "What still needs game.wizard",
