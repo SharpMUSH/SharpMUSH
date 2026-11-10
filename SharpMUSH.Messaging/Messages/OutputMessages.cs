@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace SharpMUSH.Messaging.Messages;
 
 /// <summary>
@@ -111,9 +113,28 @@ public record MSSPReportMessage(MSSPVariable[] Variables);
 /// turn HTML mode on.
 /// </param>
 /// <param name="NegotiationWaitMilliseconds">The game's <c>negotiation_wait_ms</c> setting for new telnet connections.</param>
+[method: JsonConstructor]
 public record OutputSettingsMessage(IReadOnlyDictionary<string, string> AsciiTranslations, string? MediaBaseUrl = null,
 	uint KeepAliveSeconds = 0, bool Pueblo = false, uint NegotiationWaitMilliseconds = 400,
-	int MaxPictureColumns = 200, int MaxPictureRows = 100);
+	int MaxPictureColumns = 200, int MaxPictureRows = 100)
+{
+	/// <summary>The constructor published with plugin contract 3.0.0.</summary>
+	public OutputSettingsMessage(IReadOnlyDictionary<string, string> AsciiTranslations, string? MediaBaseUrl,
+		uint KeepAliveSeconds, bool Pueblo)
+		: this(AsciiTranslations, MediaBaseUrl, KeepAliveSeconds, Pueblo, 400, 200, 100)
+	{
+	}
+
+	/// <summary>The deconstruction published with plugin contract 3.0.0.</summary>
+	public void Deconstruct(out IReadOnlyDictionary<string, string> asciiTranslations, out string? mediaBaseUrl,
+		out uint keepAliveSeconds, out bool pueblo)
+	{
+		asciiTranslations = AsciiTranslations;
+		mediaBaseUrl = MediaBaseUrl;
+		keepAliveSeconds = KeepAliveSeconds;
+		pueblo = Pueblo;
+	}
+}
 
 /// <summary>
 /// Message sent from MainProcess to ConnectionServer to update player output preferences for a connection
