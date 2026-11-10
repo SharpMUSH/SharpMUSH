@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Library;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Common;
@@ -394,8 +395,8 @@ public partial class Commands
 			return await NotifyService.PermissionDeniedNotControlled(executor, targetObject);
 		}
 
-		// Mortals can only chown to their own owner; wizards can chown to anyone.
-		if (!await executor.IsWizard())
+		// Mortals can only chown to their own owner; game.chown.any chowns to anyone.
+		if (!await executor.CanOver(PortalPermission.ChownAny, new AnySharpObject(newOwnerPlayer)))
 		{
 			var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 			if (executorOwner.Object.DBRef != newOwnerPlayer.Object.DBRef)

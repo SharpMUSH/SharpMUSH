@@ -63,7 +63,7 @@ public partial class PageCommandTests
 			await Assert.That(Notifications.For(outgoing.DbRef).Skip(outStart).Any(line => line.Contains("Answer="))).IsFalse();
 			await Assert.That(Notifications.For(incoming.DbRef).Skip(inStart)).Contains($"{sender.Name} pages: Answer=with an equals sign");
 			await Assert.That(await Context(sender, "LASTPAGED")).IsEqualTo(incoming.DbRef.ToString());
-			await Assert.That(await Context(sender, "LASTPAGER")).IsEqualTo(incoming.DbRef.ToString());
+			await Assert.That(await StoredIncomingText(sender)).IsEqualTo(incoming.DbRef.ToString());
 		}
 		finally { await DisconnectPages(sender, outgoing, incoming); }
 	}
@@ -101,7 +101,7 @@ public partial class PageCommandTests
 			await GodCommandAsync($"@set {blocked.DbRef}=HAVEN");
 			await PageAsync(sender, blocked.Name, "Refused");
 			await Assert.That(await Context(sender, "LASTPAGED")).IsEqualTo(previous.DbRef.ToString());
-			await Assert.That(await Context(blocked, "LASTPAGER")).IsEqualTo(previous.DbRef.ToString());
+			await Assert.That(await StoredIncomingText(blocked)).IsEqualTo(previous.DbRef.ToString());
 		}
 		finally { await DisconnectPages(sender, previous, blocked); }
 	}
@@ -117,8 +117,8 @@ public partial class PageCommandTests
 			await GodCommandAsync($"@set {blocked.DbRef}=HAVEN");
 			await PageAsync(sender, $"{blocked.Name} {admitted.Name}", "Partially delivered");
 			await Assert.That(await Context(sender, "LASTPAGED")).IsEqualTo(admitted.DbRef.ToString());
-			await Assert.That(await Context(admitted, "LASTPAGER")).IsEqualTo(sender.DbRef.ToString());
-			await Assert.That(await Context(blocked, "LASTPAGER")).IsEqualTo(string.Empty);
+			await Assert.That(await StoredIncomingText(admitted)).IsEqualTo(sender.DbRef.ToString());
+			await Assert.That(await StoredIncomingText(blocked)).IsEqualTo(string.Empty);
 		}
 		finally { await DisconnectPages(sender, admitted, blocked); }
 	}
@@ -225,7 +225,7 @@ public partial class PageCommandTests
 			await CommandAsync(sender, "page/reply/noeval [add(1,2)]=literal");
 			await Assert.That(Notifications.For(incoming.DbRef).Skip(start)).Contains($"{sender.Name} pages: [add(1,2)]=literal");
 			await CommandAsync(sender, $"&LASTPAGER me={sender.DbRef}");
-			await Assert.That(await Context(sender, "LASTPAGER")).IsEqualTo(incoming.DbRef.ToString());
+			await Assert.That(await StoredIncomingText(sender)).IsEqualTo(incoming.DbRef.ToString());
 		}
 		finally { await DisconnectPages(sender, incoming); }
 	}
@@ -293,7 +293,7 @@ public partial class PageCommandTests
 			await Assert.That((await StoredIncomingContext(sender)).Value.ToPlainText()).IsEqualTo(forged.DbRef.ToString());
 			await PageAsync(incoming, sender.Name, "Genuine incoming");
 			var established = await StoredIncomingContext(sender);
-			var expectedFlags = new[] { "wizard", "locked", "no_clone", "prefixmatch" }.Concat(legacyFlag.Length > 0 ? [legacyFlag] : []);
+			var expectedFlags = new[] { "wizard", "locked", "no_clone", "prefixmatch", "internal" }.Concat(legacyFlag is "" or "internal" ? [] : [legacyFlag]);
 			await Assert.That(established.Flags.Select(flag => flag.Name.ToLowerInvariant())).IsEquivalentTo(expectedFlags);
 			await Assert.That((await established.Owner.WithCancellation(CancellationToken.None))?.Object.Key).IsEqualTo((int?)1);
 			await CommandAsync(sender, $"&LASTPAGER me={forged.DbRef}");
@@ -326,6 +326,11 @@ public partial class PageCommandTests
 
 	private async Task<SharpAttribute> StoredIncomingContext(PagePlayer player)
 		=> await Mediator.CreateStream(new GetAttributeQuery(player.DbRef, ["LASTPAGER"])).SingleAsync();
+
+	/// <summary>LASTPAGER as stored: a page writes it internal, so no attribute read sees it.</summary>
+	private async Task<string> StoredIncomingText(PagePlayer player)
+		=> await Mediator.CreateStream(new GetAttributeQuery(player.DbRef, ["LASTPAGER"])).SingleOrDefaultAsync()
+			is { } attribute ? attribute.Value.ToPlainText() : string.Empty;
 
 	private async Task<string> Context(PagePlayer player, string name)
 		=> await AttributeService.GetAttributeAsync(player.Object, player.Object, name, IAttributeService.AttributeMode.Read, false)

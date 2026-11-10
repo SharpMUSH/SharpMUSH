@@ -103,6 +103,7 @@ public sealed record PermissionRefusal(string Key, string Format, params object[
 		nameof(ErrorMessages.Notifications.PermissionDeniedFlagLocked) => $"{Arg(0)} LOCKED",
 		nameof(ErrorMessages.Notifications.PermissionDeniedFlagRestricted) => $"{Arg(0)} NEEDS {Alternatives(1)}",
 		nameof(ErrorMessages.Notifications.PermissionDeniedGagWizard) => "WIZARD",
+		nameof(ErrorMessages.Notifications.PermissionDeniedShielded) => $"TARGET HOLDS {Arg(1)}",
 		nameof(ErrorMessages.Notifications.PermissionDeniedLinkedExit) => "NOT CONTROLLED, ALREADY LINKED",
 		nameof(ErrorMessages.Notifications.PermissionDeniedExamine) => "CANNOT EXAMINE",
 		nameof(ErrorMessages.Notifications.PermissionDeniedLocate) => "CANNOT LOCATE",
@@ -119,6 +120,11 @@ public sealed record PermissionRefusal(string Key, string Format, params object[
 
 	/// <summary>A comma-joined list of scopes as "A OR B".</summary>
 	private string Alternatives(int index) => Arg(index).Replace(", ", " OR ", StringComparison.Ordinal);
+
+	/// <summary><paramref name="target"/> holds a protective <paramref name="scope"/> that shields it from the actor.</summary>
+	public static PermissionRefusal Shielded(AnySharpObject target, string scope)
+		=> new(nameof(ErrorMessages.Notifications.PermissionDeniedShielded), ErrorMessages.Notifications.PermissionDeniedShielded,
+			target.Object().Name, scope);
 
 	public static PermissionRefusal GodOnly()
 		=> new(nameof(ErrorMessages.Notifications.PermissionDeniedGodOnly), ErrorMessages.Notifications.PermissionDeniedGodOnly);

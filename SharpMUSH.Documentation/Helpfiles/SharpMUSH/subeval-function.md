@@ -13,7 +13,7 @@
 
 `subeval(<string>)`
 
-Evaluates the `%` substitutions and `\` escapes in *<string>*, and leaves function calls, brackets and braces as written. `%l` is left as written too. Use it with [get()] or [v()] to control when the text in an attribute is evaluated.
+Evaluates the `%` substitutions and `\` escapes in *<string>* and nothing else. Function calls, braces, and everything between brackets stay as written, `%l` gives nothing, and spaces are not compressed. Use it with [get()] or [v()] to control when the text in an attribute is evaluated.
 
 This function comes from TinyMUX.
 

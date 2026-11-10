@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Tests.Functions;
@@ -116,6 +117,16 @@ public class MuxFunctionTests : ServerTestBase
 	[Arguments("wrapcolumns([sound(chime.wav)]abc,3,1)", "abc")]
 	[Arguments("wrapcolumns(ab [sound(chime.wav)]cd,2,1)", "ab\ncd")]
 	[Arguments("wrapcolumns(sound(chime.wav),3,1)", "   ")]
+	[Arguments("wrapcolumns(ab%b[sound(chime.wav)]%bcd,2,1)", "ab\ncd")]
+	[Arguments("wrapcolumns(ab [sound(chime.wav)],2,1)", "ab")]
+	[Arguments("subeval(a[sound(chime.wav)]\\%#b)", "a#1b")]
+	[Arguments("subeval(%b[sound(chime.wav)]%b)", "  ")]
+	[Arguments("subeval(\\[[sound(chime.wav)]\\])", "[]")]
+	[Arguments("subeval(\\%\\%[sound(chime.wav)])", "%")]
+	[Arguments("subeval(sound(chime.wav))", "")]
+	[Arguments("subeval(\\%[beep()]x)", "x")]
+	[Arguments("subeval(\\%q[beep()]x)", "x")]
+	[Arguments("subeval(\\%=<a[beep()]>x)", "x")]
 	public async Task MuxShimsKeepPoints(string expression, string expected)
 	{
 		var result = (await Parser.FunctionParse(MString.Plain(expression)))!.Message!;
@@ -141,6 +152,119 @@ public class MuxFunctionTests : ServerTestBase
 		await Assert.That(await Eval("pmatch(#0)")).StartsWith("#-1");
 	}
 
+	/// <summary>subeval() reads <c>%=&lt;n&gt;</c> as TinyMUX does: up to three digits, the rest of the name ignored.</summary>
+	[Test]
+	public async Task SubevalReadsArgumentNumbersAsTinyMux()
+	{
+		var thing = await Eval($"create({TestIsolationHelpers.GenerateUniqueName("MuxSubevalArgs")})");
+		await Eval($"attrib_set({thing}/TXT,\\%=<1a>|\\%=<01>|\\%=<001>|\\%=<0001>|\\%=<0>)");
+		await Eval($"attrib_set({thing}/FN,lit(subeval(v(TXT))))");
+		await Assert.That(await Eval($"u({thing}/FN,zero,one)")).IsEqualTo("one|one|one||zero");
+	}
+
+	/// <summary>subeval() reads <c>%=&lt;name&gt;</c> for any name TinyMUX allows, and gives nothing for one it does not.</summary>
+	[Test]
+	public async Task SubevalReadsAttributeNamesAsTinyMux()
+	{
+		var thing = await Eval($"create({TestIsolationHelpers.GenerateUniqueName("MuxSubevalAttr")})");
+		await Eval($"attrib_set({thing}/A?B,qmark)");
+		await Eval($"attrib_set({thing}/A#B,hash)");
+		await Eval($"attrib_set({thing}/TXT,\\%=<A?B>|\\%=<A#B>|\\%=<A\\(B>|\\%=<A=B>|\\%=<A<B>|\\%=<1A%%B>)");
+		await Eval($"attrib_set({thing}/FN,lit(subeval(v(TXT))))");
+		await Assert.That(await Eval($"u({thing}/FN)")).IsEqualTo("qmark|hash||||");
+	}
+
+	/// <summary>pfind(me) is the caller whatever it is, as TinyMUX's lookup_player has it.</summary>
+	[Test]
+	public async Task PfindMeFindsAThing()
+	{
+		var thing = await Eval($"create({TestIsolationHelpers.GenerateUniqueName("MuxPfindMe")})");
+		await Eval($"attrib_set({thing}/FN,lit([pfind(me)] [pfind(*me)] [pfind(**me)]))");
+		var objid = await Eval($"objid({thing})");
+		await Assert.That(await Eval($"u({thing}/FN)")).IsEqualTo($"{objid} {objid} {ErrorMessages.Returns.NoMatch}");
+	}
+
+	/// <summary>pfind() answers a miss with the error alone, as TinyMUX's quiet matches do; pmatch() tells the caller.</summary>
+	[Test]
+	public async Task PfindIsQuietOnAMiss()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("MuxPfind");
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>();
+		var caller = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, mediator, token);
+		var room = (await Cmd($"@dig {token}_Room")).Trim().Split(' ')[^1].Trim();
+		await Cmd($"@tel #{caller.Number}={room}");
+		var parser = WebAppFactoryArg.FunctionParserFor(caller);
+		async Task<string> AsCaller(string code) => (await parser.EvaluateAsync(MString.Plain(code))).ToPlainText();
+
+		var before = Notifications.CountFor(caller);
+		await Assert.That(await AsCaller("pfind(#99999999)")).IsEqualTo("#-1");
+		await Assert.That(await AsCaller("pfind(me)")).IsEqualTo(await AsCaller("objid(me)"));
+		await Assert.That(await AsCaller("pfind(*me)")).IsEqualTo(await AsCaller("objid(me)"));
+		await Assert.That(await AsCaller("pfind(*%bme)")).IsEqualTo(await AsCaller("objid(me)"));
+		await Assert.That(await AsCaller("pfind(**me)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
+		await Assert.That(await AsCaller($"pfind(*#+{caller.Number})")).IsEqualTo(await AsCaller("objid(me)"));
+		await Assert.That(await AsCaller($"pfind(*#{caller.Number}%b)")).IsEqualTo(await AsCaller("objid(me)"));
+		await Assert.That(await AsCaller($"pfind(#%b{caller.Number}%b)")).IsEqualTo(await AsCaller("objid(me)"));
+		await Assert.That(await AsCaller("pfind(*#0)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
+		await Assert.That(await AsCaller($"pfind(*#{caller.Number})")).IsEqualTo(await AsCaller("objid(me)"));
+		await Assert.That(await AsCaller($"pfind({token}_Nobody)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
+		await Assert.That(Notifications.CountFor(caller)).IsEqualTo(before);
+
+		await AsCaller($"pmatch({token}_Nobody)");
+		await Assert.That(Notifications.CountFor(caller)).IsGreaterThan(before);
+	}
+
+	/// <summary>
+	/// subeval() leaves what sits between brackets as written, does not compress spaces, and reads the caller's
+	/// registers.
+	/// </summary>
+	[Test]
+	[Arguments("subeval(lit([%#] [\\x] [a[b]%#]))", "[%#] [\\x] [a[b]%#]")]
+	[Arguments("subeval(a[space(3)]b)", "a   b")]
+	[Arguments("[subeval([space(2)]x)]|", "  x|")]
+	[Arguments("[setq(0,hi)][subeval(lit(%q0 %q0))]", "hi hi")]
+	[Arguments("subeval(lit(a\\ b%b%bc))", "a b  c")]
+	[Arguments("subeval(lit([a\\]%#] [x%] %#]))", "[a\\]%#] [x%] %#]")]
+	[Arguments("subeval(\\[[chr(123)]\\]\\} \\%#\\])", "[{]} %#]")]
+	[Arguments("subeval(a [chr(123)]\\%#)", "a {#1}")]
+	[Arguments("subeval(a \\[b [chr(123)]c)", "a [b {c}]")]
+	[Arguments("[subeval(lit(%q<1 >))]|", "|")]
+	[Arguments("subeval(lit(%b%ba%b%bb%b%b))|", "  a  b  |")]
+	[Arguments("subeval(lit({%#} add(%#,1)))", "{#1} add(#1,1)")]
+	[Arguments("[subeval(lit(%q<[setq(z,LEAK)]>))][r(z)]", "%q<[setq(z,LEAK)]>")]
+	[Arguments("[setq(0,\\%q<>)][subeval(%q0)]|", "|")]
+	[Arguments("subeval(lit(%<a b> %*<c>))", "<a b> *<c>")]
+	[Arguments("[setq(0,\\%q<f\\(x\\)> \\%=<a\\,b>)][subeval(%q0)]", "%q<f(x)> %=<a,b>")]
+	[Arguments("[setq(0,abc\\%)][subeval(%q0)]|", "abc%|")]
+	[Arguments("[setq(0,abc\\\\)][subeval(%q0)]|", "abc|")]
+	[Arguments("[setq(0,\\{\\%)][subeval(%q0)]", "{%}")]
+	[Arguments("subeval(lit([%q]%#]))", "[%q]%#]")]
+	[Arguments("[setq(0,\\%\\q\\<\\a\\(\\b\\>)][subeval(%q0)]", "")]
+	[Arguments("[setq(0,\\%\\q\\<\\a\\%\\>)][subeval(%q0)]", "")]
+	[Arguments("[setq(0,\\%\\q\\[\\a\\b\\c\\])][subeval(%q0)]", "abc]")]
+	[Arguments("[setq(0,\\a\\%\\q\\ \\b)][subeval(%q0)]", "ab")]
+	[Arguments("[setq(0,\\[\\%\\v\\]\\x)][subeval(%q0)]", "[%v]x")]
+	[Arguments("[setq(0,\\[\\%\\v\\{\\a\\]\\x)][subeval(%q0)]", "[%v{a]x}]")]
+	[Arguments("[setq(0,\\a\\%\\=\\<)][subeval(%q0)]", "a")]
+	[Arguments("[setq(0,\\[\\%\\q\\<\\a\\\\\\]\\b)][subeval(%q0)]", "[%q<a\\]b")]
+	[Arguments("[setq(0,\\%\\i)][subeval(%q0)]", "")]
+	[Arguments("[setq(ab,X)][setq(1,ab)][setq(0,\\%\\q\\<\\%\\q\\1\\>)][subeval(%q0)]|", "|")]
+	public async Task SubevalMatchesTinyMux(string expression, string expected)
+		=> await Assert.That(await Eval(expression)).IsEqualTo(expected);
+
+	/// <summary>subeval() keeps the colour of the text it is given.</summary>
+	[Test]
+	public async Task SubevalKeepsColour()
+	{
+		var result = (await Parser.FunctionParse(MString.Plain("subeval(ansi(r,red [lit(\\[x\\])]))")))!.Message!;
+		var expected = (await Parser.FunctionParse(MString.Plain("ansi(r,red \\[x\\])")))!.Message!;
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo(expected.Render(MarkupFormat.Ansi));
+
+		var substituted = (await Parser.FunctionParse(MString.Plain("subeval(ansi(r,lit(%b%bx)))")))!.Message!;
+		var red = (await Parser.FunctionParse(MString.Plain("ansi(r,%b%bx)")))!.Message!;
+		await Assert.That(substituted.Render(MarkupFormat.Ansi)).IsEqualTo(red.Render(MarkupFormat.Ansi));
+	}
+
 	/// <summary>subeval() runs the substitutions in the text it is given and leaves its function calls as text.</summary>
 	[Test]
 	public async Task SubevalRunsSubstitutionsOnly()
@@ -149,7 +273,7 @@ public class MuxFunctionTests : ServerTestBase
 		await Eval($"attrib_set({thing}/TEXT,lit(%# said [add(1,2)] {{x}} at %l))");
 
 		await Assert.That(await Eval($"subeval(get({thing}/TEXT))"))
-			.IsEqualTo($"{await Eval("%#")} said [add(1,2)] {{x}} at %l");
+			.IsEqualTo($"{await Eval("%#")} said [add(1,2)] {{x}} at ");
 	}
 
 	/// <summary>The bool family keeps TinyMUX's own test when <c>mux_logic</c> makes and() read numbers.</summary>
