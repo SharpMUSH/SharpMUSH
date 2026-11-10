@@ -1626,7 +1626,7 @@
       },
       {
         "id": "protection-flags-protection-flags",
-        "lookup": "compatibility config protection flags noexamine nomodify",
+        "lookup": "compatibility config protection flags noexamine nomodify noconnect",
         "heading": "Protection flags: \u0060protection_flags\u0060",
         "aliases": []
       },

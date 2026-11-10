@@ -88,7 +88,7 @@
     {
       "id": "protection-flags-protection-flags",
       "heading": "Protection flags: `protection_flags`",
-      "lookup": "compatibility config protection flags noexamine nomodify"
+      "lookup": "compatibility config protection flags noexamine nomodify noconnect"
     },
     {
       "id": "rhostmush-map-arguments-rhost-map-args",
@@ -388,9 +388,9 @@ With `rhost_lrooms` off, lrooms() takes a depth from 0 to 50, and a depth of 0 l
 
 ## Protection flags: `protection_flags`
 
-Off by default; meant for a game moved from RhostMUSH or TinyMUX, whose imports turn it on and bring the NOEXAMINE and NOMODIFY flags with them.
+Off by default; meant for a game moved from RhostMUSH or TinyMUX, whose imports turn it on and bring the NOEXAMINE and NOMODIFY flags with them, and from RhostMUSH NOCONNECT.
 
-With `protection_flags` on, nobody below wizard and royalty may examine or @decompile an object set NOEXAMINE, its owner included, though the object still reads its own attributes. Nobody below them may change an object set NOMODIFY, its owner and the object itself included; they can still examine and find it. Off, the two flags do nothing.
+With `protection_flags` on, nobody below wizard and royalty may examine or @decompile an object set NOEXAMINE, its owner included, though the object still reads its own attributes. Nobody below them may change an object set NOMODIFY, its owner and the object itself included; they can still examine and find it. A player set NOCONNECT may not connect, play from an account, or act through the portal; God is never kept out. Off, the three flags do nothing.
 
 A wizard sets the flag; then its owner, a player, tries to change it:
 
