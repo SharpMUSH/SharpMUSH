@@ -71,6 +71,8 @@ public static partial class SoftcodeDecomposer
 		Themed themed => Softcode(themed.Content, width, themed.Theme),
 		TextBlock text => Decompose(text.Content),
 		Stack stack => Join(stack.Children),
+		// A layout nested at a width of its own: the width its call names.
+		Bounded bounded => Softcode(bounded.Content, bounded.Width, theme),
 		Frame frame => BoxCall(frame, width, theme),
 		Rule rule => RuleCall(rule, width, theme),
 		Flex { Items: [Sized item], Gap: 2, Separator: null, Justify: FlexJustify.Start, Align: FlexAlign.Start, Vertical: false } when width is null && theme is null => ItemCall(item),

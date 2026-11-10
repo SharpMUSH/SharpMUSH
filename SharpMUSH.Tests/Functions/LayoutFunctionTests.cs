@@ -50,6 +50,43 @@ public class LayoutFunctionTests
 		await Assert.That(html).DoesNotContain("+===");
 	}
 
+	/// <summary>A box given a width keeps it inside a wider box, and fits a narrower one; with none it fills the box.</summary>
+	[Test]
+	public async Task Box_InABox_TakesTheWidthOfTheBoxAroundIt()
+	{
+		await Assert.That(TrimLines(await Eval("box(box(Hi,,12,{{\"border\":\"ascii\"}}),,30,{{\"border\":\"ascii\"}})"))).IsEqualTo(Lines(
+			"+----------------------------+",
+			"| +----------+               |",
+			"| | Hi       |               |",
+			"| +----------+               |",
+			"+----------------------------+"));
+		await Assert.That(TrimLines(await Eval("box(box(Hi,,40,{{\"border\":\"ascii\"}}),,20,{{\"border\":\"ascii\"}})"))).IsEqualTo(Lines(
+			"+------------------+",
+			"| +--------------+ |",
+			"| | Hi           | |",
+			"| +--------------+ |",
+			"+------------------+"));
+		await Assert.That(TrimLines(await Eval("box(box(Hi,,,{{\"border\":\"ascii\"}}),,20,{{\"border\":\"ascii\"}})"))).IsEqualTo(Lines(
+			"+------------------+",
+			"| +--------------+ |",
+			"| | Hi           | |",
+			"| +--------------+ |",
+			"+------------------+"));
+	}
+
+	/// <summary>Boxes with widths sit side by side at those widths.</summary>
+	[Test]
+	public async Task Boxes_WithWidthsInAFlex_KeepThem()
+		=> await Assert.That(TrimLines(await Eval("flex({{\"border\":\"ascii\"}},box(a,,12),box(b,,12))"))).StartsWith(Lines(
+			"+----------+  +----------+",
+			"| a        |  | b        |"));
+
+	/// <summary>In the portal the inner box is held to its width too.</summary>
+	[Test]
+	public async Task Box_InABox_KeepsItsWidthInTheBrowser()
+		=> await Assert.That((await Eval("box(box(Hi,,12),,30)")).Render(MarkupFormat.Html))
+			.Contains("<div class=\"ms-bounded\" style=\"max-width:12ch\"><fieldset class=\"ms-box");
+
 	[Test]
 	public async Task Box_TakesAPresetAndItsOwnPieces()
 	{

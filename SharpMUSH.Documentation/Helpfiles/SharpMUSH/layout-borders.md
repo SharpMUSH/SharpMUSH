@@ -62,9 +62,9 @@ The border options are not only for box() and rule(). Given to any layout that h
 
 ```sharp
 > think flex({{"border":"ascii"}},box(Left,,12),box(Right,,12,{{"border":"double"}}))
-+------------------------------------+  +====================================+
-| Left                               |  | Right                              |
-+------------------------------------+  +====================================+
++----------+  +==========+
+| Left     |  | Right    |
++----------+  +==========+
 ```
 
 ## Border pieces

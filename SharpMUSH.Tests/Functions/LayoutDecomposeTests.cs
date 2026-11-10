@@ -40,6 +40,7 @@ public class LayoutDecomposeTests
 	[Arguments("gradient(box(Hi,T,12),primary|secondary)", "[gradient([box(Hi,T,12)],primary|secondary)]")]
 	[Arguments("gauge(6,12,HP,{{\"gradient\":\"#ff0000|secondary\"}})", "[gauge(6,12,HP,{{\"gradient\":\"#ff0000|secondary\"}})]")]
 	[Arguments("box(a%r[rule()]%rb,,9)", "[box(a%r[rule()]%rb,,9)]")]
+	[Arguments("box(box(Hi,,12),,30)", "[box([box(Hi,,12)],,30)]")]
 	[Arguments("box(fields(,Sex,Male)%r[rule(Quote)]%rHooo,Name)", "[box([fields(,Sex,Male)]%r[rule(Quote)]%rHooo,Name)]")]
 	[Arguments("figure(,A cat,=^.^=,left,The cat sits.,30)", "[figure(,A cat,=\\^.\\^=,left,The cat sits.,30)]")]
 	[Arguments("box(x,,,{{\"theme\":\"nord\"}})", "[box(x,,,{{\"theme\":\"nord\"}})]")]

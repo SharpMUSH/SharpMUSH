@@ -108,6 +108,17 @@ The body can be a layout, or several on lines of their own. To centre the body, 
 +============================+
 ```
 
+A box given a width keeps it inside a wider box, against the left. In a narrower one it takes the room it has. A box with no width fills the box around it:
+
+```sharp
+> think box(box(Hi,,12),,30)
++============================+
+| +==========+               |
+| | Hi       |               |
+| +==========+               |
++============================+
+```
+
 ## Border examples
 
 A Unicode client sees this box in light lines with rounded corners. A client without Unicode is sent the ASCII form shown here:
