@@ -121,9 +121,9 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ConfigOptionsInCategoryFormat = "Configuration: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ConfigOptionValueFormat = " {0,-40} {1}";
+		public const string ConfigOptionsMatchingFormat = "Configuration options matching '{0}'";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ConfigOptionChoicesFormat = "   One of: {0}";
+		public const string ConfigOptionChoicesFormat = "One of: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ConfigNoCategoryOrOptionFormat = "No configuration category or option named '{0}'.";
 

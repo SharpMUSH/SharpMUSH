@@ -16,6 +16,11 @@
       "lookup": "compatibility commands config set is stored"
     },
     {
+      "id": "config-listings-are-drawn-as-titled-boxes",
+      "heading": "`@config` listings are drawn as titled boxes",
+      "lookup": "compatibility commands config listings are drawn as titled boxes"
+    },
+    {
       "id": "command-restrictions-reapplies-without-a-restart",
       "heading": "`command_restrictions` reapplies without a restart",
       "lookup": "compatibility commands command restrictions reapplies without a restart"
@@ -81,6 +86,16 @@ This command has not been implemented.
 **Why.** There is no `mush.cnf` for a running game to fall back to.<br>
 **Workaround.** Set the value back when a change was meant to be temporary.<br>
 **No example.** The difference shows only after a restart, and the parity harness starts each server once per run.
+
+## `@config` listings are drawn as titled boxes
+
+**A choice.**
+
+**PennMUSH** prints each option `@config <option>` matches as a line of its own, the name padded to 40 columns and then the value.<br>
+**SharpMUSH** draws the matches as it draws a category: one titled box with each option's name beside its value, the values an option of a fixed set takes under it, and links to the options' categories at the bottom. A client without UTF-8 gets the box in ASCII, and a narrow client gets it laid out again at its own width.<br>
+**Why.** The same listing reads as labelled values on a terminal, in the web portal and to a screen reader, and each name is a link to the option.<br>
+**Workaround.** Code that reads an option goes through `config()`, which answers as PennMUSH's does. When one option matches, `@config` still outputs its value as `config()` returns it.<br>
+**Example.** The parity case `admin.lists` in `tools/parity/scenarios/20-admin-commands.scn` runs `@config names` on both servers.
 
 ## `command_restrictions` reapplies without a restart
 

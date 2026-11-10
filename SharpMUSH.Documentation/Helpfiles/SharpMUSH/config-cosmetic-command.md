@@ -61,7 +61,7 @@ More cosmetic options.
 
 ## Layouts
 
-`@config <option>` lists the values an option with a fixed set takes.
+`@config <option>` lists the values an option with a fixed set takes; see [@config].
 
 - `layout_border=<style>`: The border box() and rule() draw when they name none. Unset, it is `double`. One of:
   - `double` - double lines
@@ -74,9 +74,3 @@ More cosmetic options.
 - `layout_theme=<theme>`: The colour theme of layouts that name none: a name themes() lists, such as `nord`, or a theme as JSON, such as `{"seed":"#7aa2f7"}`. Unset, it is `sharpmush`; `none` gives no colour. See [layout themes].
 
 A client without Unicode is sent the Unicode styles in ASCII; see [layout borders ascii].
-
-```sharp
-> @config layout_border
- layout_border                            double
-   One of: double, single, heavy, rounded, mush, ascii, none
-```

@@ -5,6 +5,7 @@
   "lookup": "@config",
   "aliases": [],
   "sections": [
+    {"id": "listing", "heading": "Listing options", "lookup": "@config listing"},
     {"id": "set", "heading": "Changing an option", "lookup": "@config set", "aliases": ["@config/set"]},
     {"id": "stored", "heading": "The stored configuration", "lookup": "@config stored", "aliases": ["@config/save"]}
   ]
@@ -17,7 +18,7 @@
 `@config/set <option>=<value>`<br>
 `@config/save <option>=<value>`
 
-With no arguments, @config lists the categories of configuration options for the MUSH. With an argument, @config lists the options in the given `<category>`, or shows the current value of the given `<option>`.
+With no arguments, @config lists the categories of configuration options for the MUSH. With an argument, @config lists the options in the given `<category>`, or the options whose names match `<option>`; see [@config listing].
 
 When exactly one option matches, `@config` outputs its value, as `config()` returns it; otherwise it outputs nothing.
 
@@ -27,8 +28,27 @@ For information about parameters, see [@config parameters].
 
 `/list` and `/lowercase` are accepted, as in PennMUSH, and list the same way as `@config` alone.
 
+- [@config listing]: what a listing shows
 - [@config set]: which values an option takes, and what cannot be set
 - [@config stored]: where a change is kept, and options the game does not read
+
+## Listing options
+
+`@config <category>`<br>
+`@config <option>`
+
+`@config <category>` lists the options in that category. `@config <option>` lists every option whose name starts with `<option>`, or, if none does, every option whose name contains it, and links the categories they are in. Each option's name, which runs `@config <name>` when clicked, stands beside its value; an option that takes one of a fixed set lists the set under it.
+
+```sharp
+> @config image
++=================< Configuration options matching 'image' >=================+
+| image_hosts:     any                                                       |
+|                  One of: any, allow, block, off                            |
+| image_host_list:                                                           |
++============================================================================+
+| Cosmetic * All categories                                                  |
++============================================================================+
+```
 
 ## Changing an option
 

@@ -1178,38 +1178,27 @@ public partial class Commands
 
 		if (matchingOptions.Count > 0)
 		{
-			string? lastValue = null;
-			foreach (var opt in matchingOptions)
+			// Laid out as the category listing is, with links under it to the categories the options are in.
+			var options = new Fields([.. matchingOptions.Select(opt =>
 			{
 				var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
-				lastValue = ConfigValueDisplay.Format(opt.Value, opt.ConfigAttr);
-				if (opt.Value is IDictionary map)
-				{
-					// One entry per line, the name on the first and the rest kept to its value column.
-					var label = name;
-					foreach (var (key, values) in ConfigValueDisplay.Entries(map))
-					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, label, $"{key}: {values}");
-						label = string.Empty;
-					}
+				return new Field(ServerLayout.CommandLink(name, $"@config {name}"), ConfigValueBlock(opt.Value, opt.ConfigAttr));
+			})]);
+			var links = matchingOptions
+				.Select(opt => opt.Category)
+				.Where(category => category.Length > 0)
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+				.Select(category => ServerLayout.CommandLink(category, $"@config {category}"))
+				.Append(ServerLayout.CommandLink(ErrorMessages.Notifications.ConfigAllCategories, "@config"));
+			await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(
+				MarkupText.Plain(string.Format(ErrorMessages.Notifications.ConfigOptionsMatchingFormat, searchTerm)),
+				options,
+				new Rule(),
+				new TextBlock(MarkupText.Join(MarkupText.Plain(" · "), links))), 78, parser.HouseLook()), executor);
 
-					if (label.Length > 0)
-					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, string.Empty);
-					}
-
-					continue;
-				}
-
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, lastValue);
-				if (opt.ConfigAttr.Choices is { Length: > 0 } choices)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionChoicesFormat), executor,
-						string.Join(", ", choices));
-				}
-			}
-
-			return new CallState(matchingOptions.Count == 1 ? lastValue! : string.Empty);
+			return new CallState(matchingOptions.Count == 1
+				? ConfigValueDisplay.Format(matchingOptions[0].Value, matchingOptions[0].ConfigAttr)
+				: string.Empty);
 		}
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigNoCategoryOrOptionFormat), executor, searchTerm);
@@ -1217,13 +1206,26 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// An option's value in the <c>@config &lt;category&gt;</c> listing: a mapping option's entries as
-	/// labelled values of their own, anything else as the text <c>config()</c> returns.
+	/// An option's value in an <c>@config</c> listing: a mapping option's entries as labelled values of
+	/// their own, anything else as the text <c>config()</c> returns, with the values an option of a fixed
+	/// set takes under it. A flag list drops the leading space <c>cf_flag</c> stores, which only
+	/// <c>config()</c> keeps.
 	/// </summary>
 	private static Block ConfigValueBlock(object? value, SharpConfigAttribute metadata)
-		=> value is IDictionary map
-			? ServerLayout.KeyValues(ConfigValueDisplay.Entries(map).Select(entry => (entry.Key, MarkupText.Plain(entry.Values))))
-			: ServerLayout.Body(MarkupText.Plain(ConfigValueDisplay.Format(value, metadata)));
+	{
+		if (value is IDictionary map)
+		{
+			return ServerLayout.KeyValues(ConfigValueDisplay.Entries(map).Select(entry => (entry.Key, MarkupText.Plain(entry.Values))));
+		}
+
+		var text = ConfigValueDisplay.Format(value, metadata);
+		var shown = ServerLayout.Body(MarkupText.Plain(metadata.Flag ? text.TrimStart(' ') : text));
+		return metadata.Choices is { Length: > 0 } choices
+			? new MarkupString.Layout.Stack([
+				shown,
+				new TextBlock(MarkupText.Plain(string.Format(ErrorMessages.Notifications.ConfigOptionChoicesFormat, string.Join(", ", choices))))])
+			: shown;
+	}
 
 	[SharpCommand(Name = "@SLAVE", Switches = ["RESTART"], Behavior = CB.Default, CommandLock = "PERM^server.operate",
 		MinArgs = 0, ParameterNames = ["object"])]

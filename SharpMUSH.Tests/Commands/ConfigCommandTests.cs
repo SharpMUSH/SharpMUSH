@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -47,10 +48,11 @@ public class ConfigCommandTests
 	[Test]
 	public async ValueTask ConfigCommand_OptionArg_ShowsOptionValue()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@config mud_name"));
+		var shown = await AsWizard("@config mud_name");
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, executor)).IsTrue();
+		await Assert.That(shown).Count().IsEqualTo(1);
+		await Assert.That(shown[0]).Contains("Configuration options matching 'mud_name'");
+		await Assert.That(shown[0]).Contains("mud_name");
 	}
 
 	/// <summary>
@@ -71,15 +73,31 @@ public class ConfigCommandTests
 
 	/// <summary>
 	/// <c>do_config_list</c> (<c>src/conf.c:1584-1621</c>) shows every option whose name starts with
-	/// the word, as <c>config_to_string</c>'s <c>" %-40s %s"</c>.
+	/// the word. They are drawn as the category listing is: a titled panel, with the option's category
+	/// linked under it.
 	/// </summary>
 	[Test]
-	public async ValueTask ConfigCommand_OptionPrefix_ListsEachMatchingOptionOnOneLine()
+	public async ValueTask ConfigCommand_OptionPrefix_ListsMatchingOptionsInAPanel()
 	{
 		var shown = await AsWizard("@config names_f");
 
-		await Assert.That(shown).IsEquivalentTo(new[] { " names_file                               names.cnf" });
+		await Assert.That(shown).Count().IsEqualTo(1);
+		await Assert.That(shown[0].Split('\n')).IsEquivalentTo(new[]
+		{
+			"+================< Configuration options matching 'names_f' >================+",
+			"| names_file: names.cnf                                                      |",
+			"+============================================================================+",
+			"| File · All categories                                                      |",
+			"+============================================================================+"
+		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
+
+	/// <summary>The option names a panel lists, in the order it lists them.</summary>
+	private static List<string> ListedOptions(string panel)
+		=> [.. panel.Split('\n')
+			.Select(line => Regex.Match(line, @"^\| (\w+):"))
+			.Where(match => match.Success)
+			.Select(match => match.Groups[1].Value)];
 
 	/// <summary>
 	/// Several matches come out in declaration order, as <c>do_config_list</c> walks its fixed
@@ -93,23 +111,23 @@ public class ConfigCommandTests
 			.Where(name => name.StartsWith("player_", StringComparison.OrdinalIgnoreCase))
 			.ToList();
 
-		var shown = (await AsWizard("@config player_")).Select(line => line.Trim().Split(' ')[0]).ToList();
+		var shown = await AsWizard("@config player_");
 
 		await Assert.That(expected.Count).IsGreaterThan(1);
-		await Assert.That(shown).IsEquivalentTo(expected, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(shown).Count().IsEqualTo(1);
+		await Assert.That(ListedOptions(shown[0])).IsEquivalentTo(expected, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
 	/// <summary>
-	/// A flag-list option prints its flags, not <c>System.String[]</c>. Observed on PennMUSH 1.8.8
-	/// (<c>80a1d5b9</c>, shipped <c>mushcnf.dst</c>): <c>cf_flag</c> stores a leading space, so the value
-	/// column starts one space further right.
+	/// A flag-list option prints its flags, not <c>System.String[]</c>, and without the leading space
+	/// <c>cf_flag</c> stores, which <c>config()</c> keeps.
 	/// </summary>
 	[Test]
 	public async ValueTask ConfigCommand_FlagListOption_ShowsItsFlags()
 	{
 		var shown = await AsWizard("@config room_flags");
 
-		await Assert.That(shown).IsEquivalentTo(new[] { " room_flags                                no_command" });
+		await Assert.That(shown[0]).Contains("| room_flags: no_command ");
 	}
 
 	/// <summary>An option that takes one of a fixed set lists the set under its value.</summary>
@@ -118,11 +136,8 @@ public class ConfigCommandTests
 	{
 		var shown = await AsWizard("@config layout_border");
 
-		await Assert.That(shown).IsEquivalentTo(new[]
-		{
-			" layout_border                            mush",
-			"   One of: double, single, heavy, rounded, mush, ascii, none"
-		});
+		await Assert.That(shown[0]).Contains("| layout_border: mush ");
+		await Assert.That(shown[0]).Contains("|                One of: double, single, heavy, rounded, mush, ascii, none ");
 	}
 
 	/// <summary>
@@ -134,9 +149,9 @@ public class ConfigCommandTests
 	{
 		var shown = await AsWizard("@config command_aliases");
 
-		await Assert.That(shown[0]).IsEqualTo(" command_aliases                          @ATRCHOWN: @attrchown");
-		await Assert.That(shown).Contains($"{new string(' ', 42)}@ATRLOCK: @attrlock");
-		await Assert.That(string.Join('\n', shown)).DoesNotContain("System.");
+		await Assert.That(shown[0]).Contains("| command_aliases: @ATRCHOWN: @attrchown ");
+		await Assert.That(shown[0]).Contains($"|{new string(' ', 18)}@ATRLOCK:  @attrlock ");
+		await Assert.That(shown[0]).DoesNotContain("System.");
 	}
 
 	/// <summary>The category listing shows a mapping option's entries as labelled values of their own.</summary>
@@ -159,7 +174,8 @@ public class ConfigCommandTests
 	{
 		var shown = await AsWizard("@config names");
 
-		await Assert.That(shown).Contains(" names_file                               names.cnf");
+		await Assert.That(ListedOptions(shown[0])).Contains("names_file");
+		await Assert.That(shown[0]).Contains("| names_file:");
 	}
 
 	[Test]
