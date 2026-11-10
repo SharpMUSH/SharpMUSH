@@ -569,6 +569,9 @@ public static class LayoutOptionGroups
 		schema = Piece(schema, "right", (style, value) => style with { Right = value });
 		schema = Piece(schema, "teel", (style, value) => style with { TeeLeft = value });
 		schema = Piece(schema, "teer", (style, value) => style with { TeeRight = value });
+		schema = Piece(schema, "teet", (style, value) => style with { TeeTop = value });
+		schema = Piece(schema, "teeb", (style, value) => style with { TeeBottom = value });
+		schema = Piece(schema, "cross", (style, value) => style with { Cross = value });
 		schema = Piece(schema, "open", (style, value) => style with { TitleOpen = value });
 		return Piece(schema, "close", (style, value) => style with { TitleClose = value });
 	}

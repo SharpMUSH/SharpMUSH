@@ -75,7 +75,7 @@ public static partial class SoftcodeDecomposer
 		Bounded bounded => Softcode(bounded.Content, bounded.Width, theme),
 		Frame frame => BoxCall(frame, width, theme),
 		Rule rule => RuleCall(rule, width, theme),
-		Flex { Items: [Sized item], Gap: 2, Separator: null, Justify: FlexJustify.Start, Align: FlexAlign.Start, Vertical: false } when width is null && theme is null => ItemCall(item),
+		Flex { Items: [Sized item], Gap: 2, Separator: null, Justify: FlexJustify.Start, Align: FlexAlign.Start, Vertical: false, Join: false } when width is null && theme is null => ItemCall(item),
 		Flex flex => FlexCall(flex, width, theme),
 		Sized item => ItemCall(item),
 		Figure figure => FigureCall(figure, width),
@@ -129,6 +129,7 @@ public static partial class SoftcodeDecomposer
 		if (flex.Justify != FlexJustify.Start) options.Text("justify", flex.Justify.ToString().ToLowerInvariant());
 		if (flex.Align != FlexAlign.Start) options.Text("align", flex.Align switch { FlexAlign.Center => "center", _ => "bottom" });
 		if (flex.Vertical) options.Flag("vertical");
+		if (flex.Join) options.Flag("join");
 		options.Theme(theme);
 		return Call("flex", [options.Write(), .. flex.Items.Select(item => item is Sized sized ? ItemCall(sized) : Child(item))], keepEmpty: true);
 	}
@@ -455,7 +456,8 @@ public static partial class SoftcodeDecomposer
 				[
 					("tl", b => b.TopLeft), ("top", b => b.Top), ("tr", b => b.TopRight), ("left", b => b.Left), ("right", b => b.Right),
 					("bl", b => b.BottomLeft), ("bottom", b => b.Bottom), ("br", b => b.BottomRight), ("teel", b => b.TeeLeft),
-					("teer", b => b.TeeRight), ("open", b => b.TitleOpen), ("close", b => b.TitleClose),
+					("teer", b => b.TeeRight), ("teet", b => b.TeeTop), ("teeb", b => b.TeeBottom), ("cross", b => b.Cross),
+					("open", b => b.TitleOpen), ("close", b => b.TitleClose),
 				])
 			{
 				if (!piece(border).Equals(piece(preset))) Text(key, piece(border));

@@ -32,7 +32,7 @@
 
 `box(<body>[, <title>[, <width>[, <options>]]])`
 
-Draws a frame round *<body>*, with *<title>* set into the top edge. A [RULE()] on a line of its own in the body becomes a divider across the box; a [FLEX()], [FIELDS()] or [TREE()] keeps its layout inside it.
+Draws a frame round *<body>*, with *<title>* set into the top edge. A [RULE()] on a line of its own in the body becomes a divider across the box; a [FLEX()], [FIELDS()] or [TREE()] keeps its layout inside it. A flex() with `"join":true` splits the box into panes that share its edges; see [flex() panes].
 
 *<width>* is the whole box, borders included; see [LAYOUT FUNCTIONS] for an empty width.
 

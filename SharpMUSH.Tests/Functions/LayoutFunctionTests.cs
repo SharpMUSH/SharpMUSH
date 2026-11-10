@@ -88,6 +88,24 @@ public class LayoutFunctionTests
 			.Contains("<div class=\"ms-bounded\" style=\"max-width:12ch\"><fieldset class=\"ms-box");
 
 	[Test]
+	public async Task JoinedFlex_InABox_SharesItsEdges()
+	{
+		await Assert.That((await Eval("box(flex({{\"join\":true}},item(a%r[rule()]%rb,8),c),,20,{{\"border\":\"single\"}})")).ToPlainText()).IsEqualTo(Lines(
+			"┌────────┬─────────┐",
+			"│ a      │ c       │",
+			"├────────┤         │",
+			"│ b      │         │",
+			"└────────┴─────────┘"));
+		await Assert.That((await Eval("box(flex({{\"join\":true}},a,b),,20)")).Render(MarkupFormat.Html))
+			.Contains("<div class=\"ms-flex ms-joined\"");
+	}
+
+	[Test]
+	public async Task JoinedFlex_OutsideABox_IsAPlainRow()
+		=> await Assert.That((await Eval("flex({{\"join\":true,\"width\":20}},a,b)")).ToPlainText())
+			.IsEqualTo((await Eval("flex({{\"width\":20}},a,b)")).ToPlainText());
+
+	[Test]
 	public async Task Box_TakesAPresetAndItsOwnPieces()
 	{
 		await Assert.That((await Eval("box(Hello there.,,30,{{\"border\":\"rounded\"}})")).ToPlainText()).IsEqualTo(Lines(

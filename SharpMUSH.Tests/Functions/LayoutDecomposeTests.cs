@@ -25,6 +25,8 @@ public class LayoutDecomposeTests
 	[Arguments("flex({{\"sep\":\" | \",\"width\":40}},item(Strength%rAgility,18),item(High%rLow,19))",
 		"[flex({{\"width\":40,\"sep\":\" | \"}},[item(Strength%rAgility,18)],[item(High%rLow,19)])]")]
 	[Arguments("flex(,a,b)", "[flex(,a,b)]")]
+	[Arguments("flex({{\"join\":true}},a,b)", "[flex({{\"join\":true}},a,b)]")]
+	[Arguments("box(x,,20,{{\"border\":\"ascii\",\"teet\":\"v\",\"teeb\":\"^\",\"cross\":\"*\"}})", "[box(x,,20,{{\"border\":\"ascii\",\"teet\":\"v\",\"teeb\":\"^\",\"cross\":\"*\"}})]")]
 	[Arguments("item(Left,>40\\%,10,2)", "[item(Left,>40\\%,10,2)]")]
 	[Arguments("fields({{\"width\":40,\"leader\":\".\"}},Sex,Male,Species,Human)", "[fields({{\"width\":40,\"leader\":\".\"}},Sex,Male,Species,Human)]")]
 	[Arguments("tree({{\"guide\":\"ascii\"}},node(Mail,Inbox,Sent))", "[tree({{\"guide\":\"ascii\"}},[node(Mail,Inbox,Sent)])]")]

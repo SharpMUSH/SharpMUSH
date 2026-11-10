@@ -195,6 +195,7 @@ A package declares the roles, permissions and categories it needs in `package.ya
 | A variadic layout from a computed list | the l-form: `ldatatable()`, `lflex()`, `ltree()`, `lnode()` take the items as one list, then a delimiter; `lfields()` takes the labels and values as two lists and one delimiter for both; a list of layouts or of player text needs a marked delimiter, such as `%*<^>`, which splits only where it is marked |
 | Names in columns / a list / a tree | `grid()` / `bullets()` / `tree()` + `node()` |
 | Side by side | `flex(<opts>, item(<content>, <width>), …)` |
+| Panes in a box, lines joined to its edges | `box(flex({{"join":true}}, item(<a>%r[rule()]%r<b>, <width>), <c>), <title>)`; see `help flex() panes` |
 | Bar / status tag | `gauge(<v>, <max>, <label>)` / `badge(<text>, ok\|warn\|error\|info\|muted)` |
 | A command's message to the player | `notice(<SOURCE>, <text>, ok\|warn\|error\|info)` - `[JOBS] Warning: There is no job 12.`; `warn` for a typing mistake, `error` only for permission refusals and real failures; one source name per package, in capitals |
 

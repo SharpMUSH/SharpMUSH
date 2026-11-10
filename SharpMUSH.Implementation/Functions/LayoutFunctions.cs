@@ -74,7 +74,8 @@ public partial class Functions
 			["centre"] = FlexAlign.Center,
 			["bottom"] = FlexAlign.End,
 		}, (laid, align) => laid with { Block = laid.Block with { Align = align } })
-		.Flag("vertical", (laid, vertical) => laid with { Block = laid.Block with { Vertical = vertical } });
+		.Flag("vertical", (laid, vertical) => laid with { Block = laid.Block with { Vertical = vertical } })
+		.Flag("join", (laid, join) => laid with { Block = laid.Block with { Join = join } });
 
 	private static OptionSchema<Laid<Fields>> FieldsSchema { get; } = InnerBorder(OptionSchema<Laid<Fields>>.Empty)
 		.Width((laid, width) => laid with { Width = width })
