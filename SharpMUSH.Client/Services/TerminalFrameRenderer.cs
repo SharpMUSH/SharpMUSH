@@ -1,12 +1,17 @@
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using MarkupString.Ansi.Decoding;
+using MarkupString.Decoding;
 
 namespace SharpMUSH.Client.Services;
 
 /// <summary>How a received WebSocket frame should be interpreted.</summary>
 public enum TerminalFrameKind
 {
-	/// <summary>Not an out-of-band envelope — handle as raw text (with the legacy ANSI strip).</summary>
+	/// <summary>
+	/// Not an out-of-band envelope: raw server text, which may carry ANSI and VT sequences. Decode it with
+	/// <see cref="TerminalFrameRenderer.DecodePlainText"/>.
+	/// </summary>
 	PlainText,
 	/// <summary>A serialized <c>MString</c> rendered to HTML by the MarkupString library.</summary>
 	Markup,
@@ -37,14 +42,47 @@ public enum TerminalFrameKind
 public readonly record struct TerminalFrame(TerminalFrameKind Kind, string Plain, string Html, string Package, string DataJson,
 	bool Prompt = false, string Session = "");
 
+/// <summary>One line of a plain-text frame, decoded.</summary>
+/// <param name="Plain">The line's text with every sequence read out of it.</param>
+/// <param name="Html">The line rendered to HTML the same way a markup frame is.</param>
+public readonly record struct TerminalTextLine(string Plain, string Html);
+
 /// <summary>
 /// Interprets a raw WebSocket text frame. Game output now arrives as an out-of-band JSON envelope
 /// <c>{ "type": "markup", "data": &lt;serialized MString, as an object&gt; }</c>; this deserializes the markup and
 /// renders it to HTML with the MarkupString library (<c>MString.Render(MarkupFormat.Html)</c>).
-/// Non-envelope frames (banners, pre-markup server text) fall back to plain-text handling.
+/// Non-envelope frames (banners, pre-markup server text) are raw text, decoded by <see cref="DecodePlainText"/>.
 /// </summary>
 public static class TerminalFrameRenderer
 {
+	/// <summary>
+	/// The terminal protocols raw server text is read with: SGR styling, the C0 controls (a carriage return
+	/// overwrites, a tab moves to the next stop), DEC line drawing, and OSC titles and links.
+	/// </summary>
+	private static readonly DecoderRegistry PlainTextDecoders = DecoderRegistry.Empty.WithVt();
+
+	/// <summary>
+	/// The text of a plain frame, one entry a line, with its styling kept: each line is decoded to markup and
+	/// rendered to HTML as a markup frame is, so it takes the same classes, colours and command links.
+	/// </summary>
+	/// <remarks>
+	/// Each frame is decoded on its own, as the ANSI strip before it read each frame: a style left open at the
+	/// end of one does not colour the next, and a last line with no line feed is still a line. The decoder's
+	/// answers to terminal queries (device attributes, size) are dropped: anything sent back to a MUSH is run as
+	/// a command. A line with no text (a blank line, a line of only sequences) is left out, as it was.
+	/// </remarks>
+	public static IReadOnlyList<TerminalTextLine> DecodePlainText(string frame)
+	{
+		var lines = new List<TerminalTextLine>();
+		foreach (var line in Decoder.DecodeAll(frame, PlainTextDecoders))
+		{
+			var plain = line.Content.ToPlainText();
+			if (plain.Length > 0)
+				lines.Add(new TerminalTextLine(plain, line.Content.Render(MarkupFormat.Html)));
+		}
+		return lines;
+	}
+
 	public static TerminalFrame Parse(string frame)
 	{
 		var trimmed = frame.AsSpan().TrimStart();
