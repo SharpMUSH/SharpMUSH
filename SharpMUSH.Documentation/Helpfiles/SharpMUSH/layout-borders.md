@@ -62,9 +62,9 @@ The border options are not only for box() and rule(). Given to any layout that h
 
 ```sharp
 > think flex({{"border":"ascii"}},box(Left,,12),box(Right,,12,{{"border":"double"}}))
-+------------------------------------+  +====================================+
-| Left                               |  | Right                              |
-+------------------------------------+  +====================================+
++----------+  +==========+
+| Left     |  | Right    |
++----------+  +==========+
 ```
 
 ## Border pieces
@@ -73,6 +73,7 @@ Any part of the style can be replaced, after `"border"` picks the starting point
 - `corner` (all four), or `tl`, `tr`, `bl`, `br` one at a time
 - `top`, `bottom`; `side` (both), or `left`, `right`
 - `teel`, `teer` - where a divider meets the left and right sides
+- `teet`, `teeb`, `cross` - where a line between joined panes meets the top edge, the bottom edge, and a divider; see [flex() panes]
 - `open`, `close` - the brackets round a title
 
 An edge is a pattern repeated along it, so `"top":"=-"` alternates and `"top":"[ansi(hb,=)]"` is blue.

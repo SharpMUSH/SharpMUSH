@@ -25,6 +25,8 @@ public class LayoutDecomposeTests
 	[Arguments("flex({{\"sep\":\" | \",\"width\":40}},item(Strength%rAgility,18),item(High%rLow,19))",
 		"[flex({{\"width\":40,\"sep\":\" | \"}},[item(Strength%rAgility,18)],[item(High%rLow,19)])]")]
 	[Arguments("flex(,a,b)", "[flex(,a,b)]")]
+	[Arguments("flex({{\"join\":true}},a,b)", "[flex({{\"join\":true}},a,b)]")]
+	[Arguments("box(x,,20,{{\"border\":\"ascii\",\"teet\":\"v\",\"teeb\":\"^\",\"cross\":\"*\"}})", "[box(x,,20,{{\"border\":\"ascii\",\"teet\":\"v\",\"teeb\":\"^\",\"cross\":\"*\"}})]")]
 	[Arguments("item(Left,>40\\%,10,2)", "[item(Left,>40\\%,10,2)]")]
 	[Arguments("fields({{\"width\":40,\"leader\":\".\"}},Sex,Male,Species,Human)", "[fields({{\"width\":40,\"leader\":\".\"}},Sex,Male,Species,Human)]")]
 	[Arguments("tree({{\"guide\":\"ascii\"}},node(Mail,Inbox,Sent))", "[tree({{\"guide\":\"ascii\"}},[node(Mail,Inbox,Sent)])]")]
@@ -40,6 +42,7 @@ public class LayoutDecomposeTests
 	[Arguments("gradient(box(Hi,T,12),primary|secondary)", "[gradient([box(Hi,T,12)],primary|secondary)]")]
 	[Arguments("gauge(6,12,HP,{{\"gradient\":\"#ff0000|secondary\"}})", "[gauge(6,12,HP,{{\"gradient\":\"#ff0000|secondary\"}})]")]
 	[Arguments("box(a%r[rule()]%rb,,9)", "[box(a%r[rule()]%rb,,9)]")]
+	[Arguments("box(box(Hi,,12),,30)", "[box([box(Hi,,12)],,30)]")]
 	[Arguments("box(fields(,Sex,Male)%r[rule(Quote)]%rHooo,Name)", "[box([fields(,Sex,Male)]%r[rule(Quote)]%rHooo,Name)]")]
 	[Arguments("figure(,A cat,=^.^=,left,The cat sits.,30)", "[figure(,A cat,=\\^.\\^=,left,The cat sits.,30)]")]
 	[Arguments("box(x,,,{{\"theme\":\"nord\"}})", "[box(x,,,{{\"theme\":\"nord\"}})]")]

@@ -74,7 +74,8 @@ public partial class Functions
 			["centre"] = FlexAlign.Center,
 			["bottom"] = FlexAlign.End,
 		}, (laid, align) => laid with { Block = laid.Block with { Align = align } })
-		.Flag("vertical", (laid, vertical) => laid with { Block = laid.Block with { Vertical = vertical } });
+		.Flag("vertical", (laid, vertical) => laid with { Block = laid.Block with { Vertical = vertical } })
+		.Flag("join", (laid, join) => laid with { Block = laid.Block with { Join = join } });
 
 	private static OptionSchema<Laid<Fields>> FieldsSchema { get; } = InnerBorder(OptionSchema<Laid<Fields>>.Empty)
 		.Width((laid, width) => laid with { Width = width })
@@ -389,8 +390,13 @@ public partial class Functions
 	/// <summary><c>layout_theme</c>'s palette, or null when it is unset or names no theme.</summary>
 	private ThemePalette? HousePalette() => HouseLook.Palette;
 
-	/// <summary>A child block without the game's look a function laid it out under.</summary>
-	private Block Adopt(Block block) => block is Themed { Fallback: true } themed && themed.Theme == HouseTheme() ? themed.Content : block;
+	/// <summary>A child block without the game's look a function laid it out under, keeping the width it was given.</summary>
+	private Block Adopt(Block block) => block switch
+	{
+		Bounded bounded => bounded with { Content = Adopt(bounded.Content) },
+		Themed { Fallback: true } themed when themed.Theme == HouseTheme() => themed.Content,
+		_ => block,
+	};
 
 	/// <summary>The arguments from <paramref name="first"/> on, in order.</summary>
 	private static IEnumerable<MString> Rest(IReadOnlyDictionary<string, CallState> args, int first) =>

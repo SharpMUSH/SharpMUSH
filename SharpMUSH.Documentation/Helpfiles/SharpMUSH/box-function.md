@@ -21,6 +21,11 @@
       "lookup": "box() nesting examples"
     },
     {
+      "id": "box-in-a-box",
+      "heading": "A box in a box",
+      "lookup": "box() in a box"
+    },
+    {
       "id": "border-examples",
       "heading": "Border examples",
       "lookup": "box() border examples"
@@ -32,13 +37,14 @@
 
 `box(<body>[, <title>[, <width>[, <options>]]])`
 
-Draws a frame round *<body>*, with *<title>* set into the top edge. A [RULE()] on a line of its own in the body becomes a divider across the box; a [FLEX()], [FIELDS()] or [TREE()] keeps its layout inside it.
+Draws a frame round *<body>*, with *<title>* set into the top edge. A [RULE()] on a line of its own in the body becomes a divider across the box; a [FLEX()], [FIELDS()] or [TREE()] keeps its layout inside it. A flex() with `"join":true` splits the box into panes that share its edges; see [flex() panes].
 
 *<width>* is the whole box, borders included; see [LAYOUT FUNCTIONS] for an empty width.
 
 - [box() options]: borders, theme, title placement, more titles and padding
 - [box() examples]: a centred title, one on the left, and two columns
 - [box() nesting examples]: a centred body, and fields with a divider
+- [box() in a box]: a box inside another keeps its width
 - [box() border examples]: a rounded border, pieces of your own, and a bottom title
 
 ::: seealso
@@ -105,6 +111,19 @@ The body can be a layout, or several on lines of their own. To centre the body, 
 | Species: Human             |
 +==========< Quote >=========+
 | Hooooo?                    |
++============================+
+```
+
+## A box in a box
+
+A box given a width keeps it inside a wider box, against the left. In a narrower one it takes the room it has. A box with no width fills the box around it:
+
+```sharp
+> think box(box(Hi,,12),,30)
++============================+
+| +==========+               |
+| | Hi       |               |
+| +==========+               |
 +============================+
 ```
 
