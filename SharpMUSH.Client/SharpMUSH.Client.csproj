@@ -1,6 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 	<PropertyGroup>
 		<TargetFramework>net11.0</TargetFramework>
+		<!-- The portal runs on the browser's Mono runtime, which cannot run runtime-async methods: built with
+		     runtime-async=on, the portal fails in Main with a ManagedError. This assembly loads in the browser,
+		     so it stays on compiler state machines (Directory.Build.targets). -->
+		<UseRuntimeAsync>false</UseRuntimeAsync>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>

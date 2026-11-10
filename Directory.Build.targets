@@ -1,5 +1,19 @@
 <Project>
 
+  <!--
+    Runtime async on .NET 11: the compiler marks async methods MethodImplOptions.Async and the runtime
+    runs them, in place of a compiler-generated state machine. It is set here rather than in the props
+    because a project's own TargetFramework is not yet known when the props are read. Only net11.0 and
+    later: below it the flag makes the compiler call preview-only APIs (SYSLIB5007, CA2252), and the
+    netstandard2.0 source generators have no such runtime. TelnetNegotiationCore and StateAlchemist
+    are built the same way. /p:UseRuntimeAsync=false builds state machines instead; the portal and the
+    assemblies it loads in the browser (SharpMUSH.Client, .Contracts, .Configuration) set it, because the
+    browser's Mono runtime cannot run runtime-async methods.
+  -->
+  <PropertyGroup Condition="'$(UseRuntimeAsync)' != 'false' AND $([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net11.0'))">
+    <Features>$(Features);runtime-async=on</Features>
+  </PropertyGroup>
+
   <!-- One embedded icon for every published SharpMUSH package. Targets are imported
        after project properties, so PackageId is available for this selection. -->
   <PropertyGroup Condition="'$(PackageId)' == 'SharpMUSH.Library' OR '$(PackageId)' == 'SharpMUSH.Implementation.Generated' OR '$(PackageId)' == 'SharpMUSH.PackageTool' OR '$(PackageId)' == 'SharpMUSH.Templates'">
