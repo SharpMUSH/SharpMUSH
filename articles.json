@@ -1625,6 +1625,12 @@
         "aliases": []
       },
       {
+        "id": "protection-flags-protection-flags",
+        "lookup": "compatibility config protection flags noexamine nomodify",
+        "heading": "Protection flags: \u0060protection_flags\u0060",
+        "aliases": []
+      },
+      {
         "id": "rhostmush-map-arguments-rhost-map-args",
         "lookup": "compatibility config rhostmush map arguments rhost map args",
         "heading": "RhostMUSH map() arguments: \u0060rhost_map_args\u0060",
