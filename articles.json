@@ -702,6 +702,12 @@
         "aliases": []
       },
       {
+        "id": "box-in-a-box",
+        "lookup": "box() in a box",
+        "heading": "A box in a box",
+        "aliases": []
+      },
+      {
         "id": "border-examples",
         "lookup": "box() border examples",
         "heading": "Border examples",
@@ -3262,6 +3268,18 @@
         "id": "examples",
         "lookup": "flex() examples",
         "heading": "Examples",
+        "aliases": []
+      },
+      {
+        "id": "panes",
+        "lookup": "flex() panes",
+        "heading": "Panes",
+        "aliases": []
+      },
+      {
+        "id": "pane-rules",
+        "lookup": "flex() pane rules",
+        "heading": "How panes are drawn",
         "aliases": []
       }
     ],
