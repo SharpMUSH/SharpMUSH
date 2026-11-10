@@ -19,6 +19,11 @@
       "id": "panes",
       "heading": "Panes",
       "lookup": "flex() panes"
+    },
+    {
+      "id": "pane-rules",
+      "heading": "How panes are drawn",
+      "lookup": "flex() pane rules"
     }
   ]
 }
@@ -32,6 +37,7 @@ Puts the items side by side, sharing the width. When they do not fit, because an
 - [flex() options]: borders, theme, width, gap, separator and alignment
 - [flex() examples]: separated columns, spread items and centred items
 - [flex() panes]: a row that splits a box into panes sharing its edges
+- [flex() pane rules]: widths, titles, pictures, and when panes are an ordinary row
 
 ::: seealso
 - [ITEM()]
@@ -89,7 +95,11 @@ With `"join":true`, a flex() that is a part of a [BOX()] body splits the box int
 +======================================+
 ```
 
-How panes are drawn:
+See [flex() pane rules] for widths, titles, pictures and when panes are an ordinary row.
+
+## How panes are drawn
+
+How [flex() panes] are drawn:
 - An [ITEM()] keeps its width. The last pane takes the width left over, so the row always reaches the right side. `"justify"` has no effect on panes.
 - `"align"` places a shorter pane at the top, middle or bottom.
 - A title in an edge is never cut by a line; the line meets the edge without a junction there.

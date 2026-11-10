@@ -21,6 +21,11 @@
       "lookup": "box() nesting examples"
     },
     {
+      "id": "box-in-a-box",
+      "heading": "A box in a box",
+      "lookup": "box() in a box"
+    },
+    {
       "id": "border-examples",
       "heading": "Border examples",
       "lookup": "box() border examples"
@@ -39,6 +44,7 @@ Draws a frame round *<body>*, with *<title>* set into the top edge. A [RULE()] o
 - [box() options]: borders, theme, title placement, more titles and padding
 - [box() examples]: a centred title, one on the left, and two columns
 - [box() nesting examples]: a centred body, and fields with a divider
+- [box() in a box]: a box inside another keeps its width
 - [box() border examples]: a rounded border, pieces of your own, and a bottom title
 
 ::: seealso
@@ -107,6 +113,8 @@ The body can be a layout, or several on lines of their own. To centre the body, 
 | Hooooo?                    |
 +============================+
 ```
+
+## A box in a box
 
 A box given a width keeps it inside a wider box, against the left. In a narrower one it takes the room it has. A box with no width fills the box around it:
 
