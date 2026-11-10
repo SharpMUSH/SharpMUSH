@@ -125,4 +125,90 @@ public class TerminalFrameRendererTests
 		await Assert.That(frame.Kind).IsEqualTo(TerminalFrameKind.PlainText);
 		await Assert.That(frame.Plain).IsEqualTo(json);
 	}
+
+	[Test]
+	public async Task PlainTextKeepsItsAnsiStyling()
+	{
+		var lines = TerminalFrameRenderer.DecodePlainText("Welcome to \u001b[1;31mSharpMUSH\u001b[0m!\r\n");
+
+		await Assert.That(lines.Count).IsEqualTo(1);
+		await Assert.That(lines[0].Plain).IsEqualTo("Welcome to SharpMUSH!");
+		await Assert.That(lines[0].Html)
+			.IsEqualTo("Welcome to <span style=\"color: var(--ms-ansi-1, #aa0000)\" class=\"ms-bold\">SharpMUSH</span>!");
+	}
+
+	[Test]
+	public async Task PlainTextIsHtmlEncoded()
+	{
+		var lines = TerminalFrameRenderer.DecodePlainText("<script>alert(1)</script> & co");
+
+		await Assert.That(lines[0].Html).IsEqualTo("&lt;script&gt;alert(1)&lt;/script&gt; &amp; co");
+	}
+
+	/// <summary>A blank line, and a line of nothing but sequences, are left out, as the ANSI strip left them out.</summary>
+	[Test]
+	public async Task PlainTextIsSplitIntoLinesWithoutTheBlankOnes()
+	{
+		var lines = TerminalFrameRenderer.DecodePlainText("one\r\n\r\n\u001b[0m\r\ntwo");
+
+		await Assert.That(lines.Select(l => l.Plain)).IsEquivalentTo(["one", "two"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task PlainTextStyleDoesNotCarryIntoTheNextFrame()
+	{
+		TerminalFrameRenderer.DecodePlainText("\u001b[31mred\n");
+
+		await Assert.That(TerminalFrameRenderer.DecodePlainText("plain\n")[0].Html).IsEqualTo("plain");
+	}
+
+	[Test]
+	public async Task CarriageReturnOverwritesTheLine()
+	{
+		var lines = TerminalFrameRenderer.DecodePlainText("Loading 10%\rLoading 100%\r\n");
+
+		await Assert.That(lines[0].Plain).IsEqualTo("Loading 100%");
+	}
+
+	[Test]
+	public async Task TitleSequenceIsReadOutOfTheText()
+	{
+		var lines = TerminalFrameRenderer.DecodePlainText("\u001b]2;The Hall\u0007Hello\n");
+
+		await Assert.That(lines[0].Plain).IsEqualTo("Hello");
+	}
+
+	[Test]
+	public async Task LineDrawingCharactersAreDrawn()
+	{
+		var lines = TerminalFrameRenderer.DecodePlainText("\u001b(0lqqk\u001b(B box");
+
+		await Assert.That(lines[0].Plain).IsEqualTo("┌──┐ box");
+	}
+
+	[Test]
+	public async Task HyperlinkIsClickable()
+	{
+		var lines = TerminalFrameRenderer.DecodePlainText("see \u001b]8;;https://example.com/x\u001b\\here\u001b]8;;\u001b\\ ok");
+
+		await Assert.That(lines[0].Plain).IsEqualTo("see here ok");
+		await Assert.That(lines[0].Html)
+			.IsEqualTo("see <a href=\"https://example.com/x\" target=\"_blank\" rel=\"noopener noreferrer\">here</a> ok");
+	}
+
+	[Test]
+	public async Task ScriptHyperlinkIsOnlyText()
+	{
+		var lines = TerminalFrameRenderer.DecodePlainText("bad \u001b]8;;javascript:alert(1)\u001b\\x\u001b]8;;\u001b\\");
+
+		await Assert.That(lines[0].Html).IsEqualTo("bad x");
+	}
+
+	[Test]
+	public async Task CommandLinkRendersForTerminalClickHandler()
+	{
+		var lines = TerminalFrameRenderer.DecodePlainText("\u001b]68;1;SEND;look\u0007\u001b[4mlook\u001b[24m");
+
+		await Assert.That(lines[0].Html).Contains("xch_cmd=\"look\"");
+	}
 }

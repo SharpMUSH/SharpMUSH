@@ -167,6 +167,54 @@ public partial class TelnetServerNegotiationTests
 		}
 	}
 
+	/// <summary>
+	/// Two NAWS reports before registration: the renderer keeps the last width while the held reports replay,
+	/// whether the window grew or shrank, and the engine still hears both sizes in order.
+	/// </summary>
+	[Test]
+	[Arguments(80, 120)]
+	[Arguments(120, 80)]
+	public async Task HeldNawsReportsDoNotRollBackRendererWidth(int first, int last)
+	{
+		const byte NAWS = 31;
+		var service = Substitute.For<IConnectionServerService>();
+		var widths = new List<int>();
+		service.UpdateCapabilities(Arg.Any<long>(), Arg.Any<Func<ProtocolCapabilities, ProtocolCapabilities>>())
+			.Returns(call =>
+			{
+				var updated = call.Arg<Func<ProtocolCapabilities, ProtocolCapabilities>>()(new ProtocolCapabilities(Width: -1));
+				if (updated.Width != -1) lock (widths) widths.Add(updated.Width);
+				return true;
+			});
+		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 1000);
+		using var serverCancellation = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, bytes => Encoding.ASCII.GetString(bytes).Contains("\u001b[c"));
+			await WriteAsync(toServer, [
+				IAC, WILL, NAWS,
+				IAC, SB, NAWS, 0, (byte)first, 0, 24, IAC, SE,
+				IAC, SB, NAWS, 0, (byte)last, 0, 24, IAC, SE,
+				.. "\u001b[?62;4clook\r\n"u8.ToArray()]);
+			await WaitForPublishedAsync<TelnetInputMessage>(published);
+
+			await Assert.That((await RegisteredCapabilitiesAsync(service)).Width).IsEqualTo(last);
+			int[] seen;
+			lock (widths) seen = [.. widths];
+			await Assert.That(seen).IsNotEmpty();
+			await Assert.That(seen.All(width => width == last)).IsTrue();
+			int[] engineWidths;
+			lock (published) engineWidths = [.. published.OfType<NAWSUpdateMessage>().Select(message => message.Width)];
+			await Assert.That(engineWidths.SequenceEqual([first, last])).IsTrue();
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
 	/// <summary>Terminal queries are sent while registration is held, and their reply seeds the first render.</summary>
 	[Test]
 	public async Task GraphicsProbe_PrecedesRegistration()
