@@ -95,7 +95,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 
 		// The MXP client fetches the picture itself; nothing is transmitted, so nothing is remembered as held.
 		if (connection.Capabilities.Format == OutputFormat.Mxp && MxpDrawsImages(connection.Capabilities.MxpSupported))
-			return new RenderPictureSource(pictureStore, new ConnectionPictures.Sent());
+			return new RenderPictureSource(pictureStore, new ConnectionPictures.Sent(), connection.Website);
 
 		if (connectionPictures is null || connection.Capabilities.Format is not (OutputFormat.Ansi or OutputFormat.Mxp)
 			|| (connection.Capabilities.Features & TerminalFeatures.Pictures) == 0)
@@ -103,7 +103,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 
 		return new RenderPictureSource(pictureStore,
 			connectionPictures.For($"{connection.Handle}:{connection.SessionId}",
-				connection.Capabilities.Features.HasFlag(TerminalFeatures.MovingPictures)));
+				connection.Capabilities.Features.HasFlag(TerminalFeatures.MovingPictures)), connection.Website);
 	}
 
 	/// <summary>
