@@ -126,7 +126,7 @@ public class LocateService(
 	private const LocateFlags NonScopeFlags =
 		// match.c's four modifiers.
 		LocateFlags.PreferLockPass | LocateFlags.OnlyMatchTypePreference | LocateFlags.NoPartialMatches |
-		LocateFlags.OnlyMatchLookerControlledObjects |
+		LocateFlags.OnlyMatchLookerControlledObjects | LocateFlags.ReadControlSuffices |
 		// MAT_NEAR and MAT_CONTENTS, which narrow a scope rather than naming one.
 		LocateFlags.OnlyMatchObjectsInLookerLocation | LocateFlags.OnlyMatchObjectsInLookerInventory |
 		// The `type` parameter, which is not part of match_flags at all.
