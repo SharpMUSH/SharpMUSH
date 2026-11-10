@@ -34,6 +34,11 @@
       "id": "sharpmush-only-flags-and-powers",
       "heading": "SharpMUSH-only flags and powers",
       "lookup": "compatibility names sharpmush only flags and powers"
+    },
+    {
+      "id": "a-player-s-totcmds-counts-their-commands",
+      "heading": "A player's `TOTCMDS` counts their commands",
+      "lookup": "compatibility names a player s totcmds counts their commands"
     }
   ]
 }
@@ -117,3 +122,13 @@ PennMUSH has none of these. `pack()` and `unpack()` come from TinyMUX and RhostM
 **Workaround.** None needed for imported code: nothing PennMUSH wrote can set or test a name it never had. Code that walks `list(flags)` should expect names it does not know, as it already must for a game's own `@flag/add` flags.
 
 **Example.** The parity case `admin.lists` in `tools/parity/scenarios/20-admin-commands.scn` lists both, and the harness accepts exactly these six names on SharpMUSH's side.
+
+## A player's `TOTCMDS` counts their commands
+
+**A choice.**
+
+**PennMUSH** keeps no count of a player's commands across sessions.<br>
+**SharpMUSH** keeps RhostMUSH's: when a session ends, the commands typed in it are added to the player's `TOTCMDS` attribute, and `totcmds()` adds the live sessions to it. `examine` of a player who has ended a session lists `TOTCMDS`.<br>
+**Why.** RhostMUSH code reads the count, and `totcmds()` needs the sessions that have ended.<br>
+**Workaround.** None is needed for PennMUSH code; it never reads `TOTCMDS`. Code that lists every attribute of a player sees one more.<br>
+**Example.** The parity case `choice.totcmds` in `tools/parity/scenarios/40-compat-choices.scn` runs it on both servers.
