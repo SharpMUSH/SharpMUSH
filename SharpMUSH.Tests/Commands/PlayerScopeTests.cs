@@ -25,6 +25,8 @@ public class PlayerScopeTests : ServerTestBase
 	[After(Test)]
 	public async Task Disconnect()
 	{
+		var wizard = (await Mediator.Send(new GetObjectNodeQuery(_wizard.DbRef))).Expect<SharpPlayer>();
+		await Mediator.Send(new UnsetObjectFlagCommand(wizard, (await Mediator.Send(new GetObjectFlagQuery("WIZARD")))!));
 		await ConnectionService.Disconnect(_wizard.Handle);
 		await ConnectionService.Disconnect(_mortal.Handle);
 	}
@@ -50,8 +52,10 @@ public class PlayerScopeTests : ServerTestBase
 	{
 		await Assert.That(await Cmd($"@permission/deny {Mortal}=player.page/wizard")).Contains("reaching wizard");
 		var before = Notifications.CountFor(_mortal.DbRef);
-		await As(_mortal, $"page #{_wizard.DbRef.Number}=hello");
+		var message = TestIsolationHelpers.GenerateUniqueName("hello");
+		await As(_mortal, $"page #{_wizard.DbRef.Number}={message}");
 		await Assert.That(string.Join("\n", Notifications.For(_mortal.DbRef).Skip(before))).Contains("player.page");
+		await Assert.That(string.Join("\n", Notifications.For(_wizard.DbRef))).DoesNotContain(message);
 		await Cmd($"@permission/clear {Mortal}=player.page");
 	}
 

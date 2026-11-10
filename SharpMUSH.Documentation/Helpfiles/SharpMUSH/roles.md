@@ -218,7 +218,7 @@ Every object holds these unless a role or override denies them, so nobody notice
 | `player.teleport` | @teleport by control or JUMP_OK; takes a reach, measured on what is moved |
 | `player.password` | @password |
 
-A role that denies one takes it from everyone holding that role, even if another role leaves it alone.
+A role that denies one takes it from everyone holding that role, even if another role leaves it alone. Another role that allows it, or an override that allows it, still wins over the deny.
 
 ## What still needs game.wizard
 

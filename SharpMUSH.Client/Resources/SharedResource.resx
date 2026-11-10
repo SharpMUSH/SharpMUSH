@@ -5430,13 +5430,13 @@
     <value>Player · Give</value>
   </data>
   <data name="EnumPermPlayerGiveDesc" xml:space="preserve">
-    <value>Gives money and things with give. Allowed unless a role or override denies it.</value>
+    <value>Gives things with give. Allowed unless a role or override denies it.</value>
   </data>
   <data name="EnumPermPlayerReceive" xml:space="preserve">
     <value>Player · Receive</value>
   </data>
   <data name="EnumPermPlayerReceiveDesc" xml:space="preserve">
-    <value>Is given money and things. Allowed unless a role or override denies it.</value>
+    <value>Is given things. Allowed unless a role or override denies it.</value>
   </data>
   <data name="EnumPermPlayerForce" xml:space="preserve">
     <value>Player · Force</value>
