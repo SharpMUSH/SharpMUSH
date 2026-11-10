@@ -612,6 +612,16 @@
       "command": "think hasattrval(*Alice,TOTCMDS)",
       "sharp": "1",
       "penn": "0"
+    },
+    {
+      "id": "KD-0054",
+      "scenario": "20-admin-commands",
+      "case": "admin.lists",
+      "step": 3,
+      "reason": "SharpMUSH draws the options @config matches as a titled box of labelled values, as it draws a category; PennMUSH prints one padded line per option.",
+      "tracking": "#1134",
+      "profile": "`@config` listings are drawn as titled boxes",
+      "command": "@config names"
     }
   ]
 }

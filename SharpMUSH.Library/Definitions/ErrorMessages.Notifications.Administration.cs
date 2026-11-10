@@ -120,10 +120,13 @@ public static partial class ErrorMessages
 		public const string ConfigNoOptionsInCategoryFormat = "No options found in category '{0}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ConfigOptionsInCategoryFormat = "Configuration: {0}";
+		/// <summary>PennMUSH's <c>@config &lt;option&gt;</c> line; @config now draws a panel, and this stays for plugins.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ConfigOptionValueFormat = " {0,-40} {1}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ConfigOptionChoicesFormat = "   One of: {0}";
+		public const string ConfigOptionsMatchingFormat = "Configuration options matching '{0}'";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ConfigOptionChoicesFormat = "One of: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ConfigNoCategoryOrOptionFormat = "No configuration category or option named '{0}'.";
 
