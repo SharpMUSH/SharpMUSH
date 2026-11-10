@@ -94,6 +94,45 @@ public static class PortalPermission
 	/// </summary>
 	public const string ServerOperate = "server.operate";
 
+	/// <summary>Takes another's object with <c>@chown</c>, and a thing not carried. RhostMUSH's CHOWN_ME and CHOWN_ANYWHERE.</summary>
+	public const string ChownSelf = "game.chown.self";
+
+	/// <summary>
+	/// Gives anything to anyone with <c>@chown</c>, and <c>@chown/preserve</c>, <c>@chownall</c> and <c>@atrchown</c>
+	/// to anyone. Covers <see cref="ChownSelf"/>. RhostMUSH's CHOWN_OTHER. <c>game.wizard</c> covers it.
+	/// </summary>
+	public const string ChownAny = "game.chown.any";
+
+	/// <summary>Destroys players with <c>@destroy</c> and <c>@nuke</c>. <c>game.wizard</c> covers it.</summary>
+	public const string Nuke = "game.nuke";
+
+	/// <summary>
+	/// Writes wizard-flagged and locked attributes and locks on what it controls, and sets any lock there.
+	/// <c>game.wizard</c> covers it.
+	/// </summary>
+	public const string Override = "game.override";
+
+	/// <summary>Passes enter, leave and exit locks. RhostMUSH's WRAITH. No role allows it by default.</summary>
+	public const string OverrideMovement = "game.override.movement";
+
+	/// <summary>
+	/// Sets the flags only wizards may set, and CHOWN_OK and DESTROY_OK on what others own. RhostMUSH's SECURITY.
+	/// <c>game.wizard</c> covers it.
+	/// </summary>
+	public const string FlagsRestricted = "game.flags.restricted";
+
+	/// <summary>
+	/// Nobody ranked below the holder may <c>@force</c> it, or, with a reach, nobody ranked at or below the reach.
+	/// RhostMUSH's NOFORCE. <c>game.wizard</c> covers it.
+	/// </summary>
+	public const string NoForce = "game.noforce";
+
+	/// <summary>
+	/// Nobody ranked below the holder may <c>@boot</c> it, or, with a reach, nobody ranked at or below the reach.
+	/// RhostMUSH's NO_BOOT. No role allows it by default.
+	/// </summary>
+	public const string NoBoot = "game.noboot";
+
 	/// <summary>Controls every object except the owner's, whoever owns it (the wizard half of PennMUSH <c>controls()</c>).</summary>
 	public const string ControlAll = "control.all";
 
@@ -128,6 +167,14 @@ public static class PortalPermission
 		ControlAll,
 		GamePower("Tport_Anything"),
 		GamePower("Tport_Anywhere"),
+		ChownSelf,
+		ChownAny,
+		Nuke,
+		Override,
+		FlagsRestricted,
+		NoForce,
+		NoBoot,
+		OverrideMovement,
 	};
 
 	/// <summary>Whether an override of <paramref name="scope"/> may carry a reach: whether its checks read one.</summary>
@@ -195,6 +242,14 @@ public static class PortalPermission
 		new(ServerOperate, "EnumPermServerOperate", GroupGame, "EnumPermServerOperateDesc"),
 		new(ControlAll, "EnumPermControlAll", GroupGame, "EnumPermControlAllDesc"),
 		new(ProtectRole, "EnumPermProtectRole", GroupGame, "EnumPermProtectRoleDesc"),
+		new(ChownSelf, "EnumPermChownSelf", GroupGame, "EnumPermChownSelfDesc"),
+		new(ChownAny, "EnumPermChownAny", GroupGame, "EnumPermChownAnyDesc"),
+		new(Nuke, "EnumPermNuke", GroupGame, "EnumPermNukeDesc"),
+		new(Override, "EnumPermOverride", GroupGame, "EnumPermOverrideDesc"),
+		new(OverrideMovement, "EnumPermOverrideMovement", GroupGame, "EnumPermOverrideMovementDesc"),
+		new(FlagsRestricted, "EnumPermFlagsRestricted", GroupGame, "EnumPermFlagsRestrictedDesc"),
+		new(NoForce, "EnumPermNoForce", GroupGame, "EnumPermNoForceDesc"),
+		new(NoBoot, "EnumPermNoBoot", GroupGame, "EnumPermNoBootDesc"),
 		.. GamePowers.All.Select(power => new Definition(power.Scope, power.ResourceKey, GroupGame, power.ResourceKey + "Desc")),
 	];
 
@@ -215,6 +270,8 @@ public static class PortalPermission
 			[WikiAdmin] = [WikiRead, WikiDrafts, WikiCreate, WikiEdit, WikiDelete],
 			[MediaAdmin] = [MediaUpload],
 			[PlayersModerate] = [PlayersView],
+			[ChownAny] = [ChownSelf],
+			[GameWizard] = [ChownAny, Nuke, Override, FlagsRestricted, NoForce],
 		};
 
 	/// <summary>The umbrella scopes that directly imply <paramref name="scope"/>.</summary>
