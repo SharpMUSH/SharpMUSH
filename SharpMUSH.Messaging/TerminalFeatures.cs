@@ -2,16 +2,68 @@
 // engine both read it, and the ConnectionServer must not take a dependency on the full Library.
 
 using MarkupString.Ansi;
+using System.Text.Json.Serialization;
 
 namespace SharpMUSH.Library.Utilities;
 
 /// <summary>What a terminal answered when it was asked (<c>SOCKSET graphics=detect</c>).</summary>
-/// <param name="KittyGraphics">Whether it answered the Kitty graphics query; null when that was not settled.</param>
-/// <param name="Sixel">Whether its device attributes list sixel; null when no answer arrived.</param>
-/// <param name="Version">What it calls itself in reply to XTVERSION, or null.</param>
-/// <param name="CellWidth">Its character cell's width in pixels, or zero when it did not say.</param>
-/// <param name="CellHeight">Its character cell's height in pixels, or zero when it did not say.</param>
-public sealed record TerminalProbeResult(bool? KittyGraphics, bool? Sixel, string? Version, int CellWidth, int CellHeight);
+public sealed record TerminalProbeResult
+{
+	/// <summary>Whether the terminal answered the Kitty query; null when unsettled.</summary>
+	public bool? KittyGraphics { get; init; }
+
+	/// <summary>Whether its device attributes list sixel; null when no answer arrived.</summary>
+	[JsonPropertyName("Sixel")]
+	public bool? SixelReply { get; init; }
+
+	/// <summary>What the terminal calls itself in reply to XTVERSION, or null.</summary>
+	public string? Version { get; init; }
+
+	/// <summary>The character cell's width in pixels, or zero when unknown.</summary>
+	public int CellWidth { get; init; }
+
+	/// <summary>The character cell's height in pixels, or zero when unknown.</summary>
+	public int CellHeight { get; init; }
+
+	/// <summary>Creates a probe that distinguishes unknown from unsupported sixel.</summary>
+	[JsonConstructor]
+	public TerminalProbeResult(bool? kittyGraphics, bool? sixelReply, string? version, int cellWidth, int cellHeight)
+	{
+		KittyGraphics = kittyGraphics;
+		SixelReply = sixelReply;
+		Version = version;
+		CellWidth = cellWidth;
+		CellHeight = cellHeight;
+	}
+
+	/// <summary>The constructor published with plugin contract 3.0.0.</summary>
+	public TerminalProbeResult(bool? KittyGraphics, bool Sixel, string? Version, int CellWidth, int CellHeight)
+		: this(KittyGraphics, (bool?)Sixel, Version, CellWidth, CellHeight)
+	{
+	}
+
+	/// <summary>
+	/// The Boolean view published with plugin contract 3.0.0. Unknown replies read as false;
+	/// use <see cref="SixelReply"/> to distinguish unknown from an explicit negative reply.
+	/// </summary>
+	[JsonIgnore]
+	public bool Sixel
+	{
+		get => SixelReply == true;
+		init => SixelReply = value;
+	}
+
+	/// <summary>The deconstruction published with plugin contract 3.0.0.</summary>
+	public void Deconstruct(out bool? kittyGraphics, out bool sixel, out string? version,
+		out int cellWidth, out int cellHeight)
+	{
+		kittyGraphics = KittyGraphics;
+		sixel = Sixel;
+		version = Version;
+		cellWidth = CellWidth;
+		cellHeight = CellHeight;
+	}
+}
 
 /// <summary>
 /// What the player set with <c>SOCKSET</c> about their terminal. Links are worked out from the terminal unless
@@ -205,7 +257,7 @@ public static class TerminalFeatureReader
 
 		if (probe is not null)
 		{
-			if (probe.Sixel is { } sixel) features = Set(features, TerminalFeatures.Sixel, sixel);
+			if (probe.SixelReply is { } sixel) features = Set(features, TerminalFeatures.Sixel, sixel);
 			if (probe.KittyGraphics is { } kitty) features = Set(features, TerminalFeatures.KittyGraphics, kitty);
 		}
 

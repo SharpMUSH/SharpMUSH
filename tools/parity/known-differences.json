@@ -564,6 +564,54 @@
       "command": "@dolist/inline [v(HOLES)]={@recycle ##;@recycle ##;@purge/confirm ##}",
       "sharp": "RqA(#NEW1Tn) is scheduled to be destroyed.\nHalted: RqA(#NEW1)\nDestroyed.\nRqA(#NEW1) is gone for good.\nRqB(#NEW2Tn) is scheduled to be destroyed.\nHalted: RqB(#NEW2)\nDestroyed.\nRqB(#NEW2) is gone for good.\nRqC(#NEW3Tn) is scheduled to be destroyed.\nHalted: RqC(#NEW3)\nDestroyed.\nRqC(#NEW3) is gone for good.\nRqD(#NEW4Tn) is scheduled to be destroyed.\nHalted: RqD(#NEW4)\nDestroyed.\nRqD(#NEW4) is gone for good.\nRqE(#NEW5Tn) is scheduled to be destroyed.\nHalted: RqE(#NEW5)\nDestroyed.\nRqE(#NEW5) is gone for good.\nRqF(#NEW6Tn) is scheduled to be destroyed.\nHalted: RqF(#NEW6)\nDestroyed.\nRqF(#NEW6) is gone for good.\nRqG(#NEW7Tn) is scheduled to be destroyed.\nHalted: RqG(#NEW7)\nDestroyed.\nRqG(#NEW7) is gone for good.\nRqH(#NEW8Tn) is scheduled to be destroyed.\nHalted: RqH(#NEW8)\nDestroyed.\nRqH(#NEW8) is gone for good.\nRqI(#NEW9Tn) is scheduled to be destroyed.\nHalted: RqI(#NEW9)\nDestroyed.\nRqI(#NEW9) is gone for good.\nRqJ(#NEW10Tn) is scheduled to be destroyed.\nHalted: RqJ(#NEW10)\nDestroyed.\nRqJ(#NEW10) is gone for good.\nRqK(#NEW11Tn) is scheduled to be destroyed.\nHalted: RqK(#NEW11)\nDestroyed.\nRqK(#NEW11) is gone for good.\nRqL(#NEW12Tn) is scheduled to be destroyed.\nHalted: RqL(#NEW12)\nDestroyed.\nRqL(#NEW12) is gone for good.\nRqM(#NEW13Tn) is scheduled to be destroyed.\nHalted: RqM(#NEW13)\nDestroyed.\nRqM(#NEW13) is gone for good.\nRqN(#NEW14Tn) is scheduled to be destroyed.\nHalted: RqN(#NEW14)\nDestroyed.\nRqN(#NEW14) is gone for good.\nRqO(#NEW15Tn) is scheduled to be destroyed.\nHalted: RqO(#NEW15)\nDestroyed.\nRqO(#NEW15) is gone for good.\nRqP(#NEW16Tn) is scheduled to be destroyed.\nHalted: RqP(#NEW16)\nDestroyed.\nRqP(#NEW16) is gone for good.\nRqQ(#NEW17Tn) is scheduled to be destroyed.\nHalted: RqQ(#NEW17)\nDestroyed.\nRqQ(#NEW17) is gone for good.",
       "penn": "RqA(#NEW1Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqA(#NEW1TGn).\nHalted: RqA(#NEW1)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqB(#NEW2Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqB(#NEW2TGn).\nHalted: RqB(#NEW2)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqC(#NEW3Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqC(#NEW3TGn).\nHalted: RqC(#NEW3)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqD(#NEW4Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqD(#NEW4TGn).\nHalted: RqD(#NEW4)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqE(#NEW5Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqE(#NEW5TGn).\nHalted: RqE(#NEW5)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqF(#NEW6Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqF(#NEW6TGn).\nHalted: RqF(#NEW6)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqG(#NEW7Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqG(#NEW7TGn).\nHalted: RqG(#NEW7)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqH(#NEW8Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqH(#NEW8TGn).\nHalted: RqH(#NEW8)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqI(#NEW9Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqI(#NEW9TGn).\nHalted: RqI(#NEW9)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqJ(#NEW10Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqJ(#NEW10TGn).\nHalted: RqJ(#NEW10)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqK(#NEW11Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqK(#NEW11TGn).\nHalted: RqK(#NEW11)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqL(#NEW12Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqL(#NEW12TGn).\nHalted: RqL(#NEW12)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqM(#NEW13Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqM(#NEW13TGn).\nHalted: RqM(#NEW13)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqN(#NEW14Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqN(#NEW14TGn).\nHalted: RqN(#NEW14)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqO(#NEW15Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqO(#NEW15TGn).\nHalted: RqO(#NEW15)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqP(#NEW16Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqP(#NEW16TGn).\nHalted: RqP(#NEW16)\nDestroyed.\n@PURGE doesn't know switch CONFIRM.\nRqQ(#NEW17Tn) is scheduled to be destroyed.\nYou get your 10 Pennies deposit back for RqQ(#NEW17TGn).\nHalted: RqQ(#NEW17)\nDestroyed.\n@PURGE doesn't know switch CONFIRM."
+    },
+    {
+      "id": "KD-0050",
+      "scenario": "20-admin-commands",
+      "case": "admin.wizard",
+      "step": 3,
+      "reason": "PennMUSH's examine shows the player's Pennies after the zone and lists the RQUOTA attribute; SharpMUSH keeps no pennies (`money()` is not supported) and counts quota instead of storing it, so it has neither. SharpMUSH lists TOTCMDS (KD-0053), and Gadget's G follows from KD-0005. `sharp` and `penn` pin the whole step, so those are the only differences accepted.",
+      "tracking": "#1134",
+      "profile": "Quota is counted, not stored",
+      "command": "examine *Alice",
+      "sharp": "Alice(#4PenAc)\nType: PLAYER Flags: ENTER_OK NO_COMMAND ANSI CONNECTED\nOwner: Alice(#4PenAc)  Zone: *NOTHING*\nParent: *NOTHING*\nBasic Lock [#1i]: =Alice(#4PenAc)\nEnter Lock [#1i]: =Alice(#4PenAc)\nUse Lock [#1i]: =Alice(#4PenAc)\nPowers:\nChannels: *NONE*\nWarnings checked: normal\nCreated: <TIMESTAMP>\nLAST [#1cwv+]: <TIMESTAMP>\nLASTFAILED [#1cw+]:\nLASTIP [#1cw+]: 127.0.0.1\nLASTLOGOUT [#1cw+]: <TIMESTAMP>\nLASTPAGED [#1cw+]: #3:<CTIME>\nLASTSITE [#1cw+]: localhost\nMAILCURF [#1$cw+]: 0\nMAILFOLDERS [#1$cw+]: 0:INBOX:0\nTOTCMDS [#1cw+]: 360\nCarrying:\nWidget(#7Tn)\nGadget(#NEW1@10-player-commandsTGn)\nHome: Room Zero(#0RL)\nLocation: Lab(#6Rn)",
+      "penn": "Alice(#4PenAc)\nType: PLAYER Flags: ENTER_OK NO_COMMAND ANSI CONNECTED\nOwner: Alice(#4PenAc)  Zone: *NOTHING*  Pennies: 101\nParent: *NOTHING*\nBasic Lock [#1i]: =Alice(#4PenAc)\nEnter Lock [#1i]: =Alice(#4PenAc)\nUse Lock [#1i]: =Alice(#4PenAc)\nPowers:\nChannels: *NONE*\nWarnings checked: normal\nCreated: <TIMESTAMP>\nLAST [#1cwv+]: <TIMESTAMP>\nLASTFAILED [#1cw+]:\nLASTIP [#1cw+]: 127.0.0.1\nLASTLOGOUT [#1cw+]: <TIMESTAMP>\nLASTPAGED [#1cw+]: #3:<CTIME>\nLASTSITE [#1cw+]: localhost\nMAILCURF [#1$cw+]: 0\nMAILFOLDERS [#1$cw+]: 0:INBOX:0\nRQUOTA [#1m+]: 11\nCarrying:\nWidget(#7Tn)\nGadget(#NEW1@10-player-commandsTn)\nHome: Room Zero(#0RL)\nLocation: Lab(#6Rn)"
+    },
+    {
+      "id": "KD-0051",
+      "scenario": "20-admin-commands",
+      "case": "admin.search",
+      "step": 2,
+      "reason": "SharpMUSH's world also holds its own system objects (the Package Manager player, the handlers, the bundled packages' objects), recreated beside the imported ones, and @stats counts them. `sharp` and `penn` pin the totals.",
+      "tracking": "#1134",
+      "profile": "`@stats` counts SharpMUSH's own objects",
+      "command": "@stats",
+      "sharp": "28 objects = 5 rooms, 5 exits, 12 things, 6 players, 0 garbage.",
+      "penn": "19 objects = 5 rooms, 5 exits, 4 things, 5 players, 0 garbage."
+    },
+    {
+      "id": "KD-0052",
+      "scenario": "36-decompose",
+      "case": "dc.colours",
+      "step": 2,
+      "reason": "SharpMUSH stores a named colour as the colour, not its name, so decompose() writes +red as #ff0000. `sharp` and `penn` pin the step, so the other three colours must still match.",
+      "tracking": "#1134",
+      "profile": "`decompose()` writes a named colour as its code",
+      "command": "think [decompose(ansi(#ff0000,x))]|[decompose(ansi(/#00ff00,x))]|[decompose(ansi(#ff0000/#0000ff,x))]|[decompose(ansi(+red,x))]",
+      "sharp": "[ansi(#ff0000,x)]|[ansi(!#0ff00,x)]|[ansi(#ff0000!#0ff,x)]|[ansi(#ff0000,x)]",
+      "penn": "[ansi(#ff0000,x)]|[ansi(!#0ff00,x)]|[ansi(#ff0000!#0ff,x)]|[ansi(+red,x)]"
+    },
+    {
+      "id": "KD-0053",
+      "scenario": "40-compat-choices",
+      "case": "choice.totcmds",
+      "step": 0,
+      "reason": "SharpMUSH adds an ended session's commands to the player's TOTCMDS, as RhostMUSH does; PennMUSH keeps no such attribute.",
+      "tracking": "#1134",
+      "profile": "A player's `TOTCMDS` counts their commands",
+      "command": "think hasattrval(*Alice,TOTCMDS)",
+      "sharp": "1",
+      "penn": "0"
     }
   ]
 }

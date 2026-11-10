@@ -36,3 +36,6 @@ The first release. Plugin contract 3.0.0. World format 1.
 - Requires the .NET 11 runtime. The Docker images carry it.
 
 [1.0.0]: https://github.com/SharpMUSH/SharpMUSH/releases/tag/v1.0.0
+
+## [0.9.0] - Intial Commit
+A semi-pre-release before 1.0.0 to help shift Latest.

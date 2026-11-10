@@ -72,3 +72,9 @@ think [hasattr(me,MAILFORWARDLIST)]
 @find Widget
 ::as god
 @command/restrict @find=!FLAG^GAGGED
+
+::case choice.totcmds  a player's ended sessions add up in TOTCMDS
+# Alice's earlier sessions have ended, so SharpMUSH has added their commands to her TOTCMDS, as
+# RhostMUSH does. PennMUSH keeps no such attribute.
+::as wiz
+think hasattrval(*Alice,TOTCMDS)
