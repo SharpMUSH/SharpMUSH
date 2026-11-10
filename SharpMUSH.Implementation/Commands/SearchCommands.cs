@@ -69,7 +69,7 @@ public partial class Commands
 		{
 			if ((name.Length > 0 && !StringMatch(obj.Name, name))
 				|| await Mediator.Send(new GetObjectNodeQuery(obj.DBRef)) is not AnySharpObject node
-				|| !await PermissionService.Controls(executor, node))
+				|| !await PermissionService.Oversees(executor, node))
 			{
 				continue;
 			}
@@ -301,7 +301,7 @@ public partial class Commands
 	}
 
 	private async ValueTask<bool> CanScanAsync(AnySharpObject executor, AnySharpObject obj)
-		=> await PermissionService.Controls(executor, obj) || await obj.HasFlag("VISUAL");
+		=> await PermissionService.Oversees(executor, obj) || await obj.HasFlag("VISUAL");
 
 	/// <summary>
 	/// Prints the grouped matches under the wording <paramref name="key"/> names - the bare entry under a

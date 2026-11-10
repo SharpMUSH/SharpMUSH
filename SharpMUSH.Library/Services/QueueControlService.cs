@@ -38,7 +38,8 @@ public sealed class QueueControlService(ITaskQueueReader queue, ITaskQueueContro
 		if (entry.Source is not { IsObjid: true } source) return false;
 		return await mediator.Send(new GetObjectNodeQuery(source), ct) is AnySharpObject target
 			&& target.Object().DBRef == source
-			&& await permissions.Controls(actor, target).AsTask().WaitAsync(ExecutionBudget.CurrentToken);
+			&& await (mutate ? permissions.Controls(actor, target) : permissions.Oversees(actor, target))
+				.AsTask().WaitAsync(ExecutionBudget.CurrentToken);
 	}
 
 	/// <summary>Stops after the requested number of visible entries, without materializing the full ledger.</summary>
@@ -84,7 +85,7 @@ public sealed class QueueControlService(ITaskQueueReader queue, ITaskQueueContro
 		ct.ThrowIfCancellationRequested();
 		var own = owner == scope.Actor.ActiveCharacter;
 		return scope.Scopes.Contains(own ? PortalPermission.QueueInspectOwn : PortalPermission.QueueInspect)
-			&& (!own || await ControlsCurrentSource(scope.Actor, owner, source, ct));
+			&& (!own || await ControlsCurrentSource(scope.Actor, owner, source, mutate: false, ct));
 	}
 
 	public async Task<QueueControlResult> ChangeAsync(CapabilityActor actor, long pid, bool resume, string reason = "", CancellationToken ct = default)
@@ -99,7 +100,7 @@ public sealed class QueueControlService(ITaskQueueReader queue, ITaskQueueContro
 		// An explicit child deny wins even when the parent scope remains granted.
 		var scopes = await capabilities.GetGrantedScopesAsync(actor, ct);
 		if (!scopes.Contains(own ? PortalPermission.QueueControlOwn : PortalPermission.QueueControl)) return QueueControlResult.NotFound;
-		if (own && !await ControlsCurrentSource(actor, entry.Owner, entry.Source, ct)) return QueueControlResult.NotFound;
+		if (own && !await ControlsCurrentSource(actor, entry.Owner, entry.Source, mutate: true, ct)) return QueueControlResult.NotFound;
 		ct.ThrowIfCancellationRequested();
 		return resume ? await control.ResumePending(pid) : await control.PausePending(pid, reason);
 	}
@@ -108,7 +109,11 @@ public sealed class QueueControlService(ITaskQueueReader queue, ITaskQueueContro
 		=> actor.ActiveCharacter is { IsObjid: true } active && actor.Executor == active
 			&& await capabilities.GetGameActorAsync(active, ct) == actor;
 
-	private async Task<bool> ControlsCurrentSource(CapabilityActor actor, DBRef? owner, DBRef? sourceIdentity, CancellationToken ct)
+	/// <summary>
+	/// Whether the actor's character controls the entry's source, as owned by <paramref name="owner"/>: control to
+	/// change it, read control to inspect it, so an owner still sees their NOMODIFY object's jobs.
+	/// </summary>
+	private async Task<bool> ControlsCurrentSource(CapabilityActor actor, DBRef? owner, DBRef? sourceIdentity, bool mutate, CancellationToken ct)
 	{
 		if (sourceIdentity is not { IsObjid: true } source) return false;
 		if (await mediator.Send(new GetObjectNodeQuery(actor.ActiveCharacter!.Value), ct) is not AnySharpObject player
@@ -116,7 +121,8 @@ public sealed class QueueControlService(ITaskQueueReader queue, ITaskQueueContro
 			|| await mediator.Send(new GetObjectNodeQuery(source), ct) is not AnySharpObject target
 			|| target.Object().DBRef != source) return false;
 		if ((await target.Object().Owner.WithCancellation(ct)).Object.DBRef != owner) return false;
-		return await permissions.Controls(player, target).AsTask().WaitAsync(ExecutionBudget.CurrentToken);
+		return await (mutate ? permissions.Controls(player, target) : permissions.Oversees(player, target))
+			.AsTask().WaitAsync(ExecutionBudget.CurrentToken);
 	}
 
 }

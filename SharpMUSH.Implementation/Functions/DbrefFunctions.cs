@@ -404,7 +404,7 @@ public partial class Functions
 			if ((locateFlags & Library.Services.LocateService.LookerRelativeScopes) != 0
 					&& !await executor.IsSee_All()
 					&& !await Library.Services.LocateService.Nearby(executor, looker)
-					&& !await PermissionService.Controls(executor, looker))
+					&& !await PermissionService.Oversees(executor, looker))
 			{
 				return PermissionRefusal.NotControlled(looker, SeeAllScopes).ReturnText;
 			}
