@@ -19,6 +19,11 @@
       "id": "decompose-tags",
       "heading": "`decompose()` writes tags and links as the calls that make them",
       "lookup": "compatibility output decompose tags"
+    },
+    {
+      "id": "decompose-named-colour",
+      "heading": "`decompose()` writes a named colour as its code",
+      "lookup": "compatibility output decompose named colour"
     }
   ]
 }
@@ -83,3 +88,22 @@ PennMUSH: `[ansi(r,a)][ansi(g,b)][ansi(r,c)]`. Example: parity case `dc.nesting`
 PennMUSH: `[tag(b)]bold[endtag(b)]`. Example: parity case `dc.markup`.
 
 **Workaround.** Evaluate `decompose()`'s result on the game that wrote it. Code that moves decomposed tags between the two servers has to rewrite one form into the other.
+
+## `decompose()` writes a named colour as its code
+
+**A choice.**
+
+**PennMUSH** keeps the name of an xterm colour or of one six letters or shorter, so `decompose()` writes `+red` back as `+red`; a longer name it stores as hex too.
+
+**SharpMUSH** stores the colour itself, not its name, and writes it as its hex code.
+
+**Why.** A named colour here is resolved when it is made, and the layer holds only the colour.
+
+```sharp
+> think decompose(ansi(+red,x))
+[ansi(#ff0000,x)]
+```
+
+PennMUSH: `[ansi(+red,x)]`. Example: parity case `dc.colours`.
+
+**Workaround.** Evaluating either result gives the same colour. Only code that compares the text of `decompose()` results needs the names.

@@ -44,6 +44,11 @@
       "id": "typed-input-is-bounded-by-a-pending-count-not-a-replenishing-rate",
       "heading": "Typed input is bounded by a pending count, not a replenishing rate",
       "lookup": "compatibility commands typed input is bounded by a pending count not a replenishing rate"
+    },
+    {
+      "id": "stats-counts-sharpmush-s-own-objects",
+      "heading": "`@stats` counts SharpMUSH's own objects",
+      "lookup": "compatibility commands stats counts sharpmush s own objects"
     }
   ]
 }
@@ -148,3 +153,13 @@ PennMUSH answers `#-1 NO SUCH CONFIG OPTION`:
 > think config(command_burst_size)
 100
 ```
+
+## `@stats` counts SharpMUSH's own objects
+
+**A choice.**
+
+**PennMUSH** starts a database with Room Zero, One and the Master Room, so `@stats` counts the game's own objects.<br>
+**SharpMUSH** counts its own system objects as well: the Package Manager player, the ancestor objects, the HTTP and event handlers, and the objects of the bundled packages. A world imported from PennMUSH gets them too, so its `@stats` totals are higher than PennMUSH's.<br>
+**Why.** Those are real objects in the world, and `@stats` counts objects.<br>
+**Workaround.** Don't compare `@stats` totals across the two servers. Count the objects you care about with `lsearch()`.<br>
+**Example.** The parity case `admin.search` in `tools/parity/scenarios/20-admin-commands.scn` runs it on both servers.

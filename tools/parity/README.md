@@ -50,6 +50,12 @@ needs a second player, God or a server setting: one case per profile entry, whos
 `known-differences.json` under that entry's heading. The entry names the case in an `**Example.**` line,
 and `CompatibilityProfileStructureTests` checks that the case exists and is allowlisted there.
 
+The private reference configuration disables daily pay (`paycheck 0`). PennMUSH otherwise grants
+50 pennies when a fixture player's login date differs from its stored `LAST`, so a run crossing
+midnight could change the inventory balance from 150 to 200. Starting money is unchanged, and the
+inventory known-difference entry still pins both transcripts exactly. This fixture does not test
+daily salary behavior; a salary-specific scenario must set and restore its own configuration.
+
 ## Scenario format (`scenarios/*.scn`)
 
 One MUSH command per line, sent verbatim. `::directives` steer the harness (no MUSH command starts
