@@ -34,6 +34,10 @@ public static class TempDirectoryLeakGate
 				$"The run left {left.Count} entries in {Path.GetTempPath()}: [{string.Join(", ", left)}].");
 	}
 
+	// systemd makes a systemd-private-* directory in /tmp for each service started with PrivateTmp (the
+	// runner's man-db timer, for one). The suite never writes there, and it can appear at any time.
 	private static HashSet<string> Entries() =>
-		Directory.EnumerateFileSystemEntries(Path.GetTempPath()).Select(Path.GetFileName).OfType<string>().ToHashSet(StringComparer.Ordinal);
+		Directory.EnumerateFileSystemEntries(Path.GetTempPath()).Select(Path.GetFileName).OfType<string>()
+			.Where(name => !name.StartsWith("systemd-private-", StringComparison.Ordinal))
+			.ToHashSet(StringComparer.Ordinal);
 }
