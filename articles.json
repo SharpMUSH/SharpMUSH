@@ -1512,6 +1512,12 @@
         "lookup": "compatibility commands typed input is bounded by a pending count not a replenishing rate",
         "heading": "Typed input is bounded by a pending count, not a replenishing rate",
         "aliases": []
+      },
+      {
+        "id": "stats-counts-sharpmush-s-own-objects",
+        "lookup": "compatibility commands stats counts sharpmush s own objects",
+        "heading": "\u0060@stats\u0060 counts SharpMUSH\u0027s own objects",
+        "aliases": []
       }
     ],
     "file": "compatibility-commands.md"
@@ -1670,6 +1676,12 @@
         "lookup": "compatibility economy money is not supported",
         "heading": "\u0060money()\u0060 is not supported",
         "aliases": []
+      },
+      {
+        "id": "quota-is-counted",
+        "lookup": "compatibility economy quota is counted",
+        "heading": "Quota is counted, not stored",
+        "aliases": []
       }
     ],
     "file": "compatibility-economy.md"
@@ -1793,6 +1805,12 @@
         "lookup": "compatibility names sharpmush only flags and powers",
         "heading": "SharpMUSH-only flags and powers",
         "aliases": []
+      },
+      {
+        "id": "a-player-s-totcmds-counts-their-commands",
+        "lookup": "compatibility names a player s totcmds counts their commands",
+        "heading": "A player\u0027s \u0060TOTCMDS\u0060 counts their commands",
+        "aliases": []
       }
     ],
     "file": "compatibility-names.md"
@@ -1819,6 +1837,12 @@
         "id": "decompose-tags",
         "lookup": "compatibility output decompose tags",
         "heading": "\u0060decompose()\u0060 writes tags and links as the calls that make them",
+        "aliases": []
+      },
+      {
+        "id": "decompose-named-colour",
+        "lookup": "compatibility output decompose named colour",
+        "heading": "\u0060decompose()\u0060 writes a named colour as its code",
         "aliases": []
       }
     ],
