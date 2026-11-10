@@ -74,6 +74,22 @@ public class ProtectionFlagTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task NomodifyLeavesTheOwnerFindingItWithLocate()
+	{
+		var thing = DBRef.Parse(await AsOwner($"@create {TestIsolationHelpers.GenerateUniqueName("Ledger")}")).Number;
+		await Cmd($"@set #{thing}=NOMODIFY");
+
+		using (Protecting(true))
+		{
+			await Assert.That(await EvalAs(_owner.DbRef, $"locate(me,#{thing},as)")).IsEqualTo($"#{thing}");
+			// A command that changes what it matched still asks for control.
+			var before = await Eval($"lock(#{thing})");
+			await AsOwner($"@lock #{thing}=me");
+			await Assert.That(await Eval($"lock(#{thing})")).IsEqualTo(before);
+		}
+	}
+
+	[Test]
 	public async Task NoexamineKeepsEvenTheOwnerOut()
 	{
 		var thing = DBRef.Parse(await AsOwner($"@create {TestIsolationHelpers.GenerateUniqueName("Secret")}")).Number;

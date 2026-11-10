@@ -386,7 +386,7 @@ public partial class Functions
 
 			// fun_locate: 's' is refused up front unless the executor controls the looker.
 			if (locateFlags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-					&& !await PermissionService.Controls(executor, looker))
+					&& !await PermissionService.Oversees(executor, looker))
 			{
 				return PermissionRefusal.NotControlled(looker).ReturnText;
 			}
@@ -518,7 +518,8 @@ public partial class Functions
 		['p'] = LocateFlags.MatchWildCardForPlayerName,
 		['z'] = LocateFlags.EnglishStyleMatching,
 		['x'] = LocateFlags.NoPartialMatches,
-		['s'] = LocateFlags.OnlyMatchLookerControlledObjects
+		// locate() only reports the match, so read control is enough: an owner finds their NOMODIFY object.
+		['s'] = LocateFlags.OnlyMatchLookerControlledObjects | LocateFlags.ReadControlSuffices
 	}.ToFrozenDictionary();
 
 	[SharpFunction(Name = "lparent", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

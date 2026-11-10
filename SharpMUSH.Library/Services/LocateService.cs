@@ -258,7 +258,7 @@ public class LocateService(
 				&& await permissionService.CanInteract(executor, looker, MatchInteraction(flags)))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-					|| await permissionService.Controls(executor, looker))
+					|| await MatchControls(flags, executor, looker))
 			{
 				return (looker.WithNoneOption().WithErrorOption(), noControl);
 			}
@@ -277,7 +277,7 @@ public class LocateService(
 				&& await permissionService.CanInteract(executor, here.WithExitOption(), MatchInteraction(flags)))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-					|| await permissionService.Controls(executor, here.WithExitOption()))
+					|| await MatchControls(flags, executor, here.WithExitOption()))
 			{
 				return (here.WithExitOption().WithNoneOption().WithErrorOption(), noControl);
 			}
@@ -319,7 +319,7 @@ public class LocateService(
 								|| await permissionService.Controls(executor, found)))
 				{
 					if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-							|| await permissionService.Controls(executor, found))
+							|| await MatchControls(flags, executor, found))
 					{
 						return (found.WithNoneOption().WithErrorOption(), noControl);
 					}
@@ -343,7 +343,7 @@ public class LocateService(
 			{
 				// MATCH_CONTROLS is per candidate — the object that matched, never the search origin.
 				if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-						|| await permissionService.Controls(executor, known))
+						|| await MatchControls(flags, executor, known))
 				{
 					return (known.WithNoneOption().WithErrorOption(), noControl);
 				}
@@ -696,6 +696,15 @@ public class LocateService(
 		return thing2;
 	}
 
+	/// <summary>
+	/// <c>MATCH_CONTROLS</c>' test for one candidate: control, or read control under
+	/// <see cref="LocateFlags.ReadControlSuffices"/>.
+	/// </summary>
+	private ValueTask<bool> MatchControls(LocateFlags flags, AnySharpObject executor, AnySharpObject candidate)
+		=> flags.HasFlag(LocateFlags.ReadControlSuffices)
+			? permissionService.Oversees(executor, candidate)
+			: permissionService.Controls(executor, candidate);
+
 	/// <summary>PennMUSH's <c>MATCHED</c> macro: fold one matched candidate into the running state.</summary>
 	private async ValueTask Matched(
 		MatchState state,
@@ -704,7 +713,7 @@ public class LocateService(
 		AnySharpObject executor)
 	{
 		if (state.Flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-				&& !await permissionService.Controls(executor, cur))
+				&& !await MatchControls(state.Flags, executor, cur))
 		{
 			// match.c sets nocontrol and continues: an uncontrolled candidate is skipped, and any
 			// previously found controlled match survives. The flag is what makes the failure say
