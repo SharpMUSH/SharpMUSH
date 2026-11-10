@@ -209,6 +209,33 @@ public class TinyMuxDatabaseReaderTests
 		await Assert.That(notes).DoesNotContain(note => note.StartsWith("Attribute number 25 not imported"));
 	}
 
+	/// <summary>NO_EXAMINE and NOMODIFY keep their definitions, and the notes say they protect rather than do nothing.</summary>
+	[Test]
+	public async Task ProtectionFlagsAreNotReportedAsDoingNothing()
+	{
+		var path = Path.Join(Path.GetTempPath(), $"sharpmush-mux-protect-{Guid.NewGuid():N}.flat");
+		try
+		{
+			// The Widget's third flag word, with NO_EXAMINE (0x4000) and NOMODIFY (0x8000) added.
+			var text = await File.ReadAllTextAsync(Fixture("tinymux-v5.flat"));
+			await File.WriteAllTextAsync(path, text.Replace("\n4194304\n", $"\n{4194304 | 0x4000 | 0x8000}\n"));
+			var database = await TinyMuxDatabaseReader.ReadFileAsync(path);
+			var notes = database.ImportNotes.Texts();
+
+			await Assert.That(database.FlagDefinitions.Select(flag => flag.Name)).Contains("NO_EXAMINE");
+			await Assert.That(database.FlagDefinitions.Select(flag => flag.Name)).Contains("NOMODIFY");
+			foreach (var flag in new[] { "NO_EXAMINE", "NOMODIFY" })
+			{
+				await Assert.That(notes).Contains(note => note.Contains($"custom flag {flag}:") && note.Contains("protection_flags"));
+				await Assert.That(notes).DoesNotContain(note => note.Contains($"custom flag {flag}:") && note.Contains("does nothing"));
+			}
+		}
+		finally
+		{
+			File.Delete(path);
+		}
+	}
+
 	/// <summary>Version 2: Latin-1 text, raw ANSI colour, and the default lock in each object's header.</summary>
 	[Test]
 	public async Task ReadsAVersionTwoFlatfile()

@@ -362,6 +362,9 @@ public static partial class TinyMuxDatabaseReader
 		/// <summary>TinyMUX's own bookkeeping left out, which every import of its flatfiles leaves out.</summary>
 		private readonly SortedDictionary<string, (ImportWarningKind Kind, List<int> Dbrefs)> _routine = new(StringComparer.Ordinal);
 		private readonly HashSet<string> _flagsUsed = new(StringComparer.OrdinalIgnoreCase);
+
+		/// <summary>The custom flags <c>protection_flags</c>, which this import turns on, gives an effect.</summary>
+		private static readonly HashSet<string> ProtectionFlags = new(["NO_EXAMINE", "NOMODIFY"], StringComparer.OrdinalIgnoreCase);
 		private readonly HashSet<string> _powersUsed = new(StringComparer.OrdinalIgnoreCase);
 
 		/// <summary>One line for each attribute whose colour substitutions were rewritten or need a look.</summary>
@@ -640,7 +643,7 @@ public static partial class TinyMuxDatabaseReader
 						{
 							_flagsUsed.Add(name);
 							Tally(ImportWarningKind.Flags, $"Flag {mapping.Source} imported as a custom flag {name}: objects keep it and hasflag() sees it, " +
-								"but SharpMUSH does nothing with it", raw.DBRef);
+								(ProtectionFlags.Contains(name) ? "and it protects them while protection_flags is on" : "but SharpMUSH does nothing with it"), raw.DBRef);
 						}
 						else if (!name.Equals(mapping.Source, StringComparison.OrdinalIgnoreCase))
 						{

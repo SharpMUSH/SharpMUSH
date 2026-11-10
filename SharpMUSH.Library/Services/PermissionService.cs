@@ -15,7 +15,7 @@ public class PermissionService(
 	IOptionsMonitor<SharpMUSHOptions> options,
 	IRealityPolicy reality,
 	IConnectionService connectionService,
-	Lazy<IAttributeService> attributeService) : IPermissionService, IChannelPermissionService
+	Lazy<IAttributeService> attributeService) : IPermissionService, IChannelPermissionService, IReadControl
 {
 	public async ValueTask<Permission> Check(AnySharpObject who, Requires requirement)
 	{
@@ -428,7 +428,7 @@ public class PermissionService(
 	/// Control for reading and finding, which a NOMODIFY target does not take away: only changes are
 	/// <see cref="Controls(AnySharpObject, AnySharpObject)"/>'s.
 	/// </summary>
-	private async ValueTask<bool> Oversees(AnySharpObject who, AnySharpObject target)
+	public async ValueTask<bool> Oversees(AnySharpObject who, AnySharpObject target)
 	{
 		var token = ExecutionBudget.CurrentToken;
 		token.ThrowIfCancellationRequested();
