@@ -548,7 +548,7 @@ public class TerminalReportConsumer(
 		var report = message.Report;
 		connectionService.Update(message.Handle, TerminalFeatureReader.ProbeKittyKey,
 			report.KittyGraphics switch { true => "1", false => "0", null => string.Empty });
-		connectionService.Update(message.Handle, TerminalFeatureReader.ProbeSixelKey, report.Sixel switch { true => "1", false => "0", null => string.Empty });
+		connectionService.Update(message.Handle, TerminalFeatureReader.ProbeSixelKey, report.SixelReply switch { true => "1", false => "0", null => string.Empty });
 		connectionService.Update(message.Handle, TerminalFeatureReader.ProbeVersionKey, report.Version ?? string.Empty);
 		connectionService.Update(message.Handle, TerminalFeatureReader.ProbeCellSizeKey,
 			report is { CellWidth: > 0, CellHeight: > 0 } ? $"{report.CellWidth}x{report.CellHeight}" : string.Empty);
