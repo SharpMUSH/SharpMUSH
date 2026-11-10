@@ -64,11 +64,12 @@ public static partial class DelegatedScopes
 	/// <summary>
 	/// The scope that holds <paramref name="permission"/>: a built-in permission's group, or the scope of a custom
 	/// permission's <paramref name="customCategory"/>; null when it is neither. The Builder power is building, so it is
-	/// in <see cref="Build"/>, not with the other powers; <see cref="OwnWork"/> is in <see cref="Commands"/>.
+	/// in <see cref="Build"/>, not with the other powers; <see cref="OwnWork"/> and the everyday
+	/// <see cref="PortalPermission.AllowedUnlessDenied"/> permissions are in <see cref="Commands"/>.
 	/// </summary>
 	public static string? ScopeOf(string permission, string? customCategory = null)
 	{
-		if (OwnWork.Contains(permission)) return Commands;
+		if (OwnWork.Contains(permission) || PortalPermission.AllowedUnlessDenied.Contains(permission)) return Commands;
 		if (string.Equals(permission, PortalPermission.GamePower("Builder"), StringComparison.OrdinalIgnoreCase)) return Build;
 		return PortalPermission.GroupOf(permission) switch
 		{

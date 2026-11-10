@@ -5450,6 +5450,10 @@
     <value>(hatókör: {0})</value>
     <comment>MT</comment>
   </data>
+  <data name="RolAccessUnlessDenied" xml:space="preserve">
+    <value>Engedélyezett, hacsak nincs megtagadva</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolOverrideSaved" xml:space="preserve">
     <value>A(z) {0} kivétele mentve.</value>
     <comment>MT</comment>

@@ -92,7 +92,18 @@ public static partial class HelperFunctions
 	/// <see cref="PortalPermission.ConfigAdmin"/>, ...) are asked through this, not <see cref="IsWizard(AnySharpObject)"/>.
 	/// </summary>
 	public static async ValueTask<bool> Can(this AnySharpObject obj, string scope)
-		=> obj.IsGod() || (await obj.GrantsAsync(ExecutionBudget.CurrentToken)).Has(scope);
+		=> obj.IsGod() || ((await obj.GrantsAsync(ExecutionBudget.CurrentToken)).Has(scope) && await OwnerAllowsEveryday(obj, scope, null));
+
+	/// <summary>
+	/// An everyday permission (<see cref="PortalPermission.AllowedUnlessDenied"/>) denied to a player is denied to what the
+	/// player owns, so a muted player cannot act through a thing. Other permissions are the object's own.
+	/// </summary>
+	private static async ValueTask<bool> OwnerAllowsEveryday(AnySharpObject obj, string scope, AnySharpObject? target)
+	{
+		if (obj.IsPlayer || !PortalPermission.AllowedUnlessDenied.Contains(scope)) return true;
+		AnySharpObject owner = await obj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
+		return target is null ? await owner.Can(scope) : await owner.CanOver(scope, target);
+	}
 
 	public static ValueTask<bool> IsRoyalty(this AnySharpObject obj)
 		=> obj.IsRoyalty(ExecutionBudget.CurrentToken);
@@ -147,9 +158,9 @@ public static partial class HelperFunctions
 	{
 		if (obj.IsGod()) return true;
 		var grants = await obj.GrantsAsync(ExecutionBudget.CurrentToken);
-		return grants.Context.HasReaches
+		return (grants.Context.HasReaches
 			? grants.Has(scope, await target.RankAsTargetAsync(ExecutionBudget.CurrentToken))
-			: grants.Has(scope);
+			: grants.Has(scope)) && await OwnerAllowsEveryday(obj, scope, target);
 	}
 
 	/// <summary>

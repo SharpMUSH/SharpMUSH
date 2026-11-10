@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using System.Globalization;
 using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library;
@@ -839,6 +840,12 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
+		// player.give on the giver, against the recipient's owner; player.receive on the recipient.
+		if (!await executor.CanOver(PortalPermission.PlayerGive, recipient))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerGive));
+		if (!await recipient.Can(PortalPermission.PlayerReceive))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.NotReceiving(recipient));
+
 		// /SILENT belongs to this branch alone: it hushes the recipient's penny message
 		// (rob.c:483) and has no bearing on the object form's triads, which rob.c fires
 		// unconditionally.
@@ -1220,6 +1227,9 @@ public partial class Commands
 			await NotifyService.Notify(executor, "Do what with them?", executor);
 			return CallState.Empty;
 		}
+
+		if (!await executor.Can(PortalPermission.PlayerCommands))
+			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.PlayerCommands);
 
 		var targetName = args["0"].Message.ToPlainText();
 		var command = arg1.Message;

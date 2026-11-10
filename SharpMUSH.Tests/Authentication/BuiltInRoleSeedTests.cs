@@ -114,7 +114,7 @@ public class BuiltInRoleSeedTests
 		var royalty = Holding(BuiltInRoles.PlayerSlug, BuiltInRoles.RoyaltySlug);
 		var wizard = Holding(BuiltInRoles.PlayerSlug, BuiltInRoles.WizardSlug);
 
-		await Assert.That(guest).IsEquivalentTo([PortalPermission.WikiRead, PortalPermission.GamePower("Guest")]);
+		await Assert.That(guest).IsEquivalentTo([PortalPermission.WikiRead, PortalPermission.GamePower("Guest"), .. PortalPermission.AllowedUnlessDenied]);
 		await Assert.That(player).Contains(PortalPermission.WikiRead);
 		await Assert.That(player).DoesNotContain(PortalPermission.WikiCreate)
 			.Because("a player who is not approved reads the wiki and writes nothing on it");
@@ -126,7 +126,8 @@ public class BuiltInRoleSeedTests
 		await Assert.That(wizard).Contains(PortalPermission.WikiEdit);
 		await Assert.That(player).Contains(PortalPermission.SnapshotRestore);
 		await Assert.That(player).DoesNotContain(PortalPermission.WikiDelete);
-		await Assert.That(player.Where(PortalPermission.IsGameScope)).IsEmpty();
+		await Assert.That(player.Where(PortalPermission.IsGameScope).Except(PortalPermission.AllowedUnlessDenied)).IsEmpty()
+			.Because("a player holds the everyday permissions and no other game permission");
 		await Assert.That(builder).Contains(PortalPermission.DiagnosticsProfile);
 		await Assert.That(builder).Contains(PortalPermission.GamePower("Builder"));
 		await Assert.That(royalty).Contains(PortalPermission.WikiDelete);

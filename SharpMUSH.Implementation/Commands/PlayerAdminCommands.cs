@@ -803,6 +803,8 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await executor.Can(PortalPermission.PlayerPassword))
+			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerPassword));
 		var oldPassword = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var newPassword = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 

@@ -178,6 +178,9 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 		return result.Principal!;
 	}
 
+	/// <summary>What everyone holds: reading the wiki, the scene package's scene.view, and the everyday permissions.</summary>
+	private static readonly string[] EveryonesScopes = [PortalPermission.WikiRead, "scene.view", .. PortalPermission.AllowedUnlessDenied];
+
 	private static string[] ScopesOf(ClaimsPrincipal principal) =>
 		[.. principal.FindAll(PortalPermission.ClaimType).Select(c => c.Value).Order(StringComparer.Ordinal)];
 
@@ -195,16 +198,15 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 		// that used to survive the character creation below.
 		var before = await AuthenticateAsync(account.AccountSessionToken);
 		await Assert.That(before.FindFirstValue(ClaimTypes.Role)).IsEqualTo(nameof(PortalRole.Guest));
-		// What everyone holds: reading the wiki, and the scene package's scene.view.
-		await Assert.That(ScopesOf(before)).IsEquivalentTo([PortalPermission.WikiRead, "scene.view"]);
+		await Assert.That(ScopesOf(before)).IsEquivalentTo(EveryonesScopes);
 
 		await CreateCharacterAsync(http, account.AccountSessionToken, UniqueName("Gwen"));
 
 		var after = await AuthenticateAsync(account.AccountSessionToken);
 
 		await Assert.That(after.FindFirstValue(ClaimTypes.Role)).IsEqualTo(nameof(PortalRole.Player));
-		await Assert.That(ScopesOf(after)).IsEquivalentTo(new[]
-		{
+		await Assert.That(ScopesOf(after)).IsEquivalentTo((string[])
+		[
 			PortalPermission.JobsManageOwn,
 			PortalPermission.MediaUpload,
 			PortalPermission.QueueControlOwn,
@@ -214,7 +216,8 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 			PortalPermission.SoftcodeUse,
 			PortalPermission.WikiRead,
 			"scene.view",
-		}).Because("writing the wiki comes with the approved role, not with having a character");
+			.. PortalPermission.AllowedUnlessDenied,
+		]).Because("writing the wiki comes with the approved role, not with having a character");
 	}
 
 	/// <summary>
@@ -239,7 +242,7 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 		var afterUnlink = await AuthenticateAsync(account.AccountSessionToken);
 
 		await Assert.That(afterUnlink.FindFirstValue(ClaimTypes.Role)).IsEqualTo(nameof(PortalRole.Guest));
-		await Assert.That(ScopesOf(afterUnlink)).IsEquivalentTo([PortalPermission.WikiRead, "scene.view"]);
+		await Assert.That(ScopesOf(afterUnlink)).IsEquivalentTo(EveryonesScopes);
 	}
 
 	/// <summary>

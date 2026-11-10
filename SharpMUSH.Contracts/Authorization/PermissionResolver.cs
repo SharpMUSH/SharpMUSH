@@ -218,7 +218,25 @@ public sealed class PermissionResolver : IPermissionResolver
 				heldDenies |= state == PermissionState.Deny;
 		}
 
-		return !heldDenies && everyoneAllows;
+		return !heldDenies && (everyoneAllows || UnlessDenied(context, scope));
+	}
+
+	/// <summary>
+	/// An everyday scope (<see cref="PortalPermission.AllowedUnlessDenied"/>) with no role denying it, <c>everyone</c>
+	/// included, for a holder of <c>everyone</c>: what the last layer decides when nobody allows it. A context with no
+	/// roles at all, such as grants that could not be read, holds none of them.
+	/// </summary>
+	private static bool UnlessDenied(PermissionContext context, string scope)
+	{
+		if (!PortalPermission.AllowedUnlessDenied.Contains(scope)) return false;
+		var holdsEveryone = false;
+		foreach (var role in context.Roles)
+		{
+			if (StateOf(role.Permissions, scope) == PermissionState.Deny) return false;
+			holdsEveryone |= BuiltInRoles.IsEveryone(role);
+		}
+
+		return holdsEveryone;
 	}
 
 	public PermissionExplanation Explain(PermissionContext context, string scope)
@@ -260,9 +278,9 @@ public sealed class PermissionResolver : IPermissionResolver
 		if (denying.Length > 0)
 			return Decided(false, denying, "role-deny");
 
-		return everyone.Any(r => StateOf(r.Permissions, scope) == PermissionState.Allow)
-			? Decided(true, everyone, "everyone-allow")
-			: new(false, null, [], "default-deny");
+		if (everyone.Any(r => StateOf(r.Permissions, scope) == PermissionState.Allow))
+			return Decided(true, everyone, "everyone-allow");
+		return UnlessDenied(context, scope) ? new(true, null, [], "default-allow") : new(false, null, [], "default-deny");
 	}
 
 	/// <summary>
