@@ -192,6 +192,24 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	public async ValueTask ExaminePlayer_ChannelsLineListsChannelsByName()
+	{
+		// channel_description (extchat.c): the channels a player is on, by name, sorted.
+		var testPlayer = await CreateWizardAsync("ExamChannels");
+		var later = TestIsolationHelpers.GenerateUniqueName("ZzExam").Replace("_", string.Empty);
+		var earlier = TestIsolationHelpers.GenerateUniqueName("AaExam").Replace("_", string.Empty);
+		foreach (var channel in new[] { later, earlier })
+		{
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/add {channel}=player"));
+			await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"@channel/on {channel}"));
+		}
+
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine me"));
+
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains($"\nChannels: {earlier} {later}\n", StringComparison.Ordinal))).Count().IsEqualTo(1);
+	}
+
+	[Test]
 	public async ValueTask ExamineRoom_ShowsExits()
 	{
 		var testPlayer = await CreateWizardAsync("ExamRoomExits");
