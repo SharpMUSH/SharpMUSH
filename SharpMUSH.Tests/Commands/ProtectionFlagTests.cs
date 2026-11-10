@@ -203,10 +203,16 @@ public class ProtectionFlagTests : ServerTestBase
 			await File.WriteAllTextAsync(path, "protection_flags 0 # keep disabled\n");
 			var commentedZero = SharpMUSH.Configuration.ReadPennMushConfig.Create(path).Compatibility.ProtectionFlags;
 
+			const string theme = """{"seed":"#f7768e","harmony":"triadic"}""";
+			await File.WriteAllTextAsync(path, $"layout_theme {theme}\n");
+			var layoutTheme = SharpMUSH.Configuration.ReadPennMushConfig.Create(path).Cosmetic.LayoutTheme;
+
 			await Assert.That(on).IsTrue();
 			await Assert.That(off).IsFalse();
 			await Assert.That(commentedNo).IsFalse();
 			await Assert.That(commentedZero).IsFalse();
+			// A # inside a value, with no space before it, is not a comment.
+			await Assert.That(layoutTheme).IsEqualTo(theme);
 		}
 		finally
 		{
