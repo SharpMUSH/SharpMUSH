@@ -146,6 +146,26 @@ public class ConfiguredFunctionRestrictionTests
 	}
 
 	/// <summary>
+	/// An alias the configuration gained after startup, once the live table has it, is held to its function's
+	/// restriction when the current aliases are passed. Driven with its own registry; the alias is unique to this test.
+	/// </summary>
+	[Test]
+	public async Task AnAliasAddedSinceStartup_IsHeldToItsFunctionsRestriction()
+	{
+		var functions = WebAppFactoryArg.Services.GetRequiredService<ILibraryProvider<FunctionDefinition>>();
+		var alias = $"lstatsx{Guid.NewGuid().ToString("N")[..8]}";
+		var aliases = new Dictionary<string, string[]> { ["lstats"] = [alias] };
+		((IConfiguredAliasRegistry)functions).RegisterConfiguredAliases(
+			new SharpMUSH.Configuration.Options.AliasOptions(aliases, new Dictionary<string, string[]>()));
+		var registry = new UserDefinedFunctionService();
+		var applier = new ConfiguredFunctionRestrictions(functions, registry, NullLogger<ConfiguredFunctionRestrictions>.Instance);
+
+		applier.Apply(new Dictionary<string, string[]> { ["lstats"] = ["noguest"] }, aliases);
+
+		await Assert.That(registry.GetBuiltinRestriction(alias)).IsEqualTo("noguest");
+	}
+
+	/// <summary>
 	/// A reapply puts the new layer in before taking the old one out: a function both layers restrict
 	/// is never cleared, not even for the moment a concurrent call could slip through.
 	/// </summary>

@@ -7870,7 +7870,7 @@
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityGenreHint" xml:space="preserve">
-    <value>Válassza ki a játék MSSP-műfaját és -alműfaját. Sharpie ezeket használja az illusztrációkhoz; ha egyik sem illik, válassza a None értéket.</value>
+    <value>Válassza ki a játék MSSP-műfaját. Válasszon egy javasolt alműfajt, vagy adjon meg egy sajátot. A Sharpie ezeket az értékeket használja az illusztrációkhoz; válassza a None értéket, ha egyik sem alkalmazható.</value>
     <comment>MT — None kept: literal MSSP value shown in the select</comment>
   </data>
   <data name="GuideIdentityGenres" xml:space="preserve">
@@ -9460,5 +9460,8 @@
   <data name="MudTreeView_ExpandItem" xml:space="preserve">
     <value>Kibontás</value>
     <comment>MT</comment>
+  </data>
+  <data name="GuideIdentityCustomSubgenre" xml:space="preserve">
+    <value>Ez az alműfaj nem szerepel az MSSP javaslatai között. Egyéni értékek is megadhatók.</value>
   </data>
 </root>

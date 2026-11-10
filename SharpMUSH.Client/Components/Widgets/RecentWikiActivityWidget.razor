@@ -27,6 +27,10 @@
                 }
             </CardRows>
         }
+        else if (_failed)
+        {
+            <div class="recent-wiki-error" role="status">@Loc["WidUnavailable"]</div>
+        }
         else
         {
             <EmptyState Compact="true" Class="recent-wiki-empty" Icon="@Icons.Material.Outlined.History">@Loc["WidNoRecentWikiActivity"]</EmptyState>
@@ -61,10 +65,13 @@
 
     private IReadOnlyList<WikiPageSummary>? _recentChanges;
     private bool _loading = true;
+    private bool _failed;
 
     protected override async Task OnInitializedAsync()
     {
-        _recentChanges = await WikiService.GetRecentChangesAsync(Fetched);
+        var result = await WikiService.GetRecentChangesResultAsync(Fetched);
+        _failed = result is ApiFailure;
+        _recentChanges = result is IReadOnlyList<WikiPageSummary> changes ? changes : null;
         _loading = false;
     }
 

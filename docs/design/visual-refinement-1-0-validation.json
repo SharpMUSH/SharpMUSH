@@ -1,0 +1,301 @@
+{
+  "baseline": "cfa5af9013",
+  "date": "2026-11-07",
+  "initial_pass": {
+    "baseline": "cfa5af9013",
+    "date": "2026-11-06",
+    "bunit": {
+      "passed": 3453,
+      "failed": 0
+    },
+    "client_js": {
+      "passed": 145,
+      "failed": 0
+    },
+    "focused_browser": {
+      "passed": 3,
+      "failed": 0
+    },
+    "route_sweep": {
+      "attempted": 130,
+      "measured": 126,
+      "horizontal_overflow": 0,
+      "excluded": [
+        "390/login redirected",
+        "390/register redirected",
+        "1280/login redirected",
+        "1280/register redirected"
+      ]
+    },
+    "final_published": [
+      {
+        "route": "/",
+        "width": 390,
+        "url": "/",
+        "containers": [
+          {
+            "class": "phosphor-main ",
+            "width": 390,
+            "scroll": 390
+          },
+          {
+            "class": "phosphor-page",
+            "width": 390,
+            "scroll": 390
+          }
+        ],
+        "errors": [],
+        "path": "docs/design/images/visual-refinement-1-0/mobile_home.png"
+      },
+      {
+        "route": "/wiki",
+        "width": 390,
+        "url": "/wiki",
+        "containers": [
+          {
+            "class": "phosphor-main ",
+            "width": 390,
+            "scroll": 390
+          },
+          {
+            "class": "phosphor-page",
+            "width": 390,
+            "scroll": 390
+          }
+        ],
+        "errors": [],
+        "path": "docs/design/images/visual-refinement-1-0/mobile_wiki.png"
+      },
+      {
+        "route": "/wiki/help/markdown_guide",
+        "width": 390,
+        "url": "/wiki/help/markdown_guide",
+        "containers": [
+          {
+            "class": "phosphor-main ",
+            "width": 390,
+            "scroll": 390
+          },
+          {
+            "class": "phosphor-page",
+            "width": 390,
+            "scroll": 390
+          }
+        ],
+        "errors": [],
+        "path": "docs/design/images/visual-refinement-1-0/mobile_wiki_help_markdown_guide.png"
+      },
+      {
+        "route": "/admin/accounts",
+        "width": 390,
+        "url": "/admin/accounts",
+        "containers": [
+          {
+            "class": "phosphor-main ",
+            "width": 390,
+            "scroll": 390
+          },
+          {
+            "class": "phosphor-page",
+            "width": 390,
+            "scroll": 390
+          }
+        ],
+        "errors": [],
+        "path": "docs/design/images/visual-refinement-1-0/mobile_admin_accounts.png"
+      },
+      {
+        "route": "/",
+        "width": 1280,
+        "url": "/",
+        "containers": [
+          {
+            "class": "phosphor-main ",
+            "width": 1208,
+            "scroll": 1208
+          },
+          {
+            "class": "phosphor-page",
+            "width": 1208,
+            "scroll": 1208
+          }
+        ],
+        "errors": [],
+        "path": "docs/design/images/visual-refinement-1-0/desktop_home.png"
+      },
+      {
+        "route": "/wiki",
+        "width": 1280,
+        "url": "/wiki",
+        "containers": [
+          {
+            "class": "phosphor-main ",
+            "width": 976,
+            "scroll": 976
+          },
+          {
+            "class": "phosphor-page",
+            "width": 976,
+            "scroll": 976
+          }
+        ],
+        "errors": [],
+        "path": "docs/design/images/visual-refinement-1-0/desktop_wiki.png"
+      },
+      {
+        "route": "/wiki/help/markdown_guide",
+        "width": 1280,
+        "url": "/wiki/help/markdown_guide",
+        "containers": [
+          {
+            "class": "phosphor-main ",
+            "width": 976,
+            "scroll": 976
+          },
+          {
+            "class": "phosphor-page",
+            "width": 976,
+            "scroll": 976
+          }
+        ],
+        "errors": [],
+        "path": "docs/design/images/visual-refinement-1-0/desktop_wiki_help_markdown_guide.png"
+      },
+      {
+        "route": "/admin/accounts",
+        "width": 1280,
+        "url": "/admin/accounts",
+        "containers": [
+          {
+            "class": "phosphor-main ",
+            "width": 976,
+            "scroll": 976
+          },
+          {
+            "class": "phosphor-page",
+            "width": 976,
+            "scroll": 976
+          }
+        ],
+        "errors": [],
+        "path": "docs/design/images/visual-refinement-1-0/desktop_admin_accounts.png"
+      }
+    ]
+  },
+  "bunit": {
+    "passed": 3488,
+    "failed": 0
+  },
+  "client_js": {
+    "passed": 145,
+    "failed": 0
+  },
+  "rendered_shell": {
+    "passed": 6,
+    "failed": 0
+  },
+  "player_captures": {
+    "count": 40,
+    "widths": [
+      390,
+      1280
+    ],
+    "themes": [
+      "Daylight",
+      "Phosphor"
+    ],
+    "document_overflow": 0,
+    "page_errors": 0
+  },
+  "theme_audit": {
+    "themes": 7,
+    "scenarios": 21,
+    "document_overflow": 0,
+    "page_errors": 0,
+    "complex_background_contrast_excluded": true,
+    "ooc_light_before": 2.029,
+    "ooc_light_after": 4.504,
+    "terminal_phosphor_before": 1.424,
+    "terminal_phosphor_after": 14.745
+  },
+  "live_scene": {
+    "matching_signalr_frames": 1,
+    "observer_navigations": 0,
+    "observer_scene_refetches": 0,
+    "sender_draft_cleared": true
+  },
+  "browser_verified": [
+    "real account login",
+    "terminal command roundtrip",
+    "mobile terminal pointer reconnect",
+    "mail draft reload recovery and discard",
+    "notifications preference save and reload",
+    "builder radio ArrowRight and End, Tab exit",
+    "native map keyboard staging",
+    "hosted graph keyboard staging and host consent",
+    "native softcode editor original loader, save and reload",
+    "published Mermaid SVG desktop and mobile"
+  ],
+  "pending": [
+    "CI/review follow-through on PR2557"
+  ],
+  "focused_editor": {
+    "passed": 31,
+    "failed": 0
+  },
+  "mermaid_browser": {
+    "passed": 2,
+    "failed": 0,
+    "sampled_label_contrast": 10.171,
+    "width": 320
+  },
+  "native_editor": {
+    "toolbar_clipped": 0,
+    "toolbar_overlaps": 0,
+    "mobile_overflow": false,
+    "save_reload_verified": true,
+    "visual_overrides": false
+  },
+  "terrain_label_browser": {
+    "passed": 1,
+    "failed": 0
+  },
+  "resource_validation": "all gates passed",
+  "world_grid": {
+    "modes": [
+      "square",
+      "flat-hex",
+      "pointy-hex"
+    ],
+    "captures": 6,
+    "widths": [
+      1280,
+      390
+    ],
+    "page_errors": 0,
+    "document_overflow": 0,
+    "named_place_selection": true,
+    "movement_locks_exercised": false
+  },
+  "main_integration": {
+    "target": "759957c688ca7f63920bf7582fb3873e220d2354",
+    "runtime_rerun": "passed",
+    "screenshot_provenance": "Pre-integration isolated runtime; retained duties installation, not a fresh official-library install.",
+    "moved_package_families": [
+      "duties",
+      "radio",
+      "scene-verse"
+    ],
+    "builder_graph_version": "0.3.3",
+    "player_captures": 40,
+    "page_errors": 0,
+    "horizontal_overflow": 0,
+    "editor_save_reload": "passed",
+    "terrain_fitted_zoomed_selection": "passed",
+    "independent_visual_review": "passed",
+    "rendered_regressions": 9,
+    "client_js_test_files": 12,
+    "resource_validation": "passed",
+    "server_and_client_publish": "passed"
+  }
+}

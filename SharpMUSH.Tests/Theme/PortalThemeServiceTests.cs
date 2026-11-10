@@ -59,7 +59,7 @@ public class PortalThemeServiceTests
 
 		var created = (await service.CreateAsync(Request("Ink", edit: t => t[ThemeStyles.FontDisplay] = "cinzel"))).Expect<PortalTheme>();
 		await Assert.That(created.Tokens[ThemeStyles.FontDisplay]).IsEqualTo("cinzel");
-		await Assert.That(created.Tokens[ThemeStyles.Texture]).IsEqualTo("none");
+		await Assert.That(created.Tokens[ThemeStyles.Texture]).IsEqualTo(BuiltInThemes.Phosphor.Tokens[ThemeStyles.Texture]);
 
 		var refused = await service.CreateAsync(Request("Bad", edit: t => t[ThemeStyles.Ornament] = "skull"));
 		await Assert.That(refused.Value).IsTypeOf<Error<string>>();

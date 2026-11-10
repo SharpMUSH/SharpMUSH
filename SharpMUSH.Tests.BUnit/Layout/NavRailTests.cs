@@ -168,7 +168,7 @@ public class NavRailTests : TrackingBunitContext
 
 		if (configured is null)
 		{
-			await Assert.That(logo.QuerySelector("svg g")!.GetAttribute("fill")).IsEqualTo("var(--accent)");
+			await Assert.That(logo.QuerySelector("svg path")!.GetAttribute("fill")).IsEqualTo("var(--accent)");
 			await Assert.That(logo.QuerySelector("img")).IsNull();
 		}
 		else

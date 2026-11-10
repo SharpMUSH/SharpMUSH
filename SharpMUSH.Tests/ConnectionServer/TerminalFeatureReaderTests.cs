@@ -1,4 +1,8 @@
 using MarkupString.Ansi;
+using SharpMUSH.Implementation.Commands;
+using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Concurrent;
+using System.Text;
 using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Tests.ConnectionServer;
@@ -9,6 +13,60 @@ namespace SharpMUSH.Tests.ConnectionServer;
 /// </summary>
 public class TerminalFeatureReaderTests
 {
+	/// <summary>Automatic aliases request probes; explicit choices preserve their selected method without probing.</summary>
+	[Test]
+	[Arguments("auto", true)]
+	[Arguments("on", true)]
+	[Arguments("yes", true)]
+	[Arguments("detect", true)]
+	[Arguments("off", false)]
+	[Arguments("iterm2", false)]
+	[Arguments("sixel", false)]
+	public async Task AutoGraphicsRequestsAProbeWithoutChangingManualChoices(string value, bool probes)
+	{
+		var connection = new IConnectionService.ConnectionData(1, null, IConnectionService.ConnectionState.Connected,
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, new ConcurrentDictionary<string, string>());
+		var result = SocketOptions.Set(connection, "graphics", value);
+		await Assert.That(result.Probe).IsEqualTo(probes);
+		await Assert.That(connection.Metadata.GetValueOrDefault(TerminalFeatureReader.GraphicsKey))
+			.IsEqualTo(probes ? "auto" : value == "off" ? null : value);
+	}
+
+	/// <summary>An unlisted terminal can establish Sixel support through replies while manual overrides remain independent.</summary>
+	[Test]
+	public async Task UnknownTerminalCanUseProbedSixelWithoutAProfile()
+	{
+		var metadata = new Dictionary<string, string>
+		{
+			[TerminalCapabilityReader.TerminalTypesKey] = "UNLISTED-CLIENT",
+			[TerminalFeatureReader.GraphicsKey] = TerminalGraphics.Auto,
+			[TerminalFeatureReader.ProbeSixelKey] = "1"
+		};
+		await Assert.That(TerminalFeatureReader.TerminalOf(metadata)).IsNull();
+		await Assert.That(TerminalFeatureReader.For(metadata).HasFlag(TerminalFeatures.Sixel)).IsTrue();
+		await Assert.That(SocketOptions.GraphicsEvidence(metadata, TerminalFeatures.Sixel)).IsEqualTo("supported (terminal reply)");
+		metadata[TerminalFeatureReader.ProbeSixelKey] = "0";
+		await Assert.That(SocketOptions.GraphicsEvidence(metadata, TerminalFeatures.Sixel)).IsEqualTo("unsupported (terminal reply)");
+		metadata[TerminalFeatureReader.GraphicsKey] = TerminalGraphics.Sixel;
+		await Assert.That(TerminalFeatureReader.For(metadata).HasFlag(TerminalFeatures.Sixel)).IsTrue();
+	}
+
+	/// <summary>Diagnostics distinguish direct replies, profile assumptions and missing evidence.</summary>
+	[Test]
+	public async Task CapabilityEvidenceDistinguishesProfilesAndSilence()
+	{
+		var metadata = new Dictionary<string, string>
+		{
+			[TerminalCapabilityReader.TerminalTypesKey] = "MUDFORGE"
+		};
+		await Assert.That(SocketOptions.GraphicsEvidence(metadata, TerminalFeatures.InlineImages)).IsEqualTo("unconfirmed (MudForge profile)");
+		await Assert.That(SocketOptions.GraphicsEvidence(metadata, TerminalFeatures.KittyGraphics)).IsEqualTo("unknown (no reply recorded)");
+		metadata[TerminalFeatureReader.ProbeSixelKey] = "0";
+		await Assert.That(SocketOptions.GraphicsEvidence(metadata, TerminalFeatures.Sixel)).IsEqualTo("unsupported (terminal reply)");
+		metadata[TerminalFeatureReader.ProbeSixelKey] = "";
+		await Assert.That(SocketOptions.GraphicsEvidence(metadata, TerminalFeatures.Sixel)).IsEqualTo("unconfirmed (MudForge profile)");
+	}
+
 	private const TerminalFeatures Links = TerminalFeatures.Hyperlinks | TerminalFeatures.CommandLinks;
 
 	private static TerminalFeatures Detected(string[] types, TerminalProbeResult? probe = null, string? pin = null) =>
@@ -19,10 +77,32 @@ public class TerminalFeatureReaderTests
 	[Arguments("xterm-ghostty", "ghostty")]
 	[Arguments("WEZTERM", "wezterm")]
 	[Arguments("FOOT", "foot")]
+	[Arguments("MUDFORGE", "mudforge")]
 	[Arguments("XTERM-256COLOR", null)]
 	[Arguments("MUSHCLIENT", null)]
 	public async Task Identify_ReadsTheTerminalName(string name, string? id) =>
 		await Assert.That(TerminalFeatureReader.Identify([name], null, null)?.Id).IsEqualTo(id);
+
+	/// <summary>The published MudForge profile survives silence without enabling graphics by default.</summary>
+	[Test]
+	public async Task MudForgeAutoGraphicsSurvivesUnansweredQueriesButRemainsOptIn()
+	{
+		var metadata = new Dictionary<string, string>
+		{
+			[TerminalCapabilityReader.TerminalTypesKey] = "MUDFORGE",
+			[TerminalFeatureReader.ProbeSixelKey] = "",
+			[TerminalFeatureReader.ProbeKittyKey] = ""
+		};
+		await Assert.That(TerminalFeatureReader.For(metadata) & TerminalFeatures.Pictures).IsEqualTo(TerminalFeatures.None);
+		metadata[TerminalFeatureReader.GraphicsKey] = TerminalGraphics.Auto;
+		var detected = TerminalFeatureReader.For(metadata);
+		await Assert.That(detected.HasFlag(TerminalFeatures.InlineImages)).IsTrue();
+		await Assert.That(detected.HasFlag(TerminalFeatures.Sixel)).IsTrue();
+		await Assert.That(detected.HasFlag(TerminalFeatures.KittyGraphics)).IsFalse();
+		metadata[TerminalFeatureReader.ProbeSixelKey] = "0";
+		await Assert.That(TerminalFeatureReader.For(metadata).HasFlag(TerminalFeatures.Sixel)).IsFalse();
+		await Assert.That(TerminalFeatureReader.For(metadata).HasFlag(TerminalFeatures.InlineImages)).IsTrue();
+	}
 
 	[Test]
 	public async Task Identify_PrefersThePlayersNameThenTheTerminalsAnswer()
@@ -33,6 +113,19 @@ public class TerminalFeatureReaderTests
 		await Assert.That(TerminalFeatureReader.Identify(["XTERM-KITTY"], answered, "windows-terminal"))
 			.IsEqualTo(TerminalProfile.WindowsTerminal);
 		await Assert.That(TerminalFeatureReader.Identify(["XTERM-KITTY"], null, "no-such-terminal")).IsEqualTo(TerminalProfile.Kitty);
+	}
+
+	/// <summary>A missing Sixel reply preserves known capabilities rather than recording a rejection.</summary>
+	[Test]
+	public async Task UnansweredSixelProbePreservesKnownCapabilities()
+	{
+		var metadata = new Dictionary<string, string>
+		{
+			[TerminalFeatureReader.ProbeSixelKey] = "",
+			[TerminalFeatureReader.ProbeVersionKey] = "foot"
+		};
+		var probe = TerminalFeatureReader.ProbeOf(metadata);
+		await Assert.That(Detected(["FOOT"], probe).HasFlag(TerminalFeatures.Sixel)).IsTrue();
 	}
 
 	[Test]
@@ -128,7 +221,7 @@ public class TerminalFeatureReaderTests
 			.IsEqualTo(TerminalFeatures.KittyGraphics | TerminalFeatures.BlockArt);
 		await Assert.That(TerminalFeatureReader.TerminalOf(metadata)).IsEqualTo(TerminalProfile.Kitty);
 		await Assert.That(TerminalFeatureReader.ProbeOf(metadata))
-			.IsEqualTo(new TerminalProbeResult(true, false, null, 9, 18));
+			.IsEqualTo(new TerminalProbeResult(true, null, null, 9, 18));
 		await Assert.That(TerminalFeatureReader.GraphicsName(TerminalFeatures.Sixel | TerminalFeatures.BlockArt))
 			.IsEqualTo(TerminalGraphics.Sixel);
 	}
@@ -140,13 +233,13 @@ public class TerminalFeatureReaderTests
 		var metadata = new Dictionary<string, string>
 		{
 			[TerminalFeatureReader.ProbeKittyKey] = "",
-			[TerminalFeatureReader.ProbeSixelKey] = "0",
+			[TerminalFeatureReader.ProbeSixelKey] = "",
 			[TerminalFeatureReader.ProbeVersionKey] = "",
 			[TerminalFeatureReader.ProbeCellSizeKey] = ""
 		};
 
 		await Assert.That(TerminalFeatureReader.ProbeOf(metadata))
-			.IsEqualTo(new TerminalProbeResult(null, false, null, 0, 0));
+			.IsEqualTo(new TerminalProbeResult(null, null, null, 0, 0));
 		await Assert.That(TerminalFeatureReader.For(metadata)).IsEqualTo(TerminalFeatures.None);
 	}
 }

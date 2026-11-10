@@ -19,7 +19,9 @@ public sealed record RenderContext(
 	long Handle = 0,
 	string? SessionId = null,
 	string? Website = null,
-	IReadOnlyDictionary<string, string>? AsciiTranslations = null);
+	IReadOnlyDictionary<string, string>? AsciiTranslations = null,
+	int MaxPictureColumns = 200,
+	int MaxPictureRows = 100);
 
 /// <param name="Prompt">Whether the markup is a prompt, which is not given a line ending.</param>
 public sealed record RenderRequest(string? Markup, byte[]? Data, RenderContext Context, bool Prompt = false);

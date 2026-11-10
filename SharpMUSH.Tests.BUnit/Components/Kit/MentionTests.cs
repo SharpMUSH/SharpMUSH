@@ -1,10 +1,42 @@
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using SharpMUSH.Client.Components.Kit;
+using SharpMUSH.Library.Models.Portal;
+using ThemeColor = SharpMUSH.Library.Models.Portal.ThemeColor;
 
 namespace SharpMUSH.Tests.BUnit.Components.Kit;
 
 public class MentionTests : TrackingBunitContext
 {
+	[Test]
+	public async Task OocBand_UsesTheInheritedPoseSurfaceInsteadOfTheDefaultBand()
+	{
+		var cut = Render<OocBand>(p => p.Add(x => x.Name, "Wren").Add(x => x.Color, "#5aa9ff")
+			.Add(x => x.Background, "#ffffff"));
+		var color = cut.Find(".kit-ooc-name").GetAttribute("style")!.Split(':')[1].TrimEnd(';');
+		await Assert.That(ThemeColor.Contrast(ThemeColor.Parse(color), ThemeColor.White)).IsGreaterThanOrEqualTo(4.5);
+	}
+
+	[Test]
+	public async Task OocBand_NameStaysReadableWhenTheThemeChanges()
+	{
+		var light = ThemeResolver.Resolve(BuiltInThemes.Daylight);
+		var dark = ThemeResolver.Resolve(BuiltInThemes.Phosphor);
+		RenderFragment band = builder =>
+		{
+			builder.OpenComponent<OocBand>(0);
+			builder.AddAttribute(1, nameof(OocBand.Name), "Wren");
+			builder.AddAttribute(2, nameof(OocBand.Color), "#5aa9ff");
+			builder.CloseComponent();
+		};
+		var cut = Render<CascadingValue<ResolvedTheme>>(p => p.Add(x => x.Value, light).Add(x => x.ChildContent, band));
+		var lightColor = cut.Find(".kit-ooc-name").GetAttribute("style")!.Split(':')[1].TrimEnd(';');
+		await Assert.That(ThemeColor.Contrast(ThemeColor.Parse(lightColor), ThemeColor.Parse(light.Token("ooc-band-bg")))).IsGreaterThanOrEqualTo(4.5);
+		cut.Render(p => p.Add(x => x.Value, dark).Add(x => x.ChildContent, band));
+		var darkColor = cut.Find(".kit-ooc-name").GetAttribute("style")!.Split(':')[1].TrimEnd(';');
+		await Assert.That(darkColor).IsEqualTo("#5aa9ff");
+	}
+
 	[Test]
 	public async Task Mention_DefaultsToTheProfileLink_AndSetsNameColour()
 	{

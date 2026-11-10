@@ -136,6 +136,30 @@ public class CommandRestrictionBootstrapTests
 	}
 
 	/// <summary>
+	/// A change that re-enables a command and gives it an alias registers the alias once the command is back,
+	/// since a parked command takes no alias, and applies the restrictions again so one naming the alias finds it.
+	/// </summary>
+	[Test]
+	public async Task AnAliasOfACommandTheChangeReEnablesIsRegisteredAfterIt()
+	{
+		var library = Substitute.For<ILibraryProvider<CommandDefinition>, ICommandRestrictionApplier, IConfiguredAliasRegistry>();
+		var calls = new List<string>();
+		_ = ((ICommandRestrictionApplier)library).ApplyConfiguredRestrictionsAsync(Arg.Do<IReadOnlyDictionary<string, string[]>>(_ => calls.Add("apply")));
+		((IConfiguredAliasRegistry)library).RegisterConfiguredAliases(Arg.Any<AliasOptions>())
+			.Returns(_ => { calls.Add("aliases"); return calls.Count(call => call == "aliases") == 2; });
+
+		var monitor = new ChangingOptions(WithRestrictions(new() { ["@EMIT"] = ["nobody"] }));
+		using var service = new CommandRestrictionBootstrapService(library, monitor, NullLogger<CommandRestrictionBootstrapService>.Instance);
+		await service.StartAsync(CancellationToken.None);
+		calls.Clear();
+
+		await monitor.Change(WithRestrictions(new() { ["@em2"] = ["wizard"] }));
+
+		await Assert.That(calls).IsEquivalentTo(new[] { "aliases", "apply", "aliases", "apply" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await service.StopAsync(CancellationToken.None);
+	}
+
+	/// <summary>
 	/// <c>function_restrictions</c> reaches the function table at boot and again when it changes, and
 	/// removing an entry loosens the function. Driven with its own registry and options monitor, so the
 	/// shared host's function table keeps its own restrictions.
@@ -149,7 +173,8 @@ public class CommandRestrictionBootstrapTests
 			NullLogger<ConfiguredFunctionRestrictions>.Instance);
 		var restricted = WithFunctionRestrictions(new() { ["lstats"] = ["noguest"] });
 		var monitor = new ChangingOptions(restricted);
-		using var service = new FunctionRestrictionBootstrapService(applier, monitor, NullLogger<FunctionRestrictionBootstrapService>.Instance);
+		using var service = new FunctionRestrictionBootstrapService(applier,
+			Factory.Services.GetRequiredService<ILibraryProvider<FunctionDefinition>>(), monitor, NullLogger<FunctionRestrictionBootstrapService>.Instance);
 
 		await service.StartAsync(CancellationToken.None);
 		await Assert.That(registry.GetBuiltinRestriction("lstats")).IsEqualTo("noguest");
@@ -162,6 +187,41 @@ public class CommandRestrictionBootstrapTests
 		await service.StopAsync(CancellationToken.None);
 		await monitor.Change(restricted);
 		await Assert.That(registry.GetBuiltinRestriction("lstats")).IsNull().Because("a stopped service no longer listens");
+	}
+
+	/// <summary>
+	/// An alias a configuration change adds works at once and is held to its function's restriction; one a later
+	/// change drops stays in the live table until restart, so it stays held to the restriction then in force.
+	/// </summary>
+	[Test]
+	public async Task AFunctionAliasAddedOnReloadIsHeldToItsFunctionsRestriction()
+	{
+		var functions = Factory.Services.GetRequiredService<ILibraryProvider<FunctionDefinition>>();
+		var alias = $"lstatsr{Guid.NewGuid().ToString("N")[..8]}";
+		var registry = new UserDefinedFunctionService();
+		var applier = new ConfiguredFunctionRestrictions(functions, registry, NullLogger<ConfiguredFunctionRestrictions>.Instance);
+		var monitor = new ChangingOptions(WithFunctionRestrictions([]));
+		using var service = new FunctionRestrictionBootstrapService(applier, functions, monitor,
+			NullLogger<FunctionRestrictionBootstrapService>.Instance);
+		await service.StartAsync(CancellationToken.None);
+
+		var withAlias = WithFunctionRestrictions(new() { ["lstats"] = ["wizard"] });
+		withAlias = withAlias with
+		{
+			Alias = withAlias.Alias with
+			{
+				FunctionAliases = new Dictionary<string, string[]>(withAlias.Alias.FunctionAliases) { ["lstats"] = [alias] }
+			}
+		};
+		await monitor.Change(withAlias);
+		await Assert.That(functions.Get().ContainsKey(alias)).IsTrue();
+		await Assert.That(registry.GetBuiltinRestriction(alias)).IsEqualTo("wizard");
+
+		await monitor.Change(WithFunctionRestrictions(new() { ["lstats"] = ["nobody"] }));
+		await Assert.That(registry.GetBuiltinRestriction(alias)).IsEqualTo("nobody")
+			.Because("the alias is still in the live table");
+
+		await service.StopAsync(CancellationToken.None);
 	}
 
 	private static SharpMUSHOptions WithFunctionRestrictions(Dictionary<string, string[]> restrictions)

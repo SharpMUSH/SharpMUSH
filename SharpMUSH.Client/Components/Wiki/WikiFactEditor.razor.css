@@ -6,9 +6,9 @@
     margin-top: 0.75rem;
 }
 .wiki-edit-facts-label {
-    font-family: var(--font-mono);
+    font-family: var(--font-kicker);
     font-size: var(--text-xs);
-    letter-spacing: 0.12em;
+    letter-spacing: var(--kicker-tracking);
     text-transform: uppercase;
     color: var(--text-faint);
 }

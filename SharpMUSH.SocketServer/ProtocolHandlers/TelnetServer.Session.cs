@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Connections;
+using MarkupString.Mxp;
 using Microsoft.AspNetCore.Connections.Features;
 using SharpMUSH.Library.Utilities;
 using SharpMUSH.SocketServer.Models;
@@ -53,8 +54,9 @@ public partial class TelnetServer
 		// When output or a keep-alive last went to the client, for KEEPALIVE.
 		private long _lastWritten = Stopwatch.GetTimestamp();
 		private volatile int _width;
-		private volatile bool _terminalTypesComplete;
-		private readonly TaskCompletionSource _negotiationSettled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		private volatile OutputFormat _negotiatedFormat = OutputFormat.Ansi;
+		private volatile TerminalProbeResult? _probe;
+		private volatile bool _gmcpAgreed;
 
 		public async ValueTask<TelnetInterpreter> BuildInterpreterAsync()
 		{
@@ -117,11 +119,10 @@ public partial class TelnetServer
 				// RFC 1091 terminal type: the only way a client names itself over plain telnet, and what
 				// terminfo() reports as the client. Without it every connection is "unknown".
 				.AddPlugin(terminalTypeProtocol)
-				// Asks the terminal what it can draw, only when the player asks for it (SOCKSET graphics=detect):
-				// a client in line mode echoes the answers, so asking unprompted would print them at everyone.
-				.AddPlugin<TerminalQueryProtocol>().OnTerminalReport(report =>
-					OnTerminalReportAsync(new TerminalProbeResult(report.KittyGraphics, report.Sixel == true,
-						report.Version, report.CellWidth ?? 0, report.CellHeight ?? 0)));
+				// Replies to initial terminal queries and later SOCKSET graphics=auto/detect requests.
+				.AddPlugin(new TerminalQueryProtocol().ProbeOnStart().OnTerminalReport(report =>
+					OnTerminalReportAsync(new TerminalProbeResult(report.KittyGraphics, report.Sixel,
+						report.Version, report.CellWidth ?? 0, report.CellHeight ?? 0))));
 
 		// The handshake itself — the hello, consuming PUEBLOCLIENT, and the start sequence that moves the
 		// client into HTML mode — is TelnetNegotiationCore's. What is left here is the part that is this
@@ -136,13 +137,14 @@ public partial class TelnetServer
 			!server._options.MxpEnabled
 				? builder
 				: builder.AddPlugin<MXPProtocol>()
+					.QuerySupportOnStart(MxpRegistration.Elements.ToArray())
 					// Registered with the plugin rather than when the question goes out: a client can answer
 					// the moment MXP mode starts, and the reply must never arrive before anything is listening.
-					.OnMxpSupports(_ =>
+					.OnMxpSupports(_ => held.PublishAsync(() =>
 					{
 						server.RecordMxpSupport(handle, _telnet);
-						return ValueTask.CompletedTask;
-					})
+						return Task.CompletedTask;
+					}))
 					.OnMXPEnabled(() =>
 					{
 						server._logger.LogInformation("MXP negotiated on handle {Handle}", handle);
@@ -176,8 +178,7 @@ public partial class TelnetServer
 
 		private async ValueTask OnSubmitAsync(string input)
 		{
-			// By the time a client has sent a line, whatever it was going to negotiate has settled.
-			_negotiationSettled.TrySetResult();
+			// Sample current protocol state; later replies can still refine it.
 			await AnnounceTelnetIfNegotiatedAsync();
 
 			// Held like the negotiation messages: a client that types as soon as it connects can
@@ -196,18 +197,11 @@ public partial class TelnetServer
 			// A client ends its list by repeating an entry. The library reports the list again then: unchanged, or
 			// with the MTTS bitvector expanded into the names of what it claims.
 			var unchanged = _publishedTerminalTypes.SequenceEqual(terminalTypes);
-			var complete = unchanged || (HasMtts(_publishedTerminalTypes) && !HasMtts(terminalTypes));
 			var snapshot = unchanged ? null : terminalTypes.ToArray();
 			if (snapshot is not null)
 			{
 				// Before settling: registration reads this list as soon as negotiation settles.
 				_publishedTerminalTypes = snapshot;
-			}
-
-			if (complete)
-			{
-				_terminalTypesComplete = true;
-				CheckNegotiationSettled();
 			}
 
 			if (snapshot is null)
@@ -222,7 +216,7 @@ public partial class TelnetServer
 			// say it, that they could display them.
 			await held.PublishAsync(async () =>
 			{
-				server.TryApplyTerminalCapabilities(handle, snapshot);
+				server.TryApplyTerminalCapabilities(handle, _publishedTerminalTypes);
 				await server._publishEndpoint.Publish(
 					new TerminalTypeNegotiatedMessage(handle, snapshot), ct);
 			});
@@ -254,6 +248,7 @@ public partial class TelnetServer
 
 		private async ValueTask OnGmcpNegotiatedAsync(bool agreed)
 		{
+			_gmcpAgreed = agreed;
 			await AnnounceTelnetIfNegotiatedAsync();
 			await held.PublishAsync(() =>
 			{
@@ -340,7 +335,6 @@ public partial class TelnetServer
 		{
 			var charset = TerminalCharsets.Parse(encoding.WebName) ?? encoding.WebName;
 			_charset = charset;
-			CheckNegotiationSettled();
 			await AnnounceTelnetIfNegotiatedAsync();
 			await held.PublishAsync(() =>
 			{
@@ -350,62 +344,71 @@ public partial class TelnetServer
 		}
 
 		/// <summary>
-		/// Waits, at most <paramref name="limit"/>, for the client to say what it can show before the connection
-		/// registers and the game sends its connect screen, as Evennia does: it waits for its handshakes, two
-		/// seconds at most. The wait ends early once the terminal-type list is complete and any character set the
-		/// client agreed to talk about is chosen, or once the client types a line. A client that answers nothing
-		/// waits the whole limit.
+		/// Gives all initial protocols one bounded window before the welcome. Finishing TTYPE or
+		/// CHARSET does not imply MXP SUPPORT, GMCP modules or terminal queries have finished.
+		/// Early input is held until registration: an automatic login is not a capability reply.
+		/// Only the deadline, cancellation or the transport ending may release this window.
 		/// </summary>
-		public async Task WaitForNegotiationAsync(TimeSpan limit)
+		public async ValueTask<InitialNegotiationEnd> WaitForNegotiationAsync(TimeSpan limit, Task readTask)
 		{
-			if (limit <= TimeSpan.Zero)
+			if (ct.IsCancellationRequested) return InitialNegotiationEnd.Cancelled;
+			if (readTask.IsCompleted) return InitialNegotiationEnd.ConnectionClosed;
+			if (limit <= TimeSpan.Zero) return InitialNegotiationEnd.DeadlineElapsed;
+
+			// TNC owns the deadline and input policy; the gateway additionally observes transport EOF.
+			using var waitingLifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
+			var waiting = _telnet!.WaitForInitialNegotiationAsync(limit, waitingLifetime.Token,
+				endOnApplicationInput: false).AsTask();
+			try
 			{
-				return;
+				await Task.WhenAny(readTask, waiting);
+				if (ct.IsCancellationRequested) return InitialNegotiationEnd.Cancelled;
+				return readTask.IsCompleted ? InitialNegotiationEnd.ConnectionClosed : await waiting;
 			}
-
-			CheckNegotiationSettled();
-			await Task.WhenAny(_negotiationSettled.Task, Task.Delay(limit, ct));
-		}
-
-		// Settled when either answer is in and the other is not still under way: a client that agreed to TTYPE
-		// or CHARSET and has not finished is waited for, and one that never took either up is not.
-		private void CheckNegotiationSettled()
-		{
-			var plugins = _telnet?.PluginManager;
-			var terminalTypesOpen = plugins?.GetPlugin<TerminalTypeProtocol>() is { IsNegotiated: true } && !_terminalTypesComplete;
-			var charsetOpen = plugins?.GetPlugin<CharsetProtocol>() is { IsNegotiated: true } && _charset is null;
-			if ((_terminalTypesComplete || _charset is not null) && !terminalTypesOpen && !charsetOpen)
+			finally
 			{
-				_negotiationSettled.TrySetResult();
+				await waitingLifetime.CancelAsync();
+				await waiting;
 			}
 		}
-
-		private static bool HasMtts(IReadOnlyList<string> terminalTypes) =>
-			terminalTypes.Any(type => type.StartsWith("MTTS ", StringComparison.OrdinalIgnoreCase));
 
 		/// <summary>What the connection registers with: what negotiation has said by then, else ASCII.</summary>
 		private ProtocolCapabilities RegisteredCapabilities()
 		{
-			var capabilities = new ProtocolCapabilities(SupportsUtf8: false, Charset: _charset, Width: _width);
+			var capabilities = new ProtocolCapabilities(SupportsUtf8: false, Charset: _charset, Width: _width,
+				Format: _negotiatedFormat,
+				MxpSupported: _negotiatedFormat == OutputFormat.Mxp
+					? string.Join(' ', MxpRegistration.Elements.Where(element =>
+						_telnet?.PluginManager?.GetPlugin<MXPProtocol>()?.Support.Supports(element) == true)) : null,
+				GmcpModules: _gmcpAgreed ? GmcpSupports.Format(_publishedGmcpSupports) : null,
+				Probe: _probe, CellWidth: _probe?.CellWidth ?? 0, CellHeight: _probe?.CellHeight ?? 0,
+				Pins: new TerminalPins(Graphics: TerminalGraphics.Auto));
 			return _publishedTerminalTypes.Count == 0
 				? capabilities
 				: WithTerminalTypes(capabilities, _publishedTerminalTypes);
 		}
 
-		private async ValueTask OnTerminalReportAsync(TerminalProbeResult answered) =>
+		private async ValueTask OnTerminalReportAsync(TerminalProbeResult answered)
+		{
+			_probe = answered;
 			await held.PublishAsync(async () =>
 			{
+				// Registration already captured the latest reply. Replaying held notifications must
+				// not roll that snapshot back to an earlier, incomplete answer during the welcome.
+				var latest = _probe ?? answered;
 				server._connectionService.UpdateCapabilities(handle, current => current with
 				{
-					Probe = answered,
-					CellWidth = answered.CellWidth,
-					CellHeight = answered.CellHeight
+					Probe = latest,
+					CellWidth = latest.CellWidth,
+					CellHeight = latest.CellHeight
 				});
 				await server._publishEndpoint.Publish(new TerminalReportMessage(handle, answered), ct);
 			});
+		}
 
 		private async ValueTask OnPuebloEnabledAsync(string clientVersion)
 		{
+			_negotiatedFormat = _negotiatedFormat.Negotiate(OutputFormat.Pueblo);
 			server._logger.LogDebug("Pueblo negotiated on handle {Handle}", handle);
 
 			await held.PublishAsync(async () =>
@@ -422,6 +425,7 @@ public partial class TelnetServer
 
 		private async ValueTask OnMxpEnabledAsync()
 		{
+			_negotiatedFormat = _negotiatedFormat.Negotiate(OutputFormat.Mxp);
 			await AnnounceTelnetIfNegotiatedAsync();
 
 			// Held like every other capability: MXP usually starts before the connection is registered.
@@ -430,7 +434,6 @@ public partial class TelnetServer
 				if (await server.TryUpdateFormatAsync(handle, OutputFormat.Mxp, ct))
 				{
 					server._logger.LogDebug("Updated MXP capabilities for handle {Handle}", handle);
-					server.StartAskingWhatMxpClientRenders(handle, _telnet, ct);
 				}
 				else if (!ct.IsCancellationRequested)
 				{

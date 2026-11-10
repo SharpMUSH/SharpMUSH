@@ -1,3 +1,4 @@
+@using SharpMUSH.Library.Models.Portal
 @* D1 §4.10 OOC band in the Play story: a tinted row pulled out 11px on both sides so its text stays
    aligned with pose text, and a 44px tile where the portrait would be: the author's initials over
    "OOC", or their picture with "OOC" across its foot. The name is in its colour; the text is 14px.
@@ -14,7 +15,7 @@
     </div>
     <div class="kit-ooc-body">
         <div class="kit-ooc-head">
-            <span class="kit-ooc-name" style="@(NameColor.Safe(Color) is { } color ? $"color:{color};" : null)">@Name</span>
+            <span class="kit-ooc-name" style="@(NameColor.Readable(Color, Background ?? Theme.Token("ooc-band-bg")) is { } color ? $"color:{color};" : null)">@Name</span>
             @if (Time is not null)
             {
                 <span class="kit-ooc-time">@Time</span>
@@ -25,6 +26,10 @@
 </div>
 
 @code {
+    [CascadingParameter] public ResolvedTheme Theme { get; set; } = NameColor.DefaultTheme;
+
+    /// <summary>The inherited band surface, when a story pose's tone replaces the theme's default band.</summary>
+    [Parameter] public string? Background { get; set; }
     [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
 
     /// <summary>The author's picture, when known.</summary>

@@ -1,6 +1,8 @@
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Markup
+@using SharpMUSH.Library.Models.Portal
+@using ThemeColor = SharpMUSH.Library.Models.Portal.ThemeColor
 @inject IStringLocalizer<SharedResource> Loc
 
 @* D1 §5.4 one pose in the Story view, drawn as its type's presentation says (PoseTypeInfo):
@@ -19,7 +21,7 @@
 {
     case PoseTypeInfo.Band:
         <div class="@RowClass("story-row--band", IsOoc ? "story-row--ooc" : null)" data-pose-type="@Type.Key" style="@ToneStyle">
-            <OocBand Name="@Pose.DisplayName" Tag="@BandTag" ImageUrl="@ImageUrl" Character="@Pose.DisplayName" Color="@SafeColor" Time="@Time">
+            <OocBand Name="@Pose.DisplayName" Tag="@BandTag" ImageUrl="@ImageUrl" Character="@Pose.DisplayName" Color="@SafeColor" Background="@BandBackground" Time="@Time">
                 @if (_editing)
                 {
                     @Editor
@@ -255,7 +257,23 @@
 
     private string? SafeColor => NameColor.Safe(Color);
 
-    private string? NameStyle => SafeColor is { } c ? $"color:{c};" : null;
+    [CascadingParameter] public ResolvedTheme Theme { get; set; } = NameColor.DefaultTheme;
+
+    // Matches the 12% tone/surface mixture in .story-row--band; the colour is not always the default OOC lavender.
+    private string BandBackground => ThemeColor.Parse(Theme.Token(ThemeTokens.Surface))
+        .Mix(ThemeColor.Parse(Theme.Token(PoseTypeStyle.ToneToken(Type.Tone)?[2..] ?? ThemeTokens.TextDim)), 0.12).Hex;
+
+    private string? NameStyle
+    {
+        get
+        {
+            var color = Type.Layout == PoseTypeInfo.Message
+                ? NameColor.Readable(Color, ThemeColor.Parse(Theme.Token(ThemeTokens.Surface2))
+                    .Mix(ThemeColor.Parse(Theme.Token(PoseTypeStyle.ToneToken(Type.Tone)?[2..] ?? ThemeTokens.Accent)), 0.1).Hex)
+                : NameColor.Readable(Color, Theme.Token(ThemeTokens.Surface), Theme.Token(ThemeTokens.Background));
+            return color is { } c ? $"color:{c};" : null;
+        }
+    }
 
     private string Time => DateDisplay.Time(Pose.CreatedAtUtc);
 
