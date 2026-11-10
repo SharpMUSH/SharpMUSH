@@ -39,7 +39,8 @@ stored with the character (`CharacterAppearance.Vision`) like the theme and acce
 - Neon and space: `cyberpunk`, `synthwave`, `space-opera`, `starship-console`.
 - Colour vision: `protan-dark`, `protan-light`, `deutan-dark`, `deutan-light`, `tritan-dark`, `tritan-light`,
   `mono-dark`, `mono-light`. Phosphor's or Daylight's surfaces and text, with an accent, warning and missing-link
-  colour picked for that vision.
+  colour picked for that vision. They draw no grain: their colours reach 4.5:1 against the flat surfaces, and the
+  grain would take some below it.
 
 Every built-in theme but the genres also has a layout theme of the same id for the game's terminal output
 (`LayoutThemes.Own`, `SharpMUSH.Library/Markup/LayoutThemes.cs`), its colours copied by hand: background `bg`,
@@ -49,7 +50,7 @@ until it reaches 3:1 (primary, muted) or 4.5:1 (the rest) against `bg`. A new bu
 `PortedLayoutThemeTests` fails until it has it. The genres keep MarkupString's genre layout themes. `sharpmush`,
 Phosphor's teal on black, is the game's default `layout_theme`. Every genre
 theme has a texture, a card frame and a title face no other genre uses
-(`ThemeResolverTests.EachGenreHasATextureAndFrameOfItsOwn`); the colour vision themes keep Phosphor's or Daylight's.
+(`ThemeResolverTests.EachGenreHasATextureAndFrameOfItsOwn`); the colour vision themes keep Phosphor's or Daylight's frame and title face, without the grain.
 
 ### How the colour vision sets were picked
 

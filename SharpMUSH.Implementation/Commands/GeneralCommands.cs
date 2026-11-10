@@ -364,6 +364,22 @@ public partial class Commands
 				outputSections.Add(MarkupText.Plain($"Overrides: {overridesLine}"));
 			}
 
+			// channel_description (extchat.c): the channels it is on, by name; a player on none says so,
+			// anything else on none prints nothing.
+			var channelNames = await Mediator.CreateStream(new GetOnChannelQuery(viewingKnown), ExecutionBudget.CurrentToken)
+				.Select(channel => channel.Name)
+				.OrderBy(name => name.ToPlainText(), StringComparer.OrdinalIgnoreCase)
+				.ToArrayAsync(ExecutionBudget.CurrentToken);
+			if (channelNames.Length > 0)
+			{
+				outputSections.Add(MarkupText.Concat(MarkupText.Plain("Channels: "),
+					MarkupText.Join(MarkupText.Plain(" "), channelNames)));
+			}
+			else if (viewingKnown.IsPlayer)
+			{
+				outputSections.Add(MarkupText.Plain("Channels: *NONE*"));
+			}
+
 			var warningsStr = obj.Warnings != WarningType.None
 				? WarningTypeHelper.UnparseWarnings(obj.Warnings)
 				: string.Empty;
@@ -378,11 +394,10 @@ public partial class Commands
 				outputSections.Add(MarkupText.Plain($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):ddd MMM dd HH:mm:ss yyyy}"));
 			}
 
-			outputSections.Add(MarkupText.Plain($"Last modified: {DateTimeOffset.FromUnixTimeMilliseconds(obj.ModifiedTime):ddd MMM dd HH:mm:ss yyyy}"));
-
-			if (viewingKnown is SharpPlayer viewedPlayer)
+			// look.c:863-865: a player's modification time is not shown.
+			if (!viewingKnown.IsPlayer)
 			{
-				outputSections.Add(MarkupText.Plain($"Quota: {viewedPlayer.Quota}"));
+				outputSections.Add(MarkupText.Plain($"Last Modification: {DateTimeOffset.FromUnixTimeMilliseconds(obj.ModifiedTime):ddd MMM dd HH:mm:ss yyyy}"));
 			}
 		}
 
