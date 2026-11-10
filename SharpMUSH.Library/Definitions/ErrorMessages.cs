@@ -640,6 +640,8 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedLinkedExit = "Permission denied. You do not control {0}, and it already leads somewhere.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedNoModify = "Permission denied. {0} is set NOMODIFY.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedAliasMembers = "Permission denied. {0} does not show its members to you.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedExamine = "Permission denied. You cannot examine {0}.";

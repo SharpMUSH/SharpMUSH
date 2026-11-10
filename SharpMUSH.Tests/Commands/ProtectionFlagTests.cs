@@ -133,6 +133,43 @@ public class ProtectionFlagTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task NomodifyLeavesTheOwnerAbleToLinkToIt()
+	{
+		var room = DBRef.Parse(await AsOwner($"@dig {TestIsolationHelpers.GenerateUniqueName("Vault")}")).Number;
+		await AsOwner($"@tel me=#{room}");
+		var exit = DBRef.Parse(await AsOwner($"@open {TestIsolationHelpers.GenerateUniqueName("Door")}")).Number;
+		await Cmd($"@set #{room}=NOMODIFY");
+
+		using (Protecting(true))
+		{
+			await AsOwner($"@link #{exit}=#{room}");
+			await Assert.That(await Eval($"loc(#{exit})")).IsEqualTo($"#{room}");
+		}
+	}
+
+	[Test]
+	public async Task NomodifyKeepsAnUnlinkedExitFromBeingLinked()
+	{
+		// Without control, an exit that leads nowhere is seized by whoever passes its link lock; NOMODIFY stops that.
+		var room = DBRef.Parse(await AsOwner($"@dig {TestIsolationHelpers.GenerateUniqueName("Vault")}")).Number;
+		await AsOwner($"@tel me=#{room}");
+		var exit = DBRef.Parse(await AsOwner($"@open {TestIsolationHelpers.GenerateUniqueName("Door")}")).Number;
+		await Cmd($"@set #{exit}=NOMODIFY");
+
+		using (Protecting(true))
+		{
+			await AsOwner($"@link #{exit}=#{room}");
+			await Assert.That(await Eval($"loc(#{exit})")).StartsWith("#-1");
+		}
+
+		using (Protecting(false))
+		{
+			await AsOwner($"@link #{exit}=#{room}");
+			await Assert.That(await Eval($"loc(#{exit})")).IsEqualTo($"#{room}");
+		}
+	}
+
+	[Test]
 	public async Task TheOptionIsReadFromAConfigurationFile()
 	{
 		var path = Path.Combine(Path.GetTempPath(), $"sharpmush-protection-{Guid.NewGuid():N}.cnf");

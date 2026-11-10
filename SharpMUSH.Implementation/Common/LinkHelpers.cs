@@ -1,4 +1,6 @@
 using Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Common;
@@ -243,7 +245,7 @@ public static class LinkHelpers
 
 		if (keyword is not null)
 		{
-			if (await ControlsOrSeizesAsync(mediator, notifyService, permissionService, lockService, attributeService,
+			if (await ControlsOrSeizesAsync(parser, mediator, notifyService, permissionService, lockService, attributeService,
 					flagAndPowerService, executor, target, exit, preserve) is Error<string> refusedKeyword)
 			{
 				return refusedKeyword;
@@ -260,7 +262,7 @@ public static class LinkHelpers
 
 		return await LocatedAsync(parser, locateService, executor, destinationName) switch
 		{
-			AnySharpObject destination => await LinkedExitToAsync(mediator, notifyService, permissionService,
+			AnySharpObject destination => await LinkedExitToAsync(parser, mediator, notifyService, permissionService,
 				lockService, attributeService, flagAndPowerService, connectionService, executor, target, exit,
 				destination, preserve),
 			Error<string> unmatched => unmatched
@@ -269,6 +271,7 @@ public static class LinkHelpers
 
 	/// <inheritdoc cref="LinkedExitAsync"/>
 	private static async ValueTask<Result<Success>> LinkedExitToAsync(
+		IMUSHCodeParser parser,
 		IMediator mediator,
 		INotifyService notifyService,
 		IPermissionService permissionService,
@@ -297,7 +300,7 @@ public static class LinkHelpers
 				ErrorMessages.Notifications.CantLinkToThat);
 		}
 
-		if (await ControlsOrSeizesAsync(mediator, notifyService, permissionService, lockService, attributeService,
+		if (await ControlsOrSeizesAsync(parser, mediator, notifyService, permissionService, lockService, attributeService,
 				flagAndPowerService, executor, target, exit, preserve) is Error<string> refused)
 		{
 			return refused;
@@ -328,6 +331,7 @@ public static class LinkHelpers
 	/// (<c>:369</c>, <c>:375</c>) and is wizard-only (<c>:352-355</c>).</para>
 	/// </remarks>
 	private static async ValueTask<Result<Success>> ControlsOrSeizesAsync(
+		IMUSHCodeParser parser,
 		IMediator mediator,
 		INotifyService notifyService,
 		IPermissionService permissionService,
@@ -344,6 +348,15 @@ public static class LinkHelpers
 		// create.c:344-345: only an exit that leads nowhere is open to whoever passes its link lock.
 		if (!controls)
 		{
+			// protection_flags: a NOMODIFY exit is not seized either, since linking it changes it.
+			if (parser.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Compatibility.ProtectionFlags
+					&& await target.HasFlag("NOMODIFY") && !await executor.IsPriv())
+			{
+				return await RefusedAsync(notifyService, executor, new PermissionRefusal(
+					nameof(ErrorMessages.Notifications.PermissionDeniedNoModify), ErrorMessages.Notifications.PermissionDeniedNoModify,
+					target.Object().Name));
+			}
+
 			if (!await LeadsNowhereAsync(attributeService, executor, target, exit))
 			{
 				return await RefusedAsync(notifyService, executor, new PermissionRefusal(

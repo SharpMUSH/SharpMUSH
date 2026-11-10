@@ -510,7 +510,8 @@ public class PermissionService(
 
 	public async ValueTask<bool> CanLinkToAsync(AnySharpObject executor, AnySharpObject destination)
 		=> (options.CurrentValue.Command.LinkToObject || destination.IsRoom)
-			&& (await Controls(executor, destination) || await executor.IsPriv() || await executor.HasPower("Link_Anywhere")
+			// Linking to a destination does not change it, so NOMODIFY on it does not refuse its owner.
+			&& (await Oversees(executor, destination) || await executor.IsPriv() || await executor.HasPower("Link_Anywhere")
 				|| (!await executor.IsGuest() && await destination.HasFlag("LINK_OK")
 					&& await lockService.Evaluate(LockType.Link, destination, executor)));
 
