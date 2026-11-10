@@ -326,7 +326,10 @@ public partial class TelnetServer
 			await held.PublishAsync(() =>
 			{
 				// Kept here as well as sent to the engine: the renderer lays automatic-width boxes out at it.
-				server._connectionService.UpdateCapabilities(handle, current => current with { Width = newWidth });
+				// The latest width, not this report's: registration already captured it, and replaying an
+				// earlier held report must not roll the renderer back to a size the client has since left.
+				var latest = _width;
+				server._connectionService.UpdateCapabilities(handle, current => current with { Width = latest });
 				return server._publishEndpoint.Publish(new NAWSUpdateMessage(handle, newHeight, newWidth), ct);
 			});
 		}
