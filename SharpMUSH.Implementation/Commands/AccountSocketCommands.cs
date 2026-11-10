@@ -439,6 +439,11 @@ public partial class Commands
 			return new None();
 		}
 
+		if (await NoConnectRefusesAsync(handle, character))
+		{
+			return new None();
+		}
+
 		if (!Configuration.CurrentValue.Net.Logins && !await PermissionService.CanLogin(new AnySharpObject(character)))
 		{
 			await NotifyLoginsDisabledAsync(handle, new AnySharpObject(character));

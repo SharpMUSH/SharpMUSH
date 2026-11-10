@@ -772,7 +772,7 @@ public partial class Functions
 
 		async ValueTask<bool> Standing(AnySharpObject executor, AnySharpObject? obj)
 			=> obj is not null
-				 && (await PermissionService.Controls(executor, obj)
+				 && (await PermissionService.Oversees(executor, obj)
 						 || await Library.Services.LocateService.Nearby(executor, obj));
 	}
 

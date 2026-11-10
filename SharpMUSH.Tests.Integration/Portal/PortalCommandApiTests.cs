@@ -113,6 +113,27 @@ public class PortalCommandApiTests(ServerWebAppFactory factory)
 	}
 
 	/// <summary>
+	/// Account sign-in while logins are off needs only one character that may log in, and the session starts on its
+	/// primary. The portal acts only as a character that could connect now, as PLAY and the terminal token ask.
+	/// </summary>
+	[Test]
+	public async Task WhileLoginsAreOff_TheCommandIsRefusedForACharacterThatMayNotLogIn()
+	{
+		var number = await TestIsolationHelpers.CreateTestPlayerAsync(factory.Services, Mediator, "PortalClosed");
+		var character = (await Mediator.Send(new GetObjectNodeQuery(number))).Expect<SharpPlayer>().Object.DBRef;
+		var controller = await CommandsControllerAs(character);
+
+		using (TestOptionsOverride.Scope(options => options with { Net = options.Net with { Logins = false } }))
+		{
+			var refused = await controller.Run(new PortalCommandRequest("think closed"), CancellationToken.None);
+			await Assert.That((refused.Result as ObjectResult)?.StatusCode).IsEqualTo(StatusCodes.Status403Forbidden);
+		}
+
+		var allowed = await controller.Run(new PortalCommandRequest("think open"), CancellationToken.None);
+		await Assert.That(allowed.Value).IsNotNull();
+	}
+
+	/// <summary>
 	/// The Scenes page's start form, end to end: <c>+scene/create</c> — a softcode <c>$</c>-command in the
 	/// scene package — run as the acting character, who has no connection, answers with the scene it made.
 	/// <c>scenefocus(me)</c> evaluated in the same entry names it, where the page used to diff the roster
@@ -280,7 +301,8 @@ public class PortalCommandApiTests(ServerWebAppFactory factory)
 			factory.Services.GetRequiredService<IVisibleWorldProjection>(),
 			Mediator,
 			factory.Services.GetRequiredService<IPermissionService>(),
-			factory.Services.GetRequiredService<IRealityPolicy>())
+			factory.Services.GetRequiredService<IRealityPolicy>(),
+			factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>())
 		{
 			ControllerContext = new ControllerContext
 			{

@@ -72,7 +72,7 @@ public static partial class ReadPennMushConfig
 							 .Where(groups => configDictionary.ContainsKey(groups["Key"].Value)))
 		{
 			var key = groups["Key"].Value;
-			var value = groups["Value"].Value;
+			var value = WithoutComment(groups["Value"].Value, afterSpaceOnly: true);
 			configDictionary[key] = accumulating.Contains(key) && configDictionary[key].Length > 0
 				? $"{configDictionary[key]} {value}"
 				: value;
@@ -683,13 +683,23 @@ public static partial class ReadPennMushConfig
 			return "";
 		}
 
-		var value = trimmed[(space + 1)..].TrimStart();
+		return WithoutComment(trimmed[(space + 1)..].TrimStart());
+	}
+
+	/// <summary>
+	/// A value with its trailing comment cut, as <see cref="DirectiveValue"/> describes. With
+	/// <paramref name="afterSpaceOnly"/>, a comment also needs a space before its <c>#</c>, so a value such as
+	/// <c>layout_theme</c>'s JSON keeps a colour like <c>"#f7768e"</c>.
+	/// </summary>
+	private static string WithoutComment(string value, bool afterSpaceOnly = false)
+	{
 		for (var i = 0; i < value.Length; i++)
 		{
-			if (value[i] == '#' && (i + 1 >= value.Length || !char.IsDigit(value[i + 1])))
+			if (value[i] == '#'
+				&& (i + 1 >= value.Length || !char.IsDigit(value[i + 1]))
+				&& (!afterSpaceOnly || (i > 0 && char.IsWhiteSpace(value[i - 1]))))
 			{
-				value = value[..i];
-				break;
+				return value[..i].TrimEnd();
 			}
 		}
 

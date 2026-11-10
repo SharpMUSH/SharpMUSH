@@ -472,6 +472,11 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
+		if (await NoConnectRefusesAsync(handle, foundDB))
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		var playerDbRef = new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime);
 		await ConnectionService.Bind(handle, playerDbRef);
 		await ApplyConnectModeAsync(handle, foundDB, mode);
@@ -567,6 +572,11 @@ public partial class Commands
 		}
 
 		if (await SitelockRefusesPlayerAsync(handle, foundPlayer))
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (await NoConnectRefusesAsync(handle, foundPlayer))
 		{
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}

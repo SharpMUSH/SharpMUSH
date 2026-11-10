@@ -55,6 +55,25 @@ public class ProtectionFlagTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task NomodifyLeavesTheOwnerStandingForNearby()
+	{
+		var mine = DBRef.Parse(await AsOwner($"@create {TestIsolationHelpers.GenerateUniqueName("Ledger")}")).Number;
+		var theirs = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("Crate")}")).Number;
+		var room = DBRef.Parse(await Cmd($"@dig {TestIsolationHelpers.GenerateUniqueName("Vault")}")).Number;
+		await Cmd($"@tel #{mine}=#{room}");
+		await Cmd($"@tel #{theirs}=#{room}");
+		await Cmd($"@set #{mine}=NOMODIFY");
+
+		using (Protecting(true))
+		{
+			await Assert.That(await EvalAs(_owner.DbRef, $"nearby(#{mine},#{theirs})")).IsEqualTo("1");
+			await Assert.That(await EvalAs(_owner.DbRef, $"nearby(#{theirs},#{mine})")).IsEqualTo("1");
+			await AsOwner($"&NOTE #{mine}=changed");
+			await Assert.That(await Eval($"get(#{mine}/NOTE)")).IsEmpty();
+		}
+	}
+
+	[Test]
 	public async Task NoexamineKeepsEvenTheOwnerOut()
 	{
 		var thing = DBRef.Parse(await AsOwner($"@create {TestIsolationHelpers.GenerateUniqueName("Secret")}")).Number;
@@ -179,9 +198,21 @@ public class ProtectionFlagTests : ServerTestBase
 			var on = SharpMUSH.Configuration.ReadPennMushConfig.Create(path).Compatibility.ProtectionFlags;
 			await File.WriteAllTextAsync(path, string.Empty);
 			var off = SharpMUSH.Configuration.ReadPennMushConfig.Create(path).Compatibility.ProtectionFlags;
+			await File.WriteAllTextAsync(path, "protection_flags no # keep disabled\n");
+			var commentedNo = SharpMUSH.Configuration.ReadPennMushConfig.Create(path).Compatibility.ProtectionFlags;
+			await File.WriteAllTextAsync(path, "protection_flags 0 # keep disabled\n");
+			var commentedZero = SharpMUSH.Configuration.ReadPennMushConfig.Create(path).Compatibility.ProtectionFlags;
+
+			const string theme = """{"seed":"#f7768e","harmony":"triadic"}""";
+			await File.WriteAllTextAsync(path, $"layout_theme {theme}\n");
+			var layoutTheme = SharpMUSH.Configuration.ReadPennMushConfig.Create(path).Cosmetic.LayoutTheme;
 
 			await Assert.That(on).IsTrue();
 			await Assert.That(off).IsFalse();
+			await Assert.That(commentedNo).IsFalse();
+			await Assert.That(commentedZero).IsFalse();
+			// A # inside a value, with no space before it, is not a comment.
+			await Assert.That(layoutTheme).IsEqualTo(theme);
 		}
 		finally
 		{

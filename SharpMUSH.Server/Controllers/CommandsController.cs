@@ -2,6 +2,8 @@ using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -45,7 +47,8 @@ public class CommandsController(
 	IVisibleWorldProjection projection,
 	IMediator mediator,
 	IPermissionService permissions,
-	IRealityPolicy reality) : ControllerBase
+	IRealityPolicy reality,
+	IOptionsWrapper<SharpMUSHOptions> options) : ControllerBase
 {
 	/// <summary>The longest line accepted, the same 5 MiB as a line typed over telnet or in the portal terminal.</summary>
 	public const int MaxCommandLength = 5 * 1024 * 1024;
@@ -55,6 +58,12 @@ public class CommandsController(
 
 	/// <summary><c>%0</c> to <c>%9</c>.</summary>
 	public const int MaxArguments = 10;
+
+	/// <summary>
+	/// The portal acts only as a character that could connect now, as PLAY and the terminal token ask: account
+	/// sign-in while logins are off needs only one character that may, and the session starts on its primary.
+	/// </summary>
+	private const string MayNotConnect = "This character may not connect now, so the portal does not act as it.";
 
 	[HttpPost]
 	public async Task<ActionResult<PortalCommandResponse>> Run([FromBody] PortalCommandRequest request, CancellationToken ct)
@@ -74,6 +83,8 @@ public class CommandsController(
 		if (pinned is { } expected && !character.Object.DBRef.Matches(expected))
 			return Problem($"This session now acts as {character.Object.Name}, not {expected}; the command was not run.",
 				statusCode: StatusCodes.Status409Conflict);
+		if (!await new AnySharpObject(character).MayConnect(options.CurrentValue, ct))
+			return Problem(MayNotConnect, statusCode: StatusCodes.Status403Forbidden);
 
 		return Answer(await commands.RunAsync(actor.AccountId, character, OAuthBearerAuthenticationHandler.App(User), request, ct));
 	}
@@ -97,6 +108,8 @@ public class CommandsController(
 		if (pinned is { } expected && !character.Object.DBRef.Matches(expected))
 			return Problem($"This session now acts as {character.Object.Name}, not {expected}; nothing was evaluated.",
 				statusCode: StatusCodes.Status409Conflict);
+		if (!await new AnySharpObject(character).MayConnect(options.CurrentValue, ct))
+			return Problem(MayNotConnect, statusCode: StatusCodes.Status403Forbidden);
 
 		DBRef? self = null;
 		if (request.Object is { } number)
