@@ -26,7 +26,6 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "11.0.x"
-          dotnet-quality: preview
 
       # The plugin depends on the SharpMUSH.Library + generator NuGets.
       # Once those are published, restore resolves them from nuget.org. Until then,

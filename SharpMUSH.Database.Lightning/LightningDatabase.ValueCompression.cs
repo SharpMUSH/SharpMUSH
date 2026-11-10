@@ -382,9 +382,8 @@ public partial class LightningDatabase
 	{
 		try
 		{
-			using var dictionary = ZstandardDictionary.Train(samples.SelectMany(sample => sample).ToArray(),
+			return ZstandardDictionary.Train(samples.SelectMany(sample => sample).ToArray(),
 				samples.Select(sample => sample.Length).ToArray(), table.DictionaryBytes);
-			return dictionary.Data.ToArray();
 		}
 		catch (Exception ex) when (ex is IOException or ArgumentException or InvalidOperationException)
 		{

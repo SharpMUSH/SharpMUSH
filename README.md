@@ -52,7 +52,7 @@ The full guide to running SharpMUSH from source and running its tests is [Develo
 
 ### How to Build and Test
 
-- Install [.NET 11](https://dotnet.microsoft.com/en-us/download/dotnet/11.0) — SDK 11.0.100-rc.2 or newer, as pinned in `global.json`
+- Install [.NET 11](https://dotnet.microsoft.com/en-us/download/dotnet/11.0) — SDK 11.0.100 or newer, as pinned in `global.json`
 - Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
 Build with:
