@@ -16,7 +16,7 @@ public class ProtectionFlagTests : ServerTestBase
 	public async Task CreatePlayer()
 	{
 		_owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "Protected");
-		foreach (var flag in new[] { "NOEXAMINE", "NOMODIFY" })
+		foreach (var flag in new[] { "NOEXAMINE", "NO_EXAMINE", "NOMODIFY" })
 		{
 			if (await Mediator.Send(new GetObjectFlagQuery(flag)) is null)
 			{
@@ -70,6 +70,20 @@ public class ProtectionFlagTests : ServerTestBase
 		using (Protecting(false))
 		{
 			await Assert.That(await EvalAs(_owner.DbRef, $"get(#{thing}/HIDDEN)")).IsEqualTo("shh");
+		}
+	}
+
+	[Test]
+	public async Task TinyMuxNoExamineProtectsUnderItsOwnName()
+	{
+		// A TinyMUX import into a game that already has a NOEXAMINE flag keeps NO_EXAMINE without the alias.
+		var thing = DBRef.Parse(await AsOwner($"@create {TestIsolationHelpers.GenerateUniqueName("Secret")}")).Number;
+		await AsOwner($"&HIDDEN #{thing}=shh");
+		await Cmd($"@set #{thing}=NO_EXAMINE");
+
+		using (Protecting(true))
+		{
+			await Assert.That(await EvalAs(_owner.DbRef, $"get(#{thing}/HIDDEN)")).StartsWith("#-1");
 		}
 	}
 

@@ -517,6 +517,8 @@ public class PermissionService(
 	public async ValueTask<bool> CanExamine(AnySharpObject examiner, AnySharpObject examinee)
 		=> examiner.Object().DBRef == examinee.Object().DBRef
 			|| (!await ProtectedFrom(examiner, examinee, "NOEXAMINE", ExecutionBudget.CurrentToken)
+				// TinyMUX's flag is NO_EXAMINE, aliased NOEXAMINE unless the game already had a flag by that name.
+				&& !await ProtectedFrom(examiner, examinee, "NO_EXAMINE", ExecutionBudget.CurrentToken)
 				&& (await Oversees(examiner, examinee)
 					|| await examiner.IsSee_All()
 					|| (await examinee.IsVisual() && await examiner.CanOver(PortalPermission.PlayerExamine, examinee)
