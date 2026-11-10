@@ -82,6 +82,14 @@ public enum LocateFlags
 	MatchForPage = 1 << 27,
 
 	/// <summary>
+	/// With <see cref="OnlyMatchLookerControlledObjects"/>, a candidate passes on read control
+	/// (<see cref="ReadControlExtensions.Oversees"/>) rather than control: a search that only reports what
+	/// it found, such as <c>locate()</c>'s <c>s</c>, still finds a NOMODIFY object its owner may not change.
+	/// A caller that goes on to change the match leaves it off.
+	/// </summary>
+	ReadControlSuffices = 1 << 28,
+
+	/// <summary>
 	/// <c>MAT_EVERYTHING</c>, member for member. <c>MAT_CONTAINER</c>
 	/// (<see cref="MatchAgainstLookerLocationName"/>), <c>MAT_CARRIED_EXIT</c>
 	/// (<see cref="ExitsInsideOfLooker"/>), <c>MAT_REMOTES</c> (<see cref="MatchRemoteContents"/>) and

@@ -1122,7 +1122,9 @@ public partial class Commands
 			target = executor;
 		}
 
-		if (await PermissionService.Check(executor, Requires.ControlOf(target, SeeQueue)) is PermissionRefusal refused)
+		// Listing a queue only reads it, so read control is enough: an owner sees their NOMODIFY object's jobs.
+		if (!await PermissionService.Oversees(executor, target)
+				&& await PermissionService.Check(executor, Requires.ControlOf(target, SeeQueue)) is PermissionRefusal refused)
 		{
 			return await NotifyService.PermissionDenied(executor, refused);
 		}
