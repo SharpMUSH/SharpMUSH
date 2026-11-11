@@ -102,26 +102,21 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState("0"));
 		}
 
-		bool? matches = type.ToLowerInvariant() switch
-		{
-			"" => true,
-			"string" => kind == JsonValueKind.String,
-			"number" => kind == JsonValueKind.Number,
-			"object" => kind == JsonValueKind.Object,
-			"array" => kind == JsonValueKind.Array,
-			"true" => kind == JsonValueKind.True,
-			"false" => kind == JsonValueKind.False,
-			"null" => kind == JsonValueKind.Null,
-			"boolean" => kind is JsonValueKind.True or JsonValueKind.False,
-			_ => null
-		};
+		static string Bit(bool value) => value ? "1" : "0";
 
-		return ValueTask.FromResult(matches switch
+		return ValueTask.FromResult(new CallState(type.ToLowerInvariant() switch
 		{
-			true => new CallState("1"),
-			false => new CallState("0"),
-			null => new CallState(ErrorMessages.Returns.UnknownJsonType)
-		});
+			"" => "1",
+			"string" => Bit(kind == JsonValueKind.String),
+			"number" => Bit(kind == JsonValueKind.Number),
+			"object" => Bit(kind == JsonValueKind.Object),
+			"array" => Bit(kind == JsonValueKind.Array),
+			"true" => Bit(kind == JsonValueKind.True),
+			"false" => Bit(kind == JsonValueKind.False),
+			"null" => Bit(kind == JsonValueKind.Null),
+			"boolean" => Bit(kind is JsonValueKind.True or JsonValueKind.False),
+			_ => ErrorMessages.Returns.UnknownJsonType
+		}));
 	}
 
 	[SharpFunction(Name = "json_map", MinArgs = 2, MaxArgs = 33, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["attribute", "json", "osep", "arg..."])]
