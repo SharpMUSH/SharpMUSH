@@ -18,7 +18,7 @@
     place to look. One property, three references.
   -->
   <PropertyGroup>
-    <TelnetNegotiationCoreVersion>4.8.0</TelnetNegotiationCoreVersion>
+    <TelnetNegotiationCoreVersion>4.10.0</TelnetNegotiationCoreVersion>
   </PropertyGroup>
 
   <!--

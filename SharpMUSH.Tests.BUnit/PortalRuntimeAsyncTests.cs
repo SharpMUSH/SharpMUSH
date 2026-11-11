@@ -8,7 +8,7 @@ namespace SharpMUSH.Tests.BUnit;
 /// The portal runs on the browser's Mono runtime, which cannot run a runtime-async method: one compiled with
 /// <c>runtime-async=on</c> fails the portal in <c>Main</c>. Directory.Build.targets turns runtime async on for every
 /// net11.0 project, and the portal's own assemblies opt out with <c>UseRuntimeAsync=false</c>. This fails when a
-/// project the portal comes to reference has not opted out.
+/// project or package the portal comes to reference carries a runtime-async method.
 /// </summary>
 public class PortalRuntimeAsyncTests
 {
@@ -24,16 +24,21 @@ public class PortalRuntimeAsyncTests
 	}
 
 	[Test]
-	public async Task PortalAssemblies_IncludeTheContractAssemblies()
+	public async Task PortalAssemblies_IncludeTheContractAssembliesAndPackages()
 	{
 		var names = PortalAssemblies().Select(Path.GetFileNameWithoutExtension).ToList();
 
 		await Assert.That(names).Contains("SharpMUSH.Client");
 		await Assert.That(names).Contains("SharpMUSH.Contracts");
 		await Assert.That(names).Contains("SharpMUSH.Configuration");
+		await Assert.That(names).Contains("MarkupString");
+		await Assert.That(names).Contains("MudBlazor");
 	}
 
-	/// <summary>SharpMUSH.Client and every SharpMUSH assembly it references, directly or not.</summary>
+	/// <summary>
+	/// SharpMUSH.Client and every assembly it references, directly or not, that ships beside it. The shared framework
+	/// is not in the output directory, so it is left out.
+	/// </summary>
 	private static List<string> PortalAssemblies()
 	{
 		var directory = AppContext.BaseDirectory;
@@ -43,14 +48,14 @@ public class PortalRuntimeAsyncTests
 
 		while (pending.TryDequeue(out var name))
 		{
-			var path = Path.Combine(directory, $"{name}.dll");
+			var path = Path.Combine(directory, $"{Path.GetFileName(name)}.dll");
 			if (!seen.Add(name) || !File.Exists(path))
 			{
 				continue;
 			}
 
 			paths.Add(path);
-			foreach (var reference in References(path).Where(r => r.StartsWith("SharpMUSH.", StringComparison.Ordinal)))
+			foreach (var reference in References(path))
 			{
 				pending.Enqueue(reference);
 			}
