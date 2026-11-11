@@ -177,7 +177,7 @@ public static partial class RhostCommandRewriter
 				"@thaw written as @queue/resume; check by hand: RhostMUSH names a frozen job by when it was frozen, SharpMUSH by its pid"),
 			"@dynhelp" => DynamicHelp(switches, left, right, written, notes),
 			"@lfunction" => LocalFunction(switches, left, right, written, notes),
-			"@zone" => Left(notes, written, "an object's zones are set with @chzone"),
+			"@zone" => Zone(switches, left, right, written, notes),
 			"wmail" => WizardMail(switches, argument, written, notes),
 			"@totemdef" => Left(notes, written,
 				"@totemdef: totems are roles here, and who may assign one is set on the role (@role)"),
@@ -247,6 +247,19 @@ public static partial class RhostCommandRewriter
 		return Written(notes, written, $"@function/local {name}={right[..slash].Trim()},{right[(slash + 1)..].Trim()}",
 			$"@lfunction {name} written as @function/local, called with localfun(){extra}; check by hand: if {name} is a SharpMUSH function, rename it, as a local function may not take a built-in's name");
 	}
+
+	/// <summary><c>@zone</c>, as <c>@chzone</c>, which keeps an object's zones in order.</summary>
+	private static string Zone(string?[] switches, string left, string? right, string written, List<string> notes)
+		=> switches switch
+		{
+			["add"] when left.Length > 0 && !string.IsNullOrWhiteSpace(right) => Written(notes, written, $"@chzone/add {left}={right}",
+				"@zone/add written as @chzone/add"),
+			["delete"] when left.Length > 0 && !string.IsNullOrWhiteSpace(right) => Written(notes, written, $"@chzone/remove {left}={right}",
+				"@zone/delete written as @chzone/remove; check by hand that the object comes first and the zone second"),
+			["purge"] when left.Length > 0 && right is null => Written(notes, written, $"@chzone {left}=",
+				"@zone/purge written as @chzone with no zone; check by hand where a zone master's members were purged"),
+			_ => Left(notes, written, "@zone listing or replacing a zone has no single SharpMUSH command; see lzone() and @chzone")
+		};
 
 	/// <summary>The <c>wmail</c> forms the mail debugger has; the rest have no SharpMUSH form.</summary>
 	private static string WizardMail(string?[] switches, string argument, string written, List<string> notes)
