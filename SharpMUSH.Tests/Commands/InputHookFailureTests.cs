@@ -123,7 +123,9 @@ public class InputHookFailureTests
 			if (mode == "throw") await Assert.That(functionCalls).IsEqualTo(1);
 			if (mode == "legacy") await legacy.Received(1).EvaluateAttributeFunctionAsync(Arg.Any<IMUSHCodeParser>(), Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
 				"HOOKBODY", Arg.Any<Dictionary<string, CallState>>(), true, true);
-			var failed = mode is "syntax" or "throw" or "nested" || mode.StartsWith("branch-", StringComparison.Ordinal);
+			// A false /ignore hands the line to $-commands, and with none to match it the line is Huh?.
+			var ignored = hookType == "IGNORE" && mode is "literal" or "legacy";
+			var failed = mode is "syntax" or "throw" or "nested" || mode.StartsWith("branch-", StringComparison.Ordinal) || ignored;
 			await Assert.That(result!.HadErrors).IsEqualTo(failed);
 			await Assert.That(sessions.GetCapturing(player.Handle) is null).IsEqualTo(failed);
 			if (mode.StartsWith("branch-", StringComparison.Ordinal))
@@ -133,7 +135,8 @@ public class InputHookFailureTests
 				if (mode == "branch-plugin") await Assert.That(result.Message.Text).IsEqualTo("plugin result");
 				if (mode == "branch-invalid") await Assert.That(result.Message.Text).IsEqualTo("#-1 INVALID SWITCH: extra");
 			}
-			if (!failed) await Assert.That(bodyCalls).IsEqualTo(hookType == "IGNORE" && mode is "literal" or "legacy" ? 0 : 1);
+			if (ignored) await Assert.That(bodyCalls).IsEqualTo(0);
+			else if (!failed) await Assert.That(bodyCalls).IsEqualTo(1);
 		}
 		finally { await connections.Disconnect(player.Handle); }
 	}
