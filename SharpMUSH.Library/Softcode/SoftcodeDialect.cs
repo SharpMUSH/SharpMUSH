@@ -68,6 +68,22 @@ public sealed record SoftcodeDialect(
 	/// </summary>
 	public IReadOnlyDictionary<string, string> PowerScopes { get; init; } = new Dictionary<string, string>();
 
+	/// <summary>
+	/// A switch this dialect gives one of SharpMUSH's commands that the command does not have under that name, by the
+	/// command's SharpMUSH name (<c>@CHOWN</c>): the switches it means here, or none when it asks for what the command
+	/// does anyway (TinyMUX's <c>@teleport/loud</c>). Like the other aliases it only fills a gap: a switch the command
+	/// has is never read as the dialect's.
+	/// </summary>
+	public IReadOnlyDictionary<string, IReadOnlyDictionary<string, string[]>> SwitchAliases { get; init; }
+		= new Dictionary<string, IReadOnlyDictionary<string, string[]>>();
+
+	/// <summary>
+	/// The switches <paramref name="switchName"/> on <paramref name="command"/> (its SharpMUSH name) means in this
+	/// dialect, if it is one of its switch aliases.
+	/// </summary>
+	public string[]? SwitchFor(string command, string switchName)
+		=> SwitchAliases.TryGetValue(command, out var switches) ? switches.GetValueOrDefault(switchName) : null;
+
 	/// <summary>What <paramref name="name"/> means as a flag in this dialect, if it is one of its flag names.</summary>
 	public DialectFlag? FlagFor(string name) => FlagNames.GetValueOrDefault(name);
 
@@ -240,7 +256,35 @@ public static class SoftcodeDialects
 			["OTFAIL"] = "TELEPORT_LOCK`OFAILURE",
 			["RFAIL"] = "RECEIVE_LOCK`FAILURE",
 			["TFAIL"] = "TELEPORT_LOCK`FAILURE"
-		}
+		},
+		SwitchAliases = Switches(new()
+		{
+			// Ways of asking for what the command does here anyway.
+			["@BOOT"] = new() { ["quiet"] = ["SILENT"] },
+			["@CLONE"] = new() { ["location"] = [], ["ansi"] = [] },
+			["@CPATTR"] = new() { ["verify"] = [], ["verbose"] = [] },
+			["@CREATE"] = new() { ["ansi"] = [], ["strict"] = [] },
+			["@DECOMPILE"] = new() { ["all"] = [], ["tree"] = [] },
+			["@DIG"] = new() { ["ansi"] = [], ["strict"] = [] },
+			// RhostMUSH's /break keeps an @break inside the list to the list, as /nobreak does here.
+			["@DOLIST"] = new() { ["break"] = ["NOBREAK"] },
+			["@EDIT"] = new() { ["single"] = ["FIRST"], ["strict"] = [] },
+			["@EMIT"] = new() { ["noansi"] = [] },
+			["@FUNCTION"] = new() { ["display"] = [], ["notrace"] = [] },
+			["@HALT"] = new() { ["quiet"] = [] },
+			["@NAME"] = new() { ["ansi"] = [] },
+			["@NOTIFY"] = new() { ["first"] = [] },
+			["@OPEN"] = new() { ["location"] = [], ["ansi"] = [], ["strict"] = [] },
+			["@PCREATE"] = new() { ["ansi"] = [], ["strict"] = [] },
+			["@PEMIT"] = new() { ["noansi"] = [], ["nosub"] = [], ["oneeval"] = [] },
+			["@SEARCH"] = new() { ["nogarbage"] = [] },
+			["@SET"] = new() { ["noisy"] = [], ["tree"] = [] },
+			["EXAMINE"] = new() { ["display"] = [], ["full"] = [], ["quick"] = ["BRIEF"], ["tree"] = [] },
+			["PAGE"] = new() { ["noansi"] = [] },
+			["POSE"] = new() { ["default"] = [], ["noansi"] = [] },
+			["SAY"] = new() { ["noansi"] = [] },
+			["THINK"] = new() { ["noansi"] = [] }
+		})
 	};
 
 	/// <summary>
@@ -410,8 +454,41 @@ public static class SoftcodeDialects
 			["PFAIL"] = "PAGE_LOCK`FAILURE",
 			["RFAIL"] = "RECEIVE_LOCK`FAILURE",
 			["TFAIL"] = "TELEPORT_LOCK`FAILURE"
-		}
+		},
+		SwitchAliases = Switches(new()
+		{
+			["@BOOT"] = new() { ["quiet"] = ["SILENT"] },
+			// The header is the channel name in front of the line, which /silent leaves off here.
+			["@CEMIT"] = new() { ["noheader"] = ["SILENT"] },
+			["@CHOWN"] = new() { ["nostrip"] = ["PRESERVE"] },
+			["@CHOWNALL"] = new() { ["nostrip"] = ["PRESERVE"] },
+			["@CLONE"] = new() { ["nostrip"] = ["PRESERVE"], ["location"] = [] },
+			["@DECOMPILE"] = new() { ["dbref"] = ["DB"] },
+			// TinyMUX's /break lets an @break inside the list end the list around it too, as it always does here.
+			["@DOLIST"] = new() { ["break"] = [] },
+			["@LISTMOTD"] = new() { ["brief"] = [] },
+			["@MALIAS"] = new() { ["delete"] = ["DESTROY"], ["status"] = ["LIST"] },
+			["@NOTIFY"] = new() { ["first"] = [] },
+			["@OPEN"] = new() { ["location"] = [] },
+			["@PS"] = new() { ["brief"] = [] },
+			// switch_default_all is on in TinyMUX's default configuration, so /default runs every match.
+			["@SWITCH"] = new() { ["default"] = [] },
+			["@TELEPORT"] = new() { ["loud"] = [] },
+			["EXAMINE"] = new() { ["full"] = [] },
+			["POSE"] = new() { ["default"] = [] }
+		})
 	};
+
+	/// <summary>
+	/// A dialect's switch aliases, compared without regard to case: the commands by name, and each one's switches.
+	/// </summary>
+	private static IReadOnlyDictionary<string, IReadOnlyDictionary<string, string[]>> Switches(
+		Dictionary<string, Dictionary<string, string[]>> aliases)
+		=> aliases.ToDictionary(
+			command => command.Key,
+			command => (IReadOnlyDictionary<string, string[]>)new Dictionary<string, string[]>(command.Value,
+				StringComparer.OrdinalIgnoreCase),
+			StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>TinyMUX's IMMORTAL flag, which its import makes the Immortal power.</summary>
 	private static DialectFlag MuxImmortal => new(Scope: PortalPermission.GamePower("Immortal"));

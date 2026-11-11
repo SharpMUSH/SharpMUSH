@@ -186,7 +186,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			if (builtIn.Definition is CommandDefinition definition)
 			{
 				return await services.Commands.InternalAsync(visitor, parser, src, context, builtIn.RootCommand,
-					builtIn.Switches, definition, evaluated => DispatchUnmatchedAsync(visitor, src, commandText, executorObject, evaluated));
+					DialectSwitches(definition, builtIn.Switches), definition, evaluated => DispatchUnmatchedAsync(visitor, src, commandText, executorObject, evaluated));
 			}
 
 			// Step 6: Check @attribute setting
@@ -705,6 +705,25 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		return matchResult?.Definition is { } definition
 			? new BuiltInLookup(rootCommand, [.. definition.ImpliedSwitches, .. switches], definition)
 			: new BuiltInLookup(rootCommand, switches, null);
+	}
+
+	/// <summary>
+	/// <paramref name="switches"/> with each one the command lacks and the dialect in force has an alias for
+	/// (<see cref="SoftcodeDialect.SwitchAliases"/>) replaced by the switches it means, which may be none.
+	/// </summary>
+	private static string[] DialectSwitches(CommandDefinition definition, string[] switches)
+	{
+		if (switches.Length == 0 || SoftcodeDialectScope.Current is not { } dialect)
+			return switches;
+
+		var known = definition.Attribute.Switches ?? [];
+		return switches
+			.SelectMany(typed => !known.Contains(typed, StringComparer.OrdinalIgnoreCase)
+				&& dialect.SwitchFor(definition.Attribute.Name, typed) is { } meant
+					? meant
+					: [typed])
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.ToArray();
 	}
 
 	/// <summary>

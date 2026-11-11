@@ -115,6 +115,51 @@ public class SoftcodeDialectTests : ServerTestBase
 		}
 	}
 
+	/// <summary>
+	/// A switch the command lacks is read as the dialect's: RhostMUSH's <c>@edit/single</c> is <c>@edit/first</c>,
+	/// and its <c>@set/noisy</c> is what <c>@set</c> does anyway. Outside the dialect both are unknown switches.
+	/// </summary>
+	[Test]
+	public async Task FlaggedAttributeReadsRhostSwitches()
+	{
+		var thing = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("DialectSwitch")}"));
+		await Cmd($"&TARGET {thing}=aaa");
+		await Cmd($"&PLAIN {thing}=@edit/single me/TARGET=a,b");
+		await Cmd($"@trigger {thing}/PLAIN");
+		await WebAppFactoryArg.QueueBarrierAsync();
+		await Assert.That(await Eval($"get({thing}/TARGET)")).IsEqualTo("aaa");
+
+		await Cmd($"&FLAGGED {thing}=@edit/single me/TARGET=a,b;@set/noisy me=SET`AFTER:[get(me/TARGET)]");
+		await Cmd($"@set {thing}/FLAGGED=rhost");
+		await Cmd($"@trigger {thing}/FLAGGED");
+		await WebAppFactoryArg.QueueBarrierAsync();
+		await Assert.That(await Eval($"get({thing}/SET`AFTER)")).IsEqualTo("baa");
+	}
+
+	/// <summary>TinyMUX's <c>@decompile/dbref</c> is <c>@decompile/db</c>: the commands name the object by its dbref.</summary>
+	[Test]
+	public async Task FlaggedAttributeReadsTinyMuxSwitches()
+	{
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DialectDecomp");
+		var mark = TestIsolationHelpers.GenerateUniqueName("dialectmark");
+		try
+		{
+			await Cmd($"&MARK {actor.DbRef}={mark}");
+			await Cmd($"&FLAGGED {actor.DbRef}=@decompile/dbref me/MARK");
+			await Cmd($"@set {actor.DbRef}/FLAGGED=mux");
+			await Cmd($"@trigger {actor.DbRef}/FLAGGED");
+			await WebAppFactoryArg.QueueBarrierAsync();
+
+			await Assert.That(Notifications.For(actor.DbRef).Where(message => message.Contains(mark, StringComparison.Ordinal)))
+				.IsEquivalentTo([$"&MARK #{actor.DbRef.Number}={mark}"]);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(actor.Handle);
+		}
+	}
+
 	[Test]
 	public async Task FlaggedAttributeCallsTinyMuxFunctionNames()
 	{
