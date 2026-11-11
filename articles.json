@@ -1604,139 +1604,202 @@
         "id": "boolean-compatibility-tiny-booleans",
         "lookup": "compatibility config boolean compatibility tiny booleans",
         "heading": "Boolean compatibility: \u0060tiny_booleans\u0060",
-        "aliases": []
+        "aliases": [
+          "tiny_booleans"
+        ]
       },
       {
         "id": "numeric-compatibility-tiny-math-null-eq-zero",
         "lookup": "compatibility config numeric compatibility tiny math null eq zero",
         "heading": "Numeric compatibility: \u0060tiny_math\u0060, \u0060null_eq_zero\u0060",
-        "aliases": []
+        "aliases": [
+          "tiny_math",
+          "null_eq_zero"
+        ]
       },
       {
         "id": "trim-argument-order-tiny-trim-fun",
         "lookup": "compatibility config trim argument order tiny trim fun",
         "heading": "Trim argument order: \u0060tiny_trim_fun\u0060",
-        "aliases": []
+        "aliases": [
+          "tiny_trim_fun"
+        ]
+      },
+      {
+        "id": "silent-pemit-silent-pemit",
+        "lookup": "compatibility config silent pemit silent pemit",
+        "heading": "Silent @pemit: \u0060silent_pemit\u0060",
+        "aliases": [
+          "silent_pemit"
+        ]
       },
       {
         "id": "parenthesis-groups-paren-groups",
         "lookup": "compatibility config parenthesis groups paren groups",
         "heading": "Parenthesis groups: \u0060paren_groups\u0060",
-        "aliases": []
+        "aliases": [
+          "paren_groups"
+        ]
+      },
+      {
+        "id": "pennmush-http-registers-http-qregisters",
+        "lookup": "compatibility config pennmush http registers http qregisters",
+        "heading": "PennMUSH HTTP registers: \u0060http_qregisters\u0060",
+        "aliases": [
+          "http_qregisters"
+        ]
       },
       {
         "id": "pennmush-mapsql-order-mapsql-sync",
         "lookup": "compatibility config pennmush mapsql order mapsql sync",
         "heading": "PennMUSH @mapsql order: \u0060mapsql_sync\u0060",
-        "aliases": []
+        "aliases": [
+          "mapsql_sync"
+        ]
       },
       {
         "id": "logical-functions-mux-logic",
         "lookup": "compatibility config logical functions mux logic",
         "heading": "Logical functions: \u0060mux_logic\u0060",
-        "aliases": []
+        "aliases": [
+          "mux_logic"
+        ]
       },
       {
         "id": "justification-mux-justify",
         "lookup": "compatibility config justification mux justify",
         "heading": "Justification: \u0060mux_justify\u0060",
-        "aliases": []
+        "aliases": [
+          "mux_justify"
+        ]
       },
       {
         "id": "text-order-mux-collation",
         "lookup": "compatibility config text order mux collation",
         "heading": "Text order: \u0060mux_collation\u0060",
-        "aliases": []
+        "aliases": [
+          "mux_collation"
+        ]
       },
       {
         "id": "innermost-loop-tokens",
         "lookup": "compatibility config innermost loop tokens",
-        "heading": "Innermost loop tokens",
-        "aliases": []
+        "heading": "Innermost loop tokens: \u0060innermost_tokens\u0060",
+        "aliases": [
+          "innermost_tokens"
+        ]
       },
       {
         "id": "tinymux-queue-functions-mux-queue-functions",
         "lookup": "compatibility config tinymux queue functions mux queue functions",
         "heading": "TinyMUX queue functions: \u0060mux_queue_functions\u0060",
-        "aliases": []
+        "aliases": [
+          "mux_queue_functions"
+        ]
       },
       {
         "id": "tinymux-quiet-switches-mux-quiet",
         "lookup": "compatibility config tinymux quiet switches mux quiet",
         "heading": "TinyMUX quiet switches: \u0060mux_quiet\u0060",
-        "aliases": []
+        "aliases": [
+          "mux_quiet"
+        ]
       },
       {
         "id": "tinymux-function-caller-mux-function-caller",
         "lookup": "compatibility config tinymux function caller mux function caller",
         "heading": "TinyMUX @function caller: \u0060mux_function_caller\u0060",
-        "aliases": []
+        "aliases": [
+          "mux_function_caller"
+        ]
       },
       {
         "id": "tinymux-argument-meanings-mux-arguments",
         "lookup": "compatibility config tinymux argument meanings mux arguments",
         "heading": "TinyMUX argument meanings: \u0060mux_arguments\u0060",
-        "aliases": []
+        "aliases": [
+          "mux_arguments"
+        ]
       },
       {
         "id": "rhostmush-edit-modes-rhost-edit",
         "lookup": "compatibility config rhostmush edit modes rhost edit",
         "heading": "RhostMUSH edit() modes: \u0060rhost_edit\u0060",
-        "aliases": []
+        "aliases": [
+          "rhost_edit"
+        ]
       },
       {
         "id": "rhostmush-lattr-arguments-rhost-lattr",
         "lookup": "compatibility config rhostmush lattr arguments rhost lattr",
         "heading": "RhostMUSH lattr() arguments: \u0060rhost_lattr\u0060",
-        "aliases": []
+        "aliases": [
+          "rhost_lattr"
+        ]
       },
       {
         "id": "rhostmush-list-loop-rhost-list",
         "lookup": "compatibility config rhostmush list loop rhost list",
         "heading": "RhostMUSH list() loop: \u0060rhost_list\u0060",
-        "aliases": []
+        "aliases": [
+          "rhost_list"
+        ]
       },
       {
         "id": "rhostmush-lrooms-depth-rhost-lrooms",
         "lookup": "compatibility config rhostmush lrooms depth rhost lrooms",
         "heading": "RhostMUSH lrooms() depth: \u0060rhost_lrooms\u0060",
-        "aliases": []
+        "aliases": [
+          "rhost_lrooms"
+        ]
       },
       {
         "id": "protection-flags-protection-flags",
         "lookup": "compatibility config protection flags noexamine nomodify noconnect",
         "heading": "Protection flags: \u0060protection_flags\u0060",
-        "aliases": []
+        "aliases": [
+          "protection_flags"
+        ]
       },
       {
         "id": "noeval-and-noparse-attributes-attribute-eval-flags",
         "lookup": "compatibility config attribute eval flags",
         "heading": "noeval and noparse attributes: \u0060attribute_eval_flags\u0060",
-        "aliases": []
+        "aliases": [
+          "attribute_eval_flags"
+        ]
       },
       {
         "id": "rhostmush-map-arguments-rhost-map-args",
         "lookup": "compatibility config rhostmush map arguments rhost map args",
         "heading": "RhostMUSH map() arguments: \u0060rhost_map_args\u0060",
-        "aliases": []
+        "aliases": [
+          "rhost_map_args"
+        ]
       },
       {
         "id": "rhostmush-printf-fields-rhost-printf",
         "lookup": "compatibility config rhostmush printf fields rhost printf",
         "heading": "RhostMUSH printf() fields: \u0060rhost_printf\u0060",
-        "aliases": []
+        "aliases": [
+          "rhost_printf"
+        ]
       },
       {
         "id": "rhostmush-side-effect-flag-sidefx-flag",
         "lookup": "compatibility config rhostmush side effect flag sidefx flag",
         "heading": "RhostMUSH side-effect flag: \u0060sidefx_flag\u0060",
-        "aliases": []
+        "aliases": [
+          "sidefx_flag"
+        ]
       },
       {
         "id": "other-servers-names-dialect",
         "lookup": "compatibility config other servers names dialect",
         "heading": "Other servers\u0027 names: \u0060dialect\u0060",
-        "aliases": []
+        "aliases": [
+          "dialect"
+        ]
       },
       {
         "id": "other-servers-attribute-names",
@@ -1748,7 +1811,9 @@
         "id": "spaces-space-compress",
         "lookup": "compatibility config spaces space compress",
         "heading": "Spaces: \u0060space_compress\u0060",
-        "aliases": []
+        "aliases": [
+          "space_compress"
+        ]
       }
     ],
     "file": "compatibility-config.md"
@@ -2352,21 +2417,39 @@
     "aliases": [],
     "sections": [
       {
+        "id": "pennmush",
+        "lookup": "@config tiny pennmush",
+        "heading": "PennMUSH options",
+        "aliases": []
+      },
+      {
         "id": "tinymush",
         "lookup": "@config tiny tinymush",
-        "heading": "TinyMUSH and parser options",
+        "heading": "TinyMUSH options",
         "aliases": []
       },
       {
         "id": "tinymux",
         "lookup": "@config tiny tinymux",
-        "heading": "TinyMUX options",
+        "heading": "TinyMUX functions",
+        "aliases": []
+      },
+      {
+        "id": "tinymux-commands",
+        "lookup": "@config tiny tinymux commands",
+        "heading": "TinyMUX commands and attributes",
         "aliases": []
       },
       {
         "id": "rhostmush",
         "lookup": "@config tiny rhostmush",
-        "heading": "RhostMUSH options",
+        "heading": "RhostMUSH functions",
+        "aliases": []
+      },
+      {
+        "id": "rhostmush-flags",
+        "lookup": "@config tiny rhostmush flags",
+        "heading": "RhostMUSH flags and names",
         "aliases": []
       }
     ],
