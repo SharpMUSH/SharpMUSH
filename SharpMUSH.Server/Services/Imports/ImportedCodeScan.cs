@@ -342,7 +342,11 @@ public static partial class ImportedCodeScan
 			}
 
 			foreach (var unknown in switches.Where(typed => !Knows(definition, root, typed, dialect)))
-				Count(_missingSwitches, $"{definition.Attribute.Name.ToLowerInvariant()}/{unknown.ToLowerInvariant()}", place);
+			{
+				var key = $"{definition.Attribute.Name.ToLowerInvariant()}/{unknown.ToLowerInvariant()}";
+				Count(_missingSwitches, key, place);
+				if (dialect is not null) _dialectOfName.TryAdd("s:" + key, dialect.Key);
+			}
 
 			if (definition.Attribute.Name is "@TRIGGER" or "@INCLUDE")
 				ReadTriggerTarget(line[word.Length..], place);
@@ -518,7 +522,8 @@ public static partial class ImportedCodeScan
 				rest => $"Softcode: {rest.Count} more commands nothing answers are run: {Listed(rest)}.");
 
 			Report(result, _missingSwitches,
-				(name, tally) => $"Softcode: {name} is run {Times(tally.Count)}, and {name[..name.IndexOf('/')]} has no /{name[(name.IndexOf('/') + 1)..]} switch. First in {tally.Where}.",
+				(name, tally) => $"Softcode: {name} is run {Times(tally.Count)}, and {name[..name.IndexOf('/')]} has no /{name[(name.IndexOf('/') + 1)..]} switch."
+					+ LeftOut('s', name) + $" First in {tally.Where}.",
 				rest => $"Softcode: {rest.Count} more switches SharpMUSH's commands do not have are used: {Listed(rest)}.");
 
 			Report(result, _arity.Where(pair => !_registered.Contains(pair.Key.Name))
@@ -562,7 +567,12 @@ public static partial class ImportedCodeScan
 		private string LeftOut(char kind, string name)
 		{
 			var dialect = _dialectOfName.GetValueOrDefault($"{kind}:{name.ToLowerInvariant()}");
-			return (kind == 'f' ? ImportLeftOut.LeavesOutFunction(dialect, name) : ImportLeftOut.LeavesOutCommand(dialect, name))
+			return (kind switch
+			{
+				'f' => ImportLeftOut.LeavesOutFunction(dialect, name),
+				's' => ImportLeftOut.LeavesOutSwitch(dialect, name[..name.IndexOf('/')], name[(name.IndexOf('/') + 1)..]),
+				_ => ImportLeftOut.LeavesOutCommand(dialect, name)
+			})
 				? $" SharpMUSH leaves it out on purpose; see 'help {LeftOutTopic}'."
 				: "";
 		}

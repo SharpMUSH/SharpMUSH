@@ -26,22 +26,34 @@
       "lookup": "compatibility left out rhostmush commands"
     },
     {
+      "id": "rhostmush-switches-left-out",
+      "heading": "RhostMUSH switches left out",
+      "lookup": "compatibility left out rhostmush switches"
+    },
+    {
       "id": "tinymux-functions-and-commands-left-out",
       "heading": "TinyMUX functions and commands left out",
       "lookup": "compatibility left out tinymux"
+    },
+    {
+      "id": "tinymux-switches-left-out",
+      "heading": "TinyMUX switches left out",
+      "lookup": "compatibility left out tinymux switches"
     }
   ]
 }
 -->
 # Compatibility Left Out
 
-SharpMUSH leaves out some RhostMUSH and TinyMUX functions and commands on purpose. Imported code that calls one of the functions gets `#-1 FUNCTION (<NAME>) NOT FOUND`, and one of the commands gets `Huh?`. The import report names each use and points here.
+SharpMUSH leaves out some RhostMUSH and TinyMUX functions, commands and switches on purpose. Imported code that calls one of the functions gets `#-1 FUNCTION (<NAME>) NOT FOUND`, one of the commands gets `Huh?`, and a command with one of the switches is refused as an unknown switch. The import report names each use and points here.
 
 - [compatibility left out rhostmush functions]: accounts, passwords, host access and engine internals
 - [compatibility left out rhostmush clusters]: `cluster_*()` and `@cluster`
 - [compatibility left out rhostmush little used]: functions no shipped code needs
 - [compatibility left out rhostmush commands]: database upkeep, RWHO and doors
+- [compatibility left out rhostmush switches]: raw colour, reality levels, ownership swaps and power levels
 - [compatibility left out tinymux]: SQL rowsets, `@cron` and `@lua`
+- [compatibility left out tinymux switches]: money, raw HTML, exits on objects and channel title settings
 
 ```sharp dialect=rhost
 > think [execscript(backup.sh)]
@@ -87,6 +99,20 @@ Little used in shipped RhostMUSH code. One is added when a game needs it.
 - `@remote`: `@force` an object in that room.
 - `@list_file`: `@listmotd` and the connect screen show the text files.
 - `newsdb`, `+players`, `wielded`, `worn`: softcode does these.
+- `mail`: RhostMUSH's mail system. `@mail` is SharpMUSH's, as in PennMUSH; see [compatibility mail].
+
+## RhostMUSH switches left out
+
+The switch names are as RhostMUSH spells them, under SharpMUSH's name for the command.
+
+- `@pemit/noansi`, `@emit/noansi`, `say/noansi`, `pose/noansi`, `think/noansi`, `page/noansi`, `@edit/raw`: colour is markup, not text, so there is no raw form to show or edit.
+- `@pemit/reality`, `@pemit/toreality`: there are no reality levels.
+- `@include/target`, `@include/sudo`, `@include/become`, `@include/possess`, `@hook/include`: they run code as another object or change who owns what runs. `@force/inplace` runs code as an object you control.
+- `@power/guildmaster`, `@power/architect`, `@power/councilor`, `@power/check`, `@power/purge`, `@power/off`: a power here is a role or a permission, with no levels. See `@role`.
+- `@halt/stop`, `@halt/cont`: `@queue/pause <pid>` and `@queue/resume <pid>` pause and resume a queue entry.
+- `@wait/recpid`, `@notify/pid`: `@wait` does not hand back the pid of what it queues. `@ps` lists pids, and `@halt/pid` and `@wait/pid` act on one.
+- `@decompile/tags`: there is no `@tag`.
+- `@emit/sub`, `@wipe/owner`, `@wipe/preserve`, `@decompile/noextra`, `@include/override`, `@include/ignore`, `@function/protected`, `@edit/braces`, `@search/zone`, `examine/quick`, `examine/regexp`: little used in shipped RhostMUSH code; one is added when a game needs it. `@search` takes `zone=<zone>` as a class.
 
 ## TinyMUX functions and commands left out
 
@@ -97,3 +123,11 @@ Little used in shipped RhostMUSH code. One is added when a game needs it.
 - `mailj()`: `mail()` and `mailinfo()` read a message.
 - `@cron`, `@crondel`, `@crontab`: `@wait` and STARTUP queue timed work.
 - `@lua`: plugins add code in other languages.
+
+## TinyMUX switches left out
+
+- `@clone/cost`: there is no money.
+- `@emit/html`, `@pemit/html`: softcode never sends raw HTML. Each client gets styled text, pictures and links in its own form.
+- `@open/inventory`: exits are opened only from rooms.
+- `@flag/remove`: TinyMUX's `@flag` renames a flag until the next restart. `@flag/alias <flag>=!<alias>` removes an alias here.
+- `comtitle/on`, `comtitle/off`, `comtitle/gag`, `comtitle/ungag`: everyone sees titles. `@channel/mute` hides a channel's connection notices.

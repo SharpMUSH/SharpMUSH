@@ -23,6 +23,12 @@
       "lookup": "@function named arguments"
     },
     {
+      "id": "argument-bounds",
+      "heading": "Argument bounds",
+      "lookup": "@function argument bounds",
+      "aliases": ["@function/min", "@function/max"]
+    },
+    {
       "id": "replacing-built-in-functions",
       "heading": "Replacing built-in functions",
       "lookup": "@function replacing built-in functions"
@@ -55,6 +61,7 @@ Otherwise, this command defines a global function with the name `<function name>
 - [@function definition example]: a u() function made global
 - [@function startup loading]: loading functions when the game starts
 - [@function named arguments]: naming the arguments with `/args`
+- [@function argument bounds]: `/min` and `/max`
 - [@function replacing built-in functions]: overriding a built-in function
 
 ## Switches, aliases and clones
@@ -127,6 +134,26 @@ think greet(Bob,3)
 Output: `Hello, Bob. You have 3 new posts.`
 
 The last name can take the rest of the arguments, in the shapes the built-in functions' parameter lists use: `items...` gives `items1`, `items2`, ... and `itemscount`; `key...|value...` deals them out in turn; `case...|result... default` also gives `default` what is left over after whole groups; and a bare `...` lets the caller name them in pairs. See [named arguments rest] for an example of each.
+
+## Argument bounds
+
+`@function/min <function name>=<count>`<br>
+`@function/max <function name>=<count>`
+
+These set the fewest or the most arguments an existing @function takes, as RhostMUSH does, keeping the rest of its definition. A negative `<count>` means no fewest, or as many as the server allows. A call outside the bounds returns an error instead of running.
+
+```sharp
+> &FN_ADD me=add(%0,%1)
+> @function myadd=me,FN_ADD
+> @function/min myadd=2
+> @function/max myadd=2
+> think myadd(1)
+#-1 FUNCTION (MYADD) EXPECTS 2 ARGUMENTS BUT GOT 1
+> think myadd(1,2)
+3
+> @function/delete myadd
+> &FN_ADD me
+```
 
 ## Replacing built-in functions
 

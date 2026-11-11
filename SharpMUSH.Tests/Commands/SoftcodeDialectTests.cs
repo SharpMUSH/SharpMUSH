@@ -349,4 +349,45 @@ public class SoftcodeDialectTests : ServerTestBase
 
 		await Assert.That(present).IsEmpty();
 	}
+
+	/// <summary>
+	/// RhostMUSH's <c>@set/strict</c> and <c>@include/command</c> ask for what SharpMUSH does anyway, and TinyMUX's
+	/// <c>@quota/total</c> is <c>/set</c>.
+	/// </summary>
+	[Test]
+	public async Task FlaggedAttributeTakesSwitchesThatChangeNothing()
+	{
+		var thing = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("DialectNoop")}"));
+		await Cmd($"&CMDTEXT {thing}=$dialectnooptest:&INCLUDED me=yes");
+		await Cmd($"&FLAGGED {thing}=@set/strict me=STRICT:_me/CMDTEXT;@include/command me/CMDTEXT");
+		await Cmd($"@set {thing}/FLAGGED=rhost");
+		await Cmd($"@trigger {thing}/FLAGGED");
+		await WebAppFactoryArg.QueueBarrierAsync();
+		await Assert.That(await Eval($"[get({thing}/STRICT)] [get({thing}/INCLUDED)]")).IsEqualTo("_me/CMDTEXT yes");
+
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DialectQuota");
+		try
+		{
+			await Cmd($"&QUOTA {thing}=@quota/total {actor.DbRef}=7;@quota/fix {actor.DbRef}");
+			await Cmd($"@set {thing}/QUOTA=mux");
+			await Cmd($"@set {thing}=WIZARD");
+			await Cmd($"@trigger {thing}/QUOTA");
+			await WebAppFactoryArg.QueueBarrierAsync();
+			var player = (await Mediator.Send(new GetObjectNodeQuery(actor.DbRef))).Expect<AnySharpObject>().Expect<SharpPlayer>();
+			await Assert.That(player.Quota).IsEqualTo(7);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(actor.Handle);
+		}
+
+		var mux = SoftcodeDialects.All["mux"];
+		await Assert.That(mux.SwitchMeaning("@MOTD", ["CONNECT", "LIST", "WIZARD", "DOWN", "FULL", "CLEAR"], "brief"))
+			.IsEquivalentTo(["LIST"]);
+		await Assert.That(mux.SwitchMeaning("@OEMIT", ["NOEVAL", "SPOOF"], "list")).IsEmpty();
+		await Assert.That(mux.SwitchMeaning("@HOOK", ["BEFORE"], "clear")).IsEmpty();
+		await Assert.That(mux.SwitchMeaning("@CLIST", ["FULL"], "headers")).IsEmpty();
+		await Assert.That(SoftcodeDialects.All["rhost"].SwitchMeaning("@CLONE", ["PRESERVE"], "inherit")).IsEmpty();
+	}
 }

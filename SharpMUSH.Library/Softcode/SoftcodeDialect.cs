@@ -310,7 +310,8 @@ public static class SoftcodeDialects
 		{
 			// Ways of asking for what the command does here anyway, and the switches it has under another name.
 			["@BOOT"] = new() { ["quiet"] = ["SILENT"] },
-			["@CLONE"] = new() { ["location"] = [], ["ansi"] = [] },
+			// A clone keeps every flag here, INHERIT among them.
+			["@CLONE"] = new() { ["location"] = [], ["ansi"] = [], ["inherit"] = [] },
 			["@CPATTR"] = new() { ["verify"] = [], ["verbose"] = [] },
 			["@CREATE"] = new() { ["ansi"] = [], ["strict"] = [] },
 			["@DECOMPILE"] = new() { ["all"] = [], ["tree"] = [] },
@@ -319,13 +320,16 @@ public static class SoftcodeDialects
 			["@DOLIST"] = new() { ["break"] = ["NOBREAK"] },
 			["@EDIT"] = new() { ["single"] = ["FIRST"], ["strict"] = [] },
 			["@FUNCTION"] = new() { ["display"] = [], ["notrace"] = [] },
+			// @include always leaves out an attribute's $-command or ^-listen pattern.
+			["@INCLUDE"] = new() { ["command"] = [] },
 			["@NAME"] = new() { ["ansi"] = [] },
 			["@NOTIFY"] = new() { ["first"] = [] },
 			["@OPEN"] = new() { ["location"] = [], ["ansi"] = [], ["strict"] = [] },
 			["@PCREATE"] = new() { ["ansi"] = [], ["strict"] = [] },
 			["@PEMIT"] = new() { ["nosub"] = [], ["oneeval"] = [] },
 			["@SEARCH"] = new() { ["nogarbage"] = [] },
-			["@SET"] = new() { ["noisy"] = [], ["tree"] = [] },
+			// A leading _ in a value is only text here, as /strict asks.
+			["@SET"] = new() { ["noisy"] = [], ["tree"] = [], ["strict"] = [] },
 			["@STATS"] = new() { ["player"] = [] },
 			["@WALL"] = new() { ["no_prefix"] = ["EMIT"] },
 			["EXAMINE"] = new() { ["display"] = [], ["full"] = [], ["tree"] = [] },
@@ -518,15 +522,25 @@ public static class SoftcodeDialects
 			["@CEMIT"] = new() { ["noheader"] = ["SILENT"] },
 			["@CHOWN"] = new() { ["nostrip"] = ["PRESERVE"] },
 			["@CHOWNALL"] = new() { ["nostrip"] = ["PRESERVE"] },
-			["@CLONE"] = new() { ["nostrip"] = ["PRESERVE"], ["location"] = [] },
+			["@CLIST"] = new() { ["headers"] = [] },
+			// A clone keeps every flag here, INHERIT among them.
+			["@CLONE"] = new() { ["nostrip"] = ["PRESERVE"], ["location"] = [], ["inherit"] = [] },
 			["@DECOMPILE"] = new() { ["dbref"] = ["DB"] },
 			// TinyMUX's /break lets an @break inside the list end the list around it too, as it always does here.
 			["@DOLIST"] = new() { ["break"] = [] },
+			// The bare form clears a hook here.
+			["@HOOK"] = new() { ["clear"] = [] },
 			["@LISTMOTD"] = new() { ["brief"] = [] },
 			["@MALIAS"] = new() { ["delete"] = ["DESTROY"], ["status"] = ["STATS"] },
+			// /brief leaves out the text files, which @motd/list never shows.
+			["@MOTD"] = new() { ["brief"] = ["LIST"] },
 			["@NOTIFY"] = new() { ["first"] = [] },
+			// @oemit takes a list of objects without a switch.
+			["@OEMIT"] = new() { ["list"] = [] },
 			["@OPEN"] = new() { ["location"] = [] },
 			["@PS"] = new() { ["brief"] = [] },
+			// A quota is always counted from what the player owns, so /fix has nothing to correct.
+			["@QUOTA"] = new() { ["fix"] = [], ["total"] = ["SET"] },
 			["@STATS"] = new() { ["player"] = [] },
 			// switch_default_all is on in TinyMUX's default configuration, so /default runs every match.
 			["@SWITCH"] = new() { ["default"] = [] },

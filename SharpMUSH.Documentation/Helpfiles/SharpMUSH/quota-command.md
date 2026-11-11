@@ -31,11 +31,12 @@ These commands are only meaningful if the Quota system is enabled (check the use
 ## Administrative quota changes
 
 `@quota/set <player>=<amount>`<br>
+`@quota/remaining <player>=<amount>`<br>
 `@quota/all`<br>
 `@squota [<player>]`<br>
 `@allquota[/quiet] <amount>`
 
-A Wizard can use `@quota/set` to set a player's total quota to an integer amount, or `@quota/all` to list all players' quotas. The amount is an absolute value: a leading + or - is parsed as a sign, not as a relative adjustment. The value is not clamped to the player's current owned-object count; setting it below current usage prevents further quota-limited building.
+A Wizard can use `@quota/set` to set a player's total quota to an integer amount, or `@quota/all` to list all players' quotas. The amount is an absolute value: a leading + or - is parsed as a sign, not as a relative adjustment. The value is not clamped to the player's current owned-object count; setting it below current usage prevents further quota-limited building. `@quota/remaining` sets the quota to what the player owns now plus `<amount>`, so that `<amount>` is left.
 
 `@squota` currently reports used and total quota, with the same visibility rules as `@quota`; it does not set quota. This differs from PennMUSH. Use `@quota/set` to change one player's quota.
 

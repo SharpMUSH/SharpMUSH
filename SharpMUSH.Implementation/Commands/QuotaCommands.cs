@@ -15,7 +15,8 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
-	[SharpCommand(Name = "@QUOTA", Switches = ["ALL", "SET"], Behavior = CB.Default | CB.EqSplit, MinArgs = 0,
+	// TinyMUX's /remaining sets a quota by what is left: the objects the player owns, plus the number given.
+	[SharpCommand(Name = "@QUOTA", Switches = ["ALL", "SET", "REMAINING"], Behavior = CB.Default | CB.EqSplit, MinArgs = 0,
 		MaxArgs = 2, ParameterNames = ["player", "quota"])]
 	public async ValueTask<Option<CallState>> Quota(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -29,7 +30,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (switches.Contains("SET"))
+		if (switches.Contains("SET") || switches.Contains("REMAINING"))
 		{
 			if (await PermissionService.Check(executor, Requires.Any(PortalPermission.PlayersModerate)) is PermissionRefusal refused)
 			{
@@ -54,6 +55,8 @@ public partial class Commands
 			return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
 				playerArg, async player =>
 				{
+					if (switches.Contains("REMAINING"))
+						amount += await Mediator.Send(new GetOwnedObjectCountQuery(player));
 					await Mediator.Send(new SetPlayerQuotaCommand(player, amount));
 
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaForPlayerSetFormat), executor, player.Object.Name, amount);

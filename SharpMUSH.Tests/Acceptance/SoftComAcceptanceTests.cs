@@ -28,7 +28,6 @@ public class SoftComAcceptanceTests
 		"elist() with 6 arguments",
 		"npemit() with 3 arguments",
 		"visible() with 1 argument",
-		"@include/command",
 		// Left out on purpose (help compatibility left out).
 		"execscript()",
 		// SoftCom calls these and defines neither.
