@@ -858,7 +858,9 @@
 
                 _error = Loc["AdmSetupStarterWikiFailed", failure.Message];
                 break;
-            case SetupWizardResponse:
+            case SetupWizardResponse saved:
+                // The summary shows the handlers as this save left them, even if the refresh after the handler step failed.
+                _handlers = saved.Handlers;
                 // The applications are saved either way; a wizard the server still counts as unfinished comes
                 // back at the next sign-in, so say so here rather than show it as done.
                 switch (await Wizard.FinishAsync())
