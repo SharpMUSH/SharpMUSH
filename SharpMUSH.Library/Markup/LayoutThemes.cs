@@ -86,7 +86,7 @@ public static class LayoutThemes
 			TitleOpen = "┫ ★ ", TitleClose = " ★ ┣", Guide = "heavy", Bullet = "★",
 			GaugeOpen = "▕", GaugeFilled = "▰", GaugeEmpty = "▱", GaugeClose = "▏", Separator = " / ", Rule = "━",
 		}),
-		Ported("jrpg", ThemeMode.Dark, ["#05070a", "#14161c", "#ffffff", "#ffb22e", "#58c46a", "#4aa8ff", "#a8a8a8", "#6cde9a", "#ffe066", "#e57373", "#5aa9ff"], new ThemeLook
+		Ported("jrpg", ThemeMode.Dark, ["#060b14", "#12303f", "#f6f2e6", "#ffc94d", "#6fe0cf", "#ff8a5c", "#a6b8b5", "#6cde9a", "#ffe066", "#e57373", "#5aa9ff"], new ThemeLook
 		{
 			Border = "rounded", TitleOpen = "┤ ", TitleClose = " ├", Guide = "rounded", Bullet = "▶",
 			GaugeOpen = "[", GaugeFilled = "■", GaugeEmpty = "□", GaugeClose = "]", Separator = " : ", Rule = "─",
@@ -114,7 +114,7 @@ public static class LayoutThemes
 		Ported("fleet-command", ThemeMode.Dark, ["#0e1012", "#1f2327", "#e6e8e6", "#f2a93b", "#7fb0d9", "#c9c2b0", "#8a9093", "#6cde9a", "#ffd166", "#e57373", "#7fb0d9"], new ThemeLook
 		{
 			Border = "single", TopLeft = "◤", TopRight = "◥", BottomLeft = "◣", BottomRight = "◢",
-			TitleOpen = "┤ ", TitleClose = " ├", Guide = "single", Bullet = "▸",
+			TitleOpen = "┤ ", TitleClose = " ├", Guide = "line", Bullet = "▸",
 			GaugeOpen = "[", GaugeFilled = "▰", GaugeEmpty = "▱", GaugeClose = "]", Rule = "─",
 		}),
 		Ported("gaslight", ThemeMode.Dark, ["#120e0b", "#261e18", "#efe6d6", "#d6b25e", "#8fbf8a", "#d0685a", "#9c8f7b", "#8fbf8a", "#e3a04f", "#e57373", "#5aa9ff"], new ThemeLook
@@ -124,7 +124,7 @@ public static class LayoutThemes
 		}),
 		Ported("desert-planet", ThemeMode.Dark, ["#17100a", "#2c1f15", "#f5e9d6", "#f0913a", "#4da3e6", "#e3c9a0", "#a8937a", "#6cde9a", "#f2c14e", "#e57373", "#4da3e6"], new ThemeLook
 		{
-			Border = "single", TitleOpen = "┤ ◉ ", TitleClose = " ◉ ├", Guide = "single", Bullet = "∴",
+			Border = "single", TitleOpen = "┤ ◉ ", TitleClose = " ◉ ├", Guide = "line", Bullet = "∴",
 			GaugeOpen = "[", GaugeFilled = "■", GaugeEmpty = "·", GaugeClose = "]", Rule = "─",
 		}),
 		Ported("arcane-academy", ThemeMode.Dark, ["#0d0f1c", "#1d2136", "#f0ecdf", "#e6c35c", "#d86070", "#4fa37b", "#9a9586", "#6cde9a", "#f0a35a", "#e57373", "#5aa9ff"], new ThemeLook
@@ -144,7 +144,7 @@ public static class LayoutThemes
 		}),
 		Ported("wasteland", ThemeMode.Dark, ["#12110d", "#24221a", "#ebe6d4", "#e0c93a", "#9bb55a", "#c0653a", "#96907c", "#9bb55a", "#e8893a", "#e57373", "#5aa9ff"], new ThemeLook
 		{
-			Border = "single", TitleOpen = "┤ ☢ ", TitleClose = " ☢ ├", Guide = "single", Bullet = "×",
+			Border = "single", TitleOpen = "┤ ☢ ", TitleClose = " ☢ ├", Guide = "line", Bullet = "×",
 			GaugeOpen = "[", GaugeFilled = "#", GaugeEmpty = "-", GaugeClose = "]", Rule = "─",
 		}),
 		Ported("protan-dark", ThemeMode.Dark, ["#0e0f11", "#1c1f23", "#e9edf0", "#a8e8fa", "#e9edf0", "#f2ef0a", "#7d8790", "#2ca1c1", "#f2ef0a", "#f58b28", "#9f5efe"]),

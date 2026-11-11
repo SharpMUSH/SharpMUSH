@@ -1650,6 +1650,8 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 		bottom: 0;
 		width: min(280px, 86vw);
 		z-index: 1001;
+		/* A drawer over the page: fully opaque, so the page does not show through its links. */
+		background: var(--surface-3);
 		transform: translateX(-100%);
 		visibility: hidden;
 		transition: transform var(--motion-exit), visibility 0s var(--duration-exit);

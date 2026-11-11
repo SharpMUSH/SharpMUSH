@@ -436,11 +436,15 @@
 	--card-shadow: 0 0 20px color-mix(in srgb, var(--accent) 12%, transparent), 0 8px 20px rgba(0, 0, 0, 0.45);
 }
 
-/* Clipped: the top left and lower right corners cut off on a slant, with the cut drawn in the border colour, and an
-   accent tick at the top right, as on fleet paperwork. */
+/* Clipped: the top left and lower right corners cut off on a slant, the outline drawn in the border colour along
+   the cut and the four sides, and an accent tick at the top right, as on fleet paperwork. */
 [data-frame-marks="clipped"] {
-	--card-marks: linear-gradient(135deg, var(--bg) 0 13px, var(--border) 13px 14.5px, transparent 14.5px) left -1px top -1px / 26px 26px no-repeat,
-		linear-gradient(-45deg, var(--bg) 0 13px, var(--border) 13px 14.5px, transparent 14.5px) right -1px bottom -1px / 26px 26px no-repeat,
+	--card-marks: linear-gradient(135deg, var(--bg) 0 13px, var(--border) 13px 14px, transparent 14px) left top / 26px 26px no-repeat,
+		linear-gradient(-45deg, var(--bg) 0 13px, var(--border) 13px 14px, transparent 14px) right bottom / 26px 26px no-repeat,
+		linear-gradient(var(--border), var(--border)) left 19px top 0 / calc(100% - 19px) 1px no-repeat,
+		linear-gradient(var(--border), var(--border)) left 0 top 19px / 1px calc(100% - 19px) no-repeat,
+		linear-gradient(var(--border), var(--border)) left 0 bottom 0 / calc(100% - 19px) 1px no-repeat,
+		linear-gradient(var(--border), var(--border)) right 0 top 0 / 1px calc(100% - 19px) no-repeat,
 		linear-gradient(var(--accent), var(--accent)) right 10px top 10px / 18px 3px no-repeat;
 }
 

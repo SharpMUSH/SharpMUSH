@@ -125,7 +125,7 @@ public static class ThemeStyles
 		["ledger"] = new("ledger", "line", "ledger"),
 		["talon"] = new("talon", "line", "talon"),
 		["scales"] = new("scales", "line", "scales"),
-		["clipped"] = new("clipped", "line", "none"),
+		["clipped"] = new("clipped", "none", "none"),
 		["planchette"] = new("planchette", "line", "planchette"),
 		["sandstep"] = new("sandstep", "line", "sandstep"),
 		["crest"] = new("crest", "double", "crest"),
