@@ -84,6 +84,31 @@ public sealed record SoftcodeDialect(
 	public string[]? SwitchFor(string command, string switchName)
 		=> SwitchAliases.TryGetValue(command, out var switches) ? switches.GetValueOrDefault(switchName) : null;
 
+	/// <summary>
+	/// The switches <paramref name="typed"/> means on <paramref name="command"/> (its SharpMUSH name), whose own
+	/// switches are <paramref name="commandSwitches"/>: itself when the command has it, its alias, or, as TinyMUX and
+	/// RhostMUSH take a switch by any start of its name, the one switch or alias that begins with it. <c>null</c> when
+	/// nothing matches or the start fits more than one.
+	/// </summary>
+	public string[]? SwitchMeaning(string command, IReadOnlyCollection<string> commandSwitches, string typed)
+	{
+		if (commandSwitches.Contains(typed, StringComparer.OrdinalIgnoreCase)) return [typed];
+		if (SwitchFor(command, typed) is { } meant) return meant;
+
+		var aliases = SwitchAliases.TryGetValue(command, out var forCommand) ? forCommand.Keys : [];
+		var candidates = commandSwitches.Concat(aliases)
+			.Where(name => name.StartsWith(typed, StringComparison.OrdinalIgnoreCase))
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.Take(2)
+			.ToArray();
+		return candidates switch
+		{
+			[var only] when commandSwitches.Contains(only, StringComparer.OrdinalIgnoreCase) => [only],
+			[var only] => SwitchFor(command, only),
+			_ => null
+		};
+	}
+
 	/// <summary>What <paramref name="name"/> means as a flag in this dialect, if it is one of its flag names.</summary>
 	public DialectFlag? FlagFor(string name) => FlagNames.GetValueOrDefault(name);
 

@@ -136,6 +136,38 @@ public class SoftcodeDialectTests : ServerTestBase
 		await Assert.That(await Eval($"get({thing}/SET`AFTER)")).IsEqualTo("baa");
 	}
 
+	/// <summary>
+	/// In a dialect a switch may be shortened to any start that fits one switch: <c>@switch/f</c> is <c>/first</c>
+	/// and <c>@edit/sing</c> is RhostMUSH's <c>/single</c>. A start that fits several is still refused, and outside
+	/// the dialect a shortened switch is unknown.
+	/// </summary>
+	[Test]
+	public async Task FlaggedAttributeTakesAShortenedSwitch()
+	{
+		var thing = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("DialectShort")}"));
+		await Cmd($"&TARGET {thing}=aaa");
+		await Cmd($"&FLAGGED {thing}=@switch/f 1=1,&FIRST me=one,1,&SECOND me=two;@edit/sing me/TARGET=a,b");
+		await Cmd($"@set {thing}/FLAGGED=rhost");
+		await Cmd($"@trigger {thing}/FLAGGED");
+		// @switch queues the action it picks, so it runs after the trigger's own entry.
+		await WebAppFactoryArg.QueueBarrierAsync();
+		await WebAppFactoryArg.QueueBarrierAsync();
+		await Assert.That(await Eval($"[get({thing}/FIRST)] [hasattr({thing},SECOND)] [get({thing}/TARGET)]"))
+			.IsEqualTo("one 0 baa");
+
+		var rhost = SoftcodeDialects.All["rhost"];
+		string[] switchSwitches = ["NOTIFY", "FIRST", "ALL", "REGEXP", "REGALL", "REGFIRST"];
+		await Assert.That(rhost.SwitchMeaning("@SWITCH", switchSwitches, "reg")).IsNull();
+		await Assert.That(rhost.SwitchMeaning("@SWITCH", switchSwitches, "regf")).IsEquivalentTo(["REGFIRST"]);
+		await Assert.That(rhost.SwitchMeaning("@EDIT", ["FIRST"], "sing")).IsEquivalentTo(["FIRST"]);
+
+		await Cmd($"&PLAIN {thing}=@switch/f 1=1,&PLAINRAN me=yes");
+		await Cmd($"@trigger {thing}/PLAIN");
+		await WebAppFactoryArg.QueueBarrierAsync();
+		await WebAppFactoryArg.QueueBarrierAsync();
+		await Assert.That(await Eval($"hasattr({thing},PLAINRAN)")).IsEqualTo("0");
+	}
+
 	/// <summary>TinyMUX's <c>@decompile/dbref</c> is <c>@decompile/db</c>: the commands name the object by its dbref.</summary>
 	[Test]
 	public async Task FlaggedAttributeReadsTinyMuxSwitches()

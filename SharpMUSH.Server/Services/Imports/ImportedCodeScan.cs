@@ -363,7 +363,7 @@ public static partial class ImportedCodeScan
 		{
 			var known = definition.Attribute.Switches ?? [];
 			return known.Contains("*") || known.Contains(typed, StringComparer.OrdinalIgnoreCase)
-				|| dialect?.SwitchFor(definition.Attribute.Name, typed) is not null;
+				|| dialect?.SwitchMeaning(definition.Attribute.Name, known, typed) is not null;
 		}
 
 		/// <summary><c>@desc me=...</c>: a standard attribute's own command, or one the dialect names an attribute by.</summary>
