@@ -136,8 +136,8 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 
 /// <summary>
 /// The write behind every <c>@&lt;attribute&gt; object[=value]</c> command: PennMUSH's <c>command_atrset</c>
-/// as <c>command_isattr</c> reaches it. The text after the command name is taken as written, never
-/// evaluated; with no <c>=</c> the attribute is cleared. The executor is the permission subject, and the
+/// as <c>command_isattr</c> reaches it. The object before the <c>=</c> is evaluated and the value after it is
+/// stored as written (<c>CMD_T_RS_NOPARSE</c>); with no <c>=</c> the attribute is cleared. The executor is the permission subject, and the
 /// confirmation passes <c>do_set_atr</c>'s QUIET gate. <c>@gender</c> uses it too, so it cannot set an
 /// attribute any differently than <c>@sex</c> does.
 /// </summary>
@@ -160,6 +160,10 @@ internal sealed class StandardAttributeWriter(
 		return CallState.Empty;
 	}
 
+	/// <summary>The object half evaluated, as ATTRIB_SET's left side is: <c>@startup [v(d.obj)]=...</c>.</summary>
+	private static async ValueTask<string> EvaluateObjectAsync(IMUSHCodeParser prs, string objectText)
+		=> ((await prs.FunctionParse(MarkupText.Plain(objectText.Trim())))?.Message?.ToPlainText() ?? string.Empty).Trim();
+
 	/// <summary>
 	/// Sets <paramref name="attributeName"/> on the object <paramref name="argsText"/> names, to the text after
 	/// its <c>=</c>, or clears it when there is no <c>=</c>.
@@ -175,7 +179,7 @@ internal sealed class StandardAttributeWriter(
 		if (equalsIndex < 0)
 		{
 			// No = sign - clear/unset the attribute
-			var objectToClear = argsPlainText.Trim();
+			var objectToClear = await EvaluateObjectAsync(prs, argsPlainText);
 
 			var clearExecutor = await prs.CurrentState.KnownExecutorObject(mediator);
 
@@ -220,7 +224,7 @@ internal sealed class StandardAttributeWriter(
 			return CallState.Empty;
 		}
 
-		var objectPart = argsPlainText[..equalsIndex].Trim();
+		var objectPart = await EvaluateObjectAsync(prs, argsPlainText[..equalsIndex]);
 		var valuePart = equalsIndex + 1 < argsPlainText.Length
 			? argsPlainText[(equalsIndex + 1)..]
 			: string.Empty;

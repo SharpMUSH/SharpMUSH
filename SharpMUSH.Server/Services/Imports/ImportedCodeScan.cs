@@ -44,6 +44,10 @@ public static partial class ImportedCodeScan
 	[GeneratedRegex(@"@function(?:/\w+)*\s+([0-9A-Za-z_~@`]+)\s*=", RegexOptions.IgnoreCase)]
 	private static partial Regex FunctionRegistration();
 
+	/// <summary>An <c>@function</c> whose name the code computes (<c>@function [rest(##,.)]=%!/##</c>).</summary>
+	[GeneratedRegex(@"@function(?:/\w+)*\s+\[", RegexOptions.IgnoreCase)]
+	private static partial Regex ComputedRegistration();
+
 	/// <summary>A name written plainly, which the scan can read without running the code around it.</summary>
 	[GeneratedRegex(@"^[A-Za-z0-9_`.\-~@#$^&*+?<>|'!]+$")]
 	private static partial Regex LiteralName();
@@ -81,6 +85,7 @@ public static partial class ImportedCodeScan
 		private readonly char _chatToken = chatToken;
 		private readonly CommandTrie _trie = CommandTrie.For(commandLibrary);
 		private readonly HashSet<string> _registered = new(StringComparer.OrdinalIgnoreCase);
+		private readonly List<string> _computedRegistrations = [];
 		private readonly List<Regex> _commandPatterns = [];
 		private readonly HashSet<string> _exits = new(StringComparer.OrdinalIgnoreCase);
 		private readonly HashSet<string> _attributesHeld = new(StringComparer.OrdinalIgnoreCase);
@@ -153,6 +158,8 @@ public static partial class ImportedCodeScan
 			var place = Place(number, name);
 			foreach (Match registration in FunctionRegistration().Matches(text))
 				_registered.Add(registration.Groups[1].Value);
+			if (_computedRegistrations.Count < MaxPlaces && ComputedRegistration().IsMatch(text))
+				_computedRegistrations.Add(place);
 
 			ScanCalls(text, dialect, place);
 
@@ -500,6 +507,10 @@ public static partial class ImportedCodeScan
 					+ LeftOut('f', name) + $" First in {tally.Where}.",
 				rest => $"Softcode: {rest.Count} more functions SharpMUSH does not have are called: "
 					+ Listed([.. rest.Select(name => name.ToLowerInvariant() + "()")]) + ".");
+			if (_computedRegistrations.Count > 0 && _missingFunctions.Keys.Any(name => !_registered.Contains(name)))
+				result.Warnings.Add(new ImportWarning(ImportWarningKind.Softcode,
+					$"Softcode: {string.Join(", ", _computedRegistrations)} registers @functions under names it computes, "
+					+ "so some of the functions above may be there once that code runs.", NeedsAction: true));
 
 			Report(result, _missingCommands.Where(pair => !WorldAnswers(pair.Key, pair.Value, channels)),
 				(name, tally) => $"Softcode: the command {name} is run {Times(tally.Count)}, and neither SharpMUSH nor anything in the world answers it."
