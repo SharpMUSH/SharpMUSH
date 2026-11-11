@@ -806,3 +806,27 @@ test('an open pop-out stays while its button shows, and closes once the rail scr
     assert.equal(handlers.has('scroll'), false);
     layout.closeOnRailScroll({ closest: () => null }, 'x', ref).dispose();
 });
+
+// ThemeImageFilter: off is data-image-filter="off" on <html>, which css/themes/imagery.css reads; on removes it.
+test('the theme image filter switch sets and clears the attribute imagery.css reads', () => {
+    const attributes = new Map();
+    const documentElement = {
+        setAttribute: (name, value) => attributes.set(name, value),
+        removeAttribute: name => attributes.delete(name)
+    };
+    const context = vm.createContext({
+        window: { matchMedia: () => ({ matches: false }) },
+        document: { addEventListener: () => {}, documentElement },
+        HTMLElement: class {}
+    });
+    vm.runInContext(readFileSync(new URL('js/layout.js', root), 'utf8'), context, { filename: 'js/layout.js' });
+    const layout = context.window.sharpmushLayout;
+
+    layout.setImageFilter(false);
+    assert.equal(attributes.get('data-image-filter'), 'off');
+    layout.setImageFilter(true);
+    assert.equal(attributes.has('data-image-filter'), false);
+
+    const css = readFileSync(new URL('css/themes/imagery.css', root), 'utf8');
+    assert.match(css, /html\[data-image-filter="off"\][^{]*\{\s*--image-filter:\s*none\s*!important;\s*\}/);
+});

@@ -7,6 +7,7 @@
 @inject IThemeService Themes
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
+@inject ThemeImageFilter ImageFilter
 
 @* Each of the account's characters with its own colour vision, theme and accent. The look is stored with the character, so
    it follows the player to every device, and the acting character's is the one the portal wears. An accent
@@ -19,6 +20,21 @@
 
 <div class="settings-theme-page" @ref="_root">
     <PageHeader Kicker="@Loc["Settings"]" Title="@Loc["NavTheme"]" Description="@Loc["NavThemeIntro"]" />
+
+    @* The theme's picture tone (its imagery part) on or off for every theme, in this browser; the same switch as the
+       account panel's. *@
+    <KitCard Class="settings-theme-card settings-theme-image-filter">
+        <label class="settings-theme-switch-row">
+            <span class="settings-theme-switch-text">
+                <span class="settings-theme-title">@Loc["NavThemeImageFilter"]</span>
+                <span class="settings-theme-note" id="theme-image-filter-note">@Loc["NavThemeImageFilterNote"]</span>
+            </span>
+            <button type="button" role="switch" class="settings-theme-switch" aria-checked="@(ImageFilter.On ? "true" : "false")"
+                    aria-describedby="theme-image-filter-note" @onclick="() => ImageFilter.SetAsync(!ImageFilter.On)">
+                <span class="settings-theme-switch-thumb" aria-hidden="true"></span>
+            </button>
+        </label>
+    </KitCard>
 
     @if (_trying is { } trying && _shown is { } shown)
     {
@@ -178,9 +194,14 @@
     {
         Themes.OnThemeChanged += Changed;
         AccountAuth.AppearanceChanged += Changed;
+        ImageFilter.Changed += Changed;
     }
 
-    protected override async Task OnInitializedAsync() => await AccountAuth.GetCharactersAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        await ImageFilter.LoadAsync();
+        await AccountAuth.GetCharactersAsync();
+    }
 
     private ResolvedTheme Resolve(AccountAuthService.CharacterSummary character) =>
         ThemeResolver.Resolve(ThemeResolver.Pick(Published.ToList(), Themes.Defaults, Themes.PrefersLight, character.ThemeId, character.Vision),
@@ -300,5 +321,6 @@
 
         Themes.OnThemeChanged -= Changed;
         AccountAuth.AppearanceChanged -= Changed;
+        ImageFilter.Changed -= Changed;
     }
 }

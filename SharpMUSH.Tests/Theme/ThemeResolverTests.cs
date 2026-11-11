@@ -234,6 +234,10 @@ public class ThemeResolverTests
 	}
 
 	[Test]
+	public async Task DirectiveTonesPicturesToItsGreys()
+		=> await Assert.That(ThemeResolver.Resolve(BuiltInThemes.Directive).Parts[ThemeStyles.Imagery]).IsEqualTo("smoke");
+
+	[Test]
 	public async Task AGenreThemeCarriesItsEmbellishments()
 	{
 		var scifi = ThemeResolver.Resolve(BuiltInThemes.ScienceFiction).Parts;

@@ -5907,6 +5907,12 @@
   <data name="NavThemeIntro" xml:space="preserve">
     <value>Dê a cada personagem seu próprio tema e cor de destaque para distinguir as janelas de relance. A aparência fica salva no personagem e o acompanha em qualquer dispositivo.</value>
   </data>
+  <data name="NavThemeImageFilter" xml:space="preserve">
+    <value>Filtro de imagem do tema</value>
+  </data>
+  <data name="NavThemeImageFilterNote" xml:space="preserve">
+    <value>As imagens recebem o tom do tema, como os cinzas do Directive. Desligue para ver banners, capas e imagens da galeria nas próprias cores em qualquer tema. Fica salvo neste navegador, para todos os personagens.</value>
+  </data>
   <data name="NavThemeNoCharacters" xml:space="preserve">
     <value>Vincule um personagem à sua conta para dar a ele uma aparência própria.</value>
   </data>

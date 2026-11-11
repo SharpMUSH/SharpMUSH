@@ -5907,6 +5907,12 @@
   <data name="NavThemeIntro" xml:space="preserve">
     <value>Nadaj każdej postaci własny motyw i kolor akcentu, aby od razu rozróżniać ich okna. Wygląd jest zapisany przy postaci i towarzyszy jej na każdym urządzeniu.</value>
   </data>
+  <data name="NavThemeImageFilter" xml:space="preserve">
+    <value>Filtr obrazów motywu</value>
+  </data>
+  <data name="NavThemeImageFilterNote" xml:space="preserve">
+    <value>Obrazy przyjmują ton motywu, jak szarości motywu Directive. Wyłącz go, aby widzieć banery, okładki i obrazy z galerii w ich własnych kolorach w każdym motywie. Zapisywane w tej przeglądarce, dla wszystkich postaci.</value>
+  </data>
   <data name="NavThemeNoCharacters" xml:space="preserve">
     <value>Powiąż postać z kontem, aby nadać jej własny wygląd.</value>
   </data>

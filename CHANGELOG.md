@@ -28,6 +28,7 @@ The first release. Plugin contract 3.0.0. World format 1.
 - A web portal served by the game server: account sign-in, characters, a terminal, scenes, mail, a wiki with semantic facts, a softcode editor, and administration for configuration, roles, packages, backups and moderation.
 - A setup wizard on first boot: claim the admin account, import a PennMUSH world, choose handlers and the bundled packages.
 - Themes, including built-in genre, anime, console and tabletop role-playing game and fan-game setting themes, and staff stylesheets.
+- Directive tones banners, covers and gallery pictures to its greys. A *Theme image filter* switch in the account menu and on the theme page shows pictures in their own colours under any theme, kept per browser.
 
 ### Upgrading
 

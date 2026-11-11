@@ -55,6 +55,8 @@
             if (theme && theme.Parts) {
                 for (const [name, value] of Object.entries(theme.Parts)) document.documentElement.setAttribute('data-' + name, value);
             }
+            // ThemeImageFilter: pictures in their own colours under any theme, if the player turned the theme's tone off.
+            if (localStorage.getItem('theme.image-filter') === 'off') document.documentElement.setAttribute('data-image-filter', 'off');
         } catch { /* storage unavailable or unreadable: tokens.css stands */ }
     </script>
     <script type="importmap"></script>

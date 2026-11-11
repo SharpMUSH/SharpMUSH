@@ -7019,6 +7019,12 @@
   <data name="NavThemeIntro" xml:space="preserve">
     <value>Give each character its own theme and accent, so you can tell their windows apart at a glance. The look is stored with the character and follows it to any device.</value>
   </data>
+  <data name="NavThemeImageFilter" xml:space="preserve">
+    <value>Theme image filter</value>
+  </data>
+  <data name="NavThemeImageFilterNote" xml:space="preserve">
+    <value>Pictures take the theme's tone, like Directive's greys. Turn it off to see banners, covers and gallery pictures in their own colours under every theme. Kept in this browser, for every character.</value>
+  </data>
   <data name="NavThemeNoCharacters" xml:space="preserve">
     <value>Link a character to your account to give it its own look.</value>
   </data>
@@ -13154,5 +13160,8 @@
   </data>
   <data name="AdmThemeStyleImageryIrradiated" xml:space="preserve">
     <value>Irradiated</value>
+  </data>
+  <data name="AdmThemeStyleImagerySmoke" xml:space="preserve">
+    <value>Smoke</value>
   </data>
 </root>

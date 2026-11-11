@@ -5907,6 +5907,12 @@
   <data name="NavThemeIntro" xml:space="preserve">
     <value>Da a cada personaje su propio tema y color de acento para distinguir sus ventanas de un vistazo. El aspecto se guarda con el personaje y lo sigue a cualquier dispositivo.</value>
   </data>
+  <data name="NavThemeImageFilter" xml:space="preserve">
+    <value>Filtro de imagen del tema</value>
+  </data>
+  <data name="NavThemeImageFilterNote" xml:space="preserve">
+    <value>Las imágenes toman el tono del tema, como los grises de Directive. Desactívalo para ver los banners, las portadas y las imágenes de la galería con sus propios colores en cualquier tema. Se guarda en este navegador, para todos los personajes.</value>
+  </data>
   <data name="NavThemeNoCharacters" xml:space="preserve">
     <value>Vincula un personaje a tu cuenta para darle su propio aspecto.</value>
   </data>

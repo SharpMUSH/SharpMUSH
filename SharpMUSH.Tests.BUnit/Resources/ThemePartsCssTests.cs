@@ -38,7 +38,8 @@ public partial class ThemePartsCssTests
 	{
 		var unknown = PartSelector().Matches(PartsCss())
 			.Select(m => (Key: m.Groups["key"].Value, Value: m.Groups["value"].Value))
-			.Where(p => p.Key != ThemeStyles.Scheme && !ThemeStyles.IsValid(p.Key, p.Value))
+			// data-image-filter="off" is the viewer's choice (ThemeImageFilter), not a theme's part.
+			.Where(p => p.Key != ThemeStyles.Scheme && p.Key != "image-filter" && !ThemeStyles.IsValid(p.Key, p.Value))
 			.Select(p => $"{p.Key}={p.Value}")
 			.Distinct()
 			.ToList();

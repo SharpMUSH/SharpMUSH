@@ -541,4 +541,27 @@ public class AccountPanelTests : TrackingBunitContext
 		await Assert.That(cut.Markup).Contains("AuthAccountManagement");
 		await Assert.That(cut.Markup).Contains("AuthLogout");
 	}
+
+	[Test]
+	public async Task The_theme_image_filter_switch_turns_the_tone_off_and_stays_open()
+	{
+		var cut = RenderPanel(initialOpen: true);
+		var filter = Services.GetRequiredService<ThemeImageFilter>();
+
+		await Assert.That(cut.Find(".account-panel-image-filter").GetAttribute("aria-checked")).IsEqualTo("true");
+
+		await cut.Find(".account-panel-image-filter").ClickAsync();
+
+		await Assert.That(filter.On).IsFalse();
+		await Assert.That(cut.Find(".account-panel-image-filter").GetAttribute("aria-checked")).IsEqualTo("false")
+			.Because("the switch is quick: the panel stays open and shows the new state");
+		var calls = JSInterop.Invocations.Select(i => (i.Identifier, Args: string.Join(",", i.Arguments))).ToList();
+		await Assert.That(calls).Contains(("localStorage.setItem", $"{ThemeImageFilter.StorageKey},off"));
+		await Assert.That(calls).Contains(("sharpmushLayout.setImageFilter", "False"));
+
+		await cut.Find(".account-panel-image-filter").ClickAsync();
+
+		await Assert.That(filter.On).IsTrue();
+		await Assert.That(JSInterop.Invocations.Select(i => i.Identifier)).Contains("localStorage.removeItem");
+	}
 }
