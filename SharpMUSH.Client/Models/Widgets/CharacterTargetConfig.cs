@@ -11,5 +11,5 @@ namespace SharpMUSH.Client.Models.Widgets;
 /// Omit it and the widget renders nothing outside a profile.
 /// </param>
 public record CharacterTargetConfig(
-	[property: WidgetConfigKey("LayCfgCharacterTarget", LabelKey = "LayCfgCharacterTargetLabel")]
+	[property: WidgetConfigKey("LayCfgCharacterTarget", LabelKey = "LayCfgCharacterTargetLabel", Example = "Alice")]
 	string? Character = null);

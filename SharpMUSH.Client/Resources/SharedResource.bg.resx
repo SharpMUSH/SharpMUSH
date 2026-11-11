@@ -9494,4 +9494,7 @@
   <data name="AuthRemovePasswordConfirm" xml:space="preserve">
     <value>Ще влизате с ключ за достъп или със свързана услуга. Можете да зададете парола отново по-късно.</value>
   </data>
+  <data name="GuideIdentityIntroductionExample" xml:space="preserve">
+    <value>Град на дъжд и стари тайни, където всяка история започва в кръчмата.</value>
+  </data>
 </root>

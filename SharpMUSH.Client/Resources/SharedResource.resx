@@ -12828,4 +12828,7 @@
   <data name="LayCfgSchemaDataUrlLabel" xml:space="preserve">
     <value>Data route</value>
   </data>
+  <data name="GuideIdentityIntroductionExample" xml:space="preserve">
+    <value>A city of rain and old secrets, where every story starts in the tavern.</value>
+  </data>
 </root>

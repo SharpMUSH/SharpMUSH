@@ -24,6 +24,9 @@ public sealed record WidgetConfigField(
 
 	/// <summary>Whether a string key holds several lines, from <see cref="WidgetConfigKeyAttribute.Multiline"/>.</summary>
 	public bool Multiline { get; init; }
+
+	/// <summary>A sample value for the empty field, from <see cref="WidgetConfigKeyAttribute.Example"/>.</summary>
+	public string? Example { get; init; }
 }
 
 /// <summary>
@@ -84,7 +87,8 @@ public static class WidgetConfigSchema
 			elementType is null ? [] : Describe(elementType, depth + 1))
 		{
 			LabelKey = attribute.LabelKey,
-			Multiline = attribute.Multiline
+			Multiline = attribute.Multiline,
+			Example = attribute.Example
 		};
 	}
 

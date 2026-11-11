@@ -6,11 +6,11 @@ namespace SharpMUSH.Client.Models.Widgets;
 /// Represents a single link entry in the Quick Links widget config.
 /// </summary>
 public record QuickLink(
-	[property: WidgetConfigKey("LayCfgQuickLinkLabel", LabelKey = "LayCfgQuickLinkLabelLabel")]
+	[property: WidgetConfigKey("LayCfgQuickLinkLabel", LabelKey = "LayCfgQuickLinkLabelLabel", Example = "Rules")]
 	string Label,
-	[property: WidgetConfigKey("LayCfgQuickLinkUrl", LabelKey = "LayCfgQuickLinkUrlLabel")]
+	[property: WidgetConfigKey("LayCfgQuickLinkUrl", LabelKey = "LayCfgQuickLinkUrlLabel", Example = "/wiki/house-rules")]
 	string Url,
-	[property: WidgetConfigKey("LayCfgQuickLinkIcon", LabelKey = "LayCfgQuickLinkIconLabel")]
+	[property: WidgetConfigKey("LayCfgQuickLinkIcon", LabelKey = "LayCfgQuickLinkIconLabel", Example = "M12 2 2 7l10 5 10-5z")]
 	string? Icon = null,
 	[property: WidgetConfigKey("LayCfgQuickLinkNewTab", LabelKey = "LayCfgQuickLinkNewTabLabel")]
 	bool NewTab = false);

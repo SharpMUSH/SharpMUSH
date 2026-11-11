@@ -183,6 +183,9 @@ public class WidgetConfigDialogTests : BunitContext
 		await Assert.That(provider.Find("[data-config-key='slug'] input").GetAttribute("value")).IsEqualTo("house-rules");
 		// The documented default is the placeholder, as text rather than its JSON literal.
 		await Assert.That(provider.Find("[data-config-key='namespace'] input").GetAttribute("placeholder")).IsEqualTo("main");
+		// An empty field shows a sample value under a raised label.
+		await Assert.That(provider.Find("[data-config-key='locale'] input").GetAttribute("placeholder")).IsEqualTo("de");
+		await Assert.That(provider.FindAll("[data-config-key='locale'] .mud-shrink").Count).IsEqualTo(1);
 		await Assert.That(provider.Markup).Contains("LayCfgWikiBodySlugLabel");
 		await Assert.That(provider.Markup).Contains("LayCfgWikiBodySlug");
 		await Assert.That(provider.FindAll("textarea").Count).IsEqualTo(0).Because("no raw JSON until asked for");
@@ -305,5 +308,20 @@ public class WidgetConfigDialogTests : BunitContext
 
 		await Assert.That(provider.FindAll(".wcf").Count).IsEqualTo(0);
 		await Assert.That(provider.Markup).Contains("LayInvalidJson");
+	}
+
+	/// <summary>Every text or number key of a shipped widget shows something in its empty field: its default or a sample value.</summary>
+	[TUnit.Core.Test]
+	public async Task EveryShippedTextOrNumberKey_HasAnExampleForItsEmptyField()
+	{
+		var missing = (
+			from widget in BuiltInWidgets.All
+			from field in SharpMUSH.Library.Models.Portal.Widgets.WidgetConfigSchema.Describe(widget.ConfigType)
+				.SelectMany(f => f.Children.Prepend(f))
+			where field.TypeLabel is "string" or "integer" or "number"
+				&& WidgetConfigForm.ExampleText(field) is null
+			select $"{widget.Name}.{field.Key}").ToList();
+
+		await Assert.That(missing).IsEmpty();
 	}
 }

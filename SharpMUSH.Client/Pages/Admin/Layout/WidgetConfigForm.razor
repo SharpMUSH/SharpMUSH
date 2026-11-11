@@ -23,7 +23,7 @@
 
                 case "integer" or "number":
                     <MudNumericField T="double?" Variant="Variant.Outlined" Margin="Margin.Dense" Label="@LabelOf(field)"
-                                     Value="@Document.GetNumber(key)" Placeholder="@DefaultText(field)"
+                                     Value="@Document.GetNumber(key)" Placeholder="@ExampleText(field)" ShrinkLabel="true"
                                      Step="@(field.TypeLabel == "integer" ? 1 : 0.1)" Immediate="true"
                                      HelperText="@Loc[field.DescriptionKey]"
                                      ValueChanged="@(value => Edit(() => Document.SetNumber(key, value, field.TypeLabel == "integer")))" />
@@ -72,7 +72,7 @@
                 case "string":
                     <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="@LabelOf(field)"
                                   Lines="@(field.Multiline ? 6 : 1)" Sizing="@(field.Multiline ? InputSizing.Auto : InputSizing.Fixed)"
-                                  Value="@Document.GetString(key)" Placeholder="@DefaultText(field)" Immediate="true"
+                                  Value="@Document.GetString(key)" Placeholder="@ExampleText(field)" ShrinkLabel="true" Immediate="true"
                                   HelperText="@Loc[field.DescriptionKey]"
                                   ValueChanged="@(text => Edit(() => Document.SetString(key, text)))" />
                     break;
@@ -130,6 +130,9 @@
 
         return builder.ToString();
     }
+
+    /// <summary>What an empty field shows, greyed: the default it falls back to, else a sample value.</summary>
+    public static string? ExampleText(WidgetConfigField field) => DefaultText(field) ?? field.Example;
 
     /// <summary>The documented default as plain text for a placeholder: "main", not the JSON literal "\"main\"".</summary>
     public static string? DefaultText(WidgetConfigField field)

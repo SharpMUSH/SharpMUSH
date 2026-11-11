@@ -9494,4 +9494,7 @@
   <data name="AuthRemovePasswordConfirm" xml:space="preserve">
     <value>Du logger i stedet ind med en adgangsnøgle eller en tilknyttet tjeneste. Du kan angive en adgangskode igen senere.</value>
   </data>
+  <data name="GuideIdentityIntroductionExample" xml:space="preserve">
+    <value>En by af regn og gamle hemmeligheder, hvor hver historie begynder på kroen.</value>
+  </data>
 </root>

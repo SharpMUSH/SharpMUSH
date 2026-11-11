@@ -33,6 +33,12 @@ public sealed class WidgetConfigKeyAttribute(string descriptionKey) : Attribute
 	/// </summary>
 	public string? LabelKey { get; init; }
 
+	/// <summary>
+	/// A sample value the settings form shows, greyed, in the empty field ("house-rules" for a wiki
+	/// slug), so an admin sees the shape of a value before typing one. A documented default wins.
+	/// </summary>
+	public string? Example { get; init; }
+
 	/// <summary>Whether a string key holds several lines (Markdown, say), so the form gives it a text area.</summary>
 	public bool Multiline { get; init; }
 }

@@ -9494,4 +9494,7 @@
   <data name="AuthRemovePasswordConfirm" xml:space="preserve">
     <value>Prijavljivat ćete se pristupnim ključem ili povezanom uslugom. Lozinku možete ponovno postaviti kasnije.</value>
   </data>
+  <data name="GuideIdentityIntroductionExample" xml:space="preserve">
+    <value>Grad kiše i starih tajni, gdje svaka priča počinje u krčmi.</value>
+  </data>
 </root>

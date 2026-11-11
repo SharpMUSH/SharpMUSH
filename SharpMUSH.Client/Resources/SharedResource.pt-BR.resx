@@ -9494,4 +9494,7 @@
   <data name="AuthRemovePasswordConfirm" xml:space="preserve">
     <value>Você entrará com uma chave de acesso ou um serviço vinculado. Você pode definir uma senha novamente depois.</value>
   </data>
+  <data name="GuideIdentityIntroductionExample" xml:space="preserve">
+    <value>Uma cidade de chuva e velhos segredos, onde toda história começa na taverna.</value>
+  </data>
 </root>

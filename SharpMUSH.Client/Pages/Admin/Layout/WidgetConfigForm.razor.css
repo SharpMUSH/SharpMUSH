@@ -60,3 +60,10 @@
 .wcf ::deep .wcf-add {
 	align-self: flex-start;
 }
+
+/* An empty field shows a sample value, greyed, so its shape is clear before anything is typed. */
+.wcf ::deep input::placeholder,
+.wcf ::deep textarea::placeholder {
+	color: var(--text-faint);
+	opacity: 1;
+}

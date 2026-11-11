@@ -9494,4 +9494,7 @@
   <data name="AuthRemovePasswordConfirm" xml:space="preserve">
     <value>你将改用通行密钥或已关联的服务登录。之后可以重新设置密码。</value>
   </data>
+  <data name="GuideIdentityIntroductionExample" xml:space="preserve">
+    <value>一座雨水与旧秘密之城，每个故事都从酒馆开始。</value>
+  </data>
 </root>

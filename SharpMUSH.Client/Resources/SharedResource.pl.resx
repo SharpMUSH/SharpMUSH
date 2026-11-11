@@ -9494,4 +9494,7 @@
   <data name="AuthRemovePasswordConfirm" xml:space="preserve">
     <value>Będziesz logować się kluczem dostępu lub połączoną usługą. Hasło możesz ustawić ponownie później.</value>
   </data>
+  <data name="GuideIdentityIntroductionExample" xml:space="preserve">
+    <value>Miasto deszczu i dawnych tajemnic, gdzie każda historia zaczyna się w karczmie.</value>
+  </data>
 </root>

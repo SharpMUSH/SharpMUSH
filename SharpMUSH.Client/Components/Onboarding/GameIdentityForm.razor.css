@@ -20,3 +20,10 @@
 .identity-starters { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 .identity-starters button { min-height: 44px; max-width: 100%; padding: var(--space-3) var(--space-4); overflow-wrap: anywhere; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
 .identity-starters button:hover { border-color: var(--accent); }
+
+/* An empty field shows a sample value, greyed, so its shape is clear before anything is typed. */
+.identity-form ::deep input::placeholder,
+.identity-form ::deep textarea::placeholder {
+	color: var(--text-faint);
+	opacity: 1;
+}

@@ -9494,4 +9494,7 @@
   <data name="AuthRemovePasswordConfirm" xml:space="preserve">
     <value>Te vei conecta cu o cheie de acces sau cu un serviciu asociat. Poți stabili din nou o parolă mai târziu.</value>
   </data>
+  <data name="GuideIdentityIntroductionExample" xml:space="preserve">
+    <value>Un oraș al ploii și al vechilor secrete, unde fiecare poveste începe la han.</value>
+  </data>
 </root>
