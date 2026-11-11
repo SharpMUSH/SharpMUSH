@@ -358,9 +358,11 @@ public static class TerminalFeatureReader
 			_ => null
 		};
 
+	// Empty entries stay, so the first entry here is the first the client sent, as on the connection itself.
 	private static string[] TypesOf(IReadOnlyDictionary<string, string> metadata) =>
-		metadata.GetValueOrDefault(TerminalCapabilityReader.TerminalTypesKey, "")
-			.Split('\t', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+		metadata.GetValueOrDefault(TerminalCapabilityReader.TerminalTypesKey, "") is { Length: > 0 } types
+			? types.Split('\t', StringSplitOptions.TrimEntries)
+			: [];
 
 	/// <summary>
 	/// Whether the connection is written in UTF-8 as far as the engine knows: what the player set, and otherwise

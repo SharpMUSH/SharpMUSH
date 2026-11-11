@@ -276,7 +276,11 @@ public partial class TelnetServerNegotiationTests
 			await WriteAsync(toServer, IAC, DO, 200);
 			seen.AddRange(await ReadUntilAsync(fromServer,
 				bytes => Contains(bytes, IAC, (byte)TelnetNegotiationCore.Models.Trigger.WONT, 200)));
-			await Assert.That(Encoding.ASCII.GetString([.. seen])).DoesNotContain("\u001b[c");
+			var sent = Encoding.ASCII.GetString([.. seen]);
+			await Assert.That(sent).DoesNotContain("\u001b[c");
+			await Assert.That(sent).DoesNotContain("\u001b_G");
+			await Assert.That(sent).DoesNotContain("\u001b[16t");
+			await Assert.That(sent).DoesNotContain("\u001b[>0q");
 		}
 		finally
 		{

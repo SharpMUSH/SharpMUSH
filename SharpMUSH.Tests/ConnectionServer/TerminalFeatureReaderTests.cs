@@ -102,6 +102,16 @@ public class TerminalFeatureReaderTests
 	public async Task Identify_ReadsTheTerminalName(string name, string? id) =>
 		await Assert.That(TerminalFeatureReader.Identify([name], null, null)?.Id).IsEqualTo(id);
 
+	/// <summary>The engine's copy of the terminal types keeps an empty first entry, so it names no terminal there either.</summary>
+	[Test]
+	public async Task EmptyFirstTerminalTypeNamesNoTerminalInMetadata()
+	{
+		var metadata = new Dictionary<string, string> { [TerminalCapabilityReader.TerminalTypesKey] = "\tXTERM-KITTY" };
+		await Assert.That(TerminalFeatureReader.TerminalOf(metadata)).IsNull();
+		metadata[TerminalCapabilityReader.TerminalTypesKey] = "XTERM-KITTY";
+		await Assert.That(TerminalFeatureReader.TerminalOf(metadata)).IsEqualTo(TerminalProfile.Kitty);
+	}
+
 	/// <summary>The published MudForge profile survives silence without enabling graphics by default.</summary>
 	[Test]
 	public async Task MudForgeAutoGraphicsSurvivesUnansweredQueriesButRemainsOptIn()
