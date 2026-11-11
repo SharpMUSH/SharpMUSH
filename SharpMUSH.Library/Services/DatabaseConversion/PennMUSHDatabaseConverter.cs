@@ -274,6 +274,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			ReportProgress("Relationships established", 0.50);
 
 			CarryHooks(pennDatabase, context);
+			RewriteForcedSpeech(pennDatabase, context);
 
 			(phase, phaseStart, phaseEnd) = ("Creating attributes", 0.50, 0.75);
 			attributesConverted = await CreateAttributesAsync(pennDatabase, context, cancellationToken);
@@ -2469,6 +2470,31 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// </summary>
 	/// <returns>How many attributes changed.</returns>
 	private static int RewriteHookCommands(PennMUSHDatabase pennDatabase, string? hookObject)
+		=> RewriteAttributes(pennDatabase, value => HookCommandRewriter.Rewrite(value, hookObject));
+
+	/// <summary>
+	/// A TinyMUX or RhostMUSH game's <c>@femit</c>, <c>@fpose</c> and <c>@fsay</c>, which SharpMUSH does not have,
+	/// written as <c>@force</c> (<see cref="ForcedSpeechRewriter"/>).
+	/// </summary>
+	private static void RewriteForcedSpeech(PennMUSHDatabase pennDatabase, PennMUSHConversionContext context)
+	{
+		if (pennDatabase.Dialect is not (DatabaseDialect.TinyMUX or DatabaseDialect.RhostMUSH))
+		{
+			return;
+		}
+
+		var rewritten = RewriteAttributes(pennDatabase, ForcedSpeechRewriter.Rewrite);
+		if (rewritten > 0)
+		{
+			context.Warn(ImportWarningKind.Softcode,
+				$"Forced speech: {rewritten} attribute(s) ran {pennDatabase.SourceName}'s @femit, @fpose or @fsay, which the import " +
+				"wrote as @force, as @force Lackey=@emit The lackey bows.");
+		}
+	}
+
+	/// <summary>Applies <paramref name="rewrite"/> to every attribute, each change a line of the import's softcode rewrites.</summary>
+	/// <returns>How many attributes changed.</returns>
+	private static int RewriteAttributes(PennMUSHDatabase pennDatabase, Func<string, SoftcodeRewriteResult> rewrite)
 	{
 		var changed = 0;
 		foreach (var obj in pennDatabase.Objects)
@@ -2476,7 +2502,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			for (var i = 0; i < obj.Attributes.Count; i++)
 			{
 				var attribute = obj.Attributes[i];
-				var result = HookCommandRewriter.Rewrite(attribute.Value, hookObject);
+				var result = rewrite(attribute.Value);
 				if (result.Notes.Count == 0)
 				{
 					continue;
