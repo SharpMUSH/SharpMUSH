@@ -3431,6 +3431,16 @@
     "file": "flag-list.md"
   },
   {
+    "id": "flagdef-command",
+    "lookup": "@flagdef",
+    "title": "@flagdef",
+    "aliases": [
+      "@rhost_flagdef"
+    ],
+    "sections": [],
+    "file": "flagdef-command.md"
+  },
+  {
     "id": "flags",
     "lookup": "flags",
     "title": "Flags",
