@@ -353,6 +353,7 @@ public static class SoftcodeDialects
 			["@addcommand"] = "@dialect_addcommand",
 			["@delcommand"] = "@dialect_delcommand",
 			["@listcommands"] = "@dialect_listcommands",
+			["@query"] = "@dialect_query",
 			["@icmd"] = "@dialect_icmd",
 			["@li"] = "@link",
 			["@lis"] = "@list",

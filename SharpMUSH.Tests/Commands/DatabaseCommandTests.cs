@@ -127,6 +127,47 @@ public class DatabaseCommandTests
 		}
 	}
 
+	/// <summary>TinyMUX's @query runs as @mapsql; the database name before the slash is not used.</summary>
+	[Test]
+	public async Task DialectQueryRunsAsMapSql()
+	{
+		var player = await CreateWizardTestPlayerAsync("SqlQuery");
+		var target = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SqlQueryTarget");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&RUN {target}=&OUT {target}=%0|%1"));
+		await Parser.FromState(ParserState.RootFor(player.DbRef))
+			.CommandListParse(MarkupText.Plain($"@dialect_query/sql {target}/RUN=anydb/SELECT 'row one' AS present"));
+		await MapSqlQueriesSettledAsync();
+		await SqlWebAppFactoryArg.QueueBarrierAsync();
+		await Assert.That((await SqlWebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({target}/OUT)"))).ToPlainText()).IsEqualTo("1|row one");
+	}
+
+	/// <summary>The evaluated left side is read as an object/attribute, never run again as commands.</summary>
+	[Test]
+	public async Task DialectQueryRunsNothingFromItsLeftSide()
+	{
+		var player = await CreateWizardTestPlayerAsync("SqlQueryLeft");
+		var target = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SqlQueryLeftTarget");
+		await Parser.FromState(ParserState.RootFor(player.DbRef))
+			.CommandListParse(MarkupText.Plain($"@dialect_query/sql [lit({target}/RUN={{SELECT 1}}%;&HACK {target}=owned)]=anydb/SELECT 1"));
+		await MapSqlQueriesSettledAsync();
+		await SqlWebAppFactoryArg.QueueBarrierAsync();
+		await Assert.That((await SqlWebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"hasattr({target},HACK)"))).ToPlainText()).IsEqualTo("0");
+	}
+
+	/// <summary>@query needs what @mapsql needs.</summary>
+	[Test]
+	public async Task DialectQueryNeedsMapSqlsPermission()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "SqlQueryMortal");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&RUN {player.DbRef}=&OUT me=%1"));
+		await Parser.FromState(ParserState.RootFor(player.DbRef))
+			.CommandListParse(MarkupText.Plain("@dialect_query/sql me/RUN=anydb/SELECT 'x' AS present"));
+		await MapSqlQueriesSettledAsync();
+		await SqlWebAppFactoryArg.QueueBarrierAsync();
+		await Assert.That((await SqlWebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"hasattr({player.DbRef},OUT)"))).ToPlainText()).IsEqualTo("0");
+	}
+
 	[Test]
 	public async Task SqlQueuedCallbackSnapshotsRegistersBeforeTheSubmittingListContinues()
 	{
