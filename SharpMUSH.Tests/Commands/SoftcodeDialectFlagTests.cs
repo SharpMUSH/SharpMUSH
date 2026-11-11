@@ -36,7 +36,14 @@ public class SoftcodeDialectFlagTests : ServerTestBase
 		await Cmd($"@set {target}=NOSPOOF");
 		await Cmd($"&STARTUP {target}=think hello");
 
-		await Assert.That(await Eval($"u({thing}/MUX)")).IsEqualTo("1001");
+		// HAS_STARTUP is God's alone, as in TinyMUX: the thing running the code is not told.
+		await Assert.That(await Eval($"u({thing}/MUX)")).IsEqualTo("1000");
+
+		using var dialect = TestOptionsOverride.Scope(options => options with
+		{
+			Compatibility = options.Compatibility with { Dialect = "mux" }
+		});
+		await Assert.That(await Eval($"hasflag({target},HAS_STARTUP)")).IsEqualTo("1");
 	}
 
 	[Test]
@@ -57,12 +64,13 @@ public class SoftcodeDialectFlagTests : ServerTestBase
 	[Test]
 	public async Task FlagLettersAreTinyMuxLetters()
 	{
-		var thing = await MuxThingAsync("[flags(me)] [andflags(me,sT)] [andflags(me,X)] [orflags(me,!s)] [andflags(me,!P!R)]");
+		var thing = await MuxThingAsync("[flags(me)] [andflags(me,sT)] [andflags(me,X)] [orflags(me,!s)] [andflags(me,!P!R)] [orflags(me,s!)]");
 		await Cmd($"@set {thing}=SAFE");
 		await Cmd($"@set {thing}=DEBUG");
 
-		// NO_COMMAND is n, SAFE s and TRACE (DEBUG) T in TinyMUX, X is ANSI; a thing has no type letter there.
-		await Assert.That(await Eval($"u({thing}/MUX)")).IsEqualTo("nsT 1 0 0 1");
+		// NO_COMMAND is n, SAFE s and TRACE (DEBUG) T in TinyMUX, X is ANSI; a thing has no type letter there. A
+		// trailing ! is false, even in an OR that has already matched.
+		await Assert.That(await Eval($"u({thing}/MUX)")).IsEqualTo("nsT 1 0 0 1 0");
 		// SharpMUSH's own letters still hold outside the dialect: X is SAFE.
 		await Assert.That(await Eval($"andflags({thing},X)")).IsEqualTo("1");
 	}

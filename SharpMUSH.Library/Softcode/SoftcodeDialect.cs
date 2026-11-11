@@ -341,7 +341,7 @@ public static class SoftcodeDialects
 		// TinyMUX's letters, in its flags() order (its flag names, alphabetically), on the flags its import gives.
 		FlagLetters =
 		[
-			new('A', new("ABODE")), new('X', new("ANSI")), new('a', new("AUDIBLE")), new('b', new("AUDITORIUM")),
+			new('A', new("ABODE")), new('X', new("ANSI")), new('~', new("NOACCENTS")), new('a', new("AUDIBLE")), new('b', new("AUDITORIUM")),
 			new('B', new("BLIND")), new('C', new("CHOWN_OK")), new('c', new("CONNECTED")), new('D', new("DARK")),
 			new('d', new("DESTROY_OK")), new('e', new("ENTER_OK")), new('f', new("FIXED")), new('F', new("FLOATING")),
 			new('j', new("GAGGED")), new('G', new("GOING")), new('h', new("HALT")), new('H', new("HAVEN")),
@@ -350,7 +350,7 @@ public static class SoftcodeDialects
 			new('L', new("LINK_OK")), new('0', new("MARKER0")), new('1', new("MARKER1")), new('2', new("MARKER2")),
 			new('3', new("MARKER3")), new('4', new("MARKER4")), new('5', new("MARKER5")), new('6', new("MARKER6")),
 			new('7', new("MARKER7")), new('8', new("MARKER8")), new('9', new("MARKER9")), new('M', new("MONITOR")),
-			new('m', new("MYOPIC")), new('n', new("NO_COMMAND")), new('E', new("NO_EXAMINE")), new('~', new("NOACCENTS")),
+			new('m', new("MYOPIC")), new('n', new("NO_COMMAND")), new('E', new("NO_EXAMINE")),
 			new('-', new("NOBLEED")), new('N', new("NOSPOOF")), new('O', new("OPAQUE")), new('z', new("OPEN_OK")),
 			new('Y', new("PARENT_OK")), new('p', new("PUPPET")), new('Q', new("QUIET")), new('r', new("ROBOT")),
 			new('Z', new("ROYALTY")), new('s', new("SAFE")), new('$', new("SITEMON")), new('x', new("SLAVE")),

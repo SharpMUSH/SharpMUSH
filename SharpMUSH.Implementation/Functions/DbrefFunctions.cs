@@ -1263,7 +1263,8 @@ public partial class Functions
 	/// over the POWER namespace, andlpowers/orlpowers. Returns null for invalid syntax: an empty list,
 	/// or a '!' with no name after it ("! puppet").
 	/// </summary>
-	private async ValueTask<bool?> FlagLongNameCheck(AnySharpObject obj, string list, bool orMode, bool powers)
+	private async ValueTask<bool?> FlagLongNameCheck(AnySharpObject viewer, AnySharpObject obj, string list, bool orMode,
+		bool powers)
 	{
 		var tokens = list.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		if (tokens.Length == 0)
@@ -1282,7 +1283,7 @@ public partial class Functions
 			bool hasIt = powers
 				? await DialectHasPowerAsync(obj, name) ?? await obj.HasPower(name)
 				: SoftcodeDialectScope.Current?.FlagFor(name) is { } dialectFlag
-				? await DialectHasAsync(obj, dialectFlag)
+				? await DialectHasAsync(viewer, obj, dialectFlag)
 				: name.ToUpperInvariant() switch
 				{
 					"PLAYER" => obj.IsPlayer,
@@ -1326,9 +1327,9 @@ public partial class Functions
 			{
 				var result = form == FlagListForm.Letters
 					? SoftcodeDialectScope.Current is { FlagLetters.Count: > 0 } dialect
-						? await DialectFlagLetterCheck(dialect, found, listArg, orMode)
+						? await DialectFlagLetterCheck(dialect, executor, found, listArg, orMode)
 						: await FlagLetterCheck(found, listArg, orMode)
-					: await FlagLongNameCheck(found, listArg, orMode, powers: form == FlagListForm.Powers);
+					: await FlagLongNameCheck(executor, found, listArg, orMode, powers: form == FlagListForm.Powers);
 				return result is { } matched
 					? new CallState(matched)
 					: new CallState(form == FlagListForm.Powers

@@ -16,14 +16,18 @@ namespace SharpMUSH.Implementation.Functions;
 /// </summary>
 public partial class Functions
 {
-	/// <summary>Whether <paramref name="obj"/> has what one of a dialect's flag names or letters asks.</summary>
-	private async ValueTask<bool> DialectHasAsync(AnySharpObject obj, DialectFlag flag, ObjectFlagSet? read = null)
+	/// <summary>
+	/// Whether <paramref name="obj"/> has what one of a dialect's flag names or letters asks, as <paramref name="viewer"/>
+	/// is told. Only God learns about an attribute that way, as TinyMUX keeps its HAS_* flags to God.
+	/// </summary>
+	private async ValueTask<bool> DialectHasAsync(AnySharpObject viewer, AnySharpObject obj, DialectFlag flag,
+		ObjectFlagSet? read = null)
 		=> flag switch
 		{
 			{ Flag: "CONNECTED" } => await ConnectionService.IsOnline(obj),
 			{ Flag: { } name } => (read ?? await obj.ReadFlagsAsync()).Has(name) != flag.Inverted,
 			{ Scope: { } scope } => (read ?? await obj.ReadFlagsAsync()).Grants.Shows(scope),
-			{ Attribute: { } attribute } => await Mediator
+			{ Attribute: { } attribute } => viewer.IsGod() && await Mediator
 				.CreateStream(new GetAttributeQuery(obj.Object().DBRef, [attribute])).LastOrDefaultAsync() is not null,
 			_ => false
 		};
@@ -38,7 +42,8 @@ public partial class Functions
 	/// <c>flags()</c> in a dialect with letters of its own: its type letter, then its letter for each flag the viewer
 	/// sees, in its order. A flag the dialect has no letter for is left out.
 	/// </summary>
-	private async ValueTask<string> DialectFlagLettersAsync(SoftcodeDialect dialect, AnySharpObject obj, FlagView view)
+	private async ValueTask<string> DialectFlagLettersAsync(SoftcodeDialect dialect, AnySharpObject viewer, AnySharpObject obj,
+		FlagView view)
 	{
 		var read = await obj.ReadFlagsAsync();
 		var visible = (await MessageFormatting.VisibleFlagsAsync(obj.Object(), view, read))
@@ -55,10 +60,16 @@ public partial class Functions
 			var shown = flag switch
 			{
 				{ Flag: { } name } => visible.Contains(name),
-				_ => await DialectHasAsync(obj, flag, read)
+				_ => await DialectHasAsync(viewer, obj, flag, read)
 			};
 			if (shown)
 			{
+				// TinyMUX's decode_flags: with no type letter, a colon keeps a leading digit from reading as part of a dbref.
+				if (letters.Length == 0 && char.IsAsciiDigit(letter))
+				{
+					letters.Append(':');
+				}
+
 				letters.Append(letter);
 			}
 		}
@@ -68,19 +79,21 @@ public partial class Functions
 
 	/// <summary>
 	/// <c>andflags()</c> and <c>orflags()</c> in a dialect with letters of its own: its type letters, then its flag
-	/// letters. A letter naming nothing fails an AND and is passed over by an OR, negated or not, as TinyMUX does.
-	/// Null for a <c>!</c> with no letter after it.
+	/// letters. A letter naming nothing fails an AND and is passed over by an OR, negated or not, and a <c>!</c> with no
+	/// letter after it is false, as TinyMUX's handle_flaglists has them.
 	/// </summary>
-	private async ValueTask<bool?> DialectFlagLetterCheck(SoftcodeDialect dialect, AnySharpObject obj, string letters,
-		bool orMode)
+	private async ValueTask<bool?> DialectFlagLetterCheck(SoftcodeDialect dialect, AnySharpObject viewer, AnySharpObject obj,
+		string letters, bool orMode)
 	{
 		ObjectFlagSet? read = null;
+		// An OR reads on after a match, so a stray ! later still fails it.
+		var matched = false;
 		for (var i = 0; i < letters.Length; i++)
 		{
 			var negate = letters[i] == '!';
 			if (negate && ++i >= letters.Length)
 			{
-				return null;
+				return false;
 			}
 
 			var letter = letters[i];
@@ -92,7 +105,7 @@ public partial class Functions
 			else if (dialect.FlagLetters.FirstOrDefault(entry => entry.Key == letter) is { Value: { } flag })
 			{
 				read ??= await obj.ReadFlagsAsync();
-				has = await DialectHasAsync(obj, flag, read);
+				has = await DialectHasAsync(viewer, obj, flag, read);
 			}
 			else if (orMode)
 			{
@@ -103,12 +116,14 @@ public partial class Functions
 				return false;
 			}
 
-			if ((has != negate) == orMode)
+			if (has == negate && !orMode)
 			{
-				return orMode;
+				return false;
 			}
+
+			matched |= has != negate;
 		}
 
-		return !orMode;
+		return !orMode || matched;
 	}
 }
