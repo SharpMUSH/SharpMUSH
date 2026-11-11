@@ -364,8 +364,12 @@
 	--card-shadow: 0 0 0 2px #000, inset 0 0 0 1px var(--accent-3), inset 0 2px 0 1px rgba(255,255,255,0.25);
 }
 
-/* Torn: a red slash torn across the top left, and white halftone fading in from the lower right corner. */
+/* Torn: a red slash torn across the top left, a slanted accent-2 stripe through the top right corner, an accent
+   triangle cut into the lower right corner, and white halftone fading in from it. */
 [data-frame-marks="torn"] {
+	--card-marks: linear-gradient(135deg, transparent 50%, var(--accent) 50%) right bottom / 38px 38px no-repeat,
+		linear-gradient(60deg, transparent 0 calc(100% - 46px), var(--accent-2) calc(100% - 46px) calc(100% - 40px), transparent calc(100% - 40px) calc(100% - 32px),
+			var(--accent) calc(100% - 32px) calc(100% - 24px), transparent calc(100% - 24px)) right top / 90px 60px no-repeat;
 	--card-mask-accent: url(/themes/drawings/frames/torn-slash.svg) left top / 140px 34px no-repeat;
 	--card-ink-accent: color-mix(in srgb, var(--accent) 45%, transparent);
 	--card-mask-text: radial-gradient(circle at 100% 100%, #000, transparent 70%) right bottom / 180px 120px no-repeat;
@@ -376,8 +380,10 @@
 	--card-shadow: 0 0 0 3px var(--accent-2), 9px 9px 0 3px var(--accent), 9px 9px 0 5px #000;
 }
 
-/* Dialog: a message box with a small accent arrow at the foot, as when more text waits. */
+/* Dialog: a message box lit from the top in accent-3, with a small accent arrow at the foot, as when more text
+   waits. */
 [data-frame-marks="dialog"] {
+	--card-marks: linear-gradient(180deg, color-mix(in srgb, var(--accent-3) 22%, transparent), transparent 60%);
 	--card-mask-accent: url(/themes/drawings/frames/dialog-arrow.svg) center bottom 6px / 12px 7px no-repeat;
 }
 /* Dialog: a black gap inside the white border and a black ring outside it. */

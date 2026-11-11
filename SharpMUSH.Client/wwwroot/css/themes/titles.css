@@ -268,8 +268,12 @@
 }
 /* Bevel: a hard black drop, two pixels deep. */
 [data-effect-shadow="bevel"] { --title-shadow: 1px 1px 0 #000, 2px 2px 0 #000; }
-/* Ransom: letters in a black outline over a hard black and accent drop, as letters cut from a page. */
-[data-effect-shadow="ransom"] { --title-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 3px 3px 0 #000, 5px 5px 0 var(--accent); }
+/* Ransom: letters in a black outline over a hard black and accent drop, as letters cut from a page; the small
+   uppercase labels take the title face too. */
+[data-effect-shadow="ransom"] {
+	--title-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 3px 3px 0 #000, 5px 5px 0 var(--accent);
+	--font-kicker: var(--font-display);
+}
 /* Dialog: a deep black drop. */
 [data-effect-shadow="dialog"] { --title-shadow: 0 2px 0 rgba(0, 0, 0, 0.9); }
 /* Stamped: pressed into the page, a light edge below. */

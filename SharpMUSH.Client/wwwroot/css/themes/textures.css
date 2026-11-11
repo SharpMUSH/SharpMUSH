@@ -407,27 +407,35 @@
 	--texture-ink-text: color-mix(in srgb, var(--warn), var(--link-missing));
 }
 
-/* Stained glass: a night sky of faint stars over a round stained-glass window rising from the foot of the page,
-   lit from behind: a rim of gold, rose and blue panes and a string of pearls, a blue field of leaded panes round
-   eight medallions, a gold and pale sunburst, and a crowned heart in the middle. Each colour glows brighter
-   toward the window's centre. */
+/* Stained glass: a round stained-glass window rising from the foot of the page under a night sky of faint stars:
+   a rim of gold, rose and blue panes and a string of pearls, a blue field of leaded panes round eight medallions,
+   a gold and pale sunburst, and a crowned heart on a blue disc in the middle. Each pane is lit from behind,
+   brightest toward the centre and darker at the rim, mottled and streaked like cathedral glass, with a sliver of
+   reflected light inside its upper edge (the top layer, in the text colour); the gold panes are the border layer,
+   in the accent. The page shows through the leading. */
 [data-texture="stained-glass"] {
 	--glass-at: left 50% bottom -420px / 1120px 1120px no-repeat;
-	--texture: radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--accent-2) 16%, transparent), transparent 75vmax),
+	--glass-grain: repeating-conic-gradient(from 3deg at 50% calc(100% - 140px), transparent 0 7deg, rgba(0, 0, 0, 0.2) 7deg 11deg,
+			color-mix(in srgb, var(--text) 6%, transparent) 11deg 16deg, rgba(0, 0, 0, 0.08) 16deg 23deg),
+		repeating-linear-gradient(68deg, color-mix(in srgb, var(--text) 9%, transparent) 0 2px, transparent 2px 11px,
+			rgba(0, 0, 0, 0.14) 11px 13px, transparent 13px 23px),
+		repeating-radial-gradient(circle at 22% 64%, transparent 0 9px, color-mix(in srgb, var(--text) 7%, transparent) 9px 13px, transparent 13px 27px),
+		repeating-radial-gradient(circle at 76% 28%, transparent 0 15px, rgba(0, 0, 0, 0.16) 15px 21px, transparent 21px 37px);
+	--texture: radial-gradient(circle at 50% calc(100% - 140px), color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 75vmax),
 		radial-gradient(1px 1px at 23px 41px, color-mix(in srgb, var(--text) 50%, transparent), transparent),
 		radial-gradient(1px 1px at 131px 97px, color-mix(in srgb, var(--text) 35%, transparent), transparent),
 		radial-gradient(1.5px 1.5px at 171px 17px, color-mix(in srgb, var(--accent) 55%, transparent), transparent);
 	--texture-size: 100% 100%, 210px 210px, 210px 210px, 210px 210px;
 	--texture-mask-accent: url(/themes/drawings/textures/stained-glass-accent.svg) var(--glass-at);
-	--texture-ink-accent: radial-gradient(circle 560px at 50% calc(100% - 140px), color-mix(in srgb, var(--accent) 42%, transparent), color-mix(in srgb, var(--accent) 22%, transparent));
+	--texture-ink-accent: color-mix(in srgb, var(--text) 50%, transparent);
 	--texture-mask-accent-2: url(/themes/drawings/textures/stained-glass-accent-2.svg) var(--glass-at);
-	--texture-ink-accent-2: radial-gradient(circle 560px at 50% calc(100% - 140px), color-mix(in srgb, var(--accent-2) 34%, transparent), color-mix(in srgb, var(--accent-2) 20%, transparent));
+	--texture-ink-accent-2: var(--glass-grain), radial-gradient(circle 580px at 50% calc(100% - 140px), color-mix(in srgb, color-mix(in srgb, var(--accent-2) 88%, var(--text)) 88%, transparent), color-mix(in srgb, var(--accent-2) 72%, transparent) 45%, color-mix(in srgb, color-mix(in srgb, var(--accent-2) 55%, #000) 52%, transparent));
 	--texture-mask-accent-3: url(/themes/drawings/textures/stained-glass-accent-3.svg) var(--glass-at);
-	--texture-ink-accent-3: radial-gradient(circle 560px at 50% calc(100% - 140px), color-mix(in srgb, var(--accent-3) 42%, transparent), color-mix(in srgb, var(--accent-3) 24%, transparent));
+	--texture-ink-accent-3: var(--glass-grain), radial-gradient(circle 580px at 50% calc(100% - 140px), color-mix(in srgb, color-mix(in srgb, var(--accent-3) 88%, var(--text)) 92%, transparent), color-mix(in srgb, var(--accent-3) 80%, transparent) 45%, color-mix(in srgb, color-mix(in srgb, var(--accent-3) 55%, #000) 60%, transparent));
 	--texture-mask-text: url(/themes/drawings/textures/stained-glass-text.svg) var(--glass-at);
-	--texture-ink-text: radial-gradient(circle 560px at 50% calc(100% - 140px), color-mix(in srgb, var(--text) 34%, transparent), color-mix(in srgb, var(--text) 16%, transparent));
+	--texture-ink-text: var(--glass-grain), radial-gradient(circle 580px at 50% calc(100% - 140px), color-mix(in srgb, color-mix(in srgb, var(--text) 88%, var(--text)) 50%, transparent), color-mix(in srgb, var(--text) 34%, transparent) 45%, color-mix(in srgb, color-mix(in srgb, var(--text) 55%, #000) 18%, transparent));
 	--texture-mask-border: url(/themes/drawings/textures/stained-glass-border.svg) var(--glass-at);
-	--texture-ink-border: color-mix(in srgb, var(--border) 80%, transparent);
+	--texture-ink-border: var(--glass-grain), radial-gradient(circle 580px at 50% calc(100% - 140px), color-mix(in srgb, color-mix(in srgb, var(--accent) 88%, var(--text)) 92%, transparent), color-mix(in srgb, var(--accent) 80%, transparent) 45%, color-mix(in srgb, color-mix(in srgb, var(--accent) 55%, #000) 60%, transparent));
 }
 
 /* Crystal: a great crystal floating right of centre among three small ones, each face lit in the
@@ -463,17 +471,28 @@
 }
 
 /* Shards: a red field torn in from the right of the page, its left edge spiked and ringed by a white band, lit
-   by dark rays bursting from the lower right and shaded with black halftone; white splinters and stars over it. */
+   by dark rays bursting from the lower right and shaded with black halftone; white splinters and stars over it.
+   The sidebar is a dark red menu panel with fine slanted lines, halftone fading in from both ends, and a slanted
+   accent bar edged in accent-2 along its top and its foot. */
 [data-texture="shards"] {
 	--texture: radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 60%);
 	--texture-size: 100% 100%;
+	--texture-mask-border: linear-gradient(#000, #000) left var(--rail-w) top 0 / var(--side-w) 100% no-repeat;
+	--texture-ink-border: repeating-linear-gradient(162deg, transparent 0 46px, color-mix(in srgb, var(--accent) 18%, transparent) 46px 48px),
+		linear-gradient(180deg, color-mix(in srgb, var(--accent) 34%, #000), color-mix(in srgb, var(--accent) 16%, #000))
+		left var(--rail-w) top 0 / var(--side-w) 100% no-repeat;
+	--texture-mask-accent-3: linear-gradient(#000, #000) left var(--rail-w) top 0 / var(--side-w) 100% no-repeat;
+	--texture-ink-accent-3: linear-gradient(170deg, var(--accent) 0 6px, var(--accent-2) 6px 10px, transparent 10px),
+		linear-gradient(170deg, transparent 0 calc(100% - 38px), var(--accent-2) calc(100% - 38px) calc(100% - 33px), var(--accent) calc(100% - 33px))
+		left var(--rail-w) top 0 / var(--side-w) 100% no-repeat;
 	--texture-mask-accent: url(/themes/drawings/textures/shards-accent.svg) right bottom / 1600px 1000px no-repeat;
 	--texture-ink-accent: repeating-conic-gradient(from 0deg at 92% 96%, color-mix(in srgb, var(--accent) 62%, #000) 0deg 3deg,
 		color-mix(in srgb, var(--accent) 40%, #000) 3deg 9deg, color-mix(in srgb, var(--accent) 56%, #000) 9deg 11deg,
 		color-mix(in srgb, var(--accent) 34%, #000) 11deg 19deg);
 	--texture-mask-accent-2: url(/themes/drawings/textures/shards-accent-2.svg) right bottom / 1600px 1000px no-repeat;
 	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 88%, transparent);
-	--texture-mask-text: radial-gradient(60% 70% at 40% 100%, #000, transparent 70%);
+	--texture-mask-text: radial-gradient(60% 70% at 40% 100%, #000, transparent 70%),
+		linear-gradient(180deg, #000, transparent 40%, transparent 65%, #000) left var(--rail-w) top 0 / var(--side-w) 100% no-repeat;
 	--texture-ink-text: radial-gradient(circle, rgba(0, 0, 0, 0.5) 2px, transparent 2.6px) 0 0 / 9px 9px;
 }
 

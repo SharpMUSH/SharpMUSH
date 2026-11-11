@@ -347,9 +347,9 @@ public static class BuiltInThemes
 		display: "anton", body: "ui", corners: "razor", texture: "shards", ornament: "jagged", frame: "torn", titles: "slant", effect: "ransom", imagery: "redout",
 		accent2: "#f5f5f5", accent3: "#ffd400");
 
-	/// <summary>JRPG: a classic console role-playing game, black dialog boxes with white borders over an overworld of tiles, dotted lettering, a cursor before a title.</summary>
+	/// <summary>JRPG: a classic console role-playing game, night-blue dialog boxes with white borders over a pixel overworld map, dotted lettering, a cursor before a title.</summary>
 	public static readonly PortalTheme Jrpg = Genre("jrpg", "JRPG", dark: true,
-		["#05070a", "#000000", "#14161c", "#000000", "#000000", "#ffffff", "#d0d0d0", "#a8a8a8", "#f2f2f2", "#3a3a3a", "#ffb22e", "#ffe066", "#ff8a8a"],
+		["#05070a", "#101a40", "#18245a", "#0c1434", "#060a1e", "#ffffff", "#d6dbee", "#b0b8d4", "#f2f2f2", "#2c3a78", "#ffb22e", "#ffe066", "#ff9a9a"],
 		display: "dotgothic", body: "ui", corners: "soft", texture: "overworld", ornament: "pointer", frame: "dialog", titles: "normal", effect: "dialog", imagery: "cartridge",
 		accent2: "#58c46a", accent3: "#4aa8ff");
 
