@@ -566,6 +566,42 @@ public class RhostDatabaseTranslatorTests
 		await Assert.That(describe.ByHand).IsFalse();
 	}
 
+	/// <summary>
+	/// An @lfunction becomes @function/local, and its owner's code calls it through localfun(); another owner's code
+	/// calling the same name is left alone.
+	/// </summary>
+	[Test]
+	public async Task LocalFunctionsAreCalledThroughLocalfunInTheirOwnersCode()
+	{
+		var definitions = new Dictionary<int, RhostAttributeDefinition>
+		{
+			[300] = new(300, "STARTUP_FNS", 0),
+			[301] = new(301, "USES", 0)
+		};
+		RhostFlatfileObject Thing(int dbref, int owner, params RhostFlatfileAttribute[] attributes) => new()
+		{
+			DBRef = dbref, Name = $"Thing{dbref}", Owner = owner, Flags = [(uint)RhostObjectType.Thing, 0, 0, 0], Toggles = new uint[8], Attributes = attributes
+		};
+		var flatfile = new RhostFlatfile(0, 13, 302, definitions,
+		[
+			new RhostFlatfileObject { DBRef = 0, Name = "Limbo", Owner = 1, Flags = [(uint)RhostObjectType.Room, 0, 0, 0], Toggles = new uint[8] },
+			new RhostFlatfileObject { DBRef = 1, Name = "One", Owner = 1, Location = 0, Flags = [(uint)RhostObjectType.Player, 0, 0, 0], Toggles = new uint[8] },
+			new RhostFlatfileObject { DBRef = 2, Name = "Two", Owner = 2, Location = 0, Flags = [(uint)RhostObjectType.Player, 0, 0, 0], Toggles = new uint[8] },
+			Thing(10, 1, new RhostFlatfileAttribute(300, "STARTUP_FNS", 1, 0, "@lfunction double=me/FN_DOUBLE")),
+			Thing(11, 1, new RhostFlatfileAttribute(301, "USES", 1, 0, "think [double(4)]")),
+			Thing(12, 2, new RhostFlatfileAttribute(301, "USES", 2, 0, "think [double(4)]"))
+		]);
+
+		var database = RhostDatabaseTranslator.Translate(flatfile);
+
+		await Assert.That(Object(database, 10).Attributes.First(a => a.Name == "STARTUP_FNS").Value)
+			.IsEqualTo("@function/local double=me,FN_DOUBLE");
+		await Assert.That(Object(database, 11).Attributes.First(a => a.Name == "USES").Value).IsEqualTo("think [localfun(double,4)]");
+		await Assert.That(Object(database, 12).Attributes.First(a => a.Name == "USES").Value).IsEqualTo("think [double(4)]");
+		await Assert.That(database.SoftcodeRewrites.Select(rewrite => rewrite.ToString()))
+			.Contains(line => line.StartsWith("#11/USES: double() called through localfun()"));
+	}
+
 	[Test]
 	public async Task MailArrivesWithItsStateAndFolders()
 	{
