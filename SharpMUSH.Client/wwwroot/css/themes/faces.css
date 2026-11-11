@@ -37,6 +37,15 @@
 [data-font-display="dotgothic"] { --font-display: 'DotGothic16', 'Courier New', monospace; --font-title-weight: 400; }
 [data-font-display="alegreya-sc"] { --font-display: 'Alegreya SC', Georgia, serif; --font-title-weight: 700; }
 [data-font-display="oswald"] { --font-display: 'Oswald', 'Arial Narrow', sans-serif; --font-title-weight: 600; }
+[data-font-display="pirata"] { --font-display: 'Pirata One', 'Old English Text MT', Georgia, serif; --font-title-weight: 400; }
+[data-font-display="uncial"] { --font-display: 'Uncial Antiqua', Georgia, serif; --font-title-weight: 400; }
+[data-font-display="barlow"] { --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif; --font-title-weight: 600; }
+[data-font-display="metamorphous"] { --font-display: Metamorphous, Georgia, serif; --font-title-weight: 400; }
+[data-font-display="krona"] { --font-display: 'Krona One', 'Arial Black', sans-serif; --font-title-weight: 400; }
+[data-font-display="eagle-lake"] { --font-display: 'Eagle Lake', Georgia, serif; --font-title-weight: 400; }
+[data-font-display="federant"] { --font-display: Federant, Georgia, serif; --font-title-weight: 400; }
+[data-font-display="rye"] { --font-display: Rye, Georgia, serif; --font-title-weight: 400; }
+[data-font-display="black-ops"] { --font-display: 'Black Ops One', Impact, sans-serif; --font-title-weight: 400; }
 
 [data-font-body="ui"] { --font-ui: 'Hanken Grotesk', system-ui, sans-serif; }
 [data-font-body="serif"] { --font-ui: Georgia, 'Iowan Old Style', 'Times New Roman', serif; }

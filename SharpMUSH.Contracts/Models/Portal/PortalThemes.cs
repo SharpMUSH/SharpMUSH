@@ -393,6 +393,60 @@ public static class BuiltInThemes
 	/// <summary>Mono light: for readers who see no colour; each meaningful colour a different lightness.</summary>
 	public static readonly PortalTheme MonoLight = Vision(ThemeVision.Mono, "Mono Light", dark: false, "#193055", "#7f7833", "#916862");
 
+	/// <summary>Gothic punk: a city of spires and gargoyles black against a blood-red sky in the rain, blackletter titles, cards raked by claws.</summary>
+	public static readonly PortalTheme GothicPunk = Genre("gothic-punk", "Gothic Punk", dark: true,
+		["#0d0b0c", "#171315", "#211b1e", "#120f11", "#070506", "#ece4dc", "#b8aca3", "#968a82", "#4a3a3f", "#2a2024", "#ef5a70", "#d9a441", "#ff8a8a"],
+		display: "pirata", body: "ui", corners: "sharp", texture: "spires", ornament: "thorn", frame: "talon", titles: "normal", effect: "bloodlet", imagery: "nocturne",
+		accent2: "#8fa58c", accent3: "#c9b99a");
+
+	/// <summary>Dragonrider: bronze, green and blue dragons wheeling over the cliffs of their weyr while silver threads fall, uncial titles, cards edged in scales.</summary>
+	public static readonly PortalTheme Dragonrider = Genre("dragonrider", "Dragonrider", dark: true,
+		["#120f0c", "#1b1612", "#251e18", "#15110e", "#0a0806", "#f1e8dc", "#c2b4a2", "#9e907f", "#5a4630", "#2e241b", "#e0a458", "#f2c14e", "#ff9a8a"],
+		display: "uncial", body: "ui", corners: "soft", texture: "dragonflight", ornament: "wing", frame: "scales", titles: "normal", effect: "firestone", imagery: "duskfire",
+		accent2: "#5fc28f", accent3: "#6fa8f0");
+
+	/// <summary>Fleet Command: a warship's plotting table, amber contacts on a sweeping scope, condensed capitals, cards with their corners clipped like fleet paperwork.</summary>
+	public static readonly PortalTheme FleetCommand = Genre("fleet-command", "Fleet Command", dark: true,
+		["#0e1012", "#171a1d", "#1f2327", "#121417", "#08090a", "#e6e8e6", "#aeb3b5", "#8a9093", "#4a5056", "#262a2e", "#f2a93b", "#ffd166", "#ff8f80"],
+		display: "barlow", body: "ui", corners: "sharp", texture: "plot", ornament: "chevron", frame: "clipped", titles: "caps", effect: "scope", imagery: "gunmetal",
+		accent2: "#7fb0d9", accent3: "#c9c2b0");
+
+	/// <summary>Gaslight Occult: a Victorian séance, a brass ritual chart with an open eye glowing out of the dark, mystic titles, cards marked with the moon and sun.</summary>
+	public static readonly PortalTheme Gaslight = Genre("gaslight", "Gaslight Occult", dark: true,
+		["#120e0b", "#1c1612", "#261e18", "#16110d", "#0a0806", "#efe6d6", "#c0b29b", "#9c8f7b", "#5c4a33", "#2e241a", "#d6b25e", "#e3a04f", "#ff9b8a"],
+		display: "metamorphous", body: "ui", corners: "soft", texture: "seance", ornament: "moon", frame: "planchette", titles: "normal", effect: "ectoplasm", imagery: "daguerreotype",
+		accent2: "#8fbf8a", accent3: "#c0574a");
+
+	/// <summary>Desert planet: dune ridges under two moons and a spice-orange dusk, wide geometric capitals, cards topped with a stepped band.</summary>
+	public static readonly PortalTheme DesertPlanet = Genre("desert-planet", "Desert Planet", dark: true,
+		["#17100a", "#211710", "#2c1f15", "#1a120c", "#0d0905", "#f5e9d6", "#cdb79a", "#a8937a", "#6b4e30", "#34261a", "#f0913a", "#f2c14e", "#ff9b8a"],
+		display: "krona", body: "ui", corners: "sharp", texture: "dunes", ornament: "sun-disc", frame: "sandstep", titles: "caps", effect: "heat", imagery: "sunbleached",
+		accent2: "#4da3e6", accent3: "#e3c9a0");
+
+	/// <summary>Arcane academy: candles floating under an enchanted night ceiling, a calligraphic hand, cards bearing a house crest in gold.</summary>
+	public static readonly PortalTheme ArcaneAcademy = Genre("arcane-academy", "Arcane Academy", dark: true,
+		["#0d0f1c", "#151829", "#1d2136", "#11132a", "#070814", "#f0ecdf", "#bdb7a6", "#9a9586", "#4a4566", "#262a42", "#e6c35c", "#f0a35a", "#ff9aa2"],
+		display: "eagle-lake", body: "ui", corners: "round", texture: "candles", ornament: "wand", frame: "crest", titles: "normal", effect: "spellglow", imagery: "candlelit",
+		accent2: "#c24a58", accent3: "#4fa37b");
+
+	/// <summary>Brass and steam: copper and verdigris gears turning in the corners over steam pipes, ornate titles, riveted brass plates for cards.</summary>
+	public static readonly PortalTheme Steampunk = Genre("steampunk", "Brass and Steam", dark: true,
+		["#15100b", "#1f1811", "#2a2017", "#18120d", "#0b0805", "#f0e4cf", "#c4b193", "#a08e72", "#7a5a34", "#352718", "#d9954a", "#e8c25a", "#ff9b8a"],
+		display: "federant", body: "ui", corners: "soft", texture: "gears", ornament: "cog", frame: "riveted", titles: "normal", effect: "brass", imagery: "tintype",
+		accent2: "#a8b4ad", accent3: "#5f9e8f");
+
+	/// <summary>Frontier: a wanted poster in the desert, mesas and saguaros under a low sun, wood-type titles, cards nailed up at the corners.</summary>
+	public static readonly PortalTheme Frontier = Genre("frontier", "Frontier", dark: false,
+		["#ece0c3", "#f8f0dc", "#f1e6cb", "#e6d9ba", "#2b1d10", "#2a1c10", "#54412d", "#644f39", "#b8a07a", "#dccdab", "#8a2a17", "#7a4d00", "#a32a1d"],
+		display: "rye", body: "ui", corners: "sharp", texture: "mesa", ornament: "sheriff", frame: "wanted", titles: "normal", effect: "woodtype", imagery: "sunbaked",
+		accent2: "#6b4a24", accent3: "#2f5f6f");
+
+	/// <summary>Wasteland: the broken skyline of a dead city in a yellow dust haze, stencilled military capitals, scrap cards with hazard stripes.</summary>
+	public static readonly PortalTheme Wasteland = Genre("wasteland", "Wasteland", dark: true,
+		["#12110d", "#1b1a14", "#24221a", "#16150f", "#0a0907", "#ebe6d4", "#bab49e", "#96907c", "#5a5340", "#2c2a20", "#e0c93a", "#e8893a", "#ff9b8a"],
+		display: "black-ops", body: "ui", corners: "sharp", texture: "ruins", ornament: "rad", frame: "scrap", titles: "caps", effect: "grime", imagery: "irradiated",
+		accent2: "#9bb55a", accent3: "#c0653a");
+
 	public static readonly IReadOnlyList<PortalTheme> All =
 	[
 		Phosphor, Daylight, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual,
@@ -404,6 +458,8 @@ public static class BuiltInThemes
 		SuperRobot,
 		HeartRealm, CrystalEpic, CrystalEpic16Bit, CallingCard, Jrpg,
 		AdventurersHandbook, Trailblazer,
+		GothicPunk, Dragonrider, FleetCommand, Gaslight, DesertPlanet,
+		ArcaneAcademy, Steampunk, Frontier, Wasteland,
 		ProtanDark, ProtanLight, DeutanDark, DeutanLight, TritanDark, TritanLight, MonoDark, MonoLight,
 	];
 

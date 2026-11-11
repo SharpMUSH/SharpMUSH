@@ -37,7 +37,7 @@ public static class LayoutThemes
 	/// <c>text-faint</c>, then the status colours the portal works out for the theme (success, <c>warn</c>, danger and
 	/// info). A colour that did not stand out from the background enough for its role was moved toward white on a dark
 	/// theme, black on a light one, until it did. Subtle, link, highlight and the hues are worked out from those
-	/// (<see cref="ThemePalette.Completed()"/>). The themes styled on games (<c>heart-realm</c> to <c>trailblazer</c>)
+	/// (<see cref="ThemePalette.Completed()"/>). The themes styled on games (<c>heart-realm</c> to <c>wasteland</c>)
 	/// also carry a look: their own border, title ornaments, bullet and gauge.
 	/// </summary>
 	public static IReadOnlyList<ThemePalette> Own { get; } =
@@ -100,6 +100,52 @@ public static class LayoutThemes
 		{
 			Border = "heavy", TitleOpen = "┫ ◆◆ ", TitleClose = " ┣", Guide = "heavy", Bullet = "◆",
 			GaugeOpen = "[", GaugeFilled = "◆", GaugeEmpty = "◇", GaugeClose = "]", Rule = "━",
+		}),
+		Ported("gothic-punk", ThemeMode.Dark, ["#0d0b0c", "#211b1e", "#ece4dc", "#ef5a70", "#8fa58c", "#c9b99a", "#968a82", "#6cde9a", "#d9a441", "#e57373", "#5aa9ff"], new ThemeLook
+		{
+			Border = "heavy", TitleOpen = "┫ ✠ ", TitleClose = " ✠ ┣", Guide = "heavy", Bullet = "†",
+			GaugeOpen = "[", GaugeFilled = "▮", GaugeEmpty = "▯", GaugeClose = "]", Rule = "━",
+		}),
+		Ported("dragonrider", ThemeMode.Dark, ["#120f0c", "#251e18", "#f1e8dc", "#e0a458", "#5fc28f", "#6fa8f0", "#9e907f", "#6cde9a", "#f2c14e", "#e57373", "#6fa8f0"], new ThemeLook
+		{
+			Border = "double", TitleOpen = "╡ ✥ ", TitleClose = " ✥ ╞", Guide = "double", Bullet = "✥",
+			GaugeOpen = "[", GaugeFilled = "▲", GaugeEmpty = "△", GaugeClose = "]", Rule = "═",
+		}),
+		Ported("fleet-command", ThemeMode.Dark, ["#0e1012", "#1f2327", "#e6e8e6", "#f2a93b", "#7fb0d9", "#c9c2b0", "#8a9093", "#6cde9a", "#ffd166", "#e57373", "#7fb0d9"], new ThemeLook
+		{
+			Border = "single", TopLeft = "◤", TopRight = "◥", BottomLeft = "◣", BottomRight = "◢",
+			TitleOpen = "┤ ", TitleClose = " ├", Guide = "single", Bullet = "▸",
+			GaugeOpen = "[", GaugeFilled = "▰", GaugeEmpty = "▱", GaugeClose = "]", Rule = "─",
+		}),
+		Ported("gaslight", ThemeMode.Dark, ["#120e0b", "#261e18", "#efe6d6", "#d6b25e", "#8fbf8a", "#d0685a", "#9c8f7b", "#8fbf8a", "#e3a04f", "#e57373", "#5aa9ff"], new ThemeLook
+		{
+			Border = "double", TitleOpen = "╡ ☽ ", TitleClose = " ☾ ╞", Guide = "double", Bullet = "✶",
+			GaugeOpen = "[", GaugeFilled = "●", GaugeEmpty = "○", GaugeClose = "]", Rule = "═",
+		}),
+		Ported("desert-planet", ThemeMode.Dark, ["#17100a", "#2c1f15", "#f5e9d6", "#f0913a", "#4da3e6", "#e3c9a0", "#a8937a", "#6cde9a", "#f2c14e", "#e57373", "#4da3e6"], new ThemeLook
+		{
+			Border = "single", TitleOpen = "┤ ◉ ", TitleClose = " ◉ ├", Guide = "single", Bullet = "∴",
+			GaugeOpen = "[", GaugeFilled = "■", GaugeEmpty = "·", GaugeClose = "]", Rule = "─",
+		}),
+		Ported("arcane-academy", ThemeMode.Dark, ["#0d0f1c", "#1d2136", "#f0ecdf", "#e6c35c", "#d86070", "#4fa37b", "#9a9586", "#6cde9a", "#f0a35a", "#e57373", "#5aa9ff"], new ThemeLook
+		{
+			Border = "double", TitleOpen = "╡ ✴ ", TitleClose = " ✴ ╞", Guide = "double", Bullet = "✧",
+			GaugeOpen = "[", GaugeFilled = "★", GaugeEmpty = "☆", GaugeClose = "]", Rule = "═",
+		}),
+		Ported("steampunk", ThemeMode.Dark, ["#15100b", "#2a2017", "#f0e4cf", "#d9954a", "#a8b4ad", "#5f9e8f", "#a08e72", "#6cde9a", "#e8c25a", "#e57373", "#5aa9ff"], new ThemeLook
+		{
+			Border = "heavy", TitleOpen = "┫ ⚙ ", TitleClose = " ⚙ ┣", Guide = "heavy", Bullet = "⁘",
+			GaugeOpen = "[", GaugeFilled = "◼", GaugeEmpty = "◻", GaugeClose = "]", Rule = "━",
+		}),
+		Ported("frontier", ThemeMode.Light, ["#ece0c3", "#f1e6cb", "#2a1c10", "#8a2a17", "#6b4a24", "#2f5f6f", "#644f39", "#326647", "#7a4d00", "#934a4a", "#346294"], new ThemeLook
+		{
+			Border = "double", TitleOpen = "╡ ★ ", TitleClose = " ★ ╞", Guide = "double", Bullet = "»",
+			GaugeOpen = "[", GaugeFilled = "▓", GaugeEmpty = "░", GaugeClose = "]", Rule = "═",
+		}),
+		Ported("wasteland", ThemeMode.Dark, ["#12110d", "#24221a", "#ebe6d4", "#e0c93a", "#9bb55a", "#c0653a", "#96907c", "#9bb55a", "#e8893a", "#e57373", "#5aa9ff"], new ThemeLook
+		{
+			Border = "single", TitleOpen = "┤ ☢ ", TitleClose = " ☢ ├", Guide = "single", Bullet = "×",
+			GaugeOpen = "[", GaugeFilled = "#", GaugeEmpty = "-", GaugeClose = "]", Rule = "─",
 		}),
 		Ported("protan-dark", ThemeMode.Dark, ["#0e0f11", "#1c1f23", "#e9edf0", "#a8e8fa", "#e9edf0", "#f2ef0a", "#7d8790", "#2ca1c1", "#f2ef0a", "#f58b28", "#9f5efe"]),
 		Ported("protan-light", ThemeMode.Light, ["#f3f4f6", "#eef0f3", "#14181c", "#1b729b", "#14181c", "#876c00", "#5f6872", "#0d155a", "#876c00", "#612f08", "#5801f5"]),

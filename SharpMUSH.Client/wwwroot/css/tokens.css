@@ -312,6 +312,69 @@
     font-style: normal;
     font-display: swap;
 }
+@font-face {
+    font-family: "Pirata One";
+    src: url("/fonts/pirata-one-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Uncial Antiqua";
+    src: url("/fonts/uncial-antiqua-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Barlow Condensed";
+    src: url("/fonts/barlow-condensed-latin.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Metamorphous";
+    src: url("/fonts/metamorphous-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Krona One";
+    src: url("/fonts/krona-one-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Eagle Lake";
+    src: url("/fonts/eagle-lake-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Federant";
+    src: url("/fonts/federant-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Rye";
+    src: url("/fonts/rye-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Black Ops One";
+    src: url("/fonts/black-ops-one-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
 
 :root {
 	/* ── Phosphor design tokens (BuiltInThemes.Phosphor) ── */

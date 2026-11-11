@@ -274,3 +274,86 @@
 [data-effect-shadow="dialog"] { --title-shadow: 0 2px 0 rgba(0, 0, 0, 0.9); }
 /* Stamped: pressed into the page, a light edge below. */
 [data-effect-shadow="stamped"] { --title-shadow: 0 1px 0 rgba(255, 255, 255, 0.75); }
+
+/* Thorn: a cross pattée either side, and a barbed line of the accent. */
+[data-ornament-glyphs="thorn"] { --ornament-before: "\2720"; --ornament-after: "\2720"; }
+[data-ornament-underline="thorn"] {
+	--title-underline: repeating-linear-gradient(90deg, var(--accent) 0 14px, transparent 14px 16px, var(--accent) 16px 18px, transparent 18px 20px);
+	--title-underline-height: 3px;
+	--title-underline-pad: 6px;
+}
+/* Wing: a four-club cross either side, and an accent line fading out at both ends. */
+[data-ornament-glyphs="wing"] { --ornament-before: "\2725"; --ornament-after: "\2725"; }
+[data-ornament-underline="wing"] {
+	--title-underline: linear-gradient(90deg, transparent, var(--accent) 25% 75%, transparent);
+	--title-underline-height: 2px;
+	--title-underline-pad: 7px;
+}
+/* Chevron: a small triangle before, and a band of accent chevrons. */
+[data-ornament-glyphs="chevron"] { --ornament-before: "\25B8"; --ornament-after: none; }
+[data-ornament-underline="chevron"] {
+	--title-underline: repeating-linear-gradient(135deg, var(--accent) 0 3px, transparent 3px 7px);
+	--title-underline-height: 5px;
+	--title-underline-pad: 6px;
+}
+/* Moon: a waxing and a waning moon either side, and an accent line parted in the middle. */
+[data-ornament-glyphs="moon"] { --ornament-before: "\263D"; --ornament-after: "\263E"; }
+[data-ornament-underline="moon"] {
+	--title-underline: linear-gradient(90deg, transparent, var(--accent) 30% 46%, transparent 46% 54%, var(--accent) 54% 70%, transparent);
+	--title-underline-height: 2px;
+	--title-underline-pad: 7px;
+}
+/* Sun disc: a fisheye either side, and an accent bar breaking into shorter dashes. */
+[data-ornament-glyphs="sun-disc"] { --ornament-before: "\25C9"; --ornament-after: "\25C9"; }
+[data-ornament-underline="sun-disc"] {
+	--title-underline: linear-gradient(90deg, var(--accent) 0 60%, transparent 60% 64%, var(--accent) 64% 72%, transparent 72% 76%, var(--accent) 76% 80%, transparent 80%);
+	--title-underline-height: 3px;
+	--title-underline-pad: 7px;
+}
+/* Wand: a spark either side, and a line running from the accent into accent-2. */
+[data-ornament-glyphs="wand"] { --ornament-before: "\2734"; --ornament-after: "\2734"; }
+[data-ornament-underline="wand"] {
+	--title-underline: linear-gradient(90deg, var(--accent), var(--accent-2) 70%, transparent);
+	--title-underline-height: 2px;
+	--title-underline-pad: 7px;
+}
+/* Cog: a gear before, and a toothed accent bar. */
+[data-ornament-glyphs="cog"] { --ornament-before: "\2699"; --ornament-after: none; }
+[data-ornament-underline="cog"] {
+	--title-underline: repeating-linear-gradient(90deg, var(--accent) 0 6px, transparent 6px 9px);
+	--title-underline-height: 4px;
+	--title-underline-pad: 6px;
+}
+/* Sheriff: a star either side, and a thick and thin rule of the accent. */
+[data-ornament-glyphs="sheriff"] { --ornament-before: "\2605"; --ornament-after: "\2605"; }
+[data-ornament-underline="sheriff"] {
+	--title-underline: linear-gradient(180deg, var(--accent) 0 3px, transparent 3px 5px, var(--accent) 5px 6px);
+	--title-underline-height: 6px;
+	--title-underline-pad: 8px;
+}
+/* Rad: a radiation sign before, and a hazard stripe of the accent. */
+[data-ornament-glyphs="rad"] { --ornament-before: "\2622"; --ornament-after: none; }
+[data-ornament-underline="rad"] {
+	--title-underline: repeating-linear-gradient(-45deg, var(--accent) 0 6px, transparent 6px 12px);
+	--title-underline-height: 6px;
+	--title-underline-pad: 6px;
+}
+
+/* Bloodlet: a black drop and a red glow. */
+[data-effect-shadow="bloodlet"] { --title-shadow: 0 2px 0 #000, 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent); }
+/* Firestone: an ember glow of the warning colour and the accent. */
+[data-effect-shadow="firestone"] { --title-shadow: 0 0 6px color-mix(in srgb, var(--warn) 55%, transparent), 0 0 18px color-mix(in srgb, var(--accent) 40%, transparent); }
+/* Scope: the accent's phosphor glow, as on a scope. */
+[data-effect-shadow="scope"] { --title-shadow: 0 0 8px color-mix(in srgb, var(--accent) 45%, transparent); }
+/* Ectoplasm: a pale accent-2 glow. */
+[data-effect-shadow="ectoplasm"] { --title-shadow: 0 0 10px color-mix(in srgb, var(--accent-2) 60%, transparent); }
+/* Heat: a warm haze and a dark edge. */
+[data-effect-shadow="heat"] { --title-shadow: 0 1px 0 #000, 0 0 12px color-mix(in srgb, var(--warn) 45%, transparent); }
+/* Spellglow: a gold glow inside an accent-2 one. */
+[data-effect-shadow="spellglow"] { --title-shadow: 0 0 8px color-mix(in srgb, var(--accent) 50%, transparent), 0 0 22px color-mix(in srgb, var(--accent-2) 30%, transparent); }
+/* Brass: a lit edge above and a dark one below, as on a stamped plate. */
+[data-effect-shadow="brass"] { --title-shadow: 0 -1px 0 #000, 0 1px 0 color-mix(in srgb, var(--text) 35%, transparent), 0 2px 4px rgba(0, 0, 0, 0.6); }
+/* Woodtype: a light offset of the ink, as from a worn block. */
+[data-effect-shadow="woodtype"] { --title-shadow: 1px 1px 0 color-mix(in srgb, var(--text) 25%, transparent); }
+/* Grime: a hard black drop and a dark smudge. */
+[data-effect-shadow="grime"] { --title-shadow: 2px 2px 0 #000, 0 0 10px rgba(0, 0, 0, 0.6); }

@@ -58,6 +58,7 @@ public static class ThemeStyles
 		"fredoka", "dancing", "mochiy", "patrick", "dela", "graduate", "saira-stencil", "pixelify", "yuji", "bangers",
 		"lilita", "titan", "chakra", "monoton", "michroma", "antonio", "oxanium", "russo",
 		"cinzel-decorative", "forum", "press-start", "anton", "dotgothic", "alegreya-sc", "oswald",
+		"pirata", "uncial", "barlow", "metamorphous", "krona", "eagle-lake", "federant", "rye", "black-ops",
 	];
 
 	/// <summary>Faces for everything else. Kept to faces that read well small.</summary>
@@ -122,6 +123,15 @@ public static class ThemeStyles
 		["dialog"] = new("dialog", "heavy", "dialog"),
 		["statblock"] = new("statblock", "none", "statblock"),
 		["ledger"] = new("ledger", "line", "ledger"),
+		["talon"] = new("talon", "line", "talon"),
+		["scales"] = new("scales", "line", "scales"),
+		["clipped"] = new("clipped", "line", "none"),
+		["planchette"] = new("planchette", "line", "planchette"),
+		["sandstep"] = new("sandstep", "line", "sandstep"),
+		["crest"] = new("crest", "double", "crest"),
+		["riveted"] = new("riveted", "thick", "riveted"),
+		["wanted"] = new("wanted", "double", "wanted"),
+		["scrap"] = new("scrap", "heavy", "scrap"),
 	};
 
 	public static readonly IReadOnlyDictionary<string, OrnamentSet> Ornaments = new Dictionary<string, OrnamentSet>
@@ -163,6 +173,15 @@ public static class ThemeStyles
 		["pointer"] = new("pointer", "none"),
 		["rubric"] = new("none", "taper"),
 		["actions"] = new("actions", "bar"),
+		["thorn"] = new("thorn", "thorn"),
+		["wing"] = new("wing", "wing"),
+		["chevron"] = new("chevron", "chevron"),
+		["moon"] = new("moon", "moon"),
+		["sun-disc"] = new("sun-disc", "sun-disc"),
+		["wand"] = new("wand", "wand"),
+		["cog"] = new("cog", "cog"),
+		["sheriff"] = new("sheriff", "sheriff"),
+		["rad"] = new("rad", "rad"),
 	};
 
 	public static readonly IReadOnlyDictionary<string, EffectSet> Effects = new Dictionary<string, EffectSet>
@@ -197,6 +216,15 @@ public static class ThemeStyles
 		["dialog"] = new("text", "dialog"),
 		["rubric"] = new("accent", "emboss"),
 		["stamped"] = new("accent", "stamped"),
+		["bloodlet"] = new("text", "bloodlet"),
+		["firestone"] = new("text", "firestone"),
+		["scope"] = new("accent", "scope"),
+		["ectoplasm"] = new("text", "ectoplasm"),
+		["heat"] = new("accent", "heat"),
+		["spellglow"] = new("accent", "spellglow"),
+		["brass"] = new("accent", "brass"),
+		["woodtype"] = new("accent", "woodtype"),
+		["grime"] = new("accent", "grime"),
 	};
 
 	/// <summary>Every setting and part with its choices, the first being what a theme that sets none gets.</summary>
@@ -211,7 +239,7 @@ public static class ThemeStyles
 			"foxing", "blood", "blinds", "petals", "mandala", "swiss", "sparkles", "bubbles", "spotlights", "notebook",
 			"speedlines", "court", "hazard", "sigil", "sumi", "benday", "filmgrain", "starburst", "rain", "outrun", "galaxy",
 			"readout", "armor-panels", "sunburst-rays", "stained-glass", "crystal", "dither", "shards", "overworld", "watercolor",
-			"marble",
+			"marble", "spires", "dragonflight", "plot", "seance", "dunes", "candles", "gears", "mesa", "ruins",
 		],
 		[Ornament] = [.. Ornaments.Keys],
 		[Frame] = [.. Frames.Keys],
@@ -221,7 +249,7 @@ public static class ThemeStyles
 		[
 			"natural", "tint", "sepia", "mono", "noir", "pastel", "airy", "spotlit", "sunny", "ink", "floodlit", "steel",
 			"vivid", "indigo", "print", "film", "cel", "neon", "dusk", "warm", "hangar", "hotblooded", "dreamlit", "crystalline",
-			"sixteen-bit", "redout", "cartridge", "watercolor", "etched",
+			"sixteen-bit", "redout", "cartridge", "watercolor", "etched", "nocturne", "duskfire", "gunmetal", "daguerreotype", "sunbleached", "candlelit", "tintype", "sunbaked", "irradiated",
 		],
 		[TextureStrength] = Strengths,
 		[FrameMarks] = [.. Frames.Values.Select(f => f.Marks).Distinct()],

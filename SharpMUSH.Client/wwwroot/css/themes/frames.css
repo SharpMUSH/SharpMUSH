@@ -406,3 +406,94 @@
 [data-frame-shadow="ledger"] {
 	--card-shadow: 0 1px 3px color-mix(in srgb, var(--text) 22%, transparent);
 }
+
+/* Talon: three claw marks raked across the top right corner in the accent. */
+[data-frame-marks="talon"] {
+	--card-mask-accent: url(/themes/drawings/frames/talon-scratch.svg) right 10px top 8px / 42px 28px no-repeat;
+	--card-ink-accent: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+/* Talon: a black ring and a deep shadow, as if the card hung in the dark. */
+[data-frame-shadow="talon"] {
+	--card-shadow: 0 0 0 1px #000, 0 10px 26px rgba(0, 0, 0, 0.6), inset 0 0 22px color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+/* Scales: a band of overlapping scales in the accent across the top of the card. */
+[data-frame-marks="scales"] {
+	--card-marks: radial-gradient(circle at 50% 0, transparent 6px, color-mix(in srgb, var(--accent) 60%, transparent) 6px 7.5px, transparent 7.5px) left top / 14px 9px repeat-x,
+		radial-gradient(circle at 50% 0, transparent 6px, color-mix(in srgb, var(--accent) 35%, transparent) 6px 7.5px, transparent 7.5px) left 7px top 5px / 14px 9px repeat-x;
+}
+/* Scales: a warm glow of the accent. */
+[data-frame-shadow="scales"] {
+	--card-shadow: 0 0 20px color-mix(in srgb, var(--accent) 12%, transparent), 0 8px 20px rgba(0, 0, 0, 0.45);
+}
+
+/* Clipped: the top left and lower right corners cut off on a slant, with the cut drawn in the border colour, and an
+   accent tick at the top right, as on fleet paperwork. */
+[data-frame-marks="clipped"] {
+	--card-marks: linear-gradient(135deg, var(--bg) 0 13px, var(--border) 13px 14.5px, transparent 14.5px) left -1px top -1px / 26px 26px no-repeat,
+		linear-gradient(-45deg, var(--bg) 0 13px, var(--border) 13px 14.5px, transparent 14.5px) right -1px bottom -1px / 26px 26px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) right 10px top 10px / 18px 3px no-repeat;
+}
+
+/* Planchette: a crescent moon in the accent at the top right and a sun in accent-2 at the lower left. */
+[data-frame-marks="planchette"] {
+	--card-mask-accent: url(/themes/drawings/frames/planchette-moon.svg) right 10px top 10px / 14px 14px no-repeat;
+	--card-ink-accent: color-mix(in srgb, var(--accent) 80%, transparent);
+	--card-mask-accent-2: url(/themes/drawings/frames/planchette-sun.svg) left 10px bottom 10px / 14px 14px no-repeat;
+	--card-ink-accent-2: color-mix(in srgb, var(--accent-2) 70%, transparent);
+}
+/* Planchette: an inner brass rule, as on a talking board. */
+[data-frame-shadow="planchette"] {
+	--card-shadow: inset 0 0 0 4px var(--surface), inset 0 0 0 5px color-mix(in srgb, var(--accent) 40%, transparent), 0 8px 22px rgba(0, 0, 0, 0.5);
+}
+
+/* Sandstep: a band of stepped shapes in the accent along the top of the card. */
+[data-frame-marks="sandstep"] {
+	--card-mask-accent: url(/themes/drawings/frames/sandstep-band.svg) left top 4px / 48px 10px repeat-x;
+	--card-ink-accent: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+/* Sandstep: a long shadow, as at dusk. */
+[data-frame-shadow="sandstep"] {
+	--card-shadow: 6px 14px 28px rgba(0, 0, 0, 0.5);
+}
+
+/* Crest: a shield crest in the accent at the top centre. */
+[data-frame-marks="crest"] {
+	--card-mask-accent: url(/themes/drawings/frames/crest-shield.svg) center top 6px / 16px 19px no-repeat;
+}
+/* Crest: a faint gold ring and a soft shadow. */
+[data-frame-shadow="crest"] {
+	--card-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent), 0 10px 26px rgba(0, 0, 0, 0.5);
+}
+
+/* Riveted: a brass rivet in each corner. */
+[data-frame-marks="riveted"] {
+	--card-marks: radial-gradient(circle at 40% 40%, color-mix(in srgb, var(--accent) 60%, var(--text)) 0 1.5px, var(--accent) 2px 3.5px, transparent 4px) left 5px top 5px / 10px 10px no-repeat,
+		radial-gradient(circle at 40% 40%, color-mix(in srgb, var(--accent) 60%, var(--text)) 0 1.5px, var(--accent) 2px 3.5px, transparent 4px) right 5px top 5px / 10px 10px no-repeat,
+		radial-gradient(circle at 40% 40%, color-mix(in srgb, var(--accent) 60%, var(--text)) 0 1.5px, var(--accent) 2px 3.5px, transparent 4px) left 5px bottom 5px / 10px 10px no-repeat,
+		radial-gradient(circle at 40% 40%, color-mix(in srgb, var(--accent) 60%, var(--text)) 0 1.5px, var(--accent) 2px 3.5px, transparent 4px) right 5px bottom 5px / 10px 10px no-repeat,
+		linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 40%);
+}
+/* Riveted: a lit top edge, a dark lower edge and a drop, as a plate of metal. */
+[data-frame-shadow="riveted"] {
+	--card-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 18%, transparent), inset 0 -2px 0 rgba(0, 0, 0, 0.4), 0 6px 14px rgba(0, 0, 0, 0.5);
+}
+
+/* Wanted: a nail in each top corner. */
+[data-frame-marks="wanted"] {
+	--card-marks: radial-gradient(circle at 40% 40%, color-mix(in srgb, var(--text) 30%, transparent) 0 1px, var(--text) 1.5px 3px, transparent 3.5px) left 6px top 6px / 9px 9px no-repeat,
+		radial-gradient(circle at 40% 40%, color-mix(in srgb, var(--text) 30%, transparent) 0 1px, var(--text) 1.5px 3px, transparent 3.5px) right 6px top 6px / 9px 9px no-repeat;
+}
+/* Wanted: a sheet lifted off the wall, with a hard shadow down and to the right. */
+[data-frame-shadow="wanted"] {
+	--card-shadow: 3px 4px 0 color-mix(in srgb, var(--text) 18%, transparent);
+}
+
+/* Scrap: a hazard stripe of the accent and black along the foot of the card. */
+[data-frame-marks="scrap"] {
+	--card-marks: repeating-linear-gradient(-45deg, var(--accent) 0 8px, #000 8px 16px) left bottom / 100% 6px no-repeat;
+}
+/* Scrap: a black ring and a hard dark drop. */
+[data-frame-shadow="scrap"] {
+	--card-shadow: 0 0 0 1px #000, 4px 4px 0 rgba(0, 0, 0, 0.55);
+}

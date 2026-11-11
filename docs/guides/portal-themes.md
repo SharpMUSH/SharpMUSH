@@ -40,6 +40,9 @@ stored with the character (`CharacterAppearance.Vision`) like the theme and acce
 - Console and tabletop role-playing games: `heart-realm`, `crystal-epic`, `crystal-epic-16bit`, `calling-card`, `jrpg`,
   `adventurers-handbook`, `trailblazer`. Each evokes a style with its own drawings and an OFL face, never a game's
   name, logo, art or font. Their layout themes also carry a look (border, title ornaments, bullet, gauge).
+- Fan-game settings: `gothic-punk`, `dragonrider`, `fleet-command`, `gaslight`, `desert-planet`, `arcane-academy`,
+  `steampunk`, `frontier`, `wasteland`. Settings that games on the MU* lists come back to, drawn the same way, and their
+  layout themes carry a look too.
 - Colour vision: `protan-dark`, `protan-light`, `deutan-dark`, `deutan-light`, `tritan-dark`, `tritan-light`,
   `mono-dark`, `mono-light`. Phosphor's or Daylight's surfaces and text, with an accent, warning and missing-link
   colour picked for that vision. They draw no grain: their colours reach 4.5:1 against the flat surfaces, and the
