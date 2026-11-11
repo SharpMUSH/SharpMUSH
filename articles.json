@@ -15840,7 +15840,14 @@
     "lookup": "tinymux forms",
     "title": "TinyMUX Forms",
     "aliases": [],
-    "sections": [],
+    "sections": [
+      {
+        "id": "flags",
+        "lookup": "tinymux flags",
+        "heading": "Flags and powers",
+        "aliases": []
+      }
+    ],
     "file": "tinymux-forms.md"
   },
   {
