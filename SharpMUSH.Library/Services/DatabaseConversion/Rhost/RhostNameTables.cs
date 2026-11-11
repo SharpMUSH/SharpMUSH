@@ -553,7 +553,7 @@ public static class RhostNameTables
 		[25] = "the money, which SharpMUSH does not track",
 		[43] = "the name, imported as the name",
 		[49] = "the quota in use, which SharpMUSH counts itself; RQUOTA sets the limit",
-		[78] = ServerState, [TotemsAttribute] = "the totems, imported as flags", [84] = ServerState + " (login history)", [99] = ServerState,
+		[78] = ServerState, [TotemsAttribute] = "the totems, imported as roles", [84] = ServerState + " (login history)", [99] = ServerState,
 		[128] = ServerState, [155] = ServerState, [175] = ServerState + " (mail password)", [176] = ServerState,
 		[179] = ServerState, [180] = ServerState, [181] = ServerState + " (mail quota)", [182] = ServerState + " (mail quota)",
 		[183] = ServerState + " (mail quota)", [184] = ServerState, [185] = ServerState, [186] = ServerState,

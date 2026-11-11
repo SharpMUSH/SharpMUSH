@@ -2,6 +2,7 @@ using System.Globalization;
 using SharpMUSH.Configuration;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Models;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Services.DatabaseConversion.Softcode;
 using SharpMUSH.Library.Services.Passwords;
@@ -339,42 +340,75 @@ public static partial class RhostDatabaseTranslator
 
 	private const uint ZoneMasterBit = 0x20;
 
+	/// <summary>The role category totems go in.</summary>
+	public const string TotemCategory = "Totems";
+
 	/// <summary>
-	/// Makes a flag of each of <paramref name="totems"/>, for a game whose <c>netrhost.conf</c> defines its own, and
-	/// sets it on every object that holds the totem. Only wizards set one, as RhostMUSH lets only them by default.
+	/// The priority of a totem's role: above guest and below player, so anyone who may assign roles at all may assign
+	/// it. It grants nothing.
+	/// </summary>
+	public const int TotemPriority = 1;
+
+	/// <summary>
+	/// Makes a role of each of <paramref name="totems"/>, a game's own from its <c>netrhost.conf</c>, and gives it to
+	/// every object that holds the totem. A game's own totem is made whether or not an object holds it, as softcode may
+	/// test it.
 	/// </summary>
 	public static void MapTotems(PennMUSHDatabase database, IEnumerable<TotemDirective> totems)
 	{
 		var report = new Report();
-		MapTotems(database, totems.Select(totem => (totem, true)), report);
+		MapTotems(database, totems.Select(totem => (totem, true)), report, always: true);
 		database.ImportNotes.AddRange(report.Decisions());
 	}
 
-	private static void MapTotems(PennMUSHDatabase database, IEnumerable<(TotemDirective Totem, bool StaffOnly)> totems, Report report)
+	/// <summary>
+	/// Each totem as a role with no permissions in the <see cref="TotemCategory"/> category, its slug the totem's name
+	/// in lower case, given to the objects holding it. RhostMUSH's own totems are made only when an object holds one.
+	/// </summary>
+	private static void MapTotems(PennMUSHDatabase database, IEnumerable<(TotemDirective Totem, bool StaffOnly)> totems, Report report,
+		bool always = false)
 	{
 		foreach (var (totem, staffOnly) in totems)
 		{
 			var name = totem.Name.ToUpperInvariant();
+			var slug = TotemSlug(totem.Name);
 			var holders = database.Objects
-				.Where(o => o.Totems.Count > totem.Slot && (o.Totems[totem.Slot] & totem.Value) == totem.Value && !o.Flags.Contains(name))
+				.Where(o => o.Totems.Count > totem.Slot && (o.Totems[totem.Slot] & totem.Value) == totem.Value && !o.Roles.Contains(slug))
 				.ToArray();
-			if (holders.Length == 0)
+			if (holders.Length == 0 && !always)
 			{
 				continue;
 			}
 
-			if (!database.FlagDefinitions.Any(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+			if (!database.Roles.Any(role => role.Slug.Equals(slug, StringComparison.OrdinalIgnoreCase)))
 			{
-				string[] perms = staffOnly ? ["wizard"] : [];
-				database.FlagDefinitions.Add(new PennMUSHFlagDefinition { Name = name, SetPermissions = [.. perms], UnsetPermissions = [.. perms] });
+				database.Roles.Add(new SharpRole { Slug = slug, Name = name, Category = TotemCategory, Priority = TotemPriority });
+				if (!database.RoleCategories.Any(category => category.Name.Equals(TotemCategory, StringComparison.OrdinalIgnoreCase)))
+				{
+					database.RoleCategories.Add(new RoleCategory(TotemCategory,
+						$"{ServerName}'s totems: roles that grant nothing, which softcode tests with hasrole().", 0));
+				}
 			}
 
+			var who = staffOnly ? "" : $"; anyone could set it in {ServerName}, here those who may assign roles do";
 			foreach (var holder in holders)
 			{
-				holder.Flags.Add(name);
-				report.Note(ImportWarningKind.Flags, $"Totem {name}: imported as a flag of its own ({(staffOnly ? "wizards set it" : "anyone may set it")})", holder.DBRef);
+				holder.Roles.Add(slug);
+				report.Note(ImportWarningKind.Flags, $"Totem {name}: imported as the role {slug}{who}", holder.DBRef);
 			}
 		}
+	}
+
+	/// <summary>
+	/// The slug of a totem's role: its name in lower case, any character a slug may not hold written as <c>_</c>, and
+	/// <c>totem-</c> before a name a built-in role has.
+	/// </summary>
+	public static string TotemSlug(string name)
+	{
+		var slug = new string([.. name.ToLowerInvariant().Select(ch => char.IsAsciiLetterOrDigit(ch) || ch is '-' or '_' ? ch : '_')]);
+		slug = BuiltInRoles.All.Concat(BuiltInRoles.RhostLevels).Concat(BuiltInRoles.Starters)
+			.Any(role => role.Slug.Equals(slug, StringComparison.Ordinal)) ? $"totem-{slug}" : slug;
+		return slug[..Math.Min(slug.Length, RoleNames.MaxLength)];
 	}
 
 	/// <summary>

@@ -44,6 +44,9 @@ public class PennMUSHDatabase
 	/// </summary>
 	public List<SharpRole> Roles { get; set; } = [];
 
+	/// <summary>The role categories <see cref="Roles"/> go in that a world may not have yet; one it has is kept.</summary>
+	public List<RoleCategory> RoleCategories { get; set; } = [];
+
 	/// <summary>
 	/// The source's reality levels, which name the bits of each object's <see cref="PennMUSHObject.Reality"/>. A
 	/// RhostMUSH or TinyMUX flatfile does not hold them; the game's configuration file does, and the import takes them

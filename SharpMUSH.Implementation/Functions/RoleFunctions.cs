@@ -14,19 +14,21 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	/// <summary>
-	/// <c>roles(&lt;object&gt;)</c>: the slugs of the roles the object holds, its own and its account's,
-	/// highest priority first, <c>everyone</c> last. An object that hides its roles from the caller
-	/// (<see cref="PortalPermission.HideRoles"/>) shows only <c>everyone</c>.
+	/// <c>roles(&lt;object&gt;[, &lt;category&gt;])</c>: the slugs of the roles the object holds, its own and its account's,
+	/// highest priority first, <c>everyone</c> last; with a category, only that category's roles. An object that hides
+	/// its roles from the caller (<see cref="PortalPermission.HideRoles"/>) shows only <c>everyone</c>.
 	/// </summary>
-	[SharpFunction(Name = "roles", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
+	[SharpFunction(Name = "roles", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "category"])]
 	public async ValueTask<CallState> Roles(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var category = parser.CurrentState.Arguments.TryGetValue("1", out var named) ? named.Message.ToPlainText().Trim() : null;
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
 			parser.CurrentState.Arguments["0"].Message.ToPlainText(), LocateFlags.All,
 			async found =>
 			{
-				var held = (await found.GrantsAsync(ExecutionBudget.CurrentToken)).Roles.Select(r => r.Role).DistinctBy(r => r.Slug).ToArray();
+				var held = (await found.GrantsAsync(ExecutionBudget.CurrentToken)).Roles.Select(r => r.Role).DistinctBy(r => r.Slug)
+					.Where(r => category is null || string.Equals(r.Category, category, StringComparison.OrdinalIgnoreCase)).ToArray();
 				var everyone = held.Where(BuiltInRoles.IsEveryone).Select(r => r.Slug);
 				return new CallState(string.Join(' ', await found.HidesRolesFrom(executor)
 					? everyone
