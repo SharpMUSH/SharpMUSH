@@ -408,11 +408,10 @@
 }
 
 /* Stained glass: a round stained-glass window rising from the foot of the page under a night sky of faint stars:
-   a rim of gold, rose and blue panes and a string of pearls, a blue field of leaded panes round eight medallions,
-   a gold and pale sunburst, and a crowned heart on a blue disc in the middle. Each pane is lit from behind,
-   brightest toward the centre and darker at the rim, mottled and streaked like cathedral glass, with a sliver of
-   reflected light inside its upper edge (the top layer, in the text colour); the gold panes are the border layer,
-   in the accent. The page shows through the leading. */
+   a silver rim, a ring of lancets with a star in each, a blue field of leaded panes, silver scrollwork, and three
+   medallions (accent, accent-2 and accent-3) round a small jewel. Each layer's drawing carries the glass's own
+   shading as its strength, so a pane keeps its light and dark under the theme's colour; the leading is the
+   border layer, nearly black. The pane colours are mottled and streaked like cathedral glass. */
 [data-texture="stained-glass"] {
 	--glass-at: left 50% bottom -420px / 1120px 1120px no-repeat;
 	--glass-grain: repeating-conic-gradient(from 3deg at 50% calc(100% - 140px), transparent 0 7deg, rgba(0, 0, 0, 0.2) 7deg 11deg,
@@ -426,16 +425,16 @@
 		radial-gradient(1px 1px at 131px 97px, color-mix(in srgb, var(--text) 35%, transparent), transparent),
 		radial-gradient(1.5px 1.5px at 171px 17px, color-mix(in srgb, var(--accent) 55%, transparent), transparent);
 	--texture-size: 100% 100%, 210px 210px, 210px 210px, 210px 210px;
-	--texture-mask-accent: url(/themes/drawings/textures/stained-glass-accent.svg) var(--glass-at);
-	--texture-ink-accent: color-mix(in srgb, var(--text) 50%, transparent);
-	--texture-mask-accent-2: url(/themes/drawings/textures/stained-glass-accent-2.svg) var(--glass-at);
-	--texture-ink-accent-2: var(--glass-grain), radial-gradient(circle 580px at 50% calc(100% - 140px), color-mix(in srgb, color-mix(in srgb, var(--accent-2) 88%, var(--text)) 88%, transparent), color-mix(in srgb, var(--accent-2) 72%, transparent) 45%, color-mix(in srgb, color-mix(in srgb, var(--accent-2) 55%, #000) 52%, transparent));
-	--texture-mask-accent-3: url(/themes/drawings/textures/stained-glass-accent-3.svg) var(--glass-at);
-	--texture-ink-accent-3: var(--glass-grain), radial-gradient(circle 580px at 50% calc(100% - 140px), color-mix(in srgb, color-mix(in srgb, var(--accent-3) 88%, var(--text)) 92%, transparent), color-mix(in srgb, var(--accent-3) 80%, transparent) 45%, color-mix(in srgb, color-mix(in srgb, var(--accent-3) 55%, #000) 60%, transparent));
-	--texture-mask-text: url(/themes/drawings/textures/stained-glass-text.svg) var(--glass-at);
-	--texture-ink-text: var(--glass-grain), radial-gradient(circle 580px at 50% calc(100% - 140px), color-mix(in srgb, color-mix(in srgb, var(--text) 88%, var(--text)) 50%, transparent), color-mix(in srgb, var(--text) 34%, transparent) 45%, color-mix(in srgb, color-mix(in srgb, var(--text) 55%, #000) 18%, transparent));
 	--texture-mask-border: url(/themes/drawings/textures/stained-glass-border.svg) var(--glass-at);
-	--texture-ink-border: var(--glass-grain), radial-gradient(circle 580px at 50% calc(100% - 140px), color-mix(in srgb, color-mix(in srgb, var(--accent) 88%, var(--text)) 92%, transparent), color-mix(in srgb, var(--accent) 80%, transparent) 45%, color-mix(in srgb, color-mix(in srgb, var(--accent) 55%, #000) 60%, transparent));
+	--texture-ink-border: color-mix(in srgb, var(--bg) 55%, #000);
+	--texture-mask-text: url(/themes/drawings/textures/stained-glass-text.svg) var(--glass-at);
+	--texture-ink-text: var(--glass-grain), radial-gradient(circle 580px at 50% calc(100% - 140px), var(--text), color-mix(in srgb, var(--text) 78%, transparent));
+	--texture-mask-accent-3: url(/themes/drawings/textures/stained-glass-accent-3.svg) var(--glass-at);
+	--texture-ink-accent-3: var(--glass-grain), radial-gradient(circle 580px at 50% calc(100% - 140px), color-mix(in srgb, var(--accent-3) 80%, var(--text)), var(--accent-3) 45%, color-mix(in srgb, var(--accent-3) 70%, #000));
+	--texture-mask-accent-2: url(/themes/drawings/textures/stained-glass-accent-2.svg) var(--glass-at);
+	--texture-ink-accent-2: var(--glass-grain), radial-gradient(circle 580px at 50% calc(100% - 140px), color-mix(in srgb, var(--accent-2) 80%, var(--text)), var(--accent-2) 45%, color-mix(in srgb, var(--accent-2) 70%, #000));
+	--texture-mask-accent: url(/themes/drawings/textures/stained-glass-accent.svg) var(--glass-at);
+	--texture-ink-accent: var(--glass-grain), radial-gradient(circle 580px at 50% calc(100% - 140px), color-mix(in srgb, var(--accent) 80%, var(--text)), var(--accent) 45%, color-mix(in srgb, var(--accent) 70%, #000));
 }
 
 /* Crystal: a great crystal floating right of centre among three small ones, each face lit in the
