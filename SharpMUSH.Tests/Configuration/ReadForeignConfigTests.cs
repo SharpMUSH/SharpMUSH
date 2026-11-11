@@ -45,6 +45,26 @@ public class ReadForeignConfigTests
 		await Assert.That(import.Unrecognized).IsEmpty();
 	}
 
+	/// <summary>TinyMUX's mail_* directives are the email_* options @email sends with.</summary>
+	[Test]
+	public async Task TinyMuxMailDirectivesReadAsTheEmailOptions()
+	{
+		var import = await ImportAsync(ConfigurationDialect.TinyMUX,
+			"mail_server smtp.example.com",
+			"mail_sendaddr game@example.com",
+			"mail_sendname The Game",
+			"mail_subject News",
+			"email_per_hour 5");
+		var net = import.Options.Net;
+
+		await Assert.That(net.EmailServer).IsEqualTo("smtp.example.com");
+		await Assert.That(net.EmailFrom).IsEqualTo("game@example.com");
+		await Assert.That(net.EmailFromName).IsEqualTo("The Game");
+		await Assert.That(net.EmailSubject).IsEqualTo("News");
+		await Assert.That(net.EmailPerHour).IsEqualTo(5u);
+		await Assert.That(net.EmailPort).IsEqualTo(587u);
+	}
+
 	[Test]
 	public async Task RhostMushSharesTheTinyMushNamesButNotTinyMuxsOwn()
 	{

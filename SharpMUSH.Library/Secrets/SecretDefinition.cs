@@ -11,4 +11,7 @@ public sealed record SecretDefinition(string Name, string Description, string? M
 {
 	/// <summary>The SQL server's password, for <c>sql()</c> and <c>@sql</c>.</summary>
 	public static readonly SecretDefinition SqlPassword = new("sql.password", "The password of sql_username on the SQL server.");
+
+	/// <summary>The SMTP server's password, for <c>@email</c>.</summary>
+	public static readonly SecretDefinition EmailPassword = new("email.password", "The password of email_username on the SMTP server.");
 }

@@ -8,6 +8,7 @@
     {"id": "web", "heading": "Game name and web", "lookup": "@config net web"},
     {"id": "logins", "heading": "Logins and clients", "lookup": "@config net logins"},
     {"id": "sql", "heading": "SQL and SSL", "lookup": "@config net sql"},
+    {"id": "email", "heading": "Email", "lookup": "@config net email"},
     {"id": "ignored", "heading": "Options with no effect", "lookup": "@config net ignored"}
   ]
 }
@@ -44,6 +45,20 @@ Networking and connection-related options.
 - `sql_database=<string>`: The name of the database on the SQL server. Only God sees it.
 - `sql_username=<string>`: The user name to log in to the SQL server with. Only God sees it. The password is the `sql.password` secret: see [@secret].
 - `ssl_require_client_cert=<boolean>`: Are client certificates verified in SSL connections?
+
+## Email
+
+[@email] sends through these. It is off while email_server or email_from is empty.
+
+- `email_server=<string>`: The host name of the SMTP server.
+- `email_port=<number>`: Its port: 587 (the default) uses STARTTLS when the server offers it, 465 starts with TLS, and 25 usually has neither.
+- `email_username=<string>`: The user name to sign in with; empty sends without signing in. The password is the `email.password` secret: see [@secret].
+- `email_from=<string>`: The address emails are from.
+- `email_from_name=<string>`: The name emails are from; empty uses mud_name.
+- `email_subject=<string>`: The subject of an email that gives none; empty uses mud_name.
+- `email_per_hour=<number>`: How many emails the game may send in an hour (default 50); 0 sends none.
+
+A TinyMUX import reads mail_server, mail_sendaddr, mail_sendname, mail_subject and email_per_hour into these.
 
 ## Options with no effect
 

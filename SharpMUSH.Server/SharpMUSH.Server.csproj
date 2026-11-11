@@ -27,6 +27,7 @@
 	
   <ItemGroup>
     <PackageReference Include="Mediator.Abstractions" Version="3.0.2" />
+    <PackageReference Include="MailKit" Version="4.18.2" />
     <PackageReference Include="Scriban" Version="7.2.5" />
     <PackageReference Include="Mediator.SourceGenerator" Version="3.0.2">
       <PrivateAssets>all</PrivateAssets>

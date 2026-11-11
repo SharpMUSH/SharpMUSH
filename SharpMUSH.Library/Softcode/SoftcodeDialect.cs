@@ -339,6 +339,8 @@ public static class SoftcodeDialects
 			["@extansi"] = "@moniker",
 			["@fi"] = "@find",
 			["@file"] = "@mail/file",
+			// Its own command, reached only here: a global @email would make @em ambiguous.
+			["@email"] = "@dialect_email",
 			// Its own command, reached only here: a global @folder would make @fo ambiguous.
 			["@folder"] = "@mux_folder",
 			// Commands both TinyMUX and RhostMUSH have and SharpMUSH has no name for.

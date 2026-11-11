@@ -41,7 +41,11 @@ public static class ConfigurationDirectives
 		["sql_server"] = "sql_host",
 		["sql_user"] = "sql_username",
 		["port_ssl"] = "ssl_port",
-		["ssl_certificate_key"] = "ssl_private_key_file"
+		["ssl_certificate_key"] = "ssl_private_key_file",
+		["mail_server"] = "email_server",
+		["mail_sendaddr"] = "email_from",
+		["mail_sendname"] = "email_from_name",
+		["mail_subject"] = "email_subject"
 	};
 
 	/// <summary>The PennMUSH name <paramref name="directive"/> has in a <paramref name="dialect"/> file, or the name itself.</summary>

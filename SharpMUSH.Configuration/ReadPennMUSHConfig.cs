@@ -369,7 +369,16 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(NetOptions.SslRequireClientCert)), d.Net.SslRequireClientCert),
 				String(Get(nameof(NetOptions.MediaBaseUrl)), d.Net.MediaBaseUrl),
 				UnsignedInteger(Get(nameof(NetOptions.NegotiationWaitMilliseconds)), d.Net.NegotiationWaitMilliseconds)
-			),
+			)
+			{
+				EmailServer = String(Get(nameof(NetOptions.EmailServer)), d.Net.EmailServer),
+				EmailPort = UnsignedInteger(Get(nameof(NetOptions.EmailPort)), d.Net.EmailPort),
+				EmailUsername = String(Get(nameof(NetOptions.EmailUsername)), d.Net.EmailUsername),
+				EmailFrom = String(Get(nameof(NetOptions.EmailFrom)), d.Net.EmailFrom),
+				EmailFromName = String(Get(nameof(NetOptions.EmailFromName)), d.Net.EmailFromName),
+				EmailSubject = String(Get(nameof(NetOptions.EmailSubject)), d.Net.EmailSubject),
+				EmailPerHour = UnsignedInteger(Get(nameof(NetOptions.EmailPerHour)), d.Net.EmailPerHour)
+			},
 			Debug = new DebugOptions(
 				Boolean(Get(nameof(DebugOptions.DebugSharpParser)), d.Debug.DebugSharpParser),
 				Enumeration(Get(nameof(DebugOptions.ParserPredictionMode)), d.Debug.ParserPredictionMode)

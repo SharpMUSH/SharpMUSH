@@ -79,15 +79,15 @@ http.github.token is set. Its value is never shown again.
 +-------------------------------< Secrets (2) >------------------------------+
 | Secret             Value       Stored                 For                  |
 | -------------------------------------------------------------------------- |
-| http.github.token  stored      2026-10-15 10:00 by    @http may send it to |
-|                                God(#1)                api.github.com       |
-|                                                       uploads.github.com.  |
+| email.password     stored      2026-10-15 10:00 by    The password of      |
+|                                God(#1)                email_username on    |
+|                                                       the SMTP server.     |
 | sql.password       not set     -                      The password of      |
 |                                                       sql_username on the  |
 |                                                       SQL server.          |
 +----------------------------------------------------------------------------+
-> @secret/clear http.github.token
-http.github.token is cleared.
+> @secret/clear email.password
+email.password is cleared.
 ```
 
 ::: seealso

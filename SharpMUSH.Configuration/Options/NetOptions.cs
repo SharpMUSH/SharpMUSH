@@ -87,6 +87,34 @@ public record NetOptions(
 	uint NegotiationWaitMilliseconds
 )
 {
+	[SharpConfig(Name = "email_server", Category = "Net", Group = "Email", Order = 1,
+		Description = "Host name of the SMTP server @email sends through. Empty turns @email off")]
+	public string? EmailServer { get; init; }
+
+	[SharpConfig(Name = "email_port", Category = "Net", Group = "Email", Order = 2, Min = 1, Max = 65535,
+		Description = "Port of the SMTP server: 587 for STARTTLS, 465 for TLS from the start, 25 for neither")]
+	public uint EmailPort { get; init; } = 587;
+
+	[SharpConfig(Name = "email_username", Category = "Net", Group = "Email", Order = 3,
+		Description = "User name to sign in to the SMTP server with; empty sends without signing in. The password is the email.password secret")]
+	public string? EmailUsername { get; init; }
+
+	[SharpConfig(Name = "email_from", Category = "Net", Group = "Email", Order = 4,
+		Description = "Address @email sends from. Empty turns @email off")]
+	public string? EmailFrom { get; init; }
+
+	[SharpConfig(Name = "email_from_name", Category = "Net", Group = "Email", Order = 5,
+		Description = "Name @email's mail is from; empty uses mud_name")]
+	public string? EmailFromName { get; init; }
+
+	[SharpConfig(Name = "email_subject", Category = "Net", Group = "Email", Order = 6,
+		Description = "Subject of an @email that gives none; empty uses mud_name")]
+	public string? EmailSubject { get; init; }
+
+	[SharpConfig(Name = "email_per_hour", Category = "Net", Group = "Email", Order = 7, Min = 0, Max = 100000,
+		Description = "How many emails the game may send in an hour; 0 sends none")]
+	public uint EmailPerHour { get; init; } = 50;
+
 	/// <summary>The constructor published with plugin contract 3.0.0.</summary>
 	public NetOptions(
 		string MudName,
