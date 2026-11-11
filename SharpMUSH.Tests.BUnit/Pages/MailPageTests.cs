@@ -273,7 +273,7 @@ public class MailPageD1Tests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".md-body"), TimeSpan.FromSeconds(5));
 
 		await Assert.That(cut.Find(".kit-page-head .kit-page-title").TextContent).IsEqualTo("Calendar of Feasts");
-		await Assert.That(cut.Find(".kit-page-head .kit-page-kicker").TextContent).IsEqualTo("Mail · INBOX");
+		await Assert.That(cut.Find(".kit-page-head .kit-page-kicker").TextContent).IsEqualTo("Mail · NavMailFolderInbox");
 		await Assert.That(cut.Find(".md-head .kit-pill").TextContent.Trim()).IsEqualTo("Urgent");
 		await Assert.That(cut.Find("a.md-reply").GetAttribute("href"))
 			.IsEqualTo("/mail/compose?to=Wren%20Halloway&subject=Re%3A%20Calendar%20of%20Feasts");

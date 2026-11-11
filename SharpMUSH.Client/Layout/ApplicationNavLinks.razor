@@ -11,7 +11,7 @@
 @foreach (var app in _apps)
 {
     <NavLink class="phosphor-nav-link" href="@($"/apps/{app.Slug}")" Match="NavLinkMatch.Prefix">
-        <MudIcon Icon="@AppIcons.Fill(app.Icon, Icons.Material.Outlined.Apps)"
+        <MudIcon Icon="@AppIcons.Outline(app.Icon, Icons.Material.Outlined.Apps)"
                  Class="phosphor-nav-icon" />
         @if (!IsCollapsed)
         {

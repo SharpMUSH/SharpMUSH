@@ -16,9 +16,9 @@
 @* D1 §6.5 one message: the plain header (its folder, its subject, Reply and Delete) over the
    message card. Back returns to the folder it was read from. *@
 <div class="mail-detail-page">
-    <PageHeader Kicker="@($"{Loc["Mail"]} · {FolderName}")" Title="@(_message?.Subject ?? $"#{Id}")">
+    <PageHeader Kicker="@($"{Loc["Mail"]} · {MailSidebar.FolderName(Loc, FolderName)}")" Title="@(_message?.Subject ?? $"#{Id}")">
         <Actions>
-            <CapsuleButton Href="@MailSidebar.FolderHref(FolderName)" Icon="@Icons.Material.Outlined.ArrowBack" AriaLabel="@Loc["NavMailBackToFolder", FolderName]" />
+            <CapsuleButton Href="@MailSidebar.FolderHref(FolderName)" Icon="@Icons.Material.Outlined.ArrowBack" AriaLabel="@Loc["NavMailBackToFolder", MailSidebar.FolderName(Loc, FolderName)]" />
             @if (_message is not null)
             {
                 <CapsuleButton Class="md-delete" Icon="@Icons.Material.Outlined.Delete" OnClick="DeleteAsync">@Loc["Delete"]</CapsuleButton>

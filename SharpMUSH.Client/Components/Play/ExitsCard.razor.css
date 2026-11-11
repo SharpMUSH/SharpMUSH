@@ -80,13 +80,14 @@
 	flex-shrink: 0;
 }
 
-/* In the narrow aside the pill moves under the name rather than cutting it short. */
-.exit--plain .exit-row {
+/* In the narrow aside a pill moves under the name rather than cutting it short. A row with no pill
+   keeps its one line, the name truncating beside the key. */
+.exits--tiles .exit--plain .exit-row:has(> .exit-pill) {
 	flex-wrap: wrap;
 	row-gap: var(--space-2);
 }
 
-.exit--plain .exit-name {
+.exits--tiles .exit--plain .exit-row:has(> .exit-pill) > .exit-name {
 	flex: 1 0 auto;
 	max-width: 100%;
 }
