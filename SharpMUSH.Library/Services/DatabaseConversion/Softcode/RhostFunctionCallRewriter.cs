@@ -81,7 +81,9 @@ public static class RhostFunctionCallRewriter
 		["hastotem"] = args => args.Length == 2 ? $"hasrole({args[0]},{TotemRole(args[1])})" : null,
 		["andtotem"] = args => TotemTest(args, "and"),
 		["ortotem"] = args => TotemTest(args, "or"),
-		["ltotems"] = args => args.Length == 1 ? $"roles({args[0]},{RhostDatabaseTranslator.TotemCategory})" : null,
+		["ltotems"] = args => args.Length == 1
+			? $"iter(roles({args[0]},{RhostDatabaseTranslator.TotemCategory}),after(##,{RhostDatabaseTranslator.TotemSlugPrefix}))"
+			: null,
 		["andtotems"] = _ => null,
 		["ortotems"] = _ => null,
 		["totems"] = _ => null,
@@ -116,9 +118,11 @@ public static class RhostFunctionCallRewriter
 		return tests.Length == 1 ? tests[0] : $"{join}({string.Join(',', tests)})";
 	}
 
-	/// <summary>The role of a totem named as written; a computed name is left as it is.</summary>
+	/// <summary>The role of a totem named as written; a computed name gets the totem prefix put before it.</summary>
 	private static string TotemRole(string name)
-		=> name.AsSpan().IndexOfAny('%', '[', '(') >= 0 || name.Trim().Length == 0 ? name : RhostDatabaseTranslator.TotemSlug(name.Trim());
+		=> name.AsSpan().IndexOfAny('%', '[', '(') >= 0 || name.Trim().Length == 0
+			? RhostDatabaseTranslator.TotemSlugPrefix + name
+			: RhostDatabaseTranslator.TotemSlug(name);
 
 	/// <summary>Rules that apply to one shape of a function SharpMUSH has: any other call to it is left without a note.</summary>
 	private static readonly HashSet<string> ShapeOnly = new(StringComparer.OrdinalIgnoreCase) { "gte", "gt", "lt", "lte" };

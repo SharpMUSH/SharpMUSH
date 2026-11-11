@@ -33,7 +33,8 @@ public static partial class TotemCommandRewriter
 				? $"@role/unassign {target}={RhostDatabaseTranslator.TotemSlug(word[1..])}"
 				: $"@role/assign {target}={RhostDatabaseTranslator.TotemSlug(word)}")
 			.ToList();
-		const string note = "@totem written as @role/assign and @role/unassign, as totems are roles here";
+		const string note = "@totem written as @role/assign and @role/unassign, as totems are roles here; " +
+			"they run only for those who may assign the role, and tell the runner each change";
 		if (!notes.Contains(note)) notes.Add(note);
 		return commands.Count > 1 && lead.TrimEnd() is [.., ',' or '=']
 			? $"{lead}{{{string.Join(";", commands)}}}"
@@ -43,9 +44,10 @@ public static partial class TotemCommandRewriter
 	/// <summary>
 	/// <c>@totem</c> at the start of a command (of the attribute, of a $-command's or ^-listen's action, after <c>;</c>,
 	/// <c>{</c>, or a <c>,</c> or <c>=</c> that starts an action), with its switches, target and totem list, up to the end
-	/// of that command or a <c>,</c> that ends an action (a totem name holds none).
+	/// of that command or a <c>,</c>, <c>)</c> or <c>]</c> that ends an action or a call around it (a totem name holds
+	/// none).
 	/// </summary>
-	[GeneratedRegex(@"(?<lead>(?:^[$^][^:\r\n]*:|^|[;{,=])[ \t]*)@totem(?<switches>(?:/[A-Za-z]+)*)(?:[ \t]+(?<target>[^=;{}\r\n]*)(?:=(?<totems>[^;{},\r\n]*))?)?(?=$|[;},])",
+	[GeneratedRegex(@"(?<lead>(?:^[$^][^:\r\n]*:|^|[;{,=])[ \t]*)@totem(?<switches>(?:/[A-Za-z]+)*)(?:[ \t]+(?<target>[^=;{}\r\n]*)(?:=(?<totems>[^;{},\r\n]*?))?)?(?=$|[;},)\]\r])",
 		RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant)]
 	private static partial Regex TotemCommand();
 }

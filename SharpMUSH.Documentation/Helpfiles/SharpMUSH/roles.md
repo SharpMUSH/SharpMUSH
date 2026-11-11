@@ -31,6 +31,11 @@
       "lookup": "roles rhost"
     },
     {
+      "id": "roles-totems",
+      "heading": "RhostMUSH's totems",
+      "lookup": "roles totems"
+    },
+    {
       "id": "roles-flags",
       "heading": "Roles, flags and powers",
       "lookup": "roles flags"
@@ -143,7 +148,9 @@ Setup can give a game RhostMUSH's staff levels in place of `helper` and `moderat
 
 RhostMUSH's royalty is the `wizard` role. As in RhostMUSH, each level controls what is held below it: an architect controls players and their things, a councilor architects too. Immortal, councilor and architect are guarded (see [roles guards]), which keeps each below the levels above it, and a wizard controls a councilor or an architect but not an immortal. The setup step removes the roles of the set not chosen, except any role someone holds.
 
-RhostMUSH's totems are roles as well. A RhostMUSH import makes each totem a role in the Totems category, at priority 1, that allows nothing, and gives it to the objects that held the totem. Imported softcode reads `hastotem()` as `hasrole()`, `andtotem()` and `ortotem()` as `and()` and `or()` of `hasrole()`, `ltotems(<object>)` as `roles(<object>,Totems)`, and `@totem` as `@role/assign` and `@role/unassign`.
+## RhostMUSH's totems
+
+RhostMUSH's totems are roles. A RhostMUSH import makes each totem a role named `totem-` and the totem's name (SHINY is `totem-shiny`), in the Totems category, at priority 1, that allows nothing, and gives it to the objects that held the totem. Imported softcode reads `hastotem()` as `hasrole()`, `andtotem()` and `ortotem()` as `and()` and `or()` of `hasrole()`, `ltotems()` from `roles(<object>,Totems)`, and `@totem` as `@role/assign` and `@role/unassign`, which only someone who may assign the role can run.
 
 ## Roles, flags and powers
 

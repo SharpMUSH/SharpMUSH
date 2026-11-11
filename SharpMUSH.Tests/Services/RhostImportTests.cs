@@ -168,14 +168,30 @@ public class RhostImportTests
 
 		var registry = world.Services.GetRequiredService<IRoleRegistryService>();
 		await Assert.That((await registry.GetCategoriesAsync(CategoryKind.Role)).Select(c => c.Name)).Contains(RhostDatabaseTranslator.TotemCategory);
-		var dull = (await registry.GetRoleAsync("dull")).Expect<SharpRole>();
+		var dull = (await registry.GetRoleAsync("totem-dull")).Expect<SharpRole>();
 		await Assert.That(dull.Category).IsEqualTo(RhostDatabaseTranslator.TotemCategory);
 		await Assert.That(dull.Permissions).IsEmpty();
 
 		var grants = await (await FindAsync(world, "Gadget")).GrantsAsync(CancellationToken.None);
-		await Assert.That(grants.HoldsRole("shiny")).IsTrue();
-		await Assert.That(grants.HoldsRole("marker0")).IsTrue();
-		await Assert.That(grants.HoldsRole("dull")).IsFalse();
+		await Assert.That(grants.HoldsRole("totem-shiny")).IsTrue();
+		await Assert.That(grants.HoldsRole("totem-marker0")).IsTrue();
+		await Assert.That(grants.HoldsRole("totem-dull")).IsFalse();
+	}
+
+	/// <summary>A role the world already has under a totem's slug, in another category, is kept and flagged for an admin.</summary>
+	[Test]
+	public async Task ATotemNamingAnotherRoleIsFlagged()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var registry = world.Services.GetRequiredService<IRoleRegistryService>();
+		await registry.UpsertRoleAsync(new SharpRole { Slug = "totem-shiny", Name = "Shiny", Category = Categories.Staff, Priority = 20 });
+		var database = await RhostDatabaseTranslator.ReadAsync(RhostFlatfileReaderTests.FlatfilePath, null, null);
+		RhostDatabaseTranslator.MapTotems(database, [new TotemDirective("Shiny", 2, 4)]);
+
+		var result = await world.Converter.ConvertDatabaseAsync(database);
+
+		await Assert.That(result.Warnings.Where(w => w.NeedsAction).Select(w => w.Text))
+			.Contains(w => w.StartsWith("Role totem-shiny: this world already has it, in Staff"));
 	}
 
 	/// <summary>

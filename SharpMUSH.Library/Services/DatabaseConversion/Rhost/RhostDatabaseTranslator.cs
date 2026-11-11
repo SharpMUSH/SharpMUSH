@@ -364,7 +364,7 @@ public static partial class RhostDatabaseTranslator
 	{
 		var report = new Report();
 		MapTotems(database, totems.Select(totem => (totem, true)), report, always: true);
-		database.ImportNotes.AddRange(report.Decisions());
+		database.ImportNotes.AddRange(report.Lines.Concat(report.Decisions()));
 	}
 
 	/// <summary>
@@ -376,8 +376,13 @@ public static partial class RhostDatabaseTranslator
 	{
 		foreach (var (totem, staffOnly) in totems)
 		{
-			var name = totem.Name.ToUpperInvariant();
-			var slug = TotemSlug(totem.Name);
+			var name = totem.Name.Trim().ToUpperInvariant();
+			if (name.Length == 0)
+			{
+				continue;
+			}
+
+			var slug = TotemSlug(name);
 			var holders = database.Objects
 				.Where(o => o.Totems.Count > totem.Slot && (o.Totems[totem.Slot] & totem.Value) == totem.Value && !o.Roles.Contains(slug))
 				.ToArray();
@@ -386,7 +391,14 @@ public static partial class RhostDatabaseTranslator
 				continue;
 			}
 
-			if (!database.Roles.Any(role => role.Slug.Equals(slug, StringComparison.OrdinalIgnoreCase)))
+			if (database.Roles.FirstOrDefault(role => role.Slug.Equals(slug, StringComparison.OrdinalIgnoreCase)) is { } shared)
+			{
+				if (!shared.Name.Equals(name, StringComparison.Ordinal))
+				{
+					report.Line(ImportWarningKind.Flags, $"Totem {name}: shares the role {slug} with the totem {shared.Name}");
+				}
+			}
+			else
 			{
 				database.Roles.Add(new SharpRole { Slug = slug, Name = name, Category = TotemCategory, Priority = TotemPriority });
 				if (!database.RoleCategories.Any(category => category.Name.Equals(TotemCategory, StringComparison.OrdinalIgnoreCase)))
@@ -405,15 +417,17 @@ public static partial class RhostDatabaseTranslator
 		}
 	}
 
+	/// <summary>The start of every totem role's slug, which keeps a totem from naming a role that allows something.</summary>
+	public const string TotemSlugPrefix = "totem-";
+
 	/// <summary>
-	/// The slug of a totem's role: its name in lower case, any character a slug may not hold written as <c>_</c>, and
-	/// <c>totem-</c> before a name a built-in role has.
+	/// The slug of a totem's role: <c>totem-</c> and its name in lower case, any character a slug may not hold written
+	/// as <c>_</c>.
 	/// </summary>
 	public static string TotemSlug(string name)
 	{
-		var slug = new string([.. name.ToLowerInvariant().Select(ch => char.IsAsciiLetterOrDigit(ch) || ch is '-' or '_' ? ch : '_')]);
-		slug = BuiltInRoles.All.Concat(BuiltInRoles.RhostLevels).Concat(BuiltInRoles.Starters)
-			.Any(role => role.Slug.Equals(slug, StringComparison.Ordinal)) ? $"totem-{slug}" : slug;
+		var slug = TotemSlugPrefix + new string([.. name.Trim().ToLowerInvariant()
+			.Select(ch => char.IsAsciiLetterOrDigit(ch) || ch is '-' or '_' ? ch : '_')]);
 		return slug[..Math.Min(slug.Length, RoleNames.MaxLength)];
 	}
 
