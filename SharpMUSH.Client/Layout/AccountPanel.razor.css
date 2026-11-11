@@ -242,6 +242,6 @@
     background: var(--accent-on);
 }
 
-.account-panel-filters:disabled {
+.account-panel-filters[aria-disabled="true"] {
     cursor: progress;
 }

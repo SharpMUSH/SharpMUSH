@@ -1382,8 +1382,8 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
     font-size: 0.85em;
 }
 
-/* Pictures put in the game (avatars, portraits, galleries, room, thing and exit pictures, scene headers, wiki and
-   schema images) take the theme's picture tone, as its banners do. A component marks such a picture game-picture;
+/* Pictures put in the game (avatars, portraits, galleries, room, thing and exit pictures, scene headers and sidebar
+   rows, maps, wiki and schema images) take the theme's picture tone, as its banners do. A component marks such a picture game-picture;
    the wiki's Markdown marks its own wiki-img. */
 .game-picture,
 .wiki-img {

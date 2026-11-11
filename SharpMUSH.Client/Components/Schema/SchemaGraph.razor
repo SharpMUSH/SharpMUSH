@@ -48,7 +48,7 @@ else
                     <circle cx="@Num(node.X)" cy="@Num(node.Y)" r="@Num(r)" class="schema-graph-disc" />
                     @if (ImageUrlPolicy.IsRenderable(node.Node.Image))
                     {
-                        <image href="@ApiUrl.Resolve(node.Node.Image!)" x="@Num(node.X - r)" y="@Num(node.Y - r)" width="@Num(2 * r)" height="@Num(2 * r)"
+                        <image class="game-picture" href="@ApiUrl.Resolve(node.Node.Image!)" x="@Num(node.X - r)" y="@Num(node.Y - r)" width="@Num(2 * r)" height="@Num(2 * r)"
                                clip-path="url(#@ClipId)" preserveAspectRatio="xMidYMid slice" />
                     }
                     else

@@ -27,13 +27,14 @@ stored with the character (`CharacterAppearance.Vision`) like the theme and acce
 
 **Image filters** give pictures the theme's tone (its `imagery`): Directive's smoky monochrome, Fantasy's sepia,
 and so on. That covers banners and covers, and also pictures put in the game: avatars, portraits, galleries, room,
-thing and exit pictures, scene headers, and wiki and schema images. A player turns them off to see every picture in
+thing and exit pictures, scene headers and sidebar rows, maps, and wiki and schema images. A player turns them off to see every picture in
 its own colours, under any theme: **Image filters** in the account menu switches it for the acting character, and
 the Theme page sets it for each character. It is stored with the character (`CharacterAppearance.ImageFilters`, on
 unless turned off) and reaches the page as `data-image-filters="on"` or `"off"` on `<html>`, beside the theme's
 parts. Under `"off"`, `shell.css` sets `--image-filter: none` after the theme layers, and the theme's resolved CSS
-repeats that rule after its own stylesheet (`ResolvedTheme.ImageFiltersOffRule`), so a stylesheet cannot put the
-tone back.
+repeats that rule after its own stylesheet (`ResolvedTheme.ImageFiltersOffRule`), so a stylesheet that sets
+`--image-filter` on `:root` does not put the tone back. A stylesheet that writes `filter` on pictures itself is not
+covered by the switch; use `--image-filter` instead. Signed out, the browser keeps the last character's choice.
 
 ## Built-in themes
 

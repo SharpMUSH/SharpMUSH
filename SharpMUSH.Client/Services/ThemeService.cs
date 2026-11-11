@@ -156,7 +156,8 @@ public sealed class ThemeService : IThemeService, IDisposable
 		ResolvedTheme For(bool light) => ThemeResolver.Resolve(
 			ThemeResolver.Pick(published, _defaults, light, character?.ThemeId, character?.Vision), character?.Accent, character?.Vision);
 
-		var filters = character?.ImageFilters ?? true;
+		// Signed out, the browser keeps the last character's choice, so signing in again paints no filtered flash.
+		var filters = character?.ImageFilters ?? _resolved.Parts.GetValueOrDefault(ImageFiltersPart) != "off";
 		var dark = WithImageFilters(For(light: false), filters);
 		var light = WithImageFilters(For(light: true), filters);
 		var resolved = _prefersLight ? light : dark;

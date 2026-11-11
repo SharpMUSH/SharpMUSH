@@ -135,6 +135,11 @@ public class ThemeServiceTests : TrackingTestContext
 		await Assert.That(service.Current.Parts[ThemeStyles.Imagery]).IsEqualTo("smoke").Because("the theme keeps its tone for the next time");
 		var cached = JsonSerializer.Deserialize<ResolvedTheme>(_storage[ThemeService.CacheKey]!)!;
 		await Assert.That(cached.Parts[ThemeService.ImageFiltersPart]).IsEqualTo("off").Because("index.html paints the cached parts before the runtime loads");
+
+		_account.ActiveCharacter = null;
+		_account.Fire();
+		await Assert.That(service.Current.Parts[ThemeService.ImageFiltersPart]).IsEqualTo("off")
+			.Because("signed out, the browser keeps the last character's choice");
 	}
 
 	[Test]
