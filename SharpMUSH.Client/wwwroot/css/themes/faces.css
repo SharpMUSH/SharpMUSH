@@ -30,6 +30,23 @@
 [data-font-display="antonio"] { --font-display: 'Antonio', 'Arial Narrow', sans-serif; --font-title-weight: 700; }
 [data-font-display="oxanium"] { --font-display: 'Oxanium', 'Arial Black', system-ui, sans-serif; --font-title-weight: 800; }
 [data-font-display="russo"] { --font-display: 'Russo One', 'Arial Black', Impact, sans-serif; --font-title-weight: 400; }
+[data-font-display="cinzel-decorative"] { --font-display: 'Cinzel Decorative', 'Times New Roman', serif; --font-title-weight: 700; }
+[data-font-display="forum"] { --font-display: 'Forum', Georgia, serif; --font-title-weight: 400; }
+[data-font-display="press-start"] { --font-display: 'Press Start 2P', 'Courier New', monospace; --font-title-weight: 400; }
+[data-font-display="anton"] { --font-display: 'Anton', Impact, 'Arial Narrow', sans-serif; --font-title-weight: 400; }
+[data-font-display="dotgothic"] { --font-display: 'DotGothic16', 'Courier New', monospace; --font-title-weight: 400; }
+[data-font-display="alegreya-sc"] { --font-display: 'Alegreya SC', Georgia, serif; --font-title-weight: 700; }
+[data-font-display="oswald"] { --font-display: 'Oswald', 'Arial Narrow', sans-serif; --font-title-weight: 600; }
+[data-font-display="pirata"] { --font-display: 'Pirata One', 'Old English Text MT', Georgia, serif; --font-title-weight: 400; }
+[data-font-display="uncial"] { --font-display: 'Uncial Antiqua', Georgia, serif; --font-title-weight: 400; }
+[data-font-display="barlow"] { --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif; --font-title-weight: 600; }
+[data-font-display="metamorphous"] { --font-display: Metamorphous, Georgia, serif; --font-title-weight: 400; }
+[data-font-display="krona"] { --font-display: 'Krona One', 'Arial Black', sans-serif; --font-title-weight: 400; }
+[data-font-display="eagle-lake"] { --font-display: 'Eagle Lake', Georgia, serif; --font-title-weight: 400; }
+[data-font-display="federant"] { --font-display: Federant, Georgia, serif; --font-title-weight: 400; }
+[data-font-display="rye"] { --font-display: Rye, Georgia, serif; --font-title-weight: 400; }
+[data-font-display="black-ops"] { --font-display: 'Black Ops One', Impact, sans-serif; --font-title-weight: 400; }
+[data-font-display="bodoni"] { --font-display: 'Bodoni Moda', Didot, 'Bodoni 72', serif; --font-title-weight: 600; }
 
 [data-font-body="ui"] { --font-ui: 'Hanken Grotesk', system-ui, sans-serif; }
 [data-font-body="serif"] { --font-ui: Georgia, 'Iowan Old Style', 'Times New Roman', serif; }

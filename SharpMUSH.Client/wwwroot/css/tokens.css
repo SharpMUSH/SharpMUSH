@@ -263,6 +263,125 @@
     font-style: normal;
     font-display: swap;
 }
+@font-face {
+    font-family: "Cinzel Decorative";
+    src: url("/fonts/cinzel-decorative-latin.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Forum";
+    src: url("/fonts/forum-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Press Start 2P";
+    src: url("/fonts/press-start-2p-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Anton";
+    src: url("/fonts/anton-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "DotGothic16";
+    src: url("/fonts/dotgothic16-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Alegreya SC";
+    src: url("/fonts/alegreya-sc-latin.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Oswald";
+    src: url("/fonts/oswald-latin.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Pirata One";
+    src: url("/fonts/pirata-one-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Uncial Antiqua";
+    src: url("/fonts/uncial-antiqua-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Barlow Condensed";
+    src: url("/fonts/barlow-condensed-latin.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Metamorphous";
+    src: url("/fonts/metamorphous-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Krona One";
+    src: url("/fonts/krona-one-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Bodoni Moda";
+    src: url("/fonts/bodoni-moda-latin.woff2") format("woff2");
+    font-weight: 400 900;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Eagle Lake";
+    src: url("/fonts/eagle-lake-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Federant";
+    src: url("/fonts/federant-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Rye";
+    src: url("/fonts/rye-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Black Ops One";
+    src: url("/fonts/black-ops-one-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
 
 :root {
 	/* ── Phosphor design tokens (BuiltInThemes.Phosphor) ── */
@@ -392,6 +511,7 @@
 	--title-underline-pad: 0px;
 	--title-transform: none;
 	--title-tracking: normal;
+	--title-tracking-length: 0em;
 	--title-style: normal;
 	--title-underline-height: 2px;
 	--title-color: var(--text);     /* titles' colour and effect (glow, gilt, letterpress...) */
@@ -595,6 +715,7 @@
 	--title-underline-pad: 0px;
 	--title-transform: none;
 	--title-tracking: normal;
+	--title-tracking-length: 0em;
 	--title-style: normal;
 	--title-underline-height: 2px;
 	--title-color: var(--text);

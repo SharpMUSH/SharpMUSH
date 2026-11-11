@@ -11,13 +11,12 @@
 	background-image: var(--mud-palette-background-gradient);
 }
 
-/* The page texture (ThemeTexture, css/themes/layers.css) is pinned to the window over the page and the section
-   sidebar's surfaces, which are not positioned; the rail, the sidebar's content and the page content are raised
-   above it. */
+/* The page texture (ThemeTexture, css/themes/layers.css) is pinned to the window over the page's surface; the
+   rail, the section sidebar, the widget asides and the page content are raised above it. The sidebar's surface
+   is mostly opaque, so the texture shows through it only faintly and its labels stay easy to read. */
 .phosphor-rail,
 .phosphor-content-col,
-.phosphor-widget-aside,
-.phosphor-pagebar > * {
+.phosphor-widget-aside {
 	position: relative;
 	z-index: 1;
 }
@@ -420,13 +419,15 @@
 
 /* ── Page-sidebar slot (D1 §3): a section's SectionShell fills it; empty, the column is gone ── */
 .phosphor-pagebar {
+	position: relative;
+	z-index: 1;
 	flex-shrink: 0;
 	width: var(--side-w);
 	min-height: 0;
 	overflow-y: auto;
 	overscroll-behavior: contain;
-	/* The page's texture (ThemeTexture) lies over this surface, so it runs on from the page without a seam. */
-	background: var(--surface-3);
+	/* Lets the page's texture (ThemeTexture) through faintly, so it runs on from the page without a seam. */
+	background: color-mix(in srgb, var(--surface-3) 84%, transparent);
 	border-right: 1px solid var(--border-soft);
 	transition: width var(--motion-move);
 }
@@ -1620,6 +1621,8 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 		bottom: 0;
 		width: min(280px, 86vw);
 		z-index: 1001;
+		/* A drawer over the page: fully opaque, so the page does not show through its links. */
+		background: var(--surface-3);
 		transform: translateX(-100%);
 		visibility: hidden;
 		transition: transform var(--motion-exit), visibility 0s var(--duration-exit);

@@ -37,13 +37,19 @@ public static class LayoutThemes
 	/// <c>text-faint</c>, then the status colours the portal works out for the theme (success, <c>warn</c>, danger and
 	/// info). A colour that did not stand out from the background enough for its role was moved toward white on a dark
 	/// theme, black on a light one, until it did. Subtle, link, highlight and the hues are worked out from those
-	/// (<see cref="ThemePalette.Completed()"/>).
+	/// (<see cref="ThemePalette.Completed()"/>). <c>directive</c> and the themes styled on games (<c>heart-realm</c> to <c>wasteland</c>)
+	/// also carry a look: their own border, title ornaments, bullet and gauge.
 	/// </summary>
 	public static IReadOnlyList<ThemePalette> Own { get; } =
 	[
 		SharpMUSH,
 		Ported("phosphor", ThemeMode.Dark, ["#121110", "#211e1c", "#efebe5", "#00f5b7", "#efebe5", "#ffb454", "#90887e", "#6cde9a", "#ffb454", "#e57373", "#5aa9ff"]),
 		Ported("daylight", ThemeMode.Light, ["#f6f4ef", "#f3f0e9", "#1c1915", "#00775f", "#1c1915", "#8f5300", "#655d54", "#387350", "#8f5300", "#a05050", "#3a6ca3"]),
+		Ported("directive", ThemeMode.Dark, ["#0a0a0a", "#1b1b1b", "#e4e4e4", "#ffffff", "#8c8c8c", "#c8c8c8", "#8c8c8c", "#6cde9a", "#e3c27e", "#f08f8f", "#5aa9ff"], new ThemeLook
+		{
+			Border = "single", TitleOpen = "┤ — ", TitleClose = " — ├", Guide = "line", Bullet = "—",
+			GaugeOpen = "[", GaugeFilled = "■", GaugeEmpty = "·", GaugeClose = "]", Rule = "─",
+		}),
 		Ported("magical-girl", ThemeMode.Light, ["#fcedf7", "#f9eafa", "#2e1538", "#b8157a", "#7e5cb9", "#8f4b00", "#6b5279", "#387350", "#8f4b00", "#9c4e4e", "#38699e"]),
 		Ported("shojo", ThemeMode.Light, ["#fdf8f1", "#fbf3ea", "#2b2226", "#0f6f73", "#ab5851", "#815fbd", "#695a60", "#3a7853", "#8f4b00", "#a55353", "#3a6ca3"]),
 		Ported("idol", ThemeMode.Dark, ["#0c0a1d", "#1c163f", "#f4efff", "#ff58a8", "#36e2ff", "#ffde4a", "#9e94c4", "#6cde9a", "#ffd84a", "#e57373", "#5aa9ff"]),
@@ -62,6 +68,90 @@ public static class LayoutThemes
 		Ported("starship-console", ThemeMode.Dark, ["#000000", "#16141c", "#f5e9da", "#ff9933", "#c39be0", "#8fa6ff", "#a99a8b", "#6cde9a", "#ffcc66", "#e57373", "#5aa9ff"]),
 		Ported("real-robot", ThemeMode.Light, ["#e4e8ee", "#f0f3f7", "#121a28", "#1a49b5", "#c91e27", "#7c6200", "#4f5a6b", "#387350", "#8a5a00", "#a05050", "#38699e"]),
 		Ported("super-robot", ThemeMode.Dark, ["#160609", "#2c1116", "#fff3e3", "#ffc82a", "#ff7a1a", "#dd413c", "#c09a8e", "#6cde9a", "#ff9a3c", "#e57373", "#5aa9ff"]),
+		Ported("heart-realm", ThemeMode.Dark, ["#0b0b24", "#1c1c4a", "#f3efff", "#ffd447", "#5cc8ff", "#ff5d8f", "#9a95c2", "#6cde9a", "#ffb35c", "#e57373", "#5aa9ff"], new ThemeLook
+		{
+			Border = "rounded", TopLeft = "♕", TopRight = "♕", BottomLeft = "♕", BottomRight = "♕",
+			TitleOpen = "┤ ♕ ", TitleClose = " ♕ ├", Guide = "rounded", Bullet = "✦",
+			GaugeOpen = "[", GaugeFilled = "♥", GaugeEmpty = "♡", GaugeClose = "]", Rule = "─",
+		}),
+		Ported("crystal-epic", ThemeMode.Dark, ["#070b14", "#16203a", "#e8eef8", "#9cd8ff", "#d4ecff", "#b6a2ff", "#8796ad", "#6cde9a", "#f2c66d", "#e57373", "#5aa9ff"], new ThemeLook
+		{
+			Border = "single", TopLeft = "◈", TopRight = "◈", BottomLeft = "◈", BottomRight = "◈",
+			TitleOpen = "┤ ◇ ", TitleClose = " ◇ ├", Guide = "line", Bullet = "◇",
+			GaugeOpen = "◂", GaugeFilled = "■", GaugeEmpty = "□", GaugeClose = "▸", Separator = " · ", Rule = "─",
+		}),
+		Ported("crystal-epic-16bit", ThemeMode.Dark, ["#02020c", "#2236b0", "#ffffff", "#ffd85a", "#8fa4ff", "#c8c8dc", "#b8c0f0", "#6cde9a", "#ffb070", "#ff8a8a", "#7ab8ff"], new ThemeLook
+		{
+			Border = "double", TitleOpen = "╡ ", TitleClose = " ╞", Guide = "double", Bullet = "►",
+			GaugeOpen = "[", GaugeFilled = "█", GaugeEmpty = "░", GaugeClose = "]", Rule = "═",
+		}),
+		Ported("calling-card", ThemeMode.Dark, ["#0a0a0a", "#1e1e1e", "#ffffff", "#ff3344", "#f5f5f5", "#ffd400", "#a3a3a3", "#6cde9a", "#ffd400", "#ff6b6b", "#5aa9ff"], new ThemeLook
+		{
+			Border = "heavy", TopLeft = "◤", TopRight = "◥", BottomLeft = "◣", BottomRight = "◢",
+			TitleOpen = "┫ ★ ", TitleClose = " ★ ┣", Guide = "heavy", Bullet = "★",
+			GaugeOpen = "▕", GaugeFilled = "▰", GaugeEmpty = "▱", GaugeClose = "▏", Separator = " / ", Rule = "━",
+		}),
+		Ported("jrpg", ThemeMode.Dark, ["#060b14", "#12303f", "#f6f2e6", "#ffc94d", "#6fe0cf", "#ff8a5c", "#a6b8b5", "#6cde9a", "#ffe066", "#e57373", "#5aa9ff"], new ThemeLook
+		{
+			Border = "rounded", TitleOpen = "┤ ", TitleClose = " ├", Guide = "rounded", Bullet = "▶",
+			GaugeOpen = "[", GaugeFilled = "■", GaugeEmpty = "□", GaugeClose = "]", Separator = " : ", Rule = "─",
+		}),
+		Ported("adventurers-handbook", ThemeMode.Light, ["#f3ead3", "#f6edd6", "#22180e", "#7e1b0f", "#7c6224", "#8a5212", "#5f4d39", "#387350", "#7f4f00", "#a05050", "#38699e"], new ThemeLook
+		{
+			Border = "single", TitleOpen = "─┤ ", TitleClose = " ├─", Guide = "line", Bullet = "▪",
+			GaugeOpen = "[", GaugeFilled = "█", GaugeEmpty = "·", GaugeClose = "]", Rule = "━",
+		}),
+		Ported("trailblazer", ThemeMode.Light, ["#e9e4d8", "#f2ede2", "#1b1a17", "#6b0f0f", "#7a5c14", "#2b4a7a", "#57524a", "#326647", "#7a4d00", "#934a4a", "#346294"], new ThemeLook
+		{
+			Border = "heavy", TitleOpen = "┫ ◆◆ ", TitleClose = " ┣", Guide = "heavy", Bullet = "◆",
+			GaugeOpen = "[", GaugeFilled = "◆", GaugeEmpty = "◇", GaugeClose = "]", Rule = "━",
+		}),
+		Ported("gothic-punk", ThemeMode.Dark, ["#0d0b0c", "#211b1e", "#ece4dc", "#ef5a70", "#8fa58c", "#c9b99a", "#968a82", "#6cde9a", "#d9a441", "#e57373", "#5aa9ff"], new ThemeLook
+		{
+			Border = "heavy", TitleOpen = "┫ ✠ ", TitleClose = " ✠ ┣", Guide = "heavy", Bullet = "†",
+			GaugeOpen = "[", GaugeFilled = "▮", GaugeEmpty = "▯", GaugeClose = "]", Rule = "━",
+		}),
+		Ported("dragonrider", ThemeMode.Dark, ["#120f0c", "#251e18", "#f1e8dc", "#e0a458", "#5fc28f", "#6fa8f0", "#9e907f", "#6cde9a", "#f2c14e", "#e57373", "#6fa8f0"], new ThemeLook
+		{
+			Border = "double", TitleOpen = "╡ ✥ ", TitleClose = " ✥ ╞", Guide = "double", Bullet = "✥",
+			GaugeOpen = "[", GaugeFilled = "▲", GaugeEmpty = "△", GaugeClose = "]", Rule = "═",
+		}),
+		Ported("fleet-command", ThemeMode.Dark, ["#0e1012", "#1f2327", "#e6e8e6", "#f2a93b", "#7fb0d9", "#c9c2b0", "#8a9093", "#6cde9a", "#ffd166", "#e57373", "#7fb0d9"], new ThemeLook
+		{
+			Border = "single", TopLeft = "◤", TopRight = "◥", BottomLeft = "◣", BottomRight = "◢",
+			TitleOpen = "┤ ", TitleClose = " ├", Guide = "line", Bullet = "▸",
+			GaugeOpen = "[", GaugeFilled = "▰", GaugeEmpty = "▱", GaugeClose = "]", Rule = "─",
+		}),
+		Ported("gaslight", ThemeMode.Dark, ["#120e0b", "#261e18", "#efe6d6", "#d6b25e", "#8fbf8a", "#d0685a", "#9c8f7b", "#8fbf8a", "#e3a04f", "#e57373", "#5aa9ff"], new ThemeLook
+		{
+			Border = "double", TitleOpen = "╡ ☽ ", TitleClose = " ☾ ╞", Guide = "double", Bullet = "✶",
+			GaugeOpen = "[", GaugeFilled = "●", GaugeEmpty = "○", GaugeClose = "]", Rule = "═",
+		}),
+		Ported("desert-planet", ThemeMode.Dark, ["#17100a", "#2c1f15", "#f5e9d6", "#f0913a", "#4da3e6", "#e3c9a0", "#a8937a", "#6cde9a", "#f2c14e", "#e57373", "#4da3e6"], new ThemeLook
+		{
+			Border = "single", TitleOpen = "┤ ◉ ", TitleClose = " ◉ ├", Guide = "line", Bullet = "∴",
+			GaugeOpen = "[", GaugeFilled = "■", GaugeEmpty = "·", GaugeClose = "]", Rule = "─",
+		}),
+		Ported("arcane-academy", ThemeMode.Dark, ["#0d0f1c", "#1d2136", "#f0ecdf", "#e6c35c", "#d86070", "#4fa37b", "#9a9586", "#6cde9a", "#f0a35a", "#e57373", "#5aa9ff"], new ThemeLook
+		{
+			Border = "double", TitleOpen = "╡ ✴ ", TitleClose = " ✴ ╞", Guide = "double", Bullet = "✧",
+			GaugeOpen = "[", GaugeFilled = "★", GaugeEmpty = "☆", GaugeClose = "]", Rule = "═",
+		}),
+		Ported("steampunk", ThemeMode.Dark, ["#15100b", "#2a2017", "#f0e4cf", "#d9954a", "#a8b4ad", "#5f9e8f", "#a08e72", "#6cde9a", "#e8c25a", "#e57373", "#5aa9ff"], new ThemeLook
+		{
+			Border = "heavy", TitleOpen = "┫ ⚙ ", TitleClose = " ⚙ ┣", Guide = "heavy", Bullet = "⁘",
+			GaugeOpen = "[", GaugeFilled = "◼", GaugeEmpty = "◻", GaugeClose = "]", Rule = "━",
+		}),
+		Ported("frontier", ThemeMode.Light, ["#ece0c3", "#f1e6cb", "#2a1c10", "#8a2a17", "#6b4a24", "#2f5f6f", "#644f39", "#326647", "#7a4d00", "#934a4a", "#346294"], new ThemeLook
+		{
+			Border = "double", TitleOpen = "╡ ★ ", TitleClose = " ★ ╞", Guide = "double", Bullet = "»",
+			GaugeOpen = "[", GaugeFilled = "▓", GaugeEmpty = "░", GaugeClose = "]", Rule = "═",
+		}),
+		Ported("wasteland", ThemeMode.Dark, ["#12110d", "#24221a", "#ebe6d4", "#e0c93a", "#9bb55a", "#c0653a", "#96907c", "#9bb55a", "#e8893a", "#e57373", "#5aa9ff"], new ThemeLook
+		{
+			Border = "single", TitleOpen = "┤ ☢ ", TitleClose = " ☢ ├", Guide = "line", Bullet = "×",
+			GaugeOpen = "[", GaugeFilled = "#", GaugeEmpty = "-", GaugeClose = "]", Rule = "─",
+		}),
 		Ported("protan-dark", ThemeMode.Dark, ["#0e0f11", "#1c1f23", "#e9edf0", "#a8e8fa", "#e9edf0", "#f2ef0a", "#7d8790", "#2ca1c1", "#f2ef0a", "#f58b28", "#9f5efe"]),
 		Ported("protan-light", ThemeMode.Light, ["#f3f4f6", "#eef0f3", "#14181c", "#1b729b", "#14181c", "#876c00", "#5f6872", "#0d155a", "#876c00", "#612f08", "#5801f5"]),
 		Ported("deutan-dark", ThemeMode.Dark, ["#0e0f11", "#1c1f23", "#e9edf0", "#b6edfa", "#e9edf0", "#fde30b", "#7d8790", "#21b4e0", "#fde30b", "#f58b28", "#8869fe"]),
@@ -79,7 +169,7 @@ public static class LayoutThemes
 	/// A palette from the colours of <see cref="ThemeRole"/>s in this order: background, surface, foreground, primary,
 	/// secondary, tertiary, muted, success, warning, error, info, with the rest worked out from them.
 	/// </summary>
-	private static ThemePalette Ported(string name, ThemeMode mode, string[] colors)
+	private static ThemePalette Ported(string name, ThemeMode mode, string[] colors, ThemeLook? look = null)
 	{
 		ThemeRole[] roles =
 		[
@@ -92,6 +182,7 @@ public static class LayoutThemes
 			Mode = mode,
 			Colors = roles.Zip(colors).ToImmutableDictionary(pair => pair.First,
 				pair => ColorMath.TryParseHex(pair.Second, out var rgb) ? ThemeColor.Of(rgb) : throw new FormatException(pair.Second)),
+			Look = look,
 		}.Completed();
 	}
 

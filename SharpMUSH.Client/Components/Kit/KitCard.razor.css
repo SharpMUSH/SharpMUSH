@@ -67,6 +67,9 @@
 	border-bottom: 0;
 }
 
+/* A narrow aside holds wide title tracking to 0.06em, so a short title such as "Recently changed" stays on
+   one line. */
 .kit-card--aside .kit-card-title {
 	font-size: var(--text-sm);
+	letter-spacing: min(var(--title-tracking-length), 0.06em);
 }

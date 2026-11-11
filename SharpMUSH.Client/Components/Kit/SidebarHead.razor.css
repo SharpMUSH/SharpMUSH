@@ -3,8 +3,12 @@
 }
 
 .kit-side-title {
+	font-family: var(--font-display);
 	font-size: var(--text-md);
-	font-weight: 700;
+	font-weight: var(--font-title-weight);
+	font-style: var(--title-style);
+	letter-spacing: var(--title-tracking);
+	text-transform: var(--title-transform);
 	color: var(--text);
 }
 

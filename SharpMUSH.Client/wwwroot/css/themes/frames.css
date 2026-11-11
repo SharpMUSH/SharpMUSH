@@ -320,3 +320,203 @@
 [data-frame-shadow="lifted"] {
 	--card-shadow: var(--elev-1);
 }
+
+/* Stained: a band of coloured glass along the top (accent-2, accent-3, the accent), a glow falling from it, and a
+   small crown in the accent in the lower right. */
+[data-frame-marks="stained"] {
+	--card-marks: linear-gradient(90deg, var(--accent-2) 0 25%, var(--accent-3) 25% 50%, var(--accent) 50% 75%, var(--accent-2) 75%) left top / 100% 4px no-repeat,
+		radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 60%);
+	--card-mask-accent: url(/themes/drawings/frames/stained-crown.svg) right 12px bottom 6px / 20px 12px no-repeat;
+	--card-ink-accent: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+/* Stained: a gold ring outside the border and an accent-2 glow. */
+[data-frame-shadow="stained"] {
+	--card-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent), 0 0 20px color-mix(in srgb, var(--accent-2) 16%, transparent);
+}
+
+/* Prism: glass lit from above, a bright line along the top, a cut gem in the accent at the top centre, and thin
+   accent brackets in the top left and lower right corners, as on a modern menu window. */
+[data-frame-marks="prism"] {
+	--card-marks: linear-gradient(var(--accent), var(--accent)) left 6px top 6px / 16px 1px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) left 6px top 6px / 1px 16px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) right 6px bottom 6px / 16px 1px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) right 6px bottom 6px / 1px 16px no-repeat,
+		linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent-2) 70%, transparent), transparent) center top / 80% 1px no-repeat,
+		linear-gradient(160deg, color-mix(in srgb, var(--accent-2) 9%, transparent), transparent 40%, color-mix(in srgb, var(--accent-3) 6%, transparent));
+	--card-mask-accent: url(/themes/drawings/frames/prism-gem.svg) center top 2px / 10px 10px no-repeat;
+}
+/* Prism: a cold glow and a soft drop. */
+[data-frame-shadow="prism"] {
+	--card-shadow: 0 0 18px color-mix(in srgb, var(--accent) 12%, transparent), 0 10px 24px rgba(0,0,0,0.45);
+}
+
+/* Window: a 16-bit menu window, accent-2 at the top fading into the surface, with a white pixel pointing glove,
+   outlined in black, in the lower right. */
+[data-frame-marks="window"] {
+	--card-marks: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 28%, transparent), transparent 70%);
+	--card-mask-text: url(/themes/drawings/frames/window-glove.svg) right 8px bottom 6px / 34px 22px no-repeat;
+	--card-ink-text: var(--text);
+	--card-mask-border: url(/themes/drawings/frames/window-glove-outline.svg) right 8px bottom 6px / 34px 22px no-repeat;
+	--card-ink-border: #000;
+}
+/* Window: a black ring outside the white border and an accent-3 bevel inside it. */
+[data-frame-shadow="window"] {
+	--card-shadow: 0 0 0 2px #000, inset 0 0 0 1px var(--accent-3), inset 0 2px 0 1px rgba(255,255,255,0.25);
+}
+
+/* Torn: an accent triangle cut into the lower right corner and a slanted accent-2 stripe through the top right
+   one; the rest of the card stays plain black, so its text reads cleanly. */
+[data-frame-marks="torn"] {
+	--card-marks: linear-gradient(135deg, transparent 50%, var(--accent) 50%) right bottom / 30px 30px no-repeat,
+		linear-gradient(60deg, transparent 0 calc(100% - 46px), var(--accent-2) calc(100% - 46px) calc(100% - 41px), transparent calc(100% - 41px) calc(100% - 34px),
+			var(--accent) calc(100% - 34px) calc(100% - 27px), transparent calc(100% - 27px)) right top / 80px 50px no-repeat;
+}
+/* Torn: a black card in a white outline, thrown on the table over a hard accent block. */
+[data-frame-shadow="torn"] {
+	--card-shadow: 0 0 0 2px var(--accent-2), 6px 6px 0 2px var(--accent);
+}
+
+
+/* Dialog: a menu panel of tinted glass, lit from the top in accent-2 with a sheen across it, a gold diamond at
+   each corner and a small accent arrow at the foot, as when more text waits. */
+[data-frame-marks="dialog"] {
+	--card-marks: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 16%, transparent), transparent 55%),
+		linear-gradient(115deg, transparent 0 30%, color-mix(in srgb, var(--text) 5%, transparent) 30% 42%, transparent 42%);
+	--card-mask-accent: url(/themes/drawings/frames/dialog-arrow.svg) center bottom 6px / 12px 7px no-repeat,
+		url(/themes/drawings/frames/dialog-diamond.svg) left 3px top 3px / 10px 10px no-repeat,
+		url(/themes/drawings/frames/dialog-diamond.svg) right 3px top 3px / 10px 10px no-repeat,
+		url(/themes/drawings/frames/dialog-diamond.svg) left 3px bottom 3px / 10px 10px no-repeat,
+		url(/themes/drawings/frames/dialog-diamond.svg) right 3px bottom 3px / 10px 10px no-repeat;
+}
+/* Dialog: a fine gold line inside the border, a dark gap between them, a black ring outside and a soft drop. */
+[data-frame-shadow="dialog"] {
+	--card-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 0 1px #000, 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+
+/* Stat block: bars of accent-3 across the top and foot of the card. */
+[data-frame-marks="statblock"] {
+	--card-marks: linear-gradient(var(--accent-3), var(--accent-3)) left top / 100% 5px no-repeat,
+		linear-gradient(var(--accent-3), var(--accent-3)) left bottom / 100% 5px no-repeat;
+}
+/* Stat block: a soft paper shadow. */
+[data-frame-shadow="statblock"] {
+	--card-shadow: 0 2px 8px color-mix(in srgb, var(--text) 18%, transparent);
+}
+
+/* Ledger: a head band in the accent lined in accent-2, a trait tab in accent-3, and a heavy rule at the foot. */
+[data-frame-marks="ledger"] {
+	--card-marks: linear-gradient(var(--accent), var(--accent)) left top / 100% 6px no-repeat,
+		linear-gradient(var(--accent-2), var(--accent-2)) left 0 top 6px / 100% 2px no-repeat,
+		linear-gradient(var(--text), var(--text)) left bottom / 100% 3px no-repeat;
+	--card-mask-accent-3: url(/themes/drawings/frames/ledger-trait.svg) right 12px bottom 4px / 40px 9px no-repeat;
+}
+/* Ledger: a slight lift off the page. */
+[data-frame-shadow="ledger"] {
+	--card-shadow: 0 1px 3px color-mix(in srgb, var(--text) 22%, transparent);
+}
+
+/* Talon: three claw marks raked across the top right corner in the accent. */
+[data-frame-marks="talon"] {
+	--card-mask-accent: url(/themes/drawings/frames/talon-scratch.svg) right 10px top 8px / 42px 28px no-repeat;
+	--card-ink-accent: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+/* Talon: a black ring and a deep shadow, as if the card hung in the dark. */
+[data-frame-shadow="talon"] {
+	--card-shadow: 0 0 0 1px #000, 0 10px 26px rgba(0, 0, 0, 0.6), inset 0 0 22px color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+/* Scales: a band of overlapping scales in the accent across the top of the card. */
+[data-frame-marks="scales"] {
+	--card-marks: radial-gradient(circle at 50% 0, transparent 6px, color-mix(in srgb, var(--accent) 60%, transparent) 6px 7.5px, transparent 7.5px) left top / 14px 9px repeat-x,
+		radial-gradient(circle at 50% 0, transparent 6px, color-mix(in srgb, var(--accent) 35%, transparent) 6px 7.5px, transparent 7.5px) left 7px top 5px / 14px 9px repeat-x;
+}
+/* Scales: a warm glow of the accent. */
+[data-frame-shadow="scales"] {
+	--card-shadow: 0 0 20px color-mix(in srgb, var(--accent) 12%, transparent), 0 8px 20px rgba(0, 0, 0, 0.45);
+}
+
+/* Clipped: the top left and lower right corners cut off on a slant, the outline drawn in the border colour along
+   the cut and the four sides, and an accent tick at the top right, as on fleet paperwork. */
+[data-frame-marks="clipped"] {
+	--card-marks: linear-gradient(135deg, var(--bg) 0 13px, var(--border) 13px 14px, transparent 14px) left top / 26px 26px no-repeat,
+		linear-gradient(-45deg, var(--bg) 0 13px, var(--border) 13px 14px, transparent 14px) right bottom / 26px 26px no-repeat,
+		linear-gradient(var(--border), var(--border)) left 19px top 0 / calc(100% - 19px) 1px no-repeat,
+		linear-gradient(var(--border), var(--border)) left 0 top 19px / 1px calc(100% - 19px) no-repeat,
+		linear-gradient(var(--border), var(--border)) left 0 bottom 0 / calc(100% - 19px) 1px no-repeat,
+		linear-gradient(var(--border), var(--border)) right 0 top 0 / 1px calc(100% - 19px) no-repeat,
+		linear-gradient(var(--accent), var(--accent)) right 10px top 10px / 18px 3px no-repeat;
+}
+
+/* Planchette: a crescent moon in the accent at the top right and a sun in accent-2 at the lower left. */
+[data-frame-marks="planchette"] {
+	--card-mask-accent: url(/themes/drawings/frames/planchette-moon.svg) right 10px top 10px / 14px 14px no-repeat;
+	--card-ink-accent: color-mix(in srgb, var(--accent) 80%, transparent);
+	--card-mask-accent-2: url(/themes/drawings/frames/planchette-sun.svg) left 10px bottom 10px / 14px 14px no-repeat;
+	--card-ink-accent-2: color-mix(in srgb, var(--accent-2) 70%, transparent);
+}
+/* Planchette: an inner brass rule, as on a talking board. */
+[data-frame-shadow="planchette"] {
+	--card-shadow: inset 0 0 0 4px var(--surface), inset 0 0 0 5px color-mix(in srgb, var(--accent) 40%, transparent), 0 8px 22px rgba(0, 0, 0, 0.5);
+}
+
+/* Sandstep: a band of stepped shapes in the accent along the top of the card. */
+[data-frame-marks="sandstep"] {
+	--card-mask-accent: url(/themes/drawings/frames/sandstep-band.svg) left top 4px / 48px 10px repeat-x;
+	--card-ink-accent: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+/* Sandstep: a long shadow, as at dusk. */
+[data-frame-shadow="sandstep"] {
+	--card-shadow: 6px 14px 28px rgba(0, 0, 0, 0.5);
+}
+
+/* Crest: a shield crest in the accent at the top centre. */
+[data-frame-marks="crest"] {
+	--card-mask-accent: url(/themes/drawings/frames/crest-shield.svg) center top 6px / 16px 19px no-repeat;
+}
+/* Crest: a faint gold ring and a soft shadow. */
+[data-frame-shadow="crest"] {
+	--card-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent), 0 10px 26px rgba(0, 0, 0, 0.5);
+}
+
+/* Riveted: a brass rivet in each corner. */
+[data-frame-marks="riveted"] {
+	--card-marks: radial-gradient(circle at 40% 40%, color-mix(in srgb, var(--accent) 60%, var(--text)) 0 1.5px, var(--accent) 2px 3.5px, transparent 4px) left 5px top 5px / 10px 10px no-repeat,
+		radial-gradient(circle at 40% 40%, color-mix(in srgb, var(--accent) 60%, var(--text)) 0 1.5px, var(--accent) 2px 3.5px, transparent 4px) right 5px top 5px / 10px 10px no-repeat,
+		radial-gradient(circle at 40% 40%, color-mix(in srgb, var(--accent) 60%, var(--text)) 0 1.5px, var(--accent) 2px 3.5px, transparent 4px) left 5px bottom 5px / 10px 10px no-repeat,
+		radial-gradient(circle at 40% 40%, color-mix(in srgb, var(--accent) 60%, var(--text)) 0 1.5px, var(--accent) 2px 3.5px, transparent 4px) right 5px bottom 5px / 10px 10px no-repeat,
+		linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 40%);
+}
+/* Riveted: a lit top edge, a dark lower edge and a drop, as a plate of metal. */
+[data-frame-shadow="riveted"] {
+	--card-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 18%, transparent), inset 0 -2px 0 rgba(0, 0, 0, 0.4), 0 6px 14px rgba(0, 0, 0, 0.5);
+}
+
+/* Wanted: a nail in each top corner. */
+[data-frame-marks="wanted"] {
+	--card-marks: radial-gradient(circle at 40% 40%, color-mix(in srgb, var(--text) 30%, transparent) 0 1px, var(--text) 1.5px 3px, transparent 3.5px) left 6px top 6px / 9px 9px no-repeat,
+		radial-gradient(circle at 40% 40%, color-mix(in srgb, var(--text) 30%, transparent) 0 1px, var(--text) 1.5px 3px, transparent 3.5px) right 6px top 6px / 9px 9px no-repeat;
+}
+/* Wanted: a sheet lifted off the wall, with a hard shadow down and to the right. */
+[data-frame-shadow="wanted"] {
+	--card-shadow: 3px 4px 0 color-mix(in srgb, var(--text) 18%, transparent);
+}
+
+/* Scrap: a hazard stripe of the accent and black along the foot of the card. */
+[data-frame-marks="scrap"] {
+	--card-marks: repeating-linear-gradient(-45deg, var(--accent) 0 8px, #000 8px 16px) left bottom / 100% 6px no-repeat;
+}
+/* Scrap: a black ring and a hard dark drop. */
+[data-frame-shadow="scrap"] {
+	--card-shadow: 0 0 0 1px #000, 4px 4px 0 rgba(0, 0, 0, 0.55);
+}
+
+/* Dossier: an index tab and a tick in the accent along the top left, a crop mark at the lower left and a strip of
+   hatching in accent-2 at the lower right, as on a filed report. */
+[data-frame-marks="dossier"] {
+	--card-marks: linear-gradient(var(--accent), var(--accent)) left 0 top 0 / 36px 3px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) left 40px top 0 / 6px 3px no-repeat,
+		linear-gradient(color-mix(in srgb, var(--text) 32%, transparent), color-mix(in srgb, var(--text) 32%, transparent)) left 7px bottom 7px / 9px 1px no-repeat,
+		linear-gradient(color-mix(in srgb, var(--text) 32%, transparent), color-mix(in srgb, var(--text) 32%, transparent)) left 7px bottom 7px / 1px 9px no-repeat;
+	--card-mask-accent-2: url(/themes/drawings/frames/dossier-hatch.svg) right 10px bottom 9px / 44px 6px no-repeat;
+}

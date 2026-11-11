@@ -12876,4 +12876,262 @@
   <data name="PkgRowDetails" xml:space="preserve">
     <value>Details</value>
   </data>
+  <data name="AdmThemeStyleTextureStainedGlass" xml:space="preserve">
+    <value>Stained glass</value>
+  </data>
+  <data name="AdmThemeStyleTextureCrystal" xml:space="preserve">
+    <value>Crystal shards</value>
+  </data>
+  <data name="AdmThemeStyleTextureDither" xml:space="preserve">
+    <value>Dithered bands</value>
+  </data>
+  <data name="AdmThemeStyleTextureNightfall" xml:space="preserve">
+    <value>Moonlit skyline</value>
+  </data>
+  <data name="AdmThemeStyleTextureOverworld" xml:space="preserve">
+    <value>Overworld tiles</value>
+  </data>
+  <data name="AdmThemeStyleTextureSkyward" xml:space="preserve">
+    <value>Floating islands</value>
+  </data>
+  <data name="AdmThemeStyleTextureWatercolor" xml:space="preserve">
+    <value>Watercolour wash</value>
+  </data>
+  <data name="AdmThemeStyleTextureMarble" xml:space="preserve">
+    <value>Marble margin</value>
+  </data>
+  <data name="AdmThemeStyleFrameStained" xml:space="preserve">
+    <value>Stained glass</value>
+  </data>
+  <data name="AdmThemeStyleFramePrism" xml:space="preserve">
+    <value>Prism</value>
+  </data>
+  <data name="AdmThemeStyleFrameWindow" xml:space="preserve">
+    <value>Menu window</value>
+  </data>
+  <data name="AdmThemeStyleFrameTorn" xml:space="preserve">
+    <value>Torn card</value>
+  </data>
+  <data name="AdmThemeStyleFrameDialog" xml:space="preserve">
+    <value>Dialog box</value>
+  </data>
+  <data name="AdmThemeStyleFrameStatblock" xml:space="preserve">
+    <value>Stat block</value>
+  </data>
+  <data name="AdmThemeStyleFrameLedger" xml:space="preserve">
+    <value>Ledger</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentCrown" xml:space="preserve">
+    <value>Crown</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentCrystal" xml:space="preserve">
+    <value>Crystal</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentGlove" xml:space="preserve">
+    <value>Pointing glove</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentJagged" xml:space="preserve">
+    <value>Jagged</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentPointer" xml:space="preserve">
+    <value>Cursor</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentRubric" xml:space="preserve">
+    <value>Tapered rule</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentActions" xml:space="preserve">
+    <value>Action diamonds</value>
+  </data>
+  <data name="AdmThemeStyleEffectStarlit" xml:space="preserve">
+    <value>Starlit</value>
+  </data>
+  <data name="AdmThemeStyleEffectPrism" xml:space="preserve">
+    <value>Prism</value>
+  </data>
+  <data name="AdmThemeStyleEffectBevel" xml:space="preserve">
+    <value>Bevel</value>
+  </data>
+  <data name="AdmThemeStyleEffectRansom" xml:space="preserve">
+    <value>Ransom note</value>
+  </data>
+  <data name="AdmThemeStyleEffectDialog" xml:space="preserve">
+    <value>Dialog</value>
+  </data>
+  <data name="AdmThemeStyleEffectRubric" xml:space="preserve">
+    <value>Rubric</value>
+  </data>
+  <data name="AdmThemeStyleEffectStamped" xml:space="preserve">
+    <value>Stamped</value>
+  </data>
+  <data name="AdmThemeStyleImageryDreamlit" xml:space="preserve">
+    <value>Dreamlit</value>
+  </data>
+  <data name="AdmThemeStyleImageryCrystalline" xml:space="preserve">
+    <value>Crystalline</value>
+  </data>
+  <data name="AdmThemeStyleImagerySixteenBit" xml:space="preserve">
+    <value>16-bit</value>
+  </data>
+  <data name="AdmThemeStyleImageryRedout" xml:space="preserve">
+    <value>Red-out</value>
+  </data>
+  <data name="AdmThemeStyleImageryCartridge" xml:space="preserve">
+    <value>Cartridge</value>
+  </data>
+  <data name="AdmThemeStyleImageryWatercolor" xml:space="preserve">
+    <value>Watercolour</value>
+  </data>
+  <data name="AdmThemeStyleImageryEtched" xml:space="preserve">
+    <value>Etched</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentUnderlineTaper" xml:space="preserve">
+    <value>Tapered rule</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentUnderlineBar" xml:space="preserve">
+    <value>Heavy bar</value>
+  </data>
+  <data name="AdmThemeStyleTextureSpires" xml:space="preserve">
+    <value>Gothic skyline</value>
+  </data>
+  <data name="AdmThemeStyleFrameTalon" xml:space="preserve">
+    <value>Claw marks</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentThorn" xml:space="preserve">
+    <value>Thorns</value>
+  </data>
+  <data name="AdmThemeStyleEffectBloodlet" xml:space="preserve">
+    <value>Blood glow</value>
+  </data>
+  <data name="AdmThemeStyleImageryNocturne" xml:space="preserve">
+    <value>Nocturne</value>
+  </data>
+  <data name="AdmThemeStyleTextureDragonflight" xml:space="preserve">
+    <value>Dragons in flight</value>
+  </data>
+  <data name="AdmThemeStyleFrameScales" xml:space="preserve">
+    <value>Dragon scales</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentWing" xml:space="preserve">
+    <value>Wings</value>
+  </data>
+  <data name="AdmThemeStyleEffectFirestone" xml:space="preserve">
+    <value>Firestone</value>
+  </data>
+  <data name="AdmThemeStyleImageryDuskfire" xml:space="preserve">
+    <value>Duskfire</value>
+  </data>
+  <data name="AdmThemeStyleTexturePlot" xml:space="preserve">
+    <value>Plotting scope</value>
+  </data>
+  <data name="AdmThemeStyleTextureHaze" xml:space="preserve">
+    <value>Smoke haze</value>
+  </data>
+  <data name="AdmThemeStyleFrameDossier" xml:space="preserve">
+    <value>Dossier</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentFlank" xml:space="preserve">
+    <value>Dashes</value>
+  </data>
+  <data name="AdmThemeStyleFrameClipped" xml:space="preserve">
+    <value>Clipped corners</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentChevron" xml:space="preserve">
+    <value>Chevrons</value>
+  </data>
+  <data name="AdmThemeStyleEffectScope" xml:space="preserve">
+    <value>Scope glow</value>
+  </data>
+  <data name="AdmThemeStyleImageryGunmetal" xml:space="preserve">
+    <value>Gunmetal</value>
+  </data>
+  <data name="AdmThemeStyleTextureSeance" xml:space="preserve">
+    <value>Ritual chart</value>
+  </data>
+  <data name="AdmThemeStyleFramePlanchette" xml:space="preserve">
+    <value>Moon and sun</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentMoon" xml:space="preserve">
+    <value>Moons</value>
+  </data>
+  <data name="AdmThemeStyleEffectEctoplasm" xml:space="preserve">
+    <value>Ectoplasm</value>
+  </data>
+  <data name="AdmThemeStyleImageryDaguerreotype" xml:space="preserve">
+    <value>Daguerreotype</value>
+  </data>
+  <data name="AdmThemeStyleTextureDunes" xml:space="preserve">
+    <value>Dunes and moons</value>
+  </data>
+  <data name="AdmThemeStyleFrameSandstep" xml:space="preserve">
+    <value>Stepped band</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentSunDisc" xml:space="preserve">
+    <value>Sun disc</value>
+  </data>
+  <data name="AdmThemeStyleEffectHeat" xml:space="preserve">
+    <value>Heat haze</value>
+  </data>
+  <data name="AdmThemeStyleImagerySunbleached" xml:space="preserve">
+    <value>Sunbleached</value>
+  </data>
+  <data name="AdmThemeStyleTextureCandles" xml:space="preserve">
+    <value>Floating candles</value>
+  </data>
+  <data name="AdmThemeStyleFrameCrest" xml:space="preserve">
+    <value>House crest</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentWand" xml:space="preserve">
+    <value>Wand sparks</value>
+  </data>
+  <data name="AdmThemeStyleEffectSpellglow" xml:space="preserve">
+    <value>Spell glow</value>
+  </data>
+  <data name="AdmThemeStyleImageryCandlelit" xml:space="preserve">
+    <value>Candlelit</value>
+  </data>
+  <data name="AdmThemeStyleTextureGears" xml:space="preserve">
+    <value>Gears and pipes</value>
+  </data>
+  <data name="AdmThemeStyleFrameRiveted" xml:space="preserve">
+    <value>Riveted plate</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentCog" xml:space="preserve">
+    <value>Cogs</value>
+  </data>
+  <data name="AdmThemeStyleEffectBrass" xml:space="preserve">
+    <value>Brass</value>
+  </data>
+  <data name="AdmThemeStyleImageryTintype" xml:space="preserve">
+    <value>Tintype</value>
+  </data>
+  <data name="AdmThemeStyleTextureMesa" xml:space="preserve">
+    <value>Mesas and cacti</value>
+  </data>
+  <data name="AdmThemeStyleFrameWanted" xml:space="preserve">
+    <value>Wanted poster</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentSheriff" xml:space="preserve">
+    <value>Sheriff stars</value>
+  </data>
+  <data name="AdmThemeStyleEffectWoodtype" xml:space="preserve">
+    <value>Wood type</value>
+  </data>
+  <data name="AdmThemeStyleImagerySunbaked" xml:space="preserve">
+    <value>Sunbaked</value>
+  </data>
+  <data name="AdmThemeStyleTextureRuins" xml:space="preserve">
+    <value>Ruined skyline</value>
+  </data>
+  <data name="AdmThemeStyleFrameScrap" xml:space="preserve">
+    <value>Scrap and hazard</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentRad" xml:space="preserve">
+    <value>Radiation</value>
+  </data>
+  <data name="AdmThemeStyleEffectGrime" xml:space="preserve">
+    <value>Grime</value>
+  </data>
+  <data name="AdmThemeStyleImageryIrradiated" xml:space="preserve">
+    <value>Irradiated</value>
+  </data>
 </root>
