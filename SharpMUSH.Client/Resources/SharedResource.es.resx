@@ -331,10 +331,6 @@
     <value>Acciones</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthColumnDbref" xml:space="preserve">
-    <value>Dbref</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthColumnName" xml:space="preserve">
     <value>Nombre</value>
     <comment>MT</comment>
@@ -9497,5 +9493,8 @@
   </data>
   <data name="AuthRemovePasswordConfirm" xml:space="preserve">
     <value>Iniciarás sesión con una llave de acceso o un servicio vinculado. Puedes volver a establecer una contraseña más adelante.</value>
+  </data>
+  <data name="GuideIdentityIntroductionExample" xml:space="preserve">
+    <value>Una ciudad de lluvia y viejos secretos, donde cada historia empieza en la taberna.</value>
   </data>
 </root>

@@ -2,6 +2,8 @@
 @using System.Text.Json
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Models.Portal.Widgets
+@using SharpMUSH.Client.Models.Widgets
+@using SharpMUSH.Library.DiscriminatedUnions
 @inject IStringLocalizer<SharedResource> Loc
 @inject IWidgetRegistry Registry
 
@@ -16,15 +18,41 @@
                 <MudNumericField @bind-Value="_height" Label="@Loc["LaySpacerHeight"]" Variant="Variant.Outlined"
                                  Min="0" Max="600" Step="4" />
             }
+            else if (_form is { } form)
+            {
+                <div class="wcd-mode">
+                    <MudText Typo="Typo.body2" Style="color:var(--text-dim);">@Loc["LayCfgFormHelp", WidgetName]</MudText>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="wcd-to-json"
+                               StartIcon="@Icons.Material.Filled.DataObject" OnClick="ShowJson">
+                        @Loc["LayCfgEditJson"]
+                    </MudButton>
+                </div>
+                <WidgetConfigForm Fields="_fields" Document="form" OnChanged="StateHasChanged" />
+                @if (form.UnknownKeys(_fields) is { Count: > 0 } unknown)
+                {
+                    <MudText Typo="Typo.caption" Class="wcd-unknown mt-2" Style="color:var(--text-dim);">
+                        @Loc["LayCfgUnknownKeys", string.Join(", ", unknown)]
+                    </MudText>
+                }
+            }
             else
             {
-                <MudText Typo="Typo.body2" Class="mb-2" Style="color:var(--text-dim);">
-                    @((MarkupString)string.Format(Loc["LayConfigJsonHelp"].Value, $"<strong>{WebUtility.HtmlEncode(WidgetName)}</strong>"))
-                </MudText>
+                <div class="wcd-mode">
+                    <MudText Typo="Typo.body2" Style="color:var(--text-dim);">
+                        @((MarkupString)string.Format(Loc["LayConfigJsonHelp"].Value, $"<strong>{WebUtility.HtmlEncode(WidgetName)}</strong>"))
+                    </MudText>
+                    @if (_fields.Count > 0)
+                    {
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="wcd-to-form"
+                                   StartIcon="@Icons.Material.Filled.Tune" OnClick="ShowForm">
+                            @Loc["LayCfgEditForm"]
+                        </MudButton>
+                    }
+                </div>
 
-                @* The key reference, generated from the widget's ConfigType. Admins type raw JSON here,
-                   so the accepted keys have to be on screen — a docs page they have to go find is not
-                   documentation they will read at the moment they need it. *@
+                @* The JSON view, for keys the form does not cover or a config pasted from elsewhere. The
+                   key reference is generated from the widget's ConfigType so the accepted keys are on
+                   screen while typing. *@
                 <MudPaper Elevation="0" Class="layout-config-schema mb-3"
                           Style="border:1px solid var(--border);border-radius:var(--radius);padding:var(--space-4);background:var(--surface);">
                     <MudText Typo="Typo.subtitle2" Class="mb-1">@Loc["LayCfgReferenceTitle"]</MudText>
@@ -95,6 +123,9 @@
 
     private string _json = string.Empty;
     private string? _error;
+
+    /// <summary>The settings form's config; null while the JSON view is showing.</summary>
+    private WidgetConfigDocument? _form;
     private int _height = DefaultSpacerHeight;
     private IReadOnlyList<WidgetConfigField> _fields = [];
 
@@ -111,6 +142,34 @@
 
         _fields = WidgetConfigSchema.Describe(
             WidgetKey is null ? null : Registry.GetWidget(WidgetKey)?.ConfigType);
+
+        // The form when the widget documents its keys and the stored config is an object it can
+        // read; otherwise the JSON view, where a broken config can be seen and fixed.
+        if (_fields.Count > 0 && WidgetConfigDocument.Parse(InitialJson, Loc["LayCfgNotAnObject"]) is WidgetConfigDocument document)
+        {
+            _form = document;
+        }
+    }
+
+    private void ShowJson()
+    {
+        _json = _form?.ToJson() ?? string.Empty;
+        _form = null;
+        _error = null;
+    }
+
+    private void ShowForm()
+    {
+        switch (WidgetConfigDocument.Parse(_json, Loc["LayCfgNotAnObject"]))
+        {
+            case WidgetConfigDocument document:
+                _form = document;
+                _error = null;
+                break;
+            case Error<string> error:
+                _error = Loc["LayInvalidJson", error.Value];
+                break;
+        }
     }
 
     private RenderFragment RenderField(WidgetConfigField field, int depth) =>
@@ -153,6 +212,13 @@
         {
             var height = Math.Clamp(_height, 0, 600);
             MudDialog.Close(DialogResult.Ok<string?>($"{{\"height\":{height}}}"));
+            return;
+        }
+
+        if (_form is { } form)
+        {
+            // No keys left → clear config, as an empty JSON box does.
+            MudDialog.Close(DialogResult.Ok<string?>(form.ToJson()));
             return;
         }
 

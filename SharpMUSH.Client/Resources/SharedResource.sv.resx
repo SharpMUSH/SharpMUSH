@@ -331,10 +331,6 @@
     <value>Åtgärder</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthColumnDbref" xml:space="preserve">
-    <value>Dbref</value>
-    <comment>MT — MUSH term of art, kept per glossary.</comment>
-  </data>
   <data name="AuthColumnName" xml:space="preserve">
     <value>Namn</value>
     <comment>MT</comment>
@@ -9497,5 +9493,8 @@
   </data>
   <data name="AuthRemovePasswordConfirm" xml:space="preserve">
     <value>Du loggar i stället in med en lösennyckel eller en länkad tjänst. Du kan ange ett lösenord igen senare.</value>
+  </data>
+  <data name="GuideIdentityIntroductionExample" xml:space="preserve">
+    <value>En stad av regn och gamla hemligheter, där varje berättelse börjar på krogen.</value>
   </data>
 </root>

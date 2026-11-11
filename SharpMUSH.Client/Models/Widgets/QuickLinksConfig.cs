@@ -6,18 +6,18 @@ namespace SharpMUSH.Client.Models.Widgets;
 /// Represents a single link entry in the Quick Links widget config.
 /// </summary>
 public record QuickLink(
-	[property: WidgetConfigKey("LayCfgQuickLinkLabel")]
+	[property: WidgetConfigKey("LayCfgQuickLinkLabel", LabelKey = "LayCfgQuickLinkLabelLabel", Example = "Rules")]
 	string Label,
-	[property: WidgetConfigKey("LayCfgQuickLinkUrl")]
+	[property: WidgetConfigKey("LayCfgQuickLinkUrl", LabelKey = "LayCfgQuickLinkUrlLabel", Example = "/wiki/house-rules")]
 	string Url,
-	[property: WidgetConfigKey("LayCfgQuickLinkIcon")]
+	[property: WidgetConfigKey("LayCfgQuickLinkIcon", LabelKey = "LayCfgQuickLinkIconLabel", Example = "/api/wiki-assets/7/rules.svg", Image = true)]
 	string? Icon = null,
-	[property: WidgetConfigKey("LayCfgQuickLinkNewTab")]
+	[property: WidgetConfigKey("LayCfgQuickLinkNewTab", LabelKey = "LayCfgQuickLinkNewTabLabel")]
 	bool NewTab = false);
 
 /// <summary>
 /// Config schema for the Quick Links widget.
 /// </summary>
 public record QuickLinksConfig(
-	[property: WidgetConfigKey("LayCfgQuickLinks")]
+	[property: WidgetConfigKey("LayCfgQuickLinks", LabelKey = "LayCfgQuickLinksLabel")]
 	IReadOnlyList<QuickLink> Links);

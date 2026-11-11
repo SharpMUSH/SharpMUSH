@@ -331,10 +331,6 @@
     <value>Aktionen</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthColumnDbref" xml:space="preserve">
-    <value>Dbref</value>
-    <comment>MT — glossary term, left untranslated.</comment>
-  </data>
   <data name="AuthColumnName" xml:space="preserve">
     <value>Name</value>
     <comment>MT</comment>
@@ -9497,5 +9493,8 @@
   </data>
   <data name="AuthRemovePasswordConfirm" xml:space="preserve">
     <value>Du meldest dich stattdessen mit einem Passkey oder einem verknüpften Dienst an. Du kannst später wieder ein Passwort festlegen.</value>
+  </data>
+  <data name="GuideIdentityIntroductionExample" xml:space="preserve">
+    <value>Eine Stadt aus Regen und alten Geheimnissen, in der jede Geschichte in der Taverne beginnt.</value>
   </data>
 </root>

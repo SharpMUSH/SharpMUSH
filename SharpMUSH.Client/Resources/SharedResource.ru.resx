@@ -331,10 +331,6 @@
     <value>Действия</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthColumnDbref" xml:space="preserve">
-    <value>Dbref</value>
-    <comment>MT — kept as-is per the glossary: dbref is a MUSH term of art; source capitalisation preserved.</comment>
-  </data>
   <data name="AuthColumnName" xml:space="preserve">
     <value>Имя</value>
     <comment>MT</comment>
@@ -9497,5 +9493,8 @@
   </data>
   <data name="AuthRemovePasswordConfirm" xml:space="preserve">
     <value>Вы будете входить с ключом доступа или через привязанный сервис. Пароль можно задать снова позже.</value>
+  </data>
+  <data name="GuideIdentityIntroductionExample" xml:space="preserve">
+    <value>Город дождя и старых тайн, где каждая история начинается в таверне.</value>
   </data>
 </root>

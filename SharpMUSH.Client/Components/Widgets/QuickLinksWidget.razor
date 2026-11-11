@@ -10,9 +10,14 @@
             <MudNavMenu>
                 @foreach (var link in _links)
                 {
+                    var picture = PictureOf(link);
                     <MudNavLink Href="@link.Url"
                                 Target="@(link.NewTab ? "_blank" : "_self")"
-                                Icon="@(link.Icon ?? Icons.Material.Filled.Link)">
+                                Icon="@(picture is null ? SvgOf(link) : null)">
+                        @if (picture is not null)
+                        {
+                            <img class="ql-icon" src="@ApiUrl.Resolve(picture)" alt="" />
+                        }
                         @link.Label
                     </MudNavLink>
                 }
@@ -23,13 +28,18 @@
             <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
                 @foreach (var link in _links)
                 {
+                    var picture = PictureOf(link);
                     <MudChip T="string"
                              Href="@link.Url"
                              Target="@(link.NewTab ? "_blank" : "_self")"
-                             Icon="@(link.Icon ?? Icons.Material.Filled.Link)"
+                             Icon="@(picture is null ? SvgOf(link) : null)"
                              Color="Color.Default"
                              Size="Size.Small"
                              Variant="Variant.Outlined">
+                        @if (picture is not null)
+                        {
+                            <img class="ql-icon" src="@ApiUrl.Resolve(picture)" alt="" />
+                        }
                         @link.Label
                     </MudChip>
                 }
@@ -62,6 +72,20 @@ else
     [Parameter] public string Zone { get; set; } = string.Empty;
 
     private IReadOnlyList<QuickLink> _links = [];
+
+    /// <summary>
+    /// The link's icon as a picture to load (an uploaded file or an https address); null when the
+    /// icon is inline SVG markup, unset, or an address the portal will not load.
+    /// </summary>
+    public static string? PictureOf(QuickLink link)
+        => ImageUrlPolicy.IsRenderable(link.Icon) ? link.Icon : null;
+
+    /// <summary>Inline SVG markup as MudBlazor draws it, else the generic link icon.</summary>
+    public static string SvgOf(QuickLink link)
+        => link.Icon is { } icon && IsSvgMarkup(icon) ? icon : Icons.Material.Filled.Link;
+
+    private static bool IsSvgMarkup(string icon) => icon.TrimStart().StartsWith('<');
+
     private bool _isSidebar;
 
     protected override void OnParametersSet()

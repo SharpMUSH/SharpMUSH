@@ -24,19 +24,10 @@
                         <MudTable Items="Characters" Dense="true" Hover="true" Class="acct-table" Elevation="0">
                             <HeaderContent>
                                 <MudTh>@Loc["AuthColumnName"]</MudTh>
-                                <MudTh>@Loc["AuthColumnDbref"]</MudTh>
-                                <MudTh>@Loc["Flags"]</MudTh>
                                 <MudTh>@Loc["AuthColumnActions"]</MudTh>
                             </HeaderContent>
                             <RowTemplate>
                                 <MudTd data-label="@Loc["AuthColumnName"]">@context.Name</MudTd>
-                                <MudTd data-label="@Loc["AuthColumnDbref"]">#@context.DbrefNumber</MudTd>
-                                <MudTd data-label="@Loc["Flags"]">
-                                    @foreach (var flag in (context.Flags ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries))
-                                    {
-                                        <span class="acct-flag">@flag</span>
-                                    }
-                                </MudTd>
                                 <MudTd data-label="@Loc["AuthColumnActions"]">
                                     <MudIconButton Icon="@Icons.Material.Outlined.Palette" Size="Size.Small"
                                                    Href="@($"/settings/theme#theme-{context.DbrefNumber}")"

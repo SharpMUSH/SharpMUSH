@@ -331,10 +331,6 @@
     <value>Acties</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthColumnDbref" xml:space="preserve">
-    <value>Dbref</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthColumnName" xml:space="preserve">
     <value>Naam</value>
     <comment>MT</comment>
@@ -9497,5 +9493,8 @@
   </data>
   <data name="AuthRemovePasswordConfirm" xml:space="preserve">
     <value>Je logt dan in met een toegangssleutel of een gekoppelde dienst. Je kunt later opnieuw een wachtwoord instellen.</value>
+  </data>
+  <data name="GuideIdentityIntroductionExample" xml:space="preserve">
+    <value>Een stad van regen en oude geheimen, waar elk verhaal in de herberg begint.</value>
   </data>
 </root>

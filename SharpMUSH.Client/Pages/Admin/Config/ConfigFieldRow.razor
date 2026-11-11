@@ -8,7 +8,10 @@
     <div class="cfg-row-text">
         <div class="cfg-row-name">
             <span>@DisplayName</span>
-            <code class="cfg-row-key">@Property.Path</code>
+            @if (ShowKey)
+            {
+                <code class="cfg-row-key">@Property.Path</code>
+            }
             @if (IsChanged)
             {
                 <span class="cfg-row-changed" title="@Loc["ResDefaultValueTooltip", Property.DefaultValue ?? string.Empty]">@Loc["ResChangedBadge"]</span>
@@ -140,6 +143,10 @@
 
     [Parameter, EditorRequired]
     public ConfigDraft Draft { get; set; } = default!;
+
+    /// <summary>Whether the option's key (its path, as mush.cnf and @config name it) is shown beside its name.</summary>
+    [Parameter]
+    public bool ShowKey { get; set; }
 
     /// <summary>Raised after an edit lands in <see cref="Draft"/>, so the page can redraw its unsaved bar.</summary>
     [Parameter]

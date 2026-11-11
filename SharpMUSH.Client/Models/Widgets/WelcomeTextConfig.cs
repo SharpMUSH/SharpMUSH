@@ -11,7 +11,7 @@ namespace SharpMUSH.Client.Models.Widgets;
 /// stays visible to everyone.
 /// </param>
 public record WelcomeTextConfig(
-	[property: WidgetConfigKey("LayCfgWelcomeMarkdown")]
+	[property: WidgetConfigKey("LayCfgWelcomeMarkdown", LabelKey = "LayCfgWelcomeMarkdownLabel", Example = "Welcome! New here? Start with the **rules**, then say hello on the public channel.", Multiline = true)]
 	string Markdown,
-	[property: WidgetConfigKey("LayCfgWelcomeShowToGuests")]
+	[property: WidgetConfigKey("LayCfgWelcomeShowToGuests", LabelKey = "LayCfgWelcomeShowToGuestsLabel")]
 	bool ShowToGuests = true);

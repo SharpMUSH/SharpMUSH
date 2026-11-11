@@ -129,7 +129,7 @@ A list of links, rendered as a nav menu in the sidebars and as chips in the top 
 | `links` | array | `[]` | The links to show. Empty renders nothing (admins see a prompt to configure it). |
 | `links[].label` | string | required | Link text. |
 | `links[].url` | string | required | Target, internal or external. |
-| `links[].icon` | string | a generic link icon | A MudBlazor icon SVG path. |
+| `links[].icon` | string | a generic link icon | A picture's address: an uploaded file (`/api/wiki-assets/...`) or an `https` URL. SVG is preferred, as it stays sharp at any size. The settings form uploads one or picks one from the media uploads. Inline SVG markup (`<svg>...</svg>`) also works. |
 | `links[].newTab` | bool | `false` | Open in a new tab. |
 
 ```json

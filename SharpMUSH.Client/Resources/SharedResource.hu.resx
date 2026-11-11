@@ -331,10 +331,6 @@
     <value>Műveletek</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthColumnDbref" xml:space="preserve">
-    <value>Dbref</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthColumnName" xml:space="preserve">
     <value>Név</value>
     <comment>MT</comment>
@@ -9497,5 +9493,8 @@
   </data>
   <data name="AuthRemovePasswordConfirm" xml:space="preserve">
     <value>Ezután azonosítókulccsal vagy összekapcsolt szolgáltatással jelentkezel be. Később újra beállíthatsz jelszót.</value>
+  </data>
+  <data name="GuideIdentityIntroductionExample" xml:space="preserve">
+    <value>Az eső és a régi titkok városa, ahol minden történet a fogadóban kezdődik.</value>
   </data>
 </root>

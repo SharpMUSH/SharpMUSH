@@ -7,5 +7,5 @@ namespace SharpMUSH.Client.Models.Widgets;
 /// the placement's column span; <see cref="Height"/> sets its height in pixels.
 /// </summary>
 public record SpacerConfig(
-	[property: WidgetConfigKey("LayCfgSpacerHeight")]
+	[property: WidgetConfigKey("LayCfgSpacerHeight", LabelKey = "LayCfgSpacerHeightLabel")]
 	int Height = 24);

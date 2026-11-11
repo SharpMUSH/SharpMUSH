@@ -331,10 +331,6 @@
     <value>Действия</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthColumnDbref" xml:space="preserve">
-    <value>Dbref</value>
-    <comment>MT — `dbref` kept in Latin per glossary, case copied from source</comment>
-  </data>
   <data name="AuthColumnName" xml:space="preserve">
     <value>Име</value>
     <comment>MT</comment>
@@ -9497,5 +9493,8 @@
   </data>
   <data name="AuthRemovePasswordConfirm" xml:space="preserve">
     <value>Ще влизате с ключ за достъп или със свързана услуга. Можете да зададете парола отново по-късно.</value>
+  </data>
+  <data name="GuideIdentityIntroductionExample" xml:space="preserve">
+    <value>Град на дъжд и стари тайни, където всяка история започва в кръчмата.</value>
   </data>
 </root>

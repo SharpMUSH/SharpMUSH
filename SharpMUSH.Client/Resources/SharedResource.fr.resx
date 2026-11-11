@@ -467,9 +467,6 @@
   <data name="AuthColumnName" xml:space="preserve">
     <value>Nom</value>
   </data>
-  <data name="AuthColumnDbref" xml:space="preserve">
-    <value>Dbref</value>
-  </data>
   <data name="AuthColumnActions" xml:space="preserve">
     <value>Actions</value>
   </data>
@@ -8807,5 +8804,8 @@
   </data>
   <data name="AuthRemovePasswordConfirm" xml:space="preserve">
     <value>Vous vous connecterez avec une clé d'accès ou un service associé. Vous pourrez définir un mot de passe plus tard.</value>
+  </data>
+  <data name="GuideIdentityIntroductionExample" xml:space="preserve">
+    <value>Une ville de pluie et de vieux secrets, où chaque histoire commence à la taverne.</value>
   </data>
 </root>

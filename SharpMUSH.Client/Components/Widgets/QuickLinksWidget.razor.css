@@ -1,3 +1,12 @@
 .quick-links-widget {
     container-type: inline-size;
 }
+
+/* An icon given as a picture sits where MudBlazor draws an SVG icon, at the text's size. */
+.ql-icon {
+    width: 1.25em;
+    height: 1.25em;
+    object-fit: contain;
+    vertical-align: middle;
+    margin-inline-end: var(--space-3);
+}

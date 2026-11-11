@@ -26,4 +26,25 @@ public sealed class WidgetConfigKeyAttribute(string descriptionKey) : Attribute
 	/// Main namespace, and "main" is the useful thing to show.
 	/// </summary>
 	public string? Default { get; init; }
+
+	/// <summary>
+	/// <c>SharedResource</c> key for the field's label in the layout editor's settings form. Unset,
+	/// the form labels the field with its key, spaced out ("newTab" reads "New tab").
+	/// </summary>
+	public string? LabelKey { get; init; }
+
+	/// <summary>
+	/// A sample value the settings form shows, greyed, in the empty field ("house-rules" for a wiki
+	/// slug), so an admin sees the shape of a value before typing one. A documented default wins.
+	/// </summary>
+	public string? Example { get; init; }
+
+	/// <summary>Whether a string key holds several lines (Markdown, say), so the form gives it a text area.</summary>
+	public bool Multiline { get; init; }
+
+	/// <summary>
+	/// Whether a string key holds a picture's address, so the form offers the media uploads to pick
+	/// one from or add one to beside the address field.
+	/// </summary>
+	public bool Image { get; init; }
 }

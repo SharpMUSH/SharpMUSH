@@ -303,6 +303,28 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 	}
 
 	/// <summary>
+	/// A player's own characters are listed by name: the dbref and the flag letters are staff detail,
+	/// shown where staff look at objects, not on the account page.
+	/// </summary>
+	[Test]
+	public async Task Characters_AreListedWithoutDbrefOrFlags()
+	{
+		Auth.SetAuthorized("headwiz");
+		var handler = new AccountPageApiHandler([new { dbrefNumber = 7, creationTime = 7L, name = "Ash", flags = "PLAYER CONNECTED" }]);
+		SeedAuthState(loggedIn: true, handler: handler);
+
+		var cut = Render<SharpMUSH.Client.Pages.Account>();
+		cut.WaitForAssertion(() => cut.Find(".acct-table td"), TimeSpan.FromSeconds(5));
+
+		var table = cut.Find(".acct-table");
+		await Assert.That(table.TextContent).Contains("Ash");
+		await Assert.That(table.TextContent).DoesNotContain("#7");
+		await Assert.That(table.TextContent).DoesNotContain("CONNECTED");
+		await Assert.That(cut.FindAll(".acct-table th").Select(th => th.TextContent.Trim()))
+			.IsEquivalentTo(["AuthColumnName", "AuthColumnActions"]);
+	}
+
+	/// <summary>
 	/// Unlinking takes the character, and any role it gave the account, away at once (unlinking #1 left
 	/// the administrator a Guest), so the button asks first; cancelling sends nothing.
 	/// </summary>

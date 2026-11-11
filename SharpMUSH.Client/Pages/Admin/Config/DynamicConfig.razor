@@ -9,6 +9,7 @@
 @inject ISnackbar Snackbar
 @inject ServerInfoService ServerInfo
 @inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
 @implements IDisposable
 
 <AdminPageTitle Page="@CategoryTitle" />
@@ -22,6 +23,9 @@
             <Actions>
                 @if (!_loading && _categoryMetadata != null)
                 {
+                    @* The option's key (Chat.MaxChannels) is what mush.cnf, the environment and @config
+                       name it by. Most admins never need it, so it stays hidden until asked for. *@
+                    <CapsuleButton Class="cfg-show-keys" Icon="@Icons.Material.Outlined.Code" Pressed="_showKeys" OnClick="ToggleKeysAsync">@Loc["AdmCfgShowKeys"]</CapsuleButton>
                     <CapsuleButton Icon="@Icons.Material.Outlined.RestartAlt" OnClick="ResetToDefaults">@Loc["ResetToDefaults"]</CapsuleButton>
                 }
             </Actions>
@@ -66,7 +70,7 @@
                     <KitCard>
                         @foreach (var prop in _categoryProperties.Values.OrderBy(p => p.Name))
                         {
-                            <ConfigFieldRow Property="prop" Draft="_draft" OnChanged="OnDraftChanged" />
+                            <ConfigFieldRow Property="prop" Draft="_draft" ShowKey="_showKeys" OnChanged="OnDraftChanged" />
                         }
                     </KitCard>
                 </div>
@@ -82,7 +86,7 @@
                         <KitCard>
                             @foreach (var prop in groupProperties)
                             {
-                                <ConfigFieldRow Property="prop" Draft="_draft" OnChanged="OnDraftChanged" />
+                                <ConfigFieldRow Property="prop" Draft="_draft" ShowKey="_showKeys" OnChanged="OnDraftChanged" />
                             }
                         </KitCard>
                     </div>
@@ -165,10 +169,22 @@
             ? []
             : _categoryMetadata.Groups.OrderBy(g => g.Order).Where(g => GetPropertiesInGroup(g.Name).Any()).ToList();
 
-    protected override void OnInitialized()
+    /// <summary>Where the viewer's choice to see option keys is remembered.</summary>
+    private const string ShowKeysStorageKey = "sharpmush.config.showkeys";
+
+    private bool _showKeys;
+
+    protected override async Task OnInitializedAsync()
     {
         NavigationManager.LocationChanged += OnLocationChanged;
         ReadAnchor();
+        _showKeys = await JS.GetItemAsync(BrowserStore.Local, ShowKeysStorageKey) == "1";
+    }
+
+    private async Task ToggleKeysAsync()
+    {
+        _showKeys = !_showKeys;
+        await JS.SetItemAsync(BrowserStore.Local, ShowKeysStorageKey, _showKeys ? "1" : "0");
     }
 
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
