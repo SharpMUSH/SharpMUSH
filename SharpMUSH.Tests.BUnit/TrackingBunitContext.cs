@@ -56,6 +56,7 @@ public abstract class TrackingBunitContext : BunitContext
 		Services.TryAddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true));
 		Services.TryAddSingleton<CommandHistory>();
 		Services.TryAddSingleton<ScreenReaderMode>();
+		Services.TryAddSingleton<ThemeImageFilter>();
 		Services.TryAddSingleton<TerminalLog>();
 		Services.TryAddSingleton<ICharacterPictures>(sp =>
 			sp.GetService<CharacterDirectoryService>() ?? (ICharacterPictures)new NoCharacterPictures());

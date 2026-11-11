@@ -34,7 +34,8 @@ stored with the character (`CharacterAppearance.Vision`) like the theme and acce
   Home hero).
 - **Directive** (`directive`, dark): white through smoke on black, Bodoni Moda capitals between dashes, square cards
   marked like a filed report (`dossier`). The chrome stays grey: the character's accent is its only colour, apart
-  from warnings and missing links. Its layout theme carries a look too.
+  from warnings and missing links. Pictures are toned to its greys (`smoke` imagery). Its layout theme carries a look
+  too.
 - One per MSSP genre, with the ids the telnet layout themes use: `fantasy`, `historical`, `horror`, `modern`,
   `mystery`, `romance`, `science-fiction`, `spiritual`.
 - Anime: `magical-girl`, `shojo`, `idol`, `slice-of-life`, `shonen`, `sports`, `mechmachine`, `real-robot`, `super-robot`, `isekai`, `yokai`.
@@ -155,7 +156,7 @@ value is one rule in `SharpMUSH.Client/wwwroot/css/themes/`, keyed on a data att
 | `textures.css` | `data-texture`, `data-texture-strength` |
 | `frames.css` | `data-frame-marks`, `data-frame-edge`, `data-frame-shadow` |
 | `titles.css` | `data-ornament-glyphs`, `data-ornament-underline`, `data-effect-color`, `data-effect-shadow` |
-| `imagery.css` | `data-imagery` |
+| `imagery.css` | `data-imagery`; `data-image-filter="off"` on `<html>` is the viewer's switch, not a part |
 
 `ThemeResolver.Resolve` returns them as `ResolvedTheme.Parts`, with `data-scheme` (`dark` or `light`) for rules that
 differ between the two (`[data-scheme="dark"][data-texture="paper"]`). `ThemeProvider` puts them on `<html>` (the

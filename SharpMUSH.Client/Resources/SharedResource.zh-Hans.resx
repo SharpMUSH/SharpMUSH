@@ -5907,6 +5907,12 @@
   <data name="NavThemeIntro" xml:space="preserve">
     <value>为每个角色设置自己的主题和强调色，一眼就能分清他们的窗口。外观随角色保存，在任何设备上都会跟随。</value>
   </data>
+  <data name="NavThemeImageFilter" xml:space="preserve">
+    <value>主题图片滤镜</value>
+  </data>
+  <data name="NavThemeImageFilterNote" xml:space="preserve">
+    <value>图片会采用主题的色调，例如 Directive 的灰色。关闭后，横幅、封面和画廊图片在任何主题下都显示原本的颜色。保存在此浏览器中，适用于所有角色。</value>
+  </data>
   <data name="NavThemeNoCharacters" xml:space="preserve">
     <value>将角色关联到你的账户，即可为其设置专属外观。</value>
   </data>

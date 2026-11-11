@@ -5907,6 +5907,12 @@
   <data name="NavThemeIntro" xml:space="preserve">
     <value>Adj minden karakternek saját témát és kiemelőszínt, hogy egy pillantással megkülönböztesd az ablakaikat. A megjelenés a karakterrel együtt tárolódik, és minden eszközre követi.</value>
   </data>
+  <data name="NavThemeImageFilter" xml:space="preserve">
+    <value>A téma képszűrője</value>
+  </data>
+  <data name="NavThemeImageFilterNote" xml:space="preserve">
+    <value>A képek felveszik a téma tónusát, például a Directive szürkéit. Kapcsold ki, hogy a szalagcímeket, borítókat és galériaképeket minden témában a saját színeikben lásd. Ebben a böngészőben marad meg, minden karakterre.</value>
+  </data>
   <data name="NavThemeNoCharacters" xml:space="preserve">
     <value>Kapcsolj egy karaktert a fiókodhoz, hogy saját megjelenést adhass neki.</value>
   </data>

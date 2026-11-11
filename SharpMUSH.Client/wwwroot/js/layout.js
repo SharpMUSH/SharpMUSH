@@ -541,6 +541,13 @@ window.sharpmushLayout = {
 		}
 	},
 
+	// ThemeImageFilter: off shows pictures in their own colours under any theme; css/themes/imagery.css reads
+	// data-image-filter="off". index.html sets the same attribute from localStorage before the runtime starts.
+	setImageFilter: function (on) {
+		if (on) document.documentElement.removeAttribute('data-image-filter');
+		else document.documentElement.setAttribute('data-image-filter', 'off');
+	},
+
 	// ThemeService: the game's default theme follows the browser's light or dark preference.
 	watchLightScheme: function (dotnetRef) {
 		return this._watchScreen('_lightScheme', '(prefers-color-scheme: light)', dotnetRef, 'OnLightSchemeChanged');

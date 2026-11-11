@@ -5907,6 +5907,12 @@
   <data name="NavThemeIntro" xml:space="preserve">
     <value>Dajte svakom liku vlastitu temu i boju naglaska kako biste njihove prozore razlikovali na prvi pogled. Izgled se sprema uz lik i prati ga na svaki uređaj.</value>
   </data>
+  <data name="NavThemeImageFilter" xml:space="preserve">
+    <value>Filtar slika teme</value>
+  </data>
+  <data name="NavThemeImageFilterNote" xml:space="preserve">
+    <value>Slike poprimaju ton teme, poput sivih tonova teme Directive. Isključite ga kako biste natpise, naslovnice i slike galerije vidjeli u njihovim vlastitim bojama u svakoj temi. Sprema se u ovom pregledniku, za sve likove.</value>
+  </data>
   <data name="NavThemeNoCharacters" xml:space="preserve">
     <value>Povežite lik sa svojim računom kako biste mu dali vlastiti izgled.</value>
   </data>

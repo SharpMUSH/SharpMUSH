@@ -5907,6 +5907,12 @@
   <data name="NavThemeIntro" xml:space="preserve">
     <value>Задайте каждому персонажу свою тему и акцентный цвет, чтобы различать их окна с первого взгляда. Оформление хранится вместе с персонажем и следует за ним на любом устройстве.</value>
   </data>
+  <data name="NavThemeImageFilter" xml:space="preserve">
+    <value>Фильтр изображений темы</value>
+  </data>
+  <data name="NavThemeImageFilterNote" xml:space="preserve">
+    <value>Изображения принимают тон темы, например серые оттенки Directive. Отключите его, чтобы видеть баннеры, обложки и изображения галереи в их собственных цветах в любой теме. Сохраняется в этом браузере для всех персонажей.</value>
+  </data>
   <data name="NavThemeNoCharacters" xml:space="preserve">
     <value>Привяжите персонажа к своей учётной записи, чтобы задать ему собственное оформление.</value>
   </data>

@@ -175,10 +175,10 @@ public static class BuiltInThemes
 			[ThemeTokens.LinkMissing] = "#c0362c",
 		}), BuiltIn: true);
 
-	/// <summary>Directive: white through smoke on black, razor-hairline serif capitals between dashes, flat square cards filed like a report. Its chrome is grey: the character's own accent is its only colour, apart from warnings and missing links.</summary>
+	/// <summary>Directive: white through smoke on black, razor-hairline serif capitals between dashes, flat square cards filed like a report. Its chrome is grey: the character's own accent is its only colour, apart from warnings and missing links. Pictures are toned to its greys ("smoke").</summary>
 	public static readonly PortalTheme Directive = Genre("directive", "Directive", dark: true,
 		["#0a0a0a", "#121212", "#1b1b1b", "#0e0e0e", "#000000", "#e4e4e4", "#a6a6a6", "#8c8c8c", "#3a3a3a", "#242424", "#ffffff", "#e3c27e", "#f08f8f"],
-		display: "bodoni", body: "ui", corners: "razor", texture: "haze", ornament: "flank", frame: "dossier", titles: "wide", effect: "console", imagery: "natural",
+		display: "bodoni", body: "ui", corners: "razor", texture: "haze", ornament: "flank", frame: "dossier", titles: "wide", effect: "console", imagery: "smoke",
 		accent2: "#6e6e6e", accent3: "#c8c8c8");
 
 	/// <summary>Phosphor's and Daylight's look beyond colour: Space Grotesk titles, grain, lifted cards.</summary>

@@ -5907,6 +5907,12 @@
   <data name="NavThemeIntro" xml:space="preserve">
     <value>Gib jedem Charakter ein eigenes Design und eine eigene Akzentfarbe, damit du ihre Fenster auf einen Blick unterscheiden kannst. Das Aussehen wird mit dem Charakter gespeichert und folgt ihm auf jedes Gerät.</value>
   </data>
+  <data name="NavThemeImageFilter" xml:space="preserve">
+    <value>Bildfilter des Designs</value>
+  </data>
+  <data name="NavThemeImageFilterNote" xml:space="preserve">
+    <value>Bilder übernehmen den Ton des Designs, etwa die Grautöne von Directive. Schalte ihn aus, um Banner, Titelbilder und Galeriebilder in jedem Design in ihren eigenen Farben zu sehen. Wird in diesem Browser für alle Charaktere gespeichert.</value>
+  </data>
   <data name="NavThemeNoCharacters" xml:space="preserve">
     <value>Verknüpfe einen Charakter mit deinem Konto, um ihm ein eigenes Aussehen zu geben.</value>
   </data>

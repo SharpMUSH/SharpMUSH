@@ -5907,6 +5907,12 @@
   <data name="NavThemeIntro" xml:space="preserve">
     <value>Дайте на всеки персонаж собствена тема и акцентен цвят, за да различавате прозорците им с един поглед. Изгледът се пази с персонажа и го следва на всяко устройство.</value>
   </data>
+  <data name="NavThemeImageFilter" xml:space="preserve">
+    <value>Филтър за изображения на темата</value>
+  </data>
+  <data name="NavThemeImageFilterNote" xml:space="preserve">
+    <value>Изображенията приемат тона на темата, например сивите нюанси на Directive. Изключете го, за да виждате банерите, кориците и снимките в галерията в собствените им цветове при всяка тема. Запазва се в този браузър, за всички герои.</value>
+  </data>
   <data name="NavThemeNoCharacters" xml:space="preserve">
     <value>Свържете персонаж с акаунта си, за да му дадете собствен изглед.</value>
   </data>

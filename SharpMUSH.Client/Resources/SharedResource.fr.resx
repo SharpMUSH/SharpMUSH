@@ -5220,6 +5220,12 @@
   <data name="NavThemeIntro" xml:space="preserve">
     <value>Donnez à chaque personnage son propre thème et sa propre couleur d'accent pour distinguer leurs fenêtres d'un coup d'œil. L'apparence est enregistrée avec le personnage et le suit sur tous vos appareils.</value>
   </data>
+  <data name="NavThemeImageFilter" xml:space="preserve">
+    <value>Filtre d'image du thème</value>
+  </data>
+  <data name="NavThemeImageFilterNote" xml:space="preserve">
+    <value>Les images prennent le ton du thème, comme les gris de Directive. Désactivez-le pour voir les bannières, les couvertures et les images de la galerie dans leurs propres couleurs, quel que soit le thème. Conservé dans ce navigateur, pour tous les personnages.</value>
+  </data>
   <data name="NavThemeNoCharacters" xml:space="preserve">
     <value>Liez un personnage à votre compte pour lui donner sa propre apparence.</value>
   </data>

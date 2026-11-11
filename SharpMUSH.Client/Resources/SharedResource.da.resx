@@ -5907,6 +5907,12 @@
   <data name="NavThemeIntro" xml:space="preserve">
     <value>Giv hver karakter sit eget tema og sin egen accentfarve, så du kan kende deres vinduer fra hinanden med det samme. Udseendet gemmes med karakteren og følger den til alle enheder.</value>
   </data>
+  <data name="NavThemeImageFilter" xml:space="preserve">
+    <value>Temaets billedfilter</value>
+  </data>
+  <data name="NavThemeImageFilterNote" xml:space="preserve">
+    <value>Billeder får temaets tone, som Directives grå nuancer. Slå det fra for at se bannere, forsider og galleribilleder i deres egne farver under alle temaer. Gemmes i denne browser for alle karakterer.</value>
+  </data>
   <data name="NavThemeNoCharacters" xml:space="preserve">
     <value>Knyt en karakter til din konto for at give den sit eget udseende.</value>
   </data>

@@ -9,6 +9,8 @@
 
 @inject IStringLocalizer<SharedResource> Loc
 @inject IJSRuntime JS
+@inject ThemeImageFilter ImageFilter
+@implements IDisposable
 
 <div>
     @if (IsOpen)
@@ -53,6 +55,15 @@
                             <span class="account-panel-item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Contrast" Style="font-size:var(--text-md);" /></span>
                             <span class="account-panel-item-label">@Loc["NavTheme"]</span>
                         </a>
+                        @* A quick switch for the theme's picture tone (its imagery part), kept per browser: it stays in the
+                           panel when pressed, so the player sees the pictures change behind it. *@
+                        <button type="button" role="switch" class="account-panel-item account-panel-image-filter"
+                                aria-checked="@(ImageFilter.On ? "true" : "false")" title="@Loc["NavThemeImageFilterNote"]"
+                                @onclick="() => ImageFilter.SetAsync(!ImageFilter.On)">
+                            <span class="account-panel-item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.FilterBAndW" Style="font-size:var(--text-md);" /></span>
+                            <span class="account-panel-item-label">@Loc["NavThemeImageFilter"]</span>
+                            <span class="account-panel-switch" aria-hidden="true"><span class="account-panel-switch-thumb"></span></span>
+                        </button>
                         <div class="account-panel-divider"></div>
                         <button type="button" class="account-panel-item account-panel-item--danger" @onclick="HandleLogoutAsync">
                             <span class="account-panel-item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Logout" Style="font-size:var(--text-md);" /></span>
@@ -124,6 +135,16 @@
         => ActiveCharacter is not null
            && ActiveCharacter.DbrefNumber == character.DbrefNumber
            && ActiveCharacter.CreationTime == character.CreationTime;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ImageFilter.Changed += HandleImageFilterChanged;
+        await ImageFilter.LoadAsync();
+    }
+
+    private void HandleImageFilterChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => ImageFilter.Changed -= HandleImageFilterChanged;
 
     protected override void OnParametersSet()
     {

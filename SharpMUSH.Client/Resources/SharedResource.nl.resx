@@ -5907,6 +5907,12 @@
   <data name="NavThemeIntro" xml:space="preserve">
     <value>Geef elk personage een eigen thema en accentkleur, zodat je hun vensters in één oogopslag uit elkaar houdt. Het uiterlijk wordt bij het personage bewaard en volgt het naar elk apparaat.</value>
   </data>
+  <data name="NavThemeImageFilter" xml:space="preserve">
+    <value>Afbeeldingsfilter van het thema</value>
+  </data>
+  <data name="NavThemeImageFilterNote" xml:space="preserve">
+    <value>Afbeeldingen nemen de toon van het thema aan, zoals de grijstinten van Directive. Zet het uit om banners, omslagen en galerijafbeeldingen in elk thema in hun eigen kleuren te zien. Wordt in deze browser bewaard, voor alle personages.</value>
+  </data>
   <data name="NavThemeNoCharacters" xml:space="preserve">
     <value>Koppel een personage aan je account om het een eigen uiterlijk te geven.</value>
   </data>

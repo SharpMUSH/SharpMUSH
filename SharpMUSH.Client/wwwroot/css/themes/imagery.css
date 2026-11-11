@@ -1,7 +1,10 @@
 /* Theme parts: picture tones. [data-imagery] is the filter banners, covers and gallery pictures take
    (--image-filter). "tint" and "pastel" turn pictures toward the accent's hue (--accent-hue, in degrees).
    A part that differs on a dark theme has a second rule with [data-scheme="dark"]: every attribute is on the
-   same element, so the two are written together. */
+   same element, so the two are written together.
+   "smoke" is Directive's: greys from black to its smoke white (#e4e4e4), never paper white, with the blacks kept deep.
+   data-image-filter="off" on <html> is the viewer's choice (ThemeImageFilter) to see pictures in their own colours
+   under any theme, so it wins over every tone, a theme's own stylesheet's included. */
 
 [data-imagery="natural"] { --image-filter: none; }
 [data-imagery="tint"] { --image-filter: grayscale(1) sepia(1) hue-rotate(calc(var(--accent-hue) * 1deg - 38deg)) saturate(2.4) brightness(1); }
@@ -10,6 +13,7 @@
 }
 [data-imagery="sepia"] { --image-filter: sepia(0.85) contrast(1.05) brightness(0.95); }
 [data-imagery="mono"] { --image-filter: grayscale(1) contrast(1.1); }
+[data-imagery="smoke"] { --image-filter: grayscale(1) contrast(1.25) brightness(0.9); }
 [data-imagery="noir"] { --image-filter: grayscale(1) contrast(1.5) brightness(0.85); }
 [data-imagery="pastel"] { --image-filter: grayscale(1) sepia(0.7) hue-rotate(calc(var(--accent-hue) * 1deg - 38deg)) saturate(1.8) brightness(1.18) contrast(0.85); }
 [data-imagery="airy"] { --image-filter: saturate(0.8) contrast(0.9) brightness(1.12); }
@@ -44,3 +48,5 @@
 [data-imagery="tintype"] { --image-filter: sepia(0.6) saturate(0.9) contrast(1.15) brightness(0.92); }
 [data-imagery="sunbaked"] { --image-filter: sepia(0.7) saturate(1.1) contrast(1.05) brightness(1.02); }
 [data-imagery="irradiated"] { --image-filter: sepia(0.4) hue-rotate(30deg) saturate(1.1) contrast(1.15) brightness(0.9); }
+
+html[data-image-filter="off"], html[data-image-filter="off"] [data-imagery] { --image-filter: none !important; }

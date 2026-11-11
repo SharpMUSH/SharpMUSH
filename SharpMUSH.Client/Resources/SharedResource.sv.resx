@@ -5907,6 +5907,12 @@
   <data name="NavThemeIntro" xml:space="preserve">
     <value>Ge varje karaktär ett eget tema och en egen accentfärg, så att du ser skillnad på deras fönster direkt. Utseendet sparas med karaktären och följer med till alla enheter.</value>
   </data>
+  <data name="NavThemeImageFilter" xml:space="preserve">
+    <value>Temats bildfilter</value>
+  </data>
+  <data name="NavThemeImageFilterNote" xml:space="preserve">
+    <value>Bilder får temats ton, som Directives gråtoner. Stäng av det för att se banderoller, omslag och galleribilder i sina egna färger i alla teman. Sparas i den här webbläsaren, för alla karaktärer.</value>
+  </data>
   <data name="NavThemeNoCharacters" xml:space="preserve">
     <value>Koppla en karaktär till ditt konto för att ge den ett eget utseende.</value>
   </data>
