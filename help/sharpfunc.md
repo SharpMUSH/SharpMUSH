@@ -74,16 +74,16 @@
 |                  |                  |                  |                  |
 |------------------|------------------|------------------|------------------|
 | [ADDRLOG()]      | [CLIENTZONE()]   | [CLOAK()]        | [CMDS()]         |
-| [CONN()]         | [CONNLAST()]     | [CONNLEFT()]     | [CONNLOG()]      |
-| [CONNMAX()]      | [CONNNUM()]      | [CONNRECORD()]   | [CONNTOTAL()]    |
-| [DOING()]        | [GMCPSUPPORTS()] | [HEIGHT()]       | [HIDDEN()]       |
-| [HOST()]         | [IDLE()]         | [IPADDR()]       | [LPORTS()]       |
-| [LWHO()]         | [LWHOID()]       | [MWHO()]         | [MWHOID()]       |
-| [NMWHO()]        | [NWHO()]         | [PLAYER()]       | [PORTS()]        |
-| [PUEBLO()]       | [RECV()]         | [SENT()]         | [SSL()]          |
-| [TERMINFO()]     | [TOTCMDS()]      | [WIDTH()]        | [XMWHO()]        |
-| [XMWHOID()]      | [XWHO()]         | [XWHOID()]       | [ZMWHO()]        |
-| [ZWHO()]         |                  |                  |                  |
+| [COLORDEPTH()]   | [CONN()]         | [CONNLAST()]     | [CONNLEFT()]     |
+| [CONNLOG()]      | [CONNMAX()]      | [CONNNUM()]      | [CONNRECORD()]   |
+| [CONNTOTAL()]    | [DOING()]        | [GMCPSUPPORTS()] | [HEIGHT()]       |
+| [HIDDEN()]       | [HOST()]         | [IDLE()]         | [IPADDR()]       |
+| [LPORTS()]       | [LWHO()]         | [LWHOID()]       | [MWHO()]         |
+| [MWHOID()]       | [NMWHO()]        | [NWHO()]         | [PLAYER()]       |
+| [PORTS()]        | [PUEBLO()]       | [RECV()]         | [SENT()]         |
+| [SSL()]          | [TERMINFO()]     | [TOTCMDS()]      | [WIDTH()]        |
+| [XMWHO()]        | [XMWHOID()]      | [XWHO()]         | [XWHOID()]       |
+| [ZMWHO()]        | [ZWHO()]         |                  |                  |
 
 # Dbref Functions
   Dbref functions return a dbref or list of dbrefs related to some value on an object.
@@ -155,13 +155,14 @@
 | [LISTSET()]     | [LISTUNION()]   | [LOCKFILTER()]  | [LREPLACE()]    |
 | [LREST()]       | [MAP()]         | [MATCH()]       | [MATCHALL()]    |
 | [MEMBER()]      | [MIX()]         | [MUNGE()]       | [NAMEGRAB()]    |
-| [NAMEGRABALL()] | [NSITER()]      | [RANDEXTRACT()] | [RANDWORD()]    |
-| [REMFLAGS()]    | [REMOVE()]      | [REMTYPE()]     | [REST()]        |
-| [REVWORDS()]    | [SETDIFF()]     | [SETINTER()]    | [SETSYMDIFF()]  |
-| [SETUNION()]    | [SHUFFLE()]     | [SOME()]        | [SORT()]        |
-| [SORTBY()]      | [SORTKEY()]     | [SPLICE()]      | [STEP()]        |
-| [STEPARGS()]    | [TABLE()]       | [TOTMEMBER()]   | [UNIQUE()]      |
-| [WHILE()]       | [WORDPOS()]     | [WORDS()]       | [WRAPCOLUMNS()] |
+| [NAMEGRABALL()] | [NSITER()]      | [NUMMEMBER()]   | [RANDEXTRACT()] |
+| [RANDWORD()]    | [REMFLAGS()]    | [REMOVE()]      | [REMTYPE()]     |
+| [REST()]        | [REVWORDS()]    | [SETDIFF()]     | [SETINTER()]    |
+| [SETSYMDIFF()]  | [SETUNION()]    | [SHUFFLE()]     | [SOME()]        |
+| [SORT()]        | [SORTBY()]      | [SORTKEY()]     | [SPLICE()]      |
+| [STEP()]        | [STEPARGS()]    | [TABLE()]       | [TOTMEMBER()]   |
+| [UNIQUE()]      | [WHILE()]       | [WORDPOS()]     | [WORDS()]       |
+| [WRAPCOLUMNS()] |                 |                 |                 |
 
 ::: seealso
 - [LISTS]
@@ -260,10 +261,11 @@
 | [IF()]                   | [IFELSE()]               | [LCSTR()]                | [LEFT()]                 |
 | [LIT()]                  | [LJUST()]                | [LPAD()]                 | [LPOS()]                 |
 | [MERGE()]                | [MID()]                  | [ORD()]                  | [ORDINAL()]              |
-| [PARSESTR()]             | [POS()]                  | [PRINTF()]               | [REGEDIT()]              |
-| [REGMATCH()]             | [RENDER()]               | [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] |
-| [REPEAT()]               | [RIGHT()]                | [RJUST()]                | [RPAD()]                 |
-| [SCRAMBLE()]             | [SECURE()]               | [SHA0()]                 | [SHA1()]                 |
+| [PARENMATCH()]           | [PARENSTR()]             | [PARSESTR()]             | [POS()]                  |
+| [PRINTF()]               | [RANDPOS()]              | [REGEDIT()]              | [REGMATCH()]             |
+| [RENDER()]               | [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] | [REPEAT()]               |
+| [RIGHT()]                | [RJUST()]                | [RPAD()]                 | [SCRAMBLE()]             |
+| [SECURE()]               | [SETQMATCH()]            | [SHA0()]                 | [SHA1()]                 |
 | [SPACE()]                | [SPELLNUM()]             | [SQUISH()]               | [STANDIN()]              |
 | [STRALLOF()]             | [STRCAT()]               | [STRDELETE()]            | [STRDISTANCE()]          |
 | [STRFIRSTOF()]           | [STRINSERT()]            | [STRIP()]                | [STRIPACCENTS()]         |
@@ -298,29 +300,30 @@
 |                    |                    |                    |                    |
 |--------------------|--------------------|--------------------|--------------------|
 | [@@()]             | [ALLOF()]          | [ANDCHR()]         | [ANSI()]           |
-| [ATRLOCK()]        | [BEEP()]           | [BENCHMARK()]      | [CHECKPASS()]      |
-| [CLONE()]          | [CMDLINK()]        | [COLORS()]         | [CREATE()]         |
-| [DESTROY()]        | [DIE()]            | [DIG()]            | [ENDTAG()]         |
-| [FIRSTOF()]        | [FN()]             | [FUNCTIONS()]      | [HTML()]           |
-| [IBREAK()]         | [ILEV()]           | [INUM()]           | [ISALNUM()]        |
-| [ISALPHA()]        | [ISDBREF()]        | [ISDIGIT()]        | [ISINT()]          |
-| [ISLOWER()]        | [ISNUM()]          | [ISOBJID()]        | [ISPUNCT()]        |
-| [ISRAT()]          | [ISREGEXP()]       | [ISSPACE()]        | [ISUPPER()]        |
-| [ISWORD()]         | [ISXDIGIT()]       | [ITEXT()]          | [LETQ()]           |
-| [LINK()]           | [LIST()]           | [LISTQ()]          | [LNUM()]           |
-| [LOCALIZE()]       | [LSET()]           | [MOVE()]           | [NAMEQ()]          |
-| [NAMEQM()]         | [NULL()]           | [NUMPOS()]         | [NUMVERSION()]     |
-| [OBJEVAL()]        | [OBJEVALS()]       | [OPEN()]           | [PCREATE()]        |
-| [PRIVATIZE()]      | [R()]              | [RAND()]           | [REGISTERS()]      |
-| [RESTRICTEDEXPR()] | [ROLL()]           | [ROLLINFO()]       | [S()]              |
-| [SCAN()]           | [SECUREX()]        | [SET()]            | [SETQ()]           |
-| [SETQM()]          | [SETR()]           | [SETRM()]          | [SLEV()]           |
-| [SOUNDEX()]        | [SOUNDSLIKE()]     | [SPEAK()]          | [STEXT()]          |
-| [STOPEVENT()]      | [STR()]            | [STRFUNC()]        | [SUBEVAL()]        |
-| [SUGGEST()]        | [TAG()]            | [TAGWRAP()]        | [TEL()]            |
-| [TESTLOCK()]       | [TEXTENTRIES()]    | [TEXTFILE()]       | [TOTPOS()]         |
-| [TRIGGER()]        | [UNSETQ()]         | [UPTIME()]         | [URL_UNESCAPE()]   |
-| [VALID()]          | [VERB()]           | [WIPE()]           |                    |
+| [ATRLOCK()]        | [BEEP()]           | [BENCHMARK()]      | [BYPASS()]         |
+| [CHECKPASS()]      | [CLONE()]          | [CMDLINK()]        | [COLORS()]         |
+| [CREATE()]         | [DESTROY()]        | [DIE()]            | [DIG()]            |
+| [ENDTAG()]         | [FIRSTOF()]        | [FN()]             | [FUNCTIONS()]      |
+| [HTML()]           | [IBREAK()]         | [ILEV()]           | [INUM()]           |
+| [ISALNUM()]        | [ISALPHA()]        | [ISDBREF()]        | [ISDIGIT()]        |
+| [ISINT()]          | [ISLOWER()]        | [ISNUM()]          | [ISOBJID()]        |
+| [ISPUNCT()]        | [ISRAT()]          | [ISREGEXP()]       | [ISSPACE()]        |
+| [ISUPPER()]        | [ISWORD()]         | [ISXDIGIT()]       | [ITEXT()]          |
+| [LETQ()]           | [LINK()]           | [LIST()]           | [LISTQ()]          |
+| [LNUM()]           | [LOCALIZE()]       | [LSET()]           | [MOVE()]           |
+| [NAMEQ()]          | [NAMEQM()]         | [NULL()]           | [NUMPOS()]         |
+| [NUMVERSION()]     | [OBJEVAL()]        | [OBJEVALS()]       | [OFPARSE()]        |
+| [OPEN()]           | [PCREATE()]        | [PRIVATIZE()]      | [PUSHREGS()]       |
+| [R()]              | [RAND()]           | [REGISTERS()]      | [RESTRICTEDEXPR()] |
+| [ROLL()]           | [ROLLINFO()]       | [S()]              | [SCAN()]           |
+| [SECUREX()]        | [SET()]            | [SETQ()]           | [SETQM()]          |
+| [SETR()]           | [SETRM()]          | [SLEV()]           | [SOUNDEX()]        |
+| [SOUNDSLIKE()]     | [SPEAK()]          | [STEXT()]          | [STOPEVENT()]      |
+| [STR()]            | [STRFUNC()]        | [SUBEVAL()]        | [SUGGEST()]        |
+| [TAG()]            | [TAGWRAP()]        | [TEL()]            | [TESTLOCK()]       |
+| [TEXTENTRIES()]    | [TEXTFILE()]       | [TOTPOS()]         | [TRIGGER()]        |
+| [UNSETQ()]         | [UPTIME()]         | [URL_UNESCAPE()]   | [VALID()]          |
+| [VERB()]           | [WIPE()]           |                    |                    |
 
 # Wiki Functions
   Wiki functions read the shared wiki: the same pages the web portal serves.

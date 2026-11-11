@@ -781,6 +781,16 @@
     "file": "butlast-function.md"
   },
   {
+    "id": "bypass-function",
+    "lookup": "bypass()",
+    "title": "bypass()",
+    "aliases": [
+      "bypass"
+    ],
+    "sections": [],
+    "file": "bypass-function.md"
+  },
+  {
     "id": "cansee-function",
     "lookup": "cansee()",
     "title": "cansee()",
@@ -1259,6 +1269,16 @@
       }
     ],
     "file": "clone-command.md"
+  },
+  {
+    "id": "colordepth-function",
+    "lookup": "colordepth()",
+    "title": "colordepth()",
+    "aliases": [
+      "colordepth"
+    ],
+    "sections": [],
+    "file": "colordepth-function.md"
   },
   {
     "id": "colors-function",
@@ -6310,6 +6330,18 @@
     "file": "nsiter-function.md"
   },
   {
+    "id": "nummember-function",
+    "lookup": "nummember()",
+    "title": "nummember()",
+    "aliases": [
+      "nummember",
+      "numwildmatch()",
+      "numwildmatch"
+    ],
+    "sections": [],
+    "file": "nummember-function.md"
+  },
+  {
     "id": "numpos-function",
     "lookup": "numpos()",
     "title": "numpos()",
@@ -6333,6 +6365,16 @@
       }
     ],
     "file": "oemit-command.md"
+  },
+  {
+    "id": "ofparse-function",
+    "lookup": "ofparse()",
+    "title": "ofparse()",
+    "aliases": [
+      "ofparse"
+    ],
+    "sections": [],
+    "file": "ofparse-function.md"
   },
   {
     "id": "oob-function",
@@ -6502,6 +6544,26 @@
       }
     ],
     "file": "palette.md"
+  },
+  {
+    "id": "parenmatch-function",
+    "lookup": "parenmatch()",
+    "title": "parenmatch()",
+    "aliases": [
+      "parenmatch"
+    ],
+    "sections": [],
+    "file": "parenmatch-function.md"
+  },
+  {
+    "id": "parenstr-function",
+    "lookup": "parenstr()",
+    "title": "parenstr()",
+    "aliases": [
+      "parenstr"
+    ],
+    "sections": [],
+    "file": "parenstr-function.md"
   },
   {
     "id": "parent",
@@ -7015,6 +7077,16 @@
     "file": "push-command.md"
   },
   {
+    "id": "pushregs-function",
+    "lookup": "pushregs()",
+    "title": "pushregs()",
+    "aliases": [
+      "pushregs"
+    ],
+    "sections": [],
+    "file": "pushregs-function.md"
+  },
+  {
     "id": "query-command",
     "lookup": "@query",
     "title": "@query",
@@ -7140,6 +7212,16 @@
       }
     ],
     "file": "quota-command.md"
+  },
+  {
+    "id": "randpos-function",
+    "lookup": "randpos()",
+    "title": "randpos()",
+    "aliases": [
+      "randpos"
+    ],
+    "sections": [],
+    "file": "randpos-function.md"
   },
   {
     "id": "reality",
@@ -8580,6 +8662,18 @@
       }
     ],
     "file": "setqm-function.md"
+  },
+  {
+    "id": "setqmatch-function",
+    "lookup": "setqmatch()",
+    "title": "setqmatch()",
+    "aliases": [
+      "setqmatch",
+      "listmatch()",
+      "listmatch"
+    ],
+    "sections": [],
+    "file": "setqmatch-function.md"
   },
   {
     "id": "sha1-function",
