@@ -472,12 +472,10 @@
 
 /* Shards: a black page with a red field torn in at its lower right, lit by dark rays bursting from the corner
    and edged by a white band with splinters, both fading out before they reach the content; a fine red halftone
-   in the corner, and a red bar along the top of the sidebar. */
+   in the corner. */
 [data-texture="shards"] {
 	--texture: radial-gradient(120% 90% at 100% 100%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%);
 	--texture-size: 100% 100%;
-	--texture-mask-accent-3: linear-gradient(#000, #000) left var(--rail-w) top 0 / var(--side-w) 5px no-repeat;
-	--texture-ink-accent-3: var(--accent);
 	--texture-mask-accent: url(/themes/drawings/textures/shards-accent.svg) right bottom / 1600px 1000px no-repeat intersect,
 		radial-gradient(circle at 100% 100%, #000 0 30vmax, transparent 62vmax);
 	--texture-ink-accent: repeating-conic-gradient(from 0deg at 92% 96%, color-mix(in srgb, var(--accent) 46%, #000) 0deg 3deg,

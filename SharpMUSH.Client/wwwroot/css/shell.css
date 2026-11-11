@@ -11,13 +11,13 @@
 	background-image: var(--mud-palette-background-gradient);
 }
 
-/* The page texture (ThemeTexture, css/themes/layers.css) is pinned to the window over the page and the section
-   sidebar's surfaces, which are not positioned; the rail, the sidebar's content and the page content are raised
-   above it. */
+/* The page texture (ThemeTexture, css/themes/layers.css) is pinned to the window over the page's surface; the
+   rail, the section sidebar, the widget asides and the page content are raised above it. The sidebar's surface
+   is mostly opaque, so the texture shows through it only faintly and its labels stay easy to read. */
 .phosphor-rail,
 .phosphor-content-col,
 .phosphor-widget-aside,
-.phosphor-pagebar > * {
+.phosphor-pagebar {
 	position: relative;
 	z-index: 1;
 }
@@ -432,8 +432,8 @@
 	min-height: 0;
 	overflow-y: auto;
 	overscroll-behavior: contain;
-	/* The page's texture (ThemeTexture) lies over this surface, so it runs on from the page without a seam. */
-	background: var(--surface-3);
+	/* Lets the page's texture (ThemeTexture) through faintly, so it runs on from the page without a seam. */
+	background: color-mix(in srgb, var(--surface-3) 84%, transparent);
 	border-right: 1px solid var(--border-soft);
 	transition: width var(--motion-move);
 }
