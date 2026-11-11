@@ -6976,6 +6976,16 @@
     "file": "push-command.md"
   },
   {
+    "id": "query-command",
+    "lookup": "@query",
+    "title": "@query",
+    "aliases": [
+      "@dialect_query"
+    ],
+    "sections": [],
+    "file": "query-command.md"
+  },
+  {
     "id": "queue-budgets",
     "lookup": "queue budgets",
     "title": "Queue Budgets",
