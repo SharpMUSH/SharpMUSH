@@ -25,7 +25,7 @@ public partial class ButtonKindTests : TrackingBunitContext
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
-	[GeneratedRegex(@"<MudButton\b((?:[^>""]|""[^""]*"")*)>")]
+	[GeneratedRegex(@"<MudButton\b((?:[^>""']|""[^""]*""|'[^']*')*)>")]
 	private static partial Regex MudButtonTag();
 
 	private static readonly HashSet<(string?, string?)> Styles =
