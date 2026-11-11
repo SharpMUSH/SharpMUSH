@@ -12,7 +12,8 @@
 # @cluster
 
 `@cluster/list <cluster>`<br>
-`@cluster/set <cluster>[/<attribute>]=<value>`<br>
+`@cluster/set <cluster>=<attribute>:<value>`<br>
+`@cluster/set <cluster>/<attribute>=<attribute flag>`<br>
 `@cluster/edit <cluster>/<pattern>=<from>,<to>`<br>
 `@cluster/grep[/regexp] <cluster>=<attributes>,<pattern>`<br>
 `@cluster/wipe <cluster>[/<pattern>]`<br>

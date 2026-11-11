@@ -95,20 +95,21 @@ public static class ObjectClusters
 	/// </summary>
 	public static async ValueTask AddAsync(IMediator mediator, DBRef merged, IEnumerable<int> members, CancellationToken ct = default)
 	{
-		// One read-change-write at a time, so two additions cannot each keep only their own. A gate per process rather
-		// than per world only ever makes another world's addition wait its turn.
-		await AddGate.WaitAsync(ct);
+		// One read-change-write at a time per engine, so two additions cannot each keep only their own.
+		var gate = AddGates.GetValue(mediator, _ => new SemaphoreSlim(1, 1));
+		await gate.WaitAsync(ct);
 		try
 		{
 			await AddLockedAsync(mediator, merged, members, ct);
 		}
 		finally
 		{
-			AddGate.Release();
+			gate.Release();
 		}
 	}
 
-	private static readonly SemaphoreSlim AddGate = new(1, 1);
+	/// <summary>Each engine's gate, keyed by its Mediator, so hosts sharing a process do not wait on each other.</summary>
+	private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<IMediator, SemaphoreSlim> AddGates = new();
 
 	private static async ValueTask AddLockedAsync(IMediator mediator, DBRef merged, IEnumerable<int> members, CancellationToken ct)
 	{

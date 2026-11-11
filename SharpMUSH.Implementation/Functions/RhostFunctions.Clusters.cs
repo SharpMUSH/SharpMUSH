@@ -235,15 +235,20 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var name = args["0"].Message.ToPlainText();
-		if (await LocateService.Locate(parser, executor, executor, name, LocateFlags.All) is not AnySharpObject target
-				|| await ObjectClusters.ClusterOfAsync(Mediator, target) is not IReadOnlyList<DBRef> numbers)
+		if (await LocateService.Locate(parser, executor, executor, name, LocateFlags.All) is not AnySharpObject target)
 		{
 			return new CallState(ErrorMessages.Returns.NoSuchCluster);
 		}
 
+		// Control first, so whether an object is a cluster is told only to those who control it, as by iscluster().
 		if (!await PermissionService.Controls(executor, target))
 		{
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (await ObjectClusters.ClusterOfAsync(Mediator, target) is not IReadOnlyList<DBRef> numbers)
+		{
+			return new CallState(ErrorMessages.Returns.NoSuchCluster);
 		}
 
 		var type = ClusterNumber(args, "1");
@@ -346,7 +351,8 @@ public partial class Functions
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, objectName, LocateFlags.All,
 			async found =>
 			{
-				if (!await PermissionService.CanExamine(executor, found))
+				// Like grep(), it reads only the attributes the executor may see, which the attribute service decides.
+				if (!await ObjectClusters.IsClusterAsync(Mediator, found))
 				{
 					return new CallState(ErrorMessages.Returns.NoSuchCluster);
 				}

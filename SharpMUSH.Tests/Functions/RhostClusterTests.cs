@@ -75,6 +75,10 @@ public class RhostClusterTests : ServerTestBase
 	{
 		var (cluster, _) = await ClusterAsync();
 		var number = cluster.Number;
+		var plain = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("NotCluster")}"));
+		await Cmd($"&VA {plain}=This is plain");
+
+		await Assert.That(await Eval($"cluster_grep({plain},v*,is)")).IsEqualTo("#-1 NO SUCH CLUSTER");
 
 		await Assert.That(await Eval($"cluster_grep({cluster},v*,is)")).IsEqualTo("VA VB VC");
 		await Assert.That(await Eval($"cluster_grep({cluster},v*,is,,1)")).IsEqualTo("VA VB");

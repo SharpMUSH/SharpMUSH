@@ -103,7 +103,7 @@
 -->
 # RhostMUSH Clusters
 
-RhostMUSH can spread one set of attributes over several objects, called a cluster, to get past its limit on attributes per object. SharpMUSH has no such limit to get past: an object holds up to 100,000 attributes. A RhostMUSH import merges each cluster into the object it was made on, which takes the others' attributes, flags and locks. The numbers the other objects had keep naming the merged object until a new object takes one, so `get(#456/VA)` still works.
+RhostMUSH can spread one set of attributes over several objects, called a cluster, to get past its limit on attributes per object. SharpMUSH has no such limit to get past: an object holds up to 100,000 attributes. A RhostMUSH import merges each cluster into the object it was made on, which takes the others' attributes, locks, and flags other than those that grant privilege. The numbers the other objects had keep naming the merged object until a new object takes one, so `get(#456/VA)` still works.
 
 The cluster functions work on that one object. Each gives `#-1 NO SUCH CLUSTER` when its object is not a cluster. In the examples, #123 is a cluster that #456 was merged into. It has VA `This is a test`, VB `This is another test.`, VC `Test Test Test whisooo!` and FN `Got %0 and %1`.
 

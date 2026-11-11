@@ -2,6 +2,7 @@ using System.Globalization;
 using SharpMUSH.Configuration;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Models;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Services.DatabaseConversion.Softcode;
 using SharpMUSH.Library.Services.Passwords;
@@ -168,7 +169,7 @@ public static partial class RhostDatabaseTranslator
 		int Linked(int number) => number != source.DBRef && Merged(number) == Merged(source.DBRef) ? -1 : Merged(number);
 		string MergedKey(string key) => mergedInto.Count == 0
 			? key
-			: Dbrefs().Replace(key, match => $"#{Merged(int.Parse(match.Groups[1].ValueSpan, CultureInfo.InvariantCulture))}");
+			: LockKeyReferences.Rewrite(key, number => mergedInto.TryGetValue(number, out var first) ? $"#{first}" : null);
 
 		var type = source.Type switch
 		{
@@ -416,7 +417,7 @@ public static partial class RhostDatabaseTranslator
 			}
 
 			var members = Dbrefs().Matches(listing.Value).Select(match => int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture))
-				.Where(member => byNumber.ContainsKey(member) && !seen.Contains(member))
+				.Where(member => byNumber.TryGetValue(member, out var held) && held.Type != RhostObjectType.Garbage && !seen.Contains(member))
 				.Distinct()
 				.ToArray();
 			if (members.Length == 0)
@@ -434,7 +435,7 @@ public static partial class RhostDatabaseTranslator
 
 	/// <summary>
 	/// Gives each cluster's first object what the others hold, in the order the cluster lists them: their attributes,
-	/// their flags, and the locks it has none of its own for. An attribute name or a lock the first object, or an earlier
+	/// their flags but those that grant privilege, and the locks it has none of its own for. An attribute name or a lock the first object, or an earlier
 	/// one, already holds keeps that value, and is noted. Privileges, tags and totems stay with the first object's own,
 	/// and a member's that differ are noted. Returns each cluster's first object and the numbers it takes over.
 	/// </summary>
@@ -467,6 +468,17 @@ public static partial class RhostDatabaseTranslator
 		return merged;
 	}
 
+	/// <summary>
+	/// The flags a cluster's other objects do not pass to its first object: those that grant privilege, those that stand
+	/// for a staff level, and those only staff may set.
+	/// </summary>
+	private static readonly HashSet<string> PrivilegedFlags = RhostNameTables.Bits.Concat(RhostNameTables.ToggleBits)
+		.Where(bit => bit.Role is not null || bit.StaffOnly)
+		.Select(bit => bit.Custom)
+		.OfType<string>()
+		.Concat(["WIZARD", "ROYALTY", "TRUST"])
+		.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
 	private static void MergeMember(PennMUSHObject target, PennMUSHObject member, Report report)
 	{
 		foreach (var attribute in member.Attributes)
@@ -483,6 +495,12 @@ public static partial class RhostDatabaseTranslator
 
 		foreach (var flag in member.Flags.Where(flag => !target.Flags.Contains(flag, StringComparer.OrdinalIgnoreCase)))
 		{
+			if (PrivilegedFlags.Contains(flag))
+			{
+				report.Note(ImportWarningKind.Flags, $"Cluster flag {flag}: a privilege, so not given to #{target.DBRef}", member.DBRef);
+				continue;
+			}
+
 			target.Flags.Add(flag);
 			report.Note(ImportWarningKind.Flags, $"Cluster flag {flag}: set on one of the cluster's objects, so set on #{target.DBRef}", member.DBRef);
 		}

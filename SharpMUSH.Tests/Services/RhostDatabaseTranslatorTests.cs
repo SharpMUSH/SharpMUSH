@@ -150,7 +150,7 @@ public class RhostDatabaseTranslatorTests
 	}
 
 	/// <summary>
-	/// A cluster is one object here: its first object takes the others' attributes, flags and the locks it has none of,
+	/// A cluster is one object here: its first object takes the others' attributes, flags but those only staff set, and the locks it has none of,
 	/// the others are not imported, and what named one of them names the first object. A name more than one of them holds
 	/// keeps the first one's value.
 	/// </summary>
@@ -161,7 +161,7 @@ public class RhostDatabaseTranslatorTests
 			.Replace("+N260\n", "+N262\n+A260\n1:_CLUSTER\n+A261\n1:EXTRA\n");
 		text = WithAttributes(text, 9, ">260", "#9 #10");
 		text = WithAttributes(text, 10, ">260", "#9 #10", ">256", "duplicate", ">261", "merged");
-		text = WithAttributes(text, 8, ">62", "#10|#3");
+		text = WithAttributes(text, 8, ">62", "#10|#3|TARGET:#10");
 
 		var database = RhostDatabaseTranslator.Translate(RhostFlatfileReader.Read(text));
 		var widget = Object(database, 9);
@@ -170,14 +170,14 @@ public class RhostDatabaseTranslatorTests
 		await Assert.That(widget.Attributes.First(a => a.Name == "EXTRA").Value).IsEqualTo("merged");
 		await Assert.That(widget.Attributes.Count(a => a.Name == "CMD_HELLO")).IsEqualTo(1);
 		await Assert.That(widget.Attributes.Select(a => a.Name)).DoesNotContain("_CLUSTER");
-		await Assert.That(widget.Flags).Contains("FUBAR").And.Contains("IC");
+		await Assert.That(widget.Flags).Contains("IC").And.DoesNotContain("FUBAR");
 		await Assert.That(widget.Locks["Control"].Expression).IsEqualTo("(#3)");
 		await Assert.That(widget.Locks["Basic"].Expression).IsEqualTo(Object(await TranslateAsync(), 9).Locks["Basic"].Expression);
-		await Assert.That(Object(database, 8).Locks["Use"].Expression).IsEqualTo("#9|#3");
+		await Assert.That(Object(database, 8).Locks["Use"].Expression).IsEqualTo("#9|#3|TARGET:#10");
 		await Assert.That(database.Clusters[9]).IsEquivalentTo([10]);
 		await Assert.That(database.ImportNotes.Texts()).Contains(n => n.StartsWith("Cluster #9: its 2 object(s) merged into #9"));
 		await Assert.That(database.ImportNotes.Texts()).Contains(n => n.StartsWith("Cluster attribute CMD_HELLO: held by more than one"));
-		await Assert.That(database.ImportNotes.Texts()).Contains(n => n.StartsWith("Cluster flag FUBAR"));
+		await Assert.That(database.ImportNotes.Texts()).Contains(n => n.StartsWith("Cluster flag FUBAR: a privilege"));
 	}
 
 	/// <summary>
