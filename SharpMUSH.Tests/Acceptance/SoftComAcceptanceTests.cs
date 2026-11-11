@@ -28,10 +28,6 @@ public class SoftComAcceptanceTests
 		"elist() with 6 arguments",
 		"npemit() with 3 arguments",
 		"visible() with 1 argument",
-		// RhostMUSH takes a switch by any unique start of its name; SharpMUSH wants it whole.
-		"@function/priv",
-		"@function/pres",
-		"@switch/f",
 		"@include/command",
 		// Left out on purpose (help compatibility left out).
 		"execscript()",
