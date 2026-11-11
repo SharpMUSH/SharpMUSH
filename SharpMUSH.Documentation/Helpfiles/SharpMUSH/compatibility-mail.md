@@ -82,6 +82,7 @@
 **A choice.**
 
 **TinyMUX** starts a draft with `@mail <player>=<subject>`, adds to it with `-<text>` and `~<text>`, and sends it with `--` or `@mail/send`; `@mail/proof`, `@mail/edit`, `@mail/cc`, `@mail/bcc` and `@mail/abort` work on the draft while it is open.<br>
+**PennMUSH** keeps no draft either: `@mail <player>=[<subject>/]<message>` sends the message at once.<br>
 **SharpMUSH** keeps no draft. A message is written and sent in one command, `@mail <player>=<subject>/<message>`, or with TinyMUX's `@mail/quick <player>/<subject>=<message>`, which works the same here. `@mail <player>=<text>` sends `<text>` at once, as PennMUSH's does, rather than opening a draft. `-` and `--` are not commands, `~` runs the rest of the line with strict parsing, and `@mail/send` with nothing after it is refused.<br>
 **Why.** A draft is state kept between commands for one player, and the web portal's mail page already writes a whole message before it is sent.<br>
 **Workaround.** Write each message in one command with `@mail/quick`, or use the portal's mail page.<br>

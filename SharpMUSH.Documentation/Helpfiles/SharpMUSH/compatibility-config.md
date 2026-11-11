@@ -93,7 +93,7 @@
     {
       "id": "noeval-and-noparse-attributes-attribute-eval-flags",
       "heading": "noeval and noparse attributes: `attribute_eval_flags`",
-      "lookup": "compatibility config attribute eval flags noeval noparse"
+      "lookup": "compatibility config attribute eval flags"
     },
     {
       "id": "rhostmush-map-arguments-rhost-map-args",

@@ -137,7 +137,6 @@
                     <SectionLabel Class="dbimport-label dbimport-includes-label">@Loc["AdmImportConfigIncludesOptional"]</SectionLabel>
                     <div class="dbimport-config-hint">@Loc["AdmImportConfigIncludesHint"]</div>
                     <MudFileUpload T="IReadOnlyList<IBrowserFile>"
-                                   Accept=".cnf,.conf,.txt"
                                    FilesChanged="OnConfigIncludesSelected"
                                    MaximumFileCount="MaxConfigIncludeFiles"
                                    MaxFileSize="MaxConfigFileSize" />
