@@ -141,7 +141,7 @@
 	color: var(--text-on-image);
 }
 
-.kit-banner-title {
+.kit-banner-text ::deep .kit-banner-title {
 	overflow-wrap: anywhere;
 	margin: 0;
 	font-family: var(--font-display);
@@ -153,8 +153,8 @@
 	line-height: 1.25;
 }
 
-.kit-banner-text--hero .kit-banner-title::before,
-.kit-banner-text--hero .kit-banner-title::after {
+.kit-banner-text--hero ::deep .kit-banner-title::before,
+.kit-banner-text--hero ::deep .kit-banner-title::after {
 	content: var(--ornament-before);
 	color: var(--accent);
 	font-family: var(--font-ui);
@@ -164,18 +164,18 @@
 	margin-right: 0.45em;
 }
 
-.kit-banner-text--hero .kit-banner-title::after {
+.kit-banner-text--hero ::deep .kit-banner-title::after {
 	content: var(--ornament-after);
 	margin-right: 0;
 	margin-left: 0.45em;
 }
 
-.kit-banner-text--hero .kit-banner-title {
+.kit-banner-text--hero ::deep .kit-banner-title {
 	overflow-wrap: anywhere;
 	font-size: var(--text-xl);
 }
 
-.kit-banner-text--character .kit-banner-title {
+.kit-banner-text--character ::deep .kit-banner-title {
 	overflow-wrap: anywhere;
 	font-size: var(--text-2xl);
 }
@@ -248,7 +248,7 @@
 	text-shadow: var(--on-image-shadow);
 }
 
-.kit-banner-strip-title {
+.kit-banner-strip-row ::deep .kit-banner-strip-title {
 	margin: 0;
 	font-family: inherit;
 	font-size: var(--text-base);
