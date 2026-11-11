@@ -36,6 +36,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
+    <ProjectReference Include="..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj" />
   </ItemGroup>
 
 </Project>
