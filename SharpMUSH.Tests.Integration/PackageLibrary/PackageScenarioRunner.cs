@@ -71,17 +71,37 @@ public sealed partial class PackageScenarioRunner(ServerWebAppFactory factory, P
 		await CleanUpAsync(scenario, report: true);
 	}
 
-	/// <summary>Takes out every package the test installed, newest first, then runs its cleanup commands.</summary>
+	/// <summary>
+	/// Takes out every package the test installed, newest first, then runs its cleanup commands. Each goes on when
+	/// one before it fails, so a failing test leaves no package behind for the next.
+	/// </summary>
 	private async Task CleanUpAsync(PackageScenario scenario, bool report)
 	{
 		var problems = new List<string>();
 		foreach (var package in Enumerable.Reverse(_installed))
 		{
-			if (await factory.Services.UninstallWithBridgesAsync(package) is Error<string> error)
-				problems.Add($"{package} did not uninstall: {error.Value}");
+			try
+			{
+				if (await factory.Services.UninstallWithBridgesAsync(package) is Error<string> error)
+					problems.Add($"{package} did not uninstall: {error.Value}");
+			}
+			catch (Exception thrown)
+			{
+				problems.Add($"{package} did not uninstall: {thrown.Message}");
+			}
 		}
 
-		foreach (var command in scenario.Cleanup) await GodAsync(command);
+		foreach (var command in scenario.Cleanup)
+		{
+			try
+			{
+				await GodAsync(command);
+			}
+			catch (Exception thrown)
+			{
+				problems.Add($"{command} failed: {thrown.Message}");
+			}
+		}
 
 		if (problems.Count == 0) return;
 		var message = $"{file.Name} cleanup: {string.Join(" ", problems)}";
@@ -142,7 +162,8 @@ public sealed partial class PackageScenarioRunner(ServerWebAppFactory factory, P
 		var installed = await factory.Services.GetRequiredService<IBundledPackageBootstrap>()
 			.InstallBundledAsync([package], CancellationToken.None);
 		if (!installed.Contains(package))
-			throw new PackageScenarioException($"{file.Name} {where}: {package} is neither in the package library nor bundled with the server.");
+			throw new PackageScenarioException(
+				$"{file.Name} {where}: {package} did not install: it is not in the package library, and the server either does not bundle it or skipped it (an attach-mode package whose handler is not configured).");
 
 		_installed.Add(package);
 		await factory.QueueBarrierAsync();
@@ -153,6 +174,14 @@ public sealed partial class PackageScenarioRunner(ServerWebAppFactory factory, P
 		var kinds = new[] { step.As, step.God, step.Eval, step.Heard, step.Install, step.Uninstall }.Count(kind => kind is not null);
 		if (kinds != 1)
 			throw new PackageScenarioException($"{file.Name} {where}: a step has exactly one of as, god, eval, heard, install or uninstall.");
+		if (step.Repeat < 1) throw Problem(where, "repeat is 1 or more.");
+		var checksOutput = step.As is not null || step.God is not null || step.Eval is not null;
+		if (!checksOutput && (step.Sees is not null || step.NotSees is not null || step.Is is not null || step.Capture is not null))
+			throw Problem(where, "sees, not_sees, is and capture go with an as, god or eval step.");
+		if (step.Heard is null && (step.Lines is not null || step.Count is not null || step.Containing is not null))
+			throw Problem(where, "containing, lines and count go with a heard step.");
+		if (step.Run is not null && step.As is null) throw Problem(where, "run goes with an as step.");
+		if (step.Render is not null && step.Eval is null) throw Problem(where, "render goes with an eval step.");
 
 		if (step.Install is { } install)
 		{
@@ -162,7 +191,10 @@ public sealed partial class PackageScenarioRunner(ServerWebAppFactory factory, P
 
 		if (step.Uninstall is { } uninstall)
 		{
-			await factory.Services.UninstallWithBridgesAsync(uninstall);
+			if (!_installed.Contains(uninstall))
+				throw Problem(where, $"{uninstall} was not installed by this test, so it is not this test's to take out.");
+			if (await factory.Services.UninstallWithBridgesAsync(uninstall) is Error<string> error)
+				throw Problem(where, $"{uninstall} did not uninstall: {error.Value}");
 			_installed.Remove(uninstall);
 			return;
 		}
@@ -261,7 +293,12 @@ public sealed partial class PackageScenarioRunner(ServerWebAppFactory factory, P
 		if (step.Is is { } exact && await ExpandAsync(exact, n) is var expected && output.Trim() != expected)
 			throw Failure(step, where, $"the output to be: {expected}", output);
 
-		if (step.Capture is { } name) _values[name] = output.Trim();
+		if (step.Capture is { } name)
+		{
+			if (_players.ContainsKey(name) || name == "n" || name.Contains(':') || name.Contains('.'))
+				throw Problem(where, $"{name} is already a player's name or a reserved one; capture under another name.");
+			_values[name] = output.Trim();
+		}
 	}
 
 	private static IEnumerable<string> Texts(object? value) => value switch
@@ -282,16 +319,19 @@ public sealed partial class PackageScenarioRunner(ServerWebAppFactory factory, P
 	/// </summary>
 	private async Task<string> ExpandAsync(string text, int n)
 	{
+		// Looked up each time: a package installed again has new objects.
+		var objects = new Dictionary<string, string>(StringComparer.Ordinal);
 		foreach (var reference in Placeholder().Matches(text).Select(match => match.Groups[1].Value)
-			.Where(name => name.StartsWith("object:", StringComparison.Ordinal) && !_values.ContainsKey(name)))
+			.Where(name => name.StartsWith("object:", StringComparison.Ordinal)).Distinct())
 		{
-			_values[reference] = await PackageObjectAsync(reference["object:".Length..]);
+			objects[reference] = await PackageObjectAsync(reference["object:".Length..]);
 		}
 
 		return Placeholder().Replace(text, match => match.Groups[1].Value switch
 		{
 			"n" => n.ToString(CultureInfo.InvariantCulture),
 			var counted when counted.StartsWith("n:", StringComparison.Ordinal) => n.ToString(counted[2..], CultureInfo.InvariantCulture),
+			var name when objects.TryGetValue(name, out var value) => value,
 			var name when _values.TryGetValue(name, out var value) => value,
 			var name => throw new PackageScenarioException($"{file.Name}: nothing is called ${{{name}}}.")
 		});
