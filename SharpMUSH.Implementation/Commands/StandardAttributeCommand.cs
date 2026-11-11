@@ -160,6 +160,34 @@ internal sealed class StandardAttributeWriter(
 		return CallState.Empty;
 	}
 
+	/// <summary>
+	/// The first <c>=</c> outside brackets, parentheses and braces and not escaped, as PennMUSH's <c>PT_EQUALS</c>
+	/// ends the left side: <c>@desc [setq(0,a=b)]#5=hi</c> names <c>[setq(0,a=b)]#5</c>. -1 when there is none.
+	/// </summary>
+	private static int ObjectEnd(string text)
+	{
+		var depth = 0;
+		for (var i = 0; i < text.Length; i++)
+		{
+			switch (text[i])
+			{
+				case '\\':
+					i++;
+					break;
+				case '[' or '(' or '{':
+					depth++;
+					break;
+				case ']' or ')' or '}' when depth > 0:
+					depth--;
+					break;
+				case '=' when depth == 0:
+					return i;
+			}
+		}
+
+		return -1;
+	}
+
 	/// <summary>The object half evaluated, as ATTRIB_SET's left side is: <c>@startup [v(d.obj)]=...</c>.</summary>
 	private static async ValueTask<string> EvaluateObjectAsync(IMUSHCodeParser prs, string objectText)
 		=> ((await prs.FunctionParse(MarkupText.Plain(objectText.Trim())))?.Message?.ToPlainText() ?? string.Empty).Trim();
@@ -175,7 +203,7 @@ internal sealed class StandardAttributeWriter(
 	{
 		var argsPlainText = argsText.ToPlainText();
 
-		var equalsIndex = argsPlainText.IndexOf('=');
+		var equalsIndex = ObjectEnd(argsPlainText);
 		if (equalsIndex < 0)
 		{
 			// No = sign - clear/unset the attribute

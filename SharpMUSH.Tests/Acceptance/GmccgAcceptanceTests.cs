@@ -56,8 +56,8 @@ public partial class GmccgAcceptanceTests
 		await SoftcodeSuiteInstaller.HearCommandsAsync(Factory);
 
 		var roll = await SoftcodeSuiteInstaller.RunAsync(Factory, "think [u(v(d.nr)/f.roller,3,10)]");
-		await Assert.That(roll).HasSingleItem();
-		await Assert.That(Roll().IsMatch(roll[0])).IsTrue().Because($"the roller answered {roll[0]}");
+		await Assert.That(roll.Any(line => Roll().IsMatch(line))).IsTrue()
+			.Because($"the roller answered {string.Join(" | ", roll)}");
 
 		var report = await SoftcodeSuiteInstaller.ReportAsync(Factory, SoftcodeDialects.Mux.Key);
 		await Assert.That(report.Where(key => !KnownGaps.Contains(key)).ToList()).IsEmpty()

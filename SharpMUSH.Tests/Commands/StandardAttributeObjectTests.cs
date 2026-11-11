@@ -28,12 +28,18 @@ public class StandardAttributeObjectTests
 	{
 		var thing = await God($"@create {TestIsolationHelpers.GenerateUniqueName("SAObj")}");
 		var pointer = TestIsolationHelpers.GenerateUniqueName("SAPTR").ToUpperInvariant();
-		await God($"&{pointer} #1={thing}");
+		await God($"&{pointer} {thing}={thing}");
 
-		await God($"@describe [v( {pointer} )]=hello [add(1,1)]");
+		await God($"@describe [get( {thing}/{pointer} )]=hello [add(1,1)]");
 		await Assert.That(await Eval($"[get({thing}/DESCRIBE)]")).IsEqualTo("hello [add(1,1)]");
 
-		await God($"@describe [v( {pointer} )]");
+		await God($"@describe [get( {thing}/{pointer} )]");
+		await Assert.That(await Eval($"[hasattr({thing},DESCRIBE)]")).IsEqualTo("0");
+
+		await God($"@describe [setq(0,a=b)]{thing}=split [r(0)]");
+		await Assert.That(await Eval($"[get({thing}/DESCRIBE)]")).IsEqualTo("split [r(0)]");
+
+		await God($"@describe {thing}");
 		await Assert.That(await Eval($"[hasattr({thing},DESCRIBE)]")).IsEqualTo("0");
 	}
 }
