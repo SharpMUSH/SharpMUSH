@@ -544,7 +544,8 @@ internal sealed class AttributeWriter(
 			return cleared;
 		}
 
-		if (patternMode == IAttributeService.AttributePatternMode.Wildcard || !PlayerAliases.Applies(obj, attributePattern))
+		if (patternMode is IAttributeService.AttributePatternMode.Wildcard or IAttributeService.AttributePatternMode.Regex
+			|| !PlayerAliases.Applies(obj, attributePattern))
 		{
 			return await ClearMatchingAsync(executor, obj, attributePattern, patternMode);
 		}
