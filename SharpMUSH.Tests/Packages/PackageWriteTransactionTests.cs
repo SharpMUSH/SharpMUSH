@@ -95,6 +95,45 @@ public partial class PackageWriteTransactionTests
 	}
 
 	[Test]
+	public async Task Revert_RestoresABaselineRowWrittenRemovedAndWrittenAgain()
+	{
+		const string package = "tx-baseline-rewrite";
+		var (_, _, objid) = await SubjectAsync("Tx Baseline Subject", package);
+		var writes = await BeginAsync();
+
+		await writes.UpsertManagedAttributeAsync(new ManagedAttributeRecord(package, objid, "TX_VALUE", "first", "h", "2.0.0"));
+		await writes.RemoveManagedAttributeAsync(package, objid, "TX_VALUE");
+		await Assert.That(await Registry.GetManagedAttributesAsync(package)).IsEmpty();
+		await writes.UpsertManagedAttributeAsync(new ManagedAttributeRecord(package, objid, "TX_VALUE", "third", "h", "2.0.0"));
+		await writes.RemoveManagedAttributeAsync(package, objid, "TX_ADDED");
+
+		await writes.RevertAsync(new Error<string>("Something failed."));
+
+		var baselines = await Registry.GetManagedAttributesAsync(package);
+		await Assert.That(baselines.Select(b => $"{b.Objid}/{b.Attribute}={b.BaselineValue}"))
+			.IsEquivalentTo([$"{objid}/TX_VALUE=original"]);
+	}
+
+	[Test]
+	public async Task Revert_RestoresBaselineRowsThatDifferOnlyByCase()
+	{
+		const string package = "tx-baseline-case";
+		var (_, _, objid) = await SubjectAsync("Tx Baseline Case Subject", package);
+		await Registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(package, objid, "tx_value", "lower", "h", "1.0.0"));
+		var writes = await BeginAsync();
+
+		await writes.RemoveManagedAttributeAsync(package, objid, "TX_VALUE");
+		await writes.RemoveManagedAttributeAsync(package, objid, "tx_value");
+		await Assert.That(await Registry.GetManagedAttributesAsync(package)).IsEmpty();
+
+		await writes.RevertAsync(new Error<string>("Something failed."));
+
+		var baselines = await Registry.GetManagedAttributesAsync(package);
+		await Assert.That(baselines.Select(b => $"{b.Attribute}={b.BaselineValue}"))
+			.IsEquivalentTo(["TX_VALUE=original", "tx_value=lower"]);
+	}
+
+	[Test]
 	public async Task Dispose_WithoutCommit_RevertsWhenAnExceptionUnwinds()
 	{
 		const string package = "tx-dispose";
