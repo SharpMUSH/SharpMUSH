@@ -3445,4 +3445,19 @@ PLAYERS:</value>
   <data name="ToggleDefSwitchUnsupported" xml:space="preserve">
     <value>@toggledef: use @flag/type or @flag/letter on the toggle's flag for that.</value>
   </data>
+  <data name="FlagDefNoSuchFlagFormat" xml:space="preserve">
+    <value>@flagdef: there is no flag named {0}.</value>
+  </data>
+  <data name="FlagDefNeedsPermissions" xml:space="preserve">
+    <value>@flagdef: give a flag and its permissions, as &lt;flag&gt;=&lt;permissions&gt;.</value>
+  </data>
+  <data name="FlagDefUpdatedFormat" xml:space="preserve">
+    <value>@flagdef: {0} updated.</value>
+  </data>
+  <data name="FlagDefNothingToDo" xml:space="preserve">
+    <value>@flagdef: none of those permissions apply here, so nothing changed.</value>
+  </data>
+  <data name="FlagDefSwitchUnsupported" xml:space="preserve">
+    <value>@flagdef: use @flag/type or @flag/letter for that.</value>
+  </data>
 </root>

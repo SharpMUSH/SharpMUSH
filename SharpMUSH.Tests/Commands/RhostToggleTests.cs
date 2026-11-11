@@ -183,4 +183,22 @@ public class RhostToggleTests : ServerTestBase
 		await Assert.That((await Mediator.Send(new GetObjectFlagQuery("ZONECMDCHK")))!.SetPermissions).IsEmpty();
 		await Assert.That(await CmdAs(mortal.DbRef, mortal.Handle, "@toggle/check #1")).IsEqualTo("#-1 PERMISSION DENIED");
 	}
+	[Test]
+	public async Task FlagDefChangesWhoMaySetAFlagAndListsIt()
+	{
+		await DefineAsync("SNUFFED");
+
+		await Cmd("@rhost_flagdef/set SNUFFED=wiz");
+		await Cmd("@rhost_flagdef/unset SNUFFED=arch");
+		await Cmd("@rhost_flagdef/set WIZARD=mortal");
+
+		var flag = (await Mediator.Send(new GetObjectFlagQuery("SNUFFED")))!;
+		await Assert.That(flag.SetPermissions).IsEquivalentTo(["wizard"]);
+		await Assert.That(flag.UnsetPermissions).IsEquivalentTo(["royalty"]);
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery("WIZARD")))!.SetPermissions).IsNotEmpty();
+
+		await Cmd("@rhost_flagdef SNUFFED");
+		await Assert.That(WebAppFactoryArg.Notifications.For(WebAppFactoryArg.ExecutorDBRef))
+			.Contains("@flagdef: SNUFFED updated.").And.Contains("SNUFFED() set: wizard unset: royalty");
+	}
 }

@@ -123,5 +123,12 @@ public static partial class ErrorMessages
 		public const string ToggleDefUpdatedFormat = "@toggledef: {0} updated.";
 		public const string ToggleDefNothingToDo = "@toggledef: none of those permissions apply here, so nothing changed.";
 		public const string ToggleDefSwitchUnsupported = "@toggledef: use @flag/type or @flag/letter on the toggle's flag for that.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FlagDefNoSuchFlagFormat = "@flagdef: there is no flag named {0}.";
+		public const string FlagDefNeedsPermissions = "@flagdef: give a flag and its permissions, as <flag>=<permissions>.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FlagDefUpdatedFormat = "@flagdef: {0} updated.";
+		public const string FlagDefNothingToDo = "@flagdef: none of those permissions apply here, so nothing changed.";
+		public const string FlagDefSwitchUnsupported = "@flagdef: use @flag/type or @flag/letter for that.";
 	}
 }
