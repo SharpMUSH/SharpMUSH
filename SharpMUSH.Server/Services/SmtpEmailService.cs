@@ -31,7 +31,7 @@ public sealed class SmtpEmailService(ISecretStore secrets, TimeProvider clock, I
 		if (!TryReserve(server.PerHour))
 			return new Error<string>("Too many emails sent in the last hour.");
 
-		var mail = new MimeMessage();
+		using var mail = new MimeMessage();
 		mail.From.Add(new MailboxAddress(server.FromName, from.Address));
 		mail.To.Add(to);
 		mail.Subject = message.Subject;

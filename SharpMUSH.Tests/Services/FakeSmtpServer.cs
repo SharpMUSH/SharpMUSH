@@ -106,6 +106,7 @@ public sealed class FakeSmtpServer : IAsyncDisposable
 		}
 		catch (ObjectDisposedException)
 		{
+			// Stopping the listener can end a pending accept this way; the server is stopping either way.
 		}
 
 		_stop.Dispose();
