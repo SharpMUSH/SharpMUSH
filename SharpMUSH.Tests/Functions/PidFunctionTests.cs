@@ -115,4 +115,85 @@ public class PidFunctionTests
 		}
 		finally { await HaltAsync(queued); }
 	}
+
+	[Test]
+	public async ValueTask PidListsWhatTheCallerMaySee()
+	{
+		var queued = await QueueThreeAsync("RhostPid");
+		var self = $"#{queued.Mortal.DbRef.Number}";
+		var thing = $"#{queued.Thing.Number}";
+		try
+		{
+			await Assert.That(await As(queued.Mortal, "pid()"))
+				.IsEqualTo($"{queued.OwnWait} {queued.ThingWait} {queued.OwnSemaphore}");
+			await Assert.That(await As(queued.Mortal, "pid(7,~)"))
+				.IsEqualTo($"{queued.OwnWait}|{self}|{self}~{queued.ThingWait}|{thing}|{thing}~{queued.OwnSemaphore}|{self}|{self}");
+			await Assert.That(await As(queued.Mortal, "pid(0,,w)")).IsEqualTo($"{queued.OwnWait} {queued.ThingWait}");
+			await Assert.That(await As(queued.Mortal, "pid(0,,S)")).IsEqualTo($"{queued.OwnSemaphore}");
+			await Assert.That(await As(queued.Mortal, "pid(0,,c)")).IsEqualTo("3");
+			await Assert.That(await As(queued.Mortal, $"pid(0,,q,{thing})")).IsEqualTo($"{queued.ThingWait}");
+			await Assert.That(await As(queued.Mortal, "pid(0,,q,me)")).IsEqualTo($"{queued.OwnWait} {queued.OwnSemaphore}");
+			await Assert.That(await As(queued.Mortal, "pid(0,,q,me,1)"))
+				.IsEqualTo($"{queued.OwnWait} {queued.ThingWait} {queued.OwnSemaphore}");
+			await Assert.That(await As(queued.Mortal, $"pid(0,,q,{queued.OwnSemaphore})")).IsEqualTo($"{queued.OwnSemaphore}");
+			await Assert.That(await As(queued.Mortal, "pid(48,,s)")).IsEqualTo("RUNNING|think RhostPidSem");
+			await Assert.That(await As(queued.Mortal, "pid(8,,s)")).IsEqualTo("0");
+			await Assert.That(await As(queued.Mortal, "pid(0,,x)")).IsEqualTo("#-1 INVALID ARGUMENT");
+			await Assert.That(await As(queued.Mortal, "pid(64)")).IsEqualTo("#-1");
+		}
+		finally { await HaltAsync(queued); }
+	}
+
+	[Test]
+	public async ValueTask PidHidesAnotherPlayersEntries()
+	{
+		var queued = await QueueThreeAsync("RhostPidOther");
+		var other = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "RhostPidStranger");
+		try
+		{
+			await Assert.That(await As(other, "pid(0,,c)")).IsEqualTo("0");
+			await Assert.That(await As(other, $"pid(0,,q,{queued.OwnWait})")).IsEqualTo(string.Empty);
+			await Assert.That(await As(other, $"pid(0,,q,#{queued.Mortal.DbRef.Number})"))
+				.IsEqualTo("#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_QUEUE");
+		}
+		finally { await HaltAsync(queued); }
+	}
+
+	[Test]
+	public async ValueTask PidNamesTheEntryThatIsRunning()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "RhostPidRunning");
+		const string list = "&PIDSEEN me=[pid(64)]/[pid(128)]";
+		var admitted = await Queue.AdmitCommandList(MarkupText.Plain(list),
+			ParserState.Empty with { Executor = mortal.DbRef, Enactor = mortal.DbRef }, TimeSpan.FromHours(1));
+		var pid = admitted.Pid!.Value;
+
+		await Queue.ReleaseScheduledWork(pid);
+		await Queue.DrainImmediateQueueForTests();
+
+		await Assert.That(await As(mortal, "get(me/PIDSEEN)")).IsEqualTo($"{pid}/{list}");
+	}
+
+	/// <summary>The example in <c>help pid()</c>.</summary>
+	[Test]
+	public async ValueTask PidHelpExample()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "RhostPidHelp");
+		var parser = WebAppFactoryArg.CommandParserFor(mortal.DbRef, mortal.Handle);
+		await parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain("@wait 300=think Hello"));
+		await parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain("@wait me=think Done"));
+		var pids = (await As(mortal, "pid()")).Split(' ').Select(long.Parse).ToArray();
+		var self = $"#{mortal.DbRef.Number}";
+		try
+		{
+			await Assert.That(pids).Count().IsEqualTo(2);
+			await Assert.That(await As(mortal, "pid(19,~)")).IsEqualTo($"{pids[0]}|{self}|RUNNING~{pids[1]}|{self}|RUNNING");
+			await Assert.That(await As(mortal, "pid(32,,s)")).IsEqualTo("think Done");
+			await Assert.That(await As(mortal, "pid(0,,c)")).IsEqualTo("2");
+		}
+		finally
+		{
+			foreach (var pid in pids) await Queue.HaltByPid(pid);
+		}
+	}
 }

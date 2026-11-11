@@ -83,6 +83,12 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			EvaluationRestrictions.Demand(definition, parser.CurrentState.Restrictions);
 			if (IsRestricted(parser) && args.Length > EvaluationRestrictions.MaximumArguments)
 				throw new RestrictedExpressionException();
+			if (FunctionSandbox.Refusal(name, definition.Attribute.Name, !parser.FunctionLibrary.ContainsKey(name)) is { } sandboxed)
+			{
+				success = false;
+				return new CallState(sandboxed, context.Depth());
+			}
+
 			var attribute = definition.Attribute;
 
 			var currentState = parser.CurrentState;

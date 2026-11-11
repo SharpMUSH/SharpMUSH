@@ -851,6 +851,7 @@ public partial class TaskScheduler(
 					using var scope = budget.Enter();
 					using var observation = entry.Observation?.Enter();
 					using var sender = DelegatedApp.Begin(entry.App);
+					using var running = RunningQueueEntry.Enter(entry.Pid, entry.Deferred?.Command);
 					try
 					{
 						budget.ThrowIfExceeded();
