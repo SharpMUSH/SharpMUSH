@@ -80,12 +80,12 @@
 | [CONNLOG()]      | [CONNMAX()]      | [CONNNUM()]      | [CONNRECORD()]   |
 | [CONNTOTAL()]    | [DOING()]        | [GMCPSUPPORTS()] | [HEIGHT()]       |
 | [HIDDEN()]       | [HOST()]         | [IDLE()]         | [IPADDR()]       |
-| [LPORTS()]       | [LWHO()]         | [LWHOID()]       | [MWHO()]         |
-| [MWHOID()]       | [NMWHO()]        | [NWHO()]         | [PLAYER()]       |
-| [PORTS()]        | [PUEBLO()]       | [RECV()]         | [SENT()]         |
-| [SSL()]          | [TERMINFO()]     | [TOTCMDS()]      | [WIDTH()]        |
-| [XMWHO()]        | [XMWHOID()]      | [XWHO()]         | [XWHOID()]       |
-| [ZMWHO()]        | [ZWHO()]         |                  |                  |
+| [LOOKUP_SITE()]  | [LPORTS()]       | [LWHO()]         | [LWHOID()]       |
+| [MWHO()]         | [MWHOID()]       | [NMWHO()]        | [NWHO()]         |
+| [PLAYER()]       | [PORTS()]        | [PUEBLO()]       | [RECV()]         |
+| [SENT()]         | [SSL()]          | [TERMINFO()]     | [TOTCMDS()]      |
+| [WIDTH()]        | [XMWHO()]        | [XMWHOID()]      | [XWHO()]         |
+| [XWHOID()]       | [ZMWHO()]        | [ZWHO()]         |                  |
 
 # Dbref Functions
   Dbref functions return a dbref or list of dbrefs related to some value on an object.
@@ -124,22 +124,23 @@
 | [DOWNMOTD()]     | [ELOCK()]        | [ERROR()]        | [FINDABLE()]     |
 | [FLAGS()]        | [FULLALIAS()]    | [FULLMOTD()]     | [FULLNAME()]     |
 | [GETPIDS()]      | [GLOBALROOM()]   | [HASATTR()]      | [HASATTRP()]     |
-| [HASDEPOWER()]   | [HASFLAG()]      | [HASPOWER()]     | [HASROLE()]      |
-| [HASRXLEVEL()]   | [HASTOGGLE()]    | [HASTXLEVEL()]   | [HASTYPE()]      |
-| [INAME()]        | [ISAPPROVED()]   | [ISTAG()]        | [LDEPOWERS()]    |
-| [LFLAGS()]       | [LISTCOMMANDS()] | [LISTFLAGS()]    | [LISTRLEVELS()]  |
-| [LISTTAGS()]     | [LISTTOGGLES()]  | [LIVEWIRE()]     | [LLOCKFLAGS()]   |
-| [LOCK()]         | [LOCKFLAGS()]    | [LOCKOWNER()]    | [LOCKS()]        |
-| [LPIDS()]        | [LSTATS()]       | [LTOGGLES()]     | [MONEY()]        |
-| [MONIKER()]      | [MOTD()]         | [MSECS()]        | [MTIME()]        |
-| [MUDNAME()]      | [MUDURL()]       | [NAME()]         | [NATTR()]        |
-| [NEARBY()]       | [OBJID()]        | [OBJMEM()]       | [ORFLAGS()]      |
-| [ORLFLAGS()]     | [ORLPOWERS()]    | [PERMISSION()]   | [PIDINFO()]      |
-| [PLAYERMEM()]    | [PLAYMEM()]      | [POLL()]         | [POWERS()]       |
-| [QUOTA()]        | [RESTARTS()]     | [ROLES()]        | [RXDESC()]       |
-| [RXLEVEL()]      | [SIZE()]         | [TAGMATCH()]     | [TAGREF()]       |
-| [TXLEVEL()]      | [TYPE()]         | [VATTRCNT()]     | [VERSION()]      |
-| [VISIBLE()]      | [WIZMOTD()]      |                  |                  |
+| [HASDEPOWER()]   | [HASFLAG()]      | [HASPOWER()]     | [HASQUOTA()]     |
+| [HASROLE()]      | [HASRXLEVEL()]   | [HASTOGGLE()]    | [HASTXLEVEL()]   |
+| [HASTYPE()]      | [INAME()]        | [ISAPPROVED()]   | [ISTAG()]        |
+| [LASTCREATE()]   | [LDEPOWERS()]    | [LFLAGS()]       | [LISTCOMMANDS()] |
+| [LISTFLAGS()]    | [LISTRLEVELS()]  | [LISTTAGS()]     | [LISTTOGGLES()]  |
+| [LIVEWIRE()]     | [LLOCKFLAGS()]   | [LOCK()]         | [LOCKCHECK()]    |
+| [LOCKDECODE()]   | [LOCKENCODE()]   | [LOCKFLAGS()]    | [LOCKOWNER()]    |
+| [LOCKS()]        | [LPIDS()]        | [LSTATS()]       | [LTOGGLES()]     |
+| [MONEY()]        | [MONIKER()]      | [MOTD()]         | [MSECS()]        |
+| [MTIME()]        | [MUDNAME()]      | [MUDURL()]       | [NAME()]         |
+| [NATTR()]        | [NEARBY()]       | [OBJID()]        | [OBJMEM()]       |
+| [ORFLAGS()]      | [ORLFLAGS()]     | [ORLPOWERS()]    | [PERMISSION()]   |
+| [PIDINFO()]      | [PLAYERMEM()]    | [PLAYMEM()]      | [POLL()]         |
+| [POWERS()]       | [QUOTA()]        | [RESTARTS()]     | [ROLES()]        |
+| [RXDESC()]       | [RXLEVEL()]      | [SIZE()]         | [TAGMATCH()]     |
+| [TAGREF()]       | [TXLEVEL()]      | [TYPE()]         | [VATTRCNT()]     |
+| [VERSION()]      | [VISIBLE()]      | [WIZMOTD()]      |                  |
 
 ::: seealso
 - [Dbref functions]
@@ -319,17 +320,18 @@
 | [LNUM()]           | [LOCALIZE()]       | [LSET()]           | [MOVE()]           |
 | [NAMEQ()]          | [NAMEQM()]         | [NULL()]           | [NUMPOS()]         |
 | [NUMVERSION()]     | [OBJEVAL()]        | [OBJEVALS()]       | [OFPARSE()]        |
-| [OPEN()]           | [PCREATE()]        | [PRIVATIZE()]      | [PUSHREGS()]       |
-| [R()]              | [RAND()]           | [REGISTERS()]      | [RESTRICTEDEXPR()] |
-| [ROLL()]           | [ROLLINFO()]       | [S()]              | [SCAN()]           |
-| [SECUREX()]        | [SET()]            | [SETQ()]           | [SETQM()]          |
-| [SETR()]           | [SETRM()]          | [SLEV()]           | [SOUNDEX()]        |
-| [SOUNDSLIKE()]     | [SPEAK()]          | [STEXT()]          | [STOPEVENT()]      |
-| [STR()]            | [STRFUNC()]        | [SUBEVAL()]        | [SUGGEST()]        |
-| [TAG()]            | [TAGWRAP()]        | [TEL()]            | [TESTLOCK()]       |
-| [TEXTENTRIES()]    | [TEXTFILE()]       | [TOTPOS()]         | [TRIGGER()]        |
-| [UNSETQ()]         | [UPTIME()]         | [URL_UNESCAPE()]   | [VALID()]          |
-| [VERB()]           | [WIPE()]           |                    |                    |
+| [OPEN()]           | [PCREATE()]        | [POSE()]           | [PRIVATIZE()]      |
+| [PUSHREGS()]       | [R()]              | [RAND()]           | [REGISTERS()]      |
+| [RESTRICTEDEXPR()] | [ROLL()]           | [ROLLINFO()]       | [S()]              |
+| [SCAN()]           | [SECUREX()]        | [SET()]            | [SETQ()]           |
+| [SETQM()]          | [SETR()]           | [SETRM()]          | [SLEV()]           |
+| [SOUNDEX()]        | [SOUNDSLIKE()]     | [SPEAK()]          | [STEXT()]          |
+| [STOPEVENT()]      | [STR()]            | [STRFUNC()]        | [SUBEVAL()]        |
+| [SUCCESSES()]      | [SUGGEST()]        | [TAG()]            | [TAGWRAP()]        |
+| [TEL()]            | [TESTLOCK()]       | [TEXTENTRIES()]    | [TEXTFILE()]       |
+| [TOTPOS()]         | [TRACE()]          | [TRIGGER()]        | [UNSETQ()]         |
+| [UPTIME()]         | [URL_UNESCAPE()]   | [VALID()]          | [VERB()]           |
+| [WIPE()]           |                    |                    |                    |
 
 # Wiki Functions
   Wiki functions read the shared wiki: the same pages the web portal serves.
