@@ -273,8 +273,29 @@ jobs:
           tar -xzf "$RUNNER_TEMP/test-build/SharpMUSH.Tests.tar.gz"
           python3 .github/scripts/ensure-test-packages.py
 
+      # Softcode suites the acceptance tests install (SharpMUSH.Tests/Acceptance), at pinned commits.
+      - name: Check out SoftCom
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          repository: RhostMUSH/trunk
+          ref: 34519b019ee8be76b35891473894250176bc9a90
+          path: third-party/rhost
+          sparse-checkout: Mushcode/comsys.notag
+          sparse-checkout-cone-mode: false
+
+      - name: Check out GMCCG
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          repository: thenomain/GMCCG
+          ref: 13ab1334a132d648ac8063f348712b5b6947bee2
+          path: third-party/GMCCG
+
       - name: Test
         env:
+          SHARPMUSH_SOFTCOM_PATH: ${{ github.workspace }}/third-party/rhost/Mushcode/comsys.notag
+          SHARPMUSH_GMCCG_PATH: ${{ github.workspace }}/third-party/GMCCG
           SHARPMUSH_ENABLE_TEST_TELEMETRY: true
           SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry.md
           SHARPMUSH_TEMP_LEAK_GATE: true

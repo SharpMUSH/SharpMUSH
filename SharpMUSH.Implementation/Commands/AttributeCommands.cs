@@ -22,7 +22,8 @@ public partial class Commands
 	/// <summary>
 	/// <c>@gender object[=value]</c>: <c>@sex</c> for whichever attribute <c>gender_attr</c> names, read when the
 	/// command runs, so a game that keeps gender in another attribute sets it where pronouns read it. The
-	/// arguments are taken as typed and written by the same path as every <c>@&lt;attribute&gt;</c> command, so
+	/// arguments are written by the same path as every <c>@&lt;attribute&gt;</c> command (object evaluated, value
+	/// as typed), so
 	/// permissions, the QUIET gate, attribute flags and clearing are <c>@sex</c>'s. <c>@sex</c> itself still sets
 	/// SEX, as in PennMUSH.
 	/// </summary>

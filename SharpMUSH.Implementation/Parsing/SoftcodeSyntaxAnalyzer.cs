@@ -184,6 +184,12 @@ public sealed class SoftcodeSyntaxAnalyzer(
 	/// left out. Nothing for text that does not parse or nests too deep.
 	/// </summary>
 	public IReadOnlyList<string> CalledFunctions(MString text)
+		=> [.. Calls(text).Select(call => call.Name)];
+
+	/// <summary>
+	/// The calls <see cref="CalledFunctions"/> names, each with the text of its arguments as written.
+	/// </summary>
+	public IReadOnlyList<SoftcodeCall> Calls(MString text)
 	{
 		var plaintext = text.ToPlainText();
 		if (!plaintext.Contains('('))
@@ -191,34 +197,77 @@ public sealed class SoftcodeSyntaxAnalyzer(
 			return [];
 		}
 
-		var tokens = SoftcodeParsePipeline.Lex(plaintext, nameof(CalledFunctions));
-		if (SoftcodeParsePipeline.ExceedsNestingLimit(tokens, SoftcodeParsePipeline.MaxParseNestingDepth,
-			configuration.CurrentValue.Compatibility.ParenGroups, out _))
+		if (Parse(plaintext, ParseType.Function, nameof(Calls)) is not { } context)
 		{
 			return [];
 		}
 
-		var context = TryCleanParse(tokens, plaintext, ParseType.Function);
-		if (context is null)
-		{
-			var parser = CreateParser(tokens);
-			parser.RemoveErrorListeners();
-			try
-			{
-				context = SoftcodeParsePipeline.Enter(parser, ParseType.Function);
-			}
-			catch (RecognitionException)
-			{
-				return [];
-			}
-		}
-
-		var names = new List<string>();
-		CollectCalls(context, evaluated: false, names);
-		return names;
+		var calls = new List<SoftcodeCall>();
+		CollectCalls(context, plaintext, evaluated: false, calls);
+		return calls;
 	}
 
-	private void CollectCalls(Antlr4.Runtime.Tree.IParseTree tree, bool evaluated, List<string> names)
+	/// <summary>
+	/// The commands of the command list <paramref name="text"/> (an action list, a <c>$</c>-command's code), each
+	/// as written and without its leading spaces: the list split at its <c>;</c>s, leaving the ones inside braces,
+	/// brackets and calls alone. Nothing for text that does not parse or nests too deep.
+	/// </summary>
+	public IReadOnlyList<string> Commands(MString text)
+	{
+		var plaintext = text.ToPlainText();
+		if (Parse(plaintext, ParseType.CommandList, nameof(Commands)) is not { } context)
+		{
+			return [];
+		}
+
+		var commands = new List<string>();
+		CollectCommands(context, plaintext, commands);
+		return commands;
+	}
+
+	private SharpMUSHParser.ISoftcodeContext? Parse(string plaintext, ParseType parseType, string sourceName)
+	{
+		var tokens = SoftcodeParsePipeline.Lex(plaintext, sourceName);
+		if (SoftcodeParsePipeline.ExceedsNestingLimit(tokens, SoftcodeParsePipeline.MaxParseNestingDepth,
+			configuration.CurrentValue.Compatibility.ParenGroups, out _))
+		{
+			return null;
+		}
+
+		if (TryCleanParse(tokens, plaintext, parseType) is { } clean)
+		{
+			return clean;
+		}
+
+		var parser = CreateParser(tokens);
+		parser.RemoveErrorListeners();
+		try
+		{
+			return SoftcodeParsePipeline.Enter(parser, parseType);
+		}
+		catch (RecognitionException)
+		{
+			return null;
+		}
+	}
+
+	private static void CollectCommands(Antlr4.Runtime.Tree.IParseTree tree, string plaintext, List<string> commands)
+	{
+		if (tree is SharpMUSHParser.ICommandContext { Start.StartIndex: >= 0 } command && command.Stop is { } stop
+			&& stop.StopIndex >= command.Start.StartIndex)
+		{
+			var written = plaintext[command.Start.StartIndex..(stop.StopIndex + 1)].TrimStart();
+			if (written.Length > 0) commands.Add(written);
+			return;
+		}
+
+		for (var i = 0; i < tree.ChildCount; i++)
+		{
+			CollectCommands(tree.GetChild(i), plaintext, commands);
+		}
+	}
+
+	private void CollectCalls(Antlr4.Runtime.Tree.IParseTree tree, string plaintext, bool evaluated, List<SoftcodeCall> calls)
 	{
 		switch (tree)
 		{
@@ -228,7 +277,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 			case SharpMUSHParser.IFunctionContext function when evaluated || function.Start.StartIndex == 0:
 				evaluated = true;
 				var name = Bang.FunctionName(function.FUNCHAR().GetText().TrimEnd('(', ' ', '\t', '\r', '\n', '\f'));
-				names.Add(name);
+				calls.Add(new SoftcodeCall(name, Arguments(function, plaintext)));
 				// lit() and the like hand their arguments over as text, so nothing inside them is called.
 				if (IsLiteral(name)) return;
 				break;
@@ -237,8 +286,25 @@ public sealed class SoftcodeSyntaxAnalyzer(
 		for (var i = 0; i < tree.ChildCount; i++)
 		{
 			ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
-			CollectCalls(tree.GetChild(i), evaluated, names);
+			CollectCalls(tree.GetChild(i), plaintext, evaluated, calls);
 		}
+	}
+
+	/// <summary>The text of each argument of <paramref name="function"/>, split at its own commas; one empty one for <c>f()</c>.</summary>
+	private static string[] Arguments(SharpMUSHParser.IFunctionContext function, string plaintext)
+	{
+		var start = function.FUNCHAR().Symbol.StopIndex + 1;
+		var end = function.CPAREN()?.Symbol is { StartIndex: >= 0 } close ? close.StartIndex : plaintext.Length;
+		var commas = function.COMMAWS();
+		var arguments = new string[commas.Length + 1];
+		for (var i = 0; i <= commas.Length; i++)
+		{
+			var stop = i < commas.Length ? commas[i].Symbol.StartIndex : end;
+			arguments[i] = start <= stop && stop <= plaintext.Length ? plaintext[start..stop] : string.Empty;
+			if (i < commas.Length) start = commas[i].Symbol.StopIndex + 1;
+		}
+
+		return arguments;
 	}
 
 	private bool IsLiteral(string name)

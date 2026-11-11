@@ -22,6 +22,7 @@ SharpMUSH targets PennMUSH 1.8.8 softcode compatibility. Where it differs, the d
   [COMPATIBILITY OUTPUT]    rendering a string for something outside the game<br>
   [COMPATIBILITY ECONOMY]   money, pennies and costs<br>
   [COMPATIBILITY NAMES]     functions and commands that exist here and not there<br>
+  [COMPATIBILITY LEFT OUT]  RhostMUSH and TinyMUX names SharpMUSH leaves out<br>
   [COMPATIBILITY MAIL]      @mail forwarding, filters and folders<br>
   [COMPATIBILITY UNRESOLVED] known differences with no decision yet<br>
   [COMPATIBILITY DEFECTS]   known differences that are bugs
