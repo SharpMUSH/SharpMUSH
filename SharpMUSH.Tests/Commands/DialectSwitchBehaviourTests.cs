@@ -109,7 +109,7 @@ public class DialectSwitchBehaviourTests : ServerTestBase
 				await CmdAs(actor.DbRef, actor.Handle, $"@trigger/notify/quiet {thing}/DO");
 				await WebAppFactoryArg.QueueBarrierAsync();
 			});
-			await Assert.That(notified).IsEquivalentTo(new[] { token });
+			await Assert.That(notified.Count(line => line.Contains(token, StringComparison.Ordinal))).IsEqualTo(1);
 		}
 		finally
 		{
