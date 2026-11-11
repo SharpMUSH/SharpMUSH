@@ -3920,6 +3920,12 @@
         "aliases": []
       },
       {
+        "id": "list",
+        "lookup": "@hook list",
+        "heading": "Listing hooks",
+        "aliases": []
+      },
+      {
         "id": "evaluation",
         "lookup": "@hook evaluation",
         "heading": "Hook evaluation",

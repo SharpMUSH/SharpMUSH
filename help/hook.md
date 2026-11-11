@@ -7,6 +7,7 @@
   "sections": [
     {"id": "override-extend", "heading": "Overriding and extending", "lookup": "@hook override and extend"},
     {"id": "permit-fail-args", "heading": "Permitting and rewriting", "lookup": "@hook permit"},
+    {"id": "list", "heading": "Listing hooks", "lookup": "@hook list"},
     {
       "id": "evaluation",
       "heading": "Hook evaluation",
@@ -62,7 +63,7 @@
 
 The `/permit`, `/fail` and `/args` switches decide whether the command runs and rewrite its arguments; see [@hook permit]. The `/override` and `/extend` switches run a $-command in place of the built-in command; see [@hook override and extend].
 
-`@hook/list` with no command lists every command that has a hook.
+`@hook/list` lists hooks; see [@hook list].
 
 ## Overriding and extending
 
@@ -85,6 +86,27 @@ The `/permit`, `/fail` and `/args` switches decide whether the command runs and 
 > @hook/fail page=#123, nopage
 > &trimmed #123=trim(switch(%3,0,%0,1,%1,%2))
 > @hook/args @emit=#123, trimmed
+```
+
+## Listing hooks
+
+`@hook/list` with no command lists every command that has a hook.
+
+`@hook/list <command>` lists that command's hooks, in the order they run.
+
+```
+@hook/list look
+```
+
+Output:
+
+```
++=====================< Hooks on LOOK >======================+
+| Hook    Object  Attribute   Options                         |
+| ----------------------------------------------------------- |
+| before  #12     B_LOOK                                      |
+| after   #12     A_LOOK      inline localize                 |
++=============================================================+
 ```
 
 ## Hook evaluation
