@@ -115,7 +115,7 @@ This command has not been implemented.
 **SharpMUSH** ships `command_restrictions` empty. Every command in a new game is open to whatever its own permission check allows: a player's `@destroy <thing>` destroys the thing, and a guest can `@create`. An imported game keeps its own: reading a PennMUSH `mush.cnf` carries its `restrict_command` and `restrict_function` lines into `command_restrictions` and `function_restrictions`, which are applied at startup (see [restrict imported]).<br>
 **Why.** Those lines are one site's policy, not the engine's behaviour; `restrict.cnf` is a file the administrator edits, and two PennMUSH games rarely ship the same one. Taking `@destroy` from ordinary players on a fresh install is the game's decision, and SharpMUSH does not make it for a world nobody has configured yet.<br>
 **Workaround.** Put the lines back, in the words PennMUSH writes them: `@config/set restrict_command=@destroy noplayer " Use @recycle instead`, one per command, or set `command_restrictions` (or `function_restrictions`) from the portal's configuration page. Each word means there what it means in `restrict.cnf`, and the restriction applies at once and lasts across restarts.<br>
-**Example.** The parity case `obj.create` in `tools/parity/scenarios/10-player-commands.scn` runs it on both servers.
+**Example.** The parity case `choice.no-restrictions` in `tools/parity/scenarios/40-compat-choices.scn` runs it on both servers.
 
 ## PennMUSH's file and allocator housekeeping answers `NOT SUPPORTED`
 
