@@ -267,6 +267,12 @@ public class DidItService(
 			return false;
 		}
 
+		// TinyMUX's AF_NOEVAL: a noeval action attribute is found but never queued.
+		if (action.Last().IsNoEval() && configuration.CurrentValue.Compatibility.AttributeEvalFlags)
+		{
+			return true;
+		}
+
 		var command = StripCommandPrefix(action.Last().Value);
 
 		// queue_attribute_base (src/cque.c:786-795) returns 1 as soon as the attribute is found, so a

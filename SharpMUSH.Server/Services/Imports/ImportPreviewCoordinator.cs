@@ -9,17 +9,32 @@ using SharpMUSH.Library.Services.DatabaseConversion;
 namespace SharpMUSH.Server.Services.Imports;
 
 public sealed record ImportWorkerRequest(string LiveWorldPath, string LiveKeyRingPath, DatabaseImportFiles Files,
-	ConfigurationSnapshot? Baseline);
+	ConfigurationSnapshot? Baseline)
+{
+	/// <summary>
+	/// The files uploaded beside the configuration, by file name, with their text: what its <c>include</c> lines are
+	/// read from. Deleted with the request once the worker has read it.
+	/// </summary>
+	public IReadOnlyDictionary<string, string> ConfigurationIncludes { get; init; } = new Dictionary<string, string>();
+}
 
 /// <summary>Owns input snapshots and a bounded child process; never resolves a live converter or forwards a live store.</summary>
 public sealed class ImportPreviewCoordinator(ImportPromotionJournal journal, ILogger<ImportPreviewCoordinator> logger)
 {
+	/// <summary>The most a configuration and the files it includes may hold together, in characters.</summary>
+	public const int MaxConfigurationLength = 1024 * 1024;
+
+	/// <param name="configurationIncludes">
+	/// The files uploaded beside <paramref name="configuration"/>, by file name: its <c>include</c> lines are read from these
+	/// and never from the server's disk.
+	/// </param>
 	public Task<ImportSession> PreviewAsync(DatabaseImportFiles files, string? configuration = null,
-		ConfigurationSnapshot? baseline = null, CancellationToken cancellationToken = default)
-		=> PreviewSessionAsync(journal.Create(), files, configuration, baseline, cancellationToken);
+		ConfigurationSnapshot? baseline = null, CancellationToken cancellationToken = default,
+		IReadOnlyDictionary<string, string>? configurationIncludes = null)
+		=> PreviewSessionAsync(journal.Create(), files, configuration, baseline, cancellationToken, configurationIncludes);
 
 	internal async Task<ImportSession> PreviewSessionAsync(ImportSession session, DatabaseImportFiles files, string? configuration,
-		ConfigurationSnapshot? baseline, CancellationToken cancellationToken)
+		ConfigurationSnapshot? baseline, CancellationToken cancellationToken, IReadOnlyDictionary<string, string>? configurationIncludes = null)
 	{
 		try
 		{
@@ -55,7 +70,8 @@ public sealed class ImportPreviewCoordinator(ImportPromotionJournal journal, ILo
 				await CopyAsync(files.MailFolders, "folders.source"), files.Format);
 			if (configuration is not null)
 			{
-				if (configuration.Length > 1024 * 1024) throw new IOException("Import configuration exceeds 1 MiB.");
+				if (configuration.Length + (configurationIncludes?.Values.Sum(text => text.Length) ?? 0) > MaxConfigurationLength)
+					throw new IOException("Import configuration exceeds 1 MiB.");
 				await File.WriteAllTextAsync(session.ConfigurationPath, configuration, cancellationToken);
 				if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(session.ConfigurationPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
 			}
@@ -94,7 +110,10 @@ public sealed class ImportPreviewCoordinator(ImportPromotionJournal journal, ILo
 					}
 			}
 
-			var request = new ImportWorkerRequest(journal.LiveWorldPath, journal.LiveKeyRingPath, copied, baseline);
+			var request = new ImportWorkerRequest(journal.LiveWorldPath, journal.LiveKeyRingPath, copied, baseline)
+			{
+				ConfigurationIncludes = configuration is null ? new Dictionary<string, string>() : configurationIncludes ?? new Dictionary<string, string>()
+			};
 			await File.WriteAllTextAsync(Path.Combine(session.Directory, "request.json"), JsonSerializer.Serialize(request), cancellationToken);
 			if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(Path.Combine(session.Directory, "request.json"), UnixFileMode.UserRead | UnixFileMode.UserWrite);
 			using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

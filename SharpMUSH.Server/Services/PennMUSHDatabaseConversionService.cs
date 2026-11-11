@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Configuration;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Server.Services.Imports;
 
@@ -19,12 +20,16 @@ public sealed class PennMUSHDatabaseConversionService(StartupImportCoordinator i
 			var files = new DatabaseImportFiles(path, Environment.GetEnvironmentVariable("PENNMUSH_MAIL_DATABASE_PATH"),
 				Environment.GetEnvironmentVariable("PENNMUSH_CHAT_DATABASE_PATH"), Environment.GetEnvironmentVariable("PENNMUSH_MAIL_FOLDERS_PATH"), format);
 			string? text = null;
+			IReadOnlyDictionary<string, string> includes = new Dictionary<string, string>();
 			if (Environment.GetEnvironmentVariable("PENNMUSH_CONFIG_PATH") is { Length: > 0 } config)
 			{
 				if (new FileInfo(config).Length > 1024 * 1024) throw new IOException("Startup configuration exceeds 1 MiB.");
 				text = await File.ReadAllTextAsync(config, cancellationToken);
+				// The file is on this server's disk, put there by its administrator, so the files it includes are read from beside it.
+				includes = ReadPennMushConfig.IncludedFiles(config);
 			}
-			return await imports.PrepareAsync(files, text, await configuration.SnapshotAsync(cancellationToken), cancellationToken);
+			return await imports.PrepareAsync(files, text, await configuration.SnapshotAsync(cancellationToken), cancellationToken,
+				includes);
 		}
 		catch (Exception error)
 		{

@@ -91,6 +91,33 @@ public class ConfigurationControllerTests
 		}
 	}
 
+	/// <summary>
+	/// The files uploaded beside the configuration are what its <c>include</c> lines read, matched by file name; a file
+	/// of the same name on the server is never read.
+	/// </summary>
+	[Test]
+	public async Task ImportConfiguration_ReadsAnIncludeFromTheUploadedFiles()
+	{
+		var (controller, _, _) = Create();
+
+		var serverFile = Path.Join(Path.GetTempPath(), $"sharpmush-server-{Guid.NewGuid():N}.cnf");
+		await File.WriteAllLinesAsync(serverFile, ["mud_name Read From The Server"]);
+		try
+		{
+			var result = await controller.ImportConfiguration(new ConfigurationImportRequest(
+				$"mud_name Test MUSH Uploaded\ninclude {serverFile}\n",
+				new Dictionary<string, string> { [Path.GetFileName(serverFile)] = "mud_name Read From The Upload" }));
+
+			await Assert.That(result.Result).IsTypeOf<OkObjectResult>();
+			var response = (ConfigurationResponse)((OkObjectResult)result.Result!).Value!;
+			await Assert.That(response.Configuration.Net.MudName).IsEqualTo("Read From The Upload");
+		}
+		finally
+		{
+			File.Delete(serverFile);
+		}
+	}
+
 	[Test]
 	public async Task ImportConfiguration_EmptyConfig_ReturnsOk()
 	{

@@ -35,9 +35,48 @@ public static partial class ReadPennMushConfig
 	/// </param>
 	public static PennMushConfigImport Import(string configFile, bool followIncludes = true,
 		ConfigurationDialect dialect = ConfigurationDialect.PennMUSH)
+		=> Import(configFile, followIncludes ? IncludeSource.Disk : IncludeSource.Refused, null, dialect);
+
+	/// <summary>
+	/// Reads an uploaded <c>mush.cnf</c>, <c>netmux.conf</c> or <c>netrhost.conf</c> as <see cref="Import(string, bool, ConfigurationDialect)"/>
+	/// does, following each <c>include</c> line into the file of that name among <paramref name="uploadedIncludes"/>, never
+	/// into a file on the server. An include is matched by its file name alone, so <c>include game/alias.conf</c> reads an
+	/// uploaded <c>alias.conf</c>. An include that names no uploaded file is reported by name.
+	/// </summary>
+	/// <param name="configFile">The uploaded configuration, written to a private file.</param>
+	/// <param name="uploadedIncludes">The other files uploaded with it, by file name, with their text.</param>
+	/// <param name="dialect">The server that wrote the file.</param>
+	public static PennMushConfigImport Import(string configFile, IReadOnlyDictionary<string, string> uploadedIncludes,
+		ConfigurationDialect dialect = ConfigurationDialect.PennMUSH)
+	{
+		// The indexer, not ToDictionary: two uploads whose names differ only in case or directory keep the later one.
+		var byName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		foreach (var (name, content) in uploadedIncludes)
+		{
+			byName[IncludedFileName(name)] = content;
+		}
+
+		return Import(configFile, IncludeSource.Uploaded, byName, dialect);
+	}
+
+	/// <summary>Where an <c>include</c> line's file is read from.</summary>
+	private enum IncludeSource
+	{
+		/// <summary>Beside the file that names it, on the server's disk.</summary>
+		Disk,
+
+		/// <summary>Nowhere: the line is reported.</summary>
+		Refused,
+
+		/// <summary>Among the files uploaded with the configuration, by file name.</summary>
+		Uploaded
+	}
+
+	private static PennMushConfigImport Import(string configFile, IncludeSource includes,
+		IReadOnlyDictionary<string, string>? uploaded, ConfigurationDialect dialect)
 	{
 		List<string> skipped = [];
-		var text = ReadWithIncludes(configFile, skipped, followIncludes)
+		var text = ReadWithIncludes(configFile, File.ReadAllLines(configFile), skipped, includes, uploaded)
 			.Select(line => DirectiveName(line) is { } name && ConfigurationDirectives.PennName(name, dialect) is var penn && penn != name
 				? penn + line.TrimStart()[name.Length..]
 				: line)
@@ -155,7 +194,8 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(CompatibilityOptions.MapsqlSync)), d.Compatibility.MapsqlSync)
 			)
 			{
-				ProtectionFlags = Boolean(Get(nameof(CompatibilityOptions.ProtectionFlags)), d.Compatibility.ProtectionFlags)
+				ProtectionFlags = Boolean(Get(nameof(CompatibilityOptions.ProtectionFlags)), d.Compatibility.ProtectionFlags),
+				AttributeEvalFlags = Boolean(Get(nameof(CompatibilityOptions.AttributeEvalFlags)), d.Compatibility.AttributeEvalFlags)
 			},
 			Cosmetic = new CosmeticOptions(
 				RequiredString(Get(nameof(CosmeticOptions.MoneySingular)), d.Cosmetic.MoneySingular).Trim(),
@@ -459,15 +499,17 @@ public static partial class ReadPennMushConfig
 
 	/// <summary>
 	/// The file's lines with each <c>include</c> line replaced by the lines of the file it names, as
-	/// <c>config_file_startup</c> reads them: an included file may include others, ten deep at most. A
-	/// relative name is found beside the file that names it, which is PennMUSH's game directory for
-	/// the shipped <c>mush.cnf</c>. An include that cannot be read is reported and passed over, as
-	/// PennMUSH logs it and reads on; only the top-level file has to exist.
+	/// <c>config_file_startup</c> reads them: an included file may include others, ten deep at most. On the server's
+	/// disk a relative name is found beside the file that names it, which is PennMUSH's game directory for the shipped
+	/// <c>mush.cnf</c>; for an upload it is the uploaded file of that name. An include that cannot be read is reported
+	/// and passed over, as PennMUSH logs it and reads on; only the top-level file has to exist.
 	/// </summary>
-	private static List<string> ReadWithIncludes(string configFile, List<string> skipped, bool followIncludes, int depth = 0)
+	private static List<string> ReadWithIncludes(string configFile, IEnumerable<string> fileLines, List<string> skipped,
+		IncludeSource includes, IReadOnlyDictionary<string, string>? uploaded, int depth = 0, HashSet<string>? uploadsRead = null)
 	{
+		uploadsRead ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		List<string> lines = [];
-		foreach (var line in File.ReadAllLines(configFile))
+		foreach (var line in fileLines)
 		{
 			if (DirectiveName(line) is not { } name || !name.Equals("include", StringComparison.OrdinalIgnoreCase))
 			{
@@ -482,7 +524,7 @@ public static partial class ReadPennMushConfig
 				continue;
 			}
 
-			if (!followIncludes)
+			if (includes == IncludeSource.Refused)
 			{
 				skipped.Add($"include {included}: not followed, because an uploaded configuration cannot read files on the server; nothing it sets was carried over.");
 				continue;
@@ -494,12 +536,34 @@ public static partial class ReadPennMushConfig
 				continue;
 			}
 
+			if (includes == IncludeSource.Uploaded)
+			{
+				var fileName = IncludedFileName(included);
+				if (!uploadsRead.Add(fileName))
+				{
+					// Each uploaded file is read once, so a file that includes itself, or one included over and over,
+					// cannot multiply its lines.
+					skipped.Add($"include {included} in {configFile}: {fileName} was already read, not read again.");
+				}
+				else if (uploaded!.TryGetValue(fileName, out var content))
+				{
+					lines.AddRange(ReadWithIncludes(fileName, content.ReplaceLineEndings("\n").Split('\n'), skipped, includes, uploaded,
+						depth + 1, uploadsRead));
+				}
+				else
+				{
+					skipped.Add($"include {included}: {fileName} was not uploaded with the configuration; nothing it sets was carried over. Upload it beside the configuration to read it.");
+				}
+
+				continue;
+			}
+
 			var path = Path.IsPathRooted(included)
 				? included
 				: Path.Join(Path.GetDirectoryName(Path.GetFullPath(configFile)), included);
 			try
 			{
-				lines.AddRange(ReadWithIncludes(path, skipped, followIncludes, depth + 1));
+				lines.AddRange(ReadWithIncludes(path, File.ReadAllLines(path), skipped, includes, uploaded, depth + 1, uploadsRead));
 			}
 			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
 			{
@@ -509,6 +573,61 @@ public static partial class ReadPennMushConfig
 
 		return lines;
 	}
+
+	/// <summary>
+	/// The files <paramref name="configFile"/>'s <c>include</c> lines name on the server's disk, and the files theirs name,
+	/// by file name, with their text: what <see cref="Import(string, IReadOnlyDictionary{string, string}, ConfigurationDialect)"/>
+	/// reads a copy of the file against once it is no longer beside them. A file that cannot be read is left out, and the
+	/// import reports it.
+	/// </summary>
+	public static Dictionary<string, string> IncludedFiles(string configFile)
+	{
+		var found = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		var pending = new Queue<(string File, int Depth)>([(configFile, 0)]);
+		while (pending.TryDequeue(out var next))
+		{
+			string[] lines;
+			try
+			{
+				lines = File.ReadAllLines(next.File);
+			}
+			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+			{
+				continue;
+			}
+
+			if (next.File != configFile)
+			{
+				found[IncludedFileName(next.File)] = string.Join('\n', lines);
+			}
+
+			if (next.Depth >= 10)
+			{
+				continue;
+			}
+
+			foreach (var line in lines)
+			{
+				if (DirectiveName(line) is not { } name || !name.Equals("include", StringComparison.OrdinalIgnoreCase)
+					|| DirectiveValue(line) is not { Length: > 0 } included || found.ContainsKey(IncludedFileName(included)))
+				{
+					continue;
+				}
+
+				pending.Enqueue((Path.IsPathRooted(included)
+					? included
+					: Path.Join(Path.GetDirectoryName(Path.GetFullPath(next.File)), included), next.Depth + 1));
+			}
+		}
+
+		return found;
+	}
+
+	/// <summary>
+	/// The file name an <c>include</c> line or an upload names, without its directories, in either separator: an uploaded
+	/// file is matched by this alone.
+	/// </summary>
+	public static string IncludedFileName(string name) => name[(name.LastIndexOfAny(['/', '\\']) + 1)..];
 
 	/// <summary>The <c>restrict_function</c> words SharpMUSH applies: the ones <c>check_func</c> tests (<c>src/function.c</c>).</summary>
 	private static readonly string[] FunctionPermissionWords =

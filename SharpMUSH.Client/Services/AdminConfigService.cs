@@ -27,10 +27,22 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 	/// This used to throw, and the import page caught the exception into the log: a refused file
 	/// stopped the spinner and said nothing, which reads as the click not landing.
 	/// </remarks>
-	public async Task<ApiResult<ConfigurationResponse>> ImportFromConfigFileAsync(string configFileContent)
+	public Task<ApiResult<ConfigurationResponse>> ImportFromConfigFileAsync(string configFileContent)
+		=> ImportFromConfigFileAsync(configFileContent, new Dictionary<string, string>());
+
+	/// <summary>
+	/// Sends a PennMUSH-style config file for the server to apply, with the files its <c>include</c> lines name, by
+	/// file name.
+	/// </summary>
+	public async Task<ApiResult<ConfigurationResponse>> ImportFromConfigFileAsync(string configFileContent,
+		IReadOnlyDictionary<string, string> includes)
 	{
-		var result = await Client.PostApiAsync<string, ConfigurationResponse>(
-			"/api/configuration/import", configFileContent, "The server returned no configuration.");
+		var result = includes.Count == 0
+			? await Client.PostApiAsync<string, ConfigurationResponse>(
+				"/api/configuration/import", configFileContent, "The server returned no configuration.")
+			: await Client.PostApiAsync<ConfigurationImportRequest, ConfigurationResponse>(
+				"/api/configuration/import/files", new ConfigurationImportRequest(configFileContent, includes),
+				"The server returned no configuration.");
 
 		switch (result)
 		{

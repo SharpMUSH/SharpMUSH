@@ -54,6 +54,7 @@ public class CompatibilityProfileStructureTests
 		["RhostMUSH map() arguments: `rhost_map_args`"] = "a RhostMUSH option; off, map() is PennMUSH's",
 		["RhostMUSH lrooms() depth: `rhost_lrooms`"] = "a RhostMUSH option; PennMUSH has no lrooms()",
 		["Protection flags: `protection_flags`"] = "a RhostMUSH and TinyMUX option, off by default; PennMUSH has neither flag",
+		["noeval and noparse attributes: `attribute_eval_flags`"] = "a TinyMUX and RhostMUSH option, off by default; PennMUSH has neither flag",
 		["RhostMUSH printf() fields: `rhost_printf`"] = "a RhostMUSH option; off, printf() is SharpMUSH's own",
 		["RhostMUSH side-effect flag: `sidefx_flag`"] = "a RhostMUSH option; off, side-effect functions are PennMUSH's",
 		["Other servers' names: `dialect`"] = "a RhostMUSH option; empty, the default, reads SharpMUSH's names only",

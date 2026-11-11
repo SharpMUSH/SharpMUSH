@@ -837,6 +837,12 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		// player.commands: denied, exits still work and $-commands are never matched.
 		var runsCommands = await executorObject.Can(PortalPermission.PlayerCommands);
 
+		// attribute_eval_flags: a noparse $-command matches the line as it was typed (%c), not as evaluated.
+		var typed = visitor.Configuration.CurrentValue.Compatibility.AttributeEvalFlags
+			&& parser.CurrentState.CommandText?.Raw is { Length: > 0 } raw
+				? raw
+				: null;
+
 		for (var scope = CommandScope.Nearby; scope <= CommandScope.MasterRoom; scope++)
 		{
 			if (await RemoteExitAsync(visitor, executorObject, scope, evaluatedCommandText.ToPlainText().Trim()) is SharpExit exit)
@@ -851,12 +857,15 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 				continue;
 			}
 
-			var userDefinedCommandMatches = await services.CommandDiscoveryService.MatchUserDefinedCommand(
-				parser,
-				PerceivedCandidates(candidates),
-				evaluatedCommandText,
-				executorObject,
-				lockFailures);
+			var userDefinedCommandMatches = typed is not null && services.CommandDiscoveryService is CommandDiscoveryService discovery
+				? await discovery.MatchTypedCommand(parser, PerceivedCandidates(candidates), evaluatedCommandText, typed, executorObject,
+					lockFailures)
+				: await services.CommandDiscoveryService.MatchUserDefinedCommand(
+					parser,
+					PerceivedCandidates(candidates),
+					evaluatedCommandText,
+					executorObject,
+					lockFailures);
 
 			if (userDefinedCommandMatches.TryGetValue(out var matches))
 			{

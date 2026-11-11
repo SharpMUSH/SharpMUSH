@@ -267,6 +267,96 @@ public class ReadPennMushConfigRestrictionTests
 		}
 	}
 
+	/// <summary>
+	/// An uploaded configuration reads each <c>include</c> from the file of that name uploaded with it, through any
+	/// directory the line names and into the files that file includes, never from the server's disk. An include that
+	/// names a file that was not uploaded is reported by name.
+	/// </summary>
+	[Test]
+	public async Task UploadedIncludes_AreReadByFileNameAndAMissingOneIsNamed()
+	{
+		var game = GameDirectory();
+		try
+		{
+			var serverFile = Write(game, "compat.conf", "restrict_command @dig nobody");
+			var uploaded = Write(game, "netmux.conf", "mud_name Uploaded", "include game/alias.conf", $"include {serverFile}");
+
+			var import = ReadPennMushConfig.Import(uploaded, new Dictionary<string, string>
+			{
+				["alias.conf"] = "include restrict.conf\r\nmoney_plural Marks",
+				["restrict.conf"] = "restrict_command @pcreate nobody"
+			});
+
+			await Assert.That(import.Options.Cosmetic.MoneyPlural).IsEqualTo("Marks");
+			await Assert.That(import.Options.Restriction.CommandRestrictions.Keys).IsEquivalentTo(new[] { "@pcreate" });
+			await Assert.That(import.Skipped).IsEquivalentTo(new[]
+			{
+				$"include {serverFile}: compat.conf was not uploaded with the configuration; nothing it sets was carried over. Upload it beside the configuration to read it."
+			});
+		}
+		finally
+		{
+			Directory.Delete(game, true);
+		}
+	}
+
+	/// <summary>
+	/// Each uploaded file is read once: a file that includes itself, or one named over and over, cannot multiply its
+	/// lines, and each repeat is reported.
+	/// </summary>
+	[Test]
+	public async Task UploadedIncludes_AreEachReadOnce()
+	{
+		var game = GameDirectory();
+		try
+		{
+			var uploaded = Write(game, "netmux.conf", "mud_name Uploaded", "include loop.conf", "include loop.conf");
+
+			var import = ReadPennMushConfig.Import(uploaded, new Dictionary<string, string>
+			{
+				["loop.conf"] = "money_plural Marks\ninclude loop.conf\ninclude loop.conf"
+			});
+
+			await Assert.That(import.Options.Cosmetic.MoneyPlural).IsEqualTo("Marks");
+			await Assert.That(import.Skipped).IsEquivalentTo(new[]
+			{
+				"include loop.conf in loop.conf: loop.conf was already read, not read again.",
+				"include loop.conf in loop.conf: loop.conf was already read, not read again.",
+				$"include loop.conf in {uploaded}: loop.conf was already read, not read again."
+			});
+		}
+		finally
+		{
+			Directory.Delete(game, true);
+		}
+	}
+
+	/// <summary>
+	/// The files a configuration on the server's disk includes, as a startup import hands them on: every one it reaches,
+	/// by file name, and none it cannot read.
+	/// </summary>
+	[Test]
+	public async Task IncludedFiles_FollowsIncludesOnTheServersDisk()
+	{
+		var game = GameDirectory();
+		try
+		{
+			Write(game, "alias.cnf", "include restrict.cnf", "money_plural Marks");
+			Write(game, "restrict.cnf", "restrict_command @pcreate nobody");
+			var config = Write(game, "mush.cnf", "mud_name Disk", "include alias.cnf", "include missing.cnf");
+
+			var included = ReadPennMushConfig.IncludedFiles(config);
+
+			await Assert.That(included.Keys).IsEquivalentTo(new[] { "alias.cnf", "restrict.cnf" });
+			await Assert.That(ReadPennMushConfig.Import(config, included).Options.Restriction.CommandRestrictions.Keys)
+				.IsEquivalentTo(new[] { "@pcreate" });
+		}
+		finally
+		{
+			Directory.Delete(game, true);
+		}
+	}
+
 	/// <summary>A file that includes itself stops ten deep, as PennMUSH's does, rather than never.</summary>
 	[Test]
 	public async Task SelfInclude_StopsAtTheDepthLimit()

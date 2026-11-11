@@ -133,6 +133,21 @@
                         <div class="dbimport-config-hint">@Loc["AdmImportConfigHint"]</div>
                     }
 
+                    @* An include line is read from the uploaded file of its name, never from this server's disk. *@
+                    <SectionLabel Class="dbimport-label dbimport-includes-label">@Loc["AdmImportConfigIncludesOptional"]</SectionLabel>
+                    <div class="dbimport-config-hint">@Loc["AdmImportConfigIncludesHint"]</div>
+                    <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                                   FilesChanged="OnConfigIncludesSelected"
+                                   MaximumFileCount="MaxConfigIncludeFiles"
+                                   MaxFileSize="MaxConfigFileSize" />
+                    @foreach (var include in _selectedConfigIncludes)
+                    {
+                        <div class="dbimport-file-row">
+                            <MudIcon Icon="@Icons.Material.Filled.Settings" Class="dbimport-file-icon" />
+                            <span class="dbimport-file-name dbimport-include-name">@include.Name</span>
+                        </div>
+                    }
+
                     <SectionLabel Class="dbimport-label">@Loc["MailDatabaseOptional"]</SectionLabel>
                     <div class="dbimport-config-hint">@Loc["AdmImportMailHint"]</div>
                     <MudFileUpload T="IBrowserFile"
@@ -538,12 +553,19 @@
 
     private IBrowserFile? _selectedConfigFile;
 
+    /// <summary>As many as the server takes beside one configuration.</summary>
+    private const int MaxConfigIncludeFiles = 16;
+
+    private IReadOnlyList<IBrowserFile> _selectedConfigIncludes = [];
+
     /// <summary>The mush.cnf this import applied before the database, for the result to say so.</summary>
     private string? _configImportedFrom;
 
     private void OnFileSelected(IBrowserFile? file) => _selectedFile = file;
 
     private void OnConfigFileSelected(IBrowserFile? file) => _selectedConfigFile = file;
+
+    private void OnConfigIncludesSelected(IReadOnlyList<IBrowserFile>? files) => _selectedConfigIncludes = files ?? [];
 
     private void OnMailFileSelected(IBrowserFile? file) => _selectedMailFile = file;
 
@@ -555,6 +577,7 @@
     {
         _selectedFile = null;
         _selectedConfigFile = null;
+        _selectedConfigIncludes = [];
         _selectedMailFile = null;
         _selectedChatFile = null;
         _selectedMailFolderFile = null;
@@ -581,21 +604,34 @@
             await using var chatStream = chatFile?.OpenReadStream(maxAllowedSize: 104857600);
             await using var configStream = _selectedConfigFile?.OpenReadStream(MaxConfigFileSize);
             await using var folderStream = folderFile?.OpenReadStream(maxAllowedSize: 104857600);
-            var upload = await ConversionService.UploadDatabaseAsync(stream, _selectedFile.Name, mailStream,
-                _selectedMailFile?.Name, chatStream, chatFile?.Name, configStream, _selectedConfigFile?.Name,
-                folderStream, folderFile?.Name, _format);
-
-            switch (upload)
+            // Included files mean nothing without the configuration that names them.
+            var includes = new List<(Stream Stream, string Name)>();
+            try
             {
-                case string sessionId:
-                    _configImportedFrom = _selectedConfigFile?.Name;
-                    _sessionId = sessionId;
-                    _isConverting = true;
-                    _progressTimer = new System.Threading.Timer(OnTimerCallback, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
-                    break;
-                case ApiFailure failure:
-                    _error = Loc["DatabaseImportFailed", failure.Message].Value;
-                    break;
+                foreach (var include in _selectedConfigFile is null ? [] : _selectedConfigIncludes)
+                    includes.Add((include.OpenReadStream(MaxConfigFileSize), include.Name));
+
+                var upload = await ConversionService.UploadDatabaseAsync(stream, _selectedFile.Name, mailStream,
+                    _selectedMailFile?.Name, chatStream, chatFile?.Name, configStream, _selectedConfigFile?.Name,
+                    folderStream, folderFile?.Name, _format, includes);
+
+                switch (upload)
+                {
+                    case string sessionId:
+                        _configImportedFrom = _selectedConfigFile?.Name;
+                        _sessionId = sessionId;
+                        _isConverting = true;
+                        _progressTimer = new System.Threading.Timer(OnTimerCallback, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+                        break;
+                    case ApiFailure failure:
+                        _error = Loc["DatabaseImportFailed", failure.Message].Value;
+                        break;
+                }
+            }
+            finally
+            {
+                foreach (var (includeStream, _) in includes)
+                    await includeStream.DisposeAsync();
             }
         }
         catch (Exception ex)
@@ -764,6 +800,7 @@
         _isPromoting = false;
         _selectedFile = null;
         _selectedConfigFile = null;
+        _selectedConfigIncludes = [];
         _configImportedFrom = null;
         _selectedMailFile = null;
         _selectedChatFile = null;
