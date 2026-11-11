@@ -242,7 +242,7 @@ public class ConnectionAnnounceService(
 	/// Ports the zone (src/bsd.c:5994-6011) and master-room (src/bsd.c:6012-6015) traversal from
 	/// announce_connect; announce_disconnect (:6085-6127) does the same walk. If the player's zone is
 	/// set and is a Thing, the hook runs once on the zone itself; if it's a Room, the hook runs on
-	/// every object in the zone's contents. The hook then always runs on every object in the master
+	/// every object in the zone's contents. A location in several zones does this for each. The hook then always runs on every object in the master
 	/// room's contents.
 	/// </summary>
 	private async ValueTask DispatchZoneAndMasterRoomHooksAsync(
@@ -251,7 +251,8 @@ public class ConnectionAnnounceService(
 		// PennMUSH zones the player's LOCATION, not the player itself (bsd.c:5992, loc = Location(player)) -
 		// zones are attached to rooms, so reading player.Object().Zone directly was dead code in practice.
 		var loc = await player.Where();
-		if (await loc.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone)
+		// A location in several zones runs the hook for each.
+		foreach (var zone in await mediator.ZonesOfAsync(loc.WithExitOption()))
 		{
 			if (zone.IsThing)
 			{

@@ -43,6 +43,7 @@ public partial class LightningDatabase
 				Home = EdgeObjid(tx, Tables.Home.Forward, n),
 				Parent = EdgeObjid(tx, Tables.Parent.Forward, n),
 				Zone = EdgeObjid(tx, Tables.Zone.Forward, n),
+				FurtherZones = ZoneList(tx, n).Skip(1).Select(zone => HeaderRef(tx, zone)?.ToString()).OfType<string>().ToArray(),
 				Flags = tx.Dups(Tables.ObjFlag.Forward, key).Select(value => Keys.ReadStr(value))
 					.Where(flag => flag is not ("GOING" or "GOING_TWICE")).ToArray(),
 				Powers = tx.Dups(Tables.ObjPower.Forward, key).Select(value => Keys.ReadStr(value)).ToArray(),
@@ -140,7 +141,11 @@ public partial class LightningDatabase
 			SetSingleEdge(tx, Tables.Owner, n, restore.Owner.Number);
 			SetSingleEdge(tx, Tables.Home, n, restore.Home?.Number);
 			SetSingleEdge(tx, Tables.Parent, n, restore.Parent?.Number);
-			SetSingleEdge(tx, Tables.Zone, n, restore.Zone?.Number);
+			// The further zones come back too, those still standing.
+			var furtherZones = entry.FurtherZones.Select(ParseObjid).OfType<DBRef>()
+				.Where(zone => zone.CreationMilliseconds is { } created && ReadObjectHeader(tx, zone.Number)?.CreationTime == created)
+				.Select(zone => (long)zone.Number);
+			SetZoneList(tx, n, [.. restore.Zone is { } zone ? [(long)zone.Number] : Array.Empty<long>(), .. furtherZones]);
 			if (restore.Location is { } location)
 			{
 				SetLocation(tx, n, location.Number);

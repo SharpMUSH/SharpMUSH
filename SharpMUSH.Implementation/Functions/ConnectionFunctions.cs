@@ -1078,8 +1078,7 @@ public partial class Functions
 			.Where(async (player, _) =>
 			{
 				var location = await player.Where();
-				return await location.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject locationZone
-					&& locationZone.Object().DBRef.Number == zoneNumber;
+				return (await Mediator.ZonesOfAsync(location.WithExitOption())).Any(locationZone => locationZone.Object().DBRef.Number == zoneNumber);
 			})
 			.Select(player => $"#{player.Object().DBRef.Number}");
 

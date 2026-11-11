@@ -130,7 +130,7 @@ public partial class Commands
 	/// <para><c>MinArgs = 1</c>: an absent or empty right-hand side is <c>none</c>, as it is in
 	/// <c>do_chzone</c> (<c>src/set.c:384</c>).</para>
 	/// </remarks>
-	[SharpCommand(Name = "@CHZONE", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
+	[SharpCommand(Name = "@CHZONE", Switches = ["PRESERVE", "ADD", "REMOVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "zone"])]
 	public async ValueTask<Option<CallState>> ChangeZone(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -140,6 +140,37 @@ public partial class Commands
 		var targetName = args["0"].Message.ToPlainText();
 		var zoneName = args.TryGetValue("1", out var zoneArg) ? zoneArg.Message.ToPlainText() : string.Empty;
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
+		var add = parser.CurrentState.Switches.Contains("ADD");
+		var remove = parser.CurrentState.Switches.Contains("REMOVE");
+		if (add && remove)
+		{
+			return await NotifyService.NotifyAndReturn(executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.TooManySwitches, notifyMessage: ErrorMessages.Notifications.ChzoneAddOrRemove,
+				shouldNotify: true);
+		}
+
+		if (add || remove)
+		{
+			if (zoneName.Length == 0 || zoneName.Equals("none", StringComparison.InvariantCultureIgnoreCase))
+			{
+				return await NotifyService.NotifyAndReturn(executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.NoMatch, notifyMessage: ErrorMessages.Notifications.ChzoneNameTheZone,
+					shouldNotify: true);
+			}
+
+			// The object is matched as @chzone matches it, the zone as @chzone matches it.
+			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+				executor, executor, targetName, LocateFlags.All | LocateFlags.OnlyMatchObjectsInLookerLocation,
+				async obj => await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+					executor, executor, zoneName, LocateFlags.All,
+					async zoneObj => Reported(add
+						? await ZoneHelpers.AddZoneAsync(parser, Mediator, RelationshipCycles, NotifyService, PermissionService,
+							LockService, DidItService, ObjectRelationshipService, FlagAndPowerService, Configuration, ConnectionService,
+							executor, obj, zoneObj, preserve, noisy: true)
+						: await ZoneHelpers.RemoveZoneAsync(Mediator, NotifyService, PermissionService, executor, obj, zoneObj,
+							noisy: true))));
+		}
+
 
 		// set.c:380: MAT_NEARBY for the object, which is MAT_EVERYTHING plus MAT_NEAR — you re-zone what
 		// is in front of you, not anything you can name. The zone below stays MAT_EVERYTHING (:386).

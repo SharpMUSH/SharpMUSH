@@ -706,6 +706,15 @@
   <data name="ObjectAlreadyInThatZone" xml:space="preserve">
     <value>That object is already in that zone.</value>
   </data>
+  <data name="ObjectNotInThatZone" xml:space="preserve">
+    <value>That object is not in that zone.</value>
+  </data>
+  <data name="ChzoneAddOrRemove" xml:space="preserve">
+    <value>Use /ADD or /REMOVE, not both.</value>
+  </data>
+  <data name="ChzoneNameTheZone" xml:space="preserve">
+    <value>Name the zone to add or remove.</value>
+  </data>
   <data name="NoPowerToShiftReality" xml:space="preserve">
     <value>You don't have the power to shift reality.</value>
   </data>

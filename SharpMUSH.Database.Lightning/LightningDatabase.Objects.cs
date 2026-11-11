@@ -599,7 +599,12 @@ public partial class LightningDatabase
 	{
 		var seeds = new List<(TableDef Table, byte[] Key)>();
 		if (filter.Owner is { } owner) seeds.Add((Tables.Owner.Reverse, Keys.Dbref(owner.Number)));
-		if (filter.Zone is { } zone) seeds.Add((Tables.Zone.Reverse, Keys.Dbref(zone.Number)));
+		// An object in the zone as a further zone of its own is not under the zone edge, so the edge seeds only a zone no
+		// object holds that way.
+		if (filter.Zone is { } zone && !tx.Dups(Tables.ZoneMoreReverse, Keys.Dbref(zone.Number)).Any())
+		{
+			seeds.Add((Tables.Zone.Reverse, Keys.Dbref(zone.Number)));
+		}
 		if (filter.Parent is { } parent) seeds.Add((Tables.Parent.Reverse, Keys.Dbref(parent.Number)));
 		if (filter.Types is [var type]) seeds.Add((Tables.ObjType, ObjTypeKey(type)));
 		if (FlagIndexSeed(tx, filter.HasFlag) is { } flagKey) seeds.Add((Tables.ObjFlag.Reverse, flagKey));
@@ -817,7 +822,7 @@ public partial class LightningDatabase
 			return false;
 		}
 
-		if (filter.Zone.HasValue && GetSingleEdge(tx, Tables.Zone.Forward, dbref) != filter.Zone.Value.Number)
+		if (filter.Zone.HasValue && !ZoneList(tx, dbref).Contains(filter.Zone.Value.Number))
 		{
 			return false;
 		}
@@ -942,7 +947,8 @@ public partial class LightningDatabase
 	{
 		var dbref = (long)obj.Object().Key;
 		long? zoneKey = zone is null ? null : (long)zone.Object().Key;
-		await Store.WriteAsync(tx => SetSingleEdge(tx, Tables.Zone, dbref, zoneKey), cancellationToken);
+		// The zone named is then its only one, as @chzone leaves it.
+		await Store.WriteAsync(tx => SetZoneList(tx, dbref, zoneKey is { } z ? [z] : []), cancellationToken);
 	}
 
 	public ValueTask UnsetObjectZone(AnySharpObject obj, CancellationToken cancellationToken = default)
@@ -1076,6 +1082,7 @@ public partial class LightningDatabase
 		// Zone/Parent/Home/Location references.
 		// Location's values carry the arrival order as well as the dbref, so it has its own sweep.
 		DeleteLocationEdges(tx, n);
+		DeleteZoneListEntries(tx, n);
 		foreach (var (forward, reverse) in Tables.EdgePairs.Where(pair => pair != Tables.Location))
 		{
 			foreach (var to in tx.Dups(forward, key).ToList())
@@ -1146,14 +1153,13 @@ public partial class LightningDatabase
 				}
 
 				var parentKey = GetSingleEdge(tx, Tables.Parent.Forward, current);
-				var zoneKey = GetSingleEdge(tx, Tables.Zone.Forward, current);
 
 				if (parentKey is long p && visited.Add(p))
 				{
 					queue.Enqueue((p, depth + 1));
 				}
 
-				if (zoneKey is long z && visited.Add(z))
+				foreach (var z in ZoneList(tx, current).Where(visited.Add))
 				{
 					queue.Enqueue((z, depth + 1));
 				}

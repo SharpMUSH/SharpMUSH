@@ -229,9 +229,14 @@ public partial class LightningDatabase
 		}, cancellationToken);
 	}
 
+	/// <summary>The objects in <paramref name="zone"/>: those whose first zone it is, then those holding it as a further zone.</summary>
 	public IAsyncEnumerable<DBRef> GetZoneMemberRefsAsync(DBRef zone, CancellationToken cancellationToken = default)
-		=> new FreshAsyncEnumerable<DBRef>(ct => Store.DupsMapValuesAsync(Tables.Zone.Reverse, Keys.Dbref(zone.Number),
-			(tx, value) => IsSubject(tx, zone) ? HeaderRef(tx, Keys.ReadDbref(value)) : null, ct: ct));
+		=> new FreshAsyncEnumerable<DBRef>(ct => ZoneMembers(Tables.Zone.Reverse, zone, ct)
+			.Concat(ZoneMembers(Tables.ZoneMoreReverse, zone, ct)));
+
+	private IAsyncEnumerable<DBRef> ZoneMembers(TableDef reverse, DBRef zone, CancellationToken ct)
+		=> Store.DupsMapValuesAsync(reverse, Keys.Dbref(zone.Number),
+			(tx, value) => IsSubject(tx, zone) ? HeaderRef(tx, Keys.ReadDbref(value)) : null, ct: ct);
 
 	/// <summary>The base object an edge value names, or null when it is gone.</summary>
 	private SharpObject? ReadSharpObject(ITx tx, byte[] value)

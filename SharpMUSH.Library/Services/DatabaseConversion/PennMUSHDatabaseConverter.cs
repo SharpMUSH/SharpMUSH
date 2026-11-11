@@ -1721,15 +1721,34 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return;
 		}
 
-		if (await _mediator.Send(new GetObjectNodeQuery(zoneDbRef), cancellationToken) is AnySharpObject zoneObj)
+		if (await _mediator.Send(new GetObjectNodeQuery(zoneDbRef), cancellationToken) is not AnySharpObject zoneObj)
+		{
+			context.Warn(ImportWarningKind.Objects, $"Zone object #{pennObj.Zone} not found for object #{pennObj.DBRef}");
+			return;
+		}
+
+		if (pennObj.FurtherZones.Count == 0)
 		{
 			await _mediator.Send(new SetObjectZoneCommand(sharpObj, zoneObj), cancellationToken);
 			_logger.LogDebug("Set zone for #{PennDBRef} to #{ZoneDBRef}", pennObj.DBRef, pennObj.Zone);
+			return;
 		}
-		else
+
+		List<AnySharpObject> zones = [zoneObj];
+		foreach (var further in pennObj.FurtherZones)
 		{
-			context.Warn(ImportWarningKind.Objects, $"Zone object #{pennObj.Zone} not found for object #{pennObj.DBRef}");
+			if (context.DbrefMapping.TryGetValue(further, out var furtherRef)
+				&& await _mediator.Send(new GetObjectNodeQuery(furtherRef), cancellationToken) is AnySharpObject furtherZone)
+			{
+				zones.Add(furtherZone);
+			}
+			else
+			{
+				context.Warn(ImportWarningKind.Objects, $"Zone #{further} of #{pennObj.DBRef} is not in the import; it was dropped");
+			}
 		}
+
+		await _mediator.Send(new SetObjectZonesCommand(sharpObj, zones), cancellationToken);
 	}
 
 	/// <summary>The SharpMUSH object a source dbref became, or none if it was not imported.</summary>

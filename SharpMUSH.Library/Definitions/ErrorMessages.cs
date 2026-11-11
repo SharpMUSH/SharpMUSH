@@ -979,6 +979,12 @@ public static partial class ErrorMessages
 		public const string CantMakeCircularZones = "You can't make circular zones!";
 		/// <summary><c>do_chzone</c>'s no-op guard (<c>src/set.c:394</c>).</summary>
 		public const string ObjectAlreadyInThatZone = "That object is already in that zone.";
+		/// <summary><c>@chzone/remove</c> naming a zone the object is not in.</summary>
+		public const string ObjectNotInThatZone = "That object is not in that zone.";
+		/// <summary><c>@chzone</c> given both <c>/ADD</c> and <c>/REMOVE</c>.</summary>
+		public const string ChzoneAddOrRemove = "Use /ADD or /REMOVE, not both.";
+		/// <summary><c>@chzone/add</c> or <c>/remove</c> with no zone named.</summary>
+		public const string ChzoneNameTheZone = "Name the zone to add or remove.";
 		/// <summary><c>do_chzone</c>'s <c>controls(player, thing)</c> refusal (<c>src/set.c:400</c>).</summary>
 		public const string NoPowerToShiftReality = "You don't have the power to shift reality.";
 		/// <summary><c>do_chzone</c>'s self-zone guard, mortals only (<c>src/set.c:423</c>).</summary>

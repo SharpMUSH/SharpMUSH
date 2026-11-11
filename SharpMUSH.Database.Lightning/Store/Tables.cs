@@ -43,6 +43,11 @@ public static class Tables
 	public static readonly (TableDef Forward, TableDef Reverse) Owner = TableDef.Edge("owner", fixedDuplicates: true);
 	public static readonly (TableDef Forward, TableDef Reverse) Parent = TableDef.Edge("parent", fixedDuplicates: true);
 	public static readonly (TableDef Forward, TableDef Reverse) Zone = TableDef.Edge("zone", fixedDuplicates: true);
+	/// <summary>An object → the zones it is in after its first (<see cref="Zone"/>), in the order they were added: their
+	/// numbers, eight bytes each, end to end. Absent for an object in one zone or none. See <c>LightningDatabase.Zones.cs</c>.</summary>
+	public static readonly TableDef ZoneMore = TableDef.Node("zone.more");
+	/// <summary>A zone → the objects that hold it in <see cref="ZoneMore"/>.</summary>
+	public static readonly TableDef ZoneMoreReverse = TableDef.Index("r.zone.more", duplicates: true, fixedDuplicates: true);
 	public static readonly (TableDef Forward, TableDef Reverse) Exit = TableDef.Edge("exit", fixedDuplicates: true);
 	public static readonly (TableDef Forward, TableDef Reverse) ObjFlag = TableDef.Edge("flag", fixedDuplicates: false);
 	public static readonly (TableDef Forward, TableDef Reverse) ObjPower = TableDef.Edge("power", fixedDuplicates: false);
