@@ -92,6 +92,32 @@ public class DialectCommandTests : ServerTestBase
 		}
 	}
 
+	/// <summary>Both switches on an object in a room name that room once; an empty message says nothing.</summary>
+	[Test]
+	public async Task ForcedEmitHereAndRoomEmitsOnceAndNeedsAMessage()
+	{
+		var actor = await IsolatedPlayerAsync("FemitBoth");
+		var (thing, name) = await PuppetAsync(actor);
+		var both = TestIsolationHelpers.GenerateUniqueName("femitboth");
+		try
+		{
+			using (Dialect("mux"))
+			{
+				await CmdAs(actor.DbRef, actor.Handle, $"@femit/here/room {thing}={both}");
+				await CmdAs(actor.DbRef, actor.Handle, $"@fsay {thing}");
+				await WebAppFactoryArg.QueueBarrierAsync();
+			}
+
+			await Assert.That(Heard(actor, both)).IsEquivalentTo([both]);
+			await Assert.That(Heard(actor, $"{name} says")).IsEmpty();
+			await Assert.That(Heard(actor, "Don't you have anything to say?")).IsNotEmpty();
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(actor.Handle);
+		}
+	}
+
 	[Test]
 	public async Task ForcedSpeechNeedsControl()
 	{

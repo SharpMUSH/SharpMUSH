@@ -21,7 +21,7 @@
 
 These make an object you control speak. The message is evaluated once, by you, and then the object emits, poses or says it as if it had typed `@emit`, `pose` or `say` itself.
 
-- @femit emits the message where the object is. /room emits it in the room the object is in at the outermost level instead, as @lemit does; with /here as well, it does both.
+- @femit emits the message where the object is. /room emits it in the room the object is in at the outermost level instead, as @lemit does; with /here as well, it does both, once when the object stands in a room.
 - @fpose poses it. /nospace leaves out the space after the object's name, as `;` does.
 - @fsay says it.
 
