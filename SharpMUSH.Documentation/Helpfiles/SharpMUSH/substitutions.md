@@ -124,6 +124,7 @@ Register, argument and list substitutions:<br>
     %-N = argument N, for N from 0 to 999 (up to three digits), the same as %`<N>`: `%-12` is the thirteenth argument. From RhostMUSH.<br>
     %dN = the list element of the Nth `@dolist` out, counting `@dolist`s only; %dL is the outermost. From RhostMUSH: see [@dolist].<br>
     `%q<!name>`, `%i!N`, `%i_!N`, `%-!N` and `%d!N` give 1 or 0 about the value instead of the value: see [bang notation].<br>
+    RhostMUSH's `%+!`, `%-`, `%-#`, `%-n`, `%-k`, `%-m`, `%-p`, `%-h`, `%f` and `%w` read as on RhostMUSH in its dialect: see [compatibility dialects rhostmush substitutions].<br>
     %`$N` = equivalent of stext(N), the `<string>` in `switch()`/`@switch`.
 
 ::: seealso

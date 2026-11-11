@@ -250,7 +250,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	/// nothing here. (In practice recovery ends the enclosing rule at EOF without adding a closer
 	/// child, so this guard is belt-and-suspenders against a future recovery path that inserts one.)
 	/// </summary>
-	private MString SliceSource(IToken token)
+	internal MString SliceSource(IToken token)
 	{
 		if (token.TokenIndex < 0 || token.StartIndex < 0)
 		{
@@ -841,7 +841,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 								 ?? new CallState(GetContextText(context), context.Depth());
 		// PE_COMPRESS_SPACES: compress literal space runs to single space. Text after the start of a
 		// string keeps its leading space, a separator: `add(1,2) x` is "3 x".
-		if (parser.CurrentState.ParseMode is ParseMode.Default)
+		if (CompressesSpaces)
 			return result with { Message = MushText.CompressSpaces(result.Message) };
 		return result;
 	}
@@ -853,10 +853,20 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 
 		var result = await VisitChildren(context)
 								 ?? new CallState(GetContextText(context), context.Depth());
-		return parser.CurrentState.ParseMode is ParseMode.Default
+		return CompressesSpaces
 			? result with { Message = CompressedAtTheStart(context, result.Message) }
 			: result;
 	}
+
+	/// <summary>
+	/// Whether text compresses its runs of spaces to one and drops the spaces that start a string, as PennMUSH's
+	/// PE_COMPRESS_SPACES does: in an evaluation, unless <c>space_compress</c> is off or the command was typed
+	/// after RhostMUSH's <c>}</c>.
+	/// </summary>
+	private bool CompressesSpaces
+		=> parser.CurrentState.ParseMode is ParseMode.Default
+			&& Configuration.CurrentValue.Compatibility.SpaceCompress
+			&& (parser.CurrentState.Flags & ParserStateFlags.KeepSpaces) == 0;
 
 	/// <summary>A text node that is a single token, not an escape or an ansi run: its text is its source.</summary>
 	private static bool IsOneToken(ISoftcodeContext context)
@@ -869,7 +879,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	private CallState TextState(ISoftcodeContext context, bool beginsString)
 	{
 		var written = GetContextText(context);
-		var message = parser.CurrentState.ParseMode is not ParseMode.Default ? written
+		var message = !CompressesSpaces ? written
 			: beginsString ? CompressedAtTheStart(context, written)
 			: MushText.CompressSpaces(written);
 		return new CallState(written, context.Depth()) { Message = message };
@@ -898,7 +908,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		[NotNull] IComplexSubstitutionSymbolContext context)
 		=> UnevaluatedSubstitution(context) ?? CapitalizeForUpperSelector(context,
 			await Substitutions.Substitutions.ParseComplexSubstitution(
-				await ComplexSubstitutionName(context), parser, AttributeService, Mediator, context));
+				await ComplexSubstitutionName(context), parser, AttributeService, Mediator, Configuration, context));
 
 	/// <summary>What follows a <c>%</c> that stands alone: <c>%#</c>, <c>%n</c>, <c>%r</c>.</summary>
 	public override async ValueTask<CallState?> VisitSubstitutionSymbol([NotNull] SubstitutionSymbolContext context)

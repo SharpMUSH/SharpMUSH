@@ -119,6 +119,13 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			if (tokenText.ToPlainText().StartsWith('[') && parser.CommandLibrary.ContainsKey("WARN_ON_MISSING"))
 				return await RedispatchAsync(parser, MarkupText.Concat(MarkupText.Plain("WARN_ON_MISSING "), tokenText));
 
+			// RhostMUSH's }: the command after it keeps its runs of spaces.
+			if (tokenText.ToPlainText().StartsWith('}')
+				&& SoftcodeDialects.InForce(parser.CurrentState.CurrentEvaluation, visitor.Configuration.CurrentValue.Compatibility.Dialect)
+					== SoftcodeDialects.Rhost)
+				return await parser.With(state => state with { Flags = state.Flags | ParserStateFlags.KeepSpaces },
+					keeping => RedispatchAsync(keeping, tokenText.Substring(1, tokenText.Length - 1)));
+
 			if (SpeechTokenCommand(tokenText) is { } speechReplacer)
 				return await RedispatchSpeechAsync(parser, speechReplacer, tokenText);
 

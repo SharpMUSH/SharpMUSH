@@ -766,6 +766,11 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		}
 
 		var executorObj = executor is AnySharpObject knownExecutor ? knownExecutor : targetObj;
+		// RhostMUSH's %-m: the hooked command line, as %c has it now, for as long as the hook runs.
+		localParser = localParser.Push(localParser.CurrentState with
+		{
+			HookedCommand = localParser.CurrentState.CommandText?.Raw ?? MarkupText.Empty
+		});
 
 		// /localize and /clearregs only apply to an inline hook.
 		using var registers = RegisterScope.Enter(localParser.CurrentState.Registers,

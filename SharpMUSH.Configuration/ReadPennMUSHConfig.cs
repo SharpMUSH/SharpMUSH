@@ -196,7 +196,8 @@ public static partial class ReadPennMushConfig
 			{
 				ProtectionFlags = Boolean(Get(nameof(CompatibilityOptions.ProtectionFlags)), d.Compatibility.ProtectionFlags),
 				AttributeEvalFlags = Boolean(Get(nameof(CompatibilityOptions.AttributeEvalFlags)), d.Compatibility.AttributeEvalFlags),
-				MuxArguments = Boolean(Get(nameof(CompatibilityOptions.MuxArguments)), d.Compatibility.MuxArguments)
+				MuxArguments = Boolean(Get(nameof(CompatibilityOptions.MuxArguments)), d.Compatibility.MuxArguments),
+				SpaceCompress = Boolean(Get(nameof(CompatibilityOptions.SpaceCompress)), d.Compatibility.SpaceCompress)
 			},
 			Cosmetic = new CosmeticOptions(
 				RequiredString(Get(nameof(CosmeticOptions.MoneySingular)), d.Cosmetic.MoneySingular).Trim(),

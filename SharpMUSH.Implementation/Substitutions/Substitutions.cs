@@ -8,7 +8,11 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Softcode;
+using SharpMUSH.Library.DiscriminatedUnions;
 using static SharpMUSHParser;
 
 namespace SharpMUSH.Implementation.Substitutions;
@@ -20,6 +24,95 @@ public static partial class Substitutions
 		IAttributeService attributeService,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		SubstitutionSymbolContext _)
+		=> InRhost(parser, configuration)
+				&& await RhostSubstitution(symbol, parser, mediator, attributeService, configuration) is { } rhost
+			? rhost
+			: await PennSubstitution(symbol, parser, mediator, attributeService, configuration);
+
+	/// <summary>Whether the code being evaluated is written in RhostMUSH's dialect (<see cref="SoftcodeDialects.Rhost"/>).</summary>
+	private static bool InRhost(IMUSHCodeParser parser, IOptionsWrapper<SharpMUSHOptions> configuration)
+		=> SoftcodeDialects.InForce(parser.CurrentState.CurrentEvaluation, configuration.CurrentValue.Compatibility.Dialect)
+			== SoftcodeDialects.Rhost;
+
+	/// <summary>
+	/// The substitutions RhostMUSH reads differently, or has where PennMUSH prints text; null for the rest.
+	/// </summary>
+	private static async ValueTask<CallState?> RhostSubstitution(string symbol, IMUSHCodeParser parser,
+		IMediator mediator, IAttributeService attributeService, IOptionsWrapper<SharpMUSHOptions> configuration)
+		=> symbol switch
+		{
+			// %f is left to a game to define on RhostMUSH, and prints %f where none does; SharpMUSH has no way to.
+			"f" or "F" => new CallState("%f"),
+			// %w is whoever a twink lock is being checked for, and #-1 at any other time; SharpMUSH has no twink lock.
+			"w" or "W" => new CallState(NoTwinkTarget),
+			// A bare %- is every argument from %10 on, joined by commas.
+			"-" => new CallState(JoinArguments(parser, from: 10, ",")),
+			"-n" or "-N" => new CallState(await QueueRunner(parser, mediator) is AnySharpObject runner
+				? runner.Object().Name
+				: NoQueueRunner),
+			"-k" or "-K" => new CallState(await QueueRunner(parser, mediator) is AnySharpObject runner
+				? await new NameFormatter(attributeService, configuration).FormatAsync(runner, NameContext.UnaccentedMoniker)
+				: MarkupText.Plain(NoQueueRunner)),
+			"-#" => new CallState(await QueueRunner(parser, mediator) is AnySharpObject runner
+				? $"#{runner.Object().DBRef.Number}"
+				: "#-1"),
+			// In a hook, the command line it hooks; empty outside one.
+			"-m" => new CallState(parser.CurrentState.HookedCommand ?? MarkupText.Empty),
+			// In a hook, the line the player typed; empty outside one.
+			"-p" => new CallState(parser.CurrentState.HookedCommand is not null && parser.CurrentState.TypedLine is { } typed
+				? typed
+				: string.Empty),
+			// %-h<name> reads RhostMUSH's attribute cache, which SharpMUSH does not have: every name is unknown.
+			['-', 'h', '<', ..] => new CallState(ErrorMessages.Returns.InvalidCache),
+			['+', '!', ..] => new CallState(AllArguments(symbol, parser)),
+			_ => null
+		};
+
+	/// <summary>RhostMUSH's <c>%w</c> outside a twink lock check.</summary>
+	private const string NoTwinkTarget = "#-1";
+
+	/// <summary>RhostMUSH's <c>%-n</c> and <c>%-k</c> when nothing runs the queue entry.</summary>
+	private const string NoQueueRunner = "**NOTHING**";
+
+	/// <summary>
+	/// The object whose queue entry, or typed line, is running: the executor of the evaluation's first state,
+	/// whichever object a <c>u()</c> or <c>@trigger</c> in place has since moved to.
+	/// </summary>
+	private static async ValueTask<AnyOptionalSharpObject> QueueRunner(IMUSHCodeParser parser, IMediator mediator)
+		=> parser.State.LastOrDefault()?.Executor is { } runner
+			? await mediator.Send(new GetObjectNodeQuery(runner))
+			: new None();
+
+	/// <summary>
+	/// RhostMUSH's <c>%+!</c>, every argument joined by a space, and <c>%+!&lt;c&gt;!</c>, joined by <c>c</c>.
+	/// </summary>
+	private static MString AllArguments(string symbol, IMUSHCodeParser parser)
+		=> JoinArguments(parser, from: 0, symbol.Length == 4 ? symbol[2].ToString() : " ");
+
+	/// <summary>The arguments from <paramref name="from"/> to the last, joined by <paramref name="separator"/>.</summary>
+	private static MString JoinArguments(IMUSHCodeParser parser, int from, string separator)
+		=> MarkupText.Join(MarkupText.Plain(separator), Enumerable.Range(from, Math.Max(ArgumentCount(parser) - from, 0))
+			.Select(index => parser.CurrentState.Argument(index.ToString())));
+
+	/// <summary>
+	/// PennMUSH's <c>%+</c>, the argument count, not the register count: pi_regs_get_envc (src/parse.c:1783-1813)
+	/// takes the highest numeric argument index plus one and skips the rest outright — "only check numeric args,
+	/// ignore named ones". Named registers share this dictionary with %0-%N: a regexp $-command's capture groups
+	/// land here (PatternArguments.cs:19-20), as do a mapsql callback's column names, so counting entries
+	/// over-reported both. Only ASCII decimal digits name numbered slots; signed names are ordinary named
+	/// arguments and must not inflate the positional count.
+	/// </summary>
+	private static int ArgumentCount(IMUSHCodeParser parser)
+		=> parser.CurrentState.EnvironmentRegisters.Keys
+			.Select(key => key.Length > 0 && key.All(char.IsAsciiDigit) && int.TryParse(key, out var index) ? index : -1)
+			.DefaultIfEmpty(-1)
+			.Max() + 1;
+
+	/// <summary>The substitutions as PennMUSH reads them, and SharpMUSH's own.</summary>
+	private static async ValueTask<CallState> PennSubstitution(string symbol, IMUSHCodeParser parser,
+		IMediator mediator,
+		IAttributeService attributeService,
+		IOptionsWrapper<SharpMUSHOptions> configuration)
 		=> symbol switch
 		{
 			"0" or "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" =>
@@ -87,17 +180,9 @@ public static partial class Substitutions
 			"|" => parser.CurrentState.PrintedOutput,
 			// PennMUSH: %? returns "invocations recursions" (two space-separated numbers)
 			"?" => $"{parser.CurrentState.TotalInvocations!.Count} {parser.CurrentState.CallDepth!.Count}",
-			// PennMUSH's %+ is the argument count, not the register count: pi_regs_get_envc
-			// (src/parse.c:1783-1813) takes the highest numeric argument index plus one and skips
-			// the rest outright — "only check numeric args, ignore named ones". Named registers
-			// share this dictionary with %0-%N: a regexp $-command's capture groups land here
-			// (PatternArguments.cs:19-20), as do a mapsql callback's column names, so counting
-			// entries over-reported both. Only ASCII decimal digits name numbered slots; signed
-			// names are ordinary named arguments and must not inflate the positional count.
-			"+" => (parser.CurrentState.EnvironmentRegisters.Keys
-				.Select(key => key.Length > 0 && key.All(char.IsAsciiDigit) && int.TryParse(key, out var index) ? index : -1)
-				.DefaultIfEmpty(-1)
-				.Max() + 1).ToString(),
+			"+" => ArgumentCount(parser).ToString(),
+			// RhostMUSH's %+! and %+!<c>!: here the argument count and the text after it.
+			['+', '!', ..] => ArgumentCount(parser) + symbol[1..],
 			// PennMUSH emits "% " (percent then space) literally "for more natural typing"
 			// (src/parse.c), unlike other unknown substitutions where the percent is dropped
 			// (%z -> z). The literal space arrives here as the OTHER_SUB catch-all.
@@ -121,7 +206,7 @@ public static partial class Substitutions
 	}
 
 	public static async ValueTask<CallState> ParseComplexSubstitution(CallState? symbol, IMUSHCodeParser parser,
-		IAttributeService attributeService, IMediator mediator,
+		IAttributeService attributeService, IMediator mediator, IOptionsWrapper<SharpMUSHOptions> configuration,
 		IComplexSubstitutionSymbolContext context)
 	{
 		ArgumentNullException.ThrowIfNull(symbol);
@@ -136,7 +221,14 @@ public static partial class Substitutions
 		if (context.DTEXT_LAST() is not null) return HandleDoListOutermost(parser);
 		if (context.STEXT_NUM() is not null) return HandleSTextNumber(symbol, parser);
 		if (context.STEXT_LAST() is not null) return HandleSTextLast(parser);
-		if (context.VWX() is not null) return await HandleVWX(symbol, parser, mediator, attributeService);
+		if (context.VWX() is not null)
+		{
+			// RhostMUSH has no %wa-%wz: its %w is the twink lock's target, and the letter is text.
+			return symbol.Message.ToPlainText() is ['w' or 'W', ..] name && InRhost(parser, configuration)
+				? new CallState(NoTwinkTarget + name[1..])
+				: await HandleVWX(symbol, parser, mediator, attributeService);
+		}
+
 		if (context.ARG_STARTCARET() is not null) return new CallState(parser.CurrentState.Argument(symbol.Message.ToPlainText()));
 		if (context.ATTR_STARTCARET() is not null) return await HandleAttributeOrArgument(symbol, parser, mediator, attributeService);
 		if (context.DELIM_STARTCARET() is not null) return new CallState(ListSeparators.Mark(symbol.Message));

@@ -124,6 +124,11 @@
       "id": "other-servers-attribute-names",
       "heading": "Other servers' attribute names",
       "lookup": "compatibility config other servers attribute names"
+    },
+    {
+      "id": "spaces-space-compress",
+      "heading": "Spaces: `space_compress`",
+      "lookup": "compatibility config spaces space compress"
     }
   ]
 }
@@ -506,7 +511,7 @@ ok
 
 ## Other servers' names: `dialect`
 
-Empty by default. With `dialect` set to `rhost`, a function or command SharpMUSH has no name for is looked up among RhostMUSH's names for one it has, in typed input and in any attribute without a dialect flag of its own: `wildmatch()` runs `match()`, `@sudo` runs `@force/inplace`, `@pe` runs `@pemit`. Set to `mux`, the names are TinyMUX's: `strtrunc()` runs `left()`, `iadd()` runs `add()`, `@qmail` runs `@mail/quick`, `@reject` sets HAVEN. SharpMUSH's full names and the game's `@function`s always come first; a dialect's name comes before a SharpMUSH abbreviation, so under `mux` `@reject` is not `@rejectmotd`. Some commands are reached only this way, because a global name would change an abbreviation PennMUSH players type: `@site` under `rhost` (see [@site]), `@folder` under `mux` (see [@folder]), `@femit`, `@fpose`, `@fsay`, `@last`, `@program` and `@quitprogram` under both (see [@femit], [@last] and [@program]), and `@progreset` under `rhost` (see [@progreset]). Under `mux`, `@fe` is `@femit`, not `@feed`. Importing a RhostMUSH or TinyMUX database sets it, and sets the `rhost` or `mux` attribute flag on every attribute it brings in, so imported code keeps reading its server's names if the option is later emptied. See [attribute flags dialect].
+Empty by default. With `dialect` set to `rhost`, a function or command SharpMUSH has no name for is looked up among RhostMUSH's names for one it has, in typed input and in any attribute without a dialect flag of its own: `wildmatch()` runs `match()`, `@sudo` runs `@force/inplace`, `@pe` runs `@pemit`. Set to `mux`, the names are TinyMUX's: `strtrunc()` runs `left()`, `iadd()` runs `add()`, `@qmail` runs `@mail/quick`, `@reject` sets HAVEN. SharpMUSH's full names and the game's `@function`s always come first; a dialect's name comes before a SharpMUSH abbreviation, so under `mux` `@reject` is not `@rejectmotd`. Some commands are reached only this way, because a global name would change an abbreviation PennMUSH players type: `@site` under `rhost` (see [@site]), `@folder` under `mux` (see [@folder]), `@femit`, `@fpose`, `@fsay`, `@last`, `@program` and `@quitprogram` under both (see [@femit], [@last] and [@program]), and `@progreset` under `rhost` (see [@progreset]). Under `mux`, `@fe` is `@femit`, not `@feed`. Importing a RhostMUSH or TinyMUX database sets it, and sets the `rhost` or `mux` attribute flag on every attribute it brings in, so imported code keeps reading its server's names if the option is later emptied. See [attribute flags dialect]. A dialect also changes how some code parses: see [compatibility dialects].
 
 ```sharp dialect=rhost
 > think wildmatch(a b c,b)
@@ -533,4 +538,13 @@ Under `mux`, `@reject` sets `HAVEN`.
 > think get(me/death) - [get(me/kill)]
 Ouch. - Ouch.
 > &death me
+```
+
+## Spaces: `space_compress`
+
+On by default. Text being evaluated has each run of spaces made one space, and the spaces that start it dropped, as on PennMUSH. Off, spaces stay as written, as on a TinyMUX or RhostMUSH game whose own `space_compress` is off. Importing a `netmux.conf` or `netrhost.conf` that turns it off turns this off too.
+
+```sharp space_compress=off
+> think a   b
+a   b
 ```

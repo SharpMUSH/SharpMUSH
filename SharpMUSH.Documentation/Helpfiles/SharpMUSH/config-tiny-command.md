@@ -40,6 +40,7 @@ Options that make SharpMUSH behave like TinyMUSH, TinyMUX or RhostMUSH, for code
 - `protection_flags=<boolean>`: Do NOEXAMINE and NOMODIFY protect, as on TinyMUX? Importing a TinyMUX database turns it on.
 - `attribute_eval_flags=<boolean>`: Is an attribute set `noeval` never evaluated, and a `$`-command set `noparse` matched against the command as typed, as on TinyMUX and RhostMUSH? See [compatibility config attribute eval flags]. Importing a TinyMUX or RhostMUSH database turns it on.
 - `mux_arguments=<boolean>`: Do the set functions, hmac(), lwho(), channels() and textfile() take TinyMUX's arguments? A TinyMUX import turns it on.
+- `space_compress=<boolean>`: Is each run of spaces in evaluated text made one, as on PennMUSH? On by default.
 
 ## RhostMUSH options
 
@@ -53,4 +54,4 @@ The `rhost_` options below are for a game moved from RhostMUSH. Each is off by d
 - `protection_flags=<boolean>`: Do NOEXAMINE, NOMODIFY and NOCONNECT protect, as on RhostMUSH?
 - `rhost_map_args=<boolean>`: Does map() leave %1 empty when no extra arguments are given, as RhostMUSH does, rather than passing the item's position?
 - `sidefx_flag=<boolean>`: Do side-effect functions work only for an object with the SIDEFX flag or the `softcode.sidefx` permission, as on RhostMUSH? Others get `#-1 FUNCTION DISABLED`.
-- `dialect=<name>`: Whose names for functions and commands do typed input and attributes without a dialect flag also read? `rhost` reads RhostMUSH's and `mux` TinyMUX's, after SharpMUSH's own; empty reads none. See [attribute flags dialect].
+- `dialect=<name>`: Whose names for functions and commands do typed input and attributes without a dialect flag also read? `rhost` reads RhostMUSH's and `mux` TinyMUX's, after SharpMUSH's own; empty reads none. See [attribute flags dialect] and [compatibility dialects].

@@ -1,3 +1,4 @@
+using Antlr4.Runtime.Tree;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
@@ -46,8 +47,8 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 		var configuration = visitor.Configuration;
 		ExecutionBudget.Current?.ThrowIfExceeded();
 		// The attribute names the function reads and writes are the dialect's (SoftcodeDialectScope).
-		using var dialect = SoftcodeDialectScope.Enter(
-			SoftcodeDialects.InForce(parser.CurrentState.CurrentEvaluation, configuration.CurrentValue.Compatibility.Dialect));
+		var inForce = SoftcodeDialects.InForce(parser.CurrentState.CurrentEvaluation, configuration.CurrentValue.Compatibility.Dialect);
+		using var dialect = SoftcodeDialectScope.Enter(inForce);
 		var clock = InvocationClock.Start(parser.Clock);
 		var success = true;
 		// The registered name, never the name as typed: a typed name is free text, and every distinct
@@ -148,8 +149,11 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 				args = [];
 			}
 
+			// TinyMUX and RhostMUSH read the commas in a one-argument function's argument as text: strlen(a,b) is 3.
+			var absorbsCommas = args.Length > 1 && inForce?.AbsorbsCommas(attribute.Name) == true;
+
 			// The only arity check a parsed call gets: InvokeValidatedAsync below does not repeat it.
-			if (FunctionDispatcher.ValidateArgumentCount(attribute, name, args.Length, emptyCall) is { } arityError)
+			if (FunctionDispatcher.ValidateArgumentCount(attribute, name, absorbsCommas ? 1 : args.Length, emptyCall) is { } arityError)
 			{
 				success = false;
 				return new CallState(arityError, contextDepth);
@@ -174,6 +178,12 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			if (attribute.Flags.HasFlag(FunctionFlags.Literal))
 			{
 				refinedArguments = LiteralArguments(visitor, context, contextDepth);
+			}
+			else if (absorbsCommas)
+			{
+				refinedArguments = [await AbsorbedArgumentAsync(visitor, context, clock, stripAnsi,
+					deferred: attribute.Flags.HasFlag(FunctionFlags.NoParse))];
+				retainedArguments?.Add(refinedArguments[0].Message.Length);
 			}
 			else if (attribute.Flags.HasFlag(FunctionFlags.NoParse))
 			{
@@ -220,7 +230,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 				definition, executor,
 				configuration.CurrentValue.Function.FunctionSideEffects && !FunctionRestrictionFlags.ForbidsSideEffects(builtinRestriction),
 				services.NotifyService, visitor.Logger,
-				argumentCount: args.Length, sideEffectsNeedGrant: configuration.CurrentValue.Compatibility.SidefxFlag);
+				argumentCount: absorbsCommas ? 1 : args.Length, sideEffectsNeedGrant: configuration.CurrentValue.Compatibility.SidefxFlag);
 
 			return Bounded(result, currentState, limitExceeded, contextDepth);
 		}
@@ -377,6 +387,46 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 	private static List<CallState> LiteralArguments(SharpMUSHParserVisitor visitor, IFunctionContext context,
 		int contextDepth)
 		=> [new CallState(visitor.LiteralArgumentText(context), contextDepth)];
+
+	/// <summary>
+	/// A call's arguments read as one, commas and the spaces after them included, as a dialect reads a function that
+	/// takes one argument (<see cref="SoftcodeDialect.AbsorbsCommas"/>). Each piece is evaluated as the argument it was
+	/// parsed as, so <c>strlen(add(1,2),x)</c> reads <c>3,x</c>; <paramref name="deferred"/> leaves the evaluation to
+	/// the function, as a NoParse argument does.
+	/// </summary>
+	private static async ValueTask<CallState> AbsorbedArgumentAsync(SharpMUSHParserVisitor visitor,
+		IFunctionContext context, InvocationClock clock, bool stripAnsi, bool deferred)
+	{
+		var evaluate = Unclocked(clock, async () =>
+		{
+			var pieces = new List<MString>(context.ChildCount);
+			for (var i = 0; i < context.ChildCount; i++)
+			{
+				switch (context.GetChild(i))
+				{
+					case ITerminalNode { Symbol: { Type: COMMAWS } comma }:
+						pieces.Add(visitor.SliceSource(comma));
+						break;
+					case IEvaluationStringContext argument:
+						pieces.Add((await visitor.EvaluationStringItems(argument))?.Message ?? MarkupText.Empty);
+						break;
+				}
+			}
+
+			var joined = MarkupText.Concat(pieces);
+			return new CallState(stripAnsi ? joined.WithoutVisualMarkup() : joined, context.Depth());
+		});
+
+		if (!deferred)
+		{
+			return await evaluate() ?? CallState.Empty;
+		}
+
+		var text = visitor.LiteralArgumentText(context);
+		return new CallState(stripAnsi ? text.WithoutVisualMarkup() : text, context.Depth(), null,
+			async () => (await evaluate())?.Message)
+		{ ParsedResult = evaluate };
+	}
 
 	/// <summary>Store NoParse arguments as unevaluated text with deferred evaluation.</summary>
 	private static List<CallState> DeferredArguments(SharpMUSHParserVisitor visitor, IFunctionContext context,

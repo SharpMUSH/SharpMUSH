@@ -280,7 +280,7 @@ add(1,2)
 A,b,c
 ```
 
-Where SharpMUSH gives a function an optional argument PennMUSH does not have (see [compatibility arguments]), a PennMUSH-era call with an unescaped comma does not fail: it passes that argument instead. `strlen()` is one.
+Where SharpMUSH gives a function an optional argument PennMUSH does not have (see [compatibility arguments]), a PennMUSH-era call with an unescaped comma does not fail: it passes that argument instead. `strlen()` is one. Under the `mux` and `rhost` dialects, the one-argument functions of TinyMUX and RhostMUSH read their commas as text: see [compatibility dialects commas in one argument functions].
 
 ## A command that crashes says so
 
