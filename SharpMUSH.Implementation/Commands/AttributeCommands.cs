@@ -437,7 +437,7 @@ public partial class Commands
 			: new CallState(ErrorMessages.Returns.PermissionDenied);
 	}
 
-	[SharpCommand(Name = "@WIPE", Switches = [], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
+	[SharpCommand(Name = "@WIPE", Switches = ["REGEXP"], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Wipe(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -463,13 +463,14 @@ public partial class Commands
 		dbref,
 		LocateFlags.All) switch
 		{
-			AnySharpObject targetObject => await WipeAsync(executor, targetObject, maybeAttribute),
+			AnySharpObject targetObject => await WipeAsync(executor, targetObject, maybeAttribute,
+				parser.CurrentState.Switches.Contains("REGEXP")),
 			Error<CallState> error => error.Value
 		};
 	}
 
 	private async ValueTask<Option<CallState>> WipeAsync(AnySharpObject executor, AnySharpObject targetObject,
-		string? maybeAttribute)
+		string? maybeAttribute, bool regexp)
 	{
 		if (await PermissionService.Check(executor, Requires.ControlOf(targetObject)) is PermissionRefusal refused)
 		{
@@ -489,11 +490,38 @@ public partial class Commands
 		// was blocked. ClearAttributeAsync's wipe branch does exactly that internally, so this
 		// command has nothing left to report itself - doing so here too would either duplicate or
 		// (worse) silently override one class of outcome with a generic "success" line.
-		var attributePattern = string.IsNullOrEmpty(maybeAttribute) ? "**" : maybeAttribute;
-		await AttributeService.ClearAttributeAsync(executor, targetObject, attributePattern,
-			IAttributeService.AttributePatternMode.Wildcard);
+		if (regexp && !await IsValidAttributeRegexAsync(executor, maybeAttribute))
+		{
+			return new CallState(ErrorMessages.Returns.InvalidRegexp);
+		}
+
+		// RhostMUSH's /regexp reads the pattern as a regular expression.
+		var (attributePattern, mode) = (string.IsNullOrEmpty(maybeAttribute), regexp) switch
+		{
+			(true, true) => (".*", IAttributeService.AttributePatternMode.Regex),
+			(true, false) => ("**", IAttributeService.AttributePatternMode.Wildcard),
+			(false, true) => (maybeAttribute!, IAttributeService.AttributePatternMode.Regex),
+			(false, false) => (maybeAttribute!, IAttributeService.AttributePatternMode.Wildcard)
+		};
+		await AttributeService.ClearAttributeAsync(executor, targetObject, attributePattern, mode);
 
 		return new CallState(string.Empty);
+	}
+
+	/// <summary>Whether <paramref name="pattern"/> compiles as a regular expression; says so when it does not.</summary>
+	private async ValueTask<bool> IsValidAttributeRegexAsync(AnySharpObject executor, string? pattern)
+	{
+		try
+		{
+			SoftcodeRegex.Create(pattern ?? string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+			return true;
+		}
+		// An invalid pattern: the Regex constructor's RegexParseException is an ArgumentException.
+		catch (ArgumentException)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandInvalidRegexp), executor);
+			return false;
+		}
 	}
 
 	[SharpCommand(Name = "@EDIT", Switches = ["FIRST", "CHECK", "QUIET", "REGEXP", "NOCASE", "ALL"],

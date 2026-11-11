@@ -912,7 +912,8 @@ public static class BuildingHelpers
 		AnySharpObject target,
 		MString? newName,
 		bool preserve,
-		MString? requestedDbref = null)
+		MString? requestedDbref = null,
+		CloneOptions options = default)
 	{
 		if (await permissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal notControlled)
 		{
@@ -950,6 +951,18 @@ public static class BuildingHelpers
 		// their own inventory instead of beside the original.
 		var into = await executor.Where();
 
+		// TinyMUX's and RhostMUSH's /inventory: a thing cloned into the cloner's own hands, when the cloner
+		// can hold one.
+		if (options.Inventory && target.IsThing)
+		{
+			into = executor switch
+			{
+				SharpPlayer player => player,
+				SharpThing thing => thing,
+				_ => into
+			};
+		}
+
 		// "We give the clone the same modification time that its other clone has, but update the
 		// creation time" (create.c:653-655). A null creation time is now; the modification time is the
 		// original's.
@@ -967,7 +980,7 @@ public static class BuildingHelpers
 			// Outside the gate: ClonedAsync fires OBJECT`CREATE and the plugin hook, and queues ACLONE.
 			DBRef cloneDbRef => await ClonedAsync(parser, mediator, notifyService, attributeService,
 				flagAndPowerService, didItService, eventService, logger, executor, target, owner, preserve,
-				cloneDbRef),
+				cloneDbRef, options.FromParent),
 			// A guest refusal, an exhausted quota and a dbref the provider would not give up are
 			// three different answers; the caller is handed the one it was actually given.
 			Error<string> refused => refused
@@ -988,7 +1001,8 @@ public static class BuildingHelpers
 		AnySharpObject target,
 		SharpPlayer owner,
 		bool preserve,
-		DBRef cloneDbRef)
+		DBRef cloneDbRef,
+		bool fromParent)
 	{
 		if (await mediator.Send(new GetObjectNodeQuery(cloneDbRef)) is not AnySharpObject clonedObj)
 		{
@@ -1001,7 +1015,12 @@ public static class BuildingHelpers
 				.LastOrDefaultAsync())?.Value
 			: null;
 
-		await CopyAttributesAsync(mediator, attributeService, logger, executor, target, clonedObj, owner);
+		// TinyMUX's and RhostMUSH's /parent: the clone inherits the original's attributes as its child
+		// rather than holding copies.
+		if (!fromParent)
+		{
+			await CopyAttributesAsync(mediator, attributeService, logger, executor, target, clonedObj, owner);
+		}
 
 		if (cloneAliases is not null)
 		{
@@ -1038,7 +1057,11 @@ public static class BuildingHelpers
 				break;
 		}
 
-		if (await target.Object().Parent.WithCancellation(CancellationToken.None) is AnySharpObject parent)
+		if (fromParent)
+		{
+			await mediator.Send(new SetObjectParentCommand(clonedObj, target));
+		}
+		else if (await target.Object().Parent.WithCancellation(CancellationToken.None) is AnySharpObject parent)
 		{
 			await mediator.Send(new SetObjectParentCommand(clonedObj, parent));
 		}
@@ -1581,3 +1604,10 @@ public static class BuildingHelpers
 		SharpRoom room => await room.Location.WithCancellation(CancellationToken.None)
 	};
 }
+
+/// <summary>
+/// How <see cref="BuildingHelpers.CloneAsync"/> places and fills a clone: <paramref name="Inventory"/> puts a cloned
+/// thing in the cloner's inventory, and <paramref name="FromParent"/> makes the original the clone's parent instead of
+/// copying its attributes.
+/// </summary>
+public readonly record struct CloneOptions(bool Inventory = false, bool FromParent = false);

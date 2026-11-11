@@ -37,7 +37,7 @@ You can either @decompile an entire object, or just certain parts of it. To @dec
 ```sharp
 @decompile <object>/<attribute pattern> [ ... <attribute patternN>]
 ```
-including each attribute. Attribute patterns can be wildcards.
+including each attribute. Attribute patterns can be wildcards, or, with `/regexp`, a case-insensitive regular expression matched anywhere in the attribute's name.
 
 ## Output switches
 

@@ -602,7 +602,7 @@ public partial class Commands
 		return new CallState($"#{targetLocation.Object().DBRef.Number}");
 	}
 
-	[SharpCommand(Name = "@DECOMPILE", Output = CommandOutput.Value, Switches = ["DB", "NAME", "PREFIX", "TF", "FLAGS", "ATTRIBS", "SKIPDEFAULTS"],
+	[SharpCommand(Name = "@DECOMPILE", Output = CommandOutput.Value, Switches = ["DB", "NAME", "PREFIX", "TF", "FLAGS", "ATTRIBS", "SKIPDEFAULTS", "REGEXP"],
 		Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0, ParameterNames = ["object", "name"])]
 	public async ValueTask<Option<CallState>> Decompile(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -637,6 +637,12 @@ public partial class Commands
 		}
 
 		var obj = target.Object();
+		if (switches.Contains("REGEXP") && !string.IsNullOrEmpty(attributePattern)
+			&& !await IsValidAttributeRegexAsync(executor, attributePattern))
+		{
+			return new CallState(ErrorMessages.Returns.InvalidRegexp);
+		}
+
 		var hasPattern = !string.IsNullOrEmpty(attributePattern);
 		// NAME is the default: the lines name the object unless /DB asks for its dbref.
 		var useDbRef = switches.Contains("DB");
@@ -653,7 +659,7 @@ public partial class Commands
 
 		if (showAttribs)
 		{
-			await DecompileAttributesAsync(decompile, target, attributePattern);
+			await DecompileAttributesAsync(decompile, target, attributePattern, switches.Contains("REGEXP"));
 		}
 
 		foreach (var output in decompile.Outputs)
@@ -781,15 +787,19 @@ public partial class Commands
 		}
 	}
 
-	private async ValueTask DecompileAttributesAsync(DecompileRun run, AnySharpObject target, string? attributePattern)
+	private async ValueTask DecompileAttributesAsync(DecompileRun run, AnySharpObject target, string? attributePattern,
+		bool regexp)
 	{
-		// Penn's do_decompile reads "**" when no pattern is given: the whole tree, not only its roots.
+		// Penn's do_decompile reads "**" when no pattern is given: the whole tree, not only its roots. RhostMUSH's
+		// /regexp reads a pattern as a regular expression.
 		var atrs = await AttributeService.GetAttributePatternAsync(
 			run.Executor,
 			target,
 			string.IsNullOrEmpty(attributePattern) ? "**" : attributePattern,
 			false, // don't check parents for decompile
-			IAttributeService.AttributePatternMode.Wildcard);
+			regexp && !string.IsNullOrEmpty(attributePattern)
+				? IAttributeService.AttributePatternMode.Regex
+				: IAttributeService.AttributePatternMode.Wildcard);
 
 		if (atrs is not SharpAttribute[] decompiledAttributes)
 		{
