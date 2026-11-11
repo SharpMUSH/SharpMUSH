@@ -138,6 +138,20 @@
     "file": "activity-function.md"
   },
   {
+    "id": "addcommand-command",
+    "lookup": "@addcommand",
+    "title": "@addcommand",
+    "aliases": [
+      "@delcommand",
+      "@listcommands",
+      "@dialect_addcommand",
+      "@dialect_delcommand",
+      "@dialect_listcommands"
+    ],
+    "sections": [],
+    "file": "addcommand-command.md"
+  },
+  {
     "id": "administration",
     "lookup": "administration",
     "title": "Administration",
