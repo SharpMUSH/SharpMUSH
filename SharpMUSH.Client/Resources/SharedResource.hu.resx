@@ -5925,7 +5925,7 @@
     <value>Egyéni szín</value>
   </data>
   <data name="NavThemeAccentAdjusted" xml:space="preserve">
-    <value>{0} színnel jelenik meg, hogy ezen a témán is olvasható maradjon.</value>
+    <value>A kiemelőszín itt kicsit világosabban vagy sötétebben jelenik meg, hogy ezen a témán is olvasható maradjon.</value>
   </data>
   <data name="NavThemeSaveFailed" xml:space="preserve">
     <value>Nem sikerült menteni: {0}</value>
@@ -9496,5 +9496,38 @@
   </data>
   <data name="GuideIdentityIntroductionExample" xml:space="preserve">
     <value>Az eső és a régi titkok városa, ahol minden történet a fogadóban kezdődik.</value>
+  </data>
+  <data name="NavThemePreviewKicker" xml:space="preserve">
+    <value>Ma este</value>
+  </data>
+  <data name="NavThemePreviewCardTitle" xml:space="preserve">
+    <value>A kikötő alkonyatkor</value>
+  </data>
+  <data name="NavThemePreviewText" xml:space="preserve">
+    <value>A rakparton égnek a lámpások.</value>
+  </data>
+  <data name="NavThemePreviewLink" xml:space="preserve">
+    <value>Tovább</value>
+  </data>
+  <data name="NavThemePreviewButton" xml:space="preserve">
+    <value>Csatlakozás</value>
+  </data>
+  <data name="NavThemePreviewTag" xml:space="preserve">
+    <value>Nyitott jelenet</value>
+  </data>
+  <data name="NavThemeTry" xml:space="preserve">
+    <value>Kipróbálás</value>
+  </data>
+  <data name="NavThemeTryNamed" xml:space="preserve">
+    <value>{0} kipróbálása a portálon</value>
+  </data>
+  <data name="NavThemeTrying" xml:space="preserve">
+    <value>A(z) {0} témát próbálod ki ehhez: {1}. Semmi sem mentődik, amíg meg nem tartod.</value>
+  </data>
+  <data name="NavThemeTryKeep" xml:space="preserve">
+    <value>Megtartom</value>
+  </data>
+  <data name="NavThemeTryStop" xml:space="preserve">
+    <value>Próba vége</value>
   </data>
 </root>

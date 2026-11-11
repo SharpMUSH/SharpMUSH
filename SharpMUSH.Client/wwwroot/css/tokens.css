@@ -567,10 +567,57 @@
 	}
 }
 
-/* A card's background: the frame's gradient layers over the surface. Worked out again wherever a theme's
-   attributes are (<html>, or an element previewing another theme), so each gets its own. */
+/* What a theme's parts start from, and what is worked out from its colours: a card's background (the frame's
+   gradient layers over the surface), the colours the texture's and frame's drawings are filled with, the kickers'
+   face. Set again wherever a theme's attributes are (<html>, or an element previewing another theme), so a preview
+   starts from the defaults rather than the worn theme's parts, and its colours are its own. The parts' rules
+   (css/themes/) come in a later layer and set what each part changes. */
 :root, [data-scheme] {
 	--card-bg: var(--card-marks), var(--surface);
+	--font-kicker: var(--font-ui);
+	--font-title-weight: 700;
+	--texture: none;
+	--texture-size: auto;
+	--texture-opacity: 1;
+	--no-drawing: linear-gradient(transparent, transparent);
+	--texture-mask-text: var(--no-drawing);
+	--texture-mask-accent: var(--no-drawing);
+	--texture-mask-accent-2: var(--no-drawing);
+	--texture-mask-accent-3: var(--no-drawing);
+	--texture-mask-border: var(--no-drawing);
+	--texture-ink-text: var(--text);
+	--texture-ink-accent: var(--accent);
+	--texture-ink-accent-2: var(--accent-2);
+	--texture-ink-accent-3: var(--accent-3);
+	--texture-ink-border: var(--border);
+	--ornament-before: none;
+	--ornament-after: none;
+	--title-underline: none;
+	--title-underline-pad: 0px;
+	--title-transform: none;
+	--title-tracking: normal;
+	--title-style: normal;
+	--title-underline-height: 2px;
+	--title-color: var(--text);
+	--title-shadow: none;
+	--image-filter: none;
+	--card-marks: none;
+	--card-mask-text: var(--no-drawing);
+	--card-mask-accent: var(--no-drawing);
+	--card-mask-accent-2: var(--no-drawing);
+	--card-mask-accent-3: var(--no-drawing);
+	--card-mask-border: var(--no-drawing);
+	--card-mask-grain: var(--no-drawing);
+	--card-ink-text: var(--text);
+	--card-ink-accent: var(--accent);
+	--card-ink-accent-2: var(--accent-2);
+	--card-ink-accent-3: var(--accent-3);
+	--card-ink-border: var(--border);
+	--card-ink-grain: var(--text);
+	--card-border-style: solid;
+	--card-border-width: 1px;
+	--card-shadow: none;
+	--hero-marks: var(--no-drawing);
 }
 
 /* CJK locales replace the whole mono stack instead of falling back per glyph. Cascadia's

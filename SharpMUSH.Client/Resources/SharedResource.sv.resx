@@ -5925,7 +5925,7 @@
     <value>Egen färg</value>
   </data>
   <data name="NavThemeAccentAdjusted" xml:space="preserve">
-    <value>Visas som {0} så att den går att läsa på det här temat.</value>
+    <value>Din accentfärg visas lite ljusare eller mörkare här så att den förblir läsbar i det här temat.</value>
   </data>
   <data name="NavThemeSaveFailed" xml:space="preserve">
     <value>Kunde inte spara: {0}</value>
@@ -9496,5 +9496,38 @@
   </data>
   <data name="GuideIdentityIntroductionExample" xml:space="preserve">
     <value>En stad av regn och gamla hemligheter, där varje berättelse börjar på krogen.</value>
+  </data>
+  <data name="NavThemePreviewKicker" xml:space="preserve">
+    <value>I kväll</value>
+  </data>
+  <data name="NavThemePreviewCardTitle" xml:space="preserve">
+    <value>Hamnen i skymningen</value>
+  </data>
+  <data name="NavThemePreviewText" xml:space="preserve">
+    <value>Lyktorna är tända längs kajen.</value>
+  </data>
+  <data name="NavThemePreviewLink" xml:space="preserve">
+    <value>Läs mer</value>
+  </data>
+  <data name="NavThemePreviewButton" xml:space="preserve">
+    <value>Gå med</value>
+  </data>
+  <data name="NavThemePreviewTag" xml:space="preserve">
+    <value>Öppen scen</value>
+  </data>
+  <data name="NavThemeTry" xml:space="preserve">
+    <value>Prova</value>
+  </data>
+  <data name="NavThemeTryNamed" xml:space="preserve">
+    <value>Prova {0} i portalen</value>
+  </data>
+  <data name="NavThemeTrying" xml:space="preserve">
+    <value>Du provar {0} för {1}. Inget sparas förrän du behåller det.</value>
+  </data>
+  <data name="NavThemeTryKeep" xml:space="preserve">
+    <value>Behåll det</value>
+  </data>
+  <data name="NavThemeTryStop" xml:space="preserve">
+    <value>Sluta prova</value>
   </data>
 </root>

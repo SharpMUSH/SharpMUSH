@@ -1,8 +1,41 @@
 .adm-theme-layout {
 	display: grid;
 	grid-template-columns: 15rem minmax(0, 1fr);
+	/* The preview's row takes only its own height; the theme list's length goes to the editor's row. */
+	grid-template-rows: auto 1fr;
+	grid-template-areas: "list preview" "list editor";
 	gap: var(--space-5);
 	align-items: start;
+}
+
+.adm-theme-list { grid-area: list; }
+.adm-theme-layout ::deep .adm-theme-editor { grid-area: editor; }
+
+/* The draft as a small page: above the editor, or beside it, held in view, where the page is wide enough. */
+.adm-theme-preview {
+	grid-area: preview;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+	max-width: 26rem;
+	min-width: 0;
+}
+
+.adm-theme-preview ::deep .theme-preview {
+	font-size: var(--text-sm);
+}
+
+@container page (min-width: 90rem) {
+	.adm-theme-layout {
+		grid-template-columns: 15rem minmax(0, 1fr) 20rem;
+		grid-template-rows: auto;
+		grid-template-areas: "list editor preview";
+	}
+
+	.adm-theme-preview {
+		position: sticky;
+		top: var(--space-5);
+	}
 }
 
 .adm-theme-list {
@@ -324,6 +357,8 @@
 @container page (max-width: 48rem) {
 	.adm-theme-layout {
 		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: auto;
+		grid-template-areas: "list" "preview" "editor";
 	}
 
 	.adm-theme-list {

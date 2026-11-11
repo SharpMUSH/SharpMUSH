@@ -5925,7 +5925,7 @@
     <value>Eigene Farbe</value>
   </data>
   <data name="NavThemeAccentAdjusted" xml:space="preserve">
-    <value>Wird als {0} angezeigt, damit sie in diesem Design lesbar bleibt.</value>
+    <value>Deine Akzentfarbe wird hier etwas heller oder dunkler gezeigt, damit sie in diesem Design lesbar bleibt.</value>
   </data>
   <data name="NavThemeSaveFailed" xml:space="preserve">
     <value>Konnte nicht gespeichert werden: {0}</value>
@@ -9496,5 +9496,38 @@
   </data>
   <data name="GuideIdentityIntroductionExample" xml:space="preserve">
     <value>Eine Stadt aus Regen und alten Geheimnissen, in der jede Geschichte in der Taverne beginnt.</value>
+  </data>
+  <data name="NavThemePreviewKicker" xml:space="preserve">
+    <value>Heute Abend</value>
+  </data>
+  <data name="NavThemePreviewCardTitle" xml:space="preserve">
+    <value>Der Hafen in der Dämmerung</value>
+  </data>
+  <data name="NavThemePreviewText" xml:space="preserve">
+    <value>Am Kai brennen die Laternen.</value>
+  </data>
+  <data name="NavThemePreviewLink" xml:space="preserve">
+    <value>Weiterlesen</value>
+  </data>
+  <data name="NavThemePreviewButton" xml:space="preserve">
+    <value>Mitmachen</value>
+  </data>
+  <data name="NavThemePreviewTag" xml:space="preserve">
+    <value>Offene Szene</value>
+  </data>
+  <data name="NavThemeTry" xml:space="preserve">
+    <value>Ausprobieren</value>
+  </data>
+  <data name="NavThemeTryNamed" xml:space="preserve">
+    <value>{0} im Portal ausprobieren</value>
+  </data>
+  <data name="NavThemeTrying" xml:space="preserve">
+    <value>Du probierst {0} für {1} aus. Nichts wird gespeichert, bis du es behältst.</value>
+  </data>
+  <data name="NavThemeTryKeep" xml:space="preserve">
+    <value>Behalten</value>
+  </data>
+  <data name="NavThemeTryStop" xml:space="preserve">
+    <value>Nicht mehr ausprobieren</value>
   </data>
 </root>

@@ -2,18 +2,16 @@
 @using SharpMUSH.Library.Models.Packages
 @inject IStringLocalizer<SharedResource> Loc
 
-@* One package in the remote library: what it ships, its version and install state, and the queue, review and README actions. *@
+@* One package in the remote library: its name, what it does and what it needs, whether it is installed, and the version,
+   queue and review actions; the id, version, contents and origin wait under Details, and the README is in the row's
+   menu. A package with no release tags offers only the dev channel; the library says that once, above its lists. *@
 <div class="lib-row">
 <PackageRow Icon="@PackageKinds.Icon(Primary)" Kind="@Primary.ToString().ToLowerInvariant()" Bridge="@Entry.Bridge"
             IconTitle="@(Entry.Bridge ? Loc["PkgKindBridgeOf", PackageKinds.Name(Primary, Loc)] : PackageKinds.Name(Primary, Loc))"
             Name="@PackageLibraryGroups.Name(Entry)"
-            Id="@(Entry.Title is null ? null : Entry.PackageId)">
-    <Tags>
-        <PackageKindTags Contents="@Entry.Contents" Bridge="@Entry.Bridge" Joins="@Entry.DependsOn" />
-        @if (Entry.Version is { } version)
-        {
-            <Pill Tag="true">v@(version)</Pill>
-        }
+            Id="@(Entry.Title is null ? null : Entry.PackageId)"
+            Description="@(Entry.Description ?? Loc["PkgNoDescription"])">
+    <Status>
         @if (Installed is not null)
         {
             <span class="lib-installed">
@@ -21,9 +19,8 @@
                 @Loc["PkgBrowseInstalled", Installed.Version]
             </span>
         }
-    </Tags>
-    <Meta>
-        <span class="lib-desc">@(Entry.Description ?? Loc["PkgNoDescription"])</span>
+    </Status>
+    <Notes>
         @if (!Entry.Bridge && Entry.DependsOn is { Count: > 0 } needs)
         {
             <span class="lib-needs">
@@ -42,18 +39,23 @@
                 }
             </span>
         }
-        @if (Installed is not null && (!string.Equals(Installed.SourceRepo, SnapshotUrl, StringComparison.Ordinal)
-            || !string.Equals(Installed.SourcePath ?? "", Entry.Path, StringComparison.Ordinal)))
-        {
-            <span class="lib-note">@Loc["PkgBrowseInstalledOrigin", Installed.SourceRepo, string.IsNullOrEmpty(Installed.SourcePath) ? "/" : Installed.SourcePath]</span>
-        }
         @if (Entry.PackageId is null)
         {
             <span class="lib-warn">@Loc["PkgManifestParseFailed"]</span>
         }
-        else if (Entry.Versions.Count == 0)
+    </Notes>
+    <Tags>
+        @if (Entry.Version is { } version)
         {
-            <span>@Loc["PkgNoReleaseTags"]</span>
+            <Pill Tag="true">v@(version)</Pill>
+        }
+        <PackageKindTags Contents="@Entry.Contents" Bridge="@Entry.Bridge" Joins="@Entry.DependsOn" />
+    </Tags>
+    <Meta>
+        @if (Installed is not null && (!string.Equals(Installed.SourceRepo, SnapshotUrl, StringComparison.Ordinal)
+            || !string.Equals(Installed.SourcePath ?? "", Entry.Path, StringComparison.Ordinal)))
+        {
+            <span class="lib-note">@Loc["PkgBrowseInstalledOrigin", Installed.SourceRepo, string.IsNullOrEmpty(Installed.SourcePath) ? "/" : Installed.SourcePath]</span>
         }
     </Meta>
     <Actions>
@@ -78,10 +80,9 @@
                        aria-pressed="false" Disabled="@(Entry.PackageId is null)" OnClick="@OnQueue">@QueueLabel</MudButton>
         }
         <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@OnReview">@Loc["PkgReviewInstall"]</MudButton>
-        <MudTooltip Text="@Loc["PkgShowReadme", Entry.PackageId ?? Entry.Path]">
-            <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" aria-label="@Loc["PkgShowReadme", Entry.PackageId ?? Entry.Path]"
-                           OnClick="@OnReadme" />
-        </MudTooltip>
+        <RowMenu Label="@Loc["NavRowMore", PackageLibraryGroups.Name(Entry)]">
+            <RowMenuItem Icon="@Icons.Material.Outlined.Description" OnClick="@OnReadme">@Loc["PkgShowReadme", Entry.PackageId ?? Entry.Path]</RowMenuItem>
+        </RowMenu>
     </Actions>
 </PackageRow>
 </div>

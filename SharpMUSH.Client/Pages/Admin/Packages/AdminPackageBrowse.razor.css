@@ -173,3 +173,13 @@
 
 /* The dependency graph, in place of the list. */
 .lib-graph { padding: var(--space-5) var(--space-5); }
+
+/* Said once above the lists, rather than on every row: which packages offer only the dev channel. */
+.lib-untagged {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--text-dim);
+}

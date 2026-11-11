@@ -5925,7 +5925,7 @@
     <value>Color propio</value>
   </data>
   <data name="NavThemeAccentAdjusted" xml:space="preserve">
-    <value>Se muestra como {0} para que siga siendo legible en este tema.</value>
+    <value>Tu color de acento se muestra un poco más claro u oscuro aquí para que siga siendo legible en este tema.</value>
   </data>
   <data name="NavThemeSaveFailed" xml:space="preserve">
     <value>No se pudo guardar: {0}</value>
@@ -9496,5 +9496,38 @@
   </data>
   <data name="GuideIdentityIntroductionExample" xml:space="preserve">
     <value>Una ciudad de lluvia y viejos secretos, donde cada historia empieza en la taberna.</value>
+  </data>
+  <data name="NavThemePreviewKicker" xml:space="preserve">
+    <value>Esta noche</value>
+  </data>
+  <data name="NavThemePreviewCardTitle" xml:space="preserve">
+    <value>El puerto al anochecer</value>
+  </data>
+  <data name="NavThemePreviewText" xml:space="preserve">
+    <value>Los faroles del muelle están encendidos.</value>
+  </data>
+  <data name="NavThemePreviewLink" xml:space="preserve">
+    <value>Leer más</value>
+  </data>
+  <data name="NavThemePreviewButton" xml:space="preserve">
+    <value>Unirse</value>
+  </data>
+  <data name="NavThemePreviewTag" xml:space="preserve">
+    <value>Escena abierta</value>
+  </data>
+  <data name="NavThemeTry" xml:space="preserve">
+    <value>Probar</value>
+  </data>
+  <data name="NavThemeTryNamed" xml:space="preserve">
+    <value>Probar {0} en el portal</value>
+  </data>
+  <data name="NavThemeTrying" xml:space="preserve">
+    <value>Estás probando {0} para {1}. No se guarda nada hasta que lo conserves.</value>
+  </data>
+  <data name="NavThemeTryKeep" xml:space="preserve">
+    <value>Conservarlo</value>
+  </data>
+  <data name="NavThemeTryStop" xml:space="preserve">
+    <value>Dejar de probar</value>
   </data>
 </root>

@@ -1,0 +1,42 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+@* A small page in a theme, for choosing one: the theme's texture, a rail with the current item lit, a page title with
+   its ornaments, and a card in its frame holding a title, a line of text with a link, a button and a tag. It carries
+   every token and part of the theme itself, so the rules in css/themes/ draw a theme that is not the one in use,
+   and a theme added later is drawn the same way. A theme's own stylesheet is left out: it styles the portal's
+   pages, not this picture. Decoration for sighted readers; the choice it sits in carries the theme's name. *@
+<span class="theme-preview @Class" style="@Style" aria-hidden="true" @attributes="Parts">
+    <ThemeTexture Contained="true" />
+    <span class="theme-preview-rail">
+        <i class="is-on"></i>
+        <i></i>
+        <i></i>
+    </span>
+    <span class="theme-preview-page">
+        <span class="theme-preview-kicker">@Loc["NavThemePreviewKicker"]</span>
+        <span class="theme-preview-title">@(Title ?? Theme.Name)</span>
+        <span class="theme-preview-card">
+            <ThemeMarks />
+            <span class="theme-preview-card-title">@Loc["NavThemePreviewCardTitle"]</span>
+            <span class="theme-preview-text">@Loc["NavThemePreviewText"] <span class="theme-preview-link">@Loc["NavThemePreviewLink"]</span></span>
+            <span class="theme-preview-row">
+                <span class="theme-preview-button">@Loc["NavThemePreviewButton"]</span>
+                <span class="theme-preview-tag">@Loc["NavThemePreviewTag"]</span>
+            </span>
+        </span>
+    </span>
+</span>
+
+@code {
+    [Parameter, EditorRequired] public ResolvedTheme Theme { get; set; } = default!;
+
+    /// <summary>The page title drawn in the preview; the theme's name when null.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Every token the theme sets, then the accent, so the preview is painted as the portal would be.</summary>
+    private string Style => string.Concat(Theme.Tokens.Select(t => $"--{t.Key}:{t.Value};")) + $"--accent:{Theme.Accent};color-scheme:{(Theme.Dark ? "dark" : "light")};";
+
+    private Dictionary<string, object> Parts => Theme.Parts.ToDictionary(p => "data-" + p.Key, p => (object)p.Value);
+}

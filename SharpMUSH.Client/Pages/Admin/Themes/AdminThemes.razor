@@ -13,8 +13,9 @@
 
 @* The theme editor: the game's themes as named sets of the design tokens and style choices, which ones a
    character that chose none sees (one for browsers that prefer dark, one for light), and which ones players may
-   choose. Built-in themes are read-only; "Duplicate" starts an editable copy. "Try on the portal" paints the whole
-   portal with the unsaved draft until it is turned off or the page is left. *@
+   choose. Built-in themes are read-only; "Duplicate" starts an editable copy. The preview beside the editor is a
+   small page in the draft, redrawn on every change; "Try on the portal" paints the whole portal with the unsaved
+   draft until it is turned off or the page is left. *@
 
 <AdminPageTitle Page="@Loc["AdmThemesTitle"]" />
 
@@ -65,6 +66,14 @@
                     </div>
                 }
             </nav>
+
+            @if (_draft is not null)
+            {
+                <aside class="adm-theme-preview" id="theme-preview" aria-label="@Loc["AdmThemesPreview"]">
+                    <h3 class="adm-theme-group-title">@Loc["AdmThemesPreview"]</h3>
+                    <ThemePreview Theme="Draft" Title="@(string.IsNullOrWhiteSpace(_draft.Name) ? Loc["AdmThemesUntitled"] : _draft.Name)" />
+                </aside>
+            }
 
             @if (_draft is not null)
             {

@@ -5925,7 +5925,7 @@
     <value>Vlastita boja</value>
   </data>
   <data name="NavThemeAccentAdjusted" xml:space="preserve">
-    <value>Prikazuje se kao {0} kako bi ostala čitljiva na ovoj temi.</value>
+    <value>Tvoja naglasna boja ovdje je prikazana malo svjetlije ili tamnije kako bi ostala čitljiva na ovoj temi.</value>
   </data>
   <data name="NavThemeSaveFailed" xml:space="preserve">
     <value>Spremanje nije uspjelo: {0}</value>
@@ -9496,5 +9496,38 @@
   </data>
   <data name="GuideIdentityIntroductionExample" xml:space="preserve">
     <value>Grad kiše i starih tajni, gdje svaka priča počinje u krčmi.</value>
+  </data>
+  <data name="NavThemePreviewKicker" xml:space="preserve">
+    <value>Večeras</value>
+  </data>
+  <data name="NavThemePreviewCardTitle" xml:space="preserve">
+    <value>Luka u sumrak</value>
+  </data>
+  <data name="NavThemePreviewText" xml:space="preserve">
+    <value>Na obali gore fenjeri.</value>
+  </data>
+  <data name="NavThemePreviewLink" xml:space="preserve">
+    <value>Pročitaj više</value>
+  </data>
+  <data name="NavThemePreviewButton" xml:space="preserve">
+    <value>Pridruži se</value>
+  </data>
+  <data name="NavThemePreviewTag" xml:space="preserve">
+    <value>Otvorena scena</value>
+  </data>
+  <data name="NavThemeTry" xml:space="preserve">
+    <value>Isprobaj</value>
+  </data>
+  <data name="NavThemeTryNamed" xml:space="preserve">
+    <value>Isprobaj {0} na portalu</value>
+  </data>
+  <data name="NavThemeTrying" xml:space="preserve">
+    <value>Isprobavaš {0} za {1}. Ništa se ne sprema dok to ne zadržiš.</value>
+  </data>
+  <data name="NavThemeTryKeep" xml:space="preserve">
+    <value>Zadrži</value>
+  </data>
+  <data name="NavThemeTryStop" xml:space="preserve">
+    <value>Prestani isprobavati</value>
   </data>
 </root>

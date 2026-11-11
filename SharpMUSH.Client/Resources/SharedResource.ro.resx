@@ -5925,7 +5925,7 @@
     <value>Culoare proprie</value>
   </data>
   <data name="NavThemeAccentAdjusted" xml:space="preserve">
-    <value>Afișată ca {0} ca să rămână lizibilă pe această temă.</value>
+    <value>Culoarea ta de accent apare aici puțin mai deschisă sau mai închisă, ca să rămână lizibilă pe această temă.</value>
   </data>
   <data name="NavThemeSaveFailed" xml:space="preserve">
     <value>Nu s-a putut salva: {0}</value>
@@ -9496,5 +9496,38 @@
   </data>
   <data name="GuideIdentityIntroductionExample" xml:space="preserve">
     <value>Un oraș al ploii și al vechilor secrete, unde fiecare poveste începe la han.</value>
+  </data>
+  <data name="NavThemePreviewKicker" xml:space="preserve">
+    <value>În seara asta</value>
+  </data>
+  <data name="NavThemePreviewCardTitle" xml:space="preserve">
+    <value>Portul la amurg</value>
+  </data>
+  <data name="NavThemePreviewText" xml:space="preserve">
+    <value>Felinarele de pe chei sunt aprinse.</value>
+  </data>
+  <data name="NavThemePreviewLink" xml:space="preserve">
+    <value>Citește mai mult</value>
+  </data>
+  <data name="NavThemePreviewButton" xml:space="preserve">
+    <value>Alătură-te</value>
+  </data>
+  <data name="NavThemePreviewTag" xml:space="preserve">
+    <value>Scenă deschisă</value>
+  </data>
+  <data name="NavThemeTry" xml:space="preserve">
+    <value>Încearcă</value>
+  </data>
+  <data name="NavThemeTryNamed" xml:space="preserve">
+    <value>Încearcă {0} în portal</value>
+  </data>
+  <data name="NavThemeTrying" xml:space="preserve">
+    <value>Încerci {0} pentru {1}. Nimic nu se salvează până nu îl păstrezi.</value>
+  </data>
+  <data name="NavThemeTryKeep" xml:space="preserve">
+    <value>Păstrează</value>
+  </data>
+  <data name="NavThemeTryStop" xml:space="preserve">
+    <value>Oprește încercarea</value>
   </data>
 </root>

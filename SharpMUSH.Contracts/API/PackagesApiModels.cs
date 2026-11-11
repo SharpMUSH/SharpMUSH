@@ -44,7 +44,11 @@ public sealed record InstalledPackageDto(
 	IReadOnlyList<string> Dependents,
 	string? Title = null,
 	int WikiPageCount = 0,
-	bool Bridge = false);
+	bool Bridge = false)
+{
+	/// <summary>What the package does, from its manifest, when the server knows it (a bundled package); else null.</summary>
+	public string? Description { get; init; }
+}
 
 /// <summary>One revision in a package's history (snapshot payloads omitted).</summary>
 public sealed record RevisionDto(int Revision, string Kind, string Version, string Commit, DateTimeOffset AppliedAt);

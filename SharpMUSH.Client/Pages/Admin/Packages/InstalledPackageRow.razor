@@ -1,22 +1,17 @@
 @using SharpMUSH.Library.Models.Packages
 @inject IStringLocalizer<SharedResource> Loc
 
-@* An installed package: its kind, version, source and update state, and the check, README and history actions, and uninstall in the row's menu. *@
+@* An installed package: its name, what it does and whether it needs an update, with the version, source and counts
+   under Details. The check action stays on the row; README, history and uninstall are in the row's menu. *@
 <PackageRow Icon="@PackageKinds.Icon(Main)" Kind="@Main.ToString().ToLowerInvariant()" Bridge="@Package.Bridge"
             IconTitle="@(Package.Bridge ? Loc["PkgKindBridgeOf", PackageKinds.Name(Main, Loc)] : PackageKinds.Name(Main, Loc))" Name="@(Package.Title ?? Package.Package.Id)"
-            Id="@(Package.Title is null ? null : Package.Package.Id)">
-    <Tags>
-        <PackageKindTags Contents="@Contents" Bridge="@Package.Bridge" />
-        <Pill Tag="true">v@(Package.Package.Version)</Pill>
+            Id="@(Package.Title is null ? null : Package.Package.Id)" Description="@Package.Description">
+    <Status>
         @if (Package.Package.PastMaximum is { } past)
         {
             <span title="@Loc["PkgPastMaximumTooltip", past.Server, past.Maximum, past.At.ToString("yyyy-MM-dd")]">
                 <Pill Tag="true" Warn="true">@Loc["PkgPastMaximumChip", past.Maximum]</Pill>
             </span>
-        }
-        @if (!string.IsNullOrEmpty(Package.Package.SourceRepo))
-        {
-            <Pill Tag="true">@Package.Package.SourceRepo</Pill>
         }
         @if (Update is not null)
         {
@@ -37,6 +32,14 @@
                 <Pill Tag="true" Warn="true">@Loc["PkgDevDrift"]</Pill>
             }
         }
+    </Status>
+    <Tags>
+        <Pill Tag="true">v@(Package.Package.Version)</Pill>
+        <PackageKindTags Contents="@Contents" Bridge="@Package.Bridge" />
+        @if (!string.IsNullOrEmpty(Package.Package.SourceRepo))
+        {
+            <Pill Tag="true">@Package.Package.SourceRepo</Pill>
+        }
     </Tags>
     <Meta>
         <span>@Loc["PkgInstalledOn", Package.Package.InstalledAt.ToString("yyyy-MM-dd")]</span>
@@ -55,15 +58,9 @@
                 @Loc["PkgCheck"]
             </MudButton>
         }
-        <MudTooltip Text="@Loc["PkgShowReadme", Package.Package.Id]">
-            <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" aria-label="@Loc["PkgShowReadme", Package.Package.Id]"
-                           OnClick="@OnReadme" />
-        </MudTooltip>
-        <MudTooltip Text="@Loc["PkgRevisionHistory"]">
-            <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small" aria-label="@Loc["PkgRevisionHistory"]"
-                           OnClick="@OnHistory" />
-        </MudTooltip>
         <RowMenu Label="@Loc["NavRowMore", Package.Title ?? Package.Package.Id]" Disabled="@Busy">
+            <RowMenuItem Icon="@Icons.Material.Outlined.Description" OnClick="@OnReadme">@Loc["PkgShowReadme", Package.Title ?? Package.Package.Id]</RowMenuItem>
+            <RowMenuItem Icon="@Icons.Material.Outlined.History" OnClick="@OnHistory">@Loc["PkgRevisionHistory"]</RowMenuItem>
             <RowMenuItem Danger="true" Icon="@Icons.Material.Outlined.Delete" OnClick="@OnUninstall">@Loc["PkgUninstall"]</RowMenuItem>
         </RowMenu>
     </Actions>

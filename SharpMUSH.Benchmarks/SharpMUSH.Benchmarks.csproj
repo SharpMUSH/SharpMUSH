@@ -15,6 +15,8 @@
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(DotNetPackageVersion)" />
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
 		<PackageReference Include="NSubstitute" Version="5.3.0" />
+		<!-- Server's Fido2 asks for System.Formats.Cbor 9.0.0 (GHSA-vmv3-wvjp-wqpj); this project does not get it from the ASP.NET framework. -->
+		<PackageReference Include="System.Formats.Cbor" Version="$(DotNetPackageVersion)" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
 		<PackageReference Include="Testcontainers.Nats" Version="4.14.0" />
 	</ItemGroup>

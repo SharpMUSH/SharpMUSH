@@ -5925,7 +5925,7 @@
     <value>Собствен цвят</value>
   </data>
   <data name="NavThemeAccentAdjusted" xml:space="preserve">
-    <value>Показва се като {0}, за да остане четим на тази тема.</value>
+    <value>Акцентът ти е показан малко по-светъл или по-тъмен, за да остане четим в тази тема.</value>
   </data>
   <data name="NavThemeSaveFailed" xml:space="preserve">
     <value>Не можа да се запази: {0}</value>
@@ -9496,5 +9496,38 @@
   </data>
   <data name="GuideIdentityIntroductionExample" xml:space="preserve">
     <value>Град на дъжд и стари тайни, където всяка история започва в кръчмата.</value>
+  </data>
+  <data name="NavThemePreviewKicker" xml:space="preserve">
+    <value>Тази вечер</value>
+  </data>
+  <data name="NavThemePreviewCardTitle" xml:space="preserve">
+    <value>Пристанището по здрач</value>
+  </data>
+  <data name="NavThemePreviewText" xml:space="preserve">
+    <value>Фенерите по кея са запалени.</value>
+  </data>
+  <data name="NavThemePreviewLink" xml:space="preserve">
+    <value>Прочети още</value>
+  </data>
+  <data name="NavThemePreviewButton" xml:space="preserve">
+    <value>Включи се</value>
+  </data>
+  <data name="NavThemePreviewTag" xml:space="preserve">
+    <value>Отворена сцена</value>
+  </data>
+  <data name="NavThemeTry" xml:space="preserve">
+    <value>Пробвай</value>
+  </data>
+  <data name="NavThemeTryNamed" xml:space="preserve">
+    <value>Пробвай {0} в портала</value>
+  </data>
+  <data name="NavThemeTrying" xml:space="preserve">
+    <value>Пробваш {0} за {1}. Нищо не се запазва, докато не го задържиш.</value>
+  </data>
+  <data name="NavThemeTryKeep" xml:space="preserve">
+    <value>Задръж го</value>
+  </data>
+  <data name="NavThemeTryStop" xml:space="preserve">
+    <value>Спри пробата</value>
   </data>
 </root>

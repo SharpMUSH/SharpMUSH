@@ -7023,7 +7023,7 @@
     <value>Custom colour</value>
   </data>
   <data name="NavThemeAccentAdjusted" xml:space="preserve">
-    <value>Shown as {0} so it stays readable on this theme.</value>
+    <value>Your accent is shown a little lighter or darker here so it stays readable on this theme.</value>
   </data>
   <data name="NavThemeSaveFailed" xml:space="preserve">
     <value>Could not save: {0}</value>
@@ -12836,5 +12836,47 @@
   </data>
   <data name="GuideIdentityIntroductionExample" xml:space="preserve">
     <value>A city of rain and old secrets, where every story starts in the tavern.</value>
+  </data>
+  <data name="NavThemePreviewKicker" xml:space="preserve">
+    <value>Tonight</value>
+  </data>
+  <data name="NavThemePreviewCardTitle" xml:space="preserve">
+    <value>The harbour at dusk</value>
+  </data>
+  <data name="NavThemePreviewText" xml:space="preserve">
+    <value>Lanterns are lit along the quay.</value>
+  </data>
+  <data name="NavThemePreviewLink" xml:space="preserve">
+    <value>Read more</value>
+  </data>
+  <data name="NavThemePreviewButton" xml:space="preserve">
+    <value>Join</value>
+  </data>
+  <data name="NavThemePreviewTag" xml:space="preserve">
+    <value>Open scene</value>
+  </data>
+  <data name="NavThemeTry" xml:space="preserve">
+    <value>Try it</value>
+  </data>
+  <data name="NavThemeTryNamed" xml:space="preserve">
+    <value>Try {0} on the portal</value>
+  </data>
+  <data name="NavThemeTrying" xml:space="preserve">
+    <value>Trying {0} for {1}. Nothing is saved until you keep it.</value>
+  </data>
+  <data name="NavThemeTryKeep" xml:space="preserve">
+    <value>Keep it</value>
+  </data>
+  <data name="NavThemeTryStop" xml:space="preserve">
+    <value>Stop trying</value>
+  </data>
+  <data name="AdmThemesPreview" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="PkgNoReleaseTagsSome" xml:space="preserve">
+    <value>Packages without release tags can be installed only from the dev channel.</value>
+  </data>
+  <data name="PkgRowDetails" xml:space="preserve">
+    <value>Details</value>
   </data>
 </root>
