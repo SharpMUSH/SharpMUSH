@@ -1124,7 +1124,7 @@ public partial class Functions
 			{
 				var attribute = await AttributeService.GetAttributeAsync(executor, actualObject, attributeName,
 					mode: IAttributeService.AttributeMode.Execute, parent: true);
-				if (attribute is not SharpAttribute[] chain)
+				if (attribute is not SharpAttribute[] chain || HidesWizardDark(executor, chain))
 					return await ParseRawArgument(parser, parser.CurrentState.Arguments["1"].Message) ?? CallState.Empty;
 
 				var arguments = new Dictionary<string, CallState>();

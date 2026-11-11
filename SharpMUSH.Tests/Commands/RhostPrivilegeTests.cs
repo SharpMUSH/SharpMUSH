@@ -94,6 +94,8 @@ public class RhostPrivilegeTests : ServerTestBase
 		await Assert.That(await EvalAs(_wizard.DbRef, $"default({thing}/SECRET,none)")).IsNotEqualTo(marker);
 
 		await Assert.That(await EvalAs(_wizard.DbRef, $"edefault({thing}/SECRET,none)")).IsEqualTo("none");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"udefault({thing}/SECRET,none)")).IsEqualTo("none");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"u2default({thing}/SECRET,none)")).IsEqualTo("none");
 
 		var child = DBRef.Parse(await CmdAs(_wizard.DbRef, _wizard.Handle, $"@create {TestIsolationHelpers.GenerateUniqueName("DarkChild")}"));
 		await CmdAs(_wizard.DbRef, _wizard.Handle, $"@parent #{child.Number}={thing}");
