@@ -531,7 +531,7 @@ An import stores a built-in attribute under SharpMUSH's name for it. In code rea
 - `rhost`: `MAILSIG` is `MAILSIGNATURE`; `EMAIL` is `REGISTERED_EMAIL`; `ANSINAME` is `MONIKER`.
 - Both: `LASTPAGE` is `LASTPAGED`; `PAY`, `OPAY`, `APAY` are `PAYMENT`, `OPAYMENT`, `APAYMENT`; `DESC`, `ADESC`, `ODESC`, `IDESC` are `DESCRIBE` and its forms; `SUCC` and `FAIL` and their `A` and `O` forms are `SUCCESS` and `FAILURE` and theirs.
 
-Under `mux`, `@reject` sets `HAVEN`.
+Under `mux`, `@reject` sets `HAVEN`. A switch SharpMUSH has under another name is read the same way: see [dialect switches].
 
 ```sharp dialect=mux
 > @kill me=Ouch.

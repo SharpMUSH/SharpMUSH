@@ -2714,6 +2714,27 @@
     "file": "destroy-command.md"
   },
   {
+    "id": "dialect-switches",
+    "lookup": "dialect switches",
+    "title": "Dialect Switches",
+    "aliases": [],
+    "sections": [
+      {
+        "id": "mux",
+        "lookup": "dialect switches mux",
+        "heading": "TinyMUX switches",
+        "aliases": []
+      },
+      {
+        "id": "rhost",
+        "lookup": "dialect switches rhost",
+        "heading": "RhostMUSH switches",
+        "aliases": []
+      }
+    ],
+    "file": "dialect-switches.md"
+  },
+  {
     "id": "dig-command",
     "lookup": "@dig",
     "title": "@dig",
