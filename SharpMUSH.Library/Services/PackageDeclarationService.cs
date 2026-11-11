@@ -200,7 +200,9 @@ public sealed class PackageDeclarationService(
 					continue;
 				}
 
+				// A package never takes wizard_dark off a copy: that is God's alone to give and take.
 				var unset = copy.Flags.Where(had => !had.Name.Equals("branch", StringComparison.OrdinalIgnoreCase)
+					&& !had.Name.Equals("wizard_dark", StringComparison.OrdinalIgnoreCase)
 					&& !entry.Flags.Contains(had.Name, StringComparer.OrdinalIgnoreCase)).ToArray();
 				var set = entry.Flags.Where(wanted => !copy.Flags.Any(had => had.Name.Equals(wanted, StringComparison.OrdinalIgnoreCase)))
 					.Select(wanted => known.GetValueOrDefault(wanted)).OfType<SharpAttributeFlag>().ToArray();

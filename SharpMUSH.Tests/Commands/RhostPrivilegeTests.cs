@@ -89,10 +89,41 @@ public class RhostPrivilegeTests : ServerTestBase
 			.Because("wizard_dark hides from wizards too");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"lattr({thing})")).DoesNotContain("SECRET");
 
+		await Assert.That(await EvalAs(_wizard.DbRef, $"u({thing}/SECRET)")).IsNotEqualTo(marker)
+			.Because("evaluating it reads it too");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"default({thing}/SECRET,none)")).IsNotEqualTo(marker);
+
 		await CmdAs(_wizard.DbRef, _wizard.Handle, $"&OPEN {thing}=x");
 		await CmdAs(_wizard.DbRef, _wizard.Handle, $"@set {thing}/OPEN=wizard_dark");
 		await Assert.That(await Eval($"lflags({thing}/OPEN)")).DoesNotContain("wizard_dark")
 			.Because("only God sets wizard_dark");
+	}
+
+	[Test]
+	public async Task OnlyGodGivesWizardDarkThroughTheAttributeTable()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("DARKENTRY").ToUpperInvariant();
+		var thing = $"#{DBRef.Parse(await CmdAs(_wizard.DbRef, _wizard.Handle, $"@create {TestIsolationHelpers.GenerateUniqueName("DarkTable")}")).Number}";
+		await Cmd($"&{name} {thing}=hidden");
+		await Cmd($"@set {thing}/{name}=wizard_dark");
+
+		await CmdAs(_wizard.DbRef, _wizard.Handle, $"@attribute/access {name}=wizard_dark");
+		await CmdAs(_wizard.DbRef, _wizard.Handle, $"&{name} me=new");
+		await Assert.That(await Eval($"lflags({Wizard}/{name})")).DoesNotContain("wizard_dark")
+			.Because("only God makes every new copy wizard_dark");
+
+		await CmdAs(_wizard.DbRef, _wizard.Handle, $"@attribute/access/retroactive {name}=none");
+		await Assert.That(await Eval($"lflags({thing}/{name})")).Contains("wizard_dark")
+			.Because("a retroactive pass by anyone but God leaves wizard_dark where it is");
+	}
+
+	[Test]
+	public async Task HideRolesHidesThePermissionReport()
+	{
+		await Cmd($"@permission/allow {Wizard}={PortalPermission.HideRoles}");
+		await Cmd($"@permission/allow {Mortal}={PortalPermission.PlayersView}");
+		await Assert.That(await CmdAs(_mortal.DbRef, _mortal.Handle, $"@role/player {Wizard}")).IsNotEqualTo(NullResult);
+		await Assert.That(Notifications.For(_mortal.DbRef).Any(line => line.Contains("hides its roles from you"))).IsTrue();
 	}
 
 	[Test]

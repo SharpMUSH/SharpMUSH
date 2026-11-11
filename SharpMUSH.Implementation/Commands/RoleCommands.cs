@@ -4,6 +4,7 @@ using System.Text;
 using MarkupString.Layout;
 using SharpMUSH.Library.Markup;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -160,6 +161,8 @@ public partial class Commands
 				&& !mine.Has(PortalPermission.RolesAdmin)
 				&& !await PermissionService.CanExamine(executor, target))
 			return MarkupText.Plain($"Seeing another object's permissions needs the {PortalPermission.PlayersView} permission.");
+		if (await target.HidesRolesFrom(executor))
+			return MarkupText.Plain($"Permission denied. {target.Object().Name} hides its roles from you.");
 
 		var grants = await capabilities.GetObjectGrantsAsync(target, ct);
 		var account = target.IsPlayer ? await AccountService.GetAccountForCharacterAsync(target.Object().DBRef, ct) : null;
