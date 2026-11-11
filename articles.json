@@ -2300,6 +2300,12 @@
         "aliases": []
       },
       {
+        "id": "email",
+        "lookup": "@config net email",
+        "heading": "Email",
+        "aliases": []
+      },
+      {
         "id": "ignored",
         "lookup": "@config net ignored",
         "heading": "Options with no effect",
@@ -2945,6 +2951,16 @@
     ],
     "sections": [],
     "file": "elementpos-function.md"
+  },
+  {
+    "id": "email-command",
+    "lookup": "@email",
+    "title": "@email",
+    "aliases": [
+      "@dialect_email"
+    ],
+    "sections": [],
+    "file": "email-command.md"
   },
   {
     "id": "escapex-function",
