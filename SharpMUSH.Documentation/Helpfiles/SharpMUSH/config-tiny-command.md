@@ -39,7 +39,7 @@ Options that make SharpMUSH behave like TinyMUSH, TinyMUX or RhostMUSH, for code
 - `innermost_tokens=<boolean>`: Do `##` and `#@` name the innermost iter() or @dolist, and `#$` the innermost switch, as in TinyMUX? When off, they name the outermost one they are written in, as in PennMUSH.
 - `protection_flags=<boolean>`: Do NOEXAMINE and NOMODIFY protect, as on TinyMUX? Importing a TinyMUX database turns it on.
 - `attribute_eval_flags=<boolean>`: Is an attribute set `noeval` never evaluated, and a `$`-command set `noparse` matched against the command as typed, as on TinyMUX and RhostMUSH? See [compatibility config attribute eval flags]. Importing a TinyMUX or RhostMUSH database turns it on.
-- `mux_arguments=<boolean>`: Do setunion(), setdiff(), setinter(), hmac(), lwho(), channels(), textfile() and dynhelp() read the arguments TinyMUX gives a different meaning as TinyMUX does? See [compatibility config]. Importing a TinyMUX database turns it on.
+- `mux_arguments=<boolean>`: Do the set functions, hmac(), lwho(), channels() and textfile() take TinyMUX's arguments? A TinyMUX import turns it on.
 
 ## RhostMUSH options
 
