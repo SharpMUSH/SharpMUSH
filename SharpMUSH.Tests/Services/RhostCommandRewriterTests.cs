@@ -117,6 +117,8 @@ public class RhostCommandRewriterTests
 	[Arguments("Type double(7) to see. x.double(1)", "Type double(7) to see. x.double(1)")]
 	[Arguments("Price, double(it) and (double(1)", "Price, double(it) and (double(1)")]
 	[Arguments("think [!double(1)] [add(1,double(2))]", "think [!localfun(double,1)] [add(1,localfun(double,2))]")]
+	[Arguments("@wait 5=think double(1)", "@wait 5=think localfun(double,1)")]
+	[Arguments("@switch %0=1,think double(1)", "@switch %0=1,think localfun(double,1)")]
 	public async Task CallsLocalFunctionsThroughLocalfun(string body, string expected)
 	{
 		var notes = new List<string>();

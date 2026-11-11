@@ -172,6 +172,28 @@ public static partial class RhostCommandRewriter
 		return -1;
 	}
 
+	/// <summary>Where the action holding <paramref name="index"/> starts: after the last <c>;</c>, <c>{</c>, <c>=</c> or <c>,</c> outside brackets before it.</summary>
+	private static int ActionStart(string text, int index)
+	{
+		var depth = 0;
+		for (var i = index - 1; i >= 0; i--)
+		{
+			switch (text[i])
+			{
+				case ']' or ')':
+					depth++;
+					break;
+				case '[' or '(' when depth > 0:
+					depth--;
+					break;
+				case ';' or '{' or '=' or ',' or '\n' when depth == 0 && !Escaped(text, i):
+					return i + 1;
+			}
+		}
+
+		return 0;
+	}
+
 	/// <summary>Where the statement holding <paramref name="index"/> starts: after the <c>;</c> or unclosed <c>{</c> before it.</summary>
 	private static int StatementStart(string text, int index)
 	{
@@ -422,7 +444,7 @@ public static partial class RhostCommandRewriter
 			return true;
 		}
 
-		var head = text[Math.Max(StatementStart(text, index), body)..index].Trim();
+		var head = text[Math.Max(ActionStart(text, index), body)..index].Trim();
 		return head.Length > 0 && !head.Any(char.IsWhiteSpace)
 			&& (head.StartsWith('@') || head.Equals("think", StringComparison.OrdinalIgnoreCase));
 	}
@@ -516,7 +538,7 @@ public static partial class RhostCommandRewriter
 	private static partial Regex CommandHead();
 
 	/// <summary>A statement whose arguments are commands, as with <c>@switch</c> or <c>@dolist</c>, after any <c>$</c>/<c>^</c> pattern.</summary>
-	[GeneratedRegex(@"^\s*(?:[$^][^:\r\n]*:)?\s*@(?:switch|select|wait|dolist|force|break|assert|skip|include)\b",
+	[GeneratedRegex(@"^\s*(?:[$^][^:\r\n]*:)?\s*@(?:switch|select|wait|dolist|force|break|assert|skip)\b",
 		RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
 	private static partial Regex RunsActions();
 
