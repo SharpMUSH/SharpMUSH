@@ -159,4 +159,47 @@ public class RhostFunctionCallRewriterTests
 			"lt() comparing bittype() written with hasrole()"
 		]);
 	}
+
+	/// <summary>A totem is a role here, so the totem tests are hasrole() and ltotems() is roles() of the Totems category.</summary>
+	[Test]
+	[Arguments("think hastotem(%#,Shiny)", "think hasrole(%#,shiny)")]
+	[Arguments("think hastotem(%#,%0)", "think hasrole(%#,%0)")]
+	[Arguments("think hastotem(%#,Wizard)", "think hasrole(%#,totem-wizard)")]
+	[Arguments("think andtotem(%#,shiny !dull)", "think and(hasrole(%#,shiny),not(hasrole(%#,dull)))")]
+	[Arguments("think ortotem(%#,shiny dull)", "think or(hasrole(%#,shiny),hasrole(%#,dull))")]
+	[Arguments("think andtotem(%#,!dull)", "think not(hasrole(%#,dull))")]
+	[Arguments("think ltotems(%#)", "think roles(%#,Totems)")]
+	public async Task TotemTestsBecomeRoleTests(string rhost, string expected)
+	{
+		var result = RhostSoftcodeRewriter.Rewrite(rhost);
+
+		await Assert.That(result.Text).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task TotemFunctionsWithoutARoleFormAreNoted()
+	{
+		var result = RhostSoftcodeRewriter.Rewrite("think [totems(%#)] [andtotem(%#,%0)]");
+
+		await Assert.That(result.Text).IsEqualTo("think [totems(%#)] [andtotem(%#,%0)]");
+		await Assert.That(result.Notes).Contains("totems() with 1 argument(s) left as written: totems are roles here; use hasrole(), roles() and @role");
+	}
+
+	/// <summary>@totem gives and takes roles; a form the import cannot read is left for a person to check.</summary>
+	[Test]
+	[Arguments("@totem me=shiny", "@role/assign me=shiny")]
+	[Arguments("@totem %#=Shiny !Dull", "@role/assign %#=shiny;@role/unassign %#=dull")]
+	[Arguments("$+shine:@totem %#=shiny !dull;@pemit %#=Done.", "$+shine:@role/assign %#=shiny;@role/unassign %#=dull;@pemit %#=Done.")]
+	[Arguments("@switch %0=1,@totem %#=shiny !dull,@totem %#=dull", "@switch %0=1,{@role/assign %#=shiny;@role/unassign %#=dull},@role/assign %#=dull")]
+	[Arguments("@force me=@totem %#=a b", "@force me={@role/assign %#=a;@role/assign %#=b}")]
+	[Arguments("@totem/clear me", "@totem/clear me")]
+	[Arguments("@totem me=[v(list)]", "@totem me=[v(list)]")]
+	[Arguments("think @totem me=shiny", "think @totem me=shiny")]
+	public async Task TotemCommandsBecomeRoleCommands(string rhost, string expected)
+	{
+		var result = RhostSoftcodeRewriter.Rewrite(rhost);
+
+		await Assert.That(result.Text).IsEqualTo(expected);
+		await Assert.That(result.Notes).Count().IsEqualTo(rhost.StartsWith("think") ? 0 : 1);
+	}
 }

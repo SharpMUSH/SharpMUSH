@@ -71,6 +71,8 @@ public class RoleCommandTests : ServerTestBase
 		await Assert.That(await EvalAs(_wizard.DbRef, $"hasrole(*{_mortal.Name},{_slug})")).IsEqualTo("1");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"permission(*{_mortal.Name},wiki.delete)")).IsEqualTo("1");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"roles(*{_mortal.Name})")).IsEqualTo($"{_slug} player everyone");
+		await Assert.That(await EvalAs(_wizard.DbRef, $"roles(*{_mortal.Name},staff)")).IsEqualTo(_slug);
+		await Assert.That(await EvalAs(_wizard.DbRef, $"roles(*{_mortal.Name},No Such Category)")).IsEqualTo("");
 
 		await As(_wizard, $"@role/unassign {_mortal.Name}={_slug}");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"hasrole(*{_mortal.Name},{_slug})")).IsEqualTo("0");

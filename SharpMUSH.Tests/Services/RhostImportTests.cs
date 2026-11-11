@@ -10,6 +10,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.DatabaseConversion.Rhost;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Tags;
 
 namespace SharpMUSH.Tests.Services;
@@ -150,6 +151,31 @@ public class RhostImportTests
 
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(result.PlayersConverted).IsGreaterThanOrEqualTo(4);
+	}
+
+	/// <summary>
+	/// Totems arrive as roles in a Totems category the import makes, held by the objects that held them; a game's own
+	/// totem is defined whether or not anything holds it.
+	/// </summary>
+	[Test]
+	public async Task TotemsArriveAsRoles()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var database = await RhostDatabaseTranslator.ReadAsync(RhostFlatfileReaderTests.FlatfilePath, null, null);
+		RhostDatabaseTranslator.MapTotems(database, [new TotemDirective("Shiny", 2, 4), new TotemDirective("Dull", 2, 8)]);
+		var result = await world.Converter.ConvertDatabaseAsync(database);
+		await Assert.That(result.Errors).IsEmpty();
+
+		var registry = world.Services.GetRequiredService<IRoleRegistryService>();
+		await Assert.That((await registry.GetCategoriesAsync(CategoryKind.Role)).Select(c => c.Name)).Contains(RhostDatabaseTranslator.TotemCategory);
+		var dull = (await registry.GetRoleAsync("dull")).Expect<SharpRole>();
+		await Assert.That(dull.Category).IsEqualTo(RhostDatabaseTranslator.TotemCategory);
+		await Assert.That(dull.Permissions).IsEmpty();
+
+		var grants = await (await FindAsync(world, "Gadget")).GrantsAsync(CancellationToken.None);
+		await Assert.That(grants.HoldsRole("shiny")).IsTrue();
+		await Assert.That(grants.HoldsRole("marker0")).IsTrue();
+		await Assert.That(grants.HoldsRole("dull")).IsFalse();
 	}
 
 	/// <summary>

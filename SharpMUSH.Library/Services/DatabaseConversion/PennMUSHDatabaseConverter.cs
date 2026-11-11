@@ -748,7 +748,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		await ImportFlagDefinitionsAsync(pennDatabase.FlagDefinitions, context, cancellationToken);
 		await ImportPowerDefinitionsAsync(pennDatabase.PowerDefinitions, context, cancellationToken);
 		await ImportAttributeDefinitionsAsync(pennDatabase, context, cancellationToken);
-		await ImportRolesAsync(pennDatabase.Roles, context, cancellationToken);
+		await ImportRolesAsync(pennDatabase.Roles, pennDatabase.RoleCategories, context, cancellationToken);
 		await ImportConfiguredAliasesAsync(pennDatabase, context, cancellationToken);
 	}
 
@@ -756,7 +756,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// The roles the source's staff levels need. A role the world already has, by slug, is left as it is, so a
 	/// second import keeps what an administrator changed. Written straight to the role registry, as the depowers are.
 	/// </summary>
-	private async Task ImportRolesAsync(List<SharpRole> roles, PennMUSHConversionContext context,
+	private async Task ImportRolesAsync(List<SharpRole> roles, List<RoleCategory> categories, PennMUSHConversionContext context,
 		CancellationToken cancellationToken)
 	{
 		if (roles.Count == 0)
@@ -766,11 +766,19 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		if (_roleRegistry is null)
 		{
-			context.Warn(ImportWarningKind.Powers, $"Roles for the staff levels ({string.Join(", ", roles.Select(r => r.Slug))}) not imported: they need the role registry this import runs without");
+			context.Warn(ImportWarningKind.Powers, $"Roles {string.Join(", ", roles.Select(r => r.Slug))} not imported: they need the role registry this import runs without");
 			return;
 		}
 
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		var existing = (await _roleRegistry.Value.GetCategoriesAsync(CategoryKind.Role, cancellationToken))
+			.Select(category => category.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+		foreach (var category in categories.Where(category => !existing.Contains(category.Name)))
+		{
+			await _roleRegistry.Value.UpsertCategoryAsync(CategoryKind.Role, category with { CreatedAt = now });
+			context.Notes.Add($"Role category {category.Name}: created");
+		}
+
 		foreach (var role in roles)
 		{
 			if (await _roleRegistry.Value.GetRoleAsync(role.Slug, cancellationToken) is SharpRole)
@@ -790,7 +798,9 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				CreatedAt = now,
 				UpdatedAt = now
 			});
-			context.Notes.Add($"Role {role.Slug}: created at priority {role.Priority} for {context.SourceName}'s {role.Name} level");
+			context.Notes.Add(role.Category == Categories.Staff
+				? $"Role {role.Slug}: created at priority {role.Priority} for {context.SourceName}'s {role.Name} level"
+				: $"Role {role.Slug}: created at priority {role.Priority} in {role.Category}");
 		}
 	}
 

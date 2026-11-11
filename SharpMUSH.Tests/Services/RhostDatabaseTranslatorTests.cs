@@ -101,7 +101,7 @@ public class RhostDatabaseTranslatorTests
 	{
 		var database = await TranslateAsync();
 		var priority = BuiltInRoles.All.ToDictionary(role => role.Slug, role => role.Priority);
-		var roles = database.Roles.ToDictionary(role => role.Slug);
+		var roles = database.Roles.Where(role => role.Category != RhostDatabaseTranslator.TotemCategory).ToDictionary(role => role.Slug);
 
 		await Assert.That(roles.Keys).IsEquivalentTo(["guildmaster", "architect", "councilor", "immortal"]);
 		await Assert.That(roles["guildmaster"].Priority).IsGreaterThan(priority[BuiltInRoles.PlayerSlug]).And.IsLessThan(roles["architect"].Priority);
@@ -128,26 +128,37 @@ public class RhostDatabaseTranslatorTests
 	}
 
 	/// <summary>
-	/// RhostMUSH's own totems are flags at once; one a game's <c>netrhost.conf</c> defines is a flag once the
-	/// configuration is read, set on each object holding its bit.
+	/// Totems are roles in the Totems category that grant nothing, given to each object holding the totem's bit.
+	/// RhostMUSH's own totems are made when an object holds one; a game's own, from its <c>netrhost.conf</c>, always.
 	/// </summary>
 	[Test]
-	public async Task TotemsBecomeFlags()
+	public async Task TotemsBecomeRoles()
 	{
 		var database = await TranslateAsync();
 		var gadget = Object(database, 10);
 
-		await Assert.That(gadget.Flags).Contains("MARKER0").And.Contains("SETQLABEL").And.DoesNotContain("MARKER1");
-		await Assert.That(database.FlagDefinitions.First(f => f.Name == "MARKER0").SetPermissions).IsEquivalentTo(["wizard"]);
-		await Assert.That(database.FlagDefinitions.First(f => f.Name == "SETQLABEL").SetPermissions).IsEmpty();
+		await Assert.That(gadget.Roles).Contains("marker0").And.Contains("setqlabel").And.DoesNotContain("marker1");
+		await Assert.That(gadget.Flags).DoesNotContain("MARKER0");
+		await Assert.That(database.Roles.Where(r => r.Category == RhostDatabaseTranslator.TotemCategory).Select(r => r.Slug))
+			.IsEquivalentTo(["marker0", "setqlabel"]);
+		await Assert.That(database.Roles.First(r => r.Slug == "marker0").Permissions).IsEmpty();
+		await Assert.That(database.RoleCategories.Select(c => c.Name)).IsEquivalentTo([RhostDatabaseTranslator.TotemCategory]);
+		await Assert.That(database.ImportNotes.Texts()).Contains(n => n.StartsWith("Totem SETQLABEL: imported as the role setqlabel; anyone could set it"));
 		await Assert.That(gadget.Attributes.Select(a => a.Name)).DoesNotContain("*TOTEMS");
 
 		RhostDatabaseTranslator.MapTotems(database, [new TotemDirective("Shiny", 2, 4), new TotemDirective("Dull", 2, 8)]);
 
-		await Assert.That(gadget.Flags).Contains("SHINY").And.DoesNotContain("DULL");
-		await Assert.That(database.FlagDefinitions.Select(f => f.Name)).Contains("SHINY").And.DoesNotContain("DULL");
-		await Assert.That(database.ImportNotes.Texts()).Contains(n => n.StartsWith("Totem SHINY: imported as a flag of its own") && n.Contains("#10"));
+		await Assert.That(gadget.Roles).Contains("shiny").And.DoesNotContain("dull");
+		await Assert.That(database.Roles.Select(r => r.Slug)).Contains("shiny").And.Contains("dull");
+		await Assert.That(database.ImportNotes.Texts()).Contains(n => n.StartsWith("Totem SHINY: imported as the role shiny") && n.Contains("#10"));
 	}
+
+	[Test]
+	[Arguments("Shiny", "shiny")]
+	[Arguments("Wizard", "totem-wizard")]
+	[Arguments("my.totem", "my_totem")]
+	public async Task TotemSlugs(string name, string slug)
+		=> await Assert.That(RhostDatabaseTranslator.TotemSlug(name)).IsEqualTo(slug);
 
 	/// <summary>
 	/// A cluster is one object here: its first object takes the others' attributes, and the others are not imported.

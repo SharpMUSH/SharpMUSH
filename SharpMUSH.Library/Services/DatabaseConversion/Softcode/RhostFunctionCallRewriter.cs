@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion.Softcode;
 
@@ -75,8 +76,49 @@ public static class RhostFunctionCallRewriter
 		["gte"] = args => BitTypeComparison(args, atLeast: 0, mirrored: "lte"),
 		["gt"] = args => BitTypeComparison(args, atLeast: 1, mirrored: "lt"),
 		["lt"] = args => BitTypeComparison(args, atLeast: 0, mirrored: "gt", negated: true),
-		["lte"] = args => BitTypeComparison(args, atLeast: 1, mirrored: "gte", negated: true)
+		["lte"] = args => BitTypeComparison(args, atLeast: 1, mirrored: "gte", negated: true),
+		// A totem is a role here (RhostDatabaseTranslator.TotemSlug).
+		["hastotem"] = args => args.Length == 2 ? $"hasrole({args[0]},{TotemRole(args[1])})" : null,
+		["andtotem"] = args => TotemTest(args, "and"),
+		["ortotem"] = args => TotemTest(args, "or"),
+		["ltotems"] = args => args.Length == 1 ? $"roles({args[0]},{RhostDatabaseTranslator.TotemCategory})" : null,
+		["andtotems"] = _ => null,
+		["ortotems"] = _ => null,
+		["totems"] = _ => null,
+		["listtotems"] = _ => null,
+		["totemset"] = _ => null,
+		["totemvalid"] = _ => null
 	};
+
+	/// <summary>Totem functions with no form here: totems are roles, which have no letters and are assigned by command.</summary>
+	private static readonly HashSet<string> TotemOnly = new(StringComparer.OrdinalIgnoreCase)
+	{
+		"andtotems", "ortotems", "totems", "listtotems", "totemset", "totemvalid"
+	};
+
+	/// <summary>
+	/// andtotem() and ortotem() with a totem list written out: <c>hasrole()</c> for each totem, <c>not()</c> of it for a
+	/// <c>!totem</c>, joined by <paramref name="join"/>. Null for a computed list.
+	/// </summary>
+	private static string? TotemTest(string[] args, string join)
+	{
+		if (args is not [var subject, var list] || list.AsSpan().IndexOfAny('%', '[', '(') >= 0
+			|| list.Split(' ', StringSplitOptions.RemoveEmptyEntries) is not { Length: > 0 } totems)
+		{
+			return null;
+		}
+
+		var tests = totems
+			.Select(totem => totem.StartsWith('!')
+				? $"not(hasrole({subject},{TotemRole(totem[1..])}))"
+				: $"hasrole({subject},{TotemRole(totem)})")
+			.ToArray();
+		return tests.Length == 1 ? tests[0] : $"{join}({string.Join(',', tests)})";
+	}
+
+	/// <summary>The role of a totem named as written; a computed name is left as it is.</summary>
+	private static string TotemRole(string name)
+		=> name.AsSpan().IndexOfAny('%', '[', '(') >= 0 || name.Trim().Length == 0 ? name : RhostDatabaseTranslator.TotemSlug(name.Trim());
 
 	/// <summary>Rules that apply to one shape of a function SharpMUSH has: any other call to it is left without a note.</summary>
 	private static readonly HashSet<string> ShapeOnly = new(StringComparer.OrdinalIgnoreCase) { "gte", "gt", "lt", "lte" };
@@ -175,7 +217,9 @@ public static class RhostFunctionCallRewriter
 	private static readonly Dictionary<string, int[]> Repeated = new(StringComparer.OrdinalIgnoreCase)
 	{
 		["ljc"] = [1],
-		["rjc"] = [1]
+		["rjc"] = [1],
+		["andtotem"] = [0],
+		["ortotem"] = [0]
 	};
 
 	/// <summary>The money name for an amount: <paramref name="first"/> is its first use, <paramref name="again"/> the rest.</summary>
@@ -251,8 +295,12 @@ public static class RhostFunctionCallRewriter
 			else
 			{
 				output.Append(name).Append('(').Append(string.Join(',', rewritten)).Append(')');
-				Say(notes, said, $"{lower}() with {rewritten.Length} argument(s) left as written" +
-					(SharedNames.Contains(lower) ? $": SharpMUSH's {lower}() is another function" : $": SharpMUSH has no {lower}()"));
+				Say(notes, said, $"{lower}() with {rewritten.Length} argument(s) left as written" + (lower switch
+				{
+					_ when SharedNames.Contains(lower) => $": SharpMUSH's {lower}() is another function",
+					_ when TotemOnly.Contains(lower) => ": totems are roles here; use hasrole(), roles() and @role",
+					_ => $": SharpMUSH has no {lower}()"
+				}));
 			}
 
 			i = close + 1;
