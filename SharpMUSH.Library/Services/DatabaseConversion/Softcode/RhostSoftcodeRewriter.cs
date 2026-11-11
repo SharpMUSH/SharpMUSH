@@ -31,11 +31,20 @@ public static class RhostSoftcodeRewriter
 {
 	/// <summary>Rewrites one attribute body.</summary>
 	public static SoftcodeRewriteResult Rewrite(string softcode)
+		=> Rewrite(softcode, new HashSet<string>());
+
+	/// <summary>
+	/// Rewrites one attribute body, whose owner's code defines <paramref name="localFunctions"/> with
+	/// <c>@lfunction</c>: their calls are written through <c>localfun()</c> (<see cref="RhostCommandRewriter"/>).
+	/// </summary>
+	public static SoftcodeRewriteResult Rewrite(string softcode, IReadOnlySet<string> localFunctions)
 	{
 		var notes = new List<string>();
 		var text = RewriteTimeFormats(softcode, notes);
 		text = RhostFunctionCallRewriter.Rewrite(text, notes);
 		text = TotemCommandRewriter.Rewrite(text, notes);
+		text = RhostCommandRewriter.Rewrite(text, notes);
+		text = RhostCommandRewriter.RewriteLocalFunctionCalls(text, localFunctions, notes);
 		text = RewriteCharacterCodes(text, notes);
 		return new SoftcodeRewriteResult(text, notes) { Changed = text != softcode };
 	}

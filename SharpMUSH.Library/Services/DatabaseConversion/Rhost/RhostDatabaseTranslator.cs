@@ -99,6 +99,7 @@ public static partial class RhostDatabaseTranslator
 		var definitions = new Definitions();
 		var folderAttributes = FolderAttributes(mail);
 
+		report.LocalFunctions = LocalFunctions(flatfile);
 		var clusters = Clusters(flatfile, byNumber, report);
 		foreach (var source in flatfile.Objects)
 		{
@@ -742,7 +743,8 @@ public static partial class RhostDatabaseTranslator
 			name = attribute.Name.ToUpperInvariant();
 		}
 
-		var value = Rewritten(attribute.Value, source.DBRef, name, report);
+		var value = Rewritten(attribute.Value, source.DBRef, name, report,
+			report.LocalFunctions.GetValueOrDefault(source.Owner) ?? Empty);
 		if (value.Length > LongValue)
 		{
 			report.Line(ImportWarningKind.Attributes, $"#{source.DBRef}/{name}: {value.Length} characters long, more than the {LongValue} SharpMUSH's softcode " +
@@ -798,12 +800,33 @@ public static partial class RhostDatabaseTranslator
 		return flags;
 	}
 
+	private static readonly HashSet<string> Empty = [];
+
+	/// <summary>
+	/// The local functions each owner's code defines with <c>@lfunction</c>. RhostMUSH files one under the owner of
+	/// the object that ran the command, and only that owner's objects call it, so a call is rewritten in their code;
+	/// not a name a global <c>@function</c> also takes, which RhostMUSH calls first.
+	/// </summary>
+	private static Dictionary<int, HashSet<string>> LocalFunctions(RhostFlatfile flatfile)
+	{
+		// A global @function of the same name is called first, so its calls stay as written.
+		var global = flatfile.Objects
+			.SelectMany(source => source.Attributes.SelectMany(attribute => RhostCommandRewriter.GlobalFunctionNames(attribute.Value)))
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
+		return flatfile.Objects
+			.SelectMany(source => source.Attributes.SelectMany(attribute => RhostCommandRewriter.LocalFunctionNames(attribute.Value))
+				.Where(name => !global.Contains(name))
+				.Select(name => (source.Owner, Name: name)))
+			.GroupBy(entry => entry.Owner)
+			.ToDictionary(group => group.Key, group => group.Select(entry => entry.Name).ToHashSet(StringComparer.OrdinalIgnoreCase));
+	}
+
 	/// <summary>The value with the softcode rewrites made, each attribute that changed listed on its own line.</summary>
-	private static string Rewritten(string value, int dbref, string name, Report report)
+	private static string Rewritten(string value, int dbref, string name, Report report, IReadOnlySet<string> localFunctions)
 	{
 		var colour = ColourSubstitutionRewriter.Rewrite(value,
 			new ColourRewriteOptions(ColourSubstitutionDialect.RhostMush, ColourRewriteMode.Auto));
-		var rest = RhostSoftcodeRewriter.Rewrite(colour.Text);
+		var rest = RhostSoftcodeRewriter.Rewrite(colour.Text, localFunctions);
 
 		var said = new List<string>();
 		if (colour.Changed)
@@ -911,6 +934,9 @@ public static partial class RhostDatabaseTranslator
 			new(StringComparer.Ordinal);
 
 		public List<ImportWarning> Lines { get; } = [];
+
+		/// <summary>The local functions each owner's code defines (<see cref="RhostDatabaseTranslator.LocalFunctions"/>).</summary>
+		public Dictionary<int, HashSet<string>> LocalFunctions { get; set; } = [];
 
 		/// <summary>The attributes whose softcode was rewritten, reported apart from the notes.</summary>
 		public List<SoftcodeRewrite> Rewrites { get; } = [];
