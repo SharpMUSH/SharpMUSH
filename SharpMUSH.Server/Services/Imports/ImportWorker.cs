@@ -110,7 +110,7 @@ public static class ImportWorker
 				}
 				await EnsurePackageManagerAsync(mediator, options, result, configuration?.Sets("package_manager") == true, deadline.Token);
 				var parser = services.GetRequiredService<IMUSHCodeParser>();
-				await ImportedCallScan.ReportAsync(mediator, parser.FunctionLibrary,
+				await ImportedCodeScan.ReportAsync(mediator, parser.FunctionLibrary, parser.CommandLibrary,
 					new SoftcodeSyntaxAnalyzer(parser.FunctionLibrary, services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()),
 					(await options.CurrentAsync()).Compatibility.Dialect, result, deadline.Token);
 				if (configuration is not null) ReportConfiguration(configuration, aliases, result);
