@@ -449,9 +449,10 @@ public partial class Commands : ICommandRestrictionApplier
 
 	/// <summary>
 	/// Puts <paramref name="clone"/> in the table as a copy of <paramref name="source"/>: its parsing, switches, lock
-	/// and hooks.
+	/// and, unless <paramref name="copyHooks"/> is false, hooks.
 	/// </summary>
-	private async ValueTask CloneCommandEntry((CommandDefinition LibraryInformation, bool IsSystem) source, string clone)
+	private async ValueTask CloneCommandEntry((CommandDefinition LibraryInformation, bool IsSystem) source, string clone,
+		bool copyHooks = true)
 	{
 		var from = source.LibraryInformation.Attribute;
 		var attribute = new SharpCommandAttribute
@@ -474,6 +475,7 @@ public partial class Commands : ICommandRestrictionApplier
 		}
 
 		RememberRestriction(attribute);
+		if (!copyHooks) return;
 
 		foreach (var (type, hook) in await HookService.GetAllHooksAsync(from.Name))
 		{

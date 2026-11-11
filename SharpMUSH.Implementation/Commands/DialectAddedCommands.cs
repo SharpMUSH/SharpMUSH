@@ -84,7 +84,8 @@ public partial class Commands
 				var original = $"__{name}";
 				if (FindCommand(original) is not null)
 					return await AddedCommandNotice(executor, $"{original} is already a command.");
-				await CloneCommandEntry(existing, original);
+				// The hooks stay on the command typed, so they run once and not again when the code calls the original.
+				await CloneCommandEntry(existing, original, copyHooks: false);
 				_dialectAddedCommands[name] = original;
 			}
 		}
