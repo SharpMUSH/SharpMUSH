@@ -232,6 +232,17 @@ public class RhostDatabaseTranslatorTests
 		await Assert.That((await TranslateAsync()).SourceOptions.ContainsKey("command_restrictions")).IsFalse();
 	}
 
+	/// <summary>RhostMUSH's last-created record (room, exit, thing, player) is kept in SharpMUSH's order, with the last of any.</summary>
+	[Test]
+	public async Task LastCreatedObjectsAreKeptInSharpMUSHsOrder()
+	{
+		var text = WithAttributes(await File.ReadAllTextAsync(RhostFlatfileReaderTests.FlatfilePath), 9, ">237", "6 7 10 -1");
+
+		var database = RhostDatabaseTranslator.Translate(RhostFlatfileReader.Read(text));
+
+		await Assert.That(Object(database, 9).Attributes.Single(a => a.Name == "LASTCREATE").Value).IsEqualTo("6 10 7 -1 10");
+	}
+
 	[Test]
 	public async Task FlagsMapToSharpMUSHsOwnOrBecomeFlagsOfTheirOwnOrAreDropped()
 	{

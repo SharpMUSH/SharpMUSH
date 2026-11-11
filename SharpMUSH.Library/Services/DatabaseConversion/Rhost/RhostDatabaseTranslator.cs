@@ -235,6 +235,9 @@ public static partial class RhostDatabaseTranslator
 				case RhostNameTables.TagsAttribute:
 					tags.AddRange(attribute.Value.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries).Select(Tag));
 					continue;
+				case RhostNameTables.LastCreateAttribute:
+					attributes.Add(new PennMUSHAttribute { Name = "LASTCREATE", Value = LastCreate(attribute.Value) });
+					continue;
 				case RhostNameTables.AliasAttribute:
 					aliases.AddRange(attribute.Value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 					break;
@@ -739,6 +742,21 @@ public static partial class RhostDatabaseTranslator
 	private static partial Regex CommandWord();
 
 	/// <summary>One attribute as the import writes it, or null for one that is not imported.</summary>
+	/// <summary>
+	/// RhostMUSH's last-created record (room, exit, thing, player) as SharpMUSH keeps it: room, thing, exit, player,
+	/// and the last of any type, which RhostMUSH does not keep and is taken as the highest of the four.
+	/// </summary>
+	private static string LastCreate(string value)
+	{
+		var rhost = value.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+			.Select(field => int.TryParse(field, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) ? number : -1)
+			.Concat(Enumerable.Repeat(-1, 4))
+			.Take(4)
+			.ToArray();
+		int[] sharp = [rhost[0], rhost[2], rhost[1], rhost[3], rhost.Max()];
+		return string.Join(' ', sharp.Select(number => number.ToString(CultureInfo.InvariantCulture)));
+	}
+
 	private static PennMUSHAttribute? Attribute(RhostFlatfileAttribute attribute, RhostFlatfileObject source,
 		RhostFlatfile flatfile, Report report)
 	{

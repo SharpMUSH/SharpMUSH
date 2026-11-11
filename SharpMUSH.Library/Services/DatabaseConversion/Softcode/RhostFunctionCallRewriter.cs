@@ -59,6 +59,10 @@ public static class RhostFunctionCallRewriter
 		// Seconds since 1970 of the first start and of the last restart.
 		["startsecs"] = args => args is [] or [""] ? "convtime(starttime())" : null,
 		["rebootsecs"] = args => args is [] or [""] ? "convtime(restarttime())" : null,
+		// RhostMUSH's trace() sets or clears the executor's TRACE flag, which imports as DEBUG; SharpMUSH's trace()
+		// is TinyMUX's, which evaluates an expression with debug output on.
+		["trace"] = args => args.Length == 1 ? $"set(%!,if({args[0]},,!)DEBUG)" : null,
+		["chktrace"] = args => args is [] or [""] ? "hasflag(%!,DEBUG)" : null,
 		["lnum2"] = args => args.Length == 1 ? $"lnum({args[0]})" : NumberRange(args),
 		// Each flag an argument of its own, !FLAG allowed, as andlflags() and orlflags() take them in a list.
 		["andflag"] = args => args.Length >= 2 ? $"andlflags({args[0]},{FlagList(args[1..])})" : null,

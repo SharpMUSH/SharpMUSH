@@ -84,6 +84,7 @@ public static class AttributeEntrySeed
 		("INVFORMAT", ["no_command","prefixmatch"]),
 		("LALIAS", ["no_command","prefixmatch"]),
 		("LAST", ["no_clone","wizard","visual","locked","prefixmatch"]),
+		("LASTCREATE", ["no_command","no_inherit","no_clone","wizard","locked","internal"]),
 		("LASTFAILED", ["no_clone","wizard","locked","prefixmatch"]),
 		("LASTIP", ["no_clone","wizard","locked","prefixmatch"]),
 		("LASTLOGOUT", ["no_clone","wizard","locked","prefixmatch"]),
