@@ -30,7 +30,7 @@ With a `<package>`, it returns 1 when the client listed the package or a module 
 
 A descriptor number reads that connection. A player name or dbref reads the player's least idle connection, the one they typed into most recently, as terminfo() and idle() do.
 
-You may read your own connections. Reading anyone else's needs a wizard or the Send_OOB power, as [oob()] does. Otherwise asking about a descriptor that is not yours, or one that does not exist, returns `#-1 NO SUCH DESCRIPTOR OR PERMISSION DENIED`.
+You may read your own connections. Reading anyone else's needs a wizard, the Send_OOB power (as [oob()] does) or the See_OOB power. Otherwise asking about a descriptor that is not yours, or one that does not exist, returns `#-1 NO SUCH DESCRIPTOR OR PERMISSION DENIED`.
 
 ## Examples
 

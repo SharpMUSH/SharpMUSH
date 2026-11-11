@@ -3810,6 +3810,18 @@
     "file": "hasarg.md"
   },
   {
+    "id": "hasdepower-function",
+    "lookup": "hasdepower()",
+    "title": "hasdepower()",
+    "aliases": [
+      "hasdepower",
+      "ldepowers()",
+      "ldepowers"
+    ],
+    "sections": [],
+    "file": "hasdepower-function.md"
+  },
+  {
     "id": "help-search",
     "lookup": "help search",
     "title": "Help Search",
@@ -7577,6 +7589,12 @@
         "id": "roles-staff",
         "lookup": "roles staff",
         "heading": "Staff permissions",
+        "aliases": []
+      },
+      {
+        "id": "roles-hidden",
+        "lookup": "roles hidden",
+        "heading": "Hidden roles",
         "aliases": []
       },
       {

@@ -115,21 +115,21 @@
 | [DOWNMOTD()]     | [ELOCK()]        | [ERROR()]        | [FINDABLE()]     |
 | [FLAGS()]        | [FULLALIAS()]    | [FULLMOTD()]     | [FULLNAME()]     |
 | [GETPIDS()]      | [GLOBALROOM()]   | [HASATTR()]      | [HASATTRP()]     |
-| [HASFLAG()]      | [HASPOWER()]     | [HASROLE()]      | [HASRXLEVEL()]   |
-| [HASTXLEVEL()]   | [HASTYPE()]      | [INAME()]        | [ISAPPROVED()]   |
-| [ISTAG()]        | [LFLAGS()]       | [LISTCOMMANDS()] | [LISTFLAGS()]    |
-| [LISTRLEVELS()]  | [LISTTAGS()]     | [LIVEWIRE()]     | [LLOCKFLAGS()]   |
-| [LOCK()]         | [LOCKFLAGS()]    | [LOCKOWNER()]    | [LOCKS()]        |
-| [LPIDS()]        | [LSTATS()]       | [MONEY()]        | [MONIKER()]      |
-| [MOTD()]         | [MSECS()]        | [MTIME()]        | [MUDNAME()]      |
-| [MUDURL()]       | [NAME()]         | [NATTR()]        | [NEARBY()]       |
-| [OBJID()]        | [OBJMEM()]       | [ORFLAGS()]      | [ORLFLAGS()]     |
-| [ORLPOWERS()]    | [PERMISSION()]   | [PIDINFO()]      | [PLAYERMEM()]    |
-| [PLAYMEM()]      | [POLL()]         | [POWERS()]       | [QUOTA()]        |
-| [RESTARTS()]     | [ROLES()]        | [RXDESC()]       | [RXLEVEL()]      |
-| [SIZE()]         | [TAGMATCH()]     | [TAGREF()]       | [TXLEVEL()]      |
-| [TYPE()]         | [VATTRCNT()]     | [VERSION()]      | [VISIBLE()]      |
-| [WIZMOTD()]      |                  |                  |                  |
+| [HASDEPOWER()]   | [HASFLAG()]      | [HASPOWER()]     | [HASROLE()]      |
+| [HASRXLEVEL()]   | [HASTXLEVEL()]   | [HASTYPE()]      | [INAME()]        |
+| [ISAPPROVED()]   | [ISTAG()]        | [LDEPOWERS()]    | [LFLAGS()]       |
+| [LISTCOMMANDS()] | [LISTFLAGS()]    | [LISTRLEVELS()]  | [LISTTAGS()]     |
+| [LIVEWIRE()]     | [LLOCKFLAGS()]   | [LOCK()]         | [LOCKFLAGS()]    |
+| [LOCKOWNER()]    | [LOCKS()]        | [LPIDS()]        | [LSTATS()]       |
+| [MONEY()]        | [MONIKER()]      | [MOTD()]         | [MSECS()]        |
+| [MTIME()]        | [MUDNAME()]      | [MUDURL()]       | [NAME()]         |
+| [NATTR()]        | [NEARBY()]       | [OBJID()]        | [OBJMEM()]       |
+| [ORFLAGS()]      | [ORLFLAGS()]     | [ORLPOWERS()]    | [PERMISSION()]   |
+| [PIDINFO()]      | [PLAYERMEM()]    | [PLAYMEM()]      | [POLL()]         |
+| [POWERS()]       | [QUOTA()]        | [RESTARTS()]     | [ROLES()]        |
+| [RXDESC()]       | [RXLEVEL()]      | [SIZE()]         | [TAGMATCH()]     |
+| [TAGREF()]       | [TXLEVEL()]      | [TYPE()]         | [VATTRCNT()]     |
+| [VERSION()]      | [VISIBLE()]      | [WIZMOTD()]      |                  |
 
 ::: seealso
 - [Dbref functions]
@@ -4819,6 +4819,8 @@ You say, "-   foo-"
 `roles(<object>)`
 
   Returns the short names of the roles `<object>` holds, its own and its account's, highest priority first, with `everyone` last.
+
+  A player holding `game.hide.roles` hides its roles from players ranked below it, and they get only `everyone`; hasrole() still answers them. See [roles].
 
   Example:
 ```sharp
