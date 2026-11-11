@@ -853,6 +853,39 @@ public partial class Functions
 				await ArgHelpers.ColorFlagsOfAsync(Mediator, descriptor.Ref)));
 	}
 
+	/// <summary>
+	/// TinyMUX's <c>colordepth()</c>: the colour depth a connection is sent, by the scale TinyMUX uses. 0 for none
+	/// (a plain or highlight-only connection), 4 for sixteen colours, 8 for 256 and 24 for full colour. It reads
+	/// the connection the way <c>terminfo()</c> does, and only the player on it and See_All may ask.
+	/// </summary>
+	[SharpFunction(Name = "colordepth", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["player|port"])]
+	public async ValueTask<CallState> ColorDepth(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var target = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var descriptor = await ArgHelpers.LookupDescriptorAsync(parser, LocateService, ConnectionService, executor, target);
+		if (descriptor is null)
+		{
+			return new CallState(ErrorMessages.Returns.NotConnected);
+		}
+
+		if (!await ArgHelpers.CanReadDescriptorAsync(executor, descriptor.Ref))
+		{
+			return PermissionRefusal.Needs(SeeAllScopes).Return;
+		}
+
+		var style = TerminalCapabilityReader.ColorStyleFor(descriptor.Metadata,
+			await ArgHelpers.ColorFlagsOfAsync(Mediator, descriptor.Ref));
+		return new CallState(style switch
+		{
+			ColorStyles.Truecolor => "24",
+			ColorStyles.Xterm256 => "8",
+			ColorStyles.SixteenColor => "4",
+			_ => "0"
+		});
+	}
+
 	[SharpFunction(Name = "width", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Width(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await DescriptorDimensionAsync(parser, "WIDTH",
