@@ -88,6 +88,12 @@ public enum ParserStateFlags
 	/// PennMUSH's <c>do_teach</c> queues the lesson without <c>QUEUE_SOCKET</c> (<c>src/speech.c:130-163</c>).
 	/// </summary>
 	QueueMatches = 1 << 5,
+
+	/// <summary>
+	/// The command was typed after RhostMUSH's <c>}</c> prefix: runs of spaces in its text are kept as written,
+	/// whatever <c>space_compress</c> says. A command queued from it does not keep the flag.
+	/// </summary>
+	KeepSpaces = 1 << 6,
 }
 
 /// <summary>
@@ -776,6 +782,12 @@ public partial record ParserState
 	/// <summary>The attribute being evaluated.</summary>
 	public DBAttribute? CurrentEvaluation { get; init; }
 
+	/// <summary>
+	/// While a command hook runs, the command line it hooks, as written: RhostMUSH's <c>%-m</c>. Null outside a
+	/// hook, and in what a hook queues.
+	/// </summary>
+	public MString? HookedCommand { get; init; }
+
 	/// <summary>The function depth.</summary>
 	public int? ParserFunctionDepth { get; init; }
 
@@ -964,6 +976,8 @@ public partial record ParserState
 	/// </summary>
 	public ParserState SnapshotForQueuedAction() => this with
 	{
+		HookedCommand = null,
+		Flags = Flags & ~ParserStateFlags.KeepSpaces,
 		Context = Context with
 		{
 			Registers = new([Registers.TryPeek(out var registers)
@@ -1163,6 +1177,8 @@ public partial record ParserState
 		Caller = Caller,
 		ParseMode = ParseMode,
 		Flags = Flags,
+		// A hook's %-m and %-p stay readable in the u() it calls.
+		HookedCommand = HookedCommand,
 		// The same evaluation's budget, so a function that parses again (u(), iter()) enters it as it is
 		// rather than pushing a copy of this frame to carry it.
 		ExecutionBudget = ExecutionBudget,

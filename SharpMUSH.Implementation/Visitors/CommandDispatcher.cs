@@ -100,6 +100,15 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			if (TryFindSocketCommand(parser, command, out var socketCommand))
 				return await services.Commands.SocketAsync(visitor, parser, src, context, command, socketCommand);
 
+			// RhostMUSH's }: the command after it keeps its runs of spaces. It is logged as that command, so a
+			// password in it is starred out.
+			if (WithoutLeadingSpaces(commandText) is var keptText
+				&& keptText.ToPlainText().StartsWith('}')
+				&& SoftcodeDialects.InForce(parser.CurrentState.CurrentEvaluation, visitor.Configuration.CurrentValue.Compatibility.Dialect)
+					== SoftcodeDialects.Rhost)
+				return await parser.With(state => state with { Flags = state.Flags | ParserStateFlags.KeepSpaces },
+					keeping => RedispatchAsync(keeping, keptText.Substring(1, keptText.Length - 1)));
+
 			await LogCommandAsync(visitor, commandText, command);
 
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is long handle)

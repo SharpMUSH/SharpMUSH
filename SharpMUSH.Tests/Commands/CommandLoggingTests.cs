@@ -41,6 +41,28 @@ public class CommandLoggingTests
 		await Assert.That(entry.Message).EndsWith($": think {marker}");
 	}
 
+	/// <summary>RhostMUSH's <c>}</c> prefix does not hide a password command from the filter.</summary>
+	[Test]
+	public async Task ABracePrefixedPasswordIsStarredOut()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LogBrace");
+		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@set #{player.DbRef.Number}=SUSPECT"));
+		var secret = TestIsolationHelpers.GenerateUniqueName("secret");
+
+		using var rhost = TestOptionsOverride.Scope(options => options with
+		{
+			Compatibility = options.Compatibility with { Dialect = "rhost" }
+		});
+		var captured = await CaptureAsync(() => WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle)
+			.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"}}@password {secret}={secret}")));
+
+		await Assert.That(captured.Any(e => e.Message.Contains(secret))).IsFalse();
+		await Assert.That(captured.Any(e => e.Message.EndsWith($": @password {new string('*', secret.Length)}={new string('*', secret.Length)}")))
+			.IsTrue();
+	}
+
 	[Test]
 	public async Task ANoLogPlayersCommandIsNotLogged()
 	{

@@ -21,7 +21,7 @@ public class ReadForeignConfigTests
 		"conn_timeout 120",
 		"parent_recursion_limit 7",
 		"sql_server db.example",
-		"space_compress yes"
+		"space_compress no"
 	];
 
 	[Test]
@@ -41,7 +41,8 @@ public class ReadForeignConfigTests
 		await Assert.That(options.Limit.UnconnectedIdleTimeout).IsEqualTo(120u);
 		await Assert.That(options.Limit.MaxParents).IsEqualTo(7u);
 		await Assert.That(options.Net.SqlHost).IsEqualTo("db.example");
-		await Assert.That(import.Unrecognized).IsEquivalentTo(new[] { "space_compress" });
+		await Assert.That(options.Compatibility.SpaceCompress).IsFalse();
+		await Assert.That(import.Unrecognized).IsEmpty();
 	}
 
 	[Test]
@@ -51,7 +52,8 @@ public class ReadForeignConfigTests
 
 		await Assert.That(import.Options.Database.PlayerStart).IsEqualTo(12u);
 		await Assert.That(import.Options.Cost.RoomCost).IsEqualTo(25u);
-		await Assert.That(import.Unrecognized).IsEquivalentTo(new[] { "parent_recursion_limit", "sql_server", "space_compress" },
+		await Assert.That(import.Options.Compatibility.SpaceCompress).IsFalse();
+		await Assert.That(import.Unrecognized).IsEquivalentTo(new[] { "parent_recursion_limit", "sql_server" },
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 

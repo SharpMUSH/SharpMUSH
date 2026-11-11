@@ -210,4 +210,12 @@ public record CompatibilityOptions(
 		Group = "TinyMUX Compatibility",
 		Order = 9)]
 	public bool MuxArguments { get; init; }
+
+	[SharpConfig(
+		Name = "space_compress",
+		Category = "Compatibility",
+		Description = "Text being evaluated has each run of spaces made one space, and the spaces before it dropped, as on PennMUSH. Off, spaces stay as written, as on a TinyMUX or RhostMUSH game whose configuration turns its space_compress off; importing that configuration turns this off too",
+		Group = "TinyMUX Compatibility",
+		Order = 10)]
+	public bool SpaceCompress { get; init; } = true;
 }

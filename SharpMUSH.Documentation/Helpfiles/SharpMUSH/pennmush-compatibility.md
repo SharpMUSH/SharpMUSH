@@ -14,6 +14,7 @@
 SharpMUSH targets PennMUSH 1.8.8 softcode compatibility. Where it differs, the difference is one of three things, and this profile keeps them apart (see [pennmush compatibility kinds]).
 
   [COMPATIBILITY CONFIG]    settings that change how your code evaluates<br>
+  [COMPATIBILITY DIALECTS]  RhostMUSH and TinyMUX parsing in their dialects<br>
   [COMPATIBILITY PARSER]    evaluation, dispatch and error handling<br>
   [COMPATIBILITY COMMANDS]  command tables, configuration and handlers<br>
   [COMPATIBILITY ARGUMENTS] functions that take a different number of arguments<br>

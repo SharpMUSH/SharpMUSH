@@ -86,6 +86,15 @@ ITEXT_POS_NUM: [iI] '_' BANG? [0-9]+ -> popMode;
 ITEXT_POS_LAST: [iI] '_' BANG? [lL] -> popMode;
 // RhostMUSH's %-<n>: argument n, 0-999, up to three digits. PennMUSH prints "-<n>".
 ARG_DASH_NUM: '-' BANG? [0-9] [0-9]? [0-9]? -> popMode;
+// RhostMUSH's %-n, %-k and %-# (who runs the queue entry: name, moniker, dbref), %-m and %-p (in a hook, the
+// hooked command and the line typed). The rhost dialect reads them; elsewhere they print "-" and the letter.
+// %-## stays '-' and the ## token, as do %-#@ and %-#$.
+ARG_DASH_LETTER: ('-' [nNkKmp] | '-#' {InputStream.LA(1) is not ('#' or '@' or '$')}?) -> popMode;
+// RhostMUSH's %-h<name>, an attribute cache. A name of word characters only, so other text keeps its reading.
+ARG_DASH_CACHE: '-h<' [a-zA-Z0-9_\-]* '>' -> popMode;
+// RhostMUSH's %+! and %+!<c>!: every argument, joined by a space or by <c>. The rhost dialect reads them;
+// elsewhere they are the argument count and the text after it.
+ARG_ALL: '+!' (~[,;=()[\]{}\\%\r\n] '!')? -> popMode;
 DTEXT_NUM: [dD] BANG? [0-9]+ -> popMode;
 DTEXT_LAST: [dD][lL] -> popMode;
 STEXT_NUM: '$' [0-9]+ -> popMode;

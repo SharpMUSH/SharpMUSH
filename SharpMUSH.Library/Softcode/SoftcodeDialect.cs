@@ -74,6 +74,12 @@ public sealed record SoftcodeDialect(
 	/// <summary>The permission <paramref name="name"/> means as a power in this dialect, if it is one of its power names.</summary>
 	public string? PowerScopeFor(string name) => PowerScopes.GetValueOrDefault(name);
 
+	/// <summary>
+	/// The functions that take one argument and read any commas in it as text, so that <c>strlen(a,b)</c> is 3: a
+	/// call with more arguments is read as one. Named as SharpMUSH has them.
+	/// </summary>
+	public IReadOnlySet<string> CommaAbsorbingFunctions { get; init; } = new HashSet<string>();
+
 	/// <summary>The SharpMUSH function <paramref name="name"/> means in this dialect, if it is one of its aliases.</summary>
 	public string? FunctionFor(string name) => FunctionAliases.GetValueOrDefault(name);
 
@@ -85,6 +91,9 @@ public sealed record SoftcodeDialect(
 
 	/// <summary>The SharpMUSH attribute <paramref name="name"/> means in this dialect, if it is one of its aliases.</summary>
 	public string? AttributeFor(string name) => AttributeAliases.GetValueOrDefault(name);
+
+	/// <summary>Whether this dialect reads a call to <paramref name="function"/> with several arguments as one.</summary>
+	public bool AbsorbsCommas(string function) => CommaAbsorbingFunctions.Contains(function);
 }
 
 /// <summary>
@@ -206,6 +215,11 @@ public static class SoftcodeDialects
 			["wh"] = "whisper"
 		})
 	{
+		// Its functions declared with -1 arguments, which SharpMUSH has with one argument.
+		CommaAbsorbingFunctions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		{
+			"capstr", "decode64", "encode64", "escape", "flip", "ispunct", "lcstr", "lit", "s", "secure", "strlen", "strlenraw", "ucstr"
+		},
 		// The built-in attributes its import stores under SharpMUSH's names (RhostNameTables.RenamedAttributes).
 		AttributeAliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
 		{
@@ -370,6 +384,11 @@ public static class SoftcodeDialects
 			["PLAYER"] = 'P'
 		},
 		PowerScopes = MuxPowerScopes(),
+		// Its functions that parse at most one argument, which SharpMUSH has with one argument.
+		CommaAbsorbingFunctions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		{
+			"capstr", "escape", "flip", "lcstr", "lit", "s", "secure", "sha1", "strlen", "strmem", "t", "ucstr"
+		},
 		// The built-in attributes its import stores under SharpMUSH's names (TinyMuxNames.AttributeRenames), and the
 		// attr_alias entries of its alias.conf.
 		AttributeAliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
