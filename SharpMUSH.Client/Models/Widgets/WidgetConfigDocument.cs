@@ -15,14 +15,21 @@ namespace SharpMUSH.Client.Models.Widgets;
 /// later version of the widget) survives being opened and saved in the form.
 /// </para>
 /// <para>
-/// Widgets read their config case-insensitively, so a key is found whatever its casing and is
-/// written back under the schema's camelCase name. Clearing a field removes its key, which hands it
-/// back to the widget's default rather than saving an empty value over it.
+/// Widgets read their config with camelCase names, matched exactly, so a key in any other casing
+/// ("Markdown") is one the widget ignores: the form shows it among the unknown keys rather than as
+/// the field's value. Clearing a field removes its key, which hands it back to the widget's default
+/// rather than saving an empty value over it. A list item left with no keys is dropped on save.
 /// </para>
 /// </remarks>
 public sealed class WidgetConfigDocument
 {
-	private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
+	// Relaxed escaping keeps Markdown and non-English text readable in the JSON view ("é", "<b>"),
+	// as an admin typed it; the config is never written into HTML or script unescaped.
+	private static readonly JsonSerializerOptions Indented = new()
+	{
+		WriteIndented = true,
+		Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+	};
 
 	private readonly JsonObject _root;
 
@@ -55,12 +62,42 @@ public sealed class WidgetConfigDocument
 	}
 
 	/// <summary>The config as indented JSON, or null when it holds no keys (no config at all).</summary>
-	public string? ToJson() => _root.Count == 0 ? null : _root.ToJsonString(Indented);
+	public string? ToJson()
+	{
+		DropEmptyItems();
+		return _root.Count == 0 ? null : _root.ToJsonString(Indented);
+	}
+
+	/// <summary>Removes list items with no keys (an added link never filled in), and a list they leave empty.</summary>
+	private void DropEmptyItems()
+	{
+		foreach (var key in _root.Where(p => p.Value is JsonArray).Select(p => p.Key).ToList())
+		{
+			var array = (JsonArray)_root[key]!;
+			foreach (var empty in array.OfType<JsonObject>().Where(o => o.Count == 0).ToList())
+			{
+				array.Remove(empty);
+			}
+
+			if (array.Count == 0)
+			{
+				_root.Remove(key);
+			}
+		}
+	}
+
+	/// <summary>Whether a key is unset or a list holding only strings: what the one-per-line field can edit without loss.</summary>
+	public bool HoldsLines(string key) => Find(key) switch
+	{
+		null => true,
+		JsonArray array => array.All(item => item is JsonValue value && value.GetValueKind() == JsonValueKind.String),
+		_ => false
+	};
 
 	/// <summary>The keys present that no documented field names, in their stored order.</summary>
 	public IReadOnlyList<string> UnknownKeys(IReadOnlyList<WidgetConfigField> fields) =>
 		_root.Select(p => p.Key)
-			.Where(key => !fields.Any(f => string.Equals(f.Key, key, StringComparison.OrdinalIgnoreCase)))
+			.Where(key => !fields.Any(f => string.Equals(f.Key, key, StringComparison.Ordinal)))
 			.ToList();
 
 	public string? GetString(string key) => Find(key) switch
@@ -178,27 +215,11 @@ public sealed class WidgetConfigDocument
 		array.Insert(to, item._root);
 	}
 
-	private JsonNode? Find(string key) => StoredKey(key) is { } stored ? _root[stored] : null;
+	private JsonNode? Find(string key) => _root.TryGetPropertyValue(key, out var node) ? node : null;
 
-	private string? StoredKey(string key) =>
-		_root.Select(p => p.Key).FirstOrDefault(k => string.Equals(k, key, StringComparison.OrdinalIgnoreCase));
-
-	/// <summary>Writes a key under its schema name, replacing it whatever its stored casing; null removes it.</summary>
+	/// <summary>Writes a key; null removes it.</summary>
 	private void Put(string key, JsonNode? value)
 	{
-		if (StoredKey(key) is { } stored && !string.Equals(stored, key, StringComparison.Ordinal))
-		{
-			// Keep the key in place: removing and re-adding would move it to the end.
-			var index = _root.IndexOf(stored);
-			_root.RemoveAt(index);
-			if (value is not null)
-			{
-				_root.Insert(index, key, value);
-			}
-
-			return;
-		}
-
 		if (value is null)
 		{
 			_root.Remove(key);

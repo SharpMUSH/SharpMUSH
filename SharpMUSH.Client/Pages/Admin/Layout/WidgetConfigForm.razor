@@ -15,10 +15,10 @@
             @switch (field.TypeLabel)
             {
                 case "boolean":
-                    <MudSwitch T="bool" Color="Color.Primary" Label="@LabelOf(field)"
+                    <MudSwitch T="bool" Color="Color.Primary" Label="@LabelOf(field)" aria-describedby="@HelpId(key)"
                                Value="@(Document.GetBool(key) ?? DefaultBool(field))"
                                ValueChanged="@(on => Edit(() => Document.SetBool(key, on)))" />
-                    <div class="wcf-help">@Loc[field.DescriptionKey]</div>
+                    <div class="wcf-help" id="@HelpId(key)">@Loc[field.DescriptionKey]</div>
                     break;
 
                 case "integer" or "number":
@@ -61,9 +61,10 @@
                     </fieldset>
                     break;
 
-                case "list":
+                case "list" when Document.HoldsLines(key):
+                    @* Committed on leaving the field, so a newline or a trailing space is not trimmed away mid-typing. *@
                     <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="@LabelOf(field)" Lines="4" Sizing="InputSizing.Auto"
-                                  Value="@string.Join('\n', Document.GetLines(key))" Immediate="true"
+                                  Value="@string.Join('\n', Document.GetLines(key))" Immediate="false"
                                   HelperText="@($"{Loc[field.DescriptionKey]} {Loc["LayCfgOnePerLine"]}")"
                                   ValueChanged="@(text => Edit(() => Document.SetLines(key, (text ?? string.Empty).Split('\n'))))" />
                     break;
@@ -77,7 +78,8 @@
                     break;
 
                 default:
-                    @* No shipped widget has a nested object key; the JSON view edits one. *@
+                    @* A nested object, or a list of values the form cannot show without loss (objects
+                       with no documented keys): the JSON view edits those. No shipped widget has one. *@
                     <div class="wcf-list-label">@LabelOf(field)</div>
                     <div class="wcf-help">@Loc[field.DescriptionKey] @Loc["LayCfgObjectInJson"]</div>
                     break;
@@ -101,6 +103,11 @@
         edit();
         return OnChanged.InvokeAsync();
     }
+
+    /// <summary>A page-unique id for a switch's help text, so the switch can name it as its description.</summary>
+    private string HelpId(string key) => $"wcf-help-{_instance}-{key}";
+
+    private readonly string _instance = Guid.NewGuid().ToString("N")[..8];
 
     private string LabelOf(WidgetConfigField field)
         => field.LabelKey is { } labelKey ? Loc[labelKey] : SpacedOut(field.Key);

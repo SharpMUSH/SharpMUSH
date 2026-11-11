@@ -40,15 +40,43 @@ public class WidgetConfigDocumentTests
 			&& error.Value != "not an object").IsTrue();
 
 	[Test]
-	public async Task AKey_IsFoundWhateverItsCasing_AndWrittenBackInPlaceUnderItsSchemaName()
+	public async Task AKey_IsMatchedByItsExactName_AsTheWidgetsReadIt()
 	{
+		// Widgets deserialize camelCase names exactly: "Slug" is a key they never see.
 		var doc = Doc("""{"first":1,"Slug":"old","last":2}""");
-		await Assert.That(doc.GetString("slug")).IsEqualTo("old");
+		await Assert.That(doc.GetString("slug")).IsNull();
 
 		doc.SetString("slug", "new");
 
-		await Assert.That(doc.ToJson()!.Replace(" ", "").Replace("\n", "")).IsEqualTo("""{"first":1,"slug":"new","last":2}""");
+		await Assert.That(doc.ToJson()!.Replace(" ", "").Replace("\n", ""))
+			.IsEqualTo("""{"first":1,"Slug":"old","last":2,"slug":"new"}""");
 	}
+
+	[Test]
+	public async Task TheJson_KeepsTextReadable()
+	{
+		var doc = Doc("""{"markdown":"Café <b>don't</b> & 世界"}""");
+		await Assert.That(doc.ToJson()).Contains("Café <b>don't</b> & 世界");
+	}
+
+	[Test]
+	public async Task AnItemLeftEmpty_IsDroppedOnSave_WithAListItEmptied()
+	{
+		var doc = Doc("""{"links":[{"label":"A"}],"other":[]}""");
+		doc.AddItem("links");
+		doc.AddItem("more");
+
+		await Assert.That(doc.ToJson()!.Replace(" ", "").Replace("\n", "")).IsEqualTo("""{"links":[{"label":"A"}]}""");
+	}
+
+	[Test]
+	[Arguments(null, true)]
+	[Arguments("""{"tags":["a","b"]}""", true)]
+	[Arguments("""{"tags":[{"x":1}]}""", false)]
+	[Arguments("""{"tags":[1]}""", false)]
+	[Arguments("""{"tags":"a"}""", false)]
+	public async Task OnlyAListOfStrings_IsEditedOnePerLine(string? json, bool lines)
+		=> await Assert.That(Doc(json).HoldsLines("tags")).IsEqualTo(lines);
 
 	[Test]
 	public async Task ClearingAField_RemovesItsKey()
@@ -100,6 +128,6 @@ public class WidgetConfigDocumentTests
 	public async Task UnknownKeys_AreTheOnesNoFieldNames()
 	{
 		var fields = SharpMUSH.Library.Models.Portal.Widgets.WidgetConfigSchema.Describe(typeof(WikiBodyConfig));
-		await Assert.That(Doc("""{"SLUG":"a","extra":1,"locale":"de"}""").UnknownKeys(fields)).IsEquivalentTo(["extra"]);
+		await Assert.That(Doc("""{"SLUG":"a","extra":1,"locale":"de"}""").UnknownKeys(fields)).IsEquivalentTo(["SLUG", "extra"]);
 	}
 }

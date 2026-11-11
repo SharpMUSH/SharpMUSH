@@ -24,6 +24,7 @@ public class WidgetConfigDialogTests : BunitContext
 		registry.Register(BuiltInWidgets.Named("WikiBody"));
 		registry.Register(BuiltInWidgets.Named("QuickLinks"));
 		registry.Register(BuiltInWidgets.Named("Stats"));
+		registry.Register(BuiltInWidgets.Named("WelcomeText"));
 
 		Services.AddMudServices();
 		Services.AddSingleton<IWidgetRegistry>(registry);
@@ -204,16 +205,37 @@ public class WidgetConfigDialogTests : BunitContext
 	[TUnit.Core.Test]
 	public async Task Form_KeepsKeysItDoesNotShow_AndSaysSo()
 	{
+		// "Slug" is not the widget's "slug": the widget ignores it, so the form lists it rather than showing it as the page.
 		var (provider, dialog) = await ShowDialogAsync("WikiBody", "{\"Slug\":\"old\",\"theme\":{\"dark\":true}}");
-		await Assert.That(provider.Find(".wcd-unknown").TextContent).Contains("theme");
+		await Assert.That(provider.Find(".wcd-unknown").TextContent).Contains("Slug, theme");
+		await Assert.That(provider.Find("[data-config-key='slug'] input").GetAttribute("value") ?? "").IsEqualTo("");
 
 		await provider.Find("[data-config-key='slug'] input").InputAsync("new");
 
 		var saved = Parsed(await ApplyAsync(provider, dialog));
-		// Written back under the schema's name, in its old place, beside the key the form left alone.
-		await Assert.That(saved.Select(p => p.Key)).IsEquivalentTo(["slug", "theme"]);
+		await Assert.That(saved.Select(p => p.Key)).IsEquivalentTo(["Slug", "theme", "slug"]);
 		await Assert.That((string?)saved["slug"]).IsEqualTo("new");
 		await Assert.That((bool?)saved["theme"]!["dark"]).IsTrue();
+	}
+
+	[TUnit.Core.Test]
+	public async Task Form_DropsALinkAddedButNeverFilledIn()
+	{
+		var (provider, dialog) = await ShowDialogAsync("QuickLinks");
+
+		await provider.Find(".wcf-add").ClickAsync();
+
+		await Assert.That(await ApplyAsync(provider, dialog)).IsNull();
+	}
+
+	[TUnit.Core.Test]
+	public async Task Form_SwitchNamesItsHelpText()
+	{
+		var provider = await RenderDialogAsync("WelcomeText");
+		var described = provider.Find("[data-config-key='showToGuests'] input").GetAttribute("aria-describedby");
+
+		await Assert.That(described).IsNotNull();
+		await Assert.That(provider.Find($"[id='{described}']").TextContent).Contains("LayCfgWelcomeShowToGuests");
 	}
 
 	[TUnit.Core.Test]
