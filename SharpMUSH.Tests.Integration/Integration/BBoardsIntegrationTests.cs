@@ -7,6 +7,7 @@ using SharpMUSH.Library.API;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
@@ -17,9 +18,9 @@ using SharpMUSH.Server.Services;
 namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
-/// The bundled bboards package, installed from the catalogue and driven by typed commands. Each test
-/// installs the package, makes a board of its own and removes the package again. Not in parallel: the
-/// commands it adds are global, and another test's install would renumber the boards.
+/// The bundled bboards package, installed from the catalogue and driven by typed commands. The package is
+/// installed once for the class and removed after its last test; each test makes a board of its own. Not in
+/// parallel: the commands it adds are global.
 /// </summary>
 [NotInParallel]
 public partial class BBoardsIntegrationTests
@@ -95,8 +96,17 @@ public partial class BBoardsIntegrationTests
 		return player;
 	}
 
-	private async Task InstallAsync(string package = "bboards")
+	// The world the package was installed on, so the class's last hook can take it out again.
+	private static ServerWebAppFactory? _installedOn;
+
+	/// <summary>Installs <paramref name="package"/> from the catalogue unless the game has it already.</summary>
+	private async Task EnsureInstalledAsync(string package = "bboards")
 	{
+		if (await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetInstalledPackageAsync(package) is InstalledPackageRecord)
+		{
+			return;
+		}
+
 		var controller = new PackagesController(
 			WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IPackageSourceService>(),
@@ -109,6 +119,7 @@ public partial class BBoardsIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>(),
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IBundledPackageBootstrap>());
+		_installedOn = WebAppFactoryArg;
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, package, null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because($"{package} must install from the catalogue");
@@ -116,10 +127,24 @@ public partial class BBoardsIntegrationTests
 		await WebAppFactoryArg.QueueBarrierAsync();
 	}
 
-	private async Task UninstallAsync()
+	[Before(Test)]
+	public Task InstallBBoardsAsync() => EnsureInstalledAsync();
+
+	[After(Class)]
+	public static async Task UninstallBBoardsAsync()
 	{
-		await Installer.UninstallAsync("bboards-app", force: true, CancellationToken.None);
-		await WebAppFactoryArg.Services.UninstallWithBridgesAsync("bboards");
+		// Gone with its world when this class was the last to use it.
+		if (_installedOn is { IsRunning: true } factory)
+		{
+			await UninstallAsync(factory);
+			_installedOn = null;
+		}
+	}
+
+	private static async Task UninstallAsync(ServerWebAppFactory factory)
+	{
+		await factory.Services.GetRequiredService<IPackageInstallService>().UninstallAsync("bboards-app", force: true, CancellationToken.None);
+		await factory.Services.UninstallWithBridgesAsync("bboards");
 	}
 
 	/// <summary>A board of the test's own at the top, made by <paramref name="admin"/>; returns its name.</summary>
@@ -141,91 +166,70 @@ public partial class BBoardsIntegrationTests
 	[Test]
 	public async Task PostsAndCommentsKeepTheirTextAndRepliesSitUnderWhatTheyAnswer()
 	{
-		try
-		{
-			await InstallAsync();
-			var admin = await Player("BbAdm", "bboard-admin");
-			var mira = await Player("BbMira");
-			var board = await Board(admin, "BbTalk");
+		var admin = await Player("BbAdm", "bboard-admin");
+		var mira = await Player("BbMira");
+		var board = await Board(admin, "BbTalk");
 
-			var post = await Post(mira, board, "Hello", "Text with [add(1,2)] and 50%.");
-			await As(admin, $"+bbcomment {post}=First comment.");
-			await As(admin, $"+bbcomment {post}=Second comment.");
-			await As(mira, $"+bbreply {post}/1=Answer to the first.");
+		var post = await Post(mira, board, "Hello", "Text with [add(1,2)] and 50%.");
+		await As(admin, $"+bbcomment {post}=First comment.");
+		await As(admin, $"+bbcomment {post}=Second comment.");
+		await As(mira, $"+bbreply {post}/1=Answer to the first.");
 
-			var read = await As(admin, $"+bbread {post}");
-			await Assert.That(read).Contains("Text with [add(1,2)] and 50%.")
-				.Because("stored text is never evaluated, and a bare [text] is not a help link");
-			var first = read.IndexOf("First comment.", StringComparison.Ordinal);
-			var answer = read.IndexOf("Answer to the first.", StringComparison.Ordinal);
-			var second = read.IndexOf("Second comment.", StringComparison.Ordinal);
-			await Assert.That(first).IsGreaterThanOrEqualTo(0).Because(read);
-			await Assert.That(answer).IsGreaterThan(first).Because(read);
-			await Assert.That(second).IsGreaterThan(answer).Because("a reply sits under the comment it answers");
+		var read = await As(admin, $"+bbread {post}");
+		await Assert.That(read).Contains("Text with [add(1,2)] and 50%.")
+			.Because("stored text is never evaluated, and a bare [text] is not a help link");
+		var first = read.IndexOf("First comment.", StringComparison.Ordinal);
+		var answer = read.IndexOf("Answer to the first.", StringComparison.Ordinal);
+		var second = read.IndexOf("Second comment.", StringComparison.Ordinal);
+		await Assert.That(first).IsGreaterThanOrEqualTo(0).Because(read);
+		await Assert.That(answer).IsGreaterThan(first).Because(read);
+		await Assert.That(second).IsGreaterThan(answer).Because("a reply sits under the comment it answers");
 
-			await Assert.That(await As(mira, $"+bbread {post}/1")).Contains("Answer to the first.")
-				.And.DoesNotContain("Second comment.").Because("a conversation is a comment and its replies");
+		await Assert.That(await As(mira, $"+bbread {post}/1")).Contains("Answer to the first.")
+			.And.DoesNotContain("Second comment.").Because("a conversation is a comment and its replies");
 
-			await Assert.That(await As(mira, $"+bbedit {post}=50%/half")).Contains($"Edited {post}.");
-			await Assert.That(await As(admin, $"+bbread {post}")).Contains("Text with [add(1,2)] and half.");
-			await Assert.That(await As(admin, $"+bbedit {post}/3=Answer/Reply")).Contains("Edited")
-				.Because("an admin moderates every board");
-		}
-		finally
-		{
-			await UninstallAsync();
-		}
+		await Assert.That(await As(mira, $"+bbedit {post}=50%/half")).Contains($"Edited {post}.");
+		await Assert.That(await As(admin, $"+bbread {post}")).Contains("Text with [add(1,2)] and half.");
+		await Assert.That(await As(admin, $"+bbedit {post}/3=Answer/Reply")).Contains("Edited")
+			.Because("an admin moderates every board");
 	}
 
 	/// <summary>The first-install code run again, as a package attaching to the commands object once did, makes no second set of boards.</summary>
 	[Test]
 	public async Task TheStartingBoardsAreMadeOnce()
 	{
-		try
-		{
-			await InstallAsync();
-			var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("bboards");
-			var commands = objects.Single(o => o.Ref == "bboards").Objid;
-			var store = objects.Single(o => o.Ref == "store").Objid;
-			async Task<string> Boards() => (await WebAppFactoryArg.FunctionParser.EvaluateAsync(
-				MarkupText.Plain($"[words(get({store}/ORDER))] [words(get({store}/CATS))]"))).ToPlainText();
-			await Assert.That(await Boards()).IsEqualTo("6 2");
+		// The other tests' boards sit at the top beside the starting ones, so this counts on a fresh install.
+		await UninstallAsync(WebAppFactoryArg);
+		await EnsureInstalledAsync();
+		var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("bboards");
+		var commands = objects.Single(o => o.Ref == "bboards").Objid;
+		var store = objects.Single(o => o.Ref == "store").Objid;
+		async Task<string> Boards() => (await WebAppFactoryArg.FunctionParser.EvaluateAsync(
+			MarkupText.Plain($"[words(get({store}/ORDER))] [words(get({store}/CATS))]"))).ToPlainText();
+		await Assert.That(await Boards()).IsEqualTo("6 2");
 
-			await God($"@trigger {commands}/AINSTALL");
+		await God($"@trigger {commands}/AINSTALL");
 
-			await Assert.That(await Boards()).IsEqualTo("6 2");
-		}
-		finally
-		{
-			await UninstallAsync();
-		}
+		await Assert.That(await Boards()).IsEqualTo("6 2");
 	}
 
 	/// <summary>A removed comment without replies is gone: the comments after it move up one.</summary>
 	[Test]
 	public async Task ARemovedCommentIsGoneAndTheNextMovesUp()
 	{
-		try
-		{
-			await InstallAsync();
-			var admin = await Player("BbRmAdm", "bboard-admin");
-			var mira = await Player("BbRmMira");
-			var board = await Board(admin, "BbRemove");
+		var admin = await Player("BbRmAdm", "bboard-admin");
+		var mira = await Player("BbRmMira");
+		var board = await Board(admin, "BbRemove");
 
-			var post = await Post(mira, board, "Gone", "A post with two comments.");
-			await As(mira, $"+bbcomment {post}=Alpha comment.");
-			await As(mira, $"+bbcomment {post}=Beta comment.");
+		var post = await Post(mira, board, "Gone", "A post with two comments.");
+		await As(mira, $"+bbcomment {post}=Alpha comment.");
+		await As(mira, $"+bbcomment {post}=Beta comment.");
 
-			await Assert.That(await As(mira, $"+bbremove {post}/1")).Contains("[2] is now [1].");
-			var read = await As(mira, $"+bbread {post}");
-			await Assert.That(read).DoesNotContain("Alpha comment.").And.Contains("Beta comment.");
-			await Assert.That(await As(mira, $"+bbread {post}/1")).Contains("Beta comment.")
-				.Because("the comment after the removed one is number 1 now");
-		}
-		finally
-		{
-			await UninstallAsync();
-		}
+		await Assert.That(await As(mira, $"+bbremove {post}/1")).Contains("[2] is now [1].");
+		var read = await As(mira, $"+bbread {post}");
+		await Assert.That(read).DoesNotContain("Alpha comment.").And.Contains("Beta comment.");
+		await Assert.That(await As(mira, $"+bbread {post}/1")).Contains("Beta comment.")
+			.Because("the comment after the removed one is number 1 now");
 	}
 
 	/// <summary>
@@ -235,12 +239,11 @@ public partial class BBoardsIntegrationTests
 	[Test]
 	public async Task SettingsAreChangedThroughPlusConfig()
 	{
+		var admin = await Player("BbCfgAdm", "bboard-admin");
+		var board = await Board(admin, "BbCfg");
+
 		try
 		{
-			await InstallAsync();
-			var admin = await Player("BbCfgAdm", "bboard-admin");
-			var board = await Board(admin, "BbCfg");
-
 			await God("+config bboards/default-pins=4");
 			await God("+config bboards/max-pins=6");
 			await God("+config bboards/thread-page=5");
@@ -260,7 +263,11 @@ public partial class BBoardsIntegrationTests
 		}
 		finally
 		{
-			await UninstallAsync();
+			// The package stays installed for the next test, so its settings go back.
+			foreach (var setting in new[] { "default-pins", "max-pins", "thread-page" })
+			{
+				await God($"+config/reset bboards/{setting}");
+			}
 		}
 	}
 
@@ -271,38 +278,30 @@ public partial class BBoardsIntegrationTests
 	[Test]
 	public async Task RemovedPostsDraftsAndBoardsLeaveNoEmptyReadingLeaves()
 	{
-		try
-		{
-			await InstallAsync();
-			var admin = await Player("BbLfAdm", "bboard-admin");
-			var mira = await Player("BbLfMira");
-			var board = await Board(admin, "BbLeaves");
-			var post = await Post(admin, board, "Followed", "Follow me.");
+		var admin = await Player("BbLfAdm", "bboard-admin");
+		var mira = await Player("BbLfMira");
+		var board = await Board(admin, "BbLeaves");
+		var post = await Post(admin, board, "Followed", "Follow me.");
 
-			await Assert.That(await As(mira, $"+bbfollow {post}")).Contains("Following");
-			await Assert.That(await God($"think [words(lattr(#{mira.DbRef.Number}/BBOARD`P**))]")).IsNotEqualTo("0");
-			await As(admin, $"+bbremove {post}");
-			await Assert.That(await God($"think [lattr(#{mira.DbRef.Number}/BBOARD`P**)]")).IsEmpty()
-				.Because("a removed post's reading leaves are wiped, not emptied");
+		await Assert.That(await As(mira, $"+bbfollow {post}")).Contains("Following");
+		await Assert.That(await God($"think [words(lattr(#{mira.DbRef.Number}/BBOARD`P**))]")).IsNotEqualTo("0");
+		await As(admin, $"+bbremove {post}");
+		await Assert.That(await God($"think [lattr(#{mira.DbRef.Number}/BBOARD`P**)]")).IsEmpty()
+			.Because("a removed post's reading leaves are wiped, not emptied");
 
-			await As(mira, $"+bbpost {board}/A draft");
-			await As(mira, "+bbwrite A line.");
-			await Assert.That(await God($"think [words(lattr(#{mira.DbRef.Number}/BBOARD`DRAFT**))]")).IsNotEqualTo("0");
-			await As(mira, "+bbtoss");
-			await Assert.That(await God($"think [lattr(#{mira.DbRef.Number}/BBOARD`DRAFT**)]")).IsEmpty()
-				.Because("a tossed draft is wiped, not emptied");
+		await As(mira, $"+bbpost {board}/A draft");
+		await As(mira, "+bbwrite A line.");
+		await Assert.That(await God($"think [words(lattr(#{mira.DbRef.Number}/BBOARD`DRAFT**))]")).IsNotEqualTo("0");
+		await As(mira, "+bbtoss");
+		await Assert.That(await God($"think [lattr(#{mira.DbRef.Number}/BBOARD`DRAFT**)]")).IsEmpty()
+			.Because("a tossed draft is wiped, not emptied");
 
-			var group = await Board(admin, "BbLeavesGone");
-			await As(mira, $"+bbleave {group}");
-			await Assert.That(await God($"think [words(lattr(#{mira.DbRef.Number}/BBOARD`B**))]")).IsNotEqualTo("0");
-			await As(admin, $"+bbcleargroup {group}");
-			await Assert.That(await God($"think [lattr(#{mira.DbRef.Number}/BBOARD`B**)]")).IsEmpty()
-				.Because("a cleared board's reading leaves are wiped, not emptied");
-		}
-		finally
-		{
-			await UninstallAsync();
-		}
+		var group = await Board(admin, "BbLeavesGone");
+		await As(mira, $"+bbleave {group}");
+		await Assert.That(await God($"think [words(lattr(#{mira.DbRef.Number}/BBOARD`B**))]")).IsNotEqualTo("0");
+		await As(admin, $"+bbcleargroup {group}");
+		await Assert.That(await God($"think [lattr(#{mira.DbRef.Number}/BBOARD`B**)]")).IsEmpty()
+			.Because("a cleared board's reading leaves are wiped, not emptied");
 	}
 
 	/// <summary>
@@ -312,321 +311,243 @@ public partial class BBoardsIntegrationTests
 	[Test]
 	public async Task BoardHooksGetTheirArgumentsByNameAndByPlace()
 	{
-		try
-		{
-			await InstallAsync();
-			var admin = await Player("BbHookAdm", "bboard-admin");
-			var actor = await Objid(admin);
-			var board = await Board(admin, "BbHook");
-			var (_, key) = await BoardRow(admin, board);
-			await God($"&ON`POST {key}=&HEARD`POST me=%<post>|%0|%<actor>|%1|%<path>|%2|%<title>|%3");
-			await God($"&ON`COMMENT {key}=&HEARD`COMMENT me=%<post>|%0|%<actor>|%1|%<path>|%2|%<comment>|%3|%<reply>|%4");
-			await God($"&ON`PIN {key}=&HEARD`PIN me=%<post>|%0|%<actor>|%1|%<pinned>|%2");
+		var admin = await Player("BbHookAdm", "bboard-admin");
+		var actor = await Objid(admin);
+		var board = await Board(admin, "BbHook");
+		var (_, key) = await BoardRow(admin, board);
+		await God($"&ON`POST {key}=&HEARD`POST me=%<post>|%0|%<actor>|%1|%<path>|%2|%<title>|%3");
+		await God($"&ON`COMMENT {key}=&HEARD`COMMENT me=%<post>|%0|%<actor>|%1|%<path>|%2|%<comment>|%3|%<reply>|%4");
+		await God($"&ON`PIN {key}=&HEARD`PIN me=%<post>|%0|%<actor>|%1|%<pinned>|%2");
 
-			var post = await Post(admin, board, "Hooked, by name", "Body.");
-			var heard = (await God($"think [get({key}/HEARD`POST)]")).Split('|');
-			await Assert.That(heard.Length).IsEqualTo(8).Because(string.Join("|", heard));
-			var postObjid = heard[0];
-			await Assert.That(postObjid).StartsWith("#").And.IsEqualTo(heard[1]);
-			await Assert.That(heard[2]).IsEqualTo(actor).And.IsEqualTo(heard[3]);
-			await Assert.That(heard[4]).IsEqualTo(post).And.IsEqualTo(heard[5]);
-			await Assert.That(heard[6]).IsEqualTo("Hooked, by name").And.IsEqualTo(heard[7])
-				.Because("a title holding a comma arrives whole, by name and by place");
+		var post = await Post(admin, board, "Hooked, by name", "Body.");
+		var heard = (await God($"think [get({key}/HEARD`POST)]")).Split('|');
+		await Assert.That(heard.Length).IsEqualTo(8).Because(string.Join("|", heard));
+		var postObjid = heard[0];
+		await Assert.That(postObjid).StartsWith("#").And.IsEqualTo(heard[1]);
+		await Assert.That(heard[2]).IsEqualTo(actor).And.IsEqualTo(heard[3]);
+		await Assert.That(heard[4]).IsEqualTo(post).And.IsEqualTo(heard[5]);
+		await Assert.That(heard[6]).IsEqualTo("Hooked, by name").And.IsEqualTo(heard[7])
+			.Because("a title holding a comma arrives whole, by name and by place");
 
-			await As(admin, $"+bbcomment {post}=First.");
-			await As(admin, $"+bbreply {post}/1=Answer.");
-			heard = (await God($"think [get({key}/HEARD`COMMENT)]")).Split('|');
-			await Assert.That(heard.Length).IsEqualTo(10).Because(string.Join("|", heard));
-			await Assert.That(heard[0]).IsEqualTo(postObjid).And.IsEqualTo(heard[1]);
-			await Assert.That(heard[2]).IsEqualTo(actor).And.IsEqualTo(heard[3]);
-			await Assert.That(heard[4]).IsEqualTo(post).And.IsEqualTo(heard[5]);
-			await Assert.That(heard[6]).IsNotEmpty().And.IsEqualTo(heard[7]);
-			await Assert.That(heard[8]).IsNotEmpty().And.IsEqualTo(heard[9])
-				.Because("a reply names the comment it answers");
+		await As(admin, $"+bbcomment {post}=First.");
+		await As(admin, $"+bbreply {post}/1=Answer.");
+		heard = (await God($"think [get({key}/HEARD`COMMENT)]")).Split('|');
+		await Assert.That(heard.Length).IsEqualTo(10).Because(string.Join("|", heard));
+		await Assert.That(heard[0]).IsEqualTo(postObjid).And.IsEqualTo(heard[1]);
+		await Assert.That(heard[2]).IsEqualTo(actor).And.IsEqualTo(heard[3]);
+		await Assert.That(heard[4]).IsEqualTo(post).And.IsEqualTo(heard[5]);
+		await Assert.That(heard[6]).IsNotEmpty().And.IsEqualTo(heard[7]);
+		await Assert.That(heard[8]).IsNotEmpty().And.IsEqualTo(heard[9])
+			.Because("a reply names the comment it answers");
 
-			await As(admin, $"+bbpin {post}");
-			heard = (await God($"think [get({key}/HEARD`PIN)]")).Split('|');
-			await Assert.That(string.Join("|", heard)).IsEqualTo($"{postObjid}|{postObjid}|{actor}|{actor}|1|1");
-		}
-		finally
-		{
-			await UninstallAsync();
-		}
+		await As(admin, $"+bbpin {post}");
+		heard = (await God($"think [get({key}/HEARD`PIN)]")).Split('|');
+		await Assert.That(string.Join("|", heard)).IsEqualTo($"{postObjid}|{postObjid}|{actor}|{actor}|1|1");
 	}
 
 	[Test]
 	public async Task AModeratorsEditRunsAsTheModeratorAndSeesAnonymousAuthors()
 	{
-		try
-		{
-			await InstallAsync();
-			var admin = await Player("BbAdm", "bboard-admin");
-			var mira = await Player("BbMira");
-			var reader = await Player("BbRead");
-			var board = await Board(admin, "BbMod");
+		var admin = await Player("BbAdm", "bboard-admin");
+		var mira = await Player("BbMira");
+		var reader = await Player("BbRead");
+		var board = await Board(admin, "BbMod");
 
-			var post = await Post(mira, board, "Mine", "plain");
-			await As(mira, $"+bbedit/all/mush {post}=Written by [name(me)].");
-			await Assert.That(await As(reader, $"+bbread {post}")).Contains($"Written by {mira.Name}.");
-			await Assert.That(await As(admin, $"+bbedit {post}=Written/Typed")).Contains("Replace it whole");
-			await Assert.That(await As(reader, $"+bbread {post}")).Contains($"Written by {mira.Name}.")
-				.Because("a partial edit of someone else's SharpMUSH text would run their code as the moderator");
-			await Assert.That(await As(admin, $"+bbedit/all/mush {post}=Edited by [name(me)]."))
-				.Contains($"Edited {post}.");
-			await Assert.That(await As(reader, $"+bbread {post}")).Contains($"Edited by {admin.Name}.")
-				.Because("a moderator's SharpMUSH text runs as the moderator, never as the post's author");
+		var post = await Post(mira, board, "Mine", "plain");
+		await As(mira, $"+bbedit/all/mush {post}=Written by [name(me)].");
+		await Assert.That(await As(reader, $"+bbread {post}")).Contains($"Written by {mira.Name}.");
+		await Assert.That(await As(admin, $"+bbedit {post}=Written/Typed")).Contains("Replace it whole");
+		await Assert.That(await As(reader, $"+bbread {post}")).Contains($"Written by {mira.Name}.")
+			.Because("a partial edit of someone else's SharpMUSH text would run their code as the moderator");
+		await Assert.That(await As(admin, $"+bbedit/all/mush {post}=Edited by [name(me)]."))
+			.Contains($"Edited {post}.");
+		await Assert.That(await As(reader, $"+bbread {post}")).Contains($"Edited by {admin.Name}.")
+			.Because("a moderator's SharpMUSH text runs as the moderator, never as the post's author");
 
-			await As(admin, $"+bbconfig {board}/anonymous=Ghost");
-			var hidden = await Post(mira, board, "Who", "Guess.");
-			var seen = await As(reader, $"+bbread {hidden}");
-			await Assert.That(seen).Contains("Ghost").And.DoesNotContain(mira.Name);
-			await Assert.That(await As(admin, $"+bbread {hidden}")).Contains($"Ghost ({mira.Name})")
-				.Because("moderators still see who wrote an anonymous post");
-		}
-		finally
-		{
-			await UninstallAsync();
-		}
+		await As(admin, $"+bbconfig {board}/anonymous=Ghost");
+		var hidden = await Post(mira, board, "Who", "Guess.");
+		var seen = await As(reader, $"+bbread {hidden}");
+		await Assert.That(seen).Contains("Ghost").And.DoesNotContain(mira.Name);
+		await Assert.That(await As(admin, $"+bbread {hidden}")).Contains($"Ghost ({mira.Name})")
+			.Because("moderators still see who wrote an anonymous post");
 	}
 
 	[Test]
 	public async Task ANumberThatChangedStopsTheCommandOnce()
 	{
-		try
-		{
-			await InstallAsync();
-			var admin = await Player("BbNumA", "bboard-admin");
-			var mira = await Player("BbNumM");
-			var board = await Board(admin, "BbNums");
+		var admin = await Player("BbNumA", "bboard-admin");
+		var mira = await Player("BbNumM");
+		var board = await Board(admin, "BbNums");
 
-			await Post(mira, board, "One", "First.");
-			var two = await Post(mira, board, "Two", "Second.");
-			await As(mira, $"+bbread {board}");
-			await As(admin, $"+bbpost {board}/Three=Third.");
-			await As(admin, $"+bbpin {board}/3");
+		await Post(mira, board, "One", "First.");
+		var two = await Post(mira, board, "Two", "Second.");
+		await As(mira, $"+bbread {board}");
+		await As(admin, $"+bbpost {board}/Three=Third.");
+		await As(admin, $"+bbpin {board}/3");
 
-			var warned = await As(mira, $"+bbcomment {two}=On two.");
-			await Assert.That(warned).Contains("have changed since you last looked").Because(warned);
-			await Assert.That(await As(admin, $"+bbread {two}")).DoesNotContain("On two.")
-				.Because("the warned command did nothing");
+		var warned = await As(mira, $"+bbcomment {two}=On two.");
+		await Assert.That(warned).Contains("have changed since you last looked").Because(warned);
+		await Assert.That(await As(admin, $"+bbread {two}")).DoesNotContain("On two.")
+			.Because("the warned command did nothing");
 
-			await As(mira, $"+bbcomment {two}=On two.");
-			await Assert.That(await As(mira, $"+bbread {two}")).Contains("On two.")
-				.Because("typing it again goes ahead");
-		}
-		finally
-		{
-			await UninstallAsync();
-		}
+		await As(mira, $"+bbcomment {two}=On two.");
+		await Assert.That(await As(mira, $"+bbread {two}")).Contains("On two.")
+			.Because("typing it again goes ahead");
 	}
 
 	[Test]
 	public async Task LocksDecideWhoReadsPostsAndModerates()
 	{
-		try
-		{
-			await InstallAsync();
-			var admin = await Player("BbLckA", "bboard-admin");
-			var mira = await Player("BbLckM");
-			var board = await Board(admin, "BbLocked");
+		var admin = await Player("BbLckA", "bboard-admin");
+		var mira = await Player("BbLckM");
+		var board = await Board(admin, "BbLocked");
 
-			await As(admin, $"+bblock {board}/post=#false");
-			await Assert.That(await As(mira, $"+bbpost {board}/Nope=No.")).DoesNotContain("Posted");
-			await As(admin, $"+bblock {board}/post=");
-			var post = await Post(mira, board, "Yes", "Allowed now.");
+		await As(admin, $"+bblock {board}/post=#false");
+		await Assert.That(await As(mira, $"+bbpost {board}/Nope=No.")).DoesNotContain("Posted");
+		await As(admin, $"+bblock {board}/post=");
+		var post = await Post(mira, board, "Yes", "Allowed now.");
 
-			await Assert.That(await As(mira, $"+bbpin {post}")).DoesNotContain("Pinned")
-				.Because("nobody moderates a board with no moderate lock");
-			await As(admin, $"+bblock {board}/moderate=#{mira.DbRef.Number}");
-			await Assert.That(await As(mira, $"+bbclose {post}")).Contains($"Closed {post} to comments.");
+		await Assert.That(await As(mira, $"+bbpin {post}")).DoesNotContain("Pinned")
+			.Because("nobody moderates a board with no moderate lock");
+		await As(admin, $"+bblock {board}/moderate=#{mira.DbRef.Number}");
+		await Assert.That(await As(mira, $"+bbclose {post}")).Contains($"Closed {post} to comments.");
 
-			await As(admin, $"+bblock {board}/read=#false");
-			await Assert.That(await As(mira, $"+bbread {board}")).Contains("you can read")
-				.Because("a board you can't read answers as if it were not there");
-			await Assert.That(await As(mira, "+bbread")).DoesNotContain(board);
-		}
-		finally
-		{
-			await UninstallAsync();
-		}
+		await As(admin, $"+bblock {board}/read=#false");
+		await Assert.That(await As(mira, $"+bbread {board}")).Contains("you can read")
+			.Because("a board you can't read answers as if it were not there");
+		await Assert.That(await As(mira, "+bbread")).DoesNotContain(board);
 	}
 
 	[Test]
 	public async Task NewPostsAndCommentsAreFoundAndCaughtUp()
 	{
-		try
-		{
-			await InstallAsync();
-			var admin = await Player("BbNewA", "bboard-admin");
-			var mira = await Player("BbNewM");
-			var board = await Board(admin, "BbFresh");
-			await As(mira, "+bbcatchup all");
+		var admin = await Player("BbNewA", "bboard-admin");
+		var mira = await Player("BbNewM");
+		var board = await Board(admin, "BbFresh");
+		await As(mira, "+bbcatchup all");
 
-			var post = await Post(admin, board, "News", "Something new.");
-			await As(admin, $"+bbcomment {post}=And a comment.");
+		var post = await Post(admin, board, "News", "Something new.");
+		await As(admin, $"+bbcomment {post}=And a comment.");
 
-			await Assert.That(await As(mira, "+bbscan")).Contains(board);
-			var next = await As(mira, "+bbnext");
-			await Assert.That(next).Contains("Something new.").And.Contains("And a comment.");
+		await Assert.That(await As(mira, "+bbscan")).Contains(board);
+		var next = await As(mira, "+bbnext");
+		await Assert.That(next).Contains("Something new.").And.Contains("And a comment.");
 
-			await As(mira, $"+bbcatchup {board}");
-			await Assert.That(await As(mira, "+bbscan")).DoesNotContain(board);
-		}
-		finally
-		{
-			await UninstallAsync();
-		}
+		await As(mira, $"+bbcatchup {board}");
+		await Assert.That(await As(mira, "+bbscan")).DoesNotContain(board);
 	}
 
 	[Test]
 	public async Task ALongThreadPagesAndADeepTreeScopesDown()
 	{
-		try
+		var admin = await Player("BbBigA", "bboard-admin");
+		var board = await Board(admin, "BbBig");
+
+		var post = await Post(admin, board, "Busy", string.Join(" ", Enumerable.Repeat("A long post body.", 200)));
+		for (var i = 1; i <= 25; i++)
 		{
-			await InstallAsync();
-			var admin = await Player("BbBigA", "bboard-admin");
-			var board = await Board(admin, "BbBig");
-
-			var post = await Post(admin, board, "Busy", string.Join(" ", Enumerable.Repeat("A long post body.", 200)));
-			for (var i = 1; i <= 25; i++)
-			{
-				await As(admin, $"+bbcomment {post}=Comment number {i}.");
-			}
-
-			var page1 = await As(admin, $"+bbread {post}");
-			await Assert.That(page1).Contains("page 1 of 3").And.Contains("Comment number 10.")
-				.And.DoesNotContain("Comment number 11.").Because(page1);
-			var page3 = await As(admin, $"+bbread/3 {post}");
-			await Assert.That(page3).Contains("Comment number 25.").And.DoesNotContain("Comment number 20.");
-
-			var path = board;
-			for (var depth = 1; depth <= 6; depth++)
-			{
-				await As(admin, $"+bbnewgroup {path}/Level{depth}");
-				path += $"/Level{depth}";
-			}
-
-			var tree = await As(admin, $"+bblist {board}");
-			await Assert.That(tree).Contains("boards below").And.DoesNotContain("Level6")
-				.Because("a deep tree stops a few levels down and says how to see the rest");
-			await Assert.That(await As(admin, $"+bblist {board}/Level1/Level2/Level3")).Contains("Level6");
+			await As(admin, $"+bbcomment {post}=Comment number {i}.");
 		}
-		finally
+
+		var page1 = await As(admin, $"+bbread {post}");
+		await Assert.That(page1).Contains("page 1 of 3").And.Contains("Comment number 10.")
+			.And.DoesNotContain("Comment number 11.").Because(page1);
+		var page3 = await As(admin, $"+bbread/3 {post}");
+		await Assert.That(page3).Contains("Comment number 25.").And.DoesNotContain("Comment number 20.");
+
+		var path = board;
+		for (var depth = 1; depth <= 6; depth++)
 		{
-			await UninstallAsync();
+			await As(admin, $"+bbnewgroup {path}/Level{depth}");
+			path += $"/Level{depth}";
 		}
+
+		var tree = await As(admin, $"+bblist {board}");
+		await Assert.That(tree).Contains("boards below").And.DoesNotContain("Level6")
+			.Because("a deep tree stops a few levels down and says how to see the rest");
+		await Assert.That(await As(admin, $"+bblist {board}/Level1/Level2/Level3")).Contains("Level6");
 	}
 
 	[Test]
 	public async Task GodKeepsReadingStateThoughTheBoardsCannotSetAttributesOnGod()
 	{
-		try
-		{
-			await InstallAsync();
-			var admin = await Player("BbGodA", "bboard-admin");
-			var board = await Board(admin, "BbGod");
-			await Post(admin, board, "One", "First.");
-			var two = await Post(admin, board, "Two", "Second.");
-			await God($"+bbread {board}");
-			await As(admin, $"+bbpost {board}/Three=Third.");
-			await As(admin, $"+bbpin {board}/3");
+		var admin = await Player("BbGodA", "bboard-admin");
+		var board = await Board(admin, "BbGod");
+		await Post(admin, board, "One", "First.");
+		var two = await Post(admin, board, "Two", "Second.");
+		await God($"+bbread {board}");
+		await As(admin, $"+bbpost {board}/Three=Third.");
+		await As(admin, $"+bbpin {board}/3");
 
-			var marker = TestIsolationHelpers.GenerateUniqueName("GodSays");
-			await God($"+bbcomment {two}={marker}");
-			await Assert.That(await As(admin, $"+bbread {two}")).DoesNotContain(marker)
-				.Because("the numbers changed since God looked, so the first try is stopped");
-			await God($"+bbcomment {two}={marker}");
-			await Assert.That(await As(admin, $"+bbread {two}")).Contains(marker)
-				.Because("God's look was kept, so the guard stops God only once");
-			await Assert.That(await God("think [lattr(#1/BBOARD*)]")).IsEmpty()
-				.Because("God's state is kept on the readers object, not on God");
-		}
-		finally
-		{
-			await UninstallAsync();
-		}
+		var marker = TestIsolationHelpers.GenerateUniqueName("GodSays");
+		await God($"+bbcomment {two}={marker}");
+		await Assert.That(await As(admin, $"+bbread {two}")).DoesNotContain(marker)
+			.Because("the numbers changed since God looked, so the first try is stopped");
+		await God($"+bbcomment {two}={marker}");
+		await Assert.That(await As(admin, $"+bbread {two}")).Contains(marker)
+			.Because("God's look was kept, so the guard stops God only once");
+		await Assert.That(await God("think [lattr(#1/BBOARD*)]")).IsEmpty()
+			.Because("God's state is kept on the readers object, not on God");
 	}
 
 	[Test]
 	public async Task TheReaderTakesSingleKeysAndLeavesOnQ()
 	{
-		try
-		{
-			await InstallAsync();
-			var admin = await Player("BbRdrA", "bboard-admin");
-			var mira = await Player("BbRdrM");
-			var board = await Board(admin, "BbKeys");
-			var post = await Post(admin, board, "Keyed", "Read me with keys.");
+		var admin = await Player("BbRdrA", "bboard-admin");
+		var mira = await Player("BbRdrM");
+		var board = await Board(admin, "BbKeys");
+		var post = await Post(admin, board, "Keyed", "Read me with keys.");
 
-			await TypedUntil(mira, $"+bbreader {post}", "Read me with keys.");
-			await TypedUntil(mira, "c From the reader.", "Comment [1]");
-			await TypedUntil(mira, "?", "Reader keys");
-			await TypedUntil(mira, "c", "Every line is text now.");
-			// While writing, q is a line of text: the session's exit line is .toss, so . still posts.
-			await Typed(mira, "q");
-			await TypedUntil(mira, ".", "Comment [2]");
-			await TypedUntil(mira, "c", "Every line is text now.");
-			await TypedUntil(mira, " .TOSS", "Dropped.");
-			await TypedUntil(mira, "q", "Left the reader.");
+		await TypedUntil(mira, $"+bbreader {post}", "Read me with keys.");
+		await TypedUntil(mira, "c From the reader.", "Comment [1]");
+		await TypedUntil(mira, "?", "Reader keys");
+		await TypedUntil(mira, "c", "Every line is text now.");
+		// While writing, q is a line of text: the session's exit line is .toss, so . still posts.
+		await Typed(mira, "q");
+		await TypedUntil(mira, ".", "Comment [2]");
+		await TypedUntil(mira, "c", "Every line is text now.");
+		await TypedUntil(mira, " .TOSS", "Dropped.");
+		await TypedUntil(mira, "q", "Left the reader.");
 
-			await Assert.That(await As(mira, $"+bbread {post}")).Contains("From the reader.");
-			await Assert.That(await Typed(mira, "think out")).Contains("out").Because("q leaves the reader");
-		}
-		finally
-		{
-			await UninstallAsync();
-		}
+		await Assert.That(await As(mira, $"+bbread {post}")).Contains("From the reader.");
+		await Assert.That(await Typed(mira, "think out")).Contains("out").Because("q leaves the reader");
 	}
 
 	[Test]
 	public async Task ALineTheCommentCannotHoldIsLeftOut()
 	{
-		try
-		{
-			await InstallAsync();
-			var admin = await Player("BbLongA", "bboard-admin");
-			var mira = await Player("BbLongM");
-			var board = await Board(admin, "BbLong");
-			var post = await Post(admin, board, "Long", "Answer at length.");
-			var limit = int.Parse(await God("think config(max_attribute_value_length)"));
-			var line = new string('a', limit / 2 + 1);
+		var admin = await Player("BbLongA", "bboard-admin");
+		var mira = await Player("BbLongM");
+		var board = await Board(admin, "BbLong");
+		var post = await Post(admin, board, "Long", "Answer at length.");
+		var limit = int.Parse(await God("think config(max_attribute_value_length)"));
+		var line = new string('a', limit / 2 + 1);
 
-			await TypedUntil(mira, $"+bbreader {post}", "Answer at length.");
-			await TypedUntil(mira, "c", "Every line is text now.");
-			await Typed(mira, line);
-			// The two lines together pass the attribute limit.
-			await TypedUntil(mira, line, "so it is left out.");
-			await TypedUntil(mira, ".toss", "Dropped.");
-			await TypedUntil(mira, "q", "Left the reader.");
-		}
-		finally
-		{
-			await UninstallAsync();
-		}
+		await TypedUntil(mira, $"+bbreader {post}", "Answer at length.");
+		await TypedUntil(mira, "c", "Every line is text now.");
+		await Typed(mira, line);
+		// The two lines together pass the attribute limit.
+		await TypedUntil(mira, line, "so it is left out.");
+		await TypedUntil(mira, ".toss", "Dropped.");
+		await TypedUntil(mira, "q", "Left the reader.");
 	}
 
 	[Test]
 	public async Task TheReaderGoesUpToTheTopAndOpensNumbersFromThere()
 	{
-		try
-		{
-			await InstallAsync();
-			var admin = await Player("BbTopA", "bboard-admin");
-			var mira = await Player("BbTopM");
-			var board = await Board(admin, "BbTop");
-			var post = await Post(admin, board, "Upward", "Read me after going up.");
-			var number = post.Split('/')[0];
+		var admin = await Player("BbTopA", "bboard-admin");
+		var mira = await Player("BbTopM");
+		// Other tests' posts sit unread on their boards; +bbnext should find only this one.
+		await As(mira, "+bbcatchup all");
+		var board = await Board(admin, "BbTop");
+		var post = await Post(admin, board, "Upward", "Read me after going up.");
+		var number = post.Split('/')[0];
 
-			await TypedUntil(mira, $"+bbreader {board}", "Upward");
-			await TypedUntil(mira, "u", "+bbread <#> opens one.");
-			await TypedUntil(mira, number, "Upward");
-			await TypedUntil(mira, "+BBNEXT", "Read me after going up.");
-			await TypedUntil(mira, $"+bbread {board}", "Upward");
-			await TypedUntil(mira, "q", "Left the reader.");
-		}
-		finally
-		{
-			await UninstallAsync();
-		}
+		await TypedUntil(mira, $"+bbreader {board}", "Upward");
+		await TypedUntil(mira, "u", "+bbread <#> opens one.");
+		await TypedUntil(mira, number, "Upward");
+		await TypedUntil(mira, "+BBNEXT", "Read me after going up.");
+		await TypedUntil(mira, $"+bbread {board}", "Upward");
+		await TypedUntil(mira, "q", "Left the reader.");
 	}
 }
