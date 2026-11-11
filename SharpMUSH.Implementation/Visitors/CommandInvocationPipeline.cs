@@ -71,7 +71,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 	{
 		var executor = await prs.CurrentState.ExecutorObject(services.Mediator);
 		var run = new BuiltInRun(rootCommand, switches, libraryCommandDefinition, singleArgument, argumentResults.Values,
-			executor, src);
+			argumentResults.LeftSideCount, executor, src);
 
 		// PennMUSH command_parse rebuilds cmd_evaled from command_argparse's results and stores it
 		// before any hook runs, so /before, /after, the body and later commands all read it as %u.
@@ -197,7 +197,8 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 	/// along the way failed.
 	/// </summary>
 	private sealed class BuiltInRun(string rootCommand, string[] switches, CommandDefinition definition,
-		bool singleArgument, List<CallState> arguments, AnyOptionalSharpObject executor, MString commandWithSwitches)
+		bool singleArgument, List<CallState> arguments, int? leftSideCount, AnyOptionalSharpObject executor,
+		MString commandWithSwitches)
 	{
 		public string[] Switches => switches;
 		public CommandDefinition Definition => definition;
@@ -220,6 +221,15 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 
 		private bool EqSplit => !singleArgument && definition.Attribute.Behavior.HasFlag(CommandBehavior.EqSplit);
 
+		/// <summary>How many arguments are on the left of the <c>=</c>: all of them unless the split says otherwise.</summary>
+		private int LeftCount => EqSplit && leftSideCount is { } count ? Math.Min(count, arguments.Count) : arguments.Count;
+
+		/// <summary>
+		/// Whether the left side was split on its commas (<c>/lsargs</c>), so a hook reads the left parts as LSA1..
+		/// and, with <c>/rsargs</c>, the right side's parts as RSA1.., as PennMUSH's <c>run_hook</c> sets them.
+		/// </summary>
+		private bool LeftSideArguments => !singleArgument && definition.Attribute.Behavior.HasFlag(CommandBehavior.LSArgs);
+
 		public Option<CallState> PreserveHookErrors(Option<CallState> result)
 		{
 			if (!HookHadErrors) return result;
@@ -234,11 +244,13 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			var prefix = switches.Length == 0 ? name : $"{name}/{string.Join('/', switches)}";
 			if (arguments.Count == 0) return MarkupText.Plain(prefix);
 
-			var values = arguments.Select(argument => argument.Message);
-			var text = EqSplit && arguments.Count > 1
-				? MarkupText.Concat([arguments[0].Message, MarkupText.Plain("="),
-					MarkupText.Join(MarkupText.Plain(","), values.Skip(1))])
-				: MarkupText.Join(MarkupText.Plain(","), values);
+			var values = arguments.Select(argument => argument.Message).ToArray();
+			var comma = MarkupText.Plain(",");
+			var left = LeftCount;
+			var text = EqSplit && arguments.Count > left
+				? MarkupText.Concat([MarkupText.Join(comma, values.Take(left)), MarkupText.Plain("="),
+					MarkupText.Join(comma, values.Skip(left))])
+				: MarkupText.Join(comma, values);
 			return MarkupText.Concat(MarkupText.Plain(prefix + " "), text);
 		}
 
@@ -312,17 +324,42 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				namedRegisters["LS"] = argumentText;
 			}
 
-			for (int i = 0; i < arguments.Count; i++)
+			if (LeftSideArguments)
 			{
-				namedRegisters[$"LSA{i + 1}"] = arguments[i].Message;
+				// run_hook (command.c): lsa<n> for each left part and rsa<n> for each right part that is not
+				// empty, each count the highest index set.
+				var left = LeftCount;
+				NumberedParts("LSA", arguments.Take(left));
+				if (definition.Attribute.Behavior.HasFlag(CommandBehavior.RSArgs)) NumberedParts("RSA", arguments.Skip(left));
+			}
+			else
+			{
+				for (int i = 0; i < arguments.Count; i++)
+				{
+					namedRegisters[$"LSA{i + 1}"] = arguments[i].Message;
+				}
+
+				namedRegisters["LSAC"] = MarkupText.Plain(arguments.Count.ToString());
 			}
 
 			// A hook can't refuse its command, so caller-named pairs it can't read are left unnamed.
 			_ = ArgHelpers.AddNamedArguments(namedRegisters, arguments.Select(argument => argument.Message).ToArray(),
 				definition.Attribute.ArgumentNames, argument => argument.ToPlainText(), MarkupText.Plain);
 
-			namedRegisters["LSAC"] = MarkupText.Plain(arguments.Count.ToString());
 			return namedRegisters;
+
+			void NumberedParts(string prefix, IEnumerable<CallState> parts)
+			{
+				var highest = 0;
+				foreach (var (part, index) in parts.Select((part, i) => (part.Message, i + 1)))
+				{
+					if (part.Length == 0) continue;
+					namedRegisters[$"{prefix}{index}"] = part;
+					highest = index;
+				}
+
+				if (highest > 0) namedRegisters[$"{prefix}C"] = MarkupText.Plain(highest.ToString());
+			}
 		}
 
 		/// <summary>

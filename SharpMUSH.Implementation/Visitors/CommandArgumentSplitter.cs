@@ -285,6 +285,7 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 		var argumentResults = new CommandArguments();
 		var arguments = argumentResults.Values;
 		var hasRightSide = pieces.Any(piece => !piece.LeftSide);
+		if (mode.EqSplit) argumentResults.LeftSideCount = pieces.Count(piece => piece.LeftSide);
 
 		// Each piece carries the parse-tree node retained from the NoParse pass (see
 		// CallState.ArgumentContexts), so an evaluated argument is produced by re-visiting the
@@ -451,6 +452,13 @@ internal sealed class CommandArguments
 {
 	private bool _deferredHadErrors;
 	public List<CallState> Values { get; } = [];
+
+	/// <summary>
+	/// How many of <see cref="Values"/> come from the left of the <c>=</c>, or <see langword="null"/> when every
+	/// argument does (no <c>=</c> split) or none was given. More than one only for an EqSplit command with
+	/// <see cref="CommandBehavior.LSArgs"/>.
+	/// </summary>
+	public int? LeftSideCount { get; set; }
 	public bool HadErrors => _deferredHadErrors || Values.Any(argument => argument.HadErrors);
 
 	public CallState? Record(CallState? result)
