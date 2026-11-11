@@ -227,11 +227,13 @@ public class MuxTimeConnectionFunctionTests : ServerTestBase
 		=> await Assert.That(ConnectionStatistics.Record.Parse(text))
 			.IsEqualTo(new ConnectionStatistics.Record(total, longest, last, sessions, logout));
 
-	/// <summary>A TinyMUX import keeps each player's record under the same name and layout.</summary>
+	/// <summary>A TinyMUX import keeps each player's connection record and each object's last-created record under the same layout.</summary>
 	[Test]
-	public async Task TinyMuxImportKeepsConnInfo()
+	public async Task TinyMuxImportKeepsConnInfoAndLastCreate()
 	{
 		await Assert.That(TinyMuxNames.Attributes[224]).IsEqualTo(ConnectionStatistics.Attribute);
 		await Assert.That(TinyMuxNames.DroppedAttributes.ContainsKey(224)).IsFalse();
+		await Assert.That(TinyMuxNames.Attributes[213]).IsEqualTo(LastCreated.Attribute);
+		await Assert.That(TinyMuxNames.DroppedAttributes.ContainsKey(213)).IsFalse();
 	}
 }

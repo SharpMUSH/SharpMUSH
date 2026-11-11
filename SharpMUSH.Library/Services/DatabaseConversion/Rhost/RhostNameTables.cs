@@ -523,6 +523,9 @@ public static class RhostNameTables
 	public const int CreatedAttribute = 228;
 	public const int RealityAttribute = 244;
 	public const int TotemsAttribute = 83;
+
+	/// <summary><c>A_LASTCREATE</c>: the last room, exit, thing and player the object created, in that order.</summary>
+	public const int LastCreateAttribute = 237;
 	public const int TagsAttribute = 251;
 
 	/// <summary>
@@ -559,7 +562,8 @@ public static class RhostNameTables
 		[183] = ServerState + " (mail quota)", [184] = ServerState, [185] = ServerState, [186] = ServerState,
 		[221] = ServerState + " (command counts)", [222] = ServerState + " (command counts)",
 		[227] = "the modification time, imported as the object's", [228] = "the creation time, imported as the object's",
-		[232] = ServerState + " (traffic counts)", [233] = ServerState + " (traffic counts)", [237] = ServerState,
+		[232] = ServerState + " (traffic counts)", [233] = ServerState + " (traffic counts)",
+		[LastCreateAttribute] = "the objects last created, imported as LASTCREATE in SharpMUSH's order",
 		[238] = ServerState, [239] = ServerState, [241] = ServerState, [242] = ServerState, [243] = ServerState,
 		[RealityAttribute] = "the reality levels, imported as the object's reality layers", [247] = ServerState, [249] = ServerState,
 		[TagsAttribute] = "the tags that name the object, imported as tags",

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Implementation.Services;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
@@ -170,6 +171,7 @@ public static class BuildingHelpers
 		IEventService eventService, AnySharpObject executor, string name, string password, DBRef player)
 	{
 		await ConnectRecord.CreatedAsync(mediator, player);
+		await LastCreated.RecordAsync(mediator, executor.Object().DBRef, LastCreated.Slot.Player, player);
 		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreatedFormat), executor,
 			name, player.Number, password);
 
@@ -657,6 +659,19 @@ public static class BuildingHelpers
 		}
 	}
 
+	/// <summary><paramref name="creation"/>, with what it made recorded as the last <paramref name="slot"/> the executor created.</summary>
+	private static async ValueTask<Result<DBRef>> RecordedAsync(IMediator mediator, AnySharpObject executor,
+		LastCreated.Slot slot, ValueTask<Result<DBRef>> creation)
+	{
+		var result = await creation;
+		if (result is DBRef created)
+		{
+			await LastCreated.RecordAsync(mediator, executor.Object().DBRef, slot, created);
+		}
+
+		return result;
+	}
+
 	/// <summary>A room, at the dbref asked for or at the next one the counter hands out, charged either way.</summary>
 	private static ValueTask<Result<DBRef>> RoomChargedAsync(
 		IMediator mediator,
@@ -667,11 +682,11 @@ public static class BuildingHelpers
 		SharpPlayer owner,
 		DBRef? requestedDbref,
 		long? modified = null)
-		=> requestedDbref is { } wanted
+		=> RecordedAsync(mediator, executor, LastCreated.Slot.Room, requestedDbref is { } wanted
 			? ChargedAtAsync(mediator, configuration, notifyService, executor,
 				async () => await mediator.Send(new CreateRoomAtCommand(wanted, name, owner, modified)))
 			: WithBuildingQuotaAsync(mediator, configuration, notifyService, executor,
-				async () => await mediator.Send(new CreateRoomCommand(name, owner, ModifiedTime: modified)));
+				async () => await mediator.Send(new CreateRoomCommand(name, owner, ModifiedTime: modified))));
 
 	/// <summary>An exit, at the dbref asked for or at the next one the counter hands out, charged either way.</summary>
 	private static ValueTask<Result<DBRef>> ExitChargedAsync(
@@ -685,11 +700,11 @@ public static class BuildingHelpers
 		SharpPlayer owner,
 		DBRef? requestedDbref,
 		long? modified = null)
-		=> requestedDbref is { } wanted
+		=> RecordedAsync(mediator, executor, LastCreated.Slot.Exit, requestedDbref is { } wanted
 			? ChargedAtAsync(mediator, configuration, notifyService, executor,
 				async () => await mediator.Send(new CreateExitAtCommand(wanted, name, aliases, where, owner, modified)))
 			: WithBuildingQuotaAsync(mediator, configuration, notifyService, executor,
-				async () => await mediator.Send(new CreateExitCommand(name, aliases, where, owner, ModifiedTime: modified)));
+				async () => await mediator.Send(new CreateExitCommand(name, aliases, where, owner, ModifiedTime: modified))));
 
 	/// <summary>A thing, at the dbref asked for or at the next one the counter hands out, charged either way.</summary>
 	private static ValueTask<Result<DBRef>> ThingChargedAsync(
@@ -703,11 +718,11 @@ public static class BuildingHelpers
 		AnySharpContainer home,
 		DBRef? requestedDbref,
 		long? modified = null)
-		=> requestedDbref is { } wanted
+		=> RecordedAsync(mediator, executor, LastCreated.Slot.Thing, requestedDbref is { } wanted
 			? ChargedAtAsync(mediator, configuration, notifyService, executor,
 				async () => await mediator.Send(new CreateThingAtCommand(wanted, name, into, owner, home, modified)))
 			: WithBuildingQuotaAsync(mediator, configuration, notifyService, executor,
-				async () => await mediator.Send(new CreateThingCommand(name, into, owner, home, ModifiedTime: modified)));
+				async () => await mediator.Send(new CreateThingCommand(name, into, owner, home, ModifiedTime: modified))));
 
 	/// <summary>The bookkeeping every freshly opened exit gets: the opener's zone, and the report.</summary>
 	private static async ValueTask<Result<DBRef>> OpenedAsync(
@@ -851,6 +866,19 @@ public static class BuildingHelpers
 		var cost = (int)configuration.CurrentValue.Cost.QuotaCost;
 		if (!configuration.CurrentValue.Limit.UseQuota || cost <= 0 || await NoQuotaAsync(executor, owner)) return null;
 		return BuildsAdmitted(owner.Quota - await mediator.Send(new GetOwnedObjectCountQuery(owner)), cost);
+	}
+
+	/// <summary>
+	/// How much quota <paramref name="holder"/>'s owner has left, as <see cref="AdmitsBuildAsync"/> counts it; null when
+	/// nothing limits what <paramref name="holder"/> builds.
+	/// </summary>
+	public static async ValueTask<int?> QuotaLeftAsync(IMediator mediator, IOptionsWrapper<SharpMUSHOptions> configuration,
+		AnySharpObject holder)
+	{
+		if (await holder.IsGuest()) return 0;
+		var owner = await holder.Object().Owner.WithCancellation(CancellationToken.None);
+		if (!configuration.CurrentValue.Limit.UseQuota || await NoQuotaAsync(holder, owner)) return null;
+		return owner.Quota - await mediator.Send(new GetOwnedObjectCountQuery(owner));
 	}
 
 	/// <summary>

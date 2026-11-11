@@ -10,7 +10,7 @@ public class SeedDataTests
 		await Assert.That(FlagSeed.Flags.Length).IsEqualTo(66);
 		await Assert.That(AttributeFlagSeed.Flags.Length).IsEqualTo(31);
 		await Assert.That(PowerSeed.Powers.Length).IsEqualTo(38);
-		await Assert.That(AttributeEntrySeed.Entries.Length).IsEqualTo(225);
+		await Assert.That(AttributeEntrySeed.Entries.Length).IsEqualTo(226);
 		await Assert.That(InitialObjectSeed.Objects.Select(o => o.Dbref)).IsEquivalentTo(Enumerable.Range(0, 10).Select(i => (long)i));
 	}
 
