@@ -22,10 +22,24 @@ public sealed record InputSession(
 {
 	/// <summary>The route whose match ends the session.</summary>
 	public InputRoute Exit => Routes[0];
+
+	/// <summary>How the session's patterns match, which for <see cref="InputMatch.Program"/> is how the session behaves.</summary>
+	public InputMatch Match { get; init; }
+
+	/// <summary>
+	/// The q-registers the session started with, which a <see cref="InputMatch.Program"/> hands to the attribute
+	/// it runs; empty for every other session, whose callback starts with none.
+	/// </summary>
+	public IReadOnlyDictionary<string, MString> Registers { get; init; } = new Dictionary<string, MString>();
 }
 
-/// <summary>How a session's patterns match a line: exactly (trimmed, any case), as wildcards, or as regexps.</summary>
-public enum InputMatch { Exact, Wild, Regex }
+/// <summary>
+/// How a session's patterns match a line: exactly (trimmed, any case), as wildcards, or as regexps. A
+/// <see cref="Program"/> session is TinyMUX's and RhostMUSH's <c>@program</c>: its one route takes any line, a
+/// line that starts with <c>|</c> runs as an ordinary command without it, and it ends quietly at its timeout
+/// instead of running its attribute.
+/// </summary>
+public enum InputMatch { Exact, Wild, Regex, Program }
 
 /// <summary>A pattern as <c>@input/start</c> was given it, and the attribute a matching line runs.</summary>
 public readonly record struct InputRouteSpec(string Pattern, DBRef Target, string Attribute);

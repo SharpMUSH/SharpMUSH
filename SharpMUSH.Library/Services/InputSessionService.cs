@@ -238,7 +238,11 @@ public sealed class InputSessionService : IInputSessionService
 				: actor.Object().DBRef;
 		HandlePublicationLane.Slot? place = null;
 		var session = new InputSession(Guid.NewGuid(), connection, connection.Metadata.GetValueOrDefault("SessionId"),
-			player.Object().DBRef, actor.Object().DBRef, owner, caller, built, _time.GetUtcNow() + timeout);
+			player.Object().DBRef, actor.Object().DBRef, owner, caller, built, _time.GetUtcNow() + timeout)
+		{
+			Match = match,
+			Registers = match == InputMatch.Program ? FlattenRegisters(state.Registers) : new Dictionary<string, MString>()
+		};
 		if (!session.Character.IsObjid || !session.Executor.IsObjid || !session.Owner.IsObjid
 			|| built.Any(route => !route.Target.IsObjid || !route.TargetOwner.IsObjid)) return InvalidContext;
 		lock (_gate)
@@ -506,10 +510,28 @@ public sealed class InputSessionService : IInputSessionService
 		}
 	}
 
+	/// <summary>The registers visible in <paramref name="registers"/>, the innermost frame winning.</summary>
+	private static Dictionary<string, MString> FlattenRegisters(IEnumerable<Dictionary<string, MString>> registers)
+	{
+		var flat = new Dictionary<string, MString>(StringComparer.OrdinalIgnoreCase);
+		// A ConcurrentStack enumerates from the top: the first frame to name a register is the one in scope.
+		foreach (var frame in registers)
+			foreach (var (name, value) in frame)
+				flat.TryAdd(name, value);
+		return flat;
+	}
+
 	private async ValueTask<CallState?> DeliverCoreAsync(IMUSHCodeParser parser, InputSession session, MString input, bool timeout)
 	{
 		if (!IsCurrent(session, timeout)) return null;
 		ExecutionBudget.Current?.ThrowIfExceeded();
+		if (timeout && session.Match == InputMatch.Program)
+		{
+			// An @program waits for its line and nothing else: it has no timeout branch to run, and like every
+			// timeout it ends with no notice of its own.
+			Discard(session);
+			return null;
+		}
 		// The timeout runs the exit route with no line; a line runs the first route it matches. A line too
 		// long to match, or one nothing matches, still has its authority checked against the exit route.
 		var oversized = !timeout && input.Length > MaxInputCodeUnits;
@@ -559,6 +581,8 @@ public sealed class InputSessionService : IInputSessionService
 			EnvironmentRegisters = arguments,
 			SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments)
 		};
+		if (session.Registers.Count > 0)
+			state = state with { Registers = new([new Dictionary<string, MString>(session.Registers, StringComparer.OrdinalIgnoreCase)]) };
 
 		return await parser.FromState(state).CommandListParse(callback.Last().Value);
 	}
