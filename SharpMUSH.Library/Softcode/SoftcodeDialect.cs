@@ -174,6 +174,7 @@ public static class SoftcodeDialects
 			["@reclist"] = "@recover",
 			// Its own command, reached only here: a global @site would make @sit ambiguous.
 			["@site"] = "@rhost_site",
+			["@flagdef"] = "@rhost_flagdef",
 			// Commands both RhostMUSH and TinyMUX have and SharpMUSH has no name for.
 			["@last"] = "@dialect_last",
 			["@program"] = "@dialect_program",

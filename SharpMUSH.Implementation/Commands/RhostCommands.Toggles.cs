@@ -108,6 +108,66 @@ public partial class Commands
 	[SharpCommand(Name = "@TOGGLEDEF", Switches = ["LIST", "SET", "UNSET", "SEE", "TYPE", "LETTER", "INDEX"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 2, ParameterNames = ["toggle", "permissions"])]
 	public async ValueTask<Option<CallState>> ToggleDef(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> await DefinitionPermissionsAsync(parser, new DefinitionKind(
+			ListToggleDefinitionsAsync,
+			async name => RhostNameTables.Toggle(name) is { Flag: { } flagName } ? await Mediator.Send(new GetObjectFlagQuery(flagName)) : null,
+			nameof(ErrorMessages.Notifications.NoSuchToggleFormat),
+			nameof(ErrorMessages.Notifications.ToggleDefNeedsPermissions),
+			nameof(ErrorMessages.Notifications.ToggleDefUpdatedFormat),
+			nameof(ErrorMessages.Notifications.ToggleDefNothingToDo),
+			nameof(ErrorMessages.Notifications.ToggleDefSwitchUnsupported),
+			ReportsFlagName: false));
+
+	/// <summary>
+	/// RhostMUSH's <c>@flagdef</c> (<c>@rhost_flagdef</c> here): <c>@toggledef</c> over flags, by RhostMUSH's flag name or
+	/// SharpMUSH's.
+	/// </summary>
+	[SharpCommand(Name = "@RHOST_FLAGDEF", Switches = ["LIST", "SET", "UNSET", "SEE", "TYPE", "LETTER", "INDEX"],
+		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 2, ParameterNames = ["flag", "permissions"])]
+	public async ValueTask<Option<CallState>> FlagDef(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> await DefinitionPermissionsAsync(parser, new DefinitionKind(
+			ListFlagDefinitionsAsync,
+			async name => await ExactFlagAsync(name) ?? (RhostFlag(name) is { } mapped ? await ExactFlagAsync(mapped) : null),
+			nameof(ErrorMessages.Notifications.FlagDefNoSuchFlagFormat),
+			nameof(ErrorMessages.Notifications.FlagDefNeedsPermissions),
+			nameof(ErrorMessages.Notifications.FlagDefUpdatedFormat),
+			nameof(ErrorMessages.Notifications.FlagDefNothingToDo),
+			nameof(ErrorMessages.Notifications.FlagDefSwitchUnsupported),
+			ReportsFlagName: true));
+
+	/// <summary>What <c>@toggledef</c> and <c>@flagdef</c> differ in: what they list, how a name is found, and what they say.</summary>
+	private sealed record DefinitionKind(
+		Func<AnySharpObject, string, ValueTask<CallState>> List,
+		Func<string, ValueTask<SharpObjectFlag?>> Find,
+		string NoSuch,
+		string NeedsPermissions,
+		string Updated,
+		string NothingToDo,
+		string SwitchUnsupported,
+		bool ReportsFlagName);
+
+	/// <summary>The flag named or aliased exactly <paramref name="name"/>: never one it only begins.</summary>
+	private async ValueTask<SharpObjectFlag?> ExactFlagAsync(string name)
+		=> await Mediator.Send(new GetObjectFlagQuery(name)) is { } flag
+			&& (flag.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
+				|| (flag.Aliases ?? []).Any(alias => alias.Equals(name, StringComparison.OrdinalIgnoreCase)))
+				? flag
+				: null;
+
+	/// <summary>
+	/// The SharpMUSH flag RhostMUSH's flag <paramref name="name"/> is: the flag an import defines for it when it has
+	/// one, else the one SharpMUSH flag it stands for.
+	/// </summary>
+	private static string? RhostFlag(string name)
+		=> RhostNameTables.Bits.FirstOrDefault(bit => bit.Word < 4 && bit.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+			switch
+		{
+			{ Custom: { } custom } => custom,
+			{ Flags: [var flag] } => flag,
+			_ => null
+		};
+
+	private async ValueTask<Option<CallState>> DefinitionPermissionsAsync(IMUSHCodeParser parser, DefinitionKind kind)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
@@ -125,11 +185,11 @@ public partial class Commands
 		switch (switches)
 		{
 			case [] or ["LIST"] or ["INDEX"]:
-				return await ListToggleDefinitionsAsync(executor, name);
+				return await kind.List(executor, name);
 			case ["SET"] or ["UNSET"] or ["SEE"]:
 				break;
 			case ["TYPE"] or ["LETTER"]:
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ToggleDefSwitchUnsupported), executor);
+				await NotifyService.NotifyLocalized(executor, kind.SwitchUnsupported, executor);
 				return CallState.Empty;
 			default:
 				return new CallState(ErrorMessages.Returns.TooManySwitches);
@@ -137,14 +197,13 @@ public partial class Commands
 
 		if (name.Length == 0 || words.Trim().Length == 0)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ToggleDefNeedsPermissions), executor);
+			await NotifyService.NotifyLocalized(executor, kind.NeedsPermissions, executor);
 			return CallState.Empty;
 		}
 
-		if (RhostNameTables.Toggle(name) is not { Flag: { } flagName }
-			|| await Mediator.Send(new GetObjectFlagQuery(flagName)) is not { } flag)
+		if (await kind.Find(name) is not { } flag)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoSuchToggleFormat), executor, name);
+			await NotifyService.NotifyLocalized(executor, kind.NoSuch, executor, name);
 			return CallState.Empty;
 		}
 
@@ -164,14 +223,30 @@ public partial class Commands
 		};
 		if (changed is not ({ } setPermissions, { } unsetPermissions))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ToggleDefNothingToDo), executor);
+			await NotifyService.NotifyLocalized(executor, kind.NothingToDo, executor);
 			return CallState.Empty;
 		}
 
 		await Mediator.Send(new UpdateObjectFlagCommand(flag.Name, flag.Aliases ?? [], flag.Symbol, setPermissions,
 			unsetPermissions, flag.TypeRestrictions));
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ToggleDefUpdatedFormat), executor,
-			name.ToUpperInvariant());
+		await NotifyService.NotifyLocalized(executor, kind.Updated, executor,
+			kind.ReportsFlagName ? flag.Name : name.ToUpperInvariant());
+		return CallState.Empty;
+	}
+
+	private async ValueTask<CallState> ListFlagDefinitionsAsync(AnySharpObject executor, string pattern)
+	{
+		var rhostName = RhostFlag(pattern);
+		await foreach (var flag in Mediator.CreateStream(new GetAllObjectFlagsQuery())
+			.Where(flag => pattern.Length == 0 || MushText.IsWildcardMatch(MString.Plain(flag.Name), pattern)
+				|| flag.Name.Equals(rhostName, StringComparison.OrdinalIgnoreCase))
+			.OrderBy(flag => flag.Name, StringComparer.Ordinal))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ToggleDefFormat), executor,
+				flag.Name, flag.Symbol, RhostPermissions.Describe(flag.SetPermissions),
+				RhostPermissions.Describe(flag.UnsetPermissions));
+		}
+
 		return CallState.Empty;
 	}
 

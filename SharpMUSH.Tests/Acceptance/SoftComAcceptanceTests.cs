@@ -24,7 +24,6 @@ public class SoftComAcceptanceTests
 	private static readonly HashSet<string> KnownGaps =
 	[
 		// Not yet in SharpMUSH; listed for the compatibility work that brings each in.
-		"parenmatch()",
 		"chan()",
 		"elist() with 6 arguments",
 		"npemit() with 3 arguments",
