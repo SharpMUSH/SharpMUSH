@@ -179,6 +179,43 @@ public partial class PageCommandTests
 	}
 
 	[Test]
+	public async ValueTask BlindPage_TellsEachRecipientAsIfTheyWereTheOnlyOne()
+	{
+		var sender = await CreatePlayerAsync("PageBlindSender");
+		var first = await CreatePlayerAsync("PageBlindFirst");
+		var second = await CreatePlayerAsync("PageBlindSecond");
+		try
+		{
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			var firstStart = Notifications.CountFor(first.DbRef);
+			var secondStart = Notifications.CountFor(second.DbRef);
+
+			await CommandAsync(sender, $"page/blind {first.Name} {second.Name}=Test");
+
+			var outgoing = $"You paged {first.Name} and {second.Name} with 'Test'";
+			var incoming = $"{sender.Name} pages: Test";
+			await Assert.That(PageMessagesSince(sender.DbRef, senderStart, outgoing)).IsEquivalentTo([outgoing]);
+			await Assert.That(PageMessagesSince(first.DbRef, firstStart, incoming)).IsEquivalentTo([incoming]);
+			await Assert.That(PageMessagesSince(second.DbRef, secondStart, incoming)).IsEquivalentTo([incoming]);
+			// first's reply-all answers only the sender: second was never in first's page.
+			var token = TestIsolationHelpers.GenerateUniqueName("blindreply");
+			var senderBefore = Notifications.CountFor(sender.DbRef);
+			var secondBefore = Notifications.CountFor(second.DbRef);
+			await CommandAsync(first, $"mrpage {token}");
+			await Assert.That(PageMessagesSince(sender.DbRef, senderBefore, $"{first.Name} pages: {token}"))
+				.IsEquivalentTo([$"{first.Name} pages: {token}"]);
+			await Assert.That(Notifications.For(second.DbRef).Skip(secondBefore)
+				.Any(line => line.Contains(token, StringComparison.Ordinal))).IsFalse();
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+			await ConnectionService.Disconnect(first.Handle);
+			await ConnectionService.Disconnect(second.Handle);
+		}
+	}
+
+	[Test]
 	public async ValueTask PageFormats_SeeCurrentLastPagedRecipients()
 	{
 		var player = await CreatePlayerAsync("PageFormatLastPaged");

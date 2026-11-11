@@ -1,11 +1,15 @@
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
 /// TinyMUX's and RhostMUSH's switches SharpMUSH has under the same name: <c>@sweep/commands</c>,
 /// <c>/listeners</c> and <c>/players</c>, <c>@stats/all</c> and <c>/me</c>, <c>@wall/pose</c>, <c>@trigger/notify</c>,
-/// <c>@clone/parent</c> and <c>/inventory</c>, and <c>@wipe/regexp</c> and <c>@decompile/regexp</c>.
+/// <c>@clone/parent</c> and <c>/inventory</c>, <c>@wipe/regexp</c> and <c>@decompile/regexp</c>, <c>@verb/no_name</c>
+/// and <c>@cpattr/clear</c>. <c>page/blind</c> is in <see cref="PageCommandTests"/>.
 /// </summary>
 public class DialectSwitchBehaviourTests : ServerTestBase
 {
@@ -204,5 +208,52 @@ public class DialectSwitchBehaviourTests : ServerTestBase
 		// @wipe's own tally, as a wildcard wipe gives it.
 		await Assert.That(wiped.Any(line => line.EndsWith(" attributes wiped.", StringComparison.Ordinal))).IsTrue();
 		await Assert.That(await Eval($"lattr({thing}/**)")).IsEqualTo("_KEEP XAB");
+	}
+
+	[Test]
+	public async Task VerbNoNameLeavesTheNameOffOnlyTheDefault()
+	{
+		var god = (await Mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef)))
+			.Expect<AnySharpObject>().Expect<SharpPlayer>();
+		var room = await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("VerbNoName"), god));
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "VerbNoNameActor", room);
+		var observer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "VerbNoNameEar", room);
+		var token = TestIsolationHelpers.GenerateUniqueName("verbed");
+		try
+		{
+			var plain = await HeardWhile(observer.DbRef,
+				() => CmdAs(actor.DbRef, actor.Handle, $"@verb me=me,,,,tests {token}.,"));
+			var bare = await HeardWhile(observer.DbRef,
+				() => CmdAs(actor.DbRef, actor.Handle, $"@verb/no_name me=me,,,,{token} happens.,"));
+			await CmdAs(actor.DbRef, actor.Handle, $"&OTEST me=owhat {token}");
+			var fromAttribute = await HeardWhile(observer.DbRef,
+				() => CmdAs(actor.DbRef, actor.Handle, $"@verb/no_name me=me,,,OTEST,unused,"));
+
+			await Assert.That(plain).Contains($"{actor.Name} tests {token}.");
+			await Assert.That(bare).Contains($"{token} happens.");
+			await Assert.That(fromAttribute).Contains($"{actor.Name} owhat {token}");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(actor.Handle);
+			await ConnectionService.Disconnect(observer.Handle);
+		}
+	}
+
+	[Test]
+	public async Task CpattrClearRemovesTheSourceOnceCopied()
+	{
+		var source = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("CpattrClearFrom")}"));
+		var target = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("CpattrClearTo")}"));
+		await Cmd($"&MOVED {source}=carried");
+		await Cmd($"&KEPT {source}=stays");
+
+		await Cmd($"@cpattr {source}/KEPT={target}");
+		await Cmd($"@cpattr/clear {source}/MOVED={target}");
+
+		await Assert.That(await Eval($"[lattr({source})] [get({target}/MOVED)] [get({target}/KEPT)]"))
+			.IsEqualTo("KEPT carried stays");
 	}
 }

@@ -12,14 +12,14 @@
 -->
 # @cpattr
 
-`@cpattr[/noflagcopy] <obj>/<attr>=<obj1>[/<attr1>][, ..., <objN>[/<attrN>]]`<br>
+`@cpattr[/noflagcopy][/clear] <obj>/<attr>=<obj1>[/<attr1>][, ..., <objN>[/<attrN>]]`<br>
 `@mvattr[/noflagcopy] <obj>/<attr>=<obj1>[/<attr1>][, ..., <objN>[/<attrN>]]`<br>
-`@cpattr[/noflagcopy] <obj>/<attribute pattern>=<obj1>[, ..., <objN>]`<br>
+`@cpattr[/noflagcopy][/clear] <obj>/<attribute pattern>=<obj1>[, ..., <objN>]`<br>
 `@mvattr[/noflagcopy] <obj>/<attribute pattern>=<obj1>[, ..., <objN>]`
 
 @cpattr copies the `<attr>` attribute from `<obj>` to `<obj1>` (and any other objects given). By default, the new attributes will have the same name as the original, but you can specify a different name to be used on each object if you wish.
 
-@mvattr works the same, but also attempts to remove the original attribute after copying it.
+@mvattr works the same, but also attempts to remove the original attribute after copying it. `@cpattr/clear` does the same as @mvattr.
 
 Attribute flags are copied as well, unless the `/noflagcopy` switch is given. This is recommended when copying from a non-standard attribute to a standard one. The `/convert` switch is accepted and changes nothing.
 
