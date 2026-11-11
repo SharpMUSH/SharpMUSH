@@ -39,8 +39,8 @@ public sealed record SoftcodeDialect(
 
 	/// <summary>
 	/// Commands this dialect has and SharpMUSH does not, under a name SharpMUSH would read as something else:
-	/// TinyMUX's <c>@fe</c> is its <c>@femit</c>, not SharpMUSH's <c>@feed</c>, and its <c>@last</c> lists logins
-	/// rather than setting LAST. Such a line goes to <c>$</c>-commands and then <c>Huh?</c>.
+	/// TinyMUX's <c>@fe</c> is its <c>@femit</c>, not SharpMUSH's <c>@feed</c>. Such a line goes to <c>$</c>-commands
+	/// and then <c>Huh?</c>.
 	/// </summary>
 	public IReadOnlySet<string> UnsupportedCommands { get; init; } = new HashSet<string>();
 
@@ -175,9 +175,6 @@ public static class SoftcodeDialects
 			// Its own command, reached only here: a global @site would make @sit ambiguous.
 			["@site"] = "@rhost_site",
 			// Commands both RhostMUSH and TinyMUX have and SharpMUSH has no name for.
-			["@femit"] = "@dialect_femit",
-			["@fpose"] = "@dialect_fpose",
-			["@fsay"] = "@dialect_fsay",
 			["@last"] = "@dialect_last",
 			["@program"] = "@dialect_program",
 			["@quitprogram"] = "@dialect_quitprogram",
@@ -343,12 +340,7 @@ public static class SoftcodeDialects
 			["@file"] = "@mail/file",
 			// Its own command, reached only here: a global @folder would make @fo ambiguous.
 			["@folder"] = "@mux_folder",
-			// Commands both TinyMUX and RhostMUSH have and SharpMUSH has no name for; @fe is TinyMUX's own
-			// abbreviation of @femit, which here would abbreviate @feed.
-			["@fe"] = "@dialect_femit",
-			["@femit"] = "@dialect_femit",
-			["@fpose"] = "@dialect_fpose",
-			["@fsay"] = "@dialect_fsay",
+			// Commands both TinyMUX and RhostMUSH have and SharpMUSH has no name for.
 			["@last"] = "@dialect_last",
 			["@program"] = "@dialect_program",
 			["@quitprogram"] = "@dialect_quitprogram",
@@ -436,6 +428,8 @@ public static class SoftcodeDialects
 		{
 			"capstr", "escape", "flip", "lcstr", "lit", "s", "secure", "sha1", "strlen", "strmem", "t", "ucstr"
 		},
+		// TinyMUX's @fe is its @femit, which an import writes as @force; a line it missed gets Huh?, not @feed.
+		UnsupportedCommands = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "@fe" },
 		// The built-in attributes its import stores under SharpMUSH's names (TinyMuxNames.AttributeRenames), and the
 		// attr_alias entries of its alias.conf.
 		AttributeAliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

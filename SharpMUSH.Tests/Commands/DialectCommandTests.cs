@@ -4,9 +4,8 @@ using SharpMUSH.Library.Models;
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
-/// Commands TinyMUX and RhostMUSH have and SharpMUSH has no name for: <c>@femit</c>, <c>@fpose</c>, <c>@fsay</c> and
-/// <c>@last</c> under those dialects, and PennMUSH's <c>#&lt;dbref&gt; &lt;command&gt;</c> and <c>PUEBLOCLIENT</c>
-/// everywhere.
+/// Commands TinyMUX and RhostMUSH have and SharpMUSH has no name for: <c>@last</c> under those dialects, and
+/// PennMUSH's <c>#&lt;dbref&gt; &lt;command&gt;</c> and <c>PUEBLOCLIENT</c> everywhere.
 /// </summary>
 public class DialectCommandTests : ServerTestBase
 {
@@ -35,132 +34,22 @@ public class DialectCommandTests : ServerTestBase
 	private IEnumerable<string> Heard(TestIsolationHelpers.TestPlayer actor, string token)
 		=> Notifications.For(actor.DbRef).Where(line => line.Contains(token, StringComparison.Ordinal));
 
+	/// <summary>
+	/// A TinyMUX import writes <c>@fsay</c> as <c>@force</c>, and the result evaluates the message once, as the one
+	/// forcing: what a player typed into it is never run as code by the object.
+	/// </summary>
 	[Test]
-	[Arguments("mux")]
-	[Arguments("rhost")]
-	public async Task ForcedSpeechSpeaksAsTheObject(string dialect)
+	public async Task RewrittenForcedSpeechEvaluatesTheMessageOnce()
 	{
-		var actor = await IsolatedPlayerAsync("Femit");
+		var actor = await IsolatedPlayerAsync("Fsay");
 		var (thing, name) = await PuppetAsync(actor);
-		var emitted = TestIsolationHelpers.GenerateUniqueName("femit");
-		var posed = TestIsolationHelpers.GenerateUniqueName("fpose");
-		var said = TestIsolationHelpers.GenerateUniqueName("fsay");
+		var said = TestIsolationHelpers.GenerateUniqueName("fsayonce");
 		try
 		{
-			using (Dialect(dialect))
-			{
-				await CmdAs(actor.DbRef, actor.Handle, $"@femit {thing}={emitted} [add(1,2)]");
-				await CmdAs(actor.DbRef, actor.Handle, $"@fpose {thing}={posed}");
-				await CmdAs(actor.DbRef, actor.Handle, $"@fpose/nospace {thing}='s {posed}");
-				await CmdAs(actor.DbRef, actor.Handle, $"@fsay {thing}={said}");
-				await WebAppFactoryArg.QueueBarrierAsync();
-			}
-
-			await Assert.That(Heard(actor, emitted)).IsEquivalentTo([$"{emitted} 3"]);
-			await Assert.That(Heard(actor, posed)).IsEquivalentTo([$"{name} {posed}", $"{name}'s {posed}"]);
-			await Assert.That(Heard(actor, said)).IsEquivalentTo([$"{name} says, \"{said}\""]);
-		}
-		finally
-		{
-			await ConnectionService.Disconnect(actor.Handle);
-		}
-	}
-
-	/// <summary>TinyMUX's <c>@fe</c> is its <c>@femit</c>, not SharpMUSH's <c>@feed</c>, and <c>/room</c> reaches the room.</summary>
-	[Test]
-	public async Task TinyMuxAbbreviationEmitsFromTheObject()
-	{
-		var actor = await IsolatedPlayerAsync("FemitAbbrev");
-		var (thing, _) = await PuppetAsync(actor);
-		var here = TestIsolationHelpers.GenerateUniqueName("femithere");
-		var room = TestIsolationHelpers.GenerateUniqueName("femitroom");
-		try
-		{
-			using (Dialect("mux"))
-			{
-				await CmdAs(actor.DbRef, actor.Handle, $"@fe {thing}={here}");
-				await CmdAs(actor.DbRef, actor.Handle, $"@femit/room {thing}={room}");
-				await WebAppFactoryArg.QueueBarrierAsync();
-			}
-
-			await Assert.That(Heard(actor, here)).IsEquivalentTo([here]);
-			await Assert.That(Heard(actor, room)).IsEquivalentTo([room]);
-		}
-		finally
-		{
-			await ConnectionService.Disconnect(actor.Handle);
-		}
-	}
-
-	/// <summary>Both switches on an object in a room name that room once; an empty message says nothing.</summary>
-	[Test]
-	public async Task ForcedEmitHereAndRoomEmitsOnceAndNeedsAMessage()
-	{
-		var actor = await IsolatedPlayerAsync("FemitBoth");
-		var (thing, name) = await PuppetAsync(actor);
-		var both = TestIsolationHelpers.GenerateUniqueName("femitboth");
-		try
-		{
-			using (Dialect("mux"))
-			{
-				await CmdAs(actor.DbRef, actor.Handle, $"@femit/here/room {thing}={both}");
-				await CmdAs(actor.DbRef, actor.Handle, $"@fsay {thing}");
-				await WebAppFactoryArg.QueueBarrierAsync();
-			}
-
-			await Assert.That(Heard(actor, both)).IsEquivalentTo([both]);
-			await Assert.That(Heard(actor, $"{name} says")).IsEmpty();
-			await Assert.That(Heard(actor, "Don't you have anything to say?")).IsNotEmpty();
-		}
-		finally
-		{
-			await ConnectionService.Disconnect(actor.Handle);
-		}
-	}
-
-	[Test]
-	public async Task ForcedSpeechNeedsControl()
-	{
-		var actor = await IsolatedPlayerAsync("FsayDenied");
-		var owner = await IsolatedPlayerAsync("FsayOwner");
-		var (thing, _) = await PuppetAsync(owner);
-		await Cmd($"@tel {thing}={await Eval($"loc({actor.DbRef})")}");
-		var said = TestIsolationHelpers.GenerateUniqueName("fsaydenied");
-		try
-		{
-			using (Dialect("mux"))
-			{
-				await CmdAs(actor.DbRef, actor.Handle, $"@fsay {thing}={said}");
-				await WebAppFactoryArg.QueueBarrierAsync();
-			}
-
-			await Assert.That(Heard(actor, said)).IsEmpty();
-			await Assert.That(Notifications.For(actor.DbRef).Any(line => line.StartsWith("Permission denied", StringComparison.Ordinal)))
-				.IsTrue();
-		}
-		finally
-		{
-			await ConnectionService.Disconnect(actor.Handle);
-			await ConnectionService.Disconnect(owner.Handle);
-		}
-	}
-
-	/// <summary>Without a dialect the names are not SharpMUSH's, so a line answers <c>Huh?</c> rather than speaking.</summary>
-	[Test]
-	public async Task ForcedSpeechNeedsTheDialect()
-	{
-		var actor = await IsolatedPlayerAsync("FemitPlain");
-		var (thing, _) = await PuppetAsync(actor);
-		var token = TestIsolationHelpers.GenerateUniqueName("femitplain");
-		try
-		{
-			await CmdAs(actor.DbRef, actor.Handle, $"@fsay {thing}={token}");
-			await CmdAs(actor.DbRef, actor.Handle, $"@fpose {thing}={token}");
-			await WebAppFactoryArg.QueueBarrierAsync();
-
-			await Assert.That(Heard(actor, token)).IsEmpty();
-			await Assert.That(Notifications.For(actor.DbRef).Count(line => line.StartsWith("Huh?", StringComparison.Ordinal)))
-				.IsEqualTo(2);
+			var command = SharpMUSH.Library.Services.DatabaseConversion.Softcode.ForcedSpeechRewriter
+				.Rewrite($"@fsay {thing}={said} [add(1,2)] \\[add(2,2)]").Text;
+			await CmdAs(actor.DbRef, actor.Handle, command);
+			await Assert.That(Heard(actor, said)).IsEquivalentTo([$"{name} says, \"{said} 3 [add(2,2)]\""]);
 		}
 		finally
 		{
