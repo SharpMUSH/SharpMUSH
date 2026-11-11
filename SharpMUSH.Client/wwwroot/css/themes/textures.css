@@ -470,23 +470,26 @@
 	--texture-ink-accent-2: repeating-conic-gradient(color-mix(in srgb, var(--accent-2) 12%, transparent) 0 25%, transparent 0 50%) 0 0 / 4px 4px;
 }
 
-/* Nightfall: a city at night as a phantom thief sees it. A huge moon in the text colour rises behind a skyline
-   drawn in the page colour, its lit windows cut through; the moon's lower limb breaks into halftone. A dark red
-   band in the accent sweeps up across the page at a slant, ruled with fine lines and edged by long accent-2
-   stripes, and accent-2 stars are scattered above. */
+/* Nightfall: a city at night as a phantom thief sees it. A huge moon in the text colour, its lower limb broken
+   into halftone, rises behind two rows of towers: the far row dark red, the near row in the page colour with its
+   windows lit in accent-2. A bright accent band sweeps up across the page at a slant behind them, ruled with
+   fine darker lines and edged by long accent-2 stripes, and accent-2 stars are scattered above. */
 [data-texture="nightfall"] {
-	--texture: radial-gradient(circle 46vmax at 74% 62%, color-mix(in srgb, var(--accent) 16%, transparent), transparent),
+	--texture: radial-gradient(circle 46vmax at 74% 62%, color-mix(in srgb, var(--accent) 14%, transparent), transparent),
 		radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.5));
 	--texture-size: 100% 100%, 100% 100%;
-	--texture-mask-border: linear-gradient(164deg, transparent 0 46%, #000 46% 71%, transparent 71%);
-	--texture-ink-border: repeating-linear-gradient(164deg, color-mix(in srgb, var(--accent) 46%, #000) 0 22px, color-mix(in srgb, var(--accent) 36%, #000) 22px 24px);
+	--texture-mask-border: linear-gradient(164deg, transparent 0 49%, #000 49% 66%, transparent 66%);
+	--texture-ink-border: repeating-linear-gradient(164deg, var(--accent) 0 26px, color-mix(in srgb, var(--accent) 72%, #000) 26px 28px);
 	--texture-mask-text: url(/themes/drawings/textures/nightfall-text.svg) center bottom / cover no-repeat;
-	--texture-ink-text: radial-gradient(circle 30vmax at 74% 60%, var(--text), color-mix(in srgb, var(--text) 78%, transparent));
+	--texture-ink-text: radial-gradient(circle 32vmax at 74% 54%, var(--text), color-mix(in srgb, var(--text) 82%, transparent));
+	--texture-mask-accent-3: url(/themes/drawings/textures/nightfall-accent-3.svg) center bottom / cover no-repeat;
+	--texture-ink-accent-3: linear-gradient(0deg, color-mix(in srgb, var(--accent) 14%, var(--bg)), color-mix(in srgb, var(--accent) 30%, var(--bg)) 55%);
 	--texture-mask-accent-2: url(/themes/drawings/textures/nightfall-accent-2.svg) center bottom / cover no-repeat;
-	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 60%, transparent);
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 62%, transparent);
 	--texture-mask-accent: url(/themes/drawings/textures/nightfall-accent.svg) center bottom / cover no-repeat;
 	--texture-ink-accent: var(--bg);
 }
+
 
 
 
