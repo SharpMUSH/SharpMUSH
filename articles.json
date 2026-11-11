@@ -3324,20 +3324,6 @@
     "file": "feed-functions.md"
   },
   {
-    "id": "femit-command",
-    "lookup": "@femit",
-    "title": "@femit",
-    "aliases": [
-      "@fpose",
-      "@fsay",
-      "@dialect_femit",
-      "@dialect_fpose",
-      "@dialect_fsay"
-    ],
-    "sections": [],
-    "file": "femit-command.md"
-  },
-  {
     "id": "fields-function",
     "lookup": "fields()",
     "title": "fields()",
