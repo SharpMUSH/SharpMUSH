@@ -1178,6 +1178,12 @@
         "lookup": "@chzone zone control and inheritance",
         "heading": "Zone control and inheritance",
         "aliases": []
+      },
+      {
+        "id": "several-zones",
+        "lookup": "@chzone several zones",
+        "heading": "Several zones",
+        "aliases": []
       }
     ],
     "file": "chzone-command.md"
