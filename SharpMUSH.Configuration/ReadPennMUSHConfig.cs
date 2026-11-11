@@ -505,8 +505,9 @@ public static partial class ReadPennMushConfig
 	/// and passed over, as PennMUSH logs it and reads on; only the top-level file has to exist.
 	/// </summary>
 	private static List<string> ReadWithIncludes(string configFile, IEnumerable<string> fileLines, List<string> skipped,
-		IncludeSource includes, IReadOnlyDictionary<string, string>? uploaded, int depth = 0)
+		IncludeSource includes, IReadOnlyDictionary<string, string>? uploaded, int depth = 0, HashSet<string>? uploadsRead = null)
 	{
+		uploadsRead ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		List<string> lines = [];
 		foreach (var line in fileLines)
 		{
@@ -538,10 +539,16 @@ public static partial class ReadPennMushConfig
 			if (includes == IncludeSource.Uploaded)
 			{
 				var fileName = IncludedFileName(included);
-				if (uploaded!.TryGetValue(fileName, out var content))
+				if (!uploadsRead.Add(fileName))
+				{
+					// Each uploaded file is read once, so a file that includes itself, or one included over and over,
+					// cannot multiply its lines.
+					skipped.Add($"include {included} in {configFile}: {fileName} was already read, not read again.");
+				}
+				else if (uploaded!.TryGetValue(fileName, out var content))
 				{
 					lines.AddRange(ReadWithIncludes(fileName, content.ReplaceLineEndings("\n").Split('\n'), skipped, includes, uploaded,
-						depth + 1));
+						depth + 1, uploadsRead));
 				}
 				else
 				{
@@ -556,7 +563,7 @@ public static partial class ReadPennMushConfig
 				: Path.Join(Path.GetDirectoryName(Path.GetFullPath(configFile)), included);
 			try
 			{
-				lines.AddRange(ReadWithIncludes(path, File.ReadAllLines(path), skipped, includes, uploaded, depth + 1));
+				lines.AddRange(ReadWithIncludes(path, File.ReadAllLines(path), skipped, includes, uploaded, depth + 1, uploadsRead));
 			}
 			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
 			{

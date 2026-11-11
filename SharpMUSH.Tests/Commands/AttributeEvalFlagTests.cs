@@ -126,4 +126,20 @@ public class AttributeEvalFlagTests : ServerTestBase
 			await Notifications.WaitForAsync(_player.DbRef, "heard 3");
 		}
 	}
+	/// <summary>@scan matches the command it is given, so a noparse command is found as any other.</summary>
+	[Test]
+	public async Task ScanFindsANoparseCommand()
+	{
+		var thing = await ThingInTheRoom();
+		var marker = TestIsolationHelpers.GenerateUniqueName("probe").ToLowerInvariant();
+		await Cmd($"@set #{thing}=!no_command");
+		await Cmd($"&CMD #{thing}=$+{marker} *:@pemit %#=heard %0");
+		await Cmd($"@set #{thing}/CMD=noparse");
+		await Cmd($"@tel #{thing}=me");
+
+		using (Emulating(true))
+		{
+			await Assert.That(await Cmd($"@scan/self +{marker} words")).Contains($"#{thing}/CMD");
+		}
+	}
 }

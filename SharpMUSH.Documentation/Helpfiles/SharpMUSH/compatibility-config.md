@@ -409,7 +409,7 @@ A wizard sets the flag; then its owner, a player, tries to change it:
 
 Off by default; meant for a game moved from TinyMUX or RhostMUSH, whose imports turn it on and keep the `noeval` and `noparse` attribute flags.
 
-With `attribute_eval_flags` on, an attribute set `noeval` is never evaluated, as on TinyMUX: u(), get_eval(), a description and the other messages give its value as written, and an action attribute set `noeval` does not run. A `$`-command attribute set `noparse` is matched against the command as it was typed, before its functions and substitutions are evaluated, as on TinyMUX and RhostMUSH, and `%0` and the rest take their text from that. Off, both flags do nothing, and every `$`-command is matched against the command after evaluation, as on PennMUSH.
+With `attribute_eval_flags` on, an attribute set `noeval` is never evaluated, as on TinyMUX: u(), get_eval(), a description and the other messages give its value as written, and an action attribute set `noeval`, such as `AUSE` or `ASUCC`, does not run when its event happens. `@trigger` still runs it. A `$`-command attribute set `noparse` is matched against the command as it was typed, before its functions and substitutions are evaluated, as on TinyMUX and RhostMUSH, and `%0` and the rest take their text from that. Off, both flags do nothing, and every `$`-command is matched against the command after evaluation, as on PennMUSH.
 
 ```sharp attribute_eval_flags
 > &EVALDOC_TEXT me=[add(1,2)]

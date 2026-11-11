@@ -301,6 +301,37 @@ public class ReadPennMushConfigRestrictionTests
 	}
 
 	/// <summary>
+	/// Each uploaded file is read once: a file that includes itself, or one named over and over, cannot multiply its
+	/// lines, and each repeat is reported.
+	/// </summary>
+	[Test]
+	public async Task UploadedIncludes_AreEachReadOnce()
+	{
+		var game = GameDirectory();
+		try
+		{
+			var uploaded = Write(game, "netmux.conf", "mud_name Uploaded", "include loop.conf", "include loop.conf");
+
+			var import = ReadPennMushConfig.Import(uploaded, new Dictionary<string, string>
+			{
+				["loop.conf"] = "money_plural Marks\ninclude loop.conf\ninclude loop.conf"
+			});
+
+			await Assert.That(import.Options.Cosmetic.MoneyPlural).IsEqualTo("Marks");
+			await Assert.That(import.Skipped).IsEquivalentTo(new[]
+			{
+				"include loop.conf in loop.conf: loop.conf was already read, not read again.",
+				"include loop.conf in loop.conf: loop.conf was already read, not read again.",
+				$"include loop.conf in {uploaded}: loop.conf was already read, not read again."
+			});
+		}
+		finally
+		{
+			Directory.Delete(game, true);
+		}
+	}
+
+	/// <summary>
 	/// The files a configuration on the server's disk includes, as a startup import hands them on: every one it reaches,
 	/// by file name, and none it cannot read.
 	/// </summary>

@@ -1,6 +1,4 @@
 ﻿using Mediator;
-using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -26,10 +24,26 @@ public partial class CommandDiscoveryService(IMediator mediator, ILockService lo
 	/// inherited as locks are) however far up its parent chain the attribute was found. An object that
 	/// refuses contributes no match and is added to <paramref name="lockFailures"/>, Penn's <c>errobj</c>.
 	/// </remarks>
-	public async ValueTask<Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>> MatchUserDefinedCommand(
+	public ValueTask<Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>> MatchUserDefinedCommand(
 		IMUSHCodeParser parser,
 		IAsyncEnumerable<AnySharpObject> objects,
 		MString commandString,
+		AnySharpObject player,
+		ICollection<AnySharpObject>? lockFailures = null)
+		=> MatchTypedCommand(parser, objects, commandString, null, player, lockFailures);
+
+	/// <summary>
+	/// <see cref="MatchUserDefinedCommand"/> for a line a player or queue entry ran, given as <paramref name="typed"/> before
+	/// evaluation as well: TinyMUX's and RhostMUSH's AF_NOPARSE matches a <c>noparse</c> <c>$</c>-command against that
+	/// text and captures its arguments from it. Only the command dispatcher has that line; <c>@scan</c>, <c>with</c>
+	/// and the hooks match a string of their own and pass none.
+	/// </summary>
+	/// <param name="typed">The line before evaluation, or null to match every pattern against <paramref name="commandString"/>.</param>
+	public async ValueTask<Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>> MatchTypedCommand(
+		IMUSHCodeParser parser,
+		IAsyncEnumerable<AnySharpObject> objects,
+		MString commandString,
+		MString? typed,
 		AnySharpObject player,
 		ICollection<AnySharpObject>? lockFailures = null)
 	{
@@ -41,12 +55,7 @@ public partial class CommandDiscoveryService(IMediator mediator, ILockService lo
 		var trimmedCommandString = commandString.Trim(TrimType.TrimBoth);
 		var plainCommandString = trimmedCommandString.ToPlainText();
 
-		// TinyMUX's and RhostMUSH's AF_NOPARSE: a noparse $-command is matched against the command as typed (%c), before
-		// it was evaluated, and captures its arguments from that.
-		MString? typed = parser.ServiceProvider.GetService<IOptionsWrapper<SharpMUSHOptions>>()?.CurrentValue.Compatibility.AttributeEvalFlags == true
-			&& parser.CurrentState.CommandText?.Raw is { } raw
-				? raw.Trim(TrimType.TrimBoth)
-				: null;
+		typed = typed?.Trim(TrimType.TrimBoth);
 		var plainTyped = typed?.ToPlainText();
 		var matched = new List<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>();
 		await foreach (var obj in objects.Where(ListensForCommandsAsync))

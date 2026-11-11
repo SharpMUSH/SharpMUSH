@@ -293,6 +293,9 @@ public class ConfigurationController(
 	public async Task<ActionResult<ConfigurationResponse>> ImportConfiguration([FromBody] ConfigurationImportRequest request)
 	{
 		var includes = request.Includes ?? new Dictionary<string, string>();
+		if (request.Content is null || includes.Values.Any(text => text is null))
+			return BadRequest("The configuration and each included file need text.");
+
 		if (request.Content.Length + includes.Values.Sum(text => text.Length) > MaxImportLength)
 			return BadRequest("The configuration files are larger than 1 MB together.");
 

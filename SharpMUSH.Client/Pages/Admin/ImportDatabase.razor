@@ -605,10 +605,12 @@
             await using var configStream = _selectedConfigFile?.OpenReadStream(MaxConfigFileSize);
             await using var folderStream = folderFile?.OpenReadStream(maxAllowedSize: 104857600);
             // Included files mean nothing without the configuration that names them.
-            var includes = _selectedConfigFile is null ? [] : _selectedConfigIncludes
-                .Select(include => (include.OpenReadStream(MaxConfigFileSize), include.Name)).ToList();
+            var includes = new List<(Stream Stream, string Name)>();
             try
             {
+                foreach (var include in _selectedConfigFile is null ? [] : _selectedConfigIncludes)
+                    includes.Add((include.OpenReadStream(MaxConfigFileSize), include.Name));
+
                 var upload = await ConversionService.UploadDatabaseAsync(stream, _selectedFile.Name, mailStream,
                     _selectedMailFile?.Name, chatStream, chatFile?.Name, configStream, _selectedConfigFile?.Name,
                     folderStream, folderFile?.Name, _format, includes);
