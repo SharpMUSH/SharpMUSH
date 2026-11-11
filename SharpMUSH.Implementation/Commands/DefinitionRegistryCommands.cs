@@ -2876,7 +2876,7 @@ public partial class Commands : ICommandRestrictionApplier
 				return CallState.Empty;
 			}
 
-			await NotifyHooksAsync(executor, commandName, hooks);
+			await NotifyHooksAsync(parser, executor, MarkupText.Plain($"Hooks on {commandName}"), [(commandName, hooks)], withCommand: false);
 			return CallState.Empty;
 		}
 
@@ -2975,47 +2975,75 @@ public partial class Commands : ICommandRestrictionApplier
 	/// <summary>Every command that has a hook, each with its hooks, in the command's name order.</summary>
 	private async ValueTask<Option<CallState>> ListAllHooksAsync(IMUSHCodeParser parser, AnySharpObject executor)
 	{
-		var any = false;
 		// The hook service names every hooked command, including one no built-in answers to (a softcode
 		// +command, or a name hooked for /extend); a service that cannot is asked about the built-ins.
 		IEnumerable<string> hooked = HookService is IHookCatalog catalog
 			? catalog.HookedCommands()
 			: parser.CommandLibrary.Select(command => command.Value.LibraryInformation.Attribute.Name).Append("HUH_COMMAND");
-		var names = hooked
-			.Distinct(StringComparer.OrdinalIgnoreCase)
-			.Order(StringComparer.OrdinalIgnoreCase);
-		foreach (var name in names)
+		var commands = new List<(string Command, Dictionary<string, CommandHook> Hooks)>();
+		foreach (var name in hooked.Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase))
 		{
 			var hooks = await HookService.GetAllHooksAsync(name);
-			if (hooks.Count == 0) continue;
-
-			any = true;
-			await NotifyHooksAsync(executor, name, hooks);
+			if (hooks.Count > 0)
+			{
+				commands.Add((name, hooks));
+			}
 		}
 
-		if (!any)
+		if (commands.Count == 0)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookNoHooks), executor);
+			return CallState.Empty;
 		}
 
+		await NotifyHooksAsync(parser, executor, MarkupText.Plain($"Hooks ({commands.Sum(command => command.Hooks.Count)})"), commands, withCommand: true);
 		return CallState.Empty;
 	}
 
-	private async ValueTask NotifyHooksAsync(AnySharpObject executor, string commandName, Dictionary<string, CommandHook> hooks)
-	{
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookListHeaderFormat), executor, commandName);
-		foreach (var (hookType, hook) in hooks)
-		{
-			var flags = new List<string>();
-			if (hook.Inline) flags.Add("inline");
-			if (hook.NoBreak) flags.Add("nobreak");
-			if (hook.Localize) flags.Add("localize");
-			if (hook.ClearRegs) flags.Add("clearregs");
+	/// <summary>The order a command's hooks run in, which is the order they are listed in.</summary>
+	private static readonly string[] HookListOrder = ["IGNORE", "EXTEND", "PERMIT", "FAIL", "OVERRIDE", "BEFORE", "ARGS", "AFTER"];
 
-			var flagStr = flags.Count > 0 ? $" ({string.Join(", ", flags)})" : "";
-			object target = hook.TargetObject.Number < 0 ? "*" : hook.TargetObject;
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookEntryFormat), executor, hookType, target, hook.AttributeName, flagStr);
-		}
+	/// <summary>
+	/// @hook/list's columns: the command (when more than one is listed), the hook, the object and attribute it runs
+	/// (<c>*</c> for an <c>/extend</c> naming none) and how an inline hook runs.
+	/// </summary>
+	private static ImmutableArray<TableColumn> HookColumns(bool withCommand) =>
+	[
+		.. withCommand ? [new TableColumn(MarkupText.Plain("Command")) { Min = 12 }] : ImmutableArray<TableColumn>.Empty,
+		new(MarkupText.Plain("Hook")) { Wrap = false },
+		new(MarkupText.Plain("Object")) { Wrap = false },
+		new(MarkupText.Plain("Attribute")) { Min = 10 },
+		new(MarkupText.Plain("Options")) { Priority = 2 }
+	];
+
+	private async ValueTask NotifyHooksAsync(IMUSHCodeParser parser, AnySharpObject executor, MarkupText title,
+		IReadOnlyList<(string Command, Dictionary<string, CommandHook> Hooks)> commands, bool withCommand)
+	{
+		var rows = commands.SelectMany(command => command.Hooks
+			.OrderBy(pair => Array.IndexOf(HookListOrder, pair.Key) is var at and >= 0 ? at : HookListOrder.Length)
+			.Select(pair => HookRow(command.Command, pair.Key, pair.Value, withCommand)));
+		var table = ServerLayout.Listing(HookColumns(withCommand), rows);
+		await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(title, table), 78, parser.HouseLook()), executor);
+	}
+
+	private static IEnumerable<string> HookRow(string command, string hookType, CommandHook hook, bool withCommand)
+	{
+		string[] options =
+		[
+			.. hook.Inline ? ["inline"] : Array.Empty<string>(),
+			.. hook.NoBreak ? ["nobreak"] : Array.Empty<string>(),
+			.. hook.Localize ? ["localize"] : Array.Empty<string>(),
+			.. hook.ClearRegs ? ["clearregs"] : Array.Empty<string>()
+		];
+		var noObject = hook.TargetObject.Number < 0;
+		return
+		[
+			.. withCommand ? [command] : Array.Empty<string>(),
+			hookType.ToLowerInvariant(),
+			noObject ? "*" : $"#{hook.TargetObject.Number}",
+			noObject ? "" : hook.AttributeName,
+			string.Join(" ", options)
+		];
 	}
 
 	/// <summary>

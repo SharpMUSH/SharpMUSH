@@ -26,18 +26,46 @@ public class HookCommandTests
 	[Test]
 	public async ValueTask HookList_NoCommand_ListsHooksOnNamesNoBuiltInAnswersTo()
 	{
-		var cmd = $"+HOOKTEST_ALL_{Guid.NewGuid():N}".ToUpperInvariant();
+		// Short enough that the Command column never wraps it, however many hooks other tests have set.
+		var cmd = $"+HK{Guid.NewGuid():N}"[..11].ToUpperInvariant();
 		await HookService.SetHookAsync(cmd, "BEFORE", new DBRef(1), "B_TEST");
 		try
 		{
 			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@hook/list"));
 
-			await Assert.That(WebAppFactoryArg.Notifications.For(WebAppFactoryArg.ExecutorDBRef))
-				.Contains(message => message.Contains($"'{cmd}'", StringComparison.Ordinal))
+			var listing = WebAppFactoryArg.Notifications.For(WebAppFactoryArg.ExecutorDBRef)
+				.LastOrDefault(message => message.Contains(cmd, StringComparison.Ordinal));
+			await Assert.That(listing).IsNotNull()
 				.Because("a softcode command's hook is listed with the built-ins'");
+			await Assert.That(listing!).Contains("Hooks (").And.Contains("Command").And.Contains("B_TEST");
 		}
 		finally
 		{
+			await HookService.ClearHookAsync(cmd, "BEFORE");
+		}
+	}
+
+	[Test]
+	public async ValueTask HookList_OneCommand_IsAPanelOfItsHooks()
+	{
+		var cmd = $"+HOOKTEST_ONE_{Guid.NewGuid():N}"[..24].ToUpperInvariant();
+		await HookService.SetHookAsync(cmd, "AFTER", new DBRef(1), "A_TEST", inline: true, localize: true);
+		await HookService.SetHookAsync(cmd, "BEFORE", new DBRef(1), "B_TEST");
+		try
+		{
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/list {cmd}"));
+
+			var listing = WebAppFactoryArg.Notifications.For(WebAppFactoryArg.ExecutorDBRef)
+				.LastOrDefault(message => message.Contains($"Hooks on {cmd}", StringComparison.Ordinal));
+			await Assert.That(listing).IsNotNull();
+			await Assert.That(listing!.IndexOf("B_TEST", StringComparison.Ordinal))
+				.IsLessThan(listing.IndexOf("A_TEST", StringComparison.Ordinal))
+				.Because("hooks are listed in the order they run");
+			await Assert.That(listing).Contains("inline localize");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(cmd, "AFTER");
 			await HookService.ClearHookAsync(cmd, "BEFORE");
 		}
 	}
