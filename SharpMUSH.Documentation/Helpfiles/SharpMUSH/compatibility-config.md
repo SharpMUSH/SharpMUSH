@@ -329,9 +329,7 @@ THING
 
 ## TinyMUX argument meanings: `mux_arguments`
 
-Off by default; importing a TinyMUX database turns it on. Where TinyMUX gives a function more arguments than PennMUSH, SharpMUSH takes them whatever the option says: before() and after() with one argument, eval() with one, a fifth to splice(), a sixth to table(), a third to convsecs() and mailsend(), a second to isjson(), regnattr() and time(), more than one to unsetq() and terminfo(), one to allof(), strallof() and strfirstof(), two to hmac() and mix(), and one or two to connlog(). See each function's help.
-
-The option covers the arguments the two servers read differently. With it on:
+Off by default; importing a TinyMUX database turns it on. Argument counts only TinyMUX takes, such as before() with one argument, work whatever the option says; see each function's help. The option covers the arguments the two servers read differently. With it on:
 
 - setunion(), setdiff(), setinter() and setsymdiff() read a fourth argument as the output separator and a fifth as the sort type.
 - hmac() with three arguments takes the text, the key and then the digest, and answers in upper-case hexadecimal.

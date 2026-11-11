@@ -100,9 +100,11 @@ public partial class Functions
 
 		return await ReadableCorpusAsync(parser, fileReference) switch
 		{
+			_ when !muxForm && parser.CurrentState.ArgumentsOrdered.Count > 2
+				=> new CallState(ErrorMessages.Returns.ArgumentCount(_2.Name.ToUpperInvariant(), 2, 2, 3)),
 			string corpus when parser.CurrentState.ArgumentsOrdered.Count < 3 => await EntryAsync(corpus, entryName),
 			Error<string> { Value: ErrorMessages.Returns.NoSuchFile } or string when muxForm => await ObjectHelpAsync(parser, fileReference, entryName),
-			string => new CallState(ErrorMessages.Returns.ArgumentCount("TEXTFILE", 2, 2, 3)),
+			string corpus => await EntryAsync(corpus, entryName),
 			Error<string> refused => new CallState(refused.Value)
 		};
 
@@ -150,9 +152,10 @@ public partial class Functions
 			return new CallState(exact.Last().Value);
 		}
 
+		// The topic is a prefix, not a pattern: a * or ? in it matches only itself.
 		var candidates = await AttributeService.GetAttributePatternAsync(executor, found, name + "*", false,
 			IAttributeService.AttributePatternMode.Wildcard) is SharpAttribute[] matched
-			? matched
+			? matched.Where(attribute => attribute.LongName.StartsWith(name, StringComparison.OrdinalIgnoreCase)).ToArray()
 			: [];
 		return candidates switch
 		{

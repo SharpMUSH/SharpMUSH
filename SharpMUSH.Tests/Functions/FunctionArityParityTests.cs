@@ -57,6 +57,27 @@ public class FunctionArityParityTests : ServerTestBase
 		["linsert"] = "TinyMUX's trailing <osep> argument, defaulting to <delimiter>",
 		["remove"] = "TinyMUX's trailing <osep> argument, defaulting to <delimiter>",
 		["ansi"] = "TinyMUX's further <codes>, <string> pairs",
+		// TinyMUX's other argument counts (MuxArgumentFormTests); mux_arguments covers the ones read differently.
+		["before"] = "TinyMUX's one-argument form, searching for a space",
+		["after"] = "TinyMUX's one-argument form, searching for a space",
+		["eval"] = "TinyMUX's one-argument form, evaluating the text again",
+		["splice"] = "TinyMUX's trailing <osep> argument",
+		["table"] = "TinyMUX's trailing <fill> argument",
+		["convsecs"] = "TinyMUX's trailing <places> argument",
+		["time"] = "TinyMUX's trailing <places> argument",
+		["mailsend"] = "TinyMUX's <players>, <subject>, <message> form",
+		["isjson"] = "TinyMUX's trailing <type> argument",
+		["regnattr"] = "TinyMUX's <object>, <regexp> form",
+		["unsetq"] = "TinyMUX's one register an argument",
+		["terminfo"] = "TinyMUX reads its commas as part of the one name",
+		["allof"] = "TinyMUX's one-argument form",
+		["strallof"] = "TinyMUX's one-argument form",
+		["strfirstof"] = "TinyMUX's one-argument form",
+		["hmac"] = "TinyMUX's <text>, <key> form",
+		["mix"] = "TinyMUX's one-list form",
+		["connlog"] = "TinyMUX's <player>[, <limit>] form",
+		["channels"] = "TinyMUX's <delimiter>, <offset>, <limit> under mux_arguments",
+		["textfile"] = "TinyMUX's dynhelp() <prefix> under mux_arguments",
 
 		// PennMUSH spells "the last argument swallows the rest" as a negative maxargs, which this table
 		// records as its absolute value. lit() reaches the same end through FunctionFlags.Literal, but

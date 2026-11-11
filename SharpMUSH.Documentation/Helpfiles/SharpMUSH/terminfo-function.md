@@ -13,7 +13,8 @@
 }
 -->
 # terminfo()
-`terminfo(<player|descriptor>)`
+`terminfo(<player|descriptor>)`<br>
+`terminfo(<part>[, ... , <partN>])`
 
 Commas between the parentheses are part of the name, as on TinyMUX: `terminfo(a,b)` looks up `a,b`.
 

@@ -206,7 +206,7 @@ public record CompatibilityOptions(
 	[SharpConfig(
 		Name = "mux_arguments",
 		Category = "Compatibility",
-		Description = "Read the arguments TinyMUX gives a different meaning: a fourth argument to setunion(), setdiff() and setinter() is the output separator; hmac() takes the text, the key and then the digest; lwho() with one argument lists dbref:port pairs when it is true; channels() lists the channels a player owns, with a delimiter, an offset and a limit; textfile() and dynhelp() whose first argument names no text file read an object's HELP_ attributes. Importing a TinyMUX database turns it on",
+		Description = "Read the arguments TinyMUX gives a different meaning: a fourth argument to setunion(), setdiff(), setinter() and setsymdiff() is the output separator; hmac() takes the text, the key and then the digest; lwho() with one argument lists dbref:port pairs when it is true; channels() lists the channels a player owns, with a delimiter, an offset and a limit; textfile() and dynhelp() whose first argument names no text file read an object's HELP_ attributes. Importing a TinyMUX database turns it on",
 		Group = "TinyMUX Compatibility",
 		Order = 9)]
 	public bool MuxArguments { get; init; }

@@ -93,7 +93,7 @@ public class RegistryContractAuditTests
 		var portal = definitions.RootElement.GetProperty("functions").GetProperty("mix");
 		await Assert.That(string.Join(',', portal.GetProperty("parameterNames").EnumerateArray().Select(value => value.GetString())))
 			.IsEqualTo("attribute,list1,list2,list-or-delimiter...");
-		await Assert.That(portal.GetProperty("minArgs").GetInt32()).IsEqualTo(3);
+		await Assert.That(portal.GetProperty("minArgs").GetInt32()).IsEqualTo(2);
 		await Assert.That(portal.GetProperty("maxArgs").GetInt32()).IsEqualTo(35);
 	}
 

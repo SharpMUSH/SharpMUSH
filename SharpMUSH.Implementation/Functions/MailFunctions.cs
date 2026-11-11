@@ -281,7 +281,7 @@ public partial class Functions
 	/// </summary>
 	/// <remarks>With three arguments it is TinyMUX's <c>mailsend(&lt;players&gt;, &lt;subject&gt;, &lt;message&gt;)</c>,
 	/// which answers 1 once the mail is delivered and the error otherwise.</remarks>
-	[SharpFunction(Name = "mailsend", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["player", "message"])]
+	[SharpFunction(Name = "mailsend", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["player", "message", "body"])]
 	public async ValueTask<CallState> mailsend(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;

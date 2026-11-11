@@ -1250,9 +1250,7 @@ public partial class Functions
 			: args["0"].Message.ToPlainText()).ToUpperInvariant();
 		var key = args["1"].Message.ToPlainText();
 		var text = args[muxForm ? "0" : "2"].Message.ToPlainText();
-		var encoding = muxForm
-			? "mux"
-			: ArgHelpers.NoParseDefaultNoParseArgument(args, 3, "base16").ToPlainText().ToLowerInvariant();
+		var encoding = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, "base16").ToPlainText().ToLowerInvariant();
 
 		HMAC? hmac = digest switch
 		{
@@ -1275,8 +1273,8 @@ public partial class Functions
 
 			var result = encoding switch
 			{
+				_ when muxForm => Convert.ToHexString(hash),
 				"base64" => Convert.ToBase64String(hash),
-				"mux" => Convert.ToHexString(hash),
 				_ => BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant()
 			};
 

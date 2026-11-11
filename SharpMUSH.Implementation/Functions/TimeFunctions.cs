@@ -379,7 +379,7 @@ public partial class Functions
 			: null;
 		var digits = MuxFractionDigits(parser.CurrentState.Arguments, "1");
 
-		if (string.IsNullOrEmpty(arg0) || (digits is not null && arg0.Equals("local", StringComparison.OrdinalIgnoreCase)))
+		if (string.IsNullOrEmpty(arg0) || arg0.Equals("local", StringComparison.OrdinalIgnoreCase))
 		{
 			return MuxDateString(DateTimeOffset.Now.ToLocalTime(), digits ?? 0);
 		}

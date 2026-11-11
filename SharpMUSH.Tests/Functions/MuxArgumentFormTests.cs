@@ -36,6 +36,8 @@ public partial class MuxArgumentFormTests : ServerTestBase
 	[Arguments("hmac(The quick brown fox jumps over the lazy dog,key)", "F7BC83F430538424B13298E6AA6FB143EF4D59A14946175997479DBC2D1A3CD8")]
 	[Arguments("hmac(sha1,key,The quick brown fox jumps over the lazy dog)", "de7c9b85b8b78aa6bc8a7a36f70a90701c9db4d9")]
 	[Arguments("setunion(a|b,b|c,|,-)", "a|b|c")]
+	[Arguments("hmac(sha1,key,text,MUX)", "369e2959eb49450338b212748f77d8ded74847bb")]
+	[Arguments("textfile(help,x,y)", "#-1 FUNCTION (TEXTFILE) EXPECTS 2 ARGUMENTS BUT GOT 3")]
 	public async Task TinyMuxArgumentCounts(string expression, string expected)
 	{
 		using var option = MuxArguments(false);
@@ -62,6 +64,7 @@ public partial class MuxArgumentFormTests : ServerTestBase
 		var result = await Eval("time(utc,3)");
 		await Assert.That(TimeString().IsMatch(result)).IsTrue().Because(result);
 		await Assert.That(TimeString().IsMatch(await Eval("time(local,0)"))).IsTrue();
+		await Assert.That(TimeString().IsMatch(await Eval("time(local)"))).IsTrue();
 	}
 
 	[Test]
@@ -138,6 +141,7 @@ public partial class MuxArgumentFormTests : ServerTestBase
 		await Assert.That(await Eval($"dynhelp({thing},fooba)")).IsEqualTo("Foo text");
 		await Assert.That(await Eval($"dynhelp({thing},foo)")).IsEqualTo(ErrorMessages.Returns.AmbiguousTopic);
 		await Assert.That(await Eval($"dynhelp({thing},zzz)")).IsEqualTo(ErrorMessages.Returns.NoSuchTopic);
+		await Assert.That(await Eval($"dynhelp({thing},foo?ar)")).IsEqualTo(ErrorMessages.Returns.NoSuchTopic);
 		await Assert.That(await Eval($"textfile({thing},x,TOPIC_)")).IsEqualTo("Ex text");
 	}
 
