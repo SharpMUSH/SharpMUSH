@@ -756,23 +756,86 @@ public sealed class PackageWriteTransaction : IAsyncDisposable
 			registry.UpsertPackageObjectAsync,
 			() => Task.CompletedTask);
 
+	// Each package's baseline rows, read once and kept in step with this transaction's own writes, so an
+	// apply that writes every attribute of a package reads its baseline once rather than once per attribute.
+	// Only package operations write these rows, and they run one at a time (IPackageOperationGate).
+	private readonly Dictionary<string, Dictionary<(string Objid, string Attribute), ManagedAttributeRecord>> _managedAttributes =
+		new(StringComparer.Ordinal);
+
+	private static (string, string) ManagedAttributeKey(string objid, string attribute) => (objid, attribute.ToUpperInvariant());
+
+	private async Task<Dictionary<(string Objid, string Attribute), ManagedAttributeRecord>> ManagedAttributesAsync(string packageId)
+	{
+		if (_managedAttributes.TryGetValue(packageId, out var rows))
+		{
+			return rows;
+		}
+
+		rows = [];
+		foreach (var row in await registry.GetManagedAttributesAsync(packageId))
+		{
+			rows.TryAdd(ManagedAttributeKey(row.Objid, row.Attribute), row);
+		}
+
+		_managedAttributes[packageId] = rows;
+		return rows;
+	}
+
 	private async Task<ManagedAttributeRecord?> ManagedAttributeAsync(string packageId, string objid, string attribute) =>
-		(await registry.GetManagedAttributesAsync(packageId)).FirstOrDefault(a =>
-			a.Objid == objid && string.Equals(a.Attribute, attribute, StringComparison.OrdinalIgnoreCase));
+		(await ManagedAttributesAsync(packageId)).GetValueOrDefault(ManagedAttributeKey(objid, attribute));
 
 	public Task UpsertManagedAttributeAsync(ManagedAttributeRecord record) =>
 		WriteRowAsync($"{record.PackageId} baseline {record.Objid}/{record.Attribute}",
 			() => ManagedAttributeAsync(record.PackageId, record.Objid, record.Attribute),
-			() => registry.UpsertManagedAttributeAsync(record),
-			registry.UpsertManagedAttributeAsync,
-			() => registry.RemoveManagedAttributeAsync(record.PackageId, record.Objid, record.Attribute));
+			async () =>
+			{
+				await registry.UpsertManagedAttributeAsync(record);
+				await RememberManagedAttributeAsync(record);
+			},
+			RestoreManagedAttributeAsync,
+			() => ForgetManagedAttributeAsync(record.PackageId, record.Objid, record.Attribute));
 
 	public Task RemoveManagedAttributeAsync(string packageId, string objid, string attribute) =>
 		WriteRowAsync($"{packageId} baseline {objid}/{attribute}",
 			() => ManagedAttributeAsync(packageId, objid, attribute),
-			() => registry.RemoveManagedAttributeAsync(packageId, objid, attribute),
-			registry.UpsertManagedAttributeAsync,
+			() => ForgetManagedAttributeAsync(packageId, objid, attribute),
+			RestoreManagedAttributeAsync,
 			() => Task.CompletedTask);
+
+	private async Task RestoreManagedAttributeAsync(ManagedAttributeRecord record)
+	{
+		await registry.UpsertManagedAttributeAsync(record);
+		await RememberManagedAttributeAsync(record);
+	}
+
+	private async Task ForgetManagedAttributeAsync(string packageId, string objid, string attribute)
+	{
+		await registry.RemoveManagedAttributeAsync(packageId, objid, attribute);
+		var rows = await ManagedAttributesAsync(packageId);
+		var key = ManagedAttributeKey(objid, attribute);
+		if (rows.GetValueOrDefault(key) is { } known && known.Attribute != attribute)
+		{
+			// The registry keys rows by exact name, so this removed nothing it holds under another case.
+			_managedAttributes.Remove(packageId);
+			return;
+		}
+
+		rows.Remove(key);
+	}
+
+	private async Task RememberManagedAttributeAsync(ManagedAttributeRecord record)
+	{
+		var rows = await ManagedAttributesAsync(record.PackageId);
+		var key = ManagedAttributeKey(record.Objid, record.Attribute);
+		if (rows.GetValueOrDefault(key) is { } known && known.Attribute != record.Attribute)
+		{
+			// Rows differing only by case are both kept; read them again rather than guess which is first.
+			_managedAttributes.Remove(record.PackageId);
+			return;
+		}
+
+		rows[key] = record;
+	}
 
 	private async Task<ManagedStructureRecord?> ManagedStructureAsync(string packageId, string objid) =>
 		(await registry.GetManagedStructuresAsync(packageId)).FirstOrDefault(s => s.Objid == objid);
