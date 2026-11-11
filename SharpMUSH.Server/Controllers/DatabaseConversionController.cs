@@ -24,17 +24,28 @@ public class DatabaseConversionController(ImportSessionRegistry sessions, Import
 	private const long MaxConfigFileSize = 1024 * 1024;
 	private const long MultipartOverhead = 1024 * 1024;
 
-	/// <summary>Uploads immutable private inputs for an isolated preview; this action never applies live configuration or promotes a world.</summary>
+	/// <summary>The most files a configuration may bring for its <c>include</c> lines.</summary>
+	private const int MaxConfigIncludeFiles = 16;
+
+	/// <summary>
+	/// Uploads immutable private inputs for an isolated preview; this action never applies live configuration or promotes a world.
+	/// <paramref name="configIncludeFiles"/> are the files the configuration names on <c>include</c> lines, such as a
+	/// <c>netmux.conf</c>'s <c>alias.conf</c>; each is matched by its file name.
+	/// </summary>
 	[HttpPost("upload")]
 	[RequestSizeLimit(4 * MaxUploadFileSize + MaxConfigFileSize + MultipartOverhead)]
 	[RequestFormLimits(MultipartBodyLengthLimit = MaxUploadFileSize)]
 	public async Task<ActionResult<string>> UploadDatabase([FromForm] IFormFile file, [FromForm] IFormFile? mailFile,
 		[FromForm] IFormFile? chatFile, [FromForm] IFormFile? configFile, [FromForm] IFormFile? mailFolderFile,
-		[FromForm] string? format, CancellationToken cancellationToken)
+		[FromForm] string? format, [FromForm] List<IFormFile>? configIncludeFiles, CancellationToken cancellationToken)
 	{
 		if (file is null || file.Length == 0) return BadRequest("No file uploaded");
 		if (!DatabaseImportFormats.TryParse(format, out var importFormat)) return BadRequest("Unknown database format.");
-		if (configFile is { Length: > MaxConfigFileSize }) return BadRequest("The configuration file is larger than 1 MB.");
+		configIncludeFiles ??= [];
+		if (configIncludeFiles.Count > MaxConfigIncludeFiles)
+			return BadRequest($"At most {MaxConfigIncludeFiles} included configuration files can be uploaded.");
+		if ((configFile?.Length ?? 0) + configIncludeFiles.Sum(include => include.Length) > MaxConfigFileSize)
+			return BadRequest("The configuration files are larger than 1 MB together.");
 		var inputs = new[] { file, mailFile, chatFile, mailFolderFile }.OfType<IFormFile>().ToArray();
 		if (inputs.Any(input => input.Length > MaxUploadFileSize)) return BadRequest("An import input is larger than 100 MB. Compress it with gzip first; the import reads .gz files.");
 		if (capacity.Measure().ImportShortfall(inputs.Sum(input => input.Length), isolated: true) is { Length: > 0 } shortfall)
@@ -55,14 +66,17 @@ public class DatabaseConversionController(ImportSessionRegistry sessions, Import
 			}
 			var files = new DatabaseImportFiles((await SaveAsync(file, "world"))!, await SaveAsync(mailFile, "mail"),
 				await SaveAsync(chatFile, "chat"), await SaveAsync(mailFolderFile, "folders"), importFormat);
-			string? text = null;
-			if (configFile is not null)
+			async Task<string> ReadTextAsync(IFormFile input)
 			{
-				using var reader = new StreamReader(configFile.OpenReadStream());
-				text = await reader.ReadToEndAsync(cancellationToken);
+				using var reader = new StreamReader(input.OpenReadStream());
+				return await reader.ReadToEndAsync(cancellationToken);
 			}
+			var text = configFile is null ? null : await ReadTextAsync(configFile);
+			var includes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+			foreach (var include in configIncludeFiles)
+				includes[include.FileName] = await ReadTextAsync(include);
 			var id = sessions.Start(files, text, await configuration.SnapshotAsync(cancellationToken), directory,
-				clock.GetUtcNow(), Path.GetFileName(file.FileName));
+				clock.GetUtcNow(), Path.GetFileName(file.FileName), includes);
 			started = true;
 			logger.LogInformation("Import preview {SessionId} started by account {AccountId}", id, User.FindFirstValue(ClaimTypes.NameIdentifier));
 			return Ok(new { sessionId = id, message = "Isolated import preview started; promotion requires a separate restart confirmation." });

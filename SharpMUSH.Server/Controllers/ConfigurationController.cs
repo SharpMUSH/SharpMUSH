@@ -281,12 +281,24 @@ public class ConfigurationController(
 		return dict;
 	}
 
+	/// <summary>The most a configuration and the files it includes may hold together, in characters.</summary>
+	private const int MaxImportLength = 1024 * 1024;
+
 	[HttpPost("import")]
-	public async Task<ActionResult<ConfigurationResponse>> ImportConfiguration([FromBody] string configContent)
+	public Task<ActionResult<ConfigurationResponse>> ImportConfiguration([FromBody] string configContent)
+		=> ImportConfiguration(new ConfigurationImportRequest(configContent));
+
+	/// <summary>Applies a configuration file with the files its <c>include</c> lines name, uploaded beside it.</summary>
+	[HttpPost("import/files")]
+	public async Task<ActionResult<ConfigurationResponse>> ImportConfiguration([FromBody] ConfigurationImportRequest request)
 	{
+		var includes = request.Includes ?? new Dictionary<string, string>();
+		if (request.Content.Length + includes.Values.Sum(text => text.Length) > MaxImportLength)
+			return BadRequest("The configuration files are larger than 1 MB together.");
+
 		try
 		{
-			var import = await mushCnf.ReadAsync(configContent);
+			var import = await mushCnf.ReadAsync(request.Content, includes);
 			var applied = await mushCnf.ApplyAsync(import, PortalSecretAuthor.Of(User));
 			await audit.RecordPortalAsync(User, AuditActions.ConfigImport, null, "mush.cnf");
 			foreach (var secret in applied.StoredSecrets)

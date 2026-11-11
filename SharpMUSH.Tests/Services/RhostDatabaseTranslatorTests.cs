@@ -275,6 +275,30 @@ public class RhostDatabaseTranslatorTests
 		await Assert.That(Mapped(false, (6, 2, 2), (6, 4, 3))).Contains("-player.teleport/guildmaster");
 	}
 
+	/// <summary>
+	/// NO_OVERRIDE (flag word 3) denies what the OVERRIDE depower denies and passing locks, even to a WRAITH that held the
+	/// latter.
+	/// </summary>
+	[Test]
+	public async Task NoOverrideDeniesPassingLocks()
+	{
+		var wraith = RhostNameTables.Powers.Single(m => m.Name == "WRAITH");
+		var toggles = new uint[8];
+		toggles[wraith.Word] = 1u << wraith.Shift;
+		var source = new RhostFlatfileObject
+		{
+			DBRef = 5, Name = "Held", Flags = [(uint)RhostObjectType.Player, 0, RhostNameTables.NoOverrideBit, 0], Toggles = toggles
+		};
+		var report = new RhostDatabaseTranslator.Report();
+		report.Line(ImportWarningKind.Flags, "Test import");
+
+		var mapped = Overrides(RhostDatabaseTranslator.MapPowers(source, report)).Split(' ');
+
+		await Assert.That(mapped).IsEquivalentTo(new[] { "-game.override", "-game.override.movement" });
+		await Assert.That(report.Finish().Select(note => note.Text))
+			.Contains(text => text.Contains("NO_OVERRIDE: also imported as a deny on game.override and game.override.movement"));
+	}
+
 	/// <summary>FUBAR denies every everyday permission without a reach.</summary>
 	[Test]
 	public async Task FubarDeniesEverydayPermissions()

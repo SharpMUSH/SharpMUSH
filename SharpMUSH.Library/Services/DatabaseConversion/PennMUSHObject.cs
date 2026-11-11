@@ -206,4 +206,11 @@ public static class RestrictingFlags
 
 	/// <summary>RhostMUSH's FUBAR: the player may only pose and say. Here it loses every everyday permission.</summary>
 	public static readonly IReadOnlyList<string> Fubar = [.. PortalPermission.AllowedUnlessDenied.Order(StringComparer.Ordinal)];
+
+	/// <summary>
+	/// RhostMUSH's NO_OVERRIDE: a wizard gets no further past locks than anyone else, as under the OVERRIDE depower. Here
+	/// the object is denied what that depower denies, changing locked attributes and locks it would not otherwise reach,
+	/// and passing enter, leave and exit locks, whatever else it holds.
+	/// </summary>
+	public static readonly IReadOnlyList<string> NoOverride = [PortalPermission.Override, PortalPermission.OverrideMovement];
 }

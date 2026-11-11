@@ -1,4 +1,7 @@
 ﻿using Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -37,20 +40,32 @@ public partial class CommandDiscoveryService(IMediator mediator, ILockService lo
 		// capture indices below stay aligned with the string the regex actually matched against.
 		var trimmedCommandString = commandString.Trim(TrimType.TrimBoth);
 		var plainCommandString = trimmedCommandString.ToPlainText();
+
+		// TinyMUX's and RhostMUSH's AF_NOPARSE: a noparse $-command is matched against the command as typed (%c), before
+		// it was evaluated, and captures its arguments from that.
+		MString? typed = parser.ServiceProvider.GetService<IOptionsWrapper<SharpMUSHOptions>>()?.CurrentValue.Compatibility.AttributeEvalFlags == true
+			&& parser.CurrentState.CommandText?.Raw is { } raw
+				? raw.Trim(TrimType.TrimBoth)
+				: null;
+		var plainTyped = typed?.ToPlainText();
 		var matched = new List<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>();
 		await foreach (var obj in objects.Where(ListensForCommandsAsync))
 		{
 			var objectMatches = new List<(AnySharpObject, SharpAttribute, Dictionary<string, CallState>)>();
 			foreach (var cached in await mediator.Send(new GetCommandAttributesQuery(obj)))
 			{
+				var (text, plain) = typed is not null && cached.Attribute.IsNoParse()
+					? (typed, plainTyped!)
+					: (trimmedCommandString, plainCommandString);
+
 				// Each pattern runs once: the Match that admits it is the one its arguments are captured from.
-				if (SoftcodeRegex.Match(cached.CompiledRegex, plainCommandString) is not { Success: true } match)
+				if (SoftcodeRegex.Match(cached.CompiledRegex, plain) is not { Success: true } match)
 				{
 					continue;
 				}
 
 				objectMatches.Add((obj, cached.Attribute,
-					PatternArguments.Capture(cached.CompiledRegex, match, cached.IsRegexFlag, trimmedCommandString)));
+					PatternArguments.Capture(cached.CompiledRegex, match, cached.IsRegexFlag, text)));
 			}
 
 			if (objectMatches.Count == 0)

@@ -32,17 +32,22 @@ public class MushCnfImportService(
 	ConfiguredAliasImport? aliases = null)
 {
 	/// <summary>
-	/// Reads <paramref name="content"/>. An uploaded <c>mush.cnf</c> arrives alone: its include lines are not
-	/// followed, since they would name files on this server, so the restrict.cnf and alias.cnf it includes are not
-	/// read; each line that could not be carried over is logged rather than lost silently.
+	/// Reads <paramref name="content"/>. Its include lines are read from <paramref name="includes"/>, the files uploaded
+	/// with it, by file name, and never from this server's disk: a <c>restrict.cnf</c> or <c>alias.cnf</c> that was not
+	/// uploaded is reported by name. Each line that could not be carried over is logged rather than lost silently.
 	/// </summary>
 	public async Task<PennMushConfigImport> ReadAsync(string content, CancellationToken cancellationToken = default)
+		=> await ReadAsync(content, new Dictionary<string, string>(), cancellationToken);
+
+	/// <inheritdoc cref="ReadAsync(string, CancellationToken)"/>
+	public async Task<PennMushConfigImport> ReadAsync(string content, IReadOnlyDictionary<string, string> includes,
+		CancellationToken cancellationToken = default)
 	{
 		var path = Path.GetTempFileName();
 		try
 		{
 			await File.WriteAllTextAsync(path, content, cancellationToken);
-			var import = ReadPennMushConfig.Import(path, followIncludes: false);
+			var import = ReadPennMushConfig.Import(path, includes);
 			foreach (var line in import.Skipped)
 			{
 				logger.LogWarning("Configuration import did not carry over: {Line}", line);

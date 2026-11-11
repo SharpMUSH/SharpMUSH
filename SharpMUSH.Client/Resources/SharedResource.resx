@@ -5235,7 +5235,7 @@
     <value>PennMUSH compresses its dumps with gzip by default. Upload the .gz files as they are; the import unpacks them. If your mush.cnf changes output_database, mail_database or chat_database, take the files it names.</value>
   </data>
   <data name="AdmImportPennIncludes" xml:space="preserve">
-    <value>The import does not follow include lines (alias.cnf, restrict.cnf), and the report lists each one it passed over. Paste the included files' lines into mush.cnf to keep their settings.</value>
+    <value>Upload the files mush.cnf includes (alias.cnf, restrict.cnf) beside it. Each include line reads the uploaded file of that name, and the report names each included file that was not uploaded.</value>
   </data>
   <data name="AdmImportMuxGuideTitle" xml:space="preserve">
     <value>TinyMUX: which files to upload</value>
@@ -5262,10 +5262,16 @@
     <value>the database, channels and mail together (TinyMUX 2.14; upload it alone)</value>
   </data>
   <data name="AdmImportMuxIncludes" xml:space="preserve">
-    <value>The import does not follow include lines (alias.conf, compat.conf), and the report lists each one it passed over. Paste the included files' lines into netmux.conf to keep their settings. The flatfile, mail.db, comsys.db and netmux.sqlite may be gzipped to fit under 100 MB.</value>
+    <value>Upload the files netmux.conf includes (alias.conf, compat.conf) beside it. Each include line reads the uploaded file of that name, and the report names each included file that was not uploaded. The flatfile, mail.db, comsys.db and netmux.sqlite may be gzipped to fit under 100 MB.</value>
   </data>
   <data name="AdmImportConfigHint" xml:space="preserve">
     <value>Give the source game's configuration file if you have it. It is applied first, so the master room, player start, ancestors and handlers are your game's; without it the game keeps SharpMUSH's defaults.</value>
+  </data>
+  <data name="AdmImportConfigIncludesOptional" xml:space="preserve">
+    <value>Files the configuration includes (optional)</value>
+  </data>
+  <data name="AdmImportConfigIncludesHint" xml:space="preserve">
+    <value>The files the configuration names on include lines, such as alias.conf or compat.conf. Each include line reads the uploaded file of the same name.</value>
   </data>
   <data name="AdmImportConfigApplied" xml:space="preserve">
     <value>The configuration from {0} was applied before the database.</value>

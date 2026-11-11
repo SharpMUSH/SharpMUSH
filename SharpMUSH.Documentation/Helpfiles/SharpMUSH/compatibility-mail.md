@@ -24,13 +24,18 @@
       "id": "mail-listings-are-drawn-as-titled-sections",
       "heading": "Mail listings are drawn as titled sections",
       "lookup": "compatibility mail mail listings are drawn as titled sections"
+    },
+    {
+      "id": "tinymux-mail-drafts-are-not-supported",
+      "heading": "TinyMUX mail drafts are not supported",
+      "lookup": "compatibility mail tinymux mail drafts are not supported"
     }
   ]
 }
 -->
 # Compatibility Mail
 
-`@mail` matches PennMUSH's commands and switches. Four differences are deliberate. Three are about what happens to a message between the sender's `@mail` and the recipient's folder; the fourth is how the listings look.
+`@mail` matches PennMUSH's commands and switches. Four differences from PennMUSH are deliberate. Three are about what happens to a message between the sender's `@mail` and the recipient's folder; the fourth is how the listings look. A fifth section covers TinyMUX's mail drafts, which SharpMUSH does not have.
 
 ## A `MAILFILTER` that mails its owner does not recurse
 
@@ -71,3 +76,20 @@
 **Why.** The same listing reads as a table on a terminal, in the web portal and to a screen reader; padded lines only line up on the terminal they were padded for.<br>
 **Workaround.** Code that reads mail goes through `mail()`, `mailstats()`, `folderstats()` and `maillist()`, which answer as PennMUSH's do. Do not parse what `@mail` prints.<br>
 **Example.** The parity case `mail.folder-numbers` in `tools/parity/scenarios/50-mail.scn` runs `@mail/folder` on both servers.
+
+## TinyMUX mail drafts are not supported
+
+**A choice.**
+
+**TinyMUX** starts a draft with `@mail <player>=<subject>`, adds to it with `-<text>` and `~<text>`, and sends it with `--` or `@mail/send`; `@mail/proof`, `@mail/edit`, `@mail/cc`, `@mail/bcc` and `@mail/abort` work on the draft while it is open.<br>
+**SharpMUSH** keeps no draft. A message is written and sent in one command, `@mail <player>=<subject>/<message>`, or with TinyMUX's `@mail/quick <player>/<subject>=<message>`, which works the same here. `@mail <player>=<text>` sends `<text>` at once, as PennMUSH's does, rather than opening a draft. `-` and `--` are not commands, `~` runs the rest of the line with strict parsing, and `@mail/send` with nothing after it is refused.<br>
+**Why.** A draft is state kept between commands for one player, and the web portal's mail page already writes a whole message before it is sent.<br>
+**Workaround.** Write each message in one command with `@mail/quick`, or use the portal's mail page.<br>
+**Example.** A player who types TinyMUX's draft lines after a quick message:
+
+```sharp unchecked
+> @mail/quick Bob/Plans=Meet at the docks at nine.
+MAIL: You sent your message to Bob.
+> -and bring a lantern
+Huh?  (Type "help" for help.)
+```

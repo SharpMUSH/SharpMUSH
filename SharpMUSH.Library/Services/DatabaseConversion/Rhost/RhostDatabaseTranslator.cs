@@ -35,7 +35,7 @@ public static partial class RhostDatabaseTranslator
 	/// The options RhostMUSH softcode needs. It writes literal parentheses unescaped (<c>paren_groups</c>),
 	/// tests <c>and()</c>, <c>or()</c> and <c>xor()</c> arguments by their leading integer (<c>mux_logic</c>), reads <c>trim()</c>, <c>edit()</c>, <c>lattr()</c>, <c>printf()</c>, <c>map()</c>, <c>list()</c>, <c>iter()</c>
 	/// and <c>lrooms()</c> as RhostMUSH defines them, lets only a SIDEFX object run side-effect functions (<c>sidefx_flag</c>), lets NOEXAMINE and NOMODIFY protect
-	/// (<c>protection_flags</c>), and
+	/// (<c>protection_flags</c>), matches a NOPARSE <c>$</c>-command against the command as typed (<c>attribute_eval_flags</c>), and
 	/// reads RhostMUSH's names for functions and commands SharpMUSH has under its own (<c>dialect</c>).
 	/// </summary>
 	public static Dictionary<string, object> CompatibilityOptions() => new(StringComparer.OrdinalIgnoreCase)
@@ -51,6 +51,7 @@ public static partial class RhostDatabaseTranslator
 		["rhost_list"] = true,
 		["rhost_lrooms"] = true,
 		["protection_flags"] = true,
+		["attribute_eval_flags"] = true,
 		["dialect"] = SoftcodeDialects.Rhost.Key,
 		// RhostMUSH's mail command is mail (see the note Translate gives).
 		["command_aliases"] = new Dictionary<string, string[]> { ["@MAIL"] = ["mail"] }
@@ -573,6 +574,18 @@ public static partial class RhostDatabaseTranslator
 			}
 
 			report.Note(ImportWarningKind.Flags, $"Flag {name}: also imported as a deny on {string.Join(" and ", denies)}", source.DBRef);
+		}
+
+		if ((source.Flags[2] & RhostNameTables.NoOverrideBit) != 0)
+		{
+			foreach (var scope in RestrictingFlags.NoOverride)
+			{
+				landed[scope] = new PennMUSHOverride(scope, PermissionState.Deny);
+			}
+
+			report.Note(ImportWarningKind.Flags,
+				$"Flag NO_OVERRIDE: also imported as a deny on {string.Join(" and ", RestrictingFlags.NoOverride)}",
+				source.DBRef);
 		}
 
 		return [.. landed.Values];
