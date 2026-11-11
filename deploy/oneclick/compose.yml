@@ -72,6 +72,8 @@ services:
       # the owner has finished /setup. sharpmush-guard flips it.
       - "${SHARPMUSH_TELNET_BIND:-0.0.0.0}:4201:4201"
       - "${SHARPMUSH_TELNET_BIND:-0.0.0.0}:4203:4203"
+      # /metrics only (ConnectionServer:MetricsPort), on the host's loopback for a scraper there or an ssh tunnel.
+      - "127.0.0.1:9091:9091"
     networks:
       - sharpmush-net
     mem_limit: 512m

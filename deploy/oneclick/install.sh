@@ -22,6 +22,7 @@
 #
 # Commands:
 #   install.sh            prepare, then configure (the default)
+#   install.sh install --ask      the same, asking for each answer before anything is installed
 #   install.sh prepare    Docker, files, images and units; starts nothing (for building VM images)
 #   install.sh configure  write .env from the answers, arm the guard, start the stack; safe to repeat
 #   install.sh configure --ask   the same, asking for each answer at the terminal
@@ -176,6 +177,9 @@ prepare() {
 
 # The answers from an earlier run stay unless this run gives new ones.
 load_previous() {
+	# Once per run: a second pass would bring back an answer cleared with "none".
+	[ -z "${PREVIOUS_LOADED:-}" ] || return 0
+	PREVIOUS_LOADED=1
 	[ -f "$SHARPMUSH_DIR/.env" ] || return 0
 	local key value
 	while IFS='=' read -r key value; do
@@ -232,6 +236,33 @@ cf_api() { # cf_api <method> <path> [json]
 	echo "$response"
 }
 
+cf_try() { # cf_try <method> <path>: the response when Cloudflare accepts it, nothing when it refuses
+	local response
+	response=$(curl -sS -X "$1" "https://api.cloudflare.com/client/v4$2" \
+		-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json") || return 0
+	[ "$(jq -r '.success' <<<"$response" 2>/dev/null)" = "true" ] && echo "$response"
+	return 0
+}
+
+# Finds the domain's zone and account, and checks the token reaches the zone, its DNS and the account's
+# tunnels, before anything on the server or in Cloudflare changes. Reading is all it can test: a token
+# with read-only permissions passes here and is refused at the first change.
+cloudflare_check() {
+	local candidate=$SHARPMUSH_DOMAIN zone=''
+	while [[ "$candidate" == *.* ]]; do
+		zone=$(cf_try GET "/zones?name=$candidate" | jq -c '.result[0] // empty')
+		[ -n "$zone" ] && break
+		candidate=${candidate#*.}
+	done
+	[ -n "$zone" ] || die "The Cloudflare token cannot read a zone for $SHARPMUSH_DOMAIN. Give it Zone > Zone > Read, with the domain under Zone Resources."
+	CF_ZONE_ID=$(jq -r '.id' <<<"$zone")
+	CF_ACCOUNT_ID=$(jq -r '.account.id' <<<"$zone")
+	[ -n "$(cf_try GET "/zones/$CF_ZONE_ID/dns_records?per_page=1")" ] \
+		|| die "The Cloudflare token cannot read DNS for $candidate. Give it Zone > DNS > Edit."
+	[ -n "$(cf_try GET "/accounts/$CF_ACCOUNT_ID/cfd_tunnel?per_page=1")" ] \
+		|| die "The Cloudflare token cannot manage tunnels. Give it Account > Cloudflare Tunnel > Edit, and choose your account under Account Resources. Then run this again."
+}
+
 cf_dns_upsert() { # cf_dns_upsert <zone id> <type> <name> <content> <proxied>
 	local body existing
 	body=$(jq -nc --arg t "$2" --arg n "$3" --arg c "$4" --argjson p "$5" \
@@ -244,20 +275,40 @@ cf_dns_upsert() { # cf_dns_upsert <zone id> <type> <name> <content> <proxied>
 	fi
 }
 
-cloudflare_setup() {
-	local domain=$SHARPMUSH_DOMAIN candidate=$SHARPMUSH_DOMAIN zone='' zone_id account tunnel name
-	log "Setting up Cloudflare for $domain"
-	while [[ "$candidate" == *.* ]]; do
-		zone=$(cf_api GET "/zones?name=$candidate" | jq -c '.result[0] // empty')
-		[ -n "$zone" ] && break
-		candidate=${candidate#*.}
-	done
-	[ -n "$zone" ] || die "None of $domain's parent domains is a zone this Cloudflare token can read."
-	zone_id=$(jq -r '.id' <<<"$zone")
-	account=$(jq -r '.account.id' <<<"$zone")
+# The tunnel id inside the token this server already runs (a tunnel token is base64 JSON: a, t, s).
+tunnel_from_token() {
+	local token=${CLOUDFLARE_TUNNEL_TOKEN:-}
+	[ -n "$token" ] || return 0
+	while [ $(( ${#token} % 4 )) -ne 0 ]; do token="$token="; done
+	base64 -d <<<"$token" 2>/dev/null | jq -r '.t // empty' 2>/dev/null || true
+}
 
-	name="sharpmush-$domain"
-	tunnel=$(cf_api GET "/accounts/$account/cfd_tunnel?name=$name&is_deleted=false" | jq -r '.result[0].id // empty')
+# The tunnel the domain pointed at before this run, when it is another one: it gets no traffic once the
+# record moves, so its owner is told to stop its connector and delete it.
+cloudflare_old_tunnel() { # cloudflare_old_tunnel <zone id> <account> <new tunnel id>
+	local target old info
+	target=$(cf_try GET "/zones/$1/dns_records?name=$SHARPMUSH_DOMAIN&type=CNAME" | jq -r '.result[0].content // empty')
+	old=${target%.cfargotunnel.com}
+	[ -n "$target" ] && [ "$old" != "$target" ] && [ "$old" != "$3" ] || return 0
+	info=$(cf_try GET "/accounts/$2/cfd_tunnel/$old" | jq -r '.result.name // empty' 2>/dev/null || true)
+	OLD_TUNNEL_NOTE="$SHARPMUSH_DOMAIN used to point at the tunnel ${info:-$old}, which now gets no traffic. Stop the server that runs it, then delete the tunnel under Zero Trust > Networks > Tunnels (Cloudflare refuses while it is still connected)."
+}
+
+cloudflare_setup() {
+	local domain=$SHARPMUSH_DOMAIN zone_id account tunnel name old_ip
+	log "Setting up Cloudflare for $domain"
+	[ -n "${CF_ZONE_ID:-}" ] || cloudflare_check
+	zone_id=$CF_ZONE_ID
+	account=$CF_ACCOUNT_ID
+
+	# This server's own tunnel: the one its token names, else the one named for this machine. Never one
+	# found by the domain alone, which another server installed for the same domain is still running.
+	name="sharpmush-$domain-$(head -c 8 /etc/machine-id 2>/dev/null || hostname -s)"
+	tunnel=$(tunnel_from_token)
+	if [ -n "$tunnel" ] && [ -z "$(cf_try GET "/accounts/$account/cfd_tunnel/$tunnel" | jq -r 'select(.result.deleted_at == null) | .result.id')" ]; then
+		tunnel=''
+	fi
+	[ -n "$tunnel" ] || tunnel=$(cf_api GET "/accounts/$account/cfd_tunnel?name=$name&is_deleted=false" | jq -r '.result[0].id // empty')
 	if [ -z "$tunnel" ]; then
 		tunnel=$(cf_api POST "/accounts/$account/cfd_tunnel" \
 			"$(jq -nc --arg n "$name" '{name: $n, config_src: "cloudflare"}')" | jq -r '.result.id')
@@ -266,9 +317,14 @@ cloudflare_setup() {
 		"$(jq -nc --arg h "$domain" '{config: {ingress: [{hostname: $h, service: "http://caddy:80"}, {service: "http_status:404"}]}}')" >/dev/null
 	CLOUDFLARE_TUNNEL_TOKEN=$(cf_api GET "/accounts/$account/cfd_tunnel/$tunnel/token" | jq -r '.result')
 
+	cloudflare_old_tunnel "$zone_id" "$account" "$tunnel"
 	cf_dns_upsert "$zone_id" CNAME "$domain" "$tunnel.cfargotunnel.com" true
 	SHARPMUSH_TELNET_HOST=${SHARPMUSH_TELNET_HOST:-telnet.$domain}
+	old_ip=$(cf_try GET "/zones/$zone_id/dns_records?name=$SHARPMUSH_TELNET_HOST&type=A" | jq -r '.result[0].content // empty')
 	cf_dns_upsert "$zone_id" A "$SHARPMUSH_TELNET_HOST" "$(public_ip)" false
+	if [ -n "$old_ip" ] && [ "$old_ip" != "$(public_ip)" ]; then
+		log "$SHARPMUSH_TELNET_HOST moved from $old_ip to $(public_ip)"
+	fi
 }
 
 # TLS telnet (4203) needs a name players connect to that resolves to this server, and Caddy's
@@ -345,6 +401,8 @@ write_env() {
 	local env=$SHARPMUSH_DIR/.env profiles=''
 	[ -n "${CLOUDFLARE_TUNNEL_TOKEN:-}" ] && profiles=cloudflare
 	[ -n "${RESTIC_REPOSITORY:-}" ] && profiles=${profiles:+$profiles,}backup
+	# load_previous exported the old value, which would win over the .env written here.
+	export COMPOSE_PROFILES=$profiles
 	umask 077
 	cat > "$env" <<EOF
 # Written by $SHARPMUSH_DIR/bin/install.sh. Run sharpmush-configure to change the answers.
@@ -391,12 +449,68 @@ write_summary() {
 	chmod 600 "$summary"
 }
 
+# Waits for the game to answer behind Caddy, and behind a tunnel for cloudflared's first connection, so
+# the address printed below works when it is opened. The stack keeps starting if this gives up.
+wait_until_ready() {
+	local i started
+	log "Waiting for the game to answer"
+	for i in $(seq 1 60); do
+		docker exec sharpmush-caddy wget -q -O /dev/null http://sharpmush-server:8080/ready 2>/dev/null && break
+		[ "$i" -eq 60 ] && { NOTES+=("The game had not answered after three minutes. Watch it start with: cd $SHARPMUSH_DIR && docker compose logs -f sharpmush-server"); return 0; }
+		sleep 3
+	done
+	[ -n "${CLOUDFLARE_TUNNEL_TOKEN:-}" ] || return 0
+	for i in $(seq 1 20); do
+		# Only this container's run: an earlier one's registration says nothing about now.
+		started=$(docker inspect -f '{{.State.StartedAt}}' sharpmush-cloudflared 2>/dev/null || true)
+		[[ "$(docker logs ${started:+--since "$started"} sharpmush-cloudflared 2>&1)" == *"Registered tunnel connection"* ]] && return 0
+		sleep 3
+	done
+	NOTES+=("The Cloudflare tunnel has not connected yet, so the portal shows a Cloudflare error page until it does. See: docker logs sharpmush-cloudflared")
+}
+
+# Things on the server itself worth fixing that the installer leaves to its owner.
+server_checks() {
+	local passwords
+	mkdir -p /run/sshd
+	# Either setting lets a password in: keyboard-interactive asks for it through PAM.
+	passwords=$(sshd -T 2>/dev/null | awk '($1 == "passwordauthentication" || $1 == "kbdinteractiveauthentication") && $2 == "yes"' || true)
+	if [ -n "$passwords" ]; then
+		NOTES+=("SSH still accepts passwords. Once your key logs you in, turn them off: see \"Lock down SSH\" in the Launch a Server guide.")
+	fi
+	if [ -f /var/run/reboot-required ]; then
+		NOTES+=("The system wants a reboot for updates it installed. The game starts again by itself after: reboot")
+	fi
+}
+
+print_notes() {
+	local note
+	[ -n "${OLD_TUNNEL_NOTE:-}" ] && NOTES+=("$OLD_TUNNEL_NOTE")
+	[ "${#NOTES[@]}" -gt 0 ] || return 0
+	for note in "${NOTES[@]}"; do printf '\033[1;33m!!\033[0m %s\n' "$note"; done
+	echo
+}
+
+# Checks the answers before anything is installed or changed.
+preflight() {
+	if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
+		[ -n "${SHARPMUSH_DOMAIN:-}" ] || die "CLOUDFLARE_API_TOKEN needs SHARPMUSH_DOMAIN."
+		if ! command -v jq >/dev/null || ! command -v curl >/dev/null; then
+			{ apt-get update -q && DEBIAN_FRONTEND=noninteractive apt-get install -yq jq curl ca-certificates; } >/dev/null
+		fi
+		[ -n "${CF_ZONE_ID:-}" ] || cloudflare_check
+	fi
+	return 0
+}
+
+NOTES=()
+
 configure() {
 	load_previous
 	[ "${1:-}" = --ask ] && ask_all
+	preflight
 
 	if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
-		[ -n "${SHARPMUSH_DOMAIN:-}" ] || die "CLOUDFLARE_API_TOKEN needs SHARPMUSH_DOMAIN."
 		cloudflare_setup
 	fi
 	if [ -z "${SHARPMUSH_DOMAIN:-}" ]; then
@@ -423,11 +537,21 @@ configure() {
 	# A changed guard file or site needs Caddy to read its configuration again.
 	docker exec sharpmush-caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 || true
 	systemctl start sharpmush.service
+	wait_until_ready
+	server_checks
 	cat "$SHARPMUSH_DIR/state/summary.txt"
+	print_notes
 }
 
 case "${1:-install}" in
-	install) prepare; configure "${2:-}" ;;
+	# Asked and checked first, so a wrong answer stops the run before anything is installed.
+	install)
+		load_previous
+		[ "${2:-}" = --ask ] && ask_all
+		preflight
+		prepare
+		configure
+		;;
 	prepare) prepare ;;
 	configure) shift; configure "${1:-}" ;;
 	*) die "Unknown command $1 (install, prepare or configure)." ;;
