@@ -259,7 +259,7 @@ public static class SoftcodeDialects
 		},
 		SwitchAliases = Switches(new()
 		{
-			// Ways of asking for what the command does here anyway.
+			// Ways of asking for what the command does here anyway, and the switches it has under another name.
 			["@BOOT"] = new() { ["quiet"] = ["SILENT"] },
 			["@CLONE"] = new() { ["location"] = [], ["ansi"] = [] },
 			["@CPATTR"] = new() { ["verify"] = [], ["verbose"] = [] },
@@ -269,21 +269,16 @@ public static class SoftcodeDialects
 			// RhostMUSH's /break keeps an @break inside the list to the list, as /nobreak does here.
 			["@DOLIST"] = new() { ["break"] = ["NOBREAK"] },
 			["@EDIT"] = new() { ["single"] = ["FIRST"], ["strict"] = [] },
-			["@EMIT"] = new() { ["noansi"] = [] },
 			["@FUNCTION"] = new() { ["display"] = [], ["notrace"] = [] },
-			["@HALT"] = new() { ["quiet"] = [] },
 			["@NAME"] = new() { ["ansi"] = [] },
 			["@NOTIFY"] = new() { ["first"] = [] },
 			["@OPEN"] = new() { ["location"] = [], ["ansi"] = [], ["strict"] = [] },
 			["@PCREATE"] = new() { ["ansi"] = [], ["strict"] = [] },
-			["@PEMIT"] = new() { ["noansi"] = [], ["nosub"] = [], ["oneeval"] = [] },
+			["@PEMIT"] = new() { ["nosub"] = [], ["oneeval"] = [] },
 			["@SEARCH"] = new() { ["nogarbage"] = [] },
 			["@SET"] = new() { ["noisy"] = [], ["tree"] = [] },
-			["EXAMINE"] = new() { ["display"] = [], ["full"] = [], ["quick"] = ["BRIEF"], ["tree"] = [] },
-			["PAGE"] = new() { ["noansi"] = [] },
-			["POSE"] = new() { ["default"] = [], ["noansi"] = [] },
-			["SAY"] = new() { ["noansi"] = [] },
-			["THINK"] = new() { ["noansi"] = [] }
+			["EXAMINE"] = new() { ["display"] = [], ["full"] = [], ["tree"] = [] },
+			["POSE"] = new() { ["default"] = [] }
 		})
 	};
 
@@ -467,7 +462,7 @@ public static class SoftcodeDialects
 			// TinyMUX's /break lets an @break inside the list end the list around it too, as it always does here.
 			["@DOLIST"] = new() { ["break"] = [] },
 			["@LISTMOTD"] = new() { ["brief"] = [] },
-			["@MALIAS"] = new() { ["delete"] = ["DESTROY"], ["status"] = ["LIST"] },
+			["@MALIAS"] = new() { ["delete"] = ["DESTROY"], ["status"] = ["STATS"] },
 			["@NOTIFY"] = new() { ["first"] = [] },
 			["@OPEN"] = new() { ["location"] = [] },
 			["@PS"] = new() { ["brief"] = [] },

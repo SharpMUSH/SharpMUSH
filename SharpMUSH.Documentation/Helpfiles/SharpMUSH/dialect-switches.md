@@ -18,8 +18,11 @@ Code read in a dialect (an attribute flagged `mux` or `rhost`, or any code on a 
 - [dialect switches rhost]: RhostMUSH's switches
 
 ```sharp dialect=rhost
-> think/noansi Switched.
-Switched.
+> &DIALECTDOC me=aaa
+> @edit/single me/DIALECTDOC=a,b
+> think get(me/DIALECTDOC)
+baa
+> &DIALECTDOC me
 ```
 
 ## TinyMUX switches
@@ -29,7 +32,7 @@ These run as the SharpMUSH switch named:
 - `@chown/nostrip`, `@chownall/nostrip` and `@clone/nostrip`: `/preserve`
 - `@decompile/dbref`: `/db`
 - `@cemit/noheader`: `/silent`
-- `@malias/delete`: `/destroy`; `@malias/status`: `/list`
+- `@malias/delete`: `/destroy`; `@malias/status`: `/stats`
 - `@boot/quiet`: `/silent`
 
 These change nothing: `@dolist/break` (an @break ends the list around it here too), `@switch/default` (every match runs, as with TinyMUX's default configuration), `@notify/first`, `@teleport/loud`, `examine/full`, `@clone/location`, `@open/location`, `pose/default`, `@ps/brief` and `@listmotd/brief`.
@@ -40,7 +43,6 @@ These run as the SharpMUSH switch named:
 
 - `@dolist/break`: `/nobreak`
 - `@edit/single`: `/first`
-- `examine/quick`: `/brief`
 - `@boot/quiet`: `/silent`
 
-These change nothing: `/noansi` on `@pemit`, `@emit`, `say`, `pose`, `think` and `page`; `@pemit/nosub` and `/oneeval`; `@set/noisy` and `/tree`; `@decompile/all` and `/tree`; `@notify/first`; `@halt/quiet`; `@function/display` and `/notrace`; `@edit/strict`; `@cpattr/verify` and `/verbose`; `/ansi` on `@clone`, `@create`, `@dig`, `@open`, `@pcreate` and `@name`; `/strict` on `@create`, `@dig`, `@open` and `@pcreate`; `@clone/location` and `@open/location`; `@search/nogarbage`; `examine/full`, `/tree` and `/display`; `pose/default`.
+These change nothing: `@pemit/nosub` and `/oneeval`; `@set/noisy` and `/tree`; `@decompile/all` and `/tree`; `@notify/first`; `@function/display` and `/notrace`; `@edit/strict`; `@cpattr/verify` and `/verbose`; `/ansi` on `@clone`, `@create`, `@dig`, `@open`, `@pcreate` and `@name`; `/strict` on `@create`, `@dig`, `@open` and `@pcreate`; `@clone/location` and `@open/location`; `@search/nogarbage`; `examine/full`, `/tree` and `/display`; `pose/default`.
