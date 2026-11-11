@@ -36,7 +36,6 @@ public sealed class WikiMarkdigPipeline
 	///   <item><see cref="WikiDirectiveExtension"/> for dynamic-listing directives
 	///     (<c>::: category …</c>, <c>::: pagelist …</c>, <c>::: recent N</c>)</item>
 	///   <item><see cref="MarkdownFlexExtension"/> for <c>flex</c> / <c>item</c> layouts</item>
-	///   <item><see cref="WikiPromptExtension"/> — the starter pages' <c>**Fill in:**</c> notes are not rendered</item>
 	///   <item>DisableHtml — raw HTML in wiki source is blocked for security</item>
 	///   <item><see cref="WikiSafetyExtension"/> — attribute blocks and link URLs cannot carry script either</item>
 	/// </list>
@@ -49,7 +48,6 @@ public sealed class WikiMarkdigPipeline
 			.Use<WikiTableExtension>()
 			.Use<WikiDirectiveExtension>()
 			.UseFlexLayout()
-			.Use<WikiPromptExtension>()
 			.DisableHtml()
 			.Use<WikiSafetyExtension>()
 			.Build();

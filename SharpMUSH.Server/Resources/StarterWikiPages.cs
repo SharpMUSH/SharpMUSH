@@ -5,8 +5,7 @@ namespace SharpMUSH.Server.Resources;
 /// <summary>
 /// The bodies of the starter wiki pages (<see cref="Services.StarterWikiService"/>): Markdown files under
 /// <c>Resources/Wiki/Starter</c>, embedded in the assembly. Lines opening <c>&gt; **Fill in:**</c> are prompts for
-/// the game's administrators: no rendering of the page shows them (<see cref="Library.Services.WikiPromptExtension"/>),
-/// and the portal tells an editor how many are left. Categories are the page's own field, not
+/// the game's administrators, which <c>wikisearch(Fill in)</c> finds. Categories are the page's own field, not
 /// part of its text.
 /// </summary>
 public static class StarterWikiPages

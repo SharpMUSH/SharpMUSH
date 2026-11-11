@@ -89,7 +89,6 @@ else if (DisplayAsHero)
 {
     <div class="WikiContent WikiContent--hero">
         @LocaleBanner
-        @PromptNotice
         <div class="mud-card-content">
             @RenderSegments
         </div>
@@ -110,7 +109,6 @@ else
                                 Minimised="@_minimised" MinimisedChanged="@(v => _minimised = v)" Fact="@MinimisedFact"
                                 Meta="@MetaLine" Actions="@HeaderActions" />
                 @FallbackNotice
-                @PromptNotice
                 @if (_hasBody)
                 {
                     <KitCard Class="wiki-article-card">
@@ -504,44 +502,6 @@ else
         }
     };
 
-    private const string StoredPrompt = "<strong>" + WikiPromptExtension.Marker + "</strong>";
-
-    private int _promptCount;
-    private string? _promptsCountedFor;
-
-    /// <summary>The <c>**Fill in:**</c> prompts left in the page's Markdown, which no reader sees rendered.</summary>
-    private int PromptCount
-    {
-        get
-        {
-            var content = Article?.Content;
-            if (!ReferenceEquals(content, _promptsCountedFor))
-            {
-                _promptsCountedFor = content;
-                _promptCount = WikiPromptExtension.Count(content);
-            }
-
-            return _promptCount;
-        }
-    }
-
-    /// <summary>
-    /// For a reader who may edit the page: how many of the starter pages' prompts are still unanswered. Readers who
-    /// may not never see the prompts, here or in the body.
-    /// </summary>
-    private RenderFragment PromptNotice => __builder =>
-    {
-        @if (Article?.Access?.Edit == true && PromptCount > 0)
-        {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="mb-2 wiki-prompt-notice">
-                <div style="display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;">
-                    <span>@Loc.Plural("WikiPromptNotice", "count", PromptCount)</span>
-                    <MudLink Typo="Typo.body2" OnClick="@(() => ActivateEditMode())">@Loc["WikiPromptNoticeEdit"]</MudLink>
-                </div>
-            </MudAlert>
-        }
-    };
-
     private RenderFragment LocaleBanner => @<div>
         @if (ShowFallbackNotice)
         {
@@ -586,10 +546,8 @@ else
     private (string Page, string? Locale)? _markedIdentity;
     private Task<string>? _marking;
 
-    // Stored table HTML may predate the scroll container, and stored HTML may predate the pipeline
-    // leaving out the starter pages' prompts: such a page is rendered again from its Markdown, once
-    // per source. Keeping the current layout in the render tree avoids reparenting Blazor's raw-markup
-    // nodes after rendering.
+    // Stored table HTML may predate the scroll container. Keep the current layout in the
+    // render tree, rather than reparenting Blazor's raw-markup nodes after rendering.
     private (string Source, string Stored, string Rendered)? _tableLayout;
 
     private string RenderedArticleHtml()
@@ -600,15 +558,10 @@ else
             return string.Empty;
         }
 
-        // HTML stored before the pipeline left the starter pages' prompts out still carries them.
-        if (article.RenderedHtml is not { } stored || stored.Contains(StoredPrompt, StringComparison.Ordinal))
+        if (article.RenderedHtml is not { } stored)
         {
-            if (_tableLayout is { } again && again.Source == article.Content && again.Stored == (article.RenderedHtml ?? string.Empty))
-                return again.Rendered;
-
-            var fresh = Services.GetRequiredService<WikiMarkdigPipeline>().RenderToHtml(article.Content);
-            _tableLayout = (article.Content, article.RenderedHtml ?? string.Empty, fresh);
-            return fresh;
+            _tableLayout = null;
+            return Services.GetRequiredService<WikiMarkdigPipeline>().RenderToHtml(article.Content);
         }
 
         if (!stored.Contains("<table", StringComparison.OrdinalIgnoreCase))

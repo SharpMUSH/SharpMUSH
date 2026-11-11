@@ -2,8 +2,6 @@
 
 # Theme
 
-What this game is about. For the world itself, see [[Setting]].
-
 ## The premise
 > **Fill in:** Three sentences: where and when the game is set, what is at stake,
 > and who the player characters are.
@@ -27,3 +25,5 @@ What this game is about. For the world itself, see [[Setting]].
 ## Content and rating
 > **Fill in:** The game's rating and how sensitive content is handled.
 > See [[Policies]].
+
+For the world itself, see [[Setting]].
