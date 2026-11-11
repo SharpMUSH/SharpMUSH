@@ -13,7 +13,7 @@
 
 `lookup_site(<player>[, <port>[, <type>]])`
 
-Returns the host names of `<player>`'s connections, separated by spaces. With `<port>`, it returns only the connection on that port. With `<type>` 1, it returns addresses instead of host names.
+Returns the host names of `<player>`'s connections, separated by spaces. With `<port>`, a whole number above 0, it returns only the connection on that port; any other `<port>` counts as none given. With `<type>` 1, it returns addresses instead of host names.
 
 If the player is not connected and no `<port>` is given, it returns the host name or address the player last connected from. It returns `#-1` if there is nothing to return or you do not control `<player>`.
 
