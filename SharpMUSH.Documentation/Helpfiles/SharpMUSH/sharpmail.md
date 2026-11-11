@@ -329,8 +329,9 @@ The mail*stats() functions return data like @mail/*stats does. You either must u
 # mailsend()
 
 - `mailsend(<player>,[<subject>/]<message>)`
+- `mailsend(<players>,<subject>,<message>)`
 
-This function sends a message to a player, just like @mail/send. It returns nothing if successful, or an error message.
+This function sends a message to a player, just like @mail/send. It returns nothing if successful, or an error message. The three-argument form is TinyMUX's: the subject is given apart, and it returns 1 once the mail is delivered.
 
 # malias()
 

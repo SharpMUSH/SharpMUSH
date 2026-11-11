@@ -33,12 +33,11 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	[SharpFunction(Name = "after", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "substring"])]
+	/// <remarks>An empty substring is a space. With none, as TinyMUX takes it, the string's outer spaces are trimmed too.</remarks>
+	[SharpFunction(Name = "after", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "substring"])]
 	public ValueTask<CallState> After(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
-		var fullString = args["0"].Message;
-		var search = args["1"].Message;
+		var (fullString, search) = StringAndSubstring(parser);
 		var idx = fullString.IndexOf(search.ToPlainText());
 
 		if (idx == -1)
@@ -636,12 +635,11 @@ public partial class Functions
 			: "a");
 	}
 
-	[SharpFunction(Name = "before", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string1", "string2"])]
+	/// <remarks>An empty substring is a space. With none, as TinyMUX takes it, the string's outer spaces are trimmed too.</remarks>
+	[SharpFunction(Name = "before", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string1", "string2"])]
 	public ValueTask<CallState> Before(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
-		var fullString = args["0"].Message;
-		var search = args["1"].Message;
+		var (fullString, search) = StringAndSubstring(parser);
 		var idx = fullString.IndexOf(search.ToPlainText());
 
 		if (idx == -1)
@@ -652,6 +650,20 @@ public partial class Functions
 		var result = fullString.Substring(0, idx);
 
 		return ValueTask.FromResult(new CallState(result));
+	}
+
+	/// <summary>
+	/// before()'s and after()'s string and substring. An empty substring is a space, as in PennMUSH; TinyMUX's
+	/// one-argument form searches the string, its outer spaces trimmed, for a space.
+	/// </summary>
+	private static (MString String, MString Substring) StringAndSubstring(IMUSHCodeParser parser)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		if (args.Count < 2)
+			return (args["0"].Message.Trim(TrimType.TrimBoth, " "), MarkupText.Space);
+
+		var search = args["1"].Message;
+		return (args["0"].Message, search.ToPlainText().Length == 0 ? MarkupText.Space : search);
 	}
 
 	[SharpFunction(Name = "brackets", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
@@ -1224,13 +1236,21 @@ public partial class Functions
 			: new CallState(ErrorMessages.Returns.BadRegName));
 	}
 
-	[SharpFunction(Name = "hmac", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["algorithm", "key", "string"])]
+	/// <remarks>
+	/// TinyMUX's form is <c>hmac(&lt;text&gt;, &lt;key&gt;[, &lt;digest&gt;])</c>, SHA256 by default, answered in
+	/// upper-case hexadecimal: with two arguments always, and with three under <c>mux_arguments</c>.
+	/// </remarks>
+	[SharpFunction(Name = "hmac", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["algorithm", "key", "string"])]
 	public ValueTask<CallState> HashMessageAuthenticationCode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var digest = parser.CurrentState.Arguments["0"].Message.ToPlainText().ToUpperInvariant();
-		var key = parser.CurrentState.Arguments["1"].Message.ToPlainText();
-		var text = parser.CurrentState.Arguments["2"].Message.ToPlainText();
-		var encoding = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, "base16").ToPlainText().ToLowerInvariant();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var muxForm = args.Count == 2 || (args.Count == 3 && Configuration.CurrentValue.Compatibility.MuxArguments);
+		var digest = (muxForm
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Empty).ToPlainText() is { Length: > 0 } named ? named : "SHA256"
+			: args["0"].Message.ToPlainText()).ToUpperInvariant();
+		var key = args["1"].Message.ToPlainText();
+		var text = args[muxForm ? "0" : "2"].Message.ToPlainText();
+		var encoding = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, "base16").ToPlainText().ToLowerInvariant();
 
 		HMAC? hmac = digest switch
 		{
@@ -1244,7 +1264,7 @@ public partial class Functions
 
 		if (hmac == null)
 		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
+			return ValueTask.FromResult(new CallState(muxForm ? ErrorMessages.Returns.UnsupportedDigestType : ErrorMessages.Returns.ArgRange));
 		}
 
 		using (hmac)
@@ -1253,6 +1273,7 @@ public partial class Functions
 
 			var result = encoding switch
 			{
+				_ when muxForm => Convert.ToHexString(hash),
 				"base64" => Convert.ToBase64String(hash),
 				_ => BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant()
 			};
@@ -2481,7 +2502,7 @@ public partial class Functions
 	/// <c>allof()</c> is <see cref="WhichOfAllAsync"/> with PennMUSH's <c>isbool</c> flag on;
 	/// <see cref="StringAllOf"/> is the same body with it off.
 	/// </remarks>
-	[SharpFunction(Name = "allof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["value..."])]
+	[SharpFunction(Name = "allof", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["value..."])]
 	public ValueTask<CallState> AllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> WhichOfAllAsync(parser, isBool: true);
 
@@ -2502,18 +2523,14 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		// With 0 or 1 argument there is no delimiter, so there are no candidates either.
-		if (args.Count < 2)
-		{
-			return CallState.Empty;
-		}
-
-		var delimParsed = await ParseRawArgument(parser, args[(args.Count - 1).ToString()].Message);
-		var delimiter = delimParsed?.Message ?? MarkupText.Empty;
+		// A lone argument, as TinyMUX takes it, is a candidate with no delimiter after it.
+		var candidates = args.Count < 2 ? args.Count : args.Count - 1;
+		var delimParsed = args.Count < 2 ? null : await ParseRawArgument(parser, args[(args.Count - 1).ToString()].Message);
+		var delimiter = delimParsed?.Message ?? MarkupText.Space;
 		var hadErrors = delimParsed?.HadErrors == true;
 
 		var kept = new List<MString>();
-		for (var i = 0; i < args.Count - 1; i++)
+		for (var i = 0; i < candidates; i++)
 		{
 			var parsed = await ParseRawArgument(parser, args[i.ToString()].Message);
 			hadErrors |= parsed?.HadErrors == true;

@@ -279,18 +279,24 @@ public partial class Functions
 	/// extmail.c:1466 — <c>do_mail_send(executor, args[0], args[1], 0, 1, 0)</c>: the same send
 	/// <c>@mail</c> performs, with silent=1 and nosig=0.
 	/// </summary>
-	[SharpFunction(Name = "mailsend", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["player", "message"])]
+	/// <remarks>With three arguments it is TinyMUX's <c>mailsend(&lt;players&gt;, &lt;subject&gt;, &lt;message&gt;)</c>,
+	/// which answers 1 once the mail is delivered and the error otherwise.</remarks>
+	[SharpFunction(Name = "mailsend", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["player", "message", "body"])]
 	public async ValueTask<CallState> mailsend(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var subject = args.Count > 2 ? args["1"].Message : null;
 
-		await SendMail.Handle(parser, LocateService, Mediator, NotifyService,
+		var sent = await SendMail.Handle(parser, LocateService, Mediator, NotifyService,
 			new MailDelivery.Services(PermissionService, Mediator, NotifyService, DidItService, AttributeService, ObjectDataService,
 			Configuration, ConnectionService, EventService),
-			args["0"].Message, args["1"].Message, ["SILENT"]);
+			args["0"].Message, args[args.Count > 2 ? "2" : "1"].Message, ["SILENT"], subject);
 
 		// do_mail_send notifies the sender about a bad recipient, so the function returns nothing.
-		return new CallState(string.Empty);
+		if (subject is null)
+			return new CallState(string.Empty);
+
+		return sent.ToPlainText().StartsWith("#-1", StringComparison.Ordinal) ? new CallState(sent) : new CallState("1");
 	}
 	[SharpFunction(Name = "mailstats", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player"])]
 	public ValueTask<CallState> mailstats(IMUSHCodeParser parser, SharpFunctionAttribute _2)

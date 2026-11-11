@@ -1,5 +1,6 @@
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Attributes;
@@ -136,7 +137,9 @@ public partial class Functions
 		return new CallState(descriptor?.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 	}
 
-	[SharpFunction(Name = "connlog", MinArgs = 3, MaxArgs = int.MaxValue,
+	/// <remarks>With one or two arguments it is TinyMUX's <c>connlog(&lt;player&gt;[, &lt;limit&gt;])</c>
+	/// (<see cref="PlayerConnectionLogAsync"/>).</remarks>
+	[SharpFunction(Name = "connlog", MinArgs = 1, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular, Restrict = [PortalPermission.PlayersModerate], ParameterNames = ["object"])]
 	public async ValueTask<CallState> ConnectionLog(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -146,6 +149,11 @@ public partial class Functions
 		}
 
 		var args = parser.CurrentState.Arguments;
+		if (parser.CurrentState.ArgumentsOrdered.Count < 3)
+		{
+			return await PlayerConnectionLogAsync(parser);
+		}
+
 		var filter = args["0"].Message.ToPlainText().ToLower();
 
 		if (filter != "all" && filter != "logged in" && filter != "not logged in" && !filter.StartsWith("#"))
@@ -207,6 +215,40 @@ public partial class Functions
 		}
 
 		return new CallState(isCount ? results.Count.ToString() : string.Join(osep, results));
+	}
+
+	/// <summary>
+	/// TinyMUX's <c>connlog(&lt;player&gt;[, &lt;limit&gt;])</c>: the player's last logins, newest first, 10 unless a
+	/// limit from 1 to 100 says otherwise, one a line as <c>id|#dbref|connected|disconnected|host|address|reason</c>.
+	/// </summary>
+	private async ValueTask<CallState> PlayerConnectionLogAsync(IMUSHCodeParser parser)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (await LocateService.LocatePlayer(parser, executor, executor, args["0"].Message.ToPlainText())
+				is not (AnySharpObject and SharpPlayer player))
+		{
+			return new CallState(ErrorMessages.Returns.PlayerNotFound);
+		}
+
+		var limit = args.Count > 1 ? Math.Clamp(SearchSpecEngine.LeadingInteger(args["1"].Message.ToPlainText()), 1, 100) : 10;
+		var dbref = $"#{player.Object.DBRef.Number}";
+		var rows = await Mediator.CreateStream(new GetConnectionLogsQuery("Connection", 0, 1000))
+			.Where(log => log.Properties.GetValueOrDefault("NewState") == "LoggedIn"
+				&& log.Properties.GetValueOrDefault("DBRef")?.Split(':')[0] == dbref)
+			.OrderByDescending(log => log.Timestamp)
+			.Take(limit)
+			.Select(log => string.Join('|',
+				log.Key,
+				dbref,
+				log.Timestamp.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
+				log.Properties.GetValueOrDefault("DisconnectTime", "0"),
+				log.Properties.GetValueOrDefault("HostName", string.Empty),
+				log.Properties.GetValueOrDefault("InternetProtocolAddress", string.Empty),
+				log.Properties.GetValueOrDefault("DisconnectReason", string.Empty)))
+			.ToArrayAsync();
+
+		return new CallState(string.Join("\r\n", rows));
 	}
 
 	[SharpFunction(Name = "connrecord", MinArgs = 1, MaxArgs = 2,
@@ -439,9 +481,33 @@ public partial class Functions
 		return new CallState(string.Join(" ", await visibleConnections.ToArrayAsync()));
 	}
 
+	/// <remarks>Under <c>mux_arguments</c>, one argument is TinyMUX's: true lists <see cref="MuxPortListAsync"/>.</remarks>
 	[SharpFunction(Name = "lwho", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flag"])]
 	public async ValueTask<CallState> ListWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await ListWhoCore(parser, objectIds: false);
+		=> parser.CurrentState.ArgumentsOrdered is { Count: 1 } args
+			&& args["0"].Message.ToPlainText().Length > 0
+			&& Configuration.CurrentValue.Compatibility.MuxArguments
+				? args["0"].Message.Truthy(parser) ? await MuxPortListAsync(parser) : await ListWhoCore(parser, objectIds: false, viewer: false)
+				: await ListWhoCore(parser, objectIds: false);
+
+	/// <summary>
+	/// TinyMUX's <c>lwho(1)</c>: each logged-in connection as the player's dbref and its descriptor, <c>#12:5</c>.
+	/// It needs the power to see every connection, hidden ones included.
+	/// </summary>
+	private async ValueTask<CallState> MuxPortListAsync(IMUSHCodeParser parser)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (await PermissionService.Check(executor, Requires.Any(SeeAllScopes)) is PermissionRefusal refused)
+		{
+			return refused.Return;
+		}
+
+		var entries = ConnectionService.GetAll()
+			.Where(x => x is { State: IConnectionService.ConnectionState.LoggedIn, Ref: not null, IsPresent: true })
+			.Select(x => $"#{x.Ref!.Value.Number}:{x.Handle}");
+
+		return new CallState(string.Join(" ", await entries.ToArrayAsync()));
+	}
 
 	[SharpFunction(Name = "lwhoid", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flags"])]
 	public async ValueTask<CallState> ListWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -452,9 +518,10 @@ public partial class Functions
 	/// objid - PennMUSH runs both through one fun_lwho, keyed on <c>strchr(called_as, 'D')</c>
 	/// (bsd.c:6528).
 	/// </summary>
-	private async ValueTask<CallState> ListWhoCore(IMUSHCodeParser parser, bool objectIds)
+	/// <param name="viewer">Whether the first argument names the viewer; TinyMUX's <c>lwho(0)</c> names none.</param>
+	private async ValueTask<CallState> ListWhoCore(IMUSHCodeParser parser, bool objectIds, bool viewer = true)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = viewer ? parser.CurrentState.Arguments : new Dictionary<string, CallState>();
 		// Arguments["0"] is always present (DefaultIfEmpty(CallState.Empty)) even for 0-arg calls, so it
 		// arrives here as an empty string rather than as an absent key; ResolveWhoLookerAsync treats
 		// blank as "no viewer named", which is the same thing.
@@ -759,20 +826,23 @@ public partial class Functions
 			: PermissionRefusal.Needs(SeeAllScopes).Return;
 	}
 
-	[SharpFunction(Name = "terminfo", MinArgs = 1, MaxArgs = 1,
+	/// <remarks>TinyMUX reads everything between the parentheses as the one argument, commas included, so a call with
+	/// several looks up their text joined by commas.</remarks>
+	[SharpFunction(Name = "terminfo", MinArgs = 1, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player"])]
 	public async ValueTask<CallState> TerminalInformation(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var target = string.Join(',', parser.CurrentState.ArgumentsOrdered.Values.Select(argument => argument.Message.ToPlainText()));
 
 		// fun_terminfo checks the argument before it looks anything up, and says so rather than
 		// answering "unknown" — which would claim the descriptor exists and has no terminal type.
-		if (string.IsNullOrEmpty(parser.CurrentState.Arguments["0"].Message.ToPlainText()))
+		if (string.IsNullOrEmpty(target))
 		{
 			return new CallState(ErrorMessages.Returns.FunctionRequiresOneArgument);
 		}
 
-		var descriptor = await LookupDescriptorAsync(parser, executor);
+		var descriptor = await ArgHelpers.LookupDescriptorAsync(parser, LocateService, ConnectionService, executor, target);
 
 		// "unknown" is default_ttype — what a connected client with no terminal type is called. A
 		// target that is not connected at all is a different answer.

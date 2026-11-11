@@ -454,6 +454,10 @@ public static partial class ErrorMessages
 		public const string ArgumentMustBeObjectAttribute = "#-1 ARGUMENT MUST BE OBJ/ATTR";
 		public const string InvalidHashType = "#-1 INVALID HASH TYPE";
 		public const string UnknownWikiField = "#-1 UNKNOWN WIKI FIELD";
+		public const string UnknownJsonType = "#-1 UNKNOWN JSON TYPE";
+		public const string UnsupportedDigestType = "#-1 UNSUPPORTED DIGEST TYPE";
+		public const string NoSuchTopic = "#-1 NO SUCH TOPIC";
+		public const string AmbiguousTopic = "#-1 AMBIGUOUS TOPIC";
 		public const string NoSuchWikiNamespace = "#-1 NO SUCH WIKI NAMESPACE";
 		public const string NoFunctionNameGiven = "#-1 FUNCTION (No function name given)";
 

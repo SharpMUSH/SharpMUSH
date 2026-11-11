@@ -622,6 +622,18 @@
       "tracking": "#1134",
       "profile": "`@config` listings are drawn as titled boxes",
       "command": "@config names"
+    },
+    {
+      "id": "KD-0055",
+      "scenario": "30-softcode",
+      "case": "sc.control",
+      "step": 2,
+      "reason": "eval() with one argument evaluates it, as TinyMUX's does; PennMUSH's eval() needs an object and an attribute.",
+      "tracking": "#1854",
+      "profile": "TinyMUX's forms of shared functions",
+      "command": "think [null(x)][s(%b)] [lit([add(1,2)])] [eval(add(1,2))]",
+      "sharp": " [add(1,2)] 3",
+      "penn": " [add(1,2)] #-1 FUNCTION (EVAL) EXPECTS 2 ARGUMENTS BUT GOT 1"
     }
   ]
 }

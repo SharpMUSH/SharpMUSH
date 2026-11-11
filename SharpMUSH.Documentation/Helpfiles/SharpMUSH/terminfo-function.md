@@ -13,7 +13,10 @@
 }
 -->
 # terminfo()
-`terminfo(<player|descriptor>)`
+`terminfo(<player|descriptor>)`<br>
+`terminfo(<part>[, ... , <partN>])`
+
+Commas between the parentheses are part of the name, as on TinyMUX: `terminfo(a,b)` looks up `a,b`.
 
 Returns a list with at least one element: the type of client used by the player, or "unknown" if the client being used doesn't support being asked to identify itself using RFC 1091.
 

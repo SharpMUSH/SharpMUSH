@@ -216,10 +216,14 @@ public partial class Functions
 		=> AttributePatternAsync(parser, attribute.Name, true, IAttributeService.AttributePatternMode.Regex,
 			matched => string.Join(AttributeListSeparator(parser, 1), matched));
 
-	[SharpFunction(Name = "regnattr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object"])]
+	/// <remarks>With two arguments it is TinyMUX's form, the object and the regular expression apart, as
+	/// <see cref="RegularExpressionNumberAttributesCaseless"/> takes them.</remarks>
+	[SharpFunction(Name = "regnattr", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["object", "regexp"])]
 	public ValueTask<CallState> RegularExpressionNumberAttributes(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
-		=> AttributePatternAsync(parser, attribute.Name, false, IAttributeService.AttributePatternMode.Regex,
-			async names => new CallState(await names.CountAsync(ExecutionBudget.CurrentToken)));
+		=> parser.CurrentState.ArgumentsOrdered.Count > 1
+			? RegularExpressionNumberAttributesCaseless(parser, attribute)
+			: AttributePatternAsync(parser, attribute.Name, false, IAttributeService.AttributePatternMode.Regex,
+				async names => new CallState(await names.CountAsync(ExecutionBudget.CurrentToken)));
 
 	[SharpFunction(Name = "regnattrp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object"])]
 	public ValueTask<CallState> RegularExpressionNumberAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute attribute)

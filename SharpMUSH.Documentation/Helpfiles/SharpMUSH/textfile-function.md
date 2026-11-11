@@ -12,6 +12,7 @@
 # textfile()
 
 `textfile(<type>, <entry>)`<br>
+`textfile(<object>, <topic>[, <prefix>])`<br>
 `textentries(<type>, <pattern>[, <osep>])`<br>
 `textsearch(<type>, <pattern>[, <osep>])`
 
@@ -22,6 +23,8 @@ textentries() returns the topic names in `<type>` matching `<pattern>`, separate
 textsearch() returns the names of the topics whose text contains `<pattern>`, ignoring case, separated by `<osep>`. `*` and `?` in `<pattern>` are wildcards.
 
 textfile(), textentries() and textsearch() return `#-1 NO SUCH FILE` for a `<type>` that is not a text file category, and `#-1 PERMISSION DENIED` for an administrator-only one (ahelp) to anyone who is not a wizard or royalty.
+
+With the `mux_arguments` @config option on, as after a TinyMUX import, textfile() and its alias dynhelp() whose first argument names no text file category, or that are given a third argument, are TinyMUX's dynhelp(): they return `<object>`'s attribute named `<prefix>` (HELP_ unless given) and `<topic>`, or the one attribute whose name starts with both. You must be able to examine `<object>`. `#-1 NO SUCH TOPIC` means none matches and `#-1 AMBIGUOUS TOPIC` more than one.
 
 - [textfile examples]: listing and reading help topics
 

@@ -248,9 +248,15 @@ public partial class Functions
 		return Preserve(await defaultArg.GetParsedResultAsync());
 	}
 
-	[SharpFunction(Name = "eval", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["object", "attribute"])]
+	/// <remarks>With one argument, as TinyMUX takes it, the argument's text is evaluated once more, as s() does.</remarks>
+	[SharpFunction(Name = "eval", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["object", "attribute"])]
 	public async ValueTask<CallState> Eval(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		if (parser.CurrentState.ArgumentsOrdered.Count < 2)
+		{
+			return (await parser.FunctionParse(parser.CurrentState.Arguments["0"].Message))!;
+		}
+
 		var dbref = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 		var attribute = parser.CurrentState.Arguments["1"].Message.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);

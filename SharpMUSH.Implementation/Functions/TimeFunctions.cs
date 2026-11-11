@@ -368,25 +368,51 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "time", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
+	/// <remarks>A second argument, as TinyMUX takes it, is the number of decimal places on the seconds
+	/// (<see cref="MuxDateString"/>), and a zone of <c>local</c> is the server's.</remarks>
+	[SharpFunction(Name = "time", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["timezone", "precision"])]
 	public async ValueTask<CallState> Time(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var arg0Value)
 			? arg0Value.Message.ToPlainText()
 			: null;
+		var digits = MuxFractionDigits(parser.CurrentState.Arguments, "1");
 
-		if (string.IsNullOrEmpty(arg0))
+		if (string.IsNullOrEmpty(arg0) || arg0.Equals("local", StringComparison.OrdinalIgnoreCase))
 		{
-			return DateTimeOffset.Now.ToLocalTime().ToString(PennTimeFormat, CultureInfo.InvariantCulture);
+			return MuxDateString(DateTimeOffset.Now.ToLocalTime(), digits ?? 0);
 		}
 
 		return await TimeZoneArgumentAsync(parser, executor, arg0) switch
 		{
-			TimeZoneInfo zone => TimeZoneInfo.ConvertTime(DateTimeOffset.Now, zone).ToString(PennTimeFormat, CultureInfo.InvariantCulture),
-			TimeSpan offset => (DateTime.UtcNow + offset).ToString(PennTimeFormat, CultureInfo.InvariantCulture),
+			TimeZoneInfo zone => MuxDateString(TimeZoneInfo.ConvertTime(DateTimeOffset.Now, zone), digits ?? 0),
+			TimeSpan offset => MuxDateString(new DateTimeOffset(DateTime.UtcNow + offset, TimeSpan.Zero), digits ?? 0),
 			Error<string> error => error.Value
 		};
+	}
+
+	/// <summary>
+	/// The decimal places TinyMUX's time() and convsecs() take as their last argument: its leading integer, 0 to 7,
+	/// or null when the argument is not there.
+	/// </summary>
+	private static int? MuxFractionDigits(IReadOnlyDictionary<string, CallState> args, string key)
+		=> args.TryGetValue(key, out var arg)
+			? Math.Clamp(SearchSpecEngine.LeadingInteger(arg.Message.ToPlainText().Trim()), 0, 7)
+			: null;
+
+	/// <summary>
+	/// <paramref name="instant"/> in PennMUSH's time-string format, with up to <paramref name="digits"/> decimal
+	/// places on the seconds as TinyMUX writes them: trailing zeros dropped, and the point too when nothing is left.
+	/// </summary>
+	private static string MuxDateString(DateTimeOffset instant, int digits)
+	{
+		var fraction = digits > 0
+			? (instant.Ticks % TimeSpan.TicksPerSecond).ToString("D7", CultureInfo.InvariantCulture)[..digits].TrimEnd('0')
+			: string.Empty;
+		return instant.ToString("ddd MMM dd HH:mm:ss", CultureInfo.InvariantCulture)
+			+ (fraction.Length > 0 ? "." + fraction : string.Empty)
+			+ instant.ToString(" yyyy", CultureInfo.InvariantCulture);
 	}
 
 	/// <summary>
@@ -980,14 +1006,21 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(result);
 	}
 
-	[SharpFunction(Name = "CONVSECS", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,
-		ParameterNames = ["seconds", "timezone"])]
+	/// <remarks>A third argument, as TinyMUX takes it, is the number of decimal places on the seconds
+	/// (<see cref="MuxDateString"/>), and a zone of <c>local</c> or nothing is the server's.</remarks>
+	[SharpFunction(Name = "CONVSECS", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular,
+		ParameterNames = ["seconds", "timezone", "precision"])]
 	public ValueTask<CallState> ConvSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var secsStr = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var digits = MuxFractionDigits(parser.CurrentState.Arguments, "2");
 		var timezone = parser.CurrentState.Arguments.TryGetValue("1", out var tzArg)
 			? tzArg.Message.ToPlainText()
 			: null;
+		if (digits is not null && (timezone?.Length is null or 0 || timezone.Equals("local", StringComparison.OrdinalIgnoreCase)))
+		{
+			timezone = null;
+		}
 
 		if (!TimePrecisions.TryParseInstant(secsStr, out var dateTime))
 		{
@@ -999,20 +1032,20 @@ public partial class Functions
 			if (timezone.Equals("utc", StringComparison.OrdinalIgnoreCase))
 			{
 				return ValueTask.FromResult<CallState>(
-					dateTime.UtcDateTime.ToString(PennTimeFormat, CultureInfo.InvariantCulture));
+					MuxDateString(dateTime.ToUniversalTime(), digits ?? 0));
 			}
 
 			if (TimeZones.TryFind(timezone, out var tz))
 			{
 				var converted = TimeZoneInfo.ConvertTime(dateTime, tz);
-				return ValueTask.FromResult<CallState>(converted.ToString(PennTimeFormat, CultureInfo.InvariantCulture));
+				return ValueTask.FromResult<CallState>(MuxDateString(converted, digits ?? 0));
 			}
 
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidTimezone);
 		}
 
 		return ValueTask.FromResult<CallState>(
-			dateTime.ToLocalTime().ToString(PennTimeFormat, CultureInfo.InvariantCulture));
+			MuxDateString(dateTime.ToLocalTime(), digits ?? 0));
 	}
 
 	[SharpFunction(Name = "CONVTIME", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular,

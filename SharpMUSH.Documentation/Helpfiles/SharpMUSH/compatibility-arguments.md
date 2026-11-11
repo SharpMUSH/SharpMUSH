@@ -173,7 +173,7 @@ PennMUSH spells "the last argument swallows the rest, commas and all" as a negat
 
 **A choice.**
 
-**PennMUSH** refuses these calls: `switch(x,default)` and `add(5)` are argument-count errors, as are `and()`, `or()`, `xor()`, `cand()`, `cor()` and `mul()` with one argument. `itext()` and `lnum()` with no argument are errors. `wrap()` takes at most four arguments, and its third must be a number. A set function's fourth argument is its sort type and its fifth the output separator, so `setunion(B a c,b, ,|,a)` joins the result with `a`: `Baaabac`.<br>
+**PennMUSH** refuses these calls: `switch(x,default)` and `add(5)` are argument-count errors, as are `and()`, `or()`, `xor()`, `cand()`, `cor()` and `mul()` with one argument. `itext()` and `lnum()` with no argument are errors, and so are `eval()`, `before()` and `after()` with one. `wrap()` takes at most four arguments, and its third must be a number. A set function's fourth argument is its sort type and its fifth the output separator, so `setunion(B a c,b, ,|,a)` joins the result with `a`: `Baaabac`.<br>
 **SharpMUSH** answers them as TinyMUX does; [tinymux forms] says how it reads each one.<br>
 **Why.** TinyMUX code that uses these forms runs. All but the set functions' order are errors in PennMUSH, so no working PennMUSH code changes; a set function changes only when its fourth argument names no sort type and its fifth names one, which PennMUSH would use as the separator.<br>
 **Workaround.** Give PennMUSH's arguments for code that has to run on both: a default with a pattern before it, two numbers, a level for `itext()`, a number as `wrap()`'s third argument, and a sort type before the output separator.
