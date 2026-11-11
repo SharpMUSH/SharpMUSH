@@ -1,25 +1,47 @@
-@* One row of the packages page's lists: the kind's icon, badged when the package is a bridge, the name and its tags,
-   a meta line, and the actions. *@
+@inject IStringLocalizer<SharedResource> Loc
+
+@* One row of the packages page's lists. The name, with its kind's icon (badged when the package is a bridge) and
+   the states that need a decision, then the description and any notes that matter now; the id, version, source and
+   counts wait in a Details disclosure. The actions sit at the right, or under the rest when the page is narrow,
+   where the row becomes a card. *@
 <div class="pkg-row">
-    <span class="pkg-row-icon-wrap" title="@IconTitle">
-        <MudIcon Icon="@Icon" Class="@($"pkg-row-icon pkg-kind-{Kind}")" aria-hidden="true" />
-        @if (Bridge)
-        {
-            <MudIcon Icon="@Icons.Material.Filled.Link" Class="pkg-row-bridge" aria-hidden="true" />
-        }
-    </span>
     <div class="pkg-row-main">
-        <div class="pkg-row-tags">
+        <div class="pkg-row-head">
+            <span class="pkg-row-icon-wrap" title="@IconTitle">
+                <MudIcon Icon="@Icon" Class="@($"pkg-row-icon pkg-kind-{Kind}")" aria-hidden="true" />
+                @if (Bridge)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Link" Class="pkg-row-bridge" aria-hidden="true" />
+                }
+            </span>
             <span class="pkg-row-name">@Name</span>
-            @if (Id is not null)
-            {
-                <span class="pkg-row-id">@Id</span>
-            }
-            @Tags
+            @Status
         </div>
-        <div class="pkg-row-meta">
-            @Meta
-        </div>
+        @if (!string.IsNullOrWhiteSpace(Description))
+        {
+            <p class="pkg-row-desc">@Description</p>
+        }
+        @if (Notes is not null)
+        {
+            <div class="pkg-row-notes">@Notes</div>
+        }
+        @if (Id is not null || Tags is not null || Meta is not null)
+        {
+            <details class="pkg-row-details">
+                <summary>@Loc["PkgRowDetails"]</summary>
+                <div class="pkg-row-tags">
+                    @if (Id is not null)
+                    {
+                        <span class="pkg-row-id">@Id</span>
+                    }
+                    @Tags
+                </div>
+                @if (Meta is not null)
+                {
+                    <div class="pkg-row-meta">@Meta</div>
+                }
+            </details>
+        }
     </div>
     <div class="pkg-row-actions">
         @Actions
@@ -40,7 +62,20 @@
 
     /// <summary>The id, beside a <see cref="Name"/> that is a title; null when the name is the id.</summary>
     [Parameter] public string? Id { get; set; }
+
+    /// <summary>What the package does, in a line or two; nothing is drawn when there is none.</summary>
+    [Parameter] public string? Description { get; set; }
+
+    /// <summary>States beside the name that call for a decision: an update, a failure, installed.</summary>
+    [Parameter] public RenderFragment? Status { get; set; }
+
+    /// <summary>Lines under the description that matter before acting: what is missing, why it failed.</summary>
+    [Parameter] public RenderFragment? Notes { get; set; }
+
+    /// <summary>Tags inside Details: version, kind, source.</summary>
     [Parameter] public RenderFragment? Tags { get; set; }
+
+    /// <summary>Lines inside Details: dates, counts, who needs it.</summary>
     [Parameter] public RenderFragment? Meta { get; set; }
     [Parameter] public RenderFragment? Actions { get; set; }
 }

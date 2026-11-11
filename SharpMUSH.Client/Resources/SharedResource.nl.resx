@@ -5925,7 +5925,7 @@
     <value>Eigen kleur</value>
   </data>
   <data name="NavThemeAccentAdjusted" xml:space="preserve">
-    <value>Wordt getoond als {0} zodat hij leesbaar blijft op dit thema.</value>
+    <value>Je accentkleur wordt hier iets lichter of donkerder getoond, zodat hij leesbaar blijft op dit thema.</value>
   </data>
   <data name="NavThemeSaveFailed" xml:space="preserve">
     <value>Opslaan mislukt: {0}</value>
@@ -9496,5 +9496,38 @@
   </data>
   <data name="GuideIdentityIntroductionExample" xml:space="preserve">
     <value>Een stad van regen en oude geheimen, waar elk verhaal in de herberg begint.</value>
+  </data>
+  <data name="NavThemePreviewKicker" xml:space="preserve">
+    <value>Vanavond</value>
+  </data>
+  <data name="NavThemePreviewCardTitle" xml:space="preserve">
+    <value>De haven bij schemering</value>
+  </data>
+  <data name="NavThemePreviewText" xml:space="preserve">
+    <value>Langs de kade branden de lantaarns.</value>
+  </data>
+  <data name="NavThemePreviewLink" xml:space="preserve">
+    <value>Lees meer</value>
+  </data>
+  <data name="NavThemePreviewButton" xml:space="preserve">
+    <value>Meedoen</value>
+  </data>
+  <data name="NavThemePreviewTag" xml:space="preserve">
+    <value>Open scène</value>
+  </data>
+  <data name="NavThemeTry" xml:space="preserve">
+    <value>Probeer het</value>
+  </data>
+  <data name="NavThemeTryNamed" xml:space="preserve">
+    <value>{0} proberen op het portaal</value>
+  </data>
+  <data name="NavThemeTrying" xml:space="preserve">
+    <value>Je probeert {0} voor {1}. Er wordt niets opgeslagen tot je het houdt.</value>
+  </data>
+  <data name="NavThemeTryKeep" xml:space="preserve">
+    <value>Houden</value>
+  </data>
+  <data name="NavThemeTryStop" xml:space="preserve">
+    <value>Stoppen met proberen</value>
   </data>
 </root>

@@ -127,6 +127,15 @@
         }
         else
         {
+            var listed = _snapshot.Packages.Where(p => p.PackageId is not null).ToList();
+            var untagged = listed.Count(p => p.Versions.Count == 0);
+            @if (untagged > 0)
+            {
+                <p class="lib-untagged" id="lib-untagged">
+                    <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" aria-hidden="true" />
+                    @(untagged == listed.Count ? Loc["PkgNoReleaseTags"] : Loc["PkgNoReleaseTagsSome"])
+                </p>
+            }
             @foreach (var group in shown)
             {
                 <KitCard Title="@group.Title" @key="group.Title">

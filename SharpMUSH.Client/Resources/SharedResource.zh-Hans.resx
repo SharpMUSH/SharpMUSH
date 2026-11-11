@@ -5925,7 +5925,7 @@
     <value>自定义颜色</value>
   </data>
   <data name="NavThemeAccentAdjusted" xml:space="preserve">
-    <value>显示为 {0}，以便在此主题上保持清晰可读。</value>
+    <value>你的强调色在这里会显示得稍亮或稍暗，以便在此主题上保持可读。</value>
   </data>
   <data name="NavThemeSaveFailed" xml:space="preserve">
     <value>无法保存：{0}</value>
@@ -9496,5 +9496,38 @@
   </data>
   <data name="GuideIdentityIntroductionExample" xml:space="preserve">
     <value>一座雨水与旧秘密之城，每个故事都从酒馆开始。</value>
+  </data>
+  <data name="NavThemePreviewKicker" xml:space="preserve">
+    <value>今晚</value>
+  </data>
+  <data name="NavThemePreviewCardTitle" xml:space="preserve">
+    <value>黄昏的港口</value>
+  </data>
+  <data name="NavThemePreviewText" xml:space="preserve">
+    <value>码头边的灯笼都亮了。</value>
+  </data>
+  <data name="NavThemePreviewLink" xml:space="preserve">
+    <value>阅读更多</value>
+  </data>
+  <data name="NavThemePreviewButton" xml:space="preserve">
+    <value>加入</value>
+  </data>
+  <data name="NavThemePreviewTag" xml:space="preserve">
+    <value>开放场景</value>
+  </data>
+  <data name="NavThemeTry" xml:space="preserve">
+    <value>试试看</value>
+  </data>
+  <data name="NavThemeTryNamed" xml:space="preserve">
+    <value>在门户上试用 {0}</value>
+  </data>
+  <data name="NavThemeTrying" xml:space="preserve">
+    <value>正在为 {1} 试用 {0}。在你保留之前不会保存任何内容。</value>
+  </data>
+  <data name="NavThemeTryKeep" xml:space="preserve">
+    <value>保留</value>
+  </data>
+  <data name="NavThemeTryStop" xml:space="preserve">
+    <value>停止试用</value>
   </data>
 </root>

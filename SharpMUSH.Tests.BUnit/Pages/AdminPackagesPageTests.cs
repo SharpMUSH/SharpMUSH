@@ -196,7 +196,7 @@ public class AdminPackagesPageTests : BunitContext, IAsyncDisposable
 		await Assert.That(host.FindAll(".pkg-graph-edge").Count).IsEqualTo(1);
 	}
 
-	/// <summary>An installed package's README button opens its README, as the server rendered it.</summary>
+	/// <summary>An installed package's README, in its row's menu, opens as the server rendered it.</summary>
 	[TUnit.Core.Test]
 	public async Task ReadmeButton_ShowsTheInstalledPackagesReadme()
 	{
@@ -212,10 +212,13 @@ public class AdminPackagesPageTests : BunitContext, IAsyncDisposable
 			}));
 			builder.CloseComponent();
 		});
-		const string button = "button[aria-label='PkgShowReadme(who-where)']";
-		cut.WaitForAssertion(() => cut.Find(button), TimeSpan.FromSeconds(5));
+		const string menu = "button[aria-label='NavRowMore(who-where)']";
+		cut.WaitForAssertion(() => cut.Find(menu), TimeSpan.FromSeconds(5));
 
-		await cut.Find(button).ClickAsync();
+		await cut.Find(menu).ClickAsync();
+		cut.WaitForAssertion(() => cut.FindAll(".kit-rowmenu-item").Single(i => i.TextContent.Contains("PkgShowReadme(who-where)", StringComparison.Ordinal)),
+			TimeSpan.FromSeconds(5));
+		await cut.FindAll(".kit-rowmenu-item").Single(i => i.TextContent.Contains("PkgShowReadme(who-where)", StringComparison.Ordinal)).ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{

@@ -12,12 +12,25 @@
    it follows the player to every device, and the acting character's is the one the portal wears. An accent
    that would be too faint on the chosen theme is shown moved toward white or black until it reads. No browser reports
    a reader's colour vision, so the player says it here; with no theme chosen it picks that vision's theme for the
-   browser's light or dark setting. *@
+   browser's light or dark setting. Each theme is shown as a small page in it, and "Try it" paints the whole portal
+   in that theme until the player keeps it, stops, or leaves the page; nothing is saved until then. *@
 
 <PageTitle>@Loc["NavTheme"] — @Loc["Settings"] — <GameName /></PageTitle>
 
 <div class="settings-theme-page" @ref="_root">
     <PageHeader Kicker="@Loc["Settings"]" Title="@Loc["NavTheme"]" Description="@Loc["NavThemeIntro"]" />
+
+    @if (_trying is { } trying)
+    {
+        <div class="settings-theme-trying" role="status" id="theme-trying">
+            <MudIcon Icon="@Icons.Material.Outlined.Visibility" Size="Size.Small" aria-hidden="true" />
+            <span class="settings-theme-trying-text">@Loc["NavThemeTrying", trying.Theme.Name, trying.Character.Name]</span>
+            <span class="settings-theme-trying-actions">
+                <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Check" OnClick="KeepAsync" Class="settings-theme-keep">@Loc["NavThemeTryKeep"]</CapsuleButton>
+                <CapsuleButton Icon="@Icons.Material.Outlined.Close" OnClick="StopTrying" Class="settings-theme-stop">@Loc["NavThemeTryStop"]</CapsuleButton>
+            </span>
+        </div>
+    }
 
     @if (AccountAuth.Characters.Count == 0)
     {
@@ -104,7 +117,7 @@
                         </div>
                         @if (look.AccentAdjusted)
                         {
-                            <span class="settings-theme-note" data-adjusted="@look.Accent">@Loc["NavThemeAccentAdjusted", look.Accent]</span>
+                            <span class="settings-theme-note" data-adjusted="true">@Loc["NavThemeAccentAdjusted"]</span>
                         }
                     </div>
                 </div>
@@ -116,6 +129,11 @@
 @code {
     private ElementReference _root;
     private readonly HashSet<int> _saving = [];
+
+    /// <summary>A theme the portal is painted in for a look, not yet saved: the character and theme choice it would save.</summary>
+    private sealed record Trial(AccountAuthService.CharacterSummary Character, string? ThemeId, ResolvedTheme Theme);
+
+    private Trial? _trying;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -167,17 +185,61 @@
     private static bool IsCustom(AccountAuthService.CharacterSummary character) =>
         character.Accent is { } accent && !BuiltInThemes.AccentSwatches.Any(s => string.Equals(s.Hex, accent, StringComparison.OrdinalIgnoreCase));
 
+    // A theme as a small page in it, named under the picture, with "Try it" beside the name. The radio is the picture
+    // and the name; "Try it" is a button of its own after it, so arrow keys move between themes and Tab reaches it.
     private RenderFragment ThemeChoice(AccountAuthService.CharacterSummary character, string? themeId, string label, bool busy) => __builder =>
     {
         var on = character.ThemeId == themeId;
         var theme = ThemeResolver.Resolve(ThemeResolver.Pick(Published.ToList(), Themes.Defaults, Themes.PrefersLight, themeId, character.Vision),
             character.Accent, character.Vision);
-        <button type="button" role="radio" class="settings-theme-choice @(on ? "is-on" : null)" aria-checked="@(on ? "true" : "false")"
-                data-theme="@(themeId ?? "default")" disabled="@busy" @onclick="() => SaveAsync(character, themeId, character.Accent, character.Vision)">
-            <ThemeSwatch Theme="theme" Class="settings-theme-choice-swatch" />
-            <span>@label</span>
-        </button>
+        var trying = _trying is { } t && t.Character.DbrefNumber == character.DbrefNumber && t.ThemeId == themeId;
+        <div class="settings-theme-option @(trying ? "is-trying" : null)" data-theme="@(themeId ?? "default")">
+            <button type="button" role="radio" class="settings-theme-choice @(on ? "is-on" : null)" aria-checked="@(on ? "true" : "false")"
+                    disabled="@busy" @onclick="() => ChooseAsync(character, themeId)">
+                <ThemePreview Theme="theme" />
+                <span class="settings-theme-choice-name">@label</span>
+            </button>
+            <button type="button" class="settings-theme-try" aria-pressed="@(trying ? "true" : "false")"
+                    aria-label="@Loc["NavThemeTryNamed", label]" disabled="@busy" @onclick="() => Try(character, themeId, theme)">
+                <MudIcon Icon="@Icons.Material.Outlined.Visibility" Size="Size.Small" aria-hidden="true" />
+                <span>@Loc["NavThemeTry"]</span>
+            </button>
+        </div>
     };
+
+    /// <summary>Paints the portal in <paramref name="theme"/> without saving it; trying the same one again stops.</summary>
+    private void Try(AccountAuthService.CharacterSummary character, string? themeId, ResolvedTheme theme)
+    {
+        if (_trying is { } current && current.Character.DbrefNumber == character.DbrefNumber && current.ThemeId == themeId)
+        {
+            StopTrying();
+            return;
+        }
+
+        _trying = new Trial(character, themeId, theme);
+        Themes.Preview(theme);
+    }
+
+    private void StopTrying()
+    {
+        if (_trying is null) return;
+        _trying = null;
+        Themes.Preview(null);
+    }
+
+    private async Task KeepAsync()
+    {
+        if (_trying is not { } trying) return;
+        var character = AccountAuth.Characters.FirstOrDefault(c => c.DbrefNumber == trying.Character.DbrefNumber) ?? trying.Character;
+        await ChooseAsync(character, trying.ThemeId);
+    }
+
+    /// <summary>Saves the theme choice; a theme being tried stops being tried, since the saved one is now worn.</summary>
+    private async Task ChooseAsync(AccountAuthService.CharacterSummary character, string? themeId)
+    {
+        StopTrying();
+        await SaveAsync(character, themeId, character.Accent, character.Vision);
+    }
 
     private async Task SaveAsync(AccountAuthService.CharacterSummary character, string? themeId, string? accent, string? vision)
     {
@@ -199,6 +261,11 @@
 
     public void Dispose()
     {
+        if (_trying is not null)
+        {
+            Themes.Preview(null);
+        }
+
         Themes.OnThemeChanged -= Changed;
         AccountAuth.AppearanceChanged -= Changed;
     }

@@ -5925,7 +5925,7 @@
     <value>Свой цвет</value>
   </data>
   <data name="NavThemeAccentAdjusted" xml:space="preserve">
-    <value>Показывается как {0}, чтобы оставаться читаемым в этой теме.</value>
+    <value>Ваш акцентный цвет показан здесь чуть светлее или темнее, чтобы оставаться читаемым в этой теме.</value>
   </data>
   <data name="NavThemeSaveFailed" xml:space="preserve">
     <value>Не удалось сохранить: {0}</value>
@@ -9496,5 +9496,38 @@
   </data>
   <data name="GuideIdentityIntroductionExample" xml:space="preserve">
     <value>Город дождя и старых тайн, где каждая история начинается в таверне.</value>
+  </data>
+  <data name="NavThemePreviewKicker" xml:space="preserve">
+    <value>Сегодня вечером</value>
+  </data>
+  <data name="NavThemePreviewCardTitle" xml:space="preserve">
+    <value>Гавань в сумерках</value>
+  </data>
+  <data name="NavThemePreviewText" xml:space="preserve">
+    <value>Вдоль причала горят фонари.</value>
+  </data>
+  <data name="NavThemePreviewLink" xml:space="preserve">
+    <value>Читать дальше</value>
+  </data>
+  <data name="NavThemePreviewButton" xml:space="preserve">
+    <value>Присоединиться</value>
+  </data>
+  <data name="NavThemePreviewTag" xml:space="preserve">
+    <value>Открытая сцена</value>
+  </data>
+  <data name="NavThemeTry" xml:space="preserve">
+    <value>Примерить</value>
+  </data>
+  <data name="NavThemeTryNamed" xml:space="preserve">
+    <value>Примерить {0} в портале</value>
+  </data>
+  <data name="NavThemeTrying" xml:space="preserve">
+    <value>Вы примеряете {0} для {1}. Ничего не сохранится, пока вы не оставите её.</value>
+  </data>
+  <data name="NavThemeTryKeep" xml:space="preserve">
+    <value>Оставить</value>
+  </data>
+  <data name="NavThemeTryStop" xml:space="preserve">
+    <value>Хватит примерять</value>
   </data>
 </root>

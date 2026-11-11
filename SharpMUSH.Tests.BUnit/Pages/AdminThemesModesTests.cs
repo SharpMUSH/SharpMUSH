@@ -121,4 +121,21 @@ public class AdminThemesModesTests : TrackingBunitContext
 		await Assert.That(cut.FindAll("#theme-stylesheet")).IsEmpty();
 		await Assert.That(cut.Find("#theme-edit-mode [aria-checked='true']").GetAttribute("data-mode")).IsEqualTo(ThemeStyles.Simple);
 	}
+
+	[Test]
+	public async Task ThePreviewIsRedrawnAsTheDraftChanges()
+	{
+		var cut = RenderEditor();
+		var preview = cut.Find("#theme-preview .theme-preview");
+		await Assert.That(cut.Find("#theme-preview .theme-preview-title").TextContent).IsEqualTo("Own");
+		await Assert.That(preview.GetAttribute("data-scheme")).IsEqualTo(BuiltInThemes.Fantasy.Dark ? "dark" : "light");
+
+		await cut.Find($".adm-theme-token[data-token='{ThemeTokens.Surface}'] input.adm-theme-hex").ChangeAsync(new() { Value = "#123456" });
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Find("#theme-preview .theme-preview").GetAttribute("style")!.Contains("--surface:#123456;", StringComparison.Ordinal))
+				throw new InvalidOperationException("preview not redrawn");
+		});
+	}
 }

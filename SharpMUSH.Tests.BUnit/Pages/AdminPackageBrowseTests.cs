@@ -237,6 +237,40 @@ public class AdminPackageBrowseTests : BunitContext
 	[After(Test)]
 	public void DisposeClient() => client.Dispose();
 
+	[Test]
+	[Arguments(0, null)]
+	[Arguments(1, "PkgNoReleaseTagsSome")]
+	[Arguments(2, "PkgNoReleaseTags")]
+	public async Task Missing_release_tags_are_said_once_above_the_lists(int untagged, string? note)
+	{
+		PackageVersionTag[] tags = [new("1.0.0", "v1.0.0", "abc123")];
+		api.Packages = [new("a", "a", "1.0.0", "A", untagged > 0 ? [] : tags), new("b", "b", "1.0.0", "B", untagged > 1 ? [] : tags)];
+		var cut = RenderBrowse();
+		var notes = cut.FindAll("#lib-untagged");
+		await Assert.That(notes.Count).IsEqualTo(note is null ? 0 : 1);
+		if (note is not null)
+			await Assert.That(notes[0].TextContent.Trim()).IsEqualTo(note);
+		foreach (var row in cut.FindAll(".lib-row"))
+			await Assert.That(row.TextContent).DoesNotContain("PkgNoReleaseTags");
+	}
+
+	[Test]
+	public async Task A_row_leads_with_its_name_and_description_and_keeps_the_rest_under_details()
+	{
+		api.Packages = [new("tools", "tools", "1.1.0", "Useful tools", [new("1.0.0", "tools/v1.0.0", "abc123")], Title: "Tools")];
+		var cut = RenderBrowse();
+		var row = cut.Find(".lib-row .pkg-row");
+		await Assert.That(row.QuerySelector(".pkg-row-head .pkg-row-name")!.TextContent).IsEqualTo("Tools");
+		await Assert.That(row.QuerySelector(".pkg-row-desc")!.TextContent).IsEqualTo("Useful tools");
+		var details = row.QuerySelector("details.pkg-row-details")!;
+		await Assert.That(details.HasAttribute("open")).IsFalse();
+		await Assert.That(details.QuerySelector(".pkg-row-id")!.TextContent).IsEqualTo("tools");
+		await Assert.That(details.TextContent).Contains("v1.1.0");
+		await Assert.That(row.QuerySelector(".pkg-row-head")!.TextContent).DoesNotContain("v1.1.0");
+		await Assert.That(row.QuerySelectorAll(".pkg-row-actions button[aria-label^='PkgShowReadme']")).IsEmpty();
+		await Assert.That(row.QuerySelector(".pkg-row-actions button[aria-label='NavRowMore(Tools)']")).IsNotNull();
+	}
+
 	private IRenderedComponent<AdminPackageBrowse> RenderBrowse()
 	{
 		var host = Render<MudHarness>(p => p.AddChildContent<AdminPackageBrowse>());

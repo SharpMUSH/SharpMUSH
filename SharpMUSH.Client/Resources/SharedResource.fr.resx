@@ -5236,7 +5236,7 @@
     <value>Couleur personnalisée</value>
   </data>
   <data name="NavThemeAccentAdjusted" xml:space="preserve">
-    <value>Affichée en {0} pour rester lisible sur ce thème.</value>
+    <value>Votre couleur d'accent est affichée un peu plus claire ou plus foncée ici pour rester lisible avec ce thème.</value>
   </data>
   <data name="NavThemeSaveFailed" xml:space="preserve">
     <value>Enregistrement impossible : {0}</value>
@@ -8807,5 +8807,38 @@
   </data>
   <data name="GuideIdentityIntroductionExample" xml:space="preserve">
     <value>Une ville de pluie et de vieux secrets, où chaque histoire commence à la taverne.</value>
+  </data>
+  <data name="NavThemePreviewKicker" xml:space="preserve">
+    <value>Ce soir</value>
+  </data>
+  <data name="NavThemePreviewCardTitle" xml:space="preserve">
+    <value>Le port au crépuscule</value>
+  </data>
+  <data name="NavThemePreviewText" xml:space="preserve">
+    <value>Les lanternes sont allumées le long du quai.</value>
+  </data>
+  <data name="NavThemePreviewLink" xml:space="preserve">
+    <value>Lire la suite</value>
+  </data>
+  <data name="NavThemePreviewButton" xml:space="preserve">
+    <value>Rejoindre</value>
+  </data>
+  <data name="NavThemePreviewTag" xml:space="preserve">
+    <value>Scène ouverte</value>
+  </data>
+  <data name="NavThemeTry" xml:space="preserve">
+    <value>Essayer</value>
+  </data>
+  <data name="NavThemeTryNamed" xml:space="preserve">
+    <value>Essayer {0} sur le portail</value>
+  </data>
+  <data name="NavThemeTrying" xml:space="preserve">
+    <value>Vous essayez {0} pour {1}. Rien n'est enregistré tant que vous ne le gardez pas.</value>
+  </data>
+  <data name="NavThemeTryKeep" xml:space="preserve">
+    <value>Le garder</value>
+  </data>
+  <data name="NavThemeTryStop" xml:space="preserve">
+    <value>Arrêter l'essai</value>
   </data>
 </root>
