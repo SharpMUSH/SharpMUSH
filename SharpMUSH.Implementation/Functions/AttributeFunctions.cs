@@ -302,7 +302,7 @@ public partial class Functions
 					var view = await FlagView.ForAsync(executor, ConnectionService);
 					// fun_flags is unparse_flags (src/flags.c:1638): the type letter, then the flags in bit order.
 					return SoftcodeDialectScope.Current is { FlagLetters.Count: > 0 } dialect
-						? await DialectFlagLettersAsync(dialect, found, view)
+						? await DialectFlagLettersAsync(dialect, executor, found, view)
 						: await MessageFormatting.FlagSymbolsAsync(found.Object(), view);
 				}
 
@@ -553,7 +553,7 @@ public partial class Functions
 
 			// A name the dialect in force spells its own way (TinyMUX's HALTED, COMMANDS, HAS_STARTUP).
 			if (SoftcodeDialectScope.Current?.FlagFor(flagNameOrSymbol) is { } dialectFlag)
-				return await DialectHasAsync(realLocated, dialectFlag);
+				return await DialectHasAsync(executor, realLocated, dialectFlag);
 
 			// Name, alias or letter — the three things flag_hash_lookup resolves (src/flags.c). See #834.
 			return await realLocated.Object().HasFlagOrLetter(flagNameOrSymbol);
