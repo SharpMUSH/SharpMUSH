@@ -117,7 +117,8 @@ public class WikiHomeReaderLifetimeTests : TrackingBunitContext
 			await cut.InvokeAsync(() => RaiseReaderChanged(true));
 			_nav.NavigateTo("/wiki?lang=de");
 			await cut.InvokeAsync(() => _api.CompleteOld());
-			cut.WaitForAssertion(() => Require(_api.PendingReturned, "The disposed widget's pending response did not complete."));
+			// The widget is unmounted, so no render follows the response for WaitForAssertion to check again on.
+			await _api.Returned;
 			await cut.InvokeAsync(() => { });
 			await Assert.That(_api.Requests).IsEqualTo(requests);
 			await Assert.That(cut.Markup).IsEmpty();
@@ -222,9 +223,12 @@ public class WikiHomeReaderLifetimeTests : TrackingBunitContext
 	private sealed class HomeApi : HttpMessageHandler
 	{
 		private readonly TaskCompletionSource<HttpResponseMessage> _old = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		private readonly TaskCompletionSource _returned = new(TaskCreationOptions.RunContinuationsAsynchronously);
 		public string? PendingStage { get; set; }
 		public bool PendingRequested { get; private set; }
 		public bool PendingReturned { get; private set; }
+		/// <summary>Completes once the delayed response has been handed back to the caller.</summary>
+		public Task Returned => _returned.Task;
 		public bool OtherReader { get; set; }
 		public string? FailCurrentStage { get; set; }
 		public Task<HttpResponseMessage>? PendingCurrentDirectory { get; set; }
@@ -267,6 +271,7 @@ public class WikiHomeReaderLifetimeTests : TrackingBunitContext
 				PendingRequested = true;
 				var response = await _old.Task;
 				PendingReturned = true;
+				_returned.TrySetResult();
 				return response;
 			}
 			if (!oldReader && stage == FailCurrentStage)
