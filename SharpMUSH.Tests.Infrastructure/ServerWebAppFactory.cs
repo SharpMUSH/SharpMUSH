@@ -49,6 +49,9 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 
 	public IServiceProvider Services => _server!.Services;
 
+	/// <summary>False once the host is disposed.</summary>
+	public bool IsRunning => _server is not null;
+
 	/// <summary>
 	/// Returns an <see cref="HttpClient"/> that targets the in-process test server directly,
 	/// bypassing real network I/O. Use this for controller-level HTTP integration tests.
