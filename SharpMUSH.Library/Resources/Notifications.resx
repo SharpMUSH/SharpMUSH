@@ -3415,4 +3415,31 @@ PLAYERS:</value>
   <data name="PipeNeedsSwitch" xml:space="preserve">
     <value>@pipe: use /on, /tee, /off or /status.</value>
   </data>
+  <data name="NoSuchToggleFormat" xml:space="preserve">
+    <value>@toggle: there is no toggle named {0}.</value>
+  </data>
+  <data name="TogglesListFormat" xml:space="preserve">
+    <value>Toggles: {0}</value>
+  </data>
+  <data name="ToggleNeedsList" xml:space="preserve">
+    <value>@toggle: name the toggles to set, or use /check or /clear.</value>
+  </data>
+  <data name="TogglesCleared" xml:space="preserve">
+    <value>@toggle: all toggles cleared.</value>
+  </data>
+  <data name="ToggleDefFormat" xml:space="preserve">
+    <value>{0}({1}) set: {2} unset: {3}</value>
+  </data>
+  <data name="ToggleDefNeedsPermissions" xml:space="preserve">
+    <value>@toggledef: give a toggle and its permissions, as &lt;toggle&gt;=&lt;permissions&gt;.</value>
+  </data>
+  <data name="ToggleDefUpdatedFormat" xml:space="preserve">
+    <value>@toggledef: {0} updated.</value>
+  </data>
+  <data name="ToggleDefNothingToDo" xml:space="preserve">
+    <value>@toggledef: none of those permissions apply here, so nothing changed.</value>
+  </data>
+  <data name="ToggleDefSwitchUnsupported" xml:space="preserve">
+    <value>@toggledef: use @flag/type or @flag/letter on the toggle's flag for that.</value>
+  </data>
 </root>

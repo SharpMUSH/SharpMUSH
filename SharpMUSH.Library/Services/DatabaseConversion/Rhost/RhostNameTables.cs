@@ -28,6 +28,18 @@ public sealed record RhostBitMapping(
 	string? Skip = null,
 	string? Role = null);
 
+/// <summary>A RhostMUSH toggle and the flag it is here.</summary>
+/// <param name="Word">Which word holds it: 4 or 5, the first two toggle words.</param>
+/// <param name="Bit">The bit.</param>
+/// <param name="Name">RhostMUSH's name for it, which <c>@toggle</c> and <c>hastoggle()</c> take.</param>
+/// <param name="Letter">RhostMUSH's letter for it, which <c>listtoggles()</c> shows.</param>
+/// <param name="Flag">The SharpMUSH flag it is; null when it is not kept.</param>
+/// <param name="StaffOnly">Whether only wizards set it.</param>
+/// <param name="Hidden">Whether only staff see it.</param>
+/// <param name="Skip">Why it is not kept, when <paramref name="Flag"/> is null.</param>
+public sealed record RhostToggle(int Word, uint Bit, string Name, char Letter, string? Flag, bool StaffOnly = false,
+	bool Hidden = false, string? Skip = null);
+
 /// <summary>A RhostMUSH power or depower: its 2-bit level field in one of the toggle words.</summary>
 /// <param name="Word">The toggle word, 0-based (2-4 powers, 5-7 depowers).</param>
 /// <param name="Shift">Where its two bits start.</param>
@@ -217,7 +229,7 @@ public static class RhostNameTables
 		Same(3, 0x8000000, "TRUECOLOR"),
 	];
 
-	/// <summary>The toggle names, word 1 and 2, of every toggle bit; those not in <see cref="Bits"/> are dropped.</summary>
+	/// <summary>The toggle names, word 1 and 2, of every toggle bit, as <see cref="Toggles"/> reads them.</summary>
 	public static readonly IReadOnlyList<(int Word, uint Bit, string Name)> ToggleNames =
 	[
 		.. Named(4, ["MONITOR", "MONITOR_USERID", "MONITOR_SITE", "MONITOR_STATS", "MONITOR_FAIL", "MONITOR_CONN",
@@ -232,14 +244,70 @@ public static class RhostNameTables
 	];
 
 	/// <summary>
-	/// The toggle bits that carry over. Most toggles are a player's own settings for RhostMUSH features
-	/// SharpMUSH does not have; those are reported, not turned into flags no code would read.
+	/// Each toggle's letter, and whether only staff set it and see it, as RhostMUSH's toggle table has them. Who sets a
+	/// toggle there is decided by its handler: anyone's, a wizard's or an immortal's.
 	/// </summary>
+	private static readonly Dictionary<string, (char Letter, bool StaffOnly, bool Hidden)> ToggleTraits =
+		new(StringComparer.OrdinalIgnoreCase)
+		{
+			["MONITOR"] = ('M', true, true), ["MONITOR_USERID"] = ('U', true, true), ["MONITOR_SITE"] = ('S', true, true),
+			["MONITOR_STATS"] = ('T', true, true), ["MONITOR_FAIL"] = ('F', true, true), ["MONITOR_CONN"] = ('C', true, true),
+			["MONITOR_TIME"] = ('I', true, true), ["MONITOR_DISREASON"] = ('R', true, true), ["MONITOR_VLIMIT"] = ('L', true, true),
+			["MONITOR_CPU"] = ('c', true, true), ["VANILLA_ERRORS"] = ('V', false, false), ["NO_ANSI_EX"] = ('E', false, false),
+			["CPUTIME"] = ('P', false, false), ["NOTIFY_LINK"] = ('l', false, false), ["MONITOR_AREG"] = ('A', true, true),
+			["NO_ANSI_PLAYER"] = ('p', false, false), ["NO_ANSI_THING"] = ('t', false, false), ["NO_ANSI_EXIT"] = ('e', false, false),
+			["NO_ANSI_ROOM"] = ('r', false, false), ["NO_FORMAT"] = ('f', true, true), ["NO_TIMESTAMP"] = ('s', true, true),
+			["ZONE_AUTOADD"] = ('z', false, false), ["ZONE_AUTOADDALL"] = ('Z', false, false), ["WIELDED"] = ('W', true, true),
+			["WORN"] = ('w', true, true), ["SEE_SUSPECT"] = ('+', true, true), ["BRANDY_MAIL"] = ('b', false, false),
+			["FORCEHALTED"] = ('h', true, false), ["PROG"] = ('g', true, false), ["NOSHPROG"] = ('o', true, true),
+			["EXTANSI"] = ('E', false, false), ["IMMPROG"] = ('I', true, true), ["MONITOR_BAD"] = ('B', true, true),
+			["PROG_ON_CONNECT"] = ('O', true, true), ["MAIL_STRIPRETURN"] = ('m', false, false), ["PENN_MAIL"] = ('@', false, false),
+			["SILENTEFFECT"] = ('q', true, true), ["IGNOREZONE"] = ('i', true, true), ["VPAGE"] = ('v', false, false),
+			["PAGELOCK"] = ('P', true, false), ["MAIL_NOPARSE"] = ('n', false, false), ["MAIL_LOCKDOWN"] = ('d', true, true),
+			["MUXPAGE"] = ('p', false, false), ["NOZONEPARENT"] = ('y', false, false), ["ATRUSE"] = ('a', true, false),
+			["NOGLOBPARENT"] = ('G', true, false), ["LOGROOM"] = ('!', true, true), ["VARIABLE"] = ('~', false, false),
+			["LOGROOMENH"] = ('^', true, true), ["EXFULLWIZATTR"] = ('x', true, true), ["NODEFAULT"] = ('D', true, true),
+			["KEEPALIVE"] = ('K', false, false), ["CHKREALITY"] = ('C', true, false), ["NOISY"] = ('N', false, false),
+			["ZONECMDCHK"] = ('k', false, false), ["HIDEIDLE"] = ('h', true, false), ["MORTALREALITY"] = ('M', true, false),
+			["ACCENTS"] = ('X', false, false), ["MAILVALIDATE"] = ('-', false, false), ["CLUSTER"] = ('~', true, true),
+			["SAFELOG"] = ('Y', false, false), ["SNUFFDARK"] = ('u', true, true), ["UTF8"] = ('$', false, false)
+		};
+
+	/// <summary>
+	/// Every toggle RhostMUSH defines, as the flag it becomes here: its own flag of the same name, except MONITOR
+	/// (HEAR_CONNECT) and KEEPALIVE (SharpMUSH's own), and CLUSTER, which is not kept.
+	/// </summary>
+	public static readonly IReadOnlyList<RhostToggle> Toggles = BuildToggles();
+
+	/// <summary>The toggle bits and what each becomes, in the form of <see cref="Bits"/>.</summary>
 	public static readonly IReadOnlyList<RhostBitMapping> ToggleBits =
 	[
-		Flag(4, 0x1, "MONITOR", "HEAR_CONNECT"),
-		Same(5, 0x10000, "KEEPALIVE"),
+		.. Toggles.Select(toggle => toggle switch
+		{
+			{ Skip: { } skip } => Skip(toggle.Word, toggle.Bit, toggle.Name, skip),
+			{ Flag: var flag } when !flag!.Equals(toggle.Name, StringComparison.OrdinalIgnoreCase)
+				=> Flag(toggle.Word, toggle.Bit, toggle.Name, flag),
+			{ Name: "KEEPALIVE" } => Same(toggle.Word, toggle.Bit, toggle.Name),
+			_ => Custom(toggle.Word, toggle.Bit, toggle.Name, toggle.StaffOnly)
+		})
 	];
+
+	/// <summary>The toggle RhostMUSH names <paramref name="name"/>, if it is one.</summary>
+	public static RhostToggle? Toggle(string name)
+		=> Toggles.FirstOrDefault(toggle => toggle.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+	private static List<RhostToggle> BuildToggles()
+		=> [.. ToggleNames.Select(toggle =>
+		{
+			var (letter, staffOnly, hidden) = ToggleTraits[toggle.Name];
+			return toggle.Name switch
+			{
+				"MONITOR" => new RhostToggle(toggle.Word, toggle.Bit, toggle.Name, letter, "HEAR_CONNECT", staffOnly, hidden),
+				"CLUSTER" => new RhostToggle(toggle.Word, toggle.Bit, toggle.Name, letter, null, staffOnly, hidden,
+					"it marks a cluster member, which the import merges into its cluster's first object"),
+				_ => new RhostToggle(toggle.Word, toggle.Bit, toggle.Name, letter, toggle.Name, staffOnly, hidden)
+			};
+		})];
 
 	private static IEnumerable<(int Word, uint Bit, string Name)> Named(int word, string?[] names)
 		=> names.Select((name, index) => (word, 1u << index, name)).Where(t => t.name is not null)

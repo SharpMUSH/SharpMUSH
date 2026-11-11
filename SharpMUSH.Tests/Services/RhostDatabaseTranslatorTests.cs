@@ -190,14 +190,25 @@ public class RhostDatabaseTranslatorTests
 	}
 
 	[Test]
-	public async Task TogglesCarryOverWhereSharpMUSHHasTheSettingAndAreReportedOtherwise()
+	public async Task TogglesBecomeFlags()
 	{
 		var database = await TranslateAsync();
 		var alice = Object(database, 3);
 
-		await Assert.That(alice.Flags).Contains("HEAR_CONNECT").And.Contains("KEEPALIVE");
-		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Toggle VPAGE: dropped") && n.Contains("#3") && n.Contains("#4")))
+		await Assert.That(alice.Flags).Contains("HEAR_CONNECT").And.Contains("KEEPALIVE").And.Contains("VPAGE");
+		await Assert.That(Object(database, 4).Flags).Contains("VPAGE");
+		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Toggle VPAGE: imported as a flag of its own, VPAGE")))
 			.IsTrue();
+
+		// Every toggle is defined, whether or not an object carries it; a staff-only toggle is set by wizards, and one
+		// RhostMUSH hides from mortals is hidden here too.
+		var names = database.FlagDefinitions.Select(f => f.Name).ToList();
+		await Assert.That(names).Contains("VPAGE").And.Contains("SNUFFDARK").And.Contains("MONITOR_CPU")
+			.And.DoesNotContain("CLUSTER").And.DoesNotContain("MONITOR");
+		await Assert.That(database.FlagDefinitions.First(f => f.Name == "VPAGE").SetPermissions).IsEmpty();
+		await Assert.That(database.FlagDefinitions.First(f => f.Name == "PROG").SetPermissions).IsEquivalentTo(["wizard"]);
+		await Assert.That(database.FlagDefinitions.First(f => f.Name == "SNUFFDARK").SetPermissions)
+			.IsEquivalentTo(["wizard", "mdark"]);
 	}
 
 	/// <summary>An object's overrides as <c>@permission</c> lists them: <c>+scope/reach</c> or <c>-scope</c>, in order.</summary>

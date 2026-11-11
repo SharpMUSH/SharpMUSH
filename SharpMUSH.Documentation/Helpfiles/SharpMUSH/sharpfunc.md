@@ -11,11 +11,12 @@
 | [LFLAGS()]            | [NATTR()]             | [OBJ()]               | [OWNER()]             |
 | [PFUN()]              | [POSS()]              | [REGLATTR()]          | [REGREP()]            |
 | [REGREPI()]           | [REGXATTR()]          | [SET()]               | [STREVAL()]           |
-| [SUBJ()]              | [SYNTAXDIAGNOSTICS()] | [U()]                 | [U2()]                |
-| [U2DEFAULT()]         | [U2LDEFAULT()]        | [U2LOCAL()]           | [UARGS()]             |
-| [UDEFAULT()]          | [UEVAL()]             | [UFUN()]              | [ULAMBDA()]           |
-| [ULDEFAULT()]         | [ULOCAL()]            | [V()]                 | [WILDGREP()]          |
-| [WILDGREPI()]         | [XATTR()]             | [XGET()]              | [ZFUN()]              |
+| [SUBJ()]              | [SYNTAXDIAGNOSTICS()] | [TOGGLE()]            | [U()]                 |
+| [U2()]                | [U2DEFAULT()]         | [U2LDEFAULT()]        | [U2LOCAL()]           |
+| [UARGS()]             | [UDEFAULT()]          | [UEVAL()]             | [UFUN()]              |
+| [ULAMBDA()]           | [ULDEFAULT()]         | [ULOCAL()]            | [V()]                 |
+| [WILDGREP()]          | [WILDGREPI()]         | [XATTR()]             | [XGET()]              |
+| [ZFUN()]              |                       |                       |                       |
 
 ::: seealso
 - [attributes]
@@ -118,20 +119,21 @@
 | [FLAGS()]        | [FULLALIAS()]    | [FULLMOTD()]     | [FULLNAME()]     |
 | [GETPIDS()]      | [GLOBALROOM()]   | [HASATTR()]      | [HASATTRP()]     |
 | [HASDEPOWER()]   | [HASFLAG()]      | [HASPOWER()]     | [HASROLE()]      |
-| [HASRXLEVEL()]   | [HASTXLEVEL()]   | [HASTYPE()]      | [INAME()]        |
-| [ISAPPROVED()]   | [ISTAG()]        | [LDEPOWERS()]    | [LFLAGS()]       |
-| [LISTCOMMANDS()] | [LISTFLAGS()]    | [LISTRLEVELS()]  | [LISTTAGS()]     |
-| [LIVEWIRE()]     | [LLOCKFLAGS()]   | [LOCK()]         | [LOCKFLAGS()]    |
-| [LOCKOWNER()]    | [LOCKS()]        | [LPIDS()]        | [LSTATS()]       |
-| [MONEY()]        | [MONIKER()]      | [MOTD()]         | [MSECS()]        |
-| [MTIME()]        | [MUDNAME()]      | [MUDURL()]       | [NAME()]         |
-| [NATTR()]        | [NEARBY()]       | [OBJID()]        | [OBJMEM()]       |
-| [ORFLAGS()]      | [ORLFLAGS()]     | [ORLPOWERS()]    | [PERMISSION()]   |
-| [PIDINFO()]      | [PLAYERMEM()]    | [PLAYMEM()]      | [POLL()]         |
-| [POWERS()]       | [QUOTA()]        | [RESTARTS()]     | [ROLES()]        |
-| [RXDESC()]       | [RXLEVEL()]      | [SIZE()]         | [TAGMATCH()]     |
-| [TAGREF()]       | [TXLEVEL()]      | [TYPE()]         | [VATTRCNT()]     |
-| [VERSION()]      | [VISIBLE()]      | [WIZMOTD()]      |                  |
+| [HASRXLEVEL()]   | [HASTOGGLE()]    | [HASTXLEVEL()]   | [HASTYPE()]      |
+| [INAME()]        | [ISAPPROVED()]   | [ISTAG()]        | [LDEPOWERS()]    |
+| [LFLAGS()]       | [LISTCOMMANDS()] | [LISTFLAGS()]    | [LISTRLEVELS()]  |
+| [LISTTAGS()]     | [LISTTOGGLES()]  | [LIVEWIRE()]     | [LLOCKFLAGS()]   |
+| [LOCK()]         | [LOCKFLAGS()]    | [LOCKOWNER()]    | [LOCKS()]        |
+| [LPIDS()]        | [LSTATS()]       | [LTOGGLES()]     | [MONEY()]        |
+| [MONIKER()]      | [MOTD()]         | [MSECS()]        | [MTIME()]        |
+| [MUDNAME()]      | [MUDURL()]       | [NAME()]         | [NATTR()]        |
+| [NEARBY()]       | [OBJID()]        | [OBJMEM()]       | [ORFLAGS()]      |
+| [ORLFLAGS()]     | [ORLPOWERS()]    | [PERMISSION()]   | [PIDINFO()]      |
+| [PLAYERMEM()]    | [PLAYMEM()]      | [POLL()]         | [POWERS()]       |
+| [QUOTA()]        | [RESTARTS()]     | [ROLES()]        | [RXDESC()]       |
+| [RXLEVEL()]      | [SIZE()]         | [TAGMATCH()]     | [TAGREF()]       |
+| [TXLEVEL()]      | [TYPE()]         | [VATTRCNT()]     | [VERSION()]      |
+| [VISIBLE()]      | [WIZMOTD()]      |                  |                  |
 
 ::: seealso
 - [Dbref functions]
