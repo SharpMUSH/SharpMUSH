@@ -94,7 +94,7 @@ public partial class Functions
 
 		if (page.StartsWith('l'))
 		{
-			return $"{entries.Count / ZoneListPage + 1} {entries.Count}";
+			return $"{Math.Max(1, (entries.Count + ZoneListPage - 1) / ZoneListPage)} {entries.Count}";
 		}
 
 		var shown = PageOf(entries, page);

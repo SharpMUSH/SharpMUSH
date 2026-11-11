@@ -1375,9 +1375,10 @@ public partial class Functions
 			return await OnZoneAsync(parser, evaluated: true, p => UserAttributeFunction(p, _2));
 		}
 
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
+		// The caller's zone, as the <zone>/<attribute> form reads the caller's zones.
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (await enactor.Object().Zone.WithCancellation(CancellationToken.None) is not AnySharpObject zone)
+		if (await executor.Object().Zone.WithCancellation(CancellationToken.None) is not AnySharpObject zone)
 		{
 			return new CallState(ErrorMessages.Returns.NoZoneSet);
 		}

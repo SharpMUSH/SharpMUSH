@@ -25,7 +25,7 @@ Changes the zones `<object>` is in, as @chzone does, and gives nothing when it w
 - `purge` takes it out of every zone.
 - `list` gives the zones `<object>` is in, its first zone first, even when `<object>` is a zone with objects of its own. `<page>` is lzone()'s.
 
-The checks are @chzone's: you must control `<object>`, and to add a zone, control it or pass its @lock/chzone. Each action may be shortened to its first letter. zonecmd() is a side-effect function.
+You must control `<object>` for every action but `list`, which needs only that you can examine it. `add` and `replace` also need you to control the zone being added or pass its @lock/chzone, and they reset the WIZARD, ROYALTY and TRUST flags and the powers of anything but a player, as @chzone does. zonecmd() cannot keep them; use @chzone/add/preserve for that. Each action may be shortened to its first letter. zonecmd() is a side-effect function.
 
 zonecmd() comes from RhostMUSH.
 

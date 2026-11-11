@@ -136,6 +136,18 @@ public class DialectZoneFunctionTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task BareZfunReadsTheCallersZone()
+	{
+		var caller = await CreateAsync("ZbCaller");
+		var zone = await CreateAsync("ZbZone");
+		await Zones.SetZonesAsync(caller, [zone]);
+		await Cmd($"&FN {zone}=zone:%0");
+		await Cmd($"&CALL {caller}=[zfun(fn,1)] [zfun({zone}/fn,1)]");
+
+		await Assert.That(await Eval($"u({caller}/CALL)")).IsEqualTo("zone:1 zone:1");
+	}
+
+	[Test]
 	public async Task ZfunFamilyRunsAZonesAttribute()
 	{
 		var caller = await CreateAsync("ZuCaller");
