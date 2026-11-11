@@ -40,7 +40,8 @@ public static partial class SchemaBuilder
 			return new SharpMUSH.Library.Models.Portal.Applications.ConfigurationSearchEntry(
 				"core:" + path, "Server", attribute.Category,
 				SharpMUSH.Library.Models.Portal.Applications.ConfigurationOptionRoutes.ForCategory(attribute.Category),
-				new(path, FormatPropertyDisplayName(attribute.Name), attribute.Description,
+				new(path, FormatPropertyDisplayName(attribute.Name),
+					CompatibilityServers.Describe(attribute, ConfigAccessor.GetPropertyType(property) == typeof(bool)),
 					[attribute.Name, property], ReadOnlyReason: attribute.Unused));
 		}).ToArray();
 
@@ -104,7 +105,7 @@ public static partial class SchemaBuilder
 			{
 				Name = propertyName,
 				DisplayName = FormatPropertyDisplayName(attr.Name),
-				Description = attr.Description,
+				Description = CompatibilityServers.Describe(attr, type == typeof(bool)),
 				Category = category,
 				Group = attr.Group,
 				Order = attr.Order,

@@ -2092,6 +2092,9 @@
   <data name="ConfigUseOptionHelp" xml:space="preserve">
     <value>Use '@config &lt;option&gt;' to see the value of an option.</value>
   </data>
+  <data name="ConfigCompatibilityHelp" xml:space="preserve">
+    <value>Each option is a link to its help; 'help &lt;option&gt;' shows it too.</value>
+  </data>
   <data name="ConfigNoOptionsInCategoryFormat" xml:space="preserve">
     <value>No options found in category '{0}'.</value>
   </data>

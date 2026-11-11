@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using SharpMUSH.Configuration;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services.DatabaseConversion.Softcode;
 using SharpMUSH.Library.Softcode;
@@ -38,31 +39,16 @@ public static partial class TinyMuxDatabaseReader
 	private const string PennPasswordPrefix = "$P6H$$";
 
 	/// <summary>
-	/// The options TinyMUX softcode needs. MUX tests and/or/xor numerically, cuts justified text, collates,
-	/// runs list() as a loop, reads ##/#@/#$ from the innermost loop, trims before characters and reads
-	/// non-numbers as 0, runs trigger() and verb(), keeps TinyMUX's /quiet switches, runs a global @function without /privileged as its caller and lets NOEXAMINE and NOMODIFY protect; it allows 500 levels of recursion and 32 KB values. It reads TinyMUX's names for
-	/// functions and commands SharpMUSH has under its own (<c>dialect</c>).
+	/// The options TinyMUX softcode needs: the compatibility options marked as set by a TinyMUX import
+	/// (<see cref="CompatibilityImport.Options"/>), with <c>dialect</c> set to <c>mux</c>, and 500 levels of
+	/// function recursion.
 	/// </summary>
-	public static Dictionary<string, object> CompatibilityOptions() => new(StringComparer.OrdinalIgnoreCase)
+	public static Dictionary<string, object> CompatibilityOptions()
 	{
-		["paren_groups"] = true,
-		["mux_logic"] = true,
-		["mux_justify"] = true,
-		["mux_collation"] = true,
-		["rhost_list"] = true,
-		["innermost_tokens"] = true,
-		["tiny_trim_fun"] = true,
-		["tiny_math"] = true,
-		["null_eq_zero"] = true,
-		["mux_queue_functions"] = true,
-		["mux_quiet"] = true,
-		["mux_function_caller"] = true,
-		["protection_flags"] = true,
-		["attribute_eval_flags"] = true,
-		["mux_arguments"] = true,
-		["function_recursion_limit"] = 500u,
-		["dialect"] = SoftcodeDialects.Mux.Key
-	};
+		var options = CompatibilityImport.Options(CompatibilityServer.TinyMUX);
+		options["function_recursion_limit"] = 500u;
+		return options;
+	}
 
 	/// <summary>Where the read model's <see cref="PennMUSHDatabase.Configuration"/> records the flatfile version.</summary>
 	public const string FlatfileVersionKey = "tinymux_flatfile_version";

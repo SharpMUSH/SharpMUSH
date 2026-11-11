@@ -291,4 +291,21 @@ public class ConfigSetCommandTests
 		await Assert.That(category.Any(m => m.Contains("sql_username", StringComparison.OrdinalIgnoreCase))).IsFalse();
 		await Assert.That(category.Any(m => m.Contains("mud_name", StringComparison.OrdinalIgnoreCase))).IsTrue();
 	}
+
+	/// <summary>
+	/// <c>@config compatibility</c> lists the compatibility options as one table: value, the servers each
+	/// emulates and the imports that set it, each name linking to its help.
+	/// </summary>
+	[Test]
+	public async ValueTask CompatibilityCategory_ListsWhatEachOptionEmulatesAndWhichImportsSetIt()
+	{
+		var wizard = await Wizard();
+
+		var listing = string.Join("\n", await As(wizard, "@config compatibility"));
+
+		await Assert.That(listing).Contains("Emulates");
+		await Assert.That(listing).Contains("mux_function_caller");
+		await Assert.That(listing).Contains("RhostMUSH");
+		await Assert.That(listing).Contains("help <option>");
+	}
 }

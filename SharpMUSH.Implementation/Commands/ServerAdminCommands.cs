@@ -1157,11 +1157,13 @@ public partial class Commands
 				return CallState.Empty;
 			}
 
-			var options = new Fields([.. categoryOptions.Select(opt =>
-			{
-				var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
-				return new Field(ServerLayout.CommandLink(name, $"@config {name}"), ConfigValueBlock(opt.Value, opt.ConfigAttr));
-			})]);
+			Block options = categoryOptions.All(opt => opt.ConfigAttr.Emulates != CompatibilityServer.None)
+				? CompatibilityListing(categoryOptions.Select(opt => (opt.ConfigAttr, opt.Value)), useLowercase)
+				: new Fields([.. categoryOptions.Select(opt =>
+				{
+					var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
+					return new Field(ServerLayout.CommandLink(name, $"@config {name}"), ConfigValueBlock(opt.Value, opt.ConfigAttr));
+				})]);
 			await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(
 				MarkupText.Plain(string.Format(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat, matchingCategory)),
 				options,
@@ -1211,6 +1213,27 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigNoCategoryOrOptionFormat), executor, searchTerm);
 		return new CallState(ErrorMessages.Returns.NotFound);
 	}
+
+	/// <summary>
+	/// The compatibility options as one table: each option, linked to its help, with its value, the servers it
+	/// emulates and the database imports that set it.
+	/// </summary>
+	private static Block CompatibilityListing(IEnumerable<(SharpConfigAttribute Option, object? Value)> options, bool useLowercase)
+		=> new MarkupString.Layout.Stack([
+			ServerLayout.Listing(
+				[
+					new TableColumn(MarkupText.Plain("Option")) { Wrap = false },
+					new TableColumn(MarkupText.Plain("Value")) { Wrap = false },
+					new TableColumn(MarkupText.Plain("Emulates")),
+					new TableColumn(MarkupText.Plain("Set by import"))
+				],
+				options.Select(entry => ImmutableArray.Create<Block>(
+					new TextBlock(ServerLayout.CommandLink(useLowercase ? entry.Option.Name.ToLower() : entry.Option.Name,
+						$"help {entry.Option.HelpTopic ?? entry.Option.Name}")),
+					new TextBlock(MarkupText.Plain(ConfigValueDisplay.Format(entry.Value, entry.Option))),
+					new TextBlock(MarkupText.Plain(string.Join(", ", CompatibilityServers.Names(entry.Option.Emulates)))),
+					new TextBlock(MarkupText.Plain(string.Join(", ", CompatibilityServers.Names(entry.Option.SetBy))))))),
+			new TextBlock(MarkupText.Plain(ErrorMessages.Notifications.ConfigCompatibilityHelp))]);
 
 	/// <summary>
 	/// An option's value in an <c>@config</c> listing: a mapping option's entries as labelled values of
