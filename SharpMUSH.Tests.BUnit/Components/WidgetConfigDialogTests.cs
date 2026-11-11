@@ -28,7 +28,7 @@ file sealed class AssetListHandler(WikiAssetInfo[] assets) : HttpMessageHandler
 /// keys have to be visible there. These confirm the reference table is generated from the widget's
 /// <c>ConfigType</c> and that the template button seeds the editor.
 /// </summary>
-public class WidgetConfigDialogTests : BunitContext
+public class WidgetConfigDialogTests : TrackingBunitContext
 {
 	private const string RulesIcon = "/api/wiki-assets/abc/rules.svg";
 
@@ -45,9 +45,9 @@ public class WidgetConfigDialogTests : BunitContext
 		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		// The link icon field offers the media uploads, which it lists through WikiAssetService.
-		var client = new HttpClient(new AssetListHandler(
+		var client = Track(new HttpClient(new AssetListHandler(
 			[new("abc", "rules.svg", RulesIcon, "image/svg+xml", 10, "", "#1", DateTimeOffset.UtcNow)]))
-		{ BaseAddress = new Uri("https://localhost:8081/") };
+		{ BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(client);
 		Services.AddSingleton(factory)
