@@ -961,10 +961,14 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.ErrorNotSupported);
 		}
 
-		// TinyMUX's and RhostMUSH's /all and /me name the world and the executor in place of the argument.
-		var name = switches.Contains("ME")
-			? "me"
-			: parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText().Trim() ?? "";
+		// TinyMUX's and RhostMUSH's /all and /me name the world and the executor's owner in place of the argument.
+		if (switches.Contains("ME"))
+		{
+			var self = await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
+			return await ObjectStatsAsync(executor, self.Object.DBRef);
+		}
+
+		var name = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText().Trim() ?? "";
 		if (name.Length == 0 || switches.Contains("ALL"))
 		{
 			return await ObjectStatsAsync(executor, owner: null);

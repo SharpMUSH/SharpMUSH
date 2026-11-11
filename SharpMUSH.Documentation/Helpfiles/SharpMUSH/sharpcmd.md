@@ -2206,7 +2206,7 @@ Note that @startups are NEVER inherited from parent objects.
 `@stats/paging`<br>
 `@stats/freespace`
 
-In its first form, display the number of objects in the game broken down by object types: `<total> objects = <rooms> rooms, <exits> exits, <things> things, <players> players.` With a `<player>`, only the objects that player owns are counted. Anyone may count their own objects (`@stats me`) or the whole game's; counting another player's objects needs the Search power or wizard/royalty privileges. The whole-game count ends with the garbage count, the free numbers (see [garbage]), which the total includes. `@stats/all` counts the whole game, and `@stats/me` your own objects, whatever the argument.
+In its first form, display the number of objects in the game broken down by object types: `<total> objects = <rooms> rooms, <exits> exits, <things> things, <players> players.` With a `<player>`, only the objects that player owns are counted. Anyone may count their own objects (`@stats me`) or the whole game's; counting another player's objects needs the Search power or wizard/royalty privileges. The whole-game count ends with the garbage count, the free numbers (see [garbage]), which the total includes. `@stats/all` counts the whole game, and `@stats/me` the objects your owner owns (your own, for a player), whatever the argument.
 
 `@stats/tables` lists SharpMUSH's lookup tables (built-in functions, @functions, commands, flags, powers, attribute definitions, config options and connections) with the number of entries in each.<br>
 `@stats/flags` reports, for the FLAG and POWER flagspaces, how many definitions each has and how objects' sets of flags are distributed.
@@ -2219,7 +2219,7 @@ In its first form, display the number of objects in the game broken down by obje
 
 The options are switches; an argument is ignored. With `/connected`, only connected players and puppets owned by connected players are shown. `/here` checks only your location, `/inventory` only the objects you carry, and `/exits` only AUDIBLE exits in your room.
 
-`/commands` lists only objects with $-commands, `/listeners` only those that hear (players, puppets, ^-listens and AUDIBLE objects), and `/players` every player and puppet, connected or not. They may be combined.
+`/commands` lists only objects with $-commands, `/listeners` only those that hear (players, puppets, ^-listens and AUDIBLE objects), and `/players` every player and puppet, connected or not. They may be combined; `/connected` and `/exits` list what they list whichever are given.
 
 
 ::: seealso

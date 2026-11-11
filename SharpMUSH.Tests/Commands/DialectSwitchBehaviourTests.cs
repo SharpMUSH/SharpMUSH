@@ -116,4 +116,31 @@ public class DialectSwitchBehaviourTests : ServerTestBase
 			await ConnectionService.Disconnect(actor.Handle);
 		}
 	}
+
+	/// <summary>@trigger/now/notify runs the attribute in place and still notifies the executor afterwards.</summary>
+	[Test]
+	public async Task TriggerNowNotifyStillReleasesTheWait()
+	{
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "TriggerNowNotify");
+		var thing = TestIsolationHelpers.GenerateUniqueName("TriggerNowNotifyThing");
+		var token = TestIsolationHelpers.GenerateUniqueName("triggernownotified");
+		try
+		{
+			await CmdAs(actor.DbRef, actor.Handle, $"@create {thing}");
+			await CmdAs(actor.DbRef, actor.Handle, $"&DO {thing}=think done");
+
+			var notified = await HeardWhile(actor.DbRef, async () =>
+			{
+				await CmdAs(actor.DbRef, actor.Handle, $"@wait me=@pemit me={token}");
+				await CmdAs(actor.DbRef, actor.Handle, $"@trigger/now/notify/quiet {thing}/DO");
+				await WebAppFactoryArg.QueueBarrierAsync();
+			});
+			await Assert.That(notified.Count(line => line.Contains(token, StringComparison.Ordinal))).IsEqualTo(1);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(actor.Handle);
+		}
+	}
 }
