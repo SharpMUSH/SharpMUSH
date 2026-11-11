@@ -14,6 +14,8 @@ _ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 # `Thu Sep 24 16:59:11 2026` (both servers' default time format)
 _TIMESTAMP = re.compile(r"\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) +\d{1,2} \d\d:\d\d:\d\d \d{4}\b")
 _TOKEN = re.compile(r"PSYNC[0-9a-f]*[A-Za-z0-9_]*x\d+")
+# A CONNINFO attribute line in examine: seconds online and a logout time, read off the wall clock.
+_CONNINFO = re.compile(r"^(CONNINFO \[[^\]]*\]:) \d+ \d+ \d+ \d+ \d+$", re.MULTILINE)
 
 
 @dataclass(frozen=True)
@@ -35,6 +37,9 @@ RULES: list[Rule] = [
          lambda t: _ANSI.sub("", t)),
     Rule("timestamp", "Absolute timestamps like 'Thu Sep 24 16:59:11 2026' become <TIMESTAMP>.",
          lambda t: _TIMESTAMP.sub("<TIMESTAMP>", t)),
+    Rule("conninfo", "The five numbers of a CONNINFO attribute line (time online, session count, last logout) "
+                     "become <CONNINFO>; they are wall-clock figures.",
+         lambda t: _CONNINFO.sub(r"\1 <CONNINFO>", t)),
     Rule("sync-token", "The harness's own sync sentinels never appear in transcripts; if one leaks "
                        "into a line it becomes <SYNC>.",
          lambda t: _TOKEN.sub("<SYNC>", t)),

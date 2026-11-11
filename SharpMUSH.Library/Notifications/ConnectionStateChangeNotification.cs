@@ -29,4 +29,12 @@ public record ConnectionStateChangeNotification(
 	IConnectionService.ConnectionState OldState,
 	IConnectionService.ConnectionState NewState,
 	int? RemainingConnections = null,
-	IConnectionService.ConnectionData? FormerConnection = null) : INotification;
+	IConnectionService.ConnectionData? FormerConnection = null) : INotification
+{
+	/// <summary>
+	/// For a QUIT-driven <see cref="ConnectionService.Disconnect"/> only: when each of the player's other play
+	/// connections logged in, read with the disconnecting handle's removal for the same reason as
+	/// <see cref="RemainingConnections"/>. Null for every other transition.
+	/// </summary>
+	public IReadOnlyList<DateTimeOffset>? OthersLoggedInAt { get; init; }
+}

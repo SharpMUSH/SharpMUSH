@@ -130,6 +130,15 @@ public class ConnectionStateEventHandler(
 					logger.LogError(ex, "Error adding the session's commands to TOTCMDS for {Player}", notification.PlayerRef.Value);
 				}
 
+				try
+				{
+					await RecordSessionAsync(notification, connectionData);
+				}
+				catch (Exception ex)
+				{
+					logger.LogError(ex, "Error recording the session in CONNINFO for {Player}", notification.PlayerRef.Value);
+				}
+
 				await eventService.TriggerEventAsync(SharpEvents.PlayerDisconnect,
 					notification.PlayerRef.Value, // Enactor is the disconnecting player
 					$"#{notification.PlayerRef.Value.Number}",
@@ -187,5 +196,22 @@ public class ConnectionStateEventHandler(
 					$"{bytesRecv}/{bytesSent}/{commandCount}"); // PennMUSH format: recv/sent/count
 			}
 		}
+	}
+
+	/// <summary>
+	/// Counts the ended session in the player's <c>CONNINFO</c>, beside the player's other play sessions still open:
+	/// those the disconnect saw as it removed this one, or, for a LOGOUT, those open now. The portal's background
+	/// session is not one, here as in the announcements.
+	/// </summary>
+	private async ValueTask RecordSessionAsync(ConnectionStateChangeNotification notification,
+		IConnectionService.ConnectionData ended)
+	{
+		var player = notification.PlayerRef!.Value;
+		var now = DateTimeOffset.UtcNow;
+		await ConnectionStatistics.SessionEndedAsync(mediator, player, ended.LoggedInAt ?? now, now,
+			async () => notification.OthersLoggedInAt ?? await connectionService.Get(player)
+				.Where(c => c.Handle != notification.Handle && c.PresenceClass != PresenceClasses.Portal)
+				.Select(c => c.LoggedInAt ?? now)
+				.ToListAsync());
 	}
 }

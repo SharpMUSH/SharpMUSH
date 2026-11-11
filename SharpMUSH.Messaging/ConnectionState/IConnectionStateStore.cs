@@ -38,6 +38,13 @@ public interface IConnectionStateStore
 	/// </summary>
 	Task SetPlayerBindingAsync(long handle, string? playerObjid, CancellationToken ct = default);
 
+	/// <summary>Binds a connection to a player and records one metadata value with it, in one update.</summary>
+	async Task SetPlayerBindingAsync(long handle, string? playerObjid, string key, string value, CancellationToken ct = default)
+	{
+		await SetPlayerBindingAsync(handle, playerObjid, ct);
+		await UpdateMetadataAsync(handle, key, value, ct);
+	}
+
 	/// <summary>
 	/// Update connection metadata
 	/// </summary>

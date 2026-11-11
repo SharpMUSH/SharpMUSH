@@ -41,6 +41,18 @@ public interface IConnectionService
 		public TimeSpan? Idle => Since("LastConnectionSignal");
 
 		/// <summary>
+		/// When a player last logged in through this connection (<c>LoginTime</c>), or when it opened for one
+		/// that carries no login time; <c>null</c> when it carries neither.
+		/// </summary>
+		public DateTimeOffset? LoggedInAt
+			=> Stamp("LoginTime") ?? Stamp("ConnectionStartTime");
+
+		private DateTimeOffset? Stamp(string key)
+			=> Metadata.TryGetValue(key, out var stamp) && long.TryParse(stamp, out var milliseconds)
+				? DateTimeOffset.FromUnixTimeMilliseconds(milliseconds)
+				: null;
+
+		/// <summary>
 		/// How long ago the millisecond timestamp under <paramref name="key"/> was, or <c>null</c>
 		/// when the connection carries no usable one.
 		/// </summary>
