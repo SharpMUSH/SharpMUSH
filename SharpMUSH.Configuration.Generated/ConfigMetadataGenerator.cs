@@ -124,7 +124,9 @@ public class ConfigMetadataGenerator : IIncrementalGenerator
 		var category = metadata.CategoryName;
 
 		var name = Named(attr, "Name") as string ?? "";
-		var description = Named(attr, "Description") as string ?? "";
+		var description = WithImportSentence(Named(attr, "Description") as string ?? "",
+			prop.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Name == "CompatibilityFlagAttribute"),
+			prop.Type.SpecialType == SpecialType.System_Boolean);
 		var group = Named(attr, "Group") as string;
 		var tooltip = Named(attr, "Tooltip") as string;
 		var validationPattern = Named(attr, "ValidationPattern") as string;
@@ -147,6 +149,28 @@ public class ConfigMetadataGenerator : IIncrementalGenerator
 			+ $"Image = {(Named(attr, "Image") is true ? "true" : "false")}, "
 			+ $"Unused = {Emit.Quote(unused) ?? "null"}"
 			+ " } }";
+	}
+
+	/// <summary>
+	/// A compatibility option's description with the sentence naming the database imports that set it, read
+	/// from its <c>[CompatibilityFlag]</c>'s <c>SetBy</c>, so the description never says it by hand.
+	/// The server bits follow <c>CompatibilityServer</c>: PennMUSH 1, TinyMUX 4, RhostMUSH 8.
+	/// </summary>
+	private static string WithImportSentence(string description, AttributeData? flag, bool isBoolean)
+	{
+		if (flag is null || Named(flag, "SetBy") is not int setBy || setBy == 0) return description;
+
+		var servers = new List<string>();
+		if ((setBy & 1) != 0) servers.Add("PennMUSH");
+		if ((setBy & 4) != 0) servers.Add("TinyMUX");
+		if ((setBy & 8) != 0) servers.Add("RhostMUSH");
+		var named = servers.Count == 1
+			? servers[0]
+			: string.Join(", ", servers.Take(servers.Count - 1)) + " or " + servers[servers.Count - 1];
+		var sentence = isBoolean
+			? $"A {named} database import turns it on"
+			: $"A {named} database import sets it to that server's dialect";
+		return description.TrimEnd('.', ' ') + ". " + sentence;
 	}
 
 	private static object? Named(AttributeData attr, string key)

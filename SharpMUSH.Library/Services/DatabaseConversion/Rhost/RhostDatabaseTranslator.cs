@@ -33,30 +33,17 @@ public static partial class RhostDatabaseTranslator
 	private const string ServerName = "RhostMUSH";
 
 	/// <summary>
-	/// The options RhostMUSH softcode needs. It writes literal parentheses unescaped (<c>paren_groups</c>),
-	/// tests <c>and()</c>, <c>or()</c> and <c>xor()</c> arguments by their leading integer (<c>mux_logic</c>), reads <c>trim()</c>, <c>edit()</c>, <c>lattr()</c>, <c>printf()</c>, <c>map()</c>, <c>list()</c>, <c>iter()</c>
-	/// and <c>lrooms()</c> as RhostMUSH defines them, lets only a SIDEFX object run side-effect functions (<c>sidefx_flag</c>), lets NOEXAMINE and NOMODIFY protect
-	/// (<c>protection_flags</c>), matches a NOPARSE <c>$</c>-command against the command as typed (<c>attribute_eval_flags</c>), and
-	/// reads RhostMUSH's names for functions and commands SharpMUSH has under its own (<c>dialect</c>).
+	/// The options RhostMUSH softcode needs: every compatibility option marked as set by a RhostMUSH import
+	/// (<see cref="CompatibilityFlagAttribute.SetBy"/>), <c>dialect</c> as RhostMUSH's, and <c>mail</c> as an alias
+	/// of <c>@mail</c>.
 	/// </summary>
-	public static Dictionary<string, object> CompatibilityOptions() => new(StringComparer.OrdinalIgnoreCase)
+	public static Dictionary<string, object> CompatibilityOptions()
 	{
-		["paren_groups"] = true,
-		["mux_logic"] = true,
-		["tiny_trim_fun"] = true,
-		["rhost_edit"] = true,
-		["rhost_lattr"] = true,
-		["rhost_printf"] = true,
-		["rhost_map_args"] = true,
-		["sidefx_flag"] = true,
-		["rhost_list"] = true,
-		["rhost_lrooms"] = true,
-		["protection_flags"] = true,
-		["attribute_eval_flags"] = true,
-		["dialect"] = SoftcodeDialects.Rhost.Key,
+		var options = CompatibilityFlags.ImportOptions(CompatibilityServer.RhostMUSH, SoftcodeDialects.Rhost.Key);
 		// RhostMUSH's mail command is mail (see the note Translate gives).
-		["command_aliases"] = new Dictionary<string, string[]> { ["@MAIL"] = ["mail"] }
-	};
+		options["command_aliases"] = new Dictionary<string, string[]> { ["@MAIL"] = ["mail"] };
+		return options;
+	}
 
 	/// <summary>Reads a flatfile and, when given, the mail dumps, into the import's model.</summary>
 	public static async Task<PennMUSHDatabase> ReadAsync(string flatfilePath, string? mailPath, string? folderPath,

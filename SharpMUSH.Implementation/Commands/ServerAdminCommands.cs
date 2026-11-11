@@ -1157,11 +1157,13 @@ public partial class Commands
 				return CallState.Empty;
 			}
 
-			var options = new Fields([.. categoryOptions.Select(opt =>
-			{
-				var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
-				return new Field(ServerLayout.CommandLink(name, $"@config {name}"), ConfigValueBlock(opt.Value, opt.ConfigAttr));
-			})]);
+			Block options = matchingCategory.Equals("Compatibility", StringComparison.OrdinalIgnoreCase)
+				? CompatibilityListing(categoryOptions.Select(opt => (opt.ConfigAttr, opt.Value)), useLowercase)
+				: new Fields([.. categoryOptions.Select(opt =>
+				{
+					var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
+					return new Field(ServerLayout.CommandLink(name, $"@config {name}"), ConfigValueBlock(opt.Value, opt.ConfigAttr));
+				})]);
 			await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(
 				MarkupText.Plain(string.Format(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat, matchingCategory)),
 				options,
@@ -1211,6 +1213,33 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigNoCategoryOrOptionFormat), executor, searchTerm);
 		return new CallState(ErrorMessages.Returns.NotFound);
 	}
+
+	/// <summary>
+	/// <c>@config compatibility</c>: one row per compatibility flag, with its value, the servers it emulates,
+	/// the database imports that turn it on and the help topic that documents it, all read from its
+	/// <see cref="CompatibilityFlagAttribute"/>.
+	/// </summary>
+	private static Table CompatibilityListing(IEnumerable<(SharpConfigAttribute ConfigAttr, object? Value)> options, bool useLowercase)
+		=> ServerLayout.Listing(
+			[
+				new TableColumn(MarkupText.Plain("Option")) { Wrap = false },
+				new TableColumn(MarkupText.Plain("Value")) { Wrap = false },
+				new TableColumn(MarkupText.Plain("Emulates")),
+				new TableColumn(MarkupText.Plain("Set by import")),
+				new TableColumn(MarkupText.Plain("Help topic")),
+			],
+			options.Select(opt =>
+			{
+				var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
+				var flag = CompatibilityFlags.Named(opt.ConfigAttr.Name)?.Compatibility;
+				var topic = flag?.HelpTopic;
+				return ImmutableArray.Create<Block>(
+					new TextBlock(ServerLayout.CommandLink(name, $"@config {name}")),
+					new TextBlock(MarkupText.Plain(ConfigValueDisplay.Format(opt.Value, opt.ConfigAttr))),
+					new TextBlock(MarkupText.Plain(flag is null ? "" : CompatibilityFlags.Names(flag.Emulates))),
+					new TextBlock(MarkupText.Plain(flag is null || flag.SetBy == CompatibilityServer.None ? "-" : CompatibilityFlags.Names(flag.SetBy))),
+					new TextBlock(topic is null ? MarkupText.Plain("") : ServerLayout.CommandLink(topic, $"help {topic}")));
+			}));
 
 	/// <summary>
 	/// An option's value in an <c>@config</c> listing: a mapping option's entries as labelled values of

@@ -1,3 +1,4 @@
+using SharpMUSH.Configuration;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Configuration.Options;
@@ -137,6 +138,7 @@ public partial class PennMUSHDatabaseConverter
 
 				updated = ConfigAccessor.WithValue(updated, property, value);
 				changed.Add(name);
+				context.Notes.Add(ChangedOptionNote(source.SourceName, name, current, value));
 			}
 
 			if (changed.Count == 0) return;
@@ -152,6 +154,25 @@ public partial class PennMUSHDatabaseConverter
 			context.WarnNeedsAction(ImportWarningKind.Configuration, $"{names} could not be set ({ex.Message}); the imported {source.SourceName} softcode needs them: " +
 				"set them in the configuration and reload it.");
 		}
+	}
+
+	/// <summary>
+	/// The report's line for one option the import changed: its old and new value and, for a compatibility
+	/// flag, the help topic that says what it does.
+	/// </summary>
+	internal static string ChangedOptionNote(string sourceName, string name, object? before, object? after)
+	{
+		var help = CompatibilityFlags.Named(name) is { } flag ? $"; see help {flag.Compatibility.HelpTopic}" : string.Empty;
+		return $"Option {name}: {OptionText(before)} -> {OptionText(after)}, for the {sourceName} softcode{help}";
+
+		static string OptionText(object? value) => value switch
+		{
+			null => "(empty)",
+			bool on => on ? "on" : "off",
+			string text when text.Length == 0 => "(empty)",
+			System.Collections.IDictionary map => $"{map.Count} entries",
+			_ => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty
+		};
 	}
 
 	private static bool IsRestrictionTable(string name)
