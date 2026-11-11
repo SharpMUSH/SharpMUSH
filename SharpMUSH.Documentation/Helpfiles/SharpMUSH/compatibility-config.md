@@ -270,7 +270,7 @@ hixx
 
 Off by default; meant for code written for TinyMUSH. No database import turns it on, but a `mush.cnf` that names it sets it.
 
-With `silent_pemit` off, `@pemit` tells you what it sent and to whom, unless given `/silent`, and `@remit`, `@oemit` and the other emit commands tell you when you are not where the message went. With it on, each of them is silent unless given `/noisy`, as if every one had `/silent`. The message itself reaches the same people either way.
+With `silent_pemit` off, `@pemit` tells you what it sent and to whom, unless given `/silent` or `/list`, and `@remit`, `@lemit`, `@zemit` and `@prompt` (and their `@ns` forms) tell you when you are not where the message went. With it on, each of these is silent unless given `/noisy`. The message itself reaches the same people either way.
 
 A wizard sends a message to a thing in another room:
 

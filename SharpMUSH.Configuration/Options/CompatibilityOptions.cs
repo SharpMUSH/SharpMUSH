@@ -48,7 +48,7 @@ public record CompatibilityOptions(
 	[property: SharpConfig(
 		Name = "silent_pemit",
 		Category = "Compatibility",
-		Description = "@pemit leaves out its \"You pemit ...\" confirmation, as if given /silent, unless given /noisy, as TinyMUSH does",
+		Description = "@pemit, @remit, @lemit, @zemit and @prompt leave out their confirmation, as if given /silent, unless given /noisy, as TinyMUSH does",
 		Group = "TinyMUSH Compatibility",
 		Order = 14,
 		Emulates = CompatibilityServer.TinyMUSH,

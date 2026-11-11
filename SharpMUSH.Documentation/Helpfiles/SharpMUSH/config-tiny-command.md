@@ -37,7 +37,7 @@ Options that make SharpMUSH behave like PennMUSH, TinyMUSH, TinyMUX or RhostMUSH
 - `tiny_booleans=<boolean>`: Use Tiny-style boolean values where only non-zero numbers are true.
 - `tiny_trim_fun=<boolean>`: Are the second and third arguments to trim() reversed? Importing a TinyMUX or RhostMUSH database turns it on.
 - `tiny_math=<boolean>`: Is a string where a number is expected considered a 0? Importing a TinyMUX database turns it on.
-- `silent_pemit=<boolean>`: Does @pemit default to @pemit/silent?
+- `silent_pemit=<boolean>`: Do @pemit, @remit, @lemit, @zemit and @prompt default to /silent?
 
 ## TinyMUX functions
 
