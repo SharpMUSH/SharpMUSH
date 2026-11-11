@@ -562,7 +562,8 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// <paramref name="listing"/> with <paramref name="remainingQuota"/> in place of any stored RQUOTA, in
+	/// <paramref name="listing"/> with <paramref name="remainingQuota"/> in place of any stored RQUOTA (a
+	/// parent's too, which the player's own shadows), in
 	/// name order among the attributes read from <paramref name="self"/>, which a <c>/parent</c> listing
 	/// puts before its parents'.
 	/// </summary>
@@ -572,7 +573,7 @@ public partial class Commands
 		static bool Own((SharpAttribute Attribute, DBRef Source) entry, DBRef self) => entry.Source.Number == self.Number;
 
 		var rest = listing
-			.Where(entry => !(Own(entry, self) && entry.Attribute.LongName.Equals(RemainingQuota, StringComparison.OrdinalIgnoreCase)))
+			.Where(entry => !entry.Attribute.LongName.Equals(RemainingQuota, StringComparison.OrdinalIgnoreCase))
 			.ToList();
 		var at = rest.FindIndex(entry => Own(entry, self)
 			&& string.Compare(entry.Attribute.LongName, RemainingQuota, StringComparison.OrdinalIgnoreCase) > 0);

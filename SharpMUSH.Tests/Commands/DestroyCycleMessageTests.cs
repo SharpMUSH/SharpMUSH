@@ -17,7 +17,8 @@ namespace SharpMUSH.Tests.Commands;
 /// harness runs the same in <c>44-objects-audit</c> (<c>obj.destroy-cycle</c>) and
 /// <c>20-admin-commands</c> (<c>admin.wizard</c>).
 /// <para>A wizard and an ordinary player each stand in a room of their own, so what they are told is
-/// theirs alone. Nothing here is destroyed twice, so a concurrent purge has nothing to free.</para>
+/// theirs alone. Nothing here is destroyed twice, and a purge frees a GOING object only on its second
+/// pass, so a concurrent purge cannot free one between a test's @nuke and its @undestroy.</para>
 /// </summary>
 public class DestroyCycleMessageTests
 {
