@@ -185,7 +185,8 @@ public class ImportedCodeScanTests
 				var (command, typed) = (entry[..entry.IndexOf('/')], entry[(entry.IndexOf('/') + 1)..]);
 				var definition = trie.FindExact(command)?.Attribute;
 				await Assert.That(definition).IsNotNull().Because($"{command} is SharpMUSH's name for the command");
-				var switches = definition!.Switches ?? [];
+				if (definition is null) continue;
+				var switches = definition.Switches ?? [];
 				await Assert.That(switches.Contains(typed, StringComparer.OrdinalIgnoreCase)
 						|| dialect.SwitchMeaning(definition.Name, switches, typed, command) is not null).IsFalse()
 					.Because($"{entry} works here now; take it out of {nameof(ImportLeftOut)} and the topic");
