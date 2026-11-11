@@ -4,6 +4,7 @@ using SharpMUSH.Messaging.Messages;
 using SharpMUSH.SocketServer.Configuration;
 using SharpMUSH.SocketServer.Models;
 using SharpMUSH.SocketServer.Services;
+using System.IO.Pipelines;
 using System.Text;
 
 namespace SharpMUSH.Tests.ConnectionServer;
@@ -14,6 +15,20 @@ namespace SharpMUSH.Tests.ConnectionServer;
 /// </summary>
 public partial class TelnetServerNegotiationTests
 {
+
+	/// <summary>
+	/// Answers the terminal-type cycle as a terminal emulator, which is asked about graphics at connect, and
+	/// reads up to the last of those questions.
+	/// </summary>
+	private static async Task NameATerminalAsync(PipeWriter toServer, PipeReader fromServer)
+	{
+		await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, DO, TTYPE));
+		await WriteAsync(toServer, IAC, WILL, TTYPE);
+		await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, SB, TTYPE, SEND));
+		await WriteAsync(toServer, [IAC, SB, TTYPE, IS, .. "XTERM-KITTY"u8.ToArray(), IAC, SE]);
+		await WriteAsync(toServer, [IAC, SB, TTYPE, IS, .. "XTERM-KITTY"u8.ToArray(), IAC, SE]);
+		await ReadUntilAsync(fromServer, bytes => Encoding.ASCII.GetString(bytes).Contains("\u001b[c"));
+	}
 
 	private static NSubstitute.Core.ICall? Registration(IConnectionServerService service) =>
 		service.ReceivedCalls().SingleOrDefault(call => call.GetMethodInfo().Name == nameof(IConnectionServerService.RegisterAsync));
@@ -74,7 +89,7 @@ public partial class TelnetServerNegotiationTests
 		using var cancellation = cts;
 		try
 		{
-			await ReadUntilAsync(fromServer, bytes => Encoding.ASCII.GetString(bytes).Contains("\u001b[c"));
+			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, DO, TTYPE));
 			await cts.CancelAsync();
 			await handler.WaitAsync(Timeout);
 			await Assert.That(Registration(service)).IsNull();
@@ -153,7 +168,7 @@ public partial class TelnetServerNegotiationTests
 		using var serverCancellation = cts;
 		try
 		{
-			await ReadUntilAsync(fromServer, bytes => Encoding.ASCII.GetString(bytes).Contains("\u001b[c"));
+			await NameATerminalAsync(toServer, fromServer);
 			await WriteAsync(toServer, "\u001b[6;17;8t\u001b[?62;4clook\r\n"u8.ToArray());
 			await WaitForPublishedAsync<TelnetInputMessage>(published);
 			await Assert.That(reports.Count).IsGreaterThanOrEqualTo(2);
@@ -190,7 +205,7 @@ public partial class TelnetServerNegotiationTests
 		using var serverCancellation = cts;
 		try
 		{
-			await ReadUntilAsync(fromServer, bytes => Encoding.ASCII.GetString(bytes).Contains("\u001b[c"));
+			await NameATerminalAsync(toServer, fromServer);
 			await WriteAsync(toServer, [
 				IAC, WILL, NAWS,
 				IAC, SB, NAWS, 0, (byte)first, 0, 24, IAC, SE,
@@ -224,12 +239,57 @@ public partial class TelnetServerNegotiationTests
 		using var serverCancellation = cts;
 		try
 		{
-			await ReadUntilAsync(fromServer, bytes => Encoding.ASCII.GetString(bytes).Contains("\u001b[c"));
+			await NameATerminalAsync(toServer, fromServer);
 			await Assert.That(Registration(service)).IsNull();
 			await WriteAsync(toServer, "\u001b[?62;4clook\r\n"u8.ToArray());
 			var capabilities = await RegisteredCapabilitiesAsync(service);
 			await Assert.That(capabilities.Probe?.Sixel).IsTrue();
 			await Assert.That(capabilities.Pins?.Graphics).IsEqualTo(TerminalGraphics.Auto);
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	/// <summary>
+	/// A MUD client prints the graphics questions as text, so only a terminal emulator named by TTYPE is asked at
+	/// connect: not a client that refuses TTYPE, names no terminal, names a bare colour level, or sends MTTS.
+	/// </summary>
+	[Test]
+	[Arguments("")]
+	[Arguments("BEIPMU")]
+	[Arguments("ANSI")]
+	[Arguments("VT100")]
+	[Arguments("XTERM-256COLOR")]
+	[Arguments("MUDLET,XTERM,MTTS 2349")]
+	public async Task MudClient_IsNotAskedAboutGraphicsAtConnect(string terminalTypeCycle)
+	{
+		var terminalTypes = terminalTypeCycle.Split(',', StringSplitOptions.RemoveEmptyEntries);
+		var service = Substitute.For<IConnectionServerService>();
+		var (toServer, fromServer, handler, _, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 500);
+		using var serverCancellation = cts;
+		try
+		{
+			var seen = new List<byte>(await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, DO, TTYPE)));
+			if (terminalTypes.Length > 0)
+			{
+				await WriteAsync(toServer, IAC, WILL, TTYPE);
+				seen.AddRange(await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, SB, TTYPE, SEND)));
+				foreach (var type in terminalTypes.Append(terminalTypes[^1]))
+				{
+					await WriteAsync(toServer, [IAC, SB, TTYPE, IS, .. Encoding.ASCII.GetBytes(type), IAC, SE]);
+				}
+			}
+
+			await RegisteredCapabilitiesAsync(service);
+			// Refusing an unknown option proves everything the server sent before it has arrived.
+			await WriteAsync(toServer, IAC, DO, 200);
+			seen.AddRange(await ReadUntilAsync(fromServer,
+				bytes => Contains(bytes, IAC, (byte)TelnetNegotiationCore.Models.Trigger.WONT, 200)));
+			await Assert.That(Encoding.ASCII.GetString([.. seen])).DoesNotContain("\u001b[c");
 		}
 		finally
 		{

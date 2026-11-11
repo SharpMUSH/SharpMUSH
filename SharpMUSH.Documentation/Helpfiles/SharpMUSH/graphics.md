@@ -16,7 +16,7 @@
 `SOCKSET graphics=<value>`<br>
 `@SOCKSET [me|<descriptor>]=graphics,<value>`
 
-New telnet connections start with graphics=auto. SharpMUSH asks about terminal graphics and MXP support before the connect screen, allowing up to `negotiation_wait_ms` milliseconds for replies (a Net game option, default 400). Set it to 0 to skip the wait. A complete input line ends the wait early; changes apply to new connections. Late replies update later output. Use SOCKSET graphics=off to request text instead; manual method choices override detection. Client profiles remain assumptions: a proxy or disabled image setting can prevent rendering.
+New telnet connections start with graphics=auto. Before the connect screen SharpMUSH asks about MXP support and, when the client reports a terminal emulator by name (such as kitty, foot or xterm) and sends no MTTS, about terminal graphics. A MUD client would print those questions, so it is not asked unless you use SOCKSET graphics=detect. SharpMUSH waits up to `negotiation_wait_ms` milliseconds for replies (a Net game option, default 400). Set it to 0 to skip the wait. A complete input line ends the wait early; changes apply to new connections. Late replies update later output. Use SOCKSET graphics=off to request text instead; manual method choices override detection. Client profiles remain assumptions: a proxy or disabled image setting can prevent rendering.
 
 - [graphics methods]: the values, from auto and detect to kitty, sixel and off
 - [graphics display]: UTF-8, screen readers, layout, fetching and moving pictures
