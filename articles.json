@@ -4246,6 +4246,16 @@
     "file": "http.md"
   },
   {
+    "id": "icmd-command",
+    "lookup": "@icmd",
+    "title": "@icmd",
+    "aliases": [
+      "@dialect_icmd"
+    ],
+    "sections": [],
+    "file": "icmd-command.md"
+  },
+  {
     "id": "if-command",
     "lookup": "@if",
     "title": "@if",
