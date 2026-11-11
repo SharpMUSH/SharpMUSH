@@ -6811,6 +6811,23 @@
     "file": "pfun-function.md"
   },
   {
+    "id": "pid-function",
+    "lookup": "pid()",
+    "title": "pid()",
+    "aliases": [
+      "pid"
+    ],
+    "sections": [
+      {
+        "id": "pid-types",
+        "lookup": "pid types",
+        "heading": "pid() types",
+        "aliases": []
+      }
+    ],
+    "file": "pid-function.md"
+  },
+  {
     "id": "pipe-command",
     "lookup": "@pipe",
     "title": "@pipe",
@@ -8380,6 +8397,16 @@
       }
     ],
     "file": "rxlevel-function.md"
+  },
+  {
+    "id": "sandbox-function",
+    "lookup": "sandbox()",
+    "title": "sandbox()",
+    "aliases": [
+      "sandbox"
+    ],
+    "sections": [],
+    "file": "sandbox-function.md"
   },
   {
     "id": "schema-functions",
