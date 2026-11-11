@@ -1033,6 +1033,11 @@ public partial class TaskScheduler(
 				if (session is not null)
 				{
 					if ((session.TransportSessionId ?? "") != (state.ConnectionSessionId ?? "")) return null;
+					// An @program lets a line through as a command when it starts with |.
+					if (session.Match == InputMatch.Program && command.Text.StartsWith('|'))
+						return string.IsNullOrWhiteSpace(command.ToPlainText()[1..])
+							? null
+							: await parser.FromState(state).CommandParse(handle, connectionService, command.Substring(1, command.Length - 1));
 					return await inputSessions!.DeliverAsync(parser, session, command);
 				}
 				// A capture that opened after admission still owns this reply after it ends.
