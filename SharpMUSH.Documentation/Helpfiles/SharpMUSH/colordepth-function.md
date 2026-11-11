@@ -24,7 +24,7 @@ Returns the colour depth a connection is sent:
 
 It reads the same colour style as [terminfo()], which takes the client and the player's ANSI, COLOR, XTERM256 and TRUECOLOR flags into account. A player with more than one connection answers for the least idle one. Only the player on the connection and objects with See_All may ask.
 
-colordepth() comes from TinyMUX.
+colordepth() comes from TinyMUX, where 24 means a player with the HTML flag; here it means 24-bit colour.
 
 ```sharp
 > think colordepth(me)

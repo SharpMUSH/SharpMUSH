@@ -16,7 +16,7 @@
 
 Saves registers and puts them back later in the same command. It returns nothing.
 
-- A `<number>` other than 0 saves every register that is set. 0 puts every saved register back, then empties the saved copies, so a second 0 empties those registers.
+- A positive `<number>` of 1 or more saves every register that is set. 0, or a fraction below 1, puts every saved register back, then empties the saved copies, so a second 0 empties those registers. A negative number is read as `<changes>`.
 - `<changes>` is a space-separated list. `+<register>` saves one register and `-<register>` puts it back. A register is named by one letter or digit.
 
 For code that should not change the caller's registers at all, [localize()] is simpler. pushregs() comes from RhostMUSH.

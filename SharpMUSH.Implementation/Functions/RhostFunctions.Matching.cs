@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using MarkupString;
 using MarkupString.Ansi;
 using SharpMUSH.Implementation.Common;
@@ -60,14 +61,14 @@ public partial class Functions
 	/// </summary>
 	[SharpFunction(Name = "numwildmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["list", "word", "delimiter"])]
-	public ValueTask<CallState> NumWildMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> NumWildMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2) => UnlessMatchTimesOut(() =>
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var word = args["1"].Message.ToPlainText();
 		var count = MushText.SplitList(ArgHelpers.Delimiter(args, 2), args["0"].Message)
 			.Count(element => SoftcodeRegex.Wildcard(element.ToPlainText()).IsMatch(word));
-		return ValueTask.FromResult(new CallState(count));
-	}
+		return new CallState(count);
+	});
 
 	/// <summary>
 	/// setqmatch(): matches the wildcard pattern against the string and, on a match, puts what each wildcard
@@ -76,7 +77,7 @@ public partial class Functions
 	/// </summary>
 	[SharpFunction(Name = "setqmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular,
 		ParameterNames = ["string", "pattern", "quiet"])]
-	public ValueTask<CallState> SetQMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> SetQMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2) => UnlessMatchTimesOut(() =>
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var set = false;
@@ -86,8 +87,8 @@ public partial class Functions
 		}
 
 		var quiet = args.Count > 2 && args["2"].Message.ToPlainText().StartsWith('n');
-		return ValueTask.FromResult(quiet ? CallState.Empty : new CallState(set ? "1" : "0"));
-	}
+		return quiet ? CallState.Empty : new CallState(set ? "1" : "0");
+	});
 
 	/// <summary>
 	/// listmatch(): what each wildcard of the pattern matched in the string, joined by the first character of
@@ -96,7 +97,7 @@ public partial class Functions
 	/// </summary>
 	[SharpFunction(Name = "listmatch", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular,
 		ParameterNames = ["string", "pattern", "delimiter", "wildcards"])]
-	public ValueTask<CallState> ListMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> ListMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2) => UnlessMatchTimesOut(() =>
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delimiterText = args.Count > 2 ? args["2"].Message.ToPlainText() : string.Empty;
@@ -109,7 +110,20 @@ public partial class Functions
 		var kept = WildcardCaptures(args["0"].Message, args["1"].Message.ToPlainText())
 			.Where(capture => wanted is null || wanted.Contains(capture.Register))
 			.Select(capture => capture.Text);
-		return ValueTask.FromResult(new CallState(MarkupText.Join(delimiter, kept)));
+		return new CallState(MarkupText.Join(delimiter, kept));
+	});
+
+	/// <summary>The function's result, or <c>#-1 REGEXP TIMEOUT</c> when a wildcard match ran past its time limit.</summary>
+	private static ValueTask<CallState> UnlessMatchTimesOut(Func<CallState> evaluate)
+	{
+		try
+		{
+			return ValueTask.FromResult(evaluate());
+		}
+		catch (RegexMatchTimeoutException)
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegexpTimeout));
+		}
 	}
 
 	/// <summary>What each of the first ten wildcards matched, when the pattern matches the whole string.</summary>
@@ -171,9 +185,10 @@ public partial class Functions
 			}
 			else
 			{
+				// Back to the register each was saved from, not through a label set since.
 				foreach (var register in saved.Keys.ToArray())
 				{
-					state.AddRegister(register, saved[register]);
+					current[register] = saved[register];
 					saved[register] = MarkupText.Empty;
 				}
 			}
@@ -191,7 +206,7 @@ public partial class Functions
 					saved[register] = value;
 					break;
 				case '-' when saved.TryGetValue(register, out var value):
-					state.AddRegister(register, value);
+					current[register] = value;
 					break;
 			}
 		}
