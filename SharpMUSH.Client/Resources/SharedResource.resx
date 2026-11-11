@@ -5408,6 +5408,12 @@
   <data name="EnumPermNoBootDesc" xml:space="preserve">
     <value>Nobody ranked lower may @boot the holder; with a reach, nobody ranked at or below it.</value>
   </data>
+  <data name="EnumPermHideRoles" xml:space="preserve">
+    <value>Game · Hide roles</value>
+  </data>
+  <data name="EnumPermHideRolesDesc" xml:space="preserve">
+    <value>Viewers ranked lower do not see the holder's roles, or its WIZARD and ROYALTY flags; with a reach, viewers ranked at or below it.</value>
+  </data>
   <data name="EnumPermServerOperate" xml:space="preserve">
     <value>Game · Operate the server</value>
   </data>
@@ -5526,7 +5532,7 @@
     <value>Power · Builder</value>
   </data>
   <data name="EnumPermPowerBuilderDesc" xml:space="preserve">
-    <value>Can build when building is restricted to builders.</value>
+    <value>Passes a command restricted to builders with @command/restrict &lt;command&gt;=POWER^Builder. Nothing is restricted that way by default.</value>
   </data>
   <data name="EnumPermPowerCanDark" xml:space="preserve">
     <value>Power · CAN_DARK</value>
@@ -5556,7 +5562,7 @@
     <value>Power · DEBIT</value>
   </data>
   <data name="EnumPermPowerDebitDesc" xml:space="preserve">
-    <value>Can take money from other players with give.</value>
+    <value>Kept for imported games: SharpMUSH has no money, so it does nothing.</value>
   </data>
   <data name="EnumPermPowerFunctions" xml:space="preserve">
     <value>Power · Functions</value>
@@ -5622,13 +5628,13 @@
     <value>Power · MANY_ATTRIBS</value>
   </data>
   <data name="EnumPermPowerManyAttribsDesc" xml:space="preserve">
-    <value>Can set more attributes than the per-object limit.</value>
+    <value>Its object may hold more attributes than max_attrs_per_obj allows.</value>
   </data>
   <data name="EnumPermPowerNoPay" xml:space="preserve">
     <value>Power · No_Pay</value>
   </data>
   <data name="EnumPermPowerNoPayDesc" xml:space="preserve">
-    <value>Never pays for commands.</value>
+    <value>Kept for imported games: SharpMUSH has no money, so no command costs anything and it does nothing.</value>
   </data>
   <data name="EnumPermPowerNoQuota" xml:space="preserve">
     <value>Power · No_Quota</value>
@@ -5700,7 +5706,7 @@
     <value>Power · See_OOB</value>
   </data>
   <data name="EnumPermPowerSeeOobDesc" xml:space="preserve">
-    <value>Can see out-of-band traffic from other connections.</value>
+    <value>Can read the GMCP modules other players' clients listed, with gmcpsupports().</value>
   </data>
   <data name="EnumPermPowerSendImage" xml:space="preserve">
     <value>Power · Send_Image</value>
@@ -5736,7 +5742,7 @@
     <value>Power · Unkillable</value>
   </data>
   <data name="EnumPermPowerUnkillableDesc" xml:space="preserve">
-    <value>Cannot be killed.</value>
+    <value>Kept for imported games: SharpMUSH has no kill command, so it does nothing.</value>
   </data>
   <data name="NavFormatMenu" xml:space="preserve">
     <value>Format text</value>

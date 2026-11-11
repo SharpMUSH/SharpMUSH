@@ -154,6 +154,25 @@ public class AttributeValueRestrictionTests
 			.Because("nattr(<object>/**) counts what the limit counts, so softcode can check it");
 	}
 
+	[Test]
+	public async Task Set_LetsAnObjectWithManyAttribsPastMaxAttrsPerObj()
+	{
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "ManyAttribs");
+		var held = await WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>()
+			.Send(new SharpMUSH.Library.Queries.Database.GetAttributeCountQuery(thing));
+		using var limit = TestOptionsOverride.Scope(options => options with
+		{
+			Limit = options.Limit with { MaxAttributesPerObj = (uint)held + 1 }
+		});
+
+		await Assert.That(await FunctionAsync($"attrib_set({thing}/FIRST,1)")).IsEqualTo(string.Empty);
+		await Assert.That(await FunctionAsync($"attrib_set({thing}/SECOND,2)")).IsEqualTo(ErrorMessages.Returns.TooManyAttributes);
+
+		await CommandAsync($"@power {thing}=MANY_ATTRIBS");
+		await Assert.That(await FunctionAsync($"attrib_set({thing}/SECOND,2)")).IsEqualTo(string.Empty);
+		await Assert.That(await FunctionAsync($"get({thing}/SECOND)")).IsEqualTo("2");
+	}
+
 	// ---- @attribute/limit and /enum as commands (src/atr_tab.c do_attribute_limit) ----------------
 
 	[Test]

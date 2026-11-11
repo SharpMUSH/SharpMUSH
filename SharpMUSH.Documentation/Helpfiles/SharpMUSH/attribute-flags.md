@@ -48,6 +48,7 @@ These flags restrict access or alter attribute behavior. Propagation depends on 
 - `no_inherit (i)`    Attribute will not be inherited by the children of this object.
 - `no_clone (c)`      Attribute will not be copied if the object is `@clone`'d.
 - `mortal_dark (m)`   Attribute cannot be seen by mortals. This flag can only be set by royalty and wizards. "hidden" is a synonym.
+- `wizard_dark`       Attribute cannot be seen by anyone but God, wizards included. Only God can set it. A TinyMUX or RhostMUSH import gives it to attributes flagged `dark` there.
 - `wizard (w)`        Attribute can only be set by wizards. This flag can only be set by royalty and wizards.
 - `veiled (V)`        Attribute value won't be shown on default examine, but is still otherwise accessible (for spammy attribs).
 - `nearby (n)`        Even if the attribute is visual, it can only be retrieved if you're near the object (see **[NEARBY()]**).

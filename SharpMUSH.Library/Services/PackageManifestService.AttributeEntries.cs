@@ -30,7 +30,7 @@ public partial class PackageManifestService
 	/// </summary>
 	public static IReadOnlySet<string> AttributeEntryFlags { get; } = new HashSet<string>(StringComparer.Ordinal)
 	{
-		"no_command", "no_inherit", "no_clone", "mortal_dark", "wizard", "veiled", "nearby", "locked", "safe",
+		"no_command", "no_inherit", "no_clone", "mortal_dark", "wizard_dark", "wizard", "veiled", "nearby", "locked", "safe",
 		"visual", "public", "debug", "no_debug", "regexp", "case", "nospace", "noname", "aahear", "amhear", "quiet",
 		"prefixmatch", "cmdsyntax", "funsyntax", "internal", "nodump", "rhost", "mux"
 	};

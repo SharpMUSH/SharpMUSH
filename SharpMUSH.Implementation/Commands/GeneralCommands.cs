@@ -354,7 +354,7 @@ public partial class Commands
 
 			// Not PennMUSH: privileges are roles here, so examine says which an object holds and where from.
 			var grants = await obj.Grants.WithCancellation(ExecutionBudget.CurrentToken);
-			if (ObjectGrantsDisplay.Roles(grants) is { Length: > 0 } rolesLine)
+			if (!await viewingKnown.HidesRolesFrom(executor) && ObjectGrantsDisplay.Roles(grants) is { Length: > 0 } rolesLine)
 			{
 				outputSections.Add(MarkupText.Plain($"Roles: {rolesLine}"));
 			}

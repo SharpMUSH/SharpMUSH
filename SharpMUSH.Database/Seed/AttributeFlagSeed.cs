@@ -11,6 +11,7 @@ public static class AttributeFlagSeed
 		("no_inherit", "i", true),
 		("no_clone", "c", true),
 		("mortal_dark", "m", true),
+		("wizard_dark", "", true),
 		("wizard", "w", true),
 		("veiled", "V", true),
 		("nearby", "n", true),

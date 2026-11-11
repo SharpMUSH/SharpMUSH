@@ -84,6 +84,13 @@ internal sealed class AttributeFlagWriter(
 			return new Error<string>(ErrorMessages.Returns.UnrecognizedAttributeFlag);
 		}
 
+		// Not PennMUSH: wizard_dark hides an attribute from all but God, so only God names it.
+		if (resolved.Any(r => r.Flag.Name.Equals("WIZARD_DARK", StringComparison.OrdinalIgnoreCase))
+				&& !executor.IsGod())
+		{
+			return new Error<string>(ErrorMessages.Returns.UnrecognizedAttributeFlag);
+		}
+
 		if (resolved.Any(r => r.Flag.Name.Equals("WIZARD", StringComparison.OrdinalIgnoreCase))
 				&& !await executor.IsSee_All())
 		{

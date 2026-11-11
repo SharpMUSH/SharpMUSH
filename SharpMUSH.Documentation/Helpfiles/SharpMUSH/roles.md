@@ -197,8 +197,9 @@ These take parts of a wizard's standing over other players' things, so a role or
 | `game.noforce` | nobody ranked below you may @force you |
 | `game.noboot` | nobody ranked below you may @boot you; no role allows it |
 | `game.override.movement` | passing enter, leave and exit locks; no role allows it |
+| `game.hide.roles` | players ranked below you see no WIZARD or ROYALTY flag on you in examine, flags() and lflags(), no Roles line in examine, and only `everyone` from roles(); hasflag() and hasrole() still answer; no role allows it |
 
-Each can carry a reach (see [@permission reach]). On `game.noforce` and `game.noboot` a reach names who is kept out: with reach `architect`, nobody ranked at or below architect may force you.
+Each can carry a reach (see [@permission reach]). On `game.noforce`, `game.noboot` and `game.hide.roles` a reach names who is kept out: with reach `architect`, nobody ranked at or below architect may force you.
 
 ## Everyday permissions
 

@@ -703,6 +703,7 @@ public partial class LightningDatabase : IAttributeIndexStore
 			level = level.Length == 0 ? segment : $"{level}`{segment}";
 			var flags = tx.TryGet(Tables.AttrMeta, Keys.Attr(dbref, level), out var meta) ? Codec.Deserialize<AttrMetaRecord>(meta).Flags : [];
 			if (flags.Any(flag => flag.Equals("mortal_dark", StringComparison.OrdinalIgnoreCase))) facts |= IndexedAttributeFacts.MortalDark;
+			if (flags.Any(flag => flag.Equals("wizard_dark", StringComparison.OrdinalIgnoreCase))) facts |= IndexedAttributeFacts.WizardDark;
 			if (flags.Any(flag => flag.Equals("nearby", StringComparison.OrdinalIgnoreCase))) facts |= IndexedAttributeFacts.AnyNearby;
 			allVisual &= flags.Any(flag => flag.Equals("visual", StringComparison.OrdinalIgnoreCase));
 			leafFlags = flags;

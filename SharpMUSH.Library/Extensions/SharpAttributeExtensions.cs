@@ -36,6 +36,10 @@ public static class SharpAttributeExtensions
 	public static bool IsMortalDark(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name.Equals("mortal_dark", StringComparison.OrdinalIgnoreCase));
 
+	/// <summary>Flagged <c>wizard_dark</c>: only God reads it.</summary>
+	public static bool IsWizardDark(this SharpAttribute attribute)
+		=> attribute.Flags.Any(x => x.Name.Equals("wizard_dark", StringComparison.OrdinalIgnoreCase));
+
 	/// <summary>
 	/// PennMUSH's <c>AF_PRIVATE</c>. <c>attr_privs_set</c> gives that one bit two names -
 	/// <c>no_inherit</c> and <c>private</c>, both on <c>'i'</c> (<c>src/atr_tab.c:35-36</c>) - and
@@ -168,6 +172,10 @@ public static class SharpAttributeExtensions
 
 	public static bool IsMortalDark(this LazySharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name.Equals("mortal_dark", StringComparison.OrdinalIgnoreCase));
+
+	/// <summary>Flagged <c>wizard_dark</c>: only God reads it.</summary>
+	public static bool IsWizardDark(this LazySharpAttribute attribute)
+		=> attribute.Flags.Any(x => x.Name.Equals("wizard_dark", StringComparison.OrdinalIgnoreCase));
 
 	/// <summary>
 	/// PennMUSH's <c>AF_MHEAR</c>, stored as <c>amhear</c> (<c>src/atr_tab.c:56</c>): the attribute

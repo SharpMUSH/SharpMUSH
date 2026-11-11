@@ -132,6 +132,14 @@ public static class PortalPermission
 	/// RhostMUSH's NO_BOOT. No role allows it by default.
 	/// </summary>
 	public const string NoBoot = "game.noboot";
+
+	/// <summary>
+	/// Hides the holder's roles from viewers ranked below it, or, with a reach, from viewers ranked at or below the reach:
+	/// they see no WIZARD or ROYALTY flag in <c>examine</c>, <c>flags()</c> and <c>lflags()</c>, no Roles line in
+	/// <c>examine</c>, and only <c>everyone</c> from <c>roles()</c>. Checks such as <c>hasflag()</c> still answer.
+	/// RhostMUSH's HIDEBIT. No role allows it by default.
+	/// </summary>
+	public const string HideRoles = "game.hide.roles";
 	/// <summary>Sends a page; checked against each recipient. Allowed unless denied (<see cref="AllowedUnlessDenied"/>).</summary>
 	public const string PlayerPage = "player.page";
 
@@ -222,6 +230,7 @@ public static class PortalPermission
 		FlagsRestricted,
 		NoForce,
 		NoBoot,
+		HideRoles,
 		OverrideMovement,
 		PlayerPage,
 		PlayerGive,
@@ -304,6 +313,7 @@ public static class PortalPermission
 		new(FlagsRestricted, "EnumPermFlagsRestricted", GroupGame, "EnumPermFlagsRestrictedDesc"),
 		new(NoForce, "EnumPermNoForce", GroupGame, "EnumPermNoForceDesc"),
 		new(NoBoot, "EnumPermNoBoot", GroupGame, "EnumPermNoBootDesc"),
+		new(HideRoles, "EnumPermHideRoles", GroupGame, "EnumPermHideRolesDesc"),
 		new(PlayerPage, "EnumPermPlayerPage", GroupGame, "EnumPermPlayerPageDesc"),
 		new(PlayerCreate, "EnumPermPlayerCreate", GroupGame, "EnumPermPlayerCreateDesc"),
 		new(PlayerGive, "EnumPermPlayerGive", GroupGame, "EnumPermPlayerGiveDesc"),

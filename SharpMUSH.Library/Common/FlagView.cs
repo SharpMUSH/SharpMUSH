@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -17,10 +18,14 @@ public sealed class FlagView
 	private readonly bool _seeAll;
 	private readonly bool _mistrust;
 	private readonly DBRef _owner;
+	private readonly int _viewer;
+	private readonly int _viewerRank;
 	private readonly IConnectionService? _connections;
 
-	private FlagView(bool god, bool seeAll, bool mistrust, DBRef owner, IConnectionService? connections)
-		=> (_god, _seeAll, _mistrust, _owner, _connections) = (god, seeAll, mistrust, owner, connections);
+	private FlagView(bool god, bool seeAll, bool mistrust, DBRef owner, int viewer, int viewerRank,
+		IConnectionService? connections)
+		=> (_god, _seeAll, _mistrust, _owner, _viewer, _viewerRank, _connections)
+			= (god, seeAll, mistrust, owner, viewer, viewerRank, connections);
 
 	/// <param name="viewer">Whose view this is.</param>
 	/// <param name="connections">Where CONNECTED is read from; without it CONNECTED is never shown.</param>
@@ -30,16 +35,23 @@ public sealed class FlagView
 		var owner = await viewer.Object().Owner.WithCancellation(token);
 		var flags = await viewer.ReadFlagsAsync(token);
 		return new FlagView(viewer.IsGod(), await viewer.IsSee_All(flags), flags.IsMistrust, owner.Object.DBRef,
-			connections);
+			viewer.Object().Key, await viewer.RankAsTargetAsync(token), connections);
 	}
 
 	/// <summary>
 	/// <c>Can_See_Flag</c>'s permission half: a flag that is not dark, mdark, odark or disabled is
 	/// public; an odark one is shown to the owner's objects (unless MISTRUST); an mdark one to See_All;
-	/// a dark one only to God.
+	/// a dark one only to God. A role-backed flag (WIZARD, ROYALTY) is hidden from a viewer the object hides its roles
+	/// from (<see cref="PortalPermission.HideRoles"/>).
 	/// </summary>
 	public async ValueTask<bool> CanSeeAsync(SharpObject thing, SharpObjectFlag flag)
 	{
+		if (!_god && thing.Key != _viewer && RoleFlags.Find(flag.Name) is not null
+			&& (await thing.Grants.WithCancellation(ExecutionBudget.CurrentToken)).Protects(PortalPermission.HideRoles, _viewerRank))
+		{
+			return false;
+		}
+
 		var perms = flag.SetPermissions;
 		bool Has(string perm) => perms.Contains(perm, StringComparer.OrdinalIgnoreCase);
 

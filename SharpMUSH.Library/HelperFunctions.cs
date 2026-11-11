@@ -193,6 +193,13 @@ public static partial class HelperFunctions
 	}
 
 	/// <summary>
+	/// Whether <paramref name="holder"/> hides its roles from <paramref name="viewer"/> (<see cref="PortalPermission.HideRoles"/>,
+	/// as <see cref="ShieldedFrom"/> reads it). Nothing hides from itself or from #1.
+	/// </summary>
+	public static async ValueTask<bool> HidesRolesFrom(this AnySharpObject holder, AnySharpObject viewer)
+		=> holder.Object().Key != viewer.Object().Key && await holder.ShieldedFrom(PortalPermission.HideRoles, viewer);
+
+	/// <summary>
 	/// <see cref="HasPower(AnySharpObject, string)"/> against <paramref name="target"/>: a built-in power held through
 	/// an override with a reach counts only when the target's owner ranks within it.
 	/// </summary>

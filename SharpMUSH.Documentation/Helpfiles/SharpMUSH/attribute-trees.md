@@ -104,7 +104,7 @@ Branch attributes will be displayed with a \` in the attribute flags on examine.
 
 ## Permissions
 
-The second benefit of attributes trees is convenient access control. `no_inherit`, `no_command`, and `mortal_dark` restrictions propagate down branches to their leaves and subbranches. A `wizard` branch restricts writes by mortals, but does not restrict reads. `no_clone` and `veiled` affect only the attribute carrying the flag. A `mortal_dark` branch prevents mortals from reading any of its leaves or subbranches.
+The second benefit of attributes trees is convenient access control. `no_inherit`, `no_command`, `mortal_dark` and `wizard_dark` restrictions propagate down branches to their leaves and subbranches. A `wizard` branch restricts writes by mortals, but does not restrict reads. `no_clone` and `veiled` affect only the attribute carrying the flag. A `mortal_dark` branch prevents mortals from reading any of its leaves or subbranches, and a `wizard_dark` branch prevents everyone but God.
 
 Attribute flags that grant access (e.g. visual) do NOT propagate down trees.
 

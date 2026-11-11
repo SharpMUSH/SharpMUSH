@@ -537,7 +537,8 @@ public class AttributeService(
 	{
 		attributePattern = await DialectPatternAsync(obj, attributePattern, mode);
 		var token = ExecutionBudget.CurrentToken;
-		var isPrivileged = executor.IsGod() || await executor.IsWizard(token);
+		// Only God skips the read test: a wizard_dark attribute is hidden from wizards too.
+		var isPrivileged = executor.IsGod();
 
 		if (IsLiteralPattern(attributePattern, mode))
 		{
@@ -984,7 +985,8 @@ public class AttributeService(
 		attributePattern = await DialectPatternAsync(obj, attributePattern, mode);
 		var token = ExecutionBudget.CurrentToken;
 		token.ThrowIfCancellationRequested();
-		var isPrivileged = executor.IsGod() || await executor.IsWizard(token);
+		// Only God skips the read test: a wizard_dark attribute is hidden from wizards too.
+		var isPrivileged = executor.IsGod();
 		return LazySharpAttributesOrError.FromAsync(ReadWithDeferredBudget(
 			budget => ReadLazyPattern(executor, obj, attributePattern, checkParents, mode, isPrivileged, budget),
 			ExecutionBudget.Current, token));

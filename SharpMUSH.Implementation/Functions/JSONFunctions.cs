@@ -4,6 +4,7 @@ using Json.Pointer;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -637,11 +638,20 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// Who may send out-of-band data to, or read the GMCP modules of, a connection that is not their own:
-	/// a wizard, or anyone with the Send_OOB power. oob() and gmcpsupports() share it.
+	/// Who may send out-of-band data to a connection that is not their own: a wizard, or anyone with the Send_OOB power.
 	/// </summary>
 	private static async ValueTask<bool> MayReachOthersOutOfBandAsync(AnySharpObject executor)
 		=> await executor.IsWizard() || await executor.HasPower("Send_OOB");
+
+	/// <summary>
+	/// Who may read the GMCP modules of a connection that is not their own: whoever may send to it, or anyone with the
+	/// See_OOB power.
+	/// </summary>
+	private static async ValueTask<bool> MaySeeOthersOutOfBandAsync(AnySharpObject executor)
+		=> await MayReachOthersOutOfBandAsync(executor) || await executor.HasPower("See_OOB");
+
+	private static readonly string[] SeeOobScopes =
+		[PortalPermission.GameWizard, PortalPermission.GamePower("Send_OOB"), PortalPermission.GamePower("See_OOB")];
 
 	/// <summary>
 	/// Sends one package to one connection: WebSocket (portal) connections get a structured envelope the
@@ -672,7 +682,7 @@ public partial class Functions
 	/// <c>gmcpsupports(&lt;descriptor|player&gt;[, &lt;package&gt;])</c>: the GMCP modules a client listed in
 	/// Core.Supports, as <c>Module version</c> pairs, or with a package 1 when it listed the package or a
 	/// module it belongs to. A player answers for their least idle connection, as <c>terminfo()</c> does.
-	/// Who may ask about a connection that is not their own is oob()'s rule.
+	/// Who may ask about a connection that is not their own: whoever may send to it with oob(), or a holder of See_OOB.
 	/// </summary>
 	[SharpFunction(Name = "gmcpsupports", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["descriptor|player", "package"])]
@@ -703,7 +713,7 @@ public partial class Functions
 	private async ValueTask<Result<IConnectionService.ConnectionData>> GmcpConnectionAsync(IMUSHCodeParser parser,
 		AnySharpObject executor, string target)
 	{
-		var mayReachOthers = await MayReachOthersOutOfBandAsync(executor);
+		var mayReachOthers = await MaySeeOthersOutOfBandAsync(executor);
 		var executorRef = executor.Object().DBRef;
 
 		if (long.TryParse(target, NumberStyles.None, CultureInfo.InvariantCulture, out var descriptor))
@@ -725,7 +735,7 @@ public partial class Functions
 		// Refused before anything about the connection, so a refusal does not say whether they are connected.
 		if (!mayReachOthers && player.Object.DBRef.Number != executorRef.Number)
 		{
-			return new Error<string>(PermissionRefusal.Needs(OobScopes).ReturnText);
+			return new Error<string>(PermissionRefusal.Needs(SeeOobScopes).ReturnText);
 		}
 
 		return await ArgHelpers.LeastIdleConnectionAsync(ConnectionService, player.Object.DBRef) switch
