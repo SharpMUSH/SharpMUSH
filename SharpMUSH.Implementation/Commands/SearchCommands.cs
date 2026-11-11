@@ -1214,12 +1214,13 @@ public partial class Commands
 		return MarkupText.Concat(MarkupText.Concat(before, match), after);
 	}
 
-	[SharpCommand(Name = "@SWEEP", Switches = ["CONNECTED", "HERE", "INVENTORY", "EXITS"], Behavior = CB.Default,
-		MinArgs = 0, MaxArgs = 0, ParameterNames = ["flags"])]
+	[SharpCommand(Name = "@SWEEP", Switches = ["CONNECTED", "HERE", "INVENTORY", "EXITS", "COMMANDS", "LISTENERS", "PLAYERS"],
+		Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = ["flags"])]
 	public async ValueTask<Option<CallState>> Sweep(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var switches = parser.CurrentState.Switches;
 		var connectFlag = switches.Contains("CONNECTED");
+		var kinds = SweepKinds.From(switches);
 		var hereFlag = switches.Contains("HERE");
 		var inventoryFlag = switches.Contains("INVENTORY");
 		var exitsFlag = switches.Contains("EXITS");
@@ -1232,8 +1233,8 @@ public partial class Commands
 		if (!inventoryFlag && !exitsFlag)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningInRoom), executor);
-			await SweepLocationAsync(executor, location, locationOwner, connectFlag);
-			await SweepContentsAsync(executor, location, perceive, connectFlag);
+			await SweepLocationAsync(executor, location, locationOwner, connectFlag, kinds);
+			await SweepContentsAsync(executor, location, perceive, connectFlag, kinds);
 		}
 
 		if (!connectFlag && !inventoryFlag && location.IsRoom && exitsFlag)
@@ -1247,7 +1248,7 @@ public partial class Commands
 			// An exit carries nothing, so its inventory sweep lists nothing.
 			if (executor.AsOptionalContainer is AnySharpContainer carrier)
 			{
-				await SweepContentsAsync(executor, carrier, perceive, connectFlag);
+				await SweepContentsAsync(executor, carrier, perceive, connectFlag, kinds);
 			}
 		}
 
@@ -1256,14 +1257,14 @@ public partial class Commands
 
 	/// <summary>@sweep's line for the executor's location: who is connected there, or what it hears, runs and broadcasts.</summary>
 	private async ValueTask SweepLocationAsync(AnySharpObject executor, AnySharpContainer location, SharpPlayer locationOwner,
-		bool connectFlag)
+		bool connectFlag, SweepKinds kinds)
 	{
 		var locationObj = location.Object();
 		var locationAnyObject = location.WithExitOption();
 
-		if (connectFlag)
+		if (connectFlag || kinds.Players && await IsPlayerOrPuppetAsync(locationAnyObject))
 		{
-			if (!await IsConnectedOrPuppetConnectedAsync(locationAnyObject)) return;
+			if (connectFlag && !await IsConnectedOrPuppetConnectedAsync(locationAnyObject)) return;
 
 			if (location.IsPlayer)
 			{
@@ -1277,34 +1278,35 @@ public partial class Commands
 			return;
 		}
 
-		await SweepSpeechAsync(executor, locationAnyObject,
-			nameof(ErrorMessages.Notifications.SweepRoomSpeechConnectedFormat), nameof(ErrorMessages.Notifications.SweepRoomSpeechFormat));
+		if (kinds.Listeners)
+			await SweepSpeechAsync(executor, locationAnyObject,
+				nameof(ErrorMessages.Notifications.SweepRoomSpeechConnectedFormat), nameof(ErrorMessages.Notifications.SweepRoomSpeechFormat));
 
-		if (await locationAnyObject.HasActiveCommands())
+		if (kinds.Commands && await locationAnyObject.HasActiveCommands())
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomCommandsFormat), executor, locationObj.Name);
-		if (await locationAnyObject.IsAudible())
+		if (kinds.Listeners && await locationAnyObject.IsAudible())
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomBroadcastingFormat), executor, locationObj.Name);
 	}
 
 	/// <summary>@sweep's lines for what <paramref name="container"/> holds that the executor perceives.</summary>
 	private async ValueTask SweepContentsAsync(AnySharpObject executor, AnySharpContainer container,
-		Func<DBRef, CancellationToken, ValueTask<bool>> perceive, bool connectFlag)
+		Func<DBRef, CancellationToken, ValueTask<bool>> perceive, bool connectFlag, SweepKinds kinds)
 	{
 		var contents = container.Content(Mediator)
 			.Where((item, ct) => perceive(item.Object().DBRef, ct));
 		await foreach (var obj in contents.WithCancellation(ExecutionBudget.CurrentToken))
 		{
-			await SweepObjectAsync(executor, obj.WithRoomOption(), connectFlag);
+			await SweepObjectAsync(executor, obj.WithRoomOption(), connectFlag, kinds);
 		}
 	}
 
-	private async ValueTask SweepObjectAsync(AnySharpObject executor, AnySharpObject obj, bool connectFlag)
+	private async ValueTask SweepObjectAsync(AnySharpObject executor, AnySharpObject obj, bool connectFlag, SweepKinds kinds)
 	{
 		var name = obj.Object().Name;
 
-		if (connectFlag)
+		if (connectFlag || kinds.Players && await IsPlayerOrPuppetAsync(obj))
 		{
-			if (!await IsConnectedOrPuppetConnectedAsync(obj)) return;
+			if (connectFlag && !await IsConnectedOrPuppetConnectedAsync(obj)) return;
 
 			if (obj.IsPlayer)
 			{
@@ -1320,10 +1322,11 @@ public partial class Commands
 			return;
 		}
 
-		await SweepSpeechAsync(executor, obj,
-			nameof(ErrorMessages.Notifications.SweepObjectSpeechConnectedFormat), nameof(ErrorMessages.Notifications.SweepObjectSpeechFormat));
+		if (kinds.Listeners)
+			await SweepSpeechAsync(executor, obj,
+				nameof(ErrorMessages.Notifications.SweepObjectSpeechConnectedFormat), nameof(ErrorMessages.Notifications.SweepObjectSpeechFormat));
 
-		if (await obj.HasActiveCommands())
+		if (kinds.Commands && await obj.HasActiveCommands())
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepObjectCommandsFormat), executor, name);
 	}
 
@@ -1348,6 +1351,24 @@ public partial class Commands
 		await foreach (var exit in exits.WithCancellation(ExecutionBudget.CurrentToken))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepExitBroadcastingFormat), executor, exit.Object().Name);
+		}
+	}
+
+	private static async ValueTask<bool> IsPlayerOrPuppetAsync(AnySharpObject obj)
+		=> obj.IsPlayer || await obj.IsPuppet();
+
+	/// <summary>
+	/// Which of @sweep's lines to give: /commands, /listeners and /players (TinyMUX's and RhostMUSH's) each ask for one
+	/// kind, and none asks for every kind but players, who are named only when they hear.
+	/// </summary>
+	private readonly record struct SweepKinds(bool Commands, bool Listeners, bool Players)
+	{
+		public static SweepKinds From(IEnumerable<string> switches)
+		{
+			var commands = switches.Contains("COMMANDS", StringComparer.OrdinalIgnoreCase);
+			var listeners = switches.Contains("LISTENERS", StringComparer.OrdinalIgnoreCase);
+			var players = switches.Contains("PLAYERS", StringComparer.OrdinalIgnoreCase);
+			return commands || listeners || players ? new(commands, listeners, players) : new(true, true, false);
 		}
 	}
 

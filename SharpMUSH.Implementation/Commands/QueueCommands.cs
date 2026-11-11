@@ -1261,7 +1261,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@TRIGGER", Output = CommandOutput.Runs,
-		Switches = ["ARGS", "CLEARREGS", "SPOOF", "INLINE", "NOBREAK", "LOCALIZE", "INPLACE", "MATCH", "QUIET", "NOW"],
+		Switches = ["ARGS", "CLEARREGS", "SPOOF", "INLINE", "NOBREAK", "LOCALIZE", "INPLACE", "MATCH", "QUIET", "NOW", "NOTIFY"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = int.MaxValue, ParameterNames = ["object/attribute", "arguments..."])]
 	public async ValueTask<Option<CallState>> Trigger(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1442,6 +1442,16 @@ public partial class Commands
 			var admission = await parser.With(_ => stateWithRegisters, p => p.WithAttributeDebug(attribute,
 				debug => Mediator.Send(new AdmitCommandListRequest(action, debug.CurrentState,
 					new DbRefAttribute(targetObject.Object().DBRef, attribute.LongName.Split('`')), -1), ExecutionBudget.CurrentToken)));
+			if (admission.Accepted && switches.Contains("NOTIFY"))
+			{
+				// TinyMUX's /notify: queued after the attribute, so a @wait on the executor runs once it has.
+				await Mediator.Send(new AdmitCommandListRequest(
+					MarkupText.Plain("@notify/quiet me"),
+					parser.CurrentState,
+					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1), ExecutionBudget.CurrentToken);
+			}
+
 			return admission.Accepted ? CallState.Empty : new CallState(admission.Error) { HadErrors = true };
 		}
 

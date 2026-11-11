@@ -2197,6 +2197,8 @@ Note that @startups are NEVER inherited from parent objects.
 :::
 # @stats
 `@stats [<player>]`<br>
+`@stats/all`<br>
+`@stats/me`<br>
 `@stats/tables`<br>
 `@stats/flags`<br>
 `@stats/chunks`<br>
@@ -2204,18 +2206,20 @@ Note that @startups are NEVER inherited from parent objects.
 `@stats/paging`<br>
 `@stats/freespace`
 
-In its first form, display the number of objects in the game broken down by object types: `<total> objects = <rooms> rooms, <exits> exits, <things> things, <players> players.` With a `<player>`, only the objects that player owns are counted. Anyone may count their own objects (`@stats me`) or the whole game's; counting another player's objects needs the Search power or wizard/royalty privileges. The whole-game count ends with the garbage count, the free numbers (see [garbage]), which the total includes.
+In its first form, display the number of objects in the game broken down by object types: `<total> objects = <rooms> rooms, <exits> exits, <things> things, <players> players.` With a `<player>`, only the objects that player owns are counted. Anyone may count their own objects (`@stats me`) or the whole game's; counting another player's objects needs the Search power or wizard/royalty privileges. The whole-game count ends with the garbage count, the free numbers (see [garbage]), which the total includes. `@stats/all` counts the whole game, and `@stats/me` your own objects, whatever the argument.
 
 `@stats/tables` lists SharpMUSH's lookup tables (built-in functions, @functions, commands, flags, powers, attribute definitions, config options and connections) with the number of entries in each.<br>
 `@stats/flags` reports, for the FLAG and POWER flagspaces, how many definitions each has and how objects' sets of flags are distributed.
 
 `@stats/chunks`, `/regions`, `/paging` and `/freespace` report PennMUSH's attribute-chunk allocator. SharpMUSH keeps attributes in its database provider and has no chunk allocator, so these switches say so and return `#-1 NOT SUPPORTED`. For how much disk the database itself uses, see `@storage`.
 # @sweep
-`@sweep[/connected][/here][/inventory][/exits]`
+`@sweep[/connected][/here][/inventory][/exits][/commands][/listeners][/players]`
 
 @sweep gives you a list of the objects that are listening in your location, including the room you are in. Most objects only listen for a particular string or phrase, so they normally do not pose a problem if you need privacy. You will have to be careful of players and puppets since they will hear everything you say and do. (And might post the same to r.g.m!)
 
 The options are switches; an argument is ignored. With `/connected`, only connected players and puppets owned by connected players are shown. `/here` checks only your location, `/inventory` only the objects you carry, and `/exits` only AUDIBLE exits in your room.
+
+`/commands` lists only objects with $-commands, `/listeners` only those that hear (players, puppets, ^-listens and AUDIBLE objects), and `/players` every player and puppet, connected or not. They may be combined.
 
 
 ::: seealso
@@ -2318,7 +2322,7 @@ Tells the player the name of the MUSH, which version of the code is currently ru
 # @wall
 # @rwall
 # @wizwall
-`@wall[/emit][/noeval][/admin|/wizard] <message>`<br>
+`@wall[/emit][/noeval][/pose][/admin|/wizard] <message>`<br>
 `@rwall[/emit][/noeval] <message>`<br>
 `@wizwall[/emit][/noeval] <message>`
 
@@ -2328,7 +2332,7 @@ Tells the player the name of the MUSH, which version of the code is currently ru
 
 The message is prefixed with the value of the wall_prefix, rwall_prefix or wizwall_prefix options, depending on the command used.
 
-TinyMUX's `@wall/admin` is @rwall, and `@wall/wizard` is @wizwall.
+TinyMUX's `@wall/admin` is @rwall, and `@wall/wizard` is @wizwall. `@wall/pose` puts your name before the message.
 
 
 ::: seealso

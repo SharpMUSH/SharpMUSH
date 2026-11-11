@@ -50,6 +50,7 @@ The triggered attribute is queued - the new action list is not run instantly. Th
 - /inline: Run @triggered attribute immediately, rather than queueing it.
 - /clearregs: Clear Q-registers before @triggering.
 - /quiet: Don't tell you "Triggered.", as the QUIET flag does. trigger() uses it.
+- /notify: Queue `@notify me` after the attribute's commands, so a `@wait me=...` runs once they have been queued. Not with /inline.
 
 If `/inline` is given, the following switches can be used:
 - /nobreak: If the @triggered attribute has @break or @assert, it won't propagate up.

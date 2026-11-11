@@ -937,7 +937,7 @@ public partial class Commands
 	/// hold them here. The four chunk switches describe Penn's attribute-chunk allocator, which
 	/// SharpMUSH does not have, and say so instead of printing a figure that measures something else.
 	/// </summary>
-	[SharpCommand(Name = "@STATS", Switches = ["CHUNKS", "FREESPACE", "PAGING", "REGIONS", "TABLES", "FLAGS"],
+	[SharpCommand(Name = "@STATS", Switches = ["CHUNKS", "FREESPACE", "PAGING", "REGIONS", "TABLES", "FLAGS", "ALL", "ME"],
 		Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["player"])]
 	public async ValueTask<Option<CallState>> Stats(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -961,8 +961,11 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.ErrorNotSupported);
 		}
 
-		var name = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText().Trim() ?? "";
-		if (name.Length == 0)
+		// TinyMUX's and RhostMUSH's /all and /me name the world and the executor in place of the argument.
+		var name = switches.Contains("ME")
+			? "me"
+			: parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText().Trim() ?? "";
+		if (name.Length == 0 || switches.Contains("ALL"))
 		{
 			return await ObjectStatsAsync(executor, owner: null);
 		}
