@@ -36,7 +36,7 @@ public static partial class RhostCommandRewriter
 	/// <summary>Every command in <paramref name="softcode"/> this rewriter covers, rewritten, with one note per change or doubt.</summary>
 	public static string Rewrite(string softcode, List<string> notes)
 	{
-		if (!Mentions().IsMatch(softcode))
+		if (!Mentions().IsMatch(softcode) || !CommandCode().IsMatch(softcode))
 		{
 			return softcode;
 		}
@@ -68,7 +68,8 @@ public static partial class RhostCommandRewriter
 			var typed = head.Groups["switches"].Value.Split('/', StringSplitOptions.RemoveEmptyEntries);
 			var switches = typed.Select(sw => SwitchName(name, sw)).ToArray();
 			var argument = softcode[(head.Index + head.Length)..end].Trim();
-			if (name.ToLowerInvariant() is "grab" or "join" && argument.Length > 0 && !PlayerReference().IsMatch(argument))
+			if (name.ToLowerInvariant() is "grab" or "join" && argument.Length > 0
+				&& (!PlayerReference().IsMatch(argument) || argument.ToLowerInvariant() is "me" or "us" or "it" or "you" or "here" or "them" or "him" or "her"))
 			{
 				continue;
 			}
@@ -91,6 +92,11 @@ public static partial class RhostCommandRewriter
 	/// </summary>
 	private static bool StartsACommand(string text, int index, int leadAt, string name, char after)
 	{
+		if (after != '\0' && (Escaped(text, leadAt) || BracketDepth(text, leadAt) > 0))
+		{
+			return false;
+		}
+
 		switch (after)
 		{
 			case ';' or '{' or ':':
@@ -98,7 +104,7 @@ public static partial class RhostCommandRewriter
 			case ',' or '=':
 				var start = StatementStart(text, index);
 				var statement = text[start..index];
-				if (!RunsActions().IsMatch(statement))
+				if (!(after == ',' ? SplitsActions() : RunsActions()).IsMatch(statement))
 				{
 					return false;
 				}
@@ -108,6 +114,37 @@ public static partial class RhostCommandRewriter
 			default:
 				return !name.Equals("grab", StringComparison.OrdinalIgnoreCase) && !name.Equals("join", StringComparison.OrdinalIgnoreCase);
 		}
+	}
+
+	/// <summary>Whether an odd number of <c>\\</c> comes right before <paramref name="index"/>.</summary>
+	private static bool Escaped(string text, int index)
+	{
+		var count = 0;
+		for (var i = index - 1; i >= 0 && text[i] == '\\'; i--) count++;
+		return count % 2 == 1;
+	}
+
+	/// <summary>How many <c>[</c> and <c>(</c> are open at <paramref name="index"/>, from the start of the text.</summary>
+	private static int BracketDepth(string text, int index, int from = 0)
+	{
+		var depth = 0;
+		for (var i = from; i < index; i++)
+		{
+			switch (text[i])
+			{
+				case '\\' or '%':
+					i++;
+					break;
+				case '[' or '(':
+					depth++;
+					break;
+				case ']' or ')':
+					depth = Math.Max(0, depth - 1);
+					break;
+			}
+		}
+
+		return depth;
 	}
 
 	/// <summary>The first <c>=</c> outside brackets from <paramref name="start"/> up to <paramref name="end"/>, or -1.</summary>
@@ -150,8 +187,8 @@ public static partial class RhostCommandRewriter
 				case '{' when depth > 0:
 					depth--;
 					break;
-				case '{':
-				case ';' when depth == 0:
+				case '{' when !Escaped(text, i):
+				case ';' when depth == 0 && !Escaped(text, i):
 				case '\n':
 					return i + 1;
 			}
@@ -193,7 +230,7 @@ public static partial class RhostCommandRewriter
 			return Left(notes, written, "@dynhelp with a switch or a subdirectory has no SharpMUSH form");
 		}
 
-		if (left.IndexOfAny([',', '[', '(']) >= 0)
+		if (left.Length == 0 || left.StartsWith('/') || left.IndexOfAny([',', '[', '(']) >= 0)
 		{
 			return Left(notes, written, "@dynhelp naming its file or topic with code has no single SharpMUSH form");
 		}
@@ -203,7 +240,8 @@ public static partial class RhostCommandRewriter
 		var topic = slash < 0 || slash == left.Length - 1 ? "help" : left[(slash + 1)..];
 		var target = string.IsNullOrWhiteSpace(right) ? "%#"
 			: right.Trim() is var named && PlayerName().IsMatch(named) && !named.Equals("me", StringComparison.OrdinalIgnoreCase) ? $"*{named}"
-			: right.Trim();
+			: right.Trim() is ['%', '#'] or ['%', 'N' or 'n'] ? right.Trim()
+			: $"[pmatch({right.Trim()})]";
 		return Written(notes, written, $"@pemit {target}=[textfile({file},{topic})]",
 			"@dynhelp written as textfile(); check by hand that the text file is one of the game's text file categories");
 	}
@@ -221,6 +259,8 @@ public static partial class RhostCommandRewriter
 		{
 			case ["list"]:
 				return Written(notes, written, "@function/local", "@lfunction/list written as @function/local");
+			case ["display" or "delete"] when name.Length == 0:
+				return Left(notes, written, "@lfunction/display and /delete name no function");
 			case ["display"]:
 				return Written(notes, written, $"@function/local {name}", "@lfunction/display written as @function/local");
 			case ["delete"]:
@@ -231,7 +271,7 @@ public static partial class RhostCommandRewriter
 
 		var slash = right?.IndexOf('/') ?? -1;
 		if (switches.Any(sw => sw is "min" or "max" or "list" or "display" or "delete")
-			|| right is null || slash < 1 || name.Length == 0 || name.StartsWith('_'))
+			|| right is null || slash < 1 || slash == right.Length - 1 || name.Length == 0 || name.StartsWith('_'))
 		{
 			return Left(notes, written, name.StartsWith('_')
 				? "@lfunction naming a built-in to override in sandbox() has no SharpMUSH form"
@@ -258,7 +298,7 @@ public static partial class RhostCommandRewriter
 				"@zone/delete written as @chzone/remove; check by hand that the object comes first and the zone second"),
 			["purge"] when left.Length > 0 && right is null => Written(notes, written, $"@chzone {left}=",
 				"@zone/purge written as @chzone with no zone; check by hand where a zone master's members were purged"),
-			_ => Left(notes, written, "@zone listing or replacing a zone has no single SharpMUSH command; see lzone() and @chzone")
+			_ => Left(notes, written, "@zone in this form has no single SharpMUSH command; see lzone() and @chzone")
 		};
 
 	/// <summary>The <c>wmail</c> forms the mail debugger has; the rest have no SharpMUSH form.</summary>
@@ -369,7 +409,15 @@ public static partial class RhostCommandRewriter
 	{
 		var before = index - 1;
 		while (before >= body && text[before] is ' ' or '\t') before--;
-		if (before < body || text[before] is '[' or '(' or ',' or ';' or '=' or '{')
+		if (before >= body && text[before] == '!')
+		{
+			// RhostMUSH's !name() negates the call's result.
+			before--;
+		}
+
+		if (before < body || text[before] is ';' or '=' or '{' or '['
+			|| (text[before] == '(' && before > body && IsNameCharacter(text[before - 1]))
+			|| (text[before] == ',' && BracketDepth(text, before, body) > 0))
 		{
 			return true;
 		}
@@ -486,6 +534,17 @@ public static partial class RhostCommandRewriter
 
 	[GeneratedRegex(@"^[A-Za-z0-9_]+$", RegexOptions.CultureInvariant)]
 	private static partial Regex FunctionName();
+
+	/// <summary>The statements whose actions are split at commas: <c>@switch</c> and <c>@select</c>.</summary>
+	[GeneratedRegex(@"^\s*(?:[$^][^:\r\n]*:)?\s*@(?:switch|select)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+	private static partial Regex SplitsActions();
+
+	/// <summary>
+	/// Text that is command code: a <c>$</c>-command or <c>^</c>-listen, or text starting with an <c>@</c>-command,
+	/// <c>&amp;</c>, <c>{</c>, <c>think</c> or <c>wmail</c>; not a description or message, which may say a command's name.
+	/// </summary>
+	[GeneratedRegex(@"^\s*(?:[$^@&{]|(?:think|wmail)\b)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+	private static partial Regex CommandCode();
 
 	/// <summary>A word in angle brackets, as help text writes an argument to fill in.</summary>
 	[GeneratedRegex(@"<[A-Za-z][A-Za-z -]*>", RegexOptions.CultureInvariant)]

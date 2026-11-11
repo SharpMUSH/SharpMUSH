@@ -16,7 +16,7 @@ public class RhostCommandRewriterTests
 	[Arguments("@freeze 123", "@queue/pause 123")]
 	[Arguments("@thaw 456", "@queue/resume 456")]
 	[Arguments("@thaw/del 456", "@halt/pid 456")]
-	[Arguments("@dynhelp history/lesson=%0", "@pemit %0=[textfile(history,lesson)]")]
+	[Arguments("@dynhelp history/lesson=%0", "@pemit [pmatch(%0)]=[textfile(history,lesson)]")]
 	[Arguments("@dynhelp history/lesson", "@pemit %#=[textfile(history,lesson)]")]
 	[Arguments("@dynhelp history", "@pemit %#=[textfile(history,help)]")]
 	[Arguments("@switch %0=1,@freeze %1,@thaw %1", "@switch %0=1,@queue/pause %1,@queue/resume %1")]
@@ -59,6 +59,9 @@ public class RhostCommandRewriterTests
 	[Arguments("wmail/lfix")]
 	[Arguments("wmail/clean")]
 	[Arguments("@dynhelp news/a,b")]
+	[Arguments("@dynhelp =Bob")]
+	[Arguments("@lfunction double=me/")]
+	[Arguments("@lfunction/delete")]
 	public async Task LeavesWhatHasNoCounterpart(string body)
 	{
 		var notes = new List<string>();
@@ -82,6 +85,14 @@ public class RhostCommandRewriterTests
 	[Arguments("The bar is busy; grab a seat.")]
 	[Arguments("Welcome!;join us at the inn.")]
 	[Arguments("@switch %0=1,@pemit %#=@freeze is how")]
+	[Arguments("@force me=say Hi, join Bob")]
+	[Arguments("@dolist lwho()=@pemit ##=Welcome, grab Bob")]
+	[Arguments("@pemit %#=a\\;join Bob")]
+	[Arguments("@switch %0=1,@pemit %#=a\\,@freeze 3")]
+	[Arguments("@pemit %#=[switch(%0,1,{join Bob})]")]
+	[Arguments("Busy here; join Bob")]
+	[Arguments("Use @freeze 12; @thaw 12 to restart.")]
+	[Arguments("think x;join me")]
 	public async Task LeavesTextAlone(string body)
 	{
 		var notes = new List<string>();
@@ -104,6 +115,8 @@ public class RhostCommandRewriterTests
 	[Arguments("think double(7)", "think localfun(double,7)")]
 	[Arguments("$double(*):think [double(%0)]", "$double(*):think [localfun(double,%0)]")]
 	[Arguments("Type double(7) to see. x.double(1)", "Type double(7) to see. x.double(1)")]
+	[Arguments("Price, double(it) and (double(1)", "Price, double(it) and (double(1)")]
+	[Arguments("think [!double(1)] [add(1,double(2))]", "think [!localfun(double,1)] [add(1,localfun(double,2))]")]
 	public async Task CallsLocalFunctionsThroughLocalfun(string body, string expected)
 	{
 		var notes = new List<string>();
