@@ -816,11 +816,13 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(heading).IsGreaterThan(-1).Because("the table has a heading row");
 		await Assert.That(Row($"Morning_{Tag}")).IsGreaterThan(heading);
 		// Other suites schedule scenes too, so one of theirs may come first on that day.
-		var named = table.Select((line, index) => (line, index)).Where(r => r.line.Contains(day)).Select(r => r.index).ToList();
+		// The whole date, so "Sat Nov 1" does not also match a row dated Sat Nov 15.
+		bool NamesDay(string line) => System.Text.RegularExpressions.Regex.IsMatch(line, $@"(?<![0-9A-Za-z]){System.Text.RegularExpressions.Regex.Escape(day)}(?![0-9])");
+		var named = table.Select((line, index) => (line, index)).Where(r => NamesDay(r.line)).Select(r => r.index).ToList();
 		await Assert.That(named).HasSingleItem().Because("the first scene of a day names the day, and only that one");
 		await Assert.That(named[0]).IsGreaterThan(heading).And.IsLessThanOrEqualTo(Row($"Morning_{Tag}"));
 		await Assert.That(Row($"Evening_{Tag}")).IsGreaterThan(Row($"Morning_{Tag}")).Because("scenes run in time order within the day");
-		await Assert.That(table[Row($"Evening_{Tag}")]).DoesNotContain(day).Because("two scenes on the same day name it once");
+		await Assert.That(NamesDay(table[Row($"Evening_{Tag}")])).IsFalse().Because("two scenes on the same day name it once");
 		await Assert.That(table[Row($"Morning_{Tag}")]).Contains(" 09:00 ").Because("a row carries the time of day");
 		await Assert.That(Row($"Later_{Tag}")).IsGreaterThan(Row($"Evening_{Tag}"));
 		await Assert.That(Row($"Far_{Tag}")).IsEqualTo(-1).Because("by default the schedule looks 30 days ahead");
