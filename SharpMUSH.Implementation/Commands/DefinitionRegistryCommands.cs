@@ -2814,7 +2814,7 @@ public partial class Commands : ICommandRestrictionApplier
 		Switches =
 		[
 			"LIST", "AFTER", "BEFORE", "EXTEND", "IGSWITCH", "IGNORE", "OVERRIDE", "INPLACE", "INLINE", "LOCALIZE",
-			"CLEARREGS", "NOBREAK"
+			"CLEARREGS", "NOBREAK", "PERMIT", "FAIL", "ARGS"
 		], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "PERM^config.admin|POWER^HOOK", MinArgs = 0, ParameterNames = ["type", "object/attribute"])]
 	public async ValueTask<Option<CallState>> Hook(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -2825,6 +2825,12 @@ public partial class Commands : ICommandRestrictionApplier
 		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.ConfigAdmin)) is PermissionRefusal refused)
 		{
 			return await NotifyService.PermissionDenied(executor, refused);
+		}
+
+		// @hook/list with no command lists every hooked command, as TinyMUX's @hook/list does.
+		if (switches.Contains("LIST") && (args.Count == 0 || string.IsNullOrWhiteSpace(args["0"].Message.ToPlainText())))
+		{
+			return await ListAllHooksAsync(parser, executor);
 		}
 
 		if (args.Count == 0)
@@ -2854,22 +2860,11 @@ public partial class Commands : ICommandRestrictionApplier
 				return CallState.Empty;
 			}
 
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookListHeaderFormat), executor, commandName);
-			foreach (var (hookType, hook) in hooks)
-			{
-				var flags = new List<string>();
-				if (hook.Inline) flags.Add("inline");
-				if (hook.NoBreak) flags.Add("nobreak");
-				if (hook.Localize) flags.Add("localize");
-				if (hook.ClearRegs) flags.Add("clearregs");
-
-				var flagStr = flags.Count > 0 ? $" ({string.Join(", ", flags)})" : "";
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookEntryFormat), executor, hookType, hook.TargetObject, hook.AttributeName, flagStr);
-			}
+			await NotifyHooksAsync(executor, commandName, hooks);
 			return CallState.Empty;
 		}
 
-		var hookTypes = new[] { "IGNORE", "OVERRIDE", "BEFORE", "AFTER", "EXTEND", "IGSWITCH" };
+		var hookTypes = new[] { "IGNORE", "PERMIT", "FAIL", "OVERRIDE", "BEFORE", "AFTER", "ARGS", "EXTEND", "IGSWITCH" };
 		var selectedHookType = hookTypes.FirstOrDefault(switches.Contains);
 
 		if (selectedHookType == "IGSWITCH")
@@ -2906,6 +2901,15 @@ public partial class Commands : ICommandRestrictionApplier
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookMustSpecifyObject), executor);
 			return new CallState(ErrorMessages.Returns.NoObject);
+		}
+
+		// `@hook/extend <command>=*` names no object: an unknown switch hands the whole line to $-commands
+		// wherever they are, as TinyMUX's igswitch does.
+		if (objectRef == "*" && selectedHookType == "EXTEND")
+		{
+			await HookService.SetHookAsync(commandName, selectedHookType, new DBRef(-1), string.Empty);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookSetFormat), executor, selectedHookType, commandName, string.Empty);
+			return CallState.Empty;
 		}
 
 		var maybeObject = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor,
@@ -2950,6 +2954,48 @@ public partial class Commands : ICommandRestrictionApplier
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookSetFormat), executor, selectedHookType, commandName, flagDesc);
 
 		return CallState.Empty;
+	}
+
+	/// <summary>Every command that has a hook, each with its hooks, in the command's name order.</summary>
+	private async ValueTask<Option<CallState>> ListAllHooksAsync(IMUSHCodeParser parser, AnySharpObject executor)
+	{
+		var any = false;
+		var names = parser.CommandLibrary.Select(command => command.Value.LibraryInformation.Attribute.Name)
+			.Append("HUH_COMMAND")
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.Order(StringComparer.OrdinalIgnoreCase);
+		foreach (var name in names)
+		{
+			var hooks = await HookService.GetAllHooksAsync(name);
+			if (hooks.Count == 0) continue;
+
+			any = true;
+			await NotifyHooksAsync(executor, name, hooks);
+		}
+
+		if (!any)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookNoHooks), executor);
+		}
+
+		return CallState.Empty;
+	}
+
+	private async ValueTask NotifyHooksAsync(AnySharpObject executor, string commandName, Dictionary<string, CommandHook> hooks)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookListHeaderFormat), executor, commandName);
+		foreach (var (hookType, hook) in hooks)
+		{
+			var flags = new List<string>();
+			if (hook.Inline) flags.Add("inline");
+			if (hook.NoBreak) flags.Add("nobreak");
+			if (hook.Localize) flags.Add("localize");
+			if (hook.ClearRegs) flags.Add("clearregs");
+
+			var flagStr = flags.Count > 0 ? $" ({string.Join(", ", flags)})" : "";
+			object target = hook.TargetObject.Number < 0 ? "*" : hook.TargetObject;
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookEntryFormat), executor, hookType, target, hook.AttributeName, flagStr);
+		}
 	}
 
 	/// <summary>

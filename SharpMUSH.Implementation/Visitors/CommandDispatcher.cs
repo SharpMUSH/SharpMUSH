@@ -183,7 +183,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			if (builtIn.Definition is CommandDefinition definition)
 			{
 				return await services.Commands.InternalAsync(visitor, parser, src, context, builtIn.RootCommand,
-					builtIn.Switches, definition);
+					builtIn.Switches, definition, () => DispatchUnmatchedAsync(visitor, src, commandText, executorObject));
 			}
 
 			// Step 6: Check @attribute setting

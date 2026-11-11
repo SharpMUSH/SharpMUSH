@@ -590,6 +590,8 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedCommandLock = "Permission denied. You do not pass the lock on {0}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedCommandHook = "Permission denied. The permit hook on {0} refuses you.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedNotControlledNeeds = "Permission denied. You do not control {0}, and you need the {1} permission.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedNotControlledNeedsAny = "Permission denied. You do not control {0}, and you need one of these permissions: {1}.";

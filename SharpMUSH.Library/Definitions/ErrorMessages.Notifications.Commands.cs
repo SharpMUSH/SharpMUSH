@@ -63,11 +63,12 @@ public static partial class ErrorMessages
 		public const string HookMustSpecifyCommandName = "You must specify a command name.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string HookNoHooksForCommandFormat = "No hooks set for command '{0}'.";
+		public const string HookNoHooks = "No hooks set.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string HookListHeaderFormat = "Hooks for command '{0}':";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string HookEntryFormat = "  {0}: {1}/{2}{3}";
-		public const string HookMustSpecifyType = "You must specify a hook type: /ignore, /override, /before, /after, or /extend";
+		public const string HookMustSpecifyType = "You must specify a hook type: /ignore, /permit, /fail, /override, /before, /after, /args, or /extend";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string HookClearedFormat = "Hook '{0}' cleared for command '{1}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

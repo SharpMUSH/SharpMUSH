@@ -1,3 +1,4 @@
+using System.Globalization;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Implementation.Handlers.Database;
 using SharpMUSH.Implementation.Services;
@@ -29,11 +30,12 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 {
 	/// <summary>
 	/// A built-in command: splits its arguments, then runs it through its hooks, plugin interceptors,
-	/// switch and lock checks.
+	/// switch and lock checks. <paramref name="notBuiltIn"/> handles the line as one no built-in claimed
+	/// (its $-command, else Huh?), for a hook that hands the command back to softcode.
 	/// </summary>
 	public async ValueTask<Option<CallState>> InternalAsync(SharpMUSHParserVisitor visitor, IMUSHCodeParser prs,
 		MString src, ICommandContext context, string rootCommand, string[] switches,
-		CommandDefinition libraryCommandDefinition)
+		CommandDefinition libraryCommandDefinition, Func<ValueTask<Option<CallState>>> notBuiltIn)
 	{
 		var noEvalSwitch = Array.Exists(switches, s => s.Equals("NOEVAL", StringComparison.OrdinalIgnoreCase));
 		var singleArgument = switches.Any(s => libraryCommandDefinition.Attribute.SingleArgumentSwitches.Contains(s, StringComparer.OrdinalIgnoreCase));
@@ -51,7 +53,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			return split switch
 			{
 				CommandArguments argumentResults => await DispatchInternalCommand(visitor, prs, src, rootCommand, switches,
-					libraryCommandDefinition, singleArgument, argumentResults, clock),
+					libraryCommandDefinition, singleArgument, argumentResults, clock, notBuiltIn),
 				Error<string> splitError => await services.Arguments.RefuseAsync(prs, splitError.Value),
 			};
 		}
@@ -67,7 +69,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 	/// </summary>
 	private async ValueTask<Option<CallState>> DispatchInternalCommand(SharpMUSHParserVisitor visitor, IMUSHCodeParser prs, MString src,
 		string rootCommand, string[] switches, CommandDefinition libraryCommandDefinition, bool singleArgument,
-		CommandArguments argumentResults, InvocationClock clock)
+		CommandArguments argumentResults, InvocationClock clock, Func<ValueTask<Option<CallState>>> notBuiltIn)
 	{
 		var executor = await prs.CurrentState.ExecutorObject(services.Mediator);
 		var run = new BuiltInRun(rootCommand, switches, libraryCommandDefinition, singleArgument, argumentResults.Values,
@@ -78,7 +80,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		prs.CurrentState.CommandText?.EvaluatedFrom(run.HookInput);
 
 		run.Enter(prs, clock);
-		var dispatchResult = await RunBuiltInAsync(visitor, run, clock);
+		var dispatchResult = await RunBuiltInAsync(visitor, run, clock, notBuiltIn);
 		return argumentResults.Preserve(dispatchResult);
 	}
 
@@ -88,15 +90,28 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 	/// CommandLock, the command itself, then the /after hook and the plugins' after seam.
 	/// </summary>
 	private async ValueTask<Option<CallState>> RunBuiltInAsync(SharpMUSHParserVisitor visitor, BuiltInRun run,
-		InvocationClock clock)
+		InvocationClock clock, Func<ValueTask<Option<CallState>>> notBuiltIn)
 	{
-		// 1. Check for /ignore hook
+		// 0. An unknown switch on a command extended anywhere (`@hook/extend <command>=*`, TinyMUX's igswitch)
+		// makes the whole line softcode's, before any other hook runs.
+		if (await ExtendedAnywhereAsync(run))
+			return await notBuiltIn();
+
+		// 1. Check for /ignore hook: a false answer skips the built-in, and the line is matched against
+		// $-commands as if there were none (PennMUSH command_parse returns commandraw).
 		if (await IgnoredByHookAsync(run))
-			return run.PreserveHookErrors(CallState.Empty);
+			return run.PreserveHookErrors(await notBuiltIn());
+
+		// 1b. The /permit hook (TinyMUX's P_ hook): a false answer refuses the command.
+		if (await RefusedByPermitHookAsync(run) is CallState refusedByHook)
+			return run.PreserveHookErrors(refusedByHook);
 
 		// 2. Check for /before hook
 		await RunHookAsync(run, "BEFORE");
 		// Hook text is ignored, but failure state is retained.
+
+		// 2b. The /args hook (TinyMUX's R_ hook) rewrites each argument before anything reads it.
+		await RewriteArgumentsByHookAsync(run);
 
 		// Phase 2b: C# command interceptors run alongside the softcode @hook flow. The dispatcher
 		// no-ops (and HasCommandInterceptors is false) when no plugin registered an interceptor, so
@@ -201,6 +216,9 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 	{
 		public string[] Switches => switches;
 		public CommandDefinition Definition => definition;
+
+		/// <summary>The command's evaluated arguments, which an /args hook may rewrite in place.</summary>
+		public List<CallState> Arguments => arguments;
 		public AnyOptionalSharpObject Executor => executor;
 		public MString CommandWithSwitches => commandWithSwitches;
 		public string PluginCommandText { get; } = commandWithSwitches.ToPlainText();
@@ -276,6 +294,10 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 
 			Parser = caller.Push(newState, clock);
 		}
+
+		/// <summary>Gives the command the arguments an /args hook rewrote.</summary>
+		public void ReplaceArguments()
+			=> Parser = Parser.Push(Parser.CurrentState with { Arguments = SharpMUSHParserVisitor.NumberedArguments(arguments) });
 
 		/// <summary>
 		/// The named arguments a hook on this command reads as <c>%&lt;name&gt;</c> or <c>r(&lt;name&gt;,args)</c>
@@ -395,11 +417,106 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		return ledger.PoseScope(dbref.Number, room);
 	}
 
+	/// <summary>
+	/// Whether the command has an unknown switch and its /extend hook names no object (<c>=*</c>): the line is then
+	/// matched against $-commands wherever they are, as TinyMUX's <c>igswitch</c> treats it.
+	/// </summary>
+	private async ValueTask<bool> ExtendedAnywhereAsync(BuiltInRun run)
+		=> InvalidSwitches(run.Switches, run.Definition.Attribute.Switches ?? []).Length > 0
+			&& await services.HookService.GetHookAsync(run.HookedCommand, "EXTEND") is CommandHook { TargetObject.Number: < 0 };
+
 	/// <summary>Whether the command's /ignore hook answered false, so the command does not run.</summary>
 	private async ValueTask<bool> IgnoredByHookAsync(BuiltInRun run)
 		=> await services.HookService.GetHookAsync(run.HookedCommand, "IGNORE") is CommandHook ignoreCode
 			&& await EvaluateHookAsync(run, ignoreCode) is CallState ignoreValue
 			&& ignoreValue.Message.Falsy(run.Parser);
+
+	/// <summary>
+	/// Refuses the command when its /permit hook answers false, as TinyMUX's <c>P_</c> hook does: the /fail hook
+	/// runs in place of the refusal when there is one. The permit hook's q-registers are restored after it, so a
+	/// check leaves nothing behind for the command. <see langword="null"/> when the command may run.
+	/// </summary>
+	private async ValueTask<CallState?> RefusedByPermitHookAsync(BuiltInRun run)
+	{
+		// A hook whose object or attribute has gone, or is empty, has no say, and TinyMUX lets the command through.
+		if (await services.HookService.GetHookAsync(run.HookedCommand, "PERMIT") is not CommandHook permit
+			|| !await HasHookCodeAsync(permit))
+			return null;
+
+		using (RegisterScope.Enter(run.Parser.CurrentState.Registers, localize: true, clear: false))
+		{
+			if (await EvaluateHookAsync(run, permit) is not CallState { Message: { } answer } || !answer.Falsy(run.Parser))
+				return null;
+		}
+
+		if (await services.HookService.GetHookAsync(run.HookedCommand, "FAIL") is CommandHook fail)
+		{
+			await EvaluateHookAsync(run, fail);
+		}
+		else if (run.Executor is AnySharpObject refused)
+		{
+			await services.NotifyService.NotifyLocalized(refused,
+				nameof(ErrorMessages.Notifications.PermissionDeniedCommandHook), refused, run.Definition.Attribute.Name);
+		}
+
+		return new CallState(ErrorMessages.Returns.PermissionDenied);
+	}
+
+	/// <summary>Whether <paramref name="hook"/>'s object still exists and its attribute holds any code.</summary>
+	private async ValueTask<bool> HasHookCodeAsync(CommandHook hook)
+		=> await services.Mediator.Send(new GetObjectNodeQuery(hook.TargetObject)) is AnySharpObject target
+			&& await services.AttributeService.GetAttributeAsync(target, target, hook.AttributeName,
+				IAttributeService.AttributeMode.Read) is SharpAttribute[] and [.., var code]
+			&& code.Value.Length > 0;
+
+	/// <summary>
+	/// Runs the command's /args hook once per argument and puts its answer in the argument's place, as TinyMUX's
+	/// <c>R_</c> hook does. The hook reads <c>%0</c> and <c>%1</c> as the command's first two arguments (its two
+	/// sides), <c>%2</c> as the list item being rewritten, <c>%3</c> as the argument's position (from 0, list items
+	/// from 2) and <c>%4</c> as the switches as typed. Its q-registers are restored after.
+	/// </summary>
+	private async ValueTask RewriteArgumentsByHookAsync(BuiltInRun run)
+	{
+		// A hook with no code leaves the arguments alone, rather than rewriting every one to nothing.
+		if (run.Arguments.Count == 0
+			|| await services.HookService.GetHookAsync(run.HookedCommand, "ARGS") is not CommandHook rewrite
+			|| !await HasHookCodeAsync(rewrite))
+			return;
+
+		var arguments = run.Arguments;
+		// The hook reads the arguments as typed: one rewritten earlier does not change what the next one sees.
+		var original = arguments.ToArray();
+		var empty = new CallState(MarkupText.Empty);
+		var listed = run.Definition.Attribute.Behavior.HasFlag(CommandBehavior.RSArgs);
+		var leftSide = original[0];
+		var rightSide = !listed && original.Length > 1 ? original[1] : empty;
+		var switches = new CallState(MarkupText.Plain(string.Join('/', run.Switches)));
+		using (RegisterScope.Enter(run.Parser.CurrentState.Registers, localize: true, clear: false))
+		{
+			for (var index = 0; index < original.Length; index++)
+			{
+				// A command whose right side is a list (CB.RSArgs) has its left side at 0 and its list items from 2.
+				var position = listed && index > 0 ? index + 1 : index;
+				var hookArguments = new Dictionary<string, CallState>(run.HookArguments(), StringComparer.OrdinalIgnoreCase)
+				{
+					["0"] = leftSide,
+					["1"] = rightSide,
+					["2"] = position >= 2 ? original[index] : empty,
+					["3"] = new CallState(MarkupText.Plain(position.ToString(CultureInfo.InvariantCulture))),
+					["4"] = switches
+				};
+
+				var result = await HookAsync(run.Parser, run.Executor, rewrite, null!, hookArguments);
+				run.HookHadErrors |= result is CallState { HadErrors: true };
+				if (result is CallState { Message: { } rewritten })
+				{
+					arguments[index] = original[index] with { Message = rewritten };
+				}
+			}
+		}
+
+		run.ReplaceArguments();
+	}
 
 	/// <summary>
 	/// What the command's /override hook answered when its $-command matched, after its /after hook;

@@ -13,9 +13,10 @@ namespace SharpMUSH.Tests.Commands;
 /// Behavioural PROOF of <c>@hook/ignore</c> (independent of the scene package).
 ///
 /// Contract (<c>SharpMUSHParserVisitor.cs</c> ~1494): the <c>/ignore</c> attribute is evaluated BEFORE the
-/// built-in command. If it returns a FALSE value (empty / <c>"0"</c> / <c>"#-1"</c>) the dispatcher
-/// returns early (<c>CallState.Empty</c>) and the command — plus everything downstream of the gate
-/// (before/override/built-in) — is SKIPPED. A TRUE value falls through and the command runs.
+/// built-in command. If it returns a FALSE value (empty / <c>"0"</c> / <c>"#-1"</c>) the built-in — plus
+/// everything downstream of the gate (before/override/built-in) — is SKIPPED, and the line is matched against
+/// $-commands as if there were no built-in (PennMUSH's command_parse returns it). A TRUE value falls through and
+/// the command runs.
 ///
 /// We prove BOTH branches on <c>@EMIT</c> using a downstream <c>@hook/override @EMIT</c> as the observable:
 /// the override writes a marker attribute, and it can only fire if execution got PAST the <c>/ignore</c>
@@ -84,6 +85,13 @@ public class HookIgnoreBehaviorTests
 		try
 		{
 			await ArmAsync(obj, gateValue);
+			// The skipped line goes on to $-commands, where the override's own pattern would match it; out of
+			// #1's reach, only the hook could run it.
+			var roomName = TestIsolationHelpers.GenerateUniqueName("HookIgnRoom");
+			var room = (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"))).Message.ToPlainText().Trim();
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {obj}={room}"));
+			await Assert.That(room).StartsWith(await ReadLocationAsync(obj));
+
 			var original = (MUSHCodeParser)Parser;
 			var baseline = original.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue;
 			var options = new TestOptions(baseline with { Compatibility = baseline.Compatibility with { TinyBooleans = tinyBooleans } });
@@ -100,6 +108,9 @@ public class HookIgnoreBehaviorTests
 			await HookService.ClearHookAsync("@EMIT", "OVERRIDE");
 		}
 	}
+	private async Task<string> ReadLocationAsync(DBRef obj)
+		=> (await Parser.FunctionParse(MarkupText.Plain($"loc({obj})")))!.Message!.ToPlainText();
+
 	private sealed record TestOptions(SharpMUSHOptions CurrentValue) : IOptionsWrapper<SharpMUSHOptions>;
 	private sealed class OptionsProvider(IServiceProvider inner, IOptionsWrapper<SharpMUSHOptions> options) : IServiceProvider
 	{
