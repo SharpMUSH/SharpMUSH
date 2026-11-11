@@ -19,6 +19,10 @@ curl -fsSL https://raw.githubusercontent.com/SharpMUSH/SharpMUSH/main/deploy/one
 
 It needs Ubuntu 24.04 or later, or Debian 12, with 2 GB of memory (4 GB is comfortable).
 
+`install.sh install --ask` asks for the domain and the Cloudflare tokens first. With an API token, the
+installer checks it can read the zone and DNS and manage tunnels before it installs anything, and says
+which permission is missing when it cannot.
+
 ## What the installer does
 
 1. Installs Docker (from get.docker.com), `jq` and `ufw`, and allows SSH, 80, 443, 4201 and 4203
@@ -36,8 +40,16 @@ It needs Ubuntu 24.04 or later, or Debian 12, with 2 GB of memory (4 GB is comfo
      Zone > Zone > Read, is used once and is not stored. An existing tunnel works too: give
      `CLOUDFLARE_TUNNEL_TOKEN` and point the tunnel's public hostname at `http://caddy:80`. In this
      mode nothing web-facing is published on the server.
-4. Arms the first-boot guard (below), starts the stack and prints the addresses and the setup link.
-   The same text is shown at every SSH login while the guard holds.
+4. Arms the first-boot guard (below), starts the stack, waits for the game (and, behind a tunnel,
+   cloudflared's first connection) to answer, and prints the addresses and the setup link. The same
+   text is shown at every SSH login while the guard holds.
+5. Prints a note for anything left to the owner: SSH that still accepts passwords, a reboot the
+   system wants, or a tunnel the domain pointed at before this run, which no longer gets traffic and
+   can be deleted.
+
+Server and connection server metrics (`/metrics` on 9092 and 9091) are published on the host's
+loopback only. Scrape them from the host, or from elsewhere through
+`ssh -N -L 19092:127.0.0.1:9092 -L 19091:127.0.0.1:9091 root@<server>`.
 
 Run `sharpmush-configure` later to change the domain or the Cloudflare settings. It asks each
 question again, with the current answer in brackets. `install.sh` lists every variable it reads.
