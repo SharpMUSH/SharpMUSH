@@ -683,7 +683,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		// flag only triggers on literal space characters, not function/substitution output.
 		// The lexer's COMMAWS/CPAREN leading WS does NOT eat trailing spaces before delimiters
 		// (OTHER greedily consumes them), so this is the layer that handles trailing.
-		if (parser.CurrentState.ParseMode is ParseMode.Default)
+		if (CompressesSpaces)
 		{
 			// Only strip if the last child is literal text (genericText/beginGenericText)
 			// Function output (brackets) trailing spaces should be preserved within the expression
@@ -863,7 +863,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	/// PE_COMPRESS_SPACES does: in an evaluation, unless <c>space_compress</c> is off or the command was typed
 	/// after RhostMUSH's <c>}</c>.
 	/// </summary>
-	private bool CompressesSpaces
+	internal bool CompressesSpaces
 		=> parser.CurrentState.ParseMode is ParseMode.Default
 			&& Configuration.CurrentValue.Compatibility.SpaceCompress
 			&& (parser.CurrentState.Flags & ParserStateFlags.KeepSpaces) == 0;

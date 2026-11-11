@@ -845,7 +845,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		var bodyState = prs.CurrentState with
 		{
 			ParseMode = ParseMode.Default,
-			Flags = prs.CurrentState.Flags & ~(ParserStateFlags.PreserveBraces | ParserStateFlags.StrictParse),
+			Flags = prs.CurrentState.Flags & ~(ParserStateFlags.PreserveBraces | ParserStateFlags.StrictParse | ParserStateFlags.KeepSpaces),
 			CommandModifierDepth = 0
 		};
 		foreach (var (obj, attr, arguments) in matches)

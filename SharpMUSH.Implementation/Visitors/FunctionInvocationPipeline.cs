@@ -389,7 +389,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 		=> [new CallState(visitor.LiteralArgumentText(context), contextDepth)];
 
 	/// <summary>
-	/// A call's arguments read as one, commas and the spaces after them included, as a dialect reads a function that
+	/// A call's arguments read as one, commas included (the spaces after one compressed as other text's are), as a dialect reads a function that
 	/// takes one argument (<see cref="SoftcodeDialect.AbsorbsCommas"/>). Each piece is evaluated as the argument it was
 	/// parsed as, so <c>strlen(add(1,2),x)</c> reads <c>3,x</c>; <paramref name="deferred"/> leaves the evaluation to
 	/// the function, as a NoParse argument does.
@@ -405,7 +405,9 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 				switch (context.GetChild(i))
 				{
 					case ITerminalNode { Symbol: { Type: COMMAWS } comma }:
-						pieces.Add(visitor.SliceSource(comma));
+						pieces.Add(visitor.CompressesSpaces && comma.Text.Length > 1
+							? MarkupText.Plain(", ")
+							: visitor.SliceSource(comma));
 						break;
 					case IEvaluationStringContext argument:
 						pieces.Add((await visitor.EvaluationStringItems(argument))?.Message ?? MarkupText.Empty);

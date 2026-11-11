@@ -49,13 +49,13 @@ a   b
 
 ## Commas in one-argument functions
 
-Under the `mux` or `rhost` dialect, a function that takes one argument reads the commas in it as text, as TinyMUX and RhostMUSH do: `strlen(a,b)` is 3. Each piece is evaluated as it would be alone, and each comma keeps the spaces after it.
+Under the `mux` or `rhost` dialect, a function that takes one argument reads the commas in it as text, as TinyMUX and RhostMUSH do: `strlen(a,b)` is 3. Each piece is evaluated as it would be alone.
 
 - Both: `capstr()`, `escape()`, `flip()` (and `reverse()`), `lcstr()`, `lit()`, `s()`, `secure()`, `strlen()`, `ucstr()`.
 - `mux` only: `sha1()`, `strmem()`, `t()`.
 - `rhost` only: `decode64()`, `encode64()`, `ispunct()`, `strlenraw()`.
 
 ```sharp dialect=mux
-> think strlen(a,b) ucstr(a, b)
+> think [strlen(a,b)] [ucstr(a, b)]
 3 A, B
 ```
