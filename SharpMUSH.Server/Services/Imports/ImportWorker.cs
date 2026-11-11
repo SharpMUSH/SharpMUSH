@@ -110,9 +110,10 @@ public static class ImportWorker
 				}
 				await EnsurePackageManagerAsync(mediator, options, result, configuration?.Sets("package_manager") == true, deadline.Token);
 				var parser = services.GetRequiredService<IMUSHCodeParser>();
+				var current = await options.CurrentAsync();
 				await ImportedCodeScan.ReportAsync(mediator, parser.FunctionLibrary, parser.CommandLibrary,
 					new SoftcodeSyntaxAnalyzer(parser.FunctionLibrary, services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()),
-					(await options.CurrentAsync()).Compatibility.Dialect, result, deadline.Token);
+					current.Compatibility.Dialect, current.Chat.ChatTokenAlias, result, deadline.Token);
 				if (configuration is not null) ReportConfiguration(configuration, aliases, result);
 				journal.Save(session with { State = ImportSessionState.Validating, Result = result });
 				if (await mediator.Send(new GetObjectCountQuery(), deadline.Token) < result.TotalObjects)

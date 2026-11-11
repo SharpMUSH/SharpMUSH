@@ -53,7 +53,7 @@ public class ImportedCodeScanTests
 
 		var result = new ConversionResult();
 		await ImportedCodeScan.ReportAsync(WebAppFactoryArg.Services.GetRequiredService<IMediator>(), Parser.FunctionLibrary, Parser.CommandLibrary,
-			Analyzer, null, result, CancellationToken.None);
+			Analyzer, null, '+', result, CancellationToken.None);
 		var text = string.Join(" | ", result.Warnings.Select(w => w.Text));
 
 		var lead = result.Warnings.Single(w => w.Text.Contains($"zzlead{id}()"));
@@ -79,9 +79,9 @@ public class ImportedCodeScanTests
 			$"@create {thing}",
 			$"&CMD {thing}=$scan{id}:{body}",
 			$"&MINE {thing}=$+mine{id} *:think ok",
-			$"&AUSE {thing}=+mine{id} hello;@tr me/LATER{id};@pemit/silent %#=fine",
+			$"&AUSE {thing}=+mine{id} hello;@tr Me/LATER{id};@pemit/silent %#=fine;]@zzbracket{id} x;@force me=zzforced{id}",
 			$"&LATER{id} {thing}={Repeat($"zzlater{id} hi")}",
-			$"&READ {thing}={Repeat($"[u(me/ZZMISSING{id})] [get(me/HELD{id})] [v(SETBYCODE{id})] [u(me/LATER{id})]")}",
+			$"&READ {thing}={Repeat($"[u(me/ZZMISSING{id})] [u(me/HELD{id})] [u(SETBYCODE{id})] [u(me/LATER{id})] [get(me/DATA{id})] [iter(a,u(me/IT_##))]")}",
 			$"&HELD{id} {thing}=1",
 			$"&SETIT {thing}=$setit{id}:&SETBYCODE{id} me=1"
 		})
@@ -90,7 +90,7 @@ public class ImportedCodeScanTests
 
 		var result = new ConversionResult();
 		await ImportedCodeScan.ReportAsync(WebAppFactoryArg.Services.GetRequiredService<IMediator>(), Parser.FunctionLibrary,
-			Parser.CommandLibrary, Analyzer, null, result, CancellationToken.None);
+			Parser.CommandLibrary, Analyzer, null, '+', result, CancellationToken.None);
 		var text = string.Join(" | ", result.Warnings.Select(w => w.Text));
 
 		await Assert.That(text).Contains($"the command @zzcmd{id} is run {Times} times");
@@ -100,11 +100,16 @@ public class ImportedCodeScanTests
 		await Assert.That(text).Contains($"@pemit/zzsw{id} is run {Times} times, and @pemit has no /zzsw{id} switch");
 		await Assert.That(text).Contains($"@pemit/zzsw2{id}").Because("an @dolist action runs as a command");
 		await Assert.That(text).DoesNotContain("@pemit/silent").Because("@pemit has /silent");
+		await Assert.That(text).Contains($"@zzbracket{id}").And.DoesNotContain($"]@zzbracket{id}")
+			.Because("] runs the command after it unevaluated");
+		await Assert.That(text).DoesNotContain($"zzforced{id}").Because("the forced object runs it, with its own commands in reach");
 		await Assert.That(text).Contains("ljust() is called with 8 arguments").And.Contains("it takes 2 to 4 arguments");
-		await Assert.That(text).Contains($"the attribute ZZMISSING{id.ToUpperInvariant()} is read {Times} times");
+		await Assert.That(text).Contains($"the attribute ZZMISSING{id.ToUpperInvariant()} is called {Times} times");
 		await Assert.That(text).DoesNotContain($"HELD{id.ToUpperInvariant()} ").Because("an object has it");
 		await Assert.That(text).DoesNotContain($"SETBYCODE{id.ToUpperInvariant()}").Because("code sets it");
-		await Assert.That(text).DoesNotContain($"LATER{id.ToUpperInvariant()} is read").Because("an object has it");
+		await Assert.That(text).DoesNotContain($"LATER{id.ToUpperInvariant()} is called").Because("an object has it");
+		await Assert.That(text).DoesNotContain($"DATA{id.ToUpperInvariant()}").Because("get() reads data, which may not be set yet");
+		await Assert.That(text).DoesNotContain("IT_##").Because("## makes the name a computed one");
 	}
 
 	[Test]
@@ -122,7 +127,7 @@ public class ImportedCodeScanTests
 
 		var result = new ConversionResult();
 		await ImportedCodeScan.ReportAsync(WebAppFactoryArg.Services.GetRequiredService<IMediator>(), Parser.FunctionLibrary,
-			Parser.CommandLibrary, Analyzer, null, result, CancellationToken.None);
+			Parser.CommandLibrary, Analyzer, null, '+', result, CancellationToken.None);
 
 		var execscript = result.Warnings.Single(w => w.Text.Contains("execscript()"));
 		await Assert.That(execscript.Text).Contains($"see 'help {ImportedCodeScan.LeftOutTopic}'");

@@ -18,7 +18,7 @@ namespace SharpMUSH.Server.Services.Imports;
 /// <summary>
 /// Reads every attribute of an imported world for what its code asks of SharpMUSH, and warns about each thing it
 /// asks for that is not here: a function, a command, a command's switch, a function called with a number of
-/// arguments it does not take, and an attribute read by a name nothing in the world has.
+/// arguments it does not take, and an attribute called as code (<c>u()</c>, <c>@trigger</c>) by a name nothing in the world has.
 /// </summary>
 /// <remarks>
 /// <para>A name counts as here when SharpMUSH has it, when the dialect of the attribute calling it has it under that
@@ -50,9 +50,9 @@ public static partial class ImportedCodeScan
 
 	public static async Task ReportAsync(IMediator mediator, LibraryService<string, FunctionDefinition> functions,
 		LibraryService<string, CommandDefinition> commands, SoftcodeSyntaxAnalyzer analyzer, string? gameDialect,
-		ConversionResult result, CancellationToken ct)
+		char chatToken, ConversionResult result, CancellationToken ct)
 	{
-		var scan = new Scan(mediator, functions, commands, analyzer, ct);
+		var scan = new Scan(mediator, functions, commands, analyzer, chatToken, ct);
 		await scan.ReadWorldAsync(gameDialect);
 		await scan.ReadTriggeredAsync(gameDialect);
 		await scan.ReportAsync(result);
@@ -76,8 +76,9 @@ public static partial class ImportedCodeScan
 	}
 
 	private sealed class Scan(IMediator mediator, LibraryService<string, FunctionDefinition> functions,
-		LibraryService<string, CommandDefinition> commandLibrary, SoftcodeSyntaxAnalyzer analyzer, CancellationToken ct)
+		LibraryService<string, CommandDefinition> commandLibrary, SoftcodeSyntaxAnalyzer analyzer, char chatToken, CancellationToken ct)
 	{
+		private readonly char _chatToken = chatToken;
 		private readonly CommandTrie _trie = CommandTrie.For(commandLibrary);
 		private readonly HashSet<string> _registered = new(StringComparer.OrdinalIgnoreCase);
 		private readonly List<Regex> _commandPatterns = [];
@@ -124,7 +125,8 @@ public static partial class ImportedCodeScan
 				SharpAttribute? found = null;
 				await foreach (var attribute in mediator.CreateStream(new GetAttributeQuery(new DBRef(number), name.Split('`')), ct))
 					found = attribute;
-				if (found is null) continue;
+				// The query walks the path; only the attribute at its end is the one named.
+				if (found is null || !(found.LongName ?? found.Name).Equals(name, StringComparison.OrdinalIgnoreCase)) continue;
 				_commandAttributes.Add((number, name));
 				ScanCommandList(found.Value.ToPlainText(), Dialect(found, gameDialect), Place(number, name), 0);
 			}
@@ -245,15 +247,10 @@ public static partial class ImportedCodeScan
 			var arguments = call.Arguments;
 			switch (function.ToUpperInvariant())
 			{
-				case "U" or "UFUN" or "ULOCAL" or "GET" or "GET_EVAL" or "UDEFAULT" when arguments.Count > 0:
-					if (AttributePart(arguments[0]) is { } named && function.ToUpperInvariant() is not "UDEFAULT")
-						Count(_attributesRead, named, place);
-					break;
-				case "XGET" or "EVAL" when arguments.Count > 1:
-					if (Plain(arguments[1]) is { } attribute) Count(_attributesRead, attribute, place);
-					break;
-				case "V" when arguments.Count == 1:
-					if (Plain(arguments[0]) is { Length: > 1 } held && !held.All(char.IsDigit)) Count(_attributesRead, held, place);
+				// Code it calls, which has to be there. Data reads (get(), v()) are left alone: code often reads data it
+				// has not set yet, behind a default() or hasattr().
+				case "U" or "UFUN" or "ULOCAL" when arguments.Count > 0:
+					if (AttributePart(arguments[0]) is { } named) Count(_attributesRead, named, place);
 					break;
 				case "SET" when arguments.Count > 1:
 					if (arguments[1].IndexOf(':') is > 0 and var colon && Plain(arguments[1][..colon]) is { } written)
@@ -275,8 +272,14 @@ public static partial class ImportedCodeScan
 			return Plain(slash < 0 ? trimmed : trimmed[(slash + 1)..]);
 		}
 
+		/// <summary>The name, upper-cased, when it is written plainly; an iter() token in it (<c>##</c>) makes it computed.</summary>
 		private static string? Plain(string text)
-			=> text.Trim() is { Length: > 0 } trimmed && LiteralName().IsMatch(trimmed) ? trimmed.ToUpperInvariant() : null;
+			=> text.Trim() is { Length: > 0 } trimmed && LiteralName().IsMatch(trimmed)
+				&& !IterTokens.Any(token => trimmed.Contains(token, StringComparison.Ordinal))
+					? trimmed.ToUpperInvariant()
+					: null;
+
+		private static readonly string[] IterTokens = ["##", "#@", "#$", "#+", "#!"];
 
 		private void ScanCommandList(string text, SoftcodeDialect? dialect, string place, int depth)
 		{
@@ -293,14 +296,16 @@ public static partial class ImportedCodeScan
 				case '{':
 					ScanCommandList(Unbrace(line), dialect, place, depth + 1);
 					return;
+				// RhostMUSH's } keeps spaces, and ] runs the command unevaluated: either way the command follows.
 				case '}' when dialect == SoftcodeDialects.Rhost:
+				case ']':
 					ScanCommand(line[1..].TrimStart(), dialect, place, depth);
 					return;
 				case '&':
 					if (Plain(line[1..].Split(' ', 2)[0]) is { } written) _attributesSet.Add(written);
 					return;
 				// Speech, the force prefix, and a line that starts with code: nothing to name.
-				case '"' or ':' or ';' or '\\' or '\'' or '[' or '%' or '(' or '#' or '-' or '|':
+				case '"' or ':' or ';' or '\\' or '\'' or '[' or '%' or '(' or '#' or '-' or '|' or '~':
 					return;
 			}
 
@@ -315,7 +320,7 @@ public static partial class ImportedCodeScan
 			var switches = parts[1..].Where(part => part.Length > 0).ToArray();
 			if (root.Length == 0) return;
 
-			if (dialect?.Lacks(root) is true)
+			if (_trie.FindExact(root) is null && dialect?.Lacks(root) is true)
 			{
 				CountCommand(root, dialect, place, line);
 				return;
@@ -373,7 +378,7 @@ public static partial class ImportedCodeScan
 			Count(_attributesRead, name, place);
 			var number = target[..slash].Trim() switch
 			{
-				"me" or "%!" or "ME" => int.Parse(place[1..place.IndexOf('/')]),
+				var self when self.Equals("me", StringComparison.OrdinalIgnoreCase) || self == "%!" => int.Parse(place[1..place.IndexOf('/')]),
 				['#', .. var digits] when int.TryParse(digits, out var parsed) => parsed,
 				_ => -1
 			};
@@ -390,7 +395,7 @@ public static partial class ImportedCodeScan
 
 		/// <summary>
 		/// The parts of a command's arguments that run as commands: every action of <c>@switch</c>, <c>@select</c>,
-		/// <c>@ifelse</c> and <c>@skip</c>, and the whole right side of <c>@dolist</c>, <c>@wait</c>, <c>@force</c>,
+		/// <c>@ifelse</c> and <c>@skip</c>, and the whole right side of <c>@dolist</c>, <c>@wait</c>,
 		/// <c>@break</c>, <c>@assert</c>, <c>@map</c> and <c>@mapsql</c>.
 		/// </summary>
 		private static IEnumerable<string> ActionLists(string command, string arguments)
@@ -408,7 +413,8 @@ public static partial class ImportedCodeScan
 				case "@IFELSE" or "@SKIP":
 					foreach (var action in TopLevelSplit(right, ',')) yield return Unbrace(action);
 					break;
-				case "@DOLIST" or "@WAIT" or "@FORCE" or "@BREAK" or "@ASSERT" or "@MAP" or "@MAPSQL":
+				// @force is left out: the forced object runs it, with its own exits, aliases and $-commands in reach.
+				case "@DOLIST" or "@WAIT" or "@BREAK" or "@ASSERT" or "@MAP" or "@MAPSQL":
 					yield return Unbrace(right);
 					break;
 			}
@@ -418,9 +424,31 @@ public static partial class ImportedCodeScan
 		private static string Unbrace(string text)
 		{
 			var trimmed = text.Trim();
-			return trimmed.Length >= 2 && trimmed[0] == '{' && trimmed[^1] == '}' && TopLevelSplit(trimmed[1..^1], '}').Count == 1
+			return trimmed.Length >= 2 && trimmed[0] == '{' && ClosingBrace(trimmed) == trimmed.Length - 1
 				? trimmed[1..^1]
 				: trimmed;
+		}
+
+		/// <summary>Where the brace that opens <paramref name="text"/> closes, or -1.</summary>
+		private static int ClosingBrace(string text)
+		{
+			var depth = 0;
+			for (var i = 0; i < text.Length; i++)
+			{
+				switch (text[i])
+				{
+					case '\\':
+						i++;
+						break;
+					case '{':
+						depth++;
+						break;
+					case '}' when --depth == 0:
+						return i;
+				}
+			}
+
+			return -1;
 		}
 
 		/// <summary><paramref name="text"/> split at each <paramref name="separator"/> outside braces, brackets and parentheses.</summary>
@@ -455,8 +483,8 @@ public static partial class ImportedCodeScan
 
 		/// <summary>Whether something in the world answers <paramref name="name"/> typed as a command.</summary>
 		private bool WorldAnswers(string name, Tally tally, IReadOnlyList<string> channels)
-			=> _exits.Contains(name)
-				|| (name.StartsWith('+') && name.Length > 1
+			=> ct.IsCancellationRequested ? throw new OperationCanceledException(ct) : _exits.Contains(name)
+				|| (name[0] == _chatToken && name.Length > 1
 					&& channels.Any(channel => channel.StartsWith(name[1..], StringComparison.OrdinalIgnoreCase)))
 				|| tally.Samples.Any(sample => _commandPatterns.Any(pattern => SoftcodeRegex.IsMatch(pattern, sample.Trim())))
 				|| _commandPatterns.Any(pattern => SoftcodeRegex.IsMatch(pattern, name));
@@ -471,30 +499,30 @@ public static partial class ImportedCodeScan
 				(name, tally) => $"Softcode: {name.ToLowerInvariant()}() is called {Times(tally.Count)}, and SharpMUSH has no function by that name."
 					+ LeftOut('f', name) + $" First in {tally.Where}.",
 				rest => $"Softcode: {rest.Count} more functions SharpMUSH does not have are called: "
-					+ string.Join(", ", rest.Select(name => name.ToLowerInvariant() + "()")) + ".");
+					+ Listed([.. rest.Select(name => name.ToLowerInvariant() + "()")]) + ".");
 
 			Report(result, _missingCommands.Where(pair => !WorldAnswers(pair.Key, pair.Value, channels)),
 				(name, tally) => $"Softcode: the command {name} is run {Times(tally.Count)}, and neither SharpMUSH nor anything in the world answers it."
 					+ LeftOut('c', name) + $" First in {tally.Where}.",
-				rest => $"Softcode: {rest.Count} more commands nothing answers are run: {string.Join(", ", rest)}.");
+				rest => $"Softcode: {rest.Count} more commands nothing answers are run: {Listed(rest)}.");
 
 			Report(result, _missingSwitches,
 				(name, tally) => $"Softcode: {name} is run {Times(tally.Count)}, and {name[..name.IndexOf('/')]} has no /{name[(name.IndexOf('/') + 1)..]} switch. First in {tally.Where}.",
-				rest => $"Softcode: {rest.Count} more switches SharpMUSH's commands do not have are used: {string.Join(", ", rest)}.");
+				rest => $"Softcode: {rest.Count} more switches SharpMUSH's commands do not have are used: {Listed(rest)}.");
 
 			Report(result, _arity.Where(pair => !_registered.Contains(pair.Key.Name))
 					.Select(pair => KeyValuePair.Create($"{pair.Key.Name}()|{pair.Key.Count}", pair.Value)),
 				(key, tally) => ArityText(key, tally),
 				rest => $"Softcode: {rest.Count} more calls give a function a number of arguments it does not take: "
-					+ string.Join(", ", rest.Select(key => key.Replace("|", " with "))) + ".");
+					+ Listed([.. rest.Select(key => key.Replace("|", " with "))]) + ".");
 
 			var known = new HashSet<string>(_attributesHeld, StringComparer.OrdinalIgnoreCase);
 			known.UnionWith(_attributesSet);
 			known.UnionWith(_standardAttributes.Select(entry => entry.Name));
 			known.UnionWith(AttributeService.StandardAttributeAliases.Keys);
 			Report(result, _attributesRead.Where(pair => !known.Contains(pair.Key) && !AliasHeld(pair.Key, known)),
-				(name, tally) => $"Softcode: the attribute {name} is read {Times(tally.Count)}, and no object in the world has it and no code sets it. First in {tally.Where}.",
-				rest => $"Softcode: {rest.Count} more attributes are read that no object has and no code sets: {string.Join(", ", rest)}.");
+				(name, tally) => $"Softcode: the attribute {name} is called {Times(tally.Count)}, and no object in the world has it and no code sets it. First in {tally.Where}.",
+				rest => $"Softcode: {rest.Count} more attributes are called that no object has and no code sets: {Listed(rest)}.");
 		}
 
 		/// <summary>An attribute a dialect reads under another name, held under the name it means here.</summary>
@@ -538,6 +566,13 @@ public static partial class ImportedCodeScan
 			if (ordered.Count > MaxReported)
 				result.Warnings.Add(new ImportWarning(ImportWarningKind.Softcode,
 					more(ordered.Skip(MaxReported).Select(pair => pair.Key).ToList()), NeedsAction: true));
+		}
+
+		/// <summary>The names an overflow line lists, at most <see cref="MaxReported"/> of them, and how many more.</summary>
+		private static string Listed(IReadOnlyCollection<string> names)
+		{
+			var listed = string.Join(", ", names.Take(MaxReported));
+			return names.Count > MaxReported ? $"{listed} and {names.Count - MaxReported} more" : listed;
 		}
 
 		private static string Times(int count) => count == 1 ? "once" : $"{count} times";
