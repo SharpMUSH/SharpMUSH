@@ -16,7 +16,7 @@
 `SOCKSET graphics=<value>`<br>
 `@SOCKSET [me|<descriptor>]=graphics,<value>`
 
-New telnet connections start with graphics=auto. SharpMUSH asks about terminal graphics and MXP support before the connect screen, allowing up to `negotiation_wait_ms` milliseconds for replies (a Net game option, default 400). Set it to 0 to skip the wait. A complete input line ends the wait early; changes apply to new connections. Late replies update later output. Use SOCKSET graphics=off to request text instead; manual method choices override detection. Client profiles remain assumptions: a proxy or disabled image setting can prevent rendering.
+New telnet connections start with graphics=auto. Before the connect screen SharpMUSH asks about MXP support and, when the client reports a terminal emulator by name (such as kitty, foot or xterm) and sends no MTTS, about terminal graphics. A MUD client would print those questions, so it is asked only when you set SOCKSET graphics=auto or detect. SharpMUSH waits up to `negotiation_wait_ms` milliseconds for replies (a Net game option, default 400). Set it to 0 to skip the wait; changes apply to new connections. Late replies update later output. Use SOCKSET graphics=off to request text instead; manual method choices override detection. Client profiles remain assumptions: a proxy or disabled image setting can prevent rendering.
 
 - [graphics methods]: the values, from auto and detect to kitty, sixel and off
 - [graphics display]: UTF-8, screen readers, layout, fetching and moving pictures
@@ -24,7 +24,7 @@ New telnet connections start with graphics=auto. SharpMUSH asks about terminal g
 
 ## Drawing methods
 
-- auto: asks the terminal for its capabilities and chooses a drawing method (see [TERMINAL]): kitty first, then iterm2, then sixel, then blocks. Replies take priority over client-profile assumptions. An unknown client can use Sixel or Kitty when it answers the probes; without evidence it gets blocks. Also accepted as 'on' or 'yes'.
+- auto: asks the terminal for its capabilities (on connect, only a terminal emulator is asked) and chooses a drawing method (see [TERMINAL]): kitty first, then iterm2, then sixel, then blocks. Replies take priority over client-profile assumptions. An unknown client can use Sixel or Kitty when it answers the probes; without evidence it gets blocks. Also accepted as 'on' or 'yes'.
 - detect: selects auto and explicitly requests another probe. Replies are processed immediately, without Enter or another command. Setting auto again also repeats the probe. A silent client remains unknown; silence is not a rejection.
 - kitty: the Kitty graphics protocol (kitty, Ghostty, Rio). The picture is sent once per connection and drawn in its cells as text, so it scrolls and wraps like text.
 - iterm2: iTerm2 inline images (iTerm2, WezTerm, Konsole, mintty, Visual Studio Code, Rio, mlterm).

@@ -230,6 +230,20 @@ public static class TerminalFeatureReader
 	private const TerminalFeatures Links = TerminalFeatures.Hyperlinks | TerminalFeatures.CommandLinks;
 
 	/// <summary>
+	/// Whether a connection is asked what it can draw (Kitty graphics, cell size, XTVERSION, DA1) once its
+	/// terminal types are in: only when one of <paramref name="terminalTypes"/> names a known terminal emulator
+	/// and the client sent no MTTS bitvector (<paramref name="sentMtts"/>). The questions are escape sequences in
+	/// the text, which only a terminal emulator swallows; a MUD client prints them on the connect screen. An
+	/// MTTS client is a MUD client even when its terminal type entry says <c>XTERM</c>, and an unknown or missing
+	/// type (<c>xterm-256color</c> included) is not asked. <c>SOCKSET graphics=detect</c> asks anyone.
+	/// </summary>
+	public static bool ProbesAtConnect(IReadOnlyList<string> terminalTypes, bool sentMtts)
+	{
+		ArgumentNullException.ThrowIfNull(terminalTypes);
+		return !sentMtts && terminalTypes.Any(type => TerminalProfile.Identify(type) is not null);
+	}
+
+	/// <summary>
 	/// The terminal: the one the player named in <paramref name="terminalPin"/>, else the one that answered
 	/// XTVERSION in <paramref name="probe"/>, else the first of <paramref name="terminalTypes"/> that names one.
 	/// </summary>

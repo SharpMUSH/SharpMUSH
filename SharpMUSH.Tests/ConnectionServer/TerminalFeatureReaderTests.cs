@@ -13,6 +13,23 @@ namespace SharpMUSH.Tests.ConnectionServer;
 /// </summary>
 public class TerminalFeatureReaderTests
 {
+	/// <summary>
+	/// Only a client naming a terminal emulator, with no MTTS bitvector, is asked what it can draw at connect: a MUD
+	/// client prints the questions on its connect screen, whatever terminal type it claims.
+	/// </summary>
+	[Test]
+	[Arguments(new[] { "XTERM-KITTY" }, false, true)]
+	[Arguments(new[] { "foot" }, false, true)]
+	[Arguments(new[] { "xterm" }, false, true)]
+	[Arguments(new[] { "xterm-256color" }, false, false)]
+	[Arguments(new[] { "VT100" }, false, false)]
+	[Arguments(new[] { "ANSI" }, false, false)]
+	[Arguments(new string[0], false, false)]
+	[Arguments(new[] { "BEIPMU" }, false, false)]
+	[Arguments(new[] { "MUDLET", "XTERM", "MTTS 2349" }, true, false)]
+	public async Task ProbesAtConnectOnlyForATerminalEmulator(string[] terminalTypes, bool sentMtts, bool probes)
+		=> await Assert.That(TerminalFeatureReader.ProbesAtConnect(terminalTypes, sentMtts)).IsEqualTo(probes);
+
 	/// <summary>Automatic aliases request probes; explicit choices preserve their selected method without probing.</summary>
 	[Test]
 	[Arguments("auto", true)]
