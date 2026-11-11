@@ -6668,6 +6668,28 @@
     "file": "profile-command.md"
   },
   {
+    "id": "program-command",
+    "lookup": "@program",
+    "title": "@program",
+    "aliases": [
+      "@quitprogram",
+      "@dialect_program",
+      "@dialect_quitprogram"
+    ],
+    "sections": [],
+    "file": "program-command.md"
+  },
+  {
+    "id": "progreset-command",
+    "lookup": "@progreset",
+    "title": "@progreset",
+    "aliases": [
+      "@rhost_progreset"
+    ],
+    "sections": [],
+    "file": "progreset-command.md"
+  },
+  {
     "id": "ps-command",
     "lookup": "@ps",
     "title": "@ps",
