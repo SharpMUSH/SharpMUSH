@@ -183,22 +183,54 @@ public class RhostToggleTests : ServerTestBase
 		await Assert.That((await Mediator.Send(new GetObjectFlagQuery("ZONECMDCHK")))!.SetPermissions).IsEmpty();
 		await Assert.That(await CmdAs(mortal.DbRef, mortal.Handle, "@toggle/check #1")).IsEqualTo("#-1 PERMISSION DENIED");
 	}
+	private static IDisposable Rhost() => TestOptionsOverride.Scope(options => options with
+	{
+		Compatibility = options.Compatibility with { Dialect = "rhost" }
+	});
+
+	private bool GodHeard(string text)
+		=> WebAppFactoryArg.Notifications.For(WebAppFactoryArg.ExecutorDBRef).Any(line => line.Contains(text, StringComparison.Ordinal));
+
 	[Test]
 	public async Task FlagDefChangesWhoMaySetAFlagAndListsIt()
 	{
 		await DefineAsync("SNUFFED");
 
-		await Cmd("@rhost_flagdef/set SNUFFED=wiz");
-		await Cmd("@rhost_flagdef/unset SNUFFED=arch");
-		await Cmd("@rhost_flagdef/set WIZARD=mortal");
+		using (Rhost())
+		{
+			await Cmd("@flagdef/set SNUFFED=wiz");
+			await Cmd("@flagdef/unset SNUFFED=arch");
+			await Cmd("@flagdef SNUFFED");
+		}
 
 		var flag = (await Mediator.Send(new GetObjectFlagQuery("SNUFFED")))!;
 		await Assert.That(flag.SetPermissions).IsEquivalentTo(["wizard"]);
 		await Assert.That(flag.UnsetPermissions).IsEquivalentTo(["royalty"]);
-		await Assert.That((await Mediator.Send(new GetObjectFlagQuery("WIZARD")))!.SetPermissions).IsNotEmpty();
+		await Assert.That(GodHeard("@flagdef: SNUFFED updated.")).IsTrue();
+		await Assert.That(GodHeard("SNUFFED() set: wizard unset: royalty")).IsTrue();
+	}
 
-		await Cmd("@rhost_flagdef SNUFFED");
-		await Assert.That(WebAppFactoryArg.Notifications.For(WebAppFactoryArg.ExecutorDBRef))
-			.Contains("@flagdef: SNUFFED updated.").And.Contains("SNUFFED() set: wizard unset: royalty");
+	[Test]
+	public async Task FlagDefRefusesSystemFlagsAndNamesItDoesNotMatchExactly()
+	{
+		await DefineAsync("FLAGDEFEXACT");
+		var wizard = (await Mediator.Send(new GetObjectFlagQuery("WIZARD")))!.SetPermissions;
+
+		await Cmd("@rhost_flagdef/set WIZARD=mortal");
+		await Cmd("@rhost_flagdef/set FLAGDEFEXA=wiz");
+
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery("WIZARD")))!.SetPermissions).IsEquivalentTo(wizard);
+		await Assert.That(GodHeard("Cannot modify system flag 'WIZARD'.")).IsTrue();
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery("FLAGDEFEXACT")))!.SetPermissions).IsEmpty();
+		await Assert.That(GodHeard("@flagdef: there is no flag named FLAGDEFEXA.")).IsTrue();
+	}
+
+	[Test]
+	public async Task FlagDefListsAFlagByItsRhostName()
+	{
+		await Cmd("@rhost_flagdef TELOK");
+
+		await Assert.That(WebAppFactoryArg.Notifications.For(WebAppFactoryArg.ExecutorDBRef)
+			.Any(line => line.StartsWith("JUMP_OK(", StringComparison.Ordinal))).IsTrue();
 	}
 }

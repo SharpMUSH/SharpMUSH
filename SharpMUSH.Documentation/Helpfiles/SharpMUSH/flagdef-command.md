@@ -16,11 +16,9 @@
 `@flagdef/unset <flag>=<permissions>`<br>
 `@flagdef/see <flag>=<permissions>`
 
-@flagdef is [@toggledef] for flags. With no switch, `/list` or `/index`, it lists each flag matching `<pattern>` with its letter and who may set and clear it. `/set` and `/unset` change who may set or clear a flag, and `/see` who may see it. `<flag>` is a SharpMUSH flag name or a RhostMUSH one that stands for a single SharpMUSH flag. `<permissions>` takes the same words as @toggledef.
+@flagdef is [@toggledef] for flags: it lists flags matching `<pattern>` with their letters and who may set and clear them, and changes who may set, clear or see one, with @toggledef's permission words. `<flag>` is a full name or alias, or a RhostMUSH name for one SharpMUSH flag. System flags cannot be changed. Unlike RhostMUSH, `/index` lists as `/list` does, and `/see` shows as `mdark` among the set permissions. `/type` and `/letter` are refused: use [@flag]. You need the config.admin permission.
 
-A system flag cannot be changed this way; @flagdef reaches the flags a game defined itself, such as those a RhostMUSH import or [@flag] added. `/type` and `/letter` are refused: use `@flag/type` and `@flag/letter`. You need the config.admin permission.
-
-@flagdef is reached under the RhostMUSH dialect (see [compatibility config]); its own name everywhere is @rhost_flagdef.
+Under the RhostMUSH dialect (see [compatibility config]) this is @flagdef; everywhere it is @rhost_flagdef.
 
 ```sharp
 > @flagdef/set SNUFFED=wiz

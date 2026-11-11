@@ -115,7 +115,8 @@ public partial class Commands
 			nameof(ErrorMessages.Notifications.ToggleDefNeedsPermissions),
 			nameof(ErrorMessages.Notifications.ToggleDefUpdatedFormat),
 			nameof(ErrorMessages.Notifications.ToggleDefNothingToDo),
-			nameof(ErrorMessages.Notifications.ToggleDefSwitchUnsupported)));
+			nameof(ErrorMessages.Notifications.ToggleDefSwitchUnsupported),
+			ReportsFlagName: false));
 
 	/// <summary>
 	/// RhostMUSH's <c>@flagdef</c> (<c>@rhost_flagdef</c> here): <c>@toggledef</c> over flags, by RhostMUSH's flag name or
@@ -126,12 +127,13 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> FlagDef(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> await DefinitionPermissionsAsync(parser, new DefinitionKind(
 			ListFlagDefinitionsAsync,
-			async name => await Mediator.Send(new GetObjectFlagQuery(RhostFlag(name) ?? name)),
+			async name => await ExactFlagAsync(name) ?? (RhostFlag(name) is { } mapped ? await ExactFlagAsync(mapped) : null),
 			nameof(ErrorMessages.Notifications.FlagDefNoSuchFlagFormat),
 			nameof(ErrorMessages.Notifications.FlagDefNeedsPermissions),
 			nameof(ErrorMessages.Notifications.FlagDefUpdatedFormat),
 			nameof(ErrorMessages.Notifications.FlagDefNothingToDo),
-			nameof(ErrorMessages.Notifications.FlagDefSwitchUnsupported)));
+			nameof(ErrorMessages.Notifications.FlagDefSwitchUnsupported),
+			ReportsFlagName: true));
 
 	/// <summary>What <c>@toggledef</c> and <c>@flagdef</c> differ in: what they list, how a name is found, and what they say.</summary>
 	private sealed record DefinitionKind(
@@ -141,12 +143,29 @@ public partial class Commands
 		string NeedsPermissions,
 		string Updated,
 		string NothingToDo,
-		string SwitchUnsupported);
+		string SwitchUnsupported,
+		bool ReportsFlagName);
 
-	/// <summary>The SharpMUSH flag RhostMUSH's flag <paramref name="name"/> is, when it is exactly one.</summary>
+	/// <summary>The flag named or aliased exactly <paramref name="name"/>: never one it only begins.</summary>
+	private async ValueTask<SharpObjectFlag?> ExactFlagAsync(string name)
+		=> await Mediator.Send(new GetObjectFlagQuery(name)) is { } flag
+			&& (flag.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
+				|| (flag.Aliases ?? []).Any(alias => alias.Equals(name, StringComparison.OrdinalIgnoreCase)))
+				? flag
+				: null;
+
+	/// <summary>
+	/// The SharpMUSH flag RhostMUSH's flag <paramref name="name"/> is: the flag an import defines for it, else the one
+	/// SharpMUSH flag it stands for.
+	/// </summary>
 	private static string? RhostFlag(string name)
 		=> RhostNameTables.Bits.FirstOrDefault(bit => bit.Word < 4 && bit.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-			is { Flags: [var flag] } ? flag : null;
+			switch
+		{
+			{ Custom: { } custom } => custom,
+			{ Flags: [var flag] } => flag,
+			_ => null
+		};
 
 	private async ValueTask<Option<CallState>> DefinitionPermissionsAsync(IMUSHCodeParser parser, DefinitionKind kind)
 	{
@@ -211,14 +230,16 @@ public partial class Commands
 		await Mediator.Send(new UpdateObjectFlagCommand(flag.Name, flag.Aliases ?? [], flag.Symbol, setPermissions,
 			unsetPermissions, flag.TypeRestrictions));
 		await NotifyService.NotifyLocalized(executor, kind.Updated, executor,
-			name.ToUpperInvariant());
+			kind.ReportsFlagName ? flag.Name : name.ToUpperInvariant());
 		return CallState.Empty;
 	}
 
 	private async ValueTask<CallState> ListFlagDefinitionsAsync(AnySharpObject executor, string pattern)
 	{
+		var rhostName = RhostFlag(pattern);
 		await foreach (var flag in Mediator.CreateStream(new GetAllObjectFlagsQuery())
-			.Where(flag => pattern.Length == 0 || MushText.IsWildcardMatch(MString.Plain(flag.Name), pattern))
+			.Where(flag => pattern.Length == 0 || MushText.IsWildcardMatch(MString.Plain(flag.Name), pattern)
+				|| flag.Name.Equals(rhostName, StringComparison.OrdinalIgnoreCase))
 			.OrderBy(flag => flag.Name, StringComparer.Ordinal))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ToggleDefFormat), executor,
