@@ -341,10 +341,10 @@ public static class BuiltInThemes
 		display: "press-start", body: "ui", corners: "sharp", texture: "dither", ornament: "glove", frame: "window", titles: "normal", effect: "bevel", imagery: "sixteen-bit",
 		accent2: "#5f78ff", accent3: "#c8c8dc");
 
-	/// <summary>Calling Card: a phantom thief's calling card, black and white torn through with red, halftone dots, tall slanted capitals.</summary>
+	/// <summary>Calling Card: a phantom thief's night, a huge halftone moon over a black skyline crossed by a red band, black cards outlined in white over a red block, tall slanted capitals.</summary>
 	public static readonly PortalTheme CallingCard = Genre("calling-card", "Calling Card", dark: true,
 		["#0a0a0a", "#141414", "#1e1e1e", "#0f0f0f", "#000000", "#ffffff", "#c8c8c8", "#a3a3a3", "#3a3a3a", "#262626", "#ff3344", "#ffd400", "#ff8a8a"],
-		display: "anton", body: "ui", corners: "razor", texture: "shards", ornament: "jagged", frame: "torn", titles: "slant", effect: "ransom", imagery: "redout",
+		display: "anton", body: "ui", corners: "razor", texture: "nightfall", ornament: "jagged", frame: "torn", titles: "slant", effect: "ransom", imagery: "redout",
 		accent2: "#f5f5f5", accent3: "#ffd400");
 
 	/// <summary>JRPG: a modern console role-playing game, deep teal menu panels trimmed in gold over floating islands at dusk, dotted lettering, a cursor before a title.</summary>

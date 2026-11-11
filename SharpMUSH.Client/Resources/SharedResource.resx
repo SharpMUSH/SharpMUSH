@@ -12887,8 +12887,8 @@
   <data name="AdmThemeStyleTextureDither" xml:space="preserve">
     <value>Dithered bands</value>
   </data>
-  <data name="AdmThemeStyleTextureShards" xml:space="preserve">
-    <value>Red shards</value>
+  <data name="AdmThemeStyleTextureNightfall" xml:space="preserve">
+    <value>Moonlit skyline</value>
   </data>
   <data name="AdmThemeStyleTextureOverworld" xml:space="preserve">
     <value>Overworld tiles</value>

@@ -238,7 +238,7 @@ public static class ThemeStyles
 			"none", "grain", "paper", "linen", "grid", "scanlines", "stars", "mist", "damask", "lace", "velvet", "parchment",
 			"foxing", "blood", "blinds", "petals", "mandala", "swiss", "sparkles", "bubbles", "spotlights", "notebook",
 			"speedlines", "court", "hazard", "sigil", "sumi", "benday", "filmgrain", "starburst", "rain", "outrun", "galaxy",
-			"readout", "armor-panels", "sunburst-rays", "stained-glass", "crystal", "dither", "shards", "overworld", "skyward", "watercolor",
+			"readout", "armor-panels", "sunburst-rays", "stained-glass", "crystal", "dither", "nightfall", "overworld", "skyward", "watercolor",
 			"marble", "spires", "dragonflight", "plot", "seance", "dunes", "candles", "gears", "mesa", "ruins",
 		],
 		[Ornament] = [.. Ornaments.Keys],

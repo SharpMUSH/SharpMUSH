@@ -470,23 +470,24 @@
 	--texture-ink-accent-2: repeating-conic-gradient(color-mix(in srgb, var(--accent-2) 12%, transparent) 0 25%, transparent 0 50%) 0 0 / 4px 4px;
 }
 
-/* Shards: a black page with a red field torn in at its lower right, lit by dark rays bursting from the corner
-   and edged by a white band with splinters, both fading out before they reach the content; a fine red halftone
-   in the corner. */
-[data-texture="shards"] {
-	--texture: radial-gradient(120% 90% at 100% 100%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%);
-	--texture-size: 100% 100%;
-	--texture-mask-accent: url(/themes/drawings/textures/shards-accent.svg) right bottom / 1600px 1000px no-repeat intersect,
-		radial-gradient(circle at 100% 100%, #000 0 30vmax, transparent 62vmax);
-	--texture-ink-accent: repeating-conic-gradient(from 0deg at 92% 96%, color-mix(in srgb, var(--accent) 46%, #000) 0deg 3deg,
-		color-mix(in srgb, var(--accent) 30%, #000) 3deg 9deg, color-mix(in srgb, var(--accent) 40%, #000) 9deg 11deg,
-		color-mix(in srgb, var(--accent) 24%, #000) 11deg 19deg);
-	--texture-mask-accent-2: url(/themes/drawings/textures/shards-accent-2.svg) right bottom / 1600px 1000px no-repeat intersect,
-		radial-gradient(circle at 100% 100%, #000 0 26vmax, transparent 50vmax);
-	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 70%, transparent);
-	--texture-mask-text: radial-gradient(circle at 100% 100%, #000, transparent 40vmax);
-	--texture-ink-text: radial-gradient(circle, rgba(0, 0, 0, 0.45) 2px, transparent 2.6px) 0 0 / 9px 9px;
+/* Nightfall: a city at night as a phantom thief sees it. A huge moon in the text colour rises behind a skyline
+   drawn in the page colour, its lit windows cut through; the moon's lower limb breaks into halftone. A dark red
+   band in the accent sweeps up across the page at a slant, ruled with fine lines and edged by long accent-2
+   stripes, and accent-2 stars are scattered above. */
+[data-texture="nightfall"] {
+	--texture: radial-gradient(circle 46vmax at 74% 62%, color-mix(in srgb, var(--accent) 16%, transparent), transparent),
+		radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.5));
+	--texture-size: 100% 100%, 100% 100%;
+	--texture-mask-border: linear-gradient(164deg, transparent 0 46%, #000 46% 71%, transparent 71%);
+	--texture-ink-border: repeating-linear-gradient(164deg, color-mix(in srgb, var(--accent) 46%, #000) 0 22px, color-mix(in srgb, var(--accent) 36%, #000) 22px 24px);
+	--texture-mask-text: url(/themes/drawings/textures/nightfall-text.svg) center bottom / cover no-repeat;
+	--texture-ink-text: radial-gradient(circle 30vmax at 74% 60%, var(--text), color-mix(in srgb, var(--text) 78%, transparent));
+	--texture-mask-accent-2: url(/themes/drawings/textures/nightfall-accent-2.svg) center bottom / cover no-repeat;
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 60%, transparent);
+	--texture-mask-accent: url(/themes/drawings/textures/nightfall-accent.svg) center bottom / cover no-repeat;
+	--texture-ink-accent: var(--bg);
 }
+
 
 
 /* Overworld: a pixel world map seen from above, as in an old console role-playing game: seas in accent-3 with
