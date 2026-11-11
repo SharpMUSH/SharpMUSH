@@ -38,6 +38,7 @@ Options that make SharpMUSH behave like TinyMUSH, TinyMUX or RhostMUSH, for code
 - `mux_function_caller=<boolean>`: Does a global @function defined without /privileged run as whoever calls it, as on TinyMUX? When off, every @function runs as the object that holds it. See [compatibility config]. Importing a TinyMUX database turns it on.
 - `innermost_tokens=<boolean>`: Do `##` and `#@` name the innermost iter() or @dolist, and `#$` the innermost switch, as in TinyMUX? When off, they name the outermost one they are written in, as in PennMUSH.
 - `protection_flags=<boolean>`: Do NOEXAMINE and NOMODIFY protect, as on TinyMUX? Importing a TinyMUX database turns it on.
+- `attribute_eval_flags=<boolean>`: Is an attribute set `noeval` never evaluated, and a `$`-command set `noparse` matched against the command as typed, as on TinyMUX and RhostMUSH? See [compatibility config attribute eval flags]. Importing a TinyMUX or RhostMUSH database turns it on.
 
 ## RhostMUSH options
 

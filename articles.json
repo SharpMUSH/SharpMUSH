@@ -1643,6 +1643,12 @@
         "aliases": []
       },
       {
+        "id": "noeval-and-noparse-attributes-attribute-eval-flags",
+        "lookup": "compatibility config attribute eval flags",
+        "heading": "noeval and noparse attributes: \u0060attribute_eval_flags\u0060",
+        "aliases": []
+      },
+      {
         "id": "rhostmush-map-arguments-rhost-map-args",
         "lookup": "compatibility config rhostmush map arguments rhost map args",
         "heading": "RhostMUSH map() arguments: \u0060rhost_map_args\u0060",
@@ -1777,6 +1783,12 @@
         "id": "mail-listings-are-drawn-as-titled-sections",
         "lookup": "compatibility mail mail listings are drawn as titled sections",
         "heading": "Mail listings are drawn as titled sections",
+        "aliases": []
+      },
+      {
+        "id": "tinymux-mail-drafts-are-not-supported",
+        "lookup": "compatibility mail tinymux mail drafts are not supported",
+        "heading": "TinyMUX mail drafts are not supported",
         "aliases": []
       }
     ],
