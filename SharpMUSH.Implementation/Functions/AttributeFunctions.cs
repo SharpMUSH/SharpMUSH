@@ -1214,7 +1214,9 @@ public partial class Functions
 		}
 
 		var found = chain.Last();
-		if (found.IsInternal() || found.IsNoInherit())
+		// pfun() reads as God to skip the permission walk, so it applies the attribute service's wizard_dark rule
+		// for its caller itself.
+		if (chain.HiddenByWizardDark(executor, parentObject) || found.IsInternal() || found.IsNoInherit())
 		{
 			return CallState.Empty;
 		}

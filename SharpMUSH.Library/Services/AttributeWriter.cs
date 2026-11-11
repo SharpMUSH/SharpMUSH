@@ -386,14 +386,16 @@ internal sealed class AttributeWriter(
 
 	/// <summary>
 	/// PennMUSH's can_create_attr (src/attrib.c:489-494): the levels this write creates may not take the object past
-	/// <c>max_attrs_per_obj</c>. A write that only replaces values creates nothing and is never refused.
+	/// <c>max_attrs_per_obj</c>. A write that only replaces values creates nothing and is never refused, and an object
+	/// with the MANY_ATTRIBS power is never held to the limit.
 	/// </summary>
 	private async ValueTask<bool> TooManyAttributesAsync(AttributeWrite write, WritePlan plan)
 	{
 		var created = write.AttrPath.Length - plan.CreatedFrom;
 		return created > 0
 			&& await mediator.Send(new GetAttributeCountQuery(write.Obj.Object().DBRef)) + created
-				> configuration.CurrentValue.Limit.MaxAttributesPerObj;
+				> configuration.CurrentValue.Limit.MaxAttributesPerObj
+			&& !await write.Obj.HasPower("MANY_ATTRIBS");
 	}
 
 	/// <summary>

@@ -193,22 +193,22 @@ public class PermissionService(
 	public ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
 		params SharpAttribute[] attribute)
 		=> CanViewAttributeAsync(viewer, target, null, attribute,
-			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsVisual(), static x => x.IsNearby());
+			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsWizardDark(), static x => x.IsVisual(), static x => x.IsNearby());
 
 	public ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
 		params LazySharpAttribute[] attribute)
 		=> CanViewAttributeAsync(viewer, target, null, attribute,
-			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsVisual(), static x => x.IsNearby());
+			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsWizardDark(), static x => x.IsVisual(), static x => x.IsNearby());
 
 	public ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target, AttributeViewMemo memo,
 		params SharpAttribute[] attribute)
 		=> CanViewAttributeAsync(viewer, target, memo, attribute,
-			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsVisual(), static x => x.IsNearby());
+			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsWizardDark(), static x => x.IsVisual(), static x => x.IsNearby());
 
 	public ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target, AttributeViewMemo memo,
 		params LazySharpAttribute[] attribute)
 		=> CanViewAttributeAsync(viewer, target, memo, attribute,
-			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsVisual(), static x => x.IsNearby());
+			static x => x.IsInternal(), static x => x.IsMortalDark(), static x => x.IsWizardDark(), static x => x.IsVisual(), static x => x.IsNearby());
 
 	/// <summary>
 	/// PennMUSH's <c>Can_Read_Attr</c> for one attribute path, root first. The tests that depend only
@@ -217,7 +217,7 @@ public class PermissionService(
 	/// </summary>
 	private async ValueTask<bool> CanViewAttributeAsync<T>(AnySharpObject viewer, AnySharpObject target,
 		AttributeViewMemo? memo, T[] attribute, Func<T, bool> isInternal, Func<T, bool> isMortalDark,
-		Func<T, bool> isVisual, Func<T, bool> isNearby)
+		Func<T, bool> isWizardDark, Func<T, bool> isVisual, Func<T, bool> isNearby)
 	{
 		// AF_INTERNAL denies reads to everyone, including wizards and God: PennMUSH's
 		// Can_Read_Attr macro (hdrs/mushdb.h:100-101) checks `!AF_Internal(a)` before the
@@ -227,6 +227,10 @@ public class PermissionService(
 		// any tree walk, and the separate per-branch-segment loop below it only ever tests
 		// AF_Private (no_inherit) - AF_Internal never propagates across `-segments.
 		if (attribute.Length > 0 && isInternal(attribute[^1]))
+			return false;
+
+		// Not PennMUSH: wizard_dark (TinyMUX's and RhostMUSH's AF_DARK) hides from all but God, at any level of the tree.
+		if (AnyOf(attribute, isWizardDark) && !viewer.IsGod())
 			return false;
 
 		// mortal_dark hides from non-privileged viewers regardless of ownership

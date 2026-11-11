@@ -1646,7 +1646,8 @@ public partial class Commands : ICommandRestrictionApplier
 	/// <summary>
 	/// The retroactive half of PennMUSH's <c>do_attribute_access</c> (<c>src/atr_tab.c:816-826</c>):
 	/// every object's own copy of <paramref name="name"/> gets exactly <paramref name="flags"/> — its
-	/// <c>branch</c> flag aside, which is Penn's AF_ROOT and is kept — and the executor as its creator.
+	/// <c>branch</c> flag aside, which is Penn's AF_ROOT and is kept, and <c>wizard_dark</c> unless God runs it — and the
+	/// executor as its creator.
 	/// </summary>
 	/// <remarks>
 	/// One pass over the world, streamed an object at a time, each change a cache-invalidating command.
@@ -1658,6 +1659,8 @@ public partial class Commands : ICommandRestrictionApplier
 		var cancellationToken = ExecutionBudget.CurrentToken;
 		var creator = await executor.Object().Owner.WithCancellation(cancellationToken);
 		var path = name.Split('`');
+		// Only God takes wizard_dark off a copy: anyone else would read what it hides.
+		var keepsWizardDark = !executor.IsGod();
 		var (scanned, updated, failed) = (0, 0, 0);
 
 		try
@@ -1673,7 +1676,8 @@ public partial class Commands : ICommandRestrictionApplier
 
 				try
 				{
-					foreach (var flag in copy.Flags.Where(had => !IsBranchFlag(had) && !flags.Any(wanted => wanted.Name == had.Name)))
+					foreach (var flag in copy.Flags.Where(had => !IsBranchFlag(had) && !flags.Any(wanted => wanted.Name == had.Name)
+						&& !(keepsWizardDark && had.Name.Equals("wizard_dark", StringComparison.OrdinalIgnoreCase))))
 					{
 						await Mediator.Send(new UnsetAttributeFlagCommand(obj.DBRef, copy, flag), cancellationToken);
 					}
@@ -1855,6 +1859,13 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(ErrorMessages.Returns.UnknownFlag);
 		}
 
+		// wizard_dark hides from all but God, so only God gives it to an attribute, as with @set.
+		if (!executor.IsGod() && flagNames.Contains("WIZARD_DARK", StringComparer.OrdinalIgnoreCase))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandUnknownFlagFormat), executor, "WIZARD_DARK");
+			return new CallState(ErrorMessages.Returns.UnknownFlag);
+		}
+
 		// Permissions only: the entry's limit or enum survives, as in Penn's do_attribute_access.
 		var current = await Mediator.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
 		if (current?.Index is not null && flagNames.Contains("INTERNAL", StringComparer.OrdinalIgnoreCase))
@@ -1864,7 +1875,12 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var entry = await Mediator.Send(new CreateAttributeEntryCommand(attrName.ToUpper(), flagNames,
+		// Only God takes wizard_dark off the entry's defaults; anyone else's change keeps it there, though a
+		// retroactive pass still gives copies only the flags named here.
+		string[] entryFlags = !executor.IsGod() && current?.DefaultFlags.Contains("WIZARD_DARK", StringComparer.OrdinalIgnoreCase) == true
+			? [.. flagNames, "WIZARD_DARK"]
+			: flagNames;
+		var entry = await Mediator.Send(new CreateAttributeEntryCommand(attrName.ToUpper(), entryFlags,
 			current?.Limit, current?.Enum, current?.EnumDelimiter ?? ' '));
 		if (entry == null)
 		{

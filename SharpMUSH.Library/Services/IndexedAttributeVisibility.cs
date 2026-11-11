@@ -14,6 +14,7 @@ namespace SharpMUSH.Library.Services;
 /// whenever the facts cannot settle a step, so it never answers differently from the full test:
 /// <list type="number">
 /// <item>An <c>internal</c> copy is hidden from everyone (and never indexed).</item>
+/// <item>A <c>wizard_dark</c> level hides the copy from all but God.</item>
 /// <item>A <c>mortal_dark</c> level hides the copy from all but wizards and God.</item>
 /// <item>A viewer that may examine the object reads it. A wizard (God included) may examine everything, and so may
 /// any <c>See_All</c> viewer; otherwise examining needs control or the object's <c>VISUAL</c> flag and examine lock.
@@ -28,14 +29,16 @@ public sealed class IndexedAttributeVisibility
 {
 	private readonly int _viewer;
 	private readonly int _viewerOwner;
+	private readonly bool _god;
 	private readonly bool _wizard;
 	private readonly bool _seeAll;
 	private readonly bool _controlsAll;
 
-	private IndexedAttributeVisibility(int viewer, int viewerOwner, bool wizard, bool seeAll, bool controlsAll)
+	private IndexedAttributeVisibility(int viewer, int viewerOwner, bool god, bool wizard, bool seeAll, bool controlsAll)
 	{
 		_viewer = viewer;
 		_viewerOwner = viewerOwner;
+		_god = god;
 		_wizard = wizard;
 		_seeAll = seeAll;
 		_controlsAll = controlsAll;
@@ -46,18 +49,26 @@ public sealed class IndexedAttributeVisibility
 	{
 		var flags = await viewer.ReadFlagsAsync(cancellationToken);
 		var owner = await viewer.Object().Owner.WithCancellation(cancellationToken);
-		return new IndexedAttributeVisibility(viewer.Object().Key, owner.Object.Key, await viewer.IsWizard(cancellationToken),
+		return new IndexedAttributeVisibility(viewer.Object().Key, owner.Object.Key, viewer.IsGod(), await viewer.IsWizard(cancellationToken),
 			await viewer.IsSee_All(flags), flags.ControlsAll);
 	}
 
-	/// <summary>Whether every hit is visible to this viewer, so a query need not read any facts.</summary>
-	public bool SeesEverything => _wizard;
+	/// <summary>
+	/// Whether every hit is visible to this viewer, so a query need not read any facts: God's view. A wizard's is not, since
+	/// a <c>wizard_dark</c> copy is hidden from it.
+	/// </summary>
+	public bool SeesEverything => _god;
 
 	/// <summary>Whether <paramref name="hit"/>'s copy is visible, hidden, or needs the full test.</summary>
 	public IndexedAttributeVerdict Judge(IndexedAttributeHit hit)
 	{
 		var facts = hit.Facts;
 		if (facts.HasFlag(IndexedAttributeFacts.Internal))
+		{
+			return IndexedAttributeVerdict.Hidden;
+		}
+
+		if (facts.HasFlag(IndexedAttributeFacts.WizardDark) && !_god)
 		{
 			return IndexedAttributeVerdict.Hidden;
 		}

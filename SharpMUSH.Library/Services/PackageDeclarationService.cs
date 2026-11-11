@@ -165,8 +165,15 @@ public sealed class PackageDeclarationService(
 		foreach (var entry in plan.AttributeEntryWrites.Select(write => write.Entry))
 		{
 			var previous = await mediator.Send(new GetAttributeEntryQuery(entry.Name), cancellationToken);
-			// Upper case, as @attribute/access stores them, so @attribute shows one spelling.
-			await mediator.Send(new CreateAttributeEntryCommand(entry.Name, [.. entry.Flags.Select(flag => flag.ToUpperInvariant())], entry.Limit,
+			// Upper case, as @attribute/access stores them, so @attribute shows one spelling. A package cannot
+			// declare wizard_dark, and does not take it off an entry God gave it to.
+			string[] flags = [.. entry.Flags.Select(flag => flag.ToUpperInvariant())];
+			if (previous?.DefaultFlags.Contains("WIZARD_DARK", StringComparer.OrdinalIgnoreCase) == true && !flags.Contains("WIZARD_DARK"))
+			{
+				flags = [.. flags, "WIZARD_DARK"];
+			}
+
+			await mediator.Send(new CreateAttributeEntryCommand(entry.Name, flags, entry.Limit,
 				entry.Enum is null ? null : [.. entry.Enum], entry.EnumDelimiter), cancellationToken);
 			writes.Track($"attribute entry {entry.Name}", () => RestoreAttributeEntryAsync(entry.Name, previous));
 			await PutIndexAsync(entry.Name, previous?.Index?.Options, entry.Index, cancellationToken);
@@ -200,7 +207,9 @@ public sealed class PackageDeclarationService(
 					continue;
 				}
 
+				// A package never takes wizard_dark off a copy: that is God's alone to give and take.
 				var unset = copy.Flags.Where(had => !had.Name.Equals("branch", StringComparison.OrdinalIgnoreCase)
+					&& !had.Name.Equals("wizard_dark", StringComparison.OrdinalIgnoreCase)
 					&& !entry.Flags.Contains(had.Name, StringComparer.OrdinalIgnoreCase)).ToArray();
 				var set = entry.Flags.Where(wanted => !copy.Flags.Any(had => had.Name.Equals(wanted, StringComparison.OrdinalIgnoreCase)))
 					.Select(wanted => known.GetValueOrDefault(wanted)).OfType<SharpAttributeFlag>().ToArray();

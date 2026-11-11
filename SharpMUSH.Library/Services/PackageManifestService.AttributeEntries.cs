@@ -26,6 +26,7 @@ public partial class PackageManifestService
 	/// <summary>
 	/// The attribute flags a new world has (<c>AttributeFlagSeed</c> in SharpMUSH.Database, which a test keeps this
 	/// in step with), less <c>branch</c>: that marks a copy with attributes below it, which is structure, not a default.
+	/// Less <c>wizard_dark</c> too: only God gives an attribute that, and a package is applied by any administrator.
 	/// The plan checks the game's own table as well.
 	/// </summary>
 	public static IReadOnlySet<string> AttributeEntryFlags { get; } = new HashSet<string>(StringComparer.Ordinal)

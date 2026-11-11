@@ -89,7 +89,10 @@ public enum IndexedAttributeFacts
 	HasControlLock = 1 << 7,
 
 	/// <summary>The object is a player.</summary>
-	IsPlayer = 1 << 8
+	IsPlayer = 1 << 8,
+
+	/// <summary>The copy or a branch above it is <c>wizard_dark</c>.</summary>
+	WizardDark = 1 << 9
 }
 
 /// <summary>One object an index query found.</summary>

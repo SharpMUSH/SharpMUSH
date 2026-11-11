@@ -51,6 +51,11 @@
       "lookup": "roles staff"
     },
     {
+      "id": "roles-hidden",
+      "heading": "Hidden roles",
+      "lookup": "roles hidden"
+    },
+    {
       "id": "roles-everyday",
       "heading": "Everyday permissions",
       "lookup": "roles everyday"
@@ -199,6 +204,19 @@ These take parts of a wizard's standing over other players' things, so a role or
 | `game.override.movement` | passing enter, leave and exit locks; no role allows it |
 
 Each can carry a reach (see [@permission reach]). On `game.noforce` and `game.noboot` a reach names who is kept out: with reach `architect`, nobody ranked at or below architect may force you.
+
+## Hidden roles
+
+`game.hide.roles` hides your roles from players ranked below you. They see no WIZARD or ROYALTY flag on you in examine, flags(), lflags() or your name, no Roles or Overrides line when they examine you, only `everyone` from roles(), and a refusal from @role/player. hasflag() and hasrole() still answer, so softcode checks work as before. No role allows it.
+
+With a reach it hides from players ranked at or below the reach instead: with reach `wizard`, other wizards do not see your roles either. A RhostMUSH import gives it to players with the HIDEBIT power, at the power's level.
+
+```sharp
+> @permission/allow *Ariel=game.hide.roles
+> think roles(*Ariel)
+everyone
+```
+Output: what a mortal is told about a wizard who hides their roles. Ariel and God still get `wizard everyone`.
 
 ## Everyday permissions
 

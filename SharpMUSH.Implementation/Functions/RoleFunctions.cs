@@ -15,17 +15,24 @@ public partial class Functions
 {
 	/// <summary>
 	/// <c>roles(&lt;object&gt;)</c>: the slugs of the roles the object holds, its own and its account's,
-	/// highest priority first, <c>everyone</c> last.
+	/// highest priority first, <c>everyone</c> last. An object that hides its roles from the caller
+	/// (<see cref="PortalPermission.HideRoles"/>) shows only <c>everyone</c>.
 	/// </summary>
 	[SharpFunction(Name = "roles", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Roles(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await WithGrants(parser, parser.CurrentState.Arguments["0"].Message.ToPlainText(),
-			grants =>
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
+			parser.CurrentState.Arguments["0"].Message.ToPlainText(), LocateFlags.All,
+			async found =>
 			{
-				var held = grants.Roles.Select(r => r.Role).DistinctBy(r => r.Slug).ToArray();
-				return new CallState(string.Join(' ', RoleHierarchy.Ranked(held).Select(r => r.Slug)
-					.Concat(held.Where(BuiltInRoles.IsEveryone).Select(r => r.Slug))));
+				var held = (await found.GrantsAsync(ExecutionBudget.CurrentToken)).Roles.Select(r => r.Role).DistinctBy(r => r.Slug).ToArray();
+				var everyone = held.Where(BuiltInRoles.IsEveryone).Select(r => r.Slug);
+				return new CallState(string.Join(' ', await found.HidesRolesFrom(executor)
+					? everyone
+					: RoleHierarchy.Ranked(held).Select(r => r.Slug).Concat(everyone)));
 			});
+	}
 
 	/// <summary>
 	/// <c>hasrole(&lt;object&gt;, &lt;role&gt;[, &lt;at least&gt;])</c>: 1 when the object holds the role, itself or through its

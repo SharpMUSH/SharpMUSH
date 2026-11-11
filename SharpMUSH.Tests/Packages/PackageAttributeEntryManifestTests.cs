@@ -352,11 +352,11 @@ public class PackageAttributeEntryManifestTests
 		await Assert.That(parsed.Warnings.Select(w => w.Path)).Contains("attributes.HP.watch");
 	}
 
-	/// <summary>The reader knows the attribute flags a new world is seeded with, less <c>branch</c>.</summary>
+	/// <summary>The reader knows the attribute flags a new world is seeded with, less <c>branch</c> and the God-only <c>wizard_dark</c>.</summary>
 	[Test]
 	public async Task TheKnownFlagsAreTheSeededOnes()
 	{
-		var seeded = AttributeFlagSeed.Flags.Select(f => f.Name).Where(n => n != "branch");
+		var seeded = AttributeFlagSeed.Flags.Select(f => f.Name).Where(n => n is not "branch" and not "wizard_dark");
 		await Assert.That(PackageManifestService.AttributeEntryFlags).IsEquivalentTo(seeded);
 	}
 }

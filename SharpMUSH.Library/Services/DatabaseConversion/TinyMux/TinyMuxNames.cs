@@ -250,7 +250,7 @@ public static class TinyMuxNames
 	public static readonly FrozenDictionary<int, AttributeFlagMapping> AttributeFlags = new Dictionary<int, AttributeFlagMapping>
 	{
 		[0x1] = new("odark", [], "dropped: SharpMUSH has no flag that hides only the o-message"),
-		[0x2] = new("dark", ["mortal_dark"], "imported as mortal_dark, which wizards can still see"),
+		[0x2] = new("dark", ["wizard_dark"]),
 		[0x4] = new("wizard", ["wizard"]),
 		[0x8] = new("mdark", ["mortal_dark"]),
 		[0x10] = new("internal", ["internal"]),

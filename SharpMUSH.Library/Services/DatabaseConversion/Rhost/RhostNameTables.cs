@@ -280,7 +280,7 @@ public static class RhostNameTables
 			Ranked("NOKILL", Power("Unkillable")), Ranked("SEARCH_ANY", Power("Search")), Ranked("SECURITY", PortalPermission.FlagsRestricted),
 			Ranked("WHO_UNFIND", PortalPermission.PlayersView), Ranked("WRAITH", PortalPermission.OverrideMovement)]),
 		.. Fields(4, [
-			Flat("PURGE", PortalPermission.ServerOperate), Dropped("HIDEBIT", "SharpMUSH cannot hide the roles a player holds"),
+			Flat("PURGE", PortalPermission.ServerOperate), Ranked("HIDEBIT", PortalPermission.HideRoles),
 			Flat("NOWHO", Power("Hide")), Flat("FULLTEL", Power("Tport_Anywhere")), Flat("EXAMINE_FULL", Power("See_All")),
 			Dropped("API", NoApi), Dropped("MONITORAPI", NoApi), Flat("WIZ_IDLE", Power("Idle")), Ranked("WIZ_SPOOF", Power("Can_spoof")),
 			Flat("USE_FREELIST", Power("PICK_DBREFS")), Dropped("ANSINAME", AnsiNames)]),
@@ -344,7 +344,7 @@ public static class RhostNameTables
 	[
 		// AF_ODARK is the default for nearly every attribute and means nothing on its own.
 		new(0x1, "ODARK", null, ""),
-		new(0x2, "DARK", "mortal_dark", "only God sees it in the source; wizards see it here"),
+		new(0x2, "DARK", "wizard_dark"),
 		new(0x4, "WIZARD", "wizard"),
 		new(0x8, "MDARK", "mortal_dark"),
 		new(0x10, "INTERNAL", null, ""),
