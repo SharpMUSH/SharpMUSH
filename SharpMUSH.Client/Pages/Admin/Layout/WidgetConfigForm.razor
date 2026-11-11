@@ -69,6 +69,14 @@
                                   ValueChanged="@(text => Edit(() => Document.SetLines(key, (text ?? string.Empty).Split('\n'))))" />
                     break;
 
+                case "string" when field.Image:
+                    <label class="wcf-list-label" for="@InputIdOf(key)">@LabelOf(field)</label>
+                    <ImageUrlField InputId="@InputIdOf(key)" Label="@LabelOf(field)" DescribedBy="@HelpId(key)"
+                                   Value="@Document.GetString(key)" Placeholder="@ExampleText(field)"
+                                   ValueChanged="@(text => Edit(() => Document.SetString(key, text)))" />
+                    <div class="wcf-help" id="@HelpId(key)">@Loc[field.DescriptionKey]</div>
+                    break;
+
                 case "string":
                     <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="@LabelOf(field)"
                                   Lines="@(field.Multiline ? 6 : 1)" Sizing="@(field.Multiline ? InputSizing.Auto : InputSizing.Fixed)"
@@ -106,6 +114,9 @@
 
     /// <summary>A page-unique id for a switch's help text, so the switch can name it as its description.</summary>
     private string HelpId(string key) => $"wcf-help-{_instance}-{key}";
+
+    /// <summary>A page-unique id for a field's input, so its label can name it.</summary>
+    private string InputIdOf(string key) => $"wcf-input-{_instance}-{key}";
 
     private readonly string _instance = Guid.NewGuid().ToString("N")[..8];
 

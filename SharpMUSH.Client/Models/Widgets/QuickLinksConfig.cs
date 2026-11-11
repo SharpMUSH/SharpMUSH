@@ -10,7 +10,7 @@ public record QuickLink(
 	string Label,
 	[property: WidgetConfigKey("LayCfgQuickLinkUrl", LabelKey = "LayCfgQuickLinkUrlLabel", Example = "/wiki/house-rules")]
 	string Url,
-	[property: WidgetConfigKey("LayCfgQuickLinkIcon", LabelKey = "LayCfgQuickLinkIconLabel", Example = "M12 2 2 7l10 5 10-5z")]
+	[property: WidgetConfigKey("LayCfgQuickLinkIcon", LabelKey = "LayCfgQuickLinkIconLabel", Example = "/api/wiki-assets/7/rules.svg", Image = true)]
 	string? Icon = null,
 	[property: WidgetConfigKey("LayCfgQuickLinkNewTab", LabelKey = "LayCfgQuickLinkNewTabLabel")]
 	bool NewTab = false);

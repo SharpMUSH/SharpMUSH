@@ -2311,7 +2311,7 @@
     <value>Where the link goes, internal or external.</value>
   </data>
   <data name="LayCfgQuickLinkIcon" xml:space="preserve">
-    <value>Icon SVG path. Unset uses a generic link icon.</value>
+    <value>Picture shown beside the link: upload one or give its address. SVG is preferred, as it stays sharp at any size. Unset uses a generic link icon.</value>
   </data>
   <data name="LayCfgQuickLinkNewTab" xml:space="preserve">
     <value>Open the link in a new tab.</value>

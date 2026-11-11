@@ -1,4 +1,4 @@
-/* A picture option. The field and buttons match ConfigFieldRow's; scoped CSS does not reach a child component. */
+/* A picture chosen by address, from the media uploads, or by uploading one. The field and buttons match ConfigFieldRow's; scoped CSS does not reach a child component. */
 .cfg-image {
 	display: flex;
 	flex-direction: column;

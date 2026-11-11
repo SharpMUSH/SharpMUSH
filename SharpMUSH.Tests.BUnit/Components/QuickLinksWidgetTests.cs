@@ -149,3 +149,43 @@ public class QuickLinksWidgetChipTests : QuickLinksWidgetTestBase
 		await Assert.That(chips.Count).IsEqualTo(1);
 	}
 }
+
+public class QuickLinksWidgetIconTests : QuickLinksWidgetTestBase
+{
+	private IRenderedComponent<QuickLinksWidget> RenderIcon(string? icon, WidgetZone zone) =>
+		Render<QuickLinksWidget>(p => p
+			.Add(c => c.Config, BuildConfig(new { Links = new[] { new { Label = "Rules", Url = "/wiki/rules", Icon = icon } } }))
+			.Add(c => c.Zone, zone.ToString()));
+
+	[TUnit.Core.Test]
+	[Arguments(WidgetZone.TopBar)]
+	[Arguments(WidgetZone.LeftSidebar)]
+	public async Task AnUploadedPicture_IsShownAsTheIcon(WidgetZone zone)
+	{
+		var cut = RenderIcon("/api/wiki-assets/abc/rules.svg", zone);
+
+		await Assert.That(cut.Find("img.ql-icon").GetAttribute("src")).IsEqualTo("/api/wiki-assets/abc/rules.svg");
+		await Assert.That(cut.Find("img.ql-icon").GetAttribute("alt")).IsEqualTo(string.Empty).Because("the label names the link");
+	}
+
+	[TUnit.Core.Test]
+	public async Task InlineSvgMarkup_IsDrawnAsBefore()
+	{
+		var cut = RenderIcon("<path d=\"M1 1h2\"/>", WidgetZone.TopBar);
+
+		await Assert.That(cut.FindAll("img.ql-icon").Count).IsEqualTo(0);
+		await Assert.That(cut.Markup).Contains("M1 1h2");
+	}
+
+	[TUnit.Core.Test]
+	[Arguments(null)]
+	[Arguments("javascript:alert(1)")]
+	[Arguments("http://example.com/plain.png")]
+	public async Task NoLoadablePicture_ShowsTheGenericLinkIcon(string? icon)
+	{
+		var cut = RenderIcon(icon, WidgetZone.TopBar);
+
+		await Assert.That(cut.FindAll("img.ql-icon").Count).IsEqualTo(0);
+		await Assert.That(cut.Markup).Contains(Icons.Material.Filled.Link);
+	}
+}

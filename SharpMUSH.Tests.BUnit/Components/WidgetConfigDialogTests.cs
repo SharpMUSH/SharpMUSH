@@ -1,15 +1,27 @@
+using System.Net;
+using NSubstitute;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor;
 using MudBlazor.Services;
 using SharpMUSH.Client.Pages.Admin.Layout;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Client.Widgets;
+using SharpMUSH.Library.API;
 using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;
+
+/// <summary>Answers the media library's list with the given pictures.</summary>
+file sealed class AssetListHandler(WikiAssetInfo[] assets) : HttpMessageHandler
+{
+	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+		Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = System.Net.Http.Json.JsonContent.Create(assets) });
+}
 
 /// <summary>
 /// The layout editor's config dialog is where an admin actually types widget config, so the accepted
@@ -18,6 +30,8 @@ namespace SharpMUSH.Tests.BUnit.Components;
 /// </summary>
 public class WidgetConfigDialogTests : BunitContext
 {
+	private const string RulesIcon = "/api/wiki-assets/abc/rules.svg";
+
 	public WidgetConfigDialogTests()
 	{
 		var registry = new WidgetRegistry();
@@ -29,6 +43,19 @@ public class WidgetConfigDialogTests : BunitContext
 		Services.AddMudServices();
 		Services.AddSingleton<IWidgetRegistry>(registry);
 		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
+
+		// The link icon field offers the media uploads, which it lists through WikiAssetService.
+		var client = new HttpClient(new AssetListHandler(
+			[new("abc", "rules.svg", RulesIcon, "image/svg+xml", 10, "", "#1", DateTimeOffset.UtcNow)]))
+		{ BaseAddress = new Uri("https://localhost:8081/") };
+		var factory = Substitute.For<IHttpClientFactory>();
+		factory.CreateClient("api").Returns(client);
+		Services.AddSingleton(factory)
+			.AddSingleton<ILogger<WikiAssetService>>(NullLogger<WikiAssetService>.Instance)
+			.AddSingleton<WikiAssetService>();
+		var auth = AddAuthorization();
+		auth.SetAuthorized("staff");
+		auth.SetPolicies("layout.admin", "media.admin", "media.upload");
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -271,6 +298,35 @@ public class WidgetConfigDialogTests : BunitContext
 		await Assert.That((string?)links[0]!["label"]).IsEqualTo("News");
 		await Assert.That((bool?)links[0]!["newTab"]).IsTrue();
 		await Assert.That((string?)links[1]!["url"]).IsEqualTo("/wiki/rules");
+	}
+
+	[TUnit.Core.Test]
+	public async Task Form_LinkIcon_IsPickedFromTheMediaUploads()
+	{
+		var (provider, dialog) = await ShowDialogAsync("QuickLinks", "{\"links\":[{\"label\":\"Rules\",\"url\":\"/wiki/rules\"}]}");
+		AngleSharp.Dom.IElement Icon() => provider.Find(".wcf-item [data-config-key='icon']");
+
+		await Assert.That(Icon().QuerySelector(".cfg-image")).IsNotNull().Because("an icon is a picture, not a text field");
+		await Assert.That(Icon().QuerySelector("input.cfg-text")!.GetAttribute("placeholder")).IsEqualTo("/api/wiki-assets/7/rules.svg");
+
+		await Icon().QuerySelector("button[aria-expanded]")!.ClickAsync();
+		provider.WaitForAssertion(() => _ = Icon().QuerySelector(".cfg-image-tile") ?? throw new InvalidOperationException("no tiles yet"), TimeSpan.FromSeconds(5));
+		await Icon().QuerySelector(".cfg-image-tile")!.ClickAsync();
+
+		await Assert.That(Icon().QuerySelector(".cfg-image-preview img")!.GetAttribute("src")).IsEqualTo(RulesIcon);
+		var links = Parsed(await ApplyAsync(provider, dialog))["links"]!.AsArray();
+		await Assert.That((string?)links[0]!["icon"]).IsEqualTo(RulesIcon);
+	}
+
+	[TUnit.Core.Test]
+	public async Task Form_LinkIcon_TakesATypedAddress()
+	{
+		var (provider, dialog) = await ShowDialogAsync("QuickLinks", "{\"links\":[{\"label\":\"Rules\",\"url\":\"/wiki/rules\"}]}");
+
+		await provider.Find(".wcf-item [data-config-key='icon'] input.cfg-text").ChangeAsync("  https://example.com/rules.svg ");
+
+		var links = Parsed(await ApplyAsync(provider, dialog))["links"]!.AsArray();
+		await Assert.That((string?)links[0]!["icon"]).IsEqualTo("https://example.com/rules.svg");
 	}
 
 	[TUnit.Core.Test]

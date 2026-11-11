@@ -27,6 +27,9 @@ public sealed record WidgetConfigField(
 
 	/// <summary>A sample value for the empty field, from <see cref="WidgetConfigKeyAttribute.Example"/>.</summary>
 	public string? Example { get; init; }
+
+	/// <summary>Whether a string key holds a picture's address, from <see cref="WidgetConfigKeyAttribute.Image"/>.</summary>
+	public bool Image { get; init; }
 }
 
 /// <summary>
@@ -88,7 +91,8 @@ public static class WidgetConfigSchema
 		{
 			LabelKey = attribute.LabelKey,
 			Multiline = attribute.Multiline,
-			Example = attribute.Example
+			Example = attribute.Example,
+			Image = attribute.Image
 		};
 	}
 

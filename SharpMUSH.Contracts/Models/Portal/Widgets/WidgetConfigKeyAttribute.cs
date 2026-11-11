@@ -41,4 +41,10 @@ public sealed class WidgetConfigKeyAttribute(string descriptionKey) : Attribute
 
 	/// <summary>Whether a string key holds several lines (Markdown, say), so the form gives it a text area.</summary>
 	public bool Multiline { get; init; }
+
+	/// <summary>
+	/// Whether a string key holds a picture's address, so the form offers the media uploads to pick
+	/// one from or add one to beside the address field.
+	/// </summary>
+	public bool Image { get; init; }
 }
