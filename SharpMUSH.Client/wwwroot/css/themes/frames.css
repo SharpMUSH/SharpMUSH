@@ -364,32 +364,35 @@
 	--card-shadow: 0 0 0 2px #000, inset 0 0 0 1px var(--accent-3), inset 0 2px 0 1px rgba(255,255,255,0.25);
 }
 
-/* Torn: a red slash torn across the top left, a slanted accent-2 stripe through the top right corner, an accent
-   triangle cut into the lower right corner, and white halftone fading in from it. */
+/* Torn: an accent triangle cut into the lower right corner and a slanted accent-2 stripe through the top right
+   one; the rest of the card stays plain black, so its text reads cleanly. */
 [data-frame-marks="torn"] {
-	--card-marks: linear-gradient(135deg, transparent 50%, var(--accent) 50%) right bottom / 38px 38px no-repeat,
-		linear-gradient(60deg, transparent 0 calc(100% - 46px), var(--accent-2) calc(100% - 46px) calc(100% - 40px), transparent calc(100% - 40px) calc(100% - 32px),
-			var(--accent) calc(100% - 32px) calc(100% - 24px), transparent calc(100% - 24px)) right top / 90px 60px no-repeat;
-	--card-mask-accent: url(/themes/drawings/frames/torn-slash.svg) left top / 140px 34px no-repeat;
-	--card-ink-accent: color-mix(in srgb, var(--accent) 45%, transparent);
-	--card-mask-text: radial-gradient(circle at 100% 100%, #000, transparent 70%) right bottom / 180px 120px no-repeat;
-	--card-ink-text: radial-gradient(circle, color-mix(in srgb, var(--text) 26%, transparent) 1.4px, transparent 1.9px) 0 0 / 7px 7px;
+	--card-marks: linear-gradient(135deg, transparent 50%, var(--accent) 50%) right bottom / 30px 30px no-repeat,
+		linear-gradient(60deg, transparent 0 calc(100% - 46px), var(--accent-2) calc(100% - 46px) calc(100% - 41px), transparent calc(100% - 41px) calc(100% - 34px),
+			var(--accent) calc(100% - 34px) calc(100% - 27px), transparent calc(100% - 27px)) right top / 80px 50px no-repeat;
 }
 /* Torn: a black card in a white outline, thrown on the table over a hard accent block. */
 [data-frame-shadow="torn"] {
-	--card-shadow: 0 0 0 3px var(--accent-2), 9px 9px 0 3px var(--accent), 9px 9px 0 5px #000;
+	--card-shadow: 0 0 0 2px var(--accent-2), 6px 6px 0 2px var(--accent);
 }
 
-/* Dialog: a message box lit from the top in accent-3, with a small accent arrow at the foot, as when more text
-   waits. */
+
+/* Dialog: a menu panel of tinted glass, lit from the top in accent-2 with a sheen across it, a gold diamond at
+   each corner and a small accent arrow at the foot, as when more text waits. */
 [data-frame-marks="dialog"] {
-	--card-marks: linear-gradient(180deg, color-mix(in srgb, var(--accent-3) 22%, transparent), transparent 60%);
-	--card-mask-accent: url(/themes/drawings/frames/dialog-arrow.svg) center bottom 6px / 12px 7px no-repeat;
+	--card-marks: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 16%, transparent), transparent 55%),
+		linear-gradient(115deg, transparent 0 30%, color-mix(in srgb, var(--text) 5%, transparent) 30% 42%, transparent 42%);
+	--card-mask-accent: url(/themes/drawings/frames/dialog-arrow.svg) center bottom 6px / 12px 7px no-repeat,
+		url(/themes/drawings/frames/dialog-diamond.svg) left 3px top 3px / 10px 10px no-repeat,
+		url(/themes/drawings/frames/dialog-diamond.svg) right 3px top 3px / 10px 10px no-repeat,
+		url(/themes/drawings/frames/dialog-diamond.svg) left 3px bottom 3px / 10px 10px no-repeat,
+		url(/themes/drawings/frames/dialog-diamond.svg) right 3px bottom 3px / 10px 10px no-repeat;
 }
-/* Dialog: a black gap inside the white border and a black ring outside it. */
+/* Dialog: a fine gold line inside the border, a dark gap between them, a black ring outside and a soft drop. */
 [data-frame-shadow="dialog"] {
-	--card-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px color-mix(in srgb, var(--border) 45%, transparent), 0 0 0 2px #000;
+	--card-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 0 1px #000, 0 10px 24px rgba(0, 0, 0, 0.45);
 }
+
 
 /* Stat block: bars of accent-3 across the top and foot of the card. */
 [data-frame-marks="statblock"] {

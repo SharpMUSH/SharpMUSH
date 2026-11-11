@@ -470,31 +470,26 @@
 	--texture-ink-accent-2: repeating-conic-gradient(color-mix(in srgb, var(--accent-2) 12%, transparent) 0 25%, transparent 0 50%) 0 0 / 4px 4px;
 }
 
-/* Shards: a red field torn in from the right of the page, its left edge spiked and ringed by a white band, lit
-   by dark rays bursting from the lower right and shaded with black halftone; white splinters and stars over it.
-   The sidebar is a dark red menu panel with fine slanted lines, halftone fading in from both ends, and a slanted
-   accent bar edged in accent-2 along its top and its foot. */
+/* Shards: a black page with a red field torn in at its lower right, lit by dark rays bursting from the corner
+   and edged by a white band with splinters, both fading out before they reach the content; a fine red halftone
+   in the corner, and a red bar along the top of the sidebar. */
 [data-texture="shards"] {
-	--texture: radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 60%);
+	--texture: radial-gradient(120% 90% at 100% 100%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%);
 	--texture-size: 100% 100%;
-	--texture-mask-border: linear-gradient(#000, #000) left var(--rail-w) top 0 / var(--side-w) 100% no-repeat;
-	--texture-ink-border: repeating-linear-gradient(162deg, transparent 0 46px, color-mix(in srgb, var(--accent) 18%, transparent) 46px 48px),
-		linear-gradient(180deg, color-mix(in srgb, var(--accent) 34%, #000), color-mix(in srgb, var(--accent) 16%, #000))
-		left var(--rail-w) top 0 / var(--side-w) 100% no-repeat;
-	--texture-mask-accent-3: linear-gradient(#000, #000) left var(--rail-w) top 0 / var(--side-w) 100% no-repeat;
-	--texture-ink-accent-3: linear-gradient(170deg, var(--accent) 0 6px, var(--accent-2) 6px 10px, transparent 10px),
-		linear-gradient(170deg, transparent 0 calc(100% - 38px), var(--accent-2) calc(100% - 38px) calc(100% - 33px), var(--accent) calc(100% - 33px))
-		left var(--rail-w) top 0 / var(--side-w) 100% no-repeat;
-	--texture-mask-accent: url(/themes/drawings/textures/shards-accent.svg) right bottom / 1600px 1000px no-repeat;
-	--texture-ink-accent: repeating-conic-gradient(from 0deg at 92% 96%, color-mix(in srgb, var(--accent) 62%, #000) 0deg 3deg,
-		color-mix(in srgb, var(--accent) 40%, #000) 3deg 9deg, color-mix(in srgb, var(--accent) 56%, #000) 9deg 11deg,
-		color-mix(in srgb, var(--accent) 34%, #000) 11deg 19deg);
-	--texture-mask-accent-2: url(/themes/drawings/textures/shards-accent-2.svg) right bottom / 1600px 1000px no-repeat;
-	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 88%, transparent);
-	--texture-mask-text: radial-gradient(60% 70% at 40% 100%, #000, transparent 70%),
-		linear-gradient(180deg, #000, transparent 40%, transparent 65%, #000) left var(--rail-w) top 0 / var(--side-w) 100% no-repeat;
-	--texture-ink-text: radial-gradient(circle, rgba(0, 0, 0, 0.5) 2px, transparent 2.6px) 0 0 / 9px 9px;
+	--texture-mask-accent-3: linear-gradient(#000, #000) left var(--rail-w) top 0 / var(--side-w) 5px no-repeat;
+	--texture-ink-accent-3: var(--accent);
+	--texture-mask-accent: url(/themes/drawings/textures/shards-accent.svg) right bottom / 1600px 1000px no-repeat intersect,
+		radial-gradient(circle at 100% 100%, #000 0 30vmax, transparent 62vmax);
+	--texture-ink-accent: repeating-conic-gradient(from 0deg at 92% 96%, color-mix(in srgb, var(--accent) 46%, #000) 0deg 3deg,
+		color-mix(in srgb, var(--accent) 30%, #000) 3deg 9deg, color-mix(in srgb, var(--accent) 40%, #000) 9deg 11deg,
+		color-mix(in srgb, var(--accent) 24%, #000) 11deg 19deg);
+	--texture-mask-accent-2: url(/themes/drawings/textures/shards-accent-2.svg) right bottom / 1600px 1000px no-repeat intersect,
+		radial-gradient(circle at 100% 100%, #000 0 26vmax, transparent 50vmax);
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 70%, transparent);
+	--texture-mask-text: radial-gradient(circle at 100% 100%, #000, transparent 40vmax);
+	--texture-ink-text: radial-gradient(circle, rgba(0, 0, 0, 0.45) 2px, transparent 2.6px) 0 0 / 9px 9px;
 }
+
 
 /* Overworld: a pixel world map seen from above, as in an old console role-playing game: seas in accent-3 with
    wave dashes, grassland in accent-2 with pine forests in a darker green, ranges of mountains in the text
@@ -516,6 +511,32 @@
 	--texture-mask-text: url(/themes/drawings/textures/overworld-text.svg) 0 0 / 1024px 640px;
 	--texture-ink-text: linear-gradient(90deg, color-mix(in srgb, var(--text) 8%, transparent) 0 300px, color-mix(in srgb, var(--text) 26%, transparent) 460px);
 }
+
+/* Skyward: a dusk sky over floating islands, as in a modern console role-playing game. The sun sets behind a sea
+   of cloud, its rays fanning up the page in the accent; a far bank of cloud in accent-3, distant islands, an
+   airship and sparkles in the text colour, near islands dark against the sunset with waterfalls of accent-2
+   pouring from them into the cloud. Under the sidebar the sky is clear and the near islands faint, so its labels
+   stay easy to read. */
+[data-texture="skyward"] {
+	--texture: linear-gradient(180deg, var(--bg) 0, color-mix(in srgb, var(--accent-2) 10%, var(--bg)) 45%, color-mix(in srgb, var(--accent-3) 26%, var(--bg)) 78%, color-mix(in srgb, var(--accent) 20%, var(--bg))),
+		radial-gradient(ellipse 40% 30% at 64% 70%, color-mix(in srgb, var(--accent) 22%, transparent), transparent);
+	--texture-size: 100% 100%, 100% 100%;
+	--texture-mask-border: url(/themes/drawings/textures/skyward-border.svg) center bottom / 1600px 900px no-repeat;
+	--texture-ink-border: color-mix(in srgb, var(--accent-3) 34%, transparent);
+	--texture-mask-text: url(/themes/drawings/textures/skyward-text.svg) center bottom / 1600px 900px no-repeat intersect,
+		linear-gradient(90deg, transparent 0 300px, #000 380px);
+	--texture-ink-text: linear-gradient(0deg, color-mix(in srgb, var(--accent-3) 30%, transparent) 0 300px, color-mix(in srgb, var(--accent-2) 22%, transparent) 500px, color-mix(in srgb, var(--text) 55%, transparent) 600px);
+	--texture-mask-accent-3: url(/themes/drawings/textures/skyward-accent-3.svg) center bottom / 1600px 900px no-repeat intersect,
+		linear-gradient(90deg, rgba(0, 0, 0, .3) 0 300px, #000 460px);
+	--texture-ink-accent-3: linear-gradient(180deg, color-mix(in srgb, var(--accent-3) 30%, var(--bg)), var(--bg) 160px) left 0 top calc(100% - 280px) / 100% 100% no-repeat, var(--bg);
+	--texture-mask-accent-2: url(/themes/drawings/textures/skyward-accent-2.svg) center bottom / 1600px 900px no-repeat,
+		url(/themes/drawings/shared/mottle.svg) 0 0 / 1600px 600px intersect, linear-gradient(180deg, transparent 20%, rgba(0, 0, 0, .5) 50%, transparent 75%);
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 30%, transparent);
+	--texture-mask-accent: repeating-conic-gradient(from -80deg at 64% 72%, #000 0 3deg, transparent 3deg 10deg) intersect,
+		radial-gradient(ellipse 55% 65% at 64% 72%, rgba(0, 0, 0, .8), transparent 72%);
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
 
 /* Watercolour: washes of accent-2 and accent-3 bled into the page, darker toward its edges; the cards are grained. */
 [data-texture="watercolor"] {
@@ -541,135 +562,173 @@
 }
 
 /* Spires: a city of gothic spires, a cathedral with a rose window and a gargoyle on its pinnacle, black against a
-   blood-red glow at the foot of the page, its windows lit in the warning colour, a bone moon above and rain. */
+   blood-red glow at the foot of the page, its windows lit in the warning colour, a bone moon above and rain. Storm
+   cloud rolls across the top of the page and a red mist lies in the streets. */
 [data-texture="spires"] {
 	--texture: repeating-linear-gradient(100deg, transparent 0 13px, color-mix(in srgb, var(--text) 5%, transparent) 13px 14px),
-		radial-gradient(ellipse 80% 45% at 50% 100%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 80%);
-	--texture-size: 100% 100%, 100% 100%;
+		radial-gradient(ellipse 80% 45% at 50% 100%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 80%),
+		radial-gradient(ellipse 60% 40% at 50% 0%, color-mix(in srgb, var(--accent-3) 5%, transparent), transparent);
+	--texture-size: 100% 100%, 100% 100%, 100% 100%;
 	--texture-mask-border: url(/themes/drawings/textures/spires-border.svg) left bottom / 1600px 520px repeat-x;
-	--texture-ink-border: var(--bg);
+	--texture-ink-border: linear-gradient(0deg, var(--bg) 0 30%, color-mix(in srgb, var(--accent) 10%, var(--bg)));
 	--texture-mask-text: url(/themes/drawings/textures/spires-text.svg) left bottom / 1600px 520px repeat-x;
-	--texture-ink-text: color-mix(in srgb, var(--warn) 55%, transparent);
+	--texture-ink-text: color-mix(in srgb, var(--warn) 60%, transparent);
 	--texture-mask-accent-3: url(/themes/drawings/textures/spires-accent-3.svg) right 8vw top 6vh / 220px 220px no-repeat;
-	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 22%, transparent);
+	--texture-ink-accent-3: radial-gradient(circle 240px at calc(100% - 8vw - 110px) calc(6vh + 110px), color-mix(in srgb, var(--accent-3) 34%, transparent), color-mix(in srgb, var(--accent-3) 14%, transparent));
+	--texture-mask-accent-2: url(/themes/drawings/shared/mottle.svg) 0 0 / 1400px 900px intersect, linear-gradient(180deg, rgba(0, 0, 0, .9), transparent 50%);
+	--texture-ink-accent-2: color-mix(in srgb, var(--text) 9%, transparent);
+	--texture-mask-accent: url(/themes/drawings/shared/mottle.svg) 300px 200px / 1100px 700px intersect, linear-gradient(0deg, #000, transparent 300px);
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
 /* Dragonflight: dragons wheeling across the sky in the accent, accent-2 and accent-3, silver threads falling
-   through them in the text colour, and a ridge of cliffs cut with cave mouths along the foot of the page. */
+   through them in the text colour, and a ridge of cliffs cut with cave mouths along the foot of the page. The
+   cliffs are banded rock lit from the sky, and clouds drift behind the dragons. */
 [data-texture="dragonflight"] {
-	--texture: linear-gradient(180deg, color-mix(in srgb, var(--accent) 9%, transparent), transparent 40%, color-mix(in srgb, var(--warn) 8%, transparent));
-	--texture-size: 100% 100%;
+	--texture: linear-gradient(180deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 45%, color-mix(in srgb, var(--warn) 10%, transparent)),
+		radial-gradient(ellipse 70% 50% at 70% 10%, color-mix(in srgb, var(--accent-2) 8%, transparent), transparent);
+	--texture-size: 100% 100%, 100% 100%;
 	--texture-mask-accent: url(/themes/drawings/textures/dragonflight-accent.svg) center bottom / 1600px 1000px no-repeat;
-	--texture-ink-accent: color-mix(in srgb, var(--accent) 30%, transparent);
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 34%, transparent);
 	--texture-mask-accent-2: url(/themes/drawings/textures/dragonflight-accent-2.svg) center bottom / 1600px 1000px no-repeat;
-	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 28%, transparent);
-	--texture-mask-accent-3: url(/themes/drawings/textures/dragonflight-accent-3.svg) center bottom / 1600px 1000px no-repeat;
-	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 28%, transparent);
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 30%, transparent);
+	--texture-mask-accent-3: url(/themes/drawings/textures/dragonflight-accent-3.svg) center bottom / 1600px 1000px no-repeat,
+		url(/themes/drawings/shared/mottle.svg) 0 0 / 1500px 1000px intersect, linear-gradient(180deg, rgba(0, 0, 0, .4), transparent 65%);
+	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 30%, transparent);
 	--texture-mask-text: url(/themes/drawings/textures/dragonflight-text.svg) center bottom / 1600px 1000px no-repeat;
-	--texture-ink-text: color-mix(in srgb, var(--text) 22%, transparent);
-	--texture-mask-border: url(/themes/drawings/textures/dragonflight-border.svg) center bottom / 1600px 1000px repeat-x;
-	--texture-ink-border: color-mix(in srgb, var(--border) 32%, transparent);
+	--texture-ink-text: color-mix(in srgb, var(--text) 24%, transparent);
+	--texture-mask-border: url(/themes/drawings/textures/dragonflight-border.svg) center bottom / 1600px 1000px repeat-x intersect, url(/themes/drawings/shared/strata.svg) 0 100% / 900px 260px, linear-gradient(rgba(0, 0, 0, .5), rgba(0, 0, 0, .5));
+	--texture-ink-border: linear-gradient(0deg, color-mix(in srgb, var(--border) 20%, transparent), color-mix(in srgb, var(--accent) 30%, var(--border)) 300px);
 }
 
 /* Plot: a plotting scope in the lower right, range rings and a bearing ring in the border colour, a sweep of the
-   accent, contacts in the accent and friendly ships in accent-2, over a faint chart grid. */
+   accent, contacts in the accent and friendly ships in accent-2, over a faint chart grid. Scan lines and screen
+   grain run across the whole page, brighter around the scope. */
 [data-texture="plot"] {
-	--texture: conic-gradient(from 300deg at calc(100% - 300px) calc(100% - 300px), transparent 0deg, color-mix(in srgb, var(--accent) 16%, transparent) 46deg, transparent 47deg),
-		radial-gradient(circle 440px at calc(100% - 300px) calc(100% - 300px), color-mix(in srgb, var(--accent) 6%, transparent), transparent),
-		linear-gradient(color-mix(in srgb, var(--text) 3%, transparent) 1px, transparent 1px),
-		linear-gradient(90deg, color-mix(in srgb, var(--text) 3%, transparent) 1px, transparent 1px);
-	--texture-size: 100% 100%, 100% 100%, 48px 48px, 48px 48px;
+	--texture: conic-gradient(from 300deg at calc(100% - 300px) calc(100% - 300px), transparent 0deg, color-mix(in srgb, var(--accent) 20%, transparent) 46deg, transparent 47deg),
+		radial-gradient(circle 460px at calc(100% - 300px) calc(100% - 300px), color-mix(in srgb, var(--accent) 9%, transparent), transparent),
+		repeating-linear-gradient(180deg, transparent 0 2px, rgba(0, 0, 0, .18) 2px 3px),
+		linear-gradient(color-mix(in srgb, var(--text) 4%, transparent) 1px, transparent 1px),
+		linear-gradient(90deg, color-mix(in srgb, var(--text) 4%, transparent) 1px, transparent 1px),
+		radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0, 0, 0, .35));
+	--texture-size: 100% 100%, 100% 100%, 100% 100%, 48px 48px, 48px 48px, 100% 100%;
 	--texture-mask-border: url(/themes/drawings/textures/plot-border.svg) right -150px bottom -150px / 900px 900px no-repeat;
-	--texture-ink-border: color-mix(in srgb, var(--accent) 30%, transparent);
+	--texture-ink-border: color-mix(in srgb, var(--accent) 34%, transparent);
 	--texture-mask-accent: url(/themes/drawings/textures/plot-accent.svg) right -150px bottom -150px / 900px 900px no-repeat;
-	--texture-ink-accent: color-mix(in srgb, var(--accent) 70%, transparent);
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 75%, transparent);
 	--texture-mask-accent-2: url(/themes/drawings/textures/plot-accent-2.svg) right -150px bottom -150px / 900px 900px no-repeat;
-	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 60%, transparent);
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 65%, transparent);
+	--texture-mask-text: url(/themes/drawings/shared/grit.svg) 0 0 / 240px 240px intersect, radial-gradient(circle 700px at calc(100% - 300px) calc(100% - 300px), rgba(0, 0, 0, .9), rgba(0, 0, 0, .25));
+	--texture-ink-text: color-mix(in srgb, var(--accent) 7%, transparent);
 }
 
 /* Seance: a ritual chart on the right of the page, its rings, hexagram and open eye in the accent, a sign in each
-   house in the text colour, ectoplasm rising through it in accent-2, and a gaslight haze in the top left. */
+   house in the text colour, ectoplasm rising through it in accent-2, and a gaslight haze in the top left. Smoke
+   curls through the gaslight and the page darkens toward its edges. */
 [data-texture="seance"] {
-	--texture: radial-gradient(circle 60vh at 0% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent),
-		radial-gradient(circle 440px at calc(100% - 290px) 50%, color-mix(in srgb, var(--accent-2) 7%, transparent), transparent);
-	--texture-size: 100% 100%, 100% 100%;
+	--texture: radial-gradient(circle 60vh at 0% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent),
+		radial-gradient(circle 440px at calc(100% - 290px) 50%, color-mix(in srgb, var(--accent-2) 9%, transparent), transparent),
+		radial-gradient(ellipse at 45% 50%, transparent 50%, rgba(0, 0, 0, .4));
+	--texture-size: 100% 100%, 100% 100%, 100% 100%;
 	--texture-mask-accent: url(/themes/drawings/textures/seance-accent.svg) right -120px center / 820px 820px no-repeat;
-	--texture-ink-accent: color-mix(in srgb, var(--accent) 30%, transparent);
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 34%, transparent);
 	--texture-mask-text: url(/themes/drawings/textures/seance-text.svg) right -120px center / 820px 820px no-repeat;
-	--texture-ink-text: color-mix(in srgb, var(--text) 30%, transparent);
-	--texture-mask-accent-2: url(/themes/drawings/textures/seance-accent-2.svg) right -120px center / 820px 820px no-repeat;
-	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 14%, transparent);
+	--texture-ink-text: color-mix(in srgb, var(--text) 32%, transparent);
+	--texture-mask-accent-2: url(/themes/drawings/textures/seance-accent-2.svg) right -120px center / 820px 820px no-repeat,
+		url(/themes/drawings/shared/mottle.svg) 100% 0 / 900px 1400px intersect, radial-gradient(ellipse 30% 60% at calc(100% - 290px) 60%, rgba(0, 0, 0, .6), transparent);
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 18%, transparent);
+	--texture-mask-accent-3: url(/themes/drawings/shared/mottle.svg) 0 0 / 1100px 800px intersect, radial-gradient(circle 70vh at 0% 0%, rgba(0, 0, 0, .8), transparent);
+	--texture-ink-accent-3: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 /* Dunes: three ridges of dunes, far in accent-3, nearer in the accent and nearest in the border colour, under an
-   accent dusk and two moons in the text colour; the ridges wrap, so they tile across a wide window. */
+   accent dusk and two moons in the text colour; the ridges wrap, so they tile across a wide window. The sand is
+   grained and rippled by the wind, each crest catches the light, and a haze of blown sand hangs above them. */
 [data-texture="dunes"] {
-	--texture: linear-gradient(180deg, transparent 30%, color-mix(in srgb, var(--accent) 14%, transparent) 75%, transparent),
-		repeating-linear-gradient(178deg, transparent 0 22px, color-mix(in srgb, var(--accent-3) 3%, transparent) 22px 23px);
+	--texture: linear-gradient(180deg, transparent 25%, color-mix(in srgb, var(--accent) 18%, transparent) 72%, transparent),
+		radial-gradient(ellipse 50% 30% at 30% 70%, color-mix(in srgb, var(--warn) 10%, transparent), transparent);
 	--texture-size: 100% 100%, 100% 100%;
 	--texture-mask-accent-3: url(/themes/drawings/textures/dunes-accent-3.svg) left bottom / 1600px 600px repeat-x;
-	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 12%, transparent);
-	--texture-mask-accent: url(/themes/drawings/textures/dunes-accent.svg) left bottom / 1600px 600px repeat-x;
-	--texture-ink-accent: color-mix(in srgb, var(--accent) 18%, transparent);
-	--texture-mask-border: url(/themes/drawings/textures/dunes-border.svg) left bottom / 1600px 600px repeat-x;
-	--texture-ink-border: color-mix(in srgb, var(--border) 70%, var(--bg));
+	--texture-ink-accent-3: linear-gradient(0deg, color-mix(in srgb, var(--accent-3) 8%, transparent), color-mix(in srgb, var(--accent-3) 20%, transparent) 600px);
+	--texture-mask-accent: url(/themes/drawings/textures/dunes-accent.svg) left bottom / 1600px 600px repeat-x intersect, url(/themes/drawings/shared/strata.svg) 0 0 / 700px 90px, linear-gradient(rgba(0, 0, 0, .55), rgba(0, 0, 0, .55));
+	--texture-ink-accent: linear-gradient(0deg, color-mix(in srgb, var(--accent) 10%, transparent), color-mix(in srgb, var(--accent) 30%, transparent) 420px);
+	--texture-mask-border: url(/themes/drawings/textures/dunes-border.svg) left bottom / 1600px 600px repeat-x intersect, url(/themes/drawings/shared/grit.svg) 0 0 / 240px 240px;
+	--texture-ink-border: linear-gradient(0deg, color-mix(in srgb, var(--border) 55%, var(--bg)), color-mix(in srgb, var(--accent) 30%, var(--border)) 260px);
 	--texture-mask-text: url(/themes/drawings/textures/dunes-text.svg) right 4vw top 2vh / 420px 280px no-repeat;
-	--texture-ink-text: color-mix(in srgb, var(--accent-3) 22%, transparent);
+	--texture-ink-text: color-mix(in srgb, var(--accent-3) 26%, transparent);
+	--texture-mask-accent-2: url(/themes/drawings/shared/mottle.svg) 0 40% / 1600px 500px intersect, linear-gradient(0deg, transparent 15%, rgba(0, 0, 0, .8) 45%, transparent 75%);
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 /* Candles: candles floating in a row across the top of the page, their wax in the text colour and their flames in
-   the accent, each in a faint halo, under a ceiling of stars. */
+   the accent, each in a faint halo, under a ceiling of stars and drifting cloud, with mist along the floor. */
 [data-texture="candles"] {
 	--texture: radial-gradient(1px 1px at 30px 40px, color-mix(in srgb, var(--text) 55%, transparent), transparent),
 		radial-gradient(1.5px 1.5px at 110px 150px, color-mix(in srgb, var(--accent) 50%, transparent), transparent),
 		radial-gradient(1px 1px at 170px 90px, color-mix(in srgb, var(--text) 35%, transparent), transparent),
-		linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent 45%);
+		linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 45%);
 	--texture-size: 200px 200px, 200px 200px, 200px 200px, 100% 100%;
 	--texture-mask-text: url(/themes/drawings/textures/candles-text.svg) left top / 1600px 460px repeat-x;
-	--texture-ink-text: color-mix(in srgb, var(--text) 22%, transparent);
+	--texture-ink-text: linear-gradient(180deg, color-mix(in srgb, var(--text) 14%, transparent), color-mix(in srgb, var(--text) 30%, transparent) 300px);
 	--texture-mask-accent: url(/themes/drawings/textures/candles-accent.svg) left top / 1600px 460px repeat-x;
-	--texture-ink-accent: color-mix(in srgb, var(--accent) 75%, transparent);
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 80%, transparent);
 	--texture-mask-border: url(/themes/drawings/textures/candles-border.svg) left top / 1600px 460px repeat-x;
-	--texture-ink-border: color-mix(in srgb, var(--accent) 7%, transparent);
+	--texture-ink-border: color-mix(in srgb, var(--accent) 9%, transparent);
+	--texture-mask-accent-3: url(/themes/drawings/shared/mottle.svg) 0 0 / 1400px 900px intersect, linear-gradient(180deg, rgba(0, 0, 0, .5), transparent 40%, transparent 70%, #000);
+	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 12%, transparent);
 }
 
 /* Gears: copper gears turning in the lower left and upper right corners with smaller verdigris ones in accent-3,
-   steam pipes in accent-2 along their edges, and a haze of steam. */
+   steam pipes in accent-2 along their edges, and a haze of steam. The gears are pitted and lit
+   from above. */
 [data-texture="gears"] {
-	--texture: radial-gradient(ellipse 50% 35% at 15% 100%, color-mix(in srgb, var(--text) 7%, transparent), transparent),
-		radial-gradient(ellipse 40% 30% at 90% 0%, color-mix(in srgb, var(--text) 5%, transparent), transparent);
-	--texture-size: 100% 100%, 100% 100%;
-	--texture-mask-accent: url(/themes/drawings/textures/gears-accent.svg) left -160px bottom -200px / 700px 700px no-repeat,
+	--texture: radial-gradient(ellipse 50% 35% at 15% 100%, color-mix(in srgb, var(--text) 8%, transparent), transparent),
+		radial-gradient(ellipse 40% 30% at 90% 0%, color-mix(in srgb, var(--text) 6%, transparent), transparent),
+		repeating-linear-gradient(90deg, transparent 0 79px, color-mix(in srgb, var(--accent) 3%, transparent) 79px 80px);
+	--texture-size: 100% 100%, 100% 100%, 100% 100%;
+	--texture-mask-accent: url(/themes/drawings/shared/grit.svg) 0 0 / 240px 240px intersect,
+		url(/themes/drawings/textures/gears-accent.svg) left calc(var(--rail-w) + var(--side-w) - 200px) bottom -230px / 760px 760px no-repeat,
 		url(/themes/drawings/textures/gears-accent.svg) right -220px top -260px / 560px 560px no-repeat;
-	--texture-ink-accent: color-mix(in srgb, var(--accent) 16%, transparent);
-	--texture-mask-accent-3: url(/themes/drawings/textures/gears-accent-3.svg) left -160px bottom -200px / 700px 700px no-repeat,
+	--texture-ink-accent: linear-gradient(160deg, color-mix(in srgb, var(--accent) 34%, transparent), color-mix(in srgb, var(--accent) 14%, transparent) 55%, color-mix(in srgb, var(--accent) 24%, transparent));
+	--texture-mask-accent-3: url(/themes/drawings/shared/grit.svg) 0 0 / 240px 240px intersect,
+		url(/themes/drawings/textures/gears-accent-3.svg) left calc(var(--rail-w) + var(--side-w) - 200px) bottom -230px / 760px 760px no-repeat,
 		url(/themes/drawings/textures/gears-accent-3.svg) right -220px top -260px / 560px 560px no-repeat;
-	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 20%, transparent);
-	--texture-mask-accent-2: url(/themes/drawings/textures/gears-accent-2.svg) left -160px bottom -200px / 700px 700px no-repeat;
-	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 14%, transparent);
+	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 22%, transparent);
+	--texture-mask-accent-2: url(/themes/drawings/textures/gears-accent-2.svg) left calc(var(--rail-w) + var(--side-w) - 200px) bottom -230px / 760px 760px no-repeat;
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 18%, transparent);
+	--texture-mask-text: url(/themes/drawings/shared/mottle.svg) 0 0 / 1200px 800px intersect, radial-gradient(ellipse 45% 55% at 30% 90%, rgba(0, 0, 0, .8), transparent), radial-gradient(ellipse 40% 45% at 92% 8%, rgba(0, 0, 0, .7), transparent);
+	--texture-ink-text: color-mix(in srgb, var(--text) 9%, transparent);
 }
 
 /* Mesa: flat-topped mesas in accent-2 and saguaros in accent-3 along the foot of the page under a low sun of the
-   accent, on sun-faded paper. */
+   accent, on sun-faded paper. The mesas are banded rock, and dust clouds trail across the sky. */
 [data-texture="mesa"] {
-	--texture: radial-gradient(circle 180px at 72% calc(100% - 210px), color-mix(in srgb, var(--accent) 16%, transparent) 0 70%, transparent 71%),
+	--texture: radial-gradient(circle 180px at 72% calc(100% - 210px), color-mix(in srgb, var(--accent) 18%, transparent) 0 70%, transparent 71%),
+		radial-gradient(circle 420px at 72% calc(100% - 210px), color-mix(in srgb, var(--accent) 10%, transparent), transparent),
 		repeating-linear-gradient(180deg, transparent 0 5px, color-mix(in srgb, var(--accent-2) 3%, transparent) 5px 6px);
-	--texture-size: 100% 100%, 100% 100%;
-	--texture-mask-accent-2: url(/themes/drawings/textures/mesa-accent-2.svg) left bottom / 1600px 500px repeat-x;
-	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 22%, transparent);
+	--texture-size: 100% 100%, 100% 100%, 100% 100%;
+	--texture-mask-accent-2: url(/themes/drawings/textures/mesa-accent-2.svg) left bottom / 1600px 500px repeat-x intersect, url(/themes/drawings/shared/strata.svg) 0 100% / 900px 160px, linear-gradient(rgba(0, 0, 0, .6), rgba(0, 0, 0, .6));
+	--texture-ink-accent-2: linear-gradient(0deg, color-mix(in srgb, var(--accent-2) 18%, transparent), color-mix(in srgb, var(--accent-2) 34%, transparent) 360px);
 	--texture-mask-accent-3: url(/themes/drawings/textures/mesa-accent-3.svg) left bottom / 1600px 500px repeat-x;
-	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 30%, transparent);
+	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 34%, transparent);
+	--texture-mask-text: url(/themes/drawings/shared/grit.svg) 0 0 / 240px 240px, url(/themes/drawings/shared/mottle.svg) 0 0 / 1600px 700px intersect, linear-gradient(180deg, rgba(0, 0, 0, .4), transparent 45%);
+	--texture-ink-text: color-mix(in srgb, var(--accent-2) 7%, transparent);
 }
 
 /* Ruins: the broken skyline of a dead city in accent-3, its windows blown out, bent girders and a fallen
-   overpass in the text colour, under a haze of the accent's yellow dust. */
+   overpass in the text colour, under a haze of the accent's yellow dust. The concrete is pitted, smoke rises
+   from the skyline and the dust drifts in banks. */
 [data-texture="ruins"] {
-	--texture: linear-gradient(180deg, transparent 20%, color-mix(in srgb, var(--accent) 9%, transparent) 70%, transparent),
+	--texture: linear-gradient(180deg, transparent 20%, color-mix(in srgb, var(--accent) 12%, transparent) 70%, transparent),
 		radial-gradient(1px 1px at 20px 30px, color-mix(in srgb, var(--text) 18%, transparent), transparent),
 		radial-gradient(1px 1px at 80px 110px, color-mix(in srgb, var(--text) 14%, transparent), transparent);
 	--texture-size: 100% 100%, 120px 140px, 120px 140px;
-	--texture-mask-accent-3: url(/themes/drawings/textures/ruins-accent-3.svg) left bottom / 1600px 560px repeat-x;
-	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 22%, transparent);
+	--texture-mask-accent-3: url(/themes/drawings/textures/ruins-accent-3.svg) left bottom / 1600px 560px repeat-x intersect, url(/themes/drawings/shared/grit.svg) 0 0 / 240px 240px;
+	--texture-ink-accent-3: linear-gradient(0deg, color-mix(in srgb, var(--accent-3) 14%, transparent), color-mix(in srgb, var(--accent-3) 32%, transparent) 500px);
 	--texture-mask-text: url(/themes/drawings/textures/ruins-text.svg) left bottom / 1600px 560px repeat-x;
-	--texture-ink-text: color-mix(in srgb, var(--text) 12%, transparent);
+	--texture-ink-text: color-mix(in srgb, var(--text) 14%, transparent);
+	--texture-mask-accent: url(/themes/drawings/shared/mottle.svg) 0 0 / 1500px 1000px intersect, linear-gradient(0deg, transparent 10%, rgba(0, 0, 0, .9) 40%, transparent 85%);
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 11%, transparent);
+	--texture-mask-border: url(/themes/drawings/shared/mottle.svg) 500px 0 / 700px 1300px intersect, linear-gradient(0deg, transparent 25%, #000 60%, transparent);
+	--texture-ink-border: color-mix(in srgb, var(--text) 7%, transparent);
 }

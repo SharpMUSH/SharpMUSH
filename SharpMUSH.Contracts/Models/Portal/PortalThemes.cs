@@ -347,11 +347,11 @@ public static class BuiltInThemes
 		display: "anton", body: "ui", corners: "razor", texture: "shards", ornament: "jagged", frame: "torn", titles: "slant", effect: "ransom", imagery: "redout",
 		accent2: "#f5f5f5", accent3: "#ffd400");
 
-	/// <summary>JRPG: a classic console role-playing game, night-blue dialog boxes with white borders over a pixel overworld map, dotted lettering, a cursor before a title.</summary>
+	/// <summary>JRPG: a modern console role-playing game, deep teal menu panels trimmed in gold over floating islands at dusk, dotted lettering, a cursor before a title.</summary>
 	public static readonly PortalTheme Jrpg = Genre("jrpg", "JRPG", dark: true,
-		["#05070a", "#101a40", "#18245a", "#0c1434", "#060a1e", "#ffffff", "#d6dbee", "#b0b8d4", "#f2f2f2", "#2c3a78", "#ffb22e", "#ffe066", "#ff9a9a"],
-		display: "dotgothic", body: "ui", corners: "soft", texture: "overworld", ornament: "pointer", frame: "dialog", titles: "normal", effect: "dialog", imagery: "cartridge",
-		accent2: "#58c46a", accent3: "#4aa8ff");
+		["#060b14", "#0d2230", "#12303f", "#0a1b27", "#04121b", "#f6f2e6", "#cfdcd9", "#a6b8b5", "#d8b462", "#1d4352", "#ffc94d", "#ffe08a", "#ff9a9a"],
+		display: "dotgothic", body: "ui", corners: "soft", texture: "skyward", ornament: "pointer", frame: "dialog", titles: "normal", effect: "dialog", imagery: "cartridge",
+		accent2: "#6fe0cf", accent3: "#ff8a5c");
 
 	/// <summary>Adventurer's Handbook: a tabletop rulebook, a cream page washed with colour, red small-capital headings over a tapered gold rule, stat-block cards.</summary>
 	public static readonly PortalTheme AdventurersHandbook = Genre("adventurers-handbook", "Adventurer's Handbook", dark: false,

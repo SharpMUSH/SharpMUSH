@@ -12893,6 +12893,9 @@
   <data name="AdmThemeStyleTextureOverworld" xml:space="preserve">
     <value>Overworld tiles</value>
   </data>
+  <data name="AdmThemeStyleTextureSkyward" xml:space="preserve">
+    <value>Floating islands</value>
+  </data>
   <data name="AdmThemeStyleTextureWatercolor" xml:space="preserve">
     <value>Watercolour wash</value>
   </data>
