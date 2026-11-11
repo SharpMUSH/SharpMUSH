@@ -129,6 +129,9 @@
   <data name="PermissionDeniedCommandLock" xml:space="preserve">
     <value>Permission denied. You do not pass the lock on {0}.</value>
   </data>
+  <data name="PermissionDeniedCommandIcmd" xml:space="preserve">
+    <value>Permission denied. {0} is turned off for you.</value>
+  </data>
   <data name="PermissionDeniedCommandHook" xml:space="preserve">
     <value>Permission denied. The permit hook on {0} refuses you.</value>
   </data>

@@ -97,6 +97,17 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		if (await ExtendedAnywhereAsync(run))
 			return await NotBuiltInAsync(run, clock, notBuiltIn);
 
+		// 0b. @icmd: the command is disabled, or ignored, for the player or for every player where they are.
+		switch (await IcmdSettingAsync(run))
+		{
+			case IcmdSetting.Ignored:
+				return await NotBuiltInAsync(run, clock, notBuiltIn);
+			case IcmdSetting.Disabled when run.Executor is AnySharpObject turnedOff:
+				await services.NotifyService.NotifyLocalized(turnedOff,
+					nameof(ErrorMessages.Notifications.PermissionDeniedCommandIcmd), turnedOff, run.Definition.Attribute.Name);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		// 1. Check for /ignore hook: a false answer skips the built-in, and the line is matched against
 		// $-commands as if there were none (PennMUSH command_parse returns commandraw).
 		if (await IgnoredByHookAsync(run))
@@ -480,6 +491,28 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 	private async ValueTask<bool> ExtendedAnywhereAsync(BuiltInRun run)
 		=> InvalidSwitches(run.Switches, run.Definition.Attribute.Switches ?? []).Length > 0
 			&& await services.HookService.GetHookAsync(run.HookedCommand, "EXTEND") is CommandHook { TargetObject.Number: < 0 };
+
+	/// <summary>
+	/// What <c>@icmd</c> set for the command: on the player, else on their location, else on its zone. Only players
+	/// are affected, God never, and only an ICMD attribute <c>@icmd</c> wrote counts (<see cref="IcmdList.OnAsync"/>).
+	/// </summary>
+	private async ValueTask<IcmdSetting> IcmdSettingAsync(BuiltInRun run)
+	{
+		if (run.Executor is not AnySharpObject { IsPlayer: true } player || player.IsGod()) return IcmdSetting.On;
+		var own = await IcmdListOnAsync(player.Object().DBRef);
+		if (!own.Checked) return IcmdSetting.On;
+		var setting = own.For(run.HookedCommand);
+		if (setting != IcmdSetting.On || player.AsOptionalContent is not AnySharpContent content) return setting;
+
+		var location = await content.Location();
+		if ((await IcmdListOnAsync(location.Object().DBRef)).For(run.HookedCommand) is var here and not IcmdSetting.On)
+			return here;
+		return await location.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone
+			? (await IcmdListOnAsync(zone.Object().DBRef)).For(run.HookedCommand)
+			: IcmdSetting.On;
+	}
+
+	private ValueTask<IcmdList> IcmdListOnAsync(DBRef holder) => IcmdList.OnAsync(services.Mediator, holder);
 
 	/// <summary>Whether the command's /ignore hook answered false, so the command does not run.</summary>
 	private async ValueTask<bool> IgnoredByHookAsync(BuiltInRun run)
