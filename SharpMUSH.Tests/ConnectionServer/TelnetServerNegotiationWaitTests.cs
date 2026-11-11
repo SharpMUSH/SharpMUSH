@@ -4,7 +4,6 @@ using SharpMUSH.Messaging.Messages;
 using SharpMUSH.SocketServer.Configuration;
 using SharpMUSH.SocketServer.Models;
 using SharpMUSH.SocketServer.Services;
-using System.IO.Pipelines;
 using System.Text;
 
 namespace SharpMUSH.Tests.ConnectionServer;
@@ -15,20 +14,6 @@ namespace SharpMUSH.Tests.ConnectionServer;
 /// </summary>
 public partial class TelnetServerNegotiationTests
 {
-
-	/// <summary>
-	/// Answers the terminal-type cycle as a terminal emulator, which is asked about graphics at connect, and
-	/// reads up to the last of those questions.
-	/// </summary>
-	private static async Task NameATerminalAsync(PipeWriter toServer, PipeReader fromServer)
-	{
-		await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, DO, TTYPE));
-		await WriteAsync(toServer, IAC, WILL, TTYPE);
-		await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, SB, TTYPE, SEND));
-		await WriteAsync(toServer, [IAC, SB, TTYPE, IS, .. "XTERM-KITTY"u8.ToArray(), IAC, SE]);
-		await WriteAsync(toServer, [IAC, SB, TTYPE, IS, .. "XTERM-KITTY"u8.ToArray(), IAC, SE]);
-		await ReadUntilAsync(fromServer, bytes => Encoding.ASCII.GetString(bytes).Contains("\u001b[c"));
-	}
 
 	private static NSubstitute.Core.ICall? Registration(IConnectionServerService service) =>
 		service.ReceivedCalls().SingleOrDefault(call => call.GetMethodInfo().Name == nameof(IConnectionServerService.RegisterAsync));
@@ -168,7 +153,7 @@ public partial class TelnetServerNegotiationTests
 		using var serverCancellation = cts;
 		try
 		{
-			await NameATerminalAsync(toServer, fromServer);
+			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, DO, TTYPE));
 			await WriteAsync(toServer, "\u001b[6;17;8t\u001b[?62;4clook\r\n"u8.ToArray());
 			await WaitForPublishedAsync<TelnetInputMessage>(published);
 			await Assert.That(reports.Count).IsGreaterThanOrEqualTo(2);
@@ -205,7 +190,7 @@ public partial class TelnetServerNegotiationTests
 		using var serverCancellation = cts;
 		try
 		{
-			await NameATerminalAsync(toServer, fromServer);
+			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, DO, TTYPE));
 			await WriteAsync(toServer, [
 				IAC, WILL, NAWS,
 				IAC, SB, NAWS, 0, (byte)first, 0, 24, IAC, SE,
@@ -230,16 +215,16 @@ public partial class TelnetServerNegotiationTests
 		}
 	}
 
-	/// <summary>Terminal queries are sent while registration is held, and their reply seeds the first render.</summary>
+	/// <summary>A terminal report that arrives while registration is held seeds the first render.</summary>
 	[Test]
-	public async Task GraphicsProbe_PrecedesRegistration()
+	public async Task TerminalReportBeforeRegistration_SeedsTheFirstRender()
 	{
 		var service = Substitute.For<IConnectionServerService>();
 		var (toServer, fromServer, handler, _, cts) = StartServer(connectionService: service, negotiationWaitMilliseconds: 1000);
 		using var serverCancellation = cts;
 		try
 		{
-			await NameATerminalAsync(toServer, fromServer);
+			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, DO, TTYPE));
 			await Assert.That(Registration(service)).IsNull();
 			await WriteAsync(toServer, "\u001b[?62;4clook\r\n"u8.ToArray());
 			var capabilities = await RegisteredCapabilitiesAsync(service);
@@ -255,17 +240,19 @@ public partial class TelnetServerNegotiationTests
 	}
 
 	/// <summary>
-	/// A MUD client prints the graphics questions as text, so only a terminal emulator named by TTYPE is asked at
-	/// connect: not a client that never answers TTYPE, names no terminal, names a bare colour level, or sends MTTS.
+	/// Nothing is asked about graphics at connect, whatever the client calls itself: the questions are escape
+	/// sequences, and a MUD client prints them. A connection is known by the name it reports.
 	/// </summary>
 	[Test]
 	[Arguments("")]
+	[Arguments("XTERM-KITTY")]
+	[Arguments("MUDRAMMER,XTERM,ANSI")]
 	[Arguments("BEIPMU")]
 	[Arguments("ANSI")]
 	[Arguments("VT100")]
 	[Arguments("XTERM-256COLOR")]
 	[Arguments("MUDLET,XTERM,MTTS 2349")]
-	public async Task MudClient_IsNotAskedAboutGraphicsAtConnect(string terminalTypeCycle)
+	public async Task NoClientIsAskedAboutGraphicsAtConnect(string terminalTypeCycle)
 	{
 		var terminalTypes = terminalTypeCycle.Split(',', StringSplitOptions.RemoveEmptyEntries);
 		var service = Substitute.For<IConnectionServerService>();

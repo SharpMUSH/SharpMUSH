@@ -230,29 +230,18 @@ public static class TerminalFeatureReader
 	private const TerminalFeatures Links = TerminalFeatures.Hyperlinks | TerminalFeatures.CommandLinks;
 
 	/// <summary>
-	/// Whether a connection is asked what it can draw (Kitty graphics, cell size, XTVERSION, DA1) once its
-	/// terminal types are in: only when one of <paramref name="terminalTypes"/> names a known terminal emulator
-	/// and the client sent no MTTS bitvector (<paramref name="sentMtts"/>). The questions are escape sequences in
-	/// the text, which only a terminal emulator swallows; a MUD client prints them on the connect screen. An
-	/// MTTS client is a MUD client even when its terminal type entry says <c>XTERM</c>, and an unknown or missing
-	/// type (<c>xterm-256color</c> included) is not asked. <c>SOCKSET graphics=detect</c> asks anyone.
-	/// </summary>
-	public static bool ProbesAtConnect(IReadOnlyList<string> terminalTypes, bool sentMtts)
-	{
-		ArgumentNullException.ThrowIfNull(terminalTypes);
-		return !sentMtts && terminalTypes.Any(type => TerminalProfile.Identify(type) is not null);
-	}
-
-	/// <summary>
 	/// The terminal: the one the player named in <paramref name="terminalPin"/>, else the one that answered
-	/// XTVERSION in <paramref name="probe"/>, else the first of <paramref name="terminalTypes"/> that names one.
+	/// XTVERSION in <paramref name="probe"/>, else the first of <paramref name="terminalTypes"/>, which is the
+	/// client's own name. The later entries are what it claims to support (MTTS's <c>XTERM</c>, <c>ANSI</c> or
+	/// <c>VT100</c>, or the terminal a MUD client runs in) and never identify it: a MUD client that sends
+	/// <c>XTERM</c> second is not an xterm and would print a picture sent to one.
 	/// </summary>
 	public static TerminalProfile? Identify(IReadOnlyList<string> terminalTypes, TerminalProbeResult? probe, string? terminalPin)
 	{
 		ArgumentNullException.ThrowIfNull(terminalTypes);
 		return TerminalProfile.Find(terminalPin)
 			?? TerminalProfile.Identify(probe?.Version)
-			?? terminalTypes.Select(TerminalProfile.Identify).FirstOrDefault(profile => profile is not null);
+			?? TerminalProfile.Identify(terminalTypes.FirstOrDefault());
 	}
 
 	/// <summary>
