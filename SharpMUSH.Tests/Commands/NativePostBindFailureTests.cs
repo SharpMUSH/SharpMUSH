@@ -103,7 +103,7 @@ public class NativePostBindFailureTests
 		await connections.Register(prepared.Handle, "203.0.113.9", "client.example.test", "telnet", _ => ValueTask.CompletedTask,
 			_ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		Exception Failure() => canceled ? new OperationCanceledException(prepared.Mint.Secret) : new InvalidOperationException(prepared.Mint.Secret);
-		if (source == "state") state.SetPlayerBindingAsync(prepared.Handle, prepared.Character.ToString(), Arg.Any<CancellationToken>()).Returns(_ => Task.FromException(Failure()));
+		if (source == "state") state.SetPlayerBindingAsync(prepared.Handle, prepared.Character.ToString(), "LoginTime", Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(_ => Task.FromException(Failure()));
 		if (source == "handler") connections.ListenState(change => { if (change.Item4 == IConnectionService.ConnectionState.LoggedIn) throw Failure(); });
 		if (source == "telemetry") telemetry.When(value => value.RecordConnectionEvent("logged_in")).Do(_ => throw Failure());
 		if (source == "publisher") publisher.Publish(Arg.Is<ConnectionStateChangeNotification>(notification => notification.NewState == IConnectionService.ConnectionState.LoggedIn), Arg.Any<CancellationToken>()).Returns(_ => ValueTask.FromException(Failure()));

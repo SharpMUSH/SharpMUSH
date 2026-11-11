@@ -120,6 +120,60 @@ public class MuxTimeConnectionFunctionTests : ServerTestBase
 		}
 	}
 
+	/// <summary>
+	/// Two sessions overlap; the older ends by LOGOUT and the newer by QUIT. The overlap is counted once, so the
+	/// total is the time from the first login to the last session's end.
+	/// </summary>
+	[Test]
+	public async Task LogoutThenQuitCountsTheOverlapOnce()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ConnStatsLogout");
+		var second = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, player.DbRef);
+		var open = new List<long> { player.Handle, second };
+		try
+		{
+			var now = DateTimeOffset.UtcNow;
+			ConnectionService.Update(player.Handle, "LoginTime", now.AddSeconds(-1000).ToUnixTimeMilliseconds().ToString());
+			ConnectionService.Update(second, "LoginTime", now.AddSeconds(-500).ToUnixTimeMilliseconds().ToString());
+
+			await ConnectionService.Unbind(player.Handle);
+			await ConnectionService.Disconnect(second);
+			open.Remove(second);
+			await WebAppFactoryArg.QueueBarrierAsync();
+
+			var record = ConnectionStatistics.Record.Parse(await Eval($"get({player.DbRef}/CONNINFO)"));
+			await Assert.That(record.Sessions).IsEqualTo(2);
+			await Assert.That(record.TotalSeconds).IsGreaterThanOrEqualTo(1000).And.IsLessThan(1100);
+			await Assert.That(record.LongestSeconds).IsGreaterThanOrEqualTo(1000).And.IsLessThan(1100);
+		}
+		finally
+		{
+			foreach (var handle in open) await ConnectionService.Disconnect(handle);
+		}
+	}
+
+	/// <summary>A hidden session still open is left out for a caller who may not see hidden players.</summary>
+	[Test]
+	public async Task OpenHiddenSessionIsLeftOutForMortals()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ConnStatsHidden");
+		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "ConnStatsMortal");
+		try
+		{
+			ConnectionService.Update(player.Handle, "Hidden", "1");
+
+			await Assert.That(await EvalAs(mortal, $"connnum({player.DbRef})")).IsEqualTo("0");
+			await Assert.That(await EvalAs(player.DbRef, "connnum(me)")).IsEqualTo("1");
+			await Assert.That(await Eval($"connnum({player.DbRef})")).IsEqualTo("1");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(player.Handle);
+		}
+	}
+
 	[Test]
 	public async Task NoRecordCountsFromZero()
 	{

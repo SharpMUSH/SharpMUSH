@@ -78,14 +78,8 @@ public class ConnectionService(
 					if (!_sessionState.TryRemove(new KeyValuePair<long, IConnectionService.ConnectionData>(handle, current))) continue;
 					Reindex(handle, current.Ref, null);
 
-					var others = current.Ref is { } playerRef
-						? _handlesByPlayer.GetValueOrDefault(playerRef, []).Select(Get)
-							.OfType<IConnectionService.ConnectionData>()
-							.Where(other => other.PresenceClass != PresenceClasses.Portal)
-							.ToList()
-						: null;
-					remainingConnections = others?.Count;
-					othersLoggedInAt = others?.Select(other => other.LoggedInAt ?? DateTimeOffset.UtcNow).ToList();
+					othersLoggedInAt = current.Ref is { } playerRef ? OtherSessionsStarted(playerRef) : null;
+					remainingConnections = othersLoggedInAt?.Count;
 					break;
 				}
 			}
@@ -153,18 +147,21 @@ public class ConnectionService(
 		if (get is null || authorize is not null && get.Ref is not null) return false;
 
 		if (get.Ref is not null && get.Ref != player && !await RevokeResumeAsync(get)) return false;
-		if (!await ReplaceAsync(get, get with { Ref = player, State = IConnectionService.ConnectionState.LoggedIn }, authorize)) return false;
+		// A session's length (connnum() and the rest) counts from the login, not from the socket opening.
+		// It is stamped with the binding, so a disconnect that sees this session sees when it began.
+		var loginTime = "";
+		if (!await ReplaceAsync(get, get with { Ref = player, State = IConnectionService.ConnectionState.LoggedIn }, authorize,
+					() =>
+					{
+						loginTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture);
+						get.Metadata["LoginTime"] = loginTime;
+					})) return false;
 		// The local binding and player index are committed before any fallible notification work.
 		onCommitted?.Invoke();
 
-		// A session's length (connnum() and the rest) counts from the login, not from the socket opening.
-		var loginTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture);
-		get.Metadata["LoginTime"] = loginTime;
-
 		if (stateStore != null)
 		{
-			await stateStore.SetPlayerBindingAsync(handle, player.ToString());
-			await stateStore.UpdateMetadataAsync(handle, "LoginTime", loginTime);
+			await stateStore.SetPlayerBindingAsync(handle, player.ToString(), "LoginTime", loginTime);
 		}
 
 		foreach (var handler in _handlers)
@@ -190,7 +187,11 @@ public class ConnectionService(
 
 		// State is updated before the notification is published, so a PLAYER`DISCONNECT handler asking
 		// for the player's remaining connections does not count the one that is leaving.
-		if (!await ReplaceAsync(get, get with { Ref = null, State = IConnectionService.ConnectionState.Connected })) return;
+		// The player's other sessions are read with the change, as Disconnect reads them, so two sessions
+		// ending together each see the other the same way.
+		IReadOnlyList<DateTimeOffset> othersLoggedInAt = [];
+		if (!await ReplaceAsync(get, get with { Ref = null, State = IConnectionService.ConnectionState.Connected }, null,
+					() => othersLoggedInAt = OtherSessionsStarted(formerRef.Value))) return;
 
 		if (stateStore != null)
 		{
@@ -209,7 +210,10 @@ public class ConnectionService(
 		UpdateConnectionMetrics();
 
 		await publisher.Publish(new ConnectionStateChangeNotification(handle, formerRef, get.State,
-			IConnectionService.ConnectionState.Connected));
+			IConnectionService.ConnectionState.Connected)
+		{
+			OthersLoggedInAt = othersLoggedInAt
+		});
 
 		// PennMUSH's logout_sock explicitly resets d->hide = 0 (bsd.c:2248) - without this, a wizard who
 		// @hides then LOGOUTs would leave the socket hidden for whoever connects next on it, including a
@@ -264,7 +268,20 @@ public class ConnectionService(
 	}
 
 	/// <summary>Swaps <paramref name="current"/> for <paramref name="next"/> if it is still the stored entry.</summary>
-	private async ValueTask<bool> ReplaceAsync(IConnectionService.ConnectionData current, IConnectionService.ConnectionData next, Func<Task<bool>>? authorize = null)
+	/// <summary>
+	/// When each of the player's play sessions still open began, the portal's background session left out. Called under
+	/// <see cref="_bindingLock"/>, once the ending session is out of the index.
+	/// </summary>
+	private List<DateTimeOffset> OtherSessionsStarted(DBRef player)
+		=> _handlesByPlayer.GetValueOrDefault(player, []).Select(Get)
+			.OfType<IConnectionService.ConnectionData>()
+			.Where(other => other.PresenceClass != PresenceClasses.Portal)
+			.Select(other => other.LoggedInAt ?? DateTimeOffset.UtcNow)
+			.ToList();
+
+	/// <param name="committed">Runs under <see cref="_bindingLock"/> once the change is in place.</param>
+	private async ValueTask<bool> ReplaceAsync(IConnectionService.ConnectionData current, IConnectionService.ConnectionData next,
+		Func<Task<bool>>? authorize = null, Action? committed = null)
 	{
 		// What this queue entry already sent to the old binding (LOGOUT's goodbye) goes out under it;
 		// once the binding is retired, a deferred send to it is dropped.
@@ -277,6 +294,7 @@ public class ConnectionService(
 			{
 				if (!_sessionState.TryUpdate(current.Handle, next with { Binding = new() }, current)) return false;
 				Reindex(current.Handle, current.Ref, next.Ref);
+				committed?.Invoke();
 				return true;
 			}
 		}

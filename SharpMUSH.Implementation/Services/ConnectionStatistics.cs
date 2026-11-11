@@ -20,8 +20,11 @@ public static class ConnectionStatistics
 {
 	public const string Attribute = "CONNINFO";
 
-	/// <summary>Updates are read and written back, so two sessions of one player ending together go one at a time.</summary>
-	private static readonly SemaphoreSlim Gate = new(1, 1);
+	/// <summary>
+	/// Updates are read and written back, so two sessions of one player ending together go one at a time. One gate per
+	/// game, found by its mediator, so games sharing a process do not wait on each other.
+	/// </summary>
+	private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<IMediator, SemaphoreSlim> Gates = new();
 
 	/// <summary>What a player's <c>CONNINFO</c> holds.</summary>
 	/// <param name="TotalSeconds">Time online in the sessions that have ended.</param>
@@ -63,7 +66,8 @@ public static class ConnectionStatistics
 	public static async ValueTask SessionEndedAsync(IMediator mediator, DBRef player, DateTimeOffset started,
 		DateTimeOffset ended, Func<ValueTask<IReadOnlyList<DateTimeOffset>>> othersStarted)
 	{
-		await Gate.WaitAsync();
+		var gate = Gates.GetValue(mediator, _ => new SemaphoreSlim(1, 1));
+		await gate.WaitAsync();
 		try
 		{
 			if (await HelperFunctions.GetGod(mediator) is not SharpPlayer god) return;
@@ -73,7 +77,7 @@ public static class ConnectionStatistics
 		}
 		finally
 		{
-			Gate.Release();
+			gate.Release();
 		}
 	}
 

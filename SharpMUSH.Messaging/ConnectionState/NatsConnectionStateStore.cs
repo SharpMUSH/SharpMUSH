@@ -175,6 +175,14 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 			data.State = playerObjid is not null ? "LoggedIn" : "Connected";
 		}, ct);
 
+	public Task SetPlayerBindingAsync(long handle, string? playerObjid, string key, string value, CancellationToken ct = default) =>
+		MutateAsync(handle, data =>
+		{
+			data.PlayerObjid = playerObjid;
+			data.State = playerObjid is not null ? "LoggedIn" : "Connected";
+			data.Metadata[key] = value;
+		}, ct);
+
 	public Task UpdateMetadataAsync(long handle, string key, string value, CancellationToken ct = default) =>
 		MutateAsync(handle, data =>
 		{
