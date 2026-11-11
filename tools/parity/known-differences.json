@@ -632,8 +632,8 @@
       "tracking": "#1854",
       "profile": "TinyMUX's forms of shared functions",
       "command": "think [null(x)][s(%b)] [lit([add(1,2)])] [eval(add(1,2))]",
-      "sharp": "[add(1,2)] 3",
-      "penn": "[add(1,2)] #-1 FUNCTION (EVAL) EXPECTS 2 ARGUMENTS BUT GOT 1"
+      "sharp": " [add(1,2)] 3",
+      "penn": " [add(1,2)] #-1 FUNCTION (EVAL) EXPECTS 2 ARGUMENTS BUT GOT 1"
     }
   ]
 }
