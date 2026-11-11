@@ -73,14 +73,16 @@
 |                  |                  |                  |                  |
 |------------------|------------------|------------------|------------------|
 | [ADDRLOG()]      | [CLIENTZONE()]   | [CLOAK()]        | [CMDS()]         |
-| [CONN()]         | [CONNLOG()]      | [CONNRECORD()]   | [DOING()]        |
-| [GMCPSUPPORTS()] | [HEIGHT()]       | [HIDDEN()]       | [HOST()]         |
-| [IDLE()]         | [IPADDR()]       | [LPORTS()]       | [LWHO()]         |
-| [LWHOID()]       | [MWHO()]         | [MWHOID()]       | [NMWHO()]        |
-| [NWHO()]         | [PLAYER()]       | [PORTS()]        | [PUEBLO()]       |
-| [RECV()]         | [SENT()]         | [SSL()]          | [TERMINFO()]     |
-| [TOTCMDS()]      | [WIDTH()]        | [XMWHO()]        | [XMWHOID()]      |
-| [XWHO()]         | [XWHOID()]       | [ZMWHO()]        | [ZWHO()]         |
+| [CONN()]         | [CONNLAST()]     | [CONNLEFT()]     | [CONNLOG()]      |
+| [CONNMAX()]      | [CONNNUM()]      | [CONNRECORD()]   | [CONNTOTAL()]    |
+| [DOING()]        | [GMCPSUPPORTS()] | [HEIGHT()]       | [HIDDEN()]       |
+| [HOST()]         | [IDLE()]         | [IPADDR()]       | [LPORTS()]       |
+| [LWHO()]         | [LWHOID()]       | [MWHO()]         | [MWHOID()]       |
+| [NMWHO()]        | [NWHO()]         | [PLAYER()]       | [PORTS()]        |
+| [PUEBLO()]       | [RECV()]         | [SENT()]         | [SSL()]          |
+| [TERMINFO()]     | [TOTCMDS()]      | [WIDTH()]        | [XMWHO()]        |
+| [XMWHOID()]      | [XWHO()]         | [XWHOID()]       | [ZMWHO()]        |
+| [ZWHO()]         |                  |                  |                  |
 
 # Dbref Functions
   Dbref functions return a dbref or list of dbrefs related to some value on an object.
@@ -278,11 +280,12 @@
 |                 |                 |                 |                 |
 |-----------------|-----------------|-----------------|-----------------|
 | [CONVSECS()]    | [CONVTIME()]    | [CONVUTCSECS()] | [CONVUTCTIME()] |
-| [CTIME()]       | [DATEPARSE()]   | [ETIME()]       | [ETIMEFMT()]    |
-| [ISDAYLIGHT()]  | [MOON()]        | [MTIME()]       | [RESTARTTIME()] |
-| [SECS()]        | [STARTTIME()]   | [STRINGSECS()]  | [TIME()]        |
+| [CTIME()]       | [DATEPARSE()]   | [DIGITTIME()]   | [ETIME()]       |
+| [ETIMEFMT()]    | [EXPTIME()]     | [ISDAYLIGHT()]  | [MOON()]        |
+| [MTIME()]       | [RESTARTSECS()] | [RESTARTTIME()] | [SECS()]        |
+| [SINGLETIME()]  | [STARTTIME()]   | [STRINGSECS()]  | [TIME()]        |
 | [TIMECALC()]    | [TIMEFMT()]     | [TIMESTRING()]  | [UPTIME()]      |
-| [UTCTIME()]     |                 |                 |                 |
+| [UTCTIME()]     | [WRITETIME()]   |                 |                 |
 
 ::: seealso
 - [timezones]
@@ -5487,10 +5490,12 @@ You don\'t say
 :::
 # starttime()
 # restarttime()
+# restartsecs()
 `starttime()`<br>
-`restarttime()`
+`restarttime()`<br>
+`restartsecs()`
 
-  starttime() returns the time the MUSH was last started, and restarttime() returns the time it was last restarted, including @shutdown/reboots. The times are in the same format as time().
+  starttime() returns the time the MUSH was last started, and restarttime() returns the time it was last restarted, including @shutdown/reboots. The times are in the same format as time(). restartsecs() returns the restart time in seconds since 1970, as secs() does; it comes from TinyMUX.
 
   Example:
 ```sharp

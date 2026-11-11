@@ -130,6 +130,15 @@ public class ConnectionStateEventHandler(
 					logger.LogError(ex, "Error adding the session's commands to TOTCMDS for {Player}", notification.PlayerRef.Value);
 				}
 
+				try
+				{
+					await RecordSessionAsync(notification.PlayerRef.Value, notification.Handle, connectionData);
+				}
+				catch (Exception ex)
+				{
+					logger.LogError(ex, "Error recording the session in CONNINFO for {Player}", notification.PlayerRef.Value);
+				}
+
 				await eventService.TriggerEventAsync(SharpEvents.PlayerDisconnect,
 					notification.PlayerRef.Value, // Enactor is the disconnecting player
 					$"#{notification.PlayerRef.Value.Number}",
@@ -187,5 +196,19 @@ public class ConnectionStateEventHandler(
 					$"{bytesRecv}/{bytesSent}/{commandCount}"); // PennMUSH format: recv/sent/count
 			}
 		}
+	}
+
+	/// <summary>
+	/// Counts the ended session in the player's <c>CONNINFO</c>, beside the player's other play sessions still open.
+	/// The portal's background session is not one, here as in the announcements.
+	/// </summary>
+	private async ValueTask RecordSessionAsync(DBRef player, long handle, IConnectionService.ConnectionData ended)
+	{
+		var now = DateTimeOffset.UtcNow;
+		var others = await connectionService.Get(player)
+			.Where(c => c.Handle != handle && c.PresenceClass != PresenceClasses.Portal)
+			.Select(c => ConnectionStatistics.StartedAt(c) ?? now)
+			.ToListAsync();
+		await ConnectionStatistics.SessionEndedAsync(mediator, player, ConnectionStatistics.StartedAt(ended) ?? now, now, others);
 	}
 }
