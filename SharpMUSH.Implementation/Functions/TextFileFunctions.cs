@@ -87,17 +87,22 @@ public partial class Functions
 	/// does. Without that gate a mortal could read the <c>ahelp</c> corpus that the AHELP command
 	/// refuses them.
 	/// </remarks>
-	[SharpFunction(Name = "textfile", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["type", "entry"])]
+	/// <remarks>Under <c>mux_arguments</c>, a first argument that names no text file is TinyMUX's dynhelp()
+	/// (<see cref="ObjectHelpAsync"/>), which takes a third argument.</remarks>
+	[SharpFunction(Name = "textfile", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["type", "entry", "prefix"])]
 	public async ValueTask<CallState> TextFile(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var fileReference = args["0"].Message.ToPlainText();
 		var entryName = args["1"].Message.ToPlainText();
+		var muxForm = Configuration.CurrentValue.Compatibility.MuxArguments;
 
 		return await ReadableCorpusAsync(parser, fileReference) switch
 		{
-			string corpus => await EntryAsync(corpus, entryName),
+			string corpus when parser.CurrentState.ArgumentsOrdered.Count < 3 => await EntryAsync(corpus, entryName),
+			Error<string> { Value: ErrorMessages.Returns.NoSuchFile } or string when muxForm => await ObjectHelpAsync(parser, fileReference, entryName),
+			string => new CallState(ErrorMessages.Returns.ArgumentCount("TEXTFILE", 2, 2, 3)),
 			Error<string> refused => new CallState(refused.Value)
 		};
 
@@ -116,6 +121,45 @@ public partial class Functions
 				return new CallState(ErrorMessages.Returns.Error);
 			}
 		}
+	}
+
+	/// <summary>
+	/// TinyMUX's <c>dynhelp(&lt;object&gt;, &lt;topic&gt;[, &lt;prefix&gt;])</c>: the object's attribute named by the
+	/// prefix, <c>HELP_</c> unless given, and the topic; else the one attribute whose name begins with them both.
+	/// The caller must be able to examine the object.
+	/// </summary>
+	private async ValueTask<CallState> ObjectHelpAsync(IMUSHCodeParser parser, string objectName, string topic)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (await LocateService.Locate(parser, executor, executor, objectName, LocateFlags.All) is not AnySharpObject found)
+		{
+			return new CallState(ErrorMessages.Returns.NoMatch);
+		}
+
+		if (!await PermissionService.CanExamine(executor, found))
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		var prefix = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, MarkupText.Empty).ToPlainText()
+			is { Length: > 0 } given ? given : "HELP_";
+		var name = (prefix + topic).ToUpperInvariant();
+		if (await AttributeService.GetAttributeAsync(executor, found, name, IAttributeService.AttributeMode.Read, false)
+				is SharpAttribute[] exact)
+		{
+			return new CallState(exact.Last().Value);
+		}
+
+		var candidates = await AttributeService.GetAttributePatternAsync(executor, found, name + "*", false,
+			IAttributeService.AttributePatternMode.Wildcard) is SharpAttribute[] matched
+			? matched
+			: [];
+		return candidates switch
+		{
+			[var only] => new CallState(only.Value),
+			[] => new CallState(ErrorMessages.Returns.NoSuchTopic),
+			_ => new CallState(ErrorMessages.Returns.AmbiguousTopic)
+		};
 	}
 
 	/// <summary>

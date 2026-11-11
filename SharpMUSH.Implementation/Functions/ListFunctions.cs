@@ -653,7 +653,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(index + 1);
 	}
 
-	[SharpFunction(Name = "mix", MinArgs = 3, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list1", "list2", "list-or-delimiter..."])]
+	[SharpFunction(Name = "mix", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list1", "list2", "list-or-delimiter..."])]
 	public async ValueTask<CallState> Mix(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var errors = new ListEvaluationErrors();
@@ -1203,9 +1203,9 @@ public partial class Functions
 	/// <summary>
 	/// PennMUSH's <c>fun_splice</c> (<c>src/funlist.c:1973</c>): each word of the first list that equals
 	/// <c>word</c>, compared without markup and case-sensitively, is replaced by the word at the same
-	/// position in the second list.
+	/// position in the second list. A fifth argument, as TinyMUX takes it, is the output separator.
 	/// </summary>
-	[SharpFunction(Name = "splice", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "word", "delimiter"])]
+	[SharpFunction(Name = "splice", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "word", "delimiter", "osep"])]
 	public ValueTask<CallState> Splice(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -1236,7 +1236,7 @@ public partial class Functions
 		var spliced = list.Select((item, index)
 			=> string.Equals(item.ToPlainText(), word, StringComparison.Ordinal) ? list2[index] : item);
 
-		return ValueTask.FromResult(new CallState(MarkupText.Join(delimiter, spliced)));
+		return ValueTask.FromResult(new CallState(MarkupText.Join(MuxOutputSeparator(args, 4, delimiter), spliced)));
 	}
 
 	// (attribute, list, step, delimiter, outsep) — arg 0 is the attribute, arg 2 the group size,
@@ -1342,7 +1342,7 @@ public partial class Functions
 	/// <c>strfirstof(r(page,args),1)</c> — the unevaluated text carries a comma, which then split the
 	/// argument list of whatever consumed it.
 	/// </summary>
-	[SharpFunction(Name = "strfirstof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression...", "default"])]
+	[SharpFunction(Name = "strfirstof", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression...", "default"])]
 	public async ValueTask<CallState> StringFirstOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var errors = new ListEvaluationErrors();
@@ -1374,7 +1374,7 @@ public partial class Functions
 	/// serves both, differing only in whether a candidate counts because it is true or because it
 	/// is non-empty, so both names run the one shared body.</para>
 	/// </remarks>
-	[SharpFunction(Name = "strallof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression..."])]
+	[SharpFunction(Name = "strallof", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression..."])]
 	public ValueTask<CallState> StringAllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> WhichOfAllAsync(parser, isBool: false);
 
@@ -1393,8 +1393,10 @@ public partial class Functions
 	/// line past <c>&lt;line length&gt;</c> by its own width but never causes the wrap itself. A
 	/// column count derived from <c>line / field</c> gets the same answer only while the separator is
 	/// one character and divides evenly.</para>
+	///
+	/// <para>A sixth argument, as TinyMUX takes it, fills each field in place of spaces.</para>
 	/// </remarks>
-	[SharpFunction(Name = "table", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "field width", "line length", "delimiter", "osep"])]
+	[SharpFunction(Name = "table", MinArgs = 1, MaxArgs = 6, Flags = FunctionFlags.Regular, ParameterNames = ["list", "field width", "line length", "delimiter", "osep", "fill"])]
 	public async ValueTask<CallState> Table(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
@@ -1405,6 +1407,7 @@ public partial class Functions
 		var lineWidthArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, "78").ToPlainText();
 		var delimiterArg = ArgHelpers.Delimiter(args, 3);
 		var separatorArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, " ");
+		var fillArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 5, MarkupText.Space);
 		var fieldAlignment = "<";
 
 		if (fieldWidthArg.StartsWith('<') || fieldWidthArg.StartsWith('>') || fieldWidthArg.StartsWith('-'))
@@ -1432,6 +1435,7 @@ public partial class Functions
 		var field = new ColumnFormat
 		{
 			Width = fieldWidth,
+			Fill = fillArg.Length == 0 ? MarkupText.Space : fillArg,
 			Alignment = fieldAlignment switch
 			{
 				">" => Alignment.Right,
@@ -1692,11 +1696,13 @@ public partial class Functions
 		// PennMUSH: with four arguments a non-empty fourth is the sort type, whatever it says, and an
 		// empty one is the output separator. With five, the fourth is the sort type and the fifth the
 		// separator, unless the fourth is text that names no sort type and the fifth names one: that is
-		// TinyMUX's order (list1, list2, delimiter, separator, sort type).
+		// TinyMUX's order (list1, list2, delimiter, separator, sort type), which mux_arguments always reads.
 		var fourth = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Empty);
 		var fifth = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, MarkupText.Empty);
+		var muxOrder = Configuration.CurrentValue.Compatibility.MuxArguments;
 		var (sortType, outputSeparator) = args.Count switch
 		{
+			4 or 5 when muxOrder => (fifth.ToPlainText(), MuxOutputSeparator(args, 3, delimiter)),
 			4 when fourth.Length == 0 => (string.Empty, MarkupText.Empty),
 			4 => (fourth.ToPlainText(), delimiter),
 			5 when fourth.Length > 0 && !SortService.IsSortType(fourth.ToPlainText())

@@ -85,18 +85,43 @@ public partial class Functions
 	}
 
 
-	[SharpFunction(Name = "isjson", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
+	/// <remarks>A second argument, as TinyMUX takes it, also asks what the JSON is: <c>string</c>, <c>number</c>,
+	/// <c>object</c>, <c>array</c>, <c>true</c>, <c>false</c>, <c>null</c> or <c>boolean</c>.</remarks>
+	[SharpFunction(Name = "isjson", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "type"])]
 	public ValueTask<CallState> IsJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var type = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message.ToPlainText() ?? string.Empty;
+		JsonValueKind kind;
 		try
 		{
 			using var jsonDoc = JsonDocument.Parse(parser.CurrentState.Arguments["0"].Message.ToPlainText());
-			return ValueTask.FromResult(new CallState("1"));
+			kind = jsonDoc.RootElement.ValueKind;
 		}
 		catch (JsonException)
 		{
 			return ValueTask.FromResult(new CallState("0"));
 		}
+
+		bool? matches = type.ToLowerInvariant() switch
+		{
+			"" => true,
+			"string" => kind == JsonValueKind.String,
+			"number" => kind == JsonValueKind.Number,
+			"object" => kind == JsonValueKind.Object,
+			"array" => kind == JsonValueKind.Array,
+			"true" => kind == JsonValueKind.True,
+			"false" => kind == JsonValueKind.False,
+			"null" => kind == JsonValueKind.Null,
+			"boolean" => kind is JsonValueKind.True or JsonValueKind.False,
+			_ => null
+		};
+
+		return ValueTask.FromResult(matches switch
+		{
+			true => new CallState("1"),
+			false => new CallState("0"),
+			null => new CallState(ErrorMessages.Returns.UnknownJsonType)
+		});
 	}
 
 	[SharpFunction(Name = "json_map", MinArgs = 2, MaxArgs = 33, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["attribute", "json", "osep", "arg..."])]

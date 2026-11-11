@@ -459,11 +459,13 @@ public partial class Functions
 			string.Join(separator, VisibleRegisterNames(parser.CurrentState, kinds, pattern))));
 	}
 
-	[SharpFunction(Name = "unsetq", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	/// <remarks>Each argument is a space-separated list of registers or patterns; TinyMUX takes one register an argument.</remarks>
+	[SharpFunction(Name = "unsetq", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public ValueTask<CallState> UnSetQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var patterns = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText()
-			.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? [];
+		var patterns = parser.CurrentState.ArgumentsOrdered.Values
+			.SelectMany(argument => argument.Message.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries))
+			.ToArray();
 		if (parser.CurrentState.Registers.TryPeek(out var registers))
 		{
 			// No pattern, or a lone "*" among them, clears the whole scope.

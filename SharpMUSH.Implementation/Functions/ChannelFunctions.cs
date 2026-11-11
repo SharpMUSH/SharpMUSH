@@ -196,9 +196,21 @@ public partial class Functions
 		});
 	}
 
-	[SharpFunction(Name = "channels", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
+	/// <remarks>Under <c>mux_arguments</c> it is TinyMUX's (<see cref="MuxChannelsAsync"/>); otherwise it takes at most two
+	/// arguments.</remarks>
+	[SharpFunction(Name = "channels", MinArgs = 0, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Channels(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		if (Configuration.CurrentValue.Compatibility.MuxArguments)
+		{
+			return await MuxChannelsAsync(parser);
+		}
+
+		if (parser.CurrentState.ArgumentsOrdered.Count > 2)
+		{
+			return new CallState(ErrorMessages.Returns.ArgumentCount("CHANNELS", 0, 2, parser.CurrentState.ArgumentsOrdered.Count));
+		}
+
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var player = executor;
@@ -282,6 +294,62 @@ public partial class Functions
 		}
 
 		return new CallState(string.Join(" ", filteredChannels));
+	}
+
+	/// <summary>
+	/// TinyMUX's <c>channels([&lt;player&gt;[, &lt;delimiter&gt;[, &lt;offset&gt;[, &lt;limit&gt;]]]])</c>: the channels
+	/// the caller can see, and with a player other than <c>all</c>, only those whose owner the player controls; the
+	/// first <c>offset</c> are skipped and at most <c>limit</c> listed when it is above 0.
+	/// </summary>
+	private async ValueTask<CallState> MuxChannelsAsync(IMUSHCodeParser parser)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var name = args.Count > 0 ? args["0"].Message.ToPlainText() : string.Empty;
+
+		AnySharpObject? owner = null;
+		if (name.Length > 0 && !name.Equals("all", StringComparison.OrdinalIgnoreCase))
+		{
+			if (await LocateService.LocatePlayer(parser, executor, executor, name) is not AnySharpObject found)
+			{
+				return new CallState(ErrorMessages.Returns.PlayerNotFound);
+			}
+
+			owner = found;
+		}
+
+		var delimiter = ArgHelpers.Delimiter(args, 1);
+		var offset = args.Count > 2 ? Math.Max(0, SearchSpecEngine.LeadingInteger(args["2"].Message.ToPlainText())) : 0;
+		var limit = args.Count > 3 ? Math.Max(0, SearchSpecEngine.LeadingInteger(args["3"].Message.ToPlainText())) : 0;
+
+		var listed = new List<string>();
+		var position = 0;
+		await foreach (var channel in Mediator.CreateStream(new GetChannelListQuery()))
+		{
+			if (limit > 0 && listed.Count >= limit)
+			{
+				break;
+			}
+
+			if (!await ChannelPermissions.ChannelCanSeeAsync(executor, channel)
+					&& !await ChannelHelper.IsMemberOfChannel(Mediator, executor, channel))
+			{
+				continue;
+			}
+
+			if (owner is not null
+					&& !await PermissionService.Controls(owner, new AnySharpObject(await channel.Owner.WithCancellation(CancellationToken.None))))
+			{
+				continue;
+			}
+
+			if (position++ >= offset)
+			{
+				listed.Add(channel.Name.ToPlainText());
+			}
+		}
+
+		return new CallState(MarkupText.Join(delimiter, listed.Select(MarkupText.Plain)));
 	}
 
 	/// <summary>

@@ -114,6 +114,8 @@ Functions inspect membership, privileges, history, and channel metadata. For cha
   - **off**: Channels *\<player\>* is not on
   - **quiet**: Just channel names, no extra info
 
+With the `mux_arguments` @config option on, as after a TinyMUX import, channels() is TinyMUX's: `channels([<player>[, <delimiter>[, <offset>[, <limit>]]]])`. It lists the channels you can see; with a `<player>` other than `all`, only those whose owner `<player>` controls. It skips the first `<offset>` and lists at most `<limit>` when that is above 0.
+
 ## cowner()
 
 `cowner(<channel>)`
