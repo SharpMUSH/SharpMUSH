@@ -13,6 +13,7 @@ using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Softcode;
 using System.Collections.Frozen;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -1279,7 +1280,9 @@ public partial class Functions
 				return null;
 
 			bool hasIt = powers
-				? await obj.HasPower(name)
+				? await DialectHasPowerAsync(obj, name) ?? await obj.HasPower(name)
+				: SoftcodeDialectScope.Current?.FlagFor(name) is { } dialectFlag
+				? await DialectHasAsync(obj, dialectFlag)
 				: name.ToUpperInvariant() switch
 				{
 					"PLAYER" => obj.IsPlayer,
@@ -1322,7 +1325,9 @@ public partial class Functions
 			async found =>
 			{
 				var result = form == FlagListForm.Letters
-					? await FlagLetterCheck(found, listArg, orMode)
+					? SoftcodeDialectScope.Current is { FlagLetters.Count: > 0 } dialect
+						? await DialectFlagLetterCheck(dialect, found, listArg, orMode)
+						: await FlagLetterCheck(found, listArg, orMode)
 					: await FlagLongNameCheck(found, listArg, orMode, powers: form == FlagListForm.Powers);
 				return result is { } matched
 					? new CallState(matched)

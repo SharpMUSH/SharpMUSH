@@ -13,6 +13,18 @@ SharpMUSH answers these calls as TinyMUX does, where PennMUSH refuses them or re
 
 `switch(<string>,<default>)` is the default, a one-argument `add()` or `and()` is that argument tested or returned, `itext()` is the innermost loop's element, and `lnum()` is empty.
 
+Code in TinyMUX's dialect (an attribute flagged `mux`, or any code on a game whose `dialect` option is `mux`) tests flags and powers by TinyMUX's names and letters. `hasflag()`, `andlflags()` and `orlflags()` read `HALTED` as `HALT`, `ASCII` as `NOACCENTS` and `IMMORTAL` as the Immortal power; `COMMANDS`, `SPOOF`, `BLEED` and `ACCENTS` hold when `NO_COMMAND`, `NOSPOOF`, `NOBLEED` and `NOACCENTS` are not set; and `HAS_STARTUP`, `HAS_LISTEN`, `HAS_FORWARDLIST` and `HAS_DAILY` hold when the object has that attribute. `flags()`, `andflags()` and `orflags()` use TinyMUX's letters (`n` is NO_COMMAND, which a new thing has, `s` is SAFE, `q` TERSE, `T` TRACE, `Z` ROYALTY, `X` ANSI, and a thing has no type letter), and `flags()` leaves out a flag TinyMUX has no letter for. `haspower()`, `andlpowers()` and `orlpowers()` read TinyMUX's power names: `comm_all`, `dark`, `free_money`, `quota`, `control_all`, `siteadmin` and the rest.
+
+```sharp unchecked
+> @create Box
+> @set Box=SAFE
+> @set Box=TERSE
+> &TEST Box=[flags(me)] [hasflag(me,COMMANDS)]
+> @set Box/TEST=mux
+> think u(Box/TEST)
+nsq 0
+```
+
 `wrap(<text>,<width>,<justify>,<left>,<right>,<hanging>,<osep>,<first width>)` is TinyMUX's `wrap()` whenever it has more than four arguments or its third starts with a letter: it pads every line to its width, justified `left`, `right` or `center`. See [wrap tinymux].
 
 `ansi(<codes>,<string>,<codes2>,<string2>,...)` marks up each string with the codes before it. `secs(utc|local[,<digits>])` reads the clock in UTC or the server's local time, to 0-7 decimal places. `extract()` and `insert()` take an output separator as a fifth argument, and `remove()` as a fourth; `@@` there means no separator. With the fifth argument, `insert()` also takes the position one past the last word, and adds the word at the end.

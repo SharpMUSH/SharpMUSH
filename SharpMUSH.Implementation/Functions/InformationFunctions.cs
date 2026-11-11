@@ -21,6 +21,7 @@ using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Softcode;
 using ConfigGenerated = SharpMUSH.Configuration.Generated;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Reality;
@@ -414,7 +415,7 @@ public partial class Functions
 		return maybeLocate switch
 		{
 			Error<CallState> error => error.Value,
-			AnySharpObject located => new CallState(await located.HasPower(power))
+			AnySharpObject located => new CallState(await DialectHasPowerAsync(located, power) ?? await located.HasPower(power))
 		};
 	}
 
