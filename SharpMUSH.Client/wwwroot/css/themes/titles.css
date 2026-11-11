@@ -236,10 +236,11 @@
 }
 /* Glove: a pointing hand before, as a menu cursor. */
 [data-ornament-glyphs="glove"] { --ornament-before: "\261E"; --ornament-after: none; }
-/* Jagged: a slashed band of the accent. */
+/* Jagged: a thick accent bar cut at a slant at both ends, with two white nicks through it. */
 [data-ornament-underline="jagged"] {
-	--title-underline: repeating-linear-gradient(135deg, var(--accent) 0 5px, transparent 5px 9px);
-	--title-underline-height: 6px;
+	--title-underline: linear-gradient(100deg, transparent 0 7px, var(--accent) 7px 64%, var(--accent-2) 64% 67%, var(--accent) 67% 80%,
+		var(--accent-2) 80% 82%, var(--accent) 82% calc(100% - 7px), transparent calc(100% - 7px));
+	--title-underline-height: 9px;
 	--title-underline-pad: 6px;
 }
 /* Pointer: a solid triangle before, as a menu cursor. */
@@ -267,8 +268,8 @@
 }
 /* Bevel: a hard black drop, two pixels deep. */
 [data-effect-shadow="bevel"] { --title-shadow: 1px 1px 0 #000, 2px 2px 0 #000; }
-/* Ransom: a hard accent block behind and a black edge, as letters cut from a page. */
-[data-effect-shadow="ransom"] { --title-shadow: 1px 1px 0 #000, 2px 2px 0 #000, 4px 4px 0 var(--accent); }
+/* Ransom: letters in a black outline over a hard black and accent drop, as letters cut from a page. */
+[data-effect-shadow="ransom"] { --title-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 3px 3px 0 #000, 5px 5px 0 var(--accent); }
 /* Dialog: a deep black drop. */
 [data-effect-shadow="dialog"] { --title-shadow: 0 2px 0 rgba(0, 0, 0, 0.9); }
 /* Stamped: pressed into the page, a light edge below. */
