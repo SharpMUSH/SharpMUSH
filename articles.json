@@ -3930,6 +3930,16 @@
     "file": "hasdepower-function.md"
   },
   {
+    "id": "hastoggle-function",
+    "lookup": "hastoggle()",
+    "title": "hastoggle()",
+    "aliases": [
+      "hastoggle"
+    ],
+    "sections": [],
+    "file": "hastoggle-function.md"
+  },
+  {
     "id": "help-search",
     "lookup": "help search",
     "title": "Help Search",
@@ -5285,6 +5295,16 @@
     "file": "listflags-function.md"
   },
   {
+    "id": "listtoggles-function",
+    "lookup": "listtoggles()",
+    "title": "listtoggles()",
+    "aliases": [
+      "listtoggles"
+    ],
+    "sections": [],
+    "file": "listtoggles-function.md"
+  },
+  {
     "id": "literal-command",
     "lookup": "]",
     "title": "]",
@@ -5610,6 +5630,16 @@
       }
     ],
     "file": "lsearch-function.md"
+  },
+  {
+    "id": "ltoggles-function",
+    "lookup": "ltoggles()",
+    "title": "ltoggles()",
+    "aliases": [
+      "ltoggles"
+    ],
+    "sections": [],
+    "file": "ltoggles-function.md"
   },
   {
     "id": "mail-other",
@@ -7773,6 +7803,12 @@
         "id": "roles-rhost",
         "lookup": "roles rhost",
         "heading": "RhostMUSH\u0027s staff levels",
+        "aliases": []
+      },
+      {
+        "id": "roles-totems",
+        "lookup": "roles totems",
+        "heading": "RhostMUSH\u0027s totems",
         "aliases": []
       },
       {
@@ -16074,6 +16110,40 @@
     ],
     "sections": [],
     "file": "tobin-function.md"
+  },
+  {
+    "id": "toggle-command",
+    "lookup": "@toggle",
+    "title": "@toggle",
+    "aliases": [],
+    "sections": [],
+    "file": "toggle-command.md"
+  },
+  {
+    "id": "toggle-function",
+    "lookup": "toggle()",
+    "title": "toggle()",
+    "aliases": [
+      "toggle"
+    ],
+    "sections": [],
+    "file": "toggle-function.md"
+  },
+  {
+    "id": "toggledef-command",
+    "lookup": "@toggledef",
+    "title": "@toggledef",
+    "aliases": [],
+    "sections": [],
+    "file": "toggledef-command.md"
+  },
+  {
+    "id": "toggles",
+    "lookup": "toggles",
+    "title": "Toggles",
+    "aliases": [],
+    "sections": [],
+    "file": "toggles.md"
   },
   {
     "id": "tone-function",

@@ -61,9 +61,9 @@ These '@' commands are general utility and programming commands:
 | [@prompt]    | [@ps]        | [@queue]     | [@remit]     | [@restart]   |
 | [@retry]     | [@roll]      | [@rollback]  | [@scan]      | [@search]    |
 | [@select]    | [@sockset]   | [@stats]     | [@sweep]     | [@switch]    |
-| [@teleport]  | [@theme]     | [@trigger]   | [@verb]      | [@version]   |
-| [@wait]      | [@warnings]  | [@wcheck]    | [@whereis]   | [@wiki]      |
-| [@zemit]     |              |              |              |              |
+| [@teleport]  | [@theme]     | [@toggle]    | [@trigger]   | [@verb]      |
+| [@version]   | [@wait]      | [@warnings]  | [@wcheck]    | [@whereis]   |
+| [@wiki]      | [@zemit]     |              |              |              |
 
 From plugins: [@discord]
 
@@ -82,9 +82,9 @@ These '@' commands are only usable by wizards or privileged players:
 | [@push]         | [@quota]        | [@readcache]    | [@reality]      | [@rejectmotd]   |
 | [@respond]      | [@role]         | [@rxlevel]      | [@secret]       | [@shutdown]     |
 | [@site]         | [@sitelock]     | [@slave]        | [@snapshot]     | [@sql]          |
-| [@squota]       | [@storage]      | [@suggest]      | [@tag]          | [@txlevel]      |
-| [@uptime]       | [@wall]         | [@wizmotd]      | [@wizwall]      | [cd]            |
-| [ch]            | [cv]            |                 |                 |                 |
+| [@squota]       | [@storage]      | [@suggest]      | [@tag]          | [@toggledef]    |
+| [@txlevel]      | [@uptime]       | [@wall]         | [@wizmotd]      | [@wizwall]      |
+| [cd]            | [ch]            | [cv]            |                 |                 |
 
 From plugins: [@scene]
 
