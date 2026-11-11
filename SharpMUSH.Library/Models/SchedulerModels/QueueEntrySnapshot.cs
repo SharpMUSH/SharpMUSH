@@ -12,6 +12,9 @@ public sealed record QueueEntrySnapshot(long Pid, DBRef? Source, DBRef? Owner, s
 	public long? InvocationCount { get; init; }
 	public string? SourceAttribute { get; init; }
 
+	/// <summary>The object whose action queued the entry; its executor when nothing else caused it.</summary>
+	public DBRef? Enactor { get; init; }
+
 	/// <summary>The action list a <c>@wait</c> runs, for a delayed or semaphore entry.</summary>
 	public MString? Command { get; init; }
 

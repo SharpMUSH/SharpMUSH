@@ -136,11 +136,11 @@
 | [MTIME()]        | [MUDNAME()]      | [MUDURL()]       | [NAME()]         |
 | [NATTR()]        | [NEARBY()]       | [OBJID()]        | [OBJMEM()]       |
 | [ORFLAGS()]      | [ORLFLAGS()]     | [ORLPOWERS()]    | [PERMISSION()]   |
-| [PIDINFO()]      | [PLAYERMEM()]    | [PLAYMEM()]      | [POLL()]         |
-| [POWERS()]       | [QUOTA()]        | [RESTARTS()]     | [ROLES()]        |
-| [RXDESC()]       | [RXLEVEL()]      | [SIZE()]         | [TAGMATCH()]     |
-| [TAGREF()]       | [TXLEVEL()]      | [TYPE()]         | [VATTRCNT()]     |
-| [VERSION()]      | [VISIBLE()]      | [WIZMOTD()]      |                  |
+| [PID()]          | [PIDINFO()]      | [PLAYERMEM()]    | [PLAYMEM()]      |
+| [POLL()]         | [POWERS()]       | [QUOTA()]        | [RESTARTS()]     |
+| [ROLES()]        | [RXDESC()]       | [RXLEVEL()]      | [SIZE()]         |
+| [TAGMATCH()]     | [TAGREF()]       | [TXLEVEL()]      | [TYPE()]         |
+| [VATTRCNT()]     | [VERSION()]      | [VISIBLE()]      | [WIZMOTD()]      |
 
 ::: seealso
 - [Dbref functions]
@@ -323,15 +323,15 @@
 | [OPEN()]           | [PCREATE()]        | [POSE()]           | [PRIVATIZE()]      |
 | [PUSHREGS()]       | [R()]              | [RAND()]           | [REGISTERS()]      |
 | [RESTRICTEDEXPR()] | [ROLL()]           | [ROLLINFO()]       | [S()]              |
-| [SCAN()]           | [SECUREX()]        | [SET()]            | [SETQ()]           |
-| [SETQM()]          | [SETR()]           | [SETRM()]          | [SLEV()]           |
-| [SOUNDEX()]        | [SOUNDSLIKE()]     | [SPEAK()]          | [STEXT()]          |
-| [STOPEVENT()]      | [STR()]            | [STRFUNC()]        | [SUBEVAL()]        |
-| [SUCCESSES()]      | [SUGGEST()]        | [TAG()]            | [TAGWRAP()]        |
-| [TEL()]            | [TESTLOCK()]       | [TEXTENTRIES()]    | [TEXTFILE()]       |
-| [TOTPOS()]         | [TRACE()]          | [TRIGGER()]        | [UNSETQ()]         |
-| [UPTIME()]         | [URL_UNESCAPE()]   | [VALID()]          | [VERB()]           |
-| [WIPE()]           |                    |                    |                    |
+| [SANDBOX()]        | [SCAN()]           | [SECUREX()]        | [SET()]            |
+| [SETQ()]           | [SETQM()]          | [SETR()]           | [SETRM()]          |
+| [SLEV()]           | [SOUNDEX()]        | [SOUNDSLIKE()]     | [SPEAK()]          |
+| [STEXT()]          | [STOPEVENT()]      | [STR()]            | [STRFUNC()]        |
+| [SUBEVAL()]        | [SUCCESSES()]      | [SUGGEST()]        | [TAG()]            |
+| [TAGWRAP()]        | [TEL()]            | [TESTLOCK()]       | [TEXTENTRIES()]    |
+| [TEXTFILE()]       | [TOTPOS()]         | [TRACE()]          | [TRIGGER()]        |
+| [UNSETQ()]         | [UPTIME()]         | [URL_UNESCAPE()]   | [VALID()]          |
+| [VERB()]           | [WIPE()]           |                    |                    |
 
 # Wiki Functions
   Wiki functions read the shared wiki: the same pages the web portal serves.

@@ -99,6 +99,7 @@ public partial class TaskScheduler
 			ExecutionDuration = entry.Observation?.ExecutionDuration,
 			InvocationCount = entry.Observation?.InvocationCount,
 			SourceAttribute = entry.Observation?.SourceAttribute,
+			Enactor = entry.Enactor,
 			Command = entry.Deferred?.Command,
 			Semaphore = entry.Deferred?.Semaphore is { } semaphore && entry.SemaphoreTarget is { } holder
 				? new DbRefAttribute(holder, semaphore.Attribute)
