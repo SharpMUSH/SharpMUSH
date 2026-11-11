@@ -62,4 +62,29 @@ public class SmtpEmailServiceTests
 
 		await Assert.That(sent is Error<string> { Value: var reason } && reason.Contains("email.password")).IsTrue();
 	}
+
+	[Test]
+	public async Task KeepsThePasswordOffAnUnencryptedConnection()
+	{
+		await using var smtp = new FakeSmtpServer();
+		var service = new SmtpEmailService(FixedSecrets.With("email.password", "hunter2"), TimeProvider.System,
+			NullLogger<SmtpEmailService>.Instance);
+		var sent = await service.SendAsync(Server(smtp) with { Username = "game" }, new EmailMessage("player@example.com", "Hi", "Body"));
+
+		await Assert.That(sent is Error<string> { Value: var reason } && reason.Contains("no encryption")).IsTrue();
+		await Assert.That(smtp.Received).IsEmpty();
+	}
+
+	[Test]
+	public async Task AFailedSendDoesNotCountAgainstTheHour()
+	{
+		await using var smtp = new FakeSmtpServer();
+		var service = new SmtpEmailService(FixedSecrets.With("email.password", "hunter2"),
+			new SecretStoreTests.FixedClock(DateTimeOffset.UnixEpoch), NullLogger<SmtpEmailService>.Instance);
+		var server = Server(smtp, perHour: 1);
+		var message = new EmailMessage("player@example.com", "Hi", "Body");
+
+		await Assert.That(await service.SendAsync(server with { Username = "game" }, message) is Error<string>).IsTrue();
+		await Assert.That(await service.SendAsync(server, message) is Success).IsTrue();
+	}
 }

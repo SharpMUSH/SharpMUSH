@@ -2,6 +2,7 @@ using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using MimeKit;
+using System.Net;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Email;
 using SharpMUSH.Library.Secrets;
@@ -18,7 +19,7 @@ public sealed class SmtpEmailService(ISecretStore secrets, TimeProvider clock, I
 	/// <summary>How long one email may take, connecting included.</summary>
 	private static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(30);
 
-	private readonly Queue<DateTimeOffset> _sent = new();
+	private readonly List<DateTimeOffset> _sent = [];
 	private readonly Lock _gate = new();
 
 	public async ValueTask<Result<Success>> SendAsync(EmailServer server, EmailMessage message,
@@ -28,7 +29,14 @@ public sealed class SmtpEmailService(ISecretStore secrets, TimeProvider clock, I
 			return new Error<string>($"{message.To} is not an email address.");
 		if (!MailboxAddress.TryParse(server.FromAddress, out var from))
 			return new Error<string>("email_from is not an email address.");
-		if (!TryReserve(server.PerHour))
+		NetworkCredential? signIn = null;
+		if (server.Username is { Length: > 0 } username)
+		{
+			if (await secrets.GetAsync(SecretDefinition.EmailPassword.Name, cancellationToken) is not string password)
+				return new Error<string>("The email.password secret is not set.");
+			signIn = new NetworkCredential(username, password);
+		}
+		if (!TryReserve(server.PerHour, out var reservation))
 			return new Error<string>("Too many emails sent in the last hour.");
 
 		using var mail = new MimeMessage();
@@ -44,17 +52,22 @@ public sealed class SmtpEmailService(ISecretStore secrets, TimeProvider clock, I
 		{
 			var security = server.Port == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTlsWhenAvailable;
 			await client.ConnectAsync(server.Host, server.Port, security, timeout.Token);
-			if (server.Username is { Length: > 0 } username)
+			if (signIn is not null)
 			{
-				if (await secrets.GetAsync(SecretDefinition.EmailPassword.Name, timeout.Token) is not string password)
-					return new Error<string>("The email.password secret is not set.");
-				await client.AuthenticateAsync(username, password, timeout.Token);
+				// The password never crosses an unencrypted connection.
+				if (!client.IsSecure)
+				{
+					Release(reservation);
+					return new Error<string>("The mail server offers no encryption, so the game will not sign in to it.");
+				}
+				await client.AuthenticateAsync(signIn, timeout.Token);
 			}
 
 			await client.SendAsync(mail, timeout.Token);
 		}
 		catch (Exception failure) when (failure is not OutOfMemoryException)
 		{
+			Release(reservation);
 			logger.LogWarning(failure, "Email to {Address} through {Host}:{Port} failed", to.Address, server.Host, server.Port);
 			return new Error<string>(failure is OperationCanceledException
 				? "The mail server did not answer in time."
@@ -74,18 +87,28 @@ public sealed class SmtpEmailService(ISecretStore secrets, TimeProvider clock, I
 		return new Success();
 	}
 
-	/// <summary>Counts one email against the hour, or refuses when <paramref name="perHour"/> have gone out in it.</summary>
-	private bool TryReserve(int perHour)
+	/// <summary>
+	/// Counts one email against the hour, or refuses when <paramref name="perHour"/> have gone out in it. A send that
+	/// fails gives its place back with <see cref="Release"/>.
+	/// </summary>
+	private bool TryReserve(int perHour, out DateTimeOffset reservation)
 	{
 		var now = clock.GetUtcNow();
+		reservation = now;
 		lock (_gate)
 		{
-			while (_sent.TryPeek(out var oldest) && now - oldest >= TimeSpan.FromHours(1))
-				_sent.Dequeue();
+			_sent.RemoveAll(sent => now - sent >= TimeSpan.FromHours(1));
 			if (_sent.Count >= perHour)
 				return false;
-			_sent.Enqueue(now);
+			_sent.Add(now);
 			return true;
 		}
+	}
+
+	/// <summary>Gives back the place a failed send held in the hour.</summary>
+	private void Release(DateTimeOffset reservation)
+	{
+		lock (_gate)
+			_sent.Remove(reservation);
 	}
 }

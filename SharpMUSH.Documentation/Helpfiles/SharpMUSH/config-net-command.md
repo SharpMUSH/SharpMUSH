@@ -52,7 +52,7 @@ Networking and connection-related options.
 
 - `email_server=<string>`: The host name of the SMTP server.
 - `email_port=<number>`: Its port: 587 (the default) uses STARTTLS when the server offers it, 465 starts with TLS, and 25 usually has neither.
-- `email_username=<string>`: The user name to sign in with; empty sends without signing in. The password is the `email.password` secret: see [@secret].
+- `email_username=<string>`: The user name to sign in with; empty sends without signing in. The game signs in only over an encrypted connection. The password is the `email.password` secret: see [@secret].
 - `email_from=<string>`: The address emails are from.
 - `email_from_name=<string>`: The name emails are from; empty uses mud_name.
 - `email_subject=<string>`: The subject of an email that gives none; empty uses mud_name.
