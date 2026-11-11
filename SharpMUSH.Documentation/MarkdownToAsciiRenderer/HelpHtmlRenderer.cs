@@ -200,13 +200,13 @@ public static class HelpHtmlRenderer
 				switch (inline)
 				{
 					case LiteralInline literal:
-						text.Append(literal.Content.ToString());
+						text.Append(literal.Content);
 						break;
 					case CodeInline code:
 						text.Append(code.Content);
 						break;
 					case HtmlEntityInline entity:
-						text.Append(entity.Transcoded.ToString());
+						text.Append(entity.Transcoded);
 						break;
 					case AutolinkInline autolink:
 						text.Append(autolink.Url);
