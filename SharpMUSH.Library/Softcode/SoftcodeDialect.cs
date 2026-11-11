@@ -174,6 +174,8 @@ public static class SoftcodeDialects
 			["@reclist"] = "@recover",
 			// Its own command, reached only here: a global @site would make @sit ambiguous.
 			["@site"] = "@rhost_site",
+			// Its clusters are one object here; @cluster works on that object.
+			["@cluster"] = "@rhost_cluster",
 			// Commands both RhostMUSH and TinyMUX have and SharpMUSH has no name for.
 			["@femit"] = "@dialect_femit",
 			["@fpose"] = "@dialect_fpose",

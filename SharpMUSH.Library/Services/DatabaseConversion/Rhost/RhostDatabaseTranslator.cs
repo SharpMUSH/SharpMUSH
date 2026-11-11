@@ -99,22 +99,29 @@ public static partial class RhostDatabaseTranslator
 		var folderAttributes = FolderAttributes(mail);
 
 		var clusters = Clusters(flatfile, byNumber, report);
+		var mergedInto = clusters
+			.SelectMany(cluster => cluster.Value.Skip(1).Select(member => (Member: member, First: cluster.Key)))
+			.ToDictionary(entry => entry.Member, entry => entry.First);
+		var members = new Dictionary<int, PennMUSHObject>();
 		foreach (var source in flatfile.Objects)
 		{
-			if (clusters.TryGetValue(source.DBRef, out var first) && first != source.DBRef)
+			if (Translated(source, flatfile, byNumber, definitions, folderAttributes, mergedInto, report) is not { } translated)
 			{
-				report.Note(ImportWarningKind.Objects, $"Cluster objects: merged into their cluster's first object (#{first}), " +
-					"which takes their attributes", source.DBRef);
 				continue;
 			}
 
-			if (Translated(source, flatfile, byNumber, definitions, folderAttributes, report) is { } translated)
+			if (mergedInto.TryGetValue(source.DBRef, out var first))
 			{
-				objects.Add(translated);
+				report.Note(ImportWarningKind.Objects, $"Cluster objects: merged into their cluster's first object (#{first}), " +
+					"which takes their attributes, flags and locks, and answers to their numbers", source.DBRef);
+				members[source.DBRef] = translated;
+				continue;
 			}
+
+			objects.Add(translated);
 		}
 
-		MergeClusters(clusters, objects, flatfile, byNumber, report);
+		var merged = MergeClusters(clusters, objects, members, report);
 
 		var database = new PennMUSHDatabase
 		{
@@ -124,6 +131,7 @@ public static partial class RhostDatabaseTranslator
 			Objects = objects,
 			FlagDefinitions = definitions.Flags,
 			Roles = [.. BuiltInRoles.RhostLevels],
+			Clusters = merged,
 			GodPlayer = 1
 		};
 
@@ -153,8 +161,15 @@ public static partial class RhostDatabaseTranslator
 
 	private static PennMUSHObject? Translated(RhostFlatfileObject source, RhostFlatfile flatfile,
 		Dictionary<int, RhostFlatfileObject> byNumber, Definitions definitions,
-		Dictionary<int, string> folderAttributes, Report report)
+		Dictionary<int, string> folderAttributes, IReadOnlyDictionary<int, int> mergedInto, Report report)
 	{
+		int Merged(int number) => mergedInto.TryGetValue(number, out var first) ? first : number;
+		// A link to another object of the object's own cluster would be a link to itself once they are one.
+		int Linked(int number) => number != source.DBRef && Merged(number) == Merged(source.DBRef) ? -1 : Merged(number);
+		string MergedKey(string key) => mergedInto.Count == 0
+			? key
+			: Dbrefs().Replace(key, match => $"#{Merged(int.Parse(match.Groups[1].ValueSpan, CultureInfo.InvariantCulture))}");
+
 		var type = source.Type switch
 		{
 			RhostObjectType.Room => PennMUSHObjectType.Room,
@@ -226,7 +241,7 @@ public static partial class RhostDatabaseTranslator
 
 			if (RhostNameTables.LockAttributes.TryGetValue(attribute.Number, out var lockName))
 			{
-				locks[lockName] = new PennMUSHLock(LockKey(attribute.Value), Creator: attribute.Owner);
+				locks[lockName] = new PennMUSHLock(MergedKey(LockKey(attribute.Value)), Creator: attribute.Owner);
 				report.Note(ImportWarningKind.Locks, $"Lock attribute {RhostNameTables.BuiltInAttributes[attribute.Number]}: imported as the {lockName} lock", source.DBRef);
 				continue;
 			}
@@ -239,7 +254,7 @@ public static partial class RhostDatabaseTranslator
 
 		if (!locks.ContainsKey("Basic") && source.Lock.Length > 0)
 		{
-			locks["Basic"] = new PennMUSHLock(LockKey(BareNumbers().Replace(source.Lock, "#$1")));
+			locks["Basic"] = new PennMUSHLock(MergedKey(LockKey(BareNumbers().Replace(source.Lock, "#$1"))));
 		}
 
 		if (folderAttributes.TryGetValue(source.DBRef, out var folders))
@@ -257,14 +272,14 @@ public static partial class RhostDatabaseTranslator
 			DBRef = source.DBRef,
 			Name = source.Name,
 			Type = objectType,
-			Location = location,
+			Location = Linked(location),
 			Contents = source.Contents,
 			Exits = exits,
-			Link = link,
+			Link = Linked(link),
 			Next = source.Next,
-			Owner = source.Owner,
-			Parent = source.Parent,
-			Zone = zone,
+			Owner = Merged(source.Owner),
+			Parent = Linked(source.Parent),
+			Zone = Linked(zone),
 			Flags = flags,
 			Powers = powers,
 			Overrides = overrides,
@@ -378,29 +393,30 @@ public static partial class RhostDatabaseTranslator
 	}
 
 	/// <summary>
-	/// Each object in a cluster, by number, and the cluster's first object, the one it was made on. RhostMUSH spreads a
-	/// cluster's attributes over its objects to pass its limit per object; one object here holds them all. Each of a
-	/// cluster's objects lists them all in its <c>_CLUSTER</c> attribute, the first object first.
+	/// Each cluster, by its first object, the one it was made on, with all its objects in the order it lists them, the
+	/// first object first. RhostMUSH spreads a cluster's attributes over its objects to pass its limit per object; one
+	/// object here holds them all. Each of a cluster's objects lists them all in its <c>_CLUSTER</c> attribute.
 	/// </summary>
-	private static Dictionary<int, int> Clusters(RhostFlatfile flatfile, Dictionary<int, RhostFlatfileObject> byNumber, Report report)
+	private static Dictionary<int, int[]> Clusters(RhostFlatfile flatfile, Dictionary<int, RhostFlatfileObject> byNumber, Report report)
 	{
 		var number = flatfile.UserAttributes.FirstOrDefault(entry => entry.Value.Name.Equals(RhostNameTables.ClusterAttribute,
 			StringComparison.OrdinalIgnoreCase)).Key;
-		var clusters = new Dictionary<int, int>();
+		var clusters = new Dictionary<int, int[]>();
 		if (number == 0)
 		{
 			return clusters;
 		}
 
+		var seen = new HashSet<int>();
 		foreach (var source in flatfile.Objects)
 		{
-			if (clusters.ContainsKey(source.DBRef) || source.Attributes.FirstOrDefault(a => a.Number == number) is not { } listing)
+			if (seen.Contains(source.DBRef) || source.Attributes.FirstOrDefault(a => a.Number == number) is not { } listing)
 			{
 				continue;
 			}
 
 			var members = Dbrefs().Matches(listing.Value).Select(match => int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture))
-				.Where(byNumber.ContainsKey)
+				.Where(member => byNumber.ContainsKey(member) && !seen.Contains(member))
 				.Distinct()
 				.ToArray();
 			if (members.Length == 0)
@@ -408,11 +424,8 @@ public static partial class RhostDatabaseTranslator
 				continue;
 			}
 
-			foreach (var member in members)
-			{
-				clusters.TryAdd(member, members[0]);
-			}
-
+			seen.UnionWith(members);
+			clusters[members[0]] = members;
 			report.Line(ImportWarningKind.Objects, $"Cluster #{members[0]}: its {members.Length} object(s) merged into #{members[0]}.");
 		}
 
@@ -420,36 +433,84 @@ public static partial class RhostDatabaseTranslator
 	}
 
 	/// <summary>
-	/// Gives each cluster's first object the user attributes of the others, in the order the cluster lists them. A name the
-	/// first object, or an earlier one, already holds keeps that value, and is noted.
+	/// Gives each cluster's first object what the others hold, in the order the cluster lists them: their attributes,
+	/// their flags, and the locks it has none of its own for. An attribute name or a lock the first object, or an earlier
+	/// one, already holds keeps that value, and is noted. Privileges, tags and totems stay with the first object's own,
+	/// and a member's that differ are noted. Returns each cluster's first object and the numbers it takes over.
 	/// </summary>
-	private static void MergeClusters(Dictionary<int, int> clusters, List<PennMUSHObject> objects, RhostFlatfile flatfile,
-		Dictionary<int, RhostFlatfileObject> byNumber, Report report)
+	private static Dictionary<int, IReadOnlyList<int>> MergeClusters(Dictionary<int, int[]> clusters, List<PennMUSHObject> objects,
+		Dictionary<int, PennMUSHObject> members, Report report)
 	{
-		foreach (var (member, first) in clusters.Where(entry => entry.Key != entry.Value))
+		var merged = new Dictionary<int, IReadOnlyList<int>>();
+		foreach (var (first, numbers) in clusters)
 		{
 			if (objects.FirstOrDefault(o => o.DBRef == first) is not { } target)
 			{
 				continue;
 			}
 
-			var source = byNumber[member];
-			foreach (var attribute in source.Attributes.Where(a => a.Number >= 256 && a.Number is not (>= RhostNameTables.InlineStart and < RhostNameTables.InlineEnd)))
+			var taken = new List<int>();
+			foreach (var number in numbers.Skip(1))
 			{
-				if (Attribute(attribute, source, flatfile, report) is not { } imported)
+				if (!members.TryGetValue(number, out var member))
 				{
 					continue;
 				}
 
-				if (target.Attributes.Any(a => a.Name.Equals(imported.Name, StringComparison.OrdinalIgnoreCase)))
-				{
-					report.Note(ImportWarningKind.Attributes, $"Cluster attribute {imported.Name}: held by more than one of the cluster's objects; " +
-						$"#{first} keeps the first one's value", member);
-					continue;
-				}
-
-				target.Attributes.Add(imported);
+				taken.Add(number);
+				MergeMember(target, member, report);
 			}
+
+			merged[first] = taken;
+		}
+
+		return merged;
+	}
+
+	private static void MergeMember(PennMUSHObject target, PennMUSHObject member, Report report)
+	{
+		foreach (var attribute in member.Attributes)
+		{
+			if (target.Attributes.Any(a => a.Name.Equals(attribute.Name, StringComparison.OrdinalIgnoreCase)))
+			{
+				report.Note(ImportWarningKind.Attributes, $"Cluster attribute {attribute.Name}: held by more than one of the cluster's objects; " +
+					$"#{target.DBRef} keeps the first one's value", member.DBRef);
+				continue;
+			}
+
+			target.Attributes.Add(attribute);
+		}
+
+		foreach (var flag in member.Flags.Where(flag => !target.Flags.Contains(flag, StringComparer.OrdinalIgnoreCase)))
+		{
+			target.Flags.Add(flag);
+			report.Note(ImportWarningKind.Flags, $"Cluster flag {flag}: set on one of the cluster's objects, so set on #{target.DBRef}", member.DBRef);
+		}
+
+		foreach (var (name, lockValue) in member.Locks)
+		{
+			if (!target.Locks.TryGetValue(name, out var held))
+			{
+				target.Locks[name] = lockValue;
+				continue;
+			}
+
+			if (!held.Expression.Equals(lockValue.Expression, StringComparison.Ordinal))
+			{
+				report.Note(ImportWarningKind.Locks, $"Cluster lock {name}: the cluster's objects lock it differently; #{target.DBRef} keeps the first one's", member.DBRef);
+			}
+		}
+
+		if (member.Powers.Except(target.Powers, StringComparer.OrdinalIgnoreCase).Any()
+				|| member.Roles.Except(target.Roles, StringComparer.OrdinalIgnoreCase).Any()
+				|| member.Overrides.Count > 0)
+		{
+			report.Note(ImportWarningKind.Objects, $"Cluster privileges: powers and levels of the cluster's other objects are not given to #{target.DBRef}", member.DBRef);
+		}
+
+		if (member.Tags.Count > 0 || member.Totems.Any(bits => bits != 0))
+		{
+			report.Note(ImportWarningKind.Objects, $"Cluster tags and totems: those on the cluster's other objects are not carried to #{target.DBRef}", member.DBRef);
 		}
 	}
 

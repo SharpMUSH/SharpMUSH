@@ -119,6 +119,12 @@ public class PennMUSHDatabase
 	public bool SharesPipingSubstitutions { get; set; }
 
 	/// <summary>
+	/// The RhostMUSH clusters the reader merged, each into its first object: that object's number, and the numbers of
+	/// the others, which the import keeps naming it (<see cref="SharpMUSH.Library.Clusters.ObjectClusters"/>).
+	/// </summary>
+	public Dictionary<int, IReadOnlyList<int>> Clusters { get; set; } = [];
+
+	/// <summary>
 	/// God/Wizard player DBRef (usually #1)
 	/// </summary>
 	public int GodPlayer { get; set; } = 1;

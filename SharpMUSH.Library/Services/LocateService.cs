@@ -196,6 +196,12 @@ public class LocateService(
 			absolute = tagged;
 		}
 
+		// A RhostMUSH cluster's objects were merged into one at import; the numbers the others had name that one.
+		if (absolute.TryGetValue(out var number) && await Clusters.ObjectClusters.MergedIntoAsync(mediator, number) is DBRef merged)
+		{
+			absolute = merged;
+		}
+
 		// And that is the whole of it. match_result_internal asks exactly one permission question of a
 		// candidate — can_interact(match, who, INTERACT_MATCH), which MatchList does per candidate — and
 		// there is no Can_Examine, DarkLegal or INTERACT_SEE anywhere in match.c. That block belongs to

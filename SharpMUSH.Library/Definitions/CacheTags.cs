@@ -36,6 +36,8 @@ public static class CacheTags
 	public const string ZoneObjects = "zone-objects";
 	public const string AttributeEntry = "attribute-entry";
 	public const string MailAliasList = "mail-alias-list";
+	/// <summary>The world's cluster table (<see cref="SharpMUSH.Library.Clusters.ObjectClusterTable"/>).</summary>
+	public const string ObjectClusters = "object-clusters";
 
 	/// <summary>
 	/// Every object's cached grants (<c>GetObjectGrantsQuery</c>). Cleared by a change to roles that

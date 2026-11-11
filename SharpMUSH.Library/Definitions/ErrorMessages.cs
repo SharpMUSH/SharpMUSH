@@ -26,6 +26,12 @@ public static partial class ErrorMessages
 		public const string CantSeeThat = "#-1 CAN'T SEE THAT HERE";
 		public const string InvalidDbref = "#-1 INVALID DBREF";
 		public const string InvalidPicture = "#-1 INVALID PICTURE";
+		/// <summary>A cluster function's object is not a cluster (or is not there).</summary>
+		public const string NoSuchCluster = "#-1 NO SUCH CLUSTER";
+		/// <summary>cluster_add(): a cluster is one object here, so nothing is added to it.</summary>
+		public const string ClusterIsOneObject = "#-1 A CLUSTER IS ONE OBJECT HERE";
+		/// <summary>cluster_wipe() given its regular-expression, owner or keep-the-rest form, which it does not take.</summary>
+		public const string ClusterWipeWildcardOnly = "#-1 CLUSTER_WIPE TAKES A WILDCARD PATTERN ONLY";
 
 		public const string NotARoom = "#-1 NOT A ROOM";
 

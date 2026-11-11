@@ -3,6 +3,7 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Clusters;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -318,6 +319,36 @@ public class RhostImportTests
 		var imported = await FindAsync(world, "Alice");
 		var grants = await imported.Object().Grants.WithCancellation(CancellationToken.None);
 		await Assert.That(grants.Context.ObjectOverrides[GamePowers.Find("Boot")!.Scope]).IsEqualTo(PermissionState.Deny);
+	}
+
+	/// <summary>
+	/// A cluster arrives as one object, and the world keeps the numbers of the objects merged into it, so softcode
+	/// that names them reaches it.
+	/// </summary>
+	[Test]
+	public async Task AClusterArrivesAsOneObjectThatAnswersToItsMembersNumbers()
+	{
+		static string WithAttributes(string text, int dbref, params string[] lines)
+		{
+			var all = text.Split('\n').ToList();
+			all.InsertRange(all.FindIndex(all.IndexOf($"!{dbref}"), line => line == "<"), lines);
+			return string.Join('\n', all);
+		}
+
+		var text = (await File.ReadAllTextAsync(RhostFlatfileReaderTests.FlatfilePath))
+			.Replace("+N260\n", "+N262\n+A260\n1:_CLUSTER\n+A261\n1:EXTRA\n");
+		text = WithAttributes(text, 9, ">260", "#9 #10");
+		text = WithAttributes(text, 10, ">260", "#9 #10", ">261", "merged");
+
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var result = await world.Converter.ConvertDatabaseAsync(RhostDatabaseTranslator.Translate(RhostFlatfileReader.Read(text)));
+		await Assert.That(result.Errors).IsEmpty();
+
+		var widget = (await FindAsync(world, "Widget")).Object().DBRef;
+		await Assert.That((await ObjectClusters.MergedIntoAsync(world.Mediator, new DBRef(10))).Expect<DBRef>()).IsEqualTo(widget);
+		await Assert.That(await world.Mediator.Send(new GetObjectNodeQuery(new DBRef(10))) is AnySharpObject).IsFalse();
+		await Assert.That(await world.Database.GetAllObjectsAsync().AnyAsync(o => o.Name == "Gadget")).IsFalse();
+		await Assert.That(result.Notes).Contains(n => n.StartsWith("Clusters: 1 cluster(s) recorded"));
 	}
 
 	private static async Task<IsolatedImportWorld> ImportAsync()

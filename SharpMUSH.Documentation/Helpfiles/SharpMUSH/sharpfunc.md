@@ -20,6 +20,7 @@
 ::: seealso
 - [attributes]
 - [NON-STANDARD ATTRIBUTES]
+- [rhostmush clusters]
 :::
 # Bitwise Functions
   These functions treat integers as a sequence of binary bits (either 0 or 1) and manipulate them.

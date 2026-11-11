@@ -15,6 +15,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 using SharpMUSH.Library.Services.DatabaseConversion.Softcode;
 using SharpMUSH.Library.Reality;
+using SharpMUSH.Library.Clusters;
 using SharpMUSH.Library.Tags;
 using SharpMUSH.Library.Services.Interfaces;
 using DotNext.Threading;
@@ -270,6 +271,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			await GrantPermissionsAsync(pennDatabase, context, cancellationToken);
 			await ImportRealityAsync(pennDatabase, context, cancellationToken);
 			await ImportTagsAsync(pennDatabase, context, cancellationToken);
+			await ImportClustersAsync(pennDatabase, context, cancellationToken);
 			context.ReportUnconverted();
 			ReportProgress("Relationships established", 0.50);
 
@@ -2710,6 +2712,36 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 
 		context.Notes.Add($"Tags: {imported} tag(s) imported");
+	}
+
+	/// <summary>
+	/// Records each RhostMUSH cluster the reader merged into one object, so the numbers its other objects had keep
+	/// naming that object (<see cref="ObjectClusters"/>) until a new object takes one.
+	/// </summary>
+	private async Task ImportClustersAsync(PennMUSHDatabase pennDatabase, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		var recorded = 0;
+		foreach (var (first, members) in pennDatabase.Clusters)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			if (!context.DbrefMapping.TryGetValue(first, out var target)
+					|| await _mediator.Send(new GetObjectNodeQuery(target), cancellationToken) is not AnySharpObject merged)
+			{
+				context.Warn(ImportWarningKind.Objects, $"Cluster #{first} not recorded: its object was not imported");
+				continue;
+			}
+
+			var numbers = members.Where(member => !context.DbrefMapping.ContainsKey(member)).ToList();
+			await ObjectClusters.AddAsync(_mediator, merged.Object().DBRef, numbers, cancellationToken);
+			recorded++;
+		}
+
+		if (recorded > 0)
+		{
+			context.Notes.Add($"Clusters: {recorded} cluster(s) recorded; each answers to the numbers of the objects merged into it, " +
+				"and cluster_get() and the other cluster functions work on it");
+		}
 	}
 
 	private const string NormalLayer = "normal";
