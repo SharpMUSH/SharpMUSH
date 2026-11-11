@@ -13,7 +13,7 @@ namespace SharpMUSH.Library.Services;
 /// Service for managing command hooks with optimized performance.
 /// Uses ConcurrentDictionary for thread-safe O(1) lookups.
 /// </summary>
-public class HookService : IHookService
+public class HookService : IHookService, IHookCatalog
 {
 	private readonly ConcurrentDictionary<string, Dictionary<string, CommandHook>> _hooks = new();
 
@@ -93,4 +93,7 @@ public class HookService : IHookService
 
 		return ValueTask.FromResult(new Dictionary<string, CommandHook>());
 	}
+
+	public IReadOnlyList<string> HookedCommands()
+		=> _hooks.Where(pair => pair.Value.Count > 0).Select(pair => pair.Key).ToList();
 }
