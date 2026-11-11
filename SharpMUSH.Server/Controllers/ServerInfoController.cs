@@ -47,17 +47,6 @@ public class ServerInfoController(IOptionsWrapper<SharpMUSHOptions> options, IGa
 	}
 
 	/// <summary>
-	/// The game's logo (<c>portal_logo</c>, else the SharpMUSH logo), as a redirect. The starter Home pages open with
-	/// it, so their picture is the game's own once it sets one, with nothing to edit.
-	/// </summary>
-	[HttpGet("logo")]
-	public IActionResult Logo()
-	{
-		Response.Headers.CacheControl = "no-cache";
-		return Redirect(PortalPicture.Logo(options.CurrentValue.Cosmetic));
-	}
-
-	/// <summary>
 	/// The portal's tab icon (<c>portal_favicon</c>, else <c>portal_logo</c>, else the SharpMUSH logo), as a
 	/// redirect. <c>index.html</c> and the startup page link here, so the icon is the game's before the portal boots.
 	/// </summary>

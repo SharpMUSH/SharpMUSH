@@ -152,17 +152,4 @@ public class ServerInfoControllerTests
 
 		await Assert.That(result.Url).IsEqualTo(expected);
 	}
-
-	[Test]
-	[Arguments("", "/assets/Logo.svg")]
-	[Arguments(" /api/wiki-assets/a/logo.png ", "/api/wiki-assets/a/logo.png")]
-	public async Task Logo_RedirectsToTheLogoThenTheSharpMUSHLogo(string logo, string expected)
-	{
-		var controller = MakeController(guestsEnabled: true, logo: logo, favicon: "https://example.com/icon.png");
-		controller.ControllerContext = new ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() };
-
-		var result = (RedirectResult)controller.Logo();
-
-		await Assert.That(result.Url).IsEqualTo(expected);
-	}
 }

@@ -37,15 +37,15 @@ public class StarterWikiPagesTests
 	}
 
 	/// <summary>
-	/// Home opens with the game's logo, which the portal shows as the page's hero: the logo address answers with
-	/// portal_logo, else the SharpMUSH logo, so a game that sets its own never shows SharpMUSH's here.
+	/// Home opens with a picture, which the portal shows as the page's hero. It is part of the page, so an editor
+	/// replaces it by editing Home; a fresh game starts with the SharpMUSH logo.
 	/// </summary>
 	[Test]
-	public async Task Home_OpensWithTheGamesLogo()
+	public async Task Home_OpensWithAPicture()
 	{
 		var html = new WikiMarkdigPipeline().RenderToHtml(StarterWikiPages.Home);
 
-		await Assert.That(WikiImages.LeadImageUrl(html)).IsEqualTo("/api/server-info/logo");
+		await Assert.That(WikiImages.LeadImageUrl(html)).IsEqualTo("/assets/Logo.svg");
 		await Assert.That(html).Contains("<div class=\"center\">");
 	}
 

@@ -1,5 +1,5 @@
 ::: center
-![Logo](/api/server-info/logo){width=20%}
+![SharpMUSH logo](/assets/Logo.svg){width=20%}
 
 # Welcome
 
