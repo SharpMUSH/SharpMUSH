@@ -48,7 +48,14 @@ public sealed class WikiPromptExtension : IMarkdownExtension
 		var emptied = EmptiedHeadings(document, prompts.ToHashSet());
 		foreach (var prompt in prompts)
 		{
-			prompt.Parent?.Remove(prompt);
+			// A quote that held nothing but the prompt goes with it, rather than rendering an empty quote.
+			Block block = prompt;
+			while (block.Parent is { } parent)
+			{
+				parent.Remove(block);
+				if (parent is not QuoteBlock { Count: 0 }) break;
+				block = parent;
+			}
 		}
 
 		foreach (var heading in emptied)
@@ -59,12 +66,13 @@ public sealed class WikiPromptExtension : IMarkdownExtension
 
 	/// <summary>
 	/// The page's headings whose section, every block up to the next heading of the same or a higher level, holds at
-	/// least one prompt and nothing else but headings.
+	/// least one prompt and nothing else but subheadings emptied the same way. Decided from the last heading up, so a
+	/// subheading is settled before the heading over it; a subheading left empty on purpose keeps its parent.
 	/// </summary>
-	private static List<HeadingBlock> EmptiedHeadings(MarkdownDocument document, HashSet<QuoteBlock> prompts)
+	private static HashSet<HeadingBlock> EmptiedHeadings(MarkdownDocument document, HashSet<QuoteBlock> prompts)
 	{
-		var emptied = new List<HeadingBlock>();
-		for (var i = 0; i < document.Count; i++)
+		var emptied = new HashSet<HeadingBlock>();
+		for (var i = document.Count - 1; i >= 0; i--)
 		{
 			if (document[i] is not HeadingBlock heading) continue;
 
@@ -74,8 +82,7 @@ public sealed class WikiPromptExtension : IMarkdownExtension
 			{
 				var block = document[j];
 				if (block is HeadingBlock next && next.Level <= heading.Level) break;
-				if (block is HeadingBlock) continue;
-				if (block is QuoteBlock quote && prompts.Contains(quote))
+				if (block is QuoteBlock quote && prompts.Contains(quote) || block is HeadingBlock sub && emptied.Contains(sub))
 				{
 					sawPrompt = true;
 					continue;

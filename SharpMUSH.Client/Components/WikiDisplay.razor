@@ -586,8 +586,10 @@ else
     private (string Page, string? Locale)? _markedIdentity;
     private Task<string>? _marking;
 
-    // Stored table HTML may predate the scroll container. Keep the current layout in the
-    // render tree, rather than reparenting Blazor's raw-markup nodes after rendering.
+    // Stored table HTML may predate the scroll container, and stored HTML may predate the pipeline
+    // leaving out the starter pages' prompts: such a page is rendered again from its Markdown, once
+    // per source. Keeping the current layout in the render tree avoids reparenting Blazor's raw-markup
+    // nodes after rendering.
     private (string Source, string Stored, string Rendered)? _tableLayout;
 
     private string RenderedArticleHtml()
@@ -601,8 +603,12 @@ else
         // HTML stored before the pipeline left the starter pages' prompts out still carries them.
         if (article.RenderedHtml is not { } stored || stored.Contains(StoredPrompt, StringComparison.Ordinal))
         {
-            _tableLayout = null;
-            return Services.GetRequiredService<WikiMarkdigPipeline>().RenderToHtml(article.Content);
+            if (_tableLayout is { } again && again.Source == article.Content && again.Stored == (article.RenderedHtml ?? string.Empty))
+                return again.Rendered;
+
+            var fresh = Services.GetRequiredService<WikiMarkdigPipeline>().RenderToHtml(article.Content);
+            _tableLayout = (article.Content, article.RenderedHtml ?? string.Empty, fresh);
+            return fresh;
         }
 
         if (!stored.Contains("<table", StringComparison.OrdinalIgnoreCase))

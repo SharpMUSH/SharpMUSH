@@ -28,16 +28,17 @@
         @Pager
         @if (batch.Total == 0)
         {
-            <EmptyState Class="wiki-cat-empty" Icon="@Icons.Material.Outlined.FolderOpen">
-                <ChildContent>@Loc["NavWikiCategoryEmpty"]</ChildContent>
-                <Action>
-                    <AuthorizeView Policy="wiki.create">
-                        <Authorized>
-                            <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add" Href="@WritePageHref">@Loc["NavWikiCategoryWritePage"]</CapsuleButton>
-                        </Authorized>
-                    </AuthorizeView>
-                </Action>
-            </EmptyState>
+            <AuthorizeView Policy="wiki.create">
+                <Authorized>
+                    <EmptyState Class="wiki-cat-empty" Icon="@Icons.Material.Outlined.FolderOpen">
+                        <ChildContent>@Loc["NavWikiCategoryEmpty"]</ChildContent>
+                        <Action><CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add" Href="@WritePageHref">@Loc["NavWikiCategoryWritePage"]</CapsuleButton></Action>
+                    </EmptyState>
+                </Authorized>
+                <NotAuthorized>
+                    <EmptyState Class="wiki-cat-empty" Icon="@Icons.Material.Outlined.FolderOpen">@Loc["NavWikiCategoryEmpty"]</EmptyState>
+                </NotAuthorized>
+            </AuthorizeView>
         }
         <div class="wiki-cat-grid">
             @foreach (var entry in batch.Pages)

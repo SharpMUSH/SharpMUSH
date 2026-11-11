@@ -9,7 +9,7 @@
 @* README §7.4 the Exits widget: ExitsCard over the play connection's room, with its keycaps and alias
    keys. Commands go through the Play page when it is the host, else straight down the play connection. *@
 @* Keys only on Play itself, and only once: placed on another page an exit shortcut would fire there. *@
-<ExitsCard Exits="@_exits" OnCommand="SendAsync" Rows="@(Page?.InSheet == true)" Bare="@(Page?.InSheet == true)"
+<ExitsCard Exits="@_exits" InRoom="@_inRoom" OnCommand="SendAsync" Rows="@(Page?.InSheet == true)" Bare="@(Page?.InSheet == true)"
            AliasKeys="@(Page is { InSheet: false })" />
 
 @code {
@@ -21,16 +21,19 @@
     [CascadingParameter] private PlayPageContext? Page { get; set; }
 
     private IReadOnlyList<RoomExit> _exits = [];
+    private bool _inRoom;
 
     protected override void OnInitialized()
     {
         _exits = PlayTerminal.OobChannels.Room.Exits;
+        _inRoom = PlayTerminal.OobChannels.Room.Info is not null;
         PlayTerminal.OobChannels.RoomChanged += OnRoomChanged;
     }
 
     private void OnRoomChanged()
     {
         _exits = PlayTerminal.OobChannels.Room.Exits;
+        _inRoom = PlayTerminal.OobChannels.Room.Info is not null;
         _ = InvokeAsync(StateHasChanged);
     }
 

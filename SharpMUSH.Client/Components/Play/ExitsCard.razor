@@ -40,11 +40,10 @@ else
     }
     @if (Exits.Count == 0)
     {
-        @* No way out that the room shows: home is the one that always works. *@
-        <EmptyState Compact="true" Class="exits-empty" Icon="@Icons.Material.Outlined.DoorFront">
-            <ChildContent>@Loc["NavNoExitsAvailable"]</ChildContent>
-            <Action><CapsuleButton Icon="@Icons.Material.Outlined.Home" OnClick="@(() => OnCommand.InvokeAsync("home"))">@Loc["NavPlayGoHome"]</CapsuleButton></Action>
-        </EmptyState>
+        @* No way out that the room shows: home is the one that always works. Before the connection is in a
+           room there is nowhere to go home from. *@
+        <EmptyState Compact="true" Class="exits-empty" Icon="@Icons.Material.Outlined.DoorFront"
+                    Action="@(InRoom ? HomeAction : null)">@Loc["NavNoExitsAvailable"]</EmptyState>
     }
     else
     {
@@ -123,6 +122,14 @@ else
         </div>
     }
     };
+
+    private RenderFragment HomeAction => __builder =>
+    {
+        <CapsuleButton Icon="@Icons.Material.Outlined.Home" OnClick="@(() => OnCommand.InvokeAsync("home"))">@Loc["NavPlayGoHome"]</CapsuleButton>
+    };
+
+    /// <summary>Whether the play connection is in a room, so an empty list means the room shows no exits.</summary>
+    [Parameter] public bool InRoom { get; set; }
 
     /// <summary>The latest <c>room.exits</c> rows.</summary>
     [Parameter] public IReadOnlyList<RoomExit> Exits { get; set; } = [];

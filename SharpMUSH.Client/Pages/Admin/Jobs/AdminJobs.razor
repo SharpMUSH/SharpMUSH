@@ -42,14 +42,17 @@
                     </Authorized></AuthorizeView>
                     @if (_jobs.Length == 0)
                     {
-                        <EmptyState Class="jobs-empty" Icon="@Icons.Material.Outlined.WorkOutline">
-                            <ChildContent>@Loc["JobsEmpty"]</ChildContent>
-                            <Action>
-                                <AuthorizeView Policy="jobs.manage.own"><Authorized>
-                                    <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add" OnClick="StartNewJobAsync">@Loc["JobsCreate"]</CapsuleButton>
-                                </Authorized></AuthorizeView>
-                            </Action>
-                        </EmptyState>
+                        <AuthorizeView Policy="jobs.manage.own">
+                            <Authorized>
+                                <EmptyState Class="jobs-empty" Icon="@Icons.Material.Outlined.WorkOutline">
+                                    <ChildContent>@Loc["JobsEmpty"]</ChildContent>
+                                    <Action><CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add" OnClick="StartNewJobAsync">@Loc["JobsCreate"]</CapsuleButton></Action>
+                                </EmptyState>
+                            </Authorized>
+                            <NotAuthorized>
+                                <EmptyState Class="jobs-empty" Icon="@Icons.Material.Outlined.WorkOutline">@Loc["JobsEmpty"]</EmptyState>
+                            </NotAuthorized>
+                        </AuthorizeView>
                     }
                     @foreach (var job in _jobs)
                     {

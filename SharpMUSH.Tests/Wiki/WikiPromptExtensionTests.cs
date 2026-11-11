@@ -93,4 +93,54 @@ public class WikiPromptExtensionTests
 
 		await Assert.That(text).IsEqualTo("Shown.");
 	}
+
+	/// <summary>A heading over a subheading left empty on purpose keeps its place, and so does that subheading.</summary>
+	[Test]
+	public async Task AHeadingOverAnEmptySubheading_Stays()
+	{
+		var html = Pipeline.RenderToHtml("""
+			# Rules
+
+			## Coming soon
+
+			## Combat
+			> **Fill in:** How fights work.
+			""");
+
+		await Assert.That(html).Contains(">Rules</h1>");
+		await Assert.That(html).Contains(">Coming soon</h2>");
+		await Assert.That(html).DoesNotContain(">Combat</h2>");
+	}
+
+	/// <summary>A heading whose subsections are all unanswered prompts goes with them.</summary>
+	[Test]
+	public async Task AHeadingOverOnlyEmptiedSubheadings_Goes()
+	{
+		var html = Pipeline.RenderToHtml("""
+			# Page
+
+			Intro.
+
+			## Rules
+
+			### Combat
+			> **Fill in:** How fights work.
+
+			### Death
+			> **Fill in:** What happens.
+			""");
+
+		await Assert.That(html).Contains(">Page</h1>");
+		await Assert.That(html).DoesNotContain(">Rules</h2>");
+		await Assert.That(html).DoesNotContain("<h3");
+	}
+
+	[Test]
+	public async Task APromptQuotedInsideAQuote_LeavesNoEmptyQuote()
+	{
+		var html = Pipeline.RenderToHtml("Before.\n\n> > **Fill in:** Nested.\n\nAfter.");
+
+		await Assert.That(html).DoesNotContain("<blockquote");
+		await Assert.That(html).DoesNotContain("Nested.");
+	}
 }
