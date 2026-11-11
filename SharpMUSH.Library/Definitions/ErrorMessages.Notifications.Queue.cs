@@ -134,6 +134,7 @@ public static partial class ErrorMessages
 		public const string PsWaitQueueHeader = "Wait queue tasks:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PsWaitTaskEntryFormat = "  [{0}] (delayed)";
+		/// <summary>Not shown by the server. It stays only because the 3.x plugin contract may not lose a public member.</summary>
 		public const string PsQueueManagementNotImplemented = "Note: Queue management not yet implemented.";
 
 		public const string TriggerMustSpecifyAttributePath = "You must specify an object/attribute to trigger.";

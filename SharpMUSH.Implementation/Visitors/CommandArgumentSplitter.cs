@@ -55,9 +55,7 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 
 		var argCallState = await SplitAs(newNoParseParser, mode.Behavior, parsedArgumentText);
 
-		// TODO: Implement lsargs (list-style arguments) support.
-		// No immediate commands require this feature yet, so implementation is deferred.
-		// Also return early when Arguments is empty (EmptyArgument sentinel), meaning no args were provided.
+		// Arguments is empty (the EmptyArgument sentinel) when none were given.
 		if (argCallState is null or { Arguments: [] })
 		{
 			return new CommandArguments();
@@ -70,8 +68,61 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 			return new Error<string>(errorText);
 		}
 
-		return await EvaluateSplitAsync(visitor, prs, mode, parsedArgumentText, argCallState, rawArguments, clock);
+		var pieces = await PiecesAsync(newNoParseParser, mode, parsedArgumentText, argCallState, rawArguments);
+		return await EvaluateSplitAsync(visitor, prs, mode, pieces, argCallState.Depth, clock);
 	}
+
+	/// <summary>
+	/// One argument of the split: its raw text, the parse subtree it came from (an
+	/// <c>IEvaluationStringContext</c>, or <see langword="null"/>) and the text that subtree's offsets
+	/// are relative to, whether it is on the left of the <c>=</c>, and whether its split recovered
+	/// from a syntax error.
+	/// </summary>
+	private readonly record struct ArgumentPiece(MString Raw, object? Context, MString Source, bool LeftSide,
+		bool HadErrors);
+
+	/// <summary>
+	/// The split's arguments in order. With <see cref="CommandBehavior.LSArgs"/> on an EqSplit command the left
+	/// side is split again on its commas (PennMUSH's <c>CMD_T_LS_ARGS</c>), so <c>a,b=c</c> gives <c>a</c>,
+	/// <c>b</c> and then the right side. Without EqSplit, LSArgs already split the whole text in
+	/// <see cref="SplitAs"/>.
+	/// </summary>
+	private static async ValueTask<List<ArgumentPiece>> PiecesAsync(IMUSHCodeParser noParseParser, SplitMode mode,
+		MString parsedArgumentText, CallState argCallState, MString[] rawArguments)
+	{
+		var contexts = argCallState.ArgumentContexts ?? [];
+		var pieces = new List<ArgumentPiece>(rawArguments.Length);
+		for (var i = 0; i < rawArguments.Length; i++)
+		{
+			pieces.Add(new ArgumentPiece(rawArguments[i], i < contexts.Length ? contexts[i] : null, parsedArgumentText,
+				LeftSide: !mode.EqSplit || i == 0, argCallState.HadErrors));
+		}
+
+		if (!mode.EqSplit || !mode.Behavior.HasFlag(CommandBehavior.LSArgs)
+				|| LeftSideText(parsedArgumentText, pieces[0].Context) is not { } leftText
+				|| await noParseParser.CommandCommaArgsParse(leftText) is not { Arguments: [_, _, ..] leftArguments } leftSplit)
+		{
+			return pieces;
+		}
+
+		var leftContexts = leftSplit.ArgumentContexts ?? [];
+		pieces.RemoveAt(0);
+		pieces.InsertRange(0, leftArguments.Select((raw, i) => new ArgumentPiece(raw,
+			i < leftContexts.Length ? leftContexts[i] : null, leftText, LeftSide: true,
+			argCallState.HadErrors || leftSplit.HadErrors)));
+		return pieces;
+	}
+
+	/// <summary>
+	/// The left side's text as typed, cut from <paramref name="parsedArgumentText"/> by its parse subtree's
+	/// tokens, or <see langword="null"/> when it is empty. The split's raw left side is not used: the NoParse
+	/// pass has already taken the braces off it, and a braced comma must stay inside its part.
+	/// </summary>
+	private static MString? LeftSideText(MString parsedArgumentText, object? leftContext)
+		=> leftContext is ISoftcodeContext { Start: { } start, Stop: { } stop }
+				&& start.StartIndex >= 0 && stop.StopIndex >= start.StartIndex
+			? parsedArgumentText.Substring(start.StartIndex, stop.StopIndex - start.StartIndex + 1)
+			: null;
 
 	/// <summary>
 	/// How a command's arguments split and which of them are evaluated, from its behavior, the parse
@@ -118,8 +169,9 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 			|| NoEvalEqSplitSwitch;
 
 		/// <summary>
-		/// Whether argument <paramref name="index"/> of <paramref name="count"/> is left raw for the
-		/// command to evaluate on demand rather than evaluated now.
+		/// Whether an argument, on the left of the <c>=</c> or not (<paramref name="leftSide"/>, always
+		/// <see langword="true"/> without EqSplit), is left raw for the command to evaluate on demand rather
+		/// than evaluated now. <paramref name="hasRightSide"/> is whether an <c>=</c> was given.
 		/// <para>
 		/// The LHS of an EqSplit command is evaluated unless the command declares full NoParse.
 		/// Commands that only want their RHS unevaluated (like &amp;) use RSNoParse instead of NoParse,
@@ -134,9 +186,9 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 		/// NoParse command (e.g. @SCENE/undo &lt;poseId&gt;) can evaluate a functional single arg on demand.
 		/// </para>
 		/// </summary>
-		public bool Defers(int index, int count) => EqSplit
-			? index == 0
-				? NoParse || (NoEvalEqSplitSwitch && count < 2)
+		public bool Defers(bool leftSide, bool hasRightSide) => EqSplit
+			? leftSide
+				? NoParse || (NoEvalEqSplitSwitch && !hasRightSide)
 				: Behavior.HasFlag(CommandBehavior.RSNoParse) || NoParse || NoEvalEqSplitSwitch
 			: NoParse;
 	}
@@ -228,42 +280,35 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 	/// from or left raw with a deferred evaluation, as <see cref="SplitMode.Defers"/> decides.
 	/// </summary>
 	private async ValueTask<Result<CommandArguments>> EvaluateSplitAsync(SharpMUSHParserVisitor visitor,
-		IMUSHCodeParser prs, SplitMode mode, MString parsedArgumentText, CallState argCallState, MString[] rawArguments,
-		InvocationClock? clock)
+		IMUSHCodeParser prs, SplitMode mode, List<ArgumentPiece> pieces, int depth, InvocationClock? clock)
 	{
 		var argumentResults = new CommandArguments();
 		var arguments = argumentResults.Values;
+		var hasRightSide = pieces.Any(piece => !piece.LeftSide);
 
-		// Retained parse-tree nodes from the NoParse pass above, index-parallel to
-		// argCallState.Arguments — see CallState.ArgumentContexts. Reused below so evaluated
-		// arguments can be produced by re-visiting the already-lexed/parsed subtree (via
-		// EvaluateArgumentSubtree) instead of running FunctionParse's full lex+parse pipeline
-		// a third time on text the NoParse pass already tokenized and structured.
-		var argContexts = argCallState.ArgumentContexts ?? [];
-
-		// The split pass above always runs lenient (CommandCommaArgsParse etc. pass
-		// lenient: !StrictParse, and StrictParse is only ever set by the single-token command
-		// handler) — so a syntax error in the argument text does NOT surface as the
-		// Arguments:null branch above; ANTLR's LenientErrorStrategy recovers and the split still
-		// returns a best-effort Arguments/ArgumentContexts array with CallState.HadErrors set.
-		// Before this optimization, that didn't matter: every argument's raw text got an
-		// independent STRICT re-parse via FunctionParse afterwards, which would surface the
-		// error as #-1 PARSER FAILURE. EvaluateArgumentSubtree must not trust a retained subtree
-		// built from an error-recovered parse, so when the split had errors ANYWHERE, every
-		// argument from it falls back to that original strict re-parse — matching pre-optimization
-		// behavior exactly rather than risking a wrong best-effort value for a malformed argument.
-		var splitHadErrors = argCallState.HadErrors;
-
+		// Each piece carries the parse-tree node retained from the NoParse pass (see
+		// CallState.ArgumentContexts), so an evaluated argument is produced by re-visiting the
+		// already-lexed/parsed subtree (via EvaluateArgumentSubtree) instead of running
+		// FunctionParse's full lex+parse pipeline a third time on text the NoParse pass already
+		// tokenized and structured.
+		//
+		// The split pass always runs lenient (CommandCommaArgsParse etc. pass lenient: !StrictParse,
+		// and StrictParse is only ever set by the single-token command handler) — so a syntax error
+		// in the argument text does NOT surface as the Arguments:null branch above; ANTLR's
+		// LenientErrorStrategy recovers and the split still returns a best-effort
+		// Arguments/ArgumentContexts array with CallState.HadErrors set. EvaluateArgumentSubtree must
+		// not trust a retained subtree built from an error-recovered parse, so when the split had
+		// errors ANYWHERE, every argument from it falls back to a strict re-parse of its raw text,
+		// which surfaces the error as #-1 PARSER FAILURE.
+		//
 		// Arguments evaluate left to right, one at a time, each against the parse-tree slot it came from.
-		// An EqSplit command's LHS is evaluated without the substitution-only debug trace.
-		for (var i = 0; i < rawArguments.Length; i++)
+		// An EqSplit command's left side is evaluated without the substitution-only debug trace.
+		foreach (var piece in pieces)
 		{
-			var raw = rawArguments[i];
-			arguments.Add(mode.Defers(i, rawArguments.Length)
-				? DeferredArgument(raw)
-				: (await EvaluateArgumentSubtree(visitor, prs, parsedArgumentText,
-					i < argContexts.Length ? argContexts[i] : null, raw,
-					emitSubstDebug: !(mode.EqSplit && i == 0), splitHadErrors))!);
+			arguments.Add(mode.Defers(piece.LeftSide, hasRightSide)
+				? DeferredArgument(piece.Raw)
+				: (await EvaluateArgumentSubtree(visitor, prs, piece.Source, piece.Context, piece.Raw,
+					emitSubstDebug: !(mode.EqSplit && piece.LeftSide), piece.HadErrors))!);
 		}
 
 		return argumentResults;
@@ -277,22 +322,23 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 					return argumentResults.Record(await prs.FunctionParse(text));
 			}
 
-			return new CallState(text, argCallState.Depth, null, async () => (await Evaluate())?.Message)
+			return new CallState(text, depth, null, async () => (await Evaluate())?.Message)
 			{ ParsedResult = Evaluate };
 		}
 	}
 
 	/// <summary>
-	/// The one split a command's arguments get, chosen by its behavior: <c>arg0 = arg1,still arg 1</c>
-	/// (EqSplit and RSArgs), <c>arg0 = arg1,arg2</c> (EqSplit), <c>arg0,arg1,arg2</c> (RSArgs), or the
-	/// whole text as one argument.
+	/// The one split a command's arguments get, chosen by its behavior: <c>arg0 = arg1,arg2</c>
+	/// (EqSplit and RSArgs), <c>arg0 = arg1,still arg 1</c> (EqSplit), <c>arg0,arg1,arg2</c> (RSArgs or
+	/// LSArgs), or the whole text as one argument. An EqSplit command's left side is split on its commas
+	/// afterwards, in <see cref="PiecesAsync"/>.
 	/// </summary>
 	private static ValueTask<CallState?> SplitAs(IMUSHCodeParser parser, CommandBehavior behavior, MString text)
 		=> behavior.HasFlag(CommandBehavior.EqSplit) && behavior.HasFlag(CommandBehavior.RSArgs)
 			? parser.CommandEqSplitArgsParse(text)
 			: behavior.HasFlag(CommandBehavior.EqSplit)
 				? parser.CommandEqSplitParse(text)
-				: behavior.HasFlag(CommandBehavior.RSArgs)
+				: behavior.HasFlag(CommandBehavior.RSArgs) || behavior.HasFlag(CommandBehavior.LSArgs)
 					? parser.CommandCommaArgsParse(text)
 					: parser.CommandSingleArgParse(text);
 

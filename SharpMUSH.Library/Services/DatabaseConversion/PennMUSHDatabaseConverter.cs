@@ -3191,39 +3191,6 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	};
 
 	/// <summary>
-	/// Converts Pueblo ANSI escape sequences from text as stored in PennMUSH database files to MarkupStrings.
-	/// PennMUSH stores ANSI escape codes as literal ESC sequences in attribute text.
-	/// Standard HTML tags are preserved as they may be intentional content.
-	/// 
-	/// Handles Pueblo-specific ANSI formats:
-	/// - CSI sequences: ESC[...m (colors, styles) - e.g., ESC[31m (red), ESC[1m (bold), ESC[38;5;n]m (256-color)
-	/// - OSC sequences: ESC]...ESC\ (operating system commands, used by Pueblo for special markup and hyperlinks)
-	/// - Simple escapes: ESC followed by single character (stripped if not recognized)
-	/// 
-	/// Converted to MarkupStrings:
-	/// - ANSI SGR (Select Graphic Rendition) codes → MarkupString colors/styles
-	/// - ANSI 256-color codes (ESC[38;5;nm, ESC[48;5;nm) → MarkupString RGB colors
-	/// - ANSI RGB codes (ESC[38;2;r;g;bm, ESC[48;2;r;g;bm) → MarkupString RGB colors
-	/// - Bold (ESC[1m), underline (ESC[4m), etc. → MarkupString formatting
-	/// - Pueblo OSC 8 sequences (hyperlinks) → MarkupString hyperlinks
-	/// 
-	/// Unrecognized escape sequences are stripped from the output.
-	/// </summary>
-	/// <param name="text">Text potentially containing Pueblo ANSI escape sequences</param>
-	/// <returns>Text with escape sequences removed but standard HTML preserved, or empty string if input is null</returns>
-	private static string StripPuebloEscapes(string? text)
-	{
-		if (string.IsNullOrEmpty(text))
-		{
-			return string.Empty;
-		}
-
-		// For now, just return the text as-is
-		// TODO: Implement proper Pueblo escape stripping
-		return text;
-	}
-
-	/// <summary>
 	/// The stored password an imported player gets: the source value exactly as the source stored it,
 	/// or <see cref="PasswordService.LockedHash"/> when it has none. <see cref="PasswordService"/>
 	/// verifies every shape PennMUSH accepts, so the value is never hashed again here.

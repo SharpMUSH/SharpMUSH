@@ -478,17 +478,4 @@ public class PennMUSHParserGapTests
 		var result = (await Parser.FunctionParse(MarkupText.Plain("lit(%q<foo>)")))?.Message.ToString();
 		await Assert.That(result).IsEqualTo("%q<foo>");
 	}
-
-	// GAP 7: lsargs (list-style arguments)
-	//
-	// PennMUSH behavior: Commands with /lsargs flag split the
-	// left-side argument on commas and make each available as
-	// %0, %1, %2, etc.
-	// Source: TODO at visitor line 1734, PennMUSH penncmd.hlp
-	//
-	// This requires @command/add setup which needs CommandParser.
-	// Testing deferred to integration tests.
-
-	// lsargs tests require command execution to set up @command/add/lsargs.
-	// See PennMUSHParserGapCommandTests for integration tests.
 }

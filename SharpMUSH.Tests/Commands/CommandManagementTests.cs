@@ -221,6 +221,65 @@ public class CommandManagementTests
 	}
 
 	/// <summary>
+	/// <c>/lsargs</c> (PennMUSH's <c>CMD_T_LS_ARGS</c>): the left side is split on its commas and each part
+	/// is evaluated on its own, so a hook reads them as LSA1, LSA2 and counts them in LSAC.
+	/// </summary>
+	[Test]
+	public async ValueTask Add_Lsargs_SplitsTheArgumentOnItsCommas()
+	{
+		var wizard = await Wizard();
+		var name = CommandName();
+		var holder = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "LsargsHolder");
+		try
+		{
+			await As(wizard, $"&SEEN {holder}=");
+			await As(wizard, $"&BEFORE {holder}=attrib_set({holder}/SEEN,%<lsac>|%<lsa1>|%<lsa2>|%<ls>)");
+			await As(wizard, $"@command/add/lsargs {name}");
+			await As(wizard, $"@hook/before {name}={holder},BEFORE");
+
+			await As(wizard, $"{name} a,[add(1,2)]");
+
+			var seen = await Parser.FunctionParse(MarkupText.Plain($"get({holder}/SEEN)"));
+			await Assert.That(seen!.Message!.ToPlainText()).IsEqualTo("2|a|3|a,[add(1,2)]");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(name, "BEFORE");
+		}
+	}
+
+	/// <summary>
+	/// On an <c>/eqsplit</c> command <c>/lsargs</c> splits only the left of the <c>=</c>: a braced comma
+	/// stays inside its part, and the right side follows the left parts in order.
+	/// </summary>
+	[Test]
+	public async ValueTask Add_EqsplitLsargs_SplitsTheLeftSideOnly()
+	{
+		var wizard = await Wizard();
+		var name = CommandName();
+		var holder = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "LsargsEqHolder");
+		try
+		{
+			await As(wizard, $"&SEEN {holder}=");
+			await As(wizard, $"&BEFORE {holder}=attrib_set({holder}/SEEN,%<lsac>|%<lsa1>|%<lsa2>|%<lsa3>|%<rs>)");
+			await As(wizard, $"@command/add/eqsplit/lsargs {name}");
+			await As(wizard, $"@hook/before {name}={holder},BEFORE");
+
+			await As(wizard, $"{name} {{x,y}},[add(2,2)]=c,d");
+			var seen = await Parser.FunctionParse(MarkupText.Plain($"get({holder}/SEEN)"));
+			await Assert.That(seen!.Message!.ToPlainText()).IsEqualTo("3|x,y|4|c,d|c,d");
+
+			await As(wizard, $"{name} e,f");
+			seen = await Parser.FunctionParse(MarkupText.Plain($"get({holder}/SEEN)"));
+			await Assert.That(seen!.Message!.ToPlainText()).IsEqualTo("2|e|f||");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(name, "BEFORE");
+		}
+	}
+
+	/// <summary>
 	/// <c>@command/add</c> and <c>/delete</c> change the live table other connections are dispatching
 	/// through, so a reader part-way through it must not fail (#1251: "Collection was modified").
 	/// </summary>

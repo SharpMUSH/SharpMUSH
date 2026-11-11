@@ -25,10 +25,12 @@ namespace SharpMUSH.Library.ParserInterfaces;
 ///   <item><term><see cref="Debug"/></term><description><c>QUEUE_DEBUG</c> (0x1000) — attribute carries the DEBUG flag; force debug output on</description></item>
 ///   <item><term><see cref="NoDebug"/></term><description><c>QUEUE_NODEBUG</c> (0x2000) — attribute carries the NO_DEBUG flag; suppress debug output</description></item>
 /// </list>
-/// Other notable PennMUSH flags not (yet) represented here:
+/// The other PennMUSH queue flags live elsewhere, not here:
 /// <c>QUEUE_SOCKET</c> (0x0004, socket input) is covered by <see cref="ParserState.Handle"/> being non-null;
 /// <c>QUEUE_BREAK</c> (0x0400) maps to <see cref="Execution.CommandListBreak"/>;
-/// <c>QUEUE_INPLACE</c>, <c>QUEUE_PRESERVE_QREG</c>, etc. are not yet implemented.
+/// <c>QUEUE_INPLACE</c> is a list run in place, counted by <see cref="ParserState.InplaceDepth"/>;
+/// <c>QUEUE_NO_BREAKS</c> is <see cref="ParserInterfaces.BreakPropagation"/>;
+/// <c>QUEUE_PRESERVE_QREG</c> and <c>QUEUE_CLEAR_QREG</c> are <see cref="RegisterScope"/>.
 /// </para>
 /// </summary>
 [Flags]
