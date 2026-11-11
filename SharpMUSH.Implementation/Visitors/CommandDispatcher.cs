@@ -198,7 +198,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			if (builtIn.Definition is CommandDefinition definition)
 			{
 				return await services.Commands.InternalAsync(visitor, parser, src, context, builtIn.RootCommand,
-					DialectSwitches(definition, builtIn.Switches), definition, evaluated => DispatchUnmatchedAsync(visitor, src, commandText, executorObject, evaluated));
+					DialectSwitches(definition, builtIn.RootCommand, builtIn.Switches), definition, evaluated => DispatchUnmatchedAsync(visitor, src, commandText, executorObject, evaluated));
 			}
 
 			// Step 6: Check @attribute setting
@@ -733,7 +733,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	/// (<see cref="SoftcodeDialect.SwitchMeaning"/>): an alias's switches, which may be none, or the one switch a
 	/// shortened name begins.
 	/// </summary>
-	private static string[] DialectSwitches(CommandDefinition definition, string[] switches)
+	private static string[] DialectSwitches(CommandDefinition definition, string typedCommand, string[] switches)
 	{
 		if (switches.Length == 0 || SoftcodeDialectScope.Current is not { } dialect)
 			return switches;
@@ -741,7 +741,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		var known = definition.Attribute.Switches ?? [];
 		return switches
 			.SelectMany(typed => !known.Contains(typed, StringComparer.OrdinalIgnoreCase)
-				&& dialect.SwitchMeaning(definition.Attribute.Name, known, typed) is { } meant
+				&& dialect.SwitchMeaning(definition.Attribute.Name, known, typed, typedCommand) is { } meant
 					? meant
 					: [typed])
 			.Distinct(StringComparer.OrdinalIgnoreCase)

@@ -12,7 +12,7 @@
 -->
 # Dialect Switches
 
-Code read in a dialect (an attribute flagged `mux` or `rhost`, or any code on a game whose `dialect` option names one) may give a command a switch SharpMUSH has under another name, or a switch that asks for what the command does here anyway. A switch the command has keeps SharpMUSH's meaning. A shortened switch is read as that server reads it, as the first of its own switches for the command that the start fits, and then means what that switch means here: `@switch/f` is `@switch/first`, and RhostMUSH's `@edit/r` is its `/raw`, which SharpMUSH lacks, never `/regexp`. Any other switch is refused as usual. Some of these servers' switches are SharpMUSH's own too, such as `@sweep/commands`, `@stats/me`, `@wall/pose` and `@trigger/notify`. See [compatibility config].
+Code read in a dialect (an attribute flagged `mux` or `rhost`, or any code on a game whose `dialect` option names one) may give a command a switch SharpMUSH has under another name, or a switch that asks for what the command does here anyway. A switch the command has keeps SharpMUSH's meaning. A shortened switch is read as that server reads it, as the first of its own switches for the command, under the name the code gives it, that the start fits, and then means what that switch means here: `@switch/f` is `@switch/first`, and RhostMUSH's `@edit/r` is its `/raw`, which SharpMUSH lacks, never `/regexp`. Any other switch is refused as usual. Some of these servers' switches are SharpMUSH's own too, such as `@sweep/commands`, `@stats/me`, `@wall/pose` and `@trigger/notify`. See [compatibility config].
 
 - [dialect switches mux]: TinyMUX's switches
 - [dialect switches rhost]: RhostMUSH's switches

@@ -166,6 +166,11 @@ public class SoftcodeDialectTests : ServerTestBase
 		await Assert.That(rhost.SwitchMeaning("@DOLIST", ["CLEARREG", "CLEARREGS", "NOBREAK"], "c")).IsEquivalentTo(["CLEARREG"]);
 		await Assert.That(SoftcodeDialects.All["mux"].SwitchMeaning("@DOLIST", ["NOTIFY", "NOBREAK", "NOW"], "n"))
 			.IsEquivalentTo(["NOTIFY"]);
+		// A command the dialect names differently reads its own table: TinyMUX's @folder runs as @mux_folder, and
+		// RhostMUSH's @sudo, which runs as @force, has no /i.
+		await Assert.That(SoftcodeDialects.All["mux"].SwitchMeaning("@MUX_FOLDER", ["FILE", "LIST", "READ", "SET"], "r", "@folder"))
+			.IsEquivalentTo(["READ"]);
+		await Assert.That(rhost.SwitchMeaning("@FORCE", ["INPLACE", "INLINE"], "i", "@sudo")).IsNull();
 
 		await Cmd($"&PLAIN {thing}=@switch/f 1=1,&PLAINRAN me=yes");
 		await Cmd($"@trigger {thing}/PLAIN");

@@ -341,7 +341,7 @@ public static partial class ImportedCodeScan
 				return;
 			}
 
-			foreach (var unknown in switches.Where(typed => !Knows(definition, typed, dialect)))
+			foreach (var unknown in switches.Where(typed => !Knows(definition, root, typed, dialect)))
 				Count(_missingSwitches, $"{definition.Attribute.Name.ToLowerInvariant()}/{unknown.ToLowerInvariant()}", place);
 
 			if (definition.Attribute.Name is "@TRIGGER" or "@INCLUDE")
@@ -359,11 +359,11 @@ public static partial class ImportedCodeScan
 			if (dialect is not null) _dialectOfName.TryAdd("c:" + root.ToLowerInvariant(), dialect.Key);
 		}
 
-		private static bool Knows(CommandDefinition definition, string typed, SoftcodeDialect? dialect)
+		private static bool Knows(CommandDefinition definition, string root, string typed, SoftcodeDialect? dialect)
 		{
 			var known = definition.Attribute.Switches ?? [];
 			return known.Contains("*") || known.Contains(typed, StringComparer.OrdinalIgnoreCase)
-				|| dialect?.SwitchMeaning(definition.Attribute.Name, known, typed) is not null;
+				|| dialect?.SwitchMeaning(definition.Attribute.Name, known, typed, root) is not null;
 		}
 
 		/// <summary><c>@desc me=...</c>: a standard attribute's own command, or one the dialect names an attribute by.</summary>

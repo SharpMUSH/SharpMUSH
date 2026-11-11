@@ -98,11 +98,18 @@ public sealed record SoftcodeDialect(
 	/// and is long enough for), then taken as the command's own switch or the dialect's alias for it. <c>null</c> when
 	/// it means nothing here.
 	/// </summary>
-	public string[]? SwitchMeaning(string command, IReadOnlyCollection<string> commandSwitches, string typed)
+	/// <param name="typedCommand">The command as the code names it, when that differs: the source server's table is
+	/// the one for that name (RhostMUSH's <c>@sudo</c>, not the <c>@force</c> it runs as here).</param>
+	public string[]? SwitchMeaning(string command, IReadOnlyCollection<string> commandSwitches, string typed,
+		string? typedCommand = null)
 	{
 		if (commandSwitches.Contains(typed, StringComparer.OrdinalIgnoreCase)) return [typed];
 
-		var full = SourceSwitches.TryGetValue(command, out var names)
+		// A command the dialect names differently reads its own table; a shortened SharpMUSH name reads the command's.
+		var table = typedCommand is not null && CommandFor(typedCommand) is not null
+			? SourceSwitches.GetValueOrDefault(typedCommand)
+			: SourceSwitches.GetValueOrDefault(typedCommand ?? command) ?? SourceSwitches.GetValueOrDefault(command);
+		var full = table is { } names
 			&& names.FirstOrDefault(name => typed.Length >= name.MinLength
 				&& name.Name.StartsWith(typed, StringComparison.OrdinalIgnoreCase)) is { Name: { } named }
 			? named

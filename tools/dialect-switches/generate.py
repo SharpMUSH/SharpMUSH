@@ -13,7 +13,8 @@ TABLE = re.compile(r'NAMETAB\s+(\w+)\[\]\s*=\s*\{(.*?)\};', re.S)
 
 
 def read(path):
-	source = open(path, encoding='latin-1').read()
+	with open(path, encoding='latin-1') as file:
+		source = file.read()
 	tables = {name: [(m.group(1), int(m.group(2))) for m in ENTRY.finditer(body)]
 		for name, body in TABLE.findall(source)}
 	commands = {}
@@ -44,7 +45,8 @@ def main():
 		'/// start each one takes.', '/// </summary>',
 		'internal static class DialectSwitchNames', '{']
 	lines += emit('Rhost', read(rhost)) + [''] + emit('Mux', read(mux)) + ['}', '']
-	open(output, 'w', newline='\n').write('\n'.join(lines))
+	with open(output, 'w', newline='\n') as file:
+		file.write('\n'.join(lines))
 
 
 main()
