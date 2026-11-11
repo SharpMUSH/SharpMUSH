@@ -9468,4 +9468,19 @@
   <data name="GuideIdentityCustomSubgenre" xml:space="preserve">
     <value>Ez az alműfaj nem szerepel az MSSP javaslatai között. Egyéni értékek is megadhatók.</value>
   </data>
+  <data name="NavPlayGoHome" xml:space="preserve">
+    <value>Haza</value>
+  </data>
+  <data name="NavPlayWhoIsOnline" xml:space="preserve">
+    <value>Ki van fent</value>
+  </data>
+  <data name="NavWikiCategoryWritePage" xml:space="preserve">
+    <value>Írj ide egy oldalt</value>
+  </data>
+  <data name="WidStatsQuiet" xml:space="preserve">
+    <value>Most senki sem játszik. Légy te az első.</value>
+  </data>
+  <data name="WidStatsQuietPlay" xml:space="preserve">
+    <value>Játék</value>
+  </data>
 </root>

@@ -40,7 +40,7 @@ else if (_entry is not null && _entry.Candidates.Count > 0)
 }
 else
 {
-    <MudAlert Severity="Severity.Info" Dense="true">@string.Format(Loc["HelpNoSuchTopic"], Topic)</MudAlert>
+    <EmptyState Icon="@Icons.Material.Outlined.SearchOff">@string.Format(Loc["HelpNoSuchTopic"], Topic)</EmptyState>
 }
 
 @code {

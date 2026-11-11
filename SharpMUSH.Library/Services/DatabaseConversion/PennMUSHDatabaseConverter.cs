@@ -13,6 +13,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.DatabaseConversion.Rhost;
+using SharpMUSH.Library.Services.DatabaseConversion.Softcode;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Tags;
 using SharpMUSH.Library.Services.Interfaces;
@@ -272,6 +273,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			context.ReportUnconverted();
 			ReportProgress("Relationships established", 0.50);
 
+			CarryHooks(pennDatabase, context);
+
 			(phase, phaseStart, phaseEnd) = ("Creating attributes", 0.50, 0.75);
 			attributesConverted = await CreateAttributesAsync(pennDatabase, context, cancellationToken);
 			ReportProgress("Attributes created", 0.75);
@@ -288,8 +291,6 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			(channelsConverted, channelMembersConverted) = await ImportChannelsAsync(pennDatabase, context, cancellationToken);
 			ReportProgress("Channels imported", 0.97);
-
-			ReportHooks(pennDatabase, context);
 
 			await RetireRecoverListedAsync(pennDatabase, context, cancellationToken);
 			await QuarantineSourceGarbageAsync(context, cancellationToken);
@@ -2329,27 +2330,36 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	/// <summary>
-	/// The hook types TinyMUX and RhostMUSH share with SharpMUSH's <c>@hook</c>, and the prefix of the attribute on
-	/// <c>hook_obj</c> each runs (<c>B_LOOK</c> for a before hook on <c>look</c>).
+	/// A TinyMUX or RhostMUSH game's command hooks. Those servers keep each hook's code on the <c>hook_obj</c> object, in
+	/// an attribute named for the hook (<c>B_LOOK</c> for a before hook on <c>look</c>), and turn hooks on with
+	/// <c>hook_cmd</c> lines in their configuration file or with <c>@hook/&lt;type&gt; &lt;command&gt;</c>, which in
+	/// SharpMUSH, as in PennMUSH, clears a hook. So every such <c>@hook</c> in the game's softcode is written out
+	/// with the object and attribute (<see cref="HookCommandRewriter"/>), and the <c>hook_cmd</c> lines become
+	/// <c>@hook</c> commands in God's <c>STARTUP</c>, which sets them again each time the server starts.
 	/// </summary>
-	private static readonly (string Hook, string Prefix)[] CarriedHooks = [("before", "B"), ("after", "A"), ("ignore", "I")];
-
-	/// <summary>
-	/// A TinyMUX or RhostMUSH game's command hooks (<see cref="HookDirectives"/>). Neither server stores them in its
-	/// database, and neither does SharpMUSH, where a game sets them from an <c>@startup</c>, as in PennMUSH. So the
-	/// report gives the <c>@hook</c> lines that do what the file did, with the objects' numbers in this world, and
-	/// names the hooks SharpMUSH has no form for: <c>permit</c>, <c>igswitch</c> and <c>fail</c>.
-	/// </summary>
-	private static void ReportHooks(PennMUSHDatabase pennDatabase, PennMUSHConversionContext context)
+	private static void CarryHooks(PennMUSHDatabase pennDatabase, PennMUSHConversionContext context)
 	{
+		if (pennDatabase.Dialect is not (DatabaseDialect.TinyMUX or DatabaseDialect.RhostMUSH))
+		{
+			return;
+		}
+
 		var hooks = pennDatabase.Hooks;
+		var hookObject = Mapped(hooks.HookObject);
+		var rewritten = RewriteHookCommands(pennDatabase, hookObject);
+		if (rewritten > 0)
+		{
+			context.Warn(ImportWarningKind.Softcode,
+				$"Command hooks: {rewritten} attribute(s) ran {pennDatabase.SourceName}'s @hook/<type> <command>, which SharpMUSH reads as " +
+				"clearing a hook; the import wrote each one out with the hook object and attribute, as @hook/before look=#12,B_LOOK.");
+		}
+
 		if (!hooks.Any)
 		{
 			return;
 		}
 
 		var file = pennDatabase.Dialect == DatabaseDialect.RhostMUSH ? "netrhost.conf" : "netmux.conf";
-		var hookObject = Mapped(hooks.HookObject);
 		if (hooks.Commands.Count > 0)
 		{
 			if (hookObject is null)
@@ -2361,10 +2371,16 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			else
 			{
 				var lines = hooks.Commands
-					.SelectMany(command => CarriedHooks.Where(carried => command.Hooks.Contains(carried.Hook))
-						.Select(carried => $"@hook/{carried.Hook} {command.Command}={hookObject},{carried.Prefix}_{command.Command.ToUpperInvariant()}"))
+					.SelectMany(command => HookCommandRewriter.Lines(command.Command, command.Hooks, hookObject))
 					.ToList();
-				if (lines.Count > 0)
+				if (lines.Count > 0 && pennDatabase.Objects.Find(o => o.DBRef == 1) is { } god && Mapped(1) is { } godRef)
+				{
+					AppendStartup(god, string.Join(";", lines));
+					context.Warn(ImportWarningKind.Configuration,
+						$"Command hooks: {file} turned these on at startup; the import added them to {godRef}'s STARTUP, so they are set " +
+						$"each time the server starts. Type them now to have them before then: {string.Join("; ", lines)}");
+				}
+				else if (lines.Count > 0)
 				{
 					context.WarnNeedsAction(ImportWarningKind.Configuration,
 						$"Command hooks: {pennDatabase.SourceName} turned these on at startup from {file}. SharpMUSH keeps hooks only while it " +
@@ -2373,7 +2389,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			}
 
 			var dropped = hooks.Commands
-				.SelectMany(command => command.Hooks.Where(hook => !CarriedHooks.Any(carried => carried.Hook == hook))
+				.SelectMany(command => command.Hooks.Where(hook => !HookCommandRewriter.IsHook(hook))
 					.Select(hook => $"{command.Command} ({hook})"))
 				.ToList();
 			if (dropped.Count > 0)
@@ -2394,6 +2410,61 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		string? Mapped(int? source)
 			=> source is { } number && context.DbrefMapping.TryGetValue(number, out var mapped) ? $"#{mapped.Number}" : null;
+	}
+
+	/// <summary>Adds <paramref name="commands"/> to the end of <paramref name="obj"/>'s <c>STARTUP</c>, which it creates if need be.</summary>
+	private static void AppendStartup(PennMUSHObject obj, string commands)
+	{
+		var index = obj.Attributes.FindIndex(a => a.Name.Equals("STARTUP", StringComparison.OrdinalIgnoreCase));
+		if (index < 0)
+		{
+			obj.Attributes.Add(new PennMUSHAttribute { Name = "STARTUP", Value = commands });
+			return;
+		}
+
+		var previous = obj.Attributes[index];
+		obj.Attributes[index] = new PennMUSHAttribute
+		{
+			Name = previous.Name, Owner = previous.Owner, Flags = previous.Flags, DerefCount = previous.DerefCount,
+			Value = previous.Value.Length == 0 ? commands : $"{previous.Value};{commands}"
+		};
+	}
+
+	/// <summary>
+	/// Writes out every TinyMUX-style <c>@hook</c> in the game's attributes (<see cref="HookCommandRewriter"/>), each
+	/// change a line of the import's softcode rewrites.
+	/// </summary>
+	/// <returns>How many attributes changed.</returns>
+	private static int RewriteHookCommands(PennMUSHDatabase pennDatabase, string? hookObject)
+	{
+		var changed = 0;
+		foreach (var obj in pennDatabase.Objects)
+		{
+			for (var i = 0; i < obj.Attributes.Count; i++)
+			{
+				var attribute = obj.Attributes[i];
+				var result = HookCommandRewriter.Rewrite(attribute.Value, hookObject);
+				if (result.Notes.Count == 0)
+				{
+					continue;
+				}
+
+				pennDatabase.SoftcodeRewrites.Add(new SoftcodeRewrite($"#{obj.DBRef}/{attribute.Name}", string.Join("; ", result.Notes),
+					attribute.Value, result.Text));
+				if (!result.Changed)
+				{
+					continue;
+				}
+
+				changed++;
+				obj.Attributes[i] = new PennMUSHAttribute
+				{
+					Name = attribute.Name, Owner = attribute.Owner, Flags = attribute.Flags, DerefCount = attribute.DerefCount, Value = result.Text
+				};
+			}
+		}
+
+		return changed;
 	}
 
 	/// <summary>

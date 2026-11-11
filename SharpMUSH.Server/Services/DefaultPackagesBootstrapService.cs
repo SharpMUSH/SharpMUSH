@@ -32,6 +32,7 @@ public class DefaultPackagesBootstrapService(
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IExpandedObjectDataService serverData,
 	PluginCatalog plugins,
+	IPackageOperationGate gate,
 	ILogger<DefaultPackagesBootstrapService> logger) : IHostedService, IBundledPackageBootstrap
 {
 	public async Task StartAsync(CancellationToken cancellationToken)
@@ -153,11 +154,22 @@ public class DefaultPackagesBootstrapService(
 	}
 
 	/// <inheritdoc />
+	/// <remarks>
+	/// Holds the package gate throughout, so a package uninstalled by another operation cannot leave between the check that
+	/// both halves are here and the bridge's install.
+	/// </remarks>
 	public async Task InstallBridgesAsync(CancellationToken cancellationToken)
-		=> await InstallOrUpgradeAllAsync(BundledPackages.All.Where(p => p.Bridge), cancellationToken);
+		=> await gate.RunAsync(async () =>
+		{
+			await InstallOrUpgradeAllAsync(BundledPackages.All.Where(p => p.Bridge), cancellationToken);
+			return new Success();
+		}, cancellationToken);
 
 	/// <inheritdoc />
-	public async Task<Result<Success>> UninstallBridgesOverAsync(string packageId, CancellationToken cancellationToken)
+	public Task<Result<Success>> UninstallBridgesOverAsync(string packageId, CancellationToken cancellationToken)
+		=> gate.RunAsync(() => UninstallBridgesOverHeldAsync(packageId, cancellationToken), cancellationToken);
+
+	private async Task<Result<Success>> UninstallBridgesOverHeldAsync(string packageId, CancellationToken cancellationToken)
 	{
 		var bridges = BundledPackages.All.Where(p => p.Bridge
 			&& BundledPackages.Dependencies(p.PackageId, manifests).Contains(packageId, StringComparer.OrdinalIgnoreCase));

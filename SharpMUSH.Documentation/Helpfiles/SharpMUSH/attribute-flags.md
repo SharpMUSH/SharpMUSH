@@ -102,6 +102,11 @@ Formatting never rewrites the stored attribute; `@decompile` and the raw value r
 
 Attribute names follow the flag too: in an attribute flagged `mux`, `get(me/kill)` reads `DEATH` and `@reject me=...` sets `HAVEN`, the names a TinyMUX import stores those attributes by. The full lists are in [compatibility config other servers attribute names].
 
+- `noeval (E)`       TinyMUX's: the attribute is text, never code. u(), get_eval(), a description and the other messages give its value as written, and an action attribute set `noeval`, such as `AUSE` or `ASUCC`, does not run when its event happens. `@trigger` still runs it.
+- `noparse (P)`       TinyMUX's and RhostMUSH's: the `$`-command is matched against the command as it was typed, before its functions and substitutions are evaluated, and `%0` and the rest take their text from that.
+
+`noeval` and `noparse` do nothing unless the `attribute_eval_flags` option is on, which a TinyMUX or RhostMUSH import turns on. See [compatibility config attribute eval flags].
+
 An attribute without the flag reads the game's `dialect` option instead, as typed commands do. A RhostMUSH or TinyMUX database import sets the option and its flag on every attribute it brings in. See [compatibility config].
 
 ## How formatted values are laid out

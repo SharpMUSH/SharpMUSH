@@ -25,14 +25,12 @@ namespace SharpMUSH.Tests.Integration.Scenes;
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class SceneHubRealtimeTests(ServerWebAppFactory factory)
 {
-	private static Type SceneHubType =>
-		AppDomain.CurrentDomain.GetAssemblies()
-			.First(a => a.GetName().Name == "SharpMUSH.Plugins.Scene")
+	private Type SceneHubType =>
+		ScenePluginAssembly.Of(factory.Services)
 			.GetType("SharpMUSH.Plugins.Scene.Web.SceneHub", throwOnError: true)!;
 
-	private static Type SceneHubContextHolderType =>
-		AppDomain.CurrentDomain.GetAssemblies()
-			.First(a => a.GetName().Name == "SharpMUSH.Plugins.Scene")
+	private Type SceneHubContextHolderType =>
+		ScenePluginAssembly.Of(factory.Services)
 			.GetType("SharpMUSH.Plugins.Scene.Web.SceneHubContextHolder", throwOnError: true)!;
 
 	[Test]

@@ -103,6 +103,25 @@ public class ImportPreviewWorkerTests
 	}
 
 	/// <summary>
+	/// A configuration's <c>include</c> reads the file of that name uploaded beside it, so an alias it sets reaches the
+	/// softcode scan as one in the configuration itself does.
+	/// </summary>
+	[Test]
+	public async Task AnIncludedFileUploadedBesideTheConfigurationIsRead()
+	{
+		var (journal, source, _) = await SetupAsync();
+		var text = await File.ReadAllTextAsync(source);
+		await File.WriteAllTextAsync(source, text.Replace("A shiny widget%r", "A shiny widget [plussrx(1,2)]%r"));
+		var coordinator = new ImportPreviewCoordinator(journal, NullLogger<ImportPreviewCoordinator>.Instance);
+		var preview = await coordinator.PreviewAsync(new DatabaseImportFiles(source, Format: DatabaseImportFormat.RhostMUSH),
+			"include alias.conf", configurationIncludes: new Dictionary<string, string> { ["alias.conf"] = "function_alias plussrx add" });
+		await Assert.That(preview.Failure).IsNull();
+		var warnings = preview.Result!.Warnings.Texts().ToList();
+		await Assert.That(warnings).DoesNotContain(warning => warning.StartsWith("Softcode: plussrx()"));
+		await Assert.That(warnings).DoesNotContain(warning => warning.StartsWith("Configuration: include"));
+	}
+
+	/// <summary>
 	/// A gzipped dump, as PennMUSH writes by default, previews as the plain one does, and the configuration lines the
 	/// import could not carry over are in the report: the include it did not follow as a warning, the directive
 	/// SharpMUSH has no option for as a note.
@@ -123,7 +142,8 @@ public class ImportPreviewWorkerTests
 		await Assert.That(preview.Failure).IsNull();
 		await Assert.That(preview.State).IsEqualTo(ImportSessionState.Ready);
 		await Assert.That(preview.Result!.TotalObjects).IsGreaterThan(0);
-		await Assert.That(preview.Result.Warnings.Texts()).Contains(warning => warning.StartsWith("Configuration: include alias.cnf: not followed"));
+		await Assert.That(preview.Result.Warnings.Texts())
+			.Contains(warning => warning.StartsWith("Configuration: include alias.cnf: alias.cnf was not uploaded with the configuration"));
 		await Assert.That(preview.Result.Notes).Contains("Configuration: 1 directive(s) SharpMUSH has no option for, not carried over: chunk_swap_file.");
 		await Assert.That(SHA256.HashData(await File.ReadAllBytesAsync(compressed))).IsEquivalentTo(compressedHash);
 	}

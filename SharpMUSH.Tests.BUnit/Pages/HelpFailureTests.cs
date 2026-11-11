@@ -141,9 +141,9 @@ public class HelpFailureTests : TrackingBunitContext
 		this.AddAuthorization();
 
 		var cut = Render<SharpMUSH.Client.Pages.HelpTopic>(p => p.Add(c => c.Topic, "nosuchtopicxyz"));
-		cut.WaitForAssertion(() => cut.Find(".mud-alert"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find(".kit-empty"), TimeSpan.FromSeconds(5));
 
-		await Assert.That(cut.Find(".mud-alert").TextContent).Contains("HelpNoSuchTopic");
+		await Assert.That(cut.Find(".kit-empty").TextContent).Contains("HelpNoSuchTopic");
 		await Assert.That(cut.Markup).DoesNotContain("HelpLoadFailed");
 	}
 

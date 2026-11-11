@@ -31,6 +31,17 @@ file sealed class StatsHandler : HttpMessageHandler
 
 	private static readonly Row[] Online = [new("Bree", "#11:1100", 1100, "")];
 
+	/// <summary>One scene running, in the shape <c>api/scenes</c> answers with.</summary>
+	internal static readonly object[] ActiveScenes =
+	[
+		new
+		{
+			Id = "s1", Status = "active", IsPublic = true, IsTempRoom = false, ScheduledFor = (long?)null, StartedAt = 1000L,
+			LastActivityAt = 1000L, PoseCount = 1, OwnerDbref = "#11", OwnerName = "Bree", StarterDbref = "#11",
+			StarterName = "Bree", RoomDbref = "#0", RoomName = "Room Zero", Meta = new Dictionary<string, string>(),
+		},
+	];
+
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
 		var path = request.RequestUri!.AbsolutePath;
@@ -38,8 +49,8 @@ file sealed class StatsHandler : HttpMessageHandler
 		{
 			"/http/characters" => Roster,
 			"/http/online" => Online,
-			"/api/wiki/recent" => Array.Empty<object>(),
-			_ when path.StartsWith("/api/scenes", StringComparison.Ordinal) => Array.Empty<object>(),
+			"/api/wiki/recent" => new[] { new SharpMUSH.Client.Models.WikiPageSummary("p", "P", "main", DateTimeOffset.UtcNow, 1) },
+			_ when path.StartsWith("/api/scenes", StringComparison.Ordinal) => ActiveScenes,
 			_ => null
 		};
 
@@ -232,7 +243,7 @@ public class StatsWidgetTests : TrackingBunitContext
 		var tile = cut.Find("a.stats-tile");
 		await Assert.That(tile.GetAttribute("href")).IsEqualTo("/wiki/recent");
 		await Assert.That(tile.QuerySelector(".stats-tile-label")!.TextContent).IsEqualTo("WidPagesChangedThisWeek");
-		await Assert.That(tile.QuerySelector(".stats-tile-value")!.TextContent).IsEqualTo("0");
+		await Assert.That(tile.QuerySelector(".stats-tile-value")!.TextContent).IsEqualTo("1");
 	}
 
 	[TUnit.Core.Test]
@@ -288,9 +299,10 @@ public class StatsWidgetTests : TrackingBunitContext
 		Wire(this, new ScenesFailHandler());
 
 		var cut = Render<StatsWidget>();
+		// Nobody is online, so that tile leaves once its count arrives.
 		cut.WaitForAssertion(() =>
 		{
-			if (TileValue(cut.Markup, "WidPlayersOnline") == "—") throw new InvalidOperationException("stats not loaded yet");
+			if (cut.Markup.Contains(">WidPlayersOnline<", StringComparison.Ordinal)) throw new InvalidOperationException("stats not loaded yet");
 		}, TimeSpan.FromSeconds(5));
 
 		await Assert.That(TileValue(cut.Markup, "WidActiveScenes")).IsEqualTo("—");
@@ -317,7 +329,7 @@ public class StatsWidgetTests : TrackingBunitContext
 		serverInfo.Refresh();
 
 		cut.WaitForAssertion(() => TileValue(cut.Markup, "WidActiveScenes"), TimeSpan.FromSeconds(5));
-		await Assert.That(TileValue(cut.Markup, "WidActiveScenes")).IsEqualTo("0");
+		await Assert.That(TileValue(cut.Markup, "WidActiveScenes")).IsEqualTo("1");
 	}
 
 	/// <summary>A count that failed is asked for again, so the tile fills in once the game is back.</summary>
@@ -330,7 +342,7 @@ public class StatsWidgetTests : TrackingBunitContext
 		var cut = Render<StatsWidget>();
 		cut.WaitForAssertion(() =>
 		{
-			if (TileValue(cut.Markup, "WidPlayersOnline") == "—") throw new InvalidOperationException("stats not loaded yet");
+			if (cut.Markup.Contains(">WidPlayersOnline<", StringComparison.Ordinal)) throw new InvalidOperationException("stats not loaded yet");
 		}, TimeSpan.FromSeconds(5));
 		await Assert.That(TileValue(cut.Markup, "Characters")).IsEqualTo("—");
 
@@ -339,5 +351,61 @@ public class StatsWidgetTests : TrackingBunitContext
 		{
 			if (TileValue(cut.Markup, "Characters") != "1") throw new InvalidOperationException("roster not read again yet");
 		}, TimeSpan.FromSeconds(10));
+	}
+
+	/// <summary>
+	/// A fresh game: one character, nobody online, nothing running, nothing written this week. No tile reads 0, and
+	/// the widget invites the reader to play instead.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task AQuietGame_ShowsNoZero_AndInvitesTheReaderToPlay()
+	{
+		Wire(this, new QuietGameHandler());
+
+		var cut = Render<StatsWidget>();
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Markup.Contains("—")) throw new InvalidOperationException("stats not loaded yet");
+		}, TimeSpan.FromSeconds(5));
+
+		var values = cut.FindAll(".stats-tile-value").Select(v => v.TextContent).ToList();
+		await Assert.That(values).DoesNotContain("0");
+		await Assert.That(TileValue(cut.Markup, "Characters")).IsEqualTo("1");
+		await Assert.That(cut.Markup).DoesNotContain(">WidPlayersOnline<");
+		await Assert.That(cut.Markup).DoesNotContain(">WidActiveScenes<");
+		await Assert.That(cut.Markup).DoesNotContain(">WidPagesChangedThisWeek<");
+
+		var invite = cut.Find(".stats-quiet");
+		await Assert.That(invite.TextContent).Contains("WidStatsQuiet");
+		await Assert.That(invite.QuerySelector("a")!.GetAttribute("href")).IsEqualTo("/play");
+	}
+
+	/// <summary>Someone is playing: no invite.</summary>
+	[TUnit.Core.Test]
+	public async Task ABusyGame_HasNoInvite()
+	{
+		Wire(this, new StatsHandler());
+
+		var cut = Render<StatsWidget>();
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Markup.Contains("—")) throw new InvalidOperationException("stats not loaded yet");
+		}, TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll(".stats-quiet").Count).IsEqualTo(0);
+	}
+}
+
+/// <summary>A game nobody has played yet: its one character, and empty lists everywhere else.</summary>
+file sealed class QuietGameHandler : HttpMessageHandler
+{
+	private record Row(string Name, string Objid, long Created, string Category);
+
+	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+	{
+		object payload = request.RequestUri!.AbsolutePath == "/http/characters"
+			? new[] { new Row("One", "#1:1", 1, "Wizard") }
+			: Array.Empty<object>();
+		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(payload) });
 	}
 }

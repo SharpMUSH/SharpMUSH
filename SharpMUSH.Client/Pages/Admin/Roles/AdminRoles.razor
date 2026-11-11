@@ -35,7 +35,7 @@
             <Records>
                 @if (SortedRoles.Count == 0)
                 {
-                    <div class="ra-empty-list">@Loc["RolNoRolesDefined"]</div>
+                    <EmptyState Compact="true" Icon="@Icons.Material.Outlined.Badge">@Loc["RolNoRolesDefined"]</EmptyState>
                 }
                 @foreach (var category in RoleCategories)
                 {

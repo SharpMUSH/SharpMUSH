@@ -183,7 +183,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			if (builtIn.Definition is CommandDefinition definition)
 			{
 				return await services.Commands.InternalAsync(visitor, parser, src, context, builtIn.RootCommand,
-					builtIn.Switches, definition);
+					builtIn.Switches, definition, evaluated => DispatchUnmatchedAsync(visitor, src, commandText, executorObject, evaluated));
 			}
 
 			// Step 6: Check @attribute setting
@@ -723,8 +723,9 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	/// refused one, else <c>HUH_COMMAND</c>. An error in evaluating the line is kept on whichever
 	/// answers.
 	/// </summary>
+	/// <param name="evaluated">The line already evaluated, when a built-in's hook handed it back; it is not evaluated again.</param>
 	private async ValueTask<Option<CallState>> DispatchUnmatchedAsync(SharpMUSHParserVisitor visitor, MString src,
-		MString commandText, AnySharpObject executorObject)
+		MString commandText, AnySharpObject executorObject, MString? evaluated = null)
 	{
 		var parser = visitor.Parser;
 
@@ -739,8 +740,8 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		// pattern is checked and before its wildcards capture %0... This mirrors what the hook
 		// OVERRIDE/EXTEND path already does. It is only reached once no built-in command matched
 		// (Steps 1-8 above), so a built-in never pays for this evaluation.
-		var evaluatedCommandResult = await parser.FunctionParse(commandText);
-		var evaluatedCommandText = evaluatedCommandResult?.Message ?? commandText;
+		var evaluatedCommandResult = evaluated is null ? await parser.FunctionParse(commandText) : null;
+		var evaluatedCommandText = evaluated ?? evaluatedCommandResult?.Message ?? commandText;
 		// game.c records this line as %u before looking for a $-command, so the caller keeps it
 		// whether a $-command, HUH_COMMAND or its hook ends up handling the command.
 		parser.CurrentState.CommandText?.Evaluated = evaluatedCommandText;
@@ -836,6 +837,12 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		// player.commands: denied, exits still work and $-commands are never matched.
 		var runsCommands = await executorObject.Can(PortalPermission.PlayerCommands);
 
+		// attribute_eval_flags: a noparse $-command matches the line as it was typed (%c), not as evaluated.
+		var typed = visitor.Configuration.CurrentValue.Compatibility.AttributeEvalFlags
+			&& parser.CurrentState.CommandText?.Raw is { Length: > 0 } raw
+				? raw
+				: null;
+
 		for (var scope = CommandScope.Nearby; scope <= CommandScope.MasterRoom; scope++)
 		{
 			if (await RemoteExitAsync(visitor, executorObject, scope, evaluatedCommandText.ToPlainText().Trim()) is SharpExit exit)
@@ -850,12 +857,15 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 				continue;
 			}
 
-			var userDefinedCommandMatches = await services.CommandDiscoveryService.MatchUserDefinedCommand(
-				parser,
-				PerceivedCandidates(candidates),
-				evaluatedCommandText,
-				executorObject,
-				lockFailures);
+			var userDefinedCommandMatches = typed is not null && services.CommandDiscoveryService is CommandDiscoveryService discovery
+				? await discovery.MatchTypedCommand(parser, PerceivedCandidates(candidates), evaluatedCommandText, typed, executorObject,
+					lockFailures)
+				: await services.CommandDiscoveryService.MatchUserDefinedCommand(
+					parser,
+					PerceivedCandidates(candidates),
+					evaluatedCommandText,
+					executorObject,
+					lockFailures);
 
 			if (userDefinedCommandMatches.TryGetValue(out var matches))
 			{

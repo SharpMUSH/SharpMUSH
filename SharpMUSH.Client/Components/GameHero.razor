@@ -1,11 +1,13 @@
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Models.Portal.Onboarding
 @inject ServerInfoService ServerInfo
 @implements IDisposable
 
 @* The game's own face at the top of Home: portal_banner behind the name, portal_logo beside it, portal_tagline
-   and portal_description under it. Without a banner the card is the theme's own surface and marks. The text
-   is in the flow, so a long description makes the hero taller instead of running off its top. *@
-<header class="@(_identity.Banner is { } banner && ImageUrlPolicy.IsRenderable(banner) ? "game-hero game-hero--image" : "game-hero")">
+   and portal_description under it. Without a banner the card is the theme's own surface and marks, with the
+   welcome picture for the game's genre (the one the guide opens with) at its side when the game has named one.
+   The text is in the flow, so a long description makes the hero taller instead of running off its top. *@
+<header class="@(HasBanner ? "game-hero game-hero--image" : "game-hero")">
     @if (_identity.Banner is { } image && ImageUrlPolicy.IsRenderable(image))
     {
         <img class="game-hero-img" src="@ApiUrl.Resolve(image)" alt="" />
@@ -16,6 +18,10 @@
         <ThemeMarks />
     }
     <div class="game-hero-body">
+        @if (!HasBanner && GenreArt is { } art)
+        {
+            <img class="game-hero-art" src="@ApiUrl.Resolve(art.Url)" alt="" width="@art.Width" height="@art.Height" loading="lazy" />
+        }
         <span class="game-hero-logo"><GameLogo Size="56" /></span>
         <div class="game-hero-text">
             <h1 class="game-hero-name">@_identity.Name</h1>
@@ -33,16 +39,41 @@
 
 @code {
     private GameIdentity _identity = new(string.Empty, null, null, null);
+    private OnboardingPresentation? _onboarding;
+
+    private bool HasBanner => _identity.Banner is { } banner && ImageUrlPolicy.IsRenderable(banner);
+
+    /// <summary>
+    /// The guide's welcome picture for the game's genre and subgenre, in its art style. Null for a game that named
+    /// no genre: the neutral picture is the guide's own, not the game's.
+    /// </summary>
+    public static SharpieArt? GenreArtFor(OnboardingPresentation? onboarding) =>
+        onboarding is null
+            ? null
+            : SharpieArtCatalog.Resolve(onboarding.ArtStyle, onboarding.Genre, onboarding.Subgenre, onboarding.ArtOverrideId,
+                GuideImagery.Full, SharpieArtMoment.Welcome) is { } art
+              && !string.Equals(art.Theme, "neutral", StringComparison.OrdinalIgnoreCase)
+              && !string.Equals(art.Theme, "None", StringComparison.OrdinalIgnoreCase)
+                ? art
+                : null;
+
+    private SharpieArt? GenreArt => GenreArtFor(_onboarding);
 
     protected override async Task OnInitializedAsync()
     {
         ServerInfo.Changed += OnServerInfoChanged;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
         _identity = await ServerInfo.IdentityAsync();
+        _onboarding = await ServerInfo.OnboardingAsync();
     }
 
     private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
     {
-        _identity = await ServerInfo.IdentityAsync();
+        await LoadAsync();
         StateHasChanged();
     });
 

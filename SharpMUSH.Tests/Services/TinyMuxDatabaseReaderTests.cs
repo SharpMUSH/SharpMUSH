@@ -1,6 +1,8 @@
 using System.Text;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services.DatabaseConversion;
+using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 using SharpMUSH.Library.Services.DatabaseConversion.TinyMux;
 
 namespace SharpMUSH.Tests.Services;
@@ -114,6 +116,21 @@ public class TinyMuxDatabaseReaderTests
 		await Assert.That(widget.Attributes.Select(a => a.Name)).Contains("DESCRIBE");
 		await Assert.That(Object(database, 1).Attributes.Select(a => a.Name)).Contains("AWAY");
 		await Assert.That(Object(database, 6).Attributes.Select(a => a.Name)).Contains("SUCCESS");
+	}
+
+	/// <summary>
+	/// TinyMUX's noeval and noparse and RhostMUSH's NOPARSE land on SharpMUSH's attribute flags of those names, which
+	/// <c>attribute_eval_flags</c> gives their effect.
+	/// </summary>
+	[Test]
+	public async Task EvaluationAttributeFlagsAreKept()
+	{
+		await Assert.That(TinyMuxNames.AttributeFlags[0x100000].Flags).IsEquivalentTo(["noeval"]);
+		await Assert.That(TinyMuxNames.AttributeFlags[0x4000].Flags).IsEquivalentTo(["noparse"]);
+		await Assert.That(RhostNameTables.AttributeFlags.Single(flag => flag.Name == "NOPARSE").Flag).IsEqualTo("noparse");
+		await Assert.That(PackageManifestService.AttributeEntryFlags).Contains("noeval").And.Contains("noparse");
+		await Assert.That(TinyMuxDatabaseReader.CompatibilityOptions()["attribute_eval_flags"] is true).IsTrue();
+		await Assert.That(RhostDatabaseTranslator.CompatibilityOptions()["attribute_eval_flags"] is true).IsTrue();
 	}
 
 	[Test]

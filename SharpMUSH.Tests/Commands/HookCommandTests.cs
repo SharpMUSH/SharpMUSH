@@ -24,6 +24,25 @@ public class HookCommandTests
 	}
 
 	[Test]
+	public async ValueTask HookList_NoCommand_ListsHooksOnNamesNoBuiltInAnswersTo()
+	{
+		var cmd = $"+HOOKTEST_ALL_{Guid.NewGuid():N}".ToUpperInvariant();
+		await HookService.SetHookAsync(cmd, "BEFORE", new DBRef(1), "B_TEST");
+		try
+		{
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@hook/list"));
+
+			await Assert.That(WebAppFactoryArg.Notifications.For(WebAppFactoryArg.ExecutorDBRef))
+				.Contains(message => message.Contains($"'{cmd}'", StringComparison.Ordinal))
+				.Because("a softcode command's hook is listed with the built-ins'");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(cmd, "BEFORE");
+		}
+	}
+
+	[Test]
 	public async ValueTask HookSet_ValidCommand_CreatesHook()
 	{
 		// @hook requires the attribute to exist on the object; this only verifies the command

@@ -9468,4 +9468,19 @@
   <data name="GuideIdentityCustomSubgenre" xml:space="preserve">
     <value>Tego podgatunku nie ma na liście propozycji MSSP. Własne wartości są dozwolone.</value>
   </data>
+  <data name="NavPlayGoHome" xml:space="preserve">
+    <value>Wróć do domu</value>
+  </data>
+  <data name="NavPlayWhoIsOnline" xml:space="preserve">
+    <value>Kto jest online</value>
+  </data>
+  <data name="NavWikiCategoryWritePage" xml:space="preserve">
+    <value>Napisz tu stronę</value>
+  </data>
+  <data name="WidStatsQuiet" xml:space="preserve">
+    <value>Nikt teraz nie gra. Wejdź jako pierwsza osoba.</value>
+  </data>
+  <data name="WidStatsQuietPlay" xml:space="preserve">
+    <value>Graj</value>
+  </data>
 </root>

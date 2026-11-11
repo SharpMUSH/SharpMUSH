@@ -24,7 +24,9 @@ else
     {
     @if (_listed.Count == 0)
     {
-        <EmptyState Compact="true" Class="here-empty" Icon="@Icons.Material.Outlined.PeopleOutline">@(Occupants.Count > 0 ? Loc["NavPlayNobodyElseHere"] : Loc["NavConnectToSeeWhoIsHere"])</EmptyState>
+        @* Alone in a room: WHO says where everyone else is. Not yet connected, there is nobody to ask. *@
+        <EmptyState Compact="true" Class="here-empty" Icon="@Icons.Material.Outlined.PeopleOutline"
+                    Action="@(Occupants.Count > 0 ? WhoAction : null)">@(Occupants.Count > 0 ? Loc["NavPlayNobodyElseHere"] : Loc["NavConnectToSeeWhoIsHere"])</EmptyState>
     }
     else
     {
@@ -54,6 +56,11 @@ else
             }
         </div>
     }
+    };
+
+    private RenderFragment WhoAction => __builder =>
+    {
+        <CapsuleButton Icon="@Icons.Material.Outlined.Groups" OnClick="@(() => OnCommand.InvokeAsync("WHO"))">@Loc["NavPlayWhoIsOnline"]</CapsuleButton>
     };
 
     /// <summary>The latest <c>room.contents</c> rows.</summary>

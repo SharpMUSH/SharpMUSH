@@ -95,6 +95,9 @@ else
     /// <summary>The title a page that does not exist yet starts from; null or blank means its slug.</summary>
     [Parameter] public string? NewTitle { get; init; }
 
+    /// <summary>A category a page that does not exist yet starts in.</summary>
+    [Parameter] public string? NewCategory { get; init; }
+
     /// <summary>
     /// True when this renders inside another page (a layout widget) rather than as the <c>/wiki</c>
     /// route itself, which drops chrome that only makes sense on that route.
@@ -183,11 +186,18 @@ else
                 Facts = [.. _article.Facts],
                 Published = _article.Published,
             }
-            : new WikiArticle(string.IsNullOrWhiteSpace(NewTitle) ? Slug : NewTitle.Trim(), string.Empty, null)
-            {
-                // A new page shows the categories its namespace will put it in, as the saved page will have them.
-                Categories = [.. WikiHelpers.NamespaceCategories(Namespace)],
-            };
+            : NewDraft();
+
+    private WikiArticle NewDraft()
+    {
+        var draft = new WikiArticle(string.IsNullOrWhiteSpace(NewTitle) ? Slug : NewTitle.Trim(), string.Empty, null)
+        {
+            // A new page shows the categories its namespace will put it in, as the saved page will have them.
+            Categories = [.. WikiHelpers.NamespaceCategories(Namespace)],
+        };
+        WikiCategories.Add(draft.Categories, NewCategory);
+        return draft;
+    }
 
     /// <summary>
     /// Switching locale in the editor is a navigation, not local state: <c>?lang=</c> stays the single

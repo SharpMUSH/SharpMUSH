@@ -116,6 +116,12 @@ internal sealed class AttributeEvaluator(
 			return new CallState(code);
 		}
 
+		// TinyMUX's AF_NOEVAL: the attribute is text, and whatever would run it gives that text as written.
+		if (function.NoEval && configuration.CurrentValue.Compatibility.AttributeEvalFlags)
+		{
+			return new CallState(code);
+		}
+
 		// Use shared tracking collections from parser state.
 		// These are guaranteed to be non-null because:
 		// - CommandParse creates them for each command evaluation

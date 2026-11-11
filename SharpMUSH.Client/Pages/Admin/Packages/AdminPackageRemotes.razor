@@ -120,7 +120,7 @@
                     }
                     @if (_community.Listings.Count == 0)
                     {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@Loc["PkgNoCommunityRepos"]</MudText>
+                        <EmptyState Compact="true" Icon="@Icons.Material.Outlined.Storefront">@Loc["PkgNoCommunityRepos"]</EmptyState>
                     }
                     @foreach (var error in _community.Errors)
                     {

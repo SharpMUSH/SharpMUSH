@@ -72,19 +72,17 @@ else if (Article is null)
         {
             @JourneyNavigation
         }
-        <MudAlert Severity="@Severity.Info" Variant="Variant.Outlined" Class="mt-2">
-            <AuthorizeView Policy="wiki.create">
-                <Authorized>
-                    <MudText>@Loc["WikiPageNotExist"]</MudText>
-                    <MudButton EndIcon="@Icons.Material.Filled.Create" Color="Color.Primary" Ripple="true"
-                               Style="text-transform:none;"
-                               OnClick="@ActivateEditMode">@Loc["CreateThisPage"]</MudButton>
-                </Authorized>
-                <NotAuthorized>
-                    <MudText>@Loc["NothingToSeeHere"]</MudText>
-                </NotAuthorized>
-            </AuthorizeView>
-        </MudAlert>
+        <AuthorizeView Policy="wiki.create">
+            <Authorized>
+                <EmptyState Class="mt-2" Icon="@Icons.Material.Outlined.Article">
+                    <ChildContent>@Loc["WikiPageNotExist"]</ChildContent>
+                    <Action><CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Create" OnClick="@(() => ActivateEditMode())">@Loc["CreateThisPage"]</CapsuleButton></Action>
+                </EmptyState>
+            </Authorized>
+            <NotAuthorized>
+                <EmptyState Class="mt-2" Icon="@Icons.Material.Outlined.Article">@Loc["NothingToSeeHere"]</EmptyState>
+            </NotAuthorized>
+        </AuthorizeView>
     </div>
 }
 else if (DisplayAsHero)

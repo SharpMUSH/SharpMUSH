@@ -9468,4 +9468,19 @@
   <data name="GuideIdentityCustomSubgenre" xml:space="preserve">
     <value>此子类型不在 MSSP 的建议列表中。允许使用自定义值。</value>
   </data>
+  <data name="NavPlayGoHome" xml:space="preserve">
+    <value>回家</value>
+  </data>
+  <data name="NavPlayWhoIsOnline" xml:space="preserve">
+    <value>谁在线</value>
+  </data>
+  <data name="NavWikiCategoryWritePage" xml:space="preserve">
+    <value>在此撰写页面</value>
+  </data>
+  <data name="WidStatsQuiet" xml:space="preserve">
+    <value>现在没有人在玩。来做第一个吧。</value>
+  </data>
+  <data name="WidStatsQuietPlay" xml:space="preserve">
+    <value>开始游戏</value>
+  </data>
 </root>

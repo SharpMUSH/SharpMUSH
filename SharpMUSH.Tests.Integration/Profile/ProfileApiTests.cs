@@ -14,6 +14,12 @@ using System.Text.Json;
 
 namespace SharpMUSH.Tests.Integration.Profile;
 
+/// <summary>The host <see cref="ProfileApiTests"/> read: a world no other suite writes players into.</summary>
+public sealed class ProfileApiServerFactory : ServerWebAppFactory
+{
+	protected override bool UsesOwnWorld => true;
+}
+
 /// <summary>
 /// End-to-end tests for the default character-profile and character-directory softcode, served
 /// through the routed http_handler (help sharphttp). The bootstrap seeds the GET verb router and
@@ -33,11 +39,12 @@ namespace SharpMUSH.Tests.Integration.Profile;
 /// this branch added more player-creating suites and the interleaving got wider, on a runner slow
 /// enough to hold the window open.
 ///
-/// A test that reads the whole database cannot run while other tests are writing to it.
+/// A test that reads the whole database cannot run while other tests are writing to it, so these run in a world of
+/// their own, one at a time, and the session's world is not held still for them.
 /// </remarks>
-[NotInParallel]
-[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-public class ProfileApiTests(ServerWebAppFactory factory)
+[NotInParallel(nameof(ProfileApiTests))]
+[ClassDataSource<ProfileApiServerFactory>(Shared = SharedType.PerTestSession)]
+public class ProfileApiTests(ProfileApiServerFactory factory)
 {
 	/// <summary>Resolves #1 (God)'s name and objid from the engine, so tests aren't tied to literals.</summary>
 	private async Task<(string Name, string Objid)> GodIdentity()

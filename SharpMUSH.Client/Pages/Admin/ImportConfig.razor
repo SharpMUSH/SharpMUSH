@@ -40,6 +40,22 @@
                         <span class="impcfg-file-size">(@($"{_selectedFile.Size / 1024.0:F1}") KB)</span>
                     </div>
 
+                    @* An include line is read from the uploaded file of its name, never from this server's disk. *@
+                    <SectionLabel Class="impcfg-includes-label">@Loc["AdmImportConfigIncludesOptional"]</SectionLabel>
+                    <span class="impcfg-dropzone-hint">@Loc["AdmImportConfigIncludesHint"]</span>
+                    <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                                   Accept=".cnf,.conf,.txt"
+                                   FilesChanged="OnIncludesSelected"
+                                   MaximumFileCount="16"
+                                   MaxFileSize="1048576" />
+                    @foreach (var include in _includes.Keys)
+                    {
+                        <div class="impcfg-file-row">
+                            <MudIcon Icon="@Icons.Material.Filled.Description" Class="impcfg-file-icon" />
+                            <span class="impcfg-file-name impcfg-include-name">@include</span>
+                        </div>
+                    }
+
                     @if (!string.IsNullOrEmpty(_fileContent))
                     {
                         <MudExpansionPanels Elevation="0" Class="impcfg-preview">
@@ -89,6 +105,9 @@
 @code {
 	private IBrowserFile? _selectedFile;
 	private string? _fileContent;
+
+	/// <summary>The files the configuration includes, by file name, with their text.</summary>
+	private Dictionary<string, string> _includes = new(StringComparer.OrdinalIgnoreCase);
 	private bool _isImporting;
 	private string? _error;
 
@@ -112,10 +131,30 @@
 		}
 	}
 
+	private async Task OnIncludesSelected(IReadOnlyList<IBrowserFile>? files)
+	{
+		_includes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		_error = null;
+		foreach (var file in files ?? [])
+		{
+			try
+			{
+				await using var stream = file.OpenReadStream(maxAllowedSize: 1048576);
+				using var reader = new StreamReader(stream);
+				_includes[file.Name] = await reader.ReadToEndAsync();
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError(ex, "Error reading included configuration file {FileName}", file.Name);
+			}
+		}
+	}
+
 	private void ClearSelection()
 	{
 		_selectedFile = null;
 		_fileContent = null;
+		_includes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 		_error = null;
 	}
 
@@ -127,7 +166,7 @@
 		_isImporting = true;
 		_error = null;
 
-		switch (await AdminConfigService.ImportFromConfigFileAsync(_fileContent))
+		switch (await AdminConfigService.ImportFromConfigFileAsync(_fileContent, _includes))
 		{
 			case ConfigurationResponse:
 				Navigation.NavigateTo("/admin/config");

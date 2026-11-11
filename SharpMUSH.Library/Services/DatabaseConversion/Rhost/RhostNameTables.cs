@@ -330,6 +330,9 @@ public static class RhostNameTables
 		(0x80000000, "SLAVE", RestrictingFlags.Slave),
 	];
 
+	/// <summary>The flag word 3 bit of NO_OVERRIDE (<see cref="RestrictingFlags.NoOverride"/>).</summary>
+	public const uint NoOverrideBit = 0x400000;
+
 	/// <summary>The flag word 3 bit that changes how every depower's level is stored on its player.</summary>
 	public const uint DepowerShift = 0x2;
 
@@ -362,7 +365,7 @@ public static class RhostNameTables
 		new(0x80000, "PINVIS", "mortal_dark", "hidden from mortals in the source by the PINVIS rule; mortal_dark here"),
 		new(0x100000, "NORETURN", null),
 		new(0x200000, "NOCLONE", "no_clone"),
-		new(0x400000, "NOPARSE", null),
+		new(0x400000, "NOPARSE", "noparse"),
 		new(0x800000, "SAFE", "safe"),
 		new(0x1000000, "USELOCK", null),
 		new(0x2000000, "SINGLETHREAD", null),

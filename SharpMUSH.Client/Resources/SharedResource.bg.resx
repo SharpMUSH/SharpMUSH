@@ -9468,4 +9468,19 @@
   <data name="GuideIdentityCustomSubgenre" xml:space="preserve">
     <value>Този поджанр не е в списъка с предложения на MSSP. Разрешени са собствени стойности.</value>
   </data>
+  <data name="NavPlayGoHome" xml:space="preserve">
+    <value>Отиди у дома</value>
+  </data>
+  <data name="NavPlayWhoIsOnline" xml:space="preserve">
+    <value>Кой е онлайн</value>
+  </data>
+  <data name="NavWikiCategoryWritePage" xml:space="preserve">
+    <value>Напиши страница тук</value>
+  </data>
+  <data name="WidStatsQuiet" xml:space="preserve">
+    <value>В момента никой не играе. Бъди първият.</value>
+  </data>
+  <data name="WidStatsQuietPlay" xml:space="preserve">
+    <value>Играй</value>
+  </data>
 </root>

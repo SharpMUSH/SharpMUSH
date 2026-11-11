@@ -71,7 +71,7 @@ public class BundledBridgeBootstrapTests
 		});
 
 		return new DefaultPackagesBootstrapService(new PackageManifestService(), registry, installer, wrapper,
-			new ServerData(new DeclinedBundledPackages { PackageIds = [.. declined] }), PluginCatalog.ForPlugins([new ScenePlugin()]),
+			new ServerData(new DeclinedBundledPackages { PackageIds = [.. declined] }), PluginCatalog.ForPlugins([new ScenePlugin()]), new PackageOperationGate(),
 			NullLogger<DefaultPackagesBootstrapService>.Instance);
 	}
 
