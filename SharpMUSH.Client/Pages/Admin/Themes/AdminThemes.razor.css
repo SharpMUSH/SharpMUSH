@@ -23,7 +23,7 @@
 	font-size: var(--text-sm);
 }
 
-@container page (min-width: 72rem) {
+@container page (min-width: 90rem) {
 	.adm-theme-layout {
 		grid-template-columns: 15rem minmax(0, 1fr) 20rem;
 		grid-template-areas: "list editor preview";

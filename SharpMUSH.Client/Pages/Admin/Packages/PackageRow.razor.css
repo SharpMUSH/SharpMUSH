@@ -70,6 +70,9 @@
     color: var(--text-dim);
 }
 
+.pkg-row-notes:not(:has(*)),
+.pkg-row-meta:not(:has(*)) { display: none; }
+
 .pkg-row-notes {
     display: flex;
     flex-wrap: wrap;
@@ -94,7 +97,7 @@
 .pkg-row-details > summary::before {
     content: "\25B8";
     display: inline-block;
-    transition: transform 120ms ease;
+    transition: transform var(--motion-spring);
 }
 
 .pkg-row-details[open] > summary::before { transform: rotate(90deg); }

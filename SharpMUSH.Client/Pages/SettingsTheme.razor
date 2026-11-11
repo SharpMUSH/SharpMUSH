@@ -20,14 +20,15 @@
 <div class="settings-theme-page" @ref="_root">
     <PageHeader Kicker="@Loc["Settings"]" Title="@Loc["NavTheme"]" Description="@Loc["NavThemeIntro"]" />
 
-    @if (_trying is { } trying)
+    @if (_trying is { } trying && _shown is { } shown)
     {
+        var keeping = _saving.Contains(trying.Dbref);
         <div class="settings-theme-trying" role="status" id="theme-trying">
             <MudIcon Icon="@Icons.Material.Outlined.Visibility" Size="Size.Small" aria-hidden="true" />
-            <span class="settings-theme-trying-text">@Loc["NavThemeTrying", trying.Theme.Name, trying.Character.Name]</span>
+            <span class="settings-theme-trying-text">@Loc["NavThemeTrying", shown.Name, trying.CharacterName]</span>
             <span class="settings-theme-trying-actions">
-                <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Check" OnClick="KeepAsync" Class="settings-theme-keep">@Loc["NavThemeTryKeep"]</CapsuleButton>
-                <CapsuleButton Icon="@Icons.Material.Outlined.Close" OnClick="StopTrying" Class="settings-theme-stop">@Loc["NavThemeTryStop"]</CapsuleButton>
+                <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Check" OnClick="KeepAsync" Disabled="keeping" Class="settings-theme-keep">@Loc["NavThemeTryKeep"]</CapsuleButton>
+                <CapsuleButton Icon="@Icons.Material.Outlined.Close" OnClick="StopTrying" Disabled="keeping" Class="settings-theme-stop">@Loc["NavThemeTryStop"]</CapsuleButton>
             </span>
         </div>
     }
@@ -131,9 +132,12 @@
     private readonly HashSet<int> _saving = [];
 
     /// <summary>A theme the portal is painted in for a look, not yet saved: the character and theme choice it would save.</summary>
-    private sealed record Trial(AccountAuthService.CharacterSummary Character, string? ThemeId, ResolvedTheme Theme);
+    private sealed record Trial(int Dbref, string CharacterName, string? ThemeId);
 
     private Trial? _trying;
+
+    /// <summary>The look the trial last painted the portal in, so a change of accent or vision paints it again.</summary>
+    private ResolvedTheme? _shown;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -192,7 +196,7 @@
         var on = character.ThemeId == themeId;
         var theme = ThemeResolver.Resolve(ThemeResolver.Pick(Published.ToList(), Themes.Defaults, Themes.PrefersLight, themeId, character.Vision),
             character.Accent, character.Vision);
-        var trying = _trying is { } t && t.Character.DbrefNumber == character.DbrefNumber && t.ThemeId == themeId;
+        var trying = _trying is { } t && t.Dbref == character.DbrefNumber && t.ThemeId == themeId;
         <div class="settings-theme-option @(trying ? "is-trying" : null)" data-theme="@(themeId ?? "default")">
             <button type="button" role="radio" class="settings-theme-choice @(on ? "is-on" : null)" aria-checked="@(on ? "true" : "false")"
                     disabled="@busy" @onclick="() => ChooseAsync(character, themeId)">
@@ -200,23 +204,38 @@
                 <span class="settings-theme-choice-name">@label</span>
             </button>
             <button type="button" class="settings-theme-try" aria-pressed="@(trying ? "true" : "false")"
-                    aria-label="@Loc["NavThemeTryNamed", label]" disabled="@busy" @onclick="() => Try(character, themeId, theme)">
+                    aria-label="@Loc["NavThemeTryNamed", label]" disabled="@busy" @onclick="() => Try(character, themeId)">
                 <MudIcon Icon="@Icons.Material.Outlined.Visibility" Size="Size.Small" aria-hidden="true" />
                 <span>@Loc["NavThemeTry"]</span>
             </button>
         </div>
     };
 
-    /// <summary>Paints the portal in <paramref name="theme"/> without saving it; trying the same one again stops.</summary>
-    private void Try(AccountAuthService.CharacterSummary character, string? themeId, ResolvedTheme theme)
+    /// <summary>Paints the portal in a theme without saving it; trying the same one again stops.</summary>
+    private void Try(AccountAuthService.CharacterSummary character, string? themeId)
     {
-        if (_trying is { } current && current.Character.DbrefNumber == character.DbrefNumber && current.ThemeId == themeId)
+        if (_trying is { } current && current.Dbref == character.DbrefNumber && current.ThemeId == themeId)
         {
             StopTrying();
             return;
         }
 
-        _trying = new Trial(character, themeId, theme);
+        _trying = new Trial(character.DbrefNumber, character.Name, themeId);
+        _shown = null;
+        ShowTrial();
+    }
+
+    /// <summary>
+    /// Paints the trial with the character's accent and vision as they are now, so changing either while trying shows
+    /// what keeping would save. Only a look that differs is sent, since sending one is itself a change this page hears.
+    /// </summary>
+    private void ShowTrial()
+    {
+        if (_trying is not { } trying || AccountAuth.Characters.FirstOrDefault(c => c.DbrefNumber == trying.Dbref) is not { } character) return;
+        var theme = ThemeResolver.Resolve(ThemeResolver.Pick(Published.ToList(), Themes.Defaults, Themes.PrefersLight, trying.ThemeId, character.Vision),
+            character.Accent, character.Vision);
+        if (_shown is { } shown && shown.ThemeId == theme.ThemeId && shown.Css == theme.Css) return;
+        _shown = theme;
         Themes.Preview(theme);
     }
 
@@ -224,32 +243,41 @@
     {
         if (_trying is null) return;
         _trying = null;
+        _shown = null;
         Themes.Preview(null);
     }
 
     private async Task KeepAsync()
     {
-        if (_trying is not { } trying) return;
-        var character = AccountAuth.Characters.FirstOrDefault(c => c.DbrefNumber == trying.Character.DbrefNumber) ?? trying.Character;
+        if (_trying is not { } trying || AccountAuth.Characters.FirstOrDefault(c => c.DbrefNumber == trying.Dbref) is not { } character) return;
         await ChooseAsync(character, trying.ThemeId);
     }
 
-    /// <summary>Saves the theme choice; a theme being tried stops being tried, since the saved one is now worn.</summary>
+    /// <summary>
+    /// Saves the theme choice. Once it is saved a trial ends, since the saved look is now worn; until then the trial
+    /// stays on, so the portal does not flash back, and a save that fails leaves it to keep or stop.
+    /// </summary>
     private async Task ChooseAsync(AccountAuthService.CharacterSummary character, string? themeId)
     {
-        StopTrying();
-        await SaveAsync(character, themeId, character.Accent, character.Vision);
+        if (await SaveAsync(character, themeId, character.Accent, character.Vision))
+        {
+            StopTrying();
+        }
     }
 
-    private async Task SaveAsync(AccountAuthService.CharacterSummary character, string? themeId, string? accent, string? vision)
+    /// <summary>Saves a character's look; false when it was not saved (another save for it is under way, or it failed).</summary>
+    private async Task<bool> SaveAsync(AccountAuthService.CharacterSummary character, string? themeId, string? accent, string? vision)
     {
-        if (!_saving.Add(character.DbrefNumber)) return;
+        if (!_saving.Add(character.DbrefNumber)) return false;
         try
         {
             if (await AccountAuth.SetAppearanceAsync(character.DbrefNumber, new CharacterAppearance(themeId, accent, vision)) is ApiFailure failure)
             {
                 Snackbar.Add(Loc["NavThemeSaveFailed", failure.Message], Severity.Error);
+                return false;
             }
+
+            return true;
         }
         finally
         {
@@ -257,7 +285,11 @@
         }
     }
 
-    private void Changed() => InvokeAsync(StateHasChanged);
+    private void Changed() => InvokeAsync(() =>
+    {
+        ShowTrial();
+        StateHasChanged();
+    });
 
     public void Dispose()
     {

@@ -567,10 +567,24 @@
 	}
 }
 
-/* A card's background: the frame's gradient layers over the surface. Worked out again wherever a theme's
-   attributes are (<html>, or an element previewing another theme), so each gets its own. */
+/* What is worked out from a theme's colours and faces: a card's background (the frame's gradient layers over the
+   surface), the colours the texture's and frame's drawings are filled with, and the kickers' face. Worked out again
+   wherever a theme's attributes are (<html>, or an element previewing another theme), so each gets its own. The
+   parts' rules (css/themes/) come in a later layer, so a part that fades an ink still does. */
 :root, [data-scheme] {
 	--card-bg: var(--card-marks), var(--surface);
+	--font-kicker: var(--font-ui);
+	--texture-ink-text: var(--text);
+	--texture-ink-accent: var(--accent);
+	--texture-ink-accent-2: var(--accent-2);
+	--texture-ink-accent-3: var(--accent-3);
+	--texture-ink-border: var(--border);
+	--card-ink-text: var(--text);
+	--card-ink-accent: var(--accent);
+	--card-ink-accent-2: var(--accent-2);
+	--card-ink-accent-3: var(--accent-3);
+	--card-ink-border: var(--border);
+	--card-ink-grain: var(--text);
 }
 
 /* CJK locales replace the whole mono stack instead of falling back per glyph. Cascadia's
