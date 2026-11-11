@@ -35,14 +35,157 @@ public partial class SizeTokenTests
 		var offenders = new List<string>();
 		foreach (var file in PortalMarkup())
 		{
-			foreach (Match style in StyleAttribute().Matches(File.ReadAllText(file)))
+			foreach (var css in InlineStyles(File.ReadAllText(file)))
 			{
-				Check(Path.GetFileName(file), style.Groups["css"].Value, offenders);
+				Check(Path.GetFileName(file), css, offenders);
 			}
 		}
 
 		await Assert.That(offenders).IsEmpty()
 			.Because("a font size, padding or gap belongs on the scale in tokens.css; use a --text-* or --space-* step");
+	}
+
+	/// <summary>
+	/// The page the browser shows before the portal starts (the boot skeleton, the insecure-origin notice) is held to
+	/// the same scale, in its own stylesheet and in its style attributes.
+	/// </summary>
+	[Test]
+	public async Task TheHostPageSizesNoTextOrSpaceOfItsOwn()
+	{
+		var html = File.ReadAllText(Path.Join(ClientSource.RazorRoot, "..", "index.html"));
+		var offenders = new List<string>();
+		foreach (Match sheet in StyleElement().Matches(html))
+		{
+			Check("index.html", Comment().Replace(sheet.Groups["css"].Value, ""), offenders);
+		}
+
+		foreach (var css in InlineStyles(html))
+		{
+			Check("index.html", css, offenders);
+		}
+
+		await Assert.That(offenders).IsEmpty()
+			.Because("a font size, padding or gap belongs on the scale in tokens.css; use a --text-* or --space-* step");
+	}
+
+	/// <summary>A style built in C# is read too: its string literals, with each interpolation hole left out.</summary>
+	[Test]
+	public async Task TheCheckReadsInterpolatedStyles()
+	{
+		var styles = InlineStyles("""
+			<div style="@($"gap:0.25rem;background:{(alt ? "var(--a)" : "var(--b)")};padding:0.5rem")"></div>
+			<MudIcon Style="@($"font-size:0.9375rem;color:{(on ? "var(--accent)" : "12px")};")" />
+			<span style="@(wide ? "padding:var(--space-2)" : "padding:3px")"></span>
+			<span style="@($"padding-left:{depth * 1.25}rem;")"></span>
+			<b style="font-size: 9px"></b>
+			""").ToList();
+
+		var offenders = new List<string>();
+		foreach (var css in styles)
+		{
+			Check("sample.razor", css, offenders);
+		}
+
+		// gap and padding on the first, font-size on the second, the ternary's raw branch, the plain attribute. The
+		// hole's own value (12px) and the computed padding-left are not literals the markup wrote.
+		await Assert.That(offenders).Count().IsEqualTo(5);
+	}
+
+	/// <summary>
+	/// Each <c>style="…"</c> or <c>Style="…"</c> attribute's CSS. A plain attribute is its text; a Razor expression
+	/// (<c>style="@($"gap:0.25rem;{x}")"</c>) is the text of its string literals, joined with <c>;</c>, each
+	/// interpolation hole left out, since what a hole computes is not written in the markup.
+	/// </summary>
+	private static IEnumerable<string> InlineStyles(string markup)
+	{
+		foreach (Match style in StyleAttribute().Matches(markup))
+		{
+			if (!style.Groups["css"].Value.StartsWith("@(", StringComparison.Ordinal))
+			{
+				yield return style.Groups["css"].Value;
+				continue;
+			}
+
+			var css = new System.Text.StringBuilder();
+			var i = style.Groups["css"].Index + 2;
+			for (var depth = 1; i < markup.Length && depth > 0;)
+			{
+				switch (markup[i])
+				{
+					case '"' or '$' when markup[i] == '"' || (i + 1 < markup.Length && markup[i + 1] == '"'):
+						i = ReadString(markup, i, css);
+						css.Append(';');
+						continue;
+					case '(':
+						depth++;
+						break;
+					case ')':
+						depth--;
+						break;
+				}
+
+				i++;
+			}
+
+			yield return css.ToString();
+		}
+	}
+
+	/// <summary>
+	/// Reads the C# string literal at <paramref name="i"/> (<c>"…"</c> or <c>$"…"</c>) into <paramref name="text"/>,
+	/// leaving out its holes, and returns the index after it.
+	/// </summary>
+	private static int ReadString(string source, int i, System.Text.StringBuilder text)
+	{
+		var interpolated = source[i] == '$';
+		i += interpolated ? 2 : 1;
+		while (i < source.Length && source[i] != '"')
+		{
+			switch (source[i])
+			{
+				case '\\' when i + 1 < source.Length:
+					text.Append(source[i + 1]);
+					i += 2;
+					break;
+				case '{' or '}' when interpolated && i + 1 < source.Length && source[i + 1] == source[i]:
+					text.Append(source[i]);
+					i += 2;
+					break;
+				case '{' when interpolated:
+					i = SkipHole(source, i + 1);
+					break;
+				default:
+					text.Append(source[i]);
+					i++;
+					break;
+			}
+		}
+
+		return i + 1;
+	}
+
+	/// <summary>Returns the index after the interpolation hole that starts at <paramref name="i"/>.</summary>
+	private static int SkipHole(string source, int i)
+	{
+		for (var depth = 1; i < source.Length && depth > 0;)
+		{
+			switch (source[i])
+			{
+				case '"' or '$' when source[i] == '"' || (i + 1 < source.Length && source[i + 1] == '"'):
+					i = ReadString(source, i, new System.Text.StringBuilder());
+					continue;
+				case '{':
+					depth++;
+					break;
+				case '}':
+					depth--;
+					break;
+			}
+
+			i++;
+		}
+
+		return i;
 	}
 
 	[Test]
@@ -93,8 +236,12 @@ public partial class SizeTokenTests
 	[GeneratedRegex(@"(?<![\w.-])(?:0*[1-9]\d*(?:\.\d+)?|0*\.\d*[1-9]\d*)(?:px|rem|pt)\b")]
 	private static partial Regex Literal();
 
+	// A Razor expression's own quotes end the plain match early; InlineStyles reads such a value from its "@(".
 	[GeneratedRegex(@"(?<![\w-])[Ss]tyle=""(?<css>[^""]*)""")]
 	private static partial Regex StyleAttribute();
+
+	[GeneratedRegex(@"<style[^>]*>(?<css>.*?)</style>", RegexOptions.Singleline | RegexOptions.IgnoreCase)]
+	private static partial Regex StyleElement();
 
 	[GeneratedRegex(@"/\*.*?\*/", RegexOptions.Singleline)]
 	private static partial Regex Comment();

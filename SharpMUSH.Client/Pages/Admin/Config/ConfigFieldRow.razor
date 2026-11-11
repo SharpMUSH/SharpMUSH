@@ -88,7 +88,7 @@
             <div class="cfg-dict">
                 @if (entries.Count == 0)
                 {
-                    <span class="cfg-empty">@Loc["NoEntries"]</span>
+                    <EmptyState Compact="true">@Loc["NoEntries"]</EmptyState>
                 }
                 @for (var e = 0; e < entries.Count; e++)
                 {

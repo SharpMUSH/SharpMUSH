@@ -39,7 +39,10 @@
 
             <LoadState TValue="AdminGuestsService.GuestListResponse" Value="_list" Loading="_loading" Error="@_error" IsEmpty="list => list.Guests.Count == 0" Context="list">
                 <Empty>
-                    <EmptyState Icon="@Icons.Material.Outlined.Group">@Loc["AdmGuestsEmpty"]</EmptyState>
+                    <EmptyState Icon="@Icons.Material.Outlined.Group">
+                        <ChildContent>@Loc["AdmGuestsEmpty"]</ChildContent>
+                        <Action><CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add" Disabled="_busy" OnClick="CreateAsync">@Loc["AdmGuestCreate"]</CapsuleButton></Action>
+                    </EmptyState>
                 </Empty>
                 <ChildContent>
                     <MudTable Items="list.Guests" Dense="true" Hover="true" Elevation="0">

@@ -75,7 +75,7 @@
                 var isCurrent = i == 0;
                 var altRow = i % 2 == 1;
 
-                <div style="@($"display:grid;grid-template-columns:36px 36px 1fr 100px 130px 80px;gap:0.25rem;align-items:center;padding:0.5rem 0.625rem;background:{(altRow ? "var(--surface-3)" : "var(--surface)")};border-bottom:1px solid var(--border-soft);")"
+                <div style="@($"display:grid;grid-template-columns:36px 36px 1fr 100px 130px 80px;gap:var(--space-2);align-items:center;padding:var(--space-3) var(--space-4);background:{(altRow ? "var(--surface-3)" : "var(--surface)")};border-bottom:1px solid var(--border-soft);")"
                      @key="rev.RevisionNumber">
 
                     <div style="display:flex;justify-content:center;">
@@ -128,7 +128,7 @@
                         @if (deltaBytes != 0)
                         {
                             <MudChip T="string" Size="Size.Small"
-                                     Style="@($"height:16px;font-size:0.625rem;padding:0 0.25rem;font-family:var(--font-mono);background:{ByteDeltaBackground(deltaBytes)};color:{ByteDeltaForeground(deltaBytes)};")">
+                                     Style="@($"height:16px;font-size:var(--text-xs);padding:0 var(--space-2);font-family:var(--font-mono);background:{ByteDeltaBackground(deltaBytes)};color:{ByteDeltaForeground(deltaBytes)};")">
                                 @(deltaBytes > 0 ? "+" : "")@deltaBytes
                             </MudChip>
                         }

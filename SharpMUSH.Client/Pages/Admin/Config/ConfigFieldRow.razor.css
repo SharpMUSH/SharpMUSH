@@ -229,10 +229,6 @@
 	font-weight: 700;
 }
 
-.cfg-empty {
-	font-size: var(--text-sm);
-	color: var(--text-faint);
-}
 
 /* ── Dictionary editor ── */
 .cfg-dict {
