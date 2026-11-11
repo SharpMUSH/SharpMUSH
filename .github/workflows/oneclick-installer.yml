@@ -1,0 +1,26 @@
+name: One-click installer regressions
+on:
+  pull_request:
+    paths:
+      - 'deploy/oneclick/install.sh'
+      - '.github/scripts/test_oneclick_cloudflare.py'
+      - '.github/workflows/oneclick-installer.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'deploy/oneclick/install.sh'
+      - '.github/scripts/test_oneclick_cloudflare.py'
+      - '.github/workflows/oneclick-installer.yml'
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Check syntax and synthetic Cloudflare cases
+        run: |
+          bash -n deploy/oneclick/install.sh
+          python3 -m unittest discover -s .github/scripts -p 'test_oneclick_cloudflare.py' -v

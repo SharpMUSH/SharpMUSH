@@ -283,38 +283,48 @@ tunnel_from_token() {
 	base64 -d <<<"$token" 2>/dev/null | jq -r '.t // empty' 2>/dev/null || true
 }
 
-# The tunnel the domain pointed at before this run, when it is another one: it gets no traffic once the
-# record moves, so its owner is told to stop its connector and delete it.
+# Moving this hostname does not prove that the previous tunnel has no other users.
 cloudflare_old_tunnel() { # cloudflare_old_tunnel <zone id> <account> <new tunnel id>
 	local target old info
 	target=$(cf_try GET "/zones/$1/dns_records?name=$SHARPMUSH_DOMAIN&type=CNAME" | jq -r '.result[0].content // empty')
 	old=${target%.cfargotunnel.com}
 	[ -n "$target" ] && [ "$old" != "$target" ] && [ "$old" != "$3" ] || return 0
 	info=$(cf_try GET "/accounts/$2/cfd_tunnel/$old" | jq -r '.result.name // empty' 2>/dev/null || true)
-	OLD_TUNNEL_NOTE="$SHARPMUSH_DOMAIN used to point at the tunnel ${info:-$old}, which now gets no traffic. Stop the server that runs it, then delete the tunnel under Zero Trust > Networks > Tunnels (Cloudflare refuses while it is still connected)."
+	OLD_TUNNEL_NOTE="$SHARPMUSH_DOMAIN used to point at the tunnel ${info:-$old}, which may still serve other hostnames or routes. Check all remaining uses and DNS propagation before stopping any connectors or deleting it under Zero Trust > Networks > Tunnels."
 }
 
 cloudflare_setup() {
-	local domain=$SHARPMUSH_DOMAIN zone_id account tunnel name old_ip
+	local domain=$SHARPMUSH_DOMAIN zone_id account tunnel name old_ip info desired configuration
 	log "Setting up Cloudflare for $domain"
 	[ -n "${CF_ZONE_ID:-}" ] || cloudflare_check
 	zone_id=$CF_ZONE_ID
 	account=$CF_ACCOUNT_ID
 
-	# This server's own tunnel: the one its token names, else the one named for this machine. Never one
-	# found by the domain alone, which another server installed for the same domain is still running.
+	# A token may have been copied from another server. Only automatically manage the
+	# machine-named tunnel; legacy/shared tunnels remain usable in token-only mode.
 	name="sharpmush-$domain-$(head -c 8 /etc/machine-id 2>/dev/null || hostname -s)"
 	tunnel=$(tunnel_from_token)
-	if [ -n "$tunnel" ] && [ -z "$(cf_try GET "/accounts/$account/cfd_tunnel/$tunnel" | jq -r 'select(.result.deleted_at == null) | .result.id')" ]; then
-		tunnel=''
+	if [ -n "${CLOUDFLARE_TUNNEL_TOKEN:-}" ]; then
+		[ -n "$tunnel" ] || die "Cannot identify the existing tunnel token. No tunnel or DNS changes were made."
+		info=$(cf_api GET "/accounts/$account/cfd_tunnel/$tunnel")
+		jq -e --arg name "$name" --arg id "$tunnel" \
+			'.result | .id == $id and .name == $name and .deleted_at == null' <<<"$info" >/dev/null \
+			|| die "The existing token does not identify this machine-named tunnel. No tunnel or DNS changes were made. Omit the API token to keep using a manually managed tunnel, or clear the tunnel token to select this machine named $name."
 	fi
 	[ -n "$tunnel" ] || tunnel=$(cf_api GET "/accounts/$account/cfd_tunnel?name=$name&is_deleted=false" | jq -r '.result[0].id // empty')
-	if [ -z "$tunnel" ]; then
+	desired=$(jq -nc --arg h "$domain" '{config: {ingress: [{hostname: $h, service: "http://caddy:80"}, {service: "http_status:404"}]}}')
+	if [ -n "$tunnel" ]; then
+		# Never replace existing ingress, even on a machine-named tunnel. Fail closed
+		# if its routes differ; the owner can inspect it without losing other services.
+		configuration=$(cf_api GET "/accounts/$account/cfd_tunnel/$tunnel/configurations")
+		jq -e --argjson desired "$desired" '.result.config.ingress == $desired.config.ingress' \
+			<<<"$configuration" >/dev/null \
+			|| die "Existing tunnel $tunnel has different ingress. No tunnel or DNS changes were made. Review its routes manually, or omit the API token to use the existing tunnel unchanged."
+	else
 		tunnel=$(cf_api POST "/accounts/$account/cfd_tunnel" \
 			"$(jq -nc --arg n "$name" '{name: $n, config_src: "cloudflare"}')" | jq -r '.result.id')
+		cf_api PUT "/accounts/$account/cfd_tunnel/$tunnel/configurations" "$desired" >/dev/null
 	fi
-	cf_api PUT "/accounts/$account/cfd_tunnel/$tunnel/configurations" \
-		"$(jq -nc --arg h "$domain" '{config: {ingress: [{hostname: $h, service: "http://caddy:80"}, {service: "http_status:404"}]}}')" >/dev/null
 	CLOUDFLARE_TUNNEL_TOKEN=$(cf_api GET "/accounts/$account/cfd_tunnel/$tunnel/token" | jq -r '.result')
 
 	cloudflare_old_tunnel "$zone_id" "$account" "$tunnel"
@@ -491,7 +501,7 @@ print_notes() {
 	echo
 }
 
-# Checks the answers before anything is installed or changed.
+# Checks access before preparing the stack; missing read-check tools are installed first.
 preflight() {
 	if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
 		[ -n "${SHARPMUSH_DOMAIN:-}" ] || die "CLOUDFLARE_API_TOKEN needs SHARPMUSH_DOMAIN."
@@ -544,7 +554,7 @@ configure() {
 }
 
 case "${1:-install}" in
-	# Asked and checked first, so a wrong answer stops the run before anything is installed.
+	# Ask and check read access before preparing the stack.
 	install)
 		load_previous
 		[ "${2:-}" = --ask ] && ask_all
@@ -556,3 +566,4 @@ case "${1:-install}" in
 	configure) shift; configure "${1:-}" ;;
 	*) die "Unknown command $1 (install, prepare or configure)." ;;
 esac
+
