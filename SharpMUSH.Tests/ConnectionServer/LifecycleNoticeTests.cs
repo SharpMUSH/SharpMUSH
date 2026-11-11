@@ -17,13 +17,20 @@ public class LifecycleNoticeTests
 			NullLogger<EngineLifecycleNoticeService>.Instance);
 
 	private static async Task<List<byte[]>> NoticesSentTo(string connectionType, ProtocolCapabilities? capabilities = null,
-		IMarkupOutputRenderer? renderer = null, Func<Encoding>? encoding = null)
+		IMarkupOutputRenderer? renderer = null, Func<Encoding>? encoding = null, int sockets = 1)
 	{
 		var service = new ConnectionServerService(NullLogger<ConnectionServerService>.Instance, Substitute.For<IMessageBus>());
 		var output = new List<byte[]>();
-		await service.RegisterAsync(1, "localhost", "localhost", connectionType,
-			data => { output.Add(data); return ValueTask.CompletedTask; }, _ => ValueTask.CompletedTask,
-			encoding ?? (() => Encoding.UTF8), () => { }, capabilities: capabilities);
+		for (var handle = 1; handle <= sockets; handle++)
+		{
+			// The service keeps one write gate per writer, so each socket needs a writer of its own: capturing the
+			// loop's handle keeps the compiler from sharing one delegate between them.
+			var socket = handle;
+			await service.RegisterAsync(handle, "localhost", "localhost", connectionType,
+				data => { _ = socket; lock (output) output.Add(data); return ValueTask.CompletedTask; },
+				_ => ValueTask.CompletedTask,
+				encoding ?? (() => Encoding.UTF8), () => { }, capabilities: capabilities);
+		}
 		var notices = Notices(service, renderer);
 		var now = DateTimeOffset.UtcNow;
 		await notices.NotifyAsync(now, false).WaitAsync(TimeSpan.FromSeconds(5));
@@ -95,6 +102,42 @@ public class LifecycleNoticeTests
 			"[GAME] " + EngineLifecycleNoticeService.Restarting,
 			"[GAME] " + EngineLifecycleNoticeService.Ready
 		});
+	}
+
+	/// <summary>
+	/// The real worker client never fails while the worker is down: it waits for it. A notice gives it one second,
+	/// once for the whole broadcast, so a full house of sockets is not each made to wait that second.
+	/// </summary>
+	[Test]
+	public async Task AnUnansweringWorkerIsWaitedOnOncePerNotice()
+	{
+		var renderer = Substitute.For<IMarkupOutputRenderer>();
+		renderer.RenderAsync(Arg.Any<string>(), Arg.Any<ConnectionServerService.ConnectionData>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+			.Returns(call => new ValueTask<RenderedOutput>(Task.Delay(Timeout.Infinite, call.Arg<CancellationToken>())
+				.ContinueWith<RenderedOutput>(_ => throw new OperationCanceledException(), TaskScheduler.Default)));
+
+		var output = await NoticesSentTo("telnet", new ProtocolCapabilities(Format: OutputFormat.Ansi), renderer, sockets: 64);
+
+		await Assert.That(output.Count).IsEqualTo(128);
+		await Assert.That(output.Select(Encoding.UTF8.GetString).Distinct().ToList()).IsEquivalentTo(new[]
+		{
+			"[GAME] " + EngineLifecycleNoticeService.Restarting,
+			"[GAME] " + EngineLifecycleNoticeService.Ready
+		});
+		await renderer.ReceivedWithAnyArgs(2).RenderAsync(default!, default!, default, default);
+	}
+
+	/// <summary>The plain text keeps what the worker would have done for the client: a Pueblo client's line break.</summary>
+	[Test]
+	public async Task PlainFallbackEndsAPuebloLine()
+	{
+		var renderer = Substitute.For<IMarkupOutputRenderer>();
+		renderer.RenderAsync(Arg.Any<string>(), Arg.Any<ConnectionServerService.ConnectionData>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+			.Returns(ValueTask.FromException<RenderedOutput>(new HttpRequestException("worker down")));
+
+		var output = await NoticesSentTo("telnet", new ProtocolCapabilities(Format: OutputFormat.Pueblo), renderer);
+
+		await Assert.That(Encoding.UTF8.GetString(output[1])).IsEqualTo("[GAME] " + EngineLifecycleNoticeService.Ready + "<BR>");
 	}
 
 	private static string StripAnsi(string text) => System.Text.RegularExpressions.Regex.Replace(text, "\u001b\\[[0-9;]*m", string.Empty);

@@ -1,6 +1,8 @@
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using MarkupString;
 using SharpMUSH.Library.Markup;
+using SharpMUSH.SocketServer.Models;
 
 namespace SharpMUSH.SocketServer.Services;
 
@@ -11,7 +13,7 @@ namespace SharpMUSH.SocketServer.Services;
 /// <remarks>
 /// A notice is a <c>[GAME]</c> notice (<see cref="NoticeMarkup"/>), as the engine's own notices are, and goes
 /// out the way the engine's output does: a browser gets a markup frame, a terminal its rendering. While the
-/// rendering worker cannot answer, a terminal is sent the plain text instead.
+/// rendering worker cannot answer, a terminal is sent the plain text instead (<see cref="Broadcast"/>).
 /// </remarks>
 public sealed class EngineLifecycleNoticeService(
 	IConnectionServerService connections,
@@ -47,9 +49,7 @@ public sealed class EngineLifecycleNoticeService(
 		{
 			if (timestamp <= _lastEvent) return;
 			_lastEvent = timestamp;
-			var notice = Notice(ready);
-			var markup = MarkupTextSerializer.Serialize(notice);
-			var plain = notice.ToPlainText();
+			var broadcast = new Broadcast(renderer, transform, logger, Notice(ready), ct);
 			await Parallel.ForEachAsync(connections.GetAll(), new ParallelOptions
 			{
 				MaxDegreeOfParallelism = 16,
@@ -60,7 +60,7 @@ public sealed class EngineLifecycleNoticeService(
 				if (!await gate.WaitAsync(0, token)) return;
 				async Task SendAsync()
 				{
-					try { await connection.OutputFunction(await WireFormAsync(connection, markup, plain, token)); }
+					try { await connection.OutputFunction(await broadcast.WireFormAsync(connection)); }
 					finally { gate.Release(); }
 				}
 				try
@@ -80,28 +80,57 @@ public sealed class EngineLifecycleNoticeService(
 	}
 
 	/// <summary>
-	/// What <paramref name="connection"/> is sent: the markup frame for a browser, otherwise the rendering for its
-	/// client. Each write ends its own line, so the notice carries no line breaks of its own.
+	/// One notice on its way to every socket. Connections that read alike are sent the same bytes, so the
+	/// rendering worker is asked once for each kind of client rather than once for each socket, and once it has
+	/// failed to answer, the rest are sent the plain text without asking it again.
 	/// </summary>
-	private async ValueTask<byte[]> WireFormAsync(ConnectionServerService.ConnectionData connection, string markup,
-		string plain, CancellationToken ct)
+	private sealed class Broadcast(IMarkupOutputRenderer renderer, IOutputTransformService transform, ILogger logger,
+		MarkupText notice, CancellationToken ct)
 	{
-		if (connection.ConnectionType == WebSocketConnectionType) return WebSocketMarkupFrames.Line(markup);
+		private readonly string _markup = MarkupTextSerializer.Serialize(notice);
+		private readonly ConcurrentDictionary<(ProtocolCapabilities, PlayerOutputPreferences?), Lazy<Task<byte[]>>> _rendered = new();
+		private volatile bool _workerDown;
 
-		using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
-		budget.CancelAfter(RenderTimeout);
-		try
+		/// <summary>
+		/// What <paramref name="connection"/> is sent: the markup frame for a browser, otherwise the rendering for
+		/// its client. Each write ends its own line, so the notice carries no line breaks of its own.
+		/// </summary>
+		public async ValueTask<byte[]> WireFormAsync(ConnectionServerService.ConnectionData connection)
 		{
-			var rendered = await renderer.RenderAsync(markup, connection, ct: budget.Token);
-			return rendered.ApplyOutputTransform
-				? await transform.TransformAsync(rendered.Data, connection.Capabilities, budget.Token)
-				: rendered.Data;
+			if (connection.ConnectionType == WebSocketConnectionType) return WebSocketMarkupFrames.Line(_markup);
+			if (_workerDown) return Plain(connection);
+			return await _rendered.GetOrAdd((connection.Capabilities, connection.Preferences),
+				_ => new Lazy<Task<byte[]>>(() => RenderAsync(connection))).Value;
 		}
-		catch (Exception ex) when (!ct.IsCancellationRequested)
+
+		private async Task<byte[]> RenderAsync(ConnectionServerService.ConnectionData connection)
 		{
-			logger.LogDebug(ex, "Rendering worker did not answer for {Handle}; sending the lifecycle notice as plain text",
-				connection.Handle);
-			return connection.EncodingFunction().GetBytes(plain);
+			using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
+			budget.CancelAfter(RenderTimeout);
+			try
+			{
+				var rendered = await renderer.RenderAsync(_markup, connection, ct: budget.Token);
+				return rendered.ApplyOutputTransform
+					? await transform.TransformAsync(rendered.Data, connection.Capabilities, budget.Token)
+					: rendered.Data;
+			}
+			catch (Exception ex) when (!ct.IsCancellationRequested)
+			{
+				_workerDown = true;
+				logger.LogWarning(ex, "Rendering worker did not answer; sending the lifecycle notice as plain text");
+				return Plain(connection);
+			}
+		}
+
+		/// <summary>
+		/// The notice as the worker would write it with no styling: as a screen reader is sent it to one, and with
+		/// the line break a Pueblo client needs to keep it off the next message's line.
+		/// </summary>
+		private byte[] Plain(ConnectionServerService.ConnectionData connection)
+		{
+			var text = NoticeMarkup.ForTelnet(notice, connection.Capabilities.ReadsAloud).ToPlainText();
+			if (connection.Capabilities.Format == OutputFormat.Pueblo) text += "<BR>";
+			return connection.EncodingFunction().GetBytes(text);
 		}
 	}
 }
