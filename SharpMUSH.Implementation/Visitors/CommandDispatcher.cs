@@ -161,13 +161,16 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 					singleTokenCommand);
 
 			var executorObject = await parser.CurrentState.KnownExecutorObject(services.Mediator);
-			if (executorObject.IsContent)
+			// PennMUSH command_parse (command.c:1276) matches exits against the whole line, not its first word,
+			// so an exit named `In Character` is taken by typing its name rather than read as `in`.
+			var exitName = tokenText.ToPlainText().Trim();
+			if (executorObject.IsContent && exitName.Length > 0)
 			{
 				var locate = await services.LocateService.Locate(
 					parser,
 					executorObject,
 					executorObject,
-					command,
+					exitName,
 					LocateFlags.ExitsInTheRoomOfLooker
 					| LocateFlags.EnglishStyleMatching
 					| LocateFlags.ExitsPreference
@@ -175,7 +178,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 
 				if (locate is AnySharpObject and SharpExit exit)
 				{
-					return await CommandInvocationPipeline.GoAsync(parser, exit, command);
+					return await CommandInvocationPipeline.GoAsync(parser, exit, exitName);
 				}
 			}
 

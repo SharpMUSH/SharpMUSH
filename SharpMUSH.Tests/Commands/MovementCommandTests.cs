@@ -244,6 +244,24 @@ public class MovementCommandTests
 		await Assert.That(await WhereIsAsync(walker.DbRef)).IsEqualTo(end.Number);
 	}
 
+	/// <summary>
+	/// PennMUSH command_parse (command.c:1276) matches exits against the whole line, so typing an exit's
+	/// full name takes it, even when its first word abbreviates a command (`In` is INVENTORY's).
+	/// </summary>
+	[Test]
+	public async ValueTask TypingAMultiWordExitNameTakesTheExit()
+	{
+		var start = await Players.DigRoomAsync("MultiWordExitStart");
+		var end = await Players.DigRoomAsync("MultiWordExitEnd");
+		var walker = await Players.WizardAsync("MultiWordExit", start);
+		var exitName = $"In {TestIsolationHelpers.GenerateUniqueName("Character")}";
+		await Players.RunAsync(walker, $"@open {exitName}={end}");
+
+		await Players.RunAsync(walker, exitName);
+
+		await Assert.That(await WhereIsAsync(walker.DbRef)).IsEqualTo(end.Number);
+	}
+
 	[Test]
 	public async ValueTask TeleportPreventsLoops()
 	{
