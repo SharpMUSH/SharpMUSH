@@ -13,7 +13,7 @@
 <AdminPageTitle Page="@Loc["PkgPackages"]" />
 
 <div class="page-stack page-stack--padded pkg-page">
-    <PlainPageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["PkgSoftcodePackages"]" Description="@Loc["PkgInstalledDescription"]">
+    <PageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["PkgSoftcodePackages"]" Description="@Loc["PkgInstalledDescription"]">
         <Actions>
             <CapsuleButton Icon="@Icons.Material.Filled.TravelExplore" Href="/admin/packages/browse">@Loc["PkgBrowse"]</CapsuleButton>
             <CapsuleButton Icon="@Icons.Material.Filled.Cloud" Href="/admin/packages/remotes">@Loc["PkgRemotes"]</CapsuleButton>
@@ -30,7 +30,7 @@
             }
             <CapsuleButton Icon="@Icons.Material.Filled.Refresh" AriaLabel="@Loc["Refresh"]" OnClick="ReloadAsync" Disabled="_busy" />
         </Actions>
-    </PlainPageHeader>
+    </PageHeader>
 
     @{
         var updatesAvailable = _installed?.Count(p => _updates.TryGetValue(p.Package.Id, out var u) && u.UpdateAvailable) ?? 0;
@@ -154,7 +154,7 @@
                             <MudSpacer />
                             @if (revision.Revision != _revisions.Max(r => r.Revision))
                             {
-                                <MudButton Size="Size.Small" Disabled="@_busy"
+                                <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@_busy"
                                            OnClick="@(() => RollbackAsync(_historyPackage!, rev.Revision))">
                                     @Loc["PkgRollBack"]
                                 </MudButton>
@@ -166,7 +166,7 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="@(() => _showHistory = false)">@Loc["PkgClose"]</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="@(() => _showHistory = false)">@Loc["PkgClose"]</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -184,7 +184,7 @@
     }
 </ConfirmDialog>
 
-<ConfirmDialog @bind-Visible="_showRestart" Title="@Loc["PkgRestartTitle"]" ConfirmText="@Loc["PkgRestart"]" ConfirmColor="Color.Warning"
+<ConfirmDialog @bind-Visible="_showRestart" Title="@Loc["PkgRestartTitle"]" ConfirmText="@Loc["PkgRestart"]"
                Busy="_busy" OnConfirm="RestartAsync">
     <MudText>@Loc["PkgRestartBody"]</MudText>
 </ConfirmDialog>

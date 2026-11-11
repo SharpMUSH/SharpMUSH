@@ -7,8 +7,8 @@
         @ChildContent
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="CancelAsync">@Loc["Cancel"]</MudButton>
-        <MudButton Color="ConfirmColor" Variant="Variant.Filled" Disabled="Busy" OnClick="OnConfirm">@ConfirmText</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="CancelAsync">@Loc["Cancel"]</MudButton>
+        <MudButton Variant="@ButtonKinds.Variant(ConfirmKind)" Color="@ButtonKinds.Color(ConfirmKind)" Disabled="Busy" OnClick="OnConfirm">@ConfirmText</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -21,7 +21,8 @@
 
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter, EditorRequired] public string ConfirmText { get; set; } = string.Empty;
-    [Parameter] public Color ConfirmColor { get; set; } = Color.Error;
+    /// <summary>The confirming button's style: the quiet danger button unless the action takes nothing away.</summary>
+    [Parameter] public ButtonKind ConfirmKind { get; set; } = ButtonKind.DangerQuiet;
 
     /// <summary>Disables the confirm button while the action it started is still running.</summary>
     [Parameter] public bool Busy { get; set; }

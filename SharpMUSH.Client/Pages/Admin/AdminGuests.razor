@@ -8,7 +8,7 @@
 <AdminPageTitle Page="@Loc["AdmGuestsTitle"]" />
 
 <div class="page-stack page-stack--padded adm-players">
-    <PlainPageHeader Kicker="@Loc["AdmGroupPeople"]" Title="@Loc["AdmGuestsTitle"]" />
+    <PageHeader Kicker="@Loc["AdmGroupPeople"]" Title="@Loc["AdmGuestsTitle"]" />
 
     <KitCard Title="@Loc["AdmGuestsSection"]" Sub="@Loc["AdmGuestsBlurb"]">
         <div class="adm-players-body">
@@ -63,7 +63,7 @@
                             <MudTd>
                                 @* Destroying a connected player is refused by the game itself, so the button that
                                    would fail is disabled rather than offered and then rejected. *@
-                                <MudButton Size="Size.Small" Color="Color.Error" data-testid="guest-delete"
+                                <MudButton Variant="Variant.Text" Color="Color.Error" Size="Size.Small" data-testid="guest-delete"
                                            Disabled="@(_busy || context.InUse)"
                                            title="@(context.InUse ? Loc["AdmGuestDeleteInUse"].Value : null)"
                                            OnClick="@(() => DeleteAsync(context))">@Loc["AdmGuestDelete"]</MudButton>

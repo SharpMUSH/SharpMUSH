@@ -69,3 +69,9 @@
 	gap: var(--space-3);
 	min-width: 0;
 }
+
+/* The search takes the room the actions leave and wraps under the title with them. */
+.kit-page-search {
+	flex: 0 1 20rem;
+	min-width: min(100%, 12rem);
+}

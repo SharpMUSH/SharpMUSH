@@ -83,7 +83,7 @@
                 }
                 else
                 {
-                    <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                                OnClick='() => Navigation.NavigateTo("/login")'>@Loc["AuthSignIn"]</MudButton>
                 }
             }
@@ -92,7 +92,7 @@
                 <MudText Typo="Typo.caption" Style="color:var(--text-faint);flex:1;">
                     @(_playerName ?? Loc["TermNotLoggedIn"].Value)
                 </MudText>
-                <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Small"
+                <MudButton Variant="Variant.Text" Color="Color.Error" Size="Size.Small"
                            OnClick="DisconnectAsync">@Loc["Disconnect"]</MudButton>
             }
         </div>

@@ -14,7 +14,7 @@
 <AdminPageTitle Page="@Loc["RolPageTitle"]" />
 
 <div class="page-stack page-stack--padded roleadmin">
-    <PlainPageHeader Kicker="@Loc["AdmGroupPeople"]" Title="@Loc["RolHeading"]">
+    <PageHeader Kicker="@Loc["AdmGroupPeople"]" Title="@Loc["RolHeading"]">
         <Actions>
             <TypeChips Items="@TabItems" Selected="@_tab.ToString()" SelectedChanged="@(v => _tab = Enum.Parse<Tab>(v))"
                        AriaLabel="@Loc["AdmRolesTabsLabel"]" />
@@ -23,7 +23,7 @@
                 <CapsuleButton Icon="@Icons.Material.Filled.Add" Primary="true" OnClick="NewRole">@Loc["RolNewRole"]</CapsuleButton>
             }
         </Actions>
-    </PlainPageHeader>
+    </PageHeader>
 
     @if (List.Loading)
     {

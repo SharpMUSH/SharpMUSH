@@ -31,13 +31,6 @@
                     </form>
                 </div>
             </Secondary>
-            <Actions>
-                <AuthorizeView Policy="wiki.create">
-                    <Authorized>
-                        <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add" Href="@NewPageHref">@Loc["NavWikiNewPage"]</CapsuleButton>
-                    </Authorized>
-                </AuthorizeView>
-            </Actions>
         </GlassBanner>
 
         @if (_navigation is { Collections.Count: > 0 } navigation && !Searching)
@@ -169,7 +162,6 @@
 
     private bool Searching => !string.IsNullOrWhiteSpace(_search);
 
-    private string NewPageHref => WikiLocaleLinks.WithLocale("/wiki/main/new-page/edit", _locale);
     private string? _locale;
     private int _version;
     private bool _disposed;

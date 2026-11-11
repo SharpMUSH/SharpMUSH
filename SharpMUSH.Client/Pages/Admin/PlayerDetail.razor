@@ -16,7 +16,7 @@
 
 <div class="page-stack page-stack--padded adm-char">
     <BackLink Href="/admin/characters">@Loc["Characters"]</BackLink>
-    <PlainPageHeader Kicker="@Loc["AdmPlayerDetailKicker"]" Title="@Title">
+    <PageHeader Kicker="@Loc["AdmPlayerDetailKicker"]" Title="@Title">
         <Actions>
             @if (_detail is { } detail)
             {
@@ -37,7 +37,7 @@
                 </AuthorizeView>
             }
         </Actions>
-    </PlainPageHeader>
+    </PageHeader>
 
     <LoadState TValue="AdminCharacterDetail" Value="_detail" Loading="_loading" Context="detail">
         <Missing>

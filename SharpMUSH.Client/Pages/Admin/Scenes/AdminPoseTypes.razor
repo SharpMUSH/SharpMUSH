@@ -18,7 +18,7 @@
 <FeatureGate Feature="@GameFeatures.Scenes">
     <ChildContent>
         <div class="page-stack page-stack--padded adm-pose">
-            <PlainPageHeader Kicker="@Loc["AdmGroupScenes"]" Title="@Loc["AdmPoseTypesTitle"]" Description="@Loc["AdmPoseTypesDescription"]" />
+            <PageHeader Kicker="@Loc["AdmGroupScenes"]" Title="@Loc["AdmPoseTypesTitle"]" Description="@Loc["AdmPoseTypesDescription"]" />
 
             @if (_error is not null)
             {
@@ -116,8 +116,8 @@
                                 @if (_confirmRemove == key)
                                 {
                                     <span class="adm-pose-remove-ask">@Loc["AdmPoseTypesRemoveAsk", type.Label]</span>
-                                    <MudButton Size="Size.Small" Variant="Variant.Text" Disabled="@_busy" OnClick="() => _confirmRemove = null">@Loc["Cancel"]</MudButton>
-                                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Error" Class="adm-pose-remove-confirm"
+                                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="@_busy" OnClick="() => _confirmRemove = null">@Loc["Cancel"]</MudButton>
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" Class="adm-pose-remove-confirm"
                                                Disabled="@_busy" OnClick="() => RemoveAsync(key)">@Loc["AdmPoseTypesRemove"]</MudButton>
                                 }
                                 else
@@ -125,7 +125,7 @@
                                     <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" StartIcon="@Icons.Material.Outlined.Delete"
                                                Class="adm-pose-remove" Disabled="@_busy" OnClick="() => _confirmRemove = key">@Loc["AdmPoseTypesRemove"]</MudButton>
                                     <span class="adm-pose-spacer"></span>
-                                    <MudButton Size="Size.Small" Variant="Variant.Text" Disabled="@(_busy || !draft.Differs(type))"
+                                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="@(_busy || !draft.Differs(type))"
                                                OnClick="() => _drafts[key] = TypeDraft.From(type)">@Loc["AdmPoseTypesRevert"]</MudButton>
                                     <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Class="adm-pose-save"
                                                Disabled="@(_busy || !draft.Differs(type))" OnClick="() => SaveAsync(type)">@Loc["Save"]</MudButton>

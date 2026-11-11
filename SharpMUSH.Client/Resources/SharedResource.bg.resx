@@ -9483,4 +9483,19 @@
   <data name="WidStatsQuietPlay" xml:space="preserve">
     <value>Играй</value>
   </data>
+  <data name="NavRowMore" xml:space="preserve">
+    <value>Още за {0}</value>
+  </data>
+  <data name="AuthAccountPasswordLabel" xml:space="preserve">
+    <value>Парола на акаунта</value>
+  </data>
+  <data name="AuthUnlinkIdentityConfirm" xml:space="preserve">
+    <value>Вече няма да можете да влизате с {0}. Можете да го свържете отново по-късно.</value>
+  </data>
+  <data name="AuthRemovePasswordConfirmTitle" xml:space="preserve">
+    <value>Да се премахне ли паролата на акаунта?</value>
+  </data>
+  <data name="AuthRemovePasswordConfirm" xml:space="preserve">
+    <value>Ще влизате с ключ за достъп или със свързана услуга. Можете да зададете парола отново по-късно.</value>
+  </data>
 </root>

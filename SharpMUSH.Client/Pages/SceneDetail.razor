@@ -45,7 +45,7 @@
         var scene = _scene;
         var visible = FilteredPoses();
         <PageTitle>@Loc.Title(scene) — <GameName /></PageTitle>
-        <PlainPageHeader Kicker="@scene.RoomName" Title="@Loc.Title(scene)">
+        <PageHeader Kicker="@scene.RoomName" Title="@Loc.Title(scene)">
             <DescriptionContent>
                 <span class="scene-detail-meta">
                     @if (scene.IsLive)
@@ -105,7 +105,7 @@
                 }
                 <CapsuleButton Icon="@Icons.Material.Outlined.ArrowBack" Href="/scenes">@Loc["RolBackToScenes"]</CapsuleButton>
             </Actions>
-        </PlainPageHeader>
+        </PageHeader>
 
         @if (Pitch(scene) is { } pitch)
         {

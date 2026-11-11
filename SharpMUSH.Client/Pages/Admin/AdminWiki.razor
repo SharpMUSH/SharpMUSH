@@ -13,7 +13,7 @@
 <AdminPageTitle Page="@Loc["WikiAdmin"]" />
 
 <div class="page-stack page-stack--padded adminwiki">
-    <PlainPageHeader Kicker="@Loc["AdmGroupContent"]" Title="@Loc["WikiAdmin"]" Description="@Loc["WikiAdminDescription"]" />
+    <PageHeader Kicker="@Loc["AdmGroupContent"]" Title="@Loc["WikiAdmin"]" Description="@Loc["WikiAdminDescription"]" />
 
     <AdminStats>
         @* Tile labels are resource keys — a collection initializer cannot reach the injected Loc. *@
@@ -306,8 +306,8 @@
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="@(() => _showMetadataDialog = false)">@Loc["Cancel"]</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@_busy" OnClick="@SaveMetadataAsync">
+        <MudButton Variant="Variant.Outlined" OnClick="@(() => _showMetadataDialog = false)">@Loc["Cancel"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_busy" OnClick="@SaveMetadataAsync">
             @Loc["Save"]
         </MudButton>
     </DialogActions>
@@ -327,8 +327,8 @@
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="@(() => _showBulkCategoryDialog = false)">@Loc["Cancel"]</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(_busy || _bulkCategories.Count == 0)"
+        <MudButton Variant="Variant.Outlined" OnClick="@(() => _showBulkCategoryDialog = false)">@Loc["Cancel"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_busy || _bulkCategories.Count == 0)"
                    OnClick="@SaveBulkCategoriesAsync">
             @Loc["WikiAddToCategory"]
         </MudButton>

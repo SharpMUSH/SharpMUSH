@@ -15,11 +15,11 @@
    whoever may edit the profile moves, captions, tags and warns images there. An image with a warning
    is covered by it until opened and chosen. *@
 <div class="char-gallery-page">
-    <PlainPageHeader Kicker="@Loc["Gallery"]" Title="@Loc["NavGalleryPageTitle", Name]">
+    <PageHeader Kicker="@Loc["Gallery"]" Title="@Loc["NavGalleryPageTitle", Name]">
         <DescriptionContent>
             <a class="char-gallery-back" href="@ProfileHref">@Loc["NavGalleryBack", Name]</a>
         </DescriptionContent>
-    </PlainPageHeader>
+    </PageHeader>
 
     @if (TagChips.Count > 1)
     {

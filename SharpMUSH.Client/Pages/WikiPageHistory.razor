@@ -13,7 +13,7 @@
 
 <div class="wikihist">
     <BackLink Href="@WithLang(WikiRoutes.PathFor(Ns, Slug))">@_displayTitle</BackLink>
-    <PlainPageHeader Kicker="@Loc["WkRevisionHistory"]" Title="@_displayTitle">
+    <PageHeader Kicker="@Loc["WkRevisionHistory"]" Title="@_displayTitle">
         <Actions>
             @if (_oldRev.HasValue && _newRev.HasValue && _oldRev.Value != _newRev.Value)
             {
@@ -24,7 +24,7 @@
                 </MudButton>
             }
         </Actions>
-    </PlainPageHeader>
+    </PageHeader>
     @if (_translations.Count > 0)
     {
         <div class="wiki-lang-chips">

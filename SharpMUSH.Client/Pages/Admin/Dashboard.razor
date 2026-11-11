@@ -16,7 +16,7 @@
    are BuildNavCatalog's entries, the same list and gates as the sidebar, so the overview offers
    exactly the pages the sidebar does, in the same groups. *@
 <div class="page-stack page-stack--padded adm-dash">
-    <PlainPageHeader Kicker="@Loc["NavBuildManage"]" Title="@Loc["AdmOverview"]" Description="@Loc["AdmOverviewDescription"]" />
+    <PageHeader Kicker="@Loc["NavBuildManage"]" Title="@Loc["AdmOverview"]" Description="@Loc["AdmOverviewDescription"]" />
     @* The first-run wizard is unfinished: an administrator who closed the tab after claiming the game
        finds the way back here, since nothing else sends them to /setup once the game is claimed. *@
     @if (_setupPending)

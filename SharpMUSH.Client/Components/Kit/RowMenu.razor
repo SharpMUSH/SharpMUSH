@@ -1,0 +1,37 @@
+@* A row's "More" menu: the row's rarer actions, and every action that destroys or takes away, so none of
+   them sits on the row as a button of its own. Items are RowMenuItems; choosing one closes the menu. *@
+<PopoverMenu Open="_open" OpenChanged="SetOpen" ArrowKeys="true" Class="@Class">
+    <Activator>
+        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Disabled="@Disabled"
+                       aria-label="@Label" aria-haspopup="menu" aria-expanded="@(_open ? "true" : "false")"
+                       OnClick="() => SetOpen(!_open)" @onkeydown="CloseOnEscape" />
+    </Activator>
+    <ChildContent>
+        <CascadingValue Value="this" IsFixed="true">
+            <div class="kit-rowmenu" role="menu" aria-label="@Label">@ChildContent</div>
+        </CascadingValue>
+    </ChildContent>
+</PopoverMenu>
+
+@code {
+    /// <summary>The button's accessible name, naming the row: "More for Scenes".</summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Class { get; set; }
+
+    private bool _open;
+
+    private void SetOpen(bool open) => _open = open;
+
+    private void CloseOnEscape(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") _open = false;
+    }
+
+    internal void Close()
+    {
+        _open = false;
+        StateHasChanged();
+    }
+}

@@ -10,11 +10,11 @@
 
 <AdminPageTitle Page="@Loc["JobsTitle"]" />
 <div class="page-stack page-stack--padded jobs">
-    <PlainPageHeader Kicker="@Loc["NavSectionBuild"]" Title="@Loc["JobsTitle"]" Description="@Loc["JobsIntro"]">
+    <PageHeader Kicker="@Loc["NavSectionBuild"]" Title="@Loc["JobsTitle"]" Description="@Loc["JobsIntro"]">
         <Actions>
             <CapsuleButton Icon="@Icons.Material.Filled.Refresh" OnClick="Load" Disabled="_busy">@Loc["JobsRefresh"]</CapsuleButton>
         </Actions>
-    </PlainPageHeader>
+    </PageHeader>
 
     @if (_error is not null) { <MudAlert Severity="Severity.Error">@_error</MudAlert> }
 
@@ -29,7 +29,7 @@
                         <MudTextField Variant="Variant.Outlined" @bind-Value="_schedule" Label="@Loc["JobsSchedule"]" />
                         <MudTextField Variant="Variant.Outlined" @bind-Value="_zone" Label="@Loc["JobsTimeZone"]" />
                         <div class="jobs-actions">
-                            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Create" Disabled="_busy">@Loc["JobsCreate"]</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Create" Disabled="_busy">@Loc["JobsCreate"]</MudButton>
                         </div>
                     </div>
                 </KitCard>
@@ -65,16 +65,16 @@
                             <div class="jobs-entry-meta">@Loc["JobsNext"]: @Time(job.NextRun) · @Loc["JobsLast"]: @Time(job.LastRun)</div>
                             @if (job.LastError is not null) { <MudAlert Severity="Severity.Warning" Dense="true">@job.LastError</MudAlert> }
                             <div class="jobs-actions">
-                                <MudButton OnClick="@(() => Toggle(job))" Disabled="_busy">@Loc[job.Enabled ? "JobsDisable" : "JobsEnable"]</MudButton>
-                                <MudButton OnClick="@(() => Select(job))" Disabled="_busy">@Loc["JobsEdit"]</MudButton>
-                                <MudButton Color="Color.Error" OnClick="@(() => Delete(job))" Disabled="_busy">@Loc["JobsDelete"]</MudButton>
+                                <MudButton Variant="Variant.Outlined" OnClick="@(() => Toggle(job))" Disabled="_busy">@Loc[job.Enabled ? "JobsDisable" : "JobsEnable"]</MudButton>
+                                <MudButton Variant="Variant.Outlined" OnClick="@(() => Select(job))" Disabled="_busy">@Loc["JobsEdit"]</MudButton>
+                                <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@(() => Delete(job))" Disabled="_busy">@Loc["JobsDelete"]</MudButton>
                             </div>
                             @if (_selected == job.Id)
                             {
                                 <MudTextField Variant="Variant.Outlined" @bind-Value="_editSchedule" Label="@Loc["JobsSchedule"]" />
                                 <MudTextField Variant="Variant.Outlined" @bind-Value="_editZone" Label="@Loc["JobsTimeZone"]" />
                                 <div class="jobs-actions">
-                                    <MudButton Color="Color.Primary" OnClick="@(() => Save(job))" Disabled="_busy">@Loc["JobsSave"]</MudButton>
+                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Save(job))" Disabled="_busy">@Loc["JobsSave"]</MudButton>
                                 </div>
                             }
                         </article>

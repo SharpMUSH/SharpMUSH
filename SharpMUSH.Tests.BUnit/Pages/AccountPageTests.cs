@@ -229,7 +229,7 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 		cut.WaitForAssertion(() => cut.Find("#characters .kit-card"), TimeSpan.FromSeconds(5));
 
 		await Assert.That(cut.Find(".kit-page-head .kit-page-title").TextContent).IsEqualTo("headwiz");
-		await Assert.That(cut.Find(".kit-page-head .kit-page-actions .acct-btn-danger").TextContent.Trim()).IsEqualTo("AuthLogOutOfAccount");
+		await Assert.That(cut.Find(".kit-page-head .kit-page-actions .mud-button-text-error").TextContent.Trim()).IsEqualTo("AuthLogOutOfAccount");
 		await Assert.That(cut.FindAll(".kit-card .kit-card-title").Select(t => t.TextContent).ToList())
 			.IsEquivalentTo(["AuthProfile", "Characters", "AuthPasskeys"]);
 		await Assert.That(cut.Find("#characters a[href='/characters/new']")).IsNotNull();

@@ -9483,4 +9483,19 @@
   <data name="WidStatsQuietPlay" xml:space="preserve">
     <value>Spielen</value>
   </data>
+  <data name="NavRowMore" xml:space="preserve">
+    <value>Mehr zu {0}</value>
+  </data>
+  <data name="AuthAccountPasswordLabel" xml:space="preserve">
+    <value>Kontopasswort</value>
+  </data>
+  <data name="AuthUnlinkIdentityConfirm" xml:space="preserve">
+    <value>Du kannst dich nicht mehr mit {0} anmelden. Du kannst es später wieder verknüpfen.</value>
+  </data>
+  <data name="AuthRemovePasswordConfirmTitle" xml:space="preserve">
+    <value>Kontopasswort entfernen?</value>
+  </data>
+  <data name="AuthRemovePasswordConfirm" xml:space="preserve">
+    <value>Du meldest dich stattdessen mit einem Passkey oder einem verknüpften Dienst an. Du kannst später wieder ein Passwort festlegen.</value>
+  </data>
 </root>

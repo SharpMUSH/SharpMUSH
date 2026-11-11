@@ -10,8 +10,7 @@
 
 <AdminPageTitle Page="@Loc["GuideAdminTitle"]" />
 <div class="admin-onboarding">
-    <h1>@Loc["GuideAdminHeading"]</h1>
-    <p>@Loc["GuideAdminIntro"]</p>
+    <PageHeader Title="@Loc["GuideAdminHeading"]" Description="@Loc["GuideAdminIntro"]" />
     @if (Guide.Error is not null) { <p role="status">@Guide.Error <button type="button" @onclick="Reload">@Loc["GuideAdminReload"]</button></p> }
     @if (Guide.Ready)
     {

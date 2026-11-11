@@ -74,10 +74,10 @@
         }
         else
         {
-            <MudButton Class="pkg-btn-primary" Variant="Variant.Filled" Size="Size.Small" StartIcon="@QueueIcon"
+            <MudButton Class="pkg-btn-primary" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@QueueIcon"
                        aria-pressed="false" Disabled="@(Entry.PackageId is null)" OnClick="@OnQueue">@QueueLabel</MudButton>
         }
-        <MudButton Size="Size.Small" OnClick="@OnReview">@Loc["PkgReviewInstall"]</MudButton>
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@OnReview">@Loc["PkgReviewInstall"]</MudButton>
         <MudTooltip Text="@Loc["PkgShowReadme", Entry.PackageId ?? Entry.Path]">
             <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" aria-label="@Loc["PkgShowReadme", Entry.PackageId ?? Entry.Path]"
                            OnClick="@OnReadme" />

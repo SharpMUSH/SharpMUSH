@@ -1,5 +1,6 @@
-@* D1 §4.9 header for a page without an image: mono kicker, 26px title, 13px dim description, and
-   the page's actions aligned right on the baseline. *@
+@* D1 §4.9 page header, the one every page leads with: mono kicker, 26px title, 13px dim description,
+   then the page's search and actions aligned right on the baseline. A page whose subject has an
+   image leads with GlassBanner instead. *@
 <header class="kit-page-head">
     <div class="kit-page-text">
         @if (Kicker is not null)
@@ -16,6 +17,10 @@
             <p class="kit-page-desc">@Description</p>
         }
     </div>
+    @if (Search is not null)
+    {
+        <div class="kit-page-search" role="search">@Search</div>
+    }
     @if (Actions is not null)
     {
         <div class="kit-page-actions">@Actions</div>
@@ -29,5 +34,9 @@
 
     /// <summary>A description with markup (a code list, a link); wins over <see cref="Description"/>.</summary>
     [Parameter] public RenderFragment? DescriptionContent { get; set; }
+
+    /// <summary>The page's search box (a <see cref="PageSearch"/>), before the actions.</summary>
+    [Parameter] public RenderFragment? Search { get; set; }
+
     [Parameter] public RenderFragment? Actions { get; set; }
 }

@@ -239,7 +239,7 @@
                                     <span class="bld-app-name">@app.Title</span>
                                     <span class="bld-note">@AppLine(app)</span>
                                 </div>
-                                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" Disabled="_busy"
+                                <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="_busy"
                                            OnClick="() => OpenSavedAsync(app.Slug, app.Holder)" aria-label="@Loc["LayBldEditApp", app.Title]">@Loc["LayBldEdit"]</MudButton>
                             </li>
                         }
@@ -766,10 +766,10 @@
                         <div class="bld-row">
                             @if (_savedLink is not null)
                             {
-                                <MudButton Href="@_savedLink" Variant="Variant.Outlined" Color="Color.Primary">@Loc["LayBldOpenApp"]</MudButton>
-                                <MudButton Variant="Variant.Text" OnClick="CopyAddressAsync">@Loc["LayBldCopyAddress"]</MudButton>
+                                <MudButton Href="@_savedLink" Variant="Variant.Outlined">@Loc["LayBldOpenApp"]</MudButton>
+                                <MudButton Variant="Variant.Outlined" OnClick="CopyAddressAsync">@Loc["LayBldCopyAddress"]</MudButton>
                             }
-                            <MudButton Variant="Variant.Text" OnClick="() => GoTo(2)">@Loc["LayBldKeepEditing"]</MudButton>
+                            <MudButton Variant="Variant.Outlined" OnClick="() => GoTo(2)">@Loc["LayBldKeepEditing"]</MudButton>
                         </div>
                     </div>
                 }

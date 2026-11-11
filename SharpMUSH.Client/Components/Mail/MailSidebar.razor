@@ -32,10 +32,6 @@
     }
     else
     {
-        <SidebarGroup Class="mail-side-compose" Label="@Loc["Compose"]">
-            <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Edit" Label="@Loc["Compose"]"
-                        Href="/mail/compose" IsCurrent="@(_path == "/mail/compose")" Collapsed="@Collapsed" />
-        </SidebarGroup>
         @if (!Collapsed)
         {
             <SectionLabel>@Loc["NavMailFolders"]</SectionLabel>

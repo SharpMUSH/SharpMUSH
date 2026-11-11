@@ -18,14 +18,14 @@
    (only while something changed), and an "In this section" table of contents in the aside. *@
 <div class="config-section">
     <div class="config-section-main">
-        <PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@CategoryTitle" Description="@_categoryMetadata?.Description">
+        <PageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@CategoryTitle" Description="@_categoryMetadata?.Description">
             <Actions>
                 @if (!_loading && _categoryMetadata != null)
                 {
                     <CapsuleButton Icon="@Icons.Material.Outlined.RestartAlt" OnClick="ResetToDefaults">@Loc["ResetToDefaults"]</CapsuleButton>
                 }
             </Actions>
-        </PlainPageHeader>
+        </PageHeader>
 
         <div class="config-section-content">
             @if (CustomPageCategories.Contains(Category))

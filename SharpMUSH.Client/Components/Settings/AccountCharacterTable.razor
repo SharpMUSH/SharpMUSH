@@ -4,10 +4,9 @@
 <div id="characters" class="acct-anchor">
     <KitCard Title="@Loc["Characters"]" Sub="@Loc["NavSettingsCharactersDescription"]">
         <Controls>
-            <button class="acct-btn acct-btn-outline" @onclick="OnRefresh" disabled="@Busy">
-                <MudIcon Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" Class="mr-1" />
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="OnRefresh" Disabled="@Busy">
                 @Loc["Refresh"]
-            </button>
+            </MudButton>
         </Controls>
         <ChildContent>
             <div class="acct-section">
@@ -64,12 +63,12 @@
                 }
 
                 <div class="acct-create">
-                    <a class="acct-btn acct-btn-primary" href="/characters/new">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/characters/new">
                         @Loc["AuthCreateNewCharacter"]
-                    </a>
-                    <a class="acct-btn acct-btn-outline" href="/characters/claim">
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Href="/characters/claim">
                         @Loc["AuthClaimExistingCharacter"]
-                    </a>
+                    </MudButton>
                 </div>
             </div>
         </ChildContent>

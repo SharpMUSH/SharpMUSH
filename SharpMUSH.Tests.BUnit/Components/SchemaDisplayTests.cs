@@ -266,8 +266,7 @@ public class SchemaDisplayTests : BunitContext
 			.Add(x => x.OnAction, (SchemaActionRequest r) => requested = r)));
 
 		var rendered = cut.Find("button.schema-button");
-		await Assert.That(rendered.ClassName).Contains("filled");
-		await Assert.That(rendered.ClassName).Contains("error");
+		await Assert.That(rendered.ClassName).Contains("mud-button-text-error").Because("an error button is the quiet danger button, filled or not");
 
 		// The click waits on the confirmation this test answers below.
 		await cut.StartClickAsync(rendered);

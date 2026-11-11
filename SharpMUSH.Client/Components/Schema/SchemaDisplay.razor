@@ -71,8 +71,8 @@
         break;
 
     case "button":
-        <MudButton Variant="@SchemaRendering.ParseVariant(Element.Variant)"
-                   Color="@SchemaRendering.ParseColor(Element.Color, Color.Secondary)"
+        <MudButton Variant="@ButtonKinds.Variant(SchemaRendering.ParseButtonKind(Element.Variant, Element.Color))"
+                   Color="@ButtonKinds.Color(SchemaRendering.ParseButtonKind(Element.Variant, Element.Color))"
                    Class="mb-2 schema-button"
                    OnClick="@(() => PressAsync())"
                    Disabled="@(Busy || _pending || !CanPress)">
@@ -562,7 +562,7 @@
                             }
                             @foreach (var action in entry.Actions)
                             {
-                                <MudButton Variant="Variant.Text" Size="Size.Small" Class="schema-timeline-action"
+                                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="schema-timeline-action"
                                            OnClick="@(() => RequestAsync(action.Action, action.Values, action.Confirm, action.Label))"
                                            Disabled="@(Busy || _pending || !CanDispatch(action.Action))">
                                     @action.Label

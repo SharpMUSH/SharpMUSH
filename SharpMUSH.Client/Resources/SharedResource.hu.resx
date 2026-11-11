@@ -6539,7 +6539,7 @@
     <value>Fiókjelszó megerősítése</value>
   </data>
   <data name="AuthVerifyWithPasskey" xml:space="preserve">
-    <value>Megerősítés hozzáférési kulccsal</value>
+    <value>Megerősítés azonosítókulccsal</value>
   </data>
   <data name="AuthProofCancelled" xml:space="preserve">
     <value>A hozzáférési kulcs kérése megszakadt. Próbáld újra, amikor készen állsz.</value>
@@ -9482,5 +9482,20 @@
   </data>
   <data name="WidStatsQuietPlay" xml:space="preserve">
     <value>Játék</value>
+  </data>
+  <data name="NavRowMore" xml:space="preserve">
+    <value>Továbbiak: {0}</value>
+  </data>
+  <data name="AuthAccountPasswordLabel" xml:space="preserve">
+    <value>Fiókjelszó</value>
+  </data>
+  <data name="AuthUnlinkIdentityConfirm" xml:space="preserve">
+    <value>Többé nem tudsz bejelentkezni ezzel: {0}. Később újra összekapcsolhatod.</value>
+  </data>
+  <data name="AuthRemovePasswordConfirmTitle" xml:space="preserve">
+    <value>Eltávolítod a fiókjelszót?</value>
+  </data>
+  <data name="AuthRemovePasswordConfirm" xml:space="preserve">
+    <value>Ezután azonosítókulccsal vagy összekapcsolt szolgáltatással jelentkezel be. Később újra beállíthatsz jelszót.</value>
   </data>
 </root>

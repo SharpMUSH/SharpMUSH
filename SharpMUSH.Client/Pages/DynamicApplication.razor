@@ -18,10 +18,7 @@
 
 <AppSectionFrame App="_app">
 <div class="app-page">
-    <header class="app-header">
-        <div class="app-kicker">@Loc["NavApplication"]</div>
-        <h1 class="app-title">@(_app?.DisplayName ?? Loc["NavApplication"])</h1>
-    </header>
+    <PageHeader Kicker="@Loc["NavApplication"]" Title="@(_app?.DisplayName ?? Loc["NavApplication"])" />
 
     @if (_loading)
     {

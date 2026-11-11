@@ -11,7 +11,7 @@
 <AdminPageTitle Page="@Loc["WkImageLibrary"]" />
 
 <div class="page-stack page-stack--padded adm-media">
-    <PlainPageHeader Kicker="@Loc["AdmGroupContent"]" Title="@Loc["WkImageLibrary"]" Description="@Loc["WkImageLibraryDescription"]">
+    <PageHeader Kicker="@Loc["AdmGroupContent"]" Title="@Loc["WkImageLibrary"]" Description="@Loc["WkImageLibraryDescription"]">
         <Actions>
             @if (_isUploading)
             {
@@ -24,7 +24,7 @@
                            MaxFileSize="52428800"
                            Disabled="_isUploading" />
         </Actions>
-    </PlainPageHeader>
+    </PageHeader>
 
     <AdminStats>
         <AdminStat Key="total" Icon="@Icons.Material.Filled.Image" Label="@Loc["WkTotalAssets"]"
@@ -175,7 +175,7 @@
     </KitCard>
 </div>
 
-<ConfirmDialog @bind-Visible="_showSharing" Title="@Loc["WkLibrarySharing"]" ConfirmText="@Loc["Save"]" ConfirmColor="Color.Primary"
+<ConfirmDialog @bind-Visible="_showSharing" Title="@Loc["WkLibrarySharing"]" ConfirmText="@Loc["Save"]" ConfirmKind="ButtonKind.Primary"
                Busy="_savingSharing" OnConfirm="SaveSharingAsync">
     @if (_sharingTarget is { } target)
     {

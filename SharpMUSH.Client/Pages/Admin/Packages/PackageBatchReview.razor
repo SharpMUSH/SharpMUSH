@@ -11,7 +11,7 @@
 
 <AdminPageTitle Page="@Loc["PkgBatchReview"]" />
 <div class="page-stack page-stack--padded pkg-batch-review">
-    <PlainPageHeader Title="@Loc["PkgBatchReview"]" Description="@Loc["PkgBatchDescription"]" />
+    <PageHeader Title="@Loc["PkgBatchReview"]" Description="@Loc["PkgBatchDescription"]" />
     <PackageBatchQueue Busy="@(_busy || Running || Packages.Batch.AdmissionBlocked)" ShowReviewLink="false" />
     @if (Packages.Batch.AdmissionPending)
     {
@@ -21,8 +21,8 @@
     {
         <MudAlert Severity="Severity.Warning" role="status" aria-live="polite">
             @Loc["PkgBatchUnknownOutcome"]
-            <MudButton Disabled="@_busy" OnClick="@RecoverAdmissionAsync">@Loc["PkgBatchRecoverAdmission"]</MudButton>
-            <MudButton Disabled="@_busy" OnClick="@RefreshUnknownAdmissionAsync">@Loc["PkgBatchReviewRemaining"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Disabled="@_busy" OnClick="@RecoverAdmissionAsync">@Loc["PkgBatchRecoverAdmission"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Disabled="@_busy" OnClick="@RefreshUnknownAdmissionAsync">@Loc["PkgBatchReviewRemaining"]</MudButton>
         </MudAlert>
     }
     @if (_busy)
@@ -64,7 +64,7 @@
                             </div>
                             @if (step.ReviewUrl is { } url && SafeReviewUrl(url))
                             {
-                                <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@(_busy || Running)" OnClick="@(() => ReviewFailedStepAsync(step))">@Loc["PkgReview"]</MudButton>
+                                <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@(_busy || Running)" OnClick="@(() => ReviewFailedStepAsync(step))">@Loc["PkgReview"]</MudButton>
                             }
                         </li>
                     }
@@ -72,7 +72,7 @@
                 @if (!Running)
                 {
                     <div class="pkg-batch-actions">
-                        <MudButton Variant="Variant.Text" Disabled="@_busy" OnClick="@RefreshRunAsync">@Loc["PkgBatchRefreshStatus"]</MudButton>
+                        <MudButton Variant="Variant.Outlined" Disabled="@_busy" OnClick="@RefreshRunAsync">@Loc["PkgBatchRefreshStatus"]</MudButton>
                         @if (Packages.Batch.Intents.Count > 0)
                         {
                             <MudButton Class="pkg-batch-review-again" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
@@ -99,7 +99,7 @@
                         {
                             <li>@Loc[PackageBatchQueue.ActionKey(proposal.Intent.Action)] <strong>@proposal.Intent.TargetId</strong>
                                 <p>@proposal.Reason</p>
-                                <MudButton Disabled="@(_busy || Running)" OnClick="@(() => AddProposalAsync(proposal))">@Loc["PkgBatchAddChange"]</MudButton>
+                                <MudButton Variant="Variant.Outlined" Disabled="@(_busy || Running)" OnClick="@(() => AddProposalAsync(proposal))">@Loc["PkgBatchAddChange"]</MudButton>
                             </li>
                         }
                     </ul>

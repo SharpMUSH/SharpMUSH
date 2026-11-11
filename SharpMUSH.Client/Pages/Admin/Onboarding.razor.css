@@ -1,5 +1,4 @@
 .admin-onboarding { max-width: 56rem; margin: auto; padding: clamp(var(--space-5), 3vw, var(--space-8)); color: var(--text); }
-.admin-onboarding h1 { font-size: var(--text-2xl); }
 .admin-onboarding p { line-height: 1.65; max-width: 70ch; margin-block: .75rem; }
 .admin-checklist { margin-top: 2rem; padding-left: var(--space-6); }
 .admin-checklist li { border-top: 1px solid var(--border); padding: var(--space-6) 0; display: flow-root; }

@@ -20,7 +20,7 @@
 <Pending><RouteSkeleton /></Pending>
 <ChildContent>
 <div class="char-scenes-page">
-    <PlainPageHeader Kicker="@Loc["SceneArchive"]" Title="@string.Format(Loc["NavCharScenesTitle"], Name)">
+    <PageHeader Kicker="@Loc["SceneArchive"]" Title="@string.Format(Loc["NavCharScenesTitle"], Name)">
         <DescriptionContent>
             <a class="char-scenes-back" href="@ProfileHref">@string.Format(Loc["NavCharScenesBack"], Name)</a>
         </DescriptionContent>
@@ -28,7 +28,7 @@
             <input name="scene-search" class="char-scenes-search" type="search" placeholder="@Loc["NavCharScenesSearch"]" aria-label="@Loc["NavCharScenesSearch"]"
                    value="@_search" @onchange="@(e => SearchAsync(e.Value?.ToString()))" />
         </Actions>
-    </PlainPageHeader>
+    </PageHeader>
 
     <TypeChips Items="@StateChips" Selected="@_state" SelectedChanged="SelectStateAsync" AriaLabel="@Loc["NavCharScenesStates"]" />
 

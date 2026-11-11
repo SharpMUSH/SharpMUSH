@@ -3,14 +3,14 @@ using System.Text.RegularExpressions;
 namespace SharpMUSH.Tests.BUnit.Components.Kit;
 
 /// <summary>
-/// The plain header (§4.9) puts the actions on the title's baseline while there is room and drops
+/// The page header (§4.9) puts the actions on the title's baseline while there is room and drops
 /// them under the title when there is not, without a breakpoint: the text takes a flex basis and the
 /// head wraps. Pages with two or more actions used to patch this in their own narrow tier with
 /// <c>::deep .kit-page-head { flex-wrap: wrap; }</c>; the rule belongs to the component.
 /// </summary>
-public class PlainPageHeaderLayoutTests
+public class PageHeaderLayoutTests
 {
-	private static string Css => File.ReadAllText(Path.Join(ClientSource.RazorRoot, "Components/Kit/PlainPageHeader.razor.css"));
+	private static string Css => File.ReadAllText(Path.Join(ClientSource.RazorRoot, "Components/Kit/PageHeader.razor.css"));
 
 	private static string Rule(string selector) =>
 		Regex.Match(Css, Regex.Escape(selector) + @"\s*\{(?<body>[^}]*)\}").Groups["body"].Value;
@@ -29,7 +29,7 @@ public class PlainPageHeaderLayoutTests
 	{
 		var files = Directory.EnumerateFiles(ClientSource.RazorRoot, "*.razor.css", SearchOption.AllDirectories).ToList();
 		var patched = files
-			.Where(f => !f.EndsWith("PlainPageHeader.razor.css", StringComparison.Ordinal))
+			.Where(f => Path.GetFileName(f) != "PageHeader.razor.css")
 			.Where(f => Regex.IsMatch(File.ReadAllText(f), @"::deep\s+\.kit-page-(head|actions)\s*\{[^}]*flex-wrap"))
 			.Select(f => Path.GetRelativePath(ClientSource.RazorRoot, f))
 			.ToList();

@@ -9483,4 +9483,19 @@
   <data name="WidStatsQuietPlay" xml:space="preserve">
     <value>Igraj</value>
   </data>
+  <data name="NavRowMore" xml:space="preserve">
+    <value>Više za {0}</value>
+  </data>
+  <data name="AuthAccountPasswordLabel" xml:space="preserve">
+    <value>Lozinka računa</value>
+  </data>
+  <data name="AuthUnlinkIdentityConfirm" xml:space="preserve">
+    <value>Više se nećete moći prijaviti putem {0}. Možete ga ponovno povezati kasnije.</value>
+  </data>
+  <data name="AuthRemovePasswordConfirmTitle" xml:space="preserve">
+    <value>Ukloniti lozinku računa?</value>
+  </data>
+  <data name="AuthRemovePasswordConfirm" xml:space="preserve">
+    <value>Prijavljivat ćete se pristupnim ključem ili povezanom uslugom. Lozinku možete ponovno postaviti kasnije.</value>
+  </data>
 </root>

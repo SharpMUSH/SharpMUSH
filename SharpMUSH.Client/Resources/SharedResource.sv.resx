@@ -9483,4 +9483,19 @@
   <data name="WidStatsQuietPlay" xml:space="preserve">
     <value>Spela</value>
   </data>
+  <data name="NavRowMore" xml:space="preserve">
+    <value>Mer för {0}</value>
+  </data>
+  <data name="AuthAccountPasswordLabel" xml:space="preserve">
+    <value>Kontolösenord</value>
+  </data>
+  <data name="AuthUnlinkIdentityConfirm" xml:space="preserve">
+    <value>Du kan inte längre logga in med {0}. Du kan länka det igen senare.</value>
+  </data>
+  <data name="AuthRemovePasswordConfirmTitle" xml:space="preserve">
+    <value>Ta bort kontolösenordet?</value>
+  </data>
+  <data name="AuthRemovePasswordConfirm" xml:space="preserve">
+    <value>Du loggar i stället in med en lösennyckel eller en länkad tjänst. Du kan ange ett lösenord igen senare.</value>
+  </data>
 </root>

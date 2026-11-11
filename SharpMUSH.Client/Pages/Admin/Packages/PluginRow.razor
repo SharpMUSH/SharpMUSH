@@ -47,8 +47,7 @@
                                OnClick="@(() => OnReadme.InvokeAsync(package))" />
             </MudTooltip>
         }
-        <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@Busy"
-                   Color="@(Plugin.Enabled ? Color.Error : Color.Primary)"
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@Busy"
                    aria-label="@Loc[Plugin.Enabled ? "PkgPluginTurnOffNamed" : "PkgPluginTurnOnNamed", Plugin.Name]"
                    OnClick="@OnToggle">
             @(Plugin.Enabled ? Loc["PkgPluginTurnOff"] : Loc["PkgPluginTurnOn"])

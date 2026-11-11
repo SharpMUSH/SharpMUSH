@@ -126,7 +126,9 @@ public class ExternalLoginUiTests : TrackingBunitContext
 		cut.WaitForAssertion(() => { if (!cut.Markup.Contains("Google account", StringComparison.Ordinal)) throw new Exception("Account methods not loaded"); });
 		await Assert.That(cut.Markup).Contains("Set or change account password");
 		await Assert.That(cut.Markup).Contains("Removing or changing a method signs out other sessions.");
-		await Assert.That(cut.Markup.Contains("Remove account password", StringComparison.Ordinal)).IsEqualTo(hasPassword);
+		await Assert.That(cut.FindAll(".signin-password button[aria-label='More for Account password']").Count).IsEqualTo(hasPassword ? 1 : 0)
+			.Because("removing the password is in the password row's menu, and asks first");
+		await Assert.That(cut.Markup).DoesNotContain("mud-button-text-error").Because("no sign-in method is removed from a button on the card");
 		await Assert.That(cut.Markup).Contains("Link Grapevine");
 		await Assert.That(cut.FindAll(".signin-provider").Single(row => row.TextContent.Contains("Link Google", StringComparison.Ordinal)).TextContent).Contains("Google account");
 		await CaptureAsync(hasPassword ? "account-methods.html" : "account-methods-passwordless.html", cut.Markup);

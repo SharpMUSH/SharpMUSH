@@ -23,7 +23,7 @@
         @if(_error is not null) { <MudAlert Severity="Severity.Error" role="alert">@_error</MudAlert> }
         <MudTextField @bind-Value="_username" Label="@Loc["AuthUsername"]" Variant="Variant.Outlined" Disabled="_busy" />
         <MudButton OnClick="Create" Disabled="_busy" Variant="Variant.Filled" Color="Color.Primary">@Loc["AuthCreateAccount"]</MudButton>
-        <MudButton OnClick="Cancel" Disabled="_busy">@Loc["Cancel"]</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="Cancel" Disabled="_busy">@Loc["Cancel"]</MudButton>
     }
     else { <MudProgressCircular Indeterminate="true" aria-label="@Loc["Loading"]" /> }
 </div>

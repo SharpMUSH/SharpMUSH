@@ -85,7 +85,7 @@
         <div class="wiki-req-actions">
             @* Also outside the pickers: Tab closes a picker's list before reaching the link inside it. *@
             <div class="wiki-req-actions-start">@DefineLink</div>
-            <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@_saving" OnClick="@(() => _editing = false)">@Loc["Cancel"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@_saving" OnClick="@(() => _editing = false)">@Loc["Cancel"]</MudButton>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Disabled="@_saving" OnClick="SaveAsync">@Loc["Save"]</MudButton>
         </div>
     }

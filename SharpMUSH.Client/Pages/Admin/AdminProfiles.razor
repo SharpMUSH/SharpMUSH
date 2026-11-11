@@ -8,7 +8,7 @@
 <AdminPageTitle Page="@Loc["ProfileHandler"]" />
 
 <div class="page-stack page-stack--padded adm-profiles">
-    <PlainPageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["ProfileHandler"]">
+    <PageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["ProfileHandler"]">
         <DescriptionContent>
             @((MarkupString)Loc["AdmProfilesSubtitle",
                 "<code>http_handler</code>",
@@ -27,7 +27,7 @@
                 </AuthorizeView>
             }
         </Actions>
-    </PlainPageHeader>
+    </PageHeader>
 
     <LoadState TValue="HandlerStatus" Value="_status" Loading="_loading" Context="status">
         <Missing>

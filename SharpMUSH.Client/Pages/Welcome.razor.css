@@ -1,7 +1,6 @@
 .welcome { max-width: 72rem; margin: 0 auto; padding: clamp(var(--space-5), 3vw, var(--space-8)); color: var(--text); }
 .welcome-intro { display: flex; align-items: center; gap: var(--space-7); margin-bottom: 2.5rem; }
 .welcome-intro div { flex: 1; min-width: 0; }
-.welcome-intro h1 { font-size: clamp(var(--text-2xl), 4vw, var(--text-3xl)); line-height: 1.15; margin-bottom: 1rem; }
 .welcome p { max-width: 65ch; line-height: 1.7; margin-block: .8rem; }
 .welcome-art { width: min(30%, 16rem); height: auto; object-fit: contain; }
 .welcome-paths h2 { font-size: var(--text-lg); margin-bottom: .85rem; }

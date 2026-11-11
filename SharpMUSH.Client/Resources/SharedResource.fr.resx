@@ -5849,7 +5849,7 @@
     <value>Vérifier le mot de passe du compte</value>
   </data>
   <data name="AuthVerifyWithPasskey" xml:space="preserve">
-    <value>Vérifier avec une clé d’accès</value>
+    <value>Vérifier avec une clé d'accès</value>
   </data>
   <data name="AuthProofCancelled" xml:space="preserve">
     <value>La demande de clé d’accès a été annulée. Réessayez lorsque vous le souhaitez.</value>
@@ -8792,5 +8792,20 @@
   </data>
   <data name="WidStatsQuietPlay" xml:space="preserve">
     <value>Jouer</value>
+  </data>
+  <data name="NavRowMore" xml:space="preserve">
+    <value>Plus pour {0}</value>
+  </data>
+  <data name="AuthAccountPasswordLabel" xml:space="preserve">
+    <value>Mot de passe du compte</value>
+  </data>
+  <data name="AuthUnlinkIdentityConfirm" xml:space="preserve">
+    <value>Vous ne pourrez plus vous connecter avec {0}. Vous pourrez l'associer à nouveau plus tard.</value>
+  </data>
+  <data name="AuthRemovePasswordConfirmTitle" xml:space="preserve">
+    <value>Supprimer le mot de passe du compte ?</value>
+  </data>
+  <data name="AuthRemovePasswordConfirm" xml:space="preserve">
+    <value>Vous vous connecterez avec une clé d'accès ou un service associé. Vous pourrez définir un mot de passe plus tard.</value>
   </data>
 </root>

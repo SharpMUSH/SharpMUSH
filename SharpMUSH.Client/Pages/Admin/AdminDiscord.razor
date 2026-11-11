@@ -18,7 +18,7 @@
 <FeatureGate Feature="@GameFeatures.Discord">
     <ChildContent>
     <div class="page-stack page-stack--padded adm-discord">
-        <PlainPageHeader Kicker="@Loc["AdmGroupServer"]" Title="@Loc["AdmDiscordTitle"]" Description="@Loc["AdmDiscordDescription"]" />
+        <PageHeader Kicker="@Loc["AdmGroupServer"]" Title="@Loc["AdmDiscordTitle"]" Description="@Loc["AdmDiscordDescription"]" />
 
         @if (_loading)
         {
@@ -348,7 +348,7 @@
     </ChildContent>
     <Otherwise>
         <div class="page-stack page-stack--padded adm-discord">
-            <PlainPageHeader Kicker="@Loc["AdmGroupServer"]" Title="@Loc["AdmDiscordTitle"]" Description="@Loc["AdmDiscordDescription"]" />
+            <PageHeader Kicker="@Loc["AdmGroupServer"]" Title="@Loc["AdmDiscordTitle"]" Description="@Loc["AdmDiscordDescription"]" />
             <EmptyState Icon="@Icons.Material.Outlined.Extension">
                 <ChildContent>@Loc["AdmDiscordNotInstalled"]</ChildContent>
                 <Action><CapsuleButton Icon="@Icons.Material.Outlined.Extension" Href="/admin/packages">@Loc["PkgPackages"]</CapsuleButton></Action>

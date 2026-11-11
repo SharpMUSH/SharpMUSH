@@ -36,8 +36,8 @@
                                     <div class="acct-row acct-passkey-rename">
                                         <MudTextField @bind-Value="State.Rename" Label="@Loc["AuthPasskeyName"]" MaxLength="64"
                                                       Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input acct-grow" />
-                                        <button class="acct-btn acct-btn-primary" disabled="@Busy" @onclick="() => RenameAsync(passkey)">@Loc["Save"]</button>
-                                        <button class="acct-btn acct-btn-ghost" @onclick="() => State.Renaming = null">@Loc["Cancel"]</button>
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@Busy" OnClick="() => RenameAsync(passkey)">@Loc["Save"]</MudButton>
+                                        <MudButton Variant="Variant.Outlined" OnClick="() => State.Renaming = null">@Loc["Cancel"]</MudButton>
                                     </div>
                                 }
                                 else
@@ -86,8 +86,8 @@
                                       Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" />
                     </div>
                     <div class="acct-field-actions">
-                        <button class="acct-btn acct-btn-primary" disabled="@Busy" @onclick="AddAsync">@Loc["AuthPasskeyCreate"]</button>
-                        <button class="acct-btn acct-btn-ghost" @onclick="() => State.Adding = false">@Loc["Cancel"]</button>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@Busy" OnClick="AddAsync">@Loc["AuthPasskeyCreate"]</MudButton>
+                        <MudButton Variant="Variant.Outlined" OnClick="() => State.Adding = false">@Loc["Cancel"]</MudButton>
                     </div>
                 </div>
             }
@@ -112,11 +112,10 @@
     /// <summary>Opens the form for a new passkey: under the list, or as the empty list's action.</summary>
     private RenderFragment AddButton => __builder =>
     {
-        <button class="acct-btn acct-btn-outline acct-create" disabled="@Busy"
-                @onclick="() => { State.Name = string.Empty; State.Password = string.Empty; State.Adding = true; }">
-            <MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" Class="mr-1" />
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Add" Class="acct-create" Disabled="@Busy"
+                OnClick="() => { State.Name = string.Empty; State.Password = string.Empty; State.Adding = true; }">
             @Loc["AuthPasskeyAdd"]
-        </button>
+        </MudButton>
     };
 
     /// <summary>The list and its forms, kept by the page.</summary>

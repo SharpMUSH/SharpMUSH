@@ -14,13 +14,13 @@
 <AdminPageTitle Page="@Loc["LayApplications"]" />
 
 <div class="page-stack page-stack--padded appadmin">
-    <PlainPageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["LayApplications"]">
+    <PageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["LayApplications"]">
         <Actions>
             <CapsuleButton Icon="@Icons.Material.Filled.Code" Href="/softcode">@Loc["LayAppsSchemaRegistry"]</CapsuleButton>
             <CapsuleButton Icon="@Icons.Material.Filled.DashboardCustomize" Href="/build/apps">@Loc["LayBldTitle"]</CapsuleButton>
             <CapsuleButton Icon="@Icons.Material.Filled.Add" Primary="true" OnClick="@(() => Edit(null))">@Loc["LayAppsNew"]</CapsuleButton>
         </Actions>
-    </PlainPageHeader>
+    </PageHeader>
 
     <AdminStats>
         @foreach (var tile in new[]

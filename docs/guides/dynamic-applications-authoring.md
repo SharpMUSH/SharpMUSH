@@ -154,8 +154,9 @@ below a rule. Group rows in the order they are read: the timeline does not sort 
 each link's `href` are followed only when they are relative or `http`/`https`/`mailto`.
 
 **Buttons** take `confirm` (asked in a dialog first), `values` (merged over the field values
-posted — two buttons can share a route and differ by intent), `color`, and `variant`
-(`filled`/`outlined`/`text`):
+posted — two buttons can share a route and differ by intent), `color`, and `variant`. The portal
+draws one of its three button styles from them: `"color": "error"` is the quiet danger button,
+`"variant": "filled"` or `"color": "primary"` the primary button, and anything else the outlined one:
 
 ```jsonc
 { "kind": "button", "label": "Close job", "action": "update", "values": { "intent": "close" },

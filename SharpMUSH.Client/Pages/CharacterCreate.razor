@@ -24,10 +24,8 @@
             </MudAlert>
         }
 
-        <MudText Typo="Typo.h5" HtmlTag="h1" GutterBottom="true">@(Claiming ? Loc["NavClaimACharacter"] : Loc["NavCreateACharacter"])</MudText>
-        <MudText Typo="Typo.body2" Style="color:var(--text-faint);">
-            @(Claiming ? Loc["NavClaimCharacterBlurb"] : Loc["NavCreateCharacterBlurb"])
-        </MudText>
+        <PageHeader Title="@(Claiming ? Loc["NavClaimACharacter"] : Loc["NavCreateACharacter"])"
+                    Description="@(Claiming ? Loc["NavClaimCharacterBlurb"] : Loc["NavCreateCharacterBlurb"])" />
 
         @if (!Claiming && _characterGuide is { } guide)
         {
@@ -57,12 +55,12 @@
 
         @if (!_rosterReady && _createdCharacter is null)
         {
-            <MudButton Disabled="_busy" OnClick="LoadRosterAsync">@Loc["GuideRetryRoster"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Disabled="_busy" OnClick="LoadRosterAsync">@Loc["GuideRetryRoster"]</MudButton>
         }
         <div class="charcreate-actions">
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_busy || (!_rosterReady && _createdCharacter is null))"
                        OnClick="CreateAsync">@(_createdCharacter is not null ? Loc["GuideRetryConnection"] : Claiming ? Loc["NavClaimCharacter"] : Loc["NavCreateCharacter"])</MudButton>
-            <MudButton Variant="Variant.Text" Href="/account">@Loc["Cancel"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Href="/account">@Loc["Cancel"]</MudButton>
         </div>
 
         @* A character made at the connect screen, by staff or by an import has no account until its

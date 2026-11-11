@@ -9,12 +9,12 @@
 <AdminPageTitle Page="@Loc["SuggestionManagement"]" />
 
 <div class="page-stack page-stack--padded sugg-page">
-    <PlainPageHeader Kicker="@Loc["AdmGroupContent"]" Title="@Loc["SuggestionManagement"]" Description="@Loc["SuggestionsDescription"]">
+    <PageHeader Kicker="@Loc["AdmGroupContent"]" Title="@Loc["SuggestionManagement"]" Description="@Loc["SuggestionsDescription"]">
         <Actions>
             <CapsuleButton Icon="@Icons.Material.Filled.Refresh" OnClick="LoadSuggestionsAsync">@Loc["Refresh"]</CapsuleButton>
             <CapsuleButton Icon="@Icons.Material.Filled.Add" Primary="true" OnClick="ShowAddCategoryDialog">@Loc["AddCategory"]</CapsuleButton>
         </Actions>
-    </PlainPageHeader>
+    </PageHeader>
 
     @if (_isLoading)
     {
@@ -71,8 +71,8 @@
                                                           AdornmentIcon="@Icons.Material.Filled.Add"
                                                           OnAdornmentClick="@(async () => await AddWordAsync(category.Key))"
                                                           FullWidth="true" />
-                                            <MudButton Variant="Variant.Filled"
-                                                       Color="Color.Primary"
+                                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                                      
                                                        StartIcon="@Icons.Material.Filled.Add"
                                                        OnClick="@(async () => await AddWordAsync(category.Key))">
                                                 @Loc["Add"]
@@ -119,7 +119,7 @@
                       HelperText="@Loc["CategoryNameHelper"].Value" />
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="@(() => _showAddCategoryDialog = false)">@Loc["Cancel"]</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="@(() => _showAddCategoryDialog = false)">@Loc["Cancel"]</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddCategoryAsync">
             @Loc["Create"]
         </MudButton>
