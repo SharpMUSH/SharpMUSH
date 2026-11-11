@@ -3816,6 +3816,12 @@
         "aliases": []
       },
       {
+        "id": "permit-fail-args",
+        "lookup": "@hook permit",
+        "heading": "Permitting and rewriting",
+        "aliases": []
+      },
+      {
         "id": "evaluation",
         "lookup": "@hook evaluation",
         "heading": "Hook evaluation",
