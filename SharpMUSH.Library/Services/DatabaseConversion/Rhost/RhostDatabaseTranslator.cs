@@ -90,7 +90,11 @@ public static partial class RhostDatabaseTranslator
 	/// <summary>The import's model of <paramref name="flatfile"/>, with <paramref name="mail"/>'s messages.</summary>
 	public static PennMUSHDatabase Translate(RhostFlatfile flatfile, RhostMail? mail = null)
 	{
-		var report = new Report();
+		var report = new Report
+		{
+			Names = AttributeNameRewriter.For(flatfile.UserAttributes.Values.Select(definition => definition.Name),
+				[.. RhostNameTables.BuiltInAttributes.Values, .. RhostNameTables.RenamedAttributes.Values])
+		};
 		report.Line(ImportWarningKind.Other, $"Read a {ServerName} flatfile, format version {flatfile.FormatVersion}, with {flatfile.Objects.Count} " +
 			$"object(s) and {flatfile.UserAttributes.Count} user attribute name(s).");
 
@@ -135,6 +139,8 @@ public static partial class RhostDatabaseTranslator
 			GodPlayer = 1
 		};
 
+		ShadowedComsys(database, report);
+
 		if (mail is not null)
 		{
 			database.Mail = mail.Mail;
@@ -152,6 +158,8 @@ public static partial class RhostDatabaseTranslator
 			"printf(), map(), list() and lrooms() the RhostMUSH way, its SIDEFX flags count and NOEXAMINE and NOMODIFY keep protecting. " +
 			"It sets dialect to rhost and gives every attribute it brings in the rhost attribute flag, so that code reads " +
 			$"{ServerName}'s names for functions and commands SharpMUSH has under its own, such as wildmatch() and @sudo.");
+		report.Lines.AddRange(report.Names.Renames.OrderBy(rename => rename.Key, StringComparer.Ordinal)
+			.Select(rename => new ImportWarning(ImportWarningKind.Attributes, AttributeNameRewriter.Note(rename.Key, rename.Value))));
 		MapTotems(database, RhostNameTables.BuiltInTotems, report);
 		database.ImportNotes = report.Finish();
 		database.RoutineNotes = report.FinishRoutine();
@@ -234,7 +242,7 @@ public static partial class RhostDatabaseTranslator
 
 			if (RhostNameTables.LockAttributes.TryGetValue(attribute.Number, out var lockName))
 			{
-				locks[lockName] = new PennMUSHLock(LockKey(attribute.Value), Creator: attribute.Owner);
+				locks[lockName] = new PennMUSHLock(report.Names.Rewrite(LockKey(attribute.Value)).Text, Creator: attribute.Owner);
 				report.Note(ImportWarningKind.Locks, $"Lock attribute {RhostNameTables.BuiltInAttributes[attribute.Number]}: imported as the {lockName} lock", source.DBRef);
 				continue;
 			}
@@ -247,7 +255,7 @@ public static partial class RhostDatabaseTranslator
 
 		if (!locks.ContainsKey("Basic") && source.Lock.Length > 0)
 		{
-			locks["Basic"] = new PennMUSHLock(LockKey(BareNumbers().Replace(source.Lock, "#$1")));
+			locks["Basic"] = new PennMUSHLock(report.Names.Rewrite(LockKey(BareNumbers().Replace(source.Lock, "#$1"))).Text);
 		}
 
 		if (folderAttributes.TryGetValue(source.DBRef, out var folders))
@@ -682,6 +690,54 @@ public static partial class RhostDatabaseTranslator
 
 	private static int Rank(string level) => RhostNameTables.LevelRoles.ToList().IndexOf(level);
 
+	/// <summary>SharpMUSH's built-in MUX-style comsys commands, which a softcode comsys such as SoftCom defines too.</summary>
+	private static readonly HashSet<string> ComsysCommands = new(StringComparer.OrdinalIgnoreCase)
+	{
+		"ADDCOM", "DELCOM", "ALLCOM", "CLEARCOM", "COMLIST", "COMTITLE",
+		"@CLIST", "@CEMIT", "@CBOOT", "@CWHO", "@CCREATE", "@CDESTROY", "@CSET", "@CCHOWN"
+	};
+
+	/// <summary>
+	/// A game running SoftCom answers <c>addcom</c>, <c>comlist</c> and the rest with its own <c>$</c>-commands, which
+	/// a built-in command of the same name would answer first. Each built-in one that a staff-owned object listening
+	/// for commands defines is turned off through <c>command_restrictions</c>; a player's own <c>$addcom</c> is not
+	/// enough.
+	/// </summary>
+	private static void ShadowedComsys(PennMUSHDatabase database, Report report)
+	{
+		var byNumber = database.Objects.ToDictionary(o => o.DBRef);
+		bool Staff(int dbref) => dbref == database.GodPlayer
+			|| (byNumber.TryGetValue(dbref, out var owner)
+				&& (owner.Flags.Contains("WIZARD", StringComparer.OrdinalIgnoreCase) || owner.Roles.Contains("immortal", StringComparer.OrdinalIgnoreCase)));
+		bool Listens(PennMUSHObject o) => !o.Flags.Any(flag => flag.Equals("NO_COMMAND", StringComparison.OrdinalIgnoreCase)
+			|| flag.Equals("HALT", StringComparison.OrdinalIgnoreCase));
+
+		var shadowed = database.Objects
+			.Where(o => Staff(o.Owner) && Listens(o))
+			.SelectMany(o => o.Attributes)
+			.Where(attribute => !attribute.Flags.Contains("no_command", StringComparer.OrdinalIgnoreCase))
+			.Select(attribute => CommandWord().Match(attribute.Value))
+			.Where(match => match.Success && ComsysCommands.Contains(match.Groups["word"].Value))
+			.Select(match => match.Groups["word"].Value.ToUpperInvariant())
+			.Distinct()
+			.Order(StringComparer.Ordinal)
+			.ToList();
+		if (shadowed.Count == 0)
+		{
+			return;
+		}
+
+		database.SourceOptions["command_restrictions"] = shadowed.ToDictionary(name => name, _ => new[] { "nobody" },
+			StringComparer.OrdinalIgnoreCase);
+		report.Line(ImportWarningKind.Channels, $"The world's own $-commands answer {string.Join(", ", shadowed)}, as a game " +
+			"running SoftCom does: the import turns SharpMUSH's built-in commands of those names off in command_restrictions, " +
+			"so its own commands answer instead. Take a name out of command_restrictions to have the built-in one back.");
+	}
+
+	/// <summary>The first word of a <c>$</c>-command's pattern: <c>addcom</c> in <c>$addcom *=*:...</c>.</summary>
+	[GeneratedRegex(@"^\$(?<word>[^\s*:?]+)[\s*:?]")]
+	private static partial Regex CommandWord();
+
 	/// <summary>One attribute as the import writes it, or null for one that is not imported.</summary>
 	private static PennMUSHAttribute? Attribute(RhostFlatfileAttribute attribute, RhostFlatfileObject source,
 		RhostFlatfile flatfile, Report report)
@@ -735,7 +791,7 @@ public static partial class RhostDatabaseTranslator
 				return null;
 			}
 
-			name = definition.Name.ToUpperInvariant();
+			name = report.Names.Name(definition.Name.ToUpperInvariant());
 			definitionFlags = definition.Flags;
 		}
 		else
@@ -826,7 +882,10 @@ public static partial class RhostDatabaseTranslator
 	{
 		var colour = ColourSubstitutionRewriter.Rewrite(value,
 			new ColourRewriteOptions(ColourSubstitutionDialect.RhostMush, ColourRewriteMode.Auto));
-		var rest = RhostSoftcodeRewriter.Rewrite(colour.Text, localFunctions);
+		var rhost = RhostSoftcodeRewriter.Rewrite(colour.Text, localFunctions);
+		var names = report.Names.Rewrite(rhost.Text);
+		var rest = new SoftcodeRewriteResult(names.Text,
+			names.Changed ? [.. rhost.Notes, "renamed attributes written under their new names"] : rhost.Notes);
 
 		var said = new List<string>();
 		if (colour.Changed)
@@ -937,6 +996,9 @@ public static partial class RhostDatabaseTranslator
 
 		/// <summary>The local functions each owner's code defines (<see cref="RhostDatabaseTranslator.LocalFunctions"/>).</summary>
 		public Dictionary<int, HashSet<string>> LocalFunctions { get; set; } = [];
+
+		/// <summary>User attribute names SharpMUSH refuses, renamed, and the code that names them.</summary>
+		public AttributeNameRewriter Names { get; init; } = AttributeNameRewriter.For([]);
 
 		/// <summary>The attributes whose softcode was rewritten, reported apart from the notes.</summary>
 		public List<SoftcodeRewrite> Rewrites { get; } = [];

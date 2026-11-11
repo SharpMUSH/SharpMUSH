@@ -319,6 +319,29 @@ public class TinyMuxDatabaseReaderTests
 		await Assert.That(describe.After).IsEqualTo("ansi(r,Welcome)%bto Limbo.");
 	}
 
+	/// <summary>
+	/// A user attribute named with characters SharpMUSH refuses is imported under a name it takes, and code that
+	/// names it whole follows; the report names each rename.
+	/// </summary>
+	[Test]
+	public async Task RenamesAttributeNamesSharpMushRefuses()
+	{
+		var text = (await File.ReadAllTextAsync(Fixture("tinymux-v5.flat")))
+			.Replace("\"CMD_HELLO\"", "\"cmd.hello()\"")
+			.Replace("$hello:@pemit %#=Hi", "$hello:@pemit %#=[u(me/Cmd.Hello())] [u(me/cmd.hello()x)]");
+		using var stream = new MemoryStream(Encoding.UTF8.GetBytes(text));
+
+		var database = TinyMuxDatabaseReader.Read(stream);
+
+		var command = Object(database, 5).Attributes.Single(a => a.Name == "CMD.HELLO__");
+		await Assert.That(command.Value).IsEqualTo("$hello:@pemit %#=[u(me/CMD.HELLO__)] [u(me/cmd.hello()x)]");
+		await Assert.That(database.ImportNotes.Select(note => note.Text)).Contains(
+			"Attribute CMD.HELLO(): imported as CMD.HELLO__, as SharpMUSH takes no ( ) or other such characters in an " +
+			"attribute name; code that names it whole is rewritten, a name built at run time is not");
+		await Assert.That(database.SoftcodeRewrites.Select(rewrite => rewrite.ToString()))
+			.Contains("#5/CMD.HELLO__: renamed attributes written under their new names");
+	}
+
 	[Test]
 	public async Task ReadsQuotedStringsAcrossLines()
 	{
