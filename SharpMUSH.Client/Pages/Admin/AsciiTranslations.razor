@@ -9,7 +9,7 @@
 <AdminPageTitle Page="@Loc["AsciiTranslations"]" />
 
 <div class="config-section-page" data-config-option="AsciiTranslations.Translations">
-    <PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["AsciiTranslations"]" Description="@Loc["AsciiTranslationsDescription"]" />
+    <PageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["AsciiTranslations"]" Description="@Loc["AsciiTranslationsDescription"]" />
 
     <AdminKeyValueList ConfigurationOptionKey="AsciiTranslations.Translations" Text="@Text"
                        Load="@(() => AsciiTranslationsService.GetAsync().AsEntriesAsync())"

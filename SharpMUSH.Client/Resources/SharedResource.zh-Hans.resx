@@ -9483,4 +9483,19 @@
   <data name="WidStatsQuietPlay" xml:space="preserve">
     <value>开始游戏</value>
   </data>
+  <data name="NavRowMore" xml:space="preserve">
+    <value>{0} 的更多操作</value>
+  </data>
+  <data name="AuthAccountPasswordLabel" xml:space="preserve">
+    <value>账号密码</value>
+  </data>
+  <data name="AuthUnlinkIdentityConfirm" xml:space="preserve">
+    <value>你将无法再使用 {0} 登录。之后可以重新关联。</value>
+  </data>
+  <data name="AuthRemovePasswordConfirmTitle" xml:space="preserve">
+    <value>移除账号密码？</value>
+  </data>
+  <data name="AuthRemovePasswordConfirm" xml:space="preserve">
+    <value>你将改用通行密钥或已关联的服务登录。之后可以重新设置密码。</value>
+  </data>
 </root>

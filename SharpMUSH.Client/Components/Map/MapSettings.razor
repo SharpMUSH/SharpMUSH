@@ -83,7 +83,7 @@
         <MudNumericField T="double?" @bind-Value="_height" Label="@Loc[Graph ? "NavMapSettingsHeightPixels" : "NavMapSettingsHeight"]" Variant="Variant.Outlined" Min="1" />
         @if (Graph)
         {
-            <MudButton Variant="Variant.Text" Disabled="@string.IsNullOrWhiteSpace(_backdrop)" OnClick="SizeFromPictureAsync">@Loc["NavMapSettingsFromPicture"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Disabled="@string.IsNullOrWhiteSpace(_backdrop)" OnClick="SizeFromPictureAsync">@Loc["NavMapSettingsFromPicture"]</MudButton>
         }
         <MudButton Variant="Variant.Outlined" Disabled="@(_width is not > 0 || _height is not > 0)" OnClick="SizeAsync">@Loc["NavMapSettingsSet"]</MudButton>
     </div>
@@ -107,7 +107,7 @@
                         }
                     </span>
                     <span>@entry.Label <span class="map-builder-dim">@entry.Type</span></span>
-                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => EditLegend(entry)">@Loc["NavMapSettingsEdit"]</MudButton>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="() => EditLegend(entry)">@Loc["NavMapSettingsEdit"]</MudButton>
                 </li>
             }
         </ul>

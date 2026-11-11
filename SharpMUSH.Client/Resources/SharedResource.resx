@@ -12735,4 +12735,19 @@
   <data name="GuideIdentityCustomSubgenre" xml:space="preserve">
     <value>This subgenre is not in MSSP's suggested list. Custom values are allowed.</value>
   </data>
+  <data name="NavRowMore" xml:space="preserve">
+    <value>More for {0}</value>
+  </data>
+  <data name="AuthAccountPasswordLabel" xml:space="preserve">
+    <value>Account password</value>
+  </data>
+  <data name="AuthUnlinkIdentityConfirm" xml:space="preserve">
+    <value>You will no longer be able to sign in with {0}. You can link it again later.</value>
+  </data>
+  <data name="AuthRemovePasswordConfirmTitle" xml:space="preserve">
+    <value>Remove your account password?</value>
+  </data>
+  <data name="AuthRemovePasswordConfirm" xml:space="preserve">
+    <value>You will sign in with a passkey or a linked service instead. You can set a password again later.</value>
+  </data>
 </root>

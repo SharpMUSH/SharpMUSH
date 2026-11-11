@@ -33,7 +33,7 @@ else if (_error is not null)
 {
     <div style="padding:var(--cpad);">
         <MudAlert Severity="Severity.Error" Class="scene-load-error">@_error</MudAlert>
-        <MudButton Href="/scenes/active" Color="Color.Primary" Variant="Variant.Text" Class="mt-2">
+        <MudButton Href="/scenes/active" Variant="Variant.Outlined" Class="mt-2">
             @Loc["RolBackToActiveScenes"]
         </MudButton>
     </div>
@@ -42,7 +42,7 @@ else if (_notFound)
 {
     <div style="padding:var(--cpad);">
         <MudAlert Severity="Severity.Warning">@Loc["RolSceneNotFound"]</MudAlert>
-        <MudButton Href="/scenes/active" Color="Color.Primary" Variant="Variant.Text" Class="mt-2">
+        <MudButton Href="/scenes/active" Variant="Variant.Outlined" Class="mt-2">
             @Loc["RolBackToActiveScenes"]
         </MudButton>
     </div>

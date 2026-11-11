@@ -10,7 +10,7 @@
 <AdminPageTitle Page="@Loc["PkgAuthorHeading"]" />
 
 <div class="page-stack page-stack--padded pkg-page">
-    <PlainPageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["PkgAuthorHeading"]" Description="@Loc["PkgAuthorDescription"]" />
+    <PageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["PkgAuthorHeading"]" Description="@Loc["PkgAuthorDescription"]" />
 
     <div class="pkg-step">
         <SectionLabel>@Loc["WidFormStepOf", 1, 4]</SectionLabel>
@@ -18,7 +18,7 @@
             <div class="pkg-card-body">
                 <ListEditor Items="_objids" ItemsChanged="@(objids => _objids = objids)" Label="@Loc["PkgObjectIdsLabel"]"
                             Placeholder="#847:1778518155494" Mono="true" Separators="ObjidSeparators" Class="pkg-objids" />
-                <MudButton Class="mt-2 pkg-btn-primary" Variant="Variant.Filled" Disabled="@_busy" OnClick="@ScanAsync">
+                <MudButton Class="mt-2 pkg-btn-primary" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_busy" OnClick="@ScanAsync">
                     @Loc["PkgScanSelection"]
                 </MudButton>
             </div>
@@ -141,7 +141,7 @@
                         <MudTextField @bind-Value="_description" Label="@Loc["PkgDescriptionLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
                     </MudItem>
                 </MudGrid>
-                <MudButton Class="mt-3 pkg-btn-primary" Variant="Variant.Filled" Disabled="@_busy" OnClick="@ExportAsync">
+                <MudButton Class="mt-3 pkg-btn-primary" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_busy" OnClick="@ExportAsync">
                     @Loc["PkgExportYaml"]
                 </MudButton>
             </div>
@@ -159,10 +159,10 @@
         </MudText>
     </DialogContent>
     <DialogActions>
-        <MudButton Href="@DownloadHref" download="package.yaml" Color="Color.Primary" Variant="Variant.Filled">
+        <MudButton Href="@DownloadHref" download="package.yaml" Variant="Variant.Filled" Color="Color.Primary">
             @Loc["PkgDownload"]
         </MudButton>
-        <MudButton OnClick="@(() => _showExport = false)">@Loc["PkgClose"]</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="@(() => _showExport = false)">@Loc["PkgClose"]</MudButton>
     </DialogActions>
 </MudDialog>
 

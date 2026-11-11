@@ -437,7 +437,7 @@
                                    OnClick="() => { (Element[arrayKey] as JsonArray)?.RemoveAt(index); Changed(); }" />
                 </div>
             }
-            <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Add"
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add"
                        OnClick="() => AddPair(arrayKey, first, second)">
                 @Loc["LayBldAddRow"]
             </MudButton>

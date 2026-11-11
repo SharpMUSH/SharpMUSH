@@ -18,7 +18,7 @@
 	border-radius: var(--radius-row);
 }
 
-/* The page's own padding, then PlainPageHeader's title and lede above a card. */
+/* The page's own padding, then PageHeader's title and lede above a card. */
 .kit-route-skeleton {
 	display: flex;
 	flex-direction: column;

@@ -431,8 +431,8 @@
                 @if (!Layout.IsGraph && room.Placed)
                 {
                     <div class="map-builder-row">
-                        <MudButton Variant="Variant.Text" OnClick="() => StartVertical(1, room)">@Loc["NavMapDigAbove"]</MudButton>
-                        <MudButton Variant="Variant.Text" OnClick="() => StartVertical(-1, room)">@Loc["NavMapDigBelow"]</MudButton>
+                        <MudButton Variant="Variant.Outlined" OnClick="() => StartVertical(1, room)">@Loc["NavMapDigAbove"]</MudButton>
+                        <MudButton Variant="Variant.Outlined" OnClick="() => StartVertical(-1, room)">@Loc["NavMapDigBelow"]</MudButton>
                     </div>
                     @if (_vertical != 0)
                     {
@@ -487,7 +487,7 @@
                             <MudTextField T="string" @bind-Value="_exitNames" Label="@Loc["NavMapExitNames"]" Variant="Variant.Outlined" Immediate="true"
                                           HelperText="@(problem ?? Loc["NavMapExitHelp"].Value)" Error="@(problem is not null)" />
                             <div class="map-builder-row">
-                                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => _exitEditing = null">@Loc["NavMapCancel"]</MudButton>
+                                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="() => _exitEditing = null">@Loc["NavMapCancel"]</MudButton>
                                 <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@(problem is not null)"
                                            OnClick="() => RenameExitAsync(exit.Id)">@Loc["NavMapSetName"]</MudButton>
                             </div>
@@ -505,8 +505,8 @@
                         @if (exit.Editable)
                         {
                             <span class="map-builder-row">
-                                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => StartRenameExit(exit)">@Loc["NavMapRename"]</MudButton>
-                                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error" OnClick="() => RemoveExitAsync(exit.Id)">@Loc["NavMapRemoveExit"]</MudButton>
+                                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="() => StartRenameExit(exit)">@Loc["NavMapRename"]</MudButton>
+                                <MudButton Variant="Variant.Text" Color="Color.Error" Size="Size.Small" OnClick="() => RemoveExitAsync(exit.Id)">@Loc["NavMapRemoveExit"]</MudButton>
                             </span>
                         }
                         @if (oneWay.TryGetValue(exit.Id, out var missing) && Layout.Rooms.TryGetValue(exit.Destination!, out var target))
@@ -547,7 +547,7 @@
                 <MudTextField T="string" @bind-Value="_backNames" Label="@Loc["NavMapExitBack"]" Variant="Variant.Outlined" Immediate="true"
                               HelperText="@(problem ?? Loc["NavMapExitHelp"].Value)" Error="@(problem is not null)" />
                 <div class="map-builder-row">
-                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => _backFor = null">@Loc["NavMapCancel"]</MudButton>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="() => _backFor = null">@Loc["NavMapCancel"]</MudButton>
                     <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@(problem is not null)"
                                OnClick="() => AddWayBackAsync(target.Room.Id, room.Room.Id)">@Loc["NavMapAddToPlan"]</MudButton>
                 </div>
@@ -716,7 +716,7 @@
         <section class="map-builder-section" aria-labelledby="map-settings-title">
             <div class="map-builder-row">
                 <h3 id="map-settings-title" class="map-builder-title">@Loc["NavMapSettings"]</h3>
-                <MudButton Variant="Variant.Text" aria-expanded="@(_settingsOpen ? "true" : "false")" aria-controls="map-settings-body"
+                <MudButton Variant="Variant.Outlined" aria-expanded="@(_settingsOpen ? "true" : "false")" aria-controls="map-settings-body"
                            OnClick="() => _settingsOpen = !_settingsOpen">@Loc[_settingsOpen ? "NavMapSettingsHide" : "NavMapSettingsShow"]</MudButton>
             </div>
             @if (_settingsOpen)
@@ -862,7 +862,7 @@
                     <div class="map-builder-row" role="group" aria-label="@Loc["NavMapTerrainTypes"]">
                         @foreach (var entry in Layout.Map.Legend)
                         {
-                            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => _paintType = entry.Type">@entry.Label</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="() => _paintType = entry.Type">@entry.Label</MudButton>
                         }
                     </div>
                 }
@@ -917,8 +917,8 @@
             }
             }
             <div class="map-builder-row">
-                <MudButton Variant="Variant.Text" OnClick="() => HidePlaceAsync(x, y, true)">@Loc["NavMapHidePlace"]</MudButton>
-                <MudButton Variant="Variant.Text" OnClick="() => HidePlaceAsync(x, y, false)">@Loc["NavMapShowPlace"]</MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="() => HidePlaceAsync(x, y, true)">@Loc["NavMapHidePlace"]</MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="() => HidePlaceAsync(x, y, false)">@Loc["NavMapShowPlace"]</MudButton>
             </div>
             <div class="map-builder-row">
                 <MudTextField T="string" @bind-Value="_placeRoom" Label="@Loc["NavMapPlaceRoomField"]" Variant="Variant.Outlined" Immediate="true"
@@ -950,7 +950,7 @@
                                 @($" · {Loc[$"NavMapSideState{kind}"]}")
                             }
                         </span>
-                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => UnlinkAsync(x, y, link.Way)">@Loc["NavMapUnlink"]</MudButton>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="() => UnlinkAsync(x, y, link.Way)">@Loc["NavMapUnlink"]</MudButton>
                     </li>
                 }
             </ul>
@@ -1151,7 +1151,7 @@
                     {
                         <li>
                             <span>@room.Name <span class="map-builder-dim">@room.Id</span></span>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => AddAsync(room)">@Loc["NavMapAdd"]</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="() => AddAsync(room)">@Loc["NavMapAdd"]</MudButton>
                         </li>
                     }
                 </ul>
@@ -1226,14 +1226,14 @@
                     <li>
                         <div class="map-builder-row">
                             <strong>@Title(change)</strong>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="_applying" OnClick="() => DropAsync(change.Key)">@Loc["NavMapDrop"]</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="_applying" OnClick="() => DropAsync(change.Key)">@Loc["NavMapDrop"]</MudButton>
                         </div>
                         <pre class="map-review-commands">@string.Join("\n", change.Steps.Select(step => Plan.Show(step.Command)))</pre>
                     </li>
                 }
             </ol>
             <div class="map-builder-row">
-                <MudButton Variant="Variant.Text" Disabled="_applying" OnClick="() => _reviewing = false">@Loc["NavMapBackToMap"]</MudButton>
+                <MudButton Variant="Variant.Outlined" Disabled="_applying" OnClick="() => _reviewing = false">@Loc["NavMapBackToMap"]</MudButton>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_applying || Plan.Changes.Count == 0 || OverQuota)" OnClick="ApplyAsync">
                     @Loc["NavMapApply", Plan.Changes.Count]
                 </MudButton>

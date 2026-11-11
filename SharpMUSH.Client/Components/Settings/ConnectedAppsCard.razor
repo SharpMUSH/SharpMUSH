@@ -34,7 +34,7 @@
                                             : Loc["AuthPasskeyNeverUsed"])
                                     </div>
                                 </div>
-                                <button class="acct-btn acct-btn-outline" disabled="@_busy" @onclick="() => RevokeAsync(grant)">@Loc["OAuthAppsRevoke"]</button>
+                                <MudButton Variant="Variant.Outlined" Disabled="@_busy" OnClick="() => RevokeAsync(grant)">@Loc["OAuthAppsRevoke"]</MudButton>
                             </li>
                         }
                     </ul>

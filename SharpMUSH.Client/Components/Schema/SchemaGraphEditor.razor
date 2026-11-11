@@ -41,11 +41,11 @@
         }
         @if (!Locked && _draft.Nodes.Count > 1)
         {
-            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.AccountTree" Class="graph-tidy" OnClick="TidyAsync">@Loc["WidGraphTidy"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.AccountTree" Class="graph-tidy" OnClick="TidyAsync">@Loc["WidGraphTidy"]</MudButton>
         }
         @if (!string.IsNullOrWhiteSpace(Spec?.Check))
         {
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Checklist"
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Checklist"
                        Disabled="Busy" OnClick="CheckAsync">@Loc["WidGraphCheck"]</MudButton>
         }
     </div>

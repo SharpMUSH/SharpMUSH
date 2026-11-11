@@ -15,7 +15,7 @@
 <div class="pkg-review">
 @if (_plan is null)
 {
-    <PlainPageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["PkgReview"]" />
+    <PageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["PkgReview"]" />
     @if (_loadError is not null)
     {
         <MudAlert Severity="Severity.Error">@_loadError</MudAlert>
@@ -29,8 +29,8 @@
 }
 else
 {
-    <PlainPageHeader Kicker="@Loc["AdmGroupPortal"]"
-                     Title="@($"{(_plan.Changeset.Kind == PackageRevisionKind.Install ? Loc["PkgInstallHeading"] : Loc["PkgUpgradeHeading"])}: {_plan.PackageId} {_plan.Version}")">
+    <PageHeader Kicker="@Loc["AdmGroupPortal"]"
+                Title="@($"{(_plan.Changeset.Kind == PackageRevisionKind.Install ? Loc["PkgInstallHeading"] : Loc["PkgUpgradeHeading"])}: {_plan.PackageId} {_plan.Version}")">
         <DescriptionContent>
             @if (IsUpload)
             {
@@ -49,7 +49,7 @@ else
             <CapsuleButton Href="@(_batchStepId is not null ? "/admin/packages/batch" : IsUpload ? "/admin/packages" : "/admin/packages/browse")">@Loc["Cancel"]</CapsuleButton>
             <CapsuleButton Primary="true" Disabled="@(!CanApply || _busy)" OnClick="@ApplyAsync">@Loc[_batchStepId is null ? "PkgApply" : "PkgBatchSaveChoices"]</CapsuleButton>
         </Actions>
-    </PlainPageHeader>
+    </PageHeader>
 
     @* ── Blockers ─────────────────────────────────────────────────────── *@
     @foreach (var issue in _plan.Changeset.DependencyIssues)

@@ -7,7 +7,7 @@
 
 <AdminPageTitle Page="@Loc["AdmRemoteBackupTitle"]" />
 <div class="page-stack page-stack--padded remote-backups-page">
-    <PlainPageHeader Kicker="@Loc["AdmGroupServer"]" Title="@Loc["AdmRemoteBackupTitle"]" Description="@Loc["AdmRemoteBackupDescription"]" />
+    <PageHeader Kicker="@Loc["AdmGroupServer"]" Title="@Loc["AdmRemoteBackupTitle"]" Description="@Loc["AdmRemoteBackupDescription"]" />
     @if (_error is not null)
     {
         <MudAlert Severity="Severity.Error">@_error</MudAlert>
@@ -52,7 +52,7 @@
         @foreach (var unknown in status.Runs.Where(run => run.State == "unknown"))
         {
             <MudAlert Severity="Severity.Warning">@Loc["AdmRemoteBackupAbandonWarning"]</MudAlert>
-            <MudButton Color="Color.Warning" Variant="Variant.Outlined" Disabled="_busy" OnClick="@(() => AbandonAsync(unknown.Id))">@Loc["AdmRemoteBackupAbandon"]</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Error" Disabled="_busy" OnClick="@(() => AbandonAsync(unknown.Id))">@Loc["AdmRemoteBackupAbandon"]</MudButton>
         }
         <MudText Typo="Typo.h6">@Loc["AdmRemoteBackupHistory"]</MudText>
         <MudTable Items="status.Runs" Dense="true" Hover="true">

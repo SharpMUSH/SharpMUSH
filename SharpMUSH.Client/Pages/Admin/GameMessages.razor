@@ -12,7 +12,7 @@
 <AdminPageTitle Page="@Loc["AdmMessagesTitle"]" />
 
 <div class="page-stack page-stack--padded adm-msg">
-    <PlainPageHeader Kicker="@Loc["AdmGroupContent"]" Title="@Loc["AdmMessagesTitle"]" Description="@Loc["AdmMessagesDescription"]" />
+    <PageHeader Kicker="@Loc["AdmGroupContent"]" Title="@Loc["AdmMessagesTitle"]" Description="@Loc["AdmMessagesDescription"]" />
 
     <LoadState TValue="GameMessagesResponse" Value="_state" Loading="@(_state is null && _error is null)" Error="@_error" Context="state">
         <KitCard Title="@Loc["AdmMessagesSourceTitle"]" Sub="@Loc["AdmMessagesSourceSub"]">
@@ -93,11 +93,11 @@
                                 }
                                 <span class="adm-msg-hint">@Loc["AdmMessagesEditorHint"]</span>
                                 <span class="adm-msg-spacer"></span>
-                                <MudButton Size="Size.Small" Variant="Variant.Text" id="messages-reset"
+                                <MudButton Size="Size.Small" Variant="Variant.Outlined" id="messages-reset"
                                            Disabled="@(_busy || selected.IsDefault)" OnClick="() => ResetAsync(selected.Message)">
                                     @Loc["AdmMessagesReset"]
                                 </MudButton>
-                                <MudButton Size="Size.Small" Variant="Variant.Text" id="messages-revert"
+                                <MudButton Size="Size.Small" Variant="Variant.Outlined" id="messages-revert"
                                            Disabled="@(_busy || !IsDirty(selected))" OnClick="() => Revert(selected)">
                                     @Loc["AdmMessagesRevert"]
                                 </MudButton>

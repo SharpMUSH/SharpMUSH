@@ -9483,4 +9483,19 @@
   <data name="WidStatsQuietPlay" xml:space="preserve">
     <value>Играть</value>
   </data>
+  <data name="NavRowMore" xml:space="preserve">
+    <value>Ещё для {0}</value>
+  </data>
+  <data name="AuthAccountPasswordLabel" xml:space="preserve">
+    <value>Пароль учётной записи</value>
+  </data>
+  <data name="AuthUnlinkIdentityConfirm" xml:space="preserve">
+    <value>Вы больше не сможете входить через {0}. Позже его можно привязать снова.</value>
+  </data>
+  <data name="AuthRemovePasswordConfirmTitle" xml:space="preserve">
+    <value>Удалить пароль учётной записи?</value>
+  </data>
+  <data name="AuthRemovePasswordConfirm" xml:space="preserve">
+    <value>Вы будете входить с ключом доступа или через привязанный сервис. Пароль можно задать снова позже.</value>
+  </data>
 </root>

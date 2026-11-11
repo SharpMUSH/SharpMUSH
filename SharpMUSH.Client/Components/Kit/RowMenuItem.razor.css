@@ -1,0 +1,29 @@
+.kit-rowmenu-item {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	min-height: 40px;
+	padding: 0 var(--space-4);
+	border: 0;
+	border-radius: var(--radius);
+	background: none;
+	color: var(--text);
+	font: inherit;
+	font-size: var(--text-sm);
+	text-align: left;
+	cursor: pointer;
+}
+
+.kit-rowmenu-item:hover:not(:disabled),
+.kit-rowmenu-item:focus-visible {
+	background: var(--surface-2);
+}
+
+.kit-rowmenu-item:disabled {
+	opacity: .4;
+	cursor: default;
+}
+
+.kit-rowmenu-item--danger {
+	color: var(--danger);
+}

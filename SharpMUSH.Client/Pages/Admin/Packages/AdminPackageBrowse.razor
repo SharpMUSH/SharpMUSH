@@ -15,7 +15,7 @@
 <AdminPageTitle Page="@Loc["PkgBrowseHeading"]" />
 
 <div class="page-stack page-stack--padded pkg-page">
-    <PlainPageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["PkgBrowseHeading"]" Description="@Loc["PkgBrowseDescription"]" />
+    <PageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["PkgBrowseHeading"]" Description="@Loc["PkgBrowseDescription"]" />
 
     @if (_remotesFailure is not null)
     {
@@ -36,7 +36,7 @@
                 <MudSelectItem Value="@remote.Name">@remote.Name</MudSelectItem>
             }
         </MudSelect>
-        <MudButton Class="pkg-btn-primary" Variant="Variant.Filled" Disabled="@(_busy || string.IsNullOrEmpty(_selectedRemote))"
+        <MudButton Class="pkg-btn-primary" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_busy || string.IsNullOrEmpty(_selectedRemote))"
                    OnClick="@BrowseAsync">@Loc["PkgRefreshAndBrowse"]</MudButton>
         @if (_remoteRecord is not null)
         {

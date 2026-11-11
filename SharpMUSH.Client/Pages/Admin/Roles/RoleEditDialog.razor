@@ -37,7 +37,7 @@
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Disabled="_saving">@Loc["Cancel"]</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="Cancel" Disabled="_saving">@Loc["Cancel"]</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save" Disabled="_saving">
             @if (_saving)
             {

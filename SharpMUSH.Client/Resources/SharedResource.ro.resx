@@ -9483,4 +9483,19 @@
   <data name="WidStatsQuietPlay" xml:space="preserve">
     <value>Joacă</value>
   </data>
+  <data name="NavRowMore" xml:space="preserve">
+    <value>Mai multe pentru {0}</value>
+  </data>
+  <data name="AuthAccountPasswordLabel" xml:space="preserve">
+    <value>Parola contului</value>
+  </data>
+  <data name="AuthUnlinkIdentityConfirm" xml:space="preserve">
+    <value>Nu te vei mai putea conecta cu {0}. Îl poți asocia din nou mai târziu.</value>
+  </data>
+  <data name="AuthRemovePasswordConfirmTitle" xml:space="preserve">
+    <value>Elimini parola contului?</value>
+  </data>
+  <data name="AuthRemovePasswordConfirm" xml:space="preserve">
+    <value>Te vei conecta cu o cheie de acces sau cu un serviciu asociat. Poți stabili din nou o parolă mai târziu.</value>
+  </data>
 </root>

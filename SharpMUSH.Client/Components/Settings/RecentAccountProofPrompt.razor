@@ -12,10 +12,10 @@
         <MudTextField @bind-Value="_password" Label="@Loc["AuthCurrentPassword"]" InputType="InputType.Password" Variant="Variant.Outlined" Disabled="_busy" />
         <MudButton OnClick="Password" Disabled="_busy" Variant="Variant.Outlined">@(ButtonLabel ?? Loc["AuthVerifyAccount"].Value)</MudButton>
     }
-    @if (_hasPasskeys) { <MudButton OnClick="Passkey" Disabled="_busy">@Loc["AuthVerifyWithPasskey"]</MudButton> }
+    @if (_hasPasskeys) { <MudButton Variant="Variant.Outlined" OnClick="Passkey" Disabled="_busy">@Loc["AuthVerifyWithPasskey"]</MudButton> }
     @foreach (var identity in _identities)
     {
-        <MudButton OnClick="() => External(identity.Provider, identity.Id)" Disabled="_busy">@Loc["AuthContinueWith", identity.Name]</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="() => External(identity.Provider, identity.Id)" Disabled="_busy">@Loc["AuthContinueWith", identity.Name]</MudButton>
     }
     @if (_error is not null) { <MudAlert Severity="Severity.Error" role="alert">@_error</MudAlert> }
 </div>

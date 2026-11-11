@@ -18,7 +18,7 @@
 @if (!_characterActive)
 {
     <div class="mail-page">
-        <PlainPageHeader Title="@Loc["Mail"]" />
+        <PageHeader Title="@Loc["Mail"]" />
         <EmptyState Class="mail-needs-character" Icon="@Icons.Material.Outlined.Mail">
             <ChildContent>@Loc["MailNeedsCharacter"]</ChildContent>
             <Action><CapsuleButton Href="/characters" Icon="@Icons.Material.Outlined.Groups">@Loc["Characters"]</CapsuleButton></Action>
@@ -28,11 +28,11 @@
 else
 {
     <div class="mail-page full-height">
-        <PlainPageHeader Title="@Loc["Mail"]">
+        <PageHeader Title="@Loc["Mail"]">
             <Actions>
                 <CapsuleButton Primary="true" Href="/mail/compose" Icon="@Icons.Material.Outlined.Edit">@Loc["Compose"]</CapsuleButton>
             </Actions>
-        </PlainPageHeader>
+        </PageHeader>
 
         <div class="mail-panes @(FolderEmpty ? "mail-panes--single" : null)">
             <KitCard Class="mail-list" Title="@_folder" Sub="@(_messages.Count > 0 ? Loc.Plural("NavMailMessageCount", "count", _messages.Count) : null)">

@@ -21,7 +21,7 @@
                                 <span class="acct-flag">@Loc["DiscordAccountLinkedOn", at.LocalDateTime.ToString("d")]</span>
                             }
                         </div>
-                        <button class="acct-btn acct-btn-outline" disabled="@_busy" @onclick="UnlinkAsync">@Loc["DiscordAccountUnlink"]</button>
+                        <MudButton Variant="Variant.Outlined" Disabled="@_busy" OnClick="UnlinkAsync">@Loc["DiscordAccountUnlink"]</MudButton>
                     </div>
                     break;
                 case DiscordAccountView:

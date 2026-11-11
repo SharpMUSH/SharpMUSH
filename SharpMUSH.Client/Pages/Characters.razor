@@ -14,12 +14,11 @@
    opaque to the portal) as chips, and the characters as portrait tiles. The address filters it:
    ?q= by name (the sidebar search), ?online=1 to who is connected, ?new=1 to the last fortnight. *@
 <div class="char-page">
-    <PlainPageHeader Title="@Loc["Characters"]" Description="@HeaderDescription">
-        <Actions>
-            <input name="character-search" class="char-filter" type="search" placeholder="@Loc["SearchCharacters"]" aria-label="@Loc["SearchCharacters"]"
-                   value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
-        </Actions>
-    </PlainPageHeader>
+    <PageHeader Title="@Loc["Characters"]" Description="@HeaderDescription">
+        <Search>
+            <PageSearch Id="character-search" Placeholder="@Loc["SearchCharacters"]" @bind-Value="_search" />
+        </Search>
+    </PageHeader>
 
     @if (!_loading && _categories.Count > 1)
     {

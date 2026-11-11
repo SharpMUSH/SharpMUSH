@@ -14,8 +14,7 @@
 <div class="welcome" data-guide-imagery="@Progress.Imagery.ToString().ToLowerInvariant()">
     <header class="welcome-intro">
         <div>
-            <h1>@Loc["GuideWelcomeGame", _game]</h1>
-            @if (Guide.Presentation?.Introduction is { Length: > 0 } introduction) { <p>@introduction</p> }
+            <PageHeader Title="@Loc["GuideWelcomeGame", _game]" Description="@Guide.Presentation?.Introduction" />
             <p>@Loc["GuideWelcomeIntro"]</p>
         </div>
         @if (!Progress.Active && !JourneyCompleted && HeaderArt is { } art && _failedArt != art.Url)

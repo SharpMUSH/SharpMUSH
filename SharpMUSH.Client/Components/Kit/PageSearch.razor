@@ -1,0 +1,17 @@
+@* The search box of a PageHeader's Search slot: one look for every page that filters what it lists. *@
+<MudTextField T="string" Value="@Value" ValueChanged="@ValueChanged" id="@Id"
+              Placeholder="@Placeholder" aria-label="@Placeholder" InputType="InputType.Search"
+              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+              Variant="Variant.Outlined" Margin="Margin.Dense" Class="kit-page-search-field"
+              Immediate="true" DebounceInterval="@DebounceInterval" OnDebounceIntervalElapsed="@OnDebounced" />
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter, EditorRequired] public string Placeholder { get; set; } = string.Empty;
+    [Parameter] public string? Id { get; set; }
+
+    /// <summary>Milliseconds after the last keystroke before <see cref="OnDebounced"/>; 0 for none.</summary>
+    [Parameter] public int DebounceInterval { get; set; }
+    [Parameter] public EventCallback<string> OnDebounced { get; set; }
+}

@@ -13,8 +13,10 @@
     {
         @if (!Embedded)
         {
-            <h1>@Title</h1>
-            <a href="@WikiLocaleLinks.WithLocale("/wiki", _state.Locale)">@Loc["NavWikiHome"]</a>
+            <div>
+                <BackLink Href="@WikiLocaleLinks.WithLocale("/wiki", _state.Locale)">@Loc["NavWikiHome"]</BackLink>
+                <PageHeader Title="@Title" />
+            </div>
         }
         @if (navigation.LandingPage is { } landing)
         {

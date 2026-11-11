@@ -6,6 +6,7 @@ using Markdig;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using MudBlazor;
+using SharpMUSH.Client.Components.Kit;
 using SharpMUSH.Client.Models.Applications;
 
 namespace SharpMUSH.Client.Components.Schema;
@@ -136,14 +137,17 @@ public static partial class SchemaRendering
 	public static Color ParseColor(string? name, Color fallback = Color.Default)
 		=> name is not null && Colors.TryGetValue(name.Trim(), out var color) ? color : fallback;
 
-	/// <summary>A button's variant: <c>filled</c>, <c>outlined</c> or <c>text</c>; anything else is <paramref name="fallback"/>.</summary>
-	public static Variant ParseVariant(string? name, Variant fallback = Variant.Outlined)
-		=> name?.Trim().ToLowerInvariant() switch
+	/// <summary>
+	/// A button's style, one of the portal's three (<see cref="ButtonKind"/>): <c>color</c> <c>error</c> is the
+	/// quiet danger button, <c>variant</c> <c>filled</c> or <c>color</c> <c>primary</c> the primary one, and
+	/// anything else the secondary one.
+	/// </summary>
+	public static ButtonKind ParseButtonKind(string? variant, string? color)
+		=> (variant?.Trim().ToLowerInvariant(), color?.Trim().ToLowerInvariant()) switch
 		{
-			"filled" => Variant.Filled,
-			"outlined" => Variant.Outlined,
-			"text" => Variant.Text,
-			_ => fallback
+			(_, "error") => ButtonKind.DangerQuiet,
+			("filled", _) or (_, "primary") => ButtonKind.Primary,
+			_ => ButtonKind.Secondary
 		};
 
 	[GeneratedRegex(@"\{([A-Za-z0-9_.\-]+)\}")]

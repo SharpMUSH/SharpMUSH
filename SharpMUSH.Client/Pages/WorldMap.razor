@@ -23,8 +23,8 @@
 <Pending><RouteSkeleton /></Pending>
 <ChildContent>
 <div class="map-page">
-    <PlainPageHeader Title="@(_layout?.Map.Map.Name ?? Loc["NavWorldMap"].Value)" Kicker="@(_layout is null ? null : Loc["NavWorldMap"].Value)"
-                     Description="@(_layout is null ? null : KindLabel(_layout.Map.Map.Kind))">
+    <PageHeader Title="@(_layout?.Map.Map.Name ?? Loc["NavWorldMap"].Value)" Kicker="@(_layout is null ? null : Loc["NavWorldMap"].Value)"
+                Description="@(_layout is null ? null : KindLabel(_layout.Map.Map.Kind))">
         <Actions>
             @if (_layout is not null)
             {
@@ -49,7 +49,7 @@
                 }
             }
         </Actions>
-    </PlainPageHeader>
+    </PageHeader>
 
     @if (AccountAuth.ActiveCharacter is null)
     {
@@ -677,7 +677,7 @@
         if (_here is not { CanBuild: true }) return;
         if (!_creating)
         {
-            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.Add" Class="map-new" OnClick="() => (_creating, _newError) = (true, null)">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Add" Class="map-new" OnClick="() => (_creating, _newError) = (true, null)">
                 @Loc["NavMapNewMap"]
             </MudButton>
             return;
@@ -698,7 +698,7 @@
                 <p class="map-new-error" role="alert">@_newError</p>
             }
             <div class="map-new-actions">
-                <MudButton Variant="Variant.Text" Disabled="_making" OnClick="() => _creating = false">@Loc["NavMapCancel"]</MudButton>
+                <MudButton Variant="Variant.Outlined" Disabled="_making" OnClick="() => _creating = false">@Loc["NavMapCancel"]</MudButton>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_making || problem is not null)" OnClick="CreateMapAsync">
                     @Loc["NavMapCreate"]
                 </MudButton>
@@ -816,7 +816,7 @@
                 @if (_layout.Map.CanEdit && room.Room.Editable && _selected != _layout.Map.Here)
                 {
                     @* A builder goes straight to a room of theirs, as @tel would take them, whether or not a way leads there. *@
-                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.NearMe" Disabled="_walking"
+                    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.NearMe" Disabled="_walking"
                                OnClick="@(() => TeleportAsync($"@tel me={room.Room.Id}"))">
                         @Loc["NavMapGoThere"]
                     </MudButton>

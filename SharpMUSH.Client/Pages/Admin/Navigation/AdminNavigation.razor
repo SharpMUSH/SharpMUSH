@@ -15,7 +15,7 @@
 <AdminPageTitle Page="@Loc["AdmNavTitle"]" />
 
 <div class="page-stack page-stack--padded adm-nav">
-    <PlainPageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["AdmNavTitle"]" Description="@Loc["AdmNavDescription"]">
+    <PageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["AdmNavTitle"]" Description="@Loc["AdmNavDescription"]">
         <Actions>
             @if (_dirty)
             {
@@ -25,14 +25,14 @@
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_draft is null || _busy || _problem is not null)"
                        OnClick="SaveAsync" id="nav-save">@Loc["Save"]</MudButton>
         </Actions>
-    </PlainPageHeader>
+    </PageHeader>
 
     @if (_confirmReset)
     {
         <div class="adm-nav-banner" role="alertdialog" aria-labelledby="nav-reset-q">
             <span id="nav-reset-q">@Loc["AdmNavResetConfirm"]</span>
-            <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="ResetAsync" id="nav-reset-yes">@Loc["AdmNavReset"]</MudButton>
-            <MudButton Variant="Variant.Text" OnClick="() => _confirmReset = false">@Loc["Cancel"]</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="ResetAsync" id="nav-reset-yes">@Loc["AdmNavReset"]</MudButton>
+            <MudButton Variant="Variant.Outlined" OnClick="() => _confirmReset = false">@Loc["Cancel"]</MudButton>
         </div>
     }
     @if (_conflict)
@@ -107,13 +107,13 @@
                                     <div class="adm-nav-link-actions">
                                         <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
                                                    Disabled="@(string.IsNullOrWhiteSpace(_linkLabel) || string.IsNullOrWhiteSpace(_linkHref))">@Loc["AdmNavAddLink"]</MudButton>
-                                        <MudButton Variant="Variant.Text" OnClick="() => _linkFor = null">@Loc["Cancel"]</MudButton>
+                                        <MudButton Variant="Variant.Outlined" OnClick="() => _linkFor = null">@Loc["Cancel"]</MudButton>
                                     </div>
                                 </form>
                             }
                             else
                             {
-                                <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Link" OnClick="() => OpenLink(id)"
+                                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Link" OnClick="() => OpenLink(id)"
                                            id="@($"nav-add-link-{id}")">@Loc["AdmNavAddLink"]</MudButton>
                             }
                         </ChildContent>

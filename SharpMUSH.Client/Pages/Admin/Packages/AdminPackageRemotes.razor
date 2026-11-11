@@ -11,7 +11,7 @@
 <AdminPageTitle Page="@Loc["PkgRemotesHeading"]" />
 
 <div class="page-stack page-stack--padded pkg-page">
-    <PlainPageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["PkgRemotesHeading"]" Description="@Loc["PkgRemotesDescription"]" />
+    <PageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["PkgRemotesHeading"]" Description="@Loc["PkgRemotesDescription"]" />
 
 <div class="pkg-cols">
     <div>
@@ -65,7 +65,7 @@
                         </MudSelect>
                         <MudTextField @bind-Value="_newBranch" Label="@Loc["PkgBranchOptionalLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
                     </MudStack>
-                    <MudButton Class="pkg-btn-primary" Variant="Variant.Filled" Disabled="@_busy" OnClick="@AddRemoteAsync">
+                    <MudButton Class="pkg-btn-primary" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_busy" OnClick="@AddRemoteAsync">
                         @Loc["PkgAddRemote"]
                     </MudButton>
                 </MudStack>

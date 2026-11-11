@@ -10,8 +10,8 @@
 @* Reached from the link /link sends in Discord. The ticket proves which Discord user asked; confirming here, signed
    in, proves which account is theirs. *@
 <div class="discord-link-page">
-    <PlainPageHeader Kicker="@($"{Loc["Settings"]} · {Loc["AuthAccount"]}")" Title="@Loc["DiscordLinkTitle"]"
-                     Description="@Loc["DiscordLinkDescription"]" />
+    <PageHeader Kicker="@($"{Loc["Settings"]} · {Loc["AuthAccount"]}")" Title="@Loc["DiscordLinkTitle"]"
+                Description="@Loc["DiscordLinkDescription"]" />
 
     <FeatureGate Feature="@GameFeatures.Discord">
         <KitCard>

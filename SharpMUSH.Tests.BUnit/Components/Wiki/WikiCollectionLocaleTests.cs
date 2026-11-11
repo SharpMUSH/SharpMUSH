@@ -32,7 +32,7 @@ public class WikiCollectionLocaleTests : TrackingBunitContext
 		var cut = Render<WikiCollection>(parameters => parameters.Add(p => p.Collection, "all"));
 		cut.WaitForAssertion(() => RequireContains("Règle 00", cut.Find(".wiki-collection-page").TextContent));
 		await AssertCollectionArticleLink(cut.Find(".wiki-collection-page").GetAttribute("href"), "fr", "Règle");
-		await Assert.That(cut.Find("h1 + a").GetAttribute("href")).IsEqualTo("/wiki?lang=fr");
+		await Assert.That(cut.Find("a.kit-back").GetAttribute("href")).IsEqualTo("/wiki?lang=fr");
 		await cut.FindAll(".wiki-collection-paging button")[1].ClickAsync(new());
 		cut.WaitForAssertion(() => RequireContains("Règle 50", cut.Find(".wiki-collection-page").TextContent));
 		await cut.Find(".wiki-collection-featured button[aria-label$=': Guides français']").ClickAsync(new());

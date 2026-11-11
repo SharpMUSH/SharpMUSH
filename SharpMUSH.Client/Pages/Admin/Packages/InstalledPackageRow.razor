@@ -1,7 +1,7 @@
 @using SharpMUSH.Library.Models.Packages
 @inject IStringLocalizer<SharedResource> Loc
 
-@* An installed package: its kind, version, source and update state, and the check, README, history and uninstall actions. *@
+@* An installed package: its kind, version, source and update state, and the check, README and history actions, and uninstall in the row's menu. *@
 <PackageRow Icon="@PackageKinds.Icon(Main)" Kind="@Main.ToString().ToLowerInvariant()" Bridge="@Package.Bridge"
             IconTitle="@(Package.Bridge ? Loc["PkgKindBridgeOf", PackageKinds.Name(Main, Loc)] : PackageKinds.Name(Main, Loc))" Name="@(Package.Title ?? Package.Package.Id)"
             Id="@(Package.Title is null ? null : Package.Package.Id)">
@@ -49,7 +49,7 @@
     <Actions>
         @if (Update is null)
         {
-            <MudButton Variant="Variant.Text" Size="Size.Small"
+            <MudButton Variant="Variant.Outlined" Size="Size.Small"
                        Disabled="@Busy"
                        OnClick="@OnCheck">
                 @Loc["PkgCheck"]
@@ -63,11 +63,9 @@
             <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small" aria-label="@Loc["PkgRevisionHistory"]"
                            OnClick="@OnHistory" />
         </MudTooltip>
-        <MudTooltip Text="@Loc["PkgUninstall"]">
-            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" aria-label="@Loc["PkgUninstall"]"
-                           Color="Color.Error" Disabled="@Busy"
-                           OnClick="@OnUninstall" />
-        </MudTooltip>
+        <RowMenu Label="@Loc["NavRowMore", Package.Title ?? Package.Package.Id]" Disabled="@Busy">
+            <RowMenuItem Danger="true" Icon="@Icons.Material.Outlined.Delete" OnClick="@OnUninstall">@Loc["PkgUninstall"]</RowMenuItem>
+        </RowMenu>
     </Actions>
 </PackageRow>
 

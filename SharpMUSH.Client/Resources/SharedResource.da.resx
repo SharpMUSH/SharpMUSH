@@ -9483,4 +9483,19 @@
   <data name="WidStatsQuietPlay" xml:space="preserve">
     <value>Spil</value>
   </data>
+  <data name="NavRowMore" xml:space="preserve">
+    <value>Mere for {0}</value>
+  </data>
+  <data name="AuthAccountPasswordLabel" xml:space="preserve">
+    <value>Kontoens adgangskode</value>
+  </data>
+  <data name="AuthUnlinkIdentityConfirm" xml:space="preserve">
+    <value>Du kan ikke længere logge ind med {0}. Du kan tilknytte den igen senere.</value>
+  </data>
+  <data name="AuthRemovePasswordConfirmTitle" xml:space="preserve">
+    <value>Fjern kontoens adgangskode?</value>
+  </data>
+  <data name="AuthRemovePasswordConfirm" xml:space="preserve">
+    <value>Du logger i stedet ind med en adgangsnøgle eller en tilknyttet tjeneste. Du kan angive en adgangskode igen senere.</value>
+  </data>
 </root>

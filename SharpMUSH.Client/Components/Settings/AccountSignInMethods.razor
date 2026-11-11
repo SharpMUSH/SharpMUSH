@@ -33,16 +33,24 @@
                         </div>
                         @foreach (var identity in _identities.Where(identity => identity.Provider == provider.Id))
                         {
-                            <div class="signin-method signin-identity"><span>@identity.Label</span><MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error" OnClick="() => Choose(AccountSecurityOperation.UnlinkIdentity, identity.Id)" Disabled="_busy">@Loc["AuthUnlink"]</MudButton></div>
+                            <div class="signin-method signin-identity"><span>@identity.Label</span>@IdentityMenu(identity.Id, identity.Label)</div>
                         }
                     </div>
                 }
                 @* A link through a service staff have since turned off can still be removed. *@
                 @foreach (var identity in _identities.Where(identity => _providers.All(provider => provider.Id != identity.Provider)))
                 {
-                    <div class="signin-method"><span class="signin-provider-name"><ProviderLogo Provider="@(identity.Provider ?? "")" />@identity.Label</span><MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error" OnClick="() => Choose(AccountSecurityOperation.UnlinkIdentity, identity.Id)" Disabled="_busy">@Loc["AuthUnlink"]</MudButton></div>
+                    <div class="signin-method"><span class="signin-provider-name"><ProviderLogo Provider="@(identity.Provider ?? "")" />@identity.Label</span>@IdentityMenu(identity.Id, identity.Label)</div>
                 }
-                @if(_hasPassword) { <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error" OnClick='() => Choose(AccountSecurityOperation.AccountPassword, "remove")' Disabled="_busy">@Loc["AuthRemoveAccountPassword"]</MudButton> }
+                @if (_hasPassword)
+                {
+                    <div class="signin-method signin-password">
+                        <span>@Loc["AuthAccountPasswordLabel"]</span>
+                        <RowMenu Label="@Loc["NavRowMore", Loc["AuthAccountPasswordLabel"]]" Disabled="_busy">
+                            <RowMenuItem Danger="true" Icon="@Icons.Material.Outlined.Delete" OnClick='() => Ask(AccountSecurityOperation.AccountPassword, "remove", null)'>@Loc["AuthRemoveAccountPassword"]</RowMenuItem>
+                        </RowMenu>
+                    </div>
+                }
                 <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick='() => Choose(AccountSecurityOperation.AccountPassword, "set")' Disabled="_busy">@Loc["AuthChangeAccountPassword"]</MudButton>
                 <MudTextField Variant="Variant.Outlined" @bind-Value="_newPassword" Label="@Loc["AuthNewPassword"]" InputType="InputType.Password" />
                 <MudTextField Variant="Variant.Outlined" @bind-Value="_confirmation" Label="@Loc["AuthConfirmNewPassword"]" InputType="InputType.Password" />
@@ -59,6 +67,10 @@
             @if (_error is not null) { <MudAlert Severity="Severity.Error" role="alert">@_error</MudAlert> }
         </div>
     </KitCard>
+    <ConfirmDialog Visible="_asking is not null" VisibleChanged="v => { if (!v) _asking = null; }"
+                   Title="@AskTitle" ConfirmText="@AskConfirmText" OnConfirm="Confirmed">
+        @AskBody
+    </ConfirmDialog>
 }
 @code {
     private AccountSecurityClient? _client;
@@ -80,6 +92,33 @@
         _loaded = true;
     }
     private void Choose(AccountSecurityOperation operation,string target) { _operation = null; _target = target; _operation = operation; _error = null; }
+
+    // Unlinking a sign-in and removing the password each take a way to sign in away: they sit in a menu and ask first.
+    private (AccountSecurityOperation Operation, string Target, string? Label)? _asking;
+
+    private RenderFragment IdentityMenu(string id, string label) => __builder =>
+    {
+        <RowMenu Label="@Loc["NavRowMore", label]" Disabled="_busy">
+            <RowMenuItem Danger="true" Icon="@Icons.Material.Outlined.LinkOff" OnClick="() => Ask(AccountSecurityOperation.UnlinkIdentity, id, label)">@Loc["AuthUnlink"]</RowMenuItem>
+        </RowMenu>
+    };
+
+    private void Ask(AccountSecurityOperation operation, string target, string? label) => _asking = (operation, target, label);
+
+    private bool AskingUnlink => _asking is { Operation: AccountSecurityOperation.UnlinkIdentity };
+
+    private string AskTitle => AskingUnlink ? Loc["AuthUnlinkConfirmTitle", _asking!.Value.Label ?? string.Empty] : Loc["AuthRemovePasswordConfirmTitle"];
+
+    private string AskBody => AskingUnlink ? Loc["AuthUnlinkIdentityConfirm", _asking!.Value.Label ?? string.Empty] : Loc["AuthRemovePasswordConfirm"];
+
+    private string AskConfirmText => AskingUnlink ? Loc["AuthUnlink"] : Loc["AuthRemoveAccountPassword"];
+
+    private void Confirmed()
+    {
+        if (_asking is not { } asking) return;
+        _asking = null;
+        Choose(asking.Operation, asking.Target);
+    }
     private async Task Apply(string grant)
     {
         if (_client is null || _operation is not {} op) return;

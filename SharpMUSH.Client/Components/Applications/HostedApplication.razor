@@ -41,7 +41,7 @@ else
             }
             <div class="d-flex flex-wrap gap-2 mt-3">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Decide(true))">@Loc.Plural("HostedAppMakeChanges", "count", plan.Steps.Count)</MudButton>
-                <MudButton Variant="Variant.Text" OnClick="@(() => Decide(false))">@Loc["Cancel"]</MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="@(() => Decide(false))">@Loc["Cancel"]</MudButton>
             </div>
         </MudPaper>
     }
@@ -60,7 +60,7 @@ else
             <MudText Typo="Typo.body2">@Loc["OAuthConsentRevoke"]</MudText>
             <div class="d-flex flex-wrap gap-2 mt-3">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Answer(true))">@Loc["OAuthConsentAllow"]</MudButton>
-                <MudButton Variant="Variant.Text" OnClick="@(() => Answer(false))">@Loc["OAuthConsentDeny"]</MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="@(() => Answer(false))">@Loc["OAuthConsentDeny"]</MudButton>
             </div>
         </MudPaper>
     }

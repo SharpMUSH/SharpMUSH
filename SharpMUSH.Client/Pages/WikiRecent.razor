@@ -10,7 +10,7 @@
 @* The sidebar's "Recent changes": the latest edits across the wiki as image rows with the editor
    and when. Nothing listed these before outside the home widget. *@
 <div class="wiki-recent">
-    <PlainPageHeader Kicker="@Loc["Wiki"]" Title="@Loc["NavWikiRecentChanges"]" Description="@Loc["NavWikiRecentDesc"]" />
+    <PageHeader Kicker="@Loc["Wiki"]" Title="@Loc["NavWikiRecentChanges"]" Description="@Loc["NavWikiRecentDesc"]" />
 
     <LoadState TValue="IReadOnlyList<WikiPageSummary>" Value="_pages" Loading="_loading" IsEmpty="pages => pages.Count == 0" Context="pages"
                LoadingRows="8">

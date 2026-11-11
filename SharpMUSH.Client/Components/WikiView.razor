@@ -22,7 +22,7 @@ else if (_loadFailed)
        create one, and nothing to edit yet. It tries again on its own and says so. *@
     <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-2 wiki-load-failed">
         <MudText>@Loc["WikiLoadFailed"]</MudText>
-        <MudButton Variant="Variant.Text" Size="Size.Small" Style="text-transform:none;" OnClick="RetryNowAsync">@Loc["NavTryAgain"]</MudButton>
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" Style="text-transform:none;" OnClick="RetryNowAsync">@Loc["NavTryAgain"]</MudButton>
     </MudAlert>
 }
 else if (Mode == WikiMode.View)
@@ -53,7 +53,7 @@ else
                 @_saveError
                 @if (_saveConflict)
                 {
-                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small"
                                OnClick="@(() => Nav.NavigateTo(Nav.Uri, forceLoad: true))">
                         @Loc["WkTranslationReload"]
                     </MudButton>

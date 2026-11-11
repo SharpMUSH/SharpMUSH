@@ -31,7 +31,7 @@ public class WikiHomeD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task Hero_IsAGlassBannerHeading_WithSearch_AndNewPageOnlyForCreators()
+	public async Task Hero_IsAGlassBannerHeading_WithSearch_AndLeavesNewPageToTheSidebar()
 	{
 		var reader = RenderHome();
 		await Assert.That(reader.Find(".kit-banner h1.kit-banner-title").TextContent).IsEqualTo("Everything you need to play");
@@ -41,7 +41,8 @@ public class WikiHomeD1Tests : TrackingBunitContext
 
 		_auth.SetPolicies("wiki.create");
 		var creator = RenderHome();
-		await Assert.That(creator.Find(".kit-banner .kit-capsule--primary").TextContent).Contains("New page");
+		await Assert.That(creator.FindAll(".kit-banner .kit-capsule--primary").Count).IsEqualTo(0)
+			.Because("the wiki sidebar's New page is on every wiki page; the hero repeated it");
 	}
 
 	[Test]

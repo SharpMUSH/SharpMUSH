@@ -54,7 +54,7 @@
                                 }
                             </tbody>
                         </MudSimpleTable>
-                        <MudButton Size="Size.Small" Variant="Variant.Text" Class="mt-1"
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="mt-1"
                                    StartIcon="@Icons.Material.Filled.DataObject"
                                    Disabled="@(!string.IsNullOrWhiteSpace(_json))"
                                    OnClick="InsertTemplate">
@@ -74,8 +74,8 @@
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">@Loc["Cancel"]</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">@Loc["LayApply"]</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="Cancel">@Loc["Cancel"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">@Loc["LayApply"]</MudButton>
     </DialogActions>
 </MudDialog>
 

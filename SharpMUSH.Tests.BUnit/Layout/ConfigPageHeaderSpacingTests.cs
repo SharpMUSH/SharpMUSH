@@ -4,7 +4,7 @@ namespace SharpMUSH.Tests.BUnit.Layout;
 
 /// <summary>
 /// The hand-built config pages (Banned Names, Import, Restrictions, Sitelock) put a
-/// <c>PlainPageHeader</c> straight into a plain <c>.config-section-page</c> block. The kit header
+/// <c>PageHeader</c> straight into a plain <c>.config-section-page</c> block. The kit header
 /// carries no bottom margin, so the space under it has to come from the config layout, once, for
 /// every such page — otherwise the header sits flush against the first card or tab strip.
 /// </summary>
@@ -19,7 +19,7 @@ public class ConfigPageHeaderSpacingTests
 			.Where(f =>
 			{
 				var text = File.ReadAllText(f);
-				return text.Contains("class=\"config-section-page\"") && text.Contains("<PlainPageHeader");
+				return text.Contains("class=\"config-section-page\"") && text.Contains("<PageHeader");
 			});
 
 	[Test]

@@ -16,7 +16,7 @@
 @* D1 §6.5 one message: the plain header (its folder, its subject, Reply and Delete) over the
    message card. Back returns to the folder it was read from. *@
 <div class="mail-detail-page">
-    <PlainPageHeader Kicker="@($"{Loc["Mail"]} · {FolderName}")" Title="@(_message?.Subject ?? $"#{Id}")">
+    <PageHeader Kicker="@($"{Loc["Mail"]} · {FolderName}")" Title="@(_message?.Subject ?? $"#{Id}")">
         <Actions>
             <CapsuleButton Href="@MailSidebar.FolderHref(FolderName)" Icon="@Icons.Material.Outlined.ArrowBack" AriaLabel="@Loc["NavMailBackToFolder", FolderName]" />
             @if (_message is not null)
@@ -25,7 +25,7 @@
                 <CapsuleButton Class="md-reply" Primary="true" Icon="@Icons.Material.Outlined.Reply" Href="@SharpMUSH.Client.Pages.Mail.ReplyHref(Summary(_message))">@Loc["Reply"]</CapsuleButton>
             }
         </Actions>
-    </PlainPageHeader>
+    </PageHeader>
 
     @if (_loading)
     {

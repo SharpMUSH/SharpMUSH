@@ -10,7 +10,12 @@
 <AdminPageTitle Page="@Loc["AdmAccountsTitle"]" />
 
 <div class="page-stack page-stack--padded accounts-page">
-    <PlainPageHeader Kicker="@Loc["AdmGroupPeople"]" Title="@Loc["AdmAccountsTitle"]" />
+    <PageHeader Kicker="@Loc["AdmGroupPeople"]" Title="@Loc["AdmAccountsTitle"]">
+        <Search>
+            <PageSearch Id="accounts-search" Placeholder="@Loc["AdmAccountsSearchPlaceholder"]" @bind-Value="_search"
+                        DebounceInterval="300" OnDebounced="OnSearchDebouncedAsync" />
+        </Search>
+    </PageHeader>
 
     <KitCard Title="@Loc["AdmStaffRecoveryProof"]">
         <div class="accounts-body accounts-proof">
@@ -23,11 +28,6 @@
     </KitCard>
     <KitCard>
         <div class="accounts-body">
-            <MudTextField T="string" @bind-Value="_search" Placeholder="@Loc["AdmAccountsSearchPlaceholder"]"
-                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                          Variant="Variant.Outlined" Margin="Margin.Dense"
-                          Immediate="true" DebounceInterval="300" OnDebounceIntervalElapsed="OnSearchDebouncedAsync" />
-
             <LoadState Value="_rows" Loading="_loading" Context="rows">
                 <MudTable Items="rows" Dense="true" Hover="true" Elevation="0" Class="accounts-table">
                     <HeaderContent>
@@ -67,13 +67,14 @@
                             }
                         </MudTd>
                         <MudTd>
-                            <MudButton Size="Size.Small" OnClick="@(() => OpenResetAsync(context))">@Loc["AdmResetPassword"]</MudButton>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => OpenResetAsync(context))">@Loc["AdmResetPassword"]</MudButton>
                             @if (!context.IsReserved)
                             {
                                 @foreach (var target in StatusTargets(context))
                                 {
                                     <MudButton Size="Size.Small" data-testid="account-status-action"
-                                               Color="@(target == "Active" ? Color.Success : Color.Error)"
+                                               Variant="@ButtonKinds.Variant(target == "Active" ? ButtonKind.Secondary : ButtonKind.DangerQuiet)"
+                                               Color="@ButtonKinds.Color(target == "Active" ? ButtonKind.Secondary : ButtonKind.DangerQuiet)"
                                                OnClick="@(() => SetStatusAsync(context, target))">
                                         @Loc[$"AdmAccountAction{target}"]
                                     </MudButton>

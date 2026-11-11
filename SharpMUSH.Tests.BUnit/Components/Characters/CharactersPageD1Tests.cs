@@ -47,7 +47,7 @@ public class CharactersPageD1Tests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".char-grid .kit-portrait"));
 
 		await Assert.That(Names(cut)).IsEquivalentTo(new[] { "Ilsa Varn" });
-		await Assert.That(cut.Find(".char-filter").GetAttribute("value")).IsEqualTo("ilsa");
+		await Assert.That(cut.Find("#character-search").GetAttribute("value")).IsEqualTo("ilsa");
 	}
 
 	[Test]

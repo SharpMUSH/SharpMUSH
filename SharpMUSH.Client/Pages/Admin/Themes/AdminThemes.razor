@@ -19,12 +19,12 @@
 <AdminPageTitle Page="@Loc["AdmThemesTitle"]" />
 
 <div class="page-stack page-stack--padded adm-theme">
-    <PlainPageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["AdmThemesTitle"]" Description="@Loc["AdmThemesDescription"]">
+    <PageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["AdmThemesTitle"]" Description="@Loc["AdmThemesDescription"]">
         <Actions>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" id="theme-new"
                        Disabled="@(_state is null || _busy)" OnClick="New">@Loc["AdmThemesNew"]</MudButton>
         </Actions>
-    </PlainPageHeader>
+    </PageHeader>
 
     <LoadState TValue="PortalThemesResponse" Value="_state" Loading="@(_state is null && _error is null)" Error="@_error" Context="state">
         <div class="adm-theme-layout">
@@ -111,7 +111,7 @@
                                     <MudSlider T="double" @bind-Value="_contrast" Min="0" Max="1" Step="0.1" Color="Color.Primary" Class="adm-theme-contrast-slider">
                                         @Loc["AdmThemesContrastLevel", _contrast.ToString("0.0")]
                                     </MudSlider>
-                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="GenerateFromSeed" id="theme-generate-seed">
+                                    <MudButton Variant="Variant.Outlined" OnClick="GenerateFromSeed" id="theme-generate-seed">
                                         @Loc["AdmThemesGenerateSeed"]
                                     </MudButton>
                                 </div>
@@ -123,14 +123,14 @@
                                             <MudSelectItem T="string" Value="@preset.Name">@preset.Name</MudSelectItem>
                                         }
                                     </MudSelect>
-                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@string.IsNullOrEmpty(_preset)"
+                                    <MudButton Variant="Variant.Outlined" Disabled="@string.IsNullOrEmpty(_preset)"
                                                OnClick="() => UsePalette(_preset)" id="theme-generate-preset">@Loc["AdmThemesUsePalette"]</MudButton>
                                 </div>
                                 <div class="adm-theme-generate adm-theme-generate--json">
                                     <MudTextField T="string" @bind-Value="_paletteJson" Label="@Loc["AdmThemesPaletteJson"]" Lines="3"
                                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="adm-theme-code" id="theme-palette-json"
                                                   Placeholder='{"seed":"#6b4fa8","harmony":"triadic","contrast":0.3}' />
-                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@string.IsNullOrWhiteSpace(_paletteJson)"
+                                    <MudButton Variant="Variant.Outlined" Disabled="@string.IsNullOrWhiteSpace(_paletteJson)"
                                                OnClick="() => UsePalette(_paletteJson)" id="theme-generate-json">@Loc["AdmThemesUseJson"]</MudButton>
                                 </div>
                                 @if (_paletteError is not null)
@@ -266,7 +266,7 @@
                                     <span class="adm-theme-spacer"></span>
                                     @if (!locked && _draft.Stylesheet is not null)
                                     {
-                                        <MudButton Variant="Variant.Text" OnClick="ResetStylesheet" id="theme-sheet-reset">@Loc["AdmThemesStylesheetReset"]</MudButton>
+                                        <MudButton Variant="Variant.Outlined" OnClick="ResetStylesheet" id="theme-sheet-reset">@Loc["AdmThemesStylesheetReset"]</MudButton>
                                     }
                                 </div>
                                 @if (SheetProblems is { Count: > 0 } problems)
@@ -294,16 +294,16 @@
                                 {
                                     <MudButton Variant="Variant.Text" Color="Color.Error" Disabled="@(_busy || IsDefault(_draft.Id))"
                                                OnClick="DeleteAsync" id="theme-delete">@Loc["AdmThemesDelete"]</MudButton>
-                                    <MudButton Variant="Variant.Text" Disabled="_busy" OnClick="Duplicate" id="theme-duplicate">@Loc["AdmThemesDuplicate"]</MudButton>
+                                    <MudButton Variant="Variant.Outlined" Disabled="_busy" OnClick="Duplicate" id="theme-duplicate">@Loc["AdmThemesDuplicate"]</MudButton>
                                 }
-                                <MudButton Variant="Variant.Text" Disabled="@(_busy || !_dirty)" OnClick="Revert" id="theme-revert">@Loc["AdmThemesRevert"]</MudButton>
+                                <MudButton Variant="Variant.Outlined" Disabled="@(_busy || !_dirty)" OnClick="Revert" id="theme-revert">@Loc["AdmThemesRevert"]</MudButton>
                                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_busy || !_dirty || SheetProblems.Count > 0)" OnClick="SaveAsync" id="theme-save">
                                     @Loc["Save"]
                                 </MudButton>
                             }
                             @if (_draft.Id is not null && !IsDefault(_draft.Id))
                             {
-                                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@(_busy || _dirty || !_draft.Published)"
+                                <MudButton Variant="Variant.Outlined" Disabled="@(_busy || _dirty || !_draft.Published)"
                                            OnClick="MakeDefaultAsync" id="theme-default">
                                     @Loc[_draft.Dark ? "AdmThemesMakeDefaultDark" : "AdmThemesMakeDefaultLight"]
                                 </MudButton>

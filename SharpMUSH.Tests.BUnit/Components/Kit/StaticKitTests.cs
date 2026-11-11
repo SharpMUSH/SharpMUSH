@@ -36,24 +36,24 @@ public class StaticKitTests : BunitContext
 	}
 
 	[Test]
-	public async Task PlainPageHeader_WhitespaceDescription_RendersNoParagraph()
+	public async Task PageHeader_WhitespaceDescription_RendersNoParagraph()
 	{
-		var cut = Render<PlainPageHeader>(p => p.Add(x => x.Title, "x").Add(x => x.Description, "   "));
+		var cut = Render<PageHeader>(p => p.Add(x => x.Title, "x").Add(x => x.Description, "   "));
 		await Assert.That(cut.FindAll(".kit-page-desc").Count).IsEqualTo(0);
 	}
 
 	[Test]
-	public async Task PlainPageHeader_DescriptionContent_RendersMarkupInTheDescription()
+	public async Task PageHeader_DescriptionContent_RendersMarkupInTheDescription()
 	{
-		var cut = Render<PlainPageHeader>(p => p.Add(x => x.Title, "Sitelock")
+		var cut = Render<PageHeader>(p => p.Add(x => x.Title, "Sitelock")
 			.Add(x => x.DescriptionContent, b => b.AddMarkupContent(0, "Rules: <code>!connect</code>")));
 		await Assert.That(cut.Find(".kit-page-desc code").TextContent).IsEqualTo("!connect");
 	}
 
 	[Test]
-	public async Task PlainPageHeader_RendersKickerTitleDescriptionAndActions()
+	public async Task PageHeader_RendersKickerTitleDescriptionAndActions()
 	{
-		var cut = Render<PlainPageHeader>(p => p
+		var cut = Render<PageHeader>(p => p
 			.Add(x => x.Kicker, "Admin · server settings")
 			.Add(x => x.Title, "Chat")
 			.Add(x => x.Description, "Chat and communication settings")

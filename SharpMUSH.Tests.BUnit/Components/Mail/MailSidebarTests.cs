@@ -32,10 +32,11 @@ public class MailSidebarTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task ListsCompose_AndEveryFolder_WithTheInboxUnreadPill()
+	public async Task ListsEveryFolder_WithTheInboxUnreadPill_AndNoComposeOfItsOwn()
 	{
 		var cut = RenderAt("/mail");
-		await Assert.That(cut.Find(".mail-side-compose a.kit-row").GetAttribute("href")).IsEqualTo("/mail/compose");
+		await Assert.That(cut.FindAll("a.kit-row[href='/mail/compose']").Count).IsEqualTo(0)
+			.Because("Compose is the Mail page header's action; the sidebar repeated it");
 		var folders = cut.FindAll(".mail-side-folders a.kit-row");
 		await Assert.That(folders.Select(a => a.GetAttribute("href")).ToList()).IsEquivalentTo(["/mail?folder=INBOX", "/mail?folder=SENT"]);
 		await Assert.That(folders[0].QuerySelector(".kit-row-unread")!.TextContent).IsEqualTo("2");
@@ -47,12 +48,13 @@ public class MailSidebarTests : TrackingBunitContext
 	[Arguments("/mail", "/mail?folder=INBOX")]
 	[Arguments("/mail?folder=SENT", "/mail?folder=SENT")]
 	[Arguments("/mail/1?folder=SENT", "/mail?folder=SENT")]
-	[Arguments("/mail/compose", "/mail/compose")]
-	public async Task MarksWhereTheReaderIs(string path, string current)
+	[Arguments("/mail/compose", null)]
+	public async Task MarksWhereTheReaderIs(string path, string? current)
 	{
 		var cut = RenderAt(path);
 		var marked = cut.FindAll("a.kit-row[aria-current='page']").Select(a => a.GetAttribute("href")).ToList();
-		await Assert.That(marked).IsEquivalentTo([current]);
+		string?[] expected = current is null ? [] : [current];
+		await Assert.That(marked).IsEquivalentTo(expected);
 	}
 
 	[Test]
@@ -153,7 +155,7 @@ public class MailSidebarTests : TrackingBunitContext
 		var cut = RenderAt("/mail", collapsed: true);
 		await Assert.That(cut.FindAll(".kit-side-head").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".kit-section-label").Count).IsEqualTo(0);
-		await Assert.That(cut.FindAll("a.kit-row.kit-row--collapsed").Count).IsEqualTo(3);
+		await Assert.That(cut.FindAll("a.kit-row.kit-row--collapsed").Count).IsEqualTo(2);
 	}
 
 	[Test]
