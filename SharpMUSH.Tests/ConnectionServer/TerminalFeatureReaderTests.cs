@@ -14,21 +14,23 @@ namespace SharpMUSH.Tests.ConnectionServer;
 public class TerminalFeatureReaderTests
 {
 	/// <summary>
-	/// Only a client naming a terminal emulator, with no MTTS bitvector, is asked what it can draw at connect: a MUD
-	/// client prints the questions on its connect screen, whatever terminal type it claims.
+	/// A connection is known by the name it gives first. The entries after it are what a MUD client claims to
+	/// support (or the terminal it runs in), and a MUD client that claims <c>XTERM</c> is not an xterm.
 	/// </summary>
 	[Test]
-	[Arguments(new[] { "XTERM-KITTY" }, false, true)]
-	[Arguments(new[] { "foot" }, false, true)]
-	[Arguments(new[] { "xterm" }, false, true)]
-	[Arguments(new[] { "xterm-256color" }, false, false)]
-	[Arguments(new[] { "VT100" }, false, false)]
-	[Arguments(new[] { "ANSI" }, false, false)]
-	[Arguments(new string[0], false, false)]
-	[Arguments(new[] { "BEIPMU" }, false, false)]
-	[Arguments(new[] { "MUDLET", "XTERM", "MTTS 2349" }, true, false)]
-	public async Task ProbesAtConnectOnlyForATerminalEmulator(string[] terminalTypes, bool sentMtts, bool probes)
-		=> await Assert.That(TerminalFeatureReader.ProbesAtConnect(terminalTypes, sentMtts)).IsEqualTo(probes);
+	[Arguments("XTERM-KITTY", "kitty")]
+	[Arguments("foot", "foot")]
+	[Arguments("MUDFORGE,XTERM,MTTS 2349", "mudforge")]
+	[Arguments("xterm", null)]
+	[Arguments("XTERM,ANSI", null)]
+	[Arguments("MUDRAMMER,XTERM,ANSI", null)]
+	[Arguments("SHARPMUTERM,XTERM,ANSI,UTF-8,256 COLORS", null)]
+	[Arguments("TINTIN++,xterm-kitty,ANSI,UTF-8", null)]
+	[Arguments("Axmud,ansi,vt100,xterm-truecolor,xterm", null)]
+	[Arguments("", null)]
+	public async Task Identify_ReadsOnlyTheFirstName(string terminalTypes, string? id) =>
+		await Assert.That(TerminalFeatureReader.Identify(
+			terminalTypes.Split(',', StringSplitOptions.RemoveEmptyEntries), null, null)?.Id).IsEqualTo(id);
 
 	/// <summary>Automatic aliases request probes; explicit choices preserve their selected method without probing.</summary>
 	[Test]
@@ -99,6 +101,16 @@ public class TerminalFeatureReaderTests
 	[Arguments("MUSHCLIENT", null)]
 	public async Task Identify_ReadsTheTerminalName(string name, string? id) =>
 		await Assert.That(TerminalFeatureReader.Identify([name], null, null)?.Id).IsEqualTo(id);
+
+	/// <summary>The engine's copy of the terminal types keeps an empty first entry, so it names no terminal there either.</summary>
+	[Test]
+	public async Task EmptyFirstTerminalTypeNamesNoTerminalInMetadata()
+	{
+		var metadata = new Dictionary<string, string> { [TerminalCapabilityReader.TerminalTypesKey] = "\tXTERM-KITTY" };
+		await Assert.That(TerminalFeatureReader.TerminalOf(metadata)).IsNull();
+		metadata[TerminalCapabilityReader.TerminalTypesKey] = "XTERM-KITTY";
+		await Assert.That(TerminalFeatureReader.TerminalOf(metadata)).IsEqualTo(TerminalProfile.Kitty);
+	}
 
 	/// <summary>The published MudForge profile survives silence without enabling graphics by default.</summary>
 	[Test]

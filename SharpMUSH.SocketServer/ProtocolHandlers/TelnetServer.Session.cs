@@ -47,9 +47,6 @@ public partial class TelnetServer
 		private TelnetInterpreter? _telnet;
 		private int _telnetAnnounced;
 		private IReadOnlyList<string> _publishedTerminalTypes = [];
-		// Whether the client's terminal types held an MTTS bitvector, which the list loses once it is expanded.
-		private bool _sentMtts;
-		private int _probedAtConnect;
 		private IReadOnlyList<string> _publishedGmcpSupports = [];
 		// What negotiation has said so far, for the capabilities the connection registers with: the updates
 		// themselves are held until registration, and the connect screen must not be drawn before they land.
@@ -122,8 +119,8 @@ public partial class TelnetServer
 				// RFC 1091 terminal type: the only way a client names itself over plain telnet, and what
 				// terminfo() reports as the client. Without it every connection is "unknown".
 				.AddPlugin(terminalTypeProtocol)
-				// Replies to the questions asked once the terminal types name a terminal emulator
-				// (OnTerminalTypesAsync), and to later SOCKSET graphics=auto/detect requests.
+				// Replies to SOCKSET graphics=auto/detect requests. Nothing is asked at connect: the questions are
+				// escape sequences that a MUD client prints, so a connection is known by the name it reports.
 				.AddPlugin(new TerminalQueryProtocol().OnTerminalReport(report =>
 					OnTerminalReportAsync(new TerminalProbeResult(report.KittyGraphics, report.Sixel,
 						report.Version, report.CellWidth ?? 0, report.CellHeight ?? 0))));
@@ -202,12 +199,6 @@ public partial class TelnetServer
 			// with the MTTS bitvector expanded into the names of what it claims.
 			var unchanged = _publishedTerminalTypes.SequenceEqual(terminalTypes);
 			var snapshot = unchanged ? null : terminalTypes.ToArray();
-			_sentMtts |= terminalTypes.Any(type => type.StartsWith("MTTS ", StringComparison.OrdinalIgnoreCase));
-			if (unchanged)
-			{
-				// A repeat with nothing to expand: the list is complete and held no MTTS bitvector.
-				await ProbeAtConnectAsync();
-			}
 			if (snapshot is not null)
 			{
 				// Before settling: registration reads this list as soon as negotiation settles.
@@ -230,23 +221,6 @@ public partial class TelnetServer
 				await server._publishEndpoint.Publish(
 					new TerminalTypeNegotiatedMessage(handle, snapshot), ct);
 			});
-		}
-
-		/// <summary>
-		/// Asks the terminal what it can draw, once per connection, when its terminal types name a terminal
-		/// emulator (<see cref="TerminalFeatureReader.ProbesAtConnect"/>). Asked before the connect screen when
-		/// the client answers TTYPE inside the negotiation wait, so its pictures can show there.
-		/// </summary>
-		private async ValueTask ProbeAtConnectAsync()
-		{
-			if (!TerminalFeatureReader.ProbesAtConnect(_publishedTerminalTypes, _sentMtts)
-					|| _telnet?.PluginManager?.GetPlugin<TerminalQueryProtocol>() is not { IsEnabled: true } queries
-					|| Interlocked.Exchange(ref _probedAtConnect, 1) != 0)
-			{
-				return;
-			}
-
-			await queries.ProbeAsync();
 		}
 
 		private async ValueTask OnEnvironmentVariablesAsync(
@@ -375,7 +349,7 @@ public partial class TelnetServer
 
 		/// <summary>
 		/// Gives all initial protocols one bounded window before the welcome. Finishing TTYPE or
-		/// CHARSET does not imply MXP SUPPORT, GMCP modules or terminal queries have finished.
+		/// CHARSET does not imply MXP SUPPORT or GMCP modules have finished.
 		/// Early input is held until registration: an automatic login is not a capability reply.
 		/// Only the deadline, cancellation or the transport ending may release this window.
 		/// </summary>
