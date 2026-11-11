@@ -25,15 +25,17 @@
 
     protected override void OnInitialized()
     {
-        _exits = PlayTerminal.OobChannels.Room.Exits;
-        _inRoom = PlayTerminal.OobChannels.Room.Info is not null;
+        var room = PlayTerminal.OobChannels.Room;
+        _exits = room.Exits;
+        _inRoom = room.Info is not null;
         PlayTerminal.OobChannels.RoomChanged += OnRoomChanged;
     }
 
     private void OnRoomChanged()
     {
-        _exits = PlayTerminal.OobChannels.Room.Exits;
-        _inRoom = PlayTerminal.OobChannels.Room.Info is not null;
+        var room = PlayTerminal.OobChannels.Room;
+        _exits = room.Exits;
+        _inRoom = room.Info is not null;
         _ = InvokeAsync(StateHasChanged);
     }
 

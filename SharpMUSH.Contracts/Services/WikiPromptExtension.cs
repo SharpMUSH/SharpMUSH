@@ -82,7 +82,7 @@ public sealed class WikiPromptExtension : IMarkdownExtension
 			{
 				var block = document[j];
 				if (block is HeadingBlock next && next.Level <= heading.Level) break;
-				if (block is QuoteBlock quote && prompts.Contains(quote) || block is HeadingBlock sub && emptied.Contains(sub))
+				if (block is QuoteBlock quote && OnlyPrompts(quote, prompts) || block is HeadingBlock sub && emptied.Contains(sub))
 				{
 					sawPrompt = true;
 					continue;
@@ -100,4 +100,11 @@ public sealed class WikiPromptExtension : IMarkdownExtension
 
 		return emptied;
 	}
+
+	/// <summary>
+	/// Whether <paramref name="quote"/> goes entirely with the prompts: it is one, or a quote holding only such quotes
+	/// (<c>&gt; &gt; **Fill in:**</c>), which the removal takes away once it is empty.
+	/// </summary>
+	private static bool OnlyPrompts(QuoteBlock quote, HashSet<QuoteBlock> prompts) =>
+		prompts.Contains(quote) || (quote.Count > 0 && quote.All(child => child is QuoteBlock inner && OnlyPrompts(inner, prompts)));
 }

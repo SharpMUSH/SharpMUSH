@@ -143,4 +143,13 @@ public class WikiPromptExtensionTests
 		await Assert.That(html).DoesNotContain("<blockquote");
 		await Assert.That(html).DoesNotContain("Nested.");
 	}
+
+	[Test]
+	public async Task AHeadingOverOnlyANestedPrompt_Goes()
+	{
+		var html = Pipeline.RenderToHtml("# Page\n\nIntro.\n\n## Staff\n> > **Fill in:** How to reach staff.\n");
+
+		await Assert.That(html).DoesNotContain(">Staff</h2>");
+		await Assert.That(html).DoesNotContain("<blockquote");
+	}
 }
