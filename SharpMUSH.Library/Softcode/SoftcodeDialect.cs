@@ -292,6 +292,8 @@ public static class SoftcodeDialects
 			["@PEMIT"] = new() { ["nosub"] = [], ["oneeval"] = [] },
 			["@SEARCH"] = new() { ["nogarbage"] = [] },
 			["@SET"] = new() { ["noisy"] = [], ["tree"] = [] },
+			["@STATS"] = new() { ["player"] = [] },
+			["@WALL"] = new() { ["no_prefix"] = ["EMIT"] },
 			["EXAMINE"] = new() { ["display"] = [], ["full"] = [], ["tree"] = [] },
 			["POSE"] = new() { ["default"] = [] }
 		})
@@ -490,9 +492,11 @@ public static class SoftcodeDialects
 			["@NOTIFY"] = new() { ["first"] = [] },
 			["@OPEN"] = new() { ["location"] = [] },
 			["@PS"] = new() { ["brief"] = [] },
+			["@STATS"] = new() { ["player"] = [] },
 			// switch_default_all is on in TinyMUX's default configuration, so /default runs every match.
 			["@SWITCH"] = new() { ["default"] = [] },
 			["@TELEPORT"] = new() { ["loud"] = [] },
+			["@WALL"] = new() { ["no_prefix"] = ["EMIT"] },
 			["EXAMINE"] = new() { ["full"] = [] },
 			["POSE"] = new() { ["default"] = [] }
 		})

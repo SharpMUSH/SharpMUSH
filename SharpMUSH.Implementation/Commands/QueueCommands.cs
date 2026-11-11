@@ -1261,7 +1261,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@TRIGGER", Output = CommandOutput.Runs,
-		Switches = ["ARGS", "CLEARREGS", "SPOOF", "INLINE", "NOBREAK", "LOCALIZE", "INPLACE", "MATCH", "QUIET", "NOW"],
+		Switches = ["ARGS", "CLEARREGS", "SPOOF", "INLINE", "NOBREAK", "LOCALIZE", "INPLACE", "MATCH", "QUIET", "NOW", "NOTIFY"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = int.MaxValue, ParameterNames = ["object/attribute", "arguments..."])]
 	public async ValueTask<Option<CallState>> Trigger(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1365,8 +1365,22 @@ public partial class Commands
 				targetObject.Object().Name);
 		}
 
+		// TinyMUX's /notify: once the attribute is found, @notify me is queued after whatever it queues, so a @wait
+		// on the executor runs then, even when the attribute is empty, /match finds nothing or it ran inline.
+		var notify = switches.Contains("NOTIFY");
+		async ValueTask NotifyExecutorAsync()
+		{
+			if (!notify) return;
+			await Mediator.Send(new AdmitCommandListRequest(
+				MarkupText.Plain("@notify/quiet me"),
+				parser.CurrentState,
+				new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
+				-1), ExecutionBudget.CurrentToken);
+		}
+
 		if (string.IsNullOrWhiteSpace(attributeText))
 		{
+			await NotifyExecutorAsync();
 			return CallState.Empty;
 		}
 
@@ -1390,7 +1404,11 @@ public partial class Commands
 			var regex = command is CommandAttributeCache compiled ? compiled.CompiledRegex : listen?.CompiledRegex;
 			var isRegex = command is CommandAttributeCache commandPattern ? commandPattern.IsRegexFlag : listen?.IsRegexFlag == true;
 			if (regex is null || SoftcodeRegex.Match(regex, matchArg.Message.ToPlainText()) is not { Success: true } match)
+			{
+				await NotifyExecutorAsync();
 				return CallState.Empty;
+			}
+
 			var captured = PatternArguments.Capture(regex, match, isRegex, matchArg.Message);
 			// Explicit /args inputs replace the corresponding captured positions; unmatched capture
 			// keys remain available. The match string itself is never a numbered argument.
@@ -1442,6 +1460,11 @@ public partial class Commands
 			var admission = await parser.With(_ => stateWithRegisters, p => p.WithAttributeDebug(attribute,
 				debug => Mediator.Send(new AdmitCommandListRequest(action, debug.CurrentState,
 					new DbRefAttribute(targetObject.Object().DBRef, attribute.LongName.Split('`')), -1), ExecutionBudget.CurrentToken)));
+			if (admission.Accepted)
+			{
+				await NotifyExecutorAsync();
+			}
+
 			return admission.Accepted ? CallState.Empty : new CallState(admission.Error) { HadErrors = true };
 		}
 
@@ -1452,6 +1475,7 @@ public partial class Commands
 			p => p.WithAttributeDebug(attribute, debug => debug.CommandListParse(action)));
 		if (propagation.Broke && !isInplace && !switches.Contains("NOBREAK"))
 			parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
+		await NotifyExecutorAsync();
 
 		return CallState.Empty with { HadErrors = result?.HadErrors == true };
 	}

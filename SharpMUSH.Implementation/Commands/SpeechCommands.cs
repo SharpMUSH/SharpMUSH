@@ -926,6 +926,12 @@ public partial class Commands
 			? ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 0, MarkupText.Empty)
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
 
+		// TinyMUX's and RhostMUSH's /pose puts the speaker's name first.
+		if (switches.Contains("POSE"))
+		{
+			shout = MarkupText.Concat(MarkupText.Plain(executor.Object().Name + " "), shout);
+		}
+
 		if (!switches.Contains("EMIT"))
 		{
 			shout = MarkupText.Concat(MarkupText.Plain(prefix + " "), shout);
@@ -971,7 +977,7 @@ public partial class Commands
 		};
 	}
 
-	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT", "ADMIN", "WIZARD"], Behavior = CB.Default | CB.NoParse,
+	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT", "ADMIN", "WIZARD", "POSE"], Behavior = CB.Default | CB.NoParse,
 		CommandLock = "PERM^chat.admin|FLAG^ROYALTY|POWER^ANNOUNCE", MinArgs = 1, ParameterNames = ["message"])]
 	public ValueTask<Option<CallState>> Wall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
