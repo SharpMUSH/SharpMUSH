@@ -589,7 +589,9 @@ public class RhostDatabaseTranslatorTests
 			new RhostFlatfileObject { DBRef = 2, Name = "Two", Owner = 2, Location = 0, Flags = [(uint)RhostObjectType.Player, 0, 0, 0], Toggles = new uint[8] },
 			Thing(10, 1, new RhostFlatfileAttribute(300, "STARTUP_FNS", 1, 0, "@lfunction double=me/FN_DOUBLE")),
 			Thing(11, 1, new RhostFlatfileAttribute(301, "USES", 1, 0, "think [double(4)]")),
-			Thing(12, 2, new RhostFlatfileAttribute(301, "USES", 2, 0, "think [double(4)]"))
+			Thing(12, 2, new RhostFlatfileAttribute(301, "USES", 2, 0, "think [double(4)]")),
+			Thing(13, 1, new RhostFlatfileAttribute(300, "STARTUP_FNS", 1, 0, "@lfunction half=me/FN_HALF;@function half=#13/FN_HALF")),
+			Thing(14, 1, new RhostFlatfileAttribute(301, "USES", 1, 0, "think [half(4)]"))
 		]);
 
 		var database = RhostDatabaseTranslator.Translate(flatfile);
@@ -598,6 +600,7 @@ public class RhostDatabaseTranslatorTests
 			.IsEqualTo("@function/local double=me,FN_DOUBLE");
 		await Assert.That(Object(database, 11).Attributes.First(a => a.Name == "USES").Value).IsEqualTo("think [localfun(double,4)]");
 		await Assert.That(Object(database, 12).Attributes.First(a => a.Name == "USES").Value).IsEqualTo("think [double(4)]");
+		await Assert.That(Object(database, 14).Attributes.First(a => a.Name == "USES").Value).IsEqualTo("think [half(4)]");
 		await Assert.That(database.SoftcodeRewrites.Select(rewrite => rewrite.ToString()))
 			.Contains(line => line.StartsWith("#11/USES: double() called through localfun()"));
 	}

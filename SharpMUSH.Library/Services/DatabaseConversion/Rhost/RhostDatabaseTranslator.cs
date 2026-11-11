@@ -804,14 +804,22 @@ public static partial class RhostDatabaseTranslator
 
 	/// <summary>
 	/// The local functions each owner's code defines with <c>@lfunction</c>. RhostMUSH files one under the owner of
-	/// the object that ran the command, and only that owner's objects call it, so a call is rewritten in their code.
+	/// the object that ran the command, and only that owner's objects call it, so a call is rewritten in their code;
+	/// not a name a global <c>@function</c> also takes, which RhostMUSH calls first.
 	/// </summary>
 	private static Dictionary<int, HashSet<string>> LocalFunctions(RhostFlatfile flatfile)
-		=> flatfile.Objects
+	{
+		// A global @function of the same name is called first, so its calls stay as written.
+		var global = flatfile.Objects
+			.SelectMany(source => source.Attributes.SelectMany(attribute => RhostCommandRewriter.GlobalFunctionNames(attribute.Value)))
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
+		return flatfile.Objects
 			.SelectMany(source => source.Attributes.SelectMany(attribute => RhostCommandRewriter.LocalFunctionNames(attribute.Value))
+				.Where(name => !global.Contains(name))
 				.Select(name => (source.Owner, Name: name)))
 			.GroupBy(entry => entry.Owner)
 			.ToDictionary(group => group.Key, group => group.Select(entry => entry.Name).ToHashSet(StringComparer.OrdinalIgnoreCase));
+	}
 
 	/// <summary>The value with the softcode rewrites made, each attribute that changed listed on its own line.</summary>
 	private static string Rewritten(string value, int dbref, string name, Report report, IReadOnlySet<string> localFunctions)

@@ -26,6 +26,10 @@ public class RhostCommandRewriterTests
 	[Arguments("@lfunction/list", "@function/local")]
 	[Arguments("wmail/wipe Jerk", "@mail/debug clear=Jerk")]
 	[Arguments("wmail/fix", "@mail/debug fix")]
+	[Arguments("wmail wipe Jerk", "@mail/debug clear=Jerk")]
+	[Arguments("@dynhelp history/lesson=Bob", "@pemit *Bob=[textfile(history,lesson)]")]
+	[Arguments("@dolist %0=grab ##", "@dolist %0=@teleport [pmatch(##)]=here")]
+	[Arguments("$+tp *:@switch %0=1,join %1", "$+tp *:@switch %0=1,@teleport me=[loc(pmatch(%1))]")]
 	[Arguments("@wait 5=@freeze [first(lpids(me))]", "@wait 5=@queue/pause [first(lpids(me))]")]
 	public async Task WritesTheCommand(string body, string expected)
 	{
@@ -47,6 +51,12 @@ public class RhostCommandRewriterTests
 	[Arguments("wmail/size Bob=10")]
 	[Arguments("@totemdef/set fire=wizard")]
 	[Arguments("@thaw/bogus 1")]
+	[Arguments("think a;join")]
+	[Arguments("@thaw/delete")]
+	[Arguments("@lfunction/delete #12_double")]
+	[Arguments("wmail/lfix")]
+	[Arguments("wmail/clean")]
+	[Arguments("@dynhelp news/a,b")]
 	public async Task LeavesWhatHasNoCounterpart(string body)
 	{
 		var notes = new List<string>();
@@ -67,6 +77,9 @@ public class RhostCommandRewriterTests
 	[Arguments("@pemit %#=@freeze stops a job")]
 	[Arguments("$+help freeze:@pemit %#=@freeze <pid> stops a job")]
 	[Arguments("@switch %0=1,{@freeze <pid>}")]
+	[Arguments("The bar is busy; grab a seat.")]
+	[Arguments("Welcome!;join us at the inn.")]
+	[Arguments("@switch %0=1,@pemit %#=@freeze is how")]
 	public async Task LeavesTextAlone(string body)
 	{
 		var notes = new List<string>();
@@ -86,6 +99,9 @@ public class RhostCommandRewriterTests
 	[Test]
 	[Arguments("think [double(7)] [half()]", "think [localfun(double,7)] [localfun(half)]")]
 	[Arguments("think [redouble(7)] [lit(double(7))] \\double(7)", "think [redouble(7)] [lit(double(7))] \\double(7)")]
+	[Arguments("think double(7)", "think localfun(double,7)")]
+	[Arguments("$double(*):think [double(%0)]", "$double(*):think [localfun(double,%0)]")]
+	[Arguments("Type double(7) to see. x.double(1)", "Type double(7) to see. x.double(1)")]
 	public async Task CallsLocalFunctionsThroughLocalfun(string body, string expected)
 	{
 		var notes = new List<string>();
