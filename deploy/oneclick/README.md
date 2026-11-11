@@ -20,13 +20,20 @@ curl -fsSL https://raw.githubusercontent.com/SharpMUSH/SharpMUSH/main/deploy/one
 It needs Ubuntu 24.04 or later, or Debian 12, with 2 GB of memory (4 GB is comfortable).
 
 `install.sh install --ask` asks for the domain and the Cloudflare tokens first. With an API token, the
-installer checks it reaches the zone, its DNS and the account's tunnels before it installs anything,
+installer checks it reaches the zone, its DNS and the account's tunnels before it prepares the stack (installing curl, jq and CA certificates first if needed),
 and says which permission is missing when it cannot. A read-only permission passes that check and is
 refused at the first change.
 
-Behind a tunnel the installer uses this server's own: the one its tunnel token names, else one named
-`sharpmush-<domain>-<machine id>`. Another server installed for the same domain keeps its tunnel, which
-stops getting traffic once the domain moves; the installer names it in a note.
+With an API token the installer automatically manages only the tunnel named
+`sharpmush-<domain>-<machine id>`. An existing tunnel token must name that tunnel, and its ingress
+must already match this domain and `http://caddy:80` with the 404 fallback. Existing ingress is never
+rewritten. A legacy/shared token or a changed domain stops automatic setup before tunnel or DNS
+writes; omit the API token to use a manually managed tunnel unchanged, or clear the tunnel token to
+select the new machine/domain tunnel. Do not copy machine IDs between servers: a matching name is
+an installation convention, not proof that no other connector uses the tunnel.
+
+After moving the domain, the previous tunnel may still serve other hostnames or routes. Check its
+remaining uses and DNS propagation before stopping connectors or deleting it.
 
 ## What the installer does
 
@@ -49,8 +56,8 @@ stops getting traffic once the domain moves; the installer names it in a note.
    cloudflared's first connection) to answer, and prints the addresses and the setup link. The same
    text is shown at every SSH login while the guard holds.
 5. Prints a note for anything left to the owner: SSH that still accepts passwords, a reboot the
-   system wants, or a tunnel the domain pointed at before this run, which no longer gets traffic and
-   can be deleted.
+   system wants, or a tunnel the domain pointed at before this run. Verify its remaining uses before
+   stopping connectors or deleting it.
 
 Server and connection server metrics (`/metrics` on 9092 and 9091) are published on the host's
 loopback only. Scrape them from the host, or from elsewhere through
@@ -111,3 +118,4 @@ timer off. `SHARPMUSH_GUARD=off` skips the guard.
   `image_tag`) picks another. A game installed before the first release runs `dev`; to follow
   releases, run `sudo env SHARPMUSH_IMAGE_TAG=latest sharpmush-configure` on it. That replaces the
   SharpMUSH containers, so connected players have to reconnect.
+
