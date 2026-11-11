@@ -433,7 +433,7 @@ else
                                 @foreach (var danger in render?.DangerousPatterns ?? [])
                                 {
                                     <MudChip T="string" Size="Size.Small" Color="Color.Error"
-                                             Icon="@Icons.Material.Filled.Warning">@danger</MudChip>
+                                             Icon="@Icons.Material.Outlined.Warning">@danger</MudChip>
                                 }
                                 @if (change.RequiresApplyResolution)
                                 {

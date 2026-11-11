@@ -98,17 +98,17 @@
                             }
                         </div>
                         <div class="schema-row-tools">
-                            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Disabled="@(Disabled || index == 0)"
+                            <MudIconButton Icon="@Icons.Material.Outlined.ArrowUpward" Size="Size.Small" Disabled="@(Disabled || index == 0)"
                                            aria-label="@Loc["WidRowsUp"]" OnClick="() => MoveRow(index, -1)" />
-                            <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Disabled="@(Disabled || index == rows.Count - 1)"
+                            <MudIconButton Icon="@Icons.Material.Outlined.ArrowDownward" Size="Size.Small" Disabled="@(Disabled || index == rows.Count - 1)"
                                            aria-label="@Loc["WidRowsDown"]" OnClick="() => MoveRow(index, 1)" />
-                            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Disabled="Disabled"
+                            <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small" Disabled="Disabled"
                                            aria-label="@Loc["WidRowsRemove"]" OnClick="() => RemoveRow(index)" />
                         </div>
                     </li>
                 }
             </ol>
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" Disabled="Disabled"
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Add" Disabled="Disabled"
                        OnClick="AddRow">@Loc["WidRowsAdd"]</MudButton>
             @ErrorLine
         </div>

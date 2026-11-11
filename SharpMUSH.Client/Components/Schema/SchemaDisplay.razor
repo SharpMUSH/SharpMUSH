@@ -392,11 +392,11 @@
                         @if (reorderable)
                         {
                             <td class="schema-table-move">
-                                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
+                                <MudIconButton Icon="@Icons.Material.Outlined.ArrowUpward" Size="Size.Small"
                                                aria-label="@Loc["WidTableMoveUp"]"
                                                Disabled="@(Busy || _pending || place <= 1)"
                                                OnClick="@(() => MoveAsync(row, place - 1))" />
-                                <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"
+                                <MudIconButton Icon="@Icons.Material.Outlined.ArrowDownward" Size="Size.Small"
                                                aria-label="@Loc["WidTableMoveDown"]"
                                                Disabled="@(Busy || _pending || place >= size)"
                                                OnClick="@(() => MoveAsync(row, place + 1))" />

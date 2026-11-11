@@ -15,14 +15,14 @@
 <AdminPageTitle Page="@Loc["LayEditorPageTitle", ScopeLabel]" />
 
 <div class="page-stack page-stack--padded layedit">
-    <a class="layedit-back" href="/admin/layout"><MudIcon Icon="@Icons.Material.Filled.ArrowBack" Class="layedit-back-icon" /> @Loc["LayAllLayouts"]</a>
+    <a class="layedit-back" href="/admin/layout"><MudIcon Icon="@Icons.Material.Outlined.ArrowBack" Class="layedit-back-icon" /> @Loc["LayAllLayouts"]</a>
     <PageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@ScopeLabel"
                 Description="@(_scopeInfo is null ? null : Loc[_scopeInfo.DescriptionKey].Value)">
         <Actions>
-            <CapsuleButton Icon="@Icons.Material.Filled.Visibility" Pressed="@_showPreview" Primary="@_showPreview"
+            <CapsuleButton Icon="@Icons.Material.Outlined.Visibility" Pressed="@_showPreview" Primary="@_showPreview"
                            OnClick="@(() => _showPreview = !_showPreview)">@Loc["LayPreview"]</CapsuleButton>
-            <CapsuleButton Icon="@Icons.Material.Filled.RestartAlt" OnClick="ResetAsync" Disabled="@_saving">@Loc["ResetToDefault"]</CapsuleButton>
-            <CapsuleButton Icon="@Icons.Material.Filled.Save" Primary="true" OnClick="SaveAsync" Disabled="@(_saving || !_dirty)">
+            <CapsuleButton Icon="@Icons.Material.Outlined.RestartAlt" OnClick="ResetAsync" Disabled="@_saving">@Loc["ResetToDefault"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Outlined.Save" Primary="true" OnClick="SaveAsync" Disabled="@(_saving || !_dirty)">
                 @(_saving ? Loc["LayPublishing"] : Loc["LayPublish"])
             </CapsuleButton>
         </Actions>
@@ -81,7 +81,7 @@
             </ChildContent>
             <ItemRenderer>
                 <div class="le-item @(context.IsTemplate ? "le-item--template" : "") @(ReferenceEquals(context, _resizing) ? "le-item--resizing" : "")">
-                    <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Class="le-item-grip" Style="font-size:var(--text-base);color:var(--text-faint);" />
+                    <MudIcon Icon="@Icons.Material.Outlined.DragIndicator" Class="le-item-grip" Style="font-size:var(--text-base);color:var(--text-faint);" />
                     <span class="le-item-name">@context.DisplayName</span>
                     @if (!context.IsTemplate)
                     {
@@ -92,24 +92,24 @@
                         }
                         @if (context.Config is not null)
                         {
-                            <MudIcon Icon="@Icons.Material.Filled.Tune" Style="font-size:var(--text-sm);color:var(--accent);" Title="@Loc["LayHasConfig"]" />
+                            <MudIcon Icon="@Icons.Material.Outlined.Tune" Style="font-size:var(--text-sm);color:var(--accent);" Title="@Loc["LayHasConfig"]" />
                         }
                         @* Dragging is never the only way to reorder: these are the keyboard and touch path. *@
                         <button type="button" class="le-item-btn le-item-btn--up" title="@Loc["LayMoveUp"]"
                                 disabled="@(!CanMove(context, -1))"
                                 @onclick="@(() => MoveBy(context, -1))" @onclick:stopPropagation="true">
-                            <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowUp" Style="font-size:var(--text-sm);" />
+                            <MudIcon Icon="@Icons.Material.Outlined.KeyboardArrowUp" Style="font-size:var(--text-sm);" />
                         </button>
                         <button type="button" class="le-item-btn le-item-btn--down" title="@Loc["LayMoveDown"]"
                                 disabled="@(!CanMove(context, 1))"
                                 @onclick="@(() => MoveBy(context, 1))" @onclick:stopPropagation="true">
-                            <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Style="font-size:var(--text-sm);" />
+                            <MudIcon Icon="@Icons.Material.Outlined.KeyboardArrowDown" Style="font-size:var(--text-sm);" />
                         </button>
                         <button type="button" class="le-item-btn" title="@Loc["LayConfigure"]" @onclick="@(() => EditConfigAsync(context))" @onclick:stopPropagation="true">
-                            <MudIcon Icon="@Icons.Material.Filled.Settings" Style="font-size:var(--text-sm);" />
+                            <MudIcon Icon="@Icons.Material.Outlined.Settings" Style="font-size:var(--text-sm);" />
                         </button>
                         <button type="button" class="le-item-btn le-item-btn--danger" title="@Loc["LayRemove"]" @onclick="@(() => Remove(context))" @onclick:stopPropagation="true">
-                            <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:var(--text-sm);" />
+                            <MudIcon Icon="@Icons.Material.Outlined.Close" Style="font-size:var(--text-sm);" />
                         </button>
                         @if (IsGridZoneName(context.Zone))
                         {
@@ -151,7 +151,7 @@
             var preview = Preview;
             <div class="le-preview">
                 <div class="le-preview-head">
-                    <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:var(--text-base);color:var(--accent);" />
+                    <MudIcon Icon="@Icons.Material.Outlined.Visibility" Style="font-size:var(--text-base);color:var(--accent);" />
                     <span>@Loc["LayLivePreview"]</span>
                     <span class="le-preview-note">
                         @Loc["LayPreviewNote"]@(Scope == LayoutScopes.Profile ? Loc["LayPreviewNoteProfile"].Value : string.Empty)
@@ -533,10 +533,10 @@
 
     private static string ZoneIcon(WidgetZone zone) => zone switch
     {
-        WidgetZone.TopBar => Icons.Material.Filled.ViewHeadline,
-        WidgetZone.LeftSidebar => Icons.Material.Filled.ViewSidebar,
-        WidgetZone.RightSidebar => Icons.Material.Filled.ViewSidebar,
-        WidgetZone.Footer => Icons.Material.Filled.ViewStream,
-        _ => Icons.Material.Filled.ViewQuilt
+        WidgetZone.TopBar => Icons.Material.Outlined.ViewHeadline,
+        WidgetZone.LeftSidebar => Icons.Material.Outlined.ViewSidebar,
+        WidgetZone.RightSidebar => Icons.Material.Outlined.ViewSidebar,
+        WidgetZone.Footer => Icons.Material.Outlined.ViewStream,
+        _ => Icons.Material.Outlined.ViewQuilt
     };
 }

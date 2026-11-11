@@ -16,7 +16,7 @@
                     @WikiCategories.Display(c, Names)
                     <button type="button" class="wcp-chip-remove" aria-label="@string.Format(Loc["WikiRemoveCategory"], WikiCategories.Display(c, Names))"
                             @onclick="@(() => RemoveAsync(c))">
-                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                        <MudIcon Icon="@Icons.Material.Outlined.Close" Size="Size.Small" />
                     </button>
                 </span>
             }
@@ -32,7 +32,7 @@
             @if (IsNew)
             {
                 <button type="button" class="wcp-option wcp-option--new" @onclick="@(() => AddAsync(_entry))">
-                    <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
+                    <MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" />
                     @string.Format(Loc["WikiCategoryNew"], _entry.Trim())
                 </button>
             }

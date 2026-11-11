@@ -342,9 +342,34 @@
         case Step.Done:
             <div class="setup-card">
                 <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
-                <h2 class="setup-title">@Loc["AuthSetupComplete"]</h2>
-                <p class="setup-lead">@Loc["AdmSetupDoneLead"]</p>
+                <h2 class="setup-title setup-done-title">
+                    <MudIcon Icon="@Icons.Material.Outlined.TaskAlt" Class="setup-done-icon" aria-hidden="true" />
+                    @Loc["AuthSetupComplete"]
+                </h2>
+                @* Empty when the wizard's state could not be read after the claim: there is nothing to sum up. *@
+                @if (_handlers.Count > 0)
+                {
+                    <h3 class="setup-done-heading">@Loc["AdmSetupDoneSummary"]</h3>
+                    <ul class="setup-handler-summary">
+                        @foreach (var handler in _handlers)
+                        {
+                            <li @key="handler.Kind"><strong>@HandlerTitle(handler.Kind)</strong> @HandlerNow(handler)</li>
+                        }
+                        @* The packages step saved exactly this set before it moved here. *@
+                        <li>@Loc.Plural("AdmSetupDonePackages", "count", Effective.Count)</li>
+                        @if (_starterWorld || _starterWorldApplied)
+                        {
+                            <li><strong>@Loc["AdmSetupStarterWorldTitle"]</strong> @Loc["AdmSetupDoneAdded"]</li>
+                        }
+                        @if (_starterWiki || _starterWikiApplied)
+                        {
+                            <li><strong>@Loc["AdmSetupStarterWikiTitle"]</strong> @Loc["AdmSetupDoneAdded"]</li>
+                        }
+                    </ul>
+                }
+                <h3 class="setup-done-heading">@Loc["AdmSetupDoneNext"]</h3>
                 <p class="setup-lead">@Loc["AdmSetupDoneStaff"]</p>
+                <p class="setup-lead">@Loc["AdmSetupDoneLead"]</p>
                 @* The checklist is the next thing to do, so it is the filled button; the portal is the way out. *@
                 <a class="setup-submit setup-signin setup-checklist" href="/admin/onboarding">@Loc["AdmSetupDoneChecklist"]</a>
                 <button class="setup-secondary setup-enter" type="button" @onclick="EnterPortal">@Loc["AuthEnterPortal"]</button>
@@ -367,19 +392,19 @@
                    icon, real password inputs. *@
                 <MudTextField id="setup-username" @bind-Value="_username" Label="@Loc["AuthUsername"]"
                               Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Person"
                               Disabled="_busy" autocomplete="username" Immediate="true" OnKeyDown="OnClaimKeyDown" />
 
                 <MudTextField id="setup-password" @bind-Value="_password" Label="@Loc["AuthPassword"]"
                               InputType="InputType.Password"
                               Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Lock"
                               Disabled="_busy" autocomplete="new-password" Immediate="true" OnKeyDown="OnClaimKeyDown" />
 
                 <MudTextField id="setup-confirm" @bind-Value="_confirm" Label="@Loc["AuthConfirmPassword"]"
                               InputType="InputType.Password"
                               Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Lock"
                               Disabled="_busy" autocomplete="new-password" Immediate="true" OnKeyDown="OnClaimKeyDown" />
 
                 <button class="setup-submit" type="button" disabled="@_busy" @onclick="SubmitAsync">
@@ -833,7 +858,9 @@
 
                 _error = Loc["AdmSetupStarterWikiFailed", failure.Message];
                 break;
-            case SetupWizardResponse:
+            case SetupWizardResponse saved:
+                // The summary shows the handlers as this save left them, even if the refresh after the handler step failed.
+                _handlers = saved.Handlers;
                 // The applications are saved either way; a wizard the server still counts as unfinished comes
                 // back at the next sign-in, so say so here rather than show it as done.
                 switch (await Wizard.FinishAsync())

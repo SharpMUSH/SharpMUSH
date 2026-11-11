@@ -18,11 +18,11 @@
     <AdminStats>
         @* Tile labels are resource keys — a collection initializer cannot reach the injected Loc. *@
         @foreach (var tile in new[] {
-            ("pages",        _totalPages, "ResWikiStatTotalPages", Icons.Material.Filled.Article,    false),
-            ("published",    _published,  "WikiPublished",         Icons.Material.Filled.Visibility, false),
-            ("drafts",       _drafts,     "ResWikiStatDrafts",     Icons.Material.Filled.EditNote,   true),
-            ("restricted",   _restricted, "WikiRestricted",        Icons.Material.Filled.Lock,       true),
-            ("translations", _coverage.Values.Sum(v => v.Count), "ResWikiStatTranslations", Icons.Material.Filled.Translate, false),
+            ("pages",        _totalPages, "ResWikiStatTotalPages", Icons.Material.Outlined.Article,    false),
+            ("published",    _published,  "WikiPublished",         Icons.Material.Outlined.Visibility, false),
+            ("drafts",       _drafts,     "ResWikiStatDrafts",     Icons.Material.Outlined.EditNote,   true),
+            ("restricted",   _restricted, "WikiRestricted",        Icons.Material.Outlined.Lock,       true),
+            ("translations", _coverage.Values.Sum(v => v.Count), "ResWikiStatTranslations", Icons.Material.Outlined.Translate, false),
         })
         {
             var (key, val, labelKey, icon, warn) = tile;
@@ -33,7 +33,7 @@
     <KitCard Title="@Loc["WikiPagesTitle"]" Sub="@Loc["WikiPagesSub"]" Class="adminwiki-pages">
         <Controls>
             <MudTooltip Text="@Loc["Refresh"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" aria-label="@Loc["Refresh"]"
+                <MudIconButton Icon="@Icons.Material.Outlined.Refresh" Size="Size.Small" aria-label="@Loc["Refresh"]"
                                OnClick="@ReloadAsync" />
             </MudTooltip>
         </Controls>
@@ -45,7 +45,7 @@
                     <MudTextField @bind-Value="_searchText" Immediate="true"
                                   Placeholder="@Loc["ResSearchTitlesPlaceholder"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense"
-                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
                                   Class="adminwiki-filter adminwiki-filter--search" />
                     <MudSelect T="string"
                                Value="@_localeFilter"
@@ -79,7 +79,7 @@
                             <div class="adminwiki-tip"><strong>@Loc["WikiProtect"]</strong><span>@Loc["WikiProtectHelp"]</span></div>
                         </TooltipContent>
                         <ChildContent>
-                            <MudIconButton Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Color="Color.Warning"
+                            <MudIconButton Icon="@Icons.Material.Outlined.Lock" Size="Size.Small" Color="Color.Warning"
                                            aria-label="@Loc["WikiProtect"]" Disabled="@_busy" OnClick="@(() => BatchProtectAsync(true))" />
                         </ChildContent>
                     </MudTooltip>
@@ -88,17 +88,17 @@
                             <div class="adminwiki-tip"><strong>@Loc["WikiUnprotect"]</strong><span>@Loc["WikiUnprotectHelp"]</span></div>
                         </TooltipContent>
                         <ChildContent>
-                            <MudIconButton Icon="@Icons.Material.Filled.LockOpen" Size="Size.Small" Color="Color.Info"
+                            <MudIconButton Icon="@Icons.Material.Outlined.LockOpen" Size="Size.Small" Color="Color.Info"
                                            aria-label="@Loc["WikiUnprotect"]" Disabled="@_busy" OnClick="@(() => BatchProtectAsync(false))" />
                         </ChildContent>
                     </MudTooltip>
                     <MudTooltip Text="@Loc["WikiDelete"]">
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                        <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error"
                                        aria-label="@Loc["WikiDelete"]" Disabled="@_busy" OnClick="@(() => _showDeleteConfirm = true)" />
                     </MudTooltip>
                     <span class="adminwiki-selection-rule" aria-hidden="true"></span>
                     <MudTooltip Text="@Loc["WikiClearSelection"]">
-                        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                        <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
                                        aria-label="@Loc["WikiClearSelection"]" OnClick="@(() => _selected = [])" />
                     </MudTooltip>
                 </div>
@@ -123,7 +123,7 @@
                                     @if (context.Item.IsRestricted)
                                     {
                                         <MudTooltip Text="@Loc["WikiRestricted"]">
-                                            <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Color="Color.Warning" Class="adminwiki-lock" />
+                                            <MudIcon Icon="@Icons.Material.Outlined.Lock" Size="Size.Small" Color="Color.Warning" Class="adminwiki-lock" />
                                         </MudTooltip>
                                     }
                                     <MudLink Href="@PageHref(context.Item)" Class="adminwiki-title-link">@context.Item.Title</MudLink>
@@ -184,7 +184,7 @@
                         <CellTemplate>
                             <div class="adminwiki-actions">
                                 <MudTooltip Text="@Loc["WikiEdit"]">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="@Loc["WikiEdit"]"
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" aria-label="@Loc["WikiEdit"]"
                                                    Href="@($"{WikiHref(context.Item)}/edit")" />
                                 </MudTooltip>
                                 <MudTooltip Text="@Loc["WikiEditMetadata"]">
@@ -192,7 +192,7 @@
                                                    OnClick="@(() => OpenMetadataDialog(context.Item))" />
                                 </MudTooltip>
                                 <MudTooltip Text="@Loc["ResHistory"]">
-                                    <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small" aria-label="@Loc["ResHistory"]"
+                                    <MudIconButton Icon="@Icons.Material.Outlined.History" Size="Size.Small" aria-label="@Loc["ResHistory"]"
                                                    Href="@($"{WikiHref(context.Item)}/history")" />
                                 </MudTooltip>
                             </div>
@@ -219,7 +219,7 @@
                           Label="@Loc["WikiNewCategoryDescription"]" Variant="Variant.Outlined" Margin="Margin.Dense"
                           Class="adminwiki-newcat-desc" />
             <MudTooltip Text="@Loc["WikiCreateCategory"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Primary"
+                <MudIconButton Icon="@Icons.Material.Outlined.Add" Variant="Variant.Filled" Color="Color.Primary"
                                ButtonType="ButtonType.Submit" aria-label="@Loc["WikiCreateCategory"]"
                                Disabled="@(_busy || WikiCategories.Key(_newCategoryName).Length == 0 || NewCategoryExists)" />
             </MudTooltip>

@@ -29,7 +29,7 @@
         @if (_step > 0)
         {
             <button type="button" class="bld-back" @onclick="() => GoTo(0)">
-                <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Small" /> @Loc["LayBldYourApps"]
+                <MudIcon Icon="@Icons.Material.Outlined.ChevronLeft" Size="Size.Small" /> @Loc["LayBldYourApps"]
             </button>
         }
         <div class="bld-bar-title">
@@ -53,12 +53,12 @@
         {
             <div class="bld-bar-tools">
                 <button type="button" class="bld-icon-button bld-icon-button--framed" aria-label="@Loc["LayBldUndo"]" title="@Loc["LayBldUndo"]"
-                        disabled="@(!CanUndo)" @onclick="Undo"><MudIcon Icon="@Icons.Material.Filled.Undo" Size="Size.Small" /></button>
+                        disabled="@(!CanUndo)" @onclick="Undo"><MudIcon Icon="@Icons.Material.Outlined.Undo" Size="Size.Small" /></button>
                 <button type="button" class="bld-icon-button bld-icon-button--framed" aria-label="@Loc["LayBldRedo"]" title="@Loc["LayBldRedo"]"
-                        disabled="@(!CanRedo)" @onclick="Redo"><MudIcon Icon="@Icons.Material.Filled.Redo" Size="Size.Small" /></button>
+                        disabled="@(!CanRedo)" @onclick="Redo"><MudIcon Icon="@Icons.Material.Outlined.Redo" Size="Size.Small" /></button>
                 @if (_step < 4)
                 {
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ChevronRight"
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Outlined.ChevronRight"
                                Disabled="@(_step == 1 && !BuilderDraft.IsSlug(_draft.Slug))" OnClick="Next">@Loc["LayBldNextTo", Loc[StepKeys[_step + 1]]]</MudButton>
                 }
             </div>
@@ -78,7 +78,7 @@
                                 aria-current="@(step == _step ? "step" : null)" disabled="@(step > _reached)" @onclick="() => GoTo(step)">
                             @if (step < _step && count == 0)
                             {
-                                <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" />
+                                <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small" />
                             }
                             else
                             {
@@ -194,7 +194,7 @@
         @if (_left is { } left)
         {
             <div class="bld-banner" role="note">
-                <MudIcon Icon="@Icons.Material.Filled.Restore" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Outlined.Restore" Size="Size.Small" />
                 <span>@Loc["LayBldLeftDraft", left.Title is { Length: > 0 } t ? t : Loc["LayBldUnnamed"].Value, left.Kept]</span>
                 <button type="button" class="bld-link-button" @onclick="ResumeLeft">@Loc["LayBldResume"]</button>
                 <button type="button" class="bld-link-button bld-link-button--quiet" @onclick="DiscardLeftAsync">@Loc["LayBldDiscard"]</button>
@@ -670,12 +670,12 @@
                     <ul class="bld-checks">
                         @if (Issues.Count == 0)
                         {
-                            <li class="bld-check bld-check--ok"><MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" /> @Loc["LayBldNoProblems"]</li>
+                            <li class="bld-check bld-check--ok"><MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small" /> @Loc["LayBldNoProblems"]</li>
                         }
                         @foreach (var issue in Issues)
                         {
                             <li class="bld-check bld-check--warn">
-                                <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Size="Size.Small" />
+                                <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Size="Size.Small" />
                                 <span>@issue.Text <button type="button" class="bld-link-button" @onclick="() => GoToIssue(issue)">@Loc["LayBldGoTo", Loc[StepKeys[issue.Step]]]</button></span>
                             </li>
                         }
@@ -696,13 +696,13 @@
                             else if (_shelf is { } shelf)
                             {
                                 <span class="@(shelf.Controls ? "bld-ok" : "bld-warn")">
-                                    <MudIcon Icon="@(shelf.Controls ? Icons.Material.Filled.Check : Icons.Material.Filled.Block)" Size="Size.Small" />
+                                    <MudIcon Icon="@(shelf.Controls ? Icons.Material.Outlined.Check : Icons.Material.Outlined.Block)" Size="Size.Small" />
                                     @(shelf.Controls ? Loc["LayBldYouControl", $"{shelf.Name}({shelf.Holder})"] : Loc["LayBldNotYours", $"{shelf.Name}({shelf.Holder})"])
                                 </span>
                             }
                             else if (_shelfFailure is { } failure)
                             {
-                                <span class="bld-warn"><MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" /> @failure</span>
+                                <span class="bld-warn"><MudIcon Icon="@Icons.Material.Outlined.ErrorOutline" Size="Size.Small" /> @failure</span>
                             }
                         </div>
                     </div>
@@ -756,13 +756,13 @@
                     </NotAuthorized>
                 </AuthorizeView>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" OnClick="SaveAsync"
-                           Disabled="@(_busy || Issues.Count > 0 || _shelf is { Controls: false })" StartIcon="@Icons.Material.Filled.Save">
+                           Disabled="@(_busy || Issues.Count > 0 || _shelf is { Controls: false })" StartIcon="@Icons.Material.Outlined.Save">
                     @(_register && Registrar ? Loc["LayBldSaveAndShow"] : Loc["LayBldSave"])
                 </MudButton>
                 @if (_savedHolder is not null)
                 {
                     <div class="bld-saved" role="status">
-                        <p class="bld-ok"><MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" /> @Loc["LayBldSaved", _draft.BaseAttribute, _savedHolder]</p>
+                        <p class="bld-ok"><MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small" /> @Loc["LayBldSaved", _draft.BaseAttribute, _savedHolder]</p>
                         <div class="bld-row">
                             @if (_savedLink is not null)
                             {

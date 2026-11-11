@@ -58,7 +58,7 @@
     @* Shown by portal-interop.js while the player has scrolled up to reread (sharp-terminal--reading); it
        says so when output has arrived meanwhile (sharp-terminal--new). *@
     <button type="button" class="sharp-terminal-jump" @onclick="JumpToLatestAsync">
-        <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Style="font-size:var(--text-md);" />
+        <MudIcon Icon="@Icons.Material.Outlined.ArrowDownward" Style="font-size:var(--text-md);" />
         <span class="sharp-terminal-jump-latest">@Loc["TermJumpLatest"]</span>
         <span class="sharp-terminal-jump-new">@Loc["TermNewLinesBelow"]</span>
     </button>
@@ -124,12 +124,12 @@
                    disabled="@(!_connected)" aria-label="@Loc["TermInputLabel"]"
                    placeholder="@Loc["TermInputPlaceholder"]" />
             <button type="button" class="term-send" @onclick="SendFromButtonAsync" disabled="@(!_connected)" title="@Loc["Send"]" aria-label="@Loc["Send"]">
-                <MudIcon Icon="@Icons.Material.Filled.Send" Style="font-size:var(--text-base);" />
+                <MudIcon Icon="@Icons.Material.Outlined.Send" Style="font-size:var(--text-base);" />
             </button>
             @if (ShowClearButton)
             {
                 <button type="button" class="term-clear" @onclick="ClearAsync" title="@Loc["TermClearTerminal"]" aria-label="@Loc["TermClearTerminal"]">
-                    <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:var(--text-base);" />
+                    <MudIcon Icon="@Icons.Material.Outlined.ClearAll" Style="font-size:var(--text-base);" />
                 </button>
             }
         </div>

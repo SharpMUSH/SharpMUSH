@@ -15,31 +15,31 @@
     <LoadState TValue="AdminServerStatus" Value="_status" Loading="@(_status is null && _error is null)" Error="@_error" ErrorClass="adm-server-error"
                Context="status">
         <AdminStats>
-            <AdminStat Key="ready" Icon="@(status.Ready ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.HourglassTop)"
+            <AdminStat Key="ready" Icon="@(status.Ready ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.HourglassTop)"
                        Label="@Loc["AdmServerReadiness"]" Warn="@(!status.Ready)"
                        Value="@Loc[status.Ready ? "AdmServerReady" : "AdmServerNotReady"]"
                        Sub="@(status.Ready ? null : Loc["AdmServerWaitingOn", string.Join(", ", status.Pending)].Value)" />
-            <AdminStat Key="uptime" Icon="@Icons.Material.Filled.Timer" Label="@Loc["AdmServerUptime"]"
+            <AdminStat Key="uptime" Icon="@Icons.Material.Outlined.Timer" Label="@Loc["AdmServerUptime"]"
                        Value="@(status.StartedAt is { } started ? Uptime(_readAt - started) : "—")"
                        Sub="@(status.StartedAt is { } since ? Loc["AdmServerSince", Utc(since)].Value : null)" />
-            <AdminStat Key="players" Icon="@Icons.Material.Filled.Group" Label="@Loc["AdmServerPlayers"]"
+            <AdminStat Key="players" Icon="@Icons.Material.Outlined.Group" Label="@Loc["AdmServerPlayers"]"
                        Value="@status.Players.ToString()" Sub="@Loc["AdmServerConnections", status.Connections]" />
-            <AdminStat Key="queue" Icon="@Icons.Material.Filled.PlaylistPlay" Label="@Loc["AdmServerQueue"]"
+            <AdminStat Key="queue" Icon="@Icons.Material.Outlined.PlaylistPlay" Label="@Loc["AdmServerQueue"]"
                        Value="@(status.QueuedTasks?.ToString() ?? "—")" Sub="@Loc["AdmServerQueueLimit", status.QueueLimit]"
                        Warn="@(status.QueuedTasks is { } queued && queued >= status.QueueLimit * 0.8)" />
-            <AdminStat Key="bus" Icon="@Icons.Material.Filled.SwapHoriz" Label="@Loc["AdmServerBusBacklog"]"
+            <AdminStat Key="bus" Icon="@Icons.Material.Outlined.SwapHoriz" Label="@Loc["AdmServerBusBacklog"]"
                        Value="@(status.BusReadAt ? status.BusBacklog.ToString() : "—")"
                        Sub="@BusLine(status)" Warn="@(FullestStream(status) is { } fullest && Share(fullest) >= 0.8)" />
-            <AdminStat Key="storage" Icon="@Icons.Material.Filled.Storage" Label="@Loc["AdmServerStorage"]"
+            <AdminStat Key="storage" Icon="@Icons.Material.Outlined.Storage" Label="@Loc["AdmServerStorage"]"
                        Value="@Loc.FormatBytes(status.Storage.LiveBytes)"
                        Sub="@Loc["AdmServerStorageLine", Loc.FormatBytes(status.Storage.FileBytes), Loc.FormatBytes(status.Storage.MapSizeBytes)]"
                        Warn="@(status.Storage.FileBytes >= status.Storage.MapSizeBytes * 0.9)" />
-            <AdminStat Key="disk" Icon="@Icons.Material.Filled.Album" Label="@Loc["AdmServerDiskFree"]"
+            <AdminStat Key="disk" Icon="@Icons.Material.Outlined.Album" Label="@Loc["AdmServerDiskFree"]"
                        Value="@(status.Storage.DiskFreeBytes < 0 ? "—" : Loc.FormatBytes(status.Storage.DiskFreeBytes))" />
-            <AdminStat Key="backup" Icon="@Icons.Material.Filled.Backup" Label="@Loc["AdmServerLastBackup"]"
+            <AdminStat Key="backup" Icon="@Icons.Material.Outlined.Backup" Label="@Loc["AdmServerLastBackup"]"
                        Value="@BackupValue(status)" Sub="@(status.LastBackup is { } taken ? Utc(taken) : null)"
                        Warn="@(status.BackupSupported && status.LastBackup is null)" />
-            <AdminStat Key="version" Icon="@Icons.Material.Filled.Info" Label="@Loc["AdmServerVersion"]"
+            <AdminStat Key="version" Icon="@Icons.Material.Outlined.Info" Label="@Loc["AdmServerVersion"]"
                        Value="@status.Version" Sub="@Loc["AdmServerBuild", ShortBuild(status.BuildId)]" />
         </AdminStats>
 

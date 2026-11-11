@@ -217,7 +217,7 @@ else
                     @if (Shell is not null)
                     {
                         <button type="button" class="play-sheet-site" @onclick="OpenSiteMenu">
-                            <MudIcon Icon="@Icons.Material.Filled.Menu" Size="Size.Small" /><span>@Loc["NavMenuLabel"]</span>
+                            <MudIcon Icon="@Icons.Material.Outlined.Menu" Size="Size.Small" /><span>@Loc["NavMenuLabel"]</span>
                         </button>
                     }
                     <div class="play-sheet-body">
@@ -239,7 +239,7 @@ else
     {
         if (PlayTerminal.IsConnected)
         {
-            <PlayControl Label="@Loc["Disconnect"]" Icon="@Icons.Material.Filled.PowerSettingsNew" OnClick="DisconnectAsync" />
+            <PlayControl Label="@Loc["Disconnect"]" Icon="@Icons.Material.Outlined.PowerSettingsNew" OnClick="DisconnectAsync" />
         }
         else if (AccountAuth.IsLoggedIn)
         {
@@ -276,7 +276,7 @@ else
     private RenderFragment BannerControls(PlaySettingsMenu menu) => __builder =>
     {
         <div class="play-banner-more">
-            <PlayControl Class="play-banner-focus" Label="@Loc["NavFocusMode"]" Icon="@Icons.Material.Filled.Fullscreen" OnClick="EnterFocusAsync" />
+            <PlayControl Class="play-banner-focus" Label="@Loc["NavFocusMode"]" Icon="@Icons.Material.Outlined.Fullscreen" OnClick="EnterFocusAsync" />
             @if (View == PlayView.Terminal)
             {
                 @TerminalSettings(menu)

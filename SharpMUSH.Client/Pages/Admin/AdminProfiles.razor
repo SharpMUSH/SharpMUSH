@@ -21,7 +21,7 @@
             @if (_status?.HandlerExists == true)
             {
                 <AuthorizeView Policy="packages.admin">
-                    <CapsuleButton Primary="true" Icon="@Icons.Material.Filled.RestartAlt" Disabled="_resetting" OnClick="ResetAsync">
+                    <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.RestartAlt" Disabled="_resetting" OnClick="ResetAsync">
                         @(_resetting ? Loc["AdmResetting"] : Loc["ResetToDefaults"])
                     </CapsuleButton>
                 </AuthorizeView>

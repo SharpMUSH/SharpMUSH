@@ -22,7 +22,7 @@
 <div class="page-stack page-stack--padded adm-theme">
     <PageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["AdmThemesTitle"]" Description="@Loc["AdmThemesDescription"]">
         <Actions>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" id="theme-new"
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Add" id="theme-new"
                        Disabled="@(_state is null || _busy)" OnClick="New">@Loc["AdmThemesNew"]</MudButton>
         </Actions>
     </PageHeader>
@@ -255,7 +255,7 @@
                                         <span class="adm-theme-contrast-sample" style="@($"color:{effective[fg]};background:{effective[bg]};border-color:{effective[ThemeTokens.Border]}")">Aa</span>
                                         <span class="adm-theme-contrast-pair">@Loc["AdmThemesOn", Loc[TokenKey(fg)], Loc[TokenKey(bg)]]</span>
                                         <span class="adm-theme-contrast-ratio">@ratio.ToString("0.0")</span>
-                                        <MudIcon Icon="@(ok ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Warning)" Size="Size.Small"
+                                        <MudIcon Icon="@(ok ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Warning)" Size="Size.Small"
                                                  Class="@(ok ? "adm-theme-ok" : "adm-theme-low")" Title="@Loc[ok ? "AdmThemesContrastOk" : "AdmThemesContrastLow"]" />
                                     </li>
                                 }

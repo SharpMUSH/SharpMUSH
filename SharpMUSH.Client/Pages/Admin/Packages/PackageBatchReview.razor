@@ -75,7 +75,7 @@
                         <MudButton Variant="Variant.Outlined" Disabled="@_busy" OnClick="@RefreshRunAsync">@Loc["PkgBatchRefreshStatus"]</MudButton>
                         @if (Packages.Batch.Intents.Count > 0)
                         {
-                            <MudButton Class="pkg-batch-review-again" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                            <MudButton Class="pkg-batch-review-again" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh"
                                        Disabled="@(_busy || Packages.Batch.AdmissionBlocked)" OnClick="@ReviewRemainingAsync">@Loc["PkgBatchReviewAgain"]</MudButton>
                         }
                     </div>
@@ -200,7 +200,7 @@
     else if (_run is null && !Running && !Packages.Batch.AdmissionBlocked && Packages.Batch.Intents.Count > 0)
     {
         <div class="pkg-batch-actions">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh"
                        Disabled="@_busy" OnClick="@PlanAsync">@Loc["PkgBatchReviewAgain"]</MudButton>
         </div>
     }

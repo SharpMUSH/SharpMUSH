@@ -16,19 +16,19 @@
 <div class="page-stack page-stack--padded appadmin">
     <PageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["LayApplications"]">
         <Actions>
-            <CapsuleButton Icon="@Icons.Material.Filled.Code" Href="/softcode">@Loc["LayAppsSchemaRegistry"]</CapsuleButton>
-            <CapsuleButton Icon="@Icons.Material.Filled.DashboardCustomize" Href="/build/apps">@Loc["LayBldTitle"]</CapsuleButton>
-            <CapsuleButton Icon="@Icons.Material.Filled.Add" Primary="true" OnClick="@(() => Edit(null))">@Loc["LayAppsNew"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Outlined.Code" Href="/softcode">@Loc["LayAppsSchemaRegistry"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Outlined.DashboardCustomize" Href="/build/apps">@Loc["LayBldTitle"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Outlined.Add" Primary="true" OnClick="@(() => Edit(null))">@Loc["LayAppsNew"]</CapsuleButton>
         </Actions>
     </PageHeader>
 
     <AdminStats>
         @foreach (var tile in new[]
         {
-            ("apps",    Apps.Count.ToString(),                                              "LayApplications",  "LayAppsStatRegistered", Icons.Material.Filled.Apps),
-            ("pages",   Apps.Count(a => a.KindEnum == ApplicationKind.Page).ToString(),     "LayAppsPages",     "LayAppsStatPages",      Icons.Material.Filled.WebAsset),
-            ("widgets", Apps.Count(a => a.KindEnum == ApplicationKind.Widget).ToString(),   "LayAppsWidgets",   "LayAppsStatWidgets",    Icons.Material.Filled.Dashboard),
-            ("schemas", Apps.Count(a => !string.IsNullOrEmpty(a.SchemaUrl)).ToString(),     "LayAppsSchemas",   "LayAppsStatSchemas",    Icons.Material.Filled.DataObject),
+            ("apps",    Apps.Count.ToString(),                                              "LayApplications",  "LayAppsStatRegistered", Icons.Material.Outlined.Apps),
+            ("pages",   Apps.Count(a => a.KindEnum == ApplicationKind.Page).ToString(),     "LayAppsPages",     "LayAppsStatPages",      Icons.Material.Outlined.WebAsset),
+            ("widgets", Apps.Count(a => a.KindEnum == ApplicationKind.Widget).ToString(),   "LayAppsWidgets",   "LayAppsStatWidgets",    Icons.Material.Outlined.Dashboard),
+            ("schemas", Apps.Count(a => !string.IsNullOrEmpty(a.SchemaUrl)).ToString(),     "LayAppsSchemas",   "LayAppsStatSchemas",    Icons.Material.Outlined.DataObject),
         })
         {
             var (key, val, labelKey, subKey, icon) = tile;
@@ -45,7 +45,7 @@
         <AdminMasterDetail Area="appadmin">
             <Records>
                 <div class="aa-search">
-                    <MudIcon Icon="@Icons.Material.Filled.Search" Class="aa-ico aa-ico--faint" />
+                    <MudIcon Icon="@Icons.Material.Outlined.Search" Class="aa-ico aa-ico--faint" />
                     <input name="application-search" value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)"
                            placeholder="@Loc["LayAppsSearchPlaceholder"]" aria-label="@Loc["LayAppsSearchPlaceholder"]" />
                 </div>
@@ -59,7 +59,7 @@
                     <AdminSelectableCard Prefix="aa" Selected="@List.IsSelected(a)" OnSelect="@(() => List.Select(a))">
                         <div class="aa-card-top">
                             <span class="aa-card-icon">
-                                <MudIcon Icon="@AppIcons.Fill(a.Icon, Icons.Material.Filled.Apps)" Class="aa-ico aa-ico--card" />
+                                <MudIcon Icon="@AppIcons.Outline(a.Icon, Icons.Material.Outlined.Apps)" Class="aa-ico aa-ico--card" />
                             </span>
                             <div class="aa-grow">
                                 <div class="aa-card-name">@a.DisplayName</div>
@@ -82,7 +82,7 @@
                 {
                     <div class="aa-detail-head">
                         <span class="aa-detail-icon">
-                            <MudIcon Icon="@AppIcons.Fill(selected.Icon, Icons.Material.Filled.Apps)" Class="aa-ico aa-ico--detail" />
+                            <MudIcon Icon="@AppIcons.Outline(selected.Icon, Icons.Material.Outlined.Apps)" Class="aa-ico aa-ico--detail" />
                         </span>
                         <div class="aa-grow">
                             <div class="aa-detail-titles">
@@ -94,10 +94,10 @@
                         </div>
                         <div class="aa-detail-headbtns">
                             <button type="button" class="aa-icon-btn" title="@Loc["LayEdit"]" aria-label="@Loc["LayEdit"]" @onclick="@(() => Edit(selected))">
-                                <MudIcon Icon="@Icons.Material.Filled.Edit" Class="aa-ico aa-ico--btn" />
+                                <MudIcon Icon="@Icons.Material.Outlined.Edit" Class="aa-ico aa-ico--btn" />
                             </button>
                             <button type="button" class="aa-icon-btn aa-icon-btn--danger" title="@Loc["LayRemove"]" aria-label="@Loc["LayRemove"]" @onclick="@(() => Delete(selected))">
-                                <MudIcon Icon="@Icons.Material.Filled.Delete" Class="aa-ico aa-ico--btn" />
+                                <MudIcon Icon="@Icons.Material.Outlined.Delete" Class="aa-ico aa-ico--btn" />
                             </button>
                         </div>
                     </div>
@@ -141,15 +141,15 @@
                         <div class="aa-section-label">@Loc["LayActions"]</div>
                         <div class="aa-actions">
                             <a class="aa-btn aa-btn--primary" href="@($"/apps/{selected.Slug}")">
-                                <MudIcon Icon="@Icons.Material.Filled.OpenInBrowser" Class="aa-ico" /> @Loc["LayAppOpen"]
+                                <MudIcon Icon="@Icons.Material.Outlined.OpenInBrowser" Class="aa-ico" /> @Loc["LayAppOpen"]
                             </a>
                             <a class="aa-btn" href="/softcode">
-                                <MudIcon Icon="@Icons.Material.Filled.Code" Class="aa-ico" /> @Loc["LayAppEditInSoftcode"]
+                                <MudIcon Icon="@Icons.Material.Outlined.Code" Class="aa-ico" /> @Loc["LayAppEditInSoftcode"]
                             </a>
                             @if (!string.IsNullOrEmpty(selected.SchemaUrl))
                             {
                                 <a class="aa-btn" href="@selected.SchemaUrl" target="_blank" rel="noopener noreferrer">
-                                    <MudIcon Icon="@Icons.Material.Filled.Link" Class="aa-ico" /> @Loc["LayAppViewSchema"]
+                                    <MudIcon Icon="@Icons.Material.Outlined.Link" Class="aa-ico" /> @Loc["LayAppViewSchema"]
                                 </a>
                             }
                         </div>

@@ -23,17 +23,17 @@
                 <AuthorizeView Policy="players.moderate" Context="moderator">
                     @if (detail.Character.Online)
                     {
-                        <CapsuleButton Icon="@Icons.Material.Filled.PowerSettingsNew" Disabled="_busy"
+                        <CapsuleButton Icon="@Icons.Material.Outlined.PowerSettingsNew" Disabled="_busy"
                                        Class="adm-char-boot" OnClick="BootAsync">@Loc["AdmCharacterBoot"]</CapsuleButton>
                     }
                     @if (detail.Character.AccountKey is not null && detail.Character.DbrefNumber != 1)
                     {
-                        <CapsuleButton Icon="@Icons.Material.Filled.LinkOff" Disabled="_busy"
+                        <CapsuleButton Icon="@Icons.Material.Outlined.LinkOff" Disabled="_busy"
                                        Class="adm-char-unlink" OnClick="UnlinkAsync">@Loc["AdmCharacterUnlink"]</CapsuleButton>
                     }
-                    <CapsuleButton Icon="@Icons.Material.Filled.Gavel" Class="adm-char-moderate"
+                    <CapsuleButton Icon="@Icons.Material.Outlined.Gavel" Class="adm-char-moderate"
                                    Href="@($"/admin/moderation?character={detail.Character.DbrefNumber}")">@Loc["AdmModerate"]</CapsuleButton>
-                    <CapsuleButton Icon="@Icons.Material.Filled.History" Href="@AuditHref(detail)">@Loc["AdmAuditTitle"]</CapsuleButton>
+                    <CapsuleButton Icon="@Icons.Material.Outlined.History" Href="@AuditHref(detail)">@Loc["AdmAuditTitle"]</CapsuleButton>
                 </AuthorizeView>
             }
         </Actions>
@@ -62,7 +62,7 @@
                                     <div class="adm-char-link">
                                         <MudTextField T="string" @bind-Value="_linkAccount" Label="@Loc["AdmCharacterLinkAccount"]" id="character-link-account"
                                                       Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" />
-                                        <CapsuleButton Icon="@Icons.Material.Filled.Link" Class="adm-char-link-go"
+                                        <CapsuleButton Icon="@Icons.Material.Outlined.Link" Class="adm-char-link-go"
                                                        Disabled="@(_busy || string.IsNullOrWhiteSpace(_linkAccount))"
                                                        OnClick="LinkAsync">@Loc["AdmCharacterLink"]</CapsuleButton>
                                     </div>
@@ -100,7 +100,7 @@
                                 <div class="adm-char-role-add" role="group" aria-label="@Loc["RolAddRole"]">
                                     @foreach (var role in assignable)
                                     {
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Add"
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Icon="@Icons.Material.Outlined.Add"
                                                  Class="adm-char-role-new" Disabled="_busy" OnClick="() => AddRoleAsync(role.Slug)">@role.Name</MudChip>
                                     }
                                 </div>

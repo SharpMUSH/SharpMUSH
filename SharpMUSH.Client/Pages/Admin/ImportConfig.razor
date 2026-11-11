@@ -23,7 +23,7 @@
                                MaximumFileCount="1"
                                MaxFileSize="1048576" />
                 <div class="impcfg-dropzone-inner">
-                    <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Class="impcfg-dropzone-icon" />
+                    <MudIcon Icon="@Icons.Material.Outlined.CloudUpload" Class="impcfg-dropzone-icon" />
                     <span class="impcfg-dropzone-title">@Loc["DropFilesOrClick"]</span>
                     <span class="impcfg-dropzone-hint">@Loc["SupportedFormatsConfig"]</span>
                 </div>
@@ -35,7 +35,7 @@
             <KitCard Title="@Loc["SelectedFile"]">
                 <div class="impcfg-body">
                     <div class="impcfg-file-row">
-                        <MudIcon Icon="@Icons.Material.Filled.Description" Class="impcfg-file-icon" />
+                        <MudIcon Icon="@Icons.Material.Outlined.Description" Class="impcfg-file-icon" />
                         <span class="impcfg-file-name">@_selectedFile.Name</span>
                         <span class="impcfg-file-size">(@($"{_selectedFile.Size / 1024.0:F1}") KB)</span>
                     </div>
@@ -51,7 +51,7 @@
                     @foreach (var include in _includes.Keys)
                     {
                         <div class="impcfg-file-row">
-                            <MudIcon Icon="@Icons.Material.Filled.Description" Class="impcfg-file-icon" />
+                            <MudIcon Icon="@Icons.Material.Outlined.Description" Class="impcfg-file-icon" />
                             <span class="impcfg-file-name impcfg-include-name">@include</span>
                         </div>
                     }
@@ -62,7 +62,7 @@
                             <MudExpansionPanel MaxHeight="400">
                                 <TitleContent>
                                     <div class="impcfg-preview-title">
-                                        <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" />
+                                        <MudIcon Icon="@Icons.Material.Outlined.Visibility" Size="Size.Small" />
                                         <span>@Loc["PreviewFileContent"]</span>
                                     </div>
                                 </TitleContent>
@@ -82,8 +82,8 @@
                     }
 
                     <div class="impcfg-actions">
-                        <CapsuleButton Icon="@Icons.Material.Filled.Clear" OnClick="ClearSelection">@Loc["ClearSelection"]</CapsuleButton>
-                        <CapsuleButton Icon="@(_isImporting ? null : Icons.Material.Filled.Upload)" Primary="true"
+                        <CapsuleButton Icon="@Icons.Material.Outlined.Clear" OnClick="ClearSelection">@Loc["ClearSelection"]</CapsuleButton>
+                        <CapsuleButton Icon="@(_isImporting ? null : Icons.Material.Outlined.Upload)" Primary="true"
                                        OnClick="ImportConfiguration" Disabled="_isImporting">
                             @if (_isImporting)
                             {

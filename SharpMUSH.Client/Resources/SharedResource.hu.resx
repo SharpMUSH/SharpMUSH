@@ -1913,6 +1913,15 @@
     <value>Mappák</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailFolderInbox" xml:space="preserve">
+    <value>Beérkezett</value>
+  </data>
+  <data name="NavMailFolderSent" xml:space="preserve">
+    <value>Elküldött</value>
+  </data>
+  <data name="NavMailFolderTrash" xml:space="preserve">
+    <value>Kuka</value>
+  </data>
   <data name="NavMailForward" xml:space="preserve">
     <value>Továbbítás</value>
     <comment>MT</comment>

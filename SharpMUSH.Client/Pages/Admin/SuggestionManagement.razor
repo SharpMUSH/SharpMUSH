@@ -11,8 +11,8 @@
 <div class="page-stack page-stack--padded sugg-page">
     <PageHeader Kicker="@Loc["AdmGroupContent"]" Title="@Loc["SuggestionManagement"]" Description="@Loc["SuggestionsDescription"]">
         <Actions>
-            <CapsuleButton Icon="@Icons.Material.Filled.Refresh" OnClick="LoadSuggestionsAsync">@Loc["Refresh"]</CapsuleButton>
-            <CapsuleButton Icon="@Icons.Material.Filled.Add" Primary="true" OnClick="ShowAddCategoryDialog">@Loc["AddCategory"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Outlined.Refresh" OnClick="LoadSuggestionsAsync">@Loc["Refresh"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Outlined.Add" Primary="true" OnClick="ShowAddCategoryDialog">@Loc["AddCategory"]</CapsuleButton>
         </Actions>
     </PageHeader>
 
@@ -30,11 +30,11 @@
     @if (_categories != null && _categories.Any())
     {
         <AdminStats>
-            <AdminStat Key="categories" Icon="@Icons.Material.Filled.Category" Label="@Loc["Categories"]"
+            <AdminStat Key="categories" Icon="@Icons.Material.Outlined.Category" Label="@Loc["Categories"]"
                        Value="@_categories.Count.ToString()" />
-            <AdminStat Key="words" Icon="@Icons.Material.Filled.TextFields" Label="@Loc["TotalWords"]"
+            <AdminStat Key="words" Icon="@Icons.Material.Outlined.TextFields" Label="@Loc["TotalWords"]"
                        Value="@_categories.Sum(c => c.Value.Count).ToString()" />
-            <AdminStat Key="average" Icon="@Icons.Material.Filled.TrendingUp" Label="@Loc["AvgWordsPerCategory"]"
+            <AdminStat Key="average" Icon="@Icons.Material.Outlined.TrendingUp" Label="@Loc["AvgWordsPerCategory"]"
                        Value="@Math.Round(_categories.Average(c => c.Value.Count), 1).ToString()" />
         </AdminStats>
 
@@ -46,11 +46,11 @@
                         <MudExpansionPanel>
                             <TitleContent>
                                 <div class="sugg-panel-title">
-                                    <MudIcon Icon="@Icons.Material.Filled.Category" Class="sugg-panel-icon" />
+                                    <MudIcon Icon="@Icons.Material.Outlined.Category" Class="sugg-panel-icon" />
                                     <span class="sugg-panel-name">@category.Key</span>
                                     <Pill Tag="true" Class="sugg-count">@Loc.Plural("WordsCount", "count", category.Value.Count)</Pill>
                                     <MudSpacer />
-                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Delete"
                                                    Size="Size.Small"
                                                    Color="Color.Error"
                                                    aria-label="@Loc["Delete"]"
@@ -68,12 +68,12 @@
                                                           Variant="Variant.Outlined"
                                                           Margin="Margin.Dense"
                                                           Adornment="Adornment.End"
-                                                          AdornmentIcon="@Icons.Material.Filled.Add"
+                                                          AdornmentIcon="@Icons.Material.Outlined.Add"
                                                           OnAdornmentClick="@(async () => await AddWordAsync(category.Key))"
                                                           FullWidth="true" />
                                             <MudButton Variant="Variant.Filled" Color="Color.Primary"
                                                       
-                                                       StartIcon="@Icons.Material.Filled.Add"
+                                                       StartIcon="@Icons.Material.Outlined.Add"
                                                        OnClick="@(async () => await AddWordAsync(category.Key))">
                                                 @Loc["Add"]
                                             </MudButton>

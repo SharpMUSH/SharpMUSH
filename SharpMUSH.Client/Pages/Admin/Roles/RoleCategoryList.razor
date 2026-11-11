@@ -11,7 +11,7 @@
         <input name="category-description" class="ra-input" type="text" placeholder="@Loc["RolCategoryDescriptionLabel"]" aria-label="@Loc["RolCategoryDescriptionLabel"]" value="@Draft.Description"
                maxlength="@Categories.MaxDescriptionLength" @oninput="@(e => Draft.Description = e.Value?.ToString() ?? string.Empty)" />
         <button type="button" class="ra-btn ra-btn--primary" @onclick="@(() => OnCreate.InvokeAsync(Kind))" disabled="@Saving">
-            <MudIcon Icon="@Icons.Material.Filled.Add" Class="ra-ico" /> @Loc["RolCategoryAdd"]
+            <MudIcon Icon="@Icons.Material.Outlined.Add" Class="ra-ico" /> @Loc["RolCategoryAdd"]
         </button>
     </div>
     @if (Items.Count == 0)
@@ -33,9 +33,9 @@
                         <div class="ra-perm-desc">@Holds(c)</div>
                     </div>
                     <div class="ra-row-actions">
-                        <RoleIconAction Icon="@Icons.Material.Filled.Save" Label="@Loc["Save"]" Disabled="Saving"
+                        <RoleIconAction Icon="@Icons.Material.Outlined.Save" Label="@Loc["Save"]" Disabled="Saving"
                                         OnClick="@(() => OnSave.InvokeAsync((Kind, c)))" />
-                        <RoleIconAction Icon="@Icons.Material.Filled.Delete" Label="@Loc["Delete"]" Danger="true" Disabled="Saving"
+                        <RoleIconAction Icon="@Icons.Material.Outlined.Delete" Label="@Loc["Delete"]" Danger="true" Disabled="Saving"
                                         OnClick="@(() => OnDelete.InvokeAsync((Kind, c)))" />
                     </div>
                 </div>

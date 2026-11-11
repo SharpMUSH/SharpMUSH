@@ -33,12 +33,12 @@
             </label>
             <div class="play-cfg-note" id="@LogsWhat">@Loc["NavKeepLongerLogsTooltip", TerminalLog.MaxLines.ToString("N0"), (int)TerminalLog.MaxAge.TotalDays]</div>
             <button type="button" class="play-cfg-item" @onclick="OnClear">
-                <MudIcon Icon="@Icons.Material.Filled.ClearAll" Style="font-size:var(--text-md);" />
+                <MudIcon Icon="@Icons.Material.Outlined.ClearAll" Style="font-size:var(--text-md);" />
                 <span>@Loc["TermClearTerminal"]</span>
             </button>
             @* The header's focus button, for a phone where Play.razor.css folds it into this menu. *@
             <button type="button" class="play-cfg-item play-cfg-focus" @onclick="() => FocusChanged.InvokeAsync(!Focus)">
-                <MudIcon Icon="@(Focus ? Icons.Material.Filled.FullscreenExit : Icons.Material.Filled.Fullscreen)" Style="font-size:var(--text-md);" />
+                <MudIcon Icon="@(Focus ? Icons.Material.Outlined.FullscreenExit : Icons.Material.Outlined.Fullscreen)" Style="font-size:var(--text-md);" />
                 <span>@(Focus ? Loc["NavExitFocusMode"] : Loc["NavFocusMode"])</span>
             </button>
         </div>

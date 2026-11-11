@@ -54,7 +54,7 @@ else
     <AuthorizeView Policy="layout.admin">
         <Authorized>
             <MudChip T="string" Href="/admin/layout"
-                     Icon="@Icons.Material.Filled.Settings" Color="Color.Default"
+                     Icon="@Icons.Material.Outlined.Settings" Color="Color.Default"
                      Size="Size.Small" Variant="Variant.Text">
                 @Loc["WidConfigureQuickLinks"]
             </MudChip>
@@ -82,7 +82,7 @@ else
 
     /// <summary>Inline SVG markup as MudBlazor draws it, else the generic link icon.</summary>
     public static string SvgOf(QuickLink link)
-        => link.Icon is { } icon && IsSvgMarkup(icon) ? icon : Icons.Material.Filled.Link;
+        => link.Icon is { } icon && IsSvgMarkup(icon) ? icon : Icons.Material.Outlined.Link;
 
     private static bool IsSvgMarkup(string icon) => icon.TrimStart().StartsWith('<');
 

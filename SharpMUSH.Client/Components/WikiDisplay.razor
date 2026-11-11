@@ -27,7 +27,7 @@
         <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WikiCharacterNoBio", Slug]</MudText>
         <AuthorizeView Policy="wiki.create">
             <Authorized>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.Create" Ripple="true"
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Outlined.Create" Ripple="true"
                            Class="mt-2" Style="text-transform:none;"
                            OnClick="@ActivateEditMode">@Loc["WikiCharacterWriteBio"]</MudButton>
             </Authorized>
@@ -521,7 +521,7 @@ else
                     }
                     <div style="flex:1;"></div>
                     <MudIconButton Class="wiki-fallback-dismiss" aria-label="@Loc["Dismiss"]"
-                                   Icon="@Icons.Material.Filled.Close"
+                                   Icon="@Icons.Material.Outlined.Close"
                                    Size="Size.Small"
                                    OnClick="@(() => _fallbackDismissed = true)" />
                 </div>

@@ -7,7 +7,7 @@
    between the languages. *@
 <PopoverMenu AnchorOrigin="AnchorOrigin" TransformOrigin="TransformOrigin" ArrowKeys="true" Open="_open" OpenChanged="v => _open = v">
     <Activator>
-        <MudIconButton Icon="@Icons.Material.Filled.Language" Color="Color.Inherit" aria-label="@Loc["NavLanguage"]"
+        <MudIconButton Icon="@Icons.Material.Outlined.Language" Color="Color.Inherit" aria-label="@Loc["NavLanguage"]"
                        aria-expanded="@(_open ? "true" : "false")" OnClick="() => _open = !_open" @onkeydown="CloseOnEscape" />
     </Activator>
     <ChildContent>
@@ -20,7 +20,7 @@
                     <span>@lang.DisplayName</span>
                     @if (current)
                     {
-                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Secondary" aria-hidden="true" />
+                        <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small" Color="Color.Secondary" aria-hidden="true" />
                     }
                 </button>
             }

@@ -2,7 +2,7 @@
    them sits on the row as a button of its own. Items are RowMenuItems; choosing one closes the menu. *@
 <PopoverMenu Open="_open" OpenChanged="SetOpen" ArrowKeys="true" Class="@Class">
     <Activator>
-        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Disabled="@Disabled"
+        <MudIconButton Icon="@Icons.Material.Outlined.MoreVert" Size="Size.Small" Disabled="@Disabled"
                        aria-label="@Label" aria-haspopup="menu" aria-expanded="@(_open ? "true" : "false")"
                        OnClick="() => SetOpen(!_open)" @onkeydown="CloseOnEscape" />
     </Activator>

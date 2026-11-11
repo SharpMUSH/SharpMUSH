@@ -52,7 +52,7 @@
                     {
                         <CapsuleButton OnClick="Reset">@Loc["Cancel"]</CapsuleButton>
                     }
-                    <CapsuleButton Primary="true" Icon="@Icons.Material.Filled.Save" Class="oauth-save"
+                    <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Save" Class="oauth-save"
                                    Disabled="@(_busy || string.IsNullOrWhiteSpace(_name) || _redirects.Count == 0)"
                                    OnClick="SaveAsync">@Loc["Save"]</CapsuleButton>
                 </div>

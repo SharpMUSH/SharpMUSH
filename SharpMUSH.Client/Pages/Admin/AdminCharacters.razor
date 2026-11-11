@@ -12,7 +12,7 @@
         <div class="adm-chars-body">
             <div class="adm-chars-filters">
                 <MudTextField T="string" @bind-Value="_search" Placeholder="@Loc["AdmCharactersSearchPlaceholder"]"
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
                               Variant="Variant.Outlined" Margin="Margin.Dense" Class="adm-chars-search" id="characters-search"
                               Immediate="true" DebounceInterval="300" OnDebounceIntervalElapsed="OnFilterDebouncedAsync" />
                 <MudSelect T="string" Value="_online" ValueChanged="OnOnlineChangedAsync" Label="@Loc["AdmCharactersConnection"]"

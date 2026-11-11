@@ -14,12 +14,12 @@
         @foreach (var page in Draft.Pages.OfType<JsonObject>().ToList())
         {
             <li>
-                @Row(Draft.Pages, page, Icons.Material.Filled.Article, null, (string?)page["title"] ?? "", () => Select(page, null, null), Draft.Pages.Count > 1)
+                @Row(Draft.Pages, page, Icons.Material.Outlined.Article, null, (string?)page["title"] ?? "", () => Select(page, null, null), Draft.Pages.Count > 1)
                 <ul>
                     @foreach (var section in BuilderDraft.Sections(page).OfType<JsonObject>().ToList())
                     {
                         <li>
-                            @Row(BuilderDraft.Sections(page), section, Icons.Material.Filled.ViewAgenda, null, SectionName(section), () => Select(page, section, null), true)
+                            @Row(BuilderDraft.Sections(page), section, Icons.Material.Outlined.ViewAgenda, null, SectionName(section), () => Select(page, section, null), true)
                             <ul>
                                 @foreach (var element in BuilderDraft.Elements(section).OfType<JsonObject>().ToList())
                                 {
@@ -33,7 +33,7 @@
                     }
                     <li class="bld-tree-add">
                         <button type="button" class="bld-link-button" @onclick="() => AddSectionAsync(page)">
-                            <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" /> @Loc["LayBldAddSection"]
+                            <MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" /> @Loc["LayBldAddSection"]
                         </button>
                     </li>
                 </ul>
@@ -41,7 +41,7 @@
         }
         <li class="bld-tree-add">
             <button type="button" class="bld-link-button" @onclick="AddPageAsync">
-                <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" /> @Loc["LayBldAddPage"]
+                <MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" /> @Loc["LayBldAddPage"]
             </button>
         </li>
     </ul>
@@ -101,7 +101,7 @@
              @ondragstart="() => { _dragList = list; _dragNode = node; }"
              @ondragend="() => { _dragList = null; _dragNode = null; }"
              @ondragover:preventDefault="true" @ondrop="() => DropAsync(list, node)">
-            <span class="bld-grip" aria-hidden="true"><MudIcon Icon="@Icons.Material.Filled.DragIndicator" Size="Size.Small" /></span>
+            <span class="bld-grip" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.DragIndicator" Size="Size.Small" /></span>
             <button type="button" class="bld-row-name" aria-current="@(selected ? "true" : null)" @onclick="select">
                 @if (icon is not null)
                 {
@@ -120,24 +120,24 @@
             </button>
             <span class="bld-row-tools">
                 <button type="button" class="bld-icon-button" disabled="@(index <= 0)" aria-label="@Loc["LayBldMoveUp", label]"
-                        @onclick="() => MoveAsync(list, node, -1)"><MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" /></button>
+                        @onclick="() => MoveAsync(list, node, -1)"><MudIcon Icon="@Icons.Material.Outlined.ArrowUpward" Size="Size.Small" /></button>
                 <button type="button" class="bld-icon-button" disabled="@(index >= list.Count - 1)" aria-label="@Loc["LayBldMoveDown", label]"
-                        @onclick="() => MoveAsync(list, node, 1)"><MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" /></button>
+                        @onclick="() => MoveAsync(list, node, 1)"><MudIcon Icon="@Icons.Material.Outlined.ArrowDownward" Size="Size.Small" /></button>
                 <PopoverMenu Open="ReferenceEquals(_menuFor, node)" OpenChanged="open => _menuFor = open ? node : null" ArrowKeys="true">
                     <Activator>
                         <button type="button" class="bld-icon-button" aria-label="@Loc["LayBldMoreFor", label]" aria-haspopup="menu"
                                 aria-expanded="@(ReferenceEquals(_menuFor, node) ? "true" : "false")"
                                 @onclick="() => _menuFor = ReferenceEquals(_menuFor, node) ? null : node">
-                            <MudIcon Icon="@Icons.Material.Filled.MoreHoriz" Size="Size.Small" />
+                            <MudIcon Icon="@Icons.Material.Outlined.MoreHoriz" Size="Size.Small" />
                         </button>
                     </Activator>
                     <ChildContent>
                         <div class="bld-menu" role="menu">
                             <button type="button" role="menuitem" @onclick="() => DuplicateAsync(list, node)">
-                                <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" /> @Loc["LayBldDuplicate"]
+                                <MudIcon Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" /> @Loc["LayBldDuplicate"]
                             </button>
                             <button type="button" role="menuitem" disabled="@(!removable)" @onclick="() => RemoveAsync(list, node, label)">
-                                <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Size="Size.Small" /> @Loc["LayBldDelete"]
+                                <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" /> @Loc["LayBldDelete"]
                             </button>
                         </div>
                     </ChildContent>

@@ -46,7 +46,7 @@
     @if (EveryPermissionReason is { } reason)
     {
         <div class="ra-note ra-note--access">
-            <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Class="ra-ico ra-note-ico" />
+            <MudIcon Icon="@Icons.Material.Outlined.VerifiedUser" Class="ra-ico ra-note-ico" />
             <span>@Loc[reason == "owner" ? "RolAccessOwnerNote" : "RolAccessAdministratorNote"]</span>
         </div>
     }
@@ -97,12 +97,12 @@
 
 <div class="ra-section ra-section--actions">
     <button type="button" class="ra-btn ra-btn--primary" @onclick="OnSave" disabled="@Saving">
-        <MudIcon Icon="@Icons.Material.Filled.Save" Class="ra-ico" /> @Loc["RolSaveRole"]
+        <MudIcon Icon="@Icons.Material.Outlined.Save" Class="ra-ico" /> @Loc["RolSaveRole"]
     </button>
     @if (!Role.IsSystem)
     {
         <button type="button" class="ra-btn ra-btn--danger" @onclick="OnDelete" disabled="@Saving">
-            <MudIcon Icon="@Icons.Material.Filled.Delete" Class="ra-ico" /> @Loc["Delete"]
+            <MudIcon Icon="@Icons.Material.Outlined.Delete" Class="ra-ico" /> @Loc["Delete"]
         </button>
     }
 </div>

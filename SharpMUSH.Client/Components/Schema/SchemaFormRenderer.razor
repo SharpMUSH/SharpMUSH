@@ -90,19 +90,19 @@ else
         <div>
             @if (!_model.IsFirstPage)
             {
-                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ChevronLeft"
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.ChevronLeft"
                            OnClick="_model.PrevPage" Disabled="_busy">@Loc["WidBack"]</MudButton>
             }
         </div>
         <div class="d-flex gap-2">
             @if (!_model.IsLastPage)
             {
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ChevronRight"
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Outlined.ChevronRight"
                            OnClick="_model.NextPage" Disabled="_busy">@Loc["WidNext"]</MudButton>
             }
             else if (HasAction("submit"))
             {
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Check"
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Check"
                            OnClick="@(() => Dispatch("submit"))" Disabled="_busy">
                     @if (_busy)
                     {

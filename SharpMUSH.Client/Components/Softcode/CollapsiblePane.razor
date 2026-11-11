@@ -5,7 +5,7 @@
     {
         @Header
     }
-    <MudIconButton Icon="@(Collapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ChevronLeft)"
+    <MudIconButton Icon="@(Collapsed ? Icons.Material.Outlined.ChevronRight : Icons.Material.Outlined.ChevronLeft)"
                    Size="Size.Small" OnClick="@(() => CollapsedChanged.InvokeAsync(!Collapsed))"
                    title="@(Collapsed ? ExpandLabel : CollapseLabel)"
                    aria-label="@(Collapsed ? ExpandLabel : CollapseLabel)" />

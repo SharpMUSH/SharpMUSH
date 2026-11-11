@@ -48,7 +48,7 @@
                                   Error="@(!BuilderDraft.IsKey(Str("key")))" ErrorText="@Loc["LayBldKeyBad"]" Immediate="true" />
                     @if (BuilderDraft.KeyFollowsLabel(Element))
                     {
-                        <span class="bld-key-link"><MudIcon Icon="@Icons.Material.Filled.Link" Size="Size.Small" /> @Loc["LayBldKeyFollows"]</span>
+                        <span class="bld-key-link"><MudIcon Icon="@Icons.Material.Outlined.Link" Size="Size.Small" /> @Loc["LayBldKeyFollows"]</span>
                     }
                     else
                     {
@@ -433,11 +433,11 @@
                                   Value="@((string?)row[first])" ValueChanged="v => { row[first] = v; Changed(); }" />
                     <MudTextField T="string" Label="@secondLabel" Variant="Variant.Outlined" Margin="Margin.Dense"
                                   Value="@((string?)row[second])" ValueChanged="v => { row[second] = v; Changed(); }" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@Loc["LayBldRemoveRow", (string?)row[second] ?? (string?)row[first] ?? ""]"
+                    <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small" aria-label="@Loc["LayBldRemoveRow", (string?)row[second] ?? (string?)row[first] ?? ""]"
                                    OnClick="() => { (Element[arrayKey] as JsonArray)?.RemoveAt(index); Changed(); }" />
                 </div>
             }
-            <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add"
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Add"
                        OnClick="() => AddPair(arrayKey, first, second)">
                 @Loc["LayBldAddRow"]
             </MudButton>

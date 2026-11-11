@@ -1913,6 +1913,15 @@
     <value>Mapper</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailFolderInbox" xml:space="preserve">
+    <value>Innboks</value>
+  </data>
+  <data name="NavMailFolderSent" xml:space="preserve">
+    <value>Sendt</value>
+  </data>
+  <data name="NavMailFolderTrash" xml:space="preserve">
+    <value>Papirkurv</value>
+  </data>
   <data name="NavMailForward" xml:space="preserve">
     <value>Videresend</value>
     <comment>MT</comment>

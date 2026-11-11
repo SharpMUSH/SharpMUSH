@@ -61,7 +61,7 @@
         <button type="button" class="scene-card-focus @(Focus ? "scene-card-focus--on" : null)" aria-pressed="@(Focus ? "true" : "false")"
                 aria-label="@(Focus ? Loc["NavExitFocusMode"] : Loc["NavFocusMode"])" title="@(Focus ? Loc["NavExitFocusMode"] : Loc["NavFocusMode"])"
                 @onclick="() => FocusChanged.InvokeAsync(!Focus)">
-            <MudIcon Icon="@(Focus ? Icons.Material.Filled.FullscreenExit : Icons.Material.Filled.Fullscreen)" Size="Size.Small" />
+            <MudIcon Icon="@(Focus ? Icons.Material.Outlined.FullscreenExit : Icons.Material.Outlined.Fullscreen)" Size="Size.Small" />
         </button>
     </header>
     <div class="scene-card-body">@ChildContent</div>

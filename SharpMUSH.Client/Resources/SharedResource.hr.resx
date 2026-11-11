@@ -1913,6 +1913,15 @@
     <value>Mape</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailFolderInbox" xml:space="preserve">
+    <value>Pristigla pošta</value>
+  </data>
+  <data name="NavMailFolderSent" xml:space="preserve">
+    <value>Poslano</value>
+  </data>
+  <data name="NavMailFolderTrash" xml:space="preserve">
+    <value>Smeće</value>
+  </data>
   <data name="NavMailForward" xml:space="preserve">
     <value>Proslijedi</value>
     <comment>MT — mail action verb</comment>

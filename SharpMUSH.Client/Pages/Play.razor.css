@@ -2,8 +2,9 @@
 .play {
     display: grid;
     /* minmax(0, 1fr): a bare 1fr track refuses to shrink below its content's min-content width, so the
-       wide terminal canvas would push the whole page wider than the viewport. */
-    grid-template-columns: minmax(0, 1fr) var(--aside-w);
+       wide terminal canvas would push the whole page wider than the viewport. The aside is as wide as the page
+       sidebar on the other side of the terminal, so the two frame it evenly. */
+    grid-template-columns: minmax(0, 1fr) var(--side-w);
     grid-template-rows: minmax(0, 1fr);
     gap: var(--space-4);
     padding: var(--space-5);

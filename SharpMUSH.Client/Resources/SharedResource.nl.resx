@@ -1913,6 +1913,15 @@
     <value>Mappen</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailFolderInbox" xml:space="preserve">
+    <value>Inbox</value>
+  </data>
+  <data name="NavMailFolderSent" xml:space="preserve">
+    <value>Verzonden</value>
+  </data>
+  <data name="NavMailFolderTrash" xml:space="preserve">
+    <value>Prullenbak</value>
+  </data>
   <data name="NavMailForward" xml:space="preserve">
     <value>Doorsturen</value>
     <comment>MT</comment>

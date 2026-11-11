@@ -1913,6 +1913,15 @@
     <value>Pastas</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailFolderInbox" xml:space="preserve">
+    <value>Caixa de entrada</value>
+  </data>
+  <data name="NavMailFolderSent" xml:space="preserve">
+    <value>Enviados</value>
+  </data>
+  <data name="NavMailFolderTrash" xml:space="preserve">
+    <value>Lixeira</value>
+  </data>
   <data name="NavMailForward" xml:space="preserve">
     <value>Encaminhar</value>
     <comment>MT</comment>

@@ -39,7 +39,7 @@
         <SidebarGroup Class="mail-side-folders" Label="@Loc["NavMailFolders"]">
             @foreach (var folder in _folders)
             {
-                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@FolderIcon(folder)" Label="@folder"
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@FolderIcon(folder)" Label="@FolderName(Loc, folder)"
                             Href="@FolderHref(folder)" IsCurrent="@IsCurrent(folder)"
                             Unread="@(folder == Inbox ? _inboxUnread ?? 0 : 0)" Collapsed="@Collapsed" />
             }
@@ -93,6 +93,18 @@
         if (_path != "/mail" && !_path.StartsWith("/mail/", StringComparison.Ordinal)) return false;
         return string.Equals(_folderQuery ?? Inbox, folder, StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>
+    /// A folder's name as the reader sees it: the inbox, sent and trash folders in the reader's language, any other
+    /// as its owner named it.
+    /// </summary>
+    public static string FolderName(IStringLocalizer<SharedResource> loc, string folder) => folder.ToUpperInvariant() switch
+    {
+        "INBOX" => loc["NavMailFolderInbox"],
+        "SENT" => loc["NavMailFolderSent"],
+        "TRASH" => loc["NavMailFolderTrash"],
+        _ => folder,
+    };
 
     private static string FolderIcon(string folder) => folder.ToUpperInvariant() switch
     {

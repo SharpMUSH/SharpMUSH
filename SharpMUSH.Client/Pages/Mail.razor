@@ -35,7 +35,7 @@ else
         </PageHeader>
 
         <div class="mail-panes @(FolderEmpty ? "mail-panes--single" : null)">
-            <KitCard Class="mail-list" Title="@_folder" Sub="@(_messages.Count > 0 ? Loc.Plural("NavMailMessageCount", "count", _messages.Count) : null)">
+            <KitCard Class="mail-list" Title="@MailSidebar.FolderName(Loc, _folder)" Sub="@(_messages.Count > 0 ? Loc.Plural("NavMailMessageCount", "count", _messages.Count) : null)">
                 <div class="mail-list-body" aria-busy="@(_loading ? "true" : "false")">
                     @if (_loading)
                     {
@@ -68,7 +68,7 @@ else
                                     }
                                     @if (m.Urgent)
                                     {
-                                        <MudIcon Icon="@Icons.Material.Filled.PriorityHigh" Color="Color.Error" Size="Size.Small" Title="@Loc["Urgent"]" />
+                                        <MudIcon Icon="@Icons.Material.Outlined.PriorityHigh" Color="Color.Error" Size="Size.Small" Title="@Loc["Urgent"]" />
                                     }
                                     <span class="mail-row-from">@m.From</span>
                                     <span class="mail-row-date">@DateDisplay.MonthDay(m.DateSent)</span>

@@ -20,7 +20,7 @@
                progress view, not the conversion. *@
             @if (FromSetup && !_isConverting && _result?.RequiresPromotion != true)
             {
-                <CapsuleButton Class="dbimport-continue-setup" Primary="@(_result is not null)" Icon="@Icons.Material.Filled.ArrowForward"
+                <CapsuleButton Class="dbimport-continue-setup" Primary="@(_result is not null)" Icon="@Icons.Material.Outlined.ArrowForward"
                                Href="/setup?step=identity">@Loc["AdmSetupContinue"]</CapsuleButton>
             }
         </Actions>
@@ -47,7 +47,7 @@
                 <MudCheckBox T="bool" Class="dbimport-confirm-discard" @bind-Value="_confirmDiscard" Disabled="_isDiscarding"
                              Label="@Loc["AdmImportConfirmDiscardPrevious"]" />
                 <div class="dbimport-actions dbimport-actions-start">
-                    <CapsuleButton Class="dbimport-discard-previous" Icon="@Icons.Material.Filled.DeleteForever"
+                    <CapsuleButton Class="dbimport-discard-previous" Icon="@Icons.Material.Outlined.DeleteForever"
                                    Disabled="@(!_confirmDiscard || _isDiscarding)" OnClick="DiscardPreviousWorld">@Loc["AdmImportDiscardPrevious"]</CapsuleButton>
                 </div>
             </div>
@@ -84,7 +84,7 @@
                                MaximumFileCount="1"
                                MaxFileSize="104857600" />
                 <div class="dbimport-dropzone-inner">
-                    <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Class="dbimport-dropzone-icon" />
+                    <MudIcon Icon="@Icons.Material.Outlined.CloudUpload" Class="dbimport-dropzone-icon" />
                     <span class="dbimport-dropzone-title">@Loc["DropDatabaseFile"]</span>
                     <span class="dbimport-dropzone-hint">@Loc["AdmImportDatabaseFormats"]</span>
                 </div>
@@ -96,7 +96,7 @@
             <KitCard Title="@Loc["SelectedFile"]">
                 <div class="dbimport-body">
                     <div class="dbimport-file-row">
-                        <MudIcon Icon="@Icons.Material.Filled.Description" Class="dbimport-file-icon" />
+                        <MudIcon Icon="@Icons.Material.Outlined.Description" Class="dbimport-file-icon" />
                         <span class="dbimport-file-name">@_selectedFile.Name</span>
                         <span class="dbimport-file-size">(@($"{_selectedFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
                     </div>
@@ -124,7 +124,7 @@
                     @if (_selectedConfigFile != null)
                     {
                         <div class="dbimport-file-row">
-                            <MudIcon Icon="@Icons.Material.Filled.Settings" Class="dbimport-file-icon" />
+                            <MudIcon Icon="@Icons.Material.Outlined.Settings" Class="dbimport-file-icon" />
                             <span class="dbimport-file-name dbimport-config-name">@_selectedConfigFile.Name</span>
                         </div>
                     }
@@ -143,7 +143,7 @@
                     @foreach (var include in _selectedConfigIncludes)
                     {
                         <div class="dbimport-file-row">
-                            <MudIcon Icon="@Icons.Material.Filled.Settings" Class="dbimport-file-icon" />
+                            <MudIcon Icon="@Icons.Material.Outlined.Settings" Class="dbimport-file-icon" />
                             <span class="dbimport-file-name dbimport-include-name">@include.Name</span>
                         </div>
                     }
@@ -157,7 +157,7 @@
                     @if (_selectedMailFile != null)
                     {
                         <div class="dbimport-file-row">
-                            <MudIcon Icon="@Icons.Material.Filled.Mail" Class="dbimport-file-icon" />
+                            <MudIcon Icon="@Icons.Material.Outlined.Mail" Class="dbimport-file-icon" />
                             <span class="dbimport-file-name">@_selectedMailFile.Name</span>
                             <span class="dbimport-file-size">(@($"{_selectedMailFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
                         </div>
@@ -175,7 +175,7 @@
                         @if (_selectedChatFile != null)
                         {
                             <div class="dbimport-file-row">
-                                <MudIcon Icon="@Icons.Material.Filled.Forum" Class="dbimport-file-icon" />
+                                <MudIcon Icon="@Icons.Material.Outlined.Forum" Class="dbimport-file-icon" />
                                 <span class="dbimport-file-name">@_selectedChatFile.Name</span>
                                 <span class="dbimport-file-size">(@($"{_selectedChatFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
                             </div>
@@ -194,15 +194,15 @@
                         @if (_selectedMailFolderFile != null)
                         {
                             <div class="dbimport-file-row">
-                                <MudIcon Icon="@Icons.Material.Filled.Folder" Class="dbimport-file-icon" />
+                                <MudIcon Icon="@Icons.Material.Outlined.Folder" Class="dbimport-file-icon" />
                                 <span class="dbimport-file-name">@_selectedMailFolderFile.Name</span>
                             </div>
                         }
                     }
 
                     <div class="dbimport-actions">
-                        <CapsuleButton Icon="@Icons.Material.Filled.Clear" OnClick="ClearSelection">@Loc["ClearSelection"]</CapsuleButton>
-                        <CapsuleButton Icon="@(_isUploading ? null : Icons.Material.Filled.Upload)" Primary="true"
+                        <CapsuleButton Icon="@Icons.Material.Outlined.Clear" OnClick="ClearSelection">@Loc["ClearSelection"]</CapsuleButton>
+                        <CapsuleButton Icon="@(_isUploading ? null : Icons.Material.Outlined.Upload)" Primary="true"
                                        OnClick="StartConversion" Disabled="_isUploading">
                             @if (_isUploading)
                             {
@@ -284,7 +284,7 @@
                 </div>
 
                 <div class="dbimport-actions dbimport-actions-start">
-                    <CapsuleButton Icon="@Icons.Material.Filled.Cancel" Class="dbimport-cancel" OnClick="CancelConversion">
+                    <CapsuleButton Icon="@Icons.Material.Outlined.Cancel" Class="dbimport-cancel" OnClick="CancelConversion">
                         @Loc["CancelConversion"]
                     </CapsuleButton>
                 </div>
@@ -431,8 +431,8 @@
                     </div>
 
                     <div class="dbimport-actions dbimport-actions-start">
-                        <CapsuleButton Icon="@Icons.Material.Filled.Refresh" Primary="true" OnClick="Reset" Disabled="@(_result.RequiresPromotion || _restartRequested)">@Loc["ImportAnotherDatabase"]</CapsuleButton>
-                        <CapsuleButton Icon="@Icons.Material.Filled.Download" OnClick="DownloadLog">@Loc["AdmImportDownloadLog"]</CapsuleButton>
+                        <CapsuleButton Icon="@Icons.Material.Outlined.Refresh" Primary="true" OnClick="Reset" Disabled="@(_result.RequiresPromotion || _restartRequested)">@Loc["ImportAnotherDatabase"]</CapsuleButton>
+                        <CapsuleButton Icon="@Icons.Material.Outlined.Download" OnClick="DownloadLog">@Loc["AdmImportDownloadLog"]</CapsuleButton>
                     </div>
                 </div>
             </ChildContent>

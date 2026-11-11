@@ -1913,6 +1913,15 @@
     <value>Dosare</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailFolderInbox" xml:space="preserve">
+    <value>Mesaje primite</value>
+  </data>
+  <data name="NavMailFolderSent" xml:space="preserve">
+    <value>Trimise</value>
+  </data>
+  <data name="NavMailFolderTrash" xml:space="preserve">
+    <value>Coș de gunoi</value>
+  </data>
   <data name="NavMailForward" xml:space="preserve">
     <value>Redirecționare</value>
     <comment>MT</comment>
