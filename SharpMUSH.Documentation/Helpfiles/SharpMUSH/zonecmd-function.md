@@ -23,9 +23,9 @@ Changes the zones `<object>` is in, as @chzone does, and gives nothing when it w
 - `delete` takes it out of `<zone>`; this is @chzone/remove.
 - `replace` takes it out of `<old zone>` and puts it in `<new zone>`, last.
 - `purge` takes it out of every zone.
-- `list` is lzone().
+- `list` gives the zones `<object>` is in, its first zone first, even when `<object>` is a zone with objects of its own. `<page>` is lzone()'s.
 
-The checks are @chzone's: you must control `<object>`, and control `<zone>` or pass its @lock/chzone. Each action may be shortened to its first letter. zonecmd() is a side-effect function.
+The checks are @chzone's: you must control `<object>`, and to add a zone, control it or pass its @lock/chzone. Each action may be shortened to its first letter. zonecmd() is a side-effect function.
 
 zonecmd() comes from RhostMUSH.
 

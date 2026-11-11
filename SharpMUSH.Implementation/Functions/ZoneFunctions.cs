@@ -157,13 +157,13 @@ public partial class Functions
 	/// </summary>
 	[SharpFunction(Name = "zsearch", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular,
 		ParameterNames = ["zone class=restriction", "low", "high"])]
-	public ValueTask<CallState> ZoneSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ZoneSearchAsync(parser, objids: false);
+	public ValueTask<CallState> ZoneSearch(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
+		=> ZoneSearchAsync(parser, attribute, objids: false);
 
 	[SharpFunction(Name = "zsearchobjid", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular,
 		ParameterNames = ["zone class=restriction", "low", "high"])]
-	public ValueTask<CallState> ZoneSearchObjid(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ZoneSearchAsync(parser, objids: true);
+	public ValueTask<CallState> ZoneSearchObjid(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
+		=> ZoneSearchAsync(parser, attribute, objids: true);
 
 	/// <summary><c>searchobjid()</c>: search() giving objids.</summary>
 	[SharpFunction(Name = "searchobjid", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular,
@@ -190,7 +190,7 @@ public partial class Functions
 				p => ListSearch(p, attribute))
 			: await ListSearch(parser, attribute);
 
-	private async ValueTask<CallState> ZoneSearchAsync(IMUSHCodeParser parser, bool objids)
+	private async ValueTask<CallState> ZoneSearchAsync(IMUSHCodeParser parser, SharpFunctionAttribute attribute, bool objids)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var first = ZoneArg(parser, "0").Trim();
@@ -206,9 +206,13 @@ public partial class Functions
 		}
 
 		var members = (await ZoneMemberRefsAsync(zone)).Select(member => member.Number).ToHashSet();
-		var arguments = new Dictionary<string, CallState>(parser.CurrentState.Arguments) { ["0"] = new(spec) };
+		// With a class, search()'s one-argument form, which reads the range from arguments 1 and 2; without one, every
+		// object the caller may search, the range as lsearch()'s MINDB and MAXDB.
+		var arguments = spec.Length > 0
+			? new Dictionary<string, CallState>(parser.CurrentState.Arguments) { ["0"] = new(spec) }
+			: RangeOnly(parser);
 		var found = await parser.With(state => state with { Arguments = arguments },
-			p => spec.Length > 0 ? TinySearchAsync(p, executor) : ListSearchInternal(p, null!, useRegex: false));
+			p => spec.Length > 0 ? TinySearchAsync(p, executor) : ListSearchInternal(p, attribute, useRegex: false));
 
 		var text = found.Message?.ToPlainText() ?? string.Empty;
 		if (text.StartsWith("#-1")) return found;
@@ -216,6 +220,22 @@ public partial class Functions
 		var kept = text.Split(' ', StringSplitOptions.RemoveEmptyEntries)
 			.Where(entry => DBRef.TryParse(entry, out var dbref) && dbref is { } parsed && members.Contains(parsed.Number));
 		return await RewriteSearchAsync(new CallState(string.Join(' ', kept)), objids, going: true);
+	}
+
+	/// <summary>lsearch() arguments for everything the caller may search, within zsearch()'s low and high dbrefs.</summary>
+	private static Dictionary<string, CallState> RangeOnly(IMUSHCodeParser parser)
+	{
+		var arguments = new Dictionary<string, CallState> { ["0"] = new(string.Empty) };
+		foreach (var (key, name) in new[] { ("1", "MINDB"), ("2", "MAXDB") })
+		{
+			if (ZoneArg(parser, key).Trim() is { Length: > 0 } bound)
+			{
+				arguments[arguments.Count.ToString()] = new(name);
+				arguments[arguments.Count.ToString()] = new(bound);
+			}
+		}
+
+		return arguments;
 	}
 
 	/// <summary>
@@ -247,30 +267,33 @@ public partial class Functions
 	/// <summary>
 	/// <c>zonecmd(&lt;action&gt;, &lt;object&gt;[, &lt;zone&gt;])</c>: <c>@chzone</c> as a function. <c>add</c> and
 	/// <c>delete</c> put the object in a zone or take it out of one, <c>replace</c> takes <c>&lt;old&gt;/&lt;new&gt;</c> and
-	/// puts the new zone last, <c>purge</c> takes it out of every zone, and <c>list</c> is lzone().
+	/// puts the new zone last, <c>purge</c> takes it out of every zone, and <c>list</c> gives the zones it is in.
 	/// </summary>
 	[SharpFunction(Name = "zonecmd", MinArgs = 2, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged | FunctionFlags.StripAnsi,
 		ParameterNames = ["action", "object", "zone"])]
-	public async ValueTask<CallState> ZoneCommand(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
+	public async ValueTask<CallState> ZoneCommand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var action = ZoneArg(parser, "0").Trim().ToLowerInvariant();
-		if (action.StartsWith('l'))
-		{
-			var arguments = new Dictionary<string, CallState> { ["0"] = parser.CurrentState.Arguments["1"] };
-			if (parser.CurrentState.Arguments.TryGetValue("2", out var page)) arguments["1"] = page;
-			return await parser.With(state => state with { Arguments = arguments }, p => ListZone(p, attribute));
-		}
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await LocateService.Locate(parser, executor, executor, ZoneArg(parser, "1"), LocateFlags.All) is not AnySharpObject target)
 		{
 			return ErrorMessages.Returns.NoMatch;
 		}
 
+		// The zones the object is in, whether or not it is a zone with objects of its own.
+		if (action.StartsWith('l'))
+		{
+			return await PermissionService.CanExamine(executor, target)
+				? string.Join(' ', PageOf([.. (await Mediator.ZonesOfAsync(target)).Select(zone => zone.Object().DBRef)],
+					ZoneArg(parser, "2").Trim()).Select(zone => $"#{zone.Number}"))
+				: ErrorMessages.Returns.Nothing;
+		}
+
 		var zoneName = ZoneArg(parser, "2").Trim();
 		return action switch
 		{
+			_ when action.StartsWith('p') && (await Mediator.ZonesOfAsync(target)).Count == 0 => CallState.Empty,
 			_ when action.StartsWith('p') => Done(await ChangeZoneForFunctionAsync(parser, executor, target,
 				new AnyOptionalSharpObject(new None()))),
 			_ when zoneName.Length == 0 => ErrorMessages.Returns.InvalidZone,

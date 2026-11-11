@@ -97,6 +97,45 @@ public class DialectZoneFunctionTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task ZsearchTakesADbrefRangeWithoutAClass()
+	{
+		var zone = await CreateAsync("ZrZone");
+		var low = await CreateAsync("ZrLow");
+		var high = await CreateAsync("ZrHigh");
+		await Zones.SetZonesAsync(low, [zone]);
+		await Zones.SetZonesAsync(high, [zone]);
+
+		await Assert.That(await Eval($"zsearch({zone},{high.Number},{high.Number})")).IsEqualTo($"#{high.Number}");
+	}
+
+	[Test]
+	public async Task ZonecmdListGivesTheZonesOfAZoneWithMembers()
+	{
+		var zone = await CreateAsync("ZlsZone");
+		var member = await CreateAsync("ZlsMember");
+		var outer = await CreateAsync("ZlsOuter");
+		await Zones.SetZonesAsync(member, [zone]);
+		await Zones.SetZonesAsync(zone, [outer]);
+
+		await Assert.That(await Eval($"zonecmd(list,{zone})")).IsEqualTo($"#{outer.Number}");
+		await Assert.That(await Eval($"lzone({zone})")).IsEqualTo($"#{member.Number}");
+	}
+
+	[Test]
+	public async Task AMortalMayNotListAZoneTheyDoNotControl()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "ZpMortal");
+		var zone = await CreateAsync("ZpZone");
+		var tool = await CreateAsync("ZpTool");
+		await Zones.SetZonesAsync(await CreateAsync("ZpMember"), [zone]);
+		await Cmd($"&LIST {tool}=[zchildren({zone})]|[zonecmd(add,{zone},{tool})]");
+		await Cmd($"@chown {tool}={mortal}");
+		await Cmd($"@set {tool}=!HALT");
+
+		await Assert.That(await Eval($"u({tool}/LIST)")).IsEqualTo("#-1 PERMISSION DENIED|#-1 PERMISSION DENIED");
+	}
+
+	[Test]
 	public async Task ZfunFamilyRunsAZonesAttribute()
 	{
 		var caller = await CreateAsync("ZuCaller");
