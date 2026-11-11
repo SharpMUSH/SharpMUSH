@@ -47,7 +47,7 @@ public static class AttributeEntrySeed
 		("CHATFORMAT", ["no_command","prefixmatch"]),
 		("COMMENT", ["no_command","no_clone","wizard","mortal_dark","prefixmatch"]),
 		("CONFORMAT", ["no_command","prefixmatch"]),
-		("CONNINFO", ["no_command","no_clone","wizard","locked"]),
+		("CONNINFO", ["no_command","no_inherit","no_clone","wizard","mortal_dark","locked"]),
 		("COST", ["no_command","prefixmatch"]),
 		("DEATH", ["no_command","prefixmatch"]),
 		("DEBUGFORWARDLIST", ["no_command","no_inherit","prefixmatch"]),

@@ -33,7 +33,7 @@ These report a player's time on the game, from the record the game keeps in thei
 - connnum() is the number of sessions, including those still open.
 - connleft() is when the last session ended, in seconds since 1970 (as secs() gives); 0 if none has ended.
 
-Time spent connected more than once at a time is counted once. The portal's background session does not count. A name that matches no player gives `#-1 PLAYER NOT FOUND`.
+A session runs from login to QUIT or LOGOUT. Time spent connected more than once at a time is counted once. The portal's background session does not count, and a caller who may not see hidden players does not see the player's hidden sessions counted. A name that matches no player gives `#-1 PLAYER NOT FOUND`.
 
 These functions come from TinyMUX, and a TinyMUX import keeps each player's record.
 

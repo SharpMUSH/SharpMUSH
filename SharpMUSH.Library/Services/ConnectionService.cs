@@ -4,6 +4,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Collections.Immutable;
 using System.Text;
 
@@ -60,6 +61,7 @@ public class ConnectionService(
 		var transportMetadata = get.Metadata;
 		var transportSession = string.IsNullOrEmpty(sessionId) ? get.Metadata.GetValueOrDefault("SessionId") : sessionId;
 		int? remainingConnections;
+		IReadOnlyList<DateTimeOffset>? othersLoggedInAt;
 		while (true)
 		{
 			var binding = get.Binding;
@@ -76,9 +78,14 @@ public class ConnectionService(
 					if (!_sessionState.TryRemove(new KeyValuePair<long, IConnectionService.ConnectionData>(handle, current))) continue;
 					Reindex(handle, current.Ref, null);
 
-					remainingConnections = current.Ref is { } playerRef
-						? _handlesByPlayer.GetValueOrDefault(playerRef, []).Count(h => Get(h)?.PresenceClass != PresenceClasses.Portal)
+					var others = current.Ref is { } playerRef
+						? _handlesByPlayer.GetValueOrDefault(playerRef, []).Select(Get)
+							.OfType<IConnectionService.ConnectionData>()
+							.Where(other => other.PresenceClass != PresenceClasses.Portal)
+							.ToList()
 						: null;
+					remainingConnections = others?.Count;
+					othersLoggedInAt = others?.Select(other => other.LoggedInAt ?? DateTimeOffset.UtcNow).ToList();
 					break;
 				}
 			}
@@ -91,7 +98,10 @@ public class ConnectionService(
 		}
 
 		await publisher.Publish(new ConnectionStateChangeNotification(get.Handle, get.Ref, get.State,
-			IConnectionService.ConnectionState.Disconnected, RemainingConnections: remainingConnections, FormerConnection: get));
+			IConnectionService.ConnectionState.Disconnected, RemainingConnections: remainingConnections, FormerConnection: get)
+		{
+			OthersLoggedInAt = othersLoggedInAt
+		});
 
 		// The socket owner already deleted a fenced close. A second delete could erase its replacement.
 		if (stateStore != null && string.IsNullOrEmpty(sessionId))
@@ -147,9 +157,14 @@ public class ConnectionService(
 		// The local binding and player index are committed before any fallible notification work.
 		onCommitted?.Invoke();
 
+		// A session's length (connnum() and the rest) counts from the login, not from the socket opening.
+		var loginTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture);
+		get.Metadata["LoginTime"] = loginTime;
+
 		if (stateStore != null)
 		{
 			await stateStore.SetPlayerBindingAsync(handle, player.ToString());
+			await stateStore.UpdateMetadataAsync(handle, "LoginTime", loginTime);
 		}
 
 		foreach (var handler in _handlers)

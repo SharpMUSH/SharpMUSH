@@ -55,18 +55,21 @@ public partial class Functions
 		Func<ConnectionStatistics.Record, (int Count, long Longest), long> read)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		if (await LocateService.LocatePlayer(parser, executor, executor,
+		if (await LocateService.LocateConnectionTarget(parser, executor, executor,
 					parser.CurrentState.Arguments["0"].Message.ToPlainText()) is not (AnySharpObject and SharpPlayer player))
 		{
 			return new CallState(ErrorMessages.Returns.PlayerNotFound);
 		}
 
 		var record = await ConnectionStatistics.StoredAsync(Mediator, player.Object.DBRef);
+		// A hidden session is left out for a caller who may not see hidden players, as conn() leaves it out.
+		var seesHidden = await executor.IsSee_All() || executor.Object().DBRef.Number == player.Object.DBRef.Number;
 		var now = DateTimeOffset.UtcNow;
 		var open = await ConnectionService.Get(player.Object.DBRef)
 			.Where(connection => connection.State == IConnectionService.ConnectionState.LoggedIn
-				&& connection.PresenceClass != PresenceClasses.Portal)
-			.Select(connection => ConnectionStatistics.StartedAt(connection) is { } started
+				&& connection.PresenceClass != PresenceClasses.Portal
+				&& (seesHidden || !connection.IsHidden))
+			.Select(connection => connection.LoggedInAt is { } started
 				? Math.Max(0, (long)(now - started).TotalSeconds)
 				: 0)
 			.ToListAsync();

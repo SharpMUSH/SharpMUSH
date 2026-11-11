@@ -4,7 +4,6 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Services;
 
@@ -57,18 +56,19 @@ public static class ConnectionStatistics
 
 	/// <summary>
 	/// Counts a session of <paramref name="player"/>'s that began at <paramref name="started"/> and ended at
-	/// <paramref name="ended"/>, while the sessions that began at <paramref name="othersStarted"/> go on.
+	/// <paramref name="ended"/>, while the sessions that began at the times <paramref name="othersStarted"/> gives go on.
+	/// Those are read once the update has its turn, so two sessions ending together each see the other.
 	/// Written as God, like <c>LASTLOGOUT</c>: the attribute is wizard-only and the player is not the one writing it.
 	/// </summary>
 	public static async ValueTask SessionEndedAsync(IMediator mediator, DBRef player, DateTimeOffset started,
-		DateTimeOffset ended, IReadOnlyCollection<DateTimeOffset> othersStarted)
+		DateTimeOffset ended, Func<ValueTask<IReadOnlyList<DateTimeOffset>>> othersStarted)
 	{
 		await Gate.WaitAsync();
 		try
 		{
 			if (await HelperFunctions.GetGod(mediator) is not SharpPlayer god) return;
 
-			var record = Ended(await StoredAsync(mediator, player), started, ended, othersStarted);
+			var record = Ended(await StoredAsync(mediator, player), started, ended, await othersStarted());
 			await mediator.Send(new SetAttributeCommand(player, [Attribute], MarkupText.Plain(record.ToString()), god));
 		}
 		finally
@@ -96,13 +96,6 @@ public static class ConnectionStatistics
 
 		return new Record(total, longest, full, record.Sessions + 1, ended.ToUnixTimeSeconds());
 	}
-
-	/// <summary>When <paramref name="connection"/> began, read as <c>conn()</c> reads it; <c>null</c> when it carries no time.</summary>
-	public static DateTimeOffset? StartedAt(IConnectionService.ConnectionData connection)
-		=> long.TryParse(connection.Metadata.GetValueOrDefault("ConnectionStartTime"), NumberStyles.Integer,
-			CultureInfo.InvariantCulture, out var milliseconds)
-			? DateTimeOffset.FromUnixTimeMilliseconds(milliseconds)
-			: null;
 
 	private static long Seconds(TimeSpan span) => Math.Max(0, (long)span.TotalSeconds);
 }

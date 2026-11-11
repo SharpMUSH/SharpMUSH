@@ -132,7 +132,7 @@ public class ConnectionStateEventHandler(
 
 				try
 				{
-					await RecordSessionAsync(notification.PlayerRef.Value, notification.Handle, connectionData);
+					await RecordSessionAsync(notification, connectionData);
 				}
 				catch (Exception ex)
 				{
@@ -199,16 +199,19 @@ public class ConnectionStateEventHandler(
 	}
 
 	/// <summary>
-	/// Counts the ended session in the player's <c>CONNINFO</c>, beside the player's other play sessions still open.
-	/// The portal's background session is not one, here as in the announcements.
+	/// Counts the ended session in the player's <c>CONNINFO</c>, beside the player's other play sessions still open:
+	/// those the disconnect saw as it removed this one, or, for a LOGOUT, those open now. The portal's background
+	/// session is not one, here as in the announcements.
 	/// </summary>
-	private async ValueTask RecordSessionAsync(DBRef player, long handle, IConnectionService.ConnectionData ended)
+	private async ValueTask RecordSessionAsync(ConnectionStateChangeNotification notification,
+		IConnectionService.ConnectionData ended)
 	{
+		var player = notification.PlayerRef!.Value;
 		var now = DateTimeOffset.UtcNow;
-		var others = await connectionService.Get(player)
-			.Where(c => c.Handle != handle && c.PresenceClass != PresenceClasses.Portal)
-			.Select(c => ConnectionStatistics.StartedAt(c) ?? now)
-			.ToListAsync();
-		await ConnectionStatistics.SessionEndedAsync(mediator, player, ConnectionStatistics.StartedAt(ended) ?? now, now, others);
+		await ConnectionStatistics.SessionEndedAsync(mediator, player, ended.LoggedInAt ?? now, now,
+			async () => notification.OthersLoggedInAt ?? await connectionService.Get(player)
+				.Where(c => c.Handle != notification.Handle && c.PresenceClass != PresenceClasses.Portal)
+				.Select(c => c.LoggedInAt ?? now)
+				.ToListAsync());
 	}
 }

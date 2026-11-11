@@ -88,6 +88,38 @@ public class MuxTimeConnectionFunctionTests : ServerTestBase
 		}
 	}
 
+	/// <summary>A session is measured from its login, not from when the socket opened.</summary>
+	[Test]
+	public async Task SessionCountsFromTheLogin()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ConnStatsLogin");
+		var disconnected = false;
+		try
+		{
+			var now = DateTimeOffset.UtcNow;
+			ConnectionService.Update(player.Handle, "ConnectionStartTime", now.AddSeconds(-5000).ToUnixTimeMilliseconds().ToString());
+			ConnectionService.Update(player.Handle, "LoginTime", now.AddSeconds(-50).ToUnixTimeMilliseconds().ToString());
+
+			// me is the caller, as TinyMUX reads it.
+			var live = long.Parse(await EvalAs(player.DbRef, "connmax(me)"));
+			await Assert.That(live).IsGreaterThanOrEqualTo(50).And.IsLessThan(100);
+
+			await ConnectionService.Disconnect(player.Handle);
+			disconnected = true;
+			await WebAppFactoryArg.QueueBarrierAsync();
+
+			var record = ConnectionStatistics.Record.Parse(await Eval($"get({player.DbRef}/CONNINFO)"));
+			await Assert.That(record.LastSeconds).IsGreaterThanOrEqualTo(50).And.IsLessThan(100);
+			await Assert.That(record.TotalSeconds).IsGreaterThanOrEqualTo(50).And.IsLessThan(100);
+			await Assert.That(record.Sessions).IsEqualTo(1);
+		}
+		finally
+		{
+			if (!disconnected) await ConnectionService.Disconnect(player.Handle);
+		}
+	}
+
 	[Test]
 	public async Task NoRecordCountsFromZero()
 	{
