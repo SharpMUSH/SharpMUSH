@@ -60,7 +60,7 @@ public static class ZoneHelpers
 	{
 		// set.c:392-396. This is also do_chzoneall's `Zone(i) != zone` filter (wiz.c:1047): the refusal
 		// returns 0, so the object is not counted.
-		if (await AlreadyZonedAsync(target, zone))
+		if (await AlreadyZonedAsync(mediator, target, zone))
 		{
 			return await RefusedAsync(notifyService, executor, noisy, ErrorMessages.Returns.NothingToDo,
 				nameof(ErrorMessages.Notifications.ObjectAlreadyInThatZone));
@@ -351,17 +351,17 @@ public static class ZoneHelpers
 		}
 	}
 
-	/// <summary><c>Zone(thing) == zone</c> (<c>src/set.c:392</c>), for both a real zone and none.</summary>
-	private static async ValueTask<bool> AlreadyZonedAsync(AnySharpObject target, AnyOptionalSharpObject zone)
+	/// <summary>
+	/// <c>Zone(thing) == zone</c> (<c>src/set.c:392</c>), for both a real zone and none. An object in several zones is
+	/// not already zoned to the first of them alone: <c>@chzone</c> to it leaves it in that one.
+	/// </summary>
+	private static async ValueTask<bool> AlreadyZonedAsync(IMediator mediator, AnySharpObject target,
+		AnyOptionalSharpObject zone)
 	{
-		var current = await target.Object().Zone.WithCancellation(CancellationToken.None);
-
-		if (zone is not AnySharpObject wanted)
-		{
-			return current is None;
-		}
-
-		return current is AnySharpObject held && held.Object().DBRef.Equals(wanted.Object().DBRef);
+		var zones = await mediator.ZonesOfAsync(target);
+		return zone is AnySharpObject wanted
+			? zones.Count == 1 && zones[0].Object().DBRef.Equals(wanted.Object().DBRef)
+			: zones.Count == 0;
 	}
 
 	/// <summary>

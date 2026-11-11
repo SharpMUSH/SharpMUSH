@@ -117,10 +117,10 @@ public partial class Commands
 		// Both zones are wanted by the ZONE branch and by the master room's already-scanned guard, and
 		// resolving one costs a fetch, so only pay for them when a branch that reads them will run.
 		var needsZones = switches.Contains("ZONE") || switches.Contains("GLOBALS");
-		var hereZone = !needsZones || here is null ? null : await ZoneOfAsync(here.Object());
-		var personalZone = !needsZones ? null : await ZoneOfAsync(executor.Object());
+		IReadOnlyList<AnySharpObject> hereZones = !needsZones || here is null ? [] : await Mediator.ZonesOfAsync(here.WithExitOption());
+		IReadOnlyList<AnySharpObject> personalZones = !needsZones ? [] : await Mediator.ZonesOfAsync(executor);
 
-		var run = new ScanRun(parser, executor, arg0, perceive, here, hereZone, personalZone);
+		var run = new ScanRun(parser, executor, arg0, perceive, here, hereZones, personalZones);
 
 		if (here is not null && switches.Contains("ROOM")) await ScanRoomAsync(run, here);
 		if (switches.Contains("SELF")) await ScanSelfAsync(run);
@@ -136,16 +136,17 @@ public partial class Commands
 
 	/// <summary>One @scan: who scans for what, where they stand, and every obj/attr pair matched so far.</summary>
 	private sealed record ScanRun(IMUSHCodeParser Parser, AnySharpObject Executor, MString Command,
-		Func<DBRef, CancellationToken, ValueTask<bool>> Perceive, AnySharpContainer? Here, AnySharpObject? HereZone,
-		AnySharpObject? PersonalZone)
+		Func<DBRef, CancellationToken, ValueTask<bool>> Perceive, AnySharpContainer? Here,
+		IReadOnlyList<AnySharpObject> HereZones, IReadOnlyList<AnySharpObject> PersonalZones)
 	{
+		/// <summary>Whether <paramref name="dbref"/> is the location's zone or the executor's, any of them.</summary>
+		public bool IsAZone(DBRef dbref)
+			=> HereZones.Concat(PersonalZones).Any(zone => zone.Object().DBRef == dbref);
+
 		public List<string> Matched { get; } = [];
 	}
 
 	private const string ScanEntry = nameof(ErrorMessages.Notifications.ScanMatchEntryFormat);
-
-	private static async ValueTask<AnySharpObject?> ZoneOfAsync(SharpObject obj)
-		=> await obj.Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone ? zone : null;
 
 	private static IAsyncEnumerable<AnySharpObject> Just(AnySharpObject obj) => new[] { obj }.ToAsyncEnumerable();
 
@@ -195,16 +196,16 @@ public partial class Commands
 	{
 		// A zone that is a room is a Zone Master Room and its CONTENTS carry the commands, under a
 		// heading; a zone that is anything else carries them itself and gets a one-line report with
-		// no heading (src/game.c:1931-1981).
-		if (run.HereZone is { } hereZone)
+		// no heading (src/game.c:1931-1981). An object in several zones has each scanned in turn.
+		foreach (var hereZone in run.HereZones)
 		{
 			await ScanZoneAsync(run, hereZone,
 				nameof(ErrorMessages.Notifications.ScanMatchesOnZoneMasterRoomOfLocation),
 				nameof(ErrorMessages.Notifications.ScanMatchedZoneOfLocationFormat));
 		}
 
-		if (run.PersonalZone is { } personalZone
-				&& (run.HereZone is null || personalZone.Object().DBRef != run.HereZone.Object().DBRef))
+		foreach (var personalZone in run.PersonalZones.Where(zone =>
+			run.HereZones.All(hereZone => hereZone.Object().DBRef != zone.Object().DBRef)))
 		{
 			await ScanZoneAsync(run, personalZone,
 				nameof(ErrorMessages.Notifications.ScanMatchesOnPersonalZoneMasterRoom),
@@ -225,9 +226,9 @@ public partial class Commands
 		// scanning the location's zone. Reads like a slip, but it is what Penn does, and it is
 		// materially different from comparing against the zone being scanned: with no personal
 		// zone set, Zone(player) is NOTHING and the location's Zone Master Room is always scanned.
-		// The heading sits inside that guard, so a suppressed block prints nothing at all.
-		if (run.Here is not null && run.PersonalZone is not null
-				&& run.Here.Object().DBRef == run.PersonalZone.Object().DBRef)
+		// The heading sits inside that guard, so a suppressed block prints nothing at all. With several personal
+		// zones, standing in any of them suppresses it.
+		if (run.Here is not null && run.PersonalZones.Any(zone => zone.Object().DBRef == run.Here.Object().DBRef))
 		{
 			return;
 		}
@@ -244,9 +245,7 @@ public partial class Commands
 		// room is either zone (src/game.c:1984-1986). Note it tests only those three dbrefs - it does
 		// NOT ask whether the ROOM or ZONE branch actually ran, so `@scan/globals` from inside the
 		// master room reports nothing in PennMUSH either, not even the heading.
-		var alreadyScanned = run.Here?.Object().DBRef == masterRoom
-			|| run.HereZone?.Object().DBRef == masterRoom
-			|| run.PersonalZone?.Object().DBRef == masterRoom;
+		var alreadyScanned = run.Here?.Object().DBRef == masterRoom || run.IsAZone(masterRoom);
 
 		if (alreadyScanned) return;
 

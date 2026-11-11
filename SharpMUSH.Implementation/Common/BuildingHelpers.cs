@@ -82,6 +82,28 @@ public static class BuildingHelpers
 	/// Everything <c>do_create</c> does once the object exists, whichever dbref it landed on: the
 	/// creator's zone, the report, the <c>OBJECT`CREATE</c> event and the object-lifecycle hook.
 	/// </summary>
+	/// <summary>
+	/// Puts <paramref name="created"/> in the zones its <paramref name="creator"/> is in, in order, leaving out any the
+	/// cycle guard refuses.
+	/// </summary>
+	private static async ValueTask InheritZonesAsync(IMediator mediator, IRelationshipCycleChecker cycleChecker,
+		AnySharpObject creator, AnySharpObject created)
+	{
+		var zones = new List<AnySharpObject>();
+		foreach (var zone in await mediator.ZonesOfAsync(creator))
+		{
+			if (await cycleChecker.SafeToAddZoneAsync(created, zone) is RelationshipSafety.Safe)
+			{
+				zones.Add(zone);
+			}
+		}
+
+		if (zones.Count > 0)
+		{
+			await mediator.Send(new SetObjectZonesCommand(created, zones));
+		}
+	}
+
 	private static async ValueTask<Result<DBRef>> CreatedAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,
@@ -91,12 +113,10 @@ public static class BuildingHelpers
 		AnySharpObject executor,
 		DBRef thing)
 	{
-		// A new object inherits its creator's zone, once the cycle guard allows it.
-		if (await executor.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone &&
-			await mediator.Send(new GetObjectNodeQuery(thing)) is AnySharpObject created &&
-			await cycleChecker.SafeToAddZoneAsync(created, zone) is RelationshipSafety.Safe)
+		// A new object inherits its creator's zones, each the cycle guard allows.
+		if (await mediator.Send(new GetObjectNodeQuery(thing)) is AnySharpObject created)
 		{
-			await mediator.Send(new SetObjectZoneCommand(created, zone));
+			await InheritZonesAsync(mediator, cycleChecker, executor, created);
 		}
 
 		// create.c:604 — `Created: Object #N.`, and nothing more. Neither the name the builder just typed
@@ -293,12 +313,8 @@ public static class BuildingHelpers
 			throw new InvalidOperationException("The room just dug must exist.");
 		}
 
-		// Zone(room) = Zone(player) (create.c:494), once the cycle guard allows it.
-		if (await executor.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone
-			&& await cycleChecker.SafeToAddZoneAsync(room, zone) is RelationshipSafety.Safe)
-		{
-			await mediator.Send(new SetObjectZoneCommand(room, zone));
-		}
+		// Zone(room) = Zone(player) (create.c:494), each zone the cycle guard allows.
+		await InheritZonesAsync(mediator, cycleChecker, executor, room);
 
 		var where = await executor.Where();
 
@@ -701,11 +717,9 @@ public static class BuildingHelpers
 		AnySharpObject executor,
 		DBRef exit)
 	{
-		if (await executor.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone &&
-			await mediator.Send(new GetObjectNodeQuery(exit)) is AnySharpObject opened &&
-			await cycleChecker.SafeToAddZoneAsync(opened, zone) is RelationshipSafety.Safe)
+		if (await mediator.Send(new GetObjectNodeQuery(exit)) is AnySharpObject opened)
 		{
-			await mediator.Send(new SetObjectZoneCommand(opened, zone));
+			await InheritZonesAsync(mediator, cycleChecker, executor, opened);
 		}
 
 		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OpenedExit), executor,
@@ -1013,13 +1027,14 @@ public static class BuildingHelpers
 		// original with no zone leaves the clone with none. That matters for an exit, which reaches
 		// here through do_real_open and so arrives carrying the cloner's zone (create.c:131); copying
 		// only a zone that exists would leave the cloner's behind.
-		switch (await target.Object().Zone.WithCancellation(CancellationToken.None))
+		// An original in several zones leaves the clone in all of them, in the same order.
+		switch (await mediator.ZonesOfAsync(target))
 		{
-			case AnySharpObject zone:
-				await mediator.Send(new SetObjectZoneCommand(clonedObj, zone));
-				break;
-			default:
+			case []:
 				await mediator.Send(new UnsetObjectZoneCommand(clonedObj));
+				break;
+			case var zones:
+				await mediator.Send(new SetObjectZonesCommand(clonedObj, zones));
 				break;
 		}
 

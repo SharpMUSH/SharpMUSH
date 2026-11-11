@@ -123,6 +123,51 @@ public class MultiZoneTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task ChzoneToTheFirstZoneLeavesOnlyThatOne()
+	{
+		var (builder, objects) = await BuilderWithAsync("MzFirst", 3);
+		var (obj, a, b) = (objects[0], objects[1], objects[2]);
+
+		try
+		{
+			await Zones.SetZonesAsync(obj, [a, b]);
+			await Assert.That(await RunAsync(builder, $"@chzone {obj}={a}")).Contains("Zone changed.");
+			await Assert.That(await ZonesOfAsync(obj)).IsEquivalentTo([a.Number]);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(builder.Handle);
+		}
+	}
+
+	[Test]
+	public async Task ACloneAndANewObjectTakeEveryZone()
+	{
+		var (builder, objects) = await BuilderWithAsync("MzInherit", 3);
+		var (obj, a, b) = (objects[0], objects[1], objects[2]);
+
+		try
+		{
+			await Zones.SetZonesAsync(obj, [a, b]);
+			var clone = DBRef.Parse(await Eval($"clone({obj})"));
+			await Assert.That(await ZonesOfAsync(clone)).IsEquivalentTo([a.Number, b.Number],
+				TUnit.Assertions.Enums.CollectionOrdering.Matching);
+
+			await Zones.SetZonesAsync(builder.DbRef, [b, a]);
+			var created = string.Join("\n", await RunAsync(builder,
+				$"@create {TestIsolationHelpers.GenerateUniqueName("MzInheritNew")}"));
+			var number = System.Text.RegularExpressions.Regex.Match(created, @"Created: Object #(\d+)\.");
+			await Assert.That(number.Success).IsTrue();
+			await Assert.That(await ZonesOfAsync(new DBRef(int.Parse(number.Groups[1].Value))))
+				.IsEquivalentTo([b.Number, a.Number], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(builder.Handle);
+		}
+	}
+
+	[Test]
 	public async Task AnAddedZoneThatWouldLoopIsRefused()
 	{
 		var (builder, objects) = await BuilderWithAsync("MzLoop", 3);

@@ -231,8 +231,34 @@ public partial class LightningDatabase
 
 	/// <summary>The objects in <paramref name="zone"/>: those whose first zone it is, then those holding it as a further zone.</summary>
 	public IAsyncEnumerable<DBRef> GetZoneMemberRefsAsync(DBRef zone, CancellationToken cancellationToken = default)
-		=> new FreshAsyncEnumerable<DBRef>(ct => ZoneMembers(Tables.Zone.Reverse, zone, ct)
-			.Concat(ZoneMembers(Tables.ZoneMoreReverse, zone, ct)));
+		=> new FreshAsyncEnumerable<DBRef>(ct => MergeByNumber(ZoneMembers(Tables.Zone.Reverse, zone, ct),
+			ZoneMembers(Tables.ZoneMoreReverse, zone, ct), ct));
+
+	/// <summary>
+	/// The members under the zone edge and those holding it as a further zone, in dbref order as each index keeps them.
+	/// An object is in one or the other for a given zone, never both.
+	/// </summary>
+	private static async IAsyncEnumerable<DBRef> MergeByNumber(IAsyncEnumerable<DBRef> first, IAsyncEnumerable<DBRef> second,
+		[EnumeratorCancellation] CancellationToken ct)
+	{
+		await using var left = first.GetAsyncEnumerator(ct);
+		await using var right = second.GetAsyncEnumerator(ct);
+		var hasLeft = await left.MoveNextAsync();
+		var hasRight = await right.MoveNextAsync();
+		while (hasLeft || hasRight)
+		{
+			if (hasLeft && (!hasRight || left.Current.Number <= right.Current.Number))
+			{
+				yield return left.Current;
+				hasLeft = await left.MoveNextAsync();
+			}
+			else
+			{
+				yield return right.Current;
+				hasRight = await right.MoveNextAsync();
+			}
+		}
+	}
 
 	private IAsyncEnumerable<DBRef> ZoneMembers(TableDef reverse, DBRef zone, CancellationToken ct)
 		=> Store.DupsMapValuesAsync(reverse, Keys.Dbref(zone.Number),
