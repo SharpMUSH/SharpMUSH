@@ -213,14 +213,16 @@ The /nuke switch destroys the post office, erasing all @mail everywhere. It may 
 
 # Mail Functions
 
-Mail functions work with @mail.
+Mail functions work with @mail. Some come from TinyMUX (see [tinymux mail functions]) and some from RhostMUSH (see [rhostmush mail functions]).
 
-|                 |                 |                 |                 |
-|-----------------|-----------------|-----------------|-----------------|
-| [FOLDERSTATS()] | [MAIL()]        | [MAILALIAS()]   | [MAILDSTATS()]  |
-| [MAILFROM()]    | [MAILFSTATS()]  | [MAILLIST()]    | [MAILSEND()]    |
-| [MAILSTATS()]   | [MAILSTATUS()]  | [MAILSUBJECT()] | [MAILTIME()]    |
-| [MALIAS()]      |                 |                 |                 |
+|                   |                   |                   |                   |
+|-------------------|-------------------|-------------------|-------------------|
+| [FOLDERCURRENT()] | [FOLDERLIST()]    | [FOLDERSTATS()]   | [MAIL()]          |
+| [MAILALIAS()]     | [MAILCOUNT()]     | [MAILDSTATS()]    | [MAILFLAGS()]     |
+| [MAILFROM()]      | [MAILFSTATS()]    | [MAILINFO()]      | [MAILLIST()]      |
+| [MAILQUICK()]     | [MAILQUOTA()]     | [MAILREAD()]      | [MAILREVIEW()]    |
+| [MAILSEND()]      | [MAILSIZE()]      | [MAILSTATS()]     | [MAILSTATUS()]    |
+| [MAILSUBJECT()]   | [MAILTIME()]      | [MALIAS()]        | [MSIZETOT()]      |
 
 # folderstats()
 

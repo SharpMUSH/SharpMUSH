@@ -93,6 +93,26 @@
       ]
     },
     {
+      "id": "chanfind",
+      "heading": "chanfind()",
+      "lookup": "chanfind()",
+      "aliases": []
+    },
+    {
+      "id": "chaninfo",
+      "heading": "chaninfo()",
+      "lookup": "chaninfo()",
+      "aliases": []
+    },
+    {
+      "id": "chanuser",
+      "heading": "chanuser()",
+      "lookup": "chanuser()",
+      "aliases": [
+        "chanusers()"
+      ]
+    },
+    {
       "id": "examples",
       "heading": "Examples",
       "lookup": "channel functions examples"
@@ -199,6 +219,57 @@ TinyMUX's comsys functions (see [muxcomsys]).
 - **chanobj()**: *\<channel\>*'s mogrifier, which stands in for TinyMUX's channel object, or `#-1` when it has none (see [mogrifier members]).
 
 comalias() and comtitle() answer only for objects you control; for anything else they answer `#-1 PERMISSION DENIED`.
+
+## chanfind()
+
+`chanfind(<text>)`
+
+TinyMUX's. The name of the channel called *\<text\>*, or whose header or @channel/describe text is *\<text\>*, ignoring case. A channel's header is its name in angle brackets, as its messages begin. A channel that is not there, or that you cannot see, answers `#-1 CHANNEL NOT FOUND`.
+
+```sharp
+> think chanfind(<public>)
+Public
+```
+
+## chaninfo()
+
+`chaninfo(<channel>, <field>)`
+
+TinyMUX's. One fact about *\<channel\>*:
+
+- `name`, `header`, `owner`, `desc`, `buffer`, `users` (members) and `msgs` (lines in the buffer).
+- `type`: TinyMUX's number for the channel: 7 when players may join, 112 when objects may, 256 when it is not Quiet, 512 when it has no see lock, added together. `flags`: `P` for no see lock, `L` for not Quiet.
+- `canjoin`, `cantransmit`, `canreceive`: 1 when you may join, speak, or see it.
+- `charge`: always 0; speaking costs nothing. `object`: the mogrifier, for wizards only.
+
+Another field answers `#-1 INVALID FIELD`, and a channel you cannot see `#-1 CHANNEL NOT FOUND`.
+
+```sharp
+> think [chaninfo(Public,type)] [chaninfo(Public,flags)]
+775 PL
+```
+
+## chanuser()
+
+`chanuser(<channel>, <object>, <field>)`<br>
+`chanusers(<channel>[, <delimiter>[, <field>[, <offset>[, <limit>]]]])`
+
+TinyMUX's. **chanuser()** gives one of *\<object\>*'s settings on *\<channel\>*; **chanusers()** lists the members' dbrefs, or one setting of each, and may skip the first *\<offset\>* and stop after *\<limit\>*. The settings:
+
+- `title`, and `alias`: the `addcom` alias.
+- `status`: `Off` when the member is gagging the channel, else `On`.
+- `gagjoin`: 1 when the member is muted (does not hear joins and leaves).
+- `flags`: `O` for gagging, `G` for muted. `comtitles`: always 1.
+- `name`: chanusers() only.
+
+chanuser() answers about you, or anyone if you are on the channel or a wizard, and an alias only for objects you control. chanusers() gives aliases to wizards only.
+
+```sharp
+> think chanusers(Public,|,status)
+On|Off
+> think chanuser(Public,me,title)
+Herald
+```
 
 ## Examples
 
