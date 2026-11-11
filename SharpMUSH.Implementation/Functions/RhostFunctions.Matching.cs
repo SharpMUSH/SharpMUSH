@@ -181,10 +181,9 @@ public partial class Functions
 			return ValueTask.FromResult(CallState.Empty);
 		}
 
-		foreach (var token in request.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries))
+		foreach (var token in request.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries)
+							 .Where(token => token.Length == 2 && char.IsAsciiLetterOrDigit(token[1])))
 		{
-			if (token.Length != 2 || !char.IsAsciiLetterOrDigit(token[1])) continue;
-
 			var register = char.ToUpperInvariant(token[1]).ToString();
 			switch (token[0])
 			{
