@@ -67,13 +67,9 @@
 	border-bottom: 0;
 }
 
-/* A narrow aside keeps its title on one line: wide title tracking is held to 0.06em here (a theme with
-   normal tracking makes the min() invalid, which leaves it normal), and a title still too long ends in an
-   ellipsis. */
+/* A narrow aside holds wide title tracking to 0.06em, so a short title such as "Recently changed" stays on
+   one line. */
 .kit-card--aside .kit-card-title {
 	font-size: var(--text-sm);
-	letter-spacing: min(var(--title-tracking), 0.06em);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+	letter-spacing: min(var(--title-tracking-length), 0.06em);
 }

@@ -513,6 +513,7 @@
 	--title-underline-pad: 0px;
 	--title-transform: none;
 	--title-tracking: normal;
+	--title-tracking-length: 0em;
 	--title-style: normal;
 	--title-underline-height: 2px;
 	--title-color: var(--text);     /* titles' colour and effect (glow, gilt, letterpress...) */
@@ -715,6 +716,7 @@
 	--title-underline-pad: 0px;
 	--title-transform: none;
 	--title-tracking: normal;
+	--title-tracking-length: 0em;
 	--title-style: normal;
 	--title-underline-height: 2px;
 	--title-color: var(--text);
