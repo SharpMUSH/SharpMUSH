@@ -668,6 +668,15 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		bool SetsAttribute = true);
 
 	/// <summary>
+	/// The full name of the built-in <paramref name="name"/> reaches when typed, a speech token (<c>"</c>, <c>:</c>,
+	/// <c>;</c>, <c>\</c>) included; <see langword="null"/> when it reaches none.
+	/// </summary>
+	internal static string? BuiltInNameFor(IMUSHCodeParser parser, string name, string? gameDialect)
+		=> name.Length == 1 && SpeechTokenCommand(MarkupText.Plain(name)) is { } token
+			? token
+			: FindBuiltIn(parser, name, gameDialect).Definition?.Attribute?.Name;
+
+	/// <summary>
 	/// The built-in <paramref name="command"/> names: one spelled that way, else the one the dialect in force
 	/// means by it (<see cref="SoftcodeDialects"/>), else the one it abbreviates. A command the dialect has and
 	/// SharpMUSH lacks names none, and sets no attribute.
