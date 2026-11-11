@@ -1,3 +1,4 @@
+using Mediator;
 using SharpMUSH.Library.Authorization;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
@@ -15,8 +16,16 @@ public class PermissionService(
 	IOptionsMonitor<SharpMUSHOptions> options,
 	IRealityPolicy reality,
 	IConnectionService connectionService,
-	Lazy<IAttributeService> attributeService) : IPermissionService, IChannelPermissionService, IReadControl
+	Lazy<IAttributeService> attributeService,
+	Lazy<IMediator>? mediator) : IPermissionService, IChannelPermissionService, IReadControl
 {
+	/// <summary>Without a mediator, zone control reads only an object's first zone.</summary>
+	public PermissionService(ILockService lockService, IOptionsMonitor<SharpMUSHOptions> options, IRealityPolicy reality,
+		IConnectionService connectionService, Lazy<IAttributeService> attributeService)
+		: this(lockService, options, reality, connectionService, attributeService, null)
+	{
+	}
+
 	public async ValueTask<Permission> Check(AnySharpObject who, Requires requirement)
 	{
 		if (requirement.GodOnly)
@@ -477,10 +486,16 @@ public class PermissionService(
 		// If zone_control_zmp_only is false, check if target has a zone and if who passes the Zone_Lock
 		if (!options.CurrentValue.Database.ZoneControlZmpOnly)
 		{
-			if (await target.Object().Zone.WithCancellation(token) is AnySharpObject targetZone
-					&& await lockService.Evaluate(LockType.Zone, targetZone, who))
+			// Each of its zones hands control to whoever passes that zone's lock.
+			if (await target.Object().Zone.WithCancellation(token) is AnySharpObject firstZone)
 			{
-				return true;
+				IReadOnlyList<AnySharpObject> zones = mediator is null
+					? [firstZone]
+					: await mediator.Value.Send(new Queries.Database.GetZonesOfQuery(target.Object().DBRef), token);
+				foreach (var zone in zones)
+				{
+					if (await lockService.Evaluate(LockType.Zone, zone, who)) return true;
+				}
 			}
 		}
 

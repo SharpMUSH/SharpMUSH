@@ -183,7 +183,7 @@ public static partial class RhostDatabaseTranslator
 		var overrides = MapPowers(source, report);
 
 		var (location, exits, link) = Fields(source, objectType, report);
-		var zone = Zone(source, byNumber, report);
+		var zones = Zones(source, byNumber);
 
 		var password = default(string);
 		var reality = default(PennMUSHReality);
@@ -264,7 +264,8 @@ public static partial class RhostDatabaseTranslator
 			Next = source.Next,
 			Owner = source.Owner,
 			Parent = source.Parent,
-			Zone = zone,
+			Zone = zones.Count > 0 ? zones[0] : -1,
+			FurtherZones = [.. zones.Skip(1)],
 			Flags = flags,
 			Powers = powers,
 			Overrides = overrides,
@@ -321,21 +322,14 @@ public static partial class RhostDatabaseTranslator
 	}
 
 	/// <summary>
-	/// The object's zone. RhostMUSH keeps a list of them on each side: a ZONEMASTER's names its members,
-	/// any other object's its zones. SharpMUSH has one zone per object, so the first one is kept.
+	/// The object's zones, in its order. RhostMUSH keeps a list of them on each side: a ZONEMASTER's names its members,
+	/// any other object's its zones. Only the second kind are zones of the object.
 	/// </summary>
-	private static int Zone(RhostFlatfileObject source, Dictionary<int, RhostFlatfileObject> byNumber, Report report)
-	{
-		var zones = source.Zones
+	private static List<int> Zones(RhostFlatfileObject source, Dictionary<int, RhostFlatfileObject> byNumber)
+		=> source.Zones
 			.Where(z => byNumber.TryGetValue(z, out var zone) && (zone.Flags[2] & ZoneMasterBit) != 0 && z != source.DBRef)
+			.Distinct()
 			.ToList();
-		if (zones.Count > 1)
-		{
-			report.Note(ImportWarningKind.Objects, $"Objects in more than one zone: only the first is kept, as SharpMUSH has one zone per object", source.DBRef);
-		}
-
-		return zones.Count > 0 ? zones[0] : -1;
-	}
 
 	private const uint ZoneMasterBit = 0x20;
 

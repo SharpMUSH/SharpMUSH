@@ -534,16 +534,29 @@ public static class TeleportHelpers
 		// to — and it is also what makes reading the zone object's own Z_TEL safe, which
 		// would otherwise be the zone of NOTHING. Penn never compares a missing source zone
 		// against the destination's.
-		if (await absoluteRoomObject.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject sourceZone
-				&& (await absoluteRoomObject.HasFlag("Z_TEL") || await sourceZone.HasFlag("Z_TEL")))
+		//
+		// A room in several zones confines to those of them that pin: every one when the room is Z_TEL, else each zone
+		// that is. The destination has to be in one of them.
+		var sourceZones = await services.Mediator.ZonesOfAsync(absoluteRoomObject);
+		if (sourceZones.Count == 0)
 		{
-			var destinationZone = await destinationContainer.WithExitOption().Object().Zone
-				.WithCancellation(CancellationToken.None);
+			return true;
+		}
 
-			var sameZone = destinationZone is AnySharpObject destinationZoneObject
-				&& sourceZone.Object().DBRef.Equals(destinationZoneObject.Object().DBRef);
+		var roomPins = await absoluteRoomObject.HasFlag("Z_TEL");
+		var pinning = new List<DBRef>();
+		foreach (var sourceZone in sourceZones)
+		{
+			if (roomPins || await sourceZone.HasFlag("Z_TEL"))
+			{
+				pinning.Add(sourceZone.Object().DBRef);
+			}
+		}
 
-			if (!sameZone)
+		if (pinning.Count > 0)
+		{
+			var destinationZones = await services.Mediator.ZonesOfAsync(destinationContainer.WithExitOption());
+			if (!destinationZones.Any(zone => pinning.Contains(zone.Object().DBRef)))
 			{
 				await services.NotifyService.NotifyLocalized(executor,
 					nameof(ErrorMessages.Notifications.NoZoneTeleport), executor);

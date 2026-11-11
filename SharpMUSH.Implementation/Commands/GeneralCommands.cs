@@ -323,8 +323,15 @@ public partial class Commands
 			MString zoneSection;
 			if (objZone is AnySharpObject zone)
 			{
-				var zoneLine = await Header(zone);
-				zoneSection = Format($"  Zone: {zoneLine}");
+				// An object in several zones lists each, its first zone first.
+				var zones = await Mediator.ZonesOfAsync(viewingKnown);
+				var zoneLines = new List<MString>();
+				foreach (var each in zones.Count > 0 ? zones : [zone])
+				{
+					zoneLines.Add(await Header(each));
+				}
+
+				zoneSection = MarkupText.Concat([MarkupText.Plain("  Zone: "), MarkupText.Join(MarkupText.Plain(", "), zoneLines)]);
 			}
 			else
 			{

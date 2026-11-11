@@ -168,8 +168,8 @@ public class MoveService(
 			what, where, old, enactor, noMoveMsgs, cause));
 
 		var absNew = (await AbsoluteRoom(mover)).Room;
-		var oldZone = absOld is null ? null : await ZoneOf(absOld);
-		var newZone = absNew is null ? null : await ZoneOf(absNew);
+		var oldZone = absOld is null ? [] : await ZonesOf(absOld);
+		var newZone = absNew is null ? [] : await ZonesOf(absNew);
 
 		var wizardSuppressed = configuration.CurrentValue.Command.WizardNoAEnter
 			&& await mover.IsWizard() && await mover.IsDarkLegal();
@@ -292,47 +292,42 @@ public class MoveService(
 	}
 
 	/// <summary>
-	/// The zone triad, fired only when the absolute room's zone actually changed.
-	/// PennMUSH <c>move.c:114-133</c>.
+	/// The zone triad, fired only for a zone of the absolute room that actually changed: on leaving, each zone of the old
+	/// room the new one is not in; on entering, each zone of the new room the old one was not in.
+	/// PennMUSH <c>move.c:114-133</c>, for each zone of a room in several.
 	/// </summary>
 	private async ValueTask ZoneTriad(
 		IMUSHCodeParser parser,
 		AnySharpObject mover,
-		AnySharpObject? oldZone,
-		AnySharpObject? newZone,
+		IReadOnlyList<AnySharpObject> oldZone,
+		IReadOnlyList<AnySharpObject> newZone,
 		bool leaving,
 		AnySharpContainer loc,
 		bool actionsOnly = false)
 	{
-		var zone = leaving ? oldZone : newZone;
+		var zones = leaving ? oldZone : newZone;
+		var others = leaving ? newZone : oldZone;
 
-		if (zone is null)
+		foreach (var zone in zones)
 		{
-			return;
+			if (others.Any(other => other.Object().DBRef.Equals(zone.Object().DBRef)))
+			{
+				continue;
+			}
+
+			await didItService.DidIt(parser, new DidItRequest(
+				Place: MonikerPlace.Movement, Player: mover,
+				Thing: zone,
+				What: actionsOnly ? null : leaving ? "ZLEAVE" : "ZENTER",
+				OWhat: actionsOnly ? null : leaving ? "OZLEAVE" : "OZENTER",
+				AWhat: leaving ? "AZLEAVE" : "AZENTER",
+				Loc: loc,
+				Interact: IPermissionService.InteractType.See));
 		}
-
-		var other = leaving ? newZone : oldZone;
-
-		if (other is not null && other.Object().DBRef.Equals(zone.Object().DBRef))
-		{
-			return;
-		}
-
-		await didItService.DidIt(parser, new DidItRequest(
-			Place: MonikerPlace.Movement, Player: mover,
-			Thing: zone,
-			What: actionsOnly ? null : leaving ? "ZLEAVE" : "ZENTER",
-			OWhat: actionsOnly ? null : leaving ? "OZLEAVE" : "OZENTER",
-			AWhat: leaving ? "AZLEAVE" : "AZENTER",
-			Loc: loc,
-			Interact: IPermissionService.InteractType.See));
 	}
 
-	private async ValueTask<AnySharpObject?> ZoneOf(AnySharpContainer container)
-	{
-		var zone = await container.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
-		return zone is AnySharpObject found ? found : null;
-	}
+	private async ValueTask<IReadOnlyList<AnySharpObject>> ZonesOf(AnySharpContainer container)
+		=> await mediator.ZonesOfAsync(container.WithExitOption());
 
 	/// <inheritdoc />
 	public async ValueTask<Result<Success>> EnterRoom(

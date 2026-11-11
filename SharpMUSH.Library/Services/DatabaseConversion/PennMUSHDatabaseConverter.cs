@@ -1707,29 +1707,43 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 	}
 
+	/// <summary>
+	/// Puts the object in the zones it was in, in order. A zone the import does not hold is dropped with a warning, and
+	/// the next one up takes its place.
+	/// </summary>
 	private async Task SetZoneAsync(PennMUSHObject pennObj, AnySharpObject sharpObj,
 		PennMUSHConversionContext context, CancellationToken cancellationToken)
 	{
-		if (pennObj.Zone < 0)
+		List<AnySharpObject> zones = [];
+		foreach (var zone in pennObj.Zone < 0 ? pennObj.FurtherZones : [pennObj.Zone, .. pennObj.FurtherZones])
 		{
-			return;
+			if (!context.DbrefMapping.TryGetValue(zone, out var zoneDbRef))
+			{
+				context.Warn(ImportWarningKind.Objects, $"Zone #{zone} of #{pennObj.DBRef} is not in the import; it was dropped");
+			}
+			else if (await _mediator.Send(new GetObjectNodeQuery(zoneDbRef), cancellationToken) is AnySharpObject zoneObj)
+			{
+				zones.Add(zoneObj);
+			}
+			else
+			{
+				context.Warn(ImportWarningKind.Objects, $"Zone object #{zone} not found for object #{pennObj.DBRef}");
+			}
 		}
 
-		if (!context.DbrefMapping.TryGetValue(pennObj.Zone, out var zoneDbRef))
+		switch (zones)
 		{
-			context.Warn(ImportWarningKind.Objects, $"Zone #{pennObj.Zone} of #{pennObj.DBRef} is not in the import; it was dropped");
-			return;
+			case []:
+				return;
+			case [var only]:
+				await _mediator.Send(new SetObjectZoneCommand(sharpObj, only), cancellationToken);
+				break;
+			default:
+				await _mediator.Send(new SetObjectZonesCommand(sharpObj, zones), cancellationToken);
+				break;
 		}
 
-		if (await _mediator.Send(new GetObjectNodeQuery(zoneDbRef), cancellationToken) is AnySharpObject zoneObj)
-		{
-			await _mediator.Send(new SetObjectZoneCommand(sharpObj, zoneObj), cancellationToken);
-			_logger.LogDebug("Set zone for #{PennDBRef} to #{ZoneDBRef}", pennObj.DBRef, pennObj.Zone);
-		}
-		else
-		{
-			context.Warn(ImportWarningKind.Objects, $"Zone object #{pennObj.Zone} not found for object #{pennObj.DBRef}");
-		}
+		_logger.LogDebug("Set zones for #{PennDBRef}", pennObj.DBRef);
 	}
 
 	/// <summary>The SharpMUSH object a source dbref became, or none if it was not imported.</summary>

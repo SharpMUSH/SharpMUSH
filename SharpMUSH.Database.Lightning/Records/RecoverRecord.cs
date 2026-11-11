@@ -13,6 +13,8 @@ public sealed record RecoverRecord
 	public string? Home { get; init; }
 	public string? Parent { get; init; }
 	public string? Zone { get; init; }
+	/// <summary>The zones it was in after <see cref="Zone"/>, in order.</summary>
+	public string[] FurtherZones { get; init; } = [];
 	public string[] Flags { get; init; } = [];
 	public string[] Powers { get; init; } = [];
 	public string[] Roles { get; init; } = [];

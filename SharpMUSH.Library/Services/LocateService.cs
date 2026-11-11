@@ -543,9 +543,10 @@ public class LocateService(
 			// MAT_REMOTES — the Zone Master Room's exits.
 			if (flags.HasFlag(LocateFlags.MatchRemoteContents) && remote)
 			{
-				var zone = await location.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
-				if (zone is AnySharpObject and SharpRoom zoneRoom)
+				// A room in several zones offers the exits of each zone master room.
+				foreach (var zone in await mediator.ZonesOfAsync(location.WithExitOption()))
 				{
+					if (zone is not SharpRoom zoneRoom) continue;
 					foreach (var candidate in ExitsIn(await reader.Of(zoneRoom))) yield return candidate;
 				}
 			}

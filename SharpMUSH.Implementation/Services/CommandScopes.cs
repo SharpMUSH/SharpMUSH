@@ -50,23 +50,8 @@ public static class CommandScopes
 				return Found(NearbyObjects.ForAsync(mediator, executor));
 
 			case CommandScope.LocationZone when executor.AsOptionalContent is AnySharpContent zoned:
-				{
-					// Step 10: Zone Exit Name and Aliases - handled in LocateService
-					var executorLocation = await zoned.Location();
-					var locationZone =
-						await executorLocation.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
-
-					// If the location has a zone that is a room (ZMR), check for $-commands in ZMR contents
-					if (locationZone is AnySharpObject and SharpRoom zoneMasterRoom)
-					{
-						AnySharpContainer zmr = zoneMasterRoom;
-						return Found(zmr
-							.Content(mediator)
-							.Select(x => x.WithRoomOption()));
-					}
-
-					return new NotFound();
-				}
+				// Step 10: Zone Exit Name and Aliases - handled in LocateService
+				return await ZoneRoomContentsAsync(mediator, (await zoned.Location()).WithExitOption());
 
 			case CommandScope.Location when executor.AsOptionalContent is AnySharpContent located:
 				{
@@ -75,19 +60,7 @@ public static class CommandScopes
 				}
 
 			case CommandScope.PersonalZone:
-				{
-					var executorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
-					if (executorZone is AnySharpObject and SharpRoom personalZoneRoom)
-					{
-						// If player has a ZMR as their personal zone, check for $-commands in ZMR contents
-						AnySharpContainer personalZMR = personalZoneRoom;
-						return Found(personalZMR
-							.Content(mediator)
-							.Select(x => x.WithRoomOption()));
-					}
-
-					return new NotFound();
-				}
+				return await ZoneRoomContentsAsync(mediator, executor);
 
 			case CommandScope.MasterRoom:
 				{
@@ -109,6 +82,27 @@ public static class CommandScopes
 			default:
 				return new NotFound();
 		}
+
+		static Found<IAsyncEnumerable<AnySharpObject>> Found(IAsyncEnumerable<AnySharpObject> candidates) => candidates;
+	}
+
+	/// <summary>
+	/// The contents of each zone master room <paramref name="zoned"/> is zoned to, its first zone's first, or
+	/// <see cref="NotFound"/> when none of its zones is a room.
+	/// </summary>
+	private static async ValueTask<Found<IAsyncEnumerable<AnySharpObject>>> ZoneRoomContentsAsync(IMediator mediator,
+		AnySharpObject zoned)
+	{
+		var rooms = new List<AnySharpContainer>();
+		foreach (var zone in await mediator.ZonesOfAsync(zoned))
+		{
+			if (zone is SharpRoom room) rooms.Add(room);
+		}
+
+		if (rooms.Count == 0) return new NotFound();
+
+		return Found(rooms.ToAsyncEnumerable()
+			.SelectMany(room => room.Content(mediator).Select(x => x.WithRoomOption())));
 
 		static Found<IAsyncEnumerable<AnySharpObject>> Found(IAsyncEnumerable<AnySharpObject> candidates) => candidates;
 	}

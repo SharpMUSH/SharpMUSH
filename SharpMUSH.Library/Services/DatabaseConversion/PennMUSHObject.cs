@@ -63,6 +63,11 @@ public class PennMUSHObject
 	public int Zone { get; init; } = -1;
 
 	/// <summary>
+	/// The zones after <see cref="Zone"/>, in order, for a server that lets an object be in several (RhostMUSH).
+	/// </summary>
+	public IReadOnlyList<int> FurtherZones { get; init; } = [];
+
+	/// <summary>
 	/// Pennies/money
 	/// </summary>
 	public int Pennies { get; init; }

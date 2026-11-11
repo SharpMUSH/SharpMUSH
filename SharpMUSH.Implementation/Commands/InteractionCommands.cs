@@ -1254,8 +1254,7 @@ public partial class Commands
 				&& !await PermissionService.Controls(executor, target))
 		{
 			// Out of reach, only the player's own ZMO or (with /ROOM) the master room may still be used.
-			var isZone = await executor.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone
-				&& zone.Object().DBRef.Number == targetRef;
+			var isZone = (await Mediator.ZonesOfAsync(executor)).Any(zone => zone.Object().DBRef.Number == targetRef);
 			var isMasterRoom = targetRef == Convert.ToInt32(Configuration.CurrentValue.Database.MasterRoom);
 
 			if ((roomSwitch && !isMasterRoom && !isZone) || (!roomSwitch && (!isZone || target.IsRoom)))

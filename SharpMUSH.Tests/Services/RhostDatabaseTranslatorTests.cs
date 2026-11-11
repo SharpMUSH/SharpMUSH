@@ -451,6 +451,31 @@ public class RhostDatabaseTranslatorTests
 		await Assert.That(Object(database, 9).Zone).IsEqualTo(-1);
 	}
 
+	/// <summary>An object in two zones keeps both, in its own order.</summary>
+	[Test]
+	public async Task EveryZoneOfAnObjectIsKeptInOrder()
+	{
+		var flatfile = await RhostFlatfileReader.ReadFileAsync(RhostFlatfileReaderTests.FlatfilePath);
+		var master = flatfile.Objects.First(o => o.DBRef == 9);
+		var secondMaster = flatfile.Objects.First(o => o.DBRef is not (9 or 10) && o.Flags.Length > 2);
+		var flags = (uint[])secondMaster.Flags.Clone();
+		flags[2] |= master.Flags[2] & 0x20;
+		var changed = flatfile with
+		{
+			Objects =
+			[
+				.. flatfile.Objects.Select(o => o.DBRef == secondMaster.DBRef ? o with { Flags = flags }
+					: o.DBRef == 10 ? o with { Zones = [secondMaster.DBRef, 9] }
+					: o)
+			]
+		};
+
+		var database = RhostDatabaseTranslator.Translate(changed);
+
+		await Assert.That(Object(database, 10).Zone).IsEqualTo(secondMaster.DBRef);
+		await Assert.That(Object(database, 10).FurtherZones).IsEquivalentTo([9]);
+	}
+
 	[Test]
 	public async Task PlayersKeepTheirPasswordsAndAliasesAndEachFormIsReported()
 	{

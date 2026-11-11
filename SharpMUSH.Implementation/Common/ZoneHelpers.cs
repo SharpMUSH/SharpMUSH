@@ -1,7 +1,9 @@
 using Mediator;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Common;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -58,7 +60,7 @@ public static class ZoneHelpers
 	{
 		// set.c:392-396. This is also do_chzoneall's `Zone(i) != zone` filter (wiz.c:1047): the refusal
 		// returns 0, so the object is not counted.
-		if (await AlreadyZonedAsync(target, zone))
+		if (await AlreadyZonedAsync(mediator, target, zone))
 		{
 			return await RefusedAsync(notifyService, executor, noisy, ErrorMessages.Returns.NothingToDo,
 				nameof(ErrorMessages.Notifications.ObjectAlreadyInThatZone));
@@ -78,6 +80,116 @@ public static class ZoneHelpers
 			return Written(await objectRelationshipService.UnsetZone(executor, target, noisy));
 		}
 
+		return await ZoneToAsync(parser, mediator, cycleChecker, notifyService, permissionService, lockService, didItService,
+			flagAndPowerService, configuration, connections, executor, target, destination, preserve, noisy,
+			async () => Written(await objectRelationshipService.SetZone(executor, target, destination, noisy)));
+	}
+
+	/// <summary>
+	/// <c>@chzone/add</c>: puts <paramref name="target"/> in <paramref name="zone"/> as well as the zones it is in, last.
+	/// An object in no zone is zoned as <c>@chzone</c> would. The checks, the default zone lock and the strip of
+	/// privileges are <c>@chzone</c>'s.
+	/// </summary>
+	public static async ValueTask<Result<Success>> AddZoneAsync(
+		IMUSHCodeParser parser,
+		IMediator mediator,
+		IRelationshipCycleChecker cycleChecker,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		ILockService lockService,
+		IDidItService didItService,
+		IObjectRelationshipService objectRelationshipService,
+		IFlagAndPowerService flagAndPowerService,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		IConnectionService connections,
+		AnySharpObject executor,
+		AnySharpObject target,
+		AnySharpObject zone,
+		bool preserve,
+		bool noisy)
+	{
+		var zones = await mediator.ZonesOfAsync(target);
+		if (zones.Count == 0)
+		{
+			return await ChangeZoneAsync(parser, mediator, cycleChecker, notifyService, permissionService, lockService,
+				didItService, objectRelationshipService, flagAndPowerService, configuration, connections, executor, target,
+				new AnyOptionalSharpObject(zone), preserve, noisy);
+		}
+
+		if (zones.Any(held => held.Object().DBRef.Equals(zone.Object().DBRef)))
+		{
+			return await RefusedAsync(notifyService, executor, noisy, ErrorMessages.Returns.NothingToDo,
+				nameof(ErrorMessages.Notifications.ObjectAlreadyInThatZone));
+		}
+
+		if (!await permissionService.Controls(executor, target))
+		{
+			return await RefusedAsync(notifyService, executor, noisy, ErrorMessages.Returns.PermissionDenied,
+				nameof(ErrorMessages.Notifications.NoPowerToShiftReality));
+		}
+
+		return await ZoneToAsync(parser, mediator, cycleChecker, notifyService, permissionService, lockService, didItService,
+			flagAndPowerService, configuration, connections, executor, target, zone, preserve, noisy,
+			async () =>
+			{
+				await mediator.Send(new SetObjectZonesCommand(target, [.. zones, zone]));
+				return await ZoneChangedAsync(notifyService, executor, noisy);
+			});
+	}
+
+	/// <summary>
+	/// <c>@chzone/remove</c>: takes <paramref name="target"/> out of <paramref name="zone"/>, leaving it in its other zones.
+	/// When that was its first zone, the next becomes its first.
+	/// </summary>
+	public static async ValueTask<Result<Success>> RemoveZoneAsync(
+		IMediator mediator,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		AnySharpObject executor,
+		AnySharpObject target,
+		AnySharpObject zone,
+		bool noisy)
+	{
+		var zones = await mediator.ZonesOfAsync(target);
+		if (!zones.Any(held => held.Object().DBRef.Equals(zone.Object().DBRef)))
+		{
+			return await RefusedAsync(notifyService, executor, noisy, ErrorMessages.Returns.NothingToDo,
+				nameof(ErrorMessages.Notifications.ObjectNotInThatZone));
+		}
+
+		if (!await permissionService.Controls(executor, target))
+		{
+			return await RefusedAsync(notifyService, executor, noisy, ErrorMessages.Returns.PermissionDenied,
+				nameof(ErrorMessages.Notifications.NoPowerToShiftReality));
+		}
+
+		await mediator.Send(new SetObjectZonesCommand(target,
+			[.. zones.Where(held => !held.Object().DBRef.Equals(zone.Object().DBRef))]));
+		return await ZoneChangedAsync(notifyService, executor, noisy);
+	}
+
+	/// <summary>
+	/// What zoning <paramref name="target"/> to <paramref name="destination"/> asks and does before
+	/// <paramref name="write"/> records it: <c>do_chzone</c> from its destination gate on (<c>src/set.c:408-482</c>).
+	/// </summary>
+	private static async ValueTask<Result<Success>> ZoneToAsync(
+		IMUSHCodeParser parser,
+		IMediator mediator,
+		IRelationshipCycleChecker cycleChecker,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		ILockService lockService,
+		IDidItService didItService,
+		IFlagAndPowerService flagAndPowerService,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		IConnectionService connections,
+		AnySharpObject executor,
+		AnySharpObject target,
+		AnySharpObject destination,
+		bool preserve,
+		bool noisy,
+		Func<ValueTask<Result<Success>>> write)
+	{
 		if (await ZoneRefusedAsync(parser, notifyService, permissionService, lockService, didItService, executor,
 				destination, noisy) is Error<string> refusedZone)
 		{
@@ -123,8 +235,21 @@ public static class ZoneHelpers
 			await WarnAboutKeptPrivilegeAsync(notifyService, executor, target);
 		}
 
-		return Written(await objectRelationshipService.SetZone(executor, target, destination, noisy));
+		return await write();
 	}
+
+	/// <summary>The "Zone changed." <c>do_chzone</c> reports for every change it makes (<c>src/set.c:487</c>).</summary>
+	private static async ValueTask<Result<Success>> ZoneChangedAsync(INotifyService notifyService, AnySharpObject executor,
+		bool noisy)
+	{
+		if (noisy)
+		{
+			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZoneChanged), executor);
+		}
+
+		return new Success();
+	}
+
 
 	/// <summary>
 	/// PennMUSH <c>check_zone_lock</c> (<c>src/lock.c:962-990</c>): a zone that has never been
@@ -226,17 +351,17 @@ public static class ZoneHelpers
 		}
 	}
 
-	/// <summary><c>Zone(thing) == zone</c> (<c>src/set.c:392</c>), for both a real zone and none.</summary>
-	private static async ValueTask<bool> AlreadyZonedAsync(AnySharpObject target, AnyOptionalSharpObject zone)
+	/// <summary>
+	/// <c>Zone(thing) == zone</c> (<c>src/set.c:392</c>), for both a real zone and none. An object in several zones is
+	/// not already zoned to the first of them alone: <c>@chzone</c> to it leaves it in that one.
+	/// </summary>
+	private static async ValueTask<bool> AlreadyZonedAsync(IMediator mediator, AnySharpObject target,
+		AnyOptionalSharpObject zone)
 	{
-		var current = await target.Object().Zone.WithCancellation(CancellationToken.None);
-
-		if (zone is not AnySharpObject wanted)
-		{
-			return current is None;
-		}
-
-		return current is AnySharpObject held && held.Object().DBRef.Equals(wanted.Object().DBRef);
+		var zones = await mediator.ZonesOfAsync(target);
+		return zone is AnySharpObject wanted
+			? zones.Count == 1 && zones[0].Object().DBRef.Equals(wanted.Object().DBRef)
+			: zones.Count == 0;
 	}
 
 	/// <summary>
