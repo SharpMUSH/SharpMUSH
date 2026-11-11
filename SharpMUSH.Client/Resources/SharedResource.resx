@@ -3806,6 +3806,27 @@
   <!-- ======================== -->
   <!-- Wiki localization        -->
   <!-- ======================== -->
+  <data name="WidStatsQuiet" xml:space="preserve">
+    <value>Nobody is playing right now. Be the first.</value>
+  </data>
+  <data name="WidStatsQuietPlay" xml:space="preserve">
+    <value>Play</value>
+  </data>
+  <data name="NavWikiCategoryWritePage" xml:space="preserve">
+    <value>Write a page here</value>
+  </data>
+  <data name="NavPlayWhoIsOnline" xml:space="preserve">
+    <value>Who is online</value>
+  </data>
+  <data name="NavPlayGoHome" xml:space="preserve">
+    <value>Go home</value>
+  </data>
+  <data name="WikiPromptNotice" xml:space="preserve">
+    <value>{count, plural, one {This page has # note for you to fill in. Readers never see it.} other {This page has # notes for you to fill in. Readers never see them.}}</value>
+  </data>
+  <data name="WikiPromptNoticeEdit" xml:space="preserve">
+    <value>Edit the page</value>
+  </data>
   <data name="WikiFallbackNotice" xml:space="preserve">
     <value>This page is not available in {0} yet — showing the {1} version.</value>
   </data>

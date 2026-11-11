@@ -60,7 +60,7 @@
                     var on = _selectedDbref == it.Dbref;
                     <button type="button" class="ob-item @(on ? "ob-item--on" : "")" @onclick="@(() => SelectObject(it))">
                         <MudIcon Icon="@GetTypeIcon(type)"
-                                 Style="@($"font-size:0.9375rem;flex-shrink:0;color:{(on ? "var(--accent)" : "var(--text-faint)")};")" />
+                                 Style="@($"font-size:var(--text-base);flex-shrink:0;color:{(on ? "var(--accent)" : "var(--text-faint)")};")" />
                         <span class="ob-item-name">@it.Name</span>
                         <span class="ob-item-ref">#@it.Dbref</span>
                     </button>

@@ -227,7 +227,7 @@
                 }
                 else if (_apps.Count == 0)
                 {
-                    <p class="bld-note">@(_appsFailure ?? Loc["LayBldNoApps"])</p>
+                    <EmptyState Compact="true" Failed="@(_appsFailure is not null)" Icon="@(_appsFailure is null ? Icons.Material.Outlined.Apps : null)">@(_appsFailure ?? Loc["LayBldNoApps"])</EmptyState>
                 }
                 else
                 {

@@ -23,7 +23,7 @@
             <AuthorizeView Policy="jobs.manage.own"><Authorized>
                 <KitCard Title="@Loc["JobsCreate"]">
                     <div class="jobs-form">
-                        <MudTextField Variant="Variant.Outlined" @bind-Value="_target" Label="@Loc["JobsTarget"]" />
+                        <MudTextField @ref="_targetField" Variant="Variant.Outlined" @bind-Value="_target" Label="@Loc["JobsTarget"]" />
                         <MudTextField Variant="Variant.Outlined" @bind-Value="_attribute" Label="@Loc["JobsAttribute"]" />
                         <MudTextField Variant="Variant.Outlined" @bind-Value="_description" Label="@Loc["JobsDescription"]" MaxLength="500" />
                         <MudTextField Variant="Variant.Outlined" @bind-Value="_schedule" Label="@Loc["JobsSchedule"]" />
@@ -40,7 +40,17 @@
                     <AuthorizeView Policy="jobs.manage"><Authorized>
                         <MudCheckBox @bind-Value="_all" Label="@Loc["JobsAll"]" />
                     </Authorized></AuthorizeView>
-                    @if (_jobs.Length == 0) { <EmptyState Class="jobs-empty" Icon="@Icons.Material.Outlined.WorkOutline">@Loc["JobsEmpty"]</EmptyState> }
+                    @if (_jobs.Length == 0)
+                    {
+                        <EmptyState Class="jobs-empty" Icon="@Icons.Material.Outlined.WorkOutline">
+                            <ChildContent>@Loc["JobsEmpty"]</ChildContent>
+                            <Action>
+                                <AuthorizeView Policy="jobs.manage.own"><Authorized>
+                                    <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add" OnClick="StartNewJobAsync">@Loc["JobsCreate"]</CapsuleButton>
+                                </Authorized></AuthorizeView>
+                            </Action>
+                        </EmptyState>
+                    }
                     @foreach (var job in _jobs)
                     {
                         <article class="jobs-entry" @key="job.Id">
@@ -81,6 +91,13 @@
 @code {
     private HttpClient? _api;
     private HttpClient Api => _api ??= ClientFactory.CreateClient("api");
+    private MudTextField<string>? _targetField;
+
+    /// <summary>The empty list's action: the new-job form is above it, so it takes the reader to its first field.</summary>
+    private async Task StartNewJobAsync()
+    {
+        if (_targetField is not null) await _targetField.FocusAsync();
+    }
     public void Dispose() => _api?.Dispose();
     private RecurringJob[] _jobs = [];
     private string _target = "", _attribute = "", _description = "", _schedule = "0 9 * * *", _zone = "UTC";

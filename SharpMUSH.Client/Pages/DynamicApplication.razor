@@ -13,7 +13,7 @@
 @inject AccountAuthService AccountAuth
 @inject NavigationManager Nav
 
-<PageTitle>@(_app?.DisplayName ?? Loc["NavApplication"])</PageTitle>
+<PageTitle>@(_app?.DisplayName ?? Loc["NavApplication"]) — <GameName /></PageTitle>
 <PalettePage Kind="@($"app:{Slug}")" />
 
 <AppSectionFrame App="_app">

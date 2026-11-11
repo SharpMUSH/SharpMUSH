@@ -40,7 +40,11 @@ else
     }
     @if (Exits.Count == 0)
     {
-        <EmptyState Compact="true" Class="exits-empty" Icon="@Icons.Material.Outlined.DoorFront">@Loc["NavNoExitsAvailable"]</EmptyState>
+        @* No way out that the room shows: home is the one that always works. *@
+        <EmptyState Compact="true" Class="exits-empty" Icon="@Icons.Material.Outlined.DoorFront">
+            <ChildContent>@Loc["NavNoExitsAvailable"]</ChildContent>
+            <Action><CapsuleButton Icon="@Icons.Material.Outlined.Home" OnClick="@(() => OnCommand.InvokeAsync("home"))">@Loc["NavPlayGoHome"]</CapsuleButton></Action>
+        </EmptyState>
     }
     else
     {

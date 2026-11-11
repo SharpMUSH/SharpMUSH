@@ -154,6 +154,8 @@ public static class ViewWiki
 			// pictures are the wiki's own, shown wherever image_hosts allows them, as the portal shows them.
 			var cosmetic = parser.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Cosmetic;
 			var document = RecursiveMarkdownHelper.Parse(markdown);
+			// The starter pages' notes to the administrators are for the editor, as on the web.
+			WikiPromptExtension.Remove(document);
 			rendered = new WikiCommandRenderer(RenderWidth, parser)
 			{
 				ImageAllowed = source => ImageHostPolicy.Allows(source, cosmetic.ImageHosts, cosmetic.ImageHostList),

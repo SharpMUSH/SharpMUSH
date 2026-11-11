@@ -140,10 +140,6 @@
 	color: var(--text);
 }
 
-.cfg-empty {
-	font-size: var(--text-sm);
-	color: var(--text-faint);
-}
 
 .cfg-row-error {
 	font-size: var(--text-sm);

@@ -10,16 +10,46 @@ namespace SharpMUSH.Tests.Wiki;
 /// </summary>
 public class StarterWikiPagesTests
 {
+	/// <summary>
+	/// Each hub's Markdown tells the administrator what to write, and no reader sees it: the rendered page and its
+	/// plain text leave the prompts out.
+	/// </summary>
 	[Test]
-	public async Task EveryPage_Renders_AndPromptsTheAdministrator()
+	public async Task EveryPage_Renders_AndPromptsOnlyTheEditor()
 	{
 		var pipeline = new WikiMarkdigPipeline();
 		foreach (var page in StarterWikiPages.All.Where(p => p.Namespace == WikiNamespace.Main))
 		{
 			var html = pipeline.RenderToHtml(page.Markdown);
 			await Assert.That(html).Contains("<h1").Because($"{page.Title} opens with its title");
-			await Assert.That(html).Contains("Fill in:").Because($"{page.Title} tells the administrator what to write");
+			await Assert.That(WikiPromptExtension.Count(page.Markdown)).IsGreaterThan(0)
+				.Because($"{page.Title} tells the administrator what to write");
+			await Assert.That(html).DoesNotContain(WikiPromptExtension.Marker).Because($"{page.Title} hides its prompts from readers");
+			await Assert.That(pipeline.ExtractPlainText(page.Markdown)).DoesNotContain(WikiPromptExtension.Marker);
 		}
+
+		await Assert.That(pipeline.RenderToHtml(StarterWikiPages.Home)).DoesNotContain(WikiPromptExtension.Marker);
+	}
+
+	/// <summary>
+	/// A section that held only prompts goes with them, so an unfinished Theme page is not a column of empty
+	/// headings; a section with anything else in it, a category listing included, stays.
+	/// </summary>
+	[Test]
+	public async Task UnansweredSections_LeaveNoEmptyHeading()
+	{
+		var pipeline = new WikiMarkdigPipeline();
+		var theme = pipeline.RenderToHtml(StarterWikiPages.All.Single(p => p is { Title: "Theme", Namespace: WikiNamespace.Main }).Markdown);
+		await Assert.That(theme).DoesNotContain("<h2");
+		await Assert.That(theme).Contains(">Setting</a>");
+
+		var policies = pipeline.RenderToHtml(StarterWikiPages.All.Single(p => p is { Title: "Policies", Namespace: WikiNamespace.Main }).Markdown);
+		await Assert.That(policies).DoesNotContain(">Conduct</h2>");
+		await Assert.That(policies).Contains(">House rules</h2>");
+
+		var gettingStarted = pipeline.RenderToHtml(StarterWikiPages.All.Single(p => p is { Title: "Getting Started", Namespace: WikiNamespace.Main }).Markdown);
+		await Assert.That(gettingStarted).Contains(">Your first hour</h2>");
+		await Assert.That(gettingStarted).DoesNotContain(">Who to ask</h2>");
 	}
 
 	[Test]

@@ -3,11 +3,11 @@
 @attribute [Authorize(Policy = "wiki.edit")]
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["WikiEdit"]: @Slug</PageTitle>
+<PageTitle>@Loc["WikiEdit"]: @Slug — <GameName /></PageTitle>
 
 <div class="full-height wiki-edit-host">
     <WikiView @key="@($"{Ns}:{Slug}:{Lang}")" Slug="@Slug" Namespace="@Ns"
-              Locale="@Lang" NewTitle="@NewTitle" Mode="WikiView.WikiMode.Edit" />
+              Locale="@Lang" NewTitle="@NewTitle" NewCategory="@NewCategory" Mode="WikiView.WikiMode.Edit" />
 </div>
 
 @code {
@@ -31,4 +31,11 @@
     /// </summary>
     [SupplyParameterFromQuery(Name = "title")]
     public string? NewTitle { get; set; }
+
+    /// <summary>
+    /// A category a new page starts in (<c>?category=</c>, from an empty category's "Write a page here"). Like
+    /// <see cref="NewTitle"/>, only a page that does not exist yet takes it.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "category")]
+    public string? NewCategory { get; set; }
 }

@@ -9468,4 +9468,19 @@
   <data name="GuideIdentityCustomSubgenre" xml:space="preserve">
     <value>Ovaj podžanr nije na popisu prijedloga MSSP-a. Prilagođene vrijednosti su dopuštene.</value>
   </data>
+  <data name="NavPlayGoHome" xml:space="preserve">
+    <value>Idi kući</value>
+  </data>
+  <data name="NavPlayWhoIsOnline" xml:space="preserve">
+    <value>Tko je na mreži</value>
+  </data>
+  <data name="NavWikiCategoryWritePage" xml:space="preserve">
+    <value>Napiši stranicu ovdje</value>
+  </data>
+  <data name="WidStatsQuiet" xml:space="preserve">
+    <value>Trenutno nitko ne igra. Budi prvi.</value>
+  </data>
+  <data name="WidStatsQuietPlay" xml:space="preserve">
+    <value>Igraj</value>
+  </data>
 </root>

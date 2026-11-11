@@ -12,7 +12,7 @@
 {
     @if (Document is null && !QuietWhenEmpty)
     {
-        <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WidNothingToDisplay"]</MudText>
+        <EmptyState Compact="true">@Loc["WidNothingToDisplay"]</EmptyState>
     }
     else
     {
@@ -26,7 +26,7 @@ else if (_document?.Pages is null || !HasAnythingToShow)
        unless the host asked for nothing. *@
     @if (!QuietWhenEmpty)
     {
-        <MudText Typo="Typo.body2" Class="mud-text-secondary">@Loc["WidNothingToDisplay"]</MudText>
+        <EmptyState Compact="true">@Loc["WidNothingToDisplay"]</EmptyState>
     }
 }
 else

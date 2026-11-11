@@ -75,7 +75,7 @@
                         </div>
                     </ItemTemplate>
                     <NoItemsTemplate>
-                        <MudText Typo="Typo.body2" Class="pa-2 mud-text-secondary">@Loc["WikiRequirementsNoMatch"]</MudText>
+                        <EmptyState Compact="true" Class="pa-2" Icon="@Icons.Material.Outlined.SearchOff">@Loc["WikiRequirementsNoMatch"]</EmptyState>
                         @DefineLink
                     </NoItemsTemplate>
                     <AfterItemsTemplate>@DefineLink</AfterItemsTemplate>

@@ -51,7 +51,7 @@
                 <div class="ra-chips">
                     @if (account.RoleSlugs.Length == 0)
                     {
-                        <span class="ra-empty">@Loc["RolNoRolesAssigned"]</span>
+                        <EmptyState Compact="true" Class="ra-empty" Icon="@Icons.Material.Outlined.Badge">@Loc["RolNoRolesAssigned"]</EmptyState>
                     }
                     @foreach (var s in account.RoleSlugs)
                     {
@@ -71,7 +71,7 @@
                 <div class="ra-chips">
                     @if (account.Overrides.Count == 0)
                     {
-                        <span class="ra-empty">@Loc["RolNoOverrides"]</span>
+                        <EmptyState Compact="true" Class="ra-empty" Icon="@Icons.Material.Outlined.Tune">@Loc["RolNoOverrides"]</EmptyState>
                     }
                     @foreach (var (scope, state) in account.Overrides.OrderBy(o => o.Key, StringComparer.Ordinal))
                     {

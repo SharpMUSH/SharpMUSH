@@ -200,7 +200,7 @@
                     </TemplateColumn>
                 </Columns>
                 <NoRecordsContent>
-                    <MudText Color="Color.Secondary">@Loc["WikiNoPages"]</MudText>
+                    <EmptyState Compact="true" Icon="@Icons.Material.Outlined.Article">@Loc["WikiNoPages"]</EmptyState>
                 </NoRecordsContent>
                 <PagerContent>
                     <MudDataGridPager T="WikiPageSummary" />
