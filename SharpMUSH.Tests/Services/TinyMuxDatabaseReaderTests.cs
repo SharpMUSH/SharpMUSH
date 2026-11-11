@@ -88,14 +88,17 @@ public class TinyMuxDatabaseReaderTests
 		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Flag SLAVE: also imported as a deny"))).IsEqualTo(player);
 	}
 
-	/// <summary>Only the custom definitions some object uses are created.</summary>
+	/// <summary>Every custom definition is created, whether an object carries it or not, so softcode testing one still finds it.</summary>
 	[Test]
-	public async Task CreatesTheCustomDefinitionsInUse()
+	public async Task CreatesEveryCustomDefinition()
 	{
 		var database = await ReadV5();
 
-		await Assert.That(database.FlagDefinitions.Select(f => f.Name)).IsEquivalentTo(["KEY", "STAFF", "MARKER0"]);
-		await Assert.That(database.PowerDefinitions).IsEmpty();
+		await Assert.That(database.FlagDefinitions.Select(f => f.Name))
+			.IsEquivalentTo(TinyMuxNames.CustomFlags.Select(f => f.Name));
+		await Assert.That(database.FlagDefinitions.Select(f => f.Name)).Contains("HEAD");
+		await Assert.That(database.PowerDefinitions.Select(p => p.Name))
+			.IsEquivalentTo(TinyMuxNames.CustomPowers.Select(p => p.Name));
 	}
 
 	[Test]

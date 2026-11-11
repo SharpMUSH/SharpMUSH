@@ -9,6 +9,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Softcode;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -298,9 +299,11 @@ public partial class Functions
 			{
 				if (attributePattern is null)
 				{
+					var view = await FlagView.ForAsync(executor, ConnectionService);
 					// fun_flags is unparse_flags (src/flags.c:1638): the type letter, then the flags in bit order.
-					return await MessageFormatting.FlagSymbolsAsync(found.Object(),
-						await FlagView.ForAsync(executor, ConnectionService));
+					return SoftcodeDialectScope.Current is { FlagLetters.Count: > 0 } dialect
+						? await DialectFlagLettersAsync(dialect, found, view)
+						: await MessageFormatting.FlagSymbolsAsync(found.Object(), view);
 				}
 
 				var attr = await AttributeService.LazilyGetAttributeAsync(
@@ -547,6 +550,10 @@ public partial class Functions
 			// background connections don't count. See IConnectionService.IsOnline.
 			if (string.Equals(flagNameOrSymbol, "CONNECTED", StringComparison.OrdinalIgnoreCase))
 				return await ConnectionService.IsOnline(realLocated);
+
+			// A name the dialect in force spells its own way (TinyMUX's HALTED, COMMANDS, HAS_STARTUP).
+			if (SoftcodeDialectScope.Current?.FlagFor(flagNameOrSymbol) is { } dialectFlag)
+				return await DialectHasAsync(realLocated, dialectFlag);
 
 			// Name, alias or letter — the three things flag_hash_lookup resolves (src/flags.c). See #834.
 			return await realLocated.Object().HasFlagOrLetter(flagNameOrSymbol);

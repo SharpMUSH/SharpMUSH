@@ -363,11 +363,9 @@ public static partial class TinyMuxDatabaseReader
 
 		/// <summary>TinyMUX's own bookkeeping left out, which every import of its flatfiles leaves out.</summary>
 		private readonly SortedDictionary<string, (ImportWarningKind Kind, List<int> Dbrefs)> _routine = new(StringComparer.Ordinal);
-		private readonly HashSet<string> _flagsUsed = new(StringComparer.OrdinalIgnoreCase);
 
 		/// <summary>The custom flags <c>protection_flags</c>, which this import turns on, gives an effect.</summary>
 		private static readonly HashSet<string> ProtectionFlags = new(["NO_EXAMINE", "NOMODIFY"], StringComparer.OrdinalIgnoreCase);
-		private readonly HashSet<string> _powersUsed = new(StringComparer.OrdinalIgnoreCase);
 
 		/// <summary>One line for each attribute whose colour substitutions were rewritten or need a look.</summary>
 		private readonly List<SoftcodeRewrite> _rewrites = [];
@@ -394,8 +392,9 @@ public static partial class TinyMuxDatabaseReader
 			}
 
 			CopyZoneControl();
-			_database.FlagDefinitions = [.. TinyMuxNames.CustomFlags.Where(flag => _flagsUsed.Contains(flag.Name))];
-			_database.PowerDefinitions = [.. TinyMuxNames.CustomPowers.Where(power => _powersUsed.Contains(power.Name))];
+			// Every one, carried or not: softcode that tests a flag no object has yet still finds it.
+			_database.FlagDefinitions = [.. TinyMuxNames.CustomFlags];
+			_database.PowerDefinitions = [.. TinyMuxNames.CustomPowers];
 			Report();
 			return _database;
 		}
@@ -643,7 +642,6 @@ public static partial class TinyMuxDatabaseReader
 						flags.Add(name);
 						if (TinyMuxNames.CustomFlags.Any(custom => custom.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
 						{
-							_flagsUsed.Add(name);
 							Tally(ImportWarningKind.Flags, $"Flag {mapping.Source} imported as a custom flag {name}: objects keep it and hasflag() sees it, " +
 								(ProtectionFlags.Contains(name) ? "and it protects them while protection_flags is on" : "but SharpMUSH does nothing with it"), raw.DBRef);
 						}
@@ -694,7 +692,6 @@ public static partial class TinyMuxDatabaseReader
 					powers.Add(power);
 					if (TinyMuxNames.CustomPowers.Any(custom => custom.Name.Equals(power, StringComparison.OrdinalIgnoreCase)))
 					{
-						_powersUsed.Add(power);
 						Tally(ImportWarningKind.Powers, $"Power {mapping.Source} imported as a custom power: objects keep it and haspower() sees it, " +
 							"but SharpMUSH does nothing with it", raw.DBRef);
 					}

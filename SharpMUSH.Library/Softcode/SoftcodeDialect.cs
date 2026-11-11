@@ -1,5 +1,7 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.DatabaseConversion.TinyMux;
 
 namespace SharpMUSH.Library.Softcode;
 
@@ -42,6 +44,36 @@ public sealed record SoftcodeDialect(
 	/// </summary>
 	public IReadOnlySet<string> UnsupportedCommands { get; init; } = new HashSet<string>();
 
+	/// <summary>
+	/// A flag name this dialect tests that SharpMUSH has under another name, as the opposite of one of its flags,
+	/// as a power or as an attribute: TinyMUX's <c>HALTED</c> is <c>HALT</c>, its <c>COMMANDS</c> is not
+	/// <c>NO_COMMAND</c>. <c>hasflag()</c>, <c>andlflags()</c> and <c>orlflags()</c> read them.
+	/// </summary>
+	public IReadOnlyDictionary<string, DialectFlag> FlagNames { get; init; } = new Dictionary<string, DialectFlag>();
+
+	/// <summary>
+	/// This dialect's flag letters, in the order its <c>flags()</c> writes them. When there are any,
+	/// <c>flags()</c>, <c>andflags()</c> and <c>orflags()</c> use these and <see cref="TypeLetters"/> in place of
+	/// SharpMUSH's letters, and a flag with no letter here is left out of <c>flags()</c>.
+	/// </summary>
+	public IReadOnlyList<KeyValuePair<char, DialectFlag>> FlagLetters { get; init; } = [];
+
+	/// <summary>The letter this dialect gives each object type; a type with none is written without one.</summary>
+	public IReadOnlyDictionary<string, char> TypeLetters { get; init; } = new Dictionary<string, char>();
+
+	/// <summary>
+	/// A power name this dialect tests, and the permission it is here: TinyMUX's <c>comm_all</c> is
+	/// <c>Chat_Privs</c>'s scope, its <c>control_all</c> is <c>control.all</c>. <c>haspower()</c>,
+	/// <c>andlpowers()</c> and <c>orlpowers()</c> read them.
+	/// </summary>
+	public IReadOnlyDictionary<string, string> PowerScopes { get; init; } = new Dictionary<string, string>();
+
+	/// <summary>What <paramref name="name"/> means as a flag in this dialect, if it is one of its flag names.</summary>
+	public DialectFlag? FlagFor(string name) => FlagNames.GetValueOrDefault(name);
+
+	/// <summary>The permission <paramref name="name"/> means as a power in this dialect, if it is one of its power names.</summary>
+	public string? PowerScopeFor(string name) => PowerScopes.GetValueOrDefault(name);
+
 	/// <summary>The SharpMUSH function <paramref name="name"/> means in this dialect, if it is one of its aliases.</summary>
 	public string? FunctionFor(string name) => FunctionAliases.GetValueOrDefault(name);
 
@@ -54,6 +86,16 @@ public sealed record SoftcodeDialect(
 	/// <summary>The SharpMUSH attribute <paramref name="name"/> means in this dialect, if it is one of its aliases.</summary>
 	public string? AttributeFor(string name) => AttributeAliases.GetValueOrDefault(name);
 }
+
+/// <summary>
+/// What one of a dialect's flag names or letters asks of an object here. Exactly one of <paramref name="Flag"/>,
+/// <paramref name="Scope"/> and <paramref name="Attribute"/> is given.
+/// </summary>
+/// <param name="Flag">The SharpMUSH flag it is, or <c>CONNECTED</c> for a connected player.</param>
+/// <param name="Inverted">Whether it holds when <paramref name="Flag"/> is not set (TinyMUX's <c>SPOOF</c>).</param>
+/// <param name="Scope">The permission it is, where the source's flag is a power here (TinyMUX's <c>IMMORTAL</c>).</param>
+/// <param name="Attribute">The attribute whose presence it is (TinyMUX's <c>HAS_STARTUP</c>).</param>
+public sealed record DialectFlag(string? Flag = null, bool Inverted = false, string? Scope = null, string? Attribute = null);
 
 /// <summary>The dialects SharpMUSH reads, and which one is in force where.</summary>
 public static class SoftcodeDialects
@@ -282,6 +324,47 @@ public static class SoftcodeDialects
 			["u"] = "use"
 		})
 	{
+		FlagNames = new Dictionary<string, DialectFlag>(StringComparer.OrdinalIgnoreCase)
+		{
+			["ACCENTS"] = new("NOACCENTS", Inverted: true),
+			["ASCII"] = new("NOACCENTS"),
+			["BLEED"] = new("NOBLEED", Inverted: true),
+			["COMMANDS"] = new("NO_COMMAND", Inverted: true),
+			["HALTED"] = new("HALT"),
+			["HAS_DAILY"] = new(Attribute: "DAILY"),
+			["HAS_FORWARDLIST"] = new(Attribute: "FORWARDLIST"),
+			["HAS_LISTEN"] = new(Attribute: "LISTEN"),
+			["HAS_STARTUP"] = new(Attribute: "STARTUP"),
+			["IMMORTAL"] = MuxImmortal,
+			["SPOOF"] = new("NOSPOOF", Inverted: true)
+		},
+		// TinyMUX's letters, in its flags() order (its flag names, alphabetically), on the flags its import gives.
+		FlagLetters =
+		[
+			new('A', new("ABODE")), new('X', new("ANSI")), new('a', new("AUDIBLE")), new('b', new("AUDITORIUM")),
+			new('B', new("BLIND")), new('C', new("CHOWN_OK")), new('c', new("CONNECTED")), new('D', new("DARK")),
+			new('d', new("DESTROY_OK")), new('e', new("ENTER_OK")), new('f', new("FIXED")), new('F', new("FLOATING")),
+			new('j', new("GAGGED")), new('G', new("GOING")), new('h', new("HALT")), new('H', new("HAVEN")),
+			new('?', new("HEAD")), new('(', new("HTML")), new('i', MuxImmortal), new('I', new("TRUST")),
+			new('J', new("JUMP_OK")), new('k', new("KEEPALIVE")), new('K', new("KEY")), new('l', new("LIGHT")),
+			new('L', new("LINK_OK")), new('0', new("MARKER0")), new('1', new("MARKER1")), new('2', new("MARKER2")),
+			new('3', new("MARKER3")), new('4', new("MARKER4")), new('5', new("MARKER5")), new('6', new("MARKER6")),
+			new('7', new("MARKER7")), new('8', new("MARKER8")), new('9', new("MARKER9")), new('M', new("MONITOR")),
+			new('m', new("MYOPIC")), new('n', new("NO_COMMAND")), new('E', new("NO_EXAMINE")), new('~', new("NOACCENTS")),
+			new('-', new("NOBLEED")), new('N', new("NOSPOOF")), new('O', new("OPAQUE")), new('z', new("OPEN_OK")),
+			new('Y', new("PARENT_OK")), new('p', new("PUPPET")), new('Q', new("QUIET")), new('r', new("ROBOT")),
+			new('Z', new("ROYALTY")), new('s', new("SAFE")), new('$', new("SITEMON")), new('x', new("SLAVE")),
+			new('w', new("STAFF")), new('S', new("STICKY")), new('u', new("SUSPECT")), new('q', new("TERSE")),
+			new('T', new("DEBUG")), new('t', new("TRANSPARENT")), new('U', new("UNFINDABLE")), new('g', new("UNINSPECTED")),
+			new('|', new("ON-VACATION")), new('v', new("VERBOSE")), new('V', new("VISUAL")), new('W', new("WIZARD"))
+		],
+		TypeLetters = new Dictionary<string, char>(StringComparer.OrdinalIgnoreCase)
+		{
+			["ROOM"] = 'R',
+			["EXIT"] = 'E',
+			["PLAYER"] = 'P'
+		},
+		PowerScopes = MuxPowerScopes(),
 		// The built-in attributes its import stores under SharpMUSH's names (TinyMuxNames.AttributeRenames), and the
 		// attr_alias entries of its alias.conf.
 		AttributeAliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -324,6 +407,20 @@ public static class SoftcodeDialects
 			["TFAIL"] = "TELEPORT_LOCK`FAILURE"
 		}
 	};
+
+	/// <summary>TinyMUX's IMMORTAL flag, which its import makes the Immortal power.</summary>
+	private static DialectFlag MuxImmortal => new(Scope: PortalPermission.GamePower("Immortal"));
+
+	/// <summary>
+	/// TinyMUX's power names that are another power or a permission here, as its import maps them
+	/// (<see cref="TinyMuxNames.Powers1"/>); one with SharpMUSH's own name needs no entry.
+	/// </summary>
+	private static Dictionary<string, string> MuxPowerScopes()
+		=> TinyMuxNames.Powers1.Values.Concat(TinyMuxNames.Powers2.Values)
+			.Select(mapping => (mapping.Source, Scope: mapping.Permission
+				?? (GamePowers.Find(mapping.Power!) is { } power && !power.AnswersTo(mapping.Source) ? power.Scope : null)))
+			.Where(entry => entry.Scope is not null)
+			.ToDictionary(entry => entry.Source, entry => entry.Scope!, StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>Every dialect, by key.</summary>
 	public static readonly IReadOnlyDictionary<string, SoftcodeDialect> All =
