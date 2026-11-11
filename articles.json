@@ -2292,6 +2292,24 @@
     "file": "connlog-function.md"
   },
   {
+    "id": "connstats-function",
+    "lookup": "conntotal()",
+    "title": "conntotal()",
+    "aliases": [
+      "CONNMAX()",
+      "CONNLAST()",
+      "CONNNUM()",
+      "CONNLEFT()",
+      "conntotal",
+      "connmax",
+      "connlast",
+      "connnum",
+      "connleft"
+    ],
+    "sections": [],
+    "file": "connstats-function.md"
+  },
+  {
     "id": "context-command",
     "lookup": "@context",
     "title": "@context",
@@ -2964,6 +2982,22 @@
       }
     ],
     "file": "exitmap-function.md"
+  },
+  {
+    "id": "exptime-function",
+    "lookup": "exptime()",
+    "title": "exptime()",
+    "aliases": [
+      "WRITETIME()",
+      "SINGLETIME()",
+      "DIGITTIME()",
+      "exptime",
+      "writetime",
+      "singletime",
+      "digittime"
+    ],
+    "sections": [],
+    "file": "exptime-function.md"
   },
   {
     "id": "failure",
@@ -13446,7 +13480,8 @@
     "lookup": "starttime()",
     "title": "starttime()",
     "aliases": [
-      "restarttime()"
+      "restarttime()",
+      "restartsecs()"
     ],
     "sections": [],
     "file": "sharpfunc.md"
