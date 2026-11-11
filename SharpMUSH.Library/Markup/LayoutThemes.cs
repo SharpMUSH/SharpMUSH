@@ -37,7 +37,8 @@ public static class LayoutThemes
 	/// <c>text-faint</c>, then the status colours the portal works out for the theme (success, <c>warn</c>, danger and
 	/// info). A colour that did not stand out from the background enough for its role was moved toward white on a dark
 	/// theme, black on a light one, until it did. Subtle, link, highlight and the hues are worked out from those
-	/// (<see cref="ThemePalette.Completed()"/>).
+	/// (<see cref="ThemePalette.Completed()"/>). The themes styled on games (<c>heart-realm</c> to <c>trailblazer</c>)
+	/// also carry a look: their own border, title ornaments, bullet and gauge.
 	/// </summary>
 	public static IReadOnlyList<ThemePalette> Own { get; } =
 	[
@@ -62,6 +63,44 @@ public static class LayoutThemes
 		Ported("starship-console", ThemeMode.Dark, ["#000000", "#16141c", "#f5e9da", "#ff9933", "#c39be0", "#8fa6ff", "#a99a8b", "#6cde9a", "#ffcc66", "#e57373", "#5aa9ff"]),
 		Ported("real-robot", ThemeMode.Light, ["#e4e8ee", "#f0f3f7", "#121a28", "#1a49b5", "#c91e27", "#7c6200", "#4f5a6b", "#387350", "#8a5a00", "#a05050", "#38699e"]),
 		Ported("super-robot", ThemeMode.Dark, ["#160609", "#2c1116", "#fff3e3", "#ffc82a", "#ff7a1a", "#dd413c", "#c09a8e", "#6cde9a", "#ff9a3c", "#e57373", "#5aa9ff"]),
+		Ported("heart-realm", ThemeMode.Dark, ["#0b0b24", "#1c1c4a", "#f3efff", "#ffd447", "#5cc8ff", "#ff5d8f", "#9a95c2", "#6cde9a", "#ffb35c", "#e57373", "#5aa9ff"], new ThemeLook
+		{
+			Border = "rounded", TopLeft = "♕", TopRight = "♕", BottomLeft = "♕", BottomRight = "♕",
+			TitleOpen = "┤ ♕ ", TitleClose = " ♕ ├", Guide = "rounded", Bullet = "✦",
+			GaugeOpen = "[", GaugeFilled = "♥", GaugeEmpty = "♡", GaugeClose = "]", Rule = "─",
+		}),
+		Ported("crystal-saga", ThemeMode.Dark, ["#070b14", "#16203a", "#e8eef8", "#9cd8ff", "#d4ecff", "#b6a2ff", "#8796ad", "#6cde9a", "#f2c66d", "#e57373", "#5aa9ff"], new ThemeLook
+		{
+			Border = "single", TopLeft = "◈", TopRight = "◈", BottomLeft = "◈", BottomRight = "◈",
+			TitleOpen = "┤ ◇ ", TitleClose = " ◇ ├", Guide = "line", Bullet = "◇",
+			GaugeOpen = "◂", GaugeFilled = "■", GaugeEmpty = "□", GaugeClose = "▸", Separator = " · ", Rule = "─",
+		}),
+		Ported("crystal-saga-16bit", ThemeMode.Dark, ["#02020c", "#2236b0", "#ffffff", "#ffd85a", "#8fa4ff", "#c8c8dc", "#b8c0f0", "#6cde9a", "#ffb070", "#ff8a8a", "#7ab8ff"], new ThemeLook
+		{
+			Border = "double", TitleOpen = "╡ ", TitleClose = " ╞", Guide = "double", Bullet = "►",
+			GaugeOpen = "[", GaugeFilled = "█", GaugeEmpty = "░", GaugeClose = "]", Rule = "═",
+		}),
+		Ported("calling-card", ThemeMode.Dark, ["#0a0a0a", "#1e1e1e", "#ffffff", "#ff3344", "#f5f5f5", "#ffd400", "#a3a3a3", "#6cde9a", "#ffd400", "#ff6b6b", "#5aa9ff"], new ThemeLook
+		{
+			Border = "heavy", TopLeft = "◤", TopRight = "◥", BottomLeft = "◣", BottomRight = "◢",
+			TitleOpen = "┫ ★ ", TitleClose = " ★ ┣", Guide = "heavy", Bullet = "★",
+			GaugeOpen = "▕", GaugeFilled = "▰", GaugeEmpty = "▱", GaugeClose = "▏", Separator = " / ", Rule = "━",
+		}),
+		Ported("jrpg", ThemeMode.Dark, ["#05070a", "#14161c", "#ffffff", "#ffb22e", "#58c46a", "#4aa8ff", "#a8a8a8", "#6cde9a", "#ffe066", "#e57373", "#5aa9ff"], new ThemeLook
+		{
+			Border = "rounded", TitleOpen = "┤ ", TitleClose = " ├", Guide = "rounded", Bullet = "▶",
+			GaugeOpen = "[", GaugeFilled = "■", GaugeEmpty = "□", GaugeClose = "]", Separator = " : ", Rule = "─",
+		}),
+		Ported("adventurers-handbook", ThemeMode.Light, ["#f3ead3", "#f6edd6", "#22180e", "#7e1b0f", "#7c6224", "#8a5212", "#5f4d39", "#387350", "#7f4f00", "#a05050", "#38699e"], new ThemeLook
+		{
+			Border = "single", TitleOpen = "─┤ ", TitleClose = " ├─", Guide = "line", Bullet = "▪",
+			GaugeOpen = "[", GaugeFilled = "█", GaugeEmpty = "·", GaugeClose = "]", Rule = "━",
+		}),
+		Ported("trailblazer", ThemeMode.Light, ["#e9e4d8", "#f2ede2", "#1b1a17", "#6b0f0f", "#7a5c14", "#2b4a7a", "#57524a", "#326647", "#7a4d00", "#934a4a", "#346294"], new ThemeLook
+		{
+			Border = "heavy", TitleOpen = "┫ ◆◆ ", TitleClose = " ┣", Guide = "heavy", Bullet = "◆",
+			GaugeOpen = "[", GaugeFilled = "◆", GaugeEmpty = "◇", GaugeClose = "]", Rule = "━",
+		}),
 		Ported("protan-dark", ThemeMode.Dark, ["#0e0f11", "#1c1f23", "#e9edf0", "#a8e8fa", "#e9edf0", "#f2ef0a", "#7d8790", "#2ca1c1", "#f2ef0a", "#f58b28", "#9f5efe"]),
 		Ported("protan-light", ThemeMode.Light, ["#f3f4f6", "#eef0f3", "#14181c", "#1b729b", "#14181c", "#876c00", "#5f6872", "#0d155a", "#876c00", "#612f08", "#5801f5"]),
 		Ported("deutan-dark", ThemeMode.Dark, ["#0e0f11", "#1c1f23", "#e9edf0", "#b6edfa", "#e9edf0", "#fde30b", "#7d8790", "#21b4e0", "#fde30b", "#f58b28", "#8869fe"]),
@@ -79,7 +118,7 @@ public static class LayoutThemes
 	/// A palette from the colours of <see cref="ThemeRole"/>s in this order: background, surface, foreground, primary,
 	/// secondary, tertiary, muted, success, warning, error, info, with the rest worked out from them.
 	/// </summary>
-	private static ThemePalette Ported(string name, ThemeMode mode, string[] colors)
+	private static ThemePalette Ported(string name, ThemeMode mode, string[] colors, ThemeLook? look = null)
 	{
 		ThemeRole[] roles =
 		[
@@ -92,6 +131,7 @@ public static class LayoutThemes
 			Mode = mode,
 			Colors = roles.Zip(colors).ToImmutableDictionary(pair => pair.First,
 				pair => ColorMath.TryParseHex(pair.Second, out var rgb) ? ThemeColor.Of(rgb) : throw new FormatException(pair.Second)),
+			Look = look,
 		}.Completed();
 	}
 

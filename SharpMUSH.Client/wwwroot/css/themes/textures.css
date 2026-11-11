@@ -406,3 +406,92 @@
 	--texture-mask-text: url(/themes/drawings/textures/readout-peach.svg) 0 0 / 100% 100% no-repeat;
 	--texture-ink-text: color-mix(in srgb, var(--warn), var(--link-missing));
 }
+
+/* Stained glass: a night sky of faint stars over a half disc of stained-glass panes rising from the foot of the
+   page, its panes in the accent, accent-2 and accent-3 with a crown in the middle, and a glow above it. */
+[data-texture="stained-glass"] {
+	--texture: radial-gradient(ellipse 60% 40% at 50% 100%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 70%),
+		radial-gradient(1px 1px at 23px 41px, color-mix(in srgb, var(--text) 50%, transparent), transparent),
+		radial-gradient(1px 1px at 131px 97px, color-mix(in srgb, var(--text) 35%, transparent), transparent),
+		radial-gradient(1.5px 1.5px at 171px 17px, color-mix(in srgb, var(--accent) 55%, transparent), transparent);
+	--texture-size: 100% 100%, 210px 210px, 210px 210px, 210px 210px;
+	--texture-mask-accent: url(/themes/drawings/textures/stained-glass-accent.svg) center bottom / 900px 450px no-repeat;
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 9%, transparent);
+	--texture-mask-accent-2: url(/themes/drawings/textures/stained-glass-accent-2.svg) center bottom / 900px 450px no-repeat;
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 9%, transparent);
+	--texture-mask-accent-3: url(/themes/drawings/textures/stained-glass-accent-3.svg) center bottom / 900px 450px no-repeat;
+	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 8%, transparent);
+}
+
+/* Crystal: faceted shards rising along the foot of the page, lit on one face in the accent and the other in
+   accent-2, under a cold light from above and an accent-3 haze. */
+[data-texture="crystal"] {
+	--texture: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 35%),
+		radial-gradient(ellipse 70% 45% at 50% 100%, color-mix(in srgb, var(--accent-3) 12%, transparent), transparent 70%);
+	--texture-size: 100% 100%, 100% 100%;
+	--texture-mask-accent: url(/themes/drawings/textures/crystal-accent.svg) left bottom / 1200px 420px repeat-x;
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 9%, transparent);
+	--texture-mask-accent-2: url(/themes/drawings/textures/crystal-accent-2.svg) left bottom / 1200px 420px repeat-x;
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 5%, transparent);
+}
+
+/* Dither: a 16-bit sky, accent-2 in hard bands growing stronger toward the foot, with a two-pixel checker
+   dithering the bands together. */
+[data-texture="dither"] {
+	--texture: linear-gradient(180deg, transparent 0 40%, color-mix(in srgb, var(--accent-2) 6%, transparent) 40% 55%,
+		color-mix(in srgb, var(--accent-2) 10%, transparent) 55% 70%, color-mix(in srgb, var(--accent-2) 15%, transparent) 70% 85%,
+		color-mix(in srgb, var(--accent-2) 20%, transparent) 85%);
+	--texture-size: 100% 100%;
+	--texture-mask-accent-2: linear-gradient(180deg, transparent 30%, #000);
+	--texture-ink-accent-2: repeating-conic-gradient(color-mix(in srgb, var(--accent-2) 12%, transparent) 0 25%, transparent 0 50%) 0 0 / 4px 4px;
+}
+
+/* Shards: red blades torn up from the lower right, white slashes beside them, and halftone dots fading out of
+   the top left corner. */
+[data-texture="shards"] {
+	--texture: linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 45%);
+	--texture-size: 100% 100%;
+	--texture-mask-accent: url(/themes/drawings/textures/shards-accent.svg) right bottom / 800px 600px no-repeat;
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 24%, transparent);
+	--texture-mask-accent-2: url(/themes/drawings/textures/shards-accent-2.svg) right bottom / 800px 600px no-repeat;
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 12%, transparent);
+	--texture-mask-text: linear-gradient(135deg, #000, transparent 40%);
+	--texture-ink-text: radial-gradient(circle, color-mix(in srgb, var(--text) 12%, transparent) 1.3px, transparent 1.8px) 0 0 / 10px 10px;
+}
+
+/* Overworld: a field of pixel tiles, trees in accent-2, water in accent-3 and hills in the text colour, on a
+   faint 32px tile grid. */
+[data-texture="overworld"] {
+	--texture: linear-gradient(color-mix(in srgb, var(--text) 3%, transparent) 1px, transparent 1px),
+		linear-gradient(90deg, color-mix(in srgb, var(--text) 3%, transparent) 1px, transparent 1px);
+	--texture-size: 32px 32px, 32px 32px;
+	--texture-mask-accent-2: url(/themes/drawings/textures/overworld-accent-2.svg) 0 0 / 256px 256px;
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 10%, transparent);
+	--texture-mask-accent-3: url(/themes/drawings/textures/overworld-accent-3.svg) 0 0 / 256px 256px;
+	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 12%, transparent);
+	--texture-mask-text: url(/themes/drawings/textures/overworld-text.svg) 0 0 / 256px 256px;
+	--texture-ink-text: color-mix(in srgb, var(--text) 7%, transparent);
+}
+
+/* Watercolour: washes of accent-2 and accent-3 bled into the page, darker toward its edges; the cards are grained. */
+[data-texture="watercolor"] {
+	--texture: radial-gradient(ellipse at 50% 40%, transparent 60%, color-mix(in srgb, var(--accent-3) 10%, transparent) 100%);
+	--texture-size: 100% 100%;
+	--texture-mask-accent-2: url(/themes/drawings/shared/clouds-600.svg) 0 0 / 600px 600px;
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 14%, transparent);
+	--texture-mask-accent-3: url(/themes/drawings/shared/clouds-800.svg) 210px 140px / 800px 800px;
+	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 9%, transparent);
+	--card-mask-grain: url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px;
+	--card-ink-grain: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+/* Marble: a page veined like stone, with a band of the rail's slate down the right edge lined in accent-2. */
+[data-texture="marble"] {
+	--texture: linear-gradient(90deg, transparent calc(100% - 18px), color-mix(in srgb, var(--accent-2) 70%, transparent) calc(100% - 18px) calc(100% - 16px),
+		color-mix(in srgb, var(--rail-bg) 90%, transparent) calc(100% - 16px));
+	--texture-size: 100% 100%;
+	--texture-mask-text: url(/themes/drawings/shared/clouds-500.svg) 0 0 / 500px 500px;
+	--texture-ink-text: color-mix(in srgb, var(--text) 5%, transparent);
+	--texture-mask-accent-3: url(/themes/drawings/textures/marble-veins.svg) 0 0 / 600px 600px;
+	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 14%, transparent);
+}

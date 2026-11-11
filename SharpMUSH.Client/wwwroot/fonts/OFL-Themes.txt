@@ -26,6 +26,13 @@ Copyright (c) 2011-2012, Jovanny Lemonad (jovanny.ru), with Reserved Font Name "
 Copyright 2019 The Saira Stencil Project Authors (https://github.com/Omnibus-Type/Saira)
 Copyright (c) 2011 Rodrigo Fuenzalida (hello@rfuenzalida.com), with Reserved Font Name "Titan One"
 Copyright 2021 The Yuji Project Authors (https://github.com/Kinutafontfactory/Yuji)
+Copyright 2012 Natanael Gama (info@ndiscovered.com), with Reserved Font Name 'Cinzel' (Cinzel Decorative)
+Copyright (c) 2011, Denis Masharov <denis.masharov@gmail.com> (Forum)
+Copyright 2012 The Press Start 2P Project Authors (cody@zone38.net), with Reserved Font Name "Press Start 2P"
+Copyright 2020 The Anton Project Authors (https://github.com/googlefonts/AntonFont.git)
+Copyright 2020 The DotGothic16 Project Authors (https://github.com/fontworks-fonts/DotGothic16/)
+Copyright 2011 The Alegreya Project Authors (https://github.com/huertatipografica/Alegreya) (Alegreya SC)
+Copyright 2016 The Oswald Project Authors (https://github.com/googlefonts/OswaldFont)
 
 
 

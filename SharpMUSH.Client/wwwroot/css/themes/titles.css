@@ -217,3 +217,59 @@
 	--title-shadow: 0 0 2px color-mix(in srgb, var(--accent) 90%, transparent), 0 2px 0 var(--accent), 0 3px 0 color-mix(in srgb, var(--accent-3) 70%, transparent),
 		0 0 14px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 30px color-mix(in srgb, var(--accent-3) 35%, transparent);
 }
+
+/* Crown: a crown either side. */
+[data-ornament-glyphs="crown"] { --ornament-before: "\2655"; --ornament-after: "\2655"; }
+/* Crown: an accent rule bright in the middle, accent-2 at its ends. */
+[data-ornament-underline="crown"] {
+	--title-underline: linear-gradient(90deg, transparent, var(--accent-2) 15%, var(--accent) 50%, var(--accent-2) 85%, transparent);
+	--title-underline-height: 2px;
+	--title-underline-pad: 6px;
+}
+/* Crystal: a gem either side. */
+[data-ornament-glyphs="crystal"] { --ornament-before: "\25C8"; --ornament-after: "\25C8"; }
+/* Crystal: a fine accent-2 line, brightest at the start. */
+[data-ornament-underline="crystal"] {
+	--title-underline: linear-gradient(90deg, var(--accent-2), color-mix(in srgb, var(--accent) 60%, transparent) 40%, transparent);
+	--title-underline-height: 1px;
+	--title-underline-pad: 8px;
+}
+/* Glove: a pointing hand before, as a menu cursor. */
+[data-ornament-glyphs="glove"] { --ornament-before: "\261E"; --ornament-after: none; }
+/* Jagged: a zigzag in the accent. */
+[data-ornament-underline="jagged"] {
+	--title-underline: conic-gradient(from -45deg at 50% 100%, var(--accent) 90deg, transparent 0) 0 0 / 10px 100%;
+	--title-underline-height: 6px;
+	--title-underline-pad: 6px;
+}
+/* Pointer: a solid triangle before, as a menu cursor. */
+[data-ornament-glyphs="pointer"] { --ornament-before: "\25B6"; --ornament-after: none; }
+/* Taper: an accent-2 rule thinning to nothing. */
+[data-ornament-underline="taper"] {
+	--title-underline: radial-gradient(ellipse 100% 50% at 0% 50%, var(--accent-2) 60%, transparent 62%);
+	--title-underline-height: 4px;
+	--title-underline-pad: 4px;
+}
+/* Actions: two action diamonds before. */
+[data-ornament-glyphs="actions"] { --ornament-before: "\25C6\25C6"; --ornament-after: none; }
+/* Bar: a heavy rule in the text colour. */
+[data-ornament-underline="bar"] {
+	--title-underline: linear-gradient(var(--text), var(--text));
+	--title-underline-height: 3px;
+	--title-underline-pad: 6px;
+}
+
+/* Starlit: a dark drop and an accent-2 glow. */
+[data-effect-shadow="starlit"] { --title-shadow: 0 1px 0 rgba(0, 0, 0, 0.6), 0 0 12px color-mix(in srgb, var(--accent-2) 45%, transparent); }
+/* Prism: a cold accent glow split by an accent-3 edge. */
+[data-effect-shadow="prism"] {
+	--title-shadow: -1px 0 0 color-mix(in srgb, var(--accent-3) 35%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+/* Bevel: a hard black drop, two pixels deep. */
+[data-effect-shadow="bevel"] { --title-shadow: 1px 1px 0 #000, 2px 2px 0 #000; }
+/* Ransom: a hard accent block behind and a black edge, as letters cut from a page. */
+[data-effect-shadow="ransom"] { --title-shadow: 1px 1px 0 #000, 2px 2px 0 #000, 4px 4px 0 var(--accent); }
+/* Dialog: a deep black drop. */
+[data-effect-shadow="dialog"] { --title-shadow: 0 2px 0 rgba(0, 0, 0, 0.9); }
+/* Stamped: pressed into the page, a light edge below. */
+[data-effect-shadow="stamped"] { --title-shadow: 0 1px 0 rgba(255, 255, 255, 0.75); }

@@ -323,6 +323,48 @@ public static class BuiltInThemes
 		["#160609", "#210c10", "#2c1116", "#19080b", "#080a1c", "#fff3e3", "#e0bfb0", "#c09a8e", "#8a8f9d", "#3a1a1e", "#ffc82a", "#ff9a3c", "#ff8f80"],
 		display: "russo", body: "ui", corners: "sharp", texture: "sunburst-rays", ornament: "battlecry", frame: "chrome-armor", titles: "slant", effect: "blazing", imagery: "hotblooded", accent2: "#ff7a1a", accent3: "#d7221c");
 
+	/// <summary>Heart Realm: a night sky over a stained-glass platform, regal gold capitals, cards banded in coloured glass, a crown either side of a title.</summary>
+	public static readonly PortalTheme HeartRealm = Genre("heart-realm", "Heart Realm", dark: true,
+		["#0b0b24", "#14143a", "#1c1c4a", "#10102e", "#07071a", "#f3efff", "#b9b4dc", "#9a95c2", "#3a3a7a", "#262658", "#ffd447", "#ffb35c", "#ff8fa8"],
+		display: "cinzel-decorative", body: "ui", corners: "round", texture: "stained-glass", ornament: "crown", frame: "stained", titles: "normal", effect: "starlit", imagery: "dreamlit",
+		accent2: "#5cc8ff", accent3: "#ff5d8f");
+
+	/// <summary>Crystal Saga: a modern fantasy epic, crystal shards rising out of the dark, wide Roman capitals, glassy cards lit from above.</summary>
+	public static readonly PortalTheme CrystalSaga = Genre("crystal-saga", "Crystal Saga", dark: true,
+		["#070b14", "#0f1626", "#16203a", "#0b111f", "#04070d", "#e8eef8", "#a6b3c8", "#8796ad", "#2a3a58", "#1b2740", "#9cd8ff", "#f2c66d", "#ff8f9a"],
+		display: "forum", body: "ui", corners: "soft", texture: "crystal", ornament: "crystal", frame: "prism", titles: "wide", effect: "prism", imagery: "crystalline",
+		accent2: "#d4ecff", accent3: "#b6a2ff");
+
+	/// <summary>Crystal Saga 16-bit: a 16-bit console RPG, blue gradient menu windows with white borders on black, pixel capitals, a pointing glove.</summary>
+	public static readonly PortalTheme CrystalSaga16Bit = Genre("crystal-saga-16bit", "Crystal Saga 16-bit", dark: true,
+		["#02020c", "#1a2a9a", "#2236b0", "#101c70", "#000010", "#ffffff", "#d6dcff", "#b8c0f0", "#e8e8f0", "#5868c8", "#ffd85a", "#ffb070", "#ffb0bc"],
+		display: "press-start", body: "ui", corners: "sharp", texture: "dither", ornament: "glove", frame: "window", titles: "normal", effect: "bevel", imagery: "sixteen-bit",
+		accent2: "#5f78ff", accent3: "#c8c8dc");
+
+	/// <summary>Calling Card: a phantom thief's calling card, black and white torn through with red, halftone dots, tall slanted capitals.</summary>
+	public static readonly PortalTheme CallingCard = Genre("calling-card", "Calling Card", dark: true,
+		["#0a0a0a", "#141414", "#1e1e1e", "#0f0f0f", "#000000", "#ffffff", "#c8c8c8", "#a3a3a3", "#3a3a3a", "#262626", "#ff3344", "#ffd400", "#ff8a8a"],
+		display: "anton", body: "ui", corners: "razor", texture: "shards", ornament: "jagged", frame: "torn", titles: "slant", effect: "ransom", imagery: "redout",
+		accent2: "#f5f5f5", accent3: "#ffd400");
+
+	/// <summary>JRPG: a classic console role-playing game, black dialog boxes with white borders over an overworld of tiles, dotted lettering, a cursor before a title.</summary>
+	public static readonly PortalTheme Jrpg = Genre("jrpg", "JRPG", dark: true,
+		["#05070a", "#000000", "#14161c", "#000000", "#000000", "#ffffff", "#d0d0d0", "#a8a8a8", "#f2f2f2", "#3a3a3a", "#ffb22e", "#ffe066", "#ff8a8a"],
+		display: "dotgothic", body: "ui", corners: "soft", texture: "overworld", ornament: "pointer", frame: "dialog", titles: "normal", effect: "dialog", imagery: "cartridge",
+		accent2: "#58c46a", accent3: "#4aa8ff");
+
+	/// <summary>Adventurer's Handbook: a tabletop rulebook, a cream page washed with colour, red small-capital headings over a tapered gold rule, stat-block cards.</summary>
+	public static readonly PortalTheme AdventurersHandbook = Genre("adventurers-handbook", "Adventurer's Handbook", dark: false,
+		["#f3ead3", "#fdf8ea", "#f6edd6", "#ede2c6", "#4a1810", "#22180e", "#4f3f2d", "#5f4d39", "#cdb88c", "#e2d4b2", "#7e1b0f", "#7f4f00", "#a32a1d"],
+		display: "alegreya-sc", body: "serif", corners: "sharp", texture: "watercolor", ornament: "rubric", frame: "statblock", titles: "normal", effect: "rubric", imagery: "watercolor",
+		accent2: "#c9a243", accent3: "#e69a28");
+
+	/// <summary>Trailblazer: a tabletop rulebook's vellum page in a stone border, condensed capitals in maroon, action diamonds, cards headed like a stat block.</summary>
+	public static readonly PortalTheme Trailblazer = Genre("trailblazer", "Trailblazer", dark: false,
+		["#e9e4d8", "#fbf8f1", "#f2ede2", "#e8e2d4", "#1d2433", "#1b1a17", "#45413a", "#57524a", "#b9b0a0", "#dcd5c7", "#6b0f0f", "#7a4d00", "#a32a1d"],
+		display: "oswald", body: "ui", corners: "sharp", texture: "marble", ornament: "actions", frame: "ledger", titles: "caps", effect: "stamped", imagery: "etched",
+		accent2: "#c99a2e", accent3: "#2b4a7a");
+
 	// One pair per colour vision (ThemeVision), Phosphor's and Daylight's surfaces and text with an accent, warning and
 	// missing-link colour that stay apart for that vision. ThemeVision picks the pair for a player who names a vision
 	// and no theme, and swaps the status and code colours to match. Colours: accent, warn, link-missing.
@@ -360,6 +402,8 @@ public static class BuiltInThemes
 		Cyberpunk, Synthwave, SpaceOpera, StarshipConsole,
 		RealRobot,
 		SuperRobot,
+		HeartRealm, CrystalSaga, CrystalSaga16Bit, CallingCard, Jrpg,
+		AdventurersHandbook, Trailblazer,
 		ProtanDark, ProtanLight, DeutanDark, DeutanLight, TritanDark, TritanLight, MonoDark, MonoLight,
 	];
 

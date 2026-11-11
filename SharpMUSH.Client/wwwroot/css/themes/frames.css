@@ -320,3 +320,81 @@
 [data-frame-shadow="lifted"] {
 	--card-shadow: var(--elev-1);
 }
+
+/* Stained: a band of coloured glass along the top (accent-2, accent-3, the accent), a glow falling from it, and a
+   small crown in the accent in the lower right. */
+[data-frame-marks="stained"] {
+	--card-marks: linear-gradient(90deg, var(--accent-2) 0 25%, var(--accent-3) 25% 50%, var(--accent) 50% 75%, var(--accent-2) 75%) left top / 100% 4px no-repeat,
+		radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 60%);
+	--card-mask-accent: url(/themes/drawings/frames/stained-crown.svg) right 12px bottom 6px / 20px 12px no-repeat;
+	--card-ink-accent: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+/* Stained: a gold ring outside the border and an accent-2 glow. */
+[data-frame-shadow="stained"] {
+	--card-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent), 0 0 20px color-mix(in srgb, var(--accent-2) 16%, transparent);
+}
+
+/* Prism: glass lit from above, a bright line along the top, and a cut gem in the accent at the top centre. */
+[data-frame-marks="prism"] {
+	--card-marks: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent-2) 70%, transparent), transparent) center top / 80% 1px no-repeat,
+		linear-gradient(160deg, color-mix(in srgb, var(--accent-2) 9%, transparent), transparent 40%, color-mix(in srgb, var(--accent-3) 6%, transparent));
+	--card-mask-accent: url(/themes/drawings/frames/prism-gem.svg) center top 2px / 10px 10px no-repeat;
+}
+/* Prism: a cold glow and a soft drop. */
+[data-frame-shadow="prism"] {
+	--card-shadow: 0 0 18px color-mix(in srgb, var(--accent) 12%, transparent), 0 10px 24px rgba(0,0,0,0.45);
+}
+
+/* Window: a 16-bit menu window, accent-2 at the top fading into the surface, with a pointing glove in the
+   lower right. */
+[data-frame-marks="window"] {
+	--card-marks: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 55%, transparent), transparent 70%);
+	--card-mask-text: url(/themes/drawings/frames/window-glove.svg) right 12px bottom 10px / 18px 14px no-repeat;
+	--card-ink-text: color-mix(in srgb, var(--text) 70%, transparent);
+}
+/* Window: a black ring outside the white border and an accent-3 bevel inside it. */
+[data-frame-shadow="window"] {
+	--card-shadow: 0 0 0 2px #000, inset 0 0 0 1px var(--accent-3), inset 0 2px 0 1px rgba(255,255,255,0.25);
+}
+
+/* Torn: a red slash torn across the top left, and a stripe of the accent down the right. */
+[data-frame-marks="torn"] {
+	--card-marks: linear-gradient(var(--accent), var(--accent)) right top / 4px 100% no-repeat;
+	--card-mask-accent: url(/themes/drawings/frames/torn-slash.svg) left top / 140px 34px no-repeat;
+	--card-ink-accent: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+/* Torn: the card thrown on the table, with a hard accent shadow and a white one behind it. */
+[data-frame-shadow="torn"] {
+	--card-shadow: 5px 5px 0 var(--accent), 9px 9px 0 var(--accent-2);
+}
+
+/* Dialog: a message box with a small accent arrow at the foot, as when more text waits. */
+[data-frame-marks="dialog"] {
+	--card-mask-accent: url(/themes/drawings/frames/dialog-arrow.svg) center bottom 6px / 12px 7px no-repeat;
+}
+/* Dialog: a black gap inside the white border and a black ring outside it. */
+[data-frame-shadow="dialog"] {
+	--card-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px color-mix(in srgb, var(--border) 45%, transparent), 0 0 0 2px #000;
+}
+
+/* Stat block: bars of accent-3 across the top and foot of the card. */
+[data-frame-marks="statblock"] {
+	--card-marks: linear-gradient(var(--accent-3), var(--accent-3)) left top / 100% 5px no-repeat,
+		linear-gradient(var(--accent-3), var(--accent-3)) left bottom / 100% 5px no-repeat;
+}
+/* Stat block: a soft paper shadow. */
+[data-frame-shadow="statblock"] {
+	--card-shadow: 0 2px 8px color-mix(in srgb, var(--text) 18%, transparent);
+}
+
+/* Ledger: a head band in the accent lined in accent-2, a trait tab in accent-3, and a heavy rule at the foot. */
+[data-frame-marks="ledger"] {
+	--card-marks: linear-gradient(var(--accent), var(--accent)) left top / 100% 6px no-repeat,
+		linear-gradient(var(--accent-2), var(--accent-2)) left 0 top 6px / 100% 2px no-repeat,
+		linear-gradient(var(--text), var(--text)) left bottom / 100% 3px no-repeat;
+	--card-mask-accent-3: url(/themes/drawings/frames/ledger-trait.svg) right 12px bottom 4px / 40px 9px no-repeat;
+}
+/* Ledger: a slight lift off the page. */
+[data-frame-shadow="ledger"] {
+	--card-shadow: 0 1px 3px color-mix(in srgb, var(--text) 22%, transparent);
+}

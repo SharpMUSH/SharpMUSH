@@ -37,6 +37,9 @@ stored with the character (`CharacterAppearance.Vision`) like the theme and acce
 - Anime: `magical-girl`, `shojo`, `idol`, `slice-of-life`, `shonen`, `sports`, `mechmachine`, `real-robot`, `super-robot`, `isekai`, `yokai`.
 - Cartoons and comics: `comic-book`, `rubber-hose`, `eighties-cartoon`.
 - Neon and space: `cyberpunk`, `synthwave`, `space-opera`, `starship-console`.
+- Console and tabletop role-playing games: `heart-realm`, `crystal-saga`, `crystal-saga-16bit`, `calling-card`, `jrpg`,
+  `adventurers-handbook`, `trailblazer`. Each evokes a style with its own drawings and an OFL face, never a game's
+  name, logo, art or font. Their layout themes also carry a look (border, title ornaments, bullet, gauge).
 - Colour vision: `protan-dark`, `protan-light`, `deutan-dark`, `deutan-light`, `tritan-dark`, `tritan-light`,
   `mono-dark`, `mono-light`. Phosphor's or Daylight's surfaces and text, with an accent, warning and missing-link
   colour picked for that vision. They draw no grain: their colours reach 4.5:1 against the flat surfaces, and the

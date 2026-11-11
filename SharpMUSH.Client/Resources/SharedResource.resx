@@ -12878,5 +12878,115 @@
   </data>
   <data name="PkgRowDetails" xml:space="preserve">
     <value>Details</value>
+  <data name="AdmThemeStyleTextureStainedGlass" xml:space="preserve">
+    <value>Stained glass</value>
+  </data>
+  <data name="AdmThemeStyleTextureCrystal" xml:space="preserve">
+    <value>Crystal shards</value>
+  </data>
+  <data name="AdmThemeStyleTextureDither" xml:space="preserve">
+    <value>Dithered bands</value>
+  </data>
+  <data name="AdmThemeStyleTextureShards" xml:space="preserve">
+    <value>Red shards</value>
+  </data>
+  <data name="AdmThemeStyleTextureOverworld" xml:space="preserve">
+    <value>Overworld tiles</value>
+  </data>
+  <data name="AdmThemeStyleTextureWatercolor" xml:space="preserve">
+    <value>Watercolour wash</value>
+  </data>
+  <data name="AdmThemeStyleTextureMarble" xml:space="preserve">
+    <value>Marble margin</value>
+  </data>
+  <data name="AdmThemeStyleFrameStained" xml:space="preserve">
+    <value>Stained glass</value>
+  </data>
+  <data name="AdmThemeStyleFramePrism" xml:space="preserve">
+    <value>Prism</value>
+  </data>
+  <data name="AdmThemeStyleFrameWindow" xml:space="preserve">
+    <value>Menu window</value>
+  </data>
+  <data name="AdmThemeStyleFrameTorn" xml:space="preserve">
+    <value>Torn card</value>
+  </data>
+  <data name="AdmThemeStyleFrameDialog" xml:space="preserve">
+    <value>Dialog box</value>
+  </data>
+  <data name="AdmThemeStyleFrameStatblock" xml:space="preserve">
+    <value>Stat block</value>
+  </data>
+  <data name="AdmThemeStyleFrameLedger" xml:space="preserve">
+    <value>Ledger</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentCrown" xml:space="preserve">
+    <value>Crown</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentCrystal" xml:space="preserve">
+    <value>Crystal</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentGlove" xml:space="preserve">
+    <value>Pointing glove</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentJagged" xml:space="preserve">
+    <value>Jagged</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentPointer" xml:space="preserve">
+    <value>Cursor</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentRubric" xml:space="preserve">
+    <value>Tapered rule</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentActions" xml:space="preserve">
+    <value>Action diamonds</value>
+  </data>
+  <data name="AdmThemeStyleEffectStarlit" xml:space="preserve">
+    <value>Starlit</value>
+  </data>
+  <data name="AdmThemeStyleEffectPrism" xml:space="preserve">
+    <value>Prism</value>
+  </data>
+  <data name="AdmThemeStyleEffectBevel" xml:space="preserve">
+    <value>Bevel</value>
+  </data>
+  <data name="AdmThemeStyleEffectRansom" xml:space="preserve">
+    <value>Ransom note</value>
+  </data>
+  <data name="AdmThemeStyleEffectDialog" xml:space="preserve">
+    <value>Dialog</value>
+  </data>
+  <data name="AdmThemeStyleEffectRubric" xml:space="preserve">
+    <value>Rubric</value>
+  </data>
+  <data name="AdmThemeStyleEffectStamped" xml:space="preserve">
+    <value>Stamped</value>
+  </data>
+  <data name="AdmThemeStyleImageryDreamlit" xml:space="preserve">
+    <value>Dreamlit</value>
+  </data>
+  <data name="AdmThemeStyleImageryCrystalline" xml:space="preserve">
+    <value>Crystalline</value>
+  </data>
+  <data name="AdmThemeStyleImagerySixteenBit" xml:space="preserve">
+    <value>16-bit</value>
+  </data>
+  <data name="AdmThemeStyleImageryRedout" xml:space="preserve">
+    <value>Red-out</value>
+  </data>
+  <data name="AdmThemeStyleImageryCartridge" xml:space="preserve">
+    <value>Cartridge</value>
+  </data>
+  <data name="AdmThemeStyleImageryWatercolor" xml:space="preserve">
+    <value>Watercolour</value>
+  </data>
+  <data name="AdmThemeStyleImageryEtched" xml:space="preserve">
+    <value>Etched</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentUnderlineTaper" xml:space="preserve">
+    <value>Tapered rule</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentUnderlineBar" xml:space="preserve">
+    <value>Heavy bar</value>
   </data>
 </root>
