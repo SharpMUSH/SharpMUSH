@@ -108,11 +108,14 @@ public partial class Functions
 			return await LastCreatedByAsync(executor, slot);
 		}
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, name,
-			LocateFlags.All,
-			async target => await PermissionService.Controls(executor, target)
-				? await LastCreatedByAsync(target, slot)
-				: PermissionRefusal.NotControlled(target).Return);
+		if (await LocateService.Locate(parser, executor, executor, name, LocateFlags.All) is not AnySharpObject target)
+		{
+			return ErrorMessages.Returns.NoMatch;
+		}
+
+		return await executor.IsPriv() || await PermissionService.Controls(executor, target)
+			? await LastCreatedByAsync(target, slot)
+			: PermissionRefusal.NotControlled(target).Return;
 	}
 
 	private async ValueTask<CallState> LastCreatedByAsync(AnySharpObject creator, LastCreated.Slot slot)
@@ -122,7 +125,9 @@ public partial class Functions
 
 	/// <summary>
 	/// <c>successes(&lt;dice&gt;, &lt;difficulty&gt;[, &lt;version&gt;])</c>: rolls that many ten-sided dice and gives
-	/// the number that reach the difficulty, less one for every 1 rolled.
+	/// the number that reach the difficulty, less one for every 1 rolled. Version 1, the default, gives all the dice
+	/// at a difficulty of 0 or less and none above 10; any other version keeps a result of at least 0, and at least 1
+	/// unless it is below 0, when the difficulty is below the number of dice.
 	/// </summary>
 	[SharpFunction(Name = "successes", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["dice", "difficulty", "version"])]
@@ -130,21 +135,36 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		if (!ArgHelpers.TryStrictInteger(args["0"].Message.ToPlainText().Trim(), out int dice)
-			|| !ArgHelpers.TryStrictInteger(args["1"].Message.ToPlainText().Trim(), out int difficulty)
-			|| (args.TryGetValue("2", out var version) && version.Message.ToPlainText().Trim() is { Length: > 0 } versionText
-				&& !ArgHelpers.TryStrictInteger(versionText, out int _)))
+			|| !ArgHelpers.TryStrictInteger(args["1"].Message.ToPlainText().Trim(), out int difficulty))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integers));
 		}
 
+		var version = args.TryGetValue("2", out var given)
+			? (int)Math.Clamp(LeadingInteger(given.Message.ToPlainText()), int.MinValue, int.MaxValue)
+			: 1;
 		return ValueTask.FromResult(dice switch
 		{
 			< 0 => new CallState("#-1 NUMBER OF DICE SHOULD BE > 0"),
 			> 100 => new CallState("#-1 TOO MANY DICE FOR ME TO ROLL"),
-			_ => new CallState(CountSuccesses(dice, difficulty, () => Random.Shared.Next(1, 11))
+			_ => new CallState(Successes(dice, difficulty, version, () => Random.Shared.Next(1, 11))
 				.ToString(CultureInfo.InvariantCulture))
 		});
 	}
+
+	/// <summary>The result of <c>successes()</c> for <paramref name="dice"/> rolls of <paramref name="roll"/>.</summary>
+	public static int Successes(int dice, int difficulty, int version, Func<int> roll)
+		=> (version, CountSuccesses(dice, difficulty, roll)) switch
+		{
+			_ when dice == 0 => 0,
+			(1, _) when difficulty <= 0 => dice,
+			(1, _) when difficulty > 10 => 0,
+			(1, var count) => count,
+			(_, var count) when difficulty >= dice => count,
+			(_, < 0) => 0,
+			(_, 0) => 1,
+			(_, var count) => count
+		};
 
 	/// <summary>The successes of <paramref name="dice"/> rolls of <paramref name="roll"/> against <paramref name="difficulty"/>.</summary>
 	public static int CountSuccesses(int dice, int difficulty, Func<int> roll)

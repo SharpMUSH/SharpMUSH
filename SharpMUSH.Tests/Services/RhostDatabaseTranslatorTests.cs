@@ -241,6 +241,10 @@ public class RhostDatabaseTranslatorTests
 		var database = RhostDatabaseTranslator.Translate(RhostFlatfileReader.Read(text));
 
 		await Assert.That(Object(database, 9).Attributes.Single(a => a.Name == "LASTCREATE").Value).IsEqualTo("6 10 7 -1 10");
+
+		var empty = RhostDatabaseTranslator.Translate(RhostFlatfileReader.Read(
+			WithAttributes(await File.ReadAllTextAsync(RhostFlatfileReaderTests.FlatfilePath), 9, ">237", "-1 -1 -1 -1")));
+		await Assert.That(Object(empty, 9).Attributes.Any(a => a.Name == "LASTCREATE")).IsFalse();
 	}
 
 	[Test]

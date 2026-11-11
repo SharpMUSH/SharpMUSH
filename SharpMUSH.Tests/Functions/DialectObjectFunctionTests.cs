@@ -27,6 +27,7 @@ public class DialectObjectFunctionTests : ServerTestBase
 		await Assert.That(await Eval($"lastcreate({maker},r)")).IsEqualTo(room);
 		await Assert.That(await Eval($"lastcreate({maker})")).IsEqualTo(room);
 		await Assert.That(await Eval($"lastcreate({maker},e)")).IsEqualTo("#-1");
+		await Assert.That(await Eval($"lastcreate({TestIsolationHelpers.GenerateUniqueName("LcNobody")})")).IsEqualTo("#-1 NO MATCH");
 	}
 
 	[Test]
@@ -61,6 +62,12 @@ public class DialectObjectFunctionTests : ServerTestBase
 		await Assert.That(await Eval("successes(101,6)")).IsEqualTo("#-1 TOO MANY DICE FOR ME TO ROLL");
 		await Assert.That(await Eval("successes(a,6)")).IsEqualTo("#-1 ARGUMENTS MUST BE INTEGERS");
 		await Assert.That(await Eval("isint(successes(5,6,2))")).IsEqualTo("1");
+		await Assert.That(await Eval("successes(5,0)")).IsEqualTo("5");
+		await Assert.That(await Eval("successes(5,11)")).IsEqualTo("0");
+		await Assert.That(SharpMUSH.Implementation.Functions.Functions.Successes(5, 3, 2, () => 1)).IsEqualTo(0);
+		await Assert.That(SharpMUSH.Implementation.Functions.Functions.Successes(5, 3, 2, () => 2)).IsEqualTo(1);
+		await Assert.That(SharpMUSH.Implementation.Functions.Functions.Successes(5, 3, 1, () => 1)).IsEqualTo(-5);
+		await Assert.That(SharpMUSH.Implementation.Functions.Functions.Successes(3, 6, 2, () => 1)).IsEqualTo(-3);
 	}
 
 	[Test]
@@ -99,6 +106,6 @@ public class DialectObjectFunctionTests : ServerTestBase
 	{
 		var result = RhostSoftcodeRewriter.Rewrite("[trace(1)][chktrace()]");
 
-		await Assert.That(result.Text).IsEqualTo("[set(%!,if(1,,!)DEBUG)][hasflag(%!,DEBUG)]");
+		await Assert.That(result.Text).IsEqualTo("[set(%!,if(trunc(1),,!)DEBUG)][hasflag(%!,DEBUG)]");
 	}
 }
