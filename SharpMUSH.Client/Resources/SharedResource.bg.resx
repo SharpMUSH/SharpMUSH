@@ -1845,14 +1845,6 @@
     <value>{count, plural, one {# регистриран герой} other {# регистрирани герои}}</value>
     <comment>MT — «герой» denotes a person, so the ordinary plural is used after the numeral, not the бройна форма</comment>
   </data>
-  <data name="NavCloseTerminal" xml:space="preserve">
-    <value>Затвори терминала</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCommandTerminal" xml:space="preserve">
-    <value>Команден терминал</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
     <value>Свържете се, за да видите кой е тук</value>
     <comment>MT</comment>
@@ -5093,6 +5085,9 @@
   </data>
   <data name="NavHelpMoreTopics" xml:space="preserve">
     <value>Още теми</value>
+  </data>
+  <data name="NavHelpSymbols" xml:space="preserve">
+    <value>Символи</value>
   </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Помощ за администратори</value>

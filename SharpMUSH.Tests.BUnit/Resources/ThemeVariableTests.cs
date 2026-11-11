@@ -74,7 +74,8 @@ public partial class ThemeVariableTests
 		var tokens = File.ReadAllText(Path.Join(ClientSource.CssRoot, "tokens.css"));
 		var phosphor = ThemeResolver.Resolve(BuiltInThemes.Phosphor);
 		foreach (var name in Enumerable.Range(1, 6).Concat(Enumerable.Range(9, 6)).SelectMany(slot => new[] { $"ms-ansi-{slot}", $"ms-ansi-bg-{slot}" })
-			.Append("tone-tertiary").Append("highlight"))
+			.Append("tone-tertiary").Append("highlight")
+			.Concat(["ooc-band-bg", "ooc-band-border", "ooc-icon-bg", "ooc-icon-fg"]))
 		{
 			await Assert.That(tokens).Contains($"--{name}: {phosphor.Token(name)};").Because(name);
 		}

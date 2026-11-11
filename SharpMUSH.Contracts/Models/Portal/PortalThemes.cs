@@ -747,6 +747,7 @@ public static class ThemeResolver
 		var surface3 = Get(ThemeTokens.Surface3);
 		var rail = Get(ThemeTokens.Rail);
 		var warn = Get(ThemeTokens.Warn);
+		var text = Get(ThemeTokens.Text);
 		var textDim = Get(ThemeTokens.TextDim);
 
 		tokens["accent-dim"] = accent.Mix(ThemeColor.Black, 0.22).Hex;
@@ -767,20 +768,21 @@ public static class ThemeResolver
 		{
 			tokens["switch-knob-off"] = "#c3cad0";
 			tokens["shadow"] = "0 1px 0 rgba(255,255,255,0.03) inset, 0 4px 16px rgba(0,0,0,0.4)";
-			tokens["ooc-band-bg"] = "#2e2748";
-			tokens["ooc-band-border"] = "#6a5aa3";
-			tokens["ooc-icon-bg"] = "#4a3d78";
-			tokens["ooc-icon-fg"] = "#d6c9ff";
 		}
 		else
 		{
 			tokens["switch-knob-off"] = tokens[ThemeTokens.TextFaint];
 			tokens["shadow"] = "0 1px 0 rgba(255,255,255,0.6) inset, 0 4px 16px rgba(20,28,36,0.10)";
-			tokens["ooc-band-bg"] = "#ebe7fb";
-			tokens["ooc-band-border"] = "#9486d0";
-			tokens["ooc-icon-bg"] = "#d8cff7";
-			tokens["ooc-icon-fg"] = "#3f3370";
 		}
+
+		// The OOC band (Play story, scene log): the surface washed toward the theme's accent, its edge and icon tile
+		// further toward it, the text on both kept readable. Each theme draws it in its own colours.
+		var oocBand = surface.Mix(accent, 0.09);
+		var oocIcon = Get(ThemeTokens.Surface2).Mix(accent, 0.22);
+		tokens["ooc-band-bg"] = oocBand.Hex;
+		tokens["ooc-band-border"] = Get(ThemeTokens.Border).Mix(accent, 0.45).Hex;
+		tokens["ooc-icon-bg"] = oocIcon.Hex;
+		tokens["ooc-icon-fg"] = ReadableAgainst(text, dark, ThemeTokens.TextContrast, oocIcon, oocBand).Hex;
 
 		// Status and kind colours (deletes and denials, allows and results, notices, roles and forms), and the code
 		// and syntax colours of help, the softcode console and highlighted softcode: each readable on the surfaces
@@ -800,7 +802,6 @@ public static class ThemeResolver
 		// follow the theme as a terminal's colour scheme does. The normal colours are the hues; the bright ones are lighter
 		// on a dark theme and darker on a light one. Behind text (--ms-ansi-bg-N) each is taken toward the page until the
 		// theme's text reads on it. Black, white and the greys keep their usual values.
-		var text = Get(ThemeTokens.Text);
 		for (var i = 0; i < HueColors.Count; i++)
 		{
 			var (name, hex) = HueColors[i];

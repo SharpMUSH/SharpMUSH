@@ -1845,14 +1845,6 @@
     <value>{count, plural, one {# personage geregistreerd} other {# personages geregistreerd}}</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCloseTerminal" xml:space="preserve">
-    <value>Terminal sluiten</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCommandTerminal" xml:space="preserve">
-    <value>Commandoterminal</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
     <value>Log in om te zien wie hier is</value>
     <comment>MT</comment>
@@ -5093,6 +5085,9 @@
   </data>
   <data name="NavHelpMoreTopics" xml:space="preserve">
     <value>Meer onderwerpen</value>
+  </data>
+  <data name="NavHelpSymbols" xml:space="preserve">
+    <value>Symbolen</value>
   </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Beheerdershulp</value>

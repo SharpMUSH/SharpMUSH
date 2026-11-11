@@ -1845,14 +1845,6 @@
     <value>{count, plural, one {# karakter registreret} other {# karakterer registreret}}</value>
     <comment>MT — participle left uninflected in the plural, as in the counter idiom</comment>
   </data>
-  <data name="NavCloseTerminal" xml:space="preserve">
-    <value>Luk terminalen</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCommandTerminal" xml:space="preserve">
-    <value>Kommandoterminal</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
     <value>Opret forbindelse for at se, hvem der er her</value>
     <comment>MT</comment>
@@ -5093,6 +5085,9 @@
   </data>
   <data name="NavHelpMoreTopics" xml:space="preserve">
     <value>Flere emner</value>
+  </data>
+  <data name="NavHelpSymbols" xml:space="preserve">
+    <value>Symboler</value>
   </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Administratorhjælp</value>

@@ -166,6 +166,54 @@
 	font-size: var(--text-sm);
 }
 
+/* The index's lists of "what you want: the topic" (HelpHtmlRenderer.RenderIndexToHtml) as cards, the way the
+   start row above draws its three: the description, then the topic or command it names. */
+.help-entry ::deep ul.help-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	gap: var(--space-3);
+	padding: 0;
+	list-style: none;
+}
+
+.help-entry ::deep .help-card {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	height: 100%;
+	box-sizing: border-box;
+	padding: var(--space-3) var(--space-4);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-tile);
+	background: var(--surface-2);
+	color: var(--text);
+	text-decoration: none;
+	white-space: normal;
+}
+
+.help-entry ::deep a.help-card:hover {
+	border-color: var(--accent);
+}
+
+.help-entry ::deep a.help-card:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.help-entry ::deep .help-card-name {
+	font-weight: 600;
+}
+
+.help-entry ::deep .help-card-target {
+	font-family: var(--font-mono);
+	font-size: var(--text-sm);
+	color: var(--text-dim);
+}
+
+.help-entry ::deep a.help-card .help-card-target {
+	color: var(--accent);
+}
+
 /* narrow: the card header's filter takes the full width it has, and the entry keeps less padding */
 @container page (max-width: 48rem) {
 	.help-filter {

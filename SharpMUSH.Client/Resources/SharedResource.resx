@@ -3639,12 +3639,6 @@
   <data name="NavSearchPlaceholder" xml:space="preserve">
     <value>Search…</value>
   </data>
-  <data name="NavCloseTerminal" xml:space="preserve">
-    <value>Close terminal</value>
-  </data>
-  <data name="NavCommandTerminal" xml:space="preserve">
-    <value>Command terminal</value>
-  </data>
   <data name="NavMenuLabel" xml:space="preserve">
     <value>Menu</value>
   </data>
@@ -4663,6 +4657,9 @@
   </data>
   <data name="NavHelpMoreTopics" xml:space="preserve">
     <value>More topics</value>
+  </data>
+  <data name="NavHelpSymbols" xml:space="preserve">
+    <value>Symbols</value>
   </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Admin help</value>

@@ -53,6 +53,38 @@ public class HelpSidebarTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task SymbolTopics_AreOneGroupOfChips_AfterTheWords()
+	{
+		Install(isStaff: false, new()
+		{
+			["help"] = new[] { "help", "%#", "&", ":", "@@", "@mail", "+help", "&help", "newbie" }
+				.ToDictionary(t => t, t => $"# {t}\nBody of {t}.", StringComparer.OrdinalIgnoreCase),
+		});
+		var cut = RenderAt("/help");
+		var words = cut.FindAll(".help-side-alphabetical a.kit-row").Select(r => r.TextContent.Trim()).ToList();
+		await Assert.That(words).DoesNotContain("%#").And.DoesNotContain("@@");
+		await Assert.That(words).Contains("@mail").And.Contains("+help");
+		await Assert.That(cut.FindAll(".help-side-symbols a").Select(a => a.TextContent))
+			.IsEquivalentTo(new[] { "%#", "&", ":", "@@" });
+		await Assert.That(cut.FindAll(".help-side-topics-label").Last().TextContent.Trim()).IsEqualTo("Symbols");
+	}
+
+	[Test]
+	[Arguments("%#", true)]
+	[Arguments("@@", true)]
+	[Arguments("%a", true)]
+	[Arguments("$-commands", false)]
+	[Arguments("@-wizard", false)]
+	[Arguments("#-1 exception", false)]
+	[Arguments("\"", true)]
+	[Arguments("@mail", false)]
+	[Arguments("+help", false)]
+	[Arguments("&help", false)]
+	[Arguments("abs()", false)]
+	public async Task ASymbolTopicIsNamedByPunctuation(string topic, bool symbol)
+		=> await Assert.That(HelpSidebar.IsSymbol(topic)).IsEqualTo(symbol);
+
+	[Test]
 	public async Task Header_CountsTheTopics()
 	{
 		Install(isStaff: false);

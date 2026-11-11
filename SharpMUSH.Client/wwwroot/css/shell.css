@@ -118,13 +118,6 @@
 	min-height: 0;
 	overflow-y: auto;
 }
-/* When the command-terminal drawer is open, reserve its height so content isn't
-   hidden beneath it. The drawer is a fixed --terminal-drawer-height on desktop and 70svh on mobile
-   (see the mobile block), and this offset tracks both. */
-.phosphor-main--terminal {
-	padding-bottom: var(--terminal-drawer-height);
-}
-
 /* The page takes the whole content column at every width, so a page's left edge always sits against the
    sidebar. A page that reads better narrower caps its own block (a form, an article's measure). */
 .phosphor-page {
@@ -464,29 +457,6 @@
 	border-top: 1px solid var(--border-soft);
 	background: var(--surface);
 	padding: var(--space-3) var(--space-5);
-}
-
-/* ── Terminal drawer: slides up over the bottom of the content column ── */
-.phosphor-terminal {
-	position: absolute;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	height: var(--terminal-drawer-height);
-	display: flex;
-	flex-direction: column;
-	background: var(--surface);
-	border-top: 1px solid var(--border);
-	box-shadow: var(--shadow-pop);
-	z-index: 10;
-}
-.phosphor-terminal-header {
-	display: flex;
-	align-items: center;
-	padding: var(--space-2) var(--space-4);
-	background: var(--surface-3);
-	border-bottom: 1px solid var(--border);
-	flex-shrink: 0;
 }
 
 /* ── Game-updated banner (GameUpdateBanner): above the app bar and drawers (MudBlazor's 1300),
@@ -1701,15 +1671,6 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	/* Global widget asides step aside so content keeps the full width. */
 	.phosphor-widget-aside { display: none; }
 
-	/* Bottom command-terminal drawer: svh keeps the input row on-screen under the
-	   address bar without resizing on scroll. */
-	.phosphor-terminal {
-		bottom: var(--bottomnav-clearance, 0px);
-		height: 70vh;
-		height: 70svh;
-		max-height: 70svh;
-	}
-
 	/* ── Hybrid bottom navigation bar ── */
 	.phosphor-bottomnav {
 		display: flex;
@@ -1732,14 +1693,6 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	}
 	.phosphor-shell--bottomnav .phosphor-main {
 		padding-bottom: var(--bottomnav-clearance);
-	}
-	/* Keep the drawer's connection controls above navigation and reserve both heights
-	   in the page content (instead of the desktop --terminal-drawer-height).
-	   Listed after the bar rule so it wins at equal specificity. */
-	.phosphor-main--terminal,
-	.phosphor-shell--bottomnav .phosphor-main--terminal {
-		padding-bottom: calc(70vh + var(--bottomnav-clearance, 0px));
-		padding-bottom: calc(70svh + var(--bottomnav-clearance, 0px));
 	}
 }
 
@@ -1791,6 +1744,9 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	.kit-row, .kit-capsule, .kit-chip { min-height: 44px; }
 	.kit-capsule--icon { min-width: 44px; }
 	.kit-portrait, .kit-tile { min-height: 44px; }
+	/* The wiki sidebar's members button and the help sidebar's symbol chips (scoped CSS takes no media query). */
+	.wiki-side-members { width: 44px; height: 44px; }
+	.help-side-symbol { display: grid; place-items: center; min-width: 44px; min-height: 44px; }
 }
 
 /* Wiki categories: a page's category bar (MediaWiki's catlinks) and a category page's subcategories.

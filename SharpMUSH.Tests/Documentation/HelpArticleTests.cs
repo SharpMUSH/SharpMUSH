@@ -332,6 +332,30 @@ public class HelpArticleTests
 		await Assert.That(html).Contains("<a href=\"/help/newbie\">newbie</a>");
 	}
 
+	private const string IndexEntry =
+		"This is the index.\n\n## New players\n\n| | |\n|---|---|\n| How to read the help files: | help [newbie] |\n| The configuration: | `@config` |\n\nAfter.";
+
+	[Test]
+	public async Task TheWebIndexDrawsItsDescriptionAndTopicListsAsCards()
+	{
+		var html = HelpHtmlRenderer.RenderIndexToHtml(IndexEntry, topic => "/help/" + topic);
+		await Assert.That(html).DoesNotContain("<table");
+		await Assert.That(html).Contains("<ul class=\"help-cards\">");
+		await Assert.That(html).Contains(
+			"<li><a class=\"help-card\" href=\"/help/newbie\"><span class=\"help-card-name\">How to read the help files</span><span class=\"help-card-target\">help newbie</span></a></li>");
+		await Assert.That(html).Contains(
+			"<li><span class=\"help-card\"><span class=\"help-card-name\">The configuration</span><span class=\"help-card-target\">@config</span></span></li>");
+		await Assert.That(html).Contains("After.");
+	}
+
+	[Test]
+	public async Task AnIndexTopicPageKeepsItsTable()
+	{
+		var html = HelpHtmlRenderer.RenderToHtml(IndexEntry, topic => "/help/" + topic);
+		await Assert.That(html).Contains("<table class=\"help-list\">");
+		await Assert.That(html).DoesNotContain("help-cards");
+	}
+
 	private const string SeeAlso = "Body.\n\n::: seealso\n- [newbie]\n- [ZONES]\n- `[NO_TEL]`\n:::";
 
 	[Test]

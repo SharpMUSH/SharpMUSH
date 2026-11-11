@@ -110,11 +110,10 @@ public class NavRailTests : TrackingBunitContext
 		_auth = AddAuthorization();
 	}
 
-	private IRenderedComponent<NavRail> RenderAt(string path, bool terminalOpen = false, Action? onSearch = null)
+	private IRenderedComponent<NavRail> RenderAt(string path, Action? onSearch = null)
 	{
 		Services.GetRequiredService<BunitNavigationManager>().NavigateTo(path);
-		return Render<NavRail>(p => p.Add(x => x.TerminalOpen, terminalOpen)
-			.Add(x => x.OnSearch, () => onSearch?.Invoke()));
+		return Render<NavRail>(p => p.Add(x => x.OnSearch, () => onSearch?.Invoke()));
 	}
 
 	[Test]
@@ -303,13 +302,14 @@ public class NavRailTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task Search_OpensThePalette_AndTheTerminalToggleSaysWhetherItIsOpen()
+	public async Task Search_OpensThePalette_AndThereIsNoSecondTerminal()
 	{
 		var searched = false;
-		var cut = RenderAt("/", terminalOpen: true, onSearch: () => searched = true);
+		var cut = RenderAt("/", onSearch: () => searched = true);
 		await cut.Find("button.phosphor-rail-search").ClickAsync();
 		await Assert.That(searched).IsTrue();
-		await Assert.That(cut.Find("button.phosphor-rail-terminal").GetAttribute("aria-pressed")).IsEqualTo("true");
+		await Assert.That(cut.FindAll(".phosphor-rail [aria-pressed]")).IsEmpty()
+			.Because("Play is the terminal; the rail has no drawer toggle beside it");
 	}
 
 	[Test]

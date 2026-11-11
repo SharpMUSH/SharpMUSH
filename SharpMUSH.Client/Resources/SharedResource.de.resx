@@ -1845,14 +1845,6 @@
     <value>{count, plural, one {# Charakter registriert} other {# Charaktere registriert}}</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCloseTerminal" xml:space="preserve">
-    <value>Terminal schließen</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCommandTerminal" xml:space="preserve">
-    <value>Befehlsterminal</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
     <value>Verbinden, um zu sehen, wer hier ist</value>
     <comment>MT — em dashes preserved.</comment>
@@ -5093,6 +5085,9 @@
   </data>
   <data name="NavHelpMoreTopics" xml:space="preserve">
     <value>Weitere Themen</value>
+  </data>
+  <data name="NavHelpSymbols" xml:space="preserve">
+    <value>Symbole</value>
   </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Admin-Hilfe</value>

@@ -42,7 +42,9 @@
 	outline: none;
 }
 
-.wiki-side-category { min-width: 0; }
-.wiki-side-members { display: flex; align-items: center; min-height: 44px; margin-inline-start: 42px; padding: var(--space-2) var(--space-3); color: var(--text-dim, var(--text)); font-size: var(--text-sm); text-decoration: underline; text-underline-offset: .2em; overflow-wrap: anywhere; }
-.wiki-side-members:hover, .wiki-side-members[aria-current="page"] { color: var(--accent); }
+.wiki-side-category { display: flex; align-items: center; gap: var(--space-1); min-width: 0; }
+.wiki-side-category > ::deep .kit-row { flex: 1; min-width: 0; }
+.wiki-side-members { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; border-radius: var(--radius-row); color: var(--text-dim); }
+.wiki-side-members:hover { background: var(--surface); color: var(--accent); }
+.wiki-side-members[aria-current="page"] { color: var(--accent); }
 .wiki-side-members:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-row); }

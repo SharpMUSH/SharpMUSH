@@ -52,24 +52,26 @@ else
             {
                 var e = exit;
                 var key = KeyOf(e);
-                <div class="exit exit--@StateName(e)">
+                var pictured = ImageUrlPolicy.IsRenderable(e.Dest?.Image?.Url);
+                <div class="exit exit--@StateName(e) @(pictured ? null : "exit--plain")">
                     <button type="button" class="exit-go" disabled="@string.IsNullOrWhiteSpace(e.Cmd)"
                             aria-keyshortcuts="@(KeysOn && IsSingleKey(key) ? key : null)" title="@(KeysOn && IsSingleKey(key) ? Loc["NavPlayExitKey", key!].Value : null)"
                             @onclick="() => TakeAsync(e)">
-                        <span class="exit-media">
-                            @if (ImageUrlPolicy.IsRenderable(e.Dest?.Image?.Url))
-                            {
+                        @* A destination with no picture is a compact row: no empty box, its state beside the name. *@
+                        @if (pictured)
+                        {
+                            <span class="exit-media">
                                 <img class="exit-img" src="@ApiUrl.Resolve(e.Dest!.Image!.Url)" alt="" loading="lazy" />
-                            }
-                            else
-                            {
-                                <span class="exit-img exit-fallback" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Explore" Size="Size.Small" /></span>
-                            }
-                            @Pill(e)
-                        </span>
+                                @Pill(e)
+                            </span>
+                        }
                         <span class="exit-text">
                             <span class="exit-row">
                                 <span class="exit-name">@NameOf(e)</span>
+                                @if (!pictured)
+                                {
+                                    @Pill(e)
+                                }
                                 @if (key is not null)
                                 {
                                     <kbd class="exit-key">@key</kbd>

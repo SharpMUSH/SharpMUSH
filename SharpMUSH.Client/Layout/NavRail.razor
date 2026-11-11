@@ -19,7 +19,7 @@
    an inline group is a labelled list with one icon per destination, a section group one icon for its first
    destination, a pop-out group one button opening its list beside the rail; the groups scroll when the rail is
    too short for them, and the current page's button is scrolled into view), then Build & manage when anything in it is visible to the viewer, search (the
-   command palette), the terminal toggle, the language, and the account. Each item is 44×44, radius 14; the
+   command palette), the language, and the account. Each item is 44×44, radius 14; the
    current section is filled --surface-2 with an accent icon and carries aria-current="page". Mobile hides
    the rail and keeps the drawer (NavMenu) and bottom tab bar. *@
 <nav class="phosphor-rail" aria-label="@Loc["NavSections"]">
@@ -67,20 +67,11 @@
             aria-haspopup="dialog" @onclick="OnSearch">
         <MudIcon Icon="@Icons.Material.Outlined.Search" />
     </button>
-    <button type="button" class="phosphor-rail-item phosphor-rail-terminal @(TerminalOpen ? "phosphor-rail-item--on" : null)"
-            aria-pressed="@(TerminalOpen ? "true" : "false")" aria-label="@Loc["NavCommandTerminal"]" title="@Loc["NavCommandTerminal"]"
-            @onclick="OnToggleTerminal">
-        <MudIcon Icon="@Icons.Material.Outlined.Terminal" />
-    </button>
     <div class="phosphor-rail-lang"><LanguagePicker AnchorOrigin="Origin.CenterRight" TransformOrigin="Origin.CenterLeft" /></div>
     <AccountButton Compact="true" />
 </nav>
 
 @code {
-    /// <summary>Whether the command terminal drawer is open (the toggle shows pressed).</summary>
-    [Parameter] public bool TerminalOpen { get; set; }
-    [Parameter] public EventCallback OnToggleTerminal { get; set; }
-
     /// <summary>Opens the command palette.</summary>
     [Parameter] public EventCallback OnSearch { get; set; }
 

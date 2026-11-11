@@ -230,12 +230,12 @@ public class AccountPanelTests : TrackingBunitContext
 		var cut = RenderNavMenuAnonymous(isCollapsed: false, nm => nm
 			.Add(c => c.ShowTools, true)
 			.Add(c => c.OnSectionMenu, () => calls.Add("section"))
-			.Add(c => c.OnSearch, () => calls.Add("search"))
-			.Add(c => c.OnToggleTerminal, () => calls.Add("terminal")));
+			.Add(c => c.OnSearch, () => calls.Add("search")));
 		await cut.Find(".phosphor-drawer-tools button.phosphor-pagebar-btn").ClickAsync();
 		await cut.Find(".phosphor-drawer-tools button[aria-haspopup='dialog']").ClickAsync();
-		await cut.Find(".phosphor-drawer-tools button[aria-pressed]").ClickAsync();
-		await Assert.That(calls).IsEquivalentTo(new[] { "section", "search", "terminal" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(calls).IsEquivalentTo(new[] { "section", "search" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(cut.FindAll(".phosphor-drawer-tools button[aria-pressed]")).IsEmpty()
+			.Because("Play has its own terminal; the drawer offers no second one");
 		await Assert.That(cut.FindAll(".phosphor-drawer-tools .phosphor-lang").Count).IsEqualTo(1);
 	}
 

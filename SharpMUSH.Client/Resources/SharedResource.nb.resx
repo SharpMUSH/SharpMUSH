@@ -1845,14 +1845,6 @@
     <value>{count, plural, one {# karakter registrert} other {# karakterer registrert}}</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCloseTerminal" xml:space="preserve">
-    <value>Lukk terminalen</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCommandTerminal" xml:space="preserve">
-    <value>Kommandoterminal</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
     <value>Koble til for å se hvem som er her</value>
     <comment>MT</comment>
@@ -5093,6 +5085,9 @@
   </data>
   <data name="NavHelpMoreTopics" xml:space="preserve">
     <value>Flere emner</value>
+  </data>
+  <data name="NavHelpSymbols" xml:space="preserve">
+    <value>Symboler</value>
   </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Administratorhjelp</value>

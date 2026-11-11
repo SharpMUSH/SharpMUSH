@@ -1845,14 +1845,6 @@
     <value>{count, plural, other {已注册 # 个角色}}</value>
     <comment>MT — Chinese has a single CLDR plural category, so one `other` branch is correct.</comment>
   </data>
-  <data name="NavCloseTerminal" xml:space="preserve">
-    <value>关闭终端</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCommandTerminal" xml:space="preserve">
-    <value>命令终端</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
     <value>连接后即可查看谁在这里</value>
     <comment>MT</comment>
@@ -5093,6 +5085,9 @@
   </data>
   <data name="NavHelpMoreTopics" xml:space="preserve">
     <value>更多主题</value>
+  </data>
+  <data name="NavHelpSymbols" xml:space="preserve">
+    <value>符号</value>
   </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>管理员帮助</value>

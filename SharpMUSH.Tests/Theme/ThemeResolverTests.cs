@@ -131,6 +131,22 @@ public class ThemeResolverTests
 	}
 
 	[Test]
+	[MethodDataSource(nameof(BuiltInIds))]
+	public async Task EveryThemesOocBandIsItsOwnAccentOverItsSurfaceAndReads(string id)
+	{
+		var theme = ThemeResolver.Resolve(BuiltIn(id));
+		var band = ThemeColor.Parse(theme.Token("ooc-band-bg"));
+		var icon = ThemeColor.Parse(theme.Token("ooc-icon-bg"));
+
+		await Assert.That(theme.Token("ooc-band-bg")).IsEqualTo(ThemeColor.Parse(theme.Token("surface")).Mix(ThemeColor.Parse(theme.Accent), 0.09).Hex)
+			.Because($"{id}: the band is the theme's surface washed toward its accent, not one colour for every theme");
+		await Assert.That(ThemeColor.Contrast(ThemeColor.Parse(theme.Token("text")), band)).IsGreaterThanOrEqualTo(ThemeTokens.TextContrast)
+			.Because($"{id}: text on the band");
+		await Assert.That(ThemeColor.Contrast(ThemeColor.Parse(theme.Token("ooc-icon-fg")), icon)).IsGreaterThanOrEqualTo(ThemeTokens.TextContrast)
+			.Because($"{id}: the band's icon on its tile");
+	}
+
+	[Test]
 	public async Task PickFallsBackFromAMissingThemeToTheDefaultForTheBrowsersPreferenceThenPhosphor()
 	{
 		IReadOnlyList<PortalTheme> themes = BuiltInThemes.All;

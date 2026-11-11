@@ -1845,14 +1845,6 @@
     <value>{count, plural, one {Zarejestrowano # postać} few {Zarejestrowano # postacie} many {Zarejestrowano # postaci} other {Zarejestrowano # postaci}}</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCloseTerminal" xml:space="preserve">
-    <value>Zamknij terminal</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCommandTerminal" xml:space="preserve">
-    <value>Terminal komend</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
     <value>Połącz się, aby zobaczyć, kto tu jest</value>
     <comment>MT</comment>
@@ -5093,6 +5085,9 @@
   </data>
   <data name="NavHelpMoreTopics" xml:space="preserve">
     <value>Więcej tematów</value>
+  </data>
+  <data name="NavHelpSymbols" xml:space="preserve">
+    <value>Symbole</value>
   </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Pomoc administracyjna</value>

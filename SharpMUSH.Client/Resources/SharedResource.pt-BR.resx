@@ -1845,14 +1845,6 @@
     <value>{count, plural, one {# personagem registrado} other {# personagens registrados}}</value>
     <comment>MT — ICU categories one+other</comment>
   </data>
-  <data name="NavCloseTerminal" xml:space="preserve">
-    <value>Fechar terminal</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCommandTerminal" xml:space="preserve">
-    <value>Terminal de comandos</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
     <value>Conecte-se para ver quem está aqui</value>
     <comment>MT</comment>
@@ -5093,6 +5085,9 @@
   </data>
   <data name="NavHelpMoreTopics" xml:space="preserve">
     <value>Mais tópicos</value>
+  </data>
+  <data name="NavHelpSymbols" xml:space="preserve">
+    <value>Símbolos</value>
   </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Ajuda de administração</value>

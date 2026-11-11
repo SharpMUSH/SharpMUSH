@@ -69,9 +69,8 @@
     }
 
     @* D1 §3: the rail on a desktop; the grouped drawer (NavMenu) on touch chrome. shell.css shows one. *@
-    <NavRail TerminalOpen="_terminalOpen" OnToggleTerminal="ToggleTerminal" OnSearch="OpenPalette" />
-    <NavMenu IsCollapsed="false" ShowTools="_isPlayRoute" TerminalOpen="_terminalOpen" OnSectionMenu="TogglePagebar" OnSearch="OpenPaletteFromDrawer"
-             OnToggleTerminal="ToggleTerminalFromDrawer" />
+    <NavRail OnSearch="OpenPalette" />
+    <NavMenu IsCollapsed="false" ShowTools="_isPlayRoute" OnSectionMenu="TogglePagebar" OnSearch="OpenPaletteFromDrawer" />
 
     @* D1 §3 page-sidebar slot: a section's layout fills it through SectionShell. The column shows only
        while a sidebar is mounted (shell.css :has), 232px or the 62px strip; on touch chrome it is the
@@ -108,11 +107,6 @@
                 <MudIcon Icon="@Icons.Material.Outlined.Search" Style="font-size:var(--text-lg);" />
             </button>
             <span class="phosphor-lang"><LanguagePicker /></span>
-            <button class="@($"phosphor-icon-btn{(_terminalOpen ? " phosphor-icon-btn--active" : "")}")"
-                    @onclick="ToggleTerminal" aria-pressed="@(_terminalOpen ? "true" : "false")"
-                    aria-label="@Loc["NavCommandTerminal"]" title="@Loc["NavCommandTerminal"]">
-                <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:var(--text-md);" />
-            </button>
         </header>
 
         @* The global TopBar zone (QuickLinks by default) as a slim strip above main, only when an admin
@@ -124,7 +118,7 @@
             </div>
         }
 
-        <main id="main-content" tabindex="-1" class="phosphor-main @(_terminalOpen ? "phosphor-main--terminal" : "")">
+        <main id="main-content" tabindex="-1" class="phosphor-main">
             <div class="phosphor-page">
                 <CascadingValue Value="_shellNavigation" IsFixed="true">
                     @Body
@@ -139,22 +133,9 @@
             </div>
         }
 
-        @* Always mounted so the command terminal auto-logs in on load; hidden until opened. *@
-        <div class="phosphor-terminal" role="region" aria-label="@Loc["NavCommandTerminal"]" style="@(_terminalOpen ? null : "display:none;")">
-            <div class="phosphor-terminal-header">
-                <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:var(--text-base);color:var(--accent);margin-right:0.5625rem;" />
-                <span style="font-family:var(--font-mono);font-size:var(--text-sm);color:var(--accent);letter-spacing:0.05em;">@Loc["NavCommandTerminal"]</span>
-                <span style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--text-faint);margin-left:0.5rem;">
-                    · @(Terminal.IsConnected ? Loc["Connected"] : Loc["Disconnected"])
-                </span>
-                <div style="flex:1;"></div>
-                <button type="button" class="phosphor-icon-btn" @onclick="ToggleTerminal" title="@Loc["NavCloseTerminal"]" aria-label="@Loc["NavCloseTerminal"]">
-                    <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:var(--text-md);" />
-                </button>
-            </div>
-            <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
-                <GlobalTerminal Terminal="Terminal" Interactive="false" />
-            </div>
+        @* Always mounted, never shown: it logs the character in on load. Play is where the game is played. *@
+        <div class="phosphor-terminal-host" hidden>
+            <GlobalTerminal Terminal="Terminal" Interactive="false" />
         </div>
 
         @* Mobile-only hybrid bottom navigation. The primary destinations stay visible (the
@@ -195,7 +176,6 @@
     private bool _paletteOpen = false;
     private bool _isConfigRoute = false;
     private bool _isPlayRoute = false;
-    private bool _terminalOpen = false;
 
     // The tab bar's destinations between Home and Menu, from the game's navigation for this viewer: a tab they
     // may not open (Play for a visitor while guest logins are off) is not there.
@@ -554,20 +534,12 @@
 
     private void OpenPalette() => _paletteOpen = true;
 
-    private void ToggleTerminal() => _terminalOpen = !_terminalOpen;
-
     /// <summary>The drawer's own copies of the header's buttons (Play, whose header is merged away) close it first.</summary>
     private void OpenPaletteFromDrawer()
     {
         _panelFocusMovesOn = _mobileNavOpen;
         _mobileNavOpen = false;
         _paletteOpen = true;
-    }
-
-    private void ToggleTerminalFromDrawer()
-    {
-        _mobileNavOpen = false;
-        _terminalOpen = !_terminalOpen;
     }
 
     private ShellNavigation? _shellNavigationField;

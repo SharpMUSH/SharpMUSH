@@ -1845,14 +1845,6 @@
     <value>{count, plural, one {зарегистрирован # персонаж} few {зарегистрировано # персонажа} many {зарегистрировано # персонажей} other {зарегистрировано # персонажа}}</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCloseTerminal" xml:space="preserve">
-    <value>Закрыть терминал</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCommandTerminal" xml:space="preserve">
-    <value>Командный терминал</value>
-    <comment>MT — lower-case as in the English source.</comment>
-  </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
     <value>Подключитесь, чтобы увидеть, кто здесь</value>
     <comment>MT — em dashes preserved.</comment>
@@ -5093,6 +5085,9 @@
   </data>
   <data name="NavHelpMoreTopics" xml:space="preserve">
     <value>Другие темы</value>
+  </data>
+  <data name="NavHelpSymbols" xml:space="preserve">
+    <value>Символы</value>
   </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Справка администратора</value>

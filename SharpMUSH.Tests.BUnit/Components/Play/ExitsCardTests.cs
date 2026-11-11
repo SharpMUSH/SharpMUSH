@@ -127,11 +127,13 @@ public class ExitsCardTests : BunitContext
 	}
 
 	[Test]
-	public async Task NoPicture_IsTheFallbackTile()
+	public async Task NoPicture_IsACompactRowWithNoPictureBox()
 	{
 		var cut = RenderExits([Out]);
 		await Assert.That(Tile(cut, "Out").QuerySelector("img")).IsNull();
-		await Assert.That(Tile(cut, "Out").QuerySelector(".exit-fallback")).IsNotNull();
+		await Assert.That(Tile(cut, "Out").QuerySelector(".exit-media")).IsNull()
+			.Because("a destination without a picture draws no empty box for one");
+		await Assert.That(Tile(cut, "Out").ClassList).Contains("exit--plain");
 		await Assert.That(Tile(cut, "Out").QuerySelector("kbd.exit-key")!.TextContent).IsEqualTo("out")
 			.Because("the keycap is the first alias, whatever its length");
 	}

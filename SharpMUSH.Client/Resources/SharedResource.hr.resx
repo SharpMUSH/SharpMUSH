@@ -1845,14 +1845,6 @@
     <value>{count, plural, one {# registriran lik} few {# registrirana lika} other {# registriranih likova}}</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCloseTerminal" xml:space="preserve">
-    <value>Zatvori terminal</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCommandTerminal" xml:space="preserve">
-    <value>Naredbeni terminal</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
     <value>Povežite se da vidite tko je ovdje</value>
     <comment>MT</comment>
@@ -5093,6 +5085,9 @@
   </data>
   <data name="NavHelpMoreTopics" xml:space="preserve">
     <value>Još tema</value>
+  </data>
+  <data name="NavHelpSymbols" xml:space="preserve">
+    <value>Simboli</value>
   </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Pomoć za administratore</value>

@@ -106,11 +106,6 @@
                 <MudIcon Icon="@Icons.Material.Outlined.Search" Style="font-size:var(--text-lg);" />
             </button>
             <span class="phosphor-lang"><LanguagePicker /></span>
-            <button type="button" class="@($"phosphor-icon-btn{(TerminalOpen ? " phosphor-icon-btn--active" : "")}")"
-                    aria-pressed="@(TerminalOpen ? "true" : "false")" aria-label="@Loc["NavCommandTerminal"]"
-                    title="@Loc["NavCommandTerminal"]" @onclick="OnToggleTerminal">
-                <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:var(--text-md);" />
-            </button>
         </div>
     }
 
@@ -134,13 +129,9 @@
     /// <summary>Whether to render the tools row: on Play, which merges the touch header into its card header.</summary>
     [Parameter] public bool ShowTools { get; set; }
 
-    /// <summary>Whether the command terminal drawer is open (the tools row's toggle shows pressed).</summary>
-    [Parameter] public bool TerminalOpen { get; set; }
-
-    /// <summary>The tools row: open this section's panel, the command palette, and the command terminal.</summary>
+    /// <summary>The tools row: open this section's panel, and the command palette.</summary>
     [Parameter] public EventCallback OnSectionMenu { get; set; }
     [Parameter] public EventCallback OnSearch { get; set; }
-    [Parameter] public EventCallback OnToggleTerminal { get; set; }
 
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 

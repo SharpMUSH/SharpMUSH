@@ -1845,14 +1845,6 @@
     <value>{count, plural, one {# karaktär registrerad} other {# karaktärer registrerade}}</value>
     <comment>MT — participle agrees in number: registrerad / registrerade</comment>
   </data>
-  <data name="NavCloseTerminal" xml:space="preserve">
-    <value>Stäng terminalen</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCommandTerminal" xml:space="preserve">
-    <value>Kommandoterminal</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
     <value>Koppla upp dig för att se vilka som är här</value>
     <comment>MT</comment>
@@ -5093,6 +5085,9 @@
   </data>
   <data name="NavHelpMoreTopics" xml:space="preserve">
     <value>Fler ämnen</value>
+  </data>
+  <data name="NavHelpSymbols" xml:space="preserve">
+    <value>Symboler</value>
   </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Administratörshjälp</value>

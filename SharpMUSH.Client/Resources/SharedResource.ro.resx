@@ -1845,14 +1845,6 @@
     <value>{count, plural, one {# personaj înregistrat} few {# personaje înregistrate} other {# de personaje înregistrate}}</value>
     <comment>MT — ICU categories one+few+other; the "de" form now covers 20+</comment>
   </data>
-  <data name="NavCloseTerminal" xml:space="preserve">
-    <value>Închidere terminal</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavCommandTerminal" xml:space="preserve">
-    <value>Terminal de comenzi</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
     <value>Conectați-vă pentru a vedea cine este aici</value>
     <comment>MT</comment>
@@ -5093,6 +5085,9 @@
   </data>
   <data name="NavHelpMoreTopics" xml:space="preserve">
     <value>Mai multe subiecte</value>
+  </data>
+  <data name="NavHelpSymbols" xml:space="preserve">
+    <value>Simboluri</value>
   </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Ajutor pentru administratori</value>

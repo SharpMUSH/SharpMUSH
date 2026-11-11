@@ -1,0 +1,36 @@
+/* The symbol topics: short punctuation names, so a wrapped row of chips rather than a full row each. */
+.help-side-symbols {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+	padding: 0 var(--space-3) var(--space-3);
+}
+
+.help-side-symbol {
+	min-width: 2.25em;
+	padding: var(--space-1) var(--space-3);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-row);
+	background: var(--surface-2);
+	color: var(--text);
+	font-family: var(--font-mono);
+	font-size: var(--text-sm);
+	text-align: center;
+	text-decoration: none;
+	transition: background var(--motion-fade), border-color var(--motion-fade);
+}
+
+.help-side-symbol:hover {
+	background: var(--surface);
+	border-color: var(--accent-dim);
+}
+
+.help-side-symbol:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.help-side-symbol[aria-current="page"] {
+	border-color: var(--accent);
+	color: var(--accent);
+}
