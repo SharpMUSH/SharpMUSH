@@ -117,6 +117,27 @@ public class ThemeServiceTests : TrackingTestContext
 	}
 
 	[Test]
+	public async Task TurningImageFiltersOffRepaintsAndIsCached()
+	{
+		_account.ActiveCharacter = Character(BuiltInThemes.Directive.Id);
+		var service = Build();
+		await service.ReloadAsync();
+		await Assert.That(service.Current.Parts[ThemeService.ImageFiltersPart]).IsEqualTo("on");
+		await Assert.That(service.Current.Parts[ThemeStyles.Imagery]).IsEqualTo("smoke");
+		var changes = 0;
+		service.OnThemeChanged += () => changes++;
+
+		_account.ActiveCharacter = Character(BuiltInThemes.Directive.Id) with { ImageFilters = false };
+		_account.FireAppearance();
+
+		await Assert.That(changes).IsEqualTo(1).Because("only the image filters changed, and that alone repaints");
+		await Assert.That(service.Current.Parts[ThemeService.ImageFiltersPart]).IsEqualTo("off");
+		await Assert.That(service.Current.Parts[ThemeStyles.Imagery]).IsEqualTo("smoke").Because("the theme keeps its tone for the next time");
+		var cached = JsonSerializer.Deserialize<ResolvedTheme>(_storage[ThemeService.CacheKey]!)!;
+		await Assert.That(cached.Parts[ThemeService.ImageFiltersPart]).IsEqualTo("off").Because("index.html paints the cached parts before the runtime loads");
+	}
+
+	[Test]
 	public async Task SwitchingCharactersOrSavingAnAccentRepaints()
 	{
 		_account.ActiveCharacter = Character();

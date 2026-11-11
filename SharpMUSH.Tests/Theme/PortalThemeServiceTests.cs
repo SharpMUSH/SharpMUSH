@@ -199,6 +199,14 @@ public class PortalThemeServiceTests
 		// "typical" is the same as naming none.
 		(await themes.SetAppearanceAsync(player, new CharacterAppearance(null, null, ThemeVision.Typical))).Expect<CharacterAppearance>();
 		await Assert.That(await themes.GetAppearanceAsync(player)).IsEqualTo(new CharacterAppearance(null, null));
+
+		// Image filters are on until turned off, and stay off through a later save that says so.
+		await Assert.That((await themes.GetAppearanceAsync(player)).ImageFilters).IsTrue();
+		var plain = (await themes.SetAppearanceAsync(player, new CharacterAppearance("directive", null) { ImageFilters = false })).Expect<CharacterAppearance>();
+		await Assert.That(plain.ImageFilters).IsFalse();
+		await Assert.That(await themes.GetAppearanceAsync(player)).IsEqualTo(new CharacterAppearance("directive", null) { ImageFilters = false });
+		(await themes.SetAppearanceAsync(player, new CharacterAppearance(null, null) { ImageFilters = true })).Expect<CharacterAppearance>();
+		await Assert.That((await themes.GetAppearanceAsync(player)).ImageFilters).IsTrue();
 	}
 
 	/// <summary>Server data round-tripped through JSON, as the database stores it.</summary>

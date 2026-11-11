@@ -9534,4 +9534,16 @@
   <data name="NavThemeTryStop" xml:space="preserve">
     <value>Спри пробата</value>
   </data>
+  <data name="NavThemeImageFilters" xml:space="preserve">
+    <value>Филтри за изображения</value>
+  </data>
+  <data name="NavThemeImageFiltersOn" xml:space="preserve">
+    <value>Вкл.</value>
+  </data>
+  <data name="NavThemeImageFiltersOff" xml:space="preserve">
+    <value>Изкл.</value>
+  </data>
+  <data name="NavThemeImageFiltersNote" xml:space="preserve">
+    <value>Картините (аватари, стаи, галерии, уикито) приемат тона на темата. Изключете, за да ги виждате в собствените им цветове.</value>
+  </data>
 </root>

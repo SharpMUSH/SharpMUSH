@@ -9534,4 +9534,16 @@
   <data name="NavThemeTryStop" xml:space="preserve">
     <value>Stoppen met proberen</value>
   </data>
+  <data name="NavThemeImageFilters" xml:space="preserve">
+    <value>Afbeeldingsfilters</value>
+  </data>
+  <data name="NavThemeImageFiltersOn" xml:space="preserve">
+    <value>Aan</value>
+  </data>
+  <data name="NavThemeImageFiltersOff" xml:space="preserve">
+    <value>Uit</value>
+  </data>
+  <data name="NavThemeImageFiltersNote" xml:space="preserve">
+    <value>Afbeeldingen (avatars, kamers, galerijen, de wiki) krijgen de tint van het thema. Zet dit uit om ze in hun eigen kleuren te zien.</value>
+  </data>
 </root>

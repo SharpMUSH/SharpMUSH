@@ -48,7 +48,7 @@
                     }
                     else if (ImageUrlPolicy.IsRenderable(hero.Url))
                     {
-                        <img src="@ApiUrl.Resolve(hero.Url)" alt="@(hero.Caption ?? string.Empty)" loading="lazy" />
+                        <img class="game-picture" src="@ApiUrl.Resolve(hero.Url)" alt="@(hero.Caption ?? string.Empty)" loading="lazy" />
                     }
                     @if (hero.IsIcon)
                     {
@@ -69,7 +69,7 @@
                                 }
                                 else if (ImageUrlPolicy.IsRenderable(e.Url))
                                 {
-                                    <img src="@ApiUrl.Resolve(e.Url)" alt="@(e.Caption ?? string.Empty)" loading="lazy" />
+                                    <img class="game-picture" src="@ApiUrl.Resolve(e.Url)" alt="@(e.Caption ?? string.Empty)" loading="lazy" />
                                 }
                             </button>
                         }

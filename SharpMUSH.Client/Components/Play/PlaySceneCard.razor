@@ -13,7 +13,7 @@
     <header class="scene-card-head @(HeaderImage is null ? null : "scene-card-head--image")">
         @if (HeaderImage is not null)
         {
-            <img class="scene-card-head-img" src="@ApiUrl.Resolve(HeaderImage)" alt="" />
+            <img class="scene-card-head-img game-picture" src="@ApiUrl.Resolve(HeaderImage)" alt="" />
             <div class="scene-card-head-scrim" aria-hidden="true"></div>
         }
         @if (Lead is not null)

@@ -54,9 +54,10 @@
 	display: block;
 }
 
+/* Dimmed, not filtered: the picture keeps the theme's tone (game-picture, shell.css). */
 .exit--locked .exit-img,
 .exit--closed .exit-img {
-	filter: saturate(0.6) brightness(0.8);
+	opacity: 0.6;
 }
 
 .exit-pill {

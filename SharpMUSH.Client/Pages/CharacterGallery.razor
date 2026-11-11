@@ -62,7 +62,7 @@
                         }
                         else if (ImageUrlPolicy.IsRenderable(entry.Url))
                         {
-                            <img src="@ApiUrl.Resolve(entry.Url)" alt="@(entry.Caption ?? string.Empty)" loading="lazy" />
+                            <img class="game-picture" src="@ApiUrl.Resolve(entry.Url)" alt="@(entry.Caption ?? string.Empty)" loading="lazy" />
                         }
                         @if (entry.IsIcon)
                         {

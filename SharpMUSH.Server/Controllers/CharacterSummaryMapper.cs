@@ -20,13 +20,13 @@ public static class CharacterSummaryMapper
 	/// <paramref name="IsActing"/> marks the character the caller's session is bound to. The roster is
 	/// how a reloaded tab learns who it is: the acting identity lives in the session token, which is
 	/// opaque to the client, so the server has to say. Defaults false for callers that don't resolve it.
-	/// <paramref name="ThemeId"/>, <paramref name="Accent"/> and <paramref name="Vision"/> are the character's portal look
+	/// <paramref name="ThemeId"/>, <paramref name="Accent"/>, <paramref name="Vision"/> and <paramref name="ImageFilters"/> are the character's portal look
 	/// (<see cref="IPortalThemeService.GetAppearanceAsync"/>), so a tab themes itself from the roster it already reads.
 	/// <paramref name="Locale"/> is the character's <c>LOCALE</c> attribute, which <c>@locale</c> and the portal's
 	/// language picker both write, so a tab in a new browser takes the character's language from the roster too.
 	/// </summary>
 	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags, bool IsActing = false,
-		string? ThemeId = null, string? Accent = null, string? Vision = null, string? Locale = null);
+		string? ThemeId = null, string? Accent = null, string? Vision = null, string? Locale = null, bool ImageFilters = true);
 
 	/// <param name="themes">Reads each character's look; without it the summaries carry none.</param>
 	/// <param name="mediator">Reads each character's <c>LOCALE</c>; without it the summaries carry none.</param>
@@ -42,7 +42,7 @@ public static class CharacterSummaryMapper
 				return new CharacterSummary(c.Object.Key, c.Object.CreationTime, c.Object.Name,
 					string.Join(" ", (await c.Object.ReadFlagsAsync(innerCt)).Flags.Select(f => f.Name)),
 					c.Object.Key == actingKey && c.Object.CreationTime == actingCreationTime,
-					look?.ThemeId, look?.Accent, look?.Vision, locale);
+					look?.ThemeId, look?.Accent, look?.Vision, locale, look?.ImageFilters ?? true);
 			})
 			.ToListAsync(ct);
 

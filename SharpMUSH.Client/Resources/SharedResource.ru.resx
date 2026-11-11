@@ -9534,4 +9534,16 @@
   <data name="NavThemeTryStop" xml:space="preserve">
     <value>Хватит примерять</value>
   </data>
+  <data name="NavThemeImageFilters" xml:space="preserve">
+    <value>Фильтры изображений</value>
+  </data>
+  <data name="NavThemeImageFiltersOn" xml:space="preserve">
+    <value>Вкл.</value>
+  </data>
+  <data name="NavThemeImageFiltersOff" xml:space="preserve">
+    <value>Выкл.</value>
+  </data>
+  <data name="NavThemeImageFiltersNote" xml:space="preserve">
+    <value>Изображения (аватары, комнаты, галереи, вики) принимают тон темы. Выключите, чтобы видеть их в собственных цветах.</value>
+  </data>
 </root>

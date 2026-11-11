@@ -516,7 +516,7 @@
 	--title-underline-height: 2px;
 	--title-color: var(--text);     /* titles' colour and effect (glow, gilt, letterpress...) */
 	--title-shadow: none;
-	--image-filter: none;           /* the tone pictures take: banners, covers */
+	--image-filter: none;           /* the tone pictures take: banners, covers, avatars, wiki pictures */
 	--card-marks: none;             /* the frame's gradient layers over a card's surface */
 	--card-mask-text: var(--no-drawing); /* the frame's drawings, filled with each colour, as for the texture */
 	--card-mask-accent: var(--no-drawing);

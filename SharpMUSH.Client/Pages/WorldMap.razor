@@ -463,7 +463,7 @@
                 }
                 @if (ImageUrlPolicy.IsRenderable(place.Image))
                 {
-                    <img class="map-place-image" src="@ApiUrl.Resolve(place.Image!)" alt="" loading="lazy" />
+                    <img class="map-place-image game-picture" src="@ApiUrl.Resolve(place.Image!)" alt="" loading="lazy" />
                 }
                 @if (place.Info.Count > 0)
                 {

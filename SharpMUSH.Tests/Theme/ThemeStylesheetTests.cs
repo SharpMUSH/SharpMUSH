@@ -116,7 +116,7 @@ public class ThemeStylesheetTests
 		await Assert.That(css.LastIndexOf("--accent:#5aa9ff;", StringComparison.Ordinal))
 			.IsGreaterThan(css.IndexOf(".kit-card.kit-card", StringComparison.Ordinal))
 			.Because("a character's accent is set again after the stylesheet");
-		await Assert.That(plain.TrimEnd()).EndsWith("border-radius: 0; }")
+		await Assert.That(plain[plain.IndexOf(".kit-card.kit-card", StringComparison.Ordinal)..]).DoesNotContain("--accent:")
 			.Because("with no accent of the character's own, the stylesheet's accent stands");
 	}
 

@@ -40,7 +40,7 @@ else
             <span class="kit-tile-media" style="@($"height:{Height}px;")">
                 @if (HasImage)
                 {
-                    <img class="kit-tile-img" src="@ApiUrl.Resolve(ImageUrl!)" alt="@(Alt ?? string.Empty)" style="@($"height:{Height}px;")" loading="lazy" />
+                    <img class="kit-tile-img game-picture" src="@ApiUrl.Resolve(ImageUrl!)" alt="@(Alt ?? string.Empty)" style="@($"height:{Height}px;")" loading="lazy" />
                 }
                 else
                 {

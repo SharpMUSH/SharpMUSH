@@ -9534,4 +9534,16 @@
   <data name="NavThemeTryStop" xml:space="preserve">
     <value>停止试用</value>
   </data>
+  <data name="NavThemeImageFilters" xml:space="preserve">
+    <value>图片滤镜</value>
+  </data>
+  <data name="NavThemeImageFiltersOn" xml:space="preserve">
+    <value>开</value>
+  </data>
+  <data name="NavThemeImageFiltersOff" xml:space="preserve">
+    <value>关</value>
+  </data>
+  <data name="NavThemeImageFiltersNote" xml:space="preserve">
+    <value>图片（头像、房间、图库、维基）会采用主题的色调。关闭后可看到图片原本的颜色。</value>
+  </data>
 </root>

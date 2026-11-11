@@ -210,3 +210,38 @@
     background: var(--surface);
     color: var(--accent);
 }
+
+/* The image filters quick toggle: the row is the switch; the pill only shows its state. */
+.account-panel-switch {
+    position: relative;
+    flex-shrink: 0;
+    width: 32px;
+    height: 18px;
+    border-radius: 9px;
+    background: var(--border);
+    transition: background var(--motion-fade);
+}
+
+.account-panel-switch--on {
+    background: var(--accent);
+}
+
+.account-panel-switch-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--switch-knob-off);
+    transition: left var(--motion-spring), background var(--motion-fade);
+}
+
+.account-panel-switch--on .account-panel-switch-knob {
+    left: 16px;
+    background: var(--accent-on);
+}
+
+.account-panel-filters:disabled {
+    cursor: progress;
+}

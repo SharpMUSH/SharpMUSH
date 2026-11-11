@@ -44,7 +44,8 @@
                           ActiveCharacter="AccountAuth.ActiveCharacter"
                           OnSwitchCharacter="HandleSwitchCharacterAsync"
                           OnOpenInNewTab="HandleOpenInNewTabAsync"
-                          OnLogout="HandleLogoutAsync" />
+                          OnLogout="HandleLogoutAsync"
+                          OnSetImageFilters="SetImageFiltersAsync" />
         </div>
     </Authorized>
     <NotAuthorized>
@@ -108,6 +109,7 @@
         _characterActive = Terminal.IsConnected;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
         AccountAuth.ActiveCharacterChanged += OnActiveCharacterChanged;
+        AccountAuth.AppearanceChanged += OnActiveCharacterChanged;
     }
 
     private void OnConnectionChanged(bool connected) => InvokeAsync(() =>
@@ -142,6 +144,17 @@
         }
     }
 
+    /// <summary>Saves the acting character's image filters, keeping the rest of its look.</summary>
+    private async Task SetImageFiltersAsync(bool on)
+    {
+        if (AccountAuth.ActiveCharacter is not { } acting) return;
+        var appearance = new CharacterAppearance(acting.ThemeId, acting.Accent, acting.Vision) { ImageFilters = on };
+        if (await AccountAuth.SetAppearanceAsync(acting.DbrefNumber, appearance) is ApiFailure failure)
+        {
+            Logger.LogWarning("Could not save image filters for #{Dbref}: {Message}", acting.DbrefNumber, failure.Message);
+        }
+    }
+
     private async Task HandleLogoutAsync()
     {
         // AccountAuth.LogoutAsync ends both game terminals; this only navigates away afterwards.
@@ -153,5 +166,6 @@
     {
         Terminal.ConnectionStateChanged -= OnConnectionChanged;
         AccountAuth.ActiveCharacterChanged -= OnActiveCharacterChanged;
+        AccountAuth.AppearanceChanged -= OnActiveCharacterChanged;
     }
 }

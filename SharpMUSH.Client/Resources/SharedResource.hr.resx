@@ -9534,4 +9534,16 @@
   <data name="NavThemeTryStop" xml:space="preserve">
     <value>Prestani isprobavati</value>
   </data>
+  <data name="NavThemeImageFilters" xml:space="preserve">
+    <value>Filtri slika</value>
+  </data>
+  <data name="NavThemeImageFiltersOn" xml:space="preserve">
+    <value>Uključeni</value>
+  </data>
+  <data name="NavThemeImageFiltersOff" xml:space="preserve">
+    <value>Isključeni</value>
+  </data>
+  <data name="NavThemeImageFiltersNote" xml:space="preserve">
+    <value>Slike (avatari, sobe, galerije, wiki) poprimaju ton teme. Isključi ih da ih vidiš u njihovim vlastitim bojama.</value>
+  </data>
 </root>

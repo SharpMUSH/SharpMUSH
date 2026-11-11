@@ -234,6 +234,19 @@ public class ThemeResolverTests
 	}
 
 	[Test]
+	public async Task DirectivesPicturesAreSmokyMonochrome()
+		=> await Assert.That(ThemeResolver.Resolve(BuiltInThemes.Directive).Parts[ThemeStyles.Imagery]).IsEqualTo("smoke");
+
+	[Test]
+	public async Task TurningImageFiltersOffHoldsOverAThemesOwnStylesheet()
+	{
+		var css = ThemeResolver.Resolve(BuiltInThemes.Phosphor with { Stylesheet = ":root { --image-filter: sepia(1); }" }).Css;
+
+		await Assert.That(css.IndexOf(ResolvedTheme.ImageFiltersOffRule, StringComparison.Ordinal))
+			.IsGreaterThan(css.IndexOf("sepia(1)", StringComparison.Ordinal));
+	}
+
+	[Test]
 	public async Task AGenreThemeCarriesItsEmbellishments()
 	{
 		var scifi = ThemeResolver.Resolve(BuiltInThemes.ScienceFiction).Parts;
