@@ -45,6 +45,9 @@ public static class HelpHtmlRenderer
 	/// <summary>The class of the spaces that indent a line inside a paragraph, which the portal keeps as written.</summary>
 	public const string IndentClass = "help-indent";
 
+	/// <summary>The class of the list an index's two-column list table becomes (<see cref="RenderIndexToHtml"/>).</summary>
+	public const string CardsClass = "help-cards";
+
 	/// <summary>The table of contents' visible label, which also names its landmark.</summary>
 	public const string ContentsLabel = "Contents";
 
@@ -62,7 +65,19 @@ public static class HelpHtmlRenderer
 	/// Maps a topic name to the URL a reader should be sent to. Called for every <c>[topic]</c>
 	/// reference in the body; return <see langword="null"/> to leave the reference as plain text.
 	/// </param>
-	public static string RenderToHtml(string markdown, Func<string, string?> topicHref, HelpArticle? article = null)
+	public static string RenderToHtml(string markdown, Func<string, string?> topicHref, HelpArticle? article = null) =>
+		Render(markdown, topicHref, article, cards: false);
+
+	/// <summary>
+	/// Renders a corpus's index entry to HTML, as <see cref="RenderToHtml"/> does, except that each list table of
+	/// two columns, a description beside the topic it names (<c>| How to read the help files: | help [newbie] |</c>),
+	/// becomes a list of cards (<see cref="CardsClass"/>): the description as the card's name, the topic or command
+	/// below it, the whole card a link when the row links a topic.
+	/// </summary>
+	public static string RenderIndexToHtml(string markdown, Func<string, string?> topicHref) =>
+		Render(markdown, topicHref, null, cards: true);
+
+	private static string Render(string markdown, Func<string, string?> topicHref, HelpArticle? article, bool cards)
 	{
 		ArgumentNullException.ThrowIfNull(markdown);
 		ArgumentNullException.ThrowIfNull(topicHref);
@@ -113,6 +128,21 @@ public static class HelpHtmlRenderer
 			}
 		}
 
+		if (cards)
+		{
+			foreach (var table in document.Descendants<Table>().Where(IsCardList).ToList())
+			{
+				var parent = table.Parent!;
+				var at = parent.IndexOf(table);
+				parent.RemoveAt(at);
+				parent.Insert(at, new HtmlBlock(null)
+				{
+					Type = HtmlBlockType.NonInterruptingBlock,
+					Lines = new StringLineGroup(Cards(table))
+				});
+			}
+		}
+
 		if (article is { Sections.Count: > 0 })
 		{
 			// Under the article's title, so a page that shows the title itself can still drop the repeat.
@@ -130,6 +160,58 @@ public static class HelpHtmlRenderer
 		renderer.Render(document);
 		writer.Flush();
 		return writer.ToString();
+	}
+
+	/// <summary>A headerless list table (<see cref="MarkHeaderlessList"/>) whose every row is two cells.</summary>
+	private static bool IsCardList(Table table) =>
+		table.Parent is not null
+		&& table.GetAttributes().Classes?.Contains(ListTableClass) == true
+		&& table.OfType<TableRow>().Any()
+		&& table.OfType<TableRow>().All(row => row.Count == 2);
+
+	/// <summary>
+	/// The rows of <paramref name="table"/> as cards: the first cell's text, without the colon that ends it in a
+	/// terminal, over the second's. A second cell that links a topic makes the card that link.
+	/// </summary>
+	private static string Cards(Table table)
+	{
+		var html = new StringBuilder($"<ul class=\"{CardsClass}\">");
+		foreach (var row in table.OfType<TableRow>())
+		{
+			var name = WebUtility.HtmlEncode(CellText(row[0]).Trim().TrimEnd(':').TrimEnd());
+			var target = WebUtility.HtmlEncode(CellText(row[1]).Trim());
+			var href = row[1].Descendants<LinkInline>().Select(link => link.Url).FirstOrDefault(url => !string.IsNullOrEmpty(url));
+			var body = $"<span class=\"help-card-name\">{name}</span><span class=\"help-card-target\">{target}</span>";
+			html.Append(href is null
+				? $"<li><span class=\"help-card\">{body}</span></li>"
+				: $"<li><a class=\"help-card\" href=\"{WebUtility.HtmlEncode(href)}\">{body}</a></li>");
+		}
+		return html.Append("</ul>").ToString();
+	}
+
+	/// <summary>A cell's text as a reader sees it: literals, code and link labels, without markup.</summary>
+	private static string CellText(Block cell)
+	{
+		var text = new StringBuilder();
+		foreach (var paragraph in cell.Descendants<ParagraphBlock>())
+		{
+			foreach (var inline in paragraph.Inline?.Descendants<Inline>() ?? [])
+			{
+				switch (inline)
+				{
+					case LiteralInline literal:
+						text.Append(literal.Content.ToString());
+						break;
+					case CodeInline code:
+						text.Append(code.Content);
+						break;
+					case LineBreakInline:
+						text.Append(' ');
+						break;
+				}
+			}
+		}
+		return text.ToString();
 	}
 
 	/// <summary>The article's table of contents: a labelled nav linking each declared section.</summary>

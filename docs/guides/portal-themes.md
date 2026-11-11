@@ -221,7 +221,6 @@ the sign to double it.
 | Shell | `.phosphor-pagebar` | A section's own sidebar (Wiki, Settings, Admin...) |
 | Shell | `.phosphor-main` | The page area |
 | Shell | `.phosphor-bottomnav` | The tabs along the bottom on a phone |
-| Shell | `.phosphor-terminal` | The docked terminal |
 | Cards | `.kit-card.kit-card`, `.kit-card-head.kit-card-head`, `.kit-card-title.kit-card-title` | Every card, its header row and title |
 | Cards | `.kit-link-card.kit-link-card` | The linked cards on overview pages |
 | Page headers | `.kit-page-head.kit-page-head`, `.kit-page-kicker.kit-page-kicker`, `.kit-page-title.kit-page-title`, `.kit-page-desc.kit-page-desc` | A page's header, the line above its title, the title, the line under it |

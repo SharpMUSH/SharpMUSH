@@ -51,13 +51,6 @@
 	display: block;
 }
 
-.exit-fallback {
-	display: grid;
-	place-items: center;
-	background: var(--surface-2);
-	color: var(--text-faint);
-}
-
 .exit--locked .exit-img,
 .exit--closed .exit-img {
 	filter: saturate(0.6) brightness(0.8);
@@ -76,6 +69,23 @@
 	font-weight: 600;
 	background: var(--glass-pill-bg);
 	color: var(--text-on-image);
+}
+
+/* Beside the name on a row without a picture, in the flow rather than over an image. */
+.exit--plain .exit-pill {
+	position: static;
+	flex-shrink: 0;
+}
+
+.exit--plain .exit-pill:not(.exit-pill--scene) {
+	background: var(--surface-3);
+	color: var(--text-dim);
+}
+
+.exit--plain .exit-go {
+	padding: var(--space-3) var(--space-4);
+	border-radius: var(--radius-tile);
+	background: var(--surface-2);
 }
 
 .exit-pill--scene {

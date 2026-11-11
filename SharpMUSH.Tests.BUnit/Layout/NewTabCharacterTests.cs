@@ -249,10 +249,9 @@ public class NewTabCharacterTests : TrackingBunitContext, IAsyncDisposable
 		});
 		await Assert.That(auth.ActiveCharacter?.Name).IsEqualTo("Beta");
 
-		// The drawer is always MOUNTED (so GlobalTerminal auto-logs in on load) but stays hidden
-		// until the player opens it — a new-tab entry must not pop it up.
-		await Assert.That(cut.Markup).Contains("phosphor-terminal-header");
-		await Assert.That(cut.Find(".phosphor-terminal").GetAttribute("style")).Contains("display:none");
+		// GlobalTerminal is always MOUNTED (so it auto-logs in on load) and never shown: Play is the terminal.
+		await Assert.That(cut.Find(".phosphor-terminal-host").HasAttribute("hidden")).IsTrue();
+		await Assert.That(cut.Markup).DoesNotContain("phosphor-terminal-header");
 	}
 
 	[Test]

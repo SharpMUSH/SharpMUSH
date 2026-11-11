@@ -191,7 +191,7 @@ public sealed class HelpController(IHelpTopicResolver resolver) : ControllerBase
 		return Ok(new HelpIndexDto(
 			corpus,
 			index?.Topic,
-			index is null ? null : HelpHtmlRenderer.RenderToHtml(index.Markdown, href),
+			index is null ? null : HelpHtmlRenderer.RenderIndexToHtml(index.Markdown, href),
 			topics));
 	}
 

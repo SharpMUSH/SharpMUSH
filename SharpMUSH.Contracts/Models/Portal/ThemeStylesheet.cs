@@ -35,7 +35,6 @@ public static partial class ThemeStylesheet
 		new("Shell", ".phosphor-pagebar", "A section's own sidebar (Wiki, Settings, Admin...)."),
 		new("Shell", ".phosphor-main", "The page area to the right of the sidebars."),
 		new("Shell", ".phosphor-bottomnav", "The tabs along the bottom on a phone."),
-		new("Shell", ".phosphor-terminal", "The docked terminal."),
 		new("Cards", ".kit-card.kit-card", "Every card: background, border, corners, shadow."),
 		new("Cards", ".kit-card-head.kit-card-head", "A card's header row."),
 		new("Cards", ".kit-card-title.kit-card-title", "A card's title."),

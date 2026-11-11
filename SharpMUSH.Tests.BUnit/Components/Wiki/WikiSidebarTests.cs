@@ -81,6 +81,28 @@ public class WikiSidebarTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task BrowseMembersIsAButtonInTheRowNotALineRepeatedUnderIt()
+	{
+		var cut = RenderAt("/wiki");
+		foreach (var members in cut.FindAll(".wiki-side-members"))
+		{
+			await Assert.That(members.TextContent.Trim()).IsEmpty();
+			await Assert.That(members.GetAttribute("aria-label")).StartsWith("Browse members: ");
+			await Assert.That(members.ParentElement!.QuerySelector(".kit-row")).IsNotNull()
+				.Because("it sits beside its category's row");
+		}
+		await Assert.That(cut.Markup.Split("Browse members</a>").Length).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task NoCollectionsDrawsNoCollectionsHeading()
+	{
+		var cut = RenderAt("/wiki");
+		await Assert.That(cut.FindAll(".wiki-side-collections")).IsEmpty();
+		await Assert.That(cut.Markup).DoesNotContain(">Collections<");
+	}
+
+	[Test]
 	public async Task HeaderCountsThePages_AndBrowseLinksHomeAndRecent()
 	{
 		var cut = RenderAt("/wiki");

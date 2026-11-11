@@ -324,8 +324,6 @@
 	/* Zero until shell.css raises it while the fixed touch bottom nav is on screen; a scoped
 	   stylesheet reads it instead of repeating that media query. */
 	--bottomnav-clearance: 0px;
-	/* The command-terminal drawer's height on a wide screen; the content column keeps that much clear under it. */
-	--terminal-drawer-height: 300px;
 	/* Motion, after Material 3's easing and duration tokens; the spring has the damping of its Expressive
 	   default spatial spring (0.8). A rule names what moves and takes one of the --motion-* pairs:
 	   --motion-fade for an effect (colour, background, border, opacity, filter, shadow); for a spatial
@@ -515,11 +513,12 @@
 	--overlay: rgba(0, 0, 0, 0.55);                /* behind a drawer or dialog */
 	--scrim-ink: 10, 11, 13;                       /* rgba(var(--scrim-ink), a): the dark wash under text over images */
 
-	/* ── OOC band (Play story) ── */
-	--ooc-band-bg: #2e2748;         /* --text on it: 11.89:1 */
-	--ooc-band-border: #6a5aa3;
-	--ooc-icon-bg: #4a3d78;
-	--ooc-icon-fg: #d6c9ff;         /* 6.12:1 on --ooc-icon-bg */
+	/* ── OOC band (Play story, scene log): Phosphor's; every theme derives its own from its surface and
+	   accent (PortalThemes Derive) ── */
+	--ooc-band-bg: #172b24;         /* --text on it: 12.57:1 */
+	--ooc-band-border: #1c8768;
+	--ooc-icon-bg: #1a4d3e;
+	--ooc-icon-fg: #efebe5;         /* 8.13:1 on --ooc-icon-bg */
 
 	/* ── frame ── */
 	--topbar-h: 60px;               /* the shell topbar; a sticky box inside .phosphor-main subtracts it */

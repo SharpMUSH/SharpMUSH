@@ -33,17 +33,21 @@
     }
     @if (_navigation is { } navigation)
     {
-        @if (!Collapsed)
+        @* No heading over nothing: a game with no collections has no Collections section. *@
+        @if (navigation.Collections.Any())
         {
-            <SectionLabel>@Loc["WikiCollections"]</SectionLabel>
-        }
-        <SidebarGroup Class="wiki-side-collections" Label="@Loc["WikiCollections"]">
-            @foreach (var collection in navigation.Collections)
+            @if (!Collapsed)
             {
-                var route = "/wiki/collections/" + Uri.EscapeDataString(collection.Id);
-                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.LibraryBooks" Label="@collection.Name" Count="@collection.Pages" Href="@WikiLocaleLinks.WithLocale(route, _locale)" IsCurrent="@(navigation.Collection == collection.Id)" Collapsed="@Collapsed" />
+                <SectionLabel>@Loc["WikiCollections"]</SectionLabel>
             }
-        </SidebarGroup>
+            <SidebarGroup Class="wiki-side-collections" Label="@Loc["WikiCollections"]">
+                @foreach (var collection in navigation.Collections)
+                {
+                    var route = "/wiki/collections/" + Uri.EscapeDataString(collection.Id);
+                    <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.LibraryBooks" Label="@collection.Name" Count="@collection.Pages" Href="@WikiLocaleLinks.WithLocale(route, _locale)" IsCurrent="@(navigation.Collection == collection.Id)" Collapsed="@Collapsed" />
+                }
+            </SidebarGroup>
+        }
         @if (!Collapsed)
         {
             <SectionLabel>@Loc["NavWikiCategories"]</SectionLabel>
@@ -55,9 +59,10 @@
                 var introduction = WikiJourneyLinks.Article(WikiCategories.Route(category.Key), _returnState, membersCollection: navigation.Collection, locale: _locale);
                 <div class="wiki-side-category">
                     <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@category.Image" Name="@category.Name" Label="@category.Name" Count="@category.Pages" Href="@(category.HasPage ? introduction : route)" IsCurrent="@(_category == category.Key)" Collapsed="@Collapsed" />
+                    @* The row opens the category's own page; its members are a button in the row, not a line under it. *@
                     @if (category.HasPage && !Collapsed)
                     {
-                        <a class="wiki-side-members" href="@route" aria-current="@(_category == category.Key ? "page" : null)" aria-label="@($"{Loc["WikiBrowseMembers"]}: {category.Name}")">@Loc["WikiBrowseMembers"]</a>
+                        <a class="wiki-side-members" href="@route" aria-current="@(_category == category.Key ? "page" : null)" aria-label="@($"{Loc["WikiBrowseMembers"]}: {category.Name}")" title="@Loc["WikiBrowseMembers"]"><MudIcon Icon="@Icons.Material.Outlined.ViewList" Size="Size.Small" /></a>
                     }
                 </div>
             }
