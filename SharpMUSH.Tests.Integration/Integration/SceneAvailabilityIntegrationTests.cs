@@ -94,7 +94,14 @@ public class SceneAvailabilityIntegrationTests
 		await ApplyAsync("time");
 		await ApplyAsync("availability");
 		WithScenes = withScenes;
-		if (withScenes) await ApplyAsync("scene-availability");
+		if (withScenes)
+		{
+			await ApplyAsync("scene-availability");
+			var logger = (await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("scene"))
+				.Single(o => o.Ref == "logger").Objid;
+			// The Scene Logger answers +scene only from the master room, and other scene suites move it.
+			await God($"@teleport {DBRef.Parse(logger)}=#2");
+		}
 		var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>()
 			.GetPackageObjectsAsync("availability");
 		Avail = objects.First(o => o.Ref == "availability").Objid;

@@ -20,7 +20,7 @@ public partial class BBoardsIntegrationTests
 		var response = (await dispatcher.DispatchAsync(method, path, body, [], IHttpHandlerCommandDispatcher.UnknownAddress, who))
 			.Expect<HttpHandlerResult>();
 		await Assert.That(response.Status).IsEqualTo(200).Because(response.Body);
-		await Assert.That(response.ContentType).StartsWith("application/json");
+		await Assert.That(response.ContentType).StartsWith("application/json").Because(response.Body);
 		await WebAppFactoryArg.QueueBarrierAsync();
 		return JsonDocument.Parse(response.Body).RootElement.Clone();
 	}

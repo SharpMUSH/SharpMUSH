@@ -81,8 +81,12 @@ public class TimelineIntegrationTests
 	/// <summary>A scene <paramref name="owner"/> creates, which starts at once and is focused, and its id.</summary>
 	private async Task<string> SceneAsync(TestIsolationHelpers.TestPlayer owner, string title)
 	{
-		await As(owner, $"+scene/create {title}");
-		return await Eval($"scenefocus(#{owner.DbRef.Number})");
+		// The Scene Logger answers +scene only from the master room, and other scene suites move it.
+		await God($"@teleport {await ObjectAsync("scene", "logger")}=#2");
+		var told = await As(owner, $"+scene/create {title}");
+		var scene = await Eval($"scenefocus(#{owner.DbRef.Number})");
+		await Assert.That(scene).DoesNotStartWith("#-1").Because(told);
+		return scene;
 	}
 
 	private async Task InstallAsync(string package)

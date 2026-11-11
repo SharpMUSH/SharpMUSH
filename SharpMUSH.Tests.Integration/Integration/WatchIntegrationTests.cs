@@ -155,10 +155,14 @@ public class WatchIntegrationTests
 	[Test]
 	public async Task WithoutTheHelpBridge_AMessageNamesNoHelpTopic()
 	{
+		// Recorded as the administrator's choice, as the packages page records it: another test's install puts back every
+		// bridge whose halves are both here, and a declined one stays out.
+		var features = WebAppFactoryArg.Services.GetRequiredService<GameFeatureService>();
 		try
 		{
 			await InstallAsync();
 			var ann = await Player("NoHelpAnn");
+			await features.SetDeclinedAsync("watch-help", declined: true);
 			(await Installer.UninstallAsync("watch-help", force: false, CancellationToken.None)).Expect<Success>();
 
 			await Assert.That(await As(ann, "+watch/bogus")).Contains("+watch has no /bogus switch.").And.DoesNotContain("+help");
@@ -166,6 +170,7 @@ public class WatchIntegrationTests
 		}
 		finally
 		{
+			await features.SetDeclinedAsync("watch-help", declined: false);
 			await UninstallAsync();
 		}
 	}

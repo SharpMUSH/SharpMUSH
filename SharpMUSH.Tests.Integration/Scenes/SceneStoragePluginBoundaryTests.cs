@@ -29,9 +29,8 @@ public class SceneStoragePluginBoundaryTests
 	private ISharpDatabase Database => WebAppFactory.Services.GetRequiredService<ISharpDatabase>();
 
 	/// <summary>The plugin's <c>ISceneService</c> interface type, loaded in the plugin's ALC.</summary>
-	private static Type SceneServiceType =>
-		AppDomain.CurrentDomain.GetAssemblies()
-			.First(a => a.GetName().Name == "SharpMUSH.Plugins.Scene")
+	private Type SceneServiceType =>
+		ScenePluginAssembly.Of(WebAppFactory.Services)
 			.GetType("SharpMUSH.Plugins.Scene.Storage.ISceneService", throwOnError: true)!;
 
 	/// <summary>The active-provider scene service, resolved from host DI by the plugin's interface type.</summary>
