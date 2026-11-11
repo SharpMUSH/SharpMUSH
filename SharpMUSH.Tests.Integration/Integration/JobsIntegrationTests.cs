@@ -438,8 +438,11 @@ public class JobsIntegrationTests
 		await Assert.That(bucket).Contains("Turnaround").And.DoesNotContain("Work lock").And.DoesNotContain("Permission")
 			.And.DoesNotContain("+bucket/set").And.Contains("+request Requests/<title>=<text>");
 		await Assert.That(await As(staff, "+bucket Requests")).Contains("Work lock").And.Contains("+bucket/set");
+		// Until Bugs takes jobs again, the next shared test reinstalls.
+		_changed = true;
 		await Assert.That(await As(staff, "+bucket/dis Bugs")).Contains("Bugs takes no new jobs now.");
 		await Assert.That(await As(staff, "+bucket/enable Bugs")).Contains("Bugs takes new jobs again.");
+		_changed = false;
 	}
 
 	[Test]
@@ -806,7 +809,8 @@ public class JobsIntegrationTests
 		await SharedInstallAsync();
 		var player = await Player("JobsIdxP");
 		var requests = await Bucket("Requests");
-		async Task<int> Indexed() => int.Parse(await God($"think [words(indexed(JOB`BUCKET,=,objid({requests})))]"));
+		// A job merged away by another test is GOING until purged, and the purge may come at any time.
+		async Task<int> Indexed() => int.Parse(await God($"think [words(iter(indexed(JOB`BUCKET,=,objid({requests})),if(hasflag(##,GOING),,##)))]"));
 		async Task<int> Listed() => int.Parse(await God("think [words(jobs(Requests))]"));
 		var (indexed, listed) = (await Indexed(), await Listed());
 		var n = await FiledJob(await As(player, "+request Room=A room, please."));
