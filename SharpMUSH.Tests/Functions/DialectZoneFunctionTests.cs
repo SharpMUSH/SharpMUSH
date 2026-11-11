@@ -74,6 +74,7 @@ public class DialectZoneFunctionTests : ServerTestBase
 		await Assert.That(await Eval($"zsearchobjid({zone} name={name})")).StartsWith($"#{member.Number}:");
 		await Assert.That(await Eval($"searchobjid(all,name,{name})")).StartsWith($"#{member.Number}:");
 		await Assert.That(await Eval($"searchng(all,name,{name})")).IsEqualTo($"#{member.Number}");
+		await Assert.That(await Eval($"searchngobjid(all,name,{name})")).StartsWith($"#{member.Number}:");
 	}
 
 	[Test]
@@ -162,5 +163,9 @@ public class DialectZoneFunctionTests : ServerTestBase
 
 		await Assert.That(await Eval($"u({caller}/CALL)")).IsEqualTo(
 			$"a:1:#{a.Number} b:2:#{b.Number} a:3:#{caller.Number} b:4:#{b.Number} dflt b:5:#{caller.Number} #-1 INVALID ZONE");
+
+		await Cmd($"&CALL2 {caller}=[zfun2local({b}/fn,6)] [zfunldefault(none,d2)] [zfun2ldefault({a}/fn,x,7)] [zfuneval({b}/fn/wizard,8)]");
+		await Assert.That(await Eval($"u({caller}/CALL2)")).IsEqualTo(
+			$"b:6:#{caller.Number} d2 a:7:#{caller.Number} b:8:#{b.Number}");
 	}
 }
