@@ -758,13 +758,15 @@ public sealed class PackageWriteTransaction : IAsyncDisposable
 
 	// Each package's baseline rows, read once and kept in step with this transaction's own writes, so an
 	// apply that writes every attribute of a package reads its baseline once rather than once per attribute.
-	// Only package operations write these rows, and they run one at a time (IPackageOperationGate).
-	private readonly Dictionary<string, Dictionary<(string Objid, string Attribute), ManagedAttributeRecord>> _managedAttributes =
+	// Only package operations write these rows, and they run one at a time (IPackageOperationGate). Rows are
+	// grouped by object and upper-cased name, and kept under their stored names in ordinal order, so a lookup
+	// finds the same row the registry's sorted list would, even where two rows differ only by case.
+	private readonly Dictionary<string, Dictionary<(string Objid, string Attribute), SortedList<string, ManagedAttributeRecord>>> _managedAttributes =
 		new(StringComparer.Ordinal);
 
 	private static (string, string) ManagedAttributeKey(string objid, string attribute) => (objid, attribute.ToUpperInvariant());
 
-	private async Task<Dictionary<(string Objid, string Attribute), ManagedAttributeRecord>> ManagedAttributesAsync(string packageId)
+	private async Task<Dictionary<(string Objid, string Attribute), SortedList<string, ManagedAttributeRecord>>> ManagedAttributesAsync(string packageId)
 	{
 		if (_managedAttributes.TryGetValue(packageId, out var rows))
 		{
@@ -774,67 +776,55 @@ public sealed class PackageWriteTransaction : IAsyncDisposable
 		rows = [];
 		foreach (var row in await registry.GetManagedAttributesAsync(packageId))
 		{
-			rows.TryAdd(ManagedAttributeKey(row.Objid, row.Attribute), row);
+			Variants(rows, row.Objid, row.Attribute)[row.Attribute] = row;
 		}
 
 		_managedAttributes[packageId] = rows;
 		return rows;
 	}
 
+	private static SortedList<string, ManagedAttributeRecord> Variants(
+		Dictionary<(string Objid, string Attribute), SortedList<string, ManagedAttributeRecord>> rows, string objid, string attribute)
+	{
+		var key = ManagedAttributeKey(objid, attribute);
+		if (!rows.TryGetValue(key, out var variants))
+		{
+			variants = new SortedList<string, ManagedAttributeRecord>(StringComparer.Ordinal);
+			rows[key] = variants;
+		}
+
+		return variants;
+	}
+
 	private async Task<ManagedAttributeRecord?> ManagedAttributeAsync(string packageId, string objid, string attribute) =>
-		(await ManagedAttributesAsync(packageId)).GetValueOrDefault(ManagedAttributeKey(objid, attribute));
+		(await ManagedAttributesAsync(packageId)).GetValueOrDefault(ManagedAttributeKey(objid, attribute)) is { Count: > 0 } variants
+			? variants.Values[0]
+			: null;
 
 	public Task UpsertManagedAttributeAsync(ManagedAttributeRecord record) =>
 		WriteRowAsync($"{record.PackageId} baseline {record.Objid}/{record.Attribute}",
 			() => ManagedAttributeAsync(record.PackageId, record.Objid, record.Attribute),
-			async () =>
-			{
-				await registry.UpsertManagedAttributeAsync(record);
-				await RememberManagedAttributeAsync(record);
-			},
-			RestoreManagedAttributeAsync,
+			() => StoreManagedAttributeAsync(record),
+			StoreManagedAttributeAsync,
 			() => ForgetManagedAttributeAsync(record.PackageId, record.Objid, record.Attribute));
 
 	public Task RemoveManagedAttributeAsync(string packageId, string objid, string attribute) =>
 		WriteRowAsync($"{packageId} baseline {objid}/{attribute}",
 			() => ManagedAttributeAsync(packageId, objid, attribute),
 			() => ForgetManagedAttributeAsync(packageId, objid, attribute),
-			RestoreManagedAttributeAsync,
+			StoreManagedAttributeAsync,
 			() => Task.CompletedTask);
 
-	private async Task RestoreManagedAttributeAsync(ManagedAttributeRecord record)
+	private async Task StoreManagedAttributeAsync(ManagedAttributeRecord record)
 	{
 		await registry.UpsertManagedAttributeAsync(record);
-		await RememberManagedAttributeAsync(record);
+		Variants(await ManagedAttributesAsync(record.PackageId), record.Objid, record.Attribute)[record.Attribute] = record;
 	}
 
 	private async Task ForgetManagedAttributeAsync(string packageId, string objid, string attribute)
 	{
 		await registry.RemoveManagedAttributeAsync(packageId, objid, attribute);
-		var rows = await ManagedAttributesAsync(packageId);
-		var key = ManagedAttributeKey(objid, attribute);
-		if (rows.GetValueOrDefault(key) is { } known && known.Attribute != attribute)
-		{
-			// The registry keys rows by exact name, so this removed nothing it holds under another case.
-			_managedAttributes.Remove(packageId);
-			return;
-		}
-
-		rows.Remove(key);
-	}
-
-	private async Task RememberManagedAttributeAsync(ManagedAttributeRecord record)
-	{
-		var rows = await ManagedAttributesAsync(record.PackageId);
-		var key = ManagedAttributeKey(record.Objid, record.Attribute);
-		if (rows.GetValueOrDefault(key) is { } known && known.Attribute != record.Attribute)
-		{
-			// Rows differing only by case are both kept; read them again rather than guess which is first.
-			_managedAttributes.Remove(record.PackageId);
-			return;
-		}
-
-		rows[key] = record;
+		Variants(await ManagedAttributesAsync(packageId), objid, attribute).Remove(attribute);
 	}
 
 	private async Task<ManagedStructureRecord?> ManagedStructureAsync(string packageId, string objid) =>
