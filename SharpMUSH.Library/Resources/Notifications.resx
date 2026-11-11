@@ -1952,9 +1952,6 @@
   <data name="PsWaitTaskEntryFormat" xml:space="preserve">
     <value>  [{0}] (delayed)</value>
   </data>
-  <data name="PsQueueManagementNotImplemented" xml:space="preserve">
-    <value>Note: Queue management not yet implemented.</value>
-  </data>
 
   <!-- @select command -->
   <data name="SelectMustSpecifyTestString" xml:space="preserve">

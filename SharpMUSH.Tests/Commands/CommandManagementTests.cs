@@ -221,6 +221,96 @@ public class CommandManagementTests
 	}
 
 	/// <summary>
+	/// <c>/lsargs</c> (PennMUSH's <c>CMD_T_LS_ARGS</c>): the left side is split on its commas and each part
+	/// is evaluated on its own, so a hook reads them as LSA1, LSA2 and counts them in LSAC.
+	/// </summary>
+	[Test]
+	public async ValueTask Add_Lsargs_SplitsTheArgumentOnItsCommas()
+	{
+		var wizard = await Wizard();
+		var name = CommandName();
+		var holder = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "LsargsHolder");
+		try
+		{
+			await As(wizard, $"&SEEN {holder}=");
+			await As(wizard, $"&BEFORE {holder}=attrib_set({holder}/SEEN,%<lsac>|%<lsa1>|%<lsa2>|%<ls>)");
+			await As(wizard, $"@command/add/lsargs {name}");
+			await As(wizard, $"@hook/before {name}={holder},BEFORE");
+
+			await As(wizard, $"{name} a,[add(1,2)]");
+
+			var seen = await Parser.FunctionParse(MarkupText.Plain($"get({holder}/SEEN)"));
+			await Assert.That(seen!.Message!.ToPlainText()).IsEqualTo("2|a|3|a,[add(1,2)]");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(name, "BEFORE");
+		}
+	}
+
+	/// <summary>
+	/// On an <c>/eqsplit</c> command <c>/lsargs</c> splits only the left of the <c>=</c>, and a braced comma
+	/// stays inside its part. As PennMUSH's <c>run_hook</c> sets them, LSA1.. and LSAC are the left parts only,
+	/// and with <c>/rsargs</c> the right side's parts are RSA1.. and RSAC.
+	/// </summary>
+	[Test]
+	public async ValueTask Add_EqsplitLsargs_SplitsTheLeftSideOnly()
+	{
+		var wizard = await Wizard();
+		var name = CommandName();
+		var holder = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "LsargsEqHolder");
+		try
+		{
+			await As(wizard, $"&SEEN {holder}=");
+			await As(wizard,
+				$"&BEFORE {holder}=attrib_set({holder}/SEEN,%<lsac>|%<lsa1>|%<lsa2>|%<lsa3>|%<rsac>|%<rsa1>|%<rsa2>|%<rs>)");
+			await As(wizard, $"@command/add/eqsplit/lsargs/rsargs {name}");
+			await As(wizard, $"@hook/before {name}={holder},BEFORE");
+
+			await As(wizard, $"{name} {{x,y}},[add(2,2)]=c,d");
+			var seen = await Parser.FunctionParse(MarkupText.Plain($"get({holder}/SEEN)"));
+			await Assert.That(seen!.Message!.ToPlainText()).IsEqualTo("2|x,y|4||2|c|d|c,d");
+
+			await As(wizard, $"{name} e,f");
+			seen = await Parser.FunctionParse(MarkupText.Plain($"get({holder}/SEEN)"));
+			await Assert.That(seen!.Message!.ToPlainText()).IsEqualTo("2|e|f|||||");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(name, "BEFORE");
+		}
+	}
+
+	/// <summary>
+	/// An /override hook on an <c>/eqsplit/lsargs</c> command is handed the line rebuilt from its parts: the
+	/// left parts joined by commas, and the <c>=</c> only when one was typed.
+	/// </summary>
+	[Test]
+	public async ValueTask Add_EqsplitLsargs_OverrideSeesTheLineAsTyped()
+	{
+		var wizard = await Wizard();
+		var name = CommandName();
+		var machine = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "LsargsMachine");
+		var lower = name.ToLowerInvariant();
+		try
+		{
+			await As(wizard, $"&SPLIT {machine}=${lower} *=*:@pemit %#=Split %0 then %1.");
+			await As(wizard, $"&WHOLE {machine}=${lower} *:@pemit %#=Whole %0.");
+			await As(wizard, $"@command/add/eqsplit/lsargs {name}");
+			await As(wizard, $"@hook/override {name}={machine},SPLIT");
+
+			await Assert.That(await AsQueued(wizard, $"{name} a,b=c")).Contains("Split a,b then c.");
+
+			await As(wizard, $"@hook/override {name}={machine},WHOLE");
+			await Assert.That(await AsQueued(wizard, $"{name} e,f")).Contains("Whole e,f.");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(name, "OVERRIDE");
+		}
+	}
+
+	/// <summary>
 	/// <c>@command/add</c> and <c>/delete</c> change the live table other connections are dispatching
 	/// through, so a reader part-way through it must not fail (#1251: "Collection was modified").
 	/// </summary>
