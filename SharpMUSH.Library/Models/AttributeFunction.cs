@@ -15,7 +15,16 @@ public readonly record struct AttributeFunction(AnySharpObject Owner, string Nam
 	/// </summary>
 	public AnySharpObject? RunAs { get; init; }
 
+	/// <summary>
+	/// Whether the attribute is set <c>noeval</c>: under <c>attribute_eval_flags</c>, running it gives <see cref="Code"/>
+	/// as written.
+	/// </summary>
+	public bool NoEval { get; init; }
+
 	/// <summary><paramref name="attribute"/>, read from <paramref name="owner"/>, to be run as a function.</summary>
 	public static AttributeFunction Of(AnySharpObject owner, SharpAttribute attribute)
-		=> new(owner, attribute.LongName.ToUpperInvariant(), attribute.Value, Softcode.SoftcodeDialects.Of(attribute));
+		=> new(owner, attribute.LongName.ToUpperInvariant(), attribute.Value, Softcode.SoftcodeDialects.Of(attribute))
+		{
+			NoEval = Extensions.SharpAttributeExtensions.IsNoEval(attribute)
+		};
 }

@@ -33,6 +33,19 @@ public static class SharpAttributeExtensions
 	public static bool IsNoprog(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name.Equals("no_command", StringComparison.OrdinalIgnoreCase));
 
+	/// <summary>
+	/// TinyMUX's <c>AF_NOEVAL</c>: the attribute is text, never code. It acts only under <c>attribute_eval_flags</c>.
+	/// </summary>
+	public static bool IsNoEval(this SharpAttribute attribute)
+		=> attribute.Flags.Any(x => x.Name.Equals("noeval", StringComparison.OrdinalIgnoreCase));
+
+	/// <summary>
+	/// TinyMUX's and RhostMUSH's <c>AF_NOPARSE</c>: the <c>$</c>-command is matched against the command as typed. It
+	/// acts only under <c>attribute_eval_flags</c>.
+	/// </summary>
+	public static bool IsNoParse(this SharpAttribute attribute)
+		=> attribute.Flags.Any(x => x.Name.Equals("noparse", StringComparison.OrdinalIgnoreCase));
+
 	public static bool IsMortalDark(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name.Equals("mortal_dark", StringComparison.OrdinalIgnoreCase));
 

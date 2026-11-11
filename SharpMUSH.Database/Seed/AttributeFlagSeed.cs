@@ -35,5 +35,7 @@ public static class AttributeFlagSeed
 		("nodump", "", true),
 		("rhost", "", true),
 		("mux", "", true),
+		("noeval", "E", true),
+		("noparse", "P", true),
 	];
 }

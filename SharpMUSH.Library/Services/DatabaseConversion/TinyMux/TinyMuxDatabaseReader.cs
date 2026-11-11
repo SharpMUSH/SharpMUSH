@@ -58,6 +58,7 @@ public static partial class TinyMuxDatabaseReader
 		["mux_quiet"] = true,
 		["mux_function_caller"] = true,
 		["protection_flags"] = true,
+		["attribute_eval_flags"] = true,
 		["function_recursion_limit"] = 500u,
 		["dialect"] = SoftcodeDialects.Mux.Key
 	};
@@ -781,8 +782,9 @@ public static partial class TinyMuxDatabaseReader
 			var notes = _database.ImportNotes;
 			notes.Add(new ImportWarning(ImportWarningKind.Softcode,
 				$"Imported from a TinyMUX {file.Source}: the import turns on paren_groups, mux_logic, mux_justify, mux_collation, " +
-				"rhost_list, innermost_tokens, tiny_trim_fun, tiny_math, null_eq_zero, mux_queue_functions, mux_quiet, mux_function_caller and protection_flags, and raises function_recursion_limit to 500, " +
-				"as TinyMUX softcode expects, and so NOEXAMINE and NOMODIFY keep protecting what holds them."));
+				"rhost_list, innermost_tokens, tiny_trim_fun, tiny_math, null_eq_zero, mux_queue_functions, mux_quiet, mux_function_caller, protection_flags and attribute_eval_flags, and raises " +
+				"function_recursion_limit to 500, as TinyMUX softcode expects, so NOEXAMINE and NOMODIFY keep protecting what holds them " +
+				"and noeval and noparse attributes keep working as they did."));
 			notes.Add(new ImportWarning(ImportWarningKind.Softcode,
 				"The import sets dialect to mux and gives every attribute it brings in the mux attribute flag, so that code " +
 				"reads TinyMUX's names for functions and commands SharpMUSH has under its own, such as strtrunc() and @qmail."));

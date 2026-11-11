@@ -92,7 +92,17 @@ public class HereCardTests : TrackingBunitContext
 	public async Task AloneInTheRoom_SaysNobodyElseIsHere()
 	{
 		var cut = RenderHere([Player("Ilsa Varn", "#313", you: true)]);
-		await Assert.That(cut.Find(".here-empty").TextContent).IsEqualTo("Nobody else is here.");
+		await Assert.That(cut.Find(".here-empty .kit-empty-text").TextContent).IsEqualTo("Nobody else is here.");
+	}
+
+	/// <summary>Alone in a room, the card offers WHO, which says where everyone else is.</summary>
+	[Test]
+	public async Task AloneInTheRoom_OffersWho()
+	{
+		string? ran = null;
+		var cut = RenderHere([Player("Ilsa Varn", "#313", you: true)], onCommand: c => ran = c);
+		await cut.Find(".here-empty .kit-empty-action button").ClickAsync();
+		await Assert.That(ran).IsEqualTo("WHO");
 	}
 
 	[Test]

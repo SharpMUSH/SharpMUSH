@@ -63,7 +63,7 @@
                 <MudTd DataLabel="@Loc["AdmRemoteBackupTime"]">@context.QueuedAt.ToUniversalTime().ToString("yyyy-MM-dd HH:mm 'UTC'")</MudTd>
                 <MudTd DataLabel="@Loc["AdmRemoteBackupReason"]">@context.Reason</MudTd><MudTd DataLabel="@Loc["AdmRemoteBackupState"]">@context.State</MudTd><MudTd DataLabel="@Loc["AdmRemoteBackupSnapshot"]" Class="remote-backups-snapshot">@context.SnapshotId</MudTd><MudTd DataLabel="@Loc["AdmRemoteBackupError"]">@context.ErrorCode @context.ExitCode</MudTd>
             </RowTemplate>
-            <NoRecordsContent><MudText>@Loc["AdmRemoteBackupNoRuns"]</MudText></NoRecordsContent>
+            <NoRecordsContent><EmptyState Compact="true" Icon="@Icons.Material.Outlined.CloudUpload">@Loc["AdmRemoteBackupNoRuns"]</EmptyState></NoRecordsContent>
         </MudTable>
     }
 </div>

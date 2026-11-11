@@ -14,13 +14,16 @@ public sealed class StartupImportCoordinator(ImportPreviewCoordinator previews, 
 	ILogger<StartupImportCoordinator> logger)
 {
 	public async Task<StartupImportOutcome> PrepareAsync(DatabaseImportFiles files, string? configuration = null,
-		ConfigurationSnapshot? baseline = null, CancellationToken cancellationToken = default)
+		ConfigurationSnapshot? baseline = null, CancellationToken cancellationToken = default,
+		IReadOnlyDictionary<string, string>? configurationIncludes = null)
 	{
 		try
 		{
+			// The receipt covers the configuration, not the files it includes: a game that imported before its includes were
+			// read must not import again over its live world on the next start.
 			var fingerprint = await FingerprintAsync(files, configuration, cancellationToken);
 			if (journal.AppliedStartupFingerprint == fingerprint) return new(StartupImportState.AlreadyApplied);
-			var preview = await previews.PreviewAsync(files, configuration, baseline, cancellationToken);
+			var preview = await previews.PreviewAsync(files, configuration, baseline, cancellationToken, configurationIncludes);
 			if (preview.State != ImportSessionState.Ready)
 				return new(StartupImportState.Failed, preview.Id, preview.Failure ?? "Startup import did not validate.");
 			journal.Save(preview with { StartupFingerprint = fingerprint, SourceFile = Path.GetFileName(files.Database) });

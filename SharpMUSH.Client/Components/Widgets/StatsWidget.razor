@@ -10,22 +10,34 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 @* D1 §6.5 stat tiles (board 31's count pills, at desktop size): one card per count, a mono label
-   over the value in accent. The tiles wrap to fit the column rather than stepping at a width. *@
+   over the value in accent. The tiles wrap to fit the column rather than stepping at a width. A count
+   of nothing is not news: its tile is left out, and when nobody is playing the widget invites the
+   reader in instead of opening on "Players online 0". *@
 <div class="stats-widget">
-    <div class="stats-tiles">
-        @foreach (var tile in Tiles)
-        {
-            @* A tile with a list behind it links to that list. *@
-            @if (tile.Href is not null)
+    @if (Quiet)
+    {
+        <EmptyState Icon="@Icons.Material.Outlined.Celebration" Class="stats-quiet">
+            <ChildContent>@Loc["WidStatsQuiet"]</ChildContent>
+            <Action><CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.PlayArrow" Href="/play">@Loc["WidStatsQuietPlay"]</CapsuleButton></Action>
+        </EmptyState>
+    }
+    @if (Shown.Any())
+    {
+        <div class="stats-tiles">
+            @foreach (var tile in Shown)
             {
-                <a class="stats-tile stats-tile--link" href="@tile.Href">@TileBody(tile)</a>
+                @* A tile with a list behind it links to that list. *@
+                @if (tile.Href is not null)
+                {
+                    <a class="stats-tile stats-tile--link" href="@tile.Href">@TileBody(tile)</a>
+                }
+                else
+                {
+                    <div class="stats-tile">@TileBody(tile)</div>
+                }
             }
-            else
-            {
-                <div class="stats-tile">@TileBody(tile)</div>
-            }
-        }
-    </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -57,6 +69,13 @@
         ("WidPagesChangedThisWeek", _recent ?? "—", _recentFailed, "/wiki/recent"),
         ("Characters",       _characters?.ToString() ?? "—", _charactersFailed, null),
     ];
+
+    /// <summary>The tiles worth showing: every count still loading or unknown, and every count above nothing.</summary>
+    private IEnumerable<(string LabelKey, string Value, bool Failed, string? Href)> Shown =>
+        Tiles.Where(tile => tile.Value != "0");
+
+    /// <summary>Nobody is connected and no scene is running, both known rather than still loading.</summary>
+    private bool Quiet => _online == 0 && (!_scenesOn || _activeScenes == 0);
 
     private RenderFragment TileBody((string LabelKey, string Value, bool Failed, string? Href) tile) => __builder =>
     {

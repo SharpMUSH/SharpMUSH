@@ -55,9 +55,12 @@ SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING=true dotnet run --project SharpMUSH.Tests
 SHARPMUSH_ENABLE_TEST_TELEMETRY=true dotnet run --project SharpMUSH.Tests
 ```
 
-Tests of packages that live in the official library (duties) install them from a checkout of
+Tests of packages that live in the official library install them from a checkout of
 SharpMUSH/SharpMUSH.Packages: `SHARPMUSH_PACKAGES_PATH`, else a `SharpMUSH.Packages` clone beside this
-repository (`TestPaths.PackageLibrary`).
+repository (`TestPaths.PackageLibrary`). The library keeps its own behaviour tests as YAML in its `tests/`
+folder; `PackageLibraryScenarioTests` runs each file as one test (format in that folder's README). Everything
+in the `SharpMUSH.Tests.PackageLibrary` namespace is what the library's CI runs, so a C# test of a library
+package (the duties tests) goes there.
 
 The test framework is **TUnit** (not xUnit or MSTest). The `--treenode-filter` format is `/<assembly>/<namespace>/<class>/<method>` with `*` wildcards.
 

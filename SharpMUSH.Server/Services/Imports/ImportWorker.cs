@@ -47,7 +47,7 @@ public static class ImportWorker
 				_ => ConfigurationDialect.PennMUSH
 			};
 			var configuration = File.Exists(session.ConfigurationPath)
-				? ReadPennMushConfig.Import(session.ConfigurationPath, followIncludes: false, dialect) : null;
+				? ReadPennMushConfig.Import(session.ConfigurationPath, request.ConfigurationIncludes, dialect) : null;
 			if (configuration is not null)
 			{
 				source.Reality = configuration.Reality;

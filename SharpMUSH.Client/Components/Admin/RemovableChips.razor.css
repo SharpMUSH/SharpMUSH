@@ -6,11 +6,6 @@
 	min-height: 30px;
 }
 
-.cfg-empty {
-	font-size: var(--text-sm);
-	color: var(--text-faint);
-}
-
 .cfg-chip {
 	display: inline-flex;
 	align-items: center;

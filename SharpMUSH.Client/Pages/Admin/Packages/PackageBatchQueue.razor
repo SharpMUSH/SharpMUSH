@@ -8,7 +8,7 @@
     <div class="pkg-batch-queue">
         @if (Packages.Batch.Intents.Count == 0)
         {
-            <span>@Loc["PkgBatchEmpty"]</span>
+            <EmptyState Compact="true" Icon="@Icons.Material.Outlined.Queue">@Loc["PkgBatchEmpty"]</EmptyState>
         }
         else
         {

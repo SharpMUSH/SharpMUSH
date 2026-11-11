@@ -28,7 +28,17 @@
         @Pager
         @if (batch.Total == 0)
         {
-            <EmptyState Class="wiki-cat-empty" Icon="@Icons.Material.Outlined.FolderOpen">@Loc["NavWikiCategoryEmpty"]</EmptyState>
+            <AuthorizeView Policy="wiki.create">
+                <Authorized>
+                    <EmptyState Class="wiki-cat-empty" Icon="@Icons.Material.Outlined.FolderOpen">
+                        <ChildContent>@Loc["NavWikiCategoryEmpty"]</ChildContent>
+                        <Action><CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add" Href="@WritePageHref">@Loc["NavWikiCategoryWritePage"]</CapsuleButton></Action>
+                    </EmptyState>
+                </Authorized>
+                <NotAuthorized>
+                    <EmptyState Class="wiki-cat-empty" Icon="@Icons.Material.Outlined.FolderOpen">@Loc["NavWikiCategoryEmpty"]</EmptyState>
+                </NotAuthorized>
+            </AuthorizeView>
         }
         <div class="wiki-cat-grid">
             @foreach (var entry in batch.Pages)
@@ -58,6 +68,10 @@
 
 @code {
     [Parameter, EditorRequired] public string Category { get; set; } = string.Empty;
+
+    /// <summary>The editor for a new page, filed in this category.</summary>
+    private string WritePageHref =>
+        WikiLocaleLinks.WithLocale($"/wiki/main/new-page/edit?category={Uri.EscapeDataString(Category)}", Locale);
     [Parameter] public string? Locale { get; set; }
     [Parameter] public string? MembersCollection { get; set; }
     [Parameter] public int MembersSkip { get; set; }

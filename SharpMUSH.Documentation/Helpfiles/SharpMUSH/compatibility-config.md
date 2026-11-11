@@ -91,6 +91,11 @@
       "lookup": "compatibility config protection flags noexamine nomodify noconnect"
     },
     {
+      "id": "noeval-and-noparse-attributes-attribute-eval-flags",
+      "heading": "noeval and noparse attributes: `attribute_eval_flags`",
+      "lookup": "compatibility config attribute eval flags"
+    },
+    {
       "id": "rhostmush-map-arguments-rhost-map-args",
       "heading": "RhostMUSH map() arguments: `rhost_map_args`",
       "lookup": "compatibility config rhostmush map arguments rhost map args"
@@ -399,6 +404,30 @@ A wizard sets the flag; then its owner, a player, tries to change it:
 > &NOTE Ledger=hello
 #-1 NO PERMISSION TO SET ATTRIBUTE
 ```
+
+## noeval and noparse attributes: `attribute_eval_flags`
+
+Off by default; meant for a game moved from TinyMUX or RhostMUSH, whose imports turn it on and keep the `noeval` and `noparse` attribute flags.
+
+With `attribute_eval_flags` on, an attribute set `noeval` is never evaluated, as on TinyMUX: u(), get_eval(), a description and the other messages give its value as written, and an action attribute set `noeval`, such as `AUSE` or `ASUCC`, does not run when its event happens. `@trigger` still runs it. A `$`-command attribute set `noparse` is matched against the command as it was typed, before its functions and substitutions are evaluated, as on TinyMUX and RhostMUSH, and `%0` and the rest take their text from that. Off, both flags do nothing, and every `$`-command is matched against the command after evaluation, as on PennMUSH.
+
+```sharp attribute_eval_flags
+> &EVALDOC_TEXT me=[add(1,2)]
+> @set me/EVALDOC_TEXT=noeval
+> think u(me/EVALDOC_TEXT)
+[add(1,2)]
+```
+
+A `noparse` command, with `+echo [add(1,2)]` typed by a player who stands near it:
+
+```sharp unchecked
+> &CMD Slate=$+echo *:@pemit %#=heard %0
+> @set Slate/CMD=noparse
+> +echo [add(1,2)]
+heard [add(1,2)]
+```
+
+With the option off, the same line gives `heard 3`.
 
 ## RhostMUSH map() arguments: `rhost_map_args`
 

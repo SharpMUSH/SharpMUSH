@@ -194,4 +194,12 @@ public record CompatibilityOptions(
 		Group = "RhostMUSH Compatibility",
 		Order = 9)]
 	public bool ProtectionFlags { get; init; }
+
+	[SharpConfig(
+		Name = "attribute_eval_flags",
+		Category = "Compatibility",
+		Description = "The noeval and noparse attribute flags work as in TinyMUX and RhostMUSH. A noeval attribute is never evaluated: u(), get_eval() and a description or other message give its text as written, and a noeval action attribute does not run. A noparse $-command is matched against the command as typed, before it is evaluated. Off, both flags do nothing. Importing a TinyMUX or RhostMUSH database turns it on",
+		Group = "TinyMUX Compatibility",
+		Order = 8)]
+	public bool AttributeEvalFlags { get; init; }
 }

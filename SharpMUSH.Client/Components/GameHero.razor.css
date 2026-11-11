@@ -37,6 +37,7 @@
 }
 
 .game-hero-body {
+	flex: 1;
 	display: flex;
 	align-items: flex-start;
 	gap: var(--space-5);
@@ -53,6 +54,17 @@
 
 .game-hero-text {
 	min-width: 0;
+}
+
+/* the genre's welcome picture, at the far side from the name; the text keeps the room it needs */
+.game-hero-art {
+	order: 1;
+	flex: none;
+	margin-inline-start: auto;
+	width: 9rem;
+	height: auto;
+	align-self: center;
+	filter: var(--image-filter);
 }
 
 .game-hero-name {
@@ -112,5 +124,9 @@
 
 	.game-hero-name {
 		font-size: var(--text-xl);
+	}
+
+	.game-hero-art {
+		width: 6rem;
 	}
 }
