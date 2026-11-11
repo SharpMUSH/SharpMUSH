@@ -135,7 +135,7 @@
 -->
 # Compatibility Config
 
-These configuration options change how existing code evaluates. All of them are read at evaluation time, so changing one takes effect on the next call rather than at the next restart. Set them with `@config/set` or on the web portal's configuration page.
+These options change how existing code evaluates. Each is read at evaluation time, so a change takes effect on the next call, not at a restart. Set them with `@config/set` or on the portal's configuration page.
 
 ## Boolean compatibility: `tiny_booleans`
 
