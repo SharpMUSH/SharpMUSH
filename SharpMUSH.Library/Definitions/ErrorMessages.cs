@@ -400,6 +400,7 @@ public static partial class ErrorMessages
 		public const string NoRoomNameSpecified = "#-1 NO ROOM NAME SPECIFIED";
 		public const string NoSuchDepower = "#-1 NO SUCH DEPOWER";
 		public const string NoSuchLevel = "#-1 NO SUCH LEVEL";
+		public const string NoSuchMessage = "#-1 NO SUCH MESSAGE";
 		public const string NoSuchRole = "#-1 NO SUCH ROLE";
 		public const string NoTargetSpecified = "#-1 NO TARGET SPECIFIED";
 		public const string NoTestString = "#-1 NO TEST STRING";
