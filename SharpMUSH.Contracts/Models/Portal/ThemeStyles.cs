@@ -195,7 +195,7 @@ public static class ThemeStyles
 		["bevel"] = new("text", "bevel"),
 		["ransom"] = new("text", "ransom"),
 		["dialog"] = new("text", "dialog"),
-		["rubric"] = new("accent", "none"),
+		["rubric"] = new("accent", "emboss"),
 		["stamped"] = new("accent", "stamped"),
 	};
 

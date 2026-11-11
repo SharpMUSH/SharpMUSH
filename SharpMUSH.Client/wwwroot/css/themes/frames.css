@@ -348,7 +348,7 @@
 /* Window: a 16-bit menu window, accent-2 at the top fading into the surface, with a pointing glove in the
    lower right. */
 [data-frame-marks="window"] {
-	--card-marks: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 55%, transparent), transparent 70%);
+	--card-marks: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 28%, transparent), transparent 70%);
 	--card-mask-text: url(/themes/drawings/frames/window-glove.svg) right 12px bottom 10px / 18px 14px no-repeat;
 	--card-ink-text: color-mix(in srgb, var(--text) 70%, transparent);
 }
@@ -361,7 +361,7 @@
 [data-frame-marks="torn"] {
 	--card-marks: linear-gradient(var(--accent), var(--accent)) right top / 4px 100% no-repeat;
 	--card-mask-accent: url(/themes/drawings/frames/torn-slash.svg) left top / 140px 34px no-repeat;
-	--card-ink-accent: color-mix(in srgb, var(--accent) 40%, transparent);
+	--card-ink-accent: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 /* Torn: the card thrown on the table, with a hard accent shadow and a white one behind it. */
 [data-frame-shadow="torn"] {

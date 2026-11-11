@@ -452,7 +452,7 @@
 	--texture: linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 45%);
 	--texture-size: 100% 100%;
 	--texture-mask-accent: url(/themes/drawings/textures/shards-accent.svg) right bottom / 800px 600px no-repeat;
-	--texture-ink-accent: color-mix(in srgb, var(--accent) 24%, transparent);
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 18%, transparent);
 	--texture-mask-accent-2: url(/themes/drawings/textures/shards-accent-2.svg) right bottom / 800px 600px no-repeat;
 	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 12%, transparent);
 	--texture-mask-text: linear-gradient(135deg, #000, transparent 40%);

@@ -236,9 +236,9 @@
 }
 /* Glove: a pointing hand before, as a menu cursor. */
 [data-ornament-glyphs="glove"] { --ornament-before: "\261E"; --ornament-after: none; }
-/* Jagged: a zigzag in the accent. */
+/* Jagged: a slashed band of the accent. */
 [data-ornament-underline="jagged"] {
-	--title-underline: conic-gradient(from -45deg at 50% 100%, var(--accent) 90deg, transparent 0) 0 0 / 10px 100%;
+	--title-underline: repeating-linear-gradient(135deg, var(--accent) 0 5px, transparent 5px 9px);
 	--title-underline-height: 6px;
 	--title-underline-pad: 6px;
 }

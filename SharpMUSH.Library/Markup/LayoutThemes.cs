@@ -69,13 +69,13 @@ public static class LayoutThemes
 			TitleOpen = "┤ ♕ ", TitleClose = " ♕ ├", Guide = "rounded", Bullet = "✦",
 			GaugeOpen = "[", GaugeFilled = "♥", GaugeEmpty = "♡", GaugeClose = "]", Rule = "─",
 		}),
-		Ported("crystal-saga", ThemeMode.Dark, ["#070b14", "#16203a", "#e8eef8", "#9cd8ff", "#d4ecff", "#b6a2ff", "#8796ad", "#6cde9a", "#f2c66d", "#e57373", "#5aa9ff"], new ThemeLook
+		Ported("crystal-epic", ThemeMode.Dark, ["#070b14", "#16203a", "#e8eef8", "#9cd8ff", "#d4ecff", "#b6a2ff", "#8796ad", "#6cde9a", "#f2c66d", "#e57373", "#5aa9ff"], new ThemeLook
 		{
 			Border = "single", TopLeft = "◈", TopRight = "◈", BottomLeft = "◈", BottomRight = "◈",
 			TitleOpen = "┤ ◇ ", TitleClose = " ◇ ├", Guide = "line", Bullet = "◇",
 			GaugeOpen = "◂", GaugeFilled = "■", GaugeEmpty = "□", GaugeClose = "▸", Separator = " · ", Rule = "─",
 		}),
-		Ported("crystal-saga-16bit", ThemeMode.Dark, ["#02020c", "#2236b0", "#ffffff", "#ffd85a", "#8fa4ff", "#c8c8dc", "#b8c0f0", "#6cde9a", "#ffb070", "#ff8a8a", "#7ab8ff"], new ThemeLook
+		Ported("crystal-epic-16bit", ThemeMode.Dark, ["#02020c", "#2236b0", "#ffffff", "#ffd85a", "#8fa4ff", "#c8c8dc", "#b8c0f0", "#6cde9a", "#ffb070", "#ff8a8a", "#7ab8ff"], new ThemeLook
 		{
 			Border = "double", TitleOpen = "╡ ", TitleClose = " ╞", Guide = "double", Bullet = "►",
 			GaugeOpen = "[", GaugeFilled = "█", GaugeEmpty = "░", GaugeClose = "]", Rule = "═",

@@ -329,14 +329,14 @@ public static class BuiltInThemes
 		display: "cinzel-decorative", body: "ui", corners: "round", texture: "stained-glass", ornament: "crown", frame: "stained", titles: "normal", effect: "starlit", imagery: "dreamlit",
 		accent2: "#5cc8ff", accent3: "#ff5d8f");
 
-	/// <summary>Crystal Saga: a modern fantasy epic, crystal shards rising out of the dark, wide Roman capitals, glassy cards lit from above.</summary>
-	public static readonly PortalTheme CrystalSaga = Genre("crystal-saga", "Crystal Saga", dark: true,
+	/// <summary>Crystal Epic: a modern fantasy epic, crystal shards rising out of the dark, wide Roman capitals, glassy cards lit from above.</summary>
+	public static readonly PortalTheme CrystalEpic = Genre("crystal-epic", "Crystal Epic", dark: true,
 		["#070b14", "#0f1626", "#16203a", "#0b111f", "#04070d", "#e8eef8", "#a6b3c8", "#8796ad", "#2a3a58", "#1b2740", "#9cd8ff", "#f2c66d", "#ff8f9a"],
 		display: "forum", body: "ui", corners: "soft", texture: "crystal", ornament: "crystal", frame: "prism", titles: "wide", effect: "prism", imagery: "crystalline",
 		accent2: "#d4ecff", accent3: "#b6a2ff");
 
-	/// <summary>Crystal Saga 16-bit: a 16-bit console RPG, blue gradient menu windows with white borders on black, pixel capitals, a pointing glove.</summary>
-	public static readonly PortalTheme CrystalSaga16Bit = Genre("crystal-saga-16bit", "Crystal Saga 16-bit", dark: true,
+	/// <summary>Crystal Epic 16-bit: a 16-bit console RPG, blue gradient menu windows with white borders on black, pixel capitals, a pointing glove.</summary>
+	public static readonly PortalTheme CrystalEpic16Bit = Genre("crystal-epic-16bit", "Crystal Epic 16-bit", dark: true,
 		["#02020c", "#1a2a9a", "#2236b0", "#101c70", "#000010", "#ffffff", "#d6dcff", "#b8c0f0", "#e8e8f0", "#5868c8", "#ffd85a", "#ffb070", "#ffb0bc"],
 		display: "press-start", body: "ui", corners: "sharp", texture: "dither", ornament: "glove", frame: "window", titles: "normal", effect: "bevel", imagery: "sixteen-bit",
 		accent2: "#5f78ff", accent3: "#c8c8dc");
@@ -402,7 +402,7 @@ public static class BuiltInThemes
 		Cyberpunk, Synthwave, SpaceOpera, StarshipConsole,
 		RealRobot,
 		SuperRobot,
-		HeartRealm, CrystalSaga, CrystalSaga16Bit, CallingCard, Jrpg,
+		HeartRealm, CrystalEpic, CrystalEpic16Bit, CallingCard, Jrpg,
 		AdventurersHandbook, Trailblazer,
 		ProtanDark, ProtanLight, DeutanDark, DeutanLight, TritanDark, TritanLight, MonoDark, MonoLight,
 	];
