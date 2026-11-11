@@ -155,8 +155,8 @@ public partial class Commands
 				: null;
 
 	/// <summary>
-	/// The SharpMUSH flag RhostMUSH's flag <paramref name="name"/> is: the flag an import defines for it, else the one
-	/// SharpMUSH flag it stands for.
+	/// The SharpMUSH flag RhostMUSH's flag <paramref name="name"/> is: the flag an import defines for it when it has
+	/// one, else the one SharpMUSH flag it stands for.
 	/// </summary>
 	private static string? RhostFlag(string name)
 		=> RhostNameTables.Bits.FirstOrDefault(bit => bit.Word < 4 && bit.Name.Equals(name, StringComparison.OrdinalIgnoreCase))

@@ -183,6 +183,7 @@ public class RhostToggleTests : ServerTestBase
 		await Assert.That((await Mediator.Send(new GetObjectFlagQuery("ZONECMDCHK")))!.SetPermissions).IsEmpty();
 		await Assert.That(await CmdAs(mortal.DbRef, mortal.Handle, "@toggle/check #1")).IsEqualTo("#-1 PERMISSION DENIED");
 	}
+
 	private static IDisposable Rhost() => TestOptionsOverride.Scope(options => options with
 	{
 		Compatibility = options.Compatibility with { Dialect = "rhost" }
