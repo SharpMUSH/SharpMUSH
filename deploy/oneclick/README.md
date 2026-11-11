@@ -20,8 +20,13 @@ curl -fsSL https://raw.githubusercontent.com/SharpMUSH/SharpMUSH/main/deploy/one
 It needs Ubuntu 24.04 or later, or Debian 12, with 2 GB of memory (4 GB is comfortable).
 
 `install.sh install --ask` asks for the domain and the Cloudflare tokens first. With an API token, the
-installer checks it can read the zone and DNS and manage tunnels before it installs anything, and says
-which permission is missing when it cannot.
+installer checks it reaches the zone, its DNS and the account's tunnels before it installs anything,
+and says which permission is missing when it cannot. A read-only permission passes that check and is
+refused at the first change.
+
+Behind a tunnel the installer uses this server's own: the one its tunnel token names, else one named
+`sharpmush-<domain>-<machine id>`. Another server installed for the same domain keeps its tunnel, which
+stops getting traffic once the domain moves; the installer names it in a note.
 
 ## What the installer does
 
