@@ -102,7 +102,7 @@ public class UnrecycleAliasTests
 		await As(mortal, $"{command} {thing}");
 
 		await Assert.That(await IsGoingAsync(thing)).IsFalse();
-		await Assert.That(WasTold(mortal.DbRef, "Spared from destruction")).IsTrue();
+		await Assert.That(WasTold(mortal.DbRef, "has been spared from destruction.")).IsTrue();
 	}
 
 	/// <summary>A mortal cannot recover somebody else's object, and the object stays GOING.</summary>

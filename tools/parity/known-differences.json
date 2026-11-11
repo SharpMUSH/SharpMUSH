@@ -84,16 +84,6 @@
       "command": "@find Widget"
     },
     {
-      "id": "KD-0005",
-      "scenario": "10-player-commands",
-      "case": "obj.create",
-      "step": 5,
-      "reason": "The reference PennMUSH runs with the shipped restrict.cnf, whose `restrict_command @destroy noplayer \" Use @recycle instead` (game/restrictcnf.dst:86) refuses a player's @destroy before it runs; SharpMUSH ships command_restrictions empty, so the command destroys the thing. Not pinned with `sharp`: the refusal is all of PennMUSH's side, and SharpMUSH's side is the unparse of the destroyed object, whose flag letters are still GRA-141 (#1404).",
-      "tracking": "#1134",
-      "profile": "A new game restricts no commands",
-      "command": "@destroy Gadget"
-    },
-    {
       "id": "KD-0009",
       "scenario": "20-admin-commands",
       "case": "admin.lists",
@@ -530,18 +520,6 @@
       "penn": "You are carrying:\nWidget\nYou have 150 Pennies."
     },
     {
-      "id": "KD-0046",
-      "scenario": "10-player-commands",
-      "case": "obj.create",
-      "step": 6,
-      "reason": "Follows from KD-0005: PennMUSH refused the player's @destroy, so Gadget is intact; SharpMUSH destroyed it, so it is GOING and its flags show G. `sharp` and `penn` pin the look so the G is the only difference accepted.",
-      "tracking": "#1134",
-      "profile": "A new game restricts no commands",
-      "command": "look Gadget",
-      "sharp": "Gadget(#NEW1TGn)\nA gleaming gizmo.",
-      "penn": "Gadget(#NEW1Tn)\nA gleaming gizmo."
-    },
-    {
       "id": "KD-0047",
       "scenario": "30-softcode",
       "case": "sc.identity",
@@ -570,12 +548,12 @@
       "scenario": "20-admin-commands",
       "case": "admin.wizard",
       "step": 3,
-      "reason": "PennMUSH's examine shows the player's Pennies after the zone and lists the RQUOTA attribute; SharpMUSH keeps no pennies (`money()` is not supported) and counts quota instead of storing it, so it has neither. SharpMUSH lists TOTCMDS (KD-0053) and TinyMUX's CONNINFO (the record conntotal() and the other conn functions read), and Gadget's G follows from KD-0005. `sharp` and `penn` pin the whole step, so those are the only differences accepted.",
+      "reason": "PennMUSH's examine shows the player's Pennies after the zone; SharpMUSH keeps no pennies (`money()` is not supported), so it has none. SharpMUSH lists TOTCMDS (KD-0053) and TinyMUX's CONNINFO (the record conntotal() and the other conn functions read). RQUOTA is on both: PennMUSH's is stored, SharpMUSH's is counted each time. `sharp` and `penn` pin the whole step, so those are the only differences accepted.",
       "tracking": "#1134",
-      "profile": "Quota is counted, not stored",
+      "profile": "`money()` is not supported",
       "command": "examine *Alice",
-      "sharp": "Alice(#4PenAc)\nType: PLAYER Flags: ENTER_OK NO_COMMAND ANSI CONNECTED\nOwner: Alice(#4PenAc)  Zone: *NOTHING*\nParent: *NOTHING*\nBasic Lock [#1i]: =Alice(#4PenAc)\nEnter Lock [#1i]: =Alice(#4PenAc)\nUse Lock [#1i]: =Alice(#4PenAc)\nPowers:\nChannels: *NONE*\nWarnings checked: normal\nCreated: <TIMESTAMP>\nCONNINFO [#1$icwm+]: <CONNINFO>\nLAST [#1cwv+]: <TIMESTAMP>\nLASTFAILED [#1cw+]:\nLASTIP [#1cw+]: 127.0.0.1\nLASTLOGOUT [#1cw+]: <TIMESTAMP>\nLASTPAGED [#1cw+]: #3:<CTIME>\nLASTSITE [#1cw+]: localhost\nMAILCURF [#1$cw+]: 0\nMAILFOLDERS [#1$cw+]: 0:INBOX:0\nTOTCMDS [#1cw+]: 360\nCarrying:\nWidget(#7Tn)\nGadget(#NEW1@10-player-commandsTGn)\nHome: Room Zero(#0RL)\nLocation: Lab(#6Rn)",
-      "penn": "Alice(#4PenAc)\nType: PLAYER Flags: ENTER_OK NO_COMMAND ANSI CONNECTED\nOwner: Alice(#4PenAc)  Zone: *NOTHING*  Pennies: 101\nParent: *NOTHING*\nBasic Lock [#1i]: =Alice(#4PenAc)\nEnter Lock [#1i]: =Alice(#4PenAc)\nUse Lock [#1i]: =Alice(#4PenAc)\nPowers:\nChannels: *NONE*\nWarnings checked: normal\nCreated: <TIMESTAMP>\nLAST [#1cwv+]: <TIMESTAMP>\nLASTFAILED [#1cw+]:\nLASTIP [#1cw+]: 127.0.0.1\nLASTLOGOUT [#1cw+]: <TIMESTAMP>\nLASTPAGED [#1cw+]: #3:<CTIME>\nLASTSITE [#1cw+]: localhost\nMAILCURF [#1$cw+]: 0\nMAILFOLDERS [#1$cw+]: 0:INBOX:0\nRQUOTA [#1m+]: 11\nCarrying:\nWidget(#7Tn)\nGadget(#NEW1@10-player-commandsTn)\nHome: Room Zero(#0RL)\nLocation: Lab(#6Rn)"
+      "sharp": "Alice(#4PenAc)\nType: PLAYER Flags: ENTER_OK NO_COMMAND ANSI CONNECTED\nOwner: Alice(#4PenAc)  Zone: *NOTHING*\nParent: *NOTHING*\nBasic Lock [#1i]: =Alice(#4PenAc)\nEnter Lock [#1i]: =Alice(#4PenAc)\nUse Lock [#1i]: =Alice(#4PenAc)\nPowers:\nChannels: *NONE*\nWarnings checked: normal\nCreated: <TIMESTAMP>\nCONNINFO [#1$icwm+]: <CONNINFO>\nLAST [#1cwv+]: <TIMESTAMP>\nLASTFAILED [#1cw+]:\nLASTIP [#1cw+]: 127.0.0.1\nLASTLOGOUT [#1cw+]: <TIMESTAMP>\nLASTPAGED [#1cw+]: #3:<CTIME>\nLASTSITE [#1cw+]: localhost\nMAILCURF [#1$cw+]: 0\nMAILFOLDERS [#1$cw+]: 0:INBOX:0\nRQUOTA [#1m+]: 11\nTOTCMDS [#1cw+]: 368\nCarrying:\nWidget(#7Tn)\nGadget(#NEW1@10-player-commandsTGn)\nHome: Room Zero(#0RL)\nLocation: Lab(#6Rn)",
+      "penn": "Alice(#4PenAc)\nType: PLAYER Flags: ENTER_OK NO_COMMAND ANSI CONNECTED\nOwner: Alice(#4PenAc)  Zone: *NOTHING*  Pennies: 101\nParent: *NOTHING*\nBasic Lock [#1i]: =Alice(#4PenAc)\nEnter Lock [#1i]: =Alice(#4PenAc)\nUse Lock [#1i]: =Alice(#4PenAc)\nPowers:\nChannels: *NONE*\nWarnings checked: normal\nCreated: <TIMESTAMP>\nLAST [#1cwv+]: <TIMESTAMP>\nLASTFAILED [#1cw+]:\nLASTIP [#1cw+]: 127.0.0.1\nLASTLOGOUT [#1cw+]: <TIMESTAMP>\nLASTPAGED [#1cw+]: #3:<CTIME>\nLASTSITE [#1cw+]: localhost\nMAILCURF [#1$cw+]: 0\nMAILFOLDERS [#1$cw+]: 0:INBOX:0\nRQUOTA [#1m+]: 11\nCarrying:\nWidget(#7Tn)\nGadget(#NEW1@10-player-commandsTGn)\nHome: Room Zero(#0RL)\nLocation: Lab(#6Rn)"
     },
     {
       "id": "KD-0051",
@@ -634,6 +612,18 @@
       "command": "think [null(x)][s(%b)] [lit([add(1,2)])] [eval(add(1,2))]",
       "sharp": " [add(1,2)] 3",
       "penn": " [add(1,2)] #-1 FUNCTION (EVAL) EXPECTS 2 ARGUMENTS BUT GOT 1"
+    },
+    {
+      "id": "KD-0056",
+      "scenario": "40-compat-choices",
+      "case": "choice.no-restrictions",
+      "step": 0,
+      "reason": "The reference PennMUSH runs with the shipped restrict.cnf, whose `restrict_command @destroy noplayer \" Use @recycle instead` (game/restrictcnf.dst:86) refuses a player's @destroy before it looks for a target; SharpMUSH ships command_restrictions empty, so the command runs and finds nothing. `sharp` and `penn` pin the step.",
+      "tracking": "#1134",
+      "profile": "A new game restricts no commands",
+      "command": "@destroy NoSuchGadget",
+      "sharp": "I can't see that here.",
+      "penn": "Use @recycle instead"
     }
   ]
 }

@@ -78,7 +78,7 @@ public partial class Commands
 	private async ValueTask<MString> SpareAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject obj)
 	{
 		if (!await PermissionService.Controls(executor, obj)) return MarkupText.Plain(ErrorMessages.Notifications.PermissionDenied);
-		if (!await UndestroyAsync(parser, obj.Object().DBRef, [])) return MarkupText.Plain($"{obj.Object().Name} is not destroyed.");
+		if (!await UndestroyAsync(parser, executor, obj.Object().DBRef, [])) return MarkupText.Plain($"{obj.Object().Name} is not destroyed.");
 
 		await Audit.RecordAsync(executor, AuditActions.ObjectRecover, AuditTargets.Of(obj), "spared while GOING");
 		return MarkupText.Plain(string.Format(ErrorMessages.Notifications.SparedFromDestructionFormat, obj.Object().Name));

@@ -461,7 +461,14 @@ For information about SharpMUSH, see [code]. If the help text has an error, tell
   See [regexp syntax]
 
 # RQUOTA
-  SharpMUSH does not use this attribute: remaining quota is the player's quota minus the objects they own. A database import reads RQUOTA to set the quota. It is settable in-game only by a wizard, and is only visible to wizards.
+  A player's remaining quota: their quota minus the objects they own. `examine` lists it on a player, counted as `examine` runs, and only wizards see it. It is never stored, so `get()` and the other attribute functions do not find it, and setting it does not change the quota; use `@quota/set`. A database import reads a stored RQUOTA to set the quota.
+
+```
+> examine *Alice/RQUOTA
+RQUOTA [#1m+]: 11
+```
+
+Output: Alice may build 11 more objects.
 
 
 ::: seealso

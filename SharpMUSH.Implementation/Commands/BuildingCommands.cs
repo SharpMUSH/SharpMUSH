@@ -348,22 +348,79 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SafeTargetScheduledAnyway), executor);
 		}
 
-		// do_destroy names its target with unparse_object (src/destroy.c:377, :391, :405) — the name
-		// plus the dbref and flag letters a viewer allowed to see them gets — not the bare name.
-		// Which of the three player wordings applies is destroy_possessions and really_safe (:369-377).
-		var destroyed = await MessageFormatting.UnparseObjectAsync(PermissionService, executor, obj, ConnectionService);
-		var destroyKey = !obj.IsPlayer || !Configuration.CurrentValue.Command.DestroyPossessions
-			? nameof(ErrorMessages.Notifications.ObjectScheduledDestroyedFormat)
-			: reallySafe
-				? nameof(ErrorMessages.Notifications.PlayerAndNonSafeObjectsScheduledDestroyedFormat)
-				: nameof(ErrorMessages.Notifications.PlayerAndObjectsScheduledDestroyedFormat);
-		await NotifyService.NotifyLocalized(executor, destroyKey, executor, destroyed);
+		await NotifyScheduledAsync(executor, obj, destroyOk, reallySafe);
 
 		await PreDestroyAsync(parser, executor, obj.Object().DBRef, []);
 		await Audit.RecordAsync(executor, obj.IsPlayer ? AuditActions.PlayerDestroy : AuditActions.ObjectDestroy,
 			AuditTargets.Of(obj), "scheduled");
 
 		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// <c>do_destroy</c>'s messages for an object it schedules (<c>src/destroy.c:347-412</c>). It names
+	/// the object with unparse_object, as each reader may see it, and its owner by name. Someone else's
+	/// room, thing or exit is announced to its owner too, except a DESTROY_OK thing's.
+	/// </summary>
+	private async ValueTask NotifyScheduledAsync(AnySharpObject executor, AnySharpObject obj, bool destroyOk, bool reallySafe)
+	{
+		var owner = new AnySharpObject(await obj.Object().Owner.WithCancellation(CancellationToken.None));
+		var ownsIt = await executor.Owns(obj);
+		var seen = await MessageFormatting.UnparseObjectAsync(PermissionService, executor, obj, ConnectionService);
+		var ownerName = owner.Object().Name;
+		var executorName = executor.Object().Name;
+
+		async ValueTask TellOwnerAsync(string key)
+			=> await NotifyService.NotifyLocalized(owner.Object().DBRef, key, null, executorName,
+				await MessageFormatting.UnparseObjectAsync(PermissionService, owner, obj, ConnectionService));
+
+		switch (obj)
+		{
+			case SharpRoom:
+				await CommunicationService.NotifyExceptAsync(obj, obj, null,
+					MarkupText.Plain(LocalizationService.Get(nameof(ErrorMessages.Notifications.RoomShakesAndCrumbles))),
+					IPermissionService.InteractType.None);
+				if (ownsIt)
+				{
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RewardedShortlyFormat), executor, seen);
+				}
+				else
+				{
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WreckingBallFormat), executor, ownerName, seen);
+					await TellOwnerAsync(nameof(ErrorMessages.Notifications.ScheduledYourRoomFormat));
+				}
+
+				break;
+
+			case SharpPlayer:
+				// Which of the three wordings applies is destroy_possessions and really_safe (:369-377).
+				var playerKey = !Configuration.CurrentValue.Command.DestroyPossessions
+					? nameof(ErrorMessages.Notifications.ObjectScheduledDestroyedFormat)
+					: reallySafe
+						? nameof(ErrorMessages.Notifications.PlayerAndNonSafeObjectsScheduledDestroyedFormat)
+						: nameof(ErrorMessages.Notifications.PlayerAndObjectsScheduledDestroyedFormat);
+				await NotifyService.NotifyLocalized(executor, playerKey, executor, seen);
+				break;
+
+			case SharpThing when !ownsIt:
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OthersObjectScheduledDestroyedFormat), executor, ownerName, seen);
+				if (!destroyOk)
+				{
+					await TellOwnerAsync(nameof(ErrorMessages.Notifications.ScheduledYourObjectFormat));
+				}
+
+				break;
+
+			case SharpExit when !ownsIt:
+				// The exit's owner hears first here (:396-402), unlike a thing's.
+				await TellOwnerAsync(nameof(ErrorMessages.Notifications.ScheduledYourObjectFormat));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OthersObjectScheduledDestroyedFormat), executor, ownerName, seen);
+				break;
+
+			default:
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectScheduledDestroyedFormat), executor, seen);
+				break;
+		}
 	}
 
 	/// <summary>
@@ -455,6 +512,11 @@ public partial class Commands
 		await SetFlagInternalAsync(thing, "GOING_TWICE", false);
 		await ObjectDataService.SetExpandedDataAsync(new DestroyedByData(executor.Object().DBRef.ToString()), thing.Object());
 
+		if (thing is SharpExit exit)
+		{
+			await TellDraggedExitOwnerAsync(executor, exit);
+		}
+
 		var dragged = thing switch
 		{
 			SharpRoom room => await ExitsOfAsync(room),
@@ -471,13 +533,35 @@ public partial class Commands
 	}
 
 	/// <summary>
+	/// <c>pre_destroy</c>'s one message (<c>src/destroy.c:487-497</c>): an exit dragged along by a GOING
+	/// room is the only object whose owner may not have heard yet, when the room is someone else's and so
+	/// is the exit.
+	/// </summary>
+	private async ValueTask TellDraggedExitOwnerAsync(AnySharpObject executor, SharpExit exit)
+	{
+		var source = (await exit.Location.WithCancellation(CancellationToken.None)).WithExitOption();
+		var exitOwner = new AnySharpObject(await exit.Object.Owner.WithCancellation(CancellationToken.None));
+		var exitObject = new AnySharpObject(exit);
+
+		if (!await source.HasFlag("GOING")
+			|| await exitOwner.Owns(source)
+			|| await executor.Owns(exitObject))
+		{
+			return;
+		}
+
+		await NotifyService.NotifyLocalized(exitOwner.Object().DBRef, nameof(ErrorMessages.Notifications.ScheduledYourObjectFormat), null,
+			executor.Object().Name, await MessageFormatting.UnparseObjectAsync(PermissionService, exitOwner, exitObject, ConnectionService));
+	}
+
+	/// <summary>
 	/// PennMUSH <c>undestroy()</c>: spare <paramref name="target"/> and everything its survival
 	/// requires — its GOING owner, an exit's source room — plus what was scheduled only on its account:
 	/// a room's exits and a player's possessions. The exceptions are Penn's "two votes" compromise
 	/// (<c>src/destroy.c:176-196</c>): an exit still doomed by something else stays GOING.
 	/// </summary>
 	/// <returns><see langword="false"/> when <paramref name="target"/> was not GOING.</returns>
-	private async ValueTask<bool> UndestroyAsync(IMUSHCodeParser parser, DBRef target, HashSet<int> visited)
+	private async ValueTask<bool> UndestroyAsync(IMUSHCodeParser parser, AnySharpObject executor, DBRef target, HashSet<int> visited)
 	{
 		if (!visited.Add(target.Number)
 			|| await Mediator.Send(new GetObjectNodeQuery(target)) is not AnySharpObject thing
@@ -494,8 +578,24 @@ public partial class Commands
 			await RunStartupAsync(parser, thing);
 		}
 
-		var owner = await thing.Object().Owner.WithCancellation(CancellationToken.None);
-		await UndestroyAsync(parser, owner.Object.DBRef, visited);
+		var owner = new AnySharpObject(await thing.Object().Owner.WithCancellation(CancellationToken.None));
+		if (!visited.Contains(owner.Object().DBRef.Number) && await owner.HasFlag("GOING"))
+		{
+			// src/destroy.c:531-543: the owner is told before it is spared.
+			if (owner.Object().DBRef.Number != executor.Object().DBRef.Number)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OwnerSparedFormat), executor,
+					await MessageFormatting.UnparseObjectAsync(PermissionService, executor, owner, ConnectionService));
+				await NotifyService.NotifyLocalized(owner.Object().DBRef, nameof(ErrorMessages.Notifications.YouSparedByFormat), null,
+					executor.Object().Name);
+			}
+			else
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouSpared), executor);
+			}
+
+			await UndestroyAsync(parser, executor, owner.Object().DBRef, visited);
+		}
 
 		var destroyPossessions = Configuration.CurrentValue.Command.DestroyPossessions;
 
@@ -505,21 +605,34 @@ public partial class Commands
 				foreach (var owned in await OwnedByAsync(player))
 				{
 					if (owned is SharpExit exit && await IsInSomeoneElsesGoingSourceAsync(exit, player)) continue;
-					await UndestroyAsync(parser, owned.Object().DBRef, visited);
+					await UndestroyAsync(parser, executor, owned.Object().DBRef, visited);
 				}
 
 				break;
 
 			case SharpExit exit:
 				var source = (await exit.Location.WithCancellation(CancellationToken.None)).WithExitOption();
-				await UndestroyAsync(parser, source.Object().DBRef, visited);
+				if (await UndestroyAsync(parser, executor, source.Object().DBRef, visited))
+				{
+					// src/destroy.c:561-571.
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RoomSparedFormat), executor,
+						await MessageFormatting.UnparseObjectAsync(PermissionService, executor, source, ConnectionService));
+					var roomOwner = new AnySharpObject(await source.Object().Owner.WithCancellation(CancellationToken.None));
+					if (roomOwner.Object().DBRef.Number != executor.Object().DBRef.Number)
+					{
+						await NotifyService.NotifyLocalized(roomOwner.Object().DBRef, nameof(ErrorMessages.Notifications.RoomSparedByFormat), null,
+							await MessageFormatting.UnparseObjectAsync(PermissionService, roomOwner, source, ConnectionService),
+							executor.Object().Name);
+					}
+				}
+
 				break;
 
 			case SharpRoom room:
 				foreach (var exitRef in await ExitsOfAsync(room))
 				{
 					if (destroyPossessions && await IsDoomedByItsOwnerAsync(exitRef)) continue;
-					await UndestroyAsync(parser, exitRef, visited);
+					await UndestroyAsync(parser, executor, exitRef, visited);
 				}
 
 				break;
@@ -695,7 +808,7 @@ public partial class Commands
 					return await NotifyService.PermissionDenied(executor, refused);
 				}
 
-				if (!await UndestroyAsync(parser, obj.Object().DBRef, []))
+				if (!await UndestroyAsync(parser, executor, obj.Object().DBRef, []))
 				{
 					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
@@ -704,7 +817,15 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SparedFromDestructionFormat), executor, obj.Object().Name);
+				// do_undestroy (src/destroy.c:438-446): the owner is told, and whoever spared it if that is someone else.
+				var owner = new AnySharpObject(await obj.Object().Owner.WithCancellation(CancellationToken.None));
+				await NotifyService.NotifyLocalized(owner.Object().DBRef, nameof(ErrorMessages.Notifications.YourObjectSparedFormat), null,
+					await MessageFormatting.UnparseObjectAsync(PermissionService, owner, obj, ConnectionService));
+				if (owner.Object().DBRef.Number != executor.Object().DBRef.Number)
+				{
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OthersObjectSparedFormat), executor,
+						owner.Object().Name, await MessageFormatting.UnparseObjectAsync(PermissionService, executor, obj, ConnectionService));
+				}
 
 				return CallState.Empty;
 			}

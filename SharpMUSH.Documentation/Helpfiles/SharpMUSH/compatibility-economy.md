@@ -40,8 +40,12 @@ SharpMUSH has no built-in currency balances or penny charges. Games that need an
 
 **A choice.**
 
-**PennMUSH** keeps a player's remaining quota in its `RQUOTA` attribute, debited on each build and refunded on each destroy, so `examine` lists `RQUOTA` with the other attributes.<br>
-**SharpMUSH** stores the limit and counts what the player owns whenever it checks. There is no `RQUOTA` attribute, so `examine` lists none.<br>
+**PennMUSH** keeps a player's remaining quota in its `RQUOTA` attribute, debited on each build and refunded on each destroy. `examine` lists it, and `get()`, `hasattr()` and the other attribute functions read it.<br>
+**SharpMUSH** stores the limit and counts what the player owns whenever it checks. `examine` lists `RQUOTA` where PennMUSH does, with the same owner, flags and value, but the value is counted as `examine` runs and is never stored. The attribute functions do not find it, and setting `RQUOTA` does not change the quota.<br>
 **Why.** A count cannot drift from what the player owns, and a stored remainder can.<br>
-**Workaround.** Read quota with `@quota` or `quota()`, never with `get(<player>/RQUOTA)`.<br>
-**Example.** The parity case `admin.wizard` in `tools/parity/scenarios/20-admin-commands.scn` runs it on both servers.
+**Workaround.** Read quota with `@quota` or `quota()`, and change it with `@quota/set`.
+
+```sharp
+> think hasattr(me,RQUOTA)
+0
+```

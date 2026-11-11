@@ -60,6 +60,14 @@ think [hasattr(me,MAILFORWARDLIST)]
 ::as bob
 &MAILFORWARDLIST me
 
+::case choice.no-restrictions  a new game restricts no commands
+# PennMUSH's shipped restrict.cnf makes @destroy noplayer (restrictcnf.dst:86), checked before the
+# command looks for its target, so Alice is told to use @recycle. SharpMUSH ships command_restrictions
+# empty, so the command runs and finds nothing to destroy. A target that does not exist keeps the two
+# worlds the same.
+::as alice
+@destroy NoSuchGadget
+
 ::case choice.restrictions-reapply  changing command_restrictions starts its commands again
 # PennMUSH applies each restrict_command line once (conf.c:866-896), so the @command/restrict after it
 # stands. SharpMUSH keeps the lines as command_restrictions and applies the whole setting again when it

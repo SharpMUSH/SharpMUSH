@@ -1620,6 +1620,45 @@
   <data name="ObjectScheduledDestroyedFormat" xml:space="preserve">
     <value>{0} is scheduled to be destroyed.</value>
   </data>
+  <data name="RoomShakesAndCrumbles" xml:space="preserve">
+    <value>The room shakes and begins to crumble.</value>
+  </data>
+  <data name="RewardedShortlyFormat" xml:space="preserve">
+    <value>You will be rewarded shortly for {0}.</value>
+  </data>
+  <data name="WreckingBallFormat" xml:space="preserve">
+    <value>The wrecking ball is on its way for {0}'s {1} and its exits.</value>
+  </data>
+  <data name="ScheduledYourRoomFormat" xml:space="preserve">
+    <value>{0} has scheduled your room {1} to be destroyed.</value>
+  </data>
+  <data name="OthersObjectScheduledDestroyedFormat" xml:space="preserve">
+    <value>{0}'s {1} is scheduled to be destroyed.</value>
+  </data>
+  <data name="ScheduledYourObjectFormat" xml:space="preserve">
+    <value>{0} has scheduled your {1} for destruction.</value>
+  </data>
+  <data name="YourObjectSparedFormat" xml:space="preserve">
+    <value>Your {0} has been spared from destruction.</value>
+  </data>
+  <data name="OthersObjectSparedFormat" xml:space="preserve">
+    <value>{0}'s {1} has been spared from destruction.</value>
+  </data>
+  <data name="OwnerSparedFormat" xml:space="preserve">
+    <value>{0} has been spared from destruction.</value>
+  </data>
+  <data name="YouSparedByFormat" xml:space="preserve">
+    <value>You have been spared from destruction by {0}.</value>
+  </data>
+  <data name="YouSpared" xml:space="preserve">
+    <value>You have been spared from destruction.</value>
+  </data>
+  <data name="RoomSparedFormat" xml:space="preserve">
+    <value>The room {0} has been spared from destruction.</value>
+  </data>
+  <data name="RoomSparedByFormat" xml:space="preserve">
+    <value>The room {0} has been spared from destruction by {1}.</value>
+  </data>
   <data name="HaltedObjectReportFormat" xml:space="preserve">
     <value>Halted: {0}(#{1})</value>
   </data>

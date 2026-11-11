@@ -34,3 +34,24 @@ examine ChargeThing/CHARGES
 @open SemiOne ; @open SemiTwo
 think [lexits(here)]
 @tel/silent me=#0
+
+::case obj.destroy-cycle  destroying and sparing someone else's thing, and a room with an exit
+# do_destroy and do_undestroy (src/destroy.c:327-450) word each message by type and by whose the
+# object is, and tell the owner. A GOING object destroyed again is freed at once, so the thing and the
+# room are left scheduled rather than freed, which keeps the two worlds' dbrefs in step.
+::login alice Alice alicepass
+::as wiz
+@create Wreck
+@chown Wreck=*Alice
+@recycle Wreck
+@nuke Wreck
+look Wreck
+@undestroy Wreck
+@nuke Wreck
+@dig/teleport WreckRoom
+@open WreckExit
+@recycle here
+look
+@undestroy here
+@tel/silent me=#0
+::logout alice
