@@ -51,8 +51,11 @@ public partial class GmccgAcceptanceTests
 	{
 		var suite = SoftcodeSuiteInstaller.Locate("SHARPMUSH_GMCCG_PATH", "GMCCG");
 		await SoftcodeSuiteInstaller.ConfigureAsync(Factory, TinyMuxDatabaseReader.CompatibilityOptions());
-		await SoftcodeSuiteInstaller.InstallAsync(Factory, Parts.SelectMany(part =>
-			Directory.GetFiles(Path.Join(suite, part), "*.txt").Order(StringComparer.Ordinal)), SoftcodeSuiteInstaller.MuxRewrite);
+		var files = Parts.SelectMany(part => Directory.GetFiles(Path.Join(suite, part), "*.txt").Order(StringComparer.Ordinal)).ToList();
+		var names = await SoftcodeSuiteInstaller.AttributeNamesAsync(files);
+		await Assert.That(names.Renames).ContainsKey("MERIT.AREA_OF_EXPERTISE_()");
+		await SoftcodeSuiteInstaller.InstallAsync(Factory, files,
+			command => names.Rewrite(SoftcodeSuiteInstaller.MuxRewrite(command)).Text);
 		await SoftcodeSuiteInstaller.HearCommandsAsync(Factory);
 
 		var roll = await SoftcodeSuiteInstaller.RunAsync(Factory, "think [u(v(d.nr)/f.roller,3,10)]");

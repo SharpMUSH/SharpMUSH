@@ -370,6 +370,10 @@ public static partial class TinyMuxDatabaseReader
 		/// <summary>One line for each attribute whose colour substitutions were rewritten or need a look.</summary>
 		private readonly List<SoftcodeRewrite> _rewrites = [];
 
+		/// <summary>User attribute names SharpMUSH refuses, renamed, and the code that names them.</summary>
+		private readonly AttributeNameRewriter _names = AttributeNameRewriter.For(
+			file.UserAttributes.Values.Select(user => user.Name), TinyMuxNames.Attributes.Values);
+
 		private void Tally(ImportWarningKind kind, string what, int dbref, bool routine = false)
 		{
 			var tally = routine ? _routine : _tally;
@@ -542,7 +546,7 @@ public static partial class TinyMuxDatabaseReader
 		/// <summary>The SharpMUSH name of an attribute number, built-in or user-named; null for an unnamed one.</summary>
 		private string? AttributeNameOf(int number)
 			=> number >= TinyMuxNames.FirstUserAttribute
-				? file.UserAttributes.TryGetValue(number, out var user) ? user.Name : null
+				? file.UserAttributes.TryGetValue(number, out var user) ? _names.Name(user.Name) : null
 				: TinyMuxNames.Attributes.GetValueOrDefault(number);
 
 		private List<string> AttributeFlagNames(int flags, string name, int dbref)
@@ -758,10 +762,17 @@ public static partial class TinyMuxDatabaseReader
 			var colour = ColourSubstitutionRewriter.Rewrite(value,
 				new ColourRewriteOptions(ColourSubstitutionDialect.TinyMux, ColourRewriteMode.Auto));
 
+			var names = _names.Rewrite(colour.Text);
+
 			var said = new List<string>();
 			if (colour.Changed)
 			{
 				said.Add("%c/%x colour written as ansi()");
+			}
+
+			if (names.Changed)
+			{
+				said.Add("renamed attributes written under their new names");
 			}
 
 			said.AddRange(colour.Flags.Select(flag => $"check by hand: {flag}"));
@@ -769,10 +780,10 @@ public static partial class TinyMuxDatabaseReader
 			{
 				// Shown to the administrator, so the stored colour, which is private-use code points, is left out.
 				_rewrites.Add(new SoftcodeRewrite($"#{dbref}/{name}", string.Join("; ", said),
-					TinyMuxColour.Strip(value), TinyMuxColour.Strip(colour.Text)));
+					TinyMuxColour.Strip(value), TinyMuxColour.Strip(names.Text)));
 			}
 
-			return colour.Text;
+			return names.Text;
 		}
 
 		private void Report()
@@ -790,6 +801,8 @@ public static partial class TinyMuxDatabaseReader
 				"TinyMUX compresses runs of spaces in evaluated text and SharpMUSH keeps them; there is no option for it yet, " +
 				"so output that relied on it may show extra spaces."));
 
+			notes.AddRange(_names.Renames.OrderBy(rename => rename.Key, StringComparer.Ordinal).Select(rename => new ImportWarning(ImportWarningKind.Attributes,
+				AttributeNameRewriter.Note(rename.Key, rename.Value))));
 			notes.AddRange(Tallied(_tally));
 			_database.RoutineNotes.AddRange(Tallied(_routine).Select(tallied => tallied.Text));
 

@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,7 +44,7 @@ internal static partial class SoftcodeSuiteInstaller
 	public static IEnumerable<string> Commands(IEnumerable<string> lines)
 	{
 		var inComment = false;
-		string? current = null;
+		StringBuilder? current = null;
 		foreach (var line in lines)
 		{
 			if (inComment)
@@ -54,7 +55,7 @@ internal static partial class SoftcodeSuiteInstaller
 
 			if (line.StartsWith("/*", StringComparison.Ordinal))
 			{
-				if (current is not null) yield return current;
+				if (current is not null) yield return current.ToString();
 				current = null;
 				inComment = !line.Contains("*/", StringComparison.Ordinal);
 				continue;
@@ -66,15 +67,15 @@ internal static partial class SoftcodeSuiteInstaller
 
 			if (char.IsWhiteSpace(line[0]) && current is not null)
 			{
-				current += line.TrimStart();
+				current.Append(line.TrimStart());
 				continue;
 			}
 
-			if (current is not null) yield return current;
-			current = line;
+			if (current is not null) yield return current.ToString();
+			current = new StringBuilder(line);
 		}
 
-		if (current is not null) yield return current;
+		if (current is not null) yield return current.ToString();
 	}
 
 	/// <summary>
@@ -83,8 +84,16 @@ internal static partial class SoftcodeSuiteInstaller
 	public static async Task ConfigureAsync(ServerWebAppFactory factory, IReadOnlyDictionary<string, object> options)
 	{
 		foreach (var (key, value) in options)
-			if (value is bool or string)
-				await RunAsync(factory, $"@config/set {key}={(value is true ? "yes" : value is false ? "no" : value)}");
+		{
+			var text = value switch
+			{
+				bool flag => flag ? "yes" : "no",
+				string written => written,
+				_ => null
+			};
+			if (text is not null)
+				await RunAsync(factory, $"@config/set {key}={text}");
+		}
 	}
 
 	/// <summary>Lets every thing hear <c>$</c>-commands, as an imported thing that never had NO_COMMAND does.</summary>
@@ -111,6 +120,24 @@ internal static partial class SoftcodeSuiteInstaller
 			foreach (var command in Commands(await File.ReadAllLinesAsync(file)))
 				await RunAsync(factory, rewrite(command));
 	}
+
+	/// <summary>
+	/// The renames an import makes for the attribute names <paramref name="files"/> set with <c>&amp;</c> that SharpMUSH
+	/// refuses, which rewrite both the setting command and the code that names them.
+	/// </summary>
+	public static async Task<AttributeNameRewriter> AttributeNamesAsync(IEnumerable<string> files)
+	{
+		var names = new List<string>();
+		foreach (var file in files)
+			names.AddRange(Commands(await File.ReadAllLinesAsync(file))
+				.Select(command => SetAttribute().Match(command))
+				.Where(match => match.Success)
+				.Select(match => match.Groups["name"].Value));
+		return AttributeNameRewriter.For(names);
+	}
+
+	[GeneratedRegex(@"^&(?<name>\S+)\s")]
+	private static partial Regex SetAttribute();
 
 	/// <summary>What a RhostMUSH import does to a stored value: colour substitutions, then the Rhost rewrites.</summary>
 	public static string RhostRewrite(string value)

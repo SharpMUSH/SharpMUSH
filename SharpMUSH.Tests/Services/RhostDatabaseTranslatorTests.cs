@@ -196,6 +196,42 @@ public class RhostDatabaseTranslatorTests
 		await Assert.That(database.ImportNotes.Texts()).Contains(n => n.StartsWith("Cluster attribute CMD_HELLO: held by more than one"));
 	}
 
+	/// <summary>A user attribute named with ( ) is imported under a name SharpMUSH takes, and code naming it follows.</summary>
+	[Test]
+	public async Task RenamesAttributeNamesSharpMushRefuses()
+	{
+		var text = (await File.ReadAllTextAsync(RhostFlatfileReaderTests.FlatfilePath))
+			.Replace("+N260\n", "+N262\n+A260\n1:STAT.STR_()\n+A261\n1:CMD_STAT\n");
+		text = WithAttributes(text, 9, ">260", "1", ">261", "$stat:think [u(me/stat.str_())]");
+
+		var database = RhostDatabaseTranslator.Translate(RhostFlatfileReader.Read(text));
+		var widget = Object(database, 9);
+
+		await Assert.That(widget.Attributes.Select(a => a.Name)).Contains("STAT.STR___");
+		await Assert.That(widget.Attributes.First(a => a.Name == "CMD_STAT").Value).IsEqualTo("$stat:think [u(me/STAT.STR___)]");
+		await Assert.That(database.ImportNotes.Texts()).Contains(n => n.StartsWith("Attribute STAT.STR_(): imported as STAT.STR___"));
+	}
+
+	/// <summary>
+	/// A world whose $-commands answer addcom and comlist, as SoftCom's do, gets SharpMUSH's built-in commands of those
+	/// names turned off, so its own answer; one that defines none keeps them.
+	/// </summary>
+	[Test]
+	public async Task TurnsOffBuiltInComsysCommandsTheWorldDefines()
+	{
+		var text = WithAttributes((await File.ReadAllTextAsync(RhostFlatfileReaderTests.FlatfilePath))
+				.Replace("+N260\n", "+N262\n+A260\n1:DO_ADDCOM\n+A261\n1:DO_COMLIST\n"), 9,
+			">260", "$addcom *=*:@pemit %#=added", ">261", "$comlist*:@pemit %#=listed");
+
+		var database = RhostDatabaseTranslator.Translate(RhostFlatfileReader.Read(text));
+
+		var restrictions = (Dictionary<string, string[]>)database.SourceOptions["command_restrictions"];
+		await Assert.That(restrictions.Keys).IsEquivalentTo(["ADDCOM", "COMLIST"]);
+		await Assert.That(restrictions["ADDCOM"]).IsEquivalentTo(["nobody"]);
+		await Assert.That(database.ImportNotes.Texts()).Contains(n => n.StartsWith("The world's own $-commands answer ADDCOM, COMLIST"));
+		await Assert.That((await TranslateAsync()).SourceOptions.ContainsKey("command_restrictions")).IsFalse();
+	}
+
 	[Test]
 	public async Task FlagsMapToSharpMUSHsOwnOrBecomeFlagsOfTheirOwnOrAreDropped()
 	{

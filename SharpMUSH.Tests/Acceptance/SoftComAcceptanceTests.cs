@@ -53,6 +53,12 @@ public class SoftComAcceptanceTests
 		var added = string.Join("\n", await SoftcodeSuiteInstaller.RunAsync(Factory, "comcfg/chanadd Gate=Acceptance gate"));
 		await Assert.That(added).Contains("New channel 'Gate' created");
 
+		// What the import turns off for a world whose $-commands define them, so SoftCom's answer.
+		foreach (var command in new[] { "addcom", "delcom", "comlist", "comtitle", "@clist", "@cemit", "@cboot" })
+			await SoftcodeSuiteInstaller.RunAsync(Factory, $"@command/disable {command}");
+		var alias = string.Join("\n", await SoftcodeSuiteInstaller.RunAsync(Factory, "addcom gt=Gate"));
+		await Assert.That(alias).Contains("ComSys: Alias of 'gt' set for channel 'Gate'.");
+
 		var report = await SoftcodeSuiteInstaller.ReportAsync(Factory, SoftcodeDialects.Rhost.Key);
 		await Assert.That(report.Where(key => !KnownGaps.Contains(key)).ToList()).IsEmpty()
 			.Because("SoftCom needs something new; fix it, or list it with the reason in KnownGaps");

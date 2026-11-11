@@ -128,6 +128,8 @@ public partial class PennMUSHDatabaseConverter
 				var value = (wanted, current) switch
 				{
 					(uint minimum, uint now) => Math.Max(minimum, now),
+					// A restriction the source needs replaces the configured one; appended words would land in its message.
+					(Dictionary<string, string[]> added, Dictionary<string, string[]> now) when IsRestrictionTable(name) => WithEntries(now, added),
 					(Dictionary<string, string[]> added, Dictionary<string, string[]> now) => WithAliases(now, added),
 					_ => wanted
 				};
@@ -150,6 +152,32 @@ public partial class PennMUSHDatabaseConverter
 			context.WarnNeedsAction(ImportWarningKind.Configuration, $"{names} could not be set ({ex.Message}); the imported {source.SourceName} softcode needs them: " +
 				"set them in the configuration and reload it.");
 		}
+	}
+
+	private static bool IsRestrictionTable(string name)
+		=> name.Equals("command_restrictions", StringComparison.OrdinalIgnoreCase)
+			|| name.Equals("function_restrictions", StringComparison.OrdinalIgnoreCase);
+
+	/// <summary><paramref name="now"/> with each entry of <paramref name="added"/> in place of its own, or itself when nothing differs.</summary>
+	internal static Dictionary<string, string[]> WithEntries(Dictionary<string, string[]> now, Dictionary<string, string[]> added)
+	{
+		if (added.All(entry => now.TryGetValue(entry.Key, out var words) && words.SequenceEqual(entry.Value)))
+		{
+			return now;
+		}
+
+		var merged = new Dictionary<string, string[]>(now, now.Comparer);
+		foreach (var (name, words) in added)
+		{
+			foreach (var same in merged.Keys.Where(key => key.Equals(name, StringComparison.OrdinalIgnoreCase)).ToList())
+			{
+				merged.Remove(same);
+			}
+
+			merged[name] = words;
+		}
+
+		return merged;
 	}
 
 	/// <summary>
