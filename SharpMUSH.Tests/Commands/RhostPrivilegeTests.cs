@@ -93,6 +93,15 @@ public class RhostPrivilegeTests : ServerTestBase
 			.Because("evaluating it reads it too");
 		await Assert.That(await EvalAs(_wizard.DbRef, $"default({thing}/SECRET,none)")).IsNotEqualTo(marker);
 
+		await Assert.That(await EvalAs(_wizard.DbRef, $"edefault({thing}/SECRET,none)")).IsEqualTo("none");
+
+		// A $-command in it still runs: hiding its value does not stop the object using it.
+		await Cmd($"@set {thing}=!NO_COMMAND");
+		await CmdAs(_wizard.DbRef, _wizard.Handle, $"&ACT {thing}=$darkcmd{marker}:@pemit %#=ran_{marker}");
+		await Cmd($"@set {thing}/ACT=wizard_dark");
+		await CmdAs(_wizard.DbRef, _wizard.Handle, $"darkcmd{marker}");
+		await Notifications.WaitForAsync(_wizard.DbRef, $"ran_{marker}");
+
 		await CmdAs(_wizard.DbRef, _wizard.Handle, $"&OPEN {thing}=x");
 		await CmdAs(_wizard.DbRef, _wizard.Handle, $"@set {thing}/OPEN=wizard_dark");
 		await Assert.That(await Eval($"lflags({thing}/OPEN)")).DoesNotContain("wizard_dark")

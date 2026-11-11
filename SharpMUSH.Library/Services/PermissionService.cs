@@ -397,11 +397,6 @@ public class PermissionService(
 		if (attribute.Length == 0)
 			return false;
 
-		// wizard_dark keeps its value from all but God, evaluated as much as read (TinyMUX and RhostMUSH ufun()
-		// read with See_attr).
-		if (!viewer.IsGod() && attribute.Any(static attr => attr.IsWizardDark()))
-			return false;
-
 		foreach (var attr in attribute)
 		{
 			if (!await CanEvalAttr(viewer, target, attr))
@@ -419,11 +414,6 @@ public class PermissionService(
 		params LazySharpAttribute[] attribute)
 	{
 		if (attribute.Length == 0)
-			return false;
-
-		// wizard_dark keeps its value from all but God, evaluated as much as read (TinyMUX and RhostMUSH ufun()
-		// read with See_attr).
-		if (!viewer.IsGod() && attribute.Any(static attr => attr.IsWizardDark()))
 			return false;
 
 		foreach (var attr in attribute)

@@ -177,7 +177,7 @@ public partial class Functions
 						mode: IAttributeService.AttributeMode.Execute,
 						parent: true);
 
-					if (maybeAttr is SharpAttribute[])
+					if (maybeAttr is SharpAttribute[] chain && !HidesWizardDark(executor, chain))
 					{
 						return Preserve(maybeAttr.AsCallState);
 					}
@@ -188,6 +188,13 @@ public partial class Functions
 
 		return Preserve(await defaultArg.GetParsedResultAsync());
 	}
+
+	/// <summary>
+	/// Whether default() and edefault() treat a wizard_dark attribute as missing: they hand its value to the caller, which
+	/// only God may read, as get() and u() check.
+	/// </summary>
+	private static bool HidesWizardDark(AnySharpObject executor, SharpAttribute[] chain)
+		=> !executor.IsGod() && chain.Any(attr => attr.IsWizardDark());
 
 	/// <summary>
 	/// Returns the first non-empty evaluated attribute value, or evaluates and returns the default value.
@@ -231,7 +238,7 @@ public partial class Functions
 						mode: IAttributeService.AttributeMode.Execute,
 						parent: true);
 
-					if (maybeAttr is SharpAttribute[])
+					if (maybeAttr is SharpAttribute[] chain && !HidesWizardDark(executor, chain))
 					{
 						return Preserve(await AttributeService.EvaluateAttributeFunctionResultAsync(
 							parser,
