@@ -9534,4 +9534,16 @@
   <data name="NavThemeTryStop" xml:space="preserve">
     <value>Nicht mehr ausprobieren</value>
   </data>
+  <data name="NavThemeImageFilters" xml:space="preserve">
+    <value>Bildfilter</value>
+  </data>
+  <data name="NavThemeImageFiltersOn" xml:space="preserve">
+    <value>An</value>
+  </data>
+  <data name="NavThemeImageFiltersOff" xml:space="preserve">
+    <value>Aus</value>
+  </data>
+  <data name="NavThemeImageFiltersNote" xml:space="preserve">
+    <value>Bilder (Avatare, Räume, Galerien, das Wiki) nehmen den Ton des Designs an. Schalte das aus, um sie in ihren eigenen Farben zu sehen.</value>
+  </data>
 </root>

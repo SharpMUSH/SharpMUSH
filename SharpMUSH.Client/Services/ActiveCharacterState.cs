@@ -77,10 +77,16 @@ public sealed class ActiveCharacterState(ILogger logger)
 	/// </summary>
 	public event Action? AppearanceChanged;
 
-	/// <summary>Records the theme, accent and colour vision the server stored for one character of the roster.</summary>
+	/// <summary>Records the theme, accent, colour vision and image filters the server stored for one character of the roster.</summary>
 	public void SetAppearance(int dbrefNumber, CharacterAppearance appearance)
 	{
-		CharacterSummary Updated(CharacterSummary c) => c with { ThemeId = appearance.ThemeId, Accent = appearance.Accent, Vision = appearance.Vision };
+		CharacterSummary Updated(CharacterSummary c) => c with
+		{
+			ThemeId = appearance.ThemeId,
+			Accent = appearance.Accent,
+			Vision = appearance.Vision,
+			ImageFilters = appearance.ImageFilters,
+		};
 
 		Characters = Characters.Select(c => c.DbrefNumber == dbrefNumber ? Updated(c) : c).ToList();
 		if (ActiveCharacter?.DbrefNumber == dbrefNumber)

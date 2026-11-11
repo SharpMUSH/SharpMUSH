@@ -7,7 +7,7 @@
    the picture (ImageUrl); given only the character, the avatar finds the picture in the directory. *@
 @if (Picture is { } url)
 {
-    <img class="@Join("char-avatar", Class, ImageClass)" src="@ApiUrl.Resolve(url)" alt="@(Alt ?? string.Empty)"
+    <img class="@Join("char-avatar game-picture", Class, ImageClass)" src="@ApiUrl.Resolve(url)" alt="@(Alt ?? string.Empty)"
          style="@Style" loading="@(Lazy ? "lazy" : null)" @attributes="Attributes" />
 }
 else if (Fallback is not null)

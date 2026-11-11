@@ -53,6 +53,21 @@
                             <span class="account-panel-item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Contrast" Style="font-size:var(--text-md);" /></span>
                             <span class="account-panel-item-label">@Loc["NavTheme"]</span>
                         </a>
+                        @* The quick toggle for the acting character's image filters (the theme's picture tone); the
+                           same choice is on the Theme page for every character. The panel stays open on a toggle. While
+                           a save runs the switch is aria-disabled, not disabled, so it keeps keyboard focus. *@
+                        @if (ActiveCharacter is { } acting)
+                        {
+                            <button type="button" role="switch" class="account-panel-item account-panel-filters"
+                                    aria-checked="@(acting.ImageFilters ? "true" : "false")" aria-disabled="@(_togglingFilters ? "true" : null)"
+                                    @onclick="() => ToggleImageFiltersAsync(acting)">
+                                <span class="account-panel-item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.FilterBAndW" Style="font-size:var(--text-md);" /></span>
+                                <span class="account-panel-item-label">@Loc["NavThemeImageFilters"]</span>
+                                <span class="account-panel-switch @(acting.ImageFilters ? "account-panel-switch--on" : null)" aria-hidden="true">
+                                    <span class="account-panel-switch-knob"></span>
+                                </span>
+                            </button>
+                        }
                         <div class="account-panel-divider"></div>
                         <button type="button" class="account-panel-item account-panel-item--danger" @onclick="HandleLogoutAsync">
                             <span class="account-panel-item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Logout" Style="font-size:var(--text-md);" /></span>
@@ -111,6 +126,25 @@
     [Parameter] public EventCallback<AccountAuthService.CharacterSummary> OnSwitchCharacter { get; set; }
     [Parameter] public EventCallback<AccountAuthService.CharacterSummary> OnOpenInNewTab { get; set; }
     [Parameter] public EventCallback OnLogout { get; set; }
+
+    /// <summary>Turns the acting character's image filters to the value given.</summary>
+    [Parameter] public EventCallback<bool> OnSetImageFilters { get; set; }
+
+    private bool _togglingFilters;
+
+    private async Task ToggleImageFiltersAsync(AccountAuthService.CharacterSummary acting)
+    {
+        if (_togglingFilters) return;
+        _togglingFilters = true;
+        try
+        {
+            await OnSetImageFilters.InvokeAsync(!acting.ImageFilters);
+        }
+        finally
+        {
+            _togglingFilters = false;
+        }
+    }
 
     private enum PanelLevel { Root, Submenu }
 

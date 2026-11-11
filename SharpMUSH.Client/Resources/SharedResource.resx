@@ -13155,4 +13155,19 @@
   <data name="AdmThemeStyleImageryIrradiated" xml:space="preserve">
     <value>Irradiated</value>
   </data>
+  <data name="NavThemeImageFilters" xml:space="preserve">
+    <value>Image filters</value>
+  </data>
+  <data name="NavThemeImageFiltersOn" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="NavThemeImageFiltersOff" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="NavThemeImageFiltersNote" xml:space="preserve">
+    <value>Pictures (avatars, rooms, galleries, the wiki) take the theme's tone. Turn this off to see them in their own colours.</value>
+  </data>
+  <data name="AdmThemeStyleImagerySmoke" xml:space="preserve">
+    <value>Smoke</value>
+  </data>
 </root>

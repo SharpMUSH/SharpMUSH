@@ -32,7 +32,7 @@
             </defs>
             @if (_backdrop is not null)
             {
-                <image class="map-backdrop" href="@_backdrop" x="0" y="0" width="@Num(Layout.Map.Size![0])" height="@Num(Layout.Map.Size[1])"
+                <image class="map-backdrop game-picture" href="@_backdrop" x="0" y="0" width="@Num(Layout.Map.Size![0])" height="@Num(Layout.Map.Size[1])"
                        preserveAspectRatio="none" />
             }
             @if (Editing && Layout.Picture is var (pictureWidth, pictureHeight))

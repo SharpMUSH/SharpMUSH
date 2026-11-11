@@ -252,6 +252,7 @@ public static class ThemeStyles
 			"natural", "tint", "sepia", "mono", "noir", "pastel", "airy", "spotlit", "sunny", "ink", "floodlit", "steel",
 			"vivid", "indigo", "print", "film", "cel", "neon", "dusk", "warm", "hangar", "hotblooded", "dreamlit", "crystalline",
 			"sixteen-bit", "redout", "cartridge", "watercolor", "etched", "nocturne", "duskfire", "gunmetal", "daguerreotype", "sunbleached", "candlelit", "tintype", "sunbaked", "irradiated",
+			"smoke",
 		],
 		[TextureStrength] = Strengths,
 		[FrameMarks] = [.. Frames.Values.Select(f => f.Marks).Distinct()],

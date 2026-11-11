@@ -24,6 +24,13 @@ public sealed class ThemeService : IThemeService, IDisposable
 	/// <summary>The light theme, kept only while the theme follows the browser's preference.</summary>
 	public const string LightCacheKey = "sharp-theme-light";
 
+	/// <summary>
+	/// The part that says whether pictures take the theme's picture tone: <c>data-image-filters="on"</c> or <c>"off"</c>
+	/// on &lt;html&gt;, from the acting character's <see cref="CharacterAppearance.ImageFilters"/>. shell.css turns the
+	/// tone off under "off". It rides with the theme's parts, so the cached theme paints it before the runtime loads.
+	/// </summary>
+	public const string ImageFiltersPart = "image-filters";
+
 	private readonly IJSRuntime _js;
 	private readonly IHttpClientFactory _http;
 	private readonly IAccountAuthState _account;
@@ -149,15 +156,23 @@ public sealed class ThemeService : IThemeService, IDisposable
 		ResolvedTheme For(bool light) => ThemeResolver.Resolve(
 			ThemeResolver.Pick(published, _defaults, light, character?.ThemeId, character?.Vision), character?.Accent, character?.Vision);
 
-		var dark = For(light: false);
-		var light = For(light: true);
+		// Signed out, the browser keeps the last character's choice, so signing in again paints no filtered flash.
+		var filters = character?.ImageFilters ?? _resolved.Parts.GetValueOrDefault(ImageFiltersPart) != "off";
+		var dark = WithImageFilters(For(light: false), filters);
+		var light = WithImageFilters(For(light: true), filters);
 		var resolved = _prefersLight ? light : dark;
 		_ = SaveAsync(dark, light.ThemeId == dark.ThemeId ? null : light);
-		if (resolved.Css == _resolved.Css && resolved.ThemeId == _resolved.ThemeId) return;
+		if (resolved.Css == _resolved.Css && resolved.ThemeId == _resolved.ThemeId
+			&& resolved.Parts.GetValueOrDefault(ImageFiltersPart) == _resolved.Parts.GetValueOrDefault(ImageFiltersPart)) return;
 
 		_resolved = resolved;
 		OnThemeChanged?.Invoke();
 	}
+
+	private static ResolvedTheme WithImageFilters(ResolvedTheme theme, bool on) => theme with
+	{
+		Parts = new Dictionary<string, string>(theme.Parts, StringComparer.Ordinal) { [ImageFiltersPart] = on ? "on" : "off" },
+	};
 
 	private async Task SaveAsync(ResolvedTheme theme, ResolvedTheme? light)
 	{

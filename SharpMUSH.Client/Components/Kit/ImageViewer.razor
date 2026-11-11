@@ -42,7 +42,7 @@
                 }
                 else if (ImageUrlPolicy.IsRenderable(item.Url))
                 {
-                    <img class="kit-viewer-img" src="@ApiUrl.Resolve(item.Url)" alt="@(item.Alt ?? string.Empty)" />
+                    <img class="kit-viewer-img game-picture" src="@ApiUrl.Resolve(item.Url)" alt="@(item.Alt ?? string.Empty)" />
                 }
                 else
                 {

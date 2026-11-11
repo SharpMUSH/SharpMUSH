@@ -92,7 +92,7 @@ else
                 case SidebarLead.Image:
                     @if (ImageUrlPolicy.IsRenderable(ImageUrl))
                     {
-                        <img class="kit-row-img" src="@ApiUrl.Resolve(ImageUrl!)" alt="" />
+                        <img class="kit-row-img game-picture" src="@ApiUrl.Resolve(ImageUrl!)" alt="" />
                     }
                     else if (Icon is not null)
                     {

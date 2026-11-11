@@ -61,7 +61,7 @@ else
                         @if (pictured)
                         {
                             <span class="exit-media">
-                                <img class="exit-img" src="@ApiUrl.Resolve(e.Dest!.Image!.Url)" alt="" loading="lazy" />
+                                <img class="exit-img game-picture" src="@ApiUrl.Resolve(e.Dest!.Image!.Url)" alt="" loading="lazy" />
                                 @Pill(e)
                             </span>
                         }
@@ -93,7 +93,7 @@ else
                             <div class="exit-preview-panel">
                                 @if (ImageUrlPolicy.IsRenderable(e.Dest?.Image?.Url))
                                 {
-                                    <img class="exit-preview-img" src="@ApiUrl.Resolve(e.Dest!.Image!.Url)" alt="" loading="lazy" />
+                                    <img class="exit-preview-img game-picture" src="@ApiUrl.Resolve(e.Dest!.Image!.Url)" alt="" loading="lazy" />
                                 }
                                 <div class="exit-preview-body">
                                     <div class="exit-row">

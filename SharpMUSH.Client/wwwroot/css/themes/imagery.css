@@ -1,5 +1,6 @@
-/* Theme parts: picture tones. [data-imagery] is the filter banners, covers and gallery pictures take
-   (--image-filter). "tint" and "pastel" turn pictures toward the accent's hue (--accent-hue, in degrees).
+/* Theme parts: picture tones. [data-imagery] is the filter banners, covers and the pictures put in the game take
+   (--image-filter; the game-picture rule in shell.css). A player who turns image filters off sees none of them
+   (data-image-filters, shell.css). "tint" and "pastel" turn pictures toward the accent's hue (--accent-hue, in degrees).
    A part that differs on a dark theme has a second rule with [data-scheme="dark"]: every attribute is on the
    same element, so the two are written together. */
 
@@ -44,3 +45,4 @@
 [data-imagery="tintype"] { --image-filter: sepia(0.6) saturate(0.9) contrast(1.15) brightness(0.92); }
 [data-imagery="sunbaked"] { --image-filter: sepia(0.7) saturate(1.1) contrast(1.05) brightness(1.02); }
 [data-imagery="irradiated"] { --image-filter: sepia(0.4) hue-rotate(30deg) saturate(1.1) contrast(1.15) brightness(0.9); }
+[data-imagery="smoke"] { --image-filter: grayscale(1) contrast(1.2) brightness(0.9); }

@@ -9534,4 +9534,16 @@
   <data name="NavThemeTryStop" xml:space="preserve">
     <value>Stop med at prøve</value>
   </data>
+  <data name="NavThemeImageFilters" xml:space="preserve">
+    <value>Billedfiltre</value>
+  </data>
+  <data name="NavThemeImageFiltersOn" xml:space="preserve">
+    <value>Til</value>
+  </data>
+  <data name="NavThemeImageFiltersOff" xml:space="preserve">
+    <value>Fra</value>
+  </data>
+  <data name="NavThemeImageFiltersNote" xml:space="preserve">
+    <value>Billeder (avatarer, rum, gallerier, wikien) får temaets tone. Slå det fra for at se dem i deres egne farver.</value>
+  </data>
 </root>

@@ -9534,4 +9534,16 @@
   <data name="NavThemeTryStop" xml:space="preserve">
     <value>Oprește încercarea</value>
   </data>
+  <data name="NavThemeImageFilters" xml:space="preserve">
+    <value>Filtre de imagine</value>
+  </data>
+  <data name="NavThemeImageFiltersOn" xml:space="preserve">
+    <value>Pornite</value>
+  </data>
+  <data name="NavThemeImageFiltersOff" xml:space="preserve">
+    <value>Oprite</value>
+  </data>
+  <data name="NavThemeImageFiltersNote" xml:space="preserve">
+    <value>Imaginile (avatare, camere, galerii, wiki-ul) iau tonul temei. Oprește-le ca să le vezi în culorile lor.</value>
+  </data>
 </root>

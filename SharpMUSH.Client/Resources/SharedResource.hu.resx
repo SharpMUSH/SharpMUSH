@@ -9534,4 +9534,16 @@
   <data name="NavThemeTryStop" xml:space="preserve">
     <value>Próba vége</value>
   </data>
+  <data name="NavThemeImageFilters" xml:space="preserve">
+    <value>Képszűrők</value>
+  </data>
+  <data name="NavThemeImageFiltersOn" xml:space="preserve">
+    <value>Be</value>
+  </data>
+  <data name="NavThemeImageFiltersOff" xml:space="preserve">
+    <value>Ki</value>
+  </data>
+  <data name="NavThemeImageFiltersNote" xml:space="preserve">
+    <value>A képek (avatarok, szobák, galériák, a wiki) felveszik a téma tónusát. Kapcsold ki, hogy a saját színeikben lásd őket.</value>
+  </data>
 </root>

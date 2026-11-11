@@ -9534,4 +9534,16 @@
   <data name="NavThemeTryStop" xml:space="preserve">
     <value>Przestań próbować</value>
   </data>
+  <data name="NavThemeImageFilters" xml:space="preserve">
+    <value>Filtry obrazów</value>
+  </data>
+  <data name="NavThemeImageFiltersOn" xml:space="preserve">
+    <value>Włączone</value>
+  </data>
+  <data name="NavThemeImageFiltersOff" xml:space="preserve">
+    <value>Wyłączone</value>
+  </data>
+  <data name="NavThemeImageFiltersNote" xml:space="preserve">
+    <value>Obrazy (awatary, pokoje, galerie, wiki) przyjmują ton motywu. Wyłącz je, aby widzieć je w ich własnych kolorach.</value>
+  </data>
 </root>

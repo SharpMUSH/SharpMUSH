@@ -9534,4 +9534,16 @@
   <data name="NavThemeTryStop" xml:space="preserve">
     <value>Parar de experimentar</value>
   </data>
+  <data name="NavThemeImageFilters" xml:space="preserve">
+    <value>Filtros de imagem</value>
+  </data>
+  <data name="NavThemeImageFiltersOn" xml:space="preserve">
+    <value>Ligados</value>
+  </data>
+  <data name="NavThemeImageFiltersOff" xml:space="preserve">
+    <value>Desligados</value>
+  </data>
+  <data name="NavThemeImageFiltersNote" xml:space="preserve">
+    <value>As imagens (avatares, salas, galerias, a wiki) assumem o tom do tema. Desligue para vê-las com as próprias cores.</value>
+  </data>
 </root>

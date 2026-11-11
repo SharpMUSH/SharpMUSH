@@ -8,7 +8,7 @@
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 
-@* Each of the account's characters with its own colour vision, theme and accent. The look is stored with the character, so
+@* Each of the account's characters with its own colour vision, theme, accent and image filters. The look is stored with the character, so
    it follows the player to every device, and the acting character's is the one the portal wears. An accent
    that would be too faint on the chosen theme is shown moved toward white or black until it reads. No browser reports
    a reader's colour vision, so the player says it here; with no theme chosen it picks that vision's theme for the
@@ -78,6 +78,23 @@
                         <span class="settings-theme-note" id="@($"vision-note-{character.DbrefNumber}")">
                             @Loc[character.Vision is null ? "NavThemeVisionNote" : character.ThemeId is null ? "NavThemeVisionFollows" : "NavThemeVisionKept"]
                         </span>
+                    </div>
+
+                    <div class="settings-theme-field">
+                        <span class="settings-theme-label" id="@($"filters-label-{character.DbrefNumber}")">@Loc["NavThemeImageFilters"]</span>
+                        <div class="settings-theme-accents settings-theme-filters" role="radiogroup" aria-labelledby="@($"filters-label-{character.DbrefNumber}")"
+                             aria-describedby="@($"filters-note-{character.DbrefNumber}")">
+                            @foreach (var on in new[] { true, false })
+                            {
+                                var chosen = character.ImageFilters == on;
+                                <button type="button" role="radio" class="settings-theme-own @(chosen ? "is-on" : null)" aria-checked="@(chosen ? "true" : "false")"
+                                        data-image-filters="@(on ? "on" : "off")" disabled="@busy"
+                                        @onclick="() => SaveAsync(character, character.ThemeId, character.Accent, character.Vision, on)">
+                                    @Loc[on ? "NavThemeImageFiltersOn" : "NavThemeImageFiltersOff"]
+                                </button>
+                            }
+                        </div>
+                        <span class="settings-theme-note" id="@($"filters-note-{character.DbrefNumber}")">@Loc["NavThemeImageFiltersNote"]</span>
                     </div>
 
                     <div class="settings-theme-field">
@@ -265,13 +282,18 @@
         }
     }
 
-    /// <summary>Saves a character's look; false when it was not saved (another save for it is under way, or it failed).</summary>
-    private async Task<bool> SaveAsync(AccountAuthService.CharacterSummary character, string? themeId, string? accent, string? vision)
+    /// <summary>
+    /// Saves a character's look, keeping its image filters unless <paramref name="imageFilters"/> says otherwise; false
+    /// when it was not saved (another save for it is under way, or it failed).
+    /// </summary>
+    private async Task<bool> SaveAsync(AccountAuthService.CharacterSummary character, string? themeId, string? accent, string? vision,
+        bool? imageFilters = null)
     {
         if (!_saving.Add(character.DbrefNumber)) return false;
         try
         {
-            if (await AccountAuth.SetAppearanceAsync(character.DbrefNumber, new CharacterAppearance(themeId, accent, vision)) is ApiFailure failure)
+            var appearance = new CharacterAppearance(themeId, accent, vision) { ImageFilters = imageFilters ?? character.ImageFilters };
+            if (await AccountAuth.SetAppearanceAsync(character.DbrefNumber, appearance) is ApiFailure failure)
             {
                 Snackbar.Add(Loc["NavThemeSaveFailed", failure.Message], Severity.Error);
                 return false;

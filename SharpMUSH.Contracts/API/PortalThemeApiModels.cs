@@ -58,4 +58,11 @@ public sealed record DefaultThemeRequest(string ThemeId);
 /// <paramref name="ThemeId"/> it picks that vision's theme for the browser's light or dark preference; with any theme
 /// it swaps the status and code colours for ones that stay apart for that vision.
 /// </param>
-public sealed record CharacterAppearance(string? ThemeId, string? Accent, string? Vision = null);
+public sealed record CharacterAppearance(string? ThemeId, string? Accent, string? Vision = null)
+{
+	/// <summary>
+	/// Whether pictures take the theme's picture tone (its <c>imagery</c>, such as Directive's monochrome); false shows
+	/// every picture as it was made, under any theme.
+	/// </summary>
+	public bool ImageFilters { get; init; } = true;
+}

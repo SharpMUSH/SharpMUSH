@@ -34,7 +34,7 @@
         var src = Element.SrcField is not null ? SchemaViewRenderer.ValueToString(Lookup(Element.SrcField)) : Element.Value;
         @if (ImageUrlPolicy.IsRenderable(src))
         {
-            <img class="schema-image" src="@ApiUrl.Resolve(src!)" alt="@(Element.Alt ?? string.Empty)" loading="lazy" />
+            <img class="schema-image game-picture" src="@ApiUrl.Resolve(src!)" alt="@(Element.Alt ?? string.Empty)" loading="lazy" />
         }
         break;
 

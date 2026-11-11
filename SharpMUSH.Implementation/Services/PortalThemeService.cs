@@ -42,6 +42,9 @@ public sealed class PortalAppearanceData
 
 	/// <summary>The player's colour vision (<see cref="ThemeVision"/>); empty for typical.</summary>
 	public string? Vision { get; set; }
+
+	/// <summary>Whether pictures take the theme's picture tone; null (never chosen) is on.</summary>
+	public bool? ImageFilters { get; set; }
 }
 
 /// <inheritdoc cref="IPortalThemeService"/>
@@ -183,6 +186,9 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 	public async ValueTask<CharacterAppearance> GetAppearanceAsync(SharpObject character)
 		=> await data.GetExpandedDataAsync<PortalAppearanceData>(character) is { } appearance
 			? new CharacterAppearance(NullIfEmpty(appearance.ThemeId), NullIfEmpty(appearance.Accent), ThemeVision.Chosen(appearance.Vision))
+			{
+				ImageFilters = appearance.ImageFilters ?? true,
+			}
 			: new CharacterAppearance(null, null);
 
 	private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
@@ -215,8 +221,14 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 
 		// Per-object data is merged over what is stored, and a null property keeps the stored value, so a cleared
 		// choice is written as an empty string.
-		await data.SetExpandedDataAsync(new PortalAppearanceData { ThemeId = themeId ?? "", Accent = accent ?? "", Vision = vision ?? "" }, character);
-		return new CharacterAppearance(themeId, accent, vision);
+		await data.SetExpandedDataAsync(new PortalAppearanceData
+		{
+			ThemeId = themeId ?? "",
+			Accent = accent ?? "",
+			Vision = vision ?? "",
+			ImageFilters = appearance.ImageFilters,
+		}, character);
+		return new CharacterAppearance(themeId, accent, vision) { ImageFilters = appearance.ImageFilters };
 	}
 
 	private static bool BuiltIn(string id) => BuiltInThemes.All.Any(t => t.Id == id);

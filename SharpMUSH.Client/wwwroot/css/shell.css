@@ -1382,6 +1382,21 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
     font-size: 0.85em;
 }
 
+/* Pictures put in the game (avatars, portraits, galleries, room, thing and exit pictures, scene headers and sidebar
+   rows, maps, wiki and schema images) take the theme's picture tone, as its banners do. A component marks such a picture game-picture;
+   the wiki's Markdown marks its own wiki-img. */
+.game-picture,
+.wiki-img {
+    filter: var(--image-filter);
+}
+
+/* A player who turns image filters off (ThemeService.ImageFiltersPart) sees every picture as it was made, under any
+   theme. This layer comes after the themes layer's picture tones; a theme's own stylesheet is unlayered, so
+   ResolvedTheme.Css repeats this rule after it. */
+:root[data-image-filters="off"] {
+    --image-filter: none;
+}
+
 /* Wiki images — lazy loading, constrained width */
 .wiki-img {
     max-width: 100%;

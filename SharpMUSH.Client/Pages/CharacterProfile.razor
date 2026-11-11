@@ -47,7 +47,7 @@ else
                 <div class="char-profile-avatar">
                     @if (ImageUrlPolicy.IsRenderable(PortraitUrl))
                     {
-                        <img class="char-profile-portrait" src="@ApiUrl.Resolve(PortraitUrl!)" alt="@DisplayName" />
+                        <img class="char-profile-portrait game-picture" src="@ApiUrl.Resolve(PortraitUrl!)" alt="@DisplayName" />
                     }
                     else
                     {

@@ -25,6 +25,17 @@ that vision's pair, dark or light by the browser's preference. With a theme chos
 derived status colours (`danger`, `success`, `info`, `special`) and code colours change to the vision's set. It is
 stored with the character (`CharacterAppearance.Vision`) like the theme and accent.
 
+**Image filters** give pictures the theme's tone (its `imagery`): Directive's smoky monochrome, Fantasy's sepia,
+and so on. That covers banners and covers, and also pictures put in the game: avatars, portraits, galleries, room,
+thing and exit pictures, scene headers and sidebar rows, maps, and wiki and schema images. A player turns them off to see every picture in
+its own colours, under any theme: **Image filters** in the account menu switches it for the acting character, and
+the Theme page sets it for each character. It is stored with the character (`CharacterAppearance.ImageFilters`, on
+unless turned off) and reaches the page as `data-image-filters="on"` or `"off"` on `<html>`, beside the theme's
+parts. Under `"off"`, `shell.css` sets `--image-filter: none` after the theme layers, and the theme's resolved CSS
+repeats that rule after its own stylesheet (`ResolvedTheme.ImageFiltersOffRule`), so a stylesheet that sets
+`--image-filter` on `:root` does not put the tone back. A stylesheet that writes `filter` on pictures itself is not
+covered by the switch; use `--image-filter` instead. Signed out, the browser keeps the last character's choice.
+
 ## Built-in themes
 
 `BuiltInThemes.All` (`SharpMUSH.Contracts/Models/Portal/PortalThemes.cs`):
@@ -33,8 +44,8 @@ stored with the character (`CharacterAppearance.Vision`) like the theme and acce
   paper, titles in Space Grotesk, a fine grain, and the `lifted` frame (cards on an elevation shadow, a glow on the
   Home hero).
 - **Directive** (`directive`, dark): white through smoke on black, Bodoni Moda capitals between dashes, square cards
-  marked like a filed report (`dossier`). The chrome stays grey: the character's accent is its only colour, apart
-  from warnings and missing links. Its layout theme carries a look too.
+  marked like a filed report (`dossier`), pictures in smoky monochrome (`smoke`). The chrome stays grey: the
+  character's accent is its only colour, apart from warnings and missing links. Its layout theme carries a look too.
 - One per MSSP genre, with the ids the telnet layout themes use: `fantasy`, `historical`, `horror`, `modern`,
   `mystery`, `romance`, `science-fiction`, `spiritual`.
 - Anime: `magical-girl`, `shojo`, `idol`, `slice-of-life`, `shonen`, `sports`, `mechmachine`, `real-robot`, `super-robot`, `isekai`, `yokai`.
@@ -156,6 +167,9 @@ value is one rule in `SharpMUSH.Client/wwwroot/css/themes/`, keyed on a data att
 | `frames.css` | `data-frame-marks`, `data-frame-edge`, `data-frame-shadow` |
 | `titles.css` | `data-ornament-glyphs`, `data-ornament-underline`, `data-effect-color`, `data-effect-shadow` |
 | `imagery.css` | `data-imagery` |
+
+A component that shows a picture put in the game marks its `<img>` `game-picture` (the wiki's Markdown marks its own
+`wiki-img`); `shell.css` gives both `filter: var(--image-filter)`.
 
 `ThemeResolver.Resolve` returns them as `ResolvedTheme.Parts`, with `data-scheme` (`dark` or `light`) for rules that
 differ between the two (`[data-scheme="dark"][data-texture="paper"]`). `ThemeProvider` puts them on `<html>` (the

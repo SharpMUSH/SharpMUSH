@@ -8847,4 +8847,16 @@
   <data name="NavThemeTryStop" xml:space="preserve">
     <value>Arrêter l'essai</value>
   </data>
+  <data name="NavThemeImageFilters" xml:space="preserve">
+    <value>Filtres d'image</value>
+  </data>
+  <data name="NavThemeImageFiltersOn" xml:space="preserve">
+    <value>Activés</value>
+  </data>
+  <data name="NavThemeImageFiltersOff" xml:space="preserve">
+    <value>Désactivés</value>
+  </data>
+  <data name="NavThemeImageFiltersNote" xml:space="preserve">
+    <value>Les images (avatars, salles, galeries, le wiki) prennent la teinte du thème. Désactivez-les pour les voir dans leurs propres couleurs.</value>
+  </data>
 </root>
