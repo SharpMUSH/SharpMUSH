@@ -256,7 +256,7 @@ public partial class TelnetServerNegotiationTests
 
 	/// <summary>
 	/// A MUD client prints the graphics questions as text, so only a terminal emulator named by TTYPE is asked at
-	/// connect: not a client that refuses TTYPE, names no terminal, names a bare colour level, or sends MTTS.
+	/// connect: not a client that never answers TTYPE, names no terminal, names a bare colour level, or sends MTTS.
 	/// </summary>
 	[Test]
 	[Arguments("")]
