@@ -254,15 +254,20 @@ public partial class Commands
 		var (othersMessage, othersDefaulted) = await GetAttributeOrDefault(
 			parser, AttributeService, executor, victim, actor, owhat, owhatd, stackArgs);
 
-		// TinyMUX's /no_name leaves the actor's name off <owhatd>; an <owhat> attribute still gets it.
-		var prependedMessage = noName && othersDefaulted
-			? othersMessage
-			: MarkupText.Plain($"{actor.Object().Name} {othersMessage.ToPlainText()}");
+		// TinyMUX's /no_name leaves the actor's name off <owhatd>, and an empty one says nothing; an <owhat>
+		// attribute still gets the name.
+		var bare = noName && othersDefaulted;
+		if (!bare || othersMessage.Length > 0)
+		{
+			var prependedMessage = bare
+				? othersMessage
+				: MarkupText.Plain($"{actor.Object().Name} {othersMessage.ToPlainText()}");
 
-		await CommunicationService.SendToRoomAsync(
-			actor, actorLocation, _ => prependedMessage,
-			INotifyService.NotificationType.Emit,
-			excludeObjects: [actor]);
+			await CommunicationService.SendToRoomAsync(
+				actor, actorLocation, _ => prependedMessage,
+				INotifyService.NotificationType.Emit,
+				excludeObjects: [actor]);
+		}
 
 		if (string.IsNullOrWhiteSpace(awhat)
 			|| await AttributeService.GetAttributeAsync(

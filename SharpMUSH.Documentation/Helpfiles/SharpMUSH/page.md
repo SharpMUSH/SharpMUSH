@@ -90,7 +90,7 @@ When a player is paged, their PAGEFORMAT attribute is checked, and if exists, th
 Page takes these switches: `/reply`, `/noeval`, `/blind`, `/override`, `/port` and `/list`, and `/recall`, `/conversations` and `/timestamps` for the page log.
 
 The `/noeval` switch prevents the MUSH from evaluating the message.<br>
-The `/blind` switch pages each player as if they were the only one paged: none of them sees, recalls or replies to the others.<br>
+The `/blind` switch pages each player as if they were the only one paged: none of them sees, recalls or replies to the others. Your page log keeps one page for each of them.<br>
 The `/override` switch needs wizard or Pemit_All authority and overrides pagelocks and HAVEN.<br>
 The `/port` switch is admin-only, and will page a single port descriptor directly, including connections that have not yet logged into a player.<br>
 The `/list` switch tells you who you last paged.<br>
