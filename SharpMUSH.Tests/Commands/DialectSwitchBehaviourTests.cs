@@ -4,7 +4,8 @@ namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
 /// TinyMUX's and RhostMUSH's switches SharpMUSH has under the same name: <c>@sweep/commands</c>,
-/// <c>/listeners</c> and <c>/players</c>, <c>@stats/all</c> and <c>/me</c>, <c>@wall/pose</c> and <c>@trigger/notify</c>.
+/// <c>/listeners</c> and <c>/players</c>, <c>@stats/all</c> and <c>/me</c>, <c>@wall/pose</c>, <c>@trigger/notify</c>,
+/// <c>@clone/parent</c> and <c>/inventory</c>, and <c>@wipe/regexp</c> and <c>@decompile/regexp</c>.
 /// </summary>
 public class DialectSwitchBehaviourTests : ServerTestBase
 {
@@ -142,5 +143,59 @@ public class DialectSwitchBehaviourTests : ServerTestBase
 		{
 			await ConnectionService.Disconnect(actor.Handle);
 		}
+	}
+
+	[Test]
+	public async Task CloneParentInheritsInsteadOfCopying()
+	{
+		var original = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("CloneParentOriginal")}"));
+		await Cmd($"&GREETING {original}=hello");
+
+		var clone = DBRef.Parse(await Cmd($"@clone/parent {original}"));
+
+		await Assert.That(await Eval($"[parent({clone})] [hasattr({clone},GREETING)] [get({clone}/GREETING)]"))
+			.IsEqualTo($"#{original.Number} 0 hello");
+	}
+
+	[Test]
+	public async Task CloneInventoryPutsTheCloneInYourHands()
+	{
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "CloneInventory");
+		var thing = TestIsolationHelpers.GenerateUniqueName("CloneInventoryThing");
+		try
+		{
+			var original = DBRef.Parse(await CmdAs(actor.DbRef, actor.Handle, $"@create {thing}"));
+			await CmdAs(actor.DbRef, actor.Handle, $"@drop {thing}");
+
+			var beside = await CmdAs(actor.DbRef, actor.Handle, $"@clone #{original.Number}");
+			var carried = await CmdAs(actor.DbRef, actor.Handle, $"@clone/inventory #{original.Number}");
+
+			await Assert.That(await Eval($"[loc({beside})] [loc({carried})]"))
+				.IsEqualTo($"{await Eval($"loc({actor.DbRef})")} #{actor.DbRef.Number}");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(actor.Handle);
+		}
+	}
+
+	[Test]
+	public async Task WipeAndDecompileTakeARegularExpression()
+	{
+		var thing = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("WipeRegexp")}"));
+		await Cmd($"&AB1 {thing}=one");
+		await Cmd($"&AB2 {thing}=two");
+		await Cmd($"&XAB {thing}=three");
+
+		var decompiled = await HeardWhile(WebAppFactoryArg.ExecutorDBRef, () => Cmd($"@decompile/db/regexp {thing}/^AB"));
+		await Assert.That(decompiled.Count(line => line.StartsWith("&AB", StringComparison.Ordinal)
+			&& line.Contains($"#{thing.Number}=", StringComparison.Ordinal))).IsEqualTo(2);
+		await Assert.That(decompiled.Any(line => line.StartsWith("&XAB", StringComparison.Ordinal)
+			&& line.Contains($"#{thing.Number}=", StringComparison.Ordinal))).IsFalse();
+
+		await Cmd($"@wipe/regexp {thing}/^AB");
+
+		await Assert.That(await Eval($"lattr({thing})")).IsEqualTo("XAB");
 	}
 }

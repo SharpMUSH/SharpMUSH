@@ -864,7 +864,7 @@ public partial class Commands
 	/// PennMUSH <c>cmd_clone</c> (<c>src/cmds.c</c>) is one call to <c>do_clone</c>, which
 	/// <see cref="BuildingHelpers.CloneAsync"/> is; <c>clone()</c> reaches the same body.
 	/// </remarks>
-	[SharpCommand(Name = "@CLONE", Output = CommandOutput.Value, Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
+	[SharpCommand(Name = "@CLONE", Output = CommandOutput.Value, Switches = ["PRESERVE", "INVENTORY", "PARENT"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 3, ParameterNames = ["object", "name", "dbref"])]
 	public async ValueTask<Option<CallState>> Clone(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -873,7 +873,9 @@ public partial class Commands
 		if (!await executor.Can(PortalPermission.PlayerCreate))
 			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerCreate));
 		var args = parser.CurrentState.Arguments;
-		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
+		var switches = parser.CurrentState.Switches.ToArray();
+		var preserve = switches.Contains("PRESERVE");
+		var options = new CloneOptions(switches.Contains("INVENTORY"), switches.Contains("PARENT"));
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message.ToPlainText(), LocateFlags.All,
@@ -881,7 +883,7 @@ public partial class Commands
 				PermissionService, LockService, AttributeService, FlagAndPowerService, DidItService,
 				EventService, Logger, executor, obj,
 				args.TryGetValue("1", out var newName) ? newName.Message : null, preserve,
-				BuildingHelpers.Argument(args, "2")) switch
+				BuildingHelpers.Argument(args, "2"), options) switch
 			{
 				DBRef clone => new CallState(clone.ToString()),
 				Error<string> error => new CallState(error.Value)
