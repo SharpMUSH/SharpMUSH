@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Library.Models;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -52,6 +53,21 @@ public static class SharpAttributeExtensions
 	/// <summary>Flagged <c>wizard_dark</c>: only God reads it.</summary>
 	public static bool IsWizardDark(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name.Equals("wizard_dark", StringComparison.OrdinalIgnoreCase));
+
+	/// <summary>
+	/// Whether <paramref name="executor"/> may not evaluate this attribute path on <paramref name="holder"/> because of
+	/// wizard_dark: only God, or the holder running its own code, may. The attribute service applies it to every
+	/// Execute-mode lookup.
+	/// </summary>
+	public static bool HiddenByWizardDark(this SharpAttribute[] path, AnySharpObject executor, AnySharpObject holder)
+		=> path.Any(attr => attr.IsWizardDark()) && WizardDarkHidesFrom(executor, holder);
+
+	/// <inheritdoc cref="HiddenByWizardDark(SharpAttribute[], AnySharpObject, AnySharpObject)"/>
+	public static bool HiddenByWizardDark(this LazySharpAttribute[] path, AnySharpObject executor, AnySharpObject holder)
+		=> path.Any(attr => attr.IsWizardDark()) && WizardDarkHidesFrom(executor, holder);
+
+	private static bool WizardDarkHidesFrom(AnySharpObject executor, AnySharpObject holder)
+		=> executor.Object().Key != holder.Object().Key && !executor.IsGod();
 
 	/// <summary>
 	/// PennMUSH's <c>AF_PRIVATE</c>. <c>attr_privs_set</c> gives that one bit two names -

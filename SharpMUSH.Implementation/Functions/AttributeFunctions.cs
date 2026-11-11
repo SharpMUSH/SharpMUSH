@@ -177,7 +177,7 @@ public partial class Functions
 						mode: IAttributeService.AttributeMode.Execute,
 						parent: true);
 
-					if (maybeAttr is SharpAttribute[] chain && !HidesWizardDark(executor, chain))
+					if (maybeAttr is SharpAttribute[])
 					{
 						return Preserve(maybeAttr.AsCallState);
 					}
@@ -188,13 +188,6 @@ public partial class Functions
 
 		return Preserve(await defaultArg.GetParsedResultAsync());
 	}
-
-	/// <summary>
-	/// Whether default() and edefault() treat a wizard_dark attribute as missing: they hand its value to the caller, which
-	/// only God may read, as get() and u() check.
-	/// </summary>
-	private static bool HidesWizardDark(AnySharpObject executor, SharpAttribute[] chain)
-		=> !executor.IsGod() && chain.Any(attr => attr.IsWizardDark());
 
 	/// <summary>
 	/// Returns the first non-empty evaluated attribute value, or evaluates and returns the default value.
@@ -238,7 +231,7 @@ public partial class Functions
 						mode: IAttributeService.AttributeMode.Execute,
 						parent: true);
 
-					if (maybeAttr is SharpAttribute[] chain && !HidesWizardDark(executor, chain))
+					if (maybeAttr is SharpAttribute[])
 					{
 						return Preserve(await AttributeService.EvaluateAttributeFunctionResultAsync(
 							parser,
@@ -1124,7 +1117,7 @@ public partial class Functions
 			{
 				var attribute = await AttributeService.GetAttributeAsync(executor, actualObject, attributeName,
 					mode: IAttributeService.AttributeMode.Execute, parent: true);
-				if (attribute is not SharpAttribute[] chain || HidesWizardDark(executor, chain))
+				if (attribute is not SharpAttribute[] chain)
 					return await ParseRawArgument(parser, parser.CurrentState.Arguments["1"].Message) ?? CallState.Empty;
 
 				var arguments = new Dictionary<string, CallState>();
@@ -1215,8 +1208,9 @@ public partial class Functions
 		}
 
 		var found = chain.Last();
-		// pfun() reads as God, so it checks wizard_dark for the caller itself, as get() and u() would.
-		if (HidesWizardDark(executor, chain) || found.IsInternal() || found.IsNoInherit())
+		// pfun() reads as God to skip the permission walk, so it applies the attribute service's wizard_dark rule
+		// for its caller itself.
+		if (chain.HiddenByWizardDark(executor, parentObject) || found.IsInternal() || found.IsNoInherit())
 		{
 			return CallState.Empty;
 		}

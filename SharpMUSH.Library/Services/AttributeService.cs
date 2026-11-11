@@ -255,10 +255,26 @@ public class AttributeService(
 				_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 			};
 
-		return allowed
+		return allowed && !HidesWizardDark(executor, obj, mode, result.Attributes)
 			? new AttributeRead<T>(result.Attributes, null)
 			: new AttributeRead<T>(null, permissionFailureType);
 	}
+
+	/// <summary>
+	/// wizard_dark in Execute mode. Read mode already refuses it to all but God (<see cref="IPermissionService"/>). An
+	/// object still runs its own wizard_dark code (triads, listens, locks, $-commands, events), as the engine fetches
+	/// those with the object as executor; anyone else evaluating it, as <c>default()</c> or <c>udefault()</c> do, would
+	/// get its value, so only God may.
+	/// </summary>
+	private static bool HidesWizardDark<T>(AnySharpObject executor, AnySharpObject obj, IAttributeService.AttributeMode mode,
+		T[] path) where T : class
+		=> mode == IAttributeService.AttributeMode.Execute
+			&& path switch
+			{
+				SharpAttribute[] eager => eager.HiddenByWizardDark(executor, obj),
+				LazySharpAttribute[] lazy => lazy.HiddenByWizardDark(executor, obj),
+				_ => false
+			};
 
 	/// <summary>
 	/// <see cref="CanReadThroughTargetsAsync{T}(AnySharpObject, T, DBRef, InheritanceWalk?, Func{DBRef, string[], ValueTask{T}}, Func{T[], ValueTask{bool}}, Func{T, string}, Func{T, bool})"/>
