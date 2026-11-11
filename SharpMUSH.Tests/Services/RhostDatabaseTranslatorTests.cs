@@ -137,26 +137,39 @@ public class RhostDatabaseTranslatorTests
 		var database = await TranslateAsync();
 		var gadget = Object(database, 10);
 
-		await Assert.That(gadget.Roles).Contains("marker0").And.Contains("setqlabel").And.DoesNotContain("marker1");
+		await Assert.That(gadget.Roles).Contains("totem-marker0").And.Contains("totem-setqlabel").And.DoesNotContain("totem-marker1");
 		await Assert.That(gadget.Flags).DoesNotContain("MARKER0");
 		await Assert.That(database.Roles.Where(r => r.Category == RhostDatabaseTranslator.TotemCategory).Select(r => r.Slug))
-			.IsEquivalentTo(["marker0", "setqlabel"]);
-		await Assert.That(database.Roles.First(r => r.Slug == "marker0").Permissions).IsEmpty();
+			.IsEquivalentTo(["totem-marker0", "totem-setqlabel"]);
+		await Assert.That(database.Roles.First(r => r.Slug == "totem-marker0").Permissions).IsEmpty();
 		await Assert.That(database.RoleCategories.Select(c => c.Name)).IsEquivalentTo([RhostDatabaseTranslator.TotemCategory]);
-		await Assert.That(database.ImportNotes.Texts()).Contains(n => n.StartsWith("Totem SETQLABEL: imported as the role setqlabel; anyone could set it"));
+		await Assert.That(database.ImportNotes.Texts()).Contains(n => n.StartsWith("Totem SETQLABEL: imported as the role totem-setqlabel; anyone could set it"));
 		await Assert.That(gadget.Attributes.Select(a => a.Name)).DoesNotContain("*TOTEMS");
 
 		RhostDatabaseTranslator.MapTotems(database, [new TotemDirective("Shiny", 2, 4), new TotemDirective("Dull", 2, 8)]);
 
-		await Assert.That(gadget.Roles).Contains("shiny").And.DoesNotContain("dull");
-		await Assert.That(database.Roles.Select(r => r.Slug)).Contains("shiny").And.Contains("dull");
-		await Assert.That(database.ImportNotes.Texts()).Contains(n => n.StartsWith("Totem SHINY: imported as the role shiny") && n.Contains("#10"));
+		await Assert.That(gadget.Roles).Contains("totem-shiny").And.DoesNotContain("totem-dull");
+		await Assert.That(database.Roles.Select(r => r.Slug)).Contains("totem-shiny").And.Contains("totem-dull");
+		await Assert.That(database.ImportNotes.Texts()).Contains(n => n.StartsWith("Totem SHINY: imported as the role totem-shiny") && n.Contains("#10"));
+	}
+
+	/// <summary>Two totems whose names make one slug share its role, and the import says so.</summary>
+	[Test]
+	public async Task TotemsMakingOneSlugShareARole()
+	{
+		var database = await TranslateAsync();
+		RhostDatabaseTranslator.MapTotems(database, [new TotemDirective("Big.One", 2, 4), new TotemDirective("Big_One", 2, 8), new TotemDirective(" ", 2, 16)]);
+
+		await Assert.That(database.Roles.Count(r => r.Slug == "totem-big_one")).IsEqualTo(1);
+		await Assert.That(database.Roles.Select(r => r.Slug)).DoesNotContain("totem-");
+		await Assert.That(database.ImportNotes.Texts()).Contains("Totem BIG_ONE: shares the role totem-big_one with the totem BIG.ONE");
 	}
 
 	[Test]
-	[Arguments("Shiny", "shiny")]
+	[Arguments("Shiny", "totem-shiny")]
 	[Arguments("Wizard", "totem-wizard")]
-	[Arguments("my.totem", "my_totem")]
+	[Arguments("my.totem", "totem-my_totem")]
+	[Arguments("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", "totem-abcdefghijklmnopqrstuvwxyz")]
 	public async Task TotemSlugs(string name, string slug)
 		=> await Assert.That(RhostDatabaseTranslator.TotemSlug(name)).IsEqualTo(slug);
 

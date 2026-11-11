@@ -781,9 +781,18 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		foreach (var role in roles)
 		{
-			if (await _roleRegistry.Value.GetRoleAsync(role.Slug, cancellationToken) is SharpRole)
+			if (await _roleRegistry.Value.GetRoleAsync(role.Slug, cancellationToken) is SharpRole kept)
 			{
-				context.Notes.Add($"Role {role.Slug}: kept as this world has it");
+				if (string.Equals(kept.Category, role.Category, StringComparison.OrdinalIgnoreCase))
+				{
+					context.Notes.Add($"Role {role.Slug}: kept as this world has it");
+				}
+				else
+				{
+					context.WarnNeedsAction(ImportWarningKind.Powers, $"Role {role.Slug}: this world already has it, in {kept.Category}, " +
+						$"so the objects that held {context.SourceName}'s {role.Name} get that role and what it allows. Rename one of them and assign it again");
+				}
+
 				continue;
 			}
 
