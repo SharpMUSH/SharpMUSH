@@ -122,6 +122,9 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			if (SpeechTokenCommand(tokenText) is { } speechReplacer)
 				return await RedispatchSpeechAsync(parser, speechReplacer, tokenText);
 
+			if (await ForcePrefixCommand(parser, command, tokenText) is { } forced)
+				return await RedispatchAsync(parser, forced);
+
 			if (command[..1] == visitor.Configuration.CurrentValue.Chat.ChatTokenAlias.ToString())
 			{
 				switch (await MatchChatAliasAsync(parser, command[1..]))
@@ -482,6 +485,23 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	private static ValueTask<Option<CallState>> RedispatchSpeechAsync(IMUSHCodeParser parser,
 		string speechReplacer, MString tokenText)
 		=> RedispatchAsync(parser, MarkupText.Concat(MarkupText.Plain(speechReplacer + " "), tokenText.Substring(1)));
+
+	/// <summary>
+	/// PennMUSH's <c>NUMBER_TOKEN</c> (<c>command.c</c>, <c>parse_force</c> in <c>wiz.c</c>): a line run by a player or
+	/// thing whose first word is <c>#</c> and digits, with a command after it, is <c>@force</c> of that object, the
+	/// command evaluated once, by the object forced. The line to run instead, or <see langword="null"/>.
+	/// </summary>
+	private async ValueTask<MString?> ForcePrefixCommand(IMUSHCodeParser parser, string command, MString tokenText)
+	{
+		if (command.Length < 2 || command[0] != '#' || command.AsSpan(1).IndexOfAnyExceptInRange('0', '9') >= 0)
+			return null;
+
+		var start = CommandArgumentSplitter.SkipSpaces(tokenText, command.Length);
+		return start < tokenText.Length
+			&& await parser.CurrentState.KnownExecutorObject(services.Mediator) is { IsPlayer: true } or { IsThing: true }
+				? MarkupText.Concat(MarkupText.Plain($"@force/noeval {command}="), tokenText.Substring(start, tokenText.Length - start))
+				: null;
+	}
 
 	/// <summary>
 	/// Runs <paramref name="line"/> in place of the typed one. PennMUSH swaps the command name without

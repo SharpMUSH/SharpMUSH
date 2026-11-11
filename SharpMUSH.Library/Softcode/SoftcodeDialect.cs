@@ -107,6 +107,11 @@ public static class SoftcodeDialects
 			["@reclist"] = "@recover",
 			// Its own command, reached only here: a global @site would make @sit ambiguous.
 			["@site"] = "@rhost_site",
+			// Commands both RhostMUSH and TinyMUX have and SharpMUSH has no name for.
+			["@femit"] = "@dialect_femit",
+			["@fpose"] = "@dialect_fpose",
+			["@fsay"] = "@dialect_fsay",
+			["@last"] = "@dialect_last",
 			["folder"] = "@mail/folder",
 			["rpage"] = "page/reply",
 			["rp"] = "page/reply",
@@ -237,6 +242,13 @@ public static class SoftcodeDialects
 			["@file"] = "@mail/file",
 			// Its own command, reached only here: a global @folder would make @fo ambiguous.
 			["@folder"] = "@mux_folder",
+			// Commands both TinyMUX and RhostMUSH have and SharpMUSH has no name for; @fe is TinyMUX's own
+			// abbreviation of @femit, which here would abbreviate @feed.
+			["@fe"] = "@dialect_femit",
+			["@femit"] = "@dialect_femit",
+			["@fpose"] = "@dialect_fpose",
+			["@fsay"] = "@dialect_fsay",
+			["@last"] = "@dialect_last",
 			["@li"] = "@link",
 			["@lis"] = "@list",
 			["@lo"] = "@lock",
@@ -270,7 +282,6 @@ public static class SoftcodeDialects
 			["u"] = "use"
 		})
 	{
-		UnsupportedCommands = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "@fe", "@last" },
 		// The built-in attributes its import stores under SharpMUSH's names (TinyMuxNames.AttributeRenames), and the
 		// attr_alias entries of its alias.conf.
 		AttributeAliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

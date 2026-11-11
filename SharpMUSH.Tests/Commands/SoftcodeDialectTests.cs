@@ -226,39 +226,6 @@ public class SoftcodeDialectTests : ServerTestBase
 		}
 	}
 
-	/// <summary>
-	/// TinyMUX's <c>@fe</c> (its <c>@femit</c>) and <c>@last</c> (a login history) have no SharpMUSH command, so they
-	/// answer <c>Huh?</c> rather than running <c>@feed</c> or setting LAST.
-	/// </summary>
-	[Test]
-	public async Task GameDialectLeavesTinyMuxCommandsSharpMushLacksUnmatched()
-	{
-		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "DialectMuxHuh");
-		var token = TestIsolationHelpers.GenerateUniqueName("dialecthuh");
-		try
-		{
-			using (TestOptionsOverride.Scope(options => options with
-			{
-				Compatibility = options.Compatibility with { Dialect = "mux" }
-			}))
-			{
-				await CmdAs(actor.DbRef, actor.Handle, $"@fe me={token}");
-				await CmdAs(actor.DbRef, actor.Handle, $"@last me={token}");
-				// Written with no space before the =, the line still reads TinyMUX's name first.
-				await CmdAs(actor.DbRef, actor.Handle, $"@fe={token}");
-				await WebAppFactoryArg.QueueBarrierAsync();
-			}
-
-			await Assert.That(Notifications.For(actor.DbRef).Count(message => message.StartsWith("Huh?", StringComparison.Ordinal)))
-				.IsEqualTo(3);
-		}
-		finally
-		{
-			await ConnectionService.Disconnect(actor.Handle);
-		}
-	}
-
 	/// <summary>An alias that names nothing would read as a missing function or <c>Huh?</c>, as if it were not there.</summary>
 	[Test]
 	public async Task EveryDialectAliasNamesSomethingSharpMushHas()

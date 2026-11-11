@@ -20,6 +20,7 @@ These commands can only be entered through a client, on the connection they are 
 - [OUTPUTPREFIX]
 - [OUTPUTSUFFIX]
 - [PROMPT_NEWLINES]
+- [PUEBLOCLIENT]
 - [QUIT]
 - [SCREENREADER]
 - [SCREENWIDTH]
