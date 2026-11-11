@@ -1829,6 +1829,45 @@
     "file": "compatibility-identity.md"
   },
   {
+    "id": "compatibility-left-out",
+    "lookup": "compatibility left out",
+    "title": "Compatibility Left Out",
+    "aliases": [],
+    "sections": [
+      {
+        "id": "rhostmush-functions-left-out",
+        "lookup": "compatibility left out rhostmush functions",
+        "heading": "RhostMUSH functions left out",
+        "aliases": []
+      },
+      {
+        "id": "rhostmush-clusters-left-out",
+        "lookup": "compatibility left out rhostmush clusters",
+        "heading": "RhostMUSH clusters left out",
+        "aliases": []
+      },
+      {
+        "id": "rhostmush-functions-little-used",
+        "lookup": "compatibility left out rhostmush little used",
+        "heading": "RhostMUSH functions little used",
+        "aliases": []
+      },
+      {
+        "id": "rhostmush-commands-left-out",
+        "lookup": "compatibility left out rhostmush commands",
+        "heading": "RhostMUSH commands left out",
+        "aliases": []
+      },
+      {
+        "id": "tinymux-functions-and-commands-left-out",
+        "lookup": "compatibility left out tinymux",
+        "heading": "TinyMUX functions and commands left out",
+        "aliases": []
+      }
+    ],
+    "file": "compatibility-left-out.md"
+  },
+  {
     "id": "compatibility-mail",
     "lookup": "compatibility mail",
     "title": "Compatibility Mail",
