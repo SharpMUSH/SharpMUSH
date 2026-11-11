@@ -5737,6 +5737,16 @@
     "file": "ltoggles-function.md"
   },
   {
+    "id": "lzone-function",
+    "lookup": "lzone()",
+    "title": "lzone()",
+    "aliases": [
+      "lzone"
+    ],
+    "sections": [],
+    "file": "lzone-function.md"
+  },
+  {
     "id": "mail-other",
     "lookup": "Other Mail Commands",
     "title": "Other Mail Commands",
@@ -8454,6 +8464,20 @@
       }
     ],
     "file": "search-command.md"
+  },
+  {
+    "id": "searchng-function",
+    "lookup": "searchng()",
+    "title": "searchng()",
+    "aliases": [
+      "SEARCHNGOBJID()",
+      "SEARCHOBJID()",
+      "searchng",
+      "searchngobjid",
+      "searchobjid"
+    ],
+    "sections": [],
+    "file": "searchng-function.md"
   },
   {
     "id": "secret-command",
@@ -17149,6 +17173,56 @@
     "file": "wshtml-function.md"
   },
   {
+    "id": "zchildren-function",
+    "lookup": "zchildren()",
+    "title": "zchildren()",
+    "aliases": [
+      "ZROOMS()",
+      "ZEXITS()",
+      "ZTHINGS()",
+      "INZONE()",
+      "zchildren",
+      "zrooms",
+      "zexits",
+      "zthings",
+      "inzone"
+    ],
+    "sections": [],
+    "file": "zchildren-function.md"
+  },
+  {
+    "id": "zfun2local-function",
+    "lookup": "zfun2local()",
+    "title": "zfun2local()",
+    "aliases": [
+      "ZFUN2()",
+      "ZFUNLOCAL()",
+      "ZFUNDEFAULT()",
+      "ZFUN2DEFAULT()",
+      "ZFUNLDEFAULT()",
+      "ZFUN2LDEFAULT()",
+      "ZFUNEVAL()",
+      "zfunlocal",
+      "zfundefault",
+      "zfun2default",
+      "zfunldefault",
+      "zfun2ldefault",
+      "zfuneval"
+    ],
+    "sections": [],
+    "file": "zfun2local-function.md"
+  },
+  {
+    "id": "zlcon-function",
+    "lookup": "zlcon()",
+    "title": "zlcon()",
+    "aliases": [
+      "zlcon"
+    ],
+    "sections": [],
+    "file": "zlcon-function.md"
+  },
+  {
     "id": "zone-masters",
     "lookup": "zone masters",
     "title": "Zone Masters",
@@ -17165,6 +17239,16 @@
       }
     ],
     "file": "zone-masters.md"
+  },
+  {
+    "id": "zonecmd-function",
+    "lookup": "zonecmd()",
+    "title": "zonecmd()",
+    "aliases": [
+      "zonecmd"
+    ],
+    "sections": [],
+    "file": "zonecmd-function.md"
   },
   {
     "id": "zones",
@@ -17186,6 +17270,18 @@
       }
     ],
     "file": "zones.md"
+  },
+  {
+    "id": "zsearch-function",
+    "lookup": "zsearch()",
+    "title": "zsearch()",
+    "aliases": [
+      "ZSEARCHOBJID()",
+      "zsearch",
+      "zsearchobjid"
+    ],
+    "sections": [],
+    "file": "zsearch-function.md"
   },
   {
     "id": "discord-command",
