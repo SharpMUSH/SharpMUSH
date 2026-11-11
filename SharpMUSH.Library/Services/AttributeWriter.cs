@@ -569,7 +569,9 @@ internal sealed class AttributeWriter(
 		// checkParents is false above, so every match is sourced from obj itself - the whole
 		// write path only ever touches the object's own attributes (Penn's atr_iter_get).
 		var attrArr = await attr.Select(x => x.Attribute).ToArrayAsync();
-		var isWipe = patternMode == IAttributeService.AttributePatternMode.Wildcard;
+		// @wipe asks for Wildcard, or Regex for RhostMUSH's @wipe/regexp; only @set obj/attr= asks for Exact.
+		var isWipe = patternMode is IAttributeService.AttributePatternMode.Wildcard
+			or IAttributeService.AttributePatternMode.Regex;
 
 		// PennMUSH's wipe_helper (src/set.c:1503-1504):
 		//   if (wildcard(pattern) && AF_Wizard(atr) && !God(player)) return 0;
@@ -579,7 +581,9 @@ internal sealed class AttributeWriter(
 		// `wildcard_count(s, 0) == -1`, hdrs/externs.h:529 - an unescaped '*' or '?'), not on
 		// which pattern mode the caller asked for: @wipe always requests Wildcard mode even for a
 		// literal name, and that literal case must stay allowed.
-		var patternIsWildcard = isWipe && AttributeService.HasUnescapedWildcard(attributePattern);
+		// A regular expression always counts as a wildcard: it names no attribute by itself.
+		var patternIsWildcard = patternMode is IAttributeService.AttributePatternMode.Regex
+			|| (isWipe && AttributeService.HasUnescapedWildcard(attributePattern));
 		var executorIsGod = executor.IsGod();
 
 		if (attrArr.Length == 0)

@@ -490,6 +490,11 @@ public partial class Commands
 		// was blocked. ClearAttributeAsync's wipe branch does exactly that internally, so this
 		// command has nothing left to report itself - doing so here too would either duplicate or
 		// (worse) silently override one class of outcome with a generic "success" line.
+		if (regexp && !await IsValidAttributeRegexAsync(executor, maybeAttribute))
+		{
+			return new CallState(ErrorMessages.Returns.InvalidRegexp);
+		}
+
 		// RhostMUSH's /regexp reads the pattern as a regular expression.
 		var (attributePattern, mode) = (string.IsNullOrEmpty(maybeAttribute), regexp) switch
 		{
@@ -501,6 +506,22 @@ public partial class Commands
 		await AttributeService.ClearAttributeAsync(executor, targetObject, attributePattern, mode);
 
 		return new CallState(string.Empty);
+	}
+
+	/// <summary>Whether <paramref name="pattern"/> compiles as a regular expression; says so when it does not.</summary>
+	private async ValueTask<bool> IsValidAttributeRegexAsync(AnySharpObject executor, string? pattern)
+	{
+		try
+		{
+			SoftcodeRegex.Create(pattern ?? string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+			return true;
+		}
+		// An invalid pattern: the Regex constructor's RegexParseException is an ArgumentException.
+		catch (ArgumentException)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandInvalidRegexp), executor);
+			return false;
+		}
 	}
 
 	[SharpCommand(Name = "@EDIT", Switches = ["FIRST", "CHECK", "QUIET", "REGEXP", "NOCASE", "ALL"],

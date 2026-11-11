@@ -194,8 +194,15 @@ public class DialectSwitchBehaviourTests : ServerTestBase
 		await Assert.That(decompiled.Any(line => line.StartsWith("&XAB", StringComparison.Ordinal)
 			&& line.Contains($"#{thing.Number}=", StringComparison.Ordinal))).IsFalse();
 
-		await Cmd($"@wipe/regexp {thing}/^AB");
+		await Cmd($"&AB1`CHILD {thing}=four");
+		await Cmd($"&_KEEP {thing}=engine");
 
-		await Assert.That(await Eval($"lattr({thing})")).IsEqualTo("XAB");
+		var invalid = await HeardWhile(WebAppFactoryArg.ExecutorDBRef, () => Cmd($"@wipe/regexp {thing}/*AB"));
+		await Assert.That(invalid).Contains("Invalid Regular Expression.");
+
+		var wiped = await HeardWhile(WebAppFactoryArg.ExecutorDBRef, () => Cmd($"@wipe/regexp {thing}/^AB|^_KEEP"));
+		// @wipe's own tally, as a wildcard wipe gives it.
+		await Assert.That(wiped.Any(line => line.EndsWith(" attributes wiped.", StringComparison.Ordinal))).IsTrue();
+		await Assert.That(await Eval($"lattr({thing}/**)")).IsEqualTo("_KEEP XAB");
 	}
 }

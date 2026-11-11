@@ -34,7 +34,7 @@ When cloning things and exits, the clone will be placed in your current location
 
 The cloned object will have the same modification time as the original object, to make tracking revisions easier, but will have a different creation time.
 
-With `/parent`, the clone does not copy `<object>`'s attributes: `<object>` becomes its parent, so it inherits them.
+With `/parent`, the clone does not copy `<object>`'s attributes: `<object>` becomes its parent, so it inherits them. Its locks, flags and zones are still copied.
 
 Normally, the Wizard and Royalty flags, @powers and @warnings are stripped from the cloned object, but Wizards may use the `/preserve` switch to prevent this.
 

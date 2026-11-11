@@ -637,6 +637,12 @@ public partial class Commands
 		}
 
 		var obj = target.Object();
+		if (switches.Contains("REGEXP") && !string.IsNullOrEmpty(attributePattern)
+			&& !await IsValidAttributeRegexAsync(executor, attributePattern))
+		{
+			return new CallState(ErrorMessages.Returns.InvalidRegexp);
+		}
+
 		var hasPattern = !string.IsNullOrEmpty(attributePattern);
 		// NAME is the default: the lines name the object unless /DB asks for its dbref.
 		var useDbRef = switches.Contains("DB");
