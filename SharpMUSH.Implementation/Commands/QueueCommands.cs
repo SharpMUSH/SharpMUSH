@@ -977,8 +977,11 @@ public partial class Commands
 		}
 	}
 
-	private async ValueTask<Option<CallState>> ForceAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		AnySharpObject found, MString cmdListArg)
+	/// <summary>
+	/// Why <paramref name="executor"/> may not make <paramref name="found"/> act, having said so, or
+	/// <see langword="null"/> when it may: <c>@force</c>'s checks, which the forced speech commands share.
+	/// </summary>
+	private async ValueTask<CallState?> ForceRefusalAsync(AnySharpObject executor, AnySharpObject found)
 	{
 		// God cannot be forced by anyone (PennMUSH src/wiz.c).
 		if (found.IsGod() && !executor.IsGod())
@@ -997,8 +1000,15 @@ public partial class Commands
 		}
 
 		// RhostMUSH's NOFORCE: game.noforce shields its holder from forcers it reaches.
-		if (await found.ShieldedFrom(PortalPermission.NoForce, executor))
-			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Shielded(found, PortalPermission.NoForce));
+		return await found.ShieldedFrom(PortalPermission.NoForce, executor)
+			? await NotifyService.PermissionDenied(executor, PermissionRefusal.Shielded(found, PortalPermission.NoForce))
+			: null;
+	}
+
+	private async ValueTask<Option<CallState>> ForceAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		AnySharpObject found, MString cmdListArg)
+	{
+		if (await ForceRefusalAsync(executor, found) is { } refused) return refused;
 
 		if (Configuration.CurrentValue.Log.LogForces)
 			await LogForceAsync(executor, found, cmdListArg);
