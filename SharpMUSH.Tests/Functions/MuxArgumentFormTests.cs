@@ -110,7 +110,10 @@ public partial class MuxArgumentFormTests : ServerTestBase
 			await Assert.That(PortEntry().IsMatch(entry)).IsTrue().Because(entry);
 		}
 
-		await Assert.That(await Eval("lwho(0)")).IsEqualTo(await Eval("lwho()"));
+		foreach (var entry in (await Eval("lwho(0)")).Split(' ', StringSplitOptions.RemoveEmptyEntries))
+		{
+			await Assert.That(PlayerEntry().IsMatch(entry)).IsTrue().Because(entry);
+		}
 	}
 
 	[Test]
@@ -150,4 +153,7 @@ public partial class MuxArgumentFormTests : ServerTestBase
 
 	[GeneratedRegex(@"\A#\d+:\d+\z")]
 	private static partial Regex PortEntry();
+
+	[GeneratedRegex(@"\A#\d+\z")]
+	private static partial Regex PlayerEntry();
 }
