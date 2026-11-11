@@ -234,14 +234,18 @@ public static class TerminalFeatureReader
 	/// XTVERSION in <paramref name="probe"/>, else the first of <paramref name="terminalTypes"/>, which is the
 	/// client's own name. The later entries are what it claims to support (MTTS's <c>XTERM</c>, <c>ANSI</c> or
 	/// <c>VT100</c>, or the terminal a MUD client runs in) and never identify it: a MUD client that sends
-	/// <c>XTERM</c> second is not an xterm and would print a picture sent to one.
+	/// <c>XTERM</c> second is not an xterm and would print a picture sent to one. A bare <c>xterm</c> names no
+	/// terminal either: PuTTY, plain telnet and MUD clients report it, and xterm itself draws Sixel only when built
+	/// to emulate a VT340. A player names xterm with a pin, or it answers XTVERSION.
 	/// </summary>
 	public static TerminalProfile? Identify(IReadOnlyList<string> terminalTypes, TerminalProbeResult? probe, string? terminalPin)
 	{
 		ArgumentNullException.ThrowIfNull(terminalTypes);
 		return TerminalProfile.Find(terminalPin)
 			?? TerminalProfile.Identify(probe?.Version)
-			?? TerminalProfile.Identify(terminalTypes.FirstOrDefault());
+			?? (TerminalProfile.Identify(terminalTypes.FirstOrDefault()) is { } named && named != TerminalProfile.XTerm
+				? named
+				: null);
 	}
 
 	/// <summary>

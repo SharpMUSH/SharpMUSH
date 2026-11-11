@@ -349,7 +349,7 @@ public partial class TelnetServer
 
 		/// <summary>
 		/// Gives all initial protocols one bounded window before the welcome. Finishing TTYPE or
-		/// CHARSET does not imply MXP SUPPORT, GMCP modules or terminal queries have finished.
+		/// CHARSET does not imply MXP SUPPORT or GMCP modules have finished.
 		/// Early input is held until registration: an automatic login is not a capability reply.
 		/// Only the deadline, cancellation or the transport ending may release this window.
 		/// </summary>

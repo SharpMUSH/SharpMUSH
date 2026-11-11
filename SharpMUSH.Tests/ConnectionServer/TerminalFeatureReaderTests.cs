@@ -21,6 +21,8 @@ public class TerminalFeatureReaderTests
 	[Arguments("XTERM-KITTY", "kitty")]
 	[Arguments("foot", "foot")]
 	[Arguments("MUDFORGE,XTERM,MTTS 2349", "mudforge")]
+	[Arguments("xterm", null)]
+	[Arguments("XTERM,ANSI", null)]
 	[Arguments("MUDRAMMER,XTERM,ANSI", null)]
 	[Arguments("SHARPMUTERM,XTERM,ANSI,UTF-8,256 COLORS", null)]
 	[Arguments("TINTIN++,xterm-kitty,ANSI,UTF-8", null)]
