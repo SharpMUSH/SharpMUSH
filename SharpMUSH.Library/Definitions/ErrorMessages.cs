@@ -1382,6 +1382,69 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ObjectScheduledDestroyedFormat = "{0} is scheduled to be destroyed.";
 		/// <summary>
+		/// <c>do_destroy</c>'s word to a room and what is in it when the room is scheduled (<c>src/destroy.c:352</c>).
+		/// </summary>
+		public const string RoomShakesAndCrumbles = "The room shakes and begins to crumble.";
+		/// <summary>
+		/// <c>do_destroy</c>'s message for one's own room (<c>src/destroy.c:354</c>). <c>{0}</c> is <c>unparse_object</c>.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RewardedShortlyFormat = "You will be rewarded shortly for {0}.";
+		/// <summary>
+		/// <c>do_destroy</c>'s message for someone else's room (<c>src/destroy.c:358</c>): the owner's name, then the room.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string WreckingBallFormat = "The wrecking ball is on its way for {0}'s {1} and its exits.";
+		/// <summary>
+		/// To the owner of a room someone else scheduled (<c>src/destroy.c:362</c>): who did it, then the room.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ScheduledYourRoomFormat = "{0} has scheduled your room {1} to be destroyed.";
+		/// <summary>
+		/// <c>do_destroy</c>'s message for someone else's thing or exit (<c>src/destroy.c:382</c>, <c>:401</c>): the owner's name, then the object.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string OthersObjectScheduledDestroyedFormat = "{0}'s {1} is scheduled to be destroyed.";
+		/// <summary>
+		/// To the owner of a thing or exit someone else scheduled (<c>src/destroy.c:387</c>, <c>:398</c>, <c>:494</c>): who did it, then the object.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ScheduledYourObjectFormat = "{0} has scheduled your {1} for destruction.";
+		/// <summary>
+		/// <c>do_undestroy</c>'s word to the owner (<c>src/destroy.c:439</c>). <c>{0}</c> is <c>unparse_object</c>.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YourObjectSparedFormat = "Your {0} has been spared from destruction.";
+		/// <summary>
+		/// <c>do_undestroy</c>'s word to someone sparing another's object (<c>src/destroy.c:442</c>): the owner's name, then the object.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string OthersObjectSparedFormat = "{0}'s {1} has been spared from destruction.";
+		/// <summary>
+		/// <c>undestroy</c> sparing the GOING owner of what was spared (<c>src/destroy.c:534</c>). <c>{0}</c> is the owner.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string OwnerSparedFormat = "{0} has been spared from destruction.";
+		/// <summary>
+		/// To a GOING owner someone else spared (<c>src/destroy.c:536</c>).
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YouSparedByFormat = "You have been spared from destruction by {0}.";
+		/// <summary>
+		/// To a GOING player who spared one of their own objects (<c>src/destroy.c:540</c>).
+		/// </summary>
+		public const string YouSpared = "You have been spared from destruction.";
+		/// <summary>
+		/// <c>undestroy</c> sparing a spared exit's GOING source room (<c>src/destroy.c:564</c>).
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RoomSparedFormat = "The room {0} has been spared from destruction.";
+		/// <summary>
+		/// To that room's owner, when someone else spared it (<c>src/destroy.c:568</c>).
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RoomSparedByFormat = "The room {0} has been spared from destruction by {1}.";
+		/// <summary>
 		/// <c>do_halt</c>'s report to the halted object's owner (<c>src/cque.c:2177</c>), which
 		/// <c>free_object</c> reaches on the way to deleting the object.
 		/// </summary>

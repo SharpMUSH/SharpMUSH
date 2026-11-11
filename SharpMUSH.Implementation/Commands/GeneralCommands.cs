@@ -524,6 +524,68 @@ public partial class Commands
 	/// <c>examine_atrs</c> (<c>src/look.c:372-405</c>): the attribute lines an examine prints. A pattern
 	/// that matches nothing answers <c>No matching attributes.</c>; the whole-object form stays silent.
 	/// </summary>
+	private const string RemainingQuota = "RQUOTA";
+
+	/// <summary>
+	/// PennMUSH keeps a player's remaining quota in its RQUOTA attribute, which examine lists with the
+	/// others (<c>src/predicat.c:552</c>, <c>hdrs/atr_tab.h:158</c>). SharpMUSH counts what the player owns
+	/// instead, so RQUOTA here is read from that count each time: the limit less what the player owns, owned
+	/// by God and flagged as the RQUOTA attribute entry says. It is never stored, so it cannot drift from the
+	/// count, and a stored RQUOTA, which nothing reads, is not listed beside it.
+	/// </summary>
+	private async ValueTask<SharpAttribute> RemainingQuotaAsync(SharpPlayer player)
+	{
+		var owned = await Mediator.Send(new GetOwnedObjectCountQuery(player));
+		var flagNames = await Mediator.Send(new GetAttributeEntryQuery(RemainingQuota)) is { } entry
+			? entry.DefaultFlags
+			: ["mortal_dark", "locked"];
+		// In the entry's order, as a stored attribute made from the entry would carry them.
+		var known = await Mediator.CreateStream(new GetAttributeFlagsQuery())
+			.ToDictionaryAsync(flag => flag.Name, StringComparer.OrdinalIgnoreCase);
+		var flags = flagNames
+			.Select(name => known.GetValueOrDefault(name))
+			.OfType<SharpAttributeFlag>()
+			.ToArray();
+		var god = await HelperFunctions.GetGod(Mediator) switch
+		{
+			SharpPlayer each => each,
+			_ => throw new InvalidOperationException("God (#1) must be a player.")
+		};
+
+		return new SharpAttribute(RemainingQuota, RemainingQuota, RemainingQuota, flags, null, RemainingQuota,
+			new(_ => Task.FromResult(AsyncEnumerable.Empty<SharpAttribute>())),
+			new(_ => Task.FromResult<SharpPlayer?>(god)),
+			new(_ => Task.FromResult<SharpAttributeEntry?>(null)))
+		{
+			Value = MarkupText.Plain((player.Quota - owned).ToString())
+		};
+	}
+
+	/// <summary>
+	/// <paramref name="listing"/> with <paramref name="remainingQuota"/> in place of any stored RQUOTA (a
+	/// parent's too, which the player's own shadows), in
+	/// name order among the attributes read from <paramref name="self"/>, which a <c>/parent</c> listing
+	/// puts before its parents'.
+	/// </summary>
+	private static (SharpAttribute Attribute, DBRef Source)[] WithRemainingQuota(
+		(SharpAttribute Attribute, DBRef Source)[] listing, SharpAttribute remainingQuota, DBRef self)
+	{
+		static bool Own((SharpAttribute Attribute, DBRef Source) entry, DBRef self) => entry.Source.Number == self.Number;
+
+		var rest = listing
+			.Where(entry => !entry.Attribute.LongName.Equals(RemainingQuota, StringComparison.OrdinalIgnoreCase))
+			.ToList();
+		var at = rest.FindIndex(entry => Own(entry, self)
+			&& string.Compare(entry.Attribute.LongName, RemainingQuota, StringComparison.OrdinalIgnoreCase) > 0);
+		if (at < 0)
+		{
+			at = rest.FindLastIndex(entry => Own(entry, self)) + 1;
+		}
+
+		rest.Insert(at, (remainingQuota, self));
+		return [.. rest];
+	}
+
 	private async ValueTask ExamineAttributesAsync(IMUSHCodeParser parser, AnySharpObject enactor,
 		AnySharpObject executor, AnySharpObject viewing, string? attributePattern, string[] switches)
 	{
@@ -542,6 +604,11 @@ public partial class Commands
 				SharpAttribute[] own => [.. own.Select(attr => (Attribute: attr, Source: viewing.Object().DBRef))],
 				_ => []
 			};
+
+		if (viewing is SharpPlayer player && (!named || MushText.IsWildcardMatch(MarkupText.Plain(RemainingQuota), attributePattern!)))
+		{
+			atrs = WithRemainingQuota(atrs, await RemainingQuotaAsync(player), viewing.Object().DBRef);
+		}
 
 		// examine_helper and examine_helper_veiled both drop DESCRIBE from a whole-object listing when
 		// ex_public_attribs is on (look.c:310-312, :346-348) -- the description line above already is it.

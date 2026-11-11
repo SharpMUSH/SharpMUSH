@@ -32,12 +32,19 @@ examine Widget
 think [get(Widget/COLOR)] [get(Widget/SIZE)] [u(Widget/GREET,World)]
 
 ::case obj.create  create, describe, rename and destroy an object
+# @recycle, because a stock PennMUSH refuses a player's @destroy (restrict.cnf). The destroyed thing
+# stays GOING until the purge frees it; @undestroy spares it; examine *Alice in 20-admin-commands
+# then finds it GOING on both servers.
 @create Gizmo
 @desc Gizmo=A gleaming gizmo.
 look Gizmo
 @name Gizmo=Gadget
 look Gadget
-@destroy Gadget
+@recycle Gadget
+look Gadget
+@undestroy Gadget
+look Gadget
+@recycle Gadget
 look Gadget
 
 ::case obj.attrs  set, read, wipe attributes
