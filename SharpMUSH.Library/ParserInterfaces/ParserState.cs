@@ -1177,6 +1177,8 @@ public partial record ParserState
 		Caller = Caller,
 		ParseMode = ParseMode,
 		Flags = Flags,
+		// A hook's %-m and %-p stay readable in the u() it calls.
+		HookedCommand = HookedCommand,
 		// The same evaluation's budget, so a function that parses again (u(), iter()) enters it as it is
 		// rather than pushing a copy of this frame to carry it.
 		ExecutionBudget = ExecutionBudget,

@@ -50,14 +50,16 @@ public class DialectParsingTests : ServerTestBase
 		await Assert.That(await Eval($"u({thing}/RUNNER)")).IsEqualTo($"#1|#{thing.Number}");
 	}
 
-	/// <summary>In a hook, <c>%-m</c> is the command line it hooks and <c>%-p</c> the line typed.</summary>
+	/// <summary>In a hook, <c>%-m</c> is the command line it hooks and <c>%-p</c> the line typed, in a <c>u()</c> it calls too.</summary>
 	[Test]
 	public async Task HookReadsTheHookedCommand()
 	{
 		var holder = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "HookSubs");
 		var target = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "HookSubsTgt");
 		await Cmd($"&SEEN {holder}=");
-		await Cmd($"&BEFORE {holder}=attrib_set({holder}/SEEN,%-m|%-p)");
+		await Cmd($"&TYPED {holder}=%-p");
+		await Cmd($"@set {holder}/TYPED=rhost");
+		await Cmd($"&BEFORE {holder}=attrib_set({holder}/SEEN,%-m|[u({holder}/TYPED)])");
 		await Cmd($"@set {holder}/BEFORE=rhost");
 		await Cmd($"@hook/before @ATRLOCK={holder},BEFORE");
 		try

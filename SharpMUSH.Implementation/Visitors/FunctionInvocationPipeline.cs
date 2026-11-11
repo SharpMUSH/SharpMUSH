@@ -400,6 +400,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 		var evaluate = Unclocked(clock, async () =>
 		{
 			var pieces = new List<MString>(context.ChildCount);
+			var hadErrors = false;
 			for (var i = 0; i < context.ChildCount; i++)
 			{
 				switch (context.GetChild(i))
@@ -410,13 +411,15 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 							: visitor.SliceSource(comma));
 						break;
 					case IEvaluationStringContext argument:
-						pieces.Add((await visitor.EvaluationStringItems(argument))?.Message ?? MarkupText.Empty);
+						var piece = await visitor.EvaluationStringItems(argument);
+						hadErrors |= piece?.HadErrors == true;
+						pieces.Add(piece?.Message ?? MarkupText.Empty);
 						break;
 				}
 			}
 
 			var joined = MarkupText.Concat(pieces);
-			return new CallState(stripAnsi ? joined.WithoutVisualMarkup() : joined, context.Depth());
+			return new CallState(stripAnsi ? joined.WithoutVisualMarkup() : joined, context.Depth()) { HadErrors = hadErrors };
 		});
 
 		if (!deferred)
