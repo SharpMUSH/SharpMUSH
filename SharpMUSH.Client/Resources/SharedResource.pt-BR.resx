@@ -1845,6 +1845,1021 @@
     <value>{count, plural, one {# personagem registrado} other {# personagens registrados}}</value>
     <comment>MT — ICU categories one+other</comment>
   </data>
+  <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
+    <value>Conecte-se para ver quem está aqui</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateACharacter" xml:space="preserve">
+    <value>Criar um personagem</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateCharacter" xml:space="preserve">
+    <value>Criar personagem</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>Dar também a este personagem uma senha própria, para entrar por um cliente MU*</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>Digite um nome para o seu personagem.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>Digite uma senha para o seu personagem, ou desmarque a caixa para entrar apenas pela sua conta.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>Digite o nome do personagem que você quer reivindicar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>Digite a senha do personagem.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>Antes de escolher um nome, leia</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateCharacterBlurb" xml:space="preserve">
+    <value>Um personagem é uma persona que você interpreta no jogo. Ele fica vinculado à sua conta; você pode criar outros depois.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavExitFocusMode" xml:space="preserve">
+    <value>Sair do modo foco</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavExits" xml:space="preserve">
+    <value>Saídas</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFocusMode" xml:space="preserve">
+    <value>Modo foco</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavGuestTag" xml:space="preserve">
+    <value>convidado</value>
+    <comment>MT — translated because it is a lowercase session badge next to "conta", not the Guest privilege level</comment>
+  </data>
+  <data name="NavInPlay" xml:space="preserve">
+    <value>em jogo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavLoadingApplication" xml:space="preserve">
+    <value>Carregando aplicativo…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailFolders" xml:space="preserve">
+    <value>Pastas</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailForward" xml:space="preserve">
+    <value>Encaminhar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailReadFullMessage" xml:space="preserve">
+    <value>Ler mensagem completa →</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailSelectMessage" xml:space="preserve">
+    <value>Selecione uma mensagem para ler</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMenuLabel" xml:space="preserve">
+    <value>Menu</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoApplicationAccess" xml:space="preserve">
+    <value>Você não tem acesso a este aplicativo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoApplicationRegistered" xml:space="preserve">
+    <value>Nenhum aplicativo registrado em {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoExitsAvailable" xml:space="preserve">
+    <value>Nenhuma saída disponível</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNotConnected" xml:space="preserve">
+    <value>não conectado</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOffline" xml:space="preserve">
+    <value>offline</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOnline" xml:space="preserve">
+    <value>online</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFlyoutHoldsCurrent" xml:space="preserve">
+    <value>{0}, contém esta página</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySessionActive" xml:space="preserve">
+    <value>Sessão de jogo ativa</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayTerminal" xml:space="preserve">
+    <value>Terminal de jogo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayUnreadActivity" xml:space="preserve">
+    <value>Atividade de jogo não lida</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSearchPlaceholder" xml:space="preserve">
+    <value>Buscar…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSectionBuild" xml:space="preserve">
+    <value>Construir</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSectionManage" xml:space="preserve">
+    <value>Gerenciar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSectionWorld" xml:space="preserve">
+    <value>Mundo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsAccountDescription" xml:space="preserve">
+    <value>E-mail, senha e segurança de login</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsCharactersDescription" xml:space="preserve">
+    <value>Gerencie os personagens vinculados à sua conta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsThemeDescription" xml:space="preserve">
+    <value>Preferências de aparência e cor de destaque</value>
+    <comment>MT — assumed "accent" means the UI accent color</comment>
+  </data>
+  <data name="NavTerminalSettings" xml:space="preserve">
+    <value>Configurações do terminal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalWidthCols" xml:space="preserve">
+    <value>Largura (colunas)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalWidthTooltip" xml:space="preserve">
+    <value>Largura preferida do terminal em colunas (mín. 78). A fonte se ajusta automaticamente para preenchê-la — mais espaço significa fonte maior — e o valor é informado ao servidor como a largura da sua tela.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTheme" xml:space="preserve">
+    <value>Tema</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavToggleNavigation" xml:space="preserve">
+    <value>Alternar navegação</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Network" xml:space="preserve">
+    <value>Rede</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NewEntry" xml:space="preserve">
+    <value>Nova entrada</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NewKey" xml:space="preserve">
+    <value>Nova chave</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoBannedNamesConfigured" xml:space="preserve">
+    <value>Nenhum nome banido configurado.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoChangesToSave" xml:space="preserve">
+    <value>Nenhuma alteração para salvar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoCharactersFound" xml:space="preserve">
+    <value>Nenhum personagem encontrado.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoCommandRestrictions" xml:space="preserve">
+    <value>Nenhuma restrição de comando configurada.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoEntries" xml:space="preserve">
+    <value>Nenhuma entrada</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoFunctionRestrictions" xml:space="preserve">
+    <value>Nenhuma restrição de função configurada.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoGroupingNote" xml:space="preserve">
+    <value>Esta categoria ainda não foi atualizada com os metadados de esquema aprimorado. As propriedades são exibidas sem agrupamento. Apenas a categoria Rede (Net) tem atualmente a interface aprimorada completa.</value>
+    <comment>MT — "(Net)" kept as the literal category identifier</comment>
+  </data>
+  <data name="NoItems" xml:space="preserve">
+    <value>Nenhum item</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoPropertiesFound" xml:space="preserve">
+    <value>Nenhuma propriedade de configuração encontrada para a categoria "{0}".</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoPropertiesHint" xml:space="preserve">
+    <value>Esta categoria pode ainda não ter sido anotada com os metadados de esquema aprimorado.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoSitelockRulesConfigured" xml:space="preserve">
+    <value>Nenhuma regra de sitelock configurada.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoSuggestionCategories" xml:space="preserve">
+    <value>Nenhuma categoria de sugestão definida. Clique em "Adicionar categoria" para criar sua primeira categoria.</value>
+    <comment>MT — "Add Category" quoted here must match the button label string translated elsewhere</comment>
+  </data>
+  <data name="NoWordsInCategory" xml:space="preserve">
+    <value>Nenhuma palavra nesta categoria ainda.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorized" xml:space="preserve">
+    <value>Você não tem autorização para acessar este recurso.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Voltar para o início</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>Você não tem permissão para ver esta página.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotFound" xml:space="preserve">
+    <value>Não encontrado</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotFoundDescription" xml:space="preserve">
+    <value>Desculpe, o conteúdo que você procura não existe.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NothingToSeeHere" xml:space="preserve">
+    <value>Nada para ver aqui.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ObjectsConverted" xml:space="preserve">
+    <value>Objetos convertidos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ObjectsCreated" xml:space="preserve">
+    <value>Objetos criados</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PercentComplete" xml:space="preserve">
+    <value>{0:F1}% concluído - {1}</value>
+    <comment>MT — kept the {0:F1} numeric format specifier verbatim</comment>
+  </data>
+  <data name="Performance" xml:space="preserve">
+    <value>Desempenho</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PerformanceCategoryDescription" xml:space="preserve">
+    <value>Limites de recursos, filas de comandos e otimização</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Phase" xml:space="preserve">
+    <value>Fase:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAction" xml:space="preserve">
+    <value>Ação</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAddRemote" xml:space="preserve">
+    <value>Adicionar remoto</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAddRemoteHeading" xml:space="preserve">
+    <value>Adicionar um remoto</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgApplied" xml:space="preserve">
+    <value>{0} {1} aplicado (revisão {2}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgApply" xml:space="preserve">
+    <value>Aplicar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAttributesCount" xml:space="preserve">
+    <value>Atributos ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAttributesToInclude" xml:space="preserve">
+    <value>Atributos a incluir:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthor" xml:space="preserve">
+    <value>Autoria</value>
+    <comment>MT — assumed this is the nav label of the package-authoring page (verb sense, like PkgAuthorHeading), not an "Author" table column</comment>
+  </data>
+  <data name="PkgAuthorDescription" xml:space="preserve">
+    <value>Transforme objetos ativos em um package.yaml. Todo dbref da seleção precisa acabar simbólico: as referências internas à seleção são resolvidas automaticamente; as demais devem ser classificadas abaixo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthorHeading" xml:space="preserve">
+    <value>Criar um pacote</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthorsLabel" xml:space="preserve">
+    <value>Autores</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAvailableFrom" xml:space="preserve">
+    <value>Disponível em {0}{1}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBaseAsInstalled" xml:space="preserve">
+    <value>Base (como instalado)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBranch" xml:space="preserve">
+    <value>Branch</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBranchOptionalLabel" xml:space="preserve">
+    <value>Branch (opcional)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowse" xml:space="preserve">
+    <value>Explorar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowseDescription" xml:space="preserve">
+    <value>Atualiza o cache do repositório do remoto e lista seus pacotes. As versões vêm das tags de release; a ponta do branch é o canal dev.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowseHeading" xml:space="preserve">
+    <value>Explorar pacotes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCheck" xml:space="preserve">
+    <value>Verificar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgClassifyNeedsKeyLabel" xml:space="preserve">
+    <value>Classifique {0}: referências configure precisam de uma chave e um rótulo.</value>
+    <comment>MT — kept "configure" as the ref-mode name from the manifest (see PkgModeConfigure)</comment>
+  </data>
+  <data name="PkgClose" xml:space="preserve">
+    <value>Fechar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommandCollision" xml:space="preserve">
+    <value>O $-command "{0}" já está definido pelo pacote {1} ({2}/{3}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommunityDirectory" xml:space="preserve">
+    <value>Diretório da comunidade</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommunityDirectoryHint" xml:space="preserve">
+    <value>Repositórios da comunidade aceitos, curados no repositório oficial de pacotes.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommunityRemoteAdded" xml:space="preserve">
+    <value>'{0}' adicionado como remoto da comunidade.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfigureKeyLabel" xml:space="preserve">
+    <value>Chave configure</value>
+    <comment>MT — "configure" kept as the ref-mode name; this is the key supplied when a ref is classified as configure</comment>
+  </data>
+  <data name="PkgConfigurePromptLabel" xml:space="preserve">
+    <value>Pergunta exibida a quem instala</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfigured" xml:space="preserve">
+    <value>configurado</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfiguredRemotes" xml:space="preserve">
+    <value>Remotos configurados</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConflictCount" xml:space="preserve">
+    <value>{count, plural, one {# conflito} other {# conflitos}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConflictLabel" xml:space="preserve">
+    <value>conflito: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConflictsWithInstalled" xml:space="preserve">
+    <value>Conflita com o instalado</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCurrent" xml:space="preserve">
+    <value>atual</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDbrefHelper" xml:space="preserve">
+    <value>ID do objeto, ex.: #123:456</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDefaultBranch" xml:space="preserve">
+    <value>padrão</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDeleteTakeTheirs" xml:space="preserve">
+    <value>Excluir (usar a versão deles)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDependedOnBy" xml:space="preserve">
+    <value>Dependem dele: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDescriptionLabel" xml:space="preserve">
+    <value>Descrição</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Título</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDetails" xml:space="preserve">
+    <value>Detalhes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDevChannelOption" xml:space="preserve">
+    <value>canal dev ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDevDrift" xml:space="preserve">
+    <value>desvio do dev</value>
+    <comment>MT — assumed this badge means the installed dev-channel commit has drifted from the branch tip</comment>
+  </data>
+  <data name="PkgDownload" xml:space="preserve">
+    <value>Baixar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgEditMergedValue" xml:space="preserve">
+    <value>Editar valor mesclado</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgEnterObjectId" xml:space="preserve">
+    <value>Informe ao menos um ID de objeto.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgExportHint" xml:space="preserve">
+    <value>Faça commit disso em um repositório de pacotes (um diretório por pacote), liste-o em index.yaml e crie tags de release como</value>
+    <comment>MT — sentence is cut off in the English; kept open-ended so the code example that follows still reads</comment>
+  </data>
+  <data name="PkgExportYaml" xml:space="preserve">
+    <value>Exportar package.yaml</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgForceRemoval" xml:space="preserve">
+    <value>Forçar a remoção mesmo assim</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgGitUrlLabel" xml:space="preserve">
+    <value>URL do Git</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstallHeading" xml:space="preserve">
+    <value>Instalar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalled" xml:space="preserve">
+    <value>Instalado</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalledDescription" xml:space="preserve">
+    <value>Pacotes de softcode instalados. As atualizações sempre passam por um plano revisado — nada é aplicado automaticamente.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalledOn" xml:space="preserve">
+    <value>instalado em {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalledSuffix" xml:space="preserve">
+    <value> — instalado: {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgKeepMine" xml:space="preserve">
+    <value>Manter a minha</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgLicenseLabel" xml:space="preserve">
+    <value>Licença (opcional)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgLiveYourVersion" xml:space="preserve">
+    <value>Em uso (sua versão)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgManifestParseFailed" xml:space="preserve">
+    <value>O manifesto na ponta do branch não pôde ser interpretado.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgManifestRefLabel" xml:space="preserve">
+    <value>Ref do manifesto (minúsculas, sublinhados)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgMergedValueLabel" xml:space="preserve">
+    <value>Valor mesclado</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgMissingRemoteParam" xml:space="preserve">
+    <value>Parâmetro 'remote' ausente.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgModeConfigure" xml:space="preserve">
+    <value>configure</value>
+    <comment>MT — left in English: this is a ref-mode value from package.yaml, shown verbatim</comment>
+  </data>
+  <data name="PkgModeWellKnown" xml:space="preserve">
+    <value>well-known</value>
+    <comment>MT — left in English: this is a ref-mode value from package.yaml, shown verbatim</comment>
+  </data>
+  <data name="PkgName" xml:space="preserve">
+    <value>Nome</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNewVersion" xml:space="preserve">
+    <value>Novo ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoCommunityRepos" xml:space="preserve">
+    <value>Nenhum repositório da comunidade aceito ainda.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoDescription" xml:space="preserve">
+    <value>(sem descrição)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoReadme" xml:space="preserve">
+    <value>Nenhum README disponível.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoReleaseTags" xml:space="preserve">
+    <value>Sem tags de release — apenas o canal dev está disponível.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoSearchMatch" xml:space="preserve">
+    <value>Nenhum pacote corresponde à sua busca.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoUpdatesAvailable" xml:space="preserve">
+    <value>Nenhum pacote tem atualização disponível.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoneInstalled" xml:space="preserve">
+    <value>Nenhum pacote instalado ainda. Configure um remoto e explore-o para instalar seu primeiro pacote.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNotInstalledSuffix" xml:space="preserve">
+    <value> — não instalado.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgObjAttrCounts" xml:space="preserve">
+    <value>{0} obj / {1} atr</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgObjectIdsLabel" xml:space="preserve">
+    <value>IDs de objetos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgObjects" xml:space="preserve">
+    <value>Objetos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgObjectsCount" xml:space="preserve">
+    <value>Objetos ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgOccurrences" xml:space="preserve">
+    <value>{count, plural, one {# ocorrência} other {# ocorrências}}, ex.: em {location}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPackageIdLabel" xml:space="preserve">
+    <value>ID do pacote (minúsculas, hifens)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPackages" xml:space="preserve">
+    <value>Pacotes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPlanLocation" xml:space="preserve">
+    <value>{0} / {1} em {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRef" xml:space="preserve">
+    <value>Ref</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRefreshAndBrowse" xml:space="preserve">
+    <value>Atualizar e explorar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemoteLabel" xml:space="preserve">
+    <value>Remoto</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemoteRemoved" xml:space="preserve">
+    <value>Remoto '{0}' removido.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemoteSaved" xml:space="preserve">
+    <value>Remoto '{0}' salvo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotes" xml:space="preserve">
+    <value>Remotos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotesDescription" xml:space="preserve">
+    <value>Repositórios Git dos quais este jogo instala pacotes. Os níveis de confiança são decisão sua — as listagens da comunidade abaixo são curadas no repositório oficial, nunca autodeclaradas.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotesHeading" xml:space="preserve">
+    <value>Remotos de pacotes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRenamedFrom" xml:space="preserve">
+    <value>renomeado de {0} (mantém {1})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgReplan" xml:space="preserve">
+    <value>Replanejar com estas respostas</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRequiredBy" xml:space="preserve">
+    <value>exigido por {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRequires" xml:space="preserve">
+    <value>Requer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgResolutionLabel" xml:space="preserve">
+    <value>Resolução</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgResolvesAtApply" xml:space="preserve">
+    <value>resolve ao aplicar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgResolvesAtApplyTooltip" xml:space="preserve">
+    <value>Algumas refs são resolvidas no momento da aplicação (novos objetos / configure)</value>
+    <comment>MT — "configure" kept as the ref-mode name from the manifest</comment>
+  </data>
+  <data name="PkgReview" xml:space="preserve">
+    <value>Revisar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgReviewInstall" xml:space="preserve">
+    <value>Revisar instalação</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionHistory" xml:space="preserve">
+    <value>Histórico de revisões</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionLine" xml:space="preserve">
+    <value>rev {0} — {1} {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionsOf" xml:space="preserve">
+    <value>{0} — revisões</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRollBack" xml:space="preserve">
+    <value>Reverter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRolledBack" xml:space="preserve">
+    <value>Revertido para a revisão {0} (nova revisão {1}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgScanSelection" xml:space="preserve">
+    <value>Analisar seleção</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgSearchPlaceholder" xml:space="preserve">
+    <value>Buscar pacotes…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgSoftcodePackages" xml:space="preserve">
+    <value>Pacotes de softcode</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepClassifyExternal" xml:space="preserve">
+    <value>Classificar referências externas ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepMetadataExport" xml:space="preserve">
+    <value>Metadados e exportação</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepRefsAttributes" xml:space="preserve">
+    <value>Refs e atributos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepSelectObjects" xml:space="preserve">
+    <value>Selecionar objetos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTagMoved" xml:space="preserve">
+    <value>tag movida!</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTakeTheirs" xml:space="preserve">
+    <value>Usar a versão deles</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrust" xml:space="preserve">
+    <value>Confiança</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustCommunity" xml:space="preserve">
+    <value>comunidade</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustOfficial" xml:space="preserve">
+    <value>oficial</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustUnknown" xml:space="preserve">
+    <value>desconhecido</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustWarningTagMoved" xml:space="preserve">
+    <value>AVISO DE CONFIANÇA: a tag de release de {0} {1} não aponta mais para o commit instalado.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgType" xml:space="preserve">
+    <value>Tipo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstall" xml:space="preserve">
+    <value>Desinstalar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstallConfirmBody" xml:space="preserve">
+    <value>{objects, plural, one {# objeto será marcado} other {# objetos serão marcados}} para destruição e {attributes, plural, one {# registro de atributo gerenciado será removido} other {# registros de atributos gerenciados serão removidos}}.</value>
+    <comment>MT — Portuguese needs verb agreement with each count, so the verbs moved inside the plural branches</comment>
+  </data>
+  <data name="PkgUninstallConfirmTitle" xml:space="preserve">
+    <value>Desinstalar {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstalled" xml:space="preserve">
+    <value>{0} desinstalado.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUnreviewedSource" xml:space="preserve">
+    <value>Esta fonte não foi revisada. Inspecione todo o código na tela de revisão antes de aplicar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdateCheckFailed" xml:space="preserve">
+    <value>A verificação de atualizações falhou — o repositório de origem está acessível?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdates" xml:space="preserve">
+    <value>Atualizações</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdatesAvailable" xml:space="preserve">
+    <value>Atualizações disponíveis</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpgradeHeading" xml:space="preserve">
+    <value>Atualizar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpgradingFrom" xml:space="preserve">
+    <value>— atualizando de {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUrl" xml:space="preserve">
+    <value>URL</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgVersionAvailable" xml:space="preserve">
+    <value>{0} disponível</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgVersionLabel" xml:space="preserve">
+    <value>Versão</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgWellKnownRefLabel" xml:space="preserve">
+    <value>Ref well-known</value>
+    <comment>MT — "well-known" kept in English: it is the ref-mode value from package.yaml (see PkgModeWellKnown)</comment>
+  </data>
+  <data name="PkgWillBeMarkedGoing" xml:space="preserve">
+    <value>{0} será marcado como GOING</value>
+    <comment>MT — GOING kept: it is the MUSH flag name</comment>
+  </data>
+  <data name="Play" xml:space="preserve">
+    <value>Jogar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Você ainda não tem um personagem. Crie um para entrar no jogo.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Não foi possível carregar seus personagens. O jogo pode estar indisponível no momento.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Tentar novamente</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Players" xml:space="preserve">
+    <value>Jogadores:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PreviewFileContent" xml:space="preserve">
+    <value>Pré-visualizar o conteúdo do arquivo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileHandler" xml:space="preserve">
+    <value>Manipulador de perfil</value>
+    <comment>MT — assumed "Handler" is the component that processes profile requests; if it is a code identifier it should stay English</comment>
+  </data>
+  <data name="ProfileUnavailable" xml:space="preserve">
+    <value>O perfil deste personagem não está disponível.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileUpdateFailed" xml:space="preserve">
+    <value>Não foi possível salvar as alterações do perfil.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileUpdated" xml:space="preserve">
+    <value>Perfil atualizado ({count, plural, one {# campo} other {# campos}}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Progress" xml:space="preserve">
+    <value>Progresso</value>
+    <comment>MT</comment>
+  </data>
+  <data name="QuickActions" xml:space="preserve">
+    <value>Ações rápidas</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Atualizar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RemoveEntry" xml:space="preserve">
+    <value>Remover entrada</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Reply" xml:space="preserve">
+    <value>Responder</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResActiveScenesSubtitle" xml:space="preserve">
+    <value>Sessões em andamento agora.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResAnyoneCanEdit" xml:space="preserve">
+    <value>qualquer pessoa pode editar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResChangeCount" xml:space="preserve">
+    <value>{count, plural, one {# alteração} other {# alterações}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResChangedBadge" xml:space="preserve">
+    <value>alterado</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResConfigSectionKicker" xml:space="preserve">
+    <value>Admin · configurações do servidor</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResDefaultValueTooltip" xml:space="preserve">
+    <value>Padrão: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResDraft" xml:space="preserve">
+    <value>Rascunho</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResHistory" xml:space="preserve">
+    <value>Histórico</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResInvalid" xml:space="preserve">
+    <value>Inválido</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResJoin" xml:space="preserve">
+    <value>Entrar</value>
+    <comment>MT — button to join a scene</comment>
+  </data>
+  <data name="ResNoScenesFound" xml:space="preserve">
+    <value>Nenhuma cena encontrada.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResOnThisPage" xml:space="preserve">
+    <value>Nesta página</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResRead" xml:space="preserve">
+    <value>Ler</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResRoutingErrorHint" xml:space="preserve">
+    <value>Esta mensagem significa que a página personalizada NÃO está sendo correspondida pelo roteador.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResSaveFailedShort" xml:space="preserve">
+    <value>Falha ao salvar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResScenesSubtitle" xml:space="preserve">
+    <value>Navegue e assista às sessões de roleplay.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResSearchTitlesPlaceholder" xml:space="preserve">
+    <value>Buscar títulos…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResStartedAt" xml:space="preserve">
+    <value>Iniciada em {0}</value>
+    <comment>MT — assumed the subject is a scene/session (feminine); {0} is a time</comment>
+  </data>
+  <data name="ResTabLive" xml:space="preserve">
+    <value>Ao vivo</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResTabRecent" xml:space="preserve">
+    <value>Recentes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResValidationFailed" xml:space="preserve">
+    <value>Falha na validação</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResViewLog" xml:space="preserve">
+    <value>Ver log</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatDrafts" xml:space="preserve">
+    <value>Rascunhos</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatTotalPages" xml:space="preserve">
+    <value>Total de páginas</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatTranslations" xml:space="preserve">
+    <value>Traduções</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetChanges" xml:space="preserve">
+    <value>Redefinir alterações</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetToDefault" xml:space="preserve">
+    <value>Restaurar padrão</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetToDefaults" xml:space="preserve">
+    <value>Restaurar padrões</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Restrictions" xml:space="preserve">
+    <value>Restrições</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RestrictionsBuilderHelper" xml:space="preserve">
+    <value>ex.: wizard, builder</value>
+    <comment>MT — privilege-level names after "e.g." left in English per the glossary</comment>
+  </data>
+  <data name="RestrictionsDescription" xml:space="preserve">
+    <value>Restrinja quais jogadores podem usar comandos ou funções específicos com base em sinais, poderes ou atributos.</value>
+    <comment>MT — "flags" rendered as "sinais" (MUSH object flags) per the locale glossary</comment>
+  </data>
+  <data name="RestrictionsHelper" xml:space="preserve">
+    <value>ex.: wizard, royalty, admin</value>
+    <comment>MT — privilege-level names after "e.g." left in English per the glossary</comment>
+  </data>
+  <data name="RestrictionsLabel" xml:space="preserve">
+    <value>Restrições</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAddRole" xml:space="preserve">
+    <value>Adicionar função</value>
+    <comment>MT — "role" rendered as "função" consistently across the roles surface</comment>
+  </data>
+  <data name="RolGuardSection" xml:space="preserve">
+    <value>Funções protegidas</value>
+  </data>
   <data name="RolGuardPass" xml:space="preserve">
     <value>Jogo · Contornar a proteção da função {0}</value>
   </data>

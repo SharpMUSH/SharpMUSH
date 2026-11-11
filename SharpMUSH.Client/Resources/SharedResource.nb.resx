@@ -1845,6 +1845,1021 @@
     <value>{count, plural, one {# karakter registrert} other {# karakterer registrert}}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
+    <value>Koble til for å se hvem som er her</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateACharacter" xml:space="preserve">
+    <value>Opprett en karakter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateCharacter" xml:space="preserve">
+    <value>Opprett karakter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>Gi også denne karakteren sitt eget passord, for å logge inn fra en MU*-klient</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>Skriv inn et navn på karakteren din.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>Skriv inn et passord for karakteren din, eller fjern haken for å logge inn bare gjennom kontoen din.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>Skriv inn navnet på karakteren du vil gjøre krav på.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>Skriv inn passordet til karakteren.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>Før du velger et navn, les</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCreateCharacterBlurb" xml:space="preserve">
+    <value>En karakter er en person du spiller i spillet. Den er knyttet til kontoen din, og du kan opprette flere senere.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavExitFocusMode" xml:space="preserve">
+    <value>Avslutt fokusmodus</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavExits" xml:space="preserve">
+    <value>Utganger</value>
+    <comment>MT — corpus term.</comment>
+  </data>
+  <data name="NavFocusMode" xml:space="preserve">
+    <value>Fokusmodus</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavGuestTag" xml:space="preserve">
+    <value>gjest</value>
+    <comment>MT — lowercase tag describing the session, not the 'Guest' privilege level, so translated.</comment>
+  </data>
+  <data name="NavInPlay" xml:space="preserve">
+    <value>i spill</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavLoadingApplication" xml:space="preserve">
+    <value>Laster applikasjon…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailFolders" xml:space="preserve">
+    <value>Mapper</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailForward" xml:space="preserve">
+    <value>Videresend</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailReadFullMessage" xml:space="preserve">
+    <value>Les hele meldingen →</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMailSelectMessage" xml:space="preserve">
+    <value>Velg en melding å lese</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavMenuLabel" xml:space="preserve">
+    <value>Meny</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoApplicationAccess" xml:space="preserve">
+    <value>Du har ikke tilgang til denne applikasjonen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNoApplicationRegistered" xml:space="preserve">
+    <value>Ingen applikasjon er registrert på {0}.</value>
+    <comment>MT — {0} is a route.</comment>
+  </data>
+  <data name="NavNoExitsAvailable" xml:space="preserve">
+    <value>Ingen tilgjengelige utganger</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavNotConnected" xml:space="preserve">
+    <value>ikke tilkoblet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOffline" xml:space="preserve">
+    <value>frakoblet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavOnline" xml:space="preserve">
+    <value>tilkoblet</value>
+    <comment>MT — corpus term for connected/online.</comment>
+  </data>
+  <data name="NavFlyoutHoldsCurrent" xml:space="preserve">
+    <value>{0}, inneholder denne siden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlaySessionActive" xml:space="preserve">
+    <value>Spilløkt aktiv</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayTerminal" xml:space="preserve">
+    <value>Spillterminal</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayUnreadActivity" xml:space="preserve">
+    <value>Ulest spillaktivitet</value>
+    <comment>MT — assumed a tooltip on an unread badge.</comment>
+  </data>
+  <data name="NavSearchPlaceholder" xml:space="preserve">
+    <value>Søk…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSectionBuild" xml:space="preserve">
+    <value>Bygge</value>
+    <comment>MT — infinitive, same form as the permission group EnumPermGroupBuild.</comment>
+  </data>
+  <data name="NavSectionManage" xml:space="preserve">
+    <value>Administrere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSectionWorld" xml:space="preserve">
+    <value>Verden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsAccountDescription" xml:space="preserve">
+    <value>E-post, passord og innloggingssikkerhet</value>
+    <comment>MT — 'passord' per corpus.</comment>
+  </data>
+  <data name="NavSettingsCharactersDescription" xml:space="preserve">
+    <value>Administrer karakterer som er knyttet til kontoen din</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavSettingsThemeDescription" xml:space="preserve">
+    <value>Utseende og aksentfarger</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalSettings" xml:space="preserve">
+    <value>Terminalinnstillinger</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalWidthCols" xml:space="preserve">
+    <value>Bredde (kol.)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTerminalWidthTooltip" xml:space="preserve">
+    <value>Foretrukket terminalbredde i kolonner (minst 78). Skriften skalerer automatisk for å fylle bredden — mer plass gir større skrift — og bredden rapporteres til serveren som skjermbredden din.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTheme" xml:space="preserve">
+    <value>Tema</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavToggleNavigation" xml:space="preserve">
+    <value>Vis/skjul navigasjon</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Network" xml:space="preserve">
+    <value>Nettverk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NewEntry" xml:space="preserve">
+    <value>Ny oppføring</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NewKey" xml:space="preserve">
+    <value>Ny nøkkel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoBannedNamesConfigured" xml:space="preserve">
+    <value>Ingen blokkerte navn er konfigurert.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoChangesToSave" xml:space="preserve">
+    <value>Ingen endringer å lagre</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoCharactersFound" xml:space="preserve">
+    <value>Fant ingen karakterer.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoCommandRestrictions" xml:space="preserve">
+    <value>Ingen kommandorestriksjoner er konfigurert.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoEntries" xml:space="preserve">
+    <value>Ingen oppføringer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoFunctionRestrictions" xml:space="preserve">
+    <value>Ingen funksjonsrestriksjoner er konfigurert.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoGroupingNote" xml:space="preserve">
+    <value>Denne kategorien er ennå ikke oppdatert med utvidede skjemametadata. Egenskapene vises uten gruppering. Foreløpig er det bare kategorien Network (Net) som har det fulle utvidede grensesnittet.</value>
+    <comment>MT — 'Network (Net)' is a config category identifier and is kept.</comment>
+  </data>
+  <data name="NoItems" xml:space="preserve">
+    <value>Ingen elementer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoPropertiesFound" xml:space="preserve">
+    <value>Fant ingen konfigurasjonsegenskaper for kategorien «{0}».</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoPropertiesHint" xml:space="preserve">
+    <value>Denne kategorien er kanskje ikke annotert med utvidede skjemametadata ennå.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoSitelockRulesConfigured" xml:space="preserve">
+    <value>Ingen sitelock-regler er konfigurert.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NoSuggestionCategories" xml:space="preserve">
+    <value>Ingen forslagskategorier er definert. Klikk «Legg til kategori» for å opprette den første.</value>
+    <comment>MT — the quoted button label matches the AddCategory string in this locale.</comment>
+  </data>
+  <data name="NoWordsInCategory" xml:space="preserve">
+    <value>Ingen ord i denne kategorien ennå.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorized" xml:space="preserve">
+    <value>Du har ikke tilgang til denne ressursen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBackHome" xml:space="preserve">
+    <value>Tilbake til forsiden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotAuthorizedBody" xml:space="preserve">
+    <value>Du har ikke tillatelse til å se denne siden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotFound" xml:space="preserve">
+    <value>Ikke funnet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NotFoundDescription" xml:space="preserve">
+    <value>Beklager, innholdet du leter etter, finnes ikke.</value>
+    <comment>MT — 'finnes ikke' per corpus.</comment>
+  </data>
+  <data name="NothingToSeeHere" xml:space="preserve">
+    <value>Ingenting å se her.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ObjectsConverted" xml:space="preserve">
+    <value>Objekter konvertert</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ObjectsCreated" xml:space="preserve">
+    <value>Objekter opprettet</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PercentComplete" xml:space="preserve">
+    <value>{0:F1} % fullført – {1}</value>
+    <comment>MT — Norwegian typography puts a space before the percent sign; the format specifier is untouched.</comment>
+  </data>
+  <data name="Performance" xml:space="preserve">
+    <value>Ytelse</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PerformanceCategoryDescription" xml:space="preserve">
+    <value>Ressursgrenser, kommandokøer og optimalisering</value>
+    <comment>MT — 'kø' per corpus.</comment>
+  </data>
+  <data name="Phase" xml:space="preserve">
+    <value>Fase:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAction" xml:space="preserve">
+    <value>Handling</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAddRemote" xml:space="preserve">
+    <value>Legg til remote</value>
+    <comment>MT — git 'remote' kept in English throughout the package pages; Norwegian developers use the English git vocabulary.</comment>
+  </data>
+  <data name="PkgAddRemoteHeading" xml:space="preserve">
+    <value>Legg til en remote</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgApplied" xml:space="preserve">
+    <value>{0} {1} er tatt i bruk (revisjon {2}).</value>
+    <comment>MT — {0}/{1} assumed to be a package name and a version.</comment>
+  </data>
+  <data name="PkgApply" xml:space="preserve">
+    <value>Ta i bruk</value>
+    <comment>MT — 'apply' of a reviewed package plan.</comment>
+  </data>
+  <data name="PkgAttributesCount" xml:space="preserve">
+    <value>Attributter ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAttributesToInclude" xml:space="preserve">
+    <value>Attributter som skal inkluderes:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthor" xml:space="preserve">
+    <value>Forfatter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthorDescription" xml:space="preserve">
+    <value>Gjør levende objekter om til en package.yaml. Hver dbref i utvalget må ende opp symbolsk: referanser innenfor utvalget løses automatisk, resten klassifiserer du nedenfor.</value>
+    <comment>MT — 'dbref' and 'package.yaml' kept per glossary.</comment>
+  </data>
+  <data name="PkgAuthorHeading" xml:space="preserve">
+    <value>Lag en pakke</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAuthorsLabel" xml:space="preserve">
+    <value>Forfattere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgAvailableFrom" xml:space="preserve">
+    <value>Tilgjengelig fra {0}{1}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBaseAsInstalled" xml:space="preserve">
+    <value>Base (slik den ble installert)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBranch" xml:space="preserve">
+    <value>Branch</value>
+    <comment>MT — git term kept in English alongside 'remote'; 'gren' exists but is not what Norwegian developers say.</comment>
+  </data>
+  <data name="PkgBranchOptionalLabel" xml:space="preserve">
+    <value>Branch (valgfritt)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowse" xml:space="preserve">
+    <value>Bla</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowseDescription" xml:space="preserve">
+    <value>Oppdaterer repo-hurtigbufferen til remoten og lister opp pakkene dens. Versjoner kommer fra release-tagger; branch-tippen er dev-kanalen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgBrowseHeading" xml:space="preserve">
+    <value>Bla i pakker</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCheck" xml:space="preserve">
+    <value>Sjekk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgClassifyNeedsKeyLabel" xml:space="preserve">
+    <value>Klassifiser {0}: configure-referanser trenger en nøkkel og en etikett.</value>
+    <comment>MT — 'configure' is the machine-mode value (see PkgModeConfigure), kept.</comment>
+  </data>
+  <data name="PkgClose" xml:space="preserve">
+    <value>Lukk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommandCollision" xml:space="preserve">
+    <value>$-kommandoen «{0}» er allerede definert av pakken {1} ({2}/{3}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommunityDirectory" xml:space="preserve">
+    <value>Fellesskapskatalog</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommunityDirectoryHint" xml:space="preserve">
+    <value>Godkjente fellesskaps-repoer, kuratert i det offisielle pakke-repoet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCommunityRemoteAdded" xml:space="preserve">
+    <value>La til «{0}» som en fellesskaps-remote.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfigureKeyLabel" xml:space="preserve">
+    <value>Configure-nøkkel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfigurePromptLabel" xml:space="preserve">
+    <value>Ledetekst som vises ved installasjon</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfigured" xml:space="preserve">
+    <value>konfigurert</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConfiguredRemotes" xml:space="preserve">
+    <value>Konfigurerte remoter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConflictCount" xml:space="preserve">
+    <value>{count, plural, one {# konflikt} other {# konflikter}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConflictLabel" xml:space="preserve">
+    <value>konflikt: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgConflictsWithInstalled" xml:space="preserve">
+    <value>I konflikt med installert</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgCurrent" xml:space="preserve">
+    <value>gjeldende</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDbrefHelper" xml:space="preserve">
+    <value>Objekt-id, f.eks. #123:456</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDefaultBranch" xml:space="preserve">
+    <value>standard</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDeleteTakeTheirs" xml:space="preserve">
+    <value>Slett den (ta deres)</value>
+    <comment>MT — merge-conflict choice, paired with PkgKeepMine/PkgTakeTheirs.</comment>
+  </data>
+  <data name="PkgDependedOnBy" xml:space="preserve">
+    <value>Brukes av: {0}</value>
+    <comment>MT — 'Depended on by' has no compact Norwegian equivalent; rendered as 'used by'. Flagged in case the distinction from a plain usage list matters.</comment>
+  </data>
+  <data name="PkgDescriptionLabel" xml:space="preserve">
+    <value>Beskrivelse</value>
+    <comment>MT — corpus term.</comment>
+  </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Tittel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDetails" xml:space="preserve">
+    <value>Detaljer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDevChannelOption" xml:space="preserve">
+    <value>dev-kanal ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDevDrift" xml:space="preserve">
+    <value>dev-avvik</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgDownload" xml:space="preserve">
+    <value>Last ned</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgEditMergedValue" xml:space="preserve">
+    <value>Rediger sammenslått verdi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgEnterObjectId" xml:space="preserve">
+    <value>Skriv inn minst én objekt-id.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgExportHint" xml:space="preserve">
+    <value>Commit dette til et pakke-repo (én mappe per pakke), list det opp i index.yaml, og tagg utgivelser som</value>
+    <comment>MT — sentence fragment continued by a code example.</comment>
+  </data>
+  <data name="PkgExportYaml" xml:space="preserve">
+    <value>Eksporter package.yaml</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgForceRemoval" xml:space="preserve">
+    <value>Tving fjerning likevel</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgGitUrlLabel" xml:space="preserve">
+    <value>Git-URL</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstallHeading" xml:space="preserve">
+    <value>Installer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalled" xml:space="preserve">
+    <value>Installert</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalledDescription" xml:space="preserve">
+    <value>Installerte softcode-pakker. Oppgraderinger går alltid gjennom en gjennomgått plan — ingenting tas i bruk automatisk.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalledOn" xml:space="preserve">
+    <value>installert {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgInstalledSuffix" xml:space="preserve">
+    <value> — installert: {0}.</value>
+    <comment>MT — leading space preserved; this is appended to another string.</comment>
+  </data>
+  <data name="PkgKeepMine" xml:space="preserve">
+    <value>Behold min</value>
+    <comment>MT — merge-conflict choice.</comment>
+  </data>
+  <data name="PkgLicenseLabel" xml:space="preserve">
+    <value>Lisens (valgfritt)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgLiveYourVersion" xml:space="preserve">
+    <value>Live (din versjon)</value>
+    <comment>MT — 'live' as opposed to the installed base version.</comment>
+  </data>
+  <data name="PkgManifestParseFailed" xml:space="preserve">
+    <value>Manifestet på branch-tippen kunne ikke tolkes.</value>
+    <comment>MT — 'the tip' spelled out as the branch tip; a bare 'tippen' is unclear in Norwegian.</comment>
+  </data>
+  <data name="PkgManifestRefLabel" xml:space="preserve">
+    <value>Manifest-ref (små bokstaver, understreker)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgMergedValueLabel" xml:space="preserve">
+    <value>Sammenslått verdi</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgMissingRemoteParam" xml:space="preserve">
+    <value>Mangler parameteren «remote».</value>
+    <comment>MT — 'remote' is the literal parameter name, kept.</comment>
+  </data>
+  <data name="PkgModeConfigure" xml:space="preserve">
+    <value>configure</value>
+    <comment>MT — machine mode value, untranslated.</comment>
+  </data>
+  <data name="PkgModeWellKnown" xml:space="preserve">
+    <value>well-known</value>
+    <comment>MT — machine mode value, untranslated.</comment>
+  </data>
+  <data name="PkgName" xml:space="preserve">
+    <value>Navn</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNewVersion" xml:space="preserve">
+    <value>Ny ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoCommunityRepos" xml:space="preserve">
+    <value>Ingen fellesskaps-repoer er godkjent ennå.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoDescription" xml:space="preserve">
+    <value>(ingen beskrivelse)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoReadme" xml:space="preserve">
+    <value>Ingen README tilgjengelig.</value>
+    <comment>MT — 'README' is a file name, kept.</comment>
+  </data>
+  <data name="PkgNoReleaseTags" xml:space="preserve">
+    <value>Ingen release-tagger — bare dev-kanalen er tilgjengelig.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoSearchMatch" xml:space="preserve">
+    <value>Ingen pakker samsvarer med søket ditt.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoUpdatesAvailable" xml:space="preserve">
+    <value>Ingen pakker har en tilgjengelig oppdatering.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNoneInstalled" xml:space="preserve">
+    <value>Ingen pakker er installert ennå. Konfigurer en remote, og bla i den for å installere din første pakke.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgNotInstalledSuffix" xml:space="preserve">
+    <value> — ikke installert.</value>
+    <comment>MT — leading space preserved.</comment>
+  </data>
+  <data name="PkgObjAttrCounts" xml:space="preserve">
+    <value>{0} obj / {1} attr</value>
+    <comment>MT — abbreviations kept as in the English.</comment>
+  </data>
+  <data name="PkgObjectIdsLabel" xml:space="preserve">
+    <value>Objekt-id-er</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgObjects" xml:space="preserve">
+    <value>Objekter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgObjectsCount" xml:space="preserve">
+    <value>Objekter ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgOccurrences" xml:space="preserve">
+    <value>{count, plural, one {# forekomst} other {# forekomster}}, f.eks. i {location}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPackageIdLabel" xml:space="preserve">
+    <value>Pakke-id (små bokstaver, bindestreker)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPackages" xml:space="preserve">
+    <value>Pakker</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgPlanLocation" xml:space="preserve">
+    <value>{0} / {1} ved {2}</value>
+    <comment>MT — {2} assumed to be a position/location within the plan.</comment>
+  </data>
+  <data name="PkgRef" xml:space="preserve">
+    <value>Ref</value>
+    <comment>MT — git ref; kept.</comment>
+  </data>
+  <data name="PkgRefreshAndBrowse" xml:space="preserve">
+    <value>Oppdater og bla</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemoteLabel" xml:space="preserve">
+    <value>Remote</value>
+    <comment>MT — git term, kept.</comment>
+  </data>
+  <data name="PkgRemoteRemoved" xml:space="preserve">
+    <value>Fjernet remoten «{0}».</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemoteSaved" xml:space="preserve">
+    <value>Remoten «{0}» er lagret.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotes" xml:space="preserve">
+    <value>Remoter</value>
+    <comment>MT — Norwegian plural suffix on the kept git term.</comment>
+  </data>
+  <data name="PkgRemotesDescription" xml:space="preserve">
+    <value>Git-repoer som dette spillet installerer pakker fra. Tillitsnivåene bestemmer du selv — fellesskapsoppføringene nedenfor er kuratert i det offisielle repoet, aldri selverklærte.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRemotesHeading" xml:space="preserve">
+    <value>Pakke-remoter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRenamedFrom" xml:space="preserve">
+    <value>omdøpt fra {0} (beholder {1})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgReplan" xml:space="preserve">
+    <value>Legg ny plan med disse svarene</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRequiredBy" xml:space="preserve">
+    <value>kreves av {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRequires" xml:space="preserve">
+    <value>Krever</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgResolutionLabel" xml:space="preserve">
+    <value>Løsning</value>
+    <comment>MT — how a conflict is resolved.</comment>
+  </data>
+  <data name="PkgResolvesAtApply" xml:space="preserve">
+    <value>løses ved bruk</value>
+    <comment>MT — 'resolves when the plan is applied'.</comment>
+  </data>
+  <data name="PkgResolvesAtApplyTooltip" xml:space="preserve">
+    <value>Noen referanser løses først når planen tas i bruk (nye objekter / configure)</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgReview" xml:space="preserve">
+    <value>Gjennomgå</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgReviewInstall" xml:space="preserve">
+    <value>Gjennomgå installasjonen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionHistory" xml:space="preserve">
+    <value>Revisjonshistorikk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionLine" xml:space="preserve">
+    <value>rev {0} — {1} {2}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRevisionsOf" xml:space="preserve">
+    <value>{0} — revisjoner</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRollBack" xml:space="preserve">
+    <value>Rull tilbake</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgRolledBack" xml:space="preserve">
+    <value>Rullet tilbake til revisjon {0} (ny revisjon {1}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgScanSelection" xml:space="preserve">
+    <value>Skann utvalget</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgSearchPlaceholder" xml:space="preserve">
+    <value>Søk i pakker…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgSoftcodePackages" xml:space="preserve">
+    <value>Softcode-pakker</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepClassifyExternal" xml:space="preserve">
+    <value>Klassifiser eksterne referanser ({0})</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepMetadataExport" xml:space="preserve">
+    <value>Metadata og eksport</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepRefsAttributes" xml:space="preserve">
+    <value>Referanser og attributter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgStepSelectObjects" xml:space="preserve">
+    <value>Velg objekter</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTagMoved" xml:space="preserve">
+    <value>taggen er flyttet!</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTakeTheirs" xml:space="preserve">
+    <value>Ta deres</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrust" xml:space="preserve">
+    <value>Tillit</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustCommunity" xml:space="preserve">
+    <value>fellesskap</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustOfficial" xml:space="preserve">
+    <value>offisiell</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustUnknown" xml:space="preserve">
+    <value>ukjent</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTrustWarningTagMoved" xml:space="preserve">
+    <value>TILLITSADVARSEL: release-taggen for {0} {1} peker ikke lenger på den installerte commiten.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgType" xml:space="preserve">
+    <value>Type</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstall" xml:space="preserve">
+    <value>Avinstaller</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstallConfirmBody" xml:space="preserve">
+    <value>{objects, plural, one {# objekt} other {# objekter}} blir merket for destruksjon, og {attributes, plural, one {# administrert attributtoppføring} other {# administrerte attributtoppføringer}} blir fjernet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstallConfirmTitle" xml:space="preserve">
+    <value>Avinstallere {0}?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUninstalled" xml:space="preserve">
+    <value>Avinstallerte {0}.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUnreviewedSource" xml:space="preserve">
+    <value>Denne kilden er ikke gjennomgått. Inspiser all kode på gjennomgangsskjermen før du tar den i bruk.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdateCheckFailed" xml:space="preserve">
+    <value>Oppdateringssjekken mislyktes — er kilde-repoet tilgjengelig?</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdates" xml:space="preserve">
+    <value>Oppdateringer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpdatesAvailable" xml:space="preserve">
+    <value>Oppdateringer tilgjengelig</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpgradeHeading" xml:space="preserve">
+    <value>Oppgrader</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUpgradingFrom" xml:space="preserve">
+    <value>— oppgraderer fra {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgUrl" xml:space="preserve">
+    <value>URL</value>
+    <comment>MT — same in Bokmål.</comment>
+  </data>
+  <data name="PkgVersionAvailable" xml:space="preserve">
+    <value>{0} tilgjengelig</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgVersionLabel" xml:space="preserve">
+    <value>Versjon</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgWellKnownRefLabel" xml:space="preserve">
+    <value>Well-known-ref</value>
+    <comment>MT — 'well-known' is the machine mode value (PkgModeWellKnown), kept.</comment>
+  </data>
+  <data name="PkgWillBeMarkedGoing" xml:space="preserve">
+    <value>{0} blir merket GOING</value>
+    <comment>MT — GOING is a MUSH flag name, kept.</comment>
+  </data>
+  <data name="Play" xml:space="preserve">
+    <value>Spill</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayNeedsCharacter" xml:space="preserve">
+    <value>Du har ingen karakter ennå. Opprett en for å komme inn i spillet.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavPlayRosterUnavailable" xml:space="preserve">
+    <value>Karakterene dine kunne ikke lastes. Spillet er kanskje utilgjengelig akkurat nå.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavTryAgain" xml:space="preserve">
+    <value>Prøv igjen</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Players" xml:space="preserve">
+    <value>Spillere:</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PreviewFileContent" xml:space="preserve">
+    <value>Forhåndsvis filinnhold</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileHandler" xml:space="preserve">
+    <value>Profilhåndterer</value>
+    <comment>MT — assumed the softcode handler that serves the profile.</comment>
+  </data>
+  <data name="ProfileUnavailable" xml:space="preserve">
+    <value>Profilen til denne karakteren er ikke tilgjengelig.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileUpdateFailed" xml:space="preserve">
+    <value>Kunne ikke lagre endringene i profilen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ProfileUpdated" xml:space="preserve">
+    <value>Profilen er oppdatert ({count, plural, one {# felt} other {# felter}}).</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Progress" xml:space="preserve">
+    <value>Fremdrift</value>
+    <comment>MT</comment>
+  </data>
+  <data name="QuickActions" xml:space="preserve">
+    <value>Hurtighandlinger</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Oppdater</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RemoveEntry" xml:space="preserve">
+    <value>Fjern oppføring</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Reply" xml:space="preserve">
+    <value>Svar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResActiveScenesSubtitle" xml:space="preserve">
+    <value>Økter som pågår akkurat nå.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResAnyoneCanEdit" xml:space="preserve">
+    <value>alle kan redigere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResChangeCount" xml:space="preserve">
+    <value>{count, plural, one {# endring} other {# endringer}}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResChangedBadge" xml:space="preserve">
+    <value>endret</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResConfigSectionKicker" xml:space="preserve">
+    <value>Admin · serverinnstillinger</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResDefaultValueTooltip" xml:space="preserve">
+    <value>Standard: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResDraft" xml:space="preserve">
+    <value>Utkast</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResHistory" xml:space="preserve">
+    <value>Historikk</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResInvalid" xml:space="preserve">
+    <value>Ugyldig</value>
+    <comment>MT — corpus term.</comment>
+  </data>
+  <data name="ResJoin" xml:space="preserve">
+    <value>Bli med</value>
+    <comment>MT — assumed a button for joining a scene.</comment>
+  </data>
+  <data name="ResNoScenesFound" xml:space="preserve">
+    <value>Fant ingen scener.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResOnThisPage" xml:space="preserve">
+    <value>På denne siden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResRead" xml:space="preserve">
+    <value>Les</value>
+    <comment>MT — assumed an action/link, not a status.</comment>
+  </data>
+  <data name="ResRoutingErrorHint" xml:space="preserve">
+    <value>Denne meldingen betyr at den egendefinerte siden IKKE blir matchet av ruteren.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResSaveFailedShort" xml:space="preserve">
+    <value>Lagring mislyktes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResScenesSubtitle" xml:space="preserve">
+    <value>Bla i og følg rollespilløkter.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResSearchTitlesPlaceholder" xml:space="preserve">
+    <value>Søk i titler…</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResStartedAt" xml:space="preserve">
+    <value>Startet {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResTabLive" xml:space="preserve">
+    <value>Live</value>
+    <comment>MT — kept: 'live' is an established Norwegian loanword (live-sending) and fits a narrow tab. 'Direkte' is the native alternative if a reviewer prefers it; it must then change in RolLiveBadge, RolLiveScene and WidSceneLive too.</comment>
+  </data>
+  <data name="ResTabRecent" xml:space="preserve">
+    <value>Nylige</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResValidationFailed" xml:space="preserve">
+    <value>Validering mislyktes</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResViewLog" xml:space="preserve">
+    <value>Vis logg</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatDrafts" xml:space="preserve">
+    <value>Utkast</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatTotalPages" xml:space="preserve">
+    <value>Sider totalt</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResWikiStatTranslations" xml:space="preserve">
+    <value>Oversettelser</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetChanges" xml:space="preserve">
+    <value>Tilbakestill endringer</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetToDefault" xml:space="preserve">
+    <value>Tilbakestill til standard</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ResetToDefaults" xml:space="preserve">
+    <value>Tilbakestill til standardverdier</value>
+    <comment>MT</comment>
+  </data>
+  <data name="Restrictions" xml:space="preserve">
+    <value>Restriksjoner</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RestrictionsBuilderHelper" xml:space="preserve">
+    <value>f.eks. wizard, builder</value>
+    <comment>MT — flag names kept in English per glossary.</comment>
+  </data>
+  <data name="RestrictionsDescription" xml:space="preserve">
+    <value>Begrens hvilke spillere som kan bruke bestemte kommandoer eller funksjoner, basert på flagg, powers eller attributter.</value>
+    <comment>MT — 'power' kept untranslated per glossary (corpus: 'den poweren').</comment>
+  </data>
+  <data name="RestrictionsHelper" xml:space="preserve">
+    <value>f.eks. wizard, royalty, admin</value>
+    <comment>MT — privilege-level names kept in English per glossary.</comment>
+  </data>
+  <data name="RestrictionsLabel" xml:space="preserve">
+    <value>Restriksjoner</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolAddRole" xml:space="preserve">
+    <value>Legg til rolle</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolGuardSection" xml:space="preserve">
+    <value>Beskyttede roller</value>
+  </data>
   <data name="RolGuardPass" xml:space="preserve">
     <value>Spill · Kom forbi beskyttelsen til {0}</value>
   </data>

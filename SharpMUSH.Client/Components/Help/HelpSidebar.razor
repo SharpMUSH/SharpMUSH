@@ -175,14 +175,14 @@
     }
 
     /// <summary>
-    /// Whether <paramref name="topic"/> is named by punctuation rather than a word: <c>%#</c>, <c>&amp;</c>,
-    /// <c>:</c>, <c>@@</c>, <c>$-commands</c>. A command's own <c>@</c>, <c>+</c> or <c>&amp;</c> does not count,
-    /// so <c>@mail</c> and <c>+help</c> are words.
+    /// Whether <paramref name="topic"/> is named by punctuation rather than a word: <c>%#</c>, <c>%a</c>, <c>&amp;</c>,
+    /// <c>:</c>, <c>@@</c>. A command's own <c>@</c>, <c>+</c> or <c>&amp;</c> does not count, so <c>@mail</c> and
+    /// <c>+help</c> are words, and so is a name with a word in it, such as <c>@-wizard</c> or <c>$-commands</c>.
     /// </summary>
     public static bool IsSymbol(string topic)
     {
         var word = topic.Length > 1 && topic[0] is '@' or '+' or '&' ? topic[1..] : topic;
-        return word.Length == 0 || !char.IsLetterOrDigit(word[0]);
+        return (word.Length == 0 || !char.IsLetterOrDigit(word[0])) && topic.Count(char.IsLetter) < 2;
     }
 
     /// <summary>The symbol topics, outside a search: what a word slice would otherwise open with.</summary>
@@ -190,7 +190,8 @@
         _index is null || _path == "/help" && _query.Length > 0
             ? []
             : _index.Topics.Where(topic => IsSymbol(topic)
-                && !string.Equals(topic, _index.Topic, StringComparison.OrdinalIgnoreCase)).ToList();
+                && !string.Equals(topic, _index.Topic, StringComparison.OrdinalIgnoreCase)
+                && Related?.Linked.Concat(Related.Nearby).Contains(topic, StringComparer.OrdinalIgnoreCase) != true).ToList();
 
     /// <summary>
     /// <see cref="TopicsShown"/> topics around <paramref name="current"/>, or from the start of the list

@@ -1744,6 +1744,9 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	.kit-row, .kit-capsule, .kit-chip { min-height: 44px; }
 	.kit-capsule--icon { min-width: 44px; }
 	.kit-portrait, .kit-tile { min-height: 44px; }
+	/* The wiki sidebar's members button and the help sidebar's symbol chips (scoped CSS takes no media query). */
+	.wiki-side-members { width: 44px; height: 44px; }
+	.help-side-symbol { display: grid; place-items: center; min-width: 44px; min-height: 44px; }
 }
 
 /* Wiki categories: a page's category bar (MediaWiki's catlinks) and a category page's subcategories.

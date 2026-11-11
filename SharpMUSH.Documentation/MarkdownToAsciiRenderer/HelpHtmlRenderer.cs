@@ -205,6 +205,12 @@ public static class HelpHtmlRenderer
 					case CodeInline code:
 						text.Append(code.Content);
 						break;
+					case HtmlEntityInline entity:
+						text.Append(entity.Transcoded.ToString());
+						break;
+					case AutolinkInline autolink:
+						text.Append(autolink.Url);
+						break;
 					case LineBreakInline:
 						text.Append(' ');
 						break;

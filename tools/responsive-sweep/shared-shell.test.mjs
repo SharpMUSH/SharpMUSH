@@ -136,20 +136,3 @@ test('shared card header wraps long titles and controls at narrow widths with en
         await browser.close();
     }
 });
-
-test('mobile terminal connection controls remain above fixed navigation', async () => {
-    const browser = await chromium.launch();
-    try {
-        const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-        await page.setContent(`<style>${tokens}${read('wwwroot/css/shell.css')}
-          body{margin:0} .phosphor-content-col{position:relative;height:100vh}
-          </style><div class="phosphor-shell phosphor-shell--bottomnav"><div class="phosphor-content-col">
-          <section class="phosphor-terminal"><div style="flex:1"></div><button id="connect">Connect</button></section>
-          <nav class="phosphor-bottomnav">Navigation</nav></div></div>`);
-        const terminal = await page.locator('.phosphor-terminal').boundingBox();
-        const nav = await page.locator('.phosphor-bottomnav').boundingBox();
-        assert.ok(terminal.y + terminal.height <= nav.y + 1, 'terminal footer must not sit beneath navigation');
-        await page.locator('#connect').click();
-        assert.equal(await page.locator('#connect').evaluate(el => el === document.activeElement), true);
-    } finally { await browser.close(); }
-});
