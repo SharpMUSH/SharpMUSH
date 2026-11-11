@@ -152,9 +152,8 @@ public partial class Commands
 			return await NotifyService.PermissionDenied(executor, refused);
 
 		var any = false;
-		foreach (var name in _dialectAddedCommands.Keys.Order(StringComparer.OrdinalIgnoreCase))
+		foreach (var name in _dialectAddedCommands.Keys.Where(name => LiveAddedCommand(name, out _)).Order(StringComparer.OrdinalIgnoreCase))
 		{
-			if (!LiveAddedCommand(name, out _)) continue;
 			if (await HookService.GetHookAsync(name, "OVERRIDE") is not CommandHook hook) continue;
 			any = true;
 			await NotifyService.Notify(executor, $"{name}: #{hook.TargetObject.Number}/{hook.AttributeName}");
