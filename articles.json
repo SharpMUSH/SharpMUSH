@@ -1703,6 +1703,12 @@
         "lookup": "compatibility config other servers attribute names",
         "heading": "Other servers\u0027 attribute names",
         "aliases": []
+      },
+      {
+        "id": "spaces-space-compress",
+        "lookup": "compatibility config spaces space compress",
+        "heading": "Spaces: \u0060space_compress\u0060",
+        "aliases": []
       }
     ],
     "file": "compatibility-config.md"
@@ -1714,6 +1720,27 @@
     "aliases": [],
     "sections": [],
     "file": "compatibility-defects.md"
+  },
+  {
+    "id": "compatibility-dialects",
+    "lookup": "compatibility dialects",
+    "title": "Compatibility Dialects",
+    "aliases": [],
+    "sections": [
+      {
+        "id": "rhostmush-substitutions",
+        "lookup": "compatibility dialects rhostmush substitutions",
+        "heading": "RhostMUSH substitutions",
+        "aliases": []
+      },
+      {
+        "id": "commas-in-one-argument-functions",
+        "lookup": "compatibility dialects commas in one argument functions",
+        "heading": "Commas in one-argument functions",
+        "aliases": []
+      }
+    ],
+    "file": "compatibility-dialects.md"
   },
   {
     "id": "compatibility-economy",

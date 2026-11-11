@@ -33,13 +33,14 @@ Options that make SharpMUSH behave like TinyMUSH, TinyMUX or RhostMUSH, for code
 - `mux_logic=<boolean>`: Do and(), or(), xor(), cand() and cor() test each argument by its leading signed integer, as TinyMUX does, and does xor() answer 1 for an odd number of true arguments? See [compatibility config].
 - `mux_justify=<boolean>`: Do ljust(), rjust() and center() cut text longer than the width, as TinyMUX does?
 - `mux_collation=<boolean>`: Do comp() with no type and sort() with no sort type order text as TinyMUX does, `a A b B`?
-- `mux_queue_functions=<boolean>`: Do trigger() and verb() queue an attribute's actions, as TinyMUX's do? When off they return `#-1 FUNCTION DISABLED`. Importing a TinyMUX database turns it on.
-- `mux_quiet=<boolean>`: Does the /quiet switch of drop, get, give, goto, enter, leave and @teleport do what TinyMUX's does? See [compatibility config]. Importing a TinyMUX database turns it on.
-- `mux_function_caller=<boolean>`: Does a global @function defined without /privileged run as whoever calls it, as on TinyMUX? When off, every @function runs as the object that holds it. See [compatibility config]. Importing a TinyMUX database turns it on.
+- `mux_queue_functions=<boolean>`: Do trigger() and verb() queue an attribute's actions, as TinyMUX's do? When off they return `#-1 FUNCTION DISABLED`. A TinyMUX import turns it on.
+- `mux_quiet=<boolean>`: Does the /quiet switch of drop, get, give, goto, enter, leave and @teleport do what TinyMUX's does? See [compatibility config]. A TinyMUX import turns it on.
+- `mux_function_caller=<boolean>`: Does a global @function made without /privileged run as its caller, as on TinyMUX? Off, it runs as the object holding it. See [compatibility config]. A TinyMUX import turns it on.
 - `innermost_tokens=<boolean>`: Do `##` and `#@` name the innermost iter() or @dolist, and `#$` the innermost switch, as in TinyMUX? When off, they name the outermost one they are written in, as in PennMUSH.
-- `protection_flags=<boolean>`: Do NOEXAMINE and NOMODIFY protect, as on TinyMUX? Importing a TinyMUX database turns it on.
-- `attribute_eval_flags=<boolean>`: Is an attribute set `noeval` never evaluated, and a `$`-command set `noparse` matched against the command as typed, as on TinyMUX and RhostMUSH? See [compatibility config attribute eval flags]. Importing a TinyMUX or RhostMUSH database turns it on.
+- `protection_flags=<boolean>`: Do NOEXAMINE and NOMODIFY protect, as on TinyMUX? A TinyMUX import turns it on.
+- `attribute_eval_flags=<boolean>`: Is an attribute set `noeval` never evaluated, and a `$`-command set `noparse` matched against the command as typed, as on TinyMUX and RhostMUSH? See [compatibility config attribute eval flags]. A TinyMUX or RhostMUSH import turns it on.
 - `mux_arguments=<boolean>`: Do the set functions, hmac(), lwho(), channels() and textfile() take TinyMUX's arguments? A TinyMUX import turns it on.
+- `space_compress=<boolean>`: Make each run of spaces one space? On by default.
 
 ## RhostMUSH options
 
@@ -53,4 +54,4 @@ The `rhost_` options below are for a game moved from RhostMUSH. Each is off by d
 - `protection_flags=<boolean>`: Do NOEXAMINE, NOMODIFY and NOCONNECT protect, as on RhostMUSH?
 - `rhost_map_args=<boolean>`: Does map() leave %1 empty when no extra arguments are given, as RhostMUSH does, rather than passing the item's position?
 - `sidefx_flag=<boolean>`: Do side-effect functions work only for an object with the SIDEFX flag or the `softcode.sidefx` permission, as on RhostMUSH? Others get `#-1 FUNCTION DISABLED`.
-- `dialect=<name>`: Whose names for functions and commands do typed input and attributes without a dialect flag also read? `rhost` reads RhostMUSH's and `mux` TinyMUX's, after SharpMUSH's own; empty reads none. See [attribute flags dialect].
+- `dialect=<name>`: Whose names for functions and commands do typed input and attributes without a dialect flag also read? `rhost` reads RhostMUSH's and `mux` TinyMUX's, after SharpMUSH's own; empty reads none. See [attribute flags dialect] and [compatibility dialects].
