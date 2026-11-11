@@ -3137,6 +3137,20 @@
     "file": "feed-functions.md"
   },
   {
+    "id": "femit-command",
+    "lookup": "@femit",
+    "title": "@femit",
+    "aliases": [
+      "@fpose",
+      "@fsay",
+      "@dialect_femit",
+      "@dialect_fpose",
+      "@dialect_fsay"
+    ],
+    "sections": [],
+    "file": "femit-command.md"
+  },
+  {
     "id": "fields-function",
     "lookup": "fields()",
     "title": "fields()",
@@ -4651,6 +4665,16 @@
       }
     ],
     "file": "land-function.md"
+  },
+  {
+    "id": "last-command",
+    "lookup": "@last",
+    "title": "@last",
+    "aliases": [
+      "@dialect_last"
+    ],
+    "sections": [],
+    "file": "last-command.md"
   },
   {
     "id": "lattr-function",
@@ -6654,6 +6678,14 @@
       }
     ],
     "file": "pueblo.md"
+  },
+  {
+    "id": "puebloclient",
+    "lookup": "PUEBLOCLIENT",
+    "title": "PUEBLOCLIENT",
+    "aliases": [],
+    "sections": [],
+    "file": "puebloclient.md"
   },
   {
     "id": "puppets",
