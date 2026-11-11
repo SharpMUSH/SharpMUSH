@@ -123,6 +123,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>, IConfigured
 
 	private IWebPushService WebPush { get; }
 
+	private Library.Email.IEmailService Email { get; }
+
 	private IPortalPresence PortalPresence { get; }
 
 	private IPipeOutputCapture PipeOutputCapture { get; }
@@ -197,6 +199,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>, IConfigured
 		IConfigOptionWriter configWriter,
 		ISecretStore secrets,
 		IWebPushService webPush,
+		Library.Email.IEmailService email,
 		IPortalPresence portalPresence,
 		ILibraryProvider<FunctionDefinition> functions,
 		NativeLoginService nativeLogins,
@@ -267,6 +270,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>, IConfigured
 		ConfigWriter = configWriter;
 		Secrets = secrets;
 		WebPush = webPush;
+		Email = email;
 		PortalPresence = portalPresence;
 		PipeOutputCapture = pipeOutputCapture;
 		Functions = functions;

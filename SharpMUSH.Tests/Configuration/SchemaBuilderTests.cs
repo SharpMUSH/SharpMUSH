@@ -91,11 +91,11 @@ public class SchemaBuilderTests
 
 		var netGroups = string.Join("|", schema.Categories.First(c => c.Name == "Net").Groups.Select(g => g.Name));
 
-		// First-property Orders in NetOptions: General=1, Database=1, Advanced=1,
+		// First-property Orders in NetOptions: General=1, Database=1, Advanced=1, Email=1,
 		// Connection Settings=4, Network Protocol=4, Connection Limits=4.
 		// Primary sort is that Order; ties keep property declaration order.
 		await Assert.That(netGroups)
-			.IsEqualTo("General|Database|Advanced|Connection Settings|Network Protocol|Connection Limits");
+			.IsEqualTo("General|Database|Advanced|Email|Connection Settings|Network Protocol|Connection Limits");
 	}
 
 	[Test]

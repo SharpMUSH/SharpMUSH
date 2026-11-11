@@ -199,6 +199,8 @@ internal static class EngineRegistration
 		// declares the ones it reads with a SecretDefinition singleton of its own.
 		services.AddSingleton(_ => SecretStoreOptions.FromEnvironment());
 		services.AddSingleton(SecretDefinition.SqlPassword);
+		services.AddSingleton(SecretDefinition.EmailPassword);
+		services.AddSingleton<SharpMUSH.Library.Email.IEmailService, Services.SmtpEmailService>();
 		services.AddSingleton<ISecretStore, SecretStore>();
 		// Web push: the VAPID key (a secret made on first use), the sender, and which portal tabs are in view.
 		services.Configure<Services.WebPushOptions>(configuration.GetSection(Services.WebPushOptions.Section));

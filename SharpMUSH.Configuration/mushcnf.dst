@@ -297,6 +297,20 @@ ws_url /wsclient
 # media_base_url https://example.com/media/
 media_base_url
 
+# The SMTP server @email sends through, and the address it sends from.
+# @email is off while either is empty. The password for email_username
+# is the email.password secret, never set here.
+# email_server smtp.example.com
+email_server
+email_port 587
+email_username
+email_from
+# Empty uses mud_name for both.
+email_from_name
+email_subject
+# How many emails the game may send in an hour.
+email_per_hour 50
+
 ###
 ### Limits, costs, and other constants
 ###
