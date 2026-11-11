@@ -11,6 +11,9 @@ public class SandboxFunctionTests : ServerTestBase
 	[Arguments("sandbox([add(1,1)] [sub(1,1)],)", "2 0")]
 	[Arguments("sandbox([add(1,1)] [sub(1,1)],[lcstr(ADD)])", "#-1 PERMISSION DENIED: CANNOT USE ADD 0")]
 	[Arguments("[sandbox(x,add)][add(1,1)]", "x2")]
+	[Arguments("sandbox(map(#apply/abs,-2 -3),abs)", "#-1 PERMISSION DENIED: CANNOT USE ABS #-1 PERMISSION DENIED: CANNOT USE ABS")]
+	[Arguments("sandbox(map(#apply/strlen,ab),strlen,1)", "#-1 FUNCTION (STRLEN) NOT FOUND")]
+	[Arguments("sandbox(map(#apply/abs,-2),map,0,0,1)", "#-1 PERMISSION DENIED: CANNOT USE ABS")]
 	[Arguments("sandbox(sandbox([add(1,1)] [sub(1,1)],sub),add)", "#-1 PERMISSION DENIED: CANNOT USE ADD #-1 PERMISSION DENIED: CANNOT USE SUB")]
 	[Arguments("sandbox(sandbox([add(1,1)] [sub(1,1)],add sub,0,0,1),add sandbox,0,0,1)", "2 #-1 PERMISSION DENIED: CANNOT USE SUB")]
 	public async Task RefusesTheListedFunctions(string expression, string expected)

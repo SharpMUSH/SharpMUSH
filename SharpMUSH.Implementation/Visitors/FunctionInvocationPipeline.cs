@@ -58,6 +58,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 		LimitExceededFlag? limitExceeded = null;
 		var isolated = IsRestricted(parser);
 
+		var typedName = name;
 		try
 		{
 			if (!TryResolveFunction(visitor, ref name, out var definition))
@@ -83,7 +84,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			EvaluationRestrictions.Demand(definition, parser.CurrentState.Restrictions);
 			if (IsRestricted(parser) && args.Length > EvaluationRestrictions.MaximumArguments)
 				throw new RestrictedExpressionException();
-			if (FunctionSandbox.Refusal(name, definition.Attribute.Name, !parser.FunctionLibrary.ContainsKey(name)) is { } sandboxed)
+			if (FunctionSandbox.Refusal(typedName, IsUserFunction(parser, name), name, definition.Attribute.Name) is { } sandboxed)
 			{
 				success = false;
 				return new CallState(sandboxed, context.Depth());
@@ -269,6 +270,11 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 
 	/// <summary>Whether <paramref name="name"/> calls a function: a built-in, an @function, or a name the dialect in force has for one.</summary>
 	public bool IsFunction(SharpMUSHParserVisitor visitor, string name) => TryResolveFunction(visitor, ref name, out _);
+
+	/// <summary>Whether <paramref name="name"/> resolved to an @function, as <see cref="TryResolveName"/> resolves it.</summary>
+	private static bool IsUserFunction(IMUSHCodeParser parser, string name)
+		=> !(parser.CurrentState.BuiltinCall is { } builtin && builtin.Attribute.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+			&& !parser.FunctionLibrary.ContainsKey(name);
 
 	/// <summary>
 	/// <see cref="TryResolveName"/>, and on a miss the SharpMUSH function the dialect in force means by

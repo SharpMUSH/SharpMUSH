@@ -196,4 +196,26 @@ public class PidFunctionTests
 			foreach (var pid in pids) await Queue.HaltByPid(pid);
 		}
 	}
+
+	/// <summary>
+	/// pid(128) in code another player's entry calls answers nothing: the caller may not see that entry, so it may
+	/// not read what was queued in it.
+	/// </summary>
+	[Test]
+	public async ValueTask PidHidesTheRunningCommandFromCodeItCalls()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "RhostPidPeek");
+		var created = await WebAppFactoryArg.CommandParserFor(mortal.DbRef, mortal.Handle)
+			.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("RhostPidPeek")}"));
+		var thing = DBRef.Parse(created.Message.ToPlainText()!);
+		await WebAppFactoryArg.CommandParserFor(mortal.DbRef, mortal.Handle)
+			.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"&PEEK #{thing.Number}=<[pid(128)]>"));
+
+		var admitted = await Queue.AdmitCommandList(MarkupText.Plain($"&SEEN #{thing.Number}=[u(#{thing.Number}/PEEK)] secret"),
+			ParserState.Empty with { Executor = new DBRef(1), Enactor = new DBRef(1) }, TimeSpan.FromHours(1));
+		await Queue.ReleaseScheduledWork(admitted.Pid!.Value);
+		await Queue.DrainImmediateQueueForTests();
+
+		await Assert.That(await As(mortal, $"get(#{thing.Number}/SEEN)")).IsEqualTo("<> secret");
+	}
 }

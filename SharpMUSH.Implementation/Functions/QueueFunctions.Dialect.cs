@@ -50,7 +50,7 @@ public partial class Functions
 		if (display.HasFlag(PidFields.CurrentPid))
 			return RunningQueueEntry.Pid is { } running ? new CallState(running.ToString(CultureInfo.InvariantCulture)) : new CallState("#-1");
 		if (display.HasFlag(PidFields.CurrentCommand))
-			return new CallState(RunningQueueEntry.Command?.ToPlainText() ?? string.Empty);
+			return new CallState(await RunningCommandFor(await parser.CurrentState.KnownExecutorObject(Mediator)));
 		if ((display & (PidFields.Pid | PidFields.Executor | PidFields.Enactor | PidFields.Remaining | PidFields.Status | PidFields.Command)) == 0)
 			display = PidFields.Pid;
 
@@ -76,6 +76,20 @@ public partial class Functions
 				type, display, separator),
 			CallState refusal => refusal
 		};
+	}
+
+	/// <summary>
+	/// The running entry's action list, when <paramref name="executor"/> may see that entry as <c>pid()</c>'s listing
+	/// would show it; otherwise nothing, so code an entry calls does not learn what someone else queued.
+	/// </summary>
+	private static async ValueTask<string> RunningCommandFor(AnySharpObject executor)
+	{
+		if (RunningQueueEntry.Current is not { Command: { } command } running) return string.Empty;
+		var executorOwner = (await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
+		var visible = running.Executor?.Number == executor.Object().DBRef.Number
+			|| running.Owner?.Number == executorOwner.Number
+			|| await executor.IsPriv() || await executor.HasPower("SEE_QUEUE");
+		return visible ? command.ToPlainText() : string.Empty;
 	}
 
 	/// <summary>Which entries <c>pid()</c> lists, or why it lists none.</summary>

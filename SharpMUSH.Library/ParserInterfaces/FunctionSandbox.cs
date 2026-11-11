@@ -3,25 +3,25 @@ using System.Collections.Immutable;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Services.Interfaces;
 
-namespace SharpMUSH.Implementation.Definitions;
+namespace SharpMUSH.Library.ParserInterfaces;
 
 /// <summary>
 /// The function lists <c>sandbox()</c> puts around an evaluation. Each <c>sandbox()</c> adds a layer that lasts
 /// while its expression is evaluated, <c>u()</c> and every other evaluation it reaches included; a call is
 /// refused when any layer refuses it, so a sandbox inside another can only take more functions away.
 /// </summary>
-internal static class FunctionSandbox
+public static class FunctionSandbox
 {
 	/// <summary>One <c>sandbox()</c>'s list.</summary>
 	/// <param name="Names">The functions listed, in any case.</param>
 	/// <param name="AllowList">True when <see cref="Names"/> are the only functions allowed, false when they are the ones refused.</param>
 	/// <param name="AsUnknown">True when a refused function answers as though it did not exist, false when it answers permission denied.</param>
 	/// <param name="CoversUserFunctions">True when the list also applies to <c>@function</c> functions.</param>
-	internal sealed record Layer(FrozenSet<string> Names, bool AllowList, bool AsUnknown, bool CoversUserFunctions)
+	public sealed record Layer(FrozenSet<string> Names, bool AllowList, bool AsUnknown, bool CoversUserFunctions)
 	{
-		public bool Refuses(string name, string registeredName, bool userFunction)
-			=> (!userFunction || CoversUserFunctions)
-				&& (Names.Contains(name) || Names.Contains(registeredName)) != AllowList;
+		/// <summary>Whether the layer refuses a call known by any of <paramref name="names"/>.</summary>
+		public bool Refuses(IEnumerable<string> names, bool userFunction)
+			=> (!userFunction || CoversUserFunctions) && names.Any(Names.Contains) != AllowList;
 	}
 
 	private static readonly AsyncLocal<ImmutableStack<Layer>?> Ambient = new();
@@ -36,14 +36,16 @@ internal static class FunctionSandbox
 
 	/// <summary>
 	/// What a call to <paramref name="name"/> answers in place of running, or null when no layer refuses it.
-	/// <paramref name="registeredName"/> is the name the function is registered under, which an alias resolves to.
+	/// <paramref name="otherNames"/> are the other names the call goes by: the function a dialect name stands for,
+	/// and the name the function is registered under, which an alias resolves to. A layer that lists any of them
+	/// refuses the call.
 	/// </summary>
-	public static string? Refusal(string name, string registeredName, bool userFunction)
+	public static string? Refusal(string name, bool userFunction, params string[] otherNames)
 	{
 		if (Ambient.Value is not { } layers) return null;
 		foreach (var layer in layers)
 		{
-			if (!layer.Refuses(name, registeredName, userFunction)) continue;
+			if (!layer.Refuses(otherNames.Prepend(name), userFunction)) continue;
 			return layer.AsUnknown
 				? string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant())
 				: PermissionRefusal.CannotUse(name.ToUpperInvariant()).ReturnText;

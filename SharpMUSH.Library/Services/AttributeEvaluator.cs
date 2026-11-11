@@ -257,6 +257,9 @@ internal sealed class AttributeEvaluator(
 
 			if (parser.FunctionLibrary.TryGetValue(attribute.ToPlainText().ToLower(), out var applyFunction))
 			{
+				if (FunctionSandbox.Refusal(attribute.ToPlainText(), userFunction: false, applyFunction.LibraryInformation.Attribute.Name) is { } sandboxed)
+					return new CallState(sandboxed);
+
 				var builtinRestriction = userFunctions?.GetBuiltinRestriction(attribute.ToPlainText());
 				if (builtinRestriction is not null && !await realExecutor.SatisfiesFunctionRestriction(builtinRestriction))
 					return new CallState(ErrorMessages.Returns.PermissionDenied);
