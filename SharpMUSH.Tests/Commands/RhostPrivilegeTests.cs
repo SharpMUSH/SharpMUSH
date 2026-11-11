@@ -95,6 +95,13 @@ public class RhostPrivilegeTests : ServerTestBase
 
 		await Assert.That(await EvalAs(_wizard.DbRef, $"edefault({thing}/SECRET,none)")).IsEqualTo("none");
 
+		var child = DBRef.Parse(await CmdAs(_wizard.DbRef, _wizard.Handle, $"@create {TestIsolationHelpers.GenerateUniqueName("DarkChild")}"));
+		await CmdAs(_wizard.DbRef, _wizard.Handle, $"@parent #{child.Number}={thing}");
+		await Cmd($"&PLAIN {thing}=plain_{marker}");
+		await Assert.That(await EvalAs(child, "pfun(PLAIN)")).IsEqualTo($"plain_{marker}");
+		await Assert.That(await EvalAs(child, "pfun(SECRET)")).IsNotEqualTo(marker)
+			.Because("pfun() reads the parent's attribute for its caller");
+
 		// A $-command in it still runs: hiding its value does not stop the object using it.
 		await Cmd($"@set {thing}=!NO_COMMAND");
 		await CmdAs(_wizard.DbRef, _wizard.Handle, $"&ACT {thing}=$darkcmd{marker}:@pemit %#=ran_{marker}");
@@ -124,6 +131,12 @@ public class RhostPrivilegeTests : ServerTestBase
 		await CmdAs(_wizard.DbRef, _wizard.Handle, $"@attribute/access/retroactive {name}=none");
 		await Assert.That(await Eval($"lflags({thing}/{name})")).Contains("wizard_dark")
 			.Because("a retroactive pass by anyone but God leaves wizard_dark where it is");
+
+		await Cmd($"@attribute/access {name}=wizard_dark");
+		await CmdAs(_wizard.DbRef, _wizard.Handle, $"@attribute/access {name}=none");
+		await Cmd($"&{name} {Mortal}=fresh");
+		await Assert.That(await Eval($"lflags({Mortal}/{name})")).Contains("wizard_dark")
+			.Because("only God takes wizard_dark off the attribute table's defaults");
 	}
 
 	[Test]
@@ -131,8 +144,8 @@ public class RhostPrivilegeTests : ServerTestBase
 	{
 		await Cmd($"@permission/allow {Wizard}={PortalPermission.HideRoles}");
 		await Cmd($"@permission/allow {Mortal}={PortalPermission.PlayersView}");
-		await Assert.That(await CmdAs(_mortal.DbRef, _mortal.Handle, $"@role/player {Wizard}")).IsNotEqualTo(NullResult);
-		await Assert.That(Notifications.For(_mortal.DbRef).Any(line => line.Contains("hides its roles from you"))).IsTrue();
+		await CmdAs(_mortal.DbRef, _mortal.Handle, $"@role/player {Wizard}");
+		await Notifications.WaitForAsync(_mortal.DbRef, "hides its roles from you");
 	}
 
 	[Test]
@@ -141,6 +154,8 @@ public class RhostPrivilegeTests : ServerTestBase
 		await Assert.That(await EvalAs(_mortal.DbRef, $"gmcpsupports({Wizard})")).StartsWith("#-1");
 		await Cmd($"@power {Mortal}=See_OOB");
 		await Assert.That(await EvalAs(_mortal.DbRef, $"gmcpsupports({Wizard})")).DoesNotStartWith("#-1");
+		await Assert.That(await EvalAs(_mortal.DbRef, $"oob({Wizard},Room.Info)")).StartsWith("#-1 PERMISSION DENIED")
+			.Because("See_OOB reads; it does not send");
 	}
 
 	[Test]

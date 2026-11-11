@@ -1875,7 +1875,12 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var entry = await Mediator.Send(new CreateAttributeEntryCommand(attrName.ToUpper(), flagNames,
+		// Only God takes wizard_dark off the entry's defaults; anyone else's change keeps it there, though a
+		// retroactive pass still gives copies only the flags named here.
+		string[] entryFlags = !executor.IsGod() && current?.DefaultFlags.Contains("WIZARD_DARK", StringComparer.OrdinalIgnoreCase) == true
+			? [.. flagNames, "WIZARD_DARK"]
+			: flagNames;
+		var entry = await Mediator.Send(new CreateAttributeEntryCommand(attrName.ToUpper(), entryFlags,
 			current?.Limit, current?.Enum, current?.EnumDelimiter ?? ' '));
 		if (entry == null)
 		{

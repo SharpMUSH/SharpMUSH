@@ -1215,7 +1215,8 @@ public partial class Functions
 		}
 
 		var found = chain.Last();
-		if (found.IsInternal() || found.IsNoInherit())
+		// pfun() reads as God, so it checks wizard_dark for the caller itself, as get() and u() would.
+		if (HidesWizardDark(executor, chain) || found.IsInternal() || found.IsNoInherit())
 		{
 			return CallState.Empty;
 		}
