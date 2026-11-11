@@ -10,9 +10,10 @@ namespace SharpMUSH.Library.Services.DatabaseConversion.Softcode;
 /// </summary>
 /// <remarks>
 /// <para>A command is rewritten where a command starts: at the start of the attribute or of a <c>$</c>-command's or
-/// <c>^</c>-listen's action, or after <c>;</c> or <c>{</c>; an <c>@</c>-command also after a <c>,</c> or <c>=</c> that
-/// starts an action, as in <c>@switch</c>. It runs to the next <c>;</c> or the <c>}</c> closing it, outside any
-/// brackets. A form with no SharpMUSH counterpart is left as written, and the note says so.</para>
+/// <c>^</c>-listen's action, or after <c>;</c> or <c>{</c>; an <c>@</c>-command also after a <c>,</c> or <c>=</c> in a
+/// command that runs its arguments, such as <c>@switch</c>. <c>grab</c> and <c>join</c>, words of prose too, are not
+/// read at the start of the text. A command runs to the next <c>;</c> (or <c>,</c>, after one) or the <c>}</c> closing
+/// it, outside any brackets; one with a <c>&lt;placeholder&gt;</c> in it, as help text writes, is left alone. A form with no SharpMUSH counterpart is left as written, and the note says so.</para>
 /// <para>RhostMUSH accepts a switch cut short (<c>@zone/del</c>), so a switch here is the first of the command's
 /// whose name starts with what was typed.</para>
 /// <para>A local function is called by name in RhostMUSH and through <c>localfun()</c> here, so the import also
@@ -51,13 +52,19 @@ public static partial class RhostCommandRewriter
 
 			var name = head.Groups["name"].Value;
 			var lead = head.Groups["lead"].Value;
-			if (!name.StartsWith('@') && lead.TrimEnd() is [.., ',' or '='])
+			var after = lead.TrimEnd(' ', '\t') is [.., var last] ? last : '\0';
+			if (!StartsACommand(softcode, head.Index, name, after))
 			{
 				continue;
 			}
 
-			var end = CommandEnd(softcode, head.Index + head.Length);
+			var end = CommandEnd(softcode, head.Index + head.Length, stopAtComma: after == ',');
 			var written = softcode[head.Index..end][lead.Length..];
+			if (Placeholder().IsMatch(written))
+			{
+				continue;
+			}
+
 			var typed = head.Groups["switches"].Value.Split('/', StringSplitOptions.RemoveEmptyEntries);
 			var switches = typed.Select(sw => SwitchName(name, sw)).ToArray();
 			var argument = softcode[(head.Index + head.Length)..end].Trim();
@@ -70,6 +77,45 @@ public static partial class RhostCommandRewriter
 		}
 
 		return output.Append(softcode, at, softcode.Length - at).ToString();
+	}
+
+	/// <summary>
+	/// Whether the command at <paramref name="index"/>, after <paramref name="after"/>, is one: <c>grab</c> and
+	/// <c>join</c> are words of prose too, so they count only after <c>;</c>, <c>{</c> or a <c>$</c>-command's or
+	/// <c>^</c>-listen's pattern; the others also at the start of the text, and an <c>@</c>-command after a <c>,</c> or
+	/// <c>=</c> only inside a command that runs its arguments, such as <c>@switch</c>.
+	/// </summary>
+	private static bool StartsACommand(string text, int index, string name, char after)
+		=> after switch
+		{
+			';' or '{' or ':' => true,
+			',' or '=' => name.StartsWith('@') && RunsActions().IsMatch(text[StatementStart(text, index)..index]),
+			_ => !name.Equals("grab", StringComparison.OrdinalIgnoreCase) && !name.Equals("join", StringComparison.OrdinalIgnoreCase)
+		};
+
+	/// <summary>Where the statement holding <paramref name="index"/> starts: after the <c>;</c> or unclosed <c>{</c> before it.</summary>
+	private static int StatementStart(string text, int index)
+	{
+		var depth = 0;
+		for (var i = index - 1; i >= 0; i--)
+		{
+			switch (text[i])
+			{
+				case ']' or ')' or '}':
+					depth++;
+					break;
+				case '[' or '(' when depth > 0:
+				case '{' when depth > 0:
+					depth--;
+					break;
+				case '{':
+				case ';' when depth == 0:
+				case '\n':
+					return i + 1;
+			}
+		}
+
+		return 0;
 	}
 
 	private static string RewriteOne(string name, string?[] switches, string argument, string written, List<string> notes)
@@ -106,7 +152,7 @@ public static partial class RhostCommandRewriter
 
 		var slash = left.IndexOf('/');
 		var file = slash < 0 ? left : left[..slash];
-		var topic = slash < 0 ? "" : left[(slash + 1)..];
+		var topic = slash < 0 || slash == left.Length - 1 ? "help" : left[(slash + 1)..];
 		var target = string.IsNullOrWhiteSpace(right) ? "%#" : right.Trim();
 		return Written(notes, written, $"@pemit {target}=[textfile({file},{topic})]",
 			"@dynhelp written as textfile(); check by hand that the text file is one of the game's text file categories");
@@ -141,7 +187,7 @@ public static partial class RhostCommandRewriter
 			? ""
 			: "; check by hand: a local function runs as the object holding it here, as /privilege made it in RhostMUSH";
 		return Written(notes, written, $"@function/local {name}={right[..slash].Trim()},{right[(slash + 1)..].Trim()}",
-			$"@lfunction {name} written as @function/local, called with localfun(){extra}");
+			$"@lfunction {name} written as @function/local, called with localfun(){extra}; check by hand: if {name} is a SharpMUSH function, rename it, as a local function may not take a built-in's name");
 	}
 
 	/// <summary><c>@zone</c>, as <c>@chzone</c>, which keeps an object's zones in order.</summary>
@@ -272,7 +318,7 @@ public static partial class RhostCommandRewriter
 	/// Where the command starting at <paramref name="start"/> ends: the next <c>;</c> outside brackets, or the
 	/// <paramref name="closing"/> character with no opener after <paramref name="start"/>, or the end of the text.
 	/// </summary>
-	private static int CommandEnd(string text, int start, bool stopAtSemicolon = true, char closing = '}')
+	private static int CommandEnd(string text, int start, bool stopAtSemicolon = true, char closing = '}', bool stopAtComma = false)
 	{
 		var depth = 0;
 		for (var i = start; i < text.Length; i++)
@@ -291,6 +337,7 @@ public static partial class RhostCommandRewriter
 				case var ch when ch == closing && depth == 0:
 					return i;
 				case ';' when stopAtSemicolon && depth == 0:
+				case ',' when stopAtComma && depth == 0:
 					return i;
 			}
 		}
@@ -323,6 +370,15 @@ public static partial class RhostCommandRewriter
 	[GeneratedRegex(@"(?<lead>(?:^[$^][^:\r\n]*:|^|[;{,=])[ \t]*)(?<name>grab|join|@zone|@dynhelp|@lfunction|@freeze|@thaw|wmail|@totemdef)(?<switches>(?:/[A-Za-z]+)*)(?=[ \t]|$|[;}])",
 		RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant)]
 	private static partial Regex CommandHead();
+
+	/// <summary>A statement whose arguments are commands, as with <c>@switch</c> or <c>@dolist</c>, after any <c>$</c>/<c>^</c> pattern.</summary>
+	[GeneratedRegex(@"^\s*(?:[$^][^:\r\n]*:)?\s*@(?:switch|select|wait|dolist|force|break|assert|skip|include)\b",
+		RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+	private static partial Regex RunsActions();
+
+	/// <summary>A word in angle brackets, as help text writes an argument to fill in.</summary>
+	[GeneratedRegex(@"<[A-Za-z][A-Za-z -]*>", RegexOptions.CultureInvariant)]
+	private static partial Regex Placeholder();
 
 	[GeneratedRegex(@"(?:^[$^][^:\r\n]*:|^|[;{,=])[ \t]*@lfunction(?:/(?:pri|pre|pro|n)[A-Za-z]*)*[ \t]+(?<name>[A-Za-z][A-Za-z0-9_]*)[ \t]*=[^;}/]+/",
 		RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant)]

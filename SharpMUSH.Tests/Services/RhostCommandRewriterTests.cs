@@ -9,8 +9,8 @@ namespace SharpMUSH.Tests.Services;
 public class RhostCommandRewriterTests
 {
 	[Test]
-	[Arguments("join Bob", "@teleport me=[loc(pmatch(Bob))]")]
-	[Arguments("grab %0", "@teleport [pmatch(%0)]=here")]
+	[Arguments("think Off;join Bob", "think Off;@teleport me=[loc(pmatch(Bob))]")]
+	[Arguments("{grab %0}", "{@teleport [pmatch(%0)]=here}")]
 	[Arguments("$+summon *:grab %0;@pemit %#=Done.", "$+summon *:@teleport [pmatch(%0)]=here;@pemit %#=Done.")]
 	[Arguments("@switch %0=1,{join #12}", "@switch %0=1,{@teleport me=[loc(pmatch(#12))]}")]
 	[Arguments("@freeze 123", "@queue/pause 123")]
@@ -18,6 +18,8 @@ public class RhostCommandRewriterTests
 	[Arguments("@thaw/del 456", "@halt/pid 456")]
 	[Arguments("@dynhelp history/lesson=%0", "@pemit %0=[textfile(history,lesson)]")]
 	[Arguments("@dynhelp history/lesson", "@pemit %#=[textfile(history,lesson)]")]
+	[Arguments("@dynhelp history", "@pemit %#=[textfile(history,help)]")]
+	[Arguments("@switch %0=1,@freeze %1,@thaw %1", "@switch %0=1,@queue/pause %1,@queue/resume %1")]
 	[Arguments("@lfunction double=me/DOUBLE", "@function/local double=me,DOUBLE")]
 	[Arguments("@lfunction/privilege double=#5/FN_DOUBLE", "@function/local double=#5,FN_DOUBLE")]
 	[Arguments("@lfunction/delete double", "@function/local/delete double")]
@@ -62,6 +64,11 @@ public class RhostCommandRewriterTests
 	[Arguments("say I will grab it")]
 	[Arguments("think [join(a,b)]")]
 	[Arguments("@emit You can join <player> here.")]
+	[Arguments("Grab a chair and sit.")]
+	[Arguments("Join us at the inn.")]
+	[Arguments("@pemit %#=@freeze stops a job")]
+	[Arguments("$+help freeze:@pemit %#=@freeze <pid> stops a job")]
+	[Arguments("@switch %0=1,{@freeze <pid>}")]
 	public async Task LeavesTextAlone(string body)
 	{
 		var notes = new List<string>();
