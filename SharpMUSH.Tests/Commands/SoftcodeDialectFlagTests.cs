@@ -75,7 +75,7 @@ public class SoftcodeDialectFlagTests : ServerTestBase
 		await Assert.That(await Eval($"andflags({thing},X)")).IsEqualTo("1");
 	}
 
-	/// <summary>The example in <c>help tinymux forms</c>.</summary>
+	/// <summary>The example in <c>help tinymux flags</c>.</summary>
 	[Test]
 	public async Task HelpExample()
 	{
