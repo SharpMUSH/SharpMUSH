@@ -1,4 +1,4 @@
-namespace SharpMUSH.Tests.Packages;
+namespace SharpMUSH.Tests.PackageLibrary;
 
 /// <summary>
 /// Checks the portal half of the <c>duties</c> package in the package library without a server: each route on the

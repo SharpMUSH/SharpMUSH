@@ -16,7 +16,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace SharpMUSH.Tests.Integration;
+namespace SharpMUSH.Tests.PackageLibrary;
 
 /// <summary>
 /// The duties package, installed from the package library checkout and driven with typed commands against a sheet

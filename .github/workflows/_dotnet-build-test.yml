@@ -560,7 +560,7 @@ jobs:
             **/*.csproj
             Directory.Build.props
 
-      # Packages that moved to the official library (duties) keep their tests here, run against its main.
+      # The package library's behaviour tests (its tests/ folder) and the duties tests run against its main.
       - name: Checkout package library
         uses: actions/checkout@v6
         with:
