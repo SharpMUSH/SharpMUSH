@@ -348,10 +348,19 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		var behavior = AddedCommandBehaviors
+		AddUnhookedCommand(name, AddedCommandBehaviors
 			.Where(entry => switches.Contains(entry.Switch))
-			.Aggregate(CommandBehavior.Default, (combined, entry) => combined | entry.Behavior);
+			.Aggregate(CommandBehavior.Default, (combined, entry) => combined | entry.Behavior));
 
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAddedFormat), executor, name);
+		return new CallState(name);
+	}
+
+	/// <summary>
+	/// Puts a command that does nothing until it is hooked in the table, parsed as <paramref name="behavior"/> says.
+	/// </summary>
+	private void AddUnhookedCommand(string name, CommandBehavior behavior)
+	{
 		var attribute = new SharpCommandAttribute
 		{
 			Name = name,
@@ -366,9 +375,6 @@ public partial class Commands : ICommandRestrictionApplier
 		}
 
 		RememberRestriction(attribute);
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAddedFormat), executor, name);
-		return new CallState(name);
 	}
 
 	/// <summary>
@@ -435,6 +441,19 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
+		await CloneCommandEntry(source, clone);
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandCloned), executor);
+		return new CallState(clone);
+	}
+
+	/// <summary>
+	/// Puts <paramref name="clone"/> in the table as a copy of <paramref name="source"/>: its parsing, switches, lock
+	/// and, unless <paramref name="copyHooks"/> is false, hooks.
+	/// </summary>
+	private async ValueTask CloneCommandEntry((CommandDefinition LibraryInformation, bool IsSystem) source, string clone,
+		bool copyHooks = true)
+	{
 		var from = source.LibraryInformation.Attribute;
 		var attribute = new SharpCommandAttribute
 		{
@@ -456,15 +475,13 @@ public partial class Commands : ICommandRestrictionApplier
 		}
 
 		RememberRestriction(attribute);
+		if (!copyHooks) return;
 
 		foreach (var (type, hook) in await HookService.GetAllHooksAsync(from.Name))
 		{
 			await HookService.SetHookAsync(clone, type, hook.TargetObject, hook.AttributeName,
 				hook.Inline, hook.NoBreak, hook.Localize, hook.ClearRegs);
 		}
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandCloned), executor);
-		return new CallState(clone);
 	}
 
 	/// <summary>
