@@ -66,6 +66,11 @@
       "lookup": "compatibility config tinymux function caller mux function caller"
     },
     {
+      "id": "tinymux-argument-meanings-mux-arguments",
+      "heading": "TinyMUX argument meanings: `mux_arguments`",
+      "lookup": "compatibility config tinymux argument meanings mux arguments"
+    },
+    {
       "id": "rhostmush-edit-modes-rhost-edit",
       "heading": "RhostMUSH edit() modes: `rhost_edit`",
       "lookup": "compatibility config rhostmush edit modes rhost edit"
@@ -320,6 +325,30 @@ PLAYER
 > @function/privileged muxdoc_caller=MuxDocCaller/MUXDOC_WHO
 > think muxdoc_caller()
 THING
+```
+
+## TinyMUX argument meanings: `mux_arguments`
+
+Off by default; importing a TinyMUX database turns it on. Argument counts only TinyMUX takes, such as before() with one argument, work whatever the option says; see each function's help. The option covers the arguments the two servers read differently. With it on:
+
+- setunion(), setdiff(), setinter() and setsymdiff() read a fourth argument as the output separator and a fifth as the sort type.
+- hmac() with three arguments takes the text, the key and then the digest, and answers in upper-case hexadecimal.
+- lwho() with one argument lists each connection as `#<dbref>:<descriptor>` when it is true, for a See_All player.
+- channels() takes a player, a delimiter, an offset and a limit, and with a player lists the channels whose owner the player controls.
+- textfile() and dynhelp() whose first argument names no text file read an object's HELP_ attributes.
+
+```sharp mux_arguments
+> think setunion(a|b,b|c,|,-)
+a-b-c
+> think setunion(10|9,1,|,%b,n)
+1 9 10
+> think hmac(The quick brown fox jumps over the lazy dog,key,sha1)
+DE7C9B85B8B78AA6BC8A7A36F70A90701C9DB4D9
+```
+
+```sharp mux_arguments=off
+> think setunion(a|b,b|c,|,-)
+a|b|c
 ```
 
 ## RhostMUSH edit() modes: `rhost_edit`

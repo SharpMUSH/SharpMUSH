@@ -1613,6 +1613,12 @@
         "aliases": []
       },
       {
+        "id": "tinymux-argument-meanings-mux-arguments",
+        "lookup": "compatibility config tinymux argument meanings mux arguments",
+        "heading": "TinyMUX argument meanings: \u0060mux_arguments\u0060",
+        "aliases": []
+      },
+      {
         "id": "rhostmush-edit-modes-rhost-edit",
         "lookup": "compatibility config rhostmush edit modes rhost edit",
         "heading": "RhostMUSH edit() modes: \u0060rhost_edit\u0060",

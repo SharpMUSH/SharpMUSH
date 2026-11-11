@@ -441,9 +441,14 @@ Ariel Brand
 - [LMATH()]
 :::
 # after()
-`after(<string1>, <string2>)`
+`after(<string1>[, <string2>])`
 
-  Returns the portion of `<string1>` that occurs after `<string2>`. If `<string2>` isn't in `<string1>`, the function returns nothing. This is case-sensitive.
+  Returns the portion of `<string1>` that occurs after `<string2>`. If `<string2>` isn't in `<string1>`, the function returns nothing. This is case-sensitive. An empty `<string2>` is a space. Without `<string2>`, as TinyMUX takes it, the spaces at both ends of `<string1>` are trimmed first.
+
+```sharp
+think after(%b%babc def ghi)
+def ghi
+```
 
   Examples:
 ```sharp
@@ -460,9 +465,10 @@ You say, "r baz"
 - [REST()]
 :::
 # allof()
-`allof(<expr>[, ... , <exprN>], <osep>)`
+`allof(<expr>[, ... , <exprN>], <osep>)`<br>
+`allof(<expr>)`
 
-  Evaluates every `<expr>` argument (including side-effects) and returns the results of those which are true, in a list separated by `<osep>`. The output separator argument is required, and can be a string of any length (including an empty string; use %b for a space).
+  Evaluates every `<expr>` argument (including side-effects) and returns the results of those which are true, in a list separated by `<osep>`. The output separator can be a string of any length (including an empty string; use %b for a space). With one argument, as TinyMUX takes it, that argument is the only `<expr>`.
 
   The meaning of true or false depends on configuration options as explained in the 'BOOLEAN VALUES' help topics.
 ```sharp
@@ -701,9 +707,14 @@ You say, "r baz"
   Returns `<number>` "alert" bell characters. `<number>` must be in the range 1 to 5, or, if unspecified, defaults to 1. This function may only be used by royalty and wizards.
 
 # before()
-`before(<string1>, <string2>)`
+`before(<string1>[, <string2>])`
 
-  Returns the portion of `<string1>` that occurs before `<string2>`. If `<string2>` isn't in `<string1>`, `<string1>` is returned. This is case-sensitive.
+  Returns the portion of `<string1>` that occurs before `<string2>`. If `<string2>` isn't in `<string1>`, `<string1>` is returned. This is case-sensitive. An empty `<string2>` is a space. Without `<string2>`, as TinyMUX takes it, the spaces at both ends of `<string1>` are trimmed first.
+
+```sharp
+think before(%b%babc def)
+abc
+```
 
   Examples:
 ```sharp
@@ -1089,12 +1100,14 @@ think config(command_aliases)
 :::
 # convsecs()
 # convutcsecs()
-`convsecs(<seconds>[, <timezone>])`<br>
+`convsecs(<seconds>[, <timezone>[, <places>]])`<br>
 `convutcsecs(<seconds>)`
 
   This function converts `<seconds>` (the number of seconds which have elapsed since midnight on January 1, 1970 UTC) to a time string. Because it's based on UTC, but returns local time, convsecs(0) is not going to be "Thu Jan 1 00:00:00 1970" unless you're in the UTC (GMT) timezone.
 
   If a `<timezone>` argument is given, the return value is based on that timezone instead of the MUSH server's local time. See [timezones] for more information on valid timezones.
+
+  A third argument, as TinyMUX takes it, gives the seconds up to `<places>` decimal places, at most 7; trailing zeros are dropped, and an empty or `local` timezone is the server's. `think convsecs(1000000000.5,utc,3)` gives `Sun Sep 09 01:46:40.5 2001`.
 
   Negative values for `<seconds>`, representing dates prior to 1970, are allowed.
 
@@ -1803,7 +1816,10 @@ You say, "Huh?  (Type "help" for help.)"
 # eval()
 # get_eval()
 `eval(<object>, <attribute>)`<br>
+`eval(<string>)`<br>
 `get_eval(<object>/<attribute>)`
+
+  eval() with one argument, as TinyMUX takes it, evaluates `<string>` once more, as s() does: `think eval(lit([add(1,2)]))` gives `3`.
 
   eval() and get_eval() are similar to ufun(), in that they evaluate the given `<attribute>` on `<object>`. However, they change the enactor (%#) to the object executing the eval (%!). It does not modify the stack (%0-%9), so the attribute being evaled sees the same values for them that the calling code does. Unless you need this behavior, it is better to use u() instead, which hides the caller's stack.
 
@@ -2775,11 +2791,12 @@ think lcmds(me, |, ^)
 `nattr(<object>[/<attribute pattern>])`<br>
 `nattrp(<object>[/<attribute pattern>])`<br>
 `regnattr(<object>[/<regexp>])`<br>
+`regnattr(<object>, <regexp>)`<br>
 `regnattrp(<object>[/<regexp>])`
 
   nattr() returns the number of attributes on `<object>` that you can see which match the given `<attribute pattern>`. It is considerably faster than words(lattr()) and doesn't suffer from buffer length constraints. It's designed primarily for statistical purposes. `<attribute pattern>` defaults to "*", which does not include branches in attribute trees; use "**" if you need to count attribute trees.
 
-  regnattr() matches attribute names against the regular expression `<regexp>`.
+  regnattr() matches attribute names against the regular expression `<regexp>`. TinyMUX's form gives `<regexp>` as a second argument, so it may hold a `/`.
 
   nattrp() and regnattrp() also count matching attributes on the parent.
 
@@ -3430,6 +3447,8 @@ th lt(1,3,2)
   `<status>` can be used to include "#-1" dbrefs for unconnected ports, and must be one of "all", "online" (the default) or "offline". It is primarily useful when using a `<status>` with lports(), to make the dbrefs and ports match up. Only See_All players can see offline dbrefs.
 
   lwhoid() returns a list of objid's instead.
+
+  With the `mux_arguments` @config option on, as after a TinyMUX import, lwho() with one argument is TinyMUX's: a true argument lists each connection as `#<dbref>:<descriptor>` for a See_All player, and a false one lists what lwho() does.
 
 
 ::: seealso
@@ -5072,7 +5091,7 @@ You say, "bar gleep"
 
   listq() returns a space-separated list of set q-registers with values available in the current q-register scope. If `<pattern>` is provided, then only those that match the wildcard pattern `<pattern>` will be returned.
 
-  unsetq() without arguments clears all registers. Otherwise, unsetq() treats its argument as a list of register name patterns, and will unset all those registers within the local scope.
+  unsetq() without arguments clears all registers. Otherwise, unsetq() treats its arguments as lists of register name patterns, and will unset all those registers within the local scope. TinyMUX names one register an argument: `unsetq(a,b)` clears a and b.
 
   If unsetq() is inside of a letq(), and does not have an argument, it will clear the registers that letq() has protected. unsetq() with arguments clears the specified registers.
 
@@ -5129,7 +5148,7 @@ LOC
 
   This function returns the union of two sets -- i.e., all the elements of both `<list1>` and `<list2>`, minus any duplicate elements. The list returned is sorted. Natural sorting is the default. You can change this with the fourth argument, which is a sort type as defined in [SORTING]. With four arguments, an empty fourth joins without separators. Otherwise it is a sort type; unknown types keep the default sort. Output uses the input delimiter unless you supply `<osep>` as argument five.
 
-  TinyMUX writes the output separator before the sort type: `setunion(<list1>, <list2>, <delimiter>, <osep>, <sort type>)`. When the fourth argument names no sort type and the fifth does, it is read that way. The same goes for setdiff(), setinter() and setsymdiff().
+  TinyMUX writes `<osep>` before `<sort type>`. A fourth argument that names no sort type, before a fifth that does, is read that way; under the `mux_arguments` @config option the fourth is always `<osep>` (`@@` for none). The same goes for setdiff(), setinter() and setsymdiff().
 
     > say setunion(B a c, b, %b, |, a)<br>
     You say, "B|a|b|c"
@@ -5363,12 +5382,12 @@ first
 - [SPELLNUM()]
 :::
 # splice()
-`splice(<list1>, <list2>, <word>[, <delimiter>])`
+`splice(<list1>, <list2>, <word>[, <delimiter>[, <osep>]])`
 
   This function splices `<list1>` and `<list2>` together. `<list1>` and `<list2>` are space-separated lists of words.
 
   If a word in `<list1>` is the same as `<word>`, it is replaced by the word in the corresponding position in `<list2>`. Both lists must have the same<br>
-  number of words.
+  number of words. The result is joined by `<osep>`, the delimiter unless given; `@@` is none.
 
   Example:
 ```sharp
@@ -5564,11 +5583,13 @@ Output: `Bob has 3 posts.` and `Alice has 1 post.`, one per line.
 # strfirstof()
 # strallof()
 `strfirstof(<expr>[, ... , <exprN>], <default>)`<br>
-`strallof(<expr>[, ... , <exprN>], <osep>)`
+`strallof(<expr>[, ... , <exprN>], <osep>)`<br>
+`strfirstof(<expr>)`<br>
+`strallof(<expr>)`
 
   strfirstof() returns the first `<expr>` which evaluates to a non-empty string (a string at least 1 character long). If all `<expr>`s evaluate empty, `<default>` is returned instead.
 
-  strallof() returns all `<expr>`s which evaluate to non-empty strings, with each expression separated by `<osep>`.
+  strallof() returns all `<expr>`s which evaluate to non-empty strings, with each expression separated by `<osep>`. With one argument, as TinyMUX takes it, that argument is the only `<expr>`; strfirstof() with one returns it.
 
   Examples:
 ```sharp
@@ -5905,11 +5926,17 @@ You say, "foo bar!"
 - [AND()]
 :::
 # table()
-`table(<list>[, <field width>[, <line length>[, <delimiter>[, <osep>]]]])`
+`table(<list>[, <field width>[, <line length>[, <delimiter>[, <osep>[, <fill>]]]]])`
 
   This function returns the elements of `<list>` in a tabular format. All other parameters are optional. `<field width>` specifies how wide each table entry is allowed to be, and defaults to 10. If `<field width>` begins with a "`<", it is left-aligned. ">`" makes it right-aligned, and "-" makes it centered. Elements longer than `<field width>` are truncated to fit.
 
-  `<line length>` is how wide a table row can be, and defaults to 78. `<delimiter>` is the delimiter used in `<list>`, and defaults to a space. `<osep>` is a single character to be used between entries in the table, and also defaults to a space.
+  `<line length>` is how wide a table row can be, and defaults to 78. `<delimiter>` is the delimiter used in `<list>`, and defaults to a space. `<osep>` is a single character to be used between entries in the table, and also defaults to a space. `<fill>` pads each entry in place of spaces.
+
+```sharp
+think table(a b c,3,8,%b,|,.)
+a..|b..
+c..
+```
 
   Examples:
 ```sharp
@@ -5967,9 +5994,9 @@ a          b          areallylon d
 - [JSON PATHS]
 :::
 # isjson()
-`isjson(<text>)`
+`isjson(<text>[, <type>])`
 
-  This function returns 1 if its argument is valid JSON, 0 if not.
+  This function returns 1 if its argument is valid JSON, 0 if not. With a `<type>` it also asks what the JSON is: `string`, `number`, `object`, `array`, `true`, `false`, `null` or `boolean`. Any other type returns `#-1 UNKNOWN JSON TYPE`.
 
   Examples:
 ```sharp
@@ -6919,9 +6946,12 @@ AARDVARK AARDVARKS AARDVARK'S etc...
 - [@HTTP]
 :::
 # hmac()
-`HMAC(<digest>, <key>, <text>[, <encoding>])`
+`HMAC(<digest>, <key>, <text>[, <encoding>])`<br>
+`HMAC(<text>, <key>[, <digest>])`
 
   Computes the HMAC (message authentication code) hash for `<text>` using the passphrase `<key>` and the given hash function `<digest>`, which can be any supported by digest(). `<encoding>` can be base16 (The default) or base64.
+
+  The second form is TinyMUX's: `<digest>` defaults to sha256 and the answer is upper-case hexadecimal. Two arguments always mean it; three mean it with the `mux_arguments` @config option on, as after a TinyMUX import.
 
   Example:
 ```sharp
