@@ -110,5 +110,18 @@ public static partial class ErrorMessages
 		public const string PipeNotRunning = "@pipe: you are not piping to an attribute.";
 		public const string PipeNeedsAttribute = "@pipe: name the attribute to pipe to.";
 		public const string PipeNeedsSwitch = "@pipe: use /on, /tee, /off or /status.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NoSuchToggleFormat = "@toggle: there is no toggle named {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string TogglesListFormat = "Toggles: {0}";
+		public const string ToggleNeedsList = "@toggle: name the toggles to set, or use /check or /clear.";
+		public const string TogglesCleared = "@toggle: all toggles cleared.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ToggleDefFormat = "{0}({1}) set: {2} unset: {3}";
+		public const string ToggleDefNeedsPermissions = "@toggledef: give a toggle and its permissions, as <toggle>=<permissions>.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ToggleDefUpdatedFormat = "@toggledef: {0} updated.";
+		public const string ToggleDefNothingToDo = "@toggledef: none of those permissions apply here, so nothing changed.";
+		public const string ToggleDefSwitchUnsupported = "@toggledef: use @flag/type or @flag/letter on the toggle's flag for that.";
 	}
 }

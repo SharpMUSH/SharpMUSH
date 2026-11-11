@@ -116,6 +116,12 @@ public static partial class RhostDatabaseTranslator
 
 		MergeClusters(clusters, objects, flatfile, byNumber, report);
 
+		// Every toggle's flag, carried or not, so @toggle and hastoggle() find one no object has yet.
+		foreach (var toggle in RhostNameTables.ToggleBits.Where(bit => bit.Custom is not null))
+		{
+			definitions.Flag(toggle.Custom!, toggle.StaffOnly, RhostNameTables.Toggle(toggle.Name)?.Hidden ?? false);
+		}
+
 		var database = new PennMUSHDatabase
 		{
 			Version = $"{ServerName} flatfile +V{flatfile.Version}",
@@ -486,20 +492,12 @@ public static partial class RhostDatabaseTranslator
 			if (bit.Custom is { } custom)
 			{
 				flags.Add(custom);
-				definitions.Flag(custom, bit.StaffOnly);
+				definitions.Flag(custom, bit.StaffOnly, bit.Word >= 4 && (RhostNameTables.Toggle(bit.Name)?.Hidden ?? false));
 			}
 
 			report.Note(ImportWarningKind.Flags, Decision(bit), source.DBRef);
 		}
 
-		foreach (var (wordIndex, bitValue, name) in RhostNameTables.ToggleNames)
-		{
-			if ((source.Toggles[wordIndex - 4] & bitValue) != 0
-					&& !RhostNameTables.ToggleBits.Any(b => b.Word == wordIndex && b.Bit == bitValue))
-			{
-				report.Note(ImportWarningKind.Flags, $"Toggle {name}: dropped, as SharpMUSH has no such setting", source.DBRef);
-			}
-		}
 	}
 
 	private static string Decision(RhostBitMapping bit)
@@ -842,14 +840,20 @@ public static partial class RhostDatabaseTranslator
 	{
 		public List<PennMUSHFlagDefinition> Flags { get; } = [];
 
-		public void Flag(string name, bool staffOnly)
+		public void Flag(string name, bool staffOnly, bool hidden = false)
 		{
 			if (Flags.Any(f => f.Name == name))
 			{
 				return;
 			}
 
-			string[] perms = staffOnly ? ["wizard"] : [];
+			// mdark: only staff see it on an object, as RhostMUSH shows a staff toggle only to staff.
+			string[] perms = (staffOnly, hidden) switch
+			{
+				(_, true) => ["wizard", "mdark"],
+				(true, false) => ["wizard"],
+				_ => []
+			};
 			Flags.Add(new PennMUSHFlagDefinition { Name = name, SetPermissions = [.. perms], UnsetPermissions = [.. perms] });
 		}
 	}
