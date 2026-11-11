@@ -20,7 +20,7 @@
     @if (_remotesFailure is not null)
     {
         <MudAlert Severity="Severity.Error" Class="pkg-remotes-error" role="alert">@_remotesFailure.Message</MudAlert>
-        <CapsuleButton Class="pkg-remotes-retry" OnClick="LoadRemotesAsync" Icon="@Icons.Material.Filled.Refresh">@Loc["Refresh"]</CapsuleButton>
+        <CapsuleButton Class="pkg-remotes-retry" OnClick="LoadRemotesAsync" Icon="@Icons.Material.Outlined.Refresh">@Loc["Refresh"]</CapsuleButton>
     }
     else if (_remotes is null)
     {
@@ -70,17 +70,17 @@
                 <div class="lib-chips lib-views" role="group" aria-label="@Loc["PkgViewChoice"]">
                     <button type="button" class="lib-chip @(_graph ? null : "active")" aria-pressed="@(_graph ? "false" : "true")"
                             @onclick="@(() => _graph = false)">
-                        <MudIcon Icon="@Icons.Material.Filled.ViewList" Size="Size.Small" aria-hidden="true" />
+                        <MudIcon Icon="@Icons.Material.Outlined.ViewList" Size="Size.Small" aria-hidden="true" />
                         @Loc["PkgViewList"]
                     </button>
                     <button type="button" class="lib-chip @(_graph ? "active" : null)" aria-pressed="@(_graph ? "true" : "false")"
                             @onclick="@(() => _graph = true)">
-                        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" aria-hidden="true" />
+                        <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Small" aria-hidden="true" />
                         @Loc["PkgViewGraph"]
                     </button>
                 </div>
                 <div class="lib-search">
-                    <MudIcon Icon="@Icons.Material.Filled.Search" Class="lib-search-icon" />
+                    <MudIcon Icon="@Icons.Material.Outlined.Search" Class="lib-search-icon" />
                     <input name="library-search" type="search" placeholder="@Loc["PkgSearchPlaceholder"]" aria-label="@Loc["PkgSearchPlaceholder"]"
                            value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
                 </div>
@@ -202,7 +202,7 @@
                 var open = Expanded(family);
                 <button type="button" class="lib-addons-toggle" aria-expanded="@(open ? "true" : "false")"
                         @onclick="@(() => Toggle(family))">
-                    <MudIcon Icon="@(open ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)" Size="Size.Small" aria-hidden="true" />
+                    <MudIcon Icon="@(open ? Icons.Material.Outlined.ExpandMore : Icons.Material.Outlined.ChevronRight)" Size="Size.Small" aria-hidden="true" />
                     @Loc.Plural("PkgBrowseAddOns", "count", family.AddOns.Count)
                     @if (!open)
                     {

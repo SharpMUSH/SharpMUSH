@@ -23,7 +23,7 @@
                 <div class="wcd-mode">
                     <MudText Typo="Typo.body2" Style="color:var(--text-dim);">@Loc["LayCfgFormHelp", WidgetName]</MudText>
                     <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="wcd-to-json"
-                               StartIcon="@Icons.Material.Filled.DataObject" OnClick="ShowJson">
+                               StartIcon="@Icons.Material.Outlined.DataObject" OnClick="ShowJson">
                         @Loc["LayCfgEditJson"]
                     </MudButton>
                 </div>
@@ -44,7 +44,7 @@
                     @if (_fields.Count > 0)
                     {
                         <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="wcd-to-form"
-                                   StartIcon="@Icons.Material.Filled.Tune" OnClick="ShowForm">
+                                   StartIcon="@Icons.Material.Outlined.Tune" OnClick="ShowForm">
                             @Loc["LayCfgEditForm"]
                         </MudButton>
                     }
@@ -83,7 +83,7 @@
                             </tbody>
                         </MudSimpleTable>
                         <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="mt-1"
-                                   StartIcon="@Icons.Material.Filled.DataObject"
+                                   StartIcon="@Icons.Material.Outlined.DataObject"
                                    Disabled="@(!string.IsNullOrWhiteSpace(_json))"
                                    OnClick="InsertTemplate">
                             @Loc["LayCfgInsertTemplate"]

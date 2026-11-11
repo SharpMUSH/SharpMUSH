@@ -60,11 +60,11 @@
                     var id = group.Id;
                     <KitCard Class="adm-nav-group" Title="@Navigation.GroupLabel(group.Id, group.Label)" HeadingLevel="2">
                         <Controls>
-                            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="@($"{Loc["AdmNavMoveUp"]}: {Navigation.GroupLabel(group.Id, group.Label)}")"
+                            <MudIconButton Icon="@Icons.Material.Outlined.ArrowUpward" Size="Size.Small" aria-label="@($"{Loc["AdmNavMoveUp"]}: {Navigation.GroupLabel(group.Id, group.Label)}")"
                                            title="@Loc["AdmNavMoveUp"]" OnClick="() => Change(() => _draft.NudgeGroup(id, -1))" />
-                            <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" aria-label="@($"{Loc["AdmNavMoveDown"]}: {Navigation.GroupLabel(group.Id, group.Label)}")"
+                            <MudIconButton Icon="@Icons.Material.Outlined.ArrowDownward" Size="Size.Small" aria-label="@($"{Loc["AdmNavMoveDown"]}: {Navigation.GroupLabel(group.Id, group.Label)}")"
                                            title="@Loc["AdmNavMoveDown"]" OnClick="() => Change(() => _draft.NudgeGroup(id, 1))" />
-                            <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline" Size="Size.Small" aria-label="@($"{Loc["AdmNavRemoveGroup"]}: {Navigation.GroupLabel(group.Id, group.Label)}")"
+                            <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" aria-label="@($"{Loc["AdmNavRemoveGroup"]}: {Navigation.GroupLabel(group.Id, group.Label)}")"
                                            title="@Loc["AdmNavRemoveGroup"]" OnClick="() => Change(() => _draft.RemoveGroup(id))" />
                         </Controls>
                         <ChildContent>
@@ -113,7 +113,7 @@
                             }
                             else
                             {
-                                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Link" OnClick="() => OpenLink(id)"
+                                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Link" OnClick="() => OpenLink(id)"
                                            id="@($"nav-add-link-{id}")">@Loc["AdmNavAddLink"]</MudButton>
                             }
                         </ChildContent>
@@ -123,7 +123,7 @@
                 <form class="adm-nav-add-group" @onsubmit="AddGroup" @onsubmit:preventDefault="true">
                     <MudTextField T="string" @bind-Value="_newGroup" Label="@Loc["AdmNavNewGroupName"]" id="nav-new-group"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" MaxLength="NavLayoutRules.MaxLabelLength" />
-                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add"
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Add"
                                Disabled="@string.IsNullOrWhiteSpace(_newGroup)">@Loc["AdmNavAddGroup"]</MudButton>
                 </form>
 
@@ -250,7 +250,7 @@
         var name = destination?.Label ?? key;
         <li class="adm-nav-item @(destination is null ? "adm-nav-item--gone" : null)" @key="key" draggable="true"
             @ondragstart="() => _dragging = key" @ondragover:preventDefault="true" @ondrop="() => DropBefore(key)" @ondrop:stopPropagation="true">
-            <span class="adm-nav-grip" aria-hidden="true" title="@Loc["AdmNavDrag"]"><MudIcon Icon="@Icons.Material.Filled.DragIndicator" Size="Size.Small" /></span>
+            <span class="adm-nav-grip" aria-hidden="true" title="@Loc["AdmNavDrag"]"><MudIcon Icon="@Icons.Material.Outlined.DragIndicator" Size="Size.Small" /></span>
             @if (destination is not null)
             {
                 <MudIcon Icon="@destination.OutlineIcon" Size="Size.Small" />
@@ -268,9 +268,9 @@
             <span class="adm-nav-item-actions">
                 @if (groupId != NavLayoutDraft.HiddenId)
                 {
-                    <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="@($"{Loc["AdmNavMoveUp"]}: {name}")"
+                    <MudIconButton Icon="@Icons.Material.Outlined.ArrowUpward" Size="Size.Small" aria-label="@($"{Loc["AdmNavMoveUp"]}: {name}")"
                                    title="@Loc["AdmNavMoveUp"]" OnClick="() => Change(() => _draft.Nudge(key, -1))" />
-                    <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" aria-label="@($"{Loc["AdmNavMoveDown"]}: {name}")"
+                    <MudIconButton Icon="@Icons.Material.Outlined.ArrowDownward" Size="Size.Small" aria-label="@($"{Loc["AdmNavMoveDown"]}: {name}")"
                                    title="@Loc["AdmNavMoveDown"]" OnClick="() => Change(() => _draft.Nudge(key, 1))" />
                 }
                 <select class="adm-nav-move" id="@($"nav-move-{key}")" aria-label="@($"{Loc["AdmNavMoveTo"]}: {name}")" title="@Loc["AdmNavMoveTo"]"
@@ -287,7 +287,7 @@
                 </select>
                 @if (destination is null || NavKeys.IsLink(key))
                 {
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@($"{Loc["AdmNavRemove"]}: {name}")"
+                    <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small" aria-label="@($"{Loc["AdmNavRemove"]}: {name}")"
                                    title="@Loc["AdmNavRemove"]" OnClick="() => Change(() => _draft.Remove(key))" />
                 }
             </span>

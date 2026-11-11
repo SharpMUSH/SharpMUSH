@@ -27,13 +27,13 @@
     </PageHeader>
 
     <AdminStats>
-        <AdminStat Key="total" Icon="@Icons.Material.Filled.Image" Label="@Loc["WkTotalAssets"]"
+        <AdminStat Key="total" Icon="@Icons.Material.Outlined.Image" Label="@Loc["WkTotalAssets"]"
                    Value="@(_isLoading ? "—" : _assets.Count.ToString())" />
-        <AdminStat Key="storage" Icon="@Icons.Material.Filled.Storage" Label="@Loc["WkStorageUsed"]"
+        <AdminStat Key="storage" Icon="@Icons.Material.Outlined.Storage" Label="@Loc["WkStorageUsed"]"
                    Value="@(_isLoading ? "—" : Loc.FormatBytes(TotalSizeBytes))" />
-        <AdminStat Key="images" Icon="@Icons.Material.Filled.PhotoLibrary" Label="@Loc["WkKindImagePlural"]"
+        <AdminStat Key="images" Icon="@Icons.Material.Outlined.PhotoLibrary" Label="@Loc["WkKindImagePlural"]"
                    Value="@(_isLoading ? "—" : _assets.Count(a => AssetKind(a.ContentType) == "image").ToString())" />
-        <AdminStat Key="other" Icon="@Icons.Material.Filled.Attachment" Label="@Loc["WkKindOther"]"
+        <AdminStat Key="other" Icon="@Icons.Material.Outlined.Attachment" Label="@Loc["WkKindOther"]"
                    Value="@(_isLoading ? "—" : _assets.Count(a => AssetKind(a.ContentType) != "image").ToString())" />
     </AdminStats>
 
@@ -77,17 +77,17 @@
                                         <span class="adm-media-size">@Loc.FormatBytes(a.SizeBytes)</span>
                                         <span class="adm-media-actions">
                                             <MudTooltip Text="@Loc["WkCopyUrl"]">
-                                                <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
+                                                <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small"
                                                                aria-label="@Loc["WkCopyUrl"]"
                                                                OnClick="@(() => CopyUrlAsync(a.Url))" />
                                             </MudTooltip>
                                             <MudTooltip Text="@Loc["WkLibrarySharing"]">
-                                                <MudIconButton Icon="@Icons.Material.Filled.Lock" Size="Size.Small"
+                                                <MudIconButton Icon="@Icons.Material.Outlined.Lock" Size="Size.Small"
                                                                Class="adm-media-sharing-button" aria-label="@Loc["WkLibrarySharing"]"
                                                                OnClick="@(() => EditSharing(a))" />
                                             </MudTooltip>
                                             <MudTooltip Text="@Loc["Delete"]">
-                                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                                <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small"
                                                                Color="Color.Error" aria-label="@Loc["Delete"]"
                                                                OnClick="@(() => ConfirmDeleteAsync(a))" />
                                             </MudTooltip>
@@ -151,13 +151,13 @@
                                 <TemplateColumn Sortable="false" CellStyle="width:112px;">
                                     <CellTemplate>
                                         <span class="adm-media-actions">
-                                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
+                                            <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small"
                                                            title="@Loc["WkCopyUrl"]" aria-label="@Loc["WkCopyUrl"]"
                                                            OnClick="@(() => CopyUrlAsync(context.Item.Url))" />
-                                            <MudIconButton Icon="@Icons.Material.Filled.Lock" Size="Size.Small"
+                                            <MudIconButton Icon="@Icons.Material.Outlined.Lock" Size="Size.Small"
                                                            Class="adm-media-sharing-button" title="@Loc["WkLibrarySharing"]" aria-label="@Loc["WkLibrarySharing"]"
                                                            OnClick="@(() => EditSharing(context.Item))" />
-                                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                            <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small"
                                                            Color="Color.Error" title="@Loc["Delete"]" aria-label="@Loc["Delete"]"
                                                            OnClick="@(() => ConfirmDeleteAsync(context.Item))" />
                                         </span>
@@ -349,9 +349,9 @@
 
     private static string KindIcon(string kind) => kind switch
     {
-        "image"    => Icons.Material.Filled.Image,
-        "video"    => Icons.Material.Filled.Videocam,
-        "document" => Icons.Material.Filled.InsertDriveFile,
-        _          => Icons.Material.Filled.Attachment,
+        "image"    => Icons.Material.Outlined.Image,
+        "video"    => Icons.Material.Outlined.Videocam,
+        "document" => Icons.Material.Outlined.InsertDriveFile,
+        _          => Icons.Material.Outlined.Attachment,
     };
 }

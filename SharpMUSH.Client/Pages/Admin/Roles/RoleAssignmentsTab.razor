@@ -10,7 +10,7 @@
    and the roles it can still be given. *@
 <KitCard Class="roleadmin-assign">
     <div class="ra-search">
-        <MudIcon Icon="@Icons.Material.Filled.Search" Class="ra-ico ra-ico--faint" />
+        <MudIcon Icon="@Icons.Material.Outlined.Search" Class="ra-ico ra-ico--faint" />
         <input name="username" value="@Lookup.Name" placeholder="@Loc["RolSearchByUsername"]" aria-label="@Loc["RolSearchByUsername"]"
                @oninput="@(e => Lookup.Name = e.Value?.ToString() ?? string.Empty)"
                @onkeydown="OnLookupKeyDown" />
@@ -119,7 +119,7 @@
                             <button type="button" class="ra-add-chip" @onclick="@(() => AddAssignmentAsync(r.Slug))">
                                 <span class="ra-dot ra-dot--sm" style="@($"background:{RoleColor.Safe(r.Color)};")"></span>
                                 @r.Name
-                                <MudIcon Icon="@Icons.Material.Filled.Add" Class="ra-ico" />
+                                <MudIcon Icon="@Icons.Material.Outlined.Add" Class="ra-ico" />
                             </button>
                         }
                     </div>

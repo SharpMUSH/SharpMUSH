@@ -186,6 +186,6 @@ public class QuickLinksWidgetIconTests : QuickLinksWidgetTestBase
 		var cut = RenderIcon(icon, WidgetZone.TopBar);
 
 		await Assert.That(cut.FindAll("img.ql-icon").Count).IsEqualTo(0);
-		await Assert.That(cut.Markup).Contains(Icons.Material.Filled.Link);
+		await Assert.That(cut.Markup).Contains(Icons.Material.Outlined.Link);
 	}
 }

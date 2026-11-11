@@ -30,11 +30,11 @@ public static class PackageKinds
 
 	public static string Icon(PackageContents kind) => kind switch
 	{
-		PackageContents.Wiki => Icons.Material.Filled.MenuBook,
-		PackageContents.Application => Icons.Material.Filled.Apps,
-		PackageContents.Plugin => Icons.Material.Filled.Extension,
-		PackageContents.Ui => Icons.Material.Filled.WebAsset,
-		_ => Icons.Material.Filled.Code
+		PackageContents.Wiki => Icons.Material.Outlined.MenuBook,
+		PackageContents.Application => Icons.Material.Outlined.Apps,
+		PackageContents.Plugin => Icons.Material.Outlined.Extension,
+		PackageContents.Ui => Icons.Material.Outlined.WebAsset,
+		_ => Icons.Material.Outlined.Code
 	};
 
 	public static string Name(PackageContents kind, IStringLocalizer localizer) => kind switch

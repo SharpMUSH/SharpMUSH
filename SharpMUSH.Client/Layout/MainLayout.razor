@@ -93,7 +93,7 @@
         <header class="phosphor-topbar">
             <button class="phosphor-icon-btn" @onclick="ToggleMobileNav" aria-expanded="@(_mobileNavOpen ? "true" : "false")"
                     aria-label="@Loc["NavToggleNavigation"]" title="@Loc["NavToggleNavigation"]">
-                <MudIcon Icon="@Icons.Material.Filled.Menu" Style="font-size:var(--text-lg);" />
+                <MudIcon Icon="@Icons.Material.Outlined.Menu" Style="font-size:var(--text-lg);" />
             </button>
             <button class="phosphor-icon-btn phosphor-pagebar-btn" @onclick="TogglePagebar" aria-expanded="@(_pagebarOpen ? "true" : "false")"
                     aria-label="@Loc["NavSectionMenu"]" title="@Loc["NavSectionMenu"]">
@@ -145,7 +145,7 @@
         @if (!_isPlayRoute)
         {
             <nav class="phosphor-bottomnav" aria-label="@Loc["NavBottomNavLabel"]">
-                @BottomTab("/", Icons.Material.Filled.Home, Loc["Home"], exact: true)
+                @BottomTab("/", Icons.Material.Outlined.Home, Loc["Home"], exact: true)
                 @foreach (var tab in _tabs)
                 {
                     @Tab(tab)
@@ -153,7 +153,7 @@
                 <button type="button"
                         class="phosphor-bottomtab @(_mobileNavOpen ? "phosphor-bottomtab--on" : "")"
                         aria-expanded="@(_mobileNavOpen ? "true" : "false")" @onclick="ToggleMobileNav">
-                    <MudIcon Icon="@Icons.Material.Filled.Menu" Class="phosphor-bottomtab-icon" />
+                    <MudIcon Icon="@Icons.Material.Outlined.Menu" Class="phosphor-bottomtab-icon" />
                     <span class="phosphor-bottomtab-label">@Loc["NavMenuLabel"]</span>
                 </button>
             </nav>

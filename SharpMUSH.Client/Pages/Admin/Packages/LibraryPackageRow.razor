@@ -15,7 +15,7 @@
         @if (Installed is not null)
         {
             <span class="lib-installed">
-                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" aria-hidden="true" />
+                <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Size="Size.Small" aria-hidden="true" />
                 @Loc["PkgBrowseInstalled", Installed.Version]
             </span>
         }
@@ -24,7 +24,7 @@
         @if (!Entry.Bridge && Entry.DependsOn is { Count: > 0 } needs)
         {
             <span class="lib-needs">
-                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" aria-hidden="true" />
+                <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Small" aria-hidden="true" />
                 @Loc["PkgBrowseNeedsLabel"]
                 @foreach (var need in needs)
                 {
@@ -32,7 +32,7 @@
                     <span class="lib-need @(missing ? "lib-need--missing" : null)" title="@(missing ? Loc["PkgBrowseNeedMissing", need].Value : null)">
                         @if (InstalledPackages?.ContainsKey(need) == true)
                         {
-                            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" aria-hidden="true" />
+                            <MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small" aria-hidden="true" />
                         }
                         @need
                     </span>
@@ -70,7 +70,7 @@
         @if (Queued is not null)
         {
             <MudTooltip Text="@Loc["PkgBatchQueuedTooltip"]">
-                <MudButton Class="lib-queued" Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Check"
+                <MudButton Class="lib-queued" Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Check"
                            aria-pressed="true" OnClick="@OnUnqueue">@Loc["PkgBatchQueued"]</MudButton>
             </MudTooltip>
         }
@@ -122,5 +122,5 @@
         : Target is { } target ? Loc["PkgBatchQueueChange", target]
         : Loc["PkgBatchQueueChangeTip"];
 
-    private string QueueIcon => Installed is null ? Icons.Material.Filled.AddToQueue : Icons.Material.Filled.Sync;
+    private string QueueIcon => Installed is null ? Icons.Material.Outlined.AddToQueue : Icons.Material.Outlined.Sync;
 }

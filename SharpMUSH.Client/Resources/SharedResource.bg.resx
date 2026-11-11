@@ -1913,6 +1913,15 @@
     <value>Папки</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailFolderInbox" xml:space="preserve">
+    <value>Входящи</value>
+  </data>
+  <data name="NavMailFolderSent" xml:space="preserve">
+    <value>Изпратени</value>
+  </data>
+  <data name="NavMailFolderTrash" xml:space="preserve">
+    <value>Кошче</value>
+  </data>
   <data name="NavMailForward" xml:space="preserve">
     <value>Препрати</value>
     <comment>MT — assumed the verb (forward a message), not a direction</comment>

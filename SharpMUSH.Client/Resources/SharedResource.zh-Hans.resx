@@ -1913,6 +1913,15 @@
     <value>文件夹</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailFolderInbox" xml:space="preserve">
+    <value>收件箱</value>
+  </data>
+  <data name="NavMailFolderSent" xml:space="preserve">
+    <value>已发送</value>
+  </data>
+  <data name="NavMailFolderTrash" xml:space="preserve">
+    <value>回收站</value>
+  </data>
   <data name="NavMailForward" xml:space="preserve">
     <value>转发</value>
     <comment>MT</comment>

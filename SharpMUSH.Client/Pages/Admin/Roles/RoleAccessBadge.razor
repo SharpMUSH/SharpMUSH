@@ -7,7 +7,7 @@
 <span class="ra-access @(Decision.Allowed ? "ra-access--allow" : "ra-access--deny")"
       title="@Loc[Decision.Allowed ? "RolAccessHeld" : "RolAccessNotHeld"]">
     <span class="ra-access-who">@Loc["RolAccessYou"]</span>
-    <MudIcon Icon="@(Decision.Allowed ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Block)" Class="ra-ico" />
+    <MudIcon Icon="@(Decision.Allowed ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Block)" Class="ra-ico" />
     <span class="ra-sr">@Loc[Decision.Allowed ? "RolAccessHeld" : "RolAccessNotHeld"]</span>
     @if (DecidingRoles(Decision) is { Count: > 0 } deciding)
     {

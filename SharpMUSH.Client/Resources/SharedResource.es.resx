@@ -1913,6 +1913,15 @@
     <value>Carpetas</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailFolderInbox" xml:space="preserve">
+    <value>Bandeja de entrada</value>
+  </data>
+  <data name="NavMailFolderSent" xml:space="preserve">
+    <value>Enviados</value>
+  </data>
+  <data name="NavMailFolderTrash" xml:space="preserve">
+    <value>Papelera</value>
+  </data>
   <data name="NavMailForward" xml:space="preserve">
     <value>Reenviar</value>
     <comment>MT</comment>

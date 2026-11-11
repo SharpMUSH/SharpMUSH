@@ -20,7 +20,7 @@
             <div class="graph-add" role="group" aria-label="@Loc["WidGraphAdd"]">
                 @foreach (var kind in Kinds)
                 {
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add"
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Add"
                                title="@kind.Help" Style="@ToneVar(kind.Tone)" Class="graph-add-button"
                                OnClick="() => AddAsync(kind)">@KindLabel(kind.Key)</MudButton>
                 }
@@ -30,22 +30,22 @@
         @if (_view == "map" && _draft.Nodes.Count > 0)
         {
             <div class="graph-zoom" role="group" aria-label="@Loc["WidGraphZoom"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Remove" Size="Size.Small" aria-label="@Loc["WidGraphZoomOut"]" title="@Loc["WidGraphZoomOut"]"
+                <MudIconButton Icon="@Icons.Material.Outlined.Remove" Size="Size.Small" aria-label="@Loc["WidGraphZoomOut"]" title="@Loc["WidGraphZoomOut"]"
                                Disabled="@(_zoom <= MinZoom)" OnClick="() => ZoomBy(-0.1)" />
                 <button type="button" class="graph-zoom-level" title="@Loc["WidGraphZoomReset"]" @onclick="() => SetZoom(1)">@($"{Math.Round(_zoom * 100)}%")</button>
-                <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" aria-label="@Loc["WidGraphZoomIn"]" title="@Loc["WidGraphZoomIn"]"
+                <MudIconButton Icon="@Icons.Material.Outlined.Add" Size="Size.Small" aria-label="@Loc["WidGraphZoomIn"]" title="@Loc["WidGraphZoomIn"]"
                                Disabled="@(_zoom >= MaxZoom)" OnClick="() => ZoomBy(0.1)" />
-                <MudIconButton Icon="@Icons.Material.Filled.FitScreen" Size="Size.Small" aria-label="@Loc["WidGraphFit"]" title="@Loc["WidGraphFit"]"
+                <MudIconButton Icon="@Icons.Material.Outlined.FitScreen" Size="Size.Small" aria-label="@Loc["WidGraphFit"]" title="@Loc["WidGraphFit"]"
                                OnClick="FitAsync" />
             </div>
         }
         @if (!Locked && _draft.Nodes.Count > 1)
         {
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.AccountTree" Class="graph-tidy" OnClick="TidyAsync">@Loc["WidGraphTidy"]</MudButton>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.AccountTree" Class="graph-tidy" OnClick="TidyAsync">@Loc["WidGraphTidy"]</MudButton>
         }
         @if (!string.IsNullOrWhiteSpace(Spec?.Check))
         {
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Checklist"
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Checklist"
                        Disabled="Busy" OnClick="CheckAsync">@Loc["WidGraphCheck"]</MudButton>
         }
     </div>
@@ -878,7 +878,7 @@
                     <li class="graph-pool-row">
                         <div class="graph-pool-head">
                             <span class="graph-pool-label">@target.Label</span>
-                            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Disabled="Locked"
+                            <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small" Disabled="Locked"
                                            aria-label="@Loc["WidGraphRemoveLink", target.Label]"
                                            OnClick="() => UnlinkAsync(node.Key, port.Key, target.Key)" />
                         </div>
@@ -909,7 +909,7 @@
             <span class="graph-inspector-kind">@KindLabel(node.Kind)</span>
             @if (!Locked)
             {
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" aria-label="@Loc["WidGraphDelete"]"
+                <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" aria-label="@Loc["WidGraphDelete"]"
                                OnClick="() => RemoveAsync(node.Key)" />
             }
         </div>

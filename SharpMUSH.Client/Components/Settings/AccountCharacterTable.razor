@@ -4,7 +4,7 @@
 <div id="characters" class="acct-anchor">
     <KitCard Title="@Loc["Characters"]" Sub="@Loc["NavSettingsCharactersDescription"]">
         <Controls>
-            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="OnRefresh" Disabled="@Busy">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.Refresh" OnClick="OnRefresh" Disabled="@Busy">
                 @Loc["Refresh"]
             </MudButton>
         </Controls>
@@ -38,7 +38,7 @@
                                     @* God (#1) never leaves its account. *@
                                     @if (context.DbrefNumber != 1)
                                     {
-                                        <MudIconButton Icon="@Icons.Material.Filled.LinkOff" Size="Size.Small"
+                                        <MudIconButton Icon="@Icons.Material.Outlined.LinkOff" Size="Size.Small"
                                                        Color="Color.Warning" aria-label="@Loc["AuthUnlinkCharacter"]"
                                                        OnClick="() => OnUnlink.InvokeAsync(context)" />
                                     }

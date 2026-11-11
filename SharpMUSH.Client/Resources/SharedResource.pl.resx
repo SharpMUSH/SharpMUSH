@@ -1913,6 +1913,15 @@
     <value>Foldery</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailFolderInbox" xml:space="preserve">
+    <value>Odebrane</value>
+  </data>
+  <data name="NavMailFolderSent" xml:space="preserve">
+    <value>Wysłane</value>
+  </data>
+  <data name="NavMailFolderTrash" xml:space="preserve">
+    <value>Kosz</value>
+  </data>
   <data name="NavMailForward" xml:space="preserve">
     <value>Przekaż</value>
     <comment>MT — mail action (forward a message)</comment>

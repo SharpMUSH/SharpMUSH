@@ -20,7 +20,7 @@
                 @if (_remotesFailure is not null)
                 {
                     <MudAlert Severity="Severity.Error" Class="pkg-remotes-error" role="alert">@_remotesFailure.Message</MudAlert>
-                    <CapsuleButton Class="pkg-remotes-retry" OnClick="ReloadRemotesAsync" Icon="@Icons.Material.Filled.Refresh">@Loc["Refresh"]</CapsuleButton>
+                    <CapsuleButton Class="pkg-remotes-retry" OnClick="ReloadRemotesAsync" Icon="@Icons.Material.Outlined.Refresh">@Loc["Refresh"]</CapsuleButton>
                 }
                 else if (_remotes is null)
                 {
@@ -38,13 +38,13 @@
                             <MudTd data-label="@Loc["PkgTrust"]"><TrustBadge Trust="@context.Trust" /></MudTd>
                             <MudTd data-label="@Loc["PkgBranch"]">@(context.Branch ?? Loc["PkgDefaultBranch"])</MudTd>
                             <MudTd>
-                                <MudIconButton Icon="@Icons.Material.Filled.TravelExplore" Size="Size.Small"
+                                <MudIconButton Icon="@Icons.Material.Outlined.TravelExplore" Size="Size.Small"
                                                title="@Loc["PkgBrowse"]" aria-label="@Loc["PkgBrowse"]" Href="@($"/admin/packages/browse?remote={Uri.EscapeDataString(context.Name)}")" />
                                 @* The bundled catalogue is not a configured remote — it is the set of
                                    packages embedded in this server build, so there is nothing to delete. *@
                                 @if (!BundledPackageSource.IsCatalogueRemote(context.Name))
                                 {
-                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error"
                                                    aria-label="@Loc["Delete"]" OnClick="@(() => DeleteAsync(context.Name))" />
                                 }
                             </MudTd>
@@ -76,7 +76,7 @@
     <div>
         <KitCard Title="@Loc["PkgCommunityDirectory"]">
             <Controls>
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" Disabled="@_busy"
+                <MudIconButton Icon="@Icons.Material.Outlined.Refresh" Size="Size.Small" Disabled="@_busy"
                                aria-label="@Loc["Refresh"]" OnClick="@LoadCommunityAsync" />
             </Controls>
             <ChildContent>
@@ -87,7 +87,7 @@
                 @if (_communityFailure is not null)
                 {
                     <MudAlert Severity="Severity.Error" Class="pkg-community-error" role="alert">@_communityFailure.Message</MudAlert>
-                    <CapsuleButton Class="pkg-community-retry" OnClick="LoadCommunityAsync" Icon="@Icons.Material.Filled.Refresh">@Loc["Refresh"]</CapsuleButton>
+                    <CapsuleButton Class="pkg-community-retry" OnClick="LoadCommunityAsync" Icon="@Icons.Material.Outlined.Refresh">@Loc["Refresh"]</CapsuleButton>
                 }
                 else if (_community is null)
                 {
@@ -102,7 +102,7 @@
                                 <MudText Typo="Typo.subtitle1">@entry.Listing.Name</MudText>
                                 <TrustBadge Trust="PackageRemoteTrust.Community" />
                                 <MudSpacer />
-                                <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" title="@Loc["PkgShowReadme", entry.Listing.Name]" aria-label="@Loc["PkgShowReadme", entry.Listing.Name]"
+                                <MudIconButton Icon="@Icons.Material.Outlined.Description" Size="Size.Small" title="@Loc["PkgShowReadme", entry.Listing.Name]" aria-label="@Loc["PkgShowReadme", entry.Listing.Name]"
                                                OnClick="@(() => ShowReadmeAsync(entry.Listing))" />
                                 @if (entry.AlreadyConfigured)
                                 {

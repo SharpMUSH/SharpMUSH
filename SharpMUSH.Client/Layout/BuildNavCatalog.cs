@@ -80,46 +80,46 @@ public static class BuildNavCatalog
 
 	/// <summary>The overview: every other staff page as a card, grouped as the sidebar groups them.</summary>
 	public static Entry Overview { get; } =
-		new("/admin", Icons.Material.Filled.SpaceDashboard, "AdmOverview", "AdmOverviewDescription", Group.Overview, [], ExactMatch: true);
+		new("/admin", Icons.Material.Outlined.SpaceDashboard, "AdmOverview", "AdmOverviewDescription", Group.Overview, [], ExactMatch: true);
 
 	/// <summary>Every entry but the overview, in menu order.</summary>
 	public static IReadOnlyList<Entry> All { get; } =
 	[
-		new("/softcode", Icons.Material.Filled.Code, "SoftcodeEditor", "AdmCardSoftcode", Group.Build, ["softcode.use"]),
-		new("/build/apps", Icons.Material.Filled.DashboardCustomize, "LayBldTitle", "LayBldCard", Group.Build, ["softcode.use"]),
-		new("/admin/snapshots", Icons.Material.Filled.History, "SnapshotsTitle", "AdmCardSnapshots", Group.Build, [], Roles: ["Wizard", "God"]),
-		new("/admin/jobs", Icons.Material.Filled.Schedule, "JobsTitle", "AdmCardJobs", Group.Build, ["jobs.manage"]),
-		new("/admin/diagnostics", Icons.Material.Filled.QueryStats, "DiagTitle", "AdmCardDiagnostics", Group.Build, ["queue.inspect"]),
+		new("/softcode", Icons.Material.Outlined.Code, "SoftcodeEditor", "AdmCardSoftcode", Group.Build, ["softcode.use"]),
+		new("/build/apps", Icons.Material.Outlined.DashboardCustomize, "LayBldTitle", "LayBldCard", Group.Build, ["softcode.use"]),
+		new("/admin/snapshots", Icons.Material.Outlined.History, "SnapshotsTitle", "AdmCardSnapshots", Group.Build, [], Roles: ["Wizard", "God"]),
+		new("/admin/jobs", Icons.Material.Outlined.Schedule, "JobsTitle", "AdmCardJobs", Group.Build, ["jobs.manage"]),
+		new("/admin/diagnostics", Icons.Material.Outlined.QueryStats, "DiagTitle", "AdmCardDiagnostics", Group.Build, ["queue.inspect"]),
 
-		new("/admin/accounts", Icons.Material.Filled.ManageAccounts, "AdmAccountsTitle", "AdmCardAccounts", Group.People, ["game.wizard"]),
-		new("/admin/characters", Icons.Material.Filled.Person, "Characters", "AdmCardCharacters", Group.People, ["players.view"]),
-		new("/admin/guests", Icons.Material.Filled.Group, "AdmGuestsTitle", "AdmCardGuests", Group.People, ["players.view"]),
-		new("/admin/activity", Icons.Material.Filled.Insights, "AdmActivityTitle", "AdmCardActivity", Group.People, ["players.view"]),
-		new("/admin/roles", Icons.Material.Filled.Shield, "AdmRolesLabel", "AdmCardRoles", Group.People, ["roles.admin"]),
+		new("/admin/accounts", Icons.Material.Outlined.ManageAccounts, "AdmAccountsTitle", "AdmCardAccounts", Group.People, ["game.wizard"]),
+		new("/admin/characters", Icons.Material.Outlined.Person, "Characters", "AdmCardCharacters", Group.People, ["players.view"]),
+		new("/admin/guests", Icons.Material.Outlined.Group, "AdmGuestsTitle", "AdmCardGuests", Group.People, ["players.view"]),
+		new("/admin/activity", Icons.Material.Outlined.Insights, "AdmActivityTitle", "AdmCardActivity", Group.People, ["players.view"]),
+		new("/admin/roles", Icons.Material.Outlined.Shield, "AdmRolesLabel", "AdmCardRoles", Group.People, ["roles.admin"]),
 
-		new("/admin/moderation", Icons.Material.Filled.Gavel, "AdmModerationTitle", "AdmModerationCardAction", Group.Moderation, ["players.moderate"]),
-		new("/admin/audit", Icons.Material.Filled.ManageHistory, "AdmAuditTitle", "AdmAuditCardAction", Group.Moderation, ["players.moderate"]),
+		new("/admin/moderation", Icons.Material.Outlined.Gavel, "AdmModerationTitle", "AdmModerationCardAction", Group.Moderation, ["players.moderate"]),
+		new("/admin/audit", Icons.Material.Outlined.ManageHistory, "AdmAuditTitle", "AdmAuditCardAction", Group.Moderation, ["players.moderate"]),
 
-		new("/admin/wiki", Icons.Material.Filled.MenuBook, "AdmWikiLabel", "AdmCardWiki", Group.Content, ["wiki.admin"]),
-		new("/admin/media", Icons.Material.Filled.PermMedia, "AdmMediaTitle", "AdmCardMedia", Group.Content, ["media.admin"]),
-		new("/admin/suggestions", Icons.Material.Filled.Spellcheck, "AdmSuggestionsLabel", "AdmCardSuggestions", Group.Content, ["config.admin"]),
-		new("/admin/messages", Icons.Material.Filled.Campaign, "AdmMessagesTitle", "AdmCardMessages", Group.Content, ["config.admin"]),
-		new("/admin/scenes/types", Icons.Material.Filled.TheaterComedy, "AdmPoseTypesTitle", "AdmCardPoseTypes", Group.Content, ["layout.admin"],
+		new("/admin/wiki", Icons.Material.Outlined.MenuBook, "AdmWikiLabel", "AdmCardWiki", Group.Content, ["wiki.admin"]),
+		new("/admin/media", Icons.Material.Outlined.PermMedia, "AdmMediaTitle", "AdmCardMedia", Group.Content, ["media.admin"]),
+		new("/admin/suggestions", Icons.Material.Outlined.Spellcheck, "AdmSuggestionsLabel", "AdmCardSuggestions", Group.Content, ["config.admin"]),
+		new("/admin/messages", Icons.Material.Outlined.Campaign, "AdmMessagesTitle", "AdmCardMessages", Group.Content, ["config.admin"]),
+		new("/admin/scenes/types", Icons.Material.Outlined.TheaterComedy, "AdmPoseTypesTitle", "AdmCardPoseTypes", Group.Content, ["layout.admin"],
 			Feature: GameFeatures.Scenes),
 
-		new("/admin/applications", Icons.Material.Filled.Apps, "AdmApplicationsTitle", "AdmCardApplications", Group.Portal, ["applications.admin"]),
-		new("/admin/layout", Icons.Material.Filled.Dashboard, "AdmLayoutTitle", "AdmCardLayout", Group.Portal, ["layout.admin"]),
-		new("/admin/themes", Icons.Material.Filled.Palette, "AdmThemesTitle", "AdmCardThemes", Group.Portal, ["layout.admin"]),
-		new("/admin/navigation", Icons.Material.Filled.Menu, "AdmNavTitle", "AdmCardNavigation", Group.Portal, ["layout.admin"]),
-		new("/admin/packages", Icons.Material.Filled.Inventory2, "PkgPackages", "AdmCardPackages", Group.Portal, ["packages.admin"]),
-		new("/admin/profiles", Icons.Material.Filled.Badge, "ProfileHandler", "AdmCardProfiles", Group.Portal, ["players.moderate"]),
+		new("/admin/applications", Icons.Material.Outlined.Apps, "AdmApplicationsTitle", "AdmCardApplications", Group.Portal, ["applications.admin"]),
+		new("/admin/layout", Icons.Material.Outlined.Dashboard, "AdmLayoutTitle", "AdmCardLayout", Group.Portal, ["layout.admin"]),
+		new("/admin/themes", Icons.Material.Outlined.Palette, "AdmThemesTitle", "AdmCardThemes", Group.Portal, ["layout.admin"]),
+		new("/admin/navigation", Icons.Material.Outlined.Menu, "AdmNavTitle", "AdmCardNavigation", Group.Portal, ["layout.admin"]),
+		new("/admin/packages", Icons.Material.Outlined.Inventory2, "PkgPackages", "AdmCardPackages", Group.Portal, ["packages.admin"]),
+		new("/admin/profiles", Icons.Material.Outlined.Badge, "ProfileHandler", "AdmCardProfiles", Group.Portal, ["players.moderate"]),
 
-		new("/admin/backups", Icons.Material.Filled.Backup, "AdmRemoteBackupTitle", "AdmRemoteBackupDescription", Group.Server, ["server.admin"]),
-		new("/admin/server", Icons.Material.Filled.Dns, "AdmServerStatusLabel", "AdmCardServer", Group.Server, ["server.admin"]),
-		new("/admin/config", Icons.Material.Filled.Tune, "Configuration", "AdmCardConfig", Group.Server, ["config.admin"]),
-		new("/admin/import", Icons.Material.Filled.CloudUpload, "AdmImportLabel", "AdmCardImport", Group.Server, ["server.admin"]),
+		new("/admin/backups", Icons.Material.Outlined.Backup, "AdmRemoteBackupTitle", "AdmRemoteBackupDescription", Group.Server, ["server.admin"]),
+		new("/admin/server", Icons.Material.Outlined.Dns, "AdmServerStatusLabel", "AdmCardServer", Group.Server, ["server.admin"]),
+		new("/admin/config", Icons.Material.Outlined.Tune, "Configuration", "AdmCardConfig", Group.Server, ["config.admin"]),
+		new("/admin/import", Icons.Material.Outlined.CloudUpload, "AdmImportLabel", "AdmCardImport", Group.Server, ["server.admin"]),
 		// discord.admin exists only while the discord package is installed, so the claim gates the page on it too.
-		new("/admin/discord", Icons.Material.Filled.Forum, "AdmDiscordTitle", "AdmCardDiscord", Group.Server, [], PermClaims: ["discord.admin"]),
+		new("/admin/discord", Icons.Custom.Brands.Discord, "AdmDiscordTitle", "AdmCardDiscord", Group.Server, [], PermClaims: ["discord.admin"]),
 	];
 
 	/// <summary>The <c>SharedResource</c> heading of a group; the overview has none.</summary>

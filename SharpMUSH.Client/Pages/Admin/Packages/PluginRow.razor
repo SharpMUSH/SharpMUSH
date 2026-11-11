@@ -3,7 +3,7 @@
 
 @* A plugin: its name, what it does and whether it is running, any change waiting on a restart and why it failed;
    the id, version, origin and what it adds wait under Details. On/off stays on the row; the README is in its menu. *@
-<PackageRow Icon="@Icons.Material.Filled.Extension" Kind="plugin" Name="@Plugin.Name" Description="@Plugin.Description"
+<PackageRow Icon="@Icons.Material.Outlined.Extension" Kind="plugin" Name="@Plugin.Name" Description="@Plugin.Description"
             Id="@(string.Equals(Plugin.Name, Plugin.Id, StringComparison.Ordinal) ? null : Plugin.Id)">
     <Status>
         <MudChip T="string" Size="Size.Small" Color="@StatusColor(Plugin.Status)">@StatusLabel(Plugin.Status)</MudChip>

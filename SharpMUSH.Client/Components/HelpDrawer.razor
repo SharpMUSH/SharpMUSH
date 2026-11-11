@@ -19,18 +19,18 @@
     <div style="display:flex;flex-direction:column;height:100%;background:var(--surface);color:var(--text);">
 
         <div style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-bottom:1px solid #333;flex-shrink:0;">
-            <MudIcon Icon="@Icons.Material.Filled.MenuBook" Color="Color.Secondary" Size="Size.Small" />
+            <MudIcon Icon="@Icons.Material.Outlined.MenuBook" Color="Color.Secondary" Size="Size.Small" />
             <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Style="flex:1;">@Loc["TermMushHelp"]</MudText>
 
             @if (_history.Count > 0)
             {
                 <MudTooltip Text="@Loc["TermHelpBack"]">
-                    <MudIconButton aria-label="@Loc["TermHelpBack"]" Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small"
+                    <MudIconButton aria-label="@Loc["TermHelpBack"]" Icon="@Icons.Material.Outlined.ArrowBack" Size="Size.Small"
                                    Color="Color.Default" OnClick="GoBack" />
                 </MudTooltip>
             }
             <MudTooltip Text="@Loc["TermHelpClose"]">
-                <MudIconButton aria-label="@Loc["TermHelpClose"]" Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                <MudIconButton aria-label="@Loc["TermHelpClose"]" Icon="@Icons.Material.Outlined.Close" Size="Size.Small"
                                Color="Color.Default" OnClick="Close" />
             </MudTooltip>
         </div>
@@ -45,7 +45,7 @@
                              Variant="Variant.Outlined"
                              Margin="Margin.Dense"
                              Adornment="Adornment.Start"
-                             AdornmentIcon="@Icons.Material.Filled.Search"
+                             AdornmentIcon="@Icons.Material.Outlined.Search"
                              AdornmentColor="Color.Secondary"
                              ShowProgressIndicator="true"
                              Dense="true"

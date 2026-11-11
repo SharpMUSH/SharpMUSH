@@ -70,7 +70,7 @@
                                 <a class="adm-discord-invite" href="@invite" target="_blank" rel="noopener">@Loc["AdmDiscordInvite"]</a>
                             }
                             <a class="adm-discord-token" href="@DiscordConfigurationFields.Token.Href("/admin/config/secrets")">@Loc["AdmDiscordToken"]</a>
-                            <CapsuleButton Icon="@Icons.Material.Filled.Refresh" Class="adm-discord-reconnect" Disabled="@_busy"
+                            <CapsuleButton Icon="@Icons.Material.Outlined.Refresh" Class="adm-discord-reconnect" Disabled="@_busy"
                                            OnClick="ReconnectAsync">@Loc["AdmDiscordReconnect"]</CapsuleButton>
                         </div>
                     </ChildContent>
@@ -168,7 +168,7 @@
                                     </MudSelectItem>
                                 }
                             </MudSelect>
-                            <CapsuleButton Primary="true" Icon="@Icons.Material.Filled.Link" Class="adm-discord-link"
+                            <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Link" Class="adm-discord-link"
                                            Disabled="@(_busy || _linkChannel is null)" OnClick="LinkAsync">@Loc["AdmDiscordLink"]</CapsuleButton>
                         </div>
                     }
@@ -193,7 +193,7 @@
                                     <div class="adm-discord-row-text">
                                         <span class="adm-discord-row-head">
                                             <span class="adm-discord-name">@@@mapping.RoleName</span>
-                                            <MudIcon Icon="@Icons.Material.Filled.SyncAlt" Size="Size.Small" Class="adm-discord-arrow" aria-hidden="true" />
+                                            <MudIcon Icon="@Icons.Material.Outlined.SyncAlt" Size="Size.Small" Class="adm-discord-arrow" aria-hidden="true" />
                                             <code>@mapping.Slug</code>
                                             <Pill Tag="true" Warn="@(mapping.Problem is not null || mapping.Drift > 0)">@MappingState(mapping)</Pill>
                                         </span>
@@ -250,7 +250,7 @@
                         {
                             <MudCheckBox T="bool" @bind-Value="_mapConfirm" Label="@Loc["AdmDiscordConfirmStaff"]" Class="adm-discord-map-confirm" />
                         }
-                        <CapsuleButton Primary="true" Icon="@Icons.Material.Filled.Add" Class="adm-discord-map"
+                        <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add" Class="adm-discord-map"
                                        Disabled="@(_busy || string.IsNullOrWhiteSpace(_mapRole) || string.IsNullOrWhiteSpace(_mapDiscordRole))"
                                        OnClick="MapAsync">@Loc["AdmDiscordMap"]</CapsuleButton>
                     </div>
@@ -303,7 +303,7 @@
                     <div class="adm-discord-form">
                         <MudTextField T="string" Value="@_search" ValueChanged="SearchAsync" Label="@Loc["AdmDiscordSearch"]" Variant="Variant.Outlined"
                                       Margin="Margin.Dense" Immediate="true" DebounceInterval="300" Adornment="Adornment.Start"
-                                      AdornmentIcon="@Icons.Material.Filled.Search" Class="adm-discord-field adm-discord-search" />
+                                      AdornmentIcon="@Icons.Material.Outlined.Search" Class="adm-discord-field adm-discord-search" />
                     </div>
                     @if (_members.Count == 0)
                     {
@@ -318,7 +318,7 @@
                                     <div class="adm-discord-row-text">
                                         <span class="adm-discord-row-head">
                                             <span class="adm-discord-name">@member.Username</span>
-                                            <MudIcon Icon="@Icons.Material.Filled.SyncAlt" Size="Size.Small" Class="adm-discord-arrow" aria-hidden="true" />
+                                            <MudIcon Icon="@Icons.Material.Outlined.SyncAlt" Size="Size.Small" Class="adm-discord-arrow" aria-hidden="true" />
                                             <span>@(member.AccountName ?? Loc["AdmDiscordAccountGone"])</span>
                                         </span>
                                         <span class="adm-discord-sub">@string.Format(Loc["AdmDiscordLinkedOn"], Date(member.LinkedAt))</span>

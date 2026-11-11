@@ -25,25 +25,25 @@
 
     <LoadState TValue="ActivitySummary" Value="_summary" Loading="@(_loading && _summary is null)" Error="@_error" Context="summary">
         <AdminStats>
-            <AdminStat Key="posed" Icon="@Icons.Material.Filled.RecordVoiceOver" Label="@Loc["AdmActivityPosed"]"
+            <AdminStat Key="posed" Icon="@Icons.Material.Outlined.RecordVoiceOver" Label="@Loc["AdmActivityPosed"]"
                        Value="@summary.Posed.ToString(CultureInfo.CurrentCulture)"
                        Sub="@Loc["AdmActivityOfApproved", summary.Approved, Change(summary.Posed, summary.PosedBefore)]" />
-            <AdminStat Key="poses" Icon="@Icons.Material.Filled.Notes" Label="@Loc["AdmActivityPoses"]"
+            <AdminStat Key="poses" Icon="@Icons.Material.Outlined.Notes" Label="@Loc["AdmActivityPoses"]"
                        Value="@summary.Poses.ToString("N0", CultureInfo.CurrentCulture)"
                        Sub="@Change(summary.Poses, summary.PosesBefore)" />
             @if (summary.Scenes is { } scenes)
             {
-                <AdminStat Key="scenes" Icon="@Icons.Material.Filled.TheaterComedy" Label="@Loc["AdmActivityScenes"]"
+                <AdminStat Key="scenes" Icon="@Icons.Material.Outlined.TheaterComedy" Label="@Loc["AdmActivityScenes"]"
                            Value="@scenes.ToString(CultureInfo.CurrentCulture)" Sub="@Change(scenes, summary.ScenesBefore ?? 0)" />
             }
-            <AdminStat Key="approvals" Icon="@Icons.Material.Filled.HowToReg" Label="@Loc["AdmActivityNewApprovals"]"
+            <AdminStat Key="approvals" Icon="@Icons.Material.Outlined.HowToReg" Label="@Loc["AdmActivityNewApprovals"]"
                        Value="@summary.NewApprovals.ToString(CultureInfo.CurrentCulture)" />
-            <AdminStat Key="rooms" Icon="@Icons.Material.Filled.MeetingRoom" Label="@Loc["AdmActivityRoomsUsed"]"
+            <AdminStat Key="rooms" Icon="@Icons.Material.Outlined.MeetingRoom" Label="@Loc["AdmActivityRoomsUsed"]"
                        Value="@summary.RoomsUsed.ToString(CultureInfo.CurrentCulture)"
                        Sub="@Loc["AdmActivityRoomsDeadSub", summary.RoomsDead]" />
-            <AdminStat Key="drifting" Icon="@Icons.Material.Filled.TrendingDown" Label="@Loc["AdmActivityDrifting"]"
+            <AdminStat Key="drifting" Icon="@Icons.Material.Outlined.TrendingDown" Label="@Loc["AdmActivityDrifting"]"
                        Value="@summary.Drifting.ToString(CultureInfo.CurrentCulture)" Warn="@(summary.Drifting > 0)" />
-            <AdminStat Key="peak" Icon="@Icons.Material.Filled.Schedule" Label="@Loc["AdmActivityPeak"]"
+            <AdminStat Key="peak" Icon="@Icons.Material.Outlined.Schedule" Label="@Loc["AdmActivityPeak"]"
                        Value="@(summary.Peak is { } peak ? $"{DayName(peak.Weekday)} {peak.Hour:00}:00" : "—")"
                        Sub="@(summary.Peak is { } p ? Loc["AdmActivityPeakSub", p.Players.ToString("0.#", CultureInfo.CurrentCulture)].Value : null)" />
         </AdminStats>

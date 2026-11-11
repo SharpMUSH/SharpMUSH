@@ -3729,6 +3729,15 @@
   <data name="NavMailFolders" xml:space="preserve">
     <value>Folders</value>
   </data>
+  <data name="NavMailFolderInbox" xml:space="preserve">
+    <value>Inbox</value>
+  </data>
+  <data name="NavMailFolderSent" xml:space="preserve">
+    <value>Sent</value>
+  </data>
+  <data name="NavMailFolderTrash" xml:space="preserve">
+    <value>Trash</value>
+  </data>
   <data name="NavMailSelectMessage" xml:space="preserve">
     <value>Select a message to read</value>
   </data>
@@ -5000,6 +5009,18 @@
   <data name="AdmSetupDoneLead" xml:space="preserve">
     <value>Everything here can be changed later from Build &amp; manage: the handlers in Configuration, under Database; packages in Packages; and another game's database in Database import.</value>
   </data>
+  <data name="AdmSetupDoneSummary" xml:space="preserve">
+    <value>What the game has now</value>
+  </data>
+  <data name="AdmSetupDonePackages" xml:space="preserve">
+    <value>{count, plural, =0 {No packages installed} one {# package installed} other {# packages installed}}</value>
+  </data>
+  <data name="AdmSetupDoneAdded" xml:space="preserve">
+    <value>added.</value>
+  </data>
+  <data name="AdmSetupDoneNext" xml:space="preserve">
+    <value>Next</value>
+  </data>
   <data name="AdmSetupBack" xml:space="preserve">
     <value>Back</value>
   </data>
@@ -5091,7 +5112,7 @@
     <value>Is triggered on game events: connections, movement, channel lines and pages. The portal's Play page learns who and what is in a room, and the channels and pages a player receives, through it.</value>
   </data>
   <data name="AdmSetupHandlerNow" xml:space="preserve">
-    <value>Now: {0}, {1}.</value>
+    <value>Uses {1} ({0}).</value>
   </data>
   <data name="AdmSetupHandlerCarries" xml:space="preserve">
     <value>Built on it: {0}.</value>

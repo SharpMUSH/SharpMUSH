@@ -2570,6 +2570,15 @@
   <data name="NavMailFolders" xml:space="preserve">
     <value>Dossiers</value>
   </data>
+  <data name="NavMailFolderInbox" xml:space="preserve">
+    <value>Boîte de réception</value>
+  </data>
+  <data name="NavMailFolderSent" xml:space="preserve">
+    <value>Envoyés</value>
+  </data>
+  <data name="NavMailFolderTrash" xml:space="preserve">
+    <value>Corbeille</value>
+  </data>
   <data name="NavMailSelectMessage" xml:space="preserve">
     <value>Sélectionnez un message à lire</value>
   </data>

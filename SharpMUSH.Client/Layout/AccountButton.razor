@@ -34,7 +34,7 @@
                         <div class="phosphor-profile-name">@DisplayName</div>
                         <div class="phosphor-profile-sub">@UserTag · @(_characterActive ? Loc["NavOnline"] : Loc["NavOffline"])</div>
                     </div>
-                    <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Class="phosphor-profile-chevron" />
+                    <MudIcon Icon="@Icons.Material.Outlined.ExpandMore" Class="phosphor-profile-chevron" />
                 }
             </button>
             <AccountPanel IsOpen="_panelOpen"
@@ -52,7 +52,7 @@
             <a href="/login" class="phosphor-profile-card" title="@Loc["AuthSignIn"]" aria-label="@(Compact ? Loc["AuthSignIn"].Value : null)">
                 <div class="phosphor-avatar-wrap">
                     <div class="phosphor-avatar" style="background:var(--surface-3);color:var(--text-faint);">
-                        <MudIcon Icon="@Icons.Material.Filled.Login" Style="font-size:var(--text-md);" />
+                        <MudIcon Icon="@Icons.Material.Outlined.Login" Style="font-size:var(--text-md);" />
                     </div>
                 </div>
                 @if (!Compact)

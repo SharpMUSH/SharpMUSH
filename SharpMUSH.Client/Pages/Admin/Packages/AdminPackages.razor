@@ -15,20 +15,20 @@
 <div class="page-stack page-stack--padded pkg-page">
     <PageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["PkgSoftcodePackages"]" Description="@Loc["PkgInstalledDescription"]">
         <Actions>
-            <CapsuleButton Icon="@Icons.Material.Filled.TravelExplore" Href="/admin/packages/browse">@Loc["PkgBrowse"]</CapsuleButton>
-            <CapsuleButton Icon="@Icons.Material.Filled.Cloud" Href="/admin/packages/remotes">@Loc["PkgRemotes"]</CapsuleButton>
-            <CapsuleButton Icon="@Icons.Material.Filled.Edit" Href="/admin/packages/author">@Loc["PkgAuthor"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Outlined.TravelExplore" Href="/admin/packages/browse">@Loc["PkgBrowse"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Outlined.Cloud" Href="/admin/packages/remotes">@Loc["PkgRemotes"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Outlined.Edit" Href="/admin/packages/author">@Loc["PkgAuthor"]</CapsuleButton>
             @if (_plugins?.InstallAllowed == true)
             {
                 <MudFileUpload T="IBrowserFile" Accept=".zip" FilesChanged="@UploadPluginAsync" MaximumFileCount="1"
                                MaxFileSize="@MaxPluginUploadBytes" Disabled="@_busy" Class="pkg-upload">
                     <CustomContent Context="upload">
-                        <CapsuleButton Icon="@Icons.Material.Filled.Extension" Disabled="@_busy"
+                        <CapsuleButton Icon="@Icons.Material.Outlined.Extension" Disabled="@_busy"
                                        OnClick="@upload.OpenFilePickerAsync">@Loc["PkgUploadPlugin"]</CapsuleButton>
                     </CustomContent>
                 </MudFileUpload>
             }
-            <CapsuleButton Icon="@Icons.Material.Filled.Refresh" AriaLabel="@Loc["Refresh"]" OnClick="ReloadAsync" Disabled="_busy" />
+            <CapsuleButton Icon="@Icons.Material.Outlined.Refresh" AriaLabel="@Loc["Refresh"]" OnClick="ReloadAsync" Disabled="_busy" />
         </Actions>
     </PageHeader>
 
@@ -36,13 +36,13 @@
         var updatesAvailable = _installed?.Count(p => _updates.TryGetValue(p.Package.Id, out var u) && u.UpdateAvailable) ?? 0;
     }
     <AdminStats>
-        <AdminStat Key="installed" Icon="@Icons.Material.Filled.Archive" Label="@Loc["PkgInstalled"]"
+        <AdminStat Key="installed" Icon="@Icons.Material.Outlined.Archive" Label="@Loc["PkgInstalled"]"
                    Value="@(_installed?.Count.ToString() ?? "—")" />
-        <AdminStat Key="updates" Icon="@Icons.Material.Filled.SystemUpdate" Label="@Loc["PkgUpdatesAvailable"]"
+        <AdminStat Key="updates" Icon="@Icons.Material.Outlined.SystemUpdate" Label="@Loc["PkgUpdatesAvailable"]"
                    Value="@(_installed is null ? "—" : updatesAvailable.ToString())" />
-        <AdminStat Key="remotes" Icon="@Icons.Material.Filled.Cloud" Label="@Loc["PkgRemotes"]"
+        <AdminStat Key="remotes" Icon="@Icons.Material.Outlined.Cloud" Label="@Loc["PkgRemotes"]"
                    Value="@(_remoteCount?.ToString() ?? "—")" />
-        <AdminStat Key="objects" Icon="@Icons.Material.Filled.DataObject" Label="@Loc["PkgObjects"]"
+        <AdminStat Key="objects" Icon="@Icons.Material.Outlined.DataObject" Label="@Loc["PkgObjects"]"
                    Value="@(_installed?.Sum(p => p.ObjectCount).ToString() ?? "—")" />
     </AdminStats>
 
@@ -71,7 +71,7 @@
                 </button>
                 <div class="pkg-tabs-spacer"></div>
                 <div class="pkg-search">
-                    <MudIcon Icon="@Icons.Material.Filled.Search" Class="pkg-search-icon" />
+                    <MudIcon Icon="@Icons.Material.Outlined.Search" Class="pkg-search-icon" />
                     <input name="package-search" type="text" placeholder="@Loc["PkgSearchPlaceholder"]" aria-label="@Loc["PkgSearchPlaceholder"]" value="@_search"
                            @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
                 </div>
@@ -86,7 +86,7 @@
             else if (_installedFailure is not null)
             {
                 <MudAlert Severity="Severity.Error" Class="pkg-installed-error" role="alert">@_installedFailure.Message</MudAlert>
-                <CapsuleButton Class="pkg-installed-retry" OnClick="ReloadAsync" Icon="@Icons.Material.Filled.Refresh">@Loc["Refresh"]</CapsuleButton>
+                <CapsuleButton Class="pkg-installed-retry" OnClick="ReloadAsync" Icon="@Icons.Material.Outlined.Refresh">@Loc["Refresh"]</CapsuleButton>
             }
             else if (_installed is null)
             {
@@ -217,7 +217,7 @@
                     <span>@Loc["PkgRestartPending"]</span>
                     <AuthorizeView Policy="server.operate" Context="serverOperator">
                         <Authorized>
-                            <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.RestartAlt"
+                            <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.RestartAlt"
                                        Disabled="@_busy" OnClick="@(() => _showRestart = true)">@Loc["PkgRestart"]</MudButton>
                         </Authorized>
                     </AuthorizeView>

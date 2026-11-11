@@ -41,7 +41,7 @@
                     <button type="button" class="nav-group-toggle" aria-expanded="@(open ? "true" : "false")"
                             aria-controls="@($"drawer-group-{group.Id}")" @onclick="() => ToggleAsync(group)">
                         <span class="nav-group-label">@group.Label</span>
-                        <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Class="nav-group-chevron" aria-hidden="true" />
+                        <MudIcon Icon="@Icons.Material.Outlined.ExpandMore" Class="nav-group-chevron" aria-hidden="true" />
                     </button>
                     <div id="@($"drawer-group-{group.Id}")" hidden="@(!open)">
                         @foreach (var item in group.Items)

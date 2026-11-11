@@ -30,18 +30,18 @@
         <button type="button" class="sc-mobiletab sc-mobiletab--icon @(_mobilePane == MobilePane.Objects ? "sc-mobiletab--on" : "")"
                 title="@Loc["TermObjects"]" aria-label="@Loc["TermObjects"]"
                 @onclick="@(() => _mobilePane = MobilePane.Objects)">
-            <MudIcon Icon="@Icons.Material.Filled.Inventory2" Style="font-size:var(--text-md);" />
+            <MudIcon Icon="@Icons.Material.Outlined.Inventory2" Style="font-size:var(--text-md);" />
         </button>
         <button type="button" class="sc-mobiletab sc-mobiletab--icon @(_mobilePane == MobilePane.Attrs ? "sc-mobiletab--on" : "")"
                 title="@AttributesPaneLabel" aria-label="@AttributesPaneLabel"
                 @onclick="@(() => _mobilePane = MobilePane.Attrs)">
-            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Style="font-size:var(--text-md);" />
+            <MudIcon Icon="@Icons.Material.Outlined.AccountTree" Style="font-size:var(--text-md);" />
         </button>
         <button type="button" class="sc-mobiletab sc-mobiletab--editor @(_mobilePane == MobilePane.Editor ? "sc-mobiletab--on" : "")"
                 title="@(ActiveTab is not null ? $"#{ActiveTab.Obj.Dbref}/{ActiveTab.Attr.Name}" : Loc["TermEditor"].Value)"
                 @onclick="@(() => _mobilePane = MobilePane.Editor)"
                 disabled="@(ActiveTab is null)">
-            <MudIcon Icon="@Icons.Material.Filled.Code" Style="font-size:var(--text-md);flex-shrink:0;" />
+            <MudIcon Icon="@Icons.Material.Outlined.Code" Style="font-size:var(--text-md);flex-shrink:0;" />
             @if (ActiveTab is null)
             {
                 <span>@Loc["TermEditor"]</span>
@@ -56,19 +56,19 @@
     </div>
 
     <div class="sc-panel sc-pane-objects @(_objCollapsed ? "sc-pane--collapsed" : "")">
-        <CollapsiblePane @bind-Collapsed="_objCollapsed" Ruled="true" RailIcon="@Icons.Material.Filled.Inventory2"
+        <CollapsiblePane @bind-Collapsed="_objCollapsed" Ruled="true" RailIcon="@Icons.Material.Outlined.Inventory2"
                          RailText="@(_selectedObject is null ? null : $"#{_selectedObject.Dbref}")"
                          ExpandLabel="@Loc["TermExpandObjects"]" CollapseLabel="@Loc["TermCollapseObjects"]">
             <Header>
                 <MudText Class="section-kicker" Style="flex:1;">@Loc["TermObjects"]</MudText>
                 <MudTooltip Text="@Loc["TermCreateThing"]">
-                    <MudIconButton aria-label="@Loc["TermCreateThing"]" Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" OnClick="@(() => ShowCreateObjectDialog(MushObjectType.Thing))" />
+                    <MudIconButton aria-label="@Loc["TermCreateThing"]" Icon="@Icons.Material.Outlined.Inventory2" Size="Size.Small" OnClick="@(() => ShowCreateObjectDialog(MushObjectType.Thing))" />
                 </MudTooltip>
                 <MudTooltip Text="@Loc["TermCreateRoom"]">
-                    <MudIconButton aria-label="@Loc["TermCreateRoom"]" Icon="@Icons.Material.Filled.MeetingRoom" Size="Size.Small" OnClick="@(() => ShowCreateObjectDialog(MushObjectType.Room))" />
+                    <MudIconButton aria-label="@Loc["TermCreateRoom"]" Icon="@Icons.Material.Outlined.MeetingRoom" Size="Size.Small" OnClick="@(() => ShowCreateObjectDialog(MushObjectType.Room))" />
                 </MudTooltip>
                 <MudTooltip Text="@Loc["TermCreateExit"]">
-                    <MudIconButton aria-label="@Loc["TermCreateExit"]" Icon="@Icons.Material.Filled.CallMade" Size="Size.Small" OnClick="@(() => ShowCreateObjectDialog(MushObjectType.Exit))" />
+                    <MudIconButton aria-label="@Loc["TermCreateExit"]" Icon="@Icons.Material.Outlined.CallMade" Size="Size.Small" OnClick="@(() => ShowCreateObjectDialog(MushObjectType.Exit))" />
                 </MudTooltip>
             </Header>
             <ChildContent>
@@ -85,8 +85,8 @@
                         <MudTextField @bind-Value="_createObjectName" Placeholder="@Loc["TermObjectNamePlaceholder"]"
                                       Variant="Variant.Outlined" Margin="Margin.Dense"
                                       Style="flex:1;font-size:var(--text-sm);" OnKeyDown="OnCreateObjectKeyDown" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Success" OnClick="ExecuteCreateObjectAsync" aria-label="@Loc["Create"]" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="CancelCreateObject" aria-label="@Loc["Cancel"]" />
+                        <MudIconButton Icon="@Icons.Material.Outlined.Check" Size="Size.Small" Color="Color.Success" OnClick="ExecuteCreateObjectAsync" aria-label="@Loc["Create"]" />
+                        <MudIconButton Icon="@Icons.Material.Outlined.Close" Size="Size.Small" OnClick="CancelCreateObject" aria-label="@Loc["Cancel"]" />
                     </div>
                 }
             </ChildContent>
@@ -94,7 +94,7 @@
     </div>
 
     <div class="sc-panel sc-pane-attrs @(_attrCollapsed ? "sc-pane--collapsed" : "")">
-        <CollapsiblePane @bind-Collapsed="_attrCollapsed" RailIcon="@Icons.Material.Filled.Code"
+        <CollapsiblePane @bind-Collapsed="_attrCollapsed" RailIcon="@Icons.Material.Outlined.Code"
                          RailText="@(ActiveTab is null ? null : $"&{ActiveTab.Attr.Name}")"
                          ExpandLabel="@Loc["TermExpandAttributes"]" CollapseLabel="@Loc["TermCollapseAttributes"]">
             <Header>
@@ -107,18 +107,18 @@
                 </MudText>
                 <button type="button" class="sc-add-btn" @onclick="ShowCreateAttr"
                         disabled="@(_selectedObject is null)" title="@Loc["TermAddAttribute"]">
-                    <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:var(--text-sm);" /> @Loc["Add"]
+                    <MudIcon Icon="@Icons.Material.Outlined.Add" Style="font-size:var(--text-sm);" /> @Loc["Add"]
                 </button>
             </Header>
             <ChildContent>
                 <div class="sc-search">
-                    <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:var(--text-base);color:var(--text-faint);" />
+                    <MudIcon Icon="@Icons.Material.Outlined.Search" Style="font-size:var(--text-base);color:var(--text-faint);" />
                     <input name="attribute-search" value="@_attrSearch" @oninput="@(e => _attrSearch = e.Value?.ToString() ?? string.Empty)"
                            placeholder="@Loc["TermFilterAttributes"]" aria-label="@Loc["TermFilterAttributes"]" class="sc-search-input" />
                     @if (!string.IsNullOrEmpty(_attrSearch))
                     {
                         <button type="button" class="sc-search-clear" @onclick="@(() => _attrSearch = string.Empty)" title="@Loc["TermClear"]">
-                            <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:var(--text-sm);" />
+                            <MudIcon Icon="@Icons.Material.Outlined.Close" Style="font-size:var(--text-sm);" />
                         </button>
                     }
                 </div>
@@ -133,10 +133,10 @@
                                    @onkeydown="OnCreateAttrKeyDown"
                                    placeholder="ATTR`NAME" class="sc-add-input" />
                             <button type="button" class="sc-add-icon" @onclick="ExecuteCreateAttrAsync" title="@Loc["Create"]" aria-label="@Loc["Create"]">
-                                <MudIcon Icon="@Icons.Material.Filled.Check" Style="font-size:var(--text-base);" />
+                                <MudIcon Icon="@Icons.Material.Outlined.Check" Style="font-size:var(--text-base);" />
                             </button>
                             <button type="button" class="sc-add-icon" @onclick="CancelCreateAttr" title="@Loc["Cancel"]" aria-label="@Loc["Cancel"]">
-                                <MudIcon Icon="@Icons.Material.Filled.Close" Style="font-size:var(--text-base);" />
+                                <MudIcon Icon="@Icons.Material.Outlined.Close" Style="font-size:var(--text-base);" />
                             </button>
                         </div>
                     }
@@ -205,12 +205,12 @@
             }
             <MudSpacer />
             <MudTooltip Text="@Loc["TermEvalTooltip"]">
-                <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small"
+                <MudIconButton Icon="@Icons.Material.Outlined.PlayArrow" Size="Size.Small"
                                OnClick="RunBufferAsync" Disabled="@(_evaluating || ActiveTab is null)"
                                aria-label="@Loc["TermEvalTooltip"]" Class="sc-eval" />
             </MudTooltip>
             <MudTooltip Text="@Loc["TermConsole"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Terminal" Size="Size.Small"
+                <MudIconButton Icon="@Icons.Material.Outlined.Terminal" Size="Size.Small"
                                Color="@(_consoleOpen ? Color.Primary : Color.Default)"
                                OnClick="ToggleConsole" aria-label="@Loc["TermConsole"]"
                                aria-pressed="@(_consoleOpen ? "true" : "false")" Class="sc-console-toggle" />
@@ -218,23 +218,23 @@
             @* Icons alone: a floppy and a bin need no label, and the toolbar's width belongs to
                the attribute's name. The tooltip and aria-label still name them. *@
             <MudTooltip Text="@Loc["Save"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Save" Variant="Variant.Filled" Color="Color.Primary"
+                <MudIconButton Icon="@Icons.Material.Outlined.Save" Variant="Variant.Filled" Color="Color.Primary"
                                Size="Size.Small" OnClick="SaveAsync" Disabled="@(ActiveTab is null)"
                                aria-label="@Loc["Save"]" Class="sc-save" />
             </MudTooltip>
             <MudTooltip Text="@Loc["Delete"]">
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Variant="Variant.Outlined" Color="Color.Error"
+                <MudIconButton Icon="@Icons.Material.Outlined.Delete" Variant="Variant.Outlined" Color="Color.Error"
                                Size="Size.Small" OnClick="DeleteAsync" Disabled="@(ActiveTab is null)"
                                aria-label="@Loc["Delete"]" Class="sc-delete" />
             </MudTooltip>
             <MudTooltip Text="@Loc["TermMushHelp"]">
-                <MudIconButton aria-label="@Loc["TermMushHelp"]" Icon="@Icons.Material.Filled.MenuBook" Size="Size.Small"
+                <MudIconButton aria-label="@Loc["TermMushHelp"]" Icon="@Icons.Material.Outlined.MenuBook" Size="Size.Small"
                                OnClick="@(() => _helpDrawer?.Open())" />
             </MudTooltip>
             @if (_selectedObject is not null)
             {
                 <MudTooltip Text="@Loc["TermRefreshAttributes"]">
-                    <MudIconButton aria-label="@Loc["TermRefreshAttributes"]" Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                    <MudIconButton aria-label="@Loc["TermRefreshAttributes"]" Icon="@Icons.Material.Outlined.Refresh" Size="Size.Small"
                                    OnClick="RefreshAttributesAsync" />
                 </MudTooltip>
             }

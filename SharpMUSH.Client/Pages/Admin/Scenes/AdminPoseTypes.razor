@@ -55,7 +55,7 @@
                                       HelperText="@Loc["AdmPoseTypesKeyHint"]" Class="adm-pose-new-key" Immediate="true" />
                         <MudTextField T="string" @bind-Value="_newLabel" Label="@Loc["AdmPoseTypesLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense"
                                       Class="adm-pose-new-label" Immediate="true" />
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Class="adm-pose-add-submit"
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Add" Class="adm-pose-add-submit"
                                    Disabled="@(_busy || !CanAdd)" OnClick="AddAsync">@Loc["AdmPoseTypesAddButton"]</MudButton>
                     </div>
                 </KitCard>

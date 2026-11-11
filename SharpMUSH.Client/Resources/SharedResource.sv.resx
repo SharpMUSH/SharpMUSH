@@ -1913,6 +1913,15 @@
     <value>Mappar</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailFolderInbox" xml:space="preserve">
+    <value>Inkorg</value>
+  </data>
+  <data name="NavMailFolderSent" xml:space="preserve">
+    <value>Skickat</value>
+  </data>
+  <data name="NavMailFolderTrash" xml:space="preserve">
+    <value>Papperskorg</value>
+  </data>
   <data name="NavMailForward" xml:space="preserve">
     <value>Vidarebefordra</value>
     <comment>MT</comment>

@@ -140,7 +140,8 @@
 }
 
 .scene-live-compose--ooc ::deep .kit-chip--on {
-    background: var(--ooc-icon-bg);
+    background: color-mix(in srgb, var(--ooc-icon-bg) 60%, transparent);
+    box-shadow: inset 0 0 0 1px var(--ooc-band-border);
     color: var(--ooc-icon-fg);
 }
 

@@ -16,7 +16,7 @@
 <div class="page-stack page-stack--padded adm-mod">
     <PageHeader Kicker="@Loc["AdmGroupModeration"]" Title="@Loc["AdmModerationTitle"]" Description="@Loc["AdmModerationBlurb"]">
         <Actions>
-            <CapsuleButton Icon="@Icons.Material.Filled.History" Href="/admin/audit">@Loc["AdmAuditTitle"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Outlined.History" Href="/admin/audit">@Loc["AdmAuditTitle"]</CapsuleButton>
         </Actions>
     </PageHeader>
 
@@ -24,7 +24,7 @@
         <div class="adm-mod-body">
             <MudTextField T="string" @bind-Value="_search" Label="@Loc["AdmModerationFind"]" id="moderation-search"
                           Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          AdornmentIcon="@Icons.Material.Outlined.Search"
                           Immediate="true" DebounceInterval="300" OnDebounceIntervalElapsed="SearchAsync" />
 
             @if (_matches.Count > 0)
@@ -72,23 +72,23 @@
                     </div>
 
                     <div class="adm-mod-actions">
-                        <CapsuleButton Icon="@Icons.Material.Filled.Campaign" Class="adm-mod-warn"
+                        <CapsuleButton Icon="@Icons.Material.Outlined.Campaign" Class="adm-mod-warn"
                                        Disabled="@(_busy || !HasReason)" OnClick="WarnAsync">@Loc["AdmModerationWarn"]</CapsuleButton>
-                        <CapsuleButton Icon="@Icons.Material.Filled.PowerSettingsNew" Class="adm-mod-boot"
+                        <CapsuleButton Icon="@Icons.Material.Outlined.PowerSettingsNew" Class="adm-mod-boot"
                                        Disabled="@(_busy || !picked.Online)" OnClick="BootAsync">@Loc["AdmCharacterBoot"]</CapsuleButton>
                         @if (BanOf(picked) is { } ban)
                         {
-                            <CapsuleButton Icon="@Icons.Material.Filled.LockOpen" Class="adm-mod-lift"
+                            <CapsuleButton Icon="@Icons.Material.Outlined.LockOpen" Class="adm-mod-lift"
                                            Disabled="_busy" OnClick="() => LiftAsync(ban)">@Loc["AdmModerationLift"]</CapsuleButton>
                         }
                         else if (!picked.GodsAccount)
                         {
-                            <CapsuleButton Icon="@Icons.Material.Filled.Block" Class="adm-mod-ban"
+                            <CapsuleButton Icon="@Icons.Material.Outlined.Block" Class="adm-mod-ban"
                                            Disabled="@(_busy || picked.AccountKey is null || !HasReason)" OnClick="BanAsync">@Loc["AdmModerationBan"]</CapsuleButton>
                         }
                         @if (picked.DbrefNumber != 1)
                         {
-                            <CapsuleButton Icon="@Icons.Material.Filled.LinkOff" Class="adm-mod-unlink"
+                            <CapsuleButton Icon="@Icons.Material.Outlined.LinkOff" Class="adm-mod-unlink"
                                            Disabled="@(_busy || picked.AccountKey is null)" OnClick="UnlinkAsync">@Loc["AdmCharacterUnlink"]</CapsuleButton>
                         }
                     </div>
@@ -134,7 +134,7 @@
                                 @(context.ExpiresAt is { } until ? until.ToLocalTime().ToString("g", CultureInfo.CurrentCulture) : Loc["AdmModerationPermanent"].Value)
                             </MudTd>
                             <MudTd>
-                                <CapsuleButton Icon="@Icons.Material.Filled.LockOpen" Class="adm-mod-lift"
+                                <CapsuleButton Icon="@Icons.Material.Outlined.LockOpen" Class="adm-mod-lift"
                                                Disabled="_busy" OnClick="() => LiftAsync(context)">@Loc["AdmModerationLift"]</CapsuleButton>
                             </MudTd>
                         </RowTemplate>

@@ -1913,6 +1913,15 @@
     <value>Папки</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMailFolderInbox" xml:space="preserve">
+    <value>Входящие</value>
+  </data>
+  <data name="NavMailFolderSent" xml:space="preserve">
+    <value>Отправленные</value>
+  </data>
+  <data name="NavMailFolderTrash" xml:space="preserve">
+    <value>Корзина</value>
+  </data>
   <data name="NavMailForward" xml:space="preserve">
     <value>Переслать</value>
     <comment>MT — assumed the mail action "forward", not a direction.</comment>

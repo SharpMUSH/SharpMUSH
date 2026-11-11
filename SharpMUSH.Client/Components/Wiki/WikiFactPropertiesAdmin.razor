@@ -9,7 +9,7 @@
 <KitCard Title="@Loc["WikiPropTitle"]" Sub="@Loc["WikiPropSub"]" Class="wikiprops">
     <Controls>
         <MudTooltip Text="@Loc["WikiPropNew"]">
-            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Primary" aria-label="@Loc["WikiPropNew"]"
+            <MudIconButton Icon="@Icons.Material.Outlined.Add" Size="Size.Small" Color="Color.Primary" aria-label="@Loc["WikiPropNew"]"
                            Disabled="@(_properties is null)" OnClick="@OpenNew" />
         </MudTooltip>
     </Controls>
@@ -58,9 +58,9 @@
                                     @(property.Keywords.Count > 0 ? string.Join(", ", property.Keywords) : property.Type == "keyword" ? Loc["WikiPropAnyValue"].Value : "")
                                 </td>
                                 <td class="wikiprops-actions">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small"
                                                    aria-label="@string.Format(Loc["WikiPropEdit"], property.Id)" OnClick="@(() => OpenEdit(property))" />
-                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Color="Color.Error"
                                                    aria-label="@string.Format(Loc["WikiPropRemove"], property.Id)" OnClick="@(() => _removing = property)" />
                                 </td>
                             </tr>

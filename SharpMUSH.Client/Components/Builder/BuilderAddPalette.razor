@@ -8,13 +8,13 @@
     <Activator>
         <button type="button" class="bld-add-button" aria-expanded="@(_open ? "true" : "false")" aria-haspopup="dialog"
                 @onclick="() => _open = !_open">
-            <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" /> @Label
+            <MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" /> @Label
         </button>
     </Activator>
     <ChildContent>
         <div class="bld-palette" role="dialog" aria-label="@Label">
             <MudTextField T="string" @bind-Value="_filter" Immediate="true" Placeholder="@Loc["LayBldFind"]" aria-label="@Loc["LayBldFind"]"
-                          Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" />
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
             @{
                 var asks = Matching(BuilderDraft.FieldTypes.Where(t => t != "hidden").Select(t => (t, $"LayBldType_{t}", $"LayBldTypeHelp_{t}")));
                 var shows = Matching(BuilderDraft.DisplayKinds.Select(k => (k, $"LayBldKind_{k}", $"LayBldKindHelp_{k}")));

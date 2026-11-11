@@ -169,7 +169,7 @@ public class MailPageD1Tests : TrackingBunitContext
 		var cut = RenderAt("/mail");
 		await Assert.That(cut.Find(".kit-page-head .kit-page-title").TextContent).IsEqualTo("Mail");
 		await Assert.That(cut.Find(".kit-page-head .kit-page-actions a[href='/mail/compose']")).IsNotNull();
-		await Assert.That(cut.Find(".mail-list.kit-card .kit-card-title").TextContent).IsEqualTo("INBOX");
+		await Assert.That(cut.Find(".mail-list.kit-card .kit-card-title").TextContent).IsEqualTo("NavMailFolderInbox");
 		await Assert.That(cut.FindAll(".mail-reading.kit-card").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll(".mail-folders").Count).IsEqualTo(0).Because("the folders live in the section sidebar now");
 	}
@@ -217,7 +217,7 @@ public class MailPageD1Tests : TrackingBunitContext
 	public async Task TheFolderComesFromTheAddress()
 	{
 		var cut = RenderAt("/mail?folder=SENT");
-		await Assert.That(cut.Find(".mail-list .kit-card-title").TextContent).IsEqualTo("SENT");
+		await Assert.That(cut.Find(".mail-list .kit-card-title").TextContent).IsEqualTo("NavMailFolderSent");
 		await Assert.That(cut.FindAll(".mail-row").Count).IsEqualTo(1);
 		await Assert.That(cut.Find(".mail-row").TextContent).Contains("Re: The ledger");
 	}

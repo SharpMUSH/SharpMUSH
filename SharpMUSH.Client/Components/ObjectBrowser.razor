@@ -9,15 +9,15 @@
     <div class="ob-modes">
         <button type="button" class="ob-mode @(_activeTab == 0 ? "ob-mode--on" : "")"
                 @onclick="LoadMyObjectsAsync" disabled="@_loading">
-            <MudIcon Icon="@Icons.Material.Filled.Person" Style="font-size:var(--text-base);" /> @Loc["TermBrowserMine"]
+            <MudIcon Icon="@Icons.Material.Outlined.Person" Style="font-size:var(--text-base);" /> @Loc["TermBrowserMine"]
         </button>
         <button type="button" class="ob-mode @(_activeTab == 1 ? "ob-mode--on" : "")"
                 @onclick="@(() => _activeTab = 1)">
-            <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:var(--text-base);" /> @Loc["TermBrowserSearch"]
+            <MudIcon Icon="@Icons.Material.Outlined.Search" Style="font-size:var(--text-base);" /> @Loc["TermBrowserSearch"]
         </button>
         <button type="button" class="ob-mode @(_activeTab == 2 ? "ob-mode--on" : "")"
                 @onclick="LoadHereAsync" disabled="@_loading">
-            <MudIcon Icon="@Icons.Material.Filled.Home" Style="font-size:var(--text-base);" /> @Loc["TermBrowserHere"]
+            <MudIcon Icon="@Icons.Material.Outlined.Home" Style="font-size:var(--text-base);" /> @Loc["TermBrowserHere"]
         </button>
     </div>
 
@@ -25,7 +25,7 @@
     {
         <div class="ob-searchwrap">
             <div class="ob-search">
-                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:var(--text-base);color:var(--text-faint);" />
+                <MudIcon Icon="@Icons.Material.Outlined.Search" Style="font-size:var(--text-base);color:var(--text-faint);" />
                 <input name="object-search" value="@_searchExpr" @oninput="@(e => _searchExpr = e.Value?.ToString() ?? string.Empty)"
                        @onkeydown="OnSearchExprKeyDown"
                        placeholder="lsearch(me, type, thing)" aria-label="@Loc["TermObjectSearch"]" class="ob-search-input" />
@@ -173,10 +173,10 @@
 
     private static string GetTypeIcon(MushObjectType type) => type switch
     {
-        MushObjectType.Thing => Icons.Material.Filled.Inventory2,
-        MushObjectType.Room => Icons.Material.Filled.MeetingRoom,
-        MushObjectType.Exit => Icons.Material.Filled.ExitToApp,
-        MushObjectType.Player => Icons.Material.Filled.Person,
-        _ => Icons.Material.Filled.DataObject,
+        MushObjectType.Thing => Icons.Material.Outlined.Inventory2,
+        MushObjectType.Room => Icons.Material.Outlined.MeetingRoom,
+        MushObjectType.Exit => Icons.Material.Outlined.ExitToApp,
+        MushObjectType.Player => Icons.Material.Outlined.Person,
+        _ => Icons.Material.Outlined.DataObject,
     };
 }

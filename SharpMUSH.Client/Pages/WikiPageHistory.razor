@@ -19,7 +19,7 @@
             {
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                            Href="@DiffHref()"
-                           StartIcon="@Icons.Material.Filled.CompareArrows">
+                           StartIcon="@Icons.Material.Outlined.CompareArrows">
                     @Loc["WkCompareSelected"]
                 </MudButton>
             }
@@ -136,13 +136,13 @@
 
                     <div style="display:flex;gap:var(--space-2);align-items:center;justify-content:center;">
                         <MudTooltip Text="@Loc["WkViewRevision"]">
-                            <MudIconButton aria-label="@Loc["WkViewRevision"]" Icon="@Icons.Material.Filled.Visibility" Size="Size.Small"
+                            <MudIconButton aria-label="@Loc["WkViewRevision"]" Icon="@Icons.Material.Outlined.Visibility" Size="Size.Small"
                                            Href="@WithLang($"/wiki/{Ns}/{Slug}")" />
                         </MudTooltip>
                         @if (!isCurrent)
                         {
                             <MudTooltip Text="@Loc["WkRestoreRevision"]">
-                                <MudIconButton aria-label="@Loc["WkRestoreRevision"]" Icon="@Icons.Material.Filled.Restore" Size="Size.Small"
+                                <MudIconButton aria-label="@Loc["WkRestoreRevision"]" Icon="@Icons.Material.Outlined.Restore" Size="Size.Small"
                                                Color="Color.Warning"
                                                OnClick="@(() => RestoreAsync(rev))"
                                                Disabled="_restoring" />

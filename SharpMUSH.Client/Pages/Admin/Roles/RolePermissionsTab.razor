@@ -13,7 +13,7 @@
             <input name="scope-description" class="ra-input" type="text" placeholder="@Loc["RolCustomDescriptionLabel"]" aria-label="@Loc["RolCustomDescriptionLabel"]" value="@Draft.Description"
                    @oninput="@(e => Draft.Description = e.Value?.ToString() ?? string.Empty)" />
             <button type="button" class="ra-btn ra-btn--primary" @onclick="OnDefine" disabled="@Saving">
-                <MudIcon Icon="@Icons.Material.Filled.Add" Class="ra-ico" /> @Loc["RolCustomAdd"]
+                <MudIcon Icon="@Icons.Material.Outlined.Add" Class="ra-ico" /> @Loc["RolCustomAdd"]
             </button>
         </div>
     </div>
@@ -35,7 +35,7 @@
                             <code class="ra-perm-scope">@p.Scope</code>
                             <div class="ra-perm-desc">@p.Description</div>
                         </div>
-                        <RoleIconAction Icon="@Icons.Material.Filled.Delete" Label="@Loc["Delete"]" Danger="true" Disabled="Saving"
+                        <RoleIconAction Icon="@Icons.Material.Outlined.Delete" Label="@Loc["Delete"]" Danger="true" Disabled="Saving"
                                         OnClick="@(() => OnRemove.InvokeAsync(p))" />
                     </div>
                 }
