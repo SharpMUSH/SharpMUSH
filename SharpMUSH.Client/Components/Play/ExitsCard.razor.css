@@ -5,9 +5,12 @@
 }
 
 /* Not positioned, and a grid: the preview's static position is then this tile's top-left, and its
-   containing block lies outside the scrolling aside, which would otherwise clip it. */
+   containing block lies outside the scrolling aside, which would otherwise clip it. minmax(0, 1fr): an
+   auto column grows to the tile's min-content, the whole unwrapped name beside its pill, and pushes the
+   pill and the hint past the narrow aside's edge; this keeps the tile to the card's width. */
 .exit {
 	display: grid;
+	grid-template-columns: minmax(0, 1fr);
 }
 
 .exit-go {
@@ -75,6 +78,17 @@
 .exit--plain .exit-pill {
 	position: static;
 	flex-shrink: 0;
+}
+
+/* In the narrow aside the pill moves under the name rather than cutting it short. */
+.exit--plain .exit-row {
+	flex-wrap: wrap;
+	row-gap: var(--space-2);
+}
+
+.exit--plain .exit-name {
+	flex: 1 0 auto;
+	max-width: 100%;
 }
 
 .exit--plain .exit-pill:not(.exit-pill--scene) {
