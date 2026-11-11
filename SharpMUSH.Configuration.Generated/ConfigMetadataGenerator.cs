@@ -145,7 +145,10 @@ public class ConfigMetadataGenerator : IIncrementalGenerator
 			+ $"Dbref = {(Named(attr, "Dbref") is true ? "true" : "false")}, "
 			+ $"Flag = {(Named(attr, "Flag") is true ? "true" : "false")}, "
 			+ $"Image = {(Named(attr, "Image") is true ? "true" : "false")}, "
-			+ $"Unused = {Emit.Quote(unused) ?? "null"}"
+			+ $"Unused = {Emit.Quote(unused) ?? "null"}, "
+			+ $"Emulates = (SharpMUSH.Configuration.CompatibilityServer){(Named(attr, "Emulates") is int emulates ? emulates : 0)}, "
+			+ $"SetBy = (SharpMUSH.Configuration.CompatibilityServer){(Named(attr, "SetBy") is int setBy ? setBy : 0)}, "
+			+ $"HelpTopic = {Emit.Quote(Named(attr, "HelpTopic") as string) ?? "null"}"
 			+ " } }";
 	}
 

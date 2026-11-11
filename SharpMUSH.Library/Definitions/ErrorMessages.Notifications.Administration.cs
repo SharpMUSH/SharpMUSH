@@ -116,6 +116,7 @@ public static partial class ErrorMessages
 		public const string ConfigAllCategories = "All categories";
 		public const string ConfigUseCategoryHelp = "Use '@config <category>' to see options in a category.";
 		public const string ConfigUseOptionHelp = "Use '@config <option>' to see the value of an option.";
+		public const string ConfigCompatibilityHelp = "Each option is a link to its help; 'help <option>' shows it too.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ConfigNoOptionsInCategoryFormat = "No options found in category '{0}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

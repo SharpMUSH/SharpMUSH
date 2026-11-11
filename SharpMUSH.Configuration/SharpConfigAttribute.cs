@@ -75,4 +75,23 @@ public class SharpConfigAttribute : Attribute
 	/// configuration page marks the field with it.
 	/// </summary>
 	public string? Unused { get; set; }
+
+	/// <summary>
+	/// For a compatibility option: the servers whose behaviour it gives. Every option in the
+	/// <c>Compatibility</c> category names at least one.
+	/// </summary>
+	public CompatibilityServer Emulates { get; set; }
+
+	/// <summary>
+	/// For a compatibility option: the database imports that set it. A boolean option is turned on; the
+	/// <c>dialect</c> option is set to the importing server's dialect. The importers read this, so it is
+	/// the one list of what an import changes.
+	/// </summary>
+	public CompatibilityServer SetBy { get; set; }
+
+	/// <summary>
+	/// For a compatibility option: the help topic that documents it, a <c>compatibility config</c>
+	/// section's lookup.
+	/// </summary>
+	public string? HelpTopic { get; set; }
 }

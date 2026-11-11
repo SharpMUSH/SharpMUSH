@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
@@ -114,7 +115,7 @@ public partial class PennMUSHDatabaseConverter
 		{
 			var options = _options.CurrentValue;
 			var updated = options;
-			var changed = new List<string>();
+			var changed = new List<(string Name, string Property, object? Was, object? Now)>();
 			foreach (var (name, wanted) in source.SourceOptions)
 			{
 				if (ConfigOptionWriter.PropertyOf(name) is not { } property)
@@ -136,7 +137,7 @@ public partial class PennMUSHDatabaseConverter
 				if (Equals(current, value)) continue;
 
 				updated = ConfigAccessor.WithValue(updated, property, value);
-				changed.Add(name);
+				changed.Add((name, property, current, value));
 			}
 
 			if (changed.Count == 0) return;
@@ -144,7 +145,12 @@ public partial class PennMUSHDatabaseConverter
 			await _mediator.Send(new SetExpandedServerDataCommand(nameof(SharpMUSHOptions),
 				updated with { Database = context.WrittenDatabaseOptions ?? updated.Database }), cancellationToken);
 			_configurationReload?.SignalChange();
-			_logger.LogInformation("Set {Options} for the imported {Source} softcode", string.Join(", ", changed), source.SourceName);
+			_logger.LogInformation("Set {Options} for the imported {Source} softcode",
+				string.Join(", ", changed.Select(option => option.Name)), source.SourceName);
+			foreach (var option in changed)
+			{
+				context.Warn(ImportWarningKind.Configuration, OptionChange(source.SourceName, option.Name, option.Property, option.Was, option.Now));
+			}
 		}
 		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
@@ -152,6 +158,21 @@ public partial class PennMUSHDatabaseConverter
 			context.WarnNeedsAction(ImportWarningKind.Configuration, $"{names} could not be set ({ex.Message}); the imported {source.SourceName} softcode needs them: " +
 				"set them in the configuration and reload it.");
 		}
+	}
+
+	/// <summary>
+	/// The report's line for one option the import changed: its value before and after, and for a
+	/// compatibility option the help topic that says what it does.
+	/// </summary>
+	internal static string OptionChange(string sourceName, string name, string property, object? was, object? now)
+	{
+		var metadata = ConfigMetadata.PropertyMetadata[property];
+		var help = metadata.HelpTopic is { } topic ? $" See help {topic}." : "";
+		return now is bool on
+			? $"The {sourceName} import turned {name} {(on ? "on" : "off")}.{help}"
+			: $"The {sourceName} import set {name} to {Shown(now)} (it was {Shown(was)}).{help}";
+
+		string Shown(object? value) => ConfigValueDisplay.Format(value, metadata) is { Length: > 0 } text ? text : "empty";
 	}
 
 	private static bool IsRestrictionTable(string name)

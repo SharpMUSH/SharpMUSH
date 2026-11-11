@@ -8,117 +8,203 @@
     {
       "id": "boolean-compatibility-tiny-booleans",
       "heading": "Boolean compatibility: `tiny_booleans`",
-      "lookup": "compatibility config boolean compatibility tiny booleans"
+      "lookup": "compatibility config boolean compatibility tiny booleans",
+      "aliases": [
+        "tiny_booleans"
+      ]
     },
     {
       "id": "numeric-compatibility-tiny-math-null-eq-zero",
       "heading": "Numeric compatibility: `tiny_math`, `null_eq_zero`",
-      "lookup": "compatibility config numeric compatibility tiny math null eq zero"
+      "lookup": "compatibility config numeric compatibility tiny math null eq zero",
+      "aliases": [
+        "tiny_math",
+        "null_eq_zero"
+      ]
     },
     {
       "id": "trim-argument-order-tiny-trim-fun",
       "heading": "Trim argument order: `tiny_trim_fun`",
-      "lookup": "compatibility config trim argument order tiny trim fun"
+      "lookup": "compatibility config trim argument order tiny trim fun",
+      "aliases": [
+        "tiny_trim_fun"
+      ]
+    },
+    {
+      "id": "silent-pemit-silent-pemit",
+      "heading": "Silent @pemit: `silent_pemit`",
+      "lookup": "compatibility config silent pemit silent pemit",
+      "aliases": [
+        "silent_pemit"
+      ]
     },
     {
       "id": "parenthesis-groups-paren-groups",
       "heading": "Parenthesis groups: `paren_groups`",
-      "lookup": "compatibility config parenthesis groups paren groups"
+      "lookup": "compatibility config parenthesis groups paren groups",
+      "aliases": [
+        "paren_groups"
+      ]
+    },
+    {
+      "id": "pennmush-http-registers-http-qregisters",
+      "heading": "PennMUSH HTTP registers: `http_qregisters`",
+      "lookup": "compatibility config pennmush http registers http qregisters",
+      "aliases": [
+        "http_qregisters"
+      ]
     },
     {
       "id": "pennmush-mapsql-order-mapsql-sync",
       "heading": "PennMUSH @mapsql order: `mapsql_sync`",
-      "lookup": "compatibility config pennmush mapsql order mapsql sync"
+      "lookup": "compatibility config pennmush mapsql order mapsql sync",
+      "aliases": [
+        "mapsql_sync"
+      ]
     },
     {
       "id": "logical-functions-mux-logic",
       "heading": "Logical functions: `mux_logic`",
-      "lookup": "compatibility config logical functions mux logic"
+      "lookup": "compatibility config logical functions mux logic",
+      "aliases": [
+        "mux_logic"
+      ]
     },
     {
       "id": "justification-mux-justify",
       "heading": "Justification: `mux_justify`",
-      "lookup": "compatibility config justification mux justify"
+      "lookup": "compatibility config justification mux justify",
+      "aliases": [
+        "mux_justify"
+      ]
     },
     {
       "id": "text-order-mux-collation",
       "heading": "Text order: `mux_collation`",
-      "lookup": "compatibility config text order mux collation"
+      "lookup": "compatibility config text order mux collation",
+      "aliases": [
+        "mux_collation"
+      ]
     },
     {
       "id": "innermost-loop-tokens",
-      "heading": "Innermost loop tokens",
-      "lookup": "compatibility config innermost loop tokens"
+      "heading": "Innermost loop tokens: `innermost_tokens`",
+      "lookup": "compatibility config innermost loop tokens",
+      "aliases": [
+        "innermost_tokens"
+      ]
     },
     {
       "id": "tinymux-queue-functions-mux-queue-functions",
       "heading": "TinyMUX queue functions: `mux_queue_functions`",
-      "lookup": "compatibility config tinymux queue functions mux queue functions"
+      "lookup": "compatibility config tinymux queue functions mux queue functions",
+      "aliases": [
+        "mux_queue_functions"
+      ]
     },
     {
       "id": "tinymux-quiet-switches-mux-quiet",
       "heading": "TinyMUX quiet switches: `mux_quiet`",
-      "lookup": "compatibility config tinymux quiet switches mux quiet"
+      "lookup": "compatibility config tinymux quiet switches mux quiet",
+      "aliases": [
+        "mux_quiet"
+      ]
     },
     {
       "id": "tinymux-function-caller-mux-function-caller",
       "heading": "TinyMUX @function caller: `mux_function_caller`",
-      "lookup": "compatibility config tinymux function caller mux function caller"
+      "lookup": "compatibility config tinymux function caller mux function caller",
+      "aliases": [
+        "mux_function_caller"
+      ]
     },
     {
       "id": "tinymux-argument-meanings-mux-arguments",
       "heading": "TinyMUX argument meanings: `mux_arguments`",
-      "lookup": "compatibility config tinymux argument meanings mux arguments"
+      "lookup": "compatibility config tinymux argument meanings mux arguments",
+      "aliases": [
+        "mux_arguments"
+      ]
     },
     {
       "id": "rhostmush-edit-modes-rhost-edit",
       "heading": "RhostMUSH edit() modes: `rhost_edit`",
-      "lookup": "compatibility config rhostmush edit modes rhost edit"
+      "lookup": "compatibility config rhostmush edit modes rhost edit",
+      "aliases": [
+        "rhost_edit"
+      ]
     },
     {
       "id": "rhostmush-lattr-arguments-rhost-lattr",
       "heading": "RhostMUSH lattr() arguments: `rhost_lattr`",
-      "lookup": "compatibility config rhostmush lattr arguments rhost lattr"
+      "lookup": "compatibility config rhostmush lattr arguments rhost lattr",
+      "aliases": [
+        "rhost_lattr"
+      ]
     },
     {
       "id": "rhostmush-list-loop-rhost-list",
       "heading": "RhostMUSH list() loop: `rhost_list`",
-      "lookup": "compatibility config rhostmush list loop rhost list"
+      "lookup": "compatibility config rhostmush list loop rhost list",
+      "aliases": [
+        "rhost_list"
+      ]
     },
     {
       "id": "rhostmush-lrooms-depth-rhost-lrooms",
       "heading": "RhostMUSH lrooms() depth: `rhost_lrooms`",
-      "lookup": "compatibility config rhostmush lrooms depth rhost lrooms"
+      "lookup": "compatibility config rhostmush lrooms depth rhost lrooms",
+      "aliases": [
+        "rhost_lrooms"
+      ]
     },
     {
       "id": "protection-flags-protection-flags",
       "heading": "Protection flags: `protection_flags`",
-      "lookup": "compatibility config protection flags noexamine nomodify noconnect"
+      "lookup": "compatibility config protection flags noexamine nomodify noconnect",
+      "aliases": [
+        "protection_flags"
+      ]
     },
     {
       "id": "noeval-and-noparse-attributes-attribute-eval-flags",
       "heading": "noeval and noparse attributes: `attribute_eval_flags`",
-      "lookup": "compatibility config attribute eval flags"
+      "lookup": "compatibility config attribute eval flags",
+      "aliases": [
+        "attribute_eval_flags"
+      ]
     },
     {
       "id": "rhostmush-map-arguments-rhost-map-args",
       "heading": "RhostMUSH map() arguments: `rhost_map_args`",
-      "lookup": "compatibility config rhostmush map arguments rhost map args"
+      "lookup": "compatibility config rhostmush map arguments rhost map args",
+      "aliases": [
+        "rhost_map_args"
+      ]
     },
     {
       "id": "rhostmush-printf-fields-rhost-printf",
       "heading": "RhostMUSH printf() fields: `rhost_printf`",
-      "lookup": "compatibility config rhostmush printf fields rhost printf"
+      "lookup": "compatibility config rhostmush printf fields rhost printf",
+      "aliases": [
+        "rhost_printf"
+      ]
     },
     {
       "id": "rhostmush-side-effect-flag-sidefx-flag",
       "heading": "RhostMUSH side-effect flag: `sidefx_flag`",
-      "lookup": "compatibility config rhostmush side effect flag sidefx flag"
+      "lookup": "compatibility config rhostmush side effect flag sidefx flag",
+      "aliases": [
+        "sidefx_flag"
+      ]
     },
     {
       "id": "other-servers-names-dialect",
       "heading": "Other servers' names: `dialect`",
-      "lookup": "compatibility config other servers names dialect"
+      "lookup": "compatibility config other servers names dialect",
+      "aliases": [
+        "dialect"
+      ]
     },
     {
       "id": "other-servers-attribute-names",
@@ -128,16 +214,21 @@
     {
       "id": "spaces-space-compress",
       "heading": "Spaces: `space_compress`",
-      "lookup": "compatibility config spaces space compress"
+      "lookup": "compatibility config spaces space compress",
+      "aliases": [
+        "space_compress"
+      ]
     }
   ]
 }
 -->
 # Compatibility Config
 
-These options change how existing code evaluates. Each is read at evaluation time, so a change takes effect on the next call, not at a restart. Set them with `@config/set` or on the portal's configuration page.
+These options change how code evaluates; set them with `@config/set`.
 
 ## Boolean compatibility: `tiny_booleans`
+
+Off by default; meant for code written for TinyMUSH. No database import turns it on.
 
 Boolean conditions use the same rules in functions, command guards, list filters, and indirect calls. With `tiny_booleans` off, numeric zero (including `-0`, `0.0` and hexadecimal zero), an empty string, space-only text, and values beginning `#-` are false. Other text is true, including the word `false`. A preserved tab is text, and a trailing space makes an otherwise numeric value text.
 
@@ -154,7 +245,7 @@ With `tiny_booleans` on, a leading signed integer determines truth. Thus `text` 
 
 ## Numeric compatibility: `tiny_math`, `null_eq_zero`
 
-`null_eq_zero` is on by default, where PennMUSH ships it off, because most MUSH softcode expects an empty value to count as zero: `add(3,)` returns 3. A `mush.cnf` import applies the value the file names.
+`null_eq_zero` is on by default, where PennMUSH ships it off, because most MUSH softcode expects an empty value to count as zero: `add(3,)` returns 3. A `mush.cnf` import applies the value the file names. `tiny_math` is off by default. Importing a TinyMUX database turns both on.
 
 Arithmetic and numeric comparisons read `tiny_math` and `null_eq_zero` at call time, including indirect `#apply` calls. With `tiny_math` off, the complete argument must be a number; an empty argument is zero only when `null_eq_zero` is on. Scientific notation is accepted. Real-valued arguments also accept hexadecimal notation, such as `0x10` and `-0x1.8p2` (16 and -6).
 
@@ -164,6 +255,8 @@ With `tiny_math` on, the leading numeric prefix is used, and text without one be
 
 ## Trim argument order: `tiny_trim_fun`
 
+Off by default; importing a TinyMUX or RhostMUSH database turns it on.
+
 With `tiny_trim_fun` off, `trim(text,characters,side)` uses Penn argument order. With it on, `trim(text,side,characters)` uses Tiny argument order. The default characters are spaces and the default side is both; `l` and `r` select the left or right side.
 
 **Workaround.** Use `trimpenn(text,characters,side)` or `trimtiny(text,side,characters)` when a package needs a fixed argument order regardless of game configuration.
@@ -172,6 +265,21 @@ With `tiny_trim_fun` off, `trim(text,characters,side)` uses Penn argument order.
 > think trimpenn(xxhixx,x,l)
 hixx
 ```
+
+## Silent @pemit: `silent_pemit`
+
+Off by default; meant for code written for TinyMUSH. No database import turns it on, but a `mush.cnf` that names it sets it.
+
+With `silent_pemit` off, `@pemit` tells you what it sent and to whom, unless given `/silent`, and `@remit`, `@oemit` and the other emit commands tell you when you are not where the message went. With it on, each of them is silent unless given `/noisy`, as if every one had `/silent`. The message itself reaches the same people either way.
+
+A wizard sends a message to a thing in another room:
+
+```sharp unchecked
+> @pemit #123=Hello.
+You pemit "Hello." to Slate.
+```
+
+With `silent_pemit` on, the same command tells the wizard nothing, and `@pemit/noisy #123=Hello.` gives the line again.
 
 ## Parenthesis groups: `paren_groups`
 
@@ -198,6 +306,25 @@ With the option on, the unescaped form groups as PennMUSH's does:
 x (a,b)c
 ```
 
+## PennMUSH HTTP registers: `http_qregisters`
+
+**A choice.** Off by default; importing a PennMUSH database turns it on.
+
+**PennMUSH** hands HTTP softcode its values in q-registers. An `@http` callback gets `%q<status>`, `%q<content-type>` and `%q<http-overflow>`, and the `http_handler` gets `%q<headers>` and a `%q<hdr.<name>>` for each request header. `@http` reads `%q<content-type>` as the type of what it sends and `%q<userpass>` as a login.<br>
+**SharpMUSH**, with `http_qregisters` off, hands the same values as named arguments only: `%<status>`, `%<content-type>`, `%<http-overflow>`, `%<headers>` and `%<hdr.<name>>`. `@http` takes its content type and login in its headers argument and reads no q-register.<br>
+**Why.** A q-register outlives the code that set it, so a register left over from other code could decide where a password goes.<br>
+**Workaround.** Read the named arguments; they are set with the option on as well. See [@http] and [http].
+
+An `@http` callback that shows the status, as code written for PennMUSH reads it:
+
+```sharp unchecked
+> &SHOW me=think %q<status> %0
+> @http me/SHOW=https://example.com/
+200 <html>...
+```
+
+With the option off, `%q<status>` is empty there, and `%<status>` gives 200 either way.
+
 ## PennMUSH @mapsql order: `mapsql_sync`
 
 **A choice.** Off by default; importing a PennMUSH database turns it on.
@@ -214,6 +341,8 @@ x (a,b)c
 **No example.** The order shows only while the SQL server is slow to answer, which no example can rely on.
 
 ## Logical functions: `mux_logic`
+
+Off by default; importing a TinyMUX or RhostMUSH database turns it on.
 
 With `mux_logic` off, `and()`, `or()`, `xor()`, `cand()` and `cor()` test each argument the way `t()` does, under `tiny_booleans`. With it on they test each argument by its leading signed integer, as TinyMUX and RhostMUSH do, so `abc` is false and `2` is true, whatever `tiny_booleans` says. `xor()` is then true for an odd number of true arguments, rather than for exactly one. `t()`, `not()`, `if()` and the other functions keep the game's own rule, as they do in TinyMUX and RhostMUSH.
 
@@ -233,6 +362,8 @@ With `mux_logic` on:
 
 ## Justification: `mux_justify`
 
+Off by default; importing a TinyMUX database turns it on.
+
 With `mux_justify` off, `ljust()`, `rjust()` and `center()` leave text longer than the width as it is, unless `ljust()` or `rjust()` is given a fourth argument of 1. With it on they cut it to the width, as TinyMUX does, unless the fourth argument is 0.
 
 ```sharp
@@ -251,6 +382,8 @@ abcdef
 
 ## Text order: `mux_collation`
 
+Off by default; importing a TinyMUX database turns it on.
+
 With `mux_collation` off, `sort()` with no sort type orders text ignoring case and keeps equal items in the order they came, and `comp()` with no type compares character codes, so `B` comes before `a`. With it on, both order text as TinyMUX does: by letter first, then lower case before upper case. A sort type or a `comp()` type given in the call is unchanged.
 
 ```sharp
@@ -265,9 +398,9 @@ With `mux_collation` on:
 a A b B|-1|A B a b
 ```
 
-## Innermost loop tokens
+## Innermost loop tokens: `innermost_tokens`
 
-The `innermost_tokens` option is for code written for TinyMUX. It is off by default, which matches PennMUSH. With it off, `##` and `#@` name the outermost `iter()` or `@dolist` they are written in, and `#$` names the outermost `switch()`, `switchall()`, `reswitch()`, `@switch` or `@select` whose action they are written in, and `#$` names a `case()`, `if()` or `ifelse()` only when no switch does. In the code of an attribute that the loop or switch calls, they are plain text.
+The `innermost_tokens` option is for code written for TinyMUX. It is off by default, which matches PennMUSH; importing a TinyMUX database turns it on. With it off, `##` and `#@` name the outermost `iter()` or `@dolist` they are written in, and `#$` names the outermost `switch()`, `switchall()`, `reswitch()`, `@switch` or `@select` whose action they are written in, and `#$` names a `case()`, `if()` or `ifelse()` only when no switch does. In the code of an attribute that the loop or switch calls, they are plain text.
 
 With it on, `##` and `#@` name the innermost `iter()` or `@dolist` that is running, and `#$` names the innermost switch, `case()`, `if()` or `ifelse()` whose action is running. This also applies in the code of an attribute that the loop or switch calls. Either way, the value is inserted as text and is never evaluated as code. To get the same result with either setting, use `%i0` or `itext(0)` for the current element, `inum(0)` for its position, and `%$0` or `stext(0)` for the current switch.
 
@@ -358,7 +491,7 @@ a|b|c
 
 ## RhostMUSH edit() modes: `rhost_edit`
 
-Off by default; meant for a game moved from RhostMUSH.
+Off by default; importing a RhostMUSH database turns it on.
 
 With `rhost_edit` off, edit() reads its arguments after the string as from/to pairs, as PennMUSH does, so `edit(abcabc,b,X,c,Y)` makes two edits. With it on, a fourth and fifth argument are RhostMUSH's mode arguments instead. A fourth that starts with a nonzero number replaces only the first match. The fifth chose how RhostMUSH edited ANSI codes; markup in SharpMUSH is never part of the text, so it is accepted and changes nothing. Three arguments mean the same either way, and more than five are an error with the option on.
 
@@ -371,7 +504,7 @@ aXcaXc
 
 ## RhostMUSH lattr() arguments: `rhost_lattr`
 
-Off by default; meant for a game moved from RhostMUSH.
+Off by default; importing a RhostMUSH database turns it on.
 
 With `rhost_lattr` off, lattr() and lattrp() take an object and pattern and an optional output delimiter, as PennMUSH does. With it on, they take RhostMUSH's arguments:
 
@@ -416,7 +549,7 @@ XY
 
 ## RhostMUSH lrooms() depth: `rhost_lrooms`
 
-Off by default; meant for a game moved from RhostMUSH.
+Off by default; importing a RhostMUSH database turns it on.
 
 With `rhost_lrooms` off, lrooms() takes a depth from 0 to 50, and a depth of 0 lists nothing, as on TinyMUX. With it on, as on RhostMUSH, any depth is taken, a negative one counts as 1, and 0 follows exits as far as they lead; lrooms() then lists at most 1,000 rooms.
 
@@ -465,7 +598,7 @@ With the option off, the same line gives `heard 3`.
 
 ## RhostMUSH map() arguments: `rhost_map_args`
 
-Off by default; meant for a game moved from RhostMUSH.
+Off by default; importing a RhostMUSH database turns it on.
 
 map() passes any arguments after its output separator to the attribute as %1, %2 and so on. With none, `rhost_map_args` off passes the item's position as %1, as PennMUSH does; with it on, %1 is empty, as on RhostMUSH.
 
@@ -479,7 +612,7 @@ map() passes any arguments after its output separator to the attribute as %1, %2
 
 ## RhostMUSH printf() fields: `rhost_printf`
 
-Off by default; meant for a game moved from RhostMUSH. With `rhost_printf` off, printf() reads `%` directives in SharpMUSH's own grammar (see printf()). With it on, it reads RhostMUSH's fields instead: a field is `$`, then any of the codes below, then `s`, and it takes the next value; `$$` is a dollar sign, and everything else is copied as it is. printf() then needs at least one value. A value with no field left for it is dropped, and a field with no value left is empty.
+Off by default; importing a RhostMUSH database turns it on. With `rhost_printf` off, printf() reads SharpMUSH's `%` directives. With it on, it reads RhostMUSH's fields instead: a field is `$`, then any of the codes below, then `s`, and it takes the next value; `$$` is a dollar sign, and everything else is copied as it is. printf() then needs at least one value. A value with no field left for it is dropped, and a field with no value left is empty.
 
 - A number is the field's width; a value longer than it is cut, and a shorter one padded. Without one the field is as wide as its value. A width starting with `0` pads with zeros.
 - `-` aligns left, `^` centres and `_` spreads the words across the width; the default is right. Giving two of these is an error.
@@ -498,7 +631,7 @@ Off by default; meant for a game moved from RhostMUSH. With `rhost_printf` off, 
 
 ## RhostMUSH side-effect flag: `sidefx_flag`
 
-Off by default; meant for a game moved from RhostMUSH.
+Off by default; importing a RhostMUSH database turns it on.
 
 With `sidefx_flag` off, side-effect functions (pemit(), set(), attrib_set(), create() and the rest that change the game) work for anyone, subject to `function_side_effects` and their own permission checks, as in PennMUSH. With it on, they work only for an object that has the SIDEFX flag or holds the `softcode.sidefx` permission; anything else gets `#-1 FUNCTION DISABLED`, the same answer as with side effects turned off. Anyone may set SIDEFX on what they control. The wizard role allows `softcode.sidefx`, so wizards need no flag, where on RhostMUSH a wizard needs the flag as well. A function's reading form, such as name() with one argument, is never affected.
 
@@ -542,7 +675,7 @@ Ouch. - Ouch.
 
 ## Spaces: `space_compress`
 
-On by default. Text being evaluated has each run of spaces made one space, and the spaces that start it dropped, as on PennMUSH. Off, spaces stay as written, as on a TinyMUX or RhostMUSH game whose own `space_compress` is off. Importing a `netmux.conf` or `netrhost.conf` that turns it off turns this off too.
+On by default. Text being evaluated has each run of spaces made one space, and the spaces that start it dropped, as on PennMUSH. Off, spaces stay as written, as on a TinyMUX or RhostMUSH game whose own `space_compress` is off. No database import changes it; importing a `netmux.conf` or `netrhost.conf` that turns it off turns this off too.
 
 ```sharp space_compress=off
 > think a   b

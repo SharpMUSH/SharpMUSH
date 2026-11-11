@@ -218,7 +218,9 @@ public static class SharpMUSHOptionsExtension
 			// IsNullable/IsDictionary predicates are written against exactly those names.
 			Type = ConfigAccessor.GetPropertyType(propertyName)?.Name ?? string.Empty,
 			RawValue = value,
-			Description = string.IsNullOrEmpty(metadata.Description) ? "No Description" : metadata.Description,
+			Description = string.IsNullOrEmpty(metadata.Description)
+				? "No Description"
+				: CompatibilityServers.Describe(metadata, ConfigAccessor.GetPropertyType(propertyName) == typeof(bool)),
 			Category = section
 		};
 	}
