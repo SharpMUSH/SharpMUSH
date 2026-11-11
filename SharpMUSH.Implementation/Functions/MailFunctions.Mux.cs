@@ -22,14 +22,15 @@ public partial class Functions
 	/// <summary>
 	/// The mailbox <paramref name="name"/> names, matched quietly: the caller's own when <paramref name="name"/> is
 	/// empty, <c>#-1 NO SUCH PLAYER</c> when it names no player, and the refusal when the caller does not control it.
+	/// A caller that is not a player has no mailbox of its own, and gets <paramref name="noMailbox"/>.
 	/// </summary>
-	private async ValueTask<CallState> WithMailbox(IMUSHCodeParser parser, string name,
+	private async ValueTask<CallState> WithMailbox(IMUSHCodeParser parser, string name, string noMailbox,
 		Func<SharpPlayer, ValueTask<CallState>> answer)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (string.IsNullOrWhiteSpace(name))
 		{
-			return executor is SharpPlayer own ? await answer(own) : new CallState(ErrorMessages.Returns.NoSuchPlayer);
+			return executor is SharpPlayer own ? await answer(own) : new CallState(noMailbox);
 		}
 
 		if (await LocateService.Locate(parser, executor, executor, name.Trim(), LocateFlags.PlayersPreference)
@@ -74,7 +75,7 @@ public partial class Functions
 	[SharpFunction(Name = "mailcount", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["player"])]
 	public ValueTask<CallState> MailCount(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> WithMailbox(parser, OptionalArgument(parser, "0"), async mailbox => new CallState(
+		=> WithMailbox(parser, OptionalArgument(parser, "0"), "0", async mailbox => new CallState(
 			(await Mediator.CreateStream(new GetMailListQuery(mailbox, ExpandedMailData.Inbox)).CountAsync())
 			.ToString(CultureInfo.InvariantCulture)));
 
@@ -82,7 +83,7 @@ public partial class Functions
 	[SharpFunction(Name = "mailflags", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["message", "player"])]
 	public ValueTask<CallState> MailFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> WithMailbox(parser, OptionalArgument(parser, "1"), async mailbox =>
+		=> WithMailbox(parser, OptionalArgument(parser, "1"), ErrorMessages.Returns.NoSuchMessage, async mailbox =>
 			await CurrentFolderMessage(parser, mailbox, OptionalArgument(parser, "0")) is { } mail
 				? new CallState(MuxMailFlags(mail))
 				: new CallState(ErrorMessages.Returns.NoSuchMessage));
@@ -95,7 +96,7 @@ public partial class Functions
 	[SharpFunction(Name = "mailinfo", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["message", "field", "player"])]
 	public ValueTask<CallState> MailInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> WithMailbox(parser, OptionalArgument(parser, "2"), async mailbox =>
+		=> WithMailbox(parser, OptionalArgument(parser, "2"), ErrorMessages.Returns.NoSuchMessage, async mailbox =>
 			await CurrentFolderMessage(parser, mailbox, OptionalArgument(parser, "0")) is { } mail
 				? await MailField(mailbox, mail, OptionalArgument(parser, "1").Trim().ToLowerInvariant())
 				: new CallState(ErrorMessages.Returns.NoSuchMessage));
@@ -170,7 +171,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
-		return await WithMailbox(parser, name, async mailbox => new CallState(
+		return await WithMailbox(parser, name, ErrorMessages.Returns.NoSuchPlayer, async mailbox => new CallState(
 			(await Mediator.CreateStream(new GetAllMailListQuery(mailbox)).AggregateAsync(0L, (size, mail) => size + mail.Content.Length + 1))
 			.ToString(CultureInfo.InvariantCulture)));
 	}

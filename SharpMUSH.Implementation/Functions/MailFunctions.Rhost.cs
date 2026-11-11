@@ -119,10 +119,9 @@ public partial class Functions
 	public ValueTask<CallState> MailQuota(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> WithRhostMailbox(parser, OptionalArgument(parser, "0"), NoQuota, NoQuota, async mailbox =>
 		{
-			var typeArg = OptionalArgument(parser, "1").Trim();
-			var type = typeArg.Length == 0
-				? 0
-				: int.TryParse(typeArg, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : -1;
+			// RhostMUSH reads the type as atoi does: anything that is not a number is type 0.
+			var type = int.TryParse(OptionalArgument(parser, "1").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture,
+				out var parsed) ? parsed : 0;
 
 			var held = await Mediator.CreateStream(new GetAllMailListQuery(mailbox)).CountAsync();
 			var limit = await MailDelivery.MailLimitAsync(AttributeService, Configuration, mailbox);
@@ -186,7 +185,8 @@ public partial class Functions
 	/// unread one. With <c>&lt;mark&gt;</c> 1 the message is marked read and nothing is returned.
 	/// </summary>
 	[SharpFunction(Name = "mailread", MinArgs = 3, MaxArgs = 4,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.WizardOnly,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.WizardOnly | FunctionFlags.HasSideFX,
+		SideEffectMinArgs = 4,
 		ParameterNames = ["player", "message", "type", "mark"])]
 	public ValueTask<CallState> MailRead(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

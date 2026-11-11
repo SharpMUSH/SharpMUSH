@@ -1,3 +1,4 @@
+using SharpMUSH.Library;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Commands.Database;
@@ -102,6 +103,7 @@ public class DialectMailFunctionTests
 		await Assert.That(await AsWizard($"[mailquota({target},2)]|[mailquota({target},3)]|[mailquota()]|[mailquota({target},9)]"))
 			.IsEqualTo("0 0|3 -1|-1 -1 -1 -1 -1 -1|-1 -1 -1 -1 -1 -1");
 		await Assert.That(await AsWizard($"[first(mailquota({target},1))]")).IsEqualTo("3");
+		await Assert.That(await AsWizard($"[words(mailquota({target},abc))]")).IsEqualTo("6");
 
 		await Assert.That(await AsWizard($"[mailread({target},1,S)]|[mailread({target},new,I)]|[mailread({target},1,G)]|[mailread({target},2,G)]|[mailread({target},3,G)]"))
 			.IsEqualTo($"{_tag}-Subject-one|2|OLD|NEW|MARKED");
@@ -111,6 +113,15 @@ public class DialectMailFunctionTests
 		await Assert.That(await AsWizard($"[mailread({target},2,B,1)]|[mailread({target},2,G)]|[mailread({target},new,I)]"))
 			.IsEqualTo("|OLD|#-1 NO SUCH MESSAGE");
 		await Assert.That(await AsWizard("[gt(msizetot(),0)]")).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task AThingHasNoMailboxOfItsOwn()
+	{
+		var thing = HelperFunctions.ParseDbRef(await AsWizard($"[create(Mailless {_tag})]")).Expect<DBRef>();
+		var result = (await WebAppFactoryArg.FunctionParserFor(thing).EvaluateAsync(MarkupText.Plain("[mailcount()] [mailflags(1)]")))
+			.ToPlainText();
+		await Assert.That(result).IsEqualTo("0 #-1 NO SUCH MESSAGE");
 	}
 
 	[Test]
