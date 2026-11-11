@@ -1,6 +1,8 @@
 .adm-theme-layout {
 	display: grid;
 	grid-template-columns: 15rem minmax(0, 1fr);
+	/* The preview's row takes only its own height; the theme list's length goes to the editor's row. */
+	grid-template-rows: auto 1fr;
 	grid-template-areas: "list preview" "list editor";
 	gap: var(--space-5);
 	align-items: start;
@@ -26,6 +28,7 @@
 @container page (min-width: 90rem) {
 	.adm-theme-layout {
 		grid-template-columns: 15rem minmax(0, 1fr) 20rem;
+		grid-template-rows: auto;
 		grid-template-areas: "list editor preview";
 	}
 
@@ -354,6 +357,7 @@
 @container page (max-width: 48rem) {
 	.adm-theme-layout {
 		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: auto;
 		grid-template-areas: "list" "preview" "editor";
 	}
 
