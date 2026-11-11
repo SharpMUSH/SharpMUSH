@@ -191,12 +191,14 @@ public class HookPermitArgsTests
 			await RunQueued($"&I_CPATTR {obj}=[lit(not(strmatch(%<ARGS>,*{token}*)))]");
 			await RunQueued($"@hook/ignore @cpattr={obj},I_CPATTR");
 
-			await RunQueued($"@cpattr {obj}/SRC{token}={obj}/DST{token}");
+			await RunQueued($"@cpattr {obj}/SRC{token}={obj}/DST{token}[set({obj},RUNS:[inc(default({obj}/RUNS,0))])]");
 
 			await Assert.That(await ReadAttributeAsync(obj, $"DST{token}")).IsEqualTo("")
 				.Because("a false /ignore skips the built-in");
 			await Assert.That(await ReadAttributeAsync(obj, $"GOT{token}")).IsEqualTo("yes")
 				.Because("and the line is matched against $-commands, as PennMUSH's command_parse returns it to be");
+			await Assert.That(await ReadAttributeAsync(obj, "RUNS")).IsEqualTo("1")
+				.Because("the line is matched as already evaluated, so a function in it runs once");
 		}
 		finally
 		{

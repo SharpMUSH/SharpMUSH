@@ -30,12 +30,12 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 {
 	/// <summary>
 	/// A built-in command: splits its arguments, then runs it through its hooks, plugin interceptors,
-	/// switch and lock checks. <paramref name="notBuiltIn"/> handles the line as one no built-in claimed
-	/// (its $-command, else Huh?), for a hook that hands the command back to softcode.
+	/// switch and lock checks. <paramref name="notBuiltIn"/> handles the line, already evaluated, as one no
+	/// built-in claimed (its $-command, else Huh?), for a hook that hands the command back to softcode.
 	/// </summary>
 	public async ValueTask<Option<CallState>> InternalAsync(SharpMUSHParserVisitor visitor, IMUSHCodeParser prs,
 		MString src, ICommandContext context, string rootCommand, string[] switches,
-		CommandDefinition libraryCommandDefinition, Func<ValueTask<Option<CallState>>> notBuiltIn)
+		CommandDefinition libraryCommandDefinition, Func<MString, ValueTask<Option<CallState>>> notBuiltIn)
 	{
 		var noEvalSwitch = Array.Exists(switches, s => s.Equals("NOEVAL", StringComparison.OrdinalIgnoreCase));
 		var singleArgument = switches.Any(s => libraryCommandDefinition.Attribute.SingleArgumentSwitches.Contains(s, StringComparer.OrdinalIgnoreCase));
@@ -69,7 +69,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 	/// </summary>
 	private async ValueTask<Option<CallState>> DispatchInternalCommand(SharpMUSHParserVisitor visitor, IMUSHCodeParser prs, MString src,
 		string rootCommand, string[] switches, CommandDefinition libraryCommandDefinition, bool singleArgument,
-		CommandArguments argumentResults, InvocationClock clock, Func<ValueTask<Option<CallState>>> notBuiltIn)
+		CommandArguments argumentResults, InvocationClock clock, Func<MString, ValueTask<Option<CallState>>> notBuiltIn)
 	{
 		var executor = await prs.CurrentState.ExecutorObject(services.Mediator);
 		var run = new BuiltInRun(rootCommand, switches, libraryCommandDefinition, singleArgument, argumentResults.Values,
@@ -90,17 +90,17 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 	/// CommandLock, the command itself, then the /after hook and the plugins' after seam.
 	/// </summary>
 	private async ValueTask<Option<CallState>> RunBuiltInAsync(SharpMUSHParserVisitor visitor, BuiltInRun run,
-		InvocationClock clock, Func<ValueTask<Option<CallState>>> notBuiltIn)
+		InvocationClock clock, Func<MString, ValueTask<Option<CallState>>> notBuiltIn)
 	{
 		// 0. An unknown switch on a command extended anywhere (`@hook/extend <command>=*`, TinyMUX's igswitch)
 		// makes the whole line softcode's, before any other hook runs.
 		if (await ExtendedAnywhereAsync(run))
-			return await notBuiltIn();
+			return await NotBuiltInAsync(run, clock, notBuiltIn);
 
 		// 1. Check for /ignore hook: a false answer skips the built-in, and the line is matched against
 		// $-commands as if there were none (PennMUSH command_parse returns commandraw).
 		if (await IgnoredByHookAsync(run))
-			return run.PreserveHookErrors(await notBuiltIn());
+			return run.PreserveHookErrors(await NotBuiltInAsync(run, clock, notBuiltIn));
 
 		// 1b. The /permit hook (TinyMUX's P_ hook): a false answer refuses the command.
 		if (await RefusedByPermitHookAsync(run) is CallState refusedByHook)
@@ -418,6 +418,18 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 	}
 
 	/// <summary>
+	/// Hands the line to $-command matching as PennMUSH's <c>command_parse</c> hands back <c>commandraw</c>: the
+	/// command's name and switches with its arguments as already evaluated, so nothing in it runs twice. The
+	/// $-command's time is its own, not the built-in's.
+	/// </summary>
+	private static async ValueTask<Option<CallState>> NotBuiltInAsync(BuiltInRun run, InvocationClock clock,
+		Func<MString, ValueTask<Option<CallState>>> notBuiltIn)
+	{
+		using (clock.Pause())
+			return await notBuiltIn(run.HookInput());
+	}
+
+	/// <summary>
 	/// Whether the command has an unknown switch and its /extend hook names no object (<c>=*</c>): the line is then
 	/// matched against $-commands wherever they are, as TinyMUX's <c>igswitch</c> treats it.
 	/// </summary>
@@ -486,6 +498,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		var arguments = run.Arguments;
 		// The hook reads the arguments as typed: one rewritten earlier does not change what the next one sees.
 		var original = arguments.ToArray();
+		var named = run.HookArguments();
 		var empty = new CallState(MarkupText.Empty);
 		var listed = run.Definition.Attribute.Behavior.HasFlag(CommandBehavior.RSArgs);
 		var leftSide = original[0];
@@ -497,7 +510,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			{
 				// A command whose right side is a list (CB.RSArgs) has its left side at 0 and its list items from 2.
 				var position = listed && index > 0 ? index + 1 : index;
-				var hookArguments = new Dictionary<string, CallState>(run.HookArguments(), StringComparer.OrdinalIgnoreCase)
+				var hookArguments = new Dictionary<string, CallState>(named, StringComparer.OrdinalIgnoreCase)
 				{
 					["0"] = leftSide,
 					["1"] = rightSide,
@@ -510,7 +523,9 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				run.HookHadErrors |= result is CallState { HadErrors: true };
 				if (result is CallState { Message: { } rewritten })
 				{
-					arguments[index] = original[index] with { Message = rewritten };
+					// A fresh state: a copy would still evaluate, for a command that reads its argument lazily, to the
+					// text as typed.
+					arguments[index] = new CallState(rewritten, original[index].Depth) { HadErrors = original[index].HadErrors };
 				}
 			}
 		}
