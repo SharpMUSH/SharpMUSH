@@ -7,17 +7,19 @@
   "sections": [
     {"id": "tinymush", "heading": "TinyMUSH and parser options", "lookup": "@config tiny tinymush"},
     {"id": "tinymux", "heading": "TinyMUX options", "lookup": "@config tiny tinymux"},
-    {"id": "rhostmush", "heading": "RhostMUSH options", "lookup": "@config tiny rhostmush"}
+    {"id": "rhostmush", "heading": "RhostMUSH options", "lookup": "@config tiny rhostmush"},
+    {"id": "pennmush", "heading": "PennMUSH options", "lookup": "@config tiny pennmush"}
   ]
 }
 -->
 # @config tiny
 
-Options that make SharpMUSH behave like TinyMUSH, TinyMUX or RhostMUSH, for code written for those servers.
+Options that make SharpMUSH behave like TinyMUSH, TinyMUX, RhostMUSH or PennMUSH, for code written for those servers. `@config compatibility` lists them all, with the servers each emulates, the database imports that turn it on and the help topic for it.
 
 - [@config tiny tinymush]: null strings, booleans, trim(), @pemit and parenthesis groups
 - [@config tiny tinymux]: TinyMUX logic, justification, text order and loop tokens
 - [@config tiny rhostmush]: the `rhost_` options and the SIDEFX flag
+- [@config tiny pennmush]: PennMUSH's HTTP registers and @mapsql order
 
 ## TinyMUSH and parser options
 
@@ -55,3 +57,10 @@ The `rhost_` options below are for a game moved from RhostMUSH. Each is off by d
 - `rhost_map_args=<boolean>`: Does map() leave %1 empty when no extra arguments are given, as RhostMUSH does, rather than passing the item's position?
 - `sidefx_flag=<boolean>`: Do side-effect functions work only for an object with the SIDEFX flag or the `softcode.sidefx` permission, as on RhostMUSH? Others get `#-1 FUNCTION DISABLED`.
 - `dialect=<name>`: Whose names for functions and commands do typed input and attributes without a dialect flag also read? `rhost` reads RhostMUSH's and `mux` TinyMUX's, after SharpMUSH's own; empty reads none. See [attribute flags dialect] and [compatibility dialects].
+
+## PennMUSH options
+
+Behaviour PennMUSH softcode counts on that SharpMUSH does differently by default. A PennMUSH database import turns both on. See [compatibility config].
+
+- `http_qregisters=<boolean>`: Does HTTP softcode also get its values in q-registers, and does @http read `%q<content-type>` and `%q<userpass>`, as on PennMUSH?
+- `mapsql_sync=<boolean>`: Does @mapsql run its query inside the command, so every row is queued before anything queued after it, as on PennMUSH?

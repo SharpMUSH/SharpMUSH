@@ -107,12 +107,7 @@ public class PennMUSHDatabase
 	/// and never lowered; an alias table (<c>command_aliases</c>) is added to the aliases already set. PennMUSH softcode writes literal parentheses unescaped, reads @http's status
 	/// from q-registers, and counts on @mapsql's rows running before what is queued after it.
 	/// </summary>
-	public Dictionary<string, object> SourceOptions { get; set; } = new(StringComparer.OrdinalIgnoreCase)
-	{
-		["paren_groups"] = true,
-		["http_qregisters"] = true,
-		["mapsql_sync"] = true
-	};
+	public Dictionary<string, object> SourceOptions { get; set; } = CompatibilityFlags.ImportOptions(CompatibilityServer.PennMUSH);
 
 	/// <summary>
 	/// Whether the source reads <c>%|</c> and <c>;|</c> as command piping and <c>%m</c> and <c>%=&lt;</c>

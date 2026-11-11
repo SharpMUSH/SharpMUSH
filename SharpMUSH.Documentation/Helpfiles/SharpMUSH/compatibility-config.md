@@ -31,6 +31,16 @@
       "lookup": "compatibility config pennmush mapsql order mapsql sync"
     },
     {
+      "id": "pennmush-http-registers-http-qregisters",
+      "heading": "PennMUSH HTTP registers: `http_qregisters`",
+      "lookup": "compatibility config pennmush http registers http qregisters"
+    },
+    {
+      "id": "pennmush-pemit-default-silent-pemit",
+      "heading": "PennMUSH @pemit default: `silent_pemit`",
+      "lookup": "compatibility config pennmush pemit default silent pemit"
+    },
+    {
       "id": "logical-functions-mux-logic",
       "heading": "Logical functions: `mux_logic`",
       "lookup": "compatibility config logical functions mux logic"
@@ -47,7 +57,7 @@
     },
     {
       "id": "innermost-loop-tokens",
-      "heading": "Innermost loop tokens",
+      "heading": "Innermost loop tokens: `innermost_tokens`",
       "lookup": "compatibility config innermost loop tokens"
     },
     {
@@ -213,6 +223,23 @@ x (a,b)c
 
 **No example.** The order shows only while the SQL server is slow to answer, which no example can rely on.
 
+## PennMUSH HTTP registers: `http_qregisters`
+
+**A choice.** Off by default; importing a PennMUSH database turns it on.
+
+**PennMUSH** hands HTTP softcode its values in q-registers: an `@http` callback reads `%q<status>`, `%q<content-type>` and `%q<http-overflow>`, the `http_handler` reads `%q<hdr.<name>>` and `%q<headers>`, and `@http` itself reads the type of its data from `%q<content-type>` and a login from `%q<userpass>`.<br>
+**SharpMUSH**, with `http_qregisters` off, hands them over as named arguments only (`%<status>` and the rest) and reads no q-register, so a register left over from other code never decides where a password goes.<br>
+**Why.** Named arguments belong to the action list alone; q-registers carry on into whatever it calls.<br>
+**Workaround.** Read the named arguments, which are set either way. See [@http] and [http].
+
+**No example.** The registers are set only while an HTTP request is answered.
+
+## PennMUSH @pemit default: `silent_pemit`
+
+Off by default. With it on, `@pemit` tells the object that ran it nothing about where the message went, as `@pemit/silent` does; `@pemit/noisy` still tells it. This is PennMUSH's own `silent_pemit` option, and a `mush.cnf` import applies the value the file names. See [@pemit].
+
+**No example.** What it hides is the line the object that ran `@pemit` is told, which depends on whom the message went to.
+
 ## Logical functions: `mux_logic`
 
 With `mux_logic` off, `and()`, `or()`, `xor()`, `cand()` and `cor()` test each argument the way `t()` does, under `tiny_booleans`. With it on they test each argument by its leading signed integer, as TinyMUX and RhostMUSH do, so `abc` is false and `2` is true, whatever `tiny_booleans` says. `xor()` is then true for an odd number of true arguments, rather than for exactly one. `t()`, `not()`, `if()` and the other functions keep the game's own rule, as they do in TinyMUX and RhostMUSH.
@@ -265,7 +292,7 @@ With `mux_collation` on:
 a A b B|-1|A B a b
 ```
 
-## Innermost loop tokens
+## Innermost loop tokens: `innermost_tokens`
 
 The `innermost_tokens` option is for code written for TinyMUX. It is off by default, which matches PennMUSH. With it off, `##` and `#@` name the outermost `iter()` or `@dolist` they are written in, and `#$` names the outermost `switch()`, `switchall()`, `reswitch()`, `@switch` or `@select` whose action they are written in, and `#$` names a `case()`, `if()` or `ifelse()` only when no switch does. In the code of an attribute that the loop or switch calls, they are plain text.
 
