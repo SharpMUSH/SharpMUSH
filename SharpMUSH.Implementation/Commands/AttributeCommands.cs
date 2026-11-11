@@ -38,10 +38,11 @@ public partial class Commands
 				: writer.UsageAsync(parser, "GENDER");
 	}
 
-	[SharpCommand(Name = "@CPATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
+	// RhostMUSH's /clear removes the source once it is copied, as @mvattr does.
+	[SharpCommand(Name = "@CPATTR", Switches = ["CONVERT", "NOFLAGCOPY", "CLEAR"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
 	MinArgs = 2, MaxArgs = int.MaxValue, ParameterNames = ["source/attribute", "destination/attribute"])]
 	public ValueTask<Option<CallState>> CopyAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
-		=> CopyAttributeAsync(parser, "@cpattr", move: false);
+		=> CopyAttributeAsync(parser, "@cpattr", move: parser.CurrentState.Switches.Contains("CLEAR"));
 
 	[SharpCommand(Name = "@MVATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
 	MinArgs = 2, MaxArgs = int.MaxValue, ParameterNames = ["source/attribute", "destination/attribute"])]

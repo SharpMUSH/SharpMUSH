@@ -178,7 +178,7 @@ public partial class Commands
 		return result;
 	}
 
-	[SharpCommand(Name = "@VERB", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 2,
+	[SharpCommand(Name = "@VERB", Switches = ["NO_NAME"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 2,
 		MaxArgs = 0, ParameterNames = ["object", "verb", "target"])]
 	public async ValueTask<Option<CallState>> Verb(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -218,7 +218,7 @@ public partial class Commands
 				parser, executor, executor, actorName, LocateFlags.All) switch
 			{
 				AnySharpObject actor => await VerbAsync(parser, executor, enactor, victim, actor, what, whatd, owhat, owhatd,
-					awhat, stackArgs),
+					awhat, stackArgs, parser.CurrentState.Switches.Contains("NO_NAME")),
 				Error<CallState> error => error.Value
 			},
 			Error<CallState> error => error.Value
@@ -228,7 +228,7 @@ public partial class Commands
 	/// <summary>PennMUSH <c>do_verb</c> once both objects are known: the permission gate, then the three messages.</summary>
 	private async ValueTask<Option<CallState>> VerbAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject enactor, AnySharpObject victim, AnySharpObject actor, string what, string whatd, string owhat,
-		string owhatd, string awhat, Dictionary<string, CallState> stackArgs)
+		string owhatd, string awhat, Dictionary<string, CallState> stackArgs, bool noName)
 	{
 		var isWizard = await executor.IsWizard();
 		var controlsBoth = await PermissionService.Controls(executor, actor) &&
@@ -245,21 +245,29 @@ public partial class Commands
 			return await NotifyService.PermissionDeniedNotControlled(executor, executorControlsVictim ? actor : victim);
 		}
 
-		var actorMessage = await GetAttributeOrDefault(
+		var (actorMessage, _) = await GetAttributeOrDefault(
 			parser, AttributeService, executor, victim, actor, what, whatd, stackArgs);
 
 		await NotifyService.Notify(actor, actorMessage, actor);
 
 		var actorLocation = await actor.Where();
-		var othersMessage = await GetAttributeOrDefault(
+		var (othersMessage, othersDefaulted) = await GetAttributeOrDefault(
 			parser, AttributeService, executor, victim, actor, owhat, owhatd, stackArgs);
 
-		var prependedMessage = MarkupText.Plain($"{actor.Object().Name} {othersMessage.ToPlainText()}");
+		// TinyMUX's /no_name leaves the actor's name off <owhatd>, and an empty one says nothing; an <owhat>
+		// attribute still gets the name.
+		var bare = noName && othersDefaulted;
+		if (!bare || othersMessage.Length > 0)
+		{
+			var prependedMessage = bare
+				? othersMessage
+				: MarkupText.Plain($"{actor.Object().Name} {othersMessage.ToPlainText()}");
 
-		await CommunicationService.SendToRoomAsync(
-			actor, actorLocation, _ => prependedMessage,
-			INotifyService.NotificationType.Emit,
-			excludeObjects: [actor]);
+			await CommunicationService.SendToRoomAsync(
+				actor, actorLocation, _ => prependedMessage,
+				INotifyService.NotificationType.Emit,
+				excludeObjects: [actor]);
+		}
 
 		if (string.IsNullOrWhiteSpace(awhat)
 			|| await AttributeService.GetAttributeAsync(
@@ -304,7 +312,11 @@ public partial class Commands
 		return admission.Accepted ? CallState.Empty : new CallState(admission.Error) { HadErrors = true };
 	}
 
-	private async ValueTask<MString> GetAttributeOrDefault(
+	/// <summary>
+	/// <paramref name="victim"/>'s <paramref name="attrName"/> evaluated, or <paramref name="defaultValue"/> when it has
+	/// none; <c>Defaulted</c> says which.
+	/// </summary>
+	private async ValueTask<(MString Message, bool Defaulted)> GetAttributeOrDefault(
 		IMUSHCodeParser parser,
 		IAttributeService attributeService,
 		AnySharpObject executor,
@@ -316,7 +328,7 @@ public partial class Commands
 	{
 		if (string.IsNullOrWhiteSpace(attrName))
 		{
-			return MarkupText.Plain(defaultValue);
+			return (MarkupText.Plain(defaultValue), true);
 		}
 
 		var maybeAttr = await attributeService.GetAttributeAsync(
@@ -324,7 +336,7 @@ public partial class Commands
 
 		if (maybeAttr.IsError || maybeAttr.IsNone)
 		{
-			return MarkupText.Plain(defaultValue);
+			return (MarkupText.Plain(defaultValue), true);
 		}
 
 		var result = await parser.With(
@@ -338,6 +350,6 @@ public partial class Commands
 			newParser => attributeService.EvaluateAttributeFunctionAsync(
 				newParser, victim, victim, attrName, stackArgs));
 
-		return result ?? MarkupText.Plain(defaultValue);
+		return result is null ? (MarkupText.Plain(defaultValue), true) : (result, false);
 	}
 }

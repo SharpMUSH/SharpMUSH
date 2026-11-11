@@ -107,7 +107,7 @@ public partial class Commands
 	}
 
 	// RECALL, CONVERSATIONS and TIMESTAMPS read the page log, a SharpMUSH extension; see PageRecall.
-	[SharpCommand(Name = "PAGE", Switches = ["LIST", "NOEVAL", "PORT", "OVERRIDE", "RECALL", "CONVERSATIONS", "TIMESTAMPS", "REPLY"],
+	[SharpCommand(Name = "PAGE", Switches = ["LIST", "NOEVAL", "PORT", "OVERRIDE", "RECALL", "CONVERSATIONS", "TIMESTAMPS", "REPLY", "BLIND"],
 		SingleArgumentSwitches = ["REPLY"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["player-list", "message"])]
 	public ValueTask<Option<CallState>> Page(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -427,18 +427,26 @@ public partial class Commands
 			// carries. The id goes out with PAGE`MESSAGE and is the one the page log keeps the page under, so
 			// the portal knows a pushed page and its logged copy for one. Then delivery, then the event, and
 			// the log write last.
-			var delivered = await PageLog.PageAsync(executor, senderName, successfulRecipients,
-				pageType switch
-				{
-					PageMessageType.Pose => "pose",
-					PageMessageType.SemiPose => "semipose",
-					_ => "say"
-				},
-				message.ToPlainText());
+			// /blind (TinyMUX) pages each recipient as if they were the only one: each is told, logged and
+			// announced as a page of its own, and none learns who else was paged. The pager is told once.
+			IReadOnlyList<AnySharpObject>[] companies = parser.CurrentState.Switches.Contains("BLIND")
+				? [.. successfulRecipients.Select(recipient => (IReadOnlyList<AnySharpObject>)[recipient])]
+				: [successfulRecipients];
+			var style = pageType switch
+			{
+				PageMessageType.Pose => "pose",
+				PageMessageType.SemiPose => "semipose",
+				_ => "say"
+			};
+			var deliveries = new List<(IReadOnlyList<AnySharpObject> Company, SharpPage Delivered)>();
+			foreach (var company in companies)
+			{
+				deliveries.Add((company,
+					await PageLog.PageAsync(executor, senderName, company, style, message.ToPlainText())));
+			}
 
 			// The same lines page/recall shows a logged page as.
-			var incomingDefault = PageText.Incoming(senderName, recipientNames, delivered.Style, message);
-			var outgoingDefault = PageText.Outgoing(executor.Object().Name, recipientNames, delivered.Style, message);
+			var outgoingDefault = PageText.Outgoing(executor.Object().Name, recipientNames, style, message);
 			var pageTypeToken = pageType switch
 			{
 				PageMessageType.Pose => ":",
@@ -481,58 +489,76 @@ public partial class Commands
 					outPageFormatArgs, outgoingDefault));
 			await NotifyService.Notify(executor, outgoing, executor);
 
-			var pageGroup = string.Join(' ',
-				new[] { executor.Object().DBRef.ToString() }.Concat(successfulRecipients.Select(r => r.Object().DBRef.ToString())));
-			foreach (var recipient in successfulRecipients)
+			foreach (var (company, delivered) in deliveries)
 			{
-				var pageFormatArgs = PageFormatArguments(
-					message, pageTypeToken, pageAlias, recipientRefs, incomingDefault);
-				var incoming = await parser.With(
-					state => state with
-					{
-						Executor = recipient.Object().DBRef,
-						Caller = recipient.Object().DBRef,
-						Enactor = executor.Object().DBRef
-					},
-					pageParser => AttributeHelpers.EvaluateFormatAttribute(
-						AttributeService, pageParser, recipient, recipient, "PAGEFORMAT",
-						pageFormatArgs, incomingDefault));
-				await NotifyService.Notify(recipient, incoming, executor, INotifyService.NotificationType.Say);
-				await PageReturn(parser, executor, recipient, "Idle", "IDLE", null);
-				// Replace legacy text and establish its protection/owner in the same transaction. This internal
-				// context deliberately uses the batch's watch bypass: arbitrary legacy custom watches are not
-				// part of paging. Outgoing LASTPAGED and PAGE`MESSAGE keep their existing paths.
-				// The page's whole company, the sender first, is what mrpage replies to.
-				if (!await Mediator.Send(new SetAttributesCommand(recipient.Object().DBRef,
-					[
-						new AttributeWrite(["LASTPAGER"], MarkupText.Plain(executor.Object().DBRef.ToString()), contextOwner, contextFlags),
-						new AttributeWrite([IncomingPageGroupAttribute], MarkupText.Plain(pageGroup), contextOwner, contextFlags)
-					])))
-					await NotifyService.Notify(executor, "Unable to remember the incoming page sender.", executor);
+				await DeliverPageAsync(parser, executor, company, delivered, senderName, message, pageTypeToken,
+					pageAlias, contextOwner, contextFlags);
 			}
-
-			// PAGE`MESSAGE names only the recipients the page reached, so a handler passing it on (the
-			// comm-feed package's comm.message) cannot reach anyone the terminal did not.
-			// The message keeps its markup (help event page); the log keeps the plain text.
-			await EventService.TriggerEventAsync(SharpEvents.PageMessage,
-				executor.Object().DBRef,
-				[
-					MarkupText.Plain(executor.Object().DBRef.ToString()),
-					MarkupText.Plain(string.Join(' ', successfulRecipients.Select(r => r.Object().DBRef.ToString()))),
-					MarkupText.Plain(delivered.Style),
-					MarkupText.Plain(senderName),
-					message,
-					MarkupText.Plain(delivered.Timestamp.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture)),
-					MarkupText.Plain(delivered.Id.ToString(CultureInfo.InvariantCulture))
-				]);
-
-			// Logged last, while page_log is on: for the pager and the recipients it reached, never one who
-			// refused it. The page is already delivered and pushed, so a slow or failed write holds up and
-			// loses nothing but its history; RecordAsync logs a failure rather than throwing it.
-			await PageLog.RecordAsync(delivered, [executor, .. successfulRecipients]);
 		}
 
 		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// One page's delivery to the <paramref name="company"/> it names: each recipient's line (through their
+	/// <c>PAGEFORMAT</c>), <c>PAGE`MESSAGE</c>, and the log entry.
+	/// </summary>
+	private async ValueTask DeliverPageAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		IReadOnlyList<AnySharpObject> company, SharpPage delivered, string senderName, MString message,
+		string pageTypeToken, string pageAlias, SharpPlayer contextOwner, SharpAttributeFlag[] contextFlags)
+	{
+		var recipientNames = company.Select(r => r.Object().Name).ToArray();
+		var recipientRefs = string.Join(" ", company.Select(r => $"#{r.Object().DBRef.Number}"));
+		var incomingDefault = PageText.Incoming(senderName, recipientNames, delivered.Style, message);
+		var pageGroup = string.Join(' ',
+			new[] { executor.Object().DBRef.ToString() }.Concat(company.Select(r => r.Object().DBRef.ToString())));
+		foreach (var recipient in company)
+		{
+			var pageFormatArgs = PageFormatArguments(
+				message, pageTypeToken, pageAlias, recipientRefs, incomingDefault);
+			var incoming = await parser.With(
+				state => state with
+				{
+					Executor = recipient.Object().DBRef,
+					Caller = recipient.Object().DBRef,
+					Enactor = executor.Object().DBRef
+				},
+				pageParser => AttributeHelpers.EvaluateFormatAttribute(
+					AttributeService, pageParser, recipient, recipient, "PAGEFORMAT",
+					pageFormatArgs, incomingDefault));
+			await NotifyService.Notify(recipient, incoming, executor, INotifyService.NotificationType.Say);
+			await PageReturn(parser, executor, recipient, "Idle", "IDLE", null);
+			// Replace legacy text and establish its protection/owner in the same transaction. This internal
+			// context deliberately uses the batch's watch bypass: arbitrary legacy custom watches are not
+			// part of paging. Outgoing LASTPAGED and PAGE`MESSAGE keep their existing paths.
+			// The page's whole company, the sender first, is what mrpage replies to.
+			if (!await Mediator.Send(new SetAttributesCommand(recipient.Object().DBRef,
+				[
+					new AttributeWrite(["LASTPAGER"], MarkupText.Plain(executor.Object().DBRef.ToString()), contextOwner, contextFlags),
+					new AttributeWrite([IncomingPageGroupAttribute], MarkupText.Plain(pageGroup), contextOwner, contextFlags)
+				])))
+				await NotifyService.Notify(executor, "Unable to remember the incoming page sender.", executor);
+		}
+
+		// PAGE`MESSAGE names only the recipients the page reached, so a handler passing it on (the
+		// comm-feed package's comm.message) cannot reach anyone the terminal did not.
+		// The message keeps its markup (help event page); the log keeps the plain text.
+		await EventService.TriggerEventAsync(SharpEvents.PageMessage,
+			executor.Object().DBRef,
+			[
+				MarkupText.Plain(executor.Object().DBRef.ToString()),
+				MarkupText.Plain(string.Join(' ', company.Select(r => r.Object().DBRef.ToString()))),
+				MarkupText.Plain(delivered.Style),
+				MarkupText.Plain(senderName),
+				message,
+				MarkupText.Plain(delivered.Timestamp.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture)),
+				MarkupText.Plain(delivered.Id.ToString(CultureInfo.InvariantCulture))
+			]);
+
+		// Logged last, while page_log is on: for the pager and the recipients it reached, never one who
+		// refused it. The page is already delivered and pushed, so a slow or failed write holds up and
+		// loses nothing but its history; RecordAsync logs a failure rather than throwing it.
+		await PageLog.RecordAsync(delivered, [executor, .. company]);
 	}
 
 	/// <summary>
