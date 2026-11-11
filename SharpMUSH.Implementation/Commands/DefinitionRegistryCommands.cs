@@ -2960,8 +2960,12 @@ public partial class Commands : ICommandRestrictionApplier
 	private async ValueTask<Option<CallState>> ListAllHooksAsync(IMUSHCodeParser parser, AnySharpObject executor)
 	{
 		var any = false;
-		var names = parser.CommandLibrary.Select(command => command.Value.LibraryInformation.Attribute.Name)
-			.Append("HUH_COMMAND")
+		// The hook service names every hooked command, including one no built-in answers to (a softcode
+		// +command, or a name hooked for /extend); a service that cannot is asked about the built-ins.
+		IEnumerable<string> hooked = HookService is IHookCatalog catalog
+			? catalog.HookedCommands()
+			: parser.CommandLibrary.Select(command => command.Value.LibraryInformation.Attribute.Name).Append("HUH_COMMAND");
+		var names = hooked
 			.Distinct(StringComparer.OrdinalIgnoreCase)
 			.Order(StringComparer.OrdinalIgnoreCase);
 		foreach (var name in names)
