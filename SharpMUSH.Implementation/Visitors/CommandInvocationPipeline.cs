@@ -324,6 +324,8 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				namedRegisters["LS"] = argumentText;
 			}
 
+			// The counts go in after the names, so an argument named LSAC never stands in for the count.
+			var counts = new Dictionary<string, int>();
 			if (LeftSideArguments)
 			{
 				// run_hook (command.c): lsa<n> for each left part and rsa<n> for each right part that is not
@@ -339,12 +341,17 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 					namedRegisters[$"LSA{i + 1}"] = arguments[i].Message;
 				}
 
-				namedRegisters["LSAC"] = MarkupText.Plain(arguments.Count.ToString());
+				counts["LSAC"] = arguments.Count;
 			}
 
 			// A hook can't refuse its command, so caller-named pairs it can't read are left unnamed.
 			_ = ArgHelpers.AddNamedArguments(namedRegisters, arguments.Select(argument => argument.Message).ToArray(),
 				definition.Attribute.ArgumentNames, argument => argument.ToPlainText(), MarkupText.Plain);
+
+			foreach (var (key, count) in counts)
+			{
+				namedRegisters[key] = MarkupText.Plain(count.ToString());
+			}
 
 			return namedRegisters;
 
@@ -358,7 +365,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 					highest = index;
 				}
 
-				if (highest > 0) namedRegisters[$"{prefix}C"] = MarkupText.Plain(highest.ToString());
+				if (highest > 0) counts[$"{prefix}C"] = highest;
 			}
 		}
 
