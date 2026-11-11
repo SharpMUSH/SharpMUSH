@@ -49,6 +49,9 @@ public class RhostMatchingFunctionTests : ServerTestBase
 	[Arguments("[setqmatch(kow, k*, n)]-[r(0)]", "-ow")]
 	[Arguments("setqmatch(abc,abc)", "0")]
 	[Arguments("[setq(0,old)][setqmatch(kow,x*)]-[r(0)]", "0-old")]
+	[Arguments("[setq(0,old)][setqmatch(xy,x*y)]-[r(0)]", "0-old")]
+	[Arguments("setqmatch(abc,abc*)", "0")]
+	[Arguments("[setq(1,old)][setqmatch(axb,a*b*)]-[r(0)]-[r(1)]", "1-x-old")]
 	public async Task SetQMatch(string code, string expected)
 	{
 		await Assert.That(await Eval(code)).IsEqualTo(expected);
@@ -63,6 +66,9 @@ public class RhostMatchingFunctionTests : ServerTestBase
 	[Arguments("listmatch(hit the troll with the sword, hit * with *, /, 1 0)", "the troll/the sword")]
 	[Arguments("listmatch(a-b, *-*,)", "a b")]
 	[Arguments("listmatch(kow, wok)", "")]
+	[Arguments("listmatch(-b,*-*,/)", "b")]
+	[Arguments("listmatch(a-,*-*)", "a")]
+	[Arguments("listmatch(a b,* *,,%b)", "")]
 	public async Task ListMatch(string code, string expected)
 	{
 		await Assert.That(await Eval(code)).IsEqualTo(expected);
@@ -77,6 +83,7 @@ public class RhostMatchingFunctionTests : ServerTestBase
 	[Arguments("[setq(0,one)][pushregs(1)][setq(0,two)][pushregs(0)][setq(0,three)][pushregs(0)]-%q0-", "--")]
 	[Arguments("[setq(0,one)][pushregs(-0)]%q0", "one")]
 	[Arguments("pushregs()", "#-1 FUNCTION REQUIRES ONE ARGUMENT")]
+	[Arguments("[setq(0,one)][pushregs(%b)]%q0", "one")]
 	public async Task PushRegs(string code, string expected)
 	{
 		await Assert.That(await Eval(code)).IsEqualTo(expected);
@@ -182,6 +189,8 @@ public class RhostMatchingFunctionTests : ServerTestBase
 		await Assert.That(await Eval($"parenmatch({thing}/VB,,,bps)")).IsEqualTo("[ add( 1, 2 ) )]");
 		await Assert.That(await Ansi($"parenmatch({thing}/VC,1)")).IsEqualTo(await Ansi("x[ansi(hr,\\()]y\\[z\\]"))
 			.Because("with nothing closed wrongly, the last opener left open is the mismatch");
+		await Assert.That(await Eval($"parenmatch({thing}/VC,,,p)")).IsEqualTo("x( y[z]")
+			.Because("a mismatched opener keeps the space after it, as a matched one would");
 		await Assert.That(await Eval($"parenmatch({thing}/NOSUCH)")).IsEqualTo(string.Empty);
 	}
 }

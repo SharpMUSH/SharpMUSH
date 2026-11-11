@@ -101,7 +101,8 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delimiterText = args.Count > 2 ? args["2"].Message.ToPlainText() : string.Empty;
 		var delimiter = MarkupText.Plain(delimiterText.Length > 0 ? delimiterText[..1] : " ");
-		var wanted = args.Count > 3 && args["3"].Message.ToPlainText().Trim().Length > 0
+		// An empty fourth argument keeps every wildcard; one of only spaces names none.
+		var wanted = args.Count > 3 && args["3"].Message.ToPlainText().Length > 0
 			? args["3"].Message.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(RhostInteger).ToHashSet()
 			: null;
 
@@ -120,8 +121,12 @@ public partial class Functions
 
 		for (var group = 1; group < match.Groups.Count && group <= RhostMatchRegisters; group++)
 		{
+			// A wildcard that matched nothing is not a capture: its register is left alone and it adds no element.
 			var captured = match.Groups[group];
-			yield return (group - 1, captured.Success ? PlainSlice(text, plain, captured.Index, captured.Length) : MarkupText.Empty);
+			if (captured is { Success: true, Length: > 0 })
+			{
+				yield return (group - 1, PlainSlice(text, plain, captured.Index, captured.Length));
+			}
 		}
 	}
 
@@ -143,7 +148,7 @@ public partial class Functions
 	{
 		var state = parser.CurrentState;
 		var request = state.ArgumentsOrdered["0"].Message.ToPlainText();
-		if (request.Trim().Length == 0)
+		if (request.Length == 0)
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.FunctionRequiresOneArgument));
 		}
@@ -344,9 +349,12 @@ public partial class Functions
 			var c = text[i];
 			if (i == mismatch)
 			{
-				if (IsCloser(c) && BracketSpacing(c, spacing)) plain.Append(' ');
+				// The spacing a matched bracket would get: before a closer, after an opener.
+				var spaced = BracketSpacing(c, spacing);
+				if (IsCloser(c) && spaced) plain.Append(' ');
 				Flush();
 				pieces.Add(Mismatched(c));
+				if (!IsCloser(c) && spaced) pieces.Add(MarkupText.Plain(" "));
 				pieces.Add(MarkupText.Plain(text[(i + 1)..]));
 				return MarkupText.Concat(pieces.ToArray());
 			}

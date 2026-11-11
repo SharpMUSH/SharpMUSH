@@ -18,7 +18,7 @@
 
 Match the wildcard `<pattern>` against the whole of `<string>`, case ignored, and return what each wildcard matched. `*` matches any characters and `?` one. Only the first ten wildcards count.
 
-- `setqmatch()` puts what the first wildcard matched in register 0, the second in register 1, and so on. It returns 1 when the pattern matched and set a register, else 0, so a pattern without wildcards gives 0. With a `<quiet>` that starts with `n` it returns nothing.
+- `setqmatch()` puts what the first wildcard matched in register 0, the second in register 1, and so on. A wildcard that matched nothing sets no register and adds nothing to `listmatch()`. It returns 1 when the pattern matched and set a register, else 0. With a `<quiet>` that starts with `n` it returns nothing.
 - `listmatch()` returns what the wildcards matched, joined by the first character of `<delimiter>` (a space by default). `<wildcards>` is a list of wildcard numbers, counting from 0, to keep; they come out in pattern order. It returns nothing when the pattern does not match.
 
 Both come from RhostMUSH.
