@@ -85,28 +85,31 @@ public sealed record SoftcodeDialect(
 		=> SwitchAliases.TryGetValue(command, out var switches) ? switches.GetValueOrDefault(switchName) : null;
 
 	/// <summary>
+	/// Each command's switch names on the source server, by its name there, in the order that server tries them and
+	/// with the shortest start each takes (<see cref="DialectSwitchNames"/>).
+	/// </summary>
+	internal IReadOnlyDictionary<string, DialectSwitchName[]> SourceSwitches { get; init; }
+		= new Dictionary<string, DialectSwitchName[]>();
+
+	/// <summary>
 	/// The switches <paramref name="typed"/> means on <paramref name="command"/> (its SharpMUSH name), whose own
-	/// switches are <paramref name="commandSwitches"/>: itself when the command has it, its alias, or, as TinyMUX and
-	/// RhostMUSH take a switch by any start of its name, the one switch or alias that begins with it. <c>null</c> when
-	/// nothing matches or the start fits more than one.
+	/// switches are <paramref name="commandSwitches"/>: itself when the command has it; otherwise the source server's
+	/// switch it names, read as that server reads a shortened switch (the first in its table that the typed text starts
+	/// and is long enough for), then taken as the command's own switch or the dialect's alias for it. <c>null</c> when
+	/// it means nothing here.
 	/// </summary>
 	public string[]? SwitchMeaning(string command, IReadOnlyCollection<string> commandSwitches, string typed)
 	{
 		if (commandSwitches.Contains(typed, StringComparer.OrdinalIgnoreCase)) return [typed];
-		if (SwitchFor(command, typed) is { } meant) return meant;
 
-		var aliases = SwitchAliases.TryGetValue(command, out var forCommand) ? forCommand.Keys : [];
-		var candidates = commandSwitches.Concat(aliases)
-			.Where(name => name.StartsWith(typed, StringComparison.OrdinalIgnoreCase))
-			.Distinct(StringComparer.OrdinalIgnoreCase)
-			.Take(2)
-			.ToArray();
-		return candidates switch
-		{
-			[var only] when commandSwitches.Contains(only, StringComparer.OrdinalIgnoreCase) => [only],
-			[var only] => SwitchFor(command, only),
-			_ => null
-		};
+		var full = SourceSwitches.TryGetValue(command, out var names)
+			&& names.FirstOrDefault(name => typed.Length >= name.MinLength
+				&& name.Name.StartsWith(typed, StringComparison.OrdinalIgnoreCase)) is { Name: { } named }
+			? named
+			: typed;
+		return commandSwitches.Contains(full, StringComparer.OrdinalIgnoreCase)
+			? [full.ToUpperInvariant()]
+			: SwitchFor(command, full);
 	}
 
 	/// <summary>What <paramref name="name"/> means as a flag in this dialect, if it is one of its flag names.</summary>
@@ -295,6 +298,7 @@ public static class SoftcodeDialects
 			["RFAIL"] = "RECEIVE_LOCK`FAILURE",
 			["TFAIL"] = "TELEPORT_LOCK`FAILURE"
 		},
+		SourceSwitches = DialectSwitchNames.Rhost,
 		SwitchAliases = Switches(new()
 		{
 			// Ways of asking for what the command does here anyway, and the switches it has under another name.
@@ -499,6 +503,7 @@ public static class SoftcodeDialects
 			["RFAIL"] = "RECEIVE_LOCK`FAILURE",
 			["TFAIL"] = "TELEPORT_LOCK`FAILURE"
 		},
+		SourceSwitches = DialectSwitchNames.Mux,
 		SwitchAliases = Switches(new()
 		{
 			["@BOOT"] = new() { ["quiet"] = ["SILENT"] },
@@ -571,3 +576,6 @@ public static class SoftcodeDialects
 			? All.GetValueOrDefault(key)
 			: null;
 }
+
+/// <summary>A switch on the source server: its name and the shortest start of it that server takes.</summary>
+internal readonly record struct DialectSwitchName(string Name, int MinLength);

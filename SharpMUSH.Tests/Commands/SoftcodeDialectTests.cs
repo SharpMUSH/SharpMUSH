@@ -137,9 +137,9 @@ public class SoftcodeDialectTests : ServerTestBase
 	}
 
 	/// <summary>
-	/// In a dialect a switch may be shortened to any start that fits one switch: <c>@switch/f</c> is <c>/first</c>
-	/// and <c>@edit/sing</c> is RhostMUSH's <c>/single</c>. A start that fits several is still refused, and outside
-	/// the dialect a shortened switch is unknown.
+	/// In a dialect a switch may be shortened as the source server allows: <c>@switch/f</c> is <c>/first</c> and
+	/// <c>@edit/sing</c> is RhostMUSH's <c>/single</c>. A start is read against that server's own switches, so it never
+	/// becomes a different SharpMUSH switch, and outside the dialect a shortened switch is unknown.
 	/// </summary>
 	[Test]
 	public async Task FlaggedAttributeTakesAShortenedSwitch()
@@ -160,6 +160,12 @@ public class SoftcodeDialectTests : ServerTestBase
 		await Assert.That(rhost.SwitchMeaning("@SWITCH", switchSwitches, "reg")).IsNull();
 		await Assert.That(rhost.SwitchMeaning("@SWITCH", switchSwitches, "regf")).IsEquivalentTo(["REGFIRST"]);
 		await Assert.That(rhost.SwitchMeaning("@EDIT", ["FIRST"], "sing")).IsEquivalentTo(["FIRST"]);
+		// RhostMUSH reads /r as its own /raw, which SharpMUSH lacks, never as /regexp.
+		await Assert.That(rhost.SwitchMeaning("@EDIT", ["FIRST", "REGEXP"], "r")).IsNull();
+		// The first switch in RhostMUSH's table that the start fits, even where SharpMUSH has two.
+		await Assert.That(rhost.SwitchMeaning("@DOLIST", ["CLEARREG", "CLEARREGS", "NOBREAK"], "c")).IsEquivalentTo(["CLEARREG"]);
+		await Assert.That(SoftcodeDialects.All["mux"].SwitchMeaning("@DOLIST", ["NOTIFY", "NOBREAK", "NOW"], "n"))
+			.IsEquivalentTo(["NOTIFY"]);
 
 		await Cmd($"&PLAIN {thing}=@switch/f 1=1,&PLAINRAN me=yes");
 		await Cmd($"@trigger {thing}/PLAIN");
