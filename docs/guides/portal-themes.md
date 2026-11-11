@@ -32,6 +32,9 @@ stored with the character (`CharacterAppearance.Vision`) like the theme and acce
 - **Phosphor** (dark) and **Daylight** (light), the default looks: the phosphor accent on warm charcoal or warm
   paper, titles in Space Grotesk, a fine grain, and the `lifted` frame (cards on an elevation shadow, a glow on the
   Home hero).
+- **Directive** (`directive`, dark): white through smoke on black, Bodoni Moda capitals between dashes, square cards
+  marked like a filed report (`dossier`). The interface adds no colour of its own beyond the character's accent. Its
+  layout theme carries a look too.
 - One per MSSP genre, with the ids the telnet layout themes use: `fantasy`, `historical`, `horror`, `modern`,
   `mystery`, `romance`, `science-fiction`, `spiritual`.
 - Anime: `magical-girl`, `shojo`, `idol`, `slice-of-life`, `shonen`, `sports`, `mechmachine`, `real-robot`, `super-robot`, `isekai`, `yokai`.

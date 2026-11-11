@@ -510,3 +510,13 @@
 [data-frame-shadow="scrap"] {
 	--card-shadow: 0 0 0 1px #000, 4px 4px 0 rgba(0, 0, 0, 0.55);
 }
+
+/* Dossier: an index tab and a tick in the accent along the top left, a crop mark at the lower left and a strip of
+   hatching in accent-2 at the lower right, as on a filed report. */
+[data-frame-marks="dossier"] {
+	--card-marks: linear-gradient(var(--accent), var(--accent)) left 0 top 0 / 36px 3px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) left 40px top 0 / 6px 3px no-repeat,
+		linear-gradient(color-mix(in srgb, var(--text) 32%, transparent), color-mix(in srgb, var(--text) 32%, transparent)) left 7px bottom 7px / 9px 1px no-repeat,
+		linear-gradient(color-mix(in srgb, var(--text) 32%, transparent), color-mix(in srgb, var(--text) 32%, transparent)) left 7px bottom 7px / 1px 9px no-repeat;
+	--card-mask-accent-2: url(/themes/drawings/frames/dossier-hatch.svg) right 10px bottom 9px / 44px 6px no-repeat;
+}

@@ -46,6 +46,7 @@
 [data-font-display="federant"] { --font-display: Federant, Georgia, serif; --font-title-weight: 400; }
 [data-font-display="rye"] { --font-display: Rye, Georgia, serif; --font-title-weight: 400; }
 [data-font-display="black-ops"] { --font-display: 'Black Ops One', Impact, sans-serif; --font-title-weight: 400; }
+[data-font-display="bodoni"] { --font-display: 'Bodoni Moda', Didot, 'Bodoni 72', serif; --font-title-weight: 600; }
 
 [data-font-body="ui"] { --font-ui: 'Hanken Grotesk', system-ui, sans-serif; }
 [data-font-body="serif"] { --font-ui: Georgia, 'Iowan Old Style', 'Times New Roman', serif; }

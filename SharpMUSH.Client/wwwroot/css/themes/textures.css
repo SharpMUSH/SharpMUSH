@@ -734,3 +734,25 @@
 	--texture-mask-border: url(/themes/drawings/shared/mottle.svg) 500px 0 / 700px 1300px intersect, linear-gradient(0deg, transparent 25%, #000 60%, transparent);
 	--texture-ink-border: color-mix(in srgb, var(--text) 7%, transparent);
 }
+
+/* Haze: smoke drifting through a dark room lit from above, a vignette, a faint grid of dots with a register cross,
+   and a few printer's marks (hatching, rules, arrowheads) in accent-2 across a pale diagonal band. */
+[data-texture="haze"] {
+	--texture: radial-gradient(70% 55% at 50% 0%, color-mix(in srgb, var(--text) 7%, transparent), transparent 70%),
+		radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.55) 100%),
+		linear-gradient(115deg, transparent 58%, color-mix(in srgb, var(--text) 3%, transparent) 58% 71%, transparent 71%);
+	--texture-size: 100% 100%, 100% 100%, 100% 100%;
+	--texture-mask-border: url(/themes/drawings/shared/clouds-800.svg) 0 0 / 100% 100%;
+	--texture-ink-border: color-mix(in srgb, var(--text) 9%, transparent);
+	--texture-mask-text: url(/themes/drawings/textures/haze-marks.svg) 0 0 / 240px 240px;
+	--texture-ink-text: var(--border);
+	--texture-mask-accent-2: url(/themes/drawings/textures/haze-hatch.svg) 0 0 / 720px 720px;
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 70%, transparent);
+}
+[data-scheme="light"][data-texture="haze"] {
+	--texture: radial-gradient(60% 55% at 50% 30%, color-mix(in srgb, #fff 85%, transparent), transparent 70%),
+		radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.12) 100%),
+		linear-gradient(115deg, transparent 58%, color-mix(in srgb, var(--text) 3%, transparent) 58% 71%, transparent 71%);
+	--texture-ink-border: color-mix(in srgb, var(--text) 5%, transparent);
+	--texture-ink-text: var(--border-soft);
+}

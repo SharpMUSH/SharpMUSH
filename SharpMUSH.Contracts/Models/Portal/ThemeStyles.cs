@@ -58,7 +58,7 @@ public static class ThemeStyles
 		"fredoka", "dancing", "mochiy", "patrick", "dela", "graduate", "saira-stencil", "pixelify", "yuji", "bangers",
 		"lilita", "titan", "chakra", "monoton", "michroma", "antonio", "oxanium", "russo",
 		"cinzel-decorative", "forum", "press-start", "anton", "dotgothic", "alegreya-sc", "oswald",
-		"pirata", "uncial", "barlow", "metamorphous", "krona", "eagle-lake", "federant", "rye", "black-ops",
+		"pirata", "uncial", "barlow", "metamorphous", "krona", "eagle-lake", "federant", "rye", "black-ops", "bodoni",
 	];
 
 	/// <summary>Faces for everything else. Kept to faces that read well small.</summary>
@@ -132,6 +132,7 @@ public static class ThemeStyles
 		["riveted"] = new("riveted", "thick", "riveted"),
 		["wanted"] = new("wanted", "double", "wanted"),
 		["scrap"] = new("scrap", "heavy", "scrap"),
+		["dossier"] = new("dossier", "line", "none"),
 	};
 
 	public static readonly IReadOnlyDictionary<string, OrnamentSet> Ornaments = new Dictionary<string, OrnamentSet>
@@ -182,6 +183,7 @@ public static class ThemeStyles
 		["cog"] = new("cog", "cog"),
 		["sheriff"] = new("sheriff", "sheriff"),
 		["rad"] = new("rad", "rad"),
+		["flank"] = new("flank", "none"),
 	};
 
 	public static readonly IReadOnlyDictionary<string, EffectSet> Effects = new Dictionary<string, EffectSet>
@@ -239,7 +241,7 @@ public static class ThemeStyles
 			"foxing", "blood", "blinds", "petals", "mandala", "swiss", "sparkles", "bubbles", "spotlights", "notebook",
 			"speedlines", "court", "hazard", "sigil", "sumi", "benday", "filmgrain", "starburst", "rain", "outrun", "galaxy",
 			"readout", "armor-panels", "sunburst-rays", "stained-glass", "crystal", "dither", "nightfall", "overworld", "skyward", "watercolor",
-			"marble", "spires", "dragonflight", "plot", "seance", "dunes", "candles", "gears", "mesa", "ruins",
+			"marble", "spires", "dragonflight", "plot", "seance", "dunes", "candles", "gears", "mesa", "ruins", "haze",
 		],
 		[Ornament] = [.. Ornaments.Keys],
 		[Frame] = [.. Frames.Keys],

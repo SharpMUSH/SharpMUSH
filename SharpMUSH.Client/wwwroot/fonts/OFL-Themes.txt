@@ -42,6 +42,7 @@ Copyright (c) 2012, Brian J. Bonislawsky DBA Astigmatic (AOETI) (astigma@astigma
 Copyright (c) 2011, Cyreal (www.cyreal.org), with Reserved Font Name 'Federant'.
 Copyright (c) 2011 by Sorkin Type Co (www.sorkintype.com), with Reserved Font Name "Rye".
 Copyright 2022 The Black-Ops Project Authors (https://github.com/googlefonts/googlefonts-project-template) (Black Ops One)
+Copyright 2020 The Bodoni Moda Project Authors (https://github.com/indestructible-type/Bodoni)
 
 
 

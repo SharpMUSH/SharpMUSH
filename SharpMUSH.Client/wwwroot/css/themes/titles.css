@@ -361,3 +361,6 @@
 [data-effect-shadow="woodtype"] { --title-shadow: 1px 1px 0 color-mix(in srgb, var(--text) 25%, transparent); }
 /* Grime: a hard black drop and a dark smudge. */
 [data-effect-shadow="grime"] { --title-shadow: 2px 2px 0 #000, 0 0 10px rgba(0, 0, 0, 0.6); }
+
+/* Flank: an em dash either side. */
+[data-ornament-glyphs="flank"] { --ornament-before: "\2014"; --ornament-after: "\2014"; }

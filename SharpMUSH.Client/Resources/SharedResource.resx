@@ -13026,6 +13026,15 @@
   <data name="AdmThemeStyleTexturePlot" xml:space="preserve">
     <value>Plotting scope</value>
   </data>
+  <data name="AdmThemeStyleTextureHaze" xml:space="preserve">
+    <value>Smoke haze</value>
+  </data>
+  <data name="AdmThemeStyleFrameDossier" xml:space="preserve">
+    <value>Dossier</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentFlank" xml:space="preserve">
+    <value>Dashes</value>
+  </data>
   <data name="AdmThemeStyleFrameClipped" xml:space="preserve">
     <value>Clipped corners</value>
   </data>
