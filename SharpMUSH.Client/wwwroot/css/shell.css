@@ -16,8 +16,7 @@
    is mostly opaque, so the texture shows through it only faintly and its labels stay easy to read. */
 .phosphor-rail,
 .phosphor-content-col,
-.phosphor-widget-aside,
-.phosphor-pagebar {
+.phosphor-widget-aside {
 	position: relative;
 	z-index: 1;
 }
@@ -427,6 +426,8 @@
 
 /* ── Page-sidebar slot (D1 §3): a section's SectionShell fills it; empty, the column is gone ── */
 .phosphor-pagebar {
+	position: relative;
+	z-index: 1;
 	flex-shrink: 0;
 	width: var(--side-w);
 	min-height: 0;
