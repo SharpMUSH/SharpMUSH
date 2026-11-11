@@ -68,6 +68,8 @@ public static class ImportLeftOut
 		"@halt/stop", "@halt/cont", "@wait/recpid", "@notify/pid",
 		// @tag.
 		"@decompile/tags",
+		// A clone's powers come across only with /preserve.
+		"@clone/inherit",
 		// Little used; added when a game needs one.
 		"@emit/sub", "@wipe/owner", "@wipe/preserve", "@decompile/noextra", "@include/override", "@include/ignore",
 		"@function/protected", "@edit/braces", "@search/zone", "examine/quick", "examine/regexp"
@@ -98,6 +100,8 @@ public static class ImportLeftOut
 		"@emit/html", "@pemit/html",
 		// Exits are opened only from rooms.
 		"@open/inventory",
+		// A channel has no header apart from its name.
+		"@clist/headers",
 		// Flags are renamed in the configuration, not for the session.
 		"@flag/remove",
 		// Everyone sees titles, and @channel/mute hides connection notices.

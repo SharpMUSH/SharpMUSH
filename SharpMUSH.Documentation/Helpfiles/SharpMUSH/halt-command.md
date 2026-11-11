@@ -21,7 +21,7 @@ The @halt command removes all queued actions for `<object>`. If given, `<action 
 
 If `<object>` is a player, it clears the queue for the player and all of their objects. You can use "@halt me" to clear your own queue without setting yourself HALT.
 
-The `/quiet` switch leaves out the lines that tell you what was halted; refusals still show. It works with `/pid` too.
+The `/quiet` switch leaves out the lines that tell you, and your owner, what was halted; refusals still show. It works with `/pid` too.
 
 Only wizards and objects with the halt @power can @halt other players' objects. Note that halting an object does NOT affect any objects waiting on it as a semaphore.
 

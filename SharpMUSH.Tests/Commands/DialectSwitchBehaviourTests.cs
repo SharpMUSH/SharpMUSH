@@ -295,6 +295,34 @@ public class DialectSwitchBehaviourTests : ServerTestBase
 		await Assert.That(await Eval($"hasflag({thing},HALT)")).IsEqualTo("1");
 	}
 
+	/// <summary>Run by an object, as softcode runs it, /quiet keeps the report from the object's owner.</summary>
+	[Test]
+	public async Task HaltQuietFromAnObjectTellsItsOwnerNothing()
+	{
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HaltQuietOwner");
+		var halter = TestIsolationHelpers.GenerateUniqueName("HaltQuietHalter");
+		var victim = TestIsolationHelpers.GenerateUniqueName("HaltQuietVictim");
+		try
+		{
+			await CmdAs(actor.DbRef, actor.Handle, $"@create {halter}");
+			await CmdAs(actor.DbRef, actor.Handle, $"@create {victim}");
+			await CmdAs(actor.DbRef, actor.Handle, $"&DO {halter}=@halt/quiet {victim}");
+
+			var heard = await HeardWhile(actor.DbRef, async () =>
+			{
+				await CmdAs(actor.DbRef, actor.Handle, $"@trigger {halter}/DO");
+				await WebAppFactoryArg.QueueBarrierAsync();
+			});
+
+			await Assert.That(heard.Any(line => line.Contains(victim, StringComparison.Ordinal))).IsFalse();
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(actor.Handle);
+		}
+	}
+
 	[Test]
 	public async Task QuotaRemainingCountsWhatThePlayerOwns()
 	{
@@ -336,9 +364,18 @@ public class DialectSwitchBehaviourTests : ServerTestBase
 			// RhostMUSH's -1 is its default: no fewest.
 			await Cmd($"@function/min {function}=-1");
 			await Assert.That(await Eval($"{function}(a)")).IsEqualTo("a");
+
+			// Through an alias, the function it names changes, and the alias stays an alias.
+			await Cmd($"@function/alias {function}x={function}");
+			await Cmd($"@function/max {function}x=1");
+			await Assert.That(await Eval($"{function}(a,b)"))
+				.IsEqualTo($"#-1 FUNCTION ({function.ToUpperInvariant()}) EXPECTS 0 OR 1 ARGUMENTS BUT GOT 2");
+			await Cmd($"@function/max {function}=2");
+			await Assert.That(await Eval($"{function}x(a,b)")).IsEqualTo("ab");
 		}
 		finally
 		{
+			await Cmd($"@function/delete {function}x");
 			await Cmd($"@function/delete {function}");
 		}
 	}

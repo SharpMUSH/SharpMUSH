@@ -112,6 +112,7 @@ The switch names are as RhostMUSH spells them, under SharpMUSH's name for the co
 - `@halt/stop`, `@halt/cont`: `@queue/pause <pid>` and `@queue/resume <pid>` pause and resume a queue entry.
 - `@wait/recpid`, `@notify/pid`: `@wait` does not hand back the pid of what it queues. `@ps` lists pids, and `@halt/pid` and `@wait/pid` act on one.
 - `@decompile/tags`: there is no `@tag`.
+- `@clone/inherit`: a clone keeps the original's flags; its powers come across only with `@clone/preserve`.
 - `@emit/sub`, `@wipe/owner`, `@wipe/preserve`, `@decompile/noextra`, `@include/override`, `@include/ignore`, `@function/protected`, `@edit/braces`, `@search/zone`, `examine/quick`, `examine/regexp`: little used in shipped RhostMUSH code; one is added when a game needs it. `@search` takes `zone=<zone>` as a class.
 
 ## TinyMUX functions and commands left out
@@ -129,5 +130,6 @@ The switch names are as RhostMUSH spells them, under SharpMUSH's name for the co
 - `@clone/cost`: there is no money.
 - `@emit/html`, `@pemit/html`: softcode never sends raw HTML. Each client gets styled text, pictures and links in its own form.
 - `@open/inventory`: exits are opened only from rooms.
-- `@flag/remove`: TinyMUX's `@flag` renames a flag until the next restart. `@flag/alias <flag>=!<alias>` removes an alias here.
+- `@clist/headers`: a channel has no header apart from its name, which `@clist` shows.
+- `@flag/remove`: TinyMUX's `@flag` renames a flag until the next restart. `@flag/alias <flag>=<aliases>` sets a flag's whole alias list here.
 - `comtitle/on`, `comtitle/off`, `comtitle/gag`, `comtitle/ungag`: everyone sees titles. `@channel/mute` hides a channel's connection notices.

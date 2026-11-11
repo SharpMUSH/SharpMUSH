@@ -56,7 +56,7 @@ public partial class Commands
 				playerArg, async player =>
 				{
 					if (switches.Contains("REMAINING"))
-						amount += await Mediator.Send(new GetOwnedObjectCountQuery(player));
+						amount = (int)Math.Min(int.MaxValue, (long)amount + await Mediator.Send(new GetOwnedObjectCountQuery(player)));
 					await Mediator.Send(new SetPlayerQuotaCommand(player, amount));
 
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaForPlayerSetFormat), executor, player.Object.Name, amount);

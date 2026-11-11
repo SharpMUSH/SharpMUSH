@@ -1505,7 +1505,11 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
-		if (userFunctionService.Resolve(functionName) is not { } function)
+		// The entry as stored, disabled or not; an alias is followed to the function it names, which is what changes.
+		var function = userFunctionService.Get(functionName) is { AliasOf: { } target }
+			? userFunctionService.Get(target)
+			: userFunctionService.Get(functionName);
+		if (function is null)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, functionName);
 			return new CallState(ErrorMessages.Returns.FunctionNotFound);

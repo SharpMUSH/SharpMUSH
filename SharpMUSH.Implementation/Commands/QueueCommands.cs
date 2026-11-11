@@ -186,7 +186,7 @@ public partial class Commands
 	/// goes through <see cref="HaltQueuesAsync"/>, which is <c>do_halt</c> and carries its report to the
 	/// victim's owner.
 	/// </remarks>
-	// RhostMUSH's /quiet leaves out the line that tells the halter what was halted; refusals still show.
+	// RhostMUSH's /quiet leaves out the lines that tell the halter and its owner what was halted; refusals still show.
 	[SharpCommand(Name = "@HALT", Switches = ["ALL", "NOEVAL", "PID", "QUIET"], Behavior = CB.Default | CB.EqSplit | CB.RSBrace,
 		MinArgs = 0, MaxArgs = 2, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Halt(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -210,7 +210,7 @@ public partial class Commands
 		var targetName = args.GetValueOrDefault("0")?.Message.ToPlainText();
 		if (string.IsNullOrEmpty(targetName))
 		{
-			await HaltQueuesAsync(executor, switches.Contains("QUIET") ? executor.Object().DBRef : null);
+			await HaltQueuesAsync(executor, switches.Contains("QUIET") ? await HalterOwnerAsync(executor) : null);
 			return CallState.Empty;
 		}
 
@@ -248,7 +248,8 @@ public partial class Commands
 		var targetObject = target.Object();
 		var executorObject = executor.Object();
 		var quiet = switches.Contains("QUIET");
-		await HaltQueuesAsync(target, quiet ? executorObject.DBRef : null);
+		var halterOwner = await HalterOwnerAsync(executor);
+		await HaltQueuesAsync(target, quiet ? halterOwner : null);
 
 		if (hasReplacementActions)
 		{
@@ -286,8 +287,9 @@ public partial class Commands
 			if (!quiet)
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltedOthersObjectFormat),
 					executor, owner.Name, targetObject.Name, dbref);
-			await NotifyService.NotifyLocalized(owner.DBRef, nameof(ErrorMessages.Notifications.HaltedObjectByFormat),
-				sender: executor, targetObject.Name, dbref, executorObject.Name);
+			if (!quiet || owner.DBRef.Number != halterOwner.Number)
+				await NotifyService.NotifyLocalized(owner.DBRef, nameof(ErrorMessages.Notifications.HaltedObjectByFormat),
+					sender: executor, targetObject.Name, dbref, executorObject.Name);
 		}
 
 		// src/cque.c:2277-2278: only a halt without replacement actions leaves the object HALTed.
@@ -326,14 +328,14 @@ public partial class Commands
 	/// entry the victim runs — and, for a player, every entry an object they own runs.
 	/// </summary>
 	/// <param name="victim">The object whose queue is wiped.</param>
-	/// <param name="quietFor">The halter who asked for /quiet: the notice is not sent to them.</param>
+	/// <param name="quietFor">The owner of a halter who asked for /quiet: the notice is not sent to them.</param>
 	private async ValueTask HaltQueuesAsync(AnySharpObject victim, DBRef? quietFor = null)
 		=> await HaltQueuesAsync(victim, (await victim.Object().Owner.WithCancellation(CancellationToken.None)).Object, quietFor);
 
 	/// <inheritdoc cref="HaltQueuesAsync(AnySharpObject)"/>
 	/// <param name="victim">The object whose queue is wiped.</param>
 	/// <param name="owner">Its owner, given by a caller that has just changed it (<c>chown_object</c>).</param>
-	/// <param name="quietFor">The halter who asked for /quiet: the notice is not sent to them.</param>
+	/// <param name="quietFor">The owner of a halter who asked for /quiet: the notice is not sent to them.</param>
 	private async ValueTask HaltQueuesAsync(AnySharpObject victim, SharpObject owner, DBRef? quietFor = null)
 	{
 		var victimObject = victim.Object();
@@ -355,6 +357,12 @@ public partial class Commands
 			await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
 		}
 	}
+
+	/// <summary>
+	/// Who RhostMUSH's /quiet keeps the report from: the halter's owner, the halter itself for a player.
+	/// </summary>
+	private static async ValueTask<DBRef> HalterOwnerAsync(AnySharpObject halter)
+		=> (await halter.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
 
 	/// <summary>
 	/// PennMUSH <c>do_allhalt</c> (<c>src/cque.c:2343-2358</c>), for <c>@halt/all</c> and <c>@allhalt</c>:
@@ -1064,8 +1072,8 @@ public partial class Commands
 		return new CallState(ErrorMessages.Returns.ErrorNotSupported);
 	}
 
-	// TinyMUX's /long lists every waiting entry, and each semaphore entry's whole command, where the plain
-	// listing shows ten of each and cuts a command at 40 characters.
+	// /long, a TinyMUX switch name, lists every waiting entry, and each semaphore entry's whole command, where
+	// the plain listing shows ten of each and cuts a command at 40 characters.
 	[SharpCommand(Name = "@PS", Switches = ["ALL", "SUMMARY", "COUNT", "QUICK", "DEBUG", "HISTORY", "LONG"], Behavior = CB.Default,
 		MinArgs = 0, MaxArgs = 1, ParameterNames = ["player, pid, or history-limit"])]
 	public async ValueTask<Option<CallState>> ProcessStatus(IMUSHCodeParser parser, SharpCommandAttribute _2)

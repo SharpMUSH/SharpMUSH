@@ -310,8 +310,7 @@ public static class SoftcodeDialects
 		{
 			// Ways of asking for what the command does here anyway, and the switches it has under another name.
 			["@BOOT"] = new() { ["quiet"] = ["SILENT"] },
-			// A clone keeps every flag here, INHERIT among them.
-			["@CLONE"] = new() { ["location"] = [], ["ansi"] = [], ["inherit"] = [] },
+			["@CLONE"] = new() { ["location"] = [], ["ansi"] = [] },
 			["@CPATTR"] = new() { ["verify"] = [], ["verbose"] = [] },
 			["@CREATE"] = new() { ["ansi"] = [], ["strict"] = [] },
 			["@DECOMPILE"] = new() { ["all"] = [], ["tree"] = [] },
@@ -319,7 +318,7 @@ public static class SoftcodeDialects
 			// RhostMUSH's /break keeps an @break inside the list to the list, as /nobreak does here.
 			["@DOLIST"] = new() { ["break"] = ["NOBREAK"] },
 			["@EDIT"] = new() { ["single"] = ["FIRST"], ["strict"] = [] },
-			["@FUNCTION"] = new() { ["display"] = [], ["notrace"] = [] },
+			["@FUNCTION"] = new() { ["display"] = [], ["notrace"] = [], ["minimum"] = ["MIN"], ["maximum"] = ["MAX"] },
 			// @include always leaves out an attribute's $-command or ^-listen pattern.
 			["@INCLUDE"] = new() { ["command"] = [] },
 			["@NAME"] = new() { ["ansi"] = [] },
@@ -522,7 +521,6 @@ public static class SoftcodeDialects
 			["@CEMIT"] = new() { ["noheader"] = ["SILENT"] },
 			["@CHOWN"] = new() { ["nostrip"] = ["PRESERVE"] },
 			["@CHOWNALL"] = new() { ["nostrip"] = ["PRESERVE"] },
-			["@CLIST"] = new() { ["headers"] = [] },
 			// A clone keeps every flag here, INHERIT among them.
 			["@CLONE"] = new() { ["nostrip"] = ["PRESERVE"], ["location"] = [], ["inherit"] = [] },
 			["@DECOMPILE"] = new() { ["dbref"] = ["DB"] },

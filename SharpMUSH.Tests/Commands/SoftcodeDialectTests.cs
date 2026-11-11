@@ -370,12 +370,17 @@ public class SoftcodeDialectTests : ServerTestBase
 		try
 		{
 			await Cmd($"&QUOTA {thing}=@quota/total {actor.DbRef}=7;@quota/fix {actor.DbRef}");
+			var heardBefore = Notifications.CountFor(thing);
 			await Cmd($"@set {thing}/QUOTA=mux");
 			await Cmd($"@set {thing}=WIZARD");
 			await Cmd($"@trigger {thing}/QUOTA");
 			await WebAppFactoryArg.QueueBarrierAsync();
 			var player = (await Mediator.Send(new GetObjectNodeQuery(actor.DbRef))).Expect<AnySharpObject>().Expect<SharpPlayer>();
 			await Assert.That(player.Quota).IsEqualTo(7);
+			// /fix ran as a plain @quota: it showed the quota, and no switch was refused.
+			var heard = Notifications.For(thing).Skip(heardBefore).ToList();
+			await Assert.That(heard.Any(line => line.Contains("doesn't know switch", StringComparison.Ordinal))).IsFalse();
+			await Assert.That(heard.Any(line => line.Contains(actor.Name, StringComparison.Ordinal))).IsTrue();
 		}
 		finally
 		{
@@ -387,7 +392,9 @@ public class SoftcodeDialectTests : ServerTestBase
 			.IsEquivalentTo(["LIST"]);
 		await Assert.That(mux.SwitchMeaning("@OEMIT", ["NOEVAL", "SPOOF"], "list")).IsEmpty();
 		await Assert.That(mux.SwitchMeaning("@HOOK", ["BEFORE"], "clear")).IsEmpty();
-		await Assert.That(mux.SwitchMeaning("@CLIST", ["FULL"], "headers")).IsEmpty();
-		await Assert.That(SoftcodeDialects.All["rhost"].SwitchMeaning("@CLONE", ["PRESERVE"], "inherit")).IsEmpty();
+		await Assert.That(mux.SwitchMeaning("@CLONE", ["PRESERVE"], "inherit")).IsEmpty();
+		// RhostMUSH spells them /minimum and /maximum, and takes two letters.
+		await Assert.That(SoftcodeDialects.All["rhost"].SwitchMeaning("@FUNCTION", ["MIN", "MAX"], "minim")).IsEquivalentTo(["MIN"]);
+		await Assert.That(SoftcodeDialects.All["rhost"].SwitchMeaning("@FUNCTION", ["MIN", "MAX"], "ma")).IsEquivalentTo(["MAX"]);
 	}
 }
