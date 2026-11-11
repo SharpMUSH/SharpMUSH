@@ -1369,9 +1369,16 @@ public partial class Functions
 	[SharpFunction(Name = "zfun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular, ParameterNames = ["zone", "attribute", "arguments..."])]
 	public async ValueTask<CallState> ZoneFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
+		// <zone>/<attribute>: RhostMUSH's form, naming one of the caller's zones.
+		if (parser.CurrentState.Arguments["0"].Message.ToPlainText().Contains('/'))
+		{
+			return await OnZoneAsync(parser, evaluated: true, p => UserAttributeFunction(p, _2));
+		}
 
-		if (await enactor.Object().Zone.WithCancellation(CancellationToken.None) is not AnySharpObject zone)
+		// The caller's zone, as the <zone>/<attribute> form reads the caller's zones.
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		if (await executor.Object().Zone.WithCancellation(CancellationToken.None) is not AnySharpObject zone)
 		{
 			return new CallState(ErrorMessages.Returns.NoZoneSet);
 		}

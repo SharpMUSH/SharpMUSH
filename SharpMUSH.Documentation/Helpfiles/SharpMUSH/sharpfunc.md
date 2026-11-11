@@ -16,7 +16,9 @@
 | [UARGS()]             | [UDEFAULT()]          | [UEVAL()]             | [UFUN()]              |
 | [ULAMBDA()]           | [ULDEFAULT()]         | [ULOCAL()]            | [V()]                 |
 | [WILDGREP()]          | [WILDGREPI()]         | [XATTR()]             | [XGET()]              |
-| [ZFUN()]              |                       |                       |                       |
+| [ZFUN()]              | [ZFUN2()]             | [ZFUN2DEFAULT()]      | [ZFUN2LDEFAULT()]     |
+| [ZFUN2LOCAL()]        | [ZFUNDEFAULT()]       | [ZFUNEVAL()]          | [ZFUNLDEFAULT()]      |
+| [ZFUNLOCAL()]         |                       |                       |                       |
 
 ::: seealso
 - [attributes]
@@ -88,19 +90,23 @@
 # Dbref Functions
   Dbref functions return a dbref or list of dbrefs related to some value on an object.
 
-|               |               |               |               |
-|---------------|---------------|---------------|---------------|
-| [CHILDREN()]  | [CON()]       | [ENTRANCES()] | [EXIT()]      |
-| [EXITMAP()]   | [FOLLOWERS()] | [FOLLOWING()] | [HOME()]      |
-| [LCON()]      | [LEXITS()]    | [LOC()]       | [LOCATE()]    |
-| [LPARENT()]   | [LPLAYERS()]  | [LROOMS()]    | [LSEARCH()]   |
-| [LTHINGS()]   | [LVCON()]     | [LVEXITS()]   | [LVPLAYERS()] |
-| [LVTHINGS()]  | [NAMELIST()]  | [NCON()]      | [NEXITS()]    |
-| [NEXT()]      | [NEXTDBREF()] | [NPLAYERS()]  | [NTHINGS()]   |
-| [NUM()]       | [OWNER()]     | [PARENT()]    | [PARENTS()]   |
-| [PFIND()]     | [PMATCH()]    | [RLOC()]      | [RNUM()]      |
-| [ROOM()]      | [WHERE()]     | [XCON()]      | [XEXITS()]    |
-| [XPLAYERS()]  | [XTHINGS()]   | [ZFIND()]     | [ZONE()]      |
+|                   |                   |                   |                   |
+|-------------------|-------------------|-------------------|-------------------|
+| [CHILDREN()]      | [CON()]           | [ENTRANCES()]     | [EXIT()]          |
+| [EXITMAP()]       | [FOLLOWERS()]     | [FOLLOWING()]     | [HOME()]          |
+| [INZONE()]        | [LCON()]          | [LEXITS()]        | [LOC()]           |
+| [LOCATE()]        | [LPARENT()]       | [LPLAYERS()]      | [LROOMS()]        |
+| [LSEARCH()]       | [LTHINGS()]       | [LVCON()]         | [LVEXITS()]       |
+| [LVPLAYERS()]     | [LVTHINGS()]      | [LZONE()]         | [NAMELIST()]      |
+| [NCON()]          | [NEXITS()]        | [NEXT()]          | [NEXTDBREF()]     |
+| [NPLAYERS()]      | [NTHINGS()]       | [NUM()]           | [OWNER()]         |
+| [PARENT()]        | [PARENTS()]       | [PFIND()]         | [PMATCH()]        |
+| [RLOC()]          | [RNUM()]          | [ROOM()]          | [SEARCHNG()]      |
+| [SEARCHNGOBJID()] | [SEARCHOBJID()]   | [WHERE()]         | [XCON()]          |
+| [XEXITS()]        | [XPLAYERS()]      | [XTHINGS()]       | [ZCHILDREN()]     |
+| [ZEXITS()]        | [ZFIND()]         | [ZLCON()]         | [ZONE()]          |
+| [ZONECMD()]       | [ZROOMS()]        | [ZSEARCH()]       | [ZSEARCHOBJID()]  |
+| [ZTHINGS()]       |                   |                   |                   |
 
 ::: seealso
 - [database]
@@ -6831,11 +6837,14 @@ think words(1 2%b%b3, %b)
 - [zones]
 :::
 # zfun()
-`zfun(<attribute>[, <arg0>[, <arg1>[, ... , <arg29>]]])`
+`zfun(<attribute>[, <arg0>[, <arg1>[, ... , <arg29>]]])`<br>
+`zfun(<zone>/<attribute>[, <arg0>[, <arg1>[, ... , <arg29>]]])`
 
   This function evaluates an attribute on the caller's Zone object. It is essentially identical to
 
 `ufun(zone(me)/<attribute>[, <arg0>[, ... , <arg29>]])`
+
+  An object in several zones can name the one: `<zone>/<attribute>` is that zone's attribute, and a zone the caller is not in gives `#-1 INVALID ZONE`. See [ZFUN2()] for the rest of the family.
 
 
 ::: seealso
@@ -6844,6 +6853,7 @@ think words(1 2%b%b3, %b)
 - [ZONE()]
 - [ZEMIT()]
 - [ZWHO()]
+- [ZFUN2()]
 - [zones]
 :::
 # zone()
