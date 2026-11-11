@@ -318,14 +318,17 @@ public static class SoftcodeDialects
 			// RhostMUSH's /break keeps an @break inside the list to the list, as /nobreak does here.
 			["@DOLIST"] = new() { ["break"] = ["NOBREAK"] },
 			["@EDIT"] = new() { ["single"] = ["FIRST"], ["strict"] = [] },
-			["@FUNCTION"] = new() { ["display"] = [], ["notrace"] = [] },
+			["@FUNCTION"] = new() { ["display"] = [], ["notrace"] = [], ["minimum"] = ["MIN"], ["maximum"] = ["MAX"] },
+			// @include always leaves out an attribute's $-command or ^-listen pattern.
+			["@INCLUDE"] = new() { ["command"] = [] },
 			["@NAME"] = new() { ["ansi"] = [] },
 			["@NOTIFY"] = new() { ["first"] = [] },
 			["@OPEN"] = new() { ["location"] = [], ["ansi"] = [], ["strict"] = [] },
 			["@PCREATE"] = new() { ["ansi"] = [], ["strict"] = [] },
 			["@PEMIT"] = new() { ["nosub"] = [], ["oneeval"] = [] },
 			["@SEARCH"] = new() { ["nogarbage"] = [] },
-			["@SET"] = new() { ["noisy"] = [], ["tree"] = [] },
+			// A leading _ in a value is only text here, as /strict asks.
+			["@SET"] = new() { ["noisy"] = [], ["tree"] = [], ["strict"] = [] },
 			["@STATS"] = new() { ["player"] = [] },
 			["@WALL"] = new() { ["no_prefix"] = ["EMIT"] },
 			["EXAMINE"] = new() { ["display"] = [], ["full"] = [], ["tree"] = [] },
@@ -518,15 +521,24 @@ public static class SoftcodeDialects
 			["@CEMIT"] = new() { ["noheader"] = ["SILENT"] },
 			["@CHOWN"] = new() { ["nostrip"] = ["PRESERVE"] },
 			["@CHOWNALL"] = new() { ["nostrip"] = ["PRESERVE"] },
-			["@CLONE"] = new() { ["nostrip"] = ["PRESERVE"], ["location"] = [] },
+			// A clone keeps every flag here, INHERIT among them.
+			["@CLONE"] = new() { ["nostrip"] = ["PRESERVE"], ["location"] = [], ["inherit"] = [] },
 			["@DECOMPILE"] = new() { ["dbref"] = ["DB"] },
 			// TinyMUX's /break lets an @break inside the list end the list around it too, as it always does here.
 			["@DOLIST"] = new() { ["break"] = [] },
+			// The bare form clears a hook here.
+			["@HOOK"] = new() { ["clear"] = [] },
 			["@LISTMOTD"] = new() { ["brief"] = [] },
 			["@MALIAS"] = new() { ["delete"] = ["DESTROY"], ["status"] = ["STATS"] },
+			// /brief leaves out the text files, which @motd/list never shows.
+			["@MOTD"] = new() { ["brief"] = ["LIST"] },
 			["@NOTIFY"] = new() { ["first"] = [] },
+			// @oemit takes a list of objects without a switch.
+			["@OEMIT"] = new() { ["list"] = [] },
 			["@OPEN"] = new() { ["location"] = [] },
 			["@PS"] = new() { ["brief"] = [] },
+			// A quota is always counted from what the player owns, so /fix has nothing to correct.
+			["@QUOTA"] = new() { ["fix"] = [], ["total"] = ["SET"] },
 			["@STATS"] = new() { ["player"] = [] },
 			// switch_default_all is on in TinyMUX's default configuration, so /default runs every match.
 			["@SWITCH"] = new() { ["default"] = [] },

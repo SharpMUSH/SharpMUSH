@@ -27,6 +27,8 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FunctionArgumentNamesFormat = "Function '{0}' passes its arguments as: {1}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FunctionArgumentCountFormat = "Function '{0}' takes {1} to {2} arguments.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FunctionArgumentNamesClearedFormat = "Function '{0}' passes its arguments by position only.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FunctionClonedFormat = "Function '{0}' cloned from '{1}'.";

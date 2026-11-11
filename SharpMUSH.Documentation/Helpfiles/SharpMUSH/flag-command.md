@@ -53,7 +53,7 @@ This command manipulates the list of flags in the database. With no switches, th
 All other switches to this command are restricted to God:
 - /disable disables a flag, making it invisible and unusable
 - /enable re-enables a disabled flag
-- /alias adds a new alias for an existing flag; use !`<alias>` to delete one.
+- /alias sets the aliases of an existing flag to the space-separated list given, replacing the ones it had.
 - /letter changes or removes a single-letter alias for an existing flag.
 - /restrict changes flag permissions (see [@flag adding flags])
 - /type changes flag type(s) (see [@flag adding flags])

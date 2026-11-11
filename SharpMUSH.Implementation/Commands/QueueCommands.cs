@@ -186,7 +186,8 @@ public partial class Commands
 	/// goes through <see cref="HaltQueuesAsync"/>, which is <c>do_halt</c> and carries its report to the
 	/// victim's owner.
 	/// </remarks>
-	[SharpCommand(Name = "@HALT", Switches = ["ALL", "NOEVAL", "PID"], Behavior = CB.Default | CB.EqSplit | CB.RSBrace,
+	// RhostMUSH's /quiet leaves out the lines that tell the halter and its owner what was halted; refusals still show.
+	[SharpCommand(Name = "@HALT", Switches = ["ALL", "NOEVAL", "PID", "QUIET"], Behavior = CB.Default | CB.EqSplit | CB.RSBrace,
 		MinArgs = 0, MaxArgs = 2, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Halt(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -201,14 +202,15 @@ public partial class Commands
 
 		if (switches.Contains("PID"))
 		{
-			return await HaltPidAsync(parser, executor, args.GetValueOrDefault("0")?.Message.ToPlainText());
+			return await HaltPidAsync(parser, executor, args.GetValueOrDefault("0")?.Message.ToPlainText(),
+				switches.Contains("QUIET"));
 		}
 
 		// do_halt1 (src/cque.c:2239-2240): no object halts the enactor, and leaves its HALT flag alone.
 		var targetName = args.GetValueOrDefault("0")?.Message.ToPlainText();
 		if (string.IsNullOrEmpty(targetName))
 		{
-			await HaltQueuesAsync(executor);
+			await HaltQueuesAsync(executor, switches.Contains("QUIET") ? await HalterOwnerAsync(executor) : null);
 			return CallState.Empty;
 		}
 
@@ -245,7 +247,9 @@ public partial class Commands
 
 		var targetObject = target.Object();
 		var executorObject = executor.Object();
-		await HaltQueuesAsync(target);
+		var quiet = switches.Contains("QUIET");
+		var halterOwner = await HalterOwnerAsync(executor);
+		await HaltQueuesAsync(target, quiet ? halterOwner : null);
 
 		if (hasReplacementActions)
 		{
@@ -260,12 +264,14 @@ public partial class Commands
 		{
 			if (targetObject.DBRef.Number == executorObject.DBRef.Number)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllYourObjectsHalted), executor);
+				if (!quiet)
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllYourObjectsHalted), executor);
 			}
 			else
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllObjectsForPlayerHaltedFormat),
-					executor, targetObject.Name);
+				if (!quiet)
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllObjectsForPlayerHaltedFormat),
+						executor, targetObject.Name);
 				await NotifyService.NotifyLocalized(target, nameof(ErrorMessages.Notifications.AllYourObjectsHaltedByFormat),
 					executor, executorObject.Name);
 			}
@@ -278,10 +284,12 @@ public partial class Commands
 		if (owner.DBRef.Number != executorObject.DBRef.Number)
 		{
 			var dbref = $"#{targetObject.DBRef.Number}";
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltedOthersObjectFormat),
-				executor, owner.Name, targetObject.Name, dbref);
-			await NotifyService.NotifyLocalized(owner.DBRef, nameof(ErrorMessages.Notifications.HaltedObjectByFormat),
-				sender: executor, targetObject.Name, dbref, executorObject.Name);
+			if (!quiet)
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltedOthersObjectFormat),
+					executor, owner.Name, targetObject.Name, dbref);
+			if (!quiet || owner.DBRef.Number != halterOwner.Number)
+				await NotifyService.NotifyLocalized(owner.DBRef, nameof(ErrorMessages.Notifications.HaltedObjectByFormat),
+					sender: executor, targetObject.Name, dbref, executorObject.Name);
 		}
 
 		// src/cque.c:2277-2278: only a halt without replacement actions leaves the object HALTed.
@@ -319,16 +327,19 @@ public partial class Commands
 	/// <c>Halted: &lt;name&gt;(#&lt;dbref&gt;)</c> unless that owner is QUIET, then wipes every queue
 	/// entry the victim runs — and, for a player, every entry an object they own runs.
 	/// </summary>
-	private async ValueTask HaltQueuesAsync(AnySharpObject victim)
-		=> await HaltQueuesAsync(victim, (await victim.Object().Owner.WithCancellation(CancellationToken.None)).Object);
+	/// <param name="victim">The object whose queue is wiped.</param>
+	/// <param name="quietFor">The owner of a halter who asked for /quiet: the notice is not sent to them.</param>
+	private async ValueTask HaltQueuesAsync(AnySharpObject victim, DBRef? quietFor = null)
+		=> await HaltQueuesAsync(victim, (await victim.Object().Owner.WithCancellation(CancellationToken.None)).Object, quietFor);
 
 	/// <inheritdoc cref="HaltQueuesAsync(AnySharpObject)"/>
 	/// <param name="victim">The object whose queue is wiped.</param>
 	/// <param name="owner">Its owner, given by a caller that has just changed it (<c>chown_object</c>).</param>
-	private async ValueTask HaltQueuesAsync(AnySharpObject victim, SharpObject owner)
+	/// <param name="quietFor">The owner of a halter who asked for /quiet: the notice is not sent to them.</param>
+	private async ValueTask HaltQueuesAsync(AnySharpObject victim, SharpObject owner, DBRef? quietFor = null)
 	{
 		var victimObject = victim.Object();
-		if (!await owner.HasQuietFlagAsync())
+		if (owner.DBRef.Number != quietFor?.Number && !await owner.HasQuietFlagAsync())
 		{
 			await NotifyService.NotifyLocalized(owner.DBRef, nameof(ErrorMessages.Notifications.HaltedNoticeFormat),
 				sender: null, victimObject.Name, $"#{victimObject.DBRef.Number}");
@@ -346,6 +357,12 @@ public partial class Commands
 			await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
 		}
 	}
+
+	/// <summary>
+	/// Who RhostMUSH's /quiet keeps the report from: the halter's owner, the halter itself for a player.
+	/// </summary>
+	private static async ValueTask<DBRef> HalterOwnerAsync(AnySharpObject halter)
+		=> (await halter.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
 
 	/// <summary>
 	/// PennMUSH <c>do_allhalt</c> (<c>src/cque.c:2343-2358</c>), for <c>@halt/all</c> and <c>@allhalt</c>:
@@ -384,7 +401,8 @@ public partial class Commands
 	}
 
 	/// <summary>PennMUSH <c>do_haltpid</c> (<c>src/cque.c:2287-2337</c>).</summary>
-	private async ValueTask<Option<CallState>> HaltPidAsync(IMUSHCodeParser parser, AnySharpObject executor, string? pidStr)
+	private async ValueTask<Option<CallState>> HaltPidAsync(IMUSHCodeParser parser, AnySharpObject executor, string? pidStr,
+		bool quiet)
 	{
 		// is_strict_uinteger (src/cque.c:2293): an empty argument is not a pid either. Penn has no return
 		// value to give; the error returns stay SharpMUSH's own.
@@ -421,7 +439,8 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NotFound);
 		}
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltPidHaltedFormat), executor, pid);
+		if (!quiet)
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltPidHaltedFormat), executor, pid);
 		return CallState.Empty;
 	}
 
@@ -1053,7 +1072,9 @@ public partial class Commands
 		return new CallState(ErrorMessages.Returns.ErrorNotSupported);
 	}
 
-	[SharpCommand(Name = "@PS", Switches = ["ALL", "SUMMARY", "COUNT", "QUICK", "DEBUG", "HISTORY"], Behavior = CB.Default,
+	// /long, a TinyMUX switch name, lists every waiting entry, and each semaphore entry's whole command, where
+	// the plain listing shows ten of each and cuts a command at 40 characters.
+	[SharpCommand(Name = "@PS", Switches = ["ALL", "SUMMARY", "COUNT", "QUICK", "DEBUG", "HISTORY", "LONG"], Behavior = CB.Default,
 		MinArgs = 0, MaxArgs = 1, ParameterNames = ["player, pid, or history-limit"])]
 	public async ValueTask<Option<CallState>> ProcessStatus(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1209,6 +1230,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
+		var shown = switches.Contains("LONG") ? int.MaxValue : 10;
 		var targetName = target.Object().DBRef.ToString();
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsQueueForTargetFormat), executor, targetName);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueCount);
@@ -1219,18 +1241,18 @@ public partial class Commands
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EmptyLine), executor);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreTasksHeader), executor);
-			foreach (var task in semaphoreTasks.Take(10))
+			foreach (var task in semaphoreTasks.Take(shown))
 			{
 				var delay = task.RunDelay.HasValue ? $"+{task.RunDelay.Value.TotalSeconds:F1}s" : "ready";
 				var commandText = task.Command.ToPlainText();
-				var truncatedCommand = commandText.Length > 40
+				var truncatedCommand = commandText.Length > 40 && shown != int.MaxValue
 					? commandText[..40]
 					: commandText;
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreTaskEntryFormat), executor, task.Pid, task.SemaphoreSource, delay, truncatedCommand);
 			}
-			if (semaphoreTasks.Length > 10)
+			if (semaphoreTasks.Length > shown)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAndMoreFormat), executor, semaphoreTasks.Length - 10);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAndMoreFormat), executor, semaphoreTasks.Length - shown);
 			}
 		}
 
@@ -1238,13 +1260,13 @@ public partial class Commands
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EmptyLine), executor);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueHeader), executor);
-			foreach (var pid in delayTasks.Take(10))
+			foreach (var pid in delayTasks.Take(shown))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitTaskEntryFormat), executor, pid);
 			}
-			if (delayTasks.Length > 10)
+			if (delayTasks.Length > shown)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAndMoreFormat), executor, delayTasks.Length - 10);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAndMoreFormat), executor, delayTasks.Length - shown);
 			}
 		}
 		IReadOnlyList<SharpMUSH.Library.Models.SchedulerModels.QueueEntrySnapshot>? entries;

@@ -23,6 +23,8 @@ public partial class Commands
 		var ports = scope == EmitScope.Private && switches.Contains("PORT");
 		var contents = scope == EmitScope.Private && !ports && switches.Contains("CONTENTS");
 		if (contents) scope = EmitScope.Room;
+		// RhostMUSH's @pemit/zone <zone>=<message> is @zemit.
+		if (scope == EmitScope.Private && !ports && switches.Contains("ZONE")) scope = EmitScope.Zone;
 		if (scope == EmitScope.Immediate && switches.Contains("ROOM")) scope = EmitScope.Outermost;
 		var messageIndex = scope is EmitScope.Immediate or EmitScope.Outermost ? 0 : 1;
 		if (args.Count <= messageIndex)
@@ -118,7 +120,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> OmitEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> await RunEmitCommand(parser, _2, EmitScope.Omit, false);
 
-	[SharpCommand(Name = "@PEMIT", Switches = ["LIST", "PORT", "CONTENTS", "SPOOF", "SILENT", "NOISY", "NOEVAL", "OBJECT"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
+	[SharpCommand(Name = "@PEMIT", Switches = ["LIST", "PORT", "CONTENTS", "SPOOF", "SILENT", "NOISY", "NOEVAL", "OBJECT", "ZONE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 2, ParameterNames = ["target", "message"])]
 	public async ValueTask<Option<CallState>> PrivateEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> await RunEmitCommand(parser, _2, EmitScope.Private, false);

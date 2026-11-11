@@ -62,6 +62,8 @@ public class CompatibilityProfileStructureTests
 		["RhostMUSH functions little used"] = "RhostMUSH names SharpMUSH does not have; PennMUSH has none of them",
 		["RhostMUSH commands left out"] = "RhostMUSH names SharpMUSH does not have; PennMUSH has none of them",
 		["TinyMUX functions and commands left out"] = "TinyMUX names SharpMUSH does not have; PennMUSH has none of them",
+		["RhostMUSH switches left out"] = "RhostMUSH switches SharpMUSH does not have; PennMUSH has none of them",
+		["TinyMUX switches left out"] = "TinyMUX switches SharpMUSH does not have; PennMUSH has none of them",
 		["RhostMUSH printf() fields: `rhost_printf`"] = "a RhostMUSH option; off, printf() is SharpMUSH's own",
 		["RhostMUSH side-effect flag: `sidefx_flag`"] = "a RhostMUSH option; off, side-effect functions are PennMUSH's",
 		["Other servers' names: `dialect`"] = "a RhostMUSH option; empty, the default, reads SharpMUSH's names only",

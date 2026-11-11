@@ -1106,7 +1106,7 @@ public partial class Commands : ICommandRestrictionApplier
 
 	[SharpCommand(Name = "@FUNCTION",
 		Switches = ["ALIAS", "ARGS", "BUILTIN", "CLONE", "DELETE", "ENABLE", "DISABLE", "PRESERVE", "RESTORE", "RESTRICT", "LOCAL",
-			"LIST", "PRIVILEGED"],
+			"LIST", "PRIVILEGED", "MIN", "MAX"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 6, ParameterNames = ["name", "object/attribute"])]
 	public async ValueTask<Option<CallState>> Function(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1150,6 +1150,8 @@ public partial class Commands : ICommandRestrictionApplier
 			"ENABLE" => await SetFunctionEnabledAsync(executor, userFunctionService, functionName, true),
 			"RESTRICT" => await RestrictFunctionAsync(executor, userFunctionService, functionName, rightSide, switches.Contains("BUILTIN")),
 			"ARGS" => await NameFunctionArgumentsAsync(executor, userFunctionService, functionName, rightSide),
+			"MIN" or "MAX" => await SetFunctionArgumentCountAsync(executor, userFunctionService, functionName, rightSide,
+				switches.Contains("MIN")),
 			_ => await DefineOrDescribeFunctionAsync(parser, executor, userFunctionService, functionName)
 		};
 	}
@@ -1159,7 +1161,7 @@ public partial class Commands : ICommandRestrictionApplier
 	/// RESTRICT comes before BUILTIN: <c>/restrict/builtin</c> restricts the built-in.
 	/// </summary>
 	private static readonly string[] FunctionActionSwitches =
-		["ALIAS", "CLONE", "RESTRICT", "BUILTIN", "PRESERVE", "RESTORE", "DELETE", "DISABLE", "ENABLE", "ARGS"];
+		["ALIAS", "CLONE", "RESTRICT", "BUILTIN", "PRESERVE", "RESTORE", "DELETE", "DISABLE", "ENABLE", "ARGS", "MIN", "MAX"];
 
 	/// <summary>
 	/// The action switch <c>@function</c> runs, or null to define or describe the function. A /preserve
@@ -1481,6 +1483,46 @@ public partial class Commands : ICommandRestrictionApplier
 				string.Join(" ", argumentNames));
 		}
 
+		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// RhostMUSH's @function/min and /max &lt;function&gt;=&lt;count&gt;: the fewest or most arguments an existing
+	/// function takes. A negative count is RhostMUSH's default: none at the least, as many as the engine carries
+	/// at the most.
+	/// </summary>
+	private async ValueTask<Option<CallState>> SetFunctionArgumentCountAsync(AnySharpObject executor,
+		IUserDefinedFunctionService userFunctionService, string functionName, string? count, bool minimum)
+	{
+		if (await RejectUnlessGlobalFuncs(executor) is { } denied)
+		{
+			return denied;
+		}
+
+		if (!int.TryParse(count?.Trim(), out var parsed))
+		{
+			await NotifyService.Notify(executor, ErrorMessages.Returns.Integer, executor);
+			return new CallState(ErrorMessages.Returns.Integer);
+		}
+
+		// The entry as stored, disabled or not; an alias is followed to the function it names, which is what changes.
+		var function = userFunctionService.Get(functionName) is { AliasOf: { } target }
+			? userFunctionService.Get(target)
+			: userFunctionService.Get(functionName);
+		if (function is null)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, functionName);
+			return new CallState(ErrorMessages.Returns.FunctionNotFound);
+		}
+
+		var bound = parsed < 0 ? (minimum ? 0 : MaximumStackArguments) : Math.Min(parsed, MaximumStackArguments);
+		var changed = minimum
+			? function with { MinArgs = bound, MaxArgs = Math.Max(bound, function.MaxArgs) }
+			: function with { MaxArgs = bound, MinArgs = Math.Min(bound, function.MinArgs) };
+		userFunctionService.Define(changed);
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionArgumentCountFormat), executor,
+			changed.Name, changed.MinArgs, changed.MaxArgs);
 		return CallState.Empty;
 	}
 

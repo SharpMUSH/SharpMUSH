@@ -9,7 +9,8 @@ namespace SharpMUSH.Tests.Commands;
 /// TinyMUX's and RhostMUSH's switches SharpMUSH has under the same name: <c>@sweep/commands</c>,
 /// <c>/listeners</c> and <c>/players</c>, <c>@stats/all</c> and <c>/me</c>, <c>@wall/pose</c>, <c>@trigger/notify</c>,
 /// <c>@clone/parent</c> and <c>/inventory</c>, <c>@wipe/regexp</c> and <c>@decompile/regexp</c>, <c>@verb/no_name</c>
-/// and <c>@cpattr/clear</c>. <c>page/blind</c> is in <see cref="PageCommandTests"/>.
+/// and <c>@cpattr/clear</c>, <c>@ps/long</c>, <c>@halt/quiet</c>, <c>@quota/remaining</c>, <c>@function/min</c> and
+/// <c>/max</c>, and <c>@pemit/zone</c>. <c>page/blind</c> is in <see cref="PageCommandTests"/>.
 /// </summary>
 public class DialectSwitchBehaviourTests : ServerTestBase
 {
@@ -255,5 +256,150 @@ public class DialectSwitchBehaviourTests : ServerTestBase
 
 		await Assert.That(await Eval($"[lattr({source})] [get({target}/MOVED)] [get({target}/KEPT)]"))
 			.IsEqualTo("KEPT carried stays");
+	}
+
+	[Test]
+	public async Task PsLongShowsTheWholeCommand()
+	{
+		var thing = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("PsLong")}"));
+		var token = TestIsolationHelpers.GenerateUniqueName("pslongtail");
+		// A semaphore entry, whose command @ps shows.
+		await Cmd($"&DO {thing}=@wait me=think {new string('x', 50)}{token}");
+		await Cmd($"@trigger {thing}/DO");
+		await WebAppFactoryArg.QueueBarrierAsync();
+		try
+		{
+			var plain = await HeardWhile(WebAppFactoryArg.ExecutorDBRef, () => Cmd($"@ps {thing}"));
+			var whole = await HeardWhile(WebAppFactoryArg.ExecutorDBRef, () => Cmd($"@ps/long {thing}"));
+
+			await Assert.That(plain.Any(line => line.Contains(token, StringComparison.Ordinal))).IsFalse();
+			await Assert.That(whole.Any(line => line.Contains(token, StringComparison.Ordinal))).IsTrue();
+		}
+		finally
+		{
+			await Cmd($"@halt {thing}");
+		}
+	}
+
+	[Test]
+	public async Task HaltQuietLeavesOutTheConfirmation()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("HaltQuiet");
+		var thing = DBRef.Parse(await Cmd($"@create {name}"));
+
+		var loud = await HeardWhile(WebAppFactoryArg.ExecutorDBRef, () => Cmd($"@halt {thing}"));
+		var quiet = await HeardWhile(WebAppFactoryArg.ExecutorDBRef, () => Cmd($"@halt/quiet {thing}"));
+
+		await Assert.That(loud.Any(line => line.Contains(name, StringComparison.Ordinal))).IsTrue();
+		await Assert.That(quiet.Any(line => line.Contains(name, StringComparison.Ordinal))).IsFalse();
+		await Assert.That(await Eval($"hasflag({thing},HALT)")).IsEqualTo("1");
+	}
+
+	/// <summary>Run by an object, as softcode runs it, /quiet keeps the report from the object's owner.</summary>
+	[Test]
+	public async Task HaltQuietFromAnObjectTellsItsOwnerNothing()
+	{
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HaltQuietOwner");
+		var halter = TestIsolationHelpers.GenerateUniqueName("HaltQuietHalter");
+		var victim = TestIsolationHelpers.GenerateUniqueName("HaltQuietVictim");
+		try
+		{
+			await CmdAs(actor.DbRef, actor.Handle, $"@create {halter}");
+			await CmdAs(actor.DbRef, actor.Handle, $"@create {victim}");
+			await CmdAs(actor.DbRef, actor.Handle, $"&DO {halter}=@halt/quiet {victim}");
+
+			var heard = await HeardWhile(actor.DbRef, async () =>
+			{
+				await CmdAs(actor.DbRef, actor.Handle, $"@trigger {halter}/DO");
+				await WebAppFactoryArg.QueueBarrierAsync();
+			});
+
+			await Assert.That(heard.Any(line => line.Contains(victim, StringComparison.Ordinal))).IsFalse();
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(actor.Handle);
+		}
+	}
+
+	[Test]
+	public async Task QuotaRemainingCountsWhatThePlayerOwns()
+	{
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "QuotaRemaining");
+		try
+		{
+			await CmdAs(actor.DbRef, actor.Handle, $"@create {TestIsolationHelpers.GenerateUniqueName("QuotaRemainingThing")}");
+
+			await Cmd($"@quota/remaining {actor.DbRef}=5");
+
+			var player = (await Mediator.Send(new GetObjectNodeQuery(actor.DbRef))).Expect<AnySharpObject>().Expect<SharpPlayer>();
+			var owned = await Mediator.Send(new GetOwnedObjectCountQuery(player));
+			await Assert.That(player.Quota).IsEqualTo(owned + 5);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(actor.Handle);
+		}
+	}
+
+	[Test]
+	public async Task FunctionMinAndMaxBoundTheArguments()
+	{
+		var function = TestIsolationHelpers.GenerateUniqueName("bounded").ToLowerInvariant();
+		var thing = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("FunctionBounds")}"));
+		await Cmd($"&FN {thing}=%0%1%2");
+		await Cmd($"@function {function}={thing},FN");
+		try
+		{
+			await Cmd($"@function/min {function}=2");
+			await Cmd($"@function/max {function}=3");
+
+			await Assert.That(await Eval($"{function}(a)"))
+				.IsEqualTo($"#-1 FUNCTION ({function.ToUpperInvariant()}) EXPECTS 2 OR 3 ARGUMENTS BUT GOT 1");
+			await Assert.That(await Eval($"{function}(a,b)")).IsEqualTo("ab");
+			await Assert.That(await Eval($"{function}(a,b,c,d)")).Contains("EXPECTS");
+
+			// RhostMUSH's -1 is its default: no fewest.
+			await Cmd($"@function/min {function}=-1");
+			await Assert.That(await Eval($"{function}(a)")).IsEqualTo("a");
+
+			// Through an alias, the function it names changes, and the alias stays an alias.
+			await Cmd($"@function/alias {function}x={function}");
+			await Cmd($"@function/max {function}x=1");
+			await Assert.That(await Eval($"{function}(a,b)"))
+				.IsEqualTo($"#-1 FUNCTION ({function.ToUpperInvariant()}) EXPECTS 0 OR 1 ARGUMENTS BUT GOT 2");
+			await Cmd($"@function/max {function}=2");
+			await Assert.That(await Eval($"{function}x(a,b)")).IsEqualTo("ab");
+		}
+		finally
+		{
+			await Cmd($"@function/delete {function}x");
+			await Cmd($"@function/delete {function}");
+		}
+	}
+
+	[Test]
+	public async Task PemitZoneReachesEveryRoomInTheZone()
+	{
+		var god = (await Mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef)))
+			.Expect<AnySharpObject>().Expect<SharpPlayer>();
+		var room = await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("PemitZoneRoom"), god));
+		var zone = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("PemitZoneMaster")}"));
+		await Cmd($"@chzone {room}={zone}");
+		var observer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PemitZoneEar", room);
+		var token = TestIsolationHelpers.GenerateUniqueName("zonepemit");
+		try
+		{
+			var heard = await HeardWhile(observer.DbRef, () => Cmd($"@pemit/zone {zone}={token}"));
+
+			await Assert.That(heard.Any(line => line.Contains(token, StringComparison.Ordinal))).IsTrue();
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(observer.Handle);
+		}
 	}
 }

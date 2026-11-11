@@ -33,6 +33,7 @@ The basic form of this command sends `<message>` to `<object>` directly. It is v
 
 The @pemit command can take the following additional switches:
 - /contents -- equivalent to @remit.
+- /zone -- equivalent to @zemit: `<object>` is a zone, and every room in it hears the message.
 - /object -- accepted for TinyMUX code. It changes nothing: the message reaches only `<object>` already.
 - /silent -- does not tell the @pemit'ing object a confirmation message.
 - /noisy -- tells the @pemit'ing object a confirmation message.
