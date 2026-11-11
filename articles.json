@@ -1013,6 +1013,26 @@
         ]
       },
       {
+        "id": "chanfind",
+        "lookup": "chanfind()",
+        "heading": "chanfind()",
+        "aliases": []
+      },
+      {
+        "id": "chaninfo",
+        "lookup": "chaninfo()",
+        "heading": "chaninfo()",
+        "aliases": []
+      },
+      {
+        "id": "chanuser",
+        "lookup": "chanuser()",
+        "heading": "chanuser()",
+        "aliases": [
+          "chanusers()"
+        ]
+      },
+      {
         "id": "examples",
         "lookup": "channel functions examples",
         "heading": "Examples",
@@ -5897,6 +5917,41 @@
     "file": "mushcode.md"
   },
   {
+    "id": "mux-mail-functions",
+    "lookup": "tinymux mail functions",
+    "title": "TinyMUX Mail Functions",
+    "aliases": [],
+    "sections": [
+      {
+        "id": "mailcount",
+        "lookup": "mailcount()",
+        "heading": "mailcount()",
+        "aliases": [
+          "mailsize()"
+        ]
+      },
+      {
+        "id": "mailflags",
+        "lookup": "mailflags()",
+        "heading": "mailflags()",
+        "aliases": []
+      },
+      {
+        "id": "mailinfo",
+        "lookup": "mailinfo()",
+        "heading": "mailinfo()",
+        "aliases": []
+      },
+      {
+        "id": "mailreview",
+        "lookup": "mailreview()",
+        "heading": "mailreview()",
+        "aliases": []
+      }
+    ],
+    "file": "mux-mail-functions.md"
+  },
+  {
     "id": "named-arguments",
     "lookup": "named arguments",
     "title": "Named Arguments",
@@ -7476,6 +7531,43 @@
       }
     ],
     "file": "retry-command.md"
+  },
+  {
+    "id": "rhost-mail-functions",
+    "lookup": "rhostmush mail functions",
+    "title": "RhostMUSH Mail Functions",
+    "aliases": [],
+    "sections": [
+      {
+        "id": "mailquick",
+        "lookup": "mailquick()",
+        "heading": "mailquick()",
+        "aliases": []
+      },
+      {
+        "id": "mailquota",
+        "lookup": "mailquota()",
+        "heading": "mailquota()",
+        "aliases": [
+          "msizetot()"
+        ]
+      },
+      {
+        "id": "mailread",
+        "lookup": "mailread()",
+        "heading": "mailread()",
+        "aliases": []
+      },
+      {
+        "id": "foldercurrent",
+        "lookup": "foldercurrent()",
+        "heading": "foldercurrent()",
+        "aliases": [
+          "folderlist()"
+        ]
+      }
+    ],
+    "file": "rhost-mail-functions.md"
   },
   {
     "id": "rhostmush-arguments",
