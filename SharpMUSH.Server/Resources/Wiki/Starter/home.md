@@ -1,4 +1,6 @@
 ::: center
+![Logo](/api/server-info/logo){width=20%}
+
 # Welcome
 
 > **Fill in:** One or two sentences a stranger could read on a MUSH listing site:

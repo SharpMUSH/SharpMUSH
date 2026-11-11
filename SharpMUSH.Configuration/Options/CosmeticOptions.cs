@@ -267,6 +267,9 @@ public static class PortalPicture
 	/// <summary>The SharpMUSH logo, which the portal serves itself.</summary>
 	public const string DefaultLogo = "/assets/Logo.svg";
 
+	/// <summary>The game's logo: <c>portal_logo</c>, else the SharpMUSH logo.</summary>
+	public static string Logo(CosmeticOptions cosmetic) => NonEmpty(cosmetic.PortalLogo) ?? DefaultLogo;
+
 	/// <summary>The tab icon for the configured pictures: the favicon, else the logo, else the SharpMUSH logo.</summary>
 	public static string Favicon(CosmeticOptions cosmetic) =>
 		NonEmpty(cosmetic.PortalFavicon) ?? NonEmpty(cosmetic.PortalLogo) ?? DefaultLogo;
