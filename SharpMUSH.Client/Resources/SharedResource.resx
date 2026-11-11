@@ -1357,9 +1357,6 @@
   <data name="AuthColumnName" xml:space="preserve">
     <value>Name</value>
   </data>
-  <data name="AuthColumnDbref" xml:space="preserve">
-    <value>Dbref</value>
-  </data>
   <data name="AuthColumnActions" xml:space="preserve">
     <value>Actions</value>
   </data>
@@ -12749,5 +12746,86 @@
   </data>
   <data name="AuthRemovePasswordConfirm" xml:space="preserve">
     <value>You will sign in with a passkey or a linked service instead. You can set a password again later.</value>
+  </data>
+  <data name="AdmCfgShowKeys" xml:space="preserve">
+    <value>Show keys</value>
+  </data>
+  <data name="LayCfgFormHelp" xml:space="preserve">
+    <value>Settings for {0}. Leave a field empty to use its default.</value>
+  </data>
+  <data name="LayCfgEditJson" xml:space="preserve">
+    <value>Edit as JSON</value>
+  </data>
+  <data name="LayCfgEditForm" xml:space="preserve">
+    <value>Edit as form</value>
+  </data>
+  <data name="LayCfgUnknownKeys" xml:space="preserve">
+    <value>Kept as they are, not shown in the form: {0}</value>
+  </data>
+  <data name="LayCfgItemTitle" xml:space="preserve">
+    <value>Item {0}</value>
+  </data>
+  <data name="LayCfgMoveUp" xml:space="preserve">
+    <value>Move item {0} up</value>
+  </data>
+  <data name="LayCfgMoveDown" xml:space="preserve">
+    <value>Move item {0} down</value>
+  </data>
+  <data name="LayCfgRemoveItem" xml:space="preserve">
+    <value>Remove item {0}</value>
+  </data>
+  <data name="LayCfgAddItem" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="LayCfgOnePerLine" xml:space="preserve">
+    <value>One per line.</value>
+  </data>
+  <data name="LayCfgObjectInJson" xml:space="preserve">
+    <value>Edit this one in the JSON view.</value>
+  </data>
+  <data name="LayCfgWikiBodySlugLabel" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="LayCfgWikiBodyNamespaceLabel" xml:space="preserve">
+    <value>Namespace</value>
+  </data>
+  <data name="LayCfgWikiBodyLocaleLabel" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="LayCfgWikiBodyCharacterLabel" xml:space="preserve">
+    <value>Character</value>
+  </data>
+  <data name="LayCfgCharacterTargetLabel" xml:space="preserve">
+    <value>Character</value>
+  </data>
+  <data name="LayCfgWelcomeMarkdownLabel" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="LayCfgWelcomeShowToGuestsLabel" xml:space="preserve">
+    <value>Show to visitors who are not signed in</value>
+  </data>
+  <data name="LayCfgSpacerHeightLabel" xml:space="preserve">
+    <value>Height</value>
+  </data>
+  <data name="LayCfgQuickLinksLabel" xml:space="preserve">
+    <value>Links</value>
+  </data>
+  <data name="LayCfgQuickLinkLabelLabel" xml:space="preserve">
+    <value>Label</value>
+  </data>
+  <data name="LayCfgQuickLinkUrlLabel" xml:space="preserve">
+    <value>Link</value>
+  </data>
+  <data name="LayCfgQuickLinkIconLabel" xml:space="preserve">
+    <value>Icon</value>
+  </data>
+  <data name="LayCfgQuickLinkNewTabLabel" xml:space="preserve">
+    <value>Open in a new tab</value>
+  </data>
+  <data name="LayCfgSchemaUrlLabel" xml:space="preserve">
+    <value>Schema route</value>
+  </data>
+  <data name="LayCfgSchemaDataUrlLabel" xml:space="preserve">
+    <value>Data route</value>
   </data>
 </root>

@@ -37,6 +37,10 @@ public class WidgetConfigDialogTests : BunitContext
 	/// </summary>
 	private async Task<IRenderedComponent<MudDialogProvider>> RenderDialogAsync(
 		string widgetKey, string? initialJson = null)
+		=> (await ShowDialogAsync(widgetKey, initialJson)).Provider;
+
+	private async Task<(IRenderedComponent<MudDialogProvider> Provider, IDialogReference Dialog)> ShowDialogAsync(
+		string widgetKey, string? initialJson = null)
 	{
 		var provider = Render<MudDialogProvider>();
 		var service = Services.GetRequiredService<IDialogService>();
@@ -48,9 +52,25 @@ public class WidgetConfigDialogTests : BunitContext
 			{ x => x.InitialJson, initialJson }
 		};
 
-		await provider.InvokeAsync(() => service.ShowAsync<WidgetConfigDialog>(widgetKey, parameters));
-		return provider;
+		var dialog = await provider.InvokeAsync(() => service.ShowAsync<WidgetConfigDialog>(widgetKey, parameters));
+		return (provider, dialog);
 	}
+
+	/// <summary>Opens the JSON view from the settings form.</summary>
+	private static async Task ShowJsonAsync(IRenderedComponent<MudDialogProvider> provider)
+		=> await provider.Find(".wcd-to-json").ClickAsync();
+
+	/// <summary>Clicks Apply and returns what the dialog closed with: the config JSON, or null for none.</summary>
+	private static async Task<string?> ApplyAsync(IRenderedComponent<MudDialogProvider> provider, IDialogReference dialog)
+	{
+		await provider.FindAll("button").First(b => b.TextContent.Contains("LayApply")).ClickAsync();
+		var result = await dialog.Result;
+		await Assert.That(result!.Canceled).IsFalse();
+		return result.Data as string;
+	}
+
+	private static System.Text.Json.Nodes.JsonObject Parsed(string? json)
+		=> (System.Text.Json.Nodes.JsonObject)System.Text.Json.Nodes.JsonNode.Parse(json!)!;
 
 	/// <summary>Clicks Apply and returns the dialog markup, which carries any validation error.</summary>
 	private static async Task<string> SaveAndRead(IRenderedComponent<MudDialogProvider> provider)
@@ -90,9 +110,11 @@ public class WidgetConfigDialogTests : BunitContext
 	}
 
 	[TUnit.Core.Test]
-	public async Task ConfigurableWidget_ListsItsKeysAndDefaults()
+	public async Task JsonView_ListsTheWidgetsKeysAndDefaults()
 	{
-		var markup = (await RenderDialogAsync("WikiBody")).Markup;
+		var provider = await RenderDialogAsync("WikiBody");
+		await ShowJsonAsync(provider);
+		var markup = provider.Markup;
 
 		await Assert.That(markup).Contains("slug");
 		await Assert.That(markup).Contains("namespace");
@@ -104,9 +126,11 @@ public class WidgetConfigDialogTests : BunitContext
 	}
 
 	[TUnit.Core.Test]
-	public async Task NestedListKeys_AreListedUnderTheirParent()
+	public async Task JsonView_ListsNestedListKeysUnderTheirParent()
 	{
-		var markup = (await RenderDialogAsync("QuickLinks")).Markup;
+		var provider = await RenderDialogAsync("QuickLinks");
+		await ShowJsonAsync(provider);
+		var markup = provider.Markup;
 
 		await Assert.That(markup).Contains("links");
 		await Assert.That(markup).Contains("newTab");
@@ -126,6 +150,7 @@ public class WidgetConfigDialogTests : BunitContext
 	public async Task InsertTemplate_SeedsTheEditorWithEveryKey()
 	{
 		var cut = await RenderDialogAsync("WikiBody");
+		await ShowJsonAsync(cut);
 
 		await cut.FindAll("button").First(b => b.TextContent.Contains("LayCfgInsertTemplate")).ClickAsync();
 
@@ -141,8 +166,122 @@ public class WidgetConfigDialogTests : BunitContext
 	{
 		// Seeding over an admin's existing config would destroy it.
 		var cut = await RenderDialogAsync("WikiBody", "{\"slug\":\"house-rules\"}");
+		await ShowJsonAsync(cut);
 
 		var button = cut.FindAll("button").First(b => b.TextContent.Contains("LayCfgInsertTemplate"));
 		await Assert.That(button.HasAttribute("disabled")).IsTrue();
+	}
+
+	[TUnit.Core.Test]
+	public async Task Form_IsWhatOpens_WithAFieldPerKey()
+	{
+		var provider = await RenderDialogAsync("WikiBody", "{\"slug\":\"house-rules\"}");
+
+		await Assert.That(provider.FindAll(".wcf-field").Select(f => f.GetAttribute("data-config-key")))
+			.IsEquivalentTo(["slug", "namespace", "locale", "character"]);
+		await Assert.That(provider.Find("[data-config-key='slug'] input").GetAttribute("value")).IsEqualTo("house-rules");
+		// The documented default is the placeholder, as text rather than its JSON literal.
+		await Assert.That(provider.Find("[data-config-key='namespace'] input").GetAttribute("placeholder")).IsEqualTo("main");
+		await Assert.That(provider.Markup).Contains("LayCfgWikiBodySlugLabel");
+		await Assert.That(provider.Markup).Contains("LayCfgWikiBodySlug");
+		await Assert.That(provider.FindAll("textarea").Count).IsEqualTo(0).Because("no raw JSON until asked for");
+	}
+
+	[TUnit.Core.Test]
+	public async Task Form_SavesWhatWasTyped()
+	{
+		var (provider, dialog) = await ShowDialogAsync("WikiBody");
+
+		await provider.Find("[data-config-key='slug'] input").InputAsync("house-rules");
+		await provider.Find("[data-config-key='namespace'] input").InputAsync("help");
+
+		var saved = Parsed(await ApplyAsync(provider, dialog));
+		await Assert.That(saved.Select(p => p.Key)).IsEquivalentTo(["slug", "namespace"]);
+		await Assert.That((string?)saved["slug"]).IsEqualTo("house-rules");
+		await Assert.That((string?)saved["namespace"]).IsEqualTo("help");
+	}
+
+	[TUnit.Core.Test]
+	public async Task Form_KeepsKeysItDoesNotShow_AndSaysSo()
+	{
+		var (provider, dialog) = await ShowDialogAsync("WikiBody", "{\"Slug\":\"old\",\"theme\":{\"dark\":true}}");
+		await Assert.That(provider.Find(".wcd-unknown").TextContent).Contains("theme");
+
+		await provider.Find("[data-config-key='slug'] input").InputAsync("new");
+
+		var saved = Parsed(await ApplyAsync(provider, dialog));
+		// Written back under the schema's name, in its old place, beside the key the form left alone.
+		await Assert.That(saved.Select(p => p.Key)).IsEquivalentTo(["slug", "theme"]);
+		await Assert.That((string?)saved["slug"]).IsEqualTo("new");
+		await Assert.That((bool?)saved["theme"]!["dark"]).IsTrue();
+	}
+
+	[TUnit.Core.Test]
+	public async Task Form_ClearingEveryField_ClearsTheConfig()
+	{
+		var (provider, dialog) = await ShowDialogAsync("WikiBody", "{\"slug\":\"house-rules\"}");
+
+		await provider.Find("[data-config-key='slug'] input").InputAsync("");
+
+		await Assert.That(await ApplyAsync(provider, dialog)).IsNull();
+	}
+
+	[TUnit.Core.Test]
+	public async Task Form_EditsAListOfLinks()
+	{
+		var (provider, dialog) = await ShowDialogAsync("QuickLinks");
+
+		await provider.Find(".wcf-add").ClickAsync();
+		await provider.Find(".wcf-item [data-config-key='label'] input").InputAsync("Rules");
+		await provider.Find(".wcf-item [data-config-key='url'] input").InputAsync("/wiki/rules");
+		await provider.Find(".wcf-add").ClickAsync();
+		await provider.FindAll(".wcf-item")[1].QuerySelector("[data-config-key='label'] input")!.InputAsync("News");
+		await provider.FindAll(".wcf-item")[1].QuerySelector("[data-config-key='url'] input")!.InputAsync("https://example.com/news");
+		await provider.FindAll(".wcf-item")[1].QuerySelector("[data-config-key='newTab'] input")!.ChangeAsync(true);
+		// The second link first.
+		await provider.Find("button[aria-label='LayCfgMoveUp(2)']").ClickAsync();
+
+		var links = Parsed(await ApplyAsync(provider, dialog))["links"]!.AsArray();
+		await Assert.That(links.Count).IsEqualTo(2);
+		await Assert.That((string?)links[0]!["label"]).IsEqualTo("News");
+		await Assert.That((bool?)links[0]!["newTab"]).IsTrue();
+		await Assert.That((string?)links[1]!["url"]).IsEqualTo("/wiki/rules");
+	}
+
+	[TUnit.Core.Test]
+	public async Task Form_RemovingTheLastLink_DropsTheList()
+	{
+		var (provider, dialog) = await ShowDialogAsync("QuickLinks", "{\"links\":[{\"label\":\"Rules\",\"url\":\"/wiki/rules\"}]}");
+
+		await provider.Find("button[aria-label='LayCfgRemoveItem(1)']").ClickAsync();
+
+		await Assert.That(provider.FindAll(".wcf-item").Count).IsEqualTo(0);
+		await Assert.That(await ApplyAsync(provider, dialog)).IsNull();
+	}
+
+	[TUnit.Core.Test]
+	public async Task JsonView_AndBack_CarriesTheEdits()
+	{
+		var (provider, dialog) = await ShowDialogAsync("WikiBody", "{\"slug\":\"house-rules\"}");
+		await ShowJsonAsync(provider);
+
+		await provider.Find("textarea").ChangeAsync("{\"slug\":\"faq\",\"locale\":\"de\"}");
+		await provider.Find(".wcd-to-form").ClickAsync();
+
+		await Assert.That(provider.Find("[data-config-key='locale'] input").GetAttribute("value")).IsEqualTo("de");
+		await Assert.That((string?)Parsed(await ApplyAsync(provider, dialog))["slug"]).IsEqualTo("faq");
+	}
+
+	[TUnit.Core.Test]
+	public async Task JsonView_KeepsBrokenJson_InsteadOfOpeningTheForm()
+	{
+		var provider = await RenderDialogAsync("WikiBody");
+		await ShowJsonAsync(provider);
+
+		await provider.Find("textarea").ChangeAsync("{not json");
+		await provider.Find(".wcd-to-form").ClickAsync();
+
+		await Assert.That(provider.FindAll(".wcf").Count).IsEqualTo(0);
+		await Assert.That(provider.Markup).Contains("LayInvalidJson");
 	}
 }

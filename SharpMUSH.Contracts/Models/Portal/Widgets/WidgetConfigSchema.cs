@@ -17,7 +17,14 @@ public sealed record WidgetConfigField(
 	string TypeLabel,
 	string? Default,
 	string DescriptionKey,
-	IReadOnlyList<WidgetConfigField> Children);
+	IReadOnlyList<WidgetConfigField> Children)
+{
+	/// <summary><c>SharedResource</c> key for the field's label, from <see cref="WidgetConfigKeyAttribute.LabelKey"/>.</summary>
+	public string? LabelKey { get; init; }
+
+	/// <summary>Whether a string key holds several lines, from <see cref="WidgetConfigKeyAttribute.Multiline"/>.</summary>
+	public bool Multiline { get; init; }
+}
 
 /// <summary>
 /// Turns a widget's <see cref="IPortalWidget.ConfigType"/> into the reference table the layout
@@ -74,7 +81,11 @@ public static class WidgetConfigSchema
 			TypeLabel(property.PropertyType),
 			attribute.Default ?? ClrDefault(property.Name, defaults),
 			attribute.DescriptionKey,
-			elementType is null ? [] : Describe(elementType, depth + 1));
+			elementType is null ? [] : Describe(elementType, depth + 1))
+		{
+			LabelKey = attribute.LabelKey,
+			Multiline = attribute.Multiline
+		};
 	}
 
 	/// <summary>Parameter positions and default values of the primary constructor.</summary>

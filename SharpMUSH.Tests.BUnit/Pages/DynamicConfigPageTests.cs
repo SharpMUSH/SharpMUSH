@@ -92,10 +92,38 @@ public class DynamicConfigPageTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task OptionKeys_StayHiddenUntilAskedFor_AndTheChoiceIsRemembered()
+	{
+		var cut = RenderChat();
+		await Assert.That(cut.FindAll(".cfg-row-key").Count).IsEqualTo(0)
+			.Because("an option's key is for mush.cnf and @config, not for reading the page");
+
+		await cut.Find(".cfg-show-keys").ClickAsync();
+
+		await Assert.That(cut.Find(".cfg-row[data-config-option='Chat.MaxChannels'] .cfg-row-key").TextContent).IsEqualTo("Chat.MaxChannels");
+		await Assert.That(cut.Find(".cfg-show-keys").GetAttribute("aria-pressed")).IsEqualTo("true");
+		var stored = JSInterop.Invocations["localStorage.setItem"].Last().Arguments;
+		await Assert.That(stored[0]).IsEqualTo("sharpmush.config.showkeys");
+		await Assert.That(stored[1]).IsEqualTo("1");
+
+		await cut.Find(".cfg-show-keys").ClickAsync();
+		await Assert.That(cut.FindAll(".cfg-row-key").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task OptionKeys_ShowFromTheStart_WhenTheViewerChoseThemBefore()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "sharpmush.config.showkeys").SetResult("1");
+		var cut = RenderChat();
+
+		await Assert.That(cut.FindAll(".cfg-row-key").Count).IsEqualTo(cut.FindAll(".cfg-row").Count);
+	}
+
+	[Test]
 	public async Task OptionNavigationPreservesDraftAndIdentifiesRenderedControl()
 	{
 		var cut = RenderChat();
-		await cut.FindAll(".cfg-row").First(row => row.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit").QuerySelector("button[role=switch]")!.ClickAsync();
+		await cut.Find(".cfg-row[data-config-option='Chat.NoisyCEmit']").QuerySelector("button[role=switch]")!.ClickAsync();
 		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/admin/config/chat#config-option-Chat.NoisyCEmit");
 		cut.Render(parameters => parameters.Add(page => page.Category, "chat"));
 		await Assert.That(cut.FindAll(".cfg-unsaved").Count).IsEqualTo(1);
@@ -117,7 +145,7 @@ public class DynamicConfigPageTests : TrackingBunitContext
 	public async Task RowShowsNameKeyAndHelp()
 	{
 		var cut = RenderChat();
-		var row = cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.MaxChannels");
+		var row = cut.Find(".cfg-row[data-config-option='Chat.MaxChannels']");
 		await Assert.That(row.QuerySelector(".cfg-row-name")!.TextContent).Contains("Max Channels");
 		await Assert.That(row.QuerySelector(".cfg-row-help")).IsNotNull();
 	}
@@ -133,7 +161,7 @@ public class DynamicConfigPageTests : TrackingBunitContext
 		var cut = Render<DynamicConfig>(p => p.Add(x => x.Category, "net"));
 		cut.WaitForAssertion(() => cut.Find(".cfg-row"), TimeSpan.FromSeconds(5));
 		AngleSharp.Dom.IElement Row(string key) =>
-			cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == key);
+			cut.Find($".cfg-row[data-config-option='{key}']");
 
 		var portal = Row("Net.PortalPort");
 		await Assert.That(portal.QuerySelector(".cfg-row-unused")!.TextContent).IsEqualTo("Not used");
@@ -157,10 +185,10 @@ public class DynamicConfigPageTests : TrackingBunitContext
 	public async Task SingleCharPattern_RendersTheNarrowInput_AndNumericShowsItsRange()
 	{
 		var cut = RenderChat();
-		var alias = cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.ChatTokenAlias");
+		var alias = cut.Find(".cfg-row[data-config-option='Chat.ChatTokenAlias']");
 		await Assert.That(alias.QuerySelector("input.cfg-text--char")).IsNotNull()
 			.Because("the chat token is one character; README §6.4 keys the narrow input on the ^.$ pattern");
-		var max = cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.MaxChannels");
+		var max = cut.Find(".cfg-row[data-config-option='Chat.MaxChannels']");
 		await Assert.That(max.QuerySelector("input.cfg-num")).IsNotNull();
 		await Assert.That(max.QuerySelector(".cfg-range")!.TextContent).Contains("–");
 	}
@@ -169,14 +197,14 @@ public class DynamicConfigPageTests : TrackingBunitContext
 	public async Task Switch_IsARoleSwitch_AndTogglingMarksTheRowChanged_AndShowsTheUnsavedBar()
 	{
 		var cut = RenderChat();
-		var row = cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit");
+		var row = cut.Find(".cfg-row[data-config-option='Chat.NoisyCEmit']");
 		var toggle = row.QuerySelector("button[role=switch]")!;
 		var before = toggle.GetAttribute("aria-checked");
 		await Assert.That(cut.FindAll(".cfg-unsaved").Count).IsEqualTo(0);
 
 		await toggle.ClickAsync();
 
-		row = cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit");
+		row = cut.Find(".cfg-row[data-config-option='Chat.NoisyCEmit']");
 		await Assert.That(row.QuerySelector("button[role=switch]")!.GetAttribute("aria-checked")).IsNotEqualTo(before);
 		await Assert.That(row.QuerySelector(".cfg-row-changed")).IsNotNull();
 		await Assert.That(cut.Find(".cfg-unsaved .cfg-count").TextContent).Contains("1");
@@ -188,12 +216,12 @@ public class DynamicConfigPageTests : TrackingBunitContext
 	{
 		_served.Save = (HttpStatusCode.BadRequest, """{ "errors": { "Chat.NoisyCEmit": "sharp-refusal-reason" } }""");
 		var cut = RenderChat();
-		await cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit").QuerySelector("button[role=switch]")!.ClickAsync();
+		await cut.Find(".cfg-row[data-config-option='Chat.NoisyCEmit']").QuerySelector("button[role=switch]")!.ClickAsync();
 
 		await cut.Find(".cfg-unsaved button.kit-capsule--primary").ClickAsync();
 
 		cut.WaitForAssertion(() => cut.Find(".cfg-row-error"), TimeSpan.FromSeconds(5));
-		var row = cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit");
+		var row = cut.Find(".cfg-row[data-config-option='Chat.NoisyCEmit']");
 		var error = row.QuerySelector(".cfg-row-error")!;
 		await Assert.That(error.TextContent).IsEqualTo("sharp-refusal-reason");
 		await Assert.That(row.QuerySelector("button[role=switch]")!.GetAttribute("aria-describedby")).Contains(error.Id!);
@@ -204,7 +232,7 @@ public class DynamicConfigPageTests : TrackingBunitContext
 	public async Task UnsavedBar_ResetChangesClearsIt()
 	{
 		var cut = RenderChat();
-		await cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit").QuerySelector("button[role=switch]")!.ClickAsync();
+		await cut.Find(".cfg-row[data-config-option='Chat.NoisyCEmit']").QuerySelector("button[role=switch]")!.ClickAsync();
 		await cut.Find(".cfg-unsaved .cfg-reset").ClickAsync();
 		await Assert.That(cut.FindAll(".cfg-unsaved").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".cfg-row-changed").Count).IsEqualTo(0);
@@ -248,7 +276,7 @@ public class DynamicConfigPageTests : TrackingBunitContext
 	{
 		// The router re-renders the page on a hash-only navigation; the edits must survive it.
 		var cut = RenderChat();
-		await cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit").QuerySelector("button[role=switch]")!.ClickAsync();
+		await cut.Find(".cfg-row[data-config-option='Chat.NoisyCEmit']").QuerySelector("button[role=switch]")!.ClickAsync();
 		await Assert.That(cut.FindAll(".cfg-unsaved").Count).IsEqualTo(1);
 
 		cut.Render(p => p.Add(x => x.Category, "chat"));
@@ -271,7 +299,7 @@ public class DynamicConfigPageTests : TrackingBunitContext
 	public async Task HelpTextIsAssociatedWithItsControl()
 	{
 		var cut = RenderChat();
-		var row = cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.MaxChannels");
+		var row = cut.Find(".cfg-row[data-config-option='Chat.MaxChannels']");
 		var input = row.QuerySelector("input.cfg-num")!;
 		var describedBy = input.GetAttribute("aria-describedby");
 		await Assert.That(describedBy).IsNotNull();
@@ -340,7 +368,7 @@ public class DynamicConfigPageTests : TrackingBunitContext
 		var cut = Render<DynamicConfig>(p => p.Add(x => x.Category, "cosmetic"));
 		cut.WaitForAssertion(() => cut.Find(".cfg-image"), TimeSpan.FromSeconds(5));
 		AngleSharp.Dom.IElement Row() =>
-			cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Cosmetic.PortalLogo");
+			cut.Find(".cfg-row[data-config-option='Cosmetic.PortalLogo']");
 
 		await Assert.That(Row().QuerySelector(".cfg-image-preview img")!.GetAttribute("src")).IsEqualTo("assets/Logo.svg");
 
@@ -364,7 +392,7 @@ public class DynamicConfigPageTests : TrackingBunitContext
 	}
 
 	private static AngleSharp.Dom.IElement Row(IRenderedComponent<DynamicConfig> cut, string key) =>
-		cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == key);
+		cut.Find($".cfg-row[data-config-option='{key}']");
 
 	/// <summary>An empty favicon previews what the tab shows: the portal logo being drafted, else the SharpMUSH logo.</summary>
 	[Test]

@@ -331,10 +331,6 @@
     <value>Handlinger</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthColumnDbref" xml:space="preserve">
-    <value>Dbref</value>
-    <comment>MT — glossary term, untranslated.</comment>
-  </data>
   <data name="AuthColumnName" xml:space="preserve">
     <value>Navn</value>
     <comment>MT</comment>

@@ -324,8 +324,8 @@ public class AdminPagesD1Tests : TrackingBunitContext
 			await Assert.That(routes).Contains(href).Because(href);
 	}
 
-	private static string ServerStatusJson(bool ready, int queued = 3) => System.Text.Json.JsonSerializer.Serialize(
-		new SharpMUSH.Library.API.AdminServerStatus("1.2.3.4", "abc123", DateTimeOffset.UtcNow.AddDays(-2).AddHours(-5),
+	private static string ServerStatusJson(bool ready, int queued = 3, string buildId = "abc123") => System.Text.Json.JsonSerializer.Serialize(
+		new SharpMUSH.Library.API.AdminServerStatus("1.2.3.4", buildId, DateTimeOffset.UtcNow.AddDays(-2).AddHours(-5),
 			Connections: 7, Players: 5, QueuedTasks: queued, QueueLimit: 10, Ready: ready,
 			Pending: ready ? [] : ["output-bridge"],
 			Streams: [new("SHARPMUSH-CS", 100, 1000)], BusBacklog: 4, BusReadAt: true,
@@ -353,6 +353,17 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.FindAll("[data-stat='ready'].adm-stat--warn").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll("[data-stat='backup'].adm-stat--warn").Count).IsEqualTo(1)
 			.Because("a provider that takes copies and has none on disk needs attention");
+	}
+
+	[Test]
+	public async Task ServerPage_ShortensALongBuildId()
+	{
+		// A development host's build id is a 32-digit MVID; whole, it ran past the tile's edge.
+		_api.Bodies["api/admin/server/status"] = ServerStatusJson(ready: true, buildId: "0123456789abcdef0123456789abcdef");
+		var cut = RenderPage(typeof(AdminServer));
+		cut.WaitForAssertion(() => cut.Find("[data-stat='version']"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find("[data-stat='version'] .adm-stat-sub").TextContent).IsEqualTo("AdmServerBuild(0123456789ab)");
 	}
 
 	[Test]

@@ -36,6 +36,7 @@
 	line-height: 1.1;
 	color: var(--text);
 	font-variant-numeric: tabular-nums;
+	overflow-wrap: anywhere;
 }
 
 .adm-stat-label {
@@ -47,7 +48,10 @@
 	color: var(--text-faint);
 }
 
+/* A long unbroken value (a build hash, a version with its commit) wraps inside the card
+   instead of pushing past its edge. */
 .adm-stat-sub {
 	font-size: var(--text-sm);
 	color: var(--text-dim);
+	overflow-wrap: anywhere;
 }

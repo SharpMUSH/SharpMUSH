@@ -331,10 +331,6 @@
     <value>Действия</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthColumnDbref" xml:space="preserve">
-    <value>Dbref</value>
-    <comment>MT — `dbref` kept in Latin per glossary, case copied from source</comment>
-  </data>
   <data name="AuthColumnName" xml:space="preserve">
     <value>Име</value>
     <comment>MT</comment>

@@ -331,10 +331,6 @@
     <value>Akcje</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthColumnDbref" xml:space="preserve">
-    <value>Dbref</value>
-    <comment>MT — kept untranslated per glossary</comment>
-  </data>
   <data name="AuthColumnName" xml:space="preserve">
     <value>Imię</value>
     <comment>MT — assumed a character list, so 'imię' per corpus (name of a player/character)</comment>

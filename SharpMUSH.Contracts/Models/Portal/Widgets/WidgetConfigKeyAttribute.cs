@@ -26,4 +26,13 @@ public sealed class WidgetConfigKeyAttribute(string descriptionKey) : Attribute
 	/// Main namespace, and "main" is the useful thing to show.
 	/// </summary>
 	public string? Default { get; init; }
+
+	/// <summary>
+	/// <c>SharedResource</c> key for the field's label in the layout editor's settings form. Unset,
+	/// the form labels the field with its key, spaced out ("newTab" reads "New tab").
+	/// </summary>
+	public string? LabelKey { get; init; }
+
+	/// <summary>Whether a string key holds several lines (Markdown, say), so the form gives it a text area.</summary>
+	public bool Multiline { get; init; }
 }

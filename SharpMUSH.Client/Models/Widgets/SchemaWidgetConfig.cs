@@ -17,7 +17,7 @@ namespace SharpMUSH.Client.Models.Widgets;
 /// <c>{objid}</c> token that cannot be filled skips the data fetch and renders the schema alone.
 /// </param>
 public record SchemaWidgetConfig(
-	[property: WidgetConfigKey("LayCfgSchemaUrl")]
+	[property: WidgetConfigKey("LayCfgSchemaUrl", LabelKey = "LayCfgSchemaUrlLabel")]
 	string? SchemaUrl = null,
-	[property: WidgetConfigKey("LayCfgSchemaDataUrl")]
+	[property: WidgetConfigKey("LayCfgSchemaDataUrl", LabelKey = "LayCfgSchemaDataUrlLabel")]
 	string? DataUrl = null);

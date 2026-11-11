@@ -1,0 +1,62 @@
+.wcf {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+	min-width: 0;
+}
+
+.wcf-field {
+	min-width: 0;
+}
+
+.wcf-help {
+	font-size: var(--text-sm);
+	color: var(--text-dim);
+}
+
+.wcf-list {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.wcf-list-label {
+	padding: 0;
+	font-weight: 600;
+	color: var(--text);
+}
+
+.wcf-item {
+	padding: var(--space-4);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+}
+
+.wcf-item-head {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	margin-bottom: var(--space-3);
+}
+
+.wcf-item-title {
+	flex: 1;
+	font-family: var(--font-kicker);
+	font-size: var(--text-xs);
+	letter-spacing: var(--kicker-tracking);
+	text-transform: uppercase;
+	color: var(--text-faint);
+}
+
+.wcf ::deep .wcf-item-remove {
+	color: var(--danger);
+}
+
+.wcf ::deep .wcf-add {
+	align-self: flex-start;
+}

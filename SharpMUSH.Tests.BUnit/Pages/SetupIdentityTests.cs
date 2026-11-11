@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using Bunit;
+using MudBlazor;
+using MudBlazor.Services;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
@@ -13,6 +15,23 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 
 public class SetupIdentityTests : BunitContext
 {
+	public SetupIdentityTests()
+	{
+		Services.AddMudServices();
+		JSInterop.Mode = JSRuntimeMode.Loose;
+	}
+
+	/// <summary>The form inside a popover provider, which its drop-downs open into.</summary>
+	private IRenderedComponent<SharpMUSH.Tests.BUnit.Components.MudHarness> RenderForm()
+		=> Render<SharpMUSH.Tests.BUnit.Components.MudHarness>(p => p.AddChildContent<GameIdentityForm>());
+
+	/// <summary>Picks an option of one of the form's drop-downs, as choosing it from the open list does.</summary>
+	private static Task ChooseAsync(IRenderedComponent<SharpMUSH.Tests.BUnit.Components.MudHarness> form, string inputId, string value)
+	{
+		var select = form.FindComponents<MudSelect<string>>().Single(s => s.Instance.InputId == inputId);
+		return select.InvokeAsync(() => select.Instance.SelectOption(value));
+	}
+
 	[Test]
 	[Arguments("Fantasy\nHorror", "High Fantasy")]
 	[Arguments("Unlisted genre", "High Fantasy")]
@@ -73,7 +92,7 @@ public class SetupIdentityTests : BunitContext
 		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
 		Services.AddSingleton<ServerInfoService>();
 		Services.AddLocalization();
-		var form = Render<GameIdentityForm>();
+		var form = RenderForm();
 		form.WaitForElement("#guide-game-name");
 		await form.Find("#guide-game-name").InputAsync("Renamed world");
 		await form.Find(".identity-save").ClickAsync();
@@ -94,9 +113,9 @@ public class SetupIdentityTests : BunitContext
 		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
 		Services.AddSingleton<ServerInfoService>();
 		Services.AddLocalization();
-		var form = Render<GameIdentityForm>();
+		var form = RenderForm();
 		form.WaitForElement("#guide-genres");
-		await form.Find("#guide-genres").ChangeAsync("Horror");
+		await ChooseAsync(form, "guide-genres", "Horror");
 		await form.Find(".identity-save").ClickAsync();
 		await Assert.That(handler.Saved!.Genres).IsEquivalentTo(new[] { "Horror" });
 		await Assert.That(handler.Saved.Subgenres).IsEquivalentTo(new[] { "Space Opera", "Cyberpunk" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
@@ -116,7 +135,7 @@ public class SetupIdentityTests : BunitContext
 		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
 		Services.AddSingleton<ServerInfoService>();
 		Services.AddLocalization();
-		var form = Render<GameIdentityForm>();
+		var form = RenderForm();
 		form.WaitForElement("#guide-game-name");
 		await form.Find("#guide-game-name").InputAsync("Renamed world");
 		await form.Find(".identity-save").ClickAsync();
@@ -134,7 +153,7 @@ public class SetupIdentityTests : BunitContext
 		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
 		Services.AddSingleton<ServerInfoService>();
 		Services.AddLocalization();
-		var form = Render<GameIdentityForm>();
+		var form = RenderForm();
 		form.WaitForElement("#guide-subgenres");
 		await form.Find("#guide-subgenres").InputAsync("Space Western");
 		await form.Find(".identity-save").ClickAsync();
@@ -157,12 +176,15 @@ public class SetupIdentityTests : BunitContext
 		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
 		Services.AddSingleton<ServerInfoService>();
 		Services.AddLocalization();
-		var form = Render<GameIdentityForm>();
+		var form = RenderForm();
 		var input = form.WaitForElement("#guide-subgenres");
 		await Assert.That(input.TagName).IsEqualTo("INPUT");
 		await Assert.That(input.GetAttribute("maxlength")).IsEqualTo("512");
-		await Assert.That(input.GetAttribute("list")).IsEqualTo("guide-subgenre-suggestions");
-		await Assert.That(form.FindAll("#guide-subgenre-suggestions option").Select(option => option.GetAttribute("value"))).Contains("High Fantasy");
+		// The catalog's subgenres are suggested as the admin types; any other value is still accepted.
+		var suggest = form.FindComponents<MudAutocomplete<string>>().Single().Instance.SearchFunc!;
+		await Assert.That(await suggest("", default)).Contains("High Fantasy");
+		await Assert.That(await suggest("fantasy", default)).Contains("High Fantasy");
+		await Assert.That(await suggest("fantasy", default)).DoesNotContain("Cyberpunk");
 		await Assert.That(form.FindAll("#guide-subgenre-custom").Count).IsEqualTo(0);
 		await input.InputAsync("Space Opera / Detective");
 		await Assert.That(form.Find("#guide-subgenre-custom").TextContent).Contains("Custom values are allowed");
@@ -175,8 +197,8 @@ public class SetupIdentityTests : BunitContext
 		await form.Find("#guide-introduction").InputAsync("An unrelated edit after saving");
 		await form.Find(".identity-save").ClickAsync();
 		await Assert.That(handler.Saved!.Subgenres).IsEquivalentTo(new[] { "Space Opera / Detective" });
-		form.Dispose();
-		var reloaded = Render<GameIdentityForm>();
+		await DisposeComponentsAsync();
+		var reloaded = RenderForm();
 		input = reloaded.WaitForElement("#guide-subgenres");
 		await Assert.That(input.GetAttribute("value")).IsEqualTo("Space Opera / Detective");
 		await Assert.That(reloaded.FindAll("#guide-subgenre-custom").Count).IsEqualTo(1);
@@ -198,7 +220,7 @@ public class SetupIdentityTests : BunitContext
 		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
 		Services.AddSingleton<ServerInfoService>();
 		Services.AddLocalization();
-		var form = Render<GameIdentityForm>();
+		var form = RenderForm();
 		form.WaitForElement("#guide-subgenres");
 		await Assert.That(form.FindAll("#guide-subgenre-custom").Count > 0).IsEqualTo(expectedNotice);
 	}
@@ -213,11 +235,11 @@ public class SetupIdentityTests : BunitContext
 		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
 		Services.AddSingleton<ServerInfoService>();
 		Services.AddLocalization();
-		var form = Render<GameIdentityForm>();
+		var form = RenderForm();
 		form.WaitForElement(".identity-preview img");
 		var expected = SharpieArtCatalog.Resolve("chibi", "Fantasy", "High Fantasy", null, GuideImagery.Full, SharpieArtMoment.Welcome);
 		await Assert.That(form.Find(".identity-preview img").GetAttribute("src")).Contains(expected!.Url);
-		await form.Find("#guide-art-style").ChangeAsync("minimalist");
+		await ChooseAsync(form, "guide-art-style", "minimalist");
 		expected = SharpieArtCatalog.Resolve("minimalist", "Fantasy", "High Fantasy", null, GuideImagery.Full, SharpieArtMoment.Welcome);
 		await Assert.That(form.Find(".identity-preview img").GetAttribute("src")).Contains(expected!.Url);
 		await Assert.That(handler.Writes).IsEqualTo(0);
@@ -230,11 +252,13 @@ public class SetupIdentityTests : BunitContext
 		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
 		Services.AddSingleton<ServerInfoService>();
 		Services.AddLocalization();
-		var form = Render<GameIdentityForm>();
+		var form = RenderForm();
 		form.WaitForElement("#guide-game-name");
-		await Assert.That(form.Find("#guide-genres").TagName).IsEqualTo("SELECT");
-		await Assert.That(form.Find("#guide-subgenres").TagName).IsEqualTo("INPUT");
-		await Assert.That(form.FindAll("#guide-genres option").Select(option => option.TextContent)).Contains("Science Fiction");
+		// The genre and the art style are kit drop-downs, like the rest of setup's fields; no native select is left.
+		await Assert.That(form.FindAll("select").Count).IsEqualTo(0);
+		var genres = form.FindComponents<MudSelect<string>>().Single(s => s.Instance.InputId == "guide-genres");
+		await Assert.That(genres.FindComponents<MudSelectItem<string>>().Select(item => item.Instance.Value)).Contains("Science Fiction");
+		await Assert.That(form.FindComponents<MudAutocomplete<string>>().Single().Instance.InputId).IsEqualTo("guide-subgenres");
 		await Assert.That(form.Find("#guide-game-name").GetAttribute("value")).IsEqualTo("Imported world");
 		await Assert.That(handler.Writes).IsEqualTo(0);
 		await form.Find("#guide-game-name").InputAsync("My new world");
@@ -258,7 +282,7 @@ public class SetupIdentityTests : BunitContext
 		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
 		Services.AddSingleton<ServerInfoService>();
 		Services.AddLocalization();
-		var form = Render<GameIdentityForm>();
+		var form = RenderForm();
 		form.WaitForElement("#guide-introduction");
 		await Assert.That(form.Find("textarea").GetAttribute("value")).IsEqualTo("An existing introduction");
 		await form.Find("#guide-game-name").InputAsync("Our world");
@@ -286,7 +310,7 @@ public class SetupIdentityTests : BunitContext
 		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
 		Services.AddSingleton<ServerInfoService>();
 		Services.AddLocalization();
-		var form = Render<GameIdentityForm>();
+		var form = RenderForm();
 		var button = form.WaitForElement(".identity-save");
 		var saving = button.ClickAsync();
 		form.WaitForAssertion(() =>

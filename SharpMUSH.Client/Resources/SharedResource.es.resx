@@ -331,10 +331,6 @@
     <value>Acciones</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthColumnDbref" xml:space="preserve">
-    <value>Dbref</value>
-    <comment>MT</comment>
-  </data>
   <data name="AuthColumnName" xml:space="preserve">
     <value>Nombre</value>
     <comment>MT</comment>

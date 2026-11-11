@@ -1,0 +1,147 @@
+@using System.Text.Json
+@using SharpMUSH.Client.Models.Widgets
+@using SharpMUSH.Library.Models.Portal.Widgets
+@inject IStringLocalizer<SharedResource> Loc
+
+@* A widget's settings as form fields, one per documented key of its ConfigType
+   (WidgetConfigSchema). A list of objects (Quick Links' links) is a stack of item cards, each the
+   same form one level down. Every edit goes straight into Document and is reported through
+   OnChanged. *@
+<div class="wcf">
+    @foreach (var field in Fields)
+    {
+        var key = field.Key;
+        <div class="wcf-field" data-config-key="@key">
+            @switch (field.TypeLabel)
+            {
+                case "boolean":
+                    <MudSwitch T="bool" Color="Color.Primary" Label="@LabelOf(field)"
+                               Value="@(Document.GetBool(key) ?? DefaultBool(field))"
+                               ValueChanged="@(on => Edit(() => Document.SetBool(key, on)))" />
+                    <div class="wcf-help">@Loc[field.DescriptionKey]</div>
+                    break;
+
+                case "integer" or "number":
+                    <MudNumericField T="double?" Variant="Variant.Outlined" Margin="Margin.Dense" Label="@LabelOf(field)"
+                                     Value="@Document.GetNumber(key)" Placeholder="@DefaultText(field)"
+                                     Step="@(field.TypeLabel == "integer" ? 1 : 0.1)" Immediate="true"
+                                     HelperText="@Loc[field.DescriptionKey]"
+                                     ValueChanged="@(value => Edit(() => Document.SetNumber(key, value, field.TypeLabel == "integer")))" />
+                    break;
+
+                case "list" when field.Children.Count > 0:
+                    var items = Document.GetItems(key);
+                    <fieldset class="wcf-list">
+                        <legend class="wcf-list-label">@LabelOf(field)</legend>
+                        <div class="wcf-help">@Loc[field.DescriptionKey]</div>
+                        @for (var i = 0; i < items.Count; i++)
+                        {
+                            var item = items[i];
+                            var index = i;
+                            <div class="wcf-item">
+                                <div class="wcf-item-head">
+                                    <span class="wcf-item-title">@Loc["LayCfgItemTitle", index + 1]</span>
+                                    <MudIconButton Icon="@Icons.Material.Outlined.ArrowUpward" Size="Size.Small" Disabled="@(index == 0)"
+                                                   aria-label="@Loc["LayCfgMoveUp", index + 1]"
+                                                   OnClick="@(() => Edit(() => Document.MoveItem(key, item, -1)))" />
+                                    <MudIconButton Icon="@Icons.Material.Outlined.ArrowDownward" Size="Size.Small" Disabled="@(index == items.Count - 1)"
+                                                   aria-label="@Loc["LayCfgMoveDown", index + 1]"
+                                                   OnClick="@(() => Edit(() => Document.MoveItem(key, item, 1)))" />
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" Class="wcf-item-remove"
+                                                   aria-label="@Loc["LayCfgRemoveItem", index + 1]"
+                                                   OnClick="@(() => Edit(() => Document.RemoveItem(key, item)))" />
+                                </div>
+                                <WidgetConfigForm Fields="field.Children" Document="item" OnChanged="OnChanged" />
+                            </div>
+                        }
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" Class="wcf-add"
+                                   OnClick="@(() => Edit(() => Document.AddItem(key)))">
+                            @Loc["LayCfgAddItem"]
+                        </MudButton>
+                    </fieldset>
+                    break;
+
+                case "list":
+                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="@LabelOf(field)" Lines="4" Sizing="InputSizing.Auto"
+                                  Value="@string.Join('\n', Document.GetLines(key))" Immediate="true"
+                                  HelperText="@($"{Loc[field.DescriptionKey]} {Loc["LayCfgOnePerLine"]}")"
+                                  ValueChanged="@(text => Edit(() => Document.SetLines(key, (text ?? string.Empty).Split('\n'))))" />
+                    break;
+
+                case "string":
+                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="@LabelOf(field)"
+                                  Lines="@(field.Multiline ? 6 : 1)" Sizing="@(field.Multiline ? InputSizing.Auto : InputSizing.Fixed)"
+                                  Value="@Document.GetString(key)" Placeholder="@DefaultText(field)" Immediate="true"
+                                  HelperText="@Loc[field.DescriptionKey]"
+                                  ValueChanged="@(text => Edit(() => Document.SetString(key, text)))" />
+                    break;
+
+                default:
+                    @* No shipped widget has a nested object key; the JSON view edits one. *@
+                    <div class="wcf-list-label">@LabelOf(field)</div>
+                    <div class="wcf-help">@Loc[field.DescriptionKey] @Loc["LayCfgObjectInJson"]</div>
+                    break;
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The documented keys to show, from <see cref="WidgetConfigSchema.Describe"/>.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<WidgetConfigField> Fields { get; set; } = [];
+
+    /// <summary>The config being edited, changed in place.</summary>
+    [Parameter, EditorRequired] public WidgetConfigDocument Document { get; set; } = default!;
+
+    /// <summary>Raised after every edit.</summary>
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private Task Edit(Action edit)
+    {
+        edit();
+        return OnChanged.InvokeAsync();
+    }
+
+    private string LabelOf(WidgetConfigField field)
+        => field.LabelKey is { } labelKey ? Loc[labelKey] : SpacedOut(field.Key);
+
+    /// <summary>"newTab" as "New tab": the label of a key that names none of its own.</summary>
+    public static string SpacedOut(string key)
+    {
+        var builder = new System.Text.StringBuilder(key.Length + 4);
+        foreach (var c in key)
+        {
+            if (char.IsUpper(c) && builder.Length > 0)
+            {
+                builder.Append(' ').Append(char.ToLowerInvariant(c));
+            }
+            else
+            {
+                builder.Append(builder.Length == 0 ? char.ToUpperInvariant(c) : c);
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>The documented default as plain text for a placeholder: "main", not the JSON literal "\"main\"".</summary>
+    public static string? DefaultText(WidgetConfigField field)
+    {
+        if (field.Default is not { } literal)
+        {
+            return null;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(literal);
+            return doc.RootElement.ValueKind == JsonValueKind.String ? doc.RootElement.GetString() : literal;
+        }
+        catch (JsonException)
+        {
+            return literal;
+        }
+    }
+
+    private static bool DefaultBool(WidgetConfigField field) => field.Default == "true";
+}

@@ -1,3 +1,23 @@
 .widget-config-dialog {
     container-type: inline-size;
 }
+
+/* The line above the settings: what they are for, and the switch to the other view. */
+.wcd-mode {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--space-4);
+	margin-bottom: var(--space-4);
+}
+
+.wcd-mode ::deep .mud-button-root {
+	flex-shrink: 0;
+	white-space: nowrap;
+}
+
+@container (max-width: 30rem) {
+	.wcd-mode {
+		flex-direction: column;
+	}
+}

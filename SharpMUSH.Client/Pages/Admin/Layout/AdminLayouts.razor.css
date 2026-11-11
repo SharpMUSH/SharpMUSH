@@ -9,7 +9,6 @@
 .lay-card-top { display: flex; align-items: center; gap: var(--space-4); }
 .lay-card-titles { flex: 1; min-width: 0; }
 .lay-card-name { font-size: var(--text-base); font-weight: 700; color: var(--text); }
-.lay-card-sub { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-faint); }
 .lay-card-desc { font-size: var(--text-sm); color: var(--text-dim); line-height: 1.45; }
 .lay-card-zones { display: flex; gap: var(--space-3); flex-wrap: wrap; }
 .lay-zone {

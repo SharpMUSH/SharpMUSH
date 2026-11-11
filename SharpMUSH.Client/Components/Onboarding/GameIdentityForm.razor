@@ -14,9 +14,16 @@
     }
     else
     {
+        @* Kit fields, the same outlined MudBlazor controls the rest of setup uses: text fields,
+           drop-downs for the genre and the art style, and a suggesting field for the subgenre,
+           which also takes a value of the game's own. *@
         <fieldset disabled="@_busy">
-            <label for="guide-game-name">@Loc["GuideIdentityName"]</label><input id="guide-game-name" @bind="_name" @bind:event="oninput" @bind:after="MarkDirty" maxlength="128" />
-            <label for="guide-introduction">@Loc["GuideIdentityIntroduction"]</label><textarea id="guide-introduction" @bind="_introduction" @bind:event="oninput" @bind:after="MarkDirty" maxlength="1000" rows="3"></textarea>
+            <MudTextField T="string" InputId="guide-game-name" Label="@Loc["GuideIdentityName"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          MaxLength="128" Immediate="true" Disabled="_busy" Class="identity-field"
+                          @bind-Value="_name" @bind-Value:after="MarkDirty" />
+            <MudTextField T="string" InputId="guide-introduction" Label="@Loc["GuideIdentityIntroduction"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          MaxLength="1000" Lines="3" Sizing="InputSizing.Auto" Immediate="true" Disabled="_busy" Class="identity-field"
+                          @bind-Value="_introduction" @bind-Value:after="MarkDirty" />
             <p id="guide-welcome-starters-help">@Loc["GuideIdentityStarterHint"]</p>
             <div class="identity-starters" role="group" aria-label="@Loc["GuideIdentityStarters"]" aria-describedby="guide-welcome-starters-help">
                 @foreach (var starter in WelcomeStarters)
@@ -25,18 +32,20 @@
                 }
             </div>
             <div class="identity-columns">
-                <div><label for="guide-genres">@Loc["GuideIdentityGenres"]</label><select id="guide-genres" @bind="_genres" @bind:after="GenreChanged">
-                    @if (!MsspCatalog.Find("GENRE")!.Choices.Contains(_genres)) { <option value="@_genres" disabled>@_genres</option> }
-                    @foreach (var choice in MsspCatalog.Find("GENRE")!.Choices) { <option value="@choice">@choice</option> }
-                </select></div>
+                <MudSelect T="string" InputId="guide-genres" Label="@Loc["GuideIdentityGenres"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Disabled="_busy" Class="identity-field" AnchorOrigin="Origin.BottomLeft"
+                           @bind-Value="_genres" @bind-Value:after="GenreChanged">
+                    @if (!MsspCatalog.Find("GENRE")!.Choices.Contains(_genres)) { <MudSelectItem T="string" Value="@_genres" Disabled="true">@_genres</MudSelectItem> }
+                    @foreach (var choice in MsspCatalog.Find("GENRE")!.Choices) { <MudSelectItem T="string" Value="@choice">@choice</MudSelectItem> }
+                </MudSelect>
                 <div>
-                    <label for="guide-subgenres">@Loc["GuideIdentitySubgenres"]</label>
-                    <input id="guide-subgenres" list="guide-subgenre-suggestions" maxlength="@MsspCatalog.MaxValueLength"
-                           aria-describedby="@(HasCustomSubgenre ? "guide-subgenre-custom" : null)"
-                           @bind="_subgenres" @bind:event="oninput" @bind:after="SubgenreChanged" />
-                    <datalist id="guide-subgenre-suggestions">
-                        @foreach (var choice in MsspCatalog.Find("SUBGENRE")!.Choices) { <option value="@choice"></option> }
-                    </datalist>
+                    <MudAutocomplete T="string" InputId="guide-subgenres" Label="@Loc["GuideIdentitySubgenres"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                     MaxLength="@MsspCatalog.MaxValueLength" Disabled="_busy" Class="identity-field"
+                                     SearchFunc="SearchSubgenres" CoerceValue="true" CoerceText="false" MaxItems="null"
+                                     ShowProgressIndicator="false" AnchorOrigin="Origin.BottomLeft"
+                                     aria-describedby="@(HasCustomSubgenre ? "guide-subgenre-custom" : null)"
+                                     Value="_subgenres" ValueChanged="SubgenreChosen"
+                                     Text="@_subgenres" TextChanged="SubgenreTyped" />
                     <div role="status">
                         @if (HasCustomSubgenre)
                         {
@@ -46,14 +55,21 @@
                 </div>
             </div>
             <p>@Loc["GuideIdentityGenreHint"]</p>
-            <label for="guide-art-style">@Loc["GuideIdentityStyle"]</label>
-            <select id="guide-art-style" @bind="_style" @bind:after="MarkDirty">
-                @foreach (var style in SharpieArtCatalog.Styles) { <option value="@style">@StyleName(style)</option> }
-            </select>
+            <MudSelect T="string" InputId="guide-art-style" Label="@Loc["GuideIdentityStyle"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                       Disabled="_busy" Class="identity-field" AnchorOrigin="Origin.BottomLeft" ToStringFunc="StyleName"
+                       @bind-Value="_style" @bind-Value:after="MarkDirty">
+                @foreach (var style in SharpieArtCatalog.Styles) { <MudSelectItem T="string" Value="@style">@StyleName(style)</MudSelectItem> }
+            </MudSelect>
             <p>@Loc["GuideIdentityArtworkHint"] <a href="/admin/config/Cosmetic">@Loc["GuideIdentityAppearance"]</a>.</p>
-            <label for="guide-welcome-page">@Loc["GuideIdentityWelcomePage"]</label><input id="guide-welcome-page" @bind="_welcome" @bind:event="oninput" @bind:after="MarkDirty" maxlength="256" placeholder="main/welcome" />
-            <label for="guide-rules-page">@Loc["GuideIdentityRulesPage"]</label><input id="guide-rules-page" @bind="_rules" @bind:event="oninput" @bind:after="MarkDirty" maxlength="256" placeholder="main/rules" />
-            <label for="guide-character-page">@Loc["GuideIdentityCharacterPage"]</label><input id="guide-character-page" @bind="_character" @bind:event="oninput" @bind:after="MarkDirty" maxlength="256" placeholder="help/character_creation" />
+            <MudTextField T="string" InputId="guide-welcome-page" Label="@Loc["GuideIdentityWelcomePage"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          MaxLength="256" Placeholder="main/welcome" Immediate="true" Disabled="_busy" Class="identity-field"
+                          @bind-Value="_welcome" @bind-Value:after="MarkDirty" />
+            <MudTextField T="string" InputId="guide-rules-page" Label="@Loc["GuideIdentityRulesPage"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          MaxLength="256" Placeholder="main/rules" Immediate="true" Disabled="_busy" Class="identity-field"
+                          @bind-Value="_rules" @bind-Value:after="MarkDirty" />
+            <MudTextField T="string" InputId="guide-character-page" Label="@Loc["GuideIdentityCharacterPage"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          MaxLength="256" Placeholder="help/character_creation" Immediate="true" Disabled="_busy" Class="identity-field"
+                          @bind-Value="_character" @bind-Value:after="MarkDirty" />
             <p>@Loc["GuideIdentityWikiHint"]</p>
             <section class="identity-preview" aria-label="@Loc["GuideIdentityPreviewLabel"]">
                 <p class="identity-preview-label">@Loc["GuideIdentityPreview"]</p>
@@ -115,6 +131,26 @@
     private void MarkDirty() => _saved = false;
     private void GenreChanged() { _genreChanged = true; MarkDirty(); }
     private void SubgenreChanged() { _subgenreChanged = true; MarkDirty(); }
+    private void SubgenreTyped(string? text)
+    {
+        if (text is null || text == _subgenres) return;
+        _subgenres = text;
+        SubgenreChanged();
+    }
+    private void SubgenreChosen(string? value)
+    {
+        if (value is null || value == _subgenres) return;
+        _subgenres = value;
+        SubgenreChanged();
+    }
+    private Task<IEnumerable<string>> SearchSubgenres(string? text, CancellationToken _)
+    {
+        var choices = MsspCatalog.Find("SUBGENRE")!.Choices;
+        // The whole list while the field holds a value from it, so opening the list shows every choice.
+        return Task.FromResult<IEnumerable<string>>(string.IsNullOrWhiteSpace(text) || choices.Contains(text)
+            ? choices
+            : choices.Where(choice => choice.Contains(text, StringComparison.OrdinalIgnoreCase)).ToList());
+    }
     private void AcceptGenres(OnboardingSettings settings)
     {
         // The fields' labels are display values; they must never replace untouched arrays.

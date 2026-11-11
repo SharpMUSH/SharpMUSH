@@ -331,10 +331,6 @@
     <value>操作</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthColumnDbref" xml:space="preserve">
-    <value>Dbref</value>
-    <comment>MT — MUSH term of art, kept in English.</comment>
-  </data>
   <data name="AuthColumnName" xml:space="preserve">
     <value>名称</value>
     <comment>MT</comment>

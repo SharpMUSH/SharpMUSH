@@ -21,11 +21,11 @@ namespace SharpMUSH.Client.Models.Widgets;
 /// <see cref="Namespace"/> = <c>character</c>. Ignored when <see cref="Slug"/> is set.
 /// </param>
 public record WikiBodyConfig(
-	[property: WidgetConfigKey("LayCfgWikiBodySlug")]
+	[property: WidgetConfigKey("LayCfgWikiBodySlug", LabelKey = "LayCfgWikiBodySlugLabel")]
 	string? Slug = null,
-	[property: WidgetConfigKey("LayCfgWikiBodyNamespace", Default = "\"main\"")]
+	[property: WidgetConfigKey("LayCfgWikiBodyNamespace", Default = "\"main\"", LabelKey = "LayCfgWikiBodyNamespaceLabel")]
 	string? Namespace = null,
-	[property: WidgetConfigKey("LayCfgWikiBodyLocale")]
+	[property: WidgetConfigKey("LayCfgWikiBodyLocale", LabelKey = "LayCfgWikiBodyLocaleLabel")]
 	string? Locale = null,
-	[property: WidgetConfigKey("LayCfgWikiBodyCharacter")]
+	[property: WidgetConfigKey("LayCfgWikiBodyCharacter", LabelKey = "LayCfgWikiBodyCharacterLabel")]
 	string? Character = null);

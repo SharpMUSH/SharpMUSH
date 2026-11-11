@@ -40,7 +40,7 @@
                        Value="@BackupValue(status)" Sub="@(status.LastBackup is { } taken ? Utc(taken) : null)"
                        Warn="@(status.BackupSupported && status.LastBackup is null)" />
             <AdminStat Key="version" Icon="@Icons.Material.Filled.Info" Label="@Loc["AdmServerVersion"]"
-                       Value="@status.Version" Sub="@Loc["AdmServerBuild", status.BuildId]" />
+                       Value="@status.Version" Sub="@Loc["AdmServerBuild", ShortBuild(status.BuildId)]" />
         </AdminStats>
 
         <p class="adm-server-note">@Loc["AdmServerUpdated", DateDisplay.TimeWithSeconds(_readAt)]</p>
@@ -48,6 +48,12 @@
 </div>
 
 @code {
+    /// <summary>
+    /// The build id shortened the way a commit hash is: it is opaque, up to 32 hex digits, and only
+    /// has to be told apart from another build's.
+    /// </summary>
+    public static string ShortBuild(string buildId) => buildId.Length > 12 ? buildId[..12] : buildId;
+
     /// <summary>How often the figures are read again while the page is open.</summary>
     public static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(10);
 

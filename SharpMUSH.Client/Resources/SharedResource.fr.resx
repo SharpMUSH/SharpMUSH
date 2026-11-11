@@ -467,9 +467,6 @@
   <data name="AuthColumnName" xml:space="preserve">
     <value>Nom</value>
   </data>
-  <data name="AuthColumnDbref" xml:space="preserve">
-    <value>Dbref</value>
-  </data>
   <data name="AuthColumnActions" xml:space="preserve">
     <value>Actions</value>
   </data>

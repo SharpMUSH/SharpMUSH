@@ -331,10 +331,6 @@
     <value>Radnje</value>
     <comment>MT</comment>
   </data>
-  <data name="AuthColumnDbref" xml:space="preserve">
-    <value>Dbref</value>
-    <comment>MT — 'dbref' untranslated per glossary</comment>
-  </data>
   <data name="AuthColumnName" xml:space="preserve">
     <value>Ime</value>
     <comment>MT</comment>
