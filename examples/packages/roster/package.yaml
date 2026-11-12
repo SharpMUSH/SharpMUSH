@@ -1,7 +1,7 @@
 format: "1.16"
 package: roster
 title: "Roster"
-version: 1.5.1
+version: 1.5.2
 authors: [SharpMUSH]
 description: "Roster: characters kept for players to take on. Staff add characters to the roster, hand them to an account and take them back; players see who is available. The roster defines no way to apply: a game says how in a setting, or installs roster-jobs."
 license: MIT
@@ -333,7 +333,12 @@ objects:
       # @trigger/inline/nobreak/args Roster/INC`API`ADD=character,<name or objid>,actor,<objid>[,group,<group>]
       INC`API`ADD:
         value: |-
-          @include {{roster}}/INC`API`START; @assert not(u({{roster}}/FUN`ENTRY`HAS,%q<roster_char>))={think setq(roster_error,name(%q<roster_char>) is already on the roster.)}; @assert not(cor(strmatch(num(%q<roster_char>),#1),hasrole(%q<roster_char>,wizard),hasrole(%q<roster_char>,royalty)))={think setq(roster_error,name(%q<roster_char>) is staff. Staff characters never go on the roster.)}; think setq(roster_key,u({{roster}}/FUN`ENTRY`KEY,%q<roster_char>)); &ENTRY`%q<roster_key> {{store}}=%q<roster_char>; &ENTRY`%q<roster_key>`ADDED {{store}}=secs(); @if strlen(%<group>)={&ENTRY`%q<roster_key>`GROUP {{store}}=%<group>}; @break strlen(setr(roster_account,account(%q<roster_char>)))={@include/args {{roster}}/INC`STATE`HELD=character,%q<roster_char>,account,%q<roster_account>,actor,%<actor>,reason,On an account when it was added.,event,added,step,ADD}; &ENTRY`%q<roster_key>`STATE {{store}}=available; &ENTRY`%q<roster_key>`SINCE {{store}}=secs(); @newpassword/generate %q<roster_char>; @include/args {{roster}}/INC`HISTORY`ADD=character,%q<roster_char>,event,added,actor,%<actor>,reason,%<reason>; @include/args {{roster}}/INC`ON`RUN=step,ADD,character,%q<roster_char>,actor,%<actor>,reason,%<reason>
+          @include {{roster}}/INC`API`START; @assert not(u({{roster}}/FUN`ENTRY`HAS,%q<roster_char>))={think setq(roster_error,name(%q<roster_char>) is already on the roster.)}; @assert not(cor(strmatch(num(%q<roster_char>),#1),hasrole(%q<roster_char>,wizard),hasrole(%q<roster_char>,royalty)))={think setq(roster_error,name(%q<roster_char>) is staff. Staff characters never go on the roster.)}; @include {{roster}}/INC`API`ADD`ENTRY; @newpassword/generate %q<roster_char>; @include/args {{roster}}/INC`HISTORY`ADD=character,%q<roster_char>,event,added,actor,%<actor>,reason,%<reason>; @include/args {{roster}}/INC`ON`RUN=step,ADD,character,%q<roster_char>,actor,%<actor>,reason,%<reason>
+        flags: [cmdsyntax]
+      # Writes the character's roster entry, held when it has an account and available when not.
+      INC`API`ADD`ENTRY:
+        value: |-
+          think setq(roster_key,u({{roster}}/FUN`ENTRY`KEY,%q<roster_char>)); &ENTRY`%q<roster_key> {{store}}=%q<roster_char>; &ENTRY`%q<roster_key>`ADDED {{store}}=secs(); @if strlen(%<group>)={&ENTRY`%q<roster_key>`GROUP {{store}}=%<group>}; @break strlen(setr(roster_account,account(%q<roster_char>)))={@include/args {{roster}}/INC`STATE`HELD=character,%q<roster_char>,account,%q<roster_account>,actor,%<actor>,reason,On an account when it was added.,event,added,step,ADD}; &ENTRY`%q<roster_key>`STATE {{store}}=available; &ENTRY`%q<roster_key>`SINCE {{store}}=secs()
         flags: [cmdsyntax]
       # @trigger/inline/nobreak/args Roster/INC`API`REMOVE=character,<name or objid>,actor,<objid>[,reason,<text>]
       # The character, its account and its history stay; only its entry goes.
@@ -469,8 +474,14 @@ objects:
       # +roster/set <name>/<field>=<value>: a field of the entry. No value clears it.
       INC`CMD`SET:
         value: |-
+          @include {{roster}}/INC`CMD`SET`READ; @break strlen(%q<cmd_right_side>)={&%q<roster_set_attribute> {{store}}=%q<cmd_right_side>; @pemit %#=notice(ROSTER,name(%q<roster_char>)'s [lcstr(%q<roster_set_field>)] field is set.,ok)}; &%q<roster_set_attribute> {{store}}; @pemit %#=notice(ROSTER,name(%q<roster_char>)'s [lcstr(%q<roster_set_field>)] field is cleared.,ok)
+        flags: [cmdsyntax]
+      # Reads the character and field, and refuses a character not on the roster or a field name that is bad or
+      # reserved.
+      INC`CMD`SET`READ:
+        value: |-
           think setqm(roster_set_name,before(%q<cmd_left_side>,/),
-          roster_set_field,ucstr(after(%q<cmd_left_side>,/))); @assert cand(strlen(%q<roster_set_name>),strlen(%q<roster_set_field>),%q<cmd_has_equals>)=@pemit %#=notice(ROSTER,+roster/set <name>/<field>=<value>,warn); @assert strlen(setr(roster_char,u({{roster}}/FUN`ENTRY`CHARACTER,%q<roster_set_name>)))=@pemit %#=notice(ROSTER,There is no character called '%q<roster_set_name>'.,warn); @assert u({{roster}}/FUN`ENTRY`HAS,%q<roster_char>)=@pemit %#=notice(ROSTER,name(%q<roster_char>) is not on the roster.,warn); @assert cand(regmatch(%q<roster_set_field>,^%[A-Z%]%[A-Z0-9_%]*$),lte(strlen(%q<roster_set_field>),30))=@pemit %#=notice(ROSTER,A field's name is a letter and then letters%, digits or _%, up to 30.,warn); @assert not(member(get({{roster}}/DATA`FIELDS`RESERVED),%q<roster_set_field>))=@pemit %#=notice(ROSTER,The roster keeps %q<roster_set_field> itself.,warn); think setq(roster_set_attribute,ENTRY`[u({{roster}}/FUN`ENTRY`KEY,%q<roster_char>)]`%q<roster_set_field>); @break strlen(%q<cmd_right_side>)={&%q<roster_set_attribute> {{store}}=%q<cmd_right_side>; @pemit %#=notice(ROSTER,name(%q<roster_char>)'s [lcstr(%q<roster_set_field>)] field is set.,ok)}; &%q<roster_set_attribute> {{store}}; @pemit %#=notice(ROSTER,name(%q<roster_char>)'s [lcstr(%q<roster_set_field>)] field is cleared.,ok)
+          roster_set_field,ucstr(after(%q<cmd_left_side>,/))); @assert cand(strlen(%q<roster_set_name>),strlen(%q<roster_set_field>),%q<cmd_has_equals>)=@pemit %#=notice(ROSTER,+roster/set <name>/<field>=<value>,warn); @assert strlen(setr(roster_char,u({{roster}}/FUN`ENTRY`CHARACTER,%q<roster_set_name>)))=@pemit %#=notice(ROSTER,There is no character called '%q<roster_set_name>'.,warn); @assert u({{roster}}/FUN`ENTRY`HAS,%q<roster_char>)=@pemit %#=notice(ROSTER,name(%q<roster_char>) is not on the roster.,warn); @assert cand(regmatch(%q<roster_set_field>,^%[A-Z%]%[A-Z0-9_%]*$),lte(strlen(%q<roster_set_field>),30))=@pemit %#=notice(ROSTER,A field's name is a letter and then letters%, digits or _%, up to 30.,warn); @assert not(member(get({{roster}}/DATA`FIELDS`RESERVED),%q<roster_set_field>))=@pemit %#=notice(ROSTER,The roster keeps %q<roster_set_field> itself.,warn); think setq(roster_set_attribute,ENTRY`[u({{roster}}/FUN`ENTRY`KEY,%q<roster_char>)]`%q<roster_set_field>)
         flags: [cmdsyntax]
       # +roster/idle [<days>]: held characters nobody has played for that long.
       INC`CMD`IDLE:
