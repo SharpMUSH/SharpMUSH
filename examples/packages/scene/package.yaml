@@ -742,8 +742,8 @@ objects:
       # unless the player owns that active scene.
       INC`PAUSE`CHECK: |-
         @assert not(strmatch(setr(scene_id,firstof(trim(before(%1,chr(61))),scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert strmatch(setr(scene_status,scene(%q<scene_id>,status)),active)=@pemit %#=notice(SCENE,u(%!/FUN`PAUSE`DENY,%q<scene_id>,%q<scene_status>),warn)
-      # +scene/pause: sets %q<pause_when> (after = in %1) and %q<pause_at>, the time it is rescheduled for, and stops
-      # unless that time is valid and still to come.
+      # +scene/pause: sets %q<pause_when> (after = in %1), %q<pause_at>, the time it is rescheduled for, and
+      # %q<pause_ref>, and stops unless that time is valid and still to come.
       INC`PAUSE`WHEN: |-
         think setq(pause_ref,secs(f),pause_when,trim(after(%1,chr(61))))[setq(pause_at,if(strlen(%q<pause_when>),u(%!/FUN`SCHEDULE`WHEN,%q<pause_when>,firstof(u(%!/FUN`ZONE,%#),UTC),%q<pause_ref>)))]; @assert cor(not(strlen(%q<pause_when>)),isint(%q<pause_at>))=@pemit %#=notice(SCENE,[get(%!/DATA`DENY`BADTIME)] %q<pause_at>,warn); @assert cor(not(strlen(%q<pause_when>)),gt(%q<pause_at>,mul(%q<pause_ref>,1000)))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`PASTTIME),warn)
 
@@ -1044,8 +1044,9 @@ objects:
         value: |-
           $(?is)^\+scene/sc(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @include %!/INC`SCHEDULE`WHEN; @assert not(strmatch(setr(scene_id,scenecreate(,%#,%q<schedule_title>,%q<schedule_pitch>,%q<schedule_at>)),#-1*))=@pemit %#=notice(SCENE,%q<scene_id>,warn); @scene/member %q<scene_id>/owner=%#; @pemit %#=notice(SCENE,Scheduled scene %q<scene_id> "%q<schedule_title>" for [u(%!/FUN`SCHEDULE`DISPLAY,extract(%q<schedule_head>,1,%q<schedule_cut>,/),%q<schedule_at>,%q<schedule_zone>,%q<schedule_ref>)].,ok)
         flags: [REGEXP]
-      # +scene/schedule: splits %1 into the time, %q<schedule_title> and %q<schedule_pitch>, sets %q<schedule_at>, and
-      # stops unless that time is valid and still to come.
+      # +scene/schedule: splits %1 into %q<schedule_head>, %q<schedule_title> and %q<schedule_pitch>, sets
+      # %q<schedule_cut>, %q<schedule_zone>, %q<schedule_at> and %q<schedule_ref>, and stops unless that time is valid
+      # and still to come.
       INC`SCHEDULE`WHEN: |-
         @assert cand(pos(chr(61),%1),pos(/,setr(schedule_head,before(%1,chr(61)))),strlen(trim(setr(schedule_pitch,after(%1,chr(61))))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`SCHEDULE),warn); think setq(schedule_ref,secs(f),schedule_zone,firstof(u(%!/FUN`ZONE,%#),UTC)); @assert isint(setr(schedule_cut,u(%!/FUN`SCHEDULE`SPLIT,%q<schedule_head>,%q<schedule_zone>,%q<schedule_ref>)))=@pemit %#=notice(SCENE,[get(%!/DATA`DENY`BADTIME)] %q<schedule_cut>,warn); @assert strlen(setr(schedule_title,trim(extract(%q<schedule_head>,add(%q<schedule_cut>,1),words(%q<schedule_head>,/),/))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`SCHEDULE),warn); @assert isint(setr(schedule_at,u(%!/FUN`SCHEDULE`WHEN,extract(%q<schedule_head>,1,%q<schedule_cut>,/),%q<schedule_zone>,%q<schedule_ref>)))=@pemit %#=notice(SCENE,[get(%!/DATA`DENY`BADTIME)] %q<schedule_at>,warn); @assert gt(%q<schedule_at>,mul(%q<schedule_ref>,1000))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`PASTTIME),warn)
       CMD`RESCHEDULE:

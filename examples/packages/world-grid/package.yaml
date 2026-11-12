@@ -105,7 +105,7 @@ objects:
           @assert isdbref(setr(map,locate(%#,%0,*)))=@pemit %#=notice(MAP,I don't see %0 here.,warn); @assert controls(%#,%q<map>)=@pemit %#=notice(MAP,You do not control [name(%q<map>)].,warn); @assert hastype(%q<map>,ROOM)=@pemit %#=notice(MAP,[name(%q<map>)] must be a room: the exits that lead between its places are on it.,warn); @assert not(strmatch(worldcell(%q<map>,0,0),#-1 NOT A WORLD MAP))=@pemit %#=notice(MAP,[name(%q<map>)] is not a world map: use @world/create first.,warn)
         flags: [cmdsyntax]
       # Marks the map's exits whose way is shared (MAP`SHARED) and renames way exits to the names their ways go by
-      # now.
+      # now. Sets %q<kind>, which the caller reads.
       INC`EXITS`TIDY:
         value: |-
           think setr(kind,if(strmatch(worldmap(%q<map>),graph),way,direction)); think setr(aliases,u(%!/FUN`ALIASES,%q<map>))[setr(unshare,squish(iter(lexits(%q<map>),if(cand(hasattr(%i0,MAP`SHARED),not(member(%q<aliases>,get(%i0/MAP`WAY)))),%i0))))][setr(share,squish(iter(lexits(%q<map>),if(cand(hasattr(%i0,MAP`WAY),not(hasattr(%i0,MAP`SHARED)),member(%q<aliases>,get(%i0/MAP`WAY))),%i0))))]; @dolist/inline %q<unshare>=&MAP`SHARED ##; @dolist/inline %q<share>=&MAP`SHARED ##=1; think setr(renamed,u(%!/FUN`RENAMED,%q<map>)); @dolist/inline %q<renamed>=@name ##=[setr(named,u(%!/FUN`NAME,%q<map>,get(##/MAP`WAY)))][if(strmatch(%q<named>,*;*),,;)]; @select/inline words(%q<renamed>)=0,,{@pemit %#=notice(MAP,Renamed [words(%q<renamed>)] way exits on [name(%q<map>)] to the names their ways go by now.,ok)}

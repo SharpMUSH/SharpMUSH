@@ -263,12 +263,13 @@ objects:
         value: |-
           @include %!/INC`WATCH`NEED`TARGET; @include %!/INC`WATCH`ADD`CHECK; @include %!/INC`WATCH`ADD`WRITE; @pemit %#=notice(WATCH,You watch [name(%q<watch_target>)] now: you hear when they connect and leave.,ok)
         flags: [cmdsyntax]
-      # Refuses watching yourself, someone watched already, a full watch list, or no room to record it.
+      # Sets %q<watch_list> and %q<watch_by>, and refuses watching yourself, someone watched already, a full watch
+      # list, or no room to record it.
       INC`WATCH`ADD`CHECK:
         value: |-
           @assert comp(%q<watch_target>,%q<viewer_objid>)=@pemit %#=notice(WATCH,You cannot watch yourself.,warn); think setq(watch_list,u(%!/FUN`WATCH`LIST,%q<viewer_key>)); @assert not(member(%q<watch_list>,%q<watch_target>))=@pemit %#=notice(WATCH,You already watch [name(%q<watch_target>)].,warn); @assert lt(words(%q<watch_list>),get(%!/DATA`CONFIG`MAX))=@pemit %#=notice(WATCH,You watch [get(%!/DATA`CONFIG`MAX)] people%, as many as you can. +%q<cmd_word>/del <name> makes room.,warn); think setq(watch_by,setunion(get({{store}}/WATCH`%q<watch_target_key>`BY),%q<viewer_objid>)); @assert u(%!/FUN`ROOM,4)=@pemit %#=notice(WATCH,There is no room to record that: an object holds at most [config(max_attrs_per_obj)] attributes.,warn); @assert lte(strlen(%q<watch_by>),config(max_attribute_value_length))=@pemit %#=notice(WATCH,[name(%q<watch_target>)] has as many watchers as fit in [config(max_attribute_value_length)] bytes.,warn)
         flags: [cmdsyntax]
-      # Records that %# watches watch_target.
+      # Records that %# watches %q<watch_target>.
       INC`WATCH`ADD`WRITE:
         value: |-
           &WATCH`%q<viewer_key> {{store}}=%q<viewer_objid>; &WATCH`%q<viewer_key>`LIST {{store}}=trim(%q<watch_list> %q<watch_target>); &WATCH`%q<watch_target_key> {{store}}=%q<watch_target>; &WATCH`%q<watch_target_key>`BY {{store}}=%q<watch_by>

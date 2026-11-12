@@ -335,7 +335,8 @@ objects:
         value: |-
           @include {{roster}}/INC`API`START; @assert not(u({{roster}}/FUN`ENTRY`HAS,%q<roster_char>))={think setq(roster_error,name(%q<roster_char>) is already on the roster.)}; @assert not(cor(strmatch(num(%q<roster_char>),#1),hasrole(%q<roster_char>,wizard),hasrole(%q<roster_char>,royalty)))={think setq(roster_error,name(%q<roster_char>) is staff. Staff characters never go on the roster.)}; @include {{roster}}/INC`API`ADD`ENTRY; @newpassword/generate %q<roster_char>; @include/args {{roster}}/INC`HISTORY`ADD=character,%q<roster_char>,event,added,actor,%<actor>,reason,%<reason>; @include/args {{roster}}/INC`ON`RUN=step,ADD,character,%q<roster_char>,actor,%<actor>,reason,%<reason>
         flags: [cmdsyntax]
-      # Writes the character's roster entry, held when it has an account and available when not.
+      # Writes the character's roster entry. A character with an account is recorded as held, and its @break ends
+      # INC`API`ADD there, so no new password is made; one without is recorded as available.
       INC`API`ADD`ENTRY:
         value: |-
           think setq(roster_key,u({{roster}}/FUN`ENTRY`KEY,%q<roster_char>)); &ENTRY`%q<roster_key> {{store}}=%q<roster_char>; &ENTRY`%q<roster_key>`ADDED {{store}}=secs(); @if strlen(%<group>)={&ENTRY`%q<roster_key>`GROUP {{store}}=%<group>}; @break strlen(setr(roster_account,account(%q<roster_char>)))={@include/args {{roster}}/INC`STATE`HELD=character,%q<roster_char>,account,%q<roster_account>,actor,%<actor>,reason,On an account when it was added.,event,added,step,ADD}; &ENTRY`%q<roster_key>`STATE {{store}}=available; &ENTRY`%q<roster_key>`SINCE {{store}}=secs()
