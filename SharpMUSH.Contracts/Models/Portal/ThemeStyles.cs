@@ -29,6 +29,7 @@ public static class ThemeStyles
 	public const string Meters = "meters";
 	public const string Motion = "motion";
 	public const string Atmosphere = "atmosphere";
+	public const string Highlight = "highlight";
 
 	// The parts the Complex mode sets apart, which a Simple texture, frame, ornament or effect sets together.
 	public const string TextureStrength = "texture-strength";
@@ -288,11 +289,14 @@ public static class ThemeStyles
 		// How the current line in a menu is marked, the cut of a button, what a card is made of, how a bar fills, how
 		// things arrive and move, and what hangs between the background and the page: one menu each, any theme.
 		[Selection] = ["standard", "bar", "skew", "halo", "brackets", "lift", "stroke", "lantern", "pennant", "gate", "wash", "platform", "trace", "lockon"],
-		[Buttons] = ["standard", "skew", "keycap", "notch", "bar", "brush", "capsule", "console", "plaque", "seal", "lacquer", "ink", "pill", "lightring", "blade"],
+		[Buttons] = ["standard", "skew", "keycap", "notch", "bar", "brush", "capsule", "console", "plaque", "seal", "lacquer", "ink", "pill", "lightring", "blade", "neon"],
 		[Material] = ["solid", "glass", "hologram", "veil", "cardstock", "felt", "wood", "lcd", "silk", "bamboo", "lacquer", "washi", "lightline"],
 		[Meters] = ["bar", "segmented", "slanted", "pips", "hairline", "vital", "abacus", "arrows", "brush", "route", "slats"],
 		[Motion] = ["calm", "still", "snappy", "drift", "wobble", "bob", "unfurl"],
-		[Atmosphere] = ["none", "vignette", "fog", "embers", "motes", "crt", "slashes", "datastream", "sky-lanterns", "smoke", "petals", "circuit", "heartbeat"],
+		[Atmosphere] = ["none", "vignette", "fog", "embers", "motes", "crt", "slashes", "datastream", "sky-lanterns", "smoke", "petals", "circuit", "heartbeat",
+			"neon-rain", "sweep", "glint", "radar", "orbit", "twinkle", "blink", "starlight", "stage-lights", "beacon", "rays"],
+		// Light on the page itself: the page title's loop and a still lit edge on cards; never motion on a card.
+		[Highlight] = ["none", "neon", "pulse", "glitch", "firelight"],
 		[TextureStrength] = Strengths,
 		[FrameMarks] = [.. Frames.Values.Select(f => f.Marks).Distinct()],
 		[FrameEdge] = Edges,
@@ -309,7 +313,7 @@ public static class ThemeStyles
 	public static readonly IReadOnlyList<string> Keys =
 	[
 		FontDisplay, FontBody, Corners, Texture, Ornament, Frame, Titles, Effect, Imagery,
-		Selection, Buttons, Material, Meters, Motion, Atmosphere,
+		Selection, Buttons, Material, Meters, Motion, Atmosphere, Highlight,
 	];
 
 	/// <summary>The settings and parts in the order the Complex editor lists them.</summary>
@@ -320,7 +324,7 @@ public static class ThemeStyles
 		FrameMarks, FrameEdge, FrameShadow,
 		OrnamentGlyphs, OrnamentUnderline,
 		EffectColor, EffectShadow,
-		Selection, Buttons, Material, Meters, Motion, Atmosphere,
+		Selection, Buttons, Material, Meters, Motion, Atmosphere, Highlight,
 	];
 
 	/// <summary>Each setting's and part's first choice: what any one a theme leaves out falls back to.</summary>
@@ -358,6 +362,7 @@ public static class ThemeStyles
 			[Meters] = Pick(Meters),
 			[Motion] = Pick(Motion),
 			[Atmosphere] = Pick(Atmosphere),
+			[Highlight] = Pick(Highlight),
 			[Texture] = Pick(Texture),
 			[TextureStrength] = Own(TextureStrength, Defaults[TextureStrength]),
 			[FrameMarks] = Own(FrameMarks, frame.Marks),

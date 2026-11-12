@@ -13379,6 +13379,60 @@
   <data name="AdmThemeStyleAtmosphereHeartbeat" xml:space="preserve">
     <value>Heartbeat</value>
   </data>
+  <data name="AdmThemeStyleAtmosphereNeonRain" xml:space="preserve">
+    <value>Neon rain</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereSweep" xml:space="preserve">
+    <value>Sweep</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereGlint" xml:space="preserve">
+    <value>Glint</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereRadar" xml:space="preserve">
+    <value>Radar</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereOrbit" xml:space="preserve">
+    <value>Orbit</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereTwinkle" xml:space="preserve">
+    <value>Twinkle</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereBlink" xml:space="preserve">
+    <value>Blink</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereStarlight" xml:space="preserve">
+    <value>Starlight</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereStageLights" xml:space="preserve">
+    <value>Stage lights</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereBeacon" xml:space="preserve">
+    <value>Beacon</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereRays" xml:space="preserve">
+    <value>Rays</value>
+  </data>
+  <data name="AdmThemeStyleButtonsNeon" xml:space="preserve">
+    <value>Neon</value>
+  </data>
+  <data name="AdmThemeStyleHighlight" xml:space="preserve">
+    <value>Highlight</value>
+  </data>
+  <data name="AdmThemeStyleHighlightNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="AdmThemeStyleHighlightNeon" xml:space="preserve">
+    <value>Neon</value>
+  </data>
+  <data name="AdmThemeStyleHighlightPulse" xml:space="preserve">
+    <value>Pulse</value>
+  </data>
+  <data name="AdmThemeStyleHighlightGlitch" xml:space="preserve">
+    <value>Glitch</value>
+  </data>
+  <data name="AdmThemeStyleHighlightFirelight" xml:space="preserve">
+    <value>Firelight</value>
+  </data>
   <data name="AdmThemeStyleTextureArchive" xml:space="preserve">
     <value>Archive</value>
   </data>

@@ -69,7 +69,8 @@
 /* Halo: a soft pool of accent light behind the line, and the words lit by it. */
 [data-selection="halo"] {
 	--select-ink-dim: initial;
-	--select-fill: radial-gradient(60% 100% at 50% 50%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 72%);
+	/* The pool of light sits behind the words, which start at the line's padding, not in the middle of the row. */
+	--select-fill: radial-gradient(4.5em 120% at calc(var(--space-4) + 1.6em) 50%, color-mix(in srgb, var(--accent) 34%, transparent), transparent 100%);
 	--select-ink: var(--text);
 	--select-text-glow: 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent);
 	--select-mark: transparent;
@@ -701,6 +702,22 @@
 	--button-plain-shadow: inset 0 -2px 0 var(--accent-2);
 	--button-press: translateY(2px);
 	--button-press-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.4), inset 0 -2px 0 var(--accent-2);
+	--button-transform: initial;
+}
+
+/* Neon: a lit tube in spaced capitals. The fill glows past its edge with a white-hot rim; pressed, it flares brighter
+   and sinks a little. Outlined buttons glow faintly. */
+[data-buttons="neon"] {
+	--button-focus-offset: initial;
+	--button-radius: 6px;
+	--button-weight: 700;
+	--button-tracking: 0.12em;
+	--button-case: uppercase;
+	--button-shadow: 0 0 0 1px color-mix(in srgb, var(--text) 55%, var(--accent)), 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 30px color-mix(in srgb, var(--accent) 30%, transparent), inset 0 0 6px rgba(255, 255, 255, 0.35);
+	--button-plain-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 10px color-mix(in srgb, var(--accent) 35%, transparent);
+	--button-press: translateY(1px) scale(0.98);
+	--button-press-shadow: 0 0 0 1px var(--text), 0 0 20px var(--accent), 0 0 48px color-mix(in srgb, var(--accent) 60%, transparent), inset 0 0 14px rgba(255, 255, 255, 0.5);
+	--button-clip: initial;
 	--button-transform: initial;
 }
 

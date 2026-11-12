@@ -858,6 +858,7 @@
 	--texture-motion: none;
 	--ambient-play: running;
 	--ambient-flow: initial;
+	--ambient-rest: var(--no-drawing);
 	/* What hangs between the texture and the page (data-atmosphere): a still layer, a deep one over it, and a moving
 	   one with its tile size, place, repeat and loop, each cut to a drawing when its mask is set. */
 	--atmosphere-still: none;
@@ -870,6 +871,21 @@
 	--atmosphere-position: 0 0;
 	--atmosphere-repeat: repeat;
 	--atmosphere-motion: none;
+	/* A loop for the still layer (a glow that breathes or wavers), and the lit layer: light shown only where its mask
+	   lets it through, as rain catching a sign's colour or a beam lighting the contacts it passes. */
+	--atmosphere-still-motion: none;
+	--atmosphere-lit: none;
+	--atmosphere-lit-size: auto;
+	--atmosphere-lit-mask: none;
+	--atmosphere-lit-motion: none;
+	/* What a texture offers that light (its drawings that catch it, and the point a turning light turns about), and a
+	   loop for its drawn layers (data-texture). */
+	--texture-lit-mask: linear-gradient(rgba(0, 0, 0, 0.1) 0 0);
+	--texture-lit-at: 50% 50%;
+	--texture-layer-motion: none;
+	/* Light on the page itself (data-highlight): a still edge on each card, and the page title's loop. */
+	--card-highlight: none;
+	--title-motion: none;
 }
 
 /* CJK locales replace the whole mono stack instead of falling back per glyph. Cascadia's

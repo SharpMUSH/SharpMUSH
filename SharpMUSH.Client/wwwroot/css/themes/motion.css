@@ -50,7 +50,7 @@
 }
 @keyframes theme-ascend {
 	from { background-position: 0 0; }
-	to { background-position: 40px -340px; }
+	to { background-position: 0 -340px; }
 }
 
 @keyframes theme-fall {
@@ -89,6 +89,7 @@
 	--texture-motion: none;
 	--ambient-play: running;
 	--ambient-flow: initial;
+	--ambient-rest: var(--no-drawing);
 }
 
 /* Still: nothing moves at all, the atmosphere included. */
@@ -99,6 +100,7 @@
 	--texture-motion: none;
 	--ambient-play: paused;
 	--ambient-flow: var(--no-drawing);
+	--ambient-rest: initial;
 	--duration-enter: 0s;
 	--duration-exit: 0s;
 	--duration-spring: 0s;
@@ -113,6 +115,7 @@
 	--texture-motion: none;
 	--ambient-play: running;
 	--ambient-flow: initial;
+	--ambient-rest: var(--no-drawing);
 }
 
 /* Drift: cards fade up slowly, and the background drifts as if seen from a slowly moving camera. */
@@ -123,6 +126,7 @@
 	--texture-motion: theme-drift 40s ease-in-out infinite alternate;
 	--ambient-play: running;
 	--ambient-flow: initial;
+	--ambient-rest: var(--no-drawing);
 }
 
 /* Wobble: cards are dealt in with a turn, and the current line floats and tilts like a held card. */
@@ -133,6 +137,7 @@
 	--texture-motion: none;
 	--ambient-play: running;
 	--ambient-flow: initial;
+	--ambient-rest: var(--no-drawing);
 }
 
 /* Bob: cards rise, and the current line bobs gently up and down. */
@@ -143,6 +148,7 @@
 	--texture-motion: none;
 	--ambient-play: running;
 	--ambient-flow: initial;
+	--ambient-rest: var(--no-drawing);
 }
 
 /* Unfurl: cards open downward like a scroll let fall; nothing loops. */
@@ -155,6 +161,22 @@
 }
 
 /* ── Atmosphere ── */
+
+/* What every choice starts from, so a choice sets only what it uses and a preview inherits nothing from the page. */
+[data-atmosphere] {
+	--atmosphere-still-mask: none;
+	--atmosphere-still-motion: none;
+	--atmosphere-deep: none;
+	--atmosphere-deep-mask: none;
+	--atmosphere-moving-mask: none;
+	--atmosphere-size: auto;
+	--atmosphere-position: 0 0;
+	--atmosphere-repeat: repeat;
+	--atmosphere-lit: none;
+	--atmosphere-lit-size: auto;
+	--atmosphere-lit-mask: none;
+	--atmosphere-lit-motion: none;
+}
 
 /* None: nothing between the texture and the page. */
 [data-atmosphere="none"] {
@@ -336,4 +358,226 @@
 		radial-gradient(ellipse 3.5px 2px at 38% 86%, color-mix(in srgb, var(--accent) 40%, #fff) 0 80%, transparent);
 	--atmosphere-size: 360px 420px;
 	--atmosphere-motion: theme-petals 28s linear infinite;
+}
+
+/* ── Living atmospheres: slow light that moves behind the page and never on it. Each mask loop moves its tiles by whole
+   tiles, so it never jumps. ── */
+
+@keyframes theme-rain-fall {
+	from { mask-position: 0 0, 0 0; }
+	to { mask-position: -200px 940px, -360px 1695px; }
+}
+@keyframes theme-flicker {
+	0%, 40%, 43%, 46%, 77%, 80%, 100% { opacity: 1; }
+	41% { opacity: 0.55; }
+	44% { opacity: 0.75; }
+	78.5% { opacity: 0.7; }
+}
+
+/* Neon rain: signs far off in the city, out of focus in the accent colours and flickering now and then, and rain
+   falling past them in two depths; a drop shows the colour of the light behind it. */
+[data-atmosphere="neon-rain"] {
+	--rain-lights:
+		radial-gradient(circle 70px at 16% 28%, var(--rl-1), transparent),
+		radial-gradient(circle 46px at 27% 18%, var(--rl-2), transparent),
+		radial-gradient(circle 110px at 71% 20%, var(--rl-3), transparent),
+		radial-gradient(circle 60px at 88% 40%, var(--rl-1), transparent),
+		radial-gradient(circle 38px at 58% 46%, var(--rl-2), transparent),
+		radial-gradient(circle 90px at 40% 62%, var(--rl-1), transparent),
+		radial-gradient(circle 54px at 92% 74%, var(--rl-2), transparent),
+		radial-gradient(70% 26% at 50% 104%, var(--rl-street), transparent);
+	--rl-1: color-mix(in srgb, var(--accent) 13%, transparent);
+	--rl-2: color-mix(in srgb, var(--accent-2) 13%, transparent);
+	--rl-3: color-mix(in srgb, var(--accent-3) 8%, transparent);
+	--rl-street: color-mix(in srgb, var(--accent) 10%, transparent);
+	--atmosphere-still: var(--rain-lights);
+	--atmosphere-still-motion: theme-flicker 14s linear infinite;
+	--atmosphere-moving: color-mix(in srgb, var(--text) 13%, transparent);
+	--atmosphere-moving-mask: url(/themes/drawings/atmosphere/rain-far.svg) 0 0 / 200px 235px, url(/themes/drawings/atmosphere/rain-near.svg) 0 0 / 360px 339px;
+	--atmosphere-size: auto;
+	--atmosphere-motion: theme-rain-fall 3.6s linear infinite;
+	--atmosphere-lit:
+		radial-gradient(circle 150px at 16% 28%, color-mix(in srgb, var(--accent) 60%, transparent), transparent),
+		radial-gradient(circle 100px at 27% 18%, color-mix(in srgb, var(--accent-2) 60%, transparent), transparent),
+		radial-gradient(circle 200px at 71% 20%, color-mix(in srgb, var(--accent-3) 50%, transparent), transparent),
+		radial-gradient(circle 130px at 88% 40%, color-mix(in srgb, var(--accent) 60%, transparent), transparent),
+		radial-gradient(circle 90px at 58% 46%, color-mix(in srgb, var(--accent-2) 60%, transparent), transparent),
+		radial-gradient(circle 180px at 40% 62%, color-mix(in srgb, var(--accent) 60%, transparent), transparent),
+		radial-gradient(circle 120px at 92% 74%, color-mix(in srgb, var(--accent-2) 60%, transparent), transparent),
+		radial-gradient(80% 34% at 50% 108%, color-mix(in srgb, var(--accent) 60%, transparent), transparent);
+	--atmosphere-lit-mask: var(--atmosphere-moving-mask);
+	--atmosphere-lit-motion: theme-rain-fall 3.6s linear infinite;
+}
+
+@property --turn { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
+@keyframes theme-turn { to { --turn: 360deg; } }
+@keyframes theme-sweep-down {
+	0% { background-position: 0 -40%; }
+	100% { background-position: 0 140%; }
+}
+@keyframes theme-glint {
+	0%, 55% { background-position: -60% 0; }
+	85%, 100% { background-position: 160% 0; }
+}
+@keyframes theme-pulse {
+	0%, 100% { opacity: 0.55; }
+	50% { opacity: 1; }
+}
+@keyframes theme-twinkle {
+	0%, 100% { opacity: 0.15; }
+	20% { opacity: 1; }
+	45% { opacity: 0.35; }
+	70% { opacity: 0.9; }
+}
+@keyframes theme-blink {
+	0%, 100% { opacity: 1; }
+	33% { opacity: 0.2; }
+	66% { opacity: 0.7; }
+}
+@keyframes theme-star-drift {
+	from { mask-position: 0 0, 0 0, 0 0; }
+	to { mask-position: -400px 0, -640px 0, -1060px 0; }
+}
+@keyframes theme-rise-motes {
+	from { background-position: 0 0, 0 0; }
+	to { background-position: 30px -400px, -40px -560px; }
+}
+@keyframes theme-bob-crowd {
+	0%, 100% { background-position: 0 100%, 14px 100%; rotate: 0deg; }
+	50% { background-position: 4px calc(100% - 8px), 10px calc(100% + 4px); }
+}
+@keyframes theme-beacon {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.15; }
+}
+
+/* Sweep: a band of light runs down the window, gathering speed as it comes, every few seconds, lighting the texture's
+   lines as it passes (a grid floor rushing at you; a scan down a screen). */
+[data-atmosphere="sweep"] {
+	--atmosphere-still: none;
+	--atmosphere-moving: none;
+	--atmosphere-motion: none;
+	--atmosphere-lit: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 35%, transparent) 45%, color-mix(in srgb, var(--accent) 60%, var(--text)) 50%, transparent);
+	--atmosphere-lit-size: 100% 34%;
+	--atmosphere-lit-mask: var(--texture-lit-mask);
+	--atmosphere-lit-motion: theme-sweep-down 12s cubic-bezier(0.55, 0, 0.9, 0.6) infinite;
+}
+
+/* Glint: now and then a sheen of light passes across, catching only the texture's glass or crystal. */
+[data-atmosphere="glint"] {
+	--atmosphere-still: none;
+	--atmosphere-moving: none;
+	--atmosphere-motion: none;
+	--atmosphere-lit: linear-gradient(105deg, transparent 42%, color-mix(in srgb, var(--text) 32%, transparent) 50%, transparent 58%);
+	--atmosphere-lit-size: 60% 100%;
+	--atmosphere-lit-mask: var(--texture-lit-mask);
+	--atmosphere-lit-motion: theme-glint 26s ease-in-out infinite;
+}
+
+/* Radar: a beam turning about the texture's centre, a trail fading behind it, and a blip on each contact the beam
+   crosses (the texture's lit mask), fading with the trail. */
+[data-atmosphere="radar"] {
+	--atmosphere-still: none;
+	--atmosphere-size: 100% 100%;
+	--atmosphere-motion: theme-turn 12s linear infinite;
+	--atmosphere-lit-mask: var(--texture-lit-mask);
+	--atmosphere-lit-motion: theme-turn 12s linear infinite;
+}
+/* The turning gradients are declared on the layers themselves, where --turn is animated. */
+[data-atmosphere="radar"] .theme-atmosphere-moving { --atmosphere-moving: conic-gradient(from var(--turn) at var(--texture-lit-at), transparent 0deg 280deg, color-mix(in srgb, var(--accent) 8%, transparent) 320deg, color-mix(in srgb, var(--accent) 32%, transparent) 358deg, color-mix(in srgb, var(--accent) 60%, transparent) 359.5deg, transparent 360deg); }
+[data-atmosphere="radar"] .theme-atmosphere-lit { --atmosphere-lit: conic-gradient(from var(--turn) at var(--texture-lit-at), transparent 0deg 300deg, color-mix(in srgb, var(--accent) 45%, transparent) 350deg, color-mix(in srgb, var(--accent) 55%, var(--text)) 359.5deg, transparent 360deg); }
+
+/* Orbit: the same turning light, slower and gentler, in the second accent, as power running round a magic circle. */
+[data-atmosphere="orbit"] {
+	--atmosphere-still: radial-gradient(30% 40% at var(--texture-lit-at), color-mix(in srgb, var(--accent) 8%, transparent), transparent 70%);
+	--atmosphere-still-motion: theme-pulse 10s ease-in-out infinite;
+	--atmosphere-moving: color-mix(in srgb, var(--accent) 85%, var(--text));
+	--atmosphere-moving-mask: url(/themes/drawings/atmosphere/motes-far.svg) 0 0 / 310px 430px, url(/themes/drawings/atmosphere/motes-near.svg) 0 0 / 470px 610px;
+	--atmosphere-size: auto;
+	--atmosphere-motion: theme-motes-rise 60s linear infinite, theme-motes-sway 9s ease-in-out infinite alternate;
+	--atmosphere-lit-mask: var(--texture-lit-mask);
+	--atmosphere-lit-motion: theme-turn 30s linear infinite;
+}
+[data-atmosphere="orbit"] .theme-atmosphere-lit { --atmosphere-lit: conic-gradient(from var(--turn) at var(--texture-lit-at), transparent 0deg 250deg, var(--accent) 340deg, var(--text) 359deg, transparent 360deg); }
+
+/* Twinkle: the texture's stars and bursts flare and fade, and a few points of light blink between them. */
+[data-atmosphere="twinkle"] {
+	--atmosphere-still: none;
+	--atmosphere-moving: radial-gradient(circle at 20% 30%, var(--text) 0 1px, transparent 2.5px),
+		radial-gradient(circle at 75% 65%, color-mix(in srgb, var(--accent-2) 90%, var(--text)) 0 1.5px, transparent 3px);
+	--atmosphere-size: 230px 190px;
+	--atmosphere-motion: theme-twinkle 7s ease-in-out infinite;
+	--atmosphere-lit: color-mix(in srgb, var(--text) 55%, transparent);
+	--atmosphere-lit-mask: var(--texture-lit-mask);
+	--atmosphere-lit-motion: theme-twinkle 10s ease-in-out infinite;
+}
+
+/* Blink: the texture's readouts light and dim in turn, as a console at work. */
+[data-atmosphere="blink"] {
+	--atmosphere-still: none;
+	--atmosphere-moving: none;
+	--atmosphere-motion: none;
+	--atmosphere-lit: color-mix(in srgb, var(--text) 80%, transparent);
+	--atmosphere-lit-mask: var(--texture-lit-mask);
+	--atmosphere-lit-motion: theme-blink 6s steps(3, jump-none) infinite;
+}
+
+/* Starlight: the stars drift past in three depths, the nearest fastest, as from a ship under way, and the planet's
+   rim brightens and dims. */
+[data-atmosphere="starlight"] {
+	--atmosphere-still: radial-gradient(circle at 112% 128%, transparent 34%, color-mix(in srgb, var(--accent-2) 30%, transparent) 34.6%, transparent 39%);
+	--atmosphere-still-motion: theme-pulse 14s ease-in-out infinite;
+	--atmosphere-moving: color-mix(in srgb, var(--text) 85%, transparent);
+	--atmosphere-moving-mask: url(/themes/drawings/shared/starfield-200.svg) 0 0 / 200px 200px, url(/themes/drawings/shared/starfield-320.svg) 0 0 / 320px 320px, url(/themes/drawings/shared/starfield-530.svg) 0 0 / 530px 530px;
+	--atmosphere-size: auto;
+	--atmosphere-motion: theme-star-drift 180s linear infinite;
+}
+
+/* Stage lights: glitter turning in the spotlight beams and nowhere else, and a crowd's lightsticks swaying along the
+   foot of the window. */
+[data-atmosphere="stage-lights"] {
+	--atmosphere-still: none;
+	--atmosphere-moving: radial-gradient(5px 16px at 50% 70%, var(--accent), transparent) 0 100% / 28px 60px repeat-x,
+		radial-gradient(5px 16px at 50% 70%, var(--accent-2), transparent) 14px 100% / 36px 72px repeat-x;
+	--atmosphere-size: 28px 60px, 36px 72px;
+	--atmosphere-position: 0 100%, 14px 100%;
+	--atmosphere-repeat: repeat-x;
+	--atmosphere-motion: theme-bob-crowd 2.6s ease-in-out infinite;
+	--atmosphere-lit: radial-gradient(circle at 20% 30%, var(--text) 0 2px, transparent 4px), radial-gradient(circle at 70% 70%, var(--accent-3) 0 1.5px, transparent 3.5px);
+	--atmosphere-lit-size: 60px 80px, 90px 100px;
+	--atmosphere-lit-mask: var(--texture-lit-mask);
+	--atmosphere-lit-motion: theme-rise-motes 24s linear infinite;
+}
+
+/* Beacon: two warning lights in the second accent at the top corners, flashing in turn. */
+[data-atmosphere="beacon"] {
+	--atmosphere-still: radial-gradient(28% 40% at 0% 0%, color-mix(in srgb, var(--accent-2) 42%, transparent), transparent 70%);
+	--atmosphere-still-motion: theme-beacon 4s ease-in-out infinite;
+	--atmosphere-moving: radial-gradient(28% 40% at 100% 0%, color-mix(in srgb, var(--accent) 38%, transparent), transparent 70%);
+	--atmosphere-size: 100% 100%;
+	--atmosphere-motion: theme-beacon 4s ease-in-out -2s infinite;
+	--atmosphere-lit: color-mix(in srgb, var(--accent-2) 80%, var(--text));
+	--atmosphere-lit-mask: var(--texture-lit-mask);
+	--atmosphere-lit-motion: theme-beacon 4s ease-in-out infinite;
+}
+
+/* Rays: rays of light turning slowly about a sun below the window, brightening and dimming. */
+[data-atmosphere="rays"] {
+	--atmosphere-still: radial-gradient(circle 40vmax at 50% 110%, color-mix(in srgb, var(--accent) 20%, transparent), transparent);
+	--atmosphere-still-motion: theme-pulse 30s ease-in-out infinite;
+	--atmosphere-size: 100% 100%;
+	--atmosphere-motion: theme-turn 360s linear infinite;
+}
+
+[data-atmosphere="rays"] .theme-atmosphere-moving { --atmosphere-moving: repeating-conic-gradient(from var(--turn) at 50% 115%, color-mix(in srgb, var(--accent-3) 22%, transparent) 0deg 3deg, transparent 3deg 9deg); }
+[data-scheme="light"][data-atmosphere="glint"] { --atmosphere-lit: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.5) 50%, transparent 58%); }
+[data-scheme="light"][data-atmosphere="sweep"] { --atmosphere-lit: linear-gradient(180deg, transparent, var(--accent) 50%, transparent); }
+
+@keyframes theme-motes-rise {
+	from { mask-position: 0 0, 0 0; }
+	to { mask-position: 0 -860px, 0 -1830px; }
+}
+@keyframes theme-motes-sway {
+	from { translate: -8px 0; }
+	to { translate: 8px 0; }
 }
