@@ -745,6 +745,9 @@
 [data-texture="haze"] {
 	--letterbox: color-mix(in srgb, var(--text) 72%, var(--bg));
 	--letterbox-h: 48px;
+	/* The section sidebar is dense glass over the bars and the page. */
+	--pagebar-bg: color-mix(in srgb, var(--surface-3) 72%, transparent);
+	--pagebar-glass: blur(16px) saturate(1.3);
 	--letterbox-mark: color-mix(in srgb, var(--accent-2) 62%, #000);
 	--letterbox-ink: color-mix(in srgb, var(--letterbox) 55%, var(--bg));
 	--letterbox-bg: linear-gradient(var(--letterbox-ink), var(--letterbox-ink)) 0 47px / 100% 1px no-repeat,

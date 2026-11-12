@@ -22,6 +22,19 @@
 }
 
 
+/* A theme's letterbox: bars across the top and bottom of the window right of the rail, --letterbox-h high (none
+   unless a theme sets it), drawn by --letterbox-bg's background layers. They lie over the page texture and under
+   the section sidebar and the page, so the sidebar sliding in and out passes over them and they never move. The
+   main column leaves room for them. Desktop only. */
+.phosphor-shell::after {
+	content: "";
+	position: absolute;
+	inset: 0 0 0 var(--rail-w);
+	z-index: 0;
+	pointer-events: none;
+	background: var(--letterbox-bg, none);
+}
+
 /* Content column: topbar + scrollable main + footer/terminal */
 .phosphor-content-col {
 	flex: 1;
@@ -116,12 +129,8 @@
 	flex: 1;
 	min-height: 0;
 	overflow-y: auto;
-	/* A theme's letterbox: bars across the top and bottom of the page that stay put while it scrolls between
-	   them. --letterbox-h is their height (none unless a theme sets it) and --letterbox-bg the background layers
-	   drawn in them, placed against the outer box. Desktop only. */
+	/* Room for a theme's letterbox (.phosphor-shell::after), so the page scrolls between its bars. */
 	border-block: var(--letterbox-h, 0px) solid transparent;
-	background: var(--letterbox-bg, none);
-	background-origin: border-box;
 }
 /* The page takes the whole content column at every width, so a page's left edge always sits against the
    sidebar. A page that reads better narrower caps its own block (a form, an article's measure). */
@@ -432,8 +441,10 @@
 	min-height: 0;
 	overflow-y: auto;
 	overscroll-behavior: contain;
-	/* Lets the page's texture (ThemeTexture) through faintly, so it runs on from the page without a seam. */
-	background: color-mix(in srgb, var(--surface-3) 84%, transparent);
+	/* Lets the page's texture (ThemeTexture) through faintly, so it runs on from the page without a seam. A theme
+	   can make it glass: --pagebar-bg a thinner surface, --pagebar-glass the backdrop-filter behind it. */
+	background: var(--pagebar-bg, color-mix(in srgb, var(--surface-3) 84%, transparent));
+	backdrop-filter: var(--pagebar-glass, none);
 	border-right: 1px solid var(--border-soft);
 	transition: width var(--motion-move);
 }
@@ -1595,6 +1606,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	.phosphor-sidebar { display: flex; }
 	.phosphor-topbar { display: flex; }
 	.phosphor-main { border-block-width: 0; }
+	.phosphor-shell::after { display: none; }
 
 	/* The section panel is always the full sidebar here (SectionShell ignores a desktop collapse). */
 	.phosphor-shell .phosphor-pagebar .kit-pagebar-toggle { display: none; }
