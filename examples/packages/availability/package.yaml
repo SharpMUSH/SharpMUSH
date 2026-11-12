@@ -1,7 +1,7 @@
 format: "1.16"
 package: availability
 title: "Availability"
-version: 1.5.1
+version: 1.5.2
 authors: [SharpMUSH]
 description: "+avail: when each character is busy or free, as dates, ranges and repeating patterns like an office calendar, and the times a group of players are all free."
 license: MIT
@@ -660,18 +660,22 @@ objects:
           case(1,isnum(%0),round(mul(%0,3600),0),cand(cor(strmatch(%0,*h*),strmatch(%0,*m)),isint(setr(read_length_hours,if(strmatch(%0,*h*),before(%0,h),0))),cor(not(strlen(setr(read_length_minutes,edit(if(strmatch(%0,*h*),after(%0,h),%0),m,)))),isint(%q<read_length_minutes>))),add(mul(%q<read_length_hours>,3600),mul(0%q<read_length_minutes>,60)))
         flags: [funsyntax]
 
+      DATA`TEMPLATE`DISPLAY`FRAME: |-
+        {"side":"","corner":"","teel":"","teer":"","pad":0}
       # ---- display -------------------------------------------------------------------
       # Every screen is a box() with no sides, corners or tees, as +time's and +help's are, so a line copied from a
       # terminal carries no |.
       FUN`DISPLAY`FRAME:
         value: |-
-          json(object,side,json(string,),corner,json(string,),teel,json(string,),teer,json(string,),pad,0)
+          v(DATA`TEMPLATE`DISPLAY`FRAME)
         flags: [funsyntax]
+      DATA`TEMPLATE`DISPLAY`TABLE: |-
+        {"rule":"","delim":"","nowrap":"","grow":""}
       # The options every table here shares: %0 the nowrap columns, %1 the shares of spare width, each split by |.
       # The delimiter is a newline, so a note may hold a |.
       FUN`DISPLAY`TABLE:
         value: |-
-          json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,edit(%0,|,%r)),grow,json(string,edit(%1,|,%r)))
+          json_fill(v(DATA`TEMPLATE`DISPLAY`TABLE),/delim,%r,/nowrap,edit(%0,|,%r),/grow,edit(%1,|,%r))
         flags: [funsyntax]
       # %0 minutes into a day: 19:00. 1440 is 24:00.
       FUN`DISPLAY`CLOCK:

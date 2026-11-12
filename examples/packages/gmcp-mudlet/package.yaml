@@ -1,7 +1,7 @@
 format: "1.16"
 package: gmcp-mudlet
 title: "GMCP for Mudlet"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "A gmcp add-on for Mudlet: offers Mudlet an interface and the game's map over GMCP (Client.GUI and Client.Map), answers its Discord rich presence (External.Discord.Info and Status), and gives players +gui on and +gui off."
 license: MIT
@@ -212,9 +212,11 @@ objects:
       FUN`CLIENT`SCREENREADER: |-
         member(terminfo(%0),screenreader)
 
+      DATA`TEMPLATE`PAYLOAD`GUI: |-
+        {"version":"","url":""}
       # ── Payloads ─────────────────────────────────────────────────────────
       FUN`PAYLOAD`GUI: |-
-        json(object,version,json(string,u(%!/FUN`GUI`VERSION)),url,json(string,u(%!/FUN`GUI`URL)))
+        json_fill(v(DATA`TEMPLATE`PAYLOAD`GUI),/version,u(%!/FUN`GUI`VERSION),/url,u(%!/FUN`GUI`URL))
       FUN`PAYLOAD`MAP: |-
         json(object,url,json(string,v(DATA`CONFIG`MAP-URL)))
       # A setting as a JSON string, or null when it is empty, so a json_mod() patch leaves it out.

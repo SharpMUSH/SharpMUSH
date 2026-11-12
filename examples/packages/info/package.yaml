@@ -1,7 +1,7 @@
 format: "1.16"
 package: info
 title: "Info files and journals"
-version: 1.3.1
+version: 1.3.2
 authors: [SharpMUSH]
 description: "+info and +pinfo files, and a journal per character whose entries can be shared."
 license: MIT
@@ -295,18 +295,22 @@ objects:
           if(gt(%q<page_count>,1),%b· page %q<cmd_page> of %q<page_count>[if(lt(%q<cmd_page>,%q<page_count>),%b· +%q<cmd_word>[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)]/[inc(%q<cmd_page>)][if(strlen(%q<cmd_argument>),%b%q<cmd_argument>)] for more)])
         flags: [funsyntax]
 
+      DATA`TEMPLATE`DISPLAY`FRAME: |-
+        {"side":"","corner":"","teel":"","teer":"","pad":0}
       # ---- display ----------------------------------------------------------------
       # A file's or entry's card is a box() with no sides, corners or tees, as +finger's and +help's are, so text
       # copied from a terminal carries no |. The listings take the game's own border.
       FUN`DISPLAY`FRAME:
         value: |-
-          json(object,side,json(string,),corner,json(string,),teel,json(string,),teer,json(string,),pad,0)
+          v(DATA`TEMPLATE`DISPLAY`FRAME)
         flags: [funsyntax]
+      DATA`TEMPLATE`DISPLAY`TABLEOPTIONS: |-
+        {"rule":"","delim":"","nowrap":"","priority":"","grow":""}
       # Table options, every list split by a new line: %0 the columns that never wrap, %1 each column's
       # priority, %2 each column's share of the spare width.
       FUN`DISPLAY`TABLEOPTIONS:
         value: |-
-          json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1),grow,json(string,%2))
+          json_fill(v(DATA`TEMPLATE`DISPLAY`TABLEOPTIONS),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2)
         flags: [funsyntax]
       # %0 seconds: the date and time, in the reader's own zone when their TZ holds one.
       FUN`DISPLAY`WHEN:

@@ -1,7 +1,7 @@
 format: "1.16"
 package: onboarding
 title: "Getting-started checklist"
-version: 1.2.0
+version: 1.2.1
 authors: [SharpMUSH]
 description: "A getting-started checklist for new characters: shown at login while a step is open and any time with +welcome, each step with more to read under +welcome <number>. The game chooses the steps."
 license: MIT
@@ -305,12 +305,14 @@ objects:
           if(regmatch(%0,^%[A-Za-z0-9_%]+$),setq(find_keys,u(%!/FUN`STEP`KEYS,%1))[extract(%q<find_keys>,if(isint(%0),max(%0,0),match(%q<find_keys>,%0)),1)])
         flags: [funsyntax]
 
+      DATA`TEMPLATE`DISPLAY`SCREEN: |-
+        {"delim":"","nowrap":"","grow":""}
       # ---- display --------------------------------------------------------------
       # %0 a player, %1 1 at login: the checklist in a box, one numbered row per step.
       FUN`DISPLAY`SCREEN:
         value: |-
           setqm(screen_keys,u(%!/FUN`STEP`KEYS,%0),
-          screen_intro,unmark(v(DATA`CONFIG`INTRO)))[if(words(%q<screen_keys>),box([if(strlen(%q<screen_intro>),%q<screen_intro>%r)][ldatatable(json(object,delim,json(string,%r),nowrap,json(string,1%r2),grow,json(string,%r%r%r1)),>#%r%rStep%rHow,iter(%q<screen_keys>,uargs(%!/FUN`DISPLAY`ROW,key,%i0,player,%0,number,inum(0)),,%*<^>),%*<^>)]%r[rule()]%r[u(%!/FUN`DISPLAY`FOOTER,%0,%1)],unmark(v(DATA`CONFIG`TITLE))),notice(WELCOME,This game has no steps on its checklist.,info))]
+          screen_intro,unmark(v(DATA`CONFIG`INTRO)))[if(words(%q<screen_keys>),box([if(strlen(%q<screen_intro>),%q<screen_intro>%r)][ldatatable(json_fill(v(DATA`TEMPLATE`DISPLAY`SCREEN),/delim,%r,/nowrap,1%r2,/grow,%r%r%r1),>#%r%rStep%rHow,iter(%q<screen_keys>,uargs(%!/FUN`DISPLAY`ROW,key,%i0,player,%0,number,inum(0)),,%*<^>),%*<^>)]%r[rule()]%r[u(%!/FUN`DISPLAY`FOOTER,%0,%1)],unmark(v(DATA`CONFIG`TITLE))),notice(WELCOME,This game has no steps on its checklist.,info))]
         flags: [funsyntax]
       # %<key> a step on %<player>'s list, %<number> its place there: its row. A step they tick off says how, as a link
       # by number, which wraps less than a name.

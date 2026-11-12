@@ -1,7 +1,7 @@
 format: "1.16"
 package: time
 title: "Time and time zones"
-version: 1.6.0
+version: 1.6.1
 authors: [SharpMUSH]
 description: "+time and +timezone: the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets."
 license: MIT
@@ -113,11 +113,13 @@ objects:
         value: |-
           fdiv(abs(%0),3600) hour[if(neq(abs(%0),3600),s)]
         flags: [funsyntax]
+      DATA`TEMPLATE`DISPLAY`FRAME: |-
+        {"side":"","corner":"","teel":"","teer":"","pad":0}
       # Every screen is a box() with no sides, corners or tees, as +finger's and +help's are, so a time copied
       # from a terminal carries no |.
       FUN`DISPLAY`FRAME:
         value: |-
-          json(object,side,json(string,),corner,json(string,),teel,json(string,),teer,json(string,),pad,0)
+          v(DATA`TEMPLATE`DISPLAY`FRAME)
         flags: [funsyntax]
       # The FILTER`TIME`SCREEN`<name> attributes on this object, in name order, for chain().
       FUN`DISPLAY`FILTERS:
