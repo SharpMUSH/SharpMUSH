@@ -174,9 +174,9 @@ public class ThemeResolverTests
 	[Test]
 	public async Task NoTwoBuiltInThemesLookAlike()
 	{
-		// Phosphor, Daylight and the colour vision themes share the plain look on purpose.
+		// Phosphor, Daylight and the colour vision themes share the plain look on purpose, and Directive Light is Directive's.
 		var genreLooks = BuiltInThemes.All.Skip(2)
-			.Where(t => ThemeVision.Of(t.Tokens) == ThemeVision.Typical)
+			.Where(t => ThemeVision.Of(t.Tokens) == ThemeVision.Typical && t != BuiltInThemes.DirectiveLight)
 			.Select(t => string.Join(",", ThemeStyles.Keys.Select(k => ThemeResolver.Complete(t.Tokens).Style[k])))
 			.ToList();
 
@@ -203,7 +203,7 @@ public class ThemeResolverTests
 	public async Task EachGenreHasATextureAndFrameOfItsOwn()
 	{
 		var genres = BuiltInThemes.All.Skip(2)
-			.Where(t => ThemeVision.Of(t.Tokens) == ThemeVision.Typical)
+			.Where(t => ThemeVision.Of(t.Tokens) == ThemeVision.Typical && t != BuiltInThemes.DirectiveLight)
 			.Select(t => ThemeResolver.Complete(t.Tokens).Style)
 			.ToList();
 
@@ -236,6 +236,23 @@ public class ThemeResolverTests
 	[Test]
 	public async Task DirectivesPicturesAreSmokyMonochrome()
 		=> await Assert.That(ThemeResolver.Resolve(BuiltInThemes.Directive).Parts[ThemeStyles.Imagery]).IsEqualTo("smoke");
+
+	[Test]
+	public async Task DirectiveLightIsDirectivesLookInLightWithTheSameYellow()
+	{
+		var dark = ThemeResolver.Resolve(BuiltInThemes.Directive);
+		var light = ThemeResolver.Resolve(BuiltInThemes.DirectiveLight);
+
+		await Assert.That(light.Parts.Where(p => p.Key != ThemeStyles.Scheme))
+			.IsEquivalentTo(dark.Parts.Where(p => p.Key != ThemeStyles.Scheme));
+		await Assert.That(light.Parts[ThemeStyles.Scheme]).IsEqualTo("light");
+		await Assert.That(dark.Parts[ThemeStyles.Scheme]).IsEqualTo("dark");
+		foreach (var theme in new[] { light, dark })
+		{
+			var yellow = ThemeColor.Parse(theme.Token(ThemeTokens.Accent2));
+			await Assert.That(yellow.R > yellow.B + 150 && yellow.G > yellow.B + 120).IsTrue().Because(theme.ThemeId);
+		}
+	}
 
 	[Test]
 	public async Task TurningImageFiltersOffHoldsOverAThemesOwnStylesheet()

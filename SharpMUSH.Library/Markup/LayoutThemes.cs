@@ -37,19 +37,23 @@ public static class LayoutThemes
 	/// <c>text-faint</c>, then the status colours the portal works out for the theme (success, <c>warn</c>, danger and
 	/// info). A colour that did not stand out from the background enough for its role was moved toward white on a dark
 	/// theme, black on a light one, until it did. Subtle, link, highlight and the hues are worked out from those
-	/// (<see cref="ThemePalette.Completed()"/>). <c>directive</c> and the themes styled on games (<c>heart-realm</c> to <c>wasteland</c>)
+	/// (<see cref="ThemePalette.Completed()"/>). <c>directive</c>, <c>directive-light</c> and the themes styled on games (<c>heart-realm</c> to <c>wasteland</c>)
 	/// also carry a look: their own border, title ornaments, bullet and gauge.
 	/// </summary>
+	/// <summary>Directive's and Directive Light's look: single rules, titles between dashes, a square gauge.</summary>
+	private static readonly ThemeLook DirectiveLook = new()
+	{
+		Border = "single", TitleOpen = "┤ — ", TitleClose = " — ├", Guide = "line", Bullet = "—",
+		GaugeOpen = "[", GaugeFilled = "■", GaugeEmpty = "·", GaugeClose = "]", Rule = "─",
+	};
+
 	public static IReadOnlyList<ThemePalette> Own { get; } =
 	[
 		SharpMUSH,
 		Ported("phosphor", ThemeMode.Dark, ["#121110", "#211e1c", "#efebe5", "#00f5b7", "#efebe5", "#ffb454", "#90887e", "#6cde9a", "#ffb454", "#e57373", "#5aa9ff"]),
 		Ported("daylight", ThemeMode.Light, ["#f6f4ef", "#f3f0e9", "#1c1915", "#00775f", "#1c1915", "#8f5300", "#655d54", "#387350", "#8f5300", "#a05050", "#3a6ca3"]),
-		Ported("directive", ThemeMode.Dark, ["#0a0a0a", "#1b1b1b", "#e4e4e4", "#ffffff", "#8c8c8c", "#c8c8c8", "#8c8c8c", "#6cde9a", "#e3c27e", "#f08f8f", "#5aa9ff"], new ThemeLook
-		{
-			Border = "single", TitleOpen = "┤ — ", TitleClose = " — ├", Guide = "line", Bullet = "—",
-			GaugeOpen = "[", GaugeFilled = "■", GaugeEmpty = "·", GaugeClose = "]", Rule = "─",
-		}),
+		Ported("directive", ThemeMode.Dark, ["#1b1b1b", "#141414", "#ebebeb", "#c5c5c5", "#f2d33a", "#ababab", "#ababab", "#6cde9a", "#e3c27e", "#f08f8f", "#5aa9ff"], DirectiveLook),
+		Ported("directive-light", ThemeMode.Light, ["#e4e4e4", "#ebebeb", "#141414", "#3a3a3a", "#6b5600", "#545454", "#545454", "#2f6344", "#7a5600", "#a3302a", "#2f5a8a"], DirectiveLook),
 		Ported("magical-girl", ThemeMode.Light, ["#fcedf7", "#f9eafa", "#2e1538", "#b8157a", "#7e5cb9", "#8f4b00", "#6b5279", "#387350", "#8f4b00", "#9c4e4e", "#38699e"]),
 		Ported("shojo", ThemeMode.Light, ["#fdf8f1", "#fbf3ea", "#2b2226", "#0f6f73", "#ab5851", "#815fbd", "#695a60", "#3a7853", "#8f4b00", "#a55353", "#3a6ca3"]),
 		Ported("idol", ThemeMode.Dark, ["#0c0a1d", "#1c163f", "#f4efff", "#ff58a8", "#36e2ff", "#ffde4a", "#9e94c4", "#6cde9a", "#ffd84a", "#e57373", "#5aa9ff"]),

@@ -43,9 +43,11 @@ covered by the switch; use `--image-filter` instead. Signed out, the browser kee
 - **Phosphor** (dark) and **Daylight** (light), the default looks: the phosphor accent on warm charcoal or warm
   paper, titles in Space Grotesk, a fine grain, and the `lifted` frame (cards on an elevation shadow, a glow on the
   Home hero).
-- **Directive** (`directive`, dark): white through smoke on black, Bodoni Moda capitals between dashes, square cards
-  marked like a filed report (`dossier`), pictures in smoky monochrome (`smoke`). The chrome stays grey: the
-  character's accent is its only colour, apart from warnings and missing links. Its layout theme carries a look too.
+- **Directive Light** (`directive-light`) and **Directive** (`directive`, dark), a game's title screen and the same
+  screen inverted: a grey field under a soft light between letterbox bars in the rail's colour, Bodoni Moda capitals
+  between dashes, flat square cards marked like a filed report (`dossier`), flat grey buttons, and pictures in smoky
+  monochrome (`smoke`). The chrome stays grey except for one colour, `accent-2`: a yellow wireframe hanging from the
+  top of the page and yellow hatching on the cards. Their layout themes carry a look too.
 - One per MSSP genre, with the ids the telnet layout themes use: `fantasy`, `historical`, `horror`, `modern`,
   `mystery`, `romance`, `science-fiction`, `spiritual`.
 - Anime: `magical-girl`, `shojo`, `idol`, `slice-of-life`, `shonen`, `sports`, `mechmachine`, `real-robot`, `super-robot`, `isekai`, `yokai`.

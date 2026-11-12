@@ -2,7 +2,7 @@
 	height: 36px;
 	padding: 0 var(--space-5) 0 var(--space-4);
 	border: 0;
-	border-radius: 18px;
+	border-radius: var(--radius-capsule, 18px);
 	background: var(--surface-2);
 	box-shadow: inset 0 0 0 1px var(--border);
 	color: var(--text);
@@ -53,5 +53,5 @@
 	background: var(--accent);
 	color: var(--accent-on);
 	font-weight: 700;
-	box-shadow: none;
+	box-shadow: var(--capsule-primary-edge, none);
 }

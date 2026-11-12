@@ -734,24 +734,30 @@
 	--texture-ink-border: color-mix(in srgb, var(--text) 7%, transparent);
 }
 
-/* Haze: smoke drifting through a dark room lit from above, a vignette, a faint grid of dots with a register cross,
-   and a few printer's marks (one strip of hatching, rules, arrowheads) in accent-2 across a pale diagonal band. */
+/* Haze: a title screen. Smoke drifting through a room lit from above, a vignette, letterbox bars in the rail's colour
+   along the top and bottom of the window, a faint grid of dots with a register cross, a few printer's marks (one strip
+   of hatching, rules, arrowheads) across a pale diagonal band, and a wireframe shell hanging from the top of the page
+   with a smaller one far off, both in accent-2. */
 [data-texture="haze"] {
-	--texture: radial-gradient(70% 55% at 50% 0%, color-mix(in srgb, var(--text) 7%, transparent), transparent 70%),
+	--texture: linear-gradient(var(--rail-bg) 14px, transparent 14px calc(100% - 14px), var(--rail-bg) calc(100% - 14px)),
+		radial-gradient(70% 55% at 50% 0%, color-mix(in srgb, var(--text) 7%, transparent), transparent 70%),
 		radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.55) 100%),
 		linear-gradient(115deg, transparent 58%, color-mix(in srgb, var(--text) 3%, transparent) 58% 71%, transparent 71%);
-	--texture-size: 100% 100%, 100% 100%, 100% 100%;
+	--texture-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%;
 	--texture-mask-border: url(/themes/drawings/shared/clouds-800.svg) 0 0 / 100% 100%;
 	--texture-ink-border: color-mix(in srgb, var(--text) 9%, transparent);
 	--texture-mask-text: url(/themes/drawings/textures/haze-marks.svg) 0 0 / 240px 240px;
 	--texture-ink-text: var(--border);
-	--texture-mask-accent-2: url(/themes/drawings/textures/haze-hatch.svg) 0 0 / 1440px 720px;
-	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 70%, transparent);
+	--texture-mask-accent-2: url(/themes/drawings/textures/haze-wire.svg) center top / 1440px 720px no-repeat,
+		url(/themes/drawings/textures/haze-hatch.svg) 0 0 / 1440px 720px;
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 80%, transparent);
 }
 [data-scheme="light"][data-texture="haze"] {
-	--texture: radial-gradient(60% 55% at 50% 30%, color-mix(in srgb, #fff 85%, transparent), transparent 70%),
-		radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.12) 100%),
+	--texture: linear-gradient(var(--rail-bg) 14px, transparent 14px calc(100% - 14px), var(--rail-bg) calc(100% - 14px)),
+		radial-gradient(60% 55% at 50% 30%, color-mix(in srgb, #fff 85%, transparent), transparent 70%),
+		radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.16) 100%),
 		linear-gradient(115deg, transparent 58%, color-mix(in srgb, var(--text) 3%, transparent) 58% 71%, transparent 71%);
 	--texture-ink-border: color-mix(in srgb, var(--text) 5%, transparent);
 	--texture-ink-text: var(--border-soft);
+	--texture-ink-accent-2: var(--accent-2);
 }

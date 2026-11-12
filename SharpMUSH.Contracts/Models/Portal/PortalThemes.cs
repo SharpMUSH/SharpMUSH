@@ -175,11 +175,21 @@ public static class BuiltInThemes
 			[ThemeTokens.LinkMissing] = "#c0362c",
 		}), BuiltIn: true);
 
-	/// <summary>Directive: white through smoke on black, razor-hairline serif capitals between dashes, flat square cards filed like a report, pictures in smoky monochrome. Its chrome is grey: the character's own accent is its only colour, apart from warnings and missing links.</summary>
+	/// <summary>Directive: Directive Light turned inside out. A dark grey field under a soft spotlight between pale letterbox bars,
+	/// razor-hairline serif capitals between dashes, flat square cards filed like a report, light grey buttons, pictures in
+	/// smoky monochrome, and one colour in the chrome: a yellow wireframe hanging from the top of the page, with yellow
+	/// hatching on the cards.</summary>
 	public static readonly PortalTheme Directive = Genre("directive", "Directive", dark: true,
-		["#0a0a0a", "#121212", "#1b1b1b", "#0e0e0e", "#000000", "#e4e4e4", "#a6a6a6", "#8c8c8c", "#3a3a3a", "#242424", "#ffffff", "#e3c27e", "#f08f8f"],
+		["#1b1b1b", "#0c0c0c", "#141414", "#262626", "#c5c5c5", "#ebebeb", "#c0c0c0", "#ababab", "#707070", "#363636", "#c5c5c5", "#e3c27e", "#f08f8f"],
 		display: "bodoni", body: "ui", corners: "razor", texture: "haze", ornament: "flank", frame: "dossier", titles: "wide", effect: "console", imagery: "smoke",
-		accent2: "#6e6e6e", accent3: "#c8c8c8");
+		accent2: "#f2d33a", accent3: "#ababab");
+
+	/// <summary>Directive Light: a title screen. A pale grey field with a soft vignette between charcoal letterbox bars,
+	/// dark serif capitals, flat dark grey buttons, and a yellow wireframe hanging from the top of the page.</summary>
+	public static readonly PortalTheme DirectiveLight = Genre("directive-light", "Directive Light", dark: false,
+		["#e4e4e4", "#f3f3f3", "#ebebeb", "#d9d9d9", "#3a3a3a", "#141414", "#3f3f3f", "#545454", "#8f8f8f", "#c9c9c9", "#3a3a3a", "#7a5600", "#a3302a"],
+		display: "bodoni", body: "ui", corners: "razor", texture: "haze", ornament: "flank", frame: "dossier", titles: "wide", effect: "console", imagery: "smoke",
+		accent2: "#e2bd12", accent3: "#545454");
 
 	/// <summary>Phosphor's and Daylight's look beyond colour: Space Grotesk titles, grain, lifted cards.</summary>
 	private static Dictionary<string, string> WithEmberStyle(Dictionary<string, string> tokens)
@@ -455,7 +465,7 @@ public static class BuiltInThemes
 
 	public static readonly IReadOnlyList<PortalTheme> All =
 	[
-		Phosphor, Daylight, Directive, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual,
+		Phosphor, Daylight, Directive, DirectiveLight, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual,
 		MagicalGirl, Shojo, Idol, SliceOfLife,
 		Shonen, Sports, MechMachine, Isekai,
 		Yokai, ComicBook, RubberHose, EightiesCartoon,
