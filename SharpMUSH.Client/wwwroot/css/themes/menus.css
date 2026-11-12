@@ -5,7 +5,7 @@
    [data-material]   a card's fill under its marks (--card-material) and what it does to the page behind it
                      (--card-backdrop)
    [data-buttons]    the cut of a button: --button-* (read by Kit/CapsuleButton.razor.css and shell.css)
-   [data-meters]     progress bars (MudProgressLinear), including a sheet's stat bars
+   [data-meters]     MudBlazor progress bars (MudProgressLinear), such as a loading or import bar
    Every colour comes from the theme. A part that differs on a dark theme has a second rule with
    [data-scheme="dark"]. */
 
@@ -17,6 +17,7 @@
 /* Standard: each menu as it marks its current line already (a glowing bar in the main menu, a raised row in a
    section's sidebar). */
 [data-selection="standard"] {
+	--select-ink-dim: initial;
 	--select-fill: initial;
 	--select-ink: initial;
 	--select-radius: initial;
@@ -33,6 +34,7 @@
 
 /* Bar: a block in the text colour, squared off, with an offset shadow, as on an archive terminal. */
 [data-selection="bar"] {
+	--select-ink-dim: color-mix(in srgb, var(--surface) 78%, var(--text));
 	--select-fill: var(--text);
 	--select-ink: var(--surface);
 	--select-radius: 0px;
@@ -49,6 +51,7 @@
 
 /* Skew: a slanted accent plate behind the text with a hard offset shadow, as in a shooter's lobby. */
 [data-selection="skew"] {
+	--select-ink-dim: color-mix(in srgb, var(--accent-on) 82%, var(--accent));
 	--select-fill: transparent;
 	--select-ink: var(--accent-on);
 	--select-mark: var(--accent);
@@ -65,6 +68,7 @@
 
 /* Halo: a soft pool of accent light behind the line, and the words lit by it. */
 [data-selection="halo"] {
+	--select-ink-dim: initial;
 	--select-fill: radial-gradient(60% 100% at 50% 50%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 72%);
 	--select-ink: var(--text);
 	--select-text-glow: 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent);
@@ -81,6 +85,7 @@
 
 /* Brackets: four corner ticks in the accent close on the line. */
 [data-selection="brackets"] {
+	--select-ink-dim: initial;
 	--select-fill: color-mix(in srgb, var(--accent) 7%, transparent);
 	--select-ink: var(--accent);
 	--select-radius: 0px;
@@ -104,6 +109,7 @@
 
 /* Lift: the line becomes a card in the text colour, raised and tilted off the table. */
 [data-selection="lift"] {
+	--select-ink-dim: color-mix(in srgb, var(--bg) 78%, var(--text));
 	--select-fill: var(--text);
 	--select-ink: var(--bg);
 	--select-shadow: 0 5px 0 rgba(0, 0, 0, 0.35);
@@ -120,6 +126,7 @@
 
 /* Stroke: a loose brush stroke in the accent under the lower half of the words. */
 [data-selection="stroke"] {
+	--select-ink-dim: initial;
 	--select-fill: transparent;
 	--select-ink: var(--text);
 	--select-mark: color-mix(in srgb, var(--accent) 80%, transparent);
@@ -193,6 +200,7 @@
 
 /* Standard: as the theme's corners make them. */
 [data-buttons="standard"] {
+	--button-focus-offset: initial;
 	--button-radius: initial;
 	--button-clip: initial;
 	--button-transform: initial;
@@ -208,6 +216,7 @@
 /* Skew: slanted plates in heavy capitals; a filled one casts a hard shadow in the text colour, and slides into it
    when pressed. */
 [data-buttons="skew"] {
+	--button-focus-offset: initial;
 	--button-radius: 0px;
 	--button-transform: skewX(-12deg);
 	--button-weight: 800;
@@ -222,6 +231,7 @@
 
 /* Keycap: a thick base under the face that the button sinks into when pressed. */
 [data-buttons="keycap"] {
+	--button-focus-offset: initial;
 	--button-radius: 8px;
 	--button-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 55%, #000), 0 7px 12px rgba(0, 0, 0, 0.3);
 	--button-plain-shadow: 0 3px 0 color-mix(in srgb, var(--text) 25%, transparent);
@@ -236,6 +246,7 @@
 
 /* Notch: two opposite corners cut off, as on a machined panel; pressed, it sinks a pixel into a shadowed recess. */
 [data-buttons="notch"] {
+	--button-focus-offset: -4px;
 	--button-radius: 0px;
 	--button-clip: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
 	--button-transform: initial;
@@ -251,6 +262,7 @@
 /* Bar: square ends and spaced capitals; an outlined one keeps only its lines above and below. Pressed, a dark bar
    rises from its foot. */
 [data-buttons="bar"] {
+	--button-focus-offset: initial;
 	--button-radius: 0px;
 	--button-tracking: 0.16em;
 	--button-case: uppercase;
@@ -268,6 +280,7 @@
 
 /* Brush: a loose painted shape with a second-accent stroke beside it; pressed, it tips and the stroke closes in. */
 [data-buttons="brush"] {
+	--button-focus-offset: initial;
 	--button-radius: 46% 14% 52% 10% / 70% 40% 60% 30%;
 	--button-shadow: 3px 2px 0 color-mix(in srgb, var(--accent-2) 80%, transparent);
 	--button-clip: initial;

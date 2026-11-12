@@ -661,8 +661,12 @@
 	box-shadow: var(--select-shadow, none);
 	transform: var(--select-lift, none);
 	text-shadow: var(--select-text-glow, none);
-	animation: var(--select-motion);
-	animation-play-state: var(--ambient-play);
+	animation: var(--nav-enter), var(--select-motion);
+	animation-play-state: running, var(--ambient-play);
+}
+/* The play-status dot takes the line's dimmer ink where the selection fills it with the accent. */
+.phosphor-nav-link.active .phosphor-nav-dot {
+	background: var(--select-ink-dim, var(--accent));
 }
 .phosphor-nav-link.active::before {
 	content: '';
@@ -675,27 +679,38 @@
 	box-shadow: var(--select-mark-glow, 0 0 8px rgba(var(--glow), 0.7));
 	transform: var(--select-mark-transform, none);
 }
-/* MudBlazor's filled and outlined buttons in the theme's cut (data-buttons, css/themes/menus.css). Each --button-*
-   variable falls back to MudBlazor's own value, so a theme that sets none leaves them as they were. */
-.mud-button-root:is(.mud-button-filled, .mud-button-outlined) {
-	border-radius: var(--button-radius, var(--mud-default-borderradius));
+/* MudBlazor's filled and outlined text buttons in the theme's cut (data-buttons, css/themes/menus.css). Each
+   --button-* variable falls back to MudBlazor's own value for that state, so a theme that leaves buttons standard
+   keeps them as they were. Round icon buttons and a button group's squared inner corners are MudBlazor's alone, and
+   a disabled or DisableElevation button keeps no shadow. */
+.mud-button-root:is(.mud-button-filled, .mud-button-outlined):not(.mud-icon-button) {
 	clip-path: var(--button-clip, none);
 	transform: var(--button-transform, none);
 	font-weight: var(--button-weight, var(--mud-typography-button-weight));
 	letter-spacing: var(--button-tracking, var(--mud-typography-button-letterspacing));
 	text-transform: var(--button-case, var(--mud-typography-button-text-transform));
 }
-.mud-button-root.mud-button-filled {
-	box-shadow: var(--button-shadow, 0px 3px 1px -2px rgba(0, 0, 0, 0.2), 0px 2px 2px 0px rgba(0, 0, 0, 0.14), 0px 1px 5px 0px rgba(0, 0, 0, 0.12));
+.mud-button-root:is(.mud-button-filled, .mud-button-outlined):not(.mud-icon-button, .mud-button-group-root > *) {
+	border-radius: var(--button-radius, var(--mud-default-borderradius));
 }
-.mud-button-root:is(.mud-button-filled, .mud-button-outlined):active {
+.mud-button-root:is(.mud-button-filled, .mud-button-outlined):not(.mud-icon-button):active {
 	transform: var(--button-press, var(--button-transform, none));
 }
-.mud-button-root.mud-button-filled:active {
+.mud-button-root.mud-button-filled:not(.mud-icon-button, .mud-button-disable-elevation, :disabled) {
+	box-shadow: var(--button-shadow, 0px 3px 1px -2px rgba(0, 0, 0, 0.2), 0px 2px 2px 0px rgba(0, 0, 0, 0.14), 0px 1px 5px 0px rgba(0, 0, 0, 0.12));
+}
+.mud-button-root.mud-button-filled:not(.mud-icon-button, .mud-button-disable-elevation, :disabled):is(:hover, :focus-visible) {
+	box-shadow: var(--button-shadow, 0px 2px 4px -1px rgba(0, 0, 0, 0.2), 0px 4px 5px 0px rgba(0, 0, 0, 0.14), 0px 1px 10px 0px rgba(0, 0, 0, 0.12));
+}
+.mud-button-root.mud-button-filled:not(.mud-icon-button, .mud-button-disable-elevation, :disabled):active {
 	box-shadow: var(--button-press-shadow, var(--button-shadow, 0px 5px 5px -3px rgba(0, 0, 0, 0.2), 0px 8px 10px 1px rgba(0, 0, 0, 0.14), 0px 3px 14px 2px rgba(0, 0, 0, 0.12)));
 }
-.mud-button-root.mud-button-outlined {
+.mud-button-root.mud-button-outlined:not(.mud-icon-button) {
 	box-shadow: var(--button-plain-shadow, none);
+}
+/* A cut that clips the button (notch) would clip a focus ring drawn outside it too, so the ring moves inside. */
+.mud-button-root:is(.mud-button-filled, .mud-button-outlined):not(.mud-icon-button):focus-visible {
+	outline-offset: var(--button-focus-offset, 2px);
 }
 .phosphor-nav-icon {
 	font-size: var(--text-md);
