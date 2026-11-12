@@ -214,7 +214,7 @@ test('a plain mouse click in the output focuses the field; selecting, links and 
 });
 
 test('while typing, pressing a command link or a marked control leaves focus in the field; other presses do not', () => {
-    const { listeners, document, main, add } = boot();
+    const { listeners, main, add } = boot();
     const field = add(['input'], main, { 'data-primary-input': 'end' });
     const output = add(['div'], main, { 'data-input-region': '' });
     const command = add(['a[xch_cmd]'], output);
