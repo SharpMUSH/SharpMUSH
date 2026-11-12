@@ -42,6 +42,13 @@
 .theme-texture-accent-3 { background: var(--texture-ink-accent-3); mask: var(--texture-mask-accent-3); }
 .theme-texture-border { background: var(--texture-ink-border); mask: var(--texture-mask-border); }
 
+/* A texture may loop its drawn layers (--texture-layer-motion), as a readout column rolling upward; the loop pauses
+   with the atmosphere's. */
+.theme-texture > i {
+	animation: var(--texture-layer-motion);
+	animation-play-state: var(--ambient-play);
+}
+
 /* A card's drawn marks (ThemeMarks): one layer per colour, as for the texture, over the card's surface and under
    its content. The card is position: relative and isolation: isolate. */
 .theme-marks {
@@ -65,7 +72,7 @@
 .theme-marks-accent-3 { background: var(--card-ink-accent-3); mask: var(--card-mask-accent-3); }
 .theme-marks-border { background: var(--card-ink-border); mask: var(--card-mask-border); }
 
-/* The atmosphere (ThemeTexture, after the texture): a still layer, a deep one over it and a moving one on top, pinned
+/* The atmosphere (ThemeTexture, after the texture): a still layer, a deep one over it, a moving one and a lit one on top, pinned
    like the texture, over it and under the page. Each may be cut to a drawing (--atmosphere-*-mask), so a circuit's
    rim, its dark groove and the light running in it are three layers of one drawing. The moving layer's loop pauses
    under reduced motion or a still theme (--ambient-play). */
@@ -91,6 +98,8 @@
 .theme-atmosphere-still {
 	background: var(--atmosphere-still);
 	mask: var(--atmosphere-still-mask);
+	animation: var(--atmosphere-still-motion);
+	animation-play-state: var(--ambient-play);
 }
 
 .theme-atmosphere-deep {
@@ -105,5 +114,18 @@
 	background-repeat: var(--atmosphere-repeat);
 	mask: var(--atmosphere-moving-mask);
 	animation: var(--atmosphere-motion);
+	animation-play-state: var(--ambient-play);
+}
+
+/* The lit layer, on top: light that shows only through its mask, often the texture's own drawings
+   (--texture-lit-mask), so rain takes the colour of the sign behind it and a radar beam lights only its contacts.
+   Cut to the texture's drawings, it also moves as they do (--atmosphere-lit-follow: the texture's drift and its
+   layers' loop), so the light stays on them. */
+.theme-atmosphere-lit {
+	background: var(--atmosphere-lit);
+	background-size: var(--atmosphere-lit-size);
+	background-repeat: var(--atmosphere-lit-repeat);
+	mask: var(--atmosphere-lit-mask);
+	animation: var(--atmosphere-lit-motion), var(--atmosphere-lit-follow);
 	animation-play-state: var(--ambient-play);
 }

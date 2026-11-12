@@ -240,7 +240,8 @@ public static class BuiltInThemes
 	/// <summary>Science fiction: deep space and cyan, wide glowing capitals in brackets, scanlines and targeting corners.</summary>
 	public static readonly PortalTheme ScienceFiction = Genre("science-fiction", "Science Fiction", dark: true,
 		["#070b14", "#0d1422", "#121b2d", "#0a101b", "#04070d", "#dbe8ff", "#93a7c6", "#7a8eae", "#1d2a42", "#152035", "#36d6ff", "#ffc857", "#ff8aa0"],
-		display: "orbitron", body: "ui", corners: "sharp", texture: "scanlines", ornament: "brackets", frame: "corners", titles: "caps", effect: "glow", imagery: "tint");
+		display: "orbitron", body: "ui", corners: "sharp", texture: "scanlines", ornament: "brackets", frame: "corners", titles: "caps", effect: "glow", imagery: "tint",
+		selection: "brackets", buttons: "notch", material: "hologram", meters: "hairline", motion: "snappy", atmosphere: "sweep", highlight: "pulse");
 
 	/// <summary>Spiritual: ivory and amethyst, a mandala of light from above, a calm roman between flowers, haloed cards.</summary>
 	public static readonly PortalTheme Spiritual = Genre("spiritual", "Spiritual", dark: false,
@@ -260,7 +261,8 @@ public static class BuiltInThemes
 	/// <summary>Idol: a concert stage in indigo dark, coloured spotlights, pop lettering glowing like a lightstick, cards rimmed in stage lights.</summary>
 	public static readonly PortalTheme Idol = Genre("idol", "Idol", dark: true,
 		["#0c0a1d", "#151030", "#1c163f", "#100c25", "#07051a", "#f4efff", "#bbb2da", "#9e94c4", "#30275f", "#221b4a", "#ff58a8", "#ffd84a", "#ff8a8a"],
-		display: "mochiy", body: "ui", corners: "soft", texture: "spotlights", ornament: "encore", frame: "stage", titles: "normal", effect: "lightstick", imagery: "spotlit", accent2: "#36e2ff", accent3: "#ffde4a");
+		display: "mochiy", body: "ui", corners: "soft", texture: "spotlights", ornament: "encore", frame: "stage", titles: "normal", effect: "lightstick", imagery: "spotlit", accent2: "#36e2ff", accent3: "#ffde4a",
+		selection: "halo", buttons: "neon", material: "glass", meters: "pips", motion: "bob", atmosphere: "stage-lights", highlight: "pulse");
 
 	/// <summary>Slice of life: warm daylight on ruled notebook paper, a handwritten face, cards stuck up with patterned washi tape.</summary>
 	public static readonly PortalTheme SliceOfLife = Genre("slice-of-life", "Slice of Life", dark: false,
@@ -280,12 +282,14 @@ public static class BuiltInThemes
 	public static readonly PortalTheme MechMachine = Genre("mechmachine", "Mech Machine", dark: true,
 		["#16181b", "#1f2226", "#272b30", "#1a1c20", "#101113", "#e7e9eb", "#aab0b6", "#8f969d", "#3c434b", "#2b3036", "#ff6b1f", "#ffc62a", "#ff8a7a"],
 		display: "saira-stencil", body: "ui", corners: "razor", texture: "hazard", ornament: "warning", frame: "chamfer", titles: "caps", effect: "stencil", imagery: "steel",
-		accent2: "#f0b820");
+		accent2: "#f0b820",
+		selection: "brackets", buttons: "keycap", material: "solid", meters: "slanted", motion: "snappy", atmosphere: "beacon", highlight: "pulse");
 
 	/// <summary>Isekai: a game's status windows over a fantasy world, royal-blue panels edged in light, a magic circle behind, pixel titles in gold.</summary>
 	public static readonly PortalTheme Isekai = Genre("isekai", "Isekai", dark: true,
 		["#0a0e2c", "#121a4a", "#18225a", "#0e1540", "#070a22", "#eaf0ff", "#acb8e4", "#919dd0", "#4466cc", "#24347c", "#ffd35e", "#ffb35c", "#ff9aa8"],
-		display: "pixelify", body: "ui", corners: "sharp", texture: "sigil", ornament: "cursor", frame: "status", titles: "normal", effect: "pixel", imagery: "vivid");
+		display: "pixelify", body: "ui", corners: "sharp", texture: "sigil", ornament: "cursor", frame: "status", titles: "normal", effect: "pixel", imagery: "vivid",
+		selection: "bar", buttons: "notch", material: "glass", meters: "pips", motion: "snappy", atmosphere: "orbit", highlight: "pulse");
 	/// <summary>Yokai: a folklore night in sumi and indigo, a moon in mist over waves, brushed titles sealed in vermilion, shoji-latticed cards.</summary>
 	public static readonly PortalTheme Yokai = Genre("yokai", "Yokai", dark: true,
 		["#0c0e1b", "#141728", "#1b1f34", "#0f111f", "#080913", "#efe6d4", "#b3ab9b", "#958d80", "#2b2e47", "#1e2135", "#f2643c", "#e8b04a", "#ff9580"],
@@ -305,52 +309,61 @@ public static class BuiltInThemes
 	/// <summary>80s cartoon: a Saturday-morning toy-box sky of star bursts and lightning, chunky outlined yellow letters, cards with hard magenta shadows.</summary>
 	public static readonly PortalTheme EightiesCartoon = Genre("eighties-cartoon", "80s Cartoon", dark: true,
 		["#190e3c", "#24164f", "#2e1d63", "#1d1146", "#10082a", "#fff6ff", "#d3c2ee", "#b3a1d6", "#6a4bd6", "#33216e", "#ffe23a", "#ffa94d", "#ff86c2"],
-		display: "titan", body: "ui", corners: "round", texture: "starburst", ornament: "bolt", frame: "chunky", titles: "caps", effect: "toybox", imagery: "cel", accent2: "#ff2fb4", accent3: "#22e1ff");
+		display: "titan", body: "ui", corners: "round", texture: "starburst", ornament: "bolt", frame: "chunky", titles: "caps", effect: "toybox", imagery: "cel", accent2: "#ff2fb4", accent3: "#22e1ff",
+		selection: "lift", buttons: "capsule", material: "solid", meters: "vital", motion: "bob", atmosphere: "twinkle", highlight: "neon");
 	/// <summary>Cyberpunk: a neon city at night, rain past magenta and cyan signs, split-signal capitals, cards cut on the diagonal.</summary>
 	public static readonly PortalTheme Cyberpunk = Genre("cyberpunk", "Cyberpunk", dark: true,
 		["#07060b", "#110d17", "#19131f", "#0c0a11", "#040307", "#f2edf7", "#b8acc6", "#9d90ad", "#2e2339", "#1e1727", "#ff2bd6", "#f3e600", "#ff8a8a"],
 		display: "chakra", body: "ui", corners: "sharp", texture: "rain", ornament: "slash", frame: "glitch", titles: "caps", effect: "rgbsplit", imagery: "neon",
-		accent2: "#05d9e8", accent3: "#f3e600");
+		accent2: "#05d9e8", accent3: "#f3e600",
+		selection: "skew", buttons: "notch", material: "glass", meters: "segmented", motion: "snappy", atmosphere: "neon-rain", highlight: "glitch");
 
 	/// <summary>Synthwave: an outrun sunset, a striped sun over a neon grid, chrome-lit inline lettering, cards lit like neon tubes.</summary>
 	public static readonly PortalTheme Synthwave = Genre("synthwave", "Synthwave", dark: true,
 		["#1a0b2e", "#25103f", "#311552", "#1d0c35", "#12061f", "#fdeeff", "#d8bfe6", "#bfa2d2", "#4a2470", "#331856", "#ff6b9d", "#ffd166", "#ff9a8a"],
 		display: "monoton", body: "ui", corners: "round", texture: "outrun", ornament: "sunset", frame: "neon", titles: "normal", effect: "retro", imagery: "dusk",
-		accent2: "#ffd166", accent3: "#ff8c42");
+		accent2: "#ffd166", accent3: "#ff8c42",
+		selection: "halo", buttons: "neon", material: "glass", meters: "hairline", motion: "drift", atmosphere: "sweep", highlight: "neon");
 
 	/// <summary>Space opera: a deep starfield with a planet on the horizon, wide gold capitals, worn riveted hull plates.</summary>
 	public static readonly PortalTheme SpaceOpera = Genre("space-opera", "Space Opera", dark: true,
 		["#04050b", "#14161d", "#1c1f28", "#0d0f15", "#03040a", "#eee7d4", "#b9b09a", "#9a927f", "#3b3d47", "#252731", "#f0b429", "#ff8c42", "#ff8a7a"],
 		display: "michroma", body: "ui", corners: "soft", texture: "galaxy", ornament: "insignia", frame: "hull", titles: "wide", effect: "gilt", imagery: "warm",
-		accent2: "#8cb4ff", accent3: "#ffe2be");
+		accent2: "#8cb4ff", accent3: "#ffe2be",
+		selection: "bar", buttons: "keycap", material: "solid", meters: "bar", motion: "drift", atmosphere: "starlight");
 
 	/// <summary>Starship console: pure black, tall condensed capitals, pill bars and elbows in orange, lavender, peach and periwinkle.</summary>
 	public static readonly PortalTheme StarshipConsole = Genre("starship-console", "Starship Console", dark: true,
 		["#000000", "#0b0a0f", "#16141c", "#060509", "#000000", "#f5e9da", "#cbbba8", "#a99a8b", "#2b2732", "#1a1820", "#ff9933", "#ffcc66", "#ff8a7a"],
 		display: "antonio", body: "ui", corners: "pill", texture: "readout", ornament: "segments", frame: "elbow", titles: "caps", effect: "console", imagery: "natural",
-		accent2: "#c39be0", accent3: "#8fa6ff");
+		accent2: "#c39be0", accent3: "#8fa6ff",
+		selection: "bar", buttons: "standard", material: "solid", meters: "segmented", motion: "snappy", highlight: "pulse");
 
 	/// <summary>Real robot: a military mobile suit's white armour plating with panel lines and decals, blue with signal red and yellow, beveled plate cards.</summary>
 	public static readonly PortalTheme RealRobot = Genre("real-robot", "Real Robot", dark: false,
 		["#e4e8ee", "#fcfdfe", "#f0f3f7", "#e9edf2", "#1b3478", "#121a28", "#3b4658", "#4f5a6b", "#a3aebd", "#d3dae3", "#1a49b5", "#8a5a00", "#b8141e"],
-		display: "oxanium", body: "ui", corners: "sharp", texture: "armor-panels", ornament: "tricolor", frame: "plating", titles: "caps", effect: "decal", imagery: "hangar", accent2: "#d6202a", accent3: "#f7c400");
+		display: "oxanium", body: "ui", corners: "sharp", texture: "armor-panels", ornament: "tricolor", frame: "plating", titles: "caps", effect: "decal", imagery: "hangar", accent2: "#d6202a", accent3: "#f7c400",
+		selection: "bar", buttons: "notch", material: "solid", meters: "segmented", motion: "snappy", atmosphere: "glint");
 
 	/// <summary>Super robot: a 1970s giant robot's finishing move, gold capitals blazing over a red and gold sunburst, cards of chrome-trimmed red armour.</summary>
 	public static readonly PortalTheme SuperRobot = Genre("super-robot", "Super Robot", dark: true,
 		["#160609", "#210c10", "#2c1116", "#19080b", "#080a1c", "#fff3e3", "#e0bfb0", "#c09a8e", "#8a8f9d", "#3a1a1e", "#ffc82a", "#ff9a3c", "#ff8f80"],
-		display: "russo", body: "ui", corners: "sharp", texture: "sunburst-rays", ornament: "battlecry", frame: "chrome-armor", titles: "slant", effect: "blazing", imagery: "hotblooded", accent2: "#ff7a1a", accent3: "#d7221c");
+		display: "russo", body: "ui", corners: "sharp", texture: "sunburst-rays", ornament: "battlecry", frame: "chrome-armor", titles: "slant", effect: "blazing", imagery: "hotblooded", accent2: "#ff7a1a", accent3: "#d7221c",
+		selection: "skew", buttons: "skew", material: "solid", meters: "slanted", motion: "snappy", atmosphere: "rays");
 
 	/// <summary>Heart Realm: a night sky over a stained-glass platform, regal gold capitals, cards banded in coloured glass, a crown either side of a title.</summary>
 	public static readonly PortalTheme HeartRealm = Genre("heart-realm", "Heart Realm", dark: true,
 		["#0b0b24", "#14143a", "#1c1c4a", "#10102e", "#07071a", "#f3efff", "#b9b4dc", "#9a95c2", "#3a3a7a", "#262658", "#ffd447", "#ffb35c", "#ff8fa8"],
 		display: "cinzel-decorative", body: "ui", corners: "round", texture: "stained-glass", ornament: "crown", frame: "stained", titles: "normal", effect: "starlit", imagery: "dreamlit",
-		accent2: "#5cc8ff", accent3: "#ff5d8f");
+		accent2: "#5cc8ff", accent3: "#ff5d8f",
+		selection: "halo", buttons: "standard", material: "glass", meters: "pips", motion: "drift", atmosphere: "glint");
 
 	/// <summary>Crystal Epic: a modern fantasy epic, crystal shards rising out of the dark, wide Roman capitals, glassy cards lit from above.</summary>
 	public static readonly PortalTheme CrystalEpic = Genre("crystal-epic", "Crystal Epic", dark: true,
 		["#070b14", "#0f1626", "#16203a", "#0b111f", "#04070d", "#e8eef8", "#a6b3c8", "#8796ad", "#2a3a58", "#1b2740", "#9cd8ff", "#f2c66d", "#ff8f9a"],
 		display: "forum", body: "ui", corners: "soft", texture: "crystal", ornament: "crystal", frame: "prism", titles: "wide", effect: "prism", imagery: "crystalline",
-		accent2: "#d4ecff", accent3: "#b6a2ff");
+		accent2: "#d4ecff", accent3: "#b6a2ff",
+		selection: "halo", buttons: "standard", material: "glass", meters: "hairline", motion: "drift");
 
 	/// <summary>Crystal Epic 16-bit: a 16-bit console RPG, blue gradient menu windows with white borders on black, pixel capitals, a pointing glove.</summary>
 	public static readonly PortalTheme CrystalEpic16Bit = Genre("crystal-epic-16bit", "Crystal Epic 16-bit", dark: true,
@@ -426,7 +439,8 @@ public static class BuiltInThemes
 	public static readonly PortalTheme FleetCommand = Genre("fleet-command", "Fleet Command", dark: true,
 		["#0e1012", "#171a1d", "#1f2327", "#121417", "#08090a", "#e6e8e6", "#aeb3b5", "#8a9093", "#4a5056", "#262a2e", "#f2a93b", "#ffd166", "#ff8f80"],
 		display: "barlow", body: "ui", corners: "sharp", texture: "plot", ornament: "chevron", frame: "clipped", titles: "caps", effect: "scope", imagery: "gunmetal",
-		accent2: "#7fb0d9", accent3: "#c9c2b0");
+		accent2: "#7fb0d9", accent3: "#c9c2b0",
+		selection: "bar", buttons: "notch", material: "solid", meters: "segmented", motion: "snappy", atmosphere: "radar", highlight: "pulse");
 
 	/// <summary>Gaslight Occult: a Victorian séance, a brass ritual chart with an open eye glowing out of the dark, mystic titles, cards marked with the moon and sun.</summary>
 	public static readonly PortalTheme Gaslight = Genre("gaslight", "Gaslight Occult", dark: true,
@@ -621,7 +635,8 @@ public static class BuiltInThemes
 	private static PortalTheme Genre(string id, string name, bool dark, string[] colors, string display, string body,
 		string corners, string texture, string ornament, string frame, string titles, string effect, string imagery,
 		string? accent2 = null, string? accent3 = null, string selection = "standard", string buttons = "standard",
-		string material = "solid", string meters = "bar", string motion = "calm", string atmosphere = "none")
+		string material = "solid", string meters = "bar", string motion = "calm", string atmosphere = "none",
+		string highlight = "none")
 	{
 		var tokens = ThemeTokens.Editable.Zip(colors).ToDictionary(p => p.First, p => p.Second);
 		if (accent2 is not null)
@@ -649,6 +664,7 @@ public static class BuiltInThemes
 		tokens[ThemeStyles.Meters] = meters;
 		tokens[ThemeStyles.Motion] = motion;
 		tokens[ThemeStyles.Atmosphere] = atmosphere;
+		tokens[ThemeStyles.Highlight] = highlight;
 		return new PortalTheme(id, name, dark, Published: true, tokens, BuiltIn: true);
 	}
 

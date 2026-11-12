@@ -12,7 +12,8 @@
 
 [data-ornament-glyphs="none"] { --ornament-before: none; --ornament-after: none; }
 [data-ornament-underline="none"] { --title-underline: none; --title-underline-height: 2px; --title-underline-pad: 0px; }
-[data-effect-shadow="none"] { --title-shadow: none; }
+[data-effect-shadow] { --title-glow-under: var(--title-shadow); }
+[data-effect-shadow="none"] { --title-shadow: none; --title-glow-under: 0 0 transparent; }
 
 /* Fleuron: a hedera before, a rotated floral heart after. */
 [data-ornament-glyphs="fleuron"] { --ornament-before: "\2619"; --ornament-after: "\2767"; }
@@ -415,4 +416,57 @@
 	--title-underline: linear-gradient(90deg, var(--accent-2) 0 78%, var(--accent) 78%);
 	--title-underline-height: 4px;
 	--title-underline-pad: 8px;
+}
+
+/* ── Highlight (data-highlight): light on the page itself. A card never moves: it gets at most a still lit edge
+   (--card-highlight, drawn by KitCard round its border). The page title carries the motion (--title-motion,
+   PageHeader), which pauses with the atmosphere. ── */
+
+[data-highlight="none"] { --card-highlight: none; --title-motion: none; }
+
+/* Neon: the page title hums and now and then stutters like a tube; each card's edge is lit in the accent. */
+[data-highlight="neon"] {
+	--card-highlight: linear-gradient(color-mix(in srgb, var(--accent) 55%, transparent) 0 0);
+	--title-motion: theme-neon-title 12s linear infinite;
+}
+
+/* Pulse: the page title's glow swells and fades slowly; each card's edge holds a faint accent line. */
+[data-highlight="pulse"] {
+	--card-highlight: linear-gradient(color-mix(in srgb, var(--accent) 45%, transparent) 0 0);
+	--title-motion: theme-glow-title 10s ease-in-out infinite;
+}
+
+/* Glitch: the page title tears into the two accents for a moment every few seconds; card edges hold both accents. */
+[data-highlight="glitch"] {
+	--card-highlight: linear-gradient(90deg, var(--accent), transparent 30% 70%, var(--accent-2));
+	--title-motion: theme-glitch-title 12s steps(1) infinite;
+}
+
+/* Firelight: the page title warms and cools as if lit by a flame; card edges hold a warm line along the foot. */
+[data-highlight="firelight"] {
+	--card-highlight: linear-gradient(0deg, color-mix(in srgb, var(--warn) 55%, transparent), transparent 60%);
+	--title-motion: theme-flicker-title 7s ease-in-out infinite;
+}
+
+@keyframes theme-neon-title {
+	0%, 6%, 9%, 100% { text-shadow: var(--title-glow-under), 0 0 10px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 26px color-mix(in srgb, var(--accent) 35%, transparent); opacity: 1; }
+	7% { text-shadow: var(--title-shadow); opacity: 0.7; }
+	8% { text-shadow: var(--title-glow-under), 0 0 6px var(--accent); opacity: 0.9; }
+	50% { text-shadow: var(--title-glow-under), 0 0 14px color-mix(in srgb, var(--accent) 80%, transparent), 0 0 34px color-mix(in srgb, var(--accent) 45%, transparent); }
+}
+@keyframes theme-glow-title {
+	0%, 100% { text-shadow: var(--title-glow-under), 0 0 6px color-mix(in srgb, var(--accent) 30%, transparent); }
+	50% { text-shadow: var(--title-glow-under), 0 0 16px color-mix(in srgb, var(--accent) 70%, transparent); }
+}
+@keyframes theme-glitch-title {
+	0%, 92%, 100% { text-shadow: var(--title-shadow); translate: 0 0; }
+	93% { text-shadow: -3px 0 var(--accent), 3px 0 var(--accent-2); translate: 2px 0; }
+	95% { text-shadow: 3px 0 var(--accent), -2px 0 var(--accent-2); translate: -2px 0; }
+	97% { text-shadow: -1px 0 var(--accent), 1px 0 var(--accent-2); translate: 0 0; }
+}
+@keyframes theme-flicker-title {
+	0%, 100% { text-shadow: var(--title-glow-under), 0 0 10px color-mix(in srgb, var(--warn) 45%, transparent); }
+	30% { text-shadow: var(--title-glow-under), 0 0 6px color-mix(in srgb, var(--warn) 30%, transparent); }
+	55% { text-shadow: var(--title-glow-under), 0 0 14px color-mix(in srgb, var(--warn) 55%, transparent); }
+	75% { text-shadow: var(--title-glow-under), 0 0 8px color-mix(in srgb, var(--warn) 35%, transparent); }
 }

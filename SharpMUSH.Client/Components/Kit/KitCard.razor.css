@@ -12,6 +12,19 @@
 	min-width: 0;
 }
 
+/* The theme's highlight (data-highlight): a still line of light round the card's edge, over its border. Never a loop. */
+.kit-card::after {
+	content: "";
+	position: absolute;
+	inset: calc(-1 * var(--card-border-width));
+	z-index: 2;
+	border-radius: inherit;
+	pointer-events: none;
+	border: 1px solid transparent;
+	background: var(--card-highlight) border-box;
+	mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0) border-box;
+}
+
 .kit-card-head {
 	min-height: 3.25rem;
 	flex-wrap: wrap;

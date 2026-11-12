@@ -5,7 +5,19 @@
      --texture-ink-<colour>             the colour itself, to make it fainter: color-mix(in srgb, var(--text) 6%, transparent)
      --card-mask-grain, --card-ink-grain   paper textures also grain the cards
    Drawings are black on clear; only their shape and transparency count. Every colour comes from the theme.
-   [data-texture-strength] fades the whole texture. */
+     --texture-lit-mask, --texture-lit-at  the drawings that catch an atmosphere's light (a mask list like the
+                                        texture's own), and the point a turning light turns about
+     --texture-layer-motion             a loop for the drawn layers, as a readout rolling upward
+   Drawings are black on clear; only their shape and transparency count. Every colour comes from the theme.
+   [data-texture-strength] fades the whole texture. A drawing that animates itself names a still one beside it:
+   var(--ambient-flow, <moving>), var(--ambient-rest, <still>), so only the still one shows where nothing may move. */
+
+/* What every texture starts from: a faint light over the whole window where none of its drawings catches it. */
+[data-texture] {
+	--texture-lit-mask: linear-gradient(rgba(0, 0, 0, 0.1) 0 0);
+	--texture-lit-at: 50% 50%;
+	--texture-layer-motion: none;
+}
 
 [data-texture-strength="normal"] { --texture-opacity: 1; }
 [data-texture-strength="soft"] { --texture-opacity: 0.7; }
@@ -366,15 +378,13 @@
 		url(/themes/drawings/textures/sunburst-rays-embers-accent-2.svg) 0 0 / 340px 340px;
 	--texture-mask-accent-3: url(/themes/drawings/textures/sunburst-rays-accent-3.svg) center bottom / 100% 100% no-repeat;
 }
-/* Neon city rain: streaks falling past a magenta glow from the street, a cyan sign above and a yellow one below. */
+/* Neon city rain: a magenta glow from the street, a cyan sign above and a yellow one below; the rain itself falls in
+   the neon-rain atmosphere. */
 [data-texture="rain"] {
 	--texture: radial-gradient(45% 40% at 40% 104%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%),
 		radial-gradient(35% 30% at 96% 4%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 70%),
 		radial-gradient(18% 10% at 86% 78%, color-mix(in srgb, var(--accent-3) 10%, transparent), transparent 70%);
 	--texture-size: 100% 100%, 100% 100%, 100% 100%;
-	--texture-mask-text: url(/themes/drawings/textures/rain-text.svg) 0 0 / 260px 260px;
-	--texture-mask-accent: url(/themes/drawings/textures/rain-accent.svg) 0 0 / 260px 260px;
-	--texture-mask-accent-2: url(/themes/drawings/textures/rain-accent-2.svg) 0 0 / 260px 260px;
 }
 
 /* An outrun sunset: a striped sun (accent-2 to accent-3 to accent) sinking behind a neon grid floor. */
@@ -400,10 +410,12 @@
 
 /* A console's quiet readout: segments in the accent, accent-2, peach (warn mixed with link-missing) and accent-3 down the page's right edge, with ticks. */
 [data-texture="readout"] {
-	--texture-mask-accent: url(/themes/drawings/textures/readout-accent.svg) 0 0 / 100% 100% no-repeat;
-	--texture-mask-accent-2: url(/themes/drawings/textures/readout-accent-2.svg) 0 0 / 100% 100% no-repeat;
-	--texture-mask-accent-3: url(/themes/drawings/textures/readout-accent-3.svg) 0 0 / 100% 100% no-repeat;
-	--texture-mask-text: url(/themes/drawings/textures/readout-peach.svg) 0 0 / 100% 100% no-repeat;
+	--texture-mask-accent: url(/themes/drawings/textures/readout-accent.svg) 0 0 / 100% 800px repeat-y;
+	--texture-mask-accent-2: url(/themes/drawings/textures/readout-accent-2.svg) 0 0 / 100% 800px repeat-y;
+	--texture-mask-accent-3: url(/themes/drawings/textures/readout-accent-3.svg) 0 0 / 100% 800px repeat-y;
+	--texture-mask-text: url(/themes/drawings/textures/readout-peach.svg) 0 0 / 100% 800px repeat-y;
+	--texture-lit-mask: var(--texture-mask-accent), var(--texture-mask-accent-2), var(--texture-mask-accent-3);
+	--texture-layer-motion: theme-roll-up 90s linear infinite;
 	--texture-ink-text: color-mix(in srgb, var(--warn), var(--link-missing));
 }
 
@@ -437,7 +449,8 @@
 	--texture-ink-accent: var(--glass-grain), radial-gradient(circle 580px at 50% calc(100% - 140px), color-mix(in srgb, var(--accent) 80%, var(--text)), var(--accent) 45%, color-mix(in srgb, var(--accent) 70%, #000));
 }
 
-/* Crystal: a great crystal floating right of centre among three small ones, each face lit in the
+/* Crystal: a great crystal floating right of centre among three small ones, each turning slowly about its long axis
+   at its own pace (the turning drawings animate themselves; the still ones stand in where nothing may move), each face lit in the
    accent, accent-2 or accent-3 and brightest at the heart of the cluster, with glints in the text colour, a halo
    behind it, an aurora drifting across the top of the page and motes of light rising through the dark. */
 [data-texture="crystal"] {
@@ -448,13 +461,17 @@
 		radial-gradient(1px 1px at 150px 20px, color-mix(in srgb, var(--accent) 60%, transparent), transparent),
 		radial-gradient(2px 2px at 90px 170px, color-mix(in srgb, var(--accent) 35%, transparent), transparent);
 	--texture-size: 100% 100%, 100% 100%, 100% 100%, 190px 230px, 190px 230px, 190px 230px;
-	--texture-mask-accent: url(/themes/drawings/textures/crystal-accent.svg) left 64% center / auto 96vh no-repeat;
+	--texture-mask-accent: var(--ambient-flow, url(/themes/drawings/textures/crystal-turn-accent.svg) left 64% center / auto 96vh no-repeat),
+		var(--ambient-rest, url(/themes/drawings/textures/crystal-accent.svg) left 64% center / auto 96vh no-repeat);
 	--texture-ink-accent: radial-gradient(circle 70vh at 68% 46%, color-mix(in srgb, var(--accent) 48%, transparent), color-mix(in srgb, var(--accent) 14%, transparent));
-	--texture-mask-accent-2: url(/themes/drawings/textures/crystal-accent-2.svg) left 64% center / auto 96vh no-repeat;
+	--texture-mask-accent-2: var(--ambient-flow, url(/themes/drawings/textures/crystal-turn-accent-2.svg) left 64% center / auto 96vh no-repeat),
+		var(--ambient-rest, url(/themes/drawings/textures/crystal-accent-2.svg) left 64% center / auto 96vh no-repeat);
 	--texture-ink-accent-2: radial-gradient(circle 70vh at 68% 46%, color-mix(in srgb, var(--accent-2) 58%, transparent), color-mix(in srgb, var(--accent-2) 16%, transparent));
-	--texture-mask-accent-3: url(/themes/drawings/textures/crystal-accent-3.svg) left 64% center / auto 96vh no-repeat;
+	--texture-mask-accent-3: var(--ambient-flow, url(/themes/drawings/textures/crystal-turn-accent-3.svg) left 64% center / auto 96vh no-repeat),
+		var(--ambient-rest, url(/themes/drawings/textures/crystal-accent-3.svg) left 64% center / auto 96vh no-repeat);
 	--texture-ink-accent-3: radial-gradient(circle 70vh at 68% 46%, color-mix(in srgb, var(--accent-3) 44%, transparent), color-mix(in srgb, var(--accent-3) 10%, transparent));
-	--texture-mask-text: url(/themes/drawings/textures/crystal-text.svg) left 64% center / auto 96vh no-repeat;
+	--texture-mask-text: var(--ambient-flow, url(/themes/drawings/textures/crystal-turn-text.svg) left 64% center / auto 96vh no-repeat),
+		var(--ambient-rest, url(/themes/drawings/textures/crystal-text.svg) left 64% center / auto 96vh no-repeat);
 	--texture-ink-text: color-mix(in srgb, var(--text) 75%, transparent);
 }
 
@@ -1048,3 +1065,24 @@
 	--texture-mask-accent: url(/themes/drawings/textures/nightline-accent.svg) right 0 bottom 0 / auto 100% no-repeat;
 	--texture-ink-accent: color-mix(in srgb, var(--warn) 35%, #fff);
 }
+
+/* The readout column rolls upward one tile per loop, so it never jumps. */
+@keyframes theme-roll-up {
+	from { mask-position: 0 0; }
+	to { mask-position: 0 -800px; }
+}
+
+/* ── What each texture offers an atmosphere's light (--texture-lit-mask), and where a turning light turns
+   (--texture-lit-at). Set after the textures, so they read the texture's own masks. ── */
+[data-texture="crystal"] { --texture-lit-mask: var(--texture-mask-accent), var(--texture-mask-accent-2), var(--texture-mask-accent-3), var(--texture-mask-text); }
+[data-texture="outrun"] { --texture-lit-mask: var(--texture-mask-accent); }
+[data-texture="spotlights"] { --texture-lit-mask: var(--texture-mask-accent), var(--texture-mask-accent-2), var(--texture-mask-accent-3); }
+[data-texture="plot"] { --texture-lit-mask: url(/themes/drawings/textures/plot-blips.svg) right -150px bottom -150px / 900px 900px no-repeat; --texture-lit-at: calc(100% - 300px) calc(100% - 300px); }
+[data-texture="sigil"] { --texture-lit-mask: var(--texture-mask-text), var(--texture-mask-accent); }
+[data-texture="stained-glass"] { --texture-lit-mask: var(--texture-mask-accent), var(--texture-mask-accent-2), var(--texture-mask-accent-3), var(--texture-mask-text); }
+[data-texture="armor-panels"] { --texture-lit-mask: var(--texture-mask-border); }
+[data-texture="starburst"] { --texture-lit-mask: var(--texture-mask-accent), var(--texture-mask-accent-2), var(--texture-mask-accent-3); }
+[data-texture="hazard"] { --texture-lit-mask: var(--texture-mask-accent-2); }
+[data-texture="scanlines"] { --texture-lit-mask: repeating-linear-gradient(0deg, #000 0 1px, transparent 1px 4px); }
+/* Under a turning radar beam the plot's own still beam goes, so only the moving one shows. */
+[data-texture="plot"][data-atmosphere="radar"] { --texture: radial-gradient(circle 460px at calc(100% - 300px) calc(100% - 300px), color-mix(in srgb, var(--accent) 9%, transparent), transparent), repeating-linear-gradient(180deg, transparent 0 2px, rgba(0, 0, 0, .18) 2px 3px), linear-gradient(color-mix(in srgb, var(--text) 4%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--text) 4%, transparent) 1px, transparent 1px), radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0, 0, 0, .35)); --texture-size: 100% 100%, 100% 100%, 48px 48px, 48px 48px, 100% 100%; }

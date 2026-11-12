@@ -195,12 +195,12 @@ value is one rule in `SharpMUSH.Client/wwwroot/css/themes/`, keyed on a data att
 | `shape.css` | `data-corners`, `data-titles` |
 | `textures.css` | `data-texture`, `data-texture-strength` |
 | `frames.css` | `data-frame-marks`, `data-frame-edge`, `data-frame-shadow` |
-| `titles.css` | `data-ornament-glyphs`, `data-ornament-underline`, `data-effect-color`, `data-effect-shadow` |
+| `titles.css` | `data-ornament-glyphs`, `data-ornament-underline`, `data-effect-color`, `data-effect-shadow`, `data-highlight` |
 | `imagery.css` | `data-imagery` |
 | `menus.css` | `data-selection`, `data-buttons`, `data-material`, `data-meters` |
 | `motion.css` | `data-motion`, `data-atmosphere` |
 
-Six of the settings come from game menus, and any theme can take any of them. A theme that names none gets the
+Seven of the settings come from game menus, and any theme can take any of them. A theme that names none gets the
 first choice of each, which is how the portal looked before they existed:
 
 - **Current line** (`selection`): how the current page in a menu is marked. `standard` (each menu's own mark: a glowing bar in the
@@ -218,7 +218,8 @@ first choice of each, which is how the portal looked before they existed:
   on a thick lip that flattens when pressed), `console` (corners cut, lit from inside in `accent-3` when pressed),
   `lacquer` (vermilion lacquer with a black lip and a grain), `ink` (an arched dry-brush stroke that soaks wider when
   pressed), `pill` (a rounded plate that rings like a ticket gate), `lightring` (round ends in a glow ring that flares when
-  pressed), `blade` (angled ends and spaced capitals, sinking onto an accent-2 keel). The rules set the `--button-*` variables that
+  pressed), `blade` (angled ends and spaced capitals, sinking onto an accent-2 keel), `neon` (a lit tube in spaced capitals
+  that flares when pressed). The rules set the `--button-*` variables that
   `Kit/CapsuleButton.razor.css` and `shell.css` read, among them the capsule's fills (`--button-fill`,
   `--button-press-fill`, `--button-plain-fill`) and the mask of a stroke drawn behind its words (`--button-stroke`).
 - **Card material** (`material`): what cards are made of, under their frame. `solid`, `glass` (blurs the page behind
@@ -241,7 +242,28 @@ first choice of each, which is how the portal looked before they existed:
   drifting across), `petals` (blossom falling), `circuit` (circuit traces with a band of light sweeping along them), `heartbeat`
   (dense channels round a heart a third of the way down the page, which beats a double pulse of light out along them).
   The last two draw a rim, a dark groove and a moving glow, each masked by the same channels; `still` motion or reduced
-  motion leaves them unlit. Its colours are the theme's.
+  motion leaves them unlit. The rest move slowly, behind the page and never on it: `neon-rain` (rain falling in two
+  depths past far neon in the accents, each drop taking the colour of the light behind it), `sweep` (a band of light
+  running down the texture's lines), `glint` (a faint sheen crossing the texture's glass or plates now and then),
+  `radar` (a beam turning about the texture's centre, lighting its contacts as it passes), `orbit` (a gentler light
+  turning round a circle, with motes rising), `twinkle` (the texture's stars flaring and fading), `blink` (a console's
+  readouts lighting in turn), `starlight` (stars drifting past in three depths), `stage-lights` (glitter in the
+  spotlight beams and lightsticks swaying along the foot), `beacon` (two warning lights flashing in turn), `rays` (rays
+  turning very slowly about a sun below the window). Its colours are the theme's.
+
+  Besides a still, a deep and a moving layer, the atmosphere has a lit layer on top (`--atmosphere-lit`, with
+  `--atmosphere-lit-size`, `--atmosphere-lit-repeat`, `--atmosphere-lit-mask` and `--atmosphere-lit-motion`): light
+  that shows only through its mask, usually the drawings the texture names as catching light (`--texture-lit-mask`,
+  and `--texture-lit-at` for the point a turning light turns about). `--atmosphere-lit-follow` gives the lit layer the
+  texture's own movement (its drift and its layers' loop), so the light stays on the drawings it lights. `--atmosphere-still-motion` gives the still layer a loop of its own, and
+  `--texture-layer-motion` the texture's drawn layers (the readout rolls upward). A drawing that animates itself, as
+  the turning crystals do, names a still drawing beside it, `var(--ambient-flow, <moving>), var(--ambient-rest,
+  <still>)`, so only the still one shows under `still` motion or reduced motion.
+- **Highlight** (`highlight`): light on the page itself. A card never moves; it gets at most a still lit edge
+  (`--card-highlight`, drawn by `KitCard`). The page title carries the motion (`--title-motion`, in `PageHeader`),
+  which stops with the atmosphere. `none`, `neon` (the title hums and now and then stutters like a tube), `pulse`
+  (its glow swells and fades slowly), `glitch` (it tears into the two accents for a moment), `firelight` (it warms and
+  cools as if lit by a flame).
 
 A component that shows a picture put in the game marks its `<img>` `game-picture` (the wiki's Markdown marks its own
 `wiki-img`); `shell.css` gives both `filter: var(--image-filter)`.
