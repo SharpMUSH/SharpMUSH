@@ -7,9 +7,11 @@
 	min-width: 0;
 	padding: var(--space-5);
 	background: var(--card-bg);
+	backdrop-filter: var(--card-backdrop);
 	border: var(--card-border-width) var(--card-border-style) var(--border);
 	border-radius: var(--radius-card);
 	box-shadow: var(--card-shadow);
+	animation: var(--card-enter);
 	color: var(--text);
 	text-decoration: none;
 	transition: border-color var(--motion-fade);

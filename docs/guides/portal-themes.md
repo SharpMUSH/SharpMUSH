@@ -57,6 +57,10 @@ covered by the switch; use `--image-filter` instead. Signed out, the browser kee
 - Fan-game settings: `gothic-punk`, `dragonrider`, `fleet-command`, `gaslight`, `desert-planet`, `arcane-academy`,
   `steampunk`, `frontier`, `wasteland`. Settings that games on the MU* lists come back to, drawn the same way, and their
   layout themes carry a look too.
+- Game menus: `archivist`, `arena`, `ashen`, `relic-slate`, `precinct`. Each takes the menus
+  of a kind of modern game (an android archive, a shooter's lobby, a soulslike, an ancient-tech tablet, a painterly
+  detective RPG) and shows off the menu settings below, never a game's name,
+  logo, art or font.
 - Colour vision: `protan-dark`, `protan-light`, `deutan-dark`, `deutan-light`, `tritan-dark`, `tritan-light`,
   `mono-dark`, `mono-light`. Phosphor's or Daylight's surfaces and text, with an accent, warning and missing-link
   colour picked for that vision. They draw no grain: their colours reach 4.5:1 against the flat surfaces, and the
@@ -167,6 +171,33 @@ value is one rule in `SharpMUSH.Client/wwwroot/css/themes/`, keyed on a data att
 | `frames.css` | `data-frame-marks`, `data-frame-edge`, `data-frame-shadow` |
 | `titles.css` | `data-ornament-glyphs`, `data-ornament-underline`, `data-effect-color`, `data-effect-shadow` |
 | `imagery.css` | `data-imagery` |
+| `menus.css` | `data-selection`, `data-buttons`, `data-material`, `data-meters` |
+| `motion.css` | `data-motion`, `data-atmosphere` |
+
+Six of the settings come from game menus, and any theme can take any of them. A theme that names none gets the
+first choice of each, which is how the portal looked before they existed:
+
+- **Current line** (`selection`): how the current page in a menu is marked. `standard` (each menu's own mark: a glowing bar in the
+  main menu, a raised row in a section's sidebar), `bar` (a squared block in the text colour), `skew` (a slanted accent plate), `halo` (a pool of light behind the
+  words), `brackets` (corner ticks), `lift` (a raised, tilted card), `stroke` (a brush stroke under the words). The
+  rules set the `--select-*` variables that `.phosphor-nav-link.active` in `shell.css` and `.kit-row--current` in
+  `Kit/SidebarRow.razor.css` read.
+- **Buttons** (`buttons`): the cut of the portal's capsule buttons and MudBlazor's filled and outlined ones, and how
+  each looks pressed. `standard`, `skew` (slides into its shadow), `keycap` (a thick base it sinks into), `notch` (two
+  corners cut), `bar` (square ends, spaced capitals), `brush` (a painted shape that tips). The rules set the
+  `--button-*` variables that `Kit/CapsuleButton.razor.css` and `shell.css` read.
+- **Card material** (`material`): what cards are made of, under their frame. `solid`, `glass` (blurs the page behind
+  it), `hologram` (accent light and scanlines), `veil` (fades out at the sides), `cardstock`, `felt`, `wood`. It sets
+  `--card-material`, the fill under `--card-marks`, and `--card-backdrop`.
+- **Meters** (`meters`): MudBlazor's progress bars, such as a loading or import bar. `bar`, `segmented`, `slanted`, `pips`,
+  `hairline`.
+- **Motion** (`motion`): how cards and menu lines arrive and what loops. `calm` (fades only), `still` (nothing moves,
+  not even the atmosphere), `snappy` (cards rise, menu lines slide in), `drift` (the background drifts slowly),
+  `wobble` (cards are dealt in, the current line floats and tilts), `bob` (the current line bobs). Arrivals use
+  `--duration-enter`, which reduced motion zeroes; under reduced motion, or with the player's reduce-motion toggle,
+  `globals.css` also stops every loop.
+- **Atmosphere** (`atmosphere`): a layer `ThemeTexture` draws over the texture and under the page. `none`,
+  `vignette`, `fog`, `embers`, `motes`, `crt` (dark corners and scanlines), `slashes`. Its colours are the theme's.
 
 A component that shows a picture put in the game marks its `<img>` `game-picture` (the wiki's Markdown marks its own
 `wiki-img`); `shell.css` gives both `filter: var(--image-filter)`.

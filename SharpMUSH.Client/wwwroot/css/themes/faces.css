@@ -47,6 +47,11 @@
 [data-font-display="rye"] { --font-display: Rye, Georgia, serif; --font-title-weight: 400; }
 [data-font-display="black-ops"] { --font-display: 'Black Ops One', Impact, sans-serif; --font-title-weight: 400; }
 [data-font-display="bodoni"] { --font-display: 'Bodoni Moda', Didot, 'Bodoni 72', serif; --font-title-weight: 600; }
+[data-font-display="jost"] { --font-display: Jost, 'Century Gothic', sans-serif; --font-title-weight: 500; }
+[data-font-display="big-shoulders"] { --font-display: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif; --font-title-weight: 800; }
+[data-font-display="garamond"] { --font-display: 'EB Garamond', Garamond, Georgia, serif; --font-title-weight: 500; }
+[data-font-display="tektur"] { --font-display: Tektur, 'Eurostile', sans-serif; --font-title-weight: 500; }
+[data-font-display="baskerville"] { --font-display: 'Libre Baskerville', Baskerville, Georgia, serif; --font-title-weight: 400; }
 
 [data-font-body="ui"] { --font-ui: 'Hanken Grotesk', system-ui, sans-serif; }
 [data-font-body="serif"] { --font-ui: Georgia, 'Iowan Old Style', 'Times New Roman', serif; }

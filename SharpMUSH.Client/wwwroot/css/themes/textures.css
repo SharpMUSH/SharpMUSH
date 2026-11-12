@@ -755,3 +755,69 @@
 	--texture-ink-border: color-mix(in srgb, var(--text) 5%, transparent);
 	--texture-ink-text: var(--border-soft);
 }
+
+/* Archive: a ruled sheet with a fine dot grid, a surveyor's rings and crosshairs in the top right in the text colour,
+   and a strip of data bars along the bottom in accent-3, as on an archive terminal. */
+[data-texture="archive"] {
+	--texture: repeating-linear-gradient(0deg, color-mix(in srgb, var(--text) 5%, transparent) 0 1px, transparent 1px 4px),
+		radial-gradient(circle, color-mix(in srgb, var(--text) 10%, transparent) 0 1px, transparent 1.5px),
+		radial-gradient(ellipse 60% 50% at 78% 30%, color-mix(in srgb, var(--surface) 70%, transparent), transparent);
+	--texture-size: 100% 4px, 24px 24px, 100% 100%;
+	--texture-mask-text: url(/themes/drawings/textures/archive-text.svg) right -220px top -200px / 900px 900px no-repeat;
+	--texture-ink-text: color-mix(in srgb, var(--text) 13%, transparent);
+	--texture-mask-accent-3: url(/themes/drawings/textures/archive-accent-3.svg) left 0 bottom 18px / 1200px 60px repeat-x;
+	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 34%, transparent);
+}
+
+/* Lobby: a halftone dot field, three chevrons pointing into the page on the left in the text colour, and slanted
+   slash stripes on the right in the second accent, as in a shooter's menu. */
+[data-texture="lobby"] {
+	--texture: radial-gradient(circle, color-mix(in srgb, var(--text) 9%, transparent) 0 1px, transparent 1.6px),
+		linear-gradient(115deg, transparent 0 64%, color-mix(in srgb, var(--text) 6%, transparent) 64%),
+		radial-gradient(ellipse 50% 40% at 0% 100%, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent);
+	--texture-size: 14px 14px, 100% 100%, 100% 100%;
+	--texture-mask-text: url(/themes/drawings/textures/lobby-text.svg) left -60px bottom -40px / 620px 520px no-repeat;
+	--texture-ink-text: color-mix(in srgb, var(--text) 5%, transparent);
+	--texture-mask-accent: url(/themes/drawings/textures/lobby-accent.svg) right 6vw top 0 / 440px 100% no-repeat;
+	--texture-ink-accent: color-mix(in srgb, var(--accent-2) 30%, transparent);
+}
+
+/* Cathedral: a ruined arch and broken columns standing in fog on the right, far spires behind, and the warm glow of
+   a fire at the arch's foot; the page darkens toward its edges. */
+[data-texture="cathedral"] {
+	--texture: radial-gradient(ellipse 30% 22% at 64% 100%, color-mix(in srgb, var(--warn) 18%, transparent), transparent),
+		radial-gradient(ellipse 70% 60% at 62% 40%, color-mix(in srgb, var(--surface-2) 70%, transparent), transparent),
+		radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.45));
+	--texture-size: 100% 100%, 100% 100%, 100% 100%;
+	--texture-mask-text: url(/themes/drawings/textures/cathedral-text.svg) right 0 bottom 0 / 1200px 900px no-repeat;
+	--texture-ink-text: linear-gradient(0deg, color-mix(in srgb, var(--text) 3%, transparent), color-mix(in srgb, var(--text) 7%, transparent) 50%, transparent);
+	--texture-mask-border: url(/themes/drawings/textures/cathedral-border.svg) right 0 bottom 0 / 1200px 900px no-repeat;
+	--texture-ink-border: linear-gradient(0deg, color-mix(in srgb, var(--border) 30%, var(--bg)), color-mix(in srgb, var(--border) 60%, var(--bg)) 40%, color-mix(in srgb, var(--border) 25%, var(--bg)));
+}
+
+/* Glyphs: a carved slate with a ring of runes in the accent on the right, grooves of old circuitry
+   in the text colour, and a cold light from within. */
+[data-texture="glyphs"] {
+	--texture: radial-gradient(circle 46vmax at 80% 40%, color-mix(in srgb, var(--accent) 10%, transparent), transparent),
+		repeating-linear-gradient(32deg, color-mix(in srgb, var(--text) 2%, transparent) 0 2px, transparent 2px 7px);
+	--texture-size: 100% 100%, 100% 100%;
+	--texture-mask-accent: url(/themes/drawings/textures/glyphs-accent.svg) right -180px top -80px / 1000px 1000px no-repeat;
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 26%, transparent);
+	--texture-mask-text: url(/themes/drawings/textures/glyphs-text.svg) left 0 bottom 0 / 1200px 900px no-repeat;
+	--texture-ink-text: color-mix(in srgb, var(--accent-3) 40%, transparent);
+}
+
+/* Oilpaint: loose strokes of paint in teal, rust and ochre on a dark canvas, with dry-brush trails, under a
+   canvas weave. */
+[data-texture="oilpaint"] {
+	--texture: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.08) 0 1px, transparent 1px 3px),
+		repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.06) 0 1px, transparent 1px 3px),
+		radial-gradient(ellipse at 50% 45%, transparent 50%, rgba(0, 0, 0, 0.5));
+	--texture-size: 100% 100%, 100% 100%, 100% 100%;
+	--texture-mask-accent-3: url(/themes/drawings/textures/oilpaint-accent-3.svg) right 0 top 0 / 1200px 900px no-repeat;
+	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 50%, transparent);
+	--texture-mask-accent-2: url(/themes/drawings/textures/oilpaint-accent-2.svg) right 0 bottom 0 / 1200px 900px no-repeat;
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 45%, transparent);
+	--texture-mask-accent: url(/themes/drawings/textures/oilpaint-accent.svg) right 0 bottom 0 / 1200px 900px no-repeat;
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 34%, transparent);
+}

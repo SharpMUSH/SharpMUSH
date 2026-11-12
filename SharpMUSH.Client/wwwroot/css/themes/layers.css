@@ -21,6 +21,11 @@
 	overflow: hidden;
 }
 
+/* The texture drifts when the theme's motion says so (data-motion="drift"); nothing else moves it. */
+.theme-texture {
+	animation: var(--texture-motion);
+}
+
 .theme-texture > i {
 	position: absolute;
 	inset: 0;
@@ -59,3 +64,33 @@
 .theme-marks-accent-2 { background: var(--card-ink-accent-2); mask: var(--card-mask-accent-2); }
 .theme-marks-accent-3 { background: var(--card-ink-accent-3); mask: var(--card-mask-accent-3); }
 .theme-marks-border { background: var(--card-ink-border); mask: var(--card-mask-border); }
+
+/* The atmosphere (ThemeTexture, after the texture): a still layer and a moving one, pinned like the texture, over it
+   and under the page. The moving layer's loop pauses under reduced motion or a still theme (--ambient-play). */
+.theme-atmosphere {
+	position: fixed;
+	inset: 0;
+	z-index: 0;
+	pointer-events: none;
+	overflow: hidden;
+}
+
+.theme-atmosphere--contained {
+	position: absolute;
+	z-index: auto;
+	border-radius: inherit;
+}
+
+.theme-atmosphere > i {
+	position: absolute;
+	inset: 0;
+}
+
+.theme-atmosphere-still { background: var(--atmosphere-still); }
+
+.theme-atmosphere-moving {
+	background: var(--atmosphere-moving);
+	background-size: var(--atmosphere-size);
+	animation: var(--atmosphere-motion);
+	animation-play-state: var(--ambient-play);
+}

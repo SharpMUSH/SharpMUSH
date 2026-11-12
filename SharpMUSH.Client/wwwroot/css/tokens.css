@@ -382,6 +382,41 @@
     font-style: normal;
     font-display: swap;
 }
+@font-face {
+    font-family: "Jost";
+    src: url("/fonts/jost-latin.woff2") format("woff2");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Big Shoulders Display";
+    src: url("/fonts/big-shoulders-display-latin.woff2") format("woff2");
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "EB Garamond";
+    src: url("/fonts/eb-garamond-latin.woff2") format("woff2");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Tektur";
+    src: url("/fonts/tektur-latin.woff2") format("woff2");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Libre Baskerville";
+    src: url("/fonts/libre-baskerville-italic-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap;
+}
 
 :root {
 	/* ── Phosphor design tokens (BuiltInThemes.Phosphor) ── */
@@ -692,7 +727,7 @@
    starts from the defaults rather than the worn theme's parts, and its colours are its own. The parts' rules
    (css/themes/) come in a later layer and set what each part changes. */
 :root, [data-scheme] {
-	--card-bg: var(--card-marks), var(--surface);
+	--card-bg: var(--card-marks), var(--card-material);
 	--font-kicker: var(--font-ui);
 	--font-title-weight: 700;
 	--texture: none;
@@ -738,6 +773,25 @@
 	--card-border-width: 1px;
 	--card-shadow: none;
 	--hero-marks: var(--no-drawing);
+	/* What a card is made of (data-material): the fill under its marks, and what it does to the page behind it. */
+	--card-material: var(--surface);
+	--card-backdrop: none;
+	/* How the current line in a menu is marked (data-selection, css/themes/menus.css) is read with fallbacks where it
+	   is drawn (shell.css, Kit/SidebarRow.razor.css), so a theme that leaves it standard keeps each menu's own look.
+	   Only the loop it plays is declared here, so data-motion can set it. */
+	--select-motion: none;
+	/* How things arrive and move (data-motion): a card and a menu line as they appear, the page texture's drift, and
+	   whether the atmosphere plays. Reduced motion stops all of them (globals.css). */
+	--card-enter: none;
+	--nav-enter: none;
+	--texture-motion: none;
+	--ambient-play: running;
+	/* What hangs between the texture and the page (data-atmosphere): a still layer, and a moving one with its tile
+	   size and loop. */
+	--atmosphere-still: none;
+	--atmosphere-moving: none;
+	--atmosphere-size: auto;
+	--atmosphere-motion: none;
 }
 
 /* CJK locales replace the whole mono stack instead of falling back per glyph. Cascadia's
