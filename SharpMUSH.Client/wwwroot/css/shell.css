@@ -911,6 +911,9 @@
     padding: var(--space-4) var(--space-5);
     background: var(--surface);
     border-top: 1px solid var(--border-soft);
+    /* Flush with the bottom of a rounded card (Play's): the focus ring below bends with the card's corners
+       instead of being cut off square by them. */
+    border-radius: 0 0 var(--scene-card-inner-radius, 0) var(--scene-card-inner-radius, 0);
 }
 
 .term-prompt {

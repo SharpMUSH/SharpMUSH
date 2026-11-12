@@ -266,6 +266,12 @@ public partial class Play
 
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
+		if (_focusAfterComm)
+		{
+			_focusAfterComm = false;
+			try { await JS.InvokeVoidAsync("sharpmushInputFocus.focusUnlessTouch"); }
+			catch (JSException) { /* no focus script: the line is there to click */ }
+		}
 		if (_focusCommandAfterGuide)
 		{
 			_focusCommandAfterGuide = false;
@@ -659,7 +665,24 @@ public partial class Play
 	/// <summary>A channel or conversation opens the channel view in main (README §5.1, board 06).</summary>
 	private void OpenComm(string key) => _commKey = key;
 
-	private void CloseComm() => _commKey = null;
+	/// <summary>Back to the game from a channel or conversation (its back button, Escape, or the sidebar's room row):
+	/// the line the player types into is focused again, except on a touch screen.</summary>
+	private void CloseComm()
+	{
+		if (_commKey is null) return;
+		_commKey = null;
+		_focusAfterComm = true;
+	}
+
+	private bool _focusAfterComm;
+
+	/// <summary>The sidebar's room row: the terminal, with no channel over it.</summary>
+	private void OpenGame()
+	{
+		CloseComm();
+		_mobileSheet = null;
+		if (SceneHere is null) ChooseView(PlayView.Terminal);
+	}
 
 	private void OpenSceneFromSheet()
 	{

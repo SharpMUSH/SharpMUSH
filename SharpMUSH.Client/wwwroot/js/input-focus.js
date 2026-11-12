@@ -88,6 +88,29 @@
 			return field ? api.focusField(field) : false;
 		},
 
+		// Back to the page's main field after a view over it closed (Play's channel view). Not on a touch screen,
+		// where focusing a field opens the keyboard. Deferred a turn, so the field the closing render shows is on
+		// screen.
+		focusUnlessTouch: function () {
+			if (window.matchMedia('(pointer: coarse)').matches) return;
+			setTimeout(() => { if (!api.overlayOpen()) api.focus(); }, 0);
+		},
+
+		// Escape anywhere on the page closes a view (Play's channel view): calls Escape on the .NET object. Not a key
+		// something else already took (a menu or a field that clears itself), not mid-composition, and not while a
+		// dialog, menu or picker is open over the page, whose own Escape closes it first.
+		onEscape: function (dotnetRef) {
+			const handler = event => {
+				if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing || event.repeat) return;
+				if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+				if (api.overlayOpen()) return;
+				event.preventDefault();
+				dotnetRef.invokeMethodAsync('Escape').catch(() => { });
+			};
+			window.addEventListener('keydown', handler);
+			return { dispose: () => window.removeEventListener('keydown', handler) };
+		},
+
 		// A field that has just come on screen, on a page that is for writing. Deferred a turn so it runs after
 		// the router's own focus move (FocusOnNavigate) and after a button that opened it has been removed.
 		// Takes the element, or its id (a component library's field, reached by its InputId).
