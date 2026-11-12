@@ -35,8 +35,10 @@ These run as the SharpMUSH switch named:
 - `@malias/delete`: `/destroy`; `@malias/status`: `/stats`
 - `@boot/quiet`: `/silent`
 - `@wall/no_prefix`: `/emit`
+- `@motd/brief`: `/list`, which shows the messages without the text files
+- `@quota/total`: `/set`
 
-These change nothing: `@stats/player`, `@dolist/break` (an @break ends the list around it here too), `@switch/default` (every match runs, as with TinyMUX's default configuration), `@notify/first`, `@teleport/loud`, `examine/full`, `@clone/location`, `@open/location`, `pose/default`, `@ps/brief` and `@listmotd/brief`.
+These change nothing: `@stats/player`, `@dolist/break` (an @break ends the list around it here too), `@switch/default` (every match runs, as with TinyMUX's default configuration), `@notify/first`, `@teleport/loud`, `examine/full`, `@clone/location`, `@clone/inherit` (a clone keeps every flag), `@open/location`, `pose/default`, `@ps/brief`, `@listmotd/brief`, `@quota/fix` (a quota is always counted from what the player owns), `@hook/clear` (`@hook/<type> <command>` with no object clears a hook, one type at a time) and `@oemit/list` (`@oemit` takes a list; each object's room hears the message, where TinyMUX uses only the first object's room).
 
 ## RhostMUSH switches
 
@@ -44,7 +46,8 @@ These run as the SharpMUSH switch named:
 
 - `@dolist/break`: `/nobreak`
 - `@edit/single`: `/first`
+- `@function/minimum` and `/maximum`: `/min` and `/max`
 - `@boot/quiet`: `/silent`
 - `@wall/no_prefix`: `/emit`
 
-These change nothing: `@stats/player`; `@pemit/nosub` and `/oneeval`; `@set/noisy` and `/tree`; `@decompile/all` and `/tree`; `@notify/first`; `@function/display` and `/notrace`; `@edit/strict`; `@cpattr/verify` and `/verbose`; `/ansi` on `@clone`, `@create`, `@dig`, `@open`, `@pcreate` and `@name`; `/strict` on `@create`, `@dig`, `@open` and `@pcreate`; `@clone/location` and `@open/location`; `@search/nogarbage`; `examine/full`, `/tree` and `/display`; `pose/default`.
+These change nothing: `@stats/player`; `@pemit/nosub` and `/oneeval`; `@set/noisy` and `/tree`; `@decompile/all` and `/tree`; `@notify/first`; `@function/display` and `/notrace`; `@edit/strict`; `@cpattr/verify` and `/verbose`; `/ansi` on `@clone`, `@create`, `@dig`, `@open`, `@pcreate` and `@name`; `/strict` on `@create`, `@dig`, `@open` and `@pcreate`; `@clone/location` and `@open/location`; `@set/strict` (a leading `_` in a value is only text); `@include/command` (`@include` always leaves out an attribute's `$` or `^` pattern); `@search/nogarbage`; `examine/full`, `/tree` and `/display`; `pose/default`.

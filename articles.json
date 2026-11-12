@@ -1944,9 +1944,21 @@
         "aliases": []
       },
       {
+        "id": "rhostmush-switches-left-out",
+        "lookup": "compatibility left out rhostmush switches",
+        "heading": "RhostMUSH switches left out",
+        "aliases": []
+      },
+      {
         "id": "tinymux-functions-and-commands-left-out",
         "lookup": "compatibility left out tinymux",
         "heading": "TinyMUX functions and commands left out",
+        "aliases": []
+      },
+      {
+        "id": "tinymux-switches-left-out",
+        "lookup": "compatibility left out tinymux switches",
+        "heading": "TinyMUX switches left out",
         "aliases": []
       }
     ],
@@ -3746,6 +3758,15 @@
         "lookup": "@function named arguments",
         "heading": "Named arguments",
         "aliases": []
+      },
+      {
+        "id": "argument-bounds",
+        "lookup": "@function argument bounds",
+        "heading": "Argument bounds",
+        "aliases": [
+          "@function/min",
+          "@function/max"
+        ]
       },
       {
         "id": "replacing-built-in-functions",
