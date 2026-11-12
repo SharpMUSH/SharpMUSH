@@ -1,7 +1,7 @@
 format: "1.16"
 package: info
 title: "Info files and journals"
-version: 1.3.1
+version: 1.3.2
 authors: [SharpMUSH]
 description: "+info and +pinfo files, and a journal per character whose entries can be shared."
 license: MIT
@@ -300,13 +300,13 @@ objects:
       # copied from a terminal carries no |. The listings take the game's own border.
       FUN`DISPLAY`FRAME:
         value: |-
-          json(object,side,json(string,),corner,json(string,),teel,json(string,),teer,json(string,),pad,0)
+          lit({"side":"","corner":"","teel":"","teer":"","pad":0})
         flags: [funsyntax]
       # Table options, every list split by a new line: %0 the columns that never wrap, %1 each column's
       # priority, %2 each column's share of the spare width.
       FUN`DISPLAY`TABLEOPTIONS:
         value: |-
-          json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1),grow,json(string,%2))
+          json_fill(lit({"rule":"","delim":"","nowrap":"","priority":"","grow":""}),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2)
         flags: [funsyntax]
       # %0 seconds: the date and time, in the reader's own zone when their TZ holds one.
       FUN`DISPLAY`WHEN:

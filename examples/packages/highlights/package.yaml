@@ -1,7 +1,7 @@
 format: "1.16"
 package: highlights
 title: "Favourite poses and highlights"
-version: 1.4.0
+version: 1.4.1
 authors: [SharpMUSH]
 description: "Favourite poses and the highlights they make: +scene/fav marks a pose you liked, and +scene/highlights shows the poses players favourited most, each credited to the character who wrote it. There is no leaderboard and no counts."
 license: MIT
@@ -222,9 +222,9 @@ objects:
       WEB`HIGHLIGHT`ADDRESS: |-
         /apps/highlights[if(strmatch(%0,mine),/mine)][if(gt(%1,1),/%1)]
       WEB`HIGHLIGHT`MARKDOWN: |-
-        json(object,kind,json(string,markdown),value,json(string,%0))
+        json_fill(lit({"kind":"markdown","value":""}),/value,%0)
       WEB`HIGHLIGHT`SECTION: |-
-        json(object,name,json(string,),order,json(number,%0),columns,json(number,1),elements,json(array,%1))
+        json_fill(lit({"name":"","order":0,"columns":1,"elements":[null]}),/order,%0,/elements/0,%1)
       # The words over the view %0, for viewer %1.
       WEB`HIGHLIGHT`INTRO: |-
         if(strmatch(%0,mine),if(strlen(%1),The poses you favourited\, the latest first. Back to \[the highlights\]\(/apps/highlights\).,Sign in with a character to see your favourites.),The poses players favourited most[if(setr(highlight_window,get({{store}}/DATA`CONFIG`WINDOW)),\, from the last [u(%!/FUN`HIGHLIGHT`SPAN,%q<highlight_window>)])].[if(strlen(%1),%bFavourite one with the button under it or `+scene/fav <pose>` in the game\, and see \[your favourites\]\(/apps/highlights/mine\).,%bPlayers favourite them with `+scene/fav <pose>` in the game.)])
@@ -232,30 +232,30 @@ objects:
       WEB`HIGHLIGHT`PAGING: |-
         squish([if(gt(%1,1),\[Previous page\]\([u(%!/WEB`HIGHLIGHT`ADDRESS,%0,dec(%1))]\))] [if(%q<highlight_more>,\[Next page\]\([u(%!/WEB`HIGHLIGHT`ADDRESS,%0,inc(%1))]\))])
       WEB`SCHEMA`HIGHLIGHTS: |-
-        setq(highlight_view,u(%!/WEB`HIGHLIGHT`VIEW,%<at>))[setq(page_number,u(%!/WEB`HIGHLIGHT`PAGENUM,%<at>))][null(u(%!/WEB`HIGHLIGHT`POSES,%<viewer>,%<at>))][setq(highlight_title,if(strmatch(%q<highlight_view>,mine),Your favourites,Highlights))][json_fill(lit({"kind":"view","schema_version":1,"title":"","pages":[{"key":"main","title":"","order":1,"sections":[]}],"actions":{"favourite":{"transport":"http","method":"POST","route":"/http/highlights/act","on_error":{"bind_field_errors":false}}}}),/title,%q<highlight_title>,/pages/0/title,%q<highlight_title>,/pages/0/sections,json_array(u(%!/WEB`HIGHLIGHT`SECTION,1,u(%!/WEB`HIGHLIGHT`MARKDOWN,u(%!/WEB`HIGHLIGHT`INTRO,%q<highlight_view>,%<viewer>)))%r[u(%!/WEB`HIGHLIGHT`SECTION,2,json(object,kind,json(string,timeline),rows_field,json(string,poses),empty,json(string,if(strmatch(%q<highlight_view>,mine),You have no favourite poses yet.,No pose is a favourite yet.))))][if(strlen(setr(paging_links,u(%!/WEB`HIGHLIGHT`PAGING,%q<highlight_view>,%q<page_number>))),%r[u(%!/WEB`HIGHLIGHT`SECTION,3,u(%!/WEB`HIGHLIGHT`MARKDOWN,%q<paging_links>))])],%r))]
+        setq(highlight_view,u(%!/WEB`HIGHLIGHT`VIEW,%<at>))[setq(page_number,u(%!/WEB`HIGHLIGHT`PAGENUM,%<at>))][null(u(%!/WEB`HIGHLIGHT`POSES,%<viewer>,%<at>))][setq(highlight_title,if(strmatch(%q<highlight_view>,mine),Your favourites,Highlights))][json_fill(lit({"kind":"view","schema_version":1,"title":"","pages":[{"key":"main","title":"","order":1,"sections":[]}],"actions":{"favourite":{"transport":"http","method":"POST","route":"/http/highlights/act","on_error":{"bind_field_errors":false}}}}),/title,%q<highlight_title>,/pages/0/title,%q<highlight_title>,/pages/0/sections,json_array(u(%!/WEB`HIGHLIGHT`SECTION,1,u(%!/WEB`HIGHLIGHT`MARKDOWN,u(%!/WEB`HIGHLIGHT`INTRO,%q<highlight_view>,%<viewer>)))%r[u(%!/WEB`HIGHLIGHT`SECTION,2,json_fill(lit({"kind":"timeline","rows_field":"poses","empty":""}),/empty,if(strmatch(%q<highlight_view>,mine),You have no favourite poses yet.,No pose is a favourite yet.)))][if(strlen(setr(paging_links,u(%!/WEB`HIGHLIGHT`PAGING,%q<highlight_view>,%q<page_number>))),%r[u(%!/WEB`HIGHLIGHT`SECTION,3,u(%!/WEB`HIGHLIGHT`MARKDOWN,%q<paging_links>))])],%r))]
       # Pose %1 as a timeline row for viewer %0 on page %2: who wrote it, when, the pose in its colours, a link to
       # its scene, and a button that favourites it or takes it back.
       WEB`HIGHLIGHT`ROW: |-
-        setq(highlight_scene,get({{store}}/POSE`%1`SCENE))[setq(is_favourite,member(get({{store}}/POSE`%1`BY),%0))][json(object,author,json(string,u(%!/FUN`HIGHLIGHT`CREDIT,%q<highlight_scene>,%1)),time,json(number,get({{store}}/POSE`%1`AT)),body,json(string,scenepose(%q<highlight_scene>,%1,markup)),format,json(string,mstring),tag,json(string,if(%q<is_favourite>,Your favourite)),tag_color,json(string,primary),links,json(array,json(object,href,json(string,/scenes/%q<highlight_scene>),label,json(string,Scene %q<highlight_scene>: [u(%!/FUN`LIST`TITLE,%q<highlight_scene>)]))),actions,u(%!/WEB`HIGHLIGHT`TOGGLE,%0,%1,%2,%q<is_favourite>))]
+        setq(highlight_scene,get({{store}}/POSE`%1`SCENE))[setq(is_favourite,member(get({{store}}/POSE`%1`BY),%0))][json_fill(lit({"author":"","time":0,"body":"","format":"mstring","tag":"","tag_color":"primary","links":[{"href":"","label":""}],"actions":null}),/author,u(%!/FUN`HIGHLIGHT`CREDIT,%q<highlight_scene>,%1),/time,get({{store}}/POSE`%1`AT),/body,scenepose(%q<highlight_scene>,%1,markup),/tag,if(%q<is_favourite>,Your favourite),/links/0/href,/scenes/%q<highlight_scene>,/links/0/label,Scene %q<highlight_scene>: [u(%!/FUN`LIST`TITLE,%q<highlight_scene>)],/actions,u(%!/WEB`HIGHLIGHT`TOGGLE,%0,%1,%2,%q<is_favourite>))]
       # The button under pose %1 for viewer %0 on page %2: favourite it, or take it back when %3 says it is theirs.
       # None for a visitor, a character who may not favourite, or the viewer's own pose.
       WEB`HIGHLIGHT`TOGGLE: |-
-        if(cor(not(u(%!/FUN`MAY,%0,scene.join)),cand(not(%3),strlen(u(%!/FUN`FAVOURITE`REFUSAL,%0,%1)))),json(array),json(array,json(object,action,json(string,favourite),label,json(string,if(%3,Take back,Favourite)),values,json(object,pose,json(string,%1),favourite,json(boolean,if(%3,false,true)),at,json(string,%2)))))
+        if(cor(not(u(%!/FUN`MAY,%0,scene.join)),cand(not(%3),strlen(u(%!/FUN`FAVOURITE`REFUSAL,%0,%1)))),json(array),json(array,json_fill(lit({"action":"favourite","label":"","values":{"pose":"","favourite":false,"at":""}}),/label,if(%3,Take back,Favourite),/values/pose,%1,/values/favourite,if(%3,false,true),/values/at,%2)))
       # The view's data for viewer %0 at %1: the poses as timeline rows.
       WEB`HIGHLIGHT`DATA: |-
-        json(object,fields,json(object,poses,json(object,value,if(words(setr(data_poses,u(%!/WEB`HIGHLIGHT`POSES,%0,%1))),json_array(iter(%q<data_poses>,u(%!/WEB`HIGHLIGHT`ROW,%0,%i0,%1),,%r),%r),json_array()),visible,json(boolean,true))))
+        json_fill(lit({"fields":{"poses":{"value":null,"visible":true}}}),/fields/poses/value,if(words(setr(data_poses,u(%!/WEB`HIGHLIGHT`POSES,%0,%1))),json_array(iter(%q<data_poses>,u(%!/WEB`HIGHLIGHT`ROW,%0,%i0,%1),,%r),%r),json_array()))
       WEB`DATA`HIGHLIGHTS: |-
         u(%!/WEB`HIGHLIGHT`DATA,%<viewer>,%<at>)
       # Field %0 of posted JSON %1, unquoted; empty when it was not posted.
       WEB`HIGHLIGHT`FIELD: |-
         setq(field_value,json_query(%1,get,%0))[switch(%q<field_value>,null,,"*,json_query(%q<field_value>,unescape),%q<field_value>)]
       WEB`HIGHLIGHT`ERROR: |-
-        json(object,ok,json(boolean,false),errors,json(object,_global,json(string,%0)))
+        json_fill(lit({"ok":false,"errors":{"_global":""}}),/errors/_global,%0)
       # A button press: favourite pose %<body>'s pose for %<viewer>, or take it back. Run by the route through @force,
       # so the "Set." lines go to the Scene Logger and not into the response. It leaves the answer in act_result: the page's
       # poses again, so the buttons and tags follow, or the refusal.
       WEB`ACT`HIGHLIGHTS: |-
-        think setq(pose_id,u(%!/WEB`HIGHLIGHT`FIELD,pose,%<body>))[setq(act_add,strmatch(json_query(%<body>,get,favourite),true))][setq(act_at,u(%!/WEB`HIGHLIGHT`FIELD,at,%<body>))][setq(act_result,u(%!/WEB`HIGHLIGHT`ERROR,Sign in with a character holding scene.join to favourite poses.))]; @assert u(%!/FUN`MAY,%<viewer>,scene.join); think setq(act_result,u(%!/WEB`HIGHLIGHT`ERROR,setr(refusal,u(%!/FUN`[if(%q<act_add>,FAVOURITE,UNFAVOURITE)]`REFUSAL,%<viewer>,%q<pose_id>)))); @assert not(strlen(%q<refusal>)); @include/args %!/INC`FAVOURITE`[if(%q<act_add>,ADD,REMOVE)]=who,%<viewer>,pose,%q<pose_id>; think setq(act_result,json(object,ok,json(boolean,true),message,json(string,if(%q<act_add>,Pose %q<pose_id> is one of your favourites now.,Pose %q<pose_id> is no longer one of your favourites.)),data,u(%!/WEB`HIGHLIGHT`DATA,%<viewer>,%q<act_at>)))
+        think setq(pose_id,u(%!/WEB`HIGHLIGHT`FIELD,pose,%<body>))[setq(act_add,strmatch(json_query(%<body>,get,favourite),true))][setq(act_at,u(%!/WEB`HIGHLIGHT`FIELD,at,%<body>))][setq(act_result,u(%!/WEB`HIGHLIGHT`ERROR,Sign in with a character holding scene.join to favourite poses.))]; @assert u(%!/FUN`MAY,%<viewer>,scene.join); think setq(act_result,u(%!/WEB`HIGHLIGHT`ERROR,setr(refusal,u(%!/FUN`[if(%q<act_add>,FAVOURITE,UNFAVOURITE)]`REFUSAL,%<viewer>,%q<pose_id>)))); @assert not(strlen(%q<refusal>)); @include/args %!/INC`FAVOURITE`[if(%q<act_add>,ADD,REMOVE)]=who,%<viewer>,pose,%q<pose_id>; think setq(act_result,json_fill(lit({"ok":true,"message":"","data":null}),/message,if(%q<act_add>,Pose %q<pose_id> is one of your favourites now.,Pose %q<pose_id> is no longer one of your favourites.),/data,u(%!/WEB`HIGHLIGHT`DATA,%<viewer>,%q<act_at>)))
 
   # The routes the portal page reads (the highlights-app package registers it). The handler must be WIZARD, as the
   # seeded one is, to @force the Scene Logger for a button press.

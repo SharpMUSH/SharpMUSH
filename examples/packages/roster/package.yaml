@@ -1,7 +1,7 @@
 format: "1.16"
 package: roster
 title: "Roster"
-version: 1.5.0
+version: 1.5.1
 authors: [SharpMUSH]
 description: "Roster: characters kept for players to take on. Staff add characters to the roster, hand them to an account and take them back; players see who is available. The roster defines no way to apply: a game says how in a setting, or installs roster-jobs."
 license: MIT
@@ -522,7 +522,7 @@ objects:
       # %2 each column's share of the spare width, %3 each column's least width.
       FUN`DISPLAY`TABLEOPTIONS:
         value: |-
-          json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1),grow,json(string,%2),min,json(string,%3))
+          json_fill(lit({"rule":"","delim":"","nowrap":"","priority":"","grow":"","min":""}),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2,/min,%3)
         flags: [funsyntax]
       # %0 characters, %1 1 to add a State column: name, group and summary. The summary takes the spare width
       # and wraps; the group goes first when the screen is narrow.

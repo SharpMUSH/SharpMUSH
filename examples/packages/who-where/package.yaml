@@ -1,7 +1,7 @@
 format: "1.16"
 package: who-where
 title: "+who and +where"
-version: 1.10.2
+version: 1.10.3
 authors: [SharpMUSH]
 description: "+who and +where commands drawn with layout functions. +who lists name, alias, idle, connected, gender and location, by name or by idle, or matching a name; +where groups players under a line per location, or lists them by location or by name."
 license: MIT
@@ -99,7 +99,7 @@ objects:
       # %0 the nowrap columns, %1 the priorities, %2 each column's share of spare width, %3 each column's
       # least width, each split by %r.
       FUN`DISPLAY`OPTIONS: |-
-        json(object,delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1),grow,json(string,%2),min,json(string,%3))
+        json_fill(lit({"delim":"","nowrap":"","priority":"","grow":"","min":""}),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2,/min,%3)
       # %0 the footer's text, under a rule.
       FUN`DISPLAY`FOOTER: |-
         %r[rule()]%r[tone(muted,%0)]
@@ -250,7 +250,7 @@ objects:
       # on the left and the count on the right; the count is a right title, so a narrow screen drops it
       # first.
       FUN`WHERE`GROUP: |-
-        rule(case(%0,#-1,Unfindable,name(%0)),,json(object,title,json(string,left),titles,json(array,json(object,text,json(string,setr(where_count,words(%1)) [case(%q<where_count>,1,player,players)]),side,json(string,right)))))%r[grid(iter(%1,u(%!/FUN`DISPLAY`NAME,%i0,idle(%i0)),,|),|)]
+        rule(case(%0,#-1,Unfindable,name(%0)),,json_fill(lit({"title":"left","titles":[{"text":"","side":"right"}]}),/titles/0/text,setr(where_count,words(%1)) [case(%q<where_count>,1,player,players)]))%r[grid(iter(%1,u(%!/FUN`DISPLAY`NAME,%i0,idle(%i0)),,|),|)]
       # +where/grouped: under a line per location.
       FUN`WHERE`GROUPED: |-
         u(%!/FUN`WHERE,%0)

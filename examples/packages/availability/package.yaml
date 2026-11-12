@@ -1,7 +1,7 @@
 format: "1.16"
 package: availability
 title: "Availability"
-version: 1.5.1
+version: 1.5.2
 authors: [SharpMUSH]
 description: "+avail: when each character is busy or free, as dates, ranges and repeating patterns like an office calendar, and the times a group of players are all free."
 license: MIT
@@ -665,13 +665,13 @@ objects:
       # terminal carries no |.
       FUN`DISPLAY`FRAME:
         value: |-
-          json(object,side,json(string,),corner,json(string,),teel,json(string,),teer,json(string,),pad,0)
+          lit({"side":"","corner":"","teel":"","teer":"","pad":0})
         flags: [funsyntax]
       # The options every table here shares: %0 the nowrap columns, %1 the shares of spare width, each split by |.
       # The delimiter is a newline, so a note may hold a |.
       FUN`DISPLAY`TABLE:
         value: |-
-          json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,edit(%0,|,%r)),grow,json(string,edit(%1,|,%r)))
+          json_fill(lit({"rule":"","delim":"","nowrap":"","grow":""}),/delim,%r,/nowrap,edit(%0,|,%r),/grow,edit(%1,|,%r))
         flags: [funsyntax]
       # %0 minutes into a day: 19:00. 1440 is 24:00.
       FUN`DISPLAY`CLOCK:

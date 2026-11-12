@@ -1,7 +1,7 @@
 format: "1.16"
 package: relationships
 title: "Relationships"
-version: 1.4.1
+version: 1.4.2
 authors: [SharpMUSH]
 description: "+rel: relationships that both players confirm, a card for any character with your private note about them, and the routes the portal draws the web and the name card from."
 license: MIT
@@ -467,13 +467,13 @@ objects:
       # Every screen is a box() with no sides, corners or tees, as +finger's are.
       FUN`DISPLAY`FRAME:
         value: |-
-          json(object,side,json(string,),corner,json(string,),teel,json(string,),teer,json(string,),pad,0)
+          lit({"side":"","corner":"","teel":"","teer":"","pad":0})
         flags: [funsyntax]
       # Table options, every list split by a new line: %0 the columns that never wrap, %1 each column's
       # priority, %2 each column's share of the spare width.
       FUN`DISPLAY`TABLEOPTIONS:
         value: |-
-          json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1),grow,json(string,%2))
+          json_fill(lit({"rule":"","delim":"","nowrap":"","priority":"","grow":""}),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2)
         flags: [funsyntax]
       # %0 a player, %1 another: the type %0 keeps for %1, coloured as the web draws it.
       FUN`DISPLAY`TYPE:
@@ -685,7 +685,7 @@ objects:
         flags: [funsyntax]
       WEB`GRAPH`DATA:
         value: |-
-          u(%!/FUN`WEB`PREPARE,%<viewer>,%<target>)[json(object,fields,json(object,web,json(object,value,u(%!/FUN`WEB`GRAPH),visible,json(boolean,true)),list,json(object,value,json_array(iter(%q<web_first>,u(%!/FUN`WEB`ROW,%i0),,chr(30)),chr(30)),visible,json(boolean,true))))]
+          u(%!/FUN`WEB`PREPARE,%<viewer>,%<target>)[json_fill(lit({"fields":{"web":{"value":null,"visible":true},"list":{"value":null,"visible":true}}}),/fields/web/value,u(%!/FUN`WEB`GRAPH),/fields/list/value,json_array(iter(%q<web_first>,u(%!/FUN`WEB`ROW,%i0),,chr(30)),chr(30)))]
         flags: [funsyntax]
       # %0 the viewer, %1 the character. Sets web_viewer, web_target, web_first (the characters %1 has a confirmed
       # relationship with that %0 may see) and web_nodes (%1, web_first, and with web-reach 2 the ones they know).
@@ -702,7 +702,7 @@ objects:
         flags: [funsyntax]
       FUN`WEB`NODE:
         value: |-
-          json(object,id,json(string,%0),label,json(string,name(%0)),image,json(string,u(%!/FUN`DISPLAY`PICTURE,%0)),focus,json(boolean,not(comp(%0,%q<web_target>))))
+          json_fill(lit({"id":"","label":"","image":"","focus":false}),/id,%0,/label,name(%0),/image,u(%!/FUN`DISPLAY`PICTURE,%0),/focus,not(comp(%0,%q<web_target>)))
         flags: [funsyntax]
       # %0 a character on the web: an edge to each one on the web it knows and sorts after, so each pair is drawn
       # once, joined by chr(30). Empty when there are none.
@@ -718,12 +718,12 @@ objects:
       # Child) it points from %1 to %0, so it reads "%1 is %0's Parent".
       FUN`WEB`EDGE:
         value: |-
-          json(object,from,json(string,%1),to,json(string,%0),label,json(string,u(%!/FUN`TYPE`LABEL,u(%!/FUN`RELATION`SIDE,%0,%1))),tone,json(string,u(%!/FUN`TYPE`TONE,u(%!/FUN`RELATION`SIDE,%0,%1))),directed,json(boolean,not(u(%!/FUN`TYPE`MUTUAL,u(%!/FUN`RELATION`SIDE,%0,%1)))))
+          json_fill(lit({"from":"","to":"","label":"","tone":"","directed":false}),/from,%1,/to,%0,/label,u(%!/FUN`TYPE`LABEL,u(%!/FUN`RELATION`SIDE,%0,%1)),/tone,u(%!/FUN`TYPE`TONE,u(%!/FUN`RELATION`SIDE,%0,%1)),/directed,not(u(%!/FUN`TYPE`MUTUAL,u(%!/FUN`RELATION`SIDE,%0,%1))))
         flags: [funsyntax]
       # %0 a character %q<web_target> knows: one row of the table, from %q<web_target>'s side.
       FUN`WEB`ROW:
         value: |-
-          json(object,name,json(string,name(%0)),type,json(string,u(%!/FUN`TYPE`LABEL,u(%!/FUN`RELATION`SIDE,%q<web_target>,%0))),color,json(string,u(%!/FUN`WEB`COLOR,u(%!/FUN`TYPE`TONE,u(%!/FUN`RELATION`SIDE,%q<web_target>,%0)))),text,json(string,get(%q<web_target>/RELATION`[u(%!/FUN`KEY`OF,%0)]`TEXT)),since,json(string,u(%!/FUN`DISPLAY`DATE,max(get(%q<web_target>/RELATION`[u(%!/FUN`KEY`OF,%0)]`SINCE),get(%0/RELATION`[u(%!/FUN`KEY`OF,%q<web_target>)]`SINCE)))))
+          json_fill(lit({"name":"","type":"","color":"","text":"","since":""}),/name,name(%0),/type,u(%!/FUN`TYPE`LABEL,u(%!/FUN`RELATION`SIDE,%q<web_target>,%0)),/color,u(%!/FUN`WEB`COLOR,u(%!/FUN`TYPE`TONE,u(%!/FUN`RELATION`SIDE,%q<web_target>,%0))),/text,get(%q<web_target>/RELATION`[u(%!/FUN`KEY`OF,%0)]`TEXT),/since,u(%!/FUN`DISPLAY`DATE,max(get(%q<web_target>/RELATION`[u(%!/FUN`KEY`OF,%0)]`SINCE),get(%0/RELATION`[u(%!/FUN`KEY`OF,%q<web_target>)]`SINCE))))
         flags: [funsyntax]
       # %0 a tone: the chip colour a table cell takes for it.
       FUN`WEB`COLOR:
@@ -746,7 +746,7 @@ objects:
       FUN`WEB`CARD`LINE:
         value: |-
           setqm(card_value,u(%!/FUN`CARD`LINE`VALUE,%1),
-          card_link,u(%!/FUN`WEB`CARD`LINK,%1))[json_mod(%0,patch,json(object,get(%!/%1),json(object,value,if(strlen(%q<card_link>),json(object,text,json(string,%q<card_value>),link,json(string,%q<card_link>)),json(string,%q<card_value>)),visible,json(boolean,t(strlen(%q<card_value>))))))]
+          card_link,u(%!/FUN`WEB`CARD`LINK,%1))[json_mod(%0,patch,json(object,get(%!/%1),json(object,value,if(strlen(%q<card_link>),json_fill(lit({"text":"","link":""}),/text,%q<card_value>,/link,%q<card_link>),json(string,%q<card_value>)),visible,json(boolean,t(strlen(%q<card_value>))))))]
         flags: [funsyntax]
       FUN`WEB`CARD`LINK:
         value: |-

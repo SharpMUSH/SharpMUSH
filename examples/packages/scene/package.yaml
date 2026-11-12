@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.19.2
+version: 1.19.3
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -265,7 +265,7 @@ objects:
       # The rule under pose %1 of scene %0: the scene and the pose's marks (+scene/mark) on the right, through the
       # POSE`RULE filters.
       FUN`POSE`FOOTER: |-
-        rule(,,json(object,titles,json(array,json(object,text,json(string,u(%!/FUN`FILTER,POSE`RULE,Scene %0[if(words(setr(pose_marks,scenepose(%0,%1,tags))),%b[chr(183)] [edit(%q<pose_marks>,%b,%b[chr(183)]%b)])],%0,%1)),side,"right"))))
+        rule(,,json_fill(lit({"titles":[{"text":"","side":"right"}]}),/titles/0/text,u(%!/FUN`FILTER,POSE`RULE,Scene %0[if(words(setr(pose_marks,scenepose(%0,%1,tags))),%b[chr(183)] [edit(%q<pose_marks>,%b,%b[chr(183)]%b)])],%0,%1)))
       # Pose %1 of scene %3, type %0 and line %2, as reader %4 sees it: between its rule and footer when its type
       # has them, nothing when its FORMAT draws nothing for them. Live lines, recall and log all go through it.
       FUN`POSE`DRAW: |-
@@ -874,13 +874,13 @@ objects:
       # dividers and bottom line across the whole width, and nothing beside the text, so a pitch or a
       # pose copied from a terminal carries no |. The portal draws its usual card.
       FUN`FRAME: |-
-        json(object,side,json(string,),corner,json(string,),teel,json(string,),teer,json(string,),pad,0)
+        lit({"side":"","corner":"","teel":"","teer":"","pad":0})
       # The options every table here shares: %0 the nowrap columns, %1 the least widths, %2 the priorities,
       # %3 the shares of spare width (the column that takes it, so the table spans the screen), each
       # written split by |. The delimiter is a newline, and these lists split on it like the cells do.
       # No heading rule: it would span only the table, not the screen, so headings are bold instead.
       FUN`TABLE`OPTS: |-
-        json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,edit(%0,|,%r)),min,json(string,edit(%1,|,%r)),priority,json(string,edit(%2,|,%r)),grow,json(string,edit(%3,|,%r)))
+        json_fill(lit({"rule":"","delim":"","nowrap":"","min":"","priority":"","grow":""}),/delim,%r,/nowrap,edit(%0,|,%r),/min,edit(%1,|,%r),/priority,edit(%2,|,%r),/grow,edit(%3,|,%r))
 
 
       # sceneposes() returns a SPACE-separated id list, so iter() must use the default

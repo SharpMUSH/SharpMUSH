@@ -1,7 +1,7 @@
 format: "1.16"
 package: watch
 title: "Watch list"
-version: 1.5.0
+version: 1.5.1
 authors: [SharpMUSH]
 description: "Watch: +watch tells you when the people you follow connect and leave, and shows their +who status."
 license: MIT
@@ -182,7 +182,7 @@ objects:
       # priority, %2 each column's share of the spare width, %3 each column's least width.
       FUN`DISPLAY`TABLE`OPTIONS:
         value: |-
-          json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1),grow,json(string,%2),min,json(string,%3))
+          json_fill(lit({"rule":"","delim":"","nowrap":"","priority":"","grow":"","min":""}),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2,/min,%3)
         flags: [funsyntax]
       # How many rows fit on the reader's screen, under a heading, a table's own heading and a footer.
       FUN`PAGE`SIZE:

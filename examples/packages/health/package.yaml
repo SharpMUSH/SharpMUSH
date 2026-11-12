@@ -1,7 +1,7 @@
 format: "1.16"
 package: health
 title: "Game health"
-version: 1.2.0
+version: 1.2.1
 authors: [SharpMUSH]
 description: "+health: staff numbers on how the game is doing, counted from poses and scenes: who posed, who is drifting away, how each month's new players stayed, which rooms are used, and when people play."
 license: MIT
@@ -265,7 +265,7 @@ objects:
       FUN`SCREEN`DRIFTING:
         value: |-
           setqm(as_of,u(%!/FUN`READ`AT,%0,$.asOf),
-          rows,u(%!/FUN`READ`INDEXES,%0,$.players))[box(if(words(%q<rows>),ldatatable(json(object,delim,json(string,%r),nowrap,json(string,2%r3%r4),priority,json(string,1%r1%r2%r2),grow,json(string,1)),Name%rLast pose%r>Days now%r>Days before,iter(%q<rows>,uargs(%!/FUN`SCREEN`DRIFTINGROW,report,%0,row,%i0),,%*<^>),%*<^>),tone(muted,Nobody who posed regularly has slowed down.))%r[rule()]%r[u(%!/FUN`READ`AT,%0,$.total)] drifting: posed on [u(%!/FUN`READ`AT,%0,$.minimumDays)] or more of the [u(%!/FUN`READ`AT,%0,$.baseline)] days before\, and half as often or less since.%r[u(%!/FUN`DISPLAY`FOOTER)],Drifting away)]
+          rows,u(%!/FUN`READ`INDEXES,%0,$.players))[box(if(words(%q<rows>),ldatatable(json_fill(lit({"delim":"","nowrap":"","priority":"","grow":"1"}),/delim,%r,/nowrap,2%r3%r4,/priority,1%r1%r2%r2),Name%rLast pose%r>Days now%r>Days before,iter(%q<rows>,uargs(%!/FUN`SCREEN`DRIFTINGROW,report,%0,row,%i0),,%*<^>),%*<^>),tone(muted,Nobody who posed regularly has slowed down.))%r[rule()]%r[u(%!/FUN`READ`AT,%0,$.total)] drifting: posed on [u(%!/FUN`READ`AT,%0,$.minimumDays)] or more of the [u(%!/FUN`READ`AT,%0,$.baseline)] days before\, and half as often or less since.%r[u(%!/FUN`DISPLAY`FOOTER)],Drifting away)]
         flags: [funsyntax]
       # %<report> and %<row>: one row, its cells on lines of their own, so a | or ^ in a name stays in it.
       FUN`SCREEN`DRIFTINGROW:
@@ -302,7 +302,7 @@ objects:
           setqm(as_of,u(%!/FUN`READ`AT,%0,$.asOf),
           used,u(%!/FUN`READ`INDEXES,%0,$.used),
           dead,u(%!/FUN`READ`INDEXES,%0,$.dead),
-          scenes,if(words(%q<used>),strlen(u(%!/FUN`READ`AT,%0,$.used\[0\].scenes))))[box(rule(Busiest)%r[if(words(%q<used>),ldatatable(json(object,delim,json(string,%r),nowrap,json(string,2%r3%r4%r5%r6),priority,json(string,1%r1%r2%r2%r2%r3),grow,json(string,1)),Room%r>Poses%r>Days%r>People[if(%q<scenes>,%r>Scenes)]%rLast pose,iter(%q<used>,uargs(%!/FUN`SCREEN`USEDROW,report,%0,row,%i0),,%*<^>),%*<^>),tone(muted,Nobody posed in a room.))]%r[rule(Dead)]%r[if(words(%q<dead>),ldatatable(json(object,delim,json(string,%r),nowrap,json(string,2),grow,json(string,1)),Room%rLast pose,iter(%q<dead>,uargs(%!/FUN`SCREEN`DEADROW,report,%0,row,%i0),,%*<^>),%*<^>),tone(muted,Every room had a pose.))]%r[rule()]%rRooms with a pose: [u(%!/FUN`READ`AT,%0,$.usedTotal)]. Rooms with none in [u(%!/FUN`READ`AT,%0,$.deadDays)] days: [u(%!/FUN`READ`AT,%0,$.deadTotal)].%r[u(%!/FUN`DISPLAY`FOOTER)],Rooms)]
+          scenes,if(words(%q<used>),strlen(u(%!/FUN`READ`AT,%0,$.used\[0\].scenes))))[box(rule(Busiest)%r[if(words(%q<used>),ldatatable(json_fill(lit({"delim":"","nowrap":"","priority":"","grow":"1"}),/delim,%r,/nowrap,2%r3%r4%r5%r6,/priority,1%r1%r2%r2%r2%r3),Room%r>Poses%r>Days%r>People[if(%q<scenes>,%r>Scenes)]%rLast pose,iter(%q<used>,uargs(%!/FUN`SCREEN`USEDROW,report,%0,row,%i0),,%*<^>),%*<^>),tone(muted,Nobody posed in a room.))]%r[rule(Dead)]%r[if(words(%q<dead>),ldatatable(json_fill(lit({"delim":"","nowrap":"2","grow":"1"}),/delim,%r),Room%rLast pose,iter(%q<dead>,uargs(%!/FUN`SCREEN`DEADROW,report,%0,row,%i0),,%*<^>),%*<^>),tone(muted,Every room had a pose.))]%r[rule()]%rRooms with a pose: [u(%!/FUN`READ`AT,%0,$.usedTotal)]. Rooms with none in [u(%!/FUN`READ`AT,%0,$.deadDays)] days: [u(%!/FUN`READ`AT,%0,$.deadTotal)].%r[u(%!/FUN`DISPLAY`FOOTER)],Rooms)]
         flags: [funsyntax]
       # %<report> and %<row>: one row of each table, its cells on lines of their own, so a | or ^ in a room's
       # name stays in it.

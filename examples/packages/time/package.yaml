@@ -1,7 +1,7 @@
 format: "1.16"
 package: time
 title: "Time and time zones"
-version: 1.6.0
+version: 1.6.1
 authors: [SharpMUSH]
 description: "+time and +timezone: the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets."
 license: MIT
@@ -117,7 +117,7 @@ objects:
       # from a terminal carries no |.
       FUN`DISPLAY`FRAME:
         value: |-
-          json(object,side,json(string,),corner,json(string,),teel,json(string,),teer,json(string,),pad,0)
+          lit({"side":"","corner":"","teel":"","teer":"","pad":0})
         flags: [funsyntax]
       # The FILTER`TIME`SCREEN`<name> attributes on this object, in name order, for chain().
       FUN`DISPLAY`FILTERS:

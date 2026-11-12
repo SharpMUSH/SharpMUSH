@@ -1,7 +1,7 @@
 format: "1.16"
 package: finger
 title: "Finger profiles"
-version: 1.5.2
+version: 1.5.3
 authors: [SharpMUSH]
 description: "+finger and +oocfinger: a character's IC and OOC profile, from a field list the game edits with +config."
 license: MIT
@@ -403,13 +403,13 @@ objects:
       # from a terminal carries no |.
       FUN`DISPLAY`FRAME:
         value: |-
-          json(object,side,json(string,),corner,json(string,),teel,json(string,),teer,json(string,),pad,0)
+          lit({"side":"","corner":"","teel":"","teer":"","pad":0})
         flags: [funsyntax]
       # Table options, every list split by a new line: %0 the columns that never wrap, %1 each column's
       # priority, %2 each column's share of the spare width.
       FUN`DISPLAY`TABLEOPTIONS:
         value: |-
-          json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1),grow,json(string,%2))
+          json_fill(lit({"rule":"","delim":"","nowrap":"","priority":"","grow":""}),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2)
         flags: [funsyntax]
 
       # ---- +finger and +oocfinger -------------------------------------------------

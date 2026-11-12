@@ -1,7 +1,7 @@
 format: "1.16"
 package: plus-config
 title: "+config"
-version: 1.2.0
+version: 1.2.1
 authors: [SharpMUSH]
 description: "+config — one command for the settings softcode systems keep for themselves, each checked against the type and limits the system declares."
 license: MIT
@@ -652,7 +652,7 @@ objects:
       # column's least width, each list joined with %r.
       FUN`DISPLAY`OPTIONS:
         value: |-
-          json(object,delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1),grow,json(string,%2),min,json(string,%3))
+          json_fill(lit({"delim":"","nowrap":"","priority":"","grow":"","min":""}),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2,/min,%3)
         flags: [funsyntax]
       # %0 the footer's text, under a rule.
       # %0 a display name, %1 a description: both, the name in bold, or "not described" when neither is given.
