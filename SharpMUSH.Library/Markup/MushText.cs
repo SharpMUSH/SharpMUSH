@@ -35,8 +35,12 @@ public static class MushText
 	/// </summary>
 	public static MarkupText[] SplitList(MarkupText delimiter, MarkupText text)
 	{
-		var items = Split(delimiter, text);
-		return delimiter.Text == " " && !ListSeparators.IsMarked(delimiter) ? Array.FindAll(items, x => x.Length > 0) : items;
+		ArgumentNullException.ThrowIfNull(delimiter);
+		ArgumentNullException.ThrowIfNull(text);
+		// One pass for a space list: the empty items are left out as the text is split, not filtered from a second array.
+		return delimiter.Text == " " && !ListSeparators.IsMarked(delimiter)
+			? text.Split(" ", StringSplitOptions.RemoveEmptyEntries)
+			: Split(delimiter, text);
 	}
 
 	/// <summary>
