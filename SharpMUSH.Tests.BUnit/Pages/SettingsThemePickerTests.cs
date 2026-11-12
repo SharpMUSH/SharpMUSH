@@ -93,10 +93,14 @@ public class SettingsThemePickerTests : TrackingBunitContext
 			var preview = cut.Find($"{Option(theme.Id)} .theme-preview");
 			var resolved = ThemeResolver.Resolve(theme);
 			await Assert.That(preview.GetAttribute("style")).Contains($"--surface:{resolved.Token(ThemeTokens.Surface)};");
-			foreach (var (part, value) in resolved.Parts)
+			foreach (var (part, value) in resolved.Parts.Where(p => p.Key != ThemeStyles.Motion))
 			{
 				await Assert.That(preview.GetAttribute($"data-{part}")).IsEqualTo(value);
 			}
+
+			// A page of previews stands still, as under Reduce motion.
+			await Assert.That(preview.GetAttribute($"data-{ThemeStyles.Motion}")).IsEqualTo("still");
+			await Assert.That(preview.GetAttribute("data-reduce-motion")).IsEqualTo("on");
 
 			await Assert.That(preview.QuerySelector(".theme-preview-title")!.TextContent).IsEqualTo(theme.Name);
 			await Assert.That(preview.QuerySelector(".theme-preview-card .theme-marks")).IsNotNull();

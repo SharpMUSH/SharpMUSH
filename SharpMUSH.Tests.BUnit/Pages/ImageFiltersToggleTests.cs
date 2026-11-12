@@ -100,13 +100,13 @@ public class ImageFiltersToggleTests : TrackingBunitContext
 	{
 		var handler = SeedSettings();
 		var cut = Render<SettingsTheme>();
-		var off = cut.WaitForElement("[data-reduce-motion='off']");
+		var off = cut.WaitForElement("button[data-reduce-motion='off']");
 		await Assert.That(off.GetAttribute("aria-checked")).IsEqualTo("true");
 
 		await cut.Find("[data-image-filters='off']").ClickAsync(new());
 		cut.WaitForState(() => cut.Find("[data-image-filters='off']").GetAttribute("aria-checked") == "true");
-		await cut.Find("[data-reduce-motion='on']").ClickAsync(new());
-		cut.WaitForState(() => cut.Find("[data-reduce-motion='on']").GetAttribute("aria-checked") == "true");
+		await cut.Find("button[data-reduce-motion='on']").ClickAsync(new());
+		cut.WaitForState(() => cut.Find("button[data-reduce-motion='on']").GetAttribute("aria-checked") == "true");
 		await Assert.That(handler.Sent).IsEqualTo(new CharacterAppearance(null, null) { ImageFilters = false, ReduceMotion = true })
 			.Because("turning motion down keeps the filters as the player left them");
 	}

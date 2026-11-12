@@ -35,8 +35,14 @@
 
     [Parameter] public string? Class { get; set; }
 
+    /// <summary>
+    /// Draws the theme standing still, as under Reduce motion: no drifting texture, no playing atmosphere, and the still
+    /// drawing in place of one that animates itself. A page of many previews (the theme picker) stays light to draw.
+    /// </summary>
+    [Parameter] public bool Still { get; set; }
+
     /// <summary>Every token the theme sets, then the accent, so the preview is painted as the portal would be.</summary>
     private string Style => string.Concat(Theme.Tokens.Select(t => $"--{t.Key}:{t.Value};")) + $"--accent:{Theme.Accent};color-scheme:{(Theme.Dark ? "dark" : "light")};";
 
-    private Dictionary<string, object> Parts => Theme.Parts.ToDictionary(p => "data-" + p.Key, p => (object)p.Value);
+    private Dictionary<string, object> Parts => ThemePreviewParts.For(Theme, Still);
 }
