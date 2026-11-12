@@ -65,8 +65,10 @@
 .theme-marks-accent-3 { background: var(--card-ink-accent-3); mask: var(--card-mask-accent-3); }
 .theme-marks-border { background: var(--card-ink-border); mask: var(--card-mask-border); }
 
-/* The atmosphere (ThemeTexture, after the texture): a still layer and a moving one, pinned like the texture, over it
-   and under the page. The moving layer's loop pauses under reduced motion or a still theme (--ambient-play). */
+/* The atmosphere (ThemeTexture, after the texture): a still layer, a deep one over it and a moving one on top, pinned
+   like the texture, over it and under the page. Each may be cut to a drawing (--atmosphere-*-mask), so a circuit's
+   rim, its dark groove and the light running in it are three layers of one drawing. The moving layer's loop pauses
+   under reduced motion or a still theme (--ambient-play). */
 .theme-atmosphere {
 	position: fixed;
 	inset: 0;
@@ -86,11 +88,22 @@
 	inset: 0;
 }
 
-.theme-atmosphere-still { background: var(--atmosphere-still); }
+.theme-atmosphere-still {
+	background: var(--atmosphere-still);
+	mask: var(--atmosphere-still-mask);
+}
+
+.theme-atmosphere-deep {
+	background: var(--atmosphere-deep);
+	mask: var(--atmosphere-deep-mask);
+}
 
 .theme-atmosphere-moving {
 	background: var(--atmosphere-moving);
 	background-size: var(--atmosphere-size);
+	background-position: var(--atmosphere-position);
+	background-repeat: var(--atmosphere-repeat);
+	mask: var(--atmosphere-moving-mask);
 	animation: var(--atmosphere-motion);
 	animation-play-state: var(--ambient-play);
 }

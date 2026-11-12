@@ -56,6 +56,8 @@ Copyright 2016 The Saira Project Authors (omnibus.type@gmail.com), with reserved
 Copyright 2021 The Shippori Mincho Project Authors (https://github.com/fontdasu/ShipporiMincho) (Shippori Mincho B1)
 Copyright 2020 The Hina Mincho Project Authors (https://github.com/satsuyako/Hina-Mincho)
 Copyright 2022 The Zen Project Authors (https://github.com/googlefonts/zen-kakugothic) (Zen Kaku Gothic New)
+Copyright (c) 2012, Brian J. Bonislawsky DBA Astigmatic (AOETI) (astigma@astigmatic.com), with Reserved Font Names "Audiowide"
+Copyright 2019 The Jura Project Authors (https://github.com/ossobuffo/jura)
 
 
 
