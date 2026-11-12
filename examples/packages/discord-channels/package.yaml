@@ -104,9 +104,11 @@ objects:
       # Discord avatar. cemit() takes only a character this object controls, which God is not.
       FUN`DISPLAY`PICTURE: |-
         if(hastype(%0,PLAYER),if(controls(me,%0),objid(%0)),%1)
+      DATA`TEMPLATE`DISPLAY`LIST: |-
+        {"delim":"","grow":"1"}
       # The linked channels, as +discord/channels shows them.
       FUN`DISPLAY`LIST: |-
-        if(words(lattr(me/DATA`LINK`*)),box(datacolumns(json(object,delim,json(string,%r),grow,json(string,1)),tone(strong,Game channel)%r[iter(lattr(me/DATA`LINK`*),u(me/FUN`DISPLAY`CHANNELNAME,v(%i0)),,%r)],tone(strong,Discord channel)%r[iter(lattr(me/DATA`LINK`*),last(%i0,`),,%r)],tone(strong,Who speaks)%r[iter(lattr(me/DATA`LINK`*),u(me/FUN`DISPLAY`ACCESS,last(%i0,`)),,%r)])%r[rule()]%r[tone(muted,+discord/channel <channel>=<Discord channel id> links one · +discord/channel/remove <channel> unlinks it · +discord/channel/unrestricted <channel> lets anyone on Discord speak)],Discord Channels),notice(DISCORD,No game channel goes to Discord. +discord/channel <channel>=<Discord channel id> links one.))
+        if(words(lattr(me/DATA`LINK`*)),box(datacolumns(json_fill(v(DATA`TEMPLATE`DISPLAY`LIST),/delim,%r),tone(strong,Game channel)%r[iter(lattr(me/DATA`LINK`*),u(me/FUN`DISPLAY`CHANNELNAME,v(%i0)),,%r)],tone(strong,Discord channel)%r[iter(lattr(me/DATA`LINK`*),last(%i0,`),,%r)],tone(strong,Who speaks)%r[iter(lattr(me/DATA`LINK`*),u(me/FUN`DISPLAY`ACCESS,last(%i0,`)),,%r)])%r[rule()]%r[tone(muted,+discord/channel <channel>=<Discord channel id> links one · +discord/channel/remove <channel> unlinks it · +discord/channel/unrestricted <channel> lets anyone on Discord speak)],Discord Channels),notice(DISCORD,No game channel goes to Discord. +discord/channel <channel>=<Discord channel id> links one.))
       # %0 a Discord channel id: who may speak there, or that the game has not linked it.
       FUN`DISPLAY`ACCESS: |-
         switch(discordlink(%0),unrestricted,anyone,restricted,linked members,tone(error,not linked))

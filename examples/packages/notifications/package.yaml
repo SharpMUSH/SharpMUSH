@@ -1,7 +1,7 @@
 format: "1.16"
 package: notifications
 title: "Push notifications"
-version: 1.3.0
+version: 1.3.1
 authors: [SharpMUSH]
 description: "Notifications: a page or @mail sends a push notification to the player's phone or browser while they are away, as each player chooses with +notify."
 license: MIT
@@ -113,9 +113,11 @@ objects:
       # %0 the viewer: the form, one switch per kind, each set as the viewer has it.
       WEB`FORM`SCHEMA: |-
         json_fill(v(DATA`WEB`SCHEMA),/pages/0/sections/0/elements,json_array(iter(u(%!/FUN`SETTING`KINDS),u(%!/WEB`FORM`FIELD,%i0,%0),,|),|),/pages/0/sections/1/elements/0/label,v(DATA`PREVIEW),/pages/0/sections/1/elements/0/default,u(%!/FUN`PREFERENCE`WANTS,%0,PREVIEW))
+      DATA`TEMPLATE`WEB`FORM`FIELD: |-
+        {"kind":"field","key":"","label":"","type":"boolean","default":false}
       # %0 a kind, %1 the viewer: its switch.
       WEB`FORM`FIELD: |-
-        json(object,kind,json(string,field),key,json(string,lcstr(%0)),label,json(string,u(%!/FUN`SETTING`LABEL,%0)),type,json(string,boolean),default,json(boolean,u(%!/FUN`PREFERENCE`WANTS,%1,%0)))
+        json_fill(v(DATA`TEMPLATE`WEB`FORM`FIELD),/key,lcstr(%0),/label,u(%!/FUN`SETTING`LABEL,%0),/default,u(%!/FUN`PREFERENCE`WANTS,%1,%0))
       # The answer when the viewer is no character.
       WEB`FORM`NOVIEWER: |-
         lit({"ok":false,"errors":{"_global":"Choose a character first."}})

@@ -1,7 +1,7 @@
 format: "1.16"
 package: staff
 title: "Staff list"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "+staff and +stafflist: the game's staff and the duties each one holds, such as Head Director or Builder. Characters with a staff role are listed on their own; duties are a +config table."
 license: MIT
@@ -186,10 +186,12 @@ objects:
       # A character a mortal cannot see on the who list is shown Offline.
       FUN`DISPLAY`SCREEN: |-
         box(if(words(%0),u(%!/FUN`DISPLAY`TABLE,%0),tone(muted,Nobody is listed as staff yet.))%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`COUNT,%0))][if(strlen(%q<staff_open>),%r[tone(muted,Open: [iter(%q<staff_open>,%i0,%*<|>,%,%b)])])],Staff)
+      DATA`TEMPLATE`DISPLAY`TABLE: |-
+        {"delim":"","nowrap":"","priority":"","grow":"","min":""}
       # %0 the characters: the table. Name, Role, Status and Idle are shown whole; Duty wraps and grows into the
       # spare width. On a narrow screen Idle goes first, then Role.
       FUN`DISPLAY`TABLE: |-
-        setq(staff_filters,iter(lattr(%!/FILTER`STAFF`STATUS`*),%!/%i0))[ldatatable(json(object,delim,json(string,%r),nowrap,json(string,1%r3%r4%r5),priority,json(string,1%r1%r3%r1%r4),grow,json(string,%r1%r%r%r),min,json(string,%r12%r%r%r)),tone(strong,Name)%r[tone(strong,Duty)]%r[tone(strong,Role)]%r[tone(strong,Status)]%r>[tone(strong,Idle)],iter(%0,u(%!/FUN`DISPLAY`ROW,%i0,t(member(%q<staff_online>,%i0))),,%*<|>),%*<|>)]
+        setq(staff_filters,iter(lattr(%!/FILTER`STAFF`STATUS`*),%!/%i0))[ldatatable(json_fill(v(DATA`TEMPLATE`DISPLAY`TABLE),/delim,%r,/nowrap,1%r3%r4%r5,/priority,1%r1%r3%r1%r4,/grow,%r1%r%r%r,/min,%r12%r%r%r),tone(strong,Name)%r[tone(strong,Duty)]%r[tone(strong,Role)]%r[tone(strong,Status)]%r>[tone(strong,Idle)],iter(%0,u(%!/FUN`DISPLAY`ROW,%i0,t(member(%q<staff_online>,%i0))),,%*<|>),%*<|>)]
       # %0 a character, %1 1 when a mortal sees them connected: their row.
       FUN`DISPLAY`ROW: |-
         unmark(name(%0)%r[r(staff_duty_[after(%0,#)])]%r[capstr(r(staff_role_[after(%0,#)]))]%r[u(%!/FUN`DISPLAY`STATUS,%0,%1)]%r[if(%1,etime(idle(%0),3))])

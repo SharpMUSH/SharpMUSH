@@ -53,8 +53,8 @@ public static class LayoutThemes
 		SharpMUSH,
 		Ported("phosphor", ThemeMode.Dark, ["#121110", "#211e1c", "#efebe5", "#00f5b7", "#efebe5", "#ffb454", "#90887e", "#6cde9a", "#ffb454", "#e57373", "#5aa9ff"]),
 		Ported("daylight", ThemeMode.Light, ["#f6f4ef", "#f3f0e9", "#1c1915", "#00775f", "#1c1915", "#8f5300", "#655d54", "#387350", "#8f5300", "#a05050", "#3a6ca3"]),
-		Ported("directive", ThemeMode.Dark, ["#1b1b1b", "#141414", "#ebebeb", "#2aa8e6", "#f2d33a", "#ababab", "#ababab", "#6cde9a", "#e3c27e", "#f08f8f", "#5aa9ff"], DirectiveLook),
-		Ported("directive-light", ThemeMode.Light, ["#e4e4e4", "#eaeaea", "#141414", "#00628f", "#6b5600", "#545454", "#545454", "#2f6344", "#7a5600", "#a3302a", "#2f5a8a"], DirectiveLook),
+		Ported("directive", ThemeMode.Dark, ["#1b1b1b", "#141414", "#ebebeb", "#f2d33a", "#f2d33a", "#ababab", "#ababab", "#6cde9a", "#f5a05a", "#f08f8f", "#5aa9ff"], DirectiveLook),
+		Ported("directive-light", ThemeMode.Light, ["#e4e4e4", "#eaeaea", "#141414", "#6b5600", "#6b5600", "#545454", "#545454", "#2f6344", "#8c430f", "#a3302a", "#2f5a8a"], DirectiveLook),
 		Ported("magical-girl", ThemeMode.Light, ["#fcedf7", "#f9eafa", "#2e1538", "#b8157a", "#7e5cb9", "#8f4b00", "#6b5279", "#387350", "#8f4b00", "#9c4e4e", "#38699e"]),
 		Ported("shojo", ThemeMode.Light, ["#fdf8f1", "#fbf3ea", "#2b2226", "#0f6f73", "#ab5851", "#815fbd", "#695a60", "#3a7853", "#8f4b00", "#a55353", "#3a6ca3"]),
 		Ported("idol", ThemeMode.Dark, ["#0c0a1d", "#1c163f", "#f4efff", "#ff58a8", "#36e2ff", "#ffde4a", "#9e94c4", "#6cde9a", "#ffd84a", "#e57373", "#5aa9ff"]),
@@ -106,7 +106,7 @@ public static class LayoutThemes
 			Border = "single", TitleOpen = "─┤ ", TitleClose = " ├─", Guide = "line", Bullet = "▪",
 			GaugeOpen = "[", GaugeFilled = "█", GaugeEmpty = "·", GaugeClose = "]", Rule = "━",
 		}),
-		Ported("trailblazer", ThemeMode.Light, ["#e9e4d8", "#f2ede2", "#1b1a17", "#6b0f0f", "#7a5c14", "#2b4a7a", "#57524a", "#326647", "#7a4d00", "#934a4a", "#346294"], new ThemeLook
+		Ported("trailblazer", ThemeMode.Light, ["#eee2c6", "#f4e9cf", "#22180f", "#8b1a1a", "#7a5c14", "#5c2d14", "#5a4835", "#326647", "#7a4d00", "#934a4a", "#346294"], new ThemeLook
 		{
 			Border = "heavy", TitleOpen = "┫ ◆◆ ", TitleClose = " ┣", Guide = "heavy", Bullet = "◆",
 			GaugeOpen = "[", GaugeFilled = "◆", GaugeEmpty = "◇", GaugeClose = "]", Rule = "━",
@@ -182,7 +182,7 @@ public static class LayoutThemes
 			Border = "single", TitleOpen = "┤ § ", TitleClose = " § ├", Guide = "line", Bullet = "–",
 			GaugeOpen = "[", GaugeFilled = "▮", GaugeEmpty = "▯", GaugeClose = "]", Rule = "─",
 		}),
-		Ported("wild-tamer", ThemeMode.Light, ["#e4f2fb", "#f4f9f5", "#1b2430", "#c62d29", "#85600a", "#2f6e40", "#4f5b68", "#2f7a3d", "#8a5a00", "#b42318", "#2b6aa3"], new ThemeLook
+		Ported("wild-tamer", ThemeMode.Light, ["#d3eafb", "#f4f9f5", "#1b2430", "#bf2a26", "#85600a", "#2f6e40", "#4f5b68", "#2c7239", "#8a5a00", "#b42318", "#2b6aa3"], new ThemeLook
 		{
 			Border = "rounded", TitleOpen = "┤ ◖◗ ", TitleClose = " ├", Guide = "rounded", Bullet = "●",
 			GaugeOpen = "(", GaugeFilled = "█", GaugeEmpty = "░", GaugeClose = ")", Rule = "─",

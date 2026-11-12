@@ -1,7 +1,7 @@
 format: "1.16"
 package: chargen
 title: "Character applications"
-version: 2.7.0
+version: 2.7.1
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
@@ -323,11 +323,13 @@ objects:
         value: |-
           if(isint(%0),u(%!/FUN`DISPLAY`DURATION,sub(secs(),%0)) ago,-)
         flags: [funsyntax]
+      DATA`TEMPLATE`DISPLAY`TABLEOPTIONS: |-
+        {"rule":"","delim":"","nowrap":"","priority":"","grow":"","min":""}
       # Table options, every list split by a new line: %0 the columns that never wrap, %1 each column's
       # priority, %2 each column's share of the spare width, %3 each column's least width.
       FUN`DISPLAY`TABLEOPTIONS:
         value: |-
-          json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,%0),priority,json(string,%1),grow,json(string,%2),min,json(string,%3))
+          json_fill(v(DATA`TEMPLATE`DISPLAY`TABLEOPTIONS),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2,/min,%3)
         flags: [funsyntax]
       # How many rows fit on the reader's screen, under a heading, a table's own heading and a footer.
       FUN`PAGE`SIZE:
@@ -1206,26 +1208,34 @@ objects:
       # WEB`SCHEMA`DOCUMENT's template: json_fill() puts the kind, title, sections and actions into it.
       DATA`WEB`DOCUMENT: |-
         {"kind":"","schema_version":1,"title":"","pages":[{"key":"main","title":"","order":1,"sections":[]}],"actions":{}}
+      DATA`TEMPLATE`WEB`FORM`SECTION: |-
+        {"name":"","order":0,"columns":1,"elements":null}
       # A section: name %0, order %1, elements %2 (%r-separated).
       WEB`FORM`SECTION:
         value: |-
-          json(object,name,json(string,%0),order,json(number,%1),columns,json(number,1),elements,u(%!/WEB`JSON`ARRAY,%2))
+          json_fill(v(DATA`TEMPLATE`WEB`FORM`SECTION),/name,%0,/order,%1,/elements,u(%!/WEB`JSON`ARRAY,%2))
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`FORM`MARKDOWN: |-
+        {"kind":"markdown","value":""}
       WEB`FORM`MARKDOWN:
         value: |-
-          json(object,kind,json(string,markdown),value,json(string,%0))
+          json_fill(v(DATA`TEMPLATE`WEB`FORM`MARKDOWN),/value,%0)
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`FORM`BUTTON: |-
+        {"kind":"button","label":"","action":"","values":{"op":"","key":""},"color":"","variant":"","confirm":""}
       # A button: label %0, the op it posts %1, the application's key %2 (empty for the viewer's own), colour
       # %3, a question asked first %4, the action %5 (act unless named).
       WEB`FORM`BUTTON:
         value: |-
-          json(object,kind,json(string,button),label,json(string,%0),action,json(string,firstof(%5,act)),values,json(object,op,json(string,%1),key,json(string,%2)),color,json(string,firstof(%3,secondary)),variant,json(string,if(match(primary success,%3),filled,outlined)),confirm,json(string,%4))
+          json_fill(v(DATA`TEMPLATE`WEB`FORM`BUTTON),/label,%0,/action,firstof(%5,act),/values/op,%1,/values/key,%2,/color,firstof(%3,secondary),/variant,if(match(primary success,%3),filled,outlined),/confirm,%4)
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`FORM`INPUT: |-
+        {"kind":"field","key":"","label":"","type":"","help":"","options":null,"validation":{"required":null,"max_length":0}}
       # An input: key %0, label %1, type %2, help %3, 1 when required %4, most characters %5 (0 for no limit),
       # options %6 (a JSON array, for a select).
       WEB`FORM`INPUT:
         value: |-
-          json(object,kind,json(string,field),key,json(string,%0),label,json(string,%1),type,json(string,%2),help,json(string,%3),options,firstof(%6,json_array()),validation,json(object,required,u(%!/WEB`JSON`BOOLEAN,%4),max_length,json(number,firstof(%5,100000))))
+          json_fill(v(DATA`TEMPLATE`WEB`FORM`INPUT),/key,%0,/label,%1,/type,%2,/help,%3,/options,firstof(%6,json_array()),/validation/required,u(%!/WEB`JSON`BOOLEAN,%4),/validation/max_length,firstof(%5,100000))
         flags: [funsyntax]
       # %0 a key, %1 a field of the form: its inputs, one for each slot. A field in chapters has a box for each
       # chapter and an empty one for the next; only the first carries the help and says the field is required.
@@ -1233,22 +1243,28 @@ objects:
         value: |-
           iter(u(%!/FUN`APP`SLOTS,%0,%1),u(%!/WEB`FORM`INPUT`SLOT,%i0,eq(#@,1)),%b,%r)
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`FORM`INPUT`SLOT: |-
+        {"value":"","label":""}
       # %0 a slot, %1 1 for its field's first: its input, field_<slot>.
       WEB`FORM`INPUT`SLOT:
         value: |-
           setqm(web_input_field,u(%!/FUN`SLOT`FIELD,%0),
-          web_input_type,u(%!/FUN`FIELD`TYPE,%q<web_input_field>))[u(%!/WEB`FORM`INPUT,field_[lcstr(%0)],u(%!/FUN`SLOT`LABEL,%0),switch(%q<web_input_type>,long,textarea,choice,select,text),if(%1,get({{store}}/FIELD`%q<web_input_field>`HELP)),cand(%1,get({{store}}/FIELD`%q<web_input_field>`REQUIRED)),u(%!/FUN`FIELD`MAX,%q<web_input_field>),if(strmatch(%q<web_input_type>,choice),u(%!/WEB`JSON`ARRAY,iter(get({{store}}/FIELD`%q<web_input_field>`CHOICES),json(object,value,json(string,%i0),label,json(string,%i0)),|,%r))))]
+          web_input_type,u(%!/FUN`FIELD`TYPE,%q<web_input_field>))[u(%!/WEB`FORM`INPUT,field_[lcstr(%0)],u(%!/FUN`SLOT`LABEL,%0),switch(%q<web_input_type>,long,textarea,choice,select,text),if(%1,get({{store}}/FIELD`%q<web_input_field>`HELP)),cand(%1,get({{store}}/FIELD`%q<web_input_field>`REQUIRED)),u(%!/FUN`FIELD`MAX,%q<web_input_field>),if(strmatch(%q<web_input_type>,choice),u(%!/WEB`JSON`ARRAY,iter(get({{store}}/FIELD`%q<web_input_field>`CHOICES),json_fill(v(DATA`TEMPLATE`WEB`FORM`INPUT`SLOT),/value,%i0,/label,%i0),|,%r))))]
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`FORM`INPUT`COMMENT: |-
+        {"kind":"field","key":"","label":"Staff only","type":"boolean"}
       # %0 a section key, or empty for the whole application, %1 1 for a reviewer: the comment box, and a
       # reviewer's Staff only switch.
       WEB`FORM`INPUT`COMMENT:
         value: |-
-          setq(web_box,firstof(lcstr(%0),all))[u(%!/WEB`FORM`INPUT,comment_%q<web_box>,if(%1,if(strlen(%0),Comment on this section,Comment on the whole application),if(strlen(%0),Reply to staff on this section,Message to staff)),textarea,,0,u(%!/FUN`CAP,get(%!/DATA`CONFIG`COMMENT-LENGTH)))][if(%1,%r[json(object,kind,json(string,field),key,json(string,private_%q<web_box>),label,json(string,Staff only),type,json(string,boolean))])]
+          setq(web_box,firstof(lcstr(%0),all))[u(%!/WEB`FORM`INPUT,comment_%q<web_box>,if(%1,if(strlen(%0),Comment on this section,Comment on the whole application),if(strlen(%0),Reply to staff on this section,Message to staff)),textarea,,0,u(%!/FUN`CAP,get(%!/DATA`CONFIG`COMMENT-LENGTH)))][if(%1,%r[json_fill(v(DATA`TEMPLATE`WEB`FORM`INPUT`COMMENT),/key,private_%q<web_box>)])]
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`FORM`TIMELINE: |-
+        {"kind":"timeline","rows_field":"","empty":""}
       # %0 the rows field, %1 the text when there are none: a timeline of comments.
       WEB`FORM`TIMELINE:
         value: |-
-          json(object,kind,json(string,timeline),rows_field,json(string,%0),empty,json(string,%1))
+          json_fill(v(DATA`TEMPLATE`WEB`FORM`TIMELINE),/rows_field,%0,/empty,%1)
         flags: [funsyntax]
       # The act action, as JSON; submit is the same, and the portal checks required fields before it posts it.
       WEB`FORM`ACTION:
@@ -1257,9 +1273,11 @@ objects:
         flags: [funsyntax]
       DATA`WEB`ACTION: |-
         {"transport":"http","method":"POST","route":"/http/chargen/act","payload":"fields","on_success":{"reset_fields":true},"on_error":{"bind_field_errors":true}}
+      DATA`TEMPLATE`WEB`RESULT`ERROR: |-
+        {"ok":false,"errors":{"_global":""}}
       WEB`RESULT`ERROR:
         value: |-
-          json(object,ok,json(boolean,false),errors,json(object,_global,json(string,%0)))
+          json_fill(v(DATA`TEMPLATE`WEB`RESULT`ERROR),/errors/_global,%0)
         flags: [funsyntax]
       # %0 %r-separated objects of one "key":"message" member each: the errors shown on those inputs.
       WEB`RESULT`ERRORS:
@@ -1291,10 +1309,12 @@ objects:
         value: |-
           u(%!/WEB`SCHEMA`DOCUMENT,view,%0,u(%!/WEB`FORM`SECTION,,1,u(%!/WEB`FORM`MARKDOWN,%1)))
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`FORM`STATUS: |-
+        {"kind":"keyvalue","fields":["State","Submitted","Queue"]}
       # The status lines both application pages start with; WEB`DATA`APP fills them in.
       WEB`FORM`STATUS:
         value: |-
-          json(object,kind,json(string,keyvalue),fields,json(array,json(string,State),json(string,Submitted),json(string,Queue)))
+          v(DATA`TEMPLATE`WEB`FORM`STATUS)
         flags: [funsyntax]
       # %0 a key, %1 a section, %2 a round (empty for the draft): each answer, its label in bold.
       WEB`FORM`ANSWERS:
@@ -1342,10 +1362,12 @@ objects:
         value: |-
           switch(%0,submitted,if(gt(%1,1),This is round %1. Each section shows what changed since round [dec(%1)].,This is the first submission.) Comments go to the applicant unless you switch on Staff only.,changes,Returned for changes. You see what was last submitted.,draft,Not submitted. You see the draft.,u(%!/FUN`STATE`LABEL,%0).)
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`SECTION`STAFF: |-
+        {"kind":"table","rows_field":"","columns":[{"key":"field","label":"Field"},{"key":"before","label":""},{"key":"after","label":""}]}
       # %0 a key, %1 a section, %2 the round shown, %3 the last round: the section's elements for a reviewer.
       WEB`SECTION`STAFF:
         value: |-
-          setq(web_section_changed,if(gt(%3,1),filterbool(%!/FUN`FORM`FIELD`IN,u(%!/FUN`APP`CHANGED,%0,dec(%3),%3),,,%1)))[u(%!/WEB`FORM`ANSWERS,%0,%1,%2)][if(words(%q<web_section_changed>),%r[u(%!/WEB`FORM`MARKDOWN,_Changed since round [dec(%3)]:_)]%r[json(object,kind,json(string,table),rows_field,json(string,diff_[lcstr(%1)]),columns,json(array,json(object,key,json(string,field),label,json(string,Field)),json(object,key,json(string,before),label,json(string,Round [dec(%3)])),json(object,key,json(string,after),label,json(string,Round %3))))])]%r[u(%!/WEB`FORM`TIMELINE,comments_[lcstr(%1)],No comments on this section.)]%r[u(%!/WEB`FORM`INPUT`COMMENT,%1,1)]%r[u(%!/WEB`FORM`BUTTON,Comment,comment,%0)]
+          setq(web_section_changed,if(gt(%3,1),filterbool(%!/FUN`FORM`FIELD`IN,u(%!/FUN`APP`CHANGED,%0,dec(%3),%3),,,%1)))[u(%!/WEB`FORM`ANSWERS,%0,%1,%2)][if(words(%q<web_section_changed>),%r[u(%!/WEB`FORM`MARKDOWN,_Changed since round [dec(%3)]:_)]%r[json_fill(v(DATA`TEMPLATE`WEB`SECTION`STAFF),/rows_field,diff_[lcstr(%1)],/columns/1/label,Round [dec(%3)],/columns/2/label,Round %3)])]%r[u(%!/WEB`FORM`TIMELINE,comments_[lcstr(%1)],No comments on this section.)]%r[u(%!/WEB`FORM`INPUT`COMMENT,%1,1)]%r[u(%!/WEB`FORM`BUTTON,Comment,comment,%0)]
         flags: [funsyntax]
       # %0 a key, %1 its state, %2 the character's name: the decision buttons.
       WEB`FORM`DECISION:
@@ -1353,11 +1375,15 @@ objects:
           if(strmatch(%1,approved),u(%!/WEB`FORM`BUTTON,Retire,retire,%0,error,Retire %2? They lose the approved role and their place goes to the next on the waitlist.),u(%!/WEB`FORM`INPUT,message,Message to the applicant,textarea,Asking for changes needs one%; approving does not.,0,u(%!/FUN`CAP,get(%!/DATA`CONFIG`COMMENT-LENGTH)))%r[u(%!/WEB`FORM`BUTTON,Ask for changes,return,%0,warning)]%r[u(%!/WEB`FORM`BUTTON,Approve,approve,%0,success,Approve %2?[if(u(%!/FUN`PLACES`FULL),%bEvery place is taken%, so they go on the waitlist.)])])
         flags: [funsyntax]
 
+      DATA`TEMPLATE`WEB`SCHEMA`LIST: |-
+        {"kind":"table","rows_field":"rows","columns":null,"empty":""}
+      DATA`TEMPLATE`WEB`SCHEMA`LIST`2: |-
+        {"kind":"keyvalue","fields":["Waiting","Typical wait","Places"]}
       # %0 the viewer, %1 queue, waitlist, all or decided: a list of applications, for a reviewer. Anyone else
       # gets the public queue.
       WEB`SCHEMA`LIST:
         value: |-
-          switch(1,u(%!/FUN`IS`REVIEWER,%0),u(%!/WEB`SCHEMA`DOCUMENT,view,u(%!/WEB`LIST`TITLE,%1),u(%!/WEB`FORM`SECTION,,1,u(%!/WEB`FORM`MARKDOWN,u(%!/WEB`LIST`HINT,%1))%r[json(object,kind,json(string,table),rows_field,json(string,rows),columns,u(%!/WEB`LIST`COLUMNS,%1),empty,json(string,u(%!/WEB`LIST`EMPTY,%1)))])),cand(strmatch(%1,queue),get(%!/DATA`CONFIG`SHOW-QUEUE)),u(%!/WEB`SCHEMA`DOCUMENT,view,Applications,u(%!/WEB`FORM`SECTION,,1,json(object,kind,json(string,keyvalue),fields,json(array,json(string,Waiting),json(string,Typical wait),json(string,Places))))),u(%!/WEB`SCHEMA`SAY,Applications,Only application reviewers see this list.))
+          switch(1,u(%!/FUN`IS`REVIEWER,%0),u(%!/WEB`SCHEMA`DOCUMENT,view,u(%!/WEB`LIST`TITLE,%1),u(%!/WEB`FORM`SECTION,,1,u(%!/WEB`FORM`MARKDOWN,u(%!/WEB`LIST`HINT,%1))%r[json_fill(v(DATA`TEMPLATE`WEB`SCHEMA`LIST),/columns,u(%!/WEB`LIST`COLUMNS,%1),/empty,u(%!/WEB`LIST`EMPTY,%1))])),cand(strmatch(%1,queue),get(%!/DATA`CONFIG`SHOW-QUEUE)),u(%!/WEB`SCHEMA`DOCUMENT,view,Applications,u(%!/WEB`FORM`SECTION,,1,v(DATA`TEMPLATE`WEB`SCHEMA`LIST`2))),u(%!/WEB`SCHEMA`SAY,Applications,Only application reviewers see this list.))
         flags: [funsyntax]
       WEB`LIST`TITLE:
         value: |-
@@ -1416,16 +1442,20 @@ objects:
         value: |-
           u(%!/WEB`JSON`ARRAY,iter(u(%!/FUN`APP`COMMENTS,%0,%1,%2),u(%!/WEB`DATA`COMMENT,%0,%i0),%b,%r))
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`DATA`COMMENT: |-
+        {"author":"","time":0,"body":"","format":"markdown","tag":"","tag_color":""}
       # %0 a key, %1 a comment: its timeline entry, tagged with the decision it came with or Staff only.
       WEB`DATA`COMMENT:
         value: |-
           setqm(web_comment,APP`%0`COMMENT`%1,
-          web_comment_tag,if(get({{store}}/%q<web_comment>`PRIVATE),Staff only,switch(get({{store}}/%q<web_comment>`KIND),return,Asked for changes,approve,Approved,waitlist,Waitlisted,retire,Retired,)))[json(object,author,json(string,get({{store}}/%q<web_comment>`NAME)),time,json(number,firstof(get({{store}}/%q<web_comment>`AT),0)),body,json(string,get({{store}}/%q<web_comment>)),format,json(string,markdown),tag,json(string,%q<web_comment_tag>),tag_color,json(string,switch(%q<web_comment_tag>,Staff only,warning,Asked for changes,warning,Approved,success,Waitlisted,info,default)))]
+          web_comment_tag,if(get({{store}}/%q<web_comment>`PRIVATE),Staff only,switch(get({{store}}/%q<web_comment>`KIND),return,Asked for changes,approve,Approved,waitlist,Waitlisted,retire,Retired,)))[json_fill(v(DATA`TEMPLATE`WEB`DATA`COMMENT),/author,get({{store}}/%q<web_comment>`NAME),/time,firstof(get({{store}}/%q<web_comment>`AT),0),/body,get({{store}}/%q<web_comment>),/tag,%q<web_comment_tag>,/tag_color,switch(%q<web_comment_tag>,Staff only,warning,Asked for changes,warning,Approved,success,Waitlisted,info,default))]
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`DATA`DIFF: |-
+        {"field":"","before":"","after":""}
       # %0 a key, %1 a section, %2 and %3 two rounds: a table row for each of the section's fields that differs.
       WEB`DATA`DIFF:
         value: |-
-          u(%!/WEB`JSON`ARRAY,iter(filterbool(%!/FUN`FORM`FIELD`IN,u(%!/FUN`APP`CHANGED,%0,%2,%3),,,%1),json(object,field,json(string,u(%!/FUN`FIELD`LABEL,%i0)),before,json(string,firstof(u(%!/FUN`APP`VALUE,%0,%i0,%2),-)),after,json(string,firstof(u(%!/FUN`APP`VALUE,%0,%i0,%3),-))),%b,%r))
+          u(%!/WEB`JSON`ARRAY,iter(filterbool(%!/FUN`FORM`FIELD`IN,u(%!/FUN`APP`CHANGED,%0,%2,%3),,,%1),json_fill(v(DATA`TEMPLATE`WEB`DATA`DIFF),/field,u(%!/FUN`FIELD`LABEL,%i0),/before,firstof(u(%!/FUN`APP`VALUE,%0,%i0,%2),-),/after,firstof(u(%!/FUN`APP`VALUE,%0,%i0,%3),-)),%b,%r))
         flags: [funsyntax]
       # %0 the viewer, %1 the list: its rows, or for someone who is not a reviewer the public queue.
       WEB`DATA`LIST:
@@ -1441,10 +1471,12 @@ objects:
         value: |-
           u(%!/WEB`JSON`ARRAY,iter(%0,u(%!/WEB`DATA`ROW,%i0,#@),%b,%r))
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`DATA`ROW: |-
+        {"key":"","place":"","name":"","state":"","state_color":"","round":"","waiting":"","changed":"","waitlisted":"","started":"","decided":"","by":""}
       WEB`DATA`ROW:
         value: |-
           setqm(web_row_state,get({{store}}/APP`%0`STATE),
-          web_row_round,default({{store}}/APP`%0`ROUND,0))[json(object,key,json(string,%0),place,json(string,%1),name,json(string,u(%!/FUN`APP`NAME,%0)),state,json(string,u(%!/FUN`STATE`LABEL,%q<web_row_state>)),state_color,json(string,u(%!/WEB`STATE`COLOR,%q<web_row_state>)),round,json(string,%q<web_row_round>),waiting,json(string,u(%!/FUN`DISPLAY`DURATION,sub(secs(),default({{store}}/APP`%0`SUBMITTED,secs())))),changed,json(string,u(%!/FUN`DISPLAY`CHANGED,%0,%q<web_row_round>)),waitlisted,json(string,u(%!/FUN`DISPLAY`DURATION,sub(secs(),default({{store}}/APP`%0`WAITLISTED,secs())))),started,json(string,u(%!/FUN`DISPLAY`AGO,get({{store}}/APP`%0`CREATED))),decided,json(string,u(%!/FUN`DISPLAY`AGO,get({{store}}/APP`%0`DECIDED))),by,json(string,if(isdbref(get({{store}}/APP`%0`BY)),name(get({{store}}/APP`%0`BY)),-)))]
+          web_row_round,default({{store}}/APP`%0`ROUND,0))[json_fill(v(DATA`TEMPLATE`WEB`DATA`ROW),/key,%0,/place,%1,/name,u(%!/FUN`APP`NAME,%0),/state,u(%!/FUN`STATE`LABEL,%q<web_row_state>),/state_color,u(%!/WEB`STATE`COLOR,%q<web_row_state>),/round,%q<web_row_round>,/waiting,u(%!/FUN`DISPLAY`DURATION,sub(secs(),default({{store}}/APP`%0`SUBMITTED,secs()))),/changed,u(%!/FUN`DISPLAY`CHANGED,%0,%q<web_row_round>),/waitlisted,u(%!/FUN`DISPLAY`DURATION,sub(secs(),default({{store}}/APP`%0`WAITLISTED,secs()))),/started,u(%!/FUN`DISPLAY`AGO,get({{store}}/APP`%0`CREATED)),/decided,u(%!/FUN`DISPLAY`AGO,get({{store}}/APP`%0`DECIDED)),/by,if(isdbref(get({{store}}/APP`%0`BY)),name(get({{store}}/APP`%0`BY)),-))]
         flags: [funsyntax]
       # The public queue: how many wait, for how long, and the places, without names.
       WEB`DATA`PUBLIC:
@@ -1461,10 +1493,14 @@ objects:
         value: |-
           json(object,groups,if(strlen(%0),u(%!/WEB`JSON`ARRAY,json(object,label,json(string,),items,u(%!/WEB`JSON`ARRAY,u(%!/WEB`NAV`LINK,My application,/apps/chargen,assignment_ind)[if(cand(not(u(%!/FUN`IS`REVIEWER,%0)),get(%!/DATA`CONFIG`SHOW-QUEUE)),%r[u(%!/WEB`NAV`LINK,Queue,/apps/chargen/queue,hourglass_top)])]))[if(u(%!/FUN`IS`REVIEWER,%0),%r[json(object,label,json(string,Review),items,u(%!/WEB`JSON`ARRAY,u(%!/WEB`NAV`LINK,Waiting,/apps/chargen/queue,inbox,words(u(%!/FUN`LIST`QUEUE)))%r[u(%!/WEB`NAV`LINK,Waitlist,/apps/chargen/waitlist,hourglass_top,words(u(%!/FUN`LIST`WAITLIST)))]%r[u(%!/WEB`NAV`LINK,Open,/apps/chargen/all,view_list)]%r[u(%!/WEB`NAV`LINK,Decided,/apps/chargen/decided,inventory_2)]))])]),json_array()))
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`NAV`LINK: |-
+        {"label":"","path":"","icon":"","count":0}
+      DATA`TEMPLATE`WEB`NAV`LINK`2: |-
+        {"label":"","path":"","icon":""}
       # A sidebar link: label %0, path %1, Material icon %2, and count %3 when there is one.
       WEB`NAV`LINK:
         value: |-
-          if(strlen(%3),json(object,label,json(string,%0),path,json(string,%1),icon,json(string,%2),count,json(number,%3)),json(object,label,json(string,%0),path,json(string,%1),icon,json(string,%2)))
+          if(strlen(%3),json_fill(v(DATA`TEMPLATE`WEB`NAV`LINK),/label,%0,/path,%1,/icon,%2,/count,%3),json_fill(v(DATA`TEMPLATE`WEB`NAV`LINK`2),/label,%0,/path,%1,/icon,%2))
         flags: [funsyntax]
 
       # actions: POST /http/chargen/act, run with @force so the writes are this object's. %q<body> is the posted
@@ -1539,9 +1575,11 @@ objects:
         value: |-
           @include %!/WEB`NEED`APP; @assert hasattr({{store}},APP`%q<app_key>)=think setq(web_response,u(%!/WEB`RESULT`ERROR,Start your application first.)); @include %!/WEB`SAVE`COMMENTS; @assert %q<web_commented>=think setq(web_response,u(%!/WEB`RESULT`ERROR,Write a comment first.)); think setq(web_response,u(%!/WEB`RESULT`DONE,Comment added.))
         flags: [cmdsyntax]
+      DATA`TEMPLATE`WEB`ACT`RETURN: |-
+        {"message":"Say what to change."}
       WEB`ACT`RETURN:
         value: |-
-          @include %!/WEB`NEED`DECIDER; @assert strmatch(%q<app_state>,submitted)=think setq(web_response,u(%!/WEB`RESULT`ERROR,This application is not waiting for a decision.)); think setq(web_message,trim(u(%!/WEB`BODY`GET,message))); @assert strlen(%q<web_message>)=think setq(web_response,u(%!/WEB`RESULT`ERRORS,json(object,message,json(string,Say what to change.)))); @include %!/WEB`SAVE`COMMENTS; @include/args %!/INC`DO`RETURN=actor,%q<viewer_objid>,message,%q<web_message>; think setq(web_response,u(%!/WEB`RESULT`DONE,Returned to [name(%q<app_objid>)] for changes.))
+          @include %!/WEB`NEED`DECIDER; @assert strmatch(%q<app_state>,submitted)=think setq(web_response,u(%!/WEB`RESULT`ERROR,This application is not waiting for a decision.)); think setq(web_message,trim(u(%!/WEB`BODY`GET,message))); @assert strlen(%q<web_message>)=think setq(web_response,u(%!/WEB`RESULT`ERRORS,v(DATA`TEMPLATE`WEB`ACT`RETURN))); @include %!/WEB`SAVE`COMMENTS; @include/args %!/INC`DO`RETURN=actor,%q<viewer_objid>,message,%q<web_message>; think setq(web_response,u(%!/WEB`RESULT`DONE,Returned to [name(%q<app_objid>)] for changes.))
         flags: [cmdsyntax]
       WEB`ACT`APPROVE:
         value: |-
@@ -1551,10 +1589,12 @@ objects:
         value: |-
           @include %!/WEB`NEED`DECIDER; @assert strmatch(%q<app_state>,approved)=think setq(web_response,u(%!/WEB`RESULT`ERROR,Only an approved application can be retired.)); think setq(retire_waiting,u(%!/FUN`LIST`WAITLIST)); @include/args %!/INC`DO`RETIRE=actor,%q<viewer_objid>; think setq(web_response,u(%!/WEB`RESULT`DONE,Retired [name(%q<app_objid>)]. [u(%!/FUN`ADMITTED`TEXT,%q<retire_waiting>)][u(%!/FUN`PLACES`TEXT)]))
         flags: [cmdsyntax]
+      DATA`TEMPLATE`WEB`RESULT`DONE: |-
+        {"ok":true,"message":"","fields":null,"schema":null,"data":{"fields":null}}
       # After a change: message %0, the inputs emptied (the owner's own fields put back), and the page drawn again.
       WEB`RESULT`DONE:
         value: |-
-          setq(web_own,not(comp(%q<app_key>,%q<viewer_key>)))[json(object,ok,json(boolean,true),message,json(string,%0),fields,if(%q<web_own>,u(%!/WEB`RESULT`FIELDS,%q<app_key>),u(%!/WEB`JSON`EMPTY)),schema,if(%q<web_own>,u(%!/WEB`SCHEMA`MINE,%q<viewer_objid>),u(%!/WEB`SCHEMA`APP,%q<viewer_objid>,%q<app_key>)),data,json(object,fields,if(%q<web_own>,u(%!/WEB`DATA`APP,%q<app_key>,0,1),u(%!/WEB`DATA`APP,%q<app_key>,1,0))))]
+          setq(web_own,not(comp(%q<app_key>,%q<viewer_key>)))[json_fill(v(DATA`TEMPLATE`WEB`RESULT`DONE),/message,%0,/fields,if(%q<web_own>,u(%!/WEB`RESULT`FIELDS,%q<app_key>),u(%!/WEB`JSON`EMPTY)),/schema,if(%q<web_own>,u(%!/WEB`SCHEMA`MINE,%q<viewer_objid>),u(%!/WEB`SCHEMA`APP,%q<viewer_objid>,%q<app_key>)),/data/fields,if(%q<web_own>,u(%!/WEB`DATA`APP,%q<app_key>,0,1),u(%!/WEB`DATA`APP,%q<app_key>,1,0)))]
         flags: [funsyntax]
       # %0 a key: the draft's slots as input values.
       WEB`RESULT`FIELDS:

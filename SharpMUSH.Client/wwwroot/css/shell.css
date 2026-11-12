@@ -156,7 +156,7 @@
 	padding: var(--space-5) 0;
 	box-sizing: border-box;
 	background: var(--rail-bg);
-	border-right: 1px solid var(--border-soft);
+	border-right: var(--rail-edge, 1px solid var(--border-soft));
 	overflow-y: auto;
 	scrollbar-width: none;
 }

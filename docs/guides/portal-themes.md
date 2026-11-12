@@ -55,7 +55,7 @@ scroll at once instead of smoothly. A stylesheet that moves something keys it of
   mobile tactics game, the dark one the light one inverted: a grey field under a soft light between letterbox bars,
   condensed capitals (Saira Condensed) after a corner triangle with a yellow slab under them (`designator`), square
   tiles on a soft drop with a yellow stripe down the left edge, a register cross and a corner triangle (`dossier`),
-  cyan blue on the primary control only, a yellow wireframe hanging from the top of the page that turns once every
+  yellow on the primary control, a yellow wireframe hanging from the top of the page that turns once every
   three minutes (still under reduced motion), and pictures in smoky monochrome (`smoke`). Their layout themes carry a look too.
 - One per MSSP genre, with the ids the telnet layout themes use: `fantasy`, `historical`, `horror`, `modern`,
   `mystery`, `romance`, `science-fiction`, `spiritual`.

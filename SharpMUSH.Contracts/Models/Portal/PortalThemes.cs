@@ -177,18 +177,18 @@ public static class BuiltInThemes
 
 	/// <summary>Directive: Directive Light inverted, after the menus of a mobile tactics game. A dark grey field under a
 	/// soft spotlight between pale letterbox bars, condensed capitals with a designator, charcoal slabs, cards filed
-	/// like an operator's record with a yellow stripe down the left edge, cyan blue on the primary control only,
+	/// like an operator's record with a yellow stripe down the left edge, yellow on the primary control,
 	/// pictures in smoky monochrome, and a yellow wireframe hanging from the top of the page.</summary>
 	public static readonly PortalTheme Directive = Genre("directive", "Directive", dark: true,
-		["#1b1b1b", "#101010", "#181818", "#262626", "#2c2c2c", "#ebebeb", "#c0c0c0", "#ababab", "#5c5c5c", "#363636", "#2aa8e6", "#e3c27e", "#f08f8f"],
+		["#1b1b1b", "#101010", "#181818", "#262626", "#2c2c2c", "#ebebeb", "#c0c0c0", "#ababab", "#5c5c5c", "#363636", "#f2d33a", "#f5a05a", "#f08f8f"],
 		display: "saira-condensed", body: "ui", corners: "razor", texture: "haze", ornament: "designator", frame: "dossier", titles: "caps", effect: "none", imagery: "smoke",
 		accent2: "#f2d33a", accent3: "#ff8a3d");
 
 	/// <summary>Directive Light: a title screen and its menus. A pale grey field with a soft vignette between charcoal
 	/// letterbox bars, condensed capitals with a designator, white panels on a soft drop with a yellow stripe down the
-	/// left edge, cyan blue on the primary control only, and a yellow wireframe hanging from the top of the page.</summary>
+	/// left edge, dark gold on the primary control, and a yellow wireframe hanging from the top of the page.</summary>
 	public static readonly PortalTheme DirectiveLight = Genre("directive-light", "Directive Light", dark: false,
-		["#e4e4e4", "#f7f7f7", "#eaeaea", "#d9d9d9", "#2c2c2c", "#141414", "#3f3f3f", "#545454", "#a8a8a8", "#cccccc", "#00628f", "#7a5600", "#a3302a"],
+		["#e4e4e4", "#f7f7f7", "#eaeaea", "#d9d9d9", "#2c2c2c", "#141414", "#3f3f3f", "#545454", "#a8a8a8", "#cccccc", "#6b5600", "#8c430f", "#a3302a"],
 		display: "saira-condensed", body: "ui", corners: "razor", texture: "haze", ornament: "designator", frame: "dossier", titles: "caps", effect: "none", imagery: "smoke",
 		accent2: "#e2bd12", accent3: "#d9641e");
 
@@ -389,11 +389,11 @@ public static class BuiltInThemes
 		display: "alegreya-sc", body: "serif", corners: "sharp", texture: "watercolor", ornament: "rubric", frame: "statblock", titles: "normal", effect: "rubric", imagery: "watercolor",
 		accent2: "#c9a243", accent3: "#e69a28");
 
-	/// <summary>Trailblazer: a tabletop rulebook's vellum page in a stone border, condensed capitals in maroon, action diamonds, cards headed like a stat block.</summary>
+	/// <summary>Trailblazer: a tabletop rulebook's parchment page in a stone border, crimson and gold, condensed capitals, action diamonds, cards headed like a stat block.</summary>
 	public static readonly PortalTheme Trailblazer = Genre("trailblazer", "Trailblazer", dark: false,
-		["#e9e4d8", "#fbf8f1", "#f2ede2", "#e8e2d4", "#1d2433", "#1b1a17", "#45413a", "#57524a", "#b9b0a0", "#dcd5c7", "#6b0f0f", "#7a4d00", "#a32a1d"],
+		["#eee2c6", "#fbf4e2", "#f4e9cf", "#e9dbb9", "#3b1512", "#22180f", "#4a3a28", "#5a4835", "#b89a68", "#dccaa1", "#8b1a1a", "#7a4d00", "#a32a1d"],
 		display: "oswald", body: "ui", corners: "sharp", texture: "marble", ornament: "actions", frame: "ledger", titles: "caps", effect: "stamped", imagery: "etched",
-		accent2: "#c99a2e", accent3: "#2b4a7a");
+		accent2: "#b8862b", accent3: "#5c2d14");
 
 	// One pair per colour vision (ThemeVision), Phosphor's and Daylight's surfaces and text with an accent, warning and
 	// missing-link colour that stay apart for that vision. ThemeVision picks the pair for a player who names a vision
@@ -521,7 +521,7 @@ public static class BuiltInThemes
 
 	/// <summary>Wild Tamer: a sunny route through tall grass, field-guide cards with a red band and a lens, fat capsule buttons, health bars that change colour.</summary>
 	public static readonly PortalTheme WildTamer = Genre("wild-tamer", "Wild Tamer", dark: false,
-		["#e4f2fb", "#ffffff", "#f4f9f5", "#e9f2ec", "#f6fbf8", "#1b2430", "#3c4856", "#4f5b68", "#3c4a58", "#cfdfd4", "#c62d29", "#8a5a00", "#b42318"],
+		["#d3eafb", "#ffffff", "#f4f9f5", "#e9f2ec", "#ffffff", "#1b2430", "#3c4856", "#4f5b68", "#1b2430", "#cfdfd4", "#bf2a26", "#8a5a00", "#b42318"],
 		display: "baloo", body: "ui", corners: "round", texture: "meadow", ornament: "capsule", frame: "field-guide", titles: "normal", effect: "sticker", imagery: "sunny",
 		accent2: "#ffcc33", accent3: "#4f9a63",
 		selection: "lift", buttons: "capsule", material: "solid", meters: "vital", motion: "bob", atmosphere: "motes");

@@ -1,7 +1,7 @@
 format: "1.16"
 package: room-contents
 title: "Room feed"
-version: 1.3.1
+version: 1.3.2
 authors: [SharpMUSH]
 description: "Pushes room.info / room.contents / room.exits OOB v2 updates, built per viewer, to a room's connected occupants — the data source for the portal's Play page."
 license: MIT
@@ -131,6 +131,8 @@ objects:
       # never u(): a URL is text the owner typed.
       FUN`ROOMCONTENTS`PICTURE: |-
         if(cand(hasflag(%0/%1,visual),cor(not(strmatch(%1,*`*)),hasflag(%0/[before(%1,`)],visual))),get(%0/%1))
+      DATA`TEMPLATE`ROOMCONTENTS`IMAGEREFERENCE: |-
+        {"url":"","alt":""}
       # The image reference of an object (%0) for the URL %1, as
       # {"url","alt","focal"} from IMAGE`ALT / IMAGE`FOCAL (help IMAGE), or the
       # word null when %1 is blank — null in a json_mod() patch REMOVES the
@@ -138,7 +140,7 @@ objects:
       # alt falls back to the object's name; focal is present only when set
       # and well-formed.
       FUN`ROOMCONTENTS`IMAGEREFERENCE: |-
-        if(%1,json_mod(json(object,url,json(string,%1),alt,json(string,strfirstof(u(me/FUN`ROOMCONTENTS`PICTURE,%0,IMAGE`ALT),name(%0)))),patch,json(object,focal,if(u(me/FUN`ROOMCONTENTS`FOCALVALID,setr(focal_point,u(me/FUN`ROOMCONTENTS`PICTURE,%0,IMAGE`FOCAL))),json_array(iter(%q<focal_point>,json(number,%i0))),null))),null)
+        if(%1,json_mod(json_fill(v(DATA`TEMPLATE`ROOMCONTENTS`IMAGEREFERENCE),/url,%1,/alt,strfirstof(u(me/FUN`ROOMCONTENTS`PICTURE,%0,IMAGE`ALT),name(%0))),patch,json(object,focal,if(u(me/FUN`ROOMCONTENTS`FOCALVALID,setr(focal_point,u(me/FUN`ROOMCONTENTS`PICTURE,%0,IMAGE`FOCAL))),json_array(iter(%q<focal_point>,json(number,%i0))),null))),null)
       # An object's (%0) thumbnail: IMAGE. Occupant rows and exit destination
       # previews use it.
       FUN`ROOMCONTENTS`IMAGE: |-
@@ -159,6 +161,8 @@ objects:
       # own text. It is also the expensive helper — see the cost note above.
       FUN`ROOMCONTENTS`DESCRIPTION: |-
         objeval(%0,u(%0/DESCRIBE))
+      DATA`TEMPLATE`ROOMCONTENTS`SCENE: |-
+        {"id":"","title":"","cast":0,"role":null,"focus":false,"elsewhere":false}
       # The scene bound to a room (%0) as seen by a viewer (%1), or null. Two
       # guards: scenewhere() answers #-1 NOT FOUND / #-1 PERMISSION, which is
       # rejected first — scene(#-1 NOT FOUND,id) answers the same constant, so
@@ -172,7 +176,7 @@ objects:
       # focus on any other scene: a #-1 PERMISSION from scenefocus() is a scene
       # the causer may not see, still a focus, so only #-1 NOT FOUND is none.
       FUN`ROOMCONTENTS`SCENE: |-
-        if(cand(not(strmatch(setr(scene_id,scenewhere(%0)),#-1*)),strmatch(%q<scene_id>,scene(%q<scene_id>,id))),if(cor(scene(%q<scene_id>,public),orflags(%1,Wr),not(strmatch(setr(scene_role,scenemember(%q<scene_id>,%1,role)),#-1*))),json(object,id,json(string,%q<scene_id>),title,json(string,scene(%q<scene_id>,title)),cast,json(number,words(scenemembers(%q<scene_id>))),role,if(strmatch(setr(scene_role,scenemember(%q<scene_id>,%1,role)),#-1*),null,json(string,%q<scene_role>)),focus,json(boolean,strmatch(setr(scene_focus,scenefocus(%1)),%q<scene_id>)),elsewhere,json(boolean,cand(not(strmatch(%q<scene_focus>,#-1 NOT FOUND)),not(strmatch(%q<scene_focus>,%q<scene_id>))))),null),null)
+        if(cand(not(strmatch(setr(scene_id,scenewhere(%0)),#-1*)),strmatch(%q<scene_id>,scene(%q<scene_id>,id))),if(cor(scene(%q<scene_id>,public),orflags(%1,Wr),not(strmatch(setr(scene_role,scenemember(%q<scene_id>,%1,role)),#-1*))),json_fill(v(DATA`TEMPLATE`ROOMCONTENTS`SCENE),/id,%q<scene_id>,/title,scene(%q<scene_id>,title),/cast,words(scenemembers(%q<scene_id>)),/role,if(strmatch(setr(scene_role,scenemember(%q<scene_id>,%1,role)),#-1*),null,json(string,%q<scene_role>)),/focus,strmatch(setr(scene_focus,scenefocus(%1)),%q<scene_id>),/elsewhere,cand(not(strmatch(%q<scene_focus>,#-1 NOT FOUND)),not(strmatch(%q<scene_focus>,%q<scene_id>)))),null),null)
       # The hint shown on a locked exit (%0): its @fail message, as stored. It
       # is plain text to the page — never evaluated, so softcode in an @fail
       # arrives as the code itself.
@@ -184,12 +188,16 @@ objects:
       # exit's Basic lock failing for THIS viewer.
       FUN`ROOMCONTENTS`EXITSTATE: |-
         switch(1,strmatch(%2,#-1*),closed,not(elock(%0/Basic,%1)),locked,open)
+      DATA`TEMPLATE`ROOMCONTENTS`DESTINATION: |-
+        {"name":"","desc":"","here":0}
       # An exit destination (%0): {name, area?, image?, desc, here}. here
       # counts the connected, non-DARK players there. Viewer-independent, so
       # FUN`ROOMCONTENTS`PREPARE computes it once per exit per event.
       FUN`ROOMCONTENTS`DESTINATION: |-
-        json_mod(json(object,name,json(string,name(%0)),desc,json(string,u(me/FUN`ROOMCONTENTS`DESCRIPTION,%0)),here,json(number,words(filter(me/FUN`ROOMCONTENTS`ONLINE,lplayers(%0))))),patch,json(object,area,if(setr(area_name,u(me/FUN`ROOMCONTENTS`AREA,%0)),json(string,%q<area_name>),null),image,u(me/FUN`ROOMCONTENTS`IMAGE,%0)))
+        json_mod(json_fill(v(DATA`TEMPLATE`ROOMCONTENTS`DESTINATION),/name,name(%0),/desc,u(me/FUN`ROOMCONTENTS`DESCRIPTION,%0),/here,words(filter(me/FUN`ROOMCONTENTS`ONLINE,lplayers(%0)))),patch,json(object,area,if(setr(area_name,u(me/FUN`ROOMCONTENTS`AREA,%0)),json(string,%q<area_name>),null),image,u(me/FUN`ROOMCONTENTS`IMAGE,%0)))
 
+      DATA`TEMPLATE`ROOMCONTENTS`WHOBASE: |-
+        {"dbref":"","objid":"","type":"","name":"","cmd":""}
       # ── Base rows (viewer-independent; computed once per event) ──────────
       # Every row is a base object every viewer gets, json_mod()-patched per
       # viewer with the keys that differ: a null in the patch removes the key,
@@ -199,21 +207,25 @@ objects:
       # are unchanged; v2 adds objid, type, and for players image, color
       # (PROFILE`COLOR, validated), status/idle (help idle()) and profile.
       FUN`ROOMCONTENTS`WHOBASE: |-
-        json_mod(json(object,dbref,json(string,num(%0)),objid,json(string,objid(%0)),type,json(string,lcstr(type(%0))),name,json(string,name(%0)),cmd,json(string,look [num(%0)])),patch,json(object,image,u(me/FUN`ROOMCONTENTS`IMAGE,%0),color,if(hastype(%0,player),u(me/FUN`ROOMCONTENTS`COLOR,%0),null),status,if(hastype(%0,player),json(string,u(me/FUN`ROOMCONTENTS`STATUS,idle(%0))),null),idle,if(hastype(%0,player),json(number,idle(%0)),null),profile,if(hastype(%0,player),true,null)))
+        json_mod(json_fill(v(DATA`TEMPLATE`ROOMCONTENTS`WHOBASE),/dbref,num(%0),/objid,objid(%0),/type,lcstr(type(%0)),/name,name(%0),/cmd,look [num(%0)]),patch,json(object,image,u(me/FUN`ROOMCONTENTS`IMAGE,%0),color,if(hastype(%0,player),u(me/FUN`ROOMCONTENTS`COLOR,%0),null),status,if(hastype(%0,player),json(string,u(me/FUN`ROOMCONTENTS`STATUS,idle(%0))),null),idle,if(hastype(%0,player),json(number,idle(%0)),null),profile,if(hastype(%0,player),true,null)))
+      DATA`TEMPLATE`ROOMCONTENTS`EXITBASE: |-
+        {"dbref":"","objid":"","name":"","aliases":null,"cmd":""}
       # An exit's base row (%0 = the exit). v1 keys name and cmd are unchanged;
       # v2 adds dbref, objid, aliases and, when set, confirm (a CONFIRM
       # attribute on the exit, plain text). state, hint and dest are per
       # viewer and patched on by FUN`ROOMCONTENTS`EXITROW.
       FUN`ROOMCONTENTS`EXITBASE: |-
-        json_mod(json(object,dbref,json(string,num(%0)),objid,json(string,objid(%0)),name,json(string,name(%0)),aliases,json_array(iter(fullalias(%0),json(string,%i0))),cmd,json(string,goto [num(%0)])),patch,json(object,confirm,if(setr(exit_confirm,get(%0/CONFIRM)),json(string,%q<exit_confirm>),null)))
+        json_mod(json_fill(v(DATA`TEMPLATE`ROOMCONTENTS`EXITBASE),/dbref,num(%0),/objid,objid(%0),/name,name(%0),/aliases,json_array(iter(fullalias(%0),json(string,%i0))),/cmd,goto [num(%0)]),patch,json(object,confirm,if(setr(exit_confirm,get(%0/CONFIRM)),json(string,%q<exit_confirm>),null)))
       # An exit's destination preview (%0 = the exit), or nothing when it leads
       # nowhere, HOME, or a VARIABLE destination.
       FUN`ROOMCONTENTS`EXITDESTINATION: |-
         if(isdbref(setr(destination_room,loc(%0))),u(me/FUN`ROOMCONTENTS`DESTINATION,%q<destination_room>))
+      DATA`TEMPLATE`ROOMCONTENTS`INFOBASE: |-
+        {"v":2,"dbref":"","objid":"","name":"","desc":{"format":"text","text":""}}
       # The room's own info (%0 = the room) without the per-viewer scene block.
       # Its image is the banner (FUN`ROOMCONTENTS`BANNER), not the thumbnail.
       FUN`ROOMCONTENTS`INFOBASE: |-
-        json_mod(json(object,v,json(number,2),dbref,json(string,num(%0)),objid,json(string,objid(%0)),name,json(string,name(%0)),desc,json(object,format,json(string,text),text,json(string,u(me/FUN`ROOMCONTENTS`DESCRIPTION,%0)))),patch,json(object,area,if(setr(area_name,u(me/FUN`ROOMCONTENTS`AREA,%0)),json(string,%q<area_name>),null),image,u(me/FUN`ROOMCONTENTS`BANNER,%0)))
+        json_mod(json_fill(v(DATA`TEMPLATE`ROOMCONTENTS`INFOBASE),/dbref,num(%0),/objid,objid(%0),/name,name(%0),/desc/text,u(me/FUN`ROOMCONTENTS`DESCRIPTION,%0)),patch,json(object,area,if(setr(area_name,u(me/FUN`ROOMCONTENTS`AREA,%0)),json(string,%q<area_name>),null),image,u(me/FUN`ROOMCONTENTS`BANNER,%0)))
       # Once per event (%0 = the room): every base row into a q-register the
       # per-viewer helpers read — occupant_row_<n> for occupant #n, exit_row_<n> and
       # exit_preview_<n> for exit #n and its destination preview, room_info_<n> for
@@ -231,6 +243,8 @@ objects:
       FUN`ROOMCONTENTS`PREPARE: |-
         null(setq(mover,if(cand(strmatch(num(loc(%#)),num(%0)),u(me/FUN`ROOMCONTENTS`VIEWER,%#)),num(%#))),iter(filter(me/FUN`ROOMCONTENTS`WHOVISIBLE,lcon(%0),,,%!),setq(occupant_row_[rest(num(%i0),#)],u(me/FUN`ROOMCONTENTS`WHOBASE,%i0))),iter(u(me/FUN`ROOMCONTENTS`EXITS,%0,%!),setq(exit_row_[rest(num(%i0),#)],u(me/FUN`ROOMCONTENTS`EXITBASE,%i0),exit_preview_[rest(num(%i0),#)],u(me/FUN`ROOMCONTENTS`EXITDESTINATION,%i0))),setq(room_info_[rest(num(%0),#)],u(me/FUN`ROOMCONTENTS`INFOBASE,%0)))
 
+      DATA`TEMPLATE`ROOMCONTENTS`WHOROW: |-
+        {"label":"Page","cmd":""}
       # ── Rows (per viewer) ────────────────────────────────────────────────
       # Each reads its base row from the register FUN`ROOMCONTENTS`PREPARE filled, or builds
       # it on the spot when called outside an event (a game's own query, a
@@ -239,7 +253,7 @@ objects:
       # One occupant row (%0 = the occupant, %1 = the viewer): "you": true on
       # the viewer's own row, and a Page action on everyone else's player rows.
       FUN`ROOMCONTENTS`WHOROW: |-
-        json_mod(strfirstof(r(occupant_row_[rest(num(%0),#)]),u(me/FUN`ROOMCONTENTS`WHOBASE,%0)),patch,json(object,you,if(strmatch(num(%0),num(%1)),true,null),actions,if(cand(hastype(%0,player),not(strmatch(num(%0),num(%1)))),json(array,json(object,label,json(string,Page),cmd,json(string,page [num(%0)]=))),null)))
+        json_mod(strfirstof(r(occupant_row_[rest(num(%0),#)]),u(me/FUN`ROOMCONTENTS`WHOBASE,%0)),patch,json(object,you,if(strmatch(num(%0),num(%1)),true,null),actions,if(cand(hastype(%0,player),not(strmatch(num(%0),num(%1)))),json(array,json_fill(v(DATA`TEMPLATE`ROOMCONTENTS`WHOROW),/cmd,page [num(%0)]=)),null)))
       # One exit row (%0 = the exit, %1 = the viewer): state for this viewer,
       # hint only when locked, and the destination preview only when NOT locked
       # — a locked door does not describe what is behind it. cmd stays on a
