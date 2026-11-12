@@ -151,7 +151,7 @@
 	--select-text-glow: 0 0 8px color-mix(in srgb, var(--accent) 55%, transparent);
 	--select-mark: radial-gradient(circle 4px at calc(100% - 4px) 50%, color-mix(in srgb, var(--accent) 35%, #fff) 0 2px, var(--accent) 3px, transparent 4px),
 		linear-gradient(90deg, color-mix(in srgb, var(--accent) 10%, transparent), var(--accent) 85%, color-mix(in srgb, var(--accent) 50%, #fff)) left 0 center / calc(100% - 4px) 2px no-repeat;
-	--select-mark-inset: auto 20% -3px 0;
+	--select-mark-inset: calc(100% - 5px) 20% -3px 0;
 	--select-mark-width: auto;
 	--select-mark-radius: 0px;
 	--select-mark-glow: none;
@@ -160,27 +160,21 @@
 	--select-lift: initial;
 }
 
-/* Lockon: four reticle corners in the second accent close on the line from just outside it, and a diamond in the same
-   colour marks it at the left, so the line reads as a target. */
+/* Lockon: a wash of the accent fading to the right, a bar of light in the accent down the left edge with a haze
+   beside it, and two reticle corners in the second accent closing on the line's right end, so the line reads as a
+   locked target. */
 [data-selection="lockon"] {
 	--select-ink-dim: initial;
-	--select-fill: color-mix(in srgb, var(--accent) 8%, transparent);
+	--select-fill: linear-gradient(90deg, color-mix(in srgb, var(--accent) 16%, transparent), transparent 85%);
 	--select-ink: var(--text);
 	--select-radius: 0px;
 	--select-text-glow: initial;
-	--select-mark: linear-gradient(to bottom right, transparent 50%, var(--accent-2) 50%) left 4px top calc(50% - 4px) / 4px 4px no-repeat,
-		linear-gradient(to bottom left, transparent 50%, var(--accent-2) 50%) left 8px top calc(50% - 4px) / 4px 4px no-repeat,
-		linear-gradient(to top right, transparent 50%, var(--accent-2) 50%) left 4px top 50% / 4px 4px no-repeat,
-		linear-gradient(to top left, transparent 50%, var(--accent-2) 50%) left 8px top 50% / 4px 4px no-repeat,
-		linear-gradient(var(--accent-2), var(--accent-2)) left top / 9px 2px no-repeat,
-		linear-gradient(var(--accent-2), var(--accent-2)) left top / 2px 9px no-repeat,
-		linear-gradient(var(--accent-2), var(--accent-2)) right top / 9px 2px no-repeat,
-		linear-gradient(var(--accent-2), var(--accent-2)) right top / 2px 9px no-repeat,
-		linear-gradient(var(--accent-2), var(--accent-2)) left bottom / 9px 2px no-repeat,
-		linear-gradient(var(--accent-2), var(--accent-2)) left bottom / 2px 9px no-repeat,
-		linear-gradient(var(--accent-2), var(--accent-2)) right bottom / 9px 2px no-repeat,
-		linear-gradient(var(--accent-2), var(--accent-2)) right bottom / 2px 9px no-repeat;
-	--select-mark-inset: -2px;
+	--select-mark: linear-gradient(90deg, var(--accent) 0 2px, color-mix(in srgb, var(--accent) 35%, transparent) 2px, transparent 10px) left 0 top 8px / 10px calc(100% - 16px) no-repeat,
+		linear-gradient(var(--accent-2), var(--accent-2)) right top / 8px 2px no-repeat,
+		linear-gradient(var(--accent-2), var(--accent-2)) right top / 2px 8px no-repeat,
+		linear-gradient(var(--accent-2), var(--accent-2)) right bottom / 8px 2px no-repeat,
+		linear-gradient(var(--accent-2), var(--accent-2)) right bottom / 2px 8px no-repeat;
+	--select-mark-inset: 0;
 	--select-mark-width: auto;
 	--select-mark-radius: 0px;
 	--select-mark-glow: none;
@@ -404,6 +398,15 @@
 	transform: skewX(-24deg);
 }
 
+/* Slats: twelve slanted segments, as a mecha's HUD readout. */
+[data-meters="slats"] .mud-progress-linear {
+	height: 8px;
+	margin-inline: 4px;
+	border-radius: 0;
+	transform: skewX(-20deg);
+	mask: repeating-linear-gradient(90deg, #000 0 calc(100% / 12 - 3px), transparent calc(100% / 12 - 3px) calc(100% / 12));
+}
+
 /* Pips: ten round pips, filled up to the value. */
 [data-meters="pips"] .mud-progress-linear {
 	height: 12px;
@@ -422,6 +425,7 @@
 
 [data-meters="segmented"] .mud-progress-linear-bar,
 [data-meters="slanted"] .mud-progress-linear-bar,
+[data-meters="slats"] .mud-progress-linear-bar,
 [data-meters="pips"] .mud-progress-linear-bar {
 	border-radius: 0;
 }

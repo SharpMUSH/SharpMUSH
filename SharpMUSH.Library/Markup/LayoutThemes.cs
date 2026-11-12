@@ -177,12 +177,12 @@ public static class LayoutThemes
 			Border = "single", TitleOpen = "┤ § ", TitleClose = " § ├", Guide = "line", Bullet = "–",
 			GaugeOpen = "[", GaugeFilled = "▮", GaugeEmpty = "▯", GaugeClose = "]", Rule = "─",
 		}),
-		Ported("lumen-grid", ThemeMode.Dark, ["#04070b", "#0a141a", "#d6f6ff", "#5ff3ff", "#ffa142", "#2fc4d4", "#7fa6b3", "#6cde9a", "#ffa142", "#ff8a7a", "#5aa9ff"], new ThemeLook
+		Ported("lumen-grid", ThemeMode.Dark, ["#04070b", "#0a141a", "#d6f6ff", "#5ff3ff", "#ffa142", "#2a8fa0", "#7fa6b3", "#6cde9a", "#ffa142", "#ff8a7a", "#5aa9ff"], new ThemeLook
 		{
 			Border = "rounded", TitleOpen = "┤ ◉ ", TitleClose = " ◉ ├", Guide = "rounded", Bullet = "▹",
 			GaugeOpen = "[", GaugeFilled = "▮", GaugeEmpty = "▯", GaugeClose = "]", Rule = "─",
 		}),
-		Ported("jovian", ThemeMode.Dark, ["#080c1f", "#10173a", "#e4ebff", "#6fd6ff", "#ff7a45", "#a994ff", "#8e9bc4", "#6cde9a", "#ff9a70", "#ff8a8a", "#7fb0ff"], new ThemeLook
+		Ported("jovian", ThemeMode.Dark, ["#080c1f", "#10173a", "#e4ebff", "#6fd6ff", "#ff7a45", "#8a72e8", "#8e9bc4", "#6cde9a", "#ff7a45", "#ff8a8a", "#7fb0ff"], new ThemeLook
 		{
 			Border = "heavy", TitleOpen = "┫ ◆ ", TitleClose = " ◆ ┣", Guide = "heavy", Bullet = "◆",
 			GaugeOpen = "⟦", GaugeFilled = "▰", GaugeEmpty = "▱", GaugeClose = "⟧", Rule = "━",

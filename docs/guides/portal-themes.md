@@ -184,7 +184,7 @@ first choice of each, which is how the portal looked before they existed:
 - **Current line** (`selection`): how the current page in a menu is marked. `standard` (each menu's own mark: a glowing bar in the
   main menu, a raised row in a section's sidebar), `bar` (a squared block in the text colour), `skew` (a slanted accent plate), `halo` (a pool of light behind the
   words), `brackets` (corner ticks), `lift` (a raised, tilted card), `stroke` (a brush stroke under the words), `trace`
-  (a line of light with a bright head), `lockon` (corner ticks and a diamond, like a target lock). The
+  (a line of light with a bright head), `lockon` (a bar of light at the left and reticle corners closing on the right end, like a target lock). The
   rules set the `--select-*` variables that `.phosphor-nav-link.active` in `shell.css` and `.kit-row--current` in
   `Kit/SidebarRow.razor.css` read.
 - **Buttons** (`buttons`): the cut of the portal's capsule buttons and MudBlazor's filled and outlined ones, and how
@@ -195,8 +195,8 @@ first choice of each, which is how the portal looked before they existed:
 - **Card material** (`material`): what cards are made of, under their frame. `solid`, `glass` (blurs the page behind
   it), `hologram` (accent light and scanlines), `veil` (fades out at the sides), `cardstock`, `felt`, `wood`, `lightline` (dark glass lit at the edges). It sets
   `--card-material`, the fill under `--card-marks`, and `--card-backdrop`.
-- **Meters** (`meters`): MudBlazor's progress bars, such as a loading or import bar. `bar`, `segmented`, `slanted`, `pips`,
-  `hairline`.
+- **Meters** (`meters`): MudBlazor's progress bars, such as a loading or import bar. `bar`, `segmented`, `slanted`, `slats` (slanted
+  segments), `pips`, `hairline`.
 - **Motion** (`motion`): how cards and menu lines arrive and what loops. `calm` (fades only), `still` (nothing moves,
   not even the atmosphere), `snappy` (cards rise, menu lines slide in), `drift` (the background drifts slowly),
   `wobble` (cards are dealt in, the current line floats and tilts), `bob` (the current line bobs). Arrivals use

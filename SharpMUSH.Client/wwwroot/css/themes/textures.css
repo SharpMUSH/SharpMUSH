@@ -823,7 +823,7 @@
 }
 
 /* Gridfloor: a floor grid in the accent running to a glowing horizon three fifths down the window, outlined towers in
-   the text colour standing on it, black above. Now and then a streak of light runs along a floor line out of the
+   a faint accent standing on it, black above. Now and then a streak of light runs along a floor line out of the
    horizon or across the floor, as data moving over the grid; the streaks move inside their drawing, which
    --ambient-flow takes away where nothing may move. */
 [data-texture="gridfloor"] {
@@ -831,23 +831,27 @@
 	--texture-size: 100% 100%;
 	--texture-mask-accent: url(/themes/drawings/textures/gridfloor-accent.svg) 0 0 / 100% 100% no-repeat;
 	--texture-ink-accent: linear-gradient(180deg, transparent 58%, color-mix(in srgb, var(--accent) 55%, transparent) 60%, color-mix(in srgb, var(--accent) 22%, transparent) 75%, color-mix(in srgb, var(--accent) 34%, transparent));
-	--texture-mask-text: url(/themes/drawings/textures/gridfloor-text.svg) left 50% bottom 40% / 1600px 260px no-repeat;
+	--texture-mask-text: url(/themes/drawings/textures/gridfloor-text.svg) left 50% top calc(60% - 104px) / 1600px 260px no-repeat;
 	--texture-ink-text: color-mix(in srgb, var(--accent) 22%, transparent);
 	--texture-mask-accent-3: var(--ambient-flow, url(/themes/drawings/textures/gridfloor-flow.svg) 0 0 / 100% 100% no-repeat);
 	--texture-ink-accent-3: linear-gradient(180deg, transparent 59%, color-mix(in srgb, var(--accent) 70%, #fff) 61%);
 }
 
-/* Orbit: a banded gas giant rising from the lower right, its limb and rings in the accent, its bands in accent-3,
-   under a field of stars. */
+/* Orbit: a banded gas giant rising from the lower right, lit from the upper left and sinking into the page on its
+   night side, its soft bands and a storm in accent-3, its limb and a haze of atmosphere lit in the accent on the sun
+   side, its rings in the accent passing behind it and across its face, over a field of stars it hides; a faint
+   accent light at the heart a third of the way down, and accent-3 light at the lower right. */
 [data-texture="orbit"] {
-	--texture: radial-gradient(circle 60vmax at 10% -10%, color-mix(in srgb, var(--accent) 9%, transparent), transparent);
-	--texture-size: 100% 100%;
+	--texture: radial-gradient(ellipse 55vmax 33vmax at 50% 33%, color-mix(in srgb, var(--accent) 9%, transparent), transparent),
+		radial-gradient(ellipse 70vmax 45vmax at 100% 100%, color-mix(in srgb, var(--accent-3) 10%, transparent), transparent);
+	--texture-size: 100% 100%, 100% 100%;
 	--texture-mask-border: url(/themes/drawings/textures/orbit-border.svg) right 0 bottom 0 / 1400px 900px no-repeat;
-	--texture-ink-border: color-mix(in srgb, var(--border) 45%, var(--bg));
+	--texture-ink-border: color-mix(in srgb, color-mix(in srgb, var(--border) 85%, var(--accent-3)) 60%, var(--bg));
 	--texture-mask-accent-3: url(/themes/drawings/textures/orbit-accent-3.svg) right 0 bottom 0 / 1400px 900px no-repeat;
-	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 30%, transparent);
+	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 38%, transparent);
 	--texture-mask-accent: url(/themes/drawings/textures/orbit-accent.svg) right 0 bottom 0 / 1400px 900px no-repeat;
-	--texture-ink-accent: color-mix(in srgb, var(--accent) 35%, transparent);
-	--texture-mask-text: url(/themes/drawings/textures/orbit-text.svg) 0 0 / 600px 600px;
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 60%, transparent);
+	--texture-mask-text: url(/themes/drawings/textures/orbit-text.svg) 0 0 / 600px 600px subtract,
+		url(/themes/drawings/textures/orbit-border.svg) right 0 bottom 0 / 1400px 900px no-repeat;
 	--texture-ink-text: color-mix(in srgb, var(--text) 45%, transparent);
 }

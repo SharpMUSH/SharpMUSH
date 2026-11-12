@@ -13271,6 +13271,9 @@
   <data name="AdmThemeStyleMetersSlanted" xml:space="preserve">
     <value>Slanted</value>
   </data>
+  <data name="AdmThemeStyleMetersSlats" xml:space="preserve">
+    <value>Slats</value>
+  </data>
   <data name="AdmThemeStyleMetersPips" xml:space="preserve">
     <value>Pips</value>
   </data>

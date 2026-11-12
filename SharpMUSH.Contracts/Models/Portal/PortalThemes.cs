@@ -506,7 +506,7 @@ public static class BuiltInThemes
 		["#080c1f", "#10173a", "#151d46", "#0c1230", "#060918", "#e4ebff", "#b3bfe3", "#8e9bc4", "#2c3a78", "#1c2550", "#6fd6ff", "#ff7a45", "#ff8a8a"],
 		display: "jura", body: "ui", corners: "sharp", texture: "orbit", ornament: "flank", frame: "plate", titles: "wide", effect: "scope", imagery: "steel",
 		accent2: "#ff7a45", accent3: "#8a72e8",
-		selection: "lockon", buttons: "blade", material: "glass", meters: "slanted", motion: "drift", atmosphere: "heartbeat");
+		selection: "lockon", buttons: "blade", material: "glass", meters: "slats", motion: "drift", atmosphere: "heartbeat");
 
 	public static readonly IReadOnlyList<PortalTheme> All =
 	[

@@ -146,7 +146,7 @@ public static class ThemeStyles
 		["rune"] = new("rune", "line", "rune"),
 		["brushed"] = new("brushed", "none", "brushed"),
 		["nodes"] = new("nodes", "line", "nodes"),
-		["plate"] = new("plate", "line", "plate"),
+		["plate"] = new("plate", "none", "plate"),
 	};
 
 	public static readonly IReadOnlyDictionary<string, OrnamentSet> Ornaments = new Dictionary<string, OrnamentSet>
@@ -274,7 +274,7 @@ public static class ThemeStyles
 		[Selection] = ["standard", "bar", "skew", "halo", "brackets", "lift", "stroke", "trace", "lockon"],
 		[Buttons] = ["standard", "skew", "keycap", "notch", "bar", "brush", "capsule", "blade"],
 		[Material] = ["solid", "glass", "hologram", "veil", "cardstock", "felt", "wood", "lightline"],
-		[Meters] = ["bar", "segmented", "slanted", "pips", "hairline"],
+		[Meters] = ["bar", "segmented", "slanted", "slats", "pips", "hairline"],
 		[Motion] = ["calm", "still", "snappy", "drift", "wobble", "bob"],
 		[Atmosphere] = ["none", "vignette", "fog", "embers", "motes", "crt", "slashes", "circuit", "heartbeat"],
 		[TextureStrength] = Strengths,

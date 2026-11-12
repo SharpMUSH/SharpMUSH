@@ -592,13 +592,18 @@
 		inset 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent), inset 0 0 26px color-mix(in srgb, var(--accent) 7%, transparent);
 }
 
-/* Plate: a pale armour strip across the top left with a keel in the accent under it, the top right corner cut off
-   along the border, and a tick in the second accent at the lower right. */
+/* Plate: a pale armour strip across the top left with a keel in the accent under it, the top right and lower left
+   corners cut off, and a hairline outline (the frame has no border of its own, as clipped) lit in the accent from
+   the top left and in the second accent from the lower right, fading to the border colour between them. */
 [data-frame-marks="plate"] {
 	--card-marks: linear-gradient(110deg, color-mix(in srgb, var(--text) 85%, transparent) 0 92%, transparent 92%) left 0 top 0 / 38% 5px no-repeat,
 		linear-gradient(110deg, var(--accent) 0 90%, transparent 90%) left 0 top 5px / 30% 2px no-repeat,
-		linear-gradient(-135deg, var(--bg) 0 14px, var(--border) 14px 15px, transparent 15px) right top / 28px 28px no-repeat,
-		linear-gradient(var(--accent-2), var(--accent-2)) right 12px bottom 8px / 22px 3px no-repeat;
+		linear-gradient(-135deg, var(--bg) 0 14px, color-mix(in srgb, var(--accent) 50%, var(--border)) 14px 15px, transparent 15px) right top / 28px 28px no-repeat,
+		linear-gradient(45deg, var(--bg) 0 14px, color-mix(in srgb, var(--accent) 50%, var(--border)) 14px 15px, transparent 15px) left bottom / 28px 28px no-repeat,
+		linear-gradient(90deg, var(--accent), var(--border) 35%, color-mix(in srgb, var(--accent) 50%, var(--border))) left 0 top 0 / calc(100% - 20px) 1px no-repeat,
+		linear-gradient(180deg, var(--accent), var(--border) 45%) left 0 top 0 / 1px calc(100% - 20px) no-repeat,
+		linear-gradient(180deg, color-mix(in srgb, var(--accent) 50%, var(--border)), var(--border) 45%, var(--accent-2)) right 0 top 20px / 1px calc(100% - 20px) no-repeat,
+		linear-gradient(90deg, color-mix(in srgb, var(--accent) 50%, var(--border)), var(--border) 55%, var(--accent-2)) right 0 bottom 0 / calc(100% - 20px) 1px no-repeat;
 }
 /* Plate: a deep shadow, and a faint accent light inside, as a lit cockpit panel. */
 [data-frame-shadow="plate"] {

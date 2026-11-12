@@ -235,7 +235,8 @@
 }
 
 /* Circuit: a few long board traces across the top of the window, cut into the page: a faint rim in the accent round
-   each dark groove, and light in the accent running along them as two slow bands cross the window. */
+   each dark groove, and light in the accent running along them as two slow bands cross the window. The glow drawing
+   is taken away by --ambient-flow where nothing may move. */
 [data-atmosphere="circuit"] {
 	--atmosphere-still: color-mix(in srgb, var(--accent) 16%, transparent);
 	--atmosphere-still-mask: url(/themes/drawings/atmosphere/circuit-rim.svg) center top / cover no-repeat;
@@ -243,7 +244,7 @@
 	--atmosphere-deep-mask: url(/themes/drawings/atmosphere/circuit-groove.svg) center top / cover no-repeat;
 	--atmosphere-moving: linear-gradient(90deg, transparent 46%, color-mix(in srgb, var(--accent) 80%, #fff) 50%, transparent 54%),
 		linear-gradient(0deg, transparent 45%, var(--accent) 50%, transparent 55%);
-	--atmosphere-moving-mask: url(/themes/drawings/atmosphere/circuit-glow.svg) center top / cover no-repeat;
+	--atmosphere-moving-mask: var(--ambient-flow, url(/themes/drawings/atmosphere/circuit-glow.svg) center top / cover no-repeat);
 	--atmosphere-size: 300% 100%, 100% 300%;
 	--atmosphere-position: 0 0, 0 0;
 	--atmosphere-repeat: no-repeat;
