@@ -197,7 +197,7 @@ public record CosmeticOptions(
 		Description = "Picture at the top left of the web portal; empty for the SharpMUSH logo",
 		ValidationPattern = PortalPicture.Pattern,
 		Image = true,
-		Example = "/api/wiki-assets/12/logo.svg",
+		Example = "https://example.com/crest.svg",
 		Group = "Portal",
 		Order = 1,
 		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address. Shown square, at 26 pixels. "
@@ -210,7 +210,7 @@ public record CosmeticOptions(
 		Description = "Browser tab icon for the web portal; empty to use portal_logo",
 		ValidationPattern = PortalPicture.Pattern,
 		Image = true,
-		Example = "/api/wiki-assets/13/icon.png",
+		Example = "https://example.com/icon.png",
 		Group = "Portal",
 		Order = 2,
 		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address. When both this and portal_logo "
@@ -225,7 +225,7 @@ public record CosmeticOptions(
 		Description = "Wide picture behind the game's name on the portal's Home, wiki and sign-in pages; empty for none",
 		ValidationPattern = PortalPicture.Pattern,
 		Image = true,
-		Example = "/api/wiki-assets/14/banner.jpg",
+		Example = "https://example.com/banner.jpg",
 		Group = "Portal",
 		Order = 3,
 		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address. Shown about four times as wide as it is "
@@ -259,10 +259,10 @@ public record CosmeticOptions(
 	[SharpConfig(
 		Name = "portal_side_art",
 		Category = "Cosmetic",
-		Description = "Picture at the right of the game's name on the portal's Home page; empty for Sharpie in the game's genre",
+		Description = "Picture at the right of the game's name on the portal's Home page; empty for Sharpie when there is no banner and portal_sharpie is on",
 		ValidationPattern = PortalPicture.Pattern,
 		Image = true,
-		Example = "/api/wiki-assets/15/mascot.png",
+		Example = "https://example.com/mascot.png",
 		Group = "Portal",
 		Order = 6,
 		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address, such as the game's mascot or crest. "

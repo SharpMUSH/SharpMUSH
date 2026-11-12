@@ -104,7 +104,10 @@
     private bool HasCustomSubgenre => (_subgenreChanged ? new[] { _subgenres } : _storedSubgenres)
         .Any(value => !string.IsNullOrWhiteSpace(value) && !MsspCatalog.Find("SUBGENRE")!.Choices.Contains(value));
     private SharpieArt? PreviewArt => SharpieArtCatalog.Resolve(_style, _genres, _subgenres, _override, GuideImagery.Full, SharpieArtMoment.Welcome);
-    private SharpieArt? HeaderSharpie => GameHero.GenreArtFor(_style, _genres, _subgenres, _override);
+    // Home resolves Sharpie from the first stored genre and subgenre, so the header preview does too.
+    private SharpieArt? HeaderSharpie => GameHero.GenreArtFor(_style,
+        _genreChanged ? _genres : _storedGenres.FirstOrDefault() ?? "",
+        _subgenreChanged ? _subgenres : _storedSubgenres.FirstOrDefault() ?? "", _override);
     private HomeHeaderFields? _header;
     private bool _loaded, _busy, _saved;
     private string? _error;
@@ -165,25 +168,23 @@
     private async Task Save()
     {
         if (_busy) return;
-        _busy = true; _saved = false; _error = null;
+        _busy = true; _saved = false;
+        // The header's options first: the server validates them, and a refusal leaves the identity unsaved too.
+        _error = _header is null ? null : await _header.SaveAsync();
+        if (_error is null) await SaveIdentityAsync();
+        ServerInfo.Refresh();
+        _busy = false;
+    }
+    private async Task SaveIdentityAsync()
+    {
         var values = new OnboardingSettings(_name, _genreChanged ? [_genres] : [.. _storedGenres],
             _subgenreChanged ? [_subgenres] : [.. _storedSubgenres], _introduction, _welcome, _rules, _character, _style,
             SharpieArtCatalog.Approved.Any(art => art.Id == _override && art.Style == _style) ? _override : "");
         switch (await Http.CreateClient("api").PutApiAsync<OnboardingSettings, OnboardingSettings>("api/onboarding/settings", values, Loc["GuideIdentitySaveEmpty"].Value))
         {
-            case OnboardingSettings settings: AcceptGenres(settings); await SaveHeaderAsync(); break;
+            case OnboardingSettings settings: AcceptGenres(settings); _saved = true; await OnSaved.InvokeAsync(); break;
             case ApiFailure failure: _error = failure.Message; break;
         }
-        _busy = false;
-    }
-    /// <summary>Saves the Home header's options once the identity is saved; a refusal keeps the form unsaved.</summary>
-    private async Task SaveHeaderAsync()
-    {
-        _error = _header is null ? null : await _header.SaveAsync();
-        ServerInfo.Refresh();
-        if (_error is not null) return;
-        _saved = true;
-        await OnSaved.InvokeAsync();
     }
     private string StyleName(string style) => Loc[$"GuideStyle_{style}"];
 }

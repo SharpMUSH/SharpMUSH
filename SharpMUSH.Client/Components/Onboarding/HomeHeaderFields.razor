@@ -11,7 +11,7 @@
    values (SaveAsync). *@
 <section class="home-header" aria-labelledby="home-header-heading">
     <h3 id="home-header-heading">@Loc["AdmHomeHeaderHeading"]</h3>
-    <p>@Loc["AdmHomeHeaderIntro"] <a href="@($"/admin/config/Cosmetic#{ConfigNaming.GroupAnchor("Portal")}")">@Loc["AdmHomeHeaderConfigLink"]</a>.</p>
+    <p>@Loc["AdmHomeHeaderIntro"] <a href="@($"/admin/config/Cosmetic#{ConfigNaming.GroupAnchor("Portal")}")" target="_blank" rel="noopener">@Loc["AdmHomeHeaderConfigLink"]</a>.</p>
     @if (_error is not null)
     {
         <p role="alert">@_error</p>

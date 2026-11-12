@@ -67,12 +67,21 @@ public class SetupIdentityTests : BunitContext
 		public SharpMUSHOptions Options = SharpMUSHOptions.Default();
 		/// <summary>The changes each configuration save sent, in order.</summary>
 		public List<Dictionary<string, JsonElement>> ConfigSaves = [];
+		/// <summary>Whether a configuration save is refused, as the server refuses an invalid value.</summary>
+		public bool RefuseConfig;
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
 			if (request.RequestUri!.AbsolutePath == "/api/configuration")
 			{
 				if (request.Method == HttpMethod.Patch)
+				{
 					ConfigSaves.Add((await request.Content!.ReadFromJsonAsync<Dictionary<string, JsonElement>>(cancellationToken))!);
+					if (RefuseConfig)
+						return new(HttpStatusCode.BadRequest)
+						{
+							Content = JsonContent.Create(new { errors = new Dictionary<string, string> { ["Cosmetic.PortalSideArt"] = "Not a picture address." } })
+						};
+				}
 				return new(HttpStatusCode.OK) { Content = JsonContent.Create(SharpMUSH.Library.API.OptionHelper.OptionsToConfigurationResponse(Options)) };
 			}
 			var result = Settings;
@@ -371,5 +380,23 @@ public class SetupIdentityTests : BunitContext
 		// Saved: a second save sends the identity again but no unchanged option.
 		await form.Find(".identity-save").ClickAsync();
 		await Assert.That(handler.ConfigSaves.Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task ARefusedHeaderOptionLeavesTheIdentityUnsaved()
+	{
+		using var handler = new Handler { RefuseConfig = true };
+		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
+		Services.AddSingleton<ServerInfoService>();
+		Services.AddLocalization();
+		var form = RenderForm();
+		var tagline = form.WaitForElement("input[name='Cosmetic.PortalTagline']");
+		await form.Find("#guide-game-name").InputAsync("Renamed world");
+		await tagline.ChangeAsync("Rain, guilds and secrets.");
+		await form.Find(".identity-save").ClickAsync();
+		await Assert.That(handler.ConfigSaves.Count).IsEqualTo(1);
+		await Assert.That(handler.Writes).IsEqualTo(0).Because("the identity is saved only once the header's options are");
+		await Assert.That(form.FindAll("[role=alert]").Count).IsGreaterThan(0);
+		await Assert.That(form.FindAll("[role=status]").Any(node => node.TextContent.Contains("Saved", StringComparison.Ordinal))).IsFalse();
 	}
 }
