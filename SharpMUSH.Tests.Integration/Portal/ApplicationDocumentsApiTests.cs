@@ -20,7 +20,7 @@ using System.Text.Json.Nodes;
 namespace SharpMUSH.Tests.Integration.Portal;
 
 /// <summary>
-/// <c>api/built/documents</c>: the builder opens and saves the document a registered application keeps beside its route
+/// <c>api/built-documents</c>: the builder opens and saves the document a registered application keeps beside its route
 /// on the <c>http_handler</c>, as the acting character. Each test registers an application of its own under a unique
 /// route, so the shared handler's real routes are never written.
 /// </summary>

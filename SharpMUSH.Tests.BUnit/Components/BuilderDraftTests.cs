@@ -240,6 +240,11 @@ public class BuilderDraftTests
 		await Assert.That(restored.Restore(draft.Snapshot())).IsTrue();
 		await Assert.That(restored.KeptAt).IsEqualTo("DATA`CHARGEN`SCHEMA");
 
+		// The app's own slug and keys are kept as they are, even where the builder would name them otherwise.
+		var named = new BuilderDraft { Slug = "Char.Profile" };
+		named.LoadStored(document.Replace("\"name\"", "\"fullName\""), null, null, "DATA`CHARGEN`SCHEMA");
+		await Assert.That(named.Problems()).IsEmpty();
+
 		restored.Load(new JsonObject());
 		await Assert.That(restored.KeptAt).IsNull();
 	}

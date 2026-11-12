@@ -37,12 +37,12 @@ namespace SharpMUSH.Server.Controllers;
 /// version. The listing says which package owns it and whether it differs from what that package installed.
 /// </para>
 /// Routes:
-///   GET api/built/documents         — the registered applications whose document can be edited here
-///   GET api/built/documents/{slug}  — one of them, with its document
-///   PUT api/built/documents/{slug}  — writes its document, after the same checks as schemacheck()
+///   GET api/built-documents         — the registered applications whose document can be edited here
+///   GET api/built-documents/{slug}  — one of them, with its document
+///   PUT api/built-documents/{slug}  — writes its document, after the same checks as schemacheck()
 /// </remarks>
 [ApiController]
-[Route("api/built/documents")]
+[Route("api/built-documents")]
 [Authorize]
 public class ApplicationDocumentsController(
 	IMediator mediator,

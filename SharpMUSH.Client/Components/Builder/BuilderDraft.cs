@@ -260,18 +260,21 @@ public sealed partial class BuilderDraft
 	public IReadOnlyList<BuilderIssue> Issues()
 	{
 		var issues = new List<BuilderIssue>();
-		if (!IsSlug(Slug)) issues.Add(new("The address name is lower-case letters, digits, _ and -.", BuilderIssue.KindStep));
+		// A stored document keeps its registry slug and its keys, which its own route answers to: the builder's own
+		// naming rules do not apply, only duplicate keys and what schemacheck() refuses.
+		var own = KeptAt is null;
+		if (own && !IsSlug(Slug)) issues.Add(new("The address name is lower-case letters, digits, _ and -.", BuilderIssue.KindStep));
 		var keys = new HashSet<string>(StringComparer.Ordinal);
 		foreach (var field in InputFields())
 		{
 			var key = (string)field["key"]!;
-			if (!IsKey(key)) issues.Add(new($"The key \"{key}\" is lower-case letters, digits and _.", BuilderIssue.LayoutStep, field));
+			if (own && !IsKey(key)) issues.Add(new($"The key \"{key}\" is lower-case letters, digits and _.", BuilderIssue.LayoutStep, field));
 			if (!keys.Add(key)) issues.Add(new($"Two fields use the key \"{key}\".", BuilderIssue.LayoutStep, field));
 			if (OptionTypes.Contains((string?)field["type"] ?? "") && (field["options"] as JsonArray)?.Count is null or 0)
 				issues.Add(new($"\"{(string?)field["label"] ?? key}\" has no choices.", BuilderIssue.LayoutStep, field));
 		}
 		issues.AddRange(from item in AllElements()
-										where !IsField(item.Element)
+										where own && !IsField(item.Element)
 										from key in ElementKeys(item.Element).OfType<string>()
 										where !IsKey(key) && !keys.Contains(key)
 										select new BuilderIssue($"The key \"{key}\" is lower-case letters, digits and _.", BuilderIssue.LayoutStep, item.Element));

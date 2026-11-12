@@ -57,13 +57,13 @@ public sealed class BuiltApplicationClient(IHttpClientFactory httpClientFactory)
 
 	/// <summary>The registered applications whose document is kept as it is beside its route, so the builder can edit it.</summary>
 	public Task<ApiResult<IReadOnlyList<StoredDocument>>> DocumentsAsync() =>
-		httpClientFactory.CreateClient("api").GetApiAsync<IReadOnlyList<StoredDocument>>("api/built/documents", "The server sent nothing back.");
+		httpClientFactory.CreateClient("api").GetApiAsync<IReadOnlyList<StoredDocument>>("api/built-documents", "The server sent nothing back.");
 
 	public Task<ApiResult<StoredDocumentSource>> OpenDocumentAsync(string slug) =>
 		httpClientFactory.CreateClient("api").GetApiAsync<StoredDocumentSource>(
-			$"api/built/documents/{Uri.EscapeDataString(slug)}", "The server sent nothing back.");
+			$"api/built-documents/{Uri.EscapeDataString(slug)}", "The server sent nothing back.");
 
 	public Task<ApiResult<StoredDocumentSource>> SaveDocumentAsync(string slug, string schema) =>
 		httpClientFactory.CreateClient("api").PutApiAsync<StoredDocumentSave, StoredDocumentSource>(
-			$"api/built/documents/{Uri.EscapeDataString(slug)}", new StoredDocumentSave(schema), "The server sent nothing back.");
+			$"api/built-documents/{Uri.EscapeDataString(slug)}", new StoredDocumentSave(schema), "The server sent nothing back.");
 }
