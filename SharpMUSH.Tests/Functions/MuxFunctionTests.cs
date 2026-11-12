@@ -184,7 +184,11 @@ public class MuxFunctionTests : ServerTestBase
 		await Assert.That(await Eval($"u({thing}/FN)")).IsEqualTo($"{objid} {objid} {ErrorMessages.Returns.NoMatch}");
 	}
 
-	/// <summary>pfind() answers a miss with the error alone, as TinyMUX's quiet matches do; pmatch() tells the caller.</summary>
+	/// <summary>
+	/// pfind() answers a miss with the error alone, as TinyMUX's quiet matches do; pmatch() tells the caller. Quiet is
+	/// judged by the locate's own messages, not by how many lines the caller had: the caller can be told other things
+	/// (its move, the shared world) while the test runs.
+	/// </summary>
 	[Test]
 	public async Task PfindIsQuietOnAMiss()
 	{
@@ -195,8 +199,11 @@ public class MuxFunctionTests : ServerTestBase
 		await Cmd($"@tel #{caller.Number}={room}");
 		var parser = WebAppFactoryArg.FunctionParserFor(caller);
 		async Task<string> AsCaller(string code) => (await parser.EvaluateAsync(MString.Plain(code))).ToPlainText();
+		string[] locateMisses = [ErrorMessages.Notifications.CantSeeThat, ErrorMessages.Notifications.AmbiguousMatch,
+			ErrorMessages.Notifications.PermissionDeniedNotControlledMatch];
+		int MissesTold() => Notifications.For(caller).Count(message => locateMisses.Any(message.Contains));
 
-		var before = Notifications.CountFor(caller);
+		var before = MissesTold();
 		await Assert.That(await AsCaller("pfind(#99999999)")).IsEqualTo("#-1");
 		await Assert.That(await AsCaller("pfind(me)")).IsEqualTo(await AsCaller("objid(me)"));
 		await Assert.That(await AsCaller("pfind(*me)")).IsEqualTo(await AsCaller("objid(me)"));
@@ -208,10 +215,10 @@ public class MuxFunctionTests : ServerTestBase
 		await Assert.That(await AsCaller("pfind(*#0)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
 		await Assert.That(await AsCaller($"pfind(*#{caller.Number})")).IsEqualTo(await AsCaller("objid(me)"));
 		await Assert.That(await AsCaller($"pfind({token}_Nobody)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
-		await Assert.That(Notifications.CountFor(caller)).IsEqualTo(before);
+		await Assert.That(MissesTold()).IsEqualTo(before);
 
 		await AsCaller($"pmatch({token}_Nobody)");
-		await Assert.That(Notifications.CountFor(caller)).IsGreaterThan(before);
+		await Assert.That(MissesTold()).IsEqualTo(before + 1);
 	}
 
 	/// <summary>
