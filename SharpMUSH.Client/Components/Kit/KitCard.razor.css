@@ -7,6 +7,7 @@
 	border-radius: var(--radius-card);
 	box-shadow: var(--card-shadow);
 	animation: var(--card-enter);
+	clip-path: var(--card-clip, none);
 	display: flex;
 	flex-direction: column;
 	min-width: 0;
