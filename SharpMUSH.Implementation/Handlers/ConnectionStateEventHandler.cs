@@ -37,6 +37,12 @@ public class ConnectionStateEventHandler(
 	ILogger<ConnectionStateEventHandler> logger)
 	: INotificationHandler<ConnectionStateChangeNotification>
 {
+	/// <summary>
+	/// Connection metadata marking a connection that is being disconnected along with the one leaving, so it is not
+	/// told that the character partially disconnected (a kick takes every connection, one at a time).
+	/// </summary>
+	public const string LeavingMetadata = "Leaving";
+
 	public async ValueTask Handle(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
 	{
 		// A socket closing is handled outside the queue's consumer. The events and hooks below run once
@@ -159,7 +165,8 @@ public class ConnectionStateEventHandler(
 				if (remainingConnections > 0)
 				{
 					await foreach (var other in connectionService.Get(notification.PlayerRef.Value)
-						.Where(c => c.Handle != notification.Handle && c.PresenceClass != PresenceClasses.Portal))
+						.Where(c => c.Handle != notification.Handle && c.PresenceClass != PresenceClasses.Portal
+							&& !c.Metadata.ContainsKey(LeavingMetadata)))
 					{
 						await notifyService.Notify(other.Handle, ErrorMessages.Notifications.YouHavePartiallyDisconnected);
 					}

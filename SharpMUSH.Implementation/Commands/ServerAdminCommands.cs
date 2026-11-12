@@ -2,6 +2,7 @@ using SharpMUSH.Library.Authorization;
 using Humanizer;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Handlers;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -297,8 +298,15 @@ public partial class Commands
 	{
 		var targetDbRef = playerObj.Object.DBRef;
 
+		var connections = await ConnectionService.Get(targetDbRef).ToListAsync();
+		// Every connection is going, so none of them is told the others partially disconnected.
+		foreach (var cd in connections)
+		{
+			cd.Metadata[ConnectionStateEventHandler.LeavingMetadata] = "1";
+		}
+
 		var any = false;
-		await foreach (var cd in ConnectionService.Get(targetDbRef))
+		foreach (var cd in connections)
 		{
 			any = true;
 			await NotifyService.NotifyLocalized(cd.Handle, nameof(ErrorMessages.Notifications.YouHaveBeenDisconnected));
