@@ -607,6 +607,29 @@
             box.classList.remove('sharp-terminal--reading', 'sharp-terminal--new');
         },
 
+        // Page Up and Page Down in the input line page the output, as a telnet client's do, so reading back
+        // does not mean leaving the line being typed. Counted as the reader's own scroll: the view stays where
+        // it is put while new output arrives. Every other key, and either one with a modifier, is the input's.
+        attachInputKeys: function (input, outputId) {
+            if (!input || input._sharpmushPageKeys) return;
+            input._sharpmushPageKeys = true;
+            input.addEventListener('keydown', function (e) {
+                if (e.key !== 'PageUp' && e.key !== 'PageDown') return;
+                if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.isComposing) return;
+                var el = document.getElementById(outputId);
+                if (!el) return;
+                e.preventDefault();
+                el._sharpmushUserAt = Date.now();
+                // A page less a line, so the line at the edge is still on screen after the move.
+                var line = parseFloat(getComputedStyle(el).lineHeight) || 20;
+                var page = Math.max(line, el.clientHeight - line);
+                el.scrollTop += e.key === 'PageUp' ? -page : page;
+                // Settled now, not on the scroll event: the input's own key handler re-renders the terminal,
+                // and a render that found the view still following would put it back at the bottom.
+                if (el._sharpmushFollow) el._sharpmushFollow();
+            });
+        },
+
         // Registers delegated handlers on the terminal output container. Clicking — or
         // pressing Enter/Space on — a command link (<a xch_cmd="...">) runs the command via
         // .NET (RunCommandLinkAsync) instead of navigating. Command links carry

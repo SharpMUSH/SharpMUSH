@@ -12,6 +12,11 @@
 //   chord (Ctrl+C included) keeps its meaning.
 // - Clicking: a plain mouse click in the output (data-input-region) that selects nothing focuses the field,
 //   as a terminal does. Dragging, double-clicking and links keep selecting and following; touch never does it.
+// - Pressing: a game's command link (a[xch_cmd]) or a control marked data-keeps-input (Send, the jump to the
+//   newest line, an exit's Go) does its work without taking focus, so a player typing in the field stays in it
+//   with the draft and caret where they were. Only while the field has focus, and only the mouse press is held
+//   back: the click still lands, Tab and the keyboard still reach the control, and a reader not typing can still
+//   select a link's text.
 // - The shell's skip links (WCAG 2.4.1, bypass blocks): one to the page, one to its main text box.
 //
 // data-primary-input="start" keeps the caret at the top the first time the field is focused (the wiki's
@@ -26,6 +31,9 @@
 			'menubar', 'tree', 'treegrid', 'treeitem', 'grid', 'gridcell', 'tablist', 'radiogroup', 'toolbar',
 			'dialog', 'alertdialog'].map(role => `[role="${role}"]`),
 	].join(',');
+
+	// Pressed with a pointer, these act without taking focus from where it is.
+	const keepsInput = 'a[xch_cmd], [data-keeps-input]';
 
 	// Something the reader has open over the page: a modal, an open menu or picker. Tooltips are not.
 	const overlay = '[aria-modal="true"], dialog[open], .mud-dialog-container, .mud-popover-open:not(.mud-tooltip)';
@@ -118,6 +126,19 @@
 			api._pointer = event.pointerType || 'mouse';
 		},
 
+		// The press that would move focus to a command link or a marked control. Held back here, the browser
+		// leaves focus where it is (the field, with its caret and any open touch keyboard) and still sends the click.
+		onMouseDown: function (event) {
+			if (event.defaultPrevented || event.button !== 0) return;
+			const target = event.target;
+			if (!target || typeof target.closest !== 'function') return;
+			const control = target.closest(keepsInput);
+			if (!control || control.disabled) return;
+			const active = document.activeElement;
+			if (!active || typeof active.hasAttribute !== 'function' || !active.hasAttribute('data-primary-input')) return;
+			event.preventDefault();
+		},
+
 		onClick: function (event) {
 			if (event.defaultPrevented || event.button !== 0 || event.detail !== 1) return;
 			if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
@@ -176,6 +197,7 @@
 			document.addEventListener('focusout', api.onFocusOut);
 			window.addEventListener('keydown', api.onKeyDown);
 			document.addEventListener('pointerdown', api.onPointerDown, { capture: true, passive: true });
+			document.addEventListener('mousedown', api.onMouseDown);
 			document.addEventListener('click', api.onSkip, { capture: true });
 			document.addEventListener('click', api.onClick);
 			document.addEventListener('focusin', api.onFocusIn);

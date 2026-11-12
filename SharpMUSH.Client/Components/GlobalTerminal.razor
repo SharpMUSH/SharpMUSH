@@ -32,7 +32,7 @@
             @if (EarlierOffered)
             {
                 <div class="sharp-terminal-earlier-bar">
-                    <button type="button" class="sharp-terminal-earlier-btn" disabled="@(_loadingEarlier || _noEarlier)" @onclick="LoadEarlierAsync">
+                    <button type="button" class="sharp-terminal-earlier-btn" data-keeps-input disabled="@(_loadingEarlier || _noEarlier)" @onclick="LoadEarlierAsync">
                         @(_noEarlier ? Loc["TermNoEarlierLines"] : Loc["TermShowEarlierLines"])
                     </button>
                 </div>
@@ -57,7 +57,7 @@
     </div>
     @* Shown by portal-interop.js while the player has scrolled up to reread (sharp-terminal--reading); it
        says so when output has arrived meanwhile (sharp-terminal--new). *@
-    <button type="button" class="sharp-terminal-jump" @onclick="JumpToLatestAsync">
+    <button type="button" class="sharp-terminal-jump" data-keeps-input @onclick="JumpToLatestAsync">
         <MudIcon Icon="@Icons.Material.Outlined.ArrowDownward" Style="font-size:var(--text-md);" />
         <span class="sharp-terminal-jump-latest">@Loc["TermJumpLatest"]</span>
         <span class="sharp-terminal-jump-new">@Loc["TermNewLinesBelow"]</span>
@@ -123,7 +123,7 @@
                    @onkeydown="OnInputKeyDown"
                    disabled="@(!_connected)" aria-label="@Loc["TermInputLabel"]"
                    placeholder="@Loc["TermInputPlaceholder"]" />
-            <button type="button" class="term-send" @onclick="SendFromButtonAsync" disabled="@(!_connected)" title="@Loc["Send"]" aria-label="@Loc["Send"]">
+            <button type="button" class="term-send" data-keeps-input @onclick="SendFromButtonAsync" disabled="@(!_connected)" title="@Loc["Send"]" aria-label="@Loc["Send"]">
                 <MudIcon Icon="@Icons.Material.Outlined.Send" Style="font-size:var(--text-base);" />
             </button>
             @if (ShowClearButton)
@@ -268,6 +268,8 @@
 
         _transcript = new TerminalTranscript(Terminal.Lines);
         _promptHtml = Terminal.Prompt?.Line.Html;
+        // What the player was typing when they left the page.
+        if (Interactive && Terminal is TerminalServiceHost kept) _input = kept.TakeDraft();
 
         Terminal.LineReceived += OnLineReceived;
         Terminal.PromptChanged += OnPromptChanged;
@@ -407,6 +409,8 @@
             _reviewKeys = true;
             try { await JsRuntime.InvokeVoidAsync("sharpmushLayout.reviewKeys", _inputRef, _selfRef); }
             catch (JSException) { /* no layout script: the output can still be read with the reader's own keys */ }
+            try { await JsRuntime.InvokeVoidAsync("SharpMUSH.Terminal.attachInputKeys", _inputRef, _outputId); }
+            catch (JSException) { /* no terminal script: the output still scrolls with the mouse and its own keys */ }
         }
 
         if (Interactive && _connected && !_arrived)
@@ -421,13 +425,15 @@
 
     /// <summary>
     /// Invoked from JS when a command link (&lt;a xch_cmd="..."&gt;) is clicked in the
-    /// terminal output. Sends the command exactly as if the player had typed it.
+    /// terminal output. Sends the command exactly as if the player had typed it, and shows the newest lines,
+    /// where its answer arrives, as sending a typed command does. The input line's draft is left alone.
     /// </summary>
     [JSInvokable]
     public async Task RunCommandLinkAsync(string command)
     {
         if (string.IsNullOrWhiteSpace(command) || !_connected) return;
         await Terminal.SendAsync(command);
+        await JumpToLatestAsync();
     }
 
     /// <summary>
@@ -726,6 +732,9 @@
         _transcript = new TerminalTranscript(Terminal.Lines);
         _promptHtml = Terminal.Prompt?.Line.Html;
         _noEarlier = false;
+        // A line half-written as the old character is not sent as the new one.
+        _input = string.Empty;
+        _historyWalk.Reset();
         StateHasChanged();
     });
 
@@ -805,7 +814,11 @@
         ScreenReader.Changed -= OnScreenReaderChanged;
         Log.Changed -= OnLogChanged;
         AccountAuth.ActiveCharacterChanged -= OnActiveCharacterChanged;
-        if (Terminal is TerminalServiceHost host) host.Recreated -= OnRecreated;
+        if (Terminal is TerminalServiceHost host)
+        {
+            host.Recreated -= OnRecreated;
+            if (Interactive) host.KeepDraft(_input);
+        }
 
         await ReleaseAsync(_cmdLinkHandle);
         await ReleaseAsync(_promptLinkHandle);

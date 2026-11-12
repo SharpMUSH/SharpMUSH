@@ -148,4 +148,61 @@ public class GlobalTerminalInteractiveTests : BunitContext
 		await Assert.That(cut.FindAll(".term-send")).IsNotEmpty();
 		await Assert.That(cut.FindAll(".sharp-terminal-output")).IsNotEmpty();
 	}
+
+	[Test]
+	public async Task The_unsent_line_waits_on_the_terminal_while_the_player_is_on_another_page()
+	{
+		var inner = AnonymousTerminal();
+		inner.IsConnected.Returns(true);
+		inner.Identity.Returns(new TerminalIdentity("ada@example.com", "#7:1"));
+		var host = new TerminalServiceHost(() => inner);
+		var first = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, host));
+		await first.Find(".term-input").InputAsync("pose waves");
+		await first.InvokeAsync(() => first.Instance.DisposeAsync().AsTask());
+
+		var back = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, host));
+		await Assert.That(back.Find(".term-input").GetAttribute("value")).IsEqualTo("pose waves");
+
+		// Signed out meanwhile (the connection gone) or signed in as someone else: nothing is offered.
+		await back.InvokeAsync(() => back.Instance.DisposeAsync().AsTask());
+		inner.IsConnected.Returns(false);
+		await Assert.That(host.TakeDraft()).IsEqualTo(string.Empty);
+		host.KeepDraft("connect Bob secret");
+		inner.IsConnected.Returns(true);
+		inner.Identity.Returns(new TerminalIdentity("bob@example.com", "#9:1"));
+		await Assert.That(host.TakeDraft()).IsEqualTo(string.Empty);
+
+		inner.Identity.Returns(new TerminalIdentity("ada@example.com", "#7:1"));
+		back = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, host));
+		await back.Find(".term-input").InputAsync("pose waves");
+
+		// A new session (a character switch): the line written as the old character goes with it.
+		await back.InvokeAsync(host.RecreateAsync);
+		back.WaitForAssertion(() =>
+		{
+			if (back.Find(".term-input").GetAttribute("value") is { Length: > 0 }) throw new InvalidOperationException("draft still shown");
+		}, TimeSpan.FromSeconds(5));
+		await back.InvokeAsync(() => back.Instance.DisposeAsync().AsTask());
+		await Assert.That(host.TakeDraft()).IsEqualTo(string.Empty).Because("a recreated session's view was cleared before it went");
+	}
+
+	[Test]
+	public async Task A_command_link_sends_its_command_shows_the_newest_lines_and_leaves_the_draft()
+	{
+		var terminal = AnonymousTerminal();
+		terminal.IsConnected.Returns(true);
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, terminal));
+		cut.WaitForAssertion(() => { if (cut.Find(".term-input").HasAttribute("disabled")) throw new InvalidOperationException("not ready"); });
+		await cut.Find(".term-input").InputAsync("say half");
+
+		await cut.InvokeAsync(() => cut.Instance.RunCommandLinkAsync("WHO"));
+
+		await terminal.Received(1).SendAsync("WHO");
+		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier == "SharpMUSH.Terminal.jumpToLatest")).IsTrue();
+		await Assert.That(cut.Find(".term-input").GetAttribute("value")).IsEqualTo("say half");
+		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier == "SharpMUSH.Terminal.attachInputKeys")).IsTrue();
+		// Pressed with the mouse, these act without taking focus from the input line (input-focus.js).
+		foreach (var control in new[] { ".term-send", ".sharp-terminal-jump" })
+			await Assert.That(cut.Find(control).HasAttribute("data-keeps-input")).IsTrue();
+	}
 }

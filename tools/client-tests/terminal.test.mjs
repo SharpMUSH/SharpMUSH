@@ -29,7 +29,7 @@ function boot() {
         observe(target) { resized.push({ target, observer: this, fire: () => this.callback([{ target }]) }); }
         disconnect() { this.disconnected = true; }
     }
-    const context = vm.createContext({ ResizeObserver, window: { addEventListener: (name) => windowListeners.push(name) }, document: {
+    const context = vm.createContext({ ResizeObserver, getComputedStyle: () => ({ lineHeight: '20px' }), window: { addEventListener: (name) => windowListeners.push(name) }, document: {
         getElementById: id => id === 'output' ? output : null
     }});
     const html = readFileSync(new URL('index.html', root), 'utf8');
@@ -157,6 +157,36 @@ test('fresh Play page command links support clicks, keyboard, and disposal', () 
     assert.equal(prevented, 3, 'ordinary URL links retain browser navigation');
     handle.dispose();
     assert.equal(listeners.size, 0);
+});
+
+test('Page Up and Page Down in the input line page the output as the reader', () => {
+    const { terminal, output, classes } = boot();
+    terminal.scrollToBottom('output');
+    const inputListeners = new Map();
+    const input = { addEventListener: (name, handler) => inputListeners.set(name, handler) };
+    terminal.attachInputKeys(input, 'output');
+    terminal.attachInputKeys(input, 'output');
+    assert.equal(inputListeners.size, 1, 'attached once');
+    const key = (key, init = {}) => {
+        let prevented = false;
+        inputListeners.get('keydown')({ key, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, isComposing: false,
+            preventDefault: () => { prevented = true; }, ...init });
+        return prevented;
+    };
+    output.scrollTop = 300;
+    assert.equal(key('PageUp'), true);
+    assert.equal(output.scrollTop, 120, 'a page is the view less a line');
+    assert.ok(Date.now() - output._sharpmushUserAt < 1000, 'counted as the reader scrolling, so it is not followed back down');
+    assert.equal(classes.has('sharp-terminal--reading'), true, 'reading at once, before the scroll event, so a render does not pull it down');
+    terminal.scrollToBottom('output');
+    assert.equal(output.scrollTop, 120, 'a render straight after leaves the view where the key put it');
+    assert.equal(key('PageDown'), true);
+    assert.equal(output.scrollTop, 300);
+    assert.equal(classes.has('sharp-terminal--reading'), false, 'back at the bottom, following again');
+    for (const [name, init] of [['ArrowUp', {}], ['a', {}], ['PageUp', { shiftKey: true }], ['PageUp', { ctrlKey: true }]]) {
+        assert.equal(key(name, init), false, `${name} stays with the input`);
+    }
+    assert.equal(output.scrollTop, 300);
 });
 
 test('help and wiki helpers are available before an editor opens', () => {
