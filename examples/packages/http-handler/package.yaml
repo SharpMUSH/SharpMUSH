@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.19"
 package: http-handler
 title: "HTTP routes"
-version: 1.0.6
+version: 1.0.7
 authors: [SharpMUSH]
 description: "Inbound HTTP verb routers (GET/POST/…) for the configured http_handler object."
 license: MIT
@@ -17,6 +17,10 @@ requires_server: ">=0.1"
 objects:
   - ref: handler
     target: "{{$http_handler}}"
+    # Every portal route runs on the handler in one queue entry each, and a listing such as
+    # /http/characters makes a few dozen calls per player, so the game's 25000 runs out on a
+    # large game. Uninstalling the package removes the limit with its routes.
+    function_invocation_limit: 200000
     attributes:
       # The handler passes the request by name: %<path> = path+query, %<body> =
       # the body (also %0 and %1). formq() decodes the query string into

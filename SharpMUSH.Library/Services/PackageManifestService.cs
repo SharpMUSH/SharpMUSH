@@ -58,8 +58,7 @@ public partial class PackageManifestService : IPackageManifestService
 
 	private static readonly IReadOnlySet<string> AttachForbiddenKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
-		"type", "name", "parent", "location", "destination", "previous_refs", "flags", "powers", "locks",
-		FunctionInvocationLimitKey
+		"type", "name", "parent", "location", "destination", "previous_refs", "flags", "powers", "locks"
 	};
 
 	private const int MaxPackageIdLength = 64;
@@ -1370,7 +1369,7 @@ public partial class PackageManifestService : IPackageManifestService
 			// object (well-known or configure) instead of creating one.
 			if (obj.ContainsKey("target"))
 			{
-				var attachSpec = ReadAttachObject(obj, refName, path, issues);
+				var attachSpec = ReadAttachObject(obj, refName, path, format, issues);
 				if (attachSpec is not null)
 				{
 					objects.Add(attachSpec);
@@ -1446,13 +1445,14 @@ public partial class PackageManifestService : IPackageManifestService
 	}
 
 	/// <summary>
-	/// Parses an attach-mode object: a <c>target</c> ref plus attributes only.
-	/// Creation-only keys (type/name/parent/location/destination/flags/locks/
-	/// previous_refs) are rejected — an attach object manages attributes on an
-	/// existing object and never restructures or destroys it.
+	/// Parses an attach-mode object: a <c>target</c> ref plus attributes, and the target's
+	/// <c>function_invocation_limit:</c>, which is an attribute too. Creation-only keys
+	/// (type/name/parent/location/destination/flags/locks/previous_refs) are rejected — an attach
+	/// object manages attributes on an existing object and never restructures or destroys it.
 	/// </summary>
 	private static PackageObjectSpec? ReadAttachObject(
-		Dictionary<string, object?> obj, string refName, string path, List<PackageManifestIssue> issues)
+		Dictionary<string, object?> obj, string refName, string path, PackageFormatVersion format,
+		List<PackageManifestIssue> issues)
 	{
 		foreach (var key in obj.Keys.Where(AttachForbiddenKeys.Contains))
 		{
@@ -1481,11 +1481,11 @@ public partial class PackageManifestService : IPackageManifestService
 			return null;
 		}
 
-		var attributes = ReadAttributes(obj, path, issues);
+		var attributes = WithFunctionInvocationLimit(ReadAttributes(obj, path, issues), obj, path, format, issues);
 		if (attributes.Count == 0)
 		{
 			issues.Add(PackageManifestIssue.Error($"{path}.attributes",
-				"An attach object must declare at least one attribute."));
+				"An attach object must declare at least one attribute or a function_invocation_limit."));
 			return null;
 		}
 
