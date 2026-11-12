@@ -1017,7 +1017,8 @@ public static class SocketOptions
 			return SocksetResult.Of(setKey, setting);
 		}
 
-		// Pictures are off until set. Explicit methods pin output; auto and detect request capabilities.
+		// Pictures are off until set. Explicit methods pin output; auto asks a known terminal what it can draw,
+		// detect asks whatever is on the other end.
 		// TNC processes replies immediately, independently of command-line submission.
 		SocksetResult SetGraphics(string newValue)
 		{
@@ -1045,7 +1046,11 @@ public static class SocketOptions
 					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetGraphicsDetecting)) with { Probe = true };
 				default:
 					connection.Metadata[TerminalFeatureReader.GraphicsKey] = setting;
-					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetGraphicsSetFormat), setting) with { Probe = setting == TerminalGraphics.Auto };
+					// auto asks only a known terminal: the questions are escape sequences a MUD client prints.
+					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetGraphicsSetFormat), setting) with
+					{
+						Probe = setting == TerminalGraphics.Auto && TerminalFeatureReader.TerminalOf(connection.Metadata) is not null
+					};
 			}
 		}
 

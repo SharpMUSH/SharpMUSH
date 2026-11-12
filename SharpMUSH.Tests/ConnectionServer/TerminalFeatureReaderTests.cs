@@ -32,23 +32,50 @@ public class TerminalFeatureReaderTests
 		await Assert.That(TerminalFeatureReader.Identify(
 			terminalTypes.Split(',', StringSplitOptions.RemoveEmptyEntries), null, null)?.Id).IsEqualTo(id);
 
-	/// <summary>Automatic aliases request probes; explicit choices preserve their selected method without probing.</summary>
+	/// <summary>
+	/// Only a known terminal is asked when auto is set, and detect asks whatever is connected; explicit choices
+	/// keep their method without asking. QMud's list is what its TelnetProcessor::sendTerminalType sends (its
+	/// name, <c>ANSI</c>, <c>MTTS 269</c>, then an empty entry) after TelnetNegotiationCore expands the bitvector:
+	/// a MUD client prints the Kitty query as <c>_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\</c>.
+	/// </summary>
 	[Test]
-	[Arguments("auto", true)]
-	[Arguments("on", true)]
-	[Arguments("yes", true)]
-	[Arguments("detect", true)]
-	[Arguments("off", false)]
-	[Arguments("iterm2", false)]
-	[Arguments("sixel", false)]
-	public async Task AutoGraphicsRequestsAProbeWithoutChangingManualChoices(string value, bool probes)
+	[Arguments("", "auto", false)]
+	[Arguments("", "on", false)]
+	[Arguments("", "yes", false)]
+	[Arguments("QMud\tANSI\t\tANSI\tUTF8\t256 COLORS\tTRUECOLOR", "auto", false)]
+	[Arguments("MUDRAMMER\tXTERM\tANSI", "auto", false)]
+	[Arguments("xterm", "auto", false)]
+	[Arguments("XTERM-KITTY", "auto", true)]
+	[Arguments("XTERM-KITTY", "on", true)]
+	[Arguments("", "detect", true)]
+	[Arguments("QMud\tANSI\t\tANSI\tUTF8\t256 COLORS\tTRUECOLOR", "detect", true)]
+	[Arguments("XTERM-KITTY", "off", false)]
+	[Arguments("XTERM-KITTY", "iterm2", false)]
+	[Arguments("XTERM-KITTY", "sixel", false)]
+	public async Task AutoGraphicsAsksOnlyAKnownTerminal(string terminalTypes, string value, bool probes)
 	{
+		var metadata = new ConcurrentDictionary<string, string>();
+		if (terminalTypes.Length > 0) metadata[TerminalCapabilityReader.TerminalTypesKey] = terminalTypes;
 		var connection = new IConnectionService.ConnectionData(1, null, IConnectionService.ConnectionState.Connected,
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, new ConcurrentDictionary<string, string>());
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, metadata);
 		var result = SocketOptions.Set(connection, "graphics", value);
 		await Assert.That(result.Probe).IsEqualTo(probes);
 		await Assert.That(connection.Metadata.GetValueOrDefault(TerminalFeatureReader.GraphicsKey))
-			.IsEqualTo(probes ? "auto" : value == "off" ? null : value);
+			.IsEqualTo(value is "off" ? null : value is "iterm2" or "sixel" ? value : "auto");
+	}
+
+	/// <summary>A terminal the player named with <c>SOCKSET terminal</c> is asked when auto is set, whatever its client reported.</summary>
+	[Test]
+	public async Task AutoGraphicsAsksAPinnedTerminal()
+	{
+		var metadata = new ConcurrentDictionary<string, string>
+		{
+			[TerminalCapabilityReader.TerminalTypesKey] = "QMud\tANSI",
+			[TerminalFeatureReader.TerminalKey] = "foot"
+		};
+		var connection = new IConnectionService.ConnectionData(1, null, IConnectionService.ConnectionState.Connected,
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, metadata);
+		await Assert.That(SocketOptions.Set(connection, "graphics", "auto").Probe).IsTrue();
 	}
 
 	/// <summary>An unlisted terminal can establish Sixel support through replies while manual overrides remain independent.</summary>

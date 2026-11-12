@@ -76,10 +76,12 @@ font/zoom changes. The named profile does not repair that missing feedback chann
 
 ## Automatic probing and evidence
 
-`SOCKSET graphics=auto` (including `on` and `yes`) now requests the existing TNC terminal probes.
-`detect` remains an explicit re-probe alias. The same option handler serves `@SOCKSET`.
+`SOCKSET graphics=auto` (including `on` and `yes`) requests the existing TNC terminal probes only for a
+known terminal: its first terminal type names a profile, a `SOCKSET terminal` pin names one, or an earlier
+XTVERSION answer did. A MUD client or unknown client would print the queries, so it is not asked.
+`detect` asks any client. The same option handler serves `@SOCKSET`.
 The command does not wait for replies and ordinary input is not blocked. A terminal can answer
-without Enter; selecting `auto` again reissues the queries. Explicit methods and `off` do not probe.
+without Enter; selecting `auto` again reissues the queries to a known terminal. Explicit methods and `off` do not probe.
 
 `SOCKSET` separates the selected output method from each protocol's evidence. Positive or negative
 probe results take precedence over profile assumptions. Profiles are labelled `unconfirmed`, and
