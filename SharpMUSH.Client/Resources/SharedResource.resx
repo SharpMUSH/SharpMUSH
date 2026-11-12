@@ -13592,4 +13592,28 @@
   <data name="AdmThemeStyleAtmospherePetals" xml:space="preserve">
     <value>Falling petals</value>
   </data>
+  <data name="LayBldGameApps" xml:space="preserve">
+    <value>The game's apps</value>
+  </data>
+  <data name="LayBldGameAppsHelp" xml:space="preserve">
+    <value>Apps whose layout is kept as it is beside their route. Saving writes the layout back to that attribute; the app's own softcode still supplies its values.</value>
+  </data>
+  <data name="LayBldDocumentLine" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="LayBldFromPackage" xml:space="preserve">
+    <value>from {0}</value>
+  </data>
+  <data name="LayBldFromPackageChanged" xml:space="preserve">
+    <value>from {0}, changed here</value>
+  </data>
+  <data name="LayBldOpenDocumentFailed" xml:space="preserve">
+    <value>Could not open {0}. {1}</value>
+  </data>
+  <data name="LayBldDocumentValues" xml:space="preserve">
+    <value>Only the layout is written. The app's own routes still supply its values and take its actions, so a field you add shows a value only when its route sends one under that key.</value>
+  </data>
+  <data name="LayBldPackageKeeps" xml:space="preserve">
+    <value>The {0} package installed this layout. Upgrades keep your change; when one changes this layout too, the package manager asks which to keep.</value>
+  </data>
 </root>

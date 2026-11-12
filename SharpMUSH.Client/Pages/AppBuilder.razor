@@ -24,7 +24,7 @@
 
 <PageTitle>@Loc["LayBldTitle"] — <GameName /></PageTitle>
 
-<div class="bld-page">
+<div class="bld-page page-solid">
     <header class="bld-bar">
         @if (_step > 0)
         {
@@ -33,11 +33,15 @@
             </button>
         }
         <div class="bld-bar-title">
-            <h1>@(_step > 0 && _draft.Title is { Length: > 0 } title ? title : Loc["LayBldTitle"])</h1>
+            <h1>@(_step > 0 && _document is { } document ? document.Name : _step > 0 && _draft.Title is { Length: > 0 } title ? title : Loc["LayBldTitle"])</h1>
             @if (_step > 0)
             {
                 <p class="bld-bar-sub">
-                    @if (BuilderDraft.IsSlug(_draft.Slug))
+                    @if (_document is { } kept)
+                    {
+                        <span class="bld-address bld-mono">@($"{kept.HolderName}({kept.Holder})/{kept.Attribute}")</span>
+                    }
+                    else if (BuilderDraft.IsSlug(_draft.Slug))
                     {
                         <span class="bld-address bld-mono">/apps/@_draft.Slug</span>
                     }
@@ -59,7 +63,7 @@
                 @if (_step < 4)
                 {
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Outlined.ChevronRight"
-                               Disabled="@(_step == 1 && !BuilderDraft.IsSlug(_draft.Slug))" OnClick="Next">@Loc["LayBldNextTo", Loc[StepKeys[_step + 1]]]</MudButton>
+                               Disabled="@(_step == 1 && !BuilderDraft.IsSlug(_draft.Slug))" OnClick="Next">@Loc["LayBldNextTo", Loc[StepKeys[NextStep(_step)]]]</MudButton>
                 }
             </div>
         }
@@ -69,9 +73,8 @@
     {
         <nav aria-label="@Loc["LayBldStepsLabel"]">
             <ol class="bld-steps">
-                @for (var i = 1; i < StepKeys.Length; i++)
+                @foreach (var step in Steps)
                 {
-                    var step = i;
                     var count = Issues.Count(issue => issue.Step == step);
                     <li>
                         <button type="button" class="bld-step @(step == _step ? "bld-step--on" : "") @(step < _step && count == 0 ? "bld-step--done" : "")"
@@ -82,7 +85,7 @@
                             }
                             else
                             {
-                                <span class="bld-step-n">@step</span>
+                                <span class="bld-step-n">@(Steps.ToList().IndexOf(step) + 1)</span>
                             }
                             @Loc[StepKeys[step]]
                             @if (count > 0)
@@ -109,6 +112,9 @@
             break;
         case 3:
             @ValuesStep()
+            break;
+        case 4 when _document is not null:
+            @DocumentSaveStep()
             break;
         case 4:
             @SaveStep()
@@ -147,7 +153,17 @@
     private int _at = -1;
     private DateTime _lastPush;
 
-    // Start: the author's apps, and a draft left in this browser.
+    // Editing the document of an application the builder did not make (the character profile): where it is kept.
+    // Only its layout is edited, so the steps are Layout and Save.
+    private StoredDocument? _document;
+
+    /// <summary>The steps this draft goes through: all four, or only Layout and Save for a stored document.</summary>
+    private IEnumerable<int> Steps => _document is null ? [1, 2, 3, 4] : [2, 4];
+
+    private int NextStep(int step) => Steps.FirstOrDefault(s => s > step, 4);
+
+    // Start: the author's apps, the game's apps with a document kept beside their route, and a draft left in this browser.
+    private IReadOnlyList<StoredDocument>? _documents;
     private IReadOnlyList<AppRow>? _apps;
     private string? _appsFailure;
     private StoredDraft? _left;
@@ -196,7 +212,7 @@
             <div class="bld-banner" role="note">
                 <MudIcon Icon="@Icons.Material.Outlined.Restore" Size="Size.Small" />
                 <span>@Loc["LayBldLeftDraft", left.Title is { Length: > 0 } t ? t : Loc["LayBldUnnamed"].Value, left.Kept]</span>
-                <button type="button" class="bld-link-button" @onclick="ResumeLeft">@Loc["LayBldResume"]</button>
+                <button type="button" class="bld-link-button" @onclick="ResumeLeftAsync">@Loc["LayBldResume"]</button>
                 <button type="button" class="bld-link-button bld-link-button--quiet" @onclick="DiscardLeftAsync">@Loc["LayBldDiscard"]</button>
             </div>
         }
@@ -245,6 +261,24 @@
                         }
                     </ul>
                 }
+                @if (_documents is { Count: > 0 } documents)
+                {
+                    <h3 class="bld-h3 bld-game-apps-h">@Loc["LayBldGameApps"]</h3>
+                    <p class="bld-note">@Loc["LayBldGameAppsHelp"]</p>
+                    <ul class="bld-apps">
+                        @foreach (var document in documents)
+                        {
+                            <li>
+                                <div class="bld-app-text">
+                                    <span class="bld-app-name">@document.Name</span>
+                                    <span class="bld-note">@DocumentLine(document)</span>
+                                </div>
+                                <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="_busy"
+                                           OnClick="() => OpenDocumentAsync(document.Slug)" aria-label="@Loc["LayBldEditApp", document.Name]">@Loc["LayBldEdit"]</MudButton>
+                            </li>
+                        }
+                    </ul>
+                }
                 <details class="bld-open-by">
                     <summary>@Loc["LayBldOpenSaved"]</summary>
                     <div class="bld-row">
@@ -265,8 +299,17 @@
         return Loc["LayBldAppLine", kind, where, app.HolderName];
     }
 
+    private string DocumentLine(StoredDocument document)
+    {
+        var kind = string.Equals(document.Kind, "form", StringComparison.OrdinalIgnoreCase) ? Loc["LayBldKindFormShort"] : Loc["LayBldKindViewShort"];
+        var line = Loc["LayBldDocumentLine", kind, $"{document.HolderName}/{document.Attribute}"].Value;
+        if (document.Package is { } package) line += " · " + Loc[document.Changed ? "LayBldFromPackageChanged" : "LayBldFromPackage", package];
+        return line;
+    }
+
     private async Task LoadAppsAsync()
     {
+        _documents = await Built.DocumentsAsync() is IReadOnlyList<StoredDocument> documents ? documents : [];
         var rows = new Dictionary<(string, string), AppRow>();
         var registered = (await Registry.ListAsync())
             .Where(app => string.Equals(app.RenderKind, ApplicationRenderKind.Built, StringComparison.OrdinalIgnoreCase))
@@ -301,6 +344,7 @@
     private void StartFromTemplate(string key)
     {
         var template = BuilderTemplates.Named(key);
+        _document = null;
         _draft.Load(template.Document());
         _draft.Title = template.Key == "blank" ? string.Empty : Loc[template.NameKey];
         _draft.Slug = BuilderDraft.SlugFrom(_draft.Title);
@@ -325,6 +369,7 @@
             switch (await Built.OpenAsync(slug, holder))
             {
                 case BuiltSource source when _draft.LoadStored(source.Schema ?? "", source.Sources, source.Save):
+                    _document = null;
                     _draft.Slug = slug;
                     _slugTouched = true;
                     _object = source.Holder ?? holder;
@@ -334,6 +379,36 @@
                     break;
                 default:
                     Snackbar.Add(Loc["LayBldOpenFailed", slug, holder], Severity.Warning);
+                    break;
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    /// <summary>Opens a registered application's document where it is kept, to edit its layout in place.</summary>
+    private async Task OpenDocumentAsync(string slug)
+    {
+        _busy = true;
+        try
+        {
+            switch (await Built.OpenDocumentAsync(slug))
+            {
+                case StoredDocumentSource source when _draft.LoadStored(source.Schema, null, null, source.Document.Attribute):
+                    _document = source.Document;
+                    _draft.Slug = slug;
+                    _slugTouched = true;
+                    _object = source.Document.Holder;
+                    (_widget, _scope) = await Registry.GetAsync(slug) is { } registered ? BuilderDraft.Placement(registered) : (false, "profile");
+                    Begin(2, 4);
+                    break;
+                case ApiFailure failure:
+                    Snackbar.Add(Loc["LayBldOpenDocumentFailed", slug, failure.Message], Severity.Warning);
+                    break;
+                default:
+                    Snackbar.Add(Loc["LayBldOpenDocumentFailed", slug, ""], Severity.Warning);
                     break;
             }
         }
@@ -359,14 +434,27 @@
         Changed();
     }
 
-    private void ResumeLeft()
+    private async Task ResumeLeftAsync()
     {
         if (_left is not { } left || !_draft.Restore(left.Snapshot)) return;
+        _document = null;
+        if (_draft.KeptAt is not null)
+        {
+            // A stored document's draft: where it is kept is asked again, since the server says who may change it.
+            var snapshot = left.Snapshot;
+            if (await Built.OpenDocumentAsync(_draft.Slug) is not StoredDocumentSource source)
+            {
+                Snackbar.Add(Loc["LayBldOpenDocumentFailed", _draft.Slug, ""], Severity.Warning);
+                return;
+            }
+            _document = source.Document;
+            _draft.Restore(snapshot);
+        }
         _widget = left.Widget;
         _scope = left.Scope;
         _object = left.Object;
         _slugTouched = true;
-        Begin(Math.Clamp(left.Step, 1, 4), Math.Clamp(left.Reached, 1, 4));
+        Begin(_document is null ? Math.Clamp(left.Step, 1, 4) : left.Step == 4 ? 4 : 2, _document is null ? Math.Clamp(left.Reached, 1, 4) : 4);
         _left = null;
     }
 
@@ -470,7 +558,7 @@
                 }
             </div>
             <div class="bld-layout-preview">
-                <BuilderPreview Document="_preview" Sample="_sample" Sources="_draft.Sources" Widget="_widget" />
+                <BuilderPreview Document="_preview" Sample="_sample" Sources="_draft.Sources" Widget="_widget" RealValues="@(_document is null)" />
             </div>
         </section>
     };
@@ -665,22 +753,7 @@
         var stored = _shelf?.Apps.FirstOrDefault(app => app.Slug == _draft.Slug);
         <div class="bld-save">
             <div class="bld-save-main">
-                <section class="bld-card-panel" aria-labelledby="bld-checks-h">
-                    <h2 id="bld-checks-h" class="bld-h3">@Loc["LayBldChecks"]</h2>
-                    <ul class="bld-checks">
-                        @if (Issues.Count == 0)
-                        {
-                            <li class="bld-check bld-check--ok"><MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small" /> @Loc["LayBldNoProblems"]</li>
-                        }
-                        @foreach (var issue in Issues)
-                        {
-                            <li class="bld-check bld-check--warn">
-                                <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Size="Size.Small" />
-                                <span>@issue.Text <button type="button" class="bld-link-button" @onclick="() => GoToIssue(issue)">@Loc["LayBldGoTo", Loc[StepKeys[issue.Step]]]</button></span>
-                            </li>
-                        }
-                    </ul>
-                </section>
+                @ChecksPanel()
 
                 <section class="bld-card-panel" aria-labelledby="bld-where-h" aria-busy="@(_shelfLoading ? "true" : "false")">
                     <h2 id="bld-where-h" class="bld-h3">@Loc["LayBldKeptOn"]</h2>
@@ -776,6 +849,103 @@
             </section>
         </div>
     };
+
+    private RenderFragment ChecksPanel() => __builder =>
+    {
+        <section class="bld-card-panel" aria-labelledby="bld-checks-h">
+            <h2 id="bld-checks-h" class="bld-h3">@Loc["LayBldChecks"]</h2>
+            <ul class="bld-checks">
+                @if (Issues.Count == 0)
+                {
+                    <li class="bld-check bld-check--ok"><MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small" /> @Loc["LayBldNoProblems"]</li>
+                }
+                @foreach (var issue in Issues)
+                {
+                    <li class="bld-check bld-check--warn">
+                        <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Size="Size.Small" />
+                        <span>@issue.Text <button type="button" class="bld-link-button" @onclick="() => GoToIssue(issue)">@Loc["LayBldGoTo", Loc[StepKeys[issue.Step]]]</button></span>
+                    </li>
+                }
+            </ul>
+        </section>
+    };
+
+    /// <summary>Save for a stored document: it is written back over the attribute it came from, and nothing else.</summary>
+    private RenderFragment DocumentSaveStep() => __builder =>
+    {
+        var document = _document!;
+        <div class="bld-save">
+            <div class="bld-save-main">
+                @ChecksPanel()
+                <section class="bld-card-panel" aria-labelledby="bld-kept-h">
+                    <h2 id="bld-kept-h" class="bld-h3">@Loc["LayBldKeptOn"]</h2>
+                    <p class="@(document.Controls ? "bld-ok" : "bld-warn")" role="status">
+                        <MudIcon Icon="@(document.Controls ? Icons.Material.Outlined.Check : Icons.Material.Outlined.Block)" Size="Size.Small" />
+                        @(document.Controls ? Loc["LayBldYouControl", $"{document.HolderName}({document.Holder})"] : Loc["LayBldNotYours", $"{document.HolderName}({document.Holder})"])
+                    </p>
+                    <table class="bld-attrs">
+                        <caption>@Loc["LayBldWillWrite"]</caption>
+                        <tbody>
+                            <tr>
+                                <td class="bld-mono">@document.Attribute</td>
+                                <td><span class="bld-tag bld-tag--warn">@Loc["LayBldAttrReplaces"]</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="bld-note">@Loc["LayBldDocumentValues"]</p>
+                    <details class="bld-json">
+                        <summary>@Loc["LayBldShowJson"]</summary>
+                        <pre>@_draft.Stored().ToJsonString(new JsonSerializerOptions { WriteIndented = true })</pre>
+                    </details>
+                </section>
+            </div>
+
+            <section class="bld-card-panel bld-save-side" aria-labelledby="bld-doc-save-h">
+                <h2 id="bld-doc-save-h" class="bld-h3">@Loc["LayBldSave"]</h2>
+                @if (document.Package is { } package)
+                {
+                    <p class="bld-note">@Loc["LayBldPackageKeeps", package]</p>
+                }
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" OnClick="SaveDocumentAsync"
+                           Disabled="@(_busy || Issues.Count > 0 || !document.Controls)" StartIcon="@Icons.Material.Outlined.Save">@Loc["LayBldSave"]</MudButton>
+                @if (_savedHolder is not null)
+                {
+                    <div class="bld-saved" role="status">
+                        <p class="bld-ok"><MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small" /> @Loc["LayBldSaved", document.Attribute, _savedHolder]</p>
+                        <div class="bld-row">
+                            <MudButton Variant="Variant.Outlined" OnClick="() => GoTo(2)">@Loc["LayBldKeepEditing"]</MudButton>
+                        </div>
+                    </div>
+                }
+            </section>
+        </div>
+    };
+
+    private async Task SaveDocumentAsync()
+    {
+        if (_document is not { } document) return;
+        _busy = true;
+        _savedHolder = null;
+        try
+        {
+            switch (await Built.SaveDocumentAsync(document.Slug, _draft.Stored().ToJsonString()))
+            {
+                case StoredDocumentSource saved:
+                    _document = saved.Document;
+                    _savedHolder = $"{saved.Document.HolderName}({saved.Document.Holder})";
+                    _savedAt = DateTime.Now.ToShortTimeString();
+                    await ForgetDraftAsync();
+                    break;
+                case ApiFailure failure:
+                    Snackbar.Add(Loc["LayBldSaveFailed", failure.Message], Severity.Error);
+                    break;
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
 
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
     private bool _registrar;
@@ -902,7 +1072,7 @@
 
     // ---------------------------------------------------------------- moving between steps, undo, keeping the draft
 
-    private void Next() => GoTo(_step + 1);
+    private void Next() => GoTo(NextStep(_step));
 
     private void GoTo(int step)
     {
@@ -910,8 +1080,15 @@
         _reached = Math.Max(_reached, _step);
         if (_step == 0) _ = LoadAppsAsync();
         if (_step == 2 && _page is null) SelectFirst();
-        if (_step == 3) _ = LoadNowAsync();
-        if (_step == 4) _ = LoadShelfAsync();
+        if (_document is not null)
+        {
+            if (_step is 1 or 3) _step = 2;
+        }
+        else
+        {
+            if (_step == 3) _ = LoadNowAsync();
+            if (_step == 4) _ = LoadShelfAsync();
+        }
         _ = KeepDraftAsync();
     }
 

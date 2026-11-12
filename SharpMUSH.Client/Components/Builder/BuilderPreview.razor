@@ -19,7 +19,10 @@
                         class="bld-segment @(width == _width ? "bld-segment--on" : "")" @onclick="() => _width = width">@Loc[$"LayBldWidth_{width}"]</button>
             }
         </div>
-        <MudSwitch T="bool" Value="_real" ValueChanged="SetRealAsync" Color="Color.Primary" Label="@Loc["LayBldRealValues"]" />
+        @if (RealValues)
+        {
+            <MudSwitch T="bool" Value="_real" ValueChanged="SetRealAsync" Color="Color.Primary" Label="@Loc["LayBldRealValues"]" />
+        }
     </div>
     <div class="bld-preview-stage">
         <div class="bld-preview-frame bld-preview-frame--@_width">
@@ -56,6 +59,12 @@
 
     /// <summary>Key → attribute, read from the author's character when the real-values switch is on.</summary>
     [Parameter] public IReadOnlyDictionary<string, string> Sources { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Whether the real-values switch is offered. A stored document's values come from its application's own route,
+    /// not from attributes the builder knows, so it shows made-up values only.
+    /// </summary>
+    [Parameter] public bool RealValues { get; set; } = true;
 
     /// <summary>Starts at a widget's width.</summary>
     [Parameter] public bool Widget { get; set; }

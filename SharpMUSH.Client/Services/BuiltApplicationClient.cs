@@ -19,6 +19,19 @@ public sealed record BuiltEntry(string Slug, string Title, string Kind, IReadOnl
 public sealed record BuiltValuesRequest(string? Object, IReadOnlyDictionary<string, string> Sources);
 
 /// <summary>
+/// A registered application's document kept beside its route on the <c>http_handler</c> (<c>DATA`PROFILE`SCHEMA</c> for
+/// <c>http/profile/schema</c>): where it is, whether the caller may change it, and the package that installed it.
+/// </summary>
+public sealed record StoredDocument(string Slug, string Name, string Kind, string Holder, string HolderName,
+	string Attribute, bool Controls, string? Package, bool Changed);
+
+/// <summary>One stored document and its text.</summary>
+public sealed record StoredDocumentSource(StoredDocument Document, string Schema);
+
+/// <summary>The document to save over a stored one.</summary>
+public sealed record StoredDocumentSave(string Schema);
+
+/// <summary>
 /// Client for the server's built-application API (<c>api/built/{slug}/source</c>): reads and writes what the
 /// application builder makes, as the session's character, so it changes only what that character could change.
 /// </summary>
@@ -41,4 +54,16 @@ public sealed class BuiltApplicationClient(IHttpClientFactory httpClientFactory)
 	public Task<ApiResult<SchemaData>> ValuesAsync(string? holder, IReadOnlyDictionary<string, string> sources) =>
 		httpClientFactory.CreateClient("api").PostApiAsync<BuiltValuesRequest, SchemaData>(
 			"api/built/values", new BuiltValuesRequest(holder, sources), "The server sent nothing back.");
+
+	/// <summary>The registered applications whose document is kept as it is beside its route, so the builder can edit it.</summary>
+	public Task<ApiResult<IReadOnlyList<StoredDocument>>> DocumentsAsync() =>
+		httpClientFactory.CreateClient("api").GetApiAsync<IReadOnlyList<StoredDocument>>("api/built/documents", "The server sent nothing back.");
+
+	public Task<ApiResult<StoredDocumentSource>> OpenDocumentAsync(string slug) =>
+		httpClientFactory.CreateClient("api").GetApiAsync<StoredDocumentSource>(
+			$"api/built/documents/{Uri.EscapeDataString(slug)}", "The server sent nothing back.");
+
+	public Task<ApiResult<StoredDocumentSource>> SaveDocumentAsync(string slug, string schema) =>
+		httpClientFactory.CreateClient("api").PutApiAsync<StoredDocumentSave, StoredDocumentSource>(
+			$"api/built/documents/{Uri.EscapeDataString(slug)}", new StoredDocumentSave(schema), "The server sent nothing back.");
 }
