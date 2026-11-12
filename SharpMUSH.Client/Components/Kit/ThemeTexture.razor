@@ -1,6 +1,7 @@
 @* The page texture: the theme's gradients, then one layer per colour its drawings use (css/themes/layers.css,
    .theme-texture). Pinned to the window, or with Contained to the positioned element holding it (a theme's
-   swatch). Decoration only, so screen readers skip it. *@
+   swatch). Decoration only, so screen readers skip it. The theme's atmosphere (fog, embers, a screen's scanlines)
+   comes after it, over the texture and under the page. *@
 <div class="theme-texture @(Contained ? "theme-texture--contained" : null)" aria-hidden="true">
     <i class="theme-texture-base"></i>
     <i class="theme-texture-border"></i>
@@ -8,6 +9,10 @@
     <i class="theme-texture-accent-3"></i>
     <i class="theme-texture-accent-2"></i>
     <i class="theme-texture-accent"></i>
+</div>
+<div class="theme-atmosphere @(Contained ? "theme-atmosphere--contained" : null)" aria-hidden="true">
+    <i class="theme-atmosphere-still"></i>
+    <i class="theme-atmosphere-moving"></i>
 </div>
 
 @code {

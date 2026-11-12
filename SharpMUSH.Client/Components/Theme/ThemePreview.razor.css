@@ -103,6 +103,7 @@
 	border: min(var(--card-border-width), 2px) var(--card-border-style) var(--border);
 	border-radius: min(var(--radius-card), 10px);
 	background: var(--card-bg);
+	backdrop-filter: var(--card-backdrop);
 	box-shadow: var(--card-shadow);
 }
 

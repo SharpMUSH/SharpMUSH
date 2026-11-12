@@ -350,13 +350,17 @@
 	--card-shadow: 0 0 18px color-mix(in srgb, var(--accent) 12%, transparent), 0 10px 24px rgba(0,0,0,0.45);
 }
 
-/* Window: a 16-bit menu window, accent-2 at the top fading into the surface, with a white pixel pointing glove,
-   outlined in black, in the lower right. */
+/* Window: a 16-bit menu window, accent-2 at the top fading into the surface, with a pixel pointing glove in the
+   lower right: white, shaded in accent-3 and a darker accent-3, outlined in black. Drawn on a 20 by 12 grid at two
+   pixels a cell, so it stays sharp. */
 [data-frame-marks="window"] {
 	--card-marks: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 28%, transparent), transparent 70%);
-	--card-mask-text: url(/themes/drawings/frames/window-glove.svg) right 8px bottom 6px / 34px 22px no-repeat;
+	--card-mask-text: url(/themes/drawings/frames/window-glove.svg) right 6px bottom 4px / 40px 24px no-repeat;
 	--card-ink-text: var(--text);
-	--card-mask-border: url(/themes/drawings/frames/window-glove-outline.svg) right 8px bottom 6px / 34px 22px no-repeat;
+	--card-mask-accent-3: url(/themes/drawings/frames/window-glove-shade.svg) right 6px bottom 4px / 40px 24px no-repeat;
+	--card-mask-accent-2: url(/themes/drawings/frames/window-glove-shadow.svg) right 6px bottom 4px / 40px 24px no-repeat;
+	--card-ink-accent-2: color-mix(in srgb, var(--accent-3) 55%, #000);
+	--card-mask-border: url(/themes/drawings/frames/window-glove-outline.svg) right 6px bottom 4px / 40px 24px no-repeat;
 	--card-ink-border: #000;
 }
 /* Window: a black ring outside the white border and an accent-3 bevel inside it. */
@@ -532,4 +536,83 @@
 /* Dossier: a tile lifted off the page by a soft drop. */
 [data-frame-shadow="dossier"] {
 	--card-shadow: 0 8px 18px -8px rgba(0, 0, 0, 0.4);
+}
+
+/* Archive: a heavy and a fine rule along the top in the text colour, a crop mark at the lower left and a filled
+   square at the lower right, as on a page from an archive. */
+[data-frame-marks="archive"] {
+	--card-marks: linear-gradient(var(--text), var(--text)) left 0 top 0 / 100% 3px no-repeat,
+		linear-gradient(var(--text), var(--text)) left 0 top 6px / 100% 1px no-repeat,
+		linear-gradient(color-mix(in srgb, var(--text) 45%, transparent), color-mix(in srgb, var(--text) 45%, transparent)) left 8px bottom 8px / 10px 1px no-repeat,
+		linear-gradient(color-mix(in srgb, var(--text) 45%, transparent), color-mix(in srgb, var(--text) 45%, transparent)) left 8px bottom 8px / 1px 10px no-repeat,
+		linear-gradient(var(--text), var(--text)) right 8px bottom 8px / 7px 7px no-repeat;
+}
+/* Archive: a soft drop in the text colour. */
+[data-frame-shadow="archive"] {
+	--card-shadow: 0 10px 24px color-mix(in srgb, var(--text) 16%, transparent), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+}
+
+/* Loadout: a slanted accent tab on the top left and a second-accent line along the bottom. */
+[data-frame-marks="loadout"] {
+	--card-marks: linear-gradient(115deg, var(--accent) 0 86%, transparent 86%) left 0 top 0 / 72px 5px no-repeat,
+		linear-gradient(var(--accent-2), var(--accent-2)) left 0 bottom 0 / 38% 2px no-repeat;
+}
+/* Loadout: a hard line under the card in the text colour and a faint lift. */
+[data-frame-shadow="loadout"] {
+	--card-shadow: 0 2px 0 var(--text), 0 12px 22px rgba(0, 0, 0, 0.08);
+}
+
+/* Hairline: one fine rule above and one below in the accent, fading out at both ends. */
+[data-frame-marks="hairline"] {
+	--card-marks: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 60%, transparent), transparent) left 0 top 0 / 100% 1px no-repeat,
+		linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 45%, transparent), transparent) left 0 bottom 0 / 100% 1px no-repeat;
+}
+/* Hairline: a deep, soft shadow. */
+[data-frame-shadow="hairline"] {
+	--card-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Rune: a cut corner with a stud on the top left in the accent, and a broken accent line along the top. */
+[data-frame-marks="rune"] {
+	--card-marks: linear-gradient(90deg, var(--accent) 0 40%, transparent 40% 44%, var(--accent) 44% 58%, transparent 58%) left 34px top 0 / 70% 1px no-repeat;
+	--card-mask-accent: url(/themes/drawings/frames/rune-corner.svg) left 0 top 0 / 40px 40px no-repeat;
+}
+/* Rune: the accent glowing around the card and inside it. */
+[data-frame-shadow="rune"] {
+	--card-shadow: 0 0 22px color-mix(in srgb, var(--accent) 18%, transparent), inset 0 0 18px color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+/* Brushed: a dry brush stroke along the top edge in the second accent. */
+[data-frame-marks="brushed"] {
+	--card-mask-accent-2: url(/themes/drawings/frames/brushed-top.svg) left 0 top 0 / 100% 10px no-repeat;
+}
+/* Brushed: a deep shadow, as a sheet of paper lifted off a desk. */
+[data-frame-shadow="brushed"] {
+	--card-shadow: 0 18px 36px rgba(0, 0, 0, 0.55), 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Field guide: a band of the accent along the top over a hinge line in the text colour, and a lens of accent-2 ringed
+   in the text colour at the top right, as on a handheld field guide. */
+[data-frame-marks="field-guide"] {
+	--card-marks: radial-gradient(circle at center, color-mix(in srgb, var(--accent-2) 60%, var(--surface)) 0 2px, var(--accent-2) 2.5px 5px, var(--text) 5.5px 7px, transparent 7.5px) right 10px top 0 / 16px 16px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) left 0 top 0 / 100% 7px no-repeat,
+		linear-gradient(var(--text), var(--text)) left 0 top 7px / 100% 2px no-repeat;
+}
+/* Field guide: a hard drop in the text colour, as a chunky plastic case. */
+[data-frame-shadow="field-guide"] {
+	--card-shadow: 0 5px 0 var(--text);
+}
+
+/* Device: three lights along the top of the bezel, the first one lit in the accent, as on a handheld partner device. */
+[data-frame-marks="device"] {
+	--card-mask-accent: radial-gradient(circle at center, #000 0 2.5px, transparent 3px) right 34px top 1px / 6px 6px no-repeat;
+	--card-ink-accent: var(--accent);
+	--card-mask-border: radial-gradient(circle at center, #000 0 2.5px, transparent 3px) right 24px top 1px / 6px 6px no-repeat,
+		radial-gradient(circle at center, #000 0 2.5px, transparent 3px) right 14px top 1px / 6px 6px no-repeat;
+	--card-ink-border: color-mix(in srgb, var(--border) 60%, #000);
+}
+/* Device: a thick bezel round the screen, lit along its top and dark along its foot, and a deep drop. */
+[data-frame-shadow="device"] {
+	--card-shadow: inset 0 2px 0 color-mix(in srgb, var(--text) 20%, transparent), inset 0 -3px 0 rgba(0, 0, 0, 0.45),
+		inset 0 0 0 8px color-mix(in srgb, var(--border) 75%, var(--surface)), inset 0 0 0 10px rgba(0, 0, 0, 0.55), 0 10px 24px rgba(0, 0, 0, 0.5);
 }

@@ -43,6 +43,13 @@ Copyright (c) 2011, Cyreal (www.cyreal.org), with Reserved Font Name 'Federant'.
 Copyright (c) 2011 by Sorkin Type Co (www.sorkintype.com), with Reserved Font Name "Rye".
 Copyright 2022 The Black-Ops Project Authors (https://github.com/googlefonts/googlefonts-project-template) (Black Ops One)
 Copyright 2020 The Bodoni Moda Project Authors (https://github.com/indestructible-type/Bodoni)
+Copyright 2020 The Jost Project Authors (https://github.com/indestructible-type)
+Copyright 2019 The Big Shoulders Project Authors (https://github.com/xotypeco/big_shoulders)
+Copyright 2017 The EB Garamond Project Authors (https://github.com/octaviopardo/EBGaramond12)
+Copyright 2023 The Tektur Project Authors (https://www.github.com/hyvyys/Tektur)
+Copyright 2012 The Libre Baskerville Project Authors (https://github.com/impallari/Libre-Baskerville) with Reserved Font Name Libre Baskerville.
+Copyright 2019 The Baloo 2 Project Authors (https://github.com/EkType/Baloo2)
+Copyright 2001 The Silkscreen Project Authors (https://github.com/googlefonts/silkscreen)
 Copyright 2016 The Saira Project Authors (omnibus.type@gmail.com), with reserved font name "Saira". (Saira Condensed)
 
 

@@ -372,3 +372,26 @@
 	--title-underline-height: 3px;
 	--title-underline-pad: 8px;
 }
+
+/* Capsule: a capsule split down the middle before the title. */
+[data-ornament-glyphs="capsule"] { --ornament-before: "\25D6\25D7"; --ornament-after: none; }
+/* Capsule: a thick bar, the accent's half and accent-2's half. */
+[data-ornament-underline="capsule"] {
+	--title-underline: linear-gradient(90deg, var(--accent) 0 50%, var(--accent-2) 50%);
+	--title-underline-height: 5px;
+	--title-underline-pad: 6px;
+}
+/* Emblem: a hexagon before the title. */
+[data-ornament-glyphs="emblem"] { --ornament-before: "\2B22"; --ornament-after: none; }
+
+/* Sticker: an outline in the surface colour all round and a hard drop in the text colour, as a sticker. */
+[data-effect-shadow="sticker"] {
+	--title-shadow: 0.04em 0 0 var(--surface), -0.04em 0 0 var(--surface), 0 0.04em 0 var(--surface), 0 -0.04em 0 var(--surface),
+		0.03em 0.03em 0 var(--surface), -0.03em -0.03em 0 var(--surface), 0.03em -0.03em 0 var(--surface), -0.03em 0.03em 0 var(--surface),
+		0.07em 0.08em 0 var(--text);
+}
+/* Evolve: the title split into accent-2 to the left and the missing-link colour to the right, as a screen changing form. */
+[data-effect-shadow="evolve"] {
+	--title-shadow: -0.05em 0 0 color-mix(in srgb, var(--accent-2) 70%, transparent), 0.05em 0 0 color-mix(in srgb, var(--link-missing) 45%, transparent),
+		0 0 14px color-mix(in srgb, var(--accent) 30%, transparent);
+}

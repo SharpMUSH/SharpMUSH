@@ -2,13 +2,17 @@
 	height: 36px;
 	padding: 0 var(--space-5) 0 var(--space-4);
 	border: 0;
-	border-radius: var(--radius-capsule, 18px);
+	border-radius: var(--button-radius, var(--radius-capsule, 18px));
+	clip-path: var(--button-clip, none);
+	transform: var(--button-transform, none);
 	background: var(--surface-2);
-	box-shadow: inset 0 0 0 1px var(--border);
+	box-shadow: inset 0 0 0 1px var(--border), var(--button-plain-shadow, 0 0 transparent);
 	color: var(--text);
 	font: inherit;
 	font-size: var(--text-sm);
-	font-weight: 600;
+	font-weight: var(--button-weight, 600);
+	letter-spacing: var(--button-tracking, normal);
+	text-transform: var(--button-case, none);
 	display: inline-flex;
 	align-items: center;
 	gap: var(--space-3);
@@ -16,7 +20,7 @@
 	white-space: nowrap;
 	text-decoration: none;
 	cursor: pointer;
-	transition: filter var(--motion-fade);
+	transition: filter var(--motion-fade), transform var(--motion-move), box-shadow var(--motion-fade);
 }
 
 /* Glass only over a picture (D1 §4.3): a banner, the image viewer, the character sheet's portrait. On a
@@ -35,7 +39,7 @@
 
 .kit-capsule:focus-visible {
 	outline: 2px solid var(--accent);
-	outline-offset: 2px;
+	outline-offset: var(--button-focus-offset, 2px);
 }
 
 .kit-capsule:disabled {
@@ -52,6 +56,16 @@
 .kit-capsule--primary {
 	background: var(--accent);
 	color: var(--accent-on);
-	font-weight: 700;
-	box-shadow: var(--capsule-primary-edge, none);
+	font-weight: var(--button-weight, 700);
+	box-shadow: var(--button-shadow, var(--capsule-primary-edge, none));
+}
+
+/* Pressed, in the theme's cut (data-buttons, css/themes/menus.css): a keycap sinks, a skewed plate slides into its
+   shadow. A standard theme leaves it as it was. */
+.kit-capsule:active:not(:disabled) {
+	transform: var(--button-press, var(--button-transform, none));
+}
+
+.kit-capsule--primary:active:not(:disabled) {
+	box-shadow: var(--button-press-shadow, var(--button-shadow, none));
 }

@@ -68,17 +68,25 @@
 		--duration-exit: 0s;
 		--duration-spring: 0s;
 		--duration-sweep: 0s;
+	}
+	/* A theme's loops (css/themes/motion.css) stand still too, on the page and in a theme's preview. */
+	:root, [data-scheme] {
+		--select-motion: none;
+		--texture-motion: none;
 		--ambient-play: paused;
 	}
 }
-/* The player's own Reduce motion setting (data-reduce-motion="on", ThemeService.ReduceMotionPart) does the same.
-   --ambient-play is a theme's background motion: an animation that runs while it is "running" and holds its place
-   under "paused". */
+/* The same, when the player turns on Reduce motion in the portal (data-reduce-motion="on", ThemeService.ReduceMotionPart)
+   rather than in the browser. */
 :root[data-reduce-motion="on"] {
 	--duration-enter: 0s;
 	--duration-exit: 0s;
 	--duration-spring: 0s;
 	--duration-sweep: 0s;
+}
+:root[data-reduce-motion="on"], [data-reduce-motion="on"] [data-scheme] {
+	--select-motion: none;
+	--texture-motion: none;
 	--ambient-play: paused;
 }
 

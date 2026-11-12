@@ -49,10 +49,33 @@
 	color: var(--text);
 }
 
+/* The current line: how it is marked is the theme's selection part (data-selection, css/themes/menus.css). Each
+   --select-* variable falls back to this row's own raised fill, so a standard theme leaves it as it was. The mark is
+   drawn under the row's content, inside its own stacking context. */
 .kit-row--current {
-	background: var(--surface-2);
-	color: var(--accent);
+	isolation: isolate;
+	background: var(--select-fill, var(--surface-2));
+	color: var(--select-ink, var(--accent));
 	font-weight: 600;
+	border-radius: var(--select-radius, var(--radius-row));
+	box-shadow: var(--select-shadow, none);
+	transform: var(--select-lift, none);
+	text-shadow: var(--select-text-glow, none);
+	animation: var(--select-motion, none);
+	animation-play-state: var(--ambient-play, running);
+}
+
+.kit-row--current::before {
+	content: '';
+	position: absolute;
+	z-index: -1;
+	inset: var(--select-mark-inset, 0);
+	width: var(--select-mark-width, 0px);
+	border-radius: var(--select-mark-radius, 0px);
+	background: var(--select-mark, transparent);
+	box-shadow: var(--select-mark-glow, none);
+	transform: var(--select-mark-transform, none);
+	pointer-events: none;
 }
 
 .kit-row--collapsed {
@@ -122,6 +145,15 @@
 
 .kit-row--current .kit-row-icon {
 	color: var(--accent);
+}
+
+/* Secondary text on the current line, in the selection's dimmer ink where its fill is solid (bar, skew, lift). */
+.kit-row--current :is(.kit-row-sub, .kit-row-trail, .kit-row-count) {
+	color: var(--select-ink-dim, var(--text-dim));
+}
+
+.kit-row--current .kit-row-hash {
+	color: var(--select-ink-dim, var(--text-faint));
 }
 
 .kit-row-hash {

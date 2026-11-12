@@ -23,6 +23,12 @@ public static class ThemeStyles
 	public const string Titles = "titles";
 	public const string Effect = "effect";
 	public const string Imagery = "imagery";
+	public const string Selection = "selection";
+	public const string Buttons = "buttons";
+	public const string Material = "material";
+	public const string Meters = "meters";
+	public const string Motion = "motion";
+	public const string Atmosphere = "atmosphere";
 
 	// The parts the Complex mode sets apart, which a Simple texture, frame, ornament or effect sets together.
 	public const string TextureStrength = "texture-strength";
@@ -59,6 +65,7 @@ public static class ThemeStyles
 		"lilita", "titan", "chakra", "monoton", "michroma", "antonio", "oxanium", "russo",
 		"cinzel-decorative", "forum", "press-start", "anton", "dotgothic", "alegreya-sc", "oswald",
 		"pirata", "uncial", "barlow", "metamorphous", "krona", "eagle-lake", "federant", "rye", "black-ops", "bodoni", "saira-condensed",
+		"jost", "big-shoulders", "garamond", "tektur", "baskerville", "baloo", "silkscreen",
 	];
 
 	/// <summary>Faces for everything else. Kept to faces that read well small.</summary>
@@ -133,6 +140,13 @@ public static class ThemeStyles
 		["wanted"] = new("wanted", "double", "wanted"),
 		["scrap"] = new("scrap", "heavy", "scrap"),
 		["dossier"] = new("dossier", "none", "dossier"),
+		["archive"] = new("archive", "none", "archive"),
+		["loadout"] = new("loadout", "none", "loadout"),
+		["hairline"] = new("hairline", "none", "hairline"),
+		["rune"] = new("rune", "line", "rune"),
+		["brushed"] = new("brushed", "none", "brushed"),
+		["field-guide"] = new("field-guide", "heavy", "field-guide"),
+		["device"] = new("device", "none", "device"),
 	};
 
 	public static readonly IReadOnlyDictionary<string, OrnamentSet> Ornaments = new Dictionary<string, OrnamentSet>
@@ -184,6 +198,8 @@ public static class ThemeStyles
 		["sheriff"] = new("sheriff", "sheriff"),
 		["rad"] = new("rad", "rad"),
 		["flank"] = new("flank", "none"),
+		["capsule"] = new("capsule", "capsule"),
+		["emblem"] = new("emblem", "fade"),
 		["designator"] = new("designator", "designator"),
 	};
 
@@ -228,6 +244,8 @@ public static class ThemeStyles
 		["brass"] = new("accent", "brass"),
 		["woodtype"] = new("accent", "woodtype"),
 		["grime"] = new("accent", "grime"),
+		["sticker"] = new("accent", "sticker"),
+		["evolve"] = new("accent", "evolve"),
 	};
 
 	/// <summary>Every setting and part with its choices, the first being what a theme that sets none gets.</summary>
@@ -243,6 +261,7 @@ public static class ThemeStyles
 			"speedlines", "court", "hazard", "sigil", "sumi", "benday", "filmgrain", "starburst", "rain", "outrun", "galaxy",
 			"readout", "armor-panels", "sunburst-rays", "stained-glass", "crystal", "dither", "nightfall", "overworld", "skyward", "watercolor",
 			"marble", "spires", "dragonflight", "plot", "seance", "dunes", "candles", "gears", "mesa", "ruins", "haze",
+			"archive", "lobby", "cathedral", "glyphs", "oilpaint", "meadow", "wireframe",
 		],
 		[Ornament] = [.. Ornaments.Keys],
 		[Frame] = [.. Frames.Keys],
@@ -255,6 +274,14 @@ public static class ThemeStyles
 			"sixteen-bit", "redout", "cartridge", "watercolor", "etched", "nocturne", "duskfire", "gunmetal", "daguerreotype", "sunbleached", "candlelit", "tintype", "sunbaked", "irradiated",
 			"smoke",
 		],
+		// How the current line in a menu is marked, the cut of a button, what a card is made of, how a bar fills, how
+		// things arrive and move, and what hangs between the background and the page: one menu each, any theme.
+		[Selection] = ["standard", "bar", "skew", "halo", "brackets", "lift", "stroke"],
+		[Buttons] = ["standard", "skew", "keycap", "notch", "bar", "brush", "capsule", "console"],
+		[Material] = ["solid", "glass", "hologram", "veil", "cardstock", "felt", "wood", "lcd"],
+		[Meters] = ["bar", "segmented", "slanted", "pips", "hairline", "vital"],
+		[Motion] = ["calm", "still", "snappy", "drift", "wobble", "bob"],
+		[Atmosphere] = ["none", "vignette", "fog", "embers", "motes", "crt", "slashes", "datastream"],
 		[TextureStrength] = Strengths,
 		[FrameMarks] = [.. Frames.Values.Select(f => f.Marks).Distinct()],
 		[FrameEdge] = Edges,
@@ -268,7 +295,11 @@ public static class ThemeStyles
 	};
 
 	/// <summary>The Simple settings in the order the editor lists them.</summary>
-	public static readonly IReadOnlyList<string> Keys = [FontDisplay, FontBody, Corners, Texture, Ornament, Frame, Titles, Effect, Imagery];
+	public static readonly IReadOnlyList<string> Keys =
+	[
+		FontDisplay, FontBody, Corners, Texture, Ornament, Frame, Titles, Effect, Imagery,
+		Selection, Buttons, Material, Meters, Motion, Atmosphere,
+	];
 
 	/// <summary>The settings and parts in the order the Complex editor lists them.</summary>
 	public static readonly IReadOnlyList<string> PartKeys =
@@ -278,6 +309,7 @@ public static class ThemeStyles
 		FrameMarks, FrameEdge, FrameShadow,
 		OrnamentGlyphs, OrnamentUnderline,
 		EffectColor, EffectShadow,
+		Selection, Buttons, Material, Meters, Motion, Atmosphere,
 	];
 
 	/// <summary>Each setting's and part's first choice: what any one a theme leaves out falls back to.</summary>
@@ -309,6 +341,12 @@ public static class ThemeStyles
 			[Corners] = Pick(Corners),
 			[Titles] = Pick(Titles),
 			[Imagery] = Pick(Imagery),
+			[Selection] = Pick(Selection),
+			[Buttons] = Pick(Buttons),
+			[Material] = Pick(Material),
+			[Meters] = Pick(Meters),
+			[Motion] = Pick(Motion),
+			[Atmosphere] = Pick(Atmosphere),
 			[Texture] = Pick(Texture),
 			[TextureStrength] = Own(TextureStrength, Defaults[TextureStrength]),
 			[FrameMarks] = Own(FrameMarks, frame.Marks),

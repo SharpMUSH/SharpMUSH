@@ -1,0 +1,443 @@
+/* Theme parts from game menus: how the current line is marked, the cut of a button, what a card is made of, and how a
+   bar fills. Each is one attribute on <html> (ThemeStyles.Selection, Buttons, Material, Meters).
+   [data-selection]  the current line in a menu: --select-*, read by .phosphor-nav-link.active (shell.css) and
+                     .kit-row--current (Kit/SidebarRow.razor.css)
+   [data-material]   a card's fill under its marks (--card-material) and what it does to the page behind it
+                     (--card-backdrop)
+   [data-buttons]    the cut of a button: --button-* (read by Kit/CapsuleButton.razor.css and shell.css)
+   [data-meters]     MudBlazor progress bars (MudProgressLinear), such as a loading or import bar
+   Every colour comes from the theme. A part that differs on a dark theme has a second rule with
+   [data-scheme="dark"]. */
+
+/* ── Selection ── */
+
+/* Each choice sets every --select-* variable, initial where it keeps the menu's own value, so a theme's preview
+   inside a page with another choice inherits nothing from it. */
+
+/* Standard: each menu as it marks its current line already (a glowing bar in the main menu, a raised row in a
+   section's sidebar). */
+[data-selection="standard"] {
+	--select-ink-dim: initial;
+	--select-fill: initial;
+	--select-ink: initial;
+	--select-radius: initial;
+	--select-mark: initial;
+	--select-mark-inset: initial;
+	--select-mark-width: initial;
+	--select-shadow: initial;
+	--select-lift: initial;
+	--select-text-glow: initial;
+	--select-mark-radius: initial;
+	--select-mark-glow: initial;
+	--select-mark-transform: initial;
+}
+
+/* Bar: a block in the text colour, squared off, with an offset shadow, as on an archive terminal. */
+[data-selection="bar"] {
+	--select-ink-dim: color-mix(in srgb, var(--surface) 78%, var(--text));
+	--select-fill: var(--text);
+	--select-ink: var(--surface);
+	--select-radius: 0px;
+	--select-shadow: 4px 4px 0 color-mix(in srgb, var(--text) 22%, transparent);
+	--select-mark: var(--surface);
+	--select-mark-inset: calc(50% - 4px) auto auto 6px;
+	--select-mark-width: 0px;
+	--select-mark-glow: none;
+	--select-lift: initial;
+	--select-text-glow: initial;
+	--select-mark-radius: initial;
+	--select-mark-transform: initial;
+}
+
+/* Skew: a slanted accent plate behind the text with a hard offset shadow, as in a shooter's lobby. */
+[data-selection="skew"] {
+	--select-ink-dim: color-mix(in srgb, var(--accent-on) 82%, var(--accent));
+	--select-fill: transparent;
+	--select-ink: var(--accent-on);
+	--select-mark: var(--accent);
+	--select-mark-inset: 0 4px 0 2px;
+	--select-mark-width: auto;
+	--select-mark-radius: 0px;
+	--select-mark-glow: 4px 4px 0 var(--text);
+	--select-mark-transform: skewX(-14deg);
+	--select-radius: initial;
+	--select-shadow: initial;
+	--select-lift: initial;
+	--select-text-glow: initial;
+}
+
+/* Halo: a soft pool of accent light behind the line, and the words lit by it. */
+[data-selection="halo"] {
+	--select-ink-dim: initial;
+	--select-fill: radial-gradient(60% 100% at 50% 50%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 72%);
+	--select-ink: var(--text);
+	--select-text-glow: 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent);
+	--select-mark: transparent;
+	--select-mark-width: 0px;
+	--select-mark-glow: none;
+	--select-radius: initial;
+	--select-shadow: initial;
+	--select-lift: initial;
+	--select-mark-inset: initial;
+	--select-mark-radius: initial;
+	--select-mark-transform: initial;
+}
+
+/* Brackets: four corner ticks in the accent close on the line. */
+[data-selection="brackets"] {
+	--select-ink-dim: initial;
+	--select-fill: color-mix(in srgb, var(--accent) 7%, transparent);
+	--select-ink: var(--accent);
+	--select-radius: 0px;
+	--select-text-glow: 0 0 8px color-mix(in srgb, var(--accent) 55%, transparent);
+	--select-mark: linear-gradient(var(--accent), var(--accent)) left top / 10px 2px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) left top / 2px 10px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) right top / 10px 2px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) right top / 2px 10px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) left bottom / 10px 2px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) left bottom / 2px 10px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) right bottom / 10px 2px no-repeat,
+		linear-gradient(var(--accent), var(--accent)) right bottom / 2px 10px no-repeat;
+	--select-mark-inset: 0;
+	--select-mark-width: auto;
+	--select-mark-radius: 0px;
+	--select-mark-glow: none;
+	--select-shadow: initial;
+	--select-lift: initial;
+	--select-mark-transform: initial;
+}
+
+/* Lift: the line becomes a card in the text colour, raised and tilted off the table. */
+[data-selection="lift"] {
+	--select-ink-dim: color-mix(in srgb, var(--bg) 78%, var(--text));
+	--select-fill: var(--text);
+	--select-ink: var(--bg);
+	--select-shadow: 0 5px 0 rgba(0, 0, 0, 0.35);
+	--select-lift: translateY(-3px) rotate(-1.5deg);
+	--select-mark: transparent;
+	--select-mark-width: 0px;
+	--select-mark-glow: none;
+	--select-radius: initial;
+	--select-text-glow: initial;
+	--select-mark-inset: initial;
+	--select-mark-radius: initial;
+	--select-mark-transform: initial;
+}
+
+/* Stroke: a loose brush stroke in the accent under the lower half of the words. */
+[data-selection="stroke"] {
+	--select-ink-dim: initial;
+	--select-fill: transparent;
+	--select-ink: var(--text);
+	--select-mark: color-mix(in srgb, var(--accent) 80%, transparent);
+	--select-mark-inset: 52% 18% 8% 4px;
+	--select-mark-width: auto;
+	--select-mark-radius: 40% 10% 55% 12% / 60% 30% 70% 40%;
+	--select-mark-glow: none;
+	--select-mark-transform: rotate(-1.5deg);
+	--select-radius: initial;
+	--select-shadow: initial;
+	--select-lift: initial;
+	--select-text-glow: initial;
+}
+
+/* ── Material ── */
+
+/* Solid: the surface, as it is. */
+[data-material="solid"] {
+	--card-material: var(--surface);
+	--card-backdrop: none;
+}
+
+/* Glass: a lit edge over a see-through surface that blurs the page behind it. */
+[data-material="glass"] {
+	--card-material: linear-gradient(160deg, color-mix(in srgb, var(--text) 9%, transparent), transparent 42%),
+		color-mix(in srgb, var(--surface) 74%, transparent);
+	--card-backdrop: blur(14px) saturate(1.3);
+}
+
+/* Hologram: a faint accent light with scanlines, the page blurred a little behind it. */
+[data-material="hologram"] {
+	--card-material: repeating-linear-gradient(0deg, color-mix(in srgb, var(--accent) 7%, transparent) 0 1px, transparent 1px 3px),
+		linear-gradient(180deg, color-mix(in srgb, var(--accent) 12%, var(--surface)), color-mix(in srgb, var(--accent) 3%, var(--surface)));
+	--card-backdrop: blur(4px);
+}
+
+/* Veil: the surface fading out at both sides, so a card is a band across the page rather than a box. */
+[data-material="veil"] {
+	--card-material: linear-gradient(90deg, transparent, var(--surface) 6%, var(--surface) 94%, transparent);
+	--card-backdrop: none;
+}
+
+/* Cardstock: printed card, lit from the top left, with a faint fibre. */
+[data-material="cardstock"] {
+	--card-material: radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.16), transparent 55%),
+		repeating-linear-gradient(115deg, rgba(0, 0, 0, 0.02) 0 2px, transparent 2px 5px),
+		var(--surface);
+	--card-backdrop: none;
+}
+
+/* Felt: a card table's cloth, a woven cross-hatch and a pool of light from above. */
+[data-material="felt"] {
+	--card-material: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.06) 0 1px, transparent 1px 6px),
+		repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.06) 0 1px, transparent 1px 6px),
+		radial-gradient(ellipse at 50% 12%, color-mix(in srgb, var(--surface) 88%, #fff), var(--surface) 75%);
+	--card-backdrop: none;
+}
+
+/* Wood: planks with a fine grain, lighter at the top. */
+[data-material="wood"] {
+	--card-material: repeating-linear-gradient(0deg, transparent 0 34px, rgba(0, 0, 0, 0.18) 34px 36px),
+		repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 9px),
+		linear-gradient(color-mix(in srgb, var(--surface) 90%, #fff), var(--surface));
+	--card-backdrop: none;
+}
+
+/* ── Buttons ── */
+/* Each sets --button-* variables, which the portal's capsule buttons (Kit/CapsuleButton.razor.css) and MudBlazor's
+   filled and outlined buttons (shell.css) read. A variable set to initial keeps that button's own look; each choice
+   sets every one, so a preview inside a page with another choice inherits nothing from it. */
+
+/* Standard: as the theme's corners make them. */
+[data-buttons="standard"] {
+	--button-focus-offset: initial;
+	--button-radius: initial;
+	--button-clip: initial;
+	--button-transform: initial;
+	--button-weight: initial;
+	--button-tracking: initial;
+	--button-case: initial;
+	--button-shadow: initial;
+	--button-plain-shadow: initial;
+	--button-press: initial;
+	--button-press-shadow: initial;
+}
+
+/* Skew: slanted plates in heavy capitals; a filled one casts a hard shadow in the text colour, and slides into it
+   when pressed. */
+[data-buttons="skew"] {
+	--button-focus-offset: initial;
+	--button-radius: 0px;
+	--button-transform: skewX(-12deg);
+	--button-weight: 800;
+	--button-tracking: 0.06em;
+	--button-case: uppercase;
+	--button-shadow: 4px 4px 0 var(--text);
+	--button-clip: initial;
+	--button-plain-shadow: initial;
+	--button-press: skewX(-12deg) translate(3px, 3px);
+	--button-press-shadow: 1px 1px 0 var(--text);
+}
+
+/* Keycap: a thick base under the face that the button sinks into when pressed. */
+[data-buttons="keycap"] {
+	--button-focus-offset: initial;
+	--button-radius: 8px;
+	--button-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 55%, #000), 0 7px 12px rgba(0, 0, 0, 0.3);
+	--button-plain-shadow: 0 3px 0 color-mix(in srgb, var(--text) 25%, transparent);
+	--button-press: translateY(3px);
+	--button-press-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 55%, #000);
+	--button-clip: initial;
+	--button-transform: initial;
+	--button-weight: initial;
+	--button-tracking: initial;
+	--button-case: initial;
+}
+
+/* Notch: two opposite corners cut off, as on a machined panel; pressed, it sinks a pixel into a shadowed recess. */
+[data-buttons="notch"] {
+	--button-focus-offset: -4px;
+	--button-radius: 0px;
+	--button-clip: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+	--button-transform: initial;
+	--button-weight: initial;
+	--button-tracking: initial;
+	--button-case: initial;
+	--button-shadow: initial;
+	--button-plain-shadow: initial;
+	--button-press: translateY(1px);
+	--button-press-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+/* Bar: square ends and spaced capitals; an outlined one keeps only its lines above and below. Pressed, a dark bar
+   rises from its foot. */
+[data-buttons="bar"] {
+	--button-focus-offset: initial;
+	--button-radius: 0px;
+	--button-tracking: 0.16em;
+	--button-case: uppercase;
+	--button-clip: initial;
+	--button-transform: initial;
+	--button-weight: initial;
+	--button-shadow: initial;
+	--button-plain-shadow: initial;
+	--button-press: translateY(1px);
+	--button-press-shadow: inset 0 -3px 0 color-mix(in srgb, var(--text) 30%, transparent);
+}
+[data-buttons="bar"] .mud-button-outlined {
+	border-inline-color: transparent;
+}
+
+/* Brush: a loose painted shape with a second-accent stroke beside it; pressed, it tips and the stroke closes in. */
+[data-buttons="brush"] {
+	--button-focus-offset: initial;
+	--button-radius: 46% 14% 52% 10% / 70% 40% 60% 30%;
+	--button-shadow: 3px 2px 0 color-mix(in srgb, var(--accent-2) 80%, transparent);
+	--button-clip: initial;
+	--button-transform: initial;
+	--button-weight: initial;
+	--button-tracking: initial;
+	--button-case: initial;
+	--button-plain-shadow: initial;
+	--button-press: rotate(-1deg) scale(0.97);
+	--button-press-shadow: 1px 1px 0 color-mix(in srgb, var(--accent-2) 80%, transparent);
+}
+
+/* ── Meters ── */
+
+/* Bar: as MudBlazor draws it. */
+[data-meters="bar"] .mud-progress-linear {
+	mask: none;
+}
+
+/* Segmented: ten blocks with gaps between. */
+[data-meters="segmented"] .mud-progress-linear {
+	height: 10px;
+	border-radius: 0;
+	mask: repeating-linear-gradient(90deg, #000 0 calc(10% - 3px), transparent calc(10% - 3px) 10%);
+}
+
+/* Slanted: a parallelogram, as a fighter's health bar. */
+[data-meters="slanted"] .mud-progress-linear {
+	height: 10px;
+	margin-inline: 4px;
+	border-radius: 0;
+	transform: skewX(-24deg);
+}
+
+/* Pips: ten round pips, filled up to the value. */
+[data-meters="pips"] .mud-progress-linear {
+	height: 12px;
+	border-radius: 0;
+	mask: radial-gradient(circle closest-side, #000 90%, transparent 100%) 0 0 / 10% 100% repeat-x;
+}
+
+/* Hairline: a thin line with the filled part glowing. */
+[data-meters="hairline"] .mud-progress-linear {
+	height: 3px;
+	border-radius: 0;
+}
+[data-meters="hairline"] .mud-progress-linear-bar {
+	box-shadow: 0 0 6px var(--accent);
+}
+
+[data-meters="segmented"] .mud-progress-linear-bar,
+[data-meters="slanted"] .mud-progress-linear-bar,
+[data-meters="pips"] .mud-progress-linear-bar {
+	border-radius: 0;
+}
+
+/* Capsule: round, fat buttons ringed in the text colour with a thick lip under them; pressed, the lip flattens and
+   the button squashes into it. */
+[data-buttons="capsule"] {
+	--button-radius: 999px;
+	--button-weight: 800;
+	--button-shadow: 0 0 0 2px var(--text), 0 5px 0 2px var(--text);
+	--button-plain-shadow: 0 4px 0 color-mix(in srgb, var(--text) 70%, transparent);
+	--button-press: translateY(4px) scaleX(1.03);
+	--button-press-shadow: 0 0 0 2px var(--text), 0 1px 0 2px var(--text), inset 0 3px 0 rgba(0, 0, 0, 0.2);
+	--button-clip: initial;
+	--button-transform: initial;
+	--button-tracking: initial;
+	--button-case: initial;
+}
+
+/* Console: a cut corner either end and a dark foot, as a handheld device's keys; pressed, it sinks and lights from
+   inside in accent-3. */
+[data-buttons="console"] {
+	--button-radius: 0px;
+	--button-clip: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+	--button-weight: 700;
+	--button-tracking: 0.04em;
+	--button-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.35);
+	--button-press: translateY(2px);
+	--button-press-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.35), inset 0 0 14px color-mix(in srgb, var(--accent-3) 75%, transparent);
+	--button-transform: initial;
+	--button-case: initial;
+	--button-plain-shadow: initial;
+}
+
+/* LCD: a handheld's screen, a fine dot grid of accent-3 over the surface, a little lighter at the top. */
+[data-material="lcd"] {
+	--card-material: radial-gradient(circle, color-mix(in srgb, var(--accent-3) 9%, transparent) 0 0.8px, transparent 1.2px) 0 0 / 4px 4px,
+		linear-gradient(180deg, color-mix(in srgb, var(--accent-3) 4%, var(--surface)), var(--surface) 40%);
+	--card-backdrop: none;
+}
+
+/* Vital: a fat, round bar ringed in the text colour with a shine along its top, as a creature's health. A sheet's stat
+   bar turns the warning colour under half and the danger colour under a fifth. */
+[data-meters="vital"] .mud-progress-linear {
+	height: 12px;
+	border-radius: 999px;
+	box-shadow: 0 0 0 2px var(--text);
+}
+[data-meters="vital"] .mud-progress-linear-bar {
+	border-radius: 999px;
+	background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0 35%, transparent 35%);
+}
+
+/* Vital: which band a sheet's stat bar is in, read from its value (0 to 100): under 20 is low, under 50 is middling. */
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="20"], [aria-valuenow^="20."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="21"], [aria-valuenow^="21."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="22"], [aria-valuenow^="22."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="23"], [aria-valuenow^="23."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="24"], [aria-valuenow^="24."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="25"], [aria-valuenow^="25."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="26"], [aria-valuenow^="26."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="27"], [aria-valuenow^="27."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="28"], [aria-valuenow^="28."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="29"], [aria-valuenow^="29."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="30"], [aria-valuenow^="30."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="31"], [aria-valuenow^="31."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="32"], [aria-valuenow^="32."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="33"], [aria-valuenow^="33."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="34"], [aria-valuenow^="34."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="35"], [aria-valuenow^="35."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="36"], [aria-valuenow^="36."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="37"], [aria-valuenow^="37."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="38"], [aria-valuenow^="38."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="39"], [aria-valuenow^="39."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="40"], [aria-valuenow^="40."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="41"], [aria-valuenow^="41."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="42"], [aria-valuenow^="42."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="43"], [aria-valuenow^="43."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="44"], [aria-valuenow^="44."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="45"], [aria-valuenow^="45."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="46"], [aria-valuenow^="46."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="47"], [aria-valuenow^="47."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="48"], [aria-valuenow^="48."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="49"], [aria-valuenow^="49."]) .mud-progress-linear-bar {
+	background-color: var(--warn);
+}
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="0"], [aria-valuenow^="0."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="1"], [aria-valuenow^="1."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="2"], [aria-valuenow^="2."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="3"], [aria-valuenow^="3."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="4"], [aria-valuenow^="4."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="5"], [aria-valuenow^="5."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="6"], [aria-valuenow^="6."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="7"], [aria-valuenow^="7."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="8"], [aria-valuenow^="8."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="9"], [aria-valuenow^="9."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="10"], [aria-valuenow^="10."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="11"], [aria-valuenow^="11."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="12"], [aria-valuenow^="12."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="13"], [aria-valuenow^="13."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="14"], [aria-valuenow^="14."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="15"], [aria-valuenow^="15."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="16"], [aria-valuenow^="16."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="17"], [aria-valuenow^="17."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="18"], [aria-valuenow^="18."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="19"], [aria-valuenow^="19."]) .mud-progress-linear-bar {
+	background-color: var(--danger);
+}

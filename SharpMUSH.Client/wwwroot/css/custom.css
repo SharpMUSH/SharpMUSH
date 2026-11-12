@@ -10,6 +10,8 @@
 @import url("themes/frames.css") layer(themes);
 @import url("themes/titles.css") layer(themes);
 @import url("themes/imagery.css") layer(themes);
+@import url("themes/menus.css") layer(themes);
+@import url("themes/motion.css") layer(themes);
 @import url("themes/layers.css") layer(themes);
 /* MarkupString's own rules for its ms-* classes, generated at build from the packages (tools/ClientData);
    shell.css comes after, so its portal-only rules build on them. */

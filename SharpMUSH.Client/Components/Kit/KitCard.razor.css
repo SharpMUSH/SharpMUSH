@@ -2,9 +2,11 @@
 	position: relative;
 	isolation: isolate;
 	background: var(--card-bg);
+	backdrop-filter: var(--card-backdrop);
 	border: var(--card-border-width) var(--card-border-style) var(--border);
 	border-radius: var(--radius-card);
 	box-shadow: var(--card-shadow);
+	animation: var(--card-enter);
 	display: flex;
 	flex-direction: column;
 	min-width: 0;
