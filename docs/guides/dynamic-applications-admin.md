@@ -61,6 +61,27 @@ registered this way is served, so nobody can point the routes at another object.
 
 The attributes are plain JSON you can also edit by hand.
 
+### Editing the game's own apps
+
+The start page also lists **The game's apps**: registered applications whose layout is kept as
+it is, as JSON, beside the route that serves it. For an application whose schema URL is
+`http/<path>`, that is ``DATA`<PATH>`` on the HTTP handler, read by the route with `v()`. The
+character profile is one: `http/profile/schema` is served by ``GET`PROFILE`SCHEMA`` from
+``DATA`PROFILE`SCHEMA``. An application that builds its layout in softcode keeps no such
+attribute and is not listed; change it in the Softcode Editor.
+
+Opening one goes straight to **Lay it out**, then **Save**, which writes the layout back over
+the attribute it came from, as you, so it needs the same control of the handler that `&`
+would. Nothing else changes: the application's own routes still supply its values and take
+its actions, so a field you add shows a value only once its route sends one under that key.
+The preview shows made-up values.
+
+When a package installed the layout, the list says so, and whether it has been changed here.
+The package keeps managing the attribute, and an upgrade keeps your version as a local change.
+When the upgrade changes the layout too, the package manager asks which to keep; the automatic
+upgrade of a bundled package at startup keeps yours. For the character profile, **Reset** on the
+Profile handler page (`/admin/profiles`) puts the shipped layout back.
+
 ## The two-part setup
 
 Standing up an application is always two steps. **Both are required** — installing the

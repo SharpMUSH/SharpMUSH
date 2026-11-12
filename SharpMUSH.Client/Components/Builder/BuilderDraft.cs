@@ -63,23 +63,32 @@ public sealed partial class BuilderDraft
 
 	public JsonArray Pages => Schema["pages"] as JsonArray ?? (JsonArray)(Schema["pages"] = new JsonArray());
 
-	/// <summary>The attribute holding the document; the maps are its leaves.</summary>
-	public string BaseAttribute => $"DATA`APP`{Slug.ToUpperInvariant()}";
+	/// <summary>
+	/// For an application the builder did not make, the attribute its document is kept in beside its route
+	/// (<c>DATA`PROFILE`SCHEMA</c>); null for one the builder made. Such a document is saved as it is: its own routes
+	/// supply its values and take its actions, so the builder keeps no maps for it and leaves its actions alone.
+	/// </summary>
+	public string? KeptAt { get; set; }
+
+	/// <summary>The attribute holding the document; for an application the builder made, the maps are its leaves.</summary>
+	public string BaseAttribute => KeptAt ?? $"DATA`APP`{Slug.ToUpperInvariant()}";
 
 	/// <summary>Starts over from <paramref name="schema"/>, a whole document.</summary>
 	public void Load(JsonObject schema)
 	{
 		Schema = schema;
+		KeptAt = null;
 		Schema["schema_version"] ??= 1;
 		Schema["kind"] ??= "view";
 		if (Pages.Count == 0) AddPage();
 	}
 
 	/// <summary>Starts over from stored attribute values; false, with nothing changed, when the document is not a JSON object.</summary>
-	public bool LoadStored(string schema, string? sources, string? save)
+	public bool LoadStored(string schema, string? sources, string? save, string? keptAt = null)
 	{
 		if (Parse(schema) is not JsonObject document) return false;
 		Load(document);
+		KeptAt = keptAt;
 		ReadMap(sources, Sources);
 		ReadMap(save, Save);
 		return true;
@@ -251,18 +260,21 @@ public sealed partial class BuilderDraft
 	public IReadOnlyList<BuilderIssue> Issues()
 	{
 		var issues = new List<BuilderIssue>();
-		if (!IsSlug(Slug)) issues.Add(new("The address name is lower-case letters, digits, _ and -.", BuilderIssue.KindStep));
+		// A stored document keeps its registry slug and its keys, which its own route answers to: the builder's own
+		// naming rules do not apply, only duplicate keys and what schemacheck() refuses.
+		var own = KeptAt is null;
+		if (own && !IsSlug(Slug)) issues.Add(new("The address name is lower-case letters, digits, _ and -.", BuilderIssue.KindStep));
 		var keys = new HashSet<string>(StringComparer.Ordinal);
 		foreach (var field in InputFields())
 		{
 			var key = (string)field["key"]!;
-			if (!IsKey(key)) issues.Add(new($"The key \"{key}\" is lower-case letters, digits and _.", BuilderIssue.LayoutStep, field));
+			if (own && !IsKey(key)) issues.Add(new($"The key \"{key}\" is lower-case letters, digits and _.", BuilderIssue.LayoutStep, field));
 			if (!keys.Add(key)) issues.Add(new($"Two fields use the key \"{key}\".", BuilderIssue.LayoutStep, field));
 			if (OptionTypes.Contains((string?)field["type"] ?? "") && (field["options"] as JsonArray)?.Count is null or 0)
 				issues.Add(new($"\"{(string?)field["label"] ?? key}\" has no choices.", BuilderIssue.LayoutStep, field));
 		}
 		issues.AddRange(from item in AllElements()
-										where !IsField(item.Element)
+										where own && !IsField(item.Element)
 										from key in ElementKeys(item.Element).OfType<string>()
 										where !IsKey(key) && !keys.Contains(key)
 										select new BuilderIssue($"The key \"{key}\" is lower-case letters, digits and _.", BuilderIssue.LayoutStep, item.Element));
@@ -336,6 +348,7 @@ public sealed partial class BuilderDraft
 		["slug"] = Slug,
 		["sources"] = new JsonObject(Sources.Select(p => KeyValuePair.Create(p.Key, (JsonNode?)p.Value))),
 		["save"] = new JsonObject(Save.Select(p => KeyValuePair.Create(p.Key, (JsonNode?)p.Value))),
+		["kept_at"] = KeptAt,
 	}.ToJsonString();
 
 	/// <summary>Goes back to a <see cref="Snapshot"/>; false, with nothing changed, when it is not one.</summary>
@@ -344,6 +357,7 @@ public sealed partial class BuilderDraft
 		if (Parse(snapshot) is not JsonObject { } saved || saved["schema"] is not JsonObject schema) return false;
 		Load((JsonObject)schema.DeepClone());
 		Slug = (string?)saved["slug"] ?? string.Empty;
+		KeptAt = (string?)saved["kept_at"];
 		ReadMap(saved["sources"]?.ToJsonString(), Sources);
 		ReadMap(saved["save"]?.ToJsonString(), Save);
 		return true;
@@ -394,7 +408,7 @@ public sealed partial class BuilderDraft
 	{
 		var copy = (JsonObject)Schema.DeepClone();
 		copy["schema_version"] = 1;
-		if (IsForm)
+		if (IsForm && KeptAt is null)
 		{
 			if (copy["actions"] is not JsonObject actions)
 			{

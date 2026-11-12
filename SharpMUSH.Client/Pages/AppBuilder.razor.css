@@ -1,7 +1,10 @@
 /* The builder page and the parts its child components share. Child components render inside .bld-page, so their
    classes are reached with ::deep; what opens in a popover is styled in that component's own file. */
 
+/* .page-solid (shell.css) makes the page opaque and full height, so nothing of a theme's atmosphere drifts under the
+   editor. */
 .bld-page {
+    box-sizing: border-box;
     padding: var(--space-5);
     display: flex;
     flex-direction: column;

@@ -144,6 +144,24 @@
 	height: 100%;
 }
 
+/* A page that wants calm behind it (the application builder) carries .page-solid: it fills the main column with the
+   theme's page colour, so the moving atmosphere stays out of sight behind it however short the page is. */
+.phosphor-page:has(> .kit-section-body > .page-solid) {
+	display: flex;
+	flex-direction: column;
+}
+
+.phosphor-page > .kit-section-body:has(> .page-solid) {
+	flex: 1 0 auto;
+	display: flex;
+	flex-direction: column;
+}
+
+.page-solid {
+	flex: 1 0 auto;
+	background: var(--bg);
+}
+
 /* ── Rail (D1 §3): 72px, one 44×44 icon per section, radius 14; the current one filled
    --surface-2 with an accent icon. Desktop only: touch chrome keeps the drawer and tab bar. ── */
 .phosphor-rail {

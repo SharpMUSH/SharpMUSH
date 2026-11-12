@@ -219,4 +219,33 @@ public class BuilderDraftTests
 		await Assert.That(draft.Problems()).IsEmpty();
 		await Assert.That(draft.PathOf(BuilderDraft.Elements(copy)[2]!.AsObject())).IsEqualTo((0, 1, 2));
 	}
+
+	[Test]
+	public async Task A_stored_document_keeps_its_own_actions_and_where_it_is_kept_through_an_undo()
+	{
+		const string document = """
+			{"kind":"form","schema_version":1,"pages":[{"key":"main","order":1,"sections":[{"name":"","order":1,
+			"elements":[{"kind":"field","key":"name","label":"Name","type":"text","visible_to":"public"}]}]}],
+			"actions":{"submit":{"transport":"http","method":"POST","route":"http/chargen/act","payload":"fields"}}}
+			""";
+		var draft = new BuilderDraft { Slug = "chargen" };
+		await Assert.That(draft.LoadStored(document, null, null, "DATA`CHARGEN`SCHEMA")).IsTrue();
+
+		var stored = draft.Stored();
+		await Assert.That((string?)stored["actions"]!["submit"]!["route"]).IsEqualTo("http/chargen/act");
+		await Assert.That((string?)stored["pages"]![0]!["sections"]![0]!["elements"]![0]!["visible_to"]).IsEqualTo("public");
+		await Assert.That(draft.BaseAttribute).IsEqualTo("DATA`CHARGEN`SCHEMA");
+
+		var restored = new BuilderDraft();
+		await Assert.That(restored.Restore(draft.Snapshot())).IsTrue();
+		await Assert.That(restored.KeptAt).IsEqualTo("DATA`CHARGEN`SCHEMA");
+
+		// The app's own slug and keys are kept as they are, even where the builder would name them otherwise.
+		var named = new BuilderDraft { Slug = "Char.Profile" };
+		named.LoadStored(document.Replace("\"name\"", "\"fullName\""), null, null, "DATA`CHARGEN`SCHEMA");
+		await Assert.That(named.Problems()).IsEmpty();
+
+		restored.Load(new JsonObject());
+		await Assert.That(restored.KeptAt).IsNull();
+	}
 }
