@@ -53,6 +53,9 @@ Copyright 2001 The Silkscreen Project Authors (https://github.com/googlefonts/si
 Copyright 2022 The Gloock Project Authors (https://github.com/Etcetera-Type-Co/Gloock)
 Copyright 2014 Claus Eggers Sørensen (es@forthehearts.net), with Reserved Font Name Inknut Antiqua.
 Copyright 2016 The Saira Project Authors (omnibus.type@gmail.com), with reserved font name "Saira". (Saira Condensed)
+Copyright 2021 The Shippori Mincho Project Authors (https://github.com/fontdasu/ShipporiMincho) (Shippori Mincho B1)
+Copyright 2020 The Hina Mincho Project Authors (https://github.com/satsuyako/Hina-Mincho)
+Copyright 2022 The Zen Project Authors (https://github.com/googlefonts/zen-kakugothic) (Zen Kaku Gothic New)
 
 
 

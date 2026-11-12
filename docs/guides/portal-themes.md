@@ -79,6 +79,9 @@ scroll at once instead of smoothly. A stylesheet that moves something keys it of
 - Chinese history and building: `vermilion-court` (light: a palace hall's gold roofs, red columns and painted beams)
   and `three-realms` (dark: three camps' banners on a ridge over a river, bamboo-slip records, cinnabar seals). Their
   drawings are made for SharpMUSH, never taken from one dynasty's, novel's or game's art.
+- Japan: `torii` (a tunnel of vermilion gates at night), `inkwash` (ink mountains in mist on washi),
+  `modern-japan` (a pale dusk over Fuji, a lattice tower and the city) and `modern-japan-night` (the same city after
+  dark).
 - Colour vision: `protan-dark`, `protan-light`, `deutan-dark`, `deutan-light`, `tritan-dark`, `tritan-light`,
   `mono-dark`, `mono-light`. Phosphor's or Daylight's surfaces and text, with an accent, warning and missing-link
   colour picked for that vision. They draw no grain: their colours reach 4.5:1 against the flat surfaces, and the
@@ -92,7 +95,8 @@ until it reaches 3:1 (primary, muted) or 4.5:1 (the rest) against `bg`. A new bu
 `PortedLayoutThemeTests` fails until it has it. The genres keep MarkupString's genre layout themes. `sharpmush`,
 Phosphor's teal on black, is the game's default `layout_theme`. Every genre
 theme has a texture, a card frame and a title face no other genre uses
-(`ThemeResolverTests.EachGenreHasATextureAndFrameOfItsOwn`); the colour vision themes keep Phosphor's or Daylight's frame and title face, without the grain.
+(`ThemeResolverTests.EachGenreHasATextureAndFrameOfItsOwn`), except that a night version of a theme
+(`modern-japan-night`) keeps its day theme's title face; the colour vision themes keep Phosphor's or Daylight's frame and title face, without the grain.
 
 ### How the colour vision sets were picked
 
@@ -198,22 +202,28 @@ first choice of each, which is how the portal looked before they existed:
 - **Current line** (`selection`): how the current page in a menu is marked. `standard` (each menu's own mark: a glowing bar in the
   main menu, a raised row in a section's sidebar), `bar` (a squared block in the text colour), `skew` (a slanted accent plate), `halo` (a pool of light behind the
   words), `brackets` (corner ticks), `lift` (a raised, tilted card), `stroke` (a brush stroke under the words), `lantern` (a small lantern hung
-  beside the line and a rule under it), `pennant` (a swallowtail flag on a pole behind the line). The
+  beside the line and a rule under it), `pennant` (a swallowtail flag on a pole behind the line), `gate` (a beam over the line on two
+  posts), `wash` (a pale ink smear), `platform` (a block in the text colour with a line-coloured edge). The
   rules set the `--select-*` variables that `.phosphor-nav-link.active` in `shell.css` and `.kit-row--current` in
   `Kit/SidebarRow.razor.css` read.
 - **Buttons** (`buttons`): the cut of the portal's capsule buttons and MudBlazor's filled and outlined ones, and how
   each looks pressed. `standard`, `skew` (slides into its shadow), `keycap` (a thick base it sinks into), `notch` (two
   corners cut), `bar` (square ends, spaced capitals), `brush` (a painted shape that tips), `plaque` (a name board with pointed ends and a
   thick foot it sinks into), `seal` (a square-cut chop with a double rim that stamps down, tilted), `capsule` (round and ringed,
-  on a thick lip that flattens when pressed), `console` (corners cut, lit from inside in `accent-3` when pressed). The rules set the
-  `--button-*` variables that `Kit/CapsuleButton.razor.css` and `shell.css` read.
+  on a thick lip that flattens when pressed), `console` (corners cut, lit from inside in `accent-3` when pressed),
+  `lacquer` (vermilion lacquer with a black lip and a grain), `ink` (an arched dry-brush stroke that soaks wider when
+  pressed), `pill` (a rounded plate that rings like a ticket gate). The rules set the `--button-*` variables that
+  `Kit/CapsuleButton.razor.css` and `shell.css` read, among them the capsule's fills (`--button-fill`,
+  `--button-press-fill`, `--button-plain-fill`) and the mask of a stroke drawn behind its words (`--button-stroke`).
 - **Card material** (`material`): what cards are made of, under their frame. `solid`, `glass` (blurs the page behind
-  it), `hologram` (accent light and scanlines), `veil` (fades out at the sides), `cardstock`, `felt`, `wood`, `lcd` (a fine dot grid, as a handheld's screen), `silk` (a fine
-  weave), `bamboo` (the seams of bound slips). It sets
+  it), `hologram` (accent light and scanlines), `veil` (fades out at the sides), `cardstock`, `felt`, `wood`, `lcd` (a
+  fine dot grid, as a handheld's screen), `silk` (a fine weave), `bamboo` (the seams of bound slips), `lacquer` (black
+  lacquer with a soft sheen), `washi` (paper fibre). It sets
   `--card-material`, the fill under `--card-marks`, and `--card-backdrop`.
 - **Meters** (`meters`): MudBlazor's progress bars, such as a loading or import bar. `bar`, `segmented`, `slanted`, `pips`,
   `hairline`, `vital` (fat and ringed; a sheet's stat bar turns the warning colour under half and the danger colour
-  under a fifth), `abacus` (beads on a rod), `arrows` (a row of arrows).
+  under a fifth), `abacus` (beads on a rod), `arrows` (a row of arrows), `brush` (a tapering ink stroke), `route` (stops
+  on a line, as on a rail map).
 - **Motion** (`motion`): how cards and menu lines arrive and what loops. `calm` (fades only), `still` (nothing moves,
   not even the atmosphere), `snappy` (cards rise, menu lines slide in), `drift` (the background drifts slowly),
   `wobble` (cards are dealt in, the current line floats and tilts), `bob` (the current line bobs), `unfurl` (cards open downward like a scroll). Arrivals use
@@ -222,7 +232,7 @@ first choice of each, which is how the portal looked before they existed:
 - **Atmosphere** (`atmosphere`): a layer `ThemeTexture` draws over the texture and under the page. `none`,
   `vignette`, `fog`, `embers`, `motes`, `crt` (dark corners and scanlines), `slashes`, `datastream` (thin trails of
   `accent-3` and `accent-2` falling far behind the page), `sky-lanterns` (a few lanterns rising slowly), `smoke` (low smoke
-  drifting across). Its colours are the theme's.
+  drifting across), `petals` (blossom falling). Its colours are the theme's.
 
 A component that shows a picture put in the game marks its `<img>` `game-picture` (the wiki's Markdown marks its own
 `wiki-img`); `shell.css` gives both `filter: var(--image-filter)`.

@@ -44,7 +44,7 @@ public static class LayoutThemes
 	/// <c>text-faint</c>, then the status colours the portal works out for the theme (success, <c>warn</c>, danger and
 	/// info). A colour that did not stand out from the background enough for its role was moved toward white on a dark
 	/// theme, black on a light one, until it did. Subtle, link, highlight and the hues are worked out from those
-	/// (<see cref="ThemePalette.Completed()"/>). <c>directive</c>, <c>directive-light</c> and the themes styled on games (<c>heart-realm</c> to <c>wasteland</c>, <c>archivist</c> to <c>data-partner</c>, <c>vermilion-court</c> and <c>three-realms</c>)
+	/// (<see cref="ThemePalette.Completed()"/>). <c>directive</c>, <c>directive-light</c> and the themes styled on games (<c>heart-realm</c> to <c>wasteland</c>, <c>archivist</c> to <c>modern-japan-night</c>)
 	/// also carry a look: their own border, title ornaments, bullet and gauge.
 	/// </summary>
 
@@ -201,6 +201,26 @@ public static class LayoutThemes
 		{
 			Border = "heavy", TitleOpen = "┫ ▣ ", TitleClose = " ▣ ┣", Guide = "heavy", Bullet = "▸",
 			GaugeOpen = "[", GaugeFilled = "↑", GaugeEmpty = "·", GaugeClose = "]", Rule = "━",
+		}),
+		Ported("torii", ThemeMode.Dark, ["#0c0909", "#1e1613", "#f2e8da", "#e8553a", "#e6b05a", "#9fbf8c", "#a99a88", "#8fbf7a", "#f09a5a", "#ff9580", "#7fa6c4"], new ThemeLook
+		{
+			Border = "heavy", TitleOpen = "┫ ◆ ", TitleClose = " ◆ ┣", Guide = "heavy", Bullet = "◆",
+			GaugeOpen = "[", GaugeFilled = "■", GaugeEmpty = "□", GaugeClose = "]", Rule = "━",
+		}),
+		Ported("inkwash", ThemeMode.Light, ["#efe9dc", "#f6f1e7", "#1b1a17", "#b8361f", "#1b1a17", "#2f5562", "#5a554c", "#2f6b2a", "#8a5a00", "#a3261a", "#2b5a8a"], new ThemeLook
+		{
+			Border = "single", TitleOpen = "─ ○ ", TitleClose = " ─", Guide = "line", Bullet = "·",
+			GaugeOpen = "[", GaugeFilled = "━", GaugeEmpty = "╌", GaugeClose = "]", Rule = "─",
+		}),
+		Ported("modern-japan", ThemeMode.Light, ["#eef1f8", "#f2f4fa", "#121b2b", "#b5321b", "#1d7a46", "#2563a6", "#4a5568", "#1d7a46", "#8a5200", "#b0261a", "#2563a6"], new ThemeLook
+		{
+			Border = "rounded", TitleOpen = "╡ ● ", TitleClose = " ╞", Guide = "rounded", Bullet = "●",
+			GaugeOpen = "[", GaugeFilled = "●", GaugeEmpty = "○", GaugeClose = "]", Rule = "─",
+		}),
+		Ported("modern-japan-night", ThemeMode.Dark, ["#0b1022", "#1a213c", "#eef1fa", "#ff6a3d", "#4fd18b", "#6aa8ff", "#98a2be", "#4fd18b", "#ffb454", "#ff8a7a", "#6aa8ff"], new ThemeLook
+		{
+			Border = "rounded", TitleOpen = "╡ ● ", TitleClose = " ╞", Guide = "rounded", Bullet = "●",
+			GaugeOpen = "[", GaugeFilled = "●", GaugeEmpty = "○", GaugeClose = "]", Rule = "─",
 		}),
 		Ported("protan-dark", ThemeMode.Dark, ["#0e0f11", "#1c1f23", "#e9edf0", "#a8e8fa", "#e9edf0", "#f2ef0a", "#7d8790", "#2ca1c1", "#f2ef0a", "#f58b28", "#9f5efe"]),
 		Ported("protan-light", ThemeMode.Light, ["#f3f4f6", "#eef0f3", "#14181c", "#1b729b", "#14181c", "#876c00", "#5f6872", "#0d155a", "#876c00", "#612f08", "#5801f5"]),

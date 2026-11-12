@@ -209,7 +209,12 @@ public class ThemeResolverTests
 
 		await Assert.That(genres.Select(s => s[ThemeStyles.Texture]).Distinct().Count()).IsEqualTo(genres.Count);
 		await Assert.That(genres.Select(s => s[ThemeStyles.Frame]).Distinct().Count()).IsEqualTo(genres.Count);
-		await Assert.That(genres.Select(s => s[ThemeStyles.FontDisplay]).Distinct().Count()).IsEqualTo(genres.Count);
+		// Directive Light and a night version keep their other theme's title face.
+		var faces = BuiltInThemes.All.Skip(2)
+			.Where(t => ThemeVision.Of(t.Tokens) == ThemeVision.Typical && t != BuiltInThemes.DirectiveLight && t != BuiltInThemes.ModernJapanNight)
+			.Select(t => ThemeResolver.Complete(t.Tokens).Style[ThemeStyles.FontDisplay])
+			.ToList();
+		await Assert.That(faces.Distinct().Count()).IsEqualTo(faces.Count);
 	}
 
 	[Test]

@@ -41,6 +41,10 @@
 	to { background-position: 100% 0%; }
 }
 
+@keyframes theme-petals {
+	from { background-position: 0 0; }
+	to { background-position: -360px 420px; }
+}
 @keyframes theme-ascend {
 	from { background-position: 0 0; }
 	to { background-position: 40px -340px; }
@@ -225,4 +229,14 @@
 		radial-gradient(24% 10% at 90% 92%, color-mix(in srgb, var(--text-faint) 14%, transparent), transparent);
 	--atmosphere-size: 200% 100%;
 	--atmosphere-motion: theme-pan 80s ease-in-out infinite alternate;
+}
+
+/* Petals: a few blossom petals falling and drifting left, in a pale mix of the accent; the moving layer only. */
+[data-atmosphere="petals"] {
+	--atmosphere-still: none;
+	--atmosphere-moving: radial-gradient(ellipse 4px 2.5px at 18% 22%, color-mix(in srgb, var(--accent) 35%, #fff) 0 80%, transparent),
+		radial-gradient(ellipse 3px 2px at 64% 58%, color-mix(in srgb, var(--accent) 28%, #fff) 0 80%, transparent),
+		radial-gradient(ellipse 3.5px 2px at 38% 86%, color-mix(in srgb, var(--accent) 40%, #fff) 0 80%, transparent);
+	--atmosphere-size: 360px 420px;
+	--atmosphere-motion: theme-petals 28s linear infinite;
 }

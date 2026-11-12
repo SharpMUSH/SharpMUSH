@@ -395,3 +395,24 @@
 	--title-shadow: -0.05em 0 0 color-mix(in srgb, var(--accent-2) 70%, transparent), 0.05em 0 0 color-mix(in srgb, var(--link-missing) 45%, transparent),
 		0 0 14px color-mix(in srgb, var(--accent) 30%, transparent);
 }
+
+/* Shimenawa: no glyphs, and a twisted straw rope of the second accent under the title. */
+[data-ornament-underline="shimenawa"] {
+	--title-underline: repeating-linear-gradient(120deg, var(--accent-2) 0 4px, color-mix(in srgb, var(--accent-2) 45%, transparent) 4px 7px);
+	--title-underline-height: 6px;
+	--title-underline-pad: 9px;
+}
+/* Enso: an ink circle before, and a brush stroke that thins out under the title. */
+[data-ornament-glyphs="enso"] { --ornament-before: "\25EF"; --ornament-after: none; }
+[data-ornament-underline="enso"] {
+	--title-underline: linear-gradient(90deg, var(--text), var(--text) 40%, color-mix(in srgb, var(--text) 70%, transparent) 75%, transparent);
+	--title-underline-height: 4px;
+	--title-underline-pad: 10px;
+}
+/* Station: a stop on the line before, and the line's stripe in the second accent ending in the accent. */
+[data-ornament-glyphs="station"] { --ornament-before: "\25CF"; --ornament-after: none; }
+[data-ornament-underline="station"] {
+	--title-underline: linear-gradient(90deg, var(--accent-2) 0 78%, var(--accent) 78%);
+	--title-underline-height: 4px;
+	--title-underline-pad: 8px;
+}
