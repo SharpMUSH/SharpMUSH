@@ -16,7 +16,7 @@ using SharpMUSH.Tests.BUnit.Resources;
 namespace SharpMUSH.Tests.BUnit.Pages;
 
 /// <summary>One character with the given look, and the appearance it was last sent.</summary>
-internal sealed class LookApiHandler(string? themeId, string? accent) : HttpMessageHandler
+internal sealed class LookApiHandler(string? themeId, string? accent, bool acting = true) : HttpMessageHandler
 {
 	public CharacterAppearance? Sent { get; private set; }
 
@@ -29,7 +29,7 @@ internal sealed class LookApiHandler(string? themeId, string? accent) : HttpMess
 			{
 				Content = JsonContent.Create(new[]
 				{
-					new { DbrefNumber = 7, CreationTime = 1L, Name = "Iris", Flags = "PLAYER", IsActing = true, ThemeId = themeId, Accent = accent, Vision = (string?)null },
+					new { DbrefNumber = 7, CreationTime = 1L, Name = "Iris", Flags = "PLAYER", IsActing = acting, ThemeId = themeId, Accent = accent, Vision = (string?)null },
 				}),
 			};
 		}
@@ -52,10 +52,10 @@ public class SettingsThemePickerTests : TrackingBunitContext
 {
 	private readonly IThemeService _themes = Substitute.For<IThemeService>();
 
-	private LookApiHandler Seed(string? themeId = null, string? accent = null)
+	private LookApiHandler Seed(string? themeId = null, string? accent = null, bool acting = true)
 	{
 		this.AddAuthorization().SetAuthorized("headwiz");
-		var handler = new LookApiHandler(themeId, accent);
+		var handler = new LookApiHandler(themeId, accent, acting);
 		var client = Track(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(client);
@@ -113,7 +113,7 @@ public class SettingsThemePickerTests : TrackingBunitContext
 	[Test]
 	public async Task TryingAThemePaintsThePortalWithoutSaving()
 	{
-		var handler = Seed();
+		var handler = Seed(acting: false);
 		var cut = Render<SettingsTheme>();
 		await cut.WaitForElement($"{Option(BuiltInThemes.DaylightId)} .settings-theme-try").ClickAsync(new());
 
@@ -132,7 +132,7 @@ public class SettingsThemePickerTests : TrackingBunitContext
 	[Test]
 	public async Task KeepingATriedThemeSavesIt()
 	{
-		var handler = Seed();
+		var handler = Seed(acting: false);
 		var cut = Render<SettingsTheme>();
 		await cut.WaitForElement($"{Option(BuiltInThemes.DaylightId)} .settings-theme-try").ClickAsync(new());
 		await cut.Find(".settings-theme-keep").ClickAsync(new());
@@ -145,7 +145,7 @@ public class SettingsThemePickerTests : TrackingBunitContext
 	[Test]
 	public async Task LeavingThePageStopsTheTrial()
 	{
-		Seed();
+		Seed(acting: false);
 		var cut = Render<SettingsTheme>();
 		await cut.WaitForElement($"{Option(BuiltInThemes.DaylightId)} .settings-theme-try").ClickAsync(new());
 

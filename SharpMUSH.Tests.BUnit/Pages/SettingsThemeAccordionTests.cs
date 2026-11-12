@@ -124,4 +124,18 @@ public class SettingsThemeAccordionTests : TrackingBunitContext
 			await Assert.That(swatch.GetAttribute("data-reduce-motion")).IsEqualTo("on");
 		}
 	}
+
+	[Test]
+	public async Task OnlyOtherCharactersOfferTryIt()
+	{
+		// The portal wears the acting character's look, so choosing a theme for it already shows it.
+		Seed();
+		var cut = Render<SettingsTheme>();
+		cut.WaitForElement(Body(7));
+		await Assert.That(cut.FindAll($"{Body(7)} .settings-theme-try")).IsEmpty();
+
+		await cut.Find(Head(8)).ClickAsync(new());
+
+		await Assert.That(cut.FindAll($"{Body(8)} .settings-theme-try").Count).IsEqualTo(BuiltInThemes.All.Count(t => t.Published) + 1);
+	}
 }

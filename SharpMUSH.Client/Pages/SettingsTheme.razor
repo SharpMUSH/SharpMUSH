@@ -260,6 +260,7 @@
 
     // A theme as a small page in it, named under the picture, with "Try it" beside the name. The radio is the picture
     // and the name; "Try it" is a button of its own after it, so arrow keys move between themes and Tab reaches it.
+    // The character being played has no "Try it": the portal wears its look, so choosing a theme already shows it.
     private RenderFragment ThemeChoice(AccountAuthService.CharacterSummary character, string? themeId, string label, bool busy) => __builder =>
     {
         var on = character.ThemeId == themeId;
@@ -272,11 +273,14 @@
                 <ThemePreview Theme="theme" Still="true" />
                 <span class="settings-theme-choice-name">@label</span>
             </button>
-            <button type="button" class="settings-theme-try" aria-pressed="@(trying ? "true" : "false")"
-                    aria-label="@Loc["NavThemeTryNamed", label]" disabled="@busy" @onclick="() => Try(character, themeId)">
-                <MudIcon Icon="@Icons.Material.Outlined.Visibility" Size="Size.Small" aria-hidden="true" />
-                <span>@Loc["NavThemeTry"]</span>
-            </button>
+            @if (!character.IsActing)
+            {
+                <button type="button" class="settings-theme-try" aria-pressed="@(trying ? "true" : "false")"
+                        aria-label="@Loc["NavThemeTryNamed", label]" disabled="@busy" @onclick="() => Try(character, themeId)">
+                    <MudIcon Icon="@Icons.Material.Outlined.Visibility" Size="Size.Small" aria-hidden="true" />
+                    <span>@Loc["NavThemeTry"]</span>
+                </button>
+            }
         </div>
     };
 
