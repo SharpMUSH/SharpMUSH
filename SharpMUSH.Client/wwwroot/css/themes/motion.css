@@ -46,6 +46,11 @@
 	to { background-position: 40px -340px; }
 }
 
+@keyframes theme-fall {
+	from { background-position: 0 0; }
+	to { background-position: 0 360px; }
+}
+
 @keyframes theme-lantern-rise {
 	from { background-position: 0 0; }
 	to { background-position: 0 -560px; }
@@ -190,6 +195,16 @@
 		transparent 60% 66%, color-mix(in srgb, var(--text) 8%, transparent) 66% 66.5%, transparent 66.5%);
 	--atmosphere-moving: none;
 	--atmosphere-motion: none;
+}
+
+/* Datastream: thin trails of accent-3 and accent-2 falling far behind the page, as data streaming past a screen. */
+[data-atmosphere="datastream"] {
+	--atmosphere-still: none;
+	--atmosphere-moving: radial-gradient(1px 46px at 12% 30%, color-mix(in srgb, var(--accent-3) 45%, transparent), transparent),
+		radial-gradient(1px 30px at 47% 70%, color-mix(in srgb, var(--accent-3) 35%, transparent), transparent),
+		radial-gradient(1px 60px at 81% 45%, color-mix(in srgb, var(--accent-2) 30%, transparent), transparent);
+	--atmosphere-size: 220px 360px;
+	--atmosphere-motion: theme-fall 9s linear infinite;
 }
 
 /* Sky lanterns: a few small paper lanterns in the warning colour, lit from inside, rising slowly over a warm glow. */
