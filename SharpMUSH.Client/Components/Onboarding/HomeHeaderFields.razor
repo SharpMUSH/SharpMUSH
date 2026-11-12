@@ -1,0 +1,141 @@
+@using SharpMUSH.Client.Pages.Admin.Config
+@using SharpMUSH.Library.API
+@using SharpMUSH.Library.Models.Portal.Onboarding
+@inject IStringLocalizer<SharedResource> Loc
+@inject ConfigSchemaService SchemaService
+@inject AdminConfigService AdminConfigService
+
+@* The header at the top of Home, in the identity step: the Cosmetic options it shows (portal_logo, portal_banner,
+   portal_tagline, portal_description, portal_side_art, portal_sharpie), edited with the same rows as their
+   configuration page, over a preview of the card as it will look. The identity form saves them with its own
+   values (SaveAsync). *@
+<section class="home-header" aria-labelledby="home-header-heading">
+    <h3 id="home-header-heading">@Loc["AdmHomeHeaderHeading"]</h3>
+    <p>@Loc["AdmHomeHeaderIntro"] <a href="@($"/admin/config/Cosmetic#{ConfigNaming.GroupAnchor("Portal")}")" target="_blank" rel="noopener">@Loc["AdmHomeHeaderConfigLink"]</a>.</p>
+    @if (_error is not null)
+    {
+        <p role="alert">@_error</p>
+    }
+    else if (!_loaded)
+    {
+        <p role="status">@Loc["AdmHomeHeaderLoading"]</p>
+    }
+    else
+    {
+        <div class="home-header-fields">
+            @foreach (var property in _properties)
+            {
+                <ConfigFieldRow Property="property" Draft="_draft" OnChanged="Changed" />
+            }
+        </div>
+        <section class="home-header-preview" aria-label="@Loc["AdmHomeHeaderPreview"]">
+            <p class="home-header-preview-label">@Loc["AdmHomeHeaderPreview"]</p>
+            <GameHeroCard Identity="PreviewIdentity" Sharpie="Sharpie" Logo="@Text(LogoPath)" />
+        </section>
+    }
+</section>
+
+@code {
+    /// <summary>The game's name as the identity form holds it.</summary>
+    [Parameter]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Sharpie for the genre and style the identity form holds; null for none.</summary>
+    [Parameter]
+    public SharpieArt? Sharpie { get; set; }
+
+    /// <summary>Raised after an edit, so the form can mark itself unsaved.</summary>
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private const string LogoPath = "Cosmetic.PortalLogo";
+    private const string BannerPath = "Cosmetic.PortalBanner";
+    private const string TaglinePath = "Cosmetic.PortalTagline";
+    private const string DescriptionPath = "Cosmetic.PortalDescription";
+    private const string SideArtPath = "Cosmetic.PortalSideArt";
+    private const string SharpiePath = "Cosmetic.PortalSharpie";
+
+    /// <summary>The options the header shows, by path, in the order the form lists them.</summary>
+    public static readonly string[] Options = [LogoPath, BannerPath, TaglinePath, DescriptionPath, SideArtPath, SharpiePath];
+
+    private readonly ConfigDraft _draft = new();
+    private List<PropertyMetadata> _properties = [];
+    private bool _loaded;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        switch (await SchemaService.GetSchemaAsync())
+        {
+            case ConfigurationSchema schema:
+                await LoadValuesAsync(schema);
+                break;
+            case ApiFailure failure:
+                _error = Loc["AdmHomeHeaderLoadFailed", failure.Message].Value;
+                break;
+        }
+    }
+
+    private async Task LoadValuesAsync(ConfigurationSchema schema)
+    {
+        var byPath = schema.Properties.Values.ToDictionary(property => property.Path, StringComparer.OrdinalIgnoreCase);
+        _properties = Options.Select(path => byPath.GetValueOrDefault(path)).OfType<PropertyMetadata>().ToList();
+        switch (await AdminConfigService.FetchConfigurationFromServer())
+        {
+            case ConfigurationResponse response:
+                _draft.Load(_properties, response.Configuration);
+                _loaded = true;
+                break;
+            case ApiFailure failure:
+                _error = Loc["AdmHomeHeaderLoadFailed", failure.Message].Value;
+                break;
+        }
+    }
+
+    private Task Changed() => OnChanged.InvokeAsync();
+
+    private string Text(string path) =>
+        _properties.FirstOrDefault(property => property.Path == path) is { } property ? _draft.String(property) : string.Empty;
+
+    private bool Switch(string path) =>
+        _properties.FirstOrDefault(property => property.Path == path) is not { } property || _draft.Bool(property);
+
+    private static string? NonEmpty(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    /// <summary>The header as the edited values draw it.</summary>
+    private GameIdentity PreviewIdentity => new(
+        string.IsNullOrWhiteSpace(Name) ? Loc["GuideIdentityYourGame"].Value : Name.Trim(),
+        NonEmpty(Text(BannerPath)), NonEmpty(Text(TaglinePath)), NonEmpty(Text(DescriptionPath)),
+        NonEmpty(Text(SideArtPath)), Switch(SharpiePath));
+
+    /// <summary>
+    /// Saves the edited options, if any. Answers null once they are saved, else why not; a refused value is also
+    /// marked beside its field, as the configuration page marks it.
+    /// </summary>
+    public async Task<string?> SaveAsync()
+    {
+        if (!_loaded) return null;
+        _draft.ClearErrors();
+        var changes = _draft.Changes();
+        if (changes.Count == 0) return null;
+        return await AdminConfigService.UpdateConfigAsync(changes) switch
+        {
+            ConfigurationResponse => Saved(changes.Keys),
+            ConfigSaveRefusal refusal => Refused(refusal),
+            ApiFailure failure => string.Format(Loc["SaveFailed"].Value, failure.Message)
+        };
+    }
+
+    private string? Saved(IEnumerable<string> paths)
+    {
+        _draft.MarkSaved(paths);
+        return null;
+    }
+
+    private string Refused(ConfigSaveRefusal refusal)
+    {
+        _draft.SetErrors(refusal.Fields, Loc["ResInvalid"].Value);
+        var messages = string.Join(' ', refusal.Messages.Select(message => message ?? Loc["ResValidationFailed"].Value));
+        return messages.Length > 0 ? messages : Loc["ResValidationFailed"].Value;
+    }
+}

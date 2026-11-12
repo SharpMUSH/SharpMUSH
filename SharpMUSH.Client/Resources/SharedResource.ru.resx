@@ -7857,16 +7857,8 @@
     <value>Это руководство всегда доступно в разделе «Справка».</value>
     <comment>MT</comment>
   </data>
-  <data name="GuideIdentityAppearance" xml:space="preserve">
-    <value>настройках оформления</value>
-    <comment>MT — link text completing GuideIdentityArtworkHint; prepositional case</comment>
-  </data>
   <data name="GuideIdentityArtFallback" xml:space="preserve">
     <value>Показан стандартный Sharpie, пока нет иллюстраций для выбранного стиля и жанра.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="GuideIdentityArtworkHint" xml:space="preserve">
-    <value>Игроки могут уменьшить или скрыть иллюстрации. Логотип игры настраивается отдельно в</value>
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityCharacterPage" xml:space="preserve">

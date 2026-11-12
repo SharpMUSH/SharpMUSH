@@ -11,7 +11,7 @@ namespace SharpMUSH.Configuration.Options;
 /// </remarks>
 [method: JsonConstructor]
 public record NetOptions(
-	[property: SharpConfig(Name = "mud_name", Category = "Net", Description = "Name of your MUSH as displayed to players", Group = "General", Order = 1)]
+	[property: SharpConfig(Name = "mud_name", Category = "Net", Description = "Name of your MUSH as displayed to players", Group = "General", Order = 1, Example = "Ravenmoor")]
 	string MudName,
 
 	[property: SharpConfig(Name = "mud_url", Category = "Net", Description = "Web address of your MUSH for browser redirects, and where MXP and Pueblo clients fetch the game's pictures. Setup fills it in", Group = "General", Order = 2)]

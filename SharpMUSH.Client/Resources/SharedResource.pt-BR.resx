@@ -7857,17 +7857,9 @@
     <value>Você sempre encontra este guia em Ajuda.</value>
     <comment>MT</comment>
   </data>
-  <data name="GuideIdentityAppearance" xml:space="preserve">
-    <value>configurações de aparência</value>
-    <comment>MT — link text completing GuideIdentityArtworkHint</comment>
-  </data>
   <data name="GuideIdentityArtFallback" xml:space="preserve">
     <value>Mostrando o Sharpie padrão até haver ilustrações para o estilo e o gênero escolhidos.</value>
     <comment>MT</comment>
-  </data>
-  <data name="GuideIdentityArtworkHint" xml:space="preserve">
-    <value>Os jogadores podem reduzir ou ocultar as ilustrações. O logotipo do seu jogo fica à parte, em</value>
-    <comment>MT — fragment; followed by the 'appearance settings' link</comment>
   </data>
   <data name="GuideIdentityCharacterPage" xml:space="preserve">
     <value>Página wiki do guia de personagens</value>

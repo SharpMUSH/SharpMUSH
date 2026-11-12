@@ -1001,6 +1001,15 @@ image_hosts any
 # link previews use onboarding_introduction.
 # portal_description Players run the guilds of a rain-soaked city.
 
+# A picture at the right of the game's name on the portal's Home page,
+# such as the game's mascot or crest. Empty shows Sharpie, drawn for the
+# game's genre, when portal_sharpie is on and there is no banner.
+# portal_side_art /api/wiki-assets/<id>/mascot.png
+
+# Whether Home shows Sharpie, the guide's mascot, at the right of the
+# game's name when portal_side_art and portal_banner are empty.
+portal_sharpie yes
+
 # Should object names be restricted to just ascii characters, or can
 # non-ascii (Accented letters, for example) be used as well if the
 # mush'es locale permits? Not reccomended except for

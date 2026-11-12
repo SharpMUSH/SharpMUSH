@@ -7857,17 +7857,9 @@
     <value>Ovaj vodič uvijek možete pronaći u Pomoći.</value>
     <comment>MT</comment>
   </data>
-  <data name="GuideIdentityAppearance" xml:space="preserve">
-    <value>postavkama izgleda</value>
-    <comment>MT — locative case: completes GuideIdentityArtworkHint ("... u") as link text</comment>
-  </data>
   <data name="GuideIdentityArtFallback" xml:space="preserve">
     <value>Prikazuje se zadani Sharpie dok ne budu dostupne ilustracije za odabrani stil i žanr.</value>
     <comment>MT</comment>
-  </data>
-  <data name="GuideIdentityArtworkHint" xml:space="preserve">
-    <value>Igrači mogu smanjiti ili sakriti ilustracije. Logotip vaše igre ostaje zaseban u</value>
-    <comment>MT — sentence fragment; followed by the GuideIdentityAppearance link</comment>
   </data>
   <data name="GuideIdentityCharacterPage" xml:space="preserve">
     <value>Wiki stranica vodiča za likove</value>

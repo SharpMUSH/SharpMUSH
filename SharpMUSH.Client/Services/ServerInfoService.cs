@@ -17,7 +17,8 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 {
 	public record ServerInfoResponse(bool GuestsEnabled, string MudName, IReadOnlyList<string>? Features = null,
 		string? BuildId = null, string? ImageHosts = null, string? ImageHostList = null, string? Logo = null,
-		OnboardingPresentation? Onboarding = null, string? Banner = null, string? Tagline = null, string? Description = null);
+		OnboardingPresentation? Onboarding = null, string? Banner = null, string? Tagline = null, string? Description = null,
+		string? SideArt = null, bool Sharpie = true);
 
 	public virtual async Task<OnboardingPresentation?> OnboardingAsync() => (await FetchAsync()).Onboarding;
 
@@ -98,13 +99,15 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 	public virtual async Task<string?> CurrentBuildIdAsync() => (await FetchCoreAsync())?.BuildId;
 
 	/// <summary>
-	/// The game's identity in the portal (<c>portal_banner</c>, <c>portal_tagline</c>, <c>portal_description</c>):
-	/// each null when it is empty. On a fetch failure all three are null.
+	/// The game's identity in the portal (<c>portal_banner</c>, <c>portal_tagline</c>, <c>portal_description</c>,
+	/// <c>portal_side_art</c>, <c>portal_sharpie</c>): each picture or text null when it is empty. On a fetch failure
+	/// they are all null and Sharpie is on.
 	/// </summary>
 	public virtual async Task<GameIdentity> IdentityAsync()
 	{
 		var info = await FetchAsync();
-		return new(info.MudName, NonEmpty(info.Banner), NonEmpty(info.Tagline), NonEmpty(info.Description));
+		return new(info.MudName, NonEmpty(info.Banner), NonEmpty(info.Tagline), NonEmpty(info.Description),
+			NonEmpty(info.SideArt), info.Sharpie);
 	}
 
 	private static string? NonEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
@@ -165,6 +168,8 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 		|| before.Banner != now.Banner
 		|| before.Tagline != now.Tagline
 		|| before.Description != now.Description
+		|| before.SideArt != now.SideArt
+		|| before.Sharpie != now.Sharpie
 		|| before.Onboarding != now.Onboarding
 		|| !(before.Features ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(now.Features ?? []);
 
@@ -177,5 +182,9 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 	}
 }
 
-/// <summary>What the portal shows as the game's own face: its name, and its banner, tagline and description when set.</summary>
-public sealed record GameIdentity(string Name, string? Banner, string? Tagline, string? Description);
+/// <summary>
+/// What the portal shows as the game's own face: its name, and its banner, tagline, description and side picture when
+/// set, and whether Home may show Sharpie when there is no side picture.
+/// </summary>
+public sealed record GameIdentity(string Name, string? Banner, string? Tagline, string? Description,
+	string? SideArt = null, bool Sharpie = true);

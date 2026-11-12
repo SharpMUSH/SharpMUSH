@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Bunit;
 using MudBlazor;
 using MudBlazor.Services;
@@ -18,6 +19,12 @@ public class SetupIdentityTests : BunitContext
 	public SetupIdentityTests()
 	{
 		Services.AddMudServices();
+		Services.AddLogging();
+		// The Home header options in the form read and write the configuration through these.
+		Services.AddSingleton<AdminConfigService>();
+		Services.AddSingleton<ConfigSchemaService>();
+		Services.AddSingleton<WikiAssetService>();
+		AddAuthorization().SetAuthorized("staff");
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -56,8 +63,27 @@ public class SetupIdentityTests : BunitContext
 		public OnboardingSettings Settings = new("Imported world", ["Fantasy"], ["High Fantasy"], "An existing introduction", "", "", "", "chibi", "");
 		public OnboardingSettings? SaveResponse;
 		public bool FailNextSave;
+		/// <summary>The configuration api/configuration answers with.</summary>
+		public readonly SharpMUSHOptions Options = SharpMUSHOptions.Default();
+		/// <summary>The changes each configuration save sent, in order.</summary>
+		public readonly List<Dictionary<string, JsonElement>> ConfigSaves = [];
+		/// <summary>Whether a configuration save is refused, as the server refuses an invalid value.</summary>
+		public bool RefuseConfig;
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
+			if (request.RequestUri!.AbsolutePath == "/api/configuration")
+			{
+				if (request.Method == HttpMethod.Patch)
+				{
+					ConfigSaves.Add((await request.Content!.ReadFromJsonAsync<Dictionary<string, JsonElement>>(cancellationToken))!);
+					if (RefuseConfig)
+						return new(HttpStatusCode.BadRequest)
+						{
+							Content = JsonContent.Create(new { errors = new Dictionary<string, string> { ["Cosmetic.PortalSideArt"] = "Not a picture address." } })
+						};
+				}
+				return new(HttpStatusCode.OK) { Content = JsonContent.Create(SharpMUSH.Library.API.OptionHelper.OptionsToConfigurationResponse(Options)) };
+			}
 			var result = Settings;
 			if (request.Method == HttpMethod.Put)
 			{
@@ -329,4 +355,48 @@ public class SetupIdentityTests : BunitContext
 		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "Blazor._internal.domWrapper.focus")).IsEqualTo(0);
 	}
 
+
+	[Test]
+	public async Task HomeHeaderOptionsShowExamplesPreviewAndSaveWithTheIdentity()
+	{
+		using var handler = new Handler();
+		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
+		Services.AddSingleton<ServerInfoService>();
+		Services.AddLocalization();
+		var form = RenderForm();
+		var tagline = form.WaitForElement("input[name='Cosmetic.PortalTagline']");
+		// An empty field shows the option's example, greyed.
+		await Assert.That(tagline.GetAttribute("placeholder")).IsEqualTo("Gaslight intrigue in a city that never sleeps.");
+		await Assert.That(form.FindAll("[data-config-option]").Select(row => row.GetAttribute("data-config-option")))
+			.IsEquivalentTo(SharpMUSH.Client.Components.Onboarding.HomeHeaderFields.Options, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await tagline.ChangeAsync("Rain, guilds and secrets.");
+		await Assert.That(form.Find(".home-header-preview .game-hero-tagline").TextContent).IsEqualTo("Rain, guilds and secrets.");
+		await Assert.That(handler.ConfigSaves.Count).IsEqualTo(0);
+		await form.Find(".identity-save").ClickAsync();
+		await Assert.That(handler.Writes).IsEqualTo(1);
+		await Assert.That(handler.ConfigSaves.Count).IsEqualTo(1);
+		await Assert.That(handler.ConfigSaves[0].Keys).IsEquivalentTo(new[] { "Cosmetic.PortalTagline" });
+		await Assert.That(handler.ConfigSaves[0]["Cosmetic.PortalTagline"].GetString()).IsEqualTo("Rain, guilds and secrets.");
+		// Saved: a second save sends the identity again but no unchanged option.
+		await form.Find(".identity-save").ClickAsync();
+		await Assert.That(handler.ConfigSaves.Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task ARefusedHeaderOptionLeavesTheIdentityUnsaved()
+	{
+		using var handler = new Handler { RefuseConfig = true };
+		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
+		Services.AddSingleton<ServerInfoService>();
+		Services.AddLocalization();
+		var form = RenderForm();
+		var tagline = form.WaitForElement("input[name='Cosmetic.PortalTagline']");
+		await form.Find("#guide-game-name").InputAsync("Renamed world");
+		await tagline.ChangeAsync("Rain, guilds and secrets.");
+		await form.Find(".identity-save").ClickAsync();
+		await Assert.That(handler.ConfigSaves.Count).IsEqualTo(1);
+		await Assert.That(handler.Writes).IsEqualTo(0).Because("the identity is saved only once the header's options are");
+		await Assert.That(form.FindAll("[role=alert]").Count).IsGreaterThan(0);
+		await Assert.That(form.FindAll("[role=status]").Any(node => node.TextContent.Contains("Saved", StringComparison.Ordinal))).IsFalse();
+	}
 }

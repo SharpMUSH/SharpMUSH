@@ -12,7 +12,7 @@ namespace SharpMUSH.Tests.BUnit.Components;
 
 /// <summary>
 /// Home's hero without a banner shows the welcome picture for the genre the game named in setup, and none for a
-/// game that named no genre or has a banner of its own.
+/// game that named no genre, has a banner of its own or turned portal_sharpie off; portal_side_art takes its place.
 /// </summary>
 public class GameHeroTests : BunitContext
 {
@@ -61,6 +61,46 @@ public class GameHeroTests : BunitContext
 		await Assert.That(GameHero.GenreArtFor(null)).IsNull();
 
 		var cut = RenderHero(new StubServerInfoService(guestsEnabled: true));
+		await Assert.That(cut.FindAll(".game-hero-art").Count).IsEqualTo(0);
+	}
+
+	[TUnit.Core.Test]
+	public async Task ASideArtOfTheGamesOwn_TakesSharpiesPlace()
+	{
+		var serverInfo = new StubServerInfoService(guestsEnabled: true, onboarding: Onboarding("Fantasy", "None"))
+		{
+			Side = ("/api/wiki-assets/a/mascot.png", true),
+		};
+		var cut = RenderHero(serverInfo);
+
+		var art = cut.Find(".game-hero-art");
+		await Assert.That(art.ClassList.Contains("game-hero-art--own")).IsTrue();
+		await Assert.That(art.GetAttribute("src")).EndsWith("/api/wiki-assets/a/mascot.png");
+	}
+
+	[TUnit.Core.Test]
+	public async Task ASideArtOfTheGamesOwn_StaysOverABanner()
+	{
+		var serverInfo = new StubServerInfoService(guestsEnabled: true)
+		{
+			Identity = ("/api/wiki-assets/a/banner.png", null, null),
+			Side = ("/api/wiki-assets/a/mascot.png", true),
+		};
+		var cut = RenderHero(serverInfo);
+
+		await Assert.That(cut.FindAll(".game-hero-img").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll(".game-hero-art--own").Count).IsEqualTo(1);
+	}
+
+	[TUnit.Core.Test]
+	public async Task SharpieOff_LeavesTheSideEmpty()
+	{
+		var serverInfo = new StubServerInfoService(guestsEnabled: true, onboarding: Onboarding("Fantasy", "None"))
+		{
+			Side = (null, false),
+		};
+		var cut = RenderHero(serverInfo);
+
 		await Assert.That(cut.FindAll(".game-hero-art").Count).IsEqualTo(0);
 	}
 }

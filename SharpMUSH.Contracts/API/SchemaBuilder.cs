@@ -118,6 +118,7 @@ public static partial class SchemaBuilder
 				Options = attr.Choices?.ToDictionary(choice => choice, choice => choice),
 				Required = !IsNullable(type),
 				Tooltip = attr.Tooltip,
+				Example = attr.Example,
 				ReadOnly = false,
 				Path = path,
 				Unused = attr.Unused

@@ -7857,16 +7857,8 @@
     <value>Ten przewodnik zawsze znajdziesz w sekcji „Pomoc”.</value>
     <comment>MT</comment>
   </data>
-  <data name="GuideIdentityAppearance" xml:space="preserve">
-    <value>ustawieniach wyglądu</value>
-    <comment>MT — link text completing GuideIdentityArtworkHint; locative case</comment>
-  </data>
   <data name="GuideIdentityArtFallback" xml:space="preserve">
     <value>Wyświetlany jest domyślny Sharpie, dopóki nie będzie grafik dla wybranego stylu i gatunku.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="GuideIdentityArtworkHint" xml:space="preserve">
-    <value>Gracze mogą ograniczyć lub ukryć grafiki. Logo gry ustawia się osobno w</value>
     <comment>MT</comment>
   </data>
   <data name="GuideIdentityCharacterPage" xml:space="preserve">

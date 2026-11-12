@@ -7857,17 +7857,9 @@
     <value>Sie finden diesen Leitfaden jederzeit unter Hilfe.</value>
     <comment>MT</comment>
   </data>
-  <data name="GuideIdentityAppearance" xml:space="preserve">
-    <value>Darstellungseinstellungen</value>
-    <comment>MT</comment>
-  </data>
   <data name="GuideIdentityArtFallback" xml:space="preserve">
     <value>Es wird der Standard-Sharpie angezeigt, bis Grafiken für Ihren gewählten Stil und Ihr Genre verfügbar sind.</value>
     <comment>MT</comment>
-  </data>
-  <data name="GuideIdentityArtworkHint" xml:space="preserve">
-    <value>Spieler können Grafiken reduzieren oder ausblenden. Ihr Spiellogo verwalten Sie davon getrennt in den</value>
-    <comment>MT — sentence fragment, followed by the GuideIdentityAppearance link</comment>
   </data>
   <data name="GuideIdentityCharacterPage" xml:space="preserve">
     <value>Wiki-Seite zum Charakterleitfaden</value>

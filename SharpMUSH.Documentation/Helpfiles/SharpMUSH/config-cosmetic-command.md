@@ -10,7 +10,8 @@
       "heading": "Page and flag display",
       "lookup": "@config cosmetic page and flag display"
     },
-    {"id": "pictures", "heading": "Pictures and the portal", "lookup": "@config cosmetic pictures"},
+    {"id": "pictures", "heading": "Pictures", "lookup": "@config cosmetic pictures"},
+    {"id": "portal", "heading": "The web portal", "lookup": "@config cosmetic portal"},
     {"id": "layouts", "heading": "Layouts", "lookup": "@config cosmetic layouts"}
   ],
   "redirects": {
@@ -32,7 +33,8 @@ These are cosmetic options of various sorts.
 - `count_all=<boolean>`: Does the count of connected players in WHO include hidden connections for mortals?
 
 - [@config cosmetic page and flag display]: page aliases, examine, wall prefixes and names
-- [@config cosmetic pictures]: which pictures may be shown, and the portal's logo and tab icon
+- [@config cosmetic pictures]: which pictures may be shown
+- [@config cosmetic portal]: the portal's logo, tab icon and Home header
 - [@config cosmetic layouts]: the border and colour theme of layouts that name none
 
 ## Page and flag display
@@ -49,15 +51,22 @@ More cosmetic options.
 - `chat_strip_quote=<boolean>`: Does +chan "foo strip the "?
 - `only_ascii_in_names=<boolean>`: Names are ascii-only or are extended characters permitted?
 
-## Pictures and the portal
+## Pictures
 
 - `image_hosts=<string>`: Which pictures [image()] and [figure()] may show: `any` (every host), `allow` (only the hosts on image_host_list), `block` (every host but those) or `off` (none). The game's own pictures, given as a relative address, are shown unless it is `off`. A refused picture shows its text art or description.
 - `image_host_list=<string>`: The hosts image_hosts allows or blocks, separated by spaces, such as `i.imgur.com *.example.com`. A `*.` entry covers every subdomain.
+
+## The web portal
+
+These options set the game's look in the web portal. The identity step of Prepare for players in the portal sets them too, with a preview of Home's header.
+
 - `portal_logo=<string>`: The picture at the top left of the web portal: a media upload (`/api/wiki-assets/...`) or an http or https address. It is shown square, 26 pixels across. Empty shows the SharpMUSH logo.
 - `portal_favicon=<string>`: The web portal's browser tab icon, given the same way. Empty uses portal_logo, or the SharpMUSH logo when that is empty too. A browser keeps a tab icon for a while, so a change can take a reload to show.
 - `portal_banner=<string>`: A wide picture behind the game's name on the portal's Home, wiki and sign-in pages, given the same way. It is cropped to fit, about four times as wide as it is tall, and link previews show it too. Empty shows none.
 - `portal_tagline=<string>`: One line of at most 120 characters, shown under the game's name on the portal and in link previews.
 - `portal_description=<string>`: Two or three sentences, at most 300 characters, about the game, for the portal's Home and sign-in pages and link previews. While it is empty, link previews use onboarding_introduction.
+- `portal_side_art=<string>`: A picture at the right of the game's name on the portal's Home page, given the same way, such as the game's mascot or crest. It is shown over the banner when there is one. Empty shows Sharpie instead, as portal_sharpie says.
+- `portal_sharpie=<boolean>`: Whether Home shows Sharpie, the guide's mascot drawn for the game's genre, at the right of the game's name when portal_side_art and portal_banner are empty.
 
 ## Layouts
 

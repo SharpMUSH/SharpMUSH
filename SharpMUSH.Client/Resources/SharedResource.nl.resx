@@ -7857,17 +7857,9 @@
     <value>Je vindt deze gids altijd onder Help.</value>
     <comment>MT</comment>
   </data>
-  <data name="GuideIdentityAppearance" xml:space="preserve">
-    <value>weergave-instellingen</value>
-    <comment>MT</comment>
-  </data>
   <data name="GuideIdentityArtFallback" xml:space="preserve">
     <value>De standaard-Sharpie wordt getoond tot er afbeeldingen zijn voor je gekozen stijl en genre.</value>
     <comment>MT</comment>
-  </data>
-  <data name="GuideIdentityArtworkHint" xml:space="preserve">
-    <value>Spelers kunnen afbeeldingen beperken of verbergen. Je spellogo staat daar los van, in de</value>
-    <comment>MT — sentence fragment, followed by the GuideIdentityAppearance link</comment>
   </data>
   <data name="GuideIdentityCharacterPage" xml:space="preserve">
     <value>Wikipagina met personagegids</value>

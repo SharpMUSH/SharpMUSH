@@ -197,6 +197,7 @@ public record CosmeticOptions(
 		Description = "Picture at the top left of the web portal; empty for the SharpMUSH logo",
 		ValidationPattern = PortalPicture.Pattern,
 		Image = true,
+		Example = "https://example.com/crest.svg",
 		Group = "Portal",
 		Order = 1,
 		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address. Shown square, at 26 pixels. "
@@ -209,6 +210,7 @@ public record CosmeticOptions(
 		Description = "Browser tab icon for the web portal; empty to use portal_logo",
 		ValidationPattern = PortalPicture.Pattern,
 		Image = true,
+		Example = "https://example.com/icon.png",
 		Group = "Portal",
 		Order = 2,
 		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address. When both this and portal_logo "
@@ -223,6 +225,7 @@ public record CosmeticOptions(
 		Description = "Wide picture behind the game's name on the portal's Home, wiki and sign-in pages; empty for none",
 		ValidationPattern = PortalPicture.Pattern,
 		Image = true,
+		Example = "https://example.com/banner.jpg",
 		Group = "Portal",
 		Order = 3,
 		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address. Shown about four times as wide as it is "
@@ -235,6 +238,7 @@ public record CosmeticOptions(
 		Category = "Cosmetic",
 		Description = "One short line under the game's name on the portal and in link previews",
 		ValidationPattern = PortalIdentity.TaglinePattern,
+		Example = "Gaslight intrigue in a city that never sleeps.",
 		Group = "Portal",
 		Order = 4,
 		Tooltip = "At most 120 characters, such as: Gaslight intrigue in a city that never sleeps.")]
@@ -245,11 +249,35 @@ public record CosmeticOptions(
 		Category = "Cosmetic",
 		Description = "Two or three sentences about the game for the portal's Home and sign-in pages and link previews",
 		ValidationPattern = PortalIdentity.DescriptionPattern,
+		Example = "Players run the guilds of a rain-soaked city, trading favours and secrets between the docks and the palace.",
 		Group = "Portal",
 		Order = 5,
 		Tooltip = "At most 300 characters of plain text. While it is empty, link previews use "
 			+ "onboarding_introduction, the introduction written during setup.")]
 	public string PortalDescription { get; init; } = "";
+
+	[SharpConfig(
+		Name = "portal_side_art",
+		Category = "Cosmetic",
+		Description = "Picture at the right of the game's name on the portal's Home page; empty for Sharpie when there is no banner and portal_sharpie is on",
+		ValidationPattern = PortalPicture.Pattern,
+		Image = true,
+		Example = "https://example.com/mascot.png",
+		Group = "Portal",
+		Order = 6,
+		Tooltip = "A media upload (/api/wiki-assets/...) or an http(s) address, such as the game's mascot or crest. "
+			+ "Shown as it is, at most 144 pixels tall and 192 wide, over the banner when there is one.")]
+	public string PortalSideArt { get; init; } = "";
+
+	[SharpConfig(
+		Name = "portal_sharpie",
+		Category = "Cosmetic",
+		Description = "Show Sharpie, the guide's mascot, at the right of the game's name on Home when portal_side_art and portal_banner are empty",
+		Group = "Portal",
+		Order = 7,
+		Tooltip = "Sharpie is drawn for the genre and art style chosen in Prepare for players. Off leaves that space empty.")]
+	public bool PortalSharpie { get; init; } = true;
+
 	[SharpConfig(Name = "max_picture_columns", Category = "Cosmetic", Description = "Maximum width in character cells for telnet and MXP figures", Group = "Pictures", Min = 1, Max = 2000)]
 	public int MaxPictureColumns { get; init; } = 200;
 
@@ -274,7 +302,7 @@ public static class PortalPicture
 	private static string? NonEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
-/// <summary>The game's identity in the portal: its banner, tagline and description.</summary>
+/// <summary>The game's identity in the portal: its banner, side picture, tagline and description.</summary>
 public static class PortalIdentity
 {
 	/// <summary>One line of at most 120 characters, or empty.</summary>
@@ -288,6 +316,9 @@ public static class PortalIdentity
 
 	/// <summary><c>portal_tagline</c>, or empty.</summary>
 	public static string Tagline(CosmeticOptions cosmetic) => NonEmpty(cosmetic.PortalTagline) ?? "";
+
+	/// <summary><c>portal_side_art</c>, or null when it is empty.</summary>
+	public static string? SideArt(CosmeticOptions cosmetic) => NonEmpty(cosmetic.PortalSideArt);
 
 	/// <summary><c>portal_description</c>, or empty. The portal shows only this: Home already shows the introduction.</summary>
 	public static string Description(CosmeticOptions cosmetic) => NonEmpty(cosmetic.PortalDescription) ?? "";

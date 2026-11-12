@@ -10192,7 +10192,6 @@
   <data name="GuideIdentitySubgenres" xml:space="preserve"><value>Subgenre</value></data>
   <data name="GuideIdentityGenreHint" xml:space="preserve"><value>Choose the game's MSSP genre. Pick a suggested subgenre or enter your own. Sharpie uses these values for artwork; choose None when neither applies.</value></data>
   <data name="GuideIdentityStyle" xml:space="preserve"><value>Sharpie style</value></data>
-  <data name="GuideIdentityAppearance" xml:space="preserve"><value>appearance settings</value></data>
   <data name="GuideIdentityWelcomePage" xml:space="preserve"><value>Welcome wiki page</value></data>
   <data name="GuideIdentityRulesPage" xml:space="preserve"><value>Rules wiki page</value></data>
   <data name="GuideIdentityCharacterPage" xml:space="preserve"><value>Character guide wiki page</value></data>
@@ -10202,7 +10201,13 @@
   <data name="GuideIdentityNoArt" xml:space="preserve"><value>No approved illustration is available for this style yet. The written guide remains available.</value></data>
   <data name="GuideIdentityVisibility" xml:space="preserve"><value>Wiki links appear only after their visibility and the wiki reader are checked by the server.</value></data>
   <data name="GuideIdentitySaved" xml:space="preserve"><value>Saved. The public guide uses these settings.</value></data>
-  <data name="GuideIdentityArtworkHint" xml:space="preserve"><value>Players can reduce or hide artwork. Your game logo stays separate in</value></data>
+  <data name="AdmHomeHeaderArtworkHint" xml:space="preserve"><value>Players can reduce or hide artwork.</value></data>
+  <data name="AdmHomeHeaderHeading" xml:space="preserve"><value>Home page header</value></data>
+  <data name="AdmHomeHeaderIntro" xml:space="preserve"><value>The logo, banner, text and side picture at the top of Home. They are saved with the rest of this step, and can be changed later here or under</value></data>
+  <data name="AdmHomeHeaderConfigLink" xml:space="preserve"><value>Config, Cosmetic, Portal</value></data>
+  <data name="AdmHomeHeaderLoading" xml:space="preserve"><value>Loading the header settings…</value></data>
+  <data name="AdmHomeHeaderLoadFailed" xml:space="preserve"><value>The header settings could not be loaded. {0}</value></data>
+  <data name="AdmHomeHeaderPreview" xml:space="preserve"><value>Home page header preview</value></data>
   <data name="GuideIdentityYourGame" xml:space="preserve"><value>your game</value></data>
   <data name="GuideIdentitySaving" xml:space="preserve"><value>Saving…</value></data>
   <data name="GuideIdentitySave" xml:space="preserve"><value>Save game introduction</value></data>
