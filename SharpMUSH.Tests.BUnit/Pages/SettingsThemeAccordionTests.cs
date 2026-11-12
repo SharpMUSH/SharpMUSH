@@ -93,6 +93,7 @@ public class SettingsThemeAccordionTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".settings-theme-body").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll(Body(8))).HasSingleItem();
 		await Assert.That(cut.Find(Head(7)).GetAttribute("aria-expanded")).IsEqualTo("false");
+		await Assert.That(cut.Find(Head(7)).HasAttribute("aria-controls")).IsFalse().Because("a closed character has no panel to point at");
 		await Assert.That(cut.Find(Head(8)).GetAttribute("aria-controls")).IsEqualTo("theme-body-8");
 
 		await cut.Find(Head(8)).ClickAsync(new());
@@ -112,13 +113,26 @@ public class SettingsThemeAccordionTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task ALinkToAnotherAccountsCharacterOpensTheActingOne()
+	{
+		Seed();
+		Services.GetRequiredService<NavigationManager>().NavigateTo("/settings/theme#theme-99");
+		var cut = Render<SettingsTheme>();
+		cut.WaitForElement(Body(7));
+
+		await Assert.That(cut.FindAll(".settings-theme-body").Count).IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task EveryCharactersSwatchStandsStill()
 	{
 		Seed();
 		var cut = Render<SettingsTheme>();
 		cut.WaitForElement(Body(7));
 
-		foreach (var swatch in cut.FindAll(".settings-theme-head .theme-swatch"))
+		var swatches = cut.FindAll(".settings-theme-head .theme-swatch");
+		await Assert.That(swatches.Count).IsEqualTo(3);
+		foreach (var swatch in swatches)
 		{
 			await Assert.That(swatch.GetAttribute("data-motion")).IsEqualTo("still");
 			await Assert.That(swatch.GetAttribute("data-reduce-motion")).IsEqualTo("on");

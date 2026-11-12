@@ -53,7 +53,7 @@
             <KitCard Class="settings-theme-card">
                 <div class="settings-theme-char @(open ? "is-open" : null)" id="@($"theme-{character.DbrefNumber}")" data-character="@character.DbrefNumber">
                     <button type="button" class="settings-theme-head" aria-expanded="@(open ? "true" : "false")"
-                            aria-controls="@($"theme-body-{character.DbrefNumber}")" @onclick="() => Toggle(character)">
+                            aria-controls="@(open ? $"theme-body-{character.DbrefNumber}" : null)" @onclick="() => Toggle(character)">
                         <ThemeSwatch Theme="look" Still="true" />
                         <span class="settings-theme-name">
                             <span class="settings-theme-title">@character.Name</span>
@@ -199,11 +199,18 @@
     /// <summary>The character whose settings are open, once the player has opened or closed one; null when all are closed.</summary>
     private int? _open;
 
-    /// <summary>False until the player opens or closes a character, or a link names one: the first character is open.</summary>
+    /// <summary>False until the player opens or closes a character: the linked character is open, else the first.</summary>
     private bool _openChosen;
 
+    /// <summary>The character a link named (#theme-7), open first when it is one of the account's.</summary>
+    private int? _linked;
+
     private bool IsOpen(AccountAuthService.CharacterSummary character) =>
-        (_openChosen ? _open : Ordered.FirstOrDefault()?.DbrefNumber) == character.DbrefNumber;
+        (_openChosen ? _open : FirstOpen) == character.DbrefNumber;
+
+    private int? FirstOpen => _linked is { } linked && AccountAuth.Characters.Any(c => c.DbrefNumber == linked)
+        ? linked
+        : Ordered.FirstOrDefault()?.DbrefNumber;
 
     /// <summary>Opens a character's settings and closes the others; opening the open one closes it.</summary>
     private void Toggle(AccountAuthService.CharacterSummary character)
@@ -241,8 +248,7 @@
         if (new Uri(Navigation.Uri).Fragment is ['#', .. var fragment] && fragment.StartsWith("theme-", StringComparison.Ordinal)
             && int.TryParse(fragment["theme-".Length..], out var linked))
         {
-            _open = linked;
-            _openChosen = true;
+            _linked = linked;
         }
 
         Themes.OnThemeChanged += Changed;
