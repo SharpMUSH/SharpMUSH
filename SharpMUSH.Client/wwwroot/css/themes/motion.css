@@ -77,6 +77,7 @@
 	--duration-enter: 0s;
 	--duration-exit: 0s;
 	--duration-spring: 0s;
+	--duration-sweep: 0s;
 }
 
 /* Snappy: cards rise and menu lines slide in quickly when a page opens. */

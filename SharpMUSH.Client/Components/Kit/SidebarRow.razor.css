@@ -147,6 +147,15 @@
 	color: var(--accent);
 }
 
+/* Secondary text on the current line, in the selection's dimmer ink where its fill is solid (bar, skew, lift). */
+.kit-row--current :is(.kit-row-sub, .kit-row-trail, .kit-row-count) {
+	color: var(--select-ink-dim, var(--text-dim));
+}
+
+.kit-row--current .kit-row-hash {
+	color: var(--select-ink-dim, var(--text-faint));
+}
+
 .kit-row-hash {
 	width: 14px;
 	font-family: var(--font-mono);
