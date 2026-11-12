@@ -50,6 +50,8 @@ Copyright 2023 The Tektur Project Authors (https://www.github.com/hyvyys/Tektur)
 Copyright 2012 The Libre Baskerville Project Authors (https://github.com/impallari/Libre-Baskerville) with Reserved Font Name Libre Baskerville.
 Copyright 2019 The Baloo 2 Project Authors (https://github.com/EkType/Baloo2)
 Copyright 2001 The Silkscreen Project Authors (https://github.com/googlefonts/silkscreen)
+Copyright 2022 The Gloock Project Authors (https://github.com/Etcetera-Type-Co/Gloock)
+Copyright 2014 Claus Eggers Sørensen (es@forthehearts.net), with Reserved Font Name Inknut Antiqua.
 Copyright 2016 The Saira Project Authors (omnibus.type@gmail.com), with reserved font name "Saira". (Saira Condensed)
 
 

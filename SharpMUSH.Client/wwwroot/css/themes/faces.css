@@ -55,6 +55,8 @@
 [data-font-display="baskerville"] { --font-display: 'Libre Baskerville', Baskerville, Georgia, serif; --font-title-weight: 400; }
 [data-font-display="baloo"] { --font-display: 'Baloo 2', 'Arial Rounded MT Bold', sans-serif; --font-title-weight: 800; }
 [data-font-display="silkscreen"] { --font-display: Silkscreen, 'Courier New', monospace; --font-title-weight: 700; }
+[data-font-display="gloock"] { --font-display: Gloock, Didot, Georgia, serif; --font-title-weight: 400; }
+[data-font-display="inknut"] { --font-display: 'Inknut Antiqua', 'Book Antiqua', Georgia, serif; --font-title-weight: 600; }
 
 [data-font-body="ui"] { --font-ui: 'Hanken Grotesk', system-ui, sans-serif; }
 [data-font-body="serif"] { --font-ui: Georgia, 'Iowan Old Style', 'Times New Roman', serif; }

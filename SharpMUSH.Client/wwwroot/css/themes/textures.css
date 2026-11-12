@@ -900,3 +900,50 @@
 		linear-gradient(180deg, rgba(0, 0, 0, .7), rgba(0, 0, 0, .25) 40%, transparent 60%);
 	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 11%, transparent);
 }
+
+/* Eaves: a palace hall on the right, its double roof of glazed tiles in the border colour, columns, walls and
+   hanging lanterns in the accent, painted beams in the second and third accents, on a three-tier terrace drawn in
+   fine lines that runs the width of the window; far roofs, hills and cloud scrolls behind, a bronze censer smoking in the courtyard, and warm haze. */
+[data-texture="eaves"] {
+	--texture: radial-gradient(ellipse 40% 34% at 76% 46%, color-mix(in srgb, var(--warn) 14%, transparent), transparent),
+		linear-gradient(180deg, color-mix(in srgb, var(--border) 18%, transparent), transparent 55%);
+	--texture-size: 100% 100%, 100% 100%;
+	--texture-mask-border: url(/themes/drawings/textures/eaves-border.svg) right 0 bottom 0 / 2400px 900px no-repeat;
+	--texture-ink-border: var(--border);
+	--texture-mask-text: url(/themes/drawings/textures/eaves-text.svg) right 0 bottom 0 / 2400px 900px no-repeat;
+	--texture-ink-text: var(--text);
+	--texture-mask-accent-3: url(/themes/drawings/textures/eaves-accent-3.svg) right 0 bottom 0 / 2400px 900px no-repeat;
+	--texture-ink-accent-3: var(--accent-3);
+	--texture-mask-accent-2: url(/themes/drawings/textures/eaves-accent-2.svg) right 0 bottom 0 / 2400px 900px no-repeat;
+	--texture-ink-accent-2: var(--accent-2);
+	--texture-mask-accent: url(/themes/drawings/textures/eaves-accent.svg) right 0 bottom 0 / 2400px 900px no-repeat;
+	--texture-ink-accent: var(--accent);
+}
+
+/* Warbanners: ranges of mountains in the border colour falling to a misty river, three camps' swallowtail banners
+   on a ridge, one in each accent with its emblem cut through, far banners in silhouette, and a beacon burning. */
+[data-texture="warbanners"] {
+	--texture: radial-gradient(ellipse 34% 30% at 82% 22%, color-mix(in srgb, var(--accent-2) 16%, transparent), transparent),
+		linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 70%, transparent), transparent 60%);
+	--texture-size: 100% 100%, 100% 100%;
+	--texture-mask-border: url(/themes/drawings/textures/warbanners-border.svg) right 0 bottom 0 / 1200px 900px no-repeat;
+	--texture-ink-border: color-mix(in srgb, var(--border) 70%, var(--bg));
+	--texture-mask-text: url(/themes/drawings/textures/warbanners-text.svg) right 0 bottom 0 / 1200px 900px no-repeat;
+	--texture-ink-text: var(--text);
+	--texture-mask-accent-3: url(/themes/drawings/textures/warbanners-accent-3.svg) right 0 bottom 0 / 1200px 900px no-repeat;
+	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 80%, var(--bg));
+	--texture-mask-accent-2: url(/themes/drawings/textures/warbanners-accent-2.svg) right 0 bottom 0 / 1200px 900px no-repeat;
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 80%, var(--bg));
+	--texture-mask-accent: url(/themes/drawings/textures/warbanners-accent.svg) right 0 bottom 0 / 1200px 900px no-repeat;
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 80%, var(--bg));
+}
+
+/* Warbanners: the banners ripple slowly in the wind, unless the reader asked for less motion or the theme stands
+   still (the rippling drawings morph their own shapes, so the page's animation switches cannot stop them). */
+@media (prefers-reduced-motion: no-preference) {
+	[data-texture="warbanners"]:not([data-motion="still"]) {
+		--texture-mask-accent: url(/themes/drawings/textures/warbanners-wave-accent.svg) right 0 bottom 0 / 1200px 900px no-repeat;
+		--texture-mask-accent-2: url(/themes/drawings/textures/warbanners-wave-accent-2.svg) right 0 bottom 0 / 1200px 900px no-repeat;
+		--texture-mask-accent-3: url(/themes/drawings/textures/warbanners-wave-accent-3.svg) right 0 bottom 0 / 1200px 900px no-repeat;
+	}
+}

@@ -51,6 +51,16 @@
 	to { background-position: 0 360px; }
 }
 
+@keyframes theme-lantern-rise {
+	from { background-position: 0 0; }
+	to { background-position: 0 -560px; }
+}
+
+@keyframes theme-unfurl {
+	from { clip-path: inset(0 0 100% 0); }
+	to { clip-path: inset(0 0 0 0); }
+}
+
 @keyframes theme-float {
 	from { background-position: 0 0; }
 	to { background-position: 300px -300px; }
@@ -112,6 +122,15 @@
 	--card-enter: theme-rise var(--duration-enter) var(--ease-enter) both;
 	--nav-enter: none;
 	--select-motion: theme-bob 2.8s ease-in-out infinite;
+	--texture-motion: none;
+	--ambient-play: running;
+}
+
+/* Unfurl: cards open downward like a scroll let fall; nothing loops. */
+[data-motion="unfurl"] {
+	--card-enter: theme-unfurl calc(var(--duration-enter) * 2) var(--ease-enter) backwards;
+	--nav-enter: none;
+	--select-motion: none;
 	--texture-motion: none;
 	--ambient-play: running;
 }
@@ -186,4 +205,24 @@
 		radial-gradient(1px 60px at 81% 45%, color-mix(in srgb, var(--accent-2) 30%, transparent), transparent);
 	--atmosphere-size: 220px 360px;
 	--atmosphere-motion: theme-fall 9s linear infinite;
+}
+
+/* Sky lanterns: a few small paper lanterns in the warning colour, lit from inside, rising slowly over a warm glow. */
+[data-atmosphere="sky-lanterns"] {
+	--atmosphere-still: radial-gradient(60% 26% at 70% 100%, color-mix(in srgb, var(--warn) 12%, transparent), transparent);
+	--atmosphere-moving: radial-gradient(5px 7px at 22% 30%, color-mix(in srgb, var(--warn) 85%, transparent) 0 70%, transparent 100%),
+		radial-gradient(4px 5px at 64% 62%, color-mix(in srgb, var(--warn) 70%, transparent) 0 70%, transparent 100%),
+		radial-gradient(3px 4px at 84% 18%, color-mix(in srgb, var(--warn) 60%, transparent) 0 70%, transparent 100%);
+	--atmosphere-size: 420px 560px;
+	--atmosphere-motion: theme-lantern-rise 70s linear infinite;
+}
+
+/* Smoke: banks of grey smoke low on the window, drifting slowly across it. */
+[data-atmosphere="smoke"] {
+	--atmosphere-still: linear-gradient(0deg, color-mix(in srgb, var(--text-faint) 10%, transparent), transparent 30%);
+	--atmosphere-moving: radial-gradient(30% 12% at 25% 94%, color-mix(in srgb, var(--text-faint) 16%, transparent), transparent),
+		radial-gradient(34% 14% at 62% 99%, color-mix(in srgb, var(--text-faint) 13%, transparent), transparent),
+		radial-gradient(24% 10% at 90% 92%, color-mix(in srgb, var(--text-faint) 14%, transparent), transparent);
+	--atmosphere-size: 200% 100%;
+	--atmosphere-motion: theme-pan 80s ease-in-out infinite alternate;
 }

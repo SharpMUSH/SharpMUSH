@@ -141,6 +141,48 @@
 	--select-text-glow: initial;
 }
 
+/* Lantern: a small lantern in the accent hung at the line's end on a cord in the border colour, a rule in the
+   border colour under the words, and a faint accent wash fading to the right. */
+[data-selection="lantern"] {
+	--select-ink-dim: initial;
+	--select-fill: linear-gradient(90deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 85%);
+	--select-ink: var(--accent);
+	--select-mark: radial-gradient(7px 8px at calc(100% - 16px) 50%, var(--accent) 0 90%, transparent 100%),
+		linear-gradient(var(--border), var(--border)) right 12px top calc(50% - 10px) / 8px 3px no-repeat,
+		linear-gradient(var(--border), var(--border)) right 12px top calc(50% + 8px) / 8px 3px no-repeat,
+		linear-gradient(var(--border), var(--border)) right 15px top 0 / 2px calc(50% - 9px) no-repeat,
+		linear-gradient(var(--border), var(--border)) left 12px bottom 4px / 45% 2px no-repeat;
+	--select-mark-inset: 0;
+	--select-mark-width: auto;
+	--select-mark-radius: 0px;
+	--select-mark-glow: none;
+	--select-radius: 0px;
+	--select-shadow: initial;
+	--select-lift: initial;
+	--select-text-glow: initial;
+	--select-mark-transform: initial;
+}
+
+/* Pennant: a swallowtail flag in the accent behind the line, on a pole in the second accent at its left. */
+[data-selection="pennant"] {
+	--select-ink-dim: color-mix(in srgb, var(--accent-on) 82%, var(--accent));
+	--select-fill: transparent;
+	--select-ink: var(--accent-on);
+	--select-mark: linear-gradient(var(--accent-2), var(--accent-2)) left 4px top 0 / 3px 100% no-repeat,
+		linear-gradient(var(--accent), var(--accent)) left 0 top 0 / calc(100% - 18px) 100% no-repeat,
+		linear-gradient(to bottom right, var(--accent) 50%, transparent 50%) right 0 top 0 / 18px 50% no-repeat,
+		linear-gradient(to top right, var(--accent) 50%, transparent 50%) right 0 bottom 0 / 18px 50% no-repeat;
+	--select-mark-inset: 2px 8px 2px 0;
+	--select-mark-width: auto;
+	--select-mark-radius: 0px;
+	--select-mark-glow: none;
+	--select-radius: 0px;
+	--select-shadow: initial;
+	--select-lift: initial;
+	--select-text-glow: initial;
+	--select-mark-transform: initial;
+}
+
 /* ── Material ── */
 
 /* Solid: the surface, as it is. */
@@ -190,6 +232,23 @@
 	--card-material: repeating-linear-gradient(0deg, transparent 0 34px, rgba(0, 0, 0, 0.18) 34px 36px),
 		repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 9px),
 		linear-gradient(color-mix(in srgb, var(--surface) 90%, #fff), var(--surface));
+	--card-backdrop: none;
+}
+
+/* Silk: a fine plain weave over the surface, with a soft sheen from the top. */
+[data-material="silk"] {
+	--card-material: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.025) 0 1px, transparent 1px 3px),
+		repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.02) 0 1px, transparent 1px 3px),
+		linear-gradient(170deg, rgba(255, 255, 255, 0.22), transparent 45%),
+		var(--surface);
+	--card-backdrop: none;
+}
+
+/* Bamboo: the seams of bound slips running down the card, each slip a shade apart. */
+[data-material="bamboo"] {
+	--card-material: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.28) 0 1px, color-mix(in srgb, var(--text) 4%, transparent) 1px 2px, transparent 2px 28px),
+		repeating-linear-gradient(90deg, transparent 0 28px, rgba(0, 0, 0, 0.05) 28px 56px),
+		var(--surface);
 	--card-backdrop: none;
 }
 
@@ -291,6 +350,38 @@
 	--button-plain-shadow: initial;
 	--button-press: rotate(-1deg) scale(0.97);
 	--button-press-shadow: 1px 1px 0 color-mix(in srgb, var(--accent-2) 80%, transparent);
+}
+
+/* Plaque: a name board with pointed ends, a rim in the border colour and a thick foot; pressed, it sinks onto the
+   foot and the rim dims. */
+[data-buttons="plaque"] {
+	--button-focus-offset: -4px;
+	--button-radius: 0px;
+	--button-clip: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+	--button-tracking: 0.06em;
+	--button-shadow: inset 0 0 0 2px var(--border), inset 0 -4px 0 color-mix(in srgb, var(--accent) 55%, #000);
+	--button-plain-shadow: inset 0 0 0 2px var(--accent);
+	--button-press: translateY(2px);
+	--button-press-shadow: inset 0 0 0 2px color-mix(in srgb, var(--border) 55%, #000), inset 0 3px 6px rgba(0, 0, 0, 0.4);
+	--button-transform: initial;
+	--button-weight: initial;
+	--button-case: initial;
+}
+
+/* Seal: a square-cut chop with a light inner rim and an accent ring around it; pressed, it stamps down, tilted, and
+   the ink pools at its edge. */
+[data-buttons="seal"] {
+	--button-focus-offset: 6px;
+	--button-radius: 3px;
+	--button-weight: 700;
+	--button-tracking: 0.08em;
+	--button-case: uppercase;
+	--button-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent-on) 70%, transparent), 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
+	--button-plain-shadow: 0 0 0 1px var(--accent);
+	--button-press: rotate(-2deg) scale(0.96);
+	--button-press-shadow: inset 0 0 0 3px color-mix(in srgb, var(--accent-on) 80%, transparent), inset 0 0 12px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--accent);
+	--button-clip: initial;
+	--button-transform: initial;
 }
 
 /* ── Meters ── */
@@ -440,4 +531,23 @@
 [data-meters="vital"] .schema-stat-bar:is([aria-valuenow="18"], [aria-valuenow^="18."]) .mud-progress-linear-bar,
 [data-meters="vital"] .schema-stat-bar:is([aria-valuenow="19"], [aria-valuenow^="19."]) .mud-progress-linear-bar {
 	background-color: var(--danger);
+}
+
+/* Abacus: ten beads on a rod, filled up to the value. */
+[data-meters="abacus"] .mud-progress-linear {
+	height: 14px;
+	border-radius: 0;
+	mask: url(/themes/drawings/meters/abacus-bead.svg) 0 0 / 10% 100% repeat-x;
+}
+
+/* Arrows: ten arrows standing in a row, filled up to the value. */
+[data-meters="arrows"] .mud-progress-linear {
+	height: 22px;
+	border-radius: 0;
+	mask: url(/themes/drawings/meters/arrow.svg) 0 0 / 10% 100% repeat-x;
+}
+
+[data-meters="abacus"] .mud-progress-linear-bar,
+[data-meters="arrows"] .mud-progress-linear-bar {
+	border-radius: 0;
 }
