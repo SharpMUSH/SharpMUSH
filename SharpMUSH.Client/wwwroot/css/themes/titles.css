@@ -364,3 +364,11 @@
 
 /* Flank: an em dash either side. */
 [data-ornament-glyphs="flank"] { --ornament-before: "\2014"; --ornament-after: "\2014"; }
+/* Designator: a solid corner triangle before, as on a menu tile's label. */
+[data-ornament-glyphs="designator"] { --ornament-before: "\25E2"; --ornament-after: none; }
+/* Designator: a slab of accent-2 and a tick, then a hairline in the border colour. */
+[data-ornament-underline="designator"] {
+	--title-underline: linear-gradient(90deg, var(--accent-2) 0 40px, transparent 40px 46px, var(--accent-2) 46px 50px, transparent 50px 56px, var(--border) 56px);
+	--title-underline-height: 3px;
+	--title-underline-pad: 8px;
+}

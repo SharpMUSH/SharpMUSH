@@ -238,6 +238,21 @@ public class ThemeResolverTests
 		=> await Assert.That(ThemeResolver.Resolve(BuiltInThemes.Directive).Parts[ThemeStyles.Imagery]).IsEqualTo("smoke");
 
 	[Test]
+	public async Task TheAccentOnTheRailStandsOutFromTheRail()
+	{
+		foreach (var theme in BuiltInThemes.All)
+		{
+			var resolved = ThemeResolver.Resolve(theme);
+			var ratio = ThemeColor.Contrast(ThemeColor.Parse(resolved.Token("rail-accent")), ThemeColor.Parse(resolved.Token(ThemeTokens.Rail)));
+			await Assert.That(ratio).IsGreaterThanOrEqualTo(3.0).Because(theme.Id);
+		}
+
+		// Directive Light's dark blue on its charcoal rail is moved toward white.
+		var light = ThemeResolver.Resolve(BuiltInThemes.DirectiveLight);
+		await Assert.That(light.Token("rail-accent")).IsNotEqualTo(light.Accent);
+	}
+
+	[Test]
 	public async Task DirectiveLightIsDirectivesLookInLightWithTheSameYellow()
 	{
 		var dark = ThemeResolver.Resolve(BuiltInThemes.Directive);

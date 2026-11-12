@@ -43,11 +43,12 @@ covered by the switch; use `--image-filter` instead. Signed out, the browser kee
 - **Phosphor** (dark) and **Daylight** (light), the default looks: the phosphor accent on warm charcoal or warm
   paper, titles in Space Grotesk, a fine grain, and the `lifted` frame (cards on an elevation shadow, a glow on the
   Home hero).
-- **Directive Light** (`directive-light`) and **Directive** (`directive`, dark), a game's title screen and the same
-  screen inverted: a grey field under a soft light between letterbox bars in the rail's colour, Bodoni Moda capitals
-  between dashes, flat square cards marked like a filed report (`dossier`), flat grey buttons, and pictures in smoky
-  monochrome (`smoke`). The chrome stays grey except for one colour, `accent-2`: a yellow wireframe hanging from the
-  top of the page and yellow hatching on the cards. Their layout themes carry a look too.
+- **Directive Light** (`directive-light`) and **Directive** (`directive`, dark), after the title screen and menus of a
+  mobile tactics game, the dark one the light one inverted: a grey field under a soft light between letterbox bars,
+  condensed capitals (Saira Condensed) after a corner triangle with a yellow slab under them (`designator`), square
+  tiles on a soft drop with a yellow stripe down the left edge, a register cross and a corner triangle (`dossier`),
+  cyan blue on the primary control only, a yellow wireframe hanging from the top of the page, and pictures in smoky
+  monochrome (`smoke`). Their layout themes carry a look too.
 - One per MSSP genre, with the ids the telnet layout themes use: `fantasy`, `historical`, `horror`, `modern`,
   `mystery`, `romance`, `science-fiction`, `spiritual`.
 - Anime: `magical-girl`, `shojo`, `idol`, `slice-of-life`, `shonen`, `sports`, `mechmachine`, `real-robot`, `super-robot`, `isekai`, `yokai`.

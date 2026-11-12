@@ -175,21 +175,22 @@ public static class BuiltInThemes
 			[ThemeTokens.LinkMissing] = "#c0362c",
 		}), BuiltIn: true);
 
-	/// <summary>Directive: Directive Light turned inside out. A dark grey field under a soft spotlight between pale letterbox bars,
-	/// razor-hairline serif capitals between dashes, flat square cards filed like a report, light grey buttons, pictures in
-	/// smoky monochrome, and one colour in the chrome: a yellow wireframe hanging from the top of the page, with yellow
-	/// hatching on the cards.</summary>
+	/// <summary>Directive: Directive Light inverted, after the menus of a mobile tactics game. A dark grey field under a
+	/// soft spotlight between pale letterbox bars, condensed capitals with a designator, charcoal slabs, cards filed
+	/// like an operator's record with a yellow stripe down the left edge, cyan blue on the primary control only,
+	/// pictures in smoky monochrome, and a yellow wireframe hanging from the top of the page.</summary>
 	public static readonly PortalTheme Directive = Genre("directive", "Directive", dark: true,
-		["#1b1b1b", "#0c0c0c", "#141414", "#262626", "#c5c5c5", "#ebebeb", "#c0c0c0", "#ababab", "#707070", "#363636", "#c5c5c5", "#e3c27e", "#f08f8f"],
-		display: "bodoni", body: "ui", corners: "razor", texture: "haze", ornament: "flank", frame: "dossier", titles: "wide", effect: "console", imagery: "smoke",
-		accent2: "#f2d33a", accent3: "#ababab");
+		["#1b1b1b", "#101010", "#181818", "#262626", "#2c2c2c", "#ebebeb", "#c0c0c0", "#ababab", "#5c5c5c", "#363636", "#2aa8e6", "#e3c27e", "#f08f8f"],
+		display: "saira-condensed", body: "ui", corners: "razor", texture: "haze", ornament: "designator", frame: "dossier", titles: "caps", effect: "none", imagery: "smoke",
+		accent2: "#f2d33a", accent3: "#ff8a3d");
 
-	/// <summary>Directive Light: a title screen. A pale grey field with a soft vignette between charcoal letterbox bars,
-	/// dark serif capitals, flat dark grey buttons, and a yellow wireframe hanging from the top of the page.</summary>
+	/// <summary>Directive Light: a title screen and its menus. A pale grey field with a soft vignette between charcoal
+	/// letterbox bars, condensed capitals with a designator, white panels on a soft drop with a yellow stripe down the
+	/// left edge, cyan blue on the primary control only, and a yellow wireframe hanging from the top of the page.</summary>
 	public static readonly PortalTheme DirectiveLight = Genre("directive-light", "Directive Light", dark: false,
-		["#e4e4e4", "#f3f3f3", "#ebebeb", "#d9d9d9", "#3a3a3a", "#141414", "#3f3f3f", "#545454", "#8f8f8f", "#c9c9c9", "#3a3a3a", "#7a5600", "#a3302a"],
-		display: "bodoni", body: "ui", corners: "razor", texture: "haze", ornament: "flank", frame: "dossier", titles: "wide", effect: "console", imagery: "smoke",
-		accent2: "#e2bd12", accent3: "#545454");
+		["#e4e4e4", "#f7f7f7", "#eaeaea", "#d9d9d9", "#2c2c2c", "#141414", "#3f3f3f", "#545454", "#a8a8a8", "#cccccc", "#00628f", "#7a5600", "#a3302a"],
+		display: "saira-condensed", body: "ui", corners: "razor", texture: "haze", ornament: "designator", frame: "dossier", titles: "caps", effect: "none", imagery: "smoke",
+		accent2: "#e2bd12", accent3: "#d9641e");
 
 	/// <summary>Phosphor's and Daylight's look beyond colour: Space Grotesk titles, grain, lifted cards.</summary>
 	private static Dictionary<string, string> WithEmberStyle(Dictionary<string, string> tokens)
@@ -565,7 +566,7 @@ public sealed record ResolvedTheme(
 {
 	/// <summary>The tokens a character's own accent sets, laid again after a theme's stylesheet so it keeps them.</summary>
 	public static readonly IReadOnlyList<string> AccentTokens =
-		[ThemeTokens.Accent, "accent-dim", "accent-on", "glow", "ms-border", "ms-title", "ms-heading", "ms-bullet"];
+		[ThemeTokens.Accent, "accent-dim", "accent-on", "glow", "rail-accent", "ms-border", "ms-title", "ms-heading", "ms-bullet"];
 
 	/// <summary>
 	/// A <c>:root</c> rule that sets every token, then the theme's stylesheet. Unlayered, so it wins over
@@ -885,6 +886,9 @@ public static class ThemeResolver
 		// The rail's icons: secondary text where it reads on the rail, else moved toward whichever of white or black the rail
 		// sets off better. A light theme may have a dark or coloured rail, where its dark secondary text would vanish.
 		tokens["rail-ink"] = ReadableAgainst(textDim, ThemeColor.Contrast(ThemeColor.White, rail) > ThemeColor.Contrast(ThemeColor.Black, rail), ThemeTokens.TextContrast, rail).Hex;
+		// The accent where it is drawn on the rail (an unread dot, a focus ring): moved, as the rail's icons are, until it
+		// stands out from the rail at the 3:1 a non-text mark needs. A light theme may pair a dark accent with a dark rail.
+		tokens["rail-accent"] = ReadableAgainst(accent, ThemeColor.Contrast(ThemeColor.White, rail) > ThemeColor.Contrast(ThemeColor.Black, rail), 3.0, rail).Hex;
 		tokens["mud-palette-navbar-gradient"] = $"linear-gradient(90deg, {surface3.Hex} 0%, {surface3.Mix(rail, 0.5).Hex} 100%)";
 
 		if (dark)

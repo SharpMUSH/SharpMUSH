@@ -37,7 +37,7 @@
 }
 
 .theme-preview-rail i.is-on {
-	background: var(--accent);
+	background: var(--rail-accent, var(--accent));
 }
 
 .theme-preview-page {

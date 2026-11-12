@@ -58,7 +58,7 @@ public static class ThemeStyles
 		"fredoka", "dancing", "mochiy", "patrick", "dela", "graduate", "saira-stencil", "pixelify", "yuji", "bangers",
 		"lilita", "titan", "chakra", "monoton", "michroma", "antonio", "oxanium", "russo",
 		"cinzel-decorative", "forum", "press-start", "anton", "dotgothic", "alegreya-sc", "oswald",
-		"pirata", "uncial", "barlow", "metamorphous", "krona", "eagle-lake", "federant", "rye", "black-ops", "bodoni",
+		"pirata", "uncial", "barlow", "metamorphous", "krona", "eagle-lake", "federant", "rye", "black-ops", "bodoni", "saira-condensed",
 	];
 
 	/// <summary>Faces for everything else. Kept to faces that read well small.</summary>
@@ -132,7 +132,7 @@ public static class ThemeStyles
 		["riveted"] = new("riveted", "thick", "riveted"),
 		["wanted"] = new("wanted", "double", "wanted"),
 		["scrap"] = new("scrap", "heavy", "scrap"),
-		["dossier"] = new("dossier", "line", "none"),
+		["dossier"] = new("dossier", "none", "dossier"),
 	};
 
 	public static readonly IReadOnlyDictionary<string, OrnamentSet> Ornaments = new Dictionary<string, OrnamentSet>
@@ -184,6 +184,7 @@ public static class ThemeStyles
 		["sheriff"] = new("sheriff", "sheriff"),
 		["rad"] = new("rad", "rad"),
 		["flank"] = new("flank", "none"),
+		["designator"] = new("designator", "designator"),
 	};
 
 	public static readonly IReadOnlyDictionary<string, EffectSet> Effects = new Dictionary<string, EffectSet>

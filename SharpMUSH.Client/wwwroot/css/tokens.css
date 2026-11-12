@@ -348,6 +348,13 @@
     font-display: swap;
 }
 @font-face {
+    font-family: "Saira Condensed";
+    src: url("/fonts/saira-condensed-latin.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
     font-family: "Bodoni Moda";
     src: url("/fonts/bodoni-moda-latin.woff2") format("woff2");
     font-weight: 400 900;

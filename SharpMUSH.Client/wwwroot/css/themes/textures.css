@@ -734,12 +734,13 @@
 	--texture-ink-border: color-mix(in srgb, var(--text) 7%, transparent);
 }
 
-/* Haze: a title screen. Smoke drifting through a room lit from above, a vignette, letterbox bars in the rail's colour
-   along the top and bottom of the window, a faint grid of dots with a register cross, a few printer's marks (one strip
-   of hatching, rules, arrowheads) across a pale diagonal band, and a wireframe shell hanging from the top of the page
-   with a smaller one far off, both in accent-2. */
+/* Haze: a title screen. Smoke drifting through a room lit from above, a vignette, letterbox bars along the top and
+   bottom of the window (charcoal in the rail's colour on a light page, pale grey on a dark one), a faint grid of dots
+   with a register cross, a few printer's marks (one strip of hatching, rules, arrowheads) across a pale diagonal
+   band, and a wireframe shell hanging from the top of the page with a smaller one far off, both in accent-2. */
 [data-texture="haze"] {
-	--texture: linear-gradient(var(--rail-bg) 14px, transparent 14px calc(100% - 14px), var(--rail-bg) calc(100% - 14px)),
+	--letterbox: color-mix(in srgb, var(--text) 72%, var(--bg));
+	--texture: linear-gradient(var(--letterbox) min(14px, 5%), transparent min(14px, 5%) calc(100% - min(14px, 5%)), var(--letterbox) calc(100% - min(14px, 5%))),
 		radial-gradient(70% 55% at 50% 0%, color-mix(in srgb, var(--text) 7%, transparent), transparent 70%),
 		radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.55) 100%),
 		linear-gradient(115deg, transparent 58%, color-mix(in srgb, var(--text) 3%, transparent) 58% 71%, transparent 71%);
@@ -753,7 +754,8 @@
 	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 80%, transparent);
 }
 [data-scheme="light"][data-texture="haze"] {
-	--texture: linear-gradient(var(--rail-bg) 14px, transparent 14px calc(100% - 14px), var(--rail-bg) calc(100% - 14px)),
+	--letterbox: var(--rail-bg);
+	--texture: linear-gradient(var(--letterbox) min(14px, 5%), transparent min(14px, 5%) calc(100% - min(14px, 5%)), var(--letterbox) calc(100% - min(14px, 5%))),
 		radial-gradient(60% 55% at 50% 30%, color-mix(in srgb, #fff 85%, transparent), transparent 70%),
 		radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.16) 100%),
 		linear-gradient(115deg, transparent 58%, color-mix(in srgb, var(--text) 3%, transparent) 58% 71%, transparent 71%);

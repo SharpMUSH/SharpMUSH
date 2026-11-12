@@ -511,14 +511,25 @@
 	--card-shadow: 0 0 0 1px #000, 4px 4px 0 rgba(0, 0, 0, 0.55);
 }
 
-/* Dossier: an index tab and a tick in the accent along the top left, a crop mark at the lower left and a strip of
-   hatching in accent-2 at the lower right, as on a filed report. A primary button is a flat slab with a thin light
-   edge and a soft drop. */
+/* Dossier: a menu tile from a tactics game's operator files. A stripe of accent-2 down the left edge with a short
+   charcoal slab beside its top, a hairline round the other sides, a register cross at the top right, a solid corner
+   triangle at the lower right with a strip of hatching in accent-2 beside it, and a pale diagonal band through the
+   tile. Drawn without a border, so the stripe meets the edge. A primary button is a flat slab with a thin light edge
+   and a soft drop. */
 [data-frame-marks="dossier"] {
-	--capsule-primary-edge: inset 0 0 0 1px color-mix(in srgb, var(--accent-on) 40%, transparent), 0 4px 10px rgba(0, 0, 0, 0.22);
-	--card-marks: linear-gradient(var(--accent), var(--accent)) left 0 top 0 / 36px 3px no-repeat,
-		linear-gradient(var(--accent), var(--accent)) left 40px top 0 / 6px 3px no-repeat,
-		linear-gradient(color-mix(in srgb, var(--text) 32%, transparent), color-mix(in srgb, var(--text) 32%, transparent)) left 7px bottom 7px / 9px 1px no-repeat,
-		linear-gradient(color-mix(in srgb, var(--text) 32%, transparent), color-mix(in srgb, var(--text) 32%, transparent)) left 7px bottom 7px / 1px 9px no-repeat;
-	--card-mask-accent-2: url(/themes/drawings/frames/dossier-hatch.svg) right 10px bottom 9px / 44px 6px no-repeat;
+	--capsule-primary-edge: inset 0 0 0 1px color-mix(in srgb, var(--accent-on) 30%, transparent), 0 4px 10px rgba(0, 0, 0, 0.22);
+	--card-marks: linear-gradient(var(--accent-2), var(--accent-2)) left 0 top 0 / 5px 100% no-repeat,
+		linear-gradient(var(--rail-bg), var(--rail-bg)) left 5px top 0 / 34px 4px no-repeat,
+		linear-gradient(var(--border-soft), var(--border-soft)) left 0 top 0 / 100% 1px no-repeat,
+		linear-gradient(var(--border-soft), var(--border-soft)) right 0 top 0 / 1px 100% no-repeat,
+		linear-gradient(var(--border-soft), var(--border-soft)) left 0 bottom 0 / 100% 1px no-repeat,
+		linear-gradient(color-mix(in srgb, var(--text) 30%, transparent), color-mix(in srgb, var(--text) 30%, transparent)) right 16px top 10px / 1px 11px no-repeat,
+		linear-gradient(color-mix(in srgb, var(--text) 30%, transparent), color-mix(in srgb, var(--text) 30%, transparent)) right 11px top 15px / 11px 1px no-repeat,
+		linear-gradient(-45deg, var(--rail-bg) 0 9px, transparent 9px) right 0 bottom 0 / 13px 13px no-repeat,
+		linear-gradient(115deg, transparent 56%, color-mix(in srgb, var(--text) 3%, transparent) 56% 72%, transparent 72%) 0 0 / 100% 100% no-repeat;
+	--card-mask-accent-2: url(/themes/drawings/frames/dossier-hatch.svg) right 22px bottom 7px / 44px 6px no-repeat;
+}
+/* Dossier: a tile lifted off the page by a soft drop. */
+[data-frame-shadow="dossier"] {
+	--card-shadow: 0 8px 18px -8px rgba(0, 0, 0, 0.4);
 }
