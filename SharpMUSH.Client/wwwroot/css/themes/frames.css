@@ -621,6 +621,8 @@
 /* Plate: a deep shadow, and a faint accent light inside, as a lit cockpit panel. */
 [data-frame-shadow="plate"] {
 	--card-shadow: 0 10px 28px rgba(0, 0, 0, 0.45), inset 0 0 22px color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
 /* Field guide: a band of the accent along the top over a hinge line in the text colour, and a lens of accent-2 ringed
    in the text colour at the top right, as on a handheld field guide. */
 [data-frame-marks="field-guide"] {
