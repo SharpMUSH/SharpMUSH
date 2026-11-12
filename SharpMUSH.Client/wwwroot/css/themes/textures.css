@@ -893,6 +893,7 @@
 	--texture-mask-text: url(/themes/drawings/textures/orbit-text.svg) 0 0 / 600px 600px subtract,
 		url(/themes/drawings/textures/orbit-border.svg) right 0 bottom 0 / 1400px 900px no-repeat;
 	--texture-ink-text: color-mix(in srgb, var(--text) 45%, transparent);
+}
 
 /* Meadow: a sunny route through the grass, as in a game about catching creatures. A sun of accent-2 and puffs of
    cloud in the surface colour over a far hill, and a near hill of accent-3 with tall grass on its ridge and flowers

@@ -43,6 +43,36 @@ public partial class ThemeVariableTests
 			.Because("a colour belongs in tokens.css as a custom property a theme can set; see docs/guides/portal-themes.md");
 	}
 
+	/// <summary>
+	/// A rule left open swallows every rule after it in the same file, and the browser reports nothing: one missing
+	/// brace in textures.css once took every texture below it off the portal.
+	/// </summary>
+	[Test]
+	public async Task EveryStylesheetClosesEachRule()
+	{
+		var offenders = new List<string>();
+		foreach (var file in ComponentCss().Append(Path.Join(ClientSource.CssRoot, "tokens.css")))
+		{
+			var css = BlockComment().Replace(File.ReadAllText(file), "");
+			var depth = 0;
+			foreach (var c in css)
+			{
+				depth += c switch { '{' => 1, '}' => -1, _ => 0 };
+				if (depth < 0)
+				{
+					break;
+				}
+			}
+
+			if (depth != 0)
+			{
+				offenders.Add($"{Path.GetFileName(file)}: {(depth < 0 ? "a } with no rule open" : $"{depth} rule(s) never closed")}");
+			}
+		}
+
+		await Assert.That(offenders).IsEmpty();
+	}
+
 	[Test]
 	public async Task EveryStylesheetHookNamesAClassThePortalRenders()
 	{
@@ -90,4 +120,7 @@ public partial class ThemeVariableTests
 
 	[GeneratedRegex(@"/\*.*?(\*/|$)|^\s*\*.*$")]
 	private static partial Regex Comment();
+
+	[GeneratedRegex(@"/\*.*?\*/", RegexOptions.Singleline)]
+	private static partial Regex BlockComment();
 }
