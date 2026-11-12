@@ -153,6 +153,18 @@ public class ConnectionStateEventHandler(
 					idleSecs,
 					$"{bytesRecv}/{bytesSent}/{commandCount}");
 
+				// PennMUSH tells the room and the player's contents, never the player. A character's other
+				// connections are told here instead, so they learn one of theirs has gone; the one leaving
+				// got the quit message. The leaving handle may still be listed, so it is excluded by handle.
+				if (remainingConnections > 0)
+				{
+					await foreach (var other in connectionService.Get(notification.PlayerRef.Value)
+						.Where(c => c.Handle != notification.Handle && c.PresenceClass != PresenceClasses.Portal))
+					{
+						await notifyService.Notify(other.Handle, ErrorMessages.Notifications.YouHavePartiallyDisconnected);
+					}
+				}
+
 				// Resolve the player object once, while it's still in the DB, and share it between
 				// the connection-announce call and the room-contents refresh below.
 				if (await mediator.Send(new GetObjectNodeQuery(notification.PlayerRef.Value))
