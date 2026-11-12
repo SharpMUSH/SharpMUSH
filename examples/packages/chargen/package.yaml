@@ -1,7 +1,7 @@
 format: "1.16"
 package: chargen
 title: "Character applications"
-version: 2.7.1
+version: 2.7.2
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
@@ -928,8 +928,14 @@ objects:
       # by default the one before the last.
       INC`APP`DIFF:
         value: |-
-          @if cand(%q<viewer_staff>,strlen(%q<cmd_left_side>),not(isint(%q<cmd_left_side>)))={@include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(diff_from,%q<cmd_right_side>)},{@include %!/INC`NEED`MINE; think setq(diff_from,%q<cmd_argument>)}; @assert hasattr({{store}},APP`%q<app_key>)=@pemit %#=notice(APP,You have no application.,warn); think setqm(diff_owner,strmatch(%q<app_objid>,%q<viewer_objid>),
-          diff_round,default({{store}}/APP`%q<app_key>`ROUND,0)); @assert %q<diff_round>=@pemit %#=notice(APP,It has not been submitted yet%, so there is nothing to compare.,warn); think setq(diff_to,if(cand(%q<diff_owner>,u(%!/FUN`STATE`EDITABLE,%q<app_state>)),,%q<diff_round>)); think setq(diff_from,firstof(%q<diff_from>,if(strlen(%q<diff_to>),dec(%q<diff_round>),%q<diff_round>))); @assert cand(isint(%q<diff_from>),gt(%q<diff_from>,0),lte(%q<diff_from>,%q<diff_round>))=@pemit %#=notice(APP,if(gt(%q<diff_round>,1),Name a round from 1 to %q<diff_round>.,It has been submitted once%, so there is nothing earlier to compare.),warn); @pemit %#=u(%!/FUN`DISPLAY`DIFF,%q<app_key>,%q<diff_from>,%q<diff_to>,u(%!/FUN`APP`NAME,%q<app_key>): round %q<diff_from> to [if(strlen(%q<diff_to>),round %q<diff_to>,the draft)])
+          @if cand(%q<viewer_staff>,strlen(%q<cmd_left_side>),not(isint(%q<cmd_left_side>)))={@include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(diff_from,%q<cmd_right_side>)},{@include %!/INC`NEED`MINE; think setq(diff_from,%q<cmd_argument>)}; @include %!/INC`APP`DIFF`READ; @pemit %#=u(%!/FUN`DISPLAY`DIFF,%q<app_key>,%q<diff_from>,%q<diff_to>,u(%!/FUN`APP`NAME,%q<app_key>): round %q<diff_from> to [if(strlen(%q<diff_to>),round %q<diff_to>,the draft)])
+        flags: [cmdsyntax]
+      # Reads which rounds of the application to compare, and refuses no application, one never submitted, or a round
+      # out of range.
+      INC`APP`DIFF`READ:
+        value: |-
+          @assert hasattr({{store}},APP`%q<app_key>)=@pemit %#=notice(APP,You have no application.,warn); think setqm(diff_owner,strmatch(%q<app_objid>,%q<viewer_objid>),
+          diff_round,default({{store}}/APP`%q<app_key>`ROUND,0)); @assert %q<diff_round>=@pemit %#=notice(APP,It has not been submitted yet%, so there is nothing to compare.,warn); think setq(diff_to,if(cand(%q<diff_owner>,u(%!/FUN`STATE`EDITABLE,%q<app_state>)),,%q<diff_round>)); think setq(diff_from,firstof(%q<diff_from>,if(strlen(%q<diff_to>),dec(%q<diff_round>),%q<diff_round>))); @assert cand(isint(%q<diff_from>),gt(%q<diff_from>,0),lte(%q<diff_from>,%q<diff_round>))=@pemit %#=notice(APP,if(gt(%q<diff_round>,1),Name a round from 1 to %q<diff_round>.,It has been submitted once%, so there is nothing earlier to compare.),warn)
         flags: [cmdsyntax]
       # +app/comment <section>=<text> for the owner, +app/comment <name>[/<section>]=<text> for a reviewer.
       INC`APP`COMMENT:

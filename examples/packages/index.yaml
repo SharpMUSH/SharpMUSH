@@ -44,7 +44,7 @@ packages:
     description: comm.channels/comm.message/comm.who OOB v2 pushes — channels, pages only to who received them, and live channel member lists — for the portal Play sidebar (bundled default)
   - path: chargen/
     package: chargen
-    version: 2.7.1
+    version: 2.7.2
     description: Character applications reviewed as drafts, with comments per section, rounds, a public queue and an optional cap (requires http-handler)
   - path: chargen-help/
     name: Character applications help
@@ -62,7 +62,7 @@ packages:
     description: Application package (Area 21) — registers chargen as a portal page at /apps/chargen (requires chargen)
   - path: scene/
     package: scene
-    version: 1.19.3
+    version: 1.19.4
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
@@ -82,7 +82,7 @@ packages:
   - path: jobs/
     name: Jobs
     package: jobs
-    version: 1.16.1
+    version: 1.16.2
     description: +job, +request and their kin — a request queue with role-worked buckets, due dates and bucket hooks (requires http-handler)
   - path: jobs-help/
     name: Jobs help
@@ -187,7 +187,7 @@ packages:
   - path: watch/
     name: Watch
     package: watch
-    version: 1.5.1
+    version: 1.5.2
     description: +watch and +friend — hearing when the people you watch connect and leave (requires who-where)
   - path: watch-help/
     name: Watch list help
@@ -372,7 +372,7 @@ packages:
   - path: discord-channels/
     name: Discord Channels
     package: discord-channels
-    version: 1.4.1
+    version: 1.4.2
     description: Joins a game channel to a Discord channel both ways, linking it when needed (+discord/channel)
   - path: discord-channels-help/
     name: Discord channel bridge help
@@ -412,7 +412,7 @@ packages:
   - path: roster/
     name: Roster
     package: roster
-    version: 1.5.1
+    version: 1.5.2
     description: +roster — characters that can be played, given to accounts and returned, with their history; no approval process of its own
   - path: roster-help/
     name: Roster help
@@ -442,7 +442,7 @@ packages:
   - path: availability/
     name: Availability
     package: availability
-    version: 1.5.2
+    version: 1.5.3
     description: +avail — when each character is busy or free, as dates and repeating patterns, and the times a group are all free
   - path: availability-help/
     name: Availability help
@@ -534,7 +534,7 @@ packages:
   - path: world-grid/
     name: World grid
     package: world-grid
-    version: 1.6.1
+    version: 1.6.2
     description: Walking a world map the World plugin keeps — direction exits lead between the rooms it lends its places, and a parent describes them from the legend
   - path: world-grid-help/
     name: World grid help
