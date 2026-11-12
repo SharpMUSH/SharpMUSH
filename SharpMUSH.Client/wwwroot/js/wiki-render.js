@@ -22,7 +22,7 @@
 
     // A smooth scroll is movement, so a reader who asked for reduced motion jumps instead.
     function scrollBehavior() {
-        return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+        return document.documentElement?.dataset.reduceMotion === "on" || window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
     }
 
     function scrollToHash() {

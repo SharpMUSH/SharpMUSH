@@ -207,6 +207,14 @@ public class PortalThemeServiceTests
 		await Assert.That(await themes.GetAppearanceAsync(player)).IsEqualTo(new CharacterAppearance("directive", null) { ImageFilters = false });
 		(await themes.SetAppearanceAsync(player, new CharacterAppearance(null, null) { ImageFilters = true })).Expect<CharacterAppearance>();
 		await Assert.That((await themes.GetAppearanceAsync(player)).ImageFilters).IsTrue();
+
+		// Reduced motion is off until turned on, and is stored beside the filters.
+		await Assert.That((await themes.GetAppearanceAsync(player)).ReduceMotion).IsFalse();
+		var still = (await themes.SetAppearanceAsync(player, new CharacterAppearance(null, null) { ReduceMotion = true })).Expect<CharacterAppearance>();
+		await Assert.That(still.ReduceMotion).IsTrue();
+		await Assert.That(await themes.GetAppearanceAsync(player)).IsEqualTo(new CharacterAppearance(null, null) { ReduceMotion = true });
+		(await themes.SetAppearanceAsync(player, new CharacterAppearance(null, null))).Expect<CharacterAppearance>();
+		await Assert.That((await themes.GetAppearanceAsync(player)).ReduceMotion).IsFalse();
 	}
 
 	/// <summary>Server data round-tripped through JSON, as the database stores it.</summary>

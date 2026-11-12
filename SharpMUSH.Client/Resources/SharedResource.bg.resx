@@ -9538,4 +9538,16 @@
   <data name="NavThemeImageFiltersNote" xml:space="preserve">
     <value>Картините (аватари, стаи, галерии, уикито) приемат тона на темата. Изключете, за да ги виждате в собствените им цветове.</value>
   </data>
+  <data name="NavThemeReduceMotion" xml:space="preserve">
+    <value>Намаляване на движението</value>
+  </data>
+  <data name="NavThemeReduceMotionOn" xml:space="preserve">
+    <value>Вкл.</value>
+  </data>
+  <data name="NavThemeReduceMotionOff" xml:space="preserve">
+    <value>Изкл.</value>
+  </data>
+  <data name="NavThemeReduceMotionNote" xml:space="preserve">
+    <value>Фонът на темата стои неподвижен и нищо на страницата не се плъзга и не се върти. Винаги е включено, когато устройството ви изисква намалено движение.</value>
+  </data>
 </root>

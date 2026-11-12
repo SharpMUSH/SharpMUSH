@@ -53,17 +53,26 @@
                             <span class="account-panel-item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Contrast" Style="font-size:var(--text-md);" /></span>
                             <span class="account-panel-item-label">@Loc["NavTheme"]</span>
                         </a>
-                        @* The quick toggle for the acting character's image filters (the theme's picture tone); the
-                           same choice is on the Theme page for every character. The panel stays open on a toggle. While
+                        @* The quick toggles for the acting character's image filters (the theme's picture tone) and
+                           reduced motion; the same choices are on the Theme page for every character. The panel stays open on a toggle. While
                            a save runs the switch is aria-disabled, not disabled, so it keeps keyboard focus. *@
                         @if (ActiveCharacter is { } acting)
                         {
                             <button type="button" role="switch" class="account-panel-item account-panel-filters"
-                                    aria-checked="@(acting.ImageFilters ? "true" : "false")" aria-disabled="@(_togglingFilters ? "true" : null)"
+                                    aria-checked="@(acting.ImageFilters ? "true" : "false")" aria-disabled="@(_saving ? "true" : null)"
                                     @onclick="() => ToggleImageFiltersAsync(acting)">
                                 <span class="account-panel-item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.FilterBAndW" Style="font-size:var(--text-md);" /></span>
                                 <span class="account-panel-item-label">@Loc["NavThemeImageFilters"]</span>
                                 <span class="account-panel-switch @(acting.ImageFilters ? "account-panel-switch--on" : null)" aria-hidden="true">
+                                    <span class="account-panel-switch-knob"></span>
+                                </span>
+                            </button>
+                            <button type="button" role="switch" class="account-panel-item account-panel-motion"
+                                    aria-checked="@(acting.ReduceMotion ? "true" : "false")" aria-disabled="@(_saving ? "true" : null)"
+                                    @onclick="() => ToggleReduceMotionAsync(acting)">
+                                <span class="account-panel-item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.MotionPhotosPaused" Style="font-size:var(--text-md);" /></span>
+                                <span class="account-panel-item-label">@Loc["NavThemeReduceMotion"]</span>
+                                <span class="account-panel-switch @(acting.ReduceMotion ? "account-panel-switch--on" : null)" aria-hidden="true">
                                     <span class="account-panel-switch-knob"></span>
                                 </span>
                             </button>
@@ -130,19 +139,40 @@
     /// <summary>Turns the acting character's image filters to the value given.</summary>
     [Parameter] public EventCallback<bool> OnSetImageFilters { get; set; }
 
-    private bool _togglingFilters;
+    /// <summary>Turns the acting character's reduced motion to the value given.</summary>
+    [Parameter] public EventCallback<bool> OnSetReduceMotion { get; set; }
+
+    /// <summary>
+    /// A save of the acting character's look is under way. Each switch saves the whole look, so while one runs
+    /// neither switch starts another that would carry the old value of the first.
+    /// </summary>
+    private bool _saving;
+
+    private async Task ToggleReduceMotionAsync(AccountAuthService.CharacterSummary acting)
+    {
+        if (_saving) return;
+        _saving = true;
+        try
+        {
+            await OnSetReduceMotion.InvokeAsync(!acting.ReduceMotion);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
 
     private async Task ToggleImageFiltersAsync(AccountAuthService.CharacterSummary acting)
     {
-        if (_togglingFilters) return;
-        _togglingFilters = true;
+        if (_saving) return;
+        _saving = true;
         try
         {
             await OnSetImageFilters.InvokeAsync(!acting.ImageFilters);
         }
         finally
         {
-            _togglingFilters = false;
+            _saving = false;
         }
     }
 

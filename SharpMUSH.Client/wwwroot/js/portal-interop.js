@@ -475,7 +475,7 @@
     // then gives the room focus when asked. Smooth unless the reader asked for less motion.
     window.SharpMUSH.mapCentre = function (frame, room, focus) {
         if (!frame || !room) return;
-        var still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var still = document.documentElement?.dataset.reduceMotion === "on" || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
         var view = frame.getBoundingClientRect();
         var box = room.getBoundingClientRect();
         frame.scrollTo({
@@ -492,7 +492,7 @@
     // was just chosen and may be dragged next, stays in view above it. Smooth unless the reader asked for less motion.
     window.SharpMUSH.mapPanelIntoView = function (panel) {
         if (!panel) return;
-        var still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var still = document.documentElement?.dataset.reduceMotion === "on" || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
         var scroller = panel.parentElement;
         while (scroller && scroller !== document.body) {
             var overflow = getComputedStyle(scroller).overflowY;

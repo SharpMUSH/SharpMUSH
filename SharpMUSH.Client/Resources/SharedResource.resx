@@ -13058,6 +13058,9 @@
   <data name="AdmThemeStyleOrnamentFlank" xml:space="preserve">
     <value>Dashes</value>
   </data>
+  <data name="AdmThemeStyleOrnamentDesignator" xml:space="preserve">
+    <value>Corner mark</value>
+  </data>
   <data name="AdmThemeStyleFrameClipped" xml:space="preserve">
     <value>Clipped corners</value>
   </data>
@@ -13171,6 +13174,18 @@
   </data>
   <data name="NavThemeImageFiltersNote" xml:space="preserve">
     <value>Pictures (avatars, rooms, galleries, the wiki) take the theme's tone. Turn this off to see them in their own colours.</value>
+  </data>
+  <data name="NavThemeReduceMotion" xml:space="preserve">
+    <value>Reduce motion</value>
+  </data>
+  <data name="NavThemeReduceMotionOn" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="NavThemeReduceMotionOff" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="NavThemeReduceMotionNote" xml:space="preserve">
+    <value>The theme's background holds still and nothing on the page slides or turns. It is always on when your device asks for reduced motion.</value>
   </data>
   <data name="AdmThemeStyleImagerySmoke" xml:space="preserve">
     <value>Smoke</value>

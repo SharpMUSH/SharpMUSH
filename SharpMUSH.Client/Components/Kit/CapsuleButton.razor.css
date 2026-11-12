@@ -2,7 +2,7 @@
 	height: 36px;
 	padding: 0 var(--space-5) 0 var(--space-4);
 	border: 0;
-	border-radius: var(--button-radius, 18px);
+	border-radius: var(--button-radius, var(--radius-capsule, 18px));
 	clip-path: var(--button-clip, none);
 	transform: var(--button-transform, none);
 	background: var(--surface-2);
@@ -57,7 +57,7 @@
 	background: var(--accent);
 	color: var(--accent-on);
 	font-weight: var(--button-weight, 700);
-	box-shadow: var(--button-shadow, none);
+	box-shadow: var(--button-shadow, var(--capsule-primary-edge, none));
 }
 
 /* Pressed, in the theme's cut (data-buttons, css/themes/menus.css): a keycap sinks, a skewed plate slides into its

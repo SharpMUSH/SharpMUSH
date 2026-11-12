@@ -9538,4 +9538,16 @@
   <data name="NavThemeImageFiltersNote" xml:space="preserve">
     <value>Afbeeldingen (avatars, kamers, galerijen, de wiki) krijgen de tint van het thema. Zet dit uit om ze in hun eigen kleuren te zien.</value>
   </data>
+  <data name="NavThemeReduceMotion" xml:space="preserve">
+    <value>Beweging beperken</value>
+  </data>
+  <data name="NavThemeReduceMotionOn" xml:space="preserve">
+    <value>Aan</value>
+  </data>
+  <data name="NavThemeReduceMotionOff" xml:space="preserve">
+    <value>Uit</value>
+  </data>
+  <data name="NavThemeReduceMotionNote" xml:space="preserve">
+    <value>De achtergrond van het thema staat stil en niets op de pagina schuift of draait. Altijd aan als je apparaat om minder beweging vraagt.</value>
+  </data>
 </root>

@@ -64,7 +64,7 @@ public static class ThemeStyles
 		"fredoka", "dancing", "mochiy", "patrick", "dela", "graduate", "saira-stencil", "pixelify", "yuji", "bangers",
 		"lilita", "titan", "chakra", "monoton", "michroma", "antonio", "oxanium", "russo",
 		"cinzel-decorative", "forum", "press-start", "anton", "dotgothic", "alegreya-sc", "oswald",
-		"pirata", "uncial", "barlow", "metamorphous", "krona", "eagle-lake", "federant", "rye", "black-ops", "bodoni",
+		"pirata", "uncial", "barlow", "metamorphous", "krona", "eagle-lake", "federant", "rye", "black-ops", "bodoni", "saira-condensed",
 		"jost", "big-shoulders", "garamond", "tektur", "baskerville", "baloo", "silkscreen", "gloock", "inknut",
 	];
 
@@ -139,7 +139,7 @@ public static class ThemeStyles
 		["riveted"] = new("riveted", "thick", "riveted"),
 		["wanted"] = new("wanted", "double", "wanted"),
 		["scrap"] = new("scrap", "heavy", "scrap"),
-		["dossier"] = new("dossier", "line", "none"),
+		["dossier"] = new("dossier", "none", "dossier"),
 		["archive"] = new("archive", "none", "archive"),
 		["loadout"] = new("loadout", "none", "loadout"),
 		["hairline"] = new("hairline", "none", "hairline"),
@@ -202,6 +202,7 @@ public static class ThemeStyles
 		["flank"] = new("flank", "none"),
 		["capsule"] = new("capsule", "capsule"),
 		["emblem"] = new("emblem", "fade"),
+		["designator"] = new("designator", "designator"),
 	};
 
 	public static readonly IReadOnlyDictionary<string, EffectSet> Effects = new Dictionary<string, EffectSet>

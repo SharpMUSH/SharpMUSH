@@ -117,6 +117,30 @@ public class ThemeServiceTests : TrackingTestContext
 	}
 
 	[Test]
+	public async Task TurningReducedMotionOnRepaintsAndIsCached()
+	{
+		_account.ActiveCharacter = Character(BuiltInThemes.Directive.Id);
+		var service = Build();
+		await service.ReloadAsync();
+		await Assert.That(service.Current.Parts[ThemeService.ReduceMotionPart]).IsEqualTo("off");
+		var changes = 0;
+		service.OnThemeChanged += () => changes++;
+
+		_account.ActiveCharacter = Character(BuiltInThemes.Directive.Id) with { ReduceMotion = true };
+		_account.FireAppearance();
+
+		await Assert.That(changes).IsEqualTo(1).Because("only reduced motion changed, and that alone repaints");
+		await Assert.That(service.Current.Parts[ThemeService.ReduceMotionPart]).IsEqualTo("on");
+		var cached = JsonSerializer.Deserialize<ResolvedTheme>(_storage[ThemeService.CacheKey]!)!;
+		await Assert.That(cached.Parts[ThemeService.ReduceMotionPart]).IsEqualTo("on").Because("index.html paints the cached parts before the runtime loads");
+
+		_account.ActiveCharacter = null;
+		_account.Fire();
+		await Assert.That(service.Current.Parts[ThemeService.ReduceMotionPart]).IsEqualTo("on")
+			.Because("signed out, the browser keeps the last character's choice");
+	}
+
+	[Test]
 	public async Task TurningImageFiltersOffRepaintsAndIsCached()
 	{
 		_account.ActiveCharacter = Character(BuiltInThemes.Directive.Id);

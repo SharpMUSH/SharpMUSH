@@ -44,8 +44,10 @@ public class AccountAuthService(
 	/// <param name="Accent">The character's own accent colour, or null for the theme's.</param>
 	/// <param name="Vision">The player's colour vision (<see cref="SharpMUSH.Library.Models.Portal.ThemeVision"/>), or null for typical.</param>
 	/// <param name="ImageFilters">Whether pictures take the theme's picture tone (<see cref="CharacterAppearance.ImageFilters"/>).</param>
+	/// <param name="ReduceMotion">Whether the portal holds still (<see cref="CharacterAppearance.ReduceMotion"/>).</param>
 	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags, bool IsActing = false,
-		string? ThemeId = null, string? Accent = null, string? Vision = null, string? Locale = null, bool ImageFilters = true);
+		string? ThemeId = null, string? Accent = null, string? Vision = null, string? Locale = null, bool ImageFilters = true,
+		bool ReduceMotion = false);
 
 	public record DebugOttResponse(string Token, int ExpiresIn, string PlayerName,
 		string? AccountId, string? AccountUsername, string? AccountSessionToken, bool AccountMustChangePassword);
