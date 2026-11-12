@@ -15,6 +15,12 @@
     [Parameter, EditorRequired] public ResolvedTheme Theme { get; set; } = default!;
     [Parameter] public string? Class { get; set; }
 
+    /// <summary>
+    /// Draws the theme standing still, as under Reduce motion: no drifting texture, no playing atmosphere, and the still
+    /// drawing in place of one that animates itself. A page of many previews (the theme picker) stays light to draw.
+    /// </summary>
+    [Parameter] public bool Still { get; set; }
+
     /// <summary>The colours the swatch and the parts' drawings paint with.</summary>
     private static readonly string[] Colors =
     [
@@ -24,5 +30,5 @@
 
     private string Style => string.Concat(Colors.Select(c => $"--{c}:{Theme.Token(c)};")) + $"--accent:{Theme.Accent};";
 
-    private Dictionary<string, object> Parts => Theme.Parts.ToDictionary(p => "data-" + p.Key, p => (object)p.Value);
+    private Dictionary<string, object> Parts => ThemePreviewParts.For(Theme, Still);
 }
