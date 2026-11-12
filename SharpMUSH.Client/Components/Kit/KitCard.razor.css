@@ -32,8 +32,10 @@
 	display: flex;
 	align-items: center;
 	gap: var(--space-4);
-	padding: var(--space-4) var(--space-5);
-	border-bottom: 1px solid var(--border-soft);
+	padding: var(--space-4) var(--space-5) var(--space-4) calc(var(--space-5) + var(--card-head-inset, 0px));
+	background: var(--card-head-bg, none);
+	border-bottom: var(--card-head-rule, 1px solid var(--border-soft));
+	border-radius: var(--card-head-radius, 0);
 }
 
 .kit-card-titles {
@@ -49,13 +51,24 @@
 	font-style: var(--title-style);
 	letter-spacing: var(--title-tracking);
 	text-transform: var(--title-transform);
-	color: var(--title-color);
-	text-shadow: var(--title-shadow);
+	color: var(--card-title-ink, var(--title-color));
+	text-shadow: var(--card-title-shadow, var(--title-shadow));
+}
+
+/* A frame may set the title on a plate (--card-title-plate*): a fill sized to the words, cut to a shape. */
+.kit-card-title {
+	width: fit-content;
+	max-width: 100%;
+	box-sizing: border-box;
+	padding: var(--card-title-plate-pad, 0);
+	background: var(--card-title-plate, none);
+	box-shadow: var(--card-title-plate-shadow, none);
+	clip-path: var(--card-title-plate-clip, none);
 }
 
 .kit-card-sub {
 	font-size: var(--text-sm);
-	color: var(--text-dim);
+	color: var(--card-head-ink, var(--text-dim));
 	margin-top: 1px;
 }
 
@@ -77,10 +90,12 @@
 	gap: var(--space-4);
 }
 
+/* A frame that heads its cards with a band (--card-head-bleed) runs it out to the aside's edges. */
 .kit-card--aside .kit-card-head {
 	min-height: 0;
-	padding: 0;
-	border-bottom: 0;
+	margin: calc(-1 * var(--card-head-bleed, 0px)) calc(-1 * var(--card-head-bleed, 0px)) 0;
+	padding: calc(var(--card-head-bleed, 0px) / 2) var(--card-head-bleed, 0px) calc(var(--card-head-bleed, 0px) / 2) calc(var(--card-head-bleed, 0px) + var(--card-head-inset, 0px));
+	border-bottom: var(--card-head-rule, 0);
 }
 
 /* A narrow aside holds wide title tracking to 0.06em, so a short title such as "Recently changed" stays on

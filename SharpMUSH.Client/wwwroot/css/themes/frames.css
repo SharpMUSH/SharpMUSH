@@ -16,8 +16,26 @@
 [data-frame-edge="none"] { --card-border-style: none; --card-border-width: 0px; }
 
 
-/* A card keeps its whole shape unless its marks cut it (--card-clip); a preview inside the page starts uncut. */
-[data-frame-marks] { --card-clip: none; }
+/* A card keeps its whole shape unless its marks cut it (--card-clip), and its plain head unless its marks band it
+   (--card-head-*); a preview inside the page starts uncut and unbanded, as do the sidebar's edge and the stat tiles. */
+[data-frame-marks] {
+	--card-clip: none;
+	--card-head-bg: initial;
+	--card-head-rule: initial;
+	--card-head-radius: initial;
+	--card-head-inset: initial;
+	--card-head-bleed: initial;
+	--card-head-ink: initial;
+	--card-title-ink: initial;
+	--card-title-shadow: initial;
+	--card-title-plate: initial;
+	--card-title-plate-pad: initial;
+	--card-title-plate-shadow: initial;
+	--card-title-plate-clip: initial;
+	--rail-edge: initial;
+	--tile-edge: initial;
+	--tile-shadow: initial;
+}
 [data-frame-marks="none"] { --card-marks: none; }
 [data-frame-shadow="none"] { --card-shadow: none; }
 
@@ -616,12 +634,28 @@
 [data-frame-marks="plate"] {
 	--card-marks: linear-gradient(110deg, color-mix(in srgb, var(--text) 85%, transparent) 0 92%, transparent 92%) left 0 top 0 / 38% 5px no-repeat,
 		linear-gradient(110deg, var(--accent) 0 90%, transparent 90%) left 0 top 5px / 30% 2px no-repeat,
-		linear-gradient(-135deg, var(--bg) 0 14px, color-mix(in srgb, var(--accent) 50%, var(--border)) 14px 15px, transparent 15px) right top / 28px 28px no-repeat,
-		linear-gradient(45deg, var(--bg) 0 14px, color-mix(in srgb, var(--accent) 50%, var(--border)) 14px 15px, transparent 15px) left bottom / 28px 28px no-repeat,
+		linear-gradient(-135deg, transparent 0 14px, color-mix(in srgb, var(--accent) 50%, var(--border)) 14px 15px, transparent 15px) right top / 28px 28px no-repeat,
+		linear-gradient(45deg, transparent 0 14px, color-mix(in srgb, var(--accent) 50%, var(--border)) 14px 15px, transparent 15px) left bottom / 28px 28px no-repeat,
 		linear-gradient(90deg, var(--accent), var(--border) 35%, color-mix(in srgb, var(--accent) 50%, var(--border))) left 0 top 0 / calc(100% - 20px) 1px no-repeat,
 		linear-gradient(180deg, var(--accent), var(--border) 45%) left 0 top 0 / 1px calc(100% - 20px) no-repeat,
 		linear-gradient(180deg, color-mix(in srgb, var(--accent) 50%, var(--border)), var(--border) 45%, var(--accent-2)) right 0 top 20px / 1px calc(100% - 20px) no-repeat,
 		linear-gradient(90deg, color-mix(in srgb, var(--accent) 50%, var(--border)), var(--border) 55%, var(--accent-2)) right 0 bottom 0 / calc(100% - 20px) 1px no-repeat;
+}
+/* Plate: the card is cut away beyond those two diagonals, and each title is set dark on a pale armour plate with a
+   dark tab at its left and an accent seam under it, cut away at its right end; a hairline in the accent fades out
+   along the foot of the head. */
+[data-frame-marks="plate"] {
+	--card-clip: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+	--card-head-rule: 0;
+	--card-head-bg: linear-gradient(90deg, color-mix(in srgb, var(--accent) 45%, transparent), transparent) left bottom / 100% 1px no-repeat;
+	--card-title-ink: var(--bg);
+	--card-title-shadow: none;
+	--card-title-plate: linear-gradient(var(--bg), var(--bg)) left / 22px 100% no-repeat,
+		linear-gradient(var(--accent), var(--accent)) left 9px center / 4px 4px no-repeat,
+		linear-gradient(180deg, var(--text), color-mix(in srgb, var(--text) 82%, var(--accent-3)));
+	--card-title-plate-pad: 3px 22px 3px 32px;
+	--card-title-plate-shadow: inset 0 -2px 0 var(--accent);
+	--card-title-plate-clip: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
 }
 /* Plate: a deep shadow, and a faint accent light inside, as a lit cockpit panel. */
 [data-frame-shadow="plate"] {
@@ -638,6 +672,23 @@
 /* Field guide: a hard drop in the text colour, as a chunky plastic case. */
 [data-frame-shadow="field-guide"] {
 	--card-shadow: 0 5px 0 var(--text);
+}
+/* Field guide: a card with a title is headed by a full band of the accent, its title in the accent's own text colour,
+   a lens at its left and a rule in the text colour under it, as a page of a handheld field guide. The sidebar is
+   ruled off in the text colour, and the stat tiles take the card's edge and drop. */
+[data-frame-marks="field-guide"] {
+	--card-head-bg: radial-gradient(circle at center, color-mix(in srgb, var(--info) 45%, var(--surface)) 0 5px, var(--surface) 5.5px 8px, var(--text) 8.5px 10px, transparent 10.5px) left 14px center / 22px 22px no-repeat,
+		var(--accent);
+	--card-head-rule: var(--card-border-width) solid var(--text);
+	--card-head-radius: calc(var(--radius-card) - var(--card-border-width)) calc(var(--radius-card) - var(--card-border-width)) 0 0;
+	--card-head-inset: 26px;
+	--card-head-bleed: var(--space-4);
+	--card-head-ink: var(--accent-on);
+	--card-title-ink: var(--accent-on);
+	--card-title-shadow: none;
+	--rail-edge: var(--card-border-width) solid var(--text);
+	--tile-edge: var(--card-border-width) solid var(--text);
+	--tile-shadow: var(--card-shadow);
 }
 
 /* Device: three lights along the top of the bezel, the first one lit in the accent, as on a handheld partner device. */

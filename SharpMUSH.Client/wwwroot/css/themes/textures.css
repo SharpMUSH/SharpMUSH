@@ -561,13 +561,14 @@
 }
 
 
-/* Watercolour: washes of accent-2 and accent-3 bled into the page, darker toward its edges; the cards are grained. */
+/* Watercolour: washes of accent-2 and accent-3 bled into the page, darker toward its edges; the cards are grained.
+   Each wash is stretched over the whole window rather than tiled, so it reads as one painted page. */
 [data-texture="watercolor"] {
 	--texture: radial-gradient(ellipse at 50% 40%, transparent 60%, color-mix(in srgb, var(--accent-3) 10%, transparent) 100%);
 	--texture-size: 100% 100%;
-	--texture-mask-accent-2: url(/themes/drawings/shared/clouds-600.svg) 0 0 / 600px 600px;
+	--texture-mask-accent-2: url(/themes/drawings/shared/clouds-600.svg) 0 0 / 100% 100%;
 	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 14%, transparent);
-	--texture-mask-accent-3: url(/themes/drawings/shared/clouds-800.svg) 210px 140px / 800px 800px;
+	--texture-mask-accent-3: url(/themes/drawings/shared/clouds-800.svg) 0 0 / 100% 100%;
 	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 9%, transparent);
 	--card-mask-grain: url(/themes/drawings/shared/noise.svg) 0 0 / 180px 180px;
 	--card-ink-grain: color-mix(in srgb, var(--text) 6%, transparent);
