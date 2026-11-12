@@ -564,6 +564,22 @@ public static class BuiltInThemes
 		display: "inknut", body: "serif", corners: "sharp", texture: "warbanners", ornament: "hanko", frame: "slips", titles: "normal", effect: "stamped", imagery: "dusk",
 		accent2: "#c9a15a", accent3: "#4f86a8",
 		selection: "pennant", buttons: "seal", material: "bamboo", meters: "arrows", motion: "unfurl", atmosphere: "smoke");
+	// Light-line science fiction: a grid world drawn in light, and a mecha pilot's HUD in orbit. Inspired by kinds of
+	// science fiction, never one film's or game's names, vehicles or art.
+
+	/// <summary>Lumen Grid: a floor grid running to a glowing horizon on black, cyan light lines with an amber rival colour, circuit traces carrying light, capsule buttons outlined in light.</summary>
+	public static readonly PortalTheme LumenGrid = Genre("lumen-grid", "Lumen Grid", dark: true,
+		["#04070b", "#0a141a", "#0f1d25", "#08111a", "#03060a", "#d6f6ff", "#9cc3cf", "#7fa6b3", "#1f5866", "#12313a", "#5ff3ff", "#ffa142", "#ff8a7a"],
+		display: "audiowide", body: "ui", corners: "soft", texture: "gridfloor", ornament: "brackets", frame: "nodes", titles: "normal", effect: "glow", imagery: "neon",
+		accent2: "#ffa142", accent3: "#2a8fa0",
+		selection: "trace", buttons: "lightring", material: "lightline", meters: "segmented", motion: "snappy", atmosphere: "circuit");
+
+	/// <summary>Jovian: a mecha pilot's HUD over a banded gas giant and its rings, pale armour plates over thin HUD lines, lock-on marks, blade buttons, neon beating outward from a core.</summary>
+	public static readonly PortalTheme Jovian = Genre("jovian", "Jovian", dark: true,
+		["#080c1f", "#10173a", "#151d46", "#0c1230", "#060918", "#e4ebff", "#b3bfe3", "#8e9bc4", "#2c3a78", "#1c2550", "#6fd6ff", "#ff7a45", "#ff8a8a"],
+		display: "jura", body: "ui", corners: "sharp", texture: "orbit", ornament: "flank", frame: "plate", titles: "wide", effect: "scope", imagery: "steel",
+		accent2: "#ff7a45", accent3: "#8a72e8",
+		selection: "lockon", buttons: "blade", material: "glass", meters: "slats", motion: "drift", atmosphere: "heartbeat");
 
 	public static readonly IReadOnlyList<PortalTheme> All =
 	[
@@ -581,6 +597,7 @@ public static class BuiltInThemes
 		Archivist, Arena, Ashen, RelicSlate, Precinct,
 		WildTamer, DataPartner,
 		VermilionCourt, ThreeRealms, Torii, Inkwash, ModernJapan, ModernJapanNight,
+		LumenGrid, Jovian,
 		ProtanDark, ProtanLight, DeutanDark, DeutanLight, TritanDark, TritanLight, MonoDark, MonoLight,
 	];
 

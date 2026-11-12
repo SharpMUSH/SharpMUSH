@@ -60,6 +60,8 @@
 [data-font-display="shippori-b1"] { --font-display: 'Shippori Mincho B1', 'Yu Mincho', Georgia, serif; --font-title-weight: 800; }
 [data-font-display="hina"] { --font-display: 'Hina Mincho', 'Yu Mincho', Georgia, serif; --font-title-weight: 400; }
 [data-font-display="zen-kaku"] { --font-display: 'Zen Kaku Gothic New', 'Hiragino Sans', system-ui, sans-serif; --font-title-weight: 900; }
+[data-font-display="audiowide"] { --font-display: Audiowide, 'Eurostile', sans-serif; --font-title-weight: 400; }
+[data-font-display="jura"] { --font-display: Jura, 'Eurostile', sans-serif; --font-title-weight: 600; }
 
 [data-font-body="ui"] { --font-ui: 'Hanken Grotesk', system-ui, sans-serif; }
 [data-font-body="serif"] { --font-ui: Georgia, 'Iowan Old Style', 'Times New Roman', serif; }

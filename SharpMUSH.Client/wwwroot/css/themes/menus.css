@@ -239,6 +239,48 @@
 	--select-mark-transform: initial;
 }
 
+/* Trace: a line of light runs under the line from the left and stops short with a bright head, over a faint wash
+   of the accent fading to the right. */
+[data-selection="trace"] {
+	--select-ink-dim: initial;
+	--select-fill: linear-gradient(90deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 85%);
+	--select-ink: var(--accent);
+	--select-radius: 0px;
+	--select-text-glow: 0 0 8px color-mix(in srgb, var(--accent) 55%, transparent);
+	--select-mark: radial-gradient(circle 4px at calc(100% - 4px) 50%, color-mix(in srgb, var(--accent) 35%, #fff) 0 2px, var(--accent) 3px, transparent 4px),
+		linear-gradient(90deg, color-mix(in srgb, var(--accent) 10%, transparent), var(--accent) 85%, color-mix(in srgb, var(--accent) 50%, #fff)) left 0 center / calc(100% - 4px) 2px no-repeat;
+	--select-mark-inset: calc(100% - 5px) 20% -3px 0;
+	--select-mark-width: auto;
+	--select-mark-radius: 0px;
+	--select-mark-glow: none;
+	--select-mark-transform: initial;
+	--select-shadow: initial;
+	--select-lift: initial;
+}
+
+/* Lockon: a wash of the accent fading to the right, a bar of light in the accent down the left edge with a haze
+   beside it, and two reticle corners in the second accent closing on the line's right end, so the line reads as a
+   locked target. */
+[data-selection="lockon"] {
+	--select-ink-dim: initial;
+	--select-fill: linear-gradient(90deg, color-mix(in srgb, var(--accent) 16%, transparent), transparent 85%);
+	--select-ink: var(--text);
+	--select-radius: 0px;
+	--select-text-glow: initial;
+	--select-mark: linear-gradient(90deg, var(--accent) 0 2px, color-mix(in srgb, var(--accent) 35%, transparent) 2px, transparent 10px) left 0 top 8px / 10px calc(100% - 16px) no-repeat,
+		linear-gradient(var(--accent-2), var(--accent-2)) right top / 8px 2px no-repeat,
+		linear-gradient(var(--accent-2), var(--accent-2)) right top / 2px 8px no-repeat,
+		linear-gradient(var(--accent-2), var(--accent-2)) right bottom / 8px 2px no-repeat,
+		linear-gradient(var(--accent-2), var(--accent-2)) right bottom / 2px 8px no-repeat;
+	--select-mark-inset: 0;
+	--select-mark-width: auto;
+	--select-mark-radius: 0px;
+	--select-mark-glow: none;
+	--select-mark-transform: initial;
+	--select-shadow: initial;
+	--select-lift: initial;
+}
+
 /* ── Material ── */
 
 /* Solid: the surface, as it is. */
@@ -322,6 +364,14 @@
 		radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.5), transparent 60%),
 		var(--surface);
 	--card-backdrop: none;
+}
+
+/* Lightline: near-black glass with light pooling at its inside edge; the frame draws its lines of light. Unlike
+   hologram, no scanlines or tint cross the face, so long text reads as on a plain card. */
+[data-material="lightline"] {
+	--card-material: radial-gradient(120% 140% at 50% 50%, transparent 62%, color-mix(in srgb, var(--accent) 9%, transparent)),
+		linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--bg) 92%, transparent));
+	--card-backdrop: blur(6px);
 }
 
 /* ── Buttons ── */
@@ -621,6 +671,39 @@
 	--button-press-stroke: initial;
 }
 
+/* Light ring: fully round ends edged in light. A filled one glows; an outlined one is a ring of light. Pressed, it
+   sinks a pixel, shrinks a little and flares. */
+[data-buttons="lightring"] {
+	--button-focus-offset: initial;
+	--button-radius: 999px;
+	--button-shadow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent);
+	--button-plain-shadow: inset 0 0 0 1px var(--accent), 0 0 8px color-mix(in srgb, var(--accent) 35%, transparent);
+	--button-press: translateY(1px) scale(0.98);
+	--button-press-shadow: 0 0 24px color-mix(in srgb, var(--accent) 85%, transparent), inset 0 2px 6px rgba(0, 0, 0, 0.35);
+	--button-clip: initial;
+	--button-transform: initial;
+	--button-weight: initial;
+	--button-tracking: initial;
+	--button-case: initial;
+}
+
+/* Blade: an armour plate with angled ends, in spaced capitals, with a darker keel along its foot. Pressed, it drops
+   two pixels into the hull, its top edge in shadow and its keel lit in the second accent. */
+[data-buttons="blade"] {
+	/* The cut ends would clip an outline outside the button, so focus draws inside it. */
+	--button-focus-offset: -4px;
+	--button-radius: 0px;
+	--button-clip: polygon(12px 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 12px 100%, 0 50%);
+	--button-weight: 700;
+	--button-tracking: 0.1em;
+	--button-case: uppercase;
+	--button-shadow: inset 0 -3px 0 color-mix(in srgb, var(--accent) 50%, #000);
+	--button-plain-shadow: inset 0 -2px 0 var(--accent-2);
+	--button-press: translateY(2px);
+	--button-press-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.4), inset 0 -2px 0 var(--accent-2);
+	--button-transform: initial;
+}
+
 /* ── Meters ── */
 
 /* Bar: as MudBlazor draws it. */
@@ -643,6 +726,15 @@
 	transform: skewX(-24deg);
 }
 
+/* Slats: twelve slanted segments, as a mecha's HUD readout. */
+[data-meters="slats"] .mud-progress-linear {
+	height: 8px;
+	margin-inline: 4px;
+	border-radius: 0;
+	transform: skewX(-20deg);
+	mask: repeating-linear-gradient(90deg, #000 0 calc(100% / 12 - 3px), transparent calc(100% / 12 - 3px) calc(100% / 12));
+}
+
 /* Pips: ten round pips, filled up to the value. */
 [data-meters="pips"] .mud-progress-linear {
 	height: 12px;
@@ -661,6 +753,7 @@
 
 [data-meters="segmented"] .mud-progress-linear-bar,
 [data-meters="slanted"] .mud-progress-linear-bar,
+[data-meters="slats"] .mud-progress-linear-bar,
 [data-meters="pips"] .mud-progress-linear-bar {
 	border-radius: 0;
 }

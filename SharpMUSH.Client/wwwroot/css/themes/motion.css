@@ -1,10 +1,13 @@
 /* Theme parts: motion and atmosphere (ThemeStyles.Motion, Atmosphere).
    [data-motion]      how a card and a menu line arrive (--card-enter, --nav-enter), a loop the current line plays
                       (--select-motion), the texture's drift (--texture-motion), and whether the atmosphere plays
-                      (--ambient-play). Arrivals take --duration-enter, which reduced motion zeroes; the loops stop
+                      (--ambient-play; --ambient-flow is --no-drawing where nothing may move, which takes away a drawing that
+                      animates itself). Arrivals take --duration-enter, which reduced motion zeroes; the loops stop
                       under reduced motion too (globals.css).
-   [data-atmosphere]  the layer between the texture and the page (ThemeTexture): --atmosphere-still, and
-                      --atmosphere-moving with its tile size and loop. Every colour comes from the theme. */
+   [data-atmosphere]  the layers between the texture and the page (ThemeTexture): --atmosphere-still, --atmosphere-deep
+                      over it, and --atmosphere-moving with its tile size, place, repeat and loop; each cut to a
+                      drawing by its --atmosphere-*-mask, or none. Every choice sets every one of them, so a preview
+                      inside a page with another choice inherits nothing. Every colour comes from the theme. */
 
 @keyframes theme-rise {
 	from { opacity: 0; translate: 0 10px; }
@@ -65,6 +68,12 @@
 	to { clip-path: inset(0 0 0 0); }
 }
 
+/* Two bands of light crossing the window, one across and one down, for the circuit atmosphere. */
+@keyframes theme-circuit {
+	from { background-position: 100% 0, 0 100%; }
+	to { background-position: 0% 0, 0 0%; }
+}
+
 @keyframes theme-float {
 	from { background-position: 0 0; }
 	to { background-position: 300px -300px; }
@@ -79,6 +88,7 @@
 	--select-motion: none;
 	--texture-motion: none;
 	--ambient-play: running;
+	--ambient-flow: initial;
 }
 
 /* Still: nothing moves at all, the atmosphere included. */
@@ -88,6 +98,7 @@
 	--select-motion: none;
 	--texture-motion: none;
 	--ambient-play: paused;
+	--ambient-flow: var(--no-drawing);
 	--duration-enter: 0s;
 	--duration-exit: 0s;
 	--duration-spring: 0s;
@@ -101,6 +112,7 @@
 	--select-motion: none;
 	--texture-motion: none;
 	--ambient-play: running;
+	--ambient-flow: initial;
 }
 
 /* Drift: cards fade up slowly, and the background drifts as if seen from a slowly moving camera. */
@@ -110,6 +122,7 @@
 	--select-motion: none;
 	--texture-motion: theme-drift 40s ease-in-out infinite alternate;
 	--ambient-play: running;
+	--ambient-flow: initial;
 }
 
 /* Wobble: cards are dealt in with a turn, and the current line floats and tilts like a held card. */
@@ -119,6 +132,7 @@
 	--select-motion: theme-wobble 3.2s ease-in-out infinite;
 	--texture-motion: none;
 	--ambient-play: running;
+	--ambient-flow: initial;
 }
 
 /* Bob: cards rise, and the current line bobs gently up and down. */
@@ -128,6 +142,7 @@
 	--select-motion: theme-bob 2.8s ease-in-out infinite;
 	--texture-motion: none;
 	--ambient-play: running;
+	--ambient-flow: initial;
 }
 
 /* Unfurl: cards open downward like a scroll let fall; nothing loops. */
@@ -146,6 +161,13 @@
 	--atmosphere-still: none;
 	--atmosphere-moving: none;
 	--atmosphere-motion: none;
+	--atmosphere-still-mask: none;
+	--atmosphere-deep: none;
+	--atmosphere-deep-mask: none;
+	--atmosphere-moving-mask: none;
+	--atmosphere-size: auto;
+	--atmosphere-position: 0 0;
+	--atmosphere-repeat: repeat;
 }
 
 /* Vignette: the edges of the window darkened. */
@@ -153,6 +175,13 @@
 	--atmosphere-still: radial-gradient(ellipse at 50% 45%, transparent 50%, rgba(0, 0, 0, 0.5) 100%);
 	--atmosphere-moving: none;
 	--atmosphere-motion: none;
+	--atmosphere-still-mask: none;
+	--atmosphere-deep: none;
+	--atmosphere-deep-mask: none;
+	--atmosphere-moving-mask: none;
+	--atmosphere-size: auto;
+	--atmosphere-position: 0 0;
+	--atmosphere-repeat: repeat;
 }
 
 /* Fog: banks of mist low on the window, slowly crossing it. */
@@ -163,6 +192,12 @@
 		radial-gradient(20% 12% at 85% 90%, color-mix(in srgb, var(--text) 12%, transparent), transparent);
 	--atmosphere-size: 200% 100%;
 	--atmosphere-motion: theme-pan 60s ease-in-out infinite alternate;
+	--atmosphere-still-mask: none;
+	--atmosphere-deep: none;
+	--atmosphere-deep-mask: none;
+	--atmosphere-moving-mask: none;
+	--atmosphere-position: 0 0;
+	--atmosphere-repeat: repeat;
 }
 
 /* Embers: sparks in the warning colour rising from a warm glow at the bottom. */
@@ -173,6 +208,12 @@
 		radial-gradient(circle at 45% 88%, var(--warn) 0 1px, transparent 2px);
 	--atmosphere-size: 260px 340px;
 	--atmosphere-motion: theme-ascend 16s linear infinite;
+	--atmosphere-still-mask: none;
+	--atmosphere-deep: none;
+	--atmosphere-deep-mask: none;
+	--atmosphere-moving-mask: none;
+	--atmosphere-position: 0 0;
+	--atmosphere-repeat: repeat;
 }
 
 /* Motes: points of accent light drifting up and across. */
@@ -183,6 +224,12 @@
 		radial-gradient(circle at 85% 15%, var(--accent) 0 1px, transparent 3px);
 	--atmosphere-size: 300px 300px;
 	--atmosphere-motion: theme-float 50s linear infinite;
+	--atmosphere-still-mask: none;
+	--atmosphere-deep: none;
+	--atmosphere-deep-mask: none;
+	--atmosphere-moving-mask: none;
+	--atmosphere-position: 0 0;
+	--atmosphere-repeat: repeat;
 }
 
 /* CRT: a curved screen's dark corners and its scanlines. */
@@ -191,6 +238,13 @@
 		repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.12) 0 1px, transparent 1px 3px);
 	--atmosphere-moving: none;
 	--atmosphere-motion: none;
+	--atmosphere-still-mask: none;
+	--atmosphere-deep: none;
+	--atmosphere-deep-mask: none;
+	--atmosphere-moving-mask: none;
+	--atmosphere-size: auto;
+	--atmosphere-position: 0 0;
+	--atmosphere-repeat: repeat;
 }
 
 /* Slashes: two long diagonal cuts across the window, one in the second accent, so the accent stays the cards' own. */
@@ -198,6 +252,49 @@
 	--atmosphere-still: linear-gradient(115deg, transparent 0 58%, color-mix(in srgb, var(--accent-2) 22%, transparent) 58% 60%,
 		transparent 60% 66%, color-mix(in srgb, var(--text) 8%, transparent) 66% 66.5%, transparent 66.5%);
 	--atmosphere-moving: none;
+	--atmosphere-motion: none;
+	--atmosphere-still-mask: none;
+	--atmosphere-deep: none;
+	--atmosphere-deep-mask: none;
+	--atmosphere-moving-mask: none;
+	--atmosphere-size: auto;
+	--atmosphere-position: 0 0;
+	--atmosphere-repeat: repeat;
+}
+
+/* Circuit: a few long board traces across the top of the window, cut into the page: a faint rim in the accent round
+   each dark groove, and light in the accent running along them as two slow bands cross the window. The glow drawing
+   is taken away by --ambient-flow where nothing may move. */
+[data-atmosphere="circuit"] {
+	--atmosphere-still: color-mix(in srgb, var(--accent) 16%, transparent);
+	--atmosphere-still-mask: url(/themes/drawings/atmosphere/circuit-rim.svg) center top / cover no-repeat;
+	--atmosphere-deep: color-mix(in srgb, var(--bg) 45%, #000);
+	--atmosphere-deep-mask: url(/themes/drawings/atmosphere/circuit-groove.svg) center top / cover no-repeat;
+	--atmosphere-moving: linear-gradient(90deg, transparent 46%, color-mix(in srgb, var(--accent) 80%, #fff) 50%, transparent 54%),
+		linear-gradient(0deg, transparent 45%, var(--accent) 50%, transparent 55%);
+	--atmosphere-moving-mask: var(--ambient-flow, url(/themes/drawings/atmosphere/circuit-glow.svg) center top / cover no-repeat);
+	--atmosphere-size: 300% 100%, 100% 300%;
+	--atmosphere-position: 0 0, 0 0;
+	--atmosphere-repeat: no-repeat;
+	--atmosphere-motion: theme-circuit 22s linear infinite;
+}
+
+/* Heartbeat: dense bundles of thin channels, as the light-lines on armour plating, walled in the accent round a dark
+   groove, round a heart in the middle a third of the way down. Pairs of lanes fan out of its top and bottom into buses
+   that weave straight up or down; bundles step out of its sides and peel off a bus at each column. The heart beats
+   twice, and the double pulse of neon runs out along every lane and down each branch, so light reaches each part of
+   the page by the channels that lead there; then a rest. The pulses move inside the flow drawing, which
+   --ambient-flow takes away where nothing may move. */
+[data-atmosphere="heartbeat"] {
+	--atmosphere-still: color-mix(in srgb, var(--accent) 42%, transparent);
+	--atmosphere-still-mask: url(/themes/drawings/atmosphere/heartbeat-rim.svg) 50% 33.33% / 2400px 1500px no-repeat;
+	--atmosphere-deep: color-mix(in srgb, var(--bg) 45%, #000);
+	--atmosphere-deep-mask: url(/themes/drawings/atmosphere/heartbeat-groove.svg) 50% 33.33% / 2400px 1500px no-repeat;
+	--atmosphere-moving: color-mix(in srgb, var(--accent) 80%, #fff);
+	--atmosphere-moving-mask: var(--ambient-flow, url(/themes/drawings/atmosphere/heartbeat-flow.svg) 50% 33.33% / 2400px 1500px no-repeat);
+	--atmosphere-size: auto;
+	--atmosphere-position: 0 0;
+	--atmosphere-repeat: repeat;
 	--atmosphere-motion: none;
 }
 

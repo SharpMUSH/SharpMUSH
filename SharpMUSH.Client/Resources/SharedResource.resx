@@ -13220,6 +13220,12 @@
   <data name="AdmThemeStyleSelectionPennant" xml:space="preserve">
     <value>Pennant</value>
   </data>
+  <data name="AdmThemeStyleSelectionTrace" xml:space="preserve">
+    <value>Light trace</value>
+  </data>
+  <data name="AdmThemeStyleSelectionLockon" xml:space="preserve">
+    <value>Lock-on</value>
+  </data>
   <data name="AdmThemeStyleButtons" xml:space="preserve">
     <value>Buttons</value>
   </data>
@@ -13246,6 +13252,12 @@
   </data>
   <data name="AdmThemeStyleButtonsSeal" xml:space="preserve">
     <value>Seal</value>
+  </data>
+  <data name="AdmThemeStyleButtonsLightring" xml:space="preserve">
+    <value>Light ring</value>
+  </data>
+  <data name="AdmThemeStyleButtonsBlade" xml:space="preserve">
+    <value>Blade</value>
   </data>
   <data name="AdmThemeStyleMaterial" xml:space="preserve">
     <value>Card material</value>
@@ -13277,6 +13289,9 @@
   <data name="AdmThemeStyleMaterialBamboo" xml:space="preserve">
     <value>Bamboo slips</value>
   </data>
+  <data name="AdmThemeStyleMaterialLightline" xml:space="preserve">
+    <value>Lightline</value>
+  </data>
   <data name="AdmThemeStyleMeters" xml:space="preserve">
     <value>Meters</value>
   </data>
@@ -13288,6 +13303,9 @@
   </data>
   <data name="AdmThemeStyleMetersSlanted" xml:space="preserve">
     <value>Slanted</value>
+  </data>
+  <data name="AdmThemeStyleMetersSlats" xml:space="preserve">
+    <value>Slats</value>
   </data>
   <data name="AdmThemeStyleMetersPips" xml:space="preserve">
     <value>Pips</value>
@@ -13355,6 +13373,12 @@
   <data name="AdmThemeStyleAtmosphereSmoke" xml:space="preserve">
     <value>Smoke</value>
   </data>
+  <data name="AdmThemeStyleAtmosphereCircuit" xml:space="preserve">
+    <value>Circuit</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereHeartbeat" xml:space="preserve">
+    <value>Heartbeat</value>
+  </data>
   <data name="AdmThemeStyleTextureArchive" xml:space="preserve">
     <value>Archive</value>
   </data>
@@ -13376,6 +13400,12 @@
   <data name="AdmThemeStyleTextureWarbanners" xml:space="preserve">
     <value>War banners</value>
   </data>
+  <data name="AdmThemeStyleTextureGridfloor" xml:space="preserve">
+    <value>Grid floor</value>
+  </data>
+  <data name="AdmThemeStyleTextureOrbit" xml:space="preserve">
+    <value>Orbit</value>
+  </data>
   <data name="AdmThemeStyleFrameArchive" xml:space="preserve">
     <value>Archive</value>
   </data>
@@ -13390,6 +13420,12 @@
   </data>
   <data name="AdmThemeStyleFrameBrushed" xml:space="preserve">
     <value>Brushed</value>
+  </data>
+  <data name="AdmThemeStyleFrameNodes" xml:space="preserve">
+    <value>Nodes</value>
+  </data>
+  <data name="AdmThemeStyleFramePlate" xml:space="preserve">
+    <value>Plate</value>
   </data>
   <data name="AdmThemeStyleTextureMeadow" xml:space="preserve">
     <value>Meadow</value>
