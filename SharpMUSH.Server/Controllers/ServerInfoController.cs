@@ -28,9 +28,11 @@ public class ServerInfoController(IOptionsWrapper<SharpMUSHOptions> options, IGa
 	/// <param name="Banner">The <c>portal_banner</c> option; empty for none.</param>
 	/// <param name="Tagline">The <c>portal_tagline</c> option.</param>
 	/// <param name="Description">The <c>portal_description</c> option.</param>
+	/// <param name="SideArt">The <c>portal_side_art</c> option; empty for Sharpie.</param>
+	/// <param name="Sharpie">The <c>portal_sharpie</c> option.</param>
 	public record ServerInfoResponse(bool GuestsEnabled, string MudName, IReadOnlyList<string> Features, string BuildId,
 		string ImageHosts, string ImageHostList, string Logo, OnboardingPresentation? Onboarding = null,
-		string Banner = "", string Tagline = "", string Description = "");
+		string Banner = "", string Tagline = "", string Description = "", string SideArt = "", bool Sharpie = true);
 
 	// Not rate-limited: every portal page load asks for this before it renders, and it reads options values,
 	// the installed-package registry and the (cached) guest roster. A limiter here only ever delayed the portal's boot.
@@ -43,7 +45,8 @@ public class ServerInfoController(IOptionsWrapper<SharpMUSHOptions> options, IGa
 			await features.EnabledAsync(), build.Id,
 			cosmetic.ImageHosts ?? "any", cosmetic.ImageHostList ?? string.Empty,
 			cosmetic.PortalLogo?.Trim() ?? string.Empty, await onboarding.PublicAsync(ct),
-			PortalIdentity.Banner(cosmetic) ?? string.Empty, PortalIdentity.Tagline(cosmetic), PortalIdentity.Description(cosmetic)));
+			PortalIdentity.Banner(cosmetic) ?? string.Empty, PortalIdentity.Tagline(cosmetic), PortalIdentity.Description(cosmetic),
+			PortalIdentity.SideArt(cosmetic) ?? string.Empty, cosmetic.PortalSharpie));
 	}
 
 	/// <summary>

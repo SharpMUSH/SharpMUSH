@@ -129,7 +129,7 @@
         {
             var single = ConfigNaming.IsSingleChar(Property);
             <input name="@Property.Path" class="cfg-text @(single ? "cfg-text--char" : "")" type="text" aria-label="@DisplayName" aria-describedby="@DescribedBy"
-                   maxlength="@(single ? 1 : null)"
+                   maxlength="@(single ? 1 : null)" placeholder="@Property.Example"
                    value="@Draft.String(Property)"
                    readonly="@Property.ReadOnly"
                    @onchange="@(e => Edit(() => Draft.Set(Property, e.Value?.ToString())))" />

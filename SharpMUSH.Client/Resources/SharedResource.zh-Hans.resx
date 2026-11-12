@@ -7857,17 +7857,9 @@
     <value>您随时可以在“帮助”中找到本指南。</value>
     <comment>MT</comment>
   </data>
-  <data name="GuideIdentityAppearance" xml:space="preserve">
-    <value>外观设置</value>
-    <comment>MT</comment>
-  </data>
   <data name="GuideIdentityArtFallback" xml:space="preserve">
     <value>在您所选风格和类型的插图就绪之前，先显示默认的 Sharpie。</value>
     <comment>MT</comment>
-  </data>
-  <data name="GuideIdentityArtworkHint" xml:space="preserve">
-    <value>玩家可以精简或隐藏插图。游戏徽标另行设置，见</value>
-    <comment>MT — sentence continues into the GuideIdentityAppearance link.</comment>
   </data>
   <data name="GuideIdentityCharacterPage" xml:space="preserve">
     <value>角色指南 wiki 页面</value>

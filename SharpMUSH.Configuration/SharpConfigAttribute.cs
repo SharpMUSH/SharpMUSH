@@ -46,6 +46,12 @@ public class SharpConfigAttribute : Attribute
 	public string? Tooltip { get; set; }
 
 	/// <summary>
+	/// A value the option might hold, which the configuration page shows greyed in the empty field. It is never
+	/// stored or used as the option's value.
+	/// </summary>
+	public string? Example { get; set; }
+
+	/// <summary>
 	/// The option names an object, so <c>config()</c> and <c>@config</c> print its value as a dbref.
 	/// PennMUSH decides this by handler: an option registered with <c>cf_dbref</c> is displayed as
 	/// <c>#&lt;n&gt;</c> (<c>src/conf.c:1707</c>), and an unset one holds <c>NOTHING</c>, printing

@@ -1,10 +1,11 @@
 @using SharpMUSH.Client.Models.Configuration
 @inject IStringLocalizer<SharedResource> Loc
 
-@* A picture option (SharpConfig Image). Empty previews what the portal shows instead: portal_favicon
-   falls back to portal_logo, and both to the SharpMUSH logo. *@
+@* A picture option (SharpConfig Image), its empty field showing the option's example. Empty previews what the
+   portal shows instead: portal_favicon falls back to portal_logo, and both to the SharpMUSH logo; any other picture
+   option (portal_banner, portal_side_art) shows nothing in its place. *@
 <ImageUrlField Name="@Property.Path" Value="@Value" ValueChanged="SetAsync" Label="@Label" DescribedBy="@DescribedBy"
-               Placeholder="@Loc["AdmCfgImageDefault"]" ReadOnly="Property.ReadOnly" Fallback="@Fallback" />
+               Placeholder="@(Property.Example ?? Loc["AdmCfgImageDefault"].Value)" ReadOnly="Property.ReadOnly" Fallback="@Fallback" />
 
 @code {
     [Parameter, EditorRequired]
@@ -26,14 +27,17 @@
     /// <summary>The option portal_favicon falls back to when empty.</summary>
     private const string LogoPath = "Cosmetic.PortalLogo";
 
+    private const string FaviconPath = "Cosmetic.PortalFavicon";
+
     private string? Value => Draft.String(Property);
 
-    /// <summary>The picture the portal shows while the option is empty.</summary>
-    private string Fallback =>
-        Property.Path == "Cosmetic.PortalFavicon" && Draft.Values.GetValueOrDefault(LogoPath) is string logo
-            && !string.IsNullOrWhiteSpace(logo)
-            ? logo
-            : "assets/Logo.svg";
+    /// <summary>The picture the portal shows while the option is empty; null when it shows none.</summary>
+    private string? Fallback => Property.Path switch
+    {
+        FaviconPath when Draft.Values.GetValueOrDefault(LogoPath) is string logo && !string.IsNullOrWhiteSpace(logo) => logo,
+        FaviconPath or LogoPath => "assets/Logo.svg",
+        _ => null
+    };
 
     private Task SetAsync(string value)
     {

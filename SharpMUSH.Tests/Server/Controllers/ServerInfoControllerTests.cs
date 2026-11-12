@@ -26,7 +26,7 @@ public class ServerInfoControllerTests
 
 	private static ServerInfoController MakeController(bool guestsEnabled, string mudName = "SharpMUSH",
 		IReadOnlyList<string>? features = null, string logo = "", string favicon = "", string banner = "",
-		string tagline = "", string description = "", string introduction = "")
+		string tagline = "", string description = "", string introduction = "", string sideArt = "", bool? sharpie = null)
 	{
 		var options = DefaultOptions();
 		options = options with
@@ -38,7 +38,9 @@ public class ServerInfoControllerTests
 				PortalFavicon = favicon,
 				PortalBanner = banner,
 				PortalTagline = tagline,
-				PortalDescription = description
+				PortalDescription = description,
+				PortalSideArt = sideArt,
+				PortalSharpie = sharpie ?? options.Cosmetic.PortalSharpie
 			},
 			Onboarding = options.Onboarding with { Introduction = introduction }
 		};
@@ -125,6 +127,19 @@ public class ServerInfoControllerTests
 		await Assert.That(response.Banner).IsEqualTo("/api/wiki-assets/a/banner.png");
 		await Assert.That(response.Tagline).IsEqualTo("Gaslight intrigue");
 		await Assert.That(response.Description).IsEqualTo("Players run the guilds.");
+	}
+
+	[Test]
+	public async Task Get_ReportsTheSidePictureAndSharpie()
+	{
+		var shipped = (ServerInfoController.ServerInfoResponse)((OkObjectResult)await MakeController(guestsEnabled: true).Get()).Value!;
+		await Assert.That(shipped.SideArt).IsEmpty();
+		await Assert.That(shipped.Sharpie).IsTrue().Because("mush.cnf ships portal_sharpie on");
+
+		var result = await MakeController(guestsEnabled: true, sideArt: " /api/wiki-assets/a/mascot.png ", sharpie: false).Get();
+		var response = (ServerInfoController.ServerInfoResponse)((OkObjectResult)result).Value!;
+		await Assert.That(response.SideArt).IsEqualTo("/api/wiki-assets/a/mascot.png");
+		await Assert.That(response.Sharpie).IsFalse();
 	}
 
 	[Test]

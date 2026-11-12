@@ -7170,17 +7170,9 @@
     <value>Vous retrouverez toujours ce guide dans l'Aide.</value>
     <comment>MT</comment>
   </data>
-  <data name="GuideIdentityAppearance" xml:space="preserve">
-    <value>les paramètres d'apparence</value>
-    <comment>MT — link text completing GuideIdentityArtworkHint</comment>
-  </data>
   <data name="GuideIdentityArtFallback" xml:space="preserve">
     <value>Sharpie par défaut affiché en attendant des illustrations pour le style et le genre choisis.</value>
     <comment>MT</comment>
-  </data>
-  <data name="GuideIdentityArtworkHint" xml:space="preserve">
-    <value>Les joueurs peuvent réduire ou masquer les illustrations. Le logo de votre jeu reste à part, dans</value>
-    <comment>MT — fragment; followed by the 'appearance settings' link</comment>
   </data>
   <data name="GuideIdentityCharacterPage" xml:space="preserve">
     <value>Page wiki du guide des personnages</value>

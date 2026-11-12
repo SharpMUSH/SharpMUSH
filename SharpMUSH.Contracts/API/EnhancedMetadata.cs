@@ -104,6 +104,12 @@ public class PropertyMetadata
 	public string? Tooltip { get; set; }
 
 	/// <summary>
+	/// A value the option might hold, shown greyed in the empty field; null when the option declares none
+	/// </summary>
+	[JsonPropertyName("example")]
+	public string? Example { get; set; }
+
+	/// <summary>
 	/// Full property path (e.g., "NetOptions.Port")
 	/// </summary>
 	[JsonPropertyName("path")]

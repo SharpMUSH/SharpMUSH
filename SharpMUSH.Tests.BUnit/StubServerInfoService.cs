@@ -22,8 +22,11 @@ public sealed class StubServerInfoService(bool guestsEnabled, string gameName = 
 	/// <summary>The banner, tagline and description <see cref="IdentityAsync"/> answers with; settable per test.</summary>
 	public (string? Banner, string? Tagline, string? Description) Identity { get; set; }
 
+	/// <summary>The side picture and Sharpie switch <see cref="IdentityAsync"/> answers with; settable per test.</summary>
+	public (string? SideArt, bool Sharpie) Side { get; set; } = (null, true);
+
 	public override Task<GameIdentity> IdentityAsync() =>
-		Task.FromResult(new GameIdentity(gameName, Identity.Banner, Identity.Tagline, Identity.Description));
+		Task.FromResult(new GameIdentity(gameName, Identity.Banner, Identity.Tagline, Identity.Description, Side.SideArt, Side.Sharpie));
 
 	public override Task<bool> GuestLoginsEnabledAsync() => Task.FromResult(guestsEnabled);
 

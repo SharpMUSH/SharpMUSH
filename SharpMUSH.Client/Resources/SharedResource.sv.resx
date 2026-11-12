@@ -7857,17 +7857,9 @@
     <value>Du hittar alltid guiden under Hjälp.</value>
     <comment>MT</comment>
   </data>
-  <data name="GuideIdentityAppearance" xml:space="preserve">
-    <value>utseendeinställningarna</value>
-    <comment>MT</comment>
-  </data>
   <data name="GuideIdentityArtFallback" xml:space="preserve">
     <value>Visar standard-Sharpie tills det finns illustrationer för vald stil och genre.</value>
     <comment>MT</comment>
-  </data>
-  <data name="GuideIdentityArtworkHint" xml:space="preserve">
-    <value>Spelare kan reducera eller dölja illustrationer. Spelets logotyp hanteras separat i</value>
-    <comment>MT — sentence continues into the GuideIdentityAppearance link.</comment>
   </data>
   <data name="GuideIdentityCharacterPage" xml:space="preserve">
     <value>Wikisida med karaktärsguide</value>

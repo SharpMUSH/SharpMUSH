@@ -7857,17 +7857,9 @@
     <value>Du kan altid finde denne guide under Hjælp.</value>
     <comment>MT</comment>
   </data>
-  <data name="GuideIdentityAppearance" xml:space="preserve">
-    <value>udseendeindstillingerne</value>
-    <comment>MT</comment>
-  </data>
   <data name="GuideIdentityArtFallback" xml:space="preserve">
     <value>Viser standard-Sharpie, indtil der er grafik til din valgte stil og genre.</value>
     <comment>MT</comment>
-  </data>
-  <data name="GuideIdentityArtworkHint" xml:space="preserve">
-    <value>Spillere kan reducere eller skjule grafik. Dit spillogo styres separat i</value>
-    <comment>MT — sentence fragment, followed by the GuideIdentityAppearance link</comment>
   </data>
   <data name="GuideIdentityCharacterPage" xml:space="preserve">
     <value>Wikiside med karakterguide</value>

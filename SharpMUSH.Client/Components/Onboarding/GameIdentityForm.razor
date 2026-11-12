@@ -60,7 +60,7 @@
                        @bind-Value="_style" @bind-Value:after="MarkDirty">
                 @foreach (var style in SharpieArtCatalog.Styles) { <MudSelectItem T="string" Value="@style">@StyleName(style)</MudSelectItem> }
             </MudSelect>
-            <p>@Loc["GuideIdentityArtworkHint"] <a href="/admin/config/Cosmetic">@Loc["GuideIdentityAppearance"]</a>.</p>
+            <p>@Loc["AdmHomeHeaderArtworkHint"]</p>
             <MudTextField T="string" InputId="guide-welcome-page" Label="@Loc["GuideIdentityWelcomePage"]" Variant="Variant.Outlined" Margin="Margin.Dense" ShrinkLabel="true"
                           MaxLength="256" Placeholder="main/welcome" Immediate="true" Disabled="_busy" Class="identity-field"
                           @bind-Value="_welcome" @bind-Value:after="MarkDirty" />
@@ -88,6 +88,7 @@
                 @if (PreviewArt is null) { <p>@Loc["GuideIdentityNoArt"]</p> }
                 <p>@Loc["GuideIdentityVisibility"]</p>
             </section>
+            <HomeHeaderFields @ref="_header" Name="@_name" Sharpie="HeaderSharpie" OnChanged="MarkDirty" />
         </fieldset>
         <button type="button" class="identity-save" aria-disabled="@(_busy ? "true" : "false")" @onclick="Save">@(_busy ? Loc["GuideIdentitySaving"].Value : SaveLabel ?? Loc["GuideIdentitySave"].Value)</button>
         @if (_saved) { <p role="status">@Loc["GuideIdentitySaved"]</p> }
@@ -103,6 +104,8 @@
     private bool HasCustomSubgenre => (_subgenreChanged ? new[] { _subgenres } : _storedSubgenres)
         .Any(value => !string.IsNullOrWhiteSpace(value) && !MsspCatalog.Find("SUBGENRE")!.Choices.Contains(value));
     private SharpieArt? PreviewArt => SharpieArtCatalog.Resolve(_style, _genres, _subgenres, _override, GuideImagery.Full, SharpieArtMoment.Welcome);
+    private SharpieArt? HeaderSharpie => GameHero.GenreArtFor(_style, _genres, _subgenres, _override);
+    private HomeHeaderFields? _header;
     private bool _loaded, _busy, _saved;
     private string? _error;
     protected override Task OnInitializedAsync() => Load();
@@ -168,10 +171,19 @@
             SharpieArtCatalog.Approved.Any(art => art.Id == _override && art.Style == _style) ? _override : "");
         switch (await Http.CreateClient("api").PutApiAsync<OnboardingSettings, OnboardingSettings>("api/onboarding/settings", values, Loc["GuideIdentitySaveEmpty"].Value))
         {
-            case OnboardingSettings settings: AcceptGenres(settings); _saved = true; ServerInfo.Refresh(); await OnSaved.InvokeAsync(); break;
+            case OnboardingSettings settings: AcceptGenres(settings); await SaveHeaderAsync(); break;
             case ApiFailure failure: _error = failure.Message; break;
         }
         _busy = false;
+    }
+    /// <summary>Saves the Home header's options once the identity is saved; a refusal keeps the form unsaved.</summary>
+    private async Task SaveHeaderAsync()
+    {
+        _error = _header is null ? null : await _header.SaveAsync();
+        ServerInfo.Refresh();
+        if (_error is not null) return;
+        _saved = true;
+        await OnSaved.InvokeAsync();
     }
     private string StyleName(string style) => Loc[$"GuideStyle_{style}"];
 }

@@ -7857,17 +7857,9 @@
     <value>Puteți găsi oricând acest ghid în Ajutor.</value>
     <comment>MT</comment>
   </data>
-  <data name="GuideIdentityAppearance" xml:space="preserve">
-    <value>setările de aspect</value>
-    <comment>MT — link text completing GuideIdentityArtworkHint ("... în")</comment>
-  </data>
   <data name="GuideIdentityArtFallback" xml:space="preserve">
     <value>Se afișează Sharpie implicit până când sunt disponibile ilustrații pentru stilul și genul selectate.</value>
     <comment>MT</comment>
-  </data>
-  <data name="GuideIdentityArtworkHint" xml:space="preserve">
-    <value>Jucătorii pot reduce sau ascunde ilustrațiile. Sigla jocului rămâne separată în</value>
-    <comment>MT — sentence fragment; followed by the GuideIdentityAppearance link</comment>
   </data>
   <data name="GuideIdentityCharacterPage" xml:space="preserve">
     <value>Pagina wiki cu ghidul personajelor</value>

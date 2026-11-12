@@ -3,10 +3,11 @@
 @implements IDisposable
 
 @* The game's mark: its portal_logo when it has one, shown as it is, else the SharpMUSH logo in the
-   theme's accent, its inner strokes in --logo-inner. Decorative: the link around it carries the name. *@
-@if (_logo is not null)
+   theme's accent, its inner strokes in --logo-inner. Decorative: the link around it carries the name.
+   A preview shows Picture instead of the saved portal_logo. *@
+@if (Logo is not null)
 {
-    <img src="@ApiUrl.Resolve(_logo)" width="@Size" height="@Size" alt="" aria-hidden="true"
+    <img src="@ApiUrl.Resolve(Logo)" width="@Size" height="@Size" alt="" aria-hidden="true"
          class="@($"game-logo {Class}".TrimEnd())" style="object-fit:contain;" />
 }
 else
@@ -28,17 +29,28 @@ else
     [Parameter]
     public string? Class { get; set; }
 
-    private string? _logo;
+    /// <summary>Shows <see cref="Picture"/> rather than the saved portal_logo, as an editor's preview does.</summary>
+    [Parameter]
+    public bool Preview { get; set; }
+
+    /// <summary>The picture a preview shows; empty for the SharpMUSH logo.</summary>
+    [Parameter]
+    public string? Picture { get; set; }
+
+    private string? _saved;
+
+    private string? Logo => Preview ? (string.IsNullOrWhiteSpace(Picture) ? null : Picture.Trim()) : _saved;
 
     protected override async Task OnInitializedAsync()
     {
         ServerInfo.Changed += OnServerInfoChanged;
-        _logo = await ServerInfo.LogoAsync();
+        if (!Preview) _saved = await ServerInfo.LogoAsync();
     }
 
     private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
     {
-        _logo = await ServerInfo.LogoAsync();
+        if (Preview) return;
+        _saved = await ServerInfo.LogoAsync();
         StateHasChanged();
     });
 

@@ -1,0 +1,36 @@
+.home-header {
+	margin-top: var(--space-6);
+	padding-top: var(--space-5);
+	border-top: 1px solid var(--border);
+}
+
+.home-header h3 {
+	margin: 0;
+	font-size: var(--text-lg);
+}
+
+.home-header p {
+	line-height: 1.65;
+	margin: .75rem 0;
+}
+
+.home-header a {
+	color: var(--accent);
+	text-decoration: underline;
+	text-underline-offset: .2em;
+}
+
+.home-header-fields {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.home-header-preview {
+	margin-top: var(--space-5);
+}
+
+.home-header-preview-label {
+	font-size: var(--text-sm);
+	color: var(--text-faint);
+}

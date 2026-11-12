@@ -1,0 +1,64 @@
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Models.Portal.Onboarding
+
+@* The game's own face at the top of Home, drawn from what it is given: portal_banner behind the name, portal_logo
+   beside it, portal_tagline and portal_description under it. Without a banner the card is the theme's own surface
+   and marks. At its far side is portal_side_art, or, without a banner, Sharpie for the game's genre while
+   portal_sharpie is on. The text is in the flow, so a long description makes the hero taller instead of running
+   off its top. GameHero feeds it the saved options; the identity step of Prepare for players feeds it the ones
+   being edited. *@
+<header class="@(HasBanner ? "game-hero game-hero--image" : "game-hero")">
+    @if (HasBanner)
+    {
+        <img class="game-hero-img" src="@ApiUrl.Resolve(Identity.Banner!)" alt="" />
+        <span class="game-hero-scrim" aria-hidden="true"></span>
+    }
+    else
+    {
+        <ThemeMarks />
+    }
+    <div class="game-hero-body">
+        @if (OwnSideArt is { } own)
+        {
+            <img class="game-hero-art game-hero-art--own" src="@ApiUrl.Resolve(own)" alt="" loading="lazy" />
+        }
+        else if (ShownSharpie is { } art)
+        {
+            <img class="game-hero-art" src="@ApiUrl.Resolve(art.Url)" alt="" width="@art.Width" height="@art.Height" loading="lazy" />
+        }
+        <span class="game-hero-logo"><GameLogo Size="56" Preview="@(Logo is not null)" Picture="@Logo" /></span>
+        <div class="game-hero-text">
+            <h1 class="game-hero-name">@Identity.Name</h1>
+            @if (Identity.Tagline is { } tagline)
+            {
+                <p class="game-hero-tagline">@tagline</p>
+            }
+            @if (Identity.Description is { } description)
+            {
+                <p class="game-hero-description">@description</p>
+            }
+        </div>
+    </div>
+</header>
+
+@code {
+    /// <summary>The name, banner, tagline, description, side picture and Sharpie switch to show.</summary>
+    [Parameter, EditorRequired]
+    public GameIdentity Identity { get; set; } = new(string.Empty, null, null, null);
+
+    /// <summary>Sharpie for the game's genre (<see cref="GameHero.GenreArtFor"/>); null for none.</summary>
+    [Parameter]
+    public SharpieArt? Sharpie { get; set; }
+
+    /// <summary>
+    /// The logo a preview shows, empty for the SharpMUSH logo; null shows the saved portal_logo.
+    /// </summary>
+    [Parameter]
+    public string? Logo { get; set; }
+
+    private bool HasBanner => Identity.Banner is { } banner && ImageUrlPolicy.IsRenderable(banner);
+
+    private string? OwnSideArt => Identity.SideArt is { } art && ImageUrlPolicy.IsRenderable(art) ? art : null;
+
+    private SharpieArt? ShownSharpie => Identity.Sharpie && !HasBanner ? Sharpie : null;
+}
