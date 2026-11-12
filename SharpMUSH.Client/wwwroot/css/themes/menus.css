@@ -144,6 +144,7 @@
 /* Lantern: a small lantern in the accent hung at the line's end on a cord in the border colour, a rule in the
    border colour under the words, and a faint accent wash fading to the right. */
 [data-selection="lantern"] {
+	--select-ink-dim: initial;
 	--select-fill: linear-gradient(90deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 85%);
 	--select-ink: var(--accent);
 	--select-mark: radial-gradient(7px 8px at calc(100% - 16px) 50%, var(--accent) 0 90%, transparent 100%),
@@ -164,6 +165,7 @@
 
 /* Pennant: a swallowtail flag in the accent behind the line, on a pole in the second accent at its left. */
 [data-selection="pennant"] {
+	--select-ink-dim: color-mix(in srgb, var(--accent-on) 82%, var(--accent));
 	--select-fill: transparent;
 	--select-ink: var(--accent-on);
 	--select-mark: linear-gradient(var(--accent-2), var(--accent-2)) left 4px top 0 / 3px 100% no-repeat,
@@ -353,6 +355,7 @@
 /* Plaque: a name board with pointed ends, a rim in the border colour and a thick foot; pressed, it sinks onto the
    foot and the rim dims. */
 [data-buttons="plaque"] {
+	--button-focus-offset: -4px;
 	--button-radius: 0px;
 	--button-clip: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
 	--button-tracking: 0.06em;
@@ -368,6 +371,7 @@
 /* Seal: a square-cut chop with a light inner rim and an accent ring around it; pressed, it stamps down, tilted, and
    the ink pools at its edge. */
 [data-buttons="seal"] {
+	--button-focus-offset: 6px;
 	--button-radius: 3px;
 	--button-weight: 700;
 	--button-tracking: 0.08em;
