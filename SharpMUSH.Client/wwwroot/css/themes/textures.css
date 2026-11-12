@@ -449,12 +449,12 @@
 	--texture-ink-accent: var(--glass-grain), radial-gradient(circle 580px at 50% calc(100% - 140px), color-mix(in srgb, var(--accent) 80%, var(--text)), var(--accent) 45%, color-mix(in srgb, var(--accent) 70%, #000));
 }
 
-/* Crystal: a great crystal floating right of centre among three small ones, each turning slowly about its long axis
-   at its own pace (the turning drawings animate themselves; the still ones stand in where nothing may move). The
-   crystals are clear glass: each face is tinted lavender to blue and lets the stars show through, the rims of the
-   faces catch the light, and the far rims show faintly through the near faces. Each face is lit in the
-   accent, accent-2 or accent-3 and brightest at the heart of the cluster, with glints shading lavender to blue, a halo
-   behind it, an aurora drifting across the top of the page and motes of light rising through the dark. */
+/* Crystal: a great crystal floating right of centre among three small ones, each a four-sided bipyramid turning
+   slowly about its long axis at its own pace (the turning drawings animate themselves; the still ones stand in where
+   nothing may move). Each crystal is clear glass of its own colour, in a layer of its own: amethyst, sapphire, rose
+   and emerald. A face is as strong as the light it catches, the faces turned away stay faint so the stars show
+   through, and the border layer draws the rims (the far ones faintly) and the glint on the brightest faces. A halo
+   sits behind the cluster, an aurora drifts across the top of the page and motes of light rise through the dark. */
 [data-texture="crystal"] {
 	--texture: radial-gradient(circle 46vh at 68% 46%, color-mix(in srgb, var(--accent) 22%, transparent), transparent),
 		radial-gradient(ellipse 70% 22% at 30% 0%, color-mix(in srgb, var(--accent-3) 14%, transparent), transparent),
@@ -465,19 +465,19 @@
 	--texture-size: 100% 100%, 100% 100%, 100% 100%, 190px 230px, 190px 230px, 190px 230px;
 	--texture-mask-accent: var(--ambient-flow, url(/themes/drawings/textures/crystal-turn-accent.svg) left 64% center / auto 96vh no-repeat),
 		var(--ambient-rest, url(/themes/drawings/textures/crystal-accent.svg) left 64% center / auto 96vh no-repeat);
-	--texture-ink-accent: radial-gradient(circle 70vh at 68% 46%, color-mix(in srgb, color-mix(in srgb, var(--accent) 60%, var(--info)) 82%, transparent), color-mix(in srgb, var(--accent) 36%, transparent));
+	--texture-ink-accent: linear-gradient(180deg, color-mix(in srgb, var(--accent) 90%, transparent), color-mix(in srgb, var(--info) 75%, transparent));
 	--texture-mask-accent-2: var(--ambient-flow, url(/themes/drawings/textures/crystal-turn-accent-2.svg) left 64% center / auto 96vh no-repeat),
 		var(--ambient-rest, url(/themes/drawings/textures/crystal-accent-2.svg) left 64% center / auto 96vh no-repeat);
-	--texture-ink-accent-2: radial-gradient(circle 70vh at 68% 46%, color-mix(in srgb, var(--accent-2) 50%, color-mix(in srgb, var(--accent) 30%, transparent)), color-mix(in srgb, var(--accent-2) 16%, transparent));
+	--texture-ink-accent-2: linear-gradient(180deg, color-mix(in srgb, color-mix(in srgb, var(--danger) 70%, var(--accent-3)) 90%, transparent), color-mix(in srgb, var(--danger) 70%, transparent));
 	--texture-mask-accent-3: var(--ambient-flow, url(/themes/drawings/textures/crystal-turn-accent-3.svg) left 64% center / auto 96vh no-repeat),
 		var(--ambient-rest, url(/themes/drawings/textures/crystal-accent-3.svg) left 64% center / auto 96vh no-repeat);
-	--texture-ink-accent-3: radial-gradient(circle 70vh at 68% 46%, color-mix(in srgb, color-mix(in srgb, var(--accent-3) 60%, var(--special)) 82%, transparent), color-mix(in srgb, var(--accent-3) 36%, transparent));
+	--texture-ink-accent-3: linear-gradient(180deg, color-mix(in srgb, color-mix(in srgb, var(--accent-3) 45%, var(--special)) 90%, transparent), color-mix(in srgb, var(--special) 70%, transparent));
 	--texture-mask-border: var(--ambient-flow, url(/themes/drawings/textures/crystal-turn-border.svg) left 64% center / auto 96vh no-repeat),
 		var(--ambient-rest, url(/themes/drawings/textures/crystal-border.svg) left 64% center / auto 96vh no-repeat);
-	--texture-ink-border: color-mix(in srgb, color-mix(in srgb, var(--accent-2), var(--text)) 80%, transparent);
+	--texture-ink-border: color-mix(in srgb, var(--text) 80%, transparent);
 	--texture-mask-text: var(--ambient-flow, url(/themes/drawings/textures/crystal-turn-text.svg) left 64% center / auto 96vh no-repeat),
 		var(--ambient-rest, url(/themes/drawings/textures/crystal-text.svg) left 64% center / auto 96vh no-repeat);
-	--texture-ink-text: linear-gradient(165deg, color-mix(in srgb, color-mix(in srgb, var(--accent-3) 25%, var(--special)) 80%, transparent) 15%, color-mix(in srgb, color-mix(in srgb, var(--accent) 40%, var(--info)) 68%, transparent) 50%, color-mix(in srgb, var(--info) 80%, transparent) 85%);
+	--texture-ink-text: linear-gradient(180deg, color-mix(in srgb, color-mix(in srgb, var(--success) 70%, var(--text)) 90%, transparent), color-mix(in srgb, var(--success) 75%, transparent));
 }
 
 /* Dither: a 16-bit sky, accent-2 in hard bands growing stronger toward the foot, with a two-pixel checker
