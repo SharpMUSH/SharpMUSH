@@ -61,6 +61,10 @@ covered by the switch; use `--image-filter` instead. Signed out, the browser kee
   of a kind of modern game (an android archive, a shooter's lobby, a soulslike, an ancient-tech tablet, a painterly
   detective RPG) and shows off the menu settings below, never a game's name,
   logo, art or font.
+- Light-line science fiction: `lumen-grid` (cyan and amber light traces on a black grid floor, with light running
+  along the floor lines now and then) and `jovian` (an indigo orbit with a gas giant, armour-plate card titles and a
+  heartbeat of light through dense channels). Their own drawings and OFL faces, never a film's or game's name, logo or
+  art.
 - Colour vision: `protan-dark`, `protan-light`, `deutan-dark`, `deutan-light`, `tritan-dark`, `tritan-light`,
   `mono-dark`, `mono-light`. Phosphor's or Daylight's surfaces and text, with an accent, warning and missing-link
   colour picked for that vision. They draw no grain: their colours reach 4.5:1 against the flat surfaces, and the
@@ -179,15 +183,17 @@ first choice of each, which is how the portal looked before they existed:
 
 - **Current line** (`selection`): how the current page in a menu is marked. `standard` (each menu's own mark: a glowing bar in the
   main menu, a raised row in a section's sidebar), `bar` (a squared block in the text colour), `skew` (a slanted accent plate), `halo` (a pool of light behind the
-  words), `brackets` (corner ticks), `lift` (a raised, tilted card), `stroke` (a brush stroke under the words). The
+  words), `brackets` (corner ticks), `lift` (a raised, tilted card), `stroke` (a brush stroke under the words), `trace`
+  (a line of light with a bright head), `lockon` (corner ticks and a diamond, like a target lock). The
   rules set the `--select-*` variables that `.phosphor-nav-link.active` in `shell.css` and `.kit-row--current` in
   `Kit/SidebarRow.razor.css` read.
 - **Buttons** (`buttons`): the cut of the portal's capsule buttons and MudBlazor's filled and outlined ones, and how
   each looks pressed. `standard`, `skew` (slides into its shadow), `keycap` (a thick base it sinks into), `notch` (two
-  corners cut), `bar` (square ends, spaced capitals), `brush` (a painted shape that tips). The rules set the
-  `--button-*` variables that `Kit/CapsuleButton.razor.css` and `shell.css` read.
+  corners cut), `bar` (square ends, spaced capitals), `brush` (a painted shape that tips), `capsule` (rounded ends in a
+  glow ring that flares when pressed), `blade` (angled ends and spaced capitals, sinking onto an accent-2 keel). The
+  rules set the `--button-*` variables that `Kit/CapsuleButton.razor.css` and `shell.css` read.
 - **Card material** (`material`): what cards are made of, under their frame. `solid`, `glass` (blurs the page behind
-  it), `hologram` (accent light and scanlines), `veil` (fades out at the sides), `cardstock`, `felt`, `wood`. It sets
+  it), `hologram` (accent light and scanlines), `veil` (fades out at the sides), `cardstock`, `felt`, `wood`, `lightline` (dark glass lit at the edges). It sets
   `--card-material`, the fill under `--card-marks`, and `--card-backdrop`.
 - **Meters** (`meters`): MudBlazor's progress bars, such as a loading or import bar. `bar`, `segmented`, `slanted`, `pips`,
   `hairline`.
@@ -196,8 +202,11 @@ first choice of each, which is how the portal looked before they existed:
   `wobble` (cards are dealt in, the current line floats and tilts), `bob` (the current line bobs). Arrivals use
   `--duration-enter`, which reduced motion zeroes; under reduced motion, or with the player's reduce-motion toggle,
   `globals.css` also stops every loop.
-- **Atmosphere** (`atmosphere`): a layer `ThemeTexture` draws over the texture and under the page. `none`,
-  `vignette`, `fog`, `embers`, `motes`, `crt` (dark corners and scanlines), `slashes`. Its colours are the theme's.
+- **Atmosphere** (`atmosphere`): a layer `ThemeTexture` draws over the texture and under the page. `none`, `vignette`,
+  `fog`, `embers`, `motes`, `crt` (dark corners and scanlines), `slashes`, `circuit` (circuit traces with a band of
+  light sweeping along them), `heartbeat` (dense channels round a heart a third of the way down the page, which beats
+  a double pulse of light out along them). The last two draw a rim, a dark groove and a moving glow, each masked by
+  the same channels; `still` motion or reduced motion leaves them unlit. Its colours are the theme's.
 
 A component that shows a picture put in the game marks its `<img>` `game-picture` (the wiki's Markdown marks its own
 `wiki-img`); `shell.css` gives both `filter: var(--image-filter)`.

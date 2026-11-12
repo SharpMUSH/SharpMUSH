@@ -65,7 +65,7 @@ public static class ThemeStyles
 		"lilita", "titan", "chakra", "monoton", "michroma", "antonio", "oxanium", "russo",
 		"cinzel-decorative", "forum", "press-start", "anton", "dotgothic", "alegreya-sc", "oswald",
 		"pirata", "uncial", "barlow", "metamorphous", "krona", "eagle-lake", "federant", "rye", "black-ops", "bodoni",
-		"jost", "big-shoulders", "garamond", "tektur", "baskerville",
+		"jost", "big-shoulders", "garamond", "tektur", "baskerville", "audiowide", "jura",
 	];
 
 	/// <summary>Faces for everything else. Kept to faces that read well small.</summary>
@@ -145,6 +145,8 @@ public static class ThemeStyles
 		["hairline"] = new("hairline", "none", "hairline"),
 		["rune"] = new("rune", "line", "rune"),
 		["brushed"] = new("brushed", "none", "brushed"),
+		["nodes"] = new("nodes", "line", "nodes"),
+		["plate"] = new("plate", "line", "plate"),
 	};
 
 	public static readonly IReadOnlyDictionary<string, OrnamentSet> Ornaments = new Dictionary<string, OrnamentSet>
@@ -254,7 +256,7 @@ public static class ThemeStyles
 			"speedlines", "court", "hazard", "sigil", "sumi", "benday", "filmgrain", "starburst", "rain", "outrun", "galaxy",
 			"readout", "armor-panels", "sunburst-rays", "stained-glass", "crystal", "dither", "nightfall", "overworld", "skyward", "watercolor",
 			"marble", "spires", "dragonflight", "plot", "seance", "dunes", "candles", "gears", "mesa", "ruins", "haze",
-			"archive", "lobby", "cathedral", "glyphs", "oilpaint",
+			"archive", "lobby", "cathedral", "glyphs", "oilpaint", "gridfloor", "orbit",
 		],
 		[Ornament] = [.. Ornaments.Keys],
 		[Frame] = [.. Frames.Keys],
@@ -269,12 +271,12 @@ public static class ThemeStyles
 		],
 		// How the current line in a menu is marked, the cut of a button, what a card is made of, how a bar fills, how
 		// things arrive and move, and what hangs between the background and the page: one menu each, any theme.
-		[Selection] = ["standard", "bar", "skew", "halo", "brackets", "lift", "stroke"],
-		[Buttons] = ["standard", "skew", "keycap", "notch", "bar", "brush"],
-		[Material] = ["solid", "glass", "hologram", "veil", "cardstock", "felt", "wood"],
+		[Selection] = ["standard", "bar", "skew", "halo", "brackets", "lift", "stroke", "trace", "lockon"],
+		[Buttons] = ["standard", "skew", "keycap", "notch", "bar", "brush", "capsule", "blade"],
+		[Material] = ["solid", "glass", "hologram", "veil", "cardstock", "felt", "wood", "lightline"],
 		[Meters] = ["bar", "segmented", "slanted", "pips", "hairline"],
 		[Motion] = ["calm", "still", "snappy", "drift", "wobble", "bob"],
-		[Atmosphere] = ["none", "vignette", "fog", "embers", "motes", "crt", "slashes"],
+		[Atmosphere] = ["none", "vignette", "fog", "embers", "motes", "crt", "slashes", "circuit", "heartbeat"],
 		[TextureStrength] = Strengths,
 		[FrameMarks] = [.. Frames.Values.Select(f => f.Marks).Distinct()],
 		[FrameEdge] = Edges,

@@ -74,6 +74,7 @@
 		--select-motion: none;
 		--texture-motion: none;
 		--ambient-play: paused;
+		--ambient-flow: var(--no-drawing);
 	}
 }
 /* The same, when the player turns motion down in the portal rather than in the browser. */
@@ -81,6 +82,7 @@
 	--select-motion: none;
 	--texture-motion: none;
 	--ambient-play: paused;
+	--ambient-flow: var(--no-drawing);
 }
 
 /* Loading placeholders: the portal's own (.kit-skeleton, Kit/SkeletonLines and friends) and MudSkeleton, whose

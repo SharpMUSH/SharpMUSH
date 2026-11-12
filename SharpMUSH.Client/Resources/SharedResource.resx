@@ -13199,6 +13199,12 @@
   <data name="AdmThemeStyleSelectionStroke" xml:space="preserve">
     <value>Brush stroke</value>
   </data>
+  <data name="AdmThemeStyleSelectionTrace" xml:space="preserve">
+    <value>Light trace</value>
+  </data>
+  <data name="AdmThemeStyleSelectionLockon" xml:space="preserve">
+    <value>Lock-on</value>
+  </data>
   <data name="AdmThemeStyleButtons" xml:space="preserve">
     <value>Buttons</value>
   </data>
@@ -13219,6 +13225,12 @@
   </data>
   <data name="AdmThemeStyleButtonsBrush" xml:space="preserve">
     <value>Brush</value>
+  </data>
+  <data name="AdmThemeStyleButtonsCapsule" xml:space="preserve">
+    <value>Capsule</value>
+  </data>
+  <data name="AdmThemeStyleButtonsBlade" xml:space="preserve">
+    <value>Blade</value>
   </data>
   <data name="AdmThemeStyleMaterial" xml:space="preserve">
     <value>Card material</value>
@@ -13243,6 +13255,9 @@
   </data>
   <data name="AdmThemeStyleMaterialWood" xml:space="preserve">
     <value>Wood</value>
+  </data>
+  <data name="AdmThemeStyleMaterialLightline" xml:space="preserve">
+    <value>Lightline</value>
   </data>
   <data name="AdmThemeStyleMeters" xml:space="preserve">
     <value>Meters</value>
@@ -13307,6 +13322,12 @@
   <data name="AdmThemeStyleAtmosphereSlashes" xml:space="preserve">
     <value>Slashes</value>
   </data>
+  <data name="AdmThemeStyleAtmosphereCircuit" xml:space="preserve">
+    <value>Circuit</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereHeartbeat" xml:space="preserve">
+    <value>Heartbeat</value>
+  </data>
   <data name="AdmThemeStyleTextureArchive" xml:space="preserve">
     <value>Archive</value>
   </data>
@@ -13322,6 +13343,12 @@
   <data name="AdmThemeStyleTextureOilpaint" xml:space="preserve">
     <value>Oil paint</value>
   </data>
+  <data name="AdmThemeStyleTextureGridfloor" xml:space="preserve">
+    <value>Grid floor</value>
+  </data>
+  <data name="AdmThemeStyleTextureOrbit" xml:space="preserve">
+    <value>Orbit</value>
+  </data>
   <data name="AdmThemeStyleFrameArchive" xml:space="preserve">
     <value>Archive</value>
   </data>
@@ -13336,5 +13363,11 @@
   </data>
   <data name="AdmThemeStyleFrameBrushed" xml:space="preserve">
     <value>Brushed</value>
+  </data>
+  <data name="AdmThemeStyleFrameNodes" xml:space="preserve">
+    <value>Nodes</value>
+  </data>
+  <data name="AdmThemeStyleFramePlate" xml:space="preserve">
+    <value>Plate</value>
   </data>
 </root>
