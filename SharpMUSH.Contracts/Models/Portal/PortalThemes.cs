@@ -453,6 +453,44 @@ public static class BuiltInThemes
 		display: "black-ops", body: "ui", corners: "sharp", texture: "ruins", ornament: "rad", frame: "scrap", titles: "caps", effect: "grime", imagery: "irradiated",
 		accent2: "#9bb55a", accent3: "#c0653a");
 
+	// Game menus: each takes its look from a kind of modern game's menus, never one game's names, logos or art, and
+	// shows off the menu parts (selection, buttons, material, meters, motion, atmosphere).
+
+	/// <summary>Archivist: sand and umber archive menus, a surveyor's rings, squared bars under the chosen line, segmented meters.</summary>
+	public static readonly PortalTheme Archivist = Genre("archivist", "Archivist", dark: false,
+		["#d6cfba", "#e8e2cf", "#dfd8c3", "#cec7b1", "#c6bea6", "#3a352b", "#4f4839", "#575041", "#a59c86", "#c6bea8", "#6a4a22", "#7d3a12", "#962a18"],
+		display: "jost", body: "ui", corners: "sharp", texture: "archive", ornament: "block", frame: "archive", titles: "wide", effect: "none", imagery: "sepia",
+		accent2: "#7d3a12", accent3: "#7b7461",
+		selection: "bar", buttons: "bar", material: "cardstock", meters: "segmented", motion: "snappy");
+
+	/// <summary>Arena: a shooter's lobby in off-white and signal red, tall condensed capitals, slanted plates, buttons and bars.</summary>
+	public static readonly PortalTheme Arena = Genre("arena", "Arena", dark: false,
+		["#d2d6db", "#f8f6f2", "#f0ece5", "#e2ddd4", "#c7ccd2", "#0f1923", "#38434e", "#4a545e", "#a9b0b8", "#d6d0c6", "#ab1826", "#7a4e00", "#a3161f"],
+		display: "big-shoulders", body: "ui", corners: "razor", texture: "lobby", ornament: "slash", frame: "loadout", titles: "slant", effect: "decal", imagery: "vivid",
+		accent2: "#0f8a82", accent3: "#0f1923",
+		selection: "skew", buttons: "skew", material: "solid", meters: "slanted", motion: "snappy", atmosphere: "slashes");
+
+	/// <summary>Ashen: a ruined arch in fog on black, centred Garamond capitals, a halo on the chosen line, gold hairlines, embers rising.</summary>
+	public static readonly PortalTheme Ashen = Genre("ashen", "Ashen", dark: true,
+		["#08080a", "#111013", "#18171b", "#0c0b0e", "#060608", "#ddd6c6", "#aaa395", "#918a7f", "#3a352c", "#24211c", "#c9a45c", "#d8925f", "#e8866e"],
+		display: "garamond", body: "serif", corners: "sharp", texture: "cathedral", ornament: "rubric", frame: "hairline", titles: "wide", effect: "ember", imagery: "nocturne",
+		accent2: "#8a6a3a", accent3: "#6f6a60",
+		selection: "halo", buttons: "bar", material: "veil", meters: "hairline", motion: "drift", atmosphere: "embers");
+
+	/// <summary>Relic Slate: carved slate lit cyan from within, rings of runes, holographic cards, brackets on the chosen line, notched buttons.</summary>
+	public static readonly PortalTheme RelicSlate = Genre("relic-slate", "Relic Slate", dark: true,
+		["#0b1418", "#10202a", "#152934", "#0d1a21", "#081014", "#d6eaf0", "#a3bcc5", "#86a0aa", "#2a4654", "#1a313c", "#38e1ff", "#ff9a3d", "#ff8a7a"],
+		display: "tektur", body: "ui", corners: "sharp", texture: "glyphs", ornament: "chevron", frame: "rune", titles: "normal", effect: "spellglow", imagery: "crystalline",
+		accent2: "#ff9a3d", accent3: "#2a7f8f",
+		selection: "brackets", buttons: "notch", material: "hologram", meters: "pips", motion: "calm", atmosphere: "motes");
+
+	/// <summary>Precinct: oil paint on a dark canvas, an italic serif voice, brush-stroke buttons and a stroke under the chosen line.</summary>
+	public static readonly PortalTheme Precinct = Genre("precinct", "Precinct", dark: true,
+		["#1a1714", "#221e1a", "#2a2520", "#15120f", "#110f0c", "#ece0c9", "#bcaf99", "#a69983", "#4a4036", "#2f2923", "#e0a63a", "#ea8a66", "#f2917c"],
+		display: "baskerville", body: "serif", corners: "sharp", texture: "oilpaint", ornament: "rule", frame: "brushed", titles: "italic", effect: "pencil", imagery: "watercolor",
+		accent2: "#b2452f", accent3: "#3c7882",
+		selection: "stroke", buttons: "brush", material: "cardstock", meters: "bar", motion: "calm", atmosphere: "vignette");
+
 	public static readonly IReadOnlyList<PortalTheme> All =
 	[
 		Phosphor, Daylight, Directive, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual,
@@ -466,6 +504,7 @@ public static class BuiltInThemes
 		AdventurersHandbook, Trailblazer,
 		GothicPunk, Dragonrider, FleetCommand, Gaslight, DesertPlanet,
 		ArcaneAcademy, Steampunk, Frontier, Wasteland,
+		Archivist, Arena, Ashen, RelicSlate, Precinct,
 		ProtanDark, ProtanLight, DeutanDark, DeutanLight, TritanDark, TritanLight, MonoDark, MonoLight,
 	];
 
@@ -488,7 +527,8 @@ public static class BuiltInThemes
 
 	private static PortalTheme Genre(string id, string name, bool dark, string[] colors, string display, string body,
 		string corners, string texture, string ornament, string frame, string titles, string effect, string imagery,
-		string? accent2 = null, string? accent3 = null)
+		string? accent2 = null, string? accent3 = null, string selection = "standard", string buttons = "standard",
+		string material = "solid", string meters = "bar", string motion = "calm", string atmosphere = "none")
 	{
 		var tokens = ThemeTokens.Editable.Zip(colors).ToDictionary(p => p.First, p => p.Second);
 		if (accent2 is not null)
@@ -510,6 +550,12 @@ public static class BuiltInThemes
 		tokens[ThemeStyles.Titles] = titles;
 		tokens[ThemeStyles.Effect] = effect;
 		tokens[ThemeStyles.Imagery] = imagery;
+		tokens[ThemeStyles.Selection] = selection;
+		tokens[ThemeStyles.Buttons] = buttons;
+		tokens[ThemeStyles.Material] = material;
+		tokens[ThemeStyles.Meters] = meters;
+		tokens[ThemeStyles.Motion] = motion;
+		tokens[ThemeStyles.Atmosphere] = atmosphere;
 		return new PortalTheme(id, name, dark, Published: true, tokens, BuiltIn: true);
 	}
 

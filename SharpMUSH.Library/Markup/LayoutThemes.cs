@@ -37,7 +37,7 @@ public static class LayoutThemes
 	/// <c>text-faint</c>, then the status colours the portal works out for the theme (success, <c>warn</c>, danger and
 	/// info). A colour that did not stand out from the background enough for its role was moved toward white on a dark
 	/// theme, black on a light one, until it did. Subtle, link, highlight and the hues are worked out from those
-	/// (<see cref="ThemePalette.Completed()"/>). <c>directive</c> and the themes styled on games (<c>heart-realm</c> to <c>wasteland</c>)
+	/// (<see cref="ThemePalette.Completed()"/>). <c>directive</c> and the themes styled on games (<c>heart-realm</c> to <c>wasteland</c>, and <c>archivist</c> to <c>precinct</c>)
 	/// also carry a look: their own border, title ornaments, bullet and gauge.
 	/// </summary>
 	public static IReadOnlyList<ThemePalette> Own { get; } =
@@ -151,6 +151,31 @@ public static class LayoutThemes
 		{
 			Border = "single", TitleOpen = "┤ ☢ ", TitleClose = " ☢ ├", Guide = "line", Bullet = "×",
 			GaugeOpen = "[", GaugeFilled = "#", GaugeEmpty = "-", GaugeClose = "]", Rule = "─",
+		}),
+		Ported("archivist", ThemeMode.Light, ["#d6cfba", "#e8e2cf", "#3a352b", "#6a4a22", "#7d3a12", "#5a5446", "#575041", "#335a22", "#7d3a12", "#962a18", "#2f5470"], new ThemeLook
+		{
+			Border = "single", TitleOpen = "┤ ■ ", TitleClose = " ■ ├", Guide = "line", Bullet = "▪",
+			GaugeOpen = "[", GaugeFilled = "■", GaugeEmpty = "□", GaugeClose = "]", Rule = "─",
+		}),
+		Ported("arena", ThemeMode.Light, ["#d2d6db", "#f8f6f2", "#0f1923", "#ab1826", "#0c6460", "#38434e", "#4a545e", "#286028", "#7a4e00", "#a3161f", "#1f5a96"], new ThemeLook
+		{
+			Border = "heavy", TitleOpen = "┫ ▶ ", TitleClose = " ◀ ┣", Guide = "heavy", Bullet = "▸",
+			GaugeOpen = "[", GaugeFilled = "▰", GaugeEmpty = "▱", GaugeClose = "]", Rule = "━",
+		}),
+		Ported("ashen", ThemeMode.Dark, ["#08080a", "#111013", "#ddd6c6", "#c9a45c", "#a8885a", "#918a7f", "#918a7f", "#8fae7a", "#d8925f", "#e8866e", "#7fa6c4"], new ThemeLook
+		{
+			Border = "single", TitleOpen = "─ ✦ ", TitleClose = " ✦ ─", Guide = "line", Bullet = "·",
+			GaugeOpen = "⟨", GaugeFilled = "━", GaugeEmpty = "─", GaugeClose = "⟩", Rule = "─",
+		}),
+		Ported("relic-slate", ThemeMode.Dark, ["#0b1418", "#10202a", "#d6eaf0", "#38e1ff", "#ff9a3d", "#2fb3c7", "#86a0aa", "#6cde9a", "#ff9a3d", "#ff8a7a", "#5aa9ff"], new ThemeLook
+		{
+			Border = "double", TitleOpen = "╡ ◈ ", TitleClose = " ◈ ╞", Guide = "double", Bullet = "◇",
+			GaugeOpen = "[", GaugeFilled = "◆", GaugeEmpty = "◇", GaugeClose = "]", Rule = "═",
+		}),
+		Ported("precinct", ThemeMode.Dark, ["#1a1714", "#221e1a", "#ece0c9", "#e0a63a", "#d0705a", "#6fb0ba", "#a69983", "#8fb87a", "#ea8a66", "#f2917c", "#7fa6c4"], new ThemeLook
+		{
+			Border = "single", TitleOpen = "┤ § ", TitleClose = " § ├", Guide = "line", Bullet = "–",
+			GaugeOpen = "[", GaugeFilled = "▮", GaugeEmpty = "▯", GaugeClose = "]", Rule = "─",
 		}),
 		Ported("protan-dark", ThemeMode.Dark, ["#0e0f11", "#1c1f23", "#e9edf0", "#a8e8fa", "#e9edf0", "#f2ef0a", "#7d8790", "#2ca1c1", "#f2ef0a", "#f58b28", "#9f5efe"]),
 		Ported("protan-light", ThemeMode.Light, ["#f3f4f6", "#eef0f3", "#14181c", "#1b729b", "#14181c", "#876c00", "#5f6872", "#0d155a", "#876c00", "#612f08", "#5801f5"]),

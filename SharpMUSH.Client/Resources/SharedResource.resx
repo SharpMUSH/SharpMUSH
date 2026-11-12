@@ -13175,4 +13175,166 @@
   <data name="AdmThemeStyleImagerySmoke" xml:space="preserve">
     <value>Smoke</value>
   </data>
+  <data name="AdmThemeStyleSelection" xml:space="preserve">
+    <value>Current line</value>
+  </data>
+  <data name="AdmThemeStyleSelectionStandard" xml:space="preserve">
+    <value>Standard</value>
+  </data>
+  <data name="AdmThemeStyleSelectionBar" xml:space="preserve">
+    <value>Bar</value>
+  </data>
+  <data name="AdmThemeStyleSelectionSkew" xml:space="preserve">
+    <value>Skew</value>
+  </data>
+  <data name="AdmThemeStyleSelectionHalo" xml:space="preserve">
+    <value>Halo</value>
+  </data>
+  <data name="AdmThemeStyleSelectionBrackets" xml:space="preserve">
+    <value>Brackets</value>
+  </data>
+  <data name="AdmThemeStyleSelectionLift" xml:space="preserve">
+    <value>Lift</value>
+  </data>
+  <data name="AdmThemeStyleSelectionStroke" xml:space="preserve">
+    <value>Brush stroke</value>
+  </data>
+  <data name="AdmThemeStyleButtons" xml:space="preserve">
+    <value>Buttons</value>
+  </data>
+  <data name="AdmThemeStyleButtonsStandard" xml:space="preserve">
+    <value>Standard</value>
+  </data>
+  <data name="AdmThemeStyleButtonsSkew" xml:space="preserve">
+    <value>Skew</value>
+  </data>
+  <data name="AdmThemeStyleButtonsKeycap" xml:space="preserve">
+    <value>Keycap</value>
+  </data>
+  <data name="AdmThemeStyleButtonsNotch" xml:space="preserve">
+    <value>Notch</value>
+  </data>
+  <data name="AdmThemeStyleButtonsBar" xml:space="preserve">
+    <value>Bar</value>
+  </data>
+  <data name="AdmThemeStyleButtonsBrush" xml:space="preserve">
+    <value>Brush</value>
+  </data>
+  <data name="AdmThemeStyleMaterial" xml:space="preserve">
+    <value>Card material</value>
+  </data>
+  <data name="AdmThemeStyleMaterialSolid" xml:space="preserve">
+    <value>Solid</value>
+  </data>
+  <data name="AdmThemeStyleMaterialGlass" xml:space="preserve">
+    <value>Glass</value>
+  </data>
+  <data name="AdmThemeStyleMaterialHologram" xml:space="preserve">
+    <value>Hologram</value>
+  </data>
+  <data name="AdmThemeStyleMaterialVeil" xml:space="preserve">
+    <value>Veil</value>
+  </data>
+  <data name="AdmThemeStyleMaterialCardstock" xml:space="preserve">
+    <value>Cardstock</value>
+  </data>
+  <data name="AdmThemeStyleMaterialFelt" xml:space="preserve">
+    <value>Felt</value>
+  </data>
+  <data name="AdmThemeStyleMaterialWood" xml:space="preserve">
+    <value>Wood</value>
+  </data>
+  <data name="AdmThemeStyleMeters" xml:space="preserve">
+    <value>Meters</value>
+  </data>
+  <data name="AdmThemeStyleMetersBar" xml:space="preserve">
+    <value>Bar</value>
+  </data>
+  <data name="AdmThemeStyleMetersSegmented" xml:space="preserve">
+    <value>Segmented</value>
+  </data>
+  <data name="AdmThemeStyleMetersSlanted" xml:space="preserve">
+    <value>Slanted</value>
+  </data>
+  <data name="AdmThemeStyleMetersPips" xml:space="preserve">
+    <value>Pips</value>
+  </data>
+  <data name="AdmThemeStyleMetersHairline" xml:space="preserve">
+    <value>Hairline</value>
+  </data>
+  <data name="AdmThemeStyleMotion" xml:space="preserve">
+    <value>Motion</value>
+  </data>
+  <data name="AdmThemeStyleMotionCalm" xml:space="preserve">
+    <value>Calm</value>
+  </data>
+  <data name="AdmThemeStyleMotionStill" xml:space="preserve">
+    <value>Still</value>
+  </data>
+  <data name="AdmThemeStyleMotionSnappy" xml:space="preserve">
+    <value>Snappy</value>
+  </data>
+  <data name="AdmThemeStyleMotionDrift" xml:space="preserve">
+    <value>Drift</value>
+  </data>
+  <data name="AdmThemeStyleMotionWobble" xml:space="preserve">
+    <value>Wobble</value>
+  </data>
+  <data name="AdmThemeStyleMotionBob" xml:space="preserve">
+    <value>Bob</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphere" xml:space="preserve">
+    <value>Atmosphere</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereVignette" xml:space="preserve">
+    <value>Vignette</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereFog" xml:space="preserve">
+    <value>Fog</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereEmbers" xml:space="preserve">
+    <value>Embers</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereMotes" xml:space="preserve">
+    <value>Motes</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereCrt" xml:space="preserve">
+    <value>CRT screen</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereSlashes" xml:space="preserve">
+    <value>Slashes</value>
+  </data>
+  <data name="AdmThemeStyleTextureArchive" xml:space="preserve">
+    <value>Archive</value>
+  </data>
+  <data name="AdmThemeStyleTextureLobby" xml:space="preserve">
+    <value>Lobby</value>
+  </data>
+  <data name="AdmThemeStyleTextureCathedral" xml:space="preserve">
+    <value>Cathedral</value>
+  </data>
+  <data name="AdmThemeStyleTextureGlyphs" xml:space="preserve">
+    <value>Glyphs</value>
+  </data>
+  <data name="AdmThemeStyleTextureOilpaint" xml:space="preserve">
+    <value>Oil paint</value>
+  </data>
+  <data name="AdmThemeStyleFrameArchive" xml:space="preserve">
+    <value>Archive</value>
+  </data>
+  <data name="AdmThemeStyleFrameLoadout" xml:space="preserve">
+    <value>Loadout</value>
+  </data>
+  <data name="AdmThemeStyleFrameHairline" xml:space="preserve">
+    <value>Hairline</value>
+  </data>
+  <data name="AdmThemeStyleFrameRune" xml:space="preserve">
+    <value>Rune</value>
+  </data>
+  <data name="AdmThemeStyleFrameBrushed" xml:space="preserve">
+    <value>Brushed</value>
+  </data>
 </root>

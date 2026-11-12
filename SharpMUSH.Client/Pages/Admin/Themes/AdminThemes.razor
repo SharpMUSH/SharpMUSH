@@ -384,7 +384,7 @@
     /// <summary>The portal's parts CSS (css/themes/), which the stylesheet's starter lists the theme's rules from.</summary>
     private string? _partsCss;
 
-    private static readonly string[] PartsFiles = ["faces", "shape", "textures", "frames", "titles", "imagery"];
+    private static readonly string[] PartsFiles = ["faces", "shape", "textures", "frames", "titles", "imagery", "menus", "motion"];
 
     /// <summary>How the draft is edited: Simple, Complex or Custom.</summary>
     private string Mode => _draft is null ? ThemeStyles.Simple : ThemeStyles.ModeOf(_draft.Tokens, _draft.Stylesheet);
@@ -492,6 +492,11 @@
         "federant" => "Federant",
         "rye" => "Rye",
         "black-ops" => "Black Ops One",
+        "jost" => "Jost",
+        "big-shoulders" => "Big Shoulders Display",
+        "garamond" => "EB Garamond",
+        "tektur" => "Tektur",
+        "baskerville" => "Libre Baskerville",
         _ => face,
     };
 

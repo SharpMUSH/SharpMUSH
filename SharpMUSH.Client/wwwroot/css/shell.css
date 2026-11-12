@@ -615,6 +615,7 @@
 	position: relative;
 	white-space: nowrap;
 	transition: background var(--motion-fade), color var(--motion-fade);
+	animation: var(--nav-enter);
 }
 
 /* Play-session status dot: present while the play terminal is active, brighter/pulsing when there is
@@ -648,21 +649,53 @@
 	background: var(--surface-2);
 	color: var(--text);
 }
+/* The current page: how it is marked is the theme's selection part (data-selection, css/themes/menus.css). Each
+   --select-* variable falls back to this menu's own glowing bar, so a standard theme leaves it as it was. The mark is
+   drawn under the text, inside the link's own stacking context. */
 .phosphor-nav-link.active {
-	background: rgba(var(--glow), 0.10);
-	color: var(--accent);
+	isolation: isolate;
+	background: var(--select-fill, rgba(var(--glow), 0.10));
+	color: var(--select-ink, var(--accent));
 	font-weight: 600;
+	border-radius: var(--select-radius, var(--radius));
+	box-shadow: var(--select-shadow, none);
+	transform: var(--select-lift, none);
+	text-shadow: var(--select-text-glow, none);
+	animation: var(--select-motion);
+	animation-play-state: var(--ambient-play);
 }
 .phosphor-nav-link.active::before {
 	content: '';
 	position: absolute;
-	left: 0;
-	top: 8px;
-	bottom: 8px;
-	width: 3px;
-	border-radius: 2px;
-	background: var(--accent);
-	box-shadow: 0 0 8px rgba(var(--glow), 0.7);
+	z-index: -1;
+	inset: var(--select-mark-inset, 8px auto 8px 0);
+	width: var(--select-mark-width, 3px);
+	border-radius: var(--select-mark-radius, 2px);
+	background: var(--select-mark, var(--accent));
+	box-shadow: var(--select-mark-glow, 0 0 8px rgba(var(--glow), 0.7));
+	transform: var(--select-mark-transform, none);
+}
+/* MudBlazor's filled and outlined buttons in the theme's cut (data-buttons, css/themes/menus.css). Each --button-*
+   variable falls back to MudBlazor's own value, so a theme that sets none leaves them as they were. */
+.mud-button-root:is(.mud-button-filled, .mud-button-outlined) {
+	border-radius: var(--button-radius, var(--mud-default-borderradius));
+	clip-path: var(--button-clip, none);
+	transform: var(--button-transform, none);
+	font-weight: var(--button-weight, var(--mud-typography-button-weight));
+	letter-spacing: var(--button-tracking, var(--mud-typography-button-letterspacing));
+	text-transform: var(--button-case, var(--mud-typography-button-text-transform));
+}
+.mud-button-root.mud-button-filled {
+	box-shadow: var(--button-shadow, 0px 3px 1px -2px rgba(0, 0, 0, 0.2), 0px 2px 2px 0px rgba(0, 0, 0, 0.14), 0px 1px 5px 0px rgba(0, 0, 0, 0.12));
+}
+.mud-button-root:is(.mud-button-filled, .mud-button-outlined):active {
+	transform: var(--button-press, var(--button-transform, none));
+}
+.mud-button-root.mud-button-filled:active {
+	box-shadow: var(--button-press-shadow, var(--button-shadow, 0px 5px 5px -3px rgba(0, 0, 0, 0.2), 0px 8px 10px 1px rgba(0, 0, 0, 0.14), 0px 3px 14px 2px rgba(0, 0, 0, 0.12)));
+}
+.mud-button-root.mud-button-outlined {
+	box-shadow: var(--button-plain-shadow, none);
 }
 .phosphor-nav-icon {
 	font-size: var(--text-md);

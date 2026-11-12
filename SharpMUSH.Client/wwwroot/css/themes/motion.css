@@ -1,0 +1,173 @@
+/* Theme parts: motion and atmosphere (ThemeStyles.Motion, Atmosphere).
+   [data-motion]      how a card and a menu line arrive (--card-enter, --nav-enter), a loop the current line plays
+                      (--select-motion), the texture's drift (--texture-motion), and whether the atmosphere plays
+                      (--ambient-play). Arrivals take --duration-enter, which reduced motion zeroes; the loops stop
+                      under reduced motion too (globals.css).
+   [data-atmosphere]  the layer between the texture and the page (ThemeTexture): --atmosphere-still, and
+                      --atmosphere-moving with its tile size and loop. Every colour comes from the theme. */
+
+@keyframes theme-rise {
+	from { opacity: 0; translate: 0 10px; }
+	to { opacity: 1; translate: 0 0; }
+}
+
+@keyframes theme-slide {
+	from { opacity: 0; translate: -14px 0; }
+	to { opacity: 1; translate: 0 0; }
+}
+
+@keyframes theme-deal {
+	from { opacity: 0; translate: 0 16px; rotate: -3deg; }
+	to { opacity: 1; translate: 0 0; rotate: 0deg; }
+}
+
+@keyframes theme-wobble {
+	0%, 100% { rotate: -1.5deg; translate: 0 0; }
+	50% { rotate: 1.5deg; translate: 0 -3px; }
+}
+
+@keyframes theme-bob {
+	0%, 100% { translate: 0 0; }
+	50% { translate: 0 -3px; }
+}
+
+@keyframes theme-drift {
+	from { transform: scale(1.06) translate(-1.2%, 0.6%); }
+	to { transform: scale(1.06) translate(1.2%, -0.6%); }
+}
+
+@keyframes theme-pan {
+	from { background-position: 0% 0%; }
+	to { background-position: 100% 0%; }
+}
+
+@keyframes theme-ascend {
+	from { background-position: 0 0; }
+	to { background-position: 40px -340px; }
+}
+
+@keyframes theme-float {
+	from { background-position: 0 0; }
+	to { background-position: 300px -300px; }
+}
+
+/* ── Motion ── */
+
+/* Calm: things fade and slide as the portal always has; nothing loops. */
+[data-motion="calm"] {
+	--card-enter: none;
+	--nav-enter: none;
+	--select-motion: none;
+	--texture-motion: none;
+	--ambient-play: running;
+}
+
+/* Still: nothing moves at all, the atmosphere included. */
+[data-motion="still"] {
+	--card-enter: none;
+	--nav-enter: none;
+	--select-motion: none;
+	--texture-motion: none;
+	--ambient-play: paused;
+	--duration-enter: 0s;
+	--duration-exit: 0s;
+	--duration-spring: 0s;
+}
+
+/* Snappy: cards rise and menu lines slide in quickly when a page opens. */
+[data-motion="snappy"] {
+	--card-enter: theme-rise var(--duration-enter) var(--ease-enter) both;
+	--nav-enter: theme-slide var(--duration-enter) var(--ease-enter) both;
+	--select-motion: none;
+	--texture-motion: none;
+	--ambient-play: running;
+}
+
+/* Drift: cards fade up slowly, and the background drifts as if seen from a slowly moving camera. */
+[data-motion="drift"] {
+	--card-enter: theme-rise calc(var(--duration-enter) * 2) var(--ease-standard) both;
+	--nav-enter: none;
+	--select-motion: none;
+	--texture-motion: theme-drift 40s ease-in-out infinite alternate;
+	--ambient-play: running;
+}
+
+/* Wobble: cards are dealt in with a turn, and the current line floats and tilts like a held card. */
+[data-motion="wobble"] {
+	--card-enter: theme-deal var(--duration-enter) var(--ease-enter) both;
+	--nav-enter: none;
+	--select-motion: theme-wobble 3.2s ease-in-out infinite;
+	--texture-motion: none;
+	--ambient-play: running;
+}
+
+/* Bob: cards rise, and the current line bobs gently up and down. */
+[data-motion="bob"] {
+	--card-enter: theme-rise var(--duration-enter) var(--ease-enter) both;
+	--nav-enter: none;
+	--select-motion: theme-bob 2.8s ease-in-out infinite;
+	--texture-motion: none;
+	--ambient-play: running;
+}
+
+/* ── Atmosphere ── */
+
+/* None: nothing between the texture and the page. */
+[data-atmosphere="none"] {
+	--atmosphere-still: none;
+	--atmosphere-moving: none;
+	--atmosphere-motion: none;
+}
+
+/* Vignette: the edges of the window darkened. */
+[data-atmosphere="vignette"] {
+	--atmosphere-still: radial-gradient(ellipse at 50% 45%, transparent 50%, rgba(0, 0, 0, 0.5) 100%);
+	--atmosphere-moving: none;
+	--atmosphere-motion: none;
+}
+
+/* Fog: banks of mist low on the window, slowly crossing it. */
+[data-atmosphere="fog"] {
+	--atmosphere-still: linear-gradient(0deg, color-mix(in srgb, var(--text) 8%, transparent), transparent 35%);
+	--atmosphere-moving: radial-gradient(22% 14% at 20% 92%, color-mix(in srgb, var(--text) 14%, transparent), transparent),
+		radial-gradient(26% 16% at 55% 98%, color-mix(in srgb, var(--text) 11%, transparent), transparent),
+		radial-gradient(20% 12% at 85% 90%, color-mix(in srgb, var(--text) 12%, transparent), transparent);
+	--atmosphere-size: 200% 100%;
+	--atmosphere-motion: theme-pan 60s ease-in-out infinite alternate;
+}
+
+/* Embers: sparks in the warning colour rising from a warm glow at the bottom. */
+[data-atmosphere="embers"] {
+	--atmosphere-still: radial-gradient(60% 30% at 50% 100%, color-mix(in srgb, var(--warn) 16%, transparent), transparent);
+	--atmosphere-moving: radial-gradient(circle at 20% 30%, var(--warn) 0 1.5px, transparent 2.5px),
+		radial-gradient(circle at 70% 70%, color-mix(in srgb, var(--warn) 60%, #fff) 0 1px, transparent 2px),
+		radial-gradient(circle at 45% 88%, var(--warn) 0 1px, transparent 2px);
+	--atmosphere-size: 260px 340px;
+	--atmosphere-motion: theme-ascend 16s linear infinite;
+}
+
+/* Motes: points of accent light drifting up and across. */
+[data-atmosphere="motes"] {
+	--atmosphere-still: none;
+	--atmosphere-moving: radial-gradient(circle at 15% 25%, color-mix(in srgb, var(--accent) 80%, #fff) 0 1.5px, color-mix(in srgb, var(--accent) 35%, transparent) 2px, transparent 5px),
+		radial-gradient(circle at 60% 65%, color-mix(in srgb, var(--accent) 80%, #fff) 0 1px, color-mix(in srgb, var(--accent) 30%, transparent) 1.5px, transparent 4px),
+		radial-gradient(circle at 85% 15%, var(--accent) 0 1px, transparent 3px);
+	--atmosphere-size: 300px 300px;
+	--atmosphere-motion: theme-float 50s linear infinite;
+}
+
+/* CRT: a curved screen's dark corners and its scanlines. */
+[data-atmosphere="crt"] {
+	--atmosphere-still: radial-gradient(ellipse at 50% 50%, transparent 60%, rgba(0, 0, 0, 0.45) 100%),
+		repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.12) 0 1px, transparent 1px 3px);
+	--atmosphere-moving: none;
+	--atmosphere-motion: none;
+}
+
+/* Slashes: two long diagonal cuts across the window, one in the second accent, so the accent stays the cards' own. */
+[data-atmosphere="slashes"] {
+	--atmosphere-still: linear-gradient(115deg, transparent 0 58%, color-mix(in srgb, var(--accent-2) 22%, transparent) 58% 60%,
+		transparent 60% 66%, color-mix(in srgb, var(--text) 8%, transparent) 66% 66.5%, transparent 66.5%);
+	--atmosphere-moving: none;
+	--atmosphere-motion: none;
+}
