@@ -15,6 +15,9 @@
 [data-frame-edge="outset"] { --card-border-style: outset; --card-border-width: 3px; }
 [data-frame-edge="none"] { --card-border-style: none; --card-border-width: 0px; }
 
+
+/* A card keeps its whole shape unless its marks cut it (--card-clip); a preview inside the page starts uncut. */
+[data-frame-marks] { --card-clip: none; }
 [data-frame-marks="none"] { --card-marks: none; }
 [data-frame-shadow="none"] { --card-shadow: none; }
 
@@ -137,6 +140,8 @@
 		repeating-linear-gradient(-45deg, var(--accent-2) 0 5px, rgba(0, 0, 0, 0.9) 5px 10px) right 30px bottom 5px / 56px 6px no-repeat,
 		radial-gradient(circle, color-mix(in srgb, var(--text) 40%, transparent) 0 1.5px, transparent 2px) right 5px top 5px / 6px 6px no-repeat,
 		radial-gradient(circle, color-mix(in srgb, var(--text) 40%, transparent) 0 1.5px, transparent 2px) left 5px bottom 5px / 6px 6px no-repeat;
+	/* The card itself is cut at those corners, so neither its surface nor the highlight's line squares them off. */
+	--card-clip: polygon(18.5px 0, 100% 0, 100% calc(100% - 18.5px), calc(100% - 18.5px) 100%, 0 100%, 0 18.5px);
 }
 /* A game's status window: a lit band at the top, a diamond in each corner. */
 [data-frame-marks="status"] {
