@@ -38,11 +38,10 @@
                 }
             </button>
         }
-        @* Back to the scene or the terminal, from anywhere in the view with Escape too. Labelled where there is room. *@
+        @* Back to the scene or the terminal, from anywhere in the view with Escape too: an arrow, and the key where there is room. *@
         <button type="button" class="comm-close" aria-label="@Loc["NavPlayBackToGame"]" title="@Loc["NavPlayBackToGame"] (Esc)"
                 aria-keyshortcuts="Escape" @onclick="OnClose">
             <MudIcon Icon="@Icons.Material.Outlined.ArrowBack" Size="Size.Small" />
-            <span class="comm-close-label" aria-hidden="true">@Loc["NavPlayBackToGame"]</span>
             <kbd class="comm-close-key" aria-hidden="true">Esc</kbd>
         </button>
     </header>
