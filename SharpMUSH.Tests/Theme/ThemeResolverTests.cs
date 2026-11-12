@@ -252,7 +252,7 @@ public class ThemeResolverTests
 			await Assert.That(ratio).IsGreaterThanOrEqualTo(3.0).Because(theme.Id);
 		}
 
-		// Directive Light's dark blue on its charcoal rail is moved toward white.
+		// Directive Light's dark gold on its charcoal rail is moved toward white.
 		var light = ThemeResolver.Resolve(BuiltInThemes.DirectiveLight);
 		await Assert.That(light.Token("rail-accent")).IsNotEqualTo(light.Accent);
 	}
