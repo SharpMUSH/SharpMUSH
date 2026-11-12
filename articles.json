@@ -2297,7 +2297,13 @@
       {
         "id": "pictures",
         "lookup": "@config cosmetic pictures",
-        "heading": "Pictures and the portal",
+        "heading": "Pictures",
+        "aliases": []
+      },
+      {
+        "id": "portal",
+        "lookup": "@config cosmetic portal",
+        "heading": "The web portal",
         "aliases": []
       },
       {
