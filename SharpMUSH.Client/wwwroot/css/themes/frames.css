@@ -350,13 +350,17 @@
 	--card-shadow: 0 0 18px color-mix(in srgb, var(--accent) 12%, transparent), 0 10px 24px rgba(0,0,0,0.45);
 }
 
-/* Window: a 16-bit menu window, accent-2 at the top fading into the surface, with a white pixel pointing glove,
-   outlined in black, in the lower right. */
+/* Window: a 16-bit menu window, accent-2 at the top fading into the surface, with a pixel pointing glove in the
+   lower right: white, shaded in accent-3 and a darker accent-3, outlined in black. Drawn on a 25 by 16 grid at two
+   pixels a cell, so it stays sharp. */
 [data-frame-marks="window"] {
 	--card-marks: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 28%, transparent), transparent 70%);
-	--card-mask-text: url(/themes/drawings/frames/window-glove.svg) right 8px bottom 6px / 34px 22px no-repeat;
+	--card-mask-text: url(/themes/drawings/frames/window-glove.svg) right 8px bottom 6px / 50px 32px no-repeat;
 	--card-ink-text: var(--text);
-	--card-mask-border: url(/themes/drawings/frames/window-glove-outline.svg) right 8px bottom 6px / 34px 22px no-repeat;
+	--card-mask-accent-3: url(/themes/drawings/frames/window-glove-shade.svg) right 8px bottom 6px / 50px 32px no-repeat;
+	--card-mask-accent-2: url(/themes/drawings/frames/window-glove-shadow.svg) right 8px bottom 6px / 50px 32px no-repeat;
+	--card-ink-accent-2: color-mix(in srgb, var(--accent-3) 55%, #000);
+	--card-mask-border: url(/themes/drawings/frames/window-glove-outline.svg) right 8px bottom 6px / 50px 32px no-repeat;
 	--card-ink-border: #000;
 }
 /* Window: a black ring outside the white border and an accent-3 bevel inside it. */
