@@ -9538,4 +9538,16 @@
   <data name="NavThemeImageFiltersNote" xml:space="preserve">
     <value>Bilder (Avatare, Räume, Galerien, das Wiki) nehmen den Ton des Designs an. Schalte das aus, um sie in ihren eigenen Farben zu sehen.</value>
   </data>
+  <data name="NavThemeReduceMotion" xml:space="preserve">
+    <value>Bewegung reduzieren</value>
+  </data>
+  <data name="NavThemeReduceMotionOn" xml:space="preserve">
+    <value>An</value>
+  </data>
+  <data name="NavThemeReduceMotionOff" xml:space="preserve">
+    <value>Aus</value>
+  </data>
+  <data name="NavThemeReduceMotionNote" xml:space="preserve">
+    <value>Der Hintergrund des Designs steht still, und nichts auf der Seite gleitet oder dreht sich. Immer an, wenn dein Gerät reduzierte Bewegung verlangt.</value>
+  </data>
 </root>

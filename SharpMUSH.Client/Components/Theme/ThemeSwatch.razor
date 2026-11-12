@@ -19,7 +19,7 @@
     private static readonly string[] Colors =
     [
         ThemeTokens.Background, ThemeTokens.Surface, ThemeTokens.Border, ThemeTokens.Text, ThemeTokens.TextDim,
-        ThemeTokens.Warn, ThemeTokens.LinkMissing, ThemeTokens.Accent2, ThemeTokens.Accent3, ThemeTokens.Rail,
+        ThemeTokens.Warn, ThemeTokens.LinkMissing, ThemeTokens.Accent2, ThemeTokens.Accent3, ThemeTokens.Rail, ThemeTokens.BorderSoft,
     ];
 
     private string Style => string.Concat(Colors.Select(c => $"--{c}:{Theme.Token(c)};")) + $"--accent:{Theme.Accent};";

@@ -557,6 +557,7 @@
 	/* ── surfaces ── */
 	--rail-bg: #0c0b0a;             /* icon rail, darker than --surface-3 (page sidebar) */
 	--rail-ink: #aaa298;            /* rail icons: --text-dim, moved until it reads 4.5:1 on --rail-bg */
+	--rail-accent: var(--accent);   /* the accent on the rail; a theme moves it until it reads 3:1 on --rail-bg */
 
 	/* ── text roles ── */
 	--text-over-image: #e9edf0;     /* primary lines and glass controls over banner images; not themed, as the scrim under them is always dark */

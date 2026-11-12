@@ -68,7 +68,18 @@
 		--duration-exit: 0s;
 		--duration-spring: 0s;
 		--duration-sweep: 0s;
+		--ambient-play: paused;
 	}
+}
+/* The player's own Reduce motion setting (data-reduce-motion="on", ThemeService.ReduceMotionPart) does the same.
+   --ambient-play is a theme's background motion: an animation that runs while it is "running" and holds its place
+   under "paused". */
+:root[data-reduce-motion="on"] {
+	--duration-enter: 0s;
+	--duration-exit: 0s;
+	--duration-spring: 0s;
+	--duration-sweep: 0s;
+	--ambient-play: paused;
 }
 
 /* Loading placeholders: the portal's own (.kit-skeleton, Kit/SkeletonLines and friends) and MudSkeleton, whose

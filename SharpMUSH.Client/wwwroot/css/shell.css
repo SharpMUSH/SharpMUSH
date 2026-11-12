@@ -116,6 +116,12 @@
 	flex: 1;
 	min-height: 0;
 	overflow-y: auto;
+	/* A theme's letterbox: bars across the top and bottom of the page that stay put while it scrolls between
+	   them. --letterbox-h is their height (none unless a theme sets it) and --letterbox-bg the background layers
+	   drawn in them, placed against the outer box. Desktop only. */
+	border-block: var(--letterbox-h, 0px) solid transparent;
+	background: var(--letterbox-bg, none);
+	background-origin: border-box;
 }
 /* The page takes the whole content column at every width, so a page's left edge always sits against the
    sidebar. A page that reads better narrower caps its own block (a form, an article's measure). */
@@ -642,6 +648,9 @@
 	.phosphor-nav-dot--unread {
 		animation: none;
 	}
+}
+:root[data-reduce-motion="on"] .phosphor-nav-dot--unread {
+	animation: none;
 }
 
 .phosphor-nav-link:hover {
@@ -1585,6 +1594,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	.phosphor-rail { display: none; }
 	.phosphor-sidebar { display: flex; }
 	.phosphor-topbar { display: flex; }
+	.phosphor-main { border-block-width: 0; }
 
 	/* The section panel is always the full sidebar here (SectionShell ignores a desktop collapse). */
 	.phosphor-shell .phosphor-pagebar .kit-pagebar-toggle { display: none; }

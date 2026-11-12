@@ -9538,4 +9538,16 @@
   <data name="NavThemeImageFiltersNote" xml:space="preserve">
     <value>A képek (avatarok, szobák, galériák, a wiki) felveszik a téma tónusát. Kapcsold ki, hogy a saját színeikben lásd őket.</value>
   </data>
+  <data name="NavThemeReduceMotion" xml:space="preserve">
+    <value>Mozgás csökkentése</value>
+  </data>
+  <data name="NavThemeReduceMotionOn" xml:space="preserve">
+    <value>Be</value>
+  </data>
+  <data name="NavThemeReduceMotionOff" xml:space="preserve">
+    <value>Ki</value>
+  </data>
+  <data name="NavThemeReduceMotionNote" xml:space="preserve">
+    <value>A téma háttere mozdulatlan, és semmi sem csúszik vagy forog az oldalon. Mindig be van kapcsolva, ha az eszközöd csökkentett mozgást kér.</value>
+  </data>
 </root>

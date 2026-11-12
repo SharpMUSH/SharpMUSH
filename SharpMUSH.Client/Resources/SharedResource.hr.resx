@@ -9538,4 +9538,16 @@
   <data name="NavThemeImageFiltersNote" xml:space="preserve">
     <value>Slike (avatari, sobe, galerije, wiki) poprimaju ton teme. Isključi ih da ih vidiš u njihovim vlastitim bojama.</value>
   </data>
+  <data name="NavThemeReduceMotion" xml:space="preserve">
+    <value>Smanji pokrete</value>
+  </data>
+  <data name="NavThemeReduceMotionOn" xml:space="preserve">
+    <value>Uključeno</value>
+  </data>
+  <data name="NavThemeReduceMotionOff" xml:space="preserve">
+    <value>Isključeno</value>
+  </data>
+  <data name="NavThemeReduceMotionNote" xml:space="preserve">
+    <value>Pozadina teme miruje i ništa na stranici ne klizi niti se okreće. Uvijek je uključeno kad vaš uređaj traži smanjeno kretanje.</value>
+  </data>
 </root>

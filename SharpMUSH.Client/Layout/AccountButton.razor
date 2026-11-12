@@ -45,7 +45,8 @@
                           OnSwitchCharacter="HandleSwitchCharacterAsync"
                           OnOpenInNewTab="HandleOpenInNewTabAsync"
                           OnLogout="HandleLogoutAsync"
-                          OnSetImageFilters="SetImageFiltersAsync" />
+                          OnSetImageFilters="SetImageFiltersAsync"
+                          OnSetReduceMotion="SetReduceMotionAsync" />
         </div>
     </Authorized>
     <NotAuthorized>
@@ -148,10 +149,21 @@
     private async Task SetImageFiltersAsync(bool on)
     {
         if (AccountAuth.ActiveCharacter is not { } acting) return;
-        var appearance = new CharacterAppearance(acting.ThemeId, acting.Accent, acting.Vision) { ImageFilters = on };
+        var appearance = new CharacterAppearance(acting.ThemeId, acting.Accent, acting.Vision) { ImageFilters = on, ReduceMotion = acting.ReduceMotion };
         if (await AccountAuth.SetAppearanceAsync(acting.DbrefNumber, appearance) is ApiFailure failure)
         {
             Logger.LogWarning("Could not save image filters for #{Dbref}: {Message}", acting.DbrefNumber, failure.Message);
+        }
+    }
+
+    /// <summary>Saves the acting character's reduced motion, keeping the rest of its look.</summary>
+    private async Task SetReduceMotionAsync(bool on)
+    {
+        if (AccountAuth.ActiveCharacter is not { } acting) return;
+        var appearance = new CharacterAppearance(acting.ThemeId, acting.Accent, acting.Vision) { ImageFilters = acting.ImageFilters, ReduceMotion = on };
+        if (await AccountAuth.SetAppearanceAsync(acting.DbrefNumber, appearance) is ApiFailure failure)
+        {
+            Logger.LogWarning("Could not save reduced motion for #{Dbref}: {Message}", acting.DbrefNumber, failure.Message);
         }
     }
 

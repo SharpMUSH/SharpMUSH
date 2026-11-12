@@ -31,6 +31,13 @@ public sealed class ThemeService : IThemeService, IDisposable
 	/// </summary>
 	public const string ImageFiltersPart = "image-filters";
 
+	/// <summary>
+	/// The part that says whether the portal holds still: <c>data-reduce-motion="on"</c> or <c>"off"</c> on &lt;html&gt;,
+	/// from the acting character's <see cref="CharacterAppearance.ReduceMotion"/>. globals.css stops a theme's motion
+	/// under "on", as it does under the browser's reduced-motion preference. It rides with the parts like image filters.
+	/// </summary>
+	public const string ReduceMotionPart = "reduce-motion";
+
 	private readonly IJSRuntime _js;
 	private readonly IHttpClientFactory _http;
 	private readonly IAccountAuthState _account;
@@ -158,20 +165,26 @@ public sealed class ThemeService : IThemeService, IDisposable
 
 		// Signed out, the browser keeps the last character's choice, so signing in again paints no filtered flash.
 		var filters = character?.ImageFilters ?? _resolved.Parts.GetValueOrDefault(ImageFiltersPart) != "off";
-		var dark = WithImageFilters(For(light: false), filters);
-		var light = WithImageFilters(For(light: true), filters);
+		var still = character?.ReduceMotion ?? _resolved.Parts.GetValueOrDefault(ReduceMotionPart) == "on";
+		var dark = WithPlayerParts(For(light: false), filters, still);
+		var light = WithPlayerParts(For(light: true), filters, still);
 		var resolved = _prefersLight ? light : dark;
 		_ = SaveAsync(dark, light.ThemeId == dark.ThemeId ? null : light);
 		if (resolved.Css == _resolved.Css && resolved.ThemeId == _resolved.ThemeId
-			&& resolved.Parts.GetValueOrDefault(ImageFiltersPart) == _resolved.Parts.GetValueOrDefault(ImageFiltersPart)) return;
+			&& resolved.Parts.GetValueOrDefault(ImageFiltersPart) == _resolved.Parts.GetValueOrDefault(ImageFiltersPart)
+			&& resolved.Parts.GetValueOrDefault(ReduceMotionPart) == _resolved.Parts.GetValueOrDefault(ReduceMotionPart)) return;
 
 		_resolved = resolved;
 		OnThemeChanged?.Invoke();
 	}
 
-	private static ResolvedTheme WithImageFilters(ResolvedTheme theme, bool on) => theme with
+	private static ResolvedTheme WithPlayerParts(ResolvedTheme theme, bool filters, bool still) => theme with
 	{
-		Parts = new Dictionary<string, string>(theme.Parts, StringComparer.Ordinal) { [ImageFiltersPart] = on ? "on" : "off" },
+		Parts = new Dictionary<string, string>(theme.Parts, StringComparer.Ordinal)
+		{
+			[ImageFiltersPart] = filters ? "on" : "off",
+			[ReduceMotionPart] = still ? "on" : "off",
+		},
 	};
 
 	private async Task SaveAsync(ResolvedTheme theme, ResolvedTheme? light)

@@ -98,6 +98,23 @@
                     </div>
 
                     <div class="settings-theme-field">
+                        <span class="settings-theme-label" id="@($"motion-label-{character.DbrefNumber}")">@Loc["NavThemeReduceMotion"]</span>
+                        <div class="settings-theme-accents settings-theme-motion" role="radiogroup" aria-labelledby="@($"motion-label-{character.DbrefNumber}")"
+                             aria-describedby="@($"motion-note-{character.DbrefNumber}")">
+                            @foreach (var on in new[] { true, false })
+                            {
+                                var chosen = character.ReduceMotion == on;
+                                <button type="button" role="radio" class="settings-theme-own @(chosen ? "is-on" : null)" aria-checked="@(chosen ? "true" : "false")"
+                                        data-reduce-motion="@(on ? "on" : "off")" disabled="@busy"
+                                        @onclick="() => SaveAsync(character, character.ThemeId, character.Accent, character.Vision, reduceMotion: on)">
+                                    @Loc[on ? "NavThemeReduceMotionOn" : "NavThemeReduceMotionOff"]
+                                </button>
+                            }
+                        </div>
+                        <span class="settings-theme-note" id="@($"motion-note-{character.DbrefNumber}")">@Loc["NavThemeReduceMotionNote"]</span>
+                    </div>
+
+                    <div class="settings-theme-field">
                         <span class="settings-theme-label" id="@($"theme-label-{character.DbrefNumber}")">@Loc["NavThemeTheme"]</span>
                         <div class="settings-theme-choices" role="radiogroup" aria-labelledby="@($"theme-label-{character.DbrefNumber}")">
                             @ThemeChoice(character, null, DefaultLabel(character), busy)
@@ -283,16 +300,21 @@
     }
 
     /// <summary>
-    /// Saves a character's look, keeping its image filters unless <paramref name="imageFilters"/> says otherwise; false
+    /// Saves a character's look, keeping its image filters and reduced motion unless <paramref name="imageFilters"/> or
+    /// <paramref name="reduceMotion"/> says otherwise; false
     /// when it was not saved (another save for it is under way, or it failed).
     /// </summary>
     private async Task<bool> SaveAsync(AccountAuthService.CharacterSummary character, string? themeId, string? accent, string? vision,
-        bool? imageFilters = null)
+        bool? imageFilters = null, bool? reduceMotion = null)
     {
         if (!_saving.Add(character.DbrefNumber)) return false;
         try
         {
-            var appearance = new CharacterAppearance(themeId, accent, vision) { ImageFilters = imageFilters ?? character.ImageFilters };
+            var appearance = new CharacterAppearance(themeId, accent, vision)
+            {
+                ImageFilters = imageFilters ?? character.ImageFilters,
+                ReduceMotion = reduceMotion ?? character.ReduceMotion,
+            };
             if (await AccountAuth.SetAppearanceAsync(character.DbrefNumber, appearance) is ApiFailure failure)
             {
                 Snackbar.Add(Loc["NavThemeSaveFailed", failure.Message], Severity.Error);

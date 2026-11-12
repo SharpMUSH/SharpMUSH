@@ -9538,4 +9538,16 @@
   <data name="NavThemeImageFiltersNote" xml:space="preserve">
     <value>Obrazy (awatary, pokoje, galerie, wiki) przyjmują ton motywu. Wyłącz je, aby widzieć je w ich własnych kolorach.</value>
   </data>
+  <data name="NavThemeReduceMotion" xml:space="preserve">
+    <value>Ogranicz ruch</value>
+  </data>
+  <data name="NavThemeReduceMotionOn" xml:space="preserve">
+    <value>Włączone</value>
+  </data>
+  <data name="NavThemeReduceMotionOff" xml:space="preserve">
+    <value>Wyłączone</value>
+  </data>
+  <data name="NavThemeReduceMotionNote" xml:space="preserve">
+    <value>Tło motywu stoi w miejscu, a nic na stronie się nie przesuwa ani nie obraca. Zawsze włączone, gdy urządzenie prosi o ograniczenie ruchu.</value>
+  </data>
 </root>

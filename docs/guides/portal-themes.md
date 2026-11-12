@@ -36,6 +36,14 @@ repeats that rule after its own stylesheet (`ResolvedTheme.ImageFiltersOffRule`)
 `--image-filter` on `:root` does not put the tone back. A stylesheet that writes `filter` on pictures itself is not
 covered by the switch; use `--image-filter` instead. Signed out, the browser keeps the last character's choice.
 
+**Reduce motion** holds the portal still: a theme's background stops moving, and nothing slides or springs. It is
+on whenever the browser reports `prefers-reduced-motion: reduce`, and a player can turn it on for a character in the
+account menu or on the Theme page. It is stored with the character (`CharacterAppearance.ReduceMotion`, off unless
+turned on) and reaches the page as `data-reduce-motion="on"` or `"off"` on `<html>`. Under `"on"`, `globals.css`
+zeroes the movement durations and sets `--ambient-play: paused`, as the media query does, and the portal's scripts
+scroll at once instead of smoothly. A stylesheet that moves something keys it off both: the media query and
+`[data-reduce-motion="on"]`. Signed out, the browser keeps the last character's choice.
+
 ## Built-in themes
 
 `BuiltInThemes.All` (`SharpMUSH.Contracts/Models/Portal/PortalThemes.cs`):
@@ -47,8 +55,8 @@ covered by the switch; use `--image-filter` instead. Signed out, the browser kee
   mobile tactics game, the dark one the light one inverted: a grey field under a soft light between letterbox bars,
   condensed capitals (Saira Condensed) after a corner triangle with a yellow slab under them (`designator`), square
   tiles on a soft drop with a yellow stripe down the left edge, a register cross and a corner triangle (`dossier`),
-  cyan blue on the primary control only, a yellow wireframe hanging from the top of the page, and pictures in smoky
-  monochrome (`smoke`). Their layout themes carry a look too.
+  cyan blue on the primary control only, a yellow wireframe hanging from the top of the page that turns once every
+  three minutes (still under reduced motion), and pictures in smoky monochrome (`smoke`). Their layout themes carry a look too.
 - One per MSSP genre, with the ids the telnet layout themes use: `fantasy`, `historical`, `horror`, `modern`,
   `mystery`, `romance`, `science-fiction`, `spiritual`.
 - Anime: `magical-girl`, `shojo`, `idol`, `slice-of-life`, `shonen`, `sports`, `mechmachine`, `real-robot`, `super-robot`, `isekai`, `yokai`.
@@ -227,12 +235,12 @@ the sign to double it.
 | Surfaces | `--bg`, `--surface`, `--surface-2`, `--surface-3`, `--rail-bg`, `--card-bg` (may be a gradient or layered images), `--code-bg` |
 | Text | `--text`, `--text-dim`, `--text-faint`, `--rail-ink` (rail icons, derived from `--text-dim` so they read on the rail), `--title-color`, `--code-text` |
 | Lines | `--border`, `--border-soft` |
-| Accent | `--accent`, `--accent-dim`, `--accent-on` (text on an accent fill), `--accent-2`, `--accent-3` (decorative, drawings only) |
+| Accent | `--accent`, `--accent-dim`, `--accent-on` (text on an accent fill), `--rail-accent` (the accent on the icon rail, derived so it stands out from the rail), `--accent-2`, `--accent-3` (decorative, drawings only) |
 | Status | `--warn`, `--link-missing`, `--danger`, `--success`, `--info`, `--special` |
 | Syntax | `--syntax-command`, `--syntax-function`, `--syntax-substitution`, `--syntax-dbref`, `--syntax-reference`, `--syntax-at-command`, `--syntax-danger` (softcode); `--syntax-string`, `--syntax-link`, `--syntax-heading`, `--syntax-emphasis` (help) |
 | Shape | `--radius`, `--radius-lg`, `--radius-card`, `--radius-row`, `--card-border-style`, `--card-border-width`, `--card-shadow`, `--elev-1` (a lifted card's shadow), `--shadow` |
 | Type | `--font-ui`, `--font-display`, `--font-mono`, `--font-kicker` (the small uppercase labels), `--kicker-tracking`, `--font-title-weight`, `--title-transform`, `--title-tracking`, `--title-style` |
-| Decoration | `--texture`, `--texture-size`, `--texture-opacity`, `--texture-mask-<colour>` and `--texture-ink-<colour>` (colour: `text`, `accent`, `accent-2`, `accent-3`, `border`), `--card-marks`, `--hero-marks` (over the Home hero), `--card-mask-<colour>` and `--card-ink-<colour>` (also `grain`), `--logo-inner` (the SharpMUSH mark's inner strokes), `--ornament-before`, `--ornament-after`, `--title-underline`, `--title-underline-height`, `--title-underline-pad`, `--title-shadow`, `--image-filter` |
+| Decoration | `--texture`, `--texture-size`, `--texture-opacity`, `--texture-mask-<colour>` and `--texture-ink-<colour>` (colour: `text`, `accent`, `accent-2`, `accent-3`, `border`), `--letterbox-h` and `--letterbox-bg` (bars across the top and bottom of the page that stay put while it scrolls, and the background layers drawn in them; wide screens only), `--card-marks`, `--hero-marks` (over the Home hero), `--card-mask-<colour>` and `--card-ink-<colour>` (also `grain`), `--logo-inner` (the SharpMUSH mark's inner strokes), `--ornament-before`, `--ornament-after`, `--title-underline`, `--title-underline-height`, `--title-underline-pad`, `--title-shadow`, `--image-filter` |
 
 `ThemeStylesheet.Variables` is the list the starter is written from.
 

@@ -734,29 +734,56 @@
 	--texture-ink-border: color-mix(in srgb, var(--text) 7%, transparent);
 }
 
-/* Haze: a title screen. Smoke drifting through a room lit from above, a vignette, letterbox bars along the top and
-   bottom of the window (charcoal in the rail's colour on a light page, pale grey on a dark one), a faint grid of dots
+/* Haze: a title screen. Smoke drifting through a room lit from above, a vignette, letterbox bars across the top and
+   bottom of the page (--letterbox-h, drawn by the shell; charcoal in the rail's colour on a light page, pale grey on a
+   dark one, each shading toward the page at its inner edge and ending on a hairline, with a yellow slab and a run of
+   ticks at opposite ends), a faint grid of dots
    with a register cross, a few printer's marks (one strip of hatching, rules, arrowheads) across a pale diagonal
-   band, and a wireframe shell hanging from the top of the page with a smaller one far off, both in accent-2. */
+   band, and a wireframe shell hanging from the top of the page with a smaller one far off, both in accent-2. The shells
+   turn slowly (haze-wire-turning.svg, one turn in three minutes and in a minute and a half); under reduced motion,
+   the browser's or the player's own, they hold still in haze-wire.svg, the turning drawing's first frame. */
 [data-texture="haze"] {
 	--letterbox: color-mix(in srgb, var(--text) 72%, var(--bg));
-	--texture: linear-gradient(var(--letterbox) min(14px, 5%), transparent min(14px, 5%) calc(100% - min(14px, 5%)), var(--letterbox) calc(100% - min(14px, 5%))),
-		radial-gradient(70% 55% at 50% 0%, color-mix(in srgb, var(--text) 7%, transparent), transparent 70%),
+	--letterbox-h: 48px;
+	--letterbox-mark: color-mix(in srgb, var(--accent-2) 62%, #000);
+	--letterbox-ink: color-mix(in srgb, var(--letterbox) 55%, var(--bg));
+	--letterbox-bg: linear-gradient(var(--letterbox-ink), var(--letterbox-ink)) 0 47px / 100% 1px no-repeat,
+		linear-gradient(var(--letterbox-ink), var(--letterbox-ink)) left 0 bottom 47px / 100% 1px no-repeat,
+		linear-gradient(var(--letterbox-mark), var(--letterbox-mark)) 24px 41px / 112px 4px no-repeat,
+		linear-gradient(var(--letterbox-mark), var(--letterbox-mark)) right 24px bottom 41px / 112px 4px no-repeat,
+		linear-gradient(var(--letterbox-mark), var(--letterbox-mark)) 140px 41px / 4px 4px no-repeat,
+		linear-gradient(var(--letterbox-mark), var(--letterbox-mark)) right 140px bottom 41px / 4px 4px no-repeat,
+		repeating-linear-gradient(90deg, var(--letterbox-ink) 0 2px, transparent 2px 6px) right 24px top 16px / 62px 10px no-repeat,
+		repeating-linear-gradient(90deg, var(--letterbox-ink) 0 2px, transparent 2px 6px) left 24px bottom 16px / 62px 10px no-repeat,
+		linear-gradient(var(--letterbox) 0 26px, color-mix(in srgb, var(--letterbox) 76%, var(--bg)) 47px, transparent 47px calc(100% - 47px),
+			color-mix(in srgb, var(--letterbox) 76%, var(--bg)) calc(100% - 47px), var(--letterbox) calc(100% - 22px)) 0 0 / 100% 100% no-repeat;
+	--texture: radial-gradient(70% 55% at 50% 0%, color-mix(in srgb, var(--text) 7%, transparent), transparent 70%),
 		radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.55) 100%),
 		linear-gradient(115deg, transparent 58%, color-mix(in srgb, var(--text) 3%, transparent) 58% 71%, transparent 71%);
-	--texture-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+	--texture-size: 100% 100%, 100% 100%, 100% 100%;
 	--texture-mask-border: url(/themes/drawings/shared/clouds-800.svg) 0 0 / 100% 100%;
 	--texture-ink-border: color-mix(in srgb, var(--text) 9%, transparent);
 	--texture-mask-text: url(/themes/drawings/textures/haze-marks.svg) 0 0 / 240px 240px;
 	--texture-ink-text: var(--border);
-	--texture-mask-accent-2: url(/themes/drawings/textures/haze-wire.svg) center top / 1440px 720px no-repeat,
-		url(/themes/drawings/textures/haze-hatch.svg) 0 0 / 1440px 720px;
+	--texture-mask-accent-2: url(/themes/drawings/textures/haze-hatch.svg) 0 0 / 1440px 720px;
 	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 80%, transparent);
+	/* The shells are in accent-2 too, but on a layer of their own: Chrome stops an animated drawing when it is one
+	   of several layers of a mask. */
+	--texture-mask-accent-3: url(/themes/drawings/textures/haze-wire-turning.svg) center top / 1440px 720px no-repeat;
+	--texture-ink-accent-3: var(--texture-ink-accent-2);
+}
+@media (prefers-reduced-motion: reduce) {
+	[data-texture="haze"] {
+		--texture-mask-accent-3: url(/themes/drawings/textures/haze-wire.svg) center top / 1440px 720px no-repeat;
+	}
+}
+[data-reduce-motion="on"][data-texture="haze"] {
+	--texture-mask-accent-3: url(/themes/drawings/textures/haze-wire.svg) center top / 1440px 720px no-repeat;
 }
 [data-scheme="light"][data-texture="haze"] {
 	--letterbox: var(--rail-bg);
-	--texture: linear-gradient(var(--letterbox) min(14px, 5%), transparent min(14px, 5%) calc(100% - min(14px, 5%)), var(--letterbox) calc(100% - min(14px, 5%))),
-		radial-gradient(60% 55% at 50% 30%, color-mix(in srgb, #fff 85%, transparent), transparent 70%),
+	--letterbox-mark: var(--accent-2);
+	--texture: radial-gradient(60% 55% at 50% 30%, color-mix(in srgb, #fff 85%, transparent), transparent 70%),
 		radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.16) 100%),
 		linear-gradient(115deg, transparent 58%, color-mix(in srgb, var(--text) 3%, transparent) 58% 71%, transparent 71%);
 	--texture-ink-border: color-mix(in srgb, var(--text) 5%, transparent);

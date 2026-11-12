@@ -84,6 +84,7 @@ public static partial class ThemeStylesheet
 			(ThemeTokens.Accent3, "The second decorative colour: drawings only, never text."),
 			("accent-dim", "The accent's quieter shade."),
 			("accent-on", "Text on an accent fill."),
+			("rail-accent", "The accent on the icon rail; derived from the accent so it stands out from the rail."),
 		]),
 		("Status", [
 			(ThemeTokens.Warn, "Unsaved and changed."),
@@ -137,6 +138,8 @@ public static partial class ThemeStylesheet
 			("texture-mask-accent-2", "The same, filled with the first decorative colour."),
 			("texture-mask-accent-3", "The same, filled with the second decorative colour."),
 			("texture-mask-border", "The same, filled with the border colour."),
+			("letterbox-h", "The height of bars across the top and bottom of the page, which stay put while it scrolls; none by default. Wide screens only."),
+			("letterbox-bg", "Background layers drawn in those bars, placed against the page's outer box."),
 			("card-marks", "Gradient layers drawn on every card, over its surface."),
 			("card-mask-text", "A drawing on every card filled with the text colour; -accent, -accent-2, -accent-3, -border and -grain likewise."),
 			("hero-marks", "Gradient layers drawn on the Home hero, over its card."),

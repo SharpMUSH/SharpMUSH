@@ -24,7 +24,7 @@ function listening(target = {}) {
     return target;
 }
 
-function load(styles = new Map(), reducedMotion = false) {
+function load(styles = new Map(), reducedMotion = false, playerStill = false) {
     const frames = [];
     const window = listening({
         matchMedia: () => ({ matches: reducedMotion }),
@@ -32,7 +32,7 @@ function load(styles = new Map(), reducedMotion = false) {
         setTimeout: () => {},
         frames,
     });
-    const context = vm.createContext({ window, getComputedStyle: el => styles.get(el) ?? {}, CSS: { escape: text => text }, document: { activeElement: null, createElement: () => ({ style: {}, setAttribute() {}, remove() {} }) } });
+    const context = vm.createContext({ window, getComputedStyle: el => styles.get(el) ?? {}, CSS: { escape: text => text }, document: { activeElement: null, documentElement: { dataset: playerStill ? { reduceMotion: 'on' } : {} }, createElement: () => ({ style: {}, setAttribute() {}, remove() {} }) } });
     vm.runInContext(readFileSync(new URL('js/portal-interop.js', root), 'utf8'), context, { filename: 'js/portal-interop.js' });
     window.SharpMUSH.window = window;
     return window.SharpMUSH;
@@ -115,6 +115,16 @@ test('a room is brought to the middle of the view, at once for a reader who aske
     assert.equal(el.scrolled.top, 700);
     assert.equal(el.scrolled.behavior, 'auto');
     assert.equal(focused.preventScroll, true);
+});
+
+test('a room is brought to the middle at once for a player who turned Reduce motion on', () => {
+    const el = frame({ clientWidth: 1000, clientHeight: 500 }, { width: 3000, height: 2000 });
+    const room = { getBoundingClientRect: () => ({ left: 1800, top: 900, width: 100, height: 100 }), focus() {} };
+    const map = load(new Map(), false, true);
+
+    map.mapCentre(el, room, false);
+
+    assert.equal(el.scrolled.behavior, 'auto');
 });
 
 // A frame to pan and zoom, 1000 x 500 at (100, 50) on the page, over a 3000 x 2000 drawing.
