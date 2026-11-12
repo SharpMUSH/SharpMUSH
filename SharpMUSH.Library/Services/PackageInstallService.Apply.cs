@@ -153,14 +153,25 @@ public partial class PackageInstallService
 		// never create it, so an unresolved target is a hard apply error.
 		foreach (var change in changeset.Objects.Where(c => c.Action == PackageObjectAction.Attach))
 		{
-			if (change.Objid is null || await GetKnownAsync(change.Objid, cancellationToken) is null)
+			var objid = change.Objid;
+			var target = objid is null ? null : await GetKnownAsync(objid, cancellationToken);
+			if (objid is null || target is null)
 			{
 				return new Error<string>(
 					$"Attach target for {{{{{change.Ref}}}}} ({change.Name}) does not resolve to an existing object; "
 					+ "configure it or check the http_handler setting before applying.");
 			}
 
-			run.ObjidByRef[change.Ref] = change.Objid;
+			// A player's limit is also the limit of every object it owns that has none of its own, so a
+			// package may raise the limit of an object it attaches to, never of a player.
+			if (target.IsPlayer
+				&& manifest.Objects.FirstOrDefault(o => o.Ref == change.Ref)?.Attributes.ContainsKey(LiveWire.AttributeName) == true)
+			{
+				return new Error<string>(
+					$"{{{{{change.Ref}}}}} ({change.Name}) is a player; a package cannot give a player a function_invocation_limit.");
+			}
+
+			run.ObjidByRef[change.Ref] = objid;
 		}
 
 		// Application packages (kind: application) register a portal app instead of creating

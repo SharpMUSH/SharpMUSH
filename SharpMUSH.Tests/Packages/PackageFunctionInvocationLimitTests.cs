@@ -36,10 +36,10 @@ public class PackageFunctionInvocationLimitTests
 	private static PackageManifestResult<ParsedPackageManifest> Parse(string yaml)
 		=> new PackageManifestService().ParseManifest(yaml);
 
-	private Task<Result<PackageApplyResult>> ApplyAsync(PackageManifest manifest)
+	private Task<Result<PackageApplyResult>> ApplyAsync(PackageManifest manifest, Dictionary<string, string>? answers = null)
 		=> Installer.ApplyAsync(manifest, new PackageApplyRequest(
 			new PackageApplySource("https://github.com/SharpMUSH/SharpMUSH-Packages", $"{manifest.Name}/", "commit-1", "main"),
-			new Dictionary<string, string>(), []));
+			answers ?? new Dictionary<string, string>(), []));
 
 	private async Task<string> Read(string expression)
 		=> (await WebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
@@ -76,21 +76,70 @@ public class PackageFunctionInvocationLimitTests
 		await Assert.That(Parse(Yaml(FreshId(), "1.0", lines)).Expect<PackageManifestFailure>().Errors).IsNotEmpty();
 	}
 
-	[Test]
-	public async Task AnAttachObjectCannotRaiseAnotherObjectsLimit()
-	{
-		var failure = Parse($$$"""
+	private static string AttachYaml(string id, string version, string objectLines)
+		=> $$$"""
 			format: "1.19"
-			package: {{{FreshId()}}}
-			title: Heavy Package
-			version: "1.0"
+			package: {{{id}}}
+			title: Heavy Handler
+			version: "{{{version}}}"
+			configure:
+			  host:
+			    label: "Object to attach to"
 			objects:
 			  - ref: handler
-			    target: "{{$http_handler}}"
-			    function_invocation_limit: 100000
-			""").Expect<PackageManifestFailure>();
+			    target: "{{?host}}"
+			{{{objectLines}}}
+			""";
 
-		await Assert.That(failure.Errors.Select(e => e.Path)).Contains(path => path.EndsWith(".function_invocation_limit"));
+	[Test]
+	public async Task AnAttachObjectMayGiveItsTargetALimit()
+	{
+		var manifest = Parse(AttachYaml(FreshId(), "1.0", "    function_invocation_limit: 100000"))
+			.Expect<ParsedPackageManifest>().Manifest;
+
+		await Assert.That(manifest.Objects.Single().Attributes[LiveWire.AttributeName].Value).IsEqualTo("100000 1");
+	}
+
+	[Test]
+	public async Task TheWriterWritesAnAttachObjectsKeyBack()
+	{
+		var manifest = Parse(AttachYaml(FreshId(), "1.0", "    function_invocation_limit: 100000\n    attributes:\n      ROUTE: x"))
+			.Expect<ParsedPackageManifest>().Manifest;
+
+		var written = PackageManifestWriter.Write(manifest);
+		var reread = Parse(written).Expect<ParsedPackageManifest>().Manifest;
+
+		await Assert.That(written).Contains("    function_invocation_limit: 100000");
+		await Assert.That(written).DoesNotContain(LiveWire.AttributeName);
+		await Assert.That(reread.Objects.Single().Attributes[LiveWire.AttributeName].Value).IsEqualTo("100000 1");
+	}
+
+	[Test]
+	public async Task AnAttachInstallRaisesItsTargetAndAnUninstallDropsIt()
+	{
+		var id = FreshId();
+		var host = await Read($"objid(create({id}))");
+		var answers = new Dictionary<string, string> { ["host"] = host };
+
+		(await ApplyAsync(Parse(AttachYaml(id, "1.0", "    function_invocation_limit: 100000"))
+			.Expect<ParsedPackageManifest>().Manifest, answers)).Expect<PackageApplyResult>();
+		await Assert.That(await Read($"livewire(funceval,{host})")).IsEqualTo("25000 100000 1");
+
+		(await Installer.UninstallAsync(id)).Expect<Success>();
+		await Assert.That(await Read($"livewire(funceval,{host})")).IsEqualTo("25000 0 0");
+	}
+
+	[Test]
+	public async Task APackageCannotGiveAPlayerALimit()
+	{
+		var id = FreshId();
+		var answers = new Dictionary<string, string> { ["host"] = await Read("objid(#1)") };
+
+		var refused = (await ApplyAsync(Parse(AttachYaml(id, "1.0", "    function_invocation_limit: 100000"))
+			.Expect<ParsedPackageManifest>().Manifest, answers)).Expect<Error<string>>();
+
+		await Assert.That(refused.Value).Contains("is a player");
+		await Assert.That(await Read("livewire(funceval,#1)")).IsEqualTo("25000 0 0");
 	}
 
 	[Test]

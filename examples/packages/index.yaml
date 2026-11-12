@@ -28,7 +28,7 @@ packages:
     description: Registers the who-where settings with +config (requires who-where and plus-config)
   - path: http-handler/
     package: http-handler
-    version: 1.0.6
+    version: 1.0.7
     description: Inbound HTTP verb routers (attach mode)
   - path: profile-handler/
     package: profile-handler

@@ -7,7 +7,9 @@ Each verb maps a request path to a backtick sub-attribute
 (`GET /http/foo/bar` → `` GET`FOO`BAR ``), decodes the query string into
 `%q<form.*>`, and answers a clean `404 API NOT FOUND` for unrouted paths. It
 manages only these attributes on the configured `http_handler` object
-(`{{$http_handler}}`, #4) — it never creates or destroys the object.
+(`{{$http_handler}}`, #8) — it never creates or destroys the object. It also gives
+the handler its own function invocation limit, 200000 calls per request (`help @livewire`),
+because every portal listing runs there; uninstalling the package removes it.
 
 Feature packages add routes as backtick children of these verbs and depend on
 this package — see [`profile-handler`](../profile-handler/). Installing

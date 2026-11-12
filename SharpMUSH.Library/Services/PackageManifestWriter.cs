@@ -501,11 +501,12 @@ public static class PackageManifestWriter
 		{
 			yaml.Append("  - ref: ").AppendLine(Scalar(obj.Ref));
 
-			// Attach mode carries a target and attributes only; every creation key is rejected by
-			// the reader, so emitting one here would produce a manifest we cannot read back.
+			// Attach mode carries a target, the target's limit and attributes only; every creation key is
+			// rejected by the reader, so emitting one here would produce a manifest we cannot read back.
 			if (obj.Target is { } target)
 			{
 				yaml.Append("    target: ").AppendLine(Scalar(target.ToString()));
+				WriteFunctionInvocationLimit(yaml, obj);
 				WriteAttributes(yaml, WithoutLiveWire(obj.Attributes));
 				continue;
 			}
@@ -540,15 +541,19 @@ public static class PackageManifestWriter
 				}
 			}
 
-			// The engine's own limit attribute is read back from function_invocation_limit:, never as an attribute.
-			if (obj.Attributes.TryGetValue(LiveWire.AttributeName, out var wire)
-				&& LiveWire.Parse(wire.Value) is { Limit: > 0 } limit)
-			{
-				yaml.Append("    ").Append(PackageManifestService.FunctionInvocationLimitKey).Append(": ")
-					.AppendLine(limit.Limit.ToString(System.Globalization.CultureInfo.InvariantCulture));
-			}
-
+			WriteFunctionInvocationLimit(yaml, obj);
 			WriteAttributes(yaml, WithoutLiveWire(obj.Attributes));
+		}
+	}
+
+	/// <summary>The engine's own limit attribute, written back as function_invocation_limit:, never as an attribute.</summary>
+	private static void WriteFunctionInvocationLimit(StringBuilder yaml, PackageObjectSpec obj)
+	{
+		if (obj.Attributes.TryGetValue(LiveWire.AttributeName, out var wire)
+			&& LiveWire.Parse(wire.Value) is { Limit: > 0 } limit)
+		{
+			yaml.Append("    ").Append(PackageManifestService.FunctionInvocationLimitKey).Append(": ")
+				.AppendLine(limit.Limit.ToString(System.Globalization.CultureInfo.InvariantCulture));
 		}
 	}
 

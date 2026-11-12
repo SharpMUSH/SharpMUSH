@@ -139,12 +139,13 @@ permissions) and `roles:`. The reference is
 - **Text, decimal and date wiki properties (format 1.18).** A `wiki_properties:` type of `text`,
   `decimal` or `date` needs format 1.18, and an earlier format refuses it.
 
-- **Function invocation limits (format 1.19).** A created object's `function_invocation_limit:`
+- **Function invocation limits (format 1.19).** An object's `function_invocation_limit:`
   is read as the engine's internal `WIREFUNCEVAL` attribute (`<limit> 1`, flags `no_command`,
   `no_clone`, `internal`), the value `@livewire/funceval` and `/funcover` write, so the plan, the
   review screen, the three-way merge, rollback and removal are the attribute model's. The writer
-  turns it back into the key. A manifest may not name `WIREFUNCEVAL` as an attribute, and an
-  attach object may not declare the key.
+  turns it back into the key. A manifest may not name `WIREFUNCEVAL` as an attribute. An attach
+  object may declare the key: it is one more managed attribute on the target, so uninstalling the
+  package removes the limit. `http-handler` uses it to give the http handler its own limit.
 - **Subcategory and bridges (format 1.20).** `subcategory:` is a second listing level under
   `category:`, read like it. `bridge: true` marks a package joining two dependencies and needs at
   least two in `depends:`. Both are listing metadata: browse snapshots carry them
