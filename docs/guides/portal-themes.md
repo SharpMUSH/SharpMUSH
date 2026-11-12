@@ -36,6 +36,14 @@ repeats that rule after its own stylesheet (`ResolvedTheme.ImageFiltersOffRule`)
 `--image-filter` on `:root` does not put the tone back. A stylesheet that writes `filter` on pictures itself is not
 covered by the switch; use `--image-filter` instead. Signed out, the browser keeps the last character's choice.
 
+**Reduce motion** holds the portal still: a theme's background stops moving, and nothing slides or springs. It is
+on whenever the browser reports `prefers-reduced-motion: reduce`, and a player can turn it on for a character in the
+account menu or on the Theme page. It is stored with the character (`CharacterAppearance.ReduceMotion`, off unless
+turned on) and reaches the page as `data-reduce-motion="on"` or `"off"` on `<html>`. Under `"on"`, `globals.css`
+zeroes the movement durations and sets `--ambient-play: paused`, as the media query does, and the portal's scripts
+scroll at once instead of smoothly. A stylesheet that moves something keys it off both: the media query and
+`[data-reduce-motion="on"]`. Signed out, the browser keeps the last character's choice.
+
 ## Built-in themes
 
 `BuiltInThemes.All` (`SharpMUSH.Contracts/Models/Portal/PortalThemes.cs`):
@@ -43,9 +51,12 @@ covered by the switch; use `--image-filter` instead. Signed out, the browser kee
 - **Phosphor** (dark) and **Daylight** (light), the default looks: the phosphor accent on warm charcoal or warm
   paper, titles in Space Grotesk, a fine grain, and the `lifted` frame (cards on an elevation shadow, a glow on the
   Home hero).
-- **Directive** (`directive`, dark): white through smoke on black, Bodoni Moda capitals between dashes, square cards
-  marked like a filed report (`dossier`), pictures in smoky monochrome (`smoke`). The chrome stays grey: the
-  character's accent is its only colour, apart from warnings and missing links. Its layout theme carries a look too.
+- **Directive Light** (`directive-light`) and **Directive** (`directive`, dark), after the title screen and menus of a
+  mobile tactics game, the dark one the light one inverted: a grey field under a soft light between letterbox bars,
+  condensed capitals (Saira Condensed) after a corner triangle with a yellow slab under them (`designator`), square
+  tiles on a soft drop with a yellow stripe down the left edge, a register cross and a corner triangle (`dossier`),
+  cyan blue on the primary control only, a yellow wireframe hanging from the top of the page that turns once every
+  three minutes (still under reduced motion), and pictures in smoky monochrome (`smoke`). Their layout themes carry a look too.
 - One per MSSP genre, with the ids the telnet layout themes use: `fantasy`, `historical`, `horror`, `modern`,
   `mystery`, `romance`, `science-fiction`, `spiritual`.
 - Anime: `magical-girl`, `shojo`, `idol`, `slice-of-life`, `shonen`, `sports`, `mechmachine`, `real-robot`, `super-robot`, `isekai`, `yokai`.
@@ -61,6 +72,16 @@ covered by the switch; use `--image-filter` instead. Signed out, the browser kee
   of a kind of modern game (an android archive, a shooter's lobby, a soulslike, an ancient-tech tablet, a painterly
   detective RPG) and shows off the menu settings below, never a game's name,
   logo, art or font.
+- Creature games: `wild-tamer`, `data-partner`. One takes the look of a game about catching creatures in tall grass
+  (field-guide cards, fat capsule buttons, health bars that change colour), the other of a game about raising a
+  digital partner (a wireframe world, cards as a handheld's screen, block meters). Their own drawings and names, never
+  a franchise's creatures, logos or devices.
+- Chinese history and building: `vermilion-court` (light: a palace hall's gold roofs, red columns and painted beams)
+  and `three-realms` (dark: three camps' banners on a ridge over a river, bamboo-slip records, cinnabar seals). Their
+  drawings are made for SharpMUSH, never taken from one dynasty's, novel's or game's art.
+- Japan: `torii` (a tunnel of vermilion gates at night), `inkwash` (ink mountains in mist on washi),
+  `modern-japan` (a pale dusk over Fuji, a lattice tower and the city) and `modern-japan-night` (the same city after
+  dark).
 - Light-line science fiction: `lumen-grid` (cyan and amber light traces on a black grid floor, with light running
   along the floor lines now and then) and `jovian` (an indigo orbit with a gas giant, armour-plate card titles and a
   heartbeat of light through dense channels). Their own drawings and OFL faces, never a film's or game's name, logo or
@@ -78,7 +99,8 @@ until it reaches 3:1 (primary, muted) or 4.5:1 (the rest) against `bg`. A new bu
 `PortedLayoutThemeTests` fails until it has it. The genres keep MarkupString's genre layout themes. `sharpmush`,
 Phosphor's teal on black, is the game's default `layout_theme`. Every genre
 theme has a texture, a card frame and a title face no other genre uses
-(`ThemeResolverTests.EachGenreHasATextureAndFrameOfItsOwn`); the colour vision themes keep Phosphor's or Daylight's frame and title face, without the grain.
+(`ThemeResolverTests.EachGenreHasATextureAndFrameOfItsOwn`), except that a night version of a theme
+(`modern-japan-night`) keeps its day theme's title face; the colour vision themes keep Phosphor's or Daylight's frame and title face, without the grain.
 
 ### How the colour vision sets were picked
 
@@ -183,30 +205,43 @@ first choice of each, which is how the portal looked before they existed:
 
 - **Current line** (`selection`): how the current page in a menu is marked. `standard` (each menu's own mark: a glowing bar in the
   main menu, a raised row in a section's sidebar), `bar` (a squared block in the text colour), `skew` (a slanted accent plate), `halo` (a pool of light behind the
-  words), `brackets` (corner ticks), `lift` (a raised, tilted card), `stroke` (a brush stroke under the words), `trace`
+  words), `brackets` (corner ticks), `lift` (a raised, tilted card), `stroke` (a brush stroke under the words), `lantern` (a small lantern hung
+  beside the line and a rule under it), `pennant` (a swallowtail flag on a pole behind the line), `gate` (a beam over the line on two
+  posts), `wash` (a pale ink smear), `platform` (a block in the text colour with a line-coloured edge), `trace`
   (a line of light with a bright head), `lockon` (a bar of light at the left and reticle corners closing on the right end, like a target lock). The
   rules set the `--select-*` variables that `.phosphor-nav-link.active` in `shell.css` and `.kit-row--current` in
   `Kit/SidebarRow.razor.css` read.
 - **Buttons** (`buttons`): the cut of the portal's capsule buttons and MudBlazor's filled and outlined ones, and how
   each looks pressed. `standard`, `skew` (slides into its shadow), `keycap` (a thick base it sinks into), `notch` (two
-  corners cut), `bar` (square ends, spaced capitals), `brush` (a painted shape that tips), `capsule` (rounded ends in a
-  glow ring that flares when pressed), `blade` (angled ends and spaced capitals, sinking onto an accent-2 keel). The
-  rules set the `--button-*` variables that `Kit/CapsuleButton.razor.css` and `shell.css` read.
+  corners cut), `bar` (square ends, spaced capitals), `brush` (a painted shape that tips), `plaque` (a name board with pointed ends and a
+  thick foot it sinks into), `seal` (a square-cut chop with a double rim that stamps down, tilted), `capsule` (round and ringed,
+  on a thick lip that flattens when pressed), `console` (corners cut, lit from inside in `accent-3` when pressed),
+  `lacquer` (vermilion lacquer with a black lip and a grain), `ink` (an arched dry-brush stroke that soaks wider when
+  pressed), `pill` (a rounded plate that rings like a ticket gate), `lightring` (round ends in a glow ring that flares when
+  pressed), `blade` (angled ends and spaced capitals, sinking onto an accent-2 keel). The rules set the `--button-*` variables that
+  `Kit/CapsuleButton.razor.css` and `shell.css` read, among them the capsule's fills (`--button-fill`,
+  `--button-press-fill`, `--button-plain-fill`) and the mask of a stroke drawn behind its words (`--button-stroke`).
 - **Card material** (`material`): what cards are made of, under their frame. `solid`, `glass` (blurs the page behind
-  it), `hologram` (accent light and scanlines), `veil` (fades out at the sides), `cardstock`, `felt`, `wood`, `lightline` (dark glass lit at the edges). It sets
+  it), `hologram` (accent light and scanlines), `veil` (fades out at the sides), `cardstock`, `felt`, `wood`, `lcd` (a
+  fine dot grid, as a handheld's screen), `silk` (a fine weave), `bamboo` (the seams of bound slips), `lacquer` (black
+  lacquer with a soft sheen), `washi` (paper fibre), `lightline` (dark glass lit at the edges). It sets
   `--card-material`, the fill under `--card-marks`, and `--card-backdrop`.
-- **Meters** (`meters`): MudBlazor's progress bars, such as a loading or import bar. `bar`, `segmented`, `slanted`, `slats` (slanted
-  segments), `pips`, `hairline`.
+- **Meters** (`meters`): MudBlazor's progress bars, such as a loading or import bar. `bar`, `segmented`, `slanted`, `slats` (slanted segments), `pips`,
+  `hairline`, `vital` (fat and ringed; a sheet's stat bar turns the warning colour under half and the danger colour
+  under a fifth), `abacus` (beads on a rod), `arrows` (a row of arrows), `brush` (a tapering ink stroke), `route` (stops
+  on a line, as on a rail map).
 - **Motion** (`motion`): how cards and menu lines arrive and what loops. `calm` (fades only), `still` (nothing moves,
   not even the atmosphere), `snappy` (cards rise, menu lines slide in), `drift` (the background drifts slowly),
-  `wobble` (cards are dealt in, the current line floats and tilts), `bob` (the current line bobs). Arrivals use
+  `wobble` (cards are dealt in, the current line floats and tilts), `bob` (the current line bobs), `unfurl` (cards open downward like a scroll). Arrivals use
   `--duration-enter`, which reduced motion zeroes; under reduced motion, or with the player's reduce-motion toggle,
   `globals.css` also stops every loop.
-- **Atmosphere** (`atmosphere`): a layer `ThemeTexture` draws over the texture and under the page. `none`, `vignette`,
-  `fog`, `embers`, `motes`, `crt` (dark corners and scanlines), `slashes`, `circuit` (circuit traces with a band of
-  light sweeping along them), `heartbeat` (dense channels round a heart a third of the way down the page, which beats
-  a double pulse of light out along them). The last two draw a rim, a dark groove and a moving glow, each masked by
-  the same channels; `still` motion or reduced motion leaves them unlit. Its colours are the theme's.
+- **Atmosphere** (`atmosphere`): a layer `ThemeTexture` draws over the texture and under the page. `none`,
+  `vignette`, `fog`, `embers`, `motes`, `crt` (dark corners and scanlines), `slashes`, `datastream` (thin trails of
+  `accent-3` and `accent-2` falling far behind the page), `sky-lanterns` (a few lanterns rising slowly), `smoke` (low smoke
+  drifting across), `petals` (blossom falling), `circuit` (circuit traces with a band of light sweeping along them), `heartbeat`
+  (dense channels round a heart a third of the way down the page, which beats a double pulse of light out along them).
+  The last two draw a rim, a dark groove and a moving glow, each masked by the same channels; `still` motion or reduced
+  motion leaves them unlit. Its colours are the theme's.
 
 A component that shows a picture put in the game marks its `<img>` `game-picture` (the wiki's Markdown marks its own
 `wiki-img`); `shell.css` gives both `filter: var(--image-filter)`.
@@ -264,12 +299,12 @@ the sign to double it.
 | Surfaces | `--bg`, `--surface`, `--surface-2`, `--surface-3`, `--rail-bg`, `--card-bg` (may be a gradient or layered images), `--code-bg` |
 | Text | `--text`, `--text-dim`, `--text-faint`, `--rail-ink` (rail icons, derived from `--text-dim` so they read on the rail), `--title-color`, `--code-text` |
 | Lines | `--border`, `--border-soft` |
-| Accent | `--accent`, `--accent-dim`, `--accent-on` (text on an accent fill), `--accent-2`, `--accent-3` (decorative, drawings only) |
+| Accent | `--accent`, `--accent-dim`, `--accent-on` (text on an accent fill), `--rail-accent` (the accent on the icon rail, derived so it stands out from the rail), `--accent-2`, `--accent-3` (decorative, drawings only) |
 | Status | `--warn`, `--link-missing`, `--danger`, `--success`, `--info`, `--special` |
 | Syntax | `--syntax-command`, `--syntax-function`, `--syntax-substitution`, `--syntax-dbref`, `--syntax-reference`, `--syntax-at-command`, `--syntax-danger` (softcode); `--syntax-string`, `--syntax-link`, `--syntax-heading`, `--syntax-emphasis` (help) |
 | Shape | `--radius`, `--radius-lg`, `--radius-card`, `--radius-row`, `--card-border-style`, `--card-border-width`, `--card-shadow`, `--elev-1` (a lifted card's shadow), `--shadow` |
 | Type | `--font-ui`, `--font-display`, `--font-mono`, `--font-kicker` (the small uppercase labels), `--kicker-tracking`, `--font-title-weight`, `--title-transform`, `--title-tracking`, `--title-style` |
-| Decoration | `--texture`, `--texture-size`, `--texture-opacity`, `--texture-mask-<colour>` and `--texture-ink-<colour>` (colour: `text`, `accent`, `accent-2`, `accent-3`, `border`), `--card-marks`, `--hero-marks` (over the Home hero), `--card-mask-<colour>` and `--card-ink-<colour>` (also `grain`), `--logo-inner` (the SharpMUSH mark's inner strokes), `--ornament-before`, `--ornament-after`, `--title-underline`, `--title-underline-height`, `--title-underline-pad`, `--title-shadow`, `--image-filter` |
+| Decoration | `--texture`, `--texture-size`, `--texture-opacity`, `--texture-mask-<colour>` and `--texture-ink-<colour>` (colour: `text`, `accent`, `accent-2`, `accent-3`, `border`), `--letterbox-h` and `--letterbox-bg` (bars across the top and bottom of the window right of the rail that stay put while the page scrolls, under the section sidebar, and the background layers drawn in them; wide screens only), `--pagebar-bg` and `--pagebar-glass` (the section sidebar's background and the backdrop-filter behind it), `--card-marks`, `--hero-marks` (over the Home hero), `--card-mask-<colour>` and `--card-ink-<colour>` (also `grain`), `--logo-inner` (the SharpMUSH mark's inner strokes), `--ornament-before`, `--ornament-after`, `--title-underline`, `--title-underline-height`, `--title-underline-pad`, `--title-shadow`, `--image-filter` |
 
 `ThemeStylesheet.Variables` is the list the starter is written from.
 

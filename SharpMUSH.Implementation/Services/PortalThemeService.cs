@@ -45,6 +45,9 @@ public sealed class PortalAppearanceData
 
 	/// <summary>Whether pictures take the theme's picture tone; null (never chosen) is on.</summary>
 	public bool? ImageFilters { get; set; }
+
+	/// <summary>Whether the portal holds still; null (never chosen) is off.</summary>
+	public bool? ReduceMotion { get; set; }
 }
 
 /// <inheritdoc cref="IPortalThemeService"/>
@@ -188,6 +191,7 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 			? new CharacterAppearance(NullIfEmpty(appearance.ThemeId), NullIfEmpty(appearance.Accent), ThemeVision.Chosen(appearance.Vision))
 			{
 				ImageFilters = appearance.ImageFilters ?? true,
+				ReduceMotion = appearance.ReduceMotion ?? false,
 			}
 			: new CharacterAppearance(null, null);
 
@@ -227,8 +231,9 @@ public class PortalThemeService(IExpandedObjectDataService data) : IPortalThemeS
 			Accent = accent ?? "",
 			Vision = vision ?? "",
 			ImageFilters = appearance.ImageFilters,
+			ReduceMotion = appearance.ReduceMotion,
 		}, character);
-		return new CharacterAppearance(themeId, accent, vision) { ImageFilters = appearance.ImageFilters };
+		return new CharacterAppearance(themeId, accent, vision) { ImageFilters = appearance.ImageFilters, ReduceMotion = appearance.ReduceMotion };
 	}
 
 	private static bool BuiltIn(string id) => BuiltInThemes.All.Any(t => t.Id == id);

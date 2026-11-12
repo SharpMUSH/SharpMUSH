@@ -175,11 +175,22 @@ public static class BuiltInThemes
 			[ThemeTokens.LinkMissing] = "#c0362c",
 		}), BuiltIn: true);
 
-	/// <summary>Directive: white through smoke on black, razor-hairline serif capitals between dashes, flat square cards filed like a report, pictures in smoky monochrome. Its chrome is grey: the character's own accent is its only colour, apart from warnings and missing links.</summary>
+	/// <summary>Directive: Directive Light inverted, after the menus of a mobile tactics game. A dark grey field under a
+	/// soft spotlight between pale letterbox bars, condensed capitals with a designator, charcoal slabs, cards filed
+	/// like an operator's record with a yellow stripe down the left edge, cyan blue on the primary control only,
+	/// pictures in smoky monochrome, and a yellow wireframe hanging from the top of the page.</summary>
 	public static readonly PortalTheme Directive = Genre("directive", "Directive", dark: true,
-		["#0a0a0a", "#121212", "#1b1b1b", "#0e0e0e", "#000000", "#e4e4e4", "#a6a6a6", "#8c8c8c", "#3a3a3a", "#242424", "#ffffff", "#e3c27e", "#f08f8f"],
-		display: "bodoni", body: "ui", corners: "razor", texture: "haze", ornament: "flank", frame: "dossier", titles: "wide", effect: "console", imagery: "smoke",
-		accent2: "#6e6e6e", accent3: "#c8c8c8");
+		["#1b1b1b", "#101010", "#181818", "#262626", "#2c2c2c", "#ebebeb", "#c0c0c0", "#ababab", "#5c5c5c", "#363636", "#2aa8e6", "#e3c27e", "#f08f8f"],
+		display: "saira-condensed", body: "ui", corners: "razor", texture: "haze", ornament: "designator", frame: "dossier", titles: "caps", effect: "none", imagery: "smoke",
+		accent2: "#f2d33a", accent3: "#ff8a3d");
+
+	/// <summary>Directive Light: a title screen and its menus. A pale grey field with a soft vignette between charcoal
+	/// letterbox bars, condensed capitals with a designator, white panels on a soft drop with a yellow stripe down the
+	/// left edge, cyan blue on the primary control only, and a yellow wireframe hanging from the top of the page.</summary>
+	public static readonly PortalTheme DirectiveLight = Genre("directive-light", "Directive Light", dark: false,
+		["#e4e4e4", "#f7f7f7", "#eaeaea", "#d9d9d9", "#2c2c2c", "#141414", "#3f3f3f", "#545454", "#a8a8a8", "#cccccc", "#00628f", "#7a5600", "#a3302a"],
+		display: "saira-condensed", body: "ui", corners: "razor", texture: "haze", ornament: "designator", frame: "dossier", titles: "caps", effect: "none", imagery: "smoke",
+		accent2: "#e2bd12", accent3: "#d9641e");
 
 	/// <summary>Phosphor's and Daylight's look beyond colour: Space Grotesk titles, grain, lifted cards.</summary>
 	private static Dictionary<string, string> WithEmberStyle(Dictionary<string, string> tokens)
@@ -491,6 +502,68 @@ public static class BuiltInThemes
 		accent2: "#b2452f", accent3: "#3c7882",
 		selection: "stroke", buttons: "brush", material: "cardstock", meters: "bar", motion: "calm", atmosphere: "vignette");
 
+	// Creature games: one about catching creatures in the wild, one about raising a digital partner. Their own art and
+	// names only, never a franchise's creatures, logos or devices.
+
+	/// <summary>Wild Tamer: a sunny route through tall grass, field-guide cards with a red band and a lens, fat capsule buttons, health bars that change colour.</summary>
+	public static readonly PortalTheme WildTamer = Genre("wild-tamer", "Wild Tamer", dark: false,
+		["#e4f2fb", "#ffffff", "#f4f9f5", "#e9f2ec", "#f6fbf8", "#1b2430", "#3c4856", "#4f5b68", "#3c4a58", "#cfdfd4", "#c62d29", "#8a5a00", "#b42318"],
+		display: "baloo", body: "ui", corners: "round", texture: "meadow", ornament: "capsule", frame: "field-guide", titles: "normal", effect: "sticker", imagery: "sunny",
+		accent2: "#ffcc33", accent3: "#4f9a63",
+		selection: "lift", buttons: "capsule", material: "solid", meters: "vital", motion: "bob", atmosphere: "motes");
+
+	/// <summary>Data Partner: a wireframe world of data, cards as a handheld device's screen, block meters, keys that light when pressed.</summary>
+	public static readonly PortalTheme DataPartner = Genre("data-partner", "Data Partner", dark: true,
+		["#070d1c", "#0e1830", "#13203d", "#0b1428", "#050a16", "#eef3ff", "#b5c2dd", "#8f9dbb", "#2b3d66", "#1b2a4c", "#ff9a2e", "#ffd23f", "#ff8a8a"],
+		display: "silkscreen", body: "ui", corners: "soft", texture: "wireframe", ornament: "emblem", frame: "device", titles: "normal", effect: "evolve", imagery: "neon",
+		accent2: "#2fd2ff", accent3: "#7cff6b",
+		selection: "brackets", buttons: "console", material: "lcd", meters: "segmented", motion: "snappy", atmosphere: "datastream");
+	// Japan: a shrine path, an ink painting and a modern city, each drawn for the portal; none repeats Yokai's night.
+
+	/// <summary>Torii: a tunnel of vermilion gates in the dark, a lacquered beam over each card and lacquered buttons.</summary>
+	public static readonly PortalTheme Torii = Genre("torii", "Torii", dark: true,
+		["#0c0909", "#171110", "#1e1613", "#130e0c", "#090707", "#f2e8da", "#c4b5a2", "#a99a88", "#4a2f26", "#2c1d18", "#e8553a", "#f09a5a", "#ff9580"],
+		display: "shippori-b1", body: "ui", corners: "sharp", texture: "senbon", ornament: "shimenawa", frame: "kasagi", titles: "normal", effect: "ember", imagery: "candlelit",
+		accent2: "#e6b05a", accent3: "#9fbf8c",
+		selection: "gate", buttons: "lacquer", material: "lacquer", meters: "segmented", motion: "calm", atmosphere: "embers");
+
+	/// <summary>Inkwash: ink mountains in mist on washi, a hanging scroll's rods on each card, brush-ink buttons and meters.</summary>
+	public static readonly PortalTheme Inkwash = Genre("inkwash", "Inkwash", dark: false,
+		["#efe9dc", "#fbf8f1", "#f6f1e7", "#e9e2d3", "#e4dccb", "#1b1a17", "#403c35", "#5a554c", "#b6ab95", "#d8cfbc", "#b8361f", "#8a5a00", "#a3261a"],
+		display: "hina", body: "ui", corners: "sharp", texture: "sansui", ornament: "enso", frame: "scroll", titles: "normal", effect: "bleed", imagery: "ink",
+		accent2: "#1b1a17", accent3: "#2f5562",
+		selection: "wash", buttons: "ink", material: "washi", meters: "brush", motion: "drift", atmosphere: "fog");
+
+	/// <summary>Modern Japan: a pale dusk over Fuji, a lit lattice tower and the city; frosted cards with a line's stripe, pill buttons, route meters.</summary>
+	public static readonly PortalTheme ModernJapan = Genre("modern-japan", "Modern Japan", dark: false,
+		["#eef1f8", "#fafbfd", "#f2f4fa", "#e3e7f2", "#dde2ef", "#121b2b", "#33415a", "#4a5568", "#aeb7cc", "#d3d9e6", "#b5321b", "#8a5200", "#b0261a"],
+		display: "zen-kaku", body: "ui", corners: "soft", texture: "skyline", ornament: "station", frame: "signboard", titles: "normal", effect: "none", imagery: "airy",
+		accent2: "#1d7a46", accent3: "#2563a6",
+		selection: "platform", buttons: "pill", material: "glass", meters: "route", motion: "snappy", atmosphere: "petals");
+
+	/// <summary>Modern Japan Night: the same city after dark, lit windows across the whole width under Fuji and the tower, smoked-glass cards.</summary>
+	public static readonly PortalTheme ModernJapanNight = Genre("modern-japan-night", "Modern Japan Night", dark: true,
+		["#0b1022", "#141a31", "#1a213c", "#0f1429", "#080c1b", "#eef1fa", "#b9c1d8", "#98a2be", "#36406a", "#232b4b", "#ff6a3d", "#ffb454", "#ff8a7a"],
+		display: "zen-kaku", body: "ui", corners: "soft", texture: "nightline", ornament: "station", frame: "nightboard", titles: "normal", effect: "glow", imagery: "nocturne",
+		accent2: "#4fd18b", accent3: "#6aa8ff",
+		selection: "platform", buttons: "pill", material: "glass", meters: "route", motion: "snappy", atmosphere: "petals");
+
+	// Chinese history and building: original drawings of a palace hall and of a war camp's banners, never one
+	// dynasty's or one story's names, emblems or art.
+
+	/// <summary>Vermilion Court: a palace hall's gold roofs, red columns and painted beams, key-fret corners, gilt name-board buttons, a lantern on the chosen line.</summary>
+	public static readonly PortalTheme VermilionCourt = Genre("vermilion-court", "Vermilion Court", dark: false,
+		["#f2e9d8", "#fbf6ec", "#f5ecdc", "#ede2cd", "#e8dbc0", "#2a1d17", "#563f33", "#6b5446", "#c4a464", "#e2d3b4", "#a3261c", "#85570a", "#9b2c4a"],
+		display: "gloock", body: "serif", corners: "sharp", texture: "eaves", ornament: "lotus", frame: "lattice", titles: "normal", effect: "gilt", imagery: "warm",
+		accent2: "#1f5e50", accent3: "#24476e",
+		selection: "lantern", buttons: "plaque", material: "silk", meters: "abacus", motion: "calm", atmosphere: "sky-lanterns");
+
+	/// <summary>Three Realms: three camps' banners on a ridge over a misty river, bamboo-slip cards, cinnabar seal buttons, arrow meters, smoke.</summary>
+	public static readonly PortalTheme ThreeRealms = Genre("three-realms", "Three Realms", dark: true,
+		["#14100d", "#211a14", "#2a221b", "#19140f", "#100c09", "#ecdfc6", "#c4b596", "#a8987c", "#5a4a36", "#3a2f24", "#ec7452", "#e9b04a", "#f2937c"],
+		display: "inknut", body: "serif", corners: "sharp", texture: "warbanners", ornament: "hanko", frame: "slips", titles: "normal", effect: "stamped", imagery: "dusk",
+		accent2: "#c9a15a", accent3: "#4f86a8",
+		selection: "pennant", buttons: "seal", material: "bamboo", meters: "arrows", motion: "unfurl", atmosphere: "smoke");
 	// Light-line science fiction: a grid world drawn in light, and a mecha pilot's HUD in orbit. Inspired by kinds of
 	// science fiction, never one film's or game's names, vehicles or art.
 
@@ -499,7 +572,7 @@ public static class BuiltInThemes
 		["#04070b", "#0a141a", "#0f1d25", "#08111a", "#03060a", "#d6f6ff", "#9cc3cf", "#7fa6b3", "#1f5866", "#12313a", "#5ff3ff", "#ffa142", "#ff8a7a"],
 		display: "audiowide", body: "ui", corners: "soft", texture: "gridfloor", ornament: "brackets", frame: "nodes", titles: "normal", effect: "glow", imagery: "neon",
 		accent2: "#ffa142", accent3: "#2a8fa0",
-		selection: "trace", buttons: "capsule", material: "lightline", meters: "segmented", motion: "snappy", atmosphere: "circuit");
+		selection: "trace", buttons: "lightring", material: "lightline", meters: "segmented", motion: "snappy", atmosphere: "circuit");
 
 	/// <summary>Jovian: a mecha pilot's HUD over a banded gas giant and its rings, pale armour plates over thin HUD lines, lock-on marks, blade buttons, neon beating outward from a core.</summary>
 	public static readonly PortalTheme Jovian = Genre("jovian", "Jovian", dark: true,
@@ -510,7 +583,7 @@ public static class BuiltInThemes
 
 	public static readonly IReadOnlyList<PortalTheme> All =
 	[
-		Phosphor, Daylight, Directive, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual,
+		Phosphor, Daylight, Directive, DirectiveLight, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual,
 		MagicalGirl, Shojo, Idol, SliceOfLife,
 		Shonen, Sports, MechMachine, Isekai,
 		Yokai, ComicBook, RubberHose, EightiesCartoon,
@@ -522,6 +595,8 @@ public static class BuiltInThemes
 		GothicPunk, Dragonrider, FleetCommand, Gaslight, DesertPlanet,
 		ArcaneAcademy, Steampunk, Frontier, Wasteland,
 		Archivist, Arena, Ashen, RelicSlate, Precinct,
+		WildTamer, DataPartner,
+		VermilionCourt, ThreeRealms, Torii, Inkwash, ModernJapan, ModernJapanNight,
 		LumenGrid, Jovian,
 		ProtanDark, ProtanLight, DeutanDark, DeutanLight, TritanDark, TritanLight, MonoDark, MonoLight,
 	];
@@ -619,7 +694,7 @@ public sealed record ResolvedTheme(
 {
 	/// <summary>The tokens a character's own accent sets, laid again after a theme's stylesheet so it keeps them.</summary>
 	public static readonly IReadOnlyList<string> AccentTokens =
-		[ThemeTokens.Accent, "accent-dim", "accent-on", "glow", "ms-border", "ms-title", "ms-heading", "ms-bullet"];
+		[ThemeTokens.Accent, "accent-dim", "accent-on", "glow", "rail-accent", "ms-border", "ms-title", "ms-heading", "ms-bullet"];
 
 	/// <summary>
 	/// A <c>:root</c> rule that sets every token, then the theme's stylesheet. Unlayered, so it wins over
@@ -939,6 +1014,9 @@ public static class ThemeResolver
 		// The rail's icons: secondary text where it reads on the rail, else moved toward whichever of white or black the rail
 		// sets off better. A light theme may have a dark or coloured rail, where its dark secondary text would vanish.
 		tokens["rail-ink"] = ReadableAgainst(textDim, ThemeColor.Contrast(ThemeColor.White, rail) > ThemeColor.Contrast(ThemeColor.Black, rail), ThemeTokens.TextContrast, rail).Hex;
+		// The accent where it is drawn on the rail (an unread dot, a focus ring): moved, as the rail's icons are, until it
+		// stands out from the rail at the 3:1 a non-text mark needs. A light theme may pair a dark accent with a dark rail.
+		tokens["rail-accent"] = ReadableAgainst(accent, ThemeColor.Contrast(ThemeColor.White, rail) > ThemeColor.Contrast(ThemeColor.Black, rail), 3.0, rail).Hex;
 		tokens["mud-palette-navbar-gradient"] = $"linear-gradient(90deg, {surface3.Hex} 0%, {surface3.Mix(rail, 0.5).Hex} 100%)";
 
 		if (dark)

@@ -77,7 +77,14 @@
 		--ambient-flow: var(--no-drawing);
 	}
 }
-/* The same, when the player turns motion down in the portal rather than in the browser. */
+/* The same, when the player turns on Reduce motion in the portal (data-reduce-motion="on", ThemeService.ReduceMotionPart)
+   rather than in the browser. */
+:root[data-reduce-motion="on"] {
+	--duration-enter: 0s;
+	--duration-exit: 0s;
+	--duration-spring: 0s;
+	--duration-sweep: 0s;
+}
 :root[data-reduce-motion="on"], [data-reduce-motion="on"] [data-scheme] {
 	--select-motion: none;
 	--texture-motion: none;

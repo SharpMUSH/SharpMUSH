@@ -141,6 +141,104 @@
 	--select-text-glow: initial;
 }
 
+/* Lantern: a small lantern in the accent hung at the line's end on a cord in the border colour, a rule in the
+   border colour under the words, and a faint accent wash fading to the right. */
+[data-selection="lantern"] {
+	--select-ink-dim: initial;
+	--select-fill: linear-gradient(90deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 85%);
+	--select-ink: var(--accent);
+	--select-mark: radial-gradient(7px 8px at calc(100% - 16px) 50%, var(--accent) 0 90%, transparent 100%),
+		linear-gradient(var(--border), var(--border)) right 12px top calc(50% - 10px) / 8px 3px no-repeat,
+		linear-gradient(var(--border), var(--border)) right 12px top calc(50% + 8px) / 8px 3px no-repeat,
+		linear-gradient(var(--border), var(--border)) right 15px top 0 / 2px calc(50% - 9px) no-repeat,
+		linear-gradient(var(--border), var(--border)) left 12px bottom 4px / 45% 2px no-repeat;
+	--select-mark-inset: 0;
+	--select-mark-width: auto;
+	--select-mark-radius: 0px;
+	--select-mark-glow: none;
+	--select-radius: 0px;
+	--select-shadow: initial;
+	--select-lift: initial;
+	--select-text-glow: initial;
+	--select-mark-transform: initial;
+}
+
+/* Pennant: a swallowtail flag in the accent behind the line, on a pole in the second accent at its left. */
+[data-selection="pennant"] {
+	--select-ink-dim: color-mix(in srgb, var(--accent-on) 82%, var(--accent));
+	--select-fill: transparent;
+	--select-ink: var(--accent-on);
+	--select-mark: linear-gradient(var(--accent-2), var(--accent-2)) left 4px top 0 / 3px 100% no-repeat,
+		linear-gradient(var(--accent), var(--accent)) left 0 top 0 / calc(100% - 18px) 100% no-repeat,
+		linear-gradient(to bottom right, var(--accent) 50%, transparent 50%) right 0 top 0 / 18px 50% no-repeat,
+		linear-gradient(to top right, var(--accent) 50%, transparent 50%) right 0 bottom 0 / 18px 50% no-repeat;
+	--select-mark-inset: 2px 8px 2px 0;
+	--select-mark-width: auto;
+	--select-mark-radius: 0px;
+	--select-mark-glow: none;
+	--select-radius: 0px;
+	--select-shadow: initial;
+	--select-lift: initial;
+	--select-text-glow: initial;
+	--select-mark-transform: initial;
+}
+
+/* Gate: a beam across the top of the line in the accent, and two posts that fade down from it, with a little of the
+   accent's light between them. */
+[data-selection="gate"] {
+	--select-ink-dim: initial;
+	--select-fill: linear-gradient(var(--accent), var(--accent)) left 0 top 0 / 100% 3px no-repeat,
+		linear-gradient(180deg, var(--accent), transparent) left 10px top 3px / 2px 100% no-repeat,
+		linear-gradient(180deg, var(--accent), transparent) right 10px top 3px / 2px 100% no-repeat,
+		linear-gradient(180deg, color-mix(in srgb, var(--accent) 18%, transparent), transparent);
+	--select-ink: var(--text);
+	--select-radius: 0px;
+	--select-mark: transparent;
+	--select-mark-width: 0px;
+	--select-mark-glow: none;
+	--select-shadow: initial;
+	--select-lift: initial;
+	--select-text-glow: initial;
+	--select-mark-inset: initial;
+	--select-mark-radius: initial;
+	--select-mark-transform: initial;
+}
+
+/* Wash: a pale smear of ink behind the words, as a brush wiped once across the paper. */
+[data-selection="wash"] {
+	--select-ink-dim: initial;
+	--select-fill: radial-gradient(ellipse 58% 46% at 38% 56%, color-mix(in srgb, var(--text) 15%, transparent), color-mix(in srgb, var(--text) 6%, transparent) 70%, transparent 76%);
+	--select-ink: var(--text);
+	--select-radius: 0px;
+	--select-mark: transparent;
+	--select-mark-width: 0px;
+	--select-mark-glow: none;
+	--select-shadow: initial;
+	--select-lift: initial;
+	--select-text-glow: initial;
+	--select-mark-inset: initial;
+	--select-mark-radius: initial;
+	--select-mark-transform: initial;
+}
+
+/* Platform: a block in the text colour with the line's colour (the second accent) along its left edge, as the current
+   stop on a station board. */
+[data-selection="platform"] {
+	--select-ink-dim: color-mix(in srgb, var(--surface) 72%, var(--text));
+	--select-fill: var(--text);
+	--select-ink: var(--surface);
+	--select-radius: 6px;
+	--select-mark: var(--accent-2);
+	--select-mark-inset: 0 auto 0 0;
+	--select-mark-width: 4px;
+	--select-mark-radius: 6px 0 0 6px;
+	--select-mark-glow: none;
+	--select-shadow: 0 6px 14px -6px color-mix(in srgb, var(--text) 50%, transparent);
+	--select-lift: initial;
+	--select-text-glow: initial;
+	--select-mark-transform: initial;
+}
+
 /* Trace: a line of light runs under the line from the left and stops short with a bright head, over a faint wash
    of the accent fading to the right. */
 [data-selection="trace"] {
@@ -235,6 +333,39 @@
 	--card-backdrop: none;
 }
 
+/* Silk: a fine plain weave over the surface, with a soft sheen from the top. */
+[data-material="silk"] {
+	--card-material: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.025) 0 1px, transparent 1px 3px),
+		repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.02) 0 1px, transparent 1px 3px),
+		linear-gradient(170deg, rgba(255, 255, 255, 0.22), transparent 45%),
+		var(--surface);
+	--card-backdrop: none;
+}
+
+/* Bamboo: the seams of bound slips running down the card, each slip a shade apart. */
+[data-material="bamboo"] {
+	--card-material: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.28) 0 1px, color-mix(in srgb, var(--text) 4%, transparent) 1px 2px, transparent 2px 28px),
+		repeating-linear-gradient(90deg, transparent 0 28px, rgba(0, 0, 0, 0.05) 28px 56px),
+		var(--surface);
+	--card-backdrop: none;
+}
+
+/* Lacquer: black lacquer with a soft sheen from above, over which the page shows a little, blurred. */
+[data-material="lacquer"] {
+	--card-material: linear-gradient(172deg, rgba(255, 255, 255, 0.06), transparent 38%),
+		radial-gradient(ellipse 80% 40% at 50% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent),
+		color-mix(in srgb, var(--surface) 90%, transparent);
+	--card-backdrop: blur(8px);
+}
+
+/* Washi: paper with a fine horizontal fibre, lit from the top left. */
+[data-material="washi"] {
+	--card-material: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.018) 0 1px, transparent 1px 4px),
+		radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.5), transparent 60%),
+		var(--surface);
+	--card-backdrop: none;
+}
+
 /* Lightline: near-black glass with light pooling at its inside edge; the frame draws its lines of light. Unlike
    hologram, no scanlines or tint cross the face, so long text reads as on a plain card. */
 [data-material="lightline"] {
@@ -261,6 +392,13 @@
 	--button-plain-shadow: initial;
 	--button-press: initial;
 	--button-press-shadow: initial;
+	--button-fill: initial;
+	--button-ink: initial;
+	--button-plain-edge: initial;
+	--button-plain-fill: initial;
+	--button-press-fill: initial;
+	--button-press-stroke: initial;
+	--button-stroke: initial;
 }
 
 /* Skew: slanted plates in heavy capitals; a filled one casts a hard shadow in the text colour, and slides into it
@@ -277,6 +415,13 @@
 	--button-plain-shadow: initial;
 	--button-press: skewX(-12deg) translate(3px, 3px);
 	--button-press-shadow: 1px 1px 0 var(--text);
+	--button-fill: initial;
+	--button-ink: initial;
+	--button-plain-edge: initial;
+	--button-plain-fill: initial;
+	--button-press-fill: initial;
+	--button-press-stroke: initial;
+	--button-stroke: initial;
 }
 
 /* Keycap: a thick base under the face that the button sinks into when pressed. */
@@ -292,6 +437,13 @@
 	--button-weight: initial;
 	--button-tracking: initial;
 	--button-case: initial;
+	--button-fill: initial;
+	--button-ink: initial;
+	--button-plain-edge: initial;
+	--button-plain-fill: initial;
+	--button-press-fill: initial;
+	--button-press-stroke: initial;
+	--button-stroke: initial;
 }
 
 /* Notch: two opposite corners cut off, as on a machined panel; pressed, it sinks a pixel into a shadowed recess. */
@@ -307,6 +459,13 @@
 	--button-plain-shadow: initial;
 	--button-press: translateY(1px);
 	--button-press-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.25);
+	--button-fill: initial;
+	--button-ink: initial;
+	--button-plain-edge: initial;
+	--button-plain-fill: initial;
+	--button-press-fill: initial;
+	--button-press-stroke: initial;
+	--button-stroke: initial;
 }
 
 /* Bar: square ends and spaced capitals; an outlined one keeps only its lines above and below. Pressed, a dark bar
@@ -323,6 +482,13 @@
 	--button-plain-shadow: initial;
 	--button-press: translateY(1px);
 	--button-press-shadow: inset 0 -3px 0 color-mix(in srgb, var(--text) 30%, transparent);
+	--button-fill: initial;
+	--button-ink: initial;
+	--button-plain-edge: initial;
+	--button-plain-fill: initial;
+	--button-press-fill: initial;
+	--button-press-stroke: initial;
+	--button-stroke: initial;
 }
 [data-buttons="bar"] .mud-button-outlined {
 	border-inline-color: transparent;
@@ -341,11 +507,173 @@
 	--button-plain-shadow: initial;
 	--button-press: rotate(-1deg) scale(0.97);
 	--button-press-shadow: 1px 1px 0 color-mix(in srgb, var(--accent-2) 80%, transparent);
+	--button-fill: initial;
+	--button-ink: initial;
+	--button-plain-edge: initial;
+	--button-plain-fill: initial;
+	--button-press-fill: initial;
+	--button-press-stroke: initial;
+	--button-stroke: initial;
 }
 
-/* Capsule: fully round ends edged in light. A filled one glows; an outlined one is a ring of light. Pressed, it sinks
-   a pixel, shrinks a little and flares. */
-[data-buttons="capsule"] {
+/* Lacquer: a vermilion lacquered beam with a black lip along the top and a fine horizontal grain under the gloss; pressed,
+   it sinks under the lip and the gloss dulls. */
+[data-buttons="lacquer"] {
+	--button-focus-offset: initial;
+	--button-radius: 2px;
+	--button-clip: initial;
+	--button-transform: initial;
+	--button-weight: 700;
+	--button-tracking: 0.12em;
+	--button-case: uppercase;
+	--button-shadow: inset 0 4px 0 rgba(0, 0, 0, 0.85), inset 0 5px 0 color-mix(in srgb, var(--accent) 55%, #fff),
+		0 8px 18px -6px color-mix(in srgb, var(--accent) 45%, transparent), 0 3px 6px rgba(0, 0, 0, 0.5);
+	--button-plain-shadow: inset 0 3px 0 var(--accent);
+	--button-press: translateY(2px);
+	--button-press-shadow: inset 0 6px 0 rgba(0, 0, 0, 0.9), inset 0 10px 14px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.5);
+	--button-fill: repeating-linear-gradient(177deg, rgba(0, 0, 0, 0.07) 0 1px, transparent 1px 4px),
+		repeating-linear-gradient(183.5deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 7px),
+		linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0 6px, rgba(255, 255, 255, 0.06) 45%, transparent 55%, rgba(0, 0, 0, 0.25)),
+		radial-gradient(120% 140% at 50% 0%, color-mix(in srgb, var(--accent) 88%, #fff), var(--accent) 45%, color-mix(in srgb, var(--accent) 50%, #000));
+	--button-press-fill: repeating-linear-gradient(177deg, rgba(0, 0, 0, 0.07) 0 1px, transparent 1px 4px),
+		linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 50%, rgba(0, 0, 0, 0.3)),
+		radial-gradient(120% 140% at 50% 0%, color-mix(in srgb, var(--accent) 80%, #000), color-mix(in srgb, var(--accent) 45%, #000));
+	--button-ink: initial;
+	--button-plain-edge: initial;
+	--button-plain-fill: initial;
+	--button-press-stroke: initial;
+	--button-stroke: initial;
+}
+
+/* Ink: a dry-brush stroke of ink in the text colour, arched, with bristle grooves and both ends breaking into clumps;
+   the words are paper. Pressed, the stroke soaks in, wider and wetter. The stroke is drawn behind the words, so neither
+   they nor the focus ring are cut by it. A plain button is a stroke of the accent under its words. */
+[data-buttons="ink"] {
+	--button-focus-offset: 4px;
+	--button-radius: 0px;
+	--button-clip: initial;
+	--button-transform: initial;
+	--button-weight: 600;
+	--button-tracking: 0.16em;
+	--button-case: uppercase;
+	--button-shadow: none;
+	--button-plain-shadow: initial;
+	--button-press: scale(1.03);
+	--button-press-shadow: none;
+	--button-fill: transparent;
+	--button-press-fill: transparent;
+	--button-ink: var(--surface);
+	--button-stroke: url(/themes/drawings/menus/ink-stroke.svg) center / 100% 100% no-repeat;
+	--button-press-stroke: url(/themes/drawings/menus/ink-soaked.svg) center / 100% 100% no-repeat;
+	--button-plain-fill: linear-gradient(90deg, transparent, var(--accent) 6% 90%, transparent) left 8px bottom 5px / calc(100% - 16px) 3px no-repeat;
+	--button-plain-edge: transparent;
+}
+
+/* MudBlazor's filled and outlined buttons (in the vendor layer, below this one) take the same fills and stroke. A
+   disabled one keeps MudBlazor's own look. */
+[data-buttons="lacquer"] .mud-button-root.mud-button-filled.mud-button-filled-primary:not(:disabled, .mud-disabled) {
+	background: var(--button-fill);
+}
+[data-buttons="lacquer"] .mud-button-root.mud-button-filled.mud-button-filled-primary:not(:disabled, .mud-disabled):active {
+	background: var(--button-press-fill);
+}
+[data-buttons="ink"] .mud-button-root.mud-button-filled.mud-button-filled-primary:not(:disabled, .mud-disabled) {
+	position: relative;
+	isolation: isolate;
+	overflow: visible;
+	background: transparent;
+	color: var(--button-ink);
+}
+[data-buttons="ink"] .mud-button-root.mud-button-filled.mud-button-filled-primary:not(:disabled, .mud-disabled)::before {
+	content: "";
+	position: absolute;
+	inset: -3px -10px;
+	z-index: -1;
+	pointer-events: none;
+	background: var(--text);
+	mask: var(--button-stroke);
+}
+[data-buttons="ink"] .mud-button-root.mud-button-filled.mud-button-filled-primary:not(:disabled, .mud-disabled):active::before {
+	inset: -6px -14px;
+	mask: var(--button-press-stroke);
+}
+[data-buttons="ink"] .mud-button-root.mud-button-outlined:not(:disabled, .mud-disabled) {
+	background: var(--button-plain-fill);
+	border-color: transparent;
+}
+
+/* Pill: a rounded plate on a thick base of its own colour; pressed, it drops onto the base and a ring of the line
+   colour (the second accent) closes round it, as a ticket gate lights. */
+[data-buttons="pill"] {
+	--button-focus-offset: initial;
+	--button-radius: 999px;
+	--button-clip: initial;
+	--button-transform: initial;
+	--button-weight: 700;
+	--button-tracking: initial;
+	--button-case: initial;
+	--button-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 55%, #000), 0 10px 18px -8px color-mix(in srgb, var(--accent) 60%, transparent);
+	--button-plain-shadow: 0 3px 0 var(--text);
+	--button-press: translateY(3px);
+	--button-press-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--accent-2);
+	--button-fill: initial;
+	--button-ink: initial;
+	--button-plain-edge: initial;
+	--button-plain-fill: initial;
+	--button-press-fill: initial;
+	--button-press-stroke: initial;
+	--button-stroke: initial;
+}
+
+/* Plaque: a name board with pointed ends, a rim in the border colour and a thick foot; pressed, it sinks onto the
+   foot and the rim dims. */
+[data-buttons="plaque"] {
+	--button-focus-offset: -4px;
+	--button-radius: 0px;
+	--button-clip: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+	--button-tracking: 0.06em;
+	--button-shadow: inset 0 0 0 2px var(--border), inset 0 -4px 0 color-mix(in srgb, var(--accent) 55%, #000);
+	--button-plain-shadow: inset 0 0 0 2px var(--accent);
+	--button-press: translateY(2px);
+	--button-press-shadow: inset 0 0 0 2px color-mix(in srgb, var(--border) 55%, #000), inset 0 3px 6px rgba(0, 0, 0, 0.4);
+	--button-transform: initial;
+	--button-weight: initial;
+	--button-case: initial;
+	--button-fill: initial;
+	--button-ink: initial;
+	--button-press-fill: initial;
+	--button-plain-fill: initial;
+	--button-plain-edge: initial;
+	--button-stroke: initial;
+	--button-press-stroke: initial;
+}
+
+/* Seal: a square-cut chop with a light inner rim and an accent ring around it; pressed, it stamps down, tilted, and
+   the ink pools at its edge. */
+[data-buttons="seal"] {
+	--button-focus-offset: 6px;
+	--button-radius: 3px;
+	--button-weight: 700;
+	--button-tracking: 0.08em;
+	--button-case: uppercase;
+	--button-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent-on) 70%, transparent), 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
+	--button-plain-shadow: 0 0 0 1px var(--accent);
+	--button-press: rotate(-2deg) scale(0.96);
+	--button-press-shadow: inset 0 0 0 3px color-mix(in srgb, var(--accent-on) 80%, transparent), inset 0 0 12px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--accent);
+	--button-clip: initial;
+	--button-transform: initial;
+	--button-fill: initial;
+	--button-ink: initial;
+	--button-press-fill: initial;
+	--button-plain-fill: initial;
+	--button-plain-edge: initial;
+	--button-stroke: initial;
+	--button-press-stroke: initial;
+}
+
+/* Light ring: fully round ends edged in light. A filled one glows; an outlined one is a ring of light. Pressed, it
+   sinks a pixel, shrinks a little and flares. */
+[data-buttons="lightring"] {
 	--button-focus-offset: initial;
 	--button-radius: 999px;
 	--button-shadow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent);
@@ -427,5 +755,162 @@
 [data-meters="slanted"] .mud-progress-linear-bar,
 [data-meters="slats"] .mud-progress-linear-bar,
 [data-meters="pips"] .mud-progress-linear-bar {
+	border-radius: 0;
+}
+
+/* Capsule: round, fat buttons ringed in the text colour with a thick lip under them; pressed, the lip flattens and
+   the button squashes into it. */
+[data-buttons="capsule"] {
+	--button-radius: 999px;
+	--button-weight: 800;
+	--button-shadow: 0 0 0 2px var(--text), 0 5px 0 2px var(--text);
+	--button-plain-shadow: 0 4px 0 color-mix(in srgb, var(--text) 70%, transparent);
+	--button-press: translateY(4px) scaleX(1.03);
+	--button-press-shadow: 0 0 0 2px var(--text), 0 1px 0 2px var(--text), inset 0 3px 0 rgba(0, 0, 0, 0.2);
+	--button-clip: initial;
+	--button-transform: initial;
+	--button-tracking: initial;
+	--button-case: initial;
+	--button-fill: initial;
+	--button-ink: initial;
+	--button-plain-edge: initial;
+	--button-plain-fill: initial;
+	--button-press-fill: initial;
+	--button-press-stroke: initial;
+	--button-stroke: initial;
+}
+
+/* Console: a cut corner either end and a dark foot, as a handheld device's keys; pressed, it sinks and lights from
+   inside in accent-3. */
+[data-buttons="console"] {
+	--button-radius: 0px;
+	--button-clip: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+	--button-weight: 700;
+	--button-tracking: 0.04em;
+	--button-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.35);
+	--button-press: translateY(2px);
+	--button-press-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.35), inset 0 0 14px color-mix(in srgb, var(--accent-3) 75%, transparent);
+	--button-transform: initial;
+	--button-case: initial;
+	--button-plain-shadow: initial;
+	--button-fill: initial;
+	--button-ink: initial;
+	--button-plain-edge: initial;
+	--button-plain-fill: initial;
+	--button-press-fill: initial;
+	--button-press-stroke: initial;
+	--button-stroke: initial;
+}
+
+/* LCD: a handheld's screen, a fine dot grid of accent-3 over the surface, a little lighter at the top. */
+[data-material="lcd"] {
+	--card-material: radial-gradient(circle, color-mix(in srgb, var(--accent-3) 9%, transparent) 0 0.8px, transparent 1.2px) 0 0 / 4px 4px,
+		linear-gradient(180deg, color-mix(in srgb, var(--accent-3) 4%, var(--surface)), var(--surface) 40%);
+	--card-backdrop: none;
+}
+
+/* Vital: a fat, round bar ringed in the text colour with a shine along its top, as a creature's health. A sheet's stat
+   bar turns the warning colour under half and the danger colour under a fifth. */
+[data-meters="vital"] .mud-progress-linear {
+	height: 12px;
+	border-radius: 999px;
+	box-shadow: 0 0 0 2px var(--text);
+}
+[data-meters="vital"] .mud-progress-linear-bar {
+	border-radius: 999px;
+	background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0 35%, transparent 35%);
+}
+
+/* Vital: which band a sheet's stat bar is in, read from its value (0 to 100): under 20 is low, under 50 is middling. */
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="20"], [aria-valuenow^="20."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="21"], [aria-valuenow^="21."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="22"], [aria-valuenow^="22."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="23"], [aria-valuenow^="23."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="24"], [aria-valuenow^="24."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="25"], [aria-valuenow^="25."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="26"], [aria-valuenow^="26."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="27"], [aria-valuenow^="27."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="28"], [aria-valuenow^="28."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="29"], [aria-valuenow^="29."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="30"], [aria-valuenow^="30."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="31"], [aria-valuenow^="31."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="32"], [aria-valuenow^="32."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="33"], [aria-valuenow^="33."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="34"], [aria-valuenow^="34."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="35"], [aria-valuenow^="35."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="36"], [aria-valuenow^="36."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="37"], [aria-valuenow^="37."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="38"], [aria-valuenow^="38."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="39"], [aria-valuenow^="39."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="40"], [aria-valuenow^="40."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="41"], [aria-valuenow^="41."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="42"], [aria-valuenow^="42."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="43"], [aria-valuenow^="43."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="44"], [aria-valuenow^="44."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="45"], [aria-valuenow^="45."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="46"], [aria-valuenow^="46."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="47"], [aria-valuenow^="47."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="48"], [aria-valuenow^="48."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="49"], [aria-valuenow^="49."]) .mud-progress-linear-bar {
+	background-color: var(--warn);
+}
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="0"], [aria-valuenow^="0."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="1"], [aria-valuenow^="1."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="2"], [aria-valuenow^="2."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="3"], [aria-valuenow^="3."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="4"], [aria-valuenow^="4."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="5"], [aria-valuenow^="5."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="6"], [aria-valuenow^="6."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="7"], [aria-valuenow^="7."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="8"], [aria-valuenow^="8."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="9"], [aria-valuenow^="9."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="10"], [aria-valuenow^="10."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="11"], [aria-valuenow^="11."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="12"], [aria-valuenow^="12."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="13"], [aria-valuenow^="13."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="14"], [aria-valuenow^="14."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="15"], [aria-valuenow^="15."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="16"], [aria-valuenow^="16."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="17"], [aria-valuenow^="17."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="18"], [aria-valuenow^="18."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="19"], [aria-valuenow^="19."]) .mud-progress-linear-bar {
+	background-color: var(--danger);
+}
+
+/* Abacus: ten beads on a rod, filled up to the value. */
+[data-meters="abacus"] .mud-progress-linear {
+	height: 14px;
+	border-radius: 0;
+	mask: url(/themes/drawings/meters/abacus-bead.svg) 0 0 / 10% 100% repeat-x;
+}
+
+/* Arrows: ten arrows standing in a row, filled up to the value. */
+[data-meters="arrows"] .mud-progress-linear {
+	height: 22px;
+	border-radius: 0;
+	mask: url(/themes/drawings/meters/arrow.svg) 0 0 / 10% 100% repeat-x;
+}
+
+[data-meters="abacus"] .mud-progress-linear-bar,
+[data-meters="arrows"] .mud-progress-linear-bar {
+	border-radius: 0;
+}
+
+/* Brush: a single ink stroke that tapers to the right, its filled part the bar's colour. */
+[data-meters="brush"] .mud-progress-linear {
+	height: 9px;
+	border-radius: 0;
+	mask: url(/themes/drawings/menus/ink-meter.svg) 0 0 / 100% 100% no-repeat;
+}
+
+/* Route: stops on a line, as on a rail map; the stops and line passed are the bar's colour. */
+[data-meters="route"] .mud-progress-linear {
+	height: 14px;
+	border-radius: 0;
+	mask: linear-gradient(#000, #000) center / 100% 3px no-repeat,
+		radial-gradient(circle closest-side, transparent 0 40%, #000 46% 86%, transparent 92%) 0 0 / 10% 100% repeat-x;
+}
+[data-meters="brush"] .mud-progress-linear-bar,
+[data-meters="route"] .mud-progress-linear-bar {
 	border-radius: 0;
 }

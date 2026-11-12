@@ -75,6 +75,42 @@ public class ImageFiltersToggleTests : TrackingBunitContext
 			.Because("choosing something else keeps the filters as the player left them");
 	}
 
+	[Test]
+	public async Task TheAccountMenuSwitchFlipsReducedMotion()
+	{
+		Services.AddMudServices().AddEchoLocalizer();
+		JSInterop.Mode = JSRuntimeMode.Loose;
+		var asked = new List<bool>();
+		var cut = Render<MudHarness>(p => p.AddChildContent<AccountPanel>(panel => panel
+			.Add(x => x.IsOpen, true)
+			.Add(x => x.ActiveCharacter, Acting)
+			.Add(x => x.OnSetReduceMotion, EventCallback.Factory.Create<bool>(this, on => asked.Add(on)))));
+
+		var toggle = cut.Find(".account-panel-motion");
+		await Assert.That(toggle.GetAttribute("role")).IsEqualTo("switch");
+		await Assert.That(toggle.GetAttribute("aria-checked")).IsEqualTo("false");
+
+		await toggle.ClickAsync(new());
+
+		await Assert.That(asked).IsEquivalentTo([true]);
+	}
+
+	[Test]
+	public async Task TheThemePageTurnsReducedMotionOnAndKeepsTheFilters()
+	{
+		var handler = SeedSettings();
+		var cut = Render<SettingsTheme>();
+		var off = cut.WaitForElement("[data-reduce-motion='off']");
+		await Assert.That(off.GetAttribute("aria-checked")).IsEqualTo("true");
+
+		await cut.Find("[data-image-filters='off']").ClickAsync(new());
+		cut.WaitForState(() => cut.Find("[data-image-filters='off']").GetAttribute("aria-checked") == "true");
+		await cut.Find("[data-reduce-motion='on']").ClickAsync(new());
+		cut.WaitForState(() => cut.Find("[data-reduce-motion='on']").GetAttribute("aria-checked") == "true");
+		await Assert.That(handler.Sent).IsEqualTo(new CharacterAppearance(null, null) { ImageFilters = false, ReduceMotion = true })
+			.Because("turning motion down keeps the filters as the player left them");
+	}
+
 	private AppearanceApiHandler SeedSettings()
 	{
 		this.AddAuthorization().SetAuthorized("headwiz");

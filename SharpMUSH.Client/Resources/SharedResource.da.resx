@@ -9538,4 +9538,16 @@
   <data name="NavThemeImageFiltersNote" xml:space="preserve">
     <value>Billeder (avatarer, rum, gallerier, wikien) får temaets tone. Slå det fra for at se dem i deres egne farver.</value>
   </data>
+  <data name="NavThemeReduceMotion" xml:space="preserve">
+    <value>Reducer bevægelse</value>
+  </data>
+  <data name="NavThemeReduceMotionOn" xml:space="preserve">
+    <value>Til</value>
+  </data>
+  <data name="NavThemeReduceMotionOff" xml:space="preserve">
+    <value>Fra</value>
+  </data>
+  <data name="NavThemeReduceMotionNote" xml:space="preserve">
+    <value>Temaets baggrund står stille, og intet på siden glider eller drejer. Det er altid slået til, når din enhed beder om reduceret bevægelse.</value>
+  </data>
 </root>

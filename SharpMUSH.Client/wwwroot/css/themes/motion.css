@@ -44,9 +44,28 @@
 	to { background-position: 100% 0%; }
 }
 
+@keyframes theme-petals {
+	from { background-position: 0 0; }
+	to { background-position: -360px 420px; }
+}
 @keyframes theme-ascend {
 	from { background-position: 0 0; }
 	to { background-position: 40px -340px; }
+}
+
+@keyframes theme-fall {
+	from { background-position: 0 0; }
+	to { background-position: 0 360px; }
+}
+
+@keyframes theme-lantern-rise {
+	from { background-position: 0 0; }
+	to { background-position: 0 -560px; }
+}
+
+@keyframes theme-unfurl {
+	from { clip-path: inset(0 0 100% 0); }
+	to { clip-path: inset(0 0 0 0); }
 }
 
 /* Two bands of light crossing the window, one across and one down, for the circuit atmosphere. */
@@ -124,6 +143,15 @@
 	--texture-motion: none;
 	--ambient-play: running;
 	--ambient-flow: initial;
+}
+
+/* Unfurl: cards open downward like a scroll let fall; nothing loops. */
+[data-motion="unfurl"] {
+	--card-enter: theme-unfurl calc(var(--duration-enter) * 2) var(--ease-enter) backwards;
+	--nav-enter: none;
+	--select-motion: none;
+	--texture-motion: none;
+	--ambient-play: running;
 }
 
 /* ── Atmosphere ── */
@@ -268,4 +296,44 @@
 	--atmosphere-position: 0 0;
 	--atmosphere-repeat: repeat;
 	--atmosphere-motion: none;
+}
+
+/* Datastream: thin trails of accent-3 and accent-2 falling far behind the page, as data streaming past a screen. */
+[data-atmosphere="datastream"] {
+	--atmosphere-still: none;
+	--atmosphere-moving: radial-gradient(1px 46px at 12% 30%, color-mix(in srgb, var(--accent-3) 45%, transparent), transparent),
+		radial-gradient(1px 30px at 47% 70%, color-mix(in srgb, var(--accent-3) 35%, transparent), transparent),
+		radial-gradient(1px 60px at 81% 45%, color-mix(in srgb, var(--accent-2) 30%, transparent), transparent);
+	--atmosphere-size: 220px 360px;
+	--atmosphere-motion: theme-fall 9s linear infinite;
+}
+
+/* Sky lanterns: a few small paper lanterns in the warning colour, lit from inside, rising slowly over a warm glow. */
+[data-atmosphere="sky-lanterns"] {
+	--atmosphere-still: radial-gradient(60% 26% at 70% 100%, color-mix(in srgb, var(--warn) 12%, transparent), transparent);
+	--atmosphere-moving: radial-gradient(5px 7px at 22% 30%, color-mix(in srgb, var(--warn) 85%, transparent) 0 70%, transparent 100%),
+		radial-gradient(4px 5px at 64% 62%, color-mix(in srgb, var(--warn) 70%, transparent) 0 70%, transparent 100%),
+		radial-gradient(3px 4px at 84% 18%, color-mix(in srgb, var(--warn) 60%, transparent) 0 70%, transparent 100%);
+	--atmosphere-size: 420px 560px;
+	--atmosphere-motion: theme-lantern-rise 70s linear infinite;
+}
+
+/* Smoke: banks of grey smoke low on the window, drifting slowly across it. */
+[data-atmosphere="smoke"] {
+	--atmosphere-still: linear-gradient(0deg, color-mix(in srgb, var(--text-faint) 10%, transparent), transparent 30%);
+	--atmosphere-moving: radial-gradient(30% 12% at 25% 94%, color-mix(in srgb, var(--text-faint) 16%, transparent), transparent),
+		radial-gradient(34% 14% at 62% 99%, color-mix(in srgb, var(--text-faint) 13%, transparent), transparent),
+		radial-gradient(24% 10% at 90% 92%, color-mix(in srgb, var(--text-faint) 14%, transparent), transparent);
+	--atmosphere-size: 200% 100%;
+	--atmosphere-motion: theme-pan 80s ease-in-out infinite alternate;
+}
+
+/* Petals: a few blossom petals falling and drifting left, in a pale mix of the accent; the moving layer only. */
+[data-atmosphere="petals"] {
+	--atmosphere-still: none;
+	--atmosphere-moving: radial-gradient(ellipse 4px 2.5px at 18% 22%, color-mix(in srgb, var(--accent) 35%, #fff) 0 80%, transparent),
+		radial-gradient(ellipse 3px 2px at 64% 58%, color-mix(in srgb, var(--accent) 28%, #fff) 0 80%, transparent),
+		radial-gradient(ellipse 3.5px 2px at 38% 86%, color-mix(in srgb, var(--accent) 40%, #fff) 0 80%, transparent);
+	--atmosphere-size: 360px 420px;
+	--atmosphere-motion: theme-petals 28s linear infinite;
 }

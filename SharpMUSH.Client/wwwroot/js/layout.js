@@ -28,7 +28,7 @@ window.sharpmushLayout = {
 		row.setAttribute('data-config-selected', 'true');
 		let details = row.closest('details');
 		while (details) { details.open = true; details = details.parentElement?.closest('details'); }
-		row.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+		row.scrollIntoView({ block: 'center', behavior: document.documentElement?.dataset.reduceMotion === 'on' || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 		const control = Array.from(row.querySelectorAll('input:not([type="hidden"]), select, textarea, button, [tabindex]'))
 			.find(element => !element.disabled && element.getAttribute('aria-disabled') !== 'true');
 		if (control) control.focus({ preventScroll: true });

@@ -7002,7 +7002,7 @@
     <value>Goodbye</value>
   </data>
   <data name="AdmMsgQuitDesc" xml:space="preserve">
-    <value>Shown after "GOODBYE." on QUIT and LOGOUT.</value>
+    <value>Shown to the connection that leaves, on QUIT and LOGOUT.</value>
   </data>
   <data name="AdmSetupPkgMessagesDesc" xml:space="preserve">
     <value>Keeps the connect screen, the messages of the day and the other server messages as softcode on one object instead of the stored text. Admin &gt; Messages switches back at any time.</value>
@@ -7803,7 +7803,7 @@
     <value>Twinkles</value>
   </data>
   <data name="AdmThemeStyleOrnamentBlossom" xml:space="preserve">
-    <value>Blossoms</value>
+    <value>Sky lanterns</value>
   </data>
   <data name="AdmThemeStyleOrnamentEncore" xml:space="preserve">
     <value>Encore hearts</value>
@@ -13058,6 +13058,9 @@
   <data name="AdmThemeStyleOrnamentFlank" xml:space="preserve">
     <value>Dashes</value>
   </data>
+  <data name="AdmThemeStyleOrnamentDesignator" xml:space="preserve">
+    <value>Corner mark</value>
+  </data>
   <data name="AdmThemeStyleFrameClipped" xml:space="preserve">
     <value>Clipped corners</value>
   </data>
@@ -13172,6 +13175,18 @@
   <data name="NavThemeImageFiltersNote" xml:space="preserve">
     <value>Pictures (avatars, rooms, galleries, the wiki) take the theme's tone. Turn this off to see them in their own colours.</value>
   </data>
+  <data name="NavThemeReduceMotion" xml:space="preserve">
+    <value>Reduce motion</value>
+  </data>
+  <data name="NavThemeReduceMotionOn" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="NavThemeReduceMotionOff" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="NavThemeReduceMotionNote" xml:space="preserve">
+    <value>The theme's background holds still and nothing on the page slides or turns. It is always on when your device asks for reduced motion.</value>
+  </data>
   <data name="AdmThemeStyleImagerySmoke" xml:space="preserve">
     <value>Smoke</value>
   </data>
@@ -13198,6 +13213,12 @@
   </data>
   <data name="AdmThemeStyleSelectionStroke" xml:space="preserve">
     <value>Brush stroke</value>
+  </data>
+  <data name="AdmThemeStyleSelectionLantern" xml:space="preserve">
+    <value>Lantern</value>
+  </data>
+  <data name="AdmThemeStyleSelectionPennant" xml:space="preserve">
+    <value>Pennant</value>
   </data>
   <data name="AdmThemeStyleSelectionTrace" xml:space="preserve">
     <value>Light trace</value>
@@ -13226,8 +13247,14 @@
   <data name="AdmThemeStyleButtonsBrush" xml:space="preserve">
     <value>Brush</value>
   </data>
-  <data name="AdmThemeStyleButtonsCapsule" xml:space="preserve">
-    <value>Capsule</value>
+  <data name="AdmThemeStyleButtonsPlaque" xml:space="preserve">
+    <value>Name board</value>
+  </data>
+  <data name="AdmThemeStyleButtonsSeal" xml:space="preserve">
+    <value>Seal</value>
+  </data>
+  <data name="AdmThemeStyleButtonsLightring" xml:space="preserve">
+    <value>Light ring</value>
   </data>
   <data name="AdmThemeStyleButtonsBlade" xml:space="preserve">
     <value>Blade</value>
@@ -13256,6 +13283,12 @@
   <data name="AdmThemeStyleMaterialWood" xml:space="preserve">
     <value>Wood</value>
   </data>
+  <data name="AdmThemeStyleMaterialSilk" xml:space="preserve">
+    <value>Silk</value>
+  </data>
+  <data name="AdmThemeStyleMaterialBamboo" xml:space="preserve">
+    <value>Bamboo slips</value>
+  </data>
   <data name="AdmThemeStyleMaterialLightline" xml:space="preserve">
     <value>Lightline</value>
   </data>
@@ -13280,6 +13313,12 @@
   <data name="AdmThemeStyleMetersHairline" xml:space="preserve">
     <value>Hairline</value>
   </data>
+  <data name="AdmThemeStyleMetersAbacus" xml:space="preserve">
+    <value>Abacus</value>
+  </data>
+  <data name="AdmThemeStyleMetersArrows" xml:space="preserve">
+    <value>Arrows</value>
+  </data>
   <data name="AdmThemeStyleMotion" xml:space="preserve">
     <value>Motion</value>
   </data>
@@ -13300,6 +13339,9 @@
   </data>
   <data name="AdmThemeStyleMotionBob" xml:space="preserve">
     <value>Bob</value>
+  </data>
+  <data name="AdmThemeStyleMotionUnfurl" xml:space="preserve">
+    <value>Unfurl</value>
   </data>
   <data name="AdmThemeStyleAtmosphere" xml:space="preserve">
     <value>Atmosphere</value>
@@ -13325,6 +13367,12 @@
   <data name="AdmThemeStyleAtmosphereSlashes" xml:space="preserve">
     <value>Slashes</value>
   </data>
+  <data name="AdmThemeStyleAtmosphereSkyLanterns" xml:space="preserve">
+    <value>Sky lanterns</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereSmoke" xml:space="preserve">
+    <value>Smoke</value>
+  </data>
   <data name="AdmThemeStyleAtmosphereCircuit" xml:space="preserve">
     <value>Circuit</value>
   </data>
@@ -13345,6 +13393,12 @@
   </data>
   <data name="AdmThemeStyleTextureOilpaint" xml:space="preserve">
     <value>Oil paint</value>
+  </data>
+  <data name="AdmThemeStyleTextureEaves" xml:space="preserve">
+    <value>Palace eaves</value>
+  </data>
+  <data name="AdmThemeStyleTextureWarbanners" xml:space="preserve">
+    <value>War banners</value>
   </data>
   <data name="AdmThemeStyleTextureGridfloor" xml:space="preserve">
     <value>Grid floor</value>
@@ -13372,5 +13426,116 @@
   </data>
   <data name="AdmThemeStyleFramePlate" xml:space="preserve">
     <value>Plate</value>
+  </data>
+  <data name="AdmThemeStyleTextureMeadow" xml:space="preserve">
+    <value>Meadow</value>
+  </data>
+  <data name="AdmThemeStyleTextureWireframe" xml:space="preserve">
+    <value>Wireframe</value>
+  </data>
+  <data name="AdmThemeStyleFrameFieldGuide" xml:space="preserve">
+    <value>Field guide</value>
+  </data>
+  <data name="AdmThemeStyleFrameDevice" xml:space="preserve">
+    <value>Device</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentCapsule" xml:space="preserve">
+    <value>Capsule</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentEmblem" xml:space="preserve">
+    <value>Emblem</value>
+  </data>
+  <data name="AdmThemeStyleEffectSticker" xml:space="preserve">
+    <value>Sticker</value>
+  </data>
+  <data name="AdmThemeStyleEffectEvolve" xml:space="preserve">
+    <value>Evolve</value>
+  </data>
+  <data name="AdmThemeStyleButtonsCapsule" xml:space="preserve">
+    <value>Capsule</value>
+  </data>
+  <data name="AdmThemeStyleButtonsConsole" xml:space="preserve">
+    <value>Console</value>
+  </data>
+  <data name="AdmThemeStyleMaterialLcd" xml:space="preserve">
+    <value>LCD</value>
+  </data>
+  <data name="AdmThemeStyleMetersVital" xml:space="preserve">
+    <value>Vital</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereDatastream" xml:space="preserve">
+    <value>Datastream</value>
+  </data>
+  <data name="AdmThemeStyleFrameLattice" xml:space="preserve">
+    <value>Lattice</value>
+  </data>
+  <data name="AdmThemeStyleFrameSlips" xml:space="preserve">
+    <value>Bamboo slips</value>
+  </data>
+  <data name="AdmThemeStyleTextureSenbon" xml:space="preserve">
+    <value>Gate tunnel</value>
+  </data>
+  <data name="AdmThemeStyleTextureSansui" xml:space="preserve">
+    <value>Ink mountains</value>
+  </data>
+  <data name="AdmThemeStyleTextureSkyline" xml:space="preserve">
+    <value>Dusk skyline</value>
+  </data>
+  <data name="AdmThemeStyleTextureNightline" xml:space="preserve">
+    <value>Night skyline</value>
+  </data>
+  <data name="AdmThemeStyleFrameKasagi" xml:space="preserve">
+    <value>Gate beam</value>
+  </data>
+  <data name="AdmThemeStyleFrameScroll" xml:space="preserve">
+    <value>Hanging scroll</value>
+  </data>
+  <data name="AdmThemeStyleFrameSignboard" xml:space="preserve">
+    <value>Station sign</value>
+  </data>
+  <data name="AdmThemeStyleFrameNightboard" xml:space="preserve">
+    <value>Lit station sign</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentShimenawa" xml:space="preserve">
+    <value>Straw rope</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentEnso" xml:space="preserve">
+    <value>Ink circle</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentStation" xml:space="preserve">
+    <value>Station stop</value>
+  </data>
+  <data name="AdmThemeStyleSelectionGate" xml:space="preserve">
+    <value>Gate</value>
+  </data>
+  <data name="AdmThemeStyleSelectionWash" xml:space="preserve">
+    <value>Ink wash</value>
+  </data>
+  <data name="AdmThemeStyleSelectionPlatform" xml:space="preserve">
+    <value>Platform</value>
+  </data>
+  <data name="AdmThemeStyleButtonsLacquer" xml:space="preserve">
+    <value>Lacquer</value>
+  </data>
+  <data name="AdmThemeStyleButtonsInk" xml:space="preserve">
+    <value>Ink stroke</value>
+  </data>
+  <data name="AdmThemeStyleButtonsPill" xml:space="preserve">
+    <value>Pill</value>
+  </data>
+  <data name="AdmThemeStyleMaterialLacquer" xml:space="preserve">
+    <value>Lacquer</value>
+  </data>
+  <data name="AdmThemeStyleMaterialWashi" xml:space="preserve">
+    <value>Washi paper</value>
+  </data>
+  <data name="AdmThemeStyleMetersBrush" xml:space="preserve">
+    <value>Brush stroke</value>
+  </data>
+  <data name="AdmThemeStyleMetersRoute" xml:space="preserve">
+    <value>Route map</value>
+  </data>
+  <data name="AdmThemeStyleAtmospherePetals" xml:space="preserve">
+    <value>Falling petals</value>
   </data>
 </root>

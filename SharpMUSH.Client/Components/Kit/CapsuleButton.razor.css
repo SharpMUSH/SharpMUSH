@@ -2,11 +2,11 @@
 	height: 36px;
 	padding: 0 var(--space-5) 0 var(--space-4);
 	border: 0;
-	border-radius: var(--button-radius, 18px);
+	border-radius: var(--button-radius, var(--radius-capsule, 18px));
 	clip-path: var(--button-clip, none);
 	transform: var(--button-transform, none);
-	background: var(--surface-2);
-	box-shadow: inset 0 0 0 1px var(--border), var(--button-plain-shadow, 0 0 transparent);
+	background: var(--button-plain-fill, var(--surface-2));
+	box-shadow: inset 0 0 0 1px var(--button-plain-edge, var(--border)), var(--button-plain-shadow, 0 0 transparent);
 	color: var(--text);
 	font: inherit;
 	font-size: var(--text-sm);
@@ -54,10 +54,24 @@
 }
 
 .kit-capsule--primary {
-	background: var(--accent);
-	color: var(--accent-on);
+	position: relative;
+	isolation: isolate;
+	background: var(--button-fill, var(--accent));
+	color: var(--button-ink, var(--accent-on));
 	font-weight: var(--button-weight, 700);
-	box-shadow: var(--button-shadow, none);
+	box-shadow: var(--button-shadow, var(--capsule-primary-edge, none));
+}
+
+/* A stroke drawn behind the words in the text colour (data-buttons="ink"): its shape is the theme's mask, and it
+   reaches a little past the button's ends. A theme without one draws nothing here. */
+.kit-capsule--primary::before {
+	content: "";
+	position: absolute;
+	inset: -3px -10px;
+	z-index: -1;
+	pointer-events: none;
+	background: var(--text);
+	mask: var(--button-stroke, linear-gradient(transparent, transparent));
 }
 
 /* Pressed, in the theme's cut (data-buttons, css/themes/menus.css): a keycap sinks, a skewed plate slides into its
@@ -67,5 +81,11 @@
 }
 
 .kit-capsule--primary:active:not(:disabled) {
+	background: var(--button-press-fill, var(--button-fill, var(--accent)));
 	box-shadow: var(--button-press-shadow, var(--button-shadow, none));
+}
+
+.kit-capsule--primary:active:not(:disabled)::before {
+	inset: -6px -14px;
+	mask: var(--button-press-stroke, var(--button-stroke, linear-gradient(transparent, transparent)));
 }

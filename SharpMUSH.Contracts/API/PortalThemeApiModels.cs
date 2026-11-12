@@ -65,4 +65,10 @@ public sealed record CharacterAppearance(string? ThemeId, string? Accent, string
 	/// every picture as it was made, under any theme.
 	/// </summary>
 	public bool ImageFilters { get; init; } = true;
+
+	/// <summary>
+	/// Whether the portal holds still: a theme's background stops moving and nothing slides, as under the browser's
+	/// reduced-motion preference, which turns it on whatever this says.
+	/// </summary>
+	public bool ReduceMotion { get; init; }
 }

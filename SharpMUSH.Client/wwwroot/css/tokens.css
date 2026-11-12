@@ -348,6 +348,13 @@
     font-display: swap;
 }
 @font-face {
+    font-family: "Saira Condensed";
+    src: url("/fonts/saira-condensed-latin.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
     font-family: "Bodoni Moda";
     src: url("/fonts/bodoni-moda-latin.woff2") format("woff2");
     font-weight: 400 900;
@@ -415,6 +422,55 @@
     src: url("/fonts/libre-baskerville-italic-latin.woff2") format("woff2");
     font-weight: 400;
     font-style: italic;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Baloo 2";
+    src: url("/fonts/baloo-2-latin.woff2") format("woff2");
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Gloock";
+    src: url("/fonts/gloock-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Silkscreen";
+    src: url("/fonts/silkscreen-latin.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Inknut Antiqua";
+    src: url("/fonts/inknut-antiqua-latin.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Shippori Mincho B1";
+    src: url("/fonts/shippori-mincho-b1-latin.woff2") format("woff2");
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Hina Mincho";
+    src: url("/fonts/hina-mincho-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Zen Kaku Gothic New";
+    src: url("/fonts/zen-kaku-gothic-new-latin.woff2") format("woff2");
+    font-weight: 900;
+    font-style: normal;
     font-display: swap;
 }
 @font-face {
@@ -599,6 +655,7 @@
 	/* ── surfaces ── */
 	--rail-bg: #0c0b0a;             /* icon rail, darker than --surface-3 (page sidebar) */
 	--rail-ink: #aaa298;            /* rail icons: --text-dim, moved until it reads 4.5:1 on --rail-bg */
+	--rail-accent: var(--accent);   /* the accent on the rail; a theme moves it until it reads 3:1 on --rail-bg */
 
 	/* ── text roles ── */
 	--text-over-image: #e9edf0;     /* primary lines and glass controls over banner images; not themed, as the scrim under them is always dark */

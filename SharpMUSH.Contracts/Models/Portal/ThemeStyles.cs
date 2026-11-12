@@ -64,8 +64,8 @@ public static class ThemeStyles
 		"fredoka", "dancing", "mochiy", "patrick", "dela", "graduate", "saira-stencil", "pixelify", "yuji", "bangers",
 		"lilita", "titan", "chakra", "monoton", "michroma", "antonio", "oxanium", "russo",
 		"cinzel-decorative", "forum", "press-start", "anton", "dotgothic", "alegreya-sc", "oswald",
-		"pirata", "uncial", "barlow", "metamorphous", "krona", "eagle-lake", "federant", "rye", "black-ops", "bodoni",
-		"jost", "big-shoulders", "garamond", "tektur", "baskerville", "audiowide", "jura",
+		"pirata", "uncial", "barlow", "metamorphous", "krona", "eagle-lake", "federant", "rye", "black-ops", "bodoni", "saira-condensed",
+		"jost", "big-shoulders", "garamond", "tektur", "baskerville", "baloo", "silkscreen", "gloock", "inknut", "shippori-b1", "hina", "zen-kaku", "audiowide", "jura",
 	];
 
 	/// <summary>Faces for everything else. Kept to faces that read well small.</summary>
@@ -139,12 +139,20 @@ public static class ThemeStyles
 		["riveted"] = new("riveted", "thick", "riveted"),
 		["wanted"] = new("wanted", "double", "wanted"),
 		["scrap"] = new("scrap", "heavy", "scrap"),
-		["dossier"] = new("dossier", "line", "none"),
+		["dossier"] = new("dossier", "none", "dossier"),
 		["archive"] = new("archive", "none", "archive"),
 		["loadout"] = new("loadout", "none", "loadout"),
 		["hairline"] = new("hairline", "none", "hairline"),
 		["rune"] = new("rune", "line", "rune"),
 		["brushed"] = new("brushed", "none", "brushed"),
+		["field-guide"] = new("field-guide", "heavy", "field-guide"),
+		["device"] = new("device", "none", "device"),
+		["lattice"] = new("lattice", "line", "lattice"),
+		["slips"] = new("slips", "none", "slips"),
+		["kasagi"] = new("kasagi", "line", "kasagi"),
+		["scroll"] = new("scroll", "none", "scroll"),
+		["signboard"] = new("signboard", "none", "signboard"),
+		["nightboard"] = new("nightboard", "line", "nightboard"),
 		["nodes"] = new("nodes", "line", "nodes"),
 		["plate"] = new("plate", "none", "plate"),
 	};
@@ -198,6 +206,12 @@ public static class ThemeStyles
 		["sheriff"] = new("sheriff", "sheriff"),
 		["rad"] = new("rad", "rad"),
 		["flank"] = new("flank", "none"),
+		["capsule"] = new("capsule", "capsule"),
+		["emblem"] = new("emblem", "fade"),
+		["designator"] = new("designator", "designator"),
+		["shimenawa"] = new("none", "shimenawa"),
+		["enso"] = new("enso", "enso"),
+		["station"] = new("station", "station"),
 	};
 
 	public static readonly IReadOnlyDictionary<string, EffectSet> Effects = new Dictionary<string, EffectSet>
@@ -241,6 +255,8 @@ public static class ThemeStyles
 		["brass"] = new("accent", "brass"),
 		["woodtype"] = new("accent", "woodtype"),
 		["grime"] = new("accent", "grime"),
+		["sticker"] = new("accent", "sticker"),
+		["evolve"] = new("accent", "evolve"),
 	};
 
 	/// <summary>Every setting and part with its choices, the first being what a theme that sets none gets.</summary>
@@ -256,7 +272,7 @@ public static class ThemeStyles
 			"speedlines", "court", "hazard", "sigil", "sumi", "benday", "filmgrain", "starburst", "rain", "outrun", "galaxy",
 			"readout", "armor-panels", "sunburst-rays", "stained-glass", "crystal", "dither", "nightfall", "overworld", "skyward", "watercolor",
 			"marble", "spires", "dragonflight", "plot", "seance", "dunes", "candles", "gears", "mesa", "ruins", "haze",
-			"archive", "lobby", "cathedral", "glyphs", "oilpaint", "gridfloor", "orbit",
+			"archive", "lobby", "cathedral", "glyphs", "oilpaint", "meadow", "wireframe", "eaves", "warbanners", "senbon", "sansui", "skyline", "nightline", "gridfloor", "orbit",
 		],
 		[Ornament] = [.. Ornaments.Keys],
 		[Frame] = [.. Frames.Keys],
@@ -271,12 +287,12 @@ public static class ThemeStyles
 		],
 		// How the current line in a menu is marked, the cut of a button, what a card is made of, how a bar fills, how
 		// things arrive and move, and what hangs between the background and the page: one menu each, any theme.
-		[Selection] = ["standard", "bar", "skew", "halo", "brackets", "lift", "stroke", "trace", "lockon"],
-		[Buttons] = ["standard", "skew", "keycap", "notch", "bar", "brush", "capsule", "blade"],
-		[Material] = ["solid", "glass", "hologram", "veil", "cardstock", "felt", "wood", "lightline"],
-		[Meters] = ["bar", "segmented", "slanted", "slats", "pips", "hairline"],
-		[Motion] = ["calm", "still", "snappy", "drift", "wobble", "bob"],
-		[Atmosphere] = ["none", "vignette", "fog", "embers", "motes", "crt", "slashes", "circuit", "heartbeat"],
+		[Selection] = ["standard", "bar", "skew", "halo", "brackets", "lift", "stroke", "lantern", "pennant", "gate", "wash", "platform", "trace", "lockon"],
+		[Buttons] = ["standard", "skew", "keycap", "notch", "bar", "brush", "capsule", "console", "plaque", "seal", "lacquer", "ink", "pill", "lightring", "blade"],
+		[Material] = ["solid", "glass", "hologram", "veil", "cardstock", "felt", "wood", "lcd", "silk", "bamboo", "lacquer", "washi", "lightline"],
+		[Meters] = ["bar", "segmented", "slanted", "pips", "hairline", "vital", "abacus", "arrows", "brush", "route", "slats"],
+		[Motion] = ["calm", "still", "snappy", "drift", "wobble", "bob", "unfurl"],
+		[Atmosphere] = ["none", "vignette", "fog", "embers", "motes", "crt", "slashes", "datastream", "sky-lanterns", "smoke", "petals", "circuit", "heartbeat"],
 		[TextureStrength] = Strengths,
 		[FrameMarks] = [.. Frames.Values.Select(f => f.Marks).Distinct()],
 		[FrameEdge] = Edges,

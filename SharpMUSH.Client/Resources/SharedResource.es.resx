@@ -9538,4 +9538,16 @@
   <data name="NavThemeImageFiltersNote" xml:space="preserve">
     <value>Las imágenes (avatares, salas, galerías, la wiki) toman el tono del tema. Desactívalos para verlas con sus propios colores.</value>
   </data>
+  <data name="NavThemeReduceMotion" xml:space="preserve">
+    <value>Reducir movimiento</value>
+  </data>
+  <data name="NavThemeReduceMotionOn" xml:space="preserve">
+    <value>Activado</value>
+  </data>
+  <data name="NavThemeReduceMotionOff" xml:space="preserve">
+    <value>Desactivado</value>
+  </data>
+  <data name="NavThemeReduceMotionNote" xml:space="preserve">
+    <value>El fondo del tema se queda quieto y nada en la página se desliza ni gira. Siempre está activado cuando su dispositivo pide menos movimiento.</value>
+  </data>
 </root>

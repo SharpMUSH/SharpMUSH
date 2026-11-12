@@ -715,16 +715,15 @@ public partial class Commands
 	{
 		var handle = parser.CurrentState.Handle!.Value;
 
-		// QUIT is a SOCKET command: it must also work at the connect screen, where the handle has
-		// no executor bound and KnownExecutorObject() would throw. Fall back to notifying the
-		// socket directly in that case.
-		var executor = await parser.CurrentState.ExecutorObject(Mediator) is AnySharpObject found ? found : null;
+		// PennMUSH's disconnect_player dumps the quit file to the leaving descriptor only. Sent to the
+		// handle, not the player, so the character's other connections never see it; they are told
+		// they partially disconnected (ConnectionStateEventHandler). At the connect screen there is no
+		// player, and the message renders without one.
+		var leaving = await parser.CurrentState.ExecutorObject(Mediator) is AnySharpObject found ? found : null;
 
-		await NotifyQuitAsync(MarkupText.Plain("GOODBYE."));
-
-		if (await MessageService.RenderAsync(GameMessage.Quit, handle, executor) is MString quitText)
+		if (await MessageService.RenderAsync(GameMessage.Quit, handle, leaving) is MString quitText)
 		{
-			await NotifyQuitAsync(quitText);
+			await NotifyService.Notify(handle, quitText);
 		}
 
 		await ConnectionService.Disconnect(handle);
@@ -736,18 +735,6 @@ public partial class Commands
 		}
 
 		return new None();
-
-		async ValueTask NotifyQuitAsync(MString what)
-		{
-			if (executor is null)
-			{
-				await NotifyService.Notify(handle, what);
-			}
-			else
-			{
-				await NotifyService.Notify(executor, what, executor);
-			}
-		}
 	}
 
 	/// <summary>

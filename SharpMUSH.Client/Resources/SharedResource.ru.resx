@@ -9538,4 +9538,16 @@
   <data name="NavThemeImageFiltersNote" xml:space="preserve">
     <value>Изображения (аватары, комнаты, галереи, вики) принимают тон темы. Выключите, чтобы видеть их в собственных цветах.</value>
   </data>
+  <data name="NavThemeReduceMotion" xml:space="preserve">
+    <value>Уменьшить движение</value>
+  </data>
+  <data name="NavThemeReduceMotionOn" xml:space="preserve">
+    <value>Вкл.</value>
+  </data>
+  <data name="NavThemeReduceMotionOff" xml:space="preserve">
+    <value>Выкл.</value>
+  </data>
+  <data name="NavThemeReduceMotionNote" xml:space="preserve">
+    <value>Фон темы неподвижен, и ничто на странице не скользит и не вращается. Всегда включено, если устройство просит уменьшить движение.</value>
+  </data>
 </root>

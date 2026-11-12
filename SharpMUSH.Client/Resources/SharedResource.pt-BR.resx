@@ -9538,4 +9538,16 @@
   <data name="NavThemeImageFiltersNote" xml:space="preserve">
     <value>As imagens (avatares, salas, galerias, a wiki) assumem o tom do tema. Desligue para vê-las com as próprias cores.</value>
   </data>
+  <data name="NavThemeReduceMotion" xml:space="preserve">
+    <value>Reduzir movimento</value>
+  </data>
+  <data name="NavThemeReduceMotionOn" xml:space="preserve">
+    <value>Ligado</value>
+  </data>
+  <data name="NavThemeReduceMotionOff" xml:space="preserve">
+    <value>Desligado</value>
+  </data>
+  <data name="NavThemeReduceMotionNote" xml:space="preserve">
+    <value>O fundo do tema fica parado e nada na página desliza ou gira. Sempre ligado quando seu dispositivo pede menos movimento.</value>
+  </data>
 </root>

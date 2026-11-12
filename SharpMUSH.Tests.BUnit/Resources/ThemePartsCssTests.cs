@@ -38,7 +38,9 @@ public partial class ThemePartsCssTests
 	{
 		var unknown = PartSelector().Matches(PartsCss())
 			.Select(m => (Key: m.Groups["key"].Value, Value: m.Groups["value"].Value))
-			.Where(p => p.Key != ThemeStyles.Scheme && !ThemeStyles.IsValid(p.Key, p.Value))
+			// The player's own reduced motion is a part too, set from the character rather than the theme.
+			.Where(p => p.Key != ThemeStyles.Scheme && p.Key != SharpMUSH.Client.Services.ThemeService.ReduceMotionPart
+				&& !ThemeStyles.IsValid(p.Key, p.Value))
 			.Select(p => $"{p.Key}={p.Value}")
 			.Distinct()
 			.ToList();

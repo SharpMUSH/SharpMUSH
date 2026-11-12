@@ -22,6 +22,7 @@ public static partial class ErrorMessages
 		public const string GameHasHiddenReconnected = "has HIDDEN-reconnected.";
 		public const string GameHasHiddenDisconnected = "has HIDDEN-disconnected.";
 		public const string GameHasPartiallyHiddenDisconnected = "has partially HIDDEN-disconnected.";
+		public const string YouHavePartiallyDisconnected = "You have partially disconnected.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GameRebootBy = "GAME: Reboot w/o disconnect by {0}, please wait.";
 		public const string GameRebootFinished = "GAME: Reboot finished.";

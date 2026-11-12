@@ -9538,4 +9538,16 @@
   <data name="NavThemeImageFiltersNote" xml:space="preserve">
     <value>Bilder (avatarer, rum, gallerier, wikin) får temats ton. Stäng av det för att se dem i sina egna färger.</value>
   </data>
+  <data name="NavThemeReduceMotion" xml:space="preserve">
+    <value>Minska rörelse</value>
+  </data>
+  <data name="NavThemeReduceMotionOn" xml:space="preserve">
+    <value>På</value>
+  </data>
+  <data name="NavThemeReduceMotionOff" xml:space="preserve">
+    <value>Av</value>
+  </data>
+  <data name="NavThemeReduceMotionNote" xml:space="preserve">
+    <value>Temats bakgrund står still och inget på sidan glider eller roterar. Alltid på när din enhet ber om minskad rörelse.</value>
+  </data>
 </root>
