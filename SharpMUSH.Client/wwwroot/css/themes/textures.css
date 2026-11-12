@@ -947,3 +947,70 @@
 		--texture-mask-accent-3: url(/themes/drawings/textures/warbanners-wave-accent-3.svg) right 0 bottom 0 / 1200px 900px no-repeat;
 	}
 }
+
+/* Senbon: a tunnel of vermilion gates running into the dark on the right, their lit edges in the second accent and
+   the path's stone steps in the border colour, with a glow where the tunnel ends. */
+[data-texture="senbon"] {
+	--texture: radial-gradient(ellipse 26% 30% at 80% 44%, color-mix(in srgb, var(--accent) 22%, transparent), transparent),
+		radial-gradient(ellipse 60% 26% at 76% 100%, color-mix(in srgb, var(--warn) 10%, transparent), transparent),
+		radial-gradient(ellipse at 40% 45%, transparent 55%, rgba(0, 0, 0, 0.5));
+	--texture-size: 100% 100%, 100% 100%, 100% 100%;
+	--texture-mask-accent: url(/themes/drawings/textures/senbon-accent.svg) right 0 bottom 0 / auto 100% no-repeat;
+	--texture-ink-accent: linear-gradient(180deg, color-mix(in srgb, var(--accent) 88%, #fff) 30%, color-mix(in srgb, var(--accent) 62%, var(--bg)) 95%);
+	--texture-mask-accent-2: url(/themes/drawings/textures/senbon-accent-2.svg) right 0 bottom 0 / auto 100% no-repeat;
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 55%, transparent);
+	--texture-mask-border: url(/themes/drawings/textures/senbon-border.svg) right 0 bottom 0 / auto 100% no-repeat;
+	--texture-ink-border: var(--border);
+}
+
+/* Sansui: ink mountains, a pine and two birds in mist on washi, on the right, with a low pale sun in the accent behind
+   the far ridge; the paper has a fine horizontal fibre. */
+[data-texture="sansui"] {
+	--texture: repeating-linear-gradient(0deg, color-mix(in srgb, var(--text) 3%, transparent) 0 1px, transparent 1px 5px),
+		repeating-linear-gradient(0deg, color-mix(in srgb, var(--text) 2%, transparent) 0 2px, transparent 2px 23px),
+		radial-gradient(ellipse 70% 60% at 30% 20%, color-mix(in srgb, var(--surface) 60%, transparent), transparent);
+	--texture-size: 100% 100%, 100% 100%, 100% 100%;
+	--texture-mask-text: url(/themes/drawings/textures/sansui-text.svg) right 0 bottom 0 / auto 100% no-repeat;
+	--texture-ink-text: color-mix(in srgb, var(--text) 85%, transparent);
+	--texture-mask-border: url(/themes/drawings/textures/sansui-border.svg) right 0 bottom 0 / auto 100% no-repeat;
+	--texture-ink-border: color-mix(in srgb, var(--accent) 34%, transparent);
+}
+
+/* Skyline: a pale sky that warms to dusk low down, Fuji, a lit lattice tower in the accent and white, and a city across
+   the whole width: a solid back row and a front row with lit windows. */
+[data-texture="skyline"] {
+	--texture: radial-gradient(circle at 82% 66%, color-mix(in srgb, var(--warn) 22%, #fff) 0, transparent 26%),
+		linear-gradient(180deg, var(--bg) 0, var(--bg) 22%, color-mix(in srgb, var(--accent-3) 16%, var(--bg)) 46%,
+			color-mix(in srgb, var(--accent) 20%, var(--bg)) 70%, color-mix(in srgb, var(--warn) 30%, var(--bg)) 92%);
+	--texture-size: 100% 100%, 100% 100%;
+	--texture-mask-border: url(/themes/drawings/textures/skyline-border.svg) right 0 bottom 0 / auto 100% no-repeat;
+	--texture-ink-border: linear-gradient(180deg, color-mix(in srgb, color-mix(in srgb, var(--accent-3) 78%, var(--accent)) 52%, var(--bg)) 45%,
+		color-mix(in srgb, color-mix(in srgb, var(--accent-3) 62%, var(--accent)) 52%, var(--bg)));
+	--texture-mask-text: url(/themes/drawings/textures/skyline-text.svg) right 0 bottom 0 / auto 100% no-repeat;
+	--texture-ink-text: color-mix(in srgb, var(--text) 52%, var(--accent-3));
+	--texture-mask-accent-3: url(/themes/drawings/textures/skyline-accent-3.svg) right 0 bottom 0 / auto 100% no-repeat;
+	--texture-ink-accent-3: color-mix(in srgb, var(--accent) 80%, #fff);
+	--texture-mask-accent-2: url(/themes/drawings/textures/skyline-accent-2.svg) right 0 bottom 0 / auto 100% no-repeat;
+	--texture-ink-accent-2: linear-gradient(180deg, color-mix(in srgb, var(--text) 80%, var(--accent-3)) 70%, var(--text));
+	--texture-mask-accent: url(/themes/drawings/textures/skyline-accent.svg) right 0 bottom 0 / auto 100% no-repeat;
+	--texture-ink-accent: color-mix(in srgb, var(--warn) 16%, #fff);
+}
+
+/* Nightline: the same city after dark across the whole width, under a deep sky with a warm glow low down, Fuji dim
+   behind the tower, and more windows lit. */
+[data-texture="nightline"] {
+	--texture: radial-gradient(circle, color-mix(in srgb, var(--text) 40%, transparent) 0 0.8px, transparent 1.2px),
+		radial-gradient(circle at 82% 70%, color-mix(in srgb, var(--accent) 20%, transparent) 0, transparent 30%),
+		linear-gradient(180deg, var(--bg) 0, var(--bg) 30%, color-mix(in srgb, var(--accent-3) 14%, var(--bg)) 62%, color-mix(in srgb, var(--accent) 18%, var(--bg)) 90%);
+	--texture-size: 173px 131px, 100% 100%, 100% 100%;
+	--texture-mask-border: url(/themes/drawings/textures/nightline-border.svg) right 0 bottom 0 / auto 100% no-repeat;
+	--texture-ink-border: color-mix(in srgb, var(--accent-3) 26%, var(--bg));
+	--texture-mask-text: url(/themes/drawings/textures/nightline-text.svg) right 0 bottom 0 / auto 100% no-repeat;
+	--texture-ink-text: color-mix(in srgb, var(--accent-3) 9%, var(--bg));
+	--texture-mask-accent-3: url(/themes/drawings/textures/nightline-accent-3.svg) right 0 bottom 0 / auto 100% no-repeat;
+	--texture-ink-accent-3: var(--accent);
+	--texture-mask-accent-2: url(/themes/drawings/textures/nightline-accent-2.svg) right 0 bottom 0 / auto 100% no-repeat;
+	--texture-ink-accent-2: color-mix(in srgb, var(--bg) 60%, #000);
+	--texture-mask-accent: url(/themes/drawings/textures/nightline-accent.svg) right 0 bottom 0 / auto 100% no-repeat;
+	--texture-ink-accent: color-mix(in srgb, var(--warn) 35%, #fff);
+}

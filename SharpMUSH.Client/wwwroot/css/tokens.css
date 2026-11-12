@@ -452,6 +452,27 @@
     font-style: normal;
     font-display: swap;
 }
+@font-face {
+    font-family: "Shippori Mincho B1";
+    src: url("/fonts/shippori-mincho-b1-latin.woff2") format("woff2");
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Hina Mincho";
+    src: url("/fonts/hina-mincho-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Zen Kaku Gothic New";
+    src: url("/fonts/zen-kaku-gothic-new-latin.woff2") format("woff2");
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
 
 :root {
 	/* ── Phosphor design tokens (BuiltInThemes.Phosphor) ── */

@@ -65,7 +65,7 @@ public static class ThemeStyles
 		"lilita", "titan", "chakra", "monoton", "michroma", "antonio", "oxanium", "russo",
 		"cinzel-decorative", "forum", "press-start", "anton", "dotgothic", "alegreya-sc", "oswald",
 		"pirata", "uncial", "barlow", "metamorphous", "krona", "eagle-lake", "federant", "rye", "black-ops", "bodoni", "saira-condensed",
-		"jost", "big-shoulders", "garamond", "tektur", "baskerville", "baloo", "silkscreen", "gloock", "inknut",
+		"jost", "big-shoulders", "garamond", "tektur", "baskerville", "baloo", "silkscreen", "gloock", "inknut", "shippori-b1", "hina", "zen-kaku",
 	];
 
 	/// <summary>Faces for everything else. Kept to faces that read well small.</summary>
@@ -149,6 +149,10 @@ public static class ThemeStyles
 		["device"] = new("device", "none", "device"),
 		["lattice"] = new("lattice", "line", "lattice"),
 		["slips"] = new("slips", "none", "slips"),
+		["kasagi"] = new("kasagi", "line", "kasagi"),
+		["scroll"] = new("scroll", "none", "scroll"),
+		["signboard"] = new("signboard", "none", "signboard"),
+		["nightboard"] = new("nightboard", "line", "nightboard"),
 	};
 
 	public static readonly IReadOnlyDictionary<string, OrnamentSet> Ornaments = new Dictionary<string, OrnamentSet>
@@ -203,6 +207,9 @@ public static class ThemeStyles
 		["capsule"] = new("capsule", "capsule"),
 		["emblem"] = new("emblem", "fade"),
 		["designator"] = new("designator", "designator"),
+		["shimenawa"] = new("none", "shimenawa"),
+		["enso"] = new("enso", "enso"),
+		["station"] = new("station", "station"),
 	};
 
 	public static readonly IReadOnlyDictionary<string, EffectSet> Effects = new Dictionary<string, EffectSet>
@@ -263,7 +270,7 @@ public static class ThemeStyles
 			"speedlines", "court", "hazard", "sigil", "sumi", "benday", "filmgrain", "starburst", "rain", "outrun", "galaxy",
 			"readout", "armor-panels", "sunburst-rays", "stained-glass", "crystal", "dither", "nightfall", "overworld", "skyward", "watercolor",
 			"marble", "spires", "dragonflight", "plot", "seance", "dunes", "candles", "gears", "mesa", "ruins", "haze",
-			"archive", "lobby", "cathedral", "glyphs", "oilpaint", "meadow", "wireframe", "eaves", "warbanners",
+			"archive", "lobby", "cathedral", "glyphs", "oilpaint", "meadow", "wireframe", "eaves", "warbanners", "senbon", "sansui", "skyline", "nightline",
 		],
 		[Ornament] = [.. Ornaments.Keys],
 		[Frame] = [.. Frames.Keys],
@@ -278,12 +285,12 @@ public static class ThemeStyles
 		],
 		// How the current line in a menu is marked, the cut of a button, what a card is made of, how a bar fills, how
 		// things arrive and move, and what hangs between the background and the page: one menu each, any theme.
-		[Selection] = ["standard", "bar", "skew", "halo", "brackets", "lift", "stroke", "lantern", "pennant"],
-		[Buttons] = ["standard", "skew", "keycap", "notch", "bar", "brush", "capsule", "console", "plaque", "seal"],
-		[Material] = ["solid", "glass", "hologram", "veil", "cardstock", "felt", "wood", "lcd", "silk", "bamboo"],
-		[Meters] = ["bar", "segmented", "slanted", "pips", "hairline", "vital", "abacus", "arrows"],
+		[Selection] = ["standard", "bar", "skew", "halo", "brackets", "lift", "stroke", "lantern", "pennant", "gate", "wash", "platform"],
+		[Buttons] = ["standard", "skew", "keycap", "notch", "bar", "brush", "capsule", "console", "plaque", "seal", "lacquer", "ink", "pill"],
+		[Material] = ["solid", "glass", "hologram", "veil", "cardstock", "felt", "wood", "lcd", "silk", "bamboo", "lacquer", "washi"],
+		[Meters] = ["bar", "segmented", "slanted", "pips", "hairline", "vital", "abacus", "arrows", "brush", "route"],
 		[Motion] = ["calm", "still", "snappy", "drift", "wobble", "bob", "unfurl"],
-		[Atmosphere] = ["none", "vignette", "fog", "embers", "motes", "crt", "slashes", "datastream", "sky-lanterns", "smoke"],
+		[Atmosphere] = ["none", "vignette", "fog", "embers", "motes", "crt", "slashes", "datastream", "sky-lanterns", "smoke", "petals"],
 		[TextureStrength] = Strengths,
 		[FrameMarks] = [.. Frames.Values.Select(f => f.Marks).Distinct()],
 		[FrameEdge] = Edges,

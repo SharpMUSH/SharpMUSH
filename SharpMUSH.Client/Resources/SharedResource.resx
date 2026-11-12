@@ -13436,4 +13436,70 @@
   <data name="AdmThemeStyleFrameSlips" xml:space="preserve">
     <value>Bamboo slips</value>
   </data>
+  <data name="AdmThemeStyleTextureSenbon" xml:space="preserve">
+    <value>Gate tunnel</value>
+  </data>
+  <data name="AdmThemeStyleTextureSansui" xml:space="preserve">
+    <value>Ink mountains</value>
+  </data>
+  <data name="AdmThemeStyleTextureSkyline" xml:space="preserve">
+    <value>Dusk skyline</value>
+  </data>
+  <data name="AdmThemeStyleTextureNightline" xml:space="preserve">
+    <value>Night skyline</value>
+  </data>
+  <data name="AdmThemeStyleFrameKasagi" xml:space="preserve">
+    <value>Gate beam</value>
+  </data>
+  <data name="AdmThemeStyleFrameScroll" xml:space="preserve">
+    <value>Hanging scroll</value>
+  </data>
+  <data name="AdmThemeStyleFrameSignboard" xml:space="preserve">
+    <value>Station sign</value>
+  </data>
+  <data name="AdmThemeStyleFrameNightboard" xml:space="preserve">
+    <value>Lit station sign</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentShimenawa" xml:space="preserve">
+    <value>Straw rope</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentEnso" xml:space="preserve">
+    <value>Ink circle</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentStation" xml:space="preserve">
+    <value>Station stop</value>
+  </data>
+  <data name="AdmThemeStyleSelectionGate" xml:space="preserve">
+    <value>Gate</value>
+  </data>
+  <data name="AdmThemeStyleSelectionWash" xml:space="preserve">
+    <value>Ink wash</value>
+  </data>
+  <data name="AdmThemeStyleSelectionPlatform" xml:space="preserve">
+    <value>Platform</value>
+  </data>
+  <data name="AdmThemeStyleButtonsLacquer" xml:space="preserve">
+    <value>Lacquer</value>
+  </data>
+  <data name="AdmThemeStyleButtonsInk" xml:space="preserve">
+    <value>Ink stroke</value>
+  </data>
+  <data name="AdmThemeStyleButtonsPill" xml:space="preserve">
+    <value>Pill</value>
+  </data>
+  <data name="AdmThemeStyleMaterialLacquer" xml:space="preserve">
+    <value>Lacquer</value>
+  </data>
+  <data name="AdmThemeStyleMaterialWashi" xml:space="preserve">
+    <value>Washi paper</value>
+  </data>
+  <data name="AdmThemeStyleMetersBrush" xml:space="preserve">
+    <value>Brush stroke</value>
+  </data>
+  <data name="AdmThemeStyleMetersRoute" xml:space="preserve">
+    <value>Route map</value>
+  </data>
+  <data name="AdmThemeStyleAtmospherePetals" xml:space="preserve">
+    <value>Falling petals</value>
+  </data>
 </root>

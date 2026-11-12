@@ -57,6 +57,9 @@
 [data-font-display="silkscreen"] { --font-display: Silkscreen, 'Courier New', monospace; --font-title-weight: 700; }
 [data-font-display="gloock"] { --font-display: Gloock, Didot, Georgia, serif; --font-title-weight: 400; }
 [data-font-display="inknut"] { --font-display: 'Inknut Antiqua', 'Book Antiqua', Georgia, serif; --font-title-weight: 600; }
+[data-font-display="shippori-b1"] { --font-display: 'Shippori Mincho B1', 'Yu Mincho', Georgia, serif; --font-title-weight: 800; }
+[data-font-display="hina"] { --font-display: 'Hina Mincho', 'Yu Mincho', Georgia, serif; --font-title-weight: 400; }
+[data-font-display="zen-kaku"] { --font-display: 'Zen Kaku Gothic New', 'Hiragino Sans', system-ui, sans-serif; --font-title-weight: 900; }
 
 [data-font-body="ui"] { --font-ui: 'Hanken Grotesk', system-ui, sans-serif; }
 [data-font-body="serif"] { --font-ui: Georgia, 'Iowan Old Style', 'Times New Roman', serif; }

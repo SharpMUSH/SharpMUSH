@@ -643,3 +643,43 @@
 [data-frame-shadow="slips"] {
 	--card-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
 }
+
+/* Kasagi: a gate's beam across the top in the accent, its tips turned up, and a thin tie-beam under it in the border
+   colour. */
+[data-frame-marks="kasagi"] {
+	--card-marks: linear-gradient(var(--border), var(--border)) left 4% top 16px / 92% 2px no-repeat;
+	--card-mask-accent: url(/themes/drawings/frames/kasagi-beam.svg) left 0 top 0 / 100% 10px no-repeat;
+}
+/* Kasagi: a deep shadow and a warm glow from below, as a lit gate at night. */
+[data-frame-shadow="kasagi"] {
+	--card-shadow: 0 18px 40px rgba(0, 0, 0, 0.6), 0 6px 22px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+/* Scroll: a hanging scroll's rods, a dark rod across the top and the bottom in the text colour. */
+[data-frame-marks="scroll"] {
+	--card-marks: linear-gradient(var(--text), var(--text)) left 0 top 0 / 100% 3px no-repeat,
+		linear-gradient(var(--text), var(--text)) left 0 bottom 0 / 100% 3px no-repeat;
+}
+/* Scroll: paper lifted off the wall, a long soft shadow. */
+[data-frame-shadow="scroll"] {
+	--card-shadow: 0 1px 0 color-mix(in srgb, var(--text) 4%, transparent), 0 20px 50px -20px color-mix(in srgb, var(--text) 30%, transparent);
+}
+
+/* Signboard: a station sign's stripe across the top, the second accent with a short run of the accent at its end. */
+[data-frame-marks="signboard"] {
+	--card-marks: linear-gradient(90deg, var(--accent-2) 0 82%, var(--accent) 82%) left 0 top 0 / 100% 5px no-repeat;
+}
+/* Signboard: a soft, cool shadow. */
+[data-frame-shadow="signboard"] {
+	--card-shadow: 0 16px 36px -14px color-mix(in srgb, var(--text) 35%, transparent), 0 1px 0 rgba(255, 255, 255, 0.6) inset;
+}
+
+/* Nightboard: the station stripe lit, glowing onto the card below it. */
+[data-frame-marks="nightboard"] {
+	--card-marks: linear-gradient(90deg, var(--accent-2) 0 82%, var(--accent) 82%) left 0 top 0 / 100% 4px no-repeat,
+		linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent) left 0 top 4px / 100% 40px no-repeat;
+}
+/* Nightboard: a deep shadow and a faint glow of the line colour. */
+[data-frame-shadow="nightboard"] {
+	--card-shadow: 0 20px 44px rgba(0, 0, 0, 0.55), 0 0 18px color-mix(in srgb, var(--accent-2) 10%, transparent);
+}

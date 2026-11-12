@@ -518,6 +518,35 @@ public static class BuiltInThemes
 		display: "silkscreen", body: "ui", corners: "soft", texture: "wireframe", ornament: "emblem", frame: "device", titles: "normal", effect: "evolve", imagery: "neon",
 		accent2: "#2fd2ff", accent3: "#7cff6b",
 		selection: "brackets", buttons: "console", material: "lcd", meters: "segmented", motion: "snappy", atmosphere: "datastream");
+	// Japan: a shrine path, an ink painting and a modern city, each drawn for the portal; none repeats Yokai's night.
+
+	/// <summary>Torii: a tunnel of vermilion gates in the dark, a lacquered beam over each card and lacquered buttons.</summary>
+	public static readonly PortalTheme Torii = Genre("torii", "Torii", dark: true,
+		["#0c0909", "#171110", "#1e1613", "#130e0c", "#090707", "#f2e8da", "#c4b5a2", "#a99a88", "#4a2f26", "#2c1d18", "#e8553a", "#f09a5a", "#ff9580"],
+		display: "shippori-b1", body: "ui", corners: "sharp", texture: "senbon", ornament: "shimenawa", frame: "kasagi", titles: "normal", effect: "ember", imagery: "candlelit",
+		accent2: "#e6b05a", accent3: "#9fbf8c",
+		selection: "gate", buttons: "lacquer", material: "lacquer", meters: "segmented", motion: "calm", atmosphere: "embers");
+
+	/// <summary>Inkwash: ink mountains in mist on washi, a hanging scroll's rods on each card, brush-ink buttons and meters.</summary>
+	public static readonly PortalTheme Inkwash = Genre("inkwash", "Inkwash", dark: false,
+		["#efe9dc", "#fbf8f1", "#f6f1e7", "#e9e2d3", "#e4dccb", "#1b1a17", "#403c35", "#5a554c", "#b6ab95", "#d8cfbc", "#b8361f", "#8a5a00", "#a3261a"],
+		display: "hina", body: "ui", corners: "sharp", texture: "sansui", ornament: "enso", frame: "scroll", titles: "normal", effect: "bleed", imagery: "ink",
+		accent2: "#1b1a17", accent3: "#2f5562",
+		selection: "wash", buttons: "ink", material: "washi", meters: "brush", motion: "drift", atmosphere: "fog");
+
+	/// <summary>Modern Japan: a pale dusk over Fuji, a lit lattice tower and the city; frosted cards with a line's stripe, pill buttons, route meters.</summary>
+	public static readonly PortalTheme ModernJapan = Genre("modern-japan", "Modern Japan", dark: false,
+		["#eef1f8", "#fafbfd", "#f2f4fa", "#e3e7f2", "#dde2ef", "#121b2b", "#33415a", "#4a5568", "#aeb7cc", "#d3d9e6", "#b5321b", "#8a5200", "#b0261a"],
+		display: "zen-kaku", body: "ui", corners: "soft", texture: "skyline", ornament: "station", frame: "signboard", titles: "normal", effect: "none", imagery: "airy",
+		accent2: "#1d7a46", accent3: "#2563a6",
+		selection: "platform", buttons: "pill", material: "glass", meters: "route", motion: "snappy", atmosphere: "petals");
+
+	/// <summary>Modern Japan Night: the same city after dark, lit windows across the whole width under Fuji and the tower, smoked-glass cards.</summary>
+	public static readonly PortalTheme ModernJapanNight = Genre("modern-japan-night", "Modern Japan Night", dark: true,
+		["#0b1022", "#141a31", "#1a213c", "#0f1429", "#080c1b", "#eef1fa", "#b9c1d8", "#98a2be", "#36406a", "#232b4b", "#ff6a3d", "#ffb454", "#ff8a7a"],
+		display: "zen-kaku", body: "ui", corners: "soft", texture: "nightline", ornament: "station", frame: "nightboard", titles: "normal", effect: "glow", imagery: "nocturne",
+		accent2: "#4fd18b", accent3: "#6aa8ff",
+		selection: "platform", buttons: "pill", material: "glass", meters: "route", motion: "snappy", atmosphere: "petals");
 
 	// Chinese history and building: original drawings of a palace hall and of a war camp's banners, never one
 	// dynasty's or one story's names, emblems or art.
@@ -551,7 +580,7 @@ public static class BuiltInThemes
 		ArcaneAcademy, Steampunk, Frontier, Wasteland,
 		Archivist, Arena, Ashen, RelicSlate, Precinct,
 		WildTamer, DataPartner,
-		VermilionCourt, ThreeRealms,
+		VermilionCourt, ThreeRealms, Torii, Inkwash, ModernJapan, ModernJapanNight,
 		ProtanDark, ProtanLight, DeutanDark, DeutanLight, TritanDark, TritanLight, MonoDark, MonoLight,
 	];
 
