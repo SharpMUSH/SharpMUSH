@@ -6,6 +6,9 @@
 	background: var(--surface);
 	border: 1px solid var(--border);
 	border-radius: 16px;
+	/* The corner inside the border, for what sits flush in the card's corners (the terminal's input row, whose
+	   focus ring follows it, shell.css). */
+	--scene-card-inner-radius: 15px;
 	overflow: hidden;
 }
 

@@ -213,6 +213,37 @@ test('a plain mouse click in the output focuses the field; selecting, links and 
     assert.equal(document.activeElement, field);
 });
 
+test('while typing, pressing a command link or a marked control leaves focus in the field; other presses do not', () => {
+    const { listeners, main, add } = boot();
+    const field = add(['input'], main, { 'data-primary-input': 'end' });
+    const output = add(['div'], main, { 'data-input-region': '' });
+    const command = add(['a[xch_cmd]'], output);
+    const inLink = add(['span'], command);
+    const send = add(['button'], main, { 'data-keeps-input': '' });
+    const off = add(['button'], main, { 'data-keeps-input': '' });
+    off.disabled = true;
+    const url = add(['a[href]'], output);
+    const line = add(['div'], output);
+    const button = add(['button'], main);
+
+    {
+        const press = click(command);
+        listeners.document.mousedown(press);
+        assert.equal(press.defaultPrevented, false, 'not typing: a link can still be pressed to select its text');
+    }
+    field.focus();
+    for (const target of [command, inLink, send]) {
+        const press = click(target);
+        listeners.document.mousedown(press);
+        assert.equal(press.defaultPrevented, true, 'the press does not move focus; the click still follows');
+    }
+    for (const [target, init] of [[off, {}], [url, {}], [line, {}], [button, {}], [command, { button: 2 }]]) {
+        const press = click(target, init);
+        listeners.document.mousedown(press);
+        assert.equal(press.defaultPrevented, false, 'a URL link, the output, a disabled or ordinary control and a right click are left alone');
+    }
+});
+
 test('arriving focuses the field after the router, unless the reader is busy or on a touch screen', () => {
     {
         const { api, document, main, add, flush } = boot();

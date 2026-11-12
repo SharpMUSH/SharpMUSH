@@ -8,7 +8,7 @@
    sends — open, occupied (a count, never names), locked (still listed, with its hint), closed,
    leaves the scene (asks first, in the payload's words), no image (the fallback tile). Dark exits
    are never sent, so none is invented. The keycap is the first alias; pressing a one-letter keycap
-   goes, except while typing. The destination's name shows under the exit's when they differ. Hover or
+   goes, except while typing. Clicking Go or Look leaves focus in the input line (data-keeps-input). The destination's name shows under the exit's when they differ. Hover or
    focus shows a preview with Go and Look, which stays while the pointer crosses to it. Rows is the
    mobile Room sheet's list. *@
 @if (Bare)
@@ -54,7 +54,7 @@ else
                 var key = KeyOf(e);
                 var pictured = ImageUrlPolicy.IsRenderable(e.Dest?.Image?.Url);
                 <div class="exit exit--@StateName(e) @(pictured ? null : "exit--plain")">
-                    <button type="button" class="exit-go" disabled="@string.IsNullOrWhiteSpace(e.Cmd)"
+                    <button type="button" class="exit-go" data-keeps-input disabled="@string.IsNullOrWhiteSpace(e.Cmd)"
                             aria-keyshortcuts="@(KeysOn && IsSingleKey(key) ? key : null)" title="@(KeysOn && IsSingleKey(key) ? Loc["NavPlayExitKey", key!].Value : null)"
                             @onclick="() => TakeAsync(e)">
                         @* A destination with no picture is a compact row: no empty box, its state beside the name. *@
@@ -112,8 +112,8 @@ else
                                         <div class="exit-preview-there">@Loc.Plural("NavPlayThereCount", "count", e.Dest.Here.Value)</div>
                                     }
                                     <div class="exit-preview-actions">
-                                        <button type="button" class="exit-preview-go" disabled="@string.IsNullOrWhiteSpace(e.Cmd)" @onclick="() => TakeAsync(e)">@Loc["NavPlayGo"]</button>
-                                        <button type="button" class="exit-preview-look" @onclick="() => OnCommand.InvokeAsync(LookAt(e))">@Loc["NavPlayLook"]</button>
+                                        <button type="button" class="exit-preview-go" data-keeps-input disabled="@string.IsNullOrWhiteSpace(e.Cmd)" @onclick="() => TakeAsync(e)">@Loc["NavPlayGo"]</button>
+                                        <button type="button" class="exit-preview-look" data-keeps-input @onclick="() => OnCommand.InvokeAsync(LookAt(e))">@Loc["NavPlayLook"]</button>
                                     </div>
                                 </div>
                             </div>

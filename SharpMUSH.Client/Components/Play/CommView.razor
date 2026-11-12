@@ -3,7 +3,7 @@
 @inject IChannelWho Who
 @inject IStringLocalizer<SharedResource> Loc
 @inject IJSRuntime JS
-@implements IDisposable
+@implements IAsyncDisposable
 
 @* D1 §5.1 / board 06 the channel view: one channel, or one page conversation, in main. Lines are grouped
    by day ("Today", "Yesterday", a date) and by author (a header per run of lines within five minutes), with
@@ -38,8 +38,11 @@
                 }
             </button>
         }
-        <button type="button" class="comm-close" aria-label="@Loc["NavPlayBackToGame"]" title="@Loc["NavPlayBackToGame"]" @onclick="OnClose">
-            <MudIcon Icon="@Icons.Material.Outlined.Close" Size="Size.Small" />
+        @* Back to the scene or the terminal, from anywhere in the view with Escape too: an arrow, and the key where there is room. *@
+        <button type="button" class="comm-close" aria-label="@Loc["NavPlayBackToGame"]" title="@Loc["NavPlayBackToGame"] (Esc)"
+                aria-keyshortcuts="Escape" @onclick="OnClose">
+            <MudIcon Icon="@Icons.Material.Outlined.ArrowBack" Size="Size.Small" />
+            <kbd class="comm-close-key" aria-hidden="true">Esc</kbd>
         </button>
     </header>
     <div class="comm-main">
@@ -214,6 +217,10 @@
 
     private bool _arrived;
 
+    private DotNetObjectReference<CommView>? _self;
+    private IJSObjectReference? _escape;
+    private bool _disposed;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (_arrived) return;
@@ -221,11 +228,35 @@
         try
         {
             await JS.InvokeVoidAsync("sharpmushInputFocus.arrive", _input);
+            _self = DotNetObjectReference.Create(this);
+            _escape = await JS.InvokeAsync<IJSObjectReference>("sharpmushInputFocus.onEscape", _self);
         }
         catch (JSException)
         {
-            // No focus script: the line is still there to click.
+            // No focus script: the line is still there to click, and the view closes with its back button.
         }
+        // Closed while that call was out: let go of the listener now.
+        if (_disposed) await ReleaseEscapeAsync();
+    }
+
+    /// <summary>Escape on the page (input-focus.js onEscape): back to the game, as the back button does.</summary>
+    [JSInvokable]
+    public Task Escape() => InvokeAsync(() => OnClose.InvokeAsync());
+
+    private async Task ReleaseEscapeAsync()
+    {
+        if (_escape is { } escape)
+        {
+            _escape = null;
+            try
+            {
+                await escape.InvokeVoidAsync("dispose");
+                await escape.DisposeAsync();
+            }
+            catch (Exception e) when (e is JSException or JSDisconnectedException or ObjectDisposedException) { }
+        }
+        _self?.Dispose();
+        _self = null;
     }
 
     private int FirstUnreadIndex() => _firstUnread is null ? -1 : IndexOf(_lines, _firstUnread);
@@ -383,8 +414,10 @@
         string.Join(' ', c.With.Select((name, i) =>
             i < c.WithObjIds.Count && c.WithObjIds[i] is { Length: > 0 } objid ? objid : $"\"{name}\""));
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        _disposed = true;
+        await ReleaseEscapeAsync();
         Feed.Changed -= OnFeedChanged;
         Who.Changed -= OnWhoChanged;
         if (_openedKey is not null) Who.Unwatch(_openedKey);

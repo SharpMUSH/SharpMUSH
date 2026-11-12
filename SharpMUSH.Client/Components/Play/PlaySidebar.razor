@@ -37,7 +37,17 @@
                         Collapsed="@Collapsed" OnClick="OnOpenScene" />
         </nav>
     }
-    else if (!Collapsed)
+    else if (Room is { } here)
+    {
+        @* No scene here: the room the play terminal is in, the way back to it from a channel or a conversation. *@
+        <nav class="play-side-room" aria-label="@Loc["NavPlayBackToGame"]">
+            <SidebarRow Lead="@(here.Image?.Url is { Length: > 0 } ? SidebarRow.SidebarLead.Image : SidebarRow.SidebarLead.Icon)"
+                        ImageUrl="@here.Image?.Url" Icon="@Icons.Material.Outlined.Terminal" Name="@here.Name"
+                        Label="@(string.IsNullOrWhiteSpace(here.Name) ? Loc["NavPlayTerminal"].Value : here.Name)"
+                        IsCurrent="@(Current == string.Empty)" Collapsed="@Collapsed" OnClick="OnOpenGame" />
+        </nav>
+    }
+    @if (Room?.Scene is null && !Collapsed)
     {
         <FeatureGate Feature="@GameFeatures.Scenes">
             <SectionLabel>@Loc["NavPlayScenes"]</SectionLabel>
@@ -131,6 +141,9 @@
     [Parameter] public string? Current { get; set; }
 
     [Parameter] public EventCallback OnOpenScene { get; set; }
+
+    /// <summary>The room row, shown while no scene is: back to the terminal.</summary>
+    [Parameter] public EventCallback OnOpenGame { get; set; }
 
     /// <summary>A channel's name or a conversation's key was chosen.</summary>
     [Parameter] public EventCallback<string> OnOpen { get; set; }

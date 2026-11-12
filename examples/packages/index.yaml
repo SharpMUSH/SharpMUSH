@@ -102,7 +102,7 @@ packages:
   - path: messages/
     name: Messages
     package: messages
-    version: 1.4.0
+    version: 1.4.1
     description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."
   - path: scene-help/
     name: Scene help

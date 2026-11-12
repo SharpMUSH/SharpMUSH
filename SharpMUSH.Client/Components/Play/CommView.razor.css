@@ -39,15 +39,41 @@
 }
 
 .comm-close {
-	width: 36px;
 	height: 36px;
-	display: grid;
-	place-items: center;
-	border: 0;
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	padding: 0 var(--space-4);
+	border: 1px solid var(--border-soft);
 	border-radius: 10px;
 	background: transparent;
 	color: var(--text-dim);
+	font: inherit;
+	font-size: var(--text-sm);
+	white-space: nowrap;
 	cursor: pointer;
+}
+
+.comm-close-key {
+	padding: var(--space-1) var(--space-2);
+	border: 1px solid var(--border);
+	border-radius: 5px;
+	font-family: var(--font-mono);
+	font-size: var(--text-xs);
+	color: var(--text-faint);
+}
+
+/* A narrow view (a phone's) keeps the arrow alone. */
+@container comm (max-width: 32rem) {
+	.comm-close {
+		width: 36px;
+		padding: 0;
+		justify-content: center;
+	}
+
+	.comm-close-key {
+		display: none;
+	}
 }
 
 .comm-close:hover {

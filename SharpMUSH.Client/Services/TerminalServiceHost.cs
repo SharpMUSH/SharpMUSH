@@ -33,6 +33,33 @@ public class TerminalServiceHost : ITerminalService
 	/// <summary>Raised once a new inner terminal is in place: a new session, whose screen starts empty.</summary>
 	public event Action? Recreated;
 
+	private string _draft = string.Empty;
+	private TerminalIdentity? _draftOwner;
+
+	/// <summary>
+	/// Keeps the input line's unsent text while no terminal view is on the page (the player has gone to another
+	/// page and will come back to Play). Kept in memory only: it can hold a typed <c>connect</c> line's password.
+	/// </summary>
+	public void KeepDraft(string text)
+	{
+		_draft = text;
+		_draftOwner = Identity;
+	}
+
+	/// <summary>
+	/// The kept draft, handed back once and only while connected as the account and character that wrote it:
+	/// after a sign-out or a character switch it is gone, so a line written by one player or character is never
+	/// offered to another. A connection that dropped and came back as the same character keeps it: it is that
+	/// player's own line.
+	/// </summary>
+	public string TakeDraft()
+	{
+		var text = IsConnected && _draftOwner == Identity ? _draft : string.Empty;
+		_draft = string.Empty;
+		_draftOwner = null;
+		return text;
+	}
+
 	/// <summary>
 	/// Disposes the current inner terminal and builds a fresh one. Subscribers keep their
 	/// subscriptions to this facade and are re-pointed transparently.
@@ -50,6 +77,8 @@ public class TerminalServiceHost : ITerminalService
 	{
 		Detach(_inner);
 		await _inner.DisposeAsync();
+		_draft = string.Empty;
+		_draftOwner = null;
 
 		_inner = _factory();
 		Attach(_inner);

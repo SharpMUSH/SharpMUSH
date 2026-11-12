@@ -30,7 +30,7 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		new RoomScene("42", "Salt Market at Dusk", 5));
 
 	private IRenderedComponent<PlaySidebar> RenderSidebar(RoomInfo? room = null, bool connected = true, bool collapsed = false,
-		string? current = null, Action? onScene = null, Action<string>? onOpen = null, string? characterName = "Ilsa Varn") =>
+		string? current = null, Action? onScene = null, Action<string>? onOpen = null, string? characterName = "Ilsa Varn", Action? onGame = null) =>
 		Render<PlaySidebar>(p => p
 			.Add(x => x.CharacterName, characterName)
 			.Add(x => x.Connected, connected)
@@ -38,7 +38,25 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 			.Add(x => x.Collapsed, collapsed)
 			.Add(x => x.Current, current)
 			.Add(x => x.OnOpenScene, () => onScene?.Invoke())
-			.Add(x => x.OnOpen, key => onOpen?.Invoke(key)));
+			.Add(x => x.OnOpen, key => onOpen?.Invoke(key))
+			.Add(x => x.OnOpenGame, () => onGame?.Invoke()));
+
+	[Test]
+	public async Task WithNoScene_TheRoomRow_LeadsBackToTheGame()
+	{
+		var back = false;
+		var room = new RoomInfo("#0", "Room Zero", null, null, null, null, null);
+		var cut = RenderSidebar(room, current: "Public", onGame: () => back = true);
+		var row = cut.Find(".play-side-room .kit-row");
+		await Assert.That(row.QuerySelector(".kit-row-label")!.TextContent).IsEqualTo("Room Zero");
+		await Assert.That(row.GetAttribute("aria-current")).IsNull().Because("a channel is what main shows");
+		await row.ClickAsync();
+		await Assert.That(back).IsTrue();
+
+		var playing = RenderSidebar(room, current: string.Empty);
+		await Assert.That(playing.Find(".play-side-room .kit-row").GetAttribute("aria-current")).IsEqualTo("page");
+		await Assert.That(RenderSidebar(Docks).FindAll(".play-side-room")).IsEmpty().Because("the scene row is the way back there");
+	}
 
 	[Test]
 	public async Task Head_SaysWhoIsConnected()

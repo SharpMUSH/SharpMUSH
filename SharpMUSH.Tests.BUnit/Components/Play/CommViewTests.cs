@@ -66,7 +66,7 @@ public class CommViewTests : TrackingBunitContext
 		var cut = RenderView("Public");
 		await Assert.That(_feed.Viewing).IsEqualTo("Public");
 		await Assert.That(_feed.MarkedRead).Contains("Public");
-		await cut.InvokeAsync(() => cut.Instance.Dispose());
+		await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
 		await Assert.That(_feed.Viewing).IsNull();
 	}
 
@@ -338,6 +338,21 @@ public class CommViewTests : TrackingBunitContext
 		var closed = false;
 		var cut = RenderView("Public", () => closed = true);
 		await cut.Find("button.comm-close").ClickAsync();
+		await Assert.That(closed).IsTrue();
+	}
+
+	[Test]
+	public async Task Escape_GoesBack_AndTheButtonSaysSo()
+	{
+		_feed.ChannelList = [new CommChannel("Public", 0)];
+		var closed = false;
+		var cut = RenderView("Public", () => closed = true);
+		await Assert.That(cut.Find("button.comm-close").GetAttribute("aria-keyshortcuts")).IsEqualTo("Escape");
+		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier == "sharpmushInputFocus.onEscape")).IsTrue();
+
+		// What input-focus.js calls on Escape.
+		await cut.InvokeAsync(cut.Instance.Escape);
+
 		await Assert.That(closed).IsTrue();
 	}
 }

@@ -12,6 +12,11 @@
 //   chord (Ctrl+C included) keeps its meaning.
 // - Clicking: a plain mouse click in the output (data-input-region) that selects nothing focuses the field,
 //   as a terminal does. Dragging, double-clicking and links keep selecting and following; touch never does it.
+// - Pressing: a game's command link (a[xch_cmd]) or a control marked data-keeps-input (Send, the jump to the
+//   newest line, an exit's Go) does its work without taking focus, so a player typing in the field stays in it
+//   with the draft and caret where they were. Only while the field has focus, and only the mouse press is held
+//   back: the click still lands, Tab and the keyboard still reach the control, and a reader not typing can still
+//   select a link's text.
 // - The shell's skip links (WCAG 2.4.1, bypass blocks): one to the page, one to its main text box.
 //
 // data-primary-input="start" keeps the caret at the top the first time the field is focused (the wiki's
@@ -26,6 +31,9 @@
 			'menubar', 'tree', 'treegrid', 'treeitem', 'grid', 'gridcell', 'tablist', 'radiogroup', 'toolbar',
 			'dialog', 'alertdialog'].map(role => `[role="${role}"]`),
 	].join(',');
+
+	// Pressed with a pointer, these act without taking focus from where it is.
+	const keepsInput = 'a[xch_cmd], [data-keeps-input]';
 
 	// Something the reader has open over the page: a modal, an open menu or picker. Tooltips are not.
 	const overlay = '[aria-modal="true"], dialog[open], .mud-dialog-container, .mud-popover-open:not(.mud-tooltip)';
@@ -80,6 +88,29 @@
 			return field ? api.focusField(field) : false;
 		},
 
+		// Back to the page's main field after a view over it closed (Play's channel view). Not on a touch screen,
+		// where focusing a field opens the keyboard. Deferred a turn, so the field the closing render shows is on
+		// screen.
+		focusUnlessTouch: function () {
+			if (window.matchMedia('(pointer: coarse)').matches) return;
+			setTimeout(() => { if (!api.overlayOpen()) api.focus(); }, 0);
+		},
+
+		// Escape anywhere on the page closes a view (Play's channel view): calls Escape on the .NET object. Not a key
+		// something else already took (a menu or a field that clears itself), not mid-composition, and not while a
+		// dialog, menu or picker is open over the page, whose own Escape closes it first.
+		onEscape: function (dotnetRef) {
+			const handler = event => {
+				if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing || event.repeat) return;
+				if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+				if (api.overlayOpen()) return;
+				event.preventDefault();
+				dotnetRef.invokeMethodAsync('Escape').catch(() => { });
+			};
+			window.addEventListener('keydown', handler);
+			return { dispose: () => window.removeEventListener('keydown', handler) };
+		},
+
 		// A field that has just come on screen, on a page that is for writing. Deferred a turn so it runs after
 		// the router's own focus move (FocusOnNavigate) and after a button that opened it has been removed.
 		// Takes the element, or its id (a component library's field, reached by its InputId).
@@ -116,6 +147,19 @@
 
 		onPointerDown: function (event) {
 			api._pointer = event.pointerType || 'mouse';
+		},
+
+		// The press that would move focus to a command link or a marked control. Held back here, the browser
+		// leaves focus where it is (the field, with its caret and any open touch keyboard) and still sends the click.
+		onMouseDown: function (event) {
+			if (event.defaultPrevented || event.button !== 0) return;
+			const target = event.target;
+			if (!target || typeof target.closest !== 'function') return;
+			const control = target.closest(keepsInput);
+			if (!control || control.disabled) return;
+			const active = document.activeElement;
+			if (!active || typeof active.hasAttribute !== 'function' || !active.hasAttribute('data-primary-input')) return;
+			event.preventDefault();
 		},
 
 		onClick: function (event) {
@@ -176,6 +220,7 @@
 			document.addEventListener('focusout', api.onFocusOut);
 			window.addEventListener('keydown', api.onKeyDown);
 			document.addEventListener('pointerdown', api.onPointerDown, { capture: true, passive: true });
+			document.addEventListener('mousedown', api.onMouseDown);
 			document.addEventListener('click', api.onSkip, { capture: true });
 			document.addEventListener('click', api.onClick);
 			document.addEventListener('focusin', api.onFocusIn);
