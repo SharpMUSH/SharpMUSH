@@ -125,8 +125,21 @@ public class PackageFunctionInvocationLimitTests
 			.Expect<ParsedPackageManifest>().Manifest, answers)).Expect<PackageApplyResult>();
 		await Assert.That(await Read($"livewire(funceval,{host})")).IsEqualTo("25000 100000 1");
 
-		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
+		(await Installer.UninstallAsync(id)).Expect<Success>();
 		await Assert.That(await Read($"livewire(funceval,{host})")).IsEqualTo("25000 0 0");
+	}
+
+	[Test]
+	public async Task APackageCannotGiveAPlayerALimit()
+	{
+		var id = FreshId();
+		var answers = new Dictionary<string, string> { ["host"] = await Read("objid(#1)") };
+
+		var refused = (await ApplyAsync(Parse(AttachYaml(id, "1.0", "    function_invocation_limit: 100000"))
+			.Expect<ParsedPackageManifest>().Manifest, answers)).Expect<Error<string>>();
+
+		await Assert.That(refused.Value).Contains("is a player");
+		await Assert.That(await Read("livewire(funceval,#1)")).IsEqualTo("25000 0 0");
 	}
 
 	[Test]

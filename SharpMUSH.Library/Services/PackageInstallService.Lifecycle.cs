@@ -469,7 +469,7 @@ public partial class PackageInstallService
 				: $"Removed {managed.Objid}/{managed.Attribute} (not present in revision {revision}).");
 		}
 
-		await RestoreStructureAsync(writes, packageId, snapshot, notes, cancellationToken);
+		await RestoreStructureAsync(writes, packageId, snapshot, sharedAttributes, notes, cancellationToken);
 
 		foreach (var released in objects.Release)
 		{
@@ -525,11 +525,14 @@ public partial class PackageInstallService
 	/// Reconciles each object's package-managed structure to a revision snapshot
 	/// (rollback): sets the snapshot's flags/powers/locks/attribute flags and
 	/// unsets package-managed elements absent from it. Scoped to elements the
-	/// package set, so admin-added extras are never disturbed.
+	/// package set, so admin-added extras are never disturbed. An attribute another package also
+	/// manages keeps its flags: its value is retained too, and the flags are part of what that package
+	/// installed (a shared function_invocation_limit is only read while it stays internal).
 	/// </summary>
 	private async Task RestoreStructureAsync(
 		PackageWriteTransaction writes,
-		string packageId, PackageRevisionSnapshot snapshot, List<string> notes, CancellationToken cancellationToken)
+		string packageId, PackageRevisionSnapshot snapshot, HashSet<(string Objid, string Attribute)> sharedAttributes,
+		List<string> notes, CancellationToken cancellationToken)
 	{
 		var noDecisions = new Dictionary<string, PackageConflictDecision>(StringComparer.Ordinal);
 		// Fold once, here, so the whole rollback speaks canonical: a revision written before lock
@@ -551,7 +554,9 @@ public partial class PackageInstallService
 			var want = target.GetValueOrDefault(objid);
 			var have = current.GetValueOrDefault(objid) ?? PackageStructureBaseline.Empty;
 
-			foreach (var change in StructureRollbackChanges(objid, have, want))
+			foreach (var change in StructureRollbackChanges(objid, have, want)
+				.Where(c => !(c is { Kind: PackageStructureKind.AttributeFlag, Action: PackageStructureAction.Remove, Attribute: { } attribute }
+					&& sharedAttributes.Contains((objid, attribute.ToUpperInvariant())))))
 			{
 				var error = await ApplyStructureChangeAsync(writes, change, objid, noDecisions, notes, cancellationToken);
 				if (error is not null)
