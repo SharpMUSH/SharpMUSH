@@ -64,9 +64,9 @@ public class SetupIdentityTests : BunitContext
 		public OnboardingSettings? SaveResponse;
 		public bool FailNextSave;
 		/// <summary>The configuration api/configuration answers with.</summary>
-		public SharpMUSHOptions Options = SharpMUSHOptions.Default();
+		public readonly SharpMUSHOptions Options = SharpMUSHOptions.Default();
 		/// <summary>The changes each configuration save sent, in order.</summary>
-		public List<Dictionary<string, JsonElement>> ConfigSaves = [];
+		public readonly List<Dictionary<string, JsonElement>> ConfigSaves = [];
 		/// <summary>Whether a configuration save is refused, as the server refuses an invalid value.</summary>
 		public bool RefuseConfig;
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
