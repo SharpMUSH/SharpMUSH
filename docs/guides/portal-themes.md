@@ -195,12 +195,12 @@ value is one rule in `SharpMUSH.Client/wwwroot/css/themes/`, keyed on a data att
 | `shape.css` | `data-corners`, `data-titles` |
 | `textures.css` | `data-texture`, `data-texture-strength` |
 | `frames.css` | `data-frame-marks`, `data-frame-edge`, `data-frame-shadow` |
-| `titles.css` | `data-ornament-glyphs`, `data-ornament-underline`, `data-effect-color`, `data-effect-shadow` |
+| `titles.css` | `data-ornament-glyphs`, `data-ornament-underline`, `data-effect-color`, `data-effect-shadow`, `data-highlight` |
 | `imagery.css` | `data-imagery` |
 | `menus.css` | `data-selection`, `data-buttons`, `data-material`, `data-meters` |
 | `motion.css` | `data-motion`, `data-atmosphere` |
 
-Six of the settings come from game menus, and any theme can take any of them. A theme that names none gets the
+Seven of the settings come from game menus, and any theme can take any of them. A theme that names none gets the
 first choice of each, which is how the portal looked before they existed:
 
 - **Current line** (`selection`): how the current page in a menu is marked. `standard` (each menu's own mark: a glowing bar in the
@@ -252,9 +252,10 @@ first choice of each, which is how the portal looked before they existed:
   turning very slowly about a sun below the window). Its colours are the theme's.
 
   Besides a still, a deep and a moving layer, the atmosphere has a lit layer on top (`--atmosphere-lit`, with
-  `--atmosphere-lit-size`, `--atmosphere-lit-mask` and `--atmosphere-lit-motion`): light that shows only through its
-  mask, usually the drawings the texture names as catching light (`--texture-lit-mask`, and `--texture-lit-at` for
-  the point a turning light turns about). `--atmosphere-still-motion` gives the still layer a loop of its own, and
+  `--atmosphere-lit-size`, `--atmosphere-lit-repeat`, `--atmosphere-lit-mask` and `--atmosphere-lit-motion`): light
+  that shows only through its mask, usually the drawings the texture names as catching light (`--texture-lit-mask`,
+  and `--texture-lit-at` for the point a turning light turns about). `--atmosphere-lit-follow` gives the lit layer the
+  texture's own movement (its drift and its layers' loop), so the light stays on the drawings it lights. `--atmosphere-still-motion` gives the still layer a loop of its own, and
   `--texture-layer-motion` the texture's drawn layers (the readout rolls upward). A drawing that animates itself, as
   the turning crystals do, names a still drawing beside it, `var(--ambient-flow, <moving>), var(--ambient-rest,
   <still>)`, so only the still one shows under `still` motion or reduced motion.

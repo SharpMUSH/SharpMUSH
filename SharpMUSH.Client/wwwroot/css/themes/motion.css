@@ -174,8 +174,10 @@
 	--atmosphere-repeat: repeat;
 	--atmosphere-lit: none;
 	--atmosphere-lit-size: auto;
+	--atmosphere-lit-repeat: no-repeat;
 	--atmosphere-lit-mask: none;
 	--atmosphere-lit-motion: none;
+	--atmosphere-lit-follow: none;
 }
 
 /* None: nothing between the texture and the page. */
@@ -412,12 +414,12 @@
 @property --turn { syntax: "<angle>"; inherits: true; initial-value: 0deg; }
 @keyframes theme-turn { to { --turn: 360deg; } }
 @keyframes theme-sweep-down {
-	0% { background-position: 0 -40%; }
-	100% { background-position: 0 140%; }
+	0% { background-position: 0 -55%; }
+	100% { background-position: 0 155%; }
 }
 @keyframes theme-glint {
-	0%, 55% { background-position: -60% 0; }
-	85%, 100% { background-position: 160% 0; }
+	0%, 55% { background-position: -90% 0; }
+	85%, 100% { background-position: 190% 0; }
 }
 @keyframes theme-pulse {
 	0%, 100% { opacity: 0.55; }
@@ -440,7 +442,7 @@
 }
 @keyframes theme-rise-motes {
 	from { background-position: 0 0, 0 0; }
-	to { background-position: 30px -400px, -40px -560px; }
+	to { background-position: 60px -400px, -90px -500px; }
 }
 @keyframes theme-bob-crowd {
 	0%, 100% { background-position: 0 100%, 14px 100%; rotate: 0deg; }
@@ -460,6 +462,7 @@
 	--atmosphere-lit: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 35%, transparent) 45%, color-mix(in srgb, var(--accent) 60%, var(--text)) 50%, transparent);
 	--atmosphere-lit-size: 100% 34%;
 	--atmosphere-lit-mask: var(--texture-lit-mask);
+	--atmosphere-lit-follow: var(--texture-motion, none), var(--texture-layer-motion, none);
 	--atmosphere-lit-motion: theme-sweep-down 12s cubic-bezier(0.55, 0, 0.9, 0.6) infinite;
 }
 
@@ -471,6 +474,7 @@
 	--atmosphere-lit: linear-gradient(105deg, transparent 42%, color-mix(in srgb, var(--text) 32%, transparent) 50%, transparent 58%);
 	--atmosphere-lit-size: 60% 100%;
 	--atmosphere-lit-mask: var(--texture-lit-mask);
+	--atmosphere-lit-follow: var(--texture-motion, none), var(--texture-layer-motion, none);
 	--atmosphere-lit-motion: theme-glint 26s ease-in-out infinite;
 }
 
@@ -481,11 +485,13 @@
 	--atmosphere-size: 100% 100%;
 	--atmosphere-motion: theme-turn 12s linear infinite;
 	--atmosphere-lit-mask: var(--texture-lit-mask);
+	--atmosphere-lit-follow: var(--texture-motion, none), var(--texture-layer-motion, none);
 	--atmosphere-lit-motion: theme-turn 12s linear infinite;
 }
-/* The turning gradients are declared on the layers themselves, where --turn is animated. */
-[data-atmosphere="radar"] .theme-atmosphere-moving { --atmosphere-moving: conic-gradient(from var(--turn) at var(--texture-lit-at), transparent 0deg 280deg, color-mix(in srgb, var(--accent) 8%, transparent) 320deg, color-mix(in srgb, var(--accent) 32%, transparent) 358deg, color-mix(in srgb, var(--accent) 60%, transparent) 359.5deg, transparent 360deg); }
-[data-atmosphere="radar"] .theme-atmosphere-lit { --atmosphere-lit: conic-gradient(from var(--turn) at var(--texture-lit-at), transparent 0deg 300deg, color-mix(in srgb, var(--accent) 45%, transparent) 350deg, color-mix(in srgb, var(--accent) 55%, var(--text)) 359.5deg, transparent 360deg); }
+/* The turning gradients are declared on the layers themselves, where --turn is animated, and only on layers whose
+   nearest atmosphere is this one, so a swatch or preview of another atmosphere inside the page keeps its own. */
+[data-atmosphere="radar"] .theme-atmosphere-moving:not([data-atmosphere="radar"] [data-atmosphere]:not([data-atmosphere="radar"]) *) { --atmosphere-moving: conic-gradient(from var(--turn) at var(--texture-lit-at), transparent 0deg 280deg, color-mix(in srgb, var(--accent) 8%, transparent) 320deg, color-mix(in srgb, var(--accent) 32%, transparent) 358deg, color-mix(in srgb, var(--accent) 60%, transparent) 359.5deg, transparent 360deg); }
+[data-atmosphere="radar"] .theme-atmosphere-lit:not([data-atmosphere="radar"] [data-atmosphere]:not([data-atmosphere="radar"]) *) { --atmosphere-lit: conic-gradient(from var(--turn) at var(--texture-lit-at), transparent 0deg 300deg, color-mix(in srgb, var(--accent) 45%, transparent) 350deg, color-mix(in srgb, var(--accent) 55%, var(--text)) 359.5deg, transparent 360deg); }
 
 /* Orbit: the same turning light, slower and gentler, in the second accent, as power running round a magic circle. */
 [data-atmosphere="orbit"] {
@@ -496,9 +502,10 @@
 	--atmosphere-size: auto;
 	--atmosphere-motion: theme-motes-rise 60s linear infinite, theme-motes-sway 9s ease-in-out infinite alternate;
 	--atmosphere-lit-mask: var(--texture-lit-mask);
+	--atmosphere-lit-follow: var(--texture-motion, none), var(--texture-layer-motion, none);
 	--atmosphere-lit-motion: theme-turn 30s linear infinite;
 }
-[data-atmosphere="orbit"] .theme-atmosphere-lit { --atmosphere-lit: conic-gradient(from var(--turn) at var(--texture-lit-at), transparent 0deg 250deg, var(--accent) 340deg, var(--text) 359deg, transparent 360deg); }
+[data-atmosphere="orbit"] .theme-atmosphere-lit:not([data-atmosphere="orbit"] [data-atmosphere]:not([data-atmosphere="orbit"]) *) { --atmosphere-lit: conic-gradient(from var(--turn) at var(--texture-lit-at), transparent 0deg 250deg, var(--accent) 340deg, var(--text) 359deg, transparent 360deg); }
 
 /* Twinkle: the texture's stars and bursts flare and fade, and a few points of light blink between them. */
 [data-atmosphere="twinkle"] {
@@ -509,6 +516,7 @@
 	--atmosphere-motion: theme-twinkle 7s ease-in-out infinite;
 	--atmosphere-lit: color-mix(in srgb, var(--text) 55%, transparent);
 	--atmosphere-lit-mask: var(--texture-lit-mask);
+	--atmosphere-lit-follow: var(--texture-motion, none), var(--texture-layer-motion, none);
 	--atmosphere-lit-motion: theme-twinkle 10s ease-in-out infinite;
 }
 
@@ -519,6 +527,7 @@
 	--atmosphere-motion: none;
 	--atmosphere-lit: color-mix(in srgb, var(--text) 80%, transparent);
 	--atmosphere-lit-mask: var(--texture-lit-mask);
+	--atmosphere-lit-follow: var(--texture-motion, none), var(--texture-layer-motion, none);
 	--atmosphere-lit-motion: theme-blink 6s steps(3, jump-none) infinite;
 }
 
@@ -545,7 +554,9 @@
 	--atmosphere-motion: theme-bob-crowd 2.6s ease-in-out infinite;
 	--atmosphere-lit: radial-gradient(circle at 20% 30%, var(--text) 0 2px, transparent 4px), radial-gradient(circle at 70% 70%, var(--accent-3) 0 1.5px, transparent 3.5px);
 	--atmosphere-lit-size: 60px 80px, 90px 100px;
+	--atmosphere-lit-repeat: repeat;
 	--atmosphere-lit-mask: var(--texture-lit-mask);
+	--atmosphere-lit-follow: var(--texture-motion, none), var(--texture-layer-motion, none);
 	--atmosphere-lit-motion: theme-rise-motes 24s linear infinite;
 }
 
@@ -558,6 +569,7 @@
 	--atmosphere-motion: theme-beacon 4s ease-in-out -2s infinite;
 	--atmosphere-lit: color-mix(in srgb, var(--accent-2) 80%, var(--text));
 	--atmosphere-lit-mask: var(--texture-lit-mask);
+	--atmosphere-lit-follow: var(--texture-motion, none), var(--texture-layer-motion, none);
 	--atmosphere-lit-motion: theme-beacon 4s ease-in-out infinite;
 }
 
@@ -569,7 +581,7 @@
 	--atmosphere-motion: theme-turn 360s linear infinite;
 }
 
-[data-atmosphere="rays"] .theme-atmosphere-moving { --atmosphere-moving: repeating-conic-gradient(from var(--turn) at 50% 115%, color-mix(in srgb, var(--accent-3) 22%, transparent) 0deg 3deg, transparent 3deg 9deg); }
+[data-atmosphere="rays"] .theme-atmosphere-moving:not([data-atmosphere="rays"] [data-atmosphere]:not([data-atmosphere="rays"]) *) { --atmosphere-moving: repeating-conic-gradient(from var(--turn) at 50% 115%, color-mix(in srgb, var(--accent-3) 22%, transparent) 0deg 3deg, transparent 3deg 9deg); }
 [data-scheme="light"][data-atmosphere="glint"] { --atmosphere-lit: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.5) 50%, transparent 58%); }
 [data-scheme="light"][data-atmosphere="sweep"] { --atmosphere-lit: linear-gradient(180deg, transparent, var(--accent) 50%, transparent); }
 

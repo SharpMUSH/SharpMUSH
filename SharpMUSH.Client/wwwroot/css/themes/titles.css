@@ -12,7 +12,8 @@
 
 [data-ornament-glyphs="none"] { --ornament-before: none; --ornament-after: none; }
 [data-ornament-underline="none"] { --title-underline: none; --title-underline-height: 2px; --title-underline-pad: 0px; }
-[data-effect-shadow="none"] { --title-shadow: none; }
+[data-effect-shadow] { --title-glow-under: var(--title-shadow); }
+[data-effect-shadow="none"] { --title-shadow: none; --title-glow-under: 0 0 transparent; }
 
 /* Fleuron: a hedera before, a rotated floral heart after. */
 [data-ornament-glyphs="fleuron"] { --ornament-before: "\2619"; --ornament-after: "\2767"; }
@@ -448,14 +449,14 @@
 }
 
 @keyframes theme-neon-title {
-	0%, 6%, 9%, 100% { text-shadow: var(--title-shadow), 0 0 10px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 26px color-mix(in srgb, var(--accent) 35%, transparent); opacity: 1; }
+	0%, 6%, 9%, 100% { text-shadow: var(--title-glow-under), 0 0 10px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 26px color-mix(in srgb, var(--accent) 35%, transparent); opacity: 1; }
 	7% { text-shadow: var(--title-shadow); opacity: 0.7; }
-	8% { text-shadow: var(--title-shadow), 0 0 6px var(--accent); opacity: 0.9; }
-	50% { text-shadow: var(--title-shadow), 0 0 14px color-mix(in srgb, var(--accent) 80%, transparent), 0 0 34px color-mix(in srgb, var(--accent) 45%, transparent); }
+	8% { text-shadow: var(--title-glow-under), 0 0 6px var(--accent); opacity: 0.9; }
+	50% { text-shadow: var(--title-glow-under), 0 0 14px color-mix(in srgb, var(--accent) 80%, transparent), 0 0 34px color-mix(in srgb, var(--accent) 45%, transparent); }
 }
 @keyframes theme-glow-title {
-	0%, 100% { text-shadow: var(--title-shadow), 0 0 6px color-mix(in srgb, var(--accent) 30%, transparent); }
-	50% { text-shadow: var(--title-shadow), 0 0 16px color-mix(in srgb, var(--accent) 70%, transparent); }
+	0%, 100% { text-shadow: var(--title-glow-under), 0 0 6px color-mix(in srgb, var(--accent) 30%, transparent); }
+	50% { text-shadow: var(--title-glow-under), 0 0 16px color-mix(in srgb, var(--accent) 70%, transparent); }
 }
 @keyframes theme-glitch-title {
 	0%, 92%, 100% { text-shadow: var(--title-shadow); translate: 0 0; }
@@ -464,8 +465,8 @@
 	97% { text-shadow: -1px 0 var(--accent), 1px 0 var(--accent-2); translate: 0 0; }
 }
 @keyframes theme-flicker-title {
-	0%, 100% { text-shadow: var(--title-shadow), 0 0 10px color-mix(in srgb, var(--warn) 45%, transparent); }
-	30% { text-shadow: var(--title-shadow), 0 0 6px color-mix(in srgb, var(--warn) 30%, transparent); }
-	55% { text-shadow: var(--title-shadow), 0 0 14px color-mix(in srgb, var(--warn) 55%, transparent); }
-	75% { text-shadow: var(--title-shadow), 0 0 8px color-mix(in srgb, var(--warn) 35%, transparent); }
+	0%, 100% { text-shadow: var(--title-glow-under), 0 0 10px color-mix(in srgb, var(--warn) 45%, transparent); }
+	30% { text-shadow: var(--title-glow-under), 0 0 6px color-mix(in srgb, var(--warn) 30%, transparent); }
+	55% { text-shadow: var(--title-glow-under), 0 0 14px color-mix(in srgb, var(--warn) 55%, transparent); }
+	75% { text-shadow: var(--title-glow-under), 0 0 8px color-mix(in srgb, var(--warn) 35%, transparent); }
 }

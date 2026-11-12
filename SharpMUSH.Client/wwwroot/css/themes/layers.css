@@ -118,12 +118,14 @@
 }
 
 /* The lit layer, on top: light that shows only through its mask, often the texture's own drawings
-   (--texture-lit-mask), so rain takes the colour of the sign behind it and a radar beam lights only its contacts. */
+   (--texture-lit-mask), so rain takes the colour of the sign behind it and a radar beam lights only its contacts.
+   Cut to the texture's drawings, it also moves as they do (--atmosphere-lit-follow: the texture's drift and its
+   layers' loop), so the light stays on them. */
 .theme-atmosphere-lit {
 	background: var(--atmosphere-lit);
 	background-size: var(--atmosphere-lit-size);
-	background-repeat: no-repeat;
+	background-repeat: var(--atmosphere-lit-repeat);
 	mask: var(--atmosphere-lit-mask);
-	animation: var(--atmosphere-lit-motion);
+	animation: var(--atmosphere-lit-motion), var(--atmosphere-lit-follow);
 	animation-play-state: var(--ambient-play);
 }
