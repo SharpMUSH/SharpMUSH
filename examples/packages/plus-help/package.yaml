@@ -384,6 +384,8 @@ objects:
         value: |-
           max(10,width(%#,78))
         flags: [funsyntax]
+      DATA`TEMPLATE`GET`FRAME: |-
+        {"side":"","corner":"","teel":"","teer":"","pad":0}
       # Every screen is a box() with no sides, corners or tees: a titled line across the top, the
       # dividers and bottom line across the whole width, and nothing beside the text, so a line copied
       # from a terminal carries no |. The portal draws its usual card. Table headings are bold rather
@@ -391,7 +393,7 @@ objects:
       # no arguments — the options every screen's box is drawn with
       FUN`GET`FRAME:
         value: |-
-          lit({"side":"","corner":"","teel":"","teer":"","pad":0})
+          v(DATA`TEMPLATE`GET`FRAME)
         flags: [funsyntax]
       # %0 a record — its first paragraph that is not a heading, rendered and on one line. The listing's
       # Summary column wraps it to the reader's width.
@@ -399,11 +401,13 @@ objects:
         value: |-
           squish(edit(rendermarkdowncustom(before(regedit(regeditall(%r[u(%!/FUN`RECORD`TEXT,%0)],%r#+ .*,),^%r+,),%r%r),%!,1000),%r,%b))
         flags: [funsyntax]
+      DATA`TEMPLATE`DISPLAY`SOURCETABLE: |-
+        {"rule":"","delim":"","nowrap":"1","min":"","grow":""}
       # %0 sources — the descriptive table on +help/sources. Cells are joined with %r and
       # split on a newline, so a description holding a | stays one cell
       FUN`DISPLAY`SOURCETABLE:
         value: |-
-          datacolumns(json_fill(lit({"rule":"","delim":"","nowrap":"1","min":"","grow":""}),/delim,%r,/min,%r20,/grow,%r1),[tone(strong,Source)]%r[iter(%0,cmdlink(%i0,+help/list %i0),%b,%r)],[tone(strong,Covers)]%r[iter(%0,edit(u(%!/FUN`SOURCE`DESCRIPTION,%i0),%r,%b),%b,%r)])
+          datacolumns(json_fill(v(DATA`TEMPLATE`DISPLAY`SOURCETABLE),/delim,%r,/min,%r20,/grow,%r1),[tone(strong,Source)]%r[iter(%0,cmdlink(%i0,+help/list %i0),%b,%r)],[tone(strong,Covers)]%r[iter(%0,edit(u(%!/FUN`SOURCE`DESCRIPTION,%i0),%r,%b),%b,%r)])
         flags: [funsyntax]
       # %0 live sources — short clickable names flow into as many columns as each reader can fit.
       # Leave width to the layout renderer so the portal can reflow the same grid responsively.
@@ -431,7 +435,7 @@ objects:
       # what follows them. The next page is head/<n> tail.
       FUN`DISPLAY`LISTING:
         value: |-
-          setq(listing_slice,u(%!/FUN`PAGE`SLICE,%<list>,%<page>))[box(datacolumns(json_fill(lit({"rule":"","delim":"","nowrap":"1","min":"","grow":""}),/delim,%r,/min,%r20,/grow,%r1),[tone(strong,Topic)]%r[iter(%q<listing_slice>,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],[tone(strong,Summary)]%r[iter(%q<listing_slice>,u(%!/FUN`DISPLAY`SUMMARY,%i0),%b,%r)]),%<title>,,u(%!/FUN`GET`FRAME))]%r[words(%<list>)] [if(eq(words(%<list>),1),topic,topics)]%b-%bpage %<page> of %<pages>[if(lt(%<page>,%<pages>),%b-%b%<head>/[add(%<page>,1)][if(strlen(%<tail>),%b%<tail>)])]
+          setq(listing_slice,u(%!/FUN`PAGE`SLICE,%<list>,%<page>))[box(datacolumns(json_fill(v(DATA`TEMPLATE`DISPLAY`SOURCETABLE),/delim,%r,/min,%r20,/grow,%r1),[tone(strong,Topic)]%r[iter(%q<listing_slice>,u(%!/FUN`DISPLAY`REF,%i0),%b,%r)],[tone(strong,Summary)]%r[iter(%q<listing_slice>,u(%!/FUN`DISPLAY`SUMMARY,%i0),%b,%r)]),%<title>,,u(%!/FUN`GET`FRAME))]%r[words(%<list>)] [if(eq(words(%<list>),1),topic,topics)]%b-%bpage %<page> of %<pages>[if(lt(%<page>,%<pages>),%b-%b%<head>/[add(%<page>,1)][if(strlen(%<tail>),%b%<tail>)])]
         flags: [funsyntax]
       # One subtopic, named as it is known under its parent, running the full +help for it.
       # %0 a child record — its short name, clickable
@@ -477,11 +481,13 @@ objects:
         value: |-
           if(isdbref(setr(source_object,first(u(%!/FUN`SOURCE`OBJECTS,%0)))),%q<source_object>)
         flags: [funsyntax]
+      DATA`TEMPLATE`DISPLAY`SOURCES: |-
+        {"rule":"","delim":"","nowrap":"","priority":"","grow":""}
       # %0 every record — the registry and what each entry contributes; a source whose object is gone is said
       # to be missing rather than shown a #-1
       FUN`DISPLAY`SOURCES:
         value: |-
-          setq(source_names,u(%!/FUN`GET`SOURCES))[box(u(%!/FUN`DISPLAY`SOURCETABLE,%q<source_names>)%r[rule(Registry)]%r[datacolumns(json_fill(lit({"rule":"","delim":"","nowrap":"","priority":"","grow":""}),/delim,%r,/nowrap,1%r2%r4,/priority,1%r2%r1%r1,/grow,%r%r1),[tone(strong,Source)]%r[iter(%q<source_names>,%i0,%b,%r)],[tone(strong,Object)]%r[iter(%q<source_names>,firstof(num(u(%!/FUN`DISPLAY`SOURCEOBJECT,%i0)),-),%b,%r)],[tone(strong,Name)]%r[iter(%q<source_names>,firstof(name(u(%!/FUN`DISPLAY`SOURCEOBJECT,%i0)),object is missing),%b,%r)],>[tone(strong,Topics)]%r[iter(%q<source_names>,words(u(%!/FUN`GET`OF,%0,%i0)),%b,%r)])],Help sources,,u(%!/FUN`GET`FRAME))]%r+help/source <name>=<object>
+          setq(source_names,u(%!/FUN`GET`SOURCES))[box(u(%!/FUN`DISPLAY`SOURCETABLE,%q<source_names>)%r[rule(Registry)]%r[datacolumns(json_fill(v(DATA`TEMPLATE`DISPLAY`SOURCES),/delim,%r,/nowrap,1%r2%r4,/priority,1%r2%r1%r1,/grow,%r%r1),[tone(strong,Source)]%r[iter(%q<source_names>,%i0,%b,%r)],[tone(strong,Object)]%r[iter(%q<source_names>,firstof(num(u(%!/FUN`DISPLAY`SOURCEOBJECT,%i0)),-),%b,%r)],[tone(strong,Name)]%r[iter(%q<source_names>,firstof(name(u(%!/FUN`DISPLAY`SOURCEOBJECT,%i0)),object is missing),%b,%r)],>[tone(strong,Topics)]%r[iter(%q<source_names>,words(u(%!/FUN`GET`OF,%0,%i0)),%b,%r)])],Help sources,,u(%!/FUN`GET`FRAME))]%r+help/source <name>=<object>
         flags: [funsyntax]
 
       # ── Markdown rendering ──────────────────────────────────────────────────

@@ -399,17 +399,21 @@ objects:
         value: |-
           if(member(lwho(%1),num(%0)),on now · idle [u(%!/FUN`DISPLAY`DURATION,idle(%0))],if(isint(setr(last_logout,convtime(get(%0/LASTLOGOUT)))),u(%!/FUN`DISPLAY`DURATION,sub(secs(),%q<last_logout>)) ago))
         flags: [funsyntax]
+      DATA`TEMPLATE`DISPLAY`FRAME: |-
+        {"side":"","corner":"","teel":"","teer":"","pad":0}
       # Every screen is a box() with no sides, corners or tees, as +help's and +scene's are, so a quote copied
       # from a terminal carries no |.
       FUN`DISPLAY`FRAME:
         value: |-
-          lit({"side":"","corner":"","teel":"","teer":"","pad":0})
+          v(DATA`TEMPLATE`DISPLAY`FRAME)
         flags: [funsyntax]
+      DATA`TEMPLATE`DISPLAY`TABLEOPTIONS: |-
+        {"rule":"","delim":"","nowrap":"","priority":"","grow":""}
       # Table options, every list split by a new line: %0 the columns that never wrap, %1 each column's
       # priority, %2 each column's share of the spare width.
       FUN`DISPLAY`TABLEOPTIONS:
         value: |-
-          json_fill(lit({"rule":"","delim":"","nowrap":"","priority":"","grow":""}),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2)
+          json_fill(v(DATA`TEMPLATE`DISPLAY`TABLEOPTIONS),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2)
         flags: [funsyntax]
 
       # ---- +finger and +oocfinger -------------------------------------------------

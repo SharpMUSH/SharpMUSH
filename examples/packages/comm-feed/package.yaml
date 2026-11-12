@@ -68,6 +68,8 @@ objects:
       # message alone — the speaker's name is the payload's from.
       FUN`COMM`TEXT: |-
         switch(%0,pose,%1 %2,semipose,%1%2,%2)
+      DATA`TEMPLATE`COMM`CHANNELROW: |-
+        {"name":"","joined":null,"members":0,"description":""}
       # One channel row (%0 = the channel's name, %1 = the viewer): whether
       # the viewer is on it, how many are, and its description, for the Play
       # drawer's channel browser; gagged appears only on a channel the viewer
@@ -78,14 +80,18 @@ objects:
       # spoiling the list: it has no member count, or its old name now only
       # abbreviates another channel, whose name cinfo() gives back.
       FUN`COMM`CHANNELROW: |-
-        if(cand(not(comp(cinfo(%0,name),%0)),isnum(setr(member_count,cusers(%0)))),json_mod(json_fill(lit({"name":"","joined":null,"members":0,"description":""}),/name,%0,/joined,if(member(cstatus(%1,%0),ON),true,false),/members,%q<member_count>,/description,cdesc(%0)),patch,json(object,gagged,if(member(cstatus(%1,%0),GAG),true,null))))
+        if(cand(not(comp(cinfo(%0,name),%0)),isnum(setr(member_count,cusers(%0)))),json_mod(json_fill(v(DATA`TEMPLATE`COMM`CHANNELROW),/name,%0,/joined,if(member(cstatus(%1,%0),ON),true,false),/members,%q<member_count>,/description,cdesc(%0)),patch,json(object,gagged,if(member(cstatus(%1,%0),GAG),true,null))))
 
+      DATA`TEMPLATE`COMM`CHANNELS: |-
+        {"v":2,"viewer":{"name":"","objid":""},"channels":null}
       # ── Payloads ─────────────────────────────────────────────────────────
       # comm.channels for a viewer (%0): who it is for, and every channel they
       # may see, on it or not. channels() lists what its executor may see, so
       # objeval() asks it as the viewer: this wizard handler would see them all.
       FUN`COMM`CHANNELS: |-
-        json_fill(lit({"v":2,"viewer":{"name":"","objid":""},"channels":null}),/viewer/name,name(%0),/viewer/objid,objid(%0),/channels,json_array(squish(iter(objeval(%0,channels()),u(me/FUN`COMM`CHANNELROW,%i0,%0),,%r),%r),%r))
+        json_fill(v(DATA`TEMPLATE`COMM`CHANNELS),/viewer/name,name(%0),/viewer/objid,objid(%0),/channels,json_array(squish(iter(objeval(%0,channels()),u(me/FUN`COMM`CHANNELROW,%i0,%0),,%r),%r),%r))
+      DATA`TEMPLATE`COMM`MESSAGE: |-
+        {"v":2,"kind":"","to":null,"from":"","text":"","style":"","ts":0}
       # comm.message, from named arguments: kind (channel|page), channel (a
       # channel line's channel), speaker (the speaker's objid; empty for a
       # sourceless line), name (the speaker's name), style, message, time
@@ -98,13 +104,15 @@ objects:
       # key a line has no value for is absent, not null — a null in a
       # json_mod() patch removes the key.
       FUN`COMM`MESSAGE: |-
-        json_mod(json_fill(lit({"v":2,"kind":"","to":null,"from":"","text":"","style":"","ts":0}),/kind,%<kind>,/to,json_array(iter(%<to>,json(string,name(%i0)),,%r),%r),/from,%<name>,/text,setr(text,uargs(me/FUN`COMM`TEXT,0,%<style>,1,%<name>,2,%<message>,style,%<style>,name,%<name>,message,%<message>)),/style,%<style>,/ts,%<time>),patch,json(object,channel,if(strlen(%<channel>),json(string,%<channel>),null),fromObjid,if(strlen(%<speaker>),json(string,%<speaker>),null),toObjids,if(words(%<to>),json_array(iter(%<to>,json(string,%i0),,%r),%r),null),id,if(strlen(%<id>),json(number,%<id>),null),markup,json(markupstring,%q<text>),picture,if(strlen(%<picture>),json(string,%<picture>),null)))
+        json_mod(json_fill(v(DATA`TEMPLATE`COMM`MESSAGE),/kind,%<kind>,/to,json_array(iter(%<to>,json(string,name(%i0)),,%r),%r),/from,%<name>,/text,setr(text,uargs(me/FUN`COMM`TEXT,0,%<style>,1,%<name>,2,%<message>,style,%<style>,name,%<name>,message,%<message>)),/style,%<style>,/ts,%<time>),patch,json(object,channel,if(strlen(%<channel>),json(string,%<channel>),null),fromObjid,if(strlen(%<speaker>),json(string,%<speaker>),null),toObjids,if(words(%<to>),json_array(iter(%<to>,json(string,%i0),,%r),%r),null),id,if(strlen(%<id>),json(number,%<id>),null),markup,json(markupstring,%q<text>),picture,if(strlen(%<picture>),json(string,%<picture>),null)))
 
+      DATA`TEMPLATE`COMM`WHO: |-
+        {"v":2,"channel":"","member":{"name":"","objid":""},"online":null}
       # comm.who, from named arguments: channel, member (objid), name (the
       # member's name) and change (on|off): the member came onto or went off
       # the channel's member list.
       FUN`COMM`WHO: |-
-        json_fill(lit({"v":2,"channel":"","member":{"name":"","objid":""},"online":null}),/channel,%<channel>,/member/name,%<name>,/member/objid,%<member>,/online,if(strmatch(%<change>,on),true,false))
+        json_fill(v(DATA`TEMPLATE`COMM`WHO),/channel,%<channel>,/member/name,%<name>,/member/objid,%<member>,/online,if(strmatch(%<change>,on),true,false))
 
       # ── The handlers ─────────────────────────────────────────────────────
       # Each reads the event's arguments by name (help event list). null()

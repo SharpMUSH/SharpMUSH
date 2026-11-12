@@ -297,10 +297,12 @@ objects:
           summary_veils,iter(%q<summary_warnings>,u(%!/FUN`SCENE`COUNT,%q<summary_keys>,%i0,VEILS),|,|),
           summary_rows,squish(iter(%q<summary_warnings>,if(add(extract(%q<summary_lines>,inum(0),1,|),extract(%q<summary_veils>,inum(0),1,|)),inum(0)),|,%b)))[if(words(%q<summary_rows>),rule(Safety)%r[u(%!/FUN`SCENE`TABLE)]%r[tone(muted,u(%!/FUN`SCENE`NOTE,words(%q<summary_keys>)))])]
         flags: [funsyntax]
+      DATA`TEMPLATE`SCENE`TABLE: |-
+        {"rule":"","delim":"","nowrap":"","grow":"","min":""}
       # The summary's table: one row per warning touched, from the registers FUN`SCENE`SUMMARY sets.
       FUN`SCENE`TABLE:
         value: |-
-          datacolumns(json_fill(lit({"rule":"","delim":"","nowrap":"","grow":"","min":""}),/delim,%r,/nowrap,2%r3,/grow,1%r%r,/min,16%r%r),[tone(strong,Content warning)]%r[iter(%q<summary_rows>,extract(%q<summary_warnings>,%i0,1,|),,%r)],>[tone(strong,Lines)]%r[iter(%q<summary_rows>,extract(%q<summary_lines>,%i0,1,|),,%r)],>[tone(strong,Veils)]%r[iter(%q<summary_rows>,extract(%q<summary_veils>,%i0,1,|),,%r)])
+          datacolumns(json_fill(v(DATA`TEMPLATE`SCENE`TABLE),/delim,%r,/nowrap,2%r3,/grow,1%r%r,/min,16%r%r),[tone(strong,Content warning)]%r[iter(%q<summary_rows>,extract(%q<summary_warnings>,%i0,1,|),,%r)],>[tone(strong,Lines)]%r[iter(%q<summary_rows>,extract(%q<summary_lines>,%i0,1,|),,%r)],>[tone(strong,Veils)]%r[iter(%q<summary_rows>,extract(%q<summary_veils>,%i0,1,|),,%r)])
         flags: [funsyntax]
       # %0 how many other people are in the scene: what the counts mean, and when they are not anonymous.
       FUN`SCENE`NOTE:

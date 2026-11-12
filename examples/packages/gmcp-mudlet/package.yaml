@@ -212,9 +212,11 @@ objects:
       FUN`CLIENT`SCREENREADER: |-
         member(terminfo(%0),screenreader)
 
+      DATA`TEMPLATE`PAYLOAD`GUI: |-
+        {"version":"","url":""}
       # ── Payloads ─────────────────────────────────────────────────────────
       FUN`PAYLOAD`GUI: |-
-        json_fill(lit({"version":"","url":""}),/version,u(%!/FUN`GUI`VERSION),/url,u(%!/FUN`GUI`URL))
+        json_fill(v(DATA`TEMPLATE`PAYLOAD`GUI),/version,u(%!/FUN`GUI`VERSION),/url,u(%!/FUN`GUI`URL))
       FUN`PAYLOAD`MAP: |-
         json(object,url,json(string,v(DATA`CONFIG`MAP-URL)))
       # A setting as a JSON string, or null when it is empty, so a json_mod() patch leaves it out.

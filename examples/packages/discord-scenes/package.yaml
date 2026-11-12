@@ -119,12 +119,14 @@ objects:
           if(strmatch(setr(scene_text,scene(%0,%1)),#-1*),,%q<scene_text>)
         flags: [funsyntax]
 
+      DATA`TEMPLATE`EVENT`JSON: |-
+        {"name":"","start":null,"end":null,"location":"","description":""}
       # ---- what Discord gets ----------------------------------------------------------------
       # %0 a scene, with FUN`SCENE`READ's registers set: the event as @discord/event takes it. Its name is the
       # scene's title, its description the scene's summary, and where it is its page on the game's website.
       FUN`EVENT`JSON:
         value: |-
-          json_fill(lit({"name":"","start":null,"end":null,"location":"","description":""}),/name,firstof(scene(%0,title),Scene %0),/start,div(%q<scene_at>,1000),/end,add(div(%q<scene_at>,1000),v(DATA`CONFIG`LENGTH)),/location,u(%!/FUN`EVENT`LOCATION,%0),/description,u(%!/FUN`SCENE`TEXT,%0,summary))
+          json_fill(v(DATA`TEMPLATE`EVENT`JSON),/name,firstof(scene(%0,title),Scene %0),/start,div(%q<scene_at>,1000),/end,add(div(%q<scene_at>,1000),v(DATA`CONFIG`LENGTH)),/location,u(%!/FUN`EVENT`LOCATION,%0),/description,u(%!/FUN`SCENE`TEXT,%0,summary))
         flags: [funsyntax]
       # %0 a scene: its page on the game's website when mud_url is set, else the game's name and the scene's room.
       FUN`EVENT`LOCATION:

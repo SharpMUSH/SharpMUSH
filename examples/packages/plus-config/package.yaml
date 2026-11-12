@@ -647,12 +647,14 @@ objects:
         value: |-
           if(%0,squish(etime(%0)),0s)
         flags: [funsyntax]
+      DATA`TEMPLATE`DISPLAY`OPTIONS: |-
+        {"delim":"","nowrap":"","priority":"","grow":"","min":""}
       # Options for a datacolumns() table whose cells are joined with %r, so a value with a | stays one
       # cell. %0 the nowrap columns, %1 the priorities, %2 each column's share of spare width, %3 each
       # column's least width, each list joined with %r.
       FUN`DISPLAY`OPTIONS:
         value: |-
-          json_fill(lit({"delim":"","nowrap":"","priority":"","grow":"","min":""}),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2,/min,%3)
+          json_fill(v(DATA`TEMPLATE`DISPLAY`OPTIONS),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2,/min,%3)
         flags: [funsyntax]
       # %0 the footer's text, under a rule.
       # %0 a display name, %1 a description: both, the name in bold, or "not described" when neither is given.

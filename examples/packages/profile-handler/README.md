@@ -58,7 +58,7 @@ like; `` FUN`PROFILE`FIELD `` reads `` PROFILE`<key> `` with `get()`, never `u()
 Set `show_when_empty: false` on an element if you would rather an unfilled field
 vanished than rendered blank.
 
-The two values, as a manifest that attaches to the http handler writes them (set them on the
+The values, as a manifest that attaches to the http handler writes them (set them on the
 handler in place of the shipped ones):
 
 ```yaml
@@ -66,8 +66,10 @@ objects:
   - ref: handler
     target: "{{$http_handler}}"
     attributes:
+      DATA`TEMPLATE`GET`PROFILE: |-
+        {"character":"","objid":"","dbref":"","fields":{"created":null,"objid":null,"image":null,"banner":null,"color":null,"fullname":null,"alias":null,"age":null,"concept":null,"faction":null,"description":null}}
       GET`PROFILE: |-
-        @assert cand(isdbref(%q<form.objid>),hastype(%q<form.objid>,player))=@respond 404 NO SUCH CHARACTER; @respond/type application/json; think json_fill(lit({"character":"","objid":"","dbref":"","fields":{"created":null,"objid":null,"image":null,"banner":null,"color":null,"fullname":null,"alias":null,"age":null,"concept":null,"faction":null,"description":null}}),/character,name(%q<form.objid>),/objid,objid(%q<form.objid>),/dbref,num(%q<form.objid>),/fields/created,u(FUN`PROFILE`VALUE,ctime(%q<form.objid>)),/fields/objid,u(FUN`PROFILE`VALUE,objid(%q<form.objid>)),/fields/image,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`PICTURE,%q<form.objid>,IMAGE)),/fields/banner,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`PICTURE,%q<form.objid>,IMAGE`BANNER)),/fields/color,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`COLOR,%q<form.objid>)),/fields/fullname,u(FUN`PROFILE`FIELD,%q<form.objid>,fullname),/fields/alias,u(FUN`PROFILE`FIELD,%q<form.objid>,alias),/fields/age,u(FUN`PROFILE`FIELD,%q<form.objid>,age),/fields/concept,u(FUN`PROFILE`FIELD,%q<form.objid>,concept),/fields/faction,u(FUN`PROFILE`FIELD,%q<form.objid>,faction),/fields/description,u(FUN`PROFILE`FIELD,%q<form.objid>,description))
+        @assert cand(isdbref(%q<form.objid>),hastype(%q<form.objid>,player))=@respond 404 NO SUCH CHARACTER; @respond/type application/json; think json_fill(v(DATA`TEMPLATE`GET`PROFILE),/character,name(%q<form.objid>),/objid,objid(%q<form.objid>),/dbref,num(%q<form.objid>),/fields/created,u(FUN`PROFILE`VALUE,ctime(%q<form.objid>)),/fields/objid,u(FUN`PROFILE`VALUE,objid(%q<form.objid>)),/fields/image,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`PICTURE,%q<form.objid>,IMAGE)),/fields/banner,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`PICTURE,%q<form.objid>,IMAGE`BANNER)),/fields/color,u(FUN`PROFILE`VALUE,u(FUN`PROFILE`COLOR,%q<form.objid>)),/fields/fullname,u(FUN`PROFILE`FIELD,%q<form.objid>,fullname),/fields/alias,u(FUN`PROFILE`FIELD,%q<form.objid>,alias),/fields/age,u(FUN`PROFILE`FIELD,%q<form.objid>,age),/fields/concept,u(FUN`PROFILE`FIELD,%q<form.objid>,concept),/fields/faction,u(FUN`PROFILE`FIELD,%q<form.objid>,faction),/fields/description,u(FUN`PROFILE`FIELD,%q<form.objid>,description))
       DATA`PROFILE`SCHEMA: |-
         {"kind":"view","schema_version":1,"pages":[{"key":"profile","order":1,"sections":[{"name":"Demographics","order":1,"elements":[{"kind":"field","key":"fullname","label":"Full Name","type":"text","visible_to":"public"},{"kind":"field","key":"alias","label":"Alias","type":"text","visible_to":"public"},{"kind":"field","key":"age","label":"Age","type":"text","visible_to":"public"},{"kind":"field","key":"concept","label":"Concept","type":"text","visible_to":"public"}]},{"name":"Status","order":2,"elements":[{"kind":"field","key":"faction","label":"Faction","type":"text","visible_to":"public"}]},{"name":"Description","order":3,"elements":[{"kind":"field","key":"description","label":"Description","type":"mstring","visible_to":"public"}]}]}]}
 ```

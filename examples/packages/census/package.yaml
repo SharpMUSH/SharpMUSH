@@ -420,9 +420,11 @@ objects:
       FUN`DISPLAY`PASTEND: |-
         if(gt(%q<cmd_page>,max(1,ceil(fdiv(%0,%1)))),notice(CENSUS,There [if(eq(ceil(fdiv(%0,%1)),1),is one page,are [ceil(fdiv(%0,%1))] pages)].,warn))
 
+      DATA`TEMPLATE`DISPLAY`OVERVIEW: |-
+        {"delim":"","nowrap":"","grow":""}
       # The overview: how many characters are counted and the dimensions the reader may use.
       FUN`DISPLAY`OVERVIEW: |-
-        box(if(words(setr(display_dims,u(%!/FUN`DIMENSION`ALL))),ldatatable(json_fill(lit({"delim":"","nowrap":"","grow":""}),/delim,%r,/nowrap,1%r3,/grow,%r1%r),tone(strong,Dimension)%r[tone(strong,Shows)]%r[tone(strong,Compares)],iter(%q<display_dims>,u(%!/FUN`DISPLAY`DIMENSION,%i0),,%*<|>),%*<|>),tone(muted,There are no census dimensions yet.))%r[rule()]%r[tone(muted,[words(%0)] characters counted%, [words(setinter(%0,%q<census_online>))] connected now.[u(%!/FUN`DISPLAY`COUNTED)]%r+census <dimension> counts them by it%, +census <dimension>=<value> lists who matches%, and / joins terms%, such as +census theme=Marvel/gender.)],Census)
+        box(if(words(setr(display_dims,u(%!/FUN`DIMENSION`ALL))),ldatatable(json_fill(v(DATA`TEMPLATE`DISPLAY`OVERVIEW),/delim,%r,/nowrap,1%r3,/grow,%r1%r),tone(strong,Dimension)%r[tone(strong,Shows)]%r[tone(strong,Compares)],iter(%q<display_dims>,u(%!/FUN`DISPLAY`DIMENSION,%i0),,%*<|>),%*<|>),tone(muted,There are no census dimensions yet.))%r[rule()]%r[tone(muted,[words(%0)] characters counted%, [words(setinter(%0,%q<census_online>))] connected now.[u(%!/FUN`DISPLAY`COUNTED)]%r+census <dimension> counts them by it%, +census <dimension>=<value> lists who matches%, and / joins terms%, such as +census theme=Marvel/gender.)],Census)
       # %0 a DIM` attribute: its row in the overview.
       FUN`DISPLAY`DIMENSION: |-
         lcstr(after(%0,`))%r[unmark(get({{store}}/%0))][if(not(comp(lcstr(get({{store}}/%0`ACCESS)),everyone)),,%b[tone(muted,\(staff\))])]%r[case(lcstr(firstof(get({{store}}/%0`COMPARE),text)),number,numbers,duration,time,words)]
@@ -436,9 +438,11 @@ objects:
       # The dimensions the reader filtered by, each once, in the order typed: a list's columns.
       FUN`DISPLAY`LISTDIMS: |-
         setq(list_dims,)[null(iter(extract(%q<query_filters>,1,%q<query_own>,|),if(member(%q<list_dims>,first(%i0,%t)),,setq(list_dims,trim(%q<list_dims> [first(%i0,%t)]))),|))]%q<list_dims>
+      DATA`TEMPLATE`DISPLAY`LISTTABLE: |-
+        {"delim":"","nowrap":"1","grow":""}
       # %0 characters split by new lines: the table, the name then a column per dimension filtered by.
       FUN`DISPLAY`LISTTABLE: |-
-        ldatatable(json_fill(lit({"delim":"","nowrap":"1","grow":""}),/delim,%r,/grow,%r[iter(%q<display_dims>,1,,%r)]),tone(strong,Name)[iter(%q<display_dims>,%r[tone(strong,u(%!/FUN`DIMENSION`LABEL,%i0))],,)],iter(%0,unmark(name(%i0))[iter(%q<display_dims>,%r[u(%!/FUN`DISPLAY`CELL,%i0,%i1)],,)],%r,%*<|>),%*<|>)
+        ldatatable(json_fill(v(DATA`TEMPLATE`DISPLAY`LISTTABLE),/delim,%r,/grow,%r[iter(%q<display_dims>,1,,%r)]),tone(strong,Name)[iter(%q<display_dims>,%r[tone(strong,u(%!/FUN`DIMENSION`LABEL,%i0))],,)],iter(%0,unmark(name(%i0))[iter(%q<display_dims>,%r[u(%!/FUN`DISPLAY`CELL,%i0,%i1)],,)],%r,%*<|>),%*<|>)
       # %0 how many lines, %1 a page's: , page n of m, when there is more than one page.
       FUN`DISPLAY`PAGEOF: |-
         if(gt(%0,%1),%, page %q<cmd_page> of [ceil(fdiv(%0,%1))])
@@ -461,7 +465,7 @@ objects:
         if(isnum(setr(row_value,last(%0,%t))),%q<row_value>,999999999999)
       # %0 the rows: a page of them in a table, with the footer.
       FUN`DISPLAY`GROUPPAGE: |-
-        setq(display_rowcount,words(%0,%r))[u(%!/FUN`DISPLAY`PASTEND,%q<display_rowcount>,%q<display_size>)][if(lte(%q<cmd_page>,max(1,ceil(fdiv(%q<display_rowcount>,%q<display_size>)))),box(if(%q<display_total>,ldatatable(json_fill(lit({"delim":"","nowrap":"","grow":""}),/delim,%r,/nowrap,u(%!/FUN`DISPLAY`GROUPNOWRAP),/grow,u(%!/FUN`DISPLAY`GROUPGROW)),iter(%q<query_groups>,tone(strong,u(%!/FUN`DIMENSION`LABEL,%i0)),,%r)%r>[tone(strong,Characters)]%r>[tone(strong,Share)],iter(extract(%0,inc(mul(dec(%q<cmd_page>),%q<display_size>)),%q<display_size>,%r),u(%!/FUN`DISPLAY`GROUPCELLS,%i0),%r,%*<|>),%*<|>),tone(muted,Nobody matches.))%r[rule()]%r[tone(muted,%q<display_total> [if(eq(%q<display_total>,1),character,characters)] in [%q<display_rowcount>] [if(eq(%q<display_rowcount>,1),group,groups)][u(%!/FUN`DISPLAY`PAGEOF,%q<display_rowcount>,%q<display_size>)].[u(%!/FUN`DISPLAY`COUNTED)][u(%!/FUN`DISPLAY`NEXT,%q<display_size>,%q<display_rowcount>)])],Census))]
+        setq(display_rowcount,words(%0,%r))[u(%!/FUN`DISPLAY`PASTEND,%q<display_rowcount>,%q<display_size>)][if(lte(%q<cmd_page>,max(1,ceil(fdiv(%q<display_rowcount>,%q<display_size>)))),box(if(%q<display_total>,ldatatable(json_fill(v(DATA`TEMPLATE`DISPLAY`OVERVIEW),/delim,%r,/nowrap,u(%!/FUN`DISPLAY`GROUPNOWRAP),/grow,u(%!/FUN`DISPLAY`GROUPGROW)),iter(%q<query_groups>,tone(strong,u(%!/FUN`DIMENSION`LABEL,%i0)),,%r)%r>[tone(strong,Characters)]%r>[tone(strong,Share)],iter(extract(%0,inc(mul(dec(%q<cmd_page>),%q<display_size>)),%q<display_size>,%r),u(%!/FUN`DISPLAY`GROUPCELLS,%i0),%r,%*<|>),%*<|>),tone(muted,Nobody matches.))%r[rule()]%r[tone(muted,%q<display_total> [if(eq(%q<display_total>,1),character,characters)] in [%q<display_rowcount>] [if(eq(%q<display_rowcount>,1),group,groups)][u(%!/FUN`DISPLAY`PAGEOF,%q<display_rowcount>,%q<display_size>)].[u(%!/FUN`DISPLAY`COUNTED)][u(%!/FUN`DISPLAY`NEXT,%q<display_size>,%q<display_rowcount>)])],Census))]
       # The group table's columns that never wrap (counts and shares) and those that share the spare width.
       FUN`DISPLAY`GROUPNOWRAP: |-
         add(words(%q<query_groups>),1)%r[add(words(%q<query_groups>),2)]

@@ -92,6 +92,8 @@ objects:
       # The table's rows, none when no run added any, which are then cleared.
       FUN`ROWS`TAKE: |-
         iter(setr(rows_attributes,sort(lattr(%!/DATA`ROWS`%q<screen_key>_*))),xget(%!,%i0),,%q<screen_row_separator>)[null(iter(%q<rows_attributes>,attrib_set(%!/%i0)))]
+      DATA`TEMPLATE`DISPLAY`OPTIONS: |-
+        {"delim":"","nowrap":"","priority":"","grow":"","min":""}
       # Short columns are nowrap and the Location and Status columns grow into the spare width, so a
       # table fills the box. On a narrow screen the columns of least priority go first (Gender, then
       # Alias, then Connected); in the portal, a phone shows only the priority-1 columns. A Status column
@@ -99,7 +101,7 @@ objects:
       # %0 the nowrap columns, %1 the priorities, %2 each column's share of spare width, %3 each column's
       # least width, each split by %r.
       FUN`DISPLAY`OPTIONS: |-
-        json_fill(lit({"delim":"","nowrap":"","priority":"","grow":"","min":""}),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2,/min,%3)
+        json_fill(get({{ww_functions}}/DATA`TEMPLATE`DISPLAY`OPTIONS),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2,/min,%3)
       # %0 the footer's text, under a rule.
       FUN`DISPLAY`FOOTER: |-
         %r[rule()]%r[tone(muted,%0)]
@@ -246,11 +248,13 @@ objects:
       # %0 players, %1 their rooms: how many are connected, and in how many locations.
       FUN`WHERE`COUNT: |-
         setq(where_places,words(remove(%1,#-1)))[words(%0)] connected in %q<where_places> [if(eq(%q<where_places>,1),location,locations)]
+      DATA`TEMPLATE`WHERE`GROUP: |-
+        {"title":"left","titles":[{"text":"","side":"right"}]}
       # %0 a room or #-1, %1 its players: its rule and its players. The rule's options put the location
       # on the left and the count on the right; the count is a right title, so a narrow screen drops it
       # first.
       FUN`WHERE`GROUP: |-
-        rule(case(%0,#-1,Unfindable,name(%0)),,json_fill(lit({"title":"left","titles":[{"text":"","side":"right"}]}),/titles/0/text,setr(where_count,words(%1)) [case(%q<where_count>,1,player,players)]))%r[grid(iter(%1,u(%!/FUN`DISPLAY`NAME,%i0,idle(%i0)),,|),|)]
+        rule(case(%0,#-1,Unfindable,name(%0)),,json_fill(get({{ww_functions}}/DATA`TEMPLATE`WHERE`GROUP),/titles/0/text,setr(where_count,words(%1)) [case(%q<where_count>,1,player,players)]))%r[grid(iter(%1,u(%!/FUN`DISPLAY`NAME,%i0,idle(%i0)),,|),|)]
       # +where/grouped: under a line per location.
       FUN`WHERE`GROUPED: |-
         u(%!/FUN`WHERE,%0)

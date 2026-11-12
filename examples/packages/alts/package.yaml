@@ -141,18 +141,22 @@ objects:
           @assert strlen(%q<viewer_key>)=@pemit %#=notice(ALTS,This character is on no account%, so it has no alts.,warn)
         flags: [cmdsyntax]
 
+      DATA`TEMPLATE`DISPLAY`FRAME: |-
+        {"side":"","corner":"","teel":"","teer":"","pad":0}
       # ---- screens --------------------------------------------------------------
       # Every screen is a box() with no sides, corners or tees, as +finger's and +help's are, so a name copied from
       # a terminal carries no |.
       FUN`DISPLAY`FRAME:
         value: |-
-          lit({"side":"","corner":"","teel":"","teer":"","pad":0})
+          v(DATA`TEMPLATE`DISPLAY`FRAME)
         flags: [funsyntax]
+      DATA`TEMPLATE`DISPLAY`TABLEOPTIONS: |-
+        {"rule":"","delim":"","nowrap":"","priority":"","grow":""}
       # Table options, every list split by a new line: %0 the columns that never wrap, %1 each column's
       # priority, %2 each column's share of the spare width.
       FUN`DISPLAY`TABLEOPTIONS:
         value: |-
-          json_fill(lit({"rule":"","delim":"","nowrap":"","priority":"","grow":""}),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2)
+          json_fill(v(DATA`TEMPLATE`DISPLAY`TABLEOPTIONS),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2)
         flags: [funsyntax]
       # %0 characters, %1 their account key, %2 the title, %3 the footer: every one of them, with whether each is
       # online and on the public list. For the account's own characters and for staff.

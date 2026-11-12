@@ -517,12 +517,14 @@ objects:
           %0[if(gt(%q<page_count>,1),[if(strlen(%0),%b·%b)]Page %q<cmd_page> of %q<page_count>[if(lt(%q<cmd_page>,%q<page_count>),%b-%b+roster[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)]/[inc(%q<cmd_page>)][if(strlen(%q<cmd_argument>),%b%q<cmd_argument>)])])]
         flags: [funsyntax]
 
+      DATA`TEMPLATE`DISPLAY`TABLEOPTIONS: |-
+        {"rule":"","delim":"","nowrap":"","priority":"","grow":"","min":""}
       # ---- screens --------------------------------------------------------------
       # Table options, every list split by a new line: %0 the columns that never wrap, %1 each column's priority,
       # %2 each column's share of the spare width, %3 each column's least width.
       FUN`DISPLAY`TABLEOPTIONS:
         value: |-
-          json_fill(lit({"rule":"","delim":"","nowrap":"","priority":"","grow":"","min":""}),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2,/min,%3)
+          json_fill(get({{roster}}/DATA`TEMPLATE`DISPLAY`TABLEOPTIONS),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2,/min,%3)
         flags: [funsyntax]
       # %0 characters, %1 1 to add a State column: name, group and summary. The summary takes the spare width
       # and wraps; the group goes first when the screen is narrow.

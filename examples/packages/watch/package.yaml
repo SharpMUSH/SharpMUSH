@@ -178,11 +178,13 @@ objects:
         value: |-
           itemize(iter(%0,name(%i0),,|),|)
         flags: [funsyntax]
+      DATA`TEMPLATE`DISPLAY`TABLE`OPTIONS: |-
+        {"rule":"","delim":"","nowrap":"","priority":"","grow":"","min":""}
       # Table options, every list split by a new line: %0 the columns that never wrap, %1 each column's
       # priority, %2 each column's share of the spare width, %3 each column's least width.
       FUN`DISPLAY`TABLE`OPTIONS:
         value: |-
-          json_fill(lit({"rule":"","delim":"","nowrap":"","priority":"","grow":"","min":""}),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2,/min,%3)
+          json_fill(v(DATA`TEMPLATE`DISPLAY`TABLE`OPTIONS),/delim,%r,/nowrap,%0,/priority,%1,/grow,%2,/min,%3)
         flags: [funsyntax]
       # How many rows fit on the reader's screen, under a heading, a table's own heading and a footer.
       FUN`PAGE`SIZE:

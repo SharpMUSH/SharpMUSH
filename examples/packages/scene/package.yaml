@@ -262,10 +262,12 @@ objects:
       # The rule over pose %1 of scene %0: who posed it and the pose, on the left.
       FUN`POSE`RULE: |-
         rule(firstof(scenepose(%0,%1,showas),scenepose(%0,%1,authorname)) [chr(183)] pose %1,,json(object,title,"left"))
+      DATA`TEMPLATE`POSE`FOOTER: |-
+        {"titles":[{"text":"","side":"right"}]}
       # The rule under pose %1 of scene %0: the scene and the pose's marks (+scene/mark) on the right, through the
       # POSE`RULE filters.
       FUN`POSE`FOOTER: |-
-        rule(,,json_fill(lit({"titles":[{"text":"","side":"right"}]}),/titles/0/text,u(%!/FUN`FILTER,POSE`RULE,Scene %0[if(words(setr(pose_marks,scenepose(%0,%1,tags))),%b[chr(183)] [edit(%q<pose_marks>,%b,%b[chr(183)]%b)])],%0,%1)))
+        rule(,,json_fill(v(DATA`TEMPLATE`POSE`FOOTER),/titles/0/text,u(%!/FUN`FILTER,POSE`RULE,Scene %0[if(words(setr(pose_marks,scenepose(%0,%1,tags))),%b[chr(183)] [edit(%q<pose_marks>,%b,%b[chr(183)]%b)])],%0,%1)))
       # Pose %1 of scene %3, type %0 and line %2, as reader %4 sees it: between its rule and footer when its type
       # has them, nothing when its FORMAT draws nothing for them. Live lines, recall and log all go through it.
       FUN`POSE`DRAW: |-
@@ -870,17 +872,21 @@ objects:
         datacolumns(u(%!/FUN`TABLE`OPTS,1|3,|12,1|1|2,|1),tone(strong,Status)%r[iter(%1,capstr(scenemember(%0,%i0,role)),,%r)],tone(strong,Name)%r[iter(%1,u(%!/FUN`CAST`NAME,%0,%i0),,%r)],>[tone(strong,Poses)]%r[iter(%1,words(sceneposes(%0,%i0)),,%r)])
       FUN`CAST`NAME: |-
         switch(setr(cast_as,scenemember(%0,%1,showas)),,name(%1),name(%1) as [edit(%q<cast_as>,%r,%b)])
+      DATA`TEMPLATE`FRAME: |-
+        {"side":"","corner":"","teel":"","teer":"","pad":0}
       # Every screen is a box() with no sides, corners or tees: a titled line across the top, the
       # dividers and bottom line across the whole width, and nothing beside the text, so a pitch or a
       # pose copied from a terminal carries no |. The portal draws its usual card.
       FUN`FRAME: |-
-        lit({"side":"","corner":"","teel":"","teer":"","pad":0})
+        v(DATA`TEMPLATE`FRAME)
+      DATA`TEMPLATE`TABLE`OPTS: |-
+        {"rule":"","delim":"","nowrap":"","min":"","priority":"","grow":""}
       # The options every table here shares: %0 the nowrap columns, %1 the least widths, %2 the priorities,
       # %3 the shares of spare width (the column that takes it, so the table spans the screen), each
       # written split by |. The delimiter is a newline, and these lists split on it like the cells do.
       # No heading rule: it would span only the table, not the screen, so headings are bold instead.
       FUN`TABLE`OPTS: |-
-        json_fill(lit({"rule":"","delim":"","nowrap":"","min":"","priority":"","grow":""}),/delim,%r,/nowrap,edit(%0,|,%r),/min,edit(%1,|,%r),/priority,edit(%2,|,%r),/grow,edit(%3,|,%r))
+        json_fill(v(DATA`TEMPLATE`TABLE`OPTS),/delim,%r,/nowrap,edit(%0,|,%r),/min,edit(%1,|,%r),/priority,edit(%2,|,%r),/grow,edit(%3,|,%r))
 
 
       # sceneposes() returns a SPACE-separated id list, so iter() must use the default

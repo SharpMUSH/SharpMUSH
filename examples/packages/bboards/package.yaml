@@ -958,15 +958,21 @@ objects:
       # c <text> comments on this post, r <text> answers this comment; alone, each starts writing.
       INC`READER`COMMENT: |-
         @assert %q<reader_at_post>=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,Open a post first.);@assert cor(not(comp(%q<reader_key_word>,c)),strlen(%q<reader_comment>))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,r answers a comment%; open one first%, or use c.);@assert strlen(%q<reader_key_rest>)={&BBOARD`READER`WRITE %q<reader_holder>=%q<reader_key_word>; &BBOARD`READER`TEXT %q<reader_holder>; @pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`INFO,if(not(comp(%q<reader_key_word>,r)),Writing a reply to %[[u({{bboards}}/FUN`STORE`COMMENTNUMBER,%q<reader_place>,%q<reader_comment>)]%] %([u({{bboards}}/FUN`DISPLAY`AUTHOR,%q<reader_place>,%q<reader_comment>,%q<viewer_objid>)]%).,Writing a comment on [u({{bboards}}/FUN`PATH`OFPOST,%q<reader_place>)].) Every line is text now.)%rFinish with a line of just . to post it%, or .toss to drop it.};think u({{bboards}}/FUN`COMMAND`PARSE,if(not(comp(%q<reader_key_word>,r)),reply,comment),,%q<reader_key_rest>);@include {{bboards}}/INC`CMD`COMMENT
+      DATA`TEMPLATE`DISPLAY`OPTIONS`BOARDS: |-
+        {"delim":"","rule":"","grow":"","nowrap":"","min":"4"}
       # The board table: #, Board, New, Last. Names can hold |, so cells split at line breaks.
       FUN`DISPLAY`OPTIONS`BOARDS: |-
-        json_fill(lit({"delim":"","rule":"","grow":"","nowrap":"","min":"4"}),/delim,%r,/grow,%r1,/nowrap,1%r3%r4)
+        json_fill(get({{bboards}}/DATA`TEMPLATE`DISPLAY`OPTIONS`BOARDS),/delim,%r,/grow,%r1,/nowrap,1%r3%r4)
+      DATA`TEMPLATE`DISPLAY`OPTIONS`POSTS: |-
+        {"delim":"","rule":"","grow":"","nowrap":"","min":"","priority":""}
       # The post table: mark, #, Title, By, Comments, Last. Comments goes first on a narrow screen. Only
       # the title wraps: a browser squeezes every column it may wrap, down to one letter.
       FUN`DISPLAY`OPTIONS`POSTS: |-
-        json_fill(lit({"delim":"","rule":"","grow":"","nowrap":"","min":"","priority":""}),/delim,%r,/grow,%r%r1,/nowrap,1%r2%r4%r5%r6,/min,1%r5%r12,/priority,1%r1%r1%r2%r3%r2)
+        json_fill(get({{bboards}}/DATA`TEMPLATE`DISPLAY`OPTIONS`POSTS),/delim,%r,/grow,%r%r1,/nowrap,1%r2%r4%r5%r6,/min,1%r5%r12,/priority,1%r1%r1%r2%r3%r2)
+      DATA`TEMPLATE`DISPLAY`OPTIONS`TREE: |-
+        {"delim":"","rule":"","grow":"","nowrap":""}
       FUN`DISPLAY`OPTIONS`TREE: |-
-        json_fill(lit({"delim":"","rule":"","grow":"","nowrap":""}),/delim,%r,/grow,%r1,/nowrap,if(%0,1%r3%r4,1%r3))
+        json_fill(get({{bboards}}/DATA`TEMPLATE`DISPLAY`OPTIONS`TREE),/delim,%r,/grow,%r1,/nowrap,if(%0,1%r3%r4,1%r3))
       # The inner rules (Posts, comments): light lines, - without UTF-8.
       FUN`DISPLAY`THINRULE: |-
         lit({"border":"single"})
@@ -1298,9 +1304,13 @@ objects:
         config_lock_column_comment,Comment,
         config_lock_column_moderate,Moderate,
         config_has_hidden,0)[null(iter(%q<config_boards>,u(%!/FUN`SCREEN`CONFIGALL`ROW,%i0)))]
+      DATA`TEMPLATE`SCREEN`CONFIGALL`TABLES: |-
+        {"delim":"","rule":"","grow":"2","nowrap":""}
+      DATA`TEMPLATE`SCREEN`CONFIGALL`TABLES`2: |-
+        {"delim":"","rule":"","nowrap":"1"}
       # The settings table, the Locks rule and the locks table, from the columns FUN`SCREEN`CONFIGALL`COLUMNS filled.
       FUN`SCREEN`CONFIGALL`TABLES: |-
-        datacolumns(json_fill(lit({"delim":"","rule":"","grow":"2","nowrap":""}),/delim,%r,/nowrap,1%r3%r4%r5%r6),%q<config_column_number>,%q<config_column_board>,%q<config_column_color>,%q<config_column_timeout>,%q<config_column_pins>,%q<config_column_anonymous>)%r[rule(Locks,,u(%!/FUN`DISPLAY`THINRULE))]%r[datacolumns(json_fill(lit({"delim":"","rule":"","nowrap":"1"}),/delim,%r),%q<config_lock_column_number>,%q<config_lock_column_read>,%q<config_lock_column_post>,%q<config_lock_column_comment>,%q<config_lock_column_moderate>)]
+        datacolumns(json_fill(get({{bboards}}/DATA`TEMPLATE`SCREEN`CONFIGALL`TABLES),/delim,%r,/nowrap,1%r3%r4%r5%r6),%q<config_column_number>,%q<config_column_board>,%q<config_column_color>,%q<config_column_timeout>,%q<config_column_pins>,%q<config_column_anonymous>)%r[rule(Locks,,u(%!/FUN`DISPLAY`THINRULE))]%r[datacolumns(json_fill(get({{bboards}}/DATA`TEMPLATE`SCREEN`CONFIGALL`TABLES`2),/delim,%r),%q<config_lock_column_number>,%q<config_lock_column_read>,%q<config_lock_column_post>,%q<config_lock_column_comment>,%q<config_lock_column_moderate>)]
       # The boards +bbconfig all shows viewer %0, from the top or from board %1 (number path %2), as
       # <board>~<depth>~<n>~<number path> tokens. Sets %q<config_is_subtree> (1 when it starts at a board), %q<config_depth_limit>
       # (the deepest depth shown), %q<config_walk_rows> (every board below), %q<config_boards> (the ones shown) and, for each
@@ -1806,36 +1816,52 @@ objects:
       # Field %0 of posted JSON %1, unquoted; empty when it was not posted.
       WEB`REQUEST`FIELD: |-
         setq(request_field_value,json_query(%1,get,%0))[switch(%q<request_field_value>,null,,"*,json_query(%q<request_field_value>,unescape),%q<request_field_value>)]
+      DATA`TEMPLATE`WEB`ELEMENT`DOCUMENT: |-
+        {"kind":"","schema_version":1,"title":"","pages":[{"key":"main","title":"","order":1,"sections":null}],"actions":null}
       # A schema document: kind %0, title %1, sections %2 (%r-separated), actions object %3.
       WEB`ELEMENT`DOCUMENT: |-
-        json_fill(lit({"kind":"","schema_version":1,"title":"","pages":[{"key":"main","title":"","order":1,"sections":null}],"actions":null}),/kind,%0,/title,%1,/pages/0/title,%1,/pages/0/sections,u({{bboards}}/WEB`JSON`ARRAY,%2),/actions,firstof(%3,u({{bboards}}/WEB`JSON`EMPTY)))
+        json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`ELEMENT`DOCUMENT),/kind,%0,/title,%1,/pages/0/title,%1,/pages/0/sections,u({{bboards}}/WEB`JSON`ARRAY,%2),/actions,firstof(%3,u({{bboards}}/WEB`JSON`EMPTY)))
+      DATA`TEMPLATE`WEB`ELEMENT`SECTION: |-
+        {"name":"","order":0,"columns":0,"elements":null}
       # A section: name %0, order %1, elements %2 (%r-separated), %3 columns.
       WEB`ELEMENT`SECTION: |-
-        json_fill(lit({"name":"","order":0,"columns":0,"elements":null}),/name,%0,/order,%1,/columns,firstof(%3,1),/elements,u({{bboards}}/WEB`JSON`ARRAY,%2))
+        json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`ELEMENT`SECTION),/name,%0,/order,%1,/columns,firstof(%3,1),/elements,u({{bboards}}/WEB`JSON`ARRAY,%2))
+      DATA`TEMPLATE`WEB`ELEMENT`MARKDOWN: |-
+        {"kind":"markdown","value":""}
       WEB`ELEMENT`MARKDOWN: |-
-        json_fill(lit({"kind":"markdown","value":""}),/value,%0)
+        json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`ELEMENT`MARKDOWN),/value,%0)
+      DATA`TEMPLATE`WEB`ELEMENT`BUTTON: |-
+        {"kind":"button","label":"","action":"act","values":null,"color":"","variant":"","confirm":""}
       # A button posting values %1 (a JSON object) to the act action: label %0, color %2, %3 a question
       # asked first.
       WEB`ELEMENT`BUTTON: |-
-        json_fill(lit({"kind":"button","label":"","action":"act","values":null,"color":"","variant":"","confirm":""}),/label,%0,/values,%1,/color,firstof(%2,secondary),/variant,if(strmatch(%2,primary),filled,outlined),/confirm,%3)
+        json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`ELEMENT`BUTTON),/label,%0,/values,%1,/color,firstof(%2,secondary),/variant,if(strmatch(%2,primary),filled,outlined),/confirm,%3)
       # The act action: posts the form's fields, empties them when it works, shows errors on them when not.
       WEB`ELEMENT`ACTACTION: |-
         lit({"transport":"http","method":"POST","route":"/http/boards/act","payload":"fields","on_success":{"reset_fields":true},"on_error":{"bind_field_errors":true}})
       WEB`ELEMENT`ACTIONS: |-
         json(object,act,u({{bboards}}/WEB`ELEMENT`ACTACTION))
+      DATA`TEMPLATE`WEB`ELEMENT`OPTION: |-
+        {"value":"","label":""}
       WEB`ELEMENT`OPTION: |-
-        json_fill(lit({"value":"","label":""}),/value,%0,/label,%1)
+        json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`ELEMENT`OPTION),/value,%0,/label,%1)
+      DATA`TEMPLATE`WEB`ELEMENT`HIDDEN: |-
+        {"kind":"field","key":"","type":"hidden","default":""}
       # A hidden field %0 holding %1, posted with every action.
       WEB`ELEMENT`HIDDEN: |-
-        json_fill(lit({"kind":"field","key":"","type":"hidden","default":""}),/key,%0,/default,%1)
+        json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`ELEMENT`HIDDEN),/key,%0,/default,%1)
+      DATA`TEMPLATE`WEB`RESULT`ERROR: |-
+        {"ok":false,"errors":{"_global":""}}
       WEB`RESULT`ERROR: |-
-        json_fill(lit({"ok":false,"errors":{"_global":""}}),/errors/_global,%0)
+        json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`RESULT`ERROR),/errors/_global,%0)
       # An error shown on field %0.
       WEB`RESULT`FIELDERROR: |-
         json(object,ok,json(boolean,false),errors,json(object,%0,json(string,%1)))
+      DATA`TEMPLATE`WEB`RESULT`GOTO: |-
+        {"ok":true,"message":"","redirect":""}
       # Success with message %0, moving to portal address %1.
       WEB`RESULT`GOTO: |-
-        json_fill(lit({"ok":true,"message":"","redirect":""}),/message,%0,/redirect,%1)
+        json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`RESULT`GOTO),/message,%0,/redirect,%1)
       # The page address of number path %0.
       WEB`ADDRESS`OFPATH: |-
         /apps/boards[if(strlen(%0),/%0)]
@@ -1878,21 +1904,25 @@ objects:
       # The board table's columns.
       WEB`TABLE`BOARDCOLUMNS: |-
         lit([{"key":"num","label":"#","link":"/apps/boards/{path}"},{"key":"name","label":"Board","link":"/apps/boards/{path}"},{"key":"new","label":"","type":"chip","color_key":"new_color"},{"key":"boards","label":"Boards"},{"key":"posts","label":"Posts"},{"key":"last","label":"Last post"}])
+      DATA`TEMPLATE`WEB`TABLE`BOARDS: |-
+        {"kind":"table","rows_field":"","columns":null,"empty":""}
       # A table of boards from data field %0, with %1 its empty text.
       WEB`TABLE`BOARDS: |-
-        json_fill(lit({"kind":"table","rows_field":"","columns":null,"empty":""}),/rows_field,%0,/columns,u({{bboards}}/WEB`TABLE`BOARDCOLUMNS),/empty,%1)
+        json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`TABLE`BOARDS),/rows_field,%0,/columns,u({{bboards}}/WEB`TABLE`BOARDCOLUMNS),/empty,%1)
       # The boards at level %0 (number path %2) viewer %1 reads, left ones too, as table rows grouped
       # by category.
       WEB`TABLE`BOARDROWS: |-
         setqm(board_visible_boards,u({{bboards}}/FUN`STORE`VISIBLEBOARDS,%0,%1,1),
         board_all_boards,u({{bboards}}/FUN`STORE`BOARDS,%0),
         board_has_categories,words(get(%0/CATS)))[u({{bboards}}/WEB`JSON`ARRAY,iter(%q<board_visible_boards>,u({{bboards}}/WEB`TABLE`BOARDROW,%i0,%1,u({{bboards}}/FUN`PATH`JOIN,%2,match(%q<board_all_boards>,%i0)),if(%q<board_has_categories>,u({{bboards}}/FUN`STORE`CATEGORYNAME,%0,u({{bboards}}/FUN`STORE`CATEGORYOF,%0,%i0)))),%b,%r))]
+      DATA`TEMPLATE`WEB`TABLE`BOARDROW: |-
+        {"num":"","path":"","key":"","name":"","group":"","new":"","new_color":"","boards":"","posts":"","last":""}
       # Board %0 for viewer %1 at number path %2, in row group %3.
       WEB`TABLE`BOARDROW: |-
         setqm(row_new_count,u({{bboards}}/FUN`READING`NEWBELOW,%0,%1),
         board_is_left,u({{bboards}}/FUN`READING`HASLEFT,%0,%1),
         row_child_count,words(u({{bboards}}/FUN`STORE`VISIBLEBOARDS,%0,%1,1)),
-        board_last_post,last(u({{bboards}}/FUN`STORE`POSTS,%0)))[json_fill(lit({"num":"","path":"","key":"","name":"","group":"","new":"","new_color":"","boards":"","posts":"","last":""}),/num,last(%2,/),/path,%2,/key,%0,/name,name(%0),/group,%3,/new,cond(%q<board_is_left>,Left,%q<row_new_count>,%q<row_new_count> new,),/new_color,if(%q<board_is_left>,default,info),/boards,if(%q<row_child_count>,%q<row_child_count>),/posts,words(u({{bboards}}/FUN`STORE`POSTS,%0)),/last,if(get(%0/ACTIVE),u({{bboards}}/FUN`DISPLAY`TIME,get(%0/ACTIVE))[if(strlen(%q<board_last_post>),%b[chr(183)] [u({{bboards}}/FUN`DISPLAY`AUTHOR,%q<board_last_post>,,%1)])]))]
+        board_last_post,last(u({{bboards}}/FUN`STORE`POSTS,%0)))[json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`TABLE`BOARDROW),/num,last(%2,/),/path,%2,/key,%0,/name,name(%0),/group,%3,/new,cond(%q<board_is_left>,Left,%q<row_new_count>,%q<row_new_count> new,),/new_color,if(%q<board_is_left>,default,info),/boards,if(%q<row_child_count>,%q<row_child_count>),/posts,words(u({{bboards}}/FUN`STORE`POSTS,%0)),/last,if(get(%0/ACTIVE),u({{bboards}}/FUN`DISPLAY`TIME,get(%0/ACTIVE))[if(strlen(%q<board_last_post>),%b[chr(183)] [u({{bboards}}/FUN`DISPLAY`AUTHOR,%q<board_last_post>,,%1)])]))]
       WEB`SCHEMA`INDEX: |-
         u({{bboards}}/WEB`ELEMENT`DOCUMENT,view,Boards,u({{bboards}}/WEB`ELEMENT`SECTION,,1,u({{bboards}}/WEB`ELEMENT`MARKDOWN,u({{bboards}}/WEB`ELEMENT`COMMAND,)))%r[u({{bboards}}/WEB`ELEMENT`SECTION,,2,u({{bboards}}/WEB`TABLE`BOARDS,boards,There are no boards you can read.))])
       WEB`DATA`INDEX: |-
@@ -1919,16 +1949,26 @@ objects:
         setqm(board_is_left,u({{bboards}}/FUN`READING`HASLEFT,%1,%0),
         board_page,min(max(1,firstof(%3,1)),u({{bboards}}/WEB`PAGING`BOARDPAGES,%1)),
         board_intro_section,u({{bboards}}/WEB`ELEMENT`MARKDOWN,u({{bboards}}/WEB`ELEMENT`CRUMBS,%1)%b·%b[u({{bboards}}/WEB`ELEMENT`COMMAND,%2)])[if(strlen(get(%1/DESCRIBE)),%r[u({{bboards}}/WEB`ELEMENT`MARKDOWN,get(%1/DESCRIBE))])])
+      DATA`TEMPLATE`WEB`SCHEMA`BOARD`BUTTONS: |-
+        {"op":"newpost","board":""}
+      DATA`TEMPLATE`WEB`SCHEMA`BOARD`BUTTONS`2: |-
+        {"op":"catchup","board":""}
+      DATA`TEMPLATE`WEB`SCHEMA`BOARD`BUTTONS`3: |-
+        {"op":"","board":""}
+      DATA`TEMPLATE`WEB`SCHEMA`BOARD`BUTTONS`4: |-
+        {"kind":"table","rows_field":"posts","columns":null,"empty":"No posts yet."}
       # Board %1 for viewer %0: its buttons and its boards. Reads %q<board_is_left>; sets
       # %q<board_buttons_section>, %q<board_children_section> and %q<board_posts_table> (the posts table).
       WEB`SCHEMA`BOARD`BUTTONS: |-
-        setqm(board_buttons_section,squish(if(u({{bboards}}/FUN`PERMISSION`CAN,%1,post,%0),u({{bboards}}/WEB`ELEMENT`BUTTON,New post,json_fill(lit({"op":"newpost","board":""}),/board,%1),primary))%r[u({{bboards}}/WEB`ELEMENT`BUTTON,Mark all read,json_fill(lit({"op":"catchup","board":""}),/board,%1))]%r[u({{bboards}}/WEB`ELEMENT`BUTTON,if(%q<board_is_left>,Follow board,Leave board),json_fill(lit({"op":"","board":""}),/op,if(%q<board_is_left>,join,leave),/board,%1))],%r),
+        setqm(board_buttons_section,squish(if(u({{bboards}}/FUN`PERMISSION`CAN,%1,post,%0),u({{bboards}}/WEB`ELEMENT`BUTTON,New post,json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`SCHEMA`BOARD`BUTTONS),/board,%1),primary))%r[u({{bboards}}/WEB`ELEMENT`BUTTON,Mark all read,json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`SCHEMA`BOARD`BUTTONS`2),/board,%1))]%r[u({{bboards}}/WEB`ELEMENT`BUTTON,if(%q<board_is_left>,Follow board,Leave board),json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`SCHEMA`BOARD`BUTTONS`3),/op,if(%q<board_is_left>,join,leave),/board,%1))],%r),
         board_children_section,if(words(u({{bboards}}/FUN`STORE`VISIBLEBOARDS,%1,%0,1)),u({{bboards}}/WEB`ELEMENT`SECTION,Boards,3,u({{bboards}}/WEB`TABLE`BOARDS,boards,))),
-        board_posts_table,json_fill(lit({"kind":"table","rows_field":"posts","columns":null,"empty":"No posts yet."}),/columns,u({{bboards}}/WEB`TABLE`POSTCOLUMNS)))
+        board_posts_table,json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`SCHEMA`BOARD`BUTTONS`4),/columns,u({{bboards}}/WEB`TABLE`POSTCOLUMNS)))
+      DATA`TEMPLATE`WEB`SCHEMA`BOARD`POSTS: |-
+        {"kind":"table","rows_field":"posts","columns":null,"empty":"No posts yet.","reorder":{"group":"Pinned","action":"act","key":"key","values":{"op":"pinorder"}}}
       # Board %1 (number path %2) for viewer %0: its posts. A moderator gets %q<board_posts_table> again,
       # reorderable; sets %q<board_posts_section> with the pages under it, reading %q<board_page>.
       WEB`SCHEMA`BOARD`POSTS: |-
-        if(u({{bboards}}/FUN`PERMISSION`CAN,%1,moderate,%0),setq(board_posts_table,json_fill(lit({"kind":"table","rows_field":"posts","columns":null,"empty":"No posts yet.","reorder":{"group":"Pinned","action":"act","key":"key","values":{"op":"pinorder"}}}),/columns,u({{bboards}}/WEB`TABLE`POSTCOLUMNS))))[setq(board_posts_section,u({{bboards}}/WEB`ELEMENT`SECTION,Posts,4,%q<board_posts_table>%r[u({{bboards}}/WEB`ELEMENT`MARKDOWN,u({{bboards}}/WEB`ELEMENT`PAGES,u({{bboards}}/WEB`ADDRESS`OFPATH,%2),u({{bboards}}/WEB`PAGING`BOARDPAGES,%1),%q<board_page>))]))]
+        if(u({{bboards}}/FUN`PERMISSION`CAN,%1,moderate,%0),setq(board_posts_table,json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`SCHEMA`BOARD`POSTS),/columns,u({{bboards}}/WEB`TABLE`POSTCOLUMNS))))[setq(board_posts_section,u({{bboards}}/WEB`ELEMENT`SECTION,Posts,4,%q<board_posts_table>%r[u({{bboards}}/WEB`ELEMENT`MARKDOWN,u({{bboards}}/WEB`ELEMENT`PAGES,u({{bboards}}/WEB`ADDRESS`OFPATH,%2),u({{bboards}}/WEB`PAGING`BOARDPAGES,%1),%q<board_page>))]))]
       # Board %1 (number path %2) for viewer %0, page %3: its boards, its pins, then a page of posts,
       # newest first.
       WEB`DATA`BOARD: |-
@@ -1947,13 +1987,15 @@ objects:
       # WEB`DATA`BOARD`PAGE sets. Sets %q<board_post_rows>.
       WEB`DATA`BOARD`ROWS: |-
         setq(board_post_rows,iter(%q<board_pins>,uargs({{bboards}}/WEB`TABLE`POSTROW,post,%i0,viewer,%0,path,%2,number,add(%q<board_child_count>,inum(0)),group,Pinned,mark,%q<board_read_mark>),%b,%r)[if(cand(words(%q<board_pins>),words(%q<board_page_posts>)),%r)][iter(%q<board_page_posts>,uargs({{bboards}}/WEB`TABLE`POSTROW,post,%i0,viewer,%0,path,%2,number,add(%q<board_child_count>,match(%q<board_posts>,%i0)),group,if(words(%q<board_pins>),Posts),mark,%q<board_read_mark>),%b,%r)])
+      DATA`TEMPLATE`WEB`TABLE`POSTROW: |-
+        {"num":"","path":"","key":"","title":"","group":"","mark":"","mark_color":"","author":"","comments":"","last":""}
       # Post %<post> for %<viewer> as a row: board path %<path>, number %<number>, row group %<group>, the
       # viewer's mark on the board %<mark>.
       WEB`TABLE`POSTROW: |-
         setqm(post_read_mark,u({{bboards}}/FUN`READING`THREADMARK,%<post>,%<viewer>,%<mark>),
         post_new_comments,if(gt(firstof(get(%<post>/LAST),0),%q<post_read_mark>),u({{bboards}}/FUN`READING`NEWCOMMENTS,%<post>,%q<post_read_mark>,%<viewer>),0),
         post_timeout_at,u({{bboards}}/FUN`STORE`TIMEOUTAT,%<post>),
-        post_mark_and_color,cond(cand(gt(get(%<post>/SEQ),%q<post_read_mark>),not(strmatch(get(%<post>/BY),%<viewer>))),Unread|info,%q<post_new_comments>,%q<post_new_comments> new|warning,get(%<post>/CLOSED),Closed|default,cand(strlen(%q<post_timeout_at>),lt(sub(%q<post_timeout_at>,secs()),259200)),Times out soon|warning,|default))[json_fill(lit({"num":"","path":"","key":"","title":"","group":"","mark":"","mark_color":"","author":"","comments":"","last":""}),/num,%<number>,/path,%<path>/%<number>,/key,%<post>,/title,firstof(get(%<post>/TITLE),%(removed%)),/group,%<group>,/mark,before(%q<post_mark_and_color>,|),/mark_color,after(%q<post_mark_and_color>,|),/author,u({{bboards}}/FUN`DISPLAY`AUTHOR,%<post>,,%<viewer>),/comments,words(u({{bboards}}/FUN`STORE`COMMENTKEYS,%<post>)),/last,u({{bboards}}/FUN`DISPLAY`TIME,get(%<post>/ACTIVE)))]
+        post_mark_and_color,cond(cand(gt(get(%<post>/SEQ),%q<post_read_mark>),not(strmatch(get(%<post>/BY),%<viewer>))),Unread|info,%q<post_new_comments>,%q<post_new_comments> new|warning,get(%<post>/CLOSED),Closed|default,cand(strlen(%q<post_timeout_at>),lt(sub(%q<post_timeout_at>,secs()),259200)),Times out soon|warning,|default))[json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`TABLE`POSTROW),/num,%<number>,/path,%<path>/%<number>,/key,%<post>,/title,firstof(get(%<post>/TITLE),%(removed%)),/group,%<group>,/mark,before(%q<post_mark_and_color>,|),/mark_color,after(%q<post_mark_and_color>,|),/author,u({{bboards}}/FUN`DISPLAY`AUTHOR,%<post>,,%<viewer>),/comments,words(u({{bboards}}/FUN`STORE`COMMENTKEYS,%<post>)),/last,u({{bboards}}/FUN`DISPLAY`TIME,get(%<post>/ACTIVE)))]
       # Conversations on one page of a thread.
       WEB`PAGING`CONVERSATIONS: |-
         15
@@ -1963,26 +2005,38 @@ objects:
       # How many pages post %0's conversations take.
       WEB`PAGING`THREADPAGES: |-
         u({{bboards}}/FUN`THREAD`ORDER,%0)[max(1,ceil(fdiv(words(squish(iter(%q<thread_order>,if(strmatch(firstof(get(%0/C`%i0`ROOT),%i0),%i0),%i0)))),u({{bboards}}/WEB`PAGING`CONVERSATIONS))))]
+      DATA`TEMPLATE`WEB`ELEMENT`BODY: |-
+        {"kind":"markdown","format":"mstring","value":null}
       # Post %0's text, or its comment %1's, as a page element: Markdown as stored, SharpMUSH text drawn
       # with its colour.
       WEB`ELEMENT`BODY: |-
-        setq(body_comment_prefix,if(strlen(%1),C`%1`))[if(strmatch(get(%0/%q<body_comment_prefix>FORMAT),mush),json_fill(lit({"kind":"markdown","format":"mstring","value":null}),/value,json(markupstring,get(%0/%q<body_comment_prefix>TEXT))),u({{bboards}}/WEB`ELEMENT`MARKDOWN,get(%0/%q<body_comment_prefix>TEXT)))]
+        setq(body_comment_prefix,if(strlen(%1),C`%1`))[if(strmatch(get(%0/%q<body_comment_prefix>FORMAT),mush),json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`ELEMENT`BODY),/value,json(markupstring,get(%0/%q<body_comment_prefix>TEXT))),u({{bboards}}/WEB`ELEMENT`MARKDOWN,get(%0/%q<body_comment_prefix>TEXT)))]
       # Post %0's head line as Markdown for viewer %1: who, when, edited, pinned, closed.
       WEB`ELEMENT`POSTHEAD: |-
         setq(post_header_markdown,squish(**[u({{bboards}}/FUN`DISPLAY`AUTHOR,%0,,%1)]** [chr(183)] [u({{bboards}}/FUN`DISPLAY`TIMESTAMP,get(%0/AT))][if(get(%0/EDITED),%b[chr(183)] edited [u({{bboards}}/FUN`DISPLAY`TIME,get(%0/EDITED))])][if(member(get(u({{bboards}}/FUN`STORE`PARENT,%0)/PINS),%0),%b[chr(183)] pinned)]))%q<post_header_markdown>[if(get(%0/CLOSED),%b[chr(183)] closed to comments by [name(get(%0/CLOSED`BY))])]
+      DATA`TEMPLATE`WEB`ELEMENT`POSTBUTTONS: |-
+        {"op":"","post":""}
+      DATA`TEMPLATE`WEB`ELEMENT`POSTBUTTONS`2: |-
+        {"op":"editpage","post":""}
+      DATA`TEMPLATE`WEB`ELEMENT`POSTBUTTONS`3: |-
+        {"op":"remove","post":""}
       # The buttons on post %0 for viewer %1.
       WEB`ELEMENT`POSTBUTTONS: |-
         setqm(post_board,u({{bboards}}/FUN`STORE`PARENT,%0),
         post_can_moderate,u({{bboards}}/FUN`PERMISSION`CAN,%q<post_board>,moderate,%1),
         post_can_edit,cand(not(strlen(get(%0/REMOVED))),u({{bboards}}/FUN`PERMISSION`CANEDIT,%0,,%1)),
-        post_is_followed,strlen(get(u({{bboards}}/FUN`READING`HOLDER,%1)/BBOARD`P[get(%0/SEQ)]`FOLLOW)))[squish(u({{bboards}}/WEB`ELEMENT`BUTTON,if(%q<post_is_followed>,Unfollow,Follow),json_fill(lit({"op":"","post":""}),/op,if(%q<post_is_followed>,unfollow,follow),/post,%0))%r[if(%q<post_can_edit>,u({{bboards}}/WEB`ELEMENT`BUTTON,Edit,json_fill(lit({"op":"editpage","post":""}),/post,%0)))]%r[if(%q<post_can_moderate>,u({{bboards}}/WEB`ELEMENT`POSTBUTTONS`MODERATE,%0))]%r[if(%q<post_can_edit>,u({{bboards}}/WEB`ELEMENT`BUTTON,Remove,json_fill(lit({"op":"remove","post":""}),/post,%0),error,Remove this post?))],%r)]
+        post_is_followed,strlen(get(u({{bboards}}/FUN`READING`HOLDER,%1)/BBOARD`P[get(%0/SEQ)]`FOLLOW)))[squish(u({{bboards}}/WEB`ELEMENT`BUTTON,if(%q<post_is_followed>,Unfollow,Follow),json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`ELEMENT`POSTBUTTONS),/op,if(%q<post_is_followed>,unfollow,follow),/post,%0))%r[if(%q<post_can_edit>,u({{bboards}}/WEB`ELEMENT`BUTTON,Edit,json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`ELEMENT`POSTBUTTONS`2),/post,%0)))]%r[if(%q<post_can_moderate>,u({{bboards}}/WEB`ELEMENT`POSTBUTTONS`MODERATE,%0))]%r[if(%q<post_can_edit>,u({{bboards}}/WEB`ELEMENT`BUTTON,Remove,json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`ELEMENT`POSTBUTTONS`3),/post,%0),error,Remove this post?))],%r)]
       # The moderator buttons on post %0: pin or unpin, and close or open to comments. Reads %q<post_board>.
       WEB`ELEMENT`POSTBUTTONS`MODERATE: |-
-        u({{bboards}}/WEB`ELEMENT`BUTTON,if(member(get(%q<post_board>/PINS),%0),Unpin,Pin),json_fill(lit({"op":"","post":""}),/op,if(member(get(%q<post_board>/PINS),%0),unpin,pin),/post,%0))%r[u({{bboards}}/WEB`ELEMENT`BUTTON,if(get(%0/CLOSED),Open to comments,Close to comments),json_fill(lit({"op":"","post":""}),/op,if(get(%0/CLOSED),open,close),/post,%0))]
+        u({{bboards}}/WEB`ELEMENT`BUTTON,if(member(get(%q<post_board>/PINS),%0),Unpin,Pin),json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`ELEMENT`POSTBUTTONS),/op,if(member(get(%q<post_board>/PINS),%0),unpin,pin),/post,%0))%r[u({{bboards}}/WEB`ELEMENT`BUTTON,if(get(%0/CLOSED),Open to comments,Close to comments),json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`ELEMENT`POSTBUTTONS),/op,if(get(%0/CLOSED),open,close),/post,%0))]
+      DATA`TEMPLATE`WEB`ELEMENT`COMMENTBOX: |-
+        {"kind":"field","key":"format","label":"Written in","type":"select","options":[null,null],"default":""}
+      DATA`TEMPLATE`WEB`ELEMENT`COMMENTBOX`2: |-
+        {"op":"","post":"","comment":""}
       # The comment box on post %0 for viewer %1: answering comment %2 when given, labelled %3. Empty
       # when the viewer may not comment.
       WEB`ELEMENT`COMMENTBOX: |-
-        if(cand(not(get(%0/CLOSED)),not(strlen(get(%0/REMOVED))),u({{bboards}}/FUN`PERMISSION`CAN,u({{bboards}}/FUN`STORE`PARENT,%0),comment,%1)),u({{bboards}}/WEB`ELEMENT`SECTION,%3,9,lit({"kind":"field","key":"text","label":"","type":"textarea","help":"Markdown works: **bold**, *italic*, lists and links."})%r[json_fill(lit({"kind":"field","key":"format","label":"Written in","type":"select","options":[null,null],"default":""}),/options/0,u({{bboards}}/WEB`ELEMENT`OPTION,md,Markdown),/options/1,u({{bboards}}/WEB`ELEMENT`OPTION,mush,SharpMUSH text),/default,if(strmatch(get(u({{bboards}}/FUN`READING`HOLDER,%1)/BBOARD`FORMAT),mush),mush,md))]%r[u({{bboards}}/WEB`ELEMENT`BUTTON,if(strlen(%2),Post reply,Post comment),json_fill(lit({"op":"","post":"","comment":""}),/op,if(strlen(%2),reply,comment),/post,%0,/comment,%2),primary)]))
+        if(cand(not(get(%0/CLOSED)),not(strlen(get(%0/REMOVED))),u({{bboards}}/FUN`PERMISSION`CAN,u({{bboards}}/FUN`STORE`PARENT,%0),comment,%1)),u({{bboards}}/WEB`ELEMENT`SECTION,%3,9,lit({"kind":"field","key":"text","label":"","type":"textarea","help":"Markdown works: **bold**, *italic*, lists and links."})%r[json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`ELEMENT`COMMENTBOX),/options/0,u({{bboards}}/WEB`ELEMENT`OPTION,md,Markdown),/options/1,u({{bboards}}/WEB`ELEMENT`OPTION,mush,SharpMUSH text),/default,if(strmatch(get(u({{bboards}}/FUN`READING`HOLDER,%1)/BBOARD`FORMAT),mush),mush,md))]%r[u({{bboards}}/WEB`ELEMENT`BUTTON,if(strlen(%2),Post reply,Post comment),json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`ELEMENT`COMMENTBOX`2),/op,if(strlen(%2),reply,comment),/post,%0,/comment,%2),primary)]))
       # Post %1 (number path %2) for viewer %0, page %3: its head, text and buttons, its conversations,
       # and the comment box.
       WEB`SCHEMA`THREAD: |-
@@ -2011,10 +2065,14 @@ objects:
         conversation_reply_count,dec(words(%q<conversation_comments>)),
         conversation_hidden_count,max(0,sub(%q<conversation_reply_count>,%<shown>)),
         conversation_slice,extract(%q<conversation_comments>,1,inc(min(%q<conversation_reply_count>,%<shown>))))[iter(%q<conversation_slice>,uargs({{bboards}}/WEB`TIMELINE`COMMENT,post,%<post>,comment,%i0,root,%<root>,viewer,%<viewer>,path,%<path>,mark,%<mark>,hidden,if(cand(%q<conversation_hidden_count>,eq(inum(0),words(%q<conversation_slice>))),%q<conversation_hidden_count>,0)),%b,%r)]
+      DATA`TEMPLATE`WEB`TIMELINE`COMMENT: |-
+        {"author":"","time":0,"body":null,"format":"","group":"","anchor":"","reply_to":"","unread":false,"tag":"","children_hidden":0,"more":"","links":[{"label":"Reply","href":""}],"actions":null}
       # Comment %<comment> on post %<post> (top comment of its conversation %<root>) as a timeline row for
       # %<viewer>: post path %<path>, read up to %<mark>, %<hidden> replies left out after it.
       WEB`TIMELINE`COMMENT: |-
-        uargs({{bboards}}/WEB`TIMELINE`COMMENT`STATE,post,%<post>,comment,%<comment>,root,%<root>,viewer,%<viewer>,mark,%<mark>)[json_fill(lit({"author":"","time":0,"body":null,"format":"","group":"","anchor":"","reply_to":"","unread":false,"tag":"","children_hidden":0,"more":"","links":[{"label":"Reply","href":""}],"actions":null}),/author,if(%q<comment_is_removed>,\[%q<comment_number>\],\[%q<comment_number>\] [u({{bboards}}/FUN`DISPLAY`AUTHOR,%<post>,%<comment>,%<viewer>)]),/time,firstof(get(%<post>/C`%<comment>),0),/body,u({{bboards}}/WEB`TIMELINE`COMMENT`BODY,%<post>,%<comment>),/format,if(cand(not(%q<comment_is_removed>),strmatch(get(%<post>/C`%<comment>`FORMAT),mush)),mstring,markdown),/group,%<root>,/anchor,c%q<comment_number>,/reply_to,if(strlen(%q<comment_reply_number>),re \[%q<comment_reply_number>\] [u({{bboards}}/FUN`DISPLAY`AUTHOR,%<post>,%q<comment_reply_key>,%<viewer>)]),/unread,if(%q<comment_is_new>,true,false),/tag,if(get(%<post>/C`%<comment>`EDITED),edited),/children_hidden,%<hidden>,/more,u({{bboards}}/WEB`ADDRESS`OFPATH,%<path>/[match(%q<thread_comment_keys>,%<root>)]),/links/0/href,u({{bboards}}/WEB`ADDRESS`OFPATH,%<path>/%q<comment_number>),/actions,u({{bboards}}/WEB`JSON`ARRAY,%q<comment_actions>))]
+        uargs({{bboards}}/WEB`TIMELINE`COMMENT`STATE,post,%<post>,comment,%<comment>,root,%<root>,viewer,%<viewer>,mark,%<mark>)[json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`TIMELINE`COMMENT),/author,if(%q<comment_is_removed>,\[%q<comment_number>\],\[%q<comment_number>\] [u({{bboards}}/FUN`DISPLAY`AUTHOR,%<post>,%<comment>,%<viewer>)]),/time,firstof(get(%<post>/C`%<comment>),0),/body,u({{bboards}}/WEB`TIMELINE`COMMENT`BODY,%<post>,%<comment>),/format,if(cand(not(%q<comment_is_removed>),strmatch(get(%<post>/C`%<comment>`FORMAT),mush)),mstring,markdown),/group,%<root>,/anchor,c%q<comment_number>,/reply_to,if(strlen(%q<comment_reply_number>),re \[%q<comment_reply_number>\] [u({{bboards}}/FUN`DISPLAY`AUTHOR,%<post>,%q<comment_reply_key>,%<viewer>)]),/unread,if(%q<comment_is_new>,true,false),/tag,if(get(%<post>/C`%<comment>`EDITED),edited),/children_hidden,%<hidden>,/more,u({{bboards}}/WEB`ADDRESS`OFPATH,%<path>/[match(%q<thread_comment_keys>,%<root>)]),/links/0/href,u({{bboards}}/WEB`ADDRESS`OFPATH,%<path>/%q<comment_number>),/actions,u({{bboards}}/WEB`JSON`ARRAY,%q<comment_actions>))]
+      DATA`TEMPLATE`WEB`TIMELINE`COMMENT`STATE: |-
+        {"label":"Remove","action":"act","values":{"op":"remove","post":"","comment":""},"confirm":""}
       # Comment %<comment> on post %<post> (top comment %<root>) for %<viewer>, read up to %<mark>. Sets %q<comment_number>,
       # %q<comment_reply_key>, %q<comment_is_removed>, %q<comment_reply_number>, %q<comment_is_new> and %q<comment_actions>.
       WEB`TIMELINE`COMMENT`STATE: |-
@@ -2023,7 +2081,7 @@ objects:
         comment_is_removed,strlen(get(%<post>/C`%<comment>`REMOVED)),
         comment_reply_number,if(cand(strlen(%q<comment_reply_key>),not(strmatch(%q<comment_reply_key>,%<root>))),match(%q<thread_comment_keys>,%q<comment_reply_key>)),
         comment_is_new,cand(gt(%<comment>,%<mark>),not(strmatch(get(%<post>/C`%<comment>`BY),%<viewer>))),
-        comment_actions,squish(if(cand(not(%q<comment_is_removed>),u({{bboards}}/FUN`PERMISSION`CANEDIT,%<post>,%<comment>,%<viewer>)),json_fill(lit({"label":"Remove","action":"act","values":{"op":"remove","post":"","comment":""},"confirm":""}),/values/post,%<post>,/values/comment,%<comment>,/confirm,Remove comment %q<comment_number>?)),%r))
+        comment_actions,squish(if(cand(not(%q<comment_is_removed>),u({{bboards}}/FUN`PERMISSION`CANEDIT,%<post>,%<comment>,%<viewer>)),json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`TIMELINE`COMMENT`STATE),/values/post,%<post>,/values/comment,%<comment>,/confirm,Remove comment %q<comment_number>?)),%r))
       # Comment %1 on post %0 as a JSON body value: who removed it when %q<comment_is_removed>, else its text.
       WEB`TIMELINE`COMMENT`BODY: |-
         if(%q<comment_is_removed>,json(string,*[capstr(u({{bboards}}/FUN`DISPLAY`REMOVEDBY,get(%0/C`%1`REMOVED)))].*),if(strmatch(get(%0/C`%1`FORMAT),mush),json(markupstring,get(%0/C`%1`TEXT)),json(string,get(%0/C`%1`TEXT))))
@@ -2042,13 +2100,15 @@ objects:
       WEB`SCHEMA`NEW`BOARD: |-
         setqm(new_board_default,if(strlen(%1),u({{bboards}}/FUN`PATH`RESOLVE,%1,%0)[if(cand(not(strlen(%q<path_error>)),strmatch(%q<path_kind>,board)),%q<path_current>)]),
         new_board_options,u({{bboards}}/WEB`JSON`ARRAY,iter(u({{bboards}}/WEB`LIST`POSTABLEBOARDS,%0),u({{bboards}}/WEB`ELEMENT`OPTION,%i0,u({{bboards}}/FUN`PATH`OFBOARD,%i0) [u({{bboards}}/FUN`DISPLAY`BOARDNAMES,%i0)]),%b,%r)))
+      DATA`TEMPLATE`WEB`SCHEMA`NEW`FIELDS: |-
+        {"kind":"field","key":"board","label":"Board","type":"select","options":null,"default":"","validation":{"required":true}}
       # The new-post form's fields for viewer %0. Reads %q<new_board_options> and %q<new_board_default>; sets
       # %q<new_board_field>, %q<new_title_field>, %q<new_text_field> and %q<new_format_field>.
       WEB`SCHEMA`NEW`FIELDS: |-
-        setqm(new_board_field,json_fill(lit({"kind":"field","key":"board","label":"Board","type":"select","options":null,"default":"","validation":{"required":true}}),/options,%q<new_board_options>,/default,%q<new_board_default>),
+        setqm(new_board_field,json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`SCHEMA`NEW`FIELDS),/options,%q<new_board_options>,/default,%q<new_board_default>),
         new_title_field,lit({"kind":"field","key":"title","label":"Title","type":"text","validation":{"required":true,"max_length":60}}),
         new_text_field,lit({"kind":"field","key":"text","label":"Text","type":"textarea","help":"Markdown works: **bold**, *italic*, lists and links.","validation":{"required":true}}),
-        new_format_field,json_fill(lit({"kind":"field","key":"format","label":"Written in","type":"select","options":[null,null],"default":""}),/options/0,u({{bboards}}/WEB`ELEMENT`OPTION,md,Markdown),/options/1,u({{bboards}}/WEB`ELEMENT`OPTION,mush,SharpMUSH text),/default,if(strmatch(get(u({{bboards}}/FUN`READING`HOLDER,%0)/BBOARD`FORMAT),mush),mush,md)))
+        new_format_field,json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`ELEMENT`COMMENTBOX),/options/0,u({{bboards}}/WEB`ELEMENT`OPTION,md,Markdown),/options/1,u({{bboards}}/WEB`ELEMENT`OPTION,mush,SharpMUSH text),/default,if(strmatch(get(u({{bboards}}/FUN`READING`HOLDER,%0)/BBOARD`FORMAT),mush),mush,md)))
       # Every board viewer %0 may post on, in number order.
       WEB`LIST`POSTABLEBOARDS: |-
         squish(iter(u({{bboards}}/FUN`STORE`DESCENDANTS,{{store}},%0,1,,0),if(u({{bboards}}/FUN`PERMISSION`CAN,first(%i0,~),post,%0),first(%i0,~))))
@@ -2057,20 +2117,26 @@ objects:
       # the moderator, so the moderator writes the replacement (as +bbedit/all asks in telnet).
       WEB`SCHEMA`EDIT: |-
         u({{bboards}}/WEB`SCHEMA`EDIT`SOURCE,%0,%1,%2,%3)[u({{bboards}}/WEB`SCHEMA`EDIT`FIELDS,%0,%1,%2,%3)][if(u({{bboards}}/FUN`PERMISSION`CANEDIT,%1,%3,%0),u({{bboards}}/WEB`SCHEMA`EDIT`FORM,%0,%1,%2,%3),u({{bboards}}/WEB`ELEMENT`DOCUMENT,view,Edit,u({{bboards}}/WEB`ELEMENT`SECTION,,1,u({{bboards}}/WEB`ELEMENT`MARKDOWN,You can edit only what you wrote.))))]
+      DATA`TEMPLATE`WEB`SCHEMA`EDIT`SOURCE: |-
+        {"kind":"field","key":"title","label":"Title","type":"text","default":"","validation":{"required":true,"max_length":60}}
       # What the edit form for post %1, or its comment %3, starts from for editor %0. Sets %q<edit_comment_prefix>,
       # %q<edit_is_others_mush>, %q<edit_source_text> and %q<edit_title_field> (empty for a comment).
       WEB`SCHEMA`EDIT`SOURCE: |-
         setqm(edit_comment_prefix,if(strlen(%3),C`%3`),
         edit_is_others_mush,cand(strmatch(get(%1/%q<edit_comment_prefix>FORMAT),mush),not(strmatch(get(%1/%q<edit_comment_prefix>BY),%0))),
         edit_source_text,cond(%q<edit_is_others_mush>,,strmatch(get(%1/%q<edit_comment_prefix>FORMAT),mush),get(%1/%q<edit_comment_prefix>SOURCE),get(%1/%q<edit_comment_prefix>TEXT)),
-        edit_title_field,if(strlen(%3),,json_fill(lit({"kind":"field","key":"title","label":"Title","type":"text","default":"","validation":{"required":true,"max_length":60}}),/default,get(%1/TITLE))))
+        edit_title_field,if(strlen(%3),,json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`SCHEMA`EDIT`SOURCE),/default,get(%1/TITLE))))
+      DATA`TEMPLATE`WEB`SCHEMA`EDIT`FIELDS: |-
+        {"kind":"field","key":"text","label":"Text","type":"textarea","default":"","help":"","validation":{"required":true}}
+      DATA`TEMPLATE`WEB`SCHEMA`EDIT`FIELDS`2: |-
+        {"op":"edit","post":"","comment":""}
       # The text, format and save button for post %1, or its comment %3. Reads %q<edit_source_text>,
       # %q<edit_is_others_mush> and %q<edit_comment_prefix>; sets %q<edit_text_field>, %q<edit_format_field> and
       # %q<edit_save_button>.
       WEB`SCHEMA`EDIT`FIELDS: |-
-        setqm(edit_text_field,json_fill(lit({"kind":"field","key":"text","label":"Text","type":"textarea","default":"","help":"","validation":{"required":true}}),/default,%q<edit_source_text>,/help,if(%q<edit_is_others_mush>,Someone else wrote this as SharpMUSH text. Its code is not copied here%, so saving cannot run it as you: write the replacement.)),
-        edit_format_field,json_fill(lit({"kind":"field","key":"format","label":"Written in","type":"select","options":[null,null],"default":""}),/options/0,u({{bboards}}/WEB`ELEMENT`OPTION,md,Markdown),/options/1,u({{bboards}}/WEB`ELEMENT`OPTION,mush,SharpMUSH text),/default,firstof(get(%1/%q<edit_comment_prefix>FORMAT),md)),
-        edit_save_button,u({{bboards}}/WEB`ELEMENT`BUTTON,Save,json_fill(lit({"op":"edit","post":"","comment":""}),/post,%1,/comment,%3),primary))
+        setqm(edit_text_field,json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`SCHEMA`EDIT`FIELDS),/default,%q<edit_source_text>,/help,if(%q<edit_is_others_mush>,Someone else wrote this as SharpMUSH text. Its code is not copied here%, so saving cannot run it as you: write the replacement.)),
+        edit_format_field,json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`ELEMENT`COMMENTBOX),/options/0,u({{bboards}}/WEB`ELEMENT`OPTION,md,Markdown),/options/1,u({{bboards}}/WEB`ELEMENT`OPTION,mush,SharpMUSH text),/default,firstof(get(%1/%q<edit_comment_prefix>FORMAT),md)),
+        edit_save_button,u({{bboards}}/WEB`ELEMENT`BUTTON,Save,json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`SCHEMA`EDIT`FIELDS`2),/post,%1,/comment,%3),primary))
       # The edit form for post %1 (number path %2), or its comment %3, from the fields WEB`SCHEMA`EDIT`SOURCE
       # and WEB`SCHEMA`EDIT`FIELDS set.
       WEB`SCHEMA`EDIT`FORM: |-
@@ -2105,10 +2171,12 @@ objects:
       # 1 when the command just run refused, and %q<out> says why, on field %0 when given.
       WEB`RESULT`FAILED: |-
         if(match(warn error,%q<said_how>),setq(out,if(strlen(%0),u({{bboards}}/WEB`RESULT`FIELDERROR,%0,%q<said>),u({{bboards}}/WEB`RESULT`ERROR,%q<said>)))1,0)
+      DATA`TEMPLATE`WEB`RESULT`DONE: |-
+        {"ok":true,"message":"","fields":null,"schema":null,"data":null}
       # After a change: message %q<said>, and the page at %q<web_view_path> drawn again for viewer %0, on page
       # %q<web_page_number> (the one the form was on, or the last after a new comment, which lands there).
       WEB`RESULT`DONE: |-
-        json_fill(lit({"ok":true,"message":"","fields":null,"schema":null,"data":null}),/message,%q<said>,/fields,u({{bboards}}/WEB`JSON`EMPTY),/schema,uargs({{bboards}}/WEB`SCHEMA,viewer,%0,at,%q<web_view_path>,page,%q<web_page_number>,edit,,board,),/data,u({{bboards}}/WEB`DATA`JSON,%0,%q<web_view_path>,%q<web_page_number>))
+        json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`RESULT`DONE),/message,%q<said>,/fields,u({{bboards}}/WEB`JSON`EMPTY),/schema,uargs({{bboards}}/WEB`SCHEMA,viewer,%0,at,%q<web_view_path>,page,%q<web_page_number>,edit,,board,),/data,u({{bboards}}/WEB`DATA`JSON,%0,%q<web_view_path>,%q<web_page_number>))
       WEB`ACT`POST: |-
         think setqm(web_board_key,u({{bboards}}/WEB`REQUEST`FIELD,board,%<body>),
         web_title,trim(u({{bboards}}/WEB`REQUEST`FIELD,title,%<body>)));@assert cand(isdbref(%q<web_board_key>),u({{bboards}}/FUN`IS`BOARD,%q<web_board_key>))=think setq(out,u({{bboards}}/WEB`RESULT`FIELDERROR,board,Pick a board.));@assert strlen(%q<web_title>)=think setq(out,u({{bboards}}/WEB`RESULT`FIELDERROR,title,Give it a title.));@assert strlen(trim(%q<web_text>))=think setq(out,u({{bboards}}/WEB`RESULT`FIELDERROR,text,Write something first.));@include {{bboards}}/WEB`NEED`BOARD;@include/args {{bboards}}/WEB`COMMAND`RUN=word,post,switches,%q<web_format_suffix>,argument,%q<web_board_path>/%q<web_title>=%q<web_text>;@assert not(u({{bboards}}/WEB`RESULT`FAILED,text));think setq(out,u({{bboards}}/WEB`RESULT`GOTO,%q<said>,u({{bboards}}/WEB`ADDRESS`OFPATH,u({{bboards}}/FUN`PATH`OFPOST,last(u({{bboards}}/FUN`STORE`POSTS,%q<web_board_key>))))))
@@ -2161,8 +2229,10 @@ objects:
         @include {{bboards}}/WEB`NEED`BOARD;think setq(out,u({{bboards}}/WEB`RESULT`GOTO,,/apps/boards/new?board=%q<web_board_path>))
       WEB`NAV: |-
         json(object,groups,if(strlen(%0),u({{bboards}}/WEB`JSON`ARRAY,u({{bboards}}/WEB`NAV`MAIN,%0)%r[u({{bboards}}/WEB`NAV`BOARDS,%0)]),json_array()))
+      DATA`TEMPLATE`WEB`NAV`MAIN: |-
+        {"label":"","items":[null,null,null]}
       WEB`NAV`MAIN: |-
-        setq(nav_new_count,ulocal({{bboards}}/FUN`READING`NEWBELOW,{{store}},%0))[json_fill(lit({"label":"","items":[null,null,null]}),/items/0,u({{bboards}}/WEB`NAV`LINK,What's new,/apps/boards/unread,mark_email_unread,%q<nav_new_count>),/items/1,u({{bboards}}/WEB`NAV`LINK,All boards,/apps/boards,forum,),/items/2,u({{bboards}}/WEB`NAV`LINK,New post,/apps/boards/new,add,))]
+        setq(nav_new_count,ulocal({{bboards}}/FUN`READING`NEWBELOW,{{store}},%0))[json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`NAV`MAIN),/items/0,u({{bboards}}/WEB`NAV`LINK,What's new,/apps/boards/unread,mark_email_unread,%q<nav_new_count>),/items/1,u({{bboards}}/WEB`NAV`LINK,All boards,/apps/boards,forum,),/items/2,u({{bboards}}/WEB`NAV`LINK,New post,/apps/boards/new,add,))]
       # The top-level boards viewer %0 follows, one group per category.
       WEB`NAV`BOARDS: |-
         setqm(nav_visible_boards,u({{bboards}}/FUN`STORE`VISIBLEBOARDS,{{store}},%0,0),
@@ -2175,9 +2245,13 @@ objects:
       WEB`NAV`BOARDS`GROUPS: |-
         null(iter(%q<nav_visible_boards>,setq(nav_category_current,u({{bboards}}/FUN`STORE`CATEGORYOF,{{store}},%i0))[if(not(strmatch(%q<nav_category_current>,%q<nav_last_category>)),if(strlen(%q<nav_items>),setq(nav_groups,%q<nav_groups>[if(strlen(%q<nav_groups>),%r)][json(object,label,json(string,u({{bboards}}/FUN`STORE`CATEGORYNAME,{{store}},%q<nav_last_category>)),items,u({{bboards}}/WEB`JSON`ARRAY,%q<nav_items>))]))[setqm(nav_items,,
         nav_last_category,%q<nav_category_current>)])][setq(nav_items,%q<nav_items>[if(strlen(%q<nav_items>),%r)][u({{bboards}}/WEB`NAV`LINK,match(%q<nav_all_boards>,%i0) [name(%i0)],/apps/boards/[match(%q<nav_all_boards>,%i0)],forum,u({{bboards}}/FUN`READING`NEWBELOW,%i0,%0))])]))
+      DATA`TEMPLATE`WEB`NAV`LINK: |-
+        {"label":"","path":"","icon":"","count":0}
+      DATA`TEMPLATE`WEB`NAV`LINK`2: |-
+        {"label":"","path":"","icon":""}
       # A sidebar link: label %0, path %1, Material icon %2, and count %3 when it is more than 0.
       WEB`NAV`LINK: |-
-        if(%3,json_fill(lit({"label":"","path":"","icon":"","count":0}),/label,%0,/path,%1,/icon,%2,/count,%3),json_fill(lit({"label":"","path":"","icon":""}),/label,%0,/path,%1,/icon,%2))
+        if(%3,json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`NAV`LINK),/label,%0,/path,%1,/icon,%2,/count,%3),json_fill(get({{bboards}}/DATA`TEMPLATE`WEB`NAV`LINK`2),/label,%0,/path,%1,/icon,%2))
       # The first time a character uses the boards, BBOARD records when.
       INC`DO`FIRSTUSE: |-
         @break strlen(get(%q<reader_holder>/BBOARD));&BBOARD %q<reader_holder>=secs()
