@@ -1,7 +1,7 @@
 format: "1.16"
 package: messages
 title: "Messages object"
-version: 1.4.0
+version: 1.4.1
 authors: [SharpMUSH]
 description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."
 license: MIT
@@ -110,4 +110,4 @@ objects:
       DOWN: |-
         %r[notice(,[mudname()] is closed to logins for now. Please try again later.,warn)]
       QUIT: |-
-        %rGoodbye from [tone(strong,mudname())]. Come back soon!
+        Goodbye from [tone(strong,mudname())]. Come back soon!

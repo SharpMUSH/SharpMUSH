@@ -7002,7 +7002,7 @@
     <value>Goodbye</value>
   </data>
   <data name="AdmMsgQuitDesc" xml:space="preserve">
-    <value>Shown after "GOODBYE." on QUIT and LOGOUT.</value>
+    <value>Shown to the connection that leaves, on QUIT and LOGOUT.</value>
   </data>
   <data name="AdmSetupPkgMessagesDesc" xml:space="preserve">
     <value>Keeps the connect screen, the messages of the day and the other server messages as softcode on one object instead of the stored text. Admin &gt; Messages switches back at any time.</value>

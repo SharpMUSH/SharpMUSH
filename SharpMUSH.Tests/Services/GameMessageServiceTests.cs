@@ -189,7 +189,7 @@ public partial class GameMessageServiceTests
 
 		var shown = (await service.RenderAsync(GameMessage.Quit, 0)).Expect<MString>();
 
-		await Assert.That(shown.ToPlainText()).IsEqualTo($"\nGoodbye from {MudName}. Come back soon!");
+		await Assert.That(shown.ToPlainText()).IsEqualTo($"Goodbye from {MudName}. Come back soon!");
 	}
 
 	[Test]

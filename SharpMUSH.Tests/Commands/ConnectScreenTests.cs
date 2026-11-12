@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -95,9 +96,36 @@ public class ConnectScreenTests
 
 		var messages = NotificationsTo(WebAppFactoryArg, anonymous);
 
-		await Assert.That(messages).Contains("GOODBYE.");
+		await Assert.That(messages.Any(m => m.Contains("Come back soon", StringComparison.Ordinal))).IsTrue();
 		await Assert.That(messages.Any(m => m.StartsWith("#-1 EXCEPTION: "))).IsFalse();
 		await Assert.That(ConnectionService.Get(anonymous)).IsNull();
+	}
+
+	/// <summary>
+	/// A character's other connections stay in the game when one of them quits. Only the leaving one
+	/// gets the goodbye (PennMUSH's disconnect_player sends the quit file to that descriptor alone);
+	/// the others are told they partially disconnected. The goodbye was once sent to the player, which
+	/// reached every connection the character had.
+	/// </summary>
+	[Test]
+	public async Task QuitSaysGoodbyeOnlyToTheLeavingConnection()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "QuitOneOfTwo");
+		var staying = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, player.DbRef);
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("QUIT"));
+
+		await Assert.That(() => NotificationsTo(WebAppFactoryArg, staying))
+			.WaitsFor(lines => lines.Contains(ErrorMessages.Notifications.YouHavePartiallyDisconnected),
+				timeout: TimeSpan.FromSeconds(5), pollingInterval: TimeSpan.FromMilliseconds(50));
+
+		var leaving = NotificationsTo(WebAppFactoryArg, player.Handle);
+		await Assert.That(leaving.Count(m => m.Contains("Come back soon", StringComparison.Ordinal))).IsEqualTo(1);
+		await Assert.That(leaving).DoesNotContain("GOODBYE.");
+		await Assert.That(NotificationsTo(WebAppFactoryArg, staying).Any(m => m.Contains("Come back soon", StringComparison.Ordinal))).IsFalse();
+		await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef).Any(m => m.Contains("Come back soon", StringComparison.Ordinal))).IsFalse();
+		await Assert.That(ConnectionService.Get(staying)?.Ref).IsEqualTo(player.DbRef);
 	}
 
 	private string? LastNotificationTo(long handle) =>
