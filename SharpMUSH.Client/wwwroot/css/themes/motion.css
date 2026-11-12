@@ -177,8 +177,7 @@
 	--atmosphere-motion: none;
 }
 
-/* Datastream: thin trails of accent-3 falling far behind the page, each brightest at its head, as data streaming
-   past a screen. */
+/* Datastream: thin trails of accent-3 and accent-2 falling far behind the page, as data streaming past a screen. */
 [data-atmosphere="datastream"] {
 	--atmosphere-still: none;
 	--atmosphere-moving: radial-gradient(1px 46px at 12% 30%, color-mix(in srgb, var(--accent-3) 45%, transparent), transparent),

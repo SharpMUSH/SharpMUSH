@@ -63,7 +63,7 @@ covered by the switch; use `--image-filter` instead. Signed out, the browser kee
   logo, art or font.
 - Creature games: `wild-tamer`, `data-partner`. One takes the look of a game about catching creatures in tall grass
   (field-guide cards, fat capsule buttons, health bars that change colour), the other of a game about raising a
-  digital partner (a wireframe world, cards as a handheld's screen, LCD meters). Their own drawings and names, never
+  digital partner (a wireframe world, cards as a handheld's screen, block meters). Their own drawings and names, never
   a franchise's creatures, logos or devices.
 - Colour vision: `protan-dark`, `protan-light`, `deutan-dark`, `deutan-light`, `tritan-dark`, `tritan-light`,
   `mono-dark`, `mono-light`. Phosphor's or Daylight's surfaces and text, with an accent, warning and missing-link
@@ -199,8 +199,8 @@ first choice of each, which is how the portal looked before they existed:
   `wobble` (cards are dealt in, the current line floats and tilts), `bob` (the current line bobs). Arrivals use
   `--duration-enter`, which reduced motion zeroes; under reduced motion `globals.css` also stops every loop.
 - **Atmosphere** (`atmosphere`): a layer `ThemeTexture` draws over the texture and under the page. `none`,
-  `vignette`, `fog`, `embers`, `motes`, `crt` (dark corners and scanlines), `slashes`, `datastream` (trails of
-  `accent-3` falling far behind the page). Its colours are the theme's.
+  `vignette`, `fog`, `embers`, `motes`, `crt` (dark corners and scanlines), `slashes`, `datastream` (thin trails of
+  `accent-3` and `accent-2` falling far behind the page). Its colours are the theme's.
 
 A component that shows a picture put in the game marks its `<img>` `game-picture` (the wiki's Markdown marks its own
 `wiki-img`); `shell.css` gives both `filter: var(--image-filter)`.

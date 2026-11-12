@@ -501,7 +501,7 @@ public static class BuiltInThemes
 		accent2: "#ffcc33", accent3: "#4f9a63",
 		selection: "lift", buttons: "capsule", material: "solid", meters: "vital", motion: "bob", atmosphere: "motes");
 
-	/// <summary>Data Partner: a wireframe world of data, cards as a handheld device's screen, LCD meters, keys that light when pressed.</summary>
+	/// <summary>Data Partner: a wireframe world of data, cards as a handheld device's screen, block meters, keys that light when pressed.</summary>
 	public static readonly PortalTheme DataPartner = Genre("data-partner", "Data Partner", dark: true,
 		["#070d1c", "#0e1830", "#13203d", "#0b1428", "#050a16", "#eef3ff", "#b5c2dd", "#8f9dbb", "#2b3d66", "#1b2a4c", "#ff9a2e", "#ffd23f", "#ff8a8a"],
 		display: "silkscreen", body: "ui", corners: "soft", texture: "wireframe", ornament: "emblem", frame: "device", titles: "normal", effect: "evolve", imagery: "neon",

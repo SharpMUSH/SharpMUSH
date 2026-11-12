@@ -367,7 +367,7 @@
 
 /* Capsule: a capsule split down the middle before the title. */
 [data-ornament-glyphs="capsule"] { --ornament-before: "\25D6\25D7"; --ornament-after: none; }
-/* Capsule: a round-ended bar, the accent's half and accent-2's half. */
+/* Capsule: a thick bar, the accent's half and accent-2's half. */
 [data-ornament-underline="capsule"] {
 	--title-underline: linear-gradient(90deg, var(--accent) 0 50%, var(--accent-2) 50%);
 	--title-underline-height: 5px;
