@@ -425,9 +425,23 @@
     font-display: swap;
 }
 @font-face {
+    font-family: "Gloock";
+    src: url("/fonts/gloock-latin.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
     font-family: "Silkscreen";
     src: url("/fonts/silkscreen-latin.woff2") format("woff2");
     font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Inknut Antiqua";
+    src: url("/fonts/inknut-antiqua-latin.woff2") format("woff2");
+    font-weight: 600;
     font-style: normal;
     font-display: swap;
 }

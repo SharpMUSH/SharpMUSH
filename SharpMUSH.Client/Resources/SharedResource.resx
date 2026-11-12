@@ -7803,7 +7803,7 @@
     <value>Twinkles</value>
   </data>
   <data name="AdmThemeStyleOrnamentBlossom" xml:space="preserve">
-    <value>Blossoms</value>
+    <value>Sky lanterns</value>
   </data>
   <data name="AdmThemeStyleOrnamentEncore" xml:space="preserve">
     <value>Encore hearts</value>
@@ -13199,6 +13199,12 @@
   <data name="AdmThemeStyleSelectionStroke" xml:space="preserve">
     <value>Brush stroke</value>
   </data>
+  <data name="AdmThemeStyleSelectionLantern" xml:space="preserve">
+    <value>Lantern</value>
+  </data>
+  <data name="AdmThemeStyleSelectionPennant" xml:space="preserve">
+    <value>Pennant</value>
+  </data>
   <data name="AdmThemeStyleButtons" xml:space="preserve">
     <value>Buttons</value>
   </data>
@@ -13219,6 +13225,12 @@
   </data>
   <data name="AdmThemeStyleButtonsBrush" xml:space="preserve">
     <value>Brush</value>
+  </data>
+  <data name="AdmThemeStyleButtonsPlaque" xml:space="preserve">
+    <value>Name board</value>
+  </data>
+  <data name="AdmThemeStyleButtonsSeal" xml:space="preserve">
+    <value>Seal</value>
   </data>
   <data name="AdmThemeStyleMaterial" xml:space="preserve">
     <value>Card material</value>
@@ -13244,6 +13256,12 @@
   <data name="AdmThemeStyleMaterialWood" xml:space="preserve">
     <value>Wood</value>
   </data>
+  <data name="AdmThemeStyleMaterialSilk" xml:space="preserve">
+    <value>Silk</value>
+  </data>
+  <data name="AdmThemeStyleMaterialBamboo" xml:space="preserve">
+    <value>Bamboo slips</value>
+  </data>
   <data name="AdmThemeStyleMeters" xml:space="preserve">
     <value>Meters</value>
   </data>
@@ -13261,6 +13279,12 @@
   </data>
   <data name="AdmThemeStyleMetersHairline" xml:space="preserve">
     <value>Hairline</value>
+  </data>
+  <data name="AdmThemeStyleMetersAbacus" xml:space="preserve">
+    <value>Abacus</value>
+  </data>
+  <data name="AdmThemeStyleMetersArrows" xml:space="preserve">
+    <value>Arrows</value>
   </data>
   <data name="AdmThemeStyleMotion" xml:space="preserve">
     <value>Motion</value>
@@ -13282,6 +13306,9 @@
   </data>
   <data name="AdmThemeStyleMotionBob" xml:space="preserve">
     <value>Bob</value>
+  </data>
+  <data name="AdmThemeStyleMotionUnfurl" xml:space="preserve">
+    <value>Unfurl</value>
   </data>
   <data name="AdmThemeStyleAtmosphere" xml:space="preserve">
     <value>Atmosphere</value>
@@ -13307,6 +13334,12 @@
   <data name="AdmThemeStyleAtmosphereSlashes" xml:space="preserve">
     <value>Slashes</value>
   </data>
+  <data name="AdmThemeStyleAtmosphereSkyLanterns" xml:space="preserve">
+    <value>Sky lanterns</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereSmoke" xml:space="preserve">
+    <value>Smoke</value>
+  </data>
   <data name="AdmThemeStyleTextureArchive" xml:space="preserve">
     <value>Archive</value>
   </data>
@@ -13321,6 +13354,12 @@
   </data>
   <data name="AdmThemeStyleTextureOilpaint" xml:space="preserve">
     <value>Oil paint</value>
+  </data>
+  <data name="AdmThemeStyleTextureEaves" xml:space="preserve">
+    <value>Palace eaves</value>
+  </data>
+  <data name="AdmThemeStyleTextureWarbanners" xml:space="preserve">
+    <value>War banners</value>
   </data>
   <data name="AdmThemeStyleFrameArchive" xml:space="preserve">
     <value>Archive</value>
@@ -13375,5 +13414,11 @@
   </data>
   <data name="AdmThemeStyleAtmosphereDatastream" xml:space="preserve">
     <value>Datastream</value>
+  </data>
+  <data name="AdmThemeStyleFrameLattice" xml:space="preserve">
+    <value>Lattice</value>
+  </data>
+  <data name="AdmThemeStyleFrameSlips" xml:space="preserve">
+    <value>Bamboo slips</value>
   </data>
 </root>
