@@ -821,3 +821,43 @@
 	--texture-mask-accent: url(/themes/drawings/textures/oilpaint-accent.svg) right 0 bottom 0 / 1200px 900px no-repeat;
 	--texture-ink-accent: color-mix(in srgb, var(--accent) 34%, transparent);
 }
+
+/* Meadow: a sunny route through the grass, as in a game about catching creatures. A sun of accent-2 and puffs of
+   cloud in the surface colour over a far hill, and a near hill of accent-3 with tall grass on its ridge and flowers
+   of the accent dotted down its side, along the foot of the page. */
+[data-texture="meadow"] {
+	--texture: radial-gradient(circle 64px at 84% 120px, color-mix(in srgb, var(--accent-2) 75%, transparent) 0 97%, transparent 100%),
+		radial-gradient(circle 150px at 84% 120px, color-mix(in srgb, var(--accent-2) 26%, transparent), transparent),
+		radial-gradient(70px 22px at 32% 90px, var(--surface) 0 96%, transparent 100%),
+		radial-gradient(46px 26px at 35% 76px, var(--surface) 0 96%, transparent 100%),
+		radial-gradient(60px 18px at 62% 170px, var(--surface) 0 96%, transparent 100%),
+		radial-gradient(38px 20px at 64.5% 158px, var(--surface) 0 96%, transparent 100%),
+		linear-gradient(180deg, var(--bg), color-mix(in srgb, var(--surface) 40%, var(--bg)) 60%);
+	--texture-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+	--texture-mask-border: url(/themes/drawings/textures/meadow-border.svg) left bottom / 1600px 500px repeat-x;
+	--texture-ink-border: color-mix(in srgb, var(--accent-3) 26%, var(--bg));
+	--texture-mask-accent-3: url(/themes/drawings/textures/meadow-accent-3.svg) left bottom / 1600px 500px repeat-x;
+	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 52%, var(--bg));
+	--texture-mask-accent: url(/themes/drawings/textures/meadow-accent.svg) left bottom / 1600px 500px repeat-x;
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 70%, var(--bg));
+}
+
+/* Wireframe: a world made of data, as in a game about digital monsters. A floor of accent-2 grid lines runs to a
+   horizon lit in accent-2, with towers of data standing on it and outlined cubes of the accent floating above; far
+   behind, columns of ones and zeros in accent-3 fade toward the floor. */
+[data-texture="wireframe"] {
+	--texture: radial-gradient(70% 22% at 50% calc(100% - 380px), color-mix(in srgb, var(--accent-2) 16%, transparent), transparent),
+		linear-gradient(180deg, var(--bg), color-mix(in srgb, var(--accent-2) 5%, var(--bg)) calc(100% - 390px), var(--bg) calc(100% - 370px));
+	--texture-size: 100% 100%, 100% 100%;
+	--texture-mask-accent-2: url(/themes/drawings/textures/wireframe-accent-2.svg) center bottom / 1600px 900px repeat-x intersect,
+		linear-gradient(180deg, transparent calc(100% - 380px), rgba(0, 0, 0, .25) calc(100% - 360px), #000);
+	--texture-ink-accent-2: color-mix(in srgb, var(--accent-2) 40%, transparent);
+	--texture-mask-border: url(/themes/drawings/textures/wireframe-border.svg) center bottom / 1600px 900px repeat-x;
+	--texture-ink-border: linear-gradient(0deg, color-mix(in srgb, var(--accent-2) 18%, transparent) 380px, color-mix(in srgb, var(--accent-2) 4%, transparent) 700px);
+	--texture-mask-accent: url(/themes/drawings/textures/wireframe-accent.svg) center bottom / 1600px 900px repeat-x;
+	--texture-ink-accent: color-mix(in srgb, var(--accent) 38%, transparent);
+	--texture-mask-accent-3: url(/themes/drawings/textures/wireframe-accent-3.svg) 0 0 / 240px 480px intersect,
+		linear-gradient(90deg, transparent 0 300px, rgba(0, 0, 0, .6) 420px, #000) intersect,
+		linear-gradient(180deg, rgba(0, 0, 0, .7), rgba(0, 0, 0, .25) 40%, transparent 60%);
+	--texture-ink-accent-3: color-mix(in srgb, var(--accent-3) 11%, transparent);
+}

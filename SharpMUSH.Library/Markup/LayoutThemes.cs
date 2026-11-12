@@ -37,7 +37,7 @@ public static class LayoutThemes
 	/// <c>text-faint</c>, then the status colours the portal works out for the theme (success, <c>warn</c>, danger and
 	/// info). A colour that did not stand out from the background enough for its role was moved toward white on a dark
 	/// theme, black on a light one, until it did. Subtle, link, highlight and the hues are worked out from those
-	/// (<see cref="ThemePalette.Completed()"/>). <c>directive</c> and the themes styled on games (<c>heart-realm</c> to <c>wasteland</c>, and <c>archivist</c> to <c>precinct</c>)
+	/// (<see cref="ThemePalette.Completed()"/>). <c>directive</c> and the themes styled on games (<c>heart-realm</c> to <c>wasteland</c>, and <c>archivist</c> to <c>data-partner</c>)
 	/// also carry a look: their own border, title ornaments, bullet and gauge.
 	/// </summary>
 	public static IReadOnlyList<ThemePalette> Own { get; } =
@@ -176,6 +176,16 @@ public static class LayoutThemes
 		{
 			Border = "single", TitleOpen = "┤ § ", TitleClose = " § ├", Guide = "line", Bullet = "–",
 			GaugeOpen = "[", GaugeFilled = "▮", GaugeEmpty = "▯", GaugeClose = "]", Rule = "─",
+		}),
+		Ported("wild-tamer", ThemeMode.Light, ["#e4f2fb", "#f4f9f5", "#1b2430", "#c62d29", "#85600a", "#2f6e40", "#4f5b68", "#2f7a3d", "#8a5a00", "#b42318", "#2b6aa3"], new ThemeLook
+		{
+			Border = "rounded", TitleOpen = "┤ ◖◗ ", TitleClose = " ├", Guide = "rounded", Bullet = "●",
+			GaugeOpen = "(", GaugeFilled = "█", GaugeEmpty = "░", GaugeClose = ")", Rule = "─",
+		}),
+		Ported("data-partner", ThemeMode.Dark, ["#070d1c", "#13203d", "#eef3ff", "#ff9a2e", "#2fd2ff", "#7cff6b", "#8f9dbb", "#6cde9a", "#ffd23f", "#ff8a8a", "#5aa9ff"], new ThemeLook
+		{
+			Border = "heavy", TitleOpen = "┫ ⬢ ", TitleClose = " ┣", Guide = "heavy", Bullet = "▪",
+			GaugeOpen = "[", GaugeFilled = "▮", GaugeEmpty = "▯", GaugeClose = "]", Rule = "━",
 		}),
 		Ported("protan-dark", ThemeMode.Dark, ["#0e0f11", "#1c1f23", "#e9edf0", "#a8e8fa", "#e9edf0", "#f2ef0a", "#7d8790", "#2ca1c1", "#f2ef0a", "#f58b28", "#9f5efe"]),
 		Ported("protan-light", ThemeMode.Light, ["#f3f4f6", "#eef0f3", "#14181c", "#1b729b", "#14181c", "#876c00", "#5f6872", "#0d155a", "#876c00", "#612f08", "#5801f5"]),
