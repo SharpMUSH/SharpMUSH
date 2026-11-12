@@ -326,10 +326,10 @@
 	--card-shadow: var(--elev-1);
 }
 
-/* Stained: a band of coloured glass along the top (accent-2, accent-3, the accent), a glow falling from it, and a
-   small crown in the accent in the lower right. */
+/* Stained: a fine gold line along the top in the accent, fading at its ends, a glow falling from it, and a small
+   crown in the accent in the lower right. */
 [data-frame-marks="stained"] {
-	--card-marks: linear-gradient(90deg, var(--accent-2) 0 25%, var(--accent-3) 25% 50%, var(--accent) 50% 75%, var(--accent-2) 75%) left top / 100% 4px no-repeat,
+	--card-marks: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 70%, transparent) 20% 80%, transparent) left top / 100% 2px no-repeat,
 		radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 60%);
 	--card-mask-accent: url(/themes/drawings/frames/stained-crown.svg) right 12px bottom 6px / 20px 12px no-repeat;
 	--card-ink-accent: color-mix(in srgb, var(--accent) 70%, transparent);
