@@ -780,7 +780,8 @@
 		--texture-mask-accent-3: url(/themes/drawings/textures/haze-wire.svg) center top / 1440px 720px no-repeat;
 	}
 }
-[data-reduce-motion="on"][data-texture="haze"] {
+[data-reduce-motion="on"][data-texture="haze"],
+[data-reduce-motion="on"] [data-texture="haze"] {
 	--texture-mask-accent-3: url(/themes/drawings/textures/haze-wire.svg) center top / 1440px 720px no-repeat;
 }
 [data-scheme="light"][data-texture="haze"] {
