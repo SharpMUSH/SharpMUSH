@@ -573,3 +573,30 @@
 [data-frame-shadow="brushed"] {
 	--card-shadow: 0 18px 36px rgba(0, 0, 0, 0.55), 0 2px 4px rgba(0, 0, 0, 0.4);
 }
+
+/* Lattice: a band of painted beam along the top (second and third accents, divided in the border colour) over a
+   rule in the border colour, and key-fret corners in the accent at the foot. */
+[data-frame-marks="lattice"] {
+	--card-marks: repeating-linear-gradient(90deg, var(--accent-2) 0 22px, var(--accent-3) 22px 44px, var(--border) 44px 48px) left 0 top 0 / 100% 10px no-repeat,
+		linear-gradient(var(--border), var(--border)) left 0 top 10px / 100% 2px no-repeat;
+	--card-mask-accent: url(/themes/drawings/frames/fret-corner-left.svg) left 0 bottom 0 / 30px 30px no-repeat,
+		url(/themes/drawings/frames/fret-corner-right.svg) right 0 bottom 0 / 30px 30px no-repeat;
+}
+/* Lattice: a warm, soft lift in the text colour. */
+[data-frame-shadow="lattice"] {
+	--card-shadow: 0 10px 28px color-mix(in srgb, var(--text) 14%, transparent);
+}
+
+/* Slips: bamboo slips bound by two cords in the second accent, knotted at the left, with darker edge slips. */
+[data-frame-marks="slips"] {
+	--card-marks: linear-gradient(var(--accent-2), var(--accent-2)) left 0 top 12px / 100% 2px no-repeat,
+		linear-gradient(var(--accent-2), var(--accent-2)) left 0 bottom 12px / 100% 2px no-repeat,
+		linear-gradient(var(--border), var(--border)) left 0 top 0 / 3px 100% no-repeat,
+		linear-gradient(var(--border), var(--border)) right 0 top 0 / 3px 100% no-repeat;
+	--card-mask-accent-2: url(/themes/drawings/frames/slips-knot.svg) left 6px top 5px / 12px 16px no-repeat,
+		url(/themes/drawings/frames/slips-knot.svg) left 6px bottom 5px / 12px 16px no-repeat;
+}
+/* Slips: a deep shadow, as a bound record laid on a dark table. */
+[data-frame-shadow="slips"] {
+	--card-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+}

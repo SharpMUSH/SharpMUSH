@@ -61,6 +61,9 @@ covered by the switch; use `--image-filter` instead. Signed out, the browser kee
   of a kind of modern game (an android archive, a shooter's lobby, a soulslike, an ancient-tech tablet, a painterly
   detective RPG) and shows off the menu settings below, never a game's name,
   logo, art or font.
+- Chinese history and building: `vermilion-court` (light: a palace hall's gold roofs, red columns and painted beams)
+  and `three-realms` (dark: three camps' banners on a ridge over a river, bamboo-slip records, cinnabar seals). Their
+  drawings are made for SharpMUSH, never taken from one dynasty's, novel's or game's art.
 - Colour vision: `protan-dark`, `protan-light`, `deutan-dark`, `deutan-light`, `tritan-dark`, `tritan-light`,
   `mono-dark`, `mono-light`. Phosphor's or Daylight's surfaces and text, with an accent, warning and missing-link
   colour picked for that vision. They draw no grain: their colours reach 4.5:1 against the flat surfaces, and the
@@ -179,25 +182,29 @@ first choice of each, which is how the portal looked before they existed:
 
 - **Current line** (`selection`): how the current page in a menu is marked. `standard` (each menu's own mark: a glowing bar in the
   main menu, a raised row in a section's sidebar), `bar` (a squared block in the text colour), `skew` (a slanted accent plate), `halo` (a pool of light behind the
-  words), `brackets` (corner ticks), `lift` (a raised, tilted card), `stroke` (a brush stroke under the words). The
+  words), `brackets` (corner ticks), `lift` (a raised, tilted card), `stroke` (a brush stroke under the words), `lantern` (a small lantern hung
+  beside the line and a rule under it), `pennant` (a swallowtail flag on a pole behind the line). The
   rules set the `--select-*` variables that `.phosphor-nav-link.active` in `shell.css` and `.kit-row--current` in
   `Kit/SidebarRow.razor.css` read.
 - **Buttons** (`buttons`): the cut of the portal's capsule buttons and MudBlazor's filled and outlined ones, and how
   each looks pressed. `standard`, `skew` (slides into its shadow), `keycap` (a thick base it sinks into), `notch` (two
-  corners cut), `bar` (square ends, spaced capitals), `brush` (a painted shape that tips). The rules set the
+  corners cut), `bar` (square ends, spaced capitals), `brush` (a painted shape that tips), `plaque` (a name board with pointed ends and a
+  thick foot it sinks into), `seal` (a square-cut chop with a double rim that stamps down, tilted). The rules set the
   `--button-*` variables that `Kit/CapsuleButton.razor.css` and `shell.css` read.
 - **Card material** (`material`): what cards are made of, under their frame. `solid`, `glass` (blurs the page behind
-  it), `hologram` (accent light and scanlines), `veil` (fades out at the sides), `cardstock`, `felt`, `wood`. It sets
+  it), `hologram` (accent light and scanlines), `veil` (fades out at the sides), `cardstock`, `felt`, `wood`, `silk` (a fine
+  weave), `bamboo` (the seams of bound slips). It sets
   `--card-material`, the fill under `--card-marks`, and `--card-backdrop`.
 - **Meters** (`meters`): MudBlazor's progress bars, such as a loading or import bar. `bar`, `segmented`, `slanted`, `pips`,
-  `hairline`.
+  `hairline`, `abacus` (beads on a rod), `arrows` (a row of arrows).
 - **Motion** (`motion`): how cards and menu lines arrive and what loops. `calm` (fades only), `still` (nothing moves,
   not even the atmosphere), `snappy` (cards rise, menu lines slide in), `drift` (the background drifts slowly),
-  `wobble` (cards are dealt in, the current line floats and tilts), `bob` (the current line bobs). Arrivals use
+  `wobble` (cards are dealt in, the current line floats and tilts), `bob` (the current line bobs), `unfurl` (cards open downward like a scroll). Arrivals use
   `--duration-enter`, which reduced motion zeroes; under reduced motion, or with the player's reduce-motion toggle,
   `globals.css` also stops every loop.
 - **Atmosphere** (`atmosphere`): a layer `ThemeTexture` draws over the texture and under the page. `none`,
-  `vignette`, `fog`, `embers`, `motes`, `crt` (dark corners and scanlines), `slashes`. Its colours are the theme's.
+  `vignette`, `fog`, `embers`, `motes`, `crt` (dark corners and scanlines), `slashes`, `sky-lanterns` (a few lanterns rising and fading), `smoke` (low smoke
+  drifting across). Its colours are the theme's.
 
 A component that shows a picture put in the game marks its `<img>` `game-picture` (the wiki's Markdown marks its own
 `wiki-img`); `shell.css` gives both `filter: var(--image-filter)`.

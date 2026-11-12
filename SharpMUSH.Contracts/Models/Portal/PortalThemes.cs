@@ -491,6 +491,23 @@ public static class BuiltInThemes
 		accent2: "#b2452f", accent3: "#3c7882",
 		selection: "stroke", buttons: "brush", material: "cardstock", meters: "bar", motion: "calm", atmosphere: "vignette");
 
+	// Chinese history and building: original drawings of a palace hall and of a war camp's banners, never one
+	// dynasty's or one story's names, emblems or art.
+
+	/// <summary>Vermilion Court: a palace hall's gold roofs, red columns and painted beams, key-fret corners, gilt name-board buttons, a lantern on the chosen line.</summary>
+	public static readonly PortalTheme VermilionCourt = Genre("vermilion-court", "Vermilion Court", dark: false,
+		["#f2e9d8", "#fbf6ec", "#f5ecdc", "#ede2cd", "#e8dbc0", "#2a1d17", "#563f33", "#6b5446", "#c4a464", "#e2d3b4", "#a3261c", "#85570a", "#9b2c4a"],
+		display: "gloock", body: "serif", corners: "sharp", texture: "eaves", ornament: "lotus", frame: "lattice", titles: "normal", effect: "gilt", imagery: "warm",
+		accent2: "#1f5e50", accent3: "#24476e",
+		selection: "lantern", buttons: "plaque", material: "silk", meters: "abacus", motion: "calm", atmosphere: "sky-lanterns");
+
+	/// <summary>Three Realms: three camps' banners on a ridge over a misty river, bamboo-slip cards, cinnabar seal buttons, arrow meters, smoke.</summary>
+	public static readonly PortalTheme ThreeRealms = Genre("three-realms", "Three Realms", dark: true,
+		["#14100d", "#211a14", "#2a221b", "#19140f", "#100c09", "#ecdfc6", "#c4b596", "#a8987c", "#5a4a36", "#3a2f24", "#ec7452", "#e9b04a", "#f2937c"],
+		display: "inknut", body: "serif", corners: "sharp", texture: "warbanners", ornament: "hanko", frame: "slips", titles: "normal", effect: "stamped", imagery: "dusk",
+		accent2: "#c9a15a", accent3: "#4f86a8",
+		selection: "pennant", buttons: "seal", material: "bamboo", meters: "arrows", motion: "unfurl", atmosphere: "smoke");
+
 	public static readonly IReadOnlyList<PortalTheme> All =
 	[
 		Phosphor, Daylight, Directive, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual,
@@ -505,6 +522,7 @@ public static class BuiltInThemes
 		GothicPunk, Dragonrider, FleetCommand, Gaslight, DesertPlanet,
 		ArcaneAcademy, Steampunk, Frontier, Wasteland,
 		Archivist, Arena, Ashen, RelicSlate, Precinct,
+		VermilionCourt, ThreeRealms,
 		ProtanDark, ProtanLight, DeutanDark, DeutanLight, TritanDark, TritanLight, MonoDark, MonoLight,
 	];
 
