@@ -123,7 +123,7 @@
 
 /* Unfurl: cards open downward like a scroll let fall; nothing loops. */
 [data-motion="unfurl"] {
-	--card-enter: theme-unfurl calc(var(--duration-enter) * 2) var(--ease-enter) both;
+	--card-enter: theme-unfurl calc(var(--duration-enter) * 2) var(--ease-enter) backwards;
 	--nav-enter: none;
 	--select-motion: none;
 	--texture-motion: none;

@@ -203,7 +203,7 @@ first choice of each, which is how the portal looked before they existed:
   `--duration-enter`, which reduced motion zeroes; under reduced motion, or with the player's reduce-motion toggle,
   `globals.css` also stops every loop.
 - **Atmosphere** (`atmosphere`): a layer `ThemeTexture` draws over the texture and under the page. `none`,
-  `vignette`, `fog`, `embers`, `motes`, `crt` (dark corners and scanlines), `slashes`, `sky-lanterns` (a few lanterns rising and fading), `smoke` (low smoke
+  `vignette`, `fog`, `embers`, `motes`, `crt` (dark corners and scanlines), `slashes`, `sky-lanterns` (a few lanterns rising slowly), `smoke` (low smoke
   drifting across). Its colours are the theme's.
 
 A component that shows a picture put in the game marks its `<img>` `game-picture` (the wiki's Markdown marks its own
