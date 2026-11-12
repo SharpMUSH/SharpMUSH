@@ -336,3 +336,108 @@
 [data-meters="pips"] .mud-progress-linear-bar {
 	border-radius: 0;
 }
+
+/* Capsule: round, fat buttons ringed in the text colour with a thick lip under them; pressed, the lip flattens and
+   the button squashes into it. */
+[data-buttons="capsule"] {
+	--button-radius: 999px;
+	--button-weight: 800;
+	--button-shadow: 0 0 0 2px var(--text), 0 5px 0 2px var(--text);
+	--button-plain-shadow: 0 4px 0 color-mix(in srgb, var(--text) 70%, transparent);
+	--button-press: translateY(4px) scaleX(1.03);
+	--button-press-shadow: 0 0 0 2px var(--text), 0 1px 0 2px var(--text), inset 0 3px 0 rgba(0, 0, 0, 0.2);
+	--button-clip: initial;
+	--button-transform: initial;
+	--button-tracking: initial;
+	--button-case: initial;
+}
+
+/* Console: a cut corner either end and a dark foot, as a handheld device's keys; pressed, it sinks and lights from
+   inside in accent-3. */
+[data-buttons="console"] {
+	--button-radius: 0px;
+	--button-clip: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+	--button-weight: 700;
+	--button-tracking: 0.04em;
+	--button-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.35);
+	--button-press: translateY(2px);
+	--button-press-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.35), inset 0 0 14px color-mix(in srgb, var(--accent-3) 75%, transparent);
+	--button-transform: initial;
+	--button-case: initial;
+	--button-plain-shadow: initial;
+}
+
+/* LCD: a handheld's screen, a fine dot grid of accent-3 over the surface, a little lighter at the top. */
+[data-material="lcd"] {
+	--card-material: radial-gradient(circle, color-mix(in srgb, var(--accent-3) 9%, transparent) 0 0.8px, transparent 1.2px) 0 0 / 4px 4px,
+		linear-gradient(180deg, color-mix(in srgb, var(--accent-3) 4%, var(--surface)), var(--surface) 40%);
+	--card-backdrop: none;
+}
+
+/* Vital: a fat, round bar ringed in the text colour with a shine along its top, as a creature's health. A sheet's stat
+   bar turns the warning colour under half and the danger colour under a fifth. */
+[data-meters="vital"] .mud-progress-linear {
+	height: 12px;
+	border-radius: 999px;
+	box-shadow: 0 0 0 2px var(--text);
+}
+[data-meters="vital"] .mud-progress-linear-bar {
+	border-radius: 999px;
+	background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0 35%, transparent 35%);
+}
+
+/* Vital: which band a sheet's stat bar is in, read from its value (0 to 100): under 20 is low, under 50 is middling. */
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="20"], [aria-valuenow^="20."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="21"], [aria-valuenow^="21."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="22"], [aria-valuenow^="22."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="23"], [aria-valuenow^="23."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="24"], [aria-valuenow^="24."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="25"], [aria-valuenow^="25."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="26"], [aria-valuenow^="26."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="27"], [aria-valuenow^="27."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="28"], [aria-valuenow^="28."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="29"], [aria-valuenow^="29."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="30"], [aria-valuenow^="30."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="31"], [aria-valuenow^="31."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="32"], [aria-valuenow^="32."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="33"], [aria-valuenow^="33."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="34"], [aria-valuenow^="34."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="35"], [aria-valuenow^="35."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="36"], [aria-valuenow^="36."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="37"], [aria-valuenow^="37."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="38"], [aria-valuenow^="38."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="39"], [aria-valuenow^="39."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="40"], [aria-valuenow^="40."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="41"], [aria-valuenow^="41."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="42"], [aria-valuenow^="42."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="43"], [aria-valuenow^="43."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="44"], [aria-valuenow^="44."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="45"], [aria-valuenow^="45."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="46"], [aria-valuenow^="46."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="47"], [aria-valuenow^="47."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="48"], [aria-valuenow^="48."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="49"], [aria-valuenow^="49."]) .mud-progress-linear-bar {
+	background-color: var(--warn);
+}
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="0"], [aria-valuenow^="0."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="1"], [aria-valuenow^="1."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="2"], [aria-valuenow^="2."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="3"], [aria-valuenow^="3."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="4"], [aria-valuenow^="4."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="5"], [aria-valuenow^="5."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="6"], [aria-valuenow^="6."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="7"], [aria-valuenow^="7."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="8"], [aria-valuenow^="8."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="9"], [aria-valuenow^="9."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="10"], [aria-valuenow^="10."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="11"], [aria-valuenow^="11."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="12"], [aria-valuenow^="12."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="13"], [aria-valuenow^="13."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="14"], [aria-valuenow^="14."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="15"], [aria-valuenow^="15."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="16"], [aria-valuenow^="16."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="17"], [aria-valuenow^="17."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="18"], [aria-valuenow^="18."]) .mud-progress-linear-bar,
+[data-meters="vital"] .schema-stat-bar:is([aria-valuenow="19"], [aria-valuenow^="19."]) .mud-progress-linear-bar {
+	background-color: var(--danger);
+}

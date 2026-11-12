@@ -13337,4 +13337,43 @@
   <data name="AdmThemeStyleFrameBrushed" xml:space="preserve">
     <value>Brushed</value>
   </data>
+  <data name="AdmThemeStyleTextureMeadow" xml:space="preserve">
+    <value>Meadow</value>
+  </data>
+  <data name="AdmThemeStyleTextureWireframe" xml:space="preserve">
+    <value>Wireframe</value>
+  </data>
+  <data name="AdmThemeStyleFrameFieldGuide" xml:space="preserve">
+    <value>Field guide</value>
+  </data>
+  <data name="AdmThemeStyleFrameDevice" xml:space="preserve">
+    <value>Device</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentCapsule" xml:space="preserve">
+    <value>Capsule</value>
+  </data>
+  <data name="AdmThemeStyleOrnamentEmblem" xml:space="preserve">
+    <value>Emblem</value>
+  </data>
+  <data name="AdmThemeStyleEffectSticker" xml:space="preserve">
+    <value>Sticker</value>
+  </data>
+  <data name="AdmThemeStyleEffectEvolve" xml:space="preserve">
+    <value>Evolve</value>
+  </data>
+  <data name="AdmThemeStyleButtonsCapsule" xml:space="preserve">
+    <value>Capsule</value>
+  </data>
+  <data name="AdmThemeStyleButtonsConsole" xml:space="preserve">
+    <value>Console</value>
+  </data>
+  <data name="AdmThemeStyleMaterialLcd" xml:space="preserve">
+    <value>LCD</value>
+  </data>
+  <data name="AdmThemeStyleMetersVital" xml:space="preserve">
+    <value>Vital</value>
+  </data>
+  <data name="AdmThemeStyleAtmosphereDatastream" xml:space="preserve">
+    <value>Datastream</value>
+  </data>
 </root>

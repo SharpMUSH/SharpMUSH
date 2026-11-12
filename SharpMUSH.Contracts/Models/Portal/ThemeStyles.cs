@@ -65,7 +65,7 @@ public static class ThemeStyles
 		"lilita", "titan", "chakra", "monoton", "michroma", "antonio", "oxanium", "russo",
 		"cinzel-decorative", "forum", "press-start", "anton", "dotgothic", "alegreya-sc", "oswald",
 		"pirata", "uncial", "barlow", "metamorphous", "krona", "eagle-lake", "federant", "rye", "black-ops", "bodoni",
-		"jost", "big-shoulders", "garamond", "tektur", "baskerville",
+		"jost", "big-shoulders", "garamond", "tektur", "baskerville", "baloo", "silkscreen",
 	];
 
 	/// <summary>Faces for everything else. Kept to faces that read well small.</summary>
@@ -145,6 +145,8 @@ public static class ThemeStyles
 		["hairline"] = new("hairline", "none", "hairline"),
 		["rune"] = new("rune", "line", "rune"),
 		["brushed"] = new("brushed", "none", "brushed"),
+		["field-guide"] = new("field-guide", "heavy", "field-guide"),
+		["device"] = new("device", "none", "device"),
 	};
 
 	public static readonly IReadOnlyDictionary<string, OrnamentSet> Ornaments = new Dictionary<string, OrnamentSet>
@@ -196,6 +198,8 @@ public static class ThemeStyles
 		["sheriff"] = new("sheriff", "sheriff"),
 		["rad"] = new("rad", "rad"),
 		["flank"] = new("flank", "none"),
+		["capsule"] = new("capsule", "capsule"),
+		["emblem"] = new("emblem", "fade"),
 	};
 
 	public static readonly IReadOnlyDictionary<string, EffectSet> Effects = new Dictionary<string, EffectSet>
@@ -239,6 +243,8 @@ public static class ThemeStyles
 		["brass"] = new("accent", "brass"),
 		["woodtype"] = new("accent", "woodtype"),
 		["grime"] = new("accent", "grime"),
+		["sticker"] = new("accent", "sticker"),
+		["evolve"] = new("accent", "evolve"),
 	};
 
 	/// <summary>Every setting and part with its choices, the first being what a theme that sets none gets.</summary>
@@ -254,7 +260,7 @@ public static class ThemeStyles
 			"speedlines", "court", "hazard", "sigil", "sumi", "benday", "filmgrain", "starburst", "rain", "outrun", "galaxy",
 			"readout", "armor-panels", "sunburst-rays", "stained-glass", "crystal", "dither", "nightfall", "overworld", "skyward", "watercolor",
 			"marble", "spires", "dragonflight", "plot", "seance", "dunes", "candles", "gears", "mesa", "ruins", "haze",
-			"archive", "lobby", "cathedral", "glyphs", "oilpaint",
+			"archive", "lobby", "cathedral", "glyphs", "oilpaint", "meadow", "wireframe",
 		],
 		[Ornament] = [.. Ornaments.Keys],
 		[Frame] = [.. Frames.Keys],
@@ -270,11 +276,11 @@ public static class ThemeStyles
 		// How the current line in a menu is marked, the cut of a button, what a card is made of, how a bar fills, how
 		// things arrive and move, and what hangs between the background and the page: one menu each, any theme.
 		[Selection] = ["standard", "bar", "skew", "halo", "brackets", "lift", "stroke"],
-		[Buttons] = ["standard", "skew", "keycap", "notch", "bar", "brush"],
-		[Material] = ["solid", "glass", "hologram", "veil", "cardstock", "felt", "wood"],
-		[Meters] = ["bar", "segmented", "slanted", "pips", "hairline"],
+		[Buttons] = ["standard", "skew", "keycap", "notch", "bar", "brush", "capsule", "console"],
+		[Material] = ["solid", "glass", "hologram", "veil", "cardstock", "felt", "wood", "lcd"],
+		[Meters] = ["bar", "segmented", "slanted", "pips", "hairline", "vital"],
 		[Motion] = ["calm", "still", "snappy", "drift", "wobble", "bob"],
-		[Atmosphere] = ["none", "vignette", "fog", "embers", "motes", "crt", "slashes"],
+		[Atmosphere] = ["none", "vignette", "fog", "embers", "motes", "crt", "slashes", "datastream"],
 		[TextureStrength] = Strengths,
 		[FrameMarks] = [.. Frames.Values.Select(f => f.Marks).Distinct()],
 		[FrameEdge] = Edges,

@@ -491,6 +491,23 @@ public static class BuiltInThemes
 		accent2: "#b2452f", accent3: "#3c7882",
 		selection: "stroke", buttons: "brush", material: "cardstock", meters: "bar", motion: "calm", atmosphere: "vignette");
 
+	// Creature games: one about catching creatures in the wild, one about raising a digital partner. Their own art and
+	// names only, never a franchise's creatures, logos or devices.
+
+	/// <summary>Wild Tamer: a sunny route through tall grass, field-guide cards with a red band and a lens, fat capsule buttons, health bars that change colour.</summary>
+	public static readonly PortalTheme WildTamer = Genre("wild-tamer", "Wild Tamer", dark: false,
+		["#e4f2fb", "#ffffff", "#f4f9f5", "#e9f2ec", "#f6fbf8", "#1b2430", "#3c4856", "#4f5b68", "#3c4a58", "#cfdfd4", "#c62d29", "#8a5a00", "#b42318"],
+		display: "baloo", body: "ui", corners: "round", texture: "meadow", ornament: "capsule", frame: "field-guide", titles: "normal", effect: "sticker", imagery: "sunny",
+		accent2: "#ffcc33", accent3: "#4f9a63",
+		selection: "lift", buttons: "capsule", material: "solid", meters: "vital", motion: "bob", atmosphere: "motes");
+
+	/// <summary>Data Partner: a wireframe world of data, cards as a handheld device's screen, block meters, keys that light when pressed.</summary>
+	public static readonly PortalTheme DataPartner = Genre("data-partner", "Data Partner", dark: true,
+		["#070d1c", "#0e1830", "#13203d", "#0b1428", "#050a16", "#eef3ff", "#b5c2dd", "#8f9dbb", "#2b3d66", "#1b2a4c", "#ff9a2e", "#ffd23f", "#ff8a8a"],
+		display: "silkscreen", body: "ui", corners: "soft", texture: "wireframe", ornament: "emblem", frame: "device", titles: "normal", effect: "evolve", imagery: "neon",
+		accent2: "#2fd2ff", accent3: "#7cff6b",
+		selection: "brackets", buttons: "console", material: "lcd", meters: "segmented", motion: "snappy", atmosphere: "datastream");
+
 	public static readonly IReadOnlyList<PortalTheme> All =
 	[
 		Phosphor, Daylight, Directive, Fantasy, Historical, Horror, Modern, Mystery, Romance, ScienceFiction, Spiritual,
@@ -505,6 +522,7 @@ public static class BuiltInThemes
 		GothicPunk, Dragonrider, FleetCommand, Gaslight, DesertPlanet,
 		ArcaneAcademy, Steampunk, Frontier, Wasteland,
 		Archivist, Arena, Ashen, RelicSlate, Precinct,
+		WildTamer, DataPartner,
 		ProtanDark, ProtanLight, DeutanDark, DeutanLight, TritanDark, TritanLight, MonoDark, MonoLight,
 	];
 
