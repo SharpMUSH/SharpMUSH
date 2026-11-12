@@ -47,9 +47,10 @@ public class TerminalServiceHost : ITerminalService
 	}
 
 	/// <summary>
-	/// The kept draft, handed back once and only to the same live session: after a sign-out, a dropped
-	/// connection or a character switch it is gone, so a line written by one player or character is never
-	/// offered to another.
+	/// The kept draft, handed back once and only while connected as the account and character that wrote it:
+	/// after a sign-out or a character switch it is gone, so a line written by one player or character is never
+	/// offered to another. A connection that dropped and came back as the same character keeps it: it is that
+	/// player's own line.
 	/// </summary>
 	public string TakeDraft()
 	{
