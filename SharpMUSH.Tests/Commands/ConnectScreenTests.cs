@@ -128,6 +128,25 @@ public class ConnectScreenTests
 		await Assert.That(ConnectionService.Get(staying)?.Ref).IsEqualTo(player.DbRef);
 	}
 
+	/// <summary>
+	/// <c>@kick</c> takes every connection, one at a time. None of them is told the character partially
+	/// disconnected on the way, since none is staying.
+	/// </summary>
+	[Test]
+	public async Task KickTellsNoConnectionItPartiallyDisconnected()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "KickBoth");
+		var second = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, player.DbRef);
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@kick {player.DbRef}"));
+
+		await Assert.That(ConnectionService.Get(player.Handle)).IsNull();
+		await Assert.That(ConnectionService.Get(second)).IsNull();
+		await Assert.That(NotificationsTo(WebAppFactoryArg, player.Handle)).DoesNotContain(ErrorMessages.Notifications.YouHavePartiallyDisconnected);
+		await Assert.That(NotificationsTo(WebAppFactoryArg, second)).DoesNotContain(ErrorMessages.Notifications.YouHavePartiallyDisconnected);
+	}
+
 	private string? LastNotificationTo(long handle) =>
 		NotificationsTo(WebAppFactoryArg, handle).LastOrDefault();
 
