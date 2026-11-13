@@ -53,7 +53,7 @@ public class SocketServerMarkupTests
 		protected override Assembly? Load(AssemblyName name)
 		{
 			if (name.Name is not { } simple || !(simple.StartsWith("MarkupString") || simple.StartsWith("SharpMUSH."))) return null;
-			var path = Path.Combine(directory, simple + ".dll");
+			var path = Path.Join(directory, simple + ".dll");
 			return File.Exists(path) ? LoadFromAssemblyPath(path) : null;
 		}
 	}
