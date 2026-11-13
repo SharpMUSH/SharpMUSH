@@ -26,12 +26,38 @@ STATE=$DATA/state
 DOMAIN=${SHARPMUSH_DOMAIN:-${FLY_APP_NAME:+$FLY_APP_NAME.fly.dev}}
 DOMAIN=${DOMAIN:-${RAILWAY_PUBLIC_DOMAIN:-}}
 DOMAIN=${DOMAIN:-localhost:8000}
-# A host's proxy (Fly's, Railway's) ends TLS in front of :8000. On the owner's own computer nothing
-# does, so the link is plain HTTP: a browser treats localhost as secure, so nothing is lost.
+# Who ends TLS. On Fly and Railway the host's proxy does, in front of :8000, and the game is at
+# https://<domain>. Otherwise players reach :8000 directly:
+#   at localhost: plain HTTP, which browsers treat as secure, so no certificate warning;
+#   at any other address (SHARPMUSH_DOMAIN with a port, e.g. 192.168.1.10:8000): Caddy serves :8000
+#   with a certificate from its own CA, since the portal runs only in a secure context. Browsers warn
+#   once, as the CA is not one they trust.
+# SHARPMUSH_TLS=internal or off overrides the guess.
 case "$DOMAIN" in
-	localhost | localhost:* | 127.* | '[::1]' | '[::1]:'*) SCHEME=http SECURE_COOKIE= ;;
-	*) SCHEME=https SECURE_COOKIE='; Secure' ;;
+	'['*']:'*) host=${DOMAIN%:*} port=${DOMAIN##*:} ;;
+	*:*:* | '['*']') host=$DOMAIN port= ;; # an IPv6 address with no port
+	*:*) host=${DOMAIN%:*} port=${DOMAIN##*:} ;;
+	*) host=$DOMAIN port= ;;
 esac
+host=${host#[}
+host=${host%]}
+case "$host" in
+	localhost | *.localhost | 127.* | ::1) TLS=off SCHEME=http ;;
+	"${FLY_APP_NAME:-}.fly.dev" | "${RAILWAY_PUBLIC_DOMAIN:-}") TLS=off SCHEME=https ;; # the host's proxy
+	*) TLS=${port:+internal} SCHEME=https ;;
+esac
+TLS=${SHARPMUSH_TLS:-${TLS:-off}}
+case "$TLS" in
+	internal)
+		SCHEME=https
+		case "$host" in *:*) SHARPMUSH_SITE="https://[$host]:8000" ;; *) SHARPMUSH_SITE="https://$host:8000" ;; esac
+		;;
+	off) SHARPMUSH_SITE=:8000 ;;
+	*) echo "sharpmush-start: SHARPMUSH_TLS must be internal or off, not $TLS" >&2; exit 1 ;;
+esac
+if [ "$SCHEME" = https ]; then SECURE_COOKIE='; Secure'; else SECURE_COOKIE=; fi
+# A browser sends no server name for an IP address; Caddy answers it with this one's certificate.
+export SHARPMUSH_SITE SHARPMUSH_DEFAULT_SNI=$host
 GUARD_PORT=14201
 export SHARPMUSH_SERVER_ADDRESS=${SHARPMUSH_SERVER_ADDRESS:-127.0.0.1:8080}
 
@@ -39,8 +65,13 @@ as_app() { setpriv --reuid=app --regid=app --init-groups "$@"; }
 # In the background: exec, so the recorded pid is the process itself and a TERM reaches it.
 as_app_bg() { exec setpriv --reuid=app --regid=app --init-groups "$@"; }
 
-mkdir -p "$STATE/guard" /run/sharpmush
-chown app:app "$DATA" "$STATE" "$STATE/guard" /run/sharpmush
+mkdir -p "$STATE/guard" "$STATE/tls" /run/sharpmush
+chown app:app "$DATA" "$STATE" "$STATE/guard" "$STATE/tls" /run/sharpmush
+if [ "$TLS" = internal ]; then
+	printf 'tls internal\n' > "$STATE/tls/tls.caddy"
+else
+	echo "# TLS ends in front of Caddy, or the game is on localhost." > "$STATE/tls/tls.caddy"
+fi
 for dir in nats caddy; do mkdir -p "$DATA/$dir" && chown app:app "$DATA/$dir"; done
 
 # --- the first-boot guard ------------------------------------------------------------------------
