@@ -295,4 +295,21 @@ public class ComponentUpdateCoordinatorTests
 		await Assert.That(result.Expect<Error<string>>().Value).Contains("did not take");
 		await Assert.That(coordinator.Status(0, 0).Job!.State).IsEqualTo(UpdateJobStates.Failed);
 	}
+
+	[Test]
+	public async Task AnUpdateWhoseWarningOutlastsTheClaimWindowFailsWithoutAPoll()
+	{
+		var (coordinator, clock, broadcast) = Create();
+		var sent = new TaskCompletionSource();
+		broadcast.BroadcastAsync(default!).ReturnsForAnyArgs(_ => new ValueTask(sent.Task), _ => ValueTask.CompletedTask);
+		coordinator.Poll(Report());
+		var queueing = coordinator.QueueAsync(new AdminUpdateRequest([ServerComponents.SocketServer], null, 60), "admin").AsTask();
+		clock.Now += ComponentUpdateCoordinator.ClaimWindow + TimeSpan.FromSeconds(1);
+		sent.SetResult();
+		var result = await queueing;
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("did not take");
+		var messages = broadcast.ReceivedCalls().Select(call => call.GetArguments().Single()).ToList();
+		await Assert.That(messages.Count).IsEqualTo(2);
+		await Assert.That(messages[1] is SharpMessage message && message is string text && text == ComponentUpdateCoordinator.SocketCalledOff).IsTrue();
+	}
 }

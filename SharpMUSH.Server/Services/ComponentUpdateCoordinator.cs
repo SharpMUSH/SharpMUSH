@@ -170,14 +170,16 @@ public sealed partial class ComponentUpdateCoordinator(string? token, TimeProvid
 			}
 			throw;
 		}
+		bool taken;
 		lock (_gate)
 		{
 			if (_warning == job.Id) _warning = null;
-			// The warning took longer than the agent may wait: the update expired while it was sent.
-			if (_job is not { State: UpdateJobStates.Queued } queued || queued.Id != job.Id)
-				return new Error<string>("The update agent did not take the update.");
+			// The warning may have taken longer than the agent may wait: the update expired while it was sent.
+			ExpireUnclaimed();
+			taken = _job is { State: UpdateJobStates.Queued } queued && queued.Id == job.Id;
 		}
-		return job;
+		Announce();
+		return taken ? job : new Error<string>("The update agent did not take the update.");
 	}
 
 	/// <summary>The broadcast players get before the socket server is replaced.</summary>
