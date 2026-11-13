@@ -140,7 +140,11 @@ def write_tag(path, tag):
     if not replaced:
         lines.append(f'{TAG_VARIABLE}={tag}')
     temporary = path.with_name('.env.update-agent')
-    temporary.write_text('\n'.join(lines) + '\n')
+    temporary.unlink(missing_ok=True)
+    # Created 0600 before anything is written: .env holds the game's secrets.
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, 'w') as file:
+        file.write('\n'.join(lines) + '\n')
     if path.exists():
         os.chmod(temporary, path.stat().st_mode & 0o777)
     os.replace(temporary, path)
