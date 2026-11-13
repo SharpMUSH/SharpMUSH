@@ -177,8 +177,12 @@
 
     private string _displayTitle = string.Empty;
 
+    // Counts loads, so an earlier load still in flight when the reader moves on cannot overwrite the later one's results.
+    private int _loadVersion;
+
     protected override async Task OnParametersSetAsync()
     {
+        var version = ++_loadVersion;
         _loading = true;
         _displayTitle = string.IsNullOrWhiteSpace(Slug) ? Loc["WkPageFallbackTitle"] : Slug.Replace('-', ' ');
 
@@ -187,6 +191,7 @@
         var revisionsTask = Wiki.GetRevisionsAsync(Slug, skip: 0, take: 50, ns: Ns, lang: Lang).AsTask();
         var translationsTask = Wiki.GetTranslationsAsync(Slug, Ns).AsTask();
         await Task.WhenAll(articleTask, revisionsTask, translationsTask);
+        if (version != _loadVersion) return;
         if (await articleTask is WikiArticle article)
             _displayTitle = article.Title;
         _revisions = [.. await revisionsTask];

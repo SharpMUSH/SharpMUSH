@@ -139,11 +139,15 @@
     private int _removedCount;
     private string _displayTitle = string.Empty;
 
+    // Counts loads, so an earlier load still in flight when the reader moves on cannot overwrite the later one's results.
+    private int _loadVersion;
+
     private enum DiffLineKind { Header, Added, Removed, Context }
     private record DiffLine(DiffLineKind Kind, string Text);
 
     protected override async Task OnParametersSetAsync()
     {
+        var version = ++_loadVersion;
         _loading = true;
         _displayTitle = string.IsNullOrWhiteSpace(Slug) ? Loc["WkPageFallbackTitle"] : Slug.Replace('-', ' ');
 
@@ -154,10 +158,13 @@
             var fromTask = Wiki.GetRevisionAsync(Slug, FromRev.Value, Ns, Lang).AsTask();
             var toTask   = Wiki.GetRevisionAsync(Slug, ToRev.Value, Ns, Lang).AsTask();
             await Task.WhenAll(fromTask, toTask);
+            if (version != _loadVersion) return;
             _fromRev = await fromTask is WikiRevisionInfo fromRevision ? fromRevision : null;
             _toRev   = await toTask is WikiRevisionInfo toRevision ? toRevision : null;
         }
-        if (await articleTask is WikiArticle article)
+        var loaded = await articleTask;
+        if (version != _loadVersion) return;
+        if (loaded is WikiArticle article)
             _displayTitle = article.Title;
 
         if (_fromRev is not null && _toRev is not null)
