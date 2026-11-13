@@ -786,11 +786,11 @@ public partial record ParserState
 	/// </summary>
 	public ParserState ForAttributeCall(Dictionary<string, CallState>? arguments, Dictionary<string, CallState>? environment,
 		DBAttribute evaluation, string function, DBRef executor)
-		=> ForAttributeCall(arguments is null ? ArgumentList : ArgumentList.From(arguments), environment, evaluation, function,
-			executor);
+		=> ForAttributeCallWith(arguments is null ? ArgumentList : ArgumentList.From(arguments), environment, evaluation,
+			function, executor);
 
 	/// <inheritdoc cref="ForAttributeCall(Dictionary{string, CallState}, Dictionary{string, CallState}, DBAttribute, string, DBRef)"/>
-	public ParserState ForAttributeCall(ArgumentList arguments, Dictionary<string, CallState>? environment,
+	public ParserState ForAttributeCallWith(ArgumentList arguments, Dictionary<string, CallState>? environment,
 		DBAttribute evaluation, string function, DBRef executor)
 	{
 		var called = arguments;
@@ -1078,6 +1078,11 @@ public partial record ParserState
 	/// which answers the same keys without building one. Setting it sets <see cref="ArgumentList"/> to read
 	/// through the dictionary given, and reading it then returns that same instance.
 	/// </summary>
+	/// <remarks>
+	/// Read it, don't write into it: on a frame whose arguments were bound by position, the dictionary is a
+	/// copy, and a write changes nothing <c>%0</c>-<c>%9</c> or a built-in reads. To change the arguments,
+	/// bind a new list with <c>with { ArgumentList = … }</c>.
+	/// </remarks>
 	public Dictionary<string, CallState> Arguments
 	{
 		get => ArgumentList.AsDictionary();
