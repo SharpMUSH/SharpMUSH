@@ -231,6 +231,19 @@ public class WikiControllerTranslationTests
 	}
 
 	[Test]
+	public async Task CreatePage_KeepsTheEditSummaryOnRevisionOne()
+	{
+		var (wiki, storage) = BuildWithClaims(PortalPermission.WikiCreate);
+
+		await wiki.Pages.CreatePage(
+			new CreatePageRequest("Wyverns", "en body", Namespace: "main") { EditSummary = "First draft" });
+
+		var created = (await storage.GetBySlugAsync("wyverns", WikiNamespace.Main)).Expect<WikiPage>();
+		var revisions = await storage.GetRevisionsAsync(created.Id);
+		await Assert.That(revisions.Single().EditSummary).IsEqualTo("First draft");
+	}
+
+	[Test]
 	public async Task GetTranslations_HidesDraftsFromAnonymousReaders()
 	{
 		var (wiki, storage) = BuildAnonymous();

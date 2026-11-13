@@ -232,7 +232,11 @@ public record UpsertTranslationRequest(
 	int? ExpectedRevisionNumber);
 
 /// <summary>Request body for creating a new wiki page, with the categories it starts in.</summary>
-public record CreatePageRequest(string Title, string Markdown, string? Namespace, IReadOnlyList<string>? Categories = null);
+public record CreatePageRequest(string Title, string Markdown, string? Namespace, IReadOnlyList<string>? Categories = null)
+{
+	/// <summary>The summary of revision 1; null for none.</summary>
+	public string? EditSummary { get; init; }
+}
 
 /// <summary>Request body for updating an existing wiki page.</summary>
 public record UpdatePageRequest(string Markdown, string? EditSummary);

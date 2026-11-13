@@ -221,8 +221,9 @@ else
             ? _loadedRevision
             : null;
 
-    private async Task HandleSave(WikiArticle draft)
+    private async Task HandleSave(WikiEditSave save)
     {
+        var draft = save.Article;
         var reader = Volatile.Read(ref _readerVersion);
         if (!IsCurrentReader(reader) || _loading) return;
         _saveError = null;
@@ -234,7 +235,7 @@ else
             // structurally, so there is no metadata call to make here.
             var translationResult = await Wiki.UpsertTranslationAsync(
                 draft.Slug, _selectedLocale, draft.Title, draft.Content, draft.Published,
-                ExpectedTranslationRevision, editSummary: null, ns: Namespace);
+                ExpectedTranslationRevision, save.EditSummary, Namespace);
             if (!IsCurrentReader(reader)) return;
 
             switch (translationResult)
@@ -264,11 +265,11 @@ else
 
         if (string.IsNullOrEmpty(draft.Slug))
         {
-            result = await Wiki.CreatePageAsync(draft.Title, draft.Content, Namespace, draft.Categories);
+            result = await Wiki.CreatePageAsync(draft.Title, draft.Content, Namespace, draft.Categories, save.EditSummary);
         }
         else
         {
-            result = await Wiki.UpdatePageAsync(draft.Slug, draft.Content, ns: Namespace);
+            result = await Wiki.UpdatePageAsync(draft.Slug, draft.Content, save.EditSummary, Namespace);
         }
         if (!IsCurrentReader(reader)) return;
 

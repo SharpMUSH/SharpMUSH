@@ -306,9 +306,10 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		string title,
 		string markdown,
 		string? ns = null,
-		IReadOnlyList<string>? categories = null) =>
+		IReadOnlyList<string>? categories = null,
+		string? editSummary = null) =>
 		Logged(Article(await Http.PostApiAsync<CreatePageRequest, WikiPageDto>(
-				"api/wiki", new CreatePageRequest(title, markdown, ns, categories), EmptyResponse)),
+				"api/wiki", new CreatePageRequest(title, markdown, ns, categories) { EditSummary = editSummary }, EmptyResponse)),
 			"CreatePageAsync", title);
 
 	/// <summary>

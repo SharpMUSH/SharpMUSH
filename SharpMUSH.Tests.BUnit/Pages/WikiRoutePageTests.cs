@@ -27,7 +27,7 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// </summary>
 file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHandler
 {
-	private record CreateReq(string Title, string Markdown, string? Namespace);
+	private record CreateReq(string Title, string Markdown, string? Namespace, string? EditSummary);
 	private record UpdateReq(string Markdown, string? EditSummary);
 	private record ExistsReq(string[] Refs);
 
@@ -69,7 +69,7 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
 		{
 			var req = await request.Content!.ReadFromJsonAsync<CreateReq>(cancellationToken: cancellationToken);
 			if (req is null) return new HttpResponseMessage(HttpStatusCode.BadRequest);
-			return await wikiService.CreateAsync(req.Title, req.Markdown, "#1", ParseNs(req.Namespace))
+			return await wikiService.CreateAsync(req.Title, req.Markdown, "#1", ParseNs(req.Namespace), editSummary: req.EditSummary)
 				is WikiPage page
 				? Json(ToDto(page), HttpStatusCode.Created)
 				: new HttpResponseMessage(HttpStatusCode.Conflict);
@@ -78,10 +78,13 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
 		if (request.Method == HttpMethod.Put &&
 				_slugRoute.Match(path) is { Success: true } putMatch)
 		{
-			var id = Uri.UnescapeDataString(putMatch.Groups[1].Value);
+			var slug = Uri.UnescapeDataString(putMatch.Groups[1].Value);
+			var ns = ParseNs(System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query)["ns"]);
 			var req = await request.Content!.ReadFromJsonAsync<UpdateReq>(cancellationToken: cancellationToken);
 			if (req is null) return new HttpResponseMessage(HttpStatusCode.BadRequest);
-			return await wikiService.UpdateAsync(id, req.Markdown, "#1", req.EditSummary) is WikiPage page
+			if (await wikiService.GetBySlugAsync(slug, ns) is not WikiPage existing)
+				return new HttpResponseMessage(HttpStatusCode.NotFound);
+			return await wikiService.UpdateAsync(existing.Id, req.Markdown, "#1", req.EditSummary) is WikiPage page
 				? Json(ToDto(page))
 				: new HttpResponseMessage(HttpStatusCode.NotFound);
 		}
@@ -99,6 +102,9 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
 	{
 		// The server decides what a reader may do; these pages are open to the test's editor.
 		Access = new WikiAccessDto(Read: true, Edit: true, Delete: true, Manage: false),
+		// The server answers in the page's source locale; without one the editor treats a save as a translation.
+		Locale = "en",
+		AvailableLocales = ["en"],
 	};
 
 	private static WikiNamespace ParseNs(string? ns) =>
@@ -298,6 +304,53 @@ public class WikiPageRouteTests : TrackingBunitContext
 		}, TimeSpan.FromSeconds(5));
 
 		await Assert.That(cut.FindComponent<WikiEdit>().Instance.Article!.Title).IsEqualTo("Salt Market");
+	}
+
+	/// <summary>Opens the editor at <paramref name="slug"/>, types a summary, and publishes.</summary>
+	private async Task PublishWithSummaryAsync(string slug, string summary)
+	{
+		var host = Render<Components.MudHarness>(p => p
+				.AddChildContent<SharpMUSH.Client.Pages.WikiPageEdit>(cp => cp
+						.Add(c => c.Slug, slug)
+						.Add(c => c.Ns, "main")));
+		var cut = host.FindComponent<SharpMUSH.Client.Pages.WikiPageEdit>();
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindComponents<WikiEdit>().Count == 0)
+				throw new InvalidOperationException("editor not rendered yet");
+		}, TimeSpan.FromSeconds(5));
+
+		var editor = cut.FindComponent<WikiEdit>();
+		editor.Instance.Article!.Content += "\nMore.";
+		await editor.Find("input[name=summary]").InputAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = summary });
+		await editor.Find(".wiki-edit-publish").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+	}
+
+	[TUnit.Core.Test]
+	public async Task WikiPageEdit_Publish_SavesTheSummaryOnTheNewRevision()
+	{
+		var wikiSvc = Services.GetRequiredService<IWikiService>();
+		var created = await wikiSvc.CreateAsync("Summary Page", "Content here.", authorDbref: "#1", WikiNamespace.Main);
+		var page = created.Expect<WikiPage>();
+
+		await PublishWithSummaryAsync("summary_page", "Fixed the opening line");
+
+		var revisions = await wikiSvc.GetRevisionsAsync(page.Id);
+		await Assert.That(revisions.Count).IsEqualTo(2);
+		await Assert.That(revisions.Single(r => r.RevisionNumber == 2).EditSummary).IsEqualTo("Fixed the opening line");
+	}
+
+	[TUnit.Core.Test]
+	public async Task WikiPageEdit_PublishingANewPage_SavesTheSummaryOnRevisionOne()
+	{
+		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/wiki/main/new_summary/edit?title=New%20Summary");
+
+		await PublishWithSummaryAsync("new_summary", "First draft");
+
+		var wikiSvc = Services.GetRequiredService<IWikiService>();
+		var page = (await wikiSvc.GetBySlugAsync("new_summary", WikiNamespace.Main)).Expect<WikiPage>();
+		var revisions = await wikiSvc.GetRevisionsAsync(page.Id);
+		await Assert.That(revisions.Single().EditSummary).IsEqualTo("First draft");
 	}
 }
 

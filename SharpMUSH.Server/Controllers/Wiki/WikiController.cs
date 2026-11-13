@@ -129,7 +129,8 @@ public class WikiController(
 		// SourceLocale is materialised at creation. The configured default affects new pages and fallback
 		// resolution only; it never reinterprets a page that already exists.
 		var result = await Wiki.CreateAsync(
-			request.Title, request.Markdown, authorDbref, ns, Localization.DefaultLocale, request.Categories);
+			request.Title, request.Markdown, authorDbref, ns, Localization.DefaultLocale, request.Categories,
+			editSummary: request.EditSummary);
 		return result switch
 		{
 			WikiPage page => await PageCreatedAsync(page),
