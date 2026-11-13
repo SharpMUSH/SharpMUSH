@@ -6,8 +6,10 @@ FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 ARG TARGETARCH
 WORKDIR /src
 COPY . .
-RUN dotnet publish SharpMUSH.SocketServer/SharpMUSH.SocketServer.csproj -c Release -o /app \
-    -r linux-$([ "$TARGETARCH" = arm64 ] && echo arm64 || echo x64) --self-contained false
+RUN case "$TARGETARCH" in amd64) RID=linux-x64 ;; arm64) RID=linux-arm64 ;; \
+      *) echo "Unsupported TARGETARCH '$TARGETARCH': build with BuildKit (docker buildx)" >&2; exit 1 ;; esac \
+    && dotnet publish SharpMUSH.SocketServer/SharpMUSH.SocketServer.csproj -c Release -o /app \
+    -r $RID --self-contained false
 
 # Stage 2: Run
 FROM mcr.microsoft.com/dotnet/aspnet:11.0
