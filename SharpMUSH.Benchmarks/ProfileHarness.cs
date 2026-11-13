@@ -151,8 +151,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("get-u-1", "[get(me/PROFILE_U)]", false, AsMortal: true),
 		new("lambda-1", "[ulambda(#lambda/%0,5)]", false, AsMortal: true),
 		// A #lambda over 1,000 items: the per-item cost of map() and the rest of its family.
-		new("map-lambda", "[strlen(map(lit(#lambda/[add(%0,1)]),lnum(1000)))]", false),
 		new("filter-lambda", "[strlen(filter(lit(#lambda/[mod(%0,2)]),lnum(1000)))]", false),
+		new("fold-lambda", "[fold(lit(#lambda/[add(%0,%1)]),lnum(1000))]", false),
 		new("strlen-m", "[strlen(5)]", false, AsMortal: true),
 		// With --connections: a player's own theme, and the player ancestor's, which every player inherits from.
 		new("theme-me", "@theme me=fantasy", true),
