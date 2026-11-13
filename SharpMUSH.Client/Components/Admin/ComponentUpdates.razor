@@ -3,6 +3,7 @@
 @inject AdminServerService ServerService
 @inject IDialogService Dialogs
 @inject IStringLocalizer<SharedResource> Loc
+@inject TimeProvider Time
 
 @* The updates panel on the server page. The update agent, a sidecar holding the Docker socket, does
    the work; this asks for it and shows what the agent last reported. *@
@@ -11,22 +12,19 @@
     {
         <MudAlert Severity="Severity.Error" Class="adm-updates-error">@_error</MudAlert>
     }
-    @if (_status is null)
+    @if (_readError is not null)
     {
-        @if (_readError is not null)
-        {
-            <MudAlert Severity="Severity.Warning">@_readError</MudAlert>
-        }
+        @* The server may be the thing being replaced: what is below is the last view it gave. *@
+        <MudAlert Severity="Severity.Warning" Class="adm-updates-unread">@_readError</MudAlert>
     }
-    else if (!_status.AgentConfigured || !_status.AgentConnected)
+    @if (_status is { AgentConfigured: var configured } and ({ AgentConfigured: false } or { AgentConnected: false }))
     {
-        <MudAlert Severity="@(_status.AgentConfigured ? Severity.Warning : Severity.Info)" Class="adm-updates-noagent">
-            @Loc[_status.AgentConfigured ? "AdmUpdAgentMissing" : "AdmUpdNoAgent"]
+        <MudAlert Severity="@(configured ? Severity.Warning : Severity.Info)" Class="adm-updates-noagent">
+            @Loc[configured ? "AdmUpdAgentMissing" : "AdmUpdNoAgent"]
         </MudAlert>
     }
-    else
+    else if (_status is { } status)
     {
-        var status = _status;
         @if (status.Job is { } job)
         {
             <MudAlert Severity="@JobSeverity(job)" Class="adm-updates-job" data-state="@job.State">@JobLine(job)</MudAlert>
@@ -112,7 +110,7 @@
 
     private async Task RefreshAsync(CancellationToken closed)
     {
-        using var timer = new PeriodicTimer(RefreshInterval);
+        using var timer = new PeriodicTimer(RefreshInterval, Time);
         try
         {
             while (await timer.WaitForNextTickAsync(closed))
@@ -217,6 +215,7 @@
     private string JobLine(UpdateJobStatus job) => job.State switch
     {
         UpdateJobStates.Queued => Loc["AdmUpdJobQueued"],
+        UpdateJobStates.Running when job.Step == ServerComponents.PullStep => Loc["AdmUpdJobPulling"],
         UpdateJobStates.Running when job.Step is { } step => Loc["AdmUpdJobRunning", ComponentName(step)],
         UpdateJobStates.Running => Loc["AdmUpdJobStarting"],
         UpdateJobStates.Succeeded => Loc["AdmUpdJobSucceeded", Finished(job)],

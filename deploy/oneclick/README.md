@@ -67,8 +67,10 @@ Updates: watchtower replaces the game server and the renderer when their image t
 players connected. The socket server is replaced from the portal (Admin > Server > Updates), which
 also updates everything at once or moves the game to another release. The `update-agent` container
 does that work: it holds the Docker socket, polls the server with the `SHARPMUSH_UPDATE_AGENT_TOKEN`
-the installer writes to `.env`, and only replaces those three components. An install from before the
-agent existed gets its token on the next `sharpmush-configure`.
+the installer writes to `.env`, and only replaces those three components. To add the agent to an install
+from before it existed, run the `curl … | sudo bash` line above again: it writes the new stack files, builds
+the agent and keeps every earlier answer. `sharpmush-configure` alone runs the box's own older copy of the
+script and does not.
 
 Run `sharpmush-configure` later to change the domain or the Cloudflare settings. It asks each
 question again, with the current answer in brackets. `install.sh` lists every variable it reads.

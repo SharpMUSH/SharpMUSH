@@ -68,6 +68,7 @@ public sealed partial class ComponentUpdateCoordinator(string? token, TimeProvid
 	private UpdateAgentReport? _report;
 	private DateTimeOffset? _seenAt;
 	private UpdateJobStatus? _job;
+	private string? _notice;
 
 	/// <summary>Whether this server was given an agent token.</summary>
 	public bool Configured => _tokenHash is not null;
@@ -80,24 +81,27 @@ public sealed partial class ComponentUpdateCoordinator(string? token, TimeProvid
 	/// <summary>The panel's view of the agent and the current update.</summary>
 	public AdminUpdatesStatus Status(int connections, int players)
 	{
+		AdminUpdatesStatus status;
 		lock (_gate)
 		{
 			ExpireUnclaimed();
 			var report = _report;
-			return new AdminUpdatesStatus(
+			status = new AdminUpdatesStatus(
 				Configured,
 				Connected(),
 				_seenAt,
 				report?.Project,
 				report?.Tag,
 				report?.Components ?? [],
-				report?.AvailableTags ?? [],
+				report is { Tag: { } tag } ? (report.AvailableTags ?? []).Where(target => MovesForward(tag, RunningVersion(report), target)).ToList() : [],
 				report?.RegistryReadAt,
 				report?.Error,
 				_job,
 				connections,
 				players);
 		}
+		Announce();
+		return status;
 	}
 
 	/// <summary>
@@ -106,17 +110,19 @@ public sealed partial class ComponentUpdateCoordinator(string? token, TimeProvid
 	/// </summary>
 	public Found<UpdateAgentJob> Poll(UpdateAgentReport report)
 	{
+		Found<UpdateAgentJob> answer;
 		lock (_gate)
 		{
 			_report = report;
 			_seenAt = time.GetUtcNow();
 			if (report.Job is { } reported) Follow(reported);
 			ExpireUnclaimed();
-			if (_job is not { State: UpdateJobStates.Queued } queued) return new NotFound();
-			// The agent is busy with another update: it is handed this one when that one ends.
-			if (report.Job is { State: UpdateJobStates.Running }) return new NotFound();
-			return new UpdateAgentJob(queued.Id, queued.Components, queued.Tag, queued.SocketNotBefore);
+			answer = _job is { State: UpdateJobStates.Queued } queued && report.Job is not { State: UpdateJobStates.Running }
+				? new UpdateAgentJob(queued.Id, queued.Components, queued.Tag, queued.SocketNotBefore)
+				: new NotFound();
 		}
+		Announce();
+		return answer;
 	}
 
 	/// <summary>Queues an update, after checking it against what the agent last reported.</summary>
@@ -154,11 +160,54 @@ public sealed partial class ComponentUpdateCoordinator(string? token, TimeProvid
 		_ => $"GAME: The connection server will be updated in {delaySeconds / 60} minutes. You will be disconnected; reconnect a minute later.",
 	};
 
+	/// <summary>The broadcast players get when an update they were warned about stops before the socket server.</summary>
+	public const string SocketCalledOff = "GAME: The connection server update was called off. You will stay connected.";
+
+	/// <summary>
+	/// Whether the game may move from the tag it follows to <paramref name="target"/>. A server refuses a world
+	/// a newer release wrote, so a move never goes back: not below the running release, and not off <c>dev</c>,
+	/// which runs ahead of every release.
+	/// </summary>
+	/// <param name="current">The tag the game follows.</param>
+	/// <param name="runningVersion">The running server's version label, which says what <c>latest</c> is now.</param>
+	/// <param name="target">The tag asked for.</param>
+	public static bool MovesForward(string current, string? runningVersion, string target)
+	{
+		if (target == current) return true;
+		if (current == "dev") return false;
+		if (target is "dev" or "latest") return true;
+		return (Release.Parse(current) ?? Release.Parse(runningVersion), Release.Parse(target)) is ({ } from, { } to) && to.CompareTo(from) > 0;
+	}
+
+	private static string? RunningVersion(UpdateAgentReport report) =>
+		report.Components?.FirstOrDefault(status => status.Component == ServerComponents.Server)?.Version;
+
+	/// <summary>A release number; a prerelease sorts below its release (<c>1.0.0-rc.1</c> &lt; <c>1.0.0</c>).</summary>
+	private readonly record struct Release(int Major, int Minor, int Patch, string? Prerelease) : IComparable<Release>
+	{
+		public static Release? Parse(string? tag) => tag is not null && ReleasePattern().Match(tag) is { Success: true } match
+			? new Release(int.Parse(match.Groups[1].Value), int.Parse(match.Groups[2].Value), int.Parse(match.Groups[3].Value),
+				match.Groups[4].Success ? match.Groups[4].Value : null)
+			: null;
+
+		public int CompareTo(Release other) =>
+			(Major, Minor, Patch) != (other.Major, other.Minor, other.Patch)
+				? (Major, Minor, Patch).CompareTo((other.Major, other.Minor, other.Patch))
+				: (Prerelease, other.Prerelease) switch
+				{
+					(null, null) => 0,
+					(null, _) => 1,
+					(_, null) => -1,
+					var (mine, theirs) => string.CompareOrdinal(mine, theirs),
+				};
+	}
+
 	private Result<Success> Check(AdminUpdateRequest request)
 	{
 		if (!Configured) return new Error<string>("No update agent is configured for this game.");
 		if (!Connected() || _report is not { } report) return new Error<string>("The update agent has not been heard from in the last minute.");
-		if (_job is { Active: true }) return new Error<string>("An update is already in progress.");
+		if (_job is { Active: true } || report.Job is { State: UpdateJobStates.Running })
+			return new Error<string>("An update is already in progress.");
 		if (request.Components is not { Count: > 0 }) return new Error<string>("Choose at least one component.");
 		if (request.Components.Distinct().Count() != request.Components.Count
 			|| request.Components.Any(component => !ServerComponents.InUpdateOrder.Contains(component)))
@@ -173,6 +222,8 @@ public sealed partial class ComponentUpdateCoordinator(string? token, TimeProvid
 		if (report.Tag is null) return new Error<string>("This game's Compose file fixes its image tags; change them there.");
 		if (request.Tag != report.Tag && !(report.AvailableTags ?? []).Contains(request.Tag))
 			return new Error<string>($"The registry has no release tagged {request.Tag}.");
+		if (!MovesForward(report.Tag, RunningVersion(report), request.Tag))
+			return new Error<string>($"The game cannot go back to {request.Tag}: a release refuses a world a newer one wrote.");
 		// One tag for every part: a socket server and a renderer from different builds disagree on capabilities.
 		if (request.Components.Count != ServerComponents.InUpdateOrder.Count)
 			return new Error<string>("Moving to another version replaces every component.");
@@ -184,6 +235,7 @@ public sealed partial class ComponentUpdateCoordinator(string? token, TimeProvid
 		if (_job is { } current && current.Id == reported.Id)
 		{
 			_job = current with { State = reported.State, Step = reported.Step, Message = reported.Message, FinishedAt = reported.FinishedAt };
+			if (current.Active && reported.State == UpdateJobStates.Failed) CallOff(current);
 			return;
 		}
 		// An update this process did not queue: the server it replaced queued it. A finished one only
@@ -198,16 +250,32 @@ public sealed partial class ComponentUpdateCoordinator(string? token, TimeProvid
 
 	private void ExpireUnclaimed()
 	{
-		if (_job is { State: UpdateJobStates.Queued } queued && time.GetUtcNow() - queued.RequestedAt > ClaimWindow)
-			_job = queued with
-			{
-				State = UpdateJobStates.Failed,
-				Message = "The update agent did not take the update.",
-				FinishedAt = time.GetUtcNow()
-			};
+		if (_job is not { State: UpdateJobStates.Queued } queued || time.GetUtcNow() - queued.RequestedAt <= ClaimWindow) return;
+		_job = queued with
+		{
+			State = UpdateJobStates.Failed,
+			Message = "The update agent did not take the update.",
+			FinishedAt = time.GetUtcNow()
+		};
+		CallOff(queued);
+	}
+
+	/// <summary>Players were told they would be disconnected; tell them they will not be, unless the socket server was reached.</summary>
+	private void CallOff(UpdateJobStatus before)
+	{
+		if (before.SocketNotBefore is not null && before.Step != ServerComponents.SocketServer) _notice = SocketCalledOff;
+	}
+
+	/// <summary>Sends a notice queued under the lock, outside it.</summary>
+	private void Announce()
+	{
+		if (Interlocked.Exchange(ref _notice, null) is { } notice) _ = broadcast.BroadcastAsync(notice).AsTask();
 	}
 
 	/// <summary>A release tag (<c>1.2.3</c>, <c>1.2.3-rc.1</c>) or one of the moving tags.</summary>
 	[GeneratedRegex(@"^(\d{1,4}\.\d{1,4}\.\d{1,6}(-[0-9A-Za-z.]{1,32})?|latest|dev)$")]
 	private static partial Regex TagPattern();
+
+	[GeneratedRegex(@"^(\d{1,4})\.(\d{1,4})\.(\d{1,6})(?:-([0-9A-Za-z.]{1,32}))?$")]
+	private static partial Regex ReleasePattern();
 }

@@ -17,11 +17,14 @@ import urllib.request
 from pathlib import Path
 
 PROTOCOL = 1
+PULL_STEP = 'pull'  # ServerComponents.PullStep
 SERVER = os.environ.get('SHARPMUSH_UPDATE_AGENT_URL', 'http://sharpmush-server:8080').rstrip('/')
 TOKEN = os.environ.get('SHARPMUSH_UPDATE_AGENT_TOKEN', '')
 STATE = Path(os.environ.get('UPDATE_AGENT_STATE', '/agent-state'))
 POLL_SECONDS = max(5, int(os.environ.get('UPDATE_AGENT_POLL_SECONDS', '10')))
 REGISTRY_SECONDS = max(300, int(os.environ.get('UPDATE_AGENT_REGISTRY_SECONDS', '900')))
+READY_SECONDS = max(30, int(os.environ.get('UPDATE_AGENT_READY_SECONDS', '600')))
+MAX_SOCKET_DELAY = datetime.timedelta(seconds=1800)
 REGISTRY = os.environ.get('UPDATE_AGENT_REGISTRY', 'https://registry-1.docker.io').rstrip('/')
 AUTH = os.environ.get('UPDATE_AGENT_REGISTRY_AUTH', 'https://auth.docker.io/token')
 TAG_VARIABLE = 'SHARPMUSH_IMAGE_TAG'
@@ -71,6 +74,18 @@ def inspect(kind, *names):
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or f'docker {kind} inspect failed')
     return json.loads(result.stdout)
+
+
+def present(kind, names):
+    """Inspects each of names that still exists. Compose removes a container while it replaces it."""
+    result = docker(kind, 'inspect', *names, timeout=60) if names else None
+    if result is None:
+        return []
+    try:
+        # docker inspect prints what it found even when one of the names is gone.
+        return json.loads(result.stdout or '[]')
+    except ValueError:
+        raise RuntimeError(result.stderr.strip() or f'docker {kind} inspect failed')
 
 
 # --- the Compose project ---------------------------------------------------------------------------
@@ -123,7 +138,10 @@ def read_env(path):
         for line in path.read_text().splitlines():
             if '=' in line and not line.lstrip().startswith('#'):
                 key, value = line.split('=', 1)
-                values[key.strip()] = value.strip()
+                value = value.strip()
+                if len(value) >= 2 and value[0] == value[-1] and value[0] in '"\'':
+                    value = value[1:-1]
+                values[key.strip()] = value
     return values
 
 
@@ -139,32 +157,48 @@ def write_tag(path, tag):
             replaced = True
     if not replaced:
         lines.append(f'{TAG_VARIABLE}={tag}')
+    write_env(path, '\n'.join(lines) + '\n')
+
+
+def write_env(path, text):
+    """Replaces .env with text in one step, keeping its mode and owner."""
     temporary = path.with_name('.env.update-agent')
     temporary.unlink(missing_ok=True)
     # Created 0600 before anything is written: .env holds the game's secrets.
     descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(descriptor, 'w') as file:
-        file.write('\n'.join(lines) + '\n')
+        file.write(text)
     if path.exists():
-        os.chmod(temporary, path.stat().st_mode & 0o777)
+        current = path.stat()
+        os.chmod(temporary, current.st_mode & 0o777)
+        try:
+            os.chown(temporary, current.st_uid, current.st_gid)
+        except PermissionError:
+            pass
     os.replace(temporary, path)
 
 
 def components(project):
     """Each SharpMUSH component in the project, keyed by component name."""
-    listing = docker('ps', '-a', '--filter', f'label=com.docker.compose.project={project.name}', '--format', '{{.ID}}', timeout=60)
+    listing = docker('ps', '-a', '--filter', f'label=com.docker.compose.project={project.name}',
+                     '--filter', 'label=com.docker.compose.oneoff=False', '--format', '{{.ID}}', timeout=60)
     if listing.returncode != 0:
         raise RuntimeError(listing.stderr.strip() or 'docker ps failed')
-    ids = listing.stdout.split()
     found = {}
-    for container in inspect('container', *ids) if ids else []:
+    for container in present('container', listing.stdout.split()):
         reference = container['Config']['Image']
         repository, _, tag = reference.rpartition(':') if ':' in reference.rsplit('/', 1)[-1] else (reference, '', 'latest')
         repository = repository.removeprefix('docker.io/')
         component = IMAGES.get(repository)
         if component is None:
             continue
-        image = inspect('image', container['Image'])[0]
+        # A stopped leftover never hides the running container of the same service.
+        if component in found and found[component]['state'] == 'running':
+            continue
+        images = present('image', [container['Image']])
+        if not images:
+            continue
+        image = images[0]
         labels = (image.get('Config') or {}).get('Labels') or {}
         digests = [entry.split('@', 1)[1] for entry in image.get('RepoDigests') or []
                    if entry.split('@', 1)[0].removeprefix('docker.io/') == repository]
@@ -218,14 +252,16 @@ class Agent:
     def __init__(self):
         self.lock = threading.Lock()
         self.job = load_json(STATE / 'job.json')
-        self.done = set(load_json(STATE / 'done.json') or [])
+        self.done = list(load_json(STATE / 'done.json') or [])
         self.registry = {'digests': {}, 'tags': [], 'readAt': None, 'checked': 0.0}
+        self.reading = threading.Lock()
         self.error = None
 
     def report(self, project):
         found = components(project) if project else {}
-        if project and time.monotonic() - self.registry['checked'] >= REGISTRY_SECONDS:
-            self.read_registry(found)
+        if project and time.monotonic() - self.registry['checked'] >= REGISTRY_SECONDS and not self.reading.locked():
+            # Docker Hub can be slow: the poll goes on without waiting for it.
+            threading.Thread(target=self.read_registry, args=(found,), daemon=True).start()
         for status in found.values():
             status['latestDigest'] = self.registry['digests'].get(f"{status['image']}:{status['tag']}")
         with self.lock:
@@ -242,6 +278,10 @@ class Agent:
         }
 
     def read_registry(self, found):
+        with self.reading:
+            self.read_registry_now(found)
+
+    def read_registry_now(self, found):
         self.registry['checked'] = time.monotonic()
         try:
             digests = {}
@@ -255,56 +295,92 @@ class Agent:
             log(f'registry: {error}')
 
     def accept(self, job):
-        """Starts a job the server handed over, once per id, after checking every field."""
+        """Starts a job the server handed over, once per id, after checking every field. True when it started."""
         identifier = job.get('id', '')
         with self.lock:
             busy = self.job and self.job.get('state') == 'running'
-            if not ID.fullmatch(identifier) or identifier in self.done or busy:
-                return
+            if not isinstance(identifier, str) or not ID.fullmatch(identifier) or identifier in self.done or busy:
+                return False
             wanted = job.get('components') or []
             tag = job.get('tag')
+            socket_not_before = parse_time(job.get('socketNotBefore'))
             problem = None
-            if not wanted or any(name not in ORDER for name in wanted) or len(set(wanted)) != len(wanted):
+            if not isinstance(wanted, list) or not wanted or any(name not in ORDER for name in wanted) or len(set(wanted)) != len(wanted):
                 problem = 'Unknown component.'
             elif tag is not None and not (isinstance(tag, str) and TAG.fullmatch(tag)):
                 problem = 'That is not a release tag.'
+            elif job.get('socketNotBefore') is not None and socket_not_before is None:
+                problem = 'That is not a time.'
             self.job = {'id': identifier, 'components': [name for name in ORDER if name in wanted], 'tag': tag,
                         'state': 'failed' if problem else 'running', 'step': None, 'message': problem,
                         'finishedAt': iso(now()) if problem else None}
-            self.done.add(identifier)
+            self.done = [*self.done, identifier][-200:]
             self.save()
-        if not problem:
-            threading.Thread(target=self.run, args=(job.get('socketNotBefore'),), daemon=True).start()
+        if problem:
+            return False
+        if socket_not_before is not None:
+            socket_not_before = min(socket_not_before, now() + MAX_SOCKET_DELAY)
+        threading.Thread(target=self.run, args=(socket_not_before,), daemon=True).start()
+        return True
 
     def run(self, socket_not_before):
         try:
             project = own_project()
-            tag = self.job['tag']
-            if tag is not None:
-                if project.tag_from_env() is None:
-                    raise RuntimeError("This game's Compose file fixes its image tags; change them there.")
-                known = lambda: tag in self.registry['tags'] or tag in ('latest', 'dev') or tag == project.tag_from_env()
-                if not known():
-                    # The list may predate the release, or this agent may not have read it yet.
-                    self.read_registry(components(project))
-                if not known():
-                    raise RuntimeError(f'The registry has no release tagged {tag}.')
-                write_tag(project.env_file, tag)
             found = components(project)
-            for name in self.job['components']:
-                if name not in found:
-                    raise RuntimeError(f'No {name} container in project {project.name}.')
+            missing = [name for name in self.job['components'] if name not in found]
+            if missing:
+                raise RuntimeError(f'No {missing[0]} container in project {project.name}.')
+            services = {name: found[name]['service'] for name in self.job['components']}
+            self.pull(project, services)
+            for name, service in services.items():
                 if name == 'socketserver' and socket_not_before:
                     wait_until(socket_not_before)
                 self.step(name)
-                service = found[name]['service']
-                for args in (('pull', '--quiet', service), ('up', '-d', '--no-deps', service)):
-                    result = project.compose(*args)
-                    if result.returncode != 0:
-                        raise RuntimeError(f'docker compose {args[0]} {service}: ' + last_line(result.stderr))
+                compose(project, 'up', '-d', '--no-deps', service)
+                # Nothing further is replaced behind a component that did not come back.
+                self.wait_ready(project, name)
             self.finish('succeeded', None)
         except Exception as error:  # Reported to the portal; the agent keeps polling.
             self.finish('failed', str(error)[:500])
+
+    def pull(self, project, services):
+        """Moves .env to the job's tag and pulls every image before anything is replaced; on a failure .env goes back."""
+        tag = self.job['tag']
+        original = project.env_file.read_text() if project.env_file.exists() else None
+        if tag is not None:
+            if project.tag_from_env() is None:
+                raise RuntimeError("This game's Compose file fixes its image tags; change them there.")
+            known = lambda: tag in self.registry['tags'] or tag in ('latest', 'dev') or tag == project.tag_from_env()
+            if not known():
+                # The list may predate the release, or this agent may not have read it yet.
+                self.read_registry(components(project))
+            if not known():
+                raise RuntimeError(f'The registry has no release tagged {tag}.')
+            write_tag(project.env_file, tag)
+        self.step(PULL_STEP)
+        try:
+            compose(project, 'pull', '--quiet', *services.values())
+        except Exception:
+            if tag is not None:
+                if original is None:
+                    project.env_file.unlink(missing_ok=True)
+                else:
+                    write_env(project.env_file, original)
+            raise
+
+    def wait_ready(self, project, name):
+        deadline = time.monotonic() + READY_SECONDS
+        while True:
+            if name == 'server':
+                ready, state = server_ready(), 'not ready'
+            else:
+                state = components(project).get(name, {}).get('state', 'missing')
+                ready = state == 'running'
+            if ready:
+                return
+            if time.monotonic() >= deadline:
+                raise RuntimeError(f'The {name} did not come back within {READY_SECONDS} seconds ({state}); nothing after it was replaced.')
+            time.sleep(5)
 
     def step(self, name):
         with self.lock:
@@ -322,7 +398,7 @@ class Agent:
     def save(self):
         STATE.mkdir(parents=True, exist_ok=True)
         write_json(STATE / 'job.json', self.job)
-        write_json(STATE / 'done.json', sorted(self.done)[-200:])
+        write_json(STATE / 'done.json', self.done)
 
     def resume(self):
         """A job the agent was running when it stopped cannot be trusted half done: report it failed."""
@@ -333,8 +409,32 @@ class Agent:
                 self.save()
 
 
-def wait_until(stamp):
-    target = datetime.datetime.fromisoformat(stamp.replace('Z', '+00:00'))
+def compose(project, *args):
+    result = project.compose(*args)
+    if result.returncode != 0:
+        raise RuntimeError(f"docker compose {' '.join(args)}: " + last_line(result.stderr))
+
+
+def server_ready():
+    """Whether the game server answers /ready: started, and connected to the bus."""
+    try:
+        with urllib.request.urlopen(f'{SERVER}/ready', timeout=10) as response:
+            return response.status == 200
+    except (urllib.error.URLError, OSError, ValueError):
+        return False
+
+
+def parse_time(value):
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.datetime.fromisoformat(value.replace('Z', '+00:00'))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else None
+
+
+def wait_until(target):
     while (remaining := (target - now()).total_seconds()) > 0:
         time.sleep(min(remaining, 5))
 
@@ -387,8 +487,9 @@ def main():
             agent.error = str(error)[:500]
         try:
             job = poll(agent.report(project))
-            if job and project:
-                agent.accept(job)
+            if job and project and agent.accept(job):
+                # Tell the server at once that the update was taken, rather than a poll later.
+                continue
         except urllib.error.HTTPError as error:
             log(f'server answered {error.code}')
         except (urllib.error.URLError, OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as error:

@@ -14,6 +14,9 @@ public static class ServerComponents
 
 	/// <summary>Every component, in update order: the socket server comes last.</summary>
 	public static readonly IReadOnlyList<string> InUpdateOrder = [Renderer, Server, SocketServer];
+
+	/// <summary>The step before any component: every image is pulled first, so a failed download replaces nothing.</summary>
+	public const string PullStep = "pull";
 }
 
 /// <summary>One component as the update agent sees it running.</summary>

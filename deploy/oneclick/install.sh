@@ -165,6 +165,9 @@ pull_images() {
 	log "Pulling images (tag $tag)"
 	(cd "$SHARPMUSH_DIR" && SHARPMUSH_SITE=:80 SHARPMUSH_IMAGE_TAG=$tag \
 		docker compose --profile cloudflare --profile backup pull --quiet --ignore-buildable)
+	# The update agent is built here, not pulled: build it again so a reinstall runs the agent.py it just wrote.
+	log "Building the update agent"
+	(cd "$SHARPMUSH_DIR" && SHARPMUSH_SITE=:80 SHARPMUSH_IMAGE_TAG=$tag docker compose build --pull --quiet update-agent)
 }
 
 prepare() {

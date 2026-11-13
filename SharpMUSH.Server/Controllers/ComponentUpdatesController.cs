@@ -74,9 +74,14 @@ public sealed class UpdateAgentController(ComponentUpdateCoordinator coordinator
 {
 	public const string TokenHeader = "X-Update-Agent-Token";
 
+	/// <summary>Headers a proxy in front of the server adds. The agent reaches the server on the Compose network, never through one.</summary>
+	public static readonly IReadOnlyList<string> ProxyHeaders = ["X-Forwarded-For", "X-Original-For", "Forwarded", "CF-Connecting-IP"];
+
 	[HttpPost("poll")]
 	public IActionResult Poll(UpdateAgentReport report)
 	{
+		// From the internet, the endpoint does not exist: a leaked token is no use outside the game's own network.
+		if (ProxyHeaders.Any(Request.Headers.ContainsKey)) return NotFound();
 		if (!coordinator.Authenticates(Request.Headers[TokenHeader].ToString())) return Unauthorized();
 		Response.Headers.CacheControl = "no-store";
 		if (report.Protocol != ComponentUpdateCoordinator.Protocol)

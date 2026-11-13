@@ -202,4 +202,69 @@ public class ComponentUpdateCoordinatorTests
 		var policy = typeof(ComponentUpdatesController).GetCustomAttributes(typeof(AuthorizeAttribute), true).Cast<AuthorizeAttribute>().Single();
 		await Assert.That(policy.Policy).IsEqualTo(PortalPermission.ServerAdmin);
 	}
+
+	[Test]
+	[Arguments("1.0.0", null, "1.1.0", true)]
+	[Arguments("1.0.0", null, "1.0.1-rc.1", true)]
+	[Arguments("1.1.0", null, "1.0.0", false)]
+	[Arguments("1.0.0", null, "1.0.0-rc.1", false)]
+	[Arguments("1.0.0-rc.1", null, "1.0.0", true)]
+	[Arguments("1.0.0", null, "latest", true)]
+	[Arguments("1.0.0", null, "dev", true)]
+	[Arguments("dev", "dev", "1.1.0", false)]
+	[Arguments("dev", "dev", "latest", false)]
+	[Arguments("latest", "1.1.0", "1.0.0", false)]
+	[Arguments("latest", "1.1.0", "1.2.0", true)]
+	[Arguments("latest", null, "1.2.0", false)]
+	[Arguments("1.9.0", null, "1.10.0", true)]
+	public async Task AMoveNeverGoesBack(string current, string? running, string target, bool allowed) =>
+		await Assert.That(ComponentUpdateCoordinator.MovesForward(current, running, target)).IsEqualTo(allowed);
+
+	[Test]
+	public async Task TheVersionListOffersOnlyNewerReleases()
+	{
+		var (coordinator, _, _) = Create();
+		coordinator.Poll(Report(tag: "1.0.0") with { AvailableTags = ["1.1.0", "1.0.0", "0.9.0"] });
+		await Assert.That(coordinator.Status(0, 0).AvailableTags).IsEquivalentTo(new[] { "1.1.0", "1.0.0" });
+		var back = await coordinator.QueueAsync(new AdminUpdateRequest(ServerComponents.InUpdateOrder, "0.9.0", 0), "admin");
+		await Assert.That(back.Expect<Error<string>>().Value).Contains("cannot go back");
+	}
+
+	[Test]
+	public async Task NothingIsQueuedWhileTheAgentRunsAnUpdateThisServerLost()
+	{
+		var (coordinator, _, _) = Create();
+		coordinator.Poll(Report(job: new(Guid.NewGuid(), [ServerComponents.Renderer], null, UpdateJobStates.Running, ServerComponents.Renderer, null, null)));
+		// The panel shows the agent's update; a second one waits until it ends.
+		var result = await coordinator.QueueAsync(Request(ServerComponents.Server), "admin");
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("already in progress");
+	}
+
+	[Test]
+	public async Task PlayersHearWhenAWarnedUpdateStopsBeforeTheSocketServer()
+	{
+		var (coordinator, _, broadcast) = Create();
+		coordinator.Poll(Report());
+		var job = (await coordinator.QueueAsync(new AdminUpdateRequest(ServerComponents.InUpdateOrder, null, 60), "admin")).Expect<UpdateJobStatus>();
+		coordinator.Poll(Report(job: new(job.Id, job.Components, null, UpdateJobStates.Running, ServerComponents.Server, null, null)));
+		coordinator.Poll(Report(job: new(job.Id, job.Components, null, UpdateJobStates.Failed, null, "pull access denied", null)));
+
+		var sent = broadcast.ReceivedCalls().Select(call => call.GetArguments().Single()).ToList();
+		await Assert.That(sent.Count).IsEqualTo(2);
+		await Assert.That(sent[1] is SharpMessage message && message is string text && text == ComponentUpdateCoordinator.SocketCalledOff).IsTrue();
+	}
+
+	[Test]
+	public async Task AnAgentPollThroughTheFrontDoorIsNotFound()
+	{
+		var (coordinator, _, _) = Create();
+		var controller = new UpdateAgentController(coordinator)
+		{
+			ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+		};
+		controller.Request.Headers[UpdateAgentController.TokenHeader] = Token;
+		controller.Request.Headers["X-Forwarded-For"] = "203.0.113.9";
+		await Assert.That(controller.Poll(Report())).IsTypeOf<NotFoundResult>();
+		await Assert.That(coordinator.Status(0, 0).AgentSeenAt).IsNull();
+	}
 }

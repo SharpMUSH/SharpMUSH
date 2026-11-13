@@ -42,7 +42,41 @@ public class ComponentUpdatesTests : TrackingBunitContext
 		};
 	}
 
+	/// <summary>Time that moves only when the test says: each tick fires every timer once.</summary>
+	private sealed class ManualTime : TimeProvider
+	{
+		private readonly List<(TimerCallback Callback, object? State)> _timers = [];
+
+		public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+		{
+			lock (_timers) _timers.Add((callback, state));
+			return new Stopped();
+		}
+
+		public void Tick()
+		{
+			(TimerCallback Callback, object? State)[] timers;
+			lock (_timers) timers = [.. _timers];
+			foreach (var (callback, state) in timers)
+			{
+				callback(state);
+			}
+		}
+
+		private sealed class Stopped : ITimer
+		{
+			public bool Change(TimeSpan dueTime, TimeSpan period) => true;
+
+			public void Dispose()
+			{
+			}
+
+			public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+		}
+	}
+
 	private readonly Api _api = new();
+	private readonly ManualTime _time = new();
 	private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
 
 	public ComponentUpdatesTests()
@@ -54,6 +88,7 @@ public class ComponentUpdatesTests : TrackingBunitContext
 			.AddSingleton(factory)
 			.AddEchoLocalizer()
 			.AddSingleton<AdminServerService>()
+			.AddSingleton<TimeProvider>(_time)
 			.AddSingleton(_dialogs);
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
@@ -148,5 +183,25 @@ public class ComponentUpdatesTests : TrackingBunitContext
 		await Assert.That(cut.Find(".adm-updates-job").TextContent.Trim()).IsEqualTo("AdmUpdJobRunning(AdmUpdServer)");
 		await Assert.That(cut.FindAll(".adm-updates-row button").All(button => button.HasAttribute("disabled"))).IsTrue();
 		await Assert.That(cut.Find(".adm-updates-all").HasAttribute("disabled")).IsTrue();
+	}
+
+	[Test]
+	public async Task ThePanelReadsAgainAndKeepsItsViewWhileTheServerIsAway()
+	{
+		_api.Status = Status();
+		var cut = RenderPanel();
+		cut.WaitForAssertion(() => cut.Find("[data-component='renderer']"), TimeSpan.FromSeconds(5));
+
+		// The server is being replaced: the read fails, and the panel keeps what it showed.
+		_api.Status = null;
+		_time.Tick();
+		cut.WaitForAssertion(() => cut.Find(".adm-updates-unread"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".adm-updates-row").Count).IsEqualTo(3);
+
+		var done = new UpdateJobStatus(Guid.NewGuid(), ServerComponents.InUpdateOrder, null, DateTimeOffset.UtcNow, "admin", null,
+			UpdateJobStates.Succeeded, null, null, DateTimeOffset.UtcNow);
+		_api.Status = Status(job: done);
+		_time.Tick();
+		cut.WaitForAssertion(() => cut.Find(".adm-updates-job[data-state='succeeded']"), TimeSpan.FromSeconds(5));
 	}
 }

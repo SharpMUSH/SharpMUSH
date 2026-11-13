@@ -817,12 +817,17 @@ get a broadcast and a warning period you choose (none, 1, 5, 10 or 30 minutes), 
 drops every connection. Each update is recorded in the audit log as `server.update`.
 
 The work is done by the update agent, a small container that holds the Docker socket so
-`sharpmush-server` never does. It polls the server with `SHARPMUSH_UPDATE_AGENT_TOKEN`, and for each
-component runs `docker compose pull <service>` and `docker compose up -d --no-deps <service>` with the
-same Compose files the stack was started with. It accepts only those three services, and only
-release tags (`1.2.3`, `1.2.3-rc.1`), `latest` or `dev`. Moving to another release rewrites
-`SHARPMUSH_IMAGE_TAG` in `.env`, so the Compose files must take their tag from that variable, as
-every supplied file does.
+`sharpmush-server` never does. It polls the server with `SHARPMUSH_UPDATE_AGENT_TOKEN` over the
+Compose network; the server answers 404 to a poll that came through a proxy, so the endpoint is not
+reachable from outside. The agent runs `docker compose pull` for every service first, then
+`docker compose up -d --no-deps <service>` for each in turn, with the same Compose files the stack was
+started with. A failed pull replaces nothing. After each replacement it waits for that component to
+run again (for the game server, for `/ready` to answer, up to `UPDATE_AGENT_READY_SECONDS`, default
+600) and stops before the socket server if it does not. It accepts only those three services, and
+only release tags (`1.2.3`, `1.2.3-rc.1`), `latest` or `dev`. Moving to another release rewrites
+`SHARPMUSH_IMAGE_TAG` in `.env` (put back if the pull fails), so the Compose files must take their tag
+from that variable, as every supplied file does. Only newer releases are offered: an older game server
+refuses a world a newer one wrote, so a move never goes back, and a game on `dev` stays on `dev`.
 
 One-click installs run the agent already. For `docker-compose.prod.yml` or
 `docker-compose.cloudflare.yml`, add to `.env`:

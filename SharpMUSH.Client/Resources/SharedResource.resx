@@ -13706,4 +13706,7 @@
   <data name="AdmUpdJobFailed" xml:space="preserve">
     <value>Last update failed: {0}</value>
   </data>
+  <data name="AdmUpdJobPulling" xml:space="preserve">
+    <value>Downloading the new images; nothing has been replaced yet.</value>
+  </data>
 </root>
