@@ -174,6 +174,7 @@ def write_env(path, text):
         try:
             os.chown(temporary, current.st_uid, current.st_gid)
         except PermissionError:
+            # Only root may give a file away; the agent runs as root, so this is a non-root test run.
             pass
     os.replace(temporary, path)
 
