@@ -33,7 +33,7 @@ public class FunctionFlagDispatchTests
 		foreach (var entry in original.FunctionLibrary) library.Add(entry.Key, entry.Value);
 		library.Add("flagprobe", (new FunctionDefinition(
 			new SharpFunctionAttribute { Name = "flagprobe", Flags = flags, MinArgs = 1, MaxArgs = 1 },
-			p => ValueTask.FromResult(new CallState(p.CurrentState.Arguments["0"].Message))), true));
+			p => ValueTask.FromResult(new CallState(p.CurrentState.ArgumentList["0"].Message))), true));
 		var config = original.Configuration.CurrentValue;
 		return original with
 		{
@@ -194,7 +194,7 @@ public class FunctionFlagDispatchTests
 		var parser = Parser(flags);
 		parser = (MUSHCodeParser)parser.Push(parser.CurrentState with
 		{
-			Arguments = new() { ["0"] = new CallState("log-argument-probe") }
+			ArgumentList = ArgumentList.From(new() { ["0"] = new CallState("log-argument-probe") })
 		});
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		var executor = (await mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef))).Expect<AnySharpObject>();
@@ -210,7 +210,7 @@ public class FunctionFlagDispatchTests
 	public async Task DeprecatedFlagNotifiesOwner()
 	{
 		var parser = Parser(FunctionFlags.Deprecated);
-		parser = (MUSHCodeParser)parser.Push(parser.CurrentState with { Arguments = new() { ["0"] = new CallState("hello") } });
+		parser = (MUSHCodeParser)parser.Push(parser.CurrentState with { ArgumentList = ArgumentList.From(new() { ["0"] = new CallState("hello") }) });
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		var executor = (await mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef))).Expect<AnySharpObject>();
 		var notify = Substitute.For<INotifyService>();
@@ -240,7 +240,7 @@ public class FunctionFlagDispatchTests
 		var definition = parser.FunctionLibrary["flagprobe"].LibraryInformation;
 		parser.FunctionLibrary["flagprobe"] = (definition with
 		{
-			Function = async p => new CallState(await p.CurrentState.Arguments["0"].ParsedMessage())
+			Function = async p => new CallState(await p.CurrentState.ArgumentList["0"].ParsedMessage())
 		}, true);
 		var result = await parser.EvaluateAsync(MarkupText.Plain("flagprobe(%qx[setq(x,inner)]%qx)"));
 		await Assert.That(result.ToPlainText()).IsEqualTo("outerinner");
@@ -283,7 +283,7 @@ public class FunctionFlagDispatchTests
 			? string.Format(ErrorMessages.Returns.GotUnEvenArgs, "FLAGPROBE")
 			: ErrorMessages.Returns.ArgumentCount("FLAGPROBE", 2, 3, 1);
 		await Assert.That(parsed.ToPlainText()).IsEqualTo(expected);
-		parser = (MUSHCodeParser)parser.Push(parser.CurrentState with { Arguments = new() { ["0"] = new CallState("hello") } });
+		parser = (MUSHCodeParser)parser.Push(parser.CurrentState with { ArgumentList = ArgumentList.From(new() { ["0"] = new CallState("hello") }) });
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		var executor = (await mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef))).Expect<AnySharpObject>();
 		var applied = await FunctionDispatcher.InvokeAsync(parser, definition, executor,

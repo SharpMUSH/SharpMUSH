@@ -46,11 +46,8 @@ public partial class Commands
 		var depth = parser.CurrentState.ArgumentsOrdered.GetValueOrDefault("1")?.Depth ?? 0;
 		return await parser.With(state => state with
 		{
-			Arguments = new Dictionary<string, CallState>
-			{
-				["0"] = new(target, depth),
-				["1"] = new(query, depth, null, async () => (await parser.FunctionParse(query))?.Message)
-			},
+			ArgumentList = ArgumentList.Of(new CallState(target, depth),
+				new CallState(query, depth, null, async () => (await parser.FunctionParse(query))?.Message)),
 			Switches = []
 		}, async inner => await MapSql(inner, _2));
 	}

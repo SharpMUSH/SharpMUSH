@@ -922,17 +922,8 @@ public partial class Functions
 			&& "preserve".StartsWith(preserveArg.Message.ToPlainText(), StringComparison.OrdinalIgnoreCase);
 		var command = attributeForm ? "@ATRCHOWN" : "@CHOWN";
 
-		var commandParser = parser.Push(parser.CurrentState with
-		{
-			Command = command,
-			Switches = preserve ? ["PRESERVE"] : [],
-			Arguments = new Dictionary<string, CallState>
-			{
-				{ "0", new CallState(target) },
-				{ "1", new CallState(args["1"].Message.ToPlainText()) }
-			},
-			Function = null
-		});
+		var commandParser = parser.Push(parser.CurrentState.ForCommand(command, preserve ? ["PRESERVE"] : [],
+			ArgumentList.Of(new CallState(target), new CallState(args[1].Message.ToPlainText()))));
 
 		// Both commands answer a refusal with a #-1 or #-2 error and say why to the caller; anything
 		// else is a change made.
@@ -1133,20 +1124,17 @@ public partial class Functions
 				if (attribute is not SharpAttribute[] chain)
 					return await ParseRawArgument(parser, parser.CurrentState.ArgumentList[1].Message) ?? CallState.Empty;
 
-				var arguments = new Dictionary<string, CallState>();
+				var arguments = new List<CallState>();
 				foreach (var argument in parser.CurrentState.ArgumentsOrdered.Skip(2))
 				{
 					var result = await ParseRawArgument(parser, argument.Value.Message) ?? CallState.Empty;
 					hadErrors |= result.HadErrors;
-					arguments[arguments.Count.ToString()] = result;
+					arguments.Add(result);
 				}
 				var value = chain.Last();
-				return (await parser.With(state => state with
+				return (await parser.With(state => state.ForAttributeArguments(ArgumentList.Of(arguments)) with
 				{
 					CurrentEvaluation = DBAttribute.Of(actualObject.Object().DBRef, value),
-					Arguments = arguments,
-					EnvironmentRegisters = arguments,
-					SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
 					Actors = state.Actors with { Executor = asCaller ? state.Executor : actualObject.Object().DBRef, Caller = state.Executor }
 				}, p => p.FunctionParse(value.Value)))!;
 			}));

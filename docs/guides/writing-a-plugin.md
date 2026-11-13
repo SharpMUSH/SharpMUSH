@@ -90,9 +90,9 @@ public sealed class SamplePlugin   // (same class; methods can live anywhere in 
     [SharpFunction(Name = "pluginadd", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
     public static ValueTask<CallState> PluginAdd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
     {
-        var args = parser.CurrentState.Arguments;
-        var a = decimal.Parse(args["0"].Message.ToPlainText());
-        var b = decimal.Parse(args["1"].Message.ToPlainText());
+        var args = parser.CurrentState.ArgumentList;
+        var a = decimal.Parse(args[0].Message.ToPlainText());
+        var b = decimal.Parse(args[1].Message.ToPlainText());
         return ValueTask.FromResult(new CallState((a + b).ToString(System.Globalization.CultureInfo.InvariantCulture)));
     }
 }
@@ -121,8 +121,8 @@ Place a `plugin.json` next to the built DLL. It drives discovery order and compa
 - `id` — must equal your plugin's runtime `Id`; a plugin whose `Id` differs is not loaded.
 - `minServerVersion` — the plugin contract version range you need. The loader checks it at start and reports
   the plugin as Incompatible when the server does not fit. Within a major version the contract only grows, so a
-  plugin that declares `>=3.0` and uses only what 3.0 has loads on every 3.x server; a server with another major
-  refuses it. A plugin that uses something added in 3.1 declares `>=3.1`.
+  plugin that declares `>=4.0` and uses only what 4.0 has loads on every 4.x server; a server with another major
+  refuses it. A plugin that uses something added in 4.1 declares `>=4.1`.
 - `dependencies` — ids of plugins that must load **before** this one (topologically ordered; cycles are
   detected and skipped).
 - `priority` — tie-break among plugins with no dependency relationship (lower loads first).
@@ -414,7 +414,7 @@ authors: [You]
 description: "What it does"
 kind: plugin
 binaries:
-  min_server_version: ">=3.0"   # the plugin/server contract version your DLL was built against
+  min_server_version: ">=4.0"   # the plugin/server contract version your DLL was built against
   files:
     - file: MyPlugin.dll
       sha256: <64-hex SHA-256 of MyPlugin.dll>

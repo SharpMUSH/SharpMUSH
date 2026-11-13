@@ -63,7 +63,7 @@ public class ParserStateRootForTests
 	{
 		var state = ParserState.RootFor(Actor);
 
-		await Assert.That(state.Arguments).IsEmpty();
+		await Assert.That(state.ArgumentList).IsEmpty();
 		await Assert.That(state.EnvironmentRegisters).IsEmpty();
 	}
 
@@ -73,9 +73,9 @@ public class ParserStateRootForTests
 		var first = ParserState.RootFor(Actor);
 		var second = ParserState.RootFor(Actor);
 
-		first.Arguments["0"] = new CallState("mine");
+		first.EnvironmentRegisters["0"] = new CallState("mine");
 
-		await Assert.That(second.Arguments).IsEmpty()
+		await Assert.That(second.EnvironmentRegisters).IsEmpty()
 			.Because("two invocations sharing a mutable dictionary would leak arguments between callers");
 	}
 }

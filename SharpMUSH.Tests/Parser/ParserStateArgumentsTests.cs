@@ -15,7 +15,7 @@ public class ParserStateArgumentsTests
 	public async ValueTask ContiguousArgumentsKeepNumericOrder()
 	{
 		var keys = Enumerable.Range(0, 12).Select(ParserState.ArgumentKey).ToArray();
-		var ordered = (ParserState.Empty with { Arguments = Bound(keys) }).ArgumentsOrdered;
+		var ordered = (ParserState.Empty with { ArgumentList = ArgumentList.From(Bound(keys)) }).ArgumentsOrdered;
 
 		await Assert.That(ordered.Keys).IsEquivalentTo(keys, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(ordered.Values.Select(value => value.Message.ToPlainText()))
@@ -25,7 +25,7 @@ public class ParserStateArgumentsTests
 	[Test]
 	public async ValueTask NamedAndMissingArgumentsAreSortedOut()
 	{
-		var ordered = (ParserState.Empty with { Arguments = Bound("name", "10", "2", "0") }).ArgumentsOrdered;
+		var ordered = (ParserState.Empty with { ArgumentList = ArgumentList.From(Bound("name", "10", "2", "0")) }).ArgumentsOrdered;
 
 		await Assert.That(ordered.Keys).IsEquivalentTo(["0", "2", "10"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
@@ -33,10 +33,10 @@ public class ParserStateArgumentsTests
 	[Test]
 	public async ValueTask TheOrderedViewFollowsANewBinding()
 	{
-		var state = ParserState.Empty with { Arguments = Bound("0", "1") };
+		var state = ParserState.Empty with { ArgumentList = ArgumentList.From(Bound("0", "1")) };
 		await Assert.That(state.ArgumentsOrdered.Count).IsEqualTo(2);
 
-		var rebound = state with { Arguments = Bound("0") };
+		var rebound = state with { ArgumentList = ArgumentList.From(Bound("0")) };
 		await Assert.That(rebound.ArgumentsOrdered.Count).IsEqualTo(1);
 	}
 
@@ -55,7 +55,7 @@ public class ParserStateArgumentsTests
 	[Test]
 	public async ValueTask KeysAreReadAsNumbers()
 	{
-		var ordered = (ParserState.Empty with { Arguments = Bound("0", "1 ", "name") }).ArgumentsOrdered;
+		var ordered = (ParserState.Empty with { ArgumentList = ArgumentList.From(Bound("0", "1 ", "name")) }).ArgumentsOrdered;
 
 		await Assert.That(ordered.Count).IsEqualTo(2);
 		await Assert.That(ordered["1"].Message.ToPlainText()).IsEqualTo("1 ");
@@ -67,7 +67,7 @@ public class ParserStateArgumentsTests
 	[Test]
 	public async ValueTask EnumeratesKeysAndValuesTogether()
 	{
-		var ordered = (ParserState.Empty with { Arguments = Bound("1", "0") }).ArgumentsOrdered;
+		var ordered = (ParserState.Empty with { ArgumentList = ArgumentList.From(Bound("1", "0")) }).ArgumentsOrdered;
 
 		await Assert.That(ordered.Select(pair => $"{pair.Key}={pair.Value.Message.ToPlainText()}"))
 			.IsEquivalentTo(["0=0", "1=1"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
@@ -104,21 +104,21 @@ public class ParserStateArgumentsTests
 	{
 		var state = ParserState.Empty with { ArgumentList = Positional("a") };
 
-		await Assert.That(state.Arguments).IsSameReferenceAs(state.Arguments);
-		await Assert.That((state with { Function = "x" }).Arguments).IsSameReferenceAs(state.Arguments);
+		await Assert.That(state.ArgumentList).IsSameReferenceAs(state.ArgumentList);
+		await Assert.That((state with { Function = "x" }).ArgumentList).IsSameReferenceAs(state.ArgumentList);
 	}
 
 	[Test]
-	public async ValueTask SettingTheDictionaryKeepsThatInstance()
+	public async ValueTask AListMadeFromADictionaryReadsThroughIt()
 	{
 		var bound = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase)
 		{
 			["0"] = new("a"),
 			["Name"] = new("b")
 		};
-		var state = ParserState.Empty with { Arguments = bound };
+		var state = ParserState.Empty with { ArgumentList = ArgumentList.From(bound) };
 
-		await Assert.That(state.Arguments).IsSameReferenceAs(bound);
+		await Assert.That(state.ArgumentList.AsDictionary()).IsSameReferenceAs(bound);
 		await Assert.That(state.ArgumentList.IsPositional).IsFalse();
 		await Assert.That(state.ArgumentList.Count).IsEqualTo(2);
 		await Assert.That(state.ArgumentList["name"].Message.ToPlainText()).IsEqualTo("b");
@@ -154,5 +154,62 @@ public class ParserStateArgumentsTests
 	{
 		var keys = AttributeArgumentEnvironment.SuppliedKeys(Positional("a", "b"));
 		await Assert.That(keys.OrderBy(key => key)).IsEquivalentTo(["0", "1"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async ValueTask WithReplacesOnePositionAndKeepsTheRest()
+	{
+		var list = Positional("a", "b");
+		var changed = list.With(0, new CallState("z"));
+		await Assert.That(changed.IsPositional).IsTrue();
+		await Assert.That(changed[0].Message.ToPlainText()).IsEqualTo("z");
+		await Assert.That(changed[1].Message.ToPlainText()).IsEqualTo("b");
+		await Assert.That(list[0].Message.ToPlainText()).IsEqualTo("a");
+		await Assert.That(list.With(2, new CallState("c")).Count).IsEqualTo(3);
+
+		var named = ArgumentList.From(new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase) { ["who"] = new("x") })
+			.With(0, new CallState("first"));
+		await Assert.That(named.ContainsKey("WHO")).IsTrue();
+		await Assert.That(named[0].Message.ToPlainText()).IsEqualTo("first");
+	}
+
+	[Test]
+	public async ValueTask AnAttributeFrameBindsArgumentsEnvironmentAndSuppliedKeysTogether()
+	{
+		var arguments = Positional("a");
+		var frame = ParserState.Empty.ForAttributeArguments(arguments);
+		await Assert.That(frame.ArgumentList).IsSameReferenceAs(arguments);
+		await Assert.That(frame.EnvironmentRegisters["0"].Message.ToPlainText()).IsEqualTo("a");
+		await Assert.That(frame.SuppliedArgumentKeys!).IsEquivalentTo(["0"]);
+
+		var environment = new Dictionary<string, CallState> { ["0"] = new("a"), ["outer"] = new("kept") };
+		var merged = ParserState.Empty.ForAttributeArguments(arguments, environment);
+		await Assert.That(merged.EnvironmentRegisters).IsSameReferenceAs(environment);
+		await Assert.That(merged.SuppliedArgumentKeys!).IsEquivalentTo(["0"]);
+	}
+
+	[Test]
+	public async ValueTask ACommandFrameNamesTheCommandAndLeavesNoFunction()
+	{
+		var frame = ParserState.Empty.ForFunction("add", ArgumentList.Empty).ForCommand("GOTO", ["QUIET"], Positional("north"));
+		await Assert.That(frame.Command).IsEqualTo("GOTO");
+		await Assert.That(frame.Switches).IsEquivalentTo(["QUIET"]);
+		await Assert.That(frame.ArgumentList[0].Message.ToPlainText()).IsEqualTo("north");
+		await Assert.That(frame.Function).IsNull();
+	}
+
+	[Test]
+	public async ValueTask WithKeepsGeneratedKeysGenerated()
+	{
+		var environment = new AttributeArgumentEnvironment { ["0"] = new("a"), ["1"] = new("b"), ["itemscount"] = new("2") };
+		environment.GeneratedKeys.Add("itemscount");
+		environment.GeneratedKeys.Add("1");
+		var changed = ArgumentList.From(environment).With(1, new CallState("c"));
+
+		var supplied = ParserState.Empty.ForAttributeArguments(changed).SuppliedArgumentKeys!;
+		await Assert.That(supplied).Contains("0");
+		await Assert.That(supplied).Contains("1");
+		await Assert.That(supplied).DoesNotContain("itemscount");
+		await Assert.That(environment.GeneratedKeys).Contains("1");
 	}
 }

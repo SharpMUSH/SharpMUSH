@@ -66,7 +66,11 @@ jobs:
             Directory.Build.props
 
       - name: Check the plugin contract against its baseline
-        run: tools/plugin-contract/check.sh
+        # A major bump skips the packing, so nothing is restored; the cache's post step fails on a
+        # missing packages folder, so make sure there is one.
+        run: |
+          mkdir -p "$HOME/.nuget/packages"
+          tools/plugin-contract/check.sh
 
   build:
     runs-on: ubuntu-latest

@@ -353,13 +353,10 @@ public class ConnectionAnnounceService(
 
 			var ownerRef = owner.Object().DBRef;
 			var playerRef = player.Object().DBRef;
-			var state = ParserState.RootFor(ownerRef) with
+			var state = ParserState.RootFor(ownerRef).ForAttributeArguments(ArgumentList.From(argsDict)) with
 			{
 				Enactor = playerRef,
 				Caller = playerRef,
-				Arguments = argsDict,
-				EnvironmentRegisters = new(argsDict),
-				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(argsDict),
 				CurrentEvaluation = new DBAttribute(ownerRef, attrName) { Dialect = SoftcodeDialects.Of(hook.Last()) }
 			};
 

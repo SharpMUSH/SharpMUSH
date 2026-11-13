@@ -565,9 +565,7 @@ public partial class Functions
 
 		var operands = parser.Push(parser.CurrentState with
 		{
-			Arguments = list
-				.Select((item, index) => (Key: index.ToString(), Value: new CallState(item)))
-				.ToDictionary(pair => pair.Key, pair => pair.Value)
+			ArgumentList = ArgumentList.Of(list.Select(item => new CallState(item)).ToArray())
 		});
 
 		return FunctionDispatcher.ValidateNumericArguments(attribute, operands.CurrentState.ArgumentsOrdered.Values, operands)

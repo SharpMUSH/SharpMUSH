@@ -122,7 +122,7 @@ public class QueueContractRuntimeTests
 	public async Task DeferredEntriesCaptureArgumentsRegistersAndIndependentLimits(bool semaphore)
 	{
 		var arguments = new Dictionary<string, CallState> { ["0"] = new("before") };
-		var state = ParserState.RootFor(_worker).ForAttributeArguments(arguments);
+		var state = ParserState.RootFor(_worker).ForAttributeArguments(ArgumentList.From(arguments));
 		state.AddRegister("X", MString.Plain("before"));
 		var body = MString.Plain("&RESULT me=%0|%qX|[add(1,2)]");
 		var admission = semaphore
@@ -161,7 +161,7 @@ public class QueueContractRuntimeTests
 	public async Task AsyncAttributeFactoriesStartWithIndependentEvaluationCounters()
 	{
 		await Cmd($"&WORK {_worker}=&RESULT me=%0|[add(1,2)]");
-		var state = ParserState.RootFor(_worker).ForAttributeArguments(new() { ["0"] = new("captured") });
+		var state = ParserState.RootFor(_worker).ForAttributeArguments(ArgumentList.Of(new CallState("captured")));
 		state.LimitExceeded!.IsExceeded = true;
 		state.TotalInvocations!.Increment();
 		var admission = await Queue.AdmitAsyncAttribute(() => ValueTask.FromResult(state), new DbRefAttribute(_worker, ["WORK"]), _worker);

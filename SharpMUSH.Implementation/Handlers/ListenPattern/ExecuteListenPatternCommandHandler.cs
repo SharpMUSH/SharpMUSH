@@ -52,13 +52,11 @@ public class ExecuteListenPatternCommandHandler(
 			}
 			if (action.Length == 0) return Unit.Value;
 			var arguments = request.Registers.ToDictionary(pair => pair.Key, pair => new CallState(pair.Value.Message));
-			var state = ParserState.RootFor(listenerDbRef).SnapshotForQueuedAction() with
+			var state = ParserState.RootFor(listenerDbRef).SnapshotForQueuedAction()
+				.ForAttributeArguments(ArgumentList.From(arguments)) with
 			{
 				Enactor = speakerDbRef,
 				Caller = speakerDbRef,
-				Arguments = arguments,
-				EnvironmentRegisters = new(arguments),
-				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
 				CurrentEvaluation = new DBAttribute(listenerDbRef, request.AttributeName) { Dialect = dialect },
 				Restrictions = EvaluationRestrictions.Current ?? restrictions
 			};

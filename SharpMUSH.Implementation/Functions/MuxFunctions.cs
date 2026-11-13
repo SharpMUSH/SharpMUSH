@@ -97,15 +97,8 @@ public partial class Functions
 			return PermissionRefusal.CannotUse(command).Return;
 		}
 
-		var commandParser = parser.Push(parser.CurrentState with
-		{
-			Command = command,
-			Switches = switches,
-			Arguments = arguments
-				.Select((argument, index) => (Key: index.ToString(CultureInfo.InvariantCulture), Value: new CallState(argument)))
-				.ToDictionary(pair => pair.Key, pair => pair.Value),
-			Function = null
-		});
+		var commandParser = parser.Push(parser.CurrentState.ForCommand(command, switches,
+			ArgumentList.Of(arguments.Select(argument => new CallState(argument)).ToArray())));
 
 		await commandParser.CommandLibrary[command].LibraryInformation.Command.Invoke(commandParser);
 		return CallState.Empty;

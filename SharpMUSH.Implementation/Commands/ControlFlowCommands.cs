@@ -240,7 +240,7 @@ public partial class Commands
 			["0"] = new CallState(element),
 			["1"] = new CallState((position + 1).ToString())
 		};
-		return state.ForAttributeArguments(arguments) with
+		return state.ForAttributeArguments(ArgumentList.From(arguments)) with
 		{
 			Registers = registers,
 			Actors = state.Actors with { Executor = target.Object().DBRef, Caller = state.Executor }
@@ -921,7 +921,7 @@ public partial class Commands
 				break;
 
 			// Evaluate each retry arg in the current context to produce the new %0, %1, …
-			var newArgValues = new Dictionary<string, CallState>();
+			var newArgValues = new CallState[retryArgTexts.Count];
 			for (var i = 0; i < retryArgTexts.Count; i++)
 			{
 				var capturedIndex = i;
@@ -930,16 +930,16 @@ public partial class Commands
 					state => state with { ArgumentList = currentArgs },
 					innerParser => innerParser.FunctionParse(capturedText));
 				hadErrors |= evaluated?.HadErrors == true;
-				newArgValues[capturedIndex.ToString()] = evaluated!;
+				newArgValues[capturedIndex] = evaluated!;
 			}
 
 			var retryResult = await parser.With(
-				state => state with { Arguments = newArgValues },
+				state => state with { ArgumentList = ArgumentList.Of(newArgValues) },
 				async innerParser => await previousCommandInvoker(innerParser));
 			hadErrors |= retryResult.TryGetValue(out var retried) && retried.HadErrors;
 
 			// The new arg values become the context for the next condition check.
-			currentArgs = ArgumentList.From(newArgValues);
+			currentArgs = ArgumentList.Of(newArgValues);
 			limit--;
 		}
 
@@ -1053,10 +1053,8 @@ public partial class Commands
 				// whichever chain or link re-enters.
 				var chainPropagation = new BreakPropagation { PreserveNext = true };
 				lastResult = await parser.With(
-					state => state with
+					state => state.ForAttributeArguments(ArgumentList.From(suppliedArgs), envArgs) with
 					{
-						EnvironmentRegisters = envArgs,
-						SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(suppliedArgs),
 						Caller = state.Executor,
 						BreakPropagation = chainPropagation,
 						CurrentEvaluation = evaluation
@@ -1163,10 +1161,8 @@ public partial class Commands
 			var propagation = new BreakPropagation { PreserveNext = true };
 
 			var execResult = await parser.With(
-				state => state with
+				state => state.ForAttributeArguments(ArgumentList.From(suppliedArgs), envArgs) with
 				{
-					EnvironmentRegisters = envArgs,
-					SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(suppliedArgs),
 					Caller = state.Executor,
 					BreakPropagation = propagation,
 					CurrentEvaluation = evaluation

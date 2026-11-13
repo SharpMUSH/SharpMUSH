@@ -69,7 +69,7 @@ public partial class Commands
 			.Select(pair => pair.Value.Message)
 			.ToArray();
 
-		var state = new RollbackState(parser, parser.CurrentState.EnvironmentRegisters, argumentTexts);
+		var state = new RollbackState(parser, argumentTexts);
 		var passes = switches.Contains("RETRY")
 			? await RetryRollbackAsync(state, first.Message, earlier)
 			: await CountedRollbackAsync(state, executor, first.Message, earlier);
@@ -84,18 +84,19 @@ public partial class Commands
 	}
 
 	/// <summary>One <c>@rollback</c>'s <c>%0</c>-<c>%9</c>, as they change from pass to pass.</summary>
-	private sealed class RollbackState(IMUSHCodeParser parser, Dictionary<string, CallState> environment, MString?[] argumentTexts)
+	private sealed class RollbackState(IMUSHCodeParser parser, MString?[] argumentTexts)
 	{
-		public Dictionary<string, CallState> Environment { get; private set; } = environment;
+		/// <summary>The arguments the last pass set; null until one does, when the caller's stay in force.</summary>
+		private ArgumentList? Arguments { get; set; }
+
+		private ParserState Bind(ParserState state) => Arguments is { } arguments ? state.ForAttributeArguments(arguments) : state;
 
 		public bool HadErrors { get; private set; }
 
 		/// <summary>Evaluates <paramref name="text"/> with the current <c>%0</c>-<c>%9</c>.</summary>
 		public async ValueTask<MString> EvaluateAsync(MString text)
 		{
-			var environment = Environment;
-			var result = await parser.With(state => state with { EnvironmentRegisters = environment },
-				inner => inner.FunctionParse(text));
+			var result = await parser.With(Bind, inner => inner.FunctionParse(text));
 			HadErrors |= result?.HadErrors == true;
 			return result?.Message ?? MarkupText.Empty;
 		}
@@ -108,21 +109,19 @@ public partial class Commands
 		{
 			if (argumentTexts.Length == 0) return;
 
-			var next = new Dictionary<string, CallState>();
+			var next = new CallState[argumentTexts.Length];
 			for (var i = 0; i < argumentTexts.Length; i++)
 			{
-				next[i.ToString(CultureInfo.InvariantCulture)] = new CallState(await EvaluateAsync(argumentTexts[i] ?? MarkupText.Empty));
+				next[i] = new CallState(await EvaluateAsync(argumentTexts[i] ?? MarkupText.Empty));
 			}
 
-			Environment = next;
+			Arguments = ArgumentList.Of(next);
 		}
 
 		/// <summary>Runs <paramref name="commands"/> as an action list with the current <c>%0</c>-<c>%9</c>.</summary>
 		public async ValueTask RunAsync(MString commands)
 		{
-			var environment = Environment;
-			var result = await parser.With(state => state with { EnvironmentRegisters = environment },
-				inner => inner.CommandListParse(commands));
+			var result = await parser.With(Bind, inner => inner.CommandListParse(commands));
 			HadErrors |= result?.HadErrors == true;
 		}
 	}
@@ -603,14 +602,8 @@ public partial class Commands
 
 		// The arguments are evaluated already, and a state built from text evaluates to that text, so @mail
 		// reads them as they are.
-		var mailParser = parser.Push(parser.CurrentState with
-		{
-			Command = "@MAIL",
-			Switches = [mailSwitch],
-			Arguments = mailArguments
-				.Select((argument, index) => (Key: index.ToString(CultureInfo.InvariantCulture), Value: new CallState(argument)))
-				.ToDictionary(pair => pair.Key, pair => pair.Value)
-		});
+		var mailParser = parser.Push(parser.CurrentState.ForCommand("@MAIL", [mailSwitch],
+			ArgumentList.Of(mailArguments.Select(argument => new CallState(argument)).ToArray())));
 
 		return await Mail(mailParser, attribute);
 	}

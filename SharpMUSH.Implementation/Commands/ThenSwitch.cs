@@ -97,5 +97,5 @@ public partial class Commands
 
 	/// <summary>The state a <c>/then</c> command list runs with: the caller's, with how many runs it followed as %0.</summary>
 	private static ParserState ThenState(ParserState state, int count)
-		=> state.ForAttributeArguments(new Dictionary<string, CallState> { ["0"] = new(count.ToString()) });
+		=> state.ForAttributeArguments(ArgumentList.Of(new CallState(count.ToString())));
 }

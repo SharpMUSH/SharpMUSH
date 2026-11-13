@@ -331,7 +331,7 @@ public class ObjectSnapshotTests
 		parser.CurrentState.Returns(ParserState.RootFor(player.Object.DBRef) with
 		{
 			Switches = [operation],
-			Arguments = new() { ["0"] = new(target.ToString()), ["1"] = new(saved.Id + ",token") }
+			ArgumentList = ArgumentList.From(new() { ["0"] = new(target.ToString()), ["1"] = new(saved.Id + ",token") })
 		});
 		var commands = (SharpMUSH.Implementation.Commands.Commands)Get<ILibraryProvider<CommandDefinition>>();
 		var metadata = typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod("Snapshot")!.GetCustomAttribute<SharpCommandAttribute>()!;

@@ -568,7 +568,7 @@ public sealed class InputSessionService : IInputSessionService
 		// A named argument, as a regexp's named group is, so it lives only as long as this run; it
 		// replaces a group of the same name.
 		arguments[ReasonArgument] = new CallState(MString.Plain(timeout ? "timeout" : exit ? "exit" : "input"), 0);
-		var state = ParserState.RootFor(session.Executor) with
+		var state = ParserState.RootFor(session.Executor).ForAttributeArguments(ArgumentList.From(arguments)) with
 		{
 			Executor = session.Executor,
 			Caller = session.Caller,
@@ -577,9 +577,7 @@ public sealed class InputSessionService : IInputSessionService
 			ConnectionSessionId = session.TransportSessionId,
 			CurrentEvaluation = new DBAttribute(route.Target, route.Attribute) { Dialect = SoftcodeDialects.Of(callback.Last()) },
 			OutputLimit = await FunctionLimits.OutputLimitForAsync(character,
-				_configuration?.CurrentValue.Limit.GuestOutputLimit ?? LimitOptions.DefaultGuestOutputLimit),
-			EnvironmentRegisters = arguments,
-			SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments)
+				_configuration?.CurrentValue.Limit.GuestOutputLimit ?? LimitOptions.DefaultGuestOutputLimit)
 		};
 		if (session.Registers.Count > 0)
 			state = state with { Registers = new([new Dictionary<string, MString>(session.Registers, StringComparer.OrdinalIgnoreCase)]) };

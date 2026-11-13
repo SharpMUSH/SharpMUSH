@@ -563,7 +563,7 @@ public class UtilityFunctionUnitTests
 		var arguments = new[] { "a", "", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l" }
 			.Select((value, index) => (value, index))
 			.ToDictionary(x => x.index.ToString(), x => new CallState(x.value));
-		var parser = Parser.FromState(ParserState.RootFor(new DBRef(1)) with { EnvironmentRegisters = arguments });
+		var parser = Parser.FromState(ParserState.RootFor(new DBRef(1)).ForAttributeArguments(ArgumentList.From(arguments)));
 
 		var result = await parser.EvaluateAsync(MarkupText.Plain("[setq(z,1)][registers(,args,|)]|[registers(,stack,|)]"));
 

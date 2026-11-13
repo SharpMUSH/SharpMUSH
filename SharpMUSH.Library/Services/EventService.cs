@@ -297,12 +297,10 @@ public class EventService(
 	/// The arguments are %0-%9, and each also by its name in EventArguments. Every attribute gets its own copy.
 	/// </summary>
 	private static ParserState State(EventRun run, Dictionary<string, CallState> arguments, Hearer hearer)
-		=> ParserState.RootFor(run.Handler) with
+		=> ParserState.RootFor(run.Handler)
+			.ForAttributeArguments(ArgumentList.From(new Dictionary<string, CallState>(arguments, StringComparer.OrdinalIgnoreCase))) with
 		{
 			Enactor = run.Enactor,
-			Arguments = new Dictionary<string, CallState>(arguments, StringComparer.OrdinalIgnoreCase),
-			EnvironmentRegisters = new(arguments, StringComparer.OrdinalIgnoreCase),
-			SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
 			CurrentEvaluation = new DBAttribute(run.Handler, hearer.Attribute) { Dialect = hearer.Dialect },
 			AttributeChangeDepth = run.AttributeChangeDepth
 		};

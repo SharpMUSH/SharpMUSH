@@ -552,13 +552,13 @@ public sealed record CommandFrame
 	public IEnumerable<string> Switches { get; init; } = [];
 
 	/// <inheritdoc cref="ParserState.CommandHistory"/>
-	public ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>? CommandHistory { get; init; }
+	public ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, ArgumentList Args)>? CommandHistory { get; init; }
 
 	/// <inheritdoc cref="ParserState.CommandSources"/>
 	public ConcurrentStack<MString>? CommandSources { get; init; }
 
 	/// <inheritdoc cref="ParserState.CallerArguments"/>
-	public Dictionary<string, CallState>? CallerArguments { get; init; }
+	public ArgumentList? CallerArguments { get; init; }
 
 	/// <inheritdoc cref="ParserState.BreakPropagation"/>
 	public BreakPropagation? BreakPropagation { get; init; }
@@ -760,22 +760,38 @@ public partial record ParserState
 	public Dictionary<string, CallState> EnvironmentRegisters
 	{
 		get => _scope?.Environment ?? _context.EnvironmentRegisters;
-		init => _scope = new AttributeScope(value, SuppliedArgumentKeys);
 	}
 
 	/// <inheritdoc cref="EvaluationContext.SuppliedArgumentKeys"/>
 	public ImmutableHashSet<string>? SuppliedArgumentKeys
 	{
 		get => _scope is { } scope ? scope.SuppliedKeys : _context.SuppliedArgumentKeys;
-		init => _scope = new AttributeScope(EnvironmentRegisters, value);
 	}
 
-	/// <summary>Starts a new attribute invocation with its actual inputs, replacing inherited presence.
-	/// Signature-generated keys remain visible but are excluded from the immutable supplied set.</summary>
-	public ParserState ForAttributeArguments(Dictionary<string, CallState> arguments) => this with
+	/// <summary>
+	/// Starts a new attribute invocation: <paramref name="arguments"/> are its %0-%9 (and named arguments) and
+	/// the keys its caller supplied, and its environment is <paramref name="environment"/>, or the arguments
+	/// themselves when that is null. Along with <see cref="ForAttributeCall"/> and <see cref="ForLambdaCall"/>, this
+	/// is the only way to bind an environment, so the arguments, environment and supplied keys always agree.
+	/// Signature-generated keys remain visible but are excluded from the immutable supplied set.
+	/// </summary>
+	public ParserState ForAttributeArguments(ArgumentList arguments, Dictionary<string, CallState>? environment = null)
+		=> this with
+		{
+			ArgumentList = arguments,
+			_scope = new AttributeScope(environment ?? arguments.AsDictionary(), AttributeArgumentEnvironment.SuppliedKeys(arguments))
+		};
+
+	/// <summary>
+	/// The frame that runs the built-in command <paramref name="command"/> with <paramref name="switches"/> and
+	/// <paramref name="arguments"/>, as when one command hands its work to another. No function is running in it.
+	/// </summary>
+	public ParserState ForCommand(string command, IEnumerable<string> switches, ArgumentList arguments) => this with
 	{
-		Arguments = arguments,
-		_scope = new AttributeScope(arguments, AttributeArgumentEnvironment.SuppliedKeys(arguments))
+		Command = command,
+		Switches = switches,
+		ArgumentList = arguments,
+		Function = null
 	};
 
 	/// <summary>
@@ -784,16 +800,10 @@ public partial record ParserState
 	/// its %0-%9 and <paramref name="environment"/> as its environment (null keeps this frame's). One copy
 	/// of the frame and one of its actors; the context stays shared.
 	/// </summary>
-	public ParserState ForAttributeCall(Dictionary<string, CallState>? arguments, Dictionary<string, CallState>? environment,
-		DBAttribute evaluation, string function, DBRef executor)
-		=> ForAttributeCallWith(arguments is null ? ArgumentList : ArgumentList.From(arguments), environment, evaluation,
-			function, executor);
-
-	/// <inheritdoc cref="ForAttributeCall(Dictionary{string, CallState}, Dictionary{string, CallState}, DBAttribute, string, DBRef)"/>
-	public ParserState ForAttributeCallWith(ArgumentList arguments, Dictionary<string, CallState>? environment,
+	public ParserState ForAttributeCall(ArgumentList? arguments, Dictionary<string, CallState>? environment,
 		DBAttribute evaluation, string function, DBRef executor)
 	{
-		var called = arguments;
+		var called = arguments ?? ArgumentList;
 		return this with
 		{
 			ArgumentList = called,
@@ -809,10 +819,10 @@ public partial record ParserState
 	/// <paramref name="environment"/> as its environment (null keeps this frame's) and <paramref name="lambda"/> as
 	/// what <c>%=</c> gives. The executor and caller stay this frame's.
 	/// </summary>
-	public ParserState ForLambdaCall(Dictionary<string, CallState>? arguments, Dictionary<string, CallState>? environment,
+	public ParserState ForLambdaCall(ArgumentList? arguments, Dictionary<string, CallState>? environment,
 		LambdaEvaluation lambda)
 	{
-		var called = arguments is null ? ArgumentList : ArgumentList.From(arguments);
+		var called = arguments ?? ArgumentList;
 		return this with
 		{
 			ArgumentList = called,
@@ -989,7 +999,7 @@ public partial record ParserState
 	/// Shared mutable stack tracking command invocations (invoker + args) for @retry support. Null outside
 	/// CommandListParse context.
 	/// </summary>
-	public ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>? CommandHistory
+	public ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, ArgumentList Args)>? CommandHistory
 	{
 		get => CommandFrame.CommandHistory;
 		init => CommandFrame = CommandFrame with { CommandHistory = value };
@@ -1007,10 +1017,10 @@ public partial record ParserState
 
 	/// <summary>
 	/// Saves the caller's numbered arguments (%0-%9) from the enclosing scope before a command
-	/// overwrites Arguments with its own parsed args. Used by @wait/@force to preserve pattern-match
+	/// binds its own parsed args. Used by @wait/@force to preserve pattern-match
 	/// variables in queued callbacks. Equivalent to PennMUSH's wenv (wild environment).
 	/// </summary>
-	public Dictionary<string, CallState>? CallerArguments
+	public ArgumentList? CallerArguments
 	{
 		get => CommandFrame.CallerArguments;
 		init => CommandFrame = CommandFrame with { CallerArguments = value };
@@ -1070,23 +1080,6 @@ public partial record ParserState
 	{
 		get => _context.TypedLine;
 		init => _context = _context with { TypedLine = value };
-	}
-
-	/// <summary>
-	/// The arguments to the command or function: %0-%9 by number, and named arguments, as a dictionary built
-	/// from <see cref="ArgumentList"/> the first time it is read. Engine code reads <see cref="ArgumentList"/>,
-	/// which answers the same keys without building one. Setting it sets <see cref="ArgumentList"/> to read
-	/// through the dictionary given, and reading it then returns that same instance.
-	/// </summary>
-	/// <remarks>
-	/// Read it, don't write into it: on a frame whose arguments were bound by position, the dictionary is a
-	/// copy, and a write changes nothing <c>%0</c>-<c>%9</c> or a built-in reads. To change the arguments,
-	/// bind a new list with <c>with { ArgumentList = … }</c>.
-	/// </remarks>
-	public Dictionary<string, CallState> Arguments
-	{
-		get => ArgumentList.AsDictionary();
-		init => ArgumentList = ArgumentList.From(value);
 	}
 
 	/// <summary>The arguments to the command or function: %0-%9 by position, and named arguments.</summary>
@@ -1219,7 +1212,7 @@ public partial record ParserState
 			? CommandFrame.None
 			: new CommandFrame
 			{
-				CallerArguments = CallerArguments is null ? null : SnapshotArguments(CallerArguments),
+				CallerArguments = CallerArguments?.Select(value => value.AsValue(value.Message, 0)),
 				BuiltinCall = BuiltinCall
 			},
 		Function = null,
@@ -1347,11 +1340,7 @@ public partial record ParserState
 	/// and connection session it was called from.
 	/// </summary>
 	/// <param name="function">The function's name as called.</param>
-	/// <param name="arguments">The call's arguments, keyed <c>"0"</c>, <c>"1"</c>, ….</param>
-	public ParserState ForFunction(string function, Dictionary<string, CallState> arguments)
-		=> ForFunction(function, ArgumentList.From(arguments));
-
-	/// <inheritdoc cref="ForFunction(string, Dictionary{string, CallState})"/>
+	/// <param name="arguments">The call's arguments, <c>%0</c>, <c>%1</c>, ….</param>
 	public ParserState ForFunction(string function, ArgumentList arguments) => new()
 	{
 		// The context carries the typed line, so its text stays out of the parse cache when the function
@@ -1434,7 +1423,7 @@ public partial record ParserState
 	private static readonly string[] ArgumentKeys = [.. Enumerable.Range(0, 64).Select(position => position.ToString())];
 
 	/// <summary>
-	/// The key <c>%<paramref name="position"/></c> is bound under in <see cref="Arguments"/>; the first 64
+	/// The key <c>%<paramref name="position"/></c> is bound under in <see cref="ArgumentList"/>'s dictionary form; the first 64
 	/// are shared strings, so binding a call's arguments allocates no key.
 	/// </summary>
 	public static string ArgumentKey(int position)

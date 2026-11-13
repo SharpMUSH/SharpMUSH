@@ -248,7 +248,7 @@ public class AttributeRetroactiveTests
 		var state = ParserState.RootFor(harness.Executor.Object().DBRef) with
 		{
 			Switches = ["ACCESS", "RETROACTIVE"],
-			Arguments = new() { ["0"] = new CallState(harness.Name), ["1"] = new CallState("no_command") }
+			ArgumentList = ArgumentList.From(new() { ["0"] = new CallState(harness.Name), ["1"] = new CallState("no_command") })
 		};
 		await state.KnownExecutorObject(harness.Mediator);
 

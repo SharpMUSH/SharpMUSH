@@ -154,7 +154,7 @@ internal sealed class AttributeEvaluator(
 		{
 			var ownerRef = owner.Object().DBRef;
 			var evaluation = new DBAttribute(ownerRef, attributeName) { Dialect = dialect };
-			var frame = parser.CurrentState.ForAttributeCall(arguments, environment, evaluation, attributeName, runner.Object().DBRef);
+			var frame = parser.CurrentState.ForAttributeCall(arguments is null ? null : ArgumentList.From(arguments), environment, evaluation, attributeName, runner.Object().DBRef);
 			// The body names attributes in its own dialect, substitutions such as %=<NAME> included.
 			using var dialectScope = SoftcodeDialectScope.Enter(
 				SoftcodeDialects.InForce(evaluation, configuration.CurrentValue.Compatibility.Dialect));
@@ -180,7 +180,7 @@ internal sealed class AttributeEvaluator(
 		Dictionary<string, CallState>? arguments, Dictionary<string, CallState>? environment)
 	{
 		EvaluationRestrictions.DemandObjectDataAccess(parser.CurrentState.Restrictions);
-		var frame = parser.CurrentState.ForLambdaCall(arguments, environment, lambda);
+		var frame = parser.CurrentState.ForLambdaCall(arguments is null ? null : ArgumentList.From(arguments), environment, lambda);
 		return await parser.Push(frame).FunctionParse(code) ?? CallState.Empty;
 	}
 
@@ -212,6 +212,9 @@ internal sealed class AttributeEvaluator(
 			Error<string> error => new CallState(error.Value)
 		};
 	}
+
+	/// <summary>The most arguments <c>#apply&lt;N&gt;</c> passes on.</summary>
+	private const int MaxApplyArguments = 100;
 
 	public async ValueTask<CallState> EvaluateAttributeFunctionResultAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		MString objAndAttribute,
@@ -262,15 +265,22 @@ internal sealed class AttributeEvaluator(
 			// The optional argument count is embedded in the obj portion after "#apply" (e.g. "#apply2" -> argN=2).
 			// The function name is in the attribute portion (e.g. "#apply/strlen" -> funcname="strlen").
 			var applyArgCountStr = objPlainText.Remove(0, 6); // part after "#apply"
-			if (!string.IsNullOrWhiteSpace(applyArgCountStr) && !int.TryParse(applyArgCountStr, out argN))
+			if (!string.IsNullOrWhiteSpace(applyArgCountStr) && !int.TryParse(applyArgCountStr, out argN)
+				|| argN is < 0 or > MaxApplyArguments)
 			{
 				return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "#APPLY"));
 			}
 
-			var slimArgs = Enumerable
-				.Range(0, argN)
-				.Select(i => i.ToString())
-				.ToDictionary(k => k, k => args.TryGetValue(k, out var v) ? v : CallState.Empty);
+			// The function's arguments are the first argN of the call's; one the caller did not supply stays
+			// unsupplied.
+			var supplied = AttributeArgumentEnvironment.SuppliedKeys(args);
+			var slimArgs = new AttributeArgumentEnvironment();
+			for (var position = 0; position < argN; position++)
+			{
+				var key = ParserState.ArgumentKey(position);
+				slimArgs[key] = args.TryGetValue(key, out var value) ? value : CallState.Empty;
+				if (!supplied.Contains(key)) slimArgs.GeneratedKeys.Add(key);
+			}
 
 			if (parser.FunctionLibrary.TryGetValue(attribute.ToPlainText().ToLower(), out var applyFunction))
 			{
@@ -283,17 +293,14 @@ internal sealed class AttributeEvaluator(
 
 				if (applyFunction.LibraryInformation.Attribute.Flags.HasFlag(FunctionFlags.StripAnsi))
 				{
-					slimArgs = slimArgs.ToDictionary(pair => pair.Key,
-						pair => pair.Value with { Message = pair.Value.Message.WithoutVisualMarkup() });
+					foreach (var (key, value) in slimArgs.ToArray())
+					{
+						slimArgs[key] = value with { Message = value.Message.WithoutVisualMarkup() };
+					}
 				}
 
 				var result = await parser.With(
-					s => s with
-					{
-						Arguments = slimArgs,
-						EnvironmentRegisters = slimArgs,
-						SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(args).Intersect(slimArgs.Keys)
-					},
+					s => s.ForAttributeArguments(ArgumentList.From(slimArgs)),
 					async np => await FunctionDispatcher.InvokeAsync(np, applyFunction.LibraryInformation, realExecutor,
 						configuration.CurrentValue.Function.FunctionSideEffects, notifyService,
 						logger, sideEffectsNeedGrant: configuration.CurrentValue.Compatibility.SidefxFlag)

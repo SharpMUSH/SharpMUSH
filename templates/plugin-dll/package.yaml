@@ -23,7 +23,7 @@ binaries:
   # The plugin/server contract version your DLL was built against. The installer
   # refuses a package built for a newer contract than the target server provides,
   # or for another major.
-  min_server_version: ">=3.0"
+  min_server_version: ">=4.0"
   files:
     # file: = a FLAT name (no path separators, no '..'). Each deposits directly
     # into the plugin's folder. sha256: = the 64-hex digest of the built bytes.

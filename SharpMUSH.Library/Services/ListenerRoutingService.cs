@@ -187,16 +187,14 @@ public class ListenerRoutingService(
 		{
 			var parser = serviceProvider.GetRequiredService<IMUSHCodeParser>();
 			var state = parser.State.IsEmpty ? ParserState.RootFor(forwarder.Object().DBRef) : parser.CurrentState;
-			var arguments = new Dictionary<string, CallState> { ["0"] = new(heard) };
-			var scoped = parser.Push(state with
+			var arguments = ArgumentList.Of(new CallState(heard));
+			var scoped = parser.Push(state.ForAttributeArguments(arguments) with
 			{
 				Actors = state.Actors with { Executor = forwarder.Object().DBRef, Enactor = speaker.Object().DBRef, Caller = speaker.Object().DBRef, Restrictions = EvaluationRestrictions.Current ?? state.Restrictions },
-				Arguments = arguments,
-				EnvironmentRegisters = new(arguments),
 				Registers = new(state.Registers.Reverse().Select(frame => new Dictionary<string, MString>(frame, frame.Comparer))),
 			});
 			var result = await AttributeService.EvaluateAttributeFunctionResultAsync(scoped, forwarder, forwarder,
-				"PREFIX", arguments, ignorePermissions: true);
+				"PREFIX", arguments.AsDictionary(), ignorePermissions: true);
 			ExecutionBudget.Current?.ThrowIfExceeded();
 			if (result.Message is { Length: > 0 } evaluated)
 				return MString.Concat(evaluated, MString.Plain(" "));
@@ -273,16 +271,14 @@ public class ListenerRoutingService(
 		{
 			var parser = serviceProvider.GetRequiredService<IMUSHCodeParser>();
 			var state = parser.State.IsEmpty ? ParserState.RootFor(listener.Object().DBRef) : parser.CurrentState;
-			var arguments = new Dictionary<string, CallState> { ["0"] = new(rawBody) };
-			var scoped = parser.Push(state with
+			var arguments = ArgumentList.Of(new CallState(rawBody));
+			var scoped = parser.Push(state.ForAttributeArguments(arguments) with
 			{
 				Actors = state.Actors with { Executor = listener.Object().DBRef, Enactor = speaker.Object().DBRef, Caller = speaker.Object().DBRef, Restrictions = EvaluationRestrictions.Current ?? state.Restrictions },
-				Arguments = arguments,
-				EnvironmentRegisters = new(arguments),
 				Registers = new(state.Registers.Reverse().Select(frame => new Dictionary<string, MString>(frame, frame.Comparer))),
 			});
 			var result = await AttributeService.EvaluateAttributeFunctionResultAsync(scoped, listener, listener,
-				"INPREFIX", arguments, ignorePermissions: true);
+				"INPREFIX", arguments.AsDictionary(), ignorePermissions: true);
 			ExecutionBudget.Current?.ThrowIfExceeded();
 			if (result.HadErrors) return;
 			prefix = MString.Concat(result.Message, MString.Plain(" "));
