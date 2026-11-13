@@ -52,8 +52,10 @@ public class RemoteBackupsHttpTests
 		using var response = await client.PutAsJsonAsync("api/admin/backups/remote",
 			new { Settings = new { Enabled = false, IntervalHours = 24 } });
 
-		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest)
-			.Because(await response.Content.ReadAsStringAsync());
+		var body = await response.Content.ReadAsStringAsync();
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest).Because(body);
+		// Refused by the [Required] model validation, before the coordinator's own check sees it.
+		await Assert.That(body).Contains("\"Settings.Repository\"");
 	}
 
 	[Test]
