@@ -210,9 +210,7 @@ public partial class Commands
 				var admitted = sync ? parser.CurrentState : parser.CurrentState.SnapshotForQueuedAction();
 				ParserState CallbackState(Dictionary<string, CallState> arguments) => (admitted.ForAttributeArguments(arguments) with
 				{
-					Executor = targetRef,
-					Enactor = triggererRef,
-					Caller = triggererRef
+					Actors = admitted.Actors with { Executor = targetRef, Enactor = triggererRef, Caller = triggererRef }
 				}).SnapshotForQueuedAction();
 
 				if (sync) return await RunQueryAsync();

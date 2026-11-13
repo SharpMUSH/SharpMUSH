@@ -1051,8 +1051,7 @@ public partial class Commands
 		var nestedResult = await parser.With(
 			state => state with
 			{
-				Executor = found.Object().DBRef,
-				Caller = state.Executor
+				Actors = state.Actors with { Executor = found.Object().DBRef, Caller = state.Executor }
 			},
 			async newParser => await newParser.CommandListParseVisitor(cmdListArg)());
 
@@ -1465,9 +1464,7 @@ public partial class Commands
 
 		var stateWithRegisters = parser.CurrentState.ForAttributeArguments(envRegisters) with
 		{
-			Executor = targetObject.Object().DBRef,
-			Enactor = executionEnactor,
-			Caller = parser.CurrentState.Executor,
+			Actors = parser.CurrentState.Actors with { Executor = targetObject.Object().DBRef, Enactor = executionEnactor, Caller = parser.CurrentState.Executor },
 			Registers = registerStack,
 			// A loop or switch the trigger ran inside does not bind ##, #@ or #$ written in the attribute it runs:
 			// PennMUSH queues that attribute, and splices those tokens only into the loop's own text.

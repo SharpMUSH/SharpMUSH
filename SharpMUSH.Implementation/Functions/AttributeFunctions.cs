@@ -1147,8 +1147,7 @@ public partial class Functions
 					Arguments = arguments,
 					EnvironmentRegisters = arguments,
 					SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
-					Executor = asCaller ? state.Executor : actualObject.Object().DBRef,
-					Caller = state.Executor
+					Actors = state.Actors with { Executor = asCaller ? state.Executor : actualObject.Object().DBRef, Caller = state.Executor }
 				}, p => p.FunctionParse(value.Value)))!;
 			}));
 	}

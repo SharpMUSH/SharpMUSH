@@ -573,60 +573,201 @@ public sealed record CommandFrame
 	public FunctionDefinition? BuiltinCall { get; init; }
 }
 
+/// <summary>
+/// Who runs a frame and under what limits: its executor, enactor and caller, the objects fetched for them,
+/// the execution budget, the restrictions and a hook's command line. A function call changes none of these,
+/// so <see cref="ParserState.ForFunction"/> shares its caller's; an attribute call makes a copy with its own
+/// executor and caller.
+/// </summary>
+/// <remarks>
+/// A state that changes several of these at once replaces the record in one step,
+/// <c>state with { Actors = state.Actors with { Executor = …, Caller = … } }</c>, rather than setting each
+/// through <see cref="ParserState"/>, where every one copies it.
+/// </remarks>
+public sealed record FrameActors
+{
+	/// <summary>No actors, budget or restrictions.</summary>
+	public static FrameActors None { get; } = new();
+
+	/// <inheritdoc cref="ParserState.Executor"/>
+	public DBRef? Executor { get; init; }
+
+	/// <inheritdoc cref="ParserState.Enactor"/>
+	public DBRef? Enactor { get; init; }
+
+	/// <inheritdoc cref="ParserState.Caller"/>
+	public DBRef? Caller { get; init; }
+
+	/// <inheritdoc cref="ParserState.ExecutionBudget"/>
+	public ExecutionBudget? ExecutionBudget { get; init; }
+
+	/// <inheritdoc cref="ParserState.Restrictions"/>
+	public EvaluationRestrictions? Restrictions { get; init; }
+
+	/// <inheritdoc cref="ParserState.HookedCommand"/>
+	public MString? HookedCommand { get; init; }
+
+	// Fetched on first use and shared by every frame holding this record, which all name the same actors.
+	// A copy made with `with` carries them over, so each is checked against its dbref before it is used.
+	private AnyOptionalSharpObject? _executorObject;
+	private AnyOptionalSharpObject? _enactorObject;
+	private AnyOptionalSharpObject? _callerObject;
+
+	/// <summary>
+	/// The actors of an attribute call <paramref name="executor"/> runs: this record's executor becomes its
+	/// caller, and the object fetched for it comes along.
+	/// </summary>
+	internal FrameActors ForAttributeCall(DBRef executor) => this with
+	{
+		Executor = executor,
+		Caller = Executor,
+		_callerObject = _executorObject
+	};
+
+	internal ValueTask<AnyOptionalSharpObject> ExecutorObject(IMediator mediator) => Fetch(Actor.Executor, Executor, mediator);
+	internal ValueTask<AnyOptionalSharpObject> EnactorObject(IMediator mediator) => Fetch(Actor.Enactor, Enactor, mediator);
+	internal ValueTask<AnyOptionalSharpObject> CallerObject(IMediator mediator) => Fetch(Actor.Caller, Caller, mediator);
+
+	private enum Actor { Executor, Enactor, Caller }
+
+	private ValueTask<AnyOptionalSharpObject> Fetch(Actor slot, DBRef? actor, IMediator mediator)
+	{
+		var cached = slot switch
+		{
+			Actor.Executor => _executorObject,
+			Actor.Enactor => _enactorObject,
+			_ => _callerObject
+		};
+
+		if (actor is not { } wanted)
+		{
+			return ValueTask.FromResult(cached is { } nobody && nobody is None ? nobody : Remember(slot, new None()));
+		}
+
+		// A cached object counts only if it is the one the dbref names (a bare dbref names it by number).
+		return cached is { } hit && hit is AnySharpObject found && found.Object().DBRef.Matches(wanted)
+			? ValueTask.FromResult(hit)
+			: FetchAsync(slot, wanted, mediator);
+	}
+
+	private async ValueTask<AnyOptionalSharpObject> FetchAsync(Actor slot, DBRef actor, IMediator mediator)
+		=> Remember(slot, await mediator.Send(new GetObjectNodeQuery(actor), ExecutionBudget.CurrentToken));
+
+	private AnyOptionalSharpObject Remember(Actor slot, AnyOptionalSharpObject found)
+	{
+		switch (slot)
+		{
+			case Actor.Executor: _executorObject = found; break;
+			case Actor.Enactor: _enactorObject = found; break;
+			default: _callerObject = found; break;
+		}
+
+		return found;
+	}
+}
+
 public partial record ParserState
 {
 	private ParserState() { }
 
-	/// <summary>What this frame shares with the rest of its evaluation.</summary>
-	public required EvaluationContext Context { get; init; }
+	// Set by the required Context, which every factory and copy assigns.
+	private EvaluationContext _context = null!;
+
+	/// <summary>
+	/// The current attribute call's environment, when this frame or one it forked from bound one. It shadows
+	/// the context's <see cref="EvaluationContext.EnvironmentRegisters"/> and
+	/// <see cref="EvaluationContext.SuppliedArgumentKeys"/>, so an attribute call binds its environment without
+	/// copying the context.
+	/// </summary>
+	private AttributeScope? _scope;
+
+	/// <summary>
+	/// What this frame shares with the rest of its evaluation. Read from a frame that binds an attribute
+	/// call's environment, it is a copy carrying that environment; setting it replaces the environment too.
+	/// </summary>
+	public required EvaluationContext Context
+	{
+		get => _scope is { } scope
+			? _context with { EnvironmentRegisters = scope.Environment, SuppliedArgumentKeys = scope.SuppliedKeys }
+			: _context;
+		init
+		{
+			_context = value;
+			_scope = null;
+		}
+	}
+
+	/// <summary>An attribute call's environment and the keys its caller supplied.</summary>
+	private sealed class AttributeScope(Dictionary<string, CallState> environment, ImmutableHashSet<string>? suppliedKeys)
+	{
+		public Dictionary<string, CallState> Environment { get; } = environment;
+		public ImmutableHashSet<string>? SuppliedKeys { get; } = suppliedKeys;
+	}
+
+	/// <summary>
+	/// Who runs this frame and under what limits, shared by the function frames forked from it, which never
+	/// change them. Setting one of its values in a <c>with</c> gives this frame a copy of its own.
+	/// </summary>
+	private FrameActors _actors = FrameActors.None;
+
+	/// <summary>
+	/// Who runs this frame and under what limits; <see cref="Executor"/>, <see cref="Enactor"/>,
+	/// <see cref="Caller"/>, <see cref="ExecutionBudget"/>, <see cref="Restrictions"/> and
+	/// <see cref="HookedCommand"/> read and set them through it.
+	/// </summary>
+	public FrameActors Actors
+	{
+		get => _actors;
+		init => _actors = value;
+	}
 
 	/// <inheritdoc cref="EvaluationContext.Registers"/>
 	public ConcurrentStack<Dictionary<string, MString>> Registers
 	{
-		get => Context.Registers;
-		init => Context = Context with { Registers = value };
+		get => _context.Registers;
+		init => _context = _context with { Registers = value };
 	}
 
 	/// <inheritdoc cref="EvaluationContext.IterationRegisters"/>
 	public ConcurrentStack<IterationWrapper<MString>> IterationRegisters
 	{
-		get => Context.IterationRegisters;
-		init => Context = Context with { IterationRegisters = value };
+		get => _context.IterationRegisters;
+		init => _context = _context with { IterationRegisters = value };
 	}
 
 	/// <inheritdoc cref="EvaluationContext.RegexRegisters"/>
 	public ConcurrentStack<Dictionary<string, MString>> RegexRegisters
 	{
-		get => Context.RegexRegisters;
-		init => Context = Context with { RegexRegisters = value };
+		get => _context.RegexRegisters;
+		init => _context = _context with { RegexRegisters = value };
 	}
 
 	/// <inheritdoc cref="EvaluationContext.SwitchStack"/>
 	public ConcurrentStack<SwitchFrame> SwitchStack
 	{
-		get => Context.SwitchStack;
-		init => Context = Context with { SwitchStack = value };
+		get => _context.SwitchStack;
+		init => _context = _context with { SwitchStack = value };
 	}
 
 	/// <inheritdoc cref="EvaluationContext.ExecutionStack"/>
 	public ConcurrentStack<Execution> ExecutionStack
 	{
-		get => Context.ExecutionStack;
-		init => Context = Context with { ExecutionStack = value };
+		get => _context.ExecutionStack;
+		init => _context = _context with { ExecutionStack = value };
 	}
 
 	/// <inheritdoc cref="EvaluationContext.EnvironmentRegisters"/>
 	public Dictionary<string, CallState> EnvironmentRegisters
 	{
-		get => Context.EnvironmentRegisters;
-		init => Context = Context with { EnvironmentRegisters = value };
+		get => _scope?.Environment ?? _context.EnvironmentRegisters;
+		init => _scope = new AttributeScope(value, SuppliedArgumentKeys);
 	}
 
 	/// <inheritdoc cref="EvaluationContext.SuppliedArgumentKeys"/>
 	public ImmutableHashSet<string>? SuppliedArgumentKeys
 	{
-		get => Context.SuppliedArgumentKeys;
-		init => Context = Context with { SuppliedArgumentKeys = value };
+		get => _scope is { } scope ? scope.SuppliedKeys : _context.SuppliedArgumentKeys;
+		init => _scope = new AttributeScope(EnvironmentRegisters, value);
 	}
 
 	/// <summary>Starts a new attribute invocation with its actual inputs, replacing inherited presence.
@@ -634,18 +775,14 @@ public partial record ParserState
 	public ParserState ForAttributeArguments(Dictionary<string, CallState> arguments) => this with
 	{
 		Arguments = arguments,
-		Context = Context with
-		{
-			EnvironmentRegisters = arguments,
-			SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments)
-		}
+		_scope = new AttributeScope(arguments, AttributeArgumentEnvironment.SuppliedKeys(arguments))
 	};
 
 	/// <summary>
 	/// The frame an attribute call runs in (PennMUSH's <c>call_ufun</c>): <paramref name="executor"/> runs
 	/// <paramref name="evaluation"/> with this frame's executor as caller, <paramref name="arguments"/> as
 	/// its %0-%9 and <paramref name="environment"/> as its environment (null keeps this frame's). One copy
-	/// of the frame and one of the context, however many of those change.
+	/// of the frame and one of its actors; the context stays shared.
 	/// </summary>
 	public ParserState ForAttributeCall(Dictionary<string, CallState>? arguments, Dictionary<string, CallState>? environment,
 		DBAttribute evaluation, string function, DBRef executor)
@@ -654,15 +791,10 @@ public partial record ParserState
 		return this with
 		{
 			Arguments = called,
-			Context = Context with
-			{
-				EnvironmentRegisters = environment ?? Context.EnvironmentRegisters,
-				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(called)
-			},
+			_scope = new AttributeScope(environment ?? EnvironmentRegisters, AttributeArgumentEnvironment.SuppliedKeys(called)),
 			CurrentEvaluation = evaluation,
 			Function = function,
-			Executor = executor,
-			Caller = Executor
+			_actors = _actors.ForAttributeCall(executor)
 		};
 	}
 
@@ -690,50 +822,50 @@ public partial record ParserState
 	/// <inheritdoc cref="EvaluationContext.Handle"/>
 	public long? Handle
 	{
-		get => Context.Handle;
-		init => Context = Context with { Handle = value };
+		get => _context.Handle;
+		init => _context = _context with { Handle = value };
 	}
 
 	/// <inheritdoc cref="EvaluationContext.HttpResponse"/>
 	public HttpResponseContext? HttpResponse
 	{
-		get => Context.HttpResponse;
-		init => Context = Context with { HttpResponse = value };
+		get => _context.HttpResponse;
+		init => _context = _context with { HttpResponse = value };
 	}
 
 	/// <inheritdoc cref="EvaluationContext.CallDepth"/>
 	public InvocationCounter? CallDepth
 	{
-		get => Context.CallDepth;
-		init => Context = Context with { CallDepth = value };
+		get => _context.CallDepth;
+		init => _context = _context with { CallDepth = value };
 	}
 
 	/// <inheritdoc cref="EvaluationContext.FunctionRecursionDepths"/>
 	public Dictionary<string, int>? FunctionRecursionDepths
 	{
-		get => Context.FunctionRecursionDepths;
-		init => Context = Context with { FunctionRecursionDepths = value };
+		get => _context.FunctionRecursionDepths;
+		init => _context = _context with { FunctionRecursionDepths = value };
 	}
 
 	/// <inheritdoc cref="EvaluationContext.TotalInvocations"/>
 	public InvocationCounter? TotalInvocations
 	{
-		get => Context.TotalInvocations;
-		init => Context = Context with { TotalInvocations = value };
+		get => _context.TotalInvocations;
+		init => _context = _context with { TotalInvocations = value };
 	}
 
 	/// <inheritdoc cref="EvaluationContext.LimitExceeded"/>
 	public LimitExceededFlag? LimitExceeded
 	{
-		get => Context.LimitExceeded;
-		init => Context = Context with { LimitExceeded = value };
+		get => _context.LimitExceeded;
+		init => _context = _context with { LimitExceeded = value };
 	}
 
 	/// <inheritdoc cref="EvaluationContext.RegisterPrivacy"/>
 	public RegisterPrivacyFlag? RegisterPrivacy
 	{
-		get => Context.RegisterPrivacy;
-		init => Context = Context with { RegisterPrivacy = value };
+		get => _context.RegisterPrivacy;
+		init => _context = _context with { RegisterPrivacy = value };
 	}
 
 	/// <summary>
@@ -744,8 +876,8 @@ public partial record ParserState
 	/// </summary>
 	public InvocationCounter? MoveDepth
 	{
-		get => Context.MoveDepth;
-		init => Context = Context with { MoveDepth = value };
+		get => _context.MoveDepth;
+		init => _context = _context with { MoveDepth = value };
 	}
 
 	/// <summary>
@@ -755,8 +887,8 @@ public partial record ParserState
 	/// </summary>
 	public int AttributeChangeDepth
 	{
-		get => Context.AttributeChangeDepth;
-		init => Context = Context with { AttributeChangeDepth = value };
+		get => _context.AttributeChangeDepth;
+		init => _context = _context with { AttributeChangeDepth = value };
 	}
 
 	/// <summary>
@@ -765,8 +897,8 @@ public partial record ParserState
 	/// </summary>
 	public CommandText? CommandText
 	{
-		get => Context.CommandText;
-		init => Context = Context with { CommandText = value };
+		get => _context.CommandText;
+		init => _context = _context with { CommandText = value };
 	}
 
 	/// <summary>
@@ -775,8 +907,8 @@ public partial record ParserState
 	/// </summary>
 	public MString? QueuedOutput
 	{
-		get => Context.QueuedOutput;
-		init => Context = Context with { QueuedOutput = value };
+		get => _context.QueuedOutput;
+		init => _context = _context with { QueuedOutput = value };
 	}
 
 	/// <summary>
@@ -785,8 +917,8 @@ public partial record ParserState
 	/// </summary>
 	public MString? QueuedPrinted
 	{
-		get => Context.QueuedPrinted;
-		init => Context = Context with { QueuedPrinted = value };
+		get => _context.QueuedPrinted;
+		init => _context = _context with { QueuedPrinted = value };
 	}
 
 	/// <summary>
@@ -796,8 +928,8 @@ public partial record ParserState
 	/// </summary>
 	public int OutputLimit
 	{
-		get => Context.OutputLimit;
-		init => Context = Context with { OutputLimit = value };
+		get => _context.OutputLimit;
+		init => _context = _context with { OutputLimit = value };
 	}
 
 	/// <summary>The attribute being evaluated.</summary>
@@ -807,7 +939,11 @@ public partial record ParserState
 	/// While a command hook runs, the command line it hooks, as written: RhostMUSH's <c>%-m</c>. Null outside a
 	/// hook, and in what a hook queues.
 	/// </summary>
-	public MString? HookedCommand { get; init; }
+	public MString? HookedCommand
+	{
+		get => _actors.HookedCommand;
+		init => _actors = _actors with { HookedCommand = value };
+	}
 
 	/// <summary>The function depth.</summary>
 	public int? ParserFunctionDepth { get; init; }
@@ -915,8 +1051,8 @@ public partial record ParserState
 	/// <summary>The connection session the evaluation runs for, when there is one.</summary>
 	public string? ConnectionSessionId
 	{
-		get => Context.ConnectionSessionId;
-		init => Context = Context with { ConnectionSessionId = value };
+		get => _context.ConnectionSessionId;
+		init => _context = _context with { ConnectionSessionId = value };
 	}
 
 	/// <summary>
@@ -926,21 +1062,33 @@ public partial record ParserState
 	/// </summary>
 	public string? TypedLine
 	{
-		get => Context.TypedLine;
-		init => Context = Context with { TypedLine = value };
+		get => _context.TypedLine;
+		init => _context = _context with { TypedLine = value };
 	}
 
 	/// <summary>The arguments to the command or function: %0-%9 by number, and named arguments.</summary>
 	public required Dictionary<string, CallState> Arguments { get; init; }
 
 	/// <summary>The executor of a command is the object actually carrying out the command or running the code: %!</summary>
-	public DBRef? Executor { get; init; }
+	public DBRef? Executor
+	{
+		get => _actors.Executor;
+		init => _actors = _actors with { Executor = value };
+	}
 
 	/// <summary>The enactor is the object which causes something to happen: %# or %:</summary>
-	public DBRef? Enactor { get; init; }
+	public DBRef? Enactor
+	{
+		get => _actors.Enactor;
+		init => _actors = _actors with { Enactor = value };
+	}
 
 	/// <summary>The caller is the object which causes an attribute to be evaluated (for instance, by using ufun() or a similar function): %@</summary>
-	public DBRef? Caller { get; init; }
+	public DBRef? Caller
+	{
+		get => _actors.Caller;
+		init => _actors = _actors with { Caller = value };
+	}
 
 	/// <summary>Parse mode, in case we need to NoParse.</summary>
 	public ParseMode ParseMode { get; init; } = ParseMode.Default;
@@ -966,10 +1114,18 @@ public partial record ParserState
 	public const int MaxInplaceDepth = 50;
 
 	/// <summary>Shared execution lifetime, retained when a nested parser copies this state.</summary>
-	public ExecutionBudget? ExecutionBudget { get; init; }
+	public ExecutionBudget? ExecutionBudget
+	{
+		get => _actors.ExecutionBudget;
+		init => _actors = _actors with { ExecutionBudget = value };
+	}
 
 	/// <summary>Restricted evaluation policy retained by nested parser state copies.</summary>
-	public EvaluationRestrictions? Restrictions { get; init; }
+	public EvaluationRestrictions? Restrictions
+	{
+		get => _actors.Restrictions;
+		init => _actors = _actors with { Restrictions = value };
+	}
 
 
 
@@ -997,7 +1153,8 @@ public partial record ParserState
 	/// </summary>
 	public ParserState SnapshotForQueuedAction() => this with
 	{
-		HookedCommand = null,
+		// A queued action is no hook, and the scheduler supplies its budget when it runs.
+		_actors = _actors with { HookedCommand = null, ExecutionBudget = null },
 		Flags = Flags & ~ParserStateFlags.KeepSpaces,
 		Context = Context with
 		{
@@ -1043,32 +1200,13 @@ public partial record ParserState
 				BuiltinCall = BuiltinCall
 			},
 		Function = null,
-		ParserFunctionDepth = 0,
-		ExecutionBudget = null
+		ParserFunctionDepth = 0
 	};
 
 	// Queued arguments are values, not deferred evaluations of the submitting parser. AsValue keeps
 	// failure metadata without retaining its parser, parse tree, or mutable argument arrays.
 	private static Dictionary<string, CallState> SnapshotArguments(Dictionary<string, CallState> arguments)
 		=> arguments.ToDictionary(pair => pair.Key, pair => pair.Value.AsValue(pair.Value.Message, 0), arguments.Comparer);
-
-	private AnyOptionalSharpObject? _executorObject;
-	private AnyOptionalSharpObject? _enactorObject;
-	private AnyOptionalSharpObject? _callerObject;
-
-	/// <summary>
-	/// Validates that a cached object is the one the expected DBRef names (a bare dbref names it by number) and clears it if not.
-	/// This handles the case where ParserState is copied with a new DBRef but the cached object is stale.
-	/// </summary>
-	private static void ValidateAndClearCacheIfNeeded(
-		ref AnyOptionalSharpObject? cachedObject,
-		DBRef? expectedDBRef)
-	{
-		if (cachedObject is AnySharpObject cached && (expectedDBRef is not { } expected || !cached.Object().DBRef.Matches(expected)))
-		{
-			cachedObject = null;
-		}
-	}
 
 	public static ParserState Empty => new()
 	{
@@ -1165,12 +1303,15 @@ public partial record ParserState
 			},
 			ParserFunctionDepth = 0,
 			Arguments = new Dictionary<string, CallState>(),
-			Executor = executor,
-			Enactor = enactor,
-			Caller = caller,
-			Flags = flags,
-			ExecutionBudget = budget,
-			Restrictions = restrictions
+			_actors = new FrameActors
+			{
+				Executor = executor,
+				Enactor = enactor,
+				Caller = caller,
+				ExecutionBudget = budget,
+				Restrictions = restrictions
+			},
+			Flags = flags
 		};
 
 	/// <summary>
@@ -1188,26 +1329,20 @@ public partial record ParserState
 	{
 		// The context carries the typed line, so its text stays out of the parse cache when the function
 		// parses part of it, and the connection's session for @input.
-		Context = Context,
+		Context = _context,
+		// The attribute call it runs in, so %0-%9's environment and hasarg() read the same as the caller's.
+		_scope = _scope,
 		CurrentEvaluation = CurrentEvaluation,
 		ParserFunctionDepth = ParserFunctionDepth + 1,
 		Function = function,
 		Arguments = arguments,
-		Executor = Executor,
-		Enactor = Enactor,
-		Caller = Caller,
 		ParseMode = ParseMode,
 		Flags = Flags,
-		// A hook's %-m and %-p stay readable in the u() it calls.
-		HookedCommand = HookedCommand,
-		// The same evaluation's budget, so a function that parses again (u(), iter()) enters it as it is
-		// rather than pushing a copy of this frame to carry it.
-		ExecutionBudget = ExecutionBudget,
-		// Same actors, so the same objects: a function body that asks for its executor reuses the
-		// caller's rather than fetching it again.
-		_executorObject = _executorObject,
-		_enactorObject = _enactorObject,
-		_callerObject = _callerObject
+		// The same actors, budget and hook, shared rather than copied: a hook's %-m and %-p stay readable in
+		// the u() it calls, a function that parses again (u(), iter()) enters the budget as it is, and a body
+		// that asks for its executor reuses the object the caller fetched. Restrictions are left to the
+		// ambient scopes already entered for the evaluation.
+		_actors = Restrictions is null ? _actors : _actors with { Restrictions = null }
 	};
 
 	/// <summary>
@@ -1215,33 +1350,24 @@ public partial record ParserState
 	/// </summary>
 	/// <param name="mediator">Mediator to get the object node with.</param>
 	/// <returns>A ValueTask containing either a SharpObject, or None.</returns>
-	public async ValueTask<AnyOptionalSharpObject> ExecutorObject(IMediator mediator)
-	{
-		ValidateAndClearCacheIfNeeded(ref _executorObject, Executor);
-		return _executorObject ??= Executor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Executor.Value), ExecutionBudget.CurrentToken);
-	}
+	public ValueTask<AnyOptionalSharpObject> ExecutorObject(IMediator mediator)
+		=> _actors.ExecutorObject(mediator);
 
 	/// <summary>
 	/// The enactor is the object which causes something to happen: %# or %:
 	/// </summary>
 	/// <param name="mediator">Mediator to get the object node with.</param>
 	/// <returns>A ValueTask containing either a SharpObject, or None.</returns>
-	public async ValueTask<AnyOptionalSharpObject> EnactorObject(IMediator mediator)
-	{
-		ValidateAndClearCacheIfNeeded(ref _enactorObject, Enactor);
-		return _enactorObject ??= Enactor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Enactor.Value), ExecutionBudget.CurrentToken);
-	}
+	public ValueTask<AnyOptionalSharpObject> EnactorObject(IMediator mediator)
+		=> _actors.EnactorObject(mediator);
 
 	/// <summary>
 	/// The caller is the object which causes an attribute to be evaluated (for instance, by using ufun() or a similar function): %@
 	/// </summary>
 	/// <param name="mediator">Mediator to get the object node with.</param>
 	/// <returns>A ValueTask containing either a SharpObject, or None.</returns>
-	public async ValueTask<AnyOptionalSharpObject> CallerObject(IMediator mediator)
-	{
-		ValidateAndClearCacheIfNeeded(ref _callerObject, Caller);
-		return _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value), ExecutionBudget.CurrentToken);
-	}
+	public ValueTask<AnyOptionalSharpObject> CallerObject(IMediator mediator)
+		=> _actors.CallerObject(mediator);
 
 	/// <summary>
 	/// The executor of a command is the object actually carrying out the command or running the code: %!

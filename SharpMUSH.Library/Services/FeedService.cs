@@ -184,9 +184,7 @@ public class FeedService(
 			registers.Push([]);
 			await parser.With(state => state with
 			{
-				Executor = ownerRef,
-				Enactor = message.Speaker,
-				Caller = state.Executor,
+				Actors = state.Actors with { Executor = ownerRef, Enactor = message.Speaker, Caller = state.Executor },
 				Registers = registers,
 				Arguments = arguments,
 				EnvironmentRegisters = arguments,

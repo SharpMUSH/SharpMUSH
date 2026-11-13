@@ -280,9 +280,7 @@ public partial class Commands
 				MarkupText.Plain(line),
 				parser.CurrentState with
 				{
-					Executor = follower.Object().DBRef,
-					Enactor = leader.Object().DBRef,
-					Caller = leader.Object().DBRef,
+					Actors = parser.CurrentState.Actors with { Executor = follower.Object().DBRef, Enactor = leader.Object().DBRef, Caller = leader.Object().DBRef },
 					// parse_que passes no pe_regs, so %0-%9 and the q-registers start empty.
 					Arguments = new Dictionary<string, CallState>(),
 					CallerArguments = null,

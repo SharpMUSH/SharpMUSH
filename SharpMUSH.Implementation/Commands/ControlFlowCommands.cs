@@ -243,8 +243,7 @@ public partial class Commands
 		return state.ForAttributeArguments(arguments) with
 		{
 			Registers = registers,
-			Executor = target.Object().DBRef,
-			Caller = state.Executor
+			Actors = state.Actors with { Executor = target.Object().DBRef, Caller = state.Executor }
 		};
 	}
 

@@ -28,9 +28,7 @@ internal static class QueuedCommandMatch
 				CurrentEvaluation = DBAttribute.Of(obj.Object().DBRef, attr),
 				Arguments = arguments,
 				Function = null,
-				Executor = obj.Object().DBRef,
-				Enactor = matcher,
-				Caller = matcher,
+				Actors = snapshot.Actors with { Executor = obj.Object().DBRef, Enactor = matcher, Caller = matcher },
 				Context = snapshot.Context with
 				{
 					Registers = new([[]]),

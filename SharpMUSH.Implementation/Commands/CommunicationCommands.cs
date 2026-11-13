@@ -287,9 +287,7 @@ public partial class Commands
 		var admission = await Mediator.Send(new AdmitCommandListRequest(attribute.Value,
 			invocation with
 			{
-				Executor = victim.Object().DBRef,
-				Enactor = actor.Object().DBRef,
-				Caller = actor.Object().DBRef,
+				Actors = invocation.Actors with { Executor = victim.Object().DBRef, Enactor = actor.Object().DBRef, Caller = actor.Object().DBRef },
 				Arguments = stackArgs,
 				CommandHistory = null,
 				CommandSources = null,
@@ -344,9 +342,7 @@ public partial class Commands
 		var result = await parser.With(
 			state => state with
 			{
-				Executor = victim.Object().DBRef,
-				Enactor = actor.Object().DBRef,
-				Caller = state.Executor,
+				Actors = state.Actors with { Executor = victim.Object().DBRef, Enactor = actor.Object().DBRef, Caller = state.Executor },
 				Arguments = stackArgs
 			},
 			newParser => attributeService.EvaluateAttributeFunctionAsync(
