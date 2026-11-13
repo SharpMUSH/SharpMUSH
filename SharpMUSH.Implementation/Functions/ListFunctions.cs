@@ -1778,8 +1778,17 @@ public partial class Functions
 	/// <summary>An item as %0 and, when <paramref name="withPosition"/>, its position from 1 as %1.</summary>
 	private static Dictionary<string, CallState> ItemArguments(MString item, int position, bool withPosition)
 		=> withPosition
-			? new Dictionary<string, CallState> { ["0"] = new CallState(item), ["1"] = new CallState((position + 1).ToString()) }
+			? new Dictionary<string, CallState> { ["0"] = new CallState(item), ["1"] = PositionArgument(position + 1) }
 			: new Dictionary<string, CallState> { ["0"] = new CallState(item) };
+
+	/// <summary>The positions map() hands out most, each made once: a CallState is immutable, so items share it.</summary>
+	private static readonly CallState?[] PositionArguments = new CallState?[1024];
+
+	/// <summary><paramref name="position"/> as an argument, shared up to <see cref="PositionArguments"/>' length.</summary>
+	private static CallState PositionArgument(int position)
+		=> position < PositionArguments.Length
+			? PositionArguments[position] ??= new CallState(position)
+			: new CallState(position);
 
 	/// <summary>A list with nothing in it: no items, or the one empty item splitting an empty string gives.</summary>
 	private static bool IsBlankList(MString[] list)

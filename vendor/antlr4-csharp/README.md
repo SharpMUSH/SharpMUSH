@@ -25,6 +25,7 @@ that every parse pays rather than the cost of long ones. Parse trees are unchang
   an edge for EOF (shifted to index 0) and up to 256 edges per state for characters above 127,
   so the end of an input and non-ASCII text no longer rebuild config sets from the ATN.
 - `CommonToken.cs`: text read from the input stream is kept after the first read.
+- `RuleContext.cs`: `GetText` of a rule with one child returns that child's text, with no builder.
 - `DefaultErrorStrategy.cs`: a conjured token takes its input from the token it stands beside,
   not from the lexer, which may have moved on to another input.
 

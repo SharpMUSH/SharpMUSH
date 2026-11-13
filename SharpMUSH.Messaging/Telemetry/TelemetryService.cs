@@ -89,11 +89,17 @@ public class TelemetryService : ITelemetryService, IDisposable
 			description: "Health state of the ConnectionServer (1 = healthy, 0 = unhealthy)");
 	}
 
+	private static readonly object BoxedTrue = true;
+	private static readonly object BoxedFalse = false;
+
+	/// <summary>A tag's bool, boxed once rather than on every call recorded.</summary>
+	private static object Boxed(bool value) => value ? BoxedTrue : BoxedFalse;
+
 	public void RecordFunctionInvocation(string functionName, double ownMs, double inclusiveMs, bool success)
 	{
 		_functionInvocationDuration.Record(ownMs,
 			new KeyValuePair<string, object?>("function.name", functionName),
-			new KeyValuePair<string, object?>("success", success));
+			new KeyValuePair<string, object?>("success", Boxed(success)));
 		Observe(new(TelemetryInvocationKind.Function, functionName, inclusiveMs, success));
 	}
 
@@ -101,7 +107,7 @@ public class TelemetryService : ITelemetryService, IDisposable
 	{
 		_commandInvocationDuration.Record(ownMs,
 			new KeyValuePair<string, object?>("command.name", commandName),
-			new KeyValuePair<string, object?>("success", success));
+			new KeyValuePair<string, object?>("success", Boxed(success)));
 		Observe(new(TelemetryInvocationKind.Command, commandName, inclusiveMs, success));
 	}
 

@@ -428,9 +428,12 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	};
 
 	internal bool BeginsRestrictedEvaluation(IFunctionContext context)
-	{
 		// !restrictedexpr(...) runs restrictedexpr(), so it opens restricted evaluation the same way.
-		var name = Bang.FunctionName(FunctionNameOf(context));
+		=> BeginsRestrictedEvaluation(context, Bang.FunctionName(FunctionNameOf(context)));
+
+	/// <summary>Whether the call opens restricted evaluation, given the name it calls with any bang taken off.</summary>
+	private bool BeginsRestrictedEvaluation(IFunctionContext context, string name)
+	{
 		if (!parser.FunctionLibrary.TryGetValue(name, out var definition)) return false;
 		return definition.LibraryInformation.RestrictedOperation == "restrictedexpr"
 			|| definition.LibraryInformation.RestrictedOperation == "fn"
@@ -525,6 +528,37 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		return arguments;
 	}
 
+	/// <summary>
+	/// A call's arguments in order, each the evaluation string between two commas or null where there is
+	/// none; <c>f()</c> has one, null, as PennMUSH reads it. Read from the children in one pass, so a call
+	/// builds no lists of its argument strings and commas.
+	/// </summary>
+	private static IEvaluationStringContext?[] CallArguments(IFunctionContext context)
+	{
+		var count = 1;
+		for (var index = 0; index < context.ChildCount; index++)
+		{
+			if (context.GetChild(index) is ITerminalNode { Symbol.Type: COMMAWS }) count++;
+		}
+
+		var arguments = new IEvaluationStringContext?[count];
+		var slot = 0;
+		for (var index = 0; index < context.ChildCount; index++)
+		{
+			switch (context.GetChild(index))
+			{
+				case ITerminalNode { Symbol.Type: COMMAWS }:
+					slot++;
+					break;
+				case IEvaluationStringContext argument:
+					arguments[slot] = argument;
+					break;
+			}
+		}
+
+		return arguments;
+	}
+
 	public override async ValueTask<CallState?> VisitFunction([NotNull] IFunctionContext context)
 	{
 		if (parser.CurrentState.ParseMode is ParseMode.NoParse or ParseMode.NoEval)
@@ -543,7 +577,8 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 			return await LiteralFunctionCall(context);
 		}
 
-		var functionName = FunctionNameOf(context);
+		var typedName = FunctionNameOf(context);
+		var functionName = typedName;
 		// !name(...): the bang answers 1 or 0 about the result. Only a name that is a function takes one;
 		// any other stays as written, so !text(...) is prose or an unknown function, as it was.
 		Bang? bang = null;
@@ -557,31 +592,9 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		// Reject oversized calls before ANTLR child-array and argument-map materialization.
 		var restricted = EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null;
 		if (restricted) DemandBoundedArguments(context);
-		var restrictedWrapper = BeginsRestrictedEvaluation(context);
+		var restrictedWrapper = BeginsRestrictedEvaluation(context, Bang.FunctionName(typedName));
 		if (!restricted && restrictedWrapper) DemandBoundedArguments(context);
-		var evalStrings = context.evaluationString();
-		var commas = context.COMMAWS();
-
-		IEvaluationStringContext?[] arguments;
-		if (evalStrings is null || evalStrings is [] && commas is [])
-		{
-			// PennMUSH treats func() as having 1 empty arg, not 0 args.
-			arguments = [null];
-		}
-		else
-		{
-			var argCount = commas.Length + 1;
-			arguments = new IEvaluationStringContext?[argCount];
-			var evalIdx = 0;
-			for (var i = 0; i < argCount; i++)
-			{
-				if (evalIdx < evalStrings.Length
-						&& (i >= commas.Length || evalStrings[evalIdx].Start.StartIndex < commas[i].Symbol.StartIndex))
-				{
-					arguments[i] = evalStrings[evalIdx++];
-				}
-			}
-		}
+		var arguments = CallArguments(context);
 
 		// Recognize the wrapper before its implementation enters the operation scope.
 		_containsRestrictedWrapper |= restrictedWrapper;
@@ -632,7 +645,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 
 		if (shouldDebug) _debugNestDepth++;
 
-		var result = await _services.Functions.InvokeAsync(this, functionName, context, arguments);
+		var result = await _services.Functions.InvokeAsync(this, functionName, context, arguments, restrictedWrapper);
 		if (bang is { } applied)
 		{
 			result = result with { Message = applied.Apply(result.Message, parser) };

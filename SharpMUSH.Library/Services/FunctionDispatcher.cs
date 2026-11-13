@@ -19,8 +19,7 @@ public static class FunctionDispatcher
 	{
 		var result = await InvokeCoreAsync(parser, definition, executor, sideEffects, notify, logger,
 			argumentCount, permissionsChecked, deferredArguments, argumentsValidated: false, sideEffectsNeedGrant);
-		return parser.CurrentState.Arguments.Values.Any(argument => argument.HadErrors)
-			? result with { HadErrors = true } : result;
+		return AnyHadErrors(parser.CurrentState.Arguments) ? result with { HadErrors = true } : result;
 	}
 
 	/// <summary>
@@ -37,8 +36,18 @@ public static class FunctionDispatcher
 	{
 		var result = await InvokeCoreAsync(parser, definition, executor, sideEffects, notify, logger,
 			argumentCount, permissionsChecked: true, deferredArguments: true, argumentsValidated: true, sideEffectsNeedGrant);
-		return parser.CurrentState.Arguments.Values.Any(argument => argument.HadErrors)
-			? result with { HadErrors = true } : result;
+		return AnyHadErrors(parser.CurrentState.Arguments) ? result with { HadErrors = true } : result;
+	}
+
+	/// <summary>Whether an argument had errors; a loop, so a call allocates no enumerator for it.</summary>
+	private static bool AnyHadErrors(Dictionary<string, CallState> arguments)
+	{
+		foreach (var (_, argument) in arguments)
+		{
+			if (argument.HadErrors) return true;
+		}
+
+		return false;
 	}
 
 	/// <summary>
@@ -75,7 +84,7 @@ public static class FunctionDispatcher
 		var name = attribute.UpperName;
 		// Only an fn()/restrictedexpr() entry reads its arguments here; every other call leaves the
 		// ordered view to the function that wants it.
-		var restrictedEntry = definition.RestrictedOperation is not null
+		var restrictedEntry = definition.RestrictedOperation is "fn" or "restrictedexpr"
 			&& EvaluationRestrictions.BeginsRestrictedEvaluation(definition,
 				parser.CurrentState.ArgumentsOrdered.Values.Select(argument => argument.Message.ToPlainText()), parser.FunctionLibrary);
 		// #apply receives values after caller evaluation; it cannot establish a raw-input boundary.
@@ -120,7 +129,18 @@ public static class FunctionDispatcher
 		else if (!suppressDiagnostics && flags.HasFlag(FunctionFlags.LogName))
 			logger.LogInformation("Function {Function} executed by {Executor}", name, executor!.Object().DBRef);
 
-		if (!flags.HasFlag(FunctionFlags.Localize)) return await definition.Function(parser);
+		return flags.HasFlag(FunctionFlags.Localize)
+			? await InvokeLocalizedAsync(parser, definition, flags, deferredArguments)
+			: await definition.Function(parser);
+	}
+
+	/// <summary>
+	/// A localize call: the function runs with a copy of the q-registers, and a no-parse argument evaluates
+	/// in that copy. Its own method, so the closures it builds are not allocated for every other call.
+	/// </summary>
+	private static async ValueTask<CallState> InvokeLocalizedAsync(IMUSHCodeParser parser, FunctionDefinition definition,
+		FunctionFlags flags, bool deferredArguments)
+	{
 		// privatize(1) (RhostMUSH): localized code starts with no q-registers rather than a copy.
 		var privatized = parser.CurrentState.RegisterPrivacy?.Enabled == true;
 		var localized = parser.Push(parser.CurrentState with
@@ -210,18 +230,34 @@ public static class FunctionDispatcher
 	{
 		if ((attribute.Flags & NumericFlags) == 0) return null;
 		var numbers = NumericEvaluation.For(parser);
+		if (arguments is IReadOnlyList<CallState> list)
+		{
+			// Indexed, so a parsed call's argument array is read without an enumerator.
+			for (var index = 0; index < list.Count; index++)
+			{
+				if (NumericArgumentError(attribute, list[index], numbers) is { } error) return error;
+			}
+
+			return null;
+		}
 
 		foreach (var argument in arguments)
 		{
-			var text = argument.Message.ToPlainText();
-			if (attribute.Flags.HasFlag(FunctionFlags.IntegersOnly) && !numbers.TryInt64(text, out _))
-				return attribute.MaxArgs == 1 ? ErrorMessages.Returns.Integer : ErrorMessages.Returns.Integers;
-			if (attribute.Flags.HasFlag(FunctionFlags.PositiveIntegersOnly) && !numbers.TryUInt64(text, out _))
-				return attribute.MaxArgs == 1 ? ErrorMessages.Returns.UInteger : ErrorMessages.Returns.UIntegers;
-			if ((attribute.Flags.HasFlag(FunctionFlags.DecimalsOnly) && !numbers.TryDecimal(text, out _))
-				|| (attribute.Flags.HasFlag(FunctionFlags.NumbersOnly) && !numbers.TryDouble(text, out _)))
-				return attribute.MaxArgs == 1 ? ErrorMessages.Returns.Number : ErrorMessages.Returns.Numbers;
+			if (NumericArgumentError(attribute, argument, numbers) is { } error) return error;
 		}
+		return null;
+	}
+
+	private static string? NumericArgumentError(SharpFunctionAttribute attribute, CallState argument, NumericEvaluation numbers)
+	{
+		var text = argument.Message.ToPlainText();
+		if (attribute.Flags.HasFlag(FunctionFlags.IntegersOnly) && !numbers.TryInt64(text, out _))
+			return attribute.MaxArgs == 1 ? ErrorMessages.Returns.Integer : ErrorMessages.Returns.Integers;
+		if (attribute.Flags.HasFlag(FunctionFlags.PositiveIntegersOnly) && !numbers.TryUInt64(text, out _))
+			return attribute.MaxArgs == 1 ? ErrorMessages.Returns.UInteger : ErrorMessages.Returns.UIntegers;
+		if ((attribute.Flags.HasFlag(FunctionFlags.DecimalsOnly) && !numbers.TryDecimal(text, out _))
+			|| (attribute.Flags.HasFlag(FunctionFlags.NumbersOnly) && !numbers.TryDouble(text, out _)))
+			return attribute.MaxArgs == 1 ? ErrorMessages.Returns.Number : ErrorMessages.Returns.Numbers;
 		return null;
 	}
 }

@@ -39,9 +39,11 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 	/// <param name="name">Function Name</param>
 	/// <param name="context">Function Context for Depth</param>
 	/// <param name="args">Arguments</param>
+	/// <param name="opensRestricted">Whether the call opens restricted evaluation
+	/// (<see cref="SharpMUSHParserVisitor.BeginsRestrictedEvaluation(IFunctionContext)"/>), as the visitor found it.</param>
 	/// <returns>The resulting CallState.</returns>
 	public async ValueTask<CallState> InvokeAsync(SharpMUSHParserVisitor visitor, string name,
-		IFunctionContext context, IEvaluationStringContext?[] args)
+		IFunctionContext context, IEvaluationStringContext?[] args, bool opensRestricted)
 	{
 		var parser = visitor.Parser;
 		var configuration = visitor.Configuration;
@@ -97,7 +99,6 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			limitExceeded = currentState.LimitExceeded!;
 
 			// Restricted evaluation reads no objects, so it is held to the game's limit, never an executor's own.
-			var opensRestricted = visitor.BeginsRestrictedEvaluation(context);
 			var gameLimit = configuration.CurrentValue.Limit.FunctionInvocationLimit;
 			if (currentState.TotalInvocations!.Increment() > (isolated || opensRestricted
 					? gameLimit

@@ -34,7 +34,13 @@ public sealed class InvocationClock
 	private long _resumedAt;
 	private int _pauses;
 	private long _stoppedAt;
-	private readonly Lock _gate = new();
+
+	/// <summary>
+	/// What a clock's fields are read and written under: its flow, which nothing else locks. The clocks of a
+	/// flow share it, which costs nothing where calls run one after another; a lock of each clock's own was
+	/// an allocation per call.
+	/// </summary>
+	private object Gate => _flow;
 
 	private InvocationClock(InvocationClock? caller, Flow flow)
 	{
@@ -93,7 +99,7 @@ public sealed class InvocationClock
 	/// <summary>Pauses this clock until the returned scope is disposed.</summary>
 	public Paused Pause()
 	{
-		lock (_gate)
+		lock (Gate)
 		{
 			if (_stoppedAt == 0 && _pauses++ == 0)
 				_ownTicks += _time.GetTimestamp() - _resumedAt;
@@ -104,7 +110,7 @@ public sealed class InvocationClock
 
 	private void Resume()
 	{
-		lock (_gate)
+		lock (Gate)
 		{
 			if (_stoppedAt == 0 && --_pauses == 0)
 				_resumedAt = _time.GetTimestamp();
@@ -117,7 +123,7 @@ public sealed class InvocationClock
 	/// </summary>
 	public void Stop()
 	{
-		lock (_gate)
+		lock (Gate)
 		{
 			if (_stoppedAt != 0) return;
 			_stoppedAt = _time.GetTimestamp();
@@ -134,7 +140,7 @@ public sealed class InvocationClock
 	{
 		get
 		{
-			lock (_gate)
+			lock (Gate)
 			{
 				var running = _stoppedAt == 0 && _pauses == 0 ? _time.GetTimestamp() - _resumedAt : 0;
 				return _time.GetElapsedTime(0, _ownTicks + running).TotalMilliseconds;
@@ -147,7 +153,7 @@ public sealed class InvocationClock
 	{
 		get
 		{
-			lock (_gate)
+			lock (Gate)
 				return _time.GetElapsedTime(_started, _stoppedAt == 0 ? _time.GetTimestamp() : _stoppedAt).TotalMilliseconds;
 		}
 	}

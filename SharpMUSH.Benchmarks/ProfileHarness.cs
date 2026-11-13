@@ -56,6 +56,10 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("strlen-iter", "[iter(lnum(20),strlen(##))]", false),
 		new("text", "[cat(Hello there, this is a fairly ordinary line of prose that a player might see, with %# in it)]", false),
 		new("ufun", "[u(me/PROFILE_FN,5)]", false),
+		// Per-item frame cost: a thousand calls each, through a #lambda, a named attribute and iter().
+		new("map-lambda", "[strlen(map(lit(#lambda/[add(%0,1)]),lnum(1000)))]", false),
+		new("map-attr", "[strlen(map(me/PROFILE_FN,lnum(1000)))]", false),
+		new("iter-lines", "[strlen(iter(lnum(1000),[ljust(%i0,6)] [rjust(mul(%i0,2),8)]%r))]", false),
 		new("get", "[get(me/PROFILE_FN)]", false),
 		new("haspower", "[haspower(me,see_all)]", false),
 		new("loc", "[loc(me)]", false),
