@@ -78,8 +78,9 @@ public partial class Functions
 			return new CallState(refused.Value);
 		}
 
+		// A time ahead of the clock (written before it was set back) is a miss, so it cannot stretch the window.
 		if (stored is SharpAttribute[] chain && chain[^1] is { ModifiedTime: { } modified } entry
-				&& window > 0 && (now - modified) / 1000 < window)
+				&& window > 0 && now >= modified && (now - modified) / 1000 < window)
 		{
 			if (sliding)
 			{
