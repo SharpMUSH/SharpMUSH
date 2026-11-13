@@ -157,12 +157,6 @@
                 <input name="summary" value="@_summary" @oninput="@(e => _summary = e.Value?.ToString() ?? string.Empty)"
                        placeholder="@Loc["WkSummaryPlaceholder"]" aria-label="@Loc["WkSummaryLabel"]" />
             </div>
-            <button type="button" class="wiki-edit-minor" @onclick="@(() => _minor = !_minor)">
-                <span class="wiki-edit-check @(_minor ? "on" : "")">
-                    @if (_minor) { <MudIcon Icon="@Icons.Material.Outlined.Check" Style="font-size:var(--text-xs);color:var(--accent-on);" /> }
-                </span>
-                @Loc["WkMinorEdit"]
-            </button>
             <span class="wiki-edit-delta" style="@(ByteDelta >= 0 ? "color:var(--accent);" : "color:var(--danger);")">
                 @Loc.Plural("WkBytesDelta", "count", Math.Abs(ByteDelta), "signed", SignedByteDelta)
             </span>
@@ -286,7 +280,6 @@
     private string? _errorMessage;
     private string _categoryEntry = string.Empty;
     private string _summary = string.Empty;
-    private bool _minor;
     private int _initialBytes;
 
     protected override void OnParametersSet()

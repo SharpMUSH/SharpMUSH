@@ -4360,10 +4360,6 @@
     <value>Skopiowano Markdown do schowka.</value>
     <comment>MT</comment>
   </data>
-  <data name="WkMinorEdit" xml:space="preserve">
-    <value>Drobna zmiana</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Nie znaleziono zasobów.</value>
     <comment>MT</comment>
