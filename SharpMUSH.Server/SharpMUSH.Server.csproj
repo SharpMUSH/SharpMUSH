@@ -67,14 +67,16 @@
     <PackageReference Include="MarkupString.Pueblo" Version="$(MarkupStringVersion)" />
     <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
     <ProjectReference Include="..\SharpMUSH.Database.Lightning\SharpMUSH.Database.Lightning.csproj" />
+    <!-- The plugins build portable even when the server is published for one runtime (the Dockerfile's
+         -r linux-x64): the targets below collect them from bin/$(Configuration)/net11.0, with no RID folder. -->
     <!-- The Scene plugin (Phase-5 reference plugin) is loaded at runtime from plugins/scene/, NOT linked.
          ReferenceOutputAssembly=false keeps it out of the host's compile graph; the CopyScenePlugin target
          below drops it into the output's plugins/scene/ where PluginBootstrapService discovers it. -->
-    <ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj" ReferenceOutputAssembly="false" Private="false" SkipGetTargetFrameworkProperties="true" />
-    <ProjectReference Include="..\SharpMUSH.Plugins.World\SharpMUSH.Plugins.World.csproj" ReferenceOutputAssembly="false" Private="false" SkipGetTargetFrameworkProperties="true" />
-    <ProjectReference Include="..\SharpMUSH.Plugins.Lsp\SharpMUSH.Plugins.Lsp.csproj" ReferenceOutputAssembly="false" Private="false" />
-    <ProjectReference Include="..\SharpMUSH.Plugins.Mcp\SharpMUSH.Plugins.Mcp.csproj" ReferenceOutputAssembly="false" Private="false" />
-    <ProjectReference Include="..\SharpMUSH.Plugins.Discord\SharpMUSH.Plugins.Discord.csproj" ReferenceOutputAssembly="false" Private="false" />
+    <ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj" ReferenceOutputAssembly="false" UndefineProperties="RuntimeIdentifier;SelfContained;PublishReadyToRun" Private="false" SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="..\SharpMUSH.Plugins.World\SharpMUSH.Plugins.World.csproj" ReferenceOutputAssembly="false" UndefineProperties="RuntimeIdentifier;SelfContained;PublishReadyToRun" Private="false" SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="..\SharpMUSH.Plugins.Lsp\SharpMUSH.Plugins.Lsp.csproj" ReferenceOutputAssembly="false" UndefineProperties="RuntimeIdentifier;SelfContained;PublishReadyToRun" Private="false" />
+    <ProjectReference Include="..\SharpMUSH.Plugins.Mcp\SharpMUSH.Plugins.Mcp.csproj" ReferenceOutputAssembly="false" UndefineProperties="RuntimeIdentifier;SelfContained;PublishReadyToRun" Private="false" />
+    <ProjectReference Include="..\SharpMUSH.Plugins.Discord\SharpMUSH.Plugins.Discord.csproj" ReferenceOutputAssembly="false" UndefineProperties="RuntimeIdentifier;SelfContained;PublishReadyToRun" Private="false" />
     <ProjectReference Include="..\SharpMUSH.CodeAnalysis\SharpMUSH.CodeAnalysis.csproj" />
   </ItemGroup>
 
