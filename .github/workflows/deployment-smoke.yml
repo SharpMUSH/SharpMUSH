@@ -73,7 +73,7 @@ jobs:
             sleep 2
           done
           curl -fsS http://127.0.0.1:8080/ready
-          docker exec renderer dotnet SharpMUSH.RenderingWorker.dll --healthcheck
+          docker exec renderer /app/SharpMUSH.RenderingWorker --healthcheck
           test "$(docker inspect -f '{{.State.Running}}' socketserver)" = true
           docker exec server uname -m
       - name: Logs

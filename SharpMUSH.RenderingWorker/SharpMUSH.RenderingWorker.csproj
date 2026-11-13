@@ -22,4 +22,22 @@
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1" />
     <PackageReference Include="StbImageSharp" Version="2.30.15" />
   </ItemGroup>
+
+  <!--
+    Published ahead of time to a native binary (see the Dockerfile): it starts in a fraction of a second and
+    holds no JIT. A build or a test run is still JIT; PublishAot turns on the trim and AOT analyzers there too,
+    and TreatWarningsAsErrors makes any new warning from them, or from the native publish, an error.
+  -->
+  <PropertyGroup>
+    <PublishAot>true</PublishAot>
+    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
+    <!-- The .dbg symbols are four times the binary; an image has no use for them. -->
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Testcontainers is reflection-based: published, the native binary leaves it out (NatsStrategyProvider); a
+         build still starts a NATS container when NATS_URL is unset. -->
+    <RuntimeHostConfigurationOption Include="SharpMUSH.Messaging.NatsTestContainers" Value="false" Trim="true"
+      Condition="'$(_IsPublishing)' == 'true'" />
+  </ItemGroup>
 </Project>

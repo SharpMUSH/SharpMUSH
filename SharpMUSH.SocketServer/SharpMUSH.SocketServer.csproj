@@ -28,7 +28,6 @@
     <PackageReference Include="Serilog" Version="4.3.1" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
     <PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
-    <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="TelnetNegotiationCore" Version="$(TelnetNegotiationCoreVersion)" />
   </ItemGroup>
@@ -42,4 +41,21 @@
     <ProjectReference Include="..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj" />
   </ItemGroup>
 
+  <!--
+    Published ahead of time to a native binary (see the Dockerfile): it starts in a fraction of a second and
+    holds no JIT. A build or a test run is still JIT; PublishAot turns on the trim and AOT analyzers there too,
+    and TreatWarningsAsErrors makes any new warning from them, or from the native publish, an error.
+  -->
+  <PropertyGroup>
+    <PublishAot>true</PublishAot>
+    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
+    <!-- The .dbg symbols are four times the binary; an image has no use for them. -->
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Testcontainers is reflection-based: published, the native binary leaves it out (NatsStrategyProvider); a
+         build still starts a NATS container when NATS_URL is unset. -->
+    <RuntimeHostConfigurationOption Include="SharpMUSH.Messaging.NatsTestContainers" Value="false" Trim="true"
+      Condition="'$(_IsPublishing)' == 'true'" />
+  </ItemGroup>
 </Project>

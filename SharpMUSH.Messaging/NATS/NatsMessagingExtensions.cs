@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -144,7 +145,7 @@ public interface INatsConsumerConfigurator
 	/// spelled at the call site. That is deliberate: the constraint makes a consumer that does not handle
 	/// the named message a compile error, and it leaves nothing for the registration to discover at runtime.
 	/// </remarks>
-	void AddConsumer<TConsumer, TMessage>()
+	void AddConsumer<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TConsumer, TMessage>()
 		where TConsumer : class, IMessageConsumer<TMessage>
 		where TMessage : class;
 
@@ -153,7 +154,7 @@ public interface INatsConsumerConfigurator
 	/// run at once: one handle's messages still run one after another, in published order, and a slow
 	/// write to one connection no longer holds up output to every other.
 	/// </summary>
-	void AddPerHandleConsumer<TConsumer, TMessage>()
+	void AddPerHandleConsumer<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TConsumer, TMessage>()
 		where TConsumer : class, IMessageConsumer<TMessage>
 		where TMessage : class, IHandleMessage;
 }
@@ -180,17 +181,17 @@ public sealed class NatsConsumerConfigurator : INatsConsumerConfigurator
 		_groupPrefix = groupPrefix;
 	}
 
-	public void AddConsumer<TConsumer, TMessage>()
+	public void AddConsumer<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TConsumer, TMessage>()
 		where TConsumer : class, IMessageConsumer<TMessage>
 		where TMessage : class
 		=> Add<TConsumer, TMessage>(perHandle: false);
 
-	public void AddPerHandleConsumer<TConsumer, TMessage>()
+	public void AddPerHandleConsumer<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TConsumer, TMessage>()
 		where TConsumer : class, IMessageConsumer<TMessage>
 		where TMessage : class, IHandleMessage
 		=> Add<TConsumer, TMessage>(perHandle: true);
 
-	private void Add<TConsumer, TMessage>(bool perHandle)
+	private void Add<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TConsumer, TMessage>(bool perHandle)
 		where TConsumer : class, IMessageConsumer<TMessage>
 		where TMessage : class
 	{

@@ -64,7 +64,7 @@ public sealed class RemoteOutputRenderer : IMarkupOutputRenderer, IOutputTransfo
 				attempt.CancelAfter(TimeSpan.FromSeconds(10));
 				try
 				{
-					using var response = await _client.PostAsJsonAsync("/render", payload, attempt.Token);
+					using var response = await _client.PostAsJsonAsync("/render", payload, HttpJsonContext.Default.RenderRequest, attempt.Token);
 					response.EnsureSuccessStatusCode();
 					var bytes = await response.Content.ReadAsByteArrayAsync(attempt.Token);
 					if (recovering) _logger.LogInformation("Rendering worker recovered; resuming pending output");

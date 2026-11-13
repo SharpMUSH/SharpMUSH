@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
@@ -11,6 +12,8 @@ namespace SharpMUSH.Messaging.NATS.Strategy;
 /// Used for local development when <c>NATS_URL</c> is not set —
 /// no external NATS installation is required.
 /// </summary>
+[RequiresUnreferencedCode("Testcontainers reads Docker's API with reflection-based JSON.")]
+[RequiresDynamicCode("Testcontainers reads Docker's API with reflection-based JSON.")]
 public sealed class NatsTestContainerStrategy : NatsStrategy
 {
 	/// <summary>

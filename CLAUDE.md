@@ -143,12 +143,12 @@ Browser (Blazor WASM)
 |---------|------|
 | `SharpMUSH.Server` | ASP.NET Core host — REST API, SignalR hub, Blazor WASM file serving, middleware stack |
 | `SharpMUSH.Client` | Blazor WASM web portal (MudBlazor 9.x) |
-| `SharpMUSH.SocketServer` | Raw telnet/WebSocket gateway; owns client sockets and bridges to Server via NATS. Image `sharpmush-socketserver`, compose service `socketserver` |
-| `SharpMUSH.RenderingWorker` | Renders markup for a connection's protocol; restarts without dropping sockets. Image `sharpmush-renderer`, compose service `renderer` |
+| `SharpMUSH.SocketServer` | Raw telnet/WebSocket gateway; owns client sockets and bridges to Server via NATS. Published Native AOT (`PublishAot`; JIT in builds and tests). Image `sharpmush-socketserver`, compose service `socketserver` |
+| `SharpMUSH.RenderingWorker` | Renders markup for a connection's protocol; restarts without dropping sockets. Published Native AOT. Image `sharpmush-renderer`, compose service `renderer` |
 | `SharpMUSH.Library` | Core interfaces, models, service contracts (`ISharpDatabase`, all `I*Service`) |
 | `SharpMUSH.Implementation` | MUSH parser (ANTLR4), commands, functions, substitutions |
 | `SharpMUSH.Database.Lightning` | LMDB embedded provider through Lightning.NET; one directory per world; writes run one at a time (on the caller's thread when nothing is queued, else group-committed on the writer thread), sync policy per `SHARPMUSH_LIGHTNING_SYNC` |
-| `SharpMUSH.Messaging` | NATS pub/sub abstraction; Testcontainer fallback for dev |
+| `SharpMUSH.Messaging` | NATS pub/sub abstraction; Testcontainer fallback for dev. Bus JSON uses `MessagingJsonContext` (source-generated): a new bus message type gets a `[JsonSerializable]` line there, or the AOT socket server cannot read it |
 | `SharpMUSH.Configuration` | Strongly-typed config options |
 | `SharpMUSH.Tests` | TUnit tests (unit + integration with real DB via Testcontainers) |
 | `SharpMUSH.Tests.BUnit` | bUnit component tests for Blazor pages and components |

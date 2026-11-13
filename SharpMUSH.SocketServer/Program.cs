@@ -61,10 +61,9 @@ public class Program
 			var webSocketHandler = app.Services.GetRequiredService<WebSocketServer>();
 			app.Map("/ws", webSocketHandler.HandleWebSocketAsync);
 
-			app.MapControllers();
 			app.MapGet("/", () => "SharpMUSH Connection Server");
-			app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTimeOffset.UtcNow }));
-			app.MapGet("/ready", () => Results.Ok(new { status = "ready", timestamp = DateTimeOffset.UtcNow }));
+			app.MapGet("/health", () => Results.Ok(new HealthReply("healthy", DateTimeOffset.UtcNow)));
+			app.MapGet("/ready", () => Results.Ok(new HealthReply("ready", DateTimeOffset.UtcNow)));
 
 			app.MapPrometheusScrapingEndpoint();
 
@@ -108,8 +107,9 @@ public class Program
 		{
 			logging.ClearProviders();
 
-			var loggerConfig = new LoggerConfiguration()
-				.ReadFrom.Configuration(builder.Configuration);
+			var loggerConfig = SerilogLevels.Apply(
+				new LoggerConfiguration().Enrich.FromLogContext().WriteTo.Console(),
+				builder.Configuration.GetSection("Serilog:MinimumLevel"));
 
 			logging.AddSerilog(loggerConfig.CreateLogger());
 		});
@@ -302,7 +302,7 @@ public class Program
 			}
 		});
 
-		builder.Services.AddControllers();
+		builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.TypeInfoResolverChain.Insert(0, HttpJsonContext.Default));
 
 		var isGKE = LoggingConfiguration.IsRunningInGKE();
 		var isK8s = LoggingConfiguration.IsRunningInKubernetes();
