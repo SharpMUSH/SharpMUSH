@@ -2,8 +2,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SharpMUSH.Library.API;
 
-public sealed record RemoteBackupSettings(bool Enabled, int IntervalHours, [property: Required, StringLength(2048)] string Repository);
-public sealed record RemoteBackupConfigure([property: Required] RemoteBackupSettings Settings, string? Password, string? AccountId, string? AccountKey, bool ClearAccountId = false, bool ClearAccountKey = false);
+public sealed record RemoteBackupSettings(bool Enabled, int IntervalHours, [Required, StringLength(2048)] string Repository);
+public sealed record RemoteBackupConfigure([Required] RemoteBackupSettings Settings, string? Password, string? AccountId, string? AccountKey, bool ClearAccountId = false, bool ClearAccountKey = false);
 public sealed record RemoteBackupRun(Guid Id, string Reason, string State, DateTimeOffset QueuedAt,
  DateTimeOffset? CompletedAt = null, string? SnapshotId = null, int? ExitCode = null, string? ErrorCode = null);
 public sealed record RemoteBackupStatus(RemoteBackupSettings Settings, bool PasswordSet, bool AccountIdSet,
@@ -13,4 +13,4 @@ public sealed record RemoteBackupClaim(Guid Id, string Nonce, string Repository,
  string PluginsPath = "/app/data/lightning.plugins", bool PluginsRequired = false,
  string KeyRingPath = "/app/data/lightning.dataprotection-keys",
  string WikiPath = "/app/data/wiki-assets", bool WikiRequired = false);
-public sealed record RemoteBackupReceipt(Guid Id, [property: Required, StringLength(64)] string Nonce, int ExitCode, [property: StringLength(64)] string? SnapshotId, [property: StringLength(128)] string? ErrorCode);
+public sealed record RemoteBackupReceipt(Guid Id, [Required, StringLength(64)] string Nonce, int ExitCode, [StringLength(64)] string? SnapshotId, [StringLength(128)] string? ErrorCode);
