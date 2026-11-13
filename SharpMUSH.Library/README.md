@@ -56,14 +56,14 @@ together.**
   <ItemGroup>
     <!-- The contract surface. ExcludeAssets=runtime keeps the host's copy authoritative at load time;
          the loader's SharedContractTypes unifies the types across the isolation boundary. -->
-    <PackageReference Include="SharpMUSH.Library" Version="3.0.0">
+    <PackageReference Include="SharpMUSH.Library" Version="4.0.0">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
 
     <!-- The source generator, referenced as an analyzer. Your plugin's [SharpCommand]/[SharpFunction]
          methods produce SharpMUSH.Implementation.Generated.CommandLibrary.Commands /
          FunctionLibrary.Functions inside YOUR assembly, which PluginBase reflects at load time. -->
-    <PackageReference Include="SharpMUSH.Implementation.Generated" Version="3.0.0"
+    <PackageReference Include="SharpMUSH.Implementation.Generated" Version="4.0.0"
                       PrivateAssets="all" />
   </ItemGroup>
 </Project>

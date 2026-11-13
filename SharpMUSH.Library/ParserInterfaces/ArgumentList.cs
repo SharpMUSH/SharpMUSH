@@ -189,10 +189,19 @@ public sealed class ArgumentList : IReadOnlyDictionary<string, CallState>
 			return new ArgumentList(values);
 		}
 
-		var dictionary = new Dictionary<string, CallState>(AsDictionary(), _dictionary?.Comparer)
+		var key = ParserState.ArgumentKey(position);
+		if (_dictionary is AttributeArgumentEnvironment environment)
 		{
-			[ParserState.ArgumentKey(position)] = value
-		};
+			// Keys a signature generated stay generated; the one replaced is supplied now.
+			var copy = new AttributeArgumentEnvironment();
+			foreach (var (name, argument) in environment) copy[name] = argument;
+			copy.GeneratedKeys.UnionWith(environment.GeneratedKeys);
+			copy.GeneratedKeys.Remove(key);
+			copy[key] = value;
+			return new ArgumentList(copy);
+		}
+
+		var dictionary = new Dictionary<string, CallState>(AsDictionary(), _dictionary?.Comparer) { [key] = value };
 		return new ArgumentList(dictionary);
 	}
 

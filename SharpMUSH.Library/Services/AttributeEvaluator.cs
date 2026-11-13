@@ -213,6 +213,9 @@ internal sealed class AttributeEvaluator(
 		};
 	}
 
+	/// <summary>The most arguments <c>#apply&lt;N&gt;</c> passes on.</summary>
+	private const int MaxApplyArguments = 100;
+
 	public async ValueTask<CallState> EvaluateAttributeFunctionResultAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		MString objAndAttribute,
 		Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false,
@@ -262,7 +265,8 @@ internal sealed class AttributeEvaluator(
 			// The optional argument count is embedded in the obj portion after "#apply" (e.g. "#apply2" -> argN=2).
 			// The function name is in the attribute portion (e.g. "#apply/strlen" -> funcname="strlen").
 			var applyArgCountStr = objPlainText.Remove(0, 6); // part after "#apply"
-			if (!string.IsNullOrWhiteSpace(applyArgCountStr) && !int.TryParse(applyArgCountStr, out argN))
+			if (!string.IsNullOrWhiteSpace(applyArgCountStr) && !int.TryParse(applyArgCountStr, out argN)
+				|| argN is < 0 or > MaxApplyArguments)
 			{
 				return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "#APPLY"));
 			}

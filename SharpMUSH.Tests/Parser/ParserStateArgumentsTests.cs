@@ -197,4 +197,19 @@ public class ParserStateArgumentsTests
 		await Assert.That(frame.ArgumentList[0].Message.ToPlainText()).IsEqualTo("north");
 		await Assert.That(frame.Function).IsNull();
 	}
+
+	[Test]
+	public async ValueTask WithKeepsGeneratedKeysGenerated()
+	{
+		var environment = new AttributeArgumentEnvironment { ["0"] = new("a"), ["1"] = new("b"), ["itemscount"] = new("2") };
+		environment.GeneratedKeys.Add("itemscount");
+		environment.GeneratedKeys.Add("1");
+		var changed = ArgumentList.From(environment).With(1, new CallState("c"));
+
+		var supplied = ParserState.Empty.ForAttributeArguments(changed).SuppliedArgumentKeys!;
+		await Assert.That(supplied).Contains("0");
+		await Assert.That(supplied).Contains("1");
+		await Assert.That(supplied).DoesNotContain("itemscount");
+		await Assert.That(environment.GeneratedKeys).Contains("1");
+	}
 }
