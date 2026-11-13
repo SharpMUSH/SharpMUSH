@@ -267,7 +267,7 @@ public class PluginPackageInstallerTests
 				version: "1.0.0"
 				kind: plugin
 				binaries:
-				  min_server_version: ">=3.0"
+				  min_server_version: ">=4.0"
 				  files:
 				    - file: {PluginPackageFixture.DllName}
 				      sha256: {PluginPackageFixture.DllSha}

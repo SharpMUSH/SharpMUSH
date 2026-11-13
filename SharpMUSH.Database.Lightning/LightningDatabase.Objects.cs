@@ -266,7 +266,7 @@ public partial class LightningDatabase
 			var list = MString.Plain(string.Join(PlayerAliases.Delimiter, aliases));
 			WriteAttributePath(tx, dbref, DatabaseConstants.TypeExit, new PreparedAttributeWrite(
 				[PlayerAliases.AttributeName], Keys.Str(MarkupTextSerializer.Serialize(list)), ownerKey, [], list),
-				WatchedAttributes.None.Names);
+				WatchedAttributes.None.Names, out _);
 		}
 
 		// The exit's own location is its source room (at_location, same table Location() reads).
@@ -1178,6 +1178,22 @@ public partial class LightningDatabase
 	/// <summary>Point read of an object's row. Returns <see langword="null"/> when no such dbref exists.</summary>
 	internal (long Dbref, ObjectRecord Record)? ReadObject(ITx tx, long dbref)
 		=> tx.TryGet(Tables.Obj, Keys.Dbref(dbref), out var bytes) ? (dbref, Codec.Deserialize<ObjectRecord>(bytes)) : null;
+
+	/// <summary>
+	/// Sets <paramref name="dbref"/>'s modification time to now, inside the write that modified it: PennMUSH's
+	/// <c>ModTime(thing) = mudtime</c> in <c>atr_add</c>, <c>atr_clear</c> (<c>src/attrib.c</c>) and the lock
+	/// commands (<c>src/lock.c</c>). A player keeps the one it has, as there.
+	/// </summary>
+	private void StampModified(ITx tx, long dbref)
+	{
+		if (ReadObject(tx, dbref) is not { } found || found.Record.Type == DatabaseConstants.TypePlayer)
+		{
+			return;
+		}
+
+		tx.Put(Tables.Obj, Keys.Dbref(dbref),
+			Codec.Serialize(found.Record with { ModifiedTime = _clock.GetUtcNow().ToUnixTimeMilliseconds() }));
+	}
 
 	/// <summary>
 	/// Point read of an object's row decoding only its <see cref="ObjectHeaderRecord"/> (type and creation

@@ -86,6 +86,7 @@ public partial class Functions
 
 		if (string.IsNullOrWhiteSpace(secs))
 		{
+			if (SideEffectFreeEvaluation.RefuseNonDeterministic()) return ValueTask.FromResult<CallState>(ErrorMessages.Returns.FunctionDisabled);
 			return ValueTask.FromResult<CallState>(tz.IsDaylightSavingTime(DateTimeOffset.UtcNow));
 		}
 
@@ -120,7 +121,7 @@ public partial class Functions
 	/// TinyMUX's form is <c>secs([utc|local][, &lt;digits&gt;])</c>: a zone first, then how many decimal places.
 	/// A first argument of <c>utc</c> or <c>local</c> is read that way; anything else is SharpMUSH's precision.
 	/// </remarks>
-	[SharpFunction(Name = "secs", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+	[SharpFunction(Name = "secs", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic | FunctionFlags.StripAnsi,
 		ParameterNames = ["precision"])]
 	public ValueTask<CallState> Secs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -167,6 +168,10 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentList;
 		var timeStr = args["0"].Message.ToPlainText().Trim();
+		if (timeStr.Equals("now", StringComparison.OrdinalIgnoreCase) && SideEffectFreeEvaluation.RefuseNonDeterministic())
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.FunctionDisabled));
+		}
 
 		if (!TryParseSecsCalcBase(timeStr, out var baseTime))
 		{
@@ -374,7 +379,7 @@ public partial class Functions
 
 	/// <remarks>A second argument, as TinyMUX takes it, is the number of decimal places on the seconds
 	/// (<see cref="MuxDateString"/>), and a zone of <c>local</c> is the server's.</remarks>
-	[SharpFunction(Name = "time", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["timezone", "precision"])]
+	[SharpFunction(Name = "time", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic | FunctionFlags.StripAnsi, ParameterNames = ["timezone", "precision"])]
 	public async ValueTask<CallState> Time(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -496,6 +501,10 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentList;
 		var timeStr = args["0"].Message.ToPlainText().Trim();
+		if (timeStr.Equals("now", StringComparison.OrdinalIgnoreCase) && SideEffectFreeEvaluation.RefuseNonDeterministic())
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.FunctionDisabled));
+		}
 
 		if (!TryParseTimeCalcBase(timeStr, out var baseTime))
 		{
@@ -565,6 +574,10 @@ public partial class Functions
 			{
 				return new ValueTask<CallState>(ErrorMessages.Returns.TimeInteger);
 			}
+		}
+		else if (SideEffectFreeEvaluation.RefuseNonDeterministic())
+		{
+			return new ValueTask<CallState>(ErrorMessages.Returns.FunctionDisabled);
 		}
 		else
 		{
@@ -753,7 +766,7 @@ public partial class Functions
 	/// is disabled. SharpMUSH has no save or dbck scheduler, so those report -1 rather than a
 	/// plausible "now" that softcode would treat as a real timestamp.
 	/// </remarks>
-	[SharpFunction(Name = "uptime", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.StripAnsi,
+	[SharpFunction(Name = "uptime", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.StripAnsi | FunctionFlags.NonDeterministic,
 		ParameterNames = ["type", "precision"])]
 	public async ValueTask<CallState> Uptime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -783,7 +796,7 @@ public partial class Functions
 			: TimePrecisions.Format(milliseconds.Value, precision);
 	}
 
-	[SharpFunction(Name = "utctime", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
+	[SharpFunction(Name = "utctime", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic, ParameterNames = [])]
 	public ValueTask<CallState> CurrentCoordinatedUniversalTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(
 			DateTimeOffset.UtcNow.ToString(PennTimeFormat, CultureInfo.InvariantCulture));

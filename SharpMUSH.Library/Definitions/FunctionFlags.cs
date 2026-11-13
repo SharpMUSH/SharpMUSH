@@ -26,5 +26,10 @@ public enum FunctionFlags
 	EvenArgsOnly = 1 << 23,
 	UnEvenArgsOnly = 1 << 24,
 	/// <summary>Arguments accepted by double.TryParse; empty arguments mean zero.</summary>
-	NumbersOnly = 1 << 25
+	NumbersOnly = 1 << 25,
+	/// <summary>
+	/// The answer can differ between two calls with the same arguments in an unchanged world: it reads the clock or a
+	/// random number. memo() refuses it.
+	/// </summary>
+	NonDeterministic = 1 << 26
 }

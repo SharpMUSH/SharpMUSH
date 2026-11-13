@@ -24,6 +24,7 @@ namespace SharpMUSH.Database.Lightning;
 /// <see cref="LightningStagingDatabase"/> and unit-test fixtures that bypass the host's Mediator cache
 /// pass <see langword="null"/> — see the <see cref="_relations"/> field doc for why.
 /// </param>
+/// <param name="clock">What object and attribute modification times are stamped from; the system clock when omitted.</param>
 public partial class LightningDatabase(
 	ILogger<LightningDatabase> logger,
 	LightningStoreOptions options,
@@ -46,8 +47,6 @@ public partial class LightningDatabase(
 	private readonly Lazy<IEnumerable<IAccountCredentialRevocation>> _credentialRevokers = credentialRevokers ?? new(() => []);
 	private readonly LightningStoreOptions _options = options;
 	private readonly IPasswordService _passwordService = passwordService;
-
-	/// <summary>The clock an attribute write stamps its modification time from.</summary>
 	private readonly TimeProvider _clock = clock ?? TimeProvider.System;
 
 	/// <summary>

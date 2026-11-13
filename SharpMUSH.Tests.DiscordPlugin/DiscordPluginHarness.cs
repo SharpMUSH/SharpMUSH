@@ -203,7 +203,7 @@ public sealed class DiscordPluginHarness : IAsyncDisposable
 		parser.CurrentState.Returns(ParserState.RootFor(executor.Object().DBRef) with
 		{
 			Switches = [.. switches],
-			Arguments = arguments,
+			ArgumentList = ArgumentList.From(arguments),
 		});
 		return parser;
 	}

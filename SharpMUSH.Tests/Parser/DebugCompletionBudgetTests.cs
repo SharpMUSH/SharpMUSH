@@ -117,10 +117,9 @@ public class DebugCompletionBudgetTests
 		var parser = new MUSHCodeParser(Factory.Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<MUSHCodeParser>>(),
 			Factory.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
 			Factory.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(), options, services,
-			ParserState.RootFor(executor.Object().DBRef) with
+			ParserState.RootFor(executor.Object().DBRef).ForAttributeArguments(ArgumentList.Of(new CallState("private-substitution"))) with
 			{
-				Flags = ParserStateFlags.Debug,
-				EnvironmentRegisters = new() { ["0"] = new("private-substitution") }
+				Flags = ParserStateFlags.Debug
 			});
 		return (parser, mediator);
 	}

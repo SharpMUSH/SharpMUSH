@@ -390,4 +390,22 @@ public record LimitOptions(
 
 	[SharpConfig(Name = "push_devices", Category = "Limit", Description = "Maximum browsers one account may turn push notifications on in; each @push sends one request per browser", Group = "Players", Order = 8, Min = 1, Max = 1000)]
 	public uint PushDevices { get; init; } = DefaultPushDevices;
+
+	/// <summary>Default memory memo() answers may take, in bytes (16 MiB).</summary>
+	public const uint DefaultMemoMaxBytes = 16 * 1024 * 1024;
+
+	[SharpConfig(Name = "memo_max_bytes", Category = "Limit", Description = "Memory memo() may keep answers in, in bytes; past it the least recently used answers are dropped (0 keeps none)", Group = "Performance", Order = 11, Min = 0, Max = 1073741824)]
+	public uint MemoMaxBytes { get; init; } = DefaultMemoMaxBytes;
+
+	/// <summary>Default number of answers memo() keeps.</summary>
+	public const uint DefaultMemoMaxEntries = 10000;
+
+	[SharpConfig(Name = "memo_max_entries", Category = "Limit", Description = "Answers memo() may keep; past it the least recently used answers are dropped (0 keeps none)", Group = "Performance", Order = 12, Min = 0, Max = 10000000)]
+	public uint MemoMaxEntries { get; init; } = DefaultMemoMaxEntries;
+
+	/// <summary>Default seconds a memo() answer is kept (an hour).</summary>
+	public const uint DefaultMemoWindow = 3600;
+
+	[SharpConfig(Name = "memo_window", Category = "Limit", Description = "Seconds a memo() answer is kept at most; an attribute it read changing drops it sooner (0 for no time limit)", Group = "Performance", Order = 13, Min = 0, Max = 2592000)]
+	public uint MemoWindow { get; init; } = DefaultMemoWindow;
 }

@@ -37,6 +37,9 @@ public partial class LightningDatabase
 {
 	private const string BranchFlag = "branch";
 
+	/// <summary>An attribute whose writes do not count as modifying its object (PennMUSH's <c>AF_NODUMP</c>).</summary>
+	private const string NoDumpFlag = "nodump";
+
 	private static AttrMetaRecord ReadAttributeMetadata(ReadOnlySpan<byte> bytes)
 	{
 		var metadata = Codec.Deserialize<AttrMetaRecord>(bytes);
@@ -406,10 +409,15 @@ public partial class LightningDatabase
 				return new NotFound();
 			}
 
-			var outcome = WriteAttributePath(tx, n, found.Record.Type, write, watched);
+			var outcome = WriteAttributePath(tx, n, found.Record.Type, write, watched, out var modifies);
 			if (TouchesAliases(write.Path))
 			{
 				SyncAliases(tx, n);
+			}
+
+			if (modifies)
+			{
+				StampModified(tx, n);
 			}
 
 			return outcome;
@@ -434,7 +442,7 @@ public partial class LightningDatabase
 
 			foreach (var write in writes)
 			{
-				WriteAttributePath(tx, n, found.Record.Type, write, WatchedAttributes.None.Names);
+				WriteAttributePath(tx, n, found.Record.Type, write, WatchedAttributes.None.Names, out _);
 			}
 
 			// The importer's path: an imported player's or exit's ALIAS is indexed as it lands.
@@ -480,13 +488,16 @@ public partial class LightningDatabase
 	/// the leaf's index entries follow its value in the same transaction (<see cref="IndexCopy"/>); the entry
 	/// is read here for its default flags anyway, so an attribute without an index costs nothing more.
 	/// Answers the leaf's change when its full name is one of <paramref name="watched"/>.
+	/// <paramref name="modifies"/> is whether the write counts as modifying the object (<see cref="StampModified"/>):
+	/// as <c>atr_add</c>, the leaf or a node it created that is not <c>nodump</c>.
 	/// </summary>
 	private AttributeWriteOutcome WriteAttributePath(ITx tx, long n, string objectType, PreparedAttributeWrite write,
-		IReadOnlySet<string> watched)
+		IReadOnlySet<string> watched, out bool modifies)
 	{
 		var path = write.Path;
 		var longName = string.Empty;
 		var created = 0;
+		modifies = false;
 		AttributeWriteOutcome outcome = new Success();
 		var now = _clock.GetUtcNow().ToUnixTimeMilliseconds();
 
@@ -515,6 +526,11 @@ public partial class LightningDatabase
 			else
 			{
 				AddFlag(flags, BranchFlag);
+			}
+
+			if ((isLeaf || existing is null) && !HasFlag(flags, NoDumpFlag))
+			{
+				modifies = true;
 			}
 
 			tx.Put(Tables.AttrMeta, key, Codec.Serialize(new AttrMetaRecord
@@ -655,6 +671,7 @@ public partial class LightningDatabase
 
 			var longName = string.Join('`', path);
 			var key = Keys.Attr(n, longName);
+			var modifies = !HasFlag(walk[^1].Meta.Flags, NoDumpFlag);
 			AttributeWriteOutcome outcome = watched.Contains(longName)
 				? new WatchedAttributesChanged([new WatchedAttributeChange(longName, ReadPreviousValue(tx, key), MarkupText.Empty)])
 				: new Success();
@@ -681,6 +698,11 @@ public partial class LightningDatabase
 				SyncAliases(tx, n);
 			}
 
+			if (modifies)
+			{
+				StampModified(tx, n);
+			}
+
 			return outcome;
 		}, cancellationToken);
 	}
@@ -703,13 +725,15 @@ public partial class LightningDatabase
 
 		return await Store.WriteAsync<AttributeWriteOutcome>(tx =>
 		{
-			if (ReadPathPrefixes(tx, n, path).Count != path.Length || path.Length == 0)
+			var walk = ReadPathPrefixes(tx, n, path);
+			if (walk.Count != path.Length || path.Length == 0)
 			{
 				return new NotFound();
 			}
 
 			var longName = string.Join('`', path);
 			var key = Keys.Attr(n, longName);
+			var modifies = !HasFlag(walk[^1].Meta.Flags, NoDumpFlag);
 			var descendants = Keys.Attr(n, longName + "`");
 			var outcome = WatchedRemovals(tx, n, longName, watched);
 
@@ -723,6 +747,11 @@ public partial class LightningDatabase
 			if (TouchesAliases(path))
 			{
 				SyncAliases(tx, n);
+			}
+
+			if (modifies)
+			{
+				StampModified(tx, n);
 			}
 
 			return outcome;
@@ -1316,6 +1345,9 @@ public partial class LightningDatabase
 
 	private static bool RemoveFlag(List<string> flags, string name)
 		=> flags.RemoveAll(existing => string.Equals(existing, name, StringComparison.OrdinalIgnoreCase)) > 0;
+
+	private static bool HasFlag(IEnumerable<string> flags, string name)
+		=> flags.Any(existing => string.Equals(existing, name, StringComparison.OrdinalIgnoreCase));
 
 	private static SharpAttributeFlag MapAttributeFlag(AttributeFlagRecord record) => new()
 	{

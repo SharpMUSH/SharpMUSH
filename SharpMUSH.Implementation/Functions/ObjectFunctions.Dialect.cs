@@ -72,8 +72,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentList;
 		var prefix = args.TryGetValue("2", out var prefixArg) ? prefixArg.Message : MString.Empty;
-		var arguments = new Dictionary<string, CallState> { ["0"] = args["0"], ["1"] = args["1"] };
-		var spoken = await parser.With(state => state with { Arguments = arguments }, p => Speak(p, _2));
+		var spoken = await parser.With(state => state with { ArgumentList = ArgumentList.Of(args[0], args[1]) }, p => Speak(p, _2));
 
 		return spoken.Message is not { } text || text.ToPlainText().StartsWith("#-1", StringComparison.Ordinal)
 			? spoken
@@ -129,7 +128,7 @@ public partial class Functions
 	/// at a difficulty of 0 or less and none above 10; any other version keeps a result of at least 0, and at least 1
 	/// unless it is below 0, when the difficulty is below the number of dice.
 	/// </summary>
-	[SharpFunction(Name = "successes", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+	[SharpFunction(Name = "successes", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic | FunctionFlags.StripAnsi,
 		ParameterNames = ["dice", "difficulty", "version"])]
 	public ValueTask<CallState> Successes(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -226,6 +225,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.Nothing);
 		}
 
+		AttributeReadLog.Untracked();
 		var last = await Mediator.CreateStream(new Library.Queries.Database.GetAttributeQuery(player.Object.DBRef,
 			[addresses ? "LASTIP" : "LASTSITE"])).LastOrDefaultAsync();
 		return last?.Value.ToPlainText() is { Length: > 0 } site

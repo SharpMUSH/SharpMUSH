@@ -30,7 +30,7 @@ public partial class Functions
 	private const int RhostMatchRegisters = 10;
 
 	/// <summary>randpos(): totpos()'s positions in a random order.</summary>
-	[SharpFunction(Name = "randpos", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+	[SharpFunction(Name = "randpos", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic | FunctionFlags.StripAnsi,
 		ParameterNames = ["match", "string"])]
 	public ValueTask<CallState> RandPos(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

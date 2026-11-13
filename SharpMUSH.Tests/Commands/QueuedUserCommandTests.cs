@@ -102,7 +102,7 @@ public class QueuedUserCommandTests : ServerTestBase
 	public async Task ReservationCapturesRegistersArgumentsAndIndependentCounters()
 	{
 		var args = new Dictionary<string, CallState> { ["0"] = new("before") };
-		var state = WebAppFactoryArg.CommandParserFor(_actor.DbRef, _actor.Handle).CurrentState.ForAttributeArguments(args);
+		var state = WebAppFactoryArg.CommandParserFor(_actor.DbRef, _actor.Handle).CurrentState.ForAttributeArguments(ArgumentList.From(args));
 		state.AddRegister("X", MString.Plain("before"));
 		using var reservation = await Scheduler.ReserveCommandList(
 			MString.Plain($"@pemit me={_token} %0|%qX|[add(1,2)]"), state);

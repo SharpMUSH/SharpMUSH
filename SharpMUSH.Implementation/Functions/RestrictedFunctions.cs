@@ -39,16 +39,15 @@ public partial class Functions
 		foreach (var argument in args.Values) retainedSource!.Add(argument.Message.Length);
 		using var scope = new EvaluationRestrictions(operations).Enter();
 		var parent = parser.CurrentState;
-		var inputs = Enumerable.Range(0, args.Count - 2).ToDictionary(i => i.ToString(), i => new CallState(args[(i + 2).ToString()].Message));
+		var inputs = ArgumentList.Of(Enumerable.Range(0, args.Count - 2).Select(i => new CallState(args[i + 2].Message)).ToArray());
 		// A fresh root drops every evaluated register/history/response frame. Only explicit inputs
 		// and shared execution accounting cross this boundary.
-		var state = ParserState.RootFor(parent.Executor.GetValueOrDefault()) with
+		var state = ParserState.RootFor(parent.Executor.GetValueOrDefault()).ForAttributeArguments(inputs) with
 		{
 			Executor = parent.Executor,
 			Enactor = parent.Executor,
 			Caller = parent.Executor,
 			Flags = ParserStateFlags.NoDebug,
-			EnvironmentRegisters = inputs,
 			CallDepth = parent.CallDepth,
 			TotalInvocations = parent.TotalInvocations,
 			FunctionRecursionDepths = parent.FunctionRecursionDepths,

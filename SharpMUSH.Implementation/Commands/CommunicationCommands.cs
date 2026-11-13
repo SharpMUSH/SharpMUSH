@@ -283,12 +283,11 @@ public partial class Commands
 		// recursion counters, as IDidItService gives an action attribute. The entry runs on the scheduler's
 		// thread, possibly before this command finishes, so it must share nothing with the caller's state.
 		var attribute = awhatChain.Last();
-		var invocation = parser.CurrentState.ForAttributeArguments(stackArgs);
+		var invocation = parser.CurrentState.ForAttributeArguments(ArgumentList.From(stackArgs));
 		var admission = await Mediator.Send(new AdmitCommandListRequest(attribute.Value,
 			invocation with
 			{
 				Actors = invocation.Actors with { Executor = victim.Object().DBRef, Enactor = actor.Object().DBRef, Caller = actor.Object().DBRef },
-				Arguments = stackArgs,
 				CommandHistory = null,
 				CommandSources = null,
 				BreakPropagation = null,
@@ -342,8 +341,7 @@ public partial class Commands
 		var result = await parser.With(
 			state => state with
 			{
-				Actors = state.Actors with { Executor = victim.Object().DBRef, Enactor = actor.Object().DBRef, Caller = state.Executor },
-				Arguments = stackArgs
+				Actors = state.Actors with { Executor = victim.Object().DBRef, Enactor = actor.Object().DBRef, Caller = state.Executor }
 			},
 			newParser => attributeService.EvaluateAttributeFunctionAsync(
 				newParser, victim, victim, attrName, stackArgs));

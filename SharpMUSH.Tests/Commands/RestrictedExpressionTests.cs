@@ -273,11 +273,10 @@ public class RestrictedExpressionTests
 		var executor = await OwnExecutor();
 		var heard = Factory.Notifications.DeliveryCountFor(executor);
 		var restrictions = new EvaluationRestrictions([]);
-		var state = ParserState.RootFor(executor) with
+		var state = ParserState.RootFor(executor).ForAttributeArguments(ArgumentList.Of(new CallState("private-input"))) with
 		{
 			Flags = ParserStateFlags.Debug,
-			Restrictions = ambient ? null : restrictions,
-			EnvironmentRegisters = new Dictionary<string, CallState> { ["0"] = new("private-input") }
+			Restrictions = ambient ? null : restrictions
 		};
 		using var scope = ambient ? restrictions.Enter() : null;
 		var result = await Factory.FunctionParser.FromState(state).FunctionParse(MarkupText.Plain("%0"), true);
@@ -288,13 +287,13 @@ public class RestrictedExpressionTests
 	[Test]
 	public async Task ParentRegistersAndIdentityAreNotInputs()
 	{
-		var parent = ParserState.RootFor(Factory.FunctionParser.CurrentState.Executor!.Value) with
+		var parent = ParserState.RootFor(Factory.FunctionParser.CurrentState.Executor!.Value)
+			.ForAttributeArguments(ArgumentList.Of(new CallState("parent input"))) with
 		{
 			TotalInvocations = new(),
 			CallDepth = new(),
 			FunctionRecursionDepths = new(),
-			LimitExceeded = new(),
-			EnvironmentRegisters = new Dictionary<string, CallState> { ["0"] = new("parent input") }
+			LimitExceeded = new()
 		};
 		parent.Registers.First()["SECRET"] = MarkupText.Plain("classified");
 		var parser = Factory.FunctionParser.FromState(parent);
@@ -425,7 +424,7 @@ public class RestrictedExpressionTests
 		var args = function == "space"
 			? new Dictionary<string, CallState> { ["0"] = new("5242881") }
 			: new Dictionary<string, CallState> { ["0"] = new("ab"), ["1"] = new("2621441") };
-		var result = await original.FunctionLibrary[function].LibraryInformation.Function(original.Push(original.CurrentState with { Arguments = args }));
+		var result = await original.FunctionLibrary[function].LibraryInformation.Function(original.Push(original.CurrentState with { ArgumentList = ArgumentList.From(args) }));
 		await Assert.That(result.Message.Length).IsLessThan(100);
 		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.OutputTooLarge);
 	}

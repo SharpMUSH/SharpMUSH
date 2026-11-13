@@ -247,10 +247,16 @@ public partial class Functions
 	/// <c>atr_get_noparent</c> reads it.
 	/// </summary>
 	private async ValueTask<string> FullAliasOf(AnySharpObject found)
-		=> found is SharpExit exit
-			? string.Join(PlayerAliases.Delimiter, exit.Aliases ?? [])
-			: (await Mediator.CreateStream(new GetAttributeQuery(found.Object().DBRef, [PlayerAliases.AttributeName]))
-				.LastOrDefaultAsync())?.Value.ToPlainText() ?? string.Empty;
+	{
+		if (found is SharpExit exit)
+		{
+			return string.Join(PlayerAliases.Delimiter, exit.Aliases ?? []);
+		}
+
+		AttributeReadLog.Untracked();
+		return (await Mediator.CreateStream(new GetAttributeQuery(found.Object().DBRef, [PlayerAliases.AttributeName]))
+			.LastOrDefaultAsync())?.Value.ToPlainText() ?? string.Empty;
+	}
 
 	/// <summary>
 	/// <c>fun_findable</c> (<c>fundb.c:1438-1452</c>): whether the first object could find the second.
@@ -1013,7 +1019,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(ErrorMessages.Returns.NoSuchOption);
 	}
 
-	[SharpFunction(Name = "benchmark", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "benchmark", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.NoParse | FunctionFlags.NonDeterministic)]
 	public async ValueTask<CallState> Benchmark(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -1036,6 +1042,10 @@ public partial class Functions
 		AnySharpObject? sendTo = null;
 		if (args.TryGetValue("2", out var sendToArg))
 		{
+			// Sending the timings to someone is a side effect HasSideFX does not cover, since only <sendto> makes one.
+			if (SideEffectFreeEvaluation.Refuse())
+				return new CallState(ErrorMessages.Returns.FunctionDisabled);
+
 			var name = (await ParseRawArgument(parser, sendToArg.Message))?.Message?.ToPlainText() ?? string.Empty;
 			switch (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, name, LocateFlags.All))
 			{

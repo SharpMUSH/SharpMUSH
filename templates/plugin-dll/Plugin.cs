@@ -46,9 +46,9 @@ public sealed class Plugin : PluginBase
 	[SharpFunction(Name = "PLUGINFNTOKEN", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Add(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
-		var a = decimal.Parse(args["0"].Message.ToPlainText());
-		var b = decimal.Parse(args["1"].Message.ToPlainText());
+		var args = parser.CurrentState.ArgumentList;
+		var a = decimal.Parse(args[0].Message.ToPlainText());
+		var b = decimal.Parse(args[1].Message.ToPlainText());
 		return ValueTask.FromResult(
 			new CallState((a + b).ToString(System.Globalization.CultureInfo.InvariantCulture)));
 	}

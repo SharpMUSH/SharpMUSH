@@ -100,9 +100,8 @@ public partial class Commands
 				var environment = state.EnvironmentRegisters.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
 				foreach (var (name, value) in inputs) environment[name] = value;
 				var attributeBody = callback.Last();
-				await parser.With(s => s.ForAttributeArguments(inputs) with
+				await parser.With(s => s.ForAttributeArguments(ArgumentList.From(inputs), environment) with
 				{
-					EnvironmentRegisters = environment,
 					CurrentEvaluation = DBAttribute.Of(target.Object().DBRef, attributeBody)
 				}, p => p.CommandListParse(attributeBody.Value));
 				if (state.Registers.TryPeek(out var registers) && registers.TryGetValue("APPDRAFT_RESULT", out var answer))

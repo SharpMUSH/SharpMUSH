@@ -475,6 +475,8 @@ public class ListFunctionUnitTests
 	[Test]
 	[Arguments(@"map(#apply/strlen,hello world foo)", "5 5 3")]
 	[Arguments(@"map(#apply/strlen,hello;world;foo,;)", "5;5;3")]
+	[Arguments(@"map(#apply101/strlen,hello)", "#-1 BAD ARGUMENT FORMAT TO #APPLY")]
+	[Arguments(@"map(#apply-1/strlen,hello)", "#-1 BAD ARGUMENT FORMAT TO #APPLY")]
 	public async Task MapWithApply(string function, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));

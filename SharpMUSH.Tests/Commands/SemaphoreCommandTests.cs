@@ -61,7 +61,7 @@ public class SemaphoreCommandTests
 		parser.ServiceProvider.Returns(WebAppFactoryArg.Services);
 		parser.CurrentState.Returns(ParserState.RootFor(actor.Object().DBRef) with
 		{
-			Arguments = new() { ["0"] = new("#41/SEMAPHORE") }
+			ArgumentList = ArgumentList.From(new() { ["0"] = new("#41/SEMAPHORE") })
 		});
 		var metadata = (SharpMUSH.Library.Attributes.SharpCommandAttribute)Attribute.GetCustomAttribute(
 			typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod(command)!, typeof(SharpMUSH.Library.Attributes.SharpCommandAttribute))!;
@@ -125,7 +125,7 @@ public class SemaphoreCommandTests
 		parser.ServiceProvider.Returns(WebAppFactoryArg.Services);
 		parser.CurrentState.Returns(ParserState.RootFor(player.Object.DBRef) with
 		{
-			Arguments = new() { ["0"] = new(phase == "delay" ? "3600" : target + "/3600"), ["1"] = new("think cancelled") }
+			ArgumentList = ArgumentList.From(new() { ["0"] = new(phase == "delay" ? "3600" : target + "/3600"), ["1"] = new("think cancelled") })
 		});
 		var metadata = (SharpMUSH.Library.Attributes.SharpCommandAttribute)Attribute.GetCustomAttribute(
 			typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod("Wait")!, typeof(SharpMUSH.Library.Attributes.SharpCommandAttribute))!;
@@ -215,7 +215,7 @@ public class SemaphoreCommandTests
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(WebAppFactoryArg.Services, mediator);
 		var parser = Substitute.For<IMUSHCodeParser>();
 		parser.ServiceProvider.Returns(WebAppFactoryArg.Services);
-		parser.CurrentState.Returns(ParserState.RootFor(player.Object.DBRef) with { Arguments = new() { ["0"] = new(target + "/CUSTOM_COUNTER") } });
+		parser.CurrentState.Returns(ParserState.RootFor(player.Object.DBRef) with { ArgumentList = ArgumentList.From(new() { ["0"] = new(target + "/CUSTOM_COUNTER") }) });
 		var metadata = (SharpMUSH.Library.Attributes.SharpCommandAttribute)Attribute.GetCustomAttribute(
 			typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod("Notify")!, typeof(SharpMUSH.Library.Attributes.SharpCommandAttribute))!;
 		try
@@ -296,7 +296,7 @@ public class SemaphoreCommandTests
 			var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(WebAppFactoryArg.Services);
 			var parser = Substitute.For<IMUSHCodeParser>();
 			parser.ServiceProvider.Returns(WebAppFactoryArg.Services);
-			parser.CurrentState.Returns(state with { Arguments = new() { ["0"] = new(target + "/SEMAPHORE") } });
+			parser.CurrentState.Returns(state with { ArgumentList = ArgumentList.From(new() { ["0"] = new(target + "/SEMAPHORE") }) });
 			var metadata = (SharpMUSH.Library.Attributes.SharpCommandAttribute)Attribute.GetCustomAttribute(
 				typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod(drain ? "Drain" : "Notify")!, typeof(SharpMUSH.Library.Attributes.SharpCommandAttribute))!;
 			var result = (drain ? await commands.Drain(parser, metadata) : await commands.Notify(parser, metadata)).Expect<CallState>();
@@ -323,7 +323,7 @@ public class SemaphoreCommandTests
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(WebAppFactoryArg.Services, mediator);
 		var parser = Substitute.For<IMUSHCodeParser>();
 		parser.ServiceProvider.Returns(WebAppFactoryArg.Services);
-		parser.CurrentState.Returns(ParserState.RootFor(player.Object.DBRef) with { Arguments = new() { ["0"] = new(target + "/SEMAPHORE") } });
+		parser.CurrentState.Returns(ParserState.RootFor(player.Object.DBRef) with { ArgumentList = ArgumentList.From(new() { ["0"] = new(target + "/SEMAPHORE") }) });
 		var metadata = (SharpMUSH.Library.Attributes.SharpCommandAttribute)Attribute.GetCustomAttribute(
 			typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod("Drain")!, typeof(SharpMUSH.Library.Attributes.SharpCommandAttribute))!;
 		await commands.Drain(parser, metadata);
@@ -355,7 +355,7 @@ public class SemaphoreCommandTests
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(WebAppFactoryArg.Services, mediator);
 		var parser = Substitute.For<IMUSHCodeParser>();
 		parser.ServiceProvider.Returns(WebAppFactoryArg.Services);
-		parser.CurrentState.Returns(state with { Arguments = new() { ["0"] = new(target + "/SEMAPHORE") } });
+		parser.CurrentState.Returns(state with { ArgumentList = ArgumentList.From(new() { ["0"] = new(target + "/SEMAPHORE") }) });
 		var metadata = (SharpMUSH.Library.Attributes.SharpCommandAttribute)Attribute.GetCustomAttribute(
 			typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod(drain ? "Drain" : "Notify")!, typeof(SharpMUSH.Library.Attributes.SharpCommandAttribute))!;
 		try

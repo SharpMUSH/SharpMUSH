@@ -18,6 +18,8 @@ public partial class Functions
 		var normalized = args.TryGetValue("3", out var outputArg) && outputArg.Message.ToPlainText().Trim().Equals("normalized", StringComparison.OrdinalIgnoreCase);
 		var precision = TimePrecision.Seconds;
 		if (!normalized && !TryPrecision(args, "3", out precision)) return "#-1 INVALID PRECISION";
+		var hasReference = args.TryGetValue("2", out var givenReference) && givenReference.Message.ToPlainText().Length != 0;
+		if (!hasReference && SideEffectFreeEvaluation.RefuseNonDeterministic()) return ErrorMessages.Returns.FunctionDisabled;
 		var reference = DateTimeOffset.UtcNow;
 		if (args.TryGetValue("2", out var referenceArg) && referenceArg.Message.ToPlainText().Length != 0
 			&& !TimePrecisions.TryParseInstant(referenceArg.Message.ToPlainText(), out reference)) return "#-1 INVALID REFERENCE TIME";

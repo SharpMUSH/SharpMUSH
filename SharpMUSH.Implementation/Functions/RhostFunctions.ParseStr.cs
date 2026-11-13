@@ -108,22 +108,16 @@ public partial class Functions
 			var chosen = plain.Length > 0 && transChars.Contains(plain[0]) ? plain[0]
 				: plain.Length > 0 && endChars.Contains(plain[^1]) ? plain[^1]
 				: (char?)null;
-			var arguments = new Dictionary<string, CallState>
-			{
-				["0"] = new(piece),
-				["1"] = new(targetName),
-				["2"] = new(evaluatedCount),
-				["3"] = new(index),
-				["4"] = new(chosen?.ToString() ?? "")
-			};
+			var arguments = ArgumentList.Of([
+				new CallState(piece),
+				new CallState(targetName),
+				new CallState(evaluatedCount),
+				new CallState(index),
+				new CallState(chosen?.ToString() ?? "")
+			]);
 			evaluatedCount++;
 			var code = chosen is null ? raw[1] : transEval!;
-			var value = await parser.With(state => state with
-			{
-				Arguments = arguments,
-				EnvironmentRegisters = arguments,
-				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments)
-			}, scoped => ParseRawArgument(scoped, code)) ?? CallState.Empty;
+			var value = await parser.With(state => state.ForAttributeArguments(arguments), scoped => ParseRawArgument(scoped, code)) ?? CallState.Empty;
 
 			if (written) result.Add(MarkupText.Plain(before));
 			result.Add(value.Message);

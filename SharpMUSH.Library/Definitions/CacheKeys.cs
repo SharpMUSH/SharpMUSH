@@ -181,6 +181,16 @@ public static class CacheKeys
 	}
 
 	/// <summary>
+	/// The keys setting, clearing or wiping <paramref name="attribute"/> on <paramref name="dbref"/> expires:
+	/// <see cref="AttributesTouchedBy"/> and the object's own node, whose modification time the provider
+	/// stamps in the same write.
+	/// </summary>
+	public static string[] AttributeEditTouches(DBRef dbref, string[] attribute)
+		=> WritesAliases(attribute)
+			? AttributesTouchedBy(dbref, attribute)
+			: [.. AttributesTouchedBy(dbref, attribute), Object(dbref)];
+
+	/// <summary>
 	/// Every tag a write to <paramref name="attribute"/> on <paramref name="dbref"/> expires: the object's
 	/// own attribute reads, the inherited ones game-wide (see <see cref="AttributesTag"/>), and, for the
 	/// ALIAS attribute, every lookup of a player by name — the write changes which names find the player.

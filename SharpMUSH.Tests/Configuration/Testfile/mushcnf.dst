@@ -362,6 +362,18 @@ push_limit 10
 # sends one request per browser.
 push_devices 10
 
+# The most memory memo() may keep answers in, in bytes. Past it the least
+# recently used answers are dropped. 0 keeps none.
+memo_max_bytes 16777216
+
+# The most answers memo() may keep. Past it the least recently used answers
+# are dropped. 0 keeps none.
+memo_max_entries 10000
+
+# The most seconds a memo() answer is kept. An attribute it read changing
+# drops it sooner. 0 for no time limit.
+memo_window 3600
+
 # How much MUSH money do players get when they're created?
 starting_money 150
 

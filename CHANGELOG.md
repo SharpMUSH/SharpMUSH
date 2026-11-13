@@ -9,7 +9,7 @@ Two version numbers matter:
 
 ## [1.0.0] - Unreleased
 
-The first release. Plugin contract 3.0.0. World format 1.
+The first release. Plugin contract 4.0.0. World format 1.
 
 ### The server
 

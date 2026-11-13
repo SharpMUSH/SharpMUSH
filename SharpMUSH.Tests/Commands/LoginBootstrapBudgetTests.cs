@@ -53,7 +53,7 @@ public class LoginBootstrapBudgetTests
 		var parser = Factory.CommandParser.FromState(Factory.CommandParser.CurrentState with
 		{
 			Handle = handle,
-			Arguments = new Dictionary<string, CallState> { ["0"] = new CallState(player.Object.Name + " password") }
+			ArgumentList = ArgumentList.From(new Dictionary<string, CallState> { ["0"] = new CallState(player.Object.Name + " password") })
 		});
 		try
 		{
@@ -103,7 +103,7 @@ public class LoginBootstrapBudgetTests
 		var parser = Factory.CommandParser.FromState(Factory.CommandParser.CurrentState with
 		{
 			Handle = handle,
-			Arguments = new Dictionary<string, CallState> { ["0"] = new CallState(player.Object.Name + " password") }
+			ArgumentList = ArgumentList.From(new Dictionary<string, CallState> { ["0"] = new CallState(player.Object.Name + " password") })
 		});
 		try
 		{

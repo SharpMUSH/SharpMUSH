@@ -33,8 +33,8 @@ This covers softcode and application packages. Plugin packages (plugin binaries)
 see *Plugin packages* below.
 
 An operation's writes go through `PackageWriteTransaction`, each recorded with its inverse. A
-transaction comes only from the world's `IPackageWriteTransactionFactory` (plugin contract 3.0.0
-removed its public constructor). The factory retains the world before it looks up the Package
+transaction comes only from the world's `IPackageWriteTransactionFactory` (it has no public
+constructor). The factory retains the world before it looks up the Package
 Manager and holds it until the transaction closes. The installer and each package helper check that
 their own services are the ones that world registered, before they read or call back, so a service
 from another world is refused. The

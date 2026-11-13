@@ -193,10 +193,9 @@ public sealed class RecurringJobService(
 				ExecutionBudget.Current?.ThrowIfExceeded();
 				// Starting evaluation is the dispatch boundary. Do not hold the gate while awaiting
 				// softcode, which may itself disable or delete this job through normal commands.
-				evaluation = parser.FromState(ParserState.RootFor(active) with
+				evaluation = parser.FromState(ParserState.RootFor(active).ForAttributeArguments(ArgumentList.NewEmpty()) with
 				{
 					CurrentEvaluation = new DBAttribute(target, job.Attribute) { Dialect = SoftcodeDialects.Of(attribute) },
-					SuppliedArgumentKeys = System.Collections.Immutable.ImmutableHashSet<string>.Empty.WithComparer(StringComparer.OrdinalIgnoreCase),
 					ExecutionBudget = ExecutionBudget.Current
 				}).WithAttributeDebug(attribute, child => child.CommandListParse(attribute.Value));
 			}

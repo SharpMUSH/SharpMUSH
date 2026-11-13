@@ -97,15 +97,8 @@ public partial class Functions
 			return PermissionRefusal.CannotUse(command).Return;
 		}
 
-		var commandParser = parser.Push(parser.CurrentState with
-		{
-			Command = command,
-			Switches = switches,
-			Arguments = arguments
-				.Select((argument, index) => (Key: index.ToString(CultureInfo.InvariantCulture), Value: new CallState(argument)))
-				.ToDictionary(pair => pair.Key, pair => pair.Value),
-			Function = null
-		});
+		var commandParser = parser.Push(parser.CurrentState.ForCommand(command, switches,
+			ArgumentList.Of(arguments.Select(argument => new CallState(argument)).ToArray())));
 
 		await commandParser.CommandLibrary[command].LibraryInformation.Command.Invoke(commandParser);
 		return CallState.Empty;
@@ -127,7 +120,7 @@ public partial class Functions
 			: string.Concat(text.Where(c => remove.Contains(c) == keep))));
 	}
 
-	[SharpFunction(Name = "lrand", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+	[SharpFunction(Name = "lrand", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic | FunctionFlags.StripAnsi,
 		ParameterNames = ["lower", "upper", "count", "osep"])]
 	public ValueTask<CallState> ListRandom(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -152,6 +145,11 @@ public partial class Functions
 		var secondsText = args.TryGetValue("0", out var secondsArg) ? secondsArg.Message?.ToPlainText() ?? string.Empty : string.Empty;
 
 		double seconds;
+		if (secondsText.Length == 0 && SideEffectFreeEvaluation.RefuseNonDeterministic())
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.FunctionDisabled));
+		}
+
 		if (secondsText.Length == 0)
 		{
 			seconds = parser.ServiceProvider.GetRequiredService<TimeProvider>().GetUtcNow().ToUnixTimeSeconds();
@@ -325,7 +323,7 @@ public partial class Functions
 			: low < value && value < high));
 	}
 
-	[SharpFunction(Name = "choose", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular,
+	[SharpFunction(Name = "choose", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic,
 		ParameterNames = ["items", "weights", "delimiter"])]
 	public ValueTask<CallState> Choose(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -350,7 +348,7 @@ public partial class Functions
 		return ValueTask.FromResult(CallState.Empty);
 	}
 
-	[SharpFunction(Name = "distribute", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+	[SharpFunction(Name = "distribute", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic | FunctionFlags.StripAnsi,
 		ParameterNames = ["points", "bins", "osep"])]
 	public ValueTask<CallState> Distribute(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

@@ -582,8 +582,7 @@ public static class BuildingHelpers
 		AnySharpObject executor,
 		MString exitName,
 		AnySharpContainer sourceRoom,
-		DBRef? requestedDbref = null,
-		long? modified = null)
+		DBRef? requestedDbref = null)
 	{
 		if (!sourceRoom.IsRoom)
 		{
@@ -608,7 +607,7 @@ public static class BuildingHelpers
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 
 		return await ExitChargedAsync(mediator, configuration, notifyService, executor, name, aliases,
-			sourceRoom, owner, requestedDbref, modified) switch
+			sourceRoom, owner, requestedDbref) switch
 		{
 			DBRef opened => await OpenedAsync(mediator, cycleChecker, notifyService, executor, opened),
 			Error<string> refused => refused
@@ -698,13 +697,12 @@ public static class BuildingHelpers
 		string[] aliases,
 		AnySharpContainer where,
 		SharpPlayer owner,
-		DBRef? requestedDbref,
-		long? modified = null)
+		DBRef? requestedDbref)
 		=> RecordedAsync(mediator, executor, LastCreated.Slot.Exit, requestedDbref is { } wanted
 			? ChargedAtAsync(mediator, configuration, notifyService, executor,
-				async () => await mediator.Send(new CreateExitAtCommand(wanted, name, aliases, where, owner, modified)))
+				async () => await mediator.Send(new CreateExitAtCommand(wanted, name, aliases, where, owner)))
 			: WithBuildingQuotaAsync(mediator, configuration, notifyService, executor,
-				async () => await mediator.Send(new CreateExitCommand(name, aliases, where, owner, ModifiedTime: modified))));
+				async () => await mediator.Send(new CreateExitCommand(name, aliases, where, owner))));
 
 	/// <summary>A thing, at the dbref asked for or at the next one the counter hands out, charged either way.</summary>
 	private static ValueTask<Result<DBRef>> ThingChargedAsync(
@@ -1094,6 +1092,15 @@ public static class BuildingHelpers
 			await mediator.Send(new SetObjectParentCommand(clonedObj, parent));
 		}
 
+		// create.c:653-655 gives a cloned thing or room its original's modification time, and atr_cpy and
+		// clone_locks leave it there; the attribute copies above stamped it, so it goes back. An exit is a
+		// do_real_open, whose time is its own.
+		if (!target.IsExit)
+		{
+			await mediator.Send(new SetObjectTimestampsCommand(cloneDbRef, clonedObj.Object().CreationTime,
+				target.Object().ModifiedTime));
+		}
+
 		await eventService.TriggerEventAsync(SharpEvents.ObjectCreate, executor.Object().DBRef,
 			cloneDbRef.ToString(),
 			target.Object().DBRef.ToString()); // cloned-from
@@ -1162,9 +1169,11 @@ public static class BuildingHelpers
 				// create.c:771-773 — the exit branch is a do_real_open, so it is held to everything one
 				// is: the source must be a room (:108-110), can_open_from must admit the cloner (:127),
 				// and only then is a slot charged (:130). Charging the clone directly skipped the first
-				// two, so a mortal could clone an exit into a room they may not open in.
+				// two, so a mortal could clone an exit into a room they may not open in. Its new_object takes
+				// the time now (db.c), not the original's: create.c:653-655 is clone_object's, which an exit
+				// never reaches.
 				return await OpenExitAsync(mediator, cycleChecker, configuration, notifyService, permissionService,
-					lockService, executor, MarkupText.Plain(name), into, requestedDbref, modified) switch
+					lockService, executor, MarkupText.Plain(name), into, requestedDbref) switch
 				{
 					DBRef cloned => await ReopenedAsync(mediator, notifyService, permissionService, executor, exit,
 						cloned),

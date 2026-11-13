@@ -608,8 +608,8 @@ public partial class Commands
 		// Restore caller's pattern-match args (%0-%9) for the queued callback state.
 		// Without this, %0 inside @wait callbacks would resolve to @wait's own arg (the delay time)
 		// instead of the enclosing $command pattern match. Equivalent to PennMUSH wenv preservation.
-		var callbackState = parser.CurrentState.CallerArguments is not null
-			? parser.CurrentState with { Arguments = new Dictionary<string, CallState>(parser.CurrentState.CallerArguments) }
+		var callbackState = parser.CurrentState.CallerArguments is { } callerArguments
+			? parser.CurrentState with { ArgumentList = callerArguments }
 			: parser.CurrentState;
 
 		if (switches.Contains("PID"))
@@ -1462,7 +1462,7 @@ public partial class Commands
 				: new Dictionary<string, MString>(currentRegs));
 		}
 
-		var stateWithRegisters = parser.CurrentState.ForAttributeArguments(envRegisters) with
+		var stateWithRegisters = parser.CurrentState.ForAttributeArguments(ArgumentList.From(envRegisters)) with
 		{
 			Actors = parser.CurrentState.Actors with { Executor = targetObject.Object().DBRef, Enactor = executionEnactor, Caller = parser.CurrentState.Executor },
 			Registers = registerStack,

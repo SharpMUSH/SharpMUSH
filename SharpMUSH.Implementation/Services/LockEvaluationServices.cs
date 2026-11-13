@@ -53,7 +53,7 @@ public sealed class LockEvaluationServices(
 
 			var evalParser = parser.Value.Push(ParserState.RootFor(unlockerRef) with
 			{
-				Arguments = arguments,
+				ArgumentList = ArgumentList.From(arguments),
 				// A limit the lock's evaluation hits halts the evaluation that asked for the lock.
 				LimitExceeded = OutputCeiling.Current?.Flag ?? new LimitExceededFlag(),
 				Restrictions = EvaluationRestrictions.Current

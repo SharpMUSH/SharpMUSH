@@ -57,12 +57,7 @@ public class EngineCommandInvoker(
 			return null;
 		}
 
-		var state = ParserState.RootFor(actor) with
-		{
-			Command = commandName,
-			Arguments = arguments,
-			Switches = switches ?? []
-		};
+		var state = ParserState.RootFor(actor).ForCommand(commandName, switches ?? [], ArgumentList.From(arguments));
 
 		var result = await registered.LibraryInformation.Command(parser.Push(state));
 

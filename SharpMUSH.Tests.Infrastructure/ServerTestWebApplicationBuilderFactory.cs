@@ -76,6 +76,7 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 		builder.ConfigureTestServices(TestHostServices.RecordServerRestarts);
 		builder.ConfigureTestServices(TestHostServices.RecordFeedLines);
 		builder.ConfigureTestServices(TestHostServices.FixConnectionTraffic);
+		builder.ConfigureTestServices(TestHostServices.StopMemoClock);
 
 		if (worldPath is not null)
 		{

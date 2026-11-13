@@ -22,7 +22,7 @@ public class ApplicationDraftCommandCompositionTests
 		parser.ServiceProvider.Returns(provider);
 		parser.CurrentState.Returns(ParserState.RootFor(new DBRef(1, 1)) with
 		{
-			Arguments = new() { ["0"] = new("FORM"), ["1"] = new("new"), ["2"] = new("{}") }
+			ArgumentList = ArgumentList.From(new() { ["0"] = new("FORM"), ["1"] = new("new"), ["2"] = new("{}") })
 		});
 		var result = (await commands.ApplicationDraft(parser, new SharpCommandAttribute { Name = "@APPDRAFT" })).Expect<CallState>();
 		await Assert.That(result.Message.ToPlainText()).Contains("Drafts require a bound connection or authenticated form instance.");

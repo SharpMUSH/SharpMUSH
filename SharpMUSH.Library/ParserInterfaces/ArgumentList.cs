@@ -5,8 +5,8 @@ namespace SharpMUSH.Library.ParserInterfaces;
 
 /// <summary>
 /// The arguments of a call or command: <c>%0</c>, <c>%1</c>, … and any named ones, what
-/// <see cref="ParserState.ArgumentList"/> holds. It reads exactly as the dictionary
-/// <see cref="ParserState.Arguments"/> does, key for key, and adds lookups by position.
+/// <see cref="ParserState.ArgumentList"/> holds. It reads as a dictionary keyed <c>"0"</c>, <c>"1"</c>, … and by
+/// name, and by position.
 /// </summary>
 /// <remarks>
 /// Nearly every call binds exactly <c>"0"</c>…<c>"n-1"</c>; such a list holds the values alone and builds the
@@ -140,8 +140,8 @@ public sealed class ArgumentList : IReadOnlyDictionary<string, CallState>
 	}
 
 	/// <summary>
-	/// The arguments as the dictionary <see cref="ParserState.Arguments"/> answers: the one this list was made
-	/// from, or one built the first time it is asked for and kept.
+	/// The arguments as a dictionary keyed <c>"0"</c>, <c>"1"</c>, … and by name: the one this list was made from,
+	/// or one built the first time it is asked for and kept.
 	/// </summary>
 	public Dictionary<string, CallState> AsDictionary()
 	{
@@ -175,6 +175,34 @@ public sealed class ArgumentList : IReadOnlyDictionary<string, CallState>
 		var mapped = new CallState[_values.Length];
 		for (var position = 0; position < mapped.Length; position++) mapped[position] = map(_values[position]);
 		return new ArgumentList(mapped);
+	}
+
+	/// <summary>A copy with <paramref name="value"/> bound to <c>%<paramref name="position"/></c> and every other argument kept.</summary>
+	public ArgumentList With(int position, CallState value)
+	{
+		ArgumentOutOfRangeException.ThrowIfNegative(position);
+		if (_values is not null && position <= _values.Length)
+		{
+			var values = new CallState[Math.Max(_values.Length, position + 1)];
+			_values.CopyTo(values, 0);
+			values[position] = value;
+			return new ArgumentList(values);
+		}
+
+		var key = ParserState.ArgumentKey(position);
+		if (_dictionary is AttributeArgumentEnvironment environment)
+		{
+			// Keys a signature generated stay generated; the one replaced is supplied now.
+			var copy = new AttributeArgumentEnvironment();
+			foreach (var (name, argument) in environment) copy[name] = argument;
+			copy.GeneratedKeys.UnionWith(environment.GeneratedKeys);
+			copy.GeneratedKeys.Remove(key);
+			copy[key] = value;
+			return new ArgumentList(copy);
+		}
+
+		var dictionary = new Dictionary<string, CallState>(AsDictionary(), _dictionary?.Comparer) { [key] = value };
+		return new ArgumentList(dictionary);
 	}
 
 	/// <summary>The keys in the order they were bound.</summary>
