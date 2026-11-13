@@ -17,6 +17,27 @@ installs the verbs first and blocks uninstalling `http-handler` while this is
 present. Disable the directory/profile API independently by uninstalling just
 `profile-handler` — the verb routers stay.
 
+## Kept rows
+
+Both list routes build each row through `` FUN`PROFILE`KEPTENTRY ``, which calls
+`` FUN`PROFILE`ENTRY `` through `memo()` (`help memo()`). A route asked again
+answers from the kept rows instead of building each one again: with 1,000
+players, `/http/characters` takes about 8 function calls a player instead of 28.
+
+`memo()` drops a kept row when an attribute the row read changes, such as
+`IMAGE`. A name, roles, powers and flags are not attributes, so
+`` FUN`PROFILE`KEPTENTRY `` passes them as arguments, and a change to any of
+them builds the row again.
+
+If you redefine `` FUN`PROFILE`CHARACTERCATEGORY `` or a visibility rule:
+
+- One that reads something else, such as a location, is not seen to change
+  until `memo_window` passes. Add it to the arguments in
+  `` FUN`PROFILE`KEPTENTRY ``.
+- One that reads the clock or connections, such as `conn()` or `idle()`, is
+  refused by `memo()`, and every row reads `#-1 MEMO REFUSES NONDETERMINISTIC
+  FUNCTIONS`. Make both routes call `` FUN`PROFILE`ENTRY `` instead.
+
 ## Images and colour (1.5)
 
 Every row carries `image`, and a profile's `fields` carry `image`, `banner` and
