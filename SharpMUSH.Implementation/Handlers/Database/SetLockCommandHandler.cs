@@ -113,8 +113,9 @@ internal static class LockWriteAuthorization
 {
 	/// <summary>
 	/// <c>do_lock</c>, <c>do_unlock</c> and <c>do_lset</c> (<c>src/lock.c</c>) set <c>ModTime(thing)</c> when the
-	/// lock changed, unless the object is a player. Restoring and importing a lock (<see cref="CopyLockCommand"/>,
-	/// <see cref="ImportLockCommand"/>) leave it alone, as <c>add_lock_raw</c> does.
+	/// lock changed, unless the object is a player. A lock copied by <c>@clone</c> (<see cref="CopyLockCommand"/>) or
+	/// imported (<see cref="ImportLockCommand"/>) leaves it alone, as <c>add_lock_raw</c> does; a restore, which is
+	/// a <see cref="SetLockCommand"/>, stamps it.
 	/// </summary>
 	public static async ValueTask StampModifiedAsync(this IObjectStore database, AnySharpObject target, TimeProvider clock,
 		CancellationToken cancellationToken)
