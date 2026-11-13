@@ -44,8 +44,17 @@ public static class PortalStaticFiles
 	}
 
 	/// <summary>
+	/// What a file the manifest leaves out is sent with: the header the SDK gives an unfingerprinted
+	/// asset, so moving a folder out of the manifest does not change how browsers cache it.
+	/// </summary>
+	public const string UnlistedCacheControl = "max-age=3600, must-revalidate";
+
+	/// <summary>
 	/// The middleware half, placed where the static-file middleware belongs in the pipeline. With a
-	/// manifest it adds nothing: the assets are endpoints (see <see cref="MapPortal"/>).
+	/// manifest, the assets are endpoints (see <see cref="MapPortal"/>) and this serves only the files the
+	/// client leaves out of it (<c>StaticWebAssetEndpointExclusionPattern</c> in SharpMUSH.Client.csproj):
+	/// every endpoint is held in the route table, built on the first request, so thousands of pictures
+	/// fetched by their plain names cost memory there for nothing.
 	/// </summary>
 	public static IApplicationBuilder UsePortalStaticFiles(this IApplicationBuilder app, string? manifestPath)
 	{
@@ -53,7 +62,14 @@ public static class PortalStaticFiles
 		{
 			app.UseBlazorFrameworkFiles();
 			app.UseStaticFiles();
+			return app;
 		}
+
+		// A request an asset endpoint matched is left to that endpoint by the middleware itself.
+		app.UseStaticFiles(new StaticFileOptions
+		{
+			OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = UnlistedCacheControl,
+		});
 
 		return app;
 	}
