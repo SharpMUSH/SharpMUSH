@@ -1,4 +1,5 @@
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Models;
 
@@ -20,6 +21,39 @@ public readonly record struct AttributeFunction(AnySharpObject Owner, string Nam
 	/// as written.
 	/// </summary>
 	public bool NoEval { get; init; }
+
+	/// <summary>
+	/// The <c>#lambda</c> this is, when it is one. A lambda runs in its caller's frame with only its arguments
+	/// and <c>%=</c> its own: the executor, caller and dialect stay the caller's.
+	/// </summary>
+	public LambdaEvaluation? Lambda { get; init; }
+
+	/// <summary>
+	/// The <c>#lambda</c> <paramref name="specifier"/> names (<c>#lambda/&lt;code&gt;</c>, everything after the first
+	/// <c>/</c> its code), run by <paramref name="executor"/> inside <paramref name="enclosing"/>; or
+	/// <see cref="NotFound"/> when it names no <c>#lambda</c>. A list function resolves it once and runs it per item.
+	/// </summary>
+	public static Found<AttributeFunction> OfLambda(AnySharpObject executor, MString specifier, DBAttribute? enclosing)
+	{
+		var slash = specifier.IndexOf("/");
+		var head = (slash < 0 ? specifier : specifier.Substring(0, slash)).ToPlainText();
+		if (!head.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase))
+		{
+			return new NotFound();
+		}
+
+		var code = slash < 0
+			? MString.Empty
+			: MString.Join(MString.Plain("/"), specifier.Split("/").Skip(1));
+		return OfLambdaCode(executor, code, enclosing);
+	}
+
+	/// <summary>A <c>#lambda</c> whose code is <paramref name="code"/>, run by <paramref name="executor"/> inside <paramref name="enclosing"/>.</summary>
+	public static AttributeFunction OfLambdaCode(AnySharpObject executor, MString code, DBAttribute? enclosing)
+		=> new(executor, "#LAMBDA", code)
+		{
+			Lambda = new LambdaEvaluation(executor.Object().DBRef, code.ToPlainText(), DBAttribute.Scope(enclosing))
+		};
 
 	/// <summary><paramref name="attribute"/>, read from <paramref name="owner"/>, to be run as a function.</summary>
 	public static AttributeFunction Of(AnySharpObject owner, SharpAttribute attribute)

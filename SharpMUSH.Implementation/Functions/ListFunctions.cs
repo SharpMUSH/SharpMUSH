@@ -1733,6 +1733,7 @@ public partial class Functions
 	/// Evaluates a #lambda or #apply expression for each item in a list, the item as %0 and, when
 	/// <paramref name="withPosition"/>, its position from 1 as %1, as map() passes them;
 	/// <paramref name="extraArguments"/>, when given, follow as %1, %2, ...
+	/// A #lambda is resolved once, and each item is one call of it.
 	/// </summary>
 	private async ValueTask<List<MString>> EvaluateLambdaOrApplyForEachItemAsync(
 		IMUSHCodeParser parser,
@@ -1744,6 +1745,7 @@ public partial class Functions
 		Dictionary<string, CallState>? extraArguments = null)
 	{
 		var results = new List<MString>(list.Length);
+		var lambda = AttributeFunction.OfLambda(executor, rawAttrArg, parser.CurrentState.CurrentEvaluation);
 		for (var position = 0; position < list.Length; position++)
 		{
 			var item = list[position];
@@ -1753,11 +1755,11 @@ public partial class Functions
 				arguments.TryAdd(key, value);
 			}
 
-			var evaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
-				parser,
-				executor,
-				rawAttrArg,
-				arguments);
+			var evaluated = lambda switch
+			{
+				AttributeFunction function => await AttributeService.CallAttributeFunctionAsync(parser, function, arguments, arguments),
+				NotFound => await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, rawAttrArg, arguments)
+			};
 			results.Add(errors.Record(evaluated));
 		}
 

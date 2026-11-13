@@ -104,6 +104,11 @@ internal sealed class AttributeEvaluator(
 	private async ValueTask<CallState> RunAsOwnerAsync(IMUSHCodeParser parser, AttributeFunction function,
 		Dictionary<string, CallState>? arguments, Dictionary<string, CallState>? environment)
 	{
+		if (function.Lambda is { } lambda)
+		{
+			return await RunLambdaAsync(parser, function.Code, lambda, arguments, environment);
+		}
+
 		var (owner, attributeName, code, dialect) = function;
 		var runner = function.RunAs ?? owner;
 
@@ -165,6 +170,18 @@ internal sealed class AttributeEvaluator(
 				recursionDepths[attributeName] = currentDepth - 1;
 			}
 		}
+	}
+
+	/// <summary>
+	/// A <c>#lambda</c> runs in its caller's frame: no HALT or recursion check of its own, and the executor,
+	/// caller and dialect stay the caller's. Only its %0-%9, environment and <c>%=</c> change.
+	/// </summary>
+	private static async ValueTask<CallState> RunLambdaAsync(IMUSHCodeParser parser, MString code, LambdaEvaluation lambda,
+		Dictionary<string, CallState>? arguments, Dictionary<string, CallState>? environment)
+	{
+		EvaluationRestrictions.DemandObjectDataAccess(parser.CurrentState.Restrictions);
+		var frame = parser.CurrentState.ForLambdaCall(arguments, environment, lambda);
+		return await parser.Push(frame).FunctionParse(code) ?? CallState.Empty;
 	}
 
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
@@ -295,16 +312,8 @@ internal sealed class AttributeEvaluator(
 
 		if (lambdaPredicate && !ignoreLambda)
 		{
-			var result = await parser.With(s => s with
-			{
-				Arguments = args,
-				EnvironmentRegisters = args,
-				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(args),
-				CurrentEvaluation = new LambdaEvaluation(executor.Object().DBRef, attribute.ToPlainText(),
-					DBAttribute.Scope(s.CurrentEvaluation))
-			},
-				async np => await np.FunctionParse(attribute));
-			return result ?? CallState.Empty;
+			return await RunAsOwnerAsync(parser,
+				AttributeFunction.OfLambdaCode(executor, attribute, parser.CurrentState.CurrentEvaluation), args, args);
 		}
 
 		var maybeObject =
