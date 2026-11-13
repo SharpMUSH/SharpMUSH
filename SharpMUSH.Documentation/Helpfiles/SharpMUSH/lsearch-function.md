@@ -70,6 +70,7 @@ search() and lsearch() also take the one-argument form RhostMUSH and TinyMUSH us
 - [@find]
 - [LPARENT()]
 - [LSTATS()]
+- [cache()]
 :::
 
 ## The INDEX class

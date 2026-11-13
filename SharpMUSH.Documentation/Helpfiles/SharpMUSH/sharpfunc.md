@@ -867,30 +867,6 @@ think brackets(v(desc))
 - [Bitwise functions]
 - [LMATH()]
 :::
-# cache()
-`cache(<object>, <attribute>, <value>[, <window>[, <sliding?>]])`
-
-  Returns `<object>`/`<attribute>` while it was set less than `<window>` seconds ago. Otherwise it evaluates `<value>`, sets the attribute to the result and returns it. `<value>` is evaluated only when the attribute is missing or too old, so cache() saves the cost of slow code whose answer changes rarely, such as a long lsearch().
-
-  `<window>` is 3600 (one hour) when left out; 0 always evaluates. A `<window>` that is not a whole number returns #-1 ARGUMENT MUST BE INTEGER, and a negative one #-1 ARGUMENT MUST BE POSITIVE INTEGER. If `<sliding?>` is true, returning the stored value also sets it again, which restarts its window.
-
-  The attribute holds only the value; its age is its own modification time (see mtime()). Clear it with attrib_set() or wipe() to make the next call evaluate. You must control `<object>`, or cache() returns #-1 NO PERMISSION TO SET ATTRIBUTE without evaluating `<value>`. A value that cannot be stored, such as one too long, is still returned. Nothing is printed. Where side-effect functions are off, cache() returns #-1 FUNCTION DISABLED.
-
-```sharp
-think cache(me,CACHE`ROOMS,words(lsearch(all,type,room)),600)
-think cache(me,CACHE`ROOMS,words(lsearch(all,type,room)),600)
-```
-
-  Output: the number of rooms, twice. The second call reads CACHE`ROOMS instead of searching again.
-
-::: seealso
-- [GET()]
-- [DEFAULT()]
-- [MTIME()]
-- [ATTRIB_SET()]
-- [WIPE()]
-- [MEMO()]
-:::
 # capstr()
 `capstr(<string>)`
 
