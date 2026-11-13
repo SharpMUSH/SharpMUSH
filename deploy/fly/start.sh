@@ -26,6 +26,12 @@ STATE=$DATA/state
 DOMAIN=${SHARPMUSH_DOMAIN:-${FLY_APP_NAME:+$FLY_APP_NAME.fly.dev}}
 DOMAIN=${DOMAIN:-${RAILWAY_PUBLIC_DOMAIN:-}}
 DOMAIN=${DOMAIN:-localhost:8000}
+# A host's proxy (Fly's, Railway's) ends TLS in front of :8000. On the owner's own computer nothing
+# does, so the link is plain HTTP: a browser treats localhost as secure, so nothing is lost.
+case "$DOMAIN" in
+	localhost | localhost:* | 127.* | '[::1]' | '[::1]:'*) SCHEME=http SECURE_COOKIE= ;;
+	*) SCHEME=https SECURE_COOKIE='; Secure' ;;
+esac
 GUARD_PORT=14201
 export SHARPMUSH_SERVER_ADDRESS=${SHARPMUSH_SERVER_ADDRESS:-127.0.0.1:8080}
 
@@ -47,7 +53,7 @@ if guard_on; then
 	cat > "$STATE/guard/guard.caddy" <<EOF
 route {
 	@setup_link query setup_code=$code
-	header @setup_link Set-Cookie "sharpmush_setup=$code; Path=/; Max-Age=604800; HttpOnly; Secure; SameSite=Lax"
+	header @setup_link Set-Cookie "sharpmush_setup=$code; Path=/; Max-Age=604800; HttpOnly$SECURE_COOKIE; SameSite=Lax"
 	redir @setup_link /setup 302
 	@locked {
 		not header Cookie *sharpmush_setup=$code*
@@ -151,7 +157,7 @@ trap 'stop_all; exit 0' TERM INT
 if guard_on; then
 	echo
 	echo "  Finish setting up SharpMUSH in your browser (only this link gets in until you do):"
-	echo "    https://$DOMAIN/?setup_code=$code"
+	echo "    $SCHEME://$DOMAIN/?setup_code=$code"
 	if [ -n "${RAILWAY_TCP_PROXY_DOMAIN:-}" ]; then
 		echo "  Telnet opens at $RAILWAY_TCP_PROXY_DOMAIN port ${RAILWAY_TCP_PROXY_PORT:-} once setup is finished."
 	else
