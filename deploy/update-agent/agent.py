@@ -257,13 +257,16 @@ class Agent:
         self.lock = threading.Lock()
         self.job = load_json(STATE / 'job.json')
         self.done = list(load_json(STATE / 'done.json') or [])
-        self.registry = {'digests': {}, 'tags': [], 'readAt': None, 'checked': 0.0}
+        # 'checked' is None until the first read, so the first poll reads it whatever the clock says.
+        self.registry = {'digests': {}, 'tags': [], 'readAt': None, 'checked': None}
         self.reading = threading.Lock()
         self.error = None
 
     def report(self, project):
         found = components(project) if project else {}
-        if project and time.monotonic() - self.registry['checked'] >= REGISTRY_SECONDS and not self.reading.locked():
+        checked = self.registry['checked']
+        due = checked is None or time.monotonic() - checked >= REGISTRY_SECONDS
+        if project and due and not self.reading.locked():
             # Docker Hub can be slow: the poll goes on without waiting for it.
             threading.Thread(target=self.read_registry, args=(found,), daemon=True).start()
         for status in found.values():
@@ -336,7 +339,7 @@ class Agent:
             if missing:
                 raise RuntimeError(f'No {missing[0]} container in project {project.name}.')
             services = {name: found[name]['service'] for name in self.job['components']}
-            self.pull(project, services)
+            self.pull(project, services, found)
             for name, service in services.items():
                 if name == 'socketserver' and socket_not_before:
                     wait_until(socket_not_before)
@@ -348,10 +351,11 @@ class Agent:
         except Exception as error:  # Reported to the portal; the agent keeps polling.
             self.finish('failed', str(error)[:500])
 
-    def pull(self, project, services):
+    def pull(self, project, services, found):
         """Moves .env to the job's tag and pulls every image before anything is replaced; on a failure .env goes back."""
         tag = self.job['tag']
         original = project.env_file.read_text() if project.env_file.exists() else None
+        previous = project.tag_from_env() if tag is not None else None
         if tag is not None:
             if project.tag_from_env() is None:
                 raise RuntimeError("This game's Compose file fixes its image tags; change them there.")
@@ -365,6 +369,8 @@ class Agent:
         self.step(PULL_STEP)
         try:
             compose(project, 'pull', '--quiet', *services.values())
+            if tag is not None and tag != previous:
+                moves_forward(found.get('server'), tag)
         except Exception:
             if tag is not None:
                 if original is None:
@@ -403,13 +409,18 @@ class Agent:
             self.job.update({'state': state, 'step': None, 'message': message, 'finishedAt': iso(now())})
             self.save()
         # A finished update changes the images: read the registry again on the next poll.
-        self.registry['checked'] = 0.0
+        self.registry['checked'] = None
         log(f"update {self.job['id']}: {state}{': ' + message if message else ''}")
 
     def save(self):
-        STATE.mkdir(parents=True, exist_ok=True)
-        write_json(STATE / 'job.json', self.job)
-        write_json(STATE / 'done.json', self.done)
+        # A full or read-only state volume must not stop an update half way, or leave a job marked
+        # running with no worker: the state is only for after a restart, and the portal shows the job.
+        try:
+            STATE.mkdir(parents=True, exist_ok=True)
+            write_json(STATE / 'job.json', self.job)
+            write_json(STATE / 'done.json', self.done)
+        except OSError as error:
+            log(f'state not saved: {error}')
 
     def resume(self):
         """A job the agent was running when it stopped cannot be trusted half done: report it failed."""
@@ -418,6 +429,20 @@ class Agent:
                 self.job.update({'state': 'failed', 'step': None, 'finishedAt': iso(now()),
                                  'message': 'The update agent restarted during the update; check each component and run it again.'})
                 self.save()
+
+
+def moves_forward(server, tag):
+    """Refuses a move whose pulled server is not a newer release than the running one: an older server
+    refuses a world a newer one wrote. Catches what the server cannot see, such as latest naming an older
+    release than a running prerelease."""
+    running = (server or {}).get('version') or ''
+    if tag == 'dev' or not RELEASE.fullmatch(running):
+        return
+    images = present('image', [f"{server['image']}:{tag}"])
+    labels = ((images[0].get('Config') or {}).get('Labels') or {}) if images else {}
+    pulled = labels.get('org.opencontainers.image.version') or ''
+    if not RELEASE.fullmatch(pulled) or release_key(pulled) <= release_key(running):
+        raise RuntimeError(f'{tag} is {pulled or "an unknown version"}, not newer than the running {running}; nothing was replaced.')
 
 
 def compose(project, *args):

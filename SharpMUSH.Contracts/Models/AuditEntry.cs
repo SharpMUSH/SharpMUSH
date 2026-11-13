@@ -202,7 +202,7 @@ public static class AuditActions
 		RoleSave, RoleDelete, RoleAssign, RoleUnassign, RoleOverride, PermissionDefine, PermissionRemove,
 		CategorySave, CategoryRename, CategoryDelete, SitelockAdd, SitelockRemove,
 		BannedNameAdd, BannedNameRemove, ConfigSet, ConfigImport, RestrictionSet, RestrictionClear,
-		PluginEnable, PluginDisable, PluginUpload, PluginInstall, PackagePastMaximum, ServerRestart, SecretSet, SecretClear, SecretHosts,
+		PluginEnable, PluginDisable, PluginUpload, PluginInstall, PackagePastMaximum, ServerRestart, ServerUpdate, SecretSet, SecretClear, SecretHosts,
 		AppSave, AppDelete, FeedLineDelete, NavigationSave, NavigationReset, ObjectDestroy, ObjectRecover, RecoverKeep,
 		RecoverUnkeep, RecoverPurge
 	];

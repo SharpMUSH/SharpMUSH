@@ -69,6 +69,7 @@ public sealed partial class ComponentUpdateCoordinator(string? token, TimeProvid
 	private DateTimeOffset? _seenAt;
 	private UpdateJobStatus? _job;
 	private string? _notice;
+	private Guid? _warning;
 
 	/// <summary>Whether this server was given an agent token.</summary>
 	public bool Configured => _tokenHash is not null;
@@ -117,7 +118,9 @@ public sealed partial class ComponentUpdateCoordinator(string? token, TimeProvid
 			_seenAt = time.GetUtcNow();
 			if (report.Job is { } reported) Follow(reported);
 			ExpireUnclaimed();
-			answer = _job is { State: UpdateJobStates.Queued } queued && report.Job is not { State: UpdateJobStates.Running }
+			// A job whose warning to players is still being sent is not handed over yet.
+			answer = _job is { State: UpdateJobStates.Queued } queued && queued.Id != _warning
+				&& report.Job is not { State: UpdateJobStates.Running }
 				? new UpdateAgentJob(queued.Id, queued.Components, queued.Tag, queued.SocketNotBefore)
 				: new NotFound();
 		}
@@ -129,6 +132,7 @@ public sealed partial class ComponentUpdateCoordinator(string? token, TimeProvid
 	public async ValueTask<Result<UpdateJobStatus>> QueueAsync(AdminUpdateRequest request, string requestedBy)
 	{
 		UpdateJobStatus job;
+		UpdateJobStatus? before;
 		lock (_gate)
 		{
 			ExpireUnclaimed();
@@ -146,9 +150,29 @@ public sealed partial class ComponentUpdateCoordinator(string? token, TimeProvid
 				null,
 				null,
 				null);
+			before = _job;
 			_job = job;
+			if (job.SocketNotBefore is not null) _warning = job.Id;
 		}
-		if (job.SocketNotBefore is not null) await broadcast.BroadcastAsync(SocketWarning(request.SocketDelaySeconds));
+		if (job.SocketNotBefore is null) return job;
+		try
+		{
+			await broadcast.BroadcastAsync(SocketWarning(request.SocketDelaySeconds));
+		}
+		catch
+		{
+			// Players were not warned, so the agent never gets it: the panel goes back to what it showed.
+			lock (_gate)
+			{
+				if (_job?.Id == job.Id) _job = before;
+				_warning = null;
+			}
+			throw;
+		}
+		lock (_gate)
+		{
+			if (_warning == job.Id) _warning = null;
+		}
 		return job;
 	}
 
@@ -175,6 +199,8 @@ public sealed partial class ComponentUpdateCoordinator(string? token, TimeProvid
 	{
 		if (target == current) return true;
 		if (current == "dev") return false;
+		// What latest names is only known once pulled: the agent checks the pulled server's version and
+		// refuses one that is not newer.
 		if (target is "dev" or "latest") return true;
 		return (Release.Parse(current) ?? Release.Parse(runningVersion), Release.Parse(target)) is ({ } from, { } to) && to.CompareTo(from) > 0;
 	}

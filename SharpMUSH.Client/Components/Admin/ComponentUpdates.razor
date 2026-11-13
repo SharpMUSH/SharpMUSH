@@ -104,8 +104,10 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Taken before the await: the page may close, and dispose _closed, while the first read is out.
+        var closed = _closed.Token;
         await ReadAsync();
-        _ = RefreshAsync(_closed.Token);
+        if (!closed.IsCancellationRequested) _ = RefreshAsync(closed);
     }
 
     private async Task RefreshAsync(CancellationToken closed)

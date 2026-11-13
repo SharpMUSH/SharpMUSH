@@ -267,4 +267,16 @@ public class ComponentUpdateCoordinatorTests
 		await Assert.That(controller.Poll(Report())).IsTypeOf<NotFoundResult>();
 		await Assert.That(coordinator.Status(0, 0).AgentSeenAt).IsNull();
 	}
+
+	[Test]
+	public async Task AnUpdateWhoseWarningFailsIsNeverHandedOver()
+	{
+		var (coordinator, _, broadcast) = Create();
+		broadcast.BroadcastAsync(default!).ReturnsForAnyArgs(_ => throw new InvalidOperationException("bus down"));
+		coordinator.Poll(Report());
+		await Assert.That(async () => await coordinator.QueueAsync(new AdminUpdateRequest([ServerComponents.SocketServer], null, 60), "admin"))
+			.Throws<InvalidOperationException>();
+		coordinator.Poll(Report()).Expect<SharpMUSH.Library.DiscriminatedUnions.NotFound>();
+		await Assert.That(coordinator.Status(0, 0).Job).IsNull();
+	}
 }

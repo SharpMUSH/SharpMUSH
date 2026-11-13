@@ -294,5 +294,52 @@ class AcceptTests(unittest.TestCase):
         self.assertNotIn('00000000-0000-4000-8000-000000000000', self.agent.done)
 
 
+class MovesForwardTests(unittest.TestCase):
+    SERVER = {'image': 'sharpmush/sharpmush-server', 'version': '2.0.0-rc.1'}
+
+    def pulled(self, version):
+        return mock.patch.object(agent, 'present', return_value=[{'Config': {'Labels': {'org.opencontainers.image.version': version}}}])
+
+    def test_latest_naming_an_older_release_is_refused(self):
+        with self.pulled('1.9.0'):
+            with self.assertRaises(RuntimeError) as refused:
+                agent.moves_forward(self.SERVER, 'latest')
+        self.assertIn('not newer than the running 2.0.0-rc.1', str(refused.exception))
+
+    def test_a_newer_release_passes(self):
+        with self.pulled('2.0.0'):
+            agent.moves_forward(self.SERVER, 'latest')
+
+    def test_a_server_on_dev_is_left_to_the_game_server_to_judge(self):
+        with mock.patch.object(agent, 'present') as present:
+            agent.moves_forward({'image': 'sharpmush/sharpmush-server', 'version': 'dev'}, '1.0.0')
+        present.assert_not_called()
+
+
+class RegistryAndStateTests(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        patcher = mock.patch.object(agent, 'STATE', Path(self.directory.name) / 'state')
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.addCleanup(self.directory.cleanup)
+
+    def test_the_first_poll_reads_the_registry_whatever_the_clock_says(self):
+        worker = agent.Agent()
+        with mock.patch.object(agent, 'components', return_value={}), \
+                mock.patch.object(agent.time, 'monotonic', return_value=120.0), \
+                mock.patch.object(agent.threading, 'Thread') as thread:
+            worker.report(mock.Mock(tag_from_env=mock.Mock(return_value='1.0.0')))
+        thread.return_value.start.assert_called_once()
+
+    def test_a_job_starts_even_when_its_state_cannot_be_saved(self):
+        worker = agent.Agent()
+        with mock.patch.object(agent, 'write_json', side_effect=OSError('No space left on device')), \
+                mock.patch.object(agent.threading, 'Thread') as thread:
+            started = worker.accept({'id': JOB_ID, 'components': ['renderer'], 'tag': None})
+        self.assertTrue(started)
+        thread.return_value.start.assert_called_once()
+
+
 if __name__ == '__main__':
     unittest.main()
