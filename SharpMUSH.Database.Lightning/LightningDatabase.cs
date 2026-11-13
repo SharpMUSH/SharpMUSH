@@ -24,7 +24,7 @@ namespace SharpMUSH.Database.Lightning;
 /// <see cref="LightningStagingDatabase"/> and unit-test fixtures that bypass the host's Mediator cache
 /// pass <see langword="null"/> — see the <see cref="_relations"/> field doc for why.
 /// </param>
-/// <param name="clock">What an object's modification time is stamped from; the system clock when omitted.</param>
+/// <param name="clock">What object and attribute modification times are stamped from; the system clock when omitted.</param>
 public partial class LightningDatabase(
 	ILogger<LightningDatabase> logger,
 	LightningStoreOptions options,

@@ -26,6 +26,13 @@ public record SharpAttribute(
 	public bool IsMetadataUnreadable { get; init; }
 
 	public MString Value { get; set; } = MarkupText.Empty;
+
+	/// <summary>
+	/// When the value was last written, in Unix milliseconds (UTC): what <c>mtime(&lt;object&gt;/&lt;attribute&gt;)</c>
+	/// reads. Null when the store does not know, as for an attribute written before attributes carried the time.
+	/// </summary>
+	[JsonIgnore]
+	public long? ModifiedTime { get; init; }
 }
 
 public record LazySharpAttribute(

@@ -40,6 +40,7 @@ The code sees only its arguments: it starts with no q-registers and the ones it 
 ::: seealso
 - [u()]
 - [ulocal()]
+- [cache()]
 :::
 
 ## Refused code
