@@ -165,7 +165,8 @@ public sealed partial class ComponentUpdateCoordinator(string? token, TimeProvid
 			lock (_gate)
 			{
 				if (_job?.Id == job.Id) _job = before;
-				_warning = null;
+				// Another update may have been queued meanwhile, once this one expired: its warning is its own.
+				if (_warning == job.Id) _warning = null;
 			}
 			throw;
 		}
