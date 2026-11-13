@@ -64,6 +64,14 @@
 		<StaticWebAssetFingerprintPattern Include="JSModule" Pattern="*.js" Expression="#[.{fingerprint}]!" />
 	</ItemGroup>
 
+	<PropertyGroup>
+		<!-- No endpoints for the Sharpie artwork: 5,400 pictures, each a plain and a fingerprinted route, were
+		     two thirds of the manifest, and the server's route table holds every route (~150 MB on the first
+		     request). The files are still published; the server serves them with the static-file
+		     middleware (PortalStaticFiles.UsePortalStaticFiles). The portal asks for them by plain name. -->
+		<StaticWebAssetEndpointExclusionPattern>images/sharpie/**</StaticWebAssetEndpointExclusionPattern>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<PackageReference Include="BlazorMonaco" Version="3.5.0" />
 		<PackageReference Include="MessageFormat" Version="8.0.0" />

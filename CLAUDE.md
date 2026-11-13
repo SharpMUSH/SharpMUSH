@@ -172,7 +172,7 @@ MUSH-specific policy (space-list semantics, `compressSpaces`, glob-to-regex, col
 
 ### Web Portal (SharpMUSH.Client)
 
-The portal is a Blazor WASM app served by `SharpMUSH.Server` (SPA fallback: all non-API, non-file routes → `index.html`, sent `Cache-Control: no-cache`). A published image serves the assets through `MapStaticAssets` from the client's `SharpMUSH.Client.staticwebassets.endpoints.json`, copied into the server's content root by the `Dockerfile`: fingerprinted files get `immutable` caching and every asset its precompressed `.br`/`.gz`. Without the manifest (dev runs, test hosts) it falls back to `UseBlazorFrameworkFiles` + `UseStaticFiles`. See `SharpMUSH.Server/PortalStaticFiles.cs`.
+The portal is a Blazor WASM app served by `SharpMUSH.Server` (SPA fallback: all non-API, non-file routes → `index.html`, sent `Cache-Control: no-cache`). A published image serves the assets through `MapStaticAssets` from the client's `SharpMUSH.Client.staticwebassets.endpoints.json`, copied into the server's content root by the `Dockerfile`: fingerprinted files get `immutable` caching and every asset its precompressed `.br`/`.gz`. Every endpoint stays in the route table, so a large folder fetched by plain name (the Sharpie artwork) is left out of the manifest with `StaticWebAssetEndpointExclusionPattern` in the client's csproj and served by the static-file middleware instead. Without the manifest (dev runs, test hosts) it falls back to `UseBlazorFrameworkFiles` + `UseStaticFiles`. See `SharpMUSH.Server/PortalStaticFiles.cs`.
 
 Startup is on the critical path of every visit: `Program.cs` awaits nothing on the network before the
 first render, and a request the first render needs goes out alongside the others rather than after
