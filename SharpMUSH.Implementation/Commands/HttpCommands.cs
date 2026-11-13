@@ -27,10 +27,10 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 
-		parser.CurrentState.Arguments.TryGetValue("0", out var objAttrArg);
-		parser.CurrentState.Arguments.TryGetValue("1", out var uriArg);
-		parser.CurrentState.Arguments.TryGetValue("2", out var dataArg);
-		parser.CurrentState.Arguments.TryGetValue("3", out var headersArg);
+		parser.CurrentState.ArgumentList.TryGet(0, out var objAttrArg);
+		parser.CurrentState.ArgumentList.TryGet(1, out var uriArg);
+		parser.CurrentState.ArgumentList.TryGet(2, out var dataArg);
+		parser.CurrentState.ArgumentList.TryGet(3, out var headersArg);
 
 		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.GameWizard, PortalPermission.GamePower("CAN_HTTP"))) is PermissionRefusal refused)
 		{
@@ -477,7 +477,7 @@ public partial class Commands
 
 		if (hasTypeSwitch)
 		{
-			parser.CurrentState.Arguments.TryGetValue("0", out var contentTypeArg);
+			parser.CurrentState.ArgumentList.TryGet(0, out var contentTypeArg);
 			if (contentTypeArg is null || string.IsNullOrWhiteSpace(contentTypeArg.Message.ToPlainText()))
 			{
 				await NotifyService.Notify(executor, "Content-Type cannot be empty.", executor);
@@ -498,8 +498,8 @@ public partial class Commands
 		else if (hasHeaderSwitch)
 		{
 			// With EqSplit, arg 0 is header name, arg 1 is header value
-			parser.CurrentState.Arguments.TryGetValue("0", out var headerNameArg);
-			parser.CurrentState.Arguments.TryGetValue("1", out var headerValueArg);
+			parser.CurrentState.ArgumentList.TryGet(0, out var headerNameArg);
+			parser.CurrentState.ArgumentList.TryGet(1, out var headerValueArg);
 
 			if (headerNameArg is null)
 			{
@@ -534,7 +534,7 @@ public partial class Commands
 		else
 		{
 			// With EqSplit, the entire "code text" comes in arg[0], need to manually split on first space
-			parser.CurrentState.Arguments.TryGetValue("0", out var statusArg);
+			parser.CurrentState.ArgumentList.TryGet(0, out var statusArg);
 
 			if (statusArg is null)
 			{

@@ -110,7 +110,7 @@ public partial class Functions
 	/// </summary>
 	private ValueTask<CallState> RegMatchInternal(IMUSHCodeParser parser, bool caseInsensitive)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var str = args["0"].Message.ToPlainText();
 		var pattern = args["1"].Message.ToPlainText();
 
@@ -243,7 +243,7 @@ public partial class Functions
 	/// </summary>
 	private ValueTask<CallState> RegGrabInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var list = args["0"].Message;
 		var pattern = args["1"].Message.ToPlainText();
 		var delimiter = ArgHelpers.Delimiter(parser.CurrentState.ArgumentsOrdered, 2);
@@ -289,7 +289,7 @@ public partial class Functions
 	/// </summary>
 	private ValueTask<CallState> RegLMatchInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var list = args["0"].Message;
 		var pattern = args["1"].Message.ToPlainText();
 		var delimiter = ArgHelpers.Delimiter(parser.CurrentState.ArgumentsOrdered, 2);
@@ -348,7 +348,7 @@ public partial class Functions
 	/// </remarks>
 	private async ValueTask<CallState> RegSwitchInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
 	{
-		var input = await parser.CurrentState.Arguments["0"].GetParsedResultAsync();
+		var input = await parser.CurrentState.ArgumentList[0].GetParsedResultAsync();
 		var hadErrors = input.HadErrors;
 		var subject = input.Message;
 		var str = subject.ToPlainText();
@@ -455,9 +455,9 @@ public partial class Functions
 		ParameterNames = ["string", "pattern", "replacement", "flags"])]
 	public ValueTask<CallState> RegReplace(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var pattern = parser.CurrentState.Arguments["1"].Message.ToPlainText();
-		var replacement = parser.CurrentState.Arguments["2"].Message.ToPlainText();
+		var str = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var pattern = parser.CurrentState.ArgumentList[1].Message.ToPlainText();
+		var replacement = parser.CurrentState.ArgumentList[2].Message.ToPlainText();
 		var flags = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, "").ToPlainText().ToLowerInvariant();
 
 		try

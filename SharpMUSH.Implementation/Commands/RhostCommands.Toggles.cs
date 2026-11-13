@@ -30,7 +30,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> ToggleCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var target = args.TryGetValue("0", out var first) ? first.Message!.ToPlainText().Trim() : string.Empty;
 		var toggles = args.TryGetValue("1", out var second) ? second.Message!.ToPlainText().Trim() : string.Empty;
 		var switches = parser.CurrentState.Switches.ToArray();
@@ -170,7 +170,7 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> DefinitionPermissionsAsync(IMUSHCodeParser parser, DefinitionKind kind)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var name = args.TryGetValue("0", out var first) ? first.Message!.ToPlainText().Trim() : string.Empty;
 		var words = args.TryGetValue("1", out var second) ? second.Message!.ToPlainText() : string.Empty;
 		var switches = parser.CurrentState.Switches.ToArray();

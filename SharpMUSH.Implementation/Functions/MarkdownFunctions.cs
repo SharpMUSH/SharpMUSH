@@ -25,7 +25,7 @@ public partial class Functions
 	public async ValueTask<CallState> RenderMarkdown(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		var markdown = "";
 		if (args.TryGetValue("0", out var markdownArg))
@@ -69,7 +69,7 @@ public partial class Functions
 	[SharpFunction(Name = "rendermarkdowncustom", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["text"])]
 	public async ValueTask<CallState> RenderMarkdownCustom(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var markdown = "";

@@ -1021,7 +1021,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		var newParser = parser.Push(parser.CurrentState with
 		{
 			Command = "HUH_COMMAND",
-			Arguments = [],
+			ArgumentList = ArgumentList.NewEmpty(),
 			Function = null
 		});
 

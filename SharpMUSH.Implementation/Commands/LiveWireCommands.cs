@@ -53,7 +53,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NotFound);
 		}
 
-		var value = parser.CurrentState.Arguments.ContainsKey("1") ? PlainArgument(parser, "1").Trim() : "";
+		var value = parser.CurrentState.ArgumentList.Contains(1) ? PlainArgument(parser, "1").Trim() : "";
 		var token = ExecutionBudget.CurrentToken;
 		return operation switch
 		{

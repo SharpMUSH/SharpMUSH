@@ -45,7 +45,7 @@ public partial class Functions
 		ParameterNames = ["object/attribute/role", "arguments..."])]
 	public async ValueTask<CallState> UEval(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var selector = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var selector = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 		var cut = selector.LastIndexOf('/');
 		if (cut < 0) return new CallState(ErrorMessages.Returns.NoLevelSpecified);
 

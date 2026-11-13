@@ -140,7 +140,7 @@ public partial class Functions
 	[SharpFunction(Name = "wshtml", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["html", "default"])]
 	public async ValueTask<CallState> WsHtml(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var html = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var html = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 		var privileged = await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator));
 
 		return HtmlFragment.Parse(html, privileged ? AnyElement : TagwrapPolicy.Wrap) switch
@@ -331,7 +331,7 @@ public partial class Functions
 	/// </summary>
 	[SharpFunction(Name = "preformat", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["text"])]
 	public ValueTask<CallState> Preformat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult(new CallState(MarkupText.Preformatted(parser.CurrentState.Arguments["0"].Message)));
+		=> ValueTask.FromResult(new CallState(MarkupText.Preformatted(parser.CurrentState.ArgumentList[0].Message)));
 
 	/// <summary>
 	/// <c>clearscreen()</c> — clears what the player has been shown: <c>ESC[H ESC[2J</c> for a terminal,
@@ -356,7 +356,7 @@ public partial class Functions
 			return PermissionRefusal.Needs(OobScopes).Return;
 		}
 
-		var address = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
+		var address = parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim();
 
 		return address.Length == 0 || address.Any(char.IsControl)
 			? new CallState(ErrorMessages.Returns.InvalidArgument)

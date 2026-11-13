@@ -410,7 +410,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>, IConfigured
 	private async ValueTask<CallState?> RejectIfTooFewArguments(IMUSHCodeParser parser,
 		SharpCommandAttribute attribute)
 	{
-		var count = parser.CurrentState.Arguments.Count;
+		var count = parser.CurrentState.ArgumentList.Count;
 		if (count >= attribute.MinArgs)
 		{
 			return null;
@@ -438,7 +438,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>, IConfigured
 	private async ValueTask<CallState?> RejectIfTooFewArguments(IMUSHCodeParser parser, int minimum,
 		AnySharpObject notified, string usageKey, string errorReturn)
 	{
-		if (parser.CurrentState.Arguments.Count >= minimum)
+		if (parser.CurrentState.ArgumentList.Count >= minimum)
 		{
 			return null;
 		}

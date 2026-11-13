@@ -32,7 +32,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Find(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		string Arg(string key) => args.TryGetValue(key, out var value) ? value.Message.ToPlainText().Trim() ?? "" : "";
 
@@ -105,7 +105,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Scan(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var arg0 = parser.CurrentState.Arguments["0"].Message;
+		var arg0 = parser.CurrentState.ArgumentList[0].Message;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches.Any()
 			? parser.CurrentState.Switches.ToArray()
@@ -329,7 +329,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Search(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		var (playerText, pairs) = ParseSearchCommandArgs(args);
 
@@ -547,7 +547,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> WhereIs(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (args.Count == 0)
 		{
@@ -606,7 +606,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0, ParameterNames = ["object", "name"])]
 	public async ValueTask<Option<CallState>> Decompile(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -875,7 +875,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Entrances(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 
 		var targetName = args.TryGetValue("0", out var arg0) ? arg0.Message.ToPlainText() : null;
@@ -955,7 +955,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.NoGagged, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "pattern"])]
 	public async ValueTask<Option<CallState>> Grep(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);

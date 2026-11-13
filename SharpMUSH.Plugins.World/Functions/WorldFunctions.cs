@@ -35,7 +35,7 @@ public static class WorldFunctions
 	private sealed record Reading(AnySharpObject Map, WorldMapRecord Record, WorldStore Store, WorldLegend Legend, bool Examine);
 
 	private static string Arg(IMUSHCodeParser parser, int index) =>
-		parser.CurrentState.Arguments.TryGetValue(index.ToString(), out var arg) ? arg.Message?.ToPlainText().Trim() ?? "" : "";
+		parser.CurrentState.ArgumentList.TryGetValue(index.ToString(), out var arg) ? arg.Message?.ToPlainText().Trim() ?? "" : "";
 
 	private static async ValueTask<CallState> ReadAsync(IMUSHCodeParser parser, Func<Reading, ValueTask<CallState>> read)
 	{
@@ -221,7 +221,7 @@ public static class WorldFunctions
 			var radius = 3;
 			if (Arg(parser, 4) is { Length: > 0 } given && (!int.TryParse(given, out radius) || radius is < 0 or > MaxRadius))
 				return new CallState(BadRadius);
-			var mark = parser.CurrentState.Arguments.TryGetValue("5", out var markArg) ? markArg.Message?.ToPlainText() ?? "" : "";
+			var mark = parser.CurrentState.ArgumentList.TryGet(5, out var markArg) ? markArg.Message?.ToPlainText() ?? "" : "";
 
 			var dbref = reading.Map.Object().DBRef;
 			var window = reading.Store.Window(dbref, at.Z, at.X - radius, at.Y - radius, at.X + radius, at.Y + radius);
@@ -303,7 +303,7 @@ public static class WorldFunctions
 			var executor = await WorldMaps.ExecutorAsync(parser);
 			if (!await parser.ServiceProvider.GetRequiredService<IPermissionService>().Controls(executor, reading.Map))
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			var at = parser.CurrentState.Arguments.Count == 2 ? WorldPosition.Parse(Arg(parser, 1)) : Position(parser);
+			var at = parser.CurrentState.ArgumentList.Count == 2 ? WorldPosition.Parse(Arg(parser, 1)) : Position(parser);
 			if (at is not { } place) return new CallState(BadPlace);
 			return await parser.ServiceProvider.GetRequiredService<WorldRooms>().RoomAsync(reading.Map, reading.Record, place) switch
 			{

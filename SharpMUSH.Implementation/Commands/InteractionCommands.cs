@@ -84,7 +84,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var objectName = args["0"].Message.ToPlainText();
 
 		var locateResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, LocateFlags.All);
@@ -244,7 +244,7 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await RefusedNonHolder(executor) is not AnySharpContainer emptier) return CallState.Empty;
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var objectName = args["0"].Message.ToPlainText();
 
 		// move.c:809-812: an unmatchable name is noisy_match_result's refusal, not a usage line.
@@ -461,7 +461,7 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await RefusedNonHolder(executor) is not AnySharpContainer) return CallState.Empty;
-		var what = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var what = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		if (string.IsNullOrWhiteSpace(what))
 		{
@@ -796,7 +796,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		var recipientName = args["0"].Message.ToPlainText();
 		var thingToGive = args["1"].Message.ToPlainText();
@@ -1054,7 +1054,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (switches.Contains("LIST"))
 		{
@@ -1101,7 +1101,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Use(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message.ToPlainText()))
 		{
@@ -1213,7 +1213,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> With(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message.ToPlainText()))

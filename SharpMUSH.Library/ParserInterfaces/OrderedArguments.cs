@@ -47,6 +47,9 @@ public sealed class OrderedArguments : IReadOnlyDictionary<string, CallState>
 		return new OrderedArguments(values, null, null);
 	}
 
+	/// <summary>Values bound as <c>"0"</c>…<c>"n-1"</c>, kept as the array itself.</summary>
+	internal static OrderedArguments Of(CallState[] values) => values.Length == 0 ? Empty : new OrderedArguments(values, null, null);
+
 	/// <summary>Any other binding: named entries dropped, the rest sorted by number.</summary>
 	private static OrderedArguments Sorted(Dictionary<string, CallState> arguments)
 	{

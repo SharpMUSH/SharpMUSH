@@ -24,7 +24,7 @@ public partial class Functions
 		ParameterNames = ["object", "depower"])]
 	public async ValueTask<CallState> HasDepower(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var name = parser.CurrentState.Arguments["1"].Message.ToPlainText().Trim();
+		var name = parser.CurrentState.ArgumentList[1].Message.ToPlainText().Trim();
 		if (RhostNameTables.Depowers.FirstOrDefault(depower => depower.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
 				is not { } depower)
 		{
@@ -60,7 +60,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
-			parser.CurrentState.Arguments["0"].Message.ToPlainText(), LocateFlags.All,
+			parser.CurrentState.ArgumentList[0].Message.ToPlainText(), LocateFlags.All,
 			async found => answer(await found.Object().Grants.WithCancellation(ExecutionBudget.CurrentToken)));
 	}
 }

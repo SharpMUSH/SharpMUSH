@@ -42,7 +42,7 @@ public partial class Functions
 
 		var mayWalk = await WalkGate(executor, enactor, room, WalkType.Exit);
 
-		if (!parser.CurrentState.Arguments.ContainsKey("1"))
+		if (!parser.CurrentState.ArgumentList.Contains(1))
 		{
 			return mayWalk ? await ExitMapAsync(parser, executor, room) : Refused;
 		}

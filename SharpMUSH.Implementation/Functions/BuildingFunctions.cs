@@ -28,7 +28,7 @@ public partial class Functions
 	public async ValueTask<CallState> PCreate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		if (!await executor.IsWizard() && !await executor.HasPower("Player_Create"))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoPowerOverBodyAndMind), executor);
@@ -61,7 +61,7 @@ public partial class Functions
 		var defaultHome = Configuration.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
 		var startingQuota = (int)Configuration.CurrentValue.Limit.StartingQuota;
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var location = await Mediator.Send(new GetObjectNodeQuery(new DBRef
 		{
 			Number = Convert.ToInt32(Configuration.CurrentValue.Database.PlayerStart)
@@ -107,7 +107,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (!await executor.Can(PortalPermission.PlayerCreate))
 			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerCreate));
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		return await BuildingHelpers.CreateThingAsync(parser, Mediator, RelationshipCycles, Configuration, ValidateService,
 			NotifyService, EventService, PermissionService, executor, args["0"].Message,
@@ -128,7 +128,7 @@ public partial class Functions
 	[SharpFunction(Name = "dig", MinArgs = 1, MaxArgs = 6, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged)]
 	public async ValueTask<CallState> Dig(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (!await executor.Can(PortalPermission.PlayerCreate))
 			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerCreate));
@@ -153,7 +153,7 @@ public partial class Functions
 	[SharpFunction(Name = "open", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged)]
 	public async ValueTask<CallState> Open(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (!await executor.Can(PortalPermission.PlayerCreate))
 			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerCreate));
@@ -224,7 +224,7 @@ public partial class Functions
 	[SharpFunction(Name = "link", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> Link(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var objectName = args["0"].Message.ToPlainText();
 		var destName = args["1"].Message.ToPlainText();
@@ -247,7 +247,7 @@ public partial class Functions
 	[SharpFunction(Name = "clone", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged)]
 	public async ValueTask<CallState> Clone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (!await executor.Can(PortalPermission.PlayerCreate))
 			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerCreate));
@@ -271,7 +271,7 @@ public partial class Functions
 	[SharpFunction(Name = "wipe", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
 	public async ValueTask<CallState> Wipe(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var objAttr = args["0"].Message.ToPlainText();
 
@@ -329,7 +329,7 @@ public partial class Functions
 	[SharpFunction(Name = "tel", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged | FunctionFlags.StripAnsi, ParameterNames = ["object", "destination", "silent", "inside"])]
 	public async ValueTask<CallState> Tel(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		// fundb.c:2317: command_check_byname(executor, "@tel", …). Penn's command_find resolves that

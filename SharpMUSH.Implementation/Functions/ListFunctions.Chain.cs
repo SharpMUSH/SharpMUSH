@@ -20,11 +20,11 @@ public partial class Functions
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var attrListStr = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var attrListStr = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 		var tokens = attrListStr.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 		// The base is the value threaded through the pipeline; it becomes %0 for the first attribute.
-		var accumulator = parser.CurrentState.Arguments["1"].Message;
+		var accumulator = parser.CurrentState.ArgumentList[1].Message;
 
 		if (tokens.Length == 0)
 		{
@@ -34,7 +34,7 @@ public partial class Functions
 		// Fixed side-arguments: chain(<list>, <base>, <arg0>, <arg1>, ...) exposes <arg0> as %1, <arg1> as
 		// %2, ... to EVERY attribute in the chain, carried down each step. PennMUSH has no chain(), so the
 		// count is bounded by nothing but the caller.
-		var sideArgs = ArgHelpers.ShiftedArguments(parser.CurrentState.Arguments, 2);
+		var sideArgs = ArgHelpers.ShiftedArguments(parser.CurrentState.ArgumentList, 2);
 
 		// Push an iteration context so a step can short-circuit the pipeline with ibreak(), exactly as it
 		// would inside iter()/map(). itext(0)/inum(0) inside a step then see the running value and step.

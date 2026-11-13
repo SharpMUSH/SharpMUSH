@@ -43,7 +43,7 @@ public static partial class WorldCommand
 		var notify = parser.ServiceProvider.GetRequiredService<INotifyService>();
 		var executor = await WorldMaps.ExecutorAsync(parser);
 		var switches = parser.CurrentState.Switches.ToArray();
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var left = args.TryGetValue("0", out var a0) ? (await a0.ParsedMessage())?.ToPlainText().Trim() ?? "" : "";
 		var hasValue = args.TryGetValue("1", out var a1);
 		var raw = hasValue ? a1!.Message?.ToPlainText() ?? "" : null;

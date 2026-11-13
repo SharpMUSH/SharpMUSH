@@ -255,7 +255,7 @@ public partial class Functions
 	/// <summary>Whether the first character of the argument is an ASCII character of one class, as C's <c>ctype.h</c> tests are.</summary>
 	private static ValueTask<CallState> FirstCharacterIs(IMUSHCodeParser parser, Func<char, bool> test)
 		=> ValueTask.FromResult(new CallState(
-			parser.CurrentState.Arguments["0"].Message.ToPlainText() is [var first, ..] && test(first)));
+			parser.CurrentState.ArgumentList[0].Message.ToPlainText() is [var first, ..] && test(first)));
 
 	[SharpFunction(Name = "cosh", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "angle-type"])]
 	public ValueTask<CallState> Cosh(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -272,8 +272,8 @@ public partial class Functions
 	private ValueTask<CallState> Hyperbolic(IMUSHCodeParser parser, Func<double, double> func)
 	{
 		var numbers = NumericEvaluation.For(parser);
-		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var typeArg) ? typeArg.Message.ToPlainText() : null;
-		return ValueTask.FromResult(numbers.TryDouble(parser.CurrentState.Arguments["0"].Message.ToPlainText(), out var value)
+		var angleType = parser.CurrentState.ArgumentList.TryGet(1, out var typeArg) ? typeArg.Message.ToPlainText() : null;
+		return ValueTask.FromResult(numbers.TryDouble(parser.CurrentState.ArgumentList[0].Message.ToPlainText(), out var value)
 			? AngleTypeMath(angleType, value, func)
 			: new CallState(ErrorMessages.Returns.Number));
 	}
@@ -305,10 +305,10 @@ public partial class Functions
 	public async ValueTask<CallState> Move(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var direction = parser.CurrentState.Arguments["1"].Message.ToPlainText().Trim();
+		var direction = parser.CurrentState.ArgumentList[1].Message.ToPlainText().Trim();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
-			parser.CurrentState.Arguments["0"].Message.ToPlainText(), LocateFlags.All,
+			parser.CurrentState.ArgumentList[0].Message.ToPlainText(), LocateFlags.All,
 			async target =>
 			{
 				if (await PermissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal refused)

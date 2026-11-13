@@ -514,19 +514,10 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	}
 
 	/// <summary>
-	/// The positional arguments a call or command binds to <c>%0</c>, <c>%1</c>, … — the dictionary a
-	/// <see cref="ParserState.Arguments"/> expects, sized once.
+	/// The positional arguments a call or command binds to <c>%0</c>, <c>%1</c>, …, as the
+	/// <see cref="ParserState.ArgumentList"/> holds them.
 	/// </summary>
-	internal static Dictionary<string, CallState> NumberedArguments(List<CallState> values)
-	{
-		var arguments = new Dictionary<string, CallState>(values.Count);
-		for (var position = 0; position < values.Count; position++)
-		{
-			arguments[ParserState.ArgumentKey(position)] = values[position];
-		}
-
-		return arguments;
-	}
+	internal static ArgumentList NumberedArguments(List<CallState> values) => ArgumentList.Of(values);
 
 	/// <summary>
 	/// A call's arguments in order, each the evaluation string between two commas or null where there is

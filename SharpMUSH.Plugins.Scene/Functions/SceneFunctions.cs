@@ -88,7 +88,7 @@ public static class SceneFunctions
 		ParameterNames = ["id", "field"])]
 	public static async ValueTask<CallState> Scene(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var id = args["0"].Message.ToPlainText().Trim();
 		var field = args.TryGetValue("1", out var fieldArg)
 			? fieldArg.Message.ToPlainText().Trim().ToLowerInvariant()
@@ -169,7 +169,7 @@ public static class SceneFunctions
 		ParameterNames = ["filter", "arg", "arg"])]
 	public static async ValueTask<CallState> SceneList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var filter = args.TryGetValue("0", out var filterArg)
 			? filterArg.Message.ToPlainText().Trim().ToLowerInvariant()
 			: "recent";
@@ -283,7 +283,7 @@ public static class SceneFunctions
 		ParameterNames = ["roomDbref"])]
 	public static async ValueTask<CallState> SceneWhere(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var roomArg = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
+		var roomArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim();
 		var room = await SceneLocate.ObjectOrSelf(parser, roomArg);
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		if (await service.GetActiveSceneInRoomAsync(room) is not Contracts.Scene scene)
@@ -309,7 +309,7 @@ public static class SceneFunctions
 		ParameterNames = ["scene", "authorDbref", "count"])]
 	public static async ValueTask<CallState> ScenePoses(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var id = args["0"].Message.ToPlainText().Trim();
 
 		string? author = null;
@@ -369,7 +369,7 @@ public static class SceneFunctions
 		ParameterNames = ["scene", "poseId", "field"])]
 	public static async ValueTask<CallState> ScenePoseFn(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var sceneId = args["0"].Message.ToPlainText().Trim();
 		var poseId = args["1"].Message.ToPlainText().Trim();
 		var field = args.TryGetValue("2", out var fieldArg)
@@ -455,7 +455,7 @@ public static class SceneFunctions
 		ParameterNames = ["scene", "role"])]
 	public static async ValueTask<CallState> SceneMembers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var id = args["0"].Message.ToPlainText().Trim();
 		string? role = null;
 		if (args.TryGetValue("1", out var roleArg))
@@ -496,7 +496,7 @@ public static class SceneFunctions
 		ParameterNames = ["scene", "player", "field"])]
 	public static async ValueTask<CallState> SceneMemberFn(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var id = args["0"].Message.ToPlainText().Trim();
 		var playerArg = args["1"].Message.ToPlainText().Trim();
 		var player = await SceneLocate.PlayerOrSelf(parser, playerArg);
@@ -540,7 +540,7 @@ public static class SceneFunctions
 		ParameterNames = ["player"])]
 	public static async ValueTask<CallState> SceneFocus(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var playerArg = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
+		var playerArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim();
 		var player = await SceneLocate.PlayerOrSelf(parser, playerArg);
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		if (await service.GetCurrentSceneAsync(player) is not Contracts.Scene scene)
@@ -569,7 +569,7 @@ public static class SceneFunctions
 		ParameterNames = ["key", "field", "json"])]
 	public static async ValueTask<CallState> SceneType(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var key = args.TryGetValue("0", out var keyArg) ? keyArg.Message.ToPlainText().Trim() : string.Empty;
 		var field = args.TryGetValue("1", out var fieldArg)
 			? fieldArg.Message.ToPlainText().Trim().ToLowerInvariant()
@@ -627,7 +627,7 @@ public static class SceneFunctions
 		ParameterNames = ["key", "field", "value"])]
 	public static async ValueTask<CallState> SceneDetailFn(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var key = args.TryGetValue("0", out var keyArg) ? keyArg.Message.ToPlainText() : string.Empty;
 		var field = args.TryGetValue("1", out var fieldArg)
 			? fieldArg.Message.ToPlainText().Trim().ToLowerInvariant()
@@ -704,7 +704,7 @@ public static class SceneFunctions
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var room = await SceneLocate.ObjectOrSelf(parser, args["0"].Message.ToPlainText().Trim());
 		var owner = await SceneLocate.PlayerOrSelf(parser, args["1"].Message.ToPlainText().Trim());
 		var title = args.TryGetValue("2", out var titleArg)
@@ -733,7 +733,7 @@ public static class SceneFunctions
 	public static async ValueTask<CallState> SceneInvite(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (!SideEffectsEnabled(parser)) return new CallState(ErrorMessages.Returns.NoSideFx);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var id = args["0"].Message.ToPlainText().Trim();
 		var player = await SceneLocate.PlayerOrSelf(parser, args["1"].Message.ToPlainText().Trim());
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
@@ -752,7 +752,7 @@ public static class SceneFunctions
 	public static async ValueTask<CallState> SceneJoin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (!SideEffectsEnabled(parser)) return new CallState(ErrorMessages.Returns.NoSideFx);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var id = args["0"].Message.ToPlainText().Trim();
 		var player = await SceneLocate.PlayerOrSelf(parser, args["1"].Message.ToPlainText().Trim());
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
@@ -783,7 +783,7 @@ public static class SceneFunctions
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var id = args["0"].Message.ToPlainText().Trim();
 		var key = args["1"].Message.ToPlainText().Trim();
 		var value = args["2"].Message.ToPlainText();
@@ -825,7 +825,7 @@ public static class SceneFunctions
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var id = args["0"].Message.ToPlainText().Trim();
 		var author = await SceneLocate.PlayerOrSelf(parser, args["1"].Message.ToPlainText().Trim());
 		var showAs = args["2"].Message.ToPlainText();
@@ -864,7 +864,7 @@ public static class SceneFunctions
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var poseId = args["0"].Message.ToPlainText().Trim();
 		var key = args["1"].Message.ToPlainText().Trim();
 		var value = args["2"].Message.ToPlainText();
@@ -894,7 +894,7 @@ public static class SceneFunctions
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var poseId = args["0"].Message.ToPlainText().Trim();
 		var editor = await SceneLocate.PlayerOrSelf(parser, args["1"].Message.ToPlainText().Trim());
 		var content = MarkupTextSerializer.Serialize(args["2"].Message);
@@ -922,7 +922,7 @@ public static class SceneFunctions
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
-		var poseId = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
+		var poseId = parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim();
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var result = await service.UndoPoseAsync(poseId);
 
@@ -948,7 +948,7 @@ public static class SceneFunctions
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
-		var poseId = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
+		var poseId = parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim();
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var result = await service.RedoPoseAsync(poseId);
 
@@ -975,7 +975,7 @@ public static class SceneFunctions
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var poseId = args["0"].Message.ToPlainText().Trim();
 		var after = args.TryGetValue("1", out var afterArg)
 			? afterArg.Message.ToPlainText().Trim()
@@ -1006,7 +1006,7 @@ public static class SceneFunctions
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
-		var poseId = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
+		var poseId = parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim();
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		return await service.DeletePoseAsync(poseId) is ScenePose pose
 			? await PublishedAsync(parser, "delete", pose)
@@ -1027,7 +1027,7 @@ public static class SceneFunctions
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var id = args["0"].Message.ToPlainText().Trim();
 		var player = await SceneLocate.PlayerOrSelf(parser, args["1"].Message.ToPlainText().Trim());
 		var role = args["2"].Message.ToPlainText().Trim();
@@ -1062,7 +1062,7 @@ public static class SceneFunctions
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var id = args["0"].Message.ToPlainText().Trim();
 		var player = await SceneLocate.PlayerOrSelf(parser, args["1"].Message.ToPlainText().Trim());
 
@@ -1091,7 +1091,7 @@ public static class SceneFunctions
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var player = await SceneLocate.PlayerOrSelf(parser, args["0"].Message.ToPlainText().Trim());
 		var id = args.TryGetValue("1", out var idArg)
 			? idArg.Message.ToPlainText().Trim()
@@ -1123,7 +1123,7 @@ public static class SceneFunctions
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var id = args["0"].Message.ToPlainText().Trim();
 		var player = await SceneLocate.PlayerOrSelf(parser, args["1"].Message.ToPlainText().Trim());
 		var name = args["2"].Message.ToPlainText();
@@ -1150,7 +1150,7 @@ public static class SceneFunctions
 			return new CallState(ErrorMessages.Returns.NoSideFx);
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var op = args["0"].Message.ToPlainText().Trim().ToLowerInvariant();
 		var plot = args["1"].Message.ToPlainText().Trim();
 		var id = args.TryGetValue("2", out var idArg)

@@ -138,14 +138,14 @@ public partial class Functions
 	{
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var rawAttrArg = parser.CurrentState.Arguments["0"].Message;
+		var rawAttrArg = parser.CurrentState.ArgumentList[0].Message;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
 		// Arguments after the output separator are RhostMUSH's form, where an empty one is the delimiter.
 		var sep = await errors.OutputSeparatorAsync(parser, 3, delim,
-			parser.CurrentState.Arguments.Count > 4 ? delim : null);
-		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
+			parser.CurrentState.ArgumentList.Count > 4 ? delim : null);
+		var list = MushText.SplitList(delim, parser.CurrentState.ArgumentList[1].Message);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
@@ -173,14 +173,14 @@ public partial class Functions
 	{
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var rawAttrArg = parser.CurrentState.Arguments["0"].Message;
+		var rawAttrArg = parser.CurrentState.ArgumentList[0].Message;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
 		// Arguments after the output separator are RhostMUSH's form, where an empty one is the delimiter.
 		var sep = await errors.OutputSeparatorAsync(parser, 3, delim,
-			parser.CurrentState.Arguments.Count > 4 ? delim : null);
-		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
+			parser.CurrentState.ArgumentList.Count > 4 ? delim : null);
+		var list = MushText.SplitList(delim, parser.CurrentState.ArgumentList[1].Message);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
@@ -235,7 +235,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delim = ArgHelpers.Delimiter(args, 1);
-		var listArg = parser.CurrentState.Arguments["0"].Message;
+		var listArg = parser.CurrentState.ArgumentList[0].Message;
 
 		return ValueTask.FromResult(new CallState(MushList.First(delim, listArg ?? MarkupText.Empty)));
 	}
@@ -269,14 +269,14 @@ public partial class Functions
 	{
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var rawAttrArg = parser.CurrentState.Arguments["0"].Message;
+		var rawAttrArg = parser.CurrentState.ArgumentList[0].Message;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var baseCase = parser.CurrentState.ArgumentsOrdered.TryGetValue("2", out var baseCaseArg)
 			? baseCaseArg.Message
 			: null;
 		var delim = await errors.DefaultArgumentAsync(parser, 3, MarkupText.Space);
-		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
+		var list = MushText.SplitList(delim, parser.CurrentState.ArgumentList[1].Message);
 
 		if (list.Length == 0)
 		{
@@ -377,14 +377,14 @@ public partial class Functions
 	private static ValueTask<CallState> WildcardScan(IMUSHCodeParser parser, bool all, bool positions)
 	{
 		var arguments = parser.CurrentState.ArgumentsOrdered;
-		var pattern = parser.CurrentState.Arguments["1"].Message.ToPlainText()!;
+		var pattern = parser.CurrentState.ArgumentList[1].Message.ToPlainText()!;
 		var regex = SoftcodeRegex.Wildcard(pattern);
 		// An empty delimiter is a space (delim_check, src/function.c:253-255); an output separator
 		// given explicitly is used as it is, even empty (fun_matchall, src/funlist.c:402-407).
 		var delimiter = ArgHelpers.Delimiter(arguments, 2);
 		if (delimiter.Length == 0) delimiter = MarkupText.Space;
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(arguments, 3, delimiter);
-		var split = MushText.SplitList(delimiter, parser.CurrentState.Arguments["0"].Message);
+		var split = MushText.SplitList(delimiter, parser.CurrentState.ArgumentList[0].Message);
 
 		try
 		{
@@ -481,7 +481,7 @@ public partial class Functions
 	public async ValueTask<CallState> Iter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var errors = new ListEvaluationErrors();
-		var listArg = errors.Record(await parser.CurrentState.Arguments["0"].GetParsedResultAsync());
+		var listArg = errors.Record(await parser.CurrentState.ArgumentList[0].GetParsedResultAsync());
 
 		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
 		var sep = await errors.OutputSeparatorAsync(parser, 3, MarkupText.Space);
@@ -493,7 +493,7 @@ public partial class Functions
 		};
 		var result = new List<MString>();
 
-		var patternArg = parser.CurrentState.Arguments["1"];
+		var patternArg = parser.CurrentState.ArgumentList[1];
 
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 
@@ -518,8 +518,8 @@ public partial class Functions
 	[SharpFunction(Name = "items", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "delimiter"])]
 	public ValueTask<CallState> Items(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var list = parser.CurrentState.Arguments["0"].Message;
-		var delimiter = parser.CurrentState.Arguments["1"].Message;
+		var list = parser.CurrentState.ArgumentList[0].Message;
+		var delimiter = parser.CurrentState.ArgumentList[1].Message;
 
 		// items() counts the number of delimiter occurrences + 1; this naturally handles null items
 		var listStr = list.ToPlainText();
@@ -577,7 +577,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delim = ArgHelpers.Delimiter(args, 1);
-		var listArg = parser.CurrentState.Arguments["0"].Message;
+		var listArg = parser.CurrentState.ArgumentList[0].Message;
 		var list = MushText.SplitList(delim, listArg ?? MarkupText.Empty);
 		var last = list.LastOrDefault() ?? MarkupText.Empty;
 
@@ -609,14 +609,14 @@ public partial class Functions
 	{
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var rawAttrArg = parser.CurrentState.Arguments["0"].Message;
+		var rawAttrArg = parser.CurrentState.ArgumentList[0].Message;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
 		var extras = ExtraPredicateArguments(parser, 4);
 		// Arguments after the output separator are RhostMUSH's form, where an empty one is a space.
 		var sep = await errors.OutputSeparatorAsync(parser, 3, delim, extras.Count > 0 ? MarkupText.Space : null);
-		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
+		var list = MushText.SplitList(delim, parser.CurrentState.ArgumentList[1].Message);
 		var withPosition = extras.Count == 0 && !Configuration.CurrentValue.Compatibility.RhostMapArgs;
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
@@ -645,7 +645,7 @@ public partial class Functions
 	[SharpFunction(Name = "member", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.StripAnsi, ParameterNames = ["list", "element", "delimiter"])]
 	public ValueTask<CallState> Member(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var list = args["0"].Message;
 		var word = args["1"].Message.ToPlainText();
 		var delimiter = ArgHelpers.Delimiter(parser.CurrentState.ArgumentsOrdered, 2);
@@ -659,7 +659,7 @@ public partial class Functions
 	{
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var rawAttrArg = parser.CurrentState.Arguments["0"].Message;
+		var rawAttrArg = parser.CurrentState.ArgumentList[0].Message;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var argCount = parser.CurrentState.ArgumentsOrdered.Count;
@@ -737,14 +737,14 @@ public partial class Functions
 	{
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var rawAttrArg = parser.CurrentState.Arguments["0"].Message;
+		var rawAttrArg = parser.CurrentState.ArgumentList[0].Message;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var delim = await errors.DefaultArgumentAsync(parser, 3, MarkupText.Space);
 		var sep = await errors.OutputSeparatorAsync(parser, 4, delim);
 
-		var list1 = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
-		var list2 = MushText.SplitList(delim, parser.CurrentState.Arguments["2"].Message);
+		var list1 = MushText.SplitList(delim, parser.CurrentState.ArgumentList[1].Message);
+		var list2 = MushText.SplitList(delim, parser.CurrentState.ArgumentList[2].Message);
 
 		// Build args for the transformation call: %0 = whole list1, %1 = delimiter
 		var mungeArgs = new Dictionary<string, CallState>
@@ -957,8 +957,8 @@ public partial class Functions
 	public ValueTask<CallState> Remove(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered;
-		var list = parser.CurrentState.Arguments["0"].Message;
-		var words = parser.CurrentState.Arguments["1"].Message;
+		var list = parser.CurrentState.ArgumentList[0].Message;
+		var words = parser.CurrentState.ArgumentList[1].Message;
 		var delimiter = ArgHelpers.Delimiter(orderedArgs, 2);
 
 		var splitList = MushText.SplitList(delimiter, list).ToList();
@@ -1000,7 +1000,7 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delim = ArgHelpers.Delimiter(args, 1);
 
-		return ValueTask.FromResult(new CallState(MushList.Rest(delim, parser.CurrentState.Arguments["0"].Message)));
+		return ValueTask.FromResult(new CallState(MushList.Rest(delim, parser.CurrentState.ArgumentList[0].Message)));
 	}
 
 	[SharpFunction(Name = "revwords", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter", "output-separator"])]
@@ -1009,7 +1009,7 @@ public partial class Functions
 		var errors = new ListEvaluationErrors();
 		var delim = await errors.DefaultArgumentAsync(parser, 1, MarkupText.Space);
 		var sep = await errors.OutputSeparatorAsync(parser, 2, delim);
-		var list = MushText.SplitList(delim, errors.Record(await parser.CurrentState.Arguments["0"].GetParsedResultAsync()));
+		var list = MushText.SplitList(delim, errors.Record(await parser.CurrentState.ArgumentList[0].GetParsedResultAsync()));
 
 		return errors.Complete(new CallState(MarkupText.Join(sep, list.Reverse())));
 	}
@@ -1054,12 +1054,12 @@ public partial class Functions
 	{
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var rawAttrArg = parser.CurrentState.Arguments["0"].Message;
+		var rawAttrArg = parser.CurrentState.ArgumentList[0].Message;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
 		var sep = await errors.OutputSeparatorAsync(parser, 3, delim);
-		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
+		var list = MushText.SplitList(delim, parser.CurrentState.ArgumentList[1].Message);
 
 		async Task<int> CompareViaLambda(MString a, MString b)
 		{
@@ -1154,14 +1154,14 @@ public partial class Functions
 	{
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var rawAttrArg = parser.CurrentState.Arguments["0"].Message;
+		var rawAttrArg = parser.CurrentState.ArgumentList[0].Message;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var sortType = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Plain(""));
 		var delim = await errors.DefaultArgumentAsync(parser, 3, MarkupText.Space);
 		var sep = await errors.OutputSeparatorAsync(parser, 4, delim);
 
-		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
+		var list = MushText.SplitList(delim, parser.CurrentState.ArgumentList[1].Message);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
@@ -1246,7 +1246,7 @@ public partial class Functions
 	[SharpFunction(Name = "step", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "step", "delimiter", "outsep"])]
 	public async ValueTask<CallState> Step(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var stepArg = parser.CurrentState.Arguments["2"].Message.ToPlainText();
+		var stepArg = parser.CurrentState.ArgumentList[2].Message.ToPlainText();
 		if (!ArgHelpers.TryInteger(parser, stepArg, out var step) || step < 1 || step > 30)
 		{
 			return new CallState(ErrorMessages.Returns.Integer);
@@ -1263,7 +1263,7 @@ public partial class Functions
 	[SharpFunction(Name = "stepargs", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "names", "delimiter", "outsep"])]
 	public async ValueTask<CallState> StepArguments(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var names = parser.CurrentState.Arguments["2"].Message.ToPlainText()
+		var names = parser.CurrentState.ArgumentList[2].Message.ToPlainText()
 			.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		if (names.Length is 0 or > 30 || names.Distinct(StringComparer.OrdinalIgnoreCase).Count() != names.Length
 			|| names.Select((name, position) => (name, position)).Any(pair => pair.name.All(char.IsAsciiDigit) && pair.name.TrimStart('0') != (pair.position == 0 ? "" : pair.position.ToString())))
@@ -1282,12 +1282,12 @@ public partial class Functions
 	{
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var rawAttrArg = parser.CurrentState.Arguments["0"].Message;
+		var rawAttrArg = parser.CurrentState.ArgumentList[0].Message;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var delim = await errors.DefaultArgumentAsync(parser, 3, MarkupText.Space);
 		var sep = await errors.OutputSeparatorAsync(parser, 4, delim);
-		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message);
+		var list = MushText.SplitList(delim, parser.CurrentState.ArgumentList[1].Message);
 		var runs = list.Chunk(names.Length).Select(run =>
 		{
 			var arguments = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase);
@@ -1558,7 +1558,7 @@ public partial class Functions
 		// it from 2 meant a delimiter was never seen and words(a|b|c,|) always counted space-separated
 		// words.
 		var delim = await errors.DefaultArgumentAsync(parser, 1, MarkupText.Space);
-		var count = MushList.Count(delim, errors.Record(await parser.CurrentState.Arguments["0"].GetParsedResultAsync()));
+		var count = MushList.Count(delim, errors.Record(await parser.CurrentState.ArgumentList[0].GetParsedResultAsync()));
 
 		return errors.Complete(new CallState(count.ToString()));
 	}
@@ -1841,7 +1841,7 @@ public partial class Functions
 	[SharpFunction(Name = "listset", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> ListSet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (!args.TryGetValue("0", out var arg0))
 		{

@@ -17,7 +17,7 @@ public partial class Functions
 		}
 		public async ValueTask<MString> DefaultArgumentAsync(IMUSHCodeParser parser, int index, MString fallback)
 		{
-			var arguments = parser.CurrentState.Arguments;
+			var arguments = parser.CurrentState.ArgumentList;
 			if (arguments.Count - 1 < index || arguments[index.ToString()].Message.Length == 0) return fallback;
 			return Record(await arguments[index.ToString()].GetParsedResultAsync());
 		}
@@ -29,7 +29,7 @@ public partial class Functions
 		public async ValueTask<MString> OutputSeparatorAsync(IMUSHCodeParser parser, int index, MString fallback,
 			MString? whenEmpty = null)
 		{
-			var arguments = parser.CurrentState.Arguments;
+			var arguments = parser.CurrentState.ArgumentList;
 			if (arguments.Count - 1 < index) return fallback;
 			if (whenEmpty is not null && arguments[index.ToString()].Message.Length == 0) return whenEmpty;
 			return Record(await arguments[index.ToString()].GetParsedResultAsync());

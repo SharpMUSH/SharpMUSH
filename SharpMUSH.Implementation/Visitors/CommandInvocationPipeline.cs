@@ -297,7 +297,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 
 			// Save caller's numbered arguments (%0-%9) before overwriting with command's own args.
 			// This allows @wait/@force to preserve pattern-match variables in queued callbacks.
-			var callerArgs = state.Arguments
+			var callerArgs = state.ArgumentList
 				.Where(x => int.TryParse(x.Key, out _))
 				.ToDictionary(x => x.Key, x => x.Value);
 
@@ -311,7 +311,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 					CommandInvoker = definition.Command,
 					CallerArguments = callerArgs.Count > 0 ? callerArgs : null
 				},
-				Arguments = SharpMUSHParserVisitor.NumberedArguments(arguments),
+				ArgumentList = SharpMUSHParserVisitor.NumberedArguments(arguments),
 				Function = null
 			};
 
@@ -320,7 +320,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 
 		/// <summary>Gives the command the arguments an /args hook rewrote.</summary>
 		public void ReplaceArguments()
-			=> Parser = Parser.Push(Parser.CurrentState with { Arguments = SharpMUSHParserVisitor.NumberedArguments(arguments) });
+			=> Parser = Parser.Push(Parser.CurrentState with { ArgumentList = SharpMUSHParserVisitor.NumberedArguments(arguments) });
 
 		/// <summary>
 		/// The named arguments a hook on this command reads as <c>%&lt;name&gt;</c> or <c>r(&lt;name&gt;,args)</c>
@@ -958,7 +958,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		var dispatchResult = await prs.With(state => state with
 		{
 			Command = command,
-			Arguments = SharpMUSHParserVisitor.NumberedArguments(arguments),
+			ArgumentList = SharpMUSHParserVisitor.NumberedArguments(arguments),
 			Function = null
 		}, async newParser => await librarySocketCommandDefinition.Command.Invoke(newParser));
 		return argumentResults.Preserve(dispatchResult);
@@ -975,7 +975,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		if (singleRootCommand is "]" or "~")
 			return await prs.With(state => state with
 			{
-				Arguments = new() { ["0"] = new CallState(tokenText.Substring(1)) },
+				ArgumentList = ArgumentList.Of(new CallState(tokenText.Substring(1))),
 				Function = null
 			}, async modified => await singleLibraryCommandDefinition.Command.Invoke(modified));
 

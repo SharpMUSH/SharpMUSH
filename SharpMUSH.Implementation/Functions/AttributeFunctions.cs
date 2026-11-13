@@ -25,7 +25,7 @@ public partial class Functions
 	public async ValueTask<CallState> AbsolutePossessivePronoun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, arg0,
 			LocateFlags.All,
@@ -87,7 +87,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "attrib_set#", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["object/attribute"])]
 	public ValueTask<CallState> AttributeSetSharp(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> AttributeSetAsync(parser, target => $"{target.Object().Name}/{parser.CurrentState.Arguments["0"].Message}");
+		=> AttributeSetAsync(parser, target => $"{target.Object().Name}/{parser.CurrentState.ArgumentList[0].Message}");
 
 	/// <summary>
 	/// The one body of <c>attrib_set()</c> (PennMUSH's <c>fun_attrib_set</c>, <c>src/fundb.c:2270</c>)
@@ -95,7 +95,7 @@ public partial class Functions
 	/// </summary>
 	private async ValueTask<CallState> AttributeSetAsync(IMUSHCodeParser parser, Func<AnySharpObject, string> successResult)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var split = HelperFunctions.SplitObjectAndAttr(args["0"].Message.ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
@@ -255,11 +255,11 @@ public partial class Functions
 	{
 		if (parser.CurrentState.ArgumentsOrdered.Count < 2)
 		{
-			return (await parser.FunctionParse(parser.CurrentState.Arguments["0"].Message))!;
+			return (await parser.FunctionParse(parser.CurrentState.ArgumentList[0].Message))!;
 		}
 
-		var dbref = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var attribute = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var dbref = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var attribute = parser.CurrentState.ArgumentList[1].Message.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, dbref,
@@ -276,7 +276,7 @@ public partial class Functions
 	public async ValueTask<CallState> Flags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// The parser hands a no-argument call an empty Arguments["0"], so "no argument" is an empty one.
-		var arg0 = (parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message ?? MarkupText.Empty).ToPlainText();
+		var arg0 = (parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message ?? MarkupText.Empty).ToPlainText();
 		if (arg0.Length == 0)
 		{
 			var flags = await Mediator.CreateStream(new GetAllObjectFlagsQuery())
@@ -321,7 +321,7 @@ public partial class Functions
 	[SharpFunction(Name = "get", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object/attribute"])]
 	public async ValueTask<CallState> Get(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (HelperFunctions.SplitObjectAndAttr(parser.CurrentState.Arguments["0"].Message.ToPlainText()) is not { Object: var dbref, Attribute: var attribute })
+		if (HelperFunctions.SplitObjectAndAttr(parser.CurrentState.ArgumentList[0].Message.ToPlainText()) is not { Object: var dbref, Attribute: var attribute })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
@@ -399,7 +399,7 @@ public partial class Functions
 	[SharpFunction(Name = "get_eval", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object/attribute"])]
 	public async ValueTask<CallState> GetEval(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (HelperFunctions.SplitObjectAndAttr(parser.CurrentState.Arguments["0"].Message.ToPlainText()) is not { Object: var dbref, Attribute: var attribute })
+		if (HelperFunctions.SplitObjectAndAttr(parser.CurrentState.ArgumentList[0].Message.ToPlainText()) is not { Object: var dbref, Attribute: var attribute })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(GetEval).ToUpper()));
 		}
@@ -531,8 +531,8 @@ public partial class Functions
 	public async ValueTask<CallState> HasFlag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objAndAttr = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var flagNameOrSymbol = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var objAndAttr = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var flagNameOrSymbol = parser.CurrentState.ArgumentList[1].Message.ToPlainText();
 		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAndAttr) is not { Object: var db, Attribute: var attr })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(HasFlag)));
@@ -613,7 +613,7 @@ public partial class Functions
 		bool checkParents,
 		IAttributeService.AttributePatternMode mode,
 		Func<IAsyncEnumerable<string>, ValueTask<CallState>> project)
-		=> HelperFunctions.SplitDbRefAndOptionalAttr(parser.CurrentState.Arguments["0"].Message.ToPlainText()) switch
+		=> HelperFunctions.SplitDbRefAndOptionalAttr(parser.CurrentState.ArgumentList[0].Message.ToPlainText()) switch
 		{
 			{ Object: var obj, Attribute: var attributePattern } => AttributePatternAsync(parser, obj, attributePattern,
 				checkParents, mode, project),
@@ -674,7 +674,7 @@ public partial class Functions
 	private ValueTask<CallState> AttributeRangeAsync(
 		IMUSHCodeParser parser, string calledAs, bool checkParents, IAttributeService.AttributePatternMode mode)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		if (!ArgHelpers.TryStrictInteger(args["1"].Message.ToPlainText(), out int start) ||
 			!ArgHelpers.TryStrictInteger(args["2"].Message.ToPlainText(), out int count))
 		{
@@ -711,7 +711,7 @@ public partial class Functions
 	public async ValueTask<CallState> ListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// The parser hands a no-argument call an empty Arguments["0"], so "no argument" is an empty one.
-		var arg0 = (parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message ?? MarkupText.Empty).ToPlainText();
+		var arg0 = (parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message ?? MarkupText.Empty).ToPlainText();
 		if (arg0.Length == 0)
 		{
 			var flags = await Mediator.CreateStream(new GetAllObjectFlagsQuery())
@@ -765,7 +765,7 @@ public partial class Functions
 	public async ValueTask<CallState> ObjectivePronoun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, arg0, LocateFlags.All,
@@ -784,8 +784,8 @@ public partial class Functions
 		// the caller before it locates anything, so objeval(%0,...) and objeval([num(here)],...)
 		// name an object. Reading the raw text here looked "%0" up as a name and answered
 		// #-1 NO MATCH for every dynamic object.
-		var objectArg = await parser.CurrentState.Arguments["0"].GetParsedResultAsync();
-		var expression = parser.CurrentState.Arguments["1"];
+		var objectArg = await parser.CurrentState.ArgumentList[0].GetParsedResultAsync();
+		var expression = parser.CurrentState.ArgumentList[1];
 		return await EvaluateAsAsync(parser, executor, objectArg, expression.Message ?? MString.Empty);
 	}
 
@@ -798,8 +798,8 @@ public partial class Functions
 	public async ValueTask<CallState> ObjectEvaluationOfText(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objectArg = parser.CurrentState.Arguments["0"];
-		var text = parser.CurrentState.Arguments["1"];
+		var objectArg = parser.CurrentState.ArgumentList[0];
+		var text = parser.CurrentState.ArgumentList[1];
 		var result = await EvaluateAsAsync(parser, executor, objectArg, text.Message ?? MString.Empty, rawArgument: false);
 		return result with { HadErrors = text.HadErrors || result.HadErrors };
 	}
@@ -842,7 +842,7 @@ public partial class Functions
 	public async ValueTask<CallState> ObjectId(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, arg0, LocateFlags.All,
@@ -861,13 +861,13 @@ public partial class Functions
 		SideEffectMinArgs = 2, ParameterNames = ["object", "new owner", "preserve"])]
 	public async ValueTask<CallState> Owner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (parser.CurrentState.Arguments.ContainsKey("1"))
+		if (parser.CurrentState.ArgumentList.Contains(1))
 		{
 			return await ChangeOwnerAsync(parser);
 		}
 
 		var dbrefAndMaybeArg =
-			HelperFunctions.SplitDbRefAndOptionalAttr(parser.CurrentState.Arguments["0"].Message.ToPlainText());
+			HelperFunctions.SplitDbRefAndOptionalAttr(parser.CurrentState.ArgumentList[0].Message.ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndMaybeArg is not { Object: var obj, Attribute: var attribute })
@@ -915,7 +915,7 @@ public partial class Functions
 			return PermissionRefusal.CannotUse("@CHOWN").Return;
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var target = args["0"].Message.ToPlainText();
 		var attributeForm = target.Contains('/');
 		var preserve = !attributeForm && args.TryGetValue("2", out var preserveArg)
@@ -946,7 +946,7 @@ public partial class Functions
 	public async ValueTask<CallState> PossessivePronoun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, arg0, LocateFlags.All,
@@ -993,7 +993,7 @@ public partial class Functions
 	/// </remarks>
 	private async ValueTask<CallState> RegEditInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
 	{
-		var stringArg = await parser.CurrentState.Arguments["0"].GetParsedResultAsync();
+		var stringArg = await parser.CurrentState.ArgumentList[0].GetParsedResultAsync();
 		var hadErrors = stringArg.HadErrors;
 		var mstr = stringArg.Message;
 		var str = mstr.ToPlainText();
@@ -1079,8 +1079,8 @@ public partial class Functions
 
 		var result = await SetHelpers.DoSet(parser, LocateService, AttributeService, FlagAndPowerService,
 			NotifyService, PermissionService, executor,
-			parser.CurrentState.Arguments["0"].Message,
-			parser.CurrentState.Arguments["1"].Message);
+			parser.CurrentState.ArgumentList[0].Message,
+			parser.CurrentState.ArgumentList[1].Message);
 
 		// fun_set (src/fundb.c) hands do_set the call and writes NOTHING to buff afterwards, whatever
 		// do_set made of it — "This function returns nothing" (help set()). do_set has already told the
@@ -1096,7 +1096,7 @@ public partial class Functions
 	public async ValueTask<CallState> SubjectivePronoun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, arg0,
 			LocateFlags.All,
@@ -1116,7 +1116,7 @@ public partial class Functions
 	/// </summary>
 	private async ValueTask<CallState> UserAttributeDefaultAsync(IMUSHCodeParser parser, bool asCaller)
 	{
-		var selector = await ParseRawArgument(parser, parser.CurrentState.Arguments["0"].Message) ?? CallState.Empty;
+		var selector = await ParseRawArgument(parser, parser.CurrentState.ArgumentList[0].Message) ?? CallState.Empty;
 		var hadErrors = selector.HadErrors;
 		CallState Preserve(CallState result) => result with { HadErrors = hadErrors || result.HadErrors };
 		var objectAndAttribute = selector.Message;
@@ -1131,7 +1131,7 @@ public partial class Functions
 				var attribute = await AttributeService.GetAttributeAsync(executor, actualObject, attributeName,
 					mode: IAttributeService.AttributeMode.Execute, parent: true);
 				if (attribute is not SharpAttribute[] chain)
-					return await ParseRawArgument(parser, parser.CurrentState.Arguments["1"].Message) ?? CallState.Empty;
+					return await ParseRawArgument(parser, parser.CurrentState.ArgumentList[1].Message) ?? CallState.Empty;
 
 				var arguments = new Dictionary<string, CallState>();
 				foreach (var argument in parser.CurrentState.ArgumentsOrdered.Skip(2))
@@ -1164,8 +1164,8 @@ public partial class Functions
 		var result = await AttributeService.EvaluateAttributeFunctionResultAsync(
 			parser,
 			executor,
-			objAndAttribute: parser.CurrentState.Arguments["0"].Message,
-			args: parser.CurrentState.Arguments.Skip(1)
+			objAndAttribute: parser.CurrentState.ArgumentList[0].Message,
+			args: parser.CurrentState.ArgumentList.Skip(1)
 				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
 				.ToDictionary(),
 			ignoreLambda: true);
@@ -1180,7 +1180,7 @@ public partial class Functions
 	[SharpFunction(Name = "uargs", MinArgs = 1, MaxArgs = 65, Flags = FunctionFlags.Regular | FunctionFlags.UnEvenArgsOnly, ParameterNames = ["object/attribute", "name", "value..."])]
 	public async ValueTask<CallState> UserAttributeNamedArguments(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		return ArgHelpers.NamedArguments(parser.CurrentState.Arguments, 1) switch
+		return ArgHelpers.NamedArguments(parser.CurrentState.ArgumentList, 1) switch
 		{
 			Dictionary<string, CallState> named => await CallWithNamedArgumentsAsync(parser, named),
 			Error<string> error => new CallState(error.Value)
@@ -1191,7 +1191,7 @@ public partial class Functions
 		=> await AttributeService.EvaluateAttributeFunctionResultAsync(
 			parser,
 			await parser.CurrentState.KnownExecutorObject(Mediator),
-			objAndAttribute: parser.CurrentState.Arguments["0"].Message,
+			objAndAttribute: parser.CurrentState.ArgumentList[0].Message,
 			args: named,
 			ignoreLambda: true);
 
@@ -1204,7 +1204,7 @@ public partial class Functions
 	[SharpFunction(Name = "pfun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "arguments..."])]
 	public async ValueTask<CallState> ParentFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var attributeName = parser.CurrentState.Arguments["0"].Message.ToPlainText().ToUpperInvariant();
+		var attributeName = parser.CurrentState.ArgumentList[0].Message.ToPlainText().ToUpperInvariant();
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.Object().Parent.WithCancellation(CancellationToken.None) is not AnySharpObject parentObject)
@@ -1243,8 +1243,8 @@ public partial class Functions
 		var result = await AttributeService.EvaluateAttributeFunctionResultAsync(
 			parser,
 			executor,
-			objAndAttribute: parser.CurrentState.Arguments["0"].Message,
-			args: parser.CurrentState.Arguments.Skip(1)
+			objAndAttribute: parser.CurrentState.ArgumentList[0].Message,
+			args: parser.CurrentState.ArgumentList.Skip(1)
 				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
 				.ToDictionary());
 
@@ -1256,7 +1256,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor,
-			objAndAttribute: parser.CurrentState.Arguments["0"].Message,
+			objAndAttribute: parser.CurrentState.ArgumentList[0].Message,
 			args: parser.CurrentState.ArgumentsOrdered.Skip(1)
 				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value)).ToDictionary());
 	}
@@ -1264,7 +1264,7 @@ public partial class Functions
 	[SharpFunction(Name = "v", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["attribute"])]
 	public async ValueTask<CallState> Variable(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message;
+		var arg0 = parser.CurrentState.ArgumentList[0].Message;
 		var plainText = arg0.ToPlainText();
 
 		switch (plainText)
@@ -1314,8 +1314,8 @@ public partial class Functions
 	{
 		await ValueTask.CompletedTask;
 
-		var obj = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var victimAttribute = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var obj = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var victimAttribute = parser.CurrentState.ArgumentList[1].Message.ToPlainText();
 		var victAttr = HelperFunctions.SplitDbRefAndOptionalAttr(victimAttribute);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
@@ -1362,14 +1362,14 @@ public partial class Functions
 	[SharpFunction(Name = "xget", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "attribute"])]
 	public ValueTask<CallState> AlternativeGet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> GetAttributeValueAsync(parser,
-			parser.CurrentState.Arguments["0"].Message.ToPlainText(),
-			parser.CurrentState.Arguments["1"].Message.ToPlainText());
+			parser.CurrentState.ArgumentList[0].Message.ToPlainText(),
+			parser.CurrentState.ArgumentList[1].Message.ToPlainText());
 
 	[SharpFunction(Name = "zfun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular, ParameterNames = ["zone", "attribute", "arguments..."])]
 	public async ValueTask<CallState> ZoneFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// <zone>/<attribute>: RhostMUSH's form, naming one of the caller's zones.
-		if (parser.CurrentState.Arguments["0"].Message.ToPlainText().Contains('/'))
+		if (parser.CurrentState.ArgumentList[0].Message.ToPlainText().Contains('/'))
 		{
 			return await OnZoneAsync(parser, evaluated: true, p => UserAttributeFunction(p, _2));
 		}
@@ -1385,8 +1385,8 @@ public partial class Functions
 		var result = await AttributeService.EvaluateAttributeFunctionResultAsync(
 			parser,
 			zone,
-			objAndAttribute: parser.CurrentState.Arguments["0"].Message,
-			args: parser.CurrentState.Arguments.Skip(1)
+			objAndAttribute: parser.CurrentState.ArgumentList[0].Message,
+			args: parser.CurrentState.ArgumentList.Skip(1)
 				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
 				.ToDictionary(),
 			ignoreLambda: true);

@@ -14,7 +14,7 @@ public partial class Functions
 		ParameterNames = ["expression", "timezone", "reference", "output"])]
 	public async ValueTask<CallState> DateParse(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var normalized = args.TryGetValue("3", out var outputArg) && outputArg.Message.ToPlainText().Trim().Equals("normalized", StringComparison.OrdinalIgnoreCase);
 		var precision = TimePrecision.Seconds;
 		if (!normalized && !TryPrecision(args, "3", out precision)) return "#-1 INVALID PRECISION";

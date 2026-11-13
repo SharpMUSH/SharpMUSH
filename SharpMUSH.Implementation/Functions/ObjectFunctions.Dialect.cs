@@ -30,7 +30,7 @@ public partial class Functions
 		ParameterNames = ["player", "amount", "type"])]
 	public async ValueTask<CallState> HasQuota(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var amountText = args.TryGetValue("1", out var amountArg) ? amountArg.Message.ToPlainText().Trim() : string.Empty;
 		var amount = 1;
 		if (amountText.Length > 0 && (!ArgHelpers.TryStrictInteger(amountText, out amount) || amount < 1))
@@ -70,7 +70,7 @@ public partial class Functions
 		ParameterNames = ["object", "text", "prefix"])]
 	public async ValueTask<CallState> PoseText(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var prefix = args.TryGetValue("2", out var prefixArg) ? prefixArg.Message : MString.Empty;
 		var arguments = new Dictionary<string, CallState> { ["0"] = args["0"], ["1"] = args["1"] };
 		var spoken = await parser.With(state => state with { Arguments = arguments }, p => Speak(p, _2));
@@ -88,7 +88,7 @@ public partial class Functions
 		ParameterNames = ["object", "type"])]
 	public async ValueTask<CallState> LastCreate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var name = args.TryGetValue("0", out var nameArg) ? nameArg.Message.ToPlainText().Trim() : string.Empty;
 		var type = args.TryGetValue("1", out var typeArg) ? typeArg.Message.ToPlainText().Trim() : string.Empty;
@@ -133,7 +133,7 @@ public partial class Functions
 		ParameterNames = ["dice", "difficulty", "version"])]
 	public ValueTask<CallState> Successes(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		if (!ArgHelpers.TryStrictInteger(args["0"].Message.ToPlainText().Trim(), out int dice)
 			|| !ArgHelpers.TryStrictInteger(args["1"].Message.ToPlainText().Trim(), out int difficulty))
 		{
@@ -180,7 +180,7 @@ public partial class Functions
 		ParameterNames = ["expression"])]
 	public async ValueTask<CallState> Trace(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var expression = parser.CurrentState.Arguments["0"].Message ?? MString.Empty;
+		var expression = parser.CurrentState.ArgumentList[0].Message ?? MString.Empty;
 		return await parser.With(
 			state => state with { Flags = (state.Flags | ParserStateFlags.Debug) & ~ParserStateFlags.NoDebug },
 			p => ParseRawArgument(p, expression)) ?? CallState.Empty;
@@ -195,7 +195,7 @@ public partial class Functions
 		ParameterNames = ["player", "port", "type"])]
 	public async ValueTask<CallState> LookupSite(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		long? port = args.TryGetValue("1", out var portArg)
 			&& long.TryParse(portArg.Message.ToPlainText().Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var asked)
@@ -238,7 +238,7 @@ public partial class Functions
 		ParameterNames = ["key"])]
 	public async ValueTask<CallState> LockEncode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var key = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
+		var key = parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim();
 		if (key.Length == 0)
 		{
 			return new CallState(UndefinedKey);
@@ -256,7 +256,7 @@ public partial class Functions
 	public async ValueTask<CallState> LockDecode(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		return DecodedKey(parser.CurrentState.Arguments["0"].Message.ToPlainText(), executor) is { } key
+		return DecodedKey(parser.CurrentState.ArgumentList[0].Message.ToPlainText(), executor) is { } key
 			? new CallState(await BooleanExpressionParser.RenderAsync(key, executor, LockRenderMode.Readback))
 			: new CallState(UndefinedKey);
 	}
@@ -269,7 +269,7 @@ public partial class Functions
 		ParameterNames = ["encoded", "object", "type"])]
 	public async ValueTask<CallState> LockCheck(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (DecodedKey(args["0"].Message.ToPlainText(), executor) is not { } key)
 		{

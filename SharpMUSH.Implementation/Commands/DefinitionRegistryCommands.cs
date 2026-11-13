@@ -49,7 +49,7 @@ public partial class Commands : ICommandRestrictionApplier
 	public async ValueTask<Option<CallState>> Command(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches.ToArray();
 
 		var commandName = args.Count == 0 ? null : args["0"].Message.ToPlainText()?.ToUpper();
@@ -1111,7 +1111,7 @@ public partial class Commands : ICommandRestrictionApplier
 	public async ValueTask<Option<CallState>> Function(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches.ToArray();
 
 		if (switches.Contains("LOCAL")) return await LocalFunctionCommand(parser, executor, switches);
@@ -1555,7 +1555,7 @@ public partial class Commands : ICommandRestrictionApplier
 	private async ValueTask<Option<CallState>> DefineOrDescribeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		IUserDefinedFunctionService userFunctionService, string functionName)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		if (args.Count >= 2 && args.GetValueOrDefault("1")?.Message.ToPlainText() is { Length: > 0 } objSpec)
 		{
 			return await DefineFunctionAsync(parser, executor, userFunctionService, functionName, objSpec);
@@ -1572,7 +1572,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return denied;
 		}
 
-		var attribSpec = parser.CurrentState.Arguments.GetValueOrDefault("2")?.Message.ToPlainText();
+		var attribSpec = parser.CurrentState.ArgumentList.GetValueOrDefault(2)?.Message.ToPlainText();
 		// cmd_function (src/cmds.c:615-623): with no second argument, the first is <obj>/<attrib>.
 		if (string.IsNullOrEmpty(attribSpec))
 		{
@@ -1598,8 +1598,8 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, functionName.ToUpperInvariant()));
 		}
 
-		var (minArgs, maxArgs) = UserFunctionArgumentBounds(parser.CurrentState.Arguments);
-		var restriction = DefinitionRestriction(parser.CurrentState.Arguments.GetValueOrDefault("5")?.Message.ToPlainText(),
+		var (minArgs, maxArgs) = UserFunctionArgumentBounds(parser.CurrentState.ArgumentList);
+		var restriction = DefinitionRestriction(parser.CurrentState.ArgumentList.GetValueOrDefault(5)?.Message.ToPlainText(),
 			parser.CurrentState.Switches.Contains("PRESERVE"));
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -1622,7 +1622,7 @@ public partial class Commands : ICommandRestrictionApplier
 	/// is clamped to MAX_STACK_ARGS — the engine carries no more positional arguments than
 	/// that, so a larger number would be a promise it cannot keep.
 	/// </summary>
-	private static (int MinArgs, int MaxArgs) UserFunctionArgumentBounds(Dictionary<string, CallState> args)
+	private static (int MinArgs, int MaxArgs) UserFunctionArgumentBounds(ArgumentList args)
 	{
 		var minArgs = args.Count >= 4 && int.TryParse(args.GetValueOrDefault("3")?.Message.ToPlainText(), out var parsedMin)
 			? Math.Clamp(parsedMin, 0, MaximumStackArguments)
@@ -1784,7 +1784,7 @@ public partial class Commands : ICommandRestrictionApplier
 	public async ValueTask<Option<CallState>> Attribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 
 		if (switches.Contains("DECOMPILE"))
@@ -1901,7 +1901,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return usage;
 		}
 
-		var flagList = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var flagList = parser.CurrentState.ArgumentList[1].Message.ToPlainText();
 
 		// strcasecmp(perms, "none"): no permissions at all, not a flag called NONE.
 		var flagNames = flagList.Trim().Equals("none", StringComparison.OrdinalIgnoreCase)
@@ -2132,7 +2132,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return usage;
 		}
 
-		var newName = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var newName = parser.CurrentState.ArgumentList[1].Message.ToPlainText();
 		if (string.IsNullOrEmpty(newName))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyNewName), executor);
@@ -2345,7 +2345,7 @@ public partial class Commands : ICommandRestrictionApplier
 		var operation = SelectDefinitionOperation(parser.CurrentState.Switches, power: false);
 
 		// cmd_flag (src/cmds.c:545): with no switch, a name is do_flag_info and nothing is the usage.
-		if (operation != DefinitionOperation.Default || parser.CurrentState.Arguments.Count > 0)
+		if (operation != DefinitionOperation.Default || parser.CurrentState.ArgumentList.Count > 0)
 		{
 			return await EditDefinitionAsync(FlagRegistry, parser, executor, operation);
 		}
@@ -2375,7 +2375,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return CallState.Empty;
 		}
 
-		var powerArgs = parser.CurrentState.Arguments;
+		var powerArgs = parser.CurrentState.ArgumentList;
 		var objectArg = powerArgs.Count > 0 ? powerArgs["0"].Message.ToPlainText().Trim() : string.Empty;
 		var powerArg = powerArgs.Count > 1 ? powerArgs["1"].Message.ToPlainText() : string.Empty;
 
@@ -2609,7 +2609,7 @@ public partial class Commands : ICommandRestrictionApplier
 	private async ValueTask<Option<CallState>> EditDefinitionAsync(DefinitionRegistry registry, IMUSHCodeParser parser,
 		AnySharpObject executor, DefinitionOperation operation)
 	{
-		var arguments = parser.CurrentState.Arguments;
+		var arguments = parser.CurrentState.ArgumentList;
 		var keys = registry.Messages;
 		string Argument(int index) => arguments.Count > index ? arguments[index.ToString()].Message.ToPlainText() : string.Empty;
 
@@ -2894,7 +2894,7 @@ public partial class Commands : ICommandRestrictionApplier
 	public async ValueTask<Option<CallState>> Hook(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 
 		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.ConfigAdmin)) is PermissionRefusal refused)
@@ -3175,7 +3175,7 @@ public partial class Commands : ICommandRestrictionApplier
 			: switches.Contains("FLAGS") ? ListKind.Flags
 			: switches.Contains("POWERS") ? ListKind.Powers
 			: switches.Contains("ALLOCATIONS") ? ListKind.Allocations
-			: ResolveListKind(parser.CurrentState.Arguments.TryGetValue("0", out var typeArg)
+			: ResolveListKind(parser.CurrentState.ArgumentList.TryGet(0, out var typeArg)
 				? typeArg.Message.ToPlainText()
 				: string.Empty);
 

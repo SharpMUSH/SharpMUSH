@@ -21,7 +21,7 @@ public partial class Functions
 	public async ValueTask<CallState> NoSpaceIter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var errors = new ListEvaluationErrors();
-		var listArg = errors.Record(await parser.CurrentState.Arguments["0"].GetParsedResultAsync());
+		var listArg = errors.Record(await parser.CurrentState.ArgumentList[0].GetParsedResultAsync());
 		var delimiter = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
 
 		var results = await RunPatternLoopAsync(parser, MushText.SplitList(delimiter, listArg), errors, bound: null);
@@ -36,7 +36,7 @@ public partial class Functions
 	public async ValueTask<CallState> CharacterIter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var errors = new ListEvaluationErrors();
-		var text = errors.Record(await parser.CurrentState.Arguments["0"].GetParsedResultAsync());
+		var text = errors.Record(await parser.CurrentState.ArgumentList[0].GetParsedResultAsync());
 		var separator = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
 
 		var results = await RunPatternLoopAsync(parser, text.EnumerateGraphemes(), errors, bound: null);
@@ -54,7 +54,7 @@ public partial class Functions
 	public async ValueTask<CallState> InfiniteIter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var errors = new ListEvaluationErrors();
-		var listArg = errors.Record(await parser.CurrentState.Arguments["0"].GetParsedResultAsync());
+		var listArg = errors.Record(await parser.CurrentState.ArgumentList[0].GetParsedResultAsync());
 		var delimiter = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
 		var separator = await errors.OutputSeparatorAsync(parser, 3, MarkupText.Space);
 
@@ -115,7 +115,7 @@ public partial class Functions
 			Value = MarkupText.Empty, Break = false, NoBreak = false, Iteration = 0,
 			Spliced = true, Evaluation = parser.CurrentState.CurrentEvaluation
 		};
-		var pattern = parser.CurrentState.Arguments["1"];
+		var pattern = parser.CurrentState.ArgumentList[1];
 		var limitExceeded = parser.CurrentState.LimitExceeded;
 		var results = new List<MString>();
 		var length = 0;

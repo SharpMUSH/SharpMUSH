@@ -55,8 +55,8 @@ public partial class Functions
 	public async ValueTask<CallState> CreationTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var targetArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var utc = parser.CurrentState.Arguments.TryGetValue("1", out var utcArgument) && utcArgument.Message.Truthy(parser);
+		var targetArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var utc = parser.CurrentState.ArgumentList.TryGet(1, out var utcArgument) && utcArgument.Message.Truthy(parser);
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
@@ -75,7 +75,7 @@ public partial class Functions
 		ParameterNames = ["seconds", "timezone"])]
 	public ValueTask<CallState> IsDaylight(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var secs = args.TryGetValue("0", out var value) ? value.Message.ToPlainText() : null;
 		var timezone = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, TimeZoneInfo.Utc.Id).ToPlainText();
 
@@ -102,8 +102,8 @@ public partial class Functions
 	public async ValueTask<CallState> ModifiedTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var targetArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var utc = parser.CurrentState.Arguments.TryGetValue("1", out var utcArgument) && utcArgument.Message.Truthy(parser);
+		var targetArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var utc = parser.CurrentState.ArgumentList.TryGet(1, out var utcArgument) && utcArgument.Message.Truthy(parser);
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
@@ -120,7 +120,7 @@ public partial class Functions
 		ParameterNames = ["precision"])]
 	public ValueTask<CallState> Secs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var now = DateTimeOffset.UtcNow;
 		var zone = args.TryGetValue("0", out var zoneArg) ? zoneArg.Message.ToPlainText().Trim() : string.Empty;
 		var isZone = zone.Equals("utc", StringComparison.OrdinalIgnoreCase) || zone.Equals("local", StringComparison.OrdinalIgnoreCase);
@@ -161,7 +161,7 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["timestring"])]
 	public ValueTask<CallState> SecsCalc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var timeStr = args["0"].Message.ToPlainText().Trim();
 
 		if (!TryParseSecsCalcBase(timeStr, out var baseTime))
@@ -243,7 +243,7 @@ public partial class Functions
 			: time;
 
 	/// <summary>The modifiers after a secscalc()/timecalc() time string, each trimmed.</summary>
-	private static IEnumerable<string> CalcModifiers(Dictionary<string, CallState> args)
+	private static IEnumerable<string> CalcModifiers(ArgumentList args)
 		=> Enumerable.Range(1, args.Count - 1)
 			.Select(i => args[i.ToString()].Message.ToPlainText().Trim());
 
@@ -297,12 +297,12 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["timestring", "precision"])]
 	public ValueTask<CallState> StringSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!TryPrecision(parser.CurrentState.Arguments, "1", out var precision))
+		if (!TryPrecision(parser.CurrentState.ArgumentList, "1", out var precision))
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidPrecision);
 		}
 
-		var timeStr = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
+		var timeStr = parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim();
 
 		if (!TryParseDurationMilliseconds(timeStr, out var milliseconds, out var error))
 		{
@@ -374,10 +374,10 @@ public partial class Functions
 	public async ValueTask<CallState> Time(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var arg0Value)
+		var arg0 = parser.CurrentState.ArgumentList.TryGet(0, out var arg0Value)
 			? arg0Value.Message.ToPlainText()
 			: null;
-		var digits = MuxFractionDigits(parser.CurrentState.Arguments, "1");
+		var digits = MuxFractionDigits(parser.CurrentState.ArgumentList, "1");
 
 		if (string.IsNullOrEmpty(arg0) || arg0.Equals("local", StringComparison.OrdinalIgnoreCase))
 		{
@@ -490,7 +490,7 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["timestring"])]
 	public ValueTask<CallState> TimeCalc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var timeStr = args["0"].Message.ToPlainText().Trim();
 
 		if (!TryParseTimeCalcBase(timeStr, out var baseTime))
@@ -550,7 +550,7 @@ public partial class Functions
 		ParameterNames = ["format", "seconds", "timezone"])]
 	public ValueTask<CallState> TimeFmt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var format = args["0"].Message.ToPlainText();
 
 		DateTimeOffset dt;
@@ -646,7 +646,7 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["seconds", "pad", "precision"])]
 	public ValueTask<CallState> TimeString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (!TryPrecision(args, "2", out var precision))
 		{
@@ -753,12 +753,12 @@ public partial class Functions
 		ParameterNames = ["type", "precision"])]
 	public async ValueTask<CallState> Uptime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!TryPrecision(parser.CurrentState.Arguments, "1", out var precision))
+		if (!TryPrecision(parser.CurrentState.ArgumentList, "1", out var precision))
 		{
 			return ErrorMessages.Returns.InvalidPrecision;
 		}
 
-		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var arg0Value)
+		var arg0 = parser.CurrentState.ArgumentList.TryGet(0, out var arg0Value)
 			? arg0Value.Message.ToPlainText()
 			: null;
 
@@ -799,13 +799,13 @@ public partial class Functions
 		ParameterNames = ["object", "precision"])]
 	public async ValueTask<CallState> CSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!TryPrecision(parser.CurrentState.Arguments, "1", out var precision))
+		if (!TryPrecision(parser.CurrentState.ArgumentList, "1", out var precision))
 		{
 			return ErrorMessages.Returns.InvalidPrecision;
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var targetArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var targetArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
@@ -817,13 +817,13 @@ public partial class Functions
 		ParameterNames = ["object", "precision"])]
 	public async ValueTask<CallState> ModifiedSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!TryPrecision(parser.CurrentState.Arguments, "1", out var precision))
+		if (!TryPrecision(parser.CurrentState.ArgumentList, "1", out var precision))
 		{
 			return ErrorMessages.Returns.InvalidPrecision;
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var targetArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var targetArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
@@ -836,7 +836,7 @@ public partial class Functions
 		ParameterNames = ["seconds", "width", "precision"])]
 	public ValueTask<CallState> ETime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (!TryPrecision(args, "2", out var precision))
 		{
@@ -916,7 +916,7 @@ public partial class Functions
 		ParameterNames = ["format", "seconds", "precision"])]
 	public ValueTask<CallState> ETimeFmt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (!TryPrecision(args, "2", out var precision))
 		{
@@ -1012,9 +1012,9 @@ public partial class Functions
 		ParameterNames = ["seconds", "timezone", "precision"])]
 	public ValueTask<CallState> ConvSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var secsStr = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var digits = MuxFractionDigits(parser.CurrentState.Arguments, "2");
-		var timezone = parser.CurrentState.Arguments.TryGetValue("1", out var tzArg)
+		var secsStr = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var digits = MuxFractionDigits(parser.CurrentState.ArgumentList, "2");
+		var timezone = parser.CurrentState.ArgumentList.TryGet(1, out var tzArg)
 			? tzArg.Message.ToPlainText()
 			: null;
 		if (digits is not null && (timezone?.Length is null or 0 || timezone.Equals("local", StringComparison.OrdinalIgnoreCase)))
@@ -1052,13 +1052,13 @@ public partial class Functions
 		ParameterNames = ["time-string", "timezone", "precision"])]
 	public ValueTask<CallState> ConvTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!TryPrecision(parser.CurrentState.Arguments, "2", out var precision))
+		if (!TryPrecision(parser.CurrentState.ArgumentList, "2", out var precision))
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidPrecision);
 		}
 
-		var timeStr = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var timezone = parser.CurrentState.Arguments.TryGetValue("1", out var tzArg)
+		var timeStr = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var timezone = parser.CurrentState.ArgumentList.TryGet(1, out var tzArg)
 			? tzArg.Message.ToPlainText()
 			: string.Empty;
 
@@ -1111,7 +1111,7 @@ public partial class Functions
 		ParameterNames = ["seconds"])]
 	public ValueTask<CallState> ConvUtcSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var secsStr = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var secsStr = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		if (!TimePrecisions.TryParseInstant(secsStr, out var dateTime))
 		{
@@ -1126,12 +1126,12 @@ public partial class Functions
 		ParameterNames = ["time-string", "precision"])]
 	public ValueTask<CallState> ConvUtcTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!TryPrecision(parser.CurrentState.Arguments, "1", out var precision))
+		if (!TryPrecision(parser.CurrentState.ArgumentList, "1", out var precision))
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidPrecision);
 		}
 
-		var timeStr = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var timeStr = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		// Try standard format first: Ddd Mmm DD HH:MM:SS YYYY
 		if (DateTimeOffset.TryParseExact(timeStr, PennTimeFormat, CultureInfo.InvariantCulture,

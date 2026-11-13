@@ -46,6 +46,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("fn10", BuildNested(10), false),
 		new("cat3", "[cat(%#,%#,%#)]", false),
 		new("iter50", "iter(lnum(50),%i0)", false),
+		// Per-item cost of an iter() that formats each line.
+		new("iter-fmt", "[strlen(iter(lnum(1000),[ljust(##,5)] [rjust(add(##,1),6)]))]", false),
 		new("mixed", "[switch(%#,#1,[iter(lnum(1,10),[add(##,1)])],other)]", false),
 		new("ansi", "[ansi(hr,Hello World)]", false),
 		new("ansi-nest", "[ansi(h,[ansi(r,Hello)] [ansi(g,World)])]", false),

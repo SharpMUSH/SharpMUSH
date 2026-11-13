@@ -22,8 +22,8 @@ public partial class Commands
 		], Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2, ParameterNames = ["player", "subject"])]
 	public async ValueTask<Option<CallState>> Mail(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
-		parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
+		parser.CurrentState.ArgumentList.TryGet(0, out var arg0CallState);
+		parser.CurrentState.ArgumentList.TryGet(1, out var arg1CallState);
 		MString? arg0, arg1;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -150,7 +150,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> MailAlias(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var left = args.TryGetValue("0", out var leftArg) ? leftArg.Message.ToPlainText() : string.Empty;
 		var right = args.TryGetValue("1", out var rightArg) ? rightArg.Message.ToPlainText() : string.Empty;
 

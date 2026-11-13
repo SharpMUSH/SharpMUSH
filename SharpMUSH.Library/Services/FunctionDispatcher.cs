@@ -19,7 +19,7 @@ public static class FunctionDispatcher
 	{
 		var result = await InvokeCoreAsync(parser, definition, executor, sideEffects, notify, logger,
 			argumentCount, permissionsChecked, deferredArguments, argumentsValidated: false, sideEffectsNeedGrant);
-		return AnyHadErrors(parser.CurrentState.Arguments) ? result with { HadErrors = true } : result;
+		return AnyHadErrors(parser.CurrentState.ArgumentList) ? result with { HadErrors = true } : result;
 	}
 
 	/// <summary>
@@ -36,13 +36,23 @@ public static class FunctionDispatcher
 	{
 		var result = await InvokeCoreAsync(parser, definition, executor, sideEffects, notify, logger,
 			argumentCount, permissionsChecked: true, deferredArguments: true, argumentsValidated: true, sideEffectsNeedGrant);
-		return AnyHadErrors(parser.CurrentState.Arguments) ? result with { HadErrors = true } : result;
+		return AnyHadErrors(parser.CurrentState.ArgumentList) ? result with { HadErrors = true } : result;
 	}
 
 	/// <summary>Whether an argument had errors; a loop, so a call allocates no enumerator for it.</summary>
-	private static bool AnyHadErrors(Dictionary<string, CallState> arguments)
+	private static bool AnyHadErrors(ArgumentList arguments)
 	{
-		foreach (var (_, argument) in arguments)
+		if (arguments.IsPositional)
+		{
+			for (var position = 0; position < arguments.Count; position++)
+			{
+				if (arguments[position].HadErrors) return true;
+			}
+
+			return false;
+		}
+
+		foreach (var (_, argument) in arguments.AsDictionary())
 		{
 			if (argument.HadErrors) return true;
 		}
@@ -104,7 +114,7 @@ public static class FunctionDispatcher
 				if (permissionError is not null) return new CallState(permissionError);
 			}
 		}
-		var count = argumentCount ?? parser.CurrentState.Arguments.Count;
+		var count = argumentCount ?? parser.CurrentState.ArgumentList.Count;
 
 		var emptyCall = count == 1 && parser.CurrentState.ArgumentsOrdered.Values.First().Message.Length == 0;
 		if (!argumentsValidated && ValidateArgumentCount(attribute, name, count, emptyCall) is { } arityError)
@@ -155,18 +165,18 @@ public static class FunctionDispatcher
 			// Rebind lazy argument evaluation to this scope instead of the caller's visitor.
 			localized = localized.Push(localized.CurrentState with
 			{
-				Arguments = localized.CurrentState.Arguments.ToDictionary(pair => pair.Key, pair =>
+				ArgumentList = localized.CurrentState.ArgumentList.Select(argument =>
 				{
 					async ValueTask<CallState?> Evaluate()
 					{
 						// The argument's work is its own, not the function's that asked for it.
 						CallState result;
 						using (InvocationClock.PauseRunning(localized.Clock))
-							result = await localized.FunctionParse(pair.Value.Message) ?? CallState.Empty;
+							result = await localized.FunctionParse(argument.Message) ?? CallState.Empty;
 						return flags.HasFlag(FunctionFlags.StripAnsi)
 							? result with { Message = result.Message.WithoutVisualMarkup() } : result;
 					}
-					return pair.Value with
+					return argument with
 					{
 						ParsedResult = Evaluate,
 						ParsedMessage = async () => (await Evaluate())?.Message

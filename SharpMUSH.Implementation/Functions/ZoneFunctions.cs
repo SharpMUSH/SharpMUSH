@@ -51,7 +51,7 @@ public partial class Functions
 		ParameterNames = ["zone", "object"])]
 	public async ValueTask<CallState> InZone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!parser.CurrentState.Arguments.ContainsKey("1"))
+		if (!parser.CurrentState.ArgumentList.Contains(1))
 		{
 			return await ZoneMembersOfTypeAsync(parser, DatabaseConstants.TypeRoom);
 		}
@@ -145,7 +145,7 @@ public partial class Functions
 			contents.Add(text);
 		}
 
-		var separator = parser.CurrentState.Arguments.ContainsKey("2") ? ZoneArg(parser, "2") : " ";
+		var separator = parser.CurrentState.ArgumentList.Contains(2) ? ZoneArg(parser, "2") : " ";
 		return string.Join(separator, contents
 			.SelectMany(list => list.Split(' ', StringSplitOptions.RemoveEmptyEntries))
 			.Select(entry => DBRef.TryParse(entry, out var dbref) && dbref is { } parsed ? $"#{parsed.Number}" : entry));
@@ -185,7 +185,7 @@ public partial class Functions
 
 	/// <summary>search() with no argument searching as an empty one does: everything the caller may search.</summary>
 	private async ValueTask<CallState> SearchAnyAsync(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
-		=> parser.CurrentState.Arguments.Count == 0
+		=> parser.CurrentState.ArgumentList.Count == 0
 			? await parser.With(state => state with { Arguments = new Dictionary<string, CallState> { ["0"] = new(string.Empty) } },
 				p => ListSearch(p, attribute))
 			: await ListSearch(parser, attribute);
@@ -209,7 +209,7 @@ public partial class Functions
 		// With a class, search()'s one-argument form, which reads the range from arguments 1 and 2; without one, every
 		// object the caller may search, the range as lsearch()'s MINDB and MAXDB.
 		var arguments = spec.Length > 0
-			? new Dictionary<string, CallState>(parser.CurrentState.Arguments) { ["0"] = new(spec) }
+			? new Dictionary<string, CallState>(parser.CurrentState.ArgumentList) { ["0"] = new(spec) }
 			: RangeOnly(parser);
 		var found = await parser.With(state => state with { Arguments = arguments },
 			p => spec.Length > 0 ? TinySearchAsync(p, executor) : ListSearchInternal(p, attribute, useRegex: false));
@@ -403,7 +403,7 @@ public partial class Functions
 	private async ValueTask<CallState> OnZoneAsync(IMUSHCodeParser parser, bool evaluated,
 		Func<IMUSHCodeParser, ValueTask<CallState>> call, bool withLevel = false)
 	{
-		var first = parser.CurrentState.Arguments["0"].Message;
+		var first = parser.CurrentState.ArgumentList[0].Message;
 		var selector = (evaluated ? first : (await ParseRawArgument(parser, first))?.Message)?.ToPlainText() ?? string.Empty;
 		var level = string.Empty;
 		if (withLevel)
@@ -438,7 +438,7 @@ public partial class Functions
 			return ErrorMessages.Returns.InvalidZone;
 		}
 
-		var arguments = new Dictionary<string, CallState>(parser.CurrentState.Arguments)
+		var arguments = new Dictionary<string, CallState>(parser.CurrentState.ArgumentList)
 		{
 			["0"] = new($"#{zone.Object().DBRef.Number}/{attributeName}{level}")
 		};
@@ -476,7 +476,7 @@ public partial class Functions
 			.ToListAsync();
 
 	private static string ZoneArg(IMUSHCodeParser parser, string key)
-		=> parser.CurrentState.Arguments.TryGetValue(key, out var value) ? value.Message?.ToPlainText() ?? string.Empty : string.Empty;
+		=> parser.CurrentState.ArgumentList.TryGetValue(key, out var value) ? value.Message?.ToPlainText() ?? string.Empty : string.Empty;
 
 	private static bool ZoneArgIsTrue(IMUSHCodeParser parser, string key)
 		=> int.TryParse(ZoneArg(parser, key).Trim(), out var value) && value != 0;

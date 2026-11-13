@@ -50,7 +50,7 @@ public partial class Commands
 		var defaultHome = Configuration.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
 		var startingQuota = (int)Configuration.CurrentValue.Limit.StartingQuota;
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var name = args["0"].Message.ToPlainText();
 		var password = args["1"].Message.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -110,11 +110,11 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var arg0 = args["0"].Message.ToPlainText();
 		var isGenerate = parser.CurrentState.Switches.Contains("GENERATE");
 
-		if (isGenerate && parser.CurrentState.Arguments.Count > 1)
+		if (isGenerate && parser.CurrentState.ArgumentList.Count > 1)
 		{
 			await NotifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordGenerateSwitchConflict), executor);
 		}
@@ -128,7 +128,7 @@ public partial class Commands
 	}
 
 	private async ValueTask<Option<CallState>> NewPasswordAsync(AnySharpObject executor, SharpPlayer asPlayer,
-		Dictionary<string, CallState> args, bool isGenerate)
+		ArgumentList args, bool isGenerate)
 	{
 		// players.moderate is not a wizard's whole standing: only God resets God's password, and only a
 		// wizard resets a wizard's, or a moderator could take the account over.
@@ -191,7 +191,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> SiteLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 
 		var sitelockRules = Configuration.CurrentValue.SitelockRules;
@@ -367,7 +367,7 @@ public partial class Commands
 	/// usual options; otherwise the options follow <c>=</c>.
 	/// </summary>
 	private async ValueTask<Option<CallState>> SitelockPlayerAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		Dictionary<string, CallState> args, IEnumerable<string> switches)
+		ArgumentList args, IEnumerable<string> switches)
 	{
 		var name = args.GetValueOrDefault("0")?.Message.ToPlainText().Trim() ?? string.Empty;
 		var options = args.GetValueOrDefault("1")?.Message.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? [];
@@ -554,7 +554,7 @@ public partial class Commands
 		bool? hide = switches.Contains("YES") || switches.Contains("ON") ? true
 			: switches.Contains("NO") || switches.Contains("OFF") ? false
 			: null;
-		var victim = parser.CurrentState.Arguments.TryGetValue("0", out var arg)
+		var victim = parser.CurrentState.ArgumentList.TryGet(0, out var arg)
 			? arg.Message?.ToPlainText().Trim() ?? string.Empty
 			: string.Empty;
 
@@ -671,7 +671,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		var suggestionData = await ObjectDataService.GetExpandedServerDataAsync<SuggestionData>()
 			?? new SuggestionData();
@@ -805,8 +805,8 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (!await executor.Can(PortalPermission.PlayerPassword))
 			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerPassword));
-		var oldPassword = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var newPassword = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var oldPassword = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var newPassword = parser.CurrentState.ArgumentList[1].Message.ToPlainText();
 
 		if (executor is not SharpPlayer player)
 		{
@@ -832,7 +832,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Warnings(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (!args.TryGetValue("0", out var objectArg) || string.IsNullOrWhiteSpace(objectArg.Message.ToPlainText()))
 		{
@@ -902,7 +902,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> WizardCheck(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 
 		var checkAll = switches.Contains("ALL");

@@ -67,7 +67,7 @@ public partial class Functions
 
 	/// <summary>The number of seconds the first argument starts with, and zero for a negative one.</summary>
 	private static long ElapsedArgument(IMUSHCodeParser parser)
-		=> Math.Max(0, LeadingInteger(parser.CurrentState.Arguments["0"].Message.ToPlainText()));
+		=> Math.Max(0, LeadingInteger(parser.CurrentState.ArgumentList[0].Message.ToPlainText()));
 
 	/// <summary>
 	/// <paramref name="seconds"/> as units: each that is not zero, or with <paramref name="single"/> only the

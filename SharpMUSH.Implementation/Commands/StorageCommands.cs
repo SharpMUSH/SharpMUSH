@@ -35,7 +35,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
-		var argument = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText() ?? "";
+		var argument = parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message.ToPlainText() ?? "";
 		if (argument.Length > 0 && !switches.Contains("BACKUPS") && !switches.Contains("DICTIONARIES"))
 		{
 			await NotifyService.Notify(executor, "Only @storage/backups and @storage/dictionaries take an argument.");

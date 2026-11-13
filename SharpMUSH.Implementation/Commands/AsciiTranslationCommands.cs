@@ -36,7 +36,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var character = (args.GetValueOrDefault("0")?.Message.ToPlainText() ?? "").Trim();
 

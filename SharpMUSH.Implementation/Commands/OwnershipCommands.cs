@@ -21,7 +21,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var targetName = args["0"].Message.ToPlainText();
 		var newOwnerName = args["1"].Message.ToPlainText();
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
@@ -136,7 +136,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var targetName = args["0"].Message.ToPlainText();
 		var zoneName = args.TryGetValue("1", out var zoneArg) ? zoneArg.Message.ToPlainText() : string.Empty;
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
@@ -210,7 +210,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var preserve = switches.Contains("PRESERVE");
 
 		if (await RejectIfTooFewArguments(parser, 1, executor,
@@ -230,7 +230,7 @@ public partial class Commands
 	}
 
 	private async ValueTask<Option<CallState>> ChownAllFromAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		SharpPlayer oldOwner, IEnumerable<string> switches, Dictionary<string, CallState> args, bool preserve)
+		SharpPlayer oldOwner, IEnumerable<string> switches, ArgumentList args, bool preserve)
 	{
 		var newOwner = executor;
 		if (args.Count > 1)
@@ -329,7 +329,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var playerName = args["0"].Message.ToPlainText();
 		var zoneName = args.TryGetValue("1", out var zoneArg) ? zoneArg.Message.ToPlainText() : string.Empty;
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");

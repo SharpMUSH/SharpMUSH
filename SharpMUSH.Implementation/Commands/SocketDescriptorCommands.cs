@@ -59,7 +59,7 @@ public partial class Commands
 	/// so no evaluation, splitting or trimming happens on the way in.
 	/// </summary>
 	private string SocketArgument(IMUSHCodeParser parser)
-		=> parser.CurrentState.Arguments.TryGetValue("0", out var arg)
+		=> parser.CurrentState.ArgumentList.TryGet(0, out var arg)
 			? arg.Message.ToPlainText()
 			: string.Empty;
 

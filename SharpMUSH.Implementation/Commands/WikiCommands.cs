@@ -28,8 +28,8 @@ public partial class Commands
 		ParameterNames = ["page", "content"])]
 	public async ValueTask<Option<CallState>> Wiki(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
-		parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
+		parser.CurrentState.ArgumentList.TryGet(0, out var arg0CallState);
+		parser.CurrentState.ArgumentList.TryGet(1, out var arg1CallState);
 		MString? arg0, arg1;
 		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);

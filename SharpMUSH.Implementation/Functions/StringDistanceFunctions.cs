@@ -14,7 +14,7 @@ public partial class Functions
 		ParameterNames = ["source", "target", "ignore case", "transpositions"])]
 	public ValueTask<CallState> StringDistanceFunction(IMUSHCodeParser parser, SharpFunctionAttribute _)
 	{
-		var arguments = parser.CurrentState.Arguments;
+		var arguments = parser.CurrentState.ArgumentList;
 		// RhostMUSH's third and fourth arguments: a non-zero number for each.
 		var ignoreCase = arguments.TryGetValue("2", out var caseArg) && ArgHelpers.ParseInteger(caseArg.Message.ToPlainText()) != 0;
 		var transpositions = arguments.TryGetValue("3", out var swapArg) && ArgHelpers.ParseInteger(swapArg.Message.ToPlainText()) != 0;
@@ -26,7 +26,7 @@ public partial class Functions
 	[SharpFunction(Name = "soundex", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> SoundEx(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 		var arg1 = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "soundex").ToPlainText().ToLowerInvariant();
 
 		return arg1 switch
@@ -41,8 +41,8 @@ public partial class Functions
 	[SharpFunction(Name = "soundslike", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> SoundLike(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var arg1 = parser.CurrentState.ArgumentList[1].Message.ToPlainText();
 		var arg2 = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, "soundex").ToPlainText().ToLowerInvariant();
 
 		return arg2 switch
@@ -101,7 +101,7 @@ public partial class Functions
 	[SharpFunction(Name = "suggest", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> Suggest(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var category = args["0"].Message.ToPlainText();
 		var word = args["1"].Message.ToPlainText();
 		var separator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();

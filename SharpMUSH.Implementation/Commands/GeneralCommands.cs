@@ -85,7 +85,7 @@ public partial class Commands
 	[SharpCommand(Name = "LOOK", Output = CommandOutput.Value, Switches = ["OUTSIDE", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Look(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		// cmds.c:1742: the /opaque switch is LOOK_NOCONTENTS.
@@ -196,7 +196,7 @@ public partial class Commands
 	/// </remarks>
 	private async ValueTask<Option<CallState>> ExamineAsync(IMUSHCodeParser parser, string[] switches)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		AnyOptionalSharpObject viewing;

@@ -48,7 +48,7 @@ public partial class Functions
 			.ToDictionary();
 
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor,
-				parser.CurrentState.Arguments["0"].Message.ToPlainText()) switch
+				parser.CurrentState.ArgumentList[0].Message.ToPlainText()) switch
 		{
 			AttributeFunction function => await CallAttributeWithArgumentsAsync(parser, function with { Owner = executor }, arguments),
 			CallState refusal when refusal.Message.ToPlainText() == ErrorMessages.Returns.NoSuchAttribute => CallState.Empty,

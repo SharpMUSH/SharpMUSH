@@ -44,7 +44,7 @@ public partial class Commands
 		var resume = switches.Contains("RESUME");
 		var owner = switches.Contains("OWNER");
 		var source = switches.Contains("OBJECT");
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var selection = args.GetValueOrDefault("0")?.Message.ToPlainText() ?? "";
 		var reason = args.GetValueOrDefault("1")?.Message.ToPlainText() ?? "";
 		if ((pause && resume) || ((pause || resume) && switches.Contains("LIST")) || (owner && source)
@@ -192,7 +192,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Halt(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 
 		if (switches.Contains("ALL"))
@@ -452,9 +452,9 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches.Except(["QUIET"]).ToArray();
 		var notifyType = "ANY";
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
-		if ((parser.CurrentState.Arguments.Count == 0) || string.IsNullOrEmpty(args["0"].Message.ToPlainText()))
+		if ((parser.CurrentState.ArgumentList.Count == 0) || string.IsNullOrEmpty(args["0"].Message.ToPlainText()))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyMustSpecifySemaphoreObject), executor);
 			return new None();
@@ -493,7 +493,7 @@ public partial class Commands
 	}
 
 	private async ValueTask<Option<CallState>> NotifySemaphoreHolderAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		AnySharpObject objectToNotify, string notifyType, Dictionary<string, CallState> args, string? maybeAttributeString)
+		AnySharpObject objectToNotify, string notifyType, ArgumentList args, string? maybeAttributeString)
 	{
 		if (!await PermissionService.Controls(executor, objectToNotify) &&
 			!await objectToNotify.HasFlag("LINK_OK"))
@@ -595,8 +595,8 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 1, MaxArgs = 2, ParameterNames = ["seconds", "command"])]
 	public async ValueTask<Option<CallState>> Wait(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText() ?? string.Empty;
-		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message;
+		var arg0 = parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message.ToPlainText() ?? string.Empty;
+		var arg1 = parser.CurrentState.ArgumentList.GetValueOrDefault(1)?.Message;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
@@ -834,8 +834,8 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Drain(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message.ToPlainText();
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var arg1 = parser.CurrentState.ArgumentList.GetValueOrDefault(1)?.Message.ToPlainText();
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
@@ -1079,7 +1079,7 @@ public partial class Commands
 	{
 		if (parser.CurrentState.Switches.Contains("HISTORY")) return await QueueHistory(parser);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 		var queueReader = parser.ServiceProvider.GetRequiredService<ITaskQueueReader>();
 
@@ -1289,7 +1289,7 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches.ToArray();
 
 		var attributePath = args["0"].Message.ToPlainText();
@@ -1326,7 +1326,7 @@ public partial class Commands
 	}
 
 	private async ValueTask<Option<CallState>> TriggerAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		AnySharpObject enactor, AnySharpObject targetObject, Dictionary<string, CallState> args, string[] switches,
+		AnySharpObject enactor, AnySharpObject targetObject, ArgumentList args, string[] switches,
 		string attributeName)
 	{
 		if (!await PermissionService.Controls(executor, targetObject))

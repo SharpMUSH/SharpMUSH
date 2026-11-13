@@ -39,7 +39,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Theme(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 		var left = args.TryGetValue("0", out var first) ? first.Message.ToPlainText().Trim() : string.Empty;
 		var spec = args.TryGetValue("1", out var given) ? given.Message.ToPlainText().Trim() : string.Empty;

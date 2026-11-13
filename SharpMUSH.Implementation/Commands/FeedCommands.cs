@@ -48,7 +48,7 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches.ToArray();
 		var operations = switches.Where(FeedOperations.Contains).ToArray();
 		var styles = switches.Where(FeedStyleSwitches.Contains).ToArray();
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var left = (args.GetValueOrDefault("0")?.Message.ToPlainText() ?? "").Trim();
 		var rightText = args.GetValueOrDefault("1")?.Message ?? MarkupText.Empty;
 		var right = rightText.ToPlainText().Trim();

@@ -45,7 +45,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (!await executor.Can(PortalPermission.PlayerCreate))
 			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerCreate));
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		return await BuildingHelpers.CreateThingAsync(parser, Mediator, RelationshipCycles, Configuration, ValidateService,
 			NotifyService, EventService, PermissionService, executor, args["0"].Message,
@@ -92,8 +92,8 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var target = parser.CurrentState.Arguments["0"].Message.ToPlainText()!;
-		var name = parser.CurrentState.Arguments["1"].Message;
+		var target = parser.CurrentState.ArgumentList[0].Message.ToPlainText()!;
+		var name = parser.CurrentState.ArgumentList[1].Message;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, target,
 			LocateFlags.All,
@@ -144,7 +144,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await SetHelpers.DoSet(parser, LocateService, AttributeService, FlagAndPowerService,
@@ -157,7 +157,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var targetName = args["0"].Message.ToPlainText();
 		var override_ = parser.CurrentState.Switches.Contains("OVERRIDE");
 		var instant = parser.CurrentState.Switches.Contains("INSTANT");
@@ -760,7 +760,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var exitName = args["0"].Message.ToPlainText();
 		// MinArgs = 1: an absent or empty destination is @unlink (src/create.c:321-324), so it has to
 		// reach do_link rather than be rejected as too few arguments.
@@ -782,7 +782,7 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		// @nuke is @destroy/override: it bypasses the SAFE flag and the "use @nuke" player guard.
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var targetName = args["0"].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -796,7 +796,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var targetName = args["0"].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -849,7 +849,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (!await executor.Can(PortalPermission.PlayerCreate))
 			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerCreate));
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		return await BuildingHelpers.DigAsync(parser, Mediator, RelationshipCycles, Configuration, NotifyService, EventService,
 			PermissionService, LockService, AttributeService, executor, args["0"].Message,
@@ -891,7 +891,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (!await executor.Can(PortalPermission.PlayerCreate))
 			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerCreate));
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		var sourceRoom = await executor.Where();
 		if (BuildingHelpers.Argument(args, "3") is { } sourceRoomName)
@@ -993,7 +993,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (!await executor.Can(PortalPermission.PlayerCreate))
 			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerCreate));
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var preserve = switches.Contains("PRESERVE");
 		var options = new CloneOptions(switches.Contains("INVENTORY"), switches.Contains("PARENT"));
@@ -1017,7 +1017,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var targetName = args["0"].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1049,7 +1049,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message.ToPlainText(), LocateFlags.All,
@@ -1090,7 +1090,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var targetName = args["0"].Message.ToPlainText();
 
 		return await LinkHelpers.UnlinkAsync(parser, Mediator, NotifyService, LocateService, PermissionService,

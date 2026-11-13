@@ -23,7 +23,7 @@ public partial class Functions
 		ParameterNames = ["attribute", "operation", "value", "start", "count"])]
 	public async ValueTask<CallState> Indexed(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var name = args["0"].Message.ToPlainText().Trim().ToUpperInvariant();
 		var opText = args["1"].Message.ToPlainText().Trim().ToLowerInvariant();
 		var value = args.TryGetValue("2", out var valueArg) ? valueArg.Message.ToPlainText() : string.Empty;

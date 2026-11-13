@@ -199,7 +199,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches.ToHashSet(StringComparer.OrdinalIgnoreCase);
-		var argument = parser.CurrentState.Arguments.TryGetValue("0", out var arg0) ? arg0.Message.ToPlainText().Trim() : string.Empty;
+		var argument = parser.CurrentState.ArgumentList.TryGet(0, out var arg0) ? arg0.Message.ToPlainText().Trim() : string.Empty;
 
 		if (switches.Contains("NODNS"))
 		{
@@ -500,7 +500,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches.ToArray();
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (switches is ["LIST"])
 		{
@@ -576,7 +576,7 @@ public partial class Commands
 		ParameterNames = ["folder", "messages"])]
 	public async ValueTask<Option<CallState>> MuxFolder(IMUSHCodeParser parser, SharpCommandAttribute attribute)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var first = args.TryGetValue("0", out var arg0) ? arg0.Message : MarkupText.Empty;
 		var second = args.TryGetValue("1", out var arg1) ? arg1.Message : null;
 		var hasFirst = first.ToPlainText().Trim().Length > 0;

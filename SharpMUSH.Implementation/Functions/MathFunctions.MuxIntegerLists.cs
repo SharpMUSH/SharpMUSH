@@ -77,7 +77,7 @@ public partial class Functions
 		ParameterNames = ["operation", "list", "delimiter"])]
 	public ValueTask<CallState> ListIntegerMath(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var operation = parser.CurrentState.Arguments["0"].Message?.ToPlainText().ToLowerInvariant() ?? string.Empty;
+		var operation = parser.CurrentState.ArgumentList[0].Message?.ToPlainText().ToLowerInvariant() ?? string.Empty;
 		return ValueTask.FromResult(ReadIntegerList(parser, 1, 2) switch
 		{
 			long[] { Length: 0 } => new CallState("0"),

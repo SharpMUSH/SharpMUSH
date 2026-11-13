@@ -27,7 +27,7 @@ public partial class Functions
 	[SharpFunction(Name = "loc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Location(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText()!;
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText()!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var locateResult = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0,
@@ -99,7 +99,7 @@ public partial class Functions
 	public async ValueTask<CallState> Children(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		// An empty object is PARENT's empty restriction: every object with no parent.
 		if (arg0.Length > 0 && (!DBRef.TryParse(arg0, out var parentRef)
@@ -144,8 +144,8 @@ public partial class Functions
 	public async ValueTask<CallState> Controls(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var arg1Split = parser.CurrentState.Arguments["1"].Message.ToPlainText().Split('/', 2);
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var arg1Split = parser.CurrentState.ArgumentList[1].Message.ToPlainText().Split('/', 2);
 		var attribute = arg1Split.Length > 1 ? arg1Split[1] : null;
 
 		if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0,
@@ -200,7 +200,7 @@ public partial class Functions
 	public async ValueTask<CallState> Entrances(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		AnySharpObject target = executor;
 		if (args.TryGetValue("0", out var locArg))
@@ -276,7 +276,7 @@ public partial class Functions
 	public async ValueTask<CallState> Followers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var objArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objArg, LocateFlags.All,
@@ -306,7 +306,7 @@ public partial class Functions
 	public async ValueTask<CallState> Following(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var objArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objArg, LocateFlags.All,
@@ -328,7 +328,7 @@ public partial class Functions
 	public async ValueTask<CallState> Home(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		var locateResult = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor, executor, arg0, LocateFlags.All);
@@ -353,12 +353,12 @@ public partial class Functions
 
 	[SharpFunction(Name = "localize", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.NoParse | FunctionFlags.Localize, ParameterNames = ["string"])]
 	public async ValueTask<CallState> Localize(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await ParseRawArgument(parser, parser.CurrentState.Arguments["0"].Message) ?? CallState.Empty;
+		=> await ParseRawArgument(parser, parser.CurrentState.ArgumentList[0].Message) ?? CallState.Empty;
 
 	[SharpFunction(Name = "locate", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player", "name", "type"])]
 	public async ValueTask<CallState> Locate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var lookerArg = args["0"].Message.ToPlainText();
 		var nameArg = args["1"].Message.ToPlainText();
 		var parametersArg = args["2"].Message.ToPlainText();
@@ -530,7 +530,7 @@ public partial class Functions
 		var maybeLocate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor,
 			executor,
-			parser.CurrentState.Arguments["0"].Message.ToPlainText(),
+			parser.CurrentState.ArgumentList[0].Message.ToPlainText(),
 			LocateFlags.All);
 
 		return maybeLocate switch
@@ -566,7 +566,7 @@ public partial class Functions
 	{
 		// Per PennMUSH documentation: comma-separated positional arguments, NOT equals syntax
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (args.Count == 0)
 		{
@@ -669,7 +669,7 @@ public partial class Functions
 	[SharpFunction(Name = "lsearchr", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["object", "class=restriction..."])]
 	public async ValueTask<CallState> ListSearchRegex(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var originalArgs = parser.CurrentState.Arguments;
+		var originalArgs = parser.CurrentState.ArgumentList;
 
 		return await ListSearchInternal(parser, _2, useRegex: true);
 	}
@@ -678,7 +678,7 @@ public partial class Functions
 	public async ValueTask<CallState> NameList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var namelist = ArgHelpers.NameList(parser.CurrentState.Arguments["0"].Message.ToPlainText());
+		var namelist = ArgHelpers.NameList(parser.CurrentState.ArgumentList[0].Message.ToPlainText());
 		var callback = await NameListCallbackAsync(parser, executor);
 
 		var resultList = new List<string>();
@@ -717,7 +717,7 @@ public partial class Functions
 	/// </summary>
 	private async ValueTask<Found<NameListCallback>> NameListCallbackAsync(IMUSHCodeParser parser, AnySharpObject executor)
 	{
-		var arguments = parser.CurrentState.Arguments;
+		var arguments = parser.CurrentState.ArgumentList;
 		if (arguments.Count <= 1 || string.IsNullOrWhiteSpace(arguments["1"].Message.ToPlainText()))
 		{
 			return new NotFound();
@@ -776,7 +776,7 @@ public partial class Functions
 	public async ValueTask<CallState> NumberOfChildren(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg1 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg1 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, arg1, LocateFlags.All,
@@ -815,7 +815,7 @@ public partial class Functions
 	public async ValueTask<CallState> Number(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser,
@@ -850,7 +850,7 @@ public partial class Functions
 	public async ValueTask<CallState> Parent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var arg0 = args["0"].Message.ToPlainText();
 
 		if (args.TryGetValue("1", out var newParentArg))
@@ -917,7 +917,7 @@ public partial class Functions
 		return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
-			parser.CurrentState.Arguments["0"].Message.ToPlainText(),
+			parser.CurrentState.ArgumentList[0].Message.ToPlainText(),
 			x => ValueTask.FromResult<CallState>(x.Object.DBRef));
 	}
 
@@ -925,8 +925,8 @@ public partial class Functions
 	public async ValueTask<CallState> RecursiveLocation(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var levelsArg = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var objArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var levelsArg = parser.CurrentState.ArgumentList[1].Message.ToPlainText();
 
 		// fun_rloc (src/fundb.c:1563-1572) reads the depth with parse_integer, which never fails, and
 		// clamps it to 0..20: a depth that is not a number, or is negative, climbs no levels at all.
@@ -967,14 +967,14 @@ public partial class Functions
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
-			parser.CurrentState.Arguments["0"].Message.ToPlainText(),
+			parser.CurrentState.ArgumentList[0].Message.ToPlainText(),
 			LocateFlags.All,
 			async x =>
 			{
 				// fun_room (src/fundb.c:1550).
 				if (!await PermissionService.CanLocate(executor, x))
 				{
-					return PermissionRefusal.Locate(parser.CurrentState.Arguments["0"].Message.ToPlainText()).ReturnText;
+					return PermissionRefusal.Locate(parser.CurrentState.ArgumentList[0].Message.ToPlainText()).ReturnText;
 				}
 
 				var room = await LocateService.Room(x);
@@ -990,10 +990,10 @@ public partial class Functions
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
-			parser.CurrentState.Arguments["0"].Message.ToPlainText(),
+			parser.CurrentState.ArgumentList[0].Message.ToPlainText(),
 			LocateFlags.All,
 			// fun_where (src/fundb.c:1537).
-			async x => !await PermissionService.CanLocate(executor, x) ? PermissionRefusal.Locate(parser.CurrentState.Arguments["0"].Message.ToPlainText()).ReturnText : x switch
+			async x => !await PermissionService.CanLocate(executor, x) ? PermissionRefusal.Locate(parser.CurrentState.ArgumentList[0].Message.ToPlainText()).ReturnText : x switch
 			{
 				SharpPlayer player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
 				SharpRoom => ErrorMessages.Returns.ThisIsARoom,
@@ -1007,7 +1007,7 @@ public partial class Functions
 	public async ValueTask<CallState> Zone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var arg0 = args["0"].Message.ToPlainText();
 		var hasArg1 = args.TryGetValue("1", out var arg1Value);
 
@@ -1318,8 +1318,8 @@ public partial class Functions
 	private async ValueTask<CallState> FlagListFunction(IMUSHCodeParser parser, FlagListForm form, bool orMode)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var listArg = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var objArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var listArg = parser.CurrentState.ArgumentList[1].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objArg, LocateFlags.All,
@@ -1397,7 +1397,7 @@ public partial class Functions
 	[SharpFunction(Name = "zfind", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["zone", "flags"])]
 	public async ValueTask<CallState> ZoneFind(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var arg0 = args["0"].Message.ToPlainText();
 

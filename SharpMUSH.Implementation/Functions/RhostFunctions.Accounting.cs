@@ -36,7 +36,7 @@ public partial class Functions
 	public async ValueTask<CallState> UserAttributeCount(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var name = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var name = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		if (await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, name, LocateFlags.All)
 				is not AnySharpObject target
@@ -66,8 +66,8 @@ public partial class Functions
 	public async ValueTask<CallState> Size(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var name = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var type = parser.CurrentState.Arguments.TryGetValue("1", out var typeArg)
+		var name = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var type = parser.CurrentState.ArgumentList.TryGet(1, out var typeArg)
 			&& int.TryParse(typeArg.Message.ToPlainText(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
 			&& parsed is >= 0 and <= 3
 				? parsed
@@ -93,7 +93,7 @@ public partial class Functions
 	public async ValueTask<CallState> Cloak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (await LocateService.Locate(parser, executor, executor, args["0"].Message.ToPlainText(), LocateFlags.All)
 				is not AnySharpObject viewer
@@ -119,7 +119,7 @@ public partial class Functions
 		ParameterNames = ["alias", "type"])]
 	public async ValueTask<CallState> MailAlias(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		if (args.TryGetValue("1", out var typeArg) && typeArg.Message.ToPlainText().Trim() == "1")
 		{
 			return CallState.Empty;
@@ -136,7 +136,7 @@ public partial class Functions
 	[SharpFunction(Name = "strlenraw", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> StringLengthRaw(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(new CallState(
-			Encoding.UTF8.GetByteCount(parser.CurrentState.Arguments["0"].Message.Render(MarkupFormat.Ansi))));
+			Encoding.UTF8.GetByteCount(parser.CurrentState.ArgumentList[0].Message.Render(MarkupFormat.Ansi))));
 
 	/// <summary>
 	/// <c>totcmds(&lt;player&gt;)</c>: every command the player has typed, the ended sessions' total
@@ -148,7 +148,7 @@ public partial class Functions
 	public async ValueTask<CallState> TotalCommandCount(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var name = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var name = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		if (await LocateService.LocateConnectionTarget(parser, executor, executor, name) is not AnySharpObject player)
 		{
@@ -183,7 +183,7 @@ public partial class Functions
 	public async ValueTask<CallState> ListCommandTable(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var type = parser.CurrentState.Arguments.TryGetValue("0", out var typeArg)
+		var type = parser.CurrentState.ArgumentList.TryGet(0, out var typeArg)
 			&& int.TryParse(typeArg.Message.ToPlainText(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
 			&& parsed is >= 0 and <= 3
 				? parsed

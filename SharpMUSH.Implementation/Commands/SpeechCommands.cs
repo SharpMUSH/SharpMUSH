@@ -64,7 +64,7 @@ public partial class Commands
 		// PennMUSH cmd_think (cmds.c:1769) is an unconditional notify, so a bare `think` prints a
 		// blank line rather than nothing at all. A bare `think` has no "0" argument at all, so the
 		// return has to come off the same check as the notify.
-		if (!parser.CurrentState.Arguments.TryGetValue("0", out var thought))
+		if (!parser.CurrentState.ArgumentList.TryGet(0, out var thought))
 		{
 			await NotifyService.Notify(executor, string.Empty, executor);
 			return CallState.Empty;
