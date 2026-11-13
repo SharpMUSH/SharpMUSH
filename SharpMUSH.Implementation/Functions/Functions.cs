@@ -58,6 +58,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>, IConfigur
 	private ILogger<Functions> Logger { get; }
 	private IMessageBus MessageBus { get; }
 	private IActivityReportService ActivityReports { get; }
+	private IMemoStore MemoStore { get; }
 
 	private readonly FunctionLibraryService _functionLibrary = [];
 
@@ -98,7 +99,8 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>, IConfigur
 		ITextFileService textFileService,
 		IDidItService didItService,
 		IAccountService accountService,
-		IActivityReportService activityReports)
+		IActivityReportService activityReports,
+		IMemoStore memoStore)
 	{
 		Logger = logger;
 		Mediator = mediator;
@@ -133,6 +135,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>, IConfigur
 		DidItService = didItService;
 		AccountService = accountService;
 		ActivityReports = activityReports;
+		MemoStore = memoStore;
 
 		Builtins = Generated.FunctionLibrary.Create(this).ToDictionary(pair => pair.Key, pair =>
 			pair.Value with { RestrictedOperation = RestrictedOperations.Contains(pair.Key) ? pair.Key.ToLowerInvariant() : null });

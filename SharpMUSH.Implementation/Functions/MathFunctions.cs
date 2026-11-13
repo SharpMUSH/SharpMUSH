@@ -1520,6 +1520,10 @@ public partial class Functions
 
 	private async ValueTask<CallState> RollWithDataAsync(IMUSHCodeParser parser, string formula, string data, RollOptions options)
 	{
+		// Recording a roll writes it to the world, a side effect HasSideFX does not cover, since only this option makes one.
+		if (options.Output is RollOutput.Record && SideEffectFreeEvaluation.Refuse())
+			return new CallState(ErrorMessages.Returns.FunctionDisabled);
+
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await RollData.RollAsync(parser, executor, LocateService, AttributeService, formula, data, options.Mode) switch
 		{

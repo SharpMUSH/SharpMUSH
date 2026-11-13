@@ -199,9 +199,31 @@ public class AttributeService(
 	private async ValueTask<AttributeRead<T>> ReadAttributeAsync<T>(AnySharpObject executor, AnySharpObject obj,
 		string attribute, IAttributeService.AttributeMode mode, bool parent, AttributeReadShape<T> shape) where T : class
 	{
-		try { return await ReadAttributeCoreAsync(executor, obj, await DialectNameAsync(mediator, obj, attribute), mode, parent, shape); }
-		catch (InvalidDataException) { return new AttributeRead<T>(null, "Attribute access metadata is unreadable."); }
+		AttributeRead<T> read;
+		try { read = await ReadAttributeCoreAsync(executor, obj, await DialectNameAsync(mediator, obj, attribute), mode, parent, shape); }
+		catch (InvalidDataException) { read = new AttributeRead<T>(null, "Attribute access metadata is unreadable."); }
+
+		if (AttributeReadLog.Recording && mode is IAttributeService.AttributeMode.Read or IAttributeService.AttributeMode.Execute)
+		{
+			AttributeReadLog.Add([new AttributeReadDependency(executor.Object().DBRef, obj.Object().DBRef, attribute, mode, parent,
+				await FingerprintAsync(read))]);
+		}
+
+		return read;
 	}
+
+	/// <summary>What a read found, for <see cref="AttributeReadLog"/>: the same for the eager and the lazy read.</summary>
+	private static async ValueTask<string> FingerprintAsync<T>(AttributeRead<T> read) where T : class
+		=> read switch
+		{
+			{ Found: SharpAttribute[] { Length: > 0 } eager } when eager.Any(attribute => attribute.IsUnreadable)
+				=> "EStored attribute value is unreadable.",
+			{ Found: SharpAttribute[] { Length: > 0 } eager } => AttributeReadLog.Fingerprint(eager[^1].Value),
+			{ Found: LazySharpAttribute[] { Length: > 0 } lazy }
+				=> AttributeReadLog.Fingerprint(await lazy[^1].Value.WithCancellation(ExecutionBudget.CurrentToken)),
+			{ Error: { } error } => "E" + error,
+			_ => AttributeReadLog.Absent
+		};
 
 	private async ValueTask<AttributeRead<T>> ReadAttributeCoreAsync<T>(
 		AnySharpObject executor,

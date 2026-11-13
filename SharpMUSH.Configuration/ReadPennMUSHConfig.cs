@@ -329,6 +329,8 @@ public static partial class ReadPennMushConfig
 				MaxGalleryImages = UnsignedInteger(Get(nameof(LimitOptions.MaxGalleryImages)), d.Limit.MaxGalleryImages),
 				CommandBurstSize = UnsignedInteger(Get(nameof(LimitOptions.CommandBurstSize)), d.Limit.CommandBurstSize),
 				PushIdleSeconds = UnsignedInteger(Get(nameof(LimitOptions.PushIdleSeconds)), d.Limit.PushIdleSeconds),
+				MemoMaxBytes = UnsignedInteger(Get(nameof(LimitOptions.MemoMaxBytes)), d.Limit.MemoMaxBytes),
+				MemoWindow = UnsignedInteger(Get(nameof(LimitOptions.MemoWindow)), d.Limit.MemoWindow),
 				PushLimit = UnsignedInteger(Get(nameof(LimitOptions.PushLimit)), d.Limit.PushLimit),
 				PushDevices = UnsignedInteger(Get(nameof(LimitOptions.PushDevices)), d.Limit.PushDevices)
 			},

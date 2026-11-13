@@ -1036,6 +1036,10 @@ public partial class Functions
 		AnySharpObject? sendTo = null;
 		if (args.TryGetValue("2", out var sendToArg))
 		{
+			// Sending the timings to someone is a side effect HasSideFX does not cover, since only <sendto> makes one.
+			if (SideEffectFreeEvaluation.Refuse())
+				return new CallState(ErrorMessages.Returns.FunctionDisabled);
+
 			var name = (await ParseRawArgument(parser, sendToArg.Message))?.Message?.ToPlainText() ?? string.Empty;
 			switch (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, name, LocateFlags.All))
 			{
