@@ -46,9 +46,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("fn10", BuildNested(10), false),
 		new("cat3", "[cat(%#,%#,%#)]", false),
 		new("iter50", "iter(lnum(50),%i0)", false),
-		// Per-item cost over a long list: a lambda and an attribute through map(), and an iter() that formats.
-		new("map-lambda", "[strlen(map(lit(#lambda/[add(%0,1)]),lnum(1000)))]", false),
-		new("map-attr", "[strlen(map(me/PROFILE_ADD,lnum(1000)))]", false),
+		// Per-item cost of an iter() that formats each line.
 		new("iter-fmt", "[strlen(iter(lnum(1000),[ljust(##,5)] [rjust(add(##,1),6)]))]", false),
 		new("mixed", "[switch(%#,#1,[iter(lnum(1,10),[add(##,1)])],other)]", false),
 		new("ansi", "[ansi(hr,Hello World)]", false),
@@ -342,7 +340,6 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 			await ParenGroupBenchmarks.VerifyWorkloadsAsync(baseParser, one);
 		if (parenGroups is { } on) baseParser = ParenGroupBenchmarks.WithParenGroups(baseParser, on);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_FN"], MarkupText.Plain("[mul(%0,2)]"), god);
-		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_ADD"], MarkupText.Plain("[add(%0,1)]"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_WHOVIS"], MarkupText.Plain("cand(not(hastype(%0,exit)),cor(not(hastype(%0,player)),hasflag(%0,CONNECTED)),cor(not(hasflag(%0,DARK)),strmatch(num(%0),num(%1)),orflags(%1,Wr),haspower(%1,See_All)))"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_WHOBASE"], MarkupText.Plain("json_mod(json(object,dbref,json(string,num(%0)),objid,json(string,objid(%0)),type,json(string,lcstr(type(%0))),name,json(string,name(%0)),cmd,json(string,look [num(%0)])),patch,json(object,status,if(hastype(%0,player),json(string,idle(%0)),null),profile,if(hastype(%0,player),true,null)))"), god);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_DOC"], MarkupText.Plain("{\"kind\":\"\",\"schema_version\":1,\"title\":\"\",\"pages\":[{\"key\":\"main\",\"title\":\"\",\"order\":1,\"sections\":[]}],\"actions\":{}}"), god);
