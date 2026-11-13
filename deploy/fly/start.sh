@@ -26,10 +26,12 @@ STATE=$DATA/state
 DOMAIN=${SHARPMUSH_DOMAIN:-${FLY_APP_NAME:+$FLY_APP_NAME.fly.dev}}
 DOMAIN=${DOMAIN:-${RAILWAY_PUBLIC_DOMAIN:-}}
 DOMAIN=${DOMAIN:-localhost:8000}
+DOMAIN=${DOMAIN#*://}
+DOMAIN=${DOMAIN%%/*}
 # Who ends TLS. On Fly and Railway the host's proxy does, in front of :8000, and the game is at
 # https://<domain>. Otherwise players reach :8000 directly:
 #   at localhost: plain HTTP, which browsers treat as secure, so no certificate warning;
-#   at any other address (SHARPMUSH_DOMAIN with a port, e.g. 192.168.1.10:8000): Caddy serves :8000
+#   at an IP address, or any name given with a port (e.g. 192.168.1.10:8000): Caddy serves :8000
 #   with a certificate from its own CA, since the portal runs only in a secure context. Browsers warn
 #   once, as the CA is not one they trust.
 # SHARPMUSH_TLS=internal or off overrides the guess.
@@ -44,13 +46,16 @@ host=${host%]}
 case "$host" in
 	localhost | *.localhost | 127.* | ::1) TLS=off SCHEME=http ;;
 	"${FLY_APP_NAME:-}.fly.dev" | "${RAILWAY_PUBLIC_DOMAIN:-}") TLS=off SCHEME=https ;; # the host's proxy
+	*:* | *[0-9]) TLS=internal SCHEME=https ;; # an IP address: nothing in front names it
 	*) TLS=${port:+internal} SCHEME=https ;;
 esac
 TLS=${SHARPMUSH_TLS:-${TLS:-off}}
 case "$TLS" in
 	internal)
 		SCHEME=https
+		# localhost too, so the machine running the game can still open it there.
 		case "$host" in *:*) SHARPMUSH_SITE="https://[$host]:8000" ;; *) SHARPMUSH_SITE="https://$host:8000" ;; esac
+		[ "$host" = localhost ] || SHARPMUSH_SITE="$SHARPMUSH_SITE, https://localhost:8000"
 		;;
 	off) SHARPMUSH_SITE=:8000 ;;
 	*) echo "sharpmush-start: SHARPMUSH_TLS must be internal or off, not $TLS" >&2; exit 1 ;;
