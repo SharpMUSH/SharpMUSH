@@ -98,18 +98,75 @@ public class ParserStateContextTests
 	}
 
 	[Test]
-	public async ValueTask ReplacingASharedValueCopiesTheContextForThatFrameOnly()
+	public async ValueTask ReplacingTheEnvironmentKeepsTheSharedValues()
 	{
 		var root = ParserState.RootFor(new DBRef(7));
 		var environment = new Dictionary<string, CallState>();
 		var localized = root with { EnvironmentRegisters = environment };
 
-		await Assert.That(ReferenceEquals(localized.Context, root.Context)).IsFalse();
 		await Assert.That(ReferenceEquals(localized.EnvironmentRegisters, environment)).IsTrue();
+		await Assert.That(ReferenceEquals(localized.Context.EnvironmentRegisters, environment)).IsTrue();
 		await Assert.That(ReferenceEquals(root.EnvironmentRegisters, environment)).IsFalse();
 		// Everything it did not replace is still the evaluation's.
 		await Assert.That(ReferenceEquals(localized.TotalInvocations, root.TotalInvocations)).IsTrue();
 		await Assert.That(ReferenceEquals(localized.Registers, root.Registers)).IsTrue();
+	}
+
+	[Test]
+	public async ValueTask ReplacingASharedValueCopiesTheContextForThatFrameOnly()
+	{
+		var root = ParserState.RootFor(new DBRef(7));
+		var registers = new System.Collections.Concurrent.ConcurrentStack<Dictionary<string, MString>>();
+		var localized = root with { Registers = registers };
+
+		await Assert.That(ReferenceEquals(localized.Context, root.Context)).IsFalse();
+		await Assert.That(ReferenceEquals(localized.Registers, registers)).IsTrue();
+		await Assert.That(ReferenceEquals(root.Registers, registers)).IsFalse();
+		await Assert.That(ReferenceEquals(localized.TotalInvocations, root.TotalInvocations)).IsTrue();
+	}
+
+	[Test]
+	public async ValueTask AnAttributeCallBindsItsEnvironmentOverTheSharedContext()
+	{
+		var root = ParserState.RootFor(new DBRef(7));
+		var arguments = new Dictionary<string, CallState> { ["0"] = new("item") };
+		var call = root.ForAttributeCall(arguments, arguments, new DBAttribute(new DBRef(9), "FN"), "FN", new DBRef(9));
+
+		await Assert.That(call.Executor).IsEqualTo(new DBRef(9));
+		await Assert.That(call.Caller).IsEqualTo(new DBRef(7));
+		await Assert.That(call.Enactor).IsEqualTo(new DBRef(7));
+		await Assert.That(ReferenceEquals(call.EnvironmentRegisters, arguments)).IsTrue();
+		await Assert.That(call.SuppliedArgumentKeys!.Contains("0")).IsTrue();
+		await Assert.That(ReferenceEquals(root.EnvironmentRegisters, arguments)).IsFalse();
+		await Assert.That(root.SuppliedArgumentKeys).IsNull();
+		await Assert.That(ReferenceEquals(call.TotalInvocations, root.TotalInvocations)).IsTrue();
+		await Assert.That(ReferenceEquals(call.Registers, root.Registers)).IsTrue();
+
+		// A function the body calls reads the same environment and actors.
+		var inner = call.ForFunction("add", []);
+		await Assert.That(ReferenceEquals(inner.EnvironmentRegisters, arguments)).IsTrue();
+		await Assert.That(inner.SuppliedArgumentKeys!.Contains("0")).IsTrue();
+		await Assert.That(inner.Executor).IsEqualTo(new DBRef(9));
+		await Assert.That(inner.Caller).IsEqualTo(new DBRef(7));
+
+		// Its context, read whole, carries the environment; setting a context replaces it.
+		await Assert.That(ReferenceEquals(call.Context.EnvironmentRegisters, arguments)).IsTrue();
+		var reset = call with { Context = root.Context };
+		await Assert.That(ReferenceEquals(reset.EnvironmentRegisters, root.EnvironmentRegisters)).IsTrue();
+		await Assert.That(reset.SuppliedArgumentKeys).IsNull();
+	}
+
+	[Test]
+	public async ValueTask ChangingAnActorLeavesTheCallersActorsAlone()
+	{
+		var root = ParserState.RootFor(new DBRef(7));
+		var changed = root with { Executor = new DBRef(9), HookedCommand = MarkupText.Plain("look") };
+
+		await Assert.That(changed.Executor).IsEqualTo(new DBRef(9));
+		await Assert.That(changed.Enactor).IsEqualTo(new DBRef(7));
+		await Assert.That(root.Executor).IsEqualTo(new DBRef(7));
+		await Assert.That(root.HookedCommand).IsNull();
+		await Assert.That(changed.ForFunction("add", []).HookedCommand!.ToPlainText()).IsEqualTo("look");
 	}
 
 	[Test]

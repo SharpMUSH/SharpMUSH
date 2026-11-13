@@ -190,13 +190,10 @@ public class ListenerRoutingService(
 			var arguments = new Dictionary<string, CallState> { ["0"] = new(heard) };
 			var scoped = parser.Push(state with
 			{
-				Executor = forwarder.Object().DBRef,
-				Enactor = speaker.Object().DBRef,
-				Caller = speaker.Object().DBRef,
+				Actors = state.Actors with { Executor = forwarder.Object().DBRef, Enactor = speaker.Object().DBRef, Caller = speaker.Object().DBRef, Restrictions = EvaluationRestrictions.Current ?? state.Restrictions },
 				Arguments = arguments,
 				EnvironmentRegisters = new(arguments),
 				Registers = new(state.Registers.Reverse().Select(frame => new Dictionary<string, MString>(frame, frame.Comparer))),
-				Restrictions = EvaluationRestrictions.Current ?? state.Restrictions
 			});
 			var result = await AttributeService.EvaluateAttributeFunctionResultAsync(scoped, forwarder, forwarder,
 				"PREFIX", arguments, ignorePermissions: true);
@@ -279,13 +276,10 @@ public class ListenerRoutingService(
 			var arguments = new Dictionary<string, CallState> { ["0"] = new(rawBody) };
 			var scoped = parser.Push(state with
 			{
-				Executor = listener.Object().DBRef,
-				Enactor = speaker.Object().DBRef,
-				Caller = speaker.Object().DBRef,
+				Actors = state.Actors with { Executor = listener.Object().DBRef, Enactor = speaker.Object().DBRef, Caller = speaker.Object().DBRef, Restrictions = EvaluationRestrictions.Current ?? state.Restrictions },
 				Arguments = arguments,
 				EnvironmentRegisters = new(arguments),
 				Registers = new(state.Registers.Reverse().Select(frame => new Dictionary<string, MString>(frame, frame.Comparer))),
-				Restrictions = EvaluationRestrictions.Current ?? state.Restrictions
 			});
 			var result = await AttributeService.EvaluateAttributeFunctionResultAsync(scoped, listener, listener,
 				"INPREFIX", arguments, ignorePermissions: true);

@@ -480,9 +480,7 @@ public partial class Commands
 			var outgoing = await parser.With(
 				state => state with
 				{
-					Executor = executor.Object().DBRef,
-					Caller = executor.Object().DBRef,
-					Enactor = executor.Object().DBRef
+					Actors = state.Actors with { Executor = executor.Object().DBRef, Caller = executor.Object().DBRef, Enactor = executor.Object().DBRef }
 				},
 				pageParser => AttributeHelpers.EvaluateFormatAttribute(
 					AttributeService, pageParser, executor, executor, "OUTPAGEFORMAT",
@@ -519,9 +517,7 @@ public partial class Commands
 			var incoming = await parser.With(
 				state => state with
 				{
-					Executor = recipient.Object().DBRef,
-					Caller = recipient.Object().DBRef,
-					Enactor = executor.Object().DBRef
+					Actors = state.Actors with { Executor = recipient.Object().DBRef, Caller = recipient.Object().DBRef, Enactor = executor.Object().DBRef }
 				},
 				pageParser => AttributeHelpers.EvaluateFormatAttribute(
 					AttributeService, pageParser, recipient, recipient, "PAGEFORMAT",
@@ -584,9 +580,7 @@ public partial class Commands
 		var returned = await parser.With(
 			state => state with
 			{
-				Executor = target.Object().DBRef,
-				Caller = target.Object().DBRef,
-				Enactor = pager.Object().DBRef
+				Actors = state.Actors with { Executor = target.Object().DBRef, Caller = target.Object().DBRef, Enactor = pager.Object().DBRef }
 			},
 			returnParser => AttributeHelpers.EvaluateFormatAttribute(
 				AttributeService, returnParser, target, target, attribute, [], MarkupText.Empty));

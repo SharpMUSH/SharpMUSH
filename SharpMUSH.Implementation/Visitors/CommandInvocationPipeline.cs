@@ -910,9 +910,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 				CurrentEvaluation = DBAttribute.Of(obj.Object().DBRef, attr),
 				Arguments = arguments,
 				Function = null,
-				Executor = obj.Object().DBRef,
-				Enactor = prs.CurrentState.Executor,
-				Caller = prs.CurrentState.Executor,
+				Actors = bodyState.Actors with { Executor = obj.Object().DBRef, Enactor = prs.CurrentState.Executor, Caller = prs.CurrentState.Executor },
 				Context = bodyState.Context with
 				{
 					EnvironmentRegisters = arguments,

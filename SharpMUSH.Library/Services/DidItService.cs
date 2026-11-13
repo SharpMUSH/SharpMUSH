@@ -306,9 +306,7 @@ public class DidItService(
 			command,
 			invocation with
 			{
-				Executor = executor,
-				Enactor = enactor,
-				Caller = enactor,
+				Actors = invocation.Actors with { Executor = executor, Enactor = enactor, Caller = enactor },
 				Arguments = args,
 				CommandHistory = null,
 				CommandSources = null,

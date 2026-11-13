@@ -284,9 +284,7 @@ public static partial class MailDelivery
 		=> parser.With(
 			state => state with
 			{
-				Executor = sender.Object().DBRef,
-				Caller = sender.Object().DBRef,
-				Enactor = sender.Object().DBRef
+				Actors = state.Actors with { Executor = sender.Object().DBRef, Caller = sender.Object().DBRef, Enactor = sender.Object().DBRef }
 			},
 			signatureParser => AttributeHelpers.EvaluateFormatAttribute(services.Attributes, signatureParser, sender,
 				sender, "MAILSIGNATURE", new(), MarkupText.Empty));
