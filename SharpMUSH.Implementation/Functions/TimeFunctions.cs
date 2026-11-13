@@ -101,10 +101,14 @@ public partial class Functions
 		ParameterNames = ["object", "utc"])]
 	public async ValueTask<CallState> ModifiedTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var targetArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 		var utc = parser.CurrentState.ArgumentList.TryGet(1, out var utcArgument) && utcArgument.Message.Truthy(parser);
+		if (HelperFunctions.SplitObjectAndAttr(targetArg) is { } attribute)
+		{
+			return await AttributeModifiedTimeAsync(parser, attribute, modified => new CallState(FormatInstant(modified, utc)));
+		}
 
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
 			async found => await PermissionService.CanExamine(executor, found)
@@ -822,14 +826,40 @@ public partial class Functions
 			return ErrorMessages.Returns.InvalidPrecision;
 		}
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var targetArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		if (HelperFunctions.SplitObjectAndAttr(targetArg) is { } attribute)
+		{
+			return await AttributeModifiedTimeAsync(parser, attribute, modified => new CallState(TimePrecisions.Format(modified, precision)));
+		}
 
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
 			async found => await PermissionService.CanExamine(executor, found)
 				? new CallState(TimePrecisions.Format(found.Object().ModifiedTime, precision))
 				: PermissionRefusal.Examine(found).Return);
+	}
+
+	/// <summary>
+	/// <c>mtime()</c> and <c>msecs()</c> given <c>&lt;object&gt;/&lt;attribute&gt;</c>: when that attribute's value was last
+	/// written, found as <c>get()</c> finds it (through <c>@parent</c>, readable by whoever may read the value).
+	/// Empty when the attribute has no recorded time.
+	/// </summary>
+	private async ValueTask<CallState> AttributeModifiedTimeAsync(IMUSHCodeParser parser, ObjectAttribute target,
+		Func<long, CallState> format)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		return await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, target.Object, LocateFlags.All) switch
+		{
+			AnySharpObject found => await AttributeService.GetAttributeAsync(executor, found, target.Attribute,
+					mode: IAttributeService.AttributeMode.Read, parent: true) switch
+			{
+				SharpAttribute[] chain => chain[^1].ModifiedTime is { } modified ? format(modified) : new CallState(string.Empty),
+				None => new CallState(ErrorMessages.Returns.NoSuchAttribute),
+				Error<string> error => new CallState(error.Value)
+			},
+			_ => new CallState(ErrorMessages.Returns.NotVisible)
+		};
 	}
 
 	[SharpFunction(Name = "etime", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular,

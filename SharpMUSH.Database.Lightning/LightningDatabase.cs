@@ -32,7 +32,8 @@ public partial class LightningDatabase(
 	IReadOnlyList<IMigrationSource>? migrationSources = null,
 	IReadOnlyList<PluginFlag>? pluginFlags = null,
 	AccountCredentialGate? credentialGate = null,
-	Lazy<IEnumerable<IAccountCredentialRevocation>>? credentialRevokers = null)
+	Lazy<IEnumerable<IAccountCredentialRevocation>>? credentialRevokers = null,
+	TimeProvider? clock = null)
 	: ISharpDatabase, IPackageRegistryService, IRoleRegistryService, ILayoutRegistryService,
 		IApplicationRegistryService, ILightningStorageAccessor, IAsyncDisposable
 {
@@ -45,6 +46,9 @@ public partial class LightningDatabase(
 	private readonly Lazy<IEnumerable<IAccountCredentialRevocation>> _credentialRevokers = credentialRevokers ?? new(() => []);
 	private readonly LightningStoreOptions _options = options;
 	private readonly IPasswordService _passwordService = passwordService;
+
+	/// <summary>The clock an attribute write stamps its modification time from.</summary>
+	private readonly TimeProvider _clock = clock ?? TimeProvider.System;
 
 	/// <summary>
 	/// How an object this provider builds resolves the relations that point at other objects — location,

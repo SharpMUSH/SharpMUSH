@@ -464,6 +464,14 @@ public partial class LightningDatabase
 			write.Value);
 	}
 
+	/// <summary>
+	/// The time a write stamps on an attribute: <paramref name="now"/>, or one millisecond past the time it already has
+	/// when that is not earlier (two writes in one millisecond, or a clock set back). Each write of an attribute so gets
+	/// a later time than the last, which lets the time stand for the value's version.
+	/// </summary>
+	private static long NextModified(AttrMetaRecord? existing, long now)
+		=> existing?.Modified is { } previous && previous >= now ? previous + 1 : now;
+
 	private static readonly byte[] EmptyAttributeValue = Keys.Str(MarkupTextSerializer.Serialize(MarkupText.Empty));
 
 	/// <summary>
@@ -480,6 +488,7 @@ public partial class LightningDatabase
 		var longName = string.Empty;
 		var created = 0;
 		AttributeWriteOutcome outcome = new Success();
+		var now = _clock.GetUtcNow().ToUnixTimeMilliseconds();
 
 		for (var level = 0; level < path.Length; level++)
 		{
@@ -512,7 +521,9 @@ public partial class LightningDatabase
 			{
 				Owner = isLeaf || existing is null ? write.Owner : existing.Owner,
 				Flags = [.. flags],
-				Entry = entry?.Name ?? existing?.Entry
+				Entry = entry?.Name ?? existing?.Entry,
+				// The leaf's value is what changed; a branch on the way keeps its own time.
+				Modified = isLeaf ? NextModified(existing, now) : existing?.Modified
 			}));
 
 			// A node that already exists keeps its value unless it is the leaf being set.
@@ -653,6 +664,9 @@ public partial class LightningDatabase
 			if (HasChildren(tx, n, longName))
 			{
 				tx.Put(Tables.AttrVal, key, empty);
+				var meta = walk[^1].Meta;
+				tx.Put(Tables.AttrMeta, key,
+					Codec.Serialize(meta with { Modified = NextModified(meta, _clock.GetUtcNow().ToUnixTimeMilliseconds()) }));
 			}
 			else
 			{
@@ -944,7 +958,8 @@ public partial class LightningDatabase
 		{
 			Value = stored?.Value ?? MarkupText.Empty,
 			StoredValue = stored,
-			IsUnreadable = unreadable
+			IsUnreadable = unreadable,
+			ModifiedTime = meta.Modified
 		};
 
 	}
