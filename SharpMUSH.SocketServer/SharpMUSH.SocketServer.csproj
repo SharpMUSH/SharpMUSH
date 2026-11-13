@@ -15,7 +15,10 @@
 
   <ItemGroup>
     <PackageReference Include="MarkupString" Version="$(MarkupStringVersion)" />
+    <PackageReference Include="MarkupString.Ansi" Version="$(MarkupStringVersion)" />
+    <PackageReference Include="MarkupString.Html" Version="$(MarkupStringVersion)" />
     <PackageReference Include="MarkupString.Mxp" Version="$(MarkupStringVersion)" />
+    <PackageReference Include="MarkupString.Pueblo" Version="$(MarkupStringVersion)" />
     <PackageReference Include="OpenTelemetry.Api" Version="1.20.1" />
     <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.20.1-beta.1" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
