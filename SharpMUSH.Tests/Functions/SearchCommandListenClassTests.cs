@@ -29,7 +29,7 @@ public class SearchCommandListenClassTests
 		await CommandAsync($"&CMD {match}=$+{token}*:think matched");
 		await CommandAsync($"&CMD {control}=$+{token}other:think matched");
 
-		var found = ReturnedDbRefs(await SearchAsync($"lsearch(all,type,thing,command,+{token}frob)"));
+		var found = ReturnedDbRefs(await SearchAsync($"lsearch(all,type,thing,command,+{token}frob,{Between(match, control)})"));
 
 		await Assert.That(found).Contains(match.Number);
 		await Assert.That(found).DoesNotContain(control.Number);
@@ -44,7 +44,7 @@ public class SearchCommandListenClassTests
 		await CommandAsync($"&CMD {match}=$+{token}z?p:think matched");
 		await CommandAsync($"&CMD {control}=$+{token}z?:think matched");
 
-		var found = ReturnedDbRefs(await SearchAsync($"lsearch(all,type,thing,command,+{token}zap)"));
+		var found = ReturnedDbRefs(await SearchAsync($"lsearch(all,type,thing,command,+{token}zap,{Between(match, control)})"));
 
 		await Assert.That(found).Contains(match.Number);
 		await Assert.That(found).DoesNotContain(control.Number);
@@ -59,7 +59,7 @@ public class SearchCommandListenClassTests
 		await CommandAsync($"@listen {match}=*{token}*");
 		await CommandAsync($"@listen {control}={token}");
 
-		var found = ReturnedDbRefs(await SearchAsync($"lsearch(all,type,thing,listen,well {token} there)"));
+		var found = ReturnedDbRefs(await SearchAsync($"lsearch(all,type,thing,listen,well {token} there,{Between(match, control)})"));
 
 		await Assert.That(found).Contains(match.Number);
 		await Assert.That(found).DoesNotContain(control.Number);
@@ -74,7 +74,7 @@ public class SearchCommandListenClassTests
 		await CommandAsync($"&HEAR {match}=^*{token}?:think heard");
 		await CommandAsync($"&HEAR {control}=^{token}:think heard");
 
-		var found = ReturnedDbRefs(await SearchAsync($"lsearch(all,type,thing,listen,oh {token}!)"));
+		var found = ReturnedDbRefs(await SearchAsync($"lsearch(all,type,thing,listen,oh {token}!,{Between(match, control)})"));
 
 		await Assert.That(found).Contains(match.Number);
 		await Assert.That(found).DoesNotContain(control.Number);
@@ -107,11 +107,21 @@ public class SearchCommandListenClassTests
 
 		var mortalParser = WebAppFactoryArg.FunctionParserFor(mortal);
 		var found = ReturnedDbRefs((await mortalParser.EvaluateAsync(
-			MarkupText.Plain($"lsearch(all,type,thing,command,+{token}frob,listen,oh {token} hi)"))).ToPlainText());
+			MarkupText.Plain($"lsearch(all,type,thing,command,+{token}frob,listen,oh {token} hi,{Between(readable, hidden)})"))).ToPlainText());
 
 		await Assert.That(found).Contains(readable.Number);
 		await Assert.That(found).Contains(hidden.Number);
 	}
+
+	/// <summary>
+	/// Bounds a search to the dbrefs the test created. The world is shared and grows through the run, and
+	/// an unbounded COMMAND/LISTEN search tests every thing in it inside one evaluation's
+	/// <c>queue_entry_cpu_time</c> (2s): under a loaded full run that scan overran the budget, the search
+	/// answered <c>#-1 EXECUTION TIME LIMIT EXCEEDED</c>, and the match looked missing. Either object may
+	/// have reused a destroyed object's dbref, so neither is assumed to be the lower.
+	/// </summary>
+	private static string Between(DBRef one, DBRef other) =>
+		$"mindb,{Math.Min(one.Number, other.Number)},maxdb,{Math.Max(one.Number, other.Number)}";
 
 	/// <summary>Letters and hex digits only, so it is a literal inside a glob.</summary>
 	private static string UniqueToken(string prefix) => prefix + Guid.NewGuid().ToString("N")[..10];
