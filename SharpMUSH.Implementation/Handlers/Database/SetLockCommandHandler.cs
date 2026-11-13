@@ -10,7 +10,8 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class SetLockCommandHandler(IObjectStore database, IBooleanExpressionParser booleanParser, ILockService lockService)
+public class SetLockCommandHandler(IObjectStore database, IBooleanExpressionParser booleanParser, ILockService lockService,
+	TimeProvider clock)
 	: ICommandHandler<SetLockCommand, Result<Success>>
 {
 	public async ValueTask<Result<Success>> Handle(SetLockCommand request, CancellationToken cancellationToken)
@@ -30,6 +31,7 @@ public class SetLockCommandHandler(IObjectStore database, IBooleanExpressionPars
 			return new Error<string>(ErrorMessages.Notifications.DontUnderstandThatKey);
 		data = data with { LockString = bound };
 		await database.SetLockAsync(target.Object(), name, data, cancellationToken);
+		await database.StampModifiedAsync(target, clock, cancellationToken);
 		if (old is not null) booleanParser.InvalidateCache(old.LockString);
 		target.Object().WithLock(name, data);
 		request.Target.WithLock(name, data);
@@ -37,7 +39,8 @@ public class SetLockCommandHandler(IObjectStore database, IBooleanExpressionPars
 	}
 }
 
-public class UnsetLockCommandHandler(IObjectStore database, IBooleanExpressionParser booleanParser, ILockService lockService)
+public class UnsetLockCommandHandler(IObjectStore database, IBooleanExpressionParser booleanParser, ILockService lockService,
+	TimeProvider clock)
 	: ICommandHandler<UnsetLockCommand, Result<Success>>
 {
 	public async ValueTask<Result<Success>> Handle(UnsetLockCommand request, CancellationToken cancellationToken)
@@ -52,6 +55,7 @@ public class UnsetLockCommandHandler(IObjectStore database, IBooleanExpressionPa
 		if (await lockService.AuthorizeWriteAsync(executor, target, old ?? new SharpLockData()) is Error<string> refused) return refused;
 		if (old is null) return new Success();
 		await database.UnsetLockAsync(target.Object(), name, cancellationToken);
+		await database.StampModifiedAsync(target, clock, cancellationToken);
 		booleanParser.InvalidateCache(old.LockString);
 		target.Object().WithoutLock(name);
 		request.Target.WithoutLock(name);
@@ -59,7 +63,7 @@ public class UnsetLockCommandHandler(IObjectStore database, IBooleanExpressionPa
 	}
 }
 
-public class SetLockFlagsCommandHandler(IObjectStore database, ILockService lockService)
+public class SetLockFlagsCommandHandler(IObjectStore database, ILockService lockService, TimeProvider clock)
 	: ICommandHandler<SetLockFlagsCommand, Result<Success>>
 {
 	public async ValueTask<Result<Success>> Handle(SetLockFlagsCommand request, CancellationToken cancellationToken)
@@ -73,6 +77,7 @@ public class SetLockFlagsCommandHandler(IObjectStore database, ILockService lock
 			return new Error<string>(ErrorMessages.Notifications.PermissionDeniedLockSetWizard);
 		data = data with { Flags = request.Clear ? data.Flags & ~request.Flags : data.Flags | request.Flags };
 		await database.SetLockAsync(target.Object(), name, data, cancellationToken);
+		await database.StampModifiedAsync(target, clock, cancellationToken);
 		target.Object().WithLock(name, data);
 		request.Target.WithLock(name, data);
 		return new Success();
@@ -106,6 +111,20 @@ public class CopyLockCommandHandler(IObjectStore database, ILockService lockServ
 
 internal static class LockWriteAuthorization
 {
+	/// <summary>
+	/// <c>do_lock</c>, <c>do_unlock</c> and <c>do_lset</c> (<c>src/lock.c</c>) set <c>ModTime(thing)</c> when the
+	/// lock changed, unless the object is a player. Restoring and importing a lock (<see cref="CopyLockCommand"/>,
+	/// <see cref="ImportLockCommand"/>) leave it alone, as <c>add_lock_raw</c> does.
+	/// </summary>
+	public static async ValueTask StampModifiedAsync(this IObjectStore database, AnySharpObject target, TimeProvider clock,
+		CancellationToken cancellationToken)
+	{
+		if (target.IsPlayer) return;
+		var obj = target.Object();
+		await database.SetObjectTimestampsAsync(obj.DBRef, obj.CreationTime, clock.GetUtcNow().ToUnixTimeMilliseconds(),
+			cancellationToken);
+	}
+
 	/// <summary>Writing <paramref name="next"/> over <paramref name="current"/>: the first refusal of the two writes, or success.</summary>
 	public static async ValueTask<Result<Success>> AuthorizeWritesAsync(this ILockService lockService, AnySharpObject executor,
 		AnySharpObject target, SharpLockData current, SharpLockData next)

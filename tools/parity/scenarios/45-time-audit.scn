@@ -10,3 +10,18 @@ think [lte(abs(add(sub(convtime(time(-8),UTC),convtime(time(utc),UTC)),28800)),2
 think [lte(abs(sub(sub(convtime(time(5.5),UTC),convtime(time(utc),UTC)),19800)),2)]
 think [time(Nowhere/Atlantis)]
 think [time(24)]
+
+::case time.mtime  an attribute or lock write moves mtime past ctime; a clone keeps its original's
+# atr_add (src/attrib.c) and do_lock (src/lock.c) set ModTime(thing) = mudtime; do_clone copies the
+# original's (src/create.c:653-655). The waits put the write at least a second after the creation.
+@create MtimeAttr
+::until MTIMEATTR
+@wait 2={&COLOUR MtimeAttr=red;think [gt(msecs(MtimeAttr),csecs(MtimeAttr))] MTIMEATTR}
+@create MtimeLock
+::until MTIMELOCK
+@wait 2={@lock MtimeLock=me;think [gt(msecs(MtimeLock),csecs(MtimeLock))] MTIMELOCK}
+@clone MtimeAttr=MtimeCopy
+think [eq(msecs(MtimeCopy),msecs(MtimeAttr))] [lt(msecs(MtimeCopy),csecs(MtimeCopy))]
+@recycle MtimeCopy
+@recycle MtimeLock
+@recycle MtimeAttr

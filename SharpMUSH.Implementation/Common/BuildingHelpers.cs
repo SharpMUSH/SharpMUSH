@@ -1094,6 +1094,11 @@ public static class BuildingHelpers
 			await mediator.Send(new SetObjectParentCommand(clonedObj, parent));
 		}
 
+		// create.c:653-655 gives the clone its original's modification time, and atr_cpy and clone_locks leave
+		// it there; the attribute and alias copies above stamped it, so it goes back.
+		await mediator.Send(new SetObjectTimestampsCommand(cloneDbRef, clonedObj.Object().CreationTime,
+			target.Object().ModifiedTime));
+
 		await eventService.TriggerEventAsync(SharpEvents.ObjectCreate, executor.Object().DBRef,
 			cloneDbRef.ToString(),
 			target.Object().DBRef.ToString()); // cloned-from

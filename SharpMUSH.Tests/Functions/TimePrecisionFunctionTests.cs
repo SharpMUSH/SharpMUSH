@@ -143,8 +143,8 @@ public class TimePrecisionFunctionTests
 	/// msecs() reads ModifiedTime, not CreationTime.
 	/// </summary>
 	/// <remarks>
-	/// ModifiedTime is currently only ever written at creation, so it equals CreationTime for every
-	/// object; this asserts the two are read from their own fields, not that they diverge.
+	/// #1 is a player, whose modification time stays at its creation (ModificationTimeTests), so this
+	/// asserts the two are read from their own fields, not that they diverge.
 	/// </remarks>
 	[Test]
 	public async Task MsecsReadsModificationTime()

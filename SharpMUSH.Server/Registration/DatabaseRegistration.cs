@@ -143,7 +143,8 @@ internal static class DatabaseRegistration
 
 			var db = new LightningDatabase(dbLogger, storeOptions, password, relations, pluginMigrationSources, pluginFlags,
 				x.GetRequiredService<AccountCredentialGate>(),
-				new Lazy<IEnumerable<IAccountCredentialRevocation>>(() => x.GetServices<IAccountCredentialRevocation>().ToArray()));
+				new Lazy<IEnumerable<IAccountCredentialRevocation>>(() => x.GetServices<IAccountCredentialRevocation>().ToArray()),
+				x.GetService<TimeProvider>());
 			return db;
 		});
 		RegisterDatabaseProvider<LightningDatabase>(services);
