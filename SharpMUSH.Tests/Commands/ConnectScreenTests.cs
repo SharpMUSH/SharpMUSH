@@ -1,8 +1,11 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Messages;
+using SharpMUSH.Server.Consumers;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -126,6 +129,32 @@ public class ConnectScreenTests
 		await Assert.That(NotificationsTo(WebAppFactoryArg, staying).Any(m => m.Contains("Come back soon", StringComparison.Ordinal))).IsFalse();
 		await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef).Any(m => m.Contains("Come back soon", StringComparison.Ordinal))).IsFalse();
 		await Assert.That(ConnectionService.Get(staying)?.Ref).IsEqualTo(player.DbRef);
+	}
+
+	/// <summary>
+	/// A client that goes away without QUIT (a closed browser tab, whose session the socket server holds for a
+	/// while first) tells the character's other connections nothing. A QUIT after it still does, once.
+	/// </summary>
+	[Test]
+	public async Task ClosedSocketTellsNoOtherConnectionItPartiallyDisconnected()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DropOneOfThree");
+		var quitting = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, player.DbRef);
+		var staying = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, player.DbRef);
+
+		await new ConnectionClosedConsumer(NullLogger<ConnectionClosedConsumer>.Instance, ConnectionService)
+			.HandleAsync(new ConnectionClosedMessage(player.Handle, DateTimeOffset.UtcNow));
+		await Parser.CommandParse(quitting, ConnectionService, MarkupText.Plain("QUIT"));
+
+		await Assert.That(() => NotificationsTo(WebAppFactoryArg, staying))
+			.WaitsFor(lines => lines.Contains(ErrorMessages.Notifications.YouHavePartiallyDisconnected),
+				timeout: TimeSpan.FromSeconds(5), pollingInterval: TimeSpan.FromMilliseconds(50));
+
+		await Assert.That(ConnectionService.Get(player.Handle)).IsNull();
+		await Assert.That(NotificationsTo(WebAppFactoryArg, staying)
+			.Count(m => m == ErrorMessages.Notifications.YouHavePartiallyDisconnected)).IsEqualTo(1);
+		await Assert.That(NotificationsTo(WebAppFactoryArg, quitting)).DoesNotContain(ErrorMessages.Notifications.YouHavePartiallyDisconnected);
 	}
 
 	/// <summary>

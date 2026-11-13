@@ -43,6 +43,13 @@ public class ConnectionStateEventHandler(
 	/// </summary>
 	public const string LeavingMetadata = "Leaving";
 
+	/// <summary>
+	/// Connection metadata marking a connection whose client went away without QUIT: its socket closed, or the
+	/// hold on a dropped web session ran out. Its character's other connections are not told it partially
+	/// disconnected, since nobody there chose to leave.
+	/// </summary>
+	public const string DroppedMetadata = "Dropped";
+
 	public async ValueTask Handle(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
 	{
 		// A socket closing is handled outside the queue's consumer. The events and hooks below run once
@@ -161,8 +168,9 @@ public class ConnectionStateEventHandler(
 
 				// PennMUSH tells the room and the player's contents, never the player. A character's other
 				// connections are told here instead, so they learn one of theirs has gone; the one leaving
-				// got the quit message. The leaving handle may still be listed, so it is excluded by handle.
-				if (remainingConnections > 0)
+				// got the quit message. The leaving handle may still be listed, so it is excluded by handle. A client
+				// that went away by itself (a closed browser tab, held for its resume window first) tells nobody.
+				if (remainingConnections > 0 && !connectionData.Metadata.ContainsKey(DroppedMetadata))
 				{
 					await foreach (var other in connectionService.Get(notification.PlayerRef.Value)
 						.Where(c => c.Handle != notification.Handle && c.PresenceClass != PresenceClasses.Portal

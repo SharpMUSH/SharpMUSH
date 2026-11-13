@@ -2,6 +2,7 @@ using Mediator;
 using SharpMUSH.Configuration.Options;
 using MarkupString;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Implementation.Handlers;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Notifications;
@@ -570,6 +571,9 @@ public class ConnectionClosedConsumer(ILogger<ConnectionClosedConsumer> logger, 
 
 		if (!string.IsNullOrEmpty(message.SessionId) &&
 			connectionService.Get(message.Handle)?.Metadata.GetValueOrDefault("SessionId") != message.SessionId) return;
+		// The client closed the socket, or the hold on its dropped session ran out: nobody typed QUIT.
+		if (connectionService.Get(message.Handle) is { } closing)
+			closing.Metadata[ConnectionStateEventHandler.DroppedMetadata] = "1";
 		await connectionService.Disconnect(message.Handle, message.SessionId);
 	}
 }
