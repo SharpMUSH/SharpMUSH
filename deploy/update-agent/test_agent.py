@@ -310,10 +310,13 @@ class MovesForwardTests(unittest.TestCase):
         with self.pulled('2.0.0'):
             agent.moves_forward(self.SERVER, 'latest')
 
-    def test_a_server_on_dev_is_left_to_the_game_server_to_judge(self):
-        with mock.patch.object(agent, 'present') as present:
-            agent.moves_forward({'image': 'sharpmush/sharpmush-server', 'version': 'dev'}, '1.0.0')
-        present.assert_not_called()
+    def test_a_running_version_that_is_not_a_release_refuses_every_move_but_dev(self):
+        for version in ('dev', None):
+            server = {'image': 'sharpmush/sharpmush-server', 'version': version}
+            with self.subTest(version=version), self.pulled('9.9.9'):
+                with self.assertRaises(RuntimeError):
+                    agent.moves_forward(server, 'latest')
+                agent.moves_forward(server, 'dev')
 
 
 class RegistryAndStateTests(unittest.TestCase):

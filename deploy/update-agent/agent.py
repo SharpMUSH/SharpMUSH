@@ -435,9 +435,12 @@ def moves_forward(server, tag):
     """Refuses a move whose pulled server is not a newer release than the running one: an older server
     refuses a world a newer one wrote. Catches what the server cannot see, such as latest naming an older
     release than a running prerelease."""
-    running = (server or {}).get('version') or ''
-    if tag == 'dev' or not RELEASE.fullmatch(running):
+    if tag == 'dev':
         return
+    running = (server or {}).get('version') or ''
+    if not RELEASE.fullmatch(running):
+        raise RuntimeError(f'The running server is {running or "unlabelled"}, not a release, so a move to {tag} '
+                           'cannot be shown to go forward; nothing was replaced.')
     images = present('image', [f"{server['image']}:{tag}"])
     labels = ((images[0].get('Config') or {}).get('Labels') or {}) if images else {}
     pulled = labels.get('org.opencontainers.image.version') or ''
