@@ -53,7 +53,7 @@ If the #lambda just calls one other function, the form
 
 `#apply[\<number of arguments\>]/<function name>`
 
-can be used instead. If the argument count is left out, it defaults to 1.
+can be used instead. If the argument count is left out, it defaults to 1. It can be at most 100.
 
 Inside the code, `%=` is `#LAMBDA/<code>`, the code as it was after the first parse, so a lambda can call itself with `ulambda(%=, ...)`:
 
