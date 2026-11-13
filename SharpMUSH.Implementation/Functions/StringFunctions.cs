@@ -1682,7 +1682,7 @@ public partial class Functions
 			: str.Pad(fill, widthInt, PadType.Left, JustifyTruncation(parser, truncate)));
 	}
 
-	[SharpFunction(Name = "scramble", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
+	[SharpFunction(Name = "scramble", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic, ParameterNames = ["string"])]
 	public ValueTask<CallState> Scramble(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.ArgumentList[0].Message;

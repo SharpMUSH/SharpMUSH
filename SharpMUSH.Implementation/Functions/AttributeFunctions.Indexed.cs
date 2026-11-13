@@ -202,6 +202,7 @@ public partial class Functions
 			return false;
 		}
 
+		AttributeReadLog.Untracked();
 		var levels = await Mediator.CreateStream(new GetAttributeQuery(target.Object().DBRef, path)).ToArrayAsync();
 		return levels.Length == path.Length && await PermissionService.CanViewAttribute(executor, target, memo, levels);
 	}

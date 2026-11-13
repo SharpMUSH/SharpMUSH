@@ -873,7 +873,7 @@ public partial class Functions
 		return string.Join(delimiter, matches.Select(x => x.Token));
 	}
 
-	[SharpFunction(Name = "randextract", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "count", "delim", "type", "osep"])]
+	[SharpFunction(Name = "randextract", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic, ParameterNames = ["list", "count", "delim", "type", "osep"])]
 	public ValueTask<CallState> RandomExtract(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -942,7 +942,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(MarkupText.Join(outputSep, result));
 	}
 
-	[SharpFunction(Name = "randword", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
+	[SharpFunction(Name = "randword", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic, ParameterNames = ["list", "delimiter"])]
 	public ValueTask<CallState> RandomWord(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered;
@@ -1014,7 +1014,7 @@ public partial class Functions
 		return errors.Complete(new CallState(MarkupText.Join(sep, list.Reverse())));
 	}
 
-	[SharpFunction(Name = "shuffle", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
+	[SharpFunction(Name = "shuffle", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic, ParameterNames = ["list", "delimiter"])]
 	public ValueTask<CallState> Shuffle(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;

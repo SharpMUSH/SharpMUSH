@@ -181,6 +181,8 @@ internal static class EngineRegistration
 		// Poses and scenes counted for the staff activity reports; ActivityFlushService writes them.
 		services.AddSingleton<IActivityLedger, ActivityLedger>();
 		services.AddSingleton<IActivityReportService, ActivityReportService>();
+		services.TryAddSingleton(TimeProvider.System);
+		services.AddSingleton<IMemoStore, MemoStore>();
 		services.AddSingleton<SetupService>();
 		services.AddSingleton<GameFeatureService>();
 		services.AddSingleton<StarterWikiService>();

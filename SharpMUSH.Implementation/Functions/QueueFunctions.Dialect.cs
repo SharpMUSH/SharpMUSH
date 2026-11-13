@@ -39,7 +39,7 @@ public partial class Functions
 	/// entries the caller may see, one per <c>&lt;separator&gt;</c>, each the fields <c>&lt;display&gt;</c> asks for
 	/// joined by <c>|</c>. Display 64 and 128 stand alone: the running entry's pid and its action list.
 	/// </summary>
-	[SharpFunction(Name = "pid", MinArgs = 0, MaxArgs = 5, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+	[SharpFunction(Name = "pid", MinArgs = 0, MaxArgs = 5, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic | FunctionFlags.StripAnsi,
 		ParameterNames = ["display", "separator", "type", "target", "owned"])]
 	public async ValueTask<CallState> Pid(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

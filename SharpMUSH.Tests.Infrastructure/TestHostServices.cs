@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Plugins;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Server.Services;
@@ -49,6 +51,22 @@ public static class TestHostServices
 		services.RemoveAll<IConnectionTrafficService>();
 		services.AddSingleton<FixedConnectionTraffic>();
 		services.AddSingleton<IConnectionTrafficService>(provider => provider.GetRequiredService<FixedConnectionTraffic>());
+	}
+
+	/// <summary>
+	/// <c>memo()</c> keeps answers for <c>memo_window</c> seconds. A test host's memo store reads a clock that never
+	/// moves, so no test depends on how fast it runs; the window itself is tested on the store with a clock of its own.
+	/// </summary>
+	public static void StopMemoClock(IServiceCollection services)
+	{
+		services.RemoveAll<IMemoStore>();
+		services.AddSingleton<IMemoStore>(provider => new MemoStore(
+			provider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(), new StoppedClock()));
+	}
+
+	private sealed class StoppedClock : TimeProvider
+	{
+		public override DateTimeOffset GetUtcNow() => DateTimeOffset.UnixEpoch;
 	}
 }
 

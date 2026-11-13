@@ -126,7 +126,7 @@ public partial class Functions
 			: new CallState("-1");
 	}
 
-	[SharpFunction(Name = "conn", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
+	[SharpFunction(Name = "conn", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ConnectedSeconds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// fun_conn answers every failure with "-1": a name that matches nothing, a player who is not
@@ -405,7 +405,7 @@ public partial class Functions
 	/// PennMUSH's idle() is a whole number of seconds, and idlesecs() is an alias for it, so the two
 	/// must render the same value.
 	/// </remarks>
-	[SharpFunction(Name = "idle", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+	[SharpFunction(Name = "idle", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic | FunctionFlags.StripAnsi,
 		ParameterNames = ["object", "precision"])]
 	public async ValueTask<CallState> IdleSeconds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -1355,7 +1355,7 @@ public partial class Functions
 		return string.Join(" ", terminfo);
 	}
 
-	[SharpFunction(Name = "IDLESECS", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+	[SharpFunction(Name = "IDLESECS", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic | FunctionFlags.StripAnsi,
 		ParameterNames = ["player", "precision"])]
 	public async ValueTask<CallState> IdleSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

@@ -115,6 +115,9 @@ public static partial class Substitutions
 		IOptionsWrapper<SharpMUSHOptions> configuration)
 		=> symbol switch
 		{
+			// What the command, connection or evaluation so far was: memo() keys on none of it, so it refuses them.
+			"j" or "J" or "C" or "c" or "M" or "m" or "U" or "u" or ">" or "|" or "?"
+				when SideEffectFreeEvaluation.RefuseNonDeterministic() => MarkupText.Empty,
 			"0" or "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" =>
 				parser.CurrentState.EnvironmentRegisters.TryGetValue(symbol, out var tmpCs)
 					? tmpCs.Message
