@@ -1,6 +1,7 @@
 using MarkupString;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Softcode;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
@@ -14,8 +15,9 @@ namespace SharpMUSH.Library.ParserInterfaces;
 /// <param name="Mode">Read or Execute.</param>
 /// <param name="Parent">Whether the read looked through parents.</param>
 /// <param name="Fingerprint">What the read found: <see cref="AttributeReadLog.Absent"/>, an error, or the value with its markup.</param>
+/// <param name="Dialect">The softcode dialect in force, which decides what an attribute alias names.</param>
 public sealed record AttributeReadDependency(DBRef Executor, DBRef Object, string Attribute,
-	IAttributeService.AttributeMode Mode, bool Parent, string Fingerprint)
+	IAttributeService.AttributeMode Mode, bool Parent, string Fingerprint, SoftcodeDialect? Dialect = null)
 {
 	/// <summary>An estimate of the memory this record holds, in bytes.</summary>
 	public long Size => 64 + 2L * (Attribute.Length + Fingerprint.Length);

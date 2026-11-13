@@ -128,7 +128,7 @@ public partial class Functions
 	/// at a difficulty of 0 or less and none above 10; any other version keeps a result of at least 0, and at least 1
 	/// unless it is below 0, when the difficulty is below the number of dice.
 	/// </summary>
-	[SharpFunction(Name = "successes", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+	[SharpFunction(Name = "successes", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic | FunctionFlags.StripAnsi,
 		ParameterNames = ["dice", "difficulty", "version"])]
 	public ValueTask<CallState> Successes(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

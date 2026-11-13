@@ -123,6 +123,8 @@ public static class FunctionDispatcher
 			&& (SideEffectFreeEvaluation.Refuse() || !sideEffects
 				|| (sideEffectsNeedGrant && executor is not null && !await SideEffectsGranted(executor))))
 			return new CallState(ErrorMessages.Returns.FunctionDisabled);
+		if (flags.HasFlag(FunctionFlags.NonDeterministic) && SideEffectFreeEvaluation.RefuseNonDeterministic())
+			return new CallState(ErrorMessages.Returns.FunctionDisabled);
 		if ((flags & NumericFlags) != 0
 			&& ValidateNumericArguments(attribute, parser.CurrentState.ArgumentsOrdered.Values, parser) is { } error)
 			return new CallState(error);

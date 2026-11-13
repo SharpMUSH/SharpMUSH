@@ -147,7 +147,63 @@ public class MemoFunctionTests
 		var thing = await Thing("MemoRoll");
 		await Command($"&FN {thing}=[roll(1d6,,record)]");
 
+		await Assert.That(await Evaluate($"[memo({thing}/FN)]")).IsEqualTo("#-1 MEMO REFUSES NONDETERMINISTIC FUNCTIONS");
+		using (SideEffectFreeEvaluation.Enter())
+		{
+			await Assert.That(await Evaluate("[roll(1d6,,record)]")).IsEqualTo("#-1 FUNCTION DISABLED")
+				.Because("recording writes the roll, even where varying answers are allowed");
+		}
+	}
+
+	[Test]
+	[Arguments("[rand(100)]")]
+	[Arguments("[shuffle(a b c)]")]
+	[Arguments("[secs()]")]
+	[Arguments("[timefmt($Y)]")]
+	[Arguments("[timecalc(now)]")]
+	public async Task AFunctionWhoseAnswerVariesIsRefused(string code)
+	{
+		var thing = await Thing("MemoVaries");
+		await Command($"&FN {thing}={code}");
+
+		await Assert.That(await Evaluate($"[memo({thing}/FN)]")).IsEqualTo("#-1 MEMO REFUSES NONDETERMINISTIC FUNCTIONS");
+	}
+
+	[Test]
+	public async Task AFunctionWhoseAnswerVariesIsRefusedThroughU()
+	{
+		var thing = await Thing("MemoVariesDeep");
+		await Command($"&ROLL {thing}=[rand(100)]");
+		await Command($"&FN {thing}=[u(me/ROLL)]");
+
+		await Assert.That(await Evaluate($"[memo({thing}/FN)]")).IsEqualTo("#-1 MEMO REFUSES NONDETERMINISTIC FUNCTIONS");
+	}
+
+	[Test]
+	public async Task AGivenTimeIsNotRefused()
+	{
+		var thing = await Thing("MemoGivenTime");
+		await Command($"&FN {thing}=[timefmt($Y,0,UTC)]");
+
+		await Assert.That(await Evaluate($"[memo({thing}/FN)]")).IsEqualTo("1970");
+	}
+
+	[Test]
+	public async Task ASideEffectInABranchNotTakenIsStillRefused()
+	{
+		var thing = await Thing("MemoBranch");
+		await Command($"&FN {thing}=[if(0,attrib_set(%!/SEEN,1),fine)]");
+
 		await Assert.That(await Evaluate($"[memo({thing}/FN)]")).IsEqualTo("#-1 MEMO REFUSES SIDE EFFECTS");
+	}
+
+	[Test]
+	public async Task TheReadingFormOfASideEffectFunctionIsAllowed()
+	{
+		var thing = await Thing("MemoReadName");
+		await Command($"&FN {thing}=[strlen(name(%!))]");
+
+		await Assert.That(await Evaluate($"[memo({thing}/FN)]")).IsEqualTo(await Evaluate($"[strlen(name({thing}))]"));
 	}
 
 	[Test]
@@ -157,6 +213,19 @@ public class MemoFunctionTests
 		await Command($"&FN {thing}=\\[%q0\\][setq(0,inside)]%q0");
 
 		await Assert.That(await Evaluate($"[setq(0,outside)][memo({thing}/FN)]-%q0")).IsEqualTo("[]inside-outside");
+	}
+
+	[Test]
+	public async Task TheCodeCannotReachTheCallersLoop()
+	{
+		var thing = await Thing("MemoLoop");
+		await Command($"&FN {thing}=[ibreak()]x");
+
+		var first = await Evaluate($"[iter(a b,memo({thing}/FN))]");
+
+		await Assert.That(await Evaluate($"[iter(a b,memo({thing}/FN))]")).IsEqualTo(first);
+		await Assert.That(first).IsEqualTo("#-1 OUT OF RANGEx #-1 OUT OF RANGEx")
+			.Because("ibreak() inside memo() has no loop of the caller's to stop, so both items run");
 	}
 
 	[Test]

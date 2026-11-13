@@ -37,14 +37,15 @@ public sealed class MemoStore(IOptionsWrapper<SharpMUSHOptions> options, TimePro
 	{
 		var limits = options.CurrentValue.Limit;
 		var budget = (long)limits.MemoMaxBytes;
+		var entries = (int)Math.Min(limits.MemoMaxEntries, int.MaxValue);
 		var size = SizeOf(key, entry);
-		if (size > budget) return;
+		if (size > budget || entries == 0) return;
 
 		var expires = limits.MemoWindow == 0 ? (DateTimeOffset?)null : time.GetUtcNow().AddSeconds(limits.MemoWindow);
 		lock (_gate)
 		{
 			if (_slots.TryGetValue(key, out var existing)) Remove(existing);
-			while (_bytes + size > budget && _recency.Last is { } oldest) Remove(oldest);
+			while ((_bytes + size > budget || _slots.Count >= entries) && _recency.Last is { } oldest) Remove(oldest);
 
 			_slots[key] = _recency.AddFirst(new Slot(key, entry, size, expires));
 			_bytes += size;

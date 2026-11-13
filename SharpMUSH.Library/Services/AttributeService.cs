@@ -206,7 +206,7 @@ public class AttributeService(
 		if (AttributeReadLog.Recording && mode is IAttributeService.AttributeMode.Read or IAttributeService.AttributeMode.Execute)
 		{
 			AttributeReadLog.Add([new AttributeReadDependency(executor.Object().DBRef, obj.Object().DBRef, attribute, mode, parent,
-				await FingerprintAsync(read))]);
+				await FingerprintAsync(read), SoftcodeDialectScope.Current)]);
 		}
 
 		return read;

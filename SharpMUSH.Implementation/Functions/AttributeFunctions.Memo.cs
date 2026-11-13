@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text;
+using SharpMUSH.Implementation.Parsing;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -8,6 +9,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Softcode;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -26,6 +28,9 @@ public partial class Functions
 {
 	/// <summary>What memo() answers when its code called a side-effect function.</summary>
 	public const string MemoRefusesSideEffects = "#-1 MEMO REFUSES SIDE EFFECTS";
+
+	/// <summary>What memo() answers when its code called a function whose answer varies between calls.</summary>
+	public const string MemoRefusesNonDeterministic = "#-1 MEMO REFUSES NONDETERMINISTIC FUNCTIONS";
 
 	/// <summary>The longest answer memo() keeps, as the longest attribute value.</summary>
 	private const int MemoMaxAnswerLength = 65536;
@@ -81,18 +86,36 @@ public partial class Functions
 	private async ValueTask<CallState> EvaluateMemoAsync(IMUSHCodeParser parser, AttributeFunction function,
 		Dictionary<string, CallState> arguments, string key)
 	{
+		if (MemoRefusesCode(parser, function.Code) is { } refused)
+		{
+			return new CallState(refused);
+		}
+
 		var limitAlreadyExceeded = parser.CurrentState.LimitExceeded is { IsExceeded: true };
-		using var refusals = SideEffectFreeEvaluation.Track();
+		using var refusals = SideEffectFreeEvaluation.Track(deterministic: true);
 		using var reads = AttributeReadLog.Open();
 
 		var answer = await parser.With(
-			state => state with { Registers = OwnRegisters(state.Registers) },
+			// Nothing of the caller's frame reaches the code: no q-registers, no loop (itext(), ibreak()), no switch or
+			// regular expression captures. The answer depends on its arguments and the attributes it reads only.
+			state => state with
+			{
+				Registers = OwnRegisters(state.Registers),
+				IterationRegisters = new ConcurrentStack<IterationWrapper<MString>>(),
+				RegexRegisters = new ConcurrentStack<Dictionary<string, MString>>(),
+				SwitchStack = new ConcurrentStack<SwitchFrame>()
+			},
 			scoped => AttributeService.CallAttributeFunctionAsync(scoped, function, arguments,
 				new Dictionary<string, CallState>(arguments)));
 
 		if (refusals.Refused)
 		{
 			return new CallState(MemoRefusesSideEffects);
+		}
+
+		if (refusals.RefusedNonDeterministic)
+		{
+			return new CallState(MemoRefusesNonDeterministic);
 		}
 
 		// An answer a limit cut short is not the answer, so it is given once and not kept.
@@ -103,6 +126,33 @@ public partial class Functions
 		}
 
 		return answer;
+	}
+
+	/// <summary>
+	/// The refusal for code that names a side-effect or non-deterministic function anywhere in it, even in a branch
+	/// this call would not take; or null. Code reached through u() or a computed name is only seen as it runs, where the
+	/// side-effect-free scope refuses it.
+	/// </summary>
+	private string? MemoRefusesCode(IMUSHCodeParser parser, MString code)
+	{
+		var analyzer = new SoftcodeSyntaxAnalyzer(parser.FunctionLibrary, Configuration);
+		string? refusal = null;
+		foreach (var call in analyzer.Calls(code))
+		{
+			if (!parser.FunctionLibrary.TryGetValue(call.Name.ToLowerInvariant(), out var found)) continue;
+			var declared = found.LibraryInformation.Attribute;
+			if (declared.Flags.HasFlag(FunctionFlags.HasSideFX) && call.Arguments.Count >= declared.SideEffectMinArgs)
+			{
+				return MemoRefusesSideEffects;
+			}
+
+			if (declared.Flags.HasFlag(FunctionFlags.NonDeterministic))
+			{
+				refusal = MemoRefusesNonDeterministic;
+			}
+		}
+
+		return refusal;
 	}
 
 	/// <summary>One empty q-register frame, so the code neither sees the caller's registers nor leaves its own.</summary>
@@ -130,7 +180,13 @@ public partial class Functions
 				return false;
 			}
 
-			var found = await AttributeService.GetAttributeAsync(reader, target, read.Attribute, read.Mode, read.Parent);
+			// The dialect the read was made in decides which attribute an alias names, so the read is repeated in it.
+			OptionalSharpAttributeOrError found;
+			using (SoftcodeDialectScope.Enter(read.Dialect))
+			{
+				found = await AttributeService.GetAttributeAsync(reader, target, read.Attribute, read.Mode, read.Parent);
+			}
+
 			var fingerprint = found switch
 			{
 				SharpAttribute[] { Length: > 0 } chain => AttributeReadLog.Fingerprint(chain[^1].Value),

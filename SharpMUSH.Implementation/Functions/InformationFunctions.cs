@@ -1013,7 +1013,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(ErrorMessages.Returns.NoSuchOption);
 	}
 
-	[SharpFunction(Name = "benchmark", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "benchmark", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.NoParse | FunctionFlags.NonDeterministic)]
 	public async ValueTask<CallState> Benchmark(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;

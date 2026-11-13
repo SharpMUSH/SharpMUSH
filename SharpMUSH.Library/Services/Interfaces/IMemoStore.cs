@@ -9,8 +9,8 @@ namespace SharpMUSH.Library.Services.Interfaces;
 public sealed record MemoEntry(MString Value, IReadOnlyList<AttributeReadDependency> Reads);
 
 /// <summary>
-/// The answers <c>memo()</c> keeps, in memory, for one game. Bounded by <c>memo_max_bytes</c> (least recently used
-/// dropped first) and <c>memo_window</c>; checking an entry's reads is the caller's part.
+/// The answers <c>memo()</c> keeps, in memory, for one game. Bounded by <c>memo_max_bytes</c> and <c>memo_max_entries</c>
+/// (least recently used dropped first) and <c>memo_window</c>; checking an entry's reads is the caller's part.
 /// </summary>
 public interface IMemoStore
 {

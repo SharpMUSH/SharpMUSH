@@ -397,9 +397,15 @@ public record LimitOptions(
 	[SharpConfig(Name = "memo_max_bytes", Category = "Limit", Description = "Memory memo() may keep answers in, in bytes; past it the least recently used answers are dropped (0 keeps none)", Group = "Performance", Order = 11, Min = 0, Max = 1073741824)]
 	public uint MemoMaxBytes { get; init; } = DefaultMemoMaxBytes;
 
-	/// <summary>Default seconds a memo() answer is kept.</summary>
-	public const uint DefaultMemoWindow = 60;
+	/// <summary>Default number of answers memo() keeps.</summary>
+	public const uint DefaultMemoMaxEntries = 10000;
 
-	[SharpConfig(Name = "memo_window", Category = "Limit", Description = "Seconds a memo() answer is kept at most; an attribute it read changing drops it sooner (0 for no time limit)", Group = "Performance", Order = 12, Min = 0, Max = 86400)]
+	[SharpConfig(Name = "memo_max_entries", Category = "Limit", Description = "Answers memo() may keep; past it the least recently used answers are dropped (0 keeps none)", Group = "Performance", Order = 12, Min = 0, Max = 10000000)]
+	public uint MemoMaxEntries { get; init; } = DefaultMemoMaxEntries;
+
+	/// <summary>Default seconds a memo() answer is kept (an hour).</summary>
+	public const uint DefaultMemoWindow = 3600;
+
+	[SharpConfig(Name = "memo_window", Category = "Limit", Description = "Seconds a memo() answer is kept at most; an attribute it read changing drops it sooner (0 for no time limit)", Group = "Performance", Order = 13, Min = 0, Max = 2592000)]
 	public uint MemoWindow { get; init; } = DefaultMemoWindow;
 }

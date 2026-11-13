@@ -18,10 +18,13 @@ public class MemoStoreTests
 	private sealed record Options(SharpMUSHOptions CurrentValue) : IOptionsWrapper<SharpMUSHOptions>;
 
 	private static MemoStore Store(Clock clock, uint maxBytes = LimitOptions.DefaultMemoMaxBytes,
-		uint window = LimitOptions.DefaultMemoWindow)
+		uint window = LimitOptions.DefaultMemoWindow, uint maxEntries = LimitOptions.DefaultMemoMaxEntries)
 	{
 		var defaults = SharpMUSHOptions.Default();
-		return new MemoStore(new Options(defaults with { Limit = defaults.Limit with { MemoMaxBytes = maxBytes, MemoWindow = window } }), clock);
+		return new MemoStore(new Options(defaults with
+		{
+			Limit = defaults.Limit with { MemoMaxBytes = maxBytes, MemoWindow = window, MemoMaxEntries = maxEntries }
+		}), clock);
 	}
 
 	private static MemoEntry Answer(string text) => new(MarkupText.Plain(text), []);
@@ -78,6 +81,31 @@ public class MemoStoreTests
 		store.Find("b").Expect<NotFound>();
 		store.Find("c").Expect<MemoEntry>();
 		await Assert.That(store.Usage.Bytes).IsLessThanOrEqualTo(one * 2);
+	}
+
+	[Test]
+	public async Task TheCountPushesOutTheLeastRecentlyUsed()
+	{
+		var store = Store(new Clock(), maxEntries: 2);
+		store.Keep("a", Answer("1"));
+		store.Keep("b", Answer("2"));
+		store.Find("a").Expect<MemoEntry>();
+		store.Keep("c", Answer("3"));
+
+		store.Find("b").Expect<NotFound>();
+		store.Find("a").Expect<MemoEntry>();
+		store.Find("c").Expect<MemoEntry>();
+		await Assert.That(store.Usage.Count).IsEqualTo(2);
+	}
+
+	[Test]
+	public async Task ACountOfZeroKeepsNothing()
+	{
+		var store = Store(new Clock(), maxEntries: 0);
+		store.Keep("a", Answer("1"));
+
+		store.Find("a").Expect<NotFound>();
+		await Assert.That(store.Usage.Count).IsEqualTo(0);
 	}
 
 	[Test]

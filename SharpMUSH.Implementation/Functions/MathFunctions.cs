@@ -1463,7 +1463,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "die", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "die", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> Die(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentList;
@@ -1502,7 +1502,7 @@ public partial class Functions
 	/// A SharpMUSH addition; PennMUSH has only <c>die()</c>. See <see cref="DiceRoll"/>. Attribute
 	/// values are read as get() reads them and never evaluated: a value is a number or a formula.
 	/// </remarks>
-	[SharpFunction(Name = "roll", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+	[SharpFunction(Name = "roll", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic | FunctionFlags.StripAnsi,
 		ParameterNames = ["formula", "data", "options"])]
 	public async ValueTask<CallState> Roll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -1580,7 +1580,7 @@ public partial class Functions
 	/// answers correctly there because two overflows cancel. Widening reaches the same answers for
 	/// every reachable input without relying on that.</para>
 	/// </remarks>
-	[SharpFunction(Name = "rand", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["low", "high"])]
+	[SharpFunction(Name = "rand", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic | FunctionFlags.StripAnsi, ParameterNames = ["low", "high"])]
 	public ValueTask<CallState> Rand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentList;
