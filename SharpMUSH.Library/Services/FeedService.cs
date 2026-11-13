@@ -241,8 +241,7 @@ public class FeedService(
 			FeedStyles.Pose => MarkupText.Concat(MarkupText.Plain($"{prefix}{name} "), message.Text),
 			FeedStyles.SemiPose => MarkupText.Concat(MarkupText.Plain($"{prefix}{name}"), message.Text),
 			FeedStyles.Emit or FeedStyles.Announce => MarkupText.Concat(MarkupText.Plain(prefix), message.Text),
-			_ => MarkupText.Concat(MarkupText.Concat(MarkupText.Plain($"{prefix}{name} says, \""), message.Text),
-				MarkupText.Plain("\""))
+			_ => MarkupText.Concat([MarkupText.Plain($"{prefix}{name} says, \""), message.Text, MarkupText.Plain("\"")])
 		};
 	}
 

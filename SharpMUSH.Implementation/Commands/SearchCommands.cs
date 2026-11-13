@@ -1167,7 +1167,7 @@ public partial class Commands
 		var match = valueSpan.Slice(index, pattern.Length).ToString();
 		var after = valueSpan.Slice(index + pattern.Length).ToString();
 
-		return MarkupText.Concat(MarkupText.Concat(MarkupText.Plain(before), MarkupText.Plain(match).Hilight()), MarkupText.Plain(after));
+		return MarkupText.Concat([MarkupText.Plain(before), MarkupText.Plain(match).Hilight(), MarkupText.Plain(after)]);
 	}
 
 	/// <summary>
@@ -1221,7 +1221,7 @@ public partial class Commands
 		var match = formatted.Substring(index, pattern.Length).Hilight();
 		var after = formatted.Substring(index + pattern.Length, plainFormatted.Length - index - pattern.Length);
 
-		return MarkupText.Concat(MarkupText.Concat(before, match), after);
+		return MarkupText.Concat([before, match, after]);
 	}
 
 	[SharpCommand(Name = "@SWEEP", Switches = ["CONNECTED", "HERE", "INVENTORY", "EXITS", "COMMANDS", "LISTENERS", "PLAYERS"],

@@ -582,7 +582,7 @@ public partial class Commands
 		var hasFirst = first.ToPlainText().Trim().Length > 0;
 		var hasSecond = second is not null && second.ToPlainText().Trim().Length > 0;
 
-		MString InFolder(MString messages) => MarkupText.Concat(MarkupText.Concat(first, MarkupText.Plain(":")), messages);
+		MString InFolder(MString messages) => MarkupText.Concat([first, MarkupText.Plain(":"), messages]);
 
 		var (mailSwitch, mailArguments) = parser.CurrentState.Switches.ToArray() switch
 		{

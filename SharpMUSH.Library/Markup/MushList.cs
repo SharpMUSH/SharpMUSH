@@ -68,6 +68,155 @@ public static class MushList
 		return until <= from ? Join(delimiter, []) : Range(delimiter, text, from, until);
 	}
 
+	/// <summary>
+	/// <c>ldelete()</c>: every item but those at the 0-based <paramref name="positions"/>, joined with
+	/// <paramref name="separator"/>. What <c>SplitList</c>, leaving those out and <c>Join</c> gave.
+	/// </summary>
+	public static MarkupText Delete(MarkupText delimiter, MarkupText separator, MarkupText text, IReadOnlySet<int> positions)
+		=> Rewrite(delimiter, separator, text, new Changes(Dropped: positions));
+
+	/// <summary>
+	/// <c>lreplace()</c>: the items with each one at the 0-based <paramref name="positions"/> replaced by
+	/// <paramref name="item"/>, joined with <paramref name="separator"/>.
+	/// </summary>
+	public static MarkupText Replace(MarkupText delimiter, MarkupText separator, MarkupText text, IReadOnlySet<int> positions,
+		MarkupText item)
+		=> Rewrite(delimiter, separator, text, new Changes(Replaced: positions, Item: item));
+
+	/// <summary>
+	/// <c>linsert()</c>: the items with <paramref name="item"/> before the one at the 0-based <paramref name="index"/>
+	/// (after the last when it is the count), joined with <paramref name="separator"/>.
+	/// </summary>
+	public static MarkupText Insert(MarkupText delimiter, MarkupText separator, MarkupText text, int index, MarkupText item)
+		=> Rewrite(delimiter, separator, text, new Changes(InsertAt: index, Item: item));
+
+	/// <summary>
+	/// What a rewrite does to the items: leaves some out, puts <see cref="Item"/> in place of others, or puts it
+	/// before the item at <see cref="InsertAt"/>.
+	/// </summary>
+	private readonly record struct Changes(
+		IReadOnlySet<int>? Dropped = null,
+		IReadOnlySet<int>? Replaced = null,
+		int InsertAt = -1,
+		MarkupText? Item = null)
+	{
+		public bool Drops(long index) => Dropped is not null && index <= int.MaxValue && Dropped.Contains((int)index);
+		public bool Replaces(long index) => Replaced is not null && index <= int.MaxValue && Replaced.Contains((int)index);
+		public bool InsertsBefore(long index) => InsertAt >= 0 && index == InsertAt;
+		public MarkupText Inserted => Item ?? MarkupText.Empty;
+	}
+
+	/// <summary>
+	/// The items with <paramref name="changes"/> made, joined with <paramref name="separator"/>: as one slice of
+	/// the text with only the gaps and items that change spliced, or, where a delimiter sits against a grapheme
+	/// cluster, item by item.
+	/// </summary>
+	private static MarkupText Rewrite(MarkupText delimiter, MarkupText separator, MarkupText text, Changes changes)
+	{
+		ArgumentNullException.ThrowIfNull(separator);
+		var scan = new Scan(delimiter, text);
+		int first = -1, last = 0;
+		while (scan.Next(out var start, out var end))
+		{
+			if (first < 0) first = start;
+			last = end;
+		}
+
+		return first >= 0 && scan.CanSlice(first, last)
+			? Rewritten(delimiter, separator, text, changes)
+			: RewrittenOneByOne(delimiter, separator, text, changes);
+	}
+
+	/// <summary>
+	/// The rewrite as slices of the text. A gap between two items that stay next to each other is kept when it
+	/// is already exactly the separator, plain, and replaced by it otherwise; a gap that takes in left-out items,
+	/// or an inserted one, is replaced the same way. Edits are applied a piece at a time, as in <see cref="Spliced"/>.
+	/// </summary>
+	private static MarkupText Rewritten(MarkupText delimiter, MarkupText separator, MarkupText text, Changes changes)
+	{
+		var source = text.Text;
+		var runs = text.Runs;
+		var run = 0;
+		var pieces = new List<MarkupText>();
+		var edits = new List<Edit>();
+		var scan = new Scan(delimiter, text);
+		long index = 0;
+		int pieceStart = -1, previousEnd = 0;
+		var skipped = false;
+		var inserting = false;
+		while (scan.Next(out var start, out var end))
+		{
+			var at = index++;
+			if (changes.InsertsBefore(at))
+			{
+				if (pieceStart < 0) pieces.Add(changes.Inserted);
+				else inserting = true;
+			}
+
+			if (changes.Drops(at))
+			{
+				skipped = true;
+				continue;
+			}
+
+			if (pieceStart < 0) pieceStart = start;
+			else if (inserting || skipped || !IsSeparator(previousEnd, start))
+			{
+				var gap = inserting ? MarkupText.Concat([separator, changes.Inserted, separator]) : separator;
+				if (edits.Count < PieceSize)
+					edits.Add(new Edit(previousEnd - pieceStart, start - previousEnd, gap));
+				else
+				{
+					// Joining the pieces puts the separator in this gap, and on both sides of an inserted item.
+					pieces.Add(Piece(pieceStart, previousEnd));
+					if (inserting) pieces.Add(changes.Inserted);
+					pieceStart = start;
+				}
+			}
+
+			if (changes.Replaces(at)) edits.Add(new Edit(start - pieceStart, end - start, changes.Item ?? MarkupText.Empty));
+			previousEnd = end;
+			skipped = inserting = false;
+		}
+
+		if (pieceStart >= 0) pieces.Add(Piece(pieceStart, previousEnd));
+		if (changes.InsertsBefore(index)) pieces.Add(changes.Inserted);
+		return pieces.Count == 1 ? pieces[0] : MarkupText.Join(separator, pieces);
+
+		bool IsSeparator(int gapStart, int gapEnd)
+		{
+			if (gapEnd - gapStart != separator.Length || separator.Runs.Length > 0) return false;
+			if (!source.AsSpan(gapStart, gapEnd - gapStart).SequenceEqual(separator.Text)) return false;
+			while (run < runs.Length && runs[run].End <= gapStart) run++;
+			return run >= runs.Length || runs[run].Start >= gapEnd;
+		}
+
+		MarkupText Piece(int start, int end)
+		{
+			var piece = text.Substring(start, end - start).Splice(CollectionsMarshal.AsSpan(edits));
+			edits.Clear();
+			return piece;
+		}
+	}
+
+	/// <summary>The rewrite cut item by item and joined, as <c>SplitList</c> and <c>Join</c> did.</summary>
+	private static MarkupText RewrittenOneByOne(MarkupText delimiter, MarkupText separator, MarkupText text, Changes changes)
+	{
+		var items = new List<MarkupText>();
+		var scan = new Scan(delimiter, text);
+		long index = 0;
+		while (scan.Next(out var start, out var end))
+		{
+			var at = index++;
+			if (changes.InsertsBefore(at)) items.Add(changes.Inserted);
+			if (changes.Drops(at)) continue;
+			items.Add(changes.Replaces(at) ? changes.Item ?? MarkupText.Empty : text.Substring(start, end - start));
+		}
+
+		if (changes.InsertsBefore(index)) items.Add(changes.Inserted);
+		return MarkupText.Join(separator, items);
+	}
+
 	/// <summary>The items at positions <paramref name="from"/> up to (not including) <paramref name="until"/>.</summary>
 	private static MarkupText Range(MarkupText delimiter, MarkupText text, long from, long until)
 	{

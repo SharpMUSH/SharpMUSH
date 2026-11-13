@@ -120,6 +120,118 @@ public class MushListTests
 		await Assert.That(differences.Take(10)).IsEmpty();
 	}
 
+	private static readonly MarkupText[] Separators = [Plain(" "), Plain("|"), Plain(""), Plain(", "), Red("|"), Red(" ")];
+
+	private static readonly int[][] PositionSets = [[], [0], [1], [2], [0, 1], [0, 2], [1, 2], [0, 1, 2], [3, 4], [0, 4]];
+
+	/// <summary>What <c>ldelete</c>, <c>lreplace</c> and <c>linsert</c> did: split the whole list, change it, join it.</summary>
+	private static MarkupText OldDelete(MarkupText d, MarkupText sep, MarkupText t, HashSet<int> positions)
+		=> MarkupText.Join(sep, Split(d, t).Where((_, i) => !positions.Contains(i)));
+
+	private static MarkupText OldReplace(MarkupText d, MarkupText sep, MarkupText t, HashSet<int> positions, MarkupText item)
+		=> MarkupText.Join(sep, Split(d, t).Select((x, i) => positions.Contains(i) ? item : x));
+
+	private static MarkupText OldInsert(MarkupText d, MarkupText sep, MarkupText t, int index, MarkupText item)
+	{
+		var list = Split(d, t).ToList();
+		list.Insert(index, item);
+		return MarkupText.Join(sep, list);
+	}
+
+	[Test]
+	public async Task RewritingAListAgreesWithSplittingAndJoiningIt()
+	{
+		var differences = new List<string>();
+		var items = new[] { Plain("new"), Red("new"), Plain(""), Plain("x|y") };
+		foreach (var text in Texts)
+			foreach (var delimiter in Delimiters)
+				foreach (var separator in Separators.Append(delimiter))
+				{
+					var count = Split(delimiter, text).Length;
+					foreach (var set in PositionSets.Select(positions => positions.Where(i => i < count).ToHashSet()))
+					{
+						if (!Same(OldDelete(delimiter, separator, text, set), MushList.Delete(delimiter, separator, text, set)))
+							differences.Add($"Delete({Describe(text)}, {Describe(delimiter)}, {Describe(separator)}, [{string.Join(",", set)}])");
+						differences.AddRange(items
+							.Where(item => !Same(OldReplace(delimiter, separator, text, set, item), MushList.Replace(delimiter, separator, text, set, item)))
+							.Select(item => $"Replace({Describe(text)}, {Describe(delimiter)}, {Describe(separator)}, [{string.Join(",", set)}], {Describe(item)})"));
+					}
+
+					for (var index = 0; index <= count; index++)
+					{
+						var at = index;
+						differences.AddRange(items
+							.Where(item => !Same(OldInsert(delimiter, separator, text, at, item), MushList.Insert(delimiter, separator, text, at, item)))
+							.Select(item => $"Insert({Describe(text)}, {Describe(delimiter)}, {Describe(separator)}, {at}, {Describe(item)})"));
+					}
+				}
+
+		await Assert.That(differences.Take(10)).IsEmpty();
+	}
+
+	[Test]
+	public async Task RewritingRandomListsAgreesWithSplittingAndJoiningThem()
+	{
+		string[] alphabet = ["a", "b", " ", "|", "́", "😀", "‍", "ab", ",", "  "];
+		string[] delimiters = ["|", " ", "a", "́", "ab", ","];
+		var random = new Random(2720);
+		var differences = new List<string>();
+		for (var i = 0; i < 3000; i++)
+		{
+			var text = MarkupText.Concat(Enumerable.Range(0, random.Next(0, 16))
+				.Select(_ => alphabet[random.Next(alphabet.Length)])
+				.Select(piece => random.Next(4) == 0 ? Red(piece) : Plain(piece)));
+			var delimiter = delimiters[random.Next(delimiters.Length)] is var raw && random.Next(6) == 0 ? Red(raw) : Plain(raw);
+			var separator = random.Next(3) == 0 ? Separators[random.Next(Separators.Length)] : delimiter;
+			var count = Split(delimiter, text).Length;
+			var set = Enumerable.Range(0, count).Where(_ => random.Next(3) == 0).ToHashSet();
+			var item = random.Next(2) == 0 ? Red("z") : Plain("z");
+			var index = random.Next(count + 1);
+
+			if (!Same(OldDelete(delimiter, separator, text, set), MushList.Delete(delimiter, separator, text, set))
+				|| !Same(OldReplace(delimiter, separator, text, set, item), MushList.Replace(delimiter, separator, text, set, item))
+				|| !Same(OldInsert(delimiter, separator, text, index, item), MushList.Insert(delimiter, separator, text, index, item)))
+				differences.Add($"{Describe(text)} on {Describe(delimiter)} as {Describe(separator)}, [{string.Join(",", set)}], at {index}");
+		}
+
+		await Assert.That(differences.Take(10)).IsEmpty();
+	}
+
+	/// <summary>More gaps to change than one piece holds: the pieces are joined, which is the same as joining every item.</summary>
+	[Test]
+	public async Task RewritingALongListWithMarkupAgreesWithSplittingAndJoiningIt()
+	{
+		var items = Enumerable.Range(0, 10_000).Select(i => i % 3 == 0 ? Red($"{i}") : Plain($"{i}")).ToArray();
+		var text = MarkupText.Join(Red("|"), items);
+		var delimiter = Plain("|");
+		var every = Enumerable.Range(0, 10_000).Where(i => i % 2 == 0).ToHashSet();
+
+		foreach (var separator in new[] { delimiter, Plain(" ") })
+		{
+			await Assert.That(Same(OldDelete(delimiter, separator, text, every), MushList.Delete(delimiter, separator, text, every))).IsTrue();
+			await Assert.That(Same(OldReplace(delimiter, separator, text, every, Red("x")),
+				MushList.Replace(delimiter, separator, text, every, Red("x")))).IsTrue();
+			await Assert.That(Same(OldInsert(delimiter, separator, text, 9_000, Red("x")),
+				MushList.Insert(delimiter, separator, text, 9_000, Red("x")))).IsTrue();
+		}
+	}
+
+	/// <summary>Deleting, replacing or inserting one item costs about the size of the answer, not an object per item.</summary>
+	[Test]
+	[Arguments(" ")]
+	[Arguments("|")]
+	public async Task RewritingANearCeilingListCostsAboutTheSizeOfItsAnswer(string delimiter)
+	{
+		var text = NearCeiling("a" + delimiter);
+		var separator = Plain(delimiter);
+		var budget = 4L * text.Length * sizeof(char);
+
+		await Assert.That(Allocated(() => MushList.Delete(separator, separator, text, new HashSet<int> { 5 }))).IsLessThan(budget);
+		await Assert.That(Allocated(() => MushList.Replace(separator, separator, text, new HashSet<int> { 5 }, Red("b"))))
+			.IsLessThan(budget);
+		await Assert.That(Allocated(() => MushList.Insert(separator, separator, text, 5, Red("b")))).IsLessThan(budget);
+	}
+
 	/// <summary>An input at the output ceiling made of nothing but delimiters and one-character items.</summary>
 	private static MarkupText NearCeiling(string unit)
 		=> Plain(string.Concat(Enumerable.Repeat(unit, FunctionLimits.MaxOutputCodeUnits / unit.Length)));
