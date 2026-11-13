@@ -469,7 +469,7 @@ public partial class LightningDatabase
 			Keys.Str(MarkupTextSerializer.Serialize(MString.Plain(value))),
 			1,
 			[],
-			MString.Plain(value)), WatchedAttributes.None.Names);
+			MString.Plain(value)), WatchedAttributes.None.Names, out _);
 
 	/// <summary>Raises <c>next_dbref</c> to (highest key in <c>obj</c>) + 1 when that is larger than what is stored — the floor a wiped-and-reimported world needs, never a ceiling this lowers.</summary>
 	/// <summary>Raises <c>next_dbref</c> past every object and every number a recover entry holds.</summary>
