@@ -155,8 +155,8 @@ public sealed class ArgumentList : IReadOnlyDictionary<string, CallState>
 			dictionary[ParserState.ArgumentKey(position)] = values[position];
 		}
 
-		// Two threads may race to build it; either copy answers the same.
-		return _dictionary = dictionary;
+		// Two threads may race to build it: the first copy published is the one every reader gets.
+		return Interlocked.CompareExchange(ref _dictionary, dictionary, null) ?? dictionary;
 	}
 
 	/// <summary>The numbered arguments in numeric order, named ones left out: <see cref="ParserState.ArgumentsOrdered"/>.</summary>
