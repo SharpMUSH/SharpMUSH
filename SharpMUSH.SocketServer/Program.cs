@@ -1,5 +1,10 @@
 using System.Net.Security;
 using System.Security.Authentication;
+using MarkupString;
+using MarkupString.Ansi;
+using MarkupString.Html;
+using MarkupString.Mxp;
+using MarkupString.Pueblo;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using OpenTelemetry.Metrics;
@@ -11,6 +16,7 @@ using SharpMUSH.SocketServer.Consumers;
 using SharpMUSH.SocketServer.ProtocolHandlers;
 using SharpMUSH.SocketServer.Services;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
@@ -87,6 +93,10 @@ public class Program
 	/// </param>
 	public static async Task<WebApplication> CreateHostBuilderAsync(string[] args, string? natsUrl = null, Action<IServiceCollection>? configureServices = null)
 	{
+		// The lifecycle notices are serialised through MarkupRegistry.Default, which throws until it is set.
+		if (!MarkupRegistry.IsConfigured)
+			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml().WithMxp().WithPueblo().WithListSeparators();
+
 		var builder = WebApplication.CreateBuilder(args);
 
 		var connectionServerOptions = new ConnectionServerOptions();
