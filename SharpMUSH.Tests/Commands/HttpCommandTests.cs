@@ -63,11 +63,11 @@ public class HttpCommandTests
 		await GrantHttpAsync(player.DbRef);
 		var state = ParserState.RootFor(player.DbRef) with
 		{
-			Arguments = new()
+			ArgumentList = ArgumentList.From(new()
 			{
 				["0"] = new CallState(player.DbRef + "/CALLBACK"),
 				["1"] = new CallState("https://example.invalid/queued")
-			}
+			})
 		};
 		await state.KnownExecutorObject(Mediator);
 		await state.KnownEnactorObject(Mediator);
@@ -104,11 +104,11 @@ public class HttpCommandTests
 		await GrantHttpAsync(player.DbRef);
 		var state = ParserState.RootFor(player.DbRef) with
 		{
-			Arguments = new()
+			ArgumentList = ArgumentList.From(new()
 			{
 				["0"] = new CallState(player.DbRef + "/CALLBACK"),
 				["1"] = new CallState("https://example.invalid/queued")
-			}
+			})
 		};
 		await state.KnownExecutorObject(Mediator);
 		await state.KnownEnactorObject(Mediator);
@@ -227,11 +227,11 @@ public class HttpCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&CALLBACK {player.DbRef}={callback}"));
 		var state = ParserState.RootFor(player.DbRef) with
 		{
-			Arguments = new()
+			ArgumentList = ArgumentList.From(new()
 			{
 				["0"] = new CallState(player.DbRef + "/CALLBACK"),
 				["1"] = new CallState("https://example.invalid/slow")
-			}
+			})
 		};
 		await state.KnownExecutorObject(Mediator);
 		await state.KnownEnactorObject(Mediator);
@@ -329,11 +329,11 @@ public class HttpCommandTests
 		if (canHttp) await GrantHttpAsync(player.DbRef);
 		var args = new Dictionary<string, CallState> { ["0"] = new(player.DbRef + "/CALLBACK") };
 		for (var i = 0; i < arguments.Length; i++) args[(i + 1).ToString()] = new CallState(arguments[i]);
-		var state = ParserState.RootFor(player.DbRef) with { Arguments = args, Switches = switches };
+		var state = ParserState.RootFor(player.DbRef) with { ArgumentList = ArgumentList.From(args), Switches = switches };
 		if (nestedPresence)
 		{
 			var parent = new Dictionary<string, CallState> { ["parent"] = new("unrelated") };
-			state = state with { EnvironmentRegisters = parent, SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(parent) };
+			state = state.ForAttributeArguments(ArgumentList.From(parent));
 		}
 		if (outputLimit is { } limit) state = state with { OutputLimit = limit };
 		foreach (var (register, value) in registers ?? [])

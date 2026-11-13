@@ -208,7 +208,7 @@ public partial class Commands
 				// (cque.c:866-868). So the target is %!, and the triggerer is %# and %@ alike.
 				// Built at admission, so its %> copy is the one each queued callback starts with.
 				var admitted = sync ? parser.CurrentState : parser.CurrentState.SnapshotForQueuedAction();
-				ParserState CallbackState(Dictionary<string, CallState> arguments) => (admitted.ForAttributeArguments(arguments) with
+				ParserState CallbackState(Dictionary<string, CallState> arguments) => (admitted.ForAttributeArguments(ArgumentList.From(arguments)) with
 				{
 					Actors = admitted.Actors with { Executor = targetRef, Enactor = triggererRef, Caller = triggererRef }
 				}).SnapshotForQueuedAction();

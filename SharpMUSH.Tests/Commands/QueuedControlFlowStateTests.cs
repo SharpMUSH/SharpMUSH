@@ -70,7 +70,7 @@ public class QueuedControlFlowStateTests
 	{
 		var state = ParserState.RootFor(Factory.ExecutorDBRef) with
 		{
-			Arguments = new() { ["0"] = new("match"), ["1"] = new("m*"), ["2"] = new("think %i0|%i1|$0|[r(NAME,regexp)]") }
+			ArgumentList = ArgumentList.From(new() { ["0"] = new("match"), ["1"] = new("m*"), ["2"] = new("think %i0|%i1|$0|[r(NAME,regexp)]") })
 		};
 		await state.KnownExecutorObject(Factory.Services.GetRequiredService<IMediator>());
 		var outer = new IterationWrapper<MString> { Value = MarkupText.Plain("outer"), Iteration = 2, Break = false, NoBreak = true };

@@ -301,13 +301,12 @@ public class DidItService(
 		// such frame: @retry in the action would replay the triggering command, an @break would be
 		// re-raised by an @include the action never ran under, and @respond would edit an HTTP
 		// response that was assembled and sent long before the queue drained.
-		var invocation = baseState.ForAttributeArguments(args);
+		var invocation = baseState.ForAttributeArguments(ArgumentList.From(args));
 		await mediator.Send(new AdmitCommandListRequest(
 			command,
 			invocation with
 			{
 				Actors = invocation.Actors with { Executor = executor, Enactor = enactor, Caller = enactor },
-				Arguments = args,
 				CommandHistory = null,
 				CommandSources = null,
 				BreakPropagation = null,

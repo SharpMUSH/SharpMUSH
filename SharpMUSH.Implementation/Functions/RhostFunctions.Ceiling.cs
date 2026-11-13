@@ -61,14 +61,8 @@ public partial class Functions
 	private async ValueTask<CallState> CallUnderCeilingAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AttributeFunction function, string level)
 	{
-		var arguments = parser.CurrentState.ArgumentsOrdered.Skip(1)
-			.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
-			.ToDictionary();
-		var calling = parser.Push(parser.CurrentState with
-		{
-			Arguments = arguments,
-			EnvironmentRegisters = new Dictionary<string, CallState>(arguments)
-		});
+		var arguments = ArgumentList.Of(parser.CurrentState.ArgumentsOrdered.Skip(1).Select(pair => pair.Value).ToArray());
+		var calling = parser.Push(parser.CurrentState.ForAttributeArguments(arguments));
 
 		if (level.Length > 0 && "subeval".StartsWith(level, StringComparison.OrdinalIgnoreCase))
 		{
@@ -97,9 +91,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var level = (await parser.FunctionParse(args["1"].Message))?.Message?.ToPlainText().Trim() ?? string.Empty;
-		var arguments = args.Skip(2)
-			.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), new CallState(value.Value.Message)))
-			.ToDictionary();
+		var arguments = ArgumentList.Of(args.Skip(2).Select(pair => new CallState(pair.Value.Message)).ToArray());
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		switch (await CeilingAsync(parser, level, executor))
@@ -113,11 +105,7 @@ public partial class Functions
 		}
 
 		async ValueTask<CallState> Evaluate()
-			=> await parser.With(state => state with
-			{
-				Arguments = arguments,
-				EnvironmentRegisters = new Dictionary<string, CallState>(arguments)
-			}, evaluating => evaluating.FunctionParse(args["0"].Message)) ?? CallState.Empty;
+			=> await parser.With(state => state.ForAttributeArguments(arguments), evaluating => evaluating.FunctionParse(args["0"].Message)) ?? CallState.Empty;
 	}
 
 	/// <summary>The ceiling a level names: a privilege ceiling, none at all (<c>god</c>), or no such role.</summary>

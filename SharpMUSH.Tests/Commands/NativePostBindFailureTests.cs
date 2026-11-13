@@ -50,7 +50,7 @@ public class NativePostBindFailureTests
 	private IMUSHCodeParser Parser(long handle, string secret) => Factory.CommandParser.FromState(Factory.CommandParser.CurrentState with
 	{
 		Handle = handle,
-		Arguments = new Dictionary<string, CallState> { ["0"] = new("token " + secret) }
+		ArgumentList = ArgumentList.From(new Dictionary<string, CallState> { ["0"] = new("token " + secret) })
 	});
 
 	[Test]

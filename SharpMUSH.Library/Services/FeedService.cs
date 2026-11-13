@@ -182,13 +182,10 @@ public class FeedService(
 				("style", message.Style), ("text", message.Text), ("name", message.DisplayName));
 			var registers = new ConcurrentStack<Dictionary<string, MString>>();
 			registers.Push([]);
-			await parser.With(state => state with
+			await parser.With(state => state.ForAttributeArguments(ArgumentList.From(arguments)) with
 			{
 				Actors = state.Actors with { Executor = ownerRef, Enactor = message.Speaker, Caller = state.Executor },
 				Registers = registers,
-				Arguments = arguments,
-				EnvironmentRegisters = arguments,
-				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
 				CurrentEvaluation = new DBAttribute(ownerRef, deliver.LongName.ToUpperInvariant()) { Dialect = SoftcodeDialects.Of(deliver) }
 			}, p => p.WithAttributeDebug(deliver, async debug => await debug.CommandListParseVisitor(deliver.Value)()));
 			return recipients.Select(r => r.Object().DBRef).ToList();
@@ -264,12 +261,9 @@ public class FeedService(
 			var arguments = Arguments(("id", message.Id), ("feed", message.Feed), ("recipients", Objids(recipients)),
 				("speaker", message.Speaker), ("style", message.Style), ("text", message.Text), ("name", message.DisplayName), ("origin", origin),
 				("picture", message.ExternalIdentity?.Picture ?? ""));
-			var state = ParserState.RootFor(tapObject.Object().DBRef) with
+			var state = ParserState.RootFor(tapObject.Object().DBRef).ForAttributeArguments(ArgumentList.From(arguments)) with
 			{
 				Enactor = message.Speaker,
-				Arguments = arguments,
-				EnvironmentRegisters = new(arguments, StringComparer.OrdinalIgnoreCase),
-				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
 				CurrentEvaluation = new DBAttribute(tapObject.Object().DBRef, tap.Attribute) { Dialect = SoftcodeDialects.Of(chain.Last()) }
 			};
 			var admission = await QueueHold.AdmitAsync(scheduler.Value, MarkupText.Plain(chain.Last().Value.ToPlainText()), state);

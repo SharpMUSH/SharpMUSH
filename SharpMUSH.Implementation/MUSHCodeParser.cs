@@ -484,7 +484,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			CommandFrame = CurrentState.CommandFrame with
 			{
-				CommandHistory = new ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>(),
+				CommandHistory = new ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, ArgumentList Args)>(),
 				CommandSources = new ConcurrentStack<MString>(),
 				InplaceDepth = depth
 			},

@@ -187,7 +187,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			// Track command history for @retry support (shared mutable reference, persists across With() copies).
 			// A rerun records its output as this run does, so @retry leaves the last rerun's %>.
 			run.Parser.CurrentState.CommandHistory?.Push((Recorded(run.Definition),
-				run.Parser.CurrentState.Arguments));
+				run.Parser.CurrentState.ArgumentList));
 			commandResult = await run.Definition.Command.Invoke(run.Parser);
 		}
 		catch (Exception)
@@ -297,9 +297,11 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 
 			// Save caller's numbered arguments (%0-%9) before overwriting with command's own args.
 			// This allows @wait/@force to preserve pattern-match variables in queued callbacks.
-			var callerArgs = state.ArgumentList
-				.Where(x => int.TryParse(x.Key, out _))
-				.ToDictionary(x => x.Key, x => x.Value);
+			var callerArgs = state.ArgumentList.IsPositional
+				? state.ArgumentList
+				: ArgumentList.From(state.ArgumentList
+					.Where(x => int.TryParse(x.Key, out _))
+					.ToDictionary(x => x.Key, x => x.Value));
 
 			var newState = state with
 			{
@@ -905,16 +907,14 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			// no %c/%u, and what it runs never reaches the command that matched it. Its enactor and caller are
 			// the object that ran the matching command (atr_comm_match's new_queue_actionlist_int(thing, player,
 			// player, ...), src/attrib.c), so a forced player's inline-hooked `say` speaks as that player.
-			var newParser = prs.Push(bodyState with
+			var bound = bodyState.ForAttributeArguments(ArgumentList.From(arguments));
+			var newParser = prs.Push(bound with
 			{
 				CurrentEvaluation = DBAttribute.Of(obj.Object().DBRef, attr),
-				Arguments = arguments,
 				Function = null,
-				Actors = bodyState.Actors with { Executor = obj.Object().DBRef, Enactor = prs.CurrentState.Executor, Caller = prs.CurrentState.Executor },
-				Context = bodyState.Context with
+				Actors = bound.Actors with { Executor = obj.Object().DBRef, Enactor = prs.CurrentState.Executor, Caller = prs.CurrentState.Executor },
+				Context = bound.Context with
 				{
-					EnvironmentRegisters = arguments,
-					SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
 					// No %c/%u yet: CommandListParse starts them, and treats the body as a queue entry's own
 					// list at in-place depth 0, so its nested lists count from 1 (src/cque.c:1182). Its %>
 					// and %| start as copies of the matching list's, as a queued body's do.
@@ -1010,19 +1010,14 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		});
 
 		// %0 is the text glued to the token itself; the split arguments follow from %1.
-		var numbered = new Dictionary<string, CallState>(arguments.Count + 1) { ["0"] = new CallState(rest) };
+		var numbered = new CallState[arguments.Count + 1];
+		numbered[0] = new CallState(rest);
 		foreach (var (i, argument) in arguments.Index())
 		{
-			numbered[(i + 1).ToString()] = argument;
+			numbered[i + 1] = argument;
 		}
 
-		var dispatchResult = await prs.With(state =>
-				state with
-				{
-					Command = singleRootCommand,
-					Arguments = numbered,
-					Function = null
-				},
+		var dispatchResult = await prs.With(state => state.ForCommand(singleRootCommand, state.Switches, ArgumentList.Of(numbered)),
 			async newParser => await singleLibraryCommandDefinition.Command.Invoke(newParser)
 		);
 		return argumentResults.Preserve(dispatchResult);
@@ -1051,15 +1046,8 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		prs.CurrentState.CommandText?.EvaluatedFrom(() => MarkupText.Concat(
 			[MarkupText.Plain("@CHAT "), channel.Name, MarkupText.Plain("="), rest]));
 
-		var chatParser = prs.Push(prs.CurrentState with
-		{
-			Command = "@CHAT",
-			Arguments = new Dictionary<string, CallState>
-			{
-				{ "0", new CallState(channel.Name) },
-				{ "1", new CallState(rest) }
-			}
-		});
+		var chatParser = prs.Push(prs.CurrentState.ForCommand("@CHAT", [],
+			ArgumentList.Of(new CallState(channel.Name), new CallState(rest))));
 
 		return await chatParser.CommandLibrary["@CHAT"].LibraryInformation.Command.Invoke(chatParser);
 	}
@@ -1075,16 +1063,8 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		// command_parse turns a matched exit into `GOTO <exit>`, which is what %u records.
 		prs.CurrentState.CommandText?.Evaluated = MarkupText.Plain($"GOTO {typedName}");
 
-		var newParser = prs.Push(prs.CurrentState with
-		{
-			Command = "GOTO",
-			Arguments = new Dictionary<string, CallState>
-			{
-				{ "0", new CallState(exit.Object.DBRef.ToString(), 0) },
-				{ "1", new CallState(typedName, 0) }
-			},
-			Function = null
-		});
+		var newParser = prs.Push(prs.CurrentState.ForCommand("GOTO", [],
+			ArgumentList.Of(new CallState(exit.Object.DBRef.ToString(), 0), new CallState(typedName, 0))));
 
 		var gotoCommand = newParser.CommandLibrary["GOTO"].LibraryInformation;
 		var result = await gotoCommand.Command.Invoke(newParser);

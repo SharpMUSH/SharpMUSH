@@ -144,10 +144,10 @@ public class LegacyQueueCommandBoundaryTests
 		parser.CurrentState.Returns(ParserState.RootFor(actor.Object().DBRef) with
 		{
 			Switches = string.IsNullOrEmpty(commandSwitch) ? [] : [commandSwitch],
-			Arguments = method == "QueueControl" ? commandSwitch == "LIST" ? new() : new() { ["0"] = new("42") } : method == "ProcessStatus" && commandSwitch != "DEBUG" ? new() : new()
+			ArgumentList = ArgumentList.From(method == "QueueControl" ? commandSwitch == "LIST" ? new() : new() { ["0"] = new("42") } : method == "ProcessStatus" && commandSwitch != "DEBUG" ? new() : new()
 			{
 				["0"] = new("42"), ["1"] = new(method == "QueueControl" ? "" : "30")
-			}
+			})
 		});
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(Factory.Services,
 			mediator, permissions, notifications);

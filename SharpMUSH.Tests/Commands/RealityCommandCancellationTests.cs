@@ -73,7 +73,7 @@ public class RealityCommandCancellationTests
 		var state = ParserState.RootFor(player.Object().DBRef) with
 		{
 			Switches = [stage.StartsWith("profile", StringComparison.Ordinal) ? "RX" : "ENABLE"],
-			Arguments = new() { ["0"] = new CallState(player.Object().DBRef.ToString()), ["1"] = new CallState("normal") }
+			ArgumentList = ArgumentList.From(new() { ["0"] = new CallState(player.Object().DBRef.ToString()), ["1"] = new CallState("normal") })
 		};
 		await state.KnownExecutorObject(mediator);
 		var parser = Substitute.For<IMUSHCodeParser>();

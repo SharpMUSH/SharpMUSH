@@ -97,11 +97,11 @@ public class RecurringJobTests
 		parser.CurrentState.Returns(ParserState.RootFor(context.Actor.ActiveCharacter!.Value) with
 		{
 			Switches = [operation],
-			Arguments = new()
+			ArgumentList = ArgumentList.From(new()
 			{
 				["0"] = new CallState(operation == "CREATE" ? context.Target + "/RUN" : job.Id),
 				["1"] = new CallState("* * * * *|UTC")
-			}
+			})
 		});
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
@@ -134,7 +134,7 @@ public class RecurringJobTests
 		parser.CurrentState.Returns(ParserState.RootFor(context.Actor.ActiveCharacter!.Value) with
 		{
 			Switches = all ? ["DELETE", "ALL"] : ["DELETE"],
-			Arguments = new() { ["0"] = new CallState(job.Id) }
+			ArgumentList = ArgumentList.From(new() { ["0"] = new CallState(job.Id) })
 		});
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(Factory.Services);
 		await commands.RecurringJob(parser, new SharpMUSH.Library.Attributes.SharpCommandAttribute { Name = "@JOB" });

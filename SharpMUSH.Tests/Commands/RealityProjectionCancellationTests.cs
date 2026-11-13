@@ -48,7 +48,7 @@ public class RealityProjectionCancellationTests
 		parser.CurrentState.Returns(ParserState.RootFor(actor.Object().DBRef) with
 		{
 			Switches = ["ROOM"],
-			Arguments = new() { ["0"] = new CallState("probe") }
+			ArgumentList = ArgumentList.From(new() { ["0"] = new CallState("probe") })
 		});
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
 			Factory.Services, mediator, new CommandDiscoveryService(mediator, Factory.Services.GetRequiredService<ILockService>()));

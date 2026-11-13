@@ -59,7 +59,7 @@ The test framework is **TUnit** (not xUnit or MSTest). The `--treenode-filter` f
 
 ## Plugin Contract
 
-The public surface of the `SharpMUSH.Library` package is the plugin contract, `PluginContractVersion.Current` (3.0.0). Within a major it may only grow: CI's `plugin-contract` job (`tools/plugin-contract/check.sh`) fails a PR that removes or changes a public member, or adds a member to a public interface, without bumping the major. Keep the old member beside the new one instead. See `tools/plugin-contract/README.md`.
+The public surface of the `SharpMUSH.Library` package is the plugin contract, `PluginContractVersion.Current` (4.0.0). Within a major it may only grow: CI's `plugin-contract` job (`tools/plugin-contract/check.sh`) fails a PR that removes or changes a public member, or adds a member to a public interface, without bumping the major. Keep the old member beside the new one instead. See `tools/plugin-contract/README.md`.
 
 ## Running the Server
 

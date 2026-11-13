@@ -72,7 +72,7 @@ public class NoSpoofEmitRealityTests
 		{
 			Enactor = enactor.Object().DBRef,
 			Switches = spoof ? ["NOEVAL", "SPOOF"] : ["NOEVAL"],
-			Arguments = new() { ["0"] = new CallState("literal [add(1,2)]") }
+			ArgumentList = ArgumentList.From(new() { ["0"] = new CallState("literal [add(1,2)]") })
 		});
 		parser.Push(Arg.Any<ParserState>()).Returns(call =>
 		{

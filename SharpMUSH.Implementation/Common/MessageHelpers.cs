@@ -227,7 +227,7 @@ public static class MessageHelpers
 		if (pinnedAttribute != null)
 		{
 			var result = await parser.With(
-				state => state.ForAttributeArguments(processedArgs) with
+				state => state.ForAttributeArguments(ArgumentList.From(processedArgs)) with
 				{
 					Actors = state.Actors with { Executor = finalObjToEvaluate.Object().DBRef, Enactor = enactor.Object().DBRef, Caller = state.Executor }
 				},

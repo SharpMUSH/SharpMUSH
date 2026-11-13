@@ -27,7 +27,7 @@ public class NamedArgumentTests
 	public async Task PresenceQueryDoesNotForceTheTargetValue()
 	{
 		var arguments = new Dictionary<string, CallState> { ["who"] = new CallState(MarkupText.Empty, 0, null, () => throw new InvalidOperationException("Target value was forced")) };
-		var state = ParserState.RootFor(WebAppFactoryArg.ExecutorDBRef) with { EnvironmentRegisters = arguments, SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments) };
+		var state = ParserState.RootFor(WebAppFactoryArg.ExecutorDBRef).ForAttributeArguments(ArgumentList.From(arguments));
 		var result = await Parser.FromState(state).FunctionParse(MarkupText.Plain("[hasarg(who)]|[hasarg(who,supplied)]"));
 		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("1|1");
 		var queued = state.SnapshotForQueuedAction();

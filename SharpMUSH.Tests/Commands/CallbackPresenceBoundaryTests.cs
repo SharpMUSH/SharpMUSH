@@ -23,7 +23,7 @@ public class CallbackPresenceBoundaryTests
 		var state = ParserState.RootFor(Factory.ExecutorDBRef);
 		if (!nested) return state;
 		var arguments = new Dictionary<string, CallState> { ["parent"] = new("unrelated") };
-		return state with { EnvironmentRegisters = arguments, SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments) };
+		return state.ForAttributeArguments(ArgumentList.From(arguments));
 	}
 
 	[Test]

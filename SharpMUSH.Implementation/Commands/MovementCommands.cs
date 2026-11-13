@@ -282,7 +282,7 @@ public partial class Commands
 				{
 					Actors = parser.CurrentState.Actors with { Executor = follower.Object().DBRef, Enactor = leader.Object().DBRef, Caller = leader.Object().DBRef },
 					// parse_que passes no pe_regs, so %0-%9 and the q-registers start empty.
-					Arguments = new Dictionary<string, CallState>(),
+					ArgumentList = ArgumentList.Empty,
 					CallerArguments = null,
 					CommandHistory = null,
 					CommandSources = null,
@@ -486,12 +486,8 @@ public partial class Commands
 			.Where(step => step.Length > 0);
 		var reached = CallState.Empty;
 		// Lazily mapped: each step is pushed only once the one before it arrived.
-		var walkers = steps.Select(step => parser.Push(parser.CurrentState with
-		{
-			Command = "GOTO",
-			Arguments = new Dictionary<string, CallState> { { "0", new CallState(step, 0) } },
-			Function = null
-		}));
+		var walkers = steps.Select(step => parser.Push(
+			parser.CurrentState.ForCommand("GOTO", [], ArgumentList.Of(new CallState(step, 0)))));
 		foreach (var walker in walkers)
 		{
 			// GOTO answers a move with the room it reached, and a refusal with nothing.

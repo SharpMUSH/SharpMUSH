@@ -20,13 +20,12 @@ internal static class QueuedCommandMatch
 		var body = attr.Value.Substring(attr.CommandListIndex!.Value, attr.Value.Length - attr.CommandListIndex!.Value);
 
 		// parse_que_attr queues with PE_INFO_DEFAULT: fresh q-registers and no iteration, regex or switch context.
-		var snapshot = current.SnapshotForQueuedAction();
+		var snapshot = current.SnapshotForQueuedAction().ForAttributeArguments(ArgumentList.From(arguments));
 		await mediator.Send(new AdmitCommandListRequest(
 			body,
 			snapshot with
 			{
 				CurrentEvaluation = DBAttribute.Of(obj.Object().DBRef, attr),
-				Arguments = arguments,
 				Function = null,
 				Actors = snapshot.Actors with { Executor = obj.Object().DBRef, Enactor = matcher, Caller = matcher },
 				Context = snapshot.Context with
@@ -35,8 +34,6 @@ internal static class QueuedCommandMatch
 					IterationRegisters = [],
 					RegexRegisters = [],
 					SwitchStack = [],
-					EnvironmentRegisters = arguments,
-					SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
 					HttpResponse = null
 				}
 			},

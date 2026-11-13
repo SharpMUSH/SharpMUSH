@@ -29,9 +29,9 @@ Adding a member to a public interface counts as a break, because a plugin may im
 A break cannot be suppressed: the check fails when `SharpMUSH.Library.csproj` or `Directory.Build.*` names a `CP` or
 `PKV` code, or when the project holds a compatibility suppression file.
 
-Additions are not checked. A plugin that uses a member added after 3.0.0 still loads on a 3.0.0 server and fails
+Additions are not checked. A plugin that uses a member added after 4.0.0 still loads on a 4.0.0 server and fails
 there when it calls it, so a release that adds to the contract bumps the minor, and such a plugin declares that
-minor (`>=3.1`).
+minor (`>=4.1`).
 
 ## The baseline
 

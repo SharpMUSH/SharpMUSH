@@ -30,11 +30,10 @@ public class ApplicationDraftCallbackFrameTests
 		try
 		{
 			var environment = new Dictionary<string, CallState> { ["parent"] = new("inherited"), ["0"] = new("parent-zero") };
-			var parent = ParserState.RootFor(Factory.ExecutorDBRef) with
+			var parent = ParserState.RootFor(Factory.ExecutorDBRef).ForAttributeArguments(ArgumentList.From(environment)) with
 			{
 				Handle = handle,
-				ConnectionSessionId = Connections.Get(handle)!.Metadata.GetValueOrDefault("SessionId"),
-				EnvironmentRegisters = environment
+				ConnectionSessionId = Connections.Get(handle)!.Metadata.GetValueOrDefault("SessionId")
 			};
 			var parser = Factory.CommandParser.FromState(parent);
 			await parser.CommandListParse(MarkupText.Plain($"@appdraft {target}/FORM=new"));
@@ -57,7 +56,7 @@ public class ApplicationDraftCallbackFrameTests
 				await Assert.That(await Read($"{target}/{suffix}OUT"))
 					.IsEqualTo($"1|1|1|1|1|1|1|0|0|inherited|{Factory.ExecutorDBRef}|{{\"text\":\"literal\"}}|{action}|{identity}|{before.Split('|')[^1]}");
 			}
-			await Assert.That(parser.CurrentState.Arguments).IsSameReferenceAs(parent.Arguments);
+			await Assert.That(parser.CurrentState.ArgumentList).IsSameReferenceAs(parent.ArgumentList);
 			await Assert.That(parser.CurrentState.SuppliedArgumentKeys).IsNull();
 			await Assert.That(parser.CurrentState.CurrentEvaluation).IsNull();
 			await Assert.That(parser.CurrentState.EnvironmentRegisters).IsSameReferenceAs(environment);

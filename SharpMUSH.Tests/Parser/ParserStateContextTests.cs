@@ -14,7 +14,7 @@ public class ParserStateContextTests
 	{
 		var root = ParserState.RootFor(new DBRef(7));
 		await Assert.That(root.CommandInvoker is not null).IsTrue();
-		await Assert.That(root.ForFunction("add", []).CommandInvoker is not null).IsTrue();
+		await Assert.That(root.ForFunction("add", ArgumentList.Empty).CommandInvoker is not null).IsTrue();
 		await Assert.That(root.SnapshotForQueuedAction().CommandInvoker is not null).IsTrue();
 	}
 
@@ -32,9 +32,9 @@ public class ParserStateContextTests
 	{
 		var argument = new CallState(MarkupText.Plain("captured"), 5, null,
 			() => throw new InvalidOperationException("Retained the submitting parser"));
-		var state = ParserState.RootFor(new DBRef(7)).ForAttributeArguments(new() { ["0"] = argument });
+		var state = ParserState.RootFor(new DBRef(7)).ForAttributeArguments(ArgumentList.Of(argument));
 		var queued = state.SnapshotForQueuedAction();
-		await Assert.That((await queued.Arguments["0"].GetParsedResultAsync()).Message.ToPlainText()).IsEqualTo("captured");
+		await Assert.That((await queued.ArgumentList["0"].GetParsedResultAsync()).Message.ToPlainText()).IsEqualTo("captured");
 		await Assert.That((await queued.EnvironmentRegisters["0"].GetParsedResultAsync()).Message.ToPlainText()).IsEqualTo("captured");
 	}
 
@@ -42,10 +42,10 @@ public class ParserStateContextTests
 	public async Task QueuedArgumentsAreDetachedFromCallerMutation()
 	{
 		var arguments = new Dictionary<string, CallState> { ["0"] = new("before") };
-		var state = ParserState.RootFor(new DBRef(7)).ForAttributeArguments(arguments) with { CallerArguments = arguments };
+		var state = ParserState.RootFor(new DBRef(7)).ForAttributeArguments(ArgumentList.From(arguments)) with { CallerArguments = ArgumentList.From(arguments) };
 		var queued = state.SnapshotForQueuedAction();
 		arguments["0"] = new("after");
-		await Assert.That(queued.Arguments["0"].Message.ToPlainText()).IsEqualTo("before");
+		await Assert.That(queued.ArgumentList["0"].Message.ToPlainText()).IsEqualTo("before");
 		await Assert.That(queued.CallerArguments!["0"].Message.ToPlainText()).IsEqualTo("before");
 	}
 
@@ -53,26 +53,26 @@ public class ParserStateContextTests
 	public async Task AttributeInvocationBinderReplacesParentPresenceAndExcludesGeneratedKeys()
 	{
 		var parentArguments = new Dictionary<string, CallState> { ["parent"] = new("old") };
-		var parent = ParserState.RootFor(new DBRef(7)) with { SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(parentArguments) };
+		var parent = ParserState.RootFor(new DBRef(7)).ForAttributeArguments(ArgumentList.From(parentArguments));
 		var arguments = new AttributeArgumentEnvironment { ["0"] = new(""), ["itemscount"] = new("1") };
 		arguments.GeneratedKeys.Add("itemscount");
-		var invocation = parent.ForAttributeArguments(arguments);
+		var invocation = parent.ForAttributeArguments(ArgumentList.From(arguments));
 		await Assert.That(invocation.SuppliedArgumentKeys!.Contains("0")).IsTrue();
 		await Assert.That(invocation.SuppliedArgumentKeys.Contains("itemscount")).IsFalse();
 		await Assert.That(invocation.SuppliedArgumentKeys.Contains("parent")).IsFalse();
 		await Assert.That(invocation.EnvironmentRegisters.ContainsKey("itemscount")).IsTrue();
-		await Assert.That(parent.ForAttributeArguments([]).SuppliedArgumentKeys!.Count).IsEqualTo(0);
+		await Assert.That(parent.ForAttributeArguments(ArgumentList.Empty).SuppliedArgumentKeys!.Count).IsEqualTo(0);
 	}
 
 	[Test]
 	public async Task QueuedPresenceIsImmutableAndDoesNotForceValues()
 	{
 		var environment = new Dictionary<string, CallState> { ["who"] = new CallState(MarkupText.Empty, 0, null, () => throw new InvalidOperationException("Presence forced an argument")) };
-		var state = ParserState.RootFor(new DBRef(7)) with { EnvironmentRegisters = environment, SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(environment) };
+		var state = ParserState.RootFor(new DBRef(7)).ForAttributeArguments(ArgumentList.From(environment));
 		var queued = state.SnapshotForQueuedAction();
 		environment.Clear();
 		await Assert.That(queued.SuppliedArgumentKeys!.Contains("WHO")).IsTrue();
-		await Assert.That(queued.ForFunction("hasarg", []).SuppliedArgumentKeys!.Contains("who")).IsTrue();
+		await Assert.That(queued.ForFunction("hasarg", ArgumentList.Empty).SuppliedArgumentKeys!.Contains("who")).IsTrue();
 		await Assert.That(queued.EnvironmentRegisters.ContainsKey("who")).IsTrue();
 	}
 
@@ -80,7 +80,7 @@ public class ParserStateContextTests
 	public async ValueTask AFunctionFrameSharesItsCallersContext()
 	{
 		var root = ParserState.RootFor(new DBRef(7));
-		var frame = root.ForFunction("add", new Dictionary<string, CallState>());
+		var frame = root.ForFunction("add", ArgumentList.Empty);
 
 		await Assert.That(ReferenceEquals(frame.Context, root.Context)).IsTrue();
 		await Assert.That(frame.ParserFunctionDepth).IsEqualTo(1);
@@ -91,7 +91,7 @@ public class ParserStateContextTests
 	public async ValueTask AFunctionFrameKeepsTheTypedLineAndSession()
 	{
 		var typed = ParserState.ForTypedLine(new DBRef(7), handle: 3, session: "session-a", outputLimit: 100, line: "think [add(1,2)]");
-		var frame = typed.ForFunction("add", new Dictionary<string, CallState>());
+		var frame = typed.ForFunction("add", ArgumentList.Empty);
 
 		await Assert.That(frame.TypedLine).IsEqualTo("think [add(1,2)]");
 		await Assert.That(frame.ConnectionSessionId).IsEqualTo("session-a");
@@ -102,7 +102,7 @@ public class ParserStateContextTests
 	{
 		var root = ParserState.RootFor(new DBRef(7));
 		var environment = new Dictionary<string, CallState>();
-		var localized = root with { EnvironmentRegisters = environment };
+		var localized = root.ForAttributeArguments(ArgumentList.Empty, environment);
 
 		await Assert.That(ReferenceEquals(localized.EnvironmentRegisters, environment)).IsTrue();
 		await Assert.That(ReferenceEquals(localized.Context.EnvironmentRegisters, environment)).IsTrue();
@@ -130,7 +130,7 @@ public class ParserStateContextTests
 	{
 		var root = ParserState.RootFor(new DBRef(7));
 		var arguments = new Dictionary<string, CallState> { ["0"] = new("item") };
-		var call = root.ForAttributeCall(arguments, arguments, new DBAttribute(new DBRef(9), "FN"), "FN", new DBRef(9));
+		var call = root.ForAttributeCall(ArgumentList.From(arguments), arguments, new DBAttribute(new DBRef(9), "FN"), "FN", new DBRef(9));
 
 		await Assert.That(call.Executor).IsEqualTo(new DBRef(9));
 		await Assert.That(call.Caller).IsEqualTo(new DBRef(7));
@@ -143,7 +143,7 @@ public class ParserStateContextTests
 		await Assert.That(ReferenceEquals(call.Registers, root.Registers)).IsTrue();
 
 		// A function the body calls reads the same environment and actors.
-		var inner = call.ForFunction("add", []);
+		var inner = call.ForFunction("add", ArgumentList.Empty);
 		await Assert.That(ReferenceEquals(inner.EnvironmentRegisters, arguments)).IsTrue();
 		await Assert.That(inner.SuppliedArgumentKeys!.Contains("0")).IsTrue();
 		await Assert.That(inner.Executor).IsEqualTo(new DBRef(9));
@@ -166,7 +166,7 @@ public class ParserStateContextTests
 		await Assert.That(changed.Enactor).IsEqualTo(new DBRef(7));
 		await Assert.That(root.Executor).IsEqualTo(new DBRef(7));
 		await Assert.That(root.HookedCommand).IsNull();
-		await Assert.That(changed.ForFunction("add", []).HookedCommand!.ToPlainText()).IsEqualTo("look");
+		await Assert.That(changed.ForFunction("add", ArgumentList.Empty).HookedCommand!.ToPlainText()).IsEqualTo("look");
 	}
 
 	[Test]

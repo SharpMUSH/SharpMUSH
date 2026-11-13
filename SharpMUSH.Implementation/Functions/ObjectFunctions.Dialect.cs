@@ -72,8 +72,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentList;
 		var prefix = args.TryGetValue("2", out var prefixArg) ? prefixArg.Message : MString.Empty;
-		var arguments = new Dictionary<string, CallState> { ["0"] = args["0"], ["1"] = args["1"] };
-		var spoken = await parser.With(state => state with { Arguments = arguments }, p => Speak(p, _2));
+		var spoken = await parser.With(state => state with { ArgumentList = ArgumentList.Of(args[0], args[1]) }, p => Speak(p, _2));
 
 		return spoken.Message is not { } text || text.ToPlainText().StartsWith("#-1", StringComparison.Ordinal)
 			? spoken

@@ -254,21 +254,18 @@ public sealed class PortalCommandService(
 			{
 				// The character's output ceiling, whoever the code runs as: it is the character's request.
 				var asCharacter = ParserState.RootFor(actor) with { OutputLimit = await OutputLimitAsync(actor) };
-				var arguments = new Dictionary<string, CallState>();
+				var arguments = new List<CallState>();
 				foreach (var argument in request.Arguments ?? [])
 				{
 					if (BudgetExpired()) break;
-					arguments[arguments.Count.ToString()] =
-						await parser.Push(asCharacter).FunctionParse(MarkupText.Plain(argument)) ?? CallState.Empty;
+					arguments.Add(await parser.Push(asCharacter).FunctionParse(MarkupText.Plain(argument)) ?? CallState.Empty);
 				}
 
 				if (!BudgetExpired())
 				{
-					var value = await parser.Push(asCharacter with
+					var value = await parser.Push(asCharacter.ForAttributeArguments(ArgumentList.Of(arguments)) with
 					{
-						Executor = self,
-						Arguments = arguments,
-						EnvironmentRegisters = arguments
+						Executor = self
 					}).FunctionParse(MarkupText.Plain(request.Expression));
 					result = value?.Message.ToPlainText() ?? string.Empty;
 				}

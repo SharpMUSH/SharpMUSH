@@ -180,7 +180,7 @@ public partial class Commands
 							["headers"] = new CallState(responseHeaders)
 						};
 
-						return callbackState.ForAttributeArguments(contentDict);
+						return callbackState.ForAttributeArguments(ArgumentList.From(contentDict));
 					},
 					dbRefAttribute, parser.CurrentState.Executor, parser.CurrentState.Enactor), ExecutionBudget.CurrentToken);
 

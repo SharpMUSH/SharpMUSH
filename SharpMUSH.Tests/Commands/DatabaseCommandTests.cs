@@ -200,7 +200,7 @@ public class DatabaseCommandTests
 		if (nested)
 		{
 			var parent = new Dictionary<string, CallState> { ["parent"] = new("unrelated") };
-			state = state with { EnvironmentRegisters = parent, SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(parent) };
+			state = state.ForAttributeArguments(ArgumentList.From(parent));
 		}
 		await Parser.FromState(state).CommandListParse(MarkupText.Plain($"@mapsql {target}/RUN=SELECT '' AS present"));
 		await MapSqlQueriesSettledAsync();
@@ -249,7 +249,7 @@ public class DatabaseCommandTests
 		var state = ParserState.RootFor(player.DbRef) with
 		{
 			Switches = ["NOTIFY"],
-			Arguments = new() { ["0"] = new CallState(player.DbRef + "/MAPSINGLE"), ["1"] = new CallState("SELECT 1") }
+			ArgumentList = ArgumentList.From(new() { ["0"] = new CallState(player.DbRef + "/MAPSINGLE"), ["1"] = new CallState("SELECT 1") })
 		};
 		await state.KnownExecutorObject(Mediator);
 		await state.KnownEnactorObject(Mediator);
@@ -309,7 +309,7 @@ public class DatabaseCommandTests
 		var state = ParserState.RootFor(player.DbRef) with
 		{
 			Switches = ["NOTIFY"],
-			Arguments = new() { ["0"] = new CallState(player.DbRef + "/MAPREJECTION"), ["1"] = new CallState("SELECT 1") }
+			ArgumentList = ArgumentList.From(new() { ["0"] = new CallState(player.DbRef + "/MAPREJECTION"), ["1"] = new CallState("SELECT 1") })
 		};
 		await state.KnownExecutorObject(Mediator);
 		await state.KnownEnactorObject(Mediator);
@@ -469,7 +469,7 @@ public class DatabaseCommandTests
 		var state = ParserState.RootFor(player.DbRef) with
 		{
 			Switches = header ? ["COLNAMES"] : [],
-			Arguments = new() { ["0"] = new CallState(player.DbRef + "/MAPINVALID"), ["1"] = new CallState("SELECT 1 AS col1") }
+			ArgumentList = ArgumentList.From(new() { ["0"] = new CallState(player.DbRef + "/MAPINVALID"), ["1"] = new CallState("SELECT 1 AS col1") })
 		};
 		await state.KnownExecutorObject(Mediator);
 		await state.KnownEnactorObject(Mediator);
@@ -497,7 +497,7 @@ public class DatabaseCommandTests
 		var state = ParserState.RootFor(player.DbRef) with
 		{
 			Switches = boundary == "header" ? ["NOTIFY", "COLNAMES"] : ["NOTIFY"],
-			Arguments = new() { ["0"] = new CallState(player.DbRef + "/MAPPIPELINE"), ["1"] = new CallState("SELECT 1 AS col1") }
+			ArgumentList = ArgumentList.From(new() { ["0"] = new CallState(player.DbRef + "/MAPPIPELINE"), ["1"] = new CallState("SELECT 1 AS col1") })
 		};
 		await state.KnownExecutorObject(Mediator);
 		await state.KnownEnactorObject(Mediator);
@@ -797,11 +797,11 @@ public class DatabaseCommandTests
 		{
 			Enactor = enactor,
 			Switches = switches,
-			Arguments = new Dictionary<string, CallState>
+			ArgumentList = ArgumentList.From(new Dictionary<string, CallState>
 			{
 				["0"] = new CallState(objectAndAttribute),
 				["1"] = new CallState(query)
-			}
+			})
 		};
 		await state.KnownExecutorObject(Mediator);
 		await state.KnownEnactorObject(Mediator);
@@ -1149,7 +1149,7 @@ public class DatabaseCommandTests
 
 		await Assert.That(arguments.Keys.Where(key => int.TryParse(key, out _)).Order())
 			.IsEquivalentTo(new[] { "0", "1", "2", "3", "4" });
-		await Assert.That((ParserState.Empty with { Arguments = arguments }).ArgumentsOrdered
+		await Assert.That((ParserState.Empty with { ArgumentList = ArgumentList.From(arguments) }).ArgumentsOrdered
 				.Values.Select(value => value.Message.ToPlainText()))
 			.IsEquivalentTo(new[] { "7", "A", "B", "C", "D" });
 		await Assert.That(arguments["alpha"].Message.ToPlainText()).IsEqualTo("A");

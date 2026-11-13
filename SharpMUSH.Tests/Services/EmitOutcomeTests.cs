@@ -176,7 +176,7 @@ public class EmitOutcomeTests
 		parser = parser.FromState(parser.CurrentState with
 		{
 			Switches = ["NOEVAL"],
-			Arguments = new() { ["0"] = new CallState(body) }
+			ArgumentList = ArgumentList.From(new() { ["0"] = new CallState(body) })
 		});
 		var definition = new SharpCommandAttribute { Name = name };
 		var result = (name == "@EMIT" ? await commands.Emit(parser, definition) : await commands.NoSpoofEmit(parser, definition)).Expect<CallState>();

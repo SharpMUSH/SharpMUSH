@@ -137,9 +137,10 @@ public partial class Functions
 		var contents = new List<string>();
 		foreach (var member in await ZoneMemberRefsAsync(zone))
 		{
-			var arguments = new Dictionary<string, CallState> { ["0"] = new($"#{member.Number}") };
-			if (type.Length > 0) arguments["1"] = new(type);
-			var listed = await parser.With(state => state with { Arguments = arguments }, WalkContentsWithFilter);
+			var arguments = type.Length > 0
+				? ArgumentList.Of(new CallState($"#{member.Number}"), new CallState(type))
+				: ArgumentList.Of(new CallState($"#{member.Number}"));
+			var listed = await parser.With(state => state with { ArgumentList = arguments }, WalkContentsWithFilter);
 			var text = listed.Message?.ToPlainText() ?? string.Empty;
 			if (text.Length == 0 || text.StartsWith("#-1")) continue;
 			contents.Add(text);
@@ -186,7 +187,7 @@ public partial class Functions
 	/// <summary>search() with no argument searching as an empty one does: everything the caller may search.</summary>
 	private async ValueTask<CallState> SearchAnyAsync(IMUSHCodeParser parser, SharpFunctionAttribute attribute)
 		=> parser.CurrentState.ArgumentList.Count == 0
-			? await parser.With(state => state with { Arguments = new Dictionary<string, CallState> { ["0"] = new(string.Empty) } },
+			? await parser.With(state => state with { ArgumentList = ArgumentList.Of(new CallState(string.Empty)) },
 				p => ListSearch(p, attribute))
 			: await ListSearch(parser, attribute);
 
@@ -209,9 +210,9 @@ public partial class Functions
 		// With a class, search()'s one-argument form, which reads the range from arguments 1 and 2; without one, every
 		// object the caller may search, the range as lsearch()'s MINDB and MAXDB.
 		var arguments = spec.Length > 0
-			? new Dictionary<string, CallState>(parser.CurrentState.ArgumentList) { ["0"] = new(spec) }
+			? parser.CurrentState.ArgumentList.With(0, new CallState(spec))
 			: RangeOnly(parser);
-		var found = await parser.With(state => state with { Arguments = arguments },
+		var found = await parser.With(state => state with { ArgumentList = arguments },
 			p => spec.Length > 0 ? TinySearchAsync(p, executor) : ListSearchInternal(p, attribute, useRegex: false));
 
 		var text = found.Message?.ToPlainText() ?? string.Empty;
@@ -223,19 +224,19 @@ public partial class Functions
 	}
 
 	/// <summary>lsearch() arguments for everything the caller may search, within zsearch()'s low and high dbrefs.</summary>
-	private static Dictionary<string, CallState> RangeOnly(IMUSHCodeParser parser)
+	private static ArgumentList RangeOnly(IMUSHCodeParser parser)
 	{
-		var arguments = new Dictionary<string, CallState> { ["0"] = new(string.Empty) };
+		List<CallState> arguments = [new(string.Empty)];
 		foreach (var (key, name) in new[] { ("1", "MINDB"), ("2", "MAXDB") })
 		{
 			if (ZoneArg(parser, key).Trim() is { Length: > 0 } bound)
 			{
-				arguments[arguments.Count.ToString()] = new(name);
-				arguments[arguments.Count.ToString()] = new(bound);
+				arguments.Add(new(name));
+				arguments.Add(new(bound));
 			}
 		}
 
-		return arguments;
+		return ArgumentList.Of(arguments);
 	}
 
 	/// <summary>
@@ -438,11 +439,8 @@ public partial class Functions
 			return ErrorMessages.Returns.InvalidZone;
 		}
 
-		var arguments = new Dictionary<string, CallState>(parser.CurrentState.ArgumentList)
-		{
-			["0"] = new($"#{zone.Object().DBRef.Number}/{attributeName}{level}")
-		};
-		return await parser.With(state => state with { Arguments = arguments }, call);
+		var arguments = parser.CurrentState.ArgumentList.With(0, new CallState($"#{zone.Object().DBRef.Number}/{attributeName}{level}"));
+		return await parser.With(state => state with { ArgumentList = arguments }, call);
 	}
 
 	/// <summary>
