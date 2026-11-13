@@ -26,6 +26,43 @@ STATE=$DATA/state
 DOMAIN=${SHARPMUSH_DOMAIN:-${FLY_APP_NAME:+$FLY_APP_NAME.fly.dev}}
 DOMAIN=${DOMAIN:-${RAILWAY_PUBLIC_DOMAIN:-}}
 DOMAIN=${DOMAIN:-localhost:8000}
+DOMAIN=${DOMAIN#*://}
+DOMAIN=${DOMAIN%%/*}
+# Who ends TLS. On Fly and Railway the host's proxy does, in front of :8000, and the game is at
+# https://<domain>. Otherwise players reach :8000 directly:
+#   at localhost: plain HTTP, which browsers treat as secure, so no certificate warning;
+#   at an IP address, or any name given with a port (e.g. 192.168.1.10:8000): Caddy serves :8000
+#   with a certificate from its own CA, since the portal runs only in a secure context. Browsers warn
+#   once, as the CA is not one they trust.
+# SHARPMUSH_TLS=internal or off overrides the guess.
+case "$DOMAIN" in
+	'['*']:'*) host=${DOMAIN%:*} port=${DOMAIN##*:} ;;
+	*:*:* | '['*']') host=$DOMAIN port= ;; # an IPv6 address with no port
+	*:*) host=${DOMAIN%:*} port=${DOMAIN##*:} ;;
+	*) host=$DOMAIN port= ;;
+esac
+host=${host#[}
+host=${host%]}
+case "$host" in
+	localhost | *.localhost | 127.* | ::1) TLS=off SCHEME=http ;;
+	"${FLY_APP_NAME:-}.fly.dev" | "${RAILWAY_PUBLIC_DOMAIN:-}") TLS=off SCHEME=https ;; # the host's proxy
+	*:* | *[0-9]) TLS=internal SCHEME=https ;; # an IP address: nothing in front names it
+	*) TLS=${port:+internal} SCHEME=https ;;
+esac
+TLS=${SHARPMUSH_TLS:-${TLS:-off}}
+case "$TLS" in
+	internal)
+		SCHEME=https
+		# localhost too, so the machine running the game can still open it there.
+		case "$host" in *:*) SHARPMUSH_SITE="https://[$host]:8000" ;; *) SHARPMUSH_SITE="https://$host:8000" ;; esac
+		[ "$host" = localhost ] || SHARPMUSH_SITE="$SHARPMUSH_SITE, https://localhost:8000"
+		;;
+	off) SHARPMUSH_SITE=:8000 ;;
+	*) echo "sharpmush-start: SHARPMUSH_TLS must be internal or off, not $TLS" >&2; exit 1 ;;
+esac
+if [ "$SCHEME" = https ]; then SECURE_COOKIE='; Secure'; else SECURE_COOKIE=; fi
+# A browser sends no server name for an IP address; Caddy answers it with this one's certificate.
+export SHARPMUSH_SITE SHARPMUSH_DEFAULT_SNI=$host
 GUARD_PORT=14201
 export SHARPMUSH_SERVER_ADDRESS=${SHARPMUSH_SERVER_ADDRESS:-127.0.0.1:8080}
 
@@ -33,8 +70,13 @@ as_app() { setpriv --reuid=app --regid=app --init-groups "$@"; }
 # In the background: exec, so the recorded pid is the process itself and a TERM reaches it.
 as_app_bg() { exec setpriv --reuid=app --regid=app --init-groups "$@"; }
 
-mkdir -p "$STATE/guard" /run/sharpmush
-chown app:app "$DATA" "$STATE" "$STATE/guard" /run/sharpmush
+mkdir -p "$STATE/guard" "$STATE/tls" /run/sharpmush
+chown app:app "$DATA" "$STATE" "$STATE/guard" "$STATE/tls" /run/sharpmush
+if [ "$TLS" = internal ]; then
+	printf 'tls internal\n' > "$STATE/tls/tls.caddy"
+else
+	echo "# TLS ends in front of Caddy, or the game is on localhost." > "$STATE/tls/tls.caddy"
+fi
 for dir in nats caddy; do mkdir -p "$DATA/$dir" && chown app:app "$DATA/$dir"; done
 
 # --- the first-boot guard ------------------------------------------------------------------------
@@ -47,7 +89,7 @@ if guard_on; then
 	cat > "$STATE/guard/guard.caddy" <<EOF
 route {
 	@setup_link query setup_code=$code
-	header @setup_link Set-Cookie "sharpmush_setup=$code; Path=/; Max-Age=604800; HttpOnly; Secure; SameSite=Lax"
+	header @setup_link Set-Cookie "sharpmush_setup=$code; Path=/; Max-Age=604800; HttpOnly$SECURE_COOKIE; SameSite=Lax"
 	redir @setup_link /setup 302
 	@locked {
 		not header Cookie *sharpmush_setup=$code*
@@ -151,7 +193,7 @@ trap 'stop_all; exit 0' TERM INT
 if guard_on; then
 	echo
 	echo "  Finish setting up SharpMUSH in your browser (only this link gets in until you do):"
-	echo "    https://$DOMAIN/?setup_code=$code"
+	echo "    $SCHEME://$DOMAIN/?setup_code=$code"
 	if [ -n "${RAILWAY_TCP_PROXY_DOMAIN:-}" ]; then
 		echo "  Telnet opens at $RAILWAY_TCP_PROXY_DOMAIN port ${RAILWAY_TCP_PROXY_PORT:-} once setup is finished."
 	else

@@ -1,8 +1,14 @@
 # SharpMUSH's front door inside the all-in-one container (deploy/fly/Dockerfile). The host's proxy
-# (Fly's or Railway's) ends TLS and hands plain HTTP to :8000; everything behind Caddy is on
-# localhost.
+# (Fly's or Railway's) ends TLS and hands plain HTTP to :8000. Reached directly at an address other
+# than localhost, Caddy serves :8000 itself with a certificate from its own CA (start.sh sets
+# SHARPMUSH_SITE and writes tls.caddy). Everything behind Caddy is on localhost.
 {
 	admin localhost:2019
+	# Caddy runs as an unprivileged user: no :80 redirect listener, and its CA stays out of the
+	# container's trust store.
+	auto_https disable_redirects
+	skip_install_trust
+	default_sni {$SHARPMUSH_DEFAULT_SNI:localhost}
 	servers {
 		# Fly's proxy reaches the machine from a private address and names the client in X-Forwarded-For.
 		# A host whose proxy comes from elsewhere sets SHARPMUSH_TRUSTED_PROXIES to its ranges.
@@ -10,7 +16,8 @@
 	}
 }
 
-:8000 {
+{$SHARPMUSH_SITE::8000} {
+	import /data/state/tls/*.caddy
 	encode zstd gzip
 
 	route {
