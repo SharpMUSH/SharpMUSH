@@ -571,8 +571,10 @@ public class ConnectionClosedConsumer(ILogger<ConnectionClosedConsumer> logger, 
 
 		if (!string.IsNullOrEmpty(message.SessionId) &&
 			connectionService.Get(message.Handle)?.Metadata.GetValueOrDefault("SessionId") != message.SessionId) return;
-		// The client closed the socket, or the hold on its dropped session ran out: nobody typed QUIT.
-		if (connectionService.Get(message.Handle) is { } closing)
+		// A session held after its client dropped (a closed browser tab) that nobody came back for: nobody is at
+		// the other end, and nobody chose to leave.
+		if (connectionService.Get(message.Handle) is { } closing
+				&& closing.Metadata.GetValueOrDefault("Detached") is { } heldUntil && heldUntil != "0")
 			closing.Metadata[ConnectionStateEventHandler.DroppedMetadata] = "1";
 		await connectionService.Disconnect(message.Handle, message.SessionId);
 	}

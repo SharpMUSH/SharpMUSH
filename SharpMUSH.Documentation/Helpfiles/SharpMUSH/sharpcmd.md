@@ -2914,7 +2914,7 @@ A deliberate divergence: PennMUSH has no bare `version` at the login screen, onl
 
 Log out and leave the game. Must be in all capitals.
 
-Only the connection you type it on closes, and only that connection gets the goodbye message. Your character's other connections stay in the game and are told you partially disconnected, as they are after a LOGOUT or an @boot. A connection that drops without QUIT, such as a closed browser tab, tells them nothing.
+Only the connection you type it on closes, and only that connection gets the goodbye message. Your character's other connections stay in the game and are told you partially disconnected, as they are after a LOGOUT, an @boot or a dropped connection. A closed browser tab that is not reopened in time tells them nothing.
 
 ```
 > QUIT
