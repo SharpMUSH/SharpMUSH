@@ -109,7 +109,7 @@ public class ParserStateArgumentsTests
 	}
 
 	[Test]
-	public async ValueTask SettingTheDictionaryKeepsThatInstance()
+	public async ValueTask AListMadeFromADictionaryReadsThroughIt()
 	{
 		var bound = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase)
 		{
@@ -118,7 +118,7 @@ public class ParserStateArgumentsTests
 		};
 		var state = ParserState.Empty with { ArgumentList = ArgumentList.From(bound) };
 
-		await Assert.That(state.ArgumentList).IsSameReferenceAs(bound);
+		await Assert.That(state.ArgumentList.AsDictionary()).IsSameReferenceAs(bound);
 		await Assert.That(state.ArgumentList.IsPositional).IsFalse();
 		await Assert.That(state.ArgumentList.Count).IsEqualTo(2);
 		await Assert.That(state.ArgumentList["name"].Message.ToPlainText()).IsEqualTo("b");

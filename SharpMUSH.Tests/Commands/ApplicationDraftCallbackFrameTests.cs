@@ -30,8 +30,11 @@ public class ApplicationDraftCallbackFrameTests
 		try
 		{
 			var environment = new Dictionary<string, CallState> { ["parent"] = new("inherited"), ["0"] = new("parent-zero") };
-			var parent = ParserState.RootFor(Factory.ExecutorDBRef).ForAttributeArguments(ArgumentList.From(environment)) with
+			var root = ParserState.RootFor(Factory.ExecutorDBRef);
+			var parent = root with
 			{
+				// An environment with no attribute invocation behind it: no supplied keys.
+				Context = root.Context with { EnvironmentRegisters = environment },
 				Handle = handle,
 				ConnectionSessionId = Connections.Get(handle)!.Metadata.GetValueOrDefault("SessionId")
 			};

@@ -333,7 +333,7 @@ public class HttpCommandTests
 		if (nestedPresence)
 		{
 			var parent = new Dictionary<string, CallState> { ["parent"] = new("unrelated") };
-			state = state.ForAttributeArguments(ArgumentList.From(parent));
+			state = state.ForAttributeArguments(ArgumentList.From(parent)) with { ArgumentList = state.ArgumentList };
 		}
 		if (outputLimit is { } limit) state = state with { OutputLimit = limit };
 		foreach (var (register, value) in registers ?? [])
