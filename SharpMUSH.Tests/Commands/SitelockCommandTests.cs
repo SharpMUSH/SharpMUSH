@@ -92,11 +92,13 @@ public class SitelockCommandTests
 
 		try
 		{
-			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@sitelock/ban {pattern}"));
+			var messages = await MessagesWhile(WebAppFactoryArg.ExecutorDBRef,
+				async () => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@sitelock/ban {pattern}")));
 
 			var rules = Configuration.CurrentValue.SitelockRules.Rules;
 			await Assert.That(rules.ContainsKey(pattern)).IsTrue();
 			await Assert.That(rules[pattern]).IsEquivalentTo(["!connect", "!create", "!guest"]);
+			await Assert.That(messages).Contains($"Sitelock rule for '{pattern}' added: !connect !create !guest");
 		}
 		finally
 		{
@@ -131,15 +133,28 @@ public class SitelockCommandTests
 
 		try
 		{
-			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@sitelock/remove {pattern}"));
+			var messages = await MessagesWhile(WebAppFactoryArg.ExecutorDBRef,
+				async () => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@sitelock/remove {pattern}")));
 
 			var rules = Configuration.CurrentValue.SitelockRules.Rules;
 			await Assert.That(rules.ContainsKey(pattern)).IsFalse();
+			await Assert.That(messages).Contains($"Sitelock rule for '{pattern}' removed.");
 		}
 		finally
 		{
 			await CleanupRuleAsync(pattern);
 		}
+	}
+
+	[Test]
+	public async ValueTask Remove_SaysWhenNoRuleMatches()
+	{
+		var pattern = $"*.{TestIsolationHelpers.GenerateUniqueName("absent")}.test";
+
+		var messages = await MessagesWhile(WebAppFactoryArg.ExecutorDBRef,
+			async () => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@sitelock/remove {pattern}")));
+
+		await Assert.That(messages).Contains("No sitelock rule was found for that pattern.");
 	}
 
 	[Test]

@@ -36,6 +36,8 @@ internal sealed class RecordingWikiHandler : HttpMessageHandler
 	public List<WikiTranslationSummaryDto> Translations { get; set; } =
 		[new("fr", "Dragons (fr)", true, DateTimeOffset.UnixEpoch, 1)];
 
+	public string PageTitle { get; set; } = "Dragons of the North";
+
 	public Uri? LastRequestTo(string pathSuffix) =>
 		Requests.LastOrDefault(u => u.AbsolutePath.EndsWith(pathSuffix, StringComparison.Ordinal));
 
@@ -53,6 +55,10 @@ internal sealed class RecordingWikiHandler : HttpMessageHandler
 
 		if (path.Contains("/revisions/", StringComparison.Ordinal))
 			return Task.FromResult(Json(Revisions[0]));
+
+		if (path.EndsWith("/api/wiki/ns/main/dragons", StringComparison.Ordinal))
+			return Task.FromResult(Json(new WikiPageDto("p1", "dragons", PageTitle, "main", "v2", "<p>v2</p>", "v2",
+				DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch, false, 2, [], true)));
 
 		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
 	}
@@ -164,6 +170,39 @@ public class WikiHistoryLocaleTests : TrackingBunitContext
 
 		await Assert.That(hrefs).Contains("/wiki/main/dragons/history");
 		await Assert.That(hrefs).Contains("/wiki/main/dragons/history?lang=fr");
+	}
+
+	[Test]
+	public async Task History_page_is_headed_by_the_page_title_not_its_slug()
+	{
+		var cut = RenderHistory(null);
+
+		cut.WaitForState(() => cut.Markup.Contains("Dragons of the North"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Markup).Contains("Dragons of the North");
+		await Assert.That(_handler.LastRequestTo("/api/wiki/ns/main/dragons")).IsNotNull();
+	}
+
+	[Test]
+	public async Task History_page_asks_for_the_title_in_the_lang_query_parameter()
+	{
+		RenderHistory("fr");
+
+		await Assert.That(_handler.LastRequestTo("/api/wiki/ns/main/dragons")!.Query)
+			.Contains("lang=fr")
+			.Because("a translation's history is headed by the translated title");
+	}
+
+	[Test]
+	public async Task Diff_page_is_headed_by_the_page_title_not_its_slug()
+	{
+		NavigateTo("/wiki/main/dragons/diff?from=1&to=2");
+
+		var cut = Render<SharpMUSH.Client.Pages.WikiPageDiff>(p => p
+			.Add(c => c.Ns, "main")
+			.Add(c => c.Slug, "dragons"));
+
+		cut.WaitForState(() => cut.Markup.Contains("Dragons of the North"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Markup).Contains("Dragons of the North");
 	}
 
 	[Test]

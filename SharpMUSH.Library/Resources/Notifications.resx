@@ -3034,6 +3034,15 @@
   <data name="SitelockPlayerRemovedFormat" xml:space="preserve">
     <value>{0} sitelocks removed.</value>
   </data>
+  <data name="SitelockRuleAddedFormat" xml:space="preserve">
+    <value>Sitelock rule for '{0}' added: {1}</value>
+  </data>
+  <data name="SitelockRuleRemovedFormat" xml:space="preserve">
+    <value>Sitelock rule for '{0}' removed.</value>
+  </data>
+  <data name="SitelockRuleNotFound" xml:space="preserve">
+    <value>No sitelock rule was found for that pattern.</value>
+  </data>
   <data name="SitelockInvalidSyntax" xml:space="preserve">
     <value>Invalid @SITELOCK syntax. Use '@help @sitelock' for usage information.</value>
   </data>

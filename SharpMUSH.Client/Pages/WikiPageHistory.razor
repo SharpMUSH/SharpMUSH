@@ -9,7 +9,7 @@
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["WkHistoryPageTitle", Slug] — <GameName /></PageTitle>
+<PageTitle>@Loc["WkHistoryPageTitle", _displayTitle] — <GameName /></PageTitle>
 
 <div class="wikihist">
     <BackLink Href="@WithLang(WikiRoutes.PathFor(Ns, Slug))">@_displayTitle</BackLink>
@@ -177,14 +177,25 @@
 
     private string _displayTitle = string.Empty;
 
+    // Counts loads, so an earlier load still in flight when the reader moves on cannot overwrite the later one's results.
+    private int _loadVersion;
+
     protected override async Task OnParametersSetAsync()
     {
+        var version = ++_loadVersion;
         _loading = true;
         _displayTitle = string.IsNullOrWhiteSpace(Slug) ? Loc["WkPageFallbackTitle"] : Slug.Replace('-', ' ');
 
-        var result = await Wiki.GetRevisionsAsync(Slug, skip: 0, take: 50, ns: Ns, lang: Lang);
-        _revisions = [.. result];
-        _translations = await Wiki.GetTranslationsAsync(Slug, Ns);
+        // A ValueTask may be awaited only once, so each becomes a Task before the three are joined.
+        var articleTask = Wiki.GetWikiArticle(Slug, Ns, Lang).AsTask();
+        var revisionsTask = Wiki.GetRevisionsAsync(Slug, skip: 0, take: 50, ns: Ns, lang: Lang).AsTask();
+        var translationsTask = Wiki.GetTranslationsAsync(Slug, Ns).AsTask();
+        await Task.WhenAll(articleTask, revisionsTask, translationsTask);
+        if (version != _loadVersion) return;
+        if (await articleTask is WikiArticle article)
+            _displayTitle = article.Title;
+        _revisions = [.. await revisionsTask];
+        _translations = await translationsTask;
         _loading = false;
 
         if (_revisions.Count >= 2)

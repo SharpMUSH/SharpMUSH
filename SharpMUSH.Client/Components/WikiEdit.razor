@@ -201,8 +201,8 @@
     /// <summary>The page's namespace; the categories it puts every page in are shown fixed.</summary>
     [Parameter] public string? Namespace { get; set; }
 
-    /// <summary>Invoked after a successful save with the updated article.</summary>
-    [Parameter] public EventCallback<WikiArticle> OnSaved { get; set; }
+    /// <summary>Invoked when the editor publishes, with the edited article and the summary typed for the revision.</summary>
+    [Parameter] public EventCallback<WikiEditSave> OnSaved { get; set; }
 
     /// <summary>Invoked when the user clicks Cancel/Discard.</summary>
     [Parameter] public EventCallback OnCancel { get; set; }
@@ -356,7 +356,7 @@
         _errorMessage = null;
         try
         {
-            await OnSaved.InvokeAsync(Article);
+            await OnSaved.InvokeAsync(new WikiEditSave(Article, string.IsNullOrWhiteSpace(_summary) ? null : _summary.Trim()));
         }
         catch (Exception ex)
         {
