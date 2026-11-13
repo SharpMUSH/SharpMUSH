@@ -1,0 +1,242 @@
+@implements IDisposable
+@using SharpMUSH.Client.Services
+@inject AdminServerService ServerService
+@inject IDialogService Dialogs
+@inject IStringLocalizer<SharedResource> Loc
+@inject TimeProvider Time
+
+@* The updates panel on the server page. The update agent, a sidecar holding the Docker socket, does
+   the work; this asks for it and shows what the agent last reported. *@
+<KitCard Title="@Loc["AdmUpdTitle"]" Sub="@Subtitle()" Class="adm-updates">
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Class="adm-updates-error">@_error</MudAlert>
+    }
+    @if (_readError is not null)
+    {
+        @* The server may be the thing being replaced: what is below is the last view it gave. *@
+        <MudAlert Severity="Severity.Warning" Class="adm-updates-unread">@_readError</MudAlert>
+    }
+    @if (_status is { AgentConfigured: var configured } and ({ AgentConfigured: false } or { AgentConnected: false }))
+    {
+        <MudAlert Severity="@(configured ? Severity.Warning : Severity.Info)" Class="adm-updates-noagent">
+            @Loc[configured ? "AdmUpdAgentMissing" : "AdmUpdNoAgent"]
+        </MudAlert>
+    }
+    else if (_status is { } status)
+    {
+        @if (status.Job is { } job)
+        {
+            <MudAlert Severity="@JobSeverity(job)" Class="adm-updates-job" data-state="@job.State">@JobLine(job)</MudAlert>
+        }
+        @if (status.AgentError is { } agentError)
+        {
+            <MudAlert Severity="Severity.Warning">@agentError</MudAlert>
+        }
+        <ul class="adm-updates-list">
+            @foreach (var component in status.Components)
+            {
+                <li class="adm-updates-row" data-component="@component.Component">
+                    <div class="adm-updates-name">
+                        <span class="adm-updates-label">@ComponentName(component.Component)</span>
+                        <span class="adm-updates-version">@VersionLine(component)</span>
+                    </div>
+                    <span class="adm-updates-state @(component.UpdateAvailable ? "adm-updates-state--new" : null)">
+                        @Loc[component switch
+                        {
+                            { UpdateAvailable: true } => "AdmUpdNewer",
+                            { LatestDigest: null } => "AdmUpdNotChecked",
+                            _ => "AdmUpdCurrent",
+                        }]
+                    </span>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@Busy(status)"
+                               OnClick="@(() => UpdateAsync([component.Component], null))">@Loc["AdmUpdUpdate"]</MudButton>
+                </li>
+            }
+        </ul>
+        <div class="adm-updates-actions">
+            <MudSelect T="int" @bind-Value="_delay" Label="@Loc["AdmUpdWarnPlayers"]" Dense="true" Variant="Variant.Outlined"
+                       Class="adm-updates-delay">
+                @foreach (var seconds in Delays)
+                {
+                    <MudSelectItem T="int" Value="@seconds">@DelayName(seconds)</MudSelectItem>
+                }
+            </MudSelect>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@Busy(status)" Class="adm-updates-all"
+                       OnClick="@(() => UpdateAsync(ServerComponents.InUpdateOrder, null))">@Loc["AdmUpdAll"]</MudButton>
+        </div>
+        @if (status.Tag is not null && status.AvailableTags.Count > 0)
+        {
+            <div class="adm-updates-actions">
+                <MudSelect T="string" @bind-Value="_tag" Label="@Loc["AdmUpdVersion"]" Dense="true" Variant="Variant.Outlined"
+                           Class="adm-updates-tag">
+                    @foreach (var tag in status.AvailableTags)
+                    {
+                        <MudSelectItem T="string" Value="@tag">@tag</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudButton Variant="Variant.Outlined" Disabled="@(Busy(status) || _tag is null || _tag == status.Tag)" Class="adm-updates-move"
+                           OnClick="@(() => UpdateAsync(ServerComponents.InUpdateOrder, _tag))">@Loc["AdmUpdMove"]</MudButton>
+            </div>
+        }
+        <p class="adm-updates-note">
+            @Loc["AdmUpdOrder"]
+            @if (status.RegistryReadAt is { } read)
+            {
+                @(" ")@Loc["AdmUpdRegistryRead", DateDisplay.TimeWithSeconds(read)]
+            }
+        </p>
+    }
+</KitCard>
+
+@code {
+    /// <summary>How often the panel is read again while the page is open.</summary>
+    public static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(10);
+
+    /// <summary>The warnings offered before the socket server is replaced, in seconds.</summary>
+    public static readonly IReadOnlyList<int> Delays = [0, 60, 300, 600, 1800];
+
+    private readonly CancellationTokenSource _closed = new();
+    private AdminUpdatesStatus? _status;
+    private string? _error, _readError, _tag;
+    private int _delay = 300;
+    private bool _sending;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Taken before the await: the page may close, and dispose _closed, while the first read is out.
+        var closed = _closed.Token;
+        await ReadAsync();
+        if (!closed.IsCancellationRequested) _ = RefreshAsync(closed);
+    }
+
+    private async Task RefreshAsync(CancellationToken closed)
+    {
+        using var timer = new PeriodicTimer(RefreshInterval, Time);
+        try
+        {
+            while (await timer.WaitForNextTickAsync(closed))
+            {
+                await ReadAsync();
+                if (closed.IsCancellationRequested) break;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The page closed.
+        }
+    }
+
+    private async Task ReadAsync()
+    {
+        switch (await ServerService.UpdatesAsync())
+        {
+            case AdminUpdatesStatus status:
+                _status = status;
+                _readError = null;
+                _tag ??= status.Tag;
+                break;
+            case ApiFailure failure:
+                // The server is one of the things an update replaces: keep the last view while it is away.
+                _readError = failure.Message;
+                break;
+        }
+    }
+
+    private bool Busy(AdminUpdatesStatus status) => _sending || status.Job is { Active: true };
+
+    private async Task UpdateAsync(IReadOnlyList<string> components, string? tag)
+    {
+        if (_status is not { } status) return;
+        if (!await Dialogs.ConfirmAsync(Loc, Loc["AdmUpdConfirmTitle"], ConfirmText(status, components, tag), Loc["AdmUpdUpdate"]))
+            return;
+        _sending = true;
+        _error = null;
+        try
+        {
+            switch (await ServerService.QueueUpdateAsync(new AdminUpdateRequest(components, tag, _delay)))
+            {
+                case UpdateJobStatus job:
+                    _status = status with { Job = job };
+                    break;
+                case ApiFailure failure:
+                    _error = failure.Message;
+                    break;
+            }
+        }
+        finally
+        {
+            _sending = false;
+        }
+    }
+
+    private string ConfirmText(AdminUpdatesStatus status, IReadOnlyList<string> components, string? tag)
+    {
+        var lines = new List<string>
+        {
+            tag is null
+                ? Loc["AdmUpdConfirmPull", string.Join(", ", components.Select(ComponentName))]
+                : Loc["AdmUpdConfirmMove", tag],
+        };
+        if (components.Contains(ServerComponents.Server)) lines.Add(Loc["AdmUpdConfirmServer"]);
+        if (components.Contains(ServerComponents.SocketServer))
+            lines.Add(Loc["AdmUpdConfirmSocket", status.Connections, status.Players, DelayName(_delay)]);
+        return string.Join(" ", lines);
+    }
+
+    private string? Subtitle() => _status switch
+    {
+        { AgentConnected: true, Project: var project, Tag: { } tag } => Loc["AdmUpdAgentTag", project ?? "", tag].Value,
+        { AgentConnected: true, Project: var project } => Loc["AdmUpdAgentFixed", project ?? ""].Value,
+        _ => null,
+    };
+
+    private string ComponentName(string component) => component switch
+    {
+        ServerComponents.Renderer => Loc["AdmUpdRenderer"],
+        ServerComponents.Server => Loc["AdmUpdServer"],
+        ServerComponents.SocketServer => Loc["AdmUpdSocketServer"],
+        _ => component,
+    };
+
+    private string DelayName(int seconds) => seconds switch
+    {
+        0 => Loc["AdmUpdDelayNone"],
+        < 120 => Loc["AdmUpdDelaySeconds", seconds],
+        _ => Loc["AdmUpdDelayMinutes", seconds / 60],
+    };
+
+    /// <summary>The release, or the build for a moving tag: <c>dev · 1a2b3c4</c>.</summary>
+    public static string VersionLine(UpdateComponentStatus component)
+    {
+        var version = component.Version ?? component.Tag;
+        return component.Revision is { Length: >= 7 } revision ? $"{version} · {revision[..7]}" : version;
+    }
+
+    private string JobLine(UpdateJobStatus job) => job.State switch
+    {
+        UpdateJobStates.Queued => Loc["AdmUpdJobQueued"],
+        UpdateJobStates.Running when job.Step == ServerComponents.PullStep => Loc["AdmUpdJobPulling"],
+        UpdateJobStates.Running when job.Step is { } step => Loc["AdmUpdJobRunning", ComponentName(step)],
+        UpdateJobStates.Running => Loc["AdmUpdJobStarting"],
+        UpdateJobStates.Succeeded => Loc["AdmUpdJobSucceeded", Finished(job)],
+        _ => Loc["AdmUpdJobFailed", job.Message ?? ""],
+    };
+
+    private string Finished(UpdateJobStatus job) =>
+        job.FinishedAt is { } finished ? DateDisplay.TimeWithSeconds(finished) : "";
+
+    private static Severity JobSeverity(UpdateJobStatus job) => job.State switch
+    {
+        UpdateJobStates.Failed => Severity.Error,
+        UpdateJobStates.Succeeded => Severity.Success,
+        _ => Severity.Info,
+    };
+
+    public void Dispose()
+    {
+        _closed.Cancel();
+        _closed.Dispose();
+    }
+}

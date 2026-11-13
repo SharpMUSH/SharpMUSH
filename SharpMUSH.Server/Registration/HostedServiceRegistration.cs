@@ -108,6 +108,10 @@ internal static class HostedServiceRegistration
 		services.AddSingleton(Services.RemoteBackupCoordinator.AccountId);
 		services.AddSingleton(Services.RemoteBackupCoordinator.AccountKey);
 		services.AddHostedService<Services.RemoteBackupScheduleService>();
+		services.AddSingleton(provider => new Services.ComponentUpdateCoordinator(
+			provider.GetRequiredService<IConfiguration>()["SHARPMUSH_UPDATE_AGENT_TOKEN"],
+			provider.GetService<TimeProvider>() ?? TimeProvider.System,
+			provider.GetRequiredService<IGameBroadcastService>()));
 		services.AddHostedService<Services.InactivityCheckService>();
 		services.AddHostedService<Services.SignalEventsService>();
 		services.AddHostedService<Services.RecurringJobRunner>();

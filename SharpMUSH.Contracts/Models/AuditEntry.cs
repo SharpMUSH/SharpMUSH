@@ -157,6 +157,9 @@ public static class AuditActions
 	public const string PluginInstall = "plugin.install";
 	public const string PackagePastMaximum = "package.past-maximum";
 	public const string ServerRestart = "server.restart";
+
+	/// <summary>An update of the game's components queued from the portal for the update agent.</summary>
+	public const string ServerUpdate = "server.update";
 	public const string SecretSet = "secret.set";
 	public const string SecretClear = "secret.clear";
 	public const string SecretHosts = "secret.hosts";
@@ -199,7 +202,7 @@ public static class AuditActions
 		RoleSave, RoleDelete, RoleAssign, RoleUnassign, RoleOverride, PermissionDefine, PermissionRemove,
 		CategorySave, CategoryRename, CategoryDelete, SitelockAdd, SitelockRemove,
 		BannedNameAdd, BannedNameRemove, ConfigSet, ConfigImport, RestrictionSet, RestrictionClear,
-		PluginEnable, PluginDisable, PluginUpload, PluginInstall, PackagePastMaximum, ServerRestart, SecretSet, SecretClear, SecretHosts,
+		PluginEnable, PluginDisable, PluginUpload, PluginInstall, PackagePastMaximum, ServerRestart, ServerUpdate, SecretSet, SecretClear, SecretHosts,
 		AppSave, AppDelete, FeedLineDelete, NavigationSave, NavigationReset, ObjectDestroy, ObjectRecover, RecoverKeep,
 		RecoverUnkeep, RecoverPurge
 	];

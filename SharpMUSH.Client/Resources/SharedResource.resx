@@ -13613,4 +13613,100 @@
   <data name="LayBldPackageKeeps" xml:space="preserve">
     <value>The {0} package installed this layout. Upgrades keep your change; when one changes this layout too, the package manager asks which to keep.</value>
   </data>
+  <data name="AdmUpdTitle" xml:space="preserve">
+    <value>Updates</value>
+  </data>
+  <data name="AdmUpdNoAgent" xml:space="preserve">
+    <value>This game has no update agent, so its components are updated on the host. One-click installs include the agent; other Docker Compose stacks add it with docker-compose.update-agent.yml.</value>
+  </data>
+  <data name="AdmUpdAgentMissing" xml:space="preserve">
+    <value>The update agent has not been heard from in the last minute. Check that the update-agent container is running.</value>
+  </data>
+  <data name="AdmUpdAgentTag" xml:space="preserve">
+    <value>Compose project {0}, following tag {1}</value>
+  </data>
+  <data name="AdmUpdAgentFixed" xml:space="preserve">
+    <value>Compose project {0}; image tags are set in the Compose file</value>
+  </data>
+  <data name="AdmUpdRenderer" xml:space="preserve">
+    <value>Renderer</value>
+  </data>
+  <data name="AdmUpdServer" xml:space="preserve">
+    <value>Game server</value>
+  </data>
+  <data name="AdmUpdSocketServer" xml:space="preserve">
+    <value>Connection server</value>
+  </data>
+  <data name="AdmUpdNewer" xml:space="preserve">
+    <value>Newer build available</value>
+  </data>
+  <data name="AdmUpdCurrent" xml:space="preserve">
+    <value>Up to date</value>
+  </data>
+  <data name="AdmUpdNotChecked" xml:space="preserve">
+    <value>Not checked yet</value>
+  </data>
+  <data name="AdmUpdUpdate" xml:space="preserve">
+    <value>Update</value>
+  </data>
+  <data name="AdmUpdAll" xml:space="preserve">
+    <value>Update all</value>
+  </data>
+  <data name="AdmUpdWarnPlayers" xml:space="preserve">
+    <value>Warn players before the connection server restarts</value>
+  </data>
+  <data name="AdmUpdVersion" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="AdmUpdMove" xml:space="preserve">
+    <value>Move to this version</value>
+  </data>
+  <data name="AdmUpdOrder" xml:space="preserve">
+    <value>Updates run renderer first, then the game server, then the connection server.</value>
+  </data>
+  <data name="AdmUpdRegistryRead" xml:space="preserve">
+    <value>Registry checked at {0}.</value>
+  </data>
+  <data name="AdmUpdDelayNone" xml:space="preserve">
+    <value>No warning</value>
+  </data>
+  <data name="AdmUpdDelaySeconds" xml:space="preserve">
+    <value>{0} seconds</value>
+  </data>
+  <data name="AdmUpdDelayMinutes" xml:space="preserve">
+    <value>{0} minutes</value>
+  </data>
+  <data name="AdmUpdConfirmTitle" xml:space="preserve">
+    <value>Update the game?</value>
+  </data>
+  <data name="AdmUpdConfirmPull" xml:space="preserve">
+    <value>This fetches the newest image of the current tag for: {0}.</value>
+  </data>
+  <data name="AdmUpdConfirmMove" xml:space="preserve">
+    <value>This moves every component to version {0}.</value>
+  </data>
+  <data name="AdmUpdConfirmServer" xml:space="preserve">
+    <value>The game server restarts; players stay connected and the portal reconnects when it is back.</value>
+  </data>
+  <data name="AdmUpdConfirmSocket" xml:space="preserve">
+    <value>Restarting the connection server disconnects {0} connections ({1} players). Players are warned first ({2}).</value>
+  </data>
+  <data name="AdmUpdJobQueued" xml:space="preserve">
+    <value>Update queued; waiting for the update agent.</value>
+  </data>
+  <data name="AdmUpdJobStarting" xml:space="preserve">
+    <value>Update starting.</value>
+  </data>
+  <data name="AdmUpdJobRunning" xml:space="preserve">
+    <value>Now updating: {0}.</value>
+  </data>
+  <data name="AdmUpdJobSucceeded" xml:space="preserve">
+    <value>Last update finished at {0}.</value>
+  </data>
+  <data name="AdmUpdJobFailed" xml:space="preserve">
+    <value>Last update failed: {0}</value>
+  </data>
+  <data name="AdmUpdJobPulling" xml:space="preserve">
+    <value>Downloading the new images; nothing has been replaced yet.</value>
+  </data>
 </root>

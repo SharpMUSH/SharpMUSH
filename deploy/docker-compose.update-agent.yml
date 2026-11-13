@@ -1,0 +1,39 @@
+# Opt-in overlay for either production stack: lets an administrator update the renderer, the server
+# and the socket server from the portal (Admin > Server > Updates).
+#
+#   docker compose -f docker-compose.cloudflare.yml -f docker-compose.update-agent.yml up -d --build
+#
+# .env beside this file needs:
+#   SHARPMUSH_UPDATE_AGENT_TOKEN  a random token of at least 32 characters (openssl rand -hex 32)
+#   SHARPMUSH_DEPLOY_DIR          this folder's absolute path, such as /opt/SharpMUSH/deploy
+#
+# The agent holds the Docker socket so sharpmush-server never does. It polls the server with the
+# token and replaces only the three SharpMUSH components, with `docker compose pull` and
+# `up -d --no-deps`. Pass the same -f files every time you run Compose: the agent reads them from the
+# labels Compose puts on each container.
+services:
+  sharpmush-server:
+    environment:
+      SHARPMUSH_UPDATE_AGENT_TOKEN: ${SHARPMUSH_UPDATE_AGENT_TOKEN:?Set a random token of at least 32 characters}
+  update-agent:
+    image: sharpmush-update-agent:local
+    build:
+      context: ./update-agent
+    container_name: sharpmush-update-agent
+    environment:
+      SHARPMUSH_UPDATE_AGENT_URL: http://sharpmush-server:8080
+      SHARPMUSH_UPDATE_AGENT_TOKEN: ${SHARPMUSH_UPDATE_AGENT_TOKEN:?Set a random token of at least 32 characters}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mounted at its own path: Compose resolves ./ paths against it and hands them to the daemon.
+      - ${SHARPMUSH_DEPLOY_DIR:?Set to this folder's absolute path}:${SHARPMUSH_DEPLOY_DIR:?Set to this folder's absolute path}
+      - update-agent-state:/agent-state
+    depends_on:
+      - sharpmush-server
+    networks:
+      - sharpmush-net
+    mem_limit: 128m
+    cpus: 0.25
+    restart: unless-stopped
+volumes:
+  update-agent-state:

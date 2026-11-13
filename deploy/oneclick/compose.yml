@@ -114,6 +114,8 @@ services:
       ASPNETCORE_Kestrel__Certificates__Default__Path: ""
       ASPNETCORE_Kestrel__Certificates__Default__Password: ""
       ForwardedHeaders__KnownProxies__0: *caddy-ip
+      # Shared with update-agent, which presents it on every poll.
+      SHARPMUSH_UPDATE_AGENT_TOKEN: ${SHARPMUSH_UPDATE_AGENT_TOKEN:-}
     volumes:
       - app-data:/app/data
     ports:
@@ -192,6 +194,31 @@ services:
     restart: unless-stopped
     logging: *default-logging
 
+  # Carries out updates an administrator asks for on the portal's Server page, so the game server never
+  # holds the Docker socket. It polls sharpmush-server with SHARPMUSH_UPDATE_AGENT_TOKEN and replaces
+  # only the renderer, sharpmush-server and socketserver (`docker compose pull` + `up -d --no-deps`).
+  # Built here from update-agent/; watchtower leaves it alone (no label).
+  update-agent:
+    image: sharpmush-update-agent:local
+    build: ./update-agent
+    container_name: sharpmush-update-agent
+    environment:
+      SHARPMUSH_UPDATE_AGENT_URL: http://sharpmush-server:8080
+      SHARPMUSH_UPDATE_AGENT_TOKEN: ${SHARPMUSH_UPDATE_AGENT_TOKEN:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mounted at its own path: Compose resolves ./ paths against it and hands them to the daemon.
+      - ${SHARPMUSH_DIR:-/opt/sharpmush}:${SHARPMUSH_DIR:-/opt/sharpmush}
+      - update-agent-state:/agent-state
+    depends_on:
+      - sharpmush-server
+    networks:
+      - sharpmush-net
+    mem_limit: 128m
+    cpus: 0.25
+    restart: unless-stopped
+    logging: *default-logging
+
   watchtower:
     image: containrrr/watchtower:1.7.1
     container_name: sharpmush-watchtower
@@ -246,6 +273,7 @@ volumes:
   caddy-data:
   caddy-config:
   telnet-tls:
+  update-agent-state:
 
 networks:
   renderer-egress:

@@ -105,7 +105,7 @@ class PinTests(unittest.TestCase):
     def test_exact_files_never_name_latest(self):
         release_images.bump('1.0.0', self.root)
         prod = self.root / 'deploy/docker-compose.prod.yml'
-        prod.write_text(prod.read_text(encoding='utf-8').replace(':1.0.0', ':latest'), encoding='utf-8')
+        prod.write_text(prod.read_text(encoding='utf-8').replace(':-1.0.0', ':-latest'), encoding='utf-8')
         self.assertIn('deploy/docker-compose.prod.yml: pins latest; the exact files pin dev or a release like 1.2.3',
                       release_images.problems(self.root))
 

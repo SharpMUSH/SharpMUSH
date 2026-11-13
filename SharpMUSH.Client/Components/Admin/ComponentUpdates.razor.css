@@ -1,0 +1,59 @@
+.adm-updates-list {
+	list-style: none;
+	margin: 0 0 var(--space-4);
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+
+.adm-updates-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-3) var(--space-4);
+}
+
+.adm-updates-name {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 12rem;
+	min-width: 0;
+}
+
+.adm-updates-version {
+	font-family: var(--font-mono);
+	font-size: var(--text-xs);
+	color: var(--text-faint);
+	overflow-wrap: anywhere;
+}
+
+.adm-updates-state {
+	font-size: var(--text-sm);
+	color: var(--text-dim);
+}
+
+.adm-updates-state--new {
+	color: var(--accent);
+	font-weight: 600;
+}
+
+.adm-updates-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-3) var(--space-4);
+	margin-bottom: var(--space-4);
+}
+
+.adm-updates-actions ::deep .adm-updates-delay,
+.adm-updates-actions ::deep .adm-updates-tag {
+	flex: 0 1 14rem;
+	min-width: 10rem;
+}
+
+.adm-updates-note {
+	margin: 0;
+	font-size: var(--text-xs);
+	color: var(--text-faint);
+}

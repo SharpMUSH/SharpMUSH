@@ -41,7 +41,7 @@ TAG = r'([0-9A-Za-z._-]+)'
 # Any image named outright in one of those files, however it is written, must also name the pin.
 LITERAL = re.compile(r'sharpmush/sharpmush-[a-z]+:([0-9A-Za-z._-]+)')
 PINS = {
-    'deploy/docker-compose.prod.yml': [rf'image: sharpmush/sharpmush-[a-z]+:{TAG}'],
+    'deploy/docker-compose.prod.yml': [rf'image: sharpmush/sharpmush-[a-z]+:\$\{{SHARPMUSH_IMAGE_TAG:-{TAG}\}}'],
     'deploy/oneclick/compose.yml': [rf'sharpmush/sharpmush-[a-z]+:\$\{{SHARPMUSH_IMAGE_TAG:-{TAG}\}}'],
     'deploy/oneclick/install.sh': [rf'^DEFAULT_IMAGE_TAG={TAG}\b'],
     'deploy/oneclick/digitalocean/sharpmush.pkr.hcl': [rf'variable "image_tag" \{{[^}}]*default\s*=\s*"{TAG}"'],

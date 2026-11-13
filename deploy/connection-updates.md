@@ -66,6 +66,8 @@ docker compose -f docker-compose.cloudflare.yml pull socketserver
 docker compose -f docker-compose.cloudflare.yml up -d socketserver
 ```
 
+Where the update agent runs (every one-click install, or `docker-compose.update-agent.yml`), Admin > Server > Updates does the same from the portal, after broadcasting a warning and waiting the period chosen there. See [Updating from the portal](README.md#updating-from-the-portal).
+
 Leaving that label at `true` is what makes a routine image publish disconnect every logged-in player without warning — the notices for the engine restart arrive, and then the socket dies when Watchtower reaches the owner in the same cycle. Set it to `true` only where unattended socket-owner updates are worth that. Watchtower's [stop timeout](https://containrrr.dev/watchtower/arguments/#stop-timeout) controls forced termination; optional [lifecycle hooks](https://containrrr.dev/watchtower/lifecycle-hooks/) can add countdowns, but container startup alone does not establish game readiness. These repository changes do not deploy production automatically until merged, images published, and the Compose migration applied.
 
 ## What each update keeps
