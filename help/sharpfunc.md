@@ -8,17 +8,17 @@
 | [GET()]               | [GREP()]              | [GREPI()]             | [HASARG()]            |
 | [HASATTR()]           | [HASATTRP()]          | [HASATTRVAL()]        | [HASFLAG()]           |
 | [INDEXED()]           | [LATTR()]             | [LATTRCMDS()]         | [LCMDS()]             |
-| [LFLAGS()]            | [NATTR()]             | [OBJ()]               | [OWNER()]             |
-| [PFUN()]              | [POSS()]              | [REGLATTR()]          | [REGREP()]            |
-| [REGREPI()]           | [REGXATTR()]          | [SET()]               | [STREVAL()]           |
-| [SUBJ()]              | [SYNTAXDIAGNOSTICS()] | [TOGGLE()]            | [U()]                 |
-| [U2()]                | [U2DEFAULT()]         | [U2LDEFAULT()]        | [U2LOCAL()]           |
-| [UARGS()]             | [UDEFAULT()]          | [UEVAL()]             | [UFUN()]              |
-| [ULAMBDA()]           | [ULDEFAULT()]         | [ULOCAL()]            | [V()]                 |
-| [WILDGREP()]          | [WILDGREPI()]         | [XATTR()]             | [XGET()]              |
-| [ZFUN()]              | [ZFUN2()]             | [ZFUN2DEFAULT()]      | [ZFUN2LDEFAULT()]     |
-| [ZFUN2LOCAL()]        | [ZFUNDEFAULT()]       | [ZFUNEVAL()]          | [ZFUNLDEFAULT()]      |
-| [ZFUNLOCAL()]         |                       |                       |                       |
+| [LFLAGS()]            | [MEMO()]              | [NATTR()]             | [OBJ()]               |
+| [OWNER()]             | [PFUN()]              | [POSS()]              | [REGLATTR()]          |
+| [REGREP()]            | [REGREPI()]           | [REGXATTR()]          | [SET()]               |
+| [STREVAL()]           | [SUBJ()]              | [SYNTAXDIAGNOSTICS()] | [TOGGLE()]            |
+| [U()]                 | [U2()]                | [U2DEFAULT()]         | [U2LDEFAULT()]        |
+| [U2LOCAL()]           | [UARGS()]             | [UDEFAULT()]          | [UEVAL()]             |
+| [UFUN()]              | [ULAMBDA()]           | [ULDEFAULT()]         | [ULOCAL()]            |
+| [V()]                 | [WILDGREP()]          | [WILDGREPI()]         | [XATTR()]             |
+| [XGET()]              | [ZFUN()]              | [ZFUN2()]             | [ZFUN2DEFAULT()]      |
+| [ZFUN2LDEFAULT()]     | [ZFUN2LOCAL()]        | [ZFUNDEFAULT()]       | [ZFUNEVAL()]          |
+| [ZFUNLDEFAULT()]      | [ZFUNLOCAL()]         |                       |                       |
 
 ::: seealso
 - [attributes]

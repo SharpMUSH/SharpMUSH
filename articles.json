@@ -6074,6 +6074,35 @@
     "file": "mask-function.md"
   },
   {
+    "id": "memo-function",
+    "lookup": "memo()",
+    "title": "memo()",
+    "aliases": [
+      "memo"
+    ],
+    "sections": [
+      {
+        "id": "refused-code",
+        "lookup": "memo refused code",
+        "heading": "Refused code",
+        "aliases": []
+      },
+      {
+        "id": "kept-answers",
+        "lookup": "memo kept answers",
+        "heading": "Kept answers",
+        "aliases": []
+      },
+      {
+        "id": "memo-examples",
+        "lookup": "memo examples",
+        "heading": "Memo examples",
+        "aliases": []
+      }
+    ],
+    "file": "memo-function.md"
+  },
+  {
     "id": "message-command",
     "lookup": "@message",
     "title": "@message",
