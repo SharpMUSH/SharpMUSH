@@ -1,0 +1,28 @@
+name: Update agent
+on:
+  pull_request:
+    paths:
+      - 'deploy/update-agent/**'
+      - '.github/workflows/update-agent.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'deploy/update-agent/**'
+      - '.github/workflows/update-agent.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Unit tests
+        working-directory: deploy/update-agent
+        run: python3 -m unittest test_agent -v
+      # The image install.sh builds on every one-click box: its packages must still exist.
+      - name: Build the image
+        run: |
+          docker build -t sharpmush-update-agent:ci deploy/update-agent
+          docker run --rm --entrypoint sh sharpmush-update-agent:ci -c 'docker --version && docker compose version && python3 -c "import ast,sys; ast.parse(open(\"/opt/update-agent/agent.py\").read())"'

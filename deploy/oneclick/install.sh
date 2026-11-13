@@ -70,6 +70,9 @@ write_files() {
 	fetch Caddyfile deploy/oneclick/Caddyfile "$SHARPMUSH_DIR/Caddyfile"
 	fetch sharpmush-guard deploy/oneclick/sharpmush-guard "$SHARPMUSH_DIR/bin/sharpmush-guard"
 	fetch sharpmush-telnet-tls-sync deploy/oneclick/sharpmush-telnet-tls-sync "$SHARPMUSH_DIR/bin/sharpmush-telnet-tls-sync"
+	mkdir -p "$SHARPMUSH_DIR/update-agent"
+	fetch ../update-agent/Dockerfile deploy/update-agent/Dockerfile "$SHARPMUSH_DIR/update-agent/Dockerfile"
+	fetch ../update-agent/agent.py deploy/update-agent/agent.py "$SHARPMUSH_DIR/update-agent/agent.py"
 	if [ -f "$HERE/nats.conf" ]; then cp "$HERE/nats.conf" "$SHARPMUSH_DIR/nats.conf"
 	elif [ -f "$HERE/../../nats.conf" ]; then cp "$HERE/../../nats.conf" "$SHARPMUSH_DIR/nats.conf"
 	else curl -fsSL "$SOURCE_URL/nats.conf" -o "$SHARPMUSH_DIR/nats.conf"; fi
@@ -100,7 +103,7 @@ ConditionPathExists=$SHARPMUSH_DIR/.env
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=$SHARPMUSH_DIR
-ExecStartPre=-/usr/bin/docker compose pull --quiet
+ExecStartPre=-/usr/bin/docker compose pull --quiet --ignore-buildable
 ExecStart=/usr/bin/docker compose up -d --remove-orphans
 ExecStop=/usr/bin/docker compose down
 TimeoutStartSec=0
@@ -161,7 +164,7 @@ pull_images() {
 	tag=${tag:-$DEFAULT_IMAGE_TAG}
 	log "Pulling images (tag $tag)"
 	(cd "$SHARPMUSH_DIR" && SHARPMUSH_SITE=:80 SHARPMUSH_IMAGE_TAG=$tag \
-		docker compose --profile cloudflare --profile backup pull --quiet)
+		docker compose --profile cloudflare --profile backup pull --quiet --ignore-buildable)
 }
 
 prepare() {
@@ -424,6 +427,8 @@ SHARPMUSH_TELNET_BIND=${SHARPMUSH_TELNET_BIND}
 SHARPMUSH_TELNET_HOST=${SHARPMUSH_TELNET_HOST:-}
 SHARPMUSH_TELNET_TLS_HOST=${SHARPMUSH_TELNET_TLS_HOST}
 SHARPMUSH_IMAGE_TAG=${SHARPMUSH_IMAGE_TAG:-$DEFAULT_IMAGE_TAG}
+SHARPMUSH_DIR=${SHARPMUSH_DIR}
+SHARPMUSH_UPDATE_AGENT_TOKEN=${SHARPMUSH_UPDATE_AGENT_TOKEN:-$(openssl rand -hex 32)}
 SHARPMUSH_GUARD=${SHARPMUSH_GUARD:-on}
 CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
 COMPOSE_PROFILES=${profiles}

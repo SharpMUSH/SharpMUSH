@@ -60,7 +60,7 @@ services:
   socketserver:
     # CI-published image (docker-dev.yml pushes :dev on every main merge, gated on the full test
     # suite). The box never builds — watchtower below pulls and recreates when the tag moves.
-    image: sharpmush/sharpmush-socketserver:dev
+    image: sharpmush/sharpmush-socketserver:${SHARPMUSH_IMAGE_TAG:-dev}
     container_name: sharpmush-socketserver
     # Deliberately NOT a watchtower target. This service owns every telnet and /ws kernel socket,
     # so recreating it disconnects everyone who is logged in — which is the one thing the split
@@ -99,7 +99,7 @@ services:
 
   # Rendering can restart independently; the stable socketserver service owns client sockets.
   renderer:
-    image: sharpmush/sharpmush-renderer:dev
+    image: sharpmush/sharpmush-renderer:${SHARPMUSH_IMAGE_TAG:-dev}
     container_name: sharpmush-renderer
     stop_grace_period: 60s
     labels:
@@ -117,7 +117,7 @@ services:
 
   sharpmush-server:
     # CI-published image; includes the Blazor WASM client (baked into /app/wwwroot at build time).
-    image: sharpmush/sharpmush-server:dev
+    image: sharpmush/sharpmush-server:${SHARPMUSH_IMAGE_TAG:-dev}
     container_name: sharpmush-server
     stop_grace_period: 60s
     labels:

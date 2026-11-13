@@ -7,8 +7,8 @@
 
 <AdminPageTitle Page="@Loc["AdmServerTitle"]" />
 
-@* The server's own figures, read in-process and refreshed every ten seconds while the page is open.
-   Restarting stays with @shutdown in the game; the page only reports. *@
+@* The server's own figures, read in-process and refreshed every ten seconds while the page is open,
+   and the updates panel, which asks the update agent to replace the game's components. *@
 <div class="page-stack page-stack--padded adm-server">
     <PageHeader Kicker="@Loc["AdmGroupServer"]" Title="@Loc["AdmServerTitle"]" Description="@Loc["AdmServerDescription"]" />
 
@@ -45,6 +45,8 @@
 
         <p class="adm-server-note">@Loc["AdmServerUpdated", DateDisplay.TimeWithSeconds(_readAt)]</p>
     </LoadState>
+
+    <ComponentUpdates />
 </div>
 
 @code {

@@ -63,6 +63,13 @@ Server and connection server metrics (`/metrics` on 9092 and 9091) are published
 loopback only. Scrape them from the host, or from elsewhere through
 `ssh -N -L 19092:127.0.0.1:9092 -L 19091:127.0.0.1:9091 root@<server>`.
 
+Updates: watchtower replaces the game server and the renderer when their image tag moves; both keep
+players connected. The socket server is replaced from the portal (Admin > Server > Updates), which
+also updates everything at once or moves the game to another release. The `update-agent` container
+does that work: it holds the Docker socket, polls the server with the `SHARPMUSH_UPDATE_AGENT_TOKEN`
+the installer writes to `.env`, and only replaces those three components. An install from before the
+agent existed gets its token on the next `sharpmush-configure`.
+
 Run `sharpmush-configure` later to change the domain or the Cloudflare settings. It asks each
 question again, with the current answer in brackets. `install.sh` lists every variable it reads.
 

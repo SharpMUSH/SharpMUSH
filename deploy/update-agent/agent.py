@@ -1,0 +1,397 @@
+"""SharpMUSH update agent.
+
+Holds the Docker socket so the game server never does. It polls the server, reports what each
+component runs and what the registry offers, and carries out updates an administrator queued in the
+portal: `docker compose pull` and `up -d --no-deps` for the renderer, the server and the socket server,
+in that order, nothing else. Every command is a fixed argument list; nothing goes through a shell.
+"""
+import datetime
+import json
+import os
+import re
+import subprocess
+import threading
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+PROTOCOL = 1
+SERVER = os.environ.get('SHARPMUSH_UPDATE_AGENT_URL', 'http://sharpmush-server:8080').rstrip('/')
+TOKEN = os.environ.get('SHARPMUSH_UPDATE_AGENT_TOKEN', '')
+STATE = Path(os.environ.get('UPDATE_AGENT_STATE', '/agent-state'))
+POLL_SECONDS = max(5, int(os.environ.get('UPDATE_AGENT_POLL_SECONDS', '10')))
+REGISTRY_SECONDS = max(300, int(os.environ.get('UPDATE_AGENT_REGISTRY_SECONDS', '900')))
+REGISTRY = os.environ.get('UPDATE_AGENT_REGISTRY', 'https://registry-1.docker.io').rstrip('/')
+AUTH = os.environ.get('UPDATE_AGENT_REGISTRY_AUTH', 'https://auth.docker.io/token')
+TAG_VARIABLE = 'SHARPMUSH_IMAGE_TAG'
+
+# The order an update replaces components in. The socket server owns every connection, so it goes last.
+ORDER = ['renderer', 'server', 'socketserver']
+IMAGES = {
+    'sharpmush/sharpmush-renderer': 'renderer',
+    'sharpmush/sharpmush-server': 'server',
+    'sharpmush/sharpmush-socketserver': 'socketserver',
+}
+TAG = re.compile(r'^(\d{1,4}\.\d{1,4}\.\d{1,6}(-[0-9A-Za-z.]{1,32})?|latest|dev)$')
+RELEASE = re.compile(r'^(\d{1,4})\.(\d{1,4})\.(\d{1,6})(-[0-9A-Za-z.]{1,32})?$')
+ID = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+MANIFEST_TYPES = ', '.join([
+    'application/vnd.oci.image.index.v1+json',
+    'application/vnd.docker.distribution.manifest.list.v2+json',
+    'application/vnd.oci.image.manifest.v1+json',
+    'application/vnd.docker.distribution.manifest.v2+json',
+])
+
+
+def now():
+    return datetime.datetime.now(datetime.timezone.utc)
+
+
+def iso(value):
+    return value.isoformat().replace('+00:00', 'Z') if value else None
+
+
+def timestamp(value):
+    """Docker's RFC 3339 time with nanoseconds, cut to microseconds; None for Docker's zero time."""
+    if not value or value.startswith('0001'):
+        return None
+    match = re.fullmatch(r'(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(\.\d+)?(Z|[+-]\d\d:\d\d)', value)
+    if not match:
+        return None
+    return match[1] + (match[2] or '')[:7] + match[3]
+
+
+def docker(*args, timeout=600):
+    return subprocess.run(['docker', *args], text=True, capture_output=True, timeout=timeout, check=False)
+
+
+def inspect(kind, *names):
+    result = docker(kind, 'inspect', *names, timeout=60)
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or f'docker {kind} inspect failed')
+    return json.loads(result.stdout)
+
+
+# --- the Compose project ---------------------------------------------------------------------------
+
+class Project:
+    """The Compose project this agent's own container belongs to, read from Compose's labels."""
+
+    def __init__(self, labels):
+        self.name = labels.get('com.docker.compose.project')
+        self.directory = labels.get('com.docker.compose.project.working_dir')
+        files = labels.get('com.docker.compose.project.config_files') or ''
+        self.files = [path for path in files.split(',') if path]
+        if not self.name or not self.directory or not self.files:
+            raise RuntimeError('This container was not started by docker compose.')
+        missing = [path for path in [self.directory, *self.files] if not Path(path).exists()]
+        if missing:
+            raise RuntimeError('The project directory is not mounted at its own path: ' + ', '.join(missing))
+
+    def compose(self, *args, timeout=900):
+        files = [argument for path in self.files for argument in ('-f', path)]
+        return docker('compose', '-p', self.name, '--project-directory', self.directory, *files, *args, timeout=timeout)
+
+    @property
+    def env_file(self):
+        return Path(self.directory) / '.env'
+
+    def tag_from_env(self):
+        """The tag the game follows, when its Compose files take it from SHARPMUSH_IMAGE_TAG; else None."""
+        if not any(('${' + TAG_VARIABLE) in Path(path).read_text() for path in self.files):
+            return None
+        value = read_env(self.env_file).get(TAG_VARIABLE)
+        if value:
+            return value
+        # The Compose file's default, as in ${SHARPMUSH_IMAGE_TAG:-1.0.0}.
+        for path in self.files:
+            found = re.search(r'\$\{' + TAG_VARIABLE + r':-([^}]+)\}', Path(path).read_text())
+            if found:
+                return found[1]
+        return None
+
+
+def own_project():
+    hostname = os.environ.get('HOSTNAME', '')
+    return Project(inspect('container', hostname)[0]['Config'].get('Labels') or {})
+
+
+def read_env(path):
+    values = {}
+    if path.exists():
+        for line in path.read_text().splitlines():
+            if '=' in line and not line.lstrip().startswith('#'):
+                key, value = line.split('=', 1)
+                values[key.strip()] = value.strip()
+    return values
+
+
+def write_tag(path, tag):
+    """Sets SHARPMUSH_IMAGE_TAG in .env, keeping every other line and the file's mode."""
+    if not TAG.fullmatch(tag):
+        raise ValueError('not a tag')
+    lines = path.read_text().splitlines() if path.exists() else []
+    replaced = False
+    for index, line in enumerate(lines):
+        if line.startswith(TAG_VARIABLE + '='):
+            lines[index] = f'{TAG_VARIABLE}={tag}'
+            replaced = True
+    if not replaced:
+        lines.append(f'{TAG_VARIABLE}={tag}')
+    temporary = path.with_name('.env.update-agent')
+    temporary.write_text('\n'.join(lines) + '\n')
+    if path.exists():
+        os.chmod(temporary, path.stat().st_mode & 0o777)
+    os.replace(temporary, path)
+
+
+def components(project):
+    """Each SharpMUSH component in the project, keyed by component name."""
+    listing = docker('ps', '-a', '--filter', f'label=com.docker.compose.project={project.name}', '--format', '{{.ID}}', timeout=60)
+    if listing.returncode != 0:
+        raise RuntimeError(listing.stderr.strip() or 'docker ps failed')
+    ids = listing.stdout.split()
+    found = {}
+    for container in inspect('container', *ids) if ids else []:
+        reference = container['Config']['Image']
+        repository, _, tag = reference.rpartition(':') if ':' in reference.rsplit('/', 1)[-1] else (reference, '', 'latest')
+        repository = repository.removeprefix('docker.io/')
+        component = IMAGES.get(repository)
+        if component is None:
+            continue
+        image = inspect('image', container['Image'])[0]
+        labels = (image.get('Config') or {}).get('Labels') or {}
+        digests = [entry.split('@', 1)[1] for entry in image.get('RepoDigests') or []
+                   if entry.split('@', 1)[0].removeprefix('docker.io/') == repository]
+        started = container['State'].get('StartedAt')
+        found[component] = {
+            'component': component,
+            'service': container['Config']['Labels'].get('com.docker.compose.service', ''),
+            'image': repository,
+            'tag': tag,
+            'version': labels.get('org.opencontainers.image.version'),
+            'revision': labels.get('org.opencontainers.image.revision'),
+            'runningDigest': digests[0] if digests else None,
+            'latestDigest': None,
+            'state': container['State'].get('Status', 'unknown'),
+            'startedAt': timestamp(started),
+        }
+    return found
+
+
+# --- the registry ----------------------------------------------------------------------------------
+
+def registry_request(repository, path, method='GET'):
+    token_url = f'{AUTH}?service=registry.docker.io&scope=repository:{repository}:pull'
+    with urllib.request.urlopen(token_url, timeout=30) as response:
+        token = json.load(response)['token']
+    request = urllib.request.Request(f'{REGISTRY}/v2/{repository}/{path}', method=method,
+                                     headers={'Authorization': f'Bearer {token}', 'Accept': MANIFEST_TYPES})
+    return urllib.request.urlopen(request, timeout=30)
+
+
+def remote_digest(repository, tag):
+    with registry_request(repository, f'manifests/{tag}', 'HEAD') as response:
+        return response.headers.get('Docker-Content-Digest')
+
+
+def release_key(tag):
+    match = RELEASE.fullmatch(tag)
+    # A prerelease sorts below its release: 1.0.0-rc.1 < 1.0.0.
+    return (int(match[1]), int(match[2]), int(match[3]), match[4] is None, match[4] or '')
+
+
+def release_tags(repository):
+    with registry_request(repository, 'tags/list?n=1000') as response:
+        tags = json.load(response).get('tags') or []
+    return sorted((tag for tag in tags if RELEASE.fullmatch(tag)), key=release_key, reverse=True)[:30]
+
+
+# --- the agent -------------------------------------------------------------------------------------
+
+class Agent:
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.job = load_json(STATE / 'job.json')
+        self.done = set(load_json(STATE / 'done.json') or [])
+        self.registry = {'digests': {}, 'tags': [], 'readAt': None, 'checked': 0.0}
+        self.error = None
+
+    def report(self, project):
+        found = components(project) if project else {}
+        if project and time.monotonic() - self.registry['checked'] >= REGISTRY_SECONDS:
+            self.read_registry(found)
+        for status in found.values():
+            status['latestDigest'] = self.registry['digests'].get(f"{status['image']}:{status['tag']}")
+        with self.lock:
+            job = dict(self.job) if self.job else None
+        return {
+            'protocol': PROTOCOL,
+            'project': project.name if project else None,
+            'tag': project.tag_from_env() if project else None,
+            'components': [found[name] for name in ORDER if name in found],
+            'availableTags': self.registry['tags'],
+            'registryReadAt': self.registry['readAt'],
+            'job': job,
+            'error': self.error,
+        }
+
+    def read_registry(self, found):
+        self.registry['checked'] = time.monotonic()
+        try:
+            digests = {}
+            for status in found.values():
+                key = f"{status['image']}:{status['tag']}"
+                digests[key] = remote_digest(status['image'], status['tag'])
+            self.registry['tags'] = release_tags('sharpmush/sharpmush-server')
+            self.registry['digests'] = digests
+            self.registry['readAt'] = iso(now())
+        except (urllib.error.URLError, OSError, ValueError, KeyError) as error:
+            log(f'registry: {error}')
+
+    def accept(self, job):
+        """Starts a job the server handed over, once per id, after checking every field."""
+        identifier = job.get('id', '')
+        with self.lock:
+            busy = self.job and self.job.get('state') == 'running'
+            if not ID.fullmatch(identifier) or identifier in self.done or busy:
+                return
+            wanted = job.get('components') or []
+            tag = job.get('tag')
+            problem = None
+            if not wanted or any(name not in ORDER for name in wanted) or len(set(wanted)) != len(wanted):
+                problem = 'Unknown component.'
+            elif tag is not None and not (isinstance(tag, str) and TAG.fullmatch(tag)):
+                problem = 'That is not a release tag.'
+            self.job = {'id': identifier, 'components': [name for name in ORDER if name in wanted], 'tag': tag,
+                        'state': 'failed' if problem else 'running', 'step': None, 'message': problem,
+                        'finishedAt': iso(now()) if problem else None}
+            self.done.add(identifier)
+            self.save()
+        if not problem:
+            threading.Thread(target=self.run, args=(job.get('socketNotBefore'),), daemon=True).start()
+
+    def run(self, socket_not_before):
+        try:
+            project = own_project()
+            tag = self.job['tag']
+            if tag is not None:
+                if project.tag_from_env() is None:
+                    raise RuntimeError("This game's Compose file fixes its image tags; change them there.")
+                known = lambda: tag in self.registry['tags'] or tag in ('latest', 'dev') or tag == project.tag_from_env()
+                if not known():
+                    # The list may predate the release, or this agent may not have read it yet.
+                    self.read_registry(components(project))
+                if not known():
+                    raise RuntimeError(f'The registry has no release tagged {tag}.')
+                write_tag(project.env_file, tag)
+            found = components(project)
+            for name in self.job['components']:
+                if name not in found:
+                    raise RuntimeError(f'No {name} container in project {project.name}.')
+                if name == 'socketserver' and socket_not_before:
+                    wait_until(socket_not_before)
+                self.step(name)
+                service = found[name]['service']
+                for args in (('pull', '--quiet', service), ('up', '-d', '--no-deps', service)):
+                    result = project.compose(*args)
+                    if result.returncode != 0:
+                        raise RuntimeError(f'docker compose {args[0]} {service}: ' + last_line(result.stderr))
+            self.finish('succeeded', None)
+        except Exception as error:  # Reported to the portal; the agent keeps polling.
+            self.finish('failed', str(error)[:500])
+
+    def step(self, name):
+        with self.lock:
+            self.job['step'] = name
+            self.save()
+
+    def finish(self, state, message):
+        with self.lock:
+            self.job.update({'state': state, 'step': None, 'message': message, 'finishedAt': iso(now())})
+            self.save()
+        # A finished update changes the images: read the registry again on the next poll.
+        self.registry['checked'] = 0.0
+        log(f"update {self.job['id']}: {state}{': ' + message if message else ''}")
+
+    def save(self):
+        STATE.mkdir(parents=True, exist_ok=True)
+        write_json(STATE / 'job.json', self.job)
+        write_json(STATE / 'done.json', sorted(self.done)[-200:])
+
+    def resume(self):
+        """A job the agent was running when it stopped cannot be trusted half done: report it failed."""
+        with self.lock:
+            if self.job and self.job.get('state') == 'running':
+                self.job.update({'state': 'failed', 'step': None, 'finishedAt': iso(now()),
+                                 'message': 'The update agent restarted during the update; check each component and run it again.'})
+                self.save()
+
+
+def wait_until(stamp):
+    target = datetime.datetime.fromisoformat(stamp.replace('Z', '+00:00'))
+    while (remaining := (target - now()).total_seconds()) > 0:
+        time.sleep(min(remaining, 5))
+
+
+def last_line(text):
+    lines = [line for line in (text or '').splitlines() if line.strip()]
+    return lines[-1][:300] if lines else 'failed'
+
+
+def load_json(path):
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def write_json(path, value):
+    temporary = path.with_suffix('.tmp')
+    temporary.write_text(json.dumps(value))
+    os.replace(temporary, path)
+
+
+def log(message):
+    print(f'{iso(now())} {message}', flush=True)
+
+
+def poll(body):
+    request = urllib.request.Request(f'{SERVER}/api/update-agent/poll', data=json.dumps(body).encode(), method='POST',
+                                     headers={'Content-Type': 'application/json', 'X-Update-Agent-Token': TOKEN})
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.load(response) if response.status == 200 else None
+
+
+def main():
+    if len(TOKEN) < 32:
+        # Idle rather than exit, so `restart: unless-stopped` does not loop on a game set up before the
+        # token existed. Running the installer's configure step again writes one.
+        log('SHARPMUSH_UPDATE_AGENT_TOKEN is not set (at least 32 characters); portal updates are off.')
+        while True:
+            time.sleep(3600)
+    agent = Agent()
+    agent.resume()
+    log(f'polling {SERVER} every {POLL_SECONDS}s')
+    while True:
+        try:
+            project = own_project()
+            agent.error = None
+        except (RuntimeError, OSError, ValueError, IndexError, subprocess.TimeoutExpired) as error:
+            project = None
+            agent.error = str(error)[:500]
+        try:
+            job = poll(agent.report(project))
+            if job and project:
+                agent.accept(job)
+        except urllib.error.HTTPError as error:
+            log(f'server answered {error.code}')
+        except (urllib.error.URLError, OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as error:
+            # The server is restarting, often because this agent is replacing it.
+            log(f'poll: {error}')
+        time.sleep(POLL_SECONDS)
+
+
+if __name__ == '__main__':
+    main()

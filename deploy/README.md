@@ -16,6 +16,8 @@ separate, optional overlay for either stack:
 |------|---------|
 | `docker-compose.prod.yml` | The stack: nats, socketserver, sharpmush-server, backup, and **Caddy** for TLS. Use this if the box faces the internet directly. |
 | `docker-compose.cloudflare.yml` | Same stack but fronted by a **Cloudflare Tunnel** instead of Caddy (no open web ports). Native clients still connect directly. See the Cloudflare section below. |
+| `docker-compose.update-agent.yml` | Opt-in update agent, so an administrator can update the renderer, server and socket server from the portal. See [Updating from the portal](#updating-from-the-portal). |
+| `update-agent/` | The update agent the overlay above (and every one-click install) builds |
 | `docker-compose.telnet-tls.yml` | Opt-in native-client TLS on 4203 with an operator-supplied certificate. See [Native-client TLS](native-client-tls.md). |
 | `Caddyfile` | Automatic-HTTPS reverse proxy config used by `docker-compose.prod.yml` |
 | `grafana/sharpmush-invocations.json` | Optional Grafana dashboard for function and command timings (see [Function and command timings](#function-and-command-timings)) |
@@ -804,6 +806,43 @@ docker compose -f docker-compose.cloudflare.yml up -d
 
 The `app-data` volume persists across updates, so the world is untouched. Database migrations
 are recorded in the database and re-applied only when new, so unattended restarts are safe.
+
+### Updating from the portal
+
+Admin > Server > Updates (`server.admin`) lists the renderer, the game server and the socket server
+with the version each runs and whether the image tag it follows has moved on Docker Hub. It can
+update one of them, all three, or move all three to another release. An update runs the renderer
+first, then the game server, then the socket server. Before the socket server is replaced, players
+get a broadcast and a warning period you choose (none, 1, 5, 10 or 30 minutes), because replacing it
+drops every connection. Each update is recorded in the audit log as `server.update`.
+
+The work is done by the update agent, a small container that holds the Docker socket so
+`sharpmush-server` never does. It polls the server with `SHARPMUSH_UPDATE_AGENT_TOKEN`, and for each
+component runs `docker compose pull <service>` and `docker compose up -d --no-deps <service>` with the
+same Compose files the stack was started with. It accepts only those three services, and only
+release tags (`1.2.3`, `1.2.3-rc.1`), `latest` or `dev`. Moving to another release rewrites
+`SHARPMUSH_IMAGE_TAG` in `.env`, so the Compose files must take their tag from that variable, as
+every supplied file does.
+
+One-click installs run the agent already. For `docker-compose.prod.yml` or
+`docker-compose.cloudflare.yml`, add to `.env`:
+
+```bash
+SHARPMUSH_UPDATE_AGENT_TOKEN=$(openssl rand -hex 32)   # write the value, not the command
+SHARPMUSH_DEPLOY_DIR=/opt/SharpMUSH/deploy             # this folder's absolute path
+```
+
+and include the overlay every time you run Compose:
+
+```bash
+docker compose -f docker-compose.cloudflare.yml -f docker-compose.update-agent.yml up -d --build
+```
+
+The agent mounts this folder at its own path, because Compose hands `./` paths to the Docker daemon
+as they are written. Anything that can use the agent's token can ask for these updates, so keep
+`.env` readable by root only. Hosts without Docker Compose (Fly.io, Railway, the all-in-one image
+under `docker run`, a bare `dotnet` install) show the panel without the agent; update them as their
+own guides describe.
 
 ## Updates and live connections
 
