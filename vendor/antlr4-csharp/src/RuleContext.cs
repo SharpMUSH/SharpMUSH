@@ -176,6 +176,10 @@ namespace Antlr4.Runtime
             {
                 return string.Empty;
             }
+            if (ChildCount == 1)
+            {
+                return GetChild(0).GetText() ?? string.Empty;
+            }
             StringBuilder builder = new StringBuilder();
             for (int i = 0; i < ChildCount; i++)
             {
