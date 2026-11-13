@@ -179,6 +179,57 @@ public class ProfileApiTests(ProfileApiServerFactory factory)
 	}
 
 	/// <summary>
+	/// The directory keeps each row with memo(), which drops a row when an attribute it read changes but not when a
+	/// name, role, power or flag does. FUN`PROFILE`KEPTENTRY passes those as arguments, so after the row is kept a
+	/// rename, the Guest power and a role each show on the next request.
+	/// </summary>
+	[Test]
+	public async Task Characters_KeptRowFollowsNameRoleAndPowerChanges()
+	{
+		var mediator = factory.Services.GetRequiredService<IMediator>();
+		var connectionService = factory.Services.GetRequiredService<IConnectionService>();
+		var home = new DBRef(0, null);
+		var name = TestIsolationHelpers.GenerateUniqueName("KeptRow");
+		// player_name_len is 16 by default, so the new name is kept short.
+		var renamed = $"Kr{Guid.NewGuid():N}"[..12];
+		await mediator.Send(new CreatePlayerCommand(name, "testpass", home, home, 1));
+		var player = await mediator.CreateStream(new GetPlayerQuery(name)).FirstAsync();
+		var objid = $"#{player.Object.Key}:{player.Object.CreationTime}";
+		var http = factory.CreateHttpClient();
+
+		async Task Cmd(string command) =>
+			await factory.CommandParser.CommandParse(1, connectionService, MarkupText.Plain(command));
+
+		async Task<JsonElement?> Row()
+		{
+			var response = await http.GetAsync("http/characters");
+			using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+			return doc.RootElement.EnumerateArray()
+				.Where(row => row.GetProperty("objid").GetString() == objid)
+				.Select(row => (JsonElement?)row.Clone())
+				.FirstOrDefault();
+		}
+
+		// Asked twice, so the second answer is the kept one.
+		await Row();
+		var kept = await Row();
+		await Assert.That(kept?.GetProperty("name").GetString()).IsEqualTo(name);
+		await Assert.That(kept?.GetProperty("category").GetString()).IsEqualTo(string.Empty);
+
+		await Cmd($"@name #{player.Object.Key}={renamed}");
+		await Assert.That((await Row())?.GetProperty("name").GetString()).IsEqualTo(renamed);
+
+		await Cmd($"@power #{player.Object.Key}=Guest");
+		await Assert.That(await Row()).IsNull();
+
+		await Cmd($"@power #{player.Object.Key}=!Guest");
+		await Assert.That(await Row()).IsNotNull();
+
+		await Cmd($"@set #{player.Object.Key}=ROYALTY");
+		await Assert.That((await Row())?.GetProperty("category").GetString()).IsEqualTo("Royalty");
+	}
+
+	/// <summary>
 	/// #7 Package Manager is seeded as a real PLAYER (it owns softcode-package objects), so a
 	/// type-based roster picks it up even though nobody plays it. FUN`PROFILE`CHARACTERVISIBLE excludes it by the
 	/// {{$package_manager}} config ref rather than a literal #7 — the seed numbering is
