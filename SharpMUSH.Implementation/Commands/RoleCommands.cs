@@ -38,7 +38,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var allSwitches = parser.CurrentState.Switches.ToArray();
 		var switches = CategorySwitches(allSwitches.Where(RoleOperations.Contains).ToArray());
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var left = (args.GetValueOrDefault("0")?.Message.ToPlainText() ?? "").Trim();
 		var right = (args.GetValueOrDefault("1")?.Message.ToPlainText() ?? "").Trim();
 		var hasRight = args.ContainsKey("1");

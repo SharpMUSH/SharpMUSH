@@ -20,7 +20,7 @@ public partial class Functions
 		ParameterNames = ["livewire", "object", "owner-too"])]
 	public async ValueTask<CallState> LiveWireFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var kind = args["0"].Message.ToPlainText().Trim();
 		if (kind.Length == 0)
 		{

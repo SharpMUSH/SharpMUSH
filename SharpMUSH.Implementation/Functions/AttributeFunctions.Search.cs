@@ -35,7 +35,7 @@ public partial class Functions
 	/// </summary>
 	private async ValueTask<CallState> GrepInternal(IMUSHCodeParser parser, bool caseInsensitive, bool checkParents)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var objectStr = args["0"].Message.ToPlainText();
 		var attrsPattern = args["1"].Message.ToPlainText();
 		var substring = args["2"].Message.ToPlainText();
@@ -80,7 +80,7 @@ public partial class Functions
 	/// </summary>
 	private async ValueTask<CallState> RegGrepInternal(IMUSHCodeParser parser, bool caseInsensitive)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var objectStr = args["0"].Message.ToPlainText();
 		var attrsPattern = args["1"].Message.ToPlainText();
 		var regexpPattern = args["2"].Message.ToPlainText();
@@ -146,7 +146,7 @@ public partial class Functions
 	/// </summary>
 	private async ValueTask<CallState> WildGrepInternal(IMUSHCodeParser parser, bool caseInsensitive)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var objectStr = args["0"].Message.ToPlainText();
 		var attrsPattern = args["1"].Message.ToPlainText();
 		var valuePattern = args["2"].Message.ToPlainText();
@@ -247,11 +247,11 @@ public partial class Functions
 			IAttributeService.AttributePatternMode.Regex,
 			async names => new CallState(await names.CountAsync(ExecutionBudget.CurrentToken)));
 
-	private static string MuxRegexpObject(IMUSHCodeParser parser) => parser.CurrentState.Arguments["0"].Message.ToPlainText();
+	private static string MuxRegexpObject(IMUSHCodeParser parser) => parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 	/// <summary>The TinyMUX form's regular expression, given apart from the object so it may hold any character.</summary>
 	private static string? MuxRegexp(IMUSHCodeParser parser)
-		=> parser.CurrentState.Arguments["1"].Message.ToPlainText() is { Length: > 0 } pattern ? pattern : null;
+		=> parser.CurrentState.ArgumentList[1].Message.ToPlainText() is { Length: > 0 } pattern ? pattern : null;
 
 	[SharpFunction(Name = "regxattr", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
 	public ValueTask<CallState> RegularExpressionNumberRangeAttributes(IMUSHCodeParser parser, SharpFunctionAttribute attribute)

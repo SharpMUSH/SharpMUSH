@@ -51,7 +51,7 @@ public static class DiscordCommandModule
 		var notify = services.GetRequiredService<INotifyService>();
 		var executor = await parser.CurrentState.KnownExecutorObject(services.GetRequiredService<IMediator>());
 		var switches = parser.CurrentState.Switches.ToArray();
-		var argument = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText().Trim() ?? "";
+		var argument = parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message?.ToPlainText().Trim() ?? "";
 		if (switches.Contains("SPEAK"))
 		{
 			return await SpeakAsync(parser, executor, argument, off: switches.Contains("OFF"));
@@ -65,13 +65,13 @@ public static class DiscordCommandModule
 
 		if (switches.Contains("MAP") || switches.Contains("UNMAP") || switches.Contains("DRIFT"))
 		{
-			var right = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message?.ToPlainText().Trim();
+			var right = parser.CurrentState.ArgumentList.GetValueOrDefault(1)?.Message?.ToPlainText().Trim();
 			return await DiscordRoleCommands.RunAsync(parser, executor, switches, argument, right);
 		}
 
 		if (switches.Contains("EVENT"))
 		{
-			var right = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message?.ToPlainText().Trim();
+			var right = parser.CurrentState.ArgumentList.GetValueOrDefault(1)?.Message?.ToPlainText().Trim();
 			return await DiscordEventCommands.RunAsync(parser, executor, switches, argument, right);
 		}
 

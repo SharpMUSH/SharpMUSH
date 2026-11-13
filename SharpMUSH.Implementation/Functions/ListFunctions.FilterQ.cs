@@ -26,20 +26,20 @@ public partial class Functions
 		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var registerName = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var registerName = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 		if (string.IsNullOrWhiteSpace(registerName))
 		{
 			return errors.Complete(new CallState(ErrorMessages.Returns.BadRegName));
 		}
 
-		var rawAttrArg = parser.CurrentState.Arguments["1"].Message;
+		var rawAttrArg = parser.CurrentState.ArgumentList[1].Message;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var delim = await errors.DefaultArgumentAsync(parser, 3, MarkupText.Space);
 		// With arguments after the output separator an empty one is the delimiter, as filter() reads it.
 		var sep = await errors.OutputSeparatorAsync(parser, 4, delim,
-			parser.CurrentState.Arguments.Count > 5 ? delim : null);
-		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["2"].Message);
+			parser.CurrentState.ArgumentList.Count > 5 ? delim : null);
+		var list = MushText.SplitList(delim, parser.CurrentState.ArgumentList[2].Message);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{

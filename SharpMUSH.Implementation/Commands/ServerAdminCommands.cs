@@ -120,7 +120,7 @@ public partial class Commands
 
 		if (!parser.CurrentState.Switches.Contains("LIST"))
 		{
-			if ((parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText() ?? "").Length > 0)
+			if ((parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message.ToPlainText() ?? "").Length > 0)
 			{
 				await NotifyService.Notify(executor, "Use @backup with no argument, or @backup/list <page>.");
 				return new None();
@@ -128,7 +128,7 @@ public partial class Commands
 			return await BackupNowAsync(executor);
 		}
 
-		await BackupInventoryAsync(executor, parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText() ?? "");
+		await BackupInventoryAsync(executor, parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message.ToPlainText() ?? "");
 
 		return new None();
 	}
@@ -229,7 +229,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches.ToArray();
-		var argument = parser.CurrentState.Arguments.TryGetValue("0", out var first) ? first.Message!.ToPlainText().Trim() : string.Empty;
+		var argument = parser.CurrentState.ArgumentList.TryGet(0, out var first) ? first.Message!.ToPlainText().Trim() : string.Empty;
 		if (switches.Length > 0 || argument.Length > 0)
 		{
 			var output = await PurgeRecoverListAsync(parser, executor, switches, argument);
@@ -277,7 +277,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Kick(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (args.Count == 0)
 		{
@@ -326,7 +326,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var silent = switches.Contains("SILENT");
 
 		List<long> targetHandles = [];
@@ -512,7 +512,7 @@ public partial class Commands
 
 		if (switches.Contains("RECALL"))
 		{
-			var countArg = parser.CurrentState.Arguments.TryGetValue("0", out var countCallState)
+			var countArg = parser.CurrentState.ArgumentList.TryGet(0, out var countCallState)
 				? countCallState!.Message.ToPlainText()
 				: "100";
 
@@ -544,7 +544,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var logMessageArg = parser.CurrentState.Arguments.TryGetValue("0", out var logCallState);
+		var logMessageArg = parser.CurrentState.ArgumentList.TryGet(0, out var logCallState);
 
 		if (!logMessageArg || string.IsNullOrWhiteSpace(logCallState!.Message.ToPlainText()))
 		{
@@ -596,7 +596,7 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> ToggleConfigOptionAsync(IMUSHCodeParser parser, bool enable)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var optionName = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText().Trim();
+		var optionName = parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message.ToPlainText().Trim();
 		if (string.IsNullOrEmpty(optionName))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat), executor, enable ? "enable" : "disable");
@@ -759,7 +759,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Restart(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 
 		if (switches.Contains("ALL"))
@@ -976,7 +976,7 @@ public partial class Commands
 			return await ObjectStatsAsync(executor, self.Object.DBRef);
 		}
 
-		var name = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText().Trim() ?? "";
+		var name = parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message.ToPlainText().Trim() ?? "";
 		if (name.Length == 0 || switches.Contains("ALL"))
 		{
 			return await ObjectStatsAsync(executor, owner: null);
@@ -1097,7 +1097,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Config(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 		var useLowercase = switches.Contains("LOWERCASE");
 

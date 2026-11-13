@@ -23,7 +23,7 @@ public partial class Functions
 	[SharpFunction(Name = "tagref", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["tag"])]
 	public async ValueTask<CallState> TagRef(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await ResolveTagAsync(parser, parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim().TrimStart('#')) switch
+		=> await ResolveTagAsync(parser, parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim().TrimStart('#')) switch
 		{
 			DBRef target => new CallState(new DBRef(target.Number).ToString()),
 			NotFound => new CallState(ErrorMessages.Returns.Nothing)
@@ -34,7 +34,7 @@ public partial class Functions
 		ParameterNames = ["string"])]
 	public async ValueTask<CallState> IsTag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var given = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
+		var given = parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim();
 		return given.StartsWith('#') && await ResolveTagAsync(parser, given[1..]) is DBRef;
 	}
 
@@ -54,7 +54,7 @@ public partial class Functions
 
 		var owner = await OwnerOfAsync(executor);
 		// listtags() is called with one empty argument.
-		if (!parser.CurrentState.Arguments.TryGetValue("0", out var named) || named.Message.ToPlainText().Trim().Length == 0)
+		if (!parser.CurrentState.ArgumentList.TryGet(0, out var named) || named.Message.ToPlainText().Trim().Length == 0)
 		{
 			var listed = await Tags(parser).ListAsync(owner, ExecutionBudget.CurrentToken);
 			return new CallState(string.Join(' ', listed.Select(tag => $"{tag.Name}|{new DBRef(tag.Target.Number)}")));
@@ -82,7 +82,7 @@ public partial class Functions
 			return refused.Return;
 		}
 
-		var pattern = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var pattern = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 		var listed = await Tags(parser).ListAsync(await OwnerOfAsync(executor), ExecutionBudget.CurrentToken);
 		return new CallState(string.Join(' ', listed.Select(tag => tag.Name).Distinct()
 			.Where(name => MushText.IsWildcardMatch(MarkupText.Plain(name), pattern))));

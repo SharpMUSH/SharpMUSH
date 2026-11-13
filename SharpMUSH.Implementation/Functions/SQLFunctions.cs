@@ -40,7 +40,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.SqlNotEnabled);
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		var query = (await EvaluateArgument(args["0"]))?.ToPlainText() ?? string.Empty;
 
@@ -106,7 +106,7 @@ public partial class Functions
 			return PermissionRefusal.Needs(PortalPermission.GameWizard, PortalPermission.GamePower("SQL_OK")).Return;
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var input = args["0"].Message.ToPlainText();
 
 		return new CallState(SqlService.Escape(input));
@@ -148,7 +148,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.SqlNotEnabled);
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		var objAttrStr = args["0"].Message.ToPlainText();
 
@@ -183,7 +183,7 @@ public partial class Functions
 	/// for every row the query streams, joined with <paramref name="osep"/>.
 	/// </summary>
 	private async ValueTask<CallState> MapSqlRowsAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		AnySharpObject found, string attrName, string query, Dictionary<string, CallState> args, bool doFieldNames,
+		AnySharpObject found, string attrName, string query, ArgumentList args, bool doFieldNames,
 		MString osep)
 	{
 		var maybeAttribute = await AttributeService.GetAttributeAsync(executor, found, attrName,
@@ -235,7 +235,7 @@ public partial class Functions
 	/// parameters, and a plain query otherwise.
 	/// </summary>
 	private async ValueTask<(IAsyncEnumerable<Dictionary<string, object?>> Rows, bool HadErrors)> SqlStreamAsync(
-		string query, Dictionary<string, CallState> args)
+		string query, ArgumentList args)
 	{
 		if (args.Count <= 4)
 		{
@@ -251,7 +251,7 @@ public partial class Functions
 	/// evaluated to plain text, and whether any of those evaluations had errors.
 	/// </summary>
 	private static async ValueTask<(object?[] Parameters, bool HadErrors)> SqlPreparedParametersAsync(
-		Dictionary<string, CallState> args)
+		ArgumentList args)
 	{
 		var hadErrors = false;
 		var parameters = new List<object?>();

@@ -44,7 +44,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.ConnectionLogDisabled);
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var argCount = args.Count;
 		var isCount = false;
 		var startArg = 0;
@@ -148,7 +148,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.ConnectionLogDisabled);
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		if (parser.CurrentState.ArgumentsOrdered.Count < 3)
 		{
 			return await PlayerConnectionLogAsync(parser);
@@ -260,7 +260,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.ConnectionLogDisabled);
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var connectionId = args["0"].Message.ToPlainText();
 		var osep = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, " ").ToPlainText();
 		if (string.IsNullOrWhiteSpace(connectionId))
@@ -359,7 +359,7 @@ public partial class Functions
 		Func<IConnectionService.ConnectionData, string> field)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		// lookup_desc takes a descriptor only from a strict integer (src/bsd.c:6634); anything else,
 		// a number past an int included, is a player name.
@@ -410,7 +410,7 @@ public partial class Functions
 	public async ValueTask<CallState> IdleSeconds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (!TimePrecisions.TryParse(
-					parser.CurrentState.Arguments.TryGetValue("1", out var precisionArg)
+					parser.CurrentState.ArgumentList.TryGet(1, out var precisionArg)
 						? precisionArg.Message.ToPlainText()
 						: null,
 					out var precision))
@@ -431,7 +431,7 @@ public partial class Functions
 	[SharpFunction(Name = "lports", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListPorts(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (await PermissionService.Check(executor, Requires.Any(SeeAllScopes)) is PermissionRefusal refused)
@@ -521,7 +521,7 @@ public partial class Functions
 	/// <param name="viewer">Whether the first argument names the viewer; TinyMUX's <c>lwho(0)</c> names none.</param>
 	private async ValueTask<CallState> ListWhoCore(IMUSHCodeParser parser, bool objectIds, bool viewer = true)
 	{
-		var args = viewer ? parser.CurrentState.Arguments : new Dictionary<string, CallState>();
+		var args = viewer ? parser.CurrentState.ArgumentList : ArgumentList.Empty;
 		// Arguments["0"] is always present (DefaultIfEmpty(CallState.Empty)) even for 0-arg calls, so it
 		// arrives here as an empty string rather than as an absent key; ResolveWhoLookerAsync treats
 		// blank as "no viewer named", which is the same thing.
@@ -734,7 +734,7 @@ public partial class Functions
 	[SharpFunction(Name = "nwho", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flags"])]
 	public async ValueTask<CallState> NumberWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var (looker, powered, lookerError) = await ResolveWhoLookerAsync(
@@ -863,7 +863,7 @@ public partial class Functions
 	public async ValueTask<CallState> ColorDepth(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var target = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var target = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 		var descriptor = await ArgHelpers.LookupDescriptorAsync(parser, LocateService, ConnectionService, executor, target);
 		if (descriptor is null)
 		{
@@ -904,8 +904,8 @@ public partial class Functions
 	[SharpFunction(Name = "xmwho", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["start", "count"])]
 	public async ValueTask<CallState> NumberRangeMortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var arg1 = parser.CurrentState.ArgumentList[1].Message.ToPlainText();
 
 		if (!TryWhoWindow(arg0, arg1, out var start, out var count))
 		{
@@ -927,8 +927,8 @@ public partial class Functions
 	public async ValueTask<CallState> NumberRangeMortalWhoObjectId(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var arg1 = parser.CurrentState.ArgumentList[1].Message.ToPlainText();
 
 		if (!TryWhoWindow(arg0, arg1, out var start, out var count))
 		{
@@ -949,7 +949,7 @@ public partial class Functions
 	[SharpFunction(Name = "xwho", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flags"])]
 	public async ValueTask<CallState> NumberRangeWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var looker = executor;
 		var powered = await executor.IsSee_All();
@@ -994,7 +994,7 @@ public partial class Functions
 	[SharpFunction(Name = "xwhoid", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flags"])]
 	public async ValueTask<CallState> NumberRangeWhoObjectId(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var looker = executor;
 		var powered = await executor.IsSee_All();
@@ -1060,7 +1060,7 @@ public partial class Functions
 	/// </remarks>
 	private async ValueTask<CallState> ZoneWhoCore(IMUSHCodeParser parser, bool mortal)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var arg0 = args["0"].Message.ToPlainText();
 
@@ -1122,7 +1122,7 @@ public partial class Functions
 	public async ValueTask<CallState> Ports(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		// fun_ports resolves its target exactly as lookup_desc's player half does — lookup_player, then
 		// MAT_ABSOLUTE | MAT_PLAYER | MAT_ME | MAT_TYPE — so "me" works here too, and a name that
@@ -1174,7 +1174,7 @@ public partial class Functions
 	public async ValueTask<CallState> Hidden(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var arg0 = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		var canSeeHidden = await executor.IsWizard() || await executor.IsRoyalty() ||
 											 await executor.IsSee_All();
@@ -1216,7 +1216,7 @@ public partial class Functions
 	private ValueTask<IConnectionService.ConnectionData?> LookupDescriptorAsync(IMUSHCodeParser parser,
 		AnySharpObject executor)
 		=> ArgHelpers.LookupDescriptorAsync(parser, LocateService, ConnectionService, executor,
-			parser.CurrentState.Arguments["0"].Message.ToPlainText());
+			parser.CurrentState.ArgumentList[0].Message.ToPlainText());
 
 	/// <summary>
 	/// PennMUSH's <c>fun_width</c> / <c>fun_height</c> (src/bsd.c), which are one function apart from
@@ -1236,7 +1236,7 @@ public partial class Functions
 	private async ValueTask<CallState> DescriptorDimensionAsync(
 		IMUSHCodeParser parser, string key, MString defaultArg)
 	{
-		var target = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var target = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		if (string.IsNullOrEmpty(target))
 		{
@@ -1361,7 +1361,7 @@ public partial class Functions
 	{
 		// Note: the parser always injects Arguments["0"] = CallState.Empty via DefaultIfEmpty,
 		// so ContainsKey("0") is always true. Check for a non-empty value instead.
-		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var arg0State)
+		var arg0 = parser.CurrentState.ArgumentList.TryGet(0, out var arg0State)
 			? arg0State.Message.ToPlainText()
 			: null;
 
@@ -1371,7 +1371,7 @@ public partial class Functions
 		}
 
 		if (!TimePrecisions.TryParse(
-					parser.CurrentState.Arguments.TryGetValue("1", out var precisionArg)
+					parser.CurrentState.ArgumentList.TryGet(1, out var precisionArg)
 						? precisionArg.Message.ToPlainText()
 						: null,
 					out var precision))
@@ -1406,13 +1406,13 @@ public partial class Functions
 	public async ValueTask<CallState> Checkpass(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var target = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var target = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, target,
 			player => ValueTask.FromResult<CallState>(
 				PasswordService.PasswordIsValid(
-					parser.CurrentState.Arguments["1"].Message.ToPlainText(),
+					parser.CurrentState.ArgumentList[1].Message.ToPlainText(),
 					player.PasswordHash)
 					? "1"
 					: "0"));

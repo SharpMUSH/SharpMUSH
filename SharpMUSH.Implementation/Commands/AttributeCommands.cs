@@ -31,7 +31,7 @@ public partial class Commands
 	public ValueTask<Option<CallState>> Gender(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var writer = new StandardAttributeWriter(Mediator, LocateService, AttributeService, NotifyService);
-		return parser.CurrentState.Arguments.TryGetValue("0", out var arguments)
+		return parser.CurrentState.ArgumentList.TryGet(0, out var arguments)
 			&& !string.IsNullOrWhiteSpace(arguments.Message.ToPlainText())
 				? writer.WriteAsync(parser, arguments.Message,
 					AttributeHelpers.GenderAttributeName(Configuration.CurrentValue.Attribute.GenderAttribute))
@@ -56,7 +56,7 @@ public partial class Commands
 	/// </summary>
 	private async ValueTask<Option<CallState>> CopyAttributeAsync(IMUSHCodeParser parser, string commandName, bool move)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var copyFlags = !parser.CurrentState.Switches.Contains("NOFLAGCOPY");
 
@@ -83,7 +83,7 @@ public partial class Commands
 	}
 
 	private async ValueTask<Option<CallState>> CopyAttributeFromAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		AnySharpObject sourceObject, Dictionary<string, CallState> args, bool copyFlags, string sourceAttr, bool move)
+		AnySharpObject sourceObject, ArgumentList args, bool copyFlags, string sourceAttr, bool move)
 	{
 		// With CB.RSArgs + CB.EqSplit, each comma-separated destination becomes a separate arg
 		// starting at index 1. Collect all destination args in order.
@@ -288,7 +288,7 @@ public partial class Commands
 	[SharpCommand(Name = "@ATRCHOWN", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object/attribute", "player"])]
 	public async ValueTask<Option<CallState>> ChangeAttributeOwner(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 

@@ -25,7 +25,7 @@ public partial class Commands
 	{
 		var registry = parser.ServiceProvider.GetRequiredService<IUserDefinedFunctionService>();
 		var owner = (await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var name = args.GetValueOrDefault("0")?.Message.ToPlainText() ?? "";
 		var operation = switches.FirstOrDefault(s => s != "LOCAL");
 		var aliasTarget = args.GetValueOrDefault("1")?.Message.ToPlainText() ?? "";

@@ -786,11 +786,17 @@ public partial record ParserState
 	/// </summary>
 	public ParserState ForAttributeCall(Dictionary<string, CallState>? arguments, Dictionary<string, CallState>? environment,
 		DBAttribute evaluation, string function, DBRef executor)
+		=> ForAttributeCall(arguments is null ? ArgumentList : ArgumentList.From(arguments), environment, evaluation, function,
+			executor);
+
+	/// <inheritdoc cref="ForAttributeCall(Dictionary{string, CallState}, Dictionary{string, CallState}, DBAttribute, string, DBRef)"/>
+	public ParserState ForAttributeCall(ArgumentList arguments, Dictionary<string, CallState>? environment,
+		DBAttribute evaluation, string function, DBRef executor)
 	{
-		var called = arguments ?? Arguments;
+		var called = arguments;
 		return this with
 		{
-			Arguments = called,
+			ArgumentList = called,
 			_scope = new AttributeScope(environment ?? EnvironmentRegisters, AttributeArgumentEnvironment.SuppliedKeys(called)),
 			CurrentEvaluation = evaluation,
 			Function = function,
@@ -806,10 +812,10 @@ public partial record ParserState
 	public ParserState ForLambdaCall(Dictionary<string, CallState>? arguments, Dictionary<string, CallState>? environment,
 		LambdaEvaluation lambda)
 	{
-		var called = arguments ?? Arguments;
+		var called = arguments is null ? ArgumentList : ArgumentList.From(arguments);
 		return this with
 		{
-			Arguments = called,
+			ArgumentList = called,
 			Context = Context with
 			{
 				EnvironmentRegisters = environment ?? Context.EnvironmentRegisters,
@@ -1066,8 +1072,20 @@ public partial record ParserState
 		init => _context = _context with { TypedLine = value };
 	}
 
-	/// <summary>The arguments to the command or function: %0-%9 by number, and named arguments.</summary>
-	public required Dictionary<string, CallState> Arguments { get; init; }
+	/// <summary>
+	/// The arguments to the command or function: %0-%9 by number, and named arguments, as a dictionary built
+	/// from <see cref="ArgumentList"/> the first time it is read. Engine code reads <see cref="ArgumentList"/>,
+	/// which answers the same keys without building one. Setting it sets <see cref="ArgumentList"/> to read
+	/// through the dictionary given, and reading it then returns that same instance.
+	/// </summary>
+	public Dictionary<string, CallState> Arguments
+	{
+		get => ArgumentList.AsDictionary();
+		init => ArgumentList = ArgumentList.From(value);
+	}
+
+	/// <summary>The arguments to the command or function: %0-%9 by position, and named arguments.</summary>
+	public ArgumentList ArgumentList { get; init; } = ArgumentList.Empty;
 
 	/// <summary>The executor of a command is the object actually carrying out the command or running the code: %!</summary>
 	public DBRef? Executor
@@ -1190,7 +1208,7 @@ public partial record ParserState
 			QueuedOutput = PipedOutput,
 			QueuedPrinted = PrintedOutput
 		},
-		Arguments = SnapshotArguments(Arguments),
+		ArgumentList = ArgumentList.Select(value => value.AsValue(value.Message, 0)),
 		// A queued action runs no command yet; it keeps only the caller's arguments and fn()'s built-in.
 		CommandFrame = CommandFrame is { CallerArguments: null, BuiltinCall: null }
 			? CommandFrame.None
@@ -1225,7 +1243,7 @@ public partial record ParserState
 			RegisterPrivacy = new RegisterPrivacyFlag(),
 			MoveDepth = new InvocationCounter()
 		},
-		Arguments = new Dictionary<string, CallState>()
+		ArgumentList = ArgumentList.NewEmpty()
 	};
 
 	// Construction. Every state is made one of three ways, and these are the only places that build one
@@ -1302,7 +1320,7 @@ public partial record ParserState
 				TypedLine = typedLine
 			},
 			ParserFunctionDepth = 0,
-			Arguments = new Dictionary<string, CallState>(),
+			ArgumentList = ArgumentList.NewEmpty(),
 			_actors = new FrameActors
 			{
 				Executor = executor,
@@ -1325,7 +1343,11 @@ public partial record ParserState
 	/// </summary>
 	/// <param name="function">The function's name as called.</param>
 	/// <param name="arguments">The call's arguments, keyed <c>"0"</c>, <c>"1"</c>, ….</param>
-	public ParserState ForFunction(string function, Dictionary<string, CallState> arguments) => new()
+	public ParserState ForFunction(string function, Dictionary<string, CallState> arguments)
+		=> ForFunction(function, ArgumentList.From(arguments));
+
+	/// <inheritdoc cref="ForFunction(string, Dictionary{string, CallState})"/>
+	public ParserState ForFunction(string function, ArgumentList arguments) => new()
 	{
 		// The context carries the typed line, so its text stays out of the parse cache when the function
 		// parses part of it, and the connection's session for @input.
@@ -1335,7 +1357,7 @@ public partial record ParserState
 		CurrentEvaluation = CurrentEvaluation,
 		ParserFunctionDepth = ParserFunctionDepth + 1,
 		Function = function,
-		Arguments = arguments,
+		ArgumentList = arguments,
 		ParseMode = ParseMode,
 		Flags = Flags,
 		// The same actors, budget and hook, shared rather than copied: a hook's %-m and %-p stay readable in
@@ -1402,22 +1424,7 @@ public partial record ParserState
 	/// <summary>
 	/// Just the numbered arguments, %0-%9 etc., in numerical order. This excludes named arguments.
 	/// </summary>
-	public OrderedArguments ArgumentsOrdered
-	{
-		get
-		{
-			// Cache the result. Invalidate if Arguments reference changed (e.g., after `with` expression).
-			if (_argumentsOrdered is not null && ReferenceEquals(_argumentsOrderedSource, Arguments))
-				return _argumentsOrdered;
-
-			_argumentsOrderedSource = Arguments;
-			_argumentsOrdered = OrderedArguments.From(Arguments);
-			return _argumentsOrdered;
-		}
-	}
-
-	private OrderedArguments? _argumentsOrdered;
-	private Dictionary<string, CallState>? _argumentsOrderedSource;
+	public OrderedArguments ArgumentsOrdered => ArgumentList.Ordered;
 
 	private static readonly string[] ArgumentKeys = [.. Enumerable.Range(0, 64).Select(position => position.ToString())];
 

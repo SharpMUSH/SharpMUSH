@@ -336,9 +336,9 @@ public partial class Commands
 	[SharpCommand(Name = "GOTO", Output = CommandOutput.Value, Switches = ["QUIET"], Behavior = CB.Player | CB.Thing, MinArgs = 1, MaxArgs = 1, ParameterNames = ["destination"])]
 	public async ValueTask<Option<CallState>> GoTo(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		if (parser.CurrentState.Arguments.Count == 0)
+		if (parser.CurrentState.ArgumentList.Count == 0)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWay), executor);
 			return CallState.Empty;
@@ -481,7 +481,7 @@ public partial class Commands
 	[SharpCommand(Name = "WALK", Output = CommandOutput.Value, Behavior = CB.Player | CB.Thing, MinArgs = 1, MaxArgs = 1, ParameterNames = ["exits"])]
 	public async ValueTask<Option<CallState>> Walk(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var steps = WalkStep().Matches(parser.CurrentState.Arguments["0"].Message.ToPlainText())
+		var steps = WalkStep().Matches(parser.CurrentState.ArgumentList[0].Message.ToPlainText())
 			.Select(step => step.Groups["quoted"].Success ? step.Groups["quoted"].Value : step.Value)
 			.Where(step => step.Length > 0);
 		var reached = CallState.Empty;
@@ -523,7 +523,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Teleport(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var destinationString = (args.Count == 1 ? args["0"].Message : args["1"].Message)?.ToPlainText() ?? string.Empty;
@@ -561,7 +561,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var objectName = args["0"].Message.ToPlainText();
 
 		// move.c:930-931: MAT_ABSOLUTE is added to the match flags only for Hasprivs — God, Wizard or
@@ -726,7 +726,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Follow(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message.ToPlainText()))
 		{
@@ -799,7 +799,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> UnFollow(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		var followingAttr = await AttributeService.GetAttributeAsync(executor, executor, AttrFollowing,
 			IAttributeService.AttributeMode.Read, false);
@@ -863,7 +863,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Desert(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message.ToPlainText()))
 		{
@@ -927,7 +927,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Dismiss(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message.ToPlainText()))
 		{

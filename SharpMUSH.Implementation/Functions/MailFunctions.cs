@@ -78,7 +78,7 @@ public partial class Functions
 	/// silent either way. Each function then returns its own failure value.
 	/// </summary>
 	private async ValueTask<SharpMail?> FetchMailAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		Dictionary<string, CallState> args)
+		ArgumentList args)
 	{
 		if (args.Count == 1)
 		{
@@ -142,7 +142,7 @@ public partial class Functions
 	[SharpFunction(Name = "mail", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player", "status"])]
 	public async ValueTask<CallState> mail(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (args.Count == 0 || (args.Count == 1 && string.IsNullOrWhiteSpace(args["0"].Message.ToPlainText())))
@@ -196,7 +196,7 @@ public partial class Functions
 	[SharpFunction(Name = "maillist", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["folder", "flags"])]
 	public async ValueTask<CallState> maillist(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		AnySharpObject targetPlayer = executor;
@@ -262,7 +262,7 @@ public partial class Functions
 	[SharpFunction(Name = "mailfrom", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["message"])]
 	public async ValueTask<CallState> mailfrom(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		// mailfun_fetch's callers all answer a message they could not fetch with #-1 (src/extmail.c).
@@ -319,7 +319,7 @@ public partial class Functions
 	private async ValueTask<CallState> MailStatsAsync(IMUSHCodeParser parser, MailStatsDetail detail)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var playerArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var playerArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 
 		AnySharpObject target;
 		if (string.IsNullOrWhiteSpace(playerArg))
@@ -362,7 +362,7 @@ public partial class Functions
 	[SharpFunction(Name = "mailstatus", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["message"])]
 	public async ValueTask<CallState> mailstatus(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		// mailfun_fetch's callers all answer a message they could not fetch with #-1 (src/extmail.c).
@@ -383,7 +383,7 @@ public partial class Functions
 	[SharpFunction(Name = "mailsubject", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number"])]
 	public async ValueTask<CallState> mailsubject(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		// mailfun_fetch's callers all answer a message they could not fetch with #-1 (src/extmail.c).
@@ -397,7 +397,7 @@ public partial class Functions
 	[SharpFunction(Name = "mailtime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["message"])]
 	public async ValueTask<CallState> mailtime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		// mailfun_fetch's callers all answer a message they could not fetch with #-1 (src/extmail.c).

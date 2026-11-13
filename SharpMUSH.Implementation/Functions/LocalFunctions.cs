@@ -20,7 +20,7 @@ public partial class Functions
 		ExecutionBudget.Current?.ThrowIfExceeded();
 		var caller = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var owner = (await caller.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
-		var name = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var name = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 		var registry = parser.ServiceProvider.GetRequiredService<IUserDefinedFunctionService>();
 		UserDefinedFunction? entry;
 		try
@@ -41,7 +41,7 @@ public partial class Functions
 			registry.InvalidateLocalDefinitions(entry.Object);
 			return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
 		}
-		var argumentCount = parser.CurrentState.Arguments.Count - 1;
+		var argumentCount = parser.CurrentState.ArgumentList.Count - 1;
 		if (argumentCount < entry.MinArgs || argumentCount > entry.MaxArgs)
 			return new CallState(ErrorMessages.Returns.ArgumentCount(name, entry.MinArgs, entry.MaxArgs, argumentCount));
 		// The caller must be able to read it; the value itself is read once, by the evaluation below, which
@@ -54,7 +54,7 @@ public partial class Functions
 				return new CallState(error.Value);
 		}
 
-		var values = Enumerable.Range(0, argumentCount).Select(i => parser.CurrentState.Arguments[(i + 1).ToString()]).ToArray();
+		var values = Enumerable.Range(0, argumentCount).Select(i => parser.CurrentState.ArgumentList[(i + 1).ToString()]).ToArray();
 		var arguments = new AttributeArgumentEnvironment();
 		for (var i = 0; i < values.Length; i++) arguments[i.ToString()] = values[i];
 		if (ArgHelpers.AddNamedArguments(arguments, values, entry.ArgumentNames, value => value.Message.ToPlainText(), text => new CallState(text)) is Error<string> refused)

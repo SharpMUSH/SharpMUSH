@@ -36,7 +36,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "json", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["expression..."])]
 	public async ValueTask<CallState> JSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> JsonFunctions.TryGetValue(parser.CurrentState.Arguments["0"].Message.ToPlainText().ToLower(), out var jsonFunction)
+		=> JsonFunctions.TryGetValue(parser.CurrentState.ArgumentList[0].Message.ToPlainText().ToLower(), out var jsonFunction)
 			? await jsonFunction(parser.CurrentState.ArgumentsOrdered)
 			: new CallState(MarkupText.Plain(ErrorMessages.Returns.InvalidType));
 
@@ -55,12 +55,12 @@ public partial class Functions
 	public async ValueTask<CallState> json_array(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// No list argument at all → an empty array (the explicit argumentless form).
-		if (!parser.CurrentState.Arguments.TryGetValue("0", out var listArg))
+		if (!parser.CurrentState.ArgumentList.TryGet(0, out var listArg))
 		{
 			return new CallState("[]");
 		}
 
-		var delimiterResult = parser.CurrentState.Arguments.TryGetValue("1", out var delimiterArg) && delimiterArg.Message.Length > 0
+		var delimiterResult = parser.CurrentState.ArgumentList.TryGet(1, out var delimiterArg) && delimiterArg.Message.Length > 0
 			? await delimiterArg.GetParsedResultAsync() : new CallState(MarkupText.Space);
 		var delimiter = delimiterResult.Message;
 		var listResult = await listArg.GetParsedResultAsync();
@@ -91,11 +91,11 @@ public partial class Functions
 	[SharpFunction(Name = "isjson", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "type"])]
 	public ValueTask<CallState> IsJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var type = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message.ToPlainText() ?? string.Empty;
+		var type = parser.CurrentState.ArgumentList.GetValueOrDefault(1)?.Message.ToPlainText() ?? string.Empty;
 		JsonValueKind kind;
 		try
 		{
-			using var jsonDoc = JsonDocument.Parse(parser.CurrentState.Arguments["0"].Message.ToPlainText());
+			using var jsonDoc = JsonDocument.Parse(parser.CurrentState.ArgumentList[0].Message.ToPlainText());
 			kind = jsonDoc.RootElement.ValueKind;
 		}
 		catch (JsonException)
@@ -124,18 +124,18 @@ public partial class Functions
 	public async ValueTask<CallState> json_map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var rawAttrArg = parser.CurrentState.Arguments["0"].Message;
+		var rawAttrArg = parser.CurrentState.ArgumentList[0].Message;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var jsonStr = parser.CurrentState.Arguments["1"].Message.ToPlainText();
-		var separatorResult = parser.CurrentState.Arguments.TryGetValue("2", out var separatorArg)
+		var jsonStr = parser.CurrentState.ArgumentList[1].Message.ToPlainText();
+		var separatorResult = parser.CurrentState.ArgumentList.TryGet(2, out var separatorArg)
 			? await separatorArg.GetParsedResultAsync() : new CallState(MarkupText.Space);
 		var osep = separatorResult.Message;
 
 		var userArgs = new Dictionary<string, CallState>();
-		for (int i = 3; i < parser.CurrentState.Arguments.Count; i++)
+		for (int i = 3; i < parser.CurrentState.ArgumentList.Count; i++)
 		{
-			userArgs[i.ToString()] = parser.CurrentState.Arguments[i.ToString()];
+			userArgs[i.ToString()] = parser.CurrentState.ArgumentList[i.ToString()];
 		}
 
 		// For #lambda / #apply, EvaluateAttributeFunctionResultAsync handles the special prefix.
@@ -568,16 +568,16 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var playersArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var package = parser.CurrentState.Arguments["1"].Message.ToPlainText();
-		var message = parser.CurrentState.Arguments.TryGetValue("2", out var msgState)
+		var playersArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var package = parser.CurrentState.ArgumentList[1].Message.ToPlainText();
+		var message = parser.CurrentState.ArgumentList.TryGet(2, out var msgState)
 			? msgState.Message.ToPlainText()
 			: "";
 
 		// The one option: send a telnet client only what it listed in Core.Supports, or everything when it
 		// listed nothing. Without it every GMCP client gets the package, which Mudlet relies on for packages
 		// it never lists.
-		var option = parser.CurrentState.Arguments.TryGetValue("3", out var optionState)
+		var option = parser.CurrentState.ArgumentList.TryGet(3, out var optionState)
 			? optionState.Message.ToPlainText().Trim()
 			: null;
 		if (option is not null && !string.Equals(option, "supported", StringComparison.OrdinalIgnoreCase))
@@ -709,7 +709,7 @@ public partial class Functions
 	public async ValueTask<CallState> GmcpSupportsFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var target = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
+		var target = parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim();
 
 		return await GmcpConnectionAsync(parser, executor, target) switch
 		{
@@ -721,7 +721,7 @@ public partial class Functions
 
 	/// <summary>The kept list, or with a package whether the list covers it.</summary>
 	private static CallState GmcpSupportsAnswer(IMUSHCodeParser parser, string listed)
-		=> parser.CurrentState.Arguments.TryGetValue("1", out var packageState)
+		=> parser.CurrentState.ArgumentList.TryGet(1, out var packageState)
 			? new CallState(GmcpSupports.Lists(listed, packageState.Message.ToPlainText()) ? "1" : "0")
 			: new CallState(listed);
 

@@ -46,7 +46,7 @@ public partial class Functions
 
 	/// <summary>The argument at <paramref name="key"/>, as plain text, or nothing when it was not given.</summary>
 	private static string OptionalArgument(IMUSHCodeParser parser, string key)
-		=> parser.CurrentState.Arguments.TryGetValue(key, out var value) ? value.Message.ToPlainText() : string.Empty;
+		=> parser.CurrentState.ArgumentList.TryGetValue(key, out var value) ? value.Message.ToPlainText() : string.Empty;
 
 	/// <summary>Message <paramref name="number"/> (from 1) in <paramref name="mailbox"/>'s current folder, if there is one.</summary>
 	private async ValueTask<SharpMail?> CurrentFolderMessage(IMUSHCodeParser parser, SharpPlayer mailbox, string number)
@@ -141,7 +141,7 @@ public partial class Functions
 		}
 
 		var sent = Mediator.CreateStream(new GetSentMailListQuery(executor.Object(), recipient));
-		if (!parser.CurrentState.Arguments.ContainsKey("1"))
+		if (!parser.CurrentState.ArgumentList.Contains(1))
 		{
 			return new CallState((await sent.CountAsync()).ToString(CultureInfo.InvariantCulture));
 		}

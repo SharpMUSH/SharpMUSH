@@ -18,7 +18,7 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> RunEmitCommand(IMUSHCodeParser parser, SharpCommandAttribute definition,
 		EmitScope scope, bool noSpoof)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 		var ports = scope == EmitScope.Private && switches.Contains("PORT");
 		var contents = scope == EmitScope.Private && !ports && switches.Contains("CONTENTS");

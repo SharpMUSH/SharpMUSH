@@ -34,7 +34,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches.ToArray();
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var target = args.TryGetValue("0", out var first) ? first.Message!.ToPlainText().Trim() : string.Empty;
 		var reason = args.TryGetValue("1", out var second) ? second.Message!.ToPlainText().Trim() : string.Empty;
 

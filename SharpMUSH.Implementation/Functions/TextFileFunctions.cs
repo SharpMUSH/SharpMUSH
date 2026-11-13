@@ -28,7 +28,7 @@ public partial class Functions
 		ParameterNames = ["type", "pattern", "osep"])]
 	public async ValueTask<CallState> TextEntries(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var fileReference = args["0"].Message.ToPlainText();
 		var pattern = args["1"].Message.ToPlainText();
 		var separator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
@@ -65,7 +65,7 @@ public partial class Functions
 		ParameterNames = ["type", "pattern", "osep"])]
 	public async ValueTask<CallState> TextSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var fileReference = args["0"].Message.ToPlainText();
 		var pattern = args["1"].Message.ToPlainText();
 		var separator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
@@ -93,7 +93,7 @@ public partial class Functions
 		ParameterNames = ["type", "entry", "prefix"])]
 	public async ValueTask<CallState> TextFile(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var fileReference = args["0"].Message.ToPlainText();
 		var entryName = args["1"].Message.ToPlainText();
 		var muxForm = Configuration.CurrentValue.Compatibility.MuxArguments;

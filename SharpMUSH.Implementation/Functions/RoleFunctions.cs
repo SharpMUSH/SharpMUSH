@@ -22,9 +22,9 @@ public partial class Functions
 	public async ValueTask<CallState> Roles(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var category = parser.CurrentState.Arguments.TryGetValue("1", out var named) ? named.Message.ToPlainText().Trim() : null;
+		var category = parser.CurrentState.ArgumentList.TryGet(1, out var named) ? named.Message.ToPlainText().Trim() : null;
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
-			parser.CurrentState.Arguments["0"].Message.ToPlainText(), LocateFlags.All,
+			parser.CurrentState.ArgumentList[0].Message.ToPlainText(), LocateFlags.All,
 			async found =>
 			{
 				var held = (await found.GrantsAsync(ExecutionBudget.CurrentToken)).Roles.Select(r => r.Role).DistinctBy(r => r.Slug)
@@ -45,7 +45,7 @@ public partial class Functions
 		ParameterNames = ["object", "role", "at-least"])]
 	public async ValueTask<CallState> HasRole(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var slug = args["1"].Message.ToPlainText().Trim();
 		if (!args.TryGetValue("2", out var atLeast) || !atLeast.Message.Truthy(parser))
 		{
@@ -74,8 +74,8 @@ public partial class Functions
 	[SharpFunction(Name = "permission", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "permission"])]
 	public async ValueTask<CallState> Permission(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var scope = parser.CurrentState.Arguments["1"].Message.ToPlainText().Trim();
-		return await WithGrants(parser, parser.CurrentState.Arguments["0"].Message.ToPlainText(),
+		var scope = parser.CurrentState.ArgumentList[1].Message.ToPlainText().Trim();
+		return await WithGrants(parser, parser.CurrentState.ArgumentList[0].Message.ToPlainText(),
 			grants => grants.Canonical(scope) is { } canonical
 				? new CallState(grants.Has(canonical))
 				: new CallState("#-1 NO SUCH PERMISSION"));

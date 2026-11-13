@@ -56,7 +56,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await LocateService.LocateConnectionTarget(parser, executor, executor,
-					parser.CurrentState.Arguments["0"].Message.ToPlainText()) is not (AnySharpObject and SharpPlayer player))
+					parser.CurrentState.ArgumentList[0].Message.ToPlainText()) is not (AnySharpObject and SharpPlayer player))
 		{
 			return new CallState(ErrorMessages.Returns.PlayerNotFound);
 		}

@@ -104,7 +104,7 @@ public static class OocCommand
 
 	private static async ValueTask<MString> MessageAsync(IMUSHCodeParser parser)
 	{
-		if (!parser.CurrentState.Arguments.TryGetValue("0", out var argument)) return MarkupText.Empty;
+		if (!parser.CurrentState.ArgumentList.TryGet(0, out var argument)) return MarkupText.Empty;
 
 		return parser.CurrentState.Switches.Contains("NOEVAL")
 			? argument.Message

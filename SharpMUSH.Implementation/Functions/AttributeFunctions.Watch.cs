@@ -20,7 +20,7 @@ public partial class Functions
 	public async ValueTask<CallState> AttributeWatchFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// The same name @attribute/watch looks up.
-		var name = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim().TrimStart('@').ToUpperInvariant();
+		var name = parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim().TrimStart('@').ToUpperInvariant();
 		if (name.Length == 0 || await Mediator.Send(new GetAttributeEntryQuery(name)) is not SharpAttributeEntry entry)
 		{
 			return new CallState(ErrorMessages.Returns.NotStandardAttribute);

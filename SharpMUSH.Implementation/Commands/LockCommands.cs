@@ -54,7 +54,7 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> ChangeLockAsync(IMUSHCodeParser parser, string? fixedType, bool unlock)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		if (!args.TryGetValue("0", out var targetArg)) return new CallState(ErrorMessages.Returns.InvalidArguments);
 		var targetText = targetArg.Message.ToPlainText();
 		var type = fixedType ?? parser.CurrentState.Switches.FirstOrDefault();
@@ -65,7 +65,7 @@ public partial class Commands
 				LocateFlags.All, async target =>
 				{
 					var attributeArgs = new Dictionary<string, CallState> { ["1"] = new CallState(unlock ? "off" : "on") };
-					return await AttributeLockAsync(executor, target, attributeArgs, targetText[(slash + 1)..]) is CallState state
+					return await AttributeLockAsync(executor, target, ArgumentList.From(attributeArgs), targetText[(slash + 1)..]) is CallState state
 						? state
 						: CallState.Empty;
 				});
@@ -83,7 +83,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, attribute) is { } error) return error;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		await LockHelpers.SetFlagsAsync(parser, LocateService, NotifyService, LockService, executor,
 			args["0"].Message.ToPlainText(), args["1"].Message.ToPlainText());
 		return CallState.Empty;
@@ -92,7 +92,7 @@ public partial class Commands
 	[SharpCommand(Name = "@ATRLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, ParameterNames = ["object/attribute", "on-off"])]
 	public async ValueTask<Option<CallState>> AttributeLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (!args.TryGetValue("0", out var objAttrArg))
@@ -117,7 +117,7 @@ public partial class Commands
 	}
 
 	private async ValueTask<Option<CallState>> AttributeLockAsync(AnySharpObject executor, AnySharpObject targetObject,
-		Dictionary<string, CallState> args, string attrName)
+		ArgumentList args, string attrName)
 	{
 		if (await PermissionService.Check(executor, Requires.ControlOf(targetObject)) is PermissionRefusal refused)
 		{

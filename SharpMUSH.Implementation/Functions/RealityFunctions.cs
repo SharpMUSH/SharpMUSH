@@ -66,7 +66,7 @@ public partial class Functions
 	public async ValueTask<CallState> RxDesc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var config = await Reality(parser).ConfigurationAsync(ExecutionBudget.CurrentToken);
-		if (!parser.CurrentState.Arguments.TryGetValue("1", out var layerArgument))
+		if (!parser.CurrentState.ArgumentList.TryGet(1, out var layerArgument))
 		{
 			return await ProfileAsync(parser, "0") switch
 			{
@@ -77,7 +77,7 @@ public partial class Functions
 			};
 		}
 
-		var subargument = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var subargument = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 		var name = layerArgument.Message.ToPlainText();
 		var kind = subargument.ToLowerInvariant();
 		if (kind is not ("desc" or "adesc" or "value" or "hex"))
@@ -133,7 +133,7 @@ public partial class Functions
 		=> await ProfileAsync(parser, "0") switch
 		{
 			ObjectReality profile => (await Reality(parser).ConfigurationAsync(ExecutionBudget.CurrentToken))
-				.Layer(parser.CurrentState.Arguments["1"].Message.ToPlainText()) is { } layer
+				.Layer(parser.CurrentState.ArgumentList[1].Message.ToPlainText()) is { } layer
 					? (receive ? profile.Receive : profile.Transmit).Contains(layer)
 					: new CallState(ErrorMessages.Returns.NoSuchLevel),
 			CallState refusal => refusal
@@ -142,7 +142,7 @@ public partial class Functions
 	private async ValueTask<CallState> LevelAsync(IMUSHCodeParser parser, bool receive)
 		=> await ProfileAsync(parser, "0") switch
 		{
-			ObjectReality profile => parser.CurrentState.Arguments.TryGetValue("1", out var levels)
+			ObjectReality profile => parser.CurrentState.ArgumentList.TryGet(1, out var levels)
 				? await SetLevelsAsync(parser, profile, receive, levels.Message.ToPlainText())
 				: new CallState(string.Join(' ', receive ? profile.Receive : profile.Transmit)),
 			CallState refusal => refusal
@@ -167,7 +167,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await SharpMUSH.Implementation.Commands.RealityLevels.FindAsync(parser, LocateService, Mediator, executor,
-				parser.CurrentState.Arguments[key].Message.ToPlainText()) switch
+				parser.CurrentState.ArgumentList[key].Message.ToPlainText()) switch
 		{
 			AnySharpObject target => await ProfileOfAsync(parser, executor, target),
 			CallState refusal => refusal

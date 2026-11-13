@@ -30,7 +30,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.PageLoggingIsOff);
 		}
 
-		var arguments = parser.CurrentState.Arguments;
+		var arguments = parser.CurrentState.ArgumentList;
 		var count = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, string.Empty).ToPlainText();
 		if (!PageRecall.TryParseLines(count, out var lines))
 		{
@@ -70,7 +70,7 @@ public partial class Functions
 		}
 
 		// pageconversations() arrives with one empty argument, which is no delimiter given.
-		var delimiter = parser.CurrentState.Arguments.TryGetValue("0", out var delimiterArgument)
+		var delimiter = parser.CurrentState.ArgumentList.TryGet(0, out var delimiterArgument)
 			&& delimiterArgument.Message.ToPlainText() is { Length: > 0 } given
 				? given
 				: "|";

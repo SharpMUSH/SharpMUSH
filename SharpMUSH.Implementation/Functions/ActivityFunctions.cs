@@ -26,7 +26,7 @@ public partial class Functions
 		Restrict = [PortalPermission.PlayersView], ParameterNames = ["report", "options"])]
 	public async ValueTask<CallState> Activity(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var report = args["0"].Message!.ToPlainText().Trim().ToLowerInvariant();
 		var optionsText = args.TryGetValue("1", out var given) ? given.Message!.ToPlainText().Trim() : string.Empty;
 

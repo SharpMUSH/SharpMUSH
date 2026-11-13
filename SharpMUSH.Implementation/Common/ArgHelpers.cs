@@ -160,7 +160,7 @@ public static partial class ArgHelpers
 	public static async ValueTask<MString> NoParseDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
 		MString defaultValue)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		if (args.Count - 1 < item || args[item.ToString()].Message.Length == 0)
 		{
 			return defaultValue;
@@ -176,7 +176,7 @@ public static partial class ArgHelpers
 	public static async ValueTask<MString> EvaluatedDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
 		CallState defaultValue)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var parsedValue = (await args[item.ToString()].ParsedMessage())!;
 		if (args.Count - 1 < item || parsedValue.Length == 0)
 		{

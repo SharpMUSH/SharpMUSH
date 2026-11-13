@@ -28,7 +28,7 @@ public partial class Functions
 		ParameterNames = ["name"])]
 	public async ValueTask<CallState> PlayerFind(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var name = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var name = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (name.StartsWith('#'))
 		{
@@ -72,7 +72,7 @@ public partial class Functions
 		ParameterNames = ["player"])]
 	public async ValueTask<CallState> PlayMem(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var name = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText() ?? string.Empty;
+		var name = parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message?.ToPlainText() ?? string.Empty;
 		if (name.Length == 0) return new CallState(0);
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -90,7 +90,7 @@ public partial class Functions
 	/// </summary>
 	[SharpFunction(Name = "subeval", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public async ValueTask<CallState> SubstitutionEvaluate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> new(await SubstitutionsEvaluated(parser, parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty,
+		=> new(await SubstitutionsEvaluated(parser, parser.CurrentState.ArgumentList[0].Message ?? MarkupText.Empty,
 			ExecutorAttribute));
 
 	/// <summary>The executor's attribute <paramref name="name"/> as <c>%=&lt;name&gt;</c> reads it, or nothing.</summary>
@@ -294,5 +294,5 @@ public partial class Functions
 		ParameterNames = ["string"])]
 	public ValueTask<CallState> UrlUnescape(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(new CallState(
-			Uri.UnescapeDataString(parser.CurrentState.Arguments["0"].Message.ToPlainText().Replace("+", "%20"))));
+			Uri.UnescapeDataString(parser.CurrentState.ArgumentList[0].Message.ToPlainText().Replace("+", "%20"))));
 }

@@ -227,7 +227,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Doing(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		var isAdmin = await executor.IsWizard() ||
 									await executor.IsRoyalty() ||

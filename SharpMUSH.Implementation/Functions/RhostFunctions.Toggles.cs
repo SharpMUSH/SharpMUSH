@@ -21,9 +21,9 @@ public partial class Functions
 	public async ValueTask<CallState> HasToggle(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var name = parser.CurrentState.Arguments["1"].Message.ToPlainText().Trim();
+		var name = parser.CurrentState.ArgumentList[1].Message.ToPlainText().Trim();
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
-			parser.CurrentState.Arguments["0"].Message.ToPlainText(), LocateFlags.All,
+			parser.CurrentState.ArgumentList[0].Message.ToPlainText(), LocateFlags.All,
 			async found => RhostNameTables.Toggle(name) is { Flag: { } flag }
 				? new CallState((await RhostToggleNames.VisibleFlagNamesAsync(executor, found, ConnectionService)).Contains(flag, StringComparer.OrdinalIgnoreCase))
 				: new CallState(false));
@@ -36,7 +36,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
-			parser.CurrentState.Arguments["0"].Message.ToPlainText(), LocateFlags.All,
+			parser.CurrentState.ArgumentList[0].Message.ToPlainText(), LocateFlags.All,
 			async found => new CallState(string.Join(' ',
 				RhostToggleNames.ToggleNamesOf(await RhostToggleNames.VisibleFlagNamesAsync(executor, found, ConnectionService)))));
 	}
@@ -69,7 +69,7 @@ public partial class Functions
 	public async ValueTask<CallState> Toggle(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var (flags, unknown) = RhostToggleNames.Translate(parser.CurrentState.Arguments["1"].Message.ToPlainText(),
+		var (flags, unknown) = RhostToggleNames.Translate(parser.CurrentState.ArgumentList[1].Message.ToPlainText(),
 			await RhostToggleNames.DefinedFlagsAsync(Mediator));
 		foreach (var name in unknown)
 		{
@@ -79,7 +79,7 @@ public partial class Functions
 		if (flags.Count > 0)
 		{
 			await SetHelpers.DoSet(parser, LocateService, AttributeService, FlagAndPowerService, NotifyService, PermissionService,
-				executor, parser.CurrentState.Arguments["0"].Message, MString.Plain(string.Join(' ', flags)), quiet: true);
+				executor, parser.CurrentState.ArgumentList[0].Message, MString.Plain(string.Join(' ', flags)), quiet: true);
 		}
 
 		return CallState.Empty;

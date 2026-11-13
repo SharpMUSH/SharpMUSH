@@ -27,7 +27,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> RollCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var formula = !args.TryGetValue("0", out var formulaArg) ? string.Empty
 			: parser.CurrentState.Switches.Contains("NOEVAL") ? formulaArg.Message.ToPlainText().Trim()
 			: (await formulaArg.ParsedMessage())?.ToPlainText().Trim() ?? string.Empty;

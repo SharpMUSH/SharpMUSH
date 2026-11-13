@@ -22,7 +22,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (!Configuration.CurrentValue.Limit.UseQuota)
 		{
@@ -140,7 +140,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> ShortQuota(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (!Configuration.CurrentValue.Limit.UseQuota)
 		{
@@ -210,7 +210,7 @@ public partial class Commands
 			return usage;
 		}
 
-		var amountArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var amountArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 		if (!int.TryParse(amountArg, out var amount))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaAmountMustBeNumber), executor);
@@ -264,7 +264,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var playerArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var playerArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 		return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg) switch
 		{
 			AnySharpObject and SharpPlayer player => await PoorAsync(executor, player),

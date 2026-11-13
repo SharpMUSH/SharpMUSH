@@ -13,8 +13,8 @@ public partial class Functions
 	[SharpFunction(Name = "hasarg", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["name", "scope"])]
 	public ValueTask<CallState> HasArgument(IMUSHCodeParser parser, SharpFunctionAttribute _)
 	{
-		var name = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var scope = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message.ToPlainText() ?? "visible";
+		var name = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var scope = parser.CurrentState.ArgumentList.GetValueOrDefault(1)?.Message.ToPlainText() ?? "visible";
 		if (!scope.Equals("visible", StringComparison.OrdinalIgnoreCase) && !scope.Equals("supplied", StringComparison.OrdinalIgnoreCase))
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidArgument));
 		var keys = parser.CurrentState.SuppliedArgumentKeys;
@@ -284,7 +284,7 @@ public partial class Functions
 	[SharpFunction(Name = "r", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> R(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var registerName = args["0"].Message.ToPlainText();
 		var typeArgStr = args.TryGetValue("1", out var typeArg)
 			? typeArg.Message.ToPlainText().Trim()
@@ -440,7 +440,7 @@ public partial class Functions
 	[SharpFunction(Name = "listq", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> ListQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var pattern = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText();
+		var pattern = parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message.ToPlainText();
 		return ValueTask.FromResult(new CallState(
 			string.Join(" ", VisibleRegisterNames(parser.CurrentState, RegisterKinds.QRegisters, pattern))));
 	}
@@ -448,7 +448,7 @@ public partial class Functions
 	[SharpFunction(Name = "registers", MinArgs = 0, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> Registers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var pattern = args.GetValueOrDefault("0")?.Message.ToPlainText();
 		var kinds = ParseRegisterKinds(args.GetValueOrDefault("1")?.Message.ToPlainText() ?? string.Empty);
 		if (kinds == RegisterKinds.None)
@@ -658,7 +658,7 @@ public partial class Functions
 		// stext(L) returns the outermost switch string.
 		// n=0 is current switch, n=1 is the switch the current is nested in, etc.
 
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var stack = parser.CurrentState.SwitchStack;
 
 		int depth = 0;

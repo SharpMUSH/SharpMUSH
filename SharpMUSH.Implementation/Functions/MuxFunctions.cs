@@ -81,7 +81,7 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged | FunctionFlags.StripAnsi,
 		ParameterNames = ["object"])]
 	public ValueTask<CallState> DestroyFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> RunCommandFromFunctionAsync(parser, "@DESTROY", [], [parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty]);
+		=> RunCommandFromFunctionAsync(parser, "@DESTROY", [], [parser.CurrentState.ArgumentList[0].Message ?? MarkupText.Empty]);
 
 	/// <summary>
 	/// Runs <paramref name="command"/> as the executor would by typing it, with the function's arguments in
@@ -115,7 +115,7 @@ public partial class Functions
 		ParameterNames = ["string", "characters", "keep"])]
 	public ValueTask<CallState> Strip(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var text = args["0"].Message?.ToPlainText() ?? string.Empty;
 		var remove = args.TryGetValue("1", out var removeArg) ? removeArg.Message?.ToPlainText() ?? string.Empty : string.Empty;
 		// RhostMUSH's third argument keeps the characters instead of removing them.
@@ -148,7 +148,7 @@ public partial class Functions
 		ParameterNames = ["seconds", "numeric"])]
 	public ValueTask<CallState> Moon(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var secondsText = args.TryGetValue("0", out var secondsArg) ? secondsArg.Message?.ToPlainText() ?? string.Empty : string.Empty;
 
 		double seconds;
@@ -246,7 +246,7 @@ public partial class Functions
 	public async ValueTask<CallState> BitType(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var name = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText() ?? string.Empty;
+		var name = parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message?.ToPlainText() ?? string.Empty;
 		if (name.Length == 0) name = "me";
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -311,7 +311,7 @@ public partial class Functions
 		ParameterNames = ["low", "high", "value", "inclusive"])]
 	public ValueTask<CallState> Between(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		if (!ArgHelpers.TryNumber(parser, args["0"].Message?.ToPlainText(), out var low)
 			|| !ArgHelpers.TryNumber(parser, args["1"].Message?.ToPlainText(), out var high)
 			|| !ArgHelpers.TryNumber(parser, args["2"].Message?.ToPlainText(), out var value))
@@ -381,7 +381,7 @@ public partial class Functions
 		ParameterNames = ["number"])]
 	public ValueTask<CallState> Roman(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!ArgHelpers.TryStrictInteger(parser.CurrentState.Arguments["0"].Message?.ToPlainText().Trim(), out int number))
+		if (!ArgHelpers.TryStrictInteger(parser.CurrentState.ArgumentList[0].Message?.ToPlainText().Trim(), out int number))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
@@ -425,10 +425,10 @@ public partial class Functions
 	/// </summary>
 	private static ValueTask<CallState> PadInField(IMUSHCodeParser parser, Func<int, int> leftOf)
 	{
-		var text = parser.CurrentState.Arguments["0"].Message!;
+		var text = parser.CurrentState.ArgumentList[0].Message!;
 		var fill = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, MarkupText.Space);
 
-		if (!ArgHelpers.TryUnsignedInteger(parser, parser.CurrentState.Arguments["1"].Message!.ToPlainText(), out var width))
+		if (!ArgHelpers.TryUnsignedInteger(parser, parser.CurrentState.ArgumentList[1].Message!.ToPlainText(), out var width))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}
@@ -488,7 +488,7 @@ public partial class Functions
 		ParameterNames = ["string"])]
 	public ValueTask<CallState> StringMemory(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(new CallState(
-			Encoding.UTF8.GetByteCount(parser.CurrentState.Arguments["0"].Message?.ToPlainText() ?? string.Empty)));
+			Encoding.UTF8.GetByteCount(parser.CurrentState.ArgumentList[0].Message?.ToPlainText() ?? string.Empty)));
 
 	[SharpFunction(Name = "ledit", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular,
 		ParameterNames = ["list", "find", "replace", "delimiter", "osep"])]
@@ -540,7 +540,7 @@ public partial class Functions
 	private async ValueTask<CallState> CommandAttributesAsync(IMUSHCodeParser parser, Func<SharpAttribute[], CallState> project)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		if (HelperFunctions.SplitDbRefAndOptionalAttr(parser.CurrentState.Arguments["0"].Message?.ToPlainText() ?? string.Empty)
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(parser.CurrentState.ArgumentList[0].Message?.ToPlainText() ?? string.Empty)
 			is not { Object: var name, Attribute: var attributePattern })
 		{
 			return new CallState(ErrorMessages.Returns.NoMatch);
@@ -560,7 +560,7 @@ public partial class Functions
 		ParameterNames = ["room", "depth", "all", "objid"])]
 	public async ValueTask<CallState> ListRooms(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 

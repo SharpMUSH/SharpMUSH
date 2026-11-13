@@ -30,7 +30,7 @@ public partial class Commands
 
 	private async ValueTask<Option<CallState>> RedispatchModifier(IMUSHCodeParser parser, bool noEval)
 	{
-		var command = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message ?? MarkupText.Empty;
+		var command = parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message ?? MarkupText.Empty;
 		if (string.IsNullOrWhiteSpace(command.ToPlainText())) return CallState.Empty;
 		if (parser.CurrentState.CommandModifierDepth >= Configuration.CurrentValue.Limit.MaxDepth)
 		{
@@ -64,7 +64,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		// This will come in as arg[0] = <attr>, arg[1]: <object> and arg[2] as [value]
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		// The attribute name (arg["0"]) is extracted from the raw command token (e.g. &hdr_%q1 obj=val

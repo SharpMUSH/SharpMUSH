@@ -33,7 +33,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Push(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches.ToArray();
 
 		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.NotifyPush)) is PermissionRefusal refused)

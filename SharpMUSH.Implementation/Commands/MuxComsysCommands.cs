@@ -126,7 +126,7 @@ public partial class Commands
 
 	private async ValueTask<CallState> MuxChannelOptionAsync(IMUSHCodeParser parser, string option, MString channel)
 	{
-		var value = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message ?? MarkupText.Empty;
+		var value = parser.CurrentState.ArgumentList.GetValueOrDefault(1)?.Message ?? MarkupText.Empty;
 		return option switch
 		{
 			"PUBLIC" => await MuxChannelLockAsync(parser, channel, "SEE", string.Empty),
@@ -204,7 +204,7 @@ public partial class Commands
 	{
 		if (await MuxCommDisabledAsync(parser) is { } disabled) return disabled;
 
-		var mode = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message.ToPlainText().Trim().ToLowerInvariant();
+		var mode = parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message.ToPlainText().Trim().ToLowerInvariant();
 		if (mode is not ("on" or "off" or "who")) return await MuxUsageAsync(parser, "allcom on|off|who");
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -276,15 +276,15 @@ public partial class Commands
 
 	/// <summary>The command's one argument, or the usage line when it is empty.</summary>
 	private async ValueTask<MuxArgument> MuxChannelArgument(IMUSHCodeParser parser, string usage)
-		=> parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message is { Length: > 0 } channel
+		=> parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message is { Length: > 0 } channel
 			// Cast, or the conditional's type is CallState, which MString converts to.
 			? (MuxArgument)channel
 			: await MuxUsageAsync(parser, usage);
 
 	/// <summary>Both sides of <c>&lt;channel&gt;=&lt;other&gt;</c>, or the usage line when either is empty.</summary>
 	private async ValueTask<MuxArguments> MuxChannelPair(IMUSHCodeParser parser, string usage)
-		=> (parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message,
-				parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message) switch
+		=> (parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message,
+				parser.CurrentState.ArgumentList.GetValueOrDefault(1)?.Message) switch
 		{
 			({ Length: > 0 } channel, { Length: > 0 } other) => new MuxPair(channel, other),
 			_ => await MuxUsageAsync(parser, usage)

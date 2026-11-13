@@ -22,7 +22,7 @@ public partial class Functions
 		ParameterNames = ["string"])]
 	public ValueTask<CallState> Sha1(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var text = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText() ?? string.Empty;
+		var text = parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message?.ToPlainText() ?? string.Empty;
 		return ValueTask.FromResult(new CallState(Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes(text)))));
 	}
 
@@ -36,8 +36,8 @@ public partial class Functions
 		ParameterNames = ["string", "type"])]
 	public ValueTask<CallState> Translate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var text = parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty;
-		var type = parser.CurrentState.Arguments["1"].Message?.ToPlainText() ?? string.Empty;
+		var text = parser.CurrentState.ArgumentList[0].Message ?? MarkupText.Empty;
+		var type = parser.CurrentState.ArgumentList[1].Message?.ToPlainText() ?? string.Empty;
 		if (type is ['1' or 'p', ..]) return ValueTask.FromResult(new CallState(SoftcodeDecomposer.Decompose(text, HouseTheme())));
 
 		var plain = new StringBuilder();

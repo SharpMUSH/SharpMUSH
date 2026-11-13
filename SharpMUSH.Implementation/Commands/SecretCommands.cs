@@ -31,7 +31,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Secret(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var name = (args.GetValueOrDefault("0")?.Message.ToPlainText() ?? "").Trim().ToLowerInvariant();
 		var hasValue = args.ContainsKey("1");

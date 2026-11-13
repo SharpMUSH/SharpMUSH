@@ -47,7 +47,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Map(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 
 		if (args.Count == 0)
@@ -272,7 +272,7 @@ public partial class Commands
 		if (hasDelimit)
 		{
 			var (delimiterParam, extractedList) = ExtractFirstParameter(
-				parser.CurrentState.Arguments["0"].Message,
+				parser.CurrentState.ArgumentList[0].Message,
 				true);
 			delimiter = delimiterParam;
 			listText = extractedList;
@@ -280,20 +280,20 @@ public partial class Commands
 		else if (hasPid)
 		{
 			var (pidParam, extractedList) = ExtractFirstParameter(
-				parser.CurrentState.Arguments["0"].Message,
+				parser.CurrentState.ArgumentList[0].Message,
 				true);
 			notifyPid = pidParam.ToPlainText();
 			listText = extractedList;
 		}
 		else
 		{
-			listText = parser.CurrentState.Arguments["0"].Message;
+			listText = parser.CurrentState.ArgumentList[0].Message;
 		}
 
 		var list = MushText.SplitList(delimiter, listText);
 		// The command keeps its braces through the split (PennMUSH's CMD_T_RS_BRACE), so /then can find the
 		// comma before the command list that runs afterwards; each loses its outer pair here.
-		var command = parser.CurrentState.Arguments["1"].Message;
+		var command = parser.CurrentState.ArgumentList[1].Message;
 		MString? afterwards = null;
 		if (switches.Contains("THEN"))
 		{
@@ -611,15 +611,15 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> IfElse(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
+		var parsedIfElse = await parser.CurrentState.ArgumentList[0].ParsedMessage();
 		var truthy = parsedIfElse!.Truthy(parser);
 		CallState? nestedResult = null;
 
 		if (truthy)
 		{
-			nestedResult = await parser.CommandListParse(parser.CurrentState.Arguments["1"].Message);
+			nestedResult = await parser.CommandListParse(parser.CurrentState.ArgumentList[1].Message);
 		}
-		else if (parser.CurrentState.Arguments.TryGetValue("2", out var arg2))
+		else if (parser.CurrentState.ArgumentList.TryGet(2, out var arg2))
 		{
 			nestedResult = await parser.CommandListParse(arg2.Message);
 		}
@@ -634,7 +634,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 
 		var testString = args["0"].Message.ToPlainText();
@@ -742,7 +742,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Break(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// Inline does nothing.
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 		var nargs = args.Count;
 
@@ -797,7 +797,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 0, MaxArgs = 2, ParameterNames = ["condition"])]
 	public async ValueTask<Option<CallState>> Assert(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 		var nargs = args.Count;
 
@@ -854,7 +854,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Skip(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
+		var parsedIfElse = await parser.CurrentState.ArgumentList[0].ParsedMessage();
 		var truthy = parsedIfElse!.Truthy(parser);
 		// PennMUSH's cmd_ifelse: @skip runs its list only when the condition is false; /ifelse is @if.
 		var branch = parser.CurrentState.Switches.Contains("IFELSE")
@@ -862,7 +862,7 @@ public partial class Commands
 			: truthy ? null : "1";
 		CallState? nestedResult = null;
 
-		if (branch is not null && parser.CurrentState.Arguments.TryGetValue(branch, out var actionList))
+		if (branch is not null && parser.CurrentState.ArgumentList.TryGetValue(branch, out var actionList))
 		{
 			nestedResult = await parser.CommandListParse(actionList.Message);
 		}
@@ -895,8 +895,7 @@ public partial class Commands
 		var (previousCommandInvoker, _) = historyArray[1];
 
 		// Use the parent state's arguments as the initial evaluation context (%0, %1, …).
-		var parentArgs = parser.State.Skip(1).FirstOrDefault()?.Arguments
-			?? new Dictionary<string, CallState>();
+		var parentArgs = parser.State.Skip(1).FirstOrDefault()?.ArgumentList ?? ArgumentList.Empty;
 
 		// Retry arg texts (everything after the condition, i.e. args["1"], args["2"], …).
 		var retryArgTexts = args
@@ -914,7 +913,7 @@ public partial class Commands
 		{
 			// Evaluate condition in the current argument context.
 			var condResult = await parser.With(
-				state => state with { Arguments = currentArgs },
+				state => state with { ArgumentList = currentArgs },
 				innerParser => innerParser.FunctionParse(conditionText));
 
 			hadErrors |= condResult?.HadErrors == true;
@@ -928,7 +927,7 @@ public partial class Commands
 				var capturedIndex = i;
 				var capturedText = retryArgTexts[i];
 				var evaluated = await parser.With(
-					state => state with { Arguments = currentArgs },
+					state => state with { ArgumentList = currentArgs },
 					innerParser => innerParser.FunctionParse(capturedText));
 				hadErrors |= evaluated?.HadErrors == true;
 				newArgValues[capturedIndex.ToString()] = evaluated!;
@@ -940,7 +939,7 @@ public partial class Commands
 			hadErrors |= retryResult.TryGetValue(out var retried) && retried.HadErrors;
 
 			// The new arg values become the context for the next condition check.
-			currentArgs = newArgValues;
+			currentArgs = ArgumentList.From(newArgValues);
 			limit--;
 		}
 
@@ -952,7 +951,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Include(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 
 		var attributePath = args.TryGetValue("0", out var target) ? target.Message.ToPlainText() : null;

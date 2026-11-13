@@ -159,7 +159,7 @@ public partial class Functions
 	private static CallState Refused => new(ErrorMessages.Returns.PermissionDenied);
 
 	private string Arg(IMUSHCodeParser parser, string index)
-		=> parser.CurrentState.Arguments[index].Message.ToPlainText();
+		=> parser.CurrentState.ArgumentList[index].Message.ToPlainText();
 
 	private string Render(IEnumerable<AnySharpContent> contents)
 		=> string.Join(" ", contents.Select(x => x.Object().DBRef.ToString()));
@@ -238,7 +238,7 @@ public partial class Functions
 	/// </remarks>
 	private async ValueTask<CallState> WalkContentsWithFilter(IMUSHCodeParser parser)
 	{
-		if (!parser.CurrentState.Arguments.ContainsKey("1"))
+		if (!parser.CurrentState.ArgumentList.Contains(1))
 		{
 			return await WalkList(parser, WalkType.Contents, skipDark: false);
 		}

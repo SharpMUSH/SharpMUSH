@@ -16,7 +16,7 @@ public partial class Functions
 {
 	private ValueTask<CallState> RunEmitFunction(IMUSHCodeParser parser, EmitScope scope, bool noSpoof)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var messageIndex = scope is EmitScope.Immediate or EmitScope.Outermost ? 0 : 1;
 		return CommunicationService.EmitAsync(parser, EmitHelpers.Create(scope,
 			messageIndex == 0 ? "" : args["0"].Message.ToPlainText(), args[messageIndex.ToString()].Message,
@@ -45,7 +45,7 @@ public partial class Functions
 		var inBetweenArgs = orderedArgs.Skip(3).Take(MaxFunctionArguments)
 			.Select((kvp, idx) => new KeyValuePair<string, CallState>(idx.ToString(), kvp.Value));
 
-		var switchesText = parser.CurrentState.Arguments.TryGetValue("13", out var switchArg)
+		var switchesText = parser.CurrentState.ArgumentList.TryGet(13, out var switchArg)
 			? (await switchArg.ParsedMessage())?.ToPlainText() ?? ""
 			: "";
 		var switchesList = switchesText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -126,7 +126,7 @@ public partial class Functions
 		// is e_range, rather than either quietly becoming a single bell. beep() is no argument at all
 		// (src/parse.c:2974-2978).
 		var count = 1;
-		if (parser.CurrentState.Arguments.TryGetValue("0", out var arg) && arg.Message.ToPlainText() is { Length: > 0 } text)
+		if (parser.CurrentState.ArgumentList.TryGet(0, out var arg) && arg.Message.ToPlainText() is { Length: > 0 } text)
 		{
 			if (!ArgHelpers.TryInteger(parser, text, out count))
 			{

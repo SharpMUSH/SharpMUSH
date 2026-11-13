@@ -27,7 +27,7 @@ public partial class Functions
 		ParameterNames = ["page", "field", "locale"])]
 	public async ValueTask<CallState> wiki(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var target = args["0"].Message.ToPlainText();
 		var field = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "text").ToPlainText().Trim().ToLowerInvariant();
 
@@ -90,7 +90,7 @@ public partial class Functions
 		ParameterNames = ["namespace"])]
 	public async ValueTask<CallState> wikilist(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		WikiNamespace? ns = null;
 		if (args.TryGetValue("0", out var nsArg))
 		{
@@ -126,7 +126,7 @@ public partial class Functions
 		ParameterNames = ["category"])]
 	public async ValueTask<CallState> wikicategory(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var name = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+		var name = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
 		var key = WikiHelpers.CategoryKey(name.StartsWith("category:", StringComparison.OrdinalIgnoreCase) ? name["category:".Length..] : name);
 		if (key.Length == 0)
 		{
@@ -152,7 +152,7 @@ public partial class Functions
 		ParameterNames = ["text"])]
 	public async ValueTask<CallState> wikisearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var needle = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
+		var needle = parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim();
 		if (needle.Length == 0)
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "WIKISEARCH"));
@@ -184,7 +184,7 @@ public partial class Functions
 	public async ValueTask<CallState> wikirecent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var count = 10;
-		if (parser.CurrentState.Arguments.TryGetValue("0", out var countArg))
+		if (parser.CurrentState.ArgumentList.TryGet(0, out var countArg))
 		{
 			var countText = countArg.Message.ToPlainText().Trim();
 			if (countText.Length > 0 && (!int.TryParse(countText, out count) || count < 1 || count > 50))
@@ -212,7 +212,7 @@ public partial class Functions
 		ParameterNames = ["page", "property", "delimiter"])]
 	public async ValueTask<CallState> wikifact(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
 		var visibility = await WikiCommandHelper.SoftcodeVisibilityAsync(parser, await parser.CurrentState.KnownExecutorObject(Mediator));
 		var (ns, slug) = WikiHelpers.ResolveTitle(args["0"].Message.ToPlainText());
@@ -265,7 +265,7 @@ public partial class Functions
 		ParameterNames = ["page", "action", "player"])]
 	public async ValueTask<CallState> wikiaccess(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (!Enum.TryParse<WikiAction>(args["1"].Message.ToPlainText().Trim(), ignoreCase: true, out var action)
 			|| action == WikiAction.Create

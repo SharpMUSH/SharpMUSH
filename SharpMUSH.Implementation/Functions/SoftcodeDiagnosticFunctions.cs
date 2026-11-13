@@ -16,10 +16,10 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object/attribute", "type"])]
 	public async ValueTask<CallState> SyntaxDiagnostics(IMUSHCodeParser parser, SharpFunctionAttribute _)
 	{
-		if (HelperFunctions.SplitDbRefAndOptionalAttr(parser.CurrentState.Arguments["0"].Message.ToPlainText())
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(parser.CurrentState.ArgumentList[0].Message.ToPlainText())
 			is not { Object: var objectName, Attribute: { } attributeName })
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "SYNTAXDIAGNOSTICS"));
-		var requested = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message.ToPlainText().Trim();
+		var requested = parser.CurrentState.ArgumentList.GetValueOrDefault(1)?.Message.ToPlainText().Trim();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, objectName,
 			LocateFlags.All, async target =>

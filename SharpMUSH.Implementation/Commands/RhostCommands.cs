@@ -28,7 +28,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var quiet = parser.CurrentState.Switches.Contains("QUIET");
-		var name = parser.CurrentState.Arguments.TryGetValue("0", out var argument)
+		var name = parser.CurrentState.ArgumentList.TryGet(0, out var argument)
 			? argument.Message!.ToPlainText().Trim().ToUpperInvariant()
 			: string.Empty;
 

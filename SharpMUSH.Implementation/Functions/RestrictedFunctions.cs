@@ -21,7 +21,7 @@ public partial class Functions
 		ParameterNames = ["allowlist", "expression", "literal inputs..."])]
 	public async ValueTask<CallState> RestrictedExpression(IMUSHCodeParser parser, SharpFunctionAttribute _)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		if (args["0"].Message.Length > 1024) return new CallState(EvaluationRestrictions.Error);
 		var allowlist = args["0"].Message.ToPlainText();
 		var operations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

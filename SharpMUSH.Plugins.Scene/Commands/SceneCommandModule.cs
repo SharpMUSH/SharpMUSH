@@ -43,8 +43,8 @@ public static class SceneCommandModule
 		var notifyService = parser.ServiceProvider.GetRequiredService<INotifyService>();
 		var sceneService = parser.ServiceProvider.GetRequiredService<ISceneService>();
 
-		parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
-		parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
+		parser.CurrentState.ArgumentList.TryGet(0, out var arg0CallState);
+		parser.CurrentState.ArgumentList.TryGet(1, out var arg1CallState);
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 

@@ -21,7 +21,7 @@ public partial class Functions
 		ParameterNames = ["player", "field"])]
 	public async ValueTask<CallState> Account(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var field = args.TryGetValue("1", out var given) ? given.Message.ToPlainText().Trim().ToLowerInvariant() : "id";
 		if (field is not ("id" or "name"))
 			return new CallState("#-1 FIELD MUST BE ID OR NAME");
@@ -38,7 +38,7 @@ public partial class Functions
 	[SharpFunction(Name = "accountchars", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["player"])]
 	public async ValueTask<CallState> AccountChars(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await WithCharacterAccount(parser, parser.CurrentState.Arguments["0"].Message.ToPlainText(), true,
+		=> await WithCharacterAccount(parser, parser.CurrentState.ArgumentList[0].Message.ToPlainText(), true,
 			async (holder, player) => holder is { Id: { } id }
 				? new CallState(string.Join(' ', (await AccountService.GetCharactersAsync(id, ExecutionBudget.CurrentToken))
 					.OrderBy(character => character.Object.Key)

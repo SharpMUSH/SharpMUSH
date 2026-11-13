@@ -32,7 +32,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.SqlNotEnabled);
 		}
 
-		if (parser.CurrentState.Arguments.Count == 0 || !parser.CurrentState.Arguments.TryGetValue("0", out var queryArg))
+		if (parser.CurrentState.ArgumentList.Count == 0 || !parser.CurrentState.ArgumentList.TryGet(0, out var queryArg))
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Returns.NoQuerySpecified, executor);
 			return new CallState(ErrorMessages.Returns.NoQuerySpecified);
@@ -120,9 +120,9 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.SqlNotEnabled);
 		}
 
-		if (parser.CurrentState.Arguments.Count < 2 ||
-				!parser.CurrentState.Arguments.TryGetValue("0", out var objAttrArg) ||
-				!parser.CurrentState.Arguments.TryGetValue("1", out var queryArg))
+		if (parser.CurrentState.ArgumentList.Count < 2 ||
+				!parser.CurrentState.ArgumentList.TryGet(0, out var objAttrArg) ||
+				!parser.CurrentState.ArgumentList.TryGet(1, out var queryArg))
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Returns.InvalidArguments, executor);
 			return new CallState(ErrorMessages.Returns.InvalidArguments);

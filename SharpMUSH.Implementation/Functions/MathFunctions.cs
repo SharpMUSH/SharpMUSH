@@ -207,7 +207,7 @@ public partial class Functions
 	[SharpFunction(Name = "decode64", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["encoded-string"])]
 	public ValueTask<CallState> Decode64(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var input = parser.CurrentState.Arguments["0"].Message;
+		var input = parser.CurrentState.ArgumentList[0].Message;
 		var inputText = (input ?? MarkupText.Empty).ToPlainText();
 
 		try
@@ -298,7 +298,7 @@ public partial class Functions
 	[SharpFunction(Name = "encode64", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Encode64(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var input = parser.CurrentState.Arguments["0"].Message;
+		var input = parser.CurrentState.ArgumentList[0].Message;
 		var inputText = (input ?? MarkupText.Empty).ToPlainText();
 		var bytes = System.Text.Encoding.UTF8.GetBytes(inputText);
 		var encoded = Convert.ToBase64String(bytes);
@@ -791,7 +791,7 @@ public partial class Functions
 	/// </summary>
 	[SharpFunction(Name = "trunc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number"])]
 	public ValueTask<CallState> Truncate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(LeadingInteger(parser.CurrentState.Arguments["0"].Message.ToPlainText()));
+		=> ValueTask.FromResult<CallState>(LeadingInteger(parser.CurrentState.ArgumentList[0].Message.ToPlainText()));
 
 	private static long LeadingInteger(string text)
 	{
@@ -812,8 +812,8 @@ public partial class Functions
 	{
 		var numbers = NumericEvaluation.For(parser);
 		await ValueTask.CompletedTask;
-		var angleArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
+		var angleArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var angleType = parser.CurrentState.ArgumentList.TryGet(1, out var value)
 			? value.Message.ToPlainText()
 			: null;
 
@@ -830,8 +830,8 @@ public partial class Functions
 	{
 		var numbers = NumericEvaluation.For(parser);
 		await ValueTask.CompletedTask;
-		var angleArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
+		var angleArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var angleType = parser.CurrentState.ArgumentList.TryGet(1, out var value)
 			? value.Message.ToPlainText()
 			: null;
 
@@ -848,8 +848,8 @@ public partial class Functions
 	{
 		var numbers = NumericEvaluation.For(parser);
 		await ValueTask.CompletedTask;
-		var angleArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
+		var angleArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var angleType = parser.CurrentState.ArgumentList.TryGet(1, out var value)
 			? value.Message.ToPlainText()
 			: null;
 
@@ -888,8 +888,8 @@ public partial class Functions
 	{
 		var numbers = NumericEvaluation.For(parser);
 		await ValueTask.CompletedTask;
-		var angleArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
+		var angleArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var angleType = parser.CurrentState.ArgumentList.TryGet(1, out var value)
 			? value.Message.ToPlainText()
 			: null;
 
@@ -938,7 +938,7 @@ public partial class Functions
 	public ValueTask<CallState> E(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var numbers = NumericEvaluation.For(parser);
-		var arguments = parser.CurrentState.Arguments;
+		var arguments = parser.CurrentState.ArgumentList;
 		var arg1 = arguments.TryGetValue("0", out var value) ? value.Message.ToPlainText() : null;
 
 		return ValueTask.FromResult<CallState>(new(numbers.TryDouble(string.IsNullOrEmpty(arg1) ? "1" : arg1, out var dec)
@@ -1098,8 +1098,8 @@ public partial class Functions
 	{
 		var numbers = NumericEvaluation.For(parser);
 		await ValueTask.CompletedTask;
-		var angleArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
+		var angleArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var angleType = parser.CurrentState.ArgumentList.TryGet(1, out var value)
 			? value.Message.ToPlainText()
 			: null;
 
@@ -1158,8 +1158,8 @@ public partial class Functions
 	{
 		var numbers = NumericEvaluation.For(parser);
 		await ValueTask.CompletedTask;
-		var angleArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
+		var angleArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var angleType = parser.CurrentState.ArgumentList.TryGet(1, out var value)
 			? value.Message.ToPlainText()
 			: null;
 
@@ -1374,7 +1374,7 @@ public partial class Functions
 	[SharpFunction(Name = "vdim", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector", "delimiter"])]
 	public ValueTask<CallState> vdim(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(new CallState(
-			MushText.SplitList(ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, MarkupText.Space), parser.CurrentState.Arguments["0"].Message).Length.ToString()
+			MushText.SplitList(ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, MarkupText.Space), parser.CurrentState.ArgumentList[0].Message).Length.ToString()
 			));
 
 	private CallState AngleTypeMath(string? angleType, double angle, Func<double, double> func)
@@ -1426,8 +1426,8 @@ public partial class Functions
 		// RNUM is deprecated - use locate() instead
 		// This implements basic functionality for backwards compatibility
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var containerArg = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var objectArg = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var containerArg = parser.CurrentState.ArgumentList[0].Message.ToPlainText();
+		var objectArg = parser.CurrentState.ArgumentList[1].Message.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, containerArg, All,
@@ -1468,7 +1468,7 @@ public partial class Functions
 	[SharpFunction(Name = "die", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> Die(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		// fun_die (src/funmisc.c:834-866): both numbers as is_uinteger reads them, or e_uints; 1 to 700
 		// dice, or NUMBER OUT OF RANGE; and the third argument is a boolean asking for every roll
@@ -1508,7 +1508,7 @@ public partial class Functions
 		ParameterNames = ["formula", "data", "options"])]
 	public async ValueTask<CallState> Roll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var formula = args["0"].Message.ToPlainText();
 		var data = args.TryGetValue("1", out var dataArg) ? dataArg.Message.ToPlainText().Trim() : string.Empty;
 		var options = args.TryGetValue("2", out var optionsArg) ? optionsArg.Message.ToPlainText().Trim() : string.Empty;
@@ -1550,7 +1550,7 @@ public partial class Functions
 		ParameterNames = ["id"])]
 	public async ValueTask<CallState> RollInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var text = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim().TrimStart('#');
+		var text = parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim().TrimStart('#');
 		if (!long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var id))
 		{
 			return new CallState(ErrorMessages.Returns.NoSuchRoll);
@@ -1581,7 +1581,7 @@ public partial class Functions
 	[SharpFunction(Name = "rand", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["low", "high"])]
 	public ValueTask<CallState> Rand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 
 		if (!args.TryGetValue("0", out var arg0) || string.IsNullOrWhiteSpace(arg0.Message.ToPlainText()))
 		{

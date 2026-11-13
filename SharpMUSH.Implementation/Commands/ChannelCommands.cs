@@ -45,8 +45,8 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (!await executor.Can(PortalPermission.PlayerChat))
 			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerChat));
-		var arg0 = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message;
-		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message;
+		var arg0 = parser.CurrentState.ArgumentList.GetValueOrDefault(0)?.Message;
+		var arg1 = parser.CurrentState.ArgumentList.GetValueOrDefault(1)?.Message;
 
 		if (arg0 is null || arg1 is null)
 		{
@@ -66,8 +66,8 @@ public partial class Commands
 	[SharpCommand(Name = "@CHAT", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
 	public async ValueTask<Option<CallState>> Chat(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
-		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
+		var arg0Check = parser.CurrentState.ArgumentList.TryGet(0, out var arg0CallState);
+		var arg1Check = parser.CurrentState.ArgumentList.TryGet(1, out var arg1CallState);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (!await executor.Can(PortalPermission.PlayerChat))
 			return await NotifyService.PermissionDenied(executor, PermissionRefusal.Needs(PortalPermission.PlayerChat));
@@ -166,8 +166,8 @@ public partial class Commands
 			return disabled;
 		}
 
-		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
-		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
+		var arg0Check = parser.CurrentState.ArgumentList.TryGet(0, out var arg0CallState);
+		var arg1Check = parser.CurrentState.ArgumentList.TryGet(1, out var arg1CallState);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (!arg0Check || !arg1Check)
@@ -242,7 +242,7 @@ public partial class Commands
 			return disabled;
 		}
 
-		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
+		var arg0Check = parser.CurrentState.ArgumentList.TryGet(0, out var arg0CallState);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (!arg0Check)
@@ -342,8 +342,8 @@ public partial class Commands
 			return disabled;
 		}
 
-		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
-		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
+		var arg0Check = parser.CurrentState.ArgumentList.TryGet(0, out var arg0CallState);
+		var arg1Check = parser.CurrentState.ArgumentList.TryGet(1, out var arg1CallState);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (!arg0Check || !arg1Check)
@@ -481,7 +481,7 @@ public partial class Commands
 		], Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSArgs, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "options..."])]
 	public async ValueTask<Option<CallState>> Channel(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		// Without player.chat a player can still look at channels and stop hearing them, but not join or run one.
@@ -593,7 +593,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var args = parser.CurrentState.ArgumentList;
 		var switches = parser.CurrentState.Switches;
 
 		var channelName = args["0"].Message;

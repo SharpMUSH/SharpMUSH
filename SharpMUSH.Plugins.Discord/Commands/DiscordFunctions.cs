@@ -29,7 +29,7 @@ public static class DiscordFunctions
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 
-		var argument = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
+		var argument = parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim();
 		if (!ulong.TryParse(argument, NumberStyles.None, CultureInfo.InvariantCulture, out var channelId))
 		{
 			return new CallState("#-1 INVALID CHANNEL ID");

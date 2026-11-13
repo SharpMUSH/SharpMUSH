@@ -73,4 +73,86 @@ public class ParserStateArgumentsTests
 			.IsEquivalentTo(["0=0", "1=1"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(ordered.Skip(1).Single().Key).IsEqualTo("1");
 	}
+
+	private static ArgumentList Positional(params string[] values)
+		=> ArgumentList.Of([.. values.Select(value => new CallState(value))]);
+
+	[Test]
+	public async ValueTask APositionalListReadsAsTheDictionaryWould()
+	{
+		var list = Positional("a", "b", "c");
+		var dictionary = list.AsDictionary();
+
+		await Assert.That(list.IsPositional).IsTrue();
+		await Assert.That(list.Count).IsEqualTo(dictionary.Count);
+		await Assert.That(list.Keys).IsEquivalentTo(dictionary.Keys, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		foreach (var key in new[] { "0", "1", "2", "3", "00", "01", " 1", "1 ", "+1", "-1", "name", "", "99999999999" })
+		{
+			await Assert.That(list.ContainsKey(key)).IsEqualTo(dictionary.ContainsKey(key));
+		}
+
+		await Assert.That(list[1].Message.ToPlainText()).IsEqualTo("b");
+		await Assert.That(list["2"].Message.ToPlainText()).IsEqualTo("c");
+		await Assert.That(list.TryGet(3, out _)).IsFalse();
+		await Assert.That(list.TryGet(-1, out _)).IsFalse();
+		await Assert.That(list.GetValueOrDefault(5)).IsNull();
+		await Assert.That(() => list[3]).Throws<KeyNotFoundException>();
+	}
+
+	[Test]
+	public async ValueTask TheDictionaryIsBuiltOnceAndKept()
+	{
+		var state = ParserState.Empty with { ArgumentList = Positional("a") };
+
+		await Assert.That(state.Arguments).IsSameReferenceAs(state.Arguments);
+		await Assert.That((state with { Function = "x" }).Arguments).IsSameReferenceAs(state.Arguments);
+	}
+
+	[Test]
+	public async ValueTask SettingTheDictionaryKeepsThatInstance()
+	{
+		var bound = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase)
+		{
+			["0"] = new("a"),
+			["Name"] = new("b")
+		};
+		var state = ParserState.Empty with { Arguments = bound };
+
+		await Assert.That(state.Arguments).IsSameReferenceAs(bound);
+		await Assert.That(state.ArgumentList.IsPositional).IsFalse();
+		await Assert.That(state.ArgumentList.Count).IsEqualTo(2);
+		await Assert.That(state.ArgumentList["name"].Message.ToPlainText()).IsEqualTo("b");
+		await Assert.That(state.ArgumentList[0].Message.ToPlainText()).IsEqualTo("a");
+		await Assert.That(state.ArgumentsOrdered.Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async ValueTask APositionalListOrdersWithoutADictionary()
+	{
+		var list = Positional("a", "b");
+		var ordered = (ParserState.Empty with { ArgumentList = list }).ArgumentsOrdered;
+
+		await Assert.That(ordered.Values.Select(value => value.Message.ToPlainText()))
+			.IsEquivalentTo(["a", "b"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(list.Ordered).IsSameReferenceAs(ordered);
+	}
+
+	[Test]
+	public async ValueTask SelectKeepsTheForm()
+	{
+		var mapped = Positional("a", "b").Select(value => new CallState(value.Message.ToPlainText().ToUpperInvariant()));
+		await Assert.That(mapped.IsPositional).IsTrue();
+		await Assert.That(mapped[1].Message.ToPlainText()).IsEqualTo("B");
+
+		var named = ArgumentList.From(new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase) { ["X"] = new("a") })
+			.Select(value => value);
+		await Assert.That(named.ContainsKey("x")).IsTrue();
+	}
+
+	[Test]
+	public async ValueTask SuppliedKeysOfAPositionalListAreItsPositions()
+	{
+		var keys = AttributeArgumentEnvironment.SuppliedKeys(Positional("a", "b"));
+		await Assert.That(keys.OrderBy(key => key)).IsEquivalentTo(["0", "1"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
 }

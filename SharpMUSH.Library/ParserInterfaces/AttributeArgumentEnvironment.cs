@@ -19,6 +19,14 @@ public sealed class AttributeArgumentEnvironment : Dictionary<string, CallState>
 
 	/// <summary>Capture keys without reading or evaluating any argument value.</summary>
 	public static ImmutableHashSet<string> SuppliedKeys(IReadOnlyDictionary<string, CallState> arguments)
+		=> arguments switch
+		{
+			ArgumentList { IsPositional: true, Count: < 65 } list => PositionalKeys[list.Count],
+			ArgumentList list => SuppliedKeysOf(list.AsDictionary()),
+			_ => SuppliedKeysOf(arguments)
+		};
+
+	private static ImmutableHashSet<string> SuppliedKeysOf(IReadOnlyDictionary<string, CallState> arguments)
 		=> arguments is not AttributeArgumentEnvironment && IsPositional(arguments)
 			? PositionalKeys[arguments.Count]
 			: arguments.Keys.Where(key => arguments is not AttributeArgumentEnvironment environment || !environment.GeneratedKeys.Contains(key))

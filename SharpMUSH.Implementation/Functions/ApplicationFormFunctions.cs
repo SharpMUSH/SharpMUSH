@@ -13,8 +13,8 @@ public partial class Functions
 	{
 		try
 		{
-			using var declaration = JsonDocument.Parse(parser.CurrentState.Arguments["0"].Message.ToPlainText());
-			using var fields = JsonDocument.Parse(parser.CurrentState.Arguments["1"].Message.ToPlainText());
+			using var declaration = JsonDocument.Parse(parser.CurrentState.ArgumentList[0].Message.ToPlainText());
+			using var fields = JsonDocument.Parse(parser.CurrentState.ArgumentList[1].Message.ToPlainText());
 			return ValueTask.FromResult<CallState>(ApplicationDraftService.ValidateFields(declaration.RootElement, fields.RootElement).GetRawText());
 		}
 		catch (JsonException)
