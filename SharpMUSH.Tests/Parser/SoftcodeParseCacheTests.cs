@@ -80,12 +80,9 @@ public class SoftcodeParseCacheTests
 		await Assert.That(cache.TryGet(KeyFor(body), out _)).IsFalse();
 	}
 
-	/// <summary>
-	/// Attribute text a typed command runs is not part of the line, and is still kept: under the attribute and its
-	/// modification time, not under its text.
-	/// </summary>
+	/// <summary>Attribute text a typed command runs is not part of the line, and is still kept.</summary>
 	[Test]
-	public async Task AttributeTextATypedLineRuns_IsKeptUnderItsAttribute()
+	public async Task AttributeTextATypedLineRuns_IsKept()
 	{
 		var cache = Factory.Services.GetRequiredService<SoftcodeParseCache>();
 		var attribute = TestIsolationHelpers.GenerateUniqueName("PARSED").ToUpperInvariant();
@@ -95,44 +92,63 @@ public class SoftcodeParseCacheTests
 		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"&{attribute} me={body}"));
 		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"think u(me/{attribute},1)"));
 
-		await Assert.That(cache.TryGet(await SourceKeyFor(attribute), body, out _)).IsTrue();
-		await Assert.That(cache.TryGet(KeyFor(body), out _)).IsFalse();
+		// Short enough to key on its text, so the same body on other objects shares the tree.
+		await Assert.That(cache.TryGet(KeyFor(body), out _)).IsTrue();
+		await Assert.That(cache.TryGet(await SourceKeyFor(attribute), body, out _)).IsFalse();
 	}
 
-	/// <summary>A body too long to key on its text is parsed once all the same.</summary>
+	/// <summary>A u() body too long to key on its text is kept under its attribute and modification time.</summary>
 	[Test]
-	public async Task LongAttributeBody_IsParsedOnce()
+	public async Task LongAttributeBody_IsKeptUnderItsAttribute()
 	{
 		var cache = Factory.Services.GetRequiredService<SoftcodeParseCache>();
 		var attribute = TestIsolationHelpers.GenerateUniqueName("LONGBODY").ToUpperInvariant();
-		var body = string.Concat(Enumerable.Repeat("[add(%0,1)]", SoftcodeParseCache.MaxTextLength / 10));
-		await Assert.That(body.Length).IsGreaterThan(SoftcodeParseCache.MaxTextLength);
+		var body = LongBody("[add(%0,1)]");
 		await SetOnOneAsync(attribute, body);
 
-		var first = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"u(#1/{attribute},1)"));
-		await Assert.That(cache.TryGet(await SourceKeyFor(attribute), body, out var entry)).IsTrue();
+		var result = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"u(#1/{attribute},1)"));
 
-		var second = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"u(#1/{attribute},1)"));
-		await Assert.That(cache.TryGet(await SourceKeyFor(attribute), body, out var again)).IsTrue();
-		await Assert.That(again).IsSameReferenceAs(entry);
-		await Assert.That(second!.Message.ToPlainText()).IsEqualTo(first!.Message.ToPlainText());
-		await Assert.That(second.Message.ToPlainText()).StartsWith("222");
+		await Assert.That(cache.TryGet(await SourceKeyFor(attribute), body, out _)).IsTrue();
+		await Assert.That(result!.Message.ToPlainText()).IsEqualTo(new string('2', body.Length / "[add(%0,1)]".Length));
+	}
+
+	/// <summary>A $-command's action list too long to key on its text is kept the same way.</summary>
+	[Test]
+	public async Task LongCommandActionList_IsKeptUnderItsAttribute()
+	{
+		var cache = Factory.Services.GetRequiredService<SoftcodeParseCache>();
+		var attribute = TestIsolationHelpers.GenerateUniqueName("LONGCMD").ToUpperInvariant();
+		var command = TestIsolationHelpers.GenerateUniqueName("+longcmd").ToLowerInvariant();
+		var actionList = LongBody("@@ [add(1,1)];") + "@@ done";
+		await SetOnOneAsync(attribute, $"${command}:{actionList}");
+
+		await Factory.CommandParser.CommandParse(1, Factory.Services.GetRequiredService<IConnectionService>(),
+			MarkupText.Plain(command));
+
+		await Assert.That(cache.TryGet(await SourceKeyFor(attribute, "CommandListParse"), actionList, out _)).IsTrue();
 	}
 
 	/// <summary>A new value is a new modification time, so the old tree is never run for it.</summary>
 	[Test]
 	public async Task RewrittenAttribute_RunsItsNewValue()
 	{
+		var cache = Factory.Services.GetRequiredService<SoftcodeParseCache>();
 		var attribute = TestIsolationHelpers.GenerateUniqueName("REWRITTEN").ToUpperInvariant();
 		var call = MarkupText.Plain($"u(#1/{attribute},5)");
+		var added = LongBody("[add(%0,1)]");
+		var multiplied = LongBody("[mul(%0,3)]");
 
-		await SetOnOneAsync(attribute, "[add(%0,1)]");
+		await SetOnOneAsync(attribute, added);
 		var before = await Factory.FunctionParser.FunctionParse(call);
-		await SetOnOneAsync(attribute, "[mul(%0,3)]");
+		var firstKey = await SourceKeyFor(attribute);
+		await SetOnOneAsync(attribute, multiplied);
 		var after = await Factory.FunctionParser.FunctionParse(call);
+		var secondKey = await SourceKeyFor(attribute);
 
-		await Assert.That(before!.Message.ToPlainText()).IsEqualTo("6");
-		await Assert.That(after!.Message.ToPlainText()).IsEqualTo("15");
+		await Assert.That(secondKey.Modified).IsGreaterThan(firstKey.Modified);
+		await Assert.That(cache.TryGet(secondKey, multiplied, out _)).IsTrue();
+		await Assert.That(before!.Message.ToPlainText()).StartsWith("666");
+		await Assert.That(after!.Message.ToPlainText()).StartsWith("151515");
 	}
 
 	/// <summary>
@@ -183,20 +199,25 @@ public class SoftcodeParseCacheTests
 		await Assert.That(cache.TryGet(overflow, out _)).IsTrue();
 	}
 
-	private SoftcodeParseCache.SourceKey SourceKey(DBRef obj, string attribute, long modified)
+	/// <summary><paramref name="unit"/> repeated past the longest text keyed on its text.</summary>
+	private static string LongBody(string unit)
+		=> string.Concat(Enumerable.Repeat(unit, SoftcodeParseCache.MaxTextLength / unit.Length + 1));
+
+	private SoftcodeParseCache.SourceKey SourceKey(DBRef obj, string attribute, long modified,
+		string entryPoint = "FunctionParse")
 	{
 		var options = Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue;
-		return new SoftcodeParseCache.SourceKey(obj, attribute, modified, "FunctionParse", false,
+		return new SoftcodeParseCache.SourceKey(obj, attribute, modified, entryPoint, false,
 			options.Compatibility.ParenGroups, options.Debug.ParserPredictionMode);
 	}
 
-	/// <summary>The key a u() of <paramref name="attribute"/> on #1 keeps its tree under.</summary>
-	private async Task<SoftcodeParseCache.SourceKey> SourceKeyFor(string attribute)
+	/// <summary>The key a parse of <paramref name="attribute"/>'s text on #1 keeps its tree under.</summary>
+	private async Task<SoftcodeParseCache.SourceKey> SourceKeyFor(string attribute, string entryPoint = "FunctionParse")
 	{
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var one = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>().Object().DBRef;
 		var stored = await mediator.CreateStream(new GetAttributeQuery(one, [attribute])).LastAsync();
-		return SourceKey(one, attribute, stored.ModifiedTime!.Value);
+		return SourceKey(one, attribute, stored.ModifiedTime!.Value, entryPoint);
 	}
 
 	private async Task SetOnOneAsync(string attribute, string value)

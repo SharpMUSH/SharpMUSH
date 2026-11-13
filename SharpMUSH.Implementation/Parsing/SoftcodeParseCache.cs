@@ -17,8 +17,8 @@ namespace SharpMUSH.Implementation.Parsing;
 /// once built: the visitor walks them and reads token text from the input they hold, so one tree can
 /// be visited by any number of evaluations at once.
 /// <para>
-/// Stored attribute text (<see cref="AttributeBody"/>) is keyed instead on the attribute and its modification
-/// time, which every write of it moves forward, so a body of any length is found without hashing it. That key
+/// Stored attribute text (<see cref="AttributeBody"/>) longer than <see cref="MaxTextLength"/> is keyed instead on the
+/// attribute and its modification time, which every write of it moves forward, so it is found without hashing it. That key
 /// alone is not proof: an attribute deleted and set again, or an object's dbref reused, can bring back a time
 /// another value had. A hit is therefore checked against the text it was parsed from, an ordinal compare that
 /// costs far less than hashing (it stops at the first difference, and is vectorised when the two agree).
@@ -31,8 +31,8 @@ namespace SharpMUSH.Implementation.Parsing;
 public sealed class SoftcodeParseCache
 {
 	/// <summary>
-	/// The longest text kept. Longer text is parsed each time, and not looked up: hashing it would cost
-	/// the time it was looked up to save.
+	/// The longest text kept under its text. Longer text is not looked up by it: hashing it would cost the time it
+	/// was looked up to save. Longer stored attribute text is kept under its <see cref="SourceKey"/>.
 	/// </summary>
 	public const int MaxTextLength = 4096;
 
@@ -110,13 +110,13 @@ public sealed class SoftcodeParseCache
 
 		MakeRoom(text.Length);
 		var sourced = new SourcedEntry(text, entry);
-		if (_sourced.TryAdd(key, sourced))
+		var replaced = 0;
+		_sourced.AddOrUpdate(key, sourced, (_, previous) =>
 		{
-			Interlocked.Add(ref _characters, text.Length);
-			return;
-		}
-
-		_sourced[key] = sourced;
+			replaced = previous.Text.Length;
+			return sourced;
+		});
+		Interlocked.Add(ref _characters, text.Length - replaced);
 	}
 
 	/// <summary>Starts again empty when <paramref name="length"/> more characters would pass the capacity.</summary>

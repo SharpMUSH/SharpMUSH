@@ -305,8 +305,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// repeated, and some carry a password (CONNECT, @password) that must not outlive the command.
 		// Attribute text a typed command runs (look's formats, u()) is not part of the line, so it is
 		// still kept. A tracing parse is never shared.
-		// Stored attribute text the frame runs is found by the attribute's version rather than by hashing
-		// it, so a body longer than a text key allows is kept as well.
+		// Stored attribute text the frame runs that is too long to key on is found by the attribute's version
+		// instead, which needs no hash of it. Shorter text keeps the text key, so the same body on many objects
+		// (inherited from a parent, or @clone'd) shares one tree.
 		var options = Configuration.CurrentValue;
 		var cache = options.Debug.DebugSharpParser
 			|| methodName is not (nameof(FunctionParse) or nameof(CommandListParse) or nameof(PipedCommandParse) or nameof(CommandCommaArgsParse)
@@ -314,7 +315,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			? null
 			: Services.ParseCache;
 		var source = parser.State.IsEmpty ? null : parser.CurrentState.AttributeBody;
-		SoftcodeParseCache.SourceKey? sourceKey = cache is not null && source is not null && ReferenceEquals(source.Text, text)
+		SoftcodeParseCache.SourceKey? sourceKey = cache is not null && source is not null
+			&& plainText.Length > SoftcodeParseCache.MaxTextLength && ReferenceEquals(source.Text, text)
 			? new(source.Object, source.Attribute, source.Modified, methodName, lenient,
 				options.Compatibility.ParenGroups, options.Debug.ParserPredictionMode)
 			: null;
