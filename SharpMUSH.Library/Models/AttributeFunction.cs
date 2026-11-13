@@ -29,6 +29,12 @@ public readonly record struct AttributeFunction(AnySharpObject Owner, string Nam
 	public LambdaEvaluation? Lambda { get; init; }
 
 	/// <summary>
+	/// The attribute's modification time (<see cref="SharpAttribute.ModifiedTime"/>), which with <see cref="Owner"/>
+	/// and <see cref="Name"/> finds <see cref="Code"/>'s parse again. Null when it has none.
+	/// </summary>
+	public long? Modified { get; init; }
+
+	/// <summary>
 	/// The <c>#lambda</c> <paramref name="specifier"/> names (<c>#lambda/&lt;code&gt;</c>, everything after the first
 	/// <c>/</c> its code), run by <paramref name="executor"/> inside <paramref name="enclosing"/>; or
 	/// <see cref="NotFound"/> when it names no <c>#lambda</c>. A list function resolves it once and runs it per item.
@@ -59,6 +65,7 @@ public readonly record struct AttributeFunction(AnySharpObject Owner, string Nam
 	public static AttributeFunction Of(AnySharpObject owner, SharpAttribute attribute)
 		=> new(owner, attribute.LongName.ToUpperInvariant(), attribute.Value, Softcode.SoftcodeDialects.Of(attribute))
 		{
-			NoEval = Extensions.SharpAttributeExtensions.IsNoEval(attribute)
+			NoEval = Extensions.SharpAttributeExtensions.IsNoEval(attribute),
+			Modified = attribute.ModifiedTime
 		};
 }

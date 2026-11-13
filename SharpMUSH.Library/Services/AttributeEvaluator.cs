@@ -154,7 +154,9 @@ internal sealed class AttributeEvaluator(
 		{
 			var ownerRef = owner.Object().DBRef;
 			var evaluation = new DBAttribute(ownerRef, attributeName) { Dialect = dialect };
-			var frame = parser.CurrentState.ForAttributeCall(arguments is null ? null : ArgumentList.From(arguments), environment, evaluation, attributeName, runner.Object().DBRef);
+			var body = function.Modified is { } modified ? new AttributeBody(ownerRef, attributeName, modified, code) : null;
+			var frame = parser.CurrentState.ForAttributeCall(arguments is null ? null : ArgumentList.From(arguments), environment,
+				evaluation, attributeName, runner.Object().DBRef, body);
 			// The body names attributes in its own dialect, substitutions such as %=<NAME> included.
 			using var dialectScope = SoftcodeDialectScope.Enter(
 				SoftcodeDialects.InForce(evaluation, configuration.CurrentValue.Compatibility.Dialect));
