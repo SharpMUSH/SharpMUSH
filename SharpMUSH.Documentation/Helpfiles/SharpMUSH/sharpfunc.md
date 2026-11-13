@@ -872,11 +872,9 @@ think brackets(v(desc))
 
   Returns `<object>`/`<attribute>` while it was set less than `<window>` seconds ago. Otherwise it evaluates `<value>`, sets the attribute to the result and returns it. `<value>` is evaluated only when the attribute is missing or too old, so cache() saves the cost of slow code whose answer changes rarely, such as a long lsearch().
 
-  `<window>` is 3600 (one hour) when left out; 0 always evaluates. A `<window>` that is not a whole number returns #-1 ARGUMENT MUST BE INTEGER, and a negative one #-1 ARGUMENT MUST BE POSITIVE INTEGER.
+  `<window>` is 3600 (one hour) when left out; 0 always evaluates. A `<window>` that is not a whole number returns #-1 ARGUMENT MUST BE INTEGER, and a negative one #-1 ARGUMENT MUST BE POSITIVE INTEGER. If `<sliding?>` is true, returning the stored value also sets it again, which restarts its window.
 
-  If `<sliding?>` is true, a call that returns the stored value sets it again, which restarts its window. A value read often enough then never expires.
-
-  The attribute holds only the value; its age is its own modification time (see mtime()). To force the next call to evaluate, clear the attribute with attrib_set() or wipe(). You must control `<object>`; otherwise cache() returns #-1 NO PERMISSION TO SET ATTRIBUTE without evaluating `<value>`. If the attribute cannot be stored, for example because the value is too long, cache() still returns the value and evaluates it again next time. Nothing is printed when the attribute is set.
+  The attribute holds only the value; its age is its own modification time (see mtime()). Clear it with attrib_set() or wipe() to make the next call evaluate. You must control `<object>`, or cache() returns #-1 NO PERMISSION TO SET ATTRIBUTE without evaluating `<value>`. A value that cannot be stored, such as one too long, is still returned. Nothing is printed. Where side-effect functions are off, cache() returns #-1 FUNCTION DISABLED.
 
 ```sharp
 think cache(me,CACHE`ROOMS,words(lsearch(all,type,room)),600)
