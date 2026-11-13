@@ -24,6 +24,7 @@ STATE = Path(os.environ.get('UPDATE_AGENT_STATE', '/agent-state'))
 POLL_SECONDS = max(5, int(os.environ.get('UPDATE_AGENT_POLL_SECONDS', '10')))
 REGISTRY_SECONDS = max(300, int(os.environ.get('UPDATE_AGENT_REGISTRY_SECONDS', '900')))
 READY_SECONDS = max(30, int(os.environ.get('UPDATE_AGENT_READY_SECONDS', '600')))
+SOCKET_HTTP_PORT = int(os.environ.get('UPDATE_AGENT_SOCKET_HTTP_PORT', '4202'))
 MAX_SOCKET_DELAY = datetime.timedelta(seconds=1800)
 REGISTRY = os.environ.get('UPDATE_AGENT_REGISTRY', 'https://registry-1.docker.io').rstrip('/')
 AUTH = os.environ.get('UPDATE_AGENT_REGISTRY_AUTH', 'https://auth.docker.io/token')
@@ -215,6 +216,8 @@ def components(project):
             'latestDigest': None,
             'state': container['State'].get('Status', 'unknown'),
             'startedAt': timestamp(started),
+            # The image's HEALTHCHECK verdict (starting, healthy, unhealthy), or None without one. Not reported.
+            'health': (container['State'].get('Health') or {}).get('Status'),
         }
     return found
 
@@ -271,7 +274,8 @@ class Agent:
             'protocol': PROTOCOL,
             'project': project.name if project else None,
             'tag': project.tag_from_env() if project else None,
-            'components': [found[name] for name in ORDER if name in found],
+            'components': [{key: value for key, value in found[name].items() if key != 'health'}
+                           for name in ORDER if name in found],
             'availableTags': self.registry['tags'],
             'registryReadAt': self.registry['readAt'],
             'job': job,
@@ -339,7 +343,7 @@ class Agent:
                 self.step(name)
                 compose(project, 'up', '-d', '--no-deps', service)
                 # Nothing further is replaced behind a component that did not come back.
-                self.wait_ready(project, name)
+                self.wait_ready(project, name, service)
             self.finish('succeeded', None)
         except Exception as error:  # Reported to the portal; the agent keeps polling.
             self.finish('failed', str(error)[:500])
@@ -369,14 +373,20 @@ class Agent:
                     write_env(project.env_file, original)
             raise
 
-    def wait_ready(self, project, name):
+    def wait_ready(self, project, name, service):
+        """Waits until a replaced component serves again: running, healthy where the image says, and answering /ready."""
         deadline = time.monotonic() + READY_SECONDS
         while True:
-            if name == 'server':
-                ready, state = server_ready(), 'not ready'
-            else:
-                state = components(project).get(name, {}).get('state', 'missing')
-                ready = state == 'running'
+            status = components(project).get(name, {})
+            state = status.get('state', 'missing')
+            health = status.get('health')
+            ready = state == 'running' and health in (None, 'healthy')
+            if health not in (None, 'healthy'):
+                state = f'{state}, {health}'
+            if ready and name == 'server':
+                ready = http_ready(f'{SERVER}/ready')
+            elif ready and name == 'socketserver':
+                ready = http_ready(f'http://{service}:{SOCKET_HTTP_PORT}/ready')
             if ready:
                 return
             if time.monotonic() >= deadline:
@@ -416,10 +426,10 @@ def compose(project, *args):
         raise RuntimeError(f"docker compose {' '.join(args)}: " + last_line(result.stderr))
 
 
-def server_ready():
-    """Whether the game server answers /ready: started, and connected to the bus."""
+def http_ready(url):
+    """Whether url answers 200. The game server's /ready also waits for the bus."""
     try:
-        with urllib.request.urlopen(f'{SERVER}/ready', timeout=10) as response:
+        with urllib.request.urlopen(url, timeout=10) as response:
             return response.status == 200
     except (urllib.error.URLError, OSError, ValueError):
         return False

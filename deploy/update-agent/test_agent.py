@@ -219,7 +219,7 @@ class AcceptTests(unittest.TestCase):
         project = mock.Mock()
         project.compose.return_value = mock.Mock(returncode=0, stderr='')
 
-        def ready(_, name):
+        def ready(_, name, service):
             if name == 'server':
                 raise RuntimeError('The server did not come back.')
 
@@ -228,17 +228,54 @@ class AcceptTests(unittest.TestCase):
         self.assertEqual(ups, ['renderer', 'sharpmush-server'])
         self.assertIn('did not come back', self.agent.job['message'])
 
+    RUNNING = {'state': 'running', 'health': None}
+
     def test_waiting_for_the_server_reads_its_ready_endpoint_until_the_deadline(self):
-        with mock.patch.object(agent, 'server_ready', side_effect=[False, False, True]) as ready, \
+        with mock.patch.object(agent, 'components', return_value={'server': self.RUNNING}), \
+                mock.patch.object(agent, 'http_ready', side_effect=[False, False, True]) as ready, \
                 mock.patch.object(agent.time, 'sleep'):
-            self.agent.wait_ready(mock.Mock(), 'server')
+            self.agent.wait_ready(mock.Mock(), 'server', 'sharpmush-server')
         self.assertEqual(ready.call_count, 3)
+        ready.assert_called_with('http://sharpmush-server:8080/ready')
         clock = iter([0, 0, 1000])
-        with mock.patch.object(agent, 'server_ready', return_value=False), \
+        with mock.patch.object(agent, 'components', return_value={'server': self.RUNNING}), \
+                mock.patch.object(agent, 'http_ready', return_value=False), \
                 mock.patch.object(agent.time, 'sleep'), \
                 mock.patch.object(agent.time, 'monotonic', side_effect=lambda: next(clock)):
             with self.assertRaises(RuntimeError):
-                self.agent.wait_ready(mock.Mock(), 'server')
+                self.agent.wait_ready(mock.Mock(), 'server', 'sharpmush-server')
+
+    def test_a_running_renderer_is_not_ready_until_its_healthcheck_passes(self):
+        states = [{'renderer': {'state': 'running', 'health': 'starting'}},
+                  {'renderer': {'state': 'running', 'health': 'healthy'}}]
+        with mock.patch.object(agent, 'components', side_effect=states) as found, \
+                mock.patch.object(agent.time, 'sleep'):
+            self.agent.wait_ready(mock.Mock(), 'renderer', 'renderer')
+        self.assertEqual(found.call_count, 2)
+
+    def test_an_unhealthy_renderer_stops_the_update_before_the_socket_server(self):
+        self.accept({'id': JOB_ID, 'components': ['renderer', 'server', 'socketserver'], 'tag': None})
+        project = mock.Mock()
+        project.compose.return_value = mock.Mock(returncode=0, stderr='')
+        unhealthy = {name: {**status, 'state': 'running', 'health': 'unhealthy'} for name, status in FOUND.items()}
+        clock = iter([0, 0, 1000])
+        with mock.patch.object(agent, 'own_project', return_value=project), \
+                mock.patch.object(agent, 'components', return_value=unhealthy), \
+                mock.patch.object(agent, 'http_ready', return_value=True), \
+                mock.patch.object(agent.time, 'sleep'), \
+                mock.patch.object(agent.time, 'monotonic', side_effect=lambda: next(clock)):
+            self.agent.run(None)
+        ups = [call.args[-1] for call in project.compose.call_args_list if call.args[0] == 'up']
+        self.assertEqual(ups, ['renderer'])
+        self.assertEqual(self.agent.job['state'], 'failed')
+        self.assertIn('renderer did not come back', self.agent.job['message'])
+        self.assertIn('unhealthy', self.agent.job['message'])
+
+    def test_the_socket_server_is_ready_when_its_own_endpoint_answers(self):
+        with mock.patch.object(agent, 'components', return_value={'socketserver': self.RUNNING}), \
+                mock.patch.object(agent, 'http_ready', return_value=True) as ready:
+            self.agent.wait_ready(mock.Mock(), 'socketserver', 'socketserver')
+        ready.assert_called_once_with('http://socketserver:4202/ready')
 
     def test_the_socket_time_is_checked_and_held_to_half_an_hour(self):
         thread = self.accept({'id': JOB_ID, 'components': ['socketserver'], 'tag': None, 'socketNotBefore': 'soon'})

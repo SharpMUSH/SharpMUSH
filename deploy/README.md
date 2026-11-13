@@ -821,9 +821,10 @@ The work is done by the update agent, a small container that holds the Docker so
 Compose network; the server answers 404 to a poll that came through a proxy, so the endpoint is not
 reachable from outside. The agent runs `docker compose pull` for every service first, then
 `docker compose up -d --no-deps <service>` for each in turn, with the same Compose files the stack was
-started with. A failed pull replaces nothing. After each replacement it waits for that component to
-run again (for the game server, for `/ready` to answer, up to `UPDATE_AGENT_READY_SECONDS`, default
-600) and stops before the socket server if it does not. It accepts only those three services, and
+started with. A failed pull replaces nothing. After each replacement it waits, up to
+`UPDATE_AGENT_READY_SECONDS` (default 600), for that component to run again with its image's
+healthcheck passing and, for the game server and the socket server, `/ready` answering. If one does
+not, the update stops there, so a broken renderer or game server never takes the socket server with it. It accepts only those three services, and
 only release tags (`1.2.3`, `1.2.3-rc.1`), `latest` or `dev`. Moving to another release rewrites
 `SHARPMUSH_IMAGE_TAG` in `.env` (put back if the pull fails), so the Compose files must take their tag
 from that variable, as every supplied file does. Only newer releases are offered: an older game server
