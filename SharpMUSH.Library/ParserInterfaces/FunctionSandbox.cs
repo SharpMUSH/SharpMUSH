@@ -40,10 +40,6 @@ public static class FunctionSandbox
 	/// and the name the function is registered under, which an alias resolves to. A layer that lists any of them
 	/// refuses the call.
 	/// </summary>
-	public static string? Refusal(string name, bool userFunction, params ReadOnlySpan<string> otherNames)
-		=> Ambient.Value is null ? null : Refusal(name, userFunction, otherNames.ToArray());
-
-	/// <inheritdoc cref="Refusal(string, bool, ReadOnlySpan{string})"/>
 	public static string? Refusal(string name, bool userFunction, params string[] otherNames)
 	{
 		if (Ambient.Value is not { } layers) return null;
