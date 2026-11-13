@@ -20,6 +20,18 @@
 		-->
 		<ServerGarbageCollection>true</ServerGarbageCollection>
 	</PropertyGroup>
+
+	<!--
+	  The Docker images publish the server for their own platform, ReadyToRun (see Dockerfile), by passing
+	  ServerRuntimeIdentifier rather than -r. A command-line -r is a global property: it would reach the
+	  plugin projects too, which then build into a RID folder the plugin copy targets below do not read, and
+	  the libraries they share with the server would be built twice in one publish.
+	-->
+	<PropertyGroup Condition="'$(ServerRuntimeIdentifier)' != ''">
+		<RuntimeIdentifier>$(ServerRuntimeIdentifier)</RuntimeIdentifier>
+		<SelfContained>false</SelfContained>
+		<PublishReadyToRun>true</PublishReadyToRun>
+	</PropertyGroup>
 	
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
