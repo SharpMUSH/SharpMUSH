@@ -4360,10 +4360,6 @@
     <value>Markdown copiado para a área de transferência.</value>
     <comment>MT</comment>
   </data>
-  <data name="WkMinorEdit" xml:space="preserve">
-    <value>Edição menor</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Nenhum arquivo encontrado.</value>
     <comment>MT</comment>

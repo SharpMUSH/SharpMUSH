@@ -4360,10 +4360,6 @@
     <value>Markdown in die Zwischenablage kopiert.</value>
     <comment>MT</comment>
   </data>
-  <data name="WkMinorEdit" xml:space="preserve">
-    <value>Kleine Änderung</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Keine Dateien gefunden.</value>
     <comment>MT</comment>

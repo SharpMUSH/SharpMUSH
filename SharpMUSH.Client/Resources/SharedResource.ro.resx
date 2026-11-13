@@ -4360,10 +4360,6 @@
     <value>Markdown copiat în clipboard.</value>
     <comment>MT</comment>
   </data>
-  <data name="WkMinorEdit" xml:space="preserve">
-    <value>Editare minoră</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Nu s-a găsit niciun fișier.</value>
     <comment>MT</comment>

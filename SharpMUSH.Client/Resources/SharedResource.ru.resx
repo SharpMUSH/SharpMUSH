@@ -4360,10 +4360,6 @@
     <value>Markdown скопирован в буфер обмена.</value>
     <comment>MT</comment>
   </data>
-  <data name="WkMinorEdit" xml:space="preserve">
-    <value>Незначительная правка</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Файлы не найдены.</value>
     <comment>MT</comment>

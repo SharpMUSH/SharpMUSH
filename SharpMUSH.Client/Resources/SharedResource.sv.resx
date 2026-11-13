@@ -4360,10 +4360,6 @@
     <value>Markdown kopierad till urklipp.</value>
     <comment>MT</comment>
   </data>
-  <data name="WkMinorEdit" xml:space="preserve">
-    <value>Mindre ändring</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>Inga filer hittades.</value>
     <comment>MT</comment>

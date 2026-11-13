@@ -4360,10 +4360,6 @@
     <value>Markdown copiado al portapapeles.</value>
     <comment>MT</comment>
   </data>
-  <data name="WkMinorEdit" xml:space="preserve">
-    <value>Edición menor</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkNoAssetsFound" xml:space="preserve">
     <value>No se encontraron recursos.</value>
     <comment>MT</comment>

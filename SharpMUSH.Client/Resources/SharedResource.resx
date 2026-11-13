@@ -2778,9 +2778,6 @@
   <data name="WkSummaryPlaceholder" xml:space="preserve">
     <value>Summarize your change (e.g. 'fixed a typo')…</value>
   </data>
-  <data name="WkMinorEdit" xml:space="preserve">
-    <value>Minor edit</value>
-  </data>
   <data name="WkBytesDelta" xml:space="preserve">
     <value>{count, plural, one {{signed} byte} other {{signed} bytes}}</value>
     <comment>ICU MessageFormat. Named args: count (absolute magnitude), signed (delta with its sign).</comment>
