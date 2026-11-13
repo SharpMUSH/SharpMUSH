@@ -247,10 +247,16 @@ public partial class Functions
 	/// <c>atr_get_noparent</c> reads it.
 	/// </summary>
 	private async ValueTask<string> FullAliasOf(AnySharpObject found)
-		=> found is SharpExit exit
-			? string.Join(PlayerAliases.Delimiter, exit.Aliases ?? [])
-			: (await Mediator.CreateStream(new GetAttributeQuery(found.Object().DBRef, [PlayerAliases.AttributeName]))
-				.LastOrDefaultAsync())?.Value.ToPlainText() ?? string.Empty;
+	{
+		if (found is SharpExit exit)
+		{
+			return string.Join(PlayerAliases.Delimiter, exit.Aliases ?? []);
+		}
+
+		AttributeReadLog.Untracked();
+		return (await Mediator.CreateStream(new GetAttributeQuery(found.Object().DBRef, [PlayerAliases.AttributeName]))
+			.LastOrDefaultAsync())?.Value.ToPlainText() ?? string.Empty;
+	}
 
 	/// <summary>
 	/// <c>fun_findable</c> (<c>fundb.c:1438-1452</c>): whether the first object could find the second.

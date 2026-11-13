@@ -32,6 +32,12 @@ public partial class Functions
 	/// <summary>What memo() answers when its code called a function whose answer varies between calls.</summary>
 	public const string MemoRefusesNonDeterministic = "#-1 MEMO REFUSES NONDETERMINISTIC FUNCTIONS";
 
+	/// <summary>
+	/// Functions with a side effect that HasSideFX does not mark, because function_side_effects must not turn them
+	/// off; they refuse inside a side-effect-free evaluation themselves.
+	/// </summary>
+	private static readonly HashSet<string> UnflaggedSideEffects = new(StringComparer.OrdinalIgnoreCase) { "stopevent" };
+
 	/// <summary>The longest answer memo() keeps, as the longest attribute value.</summary>
 	private const int MemoMaxAnswerLength = 65536;
 
@@ -91,7 +97,6 @@ public partial class Functions
 			return new CallState(refused);
 		}
 
-		var limitAlreadyExceeded = parser.CurrentState.LimitExceeded is { IsExceeded: true };
 		using var refusals = SideEffectFreeEvaluation.Track(deterministic: true);
 		using var reads = AttributeReadLog.Open();
 
@@ -119,8 +124,8 @@ public partial class Functions
 		}
 
 		// An answer a limit cut short is not the answer, so it is given once and not kept.
-		var cutShort = !limitAlreadyExceeded && parser.CurrentState.LimitExceeded is { IsExceeded: true };
-		if (!cutShort && answer.Message.Length <= MemoMaxAnswerLength)
+		var cutShort = parser.CurrentState.LimitExceeded is { IsExceeded: true };
+		if (!cutShort && !reads.IsUntracked && answer.Message.Length <= MemoMaxAnswerLength)
 		{
 			MemoStore.Keep(key, new MemoEntry(answer.Message, reads.Reads));
 		}
@@ -141,7 +146,8 @@ public partial class Functions
 		{
 			if (!parser.FunctionLibrary.TryGetValue(call.Name.ToLowerInvariant(), out var found)) continue;
 			var declared = found.LibraryInformation.Attribute;
-			if (declared.Flags.HasFlag(FunctionFlags.HasSideFX) && call.Arguments.Count >= declared.SideEffectMinArgs)
+			if (UnflaggedSideEffects.Contains(declared.Name)
+				|| (declared.Flags.HasFlag(FunctionFlags.HasSideFX) && call.Arguments.Count >= declared.SideEffectMinArgs))
 			{
 				return MemoRefusesSideEffects;
 			}
@@ -181,18 +187,12 @@ public partial class Functions
 			}
 
 			// The dialect the read was made in decides which attribute an alias names, so the read is repeated in it.
-			OptionalSharpAttributeOrError found;
+			string fingerprint;
 			using (SoftcodeDialectScope.Enter(read.Dialect))
 			{
-				found = await AttributeService.GetAttributeAsync(reader, target, read.Attribute, read.Mode, read.Parent);
+				fingerprint = await MemoReadAgainAsync(reader, target, read);
 			}
 
-			var fingerprint = found switch
-			{
-				SharpAttribute[] { Length: > 0 } chain => AttributeReadLog.Fingerprint(chain[^1].Value),
-				Error<string> error => "E" + error.Value,
-				_ => AttributeReadLog.Absent
-			};
 			if (fingerprint != read.Fingerprint)
 			{
 				return false;
@@ -201,6 +201,23 @@ public partial class Functions
 
 		return true;
 	}
+
+	/// <summary>What <paramref name="read"/> finds now, as <see cref="AttributeReadLog"/> fingerprints it.</summary>
+	private async ValueTask<string> MemoReadAgainAsync(AnySharpObject reader, AnySharpObject target,
+		AttributeReadDependency read)
+		=> read.Kind switch
+		{
+			AttributeReadKind.Visible => AttributeReadLog.Fingerprint(
+				await AttributeService.GetVisibleAttributesAsync(reader, target, read.Depth)),
+			AttributeReadKind.Pattern => AttributeReadLog.Fingerprint(
+				await AttributeService.GetAttributePatternAsync(reader, target, read.Attribute, read.Parent, read.PatternMode)),
+			_ => await AttributeService.GetAttributeAsync(reader, target, read.Attribute, read.Mode, read.Parent) switch
+			{
+				SharpAttribute[] { Length: > 0 } chain => AttributeReadLog.Fingerprint(chain[^1].Value),
+				Error<string> error => "E" + error.Value,
+				_ => AttributeReadLog.Absent
+			}
+		};
 
 	/// <summary>The object <paramref name="dbref"/> names, unless it is gone or is now another object.</summary>
 	private async ValueTask<AnyOptionalSharpObject> MemoObjectAsync(DBRef dbref)
@@ -223,7 +240,8 @@ public partial class Functions
 		Part(function.Owner.Object().DBRef.ToString());
 		Part(function.Name);
 		Part(AttributeReadLog.Fingerprint(function.Code));
-		Part(function.Dialect ?? string.Empty);
+		// A #lambda runs in its caller's dialect, which decides what its names mean.
+		Part(function.Dialect ?? (function.Lambda is null ? string.Empty : SoftcodeDialectScope.Current?.Key ?? string.Empty));
 		Part(function.NoEval ? "1" : "0");
 		Part(function.RunAs?.Object().DBRef.ToString() ?? string.Empty);
 		Part(executor.Object().DBRef.ToString());

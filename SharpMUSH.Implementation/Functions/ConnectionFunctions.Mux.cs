@@ -18,13 +18,13 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	/// <summary><c>conntotal(&lt;player&gt;)</c>: seconds online in every session, the longest open one included.</summary>
-	[SharpFunction(Name = "conntotal", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+	[SharpFunction(Name = "conntotal", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic | FunctionFlags.StripAnsi,
 		ParameterNames = ["player"])]
 	public ValueTask<CallState> ConnTotal(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ConnectionStatisticAsync(parser, (record, open) => record.TotalSeconds + open.Longest);
 
 	/// <summary><c>connmax(&lt;player&gt;)</c>: the longest session in seconds, the open ones included.</summary>
-	[SharpFunction(Name = "connmax", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+	[SharpFunction(Name = "connmax", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic | FunctionFlags.StripAnsi,
 		ParameterNames = ["player"])]
 	public ValueTask<CallState> ConnMax(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ConnectionStatisticAsync(parser, (record, open) => Math.Max(record.LongestSeconds, open.Longest));
@@ -36,7 +36,7 @@ public partial class Functions
 		=> ConnectionStatisticAsync(parser, (record, _) => record.LastSeconds);
 
 	/// <summary><c>connnum(&lt;player&gt;)</c>: how many sessions the player has had, the open ones included.</summary>
-	[SharpFunction(Name = "connnum", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+	[SharpFunction(Name = "connnum", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.NonDeterministic | FunctionFlags.StripAnsi,
 		ParameterNames = ["player"])]
 	public ValueTask<CallState> ConnNum(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ConnectionStatisticAsync(parser, (record, open) => record.Sessions + open.Count);

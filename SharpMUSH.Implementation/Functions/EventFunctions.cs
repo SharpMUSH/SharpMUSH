@@ -17,6 +17,12 @@ public partial class Functions
 	[SharpFunction(Name = "STOPEVENT", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public ValueTask<CallState> StopEvent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		// Stopping the event is a side effect, which HasSideFX does not mark: function_side_effects must not turn it off.
+		if (SideEffectFreeEvaluation.Refuse())
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.FunctionDisabled));
+		}
+
 		if (EventStop.Current is not { } stop)
 		{
 			return ValueTask.FromResult(new CallState(NotInStoppableEvent));

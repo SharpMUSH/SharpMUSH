@@ -212,6 +212,30 @@ public class AttributeService(
 		return read;
 	}
 
+	/// <summary>
+	/// Records a listing for <see cref="AttributeReadLog"/>: read again eagerly, with nothing recorded, so the lazy
+	/// and eager listings record the same thing.
+	/// </summary>
+	private async ValueTask RecordListingAsync(AnySharpObject executor, AnySharpObject obj, AttributeReadKind kind,
+		string pattern, bool parents, IAttributeService.AttributePatternMode mode, int depth)
+	{
+		SharpAttributesOrError found;
+		using (AttributeReadLog.Suspend())
+		{
+			found = kind == AttributeReadKind.Visible
+				? await GetVisibleAttributesAsync(executor, obj, depth)
+				: await GetAttributePatternAsync(executor, obj, pattern, parents, mode);
+		}
+
+		AttributeReadLog.Add([new AttributeReadDependency(executor.Object().DBRef, obj.Object().DBRef, pattern,
+			IAttributeService.AttributeMode.Read, parents, AttributeReadLog.Fingerprint(found), SoftcodeDialectScope.Current)
+		{
+			Kind = kind,
+			PatternMode = mode,
+			Depth = depth
+		}]);
+	}
+
 	/// <summary>What a read found, for <see cref="AttributeReadLog"/>: the same for the eager and the lazy read.</summary>
 	private static async ValueTask<string> FingerprintAsync<T>(AttributeRead<T> read) where T : class
 		=> read switch
@@ -478,19 +502,21 @@ public class AttributeService(
 	public async ValueTask<SharpAttributesOrError> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj,
 		int depth = 1)
 	{
+		if (AttributeReadLog.Recording) await RecordListingAsync(executor, obj, AttributeReadKind.Visible, string.Empty, false, default, depth);
 		var token = ExecutionBudget.CurrentToken;
 		token.ThrowIfCancellationRequested();
 		return await GetVisibleAttributesAsync(obj.Object().Attributes.Value, executor, obj, Math.Max(1, depth), new AttributeViewMemo(), token).ToArrayAsync(token);
 	}
 
-	public ValueTask<LazySharpAttributesOrError> LazilyGetVisibleAttributesAsync(AnySharpObject executor,
+	public async ValueTask<LazySharpAttributesOrError> LazilyGetVisibleAttributesAsync(AnySharpObject executor,
 		AnySharpObject obj, int depth = 1)
 	{
+		if (AttributeReadLog.Recording) await RecordListingAsync(executor, obj, AttributeReadKind.Visible, string.Empty, false, default, depth);
 		var token = ExecutionBudget.CurrentToken;
 		token.ThrowIfCancellationRequested();
-		return ValueTask.FromResult(LazySharpAttributesOrError.FromAsync(ReadWithDeferredBudget(
+		return LazySharpAttributesOrError.FromAsync(ReadWithDeferredBudget(
 			budget => GetVisibleLazyAttributesAsync(obj.Object().LazyAttributes.Value, executor, obj, Math.Max(1, depth), budget),
-			ExecutionBudget.Current, token)));
+			ExecutionBudget.Current, token));
 	}
 
 
@@ -573,6 +599,7 @@ public class AttributeService(
 		bool checkParents,
 		IAttributeService.AttributePatternMode mode)
 	{
+		if (AttributeReadLog.Recording) await RecordListingAsync(executor, obj, AttributeReadKind.Pattern, attributePattern, checkParents, mode, 0);
 		attributePattern = await DialectPatternAsync(obj, attributePattern, mode);
 		var token = ExecutionBudget.CurrentToken;
 		// Only God skips the read test: a wizard_dark attribute is hidden from wizards too.
@@ -1020,6 +1047,7 @@ public class AttributeService(
 		AnySharpObject obj, string attributePattern,
 		bool checkParents, IAttributeService.AttributePatternMode mode = IAttributeService.AttributePatternMode.Exact)
 	{
+		if (AttributeReadLog.Recording) await RecordListingAsync(executor, obj, AttributeReadKind.Pattern, attributePattern, checkParents, mode, 0);
 		attributePattern = await DialectPatternAsync(obj, attributePattern, mode);
 		var token = ExecutionBudget.CurrentToken;
 		token.ThrowIfCancellationRequested();

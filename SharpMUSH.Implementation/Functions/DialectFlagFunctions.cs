@@ -20,6 +20,13 @@ public partial class Functions
 	/// Whether <paramref name="obj"/> has what one of a dialect's flag names or letters asks, as <paramref name="viewer"/>
 	/// is told. Only God learns about an attribute that way, as TinyMUX keeps its HAS_* flags to God.
 	/// </summary>
+	/// <summary>Whether <paramref name="obj"/> has <paramref name="attribute"/>, read around the attribute service.</summary>
+	private async ValueTask<bool> HasAttributeUntrackedAsync(AnySharpObject obj, string attribute)
+	{
+		AttributeReadLog.Untracked();
+		return await Mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, [attribute])).LastOrDefaultAsync() is not null;
+	}
+
 	private async ValueTask<bool> DialectHasAsync(AnySharpObject viewer, AnySharpObject obj, DialectFlag flag,
 		ObjectFlagSet? read = null)
 		=> flag switch
@@ -27,8 +34,7 @@ public partial class Functions
 			{ Flag: "CONNECTED" } => await ConnectionService.IsOnline(obj),
 			{ Flag: { } name } => (read ?? await obj.ReadFlagsAsync()).Has(name) != flag.Inverted,
 			{ Scope: { } scope } => (read ?? await obj.ReadFlagsAsync()).Grants.Shows(scope),
-			{ Attribute: { } attribute } => viewer.IsGod() && await Mediator
-				.CreateStream(new GetAttributeQuery(obj.Object().DBRef, [attribute])).LastOrDefaultAsync() is not null,
+			{ Attribute: { } attribute } => viewer.IsGod() && await HasAttributeUntrackedAsync(obj, attribute),
 			_ => false
 		};
 

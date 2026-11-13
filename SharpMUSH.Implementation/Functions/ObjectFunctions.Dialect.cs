@@ -225,6 +225,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.Nothing);
 		}
 
+		AttributeReadLog.Untracked();
 		var last = await Mediator.CreateStream(new Library.Queries.Database.GetAttributeQuery(player.Object.DBRef,
 			[addresses ? "LASTIP" : "LASTSITE"])).LastOrDefaultAsync();
 		return last?.Value.ToPlainText() is { Length: > 0 } site

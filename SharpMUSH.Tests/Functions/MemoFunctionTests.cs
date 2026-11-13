@@ -161,6 +161,11 @@ public class MemoFunctionTests
 	[Arguments("[secs()]")]
 	[Arguments("[timefmt($Y)]")]
 	[Arguments("[timecalc(now)]")]
+	[Arguments("[idle(me)]")]
+	[Arguments("[conn(me)]")]
+	[Arguments("[pid()]")]
+	[Arguments("[strlen(%c)]")]
+	[Arguments("[strlen(%u)]")]
 	public async Task AFunctionWhoseAnswerVariesIsRefused(string code)
 	{
 		var thing = await Thing("MemoVaries");
@@ -177,6 +182,40 @@ public class MemoFunctionTests
 		await Command($"&FN {thing}=[u(me/ROLL)]");
 
 		await Assert.That(await Evaluate($"[memo({thing}/FN)]")).IsEqualTo("#-1 MEMO REFUSES NONDETERMINISTIC FUNCTIONS");
+	}
+
+	[Test]
+	public async Task StoppingAnEventIsRefused()
+	{
+		var thing = await Thing("MemoStopEvent");
+		await Command($"&FN {thing}=[stopevent()]");
+
+		await Assert.That(await Evaluate($"[memo({thing}/FN)]")).IsEqualTo("#-1 MEMO REFUSES SIDE EFFECTS");
+	}
+
+	[Test]
+	public async Task ANewAttributeInAListingItReadDropsTheAnswer()
+	{
+		var thing = await Thing("MemoListing");
+		await Command($"&LIST {thing}=[words(lattr(me))]");
+		await Assert.That(await Evaluate($"[memo({thing}/LIST)]")).IsEqualTo("1");
+
+		await Command($"&MORE {thing}=1");
+
+		await Assert.That(await Evaluate($"[memo({thing}/LIST)]")).IsEqualTo("2");
+	}
+
+	[Test]
+	public async Task AChangedValueInAPatternItReadDropsTheAnswer()
+	{
+		var thing = await Thing("MemoGrep");
+		await Command($"&DATA`ONE {thing}=red");
+		await Command($"&FIND {thing}=[grep(me,DATA`*,blue)]");
+		await Assert.That(await Evaluate($"[memo({thing}/FIND)]")).IsEqualTo("");
+
+		await Command($"&DATA`ONE {thing}=blue");
+
+		await Assert.That(await Evaluate($"[memo({thing}/FIND)]")).IsEqualTo("DATA`ONE");
 	}
 
 	[Test]

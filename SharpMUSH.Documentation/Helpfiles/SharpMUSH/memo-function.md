@@ -44,8 +44,8 @@ The code sees only its arguments: it starts with no q-registers and the ones it 
 
 ## Refused code
 
-- If the code names a side-effect function anywhere, even in a branch it would not take, memo() returns `#-1 MEMO REFUSES SIDE EFFECTS`. Side-effect functions are the ones the `function_side_effects` option turns off, such as set(), pemit() and create(). A function's reading form, such as name() with one argument, is allowed.
-- If the code names a function whose answer varies, such as rand(), shuffle(), roll(), secs() or time(), or timefmt() without a time, memo() returns `#-1 MEMO REFUSES NONDETERMINISTIC FUNCTIONS`.
+- If the code names a side-effect function anywhere, even in a branch it would not take, memo() returns `#-1 MEMO REFUSES SIDE EFFECTS`. Side-effect functions are the ones the `function_side_effects` option turns off, such as set(), pemit() and create(), and also stopevent(). A function's reading form, such as name() with one argument, is allowed.
+- If the code names a function whose answer varies, such as rand(), shuffle(), roll(), secs(), time(), idle(), conn() or pid(), or timefmt() without a time, memo() returns `#-1 MEMO REFUSES NONDETERMINISTIC FUNCTIONS`. So does a substitution for the running command or the queue, such as %c, %u, %j or %?.
 
 Code reached through u() is checked as it runs: there, such a function answers #-1 FUNCTION DISABLED and memo() returns the same errors. Nothing is kept.
 
@@ -55,14 +55,14 @@ Two calls are the same when they run the same code on the same object, called by
 
 A kept answer is dropped when:
 
-- an attribute the code read now reads differently, or is gone;
+- an attribute the code read now reads differently, or is gone, or a list of attributes it read (lattr(), grep() and the like) has changed;
 - the code itself is changed;
 - `memo_window` seconds have passed (an hour by default); or
 - `memo_max_entries` answers (10000 by default) or `memo_max_bytes` of memory (16 MiB by default) are kept and it is the least recently used.
 
 These options are under [@config limits].
 
-Other changes, such as a name, location, flag or lock, are not noticed until the window passes. Messages the code sends to the caller, such as "I can't see that here.", are only sent when it runs.
+Other changes, such as a name, location, flag, lock or @function, are not noticed until the window passes. An answer that read an attribute some other way, such as through indexed() or an alias lookup, is not kept. Messages the code sends to the caller, such as "I can't see that here.", are only sent when it runs.
 
 An answer that hit a function limit, or is longer than 65536 characters, is not kept.
 
