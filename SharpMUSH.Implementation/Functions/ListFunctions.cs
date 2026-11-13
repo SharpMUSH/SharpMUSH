@@ -310,12 +310,14 @@ public partial class Functions
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
+			var lambda = AttributeFunction.OfLambda(executor, rawAttrArg, parser.CurrentState.CurrentEvaluation);
 			for (var i = startIndex; i < list.Length; i++)
 			{
-				accumulator = errors.Record(await AttributeService.EvaluateAttributeFunctionResultAsync(
+				accumulator = errors.Record(await CallLambdaOrApplyAsync(
 					parser,
 					executor,
 					rawAttrArg,
+					lambda,
 					new Dictionary<string, CallState>
 					{
 						{ "0", new CallState(accumulator) },
@@ -687,6 +689,7 @@ public partial class Functions
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
 			var result = new List<MString>();
+			var lambda = AttributeFunction.OfLambda(executor, rawAttrArg, parser.CurrentState.CurrentEvaluation);
 			for (var i = 0; i < maxLength; i++)
 			{
 				var args = new Dictionary<string, CallState>();
@@ -694,7 +697,7 @@ public partial class Functions
 				{
 					args[j.ToString()] = new CallState(i < lists[j].Length ? lists[j][i] : MarkupText.Empty);
 				}
-				result.Add(errors.Record(await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, rawAttrArg, args)));
+				result.Add(errors.Record(await CallLambdaOrApplyAsync(parser, executor, rawAttrArg, lambda, args)));
 			}
 			return errors.Complete(new CallState(MarkupText.Join(delimiter, result)));
 		}
@@ -1302,9 +1305,10 @@ public partial class Functions
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
 			var result = new List<MString>();
+			var lambda = AttributeFunction.OfLambda(executor, rawAttrArg, parser.CurrentState.CurrentEvaluation);
 			foreach (var args in runs)
 			{
-				result.Add(errors.Record(await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, rawAttrArg, args)));
+				result.Add(errors.Record(await CallLambdaOrApplyAsync(parser, executor, rawAttrArg, lambda, args)));
 			}
 			return errors.Complete(new CallState(MarkupText.Join(sep, result)));
 		}
@@ -1733,6 +1737,7 @@ public partial class Functions
 	/// Evaluates a #lambda or #apply expression for each item in a list, the item as %0 and, when
 	/// <paramref name="withPosition"/>, its position from 1 as %1, as map() passes them;
 	/// <paramref name="extraArguments"/>, when given, follow as %1, %2, ...
+	/// A #lambda is resolved once, and each item is one call of it.
 	/// </summary>
 	private async ValueTask<List<MString>> EvaluateLambdaOrApplyForEachItemAsync(
 		IMUSHCodeParser parser,
@@ -1744,6 +1749,7 @@ public partial class Functions
 		Dictionary<string, CallState>? extraArguments = null)
 	{
 		var results = new List<MString>(list.Length);
+		var lambda = AttributeFunction.OfLambda(executor, rawAttrArg, parser.CurrentState.CurrentEvaluation);
 		for (var position = 0; position < list.Length; position++)
 		{
 			var item = list[position];
@@ -1753,16 +1759,23 @@ public partial class Functions
 				arguments.TryAdd(key, value);
 			}
 
-			var evaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
-				parser,
-				executor,
-				rawAttrArg,
-				arguments);
-			results.Add(errors.Record(evaluated));
+			results.Add(errors.Record(await CallLambdaOrApplyAsync(parser, executor, rawAttrArg, lambda, arguments)));
 		}
 
 		return results;
 	}
+
+	/// <summary>
+	/// One call of <paramref name="rawAttrArg"/>, a #lambda or #apply, with <paramref name="arguments"/> as its %0-%9:
+	/// <paramref name="lambda"/> when it is the #lambda resolved once for the whole list, else the #apply.
+	/// </summary>
+	private ValueTask<CallState> CallLambdaOrApplyAsync(IMUSHCodeParser parser, AnySharpObject executor, MString rawAttrArg,
+		Found<AttributeFunction> lambda, Dictionary<string, CallState> arguments)
+		=> lambda switch
+		{
+			AttributeFunction function => AttributeService.CallAttributeFunctionAsync(parser, function, arguments, arguments),
+			NotFound => AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, rawAttrArg, arguments)
+		};
 
 	/// <summary>
 	/// One call of a fetched attribute with <paramref name="arguments"/> as both its arguments and its

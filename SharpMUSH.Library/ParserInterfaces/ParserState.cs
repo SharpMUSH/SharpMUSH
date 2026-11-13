@@ -666,6 +666,27 @@ public partial record ParserState
 		};
 	}
 
+	/// <summary>
+	/// The frame a <c>#lambda</c> runs in: this frame with <paramref name="arguments"/> as its %0-%9,
+	/// <paramref name="environment"/> as its environment (null keeps this frame's) and <paramref name="lambda"/> as
+	/// what <c>%=</c> gives. The executor and caller stay this frame's.
+	/// </summary>
+	public ParserState ForLambdaCall(Dictionary<string, CallState>? arguments, Dictionary<string, CallState>? environment,
+		LambdaEvaluation lambda)
+	{
+		var called = arguments ?? Arguments;
+		return this with
+		{
+			Arguments = called,
+			Context = Context with
+			{
+				EnvironmentRegisters = environment ?? Context.EnvironmentRegisters,
+				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(called)
+			},
+			CurrentEvaluation = lambda
+		};
+	}
+
 	/// <inheritdoc cref="EvaluationContext.Handle"/>
 	public long? Handle
 	{
