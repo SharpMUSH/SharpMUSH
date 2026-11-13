@@ -3687,7 +3687,7 @@ You say, "es"
 
   Every type of object, players included, has a modification time. You must be able to examine `<object>`; otherwise both return #-1 PERMISSION DENIED.
 
-  Given `<object>`/`<attribute>`, both return when that attribute's value was last set or cleared. The attribute is found as get() finds it, parents included, and you need only be able to read it. A missing attribute returns #-1 NO SUCH ATTRIBUTE. An attribute with no recorded time returns nothing: one only created as the branch above another attribute, or one written before attributes kept their times.
+  Given `<object>`/`<attribute>`, both return when that attribute's value was last set. The attribute is found as get() finds it, parents included, and you need only be able to read it. A missing attribute returns #-1 NO SUCH ATTRIBUTE. An attribute with no recorded time returns nothing: a branch above other attributes that holds no value of its own (never set, or cleared), or one written before attributes kept their times.
 
 ```sharp
 &NOTE me=hello

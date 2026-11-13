@@ -664,9 +664,9 @@ public partial class LightningDatabase
 			if (HasChildren(tx, n, longName))
 			{
 				tx.Put(Tables.AttrVal, key, empty);
-				var meta = walk[^1].Meta;
-				tx.Put(Tables.AttrMeta, key,
-					Codec.Serialize(meta with { Modified = NextModified(meta, _clock.GetUtcNow().ToUnixTimeMilliseconds()) }));
+				// Emptied, the branch holds no value of its own again, so it has no time either: what cache() reads
+				// as "never written".
+				tx.Put(Tables.AttrMeta, key, Codec.Serialize(walk[^1].Meta with { Modified = null }));
 			}
 			else
 			{

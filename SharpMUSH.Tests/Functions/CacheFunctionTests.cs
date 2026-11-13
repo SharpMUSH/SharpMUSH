@@ -37,6 +37,12 @@ public class CacheFunctionTests
 			.IsEqualTo("one-two-two");
 
 	[Test]
+	public async Task ClearingACachedBranchMakesTheNextCallEvaluate()
+		=> await Assert.That(await EvalOnNewThingAsync(
+				"[cache(%q0,TREE,old)][attrib_set(%q0/TREE`CHILD,x)][attrib_set(%q0/TREE)]-[cache(%q0,TREE,new)]"))
+			.IsEqualTo("old-new");
+
+	[Test]
 	public async Task ASlidingHitKeepsTheValueAndRewritesTheTime()
 		=> await Assert.That(await EvalOnNewThingAsync(
 				"[cache(%q0,SLIDE,kept)][setq(t,msecs(%q0/SLIDE))][cache(%q0,SLIDE,lost,3600,1)]-[gte(msecs(%q0/SLIDE),%qt)]"))

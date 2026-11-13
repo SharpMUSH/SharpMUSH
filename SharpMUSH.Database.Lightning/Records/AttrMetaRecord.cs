@@ -12,7 +12,8 @@ public sealed record AttrMetaRecord
 
 	/// <summary>
 	/// When the attribute's value was last written, in Unix milliseconds (UTC, 64-bit). Null for a row written before
-	/// attributes carried the time, and for a branch that has only ever held the empty value its children's writes gave it.
+	/// attributes carried the time, and for a branch that holds only the empty value: created on the way to a child, or cleared
+	/// while it has children.
 	/// </summary>
 	public long? Modified { get; init; }
 }

@@ -79,7 +79,7 @@ public partial class Functions
 		}
 
 		if (stored is SharpAttribute[] chain && chain[^1] is { ModifiedTime: { } modified } entry
-				&& (now - modified) / 1000 < window)
+				&& window > 0 && (now - modified) / 1000 < window)
 		{
 			if (sliding)
 			{

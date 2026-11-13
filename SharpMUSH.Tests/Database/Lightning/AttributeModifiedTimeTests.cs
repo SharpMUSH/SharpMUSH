@@ -103,7 +103,7 @@ public class AttributeModifiedTimeTests
 	}
 
 	[Test]
-	public async Task ClearingABranchThatKeepsItsChildrenStampsIt()
+	public async Task ClearingABranchThatKeepsItsChildrenLeavesItWithNoTime()
 	{
 		var god = await God();
 		await _db.SetAttributeAsync(new DBRef(1), ["KEPT"], MarkupText.Plain("value"), god);
@@ -112,7 +112,7 @@ public class AttributeModifiedTimeTests
 		_clock.Now = _clock.Now.AddHours(1);
 		await _db.ClearAttributeAsync(new DBRef(1), ["KEPT"]);
 
-		await Assert.That(await ModifiedAsync("KEPT")).IsEqualTo(1_700_003_600_000);
+		await Assert.That(await ModifiedAsync("KEPT")).IsNull();
 	}
 
 	[Test]
