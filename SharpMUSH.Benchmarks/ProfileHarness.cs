@@ -24,6 +24,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		bool AsStranger = false);
 
 	private static readonly string Shuffled100 = string.Join(' ', Enumerable.Range(0, 100).Select(i => i * 37 % 100));
+	private static readonly string Words1000 = string.Join(' ', Enumerable.Range(0, 1000).Select(i => $"w{i}"));
+	private static readonly string Pipes1000 = string.Join('|', Enumerable.Range(0, 1000).Select(i => $"w{i}"));
 
 	private static readonly Scenario[] Scenarios =
 	[
@@ -82,6 +84,13 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		// 0-99 in a fixed shuffled order: a sorted list is a merge sort's best case.
 		new("sort", $"[sort({Shuffled100})]", false),
 		new("sortby", $"[sortby(me/PROFILE_CMP,{Shuffled100})]", false),
+		// One edit to a 1000-item list: the answer is the list less or plus one item.
+		new("ldelete1000", $"[ldelete({Words1000},500)]", false),
+		new("ldelete1000-pipe", $"[ldelete({Pipes1000},500,|)]", false),
+		new("lreplace1000", $"[lreplace({Words1000},500,x)]", false),
+		new("linsert1000", $"[linsert({Words1000},500,x)]", false),
+		new("setdiff1000", $"[setdiff({Words1000},w1 w2 w3)]", false),
+		new("parsestr1000", $"[parsestr({Words1000},%i0)]", false),
 		new("set", "&PROFILE_X me=x", true),
 		new("set-cmd", "@set me=PROFILE_X:x", true),
 		new("set-fn", "[attrib_set(me/PROFILE_X,x)]", false),

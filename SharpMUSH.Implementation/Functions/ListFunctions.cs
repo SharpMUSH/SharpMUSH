@@ -91,12 +91,12 @@ public partial class Functions
 		if (splitList.Length == 2)
 		{
 			return ValueTask.FromResult<CallState>(
-				MarkupText.Join(outSeparator, [splitList[0], MarkupText.Concat(conjunction, MarkupText.Concat(outSeparator, splitList[1]))]));
+				MarkupText.Join(outSeparator, [splitList[0], MarkupText.Concat([conjunction, outSeparator, splitList[1]])]));
 		}
 
 		if (splitList.Length > 2)
 		{
-			splitList[^1] = MarkupText.Concat(conjunction, MarkupText.Concat(outSeparator, splitList[^1]));
+			splitList[^1] = MarkupText.Concat([conjunction, outSeparator, splitList[^1]]);
 		}
 
 		return ValueTask.FromResult<CallState>(
@@ -558,12 +558,12 @@ public partial class Functions
 		if (splitList.Length == 2)
 		{
 			return ValueTask.FromResult<CallState>(
-				MarkupText.Join(space, [splitList[0], MarkupText.Concat(conjunction, MarkupText.Concat(space, splitList[1]))]));
+				MarkupText.Join(space, [splitList[0], MarkupText.Concat([conjunction, space, splitList[1]])]));
 		}
 
 		if (splitList.Length > 2)
 		{
-			splitList[^1] = MarkupText.Concat(conjunction, MarkupText.Concat(space, splitList[^1]));
+			splitList[^1] = MarkupText.Concat([conjunction, space, splitList[^1]]);
 		}
 
 		return ValueTask.FromResult<CallState>(
@@ -591,11 +591,10 @@ public partial class Functions
 		var delimiter = ArgHelpers.Delimiter(args, 2);
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, delimiter);
 
-		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
-		var deleted = ListPositions(parser, positionsArg, list.Length);
+		var list = listArg ?? MarkupText.Empty;
+		var deleted = ListPositions(parser, positionsArg, MushList.Count(delimiter, list));
 
-		return ValueTask.FromResult<CallState>(
-			MarkupText.Join(outputSep, list.Where((_, i) => !deleted.Contains(i))));
+		return ValueTask.FromResult<CallState>(MushList.Delete(delimiter, outputSep, list, deleted));
 	}
 
 	/// <summary>
@@ -985,13 +984,11 @@ public partial class Functions
 		var delimiter = ArgHelpers.Delimiter(args, 3);
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
-		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
-		foreach (var index in ListPositions(parser, positionsArg, list.Length))
-		{
-			list[index] = newItem ?? MarkupText.Empty;
-		}
+		var list = listArg ?? MarkupText.Empty;
+		var replaced = ListPositions(parser, positionsArg, MushList.Count(delimiter, list));
 
-		return ValueTask.FromResult<CallState>(MarkupText.Join(outputSep, list));
+		return ValueTask.FromResult<CallState>(
+			MushList.Replace(delimiter, outputSep, list, replaced, newItem ?? MarkupText.Empty));
 	}
 
 	[SharpFunction(Name = "rest", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
@@ -1583,8 +1580,8 @@ public partial class Functions
 			return new CallState(listArg);
 		}
 
-		var listItems = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty).ToList();
-		var count = listItems.Count;
+		var list = listArg ?? MarkupText.Empty;
+		var count = MushList.Count(delimiter, list);
 
 		// PennMUSH find_list_position logic with insert=true
 		int insertIndex;
@@ -1639,8 +1636,8 @@ public partial class Functions
 			return new CallState(listArg);
 		}
 
-		listItems.Insert(insertIndex, newItemArg ?? MarkupText.Empty);
-		return new CallState(MarkupText.Join(MuxOutputSeparator(args, 4, delimiter), listItems));
+		return new CallState(
+			MushList.Insert(delimiter, MuxOutputSeparator(args, 4, delimiter), list, insertIndex, newItemArg ?? MarkupText.Empty));
 	}
 
 	/// <summary>

@@ -84,8 +84,7 @@ public partial class Functions
 		}
 
 		// A space delimiter takes a run of spaces as one, and none at either end.
-		var pieces = delimiter != ' ' ? text.Split(delimiter.ToString())
-			: text.Split(" ").Where(piece => piece.ToPlainText().Length > 0).DefaultIfEmpty(MarkupText.Empty).ToArray();
+		var pieces = delimiter != ' ' ? text.Split(delimiter.ToString()) : Words(text);
 
 		var result = new List<MString>();
 		var written = false;
@@ -198,5 +197,17 @@ public partial class Functions
 
 		pieces.Add(speech.Substring(Math.Min(start, speech.Length)));
 		return MarkupText.Concat(pieces.ToArray());
+	}
+
+	/// <summary>
+	/// The words of <paramref name="text"/>: a run of spaces is one break and none count at either end, and a word
+	/// with no plain text (only a point, such as a sound) is left out. One empty word when there are none.
+	/// </summary>
+	private static MString[] Words(MString text)
+	{
+		var words = text.Split(" ", StringSplitOptions.RemoveEmptyEntries);
+		if (Array.Exists(words, word => word.ToPlainText().Length == 0))
+			words = Array.FindAll(words, word => word.ToPlainText().Length > 0);
+		return words.Length > 0 ? words : [MarkupText.Empty];
 	}
 }

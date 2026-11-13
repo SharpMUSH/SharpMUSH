@@ -65,7 +65,9 @@ public partial class Functions
 	}
 
 	private static MString[] NonEmptyItems(MString delimiter, MString list)
-		=> Array.FindAll(MushText.SplitList(delimiter, list), item => item.Length > 0);
+		=> ListSeparators.IsMarked(delimiter)
+			? Array.FindAll(MushText.Split(delimiter, list), item => item.Length > 0)
+			: list.Split(delimiter.Text, StringSplitOptions.RemoveEmptyEntries);
 
 	/// <summary>The items in order, each text only the first time unless <paramref name="keepDuplicates"/>.</summary>
 	private static IEnumerable<MString> Distinct(IEnumerable<MString> items, bool keepDuplicates)
