@@ -279,4 +279,20 @@ public class ComponentUpdateCoordinatorTests
 		coordinator.Poll(Report()).Expect<SharpMUSH.Library.DiscriminatedUnions.NotFound>();
 		await Assert.That(coordinator.Status(0, 0).Job).IsNull();
 	}
+
+	[Test]
+	public async Task AnUpdateThatExpiresWhileItsWarningIsSentIsNotReportedQueued()
+	{
+		var (coordinator, clock, broadcast) = Create();
+		var sent = new TaskCompletionSource();
+		broadcast.BroadcastAsync(default!).ReturnsForAnyArgs(_ => new ValueTask(sent.Task));
+		coordinator.Poll(Report());
+		var queueing = coordinator.QueueAsync(new AdminUpdateRequest([ServerComponents.SocketServer], null, 60), "admin").AsTask();
+		clock.Now += ComponentUpdateCoordinator.ClaimWindow + TimeSpan.FromSeconds(1);
+		coordinator.Poll(Report()).Expect<SharpMUSH.Library.DiscriminatedUnions.NotFound>();
+		sent.SetResult();
+		var result = await queueing;
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("did not take");
+		await Assert.That(coordinator.Status(0, 0).Job!.State).IsEqualTo(UpdateJobStates.Failed);
+	}
 }

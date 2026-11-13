@@ -173,6 +173,9 @@ public sealed partial class ComponentUpdateCoordinator(string? token, TimeProvid
 		lock (_gate)
 		{
 			if (_warning == job.Id) _warning = null;
+			// The warning took longer than the agent may wait: the update expired while it was sent.
+			if (_job is not { State: UpdateJobStates.Queued } queued || queued.Id != job.Id)
+				return new Error<string>("The update agent did not take the update.");
 		}
 		return job;
 	}
