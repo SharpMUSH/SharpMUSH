@@ -148,20 +148,22 @@ public class MushListTests
 				foreach (var separator in Separators.Append(delimiter))
 				{
 					var count = Split(delimiter, text).Length;
-					foreach (var positions in PositionSets)
+					foreach (var set in PositionSets.Select(positions => positions.Where(i => i < count).ToHashSet()))
 					{
-						var set = positions.Where(i => i < count).ToHashSet();
 						if (!Same(OldDelete(delimiter, separator, text, set), MushList.Delete(delimiter, separator, text, set)))
 							differences.Add($"Delete({Describe(text)}, {Describe(delimiter)}, {Describe(separator)}, [{string.Join(",", set)}])");
-						foreach (var item in items)
-							if (!Same(OldReplace(delimiter, separator, text, set, item), MushList.Replace(delimiter, separator, text, set, item)))
-								differences.Add($"Replace({Describe(text)}, {Describe(delimiter)}, {Describe(separator)}, [{string.Join(",", set)}], {Describe(item)})");
+						differences.AddRange(items
+							.Where(item => !Same(OldReplace(delimiter, separator, text, set, item), MushList.Replace(delimiter, separator, text, set, item)))
+							.Select(item => $"Replace({Describe(text)}, {Describe(delimiter)}, {Describe(separator)}, [{string.Join(",", set)}], {Describe(item)})"));
 					}
 
 					for (var index = 0; index <= count; index++)
-						foreach (var item in items)
-							if (!Same(OldInsert(delimiter, separator, text, index, item), MushList.Insert(delimiter, separator, text, index, item)))
-								differences.Add($"Insert({Describe(text)}, {Describe(delimiter)}, {Describe(separator)}, {index}, {Describe(item)})");
+					{
+						var at = index;
+						differences.AddRange(items
+							.Where(item => !Same(OldInsert(delimiter, separator, text, at, item), MushList.Insert(delimiter, separator, text, at, item)))
+							.Select(item => $"Insert({Describe(text)}, {Describe(delimiter)}, {Describe(separator)}, {at}, {Describe(item)})"));
+					}
 				}
 
 		await Assert.That(differences.Take(10)).IsEmpty();
