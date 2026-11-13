@@ -305,20 +305,28 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// repeated, and some carry a password (CONNECT, @password) that must not outlive the command.
 		// Attribute text a typed command runs (look's formats, u()) is not part of the line, so it is
 		// still kept. A tracing parse is never shared.
+		// Stored attribute text the frame runs is found by the attribute's version rather than by hashing
+		// it, so a body longer than a text key allows is kept as well.
 		var options = Configuration.CurrentValue;
-		var typedLine = parser.State.IsEmpty ? null : parser.CurrentState.TypedLine;
-		var cache = options.Debug.DebugSharpParser || plainText.Length > SoftcodeParseCache.MaxTextLength
+		var cache = options.Debug.DebugSharpParser
 			|| methodName is not (nameof(FunctionParse) or nameof(CommandListParse) or nameof(PipedCommandParse) or nameof(CommandCommaArgsParse)
 				or nameof(CommandSingleArgParse) or nameof(CommandEqSplitArgsParse) or nameof(CommandEqSplitParse))
-			|| typedLine?.Contains(plainText, StringComparison.Ordinal) == true
 			? null
 			: Services.ParseCache;
+		var source = parser.State.IsEmpty ? null : parser.CurrentState.AttributeBody;
+		SoftcodeParseCache.SourceKey? sourceKey = cache is not null && source is not null && ReferenceEquals(source.Text, text)
+			? new(source.Object, source.Attribute, source.Modified, methodName, lenient,
+				options.Compatibility.ParenGroups, options.Debug.ParserPredictionMode)
+			: null;
+		var typedLine = parser.State.IsEmpty ? null : parser.CurrentState.TypedLine;
+		var keyedOnText = cache is not null && sourceKey is null && plainText.Length <= SoftcodeParseCache.MaxTextLength
+			&& typedLine?.Contains(plainText, StringComparison.Ordinal) != true;
 		var key = new SoftcodeParseCache.Key(plainText, methodName, lenient,
 			options.Compatibility.ParenGroups, options.Debug.ParserPredictionMode);
 
 		TContext context;
 		ParserErrorListener errorListener;
-		if (cache is not null && cache.TryGet(key, out var parsed))
+		if (Cached(cache, sourceKey, keyedOnText, key, plainText) is { } parsed)
 		{
 			context = (TContext)parsed.Context;
 			errorListener = parsed.Errors;
@@ -350,7 +358,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				return (new CallState(ExecutionBudget.Error) { HadErrors = true }, true);
 			}
 
-			cache?.Add(key, new SoftcodeParseCache.Entry(context, errorListener));
+			var entry = new SoftcodeParseCache.Entry(context, errorListener);
+			if (sourceKey is { } sourced) cache!.Add(sourced, plainText, entry);
+			else if (keyedOnText) cache!.Add(key, entry);
 		}
 
 		// In strict mode (default for function evaluation), surface any syntax error
@@ -387,6 +397,18 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		}
 
 		return (result, visitor.SuppressSubstitutionOnlyDebugTrace);
+	}
+
+	/// <summary>
+	/// The tree <paramref name="cache"/> holds for this parse, under whichever key it is kept by. A key is only given
+	/// when there is a cache.
+	/// </summary>
+	private static SoftcodeParseCache.Entry? Cached(SoftcodeParseCache? cache, SoftcodeParseCache.SourceKey? sourceKey,
+		bool keyedOnText, in SoftcodeParseCache.Key key, string plainText)
+	{
+		if (sourceKey is { } sourced) return cache!.TryGet(sourced, plainText, out var bySource) ? bySource : null;
+		if (keyedOnText) return cache!.TryGet(key, out var byText) ? byText : null;
+		return null;
 	}
 
 	/// <inheritdoc/>

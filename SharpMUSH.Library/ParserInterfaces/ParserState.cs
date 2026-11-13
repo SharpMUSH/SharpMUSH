@@ -802,6 +802,12 @@ public partial record ParserState
 	/// </summary>
 	public ParserState ForAttributeCall(ArgumentList? arguments, Dictionary<string, CallState>? environment,
 		DBAttribute evaluation, string function, DBRef executor)
+		=> ForAttributeCall(arguments, environment, evaluation, function, executor, body: null);
+
+	/// <inheritdoc cref="ForAttributeCall(ArgumentList, Dictionary{string, CallState}, DBAttribute, string, DBRef)"/>
+	/// <param name="body">The attribute's stored text and its version (<see cref="AttributeBody"/>), or null.</param>
+	public ParserState ForAttributeCall(ArgumentList? arguments, Dictionary<string, CallState>? environment,
+		DBAttribute evaluation, string function, DBRef executor, AttributeBody? body)
 	{
 		var called = arguments ?? ArgumentList;
 		return this with
@@ -809,6 +815,7 @@ public partial record ParserState
 			ArgumentList = called,
 			_scope = new AttributeScope(environment ?? EnvironmentRegisters, AttributeArgumentEnvironment.SuppliedKeys(called)),
 			CurrentEvaluation = evaluation,
+			AttributeBody = body,
 			Function = function,
 			_actors = _actors.ForAttributeCall(executor)
 		};
@@ -950,6 +957,14 @@ public partial record ParserState
 
 	/// <summary>The attribute being evaluated.</summary>
 	public DBAttribute? CurrentEvaluation { get; init; }
+
+	/// <summary>
+	/// The stored text this frame runs and the version of the attribute it came from, so its parse can be found
+	/// again without hashing the text. Applies only to a parse of <see cref="AttributeBody.Text"/> itself, not
+	/// to the other text the body's functions parse. Null when the frame runs no stored text, or the
+	/// attribute has no modification time.
+	/// </summary>
+	public AttributeBody? AttributeBody { get; init; }
 
 	/// <summary>
 	/// While a command hook runs, the command line it hooks, as written: RhostMUSH's <c>%-m</c>. Null outside a

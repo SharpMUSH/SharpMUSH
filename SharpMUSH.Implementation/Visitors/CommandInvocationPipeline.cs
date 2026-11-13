@@ -911,6 +911,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			var newParser = prs.Push(bound with
 			{
 				CurrentEvaluation = DBAttribute.Of(obj.Object().DBRef, attr),
+				AttributeBody = AttributeBody.Of(obj.Object().DBRef, attr, body),
 				Function = null,
 				Actors = bound.Actors with { Executor = obj.Object().DBRef, Enactor = prs.CurrentState.Executor, Caller = prs.CurrentState.Executor },
 				Context = bound.Context with
