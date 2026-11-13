@@ -2,6 +2,7 @@ using System.Buffers;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace SharpMUSH.SocketServer.Services;
 
@@ -13,14 +14,8 @@ namespace SharpMUSH.SocketServer.Services;
 /// the <c>{"type":"bye"}</c> logout notice, and the inbound <c>{"type":"hello"}</c> /
 /// <c>{"type":"resume","token":"...","lastSeq":n}</c> requests.
 /// </summary>
-public static class SeqEnvelope
+public static partial class SeqEnvelope
 {
-	private static readonly JsonSerializerOptions Json = new()
-	{
-		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-		PropertyNameCaseInsensitive = true
-	};
-
 	/// <summary>Leaves the text's non-ASCII as UTF-8: the frame goes to a JSON parser, never into a document.</summary>
 	private static readonly JsonWriterOptions WriterOptions = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
@@ -66,11 +61,11 @@ public static class SeqEnvelope
 
 	/// <summary>Serializes the <c>{"type":"resumeToken","token":"..."}</c> control frame.</summary>
 	public static byte[] ResumeToken(string token)
-		=> JsonSerializer.SerializeToUtf8Bytes(new ResumeTokenFrame("resumeToken", token), Json);
+		=> JsonSerializer.SerializeToUtf8Bytes(new ResumeTokenFrame("resumeToken", token), FrameJson.Default.ResumeTokenFrame);
 
 	/// <summary>Serializes the <c>{"type":"reattached"}</c> rebind acknowledgement.</summary>
 	public static byte[] Reattached()
-		=> JsonSerializer.SerializeToUtf8Bytes(new ReattachedFrame("reattached"), Json);
+		=> JsonSerializer.SerializeToUtf8Bytes(new ReattachedFrame("reattached"), FrameJson.Default.ReattachedFrame);
 
 	/// <summary>
 	/// Serializes the <c>{"type":"bye"}</c> terminal-close frame. Sent immediately before the socket is
@@ -79,12 +74,12 @@ public static class SeqEnvelope
 	/// carries no bye and stays resumable within the grace window.
 	/// </summary>
 	public static byte[] Bye()
-		=> JsonSerializer.SerializeToUtf8Bytes(new ByeFrame("bye"), Json);
+		=> JsonSerializer.SerializeToUtf8Bytes(new ByeFrame("bye"), FrameJson.Default.ByeFrame);
 
 	/// <summary>Reads the sequence of an output envelope, throwing if the frame is not one.</summary>
 	public static long ReadSeq(byte[] frame)
 	{
-		var parsed = JsonSerializer.Deserialize<SeqFrame>(frame, Json);
+		var parsed = JsonSerializer.Deserialize(frame, FrameJson.Default.SeqFrame);
 		if (parsed?.Type != "seq" || parsed.Seq is null)
 			throw new FormatException("Frame is not a sequence envelope (missing seq).");
 		return parsed.Seq.Value;
@@ -96,7 +91,7 @@ public static class SeqEnvelope
 		seq = 0;
 		try
 		{
-			var parsed = JsonSerializer.Deserialize<SeqFrame>(frame, Json);
+			var parsed = JsonSerializer.Deserialize(frame, FrameJson.Default.SeqFrame);
 			if (parsed?.Type != "seq" || parsed.Seq is null) return false;
 			seq = parsed.Seq.Value;
 			return true;
@@ -124,7 +119,7 @@ public static class SeqEnvelope
 		presenceClass = "play";
 		try
 		{
-			var hello = JsonSerializer.Deserialize<HelloFrame>(frame, Json);
+			var hello = JsonSerializer.Deserialize(frame, FrameJson.Default.HelloFrame);
 			if (hello?.Type != "hello") return false;
 			presenceClass = string.IsNullOrEmpty(hello.Class) ? "play" : hello.Class;
 			return true;
@@ -146,7 +141,7 @@ public static class SeqEnvelope
 	{
 		try
 		{
-			return JsonSerializer.Deserialize<HelloFrame>(frame, Json) is { Type: "hello" or "resume", SignIn: true };
+			return JsonSerializer.Deserialize(frame, FrameJson.Default.HelloFrame) is { Type: "hello" or "resume", SignIn: true };
 		}
 		catch (JsonException)
 		{
@@ -165,7 +160,7 @@ public static class SeqEnvelope
 		presenceClass = "play";
 		try
 		{
-			var resume = JsonSerializer.Deserialize<ResumeFrame>(frame, Json);
+			var resume = JsonSerializer.Deserialize(frame, FrameJson.Default.ResumeFrame);
 			if (resume?.Type != "resume" || resume.Token is null) return false;
 			token = resume.Token;
 			lastSeq = resume.LastSeq;
@@ -189,4 +184,13 @@ public static class SeqEnvelope
 	private sealed record ReattachedFrame(string Type);
 
 	private sealed record ByeFrame(string Type);
+
+	[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true)]
+	[JsonSerializable(typeof(HelloFrame))]
+	[JsonSerializable(typeof(SeqFrame))]
+	[JsonSerializable(typeof(ResumeFrame))]
+	[JsonSerializable(typeof(ResumeTokenFrame))]
+	[JsonSerializable(typeof(ReattachedFrame))]
+	[JsonSerializable(typeof(ByeFrame))]
+	private sealed partial class FrameJson : JsonSerializerContext;
 }

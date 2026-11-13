@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using MarkupString;
 using SharpMUSH.Library.Utilities;
 using SharpMUSH.SocketServer.Models;
@@ -15,7 +16,7 @@ public readonly record struct GmcpFrame(string Package, string Json);
 /// <c>Client.Media</c> (or <c>Client</c>) in Core.Supports. Mudlet plays sound this way: it has no MSP
 /// trigger in the text and does not play MXP <c>&lt;SOUND&gt;</c>.
 /// </summary>
-public static class ClientMediaFrames
+public static partial class ClientMediaFrames
 {
 	/// <summary>The GMCP module a client lists to be sent these.</summary>
 	public const string Module = "Client.Media";
@@ -148,7 +149,7 @@ public static class ClientMediaFrames
 		var kept = 0;
 		foreach (var frame in frames)
 		{
-			var pair = JsonSerializer.SerializeToUtf8Bytes(new[] { frame.Package, frame.Json }).Length + (kept > 0 ? 1 : 0);
+			var pair = JsonSerializer.SerializeToUtf8Bytes(new[] { frame.Package, frame.Json }, PairJson.Default.StringArray).Length + (kept > 0 ? 1 : 0);
 			if (Base64Length(length + pair) > MaxHeaderLength) break;
 			length += pair;
 			kept++;
@@ -157,7 +158,8 @@ public static class ClientMediaFrames
 		dropped = frames.Count - kept;
 		return kept == 0
 			? null
-			: Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(frames.Take(kept).Select(frame => new[] { frame.Package, frame.Json })));
+			: Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(frames.Take(kept).Select(frame => new[] { frame.Package, frame.Json }).ToArray(),
+				PairJson.Default.StringArrayArray));
 	}
 
 	private static int Base64Length(int bytes) => (bytes + 2) / 3 * 4;
@@ -168,7 +170,7 @@ public static class ClientMediaFrames
 		if (string.IsNullOrEmpty(header)) return null;
 		try
 		{
-			var pairs = JsonSerializer.Deserialize<string[][]>(Encoding.UTF8.GetString(Convert.FromBase64String(header)));
+			var pairs = JsonSerializer.Deserialize(Encoding.UTF8.GetString(Convert.FromBase64String(header)), PairJson.Default.StringArrayArray);
 			var frames = pairs?.Where(pair => pair is [_, _]).Select(pair => new GmcpFrame(pair[0], pair[1])).ToArray();
 			return frames is { Length: > 0 } ? frames : null;
 		}
@@ -177,4 +179,7 @@ public static class ClientMediaFrames
 			return null;
 		}
 	}
+
+	[JsonSerializable(typeof(string[][]))]
+	private sealed partial class PairJson : JsonSerializerContext;
 }

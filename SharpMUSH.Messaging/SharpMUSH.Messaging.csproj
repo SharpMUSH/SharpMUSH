@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
     <LangVersion>default</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- The AOT socket server and rendering worker use it: the trim and AOT analyzers keep it clean. -->
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>

@@ -276,7 +276,7 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 		if (data.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null) return null;
 		try
 		{
-			return data.Deserialize(reg.MessageType);
+			return data.Deserialize(MessagingJson.TypeInfo(reg.MessageType));
 		}
 		catch (JsonException ex)
 		{

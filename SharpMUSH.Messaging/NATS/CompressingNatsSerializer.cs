@@ -1,5 +1,4 @@
 using NATS.Client.Core;
-using NATS.Client.Serializers.Json;
 using System.Buffers;
 using System.IO.Compression;
 using System.IO.Pipelines;
@@ -42,7 +41,7 @@ public sealed class CompressingNatsSerializer<T> : INatsSerializer<T>
 	}
 
 	public static CompressingNatsSerializer<T> Default { get; } =
-			new(NatsJsonSerializer<T>.Default, DefaultThresholdBytes);
+			new(MessagingNatsSerializer<T>.Default, DefaultThresholdBytes);
 
 	public void Serialize(IBufferWriter<byte> bufferWriter, T value)
 	{

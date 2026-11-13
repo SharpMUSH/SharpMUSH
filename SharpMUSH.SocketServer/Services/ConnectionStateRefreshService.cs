@@ -12,7 +12,7 @@ public sealed class ConnectionStateRefreshService(
 	IConfiguration? configuration = null) : BackgroundService
 {
 	private readonly TimeSpan _tokenRefreshInterval = TimeSpan.FromHours(
-		(configuration?.GetValue("Replay:RetentionHours", 24.0) ?? 24.0) / 2);
+		(configuration is null ? 24.0 : configuration.GetValue("Replay:RetentionHours", 24.0)) / 2);
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{

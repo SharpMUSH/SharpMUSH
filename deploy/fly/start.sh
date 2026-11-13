@@ -105,7 +105,7 @@ start_connection() {
 		NATS_URL=nats://127.0.0.1:4222 \
 		ConnectionServer__TelnetPort="$TELNET_PORT" \
 		ForwardedHeaders__KnownProxies__0=127.0.0.1 \
-		setpriv --reuid=app --regid=app --init-groups dotnet SharpMUSH.SocketServer.dll) &
+		setpriv --reuid=app --regid=app --init-groups ./SharpMUSH.SocketServer) &
 	pid[connection]=$!
 }
 
@@ -115,7 +115,7 @@ pid[nats]=$!
 wait_for nats bash -c 'exec 3<>/dev/tcp/127.0.0.1/4222'
 
 if [ "$ROLE" = all ]; then
-	(cd /app/renderer && exec setpriv --reuid=app --regid=app --init-groups dotnet SharpMUSH.RenderingWorker.dll) &
+	(cd /app/renderer && exec setpriv --reuid=app --regid=app --init-groups ./SharpMUSH.RenderingWorker) &
 	pid[renderer]=$!
 	wait_for renderer test -S /run/sharpmush/render.sock
 fi

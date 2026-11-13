@@ -8,6 +8,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.NATS;
 using System.Text.Json;
+using SharpMUSH.Messaging;
 
 namespace SharpMUSH.Library.Services;
 
@@ -65,7 +66,7 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 	{
 		try
 		{
-			var json = JsonSerializer.Serialize(data);
+			var json = JsonSerializer.Serialize(data, MessagingJson.TypeInfo<ConnectionStateData>());
 			await _store.PutAsync(GetKey(handle), json, cancellationToken: ct);
 			_logger.LogTrace("Stored connection state for handle {Handle}", handle);
 		}
@@ -90,7 +91,7 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 			}
 
 			var json = result.Value.Value;
-			return json is null ? null : JsonSerializer.Deserialize<ConnectionStateData>(json);
+			return json is null ? null : JsonSerializer.Deserialize(json, MessagingJson.TypeInfo<ConnectionStateData>());
 		}
 		catch (Exception ex) when (!(ex is OperationCanceledException && ct.IsCancellationRequested))
 		{
@@ -239,7 +240,7 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 				if (entry.Error is NatsKVKeyNotFoundException or NatsKVKeyDeletedException) return false;
 				throw entry.Error;
 			}
-			var data = entry.Value.Value is { } json ? JsonSerializer.Deserialize<ConnectionStateData>(json) : null;
+			var data = entry.Value.Value is { } json ? JsonSerializer.Deserialize(json, MessagingJson.TypeInfo<ConnectionStateData>()) : null;
 			if (data is null || data.Handle != handle
 				|| (sessionId is not null && data.Metadata.GetValueOrDefault("SessionId") != sessionId)) return false;
 			// Never apply a retry to a later occupant of a recycled descriptor.
@@ -248,7 +249,7 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 			if (validate is not null && !validate(data)) return false;
 			mutate(data);
 			data.LastSeen = DateTimeOffset.UtcNow;
-			var result = await _store.TryUpdateAsync(GetKey(handle), JsonSerializer.Serialize(data),
+			var result = await _store.TryUpdateAsync(GetKey(handle), JsonSerializer.Serialize(data, MessagingJson.TypeInfo<ConnectionStateData>()),
 				entry.Value.Revision, cancellationToken: ct);
 			if (result.Success) return true;
 			if (result.Error is not NatsKVWrongLastRevisionException) throw result.Error;

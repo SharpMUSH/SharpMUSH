@@ -51,6 +51,7 @@ public static class Program
 					break;
 			}
 		});
+		builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.TypeInfoResolverChain.Insert(0, HttpJsonContext.Default));
 		builder.Services.AddSingleton<TerminalPictureStore>();
 		builder.Services.AddSingleton<ConnectionPictures>();
 		builder.Services.AddSingleton(sp => new MarkupOutputRenderer(
