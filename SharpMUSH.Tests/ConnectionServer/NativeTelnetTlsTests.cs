@@ -14,6 +14,7 @@ using NSubstitute;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;
+using SharpMUSH.SocketServer;
 using SharpMUSH.SocketServer.Services;
 
 namespace SharpMUSH.Tests.ConnectionServer;
@@ -47,6 +48,57 @@ public class NativeTelnetTlsTests
 		using var plaintext = new TcpClient();
 		await plaintext.ConnectAsync(IPAddress.Loopback, server.PlaintextPort, timeout.Token);
 		await ExchangeTelnetAsync(server, plaintext.GetStream(), isSecure: false, timeout.Token);
+	}
+
+	[Test]
+	public async Task MultipathTelnetNegotiatesMptcpOnBothTelnetPortsAndStillTakesPlainTcp()
+	{
+		using var probe = MultipathTcp.TryOpen(AddressFamily.InterNetwork, out var unavailable);
+		if (probe is null) Skip.Test($"This kernel opens no MPTCP socket ({unavailable})");
+
+		using var certificates = new TestCertificates();
+		using var timeout = new CancellationTokenSource(Timeout);
+		var telnetPort = GetUnusedPort();
+		var tlsPort = GetUnusedPort();
+		await using var server = await TestServer.StartAsync(tlsPort, certificates, timeout.Token,
+			$"--ConnectionServer:TelnetPort={telnetPort}", "--ConnectionServer:TelnetMultipathTcp=true");
+
+		using (var client = MultipathTcp.TryOpen(AddressFamily.InterNetwork, out _)!)
+		{
+			await client.ConnectAsync(IPAddress.Loopback, telnetPort, timeout.Token);
+			await Assert.That(MultipathTcp.IsActive(client)).IsTrue();
+			await ExchangeTelnetAsync(server, new NetworkStream(client), isSecure: false, timeout.Token);
+		}
+
+		using (var client = MultipathTcp.TryOpen(AddressFamily.InterNetwork, out _)!)
+		{
+			await client.ConnectAsync(IPAddress.Loopback, tlsPort, timeout.Token);
+			await Assert.That(MultipathTcp.IsActive(client)).IsTrue();
+			await using var stream = new SslStream(new NetworkStream(client));
+			await stream.AuthenticateAsClientAsync(certificates.ClientOptions(), timeout.Token);
+			await ExchangeTelnetAsync(server, stream, isSecure: true, timeout.Token);
+		}
+
+		using var plain = new TcpClient();
+		await plain.ConnectAsync(IPAddress.Loopback, telnetPort, timeout.Token);
+		await Assert.That(MultipathTcp.IsActive(plain.Client)).IsFalse();
+		await ExchangeTelnetAsync(server, plain.GetStream(), isSecure: false, timeout.Token);
+	}
+
+	[Test]
+	public async Task TelnetIsPlainTcpUnlessMultipathIsTurnedOn()
+	{
+		using var probe = MultipathTcp.TryOpen(AddressFamily.InterNetwork, out var unavailable);
+		if (probe is null) Skip.Test($"This kernel opens no MPTCP socket ({unavailable})");
+
+		using var timeout = new CancellationTokenSource(Timeout);
+		var telnetPort = GetUnusedPort();
+		await using var server = await TestServer.StartAsync(0, null, timeout.Token, $"--ConnectionServer:TelnetPort={telnetPort}");
+
+		using var client = MultipathTcp.TryOpen(AddressFamily.InterNetwork, out _)!;
+		await client.ConnectAsync(IPAddress.Loopback, telnetPort, timeout.Token);
+		await Assert.That(MultipathTcp.IsActive(client)).IsFalse();
+		await ExchangeTelnetAsync(server, new NetworkStream(client), isSecure: false, timeout.Token);
 	}
 
 	[Test]
@@ -200,7 +252,8 @@ public class NativeTelnetTlsTests
 		// Program registers plaintext telnet first, then optional TLS, then HTTP.
 		public int PlaintextPort => new Uri(App.Urls.First()).Port;
 
-		public static async Task<TestServer> StartAsync(int tlsPort, TestCertificates? certificates, CancellationToken ct)
+		public static async Task<TestServer> StartAsync(
+			int tlsPort, TestCertificates? certificates, CancellationToken ct, params string[] extraArguments)
 		{
 			var backend = new TestBackend();
 			var args = new List<string>(TestDiagnostics.HostArguments)
@@ -216,6 +269,7 @@ public class NativeTelnetTlsTests
 				args.Add($"--Kestrel:Certificates:Default:Path={certificates.CertificatePath}");
 				args.Add($"--Kestrel:Certificates:Default:KeyPath={certificates.KeyPath}");
 			}
+			args.AddRange(extraArguments);
 
 			var app = await SharpMUSH.SocketServer.Program.CreateHostBuilderAsync(
 				[.. args], configureServices: backend.Configure);

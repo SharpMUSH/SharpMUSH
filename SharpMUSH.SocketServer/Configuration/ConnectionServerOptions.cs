@@ -52,6 +52,14 @@ public class ConnectionServerOptions
 	public string TelnetSslKeyPath { get; set; } = "";
 
 	/// <summary>
+	/// Open <see cref="TelnetPort"/> and <see cref="TelnetSslPort"/> as Linux Multipath TCP listeners, so a client
+	/// that speaks MPTCP can keep its session across a Wi-Fi/cellular switch. Clients without it connect as plain
+	/// TCP on the same port. Where the kernel offers no MPTCP the ports open as plain TCP, with a warning. A port
+	/// of 0 (ephemeral) is never MPTCP. The HTTP/WebSocket port is unaffected. Defaults to false.
+	/// </summary>
+	public bool TelnetMultipathTcp { get; set; } = false;
+
+	/// <summary>
 	/// Starting descriptor number for Telnet connections
 	/// </summary>
 	public long TelnetDescriptorStart { get; set; } = 0;

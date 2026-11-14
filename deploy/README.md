@@ -187,6 +187,28 @@ does not discover Caddy's certificates, provision ACME certificates, or renew th
 changes require a deliberate `socketserver` restart, which disconnects its native and
 WebSocket clients.
 
+### Multipath TCP for telnet
+
+Set `SHARPMUSH_TELNET_MPTCP=true` in `.env` (it sets `ConnectionServer__TelnetMultipathTcp`) to open
+4201 and 4203 as Linux Multipath TCP listeners. A client whose system speaks MPTCP, such as an iOS
+or macOS app that asks Network.framework for it, can then move between Wi-Fi and cellular without
+dropping its session. Every other client connects to the same ports as plain TCP. The web
+terminal is not affected: it reaches the server through Caddy (and Cloudflare), which end the
+client's TCP connection.
+
+The host kernel needs MPTCP built in (`/proc/sys/net/mptcp` exists). Every network namespace,
+the container's included, then has it on unless `net.mptcp.enabled` is set to `0` there. Without
+it the ports open as plain TCP and the socket server logs `Multipath TCP is not available here`. Keep the
+kernel patched; an MPTCP listener is kernel code reachable from the internet.
+
+To list the MPTCP sockets, run `ss -M` in the socket server's network namespace on the host:
+
+```bash
+sudo nsenter -t "$(docker inspect -f '{{.State.Pid}}' sharpmush-socketserver)" -n ss -Mni
+```
+
+From a Linux client, `mptcpize run telnet <host> 4201` connects with MPTCP.
+
 If you **don't** use Caddy (e.g. you terminate TLS at a load balancer), remember the browser
 terminal's `/ws` endpoint lives on the connection server (`:4202`), not the main server. The terminal
 connects to `/ws` on the portal's own address, so your proxy must route that path to `4202`, in

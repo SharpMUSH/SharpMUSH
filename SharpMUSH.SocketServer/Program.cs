@@ -7,6 +7,7 @@ using MarkupString.Mxp;
 using MarkupString.Pueblo;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
+using Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.ResourceDetectors.Container;
@@ -238,6 +239,19 @@ public class Program
 
 		var keepAlive = KeepAliveOptions.FromConfiguration(builder.Configuration);
 		builder.Services.AddSingleton(keepAlive);
+
+		if (connectionServerOptions.TelnetMultipathTcp)
+		{
+			int[] multipathPorts = [connectionServerOptions.TelnetPort, connectionServerOptions.TelnetSslPort];
+			builder.Services.AddOptions<SocketTransportOptions>().Configure<ILoggerFactory>((sockets, loggers) =>
+			{
+				var logger = loggers.CreateLogger(typeof(MultipathTcp).FullName!);
+				sockets.CreateBoundListenSocket = MultipathTcp.ListenSocketFactory(
+					multipathPorts.Where(port => port > 0).ToHashSet(),
+					(port, error) => logger.LogWarning(
+						"Multipath TCP is not available here ({Error}); telnet port {Port} listens as plain TCP", error, port));
+			});
+		}
 
 		builder.WebHost.ConfigureKestrel((context, options) =>
 		{

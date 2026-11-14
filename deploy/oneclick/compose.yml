@@ -62,6 +62,8 @@ services:
       ConnectionServer__TelnetSslPort: "4203"
       ConnectionServer__TelnetSslCertificatePath: /run/sharpmush-tls/telnet.crt
       ConnectionServer__TelnetSslKeyPath: /run/sharpmush-tls/telnet.key
+      # Multipath TCP on the telnet ports (deploy/README.md, "Multipath TCP for telnet").
+      ConnectionServer__TelnetMultipathTcp: "${SHARPMUSH_TELNET_MPTCP:-false}"
     depends_on:
       renderer:
         condition: service_healthy

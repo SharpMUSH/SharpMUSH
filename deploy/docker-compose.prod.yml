@@ -72,6 +72,8 @@ services:
       # connection the player's own address, which is what WHO, sitelock and sitebans see. Nothing
       # else is trusted: a client that reaches :4202 directly cannot name its own address.
       ForwardedHeaders__KnownProxies__0: *caddy-ip
+      # Multipath TCP on the telnet ports (deploy/README.md, "Multipath TCP for telnet").
+      ConnectionServer__TelnetMultipathTcp: "${SHARPMUSH_TELNET_MPTCP:-false}"
     depends_on:
       renderer:
         condition: service_healthy
