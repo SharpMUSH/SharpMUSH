@@ -9,6 +9,7 @@
     {"id": "stock-routes", "heading": "Stock routes", "lookup": "http stock routes"},
     {"id": "roster", "heading": "The roster", "lookup": "http roster"},
     {"id": "online", "heading": "The connection list", "lookup": "http online"},
+    {"id": "kept-rows", "heading": "Kept rows", "lookup": "http kept rows"},
     {"id": "profiles", "heading": "Profiles", "lookup": "http profiles"}
   ]
 }
@@ -34,6 +35,7 @@ Before dispatching, the router sets:
 - [http stock routes]: the routes the web portal uses
 - [http roster]: the `/http/characters` roster
 - [http online]: the `/http/online` connection list
+- [http kept rows]: how both lists keep their rows with memo()
 - [http profiles]: the `/http/profile` routes
 
 ## Adding a route
@@ -83,11 +85,15 @@ The connection list is `/http/online`.
 
 ``&GET`ONLINE`` answers the **connection list**, with the same row shape as `/http/characters` (`{name, objid, created, category, image}`). It is built on [lwho()], the same registry `WHO` reads, so an object that never binds a connection cannot appear here however it is flagged. Visibility comes from ``&FUN`PROFILE`ONLINEVISIBLE``, which by default applies the ``&FUN`PROFILE`CHARACTERVISIBLE`` rules plus hiding DARK players. lwho() lists the players its caller can see, and the handler is a wizard, so without that rule DARK players would be listed to anonymous web visitors. Redefine it to suit your game's policy.
 
-A redefined ``&FUN`PROFILE`CHARACTERCATEGORY`` or visibility rule runs inside [memo()]. The category is passed to memo() as an argument, so any change to it shows at once. A visibility rule that reads something other than attributes, a name, the category or flags, such as a location, is not seen to change until `memo_window` passes; add it to the arguments of ``&FUN`PROFILE`KEPTENTRY``. One that reads the clock or connections, such as conn() or idle(), is refused by memo(): have both routes call ``&FUN`PROFILE`ENTRY`` instead.
-
 ### Row separators
 
 Both routes pass `%r` as the [json_array()] separator rather than taking the default. `json_array()` splits its input *before* parsing each element, and rows embed player names, which routinely contain spaces; with the default separator a name like `Package Manager` is shredded into fragments that are no longer valid JSON. Keep the separator to something your rows cannot contain if you rewrite these.
+
+## Kept rows
+
+Both lists build each row through ``&FUN`PROFILE`KEPTENTRY``, which runs ``&FUN`PROFILE`ENTRY`` through [memo()]. A row is built again when an attribute it read changes, or when the player's name, category or flags change, or whether their `IMAGE` is visual.
+
+A redefined ``&FUN`PROFILE`CHARACTERCATEGORY`` or visibility rule runs inside [memo()]. The category is passed to memo() as an argument, so any change to it shows at once. A visibility rule that reads something other than attributes, a name, the category or flags, such as a location, is not seen to change until `memo_window` passes; add it to the arguments of ``&FUN`PROFILE`KEPTENTRY``. One that reads the clock or connections, such as conn() or idle(), is refused by memo(): have both routes call ``&FUN`PROFILE`ENTRY`` instead.
 
 ## Profiles
 
