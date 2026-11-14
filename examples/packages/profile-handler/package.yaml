@@ -99,6 +99,18 @@ objects:
       FUN`PROFILE`KEPTENTRY: |-
         memo(FUN`PROFILE`ENTRY,objid(%0),%1,name(%0),u(FUN`PROFILE`CHARACTERCATEGORY,%0),flags(%0),hasflag(%0/IMAGE,visual))
 
+      # Seconds a list route's answer is kept in its CACHE`PROFILE`* attribute on this handler. Rows are already kept
+      # by memo(), so this saves the remaining per-player calls; a rename, a role or an image made private can show
+      # this much later. 0 builds the list on every request.
+      DATA`PROFILE`CACHEWINDOW: |-
+        30
+      # A list route's answer: the value of attribute %0 while it is younger than DATA`PROFILE`CACHEWINDOW, else
+      # u(%1) stored there. A list longer than max_attribute_value_length cannot be stored and is built every time.
+      # With function_side_effects off, cache() is disabled, and the list is built every time. An answer that is an
+      # error (json_array() refusing a row) is cleared again, so it is not served for the whole window.
+      FUN`PROFILE`CACHED: |-
+        setq(profile_cached,cache(me,%0,u(%1),v(DATA`PROFILE`CACHEWINDOW)))[cond(strmatch(%q<profile_cached>,#-1 FUNCTION DISABLED),u(%1),strmatch(%q<profile_cached>,#-1*),[attrib_set(me/%0)]%q<profile_cached>,%q<profile_cached>)]
+
       # ── Routes (children of http-handler's GET verb) ─────────────────────
       # Both routes build their array with json_array(iter(...)) over a %r-separated list.
       # json_array() splits its input BEFORE parsing each element, so the separator must be
@@ -110,7 +122,9 @@ objects:
       # who EXISTS, not who is connected. For connections see GET`ONLINE. Rows are FUN`PROFILE`CHARACTERROW:
       # {name, objid, created, category, image}.
       GET`CHARACTERS: |-
-        @respond/type application/json; think json_array(squish(iter(lsearch(all,type,player),u(me/FUN`PROFILE`KEPTENTRY,%i0,FUN`PROFILE`CHARACTERVISIBLE),,%r),%r),%r)
+        @respond/type application/json; think u(me/FUN`PROFILE`CACHED,CACHE`PROFILE`CHARACTERS,FUN`PROFILE`CHARACTERS)
+      FUN`PROFILE`CHARACTERS: |-
+        json_array(squish(iter(lsearch(all,type,player),u(me/FUN`PROFILE`KEPTENTRY,%i0,FUN`PROFILE`CHARACTERVISIBLE),,%r),%r),%r)
       # GET /http/online — connected, visible players, same row shape as GET`CHARACTERS. mwho() is
       # the mortal who-list: caller-independent (this handler is wizard-flagged), so it hides DARK
       # players and portal-class background connections. Objects that never bind a connection can't
@@ -118,7 +132,9 @@ objects:
       # answers "who is here", not "how many sockets are open". A redefinition built on lwho()/
       # ports() would reintroduce per-connection rows and make the portal's presence counts wrong.
       GET`ONLINE: |-
-        @respond/type application/json; think json_array(squish(iter(mwho(),u(me/FUN`PROFILE`KEPTENTRY,%i0,FUN`PROFILE`ONLINEVISIBLE),,%r),%r),%r)
+        @respond/type application/json; think u(me/FUN`PROFILE`CACHED,CACHE`PROFILE`ONLINE,FUN`PROFILE`ONLINE)
+      FUN`PROFILE`ONLINE: |-
+        json_array(squish(iter(mwho(),u(me/FUN`PROFILE`KEPTENTRY,%i0,FUN`PROFILE`ONLINEVISIBLE),,%r),%r),%r)
       DATA`TEMPLATE`GET`PROFILE: |-
         {"character":"","objid":"","dbref":"","fields":{"created":null,"objid":null,"image":null,"banner":null,"color":null}}
       # GET /http/profile?objid=#1:123 — one character's public profile.
