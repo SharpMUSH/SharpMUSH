@@ -41,4 +41,5 @@ See [SQL Examples] for more examples.
 - [setq()]
 - [R()]
 - [@mapsql]
+- [cache()]
 :::

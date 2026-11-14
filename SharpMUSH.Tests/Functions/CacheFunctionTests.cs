@@ -1,5 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -13,6 +15,13 @@ public class CacheFunctionTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+
+	private async Task Command(string command)
+		=> await WebAppFactoryArg.CommandParser.CommandParse(1,
+			WebAppFactoryArg.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain(command));
+
+	private async Task<string> EvalAsync(string expression)
+		=> (await Parser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
 	private async Task<string> EvalOnNewThingAsync(string expression)
 	{
@@ -71,4 +80,38 @@ public class CacheFunctionTests
 	public async Task MsecsOfAMissingAttributeIsAnError()
 		=> await Assert.That(await EvalOnNewThingAsync("[msecs(%q0/NOT_THERE)]"))
 			.IsEqualTo(ErrorMessages.Returns.NoSuchAttribute);
+
+	[Test]
+	public async Task AHitDoesNotSeeANewRoomUntilTheWindowPasses()
+	{
+		var count = "[cache(%q0,ROOMS,words(lsearch(all,type,room)),600)]";
+		var room = TestIsolationHelpers.GenerateUniqueName("CacheAnnex");
+		var result = await EvalOnNewThingAsync(
+			$"{count}-[setq(1,dig({room}))][words(lsearch(all,type,room))]-{count}");
+		var parts = result.Split('-');
+
+		await Assert.That(parts[2]).IsEqualTo(parts[0]);
+		await Assert.That(int.Parse(parts[1])).IsGreaterThan(int.Parse(parts[0]));
+	}
+
+	[Test]
+	public async Task AWatchOnTheSourceAttributeClearsTheCache()
+	{
+		var source = TestIsolationHelpers.GenerateUniqueName("CacheLevel").ToUpperInvariant();
+		var cached = $"CACHE`{source}";
+		var total = $"[cache(#9,{cached},ladd(iter(lsearch(all,type,player),get(##/{source}))),86400)]";
+		await Command($"@attribute/access {source}=none");
+		await Command($"@attribute/watch {source}");
+		await Command($"&WATCH`{source}`CACHE #9=&{cached} #9");
+		await Command($"&{source} me=5");
+		await Assert.That(await EvalAsync(total)).IsEqualTo("5");
+
+		await Command($"&{source} me=7");
+		for (var tries = 0; tries < 100 && await EvalAsync($"[hasattr(#9,{cached})]") == "1"; tries++)
+		{
+			await Task.Delay(50);
+		}
+
+		await Assert.That(await EvalAsync(total)).IsEqualTo("7");
+	}
 }

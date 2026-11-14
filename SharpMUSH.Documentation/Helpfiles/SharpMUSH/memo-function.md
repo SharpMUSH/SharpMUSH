@@ -50,6 +50,22 @@ The code sees only its arguments: it starts with no q-registers and the ones it 
 
 Code reached through u() is checked as it runs: there, such a function answers #-1 FUNCTION DISABLED and memo() returns the same errors. Nothing is kept.
 
+```sharp
+> &MARK me=[set(me,SEEN:1)]done
+> think memo(MARK)
+#-1 MEMO REFUSES SIDE EFFECTS
+```
+
+Output: #-1 MEMO REFUSES SIDE EFFECTS
+
+```sharp
+> &PICK me=first(shuffle(%0))
+> think memo(PICK,a b c)
+#-1 MEMO REFUSES NONDETERMINISTIC FUNCTIONS
+```
+
+Output: #-1 MEMO REFUSES NONDETERMINISTIC FUNCTIONS
+
 ## Kept answers
 
 Two calls are the same when they run the same code on the same object, called by the same object, for the same enactor (%#), with the same arguments. Colour in an argument counts.
@@ -70,12 +86,15 @@ An answer that hit a function limit, or is longer than 65536 characters, is not 
 ## Memo examples
 
 ```sharp
-> &DOUBLE me=mul(%0,2)
-> think memo(DOUBLE,21)
-42
+> &FIB me=if(lt(%0,2),%0,add(u(FIB,sub(%0,1)),u(FIB,sub(%0,2))))
+> think u(FIB,30)
+#-1 FUNCTION INVOCATION LIMIT EXCEEDED
+> &MFIB me=if(lt(%0,2),%0,add(memo(MFIB,sub(%0,1)),memo(MFIB,sub(%0,2))))
+> think memo(MFIB,30)
+832040
 ```
 
-Output: 42
+Output: 832040. FIB works out each smaller number again every time it needs it, over a million calls for 30, and runs out of function calls. MFIB keeps each answer, so it works each number out once.
 
 ```sharp
 > &BONUS me=10
@@ -88,19 +107,3 @@ Output: 42
 ```
 
 Output: 25, because TOTAL read BONUS and BONUS changed.
-
-```sharp
-> &MARK me=[set(me,SEEN:1)]done
-> think memo(MARK)
-#-1 MEMO REFUSES SIDE EFFECTS
-```
-
-Output: #-1 MEMO REFUSES SIDE EFFECTS
-
-```sharp
-> &PICK me=first(shuffle(%0))
-> think memo(PICK,a b c)
-#-1 MEMO REFUSES NONDETERMINISTIC FUNCTIONS
-```
-
-Output: #-1 MEMO REFUSES NONDETERMINISTIC FUNCTIONS

@@ -31,6 +31,17 @@ public class MemoFunctionTests
 	}
 
 	[Test]
+	public async Task ARecursiveFibonacciThatRunsOutOfCallsUnderUFinishesUnderMemo()
+	{
+		var thing = await Thing("MemoFib");
+		await Command($"&FIB {thing}=if(lt(%0,2),%0,add(u(FIB,sub(%0,1)),u(FIB,sub(%0,2))))");
+		await Command($"&MFIB {thing}=if(lt(%0,2),%0,add(memo(MFIB,sub(%0,1)),memo(MFIB,sub(%0,2))))");
+
+		await Assert.That(await Evaluate($"[u({thing}/FIB,30)]")).IsEqualTo("#-1 FUNCTION INVOCATION LIMIT EXCEEDED");
+		await Assert.That(await Evaluate($"[memo({thing}/MFIB,30)]")).IsEqualTo("832040");
+	}
+
+	[Test]
 	public async Task AnswersAsUDoes()
 	{
 		var thing = await Thing("MemoDouble");
