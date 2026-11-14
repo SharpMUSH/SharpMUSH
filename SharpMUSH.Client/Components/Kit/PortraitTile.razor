@@ -32,19 +32,24 @@ else
     [Parameter] public EventCallback OnClick { get; set; }
     [Parameter] public int Height { get; set; } = 72;
 
-    /// <summary>The accessible name when the label is shortened (a first name in Play's Here).</summary>
+    /// <summary>The accessible name, for a label that is shortened or a picture that should not be read with it.</summary>
     [Parameter] public string? AriaLabel { get; set; }
 
     /// <summary>The full name in place of a shortened label, still with its status: "idle 14m" is not only for the eye.</summary>
     private string? AccessibleName => AriaLabel is null || Status is null ? AriaLabel : $"{AriaLabel} · {Status}";
 
     private string RootClass => Highlight ? "kit-portrait kit-portrait--highlight" : "kit-portrait";
-    private string Text => Status is null ? (Label ?? Name) : $"{Label ?? Name} · {Status}";
 
     private RenderFragment Inner => __builder =>
     {
         <CharacterAvatar ImageClass="kit-portrait-img" FallbackClass="kit-portrait-fallback" Name="@Name" ImageUrl="@ImageUrl"
                          Character="@Character" Alt="@Alt" Style="@($"height:{Height}px;")" Lazy="true" />
-        <span class="kit-portrait-label @(Status is not null ? "kit-portrait-label--dim" : null)">@Text</span>
+        <span class="kit-portrait-label @(Status is not null ? "kit-portrait-label--dim" : null)">
+            <span class="kit-portrait-name">@(Label ?? Name)</span>
+            @if (Status is not null)
+            {
+                <span class="kit-portrait-status"><span class="kit-portrait-sep"> · </span>@Status</span>
+            }
+        </span>
     };
 }

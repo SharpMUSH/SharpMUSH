@@ -7,6 +7,14 @@ Two version numbers matter:
 - **The engine version** is the release: what `version()`, `numversion()`, `@version`, MSSP's `CODEBASE` and a package's `requires_server` see. The `vX.Y.Z` tag sets it.
 - **The plugin contract version** belongs to the `SharpMUSH.Library` and `SharpMUSH.Implementation.Generated` NuGet packages, which C# plugins build against, and is checked against a plugin package's `binaries.min_server_version`. It changes only when that contract does, and is released with a `plugin-nuget/vX.Y.Z` tag.
 
+## [Unreleased]
+
+### Fixed
+
+- Play's Here card shows each character's full name, wrapping to a second line, where it showed only the first word ("The" for "The Foo").
+
+[Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.0...HEAD
+
 ## [1.0.0] - 2026-11-14
 
 The first release. Plugin contract 4.0.0. World format 1.
