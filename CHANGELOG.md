@@ -21,7 +21,7 @@ The first release. Plugin contract 4.0.0. World format 1.
 - Styled text is MarkupString, rendered for each client's protocol and width. Listings and panels follow the game's `layout_border` and `layout_theme`.
 - Roles and permissions in place of fixed wizard and royalty bits, managed with `@role`. Secrets are stored encrypted and never readable from softcode.
 - Softcode packages (`package.yaml`) installed, upgraded and rolled back from the portal. 110 packages are bundled with the server, counting each system's help, configuration and portal packages. Among them are jobs, bulletin boards, scenes, chargen, a wiki reader, `+who`/`+where` and the onboarding tutorial.
-- C# plugins built against the plugin contract: Discord, Scene, a language server for softcode and an MCP server are bundled.
+- C# plugins built against the plugin contract: Discord, Scene, World (grid maps), a language server for softcode and an MCP server are bundled.
 
 ### The portal
 
