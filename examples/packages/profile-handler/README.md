@@ -46,7 +46,8 @@ If you redefine `` FUN`PROFILE`CHARACTERCATEGORY `` or a visibility rule:
 On top of the kept rows, each list route keeps its whole answer for
 `` DATA`PROFILE`CACHEWINDOW `` seconds (30) in `` CACHE`PROFILE`CHARACTERS `` or
 `` CACHE`PROFILE`ONLINE `` on the handler, through `cache()` (`help cache()`).
-Within that window a rename, a role or an image made private can show late.
+Within that window a rename, a role, an image made private, a login or logout,
+or a player turning DARK can show late.
 Set the window to 0 to build the list on every request, or clear the
 attribute to rebuild it once. A list longer than `max_attribute_value_length`
 (about 650 players at the default 65536) cannot be stored, so it is built on

@@ -100,8 +100,8 @@ objects:
         memo(FUN`PROFILE`ENTRY,objid(%0),%1,name(%0),u(FUN`PROFILE`CHARACTERCATEGORY,%0),flags(%0),hasflag(%0/IMAGE,visual))
 
       # Seconds a list route's answer is kept in its CACHE`PROFILE`* attribute on this handler. Rows are already kept
-      # by memo(), so this saves the remaining per-player calls; a rename, a role or an image made private can show
-      # this much later. 0 builds the list on every request.
+      # by memo(), so this saves the remaining per-player calls; a rename, a role, an image made private, a login or
+      # logout, or a player turning DARK can show this much later. 0 builds the list on every request.
       DATA`PROFILE`CACHEWINDOW: |-
         30
       # A list route's answer: the value of attribute %0 while it is younger than DATA`PROFILE`CACHEWINDOW, else
