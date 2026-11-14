@@ -7,7 +7,7 @@ Two version numbers matter:
 - **The engine version** is the release: what `version()`, `numversion()`, `@version`, MSSP's `CODEBASE` and a package's `requires_server` see. The `vX.Y.Z` tag sets it.
 - **The plugin contract version** belongs to the `SharpMUSH.Library` and `SharpMUSH.Implementation.Generated` NuGet packages, which C# plugins build against, and is checked against a plugin package's `binaries.min_server_version`. It changes only when that contract does, and is released with a `plugin-nuget/vX.Y.Z` tag.
 
-## [1.0.0] - Unreleased
+## [1.0.0] - 2026-11-14
 
 The first release. Plugin contract 4.0.0. World format 1.
 
@@ -20,7 +20,7 @@ The first release. Plugin contract 4.0.0. World format 1.
 - Telnet with TTYPE, CHARSET, MSSP, GMCP, MXP and Pueblo; WebSocket clients; ASCII output for clients without UTF-8, and a screen-reader mode.
 - Styled text is MarkupString, rendered for each client's protocol and width. Listings and panels follow the game's `layout_border` and `layout_theme`.
 - Roles and permissions in place of fixed wizard and royalty bits, managed with `@role`. Secrets are stored encrypted and never readable from softcode.
-- Softcode packages (`package.yaml`) installed, upgraded and rolled back from the portal. 59 packages are bundled with the server, among them jobs, bulletin boards, scenes, chargen, a wiki reader, `+who`/`+where` and the onboarding tutorial.
+- Softcode packages (`package.yaml`) installed, upgraded and rolled back from the portal. 110 packages are bundled with the server, counting each system's help, configuration and portal packages. Among them are jobs, bulletin boards, scenes, chargen, a wiki reader, `+who`/`+where` and the onboarding tutorial.
 - C# plugins built against the plugin contract: Discord, Scene, a language server for softcode and an MCP server are bundled.
 
 ### The portal
