@@ -5,7 +5,7 @@
 # Build from the repository root (it needs nats.conf):
 #   docker build -f deploy/fly/Dockerfile -t sharpmush-allinone .
 #   docker build -f deploy/fly/Dockerfile --target edge -t sharpmush-edge .
-ARG SHARPMUSH_IMAGE_TAG=dev
+ARG SHARPMUSH_IMAGE_TAG=1.0.0
 FROM sharpmush/sharpmush-server:${SHARPMUSH_IMAGE_TAG} AS server
 FROM sharpmush/sharpmush-socketserver:${SHARPMUSH_IMAGE_TAG} AS connection
 FROM sharpmush/sharpmush-renderer:${SHARPMUSH_IMAGE_TAG} AS renderer

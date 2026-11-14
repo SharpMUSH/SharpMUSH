@@ -45,7 +45,7 @@ services:
     logging: *default-logging
 
   socketserver:
-    image: sharpmush/sharpmush-socketserver:${SHARPMUSH_IMAGE_TAG:-dev}
+    image: sharpmush/sharpmush-socketserver:${SHARPMUSH_IMAGE_TAG:-latest}
     container_name: sharpmush-socketserver
     # Not a watchtower target: recreating it drops every connected player (deploy/connection-updates.md).
     labels:
@@ -82,7 +82,7 @@ services:
     logging: *default-logging
 
   renderer:
-    image: sharpmush/sharpmush-renderer:${SHARPMUSH_IMAGE_TAG:-dev}
+    image: sharpmush/sharpmush-renderer:${SHARPMUSH_IMAGE_TAG:-latest}
     container_name: sharpmush-renderer
     stop_grace_period: 60s
     labels:
@@ -97,7 +97,7 @@ services:
     logging: *default-logging
 
   sharpmush-server:
-    image: sharpmush/sharpmush-server:${SHARPMUSH_IMAGE_TAG:-dev}
+    image: sharpmush/sharpmush-server:${SHARPMUSH_IMAGE_TAG:-latest}
     container_name: sharpmush-server
     labels:
       - com.centurylinklabs.watchtower.enable=true

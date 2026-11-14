@@ -31,7 +31,7 @@ set -euo pipefail
 SHARPMUSH_DIR=${SHARPMUSH_DIR:-/opt/sharpmush}
 SOURCE_REF=${SHARPMUSH_SOURCE_REF:-main}
 # The image tag a new game runs. Moved after each release; see .github/scripts/release_images.py.
-DEFAULT_IMAGE_TAG=dev
+DEFAULT_IMAGE_TAG=latest
 SOURCE_URL="https://raw.githubusercontent.com/SharpMUSH/SharpMUSH/${SOURCE_REF}"
 # Where this script's own files are; nowhere when it was piped in from curl.
 HERE=/nonexistent

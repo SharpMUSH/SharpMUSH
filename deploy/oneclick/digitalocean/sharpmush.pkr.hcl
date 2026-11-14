@@ -24,7 +24,7 @@ variable "do_token" {
 
 variable "image_tag" {
   type        = string
-  default     = "dev"
+  default     = "latest"
   description = "SharpMUSH image tag the snapshot pulls and runs."
 }
 
