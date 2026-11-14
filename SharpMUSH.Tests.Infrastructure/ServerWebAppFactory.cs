@@ -110,6 +110,13 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 		await reached.Task.WaitAsync(timeout ?? TimeSpan.FromSeconds(60));
 	}
 
+	/// <summary>
+	/// When the earliest <c>@wait</c> entry not yet on the queue is due, or null when there is none, including one
+	/// whose timer has just fired.
+	/// </summary>
+	public DateTimeOffset? NextDelayedDue() =>
+		Services.GetRequiredService<SharpMUSH.Library.Services.TaskScheduler>().NextDelayedDue();
+
 	// Metrics collected via MeterListener — static so they persist across all factory instances
 	// and can be written from the ProcessExit handler regardless of disposal order.
 	private MeterListener? _meterListener;

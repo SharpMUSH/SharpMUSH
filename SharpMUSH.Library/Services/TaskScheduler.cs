@@ -1157,6 +1157,20 @@ public partial class TaskScheduler(
 	internal Task BackgroundWorkSettled() => Task.WhenAll(_background.Values);
 
 	/// <summary>
+	/// When the earliest <c>@wait</c> entry not yet released to the queue is due, or null when there is none. It
+	/// counts an entry whose timer has fired but which is not on the queue yet, which the timers alone no longer show.
+	/// </summary>
+	internal DateTimeOffset? NextDelayedDue()
+	{
+		lock (_admissionLock)
+			return LockedPendingEntries
+				.Where(entry => entry.Deferred is not null && !_ready.Contains(entry.Pid)
+					&& entry.Group.StartsWith(DelayGroup + ":", StringComparison.Ordinal))
+				.Select(entry => (DateTimeOffset?)entry.Deferred!.Due)
+				.Min();
+	}
+
+	/// <summary>
 	/// Reserves an entry for <paramref name="executor"/> now, counted against its quota, shown by <c>@ps</c>
 	/// and halted with it, then runs <paramref name="work"/> off the queue, so the game keeps running while
 	/// it waits. What the work returns runs as that entry, at the tail of the queue when the work finishes;
