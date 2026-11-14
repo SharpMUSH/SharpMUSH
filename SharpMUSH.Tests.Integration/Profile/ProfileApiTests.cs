@@ -181,7 +181,7 @@ public class ProfileApiTests(ProfileApiServerFactory factory)
 	/// <summary>
 	/// The directory keeps each row with memo(), which drops a row when an attribute it read changes but not when a
 	/// name, role, power or flag does. FUN`PROFILE`KEPTENTRY passes those as arguments, so after the row is kept a
-	/// rename, the Guest power and a role each show on the next request.
+	/// rename, the Guest power, a role and a parent's IMAGE made private each show on the next request.
 	/// </summary>
 	[Test]
 	public async Task Characters_KeptRowFollowsNameRoleAndPowerChanges()
@@ -227,6 +227,19 @@ public class ProfileApiTests(ProfileApiServerFactory factory)
 
 		await Cmd($"@set #{player.Object.Key}=ROYALTY");
 		await Assert.That((await Row())?.GetProperty("category").GetString()).IsEqualTo("Royalty");
+
+		// An IMAGE inherited from a parent: making the parent's private hides it on the next request.
+		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1, null)))).Expect<SharpPlayer>();
+		var room = (await mediator.Send(new GetObjectNodeQuery(home))).Expect<SharpRoom>();
+		var parent = (await mediator.Send(new CreateThingCommand(
+			TestIsolationHelpers.GenerateUniqueName("KeptParent"), room, god, room))).Number;
+		await Cmd($"&IMAGE #{parent}=/assets/chars/inherited.jpg");
+		await Cmd($"@parent #{player.Object.Key}=#{parent}");
+		await Row();
+		await Assert.That((await Row())?.GetProperty("image").GetString()).IsEqualTo("/assets/chars/inherited.jpg");
+
+		await Cmd($"@set #{parent}/IMAGE=!visual");
+		await Assert.That((await Row())?.GetProperty("image").GetString()).IsEqualTo(string.Empty);
 	}
 
 	/// <summary>

@@ -83,19 +83,21 @@ objects:
       # so the DARK guard here is just a belt-and-suspenders default. Redefine to suit.
       FUN`PROFILE`ONLINEVISIBLE: |-
         cand(u(FUN`PROFILE`CHARACTERVISIBLE,%0),not(hasflag(%0,DARK)))
-      # One route's row for player %0, or nothing when the route's predicate (%1, FUN`PROFILE`CHARACTERVISIBLE or
-      # FUN`PROFILE`ONLINEVISIBLE) hides them.
+      # One route's row for player %0, or nothing unless the route's predicate (%1, FUN`PROFILE`CHARACTERVISIBLE or
+      # FUN`PROFILE`ONLINEVISIBLE) answers exactly 1, as filter() takes it.
       FUN`PROFILE`ENTRY: |-
-        if(u(%1,%0),u(FUN`PROFILE`CHARACTERROW,%0))
+        if(strmatch(u(%1,%0),1),u(FUN`PROFILE`CHARACTERROW,%0))
       # FUN`PROFILE`ENTRY for player %0 under predicate %1, kept by memo() so a route asked again does not build every
       # row again. memo() drops a kept row when an attribute it read changes (IMAGE, PROFILE`*, these FUN`PROFILE`*
       # helpers), but not when a name, role, power or flag does, so those are passed as arguments: a change to any of
-      # them makes a new call. objid() keeps a row from outliving its player when the dbref is reused. A
+      # them makes a new call. The category is passed as FUN`PROFILE`CHARACTERCATEGORY answers it, since roles() shows
+      # a player who hides their roles as holding none. flags(%0) changes on connect, which costs one new row a login. Whether IMAGE is visual is passed as hasflag() answers it, through parents as
+      # FUN`PROFILE`PICTURE reads it; flags(%0/IMAGE) would not see a parent's IMAGE. objid() keeps a row from outliving its player when the dbref is reused. A
       # FUN`PROFILE`CHARACTERCATEGORY or predicate redefined to read anything else should be added here too, and one
       # that reads the clock or connections (conn(), idle()) cannot be kept: call FUN`PROFILE`ENTRY instead. See
       # "Kept rows" in README.md.
       FUN`PROFILE`KEPTENTRY: |-
-        memo(FUN`PROFILE`ENTRY,objid(%0),%1,name(%0),roles(%0),powers(%0),flags(%0),flags(%0/IMAGE))
+        memo(FUN`PROFILE`ENTRY,objid(%0),%1,name(%0),u(FUN`PROFILE`CHARACTERCATEGORY,%0),flags(%0),hasflag(%0/IMAGE,visual))
 
       # ── Routes (children of http-handler's GET verb) ─────────────────────
       # Both routes build their array with json_array(iter(...)) over a %r-separated list.
