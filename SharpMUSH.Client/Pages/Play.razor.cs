@@ -124,7 +124,13 @@ public partial class Play
 	private const int MaxCols = 240;
 	private const string BannerKey = "play.banner";
 	private const string AsideKey = "play.aside";
+
+	/// <summary>Kept as "off" while the player has turned echo off; on is the default and keeps nothing.</summary>
+	private const string EchoKey = "play.echo";
 	private int _targetCols = MinCols;
+
+	/// <summary>Whether the play terminal shows the commands the player sends.</summary>
+	private bool _echo = true;
 
 	/// <summary>
 	/// The room banner is folded into the card header on every screen: one bar over the game. The header carries
@@ -312,6 +318,11 @@ public partial class Play
 			changed |= !_asideCollapsed;
 			_asideCollapsed = true;
 		}
+		if (await JS.GetItemAsync(BrowserStore.Local, EchoKey) == "off")
+		{
+			changed |= _echo;
+			_echo = false;
+		}
 		return changed;
 	}
 
@@ -425,6 +436,13 @@ public partial class Play
 	private void CloseSettings() => _settingsOpen = null;
 
 	private void ClearTerminal() => _playTerm?.ClearOutput();
+
+	private async Task OnEchoChanged(bool on)
+	{
+		_echo = on;
+		if (on) await JS.RemoveItemAsync(BrowserStore.Local, EchoKey);
+		else await JS.SetItemAsync(BrowserStore.Local, EchoKey, "off");
+	}
 
 	private async Task OnColsChanged(string? value)
 	{

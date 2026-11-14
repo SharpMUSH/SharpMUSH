@@ -8290,6 +8290,12 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>For playing with a screen reader in this browser: the exit letter keys are off, your own commands are not read back, Alt+number reads a recent line again (Alt+1 the newest), and the game is told so it can leave out pictures made of characters.</value>
   </data>
+  <data name="NavEchoCommands" xml:space="preserve">
+    <value>Echo my commands</value>
+  </data>
+  <data name="NavEchoCommandsTooltip" xml:space="preserve">
+    <value>Shows each command you send in the output. Off hides them, the ones already there included. Kept in this browser.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Keep longer logs</value>
   </data>

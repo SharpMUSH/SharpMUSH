@@ -6082,6 +6082,12 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>Para jogar com um leitor de tela neste navegador: as teclas de letra das saídas ficam desligadas, seus próprios comandos não são lidos de volta, Alt e um número lê de novo uma linha recente (Alt+1 a mais nova), e o jogo é avisado para poder omitir desenhos feitos com caracteres.</value>
   </data>
+  <data name="NavEchoCommands" xml:space="preserve">
+    <value>Mostrar meus comandos</value>
+  </data>
+  <data name="NavEchoCommandsTooltip" xml:space="preserve">
+    <value>Mostra na saída cada comando que você envia. Desligado os oculta, inclusive os que já aparecem. Fica salvo neste navegador.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Manter registros mais longos</value>
   </data>
