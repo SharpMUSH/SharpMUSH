@@ -32,7 +32,7 @@ else
     [Parameter] public EventCallback OnClick { get; set; }
     [Parameter] public int Height { get; set; } = 72;
 
-    /// <summary>The accessible name when the label is shortened (a first name in Play's Here).</summary>
+    /// <summary>The accessible name, for a label that is shortened or a picture that should not be read with it.</summary>
     [Parameter] public string? AriaLabel { get; set; }
 
     /// <summary>The full name in place of a shortened label, still with its status: "idle 14m" is not only for the eye.</summary>

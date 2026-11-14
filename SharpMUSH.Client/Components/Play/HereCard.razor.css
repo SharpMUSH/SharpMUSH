@@ -52,3 +52,13 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
+
+/* the full name wraps to a second line before an ellipsis cuts it ("The Foo · away" in a narrow column) */
+.here-grid ::deep .kit-portrait-label {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
