@@ -8,85 +8,89 @@
 @* The updates panel on the server page. The update agent, a sidecar holding the Docker socket, does
    the work; this asks for it and shows what the agent last reported. *@
 <KitCard Title="@Loc["AdmUpdTitle"]" Sub="@Subtitle()" Class="adm-updates">
-    @if (_error is not null)
-    {
-        <MudAlert Severity="Severity.Error" Class="adm-updates-error">@_error</MudAlert>
-    }
-    @if (_readError is not null)
-    {
-        @* The server may be the thing being replaced: what is below is the last view it gave. *@
-        <MudAlert Severity="Severity.Warning" Class="adm-updates-unread">@_readError</MudAlert>
-    }
-    @if (_status is { AgentConfigured: var configured } and ({ AgentConfigured: false } or { AgentConnected: false }))
-    {
-        <MudAlert Severity="@(configured ? Severity.Warning : Severity.Info)" Class="adm-updates-noagent">
-            @Loc[configured ? "AdmUpdAgentMissing" : "AdmUpdNoAgent"]
-        </MudAlert>
-    }
-    else if (_status is { } status)
-    {
-        @if (status.Job is { } job)
+    <div class="adm-updates-body">
+        @if (_error is not null)
         {
-            <MudAlert Severity="@JobSeverity(job)" Class="adm-updates-job" data-state="@job.State">@JobLine(job)</MudAlert>
+            <MudAlert Severity="Severity.Error" Class="adm-updates-error">@_error</MudAlert>
         }
-        @if (status.AgentError is { } agentError)
+        @if (_readError is not null)
         {
-            <MudAlert Severity="Severity.Warning">@agentError</MudAlert>
+            @* The server may be the thing being replaced: what is below is the last view it gave. *@
+            <MudAlert Severity="Severity.Warning" Class="adm-updates-unread">@_readError</MudAlert>
         }
-        <ul class="adm-updates-list">
-            @foreach (var component in status.Components)
+        @if (_status is { AgentConfigured: var configured } and ({ AgentConfigured: false } or { AgentConnected: false }))
+        {
+            <MudAlert Severity="@(configured ? Severity.Warning : Severity.Info)" Class="adm-updates-noagent">
+                @Loc[configured ? "AdmUpdAgentMissing" : "AdmUpdNoAgent"]
+            </MudAlert>
+        }
+        else if (_status is { } status)
+        {
+            @if (status.Job is { } job)
             {
-                <li class="adm-updates-row" data-component="@component.Component">
-                    <div class="adm-updates-name">
-                        <span class="adm-updates-label">@ComponentName(component.Component)</span>
-                        <span class="adm-updates-version">@VersionLine(component)</span>
-                    </div>
-                    <span class="adm-updates-state @(component.UpdateAvailable ? "adm-updates-state--new" : null)">
-                        @Loc[component switch
-                        {
-                            { UpdateAvailable: true } => "AdmUpdNewer",
-                            { LatestDigest: null } => "AdmUpdNotChecked",
-                            _ => "AdmUpdCurrent",
-                        }]
-                    </span>
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@Busy(status)"
-                               OnClick="@(() => UpdateAsync([component.Component], null))">@Loc["AdmUpdUpdate"]</MudButton>
-                </li>
+                <MudAlert Severity="@JobSeverity(job)" Class="adm-updates-job" data-state="@job.State">@JobLine(job)</MudAlert>
             }
-        </ul>
-        <div class="adm-updates-actions">
-            <MudSelect T="int" @bind-Value="_delay" Label="@Loc["AdmUpdWarnPlayers"]" Dense="true" Variant="Variant.Outlined"
-                       Class="adm-updates-delay">
-                @foreach (var seconds in Delays)
+            @if (status.AgentError is { } agentError)
+            {
+                <MudAlert Severity="Severity.Warning">@agentError</MudAlert>
+            }
+            <ul class="adm-updates-list">
+                @foreach (var component in status.Components)
                 {
-                    <MudSelectItem T="int" Value="@seconds">@DelayName(seconds)</MudSelectItem>
+                    <li class="adm-updates-row" data-component="@component.Component">
+                        <div class="adm-updates-name">
+                            <span class="adm-updates-label">@ComponentName(component.Component)</span>
+                            <span class="adm-updates-version">@VersionLine(component)</span>
+                        </div>
+                        <div class="adm-updates-act">
+                            <span class="adm-updates-state @(component.UpdateAvailable ? "adm-updates-state--new" : null)">
+                                @Loc[component switch
+                                {
+                                    { UpdateAvailable: true } => "AdmUpdNewer",
+                                    { LatestDigest: null } => "AdmUpdNotChecked",
+                                    _ => "AdmUpdCurrent",
+                                }]
+                            </span>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@Busy(status)"
+                                       OnClick="@(() => UpdateAsync([component.Component], null))">@Loc["AdmUpdUpdate"]</MudButton>
+                        </div>
+                    </li>
                 }
-            </MudSelect>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@Busy(status)" Class="adm-updates-all"
-                       OnClick="@(() => UpdateAsync(ServerComponents.InUpdateOrder, null))">@Loc["AdmUpdAll"]</MudButton>
-        </div>
-        @if (status.Tag is not null && status.AvailableTags.Count > 0)
-        {
+            </ul>
             <div class="adm-updates-actions">
-                <MudSelect T="string" @bind-Value="_tag" Label="@Loc["AdmUpdVersion"]" Dense="true" Variant="Variant.Outlined"
-                           Class="adm-updates-tag">
-                    @foreach (var tag in status.AvailableTags)
+                <MudSelect T="int" @bind-Value="_delay" Label="@Loc["AdmUpdWarnPlayers"]" Dense="true" Variant="Variant.Outlined"
+                           Class="adm-updates-delay">
+                    @foreach (var seconds in Delays)
                     {
-                        <MudSelectItem T="string" Value="@tag">@tag</MudSelectItem>
+                        <MudSelectItem T="int" Value="@seconds">@DelayName(seconds)</MudSelectItem>
                     }
                 </MudSelect>
-                <MudButton Variant="Variant.Outlined" Disabled="@(Busy(status) || _tag is null || _tag == status.Tag)" Class="adm-updates-move"
-                           OnClick="@(() => UpdateAsync(ServerComponents.InUpdateOrder, _tag))">@Loc["AdmUpdMove"]</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@Busy(status)" Class="adm-updates-all"
+                           OnClick="@(() => UpdateAsync(ServerComponents.InUpdateOrder, null))">@Loc["AdmUpdAll"]</MudButton>
             </div>
-        }
-        <p class="adm-updates-note">
-            @Loc["AdmUpdOrder"]
-            @if (status.RegistryReadAt is { } read)
+            @if (status.Tag is not null && status.AvailableTags.Count > 0)
             {
-                @(" ")@Loc["AdmUpdRegistryRead", DateDisplay.TimeWithSeconds(read)]
+                <div class="adm-updates-actions">
+                    <MudSelect T="string" @bind-Value="_tag" Label="@Loc["AdmUpdVersion"]" Dense="true" Variant="Variant.Outlined"
+                               Class="adm-updates-tag">
+                        @foreach (var tag in status.AvailableTags)
+                        {
+                            <MudSelectItem T="string" Value="@tag">@tag</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudButton Variant="Variant.Outlined" Disabled="@(Busy(status) || _tag is null || _tag == status.Tag)" Class="adm-updates-move"
+                               OnClick="@(() => UpdateAsync(ServerComponents.InUpdateOrder, _tag))">@Loc["AdmUpdMove"]</MudButton>
+                </div>
             }
-        </p>
-    }
+            <p class="adm-updates-note">
+                @Loc["AdmUpdOrder"]
+                @if (status.RegistryReadAt is { } read)
+                {
+                    @(" ")@Loc["AdmUpdRegistryRead", DateDisplay.TimeWithSeconds(read)]
+                }
+            </p>
+        }
+    </div>
 </KitCard>
 
 @code {
