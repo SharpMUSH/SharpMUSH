@@ -1,3 +1,9 @@
+/* The card's body has no padding of its own: inset like the card's header, so the rows, the controls and a
+   theme's button marks (the ink stroke reaches 10px past the button) stay inside the card. */
+.adm-updates-body {
+	padding: var(--space-4) var(--space-5) var(--space-5) calc(var(--space-5) + var(--card-head-inset, 0px));
+}
+
 .adm-updates-list {
 	list-style: none;
 	margin: 0 0 var(--space-4);
@@ -28,6 +34,14 @@
 	overflow-wrap: anywhere;
 }
 
+/* The state and its button stay together, at the row's end even when they wrap under the name. */
+.adm-updates-act {
+	display: flex;
+	align-items: center;
+	gap: var(--space-4);
+	margin-inline-start: auto;
+}
+
 .adm-updates-state {
 	font-size: var(--text-sm);
 	color: var(--text-dim);
@@ -42,14 +56,15 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: var(--space-3) var(--space-4);
+	gap: var(--space-4) var(--space-6);
 	margin-bottom: var(--space-4);
 }
 
-.adm-updates-actions ::deep .adm-updates-delay,
-.adm-updates-actions ::deep .adm-updates-tag {
-	flex: 0 1 14rem;
-	min-width: 10rem;
+/* MudSelect puts the class on an inner control; the outer .mud-select is the row's flex item, and it grows by default. */
+.adm-updates-actions ::deep .mud-select:has(> .adm-updates-delay),
+.adm-updates-actions ::deep .mud-select:has(> .adm-updates-tag) {
+	flex: 0 1 28rem;
+	min-width: min(100%, 10rem);
 }
 
 .adm-updates-note {
