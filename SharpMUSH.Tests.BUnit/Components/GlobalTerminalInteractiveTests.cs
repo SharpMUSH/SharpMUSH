@@ -7,6 +7,7 @@ using Microsoft.JSInterop;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components;
+using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Tests.BUnit.Resources;
@@ -89,6 +90,25 @@ public class GlobalTerminalInteractiveTests : BunitContext
 			if (cut.Find(".sharp-terminal-earlier").TextContent.Trim() != "earlier") throw new InvalidOperationException("not loaded yet");
 		}, TimeSpan.FromSeconds(5));
 		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier == "SharpMUSH.Terminal.restorePlace")).IsTrue();
+	}
+
+	[Test]
+	public async Task Echo_off_hides_the_sent_commands_and_keeps_them()
+	{
+		var terminal = AnonymousTerminal();
+		terminal.Lines.Returns([
+			new TerminalLine(DateTime.Now, "look", TerminalLineSource.Client),
+			new TerminalLine(DateTime.Now, "A quiet room.", TerminalLineSource.Server)]);
+
+		var echoing = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, terminal));
+		await Assert.That(echoing.FindAll(".sharp-terminal-no-echo")).IsEmpty();
+
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, terminal).Add(g => g.EchoCommands, false));
+		await Assert.That(cut.FindAll(".sharp-terminal-output.sharp-terminal-no-echo")).Count().IsEqualTo(1);
+		await Assert.That(cut.Find(".sharp-terminal-no-echo .terminal-sent").TextContent).IsEqualTo("look");
+
+		cut.Render(p => p.Add(g => g.EchoCommands, true));
+		await Assert.That(cut.FindAll(".sharp-terminal-no-echo")).IsEmpty();
 	}
 
 	[Test]

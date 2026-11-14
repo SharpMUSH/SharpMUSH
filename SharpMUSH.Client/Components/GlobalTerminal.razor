@@ -21,7 +21,7 @@
        the background terminal in the drawer stays quiet. It takes focus so the keyboard can scroll it. In
        Screen reader mode the announcer below reads instead, leaving out the player's own commands. *@
     <div id="@_outputId"
-         class="sharp-terminal-output" data-input-region="@Interactive"
+         class="@(EchoCommands ? "sharp-terminal-output" : "sharp-terminal-output sharp-terminal-no-echo")" data-input-region="@Interactive"
          role="log" aria-live="@(Interactive && !ScreenReader.On ? "polite" : "off")" aria-label="@Loc["TermOutputLabel"]" tabindex="0"
          style="flex:1;min-height:0;overflow:auto;white-space:pre-wrap;word-break:break-word;line-height:1.6;">
         @* When MinColumns is set (the /play terminal asks for 78), this inner track holds a
@@ -193,6 +193,13 @@
     /// preference, measure the natural grid at the base font.
     /// </summary>
     [Parameter] public int TargetColumns { get; set; }
+
+    /// <summary>
+    /// Whether the output shows the commands the player sends. Off (the /play terminal's echo setting)
+    /// hides them, the ones already in the output included, without removing them: the kept log and the
+    /// input history still have them, and turning echo back on shows them again.
+    /// </summary>
+    [Parameter] public bool EchoCommands { get; set; } = true;
 
 
     /// <summary>Writes a diagnostic line only when this terminal opted in and we are in dev.</summary>

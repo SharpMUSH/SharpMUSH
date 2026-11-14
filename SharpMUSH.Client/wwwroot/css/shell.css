@@ -907,6 +907,11 @@
     opacity: 0.85;
 }
 
+/* Echo turned off (Play's terminal settings): the sent commands stay in the scrollback, unshown. */
+.sharp-terminal-no-echo .terminal-sent {
+    display: none;
+}
+
 /* System/diagnostic lines — accent-dim, matches the prototype terminal */
 .terminal-system {
     color: var(--accent-dim);
