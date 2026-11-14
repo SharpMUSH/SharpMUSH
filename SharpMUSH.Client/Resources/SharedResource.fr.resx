@@ -5396,6 +5396,12 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>Pour jouer avec un lecteur d'écran dans ce navigateur : les touches de lettre des sorties sont désactivées, vos propres commandes ne sont pas relues, Alt et un chiffre relit une ligne récente (Alt+1 la plus récente), et le jeu en est informé pour pouvoir omettre les images dessinées avec des caractères.</value>
   </data>
+  <data name="NavEchoCommands" xml:space="preserve">
+    <value>Afficher mes commandes</value>
+  </data>
+  <data name="NavEchoCommandsTooltip" xml:space="preserve">
+    <value>Affiche dans la sortie chaque commande envoyée. Désactivé, les masque, y compris celles déjà affichées. Conservé dans ce navigateur.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Garder des journaux plus longs</value>
   </data>

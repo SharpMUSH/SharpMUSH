@@ -6082,6 +6082,12 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>За игра с екранен четец в този браузър: буквените клавиши за изходи са изключени, собствените ви команди не се четат отново, Alt и цифра прочита отново един от последните редове (Alt+1 най-новия), а играта е уведомена, за да може да пропуска картинки, нарисувани със символи.</value>
   </data>
+  <data name="NavEchoCommands" xml:space="preserve">
+    <value>Показвай командите ми</value>
+  </data>
+  <data name="NavEchoCommandsTooltip" xml:space="preserve">
+    <value>Показва всяка изпратена команда в изхода. Изключено ги скрива, включително вече показаните. Пази се в този браузър.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Пазене на по-дълги записи</value>
   </data>

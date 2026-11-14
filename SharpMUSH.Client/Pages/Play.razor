@@ -146,7 +146,7 @@ else
                                         <PlaySceneHint Scene="running" OnOpen="OpenScene" OnHide="() => _hintHiddenFor = running.Id" />
                                     }
                                     <GlobalTerminal @ref="_playTerm" Terminal="PlayTerminal" ShowDiagnostics="false"
-                                                    TargetColumns="_targetCols" ShowClearButton="false" ShowConnectionBar="false" AllowGuest="true" KeepsLog="true" />
+                                                    TargetColumns="_targetCols" EchoCommands="_echo" ShowClearButton="false" ShowConnectionBar="false" AllowGuest="true" KeepsLog="true" />
                                 </div>
                             </div>
                         </ChildContent>
@@ -262,6 +262,7 @@ else
     {
         <PlayTerminalSettings Menu="menu" Open="@(_settingsOpen == menu)" OpenChanged="@((bool now) => OnSettingsOpenChanged(menu, now))"
                               OnEscape="CloseSettings" Columns="_targetCols" ColumnsChanged="OnColsChanged"
+                              EchoOn="_echo" EchoChanged="OnEchoChanged"
                               ScreenReaderOn="@ScreenReader.On" ScreenReaderChanged="ScreenReader.SetAsync"
                               KeepLogsOn="@TerminalLog.On" KeepLogsChanged="TerminalLog.SetAsync" OnClear="ClearTerminal"
                               Focus="_focus" FocusChanged="OnFocusChanged" />

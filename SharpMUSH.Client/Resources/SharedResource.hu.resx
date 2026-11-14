@@ -6082,6 +6082,12 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>Képernyőolvasóval való játékhoz ebben a böngészőben: a kijáratok betűbillentyűi ki vannak kapcsolva, a saját parancsaidat nem olvassa fel újra, az Alt és egy szám újra felolvas egy friss sort (Alt+1 a legújabbat), és a játék is tud róla, így elhagyhatja a karakterekből rajzolt képeket.</value>
   </data>
+  <data name="NavEchoCommands" xml:space="preserve">
+    <value>Parancsaim megjelenítése</value>
+  </data>
+  <data name="NavEchoCommandsTooltip" xml:space="preserve">
+    <value>Megjeleníti a kimenetben minden elküldött parancsodat. Kikapcsolva elrejti őket, a már megjelenteket is. Ebben a böngészőben marad meg.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Hosszabb naplók megőrzése</value>
   </data>

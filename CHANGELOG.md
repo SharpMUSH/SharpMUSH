@@ -9,6 +9,10 @@ Two version numbers matter:
 
 ## [Unreleased]
 
+### Added
+
+- The play terminal's settings menu has an "Echo my commands" checkbox. Off hides the commands you send from the output; on (the default) shows them. The choice is kept per browser.
+
 ### Fixed
 
 - Play's Here card shows each character's full name, wrapping to a second line, where it showed only the first word ("The" for "The Foo").

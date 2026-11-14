@@ -1,6 +1,6 @@
 @inject IStringLocalizer<SharedResource> Loc
 
-@* Play's terminal settings menu: the width in columns, screen reader mode, the longer log, Clear, and focus mode. The page
+@* Play's terminal settings menu: the width in columns, echo, screen reader mode, the longer log, Clear, and focus mode. The page
    keeps which menu is open, since several can be on it at once (PlaySettingsMenu). *@
 <PopoverMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
              Open="Open" OpenChanged="OpenChanged">
@@ -18,6 +18,13 @@
                 <input name="columns" class="play-cols-input" type="number" min="78" max="240" step="1"
                        value="@Columns" @onchange="e => ColumnsChanged.InvokeAsync(e.Value?.ToString())" />
             </label>
+            @* Per browser, as the width is. Off hides the sent commands already in the output too. *@
+            <label class="play-cfg-row">
+                <span>@Loc["NavEchoCommands"]</span>
+                <input name="echo" class="play-cfg-check" type="checkbox" checked="@EchoOn"
+                       aria-describedby="@EchoWhat" @onchange="e => EchoChanged.InvokeAsync(e.Value is true)" />
+            </label>
+            <div class="play-cfg-note" id="@EchoWhat">@Loc["NavEchoCommandsTooltip"]</div>
             @* Per browser, and here rather than in Settings so a guest can turn it on too. *@
             <label class="play-cfg-row">
                 <span>@Loc["NavScreenReaderMode"]</span>
@@ -61,6 +68,10 @@
     /// <summary>The width as typed, for the page to clamp and keep.</summary>
     [Parameter] public EventCallback<string?> ColumnsChanged { get; set; }
 
+    /// <summary>The terminal shows the commands the player sends.</summary>
+    [Parameter] public bool EchoOn { get; set; } = true;
+    [Parameter] public EventCallback<bool> EchoChanged { get; set; }
+
     [Parameter] public bool ScreenReaderOn { get; set; }
     [Parameter] public EventCallback<bool> ScreenReaderChanged { get; set; }
 
@@ -73,6 +84,7 @@
     [Parameter] public bool Focus { get; set; }
     [Parameter] public EventCallback<bool> FocusChanged { get; set; }
 
+    private string EchoWhat => $"play-cfg-echo-what-{Menu}";
     private string ReaderWhat => $"play-cfg-reader-what-{Menu}";
     private string LogsWhat => $"play-cfg-logs-what-{Menu}";
 

@@ -6082,6 +6082,12 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>Za igranje s čitačem zaslona u ovom pregledniku: tipke sa slovima za izlaze su isključene, vaše vlastite naredbe ne čitaju se ponovno, Alt i broj ponovno čita jedan od nedavnih redaka (Alt+1 najnoviji), a igra to zna pa može izostaviti slike nacrtane znakovima.</value>
   </data>
+  <data name="NavEchoCommands" xml:space="preserve">
+    <value>Prikaži moje naredbe</value>
+  </data>
+  <data name="NavEchoCommandsTooltip" xml:space="preserve">
+    <value>Prikazuje svaku poslanu naredbu u izlazu. Isključeno ih skriva, uključujući one već prikazane. Pamti se u ovom pregledniku.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Čuvaj duže zapise</value>
   </data>

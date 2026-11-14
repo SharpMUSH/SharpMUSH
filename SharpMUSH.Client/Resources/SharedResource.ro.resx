@@ -6082,6 +6082,12 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>Pentru a juca cu un cititor de ecran în acest browser: tastele cu litere pentru ieșiri sunt oprite, propriile comenzi nu sunt citite înapoi, Alt și o cifră citește din nou un rând recent (Alt+1 cel mai nou), iar jocul află, ca să poată omite desenele făcute din caractere.</value>
   </data>
+  <data name="NavEchoCommands" xml:space="preserve">
+    <value>Afișează comenzile mele</value>
+  </data>
+  <data name="NavEchoCommandsTooltip" xml:space="preserve">
+    <value>Afișează în ieșire fiecare comandă trimisă. Dezactivat le ascunde, inclusiv pe cele deja afișate. Se păstrează în acest browser.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Păstrează jurnale mai lungi</value>
   </data>

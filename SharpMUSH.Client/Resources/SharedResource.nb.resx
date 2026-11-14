@@ -6082,6 +6082,12 @@
   <data name="NavScreenReaderModeTooltip" xml:space="preserve">
     <value>For å spille med skjermleser i denne nettleseren: bokstavtastene for utganger er slått av, dine egne kommandoer leses ikke opp igjen, Alt og et tall leser en av de siste linjene igjen (Alt+1 den nyeste), og spillet får beskjed så det kan utelate bilder tegnet med tegn.</value>
   </data>
+  <data name="NavEchoCommands" xml:space="preserve">
+    <value>Vis kommandoene mine</value>
+  </data>
+  <data name="NavEchoCommandsTooltip" xml:space="preserve">
+    <value>Viser hver kommando du sender i utdataene. Av skjuler dem, også de som allerede står der. Lagres i denne nettleseren.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Behold lengre logger</value>
   </data>
