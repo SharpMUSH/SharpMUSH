@@ -9,6 +9,7 @@
     {"id": "stock-routes", "heading": "Stock routes", "lookup": "http stock routes"},
     {"id": "roster", "heading": "The roster", "lookup": "http roster"},
     {"id": "online", "heading": "The connection list", "lookup": "http online"},
+    {"id": "kept-rows", "heading": "Kept rows", "lookup": "http kept rows"},
     {"id": "profiles", "heading": "Profiles", "lookup": "http profiles"}
   ]
 }
@@ -34,6 +35,7 @@ Before dispatching, the router sets:
 - [http stock routes]: the routes the web portal uses
 - [http roster]: the `/http/characters` roster
 - [http online]: the `/http/online` connection list
+- [http kept rows]: how both lists keep their rows with memo()
 - [http profiles]: the `/http/profile` routes
 
 ## Adding a route
@@ -72,7 +74,7 @@ SharpMUSH also seeds these routed sub-attributes, used by the web portal. Like t
 The roster is `/http/characters`.
 
 
-``&GET`CHARACTERS`` answers the **roster**: a JSON array of listed players, ``[{name, objid, created, category, image}, ...]``. `image` is the player's `IMAGE` attribute (see [IMAGE]), read with `get()` and blank when unset. It says who *exists*, not who is connected; for that see `/http/online`. It is built with ``json_array(iter(filter(me/FUN`PROFILE`CHARACTERVISIBLE, lsearch(all,type,player)), u(me/FUN`PROFILE`CHARACTERROW,%i0), , %r), %r)``.
+``&GET`CHARACTERS`` answers the **roster**: a JSON array of listed players, ``[{name, objid, created, category, image}, ...]``. `image` is the player's `IMAGE` attribute (see [IMAGE]), read with `get()` and blank when unset. It says who *exists*, not who is connected; for that see `/http/online`. It is built with ``json_array(squish(iter(lsearch(all,type,player), u(me/FUN`PROFILE`KEPTENTRY,%i0,FUN`PROFILE`CHARACTERVISIBLE), , %r), %r), %r)``: one ``&FUN`PROFILE`CHARACTERROW`` per player that ``&FUN`PROFILE`CHARACTERVISIBLE`` lists, kept by [memo()] until the player's name, category or flags, whether their `IMAGE` is visual, or an attribute the row read changes.
 
 `category` comes from ``&FUN`PROFILE`CHARACTERCATEGORY``, by default flag-based, first match wins: `Wizard` (WIZARD flag), `Royalty` (ROYALTY flag), `Guest` (the Guest power); everyone else is blank. Who is listed at all comes from ``&FUN`PROFILE`CHARACTERVISIBLE`` (1 to list, 0 to hide); the default hides the `Guest` category and the `package_manager` principal, which is seeded as a real player (it owns softcode-package objects) but is nobody's character. Both are MUSH-side policy: redefine them freely. The portal hard-codes nothing; it lists exactly what comes back, grouping by label (alphabetically) and pooling blanks in an untitled section at the bottom.
 
@@ -86,6 +88,14 @@ The connection list is `/http/online`.
 ### Row separators
 
 Both routes pass `%r` as the [json_array()] separator rather than taking the default. `json_array()` splits its input *before* parsing each element, and rows embed player names, which routinely contain spaces; with the default separator a name like `Package Manager` is shredded into fragments that are no longer valid JSON. Keep the separator to something your rows cannot contain if you rewrite these.
+
+## Kept rows
+
+Both lists build each row through ``&FUN`PROFILE`KEPTENTRY``, which runs ``&FUN`PROFILE`ENTRY`` through [memo()]. A row is built again when an attribute it read changes, or when the player's name, category or flags change, or whether their `IMAGE` is visual.
+
+Each list's whole answer is also kept for ``&DATA`PROFILE`CACHEWINDOW`` seconds (30) by [cache()] in ``&CACHE`PROFILE`CHARACTERS`` or ``&CACHE`PROFILE`ONLINE``; a rename, a login or logout, or a player turning DARK can show that much later. Set the window to 0, or clear the attribute, to see a change at once.
+
+A redefined ``&FUN`PROFILE`CHARACTERCATEGORY`` or visibility rule runs inside [memo()]. The category is passed to memo() as an argument, so any change to it shows at once. A visibility rule that reads something other than attributes, a name, the category or flags, such as a location, is not seen to change until `memo_window` passes; add it to the arguments of ``&FUN`PROFILE`KEPTENTRY``. One that reads the clock or connections, such as conn() or idle(), is refused by memo(): have both routes call ``&FUN`PROFILE`ENTRY`` instead.
 
 ## Profiles
 
