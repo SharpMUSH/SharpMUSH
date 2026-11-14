@@ -5,7 +5,7 @@
 # Every deploy pulls the newest image of the tag named here and restarts the machine, dropping
 # connected players. Nothing deploys on its own.
 [build]
-  image = "sharpmush/sharpmush-allinone:dev"
+  image = "sharpmush/sharpmush-allinone:latest"
 
 [env]
   # Set to your own domain once it points at the app (fly certs add <domain>); the setup link in the

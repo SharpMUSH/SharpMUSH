@@ -16,7 +16,7 @@ image updates off. They reach each other on the project's private network, under
 gives them (`<service>.railway.internal`); the `${{...}}` values below are Railway reference
 variables and fill those names in.
 
-`edge`, from `sharpmush/sharpmush-edge:dev`, the only public service:
+`edge`, from `sharpmush/sharpmush-edge:latest`, the only public service:
 
 | Setting | Value |
 |---|---|
@@ -29,7 +29,7 @@ variables and fill those names in.
 | TCP proxy | port `4201` |
 | Healthcheck path | none |
 
-`server`, from `sharpmush/sharpmush-server:dev`, with the world:
+`server`, from `sharpmush/sharpmush-server:latest`, with the world:
 
 | Setting | Value |
 |---|---|
@@ -45,7 +45,7 @@ variables and fill those names in.
 | Volume | mounted at `/data` |
 | Public networking | none |
 
-`renderer`, from `sharpmush/sharpmush-renderer:dev`:
+`renderer`, from `sharpmush/sharpmush-renderer:latest`:
 
 | Setting | Value |
 |---|---|
