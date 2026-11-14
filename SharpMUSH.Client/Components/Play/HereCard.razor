@@ -50,7 +50,7 @@ else
                 }
                 else
                 {
-                    <PortraitTile Name="@o.Name" AriaLabel="@o.Name" ImageUrl="@o.Image?.Url" Alt="@o.Image?.Alt"
+                    <PortraitTile Name="@o.Name" Label="@(string.IsNullOrWhiteSpace(o.Name) ? Loc["RolUntitled"].Value : null)" AriaLabel="@o.Name" ImageUrl="@o.Image?.Url" Alt="@o.Image?.Alt"
                                   Status="@StatusOf(o)" OnClick="() => Activate(o)" />
                 }
             }

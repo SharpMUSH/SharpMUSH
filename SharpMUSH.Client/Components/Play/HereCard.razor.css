@@ -53,12 +53,29 @@
 	text-overflow: ellipsis;
 }
 
-/* the full name wraps to a second line before an ellipsis cuts it ("The Foo · away" in a narrow column) */
+/* the full name wraps to a second line before an ellipsis cuts it ("The Foo" in a narrow column), and the
+   status word keeps a line of its own so a long name never hides "away" */
 .here-grid ::deep .kit-portrait-label {
+	display: flex;
+	flex-direction: column;
+	white-space: normal;
+}
+
+.here-grid ::deep .kit-portrait-name {
 	display: -webkit-box;
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: 2;
 	line-clamp: 2;
-	white-space: normal;
+	overflow: hidden;
 	overflow-wrap: anywhere;
+}
+
+.here-grid ::deep .kit-portrait-status {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.here-grid ::deep .kit-portrait-sep {
+	display: none;
 }

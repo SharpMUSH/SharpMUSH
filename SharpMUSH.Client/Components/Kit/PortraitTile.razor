@@ -39,12 +39,17 @@ else
     private string? AccessibleName => AriaLabel is null || Status is null ? AriaLabel : $"{AriaLabel} · {Status}";
 
     private string RootClass => Highlight ? "kit-portrait kit-portrait--highlight" : "kit-portrait";
-    private string Text => Status is null ? (Label ?? Name) : $"{Label ?? Name} · {Status}";
 
     private RenderFragment Inner => __builder =>
     {
         <CharacterAvatar ImageClass="kit-portrait-img" FallbackClass="kit-portrait-fallback" Name="@Name" ImageUrl="@ImageUrl"
                          Character="@Character" Alt="@Alt" Style="@($"height:{Height}px;")" Lazy="true" />
-        <span class="kit-portrait-label @(Status is not null ? "kit-portrait-label--dim" : null)">@Text</span>
+        <span class="kit-portrait-label @(Status is not null ? "kit-portrait-label--dim" : null)">
+            <span class="kit-portrait-name">@(Label ?? Name)</span>
+            @if (Status is not null)
+            {
+                <span class="kit-portrait-status"><span class="kit-portrait-sep"> · </span>@Status</span>
+            }
+        </span>
     };
 }

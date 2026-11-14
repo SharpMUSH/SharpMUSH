@@ -54,6 +54,17 @@ public class HereCardTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task AStatus_IsItsOwnElement_AndABlankName_IsUntitled()
+	{
+		var cut = RenderHere([Player("The Foo", "#312", status: "away"), Player(" ", "#313")]);
+		var tiles = cut.FindAll(".kit-portrait");
+		await Assert.That(tiles[0].QuerySelector(".kit-portrait-name")!.TextContent).IsEqualTo("The Foo");
+		await Assert.That(tiles[0].QuerySelector(".kit-portrait-status")!.TextContent).IsEqualTo(" · away");
+		await Assert.That(tiles[1].QuerySelector(".kit-portrait-name")!.TextContent).IsEqualTo("Untitled");
+		await Assert.That(tiles[1].QuerySelector(".kit-portrait-status")).IsNull();
+	}
+
+	[Test]
 	public async Task ACharacterWithAProfile_OpensTheSheet_OneWithout_RunsItsCommand()
 	{
 		RoomOccupant? opened = null;
