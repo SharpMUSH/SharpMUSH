@@ -22,16 +22,19 @@ present. Disable the directory/profile API independently by uninstalling just
 Both list routes build each row through `` FUN`PROFILE`KEPTENTRY ``, which calls
 `` FUN`PROFILE`ENTRY `` through `memo()` (`help memo()`). A route asked again
 answers from the kept rows instead of building each one again: with 1,000
-players, `/http/characters` takes about 8 function calls a player instead of 28.
+players, `/http/characters` takes about 11 function calls a player instead of 28.
 
 `memo()` drops a kept row when an attribute the row read changes, such as
-`IMAGE`. A name, roles, powers and flags are not attributes, so
+`IMAGE`. A name, the category, flags and whether `IMAGE` is visual (its own
+or one inherited from a parent) are not attribute values, so
 `` FUN`PROFILE`KEPTENTRY `` passes them as arguments, and a change to any of
 them builds the row again.
 
 If you redefine `` FUN`PROFILE`CHARACTERCATEGORY `` or a visibility rule:
 
-- One that reads something else, such as a location, is not seen to change
+- The category is passed as an argument, so a change to it always shows at
+  once. A visibility rule that reads something else, such as a location, is
+  not seen to change
   until `memo_window` passes. Add it to the arguments in
   `` FUN`PROFILE`KEPTENTRY ``.
 - One that reads the clock or connections, such as `conn()` or `idle()`, is
