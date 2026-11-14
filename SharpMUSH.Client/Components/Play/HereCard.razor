@@ -2,7 +2,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 @* D1 §5.6 Here: who and what is in the room, from room.contents. Characters as portrait tiles (the
-   first name, and the status word when it is not "active"), then objects as square thumbnails. The
+   full name, and the status word when it is not "active"), then objects as square thumbnails. The
    viewer is not listed (board 01's "Here · 4" beside "5 here"). A character with a profile opens the
    character sheet; anything else runs its cmd. *@
 @if (Bare)
@@ -50,7 +50,7 @@ else
                 }
                 else
                 {
-                    <PortraitTile Name="@o.Name" Label="@FirstName(o.Name)" AriaLabel="@o.Name" ImageUrl="@o.Image?.Url" Alt="@o.Image?.Alt"
+                    <PortraitTile Name="@o.Name" Label="@(string.IsNullOrWhiteSpace(o.Name) ? Loc["RolUntitled"].Value : null)" AriaLabel="@o.Name" ImageUrl="@o.Image?.Url" Alt="@o.Image?.Alt"
                                   Status="@StatusOf(o)" OnClick="() => Activate(o)" />
                 }
             }
@@ -85,10 +85,6 @@ else
 
     private static string? StatusOf(RoomOccupant o) =>
         string.IsNullOrWhiteSpace(o.Status) || string.Equals(o.Status, "active", StringComparison.OrdinalIgnoreCase) ? null : o.Status;
-
-    private string FirstName(string name) =>
-        string.IsNullOrWhiteSpace(name) ? Loc["RolUntitled"]
-        : name.Split(' ', StringSplitOptions.RemoveEmptyEntries) is [var first, ..] ? first : name;
 
     private Task Activate(RoomOccupant o)
     {

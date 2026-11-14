@@ -38,7 +38,7 @@ public class HereCardTests : TrackingBunitContext
 		var cut = RenderHere([Bundle, Player("Ilsa Varn", "#313", you: true), Player("Tomas Reyes", "#312", "/t.jpg"), Player("Wren Halloway", "#314", status: "away")]);
 		await Assert.That(cut.Find(".kit-card-title").TextContent).IsEqualTo("Here · 3");
 		var labels = cut.FindAll(".here-grid .kit-portrait-label, .here-grid .here-thing-label").Select(e => e.TextContent.Trim()).ToList();
-		await Assert.That(labels).IsEquivalentTo(new[] { "Tomas", "Wren · away", "Oilcloth bundle" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(labels).IsEquivalentTo(new[] { "Tomas Reyes", "Wren Halloway · away", "Oilcloth bundle" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
 	[Test]
@@ -49,8 +49,19 @@ public class HereCardTests : TrackingBunitContext
 		await Assert.That(tiles[0].QuerySelector("img")!.GetAttribute("src")).IsEqualTo("/t.jpg");
 		await Assert.That(tiles[0].QuerySelector(".kit-portrait-label--dim")).IsNull();
 		await Assert.That(tiles[1].QuerySelector(".kit-portrait-fallback")!.TextContent).IsEqualTo("WH");
-		await Assert.That(tiles[1].QuerySelector(".kit-portrait-label--dim")!.TextContent).IsEqualTo("Wren · idle 14m");
+		await Assert.That(tiles[1].QuerySelector(".kit-portrait-label--dim")!.TextContent).IsEqualTo("Wren Halloway · idle 14m");
 		await Assert.That(tiles[0].GetAttribute("aria-label")).IsEqualTo("Tomas Reyes");
+	}
+
+	[Test]
+	public async Task AStatus_IsItsOwnElement_AndABlankName_IsUntitled()
+	{
+		var cut = RenderHere([Player("The Foo", "#312", status: "away"), Player(" ", "#313")]);
+		var tiles = cut.FindAll(".kit-portrait");
+		await Assert.That(tiles[0].QuerySelector(".kit-portrait-name")!.TextContent).IsEqualTo("The Foo");
+		await Assert.That(tiles[0].QuerySelector(".kit-portrait-status")!.TextContent).IsEqualTo(" · away");
+		await Assert.That(tiles[1].QuerySelector(".kit-portrait-name")!.TextContent).IsEqualTo("Untitled");
+		await Assert.That(tiles[1].QuerySelector(".kit-portrait-status")).IsNull();
 	}
 
 	[Test]
