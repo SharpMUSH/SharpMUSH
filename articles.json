@@ -791,6 +791,35 @@
     "file": "bypass-function.md"
   },
   {
+    "id": "cache-function",
+    "lookup": "cache()",
+    "title": "cache()",
+    "aliases": [
+      "cache"
+    ],
+    "sections": [
+      {
+        "id": "cache-windows",
+        "lookup": "cache windows",
+        "heading": "Cache windows",
+        "aliases": []
+      },
+      {
+        "id": "cache-clearing",
+        "lookup": "cache clearing",
+        "heading": "Clearing a cache",
+        "aliases": []
+      },
+      {
+        "id": "cache-examples",
+        "lookup": "cache examples",
+        "heading": "Cache examples",
+        "aliases": []
+      }
+    ],
+    "file": "cache-function.md"
+  },
+  {
     "id": "cansee-function",
     "lookup": "cansee()",
     "title": "cansee()",
@@ -11744,14 +11773,6 @@
     "id": "legacy:bxor()",
     "lookup": "bxor()",
     "title": "bxor()",
-    "aliases": [],
-    "sections": [],
-    "file": "sharpfunc.md"
-  },
-  {
-    "id": "legacy:cache()",
-    "lookup": "cache()",
-    "title": "cache()",
     "aliases": [],
     "sections": [],
     "file": "sharpfunc.md"
