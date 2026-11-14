@@ -46,6 +46,23 @@ public sealed class ProfileApiServerFactory : ServerWebAppFactory
 [ClassDataSource<ProfileApiServerFactory>(Shared = SharedType.PerTestSession)]
 public class ProfileApiTests(ProfileApiServerFactory factory)
 {
+	/// <summary>
+	/// The list routes keep their answer for DATA`PROFILE`CACHEWINDOW seconds. These tests check what each request
+	/// answers right after a change, so they run with the window at 0, except
+	/// <see cref="Characters_KeptListWaitsForItsWindow"/>, which checks the window itself.
+	/// </summary>
+	[Before(Test)]
+	public async Task BuildTheListsOnEveryRequest() => await SetHandlerAttributeAsync("DATA`PROFILE`CACHEWINDOW", "0");
+
+	private async Task SetHandlerAttributeAsync(string attribute, string value)
+	{
+		var mediator = factory.Services.GetRequiredService<IMediator>();
+		var attributes = factory.Services.GetRequiredService<IAttributeService>();
+		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1, null)))).Expect<AnySharpObject>();
+		var handler = (await mediator.Send(new GetObjectNodeQuery(new DBRef(8, null)))).Expect<AnySharpObject>();
+		(await attributes.SetAttributeAsync(god, handler, attribute, MarkupText.Plain(value))).Expect<Success>();
+	}
+
 	/// <summary>Resolves #1 (God)'s name and objid from the engine, so tests aren't tied to literals.</summary>
 	private async Task<(string Name, string Objid)> GodIdentity()
 	{
@@ -176,6 +193,51 @@ public class ProfileApiTests(ProfileApiServerFactory factory)
 			.ToList();
 
 		await Assert.That(names).Contains("Spaced Out Name");
+	}
+
+	/// <summary>
+	/// With a window, the directory's answer is kept in CACHE`PROFILE`CHARACTERS: a rename is not seen until the window
+	/// passes or the attribute is cleared, and clearing it builds the list again at once.
+	/// </summary>
+	[Test]
+	public async Task Characters_KeptListWaitsForItsWindow()
+	{
+		var mediator = factory.Services.GetRequiredService<IMediator>();
+		var connectionService = factory.Services.GetRequiredService<IConnectionService>();
+		var home = new DBRef(0, null);
+		var name = TestIsolationHelpers.GenerateUniqueName("KeptList");
+		// player_name_len is 16 by default, so the new name is kept short.
+		var renamed = $"Kl{Guid.NewGuid():N}"[..12];
+		await mediator.Send(new CreatePlayerCommand(name, "testpass", home, home, 1));
+		var player = await mediator.CreateStream(new GetPlayerQuery(name)).FirstAsync();
+		var objid = $"#{player.Object.Key}:{player.Object.CreationTime}";
+		var http = factory.CreateHttpClient();
+
+		async Task<string?> Name()
+		{
+			using var doc = JsonDocument.Parse(await (await http.GetAsync("http/characters")).Content.ReadAsStringAsync());
+			return doc.RootElement.EnumerateArray()
+				.Where(row => row.GetProperty("objid").GetString() == objid)
+				.Select(row => row.GetProperty("name").GetString())
+				.FirstOrDefault();
+		}
+
+		try
+		{
+			await SetHandlerAttributeAsync("DATA`PROFILE`CACHEWINDOW", "3600");
+			await factory.CommandParser.CommandParse(1, connectionService, MarkupText.Plain("&CACHE`PROFILE`CHARACTERS #8"));
+			await Assert.That(await Name()).IsEqualTo(name);
+
+			await factory.CommandParser.CommandParse(1, connectionService, MarkupText.Plain($"@name #{player.Object.Key}={renamed}"));
+			await Assert.That(await Name()).IsEqualTo(name).Because("the kept list is younger than its window");
+
+			await factory.CommandParser.CommandParse(1, connectionService, MarkupText.Plain("&CACHE`PROFILE`CHARACTERS #8"));
+			await Assert.That(await Name()).IsEqualTo(renamed);
+		}
+		finally
+		{
+			await SetHandlerAttributeAsync("DATA`PROFILE`CACHEWINDOW", "0");
+		}
 	}
 
 	/// <summary>

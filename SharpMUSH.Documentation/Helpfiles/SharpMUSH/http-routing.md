@@ -93,6 +93,8 @@ Both routes pass `%r` as the [json_array()] separator rather than taking the def
 
 Both lists build each row through ``&FUN`PROFILE`KEPTENTRY``, which runs ``&FUN`PROFILE`ENTRY`` through [memo()]. A row is built again when an attribute it read changes, or when the player's name, category or flags change, or whether their `IMAGE` is visual.
 
+Each list's whole answer is also kept for ``&DATA`PROFILE`CACHEWINDOW`` seconds (30) by [cache()] in ``&CACHE`PROFILE`CHARACTERS`` or ``&CACHE`PROFILE`ONLINE``; set the window to 0, or clear the attribute, to see a change at once.
+
 A redefined ``&FUN`PROFILE`CHARACTERCATEGORY`` or visibility rule runs inside [memo()]. The category is passed to memo() as an argument, so any change to it shows at once. A visibility rule that reads something other than attributes, a name, the category or flags, such as a location, is not seen to change until `memo_window` passes; add it to the arguments of ``&FUN`PROFILE`KEPTENTRY``. One that reads the clock or connections, such as conn() or idle(), is refused by memo(): have both routes call ``&FUN`PROFILE`ENTRY`` instead.
 
 ## Profiles
