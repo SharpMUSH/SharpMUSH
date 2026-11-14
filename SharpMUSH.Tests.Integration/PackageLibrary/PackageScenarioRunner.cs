@@ -223,8 +223,45 @@ public sealed partial class PackageScenarioRunner(ServerWebAppFactory factory, P
 		var typed = await ExpandAsync(command, n);
 		var before = factory.Notifications.CountFor(player.DbRef);
 		await factory.CommandParser.CommandParse(player.Handle, Connections, MarkupText.Plain(typed));
-		await factory.QueueBarrierAsync();
+		await SettleAsync();
 		return ($"{who}: {typed}", string.Join("\n", factory.Notifications.For(player.DbRef).Skip(before)));
+	}
+
+	/// <summary>
+	/// Waits for what a step set going, as a player would before typing the next line: the queue, and then any
+	/// <c>@wait</c> due within <see cref="SoonDelay"/> (a package's <c>@wait 0</c> follow-up), with the queue again
+	/// after it fires. A step runs off the queue, so without this the next step could run beside that follow-up.
+	/// Longer waits are left for the test to wait on.
+	/// </summary>
+	private async Task SettleAsync()
+	{
+		var scheduler = factory.Services.GetRequiredService<SharpMUSH.Library.Services.TaskScheduler>();
+		var deadline = DateTimeOffset.UtcNow + SettleLimit;
+		await factory.QueueBarrierAsync();
+		while (DateTimeOffset.UtcNow < deadline && await NextDueWaitAsync(scheduler) is { } due)
+		{
+			var until = due - DateTimeOffset.UtcNow;
+			await Task.Delay(until > TimeSpan.Zero ? until + SoonDelay / 10 : SoonDelay / 10);
+			await factory.QueueBarrierAsync();
+		}
+	}
+
+	private static readonly TimeSpan SoonDelay = TimeSpan.FromMilliseconds(500);
+	private static readonly TimeSpan SettleLimit = TimeSpan.FromSeconds(10);
+
+	private static async Task<DateTimeOffset?> NextDueWaitAsync(SharpMUSH.Library.Services.TaskScheduler scheduler)
+	{
+		var soon = DateTimeOffset.UtcNow + SoonDelay;
+		DateTimeOffset? next = null;
+		await foreach (var (group, tasks) in scheduler.GetAllTasks())
+		{
+			if (!group.StartsWith(SharpMUSH.Library.Services.TaskScheduler.DelayGroup + ":", StringComparison.Ordinal)) continue;
+			foreach (var (due, _) in tasks)
+			{
+				if (due <= soon && (next is null || due < next)) next = due;
+			}
+		}
+		return next;
 	}
 
 	private async Task<(string Action, string Output)> GodStepAsync(string command, int n)
@@ -236,7 +273,7 @@ public sealed partial class PackageScenarioRunner(ServerWebAppFactory factory, P
 	private async Task<string> GodAsync(string command)
 	{
 		var result = await factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain(command));
-		await factory.QueueBarrierAsync();
+		await SettleAsync();
 		return result.Message?.ToPlainText() ?? string.Empty;
 	}
 
@@ -244,7 +281,7 @@ public sealed partial class PackageScenarioRunner(ServerWebAppFactory factory, P
 	{
 		var typed = await ExpandAsync(expression, n);
 		var value = await factory.FunctionParser.EvaluateAsync(MarkupText.Plain(typed));
-		await factory.QueueBarrierAsync();
+		await SettleAsync();
 		return render switch
 		{
 			null or "plain" => ($"eval: {typed}", value.ToPlainText()),
