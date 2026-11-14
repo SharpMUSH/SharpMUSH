@@ -65,7 +65,7 @@ A value that cannot be stored, such as one too long, is still returned, and the 
 
 Clear the attribute, with `&<attribute> <object>`, attrib_set() or wipe(), and the next call evaluates `<value>` again. Code that changes what an answer is built from can clear it at the same time.
 
-When that data is a standard attribute, @attribute/watch can clear it instead: the event handler runs its watch attributes whenever any copy of the attribute changes, on any object, by any command or function. See [@attribute watch] and the second of the [cache examples].
+When that data is a standard attribute, @attribute/watch can clear it instead: the event handler runs its watch attributes whenever any copy of the attribute changes, on any object, by any command or function. The watch is queued after the command that made the change, so a read later in the same command list can still get the old answer; clear the attribute there instead. See [@attribute watch] and the second of the [cache examples].
 
 ## Cache examples
 
