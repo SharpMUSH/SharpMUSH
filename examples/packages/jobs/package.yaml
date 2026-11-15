@@ -1,7 +1,7 @@
 format: "1.16"
 package: jobs
 title: "Jobs"
-version: 1.16.2
+version: 1.17.0
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -605,6 +605,19 @@ objects:
         t(elock(%0/work,%1))
       FUN`CAN`FILE: |-
         t(elock(%0/file,%1))
+      # Why %1 may not file in bucket %0, as "Permission denied. <reason>".
+      FUN`WHY`FILE: |-
+        setqm(why_lock,u({{jobs}}/FUN`LOCK`TEXT,%0,file),
+        why_needs,u({{jobs}}/FUN`LOCK`NEEDS,%q<why_lock>))Permission denied. [cond(strmatch(%q<why_lock>,#FALSE),Nobody may file in [name(%0)].,strlen(%q<why_needs>),Filing in [name(%0)] needs %q<why_needs>.,Filing in [name(%0)] is limited by its file lock%, and you don't pass it.)]
+      # Why %0 may file in no bucket: what the file locks of the open buckets they see ask for.
+      FUN`WHY`NOWHERE: |-
+        setq(nowhere_needs,setunion(trim(squish(iter(u({{jobs}}/FUN`BUCKETS`SEEN,%0),if(u({{jobs}}/FUN`BUCKET`TAKING,%i0),u({{jobs}}/FUN`LOCK`NEEDS,u({{jobs}}/FUN`LOCK`TEXT,%i0,file))),%b,|),|),b,|),,|))Permission denied. There is no bucket you may file in.[if(words(%q<nowhere_needs>,|),%bFiling needs [itemize(%q<nowhere_needs>,|,or)].)]
+      # What lock %0 asks for in words, when it is only roles or only permissions joined by |: "the
+      # approved role", "the staff or approved role", "the softcode.jobs.admin permission". Empty for
+      # any other lock.
+      FUN`LOCK`NEEDS: |-
+        setqm(needs_parts,iter(%0,trim(%i0),|,|),
+        needs_plain,not(cor(strmatch(%0,*&*),strmatch(%0,*!*),strmatch(%0,*%(*),strmatch(%0,*%b*))))[cond(not(cand(strlen(%0),%q<needs_plain>)),,not(words(squish(iter(%q<needs_parts>,if(strmatch(%i0,ROLE^?*),,x),|)))),the [itemize(iter(%q<needs_parts>,after(%i0,^),|,|),|,or)] role,not(words(squish(iter(%q<needs_parts>,if(strmatch(%i0,PERM^?*),,x),|)))),the [itemize(iter(%q<needs_parts>,after(%i0,^),|,|),|,or)] permission,)]
       # Bucket %0's %1 lock (file, work or audit) as +bucket/lock takes it; empty when there is none.
       FUN`LOCK`TEXT: |-
         if(strmatch(setr(lock_text,lock(%0/%1)),*UNLOCKED*),,%q<lock_text>)
@@ -644,10 +657,20 @@ objects:
       # Overdue only counts while it is staff's turn, so a job waiting on its player is never overdue.
       FUN`IS`OVERDUE: |-
         cand(match(new staff,get(%0/JOB`STATE)),isint(get(%0/JOB`DUE)),lt(get(%0/JOB`DUE),secs()))
+      # Seconds %0 in the reader's zone (FUN`TIME`ZONE): Oct 07 18:02, or Oct 07 for FUN`TIME`DATE.
       FUN`TIME`WHEN: |-
-        if(isint(%0),timefmt($b $d $H:$M,%0),-)
+        if(isint(%0),u({{jobs}}/FUN`TIME`AT,$b $d $H:$M,%0),-)
       FUN`TIME`DATE: |-
-        if(isint(%0),timefmt($b $d,%0),-)
+        if(isint(%0),u({{jobs}}/FUN`TIME`AT,$b $d,%0),-)
+      FUN`TIME`AT: |-
+        setq(time_zone,u({{jobs}}/FUN`TIME`ZONE))[if(strlen(%q<time_zone>),timefmt(%0,%1,%q<time_zone>),timefmt(%0,%1))]
+      # The reader's time zone: %q<reader_zone>, which the portal's routes set for the viewer, or else the
+      # TZ attribute of the player running the command, when it names a zone. Empty for the game's time.
+      FUN`TIME`ZONE: |-
+        if(strlen(%q<reader_zone>),%q<reader_zone>,if(hastype(%#,player),u({{jobs}}/FUN`TIME`ZONEOF,%#)))
+      # Player %0's TZ attribute, as the time package and time() keep it, when it names a zone.
+      FUN`TIME`ZONEOF: |-
+        setq(zone_name,get(%0/TZ))[if(cand(strlen(%q<zone_name>),not(strmatch(timefmt($Z,0,%q<zone_name>),#-1*))),%q<zone_name>)]
       # Unread is per person: anything newer than their last read that they may see.
       FUN`IS`UNREAD: |-
         gt(firstof(get(%0/[if(u({{jobs}}/FUN`CAN`WORK,get(%0/JOB`BUCKET),%1),JOB`UPDATED`AT,JOB`PUBLIC`AT)]),0),firstof(get(%0/JOB`READ`[u({{jobs}}/FUN`PERSON`KEY,%1)]),0))
@@ -1107,7 +1130,7 @@ objects:
       # %<bucket> (an objid, or empty when there is none), %<title> and %<text>, from +request, +bug and
       # friends, and /create; the /softcode switch is %q<text_format>, as FUN`COMMAND`PARSE left it.
       INC`FILE`CHECKED: |-
-        @assert strlen(%<bucket>)=@pemit %#=notice(JOBS,There is no such bucket. +buckets lists them.,warn); @assert cand(u({{jobs}}/FUN`CAN`FILE,%<bucket>,%#),cor(not(get(%<bucket>/HIDDEN)),u({{jobs}}/FUN`CAN`WORK,%<bucket>,%#)))=@pemit %#=notice(JOBS,You can't file in [name(%<bucket>)].,error); @assert u({{jobs}}/FUN`BUCKET`TAKING,%<bucket>)=@pemit %#=notice(JOBS,name(%<bucket>) is not taking new jobs. +buckets lists the buckets.,warn); @assert strmatch(json_query(setr(form_check,appfields(get({{jobs}}/FORM),json_fill(get({{jobs}}/DATA`TEMPLATE`INC`FILE`CHECKED),/bucket,%<bucket>,/title,%<title>,/text,%<text>))),get,ok),true)=@pemit %#=notice(JOBS,json_query(%q<form_check>,get,errors),warn); @include/args {{jobs}}/INC`DO`FILE=filer,%q<actor>,author,,priority,,bucket,%<bucket>,title,%<title>,text,%<text>,format,%q<text_format>,how,command; @pemit %#=notice(JOBS,Filed job %q<job_number> in [name(%<bucket>)]: %<title>.[if(strmatch(get(%q<job_object>/JOB`AUDIT`STATE),pending),%bIt is approved at once\, and staff look it over later.,if(strlen(setr(file_expect,u({{jobs}}/FUN`WAIT`SENTENCE,%<bucket>))),%b%q<file_expect>))] +job %q<job_number> shows it.,ok)
+        @assert strlen(%<bucket>)=@pemit %#=notice(JOBS,There is no such bucket. +buckets lists them.,warn); @assert cor(not(get(%<bucket>/HIDDEN)),u({{jobs}}/FUN`CAN`WORK,%<bucket>,%#))=@pemit %#=notice(JOBS,There is no such bucket. +buckets lists them.,warn); @assert u({{jobs}}/FUN`CAN`FILE,%<bucket>,%#)=@pemit %#=notice(JOBS,u({{jobs}}/FUN`WHY`FILE,%<bucket>,%#),error); @assert u({{jobs}}/FUN`BUCKET`TAKING,%<bucket>)=@pemit %#=notice(JOBS,name(%<bucket>) is not taking new jobs. +buckets lists the buckets.,warn); @assert strmatch(json_query(setr(form_check,appfields(get({{jobs}}/FORM),json_fill(get({{jobs}}/DATA`TEMPLATE`INC`FILE`CHECKED),/bucket,%<bucket>,/title,%<title>,/text,%<text>))),get,ok),true)=@pemit %#=notice(JOBS,json_query(%q<form_check>,get,errors),warn); @include/args {{jobs}}/INC`DO`FILE=filer,%q<actor>,author,,priority,,bucket,%<bucket>,title,%<title>,text,%<text>,format,%q<text_format>,how,command; @pemit %#=notice(JOBS,Filed job %q<job_number> in [name(%<bucket>)]: %<title>.[if(strmatch(get(%q<job_object>/JOB`AUDIT`STATE),pending),%bIt is approved at once\, and staff look it over later.,if(strlen(setr(file_expect,u({{jobs}}/FUN`WAIT`SENTENCE,%<bucket>))),%b%q<file_expect>))] +job %q<job_number> shows it.,ok)
 
       # ---- writes, shared with the portal routes and the API -------------------
       # Each takes what it writes as named arguments (@include/args): text with commas in it arrives
@@ -1402,13 +1425,13 @@ objects:
       FORM`VALUE: |-
         setq(form_raw,json_query(%0,get,%1))[if(strmatch(%q<form_raw>,"*),json_query(%q<form_raw>,unescape),%q<form_raw>)]
       FORM`VALIDATE: |-
-        think setqm(appdraft_result,lit({"ok":true}),file_bucket,u({{jobs}}/FUN`BUCKET`SEEN,u({{jobs}}/FORM`VALUE,%<draft_fields>,bucket),%<draft_actor>)); @assert cand(strlen(%q<file_bucket>),u({{jobs}}/FUN`CAN`FILE,%q<file_bucket>,%<draft_actor>),u({{jobs}}/FUN`BUCKET`TAKING,%q<file_bucket>))=think setq(appdraft_result,u({{jobs}}/WEB`ANSWER`FIELDERROR,bucket,Pick an open bucket you can file in.))
+        think setqm(appdraft_result,lit({"ok":true}),file_bucket,u({{jobs}}/FUN`BUCKET`SEEN,u({{jobs}}/FORM`VALUE,%<draft_fields>,bucket),%<draft_actor>)); @assert cand(strlen(%q<file_bucket>),u({{jobs}}/FUN`BUCKET`TAKING,%q<file_bucket>))=think setq(appdraft_result,u({{jobs}}/WEB`ANSWER`FIELDERROR,bucket,Pick an open bucket you can file in.)); @assert u({{jobs}}/FUN`CAN`FILE,%q<file_bucket>,%<draft_actor>)=think setq(appdraft_result,u({{jobs}}/WEB`ANSWER`FIELDERROR,bucket,u({{jobs}}/FUN`WHY`FILE,%q<file_bucket>,%<draft_actor>)))
       DATA`TEMPLATE`FORM`FILE: |-
         {"ok":true,"message":"","redirect":""}
       FORM`FILE: |-
         @include {{jobs}}/FORM`VALIDATE; @assert strmatch(json_query(%q<appdraft_result>,get,ok),true); think setqm(actor,%<draft_actor>,actor_key,u({{jobs}}/FUN`PERSON`KEY,%<draft_actor>),text_format,if(strmatch(u({{jobs}}/FORM`VALUE,%<draft_fields>,softcode),true),softcode,markdown)); @include/args {{jobs}}/INC`DO`FILE=filer,%<draft_actor>,author,,priority,,bucket,%q<file_bucket>,title,u({{jobs}}/FORM`VALUE,%<draft_fields>,title),text,u({{jobs}}/FORM`VALUE,%<draft_fields>,text),format,%q<text_format>,how,application; think setq(appdraft_result,json_fill(get({{jobs}}/DATA`TEMPLATE`FORM`FILE),/message,Filed job %q<job_number>.,/redirect,/apps/jobs/%q<job_number>))
       INC`DRAFT: |-
-        think setqm(draft_action,lcstr(first(%q<cmd_argument>)),draft_payload,json(object)); @if strmatch(%q<draft_action>,new)={think setq(draft_payload,json(object,bucket,json(string,get({{jobs}}/DATA`CONFIG`DEFAULT-BUCKET))))}; @if strmatch(%q<draft_action>,set)={think setqm(draft_field,trim(rest(%q<cmd_left_side>)),draft_payload,if(%q<cmd_has_equals>,json(object,%q<draft_field>,if(cand(match(boolean number list multiselect,u({{jobs}}/FORM`VALUE,u({{jobs}}/FORM`FIELD,%q<draft_field>),type)),isjson(%q<cmd_right_side>)),%q<cmd_right_side>,json(string,%q<cmd_right_side>))),json(null)))}; @appdraft/show {{jobs}}/FORM=%q<draft_action>,%q<draft_payload>
+        think setqm(draft_action,lcstr(first(%q<cmd_argument>)),draft_payload,json(object)); @assert cor(not(strmatch(%q<draft_action>,new)),words(u({{jobs}}/WEB`BUCKET`FILEABLE,%#)))=@pemit %#=notice(JOBS,u({{jobs}}/FUN`WHY`NOWHERE,%#),error); @if strmatch(%q<draft_action>,new)={think setq(draft_payload,json(object,bucket,json(string,get({{jobs}}/DATA`CONFIG`DEFAULT-BUCKET))))}; @if strmatch(%q<draft_action>,set)={think setqm(draft_field,trim(rest(%q<cmd_left_side>)),draft_payload,if(%q<cmd_has_equals>,json(object,%q<draft_field>,if(cand(match(boolean number list multiselect,u({{jobs}}/FORM`VALUE,u({{jobs}}/FORM`FIELD,%q<draft_field>),type)),isjson(%q<cmd_right_side>)),%q<cmd_right_side>,json(string,%q<cmd_right_side>))),json(null)))}; @appdraft/show {{jobs}}/FORM=%q<draft_action>,%q<draft_payload>
       FORM`DISPLAY: |-
         if(strmatch(json_query(%0,get,ok),true),if(strlen(u({{jobs}}/FORM`VALUE,%0,message)),u({{jobs}}/FORM`VALUE,%0,message),box(iter(lnum(0,dec(json_query(get({{jobs}}/FORM),size))),u({{jobs}}/FORM`VALUE,json_query(get({{jobs}}/FORM),get,%i0),label): [u({{jobs}}/FORM`VALUE,json_query(%0,get,fields),u({{jobs}}/FORM`VALUE,json_query(get({{jobs}}/FORM),get,%i0),key))],%b,%r)%r%r+request/draft set <field>=<literal text>%r+request/draft review | back | file | cancel)),json_query(%0,get,errors))
       WEB`DRAFT`DATA: |-
@@ -1508,7 +1531,7 @@ objects:
       # %<viewer>, sub-path %<at>: the queue (%<filter> or the bucket whose slug is %<bucket>), new, a job
       # number, buckets, or buckets/<slug>.
       WEB`SCHEMA`ROUTE: |-
-        switch(1,not(strlen(%<viewer>)),u({{jobs}}/WEB`SCHEMA`ANONYMOUS),isint(%<at>),u({{jobs}}/WEB`SCHEMA`JOB,%<viewer>,%<at>),strmatch(%<at>,new),u({{jobs}}/WEB`SCHEMA`NEW,%<viewer>),strmatch(%<at>,buckets),u({{jobs}}/WEB`SCHEMA`BUCKETS,%<viewer>),strmatch(%<at>,buckets/*),u({{jobs}}/WEB`SCHEMA`BUCKET,%<viewer>,after(%<at>,/)),u({{jobs}}/WEB`SCHEMA`QUEUE,%<viewer>,%<filter>,%<bucket>))
+        setq(reader_zone,if(strlen(%<viewer>),u({{jobs}}/FUN`TIME`ZONEOF,%<viewer>)))[switch(1,not(strlen(%<viewer>)),u({{jobs}}/WEB`SCHEMA`ANONYMOUS),isint(%<at>),u({{jobs}}/WEB`SCHEMA`JOB,%<viewer>,%<at>),strmatch(%<at>,new),u({{jobs}}/WEB`SCHEMA`NEW,%<viewer>),strmatch(%<at>,buckets),u({{jobs}}/WEB`SCHEMA`BUCKETS,%<viewer>),strmatch(%<at>,buckets/*),u({{jobs}}/WEB`SCHEMA`BUCKET,%<viewer>,after(%<at>,/)),u({{jobs}}/WEB`SCHEMA`QUEUE,%<viewer>,%<filter>,%<bucket>))]
       WEB`SCHEMA`ANONYMOUS: |-
         setq(anonymous_note,u({{jobs}}/WEB`ELEMENT`MARKDOWN,Sign in with a character to file and read jobs.))[u({{jobs}}/WEB`ELEMENT`DOCUMENT,view,,u({{jobs}}/WEB`ELEMENT`SECTION,,1,%q<anonymous_note>))]
       WEB`FILTER`LIST: |-
@@ -1538,8 +1561,11 @@ objects:
       # The buckets viewer %0 works.
       WEB`BUCKET`WORKED: |-
         squish(iter(u({{jobs}}/FUN`BUCKETS`SEEN,%0),if(u({{jobs}}/FUN`CAN`WORK,%i0,%0),%i0)))
-      # The new-request form. Its hidden op field sends the draft to review.
+      # The new-request form. Its hidden op field sends the draft to review. Someone who may file in no
+      # bucket gets why instead of a form.
       WEB`SCHEMA`NEW: |-
+        if(words(u({{jobs}}/WEB`BUCKET`FILEABLE,%0)),u({{jobs}}/WEB`SCHEMA`NEW`FORM,%0),u({{jobs}}/WEB`ELEMENT`DOCUMENT,view,New request,u({{jobs}}/WEB`ELEMENT`SECTION,,1,u({{jobs}}/WEB`ELEMENT`MARKDOWN,u({{jobs}}/FUN`WHY`NOWHERE,%0)))))
+      WEB`SCHEMA`NEW`FORM: |-
         setqm(new_op_field,lit({"kind":"field","key":"op","type":"hidden","default":"draftreview"}),
         new_fields,iter(lnum(0,dec(json_query(get({{jobs}}/FORM),size))),if(strmatch(u({{jobs}}/FORM`VALUE,json_query(get({{jobs}}/FORM),get,%i0),key),bucket),u({{jobs}}/WEB`SCHEMA`NEW`BUCKET,%0),json_query(get({{jobs}}/FORM),get,%i0)),%b,%r),
         new_section,u({{jobs}}/WEB`ELEMENT`SECTION,,1,%q<new_op_field>%r%q<new_fields>))[u({{jobs}}/WEB`ELEMENT`DOCUMENT,form,New request,%q<new_section>,json(object,submit,u({{jobs}}/WEB`ACTION`KEEP)))]
@@ -1626,7 +1652,7 @@ objects:
         u({{jobs}}/WEB`ELEMENT`BUTTON,%1,json_fill(get({{jobs}}/DATA`TEMPLATE`WEB`BUTTON`STAFF),/op,lcstr(%1),/job,%0))%r[iter(approved denied completed,u({{jobs}}/WEB`ELEMENT`BUTTON,capstr(switch(%i0,approved,approve,denied,deny,complete)),json_fill(get({{jobs}}/DATA`TEMPLATE`WEB`BUTTON`STAFF`2),/outcome,%i0,/job,%0),switch(%i0,denied,error,success),Close job %0 as %i0? What is in the message box goes to the player with it.),%b,%r)]
       # For %<viewer>. Leaves the data in %q<web_answer>. Opening a job marks it read.
       WEB`DATA`ROUTE: |-
-        think setq(web_answer,switch(1,not(strlen(%<viewer>)),json(object,fields,u({{jobs}}/WEB`JSON`EMPTY)),isint(%q<form.at>),u({{jobs}}/WEB`DATA`JOB,%<viewer>,%q<form.at>),strmatch(%q<form.at>,new),json(object,fields,u({{jobs}}/WEB`JSON`EMPTY)),strmatch(%q<form.at>,buckets),u({{jobs}}/WEB`DATA`BUCKETS,%<viewer>),strmatch(%q<form.at>,buckets/*),u({{jobs}}/WEB`DATA`BUCKET,%<viewer>,after(%q<form.at>,/)),u({{jobs}}/WEB`DATA`QUEUE,%<viewer>,%q<form.filter>,%q<form.bucket>))); @assert cand(strlen(%<viewer>),isint(%q<form.at>),strlen(setr(job_object,u({{jobs}}/FUN`JOB`FIND,%q<form.at>))),u({{jobs}}/FUN`CAN`SEE,%q<job_object>,%<viewer>)); &JOB`READ`[u({{jobs}}/FUN`PERSON`KEY,%<viewer>)] %q<job_object>=secs()
+        think setq(reader_zone,if(strlen(%<viewer>),u({{jobs}}/FUN`TIME`ZONEOF,%<viewer>)))[setq(web_answer,switch(1,not(strlen(%<viewer>)),json(object,fields,u({{jobs}}/WEB`JSON`EMPTY)),isint(%q<form.at>),u({{jobs}}/WEB`DATA`JOB,%<viewer>,%q<form.at>),strmatch(%q<form.at>,new),json(object,fields,u({{jobs}}/WEB`JSON`EMPTY)),strmatch(%q<form.at>,buckets),u({{jobs}}/WEB`DATA`BUCKETS,%<viewer>),strmatch(%q<form.at>,buckets/*),u({{jobs}}/WEB`DATA`BUCKET,%<viewer>,after(%q<form.at>,/)),u({{jobs}}/WEB`DATA`QUEUE,%<viewer>,%q<form.filter>,%q<form.bucket>)))]; @assert cand(strlen(%<viewer>),isint(%q<form.at>),strlen(setr(job_object,u({{jobs}}/FUN`JOB`FIND,%q<form.at>))),u({{jobs}}/FUN`CAN`SEE,%q<job_object>,%<viewer>)); &JOB`READ`[u({{jobs}}/FUN`PERSON`KEY,%<viewer>)] %q<job_object>=secs()
       WEB`DATA`QUEUE: |-
         setqm(queue_bucket,u({{jobs}}/WEB`FILTER`BUCKET,%0,%2),
         queue_jobs,if(strlen(%q<queue_bucket>),u({{jobs}}/FUN`SELECT`JOBS,%0,BUCKET,%q<queue_bucket>),u({{jobs}}/FUN`SELECT`JOBS,%0,u({{jobs}}/WEB`FILTER`PREDICATE,u({{jobs}}/WEB`FILTER`CHOSEN,%0,%1)),)))[json(object,fields,json(object,jobs,u({{jobs}}/WEB`JSON`VALUE,u({{jobs}}/WEB`JSON`ARRAY,iter(u({{jobs}}/FUN`SORT`QUEUE,%q<queue_jobs>),u({{jobs}}/WEB`QUEUE`ROW,%i0,%0),%b,%r)),1)))]
@@ -1683,6 +1709,7 @@ objects:
       # +bucket commands; the writes are the same INC`DO` routines and settings.
       WEB`ACT`ROUTE: |-
         think setqm(web_answer,u({{jobs}}/WEB`ANSWER`ERROR,Something went wrong.),
+        reader_zone,if(strlen(%<viewer>),u({{jobs}}/FUN`TIME`ZONEOF,%<viewer>)),
         web_op,lcstr(u({{jobs}}/WEB`POSTED`FIELD,op)),
         actor,%<viewer>,
         actor_key,if(strlen(%<viewer>),u({{jobs}}/FUN`PERSON`KEY,%<viewer>)),
@@ -1691,7 +1718,7 @@ objects:
         text_format,if(match(true 1 yes on,lcstr(u({{jobs}}/WEB`POSTED`FIELD,softcode))),softcode,markdown)); @assert strlen(%<viewer>)=think setq(web_answer,u({{jobs}}/WEB`ANSWER`ERROR,Sign in with a character first.)); @assert match(draftreview draftback draftfile draftcancel file reply claim unclaim close reopen format status check uncheck scene audit revert bucket newbucket renamebucket disablebucket enablebucket deletebucket,%q<web_op>)=think setq(web_answer,u({{jobs}}/WEB`ANSWER`ERROR,There is no [firstof(%q<web_op>,such)] action.)); @include {{jobs}}/WEB`ACT`%q<web_op>
       WEB`ACT`FILE: |-
         think setqm(file_bucket,u({{jobs}}/FUN`BUCKET`SEEN,u({{jobs}}/WEB`POSTED`FIELD,bucket),%<viewer>),
-        job_title,trim(u({{jobs}}/WEB`POSTED`FIELD,title))); @assert cand(strlen(%q<file_bucket>),u({{jobs}}/FUN`CAN`FILE,%q<file_bucket>,%<viewer>))=think setq(web_answer,u({{jobs}}/WEB`ANSWER`FIELDERROR,bucket,Pick a bucket you can file in.)); @assert u({{jobs}}/FUN`BUCKET`TAKING,%q<file_bucket>)=think setq(web_answer,u({{jobs}}/WEB`ANSWER`FIELDERROR,bucket,name(%q<file_bucket>) is not taking new jobs.)); think setq(form_check,appfields(get({{jobs}}/FORM),json_fill(get({{jobs}}/DATA`TEMPLATE`INC`FILE`CHECKED),/bucket,%q<file_bucket>,/title,%q<job_title>,/text,%q<web_text>))); @assert strmatch(json_query(%q<form_check>,get,ok),true)=think setq(web_answer,%q<form_check>); @include/args {{jobs}}/INC`DO`FILE=filer,%q<actor>,author,,priority,,bucket,%q<file_bucket>,title,%q<job_title>,text,%q<web_text>,format,%q<text_format>,how,portal; think setq(web_answer,json_fill(get({{jobs}}/DATA`TEMPLATE`FORM`FILE),/message,Filed job %q<job_number>.,/redirect,/apps/jobs/%q<job_number>))
+        job_title,trim(u({{jobs}}/WEB`POSTED`FIELD,title))); @assert strlen(%q<file_bucket>)=think setq(web_answer,u({{jobs}}/WEB`ANSWER`FIELDERROR,bucket,Pick a bucket you can file in.)); @assert u({{jobs}}/FUN`CAN`FILE,%q<file_bucket>,%<viewer>)=think setq(web_answer,u({{jobs}}/WEB`ANSWER`FIELDERROR,bucket,u({{jobs}}/FUN`WHY`FILE,%q<file_bucket>,%<viewer>))); @assert u({{jobs}}/FUN`BUCKET`TAKING,%q<file_bucket>)=think setq(web_answer,u({{jobs}}/WEB`ANSWER`FIELDERROR,bucket,name(%q<file_bucket>) is not taking new jobs.)); think setq(form_check,appfields(get({{jobs}}/FORM),json_fill(get({{jobs}}/DATA`TEMPLATE`INC`FILE`CHECKED),/bucket,%q<file_bucket>,/title,%q<job_title>,/text,%q<web_text>))); @assert strmatch(json_query(%q<form_check>,get,ok),true)=think setq(web_answer,%q<form_check>); @include/args {{jobs}}/INC`DO`FILE=filer,%q<actor>,author,,priority,,bucket,%q<file_bucket>,title,%q<job_title>,text,%q<web_text>,format,%q<text_format>,how,portal; think setq(web_answer,json_fill(get({{jobs}}/DATA`TEMPLATE`FORM`FILE),/message,Filed job %q<job_number>.,/redirect,/apps/jobs/%q<job_number>))
       # The posted job, as INC`NEED`JOB finds one for a command.
       WEB`NEED`JOB: |-
         @assert cand(isint(%q<web_job_number>),strlen(setr(job_object,u({{jobs}}/FUN`JOB`FIND,%q<web_job_number>))),u({{jobs}}/FUN`CAN`SEE,%q<job_object>,%<viewer>))=think setq(web_answer,u({{jobs}}/WEB`ANSWER`ERROR,There is no job %q<web_job_number>.)); think setqm(job_number,get(%q<job_object>/JOB`NUM),
