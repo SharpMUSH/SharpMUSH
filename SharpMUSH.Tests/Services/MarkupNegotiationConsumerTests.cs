@@ -76,7 +76,7 @@ public class MarkupNegotiationConsumerTests
 		var mediator = Substitute.For<IMediator>();
 
 		await new PuebloNegotiatedConsumer(NullLogger<PuebloNegotiatedConsumer>.Instance, service, mediator)
-			.HandleAsync(new PuebloNegotiatedMessage(Handle, "PUEBLOCLIENT 1.10", ReplayWelcome: false));
+			.HandleAsync(new PuebloNegotiatedMessage(Handle, "PUEBLOCLIENT 1.10") { ReplayWelcome = false });
 
 		await mediator.DidNotReceive().Publish(Arg.Any<ConnectionStateChangeNotification>(), Arg.Any<CancellationToken>());
 		await Assert.That(service.Get(Handle)!.Metadata["PUEBLO"]).IsEqualTo("1");

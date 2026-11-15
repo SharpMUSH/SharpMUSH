@@ -120,12 +120,15 @@ public record WebSocketInputMessage(long Handle, string Input, string? SessionId
 /// Message sent from ConnectionServer to MainProcess when Pueblo handshake is detected.
 /// The main process should set PUEBLO metadata on the connection.
 /// </summary>
-/// <param name="ReplayWelcome">
-/// Whether the login prompt is shown again, because the handshake's start sequence cleared it. False when the
-/// client answered before the connection was registered: it was registered as Pueblo, so it has not been shown
-/// the prompt yet, and the one it is shown is written for Pueblo.
-/// </param>
-public record PuebloNegotiatedMessage(long Handle, string ClientResponse, bool ReplayWelcome = true) : IHandleMessage;
+public record PuebloNegotiatedMessage(long Handle, string ClientResponse) : IHandleMessage
+{
+	/// <summary>
+	/// Whether the login prompt is shown again, because the handshake's start sequence cleared it. False when the
+	/// client answered before the connection was registered: it was registered as Pueblo, so the prompt it is
+	/// shown is already written for Pueblo.
+	/// </summary>
+	public bool ReplayWelcome { get; init; } = true;
+}
 
 /// <summary>
 /// Message sent from ConnectionServer to MainProcess when MXP (telnet option 91) is negotiated.

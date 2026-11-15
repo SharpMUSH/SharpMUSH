@@ -431,8 +431,10 @@ public partial class TelnetServer
 				// hello at once — was registered as Pueblo and is shown the login prompt once, as Pueblo; a replay
 				// would show it twice, since MUSHclient does not clear the screen at <xch_page clear=text>.
 				await server._publishEndpoint.Publish(
-					new PuebloNegotiatedMessage(handle, PuebloProtocol.ClientCommand + clientVersion,
-						ReplayWelcome: !_registeredAsPueblo), ct);
+					new PuebloNegotiatedMessage(handle, PuebloProtocol.ClientCommand + clientVersion)
+					{
+						ReplayWelcome = !_registeredAsPueblo
+					}, ct);
 			});
 		}
 
