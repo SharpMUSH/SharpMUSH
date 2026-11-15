@@ -159,6 +159,43 @@ class SmokeTlsProtocolTests(unittest.TestCase):
         with self.server(handler) as port:
             smoke.websocket_who(port, self.ca)
 
+    def test_telnet_websocket_offers_telnet_and_declines_options_in_binary_frames(self):
+        def handler(stream):
+            request = bytearray()
+            while not request.endswith(b"\r\n\r\n"):
+                request.extend(smoke._read_exact(stream, 1))
+            self.assertTrue(request.startswith(b"GET /telnet HTTP/1.1\r\n"))
+            self.assertIn(b"\r\nSec-WebSocket-Protocol: telnet\r\n", request)
+            key = next(line.split(":", 1)[1].strip() for line in request.decode().split("\r\n")
+                       if line.lower().startswith("sec-websocket-key:"))
+            accept = base64.b64encode(hashlib.sha1((key + smoke.WS_GUID).encode()).digest()).decode()
+            stream.sendall(("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\n"
+                            f"Connection: Upgrade\r\nSec-WebSocket-Accept: {accept}\r\n"
+                            "Sec-WebSocket-Protocol: telnet\r\n\r\n").encode())
+            self.assertEqual(client_frame(stream), (2, b"WHO\r\n"))
+            stream.sendall(server_frame(b"\xff\xfd\x18Player Name\r\n", opcode=2))
+            self.assertEqual(client_frame(stream), (2, b"\xff\xfc\x18"))
+            stream.sendall(server_frame(b"There are no players connected.\r\n", opcode=2))
+            self.assertEqual(client_frame(stream), (8, struct.pack("!H", 1000)))
+
+        with self.server(handler) as port:
+            smoke.telnet_websocket_who(port, self.ca)
+
+    def test_telnet_websocket_requires_the_offered_subprotocol(self):
+        def handler(stream):
+            request = bytearray()
+            while not request.endswith(b"\r\n\r\n"):
+                request.extend(smoke._read_exact(stream, 1))
+            key = next(line.split(":", 1)[1].strip() for line in request.decode().split("\r\n")
+                       if line.lower().startswith("sec-websocket-key:"))
+            accept = base64.b64encode(hashlib.sha1((key + smoke.WS_GUID).encode()).digest()).decode()
+            stream.sendall(("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\n"
+                            f"Connection: Upgrade\r\nSec-WebSocket-Accept: {accept}\r\n\r\n").encode())
+
+        with self.server(handler) as port:
+            with self.assertRaises(RuntimeError):
+                smoke.telnet_websocket_who(port, self.ca)
+
     def test_renewal_replaces_leaf_but_preserves_root_and_key_permissions(self):
         before = (self.certificates / "fullchain.pem").read_bytes()
         root = self.ca.read_bytes()

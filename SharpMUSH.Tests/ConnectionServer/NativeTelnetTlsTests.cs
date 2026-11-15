@@ -144,7 +144,7 @@ public class NativeTelnetTlsTests
 		await ExchangeTelnetAsync(server, stream, isSecure: true, ct);
 	}
 
-	private static async Task ExchangeTelnetAsync(TestServer server, Stream stream, bool isSecure, CancellationToken ct)
+	internal static async Task ExchangeTelnetAsync(TestServer server, Stream stream, bool isSecure, CancellationToken ct)
 	{
 		var established = await server.Backend.Established.Reader.ReadAsync(ct);
 		await Assert.That(established.ConnectionType).IsEqualTo("telnet");
@@ -193,14 +193,16 @@ public class NativeTelnetTlsTests
 		await Assert.That(async () => await client.ConnectAsync(IPAddress.Loopback, port, ct)).Throws<SocketException>();
 	}
 
-	private sealed class TestServer(WebApplication app, TestBackend backend) : IAsyncDisposable
+	internal sealed class TestServer(WebApplication app, TestBackend backend) : IAsyncDisposable
 	{
 		public WebApplication App { get; } = app;
 		public TestBackend Backend { get; } = backend;
 		// Program registers plaintext telnet first, then optional TLS, then HTTP.
 		public int PlaintextPort => new Uri(App.Urls.First()).Port;
+		public int HttpPort => new Uri(App.Urls.Last()).Port;
 
-		public static async Task<TestServer> StartAsync(int tlsPort, TestCertificates? certificates, CancellationToken ct)
+		public static async Task<TestServer> StartAsync(int tlsPort, TestCertificates? certificates, CancellationToken ct,
+			Action<WebApplication>? configure = null)
 		{
 			var backend = new TestBackend();
 			var args = new List<string>(TestDiagnostics.HostArguments)
@@ -221,6 +223,7 @@ public class NativeTelnetTlsTests
 				[.. args], configureServices: backend.Configure);
 			try
 			{
+				configure?.Invoke(app);
 				await app.StartAsync(ct);
 				return new TestServer(app, backend);
 			}
@@ -239,7 +242,7 @@ public class NativeTelnetTlsTests
 		}
 	}
 
-	private sealed class TestBackend : IMessageBus
+	internal sealed class TestBackend : IMessageBus
 	{
 		public Channel<ConnectionEstablishedMessage> Established { get; } = Channel.CreateUnbounded<ConnectionEstablishedMessage>();
 		public Channel<TelnetInputMessage> Input { get; } = Channel.CreateUnbounded<TelnetInputMessage>();
@@ -282,7 +285,7 @@ public class NativeTelnetTlsTests
 			=> Task.CompletedTask;
 	}
 
-	private sealed class TestCertificates : IDisposable
+	internal sealed class TestCertificates : IDisposable
 	{
 		private readonly string _directory = Path.Combine(Path.GetTempPath(), "sharpmush-tls-" + Guid.NewGuid().ToString("N"));
 		private readonly RSA _rootKey = RSA.Create(2048);

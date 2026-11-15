@@ -84,8 +84,14 @@ it, and a renewed certificate is served from the next connection on, so renewing
 - **Let's Encrypt mode:** the telnet name is the domain (or `SHARPMUSH_TELNET_HOST` when given).
 - **Cloudflare Tunnel mode:** the domain points at Cloudflare, so the name is the DNS-only
   `telnet.<domain>` record the API token creates. Caddy fetches its certificate over 443, which is
-  published for that alone. With only a tunnel token and no `SHARPMUSH_TELNET_HOST`, there is no
-  name and 4203 refuses every connection.
+  published for that and for telnet over WebSocket. With only a tunnel token and no
+  `SHARPMUSH_TELNET_HOST`, there is no name and 4203 refuses every connection.
+
+## Telnet over WebSocket
+
+MU\* clients that speak the mudstandards.org WebSocket subprotocols connect to `wss://<domain>/telnet`. When the
+telnet name differs from the domain, `wss://<telnet name>/` works too, on any path but `/health`. Both reach the
+socket server's `/telnet` endpoint, and the player is an ordinary telnet connection from there on.
 
 ## The first-boot guard
 
@@ -95,7 +101,8 @@ whoever reaches it first. Until the owner finishes `/setup`:
 - the portal answers only a browser that opened the setup link
   (`https://<domain>/?setup_code=<code>`, which sets a cookie). Everyone else gets a 403 page.
   `/health` stays open for health checks.
-- telnet (4201 and 4203) is published on `127.0.0.1` only.
+- telnet (4201 and 4203) is published on `127.0.0.1` only, and telnet over WebSocket gets the same
+  403 as the portal.
 
 `sharpmush-guard.timer` asks the game every 15 seconds whether setup is finished. When it is, the
 guard clears `guard/guard.caddy`, reloads Caddy, publishes telnet on every address and turns the

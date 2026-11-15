@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Connections;
-using System.IO.Pipelines;
+using Microsoft.AspNetCore.Connections.Features;
+using System.Net;
+using System.Net.WebSockets;
 using SharpMUSH.SocketServer.Configuration;
 using SharpMUSH.SocketServer.Models;
 using SharpMUSH.Library.Utilities;
@@ -8,13 +10,18 @@ using SharpMUSH.Messaging.Abstractions;
 using System.Text;
 using TelnetNegotiationCore.Builders;
 using MarkupString.Mxp;
+using TelnetNegotiationCore.Connections;
 using TelnetNegotiationCore.Interpreters;
 using TelnetNegotiationCore.Protocols;
+using TelnetNegotiationCore.WebSockets;
 
 namespace SharpMUSH.SocketServer.ProtocolHandlers;
 
 /// <summary>
-/// Handles Telnet protocol connections and publishes messages to the message queue
+/// Handles Telnet protocol connections and publishes messages to the message queue: TCP from Kestrel's telnet
+/// listeners, and telnet carried in a WebSocket (<see cref="HandleWebSocketAsync"/>). Both run the same
+/// <see cref="TelnetSession"/> on a TelnetNegotiationCore <see cref="TelnetConnection"/>; only the transport and
+/// where the address comes from differ.
 /// </summary>
 public partial class TelnetServer : ConnectionHandler
 {
@@ -28,6 +35,7 @@ public partial class TelnetServer : ConnectionHandler
 	private readonly TerminalProbes _probes;
 	private readonly OutputSettingsHolder? _settings;
 	private readonly ConnectionTrafficCounters _traffic;
+	private readonly KeepAliveOptions? _keepAlive;
 
 	/// <summary>
 	/// How much a client may type before its connection is registered. Registration normally takes
@@ -46,7 +54,8 @@ public partial class TelnetServer : ConnectionHandler
 		MsspReportHolder mssp,
 		TerminalProbes probes,
 		OutputSettingsHolder? settings = null,
-		ConnectionTrafficCounters? traffic = null)
+		ConnectionTrafficCounters? traffic = null,
+		KeepAliveOptions? keepAlive = null)
 	{
 		Console.OutputEncoding = Encoding.UTF8;
 		_logger = logger;
@@ -59,79 +68,165 @@ public partial class TelnetServer : ConnectionHandler
 		_probes = probes;
 		_settings = settings;
 		_traffic = traffic ?? new ConnectionTrafficCounters();
+		_keepAlive = keepAlive;
 	}
 
-	public override async Task OnConnectedAsync(ConnectionContext connection)
+	public override Task OnConnectedAsync(ConnectionContext connection) =>
+		ServeAsync(new TelnetEndpoint(
+			connection.ConnectionId,
+			// Ending the connection from this side drops the socket at once, as PennMUSH does.
+			TelnetTransport.Pipe(connection.Transport, () =>
+			{
+				connection.Abort();
+				return ValueTask.CompletedTask;
+			}),
+			connection.Abort,
+			// The address alone, as PennMUSH's ipaddr() and a WebSocket connection give it: sitelock rules, @ban and
+			// softcode read it as an address.
+			connection.RemoteEndPoint is IPEndPoint remote ? WebSocketServer.ClientAddress(remote.Address) : "unknown",
+			// PennMUSH's CONN_SSL. Kestrel attaches ITlsHandshakeFeature only on an endpoint that actually
+			// terminated TLS, so this is the handshake that happened rather than anything the client says
+			// about itself — and it is false, correctly, on the plaintext listener.
+			connection.Features.Get<ITlsHandshakeFeature>() is not null,
+			connection.ConnectionClosed));
+
+	/// <summary>
+	/// The subprotocols a MUD client may ask for on <c>/telnet</c>, in the order this server prefers them: the
+	/// mudstandards.org names for the telnet stream. A client that names none is taken as telnet too, as most
+	/// wss-to-telnet bridges and older clients send none.
+	/// </summary>
+	internal static readonly string[] WebSocketSubprotocols =
+	[
+		MudWebSocketSubprotocols.Telnet,
+		MudWebSocketSubprotocols.TelnetAlias,
+		MudWebSocketSubprotocols.TelnetBase64
+	];
+
+	/// <summary>
+	/// Telnet in a WebSocket, for MUD clients that connect over <c>wss://</c> (the mudstandards.org proposal). The
+	/// connection is a telnet connection in every way the game sees: the same negotiation, registration and
+	/// output as one on the telnet port. The portal's terminal is not this; it speaks its own protocol on
+	/// <c>/ws</c>.
+	/// </summary>
+	public async Task HandleWebSocketAsync(HttpContext context)
 	{
-		var ct = connection.ConnectionClosed;
-		var closer = new ConnectionCloser(connection);
+		var offered = context.WebSockets.WebSocketRequestedProtocols;
+		var chosen = WebSocketSubprotocols.FirstOrDefault(name =>
+			offered.Any(o => string.Equals(o, name, StringComparison.OrdinalIgnoreCase)));
+		if (!context.WebSockets.IsWebSocketRequest || (chosen is null && offered.Count > 0))
+		{
+			// Not a WebSocket, or one that only speaks something else (the portal's protocol belongs on /ws).
+			context.Response.StatusCode = StatusCodes.Status400BadRequest;
+			return;
+		}
+
+		// No permessage-deflate: telnet has MCCP for that, and compressing a stream that carries a typed password
+		// next to text another player chose is what CRIME and BREACH exploit. KeepAliveTimeout aborts a socket whose
+		// pongs stop, so a client that vanished is noticed as on /ws.
+		using var socket = await context.WebSockets.AcceptWebSocketAsync(new WebSocketAcceptContext
+		{
+			SubProtocol = chosen,
+			KeepAliveInterval = _keepAlive?.WsInterval ?? TimeSpan.FromSeconds(15),
+			KeepAliveTimeout = _keepAlive?.WsTimeout ?? TimeSpan.FromSeconds(20)
+		});
+
+		await ServeAsync(new TelnetEndpoint(
+			context.TraceIdentifier,
+			TelnetTransport.WebSocket(socket),
+			context.Abort,
+			// Behind a proxy listed in ForwardedHeaders:KnownProxies, UseForwardedHeaders has already put the
+			// X-Forwarded-For client here (TrustedProxies), as for /ws.
+			WebSocketServer.ClientAddress(context.Connection.RemoteIpAddress),
+			// wss:// reports SSL; behind a TLS-terminating proxy only once its X-Forwarded-Proto is honoured.
+			context.Request.IsHttps,
+			context.RequestAborted));
+	}
+
+	private async Task ServeAsync(TelnetEndpoint endpoint)
+	{
+		var ct = endpoint.Closed;
 		try
 		{
-			await ServeAsync(connection, closer, ct);
+			var nextPort = await _descriptorGenerator.GetNextTelnetDescriptorAsync(ct);
+			try
+			{
+				await RunConnectionAsync(endpoint, nextPort, ct);
+			}
+			finally
+			{
+				using var teardown = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+				try { await _connectionService.DisconnectAsync(nextPort, teardown.Token).WaitAsync(teardown.Token); }
+				catch (OperationCanceledException) { _logger.LogDebug("Connection {Handle} teardown timed out", nextPort); }
+				finally { _descriptorGenerator.ReleaseTelnetDescriptor(nextPort); }
+			}
 		}
-		catch (OperationCanceledException) when (ct.IsCancellationRequested && !closer.ClosedByServer)
+		catch (OperationCanceledException) when (ct.IsCancellationRequested && !endpoint.ClosedByServer)
 		{
 			// The client left before its connection was registered: a port probe that connects and
 			// closes at once ends here. Kestrel would log anything thrown as an unhandled exception.
-			_logger.LogDebug("Connection {ConnectionId} closed before it was registered", connection.ConnectionId);
-		}
-	}
-
-	private async Task ServeAsync(ConnectionContext connection, ConnectionCloser closer, CancellationToken ct)
-	{
-		var nextPort = await _descriptorGenerator.GetNextTelnetDescriptorAsync(ct);
-		try
-		{
-			await RunConnectionAsync(connection, closer, nextPort, ct);
-		}
-		finally
-		{
-			using var teardown = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-			try { await _connectionService.DisconnectAsync(nextPort, teardown.Token).WaitAsync(teardown.Token); }
-			catch (OperationCanceledException) { _logger.LogDebug("Connection {Handle} teardown timed out", nextPort); }
-			finally { _descriptorGenerator.ReleaseTelnetDescriptor(nextPort); }
+			_logger.LogDebug("Connection {ConnectionId} closed before it was registered", endpoint.Id);
 		}
 	}
 
 	/// <summary>
-	/// Closes a connection for the server and remembers that it did. Aborting cancels
-	/// <see cref="ConnectionContext.ConnectionClosed"/> just as a client leaving does, so the token
-	/// alone cannot say whose close a cancellation came from.
+	/// Where one telnet connection runs: a TCP connection from Kestrel or a WebSocket, and what the transport says
+	/// about the client.
 	/// </summary>
-	private sealed class ConnectionCloser(ConnectionContext connection)
+	/// <param name="Id">The transport's id for the connection, for logs.</param>
+	/// <param name="Closed">Cancelled when the client leaves (or the server closes the connection).</param>
+	/// <param name="Abort">Drops the connection at once, with no goodbye to the client.</param>
+	private sealed record TelnetEndpoint(
+		string Id, ITelnetTransport Transport, Action Abort, string RemoteIp, bool IsSecure, CancellationToken Closed)
 	{
-		private int _closedByServer;
+		/// <summary>
+		/// How long a close from this side may take before the connection is dropped. A WebSocket close waits behind
+		/// a send to a client that has stopped reading, and TelnetNegotiationCore's own close timeout starts only
+		/// once the close frame is out.
+		/// </summary>
+		internal static readonly TimeSpan CloseDeadline = TimeSpan.FromSeconds(10);
 
-		/// <summary>True once the server closed a connection whose client was still there.</summary>
-		public bool ClosedByServer => Volatile.Read(ref _closedByServer) == 1;
+		/// <summary>The running connection, once it has started.</summary>
+		public TelnetConnection? Connection { get; set; }
 
+		/// <summary>
+		/// True once the server closed a connection whose client was still there. Closing cancels
+		/// <see cref="Closed"/> just as a client leaving does, so the token alone cannot say whose close it was.
+		/// </summary>
+		public bool ClosedByServer => Connection?.ClosedByServer == true;
+
+		/// <summary>Ends the connection from this side, as the main process asks (a @boot, QUIT, a failed registration).</summary>
 		public void Close()
 		{
-			if (!connection.ConnectionClosed.IsCancellationRequested)
-				Volatile.Write(ref _closedByServer, 1);
-			connection.Abort();
+			if (Connection is not { } connection) return;
+			_ = connection.CloseAsync().AsTask().ContinueWith(
+				static (t, _) => _ = t.Exception, null, TaskContinuationOptions.OnlyOnFaulted);
+			_ = AbortUnlessEndedAsync(connection.Completion);
+		}
+
+		private async Task AbortUnlessEndedAsync(Task completion)
+		{
+			if (await Task.WhenAny(completion, Task.Delay(CloseDeadline)) != completion)
+				Abort();
 		}
 	}
 
-	private async Task RunConnectionAsync(ConnectionContext connection, ConnectionCloser closer, long nextPort,
-		CancellationToken ct)
+	private async Task RunConnectionAsync(TelnetEndpoint endpoint, long nextPort, CancellationToken ct)
 	{
-		using var readLifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
-		ct = readLifetime.Token;
 		using var held = new RegistrationHold(nextPort, _logger, ct);
 		var traffic = _traffic.Start(nextPort);
-		var session = new TelnetSession(this, connection, closer, nextPort, held, traffic, ct);
+		var session = new TelnetSession(this, endpoint, nextPort, held, traffic, ct);
 
-		var telnet = await session.BuildInterpreterAsync();
-		if (telnet.PluginManager?.GetPlugin<TerminalQueryProtocol>() is { } terminalQueries)
-		{
-			_probes.Register(nextPort, () => terminalQueries.ProbeAsync());
-		}
-
-		var readTask = ReadAndObserveNegotiationAsync(
-			telnet, connection.Transport.Input, traffic, session.AnnounceTelnetIfNegotiatedAsync, ct);
+		TelnetConnection? connection = null;
 		try
 		{
+			connection = await session.StartAsync();
+			var telnet = connection.Interpreter;
+			if (telnet.PluginManager?.GetPlugin<TerminalQueryProtocol>() is { } terminalQueries)
+			{
+				_probes.Register(nextPort, () => terminalQueries.ProbeAsync());
+			}
+
+			var readTask = connection.Completion;
 			// The read loop is already running by now, so a fast client could have negotiated in the gap
 			// above and found nothing to sample. Re-sampling here closes it without needing a lock.
 			await session.AnnounceTelnetIfNegotiatedAsync();
@@ -152,35 +247,17 @@ public partial class TelnetServer : ConnectionHandler
 		{
 			_probes.Unregister(nextPort);
 			_traffic.End(nextPort, traffic);
-			await StopTelnetAsync(readLifetime, readTask, telnet, connection.ConnectionId);
+			if (connection is not null)
+				await DisposeTelnetAsync(connection, endpoint.Id);
 		}
 	}
 
-	private async Task StopTelnetAsync(
-		CancellationTokenSource readLifetime,
-		Task readTask,
-		TelnetInterpreter telnet,
-		string connectionId)
+	/// <summary>Stops the read loop and disposes the interpreter. A failure there is logged, never thrown over the connection's own.</summary>
+	private async Task DisposeTelnetAsync(TelnetConnection connection, string connectionId)
 	{
 		try
 		{
-			await readLifetime.CancelAsync();
-		}
-		catch (Exception ex)
-		{
-			_logger.LogDebug(ex, "Connection {ConnectionId} read cancellation failed", connectionId);
-		}
-
-		var readStopped = AwaitReadTaskAsync(readTask, connectionId);
-		var interpreterStopped = DisposeTelnetAsync(telnet, connectionId);
-		await Task.WhenAll(readStopped, interpreterStopped);
-	}
-
-	private async Task DisposeTelnetAsync(TelnetInterpreter telnet, string connectionId)
-	{
-		try
-		{
-			await telnet.DisposeAsync();
+			await connection.DisposeAsync();
 		}
 		catch (Exception ex)
 		{
@@ -204,50 +281,6 @@ public partial class TelnetServer : ConnectionHandler
 		catch (Exception ex)
 		{
 			_logger.LogInformation("Connection {Handle} closed: {ErrorType}: {Reason}", handle, ex.GetType().Name, ex.Message);
-		}
-	}
-
-	private async Task AwaitReadTaskAsync(Task readTask, string connectionId)
-	{
-		try
-		{
-			await readTask;
-		}
-		catch (Exception ex) when (ex is ConnectionResetException or OperationCanceledException)
-		{
-			// Normal disconnect or read-loop shutdown.
-		}
-		catch (Exception ex)
-		{
-			_logger.LogDebug(ex, "Connection {ConnectionId} disconnected unexpectedly.", connectionId);
-		}
-	}
-
-	private static async Task ReadAndObserveNegotiationAsync(
-		TelnetInterpreter interpreter,
-		PipeReader reader,
-		TrafficCounter traffic,
-		Func<ValueTask> onProcessed,
-		CancellationToken cancellationToken)
-	{
-		while (!cancellationToken.IsCancellationRequested)
-		{
-			var result = await reader.ReadAtLeastAsync(1, cancellationToken);
-			traffic.Received(result.Buffer.Length);
-
-			foreach (var segment in result.Buffer)
-			{
-				await interpreter.InterpretByteArrayAsync(segment);
-				await interpreter.WaitForProcessingAsync(additionalDelayMs: 0);
-				await onProcessed();
-			}
-
-			reader.AdvanceTo(result.Buffer.End);
-
-			if (result.IsCompleted)
-			{
-				break;
-			}
 		}
 	}
 

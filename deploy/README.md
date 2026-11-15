@@ -145,6 +145,21 @@ The `Caddyfile` already routes `https://<your-domain>/ws` to the connection serv
 own must route that same path there. A portal opened on `localhost` connects to
 `ws://localhost:4202/ws`, the connection server in local development.
 
+### Telnet over WebSocket for MUD clients
+
+MUD clients that speak the mudstandards.org WebSocket subprotocols (`telnet.mudstandards.org` or
+`telnet`, `telnetb64.mudstandards.org`, or none)
+reach the game at `/telnet` on the connection server. The `Caddyfile` routes it:
+
+```
+wss://<your-domain>/telnet
+```
+
+When the telnet name (`SHARPMUSH_TELNET_HOST`) differs from the domain, the one-click install also serves it there, where a WebSocket
+on any path but `/health` is telnet, so `wss://telnet.<your-domain>/` works. Players connected this way show up in
+`WHO` and the portal as ordinary telnet connections. `/ws` stays the portal terminal's own protocol;
+a MUD client pointed there will not get telnet.
+
 ### Passkeys
 
 Players can add passkeys to their accounts and sign in with them. A passkey belongs to the host
@@ -167,7 +182,7 @@ reached at one stable HTTPS address and the proxy passes the browser's `Host` th
 | 4201 | Telnet — **plaintext** | yes |
 | 4203 | Native Telnet over TLS | only with `docker-compose.telnet-tls.yml`; allow TCP 4203 on the host firewall when enabled |
 | 8080 | ASP.NET server (HTTP) | no — internal, behind Caddy |
-| 4202 | Connection server HTTP / `/ws` WebSocket | no — internal, reached via Caddy's `/ws` route |
+| 4202 | Connection server HTTP / `/ws` and `/telnet` WebSockets | no — internal, reached via Caddy's `/ws` and `/telnet` routes |
 | 9092 | Server `/metrics` for Prometheus (plain HTTP, answers nothing else; `Metrics:Port`, 0 turns it off) | no — published on the host's loopback only (`127.0.0.1:9092`), for a scraper on the host or an ssh tunnel. Needs Docker Engine 28.3.3 or later: older engines let hosts on the same network segment reach loopback-published ports (before 28.0.0), or did so after a firewalld reload (before 28.3.3) |
 | 9091 | Connection server `/metrics` (same; `ConnectionServer:MetricsPort`) | no — scrape it from the compose network |
 | 4222 / 8222 | NATS client / monitoring | no — internal only |
