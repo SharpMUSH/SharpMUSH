@@ -244,7 +244,10 @@ internal static class EngineRegistration
 		services.AddPackageWriteTransactions<SharpMUSH.Database.Lightning.LightningDatabase>();
 		services.AddSingleton<IPackageWikiService, PackageWikiService>();
 		services.AddSingleton(EngineVersion.Parse(Implementation.Generated.VersionInfo.SharpMUSHVersion));
-		services.AddSingleton<IPackageInstallService, PackageInstallService>();
+		// Wrapped so every portal tab reads its permissions again after a package changes roles or grants.
+		services.AddSingleton<PackageInstallService>();
+		services.AddSingleton<IPackageInstallService>(sp => new PermissionNoticePackageInstallService(
+			sp.GetRequiredService<PackageInstallService>(), sp.GetRequiredService<PortalPermissionNotices>()));
 		// Portal package operations run as queue entries, after a pre-operation backup (#1332, #1333).
 		services.AddSingleton<IPackageOperationRunner, PackageOperationRunner>();
 		services.AddSingleton<IPackageAuthoringService, PackageAuthoringService>();
@@ -307,9 +310,14 @@ internal static class EngineRegistration
 		// (see RegisterDatabaseProvider).
 		services.AddSingleton<IPermissionResolver, PermissionResolver>();
 		services.AddSingleton<IAdministrativeCapabilityService, AdministrativeCapabilityService>();
-		// Role changes go through the auditing decorator, so every one from either surface is recorded once.
+		// Role changes go through the auditing decorator, so every one from either surface is recorded once, then
+		// through the one that tells every portal tab when a role's or permission's meaning changed.
 		services.AddSingleton<RoleManagementService>();
-		services.AddSingleton<IRoleManagementService, AuditingRoleManagementService>();
+		services.AddSingleton<AuditingRoleManagementService>();
+		services.AddSingleton<PortalPermissionNotices>();
+		services.AddSingleton<Library.Plugins.IAccountChangeListener>(sp => sp.GetRequiredService<PortalPermissionNotices>());
+		services.AddSingleton<IRoleManagementService>(sp => new PermissionNoticeRoleManagementService(
+			sp.GetRequiredService<AuditingRoleManagementService>(), sp.GetRequiredService<PortalPermissionNotices>()));
 		services.AddSingleton<SharpMUSH.Library.Services.RecurringJobs.IRecurringJobService, SharpMUSH.Library.Services.RecurringJobs.RecurringJobService>();
 		services.AddSingleton<SharpMUSH.Library.Services.Snapshots.IObjectSnapshotService, SharpMUSH.Library.Services.Snapshots.ObjectSnapshotService>();
 		services.AddHttpContextAccessor();
