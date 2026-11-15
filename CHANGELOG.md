@@ -16,6 +16,7 @@ Two version numbers matter:
 - The play terminal's settings menu has "Hide pages" and "Hide channel messages" checkboxes. On, pages stay in the sidebar's Pages list and channel messages (connect and disconnect lines included) in their channel's view, out of the main output, the ones already there included. Both are off by default and kept per browser, and are offered only while the game sends channels and pages to the sidebar. A portal connection's output now marks each channel line and page as one.
 - A visitor playing as a guest on the portal's Play page sees a line above the terminal saying so, with a link to create an account.
 - The play terminal's settings menu lists each option by name only; an (i) beside it shows the details on hover, focus or a tap.
+- Boards (bboards 1.8.0): a new comment or reply is announced to the board's readers as a new post is, as `(New BB comment (5/1/1/3) posted to 'General' by Seliana: Test Post)`.
 
 ### Changed
 
@@ -23,6 +24,10 @@ Two version numbers matter:
 
 ### Fixed
 
+- Boards and Jobs say why they refuse a post, comment or request, such as "Permission denied. Posting on 5 Public needs the approved role." The portal shows it on the board's page and in place of the new-post or new-request form, and a draft (`+bbpost <board>/<title>`, `+request/draft new`) is refused before it starts.
+- Boards: reading the conversation that holds a post's new comments (`+bbread 5/1/1/3`, or opening it in the portal) marks the post read, so it no longer shows as new.
+- Boards and Jobs show times in the reader's time zone (their `TZ` attribute, set with `+timezone`), in the terminal and the portal, where they showed the game's.
+- A reply in a board's conversation view sits just right of the comment it answers in the portal terminal, where it was pushed half the row across (MarkupString 2.31.1).
 - An empty list's button (Who is online and Go home on Play's Here and Exits cards, Add a passkey) sits on its own line under the sentence instead of squeezing it into a narrow column.
 - Play's Here card shows each character's full name, wrapping to a second line, where it showed only the first word ("The" for "The Foo").
 - Coming back to the play output from a channel or a conversation keeps it where it was: on the newest line if you were following it, or on the line you were reading. It landed a screen or more higher, further the longer the scrollback.

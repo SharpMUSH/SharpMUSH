@@ -418,6 +418,92 @@ public partial class BBoardsIntegrationTests
 		await Assert.That(await As(mira, "+bbread")).DoesNotContain(board);
 	}
 
+	/// <summary>
+	/// A refusal says what the board's lock asks for, and a draft is refused before it starts, not when
+	/// it is posted.
+	/// </summary>
+	[Test]
+	public async Task ARefusalSaysWhatTheLockAsksFor()
+	{
+		var admin = await Player("BbWhyA", "bboard-admin");
+		var mira = await Player("BbWhyM");
+		var board = await Board(admin, "BbWhy");
+
+		await As(admin, $"+bblock {board}/post=role^approved");
+		await Assert.That(await As(mira, $"+bbpost {board}/Nope=No.")).Contains("Permission denied. Posting on")
+			.And.Contains($"{board} needs the approved role.");
+		await Assert.That(await As(mira, $"+bbpost {board}/A draft")).Contains("needs the approved role.")
+			.And.DoesNotContain("Drafting");
+		await Assert.That(await God($"think [lattr(#{mira.DbRef.Number}/BBOARD`DRAFT**)]")).IsEmpty()
+			.Because("no draft starts on a board the reader may not post on");
+
+		var post = await Post(admin, board, "Closed talk", "Read only.");
+		await As(admin, $"+bblock {board}/comment=#false");
+		await Assert.That(await As(mira, $"+bbcomment {post}=Hello.")).Contains($"Permission denied. Nobody may comment on");
+	}
+
+	/// <summary>
+	/// A comment is announced to the board's listeners as a new post is, and the post's author hears it
+	/// is on their post.
+	/// </summary>
+	[Test]
+	public async Task ACommentIsAnnouncedLikeAPost()
+	{
+		var admin = await Player("BbSayA", "bboard-admin");
+		var mira = await Player("BbSayM");
+		var listener = await Player("BbSayL");
+		var board = await Board(admin, "BbSay");
+		var post = await Post(admin, board, "Talk", "Say something.");
+
+		var adminBefore = Notifications.CountFor(admin.DbRef);
+		var listenerBefore = Notifications.CountFor(listener.DbRef);
+		await As(mira, $"+bbcomment {post}=Something.");
+		await Assert.That(string.Join("\n", Notifications.For(listener.DbRef).Skip(listenerBefore)))
+			.Contains($"New BB comment ({post}/1) posted to '{board}'").And.Contains(": Talk");
+		await Assert.That(string.Join("\n", Notifications.For(admin.DbRef).Skip(adminBefore)))
+			.Contains($"New BB comment ({post}/1)").And.Contains("on your post");
+	}
+
+	/// <summary>
+	/// Reading the conversation that holds the only new comment reads the post, so it is not new any more.
+	/// </summary>
+	[Test]
+	public async Task ReadingTheConversationWithTheNewCommentReadsThePost()
+	{
+		var admin = await Player("BbConvA", "bboard-admin");
+		var mira = await Player("BbConvM");
+		var board = await Board(admin, "BbConv");
+		var post = await Post(admin, board, "Thread", "Start.");
+		await As(admin, $"+bbcomment {post}=First.");
+		await As(mira, $"+bbread {post}");
+		await Assert.That(await As(mira, "+bbscan")).DoesNotContain(board);
+
+		await As(admin, $"+bbreply {post}/1=Answer.");
+		await Assert.That(await As(mira, "+bbscan")).Contains(board);
+		await Assert.That(await As(mira, $"+bbread {post}/2")).Contains("Answer.");
+		await Assert.That(await As(mira, "+bbscan")).DoesNotContain(board)
+			.Because("the conversation shown held every comment newer than the reader's mark");
+	}
+
+	/// <summary>Times are drawn in the reader's own zone, their TZ attribute.</summary>
+	[Test]
+	public async Task TimesAreInTheReadersZone()
+	{
+		var admin = await Player("BbZoneA", "bboard-admin");
+		var mira = await Player("BbZoneM");
+		var board = await Board(admin, "BbZone");
+		var (_, key) = await BoardRow(admin, board);
+		await God($"&ON`POST {key}=&HEARD`POST me=%<post>");
+		var post = await Post(admin, board, "Clock", "Tick.");
+		var postObjid = await God($"think [get({key}/HEARD`POST)]");
+		await God($"&AT {postObjid}=0");
+
+		await God($"&TZ #{mira.DbRef.Number}=Asia/Tokyo");
+		await Assert.That(await As(mira, $"+bbread {post}")).Contains("Jan 01 09:00");
+		await God($"&TZ #{mira.DbRef.Number}=America/Chicago");
+		await Assert.That(await As(mira, $"+bbread {post}")).Contains("Dec 31 18:00");
+	}
+
 	[Test]
 	public async Task NewPostsAndCommentsAreFoundAndCaughtUp()
 	{

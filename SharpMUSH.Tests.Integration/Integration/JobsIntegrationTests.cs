@@ -887,6 +887,39 @@ public class JobsIntegrationTests
 		}
 	}
 
+	/// <summary>
+	/// Filing where a file lock keeps the player out says what the lock asks for. Someone who may file
+	/// nowhere is told so before a draft or the portal's form starts, and job times are in their zone.
+	/// </summary>
+	[Test]
+	public async Task ARefusedFilingSaysWhatTheLockAsksFor()
+	{
+		await FreshInstallAsync();
+		var player = await Player("JobsWhyP");
+		var staff = await Player("JobsWhyS", "job-admin");
+		await Assert.That(await As(staff, "+bucket/lock Requests/file=role^approved")).Contains("Requests file lock");
+		await Assert.That(await As(player, "+request Requests/Help=Please.")).Contains("Permission denied. Filing in Requests needs the approved role.");
+
+		foreach (var bucket in new[] { "Requests", "Applications", "Building", "Bugs", "Plots", "Feedback" })
+		{
+			await As(staff, $"+bucket/lock {bucket}/file=role^approved");
+		}
+
+		await Assert.That(await As(player, "+request/draft new")).Contains("Permission denied. There is no bucket you may file in. Filing needs the approved role.")
+			.And.DoesNotContain("Bucket:");
+		var form = await Http("GET", "/jobs/schema?at=new", "", player);
+		await Assert.That(form.GetProperty("kind").GetString()).IsEqualTo("view");
+		await Assert.That(form.ToString()).Contains("There is no bucket you may file in.");
+
+		await God($"@role/assign #{player.DbRef.Number}=approved");
+		await Assert.That(await As(player, "+request Requests/Clock=What time is it?")).Contains("Filed job");
+		var filed = await God("think [first(jobs(Requests))]");
+		var jobs = await God("think [first(iter(lsearch(all,type,thing),if(cand(strmatch(name(%i0),Jobs),not(hasflag(%i0,GOING))),%i0)))]");
+		await God($"&JOB`FILED`AT [u({jobs}/FUN`JOB`FIND,{filed})]=0");
+		await God($"&TZ #{player.DbRef.Number}=Asia/Tokyo");
+		await Assert.That(await As(player, $"+job {filed}")).Contains("Jan 01 09:00");
+	}
+
 	[Test]
 	public async Task AnAuditedBucketApprovesAtOnceAndEachRevertRunsItsOwnHook()
 	{
