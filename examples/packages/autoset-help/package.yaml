@@ -1,0 +1,35 @@
+format: "1.20"
+package: autoset-help
+title: "Autoset: +help topics"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts autoset into +help: registers the autoset package's topics with the +help librarian."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [autoset, roles, help, bridge]
+category: Characters
+bridge: true
+requires_server: ">=1.0"
+
+# A bridge: it joins two packages that do not know about each other. The autoset package keeps its topics on its own
+# help object, and plus-help reads any object registered with its librarian. This package is that registration.
+depends:
+  - package: autoset
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/autoset/
+      branch: main
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`AUTOSET: |-
+        {{autoset/autoset_help}}

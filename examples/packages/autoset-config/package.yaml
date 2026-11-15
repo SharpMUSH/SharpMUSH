@@ -1,0 +1,68 @@
+format: "1.20"
+package: autoset-config
+title: "Autoset: +config rules"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts autoset's rules into +config: registers the Autoset object with the +config registry, so wizards add, change and remove rules with +config autoset."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [autoset, roles, config, settings, bridge]
+category: Characters
+bridge: true
+requires_server: ">=1.0"
+
+# A bridge: it joins two packages that do not know about each other. The autoset package declares its rules table on
+# the Autoset object as DATA`CONFIG`RULES, with its fields and checks, and reads the rules whether or not +config is
+# installed. This package is the one leaf that tells the +config registry where they are, and the +help topic that says
+# how to change them.
+depends:
+  - package: autoset
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/autoset/
+      branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
+
+objects:
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`AUTOSET: |-
+        {{autoset/autoset}}
+
+  # +help autoset config, beside the autoset package's own topics. Bodies are evaluated, so brackets, parentheses and
+  # percent signs are escaped.
+  - ref: config_help
+    target: "{{autoset/autoset_help}}"
+    attributes:
+      LOCK`AUTOSET`CONFIG: |-
+        perm^roles.admin|perm^config.admin
+      HELP`AUTOSET`CONFIG: |-
+        Staff with the `game.wizard` permission change the rules with `+config`. Anyone who may read `+autoset` may look.
+
+        - `+config autoset/rules` lists the rules, and `+config autoset/rules/<rule>` shows one.
+        - `+config/add autoset/rules/<rule>=<when>` adds a rule: `create`, `connect`, `first-connect`, `link`, `gain` or `lose`.
+        - `+config autoset/rules/<rule>/role=<role>` sets the role whose change runs a `gain` or `lose` rule.
+        - `+config autoset/rules/<rule>/give=<roles>` sets the roles it gives, separated by spaces.
+        - `+config autoset/rules/<rule>/take=<roles>` sets the roles it takes away.
+        - `+config autoset/rules/<rule>/guests=yes` runs it for guests too. It is `no` for a new rule.
+        - `+config autoset/rules/<rule>/when=<when>` changes when it runs.
+        - `+config/remove autoset/rules/<rule>` takes a rule away.
+
+        A role must exist, rank below wizard, and rank below your own highest role.
+
+        Example, giving every approved character the citizen role:
+
+        ```
+        > +config/add autoset/rules/citizen=gain
+        > +config autoset/rules/citizen/role=approved
+        > +config autoset/rules/citizen/give=citizen
+        ```
+
+        Output: a line saying what changed for each.

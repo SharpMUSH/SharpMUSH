@@ -1,0 +1,426 @@
+format: "1.16"
+package: autoset
+title: "Roles on game events"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Gives characters roles, and takes roles away, when something happens to them: when they are created, log in for the first time or every time, are linked to an account, or gain or lose a role, such as approved. The game keeps its rules as a table; +autoset lists them and runs one on a character now."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [autoset, roles, approval, new players, automation]
+category: Characters
+requires_server: ">=1.0"
+
+# Depends on nothing. The events it hears come from the engine: PLAYER`CREATE, PLAYER`CONNECT and PLAYER`LINK, and
+# ROLE`ASSIGN / ROLE`UNASSIGN, which every role change raises (an approval through an application, @role/assign, the
+# portal's Roles page). Its +help topics and its rules table are its own data on its own objects; autoset-help and
+# autoset-config are the bridges that show them to +help and +config.
+objects:
+  # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook) and gives and
+  # takes roles (@role/assign, @role/unassign). It acts with a wizard's reach on whoever a rule names, so changing the
+  # rules and running one by hand need game.wizard as well, and the rules table refuses a role the person setting it
+  # could not give themselves. A cycle of rules is stopped by FUN`GUARD`: past 20 changes to one player in 10 seconds,
+  # the rules leave that player alone and the wizard log says so.
+  #
+  # +autoset is added with /noparse/rsnoparse and hooked to CMD`AUTOSET, so what a player types reaches the code
+  # exactly as typed and is never evaluated.
+  #
+  # A rule is an entry on the Autoset Rules store: RULE`<KEY> when it runs, with ROLE, GIVE, TAKE and GUESTS beneath.
+  #
+  # Trees: CMD` the hooked command, INC`COMMAND` the dispatch, INC`AUTOSET` one routine per switch, INC`APPLY` the steps
+  # of /apply, EVENT` what the event handler hands on, INC`RULE` the writes, FUN`RULE` and FUN`RANK` the reads,
+  # FUN`CONFIG`CHECK` what the rules table checks, FUN`DISPLAY` the screens. DATA` the settings and routes.
+  - ref: autoset
+    type: thing
+    name: Autoset
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      DATA: |-
+        Settings and routes. One leaf each.
+      # ---- Settings: +config autoset (with autoset-config) ----------------------
+      # The rules, a +config table: entries on the store under RULE`, each holding when it runs, with ROLE, GIVE, TAKE
+      # and GUESTS beneath. Changing them needs game.wizard: the Autoset object gives roles with a wizard's reach.
+      DATA`CONFIG:
+        value: |-
+          Roles a character is given or loses when something happens to it.
+        flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Autoset
+      DATA`CONFIG`RULES`TYPE: |-
+        table
+      DATA`CONFIG`RULES`LABEL: |-
+        Rules
+      DATA`CONFIG`RULES`DESCRIPTION: |-
+        When each rule runs, and the roles it gives and takes.
+      DATA`CONFIG`RULES`PERMISSION: |-
+        game.wizard
+      DATA`CONFIG`RULES`STORE: |-
+        {{store}}
+      DATA`CONFIG`RULES`PATH: |-
+        RULE
+      DATA`CONFIG`RULES`ENTRY: |-
+        when
+      DATA`CONFIG`RULES`FIELDS: |-
+        when role give take guests
+      DATA`CONFIG`RULES`KEYPATTERN: |-
+        ^[A-Za-z][A-Za-z0-9_-]{0,23}$
+      DATA`CONFIG`RULES`FIELD`WHEN`TYPE: |-
+        choice
+      DATA`CONFIG`RULES`FIELD`WHEN`CHOICES: |-
+        create connect first-connect link gain lose
+      DATA`CONFIG`RULES`FIELD`WHEN`LABEL: |-
+        When
+      DATA`CONFIG`RULES`FIELD`WHEN`DESCRIPTION: |-
+        create, connect (every login), first-connect, link (to an account), gain or lose (the rule's role).
+      DATA`CONFIG`RULES`FIELD`ROLE`TYPE: |-
+        text
+      DATA`CONFIG`RULES`FIELD`ROLE`MAX: |-
+        32
+      DATA`CONFIG`RULES`FIELD`ROLE`CHECK: |-
+        FUN`CONFIG`CHECK`ROLE
+      DATA`CONFIG`RULES`FIELD`ROLE`LABEL: |-
+        Role
+      DATA`CONFIG`RULES`FIELD`ROLE`DESCRIPTION: |-
+        For gain and lose: the role whose change runs the rule, such as approved.
+      DATA`CONFIG`RULES`FIELD`GIVE`TYPE: |-
+        list
+      DATA`CONFIG`RULES`FIELD`GIVE`MAX: |-
+        20
+      DATA`CONFIG`RULES`FIELD`GIVE`CHECK: |-
+        FUN`CONFIG`CHECK`GRANTS
+      DATA`CONFIG`RULES`FIELD`GIVE`LABEL: |-
+        Gives
+      DATA`CONFIG`RULES`FIELD`GIVE`DESCRIPTION: |-
+        The roles the character is given, separated by spaces.
+      DATA`CONFIG`RULES`FIELD`TAKE`TYPE: |-
+        list
+      DATA`CONFIG`RULES`FIELD`TAKE`MAX: |-
+        20
+      DATA`CONFIG`RULES`FIELD`TAKE`CHECK: |-
+        FUN`CONFIG`CHECK`GRANTS
+      DATA`CONFIG`RULES`FIELD`TAKE`LABEL: |-
+        Takes
+      DATA`CONFIG`RULES`FIELD`TAKE`DESCRIPTION: |-
+        The roles taken from the character, separated by spaces.
+      DATA`CONFIG`RULES`FIELD`GUESTS`TYPE: |-
+        boolean
+      DATA`CONFIG`RULES`FIELD`GUESTS`DEFAULT: |-
+        0
+      DATA`CONFIG`RULES`FIELD`GUESTS`LABEL: |-
+        Guests too
+      DATA`CONFIG`RULES`FIELD`GUESTS`DESCRIPTION: |-
+        Whether the rule also runs for guests.
+      # Which INC` routine each switch runs: DATA`ROUTE`<switch>. Without a switch, +autoset lists the rules.
+      DATA`ROUTE: |-
+        Which routine each switch runs. One leaf per switch.
+      DATA`ROUTE`APPLY: |-
+        AUTOSET`APPLY
+      DATA`TEMPLATE`DISPLAY`SCREEN: |-
+        {"delim":"","nowrap":"","grow":""}
+
+      # ---- command --------------------------------------------------------------
+      # %1 the switch and %2 what follows, exactly as typed.
+      CMD`AUTOSET:
+        value: |-
+          $(?is)^\+autoset(?\:/(\S*))?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=switch,%1,argument,trim(%2)
+        flags: [regexp, cmdsyntax]
+      # Finds the routine for the switch and runs it. Only staff who manage roles or the configuration read the rules.
+      INC`COMMAND`RUN:
+        value: |-
+          @assert u(%!/FUN`RANK`STAFF,%#)=@pemit %#=notice(AUTOSET,Permission denied. +autoset needs the roles.admin or config.admin permission.,error); think setq(cmd_route,if(strlen(%<switch>),if(regmatch(%<switch>,^%[A-Za-z%]+$),get(%!/DATA`ROUTE`%<switch>)),AUTOSET`LIST)); @assert strlen(%q<cmd_route>)=@pemit %#=notice(AUTOSET,+autoset has no /%<switch> switch. It takes /apply.,warn); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      INC`AUTOSET`LIST:
+        value: |-
+          @assert not(strlen(%<argument>))=@pemit %#=notice(AUTOSET,+autoset takes nothing after it. +autoset/apply <player>=<rule> runs a rule now.,warn); @pemit %#=u(%!/FUN`DISPLAY`SCREEN)
+        flags: [cmdsyntax]
+      # /apply <player>=<rule>: the rule's roles, given and taken now, whatever its event.
+      INC`AUTOSET`APPLY:
+        value: |-
+          @assert permission(%#,game.wizard)=@pemit %#=notice(AUTOSET,Permission denied. Running a rule needs the game.wizard permission.,error); @include %!/INC`APPLY`FIND; @include %!/INC`APPLY`RUN
+        flags: [cmdsyntax]
+      # Sets apply_player and apply_key from %<argument>, or stops with why.
+      INC`APPLY`FIND:
+        value: |-
+          think setqm(apply_name,trim(before(%<argument>,=)),
+          apply_rule,trim(after(%<argument>,=))); @assert cand(strlen(%q<apply_name>),strlen(%q<apply_rule>))=@pemit %#=notice(AUTOSET,Which player and rule? +autoset/apply <player>=<rule>. +autoset lists the rules.,warn); think setq(apply_player,pmatch(%q<apply_name>)); @assert hastype(%q<apply_player>,player)=@pemit %#=notice(AUTOSET,There is no player called '%q<apply_name>'.,warn); think setqm(apply_player,objid(%q<apply_player>),
+          apply_key,u(%!/FUN`RULE`FIND,%q<apply_rule>)); @assert strlen(%q<apply_key>)=@pemit %#=notice(AUTOSET,There is no rule called '%q<apply_rule>'. +autoset lists them.,warn); @assert not(u(%!/FUN`RULE`SKIPS,%q<apply_key>,%q<apply_player>))=@pemit %#=notice(AUTOSET,[u(%!/FUN`RULE`NAME,%q<apply_key>)] leaves [name(%q<apply_player>)] alone: [u(%!/FUN`RULE`WHYSKIPPED,%q<apply_key>,%q<apply_player>)].,warn)
+        flags: [cmdsyntax]
+      # Runs apply_key on apply_player and says which roles changed. Rules the change runs in turn come after.
+      INC`APPLY`RUN:
+        value: |-
+          think setq(apply_before,roles(%q<apply_player>)); @include/args/nobreak %!/INC`RULE`APPLY=rule,%q<apply_key>,player,%q<apply_player>; think setqm(apply_gained,setdiff(roles(%q<apply_player>),%q<apply_before>),
+          apply_lost,setdiff(%q<apply_before>,roles(%q<apply_player>))); @pemit %#=notice(AUTOSET,u(%!/FUN`DISPLAY`APPLIED,%q<apply_key>,%q<apply_player>,%q<apply_gained>,%q<apply_lost>),ok)
+        flags: [cmdsyntax]
+
+      # ---- events ---------------------------------------------------------------
+      # Handed on by the event handler: %<when> what happened, %<player> to whom, %<role> the role for gain and lose.
+      EVENT`RUN:
+        value: |-
+          @include/args/nobreak %!/INC`EVENT`RULES=when,%<when>,player,%<player>,role,%<role>
+        flags: [cmdsyntax]
+      # A login runs the connect rules, then the first-connect rules for a character that has never logged out.
+      EVENT`CONNECT:
+        value: |-
+          @include/args/nobreak %!/INC`EVENT`RULES=when,connect,player,%<player>; @assert not(hasattr(%<player>,LASTLOGOUT)); @include/args/nobreak %!/INC`EVENT`RULES=when,first-connect,player,%<player>
+        flags: [cmdsyntax]
+      # Every rule for %<when> (and %<role>) on %<player>, in name order.
+      INC`EVENT`RULES:
+        value: |-
+          @assert hastype(%<player>,player); @dolist/inline u(%!/FUN`RULE`MATCHING,%<when>,%<role>)={@include/args/nobreak %!/INC`RULE`APPLY=rule,##,player,%<player>}
+        flags: [cmdsyntax]
+      # %<rule> on %<player>: the roles it gives that they lack, then the ones it takes that they hold. A rule with
+      # nothing to change writes nothing; one that would change a player the guard has stopped is logged instead.
+      INC`RULE`APPLY:
+        value: |-
+          @break u(%!/FUN`RULE`SKIPS,%<rule>,%<player>); think setqm(rule_give,u(%!/FUN`RULE`MISSING,%<rule>,%<player>),
+          rule_take,u(%!/FUN`RULE`HELD,%<rule>,%<player>)); @break not(words(%q<rule_give> %q<rule_take>)); @assert u(%!/FUN`GUARD`ALLOWS,%<player>)=@log/wiz Autoset: rule [u(%!/FUN`RULE`NAME,%<rule>)] left [name(%<player>)] alone. Their roles changed over 20 times in 10 seconds%, so two rules may undo each other.; &GUARD`[after(num(%<player>),#)] %!=u(%!/FUN`GUARD`NEXT,%<player>); @dolist/inline %q<rule_give>={@role/assign %<player>=##}; @dolist/inline %q<rule_take>={@role/unassign %<player>=##}
+        flags: [cmdsyntax]
+
+      # ---- guard ----------------------------------------------------------------
+      # GUARD`<number> on this object: when the player's current 10-second window began, and how many rule runs changed
+      # them in it. %0 a player.
+      FUN`GUARD`WINDOW:
+        value: |-
+          setq(guard_record,get(%!/GUARD`[after(num(%0),#)]))[cand(strlen(%q<guard_record>),lt(sub(secs(),first(%q<guard_record>)),10))]
+        flags: [funsyntax]
+      FUN`GUARD`ALLOWS:
+        value: |-
+          not(cand(u(%!/FUN`GUARD`WINDOW,%0),gte(rest(%q<guard_record>),20)))
+        flags: [funsyntax]
+      # The record after one more run: the same window counted up, or a new one.
+      FUN`GUARD`NEXT:
+        value: |-
+          if(u(%!/FUN`GUARD`WINDOW,%0),first(%q<guard_record>) [inc(rest(%q<guard_record>))],secs() 1)
+        flags: [funsyntax]
+
+      # ---- rules ----------------------------------------------------------------
+      # The keys of every rule, in name order.
+      FUN`RULE`KEYS:
+        value: |-
+          sort(iter(lattr({{store}}/RULE`*),after(%i0,`)))
+        flags: [funsyntax]
+      # %0 what happened, %1 the role for gain and lose: the keys of the rules it runs.
+      FUN`RULE`MATCHING:
+        value: |-
+          filterbool(%!/FUN`RULE`MATCHES,u(%!/FUN`RULE`KEYS),,,%0,%1)
+        flags: [funsyntax]
+      FUN`RULE`MATCHES:
+        value: |-
+          cand(not(comp(lcstr(get({{store}}/RULE`%0)),lcstr(%1))),if(match(gain lose,%1),cand(strlen(%2),not(comp(u(%!/FUN`RULE`ROLE,%0),lcstr(%2)))),1))
+        flags: [funsyntax]
+      FUN`RULE`WHEN:
+        value: |-
+          lcstr(get({{store}}/RULE`%0))
+        flags: [funsyntax]
+      FUN`RULE`ROLE:
+        value: |-
+          lcstr(trim(get({{store}}/RULE`%0`ROLE)))
+        flags: [funsyntax]
+      FUN`RULE`NAME:
+        value: |-
+          lcstr(%0)
+        flags: [funsyntax]
+      # %0 a key, %1 GIVE or TAKE: those roles, in lower case.
+      FUN`RULE`ROLES:
+        value: |-
+          lcstr(squish(get({{store}}/RULE`%0`%1)))
+        flags: [funsyntax]
+      # %0 a key, %1 a player: the roles it gives that they do not hold yet.
+      FUN`RULE`MISSING:
+        value: |-
+          filterbool(%!/FUN`RULE`LACKS,u(%!/FUN`RULE`ROLES,%0,GIVE),,,%1)
+        flags: [funsyntax]
+      # %0 a key, %1 a player: the roles it takes that are their own.
+      FUN`RULE`HELD:
+        value: |-
+          filterbool(%!/FUN`RULE`OWNS,u(%!/FUN`RULE`ROLES,%0,TAKE),,,%1)
+        flags: [funsyntax]
+      FUN`RULE`LACKS:
+        value: |-
+          not(hasrole(%1,%0))
+        flags: [funsyntax]
+      FUN`RULE`OWNS:
+        value: |-
+          hasrole(%1,%0)
+        flags: [funsyntax]
+      # %0 a key, %1 an object: whether the rule leaves it alone. Only players, never #1, and guests only when it says.
+      FUN`RULE`SKIPS:
+        value: |-
+          strlen(u(%!/FUN`RULE`WHYSKIPPED,%0,%1))
+        flags: [funsyntax]
+      FUN`RULE`WHYSKIPPED:
+        value: |-
+          cond(not(hastype(%1,player)),it is not a player,strmatch(num(%1),#1),#1 holds every role,cand(haspower(%1,Guest),not(get({{store}}/RULE`%0`GUESTS))),the rule is not for guests)
+        flags: [funsyntax]
+      # %0 typed text: the key of the rule it names, in any case, or nothing.
+      FUN`RULE`FIND:
+        value: |-
+          if(regmatch(%0,^%[A-Za-z0-9_-%]+$),setq(find_keys,u(%!/FUN`RULE`KEYS))[extract(%q<find_keys>,match(%q<find_keys>,%0),1)])
+        flags: [funsyntax]
+
+      # ---- ranks ----------------------------------------------------------------
+      # %0 an object: whether it may read the rules.
+      FUN`RANK`STAFF:
+        value: |-
+          cor(permission(%0,roles.admin),permission(%0,config.admin))
+        flags: [funsyntax]
+      # %0 an object, %1 a role that exists: whether %0 ranks above it, as giving it needs. hasrole() with at-least
+      # says %0 holds a role at least as high; %1 must not be %0's own highest role. #1 ranks above every role. A role
+      # of the same priority as %0's highest, under another name, passes here; @role/assign still refuses it.
+      FUN`RANK`ABOVE:
+        value: |-
+          cor(strmatch(num(%0),#1),cand(hasrole(%0,%1,1),comp(first(roles(%0)),%1)))
+        flags: [funsyntax]
+      FUN`RANK`EXISTS:
+        value: |-
+          not(strmatch(hasrole(%!,%0,1),#-1*))
+        flags: [funsyntax]
+
+      # ---- checks for the rules table -------------------------------------------
+      # %0 the value as stored: empty when fine, else why not. %# is whoever is setting it.
+      FUN`CONFIG`CHECK`ROLE:
+        value: |-
+          if(cor(not(strlen(%0)),u(%!/FUN`RANK`EXISTS,lcstr(%0))),,There is no role '%0'. @role/list lists them.)
+        flags: [funsyntax]
+      # Each role must exist, be one that is ever assigned, rank below this object, and rank below the setter. Every
+      # refusal is listed.
+      FUN`CONFIG`CHECK`GRANTS:
+        value: |-
+          squish(iter(lcstr(%0),u(%!/FUN`CONFIG`CHECK`GRANT,%i0)))
+        flags: [funsyntax]
+      FUN`CONFIG`CHECK`GRANT:
+        value: |-
+          cond(not(u(%!/FUN`RANK`EXISTS,%0)),There is no role '%0'. @role/list lists them.,match(everyone player god,%0),%0 is never assigned.,not(u(%!/FUN`RANK`ABOVE,%!,%0)),Autoset gives only roles below wizard%, and %0 is not.,not(u(%!/FUN`RANK`ABOVE,%#,%0)),You can give only roles below your highest%, and %0 is not.)
+        flags: [funsyntax]
+
+      # ---- display --------------------------------------------------------------
+      # Every rule, one row each: its name, when it runs, and the roles it gives and takes.
+      FUN`DISPLAY`SCREEN:
+        value: |-
+          setq(screen_keys,u(%!/FUN`RULE`KEYS))[if(words(%q<screen_keys>),box(ldatatable(json_fill(v(DATA`TEMPLATE`DISPLAY`SCREEN),/delim,%r,/nowrap,1,/grow,%r1%r1%r1),Rule%rWhen%rGives%rTakes,iter(%q<screen_keys>,u(%!/FUN`DISPLAY`ROW,%i0),,%*<^>),%*<^>)%r[rule()]%r[u(%!/FUN`DISPLAY`COUNT,words(%q<screen_keys>))] +autoset/apply <player>=<rule> runs one on a player now.,Autoset rules),notice(AUTOSET,This game has no autoset rules.,info))]
+        flags: [funsyntax]
+      FUN`DISPLAY`ROW:
+        value: |-
+          u(%!/FUN`RULE`NAME,%0)%r[u(%!/FUN`DISPLAY`WHEN,%0)]%r[firstof(u(%!/FUN`RULE`ROLES,%0,GIVE),-)]%r[firstof(u(%!/FUN`RULE`ROLES,%0,TAKE),-)]
+        flags: [funsyntax]
+      # %0 a key: when it runs, in words, and whether guests are included.
+      FUN`DISPLAY`WHEN:
+        value: |-
+          setq(when_role,u(%!/FUN`RULE`ROLE,%0))[switch(u(%!/FUN`RULE`WHEN,%0),create,Created,connect,Every login,first-connect,First login,link,Linked to an account,gain,if(strlen(%q<when_role>),Gains %q<when_role>,Gains a role: none named),lose,if(strlen(%q<when_role>),Loses %q<when_role>,Loses a role: none named),Never)][if(get({{store}}/RULE`%0`GUESTS),%b· guests too)]
+        flags: [funsyntax]
+      FUN`DISPLAY`COUNT:
+        value: |-
+          switch(%0,1,One rule.,%0 rules.)
+        flags: [funsyntax]
+      # %0 a key, %1 the player, %2 the roles they gained, %3 the roles they lost: what /apply did.
+      FUN`DISPLAY`APPLIED:
+        value: |-
+          [u(%!/FUN`RULE`NAME,%0)] on [name(%1)]: [if(cor(words(%2),words(%3)),trim([if(words(%2),gave [itemize(%2)].)] [if(words(%3),took [itemize(%3)].)]),nothing to change.)]
+        flags: [funsyntax]
+
+      # ---- lifecycle ------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @command/add/noparse/rsnoparse +autoset; @hook/override/inline +autoset=%!,CMD`AUTOSET
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # The rules, a +config table: RULE`<KEY> when it runs, with ROLE, GIVE, TAKE and GUESTS beneath. Data only, never
+  # evaluated. A new game has none.
+  - ref: store
+    type: thing
+    name: Autoset Rules
+    location: "{{autoset}}"
+    flags: [no_command]
+    attributes:
+      RULE: |-
+        The autoset rules, one branch each, named as staff type it.
+
+  # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. autoset-help
+  # registers it. Bodies are evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: autoset_help
+    type: thing
+    name: Autoset Help
+    location: "{{autoset}}"
+    attributes:
+      HELP: |-
+        Roles given and taken when something happens to a character: +autoset.
+      LOCK`AUTOSET: |-
+        perm^roles.admin|perm^config.admin
+      HELP`AUTOSET: |-
+        `+autoset` gives characters roles, and takes roles away, when something happens to them: when they are created, when they log in, when they are approved. Each rule says when it runs and which roles it gives and takes.
+
+        - `+autoset` lists the rules.
+        - `+autoset/apply <player>=<rule>` runs one rule on one player now, whatever its event: for a character approved before the rule existed, say. It needs the `game.wizard` permission.
+
+        Reading the rules needs the `roles.admin` or `config.admin` permission.
+
+        ## When a rule runs
+
+        - `create`: a character is created, at the connect screen or with `@pcreate`.
+        - `connect`: a character logs in, every time.
+        - `first-connect`: a character logs in for the first time, before it has ever logged out.
+        - `link`: a character is linked to an account.
+        - `gain`: a character is given the rule's role. Approving a character gives it the `approved` role, so `gain` with the role `approved` runs whenever a character is approved, through an application or by hand.
+        - `lose`: the rule's role is taken from a character.
+
+        A rule leaves guests alone unless it says otherwise, and never changes #1. A role a rule gives runs the rules for gaining that role, and a role it takes the rules for losing it. When two rules undo each other, a player whose roles change more than 20 times in 10 seconds is left alone, and the wizard log says which rule stopped.
+
+        A rule changes only the character's own roles. A role given to a whole account, not to the character, runs no rule, a rule does not give a role the account already holds, and it cannot take one away from the account.
+
+        Changing the rules needs the `game.wizard` permission, because Autoset gives roles with a wizard's reach. A rule gives only roles below wizard, and only roles below the highest role of whoever sets it.
+
+        ## Example
+
+        ```
+        > +autoset/apply Raya=citizen
+        \[AUTOSET\] Done: citizen on Raya: gave citizen.
+        ```
+
+        Output: one line naming the rule, the player and the roles that changed.
+      LOCK`AUTOSET`RULES: |-
+        perm^game.wizard
+      HELP`AUTOSET`RULES: |-
+        Each rule is an entry on the Autoset Rules object, inside the Autoset object in the master room. `` RULE`<NAME> `` holds when it runs \(`create`, `connect`, `first-connect`, `link`, `gain` or `lose`\), with these beneath:
+
+        - `ROLE`: for `gain` and `lose`, the role whose change runs the rule.
+        - `GIVE`: the roles the character is given, separated by spaces.
+        - `TAKE`: the roles taken from the character, separated by spaces.
+        - `GUESTS`: `1` to run the rule for guests too.
+
+        A rule's name starts with a letter and holds letters, digits, `-` and `_`. Rules run in name order. A game starts with none. Written by hand like this, a rule is not checked: a role that does not exist, or that Autoset may not give, is skipped when the rule runs.
+
+        Example, giving every approved character the citizen role and taking newcomer away:
+
+        ```
+        > &RULE`CITIZEN Autoset Rules=gain
+        > &RULE`CITIZEN`ROLE Autoset Rules=approved
+        > &RULE`CITIZEN`GIVE Autoset Rules=citizen
+        > &RULE`CITIZEN`TAKE Autoset Rules=newcomer
+        ```
+
+        Output: a Set. line for each.
+
+  # What the game reports, handed on to the Autoset object. ROLE`ASSIGN and ROLE`UNASSIGN name an account rather
+  # than an object when the role went to a whole account; those run no rule.
+  - ref: events
+    target: "{{$event_handler}}"
+    attributes:
+      PLAYER`CREATE`AUTOSET: |-
+        @trigger/args {{autoset}}/EVENT`RUN=when,create,player,%<objid>
+      PLAYER`CONNECT`AUTOSET: |-
+        @trigger/args {{autoset}}/EVENT`CONNECT=player,%<objid>
+      PLAYER`LINK`AUTOSET: |-
+        @trigger/args {{autoset}}/EVENT`RUN=when,link,player,%<objid>
+      ROLE`ASSIGN`AUTOSET: |-
+        @assert strlen(%<objid>); @trigger/args {{autoset}}/EVENT`RUN=when,gain,player,%<objid>,role,%<role>
+      ROLE`UNASSIGN`AUTOSET: |-
+        @assert strlen(%<objid>); @trigger/args {{autoset}}/EVENT`RUN=when,lose,player,%<objid>,role,%<role>
