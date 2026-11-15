@@ -109,10 +109,10 @@ class Caddy:
         subprocess.run(['docker', 'rm', '-f', self.name], capture_output=True, timeout=60)
 
 
-def status_of(port, host, path, websocket=True):
+def status_of(port, host, path, websocket=True, connection='Upgrade', upgrade='websocket'):
     lines = [f'GET {path} HTTP/1.1', f'Host: {host}']
     if websocket:
-        lines += ['Connection: Upgrade', 'Upgrade: websocket', 'Sec-WebSocket-Version: 13',
+        lines += [f'Connection: {connection}', f'Upgrade: {upgrade}', 'Sec-WebSocket-Version: 13',
                   'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==', 'Sec-WebSocket-Protocol: telnet']
     else:
         lines.append('Connection: close')
@@ -139,10 +139,12 @@ class Stack:
     def setUp(self):
         self.backend.seen.clear()
 
-    def assert_reaches_telnet(self, host, path):
+    def assert_reaches_telnet(self, host, path, **headers):
         self.backend.seen.clear()
-        self.assertEqual(status_of(self.port, host, path), 200)
-        self.assertEqual(self.backend.seen, [('/telnet', 'websocket')])
+        self.assertEqual(status_of(self.port, host, path, **headers), 200)
+        self.assertEqual(len(self.backend.seen), 1)
+        self.assertEqual(self.backend.seen[0][0], '/telnet')
+        self.assertEqual(self.backend.seen[0][1].lower(), 'websocket')
 
     def assert_reaches_nothing(self, host, path, websocket=True, status=None):
         self.backend.seen.clear()
@@ -172,6 +174,11 @@ class AfterSetup(Stack, unittest.TestCase):
         for path in ('/', '/anything'):
             with self.subTest(path=path):
                 self.assert_reaches_telnet(TELNET, path)
+
+    def test_upgrade_headers_match_in_any_case(self):
+        for connection, upgrade in (('upgrade', 'websocket'), ('Upgrade', 'WebSocket'), ('keep-alive, Upgrade', 'websocket')):
+            with self.subTest(connection=connection, upgrade=upgrade):
+                self.assert_reaches_telnet(TELNET, '/', connection=connection, upgrade=upgrade)
 
     def test_the_portal_name_serves_telnet_on_its_own_path(self):
         self.assert_reaches_telnet(DOMAIN, '/telnet')

@@ -51,6 +51,35 @@ public class TelnetWebSocketEndpointTests
 	}
 
 	[Test]
+	public async Task ClosingAClientThatStoppedReadingDropsItByTheDeadline()
+	{
+		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+		await using var server = await StartAsync(timeout.Token);
+		using var socket = new ClientWebSocket();
+		socket.Options.AddSubProtocol(MudWebSocketSubprotocols.Telnet);
+		await socket.ConnectAsync(new Uri($"ws://127.0.0.1:{server.HttpPort}/telnet"), timeout.Token);
+		var established = await server.Backend.Established.Reader.ReadAsync(timeout.Token);
+		var connections = server.App.Services.GetRequiredService<IConnectionServerService>();
+		var connection = connections.Get(established.Handle)!;
+
+		// The client never reads, so output piles up until a send can no longer finish and holds the socket.
+		var chunk = new byte[64 * 1024];
+		Array.Fill(chunk, (byte)'x');
+		while (true)
+		{
+			var write = connection.OutputFunction(chunk).AsTask();
+			if (await Task.WhenAny(write, Task.Delay(500, timeout.Token)) != write) break;
+		}
+
+		var closing = System.Diagnostics.Stopwatch.StartNew();
+		connection.DisconnectFunction();
+		while (connections.Get(established.Handle) is not null)
+			await Task.Delay(50, timeout.Token);
+
+		await Assert.That(closing.Elapsed).IsLessThan(TimeSpan.FromSeconds(15));
+	}
+
+	[Test]
 	public async Task ASocketThatOnlySpeaksAnotherSubprotocolIsRefused()
 	{
 		using var timeout = new CancellationTokenSource(Timeout);

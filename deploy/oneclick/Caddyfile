@@ -22,8 +22,8 @@
 		import /etc/caddy/guard/*.caddy
 
 		@websocket {
-			header Connection *Upgrade*
-			header Upgrade websocket
+			header_regexp Connection (?i)(^|[\s,])upgrade($|[\s,])
+			header_regexp Upgrade (?i)(^|[\s,])websocket($|[\s,])
 			not path /health
 		}
 		handle @websocket {

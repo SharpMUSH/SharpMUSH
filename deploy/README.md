@@ -155,7 +155,7 @@ reach the game at `/telnet` on the connection server. The `Caddyfile` routes it:
 wss://<your-domain>/telnet
 ```
 
-The one-click install also serves it on the telnet name (`SHARPMUSH_TELNET_HOST`), where a WebSocket
+When the telnet name (`SHARPMUSH_TELNET_HOST`) differs from the domain, the one-click install also serves it there, where a WebSocket
 on any path but `/health` is telnet, so `wss://telnet.<your-domain>/` works. Players connected this way show up in
 `WHO` and the portal as ordinary telnet connections. `/ws` stays the portal terminal's own protocol;
 a MUD client pointed there will not get telnet.

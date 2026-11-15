@@ -80,6 +80,7 @@ public partial class TelnetServer : ConnectionHandler
 				connection.Abort();
 				return ValueTask.CompletedTask;
 			}),
+			connection.Abort,
 			// The address alone, as PennMUSH's ipaddr() and a WebSocket connection give it: sitelock rules, @ban and
 			// softcode read it as an address.
 			connection.RemoteEndPoint is IPEndPoint remote ? WebSocketServer.ClientAddress(remote.Address) : "unknown",
@@ -132,6 +133,7 @@ public partial class TelnetServer : ConnectionHandler
 		await ServeAsync(new TelnetEndpoint(
 			context.TraceIdentifier,
 			TelnetTransport.WebSocket(socket),
+			context.Abort,
 			// Behind a proxy listed in ForwardedHeaders:KnownProxies, UseForwardedHeaders has already put the
 			// X-Forwarded-For client here (TrustedProxies), as for /ws.
 			WebSocketServer.ClientAddress(context.Connection.RemoteIpAddress),
@@ -172,9 +174,17 @@ public partial class TelnetServer : ConnectionHandler
 	/// </summary>
 	/// <param name="Id">The transport's id for the connection, for logs.</param>
 	/// <param name="Closed">Cancelled when the client leaves (or the server closes the connection).</param>
+	/// <param name="Abort">Drops the connection at once, with no goodbye to the client.</param>
 	private sealed record TelnetEndpoint(
-		string Id, ITelnetTransport Transport, string RemoteIp, bool IsSecure, CancellationToken Closed)
+		string Id, ITelnetTransport Transport, Action Abort, string RemoteIp, bool IsSecure, CancellationToken Closed)
 	{
+		/// <summary>
+		/// How long a close from this side may take before the connection is dropped. A WebSocket close waits behind
+		/// a send to a client that has stopped reading, and TelnetNegotiationCore's own close timeout starts only
+		/// once the close frame is out.
+		/// </summary>
+		internal static readonly TimeSpan CloseDeadline = TimeSpan.FromSeconds(10);
+
 		/// <summary>The running connection, once it has started.</summary>
 		public TelnetConnection? Connection { get; set; }
 
@@ -187,9 +197,16 @@ public partial class TelnetServer : ConnectionHandler
 		/// <summary>Ends the connection from this side, as the main process asks (a @boot, QUIT, a failed registration).</summary>
 		public void Close()
 		{
-			if (Connection is { } connection)
-				_ = connection.CloseAsync().AsTask().ContinueWith(
-					static (t, _) => _ = t.Exception, null, TaskContinuationOptions.OnlyOnFaulted);
+			if (Connection is not { } connection) return;
+			_ = connection.CloseAsync().AsTask().ContinueWith(
+				static (t, _) => _ = t.Exception, null, TaskContinuationOptions.OnlyOnFaulted);
+			_ = AbortUnlessEndedAsync(connection.Completion);
+		}
+
+		private async Task AbortUnlessEndedAsync(Task completion)
+		{
+			if (await Task.WhenAny(completion, Task.Delay(CloseDeadline)) != completion)
+				Abort();
 		}
 	}
 
