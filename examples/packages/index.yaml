@@ -252,7 +252,7 @@ packages:
   - path: census/
     name: Census
     package: census
-    version: 1.0.2
+    version: 1.0.3
     description: +census — counts and lists the characters by dimensions staff set in a +config table (attributes, roles, last on, created, account size), with filters and breakdowns that combine
   - path: census-help/
     name: Census help
