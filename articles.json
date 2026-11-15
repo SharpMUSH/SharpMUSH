@@ -15079,10 +15079,12 @@
     ],
     "sections": [
       {
-        "id": "features-accounts",
-        "lookup": "sharpmush features accounts",
-        "heading": "Accounts and the web portal",
-        "aliases": []
+        "id": "features-portal",
+        "lookup": "sharpmush features portal",
+        "heading": "The web portal and accounts",
+        "aliases": [
+          "sharpmush features accounts"
+        ]
       },
       {
         "id": "features-roles",
@@ -15091,9 +15093,23 @@
         "aliases": []
       },
       {
-        "id": "features-wiki",
-        "lookup": "sharpmush features wiki",
-        "heading": "The wiki",
+        "id": "features-community",
+        "lookup": "sharpmush features community",
+        "heading": "Wiki, feeds, pages and dice",
+        "aliases": [
+          "sharpmush features wiki"
+        ]
+      },
+      {
+        "id": "features-plugins",
+        "lookup": "sharpmush features plugins",
+        "heading": "Plugins, Discord and scenes",
+        "aliases": []
+      },
+      {
+        "id": "features-packages",
+        "lookup": "sharpmush features packages",
+        "heading": "Softcode packages",
         "aliases": []
       },
       {
@@ -15103,9 +15119,27 @@
         "aliases": []
       },
       {
+        "id": "features-functions",
+        "lookup": "sharpmush features functions",
+        "heading": "Functions",
+        "aliases": []
+      },
+      {
+        "id": "features-commands",
+        "lookup": "sharpmush features commands",
+        "heading": "Commands and switches",
+        "aliases": []
+      },
+      {
         "id": "features-clients",
         "lookup": "sharpmush features clients",
         "heading": "Clients, pictures and sound",
+        "aliases": []
+      },
+      {
+        "id": "features-dialects",
+        "lookup": "sharpmush features dialects",
+        "heading": "TinyMUX, RhostMUSH and imports",
         "aliases": []
       },
       {
