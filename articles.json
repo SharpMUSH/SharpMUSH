@@ -7073,13 +7073,20 @@
     "lookup": "Player Events",
     "title": "Player Events",
     "aliases": [
-      "Event Player"
+      "Event Player",
+      "Event Role"
     ],
     "sections": [
       {
         "id": "channels-accounts",
         "lookup": "player events channels and accounts",
         "heading": "Channels, warnings and accounts",
+        "aliases": []
+      },
+      {
+        "id": "roles",
+        "lookup": "player events roles",
+        "heading": "Roles",
         "aliases": []
       }
     ],
