@@ -42,7 +42,7 @@ public class NatsBridgeReadinessTests
 		var readiness = new ServerReadiness(new NatsConsumerRegistry(), Substitute.For<IHostApplicationLifetime>());
 		var service = new NatsBridgeService(hub, Substitute.For<IHubContext<GameHub>>(), new NatsOptions { Url = url },
 			SharpMUSH.Implementation.Services.PluginCatalog.Empty(), NullLogger<NatsBridgeService>.Instance,
-			Substitute.For<IRoomEventDispatcher>(), readiness);
+			Substitute.For<IRoomEventDispatcher>(), readiness, new NatsMessagingMetrics());
 
 		await using var publisher = new NatsConnection(new NatsOpts { Url = url });
 		await publisher.ConnectAsync();

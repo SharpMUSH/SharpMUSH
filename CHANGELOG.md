@@ -11,6 +11,7 @@ Two version numbers matter:
 
 ### Added
 
+- `/metrics` reports `sharpmush.messaging.subscription.dropped`, by subscribed subject: portal output (`game.output.*`, `game.room.*`, `game.scene.*`) the server's bridge dropped because it fell behind. Those drops were silent.
 - `@function/restrict` and `@command/restrict` take `role^<role>`, `power^<power>`, `flag^<flag>` and `perm^<permission>`, any one of which lets its holder in, `!` in front of one to turn its holders away, and `everyone`. On a built-in function they change its own restriction instead of adding to it, so `@function/restrict cmdlink=everyone` lets anyone use `cmdlink()`, and `!wizard` opens a wizard-only function as in PennMUSH. `cmdlink()`, `sound()`, `music()`, `stopsound()`, `image()`, `pane()`, `clearscreen()`, `prefetch()` and `expirelinks()` declare their Send_OOB requirement this way. See `help restrict`.
 - A scene's members, wherever they are, and the others in its room are told when it starts, pauses, resumes or ends: who did it, the scene's number and title, and for a public scene the command that joins it (`[SCENE] Mira started scene 12: The Docks · +scene/join 12 to join`). While a scene runs, they are also told when a pose in it is edited, or an edit is undone or redone (`[SCENE] Mira undid an edit to their pose 34 in scene 12.`). A private scene is announced only to its members. `+config scene/announce=no` turns it off (scene package 1.20.0).
 - A scene's page in the portal has Finish and Cancel buttons, each asking once before it runs. Whoever holds `scene.manage` gets every control on any scene (edit, pause, start, finish, cancel), and whoever holds `scene.close` gets Finish.
@@ -18,15 +19,19 @@ Two version numbers matter:
 - The play terminal's settings menu has "Hide pages" and "Hide channel messages" checkboxes. On, pages stay in the sidebar's Pages list and channel messages (connect and disconnect lines included) in their channel's view, out of the main output, the ones already there included. Both are off by default and kept per browser, and are offered only while the game sends channels and pages to the sidebar. A portal connection's output now marks each channel line and page as one.
 - A visitor playing as a guest on the portal's Play page sees a line above the terminal saying so, with a link to create an account.
 - The play terminal's settings menu lists each option by name only; an (i) beside it shows the details on hover, focus or a tap.
+- The portal's Mail page has a Sent list: each message the character sent, newest first, with its recipients and how many of them have read it. A message sent to several people is one row.
+- The Mail link in the portal's navigation shows how many inbox messages are unread, and a notice appears when new mail arrives, with a button to read it. comm-feed 1.5.0 pushes each new message to the recipient as the `mail.new` OOB package.
 - Boards (bboards 1.8.0): a new comment or reply is announced to the board's readers as a new post is, as `(New BB comment (5/1/1/3) posted to 'General' by Seliana: Test Post)`.
 
 ### Changed
 
+- NATS.Net 3.3.2, from 2.7.3. A core subscription now buffers 16,384 messages before it drops one, where it buffered 1,024, so the portal loses less output in a burst, and a ping that cannot be written counts as a missed pong, so a dead broker connection is noticed. A C# plugin that uses the `NatsConnection` its bridge source is handed builds against NATS.Net 3.
 - In `@function/restrict`, a `!` in front of `wizard`, `admin`, `god`, `noguest`, `nogagged`, `nofixed` or `nobody` takes that restriction off, as PennMUSH's does, where it turned away whoever met it. A permission or `royalty` in a built-in's restriction replaces what the built-in asks for instead of adding to it, so a restriction already set may now let more in; check `@function <name>`. Restricting a built-in function needs `config.admin` (the Functions power is still enough for @functions). A function refused for lacking a permission names it: `#-1 PERMISSION DENIED: NEEDS CHAT.ADMIN`.
 
 ### Fixed
 
 - `connect <character> <password>` takes the password of the account the character is linked to as well as the character's own, so a character made on the web portal, which gets no password of its own, can connect from a MU* client.
+- The portal's Mail page shows times in the character's `TZ` zone when it names a known one, where it showed the browser's.
 - Boards and Jobs say why they refuse a post, comment or request, such as "Permission denied. Posting on 5 Public needs the approved role." The portal shows it on the board's page and in place of the new-post or new-request form, and a draft (`+bbpost <board>/<title>`, `+request/draft new`) is refused before it starts.
 - Boards: reading the conversation that holds a post's new comments (`+bbread 5/1/1/3`, or opening it in the portal) marks the post read, so it no longer shows as new.
 - Boards and Jobs show times in the reader's time zone (their `TZ` attribute, set with `+timezone`), in the terminal and the portal, where they showed the game's.

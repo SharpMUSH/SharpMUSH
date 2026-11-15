@@ -13736,6 +13736,27 @@
   <data name="AdmUpdJobPulling" xml:space="preserve">
     <value>Downloading the new images; nothing has been replaced yet.</value>
   </data>
+  <data name="MailSentEmpty" xml:space="preserve">
+    <value>Nothing you sent is still in a mailbox.</value>
+  </data>
+  <data name="MailSentRead" xml:space="preserve">
+    <value>Read</value>
+  </data>
+  <data name="MailSentNotRead" xml:space="preserve">
+    <value>Not read yet</value>
+  </data>
+  <data name="MailSentReadBy" xml:space="preserve">
+    <value>Read by {0} of {1}</value>
+  </data>
+  <data name="MailNewFrom" xml:space="preserve">
+    <value>New mail from {0}</value>
+  </data>
+  <data name="MailNewFromSubject" xml:space="preserve">
+    <value>New mail from {0}: {1}</value>
+  </data>
+  <data name="MailNewRead" xml:space="preserve">
+    <value>Read</value>
+  </data>
   <data name="RolCancelScene" xml:space="preserve">
     <value>Cancel scene</value>
   </data>

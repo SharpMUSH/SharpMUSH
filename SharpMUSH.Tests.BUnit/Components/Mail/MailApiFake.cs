@@ -12,7 +12,7 @@ namespace SharpMUSH.Tests.BUnit.Components.Mail;
 
 /// <summary>
 /// The slice of <c>api/mail</c> the Mail section reads: two folders, an INBOX with two unread
-/// messages and one read, a SENT folder with one. Reading a message marks it read, as the server does.
+/// messages and one read, a SENT folder with one, and one message sent to two players. Reading a message marks it read, as the server does.
 /// </summary>
 public sealed class MailApiFake : HttpMessageHandler
 {
@@ -30,11 +30,22 @@ public sealed class MailApiFake : HttpMessageHandler
 
 	private string[] _folders = ["INBOX", "SENT"];
 
+	/// <summary>What the character sent (<c>api/mail/sent</c>): one message to two players, one of whom read it.</summary>
+	private List<MailService.SentMail> _sentMail =
+	[
+		new(7, ["Tomas Reyes", "Wren Halloway"], "Lantern route", DateTimeOffset.UnixEpoch, Urgent: false, ReadBy: 1),
+	];
+
+	public const string SentBody = "Take the river path.";
+
 	/// <summary>The character the tab acts as first, whose mailbox the fields above are.</summary>
 	public static readonly AccountAuthService.CharacterSummary First = new(313, 1, "Ilsa Varn", "PLAYER", IsActing: true);
 
 	/// <summary>The character <see cref="SwitchCharacter"/> switches to.</summary>
 	public static readonly AccountAuthService.CharacterSummary Second = new(314, 1, "Wren Halloway", "PLAYER", IsActing: true);
+
+	/// <summary>The command terminal's OOB store, where <c>mail.new</c> arrives.</summary>
+	public OobChannelStore Oob { get; } = new();
 
 	/// <summary>The account session the Mail section reads its acting character from.</summary>
 	public IAccountAuthState Auth { get; } = Substitute.For<IAccountAuthState>();
@@ -63,11 +74,26 @@ public sealed class MailApiFake : HttpMessageHandler
 		_folders = ["INBOX", "PLOTS"];
 		_inbox = [new(1, "Mara Quill", "Second bell", DateTimeOffset.UnixEpoch, Read: false, Urgent: false, "INBOX")];
 		_sent = [];
+		_sentMail = [];
 		Auth.ActiveCharacter.Returns(Second);
 		Auth.ActiveCharacterChanged += Raise.Event<Action>();
 	}
 
 	public const string Body = "Meet me by the second bell.";
+
+	/// <summary>A message arrives in the inbox, and the game pushes <c>mail.new</c> for it, as comm-feed does.</summary>
+	public void Deliver(MailService.MailSummary message)
+	{
+		_inbox = [.. _inbox, message];
+		Oob.Set(MailWatch.NewMailPackage, System.Text.Json.JsonSerializer.Serialize(new
+		{
+			v = 2,
+			number = message.Number,
+			from = message.From,
+			subject = message.Subject,
+			urgent = message.Urgent
+		}));
+	}
 
 	/// <summary>Every list or folder request the fake has answered, to prove a change was applied without one.</summary>
 	public int ListRequests { get; private set; }
@@ -90,6 +116,12 @@ public sealed class MailApiFake : HttpMessageHandler
 		if (request.Method == HttpMethod.Get && path is "api/mail/folders" or "api/mail") ListRequests++;
 		if (request.Method == HttpMethod.Get && path == "api/mail/folders") return (Json(_folders), false);
 		if (request.Method == HttpMethod.Get && path == "api/mail") return (Json(query.Contains("folder=SENT") ? _sent : _inbox), false);
+		if (request.Method == HttpMethod.Get && path == "api/mail/sent") return (Json(_sentMail), false);
+		if (request.Method == HttpMethod.Get && path.StartsWith("api/mail/sent/", StringComparison.Ordinal)
+			&& long.TryParse(path["api/mail/sent/".Length..], out var sentId)
+			&& _sentMail.FirstOrDefault(m => m.Id == sentId) is { } sentRow)
+			return (Json(new MailService.SentMailMessage(sentRow.Id, sentRow.To, sentRow.Subject, SentBody, sentRow.DateSent,
+				sentRow.Urgent, sentRow.ReadBy)), false);
 
 		var parts = path.Split('/');
 		if (parts is ["api", "mail", var folderName, var numberText] && int.TryParse(numberText, out var number))
@@ -124,12 +156,15 @@ public sealed class MailApiFake : HttpMessageHandler
 		factory.CreateClient("api").Returns(client);
 		var terminal = Substitute.For<ITerminalService>();
 		terminal.IsConnected.Returns(connected);
+		terminal.OobChannels.Returns(fake.Oob);
+		var mail = new MailService(factory, fake.Auth);
 		ctx.Services
 			.AddMudServices()
 			.AddSingleton(factory)
 			.AddSingleton(terminal)
 			.AddSingleton(fake.Auth)
-			.AddSingleton(new MailService(factory, fake.Auth))
+			.AddSingleton(mail)
+			.AddSingleton(new MailWatch(mail, terminal, fake.Auth))
 			.AddSingleton<SidebarCollapseService>()
 			.AddEchoLocalizer();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;

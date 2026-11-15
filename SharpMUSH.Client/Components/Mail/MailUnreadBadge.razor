@@ -1,0 +1,23 @@
+@using SharpMUSH.Client.Services
+@inject MailWatch Watch
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+@* The inbox's unread count on the Mail destination of the rail, the drawer and the tab bar: a small
+   accent pill, and the same count in words for a screen reader. Nothing while nothing is unread. *@
+@if (Watch.InboxUnread is > 0 and var unread)
+{
+    <span class="mail-unread-badge @Class" aria-hidden="true">@(unread > 99 ? "99+" : unread.ToString(System.Globalization.CultureInfo.CurrentCulture))</span>
+    <span class="visually-hidden">@Loc.Plural("NavUnreadCount", "count", unread)</span>
+}
+
+@code {
+    /// <summary>Where it sits: <c>mail-unread-badge--rail</c>, <c>--nav</c> or <c>--tab</c>.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    protected override void OnInitialized() => Watch.Changed += OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Watch.Changed -= OnChanged;
+}

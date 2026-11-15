@@ -1,14 +1,15 @@
 @using Microsoft.AspNetCore.Components.Routing
 @using SharpMUSH.Client.Services
 @inject MailService MailApi
+@inject MailWatch Watch
 @inject ITerminalService Terminal
 @inject IAccountAuthState AccountAuth
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
 @implements IDisposable
 
-@* D1 §6.5 Mail page sidebar: "Mail" and the inbox's unread count, Compose, then one row per
-   folder (the inbox with its unread pill), the folder on screen marked. Mail belongs to the active
+@* D1 §6.5 Mail page sidebar: "Mail" and the inbox's unread count, then one row per folder (the inbox
+   with its unread pill) and Sent, the mail the character sent, the list on screen marked. Mail belongs to the active
    character, so without one there is no mailbox to list and the sidebar says so. Collapsed keeps
    each row's icon. *@
 <SidebarPanel Class="mail-side" Collapsed="@Collapsed">
@@ -16,7 +17,7 @@
     {
         <SidebarHead Title="@Loc["Mail"]">
             <Sub>
-                @if (_connected && _inboxUnread is int unread)
+                @if (_connected && Watch.InboxUnread is int unread)
                 {
                     <span>@Loc.Plural("NavUnreadCount", "count", unread)</span>
                 }
@@ -41,8 +42,10 @@
             {
                 <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@FolderIcon(folder)" Label="@FolderName(Loc, folder)"
                             Href="@FolderHref(folder)" IsCurrent="@IsCurrent(folder)"
-                            Unread="@(folder == Inbox ? _inboxUnread ?? 0 : 0)" Collapsed="@Collapsed" />
+                            Unread="@(folder == Inbox ? Watch.InboxUnread ?? 0 : 0)" Collapsed="@Collapsed" />
             }
+            <SidebarRow Class="mail-side-sent" Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Send" Label="@Loc["NavMailFolderSent"]"
+                        Href="@SentHref" IsCurrent="@(_path == SentHref)" Collapsed="@Collapsed" />
         </SidebarGroup>
     }
 </SidebarPanel>
@@ -53,9 +56,11 @@
 
     public const string Inbox = "INBOX";
 
+    /// <summary>The list of mail the character sent: not a folder, since what they sent is in other mailboxes.</summary>
+    public const string SentHref = "/mail/sent";
+
     private bool _connected;
     private IReadOnlyList<string> _folders = [Inbox];
-    private int? _inboxUnread;
     private string _path = "/mail";
     private string? _folderQuery;
 
@@ -67,6 +72,7 @@
         Nav.LocationChanged += OnLocationChanged;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
         MailApi.Changed += OnMailChanged;
+        Watch.Changed += OnUnreadChanged;
         AccountAuth.ActiveCharacterChanged += OnActingChanged;
         Locate();
         _connected = Terminal.IsConnected;
@@ -79,29 +85,25 @@
     private async Task RefreshAsync()
     {
         var ticket = ++_ticket;
-        var folders = MailApi.FoldersAsync();
-        var inbox = MailApi.ListAsync(Inbox);
-        var names = await folders is IReadOnlyList<string> list && list.Count > 0 ? list : [Inbox];
-        int? unread = await inbox is IReadOnlyList<MailService.MailSummary> rows ? rows.Count(r => !r.Read) : null;
+        var names = await MailApi.FoldersAsync() is IReadOnlyList<string> list && list.Count > 0 ? list : [Inbox];
         if (ticket != _ticket) return;
-        (_folders, _inboxUnread) = (names, unread);
+        _folders = names;
     }
 
     private bool IsCurrent(string folder)
     {
-        if (_path == "/mail/compose") return false;
+        if (_path is "/mail/compose" or SentHref) return false;
         if (_path != "/mail" && !_path.StartsWith("/mail/", StringComparison.Ordinal)) return false;
         return string.Equals(_folderQuery ?? Inbox, folder, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
-    /// A folder's name as the reader sees it: the inbox, sent and trash folders in the reader's language, any other
-    /// as its owner named it.
+    /// A folder's name as the reader sees it: the inbox and trash folders in the reader's language, any other as its
+    /// owner named it. A folder named SENT keeps its name: Sent is the list of mail the character sent.
     /// </summary>
     public static string FolderName(IStringLocalizer<SharedResource> loc, string folder) => folder.ToUpperInvariant() switch
     {
         "INBOX" => loc["NavMailFolderInbox"],
-        "SENT" => loc["NavMailFolderSent"],
         "TRASH" => loc["NavMailFolderTrash"],
         _ => folder,
     };
@@ -109,7 +111,6 @@
     private static string FolderIcon(string folder) => folder.ToUpperInvariant() switch
     {
         "INBOX" => Icons.Material.Outlined.Inbox,
-        "SENT" => Icons.Material.Outlined.Send,
         "TRASH" => Icons.Material.Outlined.Delete,
         _ => Icons.Material.Outlined.Folder,
     };
@@ -156,31 +157,22 @@
         StateHasChanged();
     });
 
+    /// <summary>A read or a send changes no folder; a delete may empty one. The unread count is the watch's.</summary>
     private void OnMailChanged(MailService.MailChange change) => InvokeAsync(async () =>
     {
-        if (!_connected) return;
-        switch (change)
-        {
-            // One inbox message read: the pill loses one where it stands, with no request.
-            case { MarkedRead: true } when string.Equals(change.Folder, Inbox, StringComparison.OrdinalIgnoreCase):
-                if (_inboxUnread is > 0) _inboxUnread--;
-                break;
-            // A message read in another folder changes nothing the sidebar counts.
-            case { MarkedRead: true }:
-                return;
-            default:
-                await RefreshAsync();
-                break;
-        }
-
+        if (!_connected || change.MarkedRead || change.Folder == MailService.SentList) return;
+        await RefreshAsync();
         StateHasChanged();
     });
+
+    private void OnUnreadChanged() => InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {
         Nav.LocationChanged -= OnLocationChanged;
         Terminal.ConnectionStateChanged -= OnConnectionChanged;
         MailApi.Changed -= OnMailChanged;
+        Watch.Changed -= OnUnreadChanged;
         AccountAuth.ActiveCharacterChanged -= OnActingChanged;
     }
 }
