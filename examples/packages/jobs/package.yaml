@@ -1406,6 +1406,11 @@ objects:
       INC`API`REPLY: |-
         think setqm(job_object,u({{jobs}}/FUN`JOB`FIND,%<job>),
         actor,objid(%<actor>)); @assert cand(strlen(%q<job_object>),strlen(%q<actor>),strlen(%<text>)); @include/args {{jobs}}/INC`DO`REPLY=kind,reply,text,%<text>,format,firstof(%<format>,markdown),mailforce,0,quiet,t(%<quiet>),keep,t(%<keep>)
+      # @trigger/inline/nobreak/args Jobs/INC`API`STAFF=job,<#>,actor,<actor>: hands a job back to staff, opening
+      # it again when it is closed, whoever <actor> is. A new job stays new.
+      INC`API`STAFF: |-
+        think setqm(job_object,u({{jobs}}/FUN`JOB`FIND,%<job>),
+        actor,objid(%<actor>)); @assert cand(strlen(%q<job_object>),strlen(%q<actor>)); @include/nobreak/args {{jobs}}/INC`DO`REOPEN=byfiler,strmatch(%q<actor>,get(%q<job_object>/JOB`FILED`BY)); @include/nobreak/args {{jobs}}/INC`DO`TURN=to,if(strmatch(get(%q<job_object>/JOB`STATE),new),,staff)
       # @trigger/inline/nobreak/args Jobs/INC`API`NOTE=job,<#>,actor,<actor>,text,<text>[,format,softcode]: a
       # staff note.
       INC`API`NOTE: |-
@@ -2735,6 +2740,7 @@ objects:
         Text with commas in it arrives whole. Add `format,softcode` to show the text as typed. A refusal stops only the API, never the code that called it.
 
         - `` INC`API`REPLY `` and `` INC`API`NOTE `` take `job`, `actor` and `text` \(and `format`\): a public reply, or a staff note. A reply also takes `quiet,1`, which tells only staff, for code that already told the filer, and `keep,1`, which leaves whose turn it is when the actor works the bucket.
+        - `` INC`API`STAFF `` takes `job` and `actor`, and hands the job back to staff, opening it again when it is closed. A reply from someone who works the bucket would leave it waiting on the filer instead.
         - `` INC`API`CLOSE `` takes `job`, `actor`, `outcome` \(approved, denied, completed or canceled\) and, when there is one, the closing `text`. `quiet,1` tells only staff.
 
         ## The portal

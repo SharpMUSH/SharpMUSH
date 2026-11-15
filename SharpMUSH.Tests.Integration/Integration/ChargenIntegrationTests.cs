@@ -687,6 +687,8 @@ public class ChargenIntegrationTests
 			await Assert.That(await LastEntry(jobs, job)).IsEqualTo($"{reviewer.Name} retired {applicant.Name}.");
 			await Assert.That(await God($"think [job({job},state)]")).IsEqualTo("closed");
 
+			// An applicant who also works the Applications bucket still hands the job to staff.
+			await God($"@role/assign #{applicant.DbRef.Number}=job-admin-applications");
 			await Assert.That(await As(applicant, "+app/submit")).Contains("Submitted.");
 			await Assert.That(await God($"think [words(jobs(Applications,all))] [job({job},state)]")).IsEqualTo("1 staff")
 				.Because("applying again opens the same job again");

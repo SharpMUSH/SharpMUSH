@@ -60,10 +60,11 @@ objects:
       FUN`TEXT`SAID: |-
         if(strlen(%1),%b[name(%0)] said: %1)
 
-      # %<character> submitted round %<round>: writes on the job following the application, else files one.
+      # %<character> submitted round %<round>: writes on the job following the application and hands it to staff
+      # (opening it again when closed, even when the applicant works the bucket too), else files one.
       INC`SUBMIT: |-
         think setqm(cj_key,u({{chargen/chargen}}/FUN`APP`KEY,%<character>),
-        cj_job,u({{tracker}}/FUN`JOB,%<character>)); @break strlen(%q<cj_job>)={@trigger/inline/nobreak/args {{jobs/jobs}}/INC`API`REPLY=job,get(%q<cj_job>/JOB`NUM),actor,%<character>,text,u({{tracker}}/FUN`TEXT`AGAIN,%<character>,%<round>)}; @trigger/inline/nobreak/args {{jobs/jobs}}/INC`API`FILE=player,%<character>,bucket,name({{jobs/applications}}),title,Application: [name(%<character>)],text,u({{tracker}}/FUN`TEXT`FILED,%<character>); @break not(strlen(%q<job>)); &JOB`%q<cj_key> {{tracker}}=%q<job>
+        cj_job,u({{tracker}}/FUN`JOB,%<character>)); @break strlen(%q<cj_job>)={@trigger/inline/nobreak/args {{jobs/jobs}}/INC`API`REPLY=job,get(%q<cj_job>/JOB`NUM),actor,%<character>,text,u({{tracker}}/FUN`TEXT`AGAIN,%<character>,%<round>); @trigger/inline/nobreak/args {{jobs/jobs}}/INC`API`STAFF=job,get(%q<cj_job>/JOB`NUM),actor,%<character>}; @trigger/inline/nobreak/args {{jobs/jobs}}/INC`API`FILE=player,%<character>,bucket,name({{jobs/applications}}),title,Application: [name(%<character>)],text,u({{tracker}}/FUN`TEXT`FILED,%<character>); @break not(strlen(%q<job>)); &JOB`%q<cj_key> {{tracker}}=%q<job>
       # %<character> took the application back: the job waits on them.
       INC`WITHDRAW: |-
         @include/args {{tracker}}/INC`WRITE=character,%<character>,kind,REPLY,keep,0,text,[name(%<character>)] took the application back to change it.
