@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace SharpMUSH.Server;
@@ -105,9 +107,19 @@ public static class PortalStaticFiles
 			});
 		}
 
+		// Read once: the shell is part of the image and does not change while the server runs.
+		var earlyHints = PortalEarlyHints.ForWebRoot(endpoints.ServiceProvider.GetRequiredService<IWebHostEnvironment>().WebRootPath);
 		endpoints.MapFallbackToFile("index.html", new StaticFileOptions
 		{
-			OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = IndexCacheControl,
+			OnPrepareResponse = context =>
+			{
+				var headers = context.Context.Response.Headers;
+				headers.CacheControl = IndexCacheControl;
+				if (earlyHints is not null)
+				{
+					headers.Link = earlyHints;
+				}
+			},
 		})
 			// Held back by PortalStartupPage until the server is first ready.
 			.WithMetadata(new PortalStartupPage.PortalShellEndpoint());

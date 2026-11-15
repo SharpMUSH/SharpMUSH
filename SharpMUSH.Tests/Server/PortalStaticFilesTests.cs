@@ -27,7 +27,7 @@ public class PortalStaticFilesTests
 	private const string FingerprintedRoute = "_framework/dotnet.native.abc123.wasm";
 	private const string UnlistedRoute = "images/sharpie/sharpie-minimal.webp";
 
-	private static readonly byte[] IndexHtml = "<!DOCTYPE html><html><body>portal</body></html>"u8.ToArray();
+	private static readonly byte[] IndexHtml = "<!DOCTYPE html><html><head><link href=\"css/app.css\" rel=\"stylesheet\" /></head><body>portal</body></html>"u8.ToArray();
 	private static readonly byte[] Wasm = [0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00];
 	private static readonly byte[] WasmBrotli = [0x0b, 0x03, 0x80, 0x00, 0x61, 0x73, 0x6d, 0x01, 0x03];
 	private static readonly byte[] Webp = "RIFF\0\0\0\0WEBP"u8.ToArray();
@@ -196,7 +196,7 @@ public class PortalStaticFilesTests
 	[Test]
 	[Arguments(true)]
 	[Arguments(false)]
-	public async Task TheSpaFallback_ServesIndexHtml_AsNoCache(bool withManifest)
+	public async Task TheSpaFallback_ServesIndexHtml_AsNoCache_WithItsEarlyHints(bool withManifest)
 	{
 		var (app, client, root) = await StartAsync(withManifest);
 		try
@@ -205,6 +205,7 @@ public class PortalStaticFilesTests
 
 			await Assert.That(response.IsSuccessStatusCode).IsTrue();
 			await Assert.That(CacheControl(response)).IsEqualTo(PortalStaticFiles.IndexCacheControl);
+			await Assert.That(response.Headers.GetValues("Link")).IsEquivalentTo(["</css/app.css>; rel=preload; as=style"]);
 			await Assert.That(await response.Content.ReadAsByteArrayAsync()).IsEquivalentTo(IndexHtml);
 		}
 		finally
