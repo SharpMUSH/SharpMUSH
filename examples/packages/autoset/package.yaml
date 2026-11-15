@@ -425,6 +425,14 @@ objects:
         - `GUESTS`: `1` to run the rule for guests too.
         - `TRIGGER`: an attribute to `@trigger` after the roles, as `#<dbref>/<attribute>`.
 
+        The `TRIGGER` attribute runs each time the rule runs, after its roles, even when no role changed, and not when the loop guard stopped the rule. It gets:
+
+        - `%0` or `%<player>`: the character's objid.
+        - `%1` or `%<rule>`: the rule's name, in lower case.
+        - `%2` or `%<when>`: what ran the rule: `create`, `connect`, `first-connect`, `link`, `gain`, `lose`, or `apply` for `+autoset/apply`.
+        - `%<gave>`: the roles given, separated by spaces; empty when none.
+        - `%<took>`: the roles taken, separated by spaces; empty when none.
+
         A rule's name starts with a letter and holds letters, digits, `-` and `_`. Rules run in name order. A game starts with none. Written by hand like this, a rule is not checked: a role that does not exist, or that Autoset may not give, is skipped when the rule runs.
 
         Example, giving every approved character the citizen role and taking newcomer away:
