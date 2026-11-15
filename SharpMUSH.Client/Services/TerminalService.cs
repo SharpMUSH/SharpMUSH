@@ -67,6 +67,9 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	/// <inheritdoc/>
 	public TerminalIdentity? Identity { get; private set; }
 
+	/// <inheritdoc/>
+	public bool IsGuest { get; private set; }
+
 	public IReadOnlyList<TerminalLine> Lines
 	{
 		// A copy taken under the lock: a view of the live list would be enumerated outside it while the
@@ -85,10 +88,11 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	/// <param name="relogin">Logs a reconnect the server could not resume back in (<see cref="IWebSocketClientService.Relogin"/>).</param>
 	/// <param name="signIn">The connection is logged in as soon as it opens, so the server draws no connect screen.</param>
 	private async Task ConnectAsync(string serverUri, TerminalIdentity? identity,
-		Func<Func<string, Task>, CancellationToken, Task<bool>>? relogin, bool signIn)
+		Func<Func<string, Task>, CancellationToken, Task<bool>>? relogin, bool signIn, bool guest = false)
 	{
 		_serverUri = serverUri;
 		Identity = identity;
+		IsGuest = guest;
 		// New connection/login: drop any OOB payloads from a previous session so the UI never
 		// renders stale cross-session data until fresh OOB arrives.
 		_oob.Clear();
@@ -191,7 +195,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		wsService.ClearSendBuffer();
 		// No pause: the server holds early input until the connection registers (ConnectWithOttAsync).
 		// A guest has no resume point, so a reconnect is a new guest.
-		await ConnectAsync(serverUri, identity: null, relogin: async (send, _) => { await send("connect guest"); return true; }, signIn: true);
+		await ConnectAsync(serverUri, identity: null, relogin: async (send, _) => { await send("connect guest"); return true; }, signIn: true, guest: true);
 		AddSystemLine("[Guest] Connecting…");
 		await wsService.SendAsync("connect guest");
 	}

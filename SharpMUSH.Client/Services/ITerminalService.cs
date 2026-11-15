@@ -21,6 +21,9 @@ public interface ITerminalService : IAsyncDisposable
 	/// <summary>Who this connection plays as, when it logged in as an account's character; null for a guest or a typed login.</summary>
 	TerminalIdentity? Identity => null;
 
+	/// <summary>Whether this connection last logged in with <c>connect guest</c>: a visitor with no account playing a guest character.</summary>
+	bool IsGuest => false;
+
 	/// <summary>Read-only snapshot of the in-memory line buffer (up to 2000 lines).</summary>
 	IReadOnlyList<TerminalLine> Lines { get; }
 

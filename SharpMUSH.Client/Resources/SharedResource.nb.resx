@@ -5144,6 +5144,15 @@
     <value>Skjul denne meldingen</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayGuestLabel" xml:space="preserve">
+    <value>Du spiller som gjest</value>
+  </data>
+  <data name="NavPlayGuestDetail" xml:space="preserve">
+    <value>Opprett en konto for å få din egen karakter.</value>
+  </data>
+  <data name="NavPlayGuestCreateAccount" xml:space="preserve">
+    <value>Opprett en konto</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Bli med i scenen</value>
     <comment>MT</comment>
@@ -9563,5 +9572,26 @@
   </data>
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Temaets bakgrunn står stille, og ingenting på siden glir eller roterer. Alltid på når enheten din ber om redusert bevegelse.</value>
+  </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Avlys scenen</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>En avlyst scene forlater timeplanen for godt og kan ikke startes igjen.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Avslutt scenen</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>En avsluttet scene slutter å ta opp og kan ikke startes igjen. Loggen blir værende.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Behold den</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>Scenen ble ikke avsluttet.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>Scenen ble ikke avlyst.</value>
   </data>
 </root>

@@ -5144,6 +5144,15 @@
     <value>Скрий това известие</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayGuestLabel" xml:space="preserve">
+    <value>Играете като гост</value>
+  </data>
+  <data name="NavPlayGuestDetail" xml:space="preserve">
+    <value>Създайте акаунт, за да имате свой собствен персонаж.</value>
+  </data>
+  <data name="NavPlayGuestCreateAccount" xml:space="preserve">
+    <value>Създаване на акаунт</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Присъединяване</value>
     <comment>MT</comment>
@@ -9563,5 +9572,26 @@
   </data>
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Фонът на темата стои неподвижен и нищо на страницата не се плъзга и не се върти. Винаги е включено, когато устройството ви изисква намалено движение.</value>
+  </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Отмяна на сцената</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>Отменената сцена напуска графика завинаги и не може да започне отново.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Приключване на сцената</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>Приключената сцена спира записа и не може да започне отново. Дневникът ѝ остава.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Запази я</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>Сцената не беше приключена.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>Сцената не беше отменена.</value>
   </data>
 </root>

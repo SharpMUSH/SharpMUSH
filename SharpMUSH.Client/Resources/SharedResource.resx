@@ -4712,6 +4712,15 @@
   <data name="NavPlaySceneHereHide" xml:space="preserve">
     <value>Hide this notice</value>
   </data>
+  <data name="NavPlayGuestLabel" xml:space="preserve">
+    <value>Playing as a guest</value>
+  </data>
+  <data name="NavPlayGuestDetail" xml:space="preserve">
+    <value>Make an account to keep a character of your own.</value>
+  </data>
+  <data name="NavPlayGuestCreateAccount" xml:space="preserve">
+    <value>Create an account</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Join scene</value>
   </data>
@@ -13726,5 +13735,26 @@
   </data>
   <data name="AdmUpdJobPulling" xml:space="preserve">
     <value>Downloading the new images; nothing has been replaced yet.</value>
+  </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Cancel scene</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>A cancelled scene leaves the schedule for good and can't be started again.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Finish scene</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>A finished scene stops recording and can't be started again. Its log stays.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Keep it</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>The scene was not finished.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>The scene was not cancelled.</value>
   </data>
 </root>

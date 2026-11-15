@@ -248,8 +248,10 @@ public class ScenePoseTypeIntegrationTests
 			var witnessBefore = Notifications.CountFor(witness.DbRef);
 			var heard = await As(poser, $"+scene/narrate {scene}={line}");
 
-			// NotifyService sends an empty message to no one; the recorder still sees the call.
-			await Assert.That(Notifications.For(witness.DbRef).Skip(witnessBefore).Where(message => message.Length > 0)).IsEmpty()
+			// NotifyService sends an empty message to no one; the recorder still sees the call. The scene's start is
+			// announced to the room as it is made, and may land after witnessBefore was read.
+			await Assert.That(Notifications.For(witness.DbRef).Skip(witnessBefore)
+					.Where(message => message.Length > 0 && !message.Contains("started scene", StringComparison.Ordinal))).IsEmpty()
 				.Because("the witness's FORMAT draws nothing, so neither the line nor its rule reaches them");
 			await Assert.That(heard).Contains($"< Scene {scene} >").And.Contains($"{line} in {scene}");
 		}

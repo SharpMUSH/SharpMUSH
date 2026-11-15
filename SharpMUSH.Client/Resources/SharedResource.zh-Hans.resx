@@ -5144,6 +5144,15 @@
     <value>隐藏此提示</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayGuestLabel" xml:space="preserve">
+    <value>正在以访客身份游玩</value>
+  </data>
+  <data name="NavPlayGuestDetail" xml:space="preserve">
+    <value>创建账户，拥有属于自己的角色。</value>
+  </data>
+  <data name="NavPlayGuestCreateAccount" xml:space="preserve">
+    <value>创建账户</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>加入场景</value>
     <comment>MT</comment>
@@ -9563,5 +9572,26 @@
   </data>
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>主题背景保持静止，页面上不会有滑动或旋转。设备要求减少动态效果时始终开启。</value>
+  </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>取消场景</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>已取消的场景将永久移出日程，无法再次开始。</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>结束场景</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>已结束的场景停止记录，无法再次开始。其记录会保留。</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>保留</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>场景未结束。</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>场景未取消。</value>
   </data>
 </root>
