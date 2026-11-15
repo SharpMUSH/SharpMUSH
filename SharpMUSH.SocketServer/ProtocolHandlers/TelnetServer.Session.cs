@@ -81,18 +81,18 @@ public partial class TelnetServer
 				})
 				// Each chunk is a sampling point: whatever it settled has been handled, callbacks included.
 				.OnInputProcessed(_ => AnnounceTelnetIfNegotiatedAsync())
-				.WrapOutput(CountWrites);
+				.WrapOutput(CountWrites)
+				// Before the read loop starts, not after StartAsync returns: the loop can deliver a line (a Pueblo
+				// handshake buffered with the client's first packet) before an assignment after the await had run,
+				// and every callback that reaches for the interpreter would find null.
+				.OnStarting(connection =>
+				{
+					_telnet = connection.Interpreter;
+					endpoint.Connection = connection;
+					return ValueTask.CompletedTask;
+				});
 
-			var transport = new HeldReadTransport(endpoint.Transport);
-			var connection = await builder.StartAsync(transport, ct);
-
-			// Before the read loop starts, not after: the loop can deliver a line — a Pueblo handshake buffered
-			// with the client's first packet — before an assignment below it would have run, and every callback
-			// that reaches for the interpreter would find null. The transport holds its reads until then.
-			_telnet = connection.Interpreter;
-			endpoint.Connection = connection;
-			transport.Open();
-			return connection;
+			return await builder.StartAsync(endpoint.Transport, ct);
 		}
 
 		/// <summary>
@@ -593,29 +593,6 @@ public partial class TelnetServer
 				server._logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", endpoint.Id);
 			}
 		}
-	}
-
-	/// <summary>
-	/// A transport whose reads wait for <see cref="Open"/>. TelnetNegotiationCore starts reading as soon as it has
-	/// built the interpreter; the session opens this once it holds the interpreter, so no input reaches a callback
-	/// before it can answer.
-	/// </summary>
-	private sealed class HeldReadTransport(ITelnetTransport inner) : ITelnetTransport
-	{
-		private readonly TaskCompletionSource _open = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-		public void Open() => _open.TrySetResult();
-
-		public async Task ReadAsync(Func<ReadOnlyMemory<byte>, ValueTask> onData, CancellationToken cancellationToken)
-		{
-			await _open.Task.WaitAsync(cancellationToken);
-			await inner.ReadAsync(onData, cancellationToken);
-		}
-
-		public ValueTask WriteAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken) =>
-			inner.WriteAsync(data, cancellationToken);
-
-		public ValueTask CloseAsync(CancellationToken cancellationToken) => inner.CloseAsync(cancellationToken);
 	}
 
 	/// <summary>
