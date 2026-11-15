@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -26,15 +27,18 @@ public class PortalPermissionNoticeTests
 		IRoleManagementService Service,
 		IHubClients<IGameHubClient> Clients,
 		IGameHubClient Account,
+		IGameHubClient OtherAccounts,
 		IGameHubClient Everyone);
 
 	/// <summary><c>owner</c> plays #1; <c>pl</c> plays #4.</summary>
 	private static World Build()
 	{
 		var account = Substitute.For<IGameHubClient>();
+		var otherAccounts = Substitute.For<IGameHubClient>();
 		var everyone = Substitute.For<IGameHubClient>();
 		var clients = Substitute.For<IHubClients<IGameHubClient>>();
-		clients.User(Arg.Any<string>()).Returns(account);
+		clients.User(Arg.Any<string>()).Returns(otherAccounts);
+		clients.User("pl").Returns(account);
 		clients.All.Returns(everyone);
 		var hub = Substitute.For<IHubContext<GameHub, IGameHubClient>>();
 		hub.Clients.Returns(clients);
@@ -59,7 +63,7 @@ public class PortalPermissionNoticeTests
 			new FusionCache(new Microsoft.Extensions.Options.OptionsWrapper<FusionCacheOptions>(new FusionCacheOptions())),
 			new ObjectVersions(), new Lazy<IEnumerable<IAccountChangeListener>>(() => [notices]));
 		var inner = new RoleManagementService(registry, accounts, capabilities, resolver, invalidator, Substitute.For<IMediator>());
-		return new World(new PermissionNoticeRoleManagementService(inner, notices), clients, account, everyone);
+		return new World(new PermissionNoticeRoleManagementService(inner, notices), clients, account, otherAccounts, everyone);
 	}
 
 	private static RoleActor Owner => new CapabilityActor("owner");
@@ -78,6 +82,7 @@ public class PortalPermissionNoticeTests
 
 		world.Clients.Received().User("pl");
 		await world.Account.Received().ReceivePermissionsChanged();
+		await world.OtherAccounts.DidNotReceive().ReceivePermissionsChanged();
 		await world.Everyone.DidNotReceive().ReceivePermissionsChanged();
 	}
 
@@ -126,5 +131,23 @@ public class PortalPermissionNoticeTests
 		await Assert.That(outcome is RoleRefusal).IsTrue();
 		world.Clients.DidNotReceive().User(Arg.Any<string>());
 		await world.Everyone.DidNotReceive().ReceivePermissionsChanged();
+	}
+}
+
+/// <summary>The host wires the notices in: role and package changes go through the notice decorators, and the
+/// claims invalidator tells <see cref="PortalPermissionNotices"/> about every account it drops.</summary>
+public class PortalPermissionNoticeWiringTests
+{
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
+
+	[Test]
+	public async Task TheHostSendsPermissionNotices()
+	{
+		var services = WebAppFactoryArg.Services;
+
+		await Assert.That(services.GetRequiredService<IRoleManagementService>()).IsTypeOf<PermissionNoticeRoleManagementService>();
+		await Assert.That(services.GetRequiredService<IPackageInstallService>()).IsTypeOf<PermissionNoticePackageInstallService>();
+		await Assert.That(services.GetServices<IAccountChangeListener>().OfType<PortalPermissionNotices>().Count()).IsEqualTo(1);
 	}
 }

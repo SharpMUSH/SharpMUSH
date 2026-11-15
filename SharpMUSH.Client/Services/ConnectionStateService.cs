@@ -47,6 +47,9 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	private bool _visible;
 	// Whether the tab has said yet; until it does, it counts as in view.
 	private bool _visibilityKnown;
+	// A connection has started before. A later start replaces one that closed or was torn down, and a
+	// permissions notice sent in between never arrived.
+	private bool _startedBefore;
 
 	/// <summary>How long to wait before each new attempt after a start failed or the hub closed; the last delay
 	/// repeats. Settable for tests.</summary>
@@ -171,6 +174,8 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 			await _hub.StartAsync();
 			SetState(SignalRState.Connected);
 			await SendVisibilityAsync();
+			if (_startedBefore) OnPermissionsChanged?.Invoke();
+			_startedBefore = true;
 
 			// Phase 9: open the separate scene realtime connection (/hubs/scene). Best-effort — a scene-hub
 			// failure must not break the primary game connection; scene pages simply receive no live events.

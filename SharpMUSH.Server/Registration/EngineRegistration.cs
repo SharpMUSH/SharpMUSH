@@ -244,7 +244,10 @@ internal static class EngineRegistration
 		services.AddPackageWriteTransactions<SharpMUSH.Database.Lightning.LightningDatabase>();
 		services.AddSingleton<IPackageWikiService, PackageWikiService>();
 		services.AddSingleton(EngineVersion.Parse(Implementation.Generated.VersionInfo.SharpMUSHVersion));
-		services.AddSingleton<IPackageInstallService, PackageInstallService>();
+		// Wrapped so every portal tab reads its permissions again after a package changes roles or grants.
+		services.AddSingleton<PackageInstallService>();
+		services.AddSingleton<IPackageInstallService>(sp => new PermissionNoticePackageInstallService(
+			sp.GetRequiredService<PackageInstallService>(), sp.GetRequiredService<PortalPermissionNotices>()));
 		// Portal package operations run as queue entries, after a pre-operation backup (#1332, #1333).
 		services.AddSingleton<IPackageOperationRunner, PackageOperationRunner>();
 		services.AddSingleton<IPackageAuthoringService, PackageAuthoringService>();

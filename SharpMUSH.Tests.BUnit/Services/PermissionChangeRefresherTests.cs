@@ -30,7 +30,7 @@ public class PermissionChangeRefresherTests
 	{
 		var (factory, connection) = await ConnectedAsync();
 		var reloads = 0;
-		using var refresher = new PermissionChangeRefresher(connection, () =>
+		using var refresher = new PermissionChangeRefresher(connection, new FakeAccountAuthState(), () =>
 		{
 			reloads++;
 			return Task.CompletedTask;
@@ -43,11 +43,29 @@ public class PermissionChangeRefresherTests
 	}
 
 	[Test]
+	public async Task ASignedInTabOpensTheHubSoNoticesReachIt()
+	{
+		var factory = new SingleHubFactory();
+		var connection = new ConnectionStateService(factory, NullLogger<ConnectionStateService>.Instance);
+		var auth = new FakeAccountAuthState();
+		using var refresher = new PermissionChangeRefresher(connection, auth, () => Task.CompletedTask,
+			NullLogger<PermissionChangeRefresher>.Instance);
+		await Assert.That(factory.Hub.StartCount).IsEqualTo(0).Because("a tab with no session has nothing to hear");
+
+		auth.AccountSessionToken = "session";
+		auth.Fire();
+
+		await Assert.That(factory.Hub.StartCount).IsEqualTo(1);
+		auth.Fire();
+		await Assert.That(factory.Hub.StartCount).IsEqualTo(1).Because("an open hub is kept, not reopened");
+	}
+
+	[Test]
 	public async Task AReconnectReloadsTheTabsAuthority()
 	{
 		var (factory, connection) = await ConnectedAsync();
 		var reloads = 0;
-		using var refresher = new PermissionChangeRefresher(connection, () =>
+		using var refresher = new PermissionChangeRefresher(connection, new FakeAccountAuthState(), () =>
 		{
 			reloads++;
 			return Task.CompletedTask;
@@ -60,12 +78,30 @@ public class PermissionChangeRefresherTests
 	}
 
 	[Test]
+	public async Task AReplacementConnectionReloadsTheTabsAuthority()
+	{
+		var (_, connection) = await ConnectedAsync();
+		var reloads = 0;
+		using var refresher = new PermissionChangeRefresher(connection, new FakeAccountAuthState(), () =>
+		{
+			reloads++;
+			return Task.CompletedTask;
+		}, NullLogger<PermissionChangeRefresher>.Instance);
+		await Assert.That(reloads).IsEqualTo(0).Because("the first connection reads nothing extra");
+
+		await connection.ReconnectAsync();
+		await refresher.Idle;
+
+		await Assert.That(reloads).IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task NoticesDuringAReloadFoldIntoOneMore()
 	{
 		var (factory, connection) = await ConnectedAsync();
 		var reloads = 0;
 		var first = new TaskCompletionSource();
-		using var refresher = new PermissionChangeRefresher(connection, () =>
+		using var refresher = new PermissionChangeRefresher(connection, new FakeAccountAuthState(), () =>
 		{
 			reloads++;
 			return reloads == 1 ? first.Task : Task.CompletedTask;
@@ -87,7 +123,7 @@ public class PermissionChangeRefresherTests
 	{
 		var (factory, connection) = await ConnectedAsync();
 		var reloads = 0;
-		using var refresher = new PermissionChangeRefresher(connection, () =>
+		using var refresher = new PermissionChangeRefresher(connection, new FakeAccountAuthState(), () =>
 		{
 			reloads++;
 			return reloads == 1 ? Task.FromException(new HttpRequestException("offline")) : Task.CompletedTask;
@@ -106,7 +142,7 @@ public class PermissionChangeRefresherTests
 	{
 		var (factory, connection) = await ConnectedAsync();
 		var reloads = 0;
-		var refresher = new PermissionChangeRefresher(connection, () =>
+		var refresher = new PermissionChangeRefresher(connection, new FakeAccountAuthState(), () =>
 		{
 			reloads++;
 			return Task.CompletedTask;
