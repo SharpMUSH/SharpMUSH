@@ -570,10 +570,9 @@ public partial class Functions
 			.Select(x => x.Value.Message)
 			.ToArray();
 
-		// Columns are laid out by their own spacing, which is what Preformatted says: a Pueblo client
-		// reads the stream as HTML, where runs of spaces collapse and a proportional font ignores the
-		// widths, and the portal gets a <pre> rather than leaning on the page's stylesheet. A terminal
-		// is unaffected — it already lays text out this way.
+		// Columns are laid out by their own spacing, which is what Preformatted says: the portal gets a
+		// <pre> rather than leaning on the page's stylesheet. A terminal and a Pueblo client are
+		// unaffected; they already lay text out this way.
 		return MarkupText.Preformatted(TextAligner.Align(widths,
 			columnArguments,
 			filler: remainder.ElementAtOrDefault(0) ?? MarkupText.Space,

@@ -27,7 +27,8 @@ public class RecursiveMarkdownRendererTests
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		await Assert.That(result.Render(MarkupFormat.Pueblo)).Contains("<xch_mudtext>");
+		await Assert.That(result.Render(MarkupFormat.Pueblo)).Contains("<BR>")
+			.Because("a Pueblo client after xch_mode=purehtml breaks a row only at <BR>");
 		await Assert.That(result.Render(MarkupFormat.Html)).Contains("<table");
 	}
 
@@ -38,11 +39,13 @@ public class RecursiveMarkdownRendererTests
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		var pueblo = result.Render(MarkupFormat.Pueblo);
+		var html = result.Render(MarkupFormat.Html);
 
-		await Assert.That(pueblo).Contains("<xch_mudtext>");
-		await Assert.That(pueblo).Contains("  indented")
+		await Assert.That(html).Contains("<pre");
+		await Assert.That(html).Contains("  indented")
 			.Because("the indentation is the code, and inside the region it survives");
+		await Assert.That(result.Render(MarkupFormat.Pueblo)).Contains("<BR>\n")
+			.Because("a Pueblo client after xch_mode=purehtml breaks a line only at <BR>");
 	}
 
 	/// <summary>Prose around them is ordinary text, and ends its lines the way the format does.</summary>
@@ -51,7 +54,7 @@ public class RecursiveMarkdownRendererTests
 	{
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown("Hello, world!");
 
-		await Assert.That(result.Render(MarkupFormat.Pueblo)).DoesNotContain("<xch_mudtext>");
+		await Assert.That(result.Render(MarkupFormat.Html)).DoesNotContain("<pre");
 	}
 
 	[Test]

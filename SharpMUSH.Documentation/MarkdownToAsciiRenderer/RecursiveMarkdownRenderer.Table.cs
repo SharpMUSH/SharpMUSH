@@ -78,8 +78,7 @@ public partial class RecursiveMarkdownRenderer
 				))
 				.ToList();
 
-			// Laid out by its own spacing, which is what Preformatted says: a Pueblo client reads the
-			// stream as HTML, where runs of spaces collapse, and the portal gets a <pre>.
+			// Laid out by its own spacing, which is what Preformatted says: the portal gets a <pre>.
 			return MarkupText.Preformatted(MarkupText.Join(MarkupText.Plain("\n"), borderlessRows));
 		}
 

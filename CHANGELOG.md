@@ -22,6 +22,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- In MUSHclient and other Pueblo clients, tables, headers, the room description and the connect screen keep their line breaks. Preformatted text went to Pueblo as `<xch_mudtext>` with bare newlines, which MUSHclient ignores; each line now ends in `<BR>` (MarkupString 2.31.2).
 - A Pueblo client that answers the hello before its connection is registered (MUSHclient) is shown the connect screen once. It was shown it again after the handshake, as for a client that answered later.
 - An empty list's button (Who is online and Go home on Play's Here and Exits cards, Add a passkey) sits on its own line under the sentence instead of squeezing it into a narrow column.
 - Play's Here card shows each character's full name, wrapping to a second line, where it showed only the first word ("The" for "The Foo").
