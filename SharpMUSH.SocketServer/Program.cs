@@ -42,9 +42,7 @@ public class Program
 			var metricsPort = app.Services.GetRequiredService<ConnectionServerOptions>().MetricsPort;
 			app.Use((context, next) =>
 			{
-				if (metricsPort > 0 && (context.Connection.LocalPort == metricsPort
-					? context.Request.Path != "/metrics"
-					: context.Request.Path.StartsWithSegments("/metrics")))
+				if (MetricsEndpoint.Refuses(context, metricsPort))
 				{
 					context.Response.StatusCode = StatusCodes.Status404NotFound;
 					return Task.CompletedTask;
@@ -65,7 +63,10 @@ public class Program
 			app.MapGet("/health", () => Results.Ok(new HealthReply("healthy", DateTimeOffset.UtcNow)));
 			app.MapGet("/ready", () => Results.Ok(new HealthReply("ready", DateTimeOffset.UtcNow)));
 
-			app.MapPrometheusScrapingEndpoint();
+			if (metricsPort > 0)
+			{
+				app.MapPrometheusScrapingEndpoint();
+			}
 
 			var logger = app.Services.GetRequiredService<ILogger<Program>>();
 			logger.LogTrace("[NATS] Connected to NATS host {NatsHost}", new Uri(natsUrl).Host);

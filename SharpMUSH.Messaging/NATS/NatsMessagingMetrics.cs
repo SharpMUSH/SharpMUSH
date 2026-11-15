@@ -1,10 +1,11 @@
 using System.Diagnostics.Metrics;
+using NATS.Client.Core;
 
 namespace SharpMUSH.Messaging.NATS;
 
 /// <summary>
 /// Bus and broker figures on the <c>SharpMUSH</c> meter, which both hosts export to Prometheus:
-/// rejected publications, handler retries and terminal failures, and the latest stream, consumer and
+/// rejected publications, handler retries and terminal failures, messages a core subscription dropped, and the latest stream, consumer and
 /// JetStream storage readings taken by <see cref="NatsBrokerMonitor"/>.
 /// </summary>
 public sealed class NatsMessagingMetrics : IDisposable
@@ -15,6 +16,7 @@ public sealed class NatsMessagingMetrics : IDisposable
 	private readonly Counter<long> _retries;
 	private readonly Counter<long> _terminal;
 	private readonly Counter<long> _duplicates;
+	private readonly Counter<long> _dropped;
 	private volatile NatsBrokerSnapshot _snapshot = NatsBrokerSnapshot.Empty;
 
 	public NatsMessagingMetrics()
@@ -28,6 +30,8 @@ public sealed class NatsMessagingMetrics : IDisposable
 			description: "Messages terminated without success, by consumer and reason");
 		_duplicates = Meter.CreateCounter<long>("sharpmush.messaging.handler.duplicates",
 			description: "Redeliveries of a message this process had already handled, acknowledged without running again");
+		_dropped = Meter.CreateCounter<long>("sharpmush.messaging.subscription.dropped",
+			description: "Core NATS messages a subscription dropped because its pending buffer was full, by subscribed subject");
 		Meter.CreateObservableGauge("sharpmush.messaging.stream.bytes",
 			() => _snapshot.Streams.Select(stream => new Measurement<long>(stream.Bytes, Tag("stream", stream.Name))),
 			unit: "By", description: "Bytes held by a JetStream stream");
@@ -69,6 +73,19 @@ public sealed class NatsMessagingMetrics : IDisposable
 		_terminal.Add(1, Tag("consumer", durable), Tag("reason", reason));
 
 	public void RecordDuplicate(string durable) => _duplicates.Add(1, Tag("consumer", durable));
+
+	public void RecordDropped(string subscription) => _dropped.Add(1, Tag("subscription", subscription));
+
+	/// <summary>
+	/// Counts every message <paramref name="nats"/> drops because a subscription's pending buffer is full.
+	/// A core subscription drops the newest message rather than block the connection, so without this a
+	/// drop is silent. The tag is the subscribed subject (<c>game.output.*</c>), not the message's.
+	/// </summary>
+	public void WatchDrops(NatsConnection nats) => nats.MessageDropped += (_, dropped) =>
+	{
+		RecordDropped(dropped.Subscription.Subject);
+		return ValueTask.CompletedTask;
+	};
 
 	public void Record(NatsBrokerSnapshot snapshot) => _snapshot = snapshot;
 

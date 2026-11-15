@@ -1,3 +1,4 @@
+@using SharpMUSH.Client.Components.Mail
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Library.Authorization
@@ -13,6 +14,7 @@
 @inject IAuthorizationService Authorization
 @inject PortalNavigation Navigation
 @inject IJSRuntime JS
+@inject MailWatch MailWatch
 @implements IDisposable
 
 @* D1 §3 rail (desktop): 72px, the logo (the link home), the game's navigation groups (PortalNavigation:
@@ -117,6 +119,15 @@
                 <MudIcon Icon="@item.OutlineIcon" />
             </a>;
         }
+        if (string.Equals(item.Key, MailKey, StringComparison.OrdinalIgnoreCase))
+        {
+            var mailLabel = MailWatch.InboxUnread is > 0 and var unread ? $"{item.Label} · {Loc.Plural("NavUnreadCount", "count", unread)}" : item.Label;
+            return @<a href="@item.Href" class="phosphor-rail-item @(current ? "phosphor-rail-item--on" : null)"
+                       aria-current="@(current ? "page" : null)" aria-label="@mailLabel" title="@mailLabel">
+                <MudIcon Icon="@item.OutlineIcon" />
+                <MailUnreadBadge Class="mail-unread-badge--rail" />
+            </a>;
+        }
         if (!string.Equals(item.Key, PlayKey, StringComparison.OrdinalIgnoreCase))
         {
             return Item(item.Href, item.OutlineIcon, item.Label, current);
@@ -151,8 +162,14 @@
         PlayTerminal.ConnectionStateChanged += OnPlayConnectionChanged;
         PlayTerminal.LineReceived += OnPlayLine;
         Nav.LocationChanged += OnLocationChanged;
+        MailWatch.Changed += OnMailUnreadChanged;
         Locate();
     }
+
+    private static readonly string MailKey = NavKeys.Core("mail");
+
+    /// <summary>The Mail button's label says how many are unread.</summary>
+    private void OnMailUnreadChanged() => InvokeAsync(StateHasChanged);
 
     private Task<AuthenticationState>? _gatesFor;
     private bool _gatesKnown;
@@ -239,6 +256,7 @@
         PlayTerminal.ConnectionStateChanged -= OnPlayConnectionChanged;
         PlayTerminal.LineReceived -= OnPlayLine;
         Nav.LocationChanged -= OnLocationChanged;
+        MailWatch.Changed -= OnMailUnreadChanged;
         ServerInfo.Changed -= OnServerInfoChanged;
         Navigation.Changed -= OnNavigationChanged;
     }

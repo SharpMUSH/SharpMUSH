@@ -48,7 +48,7 @@
                 {
                     <Pill Tag="true" Warn="true">@Loc["Urgent"]</Pill>
                 }
-                <span class="md-date">@_message.DateSent.LocalDateTime.ToString("f")</span>
+                <span class="md-date">@DateDisplay.LongDateTime(_message.DateSent, asGiven: _message.Zoned)</span>
             </div>
             <div class="md-body">@_message.Body</div>
         </KitCard>
@@ -101,7 +101,7 @@
     }
 
     private static MailService.MailSummary Summary(MailService.MailMessage m) =>
-        new(m.Number, m.From, m.Subject, m.DateSent, m.Read, m.Urgent, m.Folder);
+        new(m.Number, m.From, m.Subject, m.DateSent, m.Read, m.Urgent, m.Folder, m.Zoned);
 
     private async Task DeleteAsync()
     {
