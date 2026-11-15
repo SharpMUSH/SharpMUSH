@@ -1,9 +1,4 @@
-"""The one-click Caddy routing for telnet over WebSocket, run through a real Caddy.
-
-Opt-in (SHARPMUSH_CADDY_TESTS=1) because it needs Docker and the caddy:2-alpine image the one-click stack runs.
-install.sh writes the guard and the telnet name's site exactly as it does on a server; the stack's Caddyfile is
-used as shipped, with only its upstreams pointed at a stub that records what reaches it.
-"""
+"""One-click Caddy routing for telnet over WebSocket. Needs Docker; opt in with SHARPMUSH_CADDY_TESTS=1."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import os
 from pathlib import Path
@@ -21,11 +16,16 @@ SOURCE = (ROOT / 'deploy/oneclick/install.sh').read_text().split('\ncase "${1:-i
 IMAGE = 'caddy:2-alpine'
 DOMAIN = 'mush.example.test'
 TELNET = 'telnet.mush.example.test'
+UPSTREAMS = ('socketserver:4202', 'sharpmush-server:8080')
+GUARD_LIFTED = '# The owner finished /setup; the guard is off.\n'
 STUBS = r'''
 systemctl() { :; }
 curl() { echo 'Unexpected network call' >&2; exit 91; }
 docker() { exit 92; }
 '''
+
+requires_caddy = unittest.skipUnless(os.environ.get('SHARPMUSH_CADDY_TESTS') == '1' and shutil.which('docker'),
+                                     'set SHARPMUSH_CADDY_TESTS=1 with Docker available')
 
 
 def free_port():
@@ -34,137 +34,153 @@ def free_port():
         return s.getsockname()[1]
 
 
+def replace_once(text, old, new):
+    if old not in text:
+        raise AssertionError(f'Expected {old!r} in the one-click config; update this test')
+    return text.replace(old, new, 1)
+
+
 class Backend(ThreadingHTTPServer):
-    """Stands in for socketserver and the main server: records each request that reaches it."""
-
     def __init__(self):
+        super().__init__(('127.0.0.1', 0), Recorder)
         self.seen = []
-        super().__init__(('127.0.0.1', 0), BackendHandler)
+        threading.Thread(target=self.serve_forever, daemon=True).start()
+
+    def close(self):
+        self.shutdown()
+        self.server_close()
 
 
-class BackendHandler(BaseHTTPRequestHandler):
+class Recorder(BaseHTTPRequestHandler):
     def do_GET(self):
         self.server.seen.append((self.path, self.headers.get('Upgrade')))
         self.send_response(200)
-        self.send_header('Content-Length', '7')
+        self.send_header('Content-Length', '0')
         self.end_headers()
-        self.wfile.write(b'backend')
 
     def log_message(self, *args):
         pass
 
 
-@unittest.skipUnless(os.environ.get('SHARPMUSH_CADDY_TESTS') == '1' and shutil.which('docker'),
-                     'set SHARPMUSH_CADDY_TESTS=1 with Docker available')
-class TelnetRoutingTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.dir = Path(tempfile.mkdtemp(prefix='sharpmush-caddy-'))
-        cls.backend = Backend()
-        threading.Thread(target=cls.backend.serve_forever, daemon=True).start()
-        cls.port = free_port()
-        cls.container = f'sharpmush-caddy-test-{uuid.uuid4().hex[:8]}'
-        cls.install_files()
-        cls.write_caddyfile()
+def write_stack(directory, port, upstream, guarded):
+    for sub in ('guard', 'sites', 'state'):
+        (directory / sub).mkdir()
+    env = dict(os.environ, SHARPMUSH_DIR=str(directory), SHARPMUSH_DOMAIN=DOMAIN, SHARPMUSH_TELNET_HOST=TELNET,
+               CLOUDFLARE_TUNNEL_TOKEN='', SHARPMUSH_GUARD='on')
+    script = 'id() { echo 0; }\n' + SOURCE + '\n' + STUBS + '\narm_guard\ntelnet_tls\n'
+    subprocess.run(['bash', '-c', script], env=env, check=True, capture_output=True, text=True, timeout=10)
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.stop_caddy()
-        cls.backend.shutdown()
-        shutil.rmtree(cls.dir, ignore_errors=True)
+    site = directory / 'sites/telnet.caddy'
+    site.write_text(replace_once(site.read_text(), f'\n{TELNET} {{\n', f'\nhttp://{TELNET}:{port} {{\n'))
+    if not guarded:
+        (directory / 'guard/guard.caddy').write_text(GUARD_LIFTED)
 
-    @classmethod
-    def install_files(cls):
-        """arm_guard and telnet_tls, as install.sh runs them in Let's Encrypt mode with a telnet name."""
-        for sub in ('guard', 'sites', 'state'):
-            (cls.dir / sub).mkdir()
-        env = dict(os.environ, SHARPMUSH_DIR=str(cls.dir), SHARPMUSH_DOMAIN=DOMAIN, SHARPMUSH_TELNET_HOST=TELNET,
-                   CLOUDFLARE_TUNNEL_TOKEN='', SHARPMUSH_GUARD='on')
-        script = 'id() { echo 0; }\n' + SOURCE + '\n' + STUBS + '\narm_guard\ntelnet_tls\n'
-        subprocess.run(['bash', '-c', script], env=env, check=True, capture_output=True, text=True, timeout=10)
-        sites = cls.dir / 'sites/telnet.caddy'
-        text = sites.read_text()
-        if f'\n{TELNET} {{\n' not in text:
-            raise AssertionError(f'install.sh did not write a site for {TELNET}:\n{text}')
-        # Plain HTTP on a test port: the routing is under test, not the certificate.
-        sites.write_text(text.replace(f'\n{TELNET} {{\n', f'\nhttp://{TELNET}:{cls.port} {{\n'))
-        cls.code = (cls.dir / 'state/setup-code').read_text().strip()
+    caddyfile = (ROOT / 'deploy/oneclick/Caddyfile').read_text()
+    for name in UPSTREAMS:
+        caddyfile = replace_once(caddyfile, name, name).replace(name, upstream)
+    caddyfile = caddyfile.replace('/etc/caddy/', f'{directory}/')
+    caddyfile = replace_once(caddyfile, '{\n\tservers {', '{\n\tauto_https off\n\tadmin off\n\tservers {')
+    (directory / 'Caddyfile').write_text(caddyfile)
 
-    @classmethod
-    def write_caddyfile(cls):
-        text = (ROOT / 'deploy/oneclick/Caddyfile').read_text()
-        upstream = f'127.0.0.1:{cls.backend.server_address[1]}'
-        for name in ('socketserver:4202', 'sharpmush-server:8080'):
-            if name not in text:
-                raise AssertionError(f'The one-click Caddyfile no longer names {name}; update this test')
-            text = text.replace(name, upstream)
-        text = text.replace('/etc/caddy/', f'{cls.dir}/')
-        text = text.replace('{\n\tservers {', '{\n\tauto_https off\n\tadmin off\n\tservers {', 1)
-        (cls.dir / 'Caddyfile').write_text(text)
 
-    @classmethod
-    def start_caddy(cls):
-        subprocess.run(['docker', 'run', '-d', '--name', cls.container, '--network', 'host',
-                        '-v', f'{cls.dir}:{cls.dir}', '-e', f'SHARPMUSH_SITE=http://{DOMAIN}:{cls.port}',
-                        IMAGE, 'caddy', 'run', '--config', f'{cls.dir}/Caddyfile', '--adapter', 'caddyfile'],
+class Caddy:
+    def __init__(self, directory, port):
+        self.directory = directory
+        self.port = port
+        self.name = f'sharpmush-caddy-test-{uuid.uuid4().hex[:8]}'
+
+    def start(self):
+        subprocess.run(['docker', 'run', '-d', '--name', self.name, '--network', 'host',
+                        '-v', f'{self.directory}:{self.directory}',
+                        '-e', f'SHARPMUSH_SITE=http://{DOMAIN}:{self.port}',
+                        IMAGE, 'caddy', 'run', '--config', f'{self.directory}/Caddyfile', '--adapter', 'caddyfile'],
                        check=True, capture_output=True, text=True, timeout=300)
         deadline = time.monotonic() + 30
         while time.monotonic() < deadline:
             try:
-                with socket.create_connection(('127.0.0.1', cls.port), timeout=1):
+                with socket.create_connection(('127.0.0.1', self.port), timeout=1):
                     return
             except OSError:
                 time.sleep(0.2)
-        logs = subprocess.run(['docker', 'logs', cls.container], capture_output=True, text=True).stderr
+        logs = subprocess.run(['docker', 'logs', self.name], capture_output=True, text=True).stderr
         raise AssertionError(f'Caddy did not start:\n{logs}')
 
+    def stop(self):
+        subprocess.run(['docker', 'rm', '-f', self.name], capture_output=True, timeout=60)
+
+
+def status_of(port, host, path, websocket=True):
+    lines = [f'GET {path} HTTP/1.1', f'Host: {host}']
+    if websocket:
+        lines += ['Connection: Upgrade', 'Upgrade: websocket', 'Sec-WebSocket-Version: 13',
+                  'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==', 'Sec-WebSocket-Protocol: telnet']
+    else:
+        lines.append('Connection: close')
+    with socket.create_connection(('127.0.0.1', port), timeout=10) as s:
+        s.sendall(('\r\n'.join(lines) + '\r\n\r\n').encode('ascii'))
+        return int(s.makefile('rb').readline().split()[1])
+
+
+class Stack:
+    guarded = True
+
     @classmethod
-    def stop_caddy(cls):
-        subprocess.run(['docker', 'rm', '-f', cls.container], capture_output=True, timeout=60)
+    def setUpClass(cls):
+        directory = Path(tempfile.mkdtemp(prefix='sharpmush-caddy-'))
+        cls.addClassCleanup(shutil.rmtree, directory, ignore_errors=True)
+        cls.backend = Backend()
+        cls.addClassCleanup(cls.backend.close)
+        cls.port = free_port()
+        write_stack(directory, cls.port, f'127.0.0.1:{cls.backend.server_address[1]}', cls.guarded)
+        caddy = Caddy(directory, cls.port)
+        cls.addClassCleanup(caddy.stop)
+        caddy.start()
 
-    def request(self, host, path, upgrade=True, cookie=None):
-        headers = [f'GET {path} HTTP/1.1', f'Host: {host}', 'Connection: close' if not upgrade else 'Connection: Upgrade']
-        if upgrade:
-            headers += ['Upgrade: websocket', 'Sec-WebSocket-Version: 13',
-                        'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==', 'Sec-WebSocket-Protocol: telnet']
-        if cookie:
-            headers.append(f'Cookie: {cookie}')
-        with socket.create_connection(('127.0.0.1', self.port), timeout=10) as s:
-            s.sendall(('\r\n'.join(headers) + '\r\n\r\n').encode('ascii'))
-            status = s.makefile('rb').readline().decode('iso-8859-1')
-        return int(status.split()[1])
+    def setUp(self):
+        self.backend.seen.clear()
 
-    def test_guard_then_open(self):
-        # Two phases in one test: Caddy reads the guard at start, as the stack's reload does.
-        self.start_caddy()
-        try:
-            for host, path in ((TELNET, '/'), (TELNET, '/telnet'), (TELNET, '/health'), (DOMAIN, '/telnet')):
-                with self.subTest(guarded=f'{host}{path}'):
-                    self.backend.seen.clear()
-                    status = self.request(host, path)
-                    self.assertNotEqual(status, 200, f'{host}{path} reached the backend while guarded')
-                    self.assertEqual(self.backend.seen, [], f'{host}{path} reached the backend while guarded')
-        finally:
-            self.stop_caddy()
+    def assert_reaches_telnet(self, host, path):
+        self.backend.seen.clear()
+        self.assertEqual(status_of(self.port, host, path), 200)
+        self.assertEqual(self.backend.seen, [('/telnet', 'websocket')])
 
-        (self.dir / 'guard/guard.caddy').write_text('# The owner finished /setup; the guard is off.\n')
-        self.start_caddy()
-        try:
-            for host, path in ((TELNET, '/'), (TELNET, '/anything'), (DOMAIN, '/telnet')):
-                with self.subTest(open=f'{host}{path}'):
-                    self.backend.seen.clear()
-                    self.assertEqual(self.request(host, path), 200)
-                    self.assertEqual(self.backend.seen, [('/telnet', 'websocket')])
-            with self.subTest(open='health is never telnet'):
-                self.backend.seen.clear()
-                self.assertEqual(self.request(TELNET, '/health'), 404)
-                self.assertEqual(self.backend.seen, [])
-            with self.subTest(open='a plain request on the telnet name'):
-                self.backend.seen.clear()
-                self.assertEqual(self.request(TELNET, '/', upgrade=False), 404)
-                self.assertEqual(self.backend.seen, [])
-        finally:
-            self.stop_caddy()
+    def assert_reaches_nothing(self, host, path, websocket=True, status=None):
+        self.backend.seen.clear()
+        actual = status_of(self.port, host, path, websocket)
+        if status is None:
+            self.assertNotEqual(actual, 200)
+        else:
+            self.assertEqual(actual, status)
+        self.assertEqual(self.backend.seen, [], f'{host}{path} reached the backend')
+
+
+@requires_caddy
+class WhileGuarded(Stack, unittest.TestCase):
+    guarded = True
+
+    def test_no_websocket_reaches_the_backend(self):
+        for host, path in ((TELNET, '/'), (TELNET, '/telnet'), (TELNET, '/health'), (DOMAIN, '/telnet')):
+            with self.subTest(url=f'{host}{path}'):
+                self.assert_reaches_nothing(host, path)
+
+
+@requires_caddy
+class AfterSetup(Stack, unittest.TestCase):
+    guarded = False
+
+    def test_a_websocket_on_any_path_of_the_telnet_name_is_telnet(self):
+        for path in ('/', '/anything'):
+            with self.subTest(path=path):
+                self.assert_reaches_telnet(TELNET, path)
+
+    def test_the_portal_name_serves_telnet_on_its_own_path(self):
+        self.assert_reaches_telnet(DOMAIN, '/telnet')
+
+    def test_health_is_never_telnet(self):
+        self.assert_reaches_nothing(TELNET, '/health', status=404)
+
+    def test_a_plain_request_on_the_telnet_name_gets_the_notice(self):
+        self.assert_reaches_nothing(TELNET, '/', websocket=False, status=404)
 
 
 if __name__ == '__main__':
