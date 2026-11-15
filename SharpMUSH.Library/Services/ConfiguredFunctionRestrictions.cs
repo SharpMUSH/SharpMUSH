@@ -11,7 +11,8 @@ namespace SharpMUSH.Library.Services;
 /// (<c>src/function.c</c>), the <c>restrict_function</c> branch of <c>config_set</c>
 /// (<c>src/conf.c</c>): the words are added to the function's own restriction bits, which
 /// <c>check_func</c> tests on every call. Here they go into the built-in restriction overlay that
-/// <c>@function/restrict</c> writes and the parser consults.
+/// <c>@function/restrict</c> writes and the parser applies onto the built-in's own restriction, so a
+/// <c>!</c> word clears one of the built-in's bits as it does in PennMUSH.
 /// </summary>
 /// <remarks>
 /// The words that say who may call a function are applied (see <see cref="PermissionWords"/>), and so are
@@ -36,12 +37,16 @@ public sealed class ConfiguredFunctionRestrictions(
 		new HashSet<string>(["nobody", "noguest", "nogagged", "nofixed", "admin", "wizard", "god"], StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>
-	/// A <see cref="PermissionWords"/> word, a permission (any dotted word, built in or custom) the caller must hold,
-	/// or a word that changes how a built-in runs. <c>noparse</c> is for @functions alone.
+	/// A <see cref="PermissionWords"/> word, a grant (a role, power, flag or permission, see
+	/// <see cref="FunctionRestrictionFlags.IsGrantWord"/>), or a word that changes how a built-in runs, each maybe
+	/// with the leading <c>!</c> that clears it. <c>noparse</c> is for @functions alone.
 	/// </summary>
 	private static bool IsAppliedWord(string term)
-		=> PermissionWords.Contains(term) || term.Contains('.')
-			|| (FunctionRestrictionFlags.IsFlagWord(term) && !term.Equals("noparse", StringComparison.OrdinalIgnoreCase));
+	{
+		var word = term.StartsWith('!') ? term[1..] : term;
+		return PermissionWords.Contains(word) || FunctionRestrictionFlags.IsGrantWord(word)
+			|| (FunctionRestrictionFlags.IsFlagWord(word) && !word.Equals("noparse", StringComparison.OrdinalIgnoreCase));
+	}
 
 	private readonly Lock _gate = new();
 	private string[] _applied = [];
@@ -70,8 +75,6 @@ public sealed class ConfiguredFunctionRestrictions(
 					continue;
 				}
 
-				// A leading ! clears one of the function's own bits in PennMUSH (apply_restrictions), and a
-				// built-in's own restrictions are not in the overlay.
 				foreach (var ignored in terms.Where(term => !IsAppliedWord(term)))
 				{
 					logger.LogWarning("CONFIG: restrict_function {Function} {Restriction}: not applied; ignored.",

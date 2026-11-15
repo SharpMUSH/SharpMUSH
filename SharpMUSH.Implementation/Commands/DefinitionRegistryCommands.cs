@@ -1001,7 +1001,9 @@ public partial class Commands : ICommandRestrictionApplier
 	/// named flags and powers OR'ed, the allowed types OR'ed, and <c>!FLAG^FIXED</c> for
 	/// <c>nofixed</c>; <c>god</c>, <c>noguest</c>, <c>nogagged</c> and <c>noapp</c> become the command behaviours
 	/// that already enforce them. A dotted word is a permission (built in or custom), checked as
-	/// <c>PERM^</c> and OR'ed with the flags and powers. NotFound when any word is not one of these, so
+	/// <c>PERM^</c> and OR'ed with the flags and powers, and so are <c>ROLE^</c>, <c>PERM^</c>, <c>FLAG^</c> and
+	/// <c>POWER^</c> keys written out (<see cref="GrantTermAsync"/>); one of those under a <c>!</c> is ANDed in as
+	/// <c>!KEY</c>. <c>everyone</c> drops every one named before it. NotFound when any word is not one of these, so
 	/// the text is a lock.
 	/// </summary>
 	private async ValueTask<Found<CommandRestriction>> RestrictionFromWords(string words, CommandBehavior behavior)
@@ -1013,6 +1015,7 @@ public partial class Commands : ICommandRestrictionApplier
 		// it. A negated type subtracts from every type, which is what `noplayer` is for.
 		var narrowed = false;
 		var flags = new List<string>();
+		var excluded = new List<string>();
 		var noFixed = false;
 		var disables = false;
 
@@ -1082,17 +1085,39 @@ public partial class Commands : ICommandRestrictionApplier
 					}
 
 					break;
+				case "EVERYONE":
+					// The grants named so far are dropped, so none is needed.
+					if (!clear)
+					{
+						flags.Clear();
+						excluded.Clear();
+					}
+
+					break;
 				default:
-					var term = await Mediator.Send(new GetObjectFlagQuery(word)) is not null ? $"FLAG^{word}"
-						: await Mediator.Send(new GetPowerQuery(word)) is not null ? $"POWER^{word}"
-						: word.Contains('.') ? $"PERM^{word.ToLowerInvariant()}"
-						: null;
+					var term = await GrantTermAsync(word);
 					if (term is null)
 					{
 						return new NotFound();
 					}
 
-					if (clear) flags.Remove(term); else if (!flags.Contains(term)) flags.Add(term);
+					// A lock key written out (ROLE^staff) or a permission keeps the lock's meaning under a !: holders
+					// are turned away. A bare flag or power name's ! takes it back off, as Penn's restriction words do.
+					if (clear && (word.Contains('^') || word.Contains('.')))
+					{
+						flags.Remove(term);
+						if (!excluded.Contains(term)) excluded.Add(term);
+					}
+					else if (clear)
+					{
+						flags.Remove(term);
+					}
+					else
+					{
+						excluded.Remove(term);
+						if (!flags.Contains(term)) flags.Add(term);
+					}
+
 					break;
 			}
 		}
@@ -1100,8 +1125,36 @@ public partial class Commands : ICommandRestrictionApplier
 		List<string> clauses = [];
 		if (flags.Count > 0) clauses.Add($"({string.Join('|', flags)})");
 		if (types.Count < allTypes.Length) clauses.Add($"({string.Join('|', allTypes.Where(types.Contains).Select(type => $"TYPE^{type}"))})");
+		clauses.AddRange(excluded.Select(term => $"!{term}"));
 		if (noFixed) clauses.Add("!FLAG^FIXED");
 		return new CommandRestriction(string.Join('&', clauses), behavior, disables);
+	}
+
+	/// <summary>
+	/// A restriction word, upper-cased, as the lock key that lets its holders run the command: <c>ROLE^&lt;role&gt;</c>,
+	/// <c>PERM^&lt;permission&gt;</c>, <c>FLAG^&lt;flag&gt;</c> and <c>POWER^&lt;power&gt;</c> as written (a flag or power
+	/// only if the game has it), and a bare word as the flag or power of that name or, with a dot in it, the
+	/// permission. Null for anything else, which leaves the restriction to be read as a lock.
+	/// </summary>
+	private async ValueTask<string?> GrantTermAsync(string word)
+	{
+		if (word.Split('^', 2) is [var kind, var name])
+		{
+			return name.Length == 0 || !name.All(c => char.IsLetterOrDigit(c) || c is '_' or '-' or '.') ? null
+				: kind switch
+				{
+					"ROLE" => $"ROLE^{name.ToLowerInvariant()}",
+					"PERM" => $"PERM^{name.ToLowerInvariant()}",
+					"FLAG" => await Mediator.Send(new GetObjectFlagQuery(name)) is not null ? $"FLAG^{name}" : null,
+					"POWER" => await Mediator.Send(new GetPowerQuery(name)) is not null ? $"POWER^{name}" : null,
+					_ => null
+				};
+		}
+
+		return await Mediator.Send(new GetObjectFlagQuery(word)) is not null ? $"FLAG^{word}"
+			: await Mediator.Send(new GetPowerQuery(word)) is not null ? $"POWER^{word}"
+			: word.Contains('.') ? $"PERM^{word.ToLowerInvariant()}"
+			: null;
 	}
 
 	[SharpCommand(Name = "@FUNCTION",
@@ -1426,6 +1479,13 @@ public partial class Commands : ICommandRestrictionApplier
 		if (await RejectUnlessGlobalFuncs(executor) is { } denied)
 		{
 			return denied;
+		}
+
+		// A built-in's restriction can loosen what the built-in itself asks for, so the Functions power, which
+		// is enough for the game's own @functions, is not enough for it.
+		if ((builtin || userFunctionService.Get(functionName) is null) && await RejectUnlessConfigAdmin(executor) is { } notAdmin)
+		{
+			return notAdmin;
 		}
 
 		if (!SetFunctionRestriction(userFunctionService, functionName, restriction, builtin))

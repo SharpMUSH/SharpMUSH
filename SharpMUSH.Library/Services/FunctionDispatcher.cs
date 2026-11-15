@@ -224,11 +224,33 @@ public static class FunctionDispatcher
 				|| (flags.HasFlag(FunctionFlags.NoFixed) && await owner.HasFlag("FIXED")))
 				return ErrorMessages.Returns.PermissionDenied;
 		}
-		if (attribute.Restrict.Length > 0
-			&& !await executor.SatisfiesFunctionRestriction(string.Join(' ', attribute.Restrict)))
-			return ErrorMessages.Returns.PermissionDenied;
+		if (attribute.Restrict.Length > 0 && !executor.IsGod())
+			return await GrantRefusalAsync(attribute.Restrict, executor);
 
 		return null;
+	}
+
+	/// <summary>
+	/// Why <paramref name="grants"/> turn <paramref name="executor"/> away, or null when they let it call the function:
+	/// it must hold none of the <c>!</c> grants and, when there are others, any one of them, which the refusal names.
+	/// </summary>
+	private static async ValueTask<string?> GrantRefusalAsync(string[] grants, AnySharpObject executor)
+	{
+		var wanted = 0;
+		var held = false;
+		foreach (var grant in grants)
+		{
+			if (grant.StartsWith('!'))
+			{
+				if (await executor.HoldsFunctionGrant(grant[1..])) return ErrorMessages.Returns.PermissionDenied;
+				continue;
+			}
+
+			wanted++;
+			held = held || await executor.HoldsFunctionGrant(grant);
+		}
+
+		return wanted == 0 || held ? null : PermissionRefusal.Needs([.. grants.Where(grant => !grant.StartsWith('!'))]).ReturnText;
 	}
 
 	private const FunctionFlags NumericFlags = FunctionFlags.IntegersOnly | FunctionFlags.PositiveIntegersOnly

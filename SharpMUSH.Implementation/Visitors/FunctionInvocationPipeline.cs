@@ -111,21 +111,20 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			// Built-in functions do NOT track recursion - only nesting depth
 			// Recursion tracking only applies to user-defined attributes (u(), ufun(), etc.)
 
-			// @function/restrict restrictions. For user-defined functions the restriction string
-			// is carried on the synthesized attribute's Restrict (see ResolveUserDefinedFunction);
-			// for built-ins it lives in the registry overlay keyed by name.
+			// @function/restrict restrictions. A user-defined function's is already applied to its synthesized
+			// attribute (see ResolveUserDefinedFunction); a built-in's lives in the registry overlay keyed by
+			// name, and applies onto what the built-in declares, so it can loosen as well as tighten it.
 			var builtinRestriction = services.UserFunctions?.GetBuiltinRestriction(name);
-			// The overlay's words that change how the built-in runs (logname, localize, ...) apply too.
-			if (FunctionRestrictionFlags.Apply(attribute.Flags, builtinRestriction, userFunction: false) is var flags
-				&& flags != attribute.Flags)
+			if (FunctionRestrictionFlags.Restricted(attribute, builtinRestriction, userFunction: false) is var overlaid
+				&& !ReferenceEquals(overlaid, attribute))
 			{
-				attribute = attribute.WithFlags(flags);
+				attribute = overlaid;
 				definition = definition with { Attribute = attribute };
 			}
 
 			// nobody is FN_DISABLED, which answers e_disabled before any permission check, so the
 			// permission gate below does not turn it into e_perm (src/parse.c).
-			if (IsDisabled(attribute, builtinRestriction))
+			if (attribute.Flags.HasFlag(FunctionFlags.Disabled))
 			{
 				success = false;
 				return new CallState(ErrorMessages.Returns.FunctionDisabled, contextDepth);
@@ -144,7 +143,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 				executor = knownExecutor;
 			}
 
-			if (await PermissionErrorAsync(attribute, executor, builtinRestriction) is { } permissionError)
+			if (await PermissionErrorAsync(attribute, executor) is { } permissionError)
 			{
 				success = false;
 				return new CallState(permissionError, contextDepth);
@@ -358,37 +357,15 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 		return limit;
 	}
 
-	/// <summary>Whether the function's own restriction or the built-in overlay disables it.</summary>
-	private static bool IsDisabled(SharpFunctionAttribute attribute, string? builtinRestriction)
-	{
-		var functionRestriction = attribute.Restrict is { Length: > 0 }
-			? string.Join(' ', attribute.Restrict)
-			: null;
-		return Disables(functionRestriction) || Disables(builtinRestriction);
-	}
-
 	/// <summary>
 	/// Why <paramref name="executor"/> may not call the function, or <see langword="null"/> when it may.
 	/// Without an executor the evaluation is isolated and only the checks that need no object data apply.
+	/// The attribute already carries any <c>@function/restrict</c> restriction.
 	/// </summary>
-	private static async ValueTask<string?> PermissionErrorAsync(SharpFunctionAttribute attribute,
-		AnySharpObject? executor, string? builtinRestriction)
-	{
-		var permissionError = executor is null
+	private static async ValueTask<string?> PermissionErrorAsync(SharpFunctionAttribute attribute, AnySharpObject? executor)
+		=> executor is null
 			? FunctionDispatcher.CheckPermissionWithoutObjectData(attribute)
 			: await FunctionDispatcher.CheckPermissionAsync(attribute, executor);
-		if (permissionError is not null)
-			return permissionError;
-
-		// Either restriction failing means the caller lacks permission and gets the standard error
-		// instead of the result. The function's own restriction (attribute.Restrict) was already
-		// answered by the permission check above — CheckPermissionAsync tests it, and the isolated
-		// check refuses any restricted function — so only the built-in overlay is left to ask.
-		return builtinRestriction is not null
-			&& (executor is null || !await executor.SatisfiesFunctionRestriction(builtinRestriction))
-				? ErrorMessages.Returns.PermissionDenied
-				: null;
-	}
 
 	/// <summary>
 	/// FunctionFlags.Literal: treat the entire content between parens as a single
@@ -557,10 +534,6 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 		};
 
 	/// <summary>Whether a function restriction says <c>nobody</c>, PennMUSH's <c>FN_DISABLED</c> (<c>src/function.c</c>).</summary>
-	private static bool Disables(string? restriction)
-		=> restriction?.Split([' ', '\t', ','], StringSplitOptions.RemoveEmptyEntries)
-			.Any(word => word.Equals("nobody", StringComparison.OrdinalIgnoreCase)) ?? false;
-
 	/// <summary>
 	/// Resolves a global user-defined function (registered via <c>@function</c>) by name, returning
 	/// a transient <see cref="FunctionDefinition"/> that the normal function-call pipeline executes.
@@ -583,10 +556,10 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			Name = name,
 			MinArgs = entry.MinArgs,
 			MaxArgs = entry.MaxArgs,
-			Flags = FunctionRestrictionFlags.Apply(FunctionFlags.Regular, entry.Restriction, userFunction: true),
 			// Carry any @function/restrict restriction onto the synthesized attribute so the
 			// permission check in InvokeAsync enforces it before evaluating the attribute.
-			Restrict = string.IsNullOrWhiteSpace(entry.Restriction) ? [] : [entry.Restriction]
+			Flags = FunctionRestrictionFlags.Apply(FunctionFlags.Regular, entry.Restriction, userFunction: true),
+			Restrict = FunctionRestrictionFlags.Grants([], entry.Restriction)
 		};
 
 		var target = entry.Object;

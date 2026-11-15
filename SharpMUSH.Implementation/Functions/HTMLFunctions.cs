@@ -77,20 +77,16 @@ public partial class Functions
 	/// (<c>&lt;A XCH_CMD&gt;</c> against <c>&lt;SEND HREF&gt;</c>), so softcode cannot write one with
 	/// <c>tagwrap()</c> that serves both; this names the link and each client's renderer writes it in
 	/// that client's dialect, or as the bare string for a client with none. The hint, the command when
-	/// not given, is the tooltip. Gated as PennMUSH gates <c>XCH_CMD</c>: a wizard or Send_OOB.
+	/// not given, is the tooltip. Gated as PennMUSH gates <c>XCH_CMD</c>: a wizard or Send_OOB, which
+	/// <c>@function/restrict</c> can change.
 	/// </summary>
-	[SharpFunction(Name = "cmdlink", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "command", "hint"])]
+	[SharpFunction(Name = "cmdlink", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, Restrict = [PortalPermission.GameWizard, SendOob], ParameterNames = ["string", "command", "hint"])]
 	public async ValueTask<CallState> CmdLink(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var text = args["0"].Message;
 		var command = args["1"].Message.ToPlainText();
 		var hint = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, string.Empty).ToPlainText();
-
-		if (!await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator)))
-		{
-			return PermissionRefusal.Needs(OobScopes).Return;
-		}
 
 		if (string.IsNullOrWhiteSpace(command))
 		{
@@ -108,9 +104,17 @@ public partial class Functions
 			text));
 	}
 
-	private static readonly string[] OobScopes = [PortalPermission.GameWizard, PortalPermission.GamePower("Send_OOB")];
+	/// <summary>
+	/// The Send_OOB power's permission. The functions that only send markup a client acts on declare it with
+	/// <see cref="PortalPermission.GameWizard"/> as their <see cref="SharpFunctionAttribute.Restrict"/> grants, so
+	/// <c>@function/restrict</c> can change who may call them.
+	/// </summary>
+	private const string SendOob = "game.send_oob";
 
-	private static readonly string[] ImageScopes = [.. OobScopes, PortalPermission.GamePower("Send_Image")];
+	/// <summary>The Send_Image power's permission, which <c>image()</c> also takes.</summary>
+	private const string SendImage = "game.send_image";
+
+	private static readonly string[] OobScopes = [PortalPermission.GameWizard, SendOob];
 
 	/// <summary>PennMUSH's <c>Can_Send_OOB</c> (<c>hdrs/mushdb.h</c>).</summary>
 	private static async ValueTask<bool> CanSendOob(AnySharpObject executor)
@@ -170,25 +174,20 @@ public partial class Functions
 	/// <c>-1</c> for until it is stopped. Gated as <c>tagwrap()</c> is: a sound makes a client fetch and
 	/// play a file.</para>
 	/// </summary>
-	[SharpFunction(Name = "sound", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["file", "volume", "repeats"])]
+	[SharpFunction(Name = "sound", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, Restrict = [PortalPermission.GameWizard, SendOob], ParameterNames = ["file", "volume", "repeats"])]
 	public ValueTask<CallState> Sound(IMUSHCodeParser parser, SharpFunctionAttribute _2) => PlayAsync(parser, music: false);
 
 	/// <summary>
 	/// <c>music(&lt;file&gt;[, &lt;volume&gt;[, &lt;repeats&gt;]])</c> — as <c>sound()</c>, for background
 	/// music: one piece plays at a time, and MXP has a channel of its own for it.
 	/// </summary>
-	[SharpFunction(Name = "music", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["file", "volume", "repeats"])]
+	[SharpFunction(Name = "music", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, Restrict = [PortalPermission.GameWizard, SendOob], ParameterNames = ["file", "volume", "repeats"])]
 	public ValueTask<CallState> Music(IMUSHCodeParser parser, SharpFunctionAttribute _2) => PlayAsync(parser, music: true);
 
 	private async ValueTask<CallState> PlayAsync(IMUSHCodeParser parser, bool music)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var file = args["0"].Message.ToPlainText().Trim();
-
-		if (!await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator)))
-		{
-			return PermissionRefusal.Needs(OobScopes).Return;
-		}
 
 		if (file.Length == 0 || file.Any(char.IsControl))
 		{
@@ -226,14 +225,9 @@ public partial class Functions
 	/// <c>stopsound([&lt;channel&gt;])</c> — silences what is playing: <c>effects</c>, <c>music</c>, or
 	/// both when no channel is named.
 	/// </summary>
-	[SharpFunction(Name = "stopsound", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["channel"])]
+	[SharpFunction(Name = "stopsound", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular, Restrict = [PortalPermission.GameWizard, SendOob], ParameterNames = ["channel"])]
 	public async ValueTask<CallState> StopSound(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator)))
-		{
-			return PermissionRefusal.Needs(OobScopes).Return;
-		}
-
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var channel = args.TryGetValue("0", out var arg) ? arg.Message.ToPlainText().Trim() : string.Empty;
 
@@ -254,14 +248,9 @@ public partial class Functions
 	///
 	/// <para>Put it inside <c>cmdlink()</c> to make it a picture that runs a command.</para>
 	/// </summary>
-	[SharpFunction(Name = "image", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["address", "description", "width", "height"])]
+	[SharpFunction(Name = "image", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular, Restrict = [PortalPermission.GameWizard, SendOob, SendImage], ParameterNames = ["address", "description", "width", "height"])]
 	public async ValueTask<CallState> Image(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!await CanSendImage(await parser.CurrentState.KnownExecutorObject(Mediator)))
-		{
-			return PermissionRefusal.Needs(ImageScopes).Return;
-		}
-
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var address = args["0"].Message.ToPlainText().Trim();
 		if (address.Length == 0 || address.Any(char.IsControl))
@@ -300,14 +289,9 @@ public partial class Functions
 	/// opening it if the client has none by that name. A client with no panes shows the text where it
 	/// is, which is why the text travels inside the markup rather than after it.
 	/// </summary>
-	[SharpFunction(Name = "pane", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["text", "name", "title"])]
+	[SharpFunction(Name = "pane", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, Restrict = [PortalPermission.GameWizard, SendOob], ParameterNames = ["text", "name", "title"])]
 	public async ValueTask<CallState> Pane(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator)))
-		{
-			return PermissionRefusal.Needs(OobScopes).Return;
-		}
-
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var text = args["0"].Message;
 		var name = args["1"].Message.ToPlainText().Trim();
@@ -338,24 +322,17 @@ public partial class Functions
 	/// <c>&lt;xch_page clear&gt;</c> for Pueblo, and an element the portal acts on. MXP has no such
 	/// instruction and is sent nothing.
 	/// </summary>
-	[SharpFunction(Name = "clearscreen", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
-	public async ValueTask<CallState> ClearScreen(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator))
-			? new CallState(MarkupText.ClearScreen())
-			: PermissionRefusal.Needs(OobScopes).Return;
+	[SharpFunction(Name = "clearscreen", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, Restrict = [PortalPermission.GameWizard, SendOob])]
+	public ValueTask<CallState> ClearScreen(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ValueTask.FromResult(new CallState(MarkupText.ClearScreen()));
 
 	/// <summary>
 	/// <c>prefetch(&lt;address&gt;)</c> — asks the client to fetch something now that it will want soon.
 	/// Pueblo and the portal act on it; every other client is sent nothing.
 	/// </summary>
-	[SharpFunction(Name = "prefetch", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["address"])]
+	[SharpFunction(Name = "prefetch", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, Restrict = [PortalPermission.GameWizard, SendOob], ParameterNames = ["address"])]
 	public async ValueTask<CallState> Prefetch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator)))
-		{
-			return PermissionRefusal.Needs(OobScopes).Return;
-		}
-
 		var address = parser.CurrentState.ArgumentList[0].Message.ToPlainText().Trim();
 
 		return address.Length == 0 || address.Any(char.IsControl)
@@ -368,14 +345,9 @@ public partial class Functions
 	/// those in a named group, or every one. MXP acts on it; the portal is told, and a client with
 	/// neither leaves its old links working.
 	/// </summary>
-	[SharpFunction(Name = "expirelinks", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["group"])]
+	[SharpFunction(Name = "expirelinks", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular, Restrict = [PortalPermission.GameWizard, SendOob], ParameterNames = ["group"])]
 	public async ValueTask<CallState> ExpireLinks(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator)))
-		{
-			return PermissionRefusal.Needs(OobScopes).Return;
-		}
-
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var group = args.TryGetValue("0", out var arg) ? arg.Message.ToPlainText().Trim() : string.Empty;
 

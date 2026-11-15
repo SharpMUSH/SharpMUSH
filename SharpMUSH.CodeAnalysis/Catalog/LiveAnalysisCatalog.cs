@@ -73,12 +73,14 @@ public sealed class LiveAnalysisCatalog(
 		foreach (var candidate in captured.Functions)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
-			if (await FunctionDispatcher.CheckPermissionAsync(candidate.Attribute, executor) is not null) continue;
 			var permittedNames = new List<string>();
 			foreach (var name in candidate.Aliases.Prepend(candidate.Name))
 			{
 				cancellationToken.ThrowIfCancellationRequested();
-				if (await executor.SatisfiesFunctionRestriction(captured.Users.BuiltinRestrictions.GetValueOrDefault(name)))
+				// A name's @function/restrict applies onto what the function declares, so it can loosen it too.
+				var restricted = FunctionRestrictionFlags.Restricted(candidate.Attribute,
+					captured.Users.BuiltinRestrictions.GetValueOrDefault(name), userFunction: false);
+				if (await FunctionDispatcher.CheckPermissionAsync(restricted, executor) is null)
 					permittedNames.Add(name);
 			}
 			if (permittedNames.Count == 0) continue;
@@ -102,12 +104,12 @@ public sealed class LiveAnalysisCatalog(
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 			if (compiledNames.Contains(definition.Name)) continue;
-			var attribute = new SharpFunctionAttribute
+			// The restriction as the call pipeline reads it (ResolveUserDefinedFunction): words set flags, grants are alternatives.
+			var attribute = FunctionRestrictionFlags.Restricted(new SharpFunctionAttribute
 			{
 				Name = definition.Name, Flags = FunctionFlags.Regular,
-				MinArgs = definition.MinArgs, MaxArgs = definition.MaxArgs, ParameterNames = definition.ArgumentNames,
-				Restrict = string.IsNullOrWhiteSpace(definition.Restriction) ? [] : [definition.Restriction]
-			};
+				MinArgs = definition.MinArgs, MaxArgs = definition.MaxArgs, ParameterNames = definition.ArgumentNames
+			}, definition.Restriction, userFunction: true);
 			if (await FunctionDispatcher.CheckPermissionAsync(attribute, executor) is not null) continue;
 			visible.Add(FunctionEntry(definition.Name, definition.Owner is null ? "user-defined" : "owner-local", attribute, [], null));
 		}

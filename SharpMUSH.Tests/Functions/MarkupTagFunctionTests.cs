@@ -248,6 +248,76 @@ public class MarkupTagFunctionTests
 			.Because("the label is unique to this run, so the helper cannot have matched another test's output");
 	}
 
+	/// <summary>
+	/// The Send_OOB gate is what <c>cmdlink()</c> declares, so <c>@function/restrict</c> replaces it: here on a
+	/// clone, which is restricted apart from <c>cmdlink()</c> itself, first to everyone and then to a role.
+	/// </summary>
+	[Test]
+	public async Task Cmdlink_Restricted_ReplacesTheSendOobGate()
+	{
+		var clone = $"cl{Guid.NewGuid():N}"[..14];
+		var role = $"r{Guid.NewGuid():N}"[..13];
+		var mortal = await MortalAsync("CmdlinkOpenMortal");
+		var member = await MortalAsync("CmdlinkRoleMortal");
+		await God($"@function/clone {clone}=cmdlink");
+		await God($"@role/create {role}=Staff");
+		await God($"@role/assign {member.DbRef}={role}");
+		try
+		{
+			await Assert.That((await ThinkAs(mortal, $"{clone}(Click,look)")).ToPlainText())
+				.IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SEND_OOB");
+
+			// The Functions power manages @functions, not a built-in's own restriction.
+			await God($"@power {mortal.DbRef}=Functions");
+			await CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@function/restrict {clone}=everyone"));
+			await God($"@power {mortal.DbRef}=!Functions");
+			await Assert.That((await ThinkAs(mortal, $"{clone}(Click,look)")).ToPlainText())
+				.IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SEND_OOB");
+
+			await God($"@function/restrict {clone}=everyone");
+			var marker = Marker();
+			await Assert.That((await ThinkAs(mortal, $"{clone}({marker},look)")).Render(MarkupFormat.Mxp)).Contains("<SEND HREF=\"look\"");
+
+			await God($"@function/restrict {clone}=role^{role}");
+			await Assert.That((await ThinkAs(mortal, $"{clone}(Click,look)")).ToPlainText())
+				.IsEqualTo($"#-1 PERMISSION DENIED: NEEDS ROLE^{role.ToUpperInvariant()}");
+			marker = Marker();
+			await Assert.That((await ThinkAs(member, $"{clone}({marker},look)")).Render(MarkupFormat.Mxp)).Contains("<SEND HREF=\"look\"");
+
+			await Assert.That((await ThinkAs(mortal, "cmdlink(Click,look)")).ToPlainText())
+				.IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SEND_OOB")
+				.Because("the clone's restriction is its own");
+		}
+		finally
+		{
+			await God($"@function/delete {clone}");
+			await God($"@role/delete {role}");
+		}
+	}
+
+	/// <summary>A <c>!</c> word clears one of a built-in's own restrictions, as <c>apply_restrictions</c> does: <c>html()</c> is wizard-only.</summary>
+	[Test]
+	public async Task Restrict_NotWizard_OpensAWizardOnlyBuiltin()
+	{
+		var clone = $"ht{Guid.NewGuid():N}"[..14];
+		var mortal = await MortalAsync("HtmlOpenMortal");
+		await God($"@function/clone {clone}=html");
+		try
+		{
+			await Assert.That((await ThinkAs(mortal, $"{clone}(b)")).ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+
+			await God($"@function/restrict {clone}=!wizard");
+
+			await Assert.That((await ThinkAs(mortal, $"{clone}(b)")).ToPlainText()).IsEqualTo(ErrorMessages.Returns.UseTagwrapInstead);
+		}
+		finally
+		{
+			await God($"@function/delete {clone}");
+		}
+	}
+
+	private Task God(string command) => CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)).AsTask();
+
 	// ── The shared vocabulary from softcode ──────────────────────────────────────
 
 	/// <summary>
