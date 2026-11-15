@@ -41,6 +41,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- The package library's behaviour tests wait for a step's `@wait 0` follow-up even when its timer has already fired and it is not on the queue yet, so the next step no longer runs ahead of it. The integration test step in CI may take 15 minutes instead of 10; the suite takes 8 to 10 on a hosted runner.
 - In MUSHclient and other Pueblo clients, tables, headers, the room description and the connect screen keep their line breaks. Preformatted text went to Pueblo as `<xch_mudtext>` with bare newlines, which MUSHclient ignores; each line now ends in `<BR>` (MarkupString 2.31.2).
 - A Pueblo client that answers the hello before its connection is registered (MUSHclient) is shown the connect screen once. It was shown it again after the handshake, as for a client that answered later.
 - `connect <character> <password>` takes the password of the account the character is linked to as well as the character's own, so a character made on the web portal, which gets no password of its own, can connect from a MU* client.
