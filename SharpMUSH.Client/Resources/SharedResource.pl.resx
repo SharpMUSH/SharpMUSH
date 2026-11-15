@@ -5144,6 +5144,15 @@
     <value>Ukryj to powiadomienie</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayGuestLabel" xml:space="preserve">
+    <value>Grasz jako gość</value>
+  </data>
+  <data name="NavPlayGuestDetail" xml:space="preserve">
+    <value>Załóż konto, aby mieć własną postać.</value>
+  </data>
+  <data name="NavPlayGuestCreateAccount" xml:space="preserve">
+    <value>Załóż konto</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Dołącz do sceny</value>
     <comment>MT</comment>
