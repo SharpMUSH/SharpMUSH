@@ -116,6 +116,10 @@ public static class BundledPackages
 		new("chargen-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// The checklist's approval step says where the player's application stands.
 		new("onboarding-chargen", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: a game chooses whether applications are followed in the job queue, so this joins
+		// chargen and jobs only when its administrator installs it, as roster-jobs does for the roster.
+		new("chargen-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("chargen-jobs-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: +autoset gives and takes roles on game events, and a game chooses its own roles. It
 		// hears PLAYER`CREATE, PLAYER`CONNECT, PLAYER`LINK and the ROLE` events on the event handler.
 		new("autoset", BundledPackageHandler.Event, InstallAtFirstBoot: false),

@@ -44,7 +44,7 @@ packages:
     description: comm.channels/comm.message/comm.who/mail.new OOB v2 pushes — channels, pages only to who received them, live channel member lists, and new @mail — for the portal Play sidebar and new-mail notice (bundled default)
   - path: chargen/
     package: chargen
-    version: 2.8.0
+    version: 2.9.0
     description: Character applications reviewed as drafts, with comments per section, rounds, a public queue and an optional cap (requires http-handler)
   - path: chargen-help/
     name: Character applications help
@@ -75,6 +75,16 @@ packages:
     package: chargen-app
     version: 2.1.0
     description: Application package (Area 21) — registers chargen as a portal page at /apps/chargen (requires chargen)
+  - path: chargen-jobs/
+    name: Character applications in the job queue
+    package: chargen-jobs
+    version: 1.0.0
+    description: Each +app submission files or reopens a job in the Applications bucket, and each decision is written on it (requires chargen and jobs)
+  - path: chargen-jobs-help/
+    name: Character applications in the job queue help
+    package: chargen-jobs-help
+    version: 1.0.0
+    description: Registers the chargen-jobs topic with +help (requires chargen-jobs and plus-help)
   - path: scene/
     package: scene
     version: 1.20.0
@@ -97,7 +107,7 @@ packages:
   - path: jobs/
     name: Jobs
     package: jobs
-    version: 1.17.0
+    version: 1.18.0
     description: +job, +request and their kin — a request queue with role-worked buckets, due dates and bucket hooks (requires http-handler)
   - path: jobs-help/
     name: Jobs help

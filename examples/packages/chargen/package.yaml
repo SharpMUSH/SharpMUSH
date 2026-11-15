@@ -1,7 +1,7 @@
 format: "1.16"
 package: chargen
 title: "Character applications"
-version: 2.8.0
+version: 2.9.0
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
@@ -795,12 +795,17 @@ objects:
       # Submits the draft as the next round. The caller has checked it may be submitted.
       INC`DO`SUBMIT:
         value: |-
-          @include/args %!/INC`NEED`ROOM=need,2; think setq(submit_round,inc(default({{store}}/APP`%q<app_key>`ROUND,0))); &CHARGEN`ROUND`%q<submit_round> %q<app_objid>=secs(); @set %q<app_objid>/CHARGEN`ROUND`%q<submit_round>=wizard; @dolist/inline u(%!/FUN`FORM`ALLFIELDS)={@include/args %!/INC`DO`SUBMIT`FIELD=field,##}; &APP`%q<app_key>`ROUND {{store}}=%q<submit_round>; &APP`%q<app_key>`SUBMITTED {{store}}=secs(); &APP`%q<app_key>`STATE {{store}}=submitted; @include/args %!/INC`DO`TELLSTAFF=text,name(%q<app_objid>) [if(gt(%q<submit_round>,1),sent their application back,submitted an application)][if(gt(%q<submit_round>,1),%b%(round %q<submit_round>%))]. +app [name(%q<app_objid>)] reads it.; @trigger/args %!/ON`SUBMIT=0,%q<app_objid>,1,,2,,character,%q<app_objid>,round,%q<submit_round>
+          @include/args %!/INC`NEED`ROOM=need,2; think setq(submit_round,inc(default({{store}}/APP`%q<app_key>`ROUND,0))); &CHARGEN`ROUND`%q<submit_round> %q<app_objid>=secs(); @set %q<app_objid>/CHARGEN`ROUND`%q<submit_round>=wizard; @dolist/inline u(%!/FUN`FORM`ALLFIELDS)={@include/args %!/INC`DO`SUBMIT`FIELD=field,##}; &APP`%q<app_key>`ROUND {{store}}=%q<submit_round>; &APP`%q<app_key>`SUBMITTED {{store}}=secs(); &APP`%q<app_key>`STATE {{store}}=submitted; @include/args %!/INC`DO`TELLSTAFF=text,name(%q<app_objid>) [if(gt(%q<submit_round>,1),sent their application back,submitted an application)][if(gt(%q<submit_round>,1),%b%(round %q<submit_round>%))]. +app [name(%q<app_objid>)] reads it.; @include/args %!/INC`ON`RUN=step,SUBMIT,character,%q<app_objid>,round,%q<submit_round>
         flags: [cmdsyntax]
       # Keeps what field %<field> says in round %q<submit_round>, chapter by chapter for a field in chapters.
       INC`DO`SUBMIT`FIELD:
         value: |-
           @if u(%!/FUN`FIELD`CHAPTERED,%<field>)={@dolist/inline u(%!/FUN`APP`CHAPTERS,%q<app_objid>,%<field>,)={&CHARGEN`ROUND`%q<submit_round>`%<field>`## %q<app_objid>=u(%!/FUN`APP`CHAPTER`TEXT,%q<app_objid>,%<field>,,##); @set %q<app_objid>/CHARGEN`ROUND`%q<submit_round>`%<field>`##=wizard}},{@if strlen(u(%!/FUN`APP`VALUE,%q<app_key>,%<field>))={&CHARGEN`ROUND`%q<submit_round>`%<field> %q<app_objid>=u(%!/FUN`APP`VALUE,%q<app_key>,%<field>); @set %q<app_objid>/CHARGEN`ROUND`%q<submit_round>`%<field>=wizard}}
+        flags: [cmdsyntax]
+      # Takes the submitted application back to its owner, to change it.
+      INC`DO`WITHDRAW:
+        value: |-
+          &APP`%q<app_key>`STATE {{store}}=draft; @include/args %!/INC`ON`RUN=step,WITHDRAW,character,%q<app_objid>
         flags: [cmdsyntax]
       # Records how long the application waited for its decision, keeping the latest 200.
       INC`DO`RECORDWAIT:
@@ -810,18 +815,18 @@ objects:
       # Returns the submitted application to its owner, asking for changes: %<actor> who, %<message> what.
       INC`DO`RETURN:
         value: |-
-          @include/args %!/INC`NEED`ROOM=need,12; @include %!/INC`DO`RECORDWAIT; &APP`%q<app_key>`STATE {{store}}=changes; &APP`%q<app_key>`DECIDED {{store}}=secs(); &APP`%q<app_key>`BY {{store}}=%<actor>; @include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,%<message>,private,0,kind,return; @include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,name(%<actor>) asked for changes to your application: %<message> +app shows it.; @trigger/args %!/ON`RETURN=0,%q<app_objid>,1,%<actor>,2,%<message>,character,%q<app_objid>,actor,%<actor>,message,%<message>
+          @include/args %!/INC`NEED`ROOM=need,12; @include %!/INC`DO`RECORDWAIT; &APP`%q<app_key>`STATE {{store}}=changes; &APP`%q<app_key>`DECIDED {{store}}=secs(); &APP`%q<app_key>`BY {{store}}=%<actor>; @include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,%<message>,private,0,kind,return; @include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,name(%<actor>) asked for changes to your application: %<message> +app shows it.; @include/args %!/INC`ON`RUN=step,RETURN,character,%q<app_objid>,actor,%<actor>,message,%<message>
         flags: [cmdsyntax]
       # Approves the submitted application, %<actor> who, %<message> what they said, if anything. With the cap
       # reached it goes on the waitlist instead.
       INC`DO`APPROVE:
         value: |-
-          @include/args %!/INC`NEED`ROOM=need,13; @include %!/INC`DO`RECORDWAIT; &APP`%q<app_key>`BY {{store}}=%<actor>; @if u(%!/FUN`PLACES`FULL)={&APP`%q<app_key>`STATE {{store}}=waitlist; &APP`%q<app_key>`WAITLISTED {{store}}=secs(); &APP`%q<app_key>`DECIDED {{store}}=secs(); @include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,firstof(%<message>,Approved. Every place is taken%, so it waits for one.),private,0,kind,waitlist; @include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,Your application is approved%, and waits for a place: every place is taken. You get one when it opens.[if(strlen(%<message>),%b[name(%<actor>)] said: %<message>)]; @trigger/args %!/ON`WAITLIST=0,%q<app_objid>,1,%<actor>,2,%<message>,character,%q<app_objid>,actor,%<actor>,message,%<message>},{@include/args %!/INC`DO`ADMIT=actor,%<actor>,message,%<message>,record,1}
+          @include/args %!/INC`NEED`ROOM=need,13; @include %!/INC`DO`RECORDWAIT; &APP`%q<app_key>`BY {{store}}=%<actor>; @if u(%!/FUN`PLACES`FULL)={&APP`%q<app_key>`STATE {{store}}=waitlist; &APP`%q<app_key>`WAITLISTED {{store}}=secs(); &APP`%q<app_key>`DECIDED {{store}}=secs(); @include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,firstof(%<message>,Approved. Every place is taken%, so it waits for one.),private,0,kind,waitlist; @include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,Your application is approved%, and waits for a place: every place is taken. You get one when it opens.[if(strlen(%<message>),%b[name(%<actor>)] said: %<message>)]; @include/args %!/INC`ON`RUN=step,WAITLIST,character,%q<app_objid>,actor,%<actor>,message,%<message>},{@include/args %!/INC`DO`ADMIT=actor,%<actor>,message,%<message>,record,1}
         flags: [cmdsyntax]
       # Approves the application for good: the state, the role, the comment (%<record> 1 to write it) and the hook.
       INC`DO`ADMIT:
         value: |-
-          &APP`%q<app_key>`STATE {{store}}=approved; &APP`%q<app_key>`DECIDED {{store}}=secs(); &APP`%q<app_key>`WAITLISTED {{store}}; think setq(admit_role,get(%!/DATA`CONFIG`APPROVED-ROLE)); @if cand(strlen(%q<admit_role>),valid(rolename,%q<admit_role>))={@role/assign %q<app_objid>=%q<admit_role>}; @if %<record>={@include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,firstof(%<message>,Approved.),private,0,kind,approve}; @include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,if(%<record>,Your application is approved.[if(strlen(%<message>),%b[name(%<actor>)] said: %<message>)],A place opened: your application is approved.); @trigger/args %!/ON`APPROVE=0,%q<app_objid>,1,%<actor>,2,%<message>,character,%q<app_objid>,actor,%<actor>,message,%<message>
+          &APP`%q<app_key>`STATE {{store}}=approved; &APP`%q<app_key>`DECIDED {{store}}=secs(); &APP`%q<app_key>`WAITLISTED {{store}}; think setq(admit_role,get(%!/DATA`CONFIG`APPROVED-ROLE)); @if cand(strlen(%q<admit_role>),valid(rolename,%q<admit_role>))={@role/assign %q<app_objid>=%q<admit_role>}; @if %<record>={@include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,firstof(%<message>,Approved.),private,0,kind,approve}; @include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,if(%<record>,Your application is approved.[if(strlen(%<message>),%b[name(%<actor>)] said: %<message>)],A place opened: your application is approved.); @include/args %!/INC`ON`RUN=step,APPROVE,character,%q<app_objid>,actor,%<actor>,message,%<message>,record,%<record>
         flags: [cmdsyntax]
       # Admits waitlisted applications, first approved first, while there are places.
       INC`DO`ADMITNEXT:
@@ -832,7 +837,7 @@ objects:
       # Retires the approved application, %<actor> who: the role goes, and the place frees.
       INC`DO`RETIRE:
         value: |-
-          @include/args %!/INC`NEED`ROOM=need,12; &APP`%q<app_key>`STATE {{store}}=retired; &APP`%q<app_key>`DECIDED {{store}}=secs(); &APP`%q<app_key>`BY {{store}}=%<actor>; think setq(retire_role,get(%!/DATA`CONFIG`APPROVED-ROLE)); @if cand(strlen(%q<retire_role>),valid(rolename,%q<retire_role>),hasrole(%q<app_objid>,%q<retire_role>))={@role/unassign %q<app_objid>=%q<retire_role>}; @include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,Retired.,private,0,kind,retire; @trigger/args %!/ON`RETIRE=0,%q<app_objid>,1,%<actor>,2,,character,%q<app_objid>,actor,%<actor>; @include/localize %!/INC`DO`ADMITNEXT
+          @include/args %!/INC`NEED`ROOM=need,12; &APP`%q<app_key>`STATE {{store}}=retired; &APP`%q<app_key>`DECIDED {{store}}=secs(); &APP`%q<app_key>`BY {{store}}=%<actor>; think setq(retire_role,get(%!/DATA`CONFIG`APPROVED-ROLE)); @if cand(strlen(%q<retire_role>),valid(rolename,%q<retire_role>),hasrole(%q<app_objid>,%q<retire_role>))={@role/unassign %q<app_objid>=%q<retire_role>}; @include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,Retired.,private,0,kind,retire; @include/args %!/INC`ON`RUN=step,RETIRE,character,%q<app_objid>,actor,%<actor>; @include/localize %!/INC`DO`ADMITNEXT
         flags: [cmdsyntax]
 
       # ---- guards ---------------------------------------------------------------
@@ -922,7 +927,7 @@ objects:
       # +app/withdraw: takes a submitted application back, to change it.
       INC`APP`WITHDRAW:
         value: |-
-          @include %!/INC`NEED`MINE; @assert strmatch(%q<app_state>,submitted)=@pemit %#=notice(APP,Your application is not with staff.,warn); &APP`%q<app_key>`STATE {{store}}=draft; @pemit %#=notice(APP,Your application is back with you. Change it%, then +app/submit.,ok)
+          @include %!/INC`NEED`MINE; @assert strmatch(%q<app_state>,submitted)=@pemit %#=notice(APP,Your application is not with staff.,warn); @include %!/INC`DO`WITHDRAW; @pemit %#=notice(APP,Your application is back with you. Change it%, then +app/submit.,ok)
         flags: [cmdsyntax]
       # +app/diff [<round>] for the owner, +app/diff <name>[=<round>] for a reviewer: what changed since that round,
       # by default the one before the last.
@@ -1579,7 +1584,7 @@ objects:
         flags: [cmdsyntax]
       WEB`ACT`WITHDRAW:
         value: |-
-          @include %!/WEB`NEED`APP; @include %!/WEB`NEED`MINE; @assert strmatch(%q<app_state>,submitted)=think setq(web_response,u(%!/WEB`RESULT`ERROR,Your application is not with staff.)); &APP`%q<app_key>`STATE {{store}}=draft; think setq(web_response,u(%!/WEB`RESULT`DONE,Your application is back with you. Change it%, then Submit.))
+          @include %!/WEB`NEED`APP; @include %!/WEB`NEED`MINE; @assert strmatch(%q<app_state>,submitted)=think setq(web_response,u(%!/WEB`RESULT`ERROR,Your application is not with staff.)); @include %!/INC`DO`WITHDRAW; think setq(web_response,u(%!/WEB`RESULT`DONE,Your application is back with you. Change it%, then Submit.))
         flags: [cmdsyntax]
       WEB`ACT`COMMENT:
         value: |-
@@ -1826,17 +1831,25 @@ objects:
         flags: [funsyntax]
 
       # ---- hooks ------------------------------------------------------------------
+      # Runs hook ON`%<step>, then every ON`%<step>`<NAME> a bridge set, in name order (chargen-jobs sets
+      # ON`SUBMIT`JOBS and its kin), so a bridge never takes the hook a game fills in.
+      INC`ON`RUN:
+        value: |-
+          @dolist/inline [if(hasattr(%!,ON`%<step>),ON`%<step>)] [sort(lattr(%!/ON`%<step>`*))]={@trigger/args %!/##=0,%<character>,1,%<actor>,2,%<message>,character,%<character>,actor,%<actor>,message,%<message>,round,%<round>,record,%<record>}
+        flags: [cmdsyntax]
       # A game fills these in. Each runs as this object after the change, with the names and positions given.
       ON`SUBMIT: |-
         @@ {Runs after an application is submitted. %<character> (%0): the applicant's objid. %<round> how many times it has been submitted. Example, telling a staff channel: @cemit Staff=[name(%<character>)] submitted an application.}
       ON`RETURN: |-
         @@ {Runs after a reviewer asks for changes. %<character> (%0): the applicant's objid. %<actor> (%1): the reviewer's objid. %<message> (%2): what they asked.}
       ON`APPROVE: |-
-        @@ {Runs after an application is approved, once the approved role is given; also when a waitlisted one gets its place. %<character> (%0): the applicant's objid. %<actor> (%1): the reviewer's objid. %<message> (%2): what they said, if anything. Example, sending the new character home: @tel %<character>=#123; @link %<character>=#123}
+        @@ {Runs after an application is approved, once the approved role is given; also when a waitlisted one gets its place. %<character> (%0): the applicant's objid. %<actor> (%1): the reviewer's objid. %<message> (%2): what they said, if anything. %<record> 1 when a reviewer approved it now, 0 when a place opened for a waitlisted one. Example, sending the new character home: @tel %<character>=#123; @link %<character>=#123}
       ON`WAITLIST: |-
         @@ {Runs after an application is approved with every place taken, so it waits for one. %<character> (%0): the applicant's objid. %<actor> (%1): the reviewer's objid. %<message> (%2): what they said, if anything.}
       ON`RETIRE: |-
         @@ {Runs after an approved character is retired and loses the approved role. %<character> (%0): the character's objid. %<actor> (%1): the reviewer's objid.}
+      ON`WITHDRAW: |-
+        @@ {Runs after an applicant takes a submitted application back to change it. %<character> (%0): the applicant's objid.}
 
       # ---- lifecycle --------------------------------------------------------------
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
@@ -2156,9 +2169,13 @@ objects:
         ## Hooks
 
         The Chargen object runs these attributes as itself after each change, when a game sets them:
-        `` ON`SUBMIT ``, `` ON`RETURN ``, `` ON`APPROVE ``, `` ON`WAITLIST `` and `` ON`RETIRE ``. Each gets
-        `%%<character>` \(%%0\), the applicant's objid; the decisions also get `%%<actor>` \(%%1\), the reviewer,
-        and `%%<message>` \(%%2\).
+        `` ON`SUBMIT ``, `` ON`WITHDRAW ``, `` ON`RETURN ``, `` ON`APPROVE ``, `` ON`WAITLIST `` and `` ON`RETIRE ``.
+        Each gets `%%<character>` \(%%0\), the applicant's objid; the decisions also get `%%<actor>` \(%%1\), the
+        reviewer, and `%%<message>` \(%%2\). `` ON`SUBMIT `` also gets `%%<round>`, how many times it has been submitted, and
+        `` ON`APPROVE `` gets `%%<record>`: 1 when a reviewer approved it, 0 when a place opened for a waitlisted one.
+
+        A package that adds to these sets `` ON`<hook>`<NAME> `` instead, such as `` ON`SUBMIT`JOBS ``, which runs
+        after the hook with the same arguments.
 
         Example, sending each approved character to the docks:
 

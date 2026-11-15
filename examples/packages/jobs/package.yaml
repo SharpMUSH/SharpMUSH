@@ -1,7 +1,7 @@
 format: "1.16"
 package: jobs
 title: "Jobs"
-version: 1.17.0
+version: 1.18.0
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -1199,13 +1199,14 @@ objects:
         chr(93),),scene_step,u({{jobs}}/FUN`STEP`SCENE`OPEN,%q<job_object>))]; &JOB`SCENES %q<job_object>=trim(get(%q<job_object>/JOB`SCENES) %<scene>); @include/args {{jobs}}/INC`DO`REPLY=kind,reply,text,Attached the log of [chr(91)]scene %<scene>[if(strlen(%q<scene_title>),: %q<scene_title>)][chr(93)](/scenes/%<scene>).,format,markdown,mailforce,0,keep,1; @break not(strlen(%q<scene_step>)); @include/args {{jobs}}/INC`DO`CHECK=step,%q<scene_step>,done,1,scene,%<scene>
       # A reply or staff note (%<kind>) of %<text> (%<format>) on %q<job_object>, with the turn and reopening rules
       # of +job/reply. %<mailforce> 1 mails the filer even when they turned job mail off. %<keep> 1 from
-      # staff leaves the turn and the first-answer time alone, as attaching a scene log does.
+      # staff leaves the turn and the first-answer time alone, as attaching a scene log does. %<quiet> 1 tells
+      # only staff.
       INC`DO`REPLY: |-
         think setqm(job_bucket,get(%q<job_object>/JOB`BUCKET),
         job_number,get(%q<job_object>/JOB`NUM),
         reply_by_staff,u({{jobs}}/FUN`CAN`WORK,get(%q<job_object>/JOB`BUCKET),%q<actor>),
         was_closed,strmatch(get(%q<job_object>/JOB`STATE),closed),
-        reply_keeps_turn,cand(%<keep>,%q<reply_by_staff>)); @include/args {{jobs}}/INC`DO`ENTRY=kind,%<kind>,action,,by,%q<actor>,text,%<text>,format,%<format>; think setq(reply_entry,%q<entry_number>); @include {{jobs}}/INC`DO`REPLY`TURN; @include/nobreak/args {{jobs}}/INC`DO`NOTIFY=actor,%q<actor>,staffmsg,u({{jobs}}/FUN`MESSAGE`STAFF,%q<job_object>,%q<actor>,if(strmatch(%<kind>,note),added a staff note to,replied to)),verb,if(strmatch(%<kind>,reply),replied to),mail,1,mailtext,%<text>,mailforce,%<mailforce>; @trigger/args %q<job_bucket>/ON`REPLY=0,%q<job_number>,1,%q<actor>,2,%q<reply_entry>,3,if(strmatch(%<kind>,reply),1,0),job,%q<job_number>,actor,%q<actor>,entry,%q<reply_entry>,public,if(strmatch(%<kind>,reply),1,0)
+        reply_keeps_turn,cand(%<keep>,%q<reply_by_staff>)); @include/args {{jobs}}/INC`DO`ENTRY=kind,%<kind>,action,,by,%q<actor>,text,%<text>,format,%<format>; think setq(reply_entry,%q<entry_number>); @include {{jobs}}/INC`DO`REPLY`TURN; @include/nobreak/args {{jobs}}/INC`DO`NOTIFY=actor,%q<actor>,staffmsg,u({{jobs}}/FUN`MESSAGE`STAFF,%q<job_object>,%q<actor>,if(strmatch(%<kind>,note),added a staff note to,replied to)),verb,if(cand(strmatch(%<kind>,reply),not(%<quiet>)),replied to),mail,1,mailtext,%<text>,mailforce,%<mailforce>; @trigger/args %q<job_bucket>/ON`REPLY=0,%q<job_number>,1,%q<actor>,2,%q<reply_entry>,3,if(strmatch(%<kind>,reply),1,0),job,%q<job_number>,actor,%q<actor>,entry,%q<reply_entry>,public,if(strmatch(%<kind>,reply),1,0)
       # INC`DO`REPLY's turn rules: a staff reply answers the job, a player's reply opens a closed one again,
       # and a reply passes the turn to the other side.
       INC`DO`REPLY`TURN: |-
@@ -1399,22 +1400,28 @@ objects:
         job_number,,
         actor,if(hastype(%<player>,PLAYER),objid(%<player>),objid(pmatch(%<player>))),
         file_bucket,u({{jobs}}/FUN`BUCKET`FIND,%<bucket>)); @assert cand(strlen(%q<actor>),strlen(%q<file_bucket>),u({{jobs}}/FUN`BUCKET`TAKING,%q<file_bucket>),strlen(%<title>),strlen(%<text>)); @include/args {{jobs}}/INC`DO`FILE=filer,%q<actor>,author,,priority,,bucket,%q<file_bucket>,title,%<title>,text,%<text>,format,firstof(%<format>,markdown),how,api; think setq(job,%q<job_number>)
-      # @trigger/inline/nobreak/args Jobs/INC`API`REPLY=job,<#>,actor,<actor>,text,<text>[,format,softcode]: a
-      # public reply.
+      # @trigger/inline/nobreak/args Jobs/INC`API`REPLY=job,<#>,actor,<actor>,text,<text>[,format,softcode][,quiet,1][,keep,1]:
+      # a public reply. quiet 1 tells only staff, for a package that told the filer itself; keep 1 from staff
+      # leaves whose turn it is.
       INC`API`REPLY: |-
         think setqm(job_object,u({{jobs}}/FUN`JOB`FIND,%<job>),
-        actor,objid(%<actor>)); @assert cand(strlen(%q<job_object>),strlen(%q<actor>),strlen(%<text>)); @include/args {{jobs}}/INC`DO`REPLY=kind,reply,text,%<text>,format,firstof(%<format>,markdown),mailforce,0
+        actor,objid(%<actor>)); @assert cand(strlen(%q<job_object>),strlen(%q<actor>),strlen(%<text>)); @include/args {{jobs}}/INC`DO`REPLY=kind,reply,text,%<text>,format,firstof(%<format>,markdown),mailforce,0,quiet,t(%<quiet>),keep,t(%<keep>)
+      # @trigger/inline/nobreak/args Jobs/INC`API`STAFF=job,<#>,actor,<actor>: hands a job back to staff, opening
+      # it again when it is closed, whoever <actor> is. A new job stays new.
+      INC`API`STAFF: |-
+        think setqm(job_object,u({{jobs}}/FUN`JOB`FIND,%<job>),
+        actor,objid(%<actor>)); @assert cand(strlen(%q<job_object>),strlen(%q<actor>)); @include/nobreak/args {{jobs}}/INC`DO`REOPEN=byfiler,strmatch(%q<actor>,get(%q<job_object>/JOB`FILED`BY)); @include/nobreak/args {{jobs}}/INC`DO`TURN=to,if(strmatch(get(%q<job_object>/JOB`STATE),new),,staff)
       # @trigger/inline/nobreak/args Jobs/INC`API`NOTE=job,<#>,actor,<actor>,text,<text>[,format,softcode]: a
       # staff note.
       INC`API`NOTE: |-
         think setqm(job_object,u({{jobs}}/FUN`JOB`FIND,%<job>),
         actor,objid(%<actor>)); @assert cand(strlen(%q<job_object>),strlen(%q<actor>),strlen(%<text>)); @include/args {{jobs}}/INC`DO`REPLY=kind,note,text,%<text>,format,firstof(%<format>,markdown),mailforce,0
-      # @trigger/inline/nobreak/args Jobs/INC`API`CLOSE=job,<#>,actor,<actor>,outcome,<approved|denied|completed|canceled>[,text,<text>]
-      # closes a job, with the closing message when there is one.
+      # @trigger/inline/nobreak/args Jobs/INC`API`CLOSE=job,<#>,actor,<actor>,outcome,<approved|denied|completed|canceled>[,text,<text>][,quiet,1]
+      # closes a job, with the closing message when there is one. quiet 1 tells only staff.
       INC`API`CLOSE: |-
         think setqm(job_object,u({{jobs}}/FUN`JOB`FIND,%<job>),
         actor,objid(%<actor>),
-        job_outcome,lcstr(%<outcome>)); @assert cand(strlen(%q<job_object>),strlen(%q<actor>),match(approved denied completed canceled,%q<job_outcome>),not(strmatch(get(%q<job_object>/JOB`STATE),closed))); @include/args {{jobs}}/INC`DO`CLOSE=outcome,%q<job_outcome>,text,%<text>,format,firstof(%<format>,markdown)
+        job_outcome,lcstr(%<outcome>)); @assert cand(strlen(%q<job_object>),strlen(%q<actor>),match(approved denied completed canceled,%q<job_outcome>),not(strmatch(get(%q<job_object>/JOB`STATE),closed))); @include/args {{jobs}}/INC`DO`CLOSE=outcome,%q<job_outcome>,text,%<text>,format,firstof(%<format>,markdown),quiet,t(%<quiet>)
 
       # Optional ordinary-command draft adapter. This declaration is shared with the portal and
       # authoritative legacy validation; adding fields needs no terminal controller or HTTP validator.
@@ -2732,8 +2739,9 @@ objects:
 
         Text with commas in it arrives whole. Add `format,softcode` to show the text as typed. A refusal stops only the API, never the code that called it.
 
-        - `` INC`API`REPLY `` and `` INC`API`NOTE `` take `job`, `actor` and `text` \(and `format`\): a public reply, or a staff note.
-        - `` INC`API`CLOSE `` takes `job`, `actor`, `outcome` \(approved, denied, completed or canceled\) and, when there is one, the closing `text`.
+        - `` INC`API`REPLY `` and `` INC`API`NOTE `` take `job`, `actor` and `text` \(and `format`\): a public reply, or a staff note. A reply also takes `quiet,1`, which tells only staff, for code that already told the filer, and `keep,1`, which leaves whose turn it is when the actor works the bucket.
+        - `` INC`API`STAFF `` takes `job` and `actor`, and hands the job back to staff, opening it again when it is closed. A reply from someone who works the bucket would leave it waiting on the filer instead.
+        - `` INC`API`CLOSE `` takes `job`, `actor`, `outcome` \(approved, denied, completed or canceled\) and, when there is one, the closing `text`. `quiet,1` tells only staff.
 
         ## The portal
 
