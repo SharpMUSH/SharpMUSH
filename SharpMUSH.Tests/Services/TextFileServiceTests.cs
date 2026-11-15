@@ -78,8 +78,8 @@ public class TextFileServiceTests
 	}
 
 	/// <summary>
-	/// A topic typed without its @ still finds the @-command's entry: exactly before any partial match, and by
-	/// prefix or fuzzy match once the topic as typed finds nothing.
+	/// A topic typed without its @ still finds the @-command's entry: exactly once the topic's own prefix match
+	/// finds nothing, and by prefix or fuzzy match once nothing else does.
 	/// </summary>
 	[Test]
 	public async Task ATopicWithoutItsAt_FindsTheAtCommand()
@@ -96,12 +96,12 @@ public class TextFileServiceTests
 			async Task<string> Topic(string typed) => (await resolver.ResolveAsync("help", typed)).Expect<HelpEntry>().Topic;
 
 			await Assert.That(await Topic("feed examples")).IsEqualTo("@feed examples");
-			await Assert.That(await Topic("FEED")).IsEqualTo("@feed").Because("the exact @-name beats a prefix match");
-			await Assert.That(await Topic("feedb")).IsEqualTo("feedback").Because("the topic as typed is matched first");
+			await Assert.That(await Topic("FEED")).IsEqualTo("feedback").Because("the topic's own prefix match comes first, as in PennMUSH");
+			await Assert.That(await Topic("lone")).IsEqualTo("lone");
+			await Assert.That(await Topic("lon")).IsEqualTo("lone");
 			await Assert.That(await Topic("feed ex")).IsEqualTo("@feed examples").Because("the @-name's prefix is tried last");
 			await Assert.That(await Topic("f examples")).IsEqualTo("@feed examples").Because("and its fuzzy pattern");
 			await Assert.That(await Topic("@feed")).IsEqualTo("@feed");
-			await Assert.That(await Topic("lone")).IsEqualTo("lone");
 			await Assert.That(await resolver.ResolveAsync("help", "@lone") is None).IsTrue().Because("an @ typed is never taken off");
 			await Assert.That(await resolver.ResolveAsync("help", "feed ex*") is None).IsTrue().Because("a wildcard is matched literally");
 		}

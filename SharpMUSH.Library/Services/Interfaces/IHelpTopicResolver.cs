@@ -23,7 +23,8 @@ public sealed record HelpRelatedTopics(string? Topic, IReadOnlyList<string> Link
 
 /// <summary>
 /// Resolves a help topic the way the game's <c>help</c> command does: literal wildcards first,
-/// then a prefix match, then PennMUSH's fuzzy pattern.
+/// then a prefix match, then the topic's @-name, then PennMUSH's fuzzy pattern, then the @-name's
+/// prefix and fuzzy matches.
 /// </summary>
 /// <remarks>
 /// This exists so the portal and the telnet game cannot drift. <c>help @mail</c> typed at a telnet

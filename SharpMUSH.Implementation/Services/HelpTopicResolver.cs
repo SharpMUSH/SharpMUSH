@@ -26,30 +26,46 @@ public sealed class HelpTopicResolver(ITextFileService textFiles) : IHelpTopicRe
 			return await NarrowAsync(corpus, await SearchAsync(corpus, topic));
 		}
 
-		// Most commands are filed under their @-name, so a reader who left the @ off ("feed examples")
-		// still reaches "@feed examples": the @-spelling is tried whenever the topic as typed is not found.
-		var command = topic.StartsWith('@') ? null : "@" + topic;
-		var exact = await GetExactAsync(corpus, topic)
-			?? (command is null ? null : await GetExactAsync(corpus, command));
+		var exact = await GetExactAsync(corpus, topic);
 		if (exact is not null)
 		{
 			return exact;
 		}
 
-		var partial = await PartialAsync(corpus, topic);
-		return partial is None && command is not null ? await PartialAsync(corpus, command) : partial;
+		// PennMUSH tries a prefix match first (name LIKE 'topic%', first alphabetically wins) and only
+		// falls back to the fuzzy pattern when that finds nothing.
+		var prefix = await textFiles.GetPrefixEntryAsync(corpus, topic);
+		if (prefix is not null)
+		{
+			return prefix;
+		}
+
+		// Most commands are filed under their @-name, so a reader who left the @ off ("feed examples")
+		// still reaches "@feed examples". It comes after the prefix match, so "help if" stays on if().
+		if (topic.StartsWith('@'))
+		{
+			return await FuzzyAsync(corpus, topic);
+		}
+
+		var command = "@" + topic;
+		if (await GetExactAsync(corpus, command) is { } commandEntry)
+		{
+			return commandEntry;
+		}
+
+		return await FuzzyAsync(corpus, topic) switch
+		{
+			None => await textFiles.GetPrefixEntryAsync(corpus, command) switch
+			{
+				{ } commandPrefix => commandPrefix,
+				null => await FuzzyAsync(corpus, command)
+			},
+			var found => found
+		};
 	}
 
-	/// <summary>
-	/// PennMUSH tries a prefix match first (name LIKE 'topic%', first alphabetically wins) and only
-	/// falls back to the fuzzy pattern when that finds nothing.
-	/// </summary>
-	private async ValueTask<HelpResolution> PartialAsync(string corpus, string topic) =>
-		await textFiles.GetPrefixEntryAsync(corpus, topic) switch
-		{
-			{ } prefix => prefix,
-			null => await NarrowAsync(corpus, await SearchAsync(corpus, BuildFuzzyPattern(topic)))
-		};
+	private async ValueTask<HelpResolution> FuzzyAsync(string corpus, string topic) =>
+		await NarrowAsync(corpus, await SearchAsync(corpus, BuildFuzzyPattern(topic)));
 
 	/// <inheritdoc />
 	public async ValueTask<HelpEntry?> GetExactAsync(string corpus, string topic)
