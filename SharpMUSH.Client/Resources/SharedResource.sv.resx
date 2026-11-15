@@ -5144,6 +5144,15 @@
     <value>Dölj det här meddelandet</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayGuestLabel" xml:space="preserve">
+    <value>Du spelar som gäst</value>
+  </data>
+  <data name="NavPlayGuestDetail" xml:space="preserve">
+    <value>Skapa ett konto för att få en egen karaktär.</value>
+  </data>
+  <data name="NavPlayGuestCreateAccount" xml:space="preserve">
+    <value>Skapa ett konto</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Gå med i scenen</value>
     <comment>MT</comment>
@@ -9584,5 +9593,26 @@
   </data>
   <data name="MailNewRead" xml:space="preserve">
     <value>Läs</value>
+  </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Ställ in scenen</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>En inställd scen lämnar schemat för gott och kan inte startas igen.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Avsluta scenen</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>En avslutad scen slutar spela in och kan inte startas igen. Loggen finns kvar.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Behåll den</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>Scenen avslutades inte.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>Scenen ställdes inte in.</value>
   </data>
 </root>

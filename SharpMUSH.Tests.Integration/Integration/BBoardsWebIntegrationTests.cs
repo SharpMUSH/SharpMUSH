@@ -48,6 +48,32 @@ public partial class BBoardsIntegrationTests
 		return (Field(row, "path"), Field(row, "key"));
 	}
 
+	/// <summary>
+	/// A reader the board's post lock keeps out is told why on the board's page and gets the reason, not a
+	/// form, on the new-post page for that board; a refused post through the act action says it too.
+	/// </summary>
+	[Test]
+	public async Task ThePortalSaysWhyAReaderMayNotPost()
+	{
+		var admin = await Player("BbwWhyA", "bboard-admin");
+		var mira = await Player("BbwWhyM");
+		var board = await Board(admin, "BbwWhy");
+		await As(admin, $"+bblock {board}/post=role^approved");
+		var (path, key) = await BoardRow(mira, board);
+		var reason = $"Permission denied. Posting on {path} {board} needs the approved role.";
+
+		var page = Elements(await Http("GET", $"/boards/schema?at={path}", "", mira));
+		await Assert.That(page.Select(e => Field(e, "value"))).Contains(reason);
+		await Assert.That(page.Select(e => Field(e, "label"))).DoesNotContain("New post");
+
+		var form = await Http("GET", $"/boards/schema?at=new&board={path}", "", mira);
+		await Assert.That(Field(form, "kind")).IsEqualTo("view");
+		await Assert.That(Elements(form).Select(e => Field(e, "value"))).Contains(reason);
+
+		var refused = await Act(mira, new { op = "post", board = key, title = "Nope", text = "No.", format = "md" });
+		await Assert.That(refused.ToString()).Contains(reason);
+	}
+
 	[Test]
 	public async Task ThePortalPostsCommentsAndRepliesAndReadsThemBackAsConversations()
 	{

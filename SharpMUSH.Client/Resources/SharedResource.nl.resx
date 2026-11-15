@@ -5144,6 +5144,15 @@
     <value>Deze melding verbergen</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayGuestLabel" xml:space="preserve">
+    <value>Je speelt als gast</value>
+  </data>
+  <data name="NavPlayGuestDetail" xml:space="preserve">
+    <value>Maak een account om een eigen personage te houden.</value>
+  </data>
+  <data name="NavPlayGuestCreateAccount" xml:space="preserve">
+    <value>Account aanmaken</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Meedoen</value>
     <comment>MT</comment>
@@ -9584,5 +9593,26 @@
   </data>
   <data name="MailNewRead" xml:space="preserve">
     <value>Lezen</value>
+  </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Scène annuleren</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>Een geannuleerde scène verdwijnt voorgoed van het rooster en kan niet opnieuw beginnen.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Scène beëindigen</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>Een beëindigde scène neemt niet meer op en kan niet opnieuw beginnen. Het logboek blijft.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Behouden</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>De scène is niet beëindigd.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>De scène is niet geannuleerd.</value>
   </data>
 </root>

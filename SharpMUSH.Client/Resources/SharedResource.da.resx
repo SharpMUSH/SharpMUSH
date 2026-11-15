@@ -5144,6 +5144,15 @@
     <value>Skjul denne besked</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayGuestLabel" xml:space="preserve">
+    <value>Du spiller som gæst</value>
+  </data>
+  <data name="NavPlayGuestDetail" xml:space="preserve">
+    <value>Opret en konto for at få din egen karakter.</value>
+  </data>
+  <data name="NavPlayGuestCreateAccount" xml:space="preserve">
+    <value>Opret en konto</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Deltag i scenen</value>
     <comment>MT</comment>
@@ -9584,5 +9593,26 @@
   </data>
   <data name="MailNewRead" xml:space="preserve">
     <value>Læs</value>
+  </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Aflys scene</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>En aflyst scene forlader planen for altid og kan ikke startes igen.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Afslut scene</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>En afsluttet scene stopper optagelsen og kan ikke startes igen. Loggen bliver.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Behold den</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>Scenen blev ikke afsluttet.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>Scenen blev ikke aflyst.</value>
   </data>
 </root>

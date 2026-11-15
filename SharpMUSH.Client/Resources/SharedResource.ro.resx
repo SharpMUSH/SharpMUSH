@@ -5144,6 +5144,15 @@
     <value>Ascunde această notificare</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayGuestLabel" xml:space="preserve">
+    <value>Joci ca invitat</value>
+  </data>
+  <data name="NavPlayGuestDetail" xml:space="preserve">
+    <value>Creează un cont ca să ai propriul personaj.</value>
+  </data>
+  <data name="NavPlayGuestCreateAccount" xml:space="preserve">
+    <value>Creează un cont</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Alătură-te scenei</value>
     <comment>MT</comment>
@@ -9584,5 +9593,26 @@
   </data>
   <data name="MailNewRead" xml:space="preserve">
     <value>Citește</value>
+  </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Anulează scena</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>O scenă anulată părăsește programul definitiv și nu mai poate începe.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Încheie scena</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>O scenă încheiată nu mai înregistrează și nu mai poate începe. Jurnalul ei rămâne.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Păstreaz-o</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>Scena nu a fost încheiată.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>Scena nu a fost anulată.</value>
   </data>
 </root>

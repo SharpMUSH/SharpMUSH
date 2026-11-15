@@ -5144,6 +5144,15 @@
     <value>Értesítés elrejtése</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayGuestLabel" xml:space="preserve">
+    <value>Vendégként játszol</value>
+  </data>
+  <data name="NavPlayGuestDetail" xml:space="preserve">
+    <value>Hozz létre fiókot, hogy saját karaktered lehessen.</value>
+  </data>
+  <data name="NavPlayGuestCreateAccount" xml:space="preserve">
+    <value>Fiók létrehozása</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Csatlakozás</value>
     <comment>MT</comment>
@@ -9584,5 +9593,26 @@
   </data>
   <data name="MailNewRead" xml:space="preserve">
     <value>Elolvasás</value>
+  </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Jelenet lemondása</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>A lemondott jelenet végleg lekerül a menetrendről, és nem indítható újra.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Jelenet befejezése</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>A befejezett jelenet nem rögzít tovább, és nem indítható újra. A naplója megmarad.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Megtartom</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>A jelenet nem fejeződött be.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>A jelenet nem lett lemondva.</value>
   </data>
 </root>

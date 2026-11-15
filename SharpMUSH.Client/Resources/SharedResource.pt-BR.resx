@@ -5144,6 +5144,15 @@
     <value>Ocultar este aviso</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayGuestLabel" xml:space="preserve">
+    <value>Jogando como convidado</value>
+  </data>
+  <data name="NavPlayGuestDetail" xml:space="preserve">
+    <value>Crie uma conta para ter um personagem só seu.</value>
+  </data>
+  <data name="NavPlayGuestCreateAccount" xml:space="preserve">
+    <value>Criar uma conta</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Participar da cena</value>
     <comment>MT</comment>
@@ -9584,5 +9593,26 @@
   </data>
   <data name="MailNewRead" xml:space="preserve">
     <value>Ler</value>
+  </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Cancelar cena</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>Uma cena cancelada sai da agenda de vez e não pode recomeçar.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Encerrar cena</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>Uma cena encerrada para de gravar e não pode recomeçar. O registro dela fica.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Manter</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>A cena não foi encerrada.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>A cena não foi cancelada.</value>
   </data>
 </root>

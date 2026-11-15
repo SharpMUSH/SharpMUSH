@@ -4458,6 +4458,15 @@
     <value>Masquer cet avis</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayGuestLabel" xml:space="preserve">
+    <value>Vous jouez en tant qu'invité</value>
+  </data>
+  <data name="NavPlayGuestDetail" xml:space="preserve">
+    <value>Créez un compte pour garder un personnage à vous.</value>
+  </data>
+  <data name="NavPlayGuestCreateAccount" xml:space="preserve">
+    <value>Créer un compte</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Rejoindre la scène</value>
     <comment>MT</comment>
@@ -8898,5 +8907,26 @@
   </data>
   <data name="MailNewRead" xml:space="preserve">
     <value>Lire</value>
+  </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Annuler la scène</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>Une scène annulée quitte le programme pour de bon et ne peut plus être lancée.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Terminer la scène</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>Une scène terminée cesse d'enregistrer et ne peut plus être relancée. Son journal reste.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>La garder</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>La scène n'a pas été terminée.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>La scène n'a pas été annulée.</value>
   </data>
 </root>
