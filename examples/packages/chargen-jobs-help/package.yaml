@@ -1,0 +1,36 @@
+format: "1.20"
+package: chargen-jobs-help
+title: "Character applications in the job queue: +help topics"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the Character applications in the job queue topic into +help: registers the chargen-jobs package's help with the +help librarian."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [chargen-jobs, help, bridge]
+category: Characters
+bridge: true
+requires_server: ">=0.1"
+
+# A bridge: chargen-jobs keeps its topic on its own help object, and plus-help reads any object registered with its
+# librarian. This package is only that registration; uninstalling it takes the topic out of +help, and neither
+# package changes.
+depends:
+  - package: chargen-jobs
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/chargen-jobs/
+      branch: main
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`CHARGEN-JOBS: |-
+        {{chargen-jobs/chargen_jobs_help}}

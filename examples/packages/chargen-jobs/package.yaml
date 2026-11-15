@@ -1,0 +1,139 @@
+format: "1.20"
+package: chargen-jobs
+title: "Character applications in the job queue"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Joins character applications to the job queue: each +app submission files a job in the Applications bucket, or writes on the one it filed before, and each decision in +app or the portal is written on the job, which approval closes. Reviewers still decide in +app."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [chargen, jobs, applications, bridge]
+category: Characters
+bridge: true
+requires_server: ">=0.1"
+
+# A bridge: chargen keeps the applications and decides them, jobs keeps the queue. This package follows each
+# application with one job in jobs' Applications bucket, through chargen's bridge hooks (ON`<hook>`JOBS, 2.9)
+# and jobs' API (INC`API`FILE, REPLY, NOTE and CLOSE). Closing the job in +job decides nothing: the application
+# is decided in +app or the portal, and that writes on the job. Uninstalling it stops the filing; the jobs
+# already filed stay.
+depends:
+  - package: chargen
+    version: ">=2.9"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/chargen/
+      branch: main
+  - package: jobs
+    version: ">=1.18"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/jobs/
+      branch: main
+
+objects:
+  # The tracker: JOB`<application key> holds the number of the job that follows that application, for as long
+  # as the job is there, so a character who applies again writes on the same job. WIZARD because it calls the
+  # jobs API, which writes the job store; Chargen runs its code with @trigger/inline, and only its controllers
+  # can change it.
+  #
+  # Every entry it writes is its own, naming the reviewer in the text, so whether a reviewer also works the
+  # Applications bucket changes nothing. The applicant's own submission is the exception: written as the
+  # applicant, it hands the job back to staff, and opens it again if it was closed.
+  - ref: tracker
+    type: thing
+    name: Application Jobs
+    location: "{{chargen/chargen}}"
+    flags: [no_command, WIZARD]
+    attributes:
+      JOB: |-
+        The job following each application, by application key.
+      # %0 a character: the job object following its application, or nothing when there is none.
+      FUN`JOB: |-
+        u({{jobs/jobs}}/FUN`JOB`FIND,get({{tracker}}/JOB`[u({{chargen/chargen}}/FUN`APP`KEY,%0)]))
+      # %0 a character: the job's text when its first application is filed.
+      FUN`TEXT`FILED: |-
+        [name(%0)] submitted an application.%r%rRead it with `+app [name(%0)]`, or [chr(91)]in the portal[chr(93)](/apps/chargen/[u({{chargen/chargen}}/FUN`APP`KEY,%0)]), and decide it there: `+app/return` asks for changes, `+app/approve` approves it. Each decision is written here, and approving closes this job. Closing it in +job decides nothing.
+      # %0 a character, %1 the round: the applicant's entry when they submit again.
+      FUN`TEXT`AGAIN: |-
+        Submitted again, round %1. `+app/diff [name(%0)]` shows what changed.
+      # %0 who acted, %1 what they said, if anything: the line saying so.
+      FUN`TEXT`SAID: |-
+        if(strlen(%1),%b[name(%0)] said: %1)
+
+      # %<character> submitted round %<round>: writes on the job following the application, else files one.
+      INC`SUBMIT: |-
+        think setqm(cj_key,u({{chargen/chargen}}/FUN`APP`KEY,%<character>),
+        cj_job,u({{tracker}}/FUN`JOB,%<character>)); @break strlen(%q<cj_job>)={@trigger/inline/nobreak/args {{jobs/jobs}}/INC`API`REPLY=job,get(%q<cj_job>/JOB`NUM),actor,%<character>,text,u({{tracker}}/FUN`TEXT`AGAIN,%<character>,%<round>)}; @trigger/inline/nobreak/args {{jobs/jobs}}/INC`API`FILE=player,%<character>,bucket,name({{jobs/applications}}),title,Application: [name(%<character>)],text,u({{tracker}}/FUN`TEXT`FILED,%<character>); @break not(strlen(%q<job>)); &JOB`%q<cj_key> {{tracker}}=%q<job>
+      # %<character> took the application back: the job waits on them.
+      INC`WITHDRAW: |-
+        @include/args {{tracker}}/INC`WRITE=character,%<character>,kind,REPLY,keep,0,text,[name(%<character>)] took the application back to change it.
+      # %<actor> asked %<character> for changes: %<message>.
+      INC`RETURN: |-
+        @include/args {{tracker}}/INC`WRITE=character,%<character>,kind,REPLY,keep,0,text,[name(%<actor>)] asked for changes: %<message>
+      # %<actor> approved %<character>'s application with every place taken: it waits for one, and the job stays
+      # with staff, since the applicant has nothing to do.
+      INC`WAITLIST: |-
+        @include/args {{tracker}}/INC`WRITE=character,%<character>,kind,REPLY,keep,1,text,[name(%<actor>)] approved it. Every place is taken%, so it waits for one.[u({{tracker}}/FUN`TEXT`SAID,%<actor>,%<message>)]
+      # %<character>'s application is approved: by %<actor> now (%<record> 1), or as a place opened for it (0). The job
+      # closes approved, quietly: chargen told the applicant.
+      INC`APPROVE: |-
+        think setq(cj_job,u({{tracker}}/FUN`JOB,%<character>)); @break not(strlen(%q<cj_job>)); @trigger/inline/nobreak/args {{jobs/jobs}}/INC`API`CLOSE=job,get(%q<cj_job>/JOB`NUM),actor,{{tracker}},outcome,approved,quiet,1,text,[if(%<record>,[name(%<actor>)] approved it.[u({{tracker}}/FUN`TEXT`SAID,%<actor>,%<message>)],A place opened: the application is approved.)]
+      # %<actor> retired %<character>: a staff note on the job.
+      INC`RETIRE: |-
+        @include/args {{tracker}}/INC`WRITE=character,%<character>,kind,NOTE,text,[name(%<actor>)] retired [name(%<character>)].
+      # Writes %<text> on the job following %<character>'s application, as this object: a public REPLY or a staff
+      # NOTE (%<kind>). Quiet, since chargen tells the applicant itself; %<keep> 1 leaves whose turn it is. Nothing
+      # when no job follows it.
+      INC`WRITE: |-
+        think setq(cj_job,u({{tracker}}/FUN`JOB,%<character>)); @break not(strlen(%q<cj_job>)); @trigger/inline/nobreak/args {{jobs/jobs}}/INC`API`%<kind>=job,get(%q<cj_job>/JOB`NUM),actor,{{tracker}},text,%<text>,quiet,1,keep,t(%<keep>)
+
+  # Chargen's bridge hooks, which run after the game's own ON`<hook>.
+  - ref: chargen_hooks
+    target: "{{chargen/chargen}}"
+    attributes:
+      ON`SUBMIT`JOBS: |-
+        @trigger/inline/nobreak/args {{tracker}}/INC`SUBMIT=character,%<character>,round,%<round>
+      ON`WITHDRAW`JOBS: |-
+        @trigger/inline/nobreak/args {{tracker}}/INC`WITHDRAW=character,%<character>
+      ON`RETURN`JOBS: |-
+        @trigger/inline/nobreak/args {{tracker}}/INC`RETURN=character,%<character>,actor,%<actor>,message,%<message>
+      ON`WAITLIST`JOBS: |-
+        @trigger/inline/nobreak/args {{tracker}}/INC`WAITLIST=character,%<character>,actor,%<actor>,message,%<message>
+      ON`APPROVE`JOBS: |-
+        @trigger/inline/nobreak/args {{tracker}}/INC`APPROVE=character,%<character>,actor,%<actor>,message,%<message>,record,%<record>
+      ON`RETIRE`JOBS: |-
+        @trigger/inline/nobreak/args {{tracker}}/INC`RETIRE=character,%<character>,actor,%<actor>
+
+  # The help, on a plain thing the +help librarian can read (chargen-jobs-help registers it). Bodies are
+  # evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: chargen_jobs_help
+    type: thing
+    name: Application Jobs Help
+    location: "{{tracker}}"
+    attributes:
+      HELP: |-
+        Character applications in the job queue.
+      SEE: |-
+        Cross-references. One leaf per topic.
+      SEE`APP`JOBS: |-
+        app review|jobs
+      HELP`APP`JOBS: |-
+        Each character application has a job in the **Applications** bucket that follows it.
+
+        - The first `+app/submit` files the job, in the applicant's name. Submitting again writes on the same job and hands it back to staff, and opens it again if it was closed.
+        - `+app/withdraw` writes on the job, which then waits on the applicant.
+        - `+app/return` writes what the reviewer asked for, and the job waits on the applicant.
+        - `+app/approve` closes the job as approved. With every place taken, it writes that the application waits for one, and closes the job when a place opens; the job stays with staff while it waits.
+        - `+app/retire` adds a staff note.
+
+        The portal's buttons at /apps/chargen do the same as these commands. Chargen tells the applicant about each decision, so the job's entries reach only staff; the applicant reads them with `+job <number>`.
+
+        Applications are decided in `+app` or the portal, never in `+job`: closing the job there changes nothing about the application. To see the jobs, a reviewer needs the Applications bucket too: `@role/assign <player>=job-admin-applications`.
+
+        Example, an applicant submitting for the first time:
+
+        ```
+        +app/submit
+        ```
+
+        Output: the usual `Submitted.` line, and `+myjobs` lists a new job called `Application: <name>`.

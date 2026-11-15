@@ -632,4 +632,86 @@ public class ChargenIntegrationTests
 			await UninstallAsync();
 		}
 	}
+
+	/// <summary>
+	/// Entry <paramref name="entry"/> on job <paramref name="job"/>, by default the newest reply or note (the log lines
+	/// are entries too), read from the job store as God.
+	/// </summary>
+	private async Task<string> LastEntry(string jobs, string job, int? entry = null) =>
+		await God($"think [setq(0,u({jobs}/FUN`JOB`FIND,{job}))][get(%q0/JOB`ENTRY`{entry?.ToString() ?? "[last(squish(iter(lnum(1,get(%q0/JOB`ENTRIES)),if(match(reply note,get(%q0/JOB`ENTRY`%i0`KIND)),%i0))))]"}`TEXT)]");
+
+	[Test]
+	public async Task AJobFollowsEachApplication()
+	{
+		try
+		{
+			await InstallAsync("chargen");
+			await InstallAsync("jobs");
+			await InstallAsync("chargen-jobs");
+			var jobs = (await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("jobs"))
+				.First(o => o.Ref == "jobs").Objid;
+			var applicant = await Player("CgJobApp");
+			var reviewer = await Player("CgJobRev", "application-reviewer");
+
+			await ApplyAsync(applicant);
+			var job = await God("think [first(jobs(Applications,all))]");
+			await Assert.That(job).IsNotEmpty().Because("the first submission files a job");
+			await Assert.That(await God($"think [job({job},title)]|[job({job},filer)]|[job({job},state)]"))
+				.IsEqualTo($"Application: {applicant.Name}|{await Objid(applicant)}|new")
+				.Because("the job is filed in the applicant's name");
+			await Assert.That(await LastEntry(jobs, job, 1)).Contains($"/apps/chargen/{await Key(applicant)}");
+
+			await Assert.That(await As(applicant, "+app/withdraw")).DoesNotContain("your job")
+				.Because("chargen tells the applicant itself, so the job's entries reach only staff");
+			await Assert.That(await LastEntry(jobs, job)).IsEqualTo($"{applicant.Name} took the application back to change it.");
+			await Assert.That(await God($"think [job({job},state)]")).IsEqualTo("player");
+
+			await Assert.That(await As(applicant, "+app/submit")).Contains("Submitted.");
+			await Assert.That(await God($"think [words(jobs(Applications,all))] [job({job},state)]")).IsEqualTo("1 staff")
+				.Because("submitting again writes on the same job, and hands it back to staff");
+			await Assert.That(await LastEntry(jobs, job)).IsEqualTo("Submitted again, round 2. `+app/diff " + applicant.Name + "` shows what changed.");
+
+			await SettleCommandsAsync();
+			var told = Notifications.CountFor(applicant.DbRef);
+			await As(reviewer, $"+app/return {applicant.Name}=Name the river, please.");
+			await Assert.That(string.Join("\n", Notifications.For(applicant.DbRef).Skip(told))).Contains("asked for changes").And.DoesNotContain("your job");
+			await Assert.That(await LastEntry(jobs, job)).IsEqualTo($"{reviewer.Name} asked for changes: Name the river, please.");
+			await Assert.That(await God($"think [job({job},state)]")).IsEqualTo("player");
+
+			await As(applicant, "+app/submit");
+			await Assert.That(await As(reviewer, $"+app/approve {applicant.Name}=Welcome.")).Contains($"Approved {applicant.Name}.");
+			await Assert.That(await God($"think [job({job},state)] [job({job},outcome)]")).IsEqualTo("closed approved")
+				.Because("approving the application closes its job");
+
+			await As(reviewer, $"+app/retire {applicant.Name}");
+			await Assert.That(await LastEntry(jobs, job)).IsEqualTo($"{reviewer.Name} retired {applicant.Name}.");
+			await Assert.That(await God($"think [job({job},state)]")).IsEqualTo("closed");
+
+			await Assert.That(await As(applicant, "+app/submit")).Contains("Submitted.");
+			await Assert.That(await God($"think [words(jobs(Applications,all))] [job({job},state)]")).IsEqualTo("1 staff")
+				.Because("applying again opens the same job again");
+
+			// With one place, taken by the applicant, a second approval waits for it.
+			await God($"&DATA`CONFIG`CAP {await Chargen()}=1");
+			await As(reviewer, $"+app/approve {applicant.Name}");
+			var second = await Player("CgJobTwo");
+			await ApplyAsync(second);
+			var secondJob = await God("think [first(jobs(Applications,all))]");
+			await Assert.That(secondJob).IsNotEqualTo(job);
+			await Assert.That(await As(reviewer, $"+app/approve {second.Name}")).Contains("Every place is taken");
+			await Assert.That(await LastEntry(jobs, secondJob)).IsEqualTo($"{reviewer.Name} approved it. Every place is taken, so it waits for one.");
+			await Assert.That(await God($"think [job({secondJob},state)]")).IsEqualTo("new")
+				.Because("a waitlisted application leaves the applicant nothing to do, so the job stays with staff");
+
+			await As(reviewer, $"+app/retire {applicant.Name}");
+			await Assert.That(await God($"think [job({secondJob},state)] [job({secondJob},outcome)]")).IsEqualTo("closed approved");
+			await Assert.That(await LastEntry(jobs, secondJob)).IsEqualTo("A place opened: the application is approved.");
+		}
+		finally
+		{
+			await WebAppFactoryArg.Services.UninstallWithBridgesAsync("chargen-jobs");
+			await WebAppFactoryArg.Services.UninstallWithBridgesAsync("jobs");
+			await UninstallAsync();
+		}
+	}
 }

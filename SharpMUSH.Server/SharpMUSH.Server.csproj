@@ -439,6 +439,14 @@
       <Link>BundledPackages\chargen-app.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.chargen-app.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\chargen-jobs\package.yaml">
+      <Link>BundledPackages\chargen-jobs.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.chargen-jobs.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\chargen-jobs-help\package.yaml">
+      <Link>BundledPackages\chargen-jobs-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.chargen-jobs-help.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\autoset\package.yaml">
       <Link>BundledPackages\autoset.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.autoset.package.yaml</LogicalName>
