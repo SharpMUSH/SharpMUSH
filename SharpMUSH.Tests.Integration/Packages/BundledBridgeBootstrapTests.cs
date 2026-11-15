@@ -33,8 +33,9 @@ public class BundledBridgeBootstrapTests
 
 		public ValueTask<T?> GetExpandedServerDataAsync<T>() where T : class => ValueTask.FromResult(declined as T);
 
+		// Bootstrap records that it offered the official package library; these tests do not read it back.
 		public ValueTask SetExpandedServerDataAsync<T>(T data, bool ignoreNull = false) where T : class
-			=> throw new NotSupportedException();
+			=> ValueTask.CompletedTask;
 	}
 
 	/// <summary>
