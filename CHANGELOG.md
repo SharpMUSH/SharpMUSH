@@ -9,6 +9,12 @@ Two version numbers matter:
 
 ## [Unreleased]
 
+[Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.1...HEAD
+
+## [1.0.1] - 2026-11-15
+
+Plugin contract 4.0.0. World format 1: a 1.0.0 world opens as it is.
+
 ### Added
 
 - The portal's page is sent with a `Link` header naming the stylesheets, fonts and Blazor boot script it loads first, read from the published `index.html`. Behind Cloudflare with Early Hints on, a browser gets them as a `103 Early Hints` response and starts fetching them while the page itself is still on its way.
@@ -37,10 +43,11 @@ Two version numbers matter:
 
 - NATS.Net 3.3.2, from 2.7.3. A core subscription now buffers 16,384 messages before it drops one, where it buffered 1,024, so the portal loses less output in a burst, and a ping that cannot be written counts as a missed pong, so a dead broker connection is noticed. A C# plugin that uses the `NatsConnection` its bridge source is handed builds against NATS.Net 3.
 - `help sharpmush features` lists what SharpMUSH has that PennMUSH does not, by area: the portal and accounts, roles, the wiki, feeds and dice, plugins (Discord, scenes, world maps, MCP and LSP), packages, softcode, functions, new commands and switches, clients, TinyMUX and RhostMUSH support, and running the game. Each line points to its own help topic.
-- In `@function/restrict`, a `!` in front of `wizard`, `admin`, `god`, `noguest`, `nogagged`, `nofixed` or `nobody` takes that restriction off, as PennMUSH's does, where it turned away whoever met it. A permission or `royalty` in a built-in's restriction replaces what the built-in asks for instead of adding to it, so a restriction already set may now let more in; check `@function <name>`. Restricting a built-in function needs `config.admin` (the Functions power is still enough for @functions). A function refused for lacking a permission names it: `#-1 PERMISSION DENIED: NEEDS CHAT.ADMIN`.
 
 ### Fixed
 
+- In `@function/restrict`, a `!` in front of `wizard`, `admin`, `god`, `noguest`, `nogagged`, `nofixed` or `nobody` takes that restriction off, as in PennMUSH; it turned away whoever met it. A permission or `royalty` in a built-in's restriction replaces what the built-in asks for instead of adding to it, so a restriction already set may now let more in; check `@function <name>`. Restricting a built-in function needs `config.admin` (the Functions power is still enough for `@function`s). A function refused for lacking a permission names it: `#-1 PERMISSION DENIED: NEEDS CHAT.ADMIN`.
+- The package library's behaviour tests wait for a step's `@wait 0` follow-up even when its timer has already fired and it is not on the queue yet, so the next step no longer runs ahead of it. The integration test step in CI may take 15 minutes instead of 10; the suite takes 8 to 10 on a hosted runner.
 - In MUSHclient and other Pueblo clients, tables, headers, the room description and the connect screen keep their line breaks. Preformatted text went to Pueblo as `<xch_mudtext>` with bare newlines, which MUSHclient ignores; each line now ends in `<BR>` (MarkupString 2.31.2).
 - A Pueblo client that answers the hello before its connection is registered (MUSHclient) is shown the connect screen once. It was shown it again after the handshake, as for a client that answered later.
 - `connect <character> <password>` takes the password of the account the character is linked to as well as the character's own, so a character made on the web portal, which gets no password of its own, can connect from a MU* client.
@@ -56,7 +63,7 @@ Two version numbers matter:
 - Help shows attribute paths such as ``LOG`RADIO`` whole in code examples (`help @feed taps`, `help palette`, `help event list` and others), where a backtick in the path cut the example short and left stray markup. A `\|` in a table's code span shows as `|`, as on the Docs site (`help named arguments`). Census help is version 1.0.3.
 - `Metrics:Port=0` (game server) and `ConnectionServer:MetricsPort=0` (connection server) turn metrics off: no port answers `/metrics`, where they moved the scrape onto the main web port, which a reverse proxy publishes.
 
-[Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.0...HEAD
+[1.0.1]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.0...v1.0.1
 
 ## [1.0.0] - 2026-11-14
 

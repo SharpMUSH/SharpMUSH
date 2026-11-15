@@ -8,7 +8,7 @@
     MarkupString.Pueblo are the same family, carried only by what renders those dialects.
   -->
   <PropertyGroup>
-    <MarkupStringVersion>2.31.2</MarkupStringVersion>
+    <MarkupStringVersion>2.31.3</MarkupStringVersion>
   </PropertyGroup>
 
   <!--
@@ -40,7 +40,7 @@
     Bump it with the next CHANGELOG.md section.
   -->
   <PropertyGroup>
-    <SharpMUSHVersion Condition="'$(SharpMUSHVersion)' == ''">1.0.0</SharpMUSHVersion>
+    <SharpMUSHVersion Condition="'$(SharpMUSHVersion)' == ''">1.0.1</SharpMUSHVersion>
   </PropertyGroup>
   <ItemGroup>
     <CompilerVisibleProperty Include="SharpMUSHVersion" />

@@ -235,10 +235,9 @@ public sealed partial class PackageScenarioRunner(ServerWebAppFactory factory, P
 	/// </summary>
 	private async Task SettleAsync()
 	{
-		var scheduler = factory.Services.GetRequiredService<SharpMUSH.Library.Services.TaskScheduler>();
 		var deadline = DateTimeOffset.UtcNow + SettleLimit;
 		await factory.QueueBarrierAsync();
-		while (DateTimeOffset.UtcNow < deadline && await NextDueWaitAsync(scheduler) is { } due)
+		while (DateTimeOffset.UtcNow < deadline && NextSoonWait() is { } due)
 		{
 			var until = due - DateTimeOffset.UtcNow;
 			await Task.Delay(until > TimeSpan.Zero ? until + SoonDelay / 10 : SoonDelay / 10);
@@ -249,20 +248,12 @@ public sealed partial class PackageScenarioRunner(ServerWebAppFactory factory, P
 	private static readonly TimeSpan SoonDelay = TimeSpan.FromMilliseconds(500);
 	private static readonly TimeSpan SettleLimit = TimeSpan.FromSeconds(10);
 
-	private static async Task<DateTimeOffset?> NextDueWaitAsync(SharpMUSH.Library.Services.TaskScheduler scheduler)
-	{
-		var soon = DateTimeOffset.UtcNow + SoonDelay;
-		DateTimeOffset? next = null;
-		await foreach (var (group, tasks) in scheduler.GetAllTasks())
-		{
-			if (!group.StartsWith(SharpMUSH.Library.Services.TaskScheduler.DelayGroup + ":", StringComparison.Ordinal)) continue;
-			foreach (var (due, _) in tasks)
-			{
-				if (due <= soon && (next is null || due < next)) next = due;
-			}
-		}
-		return next;
-	}
+	/// <summary>
+	/// The soonest <c>@wait</c> due within <see cref="SoonDelay"/>, including one whose timer has fired but which
+	/// is not on the queue yet: the barrier passes ahead of that one, so missing it lets the next step run first.
+	/// </summary>
+	private DateTimeOffset? NextSoonWait() =>
+		factory.NextDelayDue() is { } due && due <= DateTimeOffset.UtcNow + SoonDelay ? due : null;
 
 	private async Task<(string Action, string Output)> GodStepAsync(string command, int n)
 	{

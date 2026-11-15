@@ -1157,6 +1157,22 @@ public partial class TaskScheduler(
 	internal Task BackgroundWorkSettled() => Task.WhenAll(_background.Values);
 
 	/// <summary>
+	/// For tests: when the soonest running <c>@wait</c> (not a semaphore wait, not paused) is due, or null when
+	/// none is. A fired <c>@wait</c> counts until it reaches the queue: its timer is removed before then, so
+	/// <see cref="GetAllTasks"/> no longer lists it while a queue barrier can already pass ahead of it.
+	/// </summary>
+	internal DateTimeOffset? NextDelayDueForTests()
+	{
+		lock (_admissionLock)
+		{
+			return LockedPendingEntries
+				.Where(e => SchedulerKeys.IsDelay(e.Group) && e.Deferred is { Paused: false, Semaphore: null } && !_ready.Contains(e.Pid))
+				.Select(e => (DateTimeOffset?)e.Deferred!.Due)
+				.Min();
+		}
+	}
+
+	/// <summary>
 	/// Reserves an entry for <paramref name="executor"/> now, counted against its quota, shown by <c>@ps</c>
 	/// and halted with it, then runs <paramref name="work"/> off the queue, so the game keeps running while
 	/// it waits. What the work returns runs as that entry, at the tail of the queue when the work finishes;
