@@ -4458,6 +4458,15 @@
     <value>Masquer cet avis</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayGuestLabel" xml:space="preserve">
+    <value>Vous jouez en tant qu'invité</value>
+  </data>
+  <data name="NavPlayGuestDetail" xml:space="preserve">
+    <value>Créez un compte pour garder un personnage à vous.</value>
+  </data>
+  <data name="NavPlayGuestCreateAccount" xml:space="preserve">
+    <value>Créer un compte</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Rejoindre la scène</value>
     <comment>MT</comment>

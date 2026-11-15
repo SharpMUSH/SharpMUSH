@@ -5144,6 +5144,15 @@
     <value>Dölj det här meddelandet</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayGuestLabel" xml:space="preserve">
+    <value>Du spelar som gäst</value>
+  </data>
+  <data name="NavPlayGuestDetail" xml:space="preserve">
+    <value>Skapa ett konto för att få en egen karaktär.</value>
+  </data>
+  <data name="NavPlayGuestCreateAccount" xml:space="preserve">
+    <value>Skapa ett konto</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Gå med i scenen</value>
     <comment>MT</comment>

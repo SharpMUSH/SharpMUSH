@@ -5144,6 +5144,15 @@
     <value>Deze melding verbergen</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayGuestLabel" xml:space="preserve">
+    <value>Je speelt als gast</value>
+  </data>
+  <data name="NavPlayGuestDetail" xml:space="preserve">
+    <value>Maak een account om een eigen personage te houden.</value>
+  </data>
+  <data name="NavPlayGuestCreateAccount" xml:space="preserve">
+    <value>Account aanmaken</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Meedoen</value>
     <comment>MT</comment>

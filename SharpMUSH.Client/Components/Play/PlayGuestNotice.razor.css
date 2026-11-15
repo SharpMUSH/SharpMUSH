@@ -1,0 +1,62 @@
+/* A guest is playing: one line above the terminal naming it, and a link to make an account. Quieter than the
+   scene hint, which asks for something now: a neutral surface, the accent only on the link. */
+.play-guest-notice {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin: 8px 4px 4px;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: var(--text-sm);
+    container-type: inline-size;
+}
+
+.play-guest-notice ::deep .mud-icon-root {
+    flex-shrink: 0;
+    color: var(--text-dim);
+}
+
+.play-guest-notice-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.play-guest-notice-label {
+    font-weight: 600;
+}
+
+.play-guest-notice-detail {
+    margin-inline-start: 6px;
+    color: var(--text-dim);
+}
+
+/* Narrow: "Guest" and the link say it; the explanation gives way first. */
+@container (max-width: 30rem) {
+    .play-guest-notice-detail {
+        display: none;
+    }
+}
+
+.play-guest-notice-action {
+    flex-shrink: 0;
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.play-guest-notice-action:hover {
+    text-decoration: underline;
+}
+
+.play-guest-notice-action:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+}

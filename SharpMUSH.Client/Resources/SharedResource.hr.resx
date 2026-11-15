@@ -5144,6 +5144,15 @@
     <value>Sakrij ovu obavijest</value>
     <comment>MT</comment>
   </data>
+  <data name="NavPlayGuestLabel" xml:space="preserve">
+    <value>Igrate kao gost</value>
+  </data>
+  <data name="NavPlayGuestDetail" xml:space="preserve">
+    <value>Napravite račun da biste imali vlastitog lika.</value>
+  </data>
+  <data name="NavPlayGuestCreateAccount" xml:space="preserve">
+    <value>Napravi račun</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Pridruži se sceni</value>
     <comment>MT</comment>

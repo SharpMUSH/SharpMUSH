@@ -145,6 +145,10 @@ else
                                     {
                                         <PlaySceneHint Scene="running" OnOpen="OpenScene" OnHide="() => _hintHiddenFor = running.Id" />
                                     }
+                                    @if (PlayingAsGuest)
+                                    {
+                                        <PlayGuestNotice />
+                                    }
                                     <GlobalTerminal @ref="_playTerm" Terminal="PlayTerminal" ShowDiagnostics="false"
                                                     TargetColumns="_targetCols" EchoCommands="_echo"
                                                     HidePages="@(_hidePages && CommsFiled)" HideChannels="@(_hideChannels && CommsFiled)" ShowClearButton="false" ShowConnectionBar="false" AllowGuest="true" KeepsLog="true" />

@@ -118,6 +118,7 @@ public class TerminalServiceHost : ITerminalService
 
 	public string? ServerUri => _inner.ServerUri;
 	public TerminalIdentity? Identity => _inner.Identity;
+	public bool IsGuest => _inner.IsGuest;
 	public IReadOnlyList<TerminalLine> Lines => _inner.Lines;
 	public TerminalPrompt? Prompt => _inner.Prompt;
 	public IOobChannelStore OobChannels => _oob;
