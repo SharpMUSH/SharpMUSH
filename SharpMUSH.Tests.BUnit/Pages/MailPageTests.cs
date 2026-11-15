@@ -213,11 +213,63 @@ public class MailPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".mail-reading-avatar").GetAttribute("style")).IsEqualTo(avatar.GetAttribute("style"));
 	}
 
+	/// <summary>
+	/// /mail/sent lists what the character sent, one row per message naming every recipient; selecting one shows
+	/// its text and how many have read it, and marks nothing read.
+	/// </summary>
+	[Test]
+	public async Task Sent_ListsEachMessageWithItsRecipients()
+	{
+		var cut = RenderAt("/mail/sent");
+		await Assert.That(cut.Find(".mail-list .kit-card-title").TextContent).IsEqualTo("NavMailFolderSent");
+		var row = cut.Find(".mail-row");
+		await Assert.That(row.ClassList).Contains("mail-row--sent");
+		await Assert.That(row.QuerySelector(".mail-row-from")!.TextContent).IsEqualTo("To: Tomas Reyes, Wren Halloway");
+		await Assert.That(row.TextContent).Contains("Lantern route");
+
+		await row.ClickAsync();
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Find(".mail-reading-body").TextContent.Contains(SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.SentBody))
+				throw new InvalidOperationException("body not rendered yet");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".mail-reading-date").TextContent).Contains("MailSentReadBy");
+		await Assert.That(cut.FindAll(".mail-reply").Count).IsEqualTo(0);
+	}
+
+	/// <summary>Going from the inbox to Sent changes no parameter of the page, and still shows the sent list.</summary>
+	[Test]
+	public async Task GoingToSent_FromTheInbox_ShowsTheSentList()
+	{
+		var cut = RenderAt("/mail");
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/mail/sent");
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".mail-row--sent").Count != 1) throw new InvalidOperationException("sent list not shown yet");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".mail-list .kit-card-title").TextContent).IsEqualTo("NavMailFolderSent");
+	}
+
+	/// <summary>A mail.new push puts the new message in the inbox on screen.</summary>
+	[Test]
+	public async Task NewMail_AppearsInTheInboxOnScreen()
+	{
+		var cut = RenderAt("/mail");
+		await Assert.That(cut.FindAll(".mail-row").Count).IsEqualTo(3);
+
+		_mail.Deliver(new(4, "Mara Quill", "Second bell", DateTimeOffset.UnixEpoch, Read: false, Urgent: false, "INBOX"));
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".mail-row").Count != 4) throw new InvalidOperationException("new mail not listed yet");
+		}, TimeSpan.FromSeconds(5));
+	}
+
 	[Test]
 	public async Task TheFolderComesFromTheAddress()
 	{
 		var cut = RenderAt("/mail?folder=SENT");
-		await Assert.That(cut.Find(".mail-list .kit-card-title").TextContent).IsEqualTo("NavMailFolderSent");
+		// A folder named SENT keeps its name: Sent is the list of mail the character sent.
+		await Assert.That(cut.Find(".mail-list .kit-card-title").TextContent).IsEqualTo("SENT");
 		await Assert.That(cut.FindAll(".mail-row").Count).IsEqualTo(1);
 		await Assert.That(cut.Find(".mail-row").TextContent).Contains("Re: The ledger");
 	}

@@ -9573,6 +9573,27 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Temaets bakgrunn står stille, og ingenting på siden glir eller roterer. Alltid på når enheten din ber om redusert bevegelse.</value>
   </data>
+  <data name="MailSentEmpty" xml:space="preserve">
+    <value>Ingenting du har sendt, ligger fortsatt i en postkasse.</value>
+  </data>
+  <data name="MailSentRead" xml:space="preserve">
+    <value>Lest</value>
+  </data>
+  <data name="MailSentNotRead" xml:space="preserve">
+    <value>Ikke lest ennå</value>
+  </data>
+  <data name="MailSentReadBy" xml:space="preserve">
+    <value>Lest av {0} av {1}</value>
+  </data>
+  <data name="MailNewFrom" xml:space="preserve">
+    <value>Ny post fra {0}</value>
+  </data>
+  <data name="MailNewFromSubject" xml:space="preserve">
+    <value>Ny post fra {0}: {1}</value>
+  </data>
+  <data name="MailNewRead" xml:space="preserve">
+    <value>Les</value>
+  </data>
   <data name="RolCancelScene" xml:space="preserve">
     <value>Avlys scenen</value>
   </data>

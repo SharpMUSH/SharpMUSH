@@ -19,8 +19,9 @@ namespace SharpMUSH.Tests.Integration.Packages;
 
 /// <summary>
 /// The bundled <c>comm-feed</c> package turns the engine's <c>CHANNEL`MESSAGE</c>, <c>PAGE`MESSAGE</c>,
-/// <c>PLAYER`CHANNELS</c> and <c>CHANNEL`WHO</c> events into the <c>comm.message</c>, <c>comm.channels</c>
-/// and <c>comm.who</c> OOB pushes the portal's Play sidebar reads (docs/softcode/comm-feed-handler.md).
+/// <c>PLAYER`CHANNELS</c>, <c>CHANNEL`WHO</c> and <c>MAIL`RECEIVED</c> events into the <c>comm.message</c>,
+/// <c>comm.channels</c>, <c>comm.who</c> and <c>mail.new</c> OOB pushes the portal reads
+/// (docs/softcode/comm-feed-handler.md).
 ///
 /// <para>Every test runs the real path: players on websocket connections, the command they would type,
 /// the event the engine raises, the package's attributes as installed at boot, and <c>oob()</c> publishing
@@ -227,6 +228,34 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 			await Assert.That(message["text"]!.GetValue<string>()).IsEqualTo($"hello, 3 [add(1,2)] {marker}");
 			await Assert.That(message["ts"]!.GetValue<long>()).IsGreaterThanOrEqualTo(before);
 		}
+	}
+
+	/// <summary>
+	/// Each @mail reaches its recipient's connections as <c>mail.new</c>, for the portal's unread count and notice,
+	/// and nobody else's: not the sender's, not a bystander's.
+	/// </summary>
+	[Test]
+	public async Task Mail_ReachesItsRecipient_AndNobodyElse()
+	{
+		var sender = await ViewerAsync("CommMailFrom");
+		var recipient = await ViewerAsync("CommMailTo");
+		var bystander = await ViewerAsync("CommMailBy");
+		var subject = TestIsolationHelpers.GenerateUniqueName("subject");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => Run(sender, $"@mail/urgent {recipient.Name}={subject}/hello"), Run,
+			sender, recipient, bystander);
+
+		await Assert.That(Frames(sent[sender.Handle], "mail.new")).IsEmpty();
+		await Assert.That(Frames(sent[bystander.Handle], "mail.new")).IsEmpty();
+
+		var mail = Frames(sent[recipient.Handle], "mail.new").Single();
+		await Assert.That(mail["v"]!.GetValue<int>()).IsEqualTo(2);
+		await Assert.That(mail["number"]!.GetValue<int>()).IsEqualTo(1);
+		await Assert.That(mail["from"]!.GetValue<string>()).IsEqualTo(sender.Name);
+		await Assert.That(mail["fromObjid"]!.GetValue<string>()).IsEqualTo(await Objid(sender));
+		await Assert.That(mail["subject"]!.GetValue<string>()).IsEqualTo(subject);
+		await Assert.That(mail["urgent"]!.GetValue<bool>()).IsTrue();
 	}
 
 	/// <summary>

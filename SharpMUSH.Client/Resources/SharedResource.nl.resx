@@ -9573,6 +9573,27 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>De achtergrond van het thema staat stil en niets op de pagina schuift of draait. Altijd aan als je apparaat om minder beweging vraagt.</value>
   </data>
+  <data name="MailSentEmpty" xml:space="preserve">
+    <value>Niets wat je hebt verstuurd staat nog in een postvak.</value>
+  </data>
+  <data name="MailSentRead" xml:space="preserve">
+    <value>Gelezen</value>
+  </data>
+  <data name="MailSentNotRead" xml:space="preserve">
+    <value>Nog niet gelezen</value>
+  </data>
+  <data name="MailSentReadBy" xml:space="preserve">
+    <value>Gelezen door {0} van {1}</value>
+  </data>
+  <data name="MailNewFrom" xml:space="preserve">
+    <value>Nieuwe post van {0}</value>
+  </data>
+  <data name="MailNewFromSubject" xml:space="preserve">
+    <value>Nieuwe post van {0}: {1}</value>
+  </data>
+  <data name="MailNewRead" xml:space="preserve">
+    <value>Lezen</value>
+  </data>
   <data name="RolCancelScene" xml:space="preserve">
     <value>Scène annuleren</value>
   </data>

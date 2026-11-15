@@ -4,7 +4,8 @@ using System.Text.RegularExpressions;
 namespace SharpMUSH.Client.Components.Kit;
 
 /// <summary>
-/// Dates and times as the reader's culture writes them, in the reader's time zone. A fixed pattern
+/// Dates and times as the reader's culture writes them, in the reader's time zone (the browser's, or one the
+/// server already converted to, passed with <c>asGiven</c>). A fixed pattern
 /// such as <c>"MMM d, yyyy"</c> translates the month name but keeps English order and punctuation, so
 /// German gets "Nov. 5, 2026" instead of "5. Nov. 2026".
 /// </summary>
@@ -17,40 +18,40 @@ namespace SharpMUSH.Client.Components.Kit;
 public static partial class DateDisplay
 {
 	/// <summary>"Nov 5, 2026" / "5. Nov. 2026".</summary>
-	public static string Date(DateTimeOffset when, CultureInfo? culture = null)
+	public static string Date(DateTimeOffset when, CultureInfo? culture = null, bool asGiven = false)
 	{
 		culture ??= CultureInfo.CurrentCulture;
-		return when.ToLocalTime().ToString(MediumDatePattern(culture), culture);
+		return Local(when, asGiven).ToString(MediumDatePattern(culture), culture);
 	}
 
 	/// <summary>"Nov 5, 2026, 4:36 PM" / "5. Nov. 2026, 16:36".</summary>
-	public static string DateTime(DateTimeOffset when, CultureInfo? culture = null)
+	public static string DateTime(DateTimeOffset when, CultureInfo? culture = null, bool asGiven = false)
 	{
 		culture ??= CultureInfo.CurrentCulture;
-		var local = when.ToLocalTime();
+		var local = Local(when, asGiven);
 		return $"{local.ToString(MediumDatePattern(culture), culture)}, {local.ToString("t", culture)}";
 	}
 
 	/// <summary>"Thursday, November 5, 2026, 4:36 PM" / "Donnerstag, 5. November 2026, 16:36".</summary>
-	public static string LongDateTime(DateTimeOffset when, CultureInfo? culture = null)
+	public static string LongDateTime(DateTimeOffset when, CultureInfo? culture = null, bool asGiven = false)
 	{
 		culture ??= CultureInfo.CurrentCulture;
-		var local = when.ToLocalTime();
+		var local = Local(when, asGiven);
 		return $"{local.ToString("D", culture)}, {local.ToString("t", culture)}";
 	}
 
 	/// <summary>"Nov 5" / "5. Nov.".</summary>
-	public static string MonthDay(DateTimeOffset when, CultureInfo? culture = null)
+	public static string MonthDay(DateTimeOffset when, CultureInfo? culture = null, bool asGiven = false)
 	{
 		culture ??= CultureInfo.CurrentCulture;
-		return when.ToLocalTime().ToString(Abbreviate(culture.DateTimeFormat.MonthDayPattern), culture);
+		return Local(when, asGiven).ToString(Abbreviate(culture.DateTimeFormat.MonthDayPattern), culture);
 	}
 
 	/// <summary>"Nov 5, 4:36 PM" / "5. Nov., 16:36".</summary>
-	public static string MonthDayTime(DateTimeOffset when, CultureInfo? culture = null)
+	public static string MonthDayTime(DateTimeOffset when, CultureInfo? culture = null, bool asGiven = false)
 	{
 		culture ??= CultureInfo.CurrentCulture;
-		var local = when.ToLocalTime();
+		var local = Local(when, asGiven);
 		return $"{local.ToString(Abbreviate(culture.DateTimeFormat.MonthDayPattern), culture)}, {local.ToString("t", culture)}";
 	}
 
@@ -67,6 +68,12 @@ public static partial class DateDisplay
 		culture ??= CultureInfo.CurrentCulture;
 		return when.ToLocalTime().ToString("T", culture);
 	}
+
+	/// <summary>
+	/// The time to show: in the reader's zone, or, when <paramref name="asGiven"/>, as the server gave it — already in
+	/// the zone the reader chose in the game (their <c>TZ</c>), which may not be the browser's.
+	/// </summary>
+	private static DateTimeOffset Local(DateTimeOffset when, bool asGiven) => asGiven ? when : when.ToLocalTime();
 
 	/// <summary>The culture's long date pattern without the weekday, with the month abbreviated.</summary>
 	public static string MediumDatePattern(CultureInfo culture)

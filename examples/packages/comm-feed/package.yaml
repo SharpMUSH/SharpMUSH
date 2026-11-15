@@ -1,18 +1,21 @@
 format: "1.16"
 package: comm-feed
 title: "Channel and page feed"
-version: 1.4.2
+version: 1.5.0
 authors: [SharpMUSH]
-description: "Pushes comm.channels, comm.message and comm.who OOB v2 updates — the channels a player may see and which they are on, each channel line or page to exactly the players who received it, and who comes onto or goes off a channel's member list — the data source for the portal Play sidebar's Channels and Pages."
+description: "Pushes comm.channels, comm.message, comm.who and mail.new OOB v2 updates — the channels a player may see and which they are on, each channel line or page to exactly the players who received it, who comes onto or goes off a channel's member list, and each @mail a player receives — the data source for the portal Play sidebar's Channels and Pages and the portal's new-mail notice."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [oob, portal, play, channels, pages]
 category: Web portal
 requires_server: ">=0.1"
 
-# Attach mode (decision 20.3): manages four event handlers and their helpers on
+# Attach mode (decision 20.3): manages five event handlers and their helpers on
 # the existing event_handler object ({{$event_handler}}, #9 by default). Every
 # helper is under FUN`COMM` so it cannot collide with room-contents' FUN`ROOMCONTENTS`*.
+#
+# 1.5.0 adds mail.new: each @mail a connected player receives, to them, for the
+# portal's unread count and new-mail notice.
 #
 # 1.4.0 adds markup to comm.message (the text with its colour kept) and
 # picture (the picture a line was sent with).
@@ -114,6 +117,13 @@ objects:
       FUN`COMM`WHO: |-
         json_fill(v(DATA`TEMPLATE`COMM`WHO),/channel,%<channel>,/member/name,%<name>,/member/objid,%<member>,/online,if(strmatch(%<change>,on),true,false))
 
+      DATA`TEMPLATE`COMM`MAIL: |-
+        {"v":2,"number":0,"from":"","fromObjid":"","subject":"","urgent":false}
+      # mail.new, from named arguments: number (the message's number in the
+      # recipient's inbox), sender (an objid), subject and urgent (1 or 0).
+      FUN`COMM`MAIL: |-
+        json_fill(v(DATA`TEMPLATE`COMM`MAIL),/number,%<number>,/from,name(%<sender>),/fromObjid,objid(%<sender>),/subject,%<subject>,/urgent,if(t(%<urgent>),true,false))
+
       # ── The handlers ─────────────────────────────────────────────────────
       # Each reads the event's arguments by name (help event list). null()
       # swallows oob()'s delivery count, which think would otherwise show the
@@ -138,3 +148,9 @@ objects:
       # list, to that player.
       PLAYER`CHANNELS`COMMFEED: |-
         think null(if(u(me/FUN`COMM`VIEWER,%<objid>),oob(%<objid>,comm.channels,u(me/FUN`COMM`CHANNELS,%<objid>))))
+      # recipient is the player whose inbox the message reached, sender who sent
+      # it. Not filtered by FUN`COMM`VIEWER: the portal's background connection,
+      # which every portal page keeps and which hears this, does not make a
+      # player CONNECTED. oob() reaches only the connections they have.
+      MAIL`RECEIVED`COMMFEED: |-
+        think null(oob(%<recipient>,mail.new,uargs(me/FUN`COMM`MAIL,number,%<number>,sender,%<sender>,subject,%<subject>,urgent,%<urgent>)))

@@ -14,10 +14,22 @@ namespace SharpMUSH.Client.Services;
 public class MailService(IHttpClientFactory httpClientFactory, IAccountAuthState accountAuth)
 {
 	/// <summary>A mailbox row; mirrors <c>MailController.MailSummaryDto</c>.</summary>
-	public record MailSummary(int Number, string From, string Subject, DateTimeOffset DateSent, bool Read, bool Urgent, string Folder);
+	/// <param name="Zoned">The time is in the reader's own zone (their <c>TZ</c>) and is shown as sent; otherwise
+	/// it is shown in the browser's.</param>
+	public record MailSummary(int Number, string From, string Subject, DateTimeOffset DateSent, bool Read, bool Urgent, string Folder, bool Zoned = false);
 
 	/// <summary>A full message; mirrors <c>MailController.MailMessageDto</c>.</summary>
-	public record MailMessage(int Number, string From, string Subject, string Body, DateTimeOffset DateSent, bool Urgent, bool Read, string Folder);
+	public record MailMessage(int Number, string From, string Subject, string Body, DateTimeOffset DateSent, bool Urgent, bool Read, string Folder, bool Zoned = false);
+
+	/// <summary>A message the character sent, one row for all its recipients; mirrors <c>MailController.SentMailDto</c>.</summary>
+	/// <param name="ReadBy">How many recipients have read their copy.</param>
+	public record SentMail(long Id, IReadOnlyList<string> To, string Subject, DateTimeOffset DateSent, bool Urgent, int ReadBy, bool Zoned = false);
+
+	/// <summary>A sent message with its text; mirrors <c>MailController.SentMailMessageDto</c>.</summary>
+	public record SentMailMessage(long Id, IReadOnlyList<string> To, string Subject, string Body, DateTimeOffset DateSent, bool Urgent, int ReadBy, bool Zoned = false);
+
+	/// <summary>What <see cref="Changed"/> names for a send: the sent list. A folder name is letters and digits only, so no folder has it.</summary>
+	public const string SentList = "(sent)";
 
 	private record SendRequest(string To, string Subject, string Body, bool Urgent);
 
@@ -27,6 +39,14 @@ public class MailService(IHttpClientFactory httpClientFactory, IAccountAuthState
 	public Task<ApiResult<IReadOnlyList<MailSummary>>> ListAsync(string folder = "INBOX") =>
 		Client.GetApiAsync<IReadOnlyList<MailSummary>>(
 			$"api/mail?folder={Uri.EscapeDataString(folder)}", "The server returned no mailbox.");
+
+	/// <summary>Lists the mail the character sent that is still in a recipient's mailbox, newest first.</summary>
+	public Task<ApiResult<IReadOnlyList<SentMail>>> SentAsync() =>
+		Client.GetApiAsync<IReadOnlyList<SentMail>>("api/mail/sent", "The server returned no sent mail.");
+
+	/// <summary>Reads one sent message. It stays as its recipients have it: reading your own copy marks nothing.</summary>
+	public Task<ApiResult<SentMailMessage>> ReadSentAsync(long id) =>
+		Client.GetApiAsync<SentMailMessage>($"api/mail/sent/{id}", "The server returned no message.");
 
 	/// <summary>Lists the character's folder names.</summary>
 	public Task<ApiResult<IReadOnlyList<string>>> FoldersAsync() =>
@@ -124,7 +144,7 @@ public class MailService(IHttpClientFactory httpClientFactory, IAccountAuthState
 	{
 		var mailbox = Mailbox;
 		var result = await Client.PostApiAsync("api/mail", new SendRequest(to, subject, body, urgent));
-		if (result is Success) Report(mailbox, new MailChange("SENT", MarkedRead: false));
+		if (result is Success) Report(mailbox, new MailChange(SentList, MarkedRead: false));
 		return result;
 	}
 

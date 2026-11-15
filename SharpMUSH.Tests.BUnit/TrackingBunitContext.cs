@@ -45,6 +45,10 @@ public abstract class TrackingBunitContext : BunitContext
 	/// no stored layout when it registers none) and the terminal it registers (no character connected when none).
 	/// </para>
 	/// <para>
+	/// The Mail button's unread count and the new-mail notice read <see cref="MailWatch"/>, over the
+	/// <see cref="MailService"/> and terminal a test registers (an empty inbox and no terminal when none).
+	/// </para>
+	/// <para>
 	/// An avatar finds a character's picture in the <see cref="CharacterDirectoryService"/> a test registers;
 	/// without one, nobody has a picture.
 	/// </para>
@@ -78,6 +82,10 @@ public abstract class TrackingBunitContext : BunitContext
 			sp.GetRequiredService<IAccountAuthState>(),
 			sp.GetService<ITerminalService>() ?? Substitute.For<ITerminalService>(),
 			sp.GetRequiredService<IStringLocalizer<SharedResource>>()));
+		Services.TryAddSingleton(sp => new MailService(sp.GetService<IHttpClientFactory>() ?? NoServer(),
+			sp.GetRequiredService<IAccountAuthState>()));
+		Services.TryAddSingleton(sp => new MailWatch(sp.GetRequiredService<MailService>(),
+			sp.GetService<ITerminalService>() ?? Substitute.For<ITerminalService>(), sp.GetRequiredService<IAccountAuthState>()));
 	}
 
 	/// <summary>

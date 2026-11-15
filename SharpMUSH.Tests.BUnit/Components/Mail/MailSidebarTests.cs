@@ -26,6 +26,7 @@ public class MailSidebarTests : TrackingBunitContext
 		if (connected)
 		{
 			cut.WaitForAssertion(() => cut.Find(".mail-side-folders a.kit-row[href='/mail?folder=SENT']"), TimeSpan.FromSeconds(5));
+			if (!collapsed) cut.WaitForAssertion(() => cut.Find(".kit-side-sub span"), TimeSpan.FromSeconds(5));
 		}
 
 		return cut;
@@ -38,7 +39,7 @@ public class MailSidebarTests : TrackingBunitContext
 		await Assert.That(cut.FindAll("a.kit-row[href='/mail/compose']").Count).IsEqualTo(0)
 			.Because("Compose is the Mail page header's action; the sidebar repeated it");
 		var folders = cut.FindAll(".mail-side-folders a.kit-row");
-		await Assert.That(folders.Select(a => a.GetAttribute("href")).ToList()).IsEquivalentTo(["/mail?folder=INBOX", "/mail?folder=SENT"]);
+		await Assert.That(folders.Select(a => a.GetAttribute("href")).ToList()).IsEquivalentTo(["/mail?folder=INBOX", "/mail?folder=SENT", "/mail/sent"]);
 		await Assert.That(folders[0].QuerySelector(".kit-row-unread")!.TextContent).IsEqualTo("2");
 		await Assert.That(folders[1].QuerySelector(".kit-row-unread")).IsNull();
 		await Assert.That(cut.Find(".kit-side-sub").TextContent).Contains("NavUnreadCount");
@@ -49,6 +50,7 @@ public class MailSidebarTests : TrackingBunitContext
 	[Arguments("/mail?folder=SENT", "/mail?folder=SENT")]
 	[Arguments("/mail/1?folder=SENT", "/mail?folder=SENT")]
 	[Arguments("/mail/compose", null)]
+	[Arguments("/mail/sent", "/mail/sent")]
 	public async Task MarksWhereTheReaderIs(string path, string? current)
 	{
 		var cut = RenderAt(path);
@@ -115,7 +117,7 @@ public class MailSidebarTests : TrackingBunitContext
 
 		cut.WaitForAssertion(() => cut.Find(".mail-side-folders a.kit-row[href='/mail?folder=PLOTS']"), TimeSpan.FromSeconds(5));
 		var folders = cut.FindAll(".mail-side-folders a.kit-row").Select(a => a.GetAttribute("href")).ToList();
-		await Assert.That(folders).IsEquivalentTo(["/mail?folder=INBOX", "/mail?folder=PLOTS"]);
+		await Assert.That(folders).IsEquivalentTo(["/mail?folder=INBOX", "/mail?folder=PLOTS", "/mail/sent"]);
 		await Assert.That(cut.Find(".mail-side-folders a.kit-row[href='/mail?folder=INBOX'] .kit-row-unread").TextContent).IsEqualTo("1");
 	}
 
@@ -155,7 +157,7 @@ public class MailSidebarTests : TrackingBunitContext
 		var cut = RenderAt("/mail", collapsed: true);
 		await Assert.That(cut.FindAll(".kit-side-head").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".kit-section-label").Count).IsEqualTo(0);
-		await Assert.That(cut.FindAll("a.kit-row.kit-row--collapsed").Count).IsEqualTo(2);
+		await Assert.That(cut.FindAll("a.kit-row.kit-row--collapsed").Count).IsEqualTo(3).Because("the two folders and Sent");
 	}
 
 	[Test]
