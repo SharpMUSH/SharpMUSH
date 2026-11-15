@@ -328,6 +328,10 @@
         {
             _selectedRemote = _remotes[0].Name;
         }
+        else if (_remotes?.FirstOrDefault(r => OfficialPackageRemote.IsLibrary(r.Url)) is { } library)
+        {
+            _selectedRemote = library.Name;
+        }
     }
 
     private string SelectedVersion(PackageRepoEntry entry) =>

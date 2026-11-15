@@ -19,7 +19,7 @@ Two version numbers matter:
 - A visitor playing as a guest on the portal's Play page sees a line above the terminal saying so, with a link to create an account.
 - The play terminal's settings menu lists each option by name only; an (i) beside it shows the details on hover, focus or a tap.
 - Boards (bboards 1.8.0): a new comment or reply is announced to the board's readers as a new post is, as `(New BB comment (5/1/1/3) posted to 'General' by Seliana: Test Post)`.
-- A world comes with the official package library, SharpMUSH Official (`https://github.com/SharpMUSH/SharpMUSH.Packages`), as a remote, so Admin → Packages → Browse lists its packages without adding it first. A world that already has the library, or a remote under that name, keeps what it has. It is added once: a library the administrator removes stays removed.
+- A world comes with the official package library, SharpMUSH Official (`https://github.com/SharpMUSH/SharpMUSH.Packages`), as a remote, and Admin → Packages → Browse starts with it selected. A world that already has the library, or a remote under that name, keeps what it has. It is added once: a library the administrator removes stays removed, unless a later release moves a package the game has installed out of the server and into the library.
 
 ### Changed
 
