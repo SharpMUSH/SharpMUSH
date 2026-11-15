@@ -10,6 +10,20 @@ namespace SharpMUSH.Tests.BUnit.Services;
 /// </summary>
 public class PermissionChangeRefresherTests
 {
+	private sealed class FreshHubFactory : IGameHubConnectionFactory
+	{
+		public List<FakeGameHubConnection> Hubs { get; } = [];
+
+		public IGameHubConnection Create()
+		{
+			var hub = new FakeGameHubConnection();
+			Hubs.Add(hub);
+			return hub;
+		}
+
+		public IGameHubConnection? CreateScene() => null;
+	}
+
 	private sealed class SingleHubFactory : IGameHubConnectionFactory
 	{
 		public FakeGameHubConnection Hub { get; } = new();
@@ -96,19 +110,47 @@ public class PermissionChangeRefresherTests
 	}
 
 	[Test]
+	public async Task AHubRebuiltAfterItClosedReloadsTheTabsAuthority()
+	{
+		var factory = new FreshHubFactory();
+		var connection = new ConnectionStateService(factory, NullLogger<ConnectionStateService>.Instance)
+		{
+			RetryDelays = [TimeSpan.Zero]
+		};
+		await connection.ConnectAsync();
+		var reloads = 0;
+		using var refresher = new PermissionChangeRefresher(connection, new FakeAccountAuthState(), () =>
+		{
+			reloads++;
+			return Task.CompletedTask;
+		}, NullLogger<PermissionChangeRefresher>.Instance);
+
+		await factory.Hubs[0].RaiseClosedAsync();
+		await refresher.Idle;
+
+		await Assert.That(factory.Hubs).Count().IsEqualTo(2).Because("the retry built a replacement hub");
+		await Assert.That(factory.Hubs[1].StartCount).IsEqualTo(1);
+		await Assert.That(reloads).IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task NoticesDuringAReloadFoldIntoOneMore()
 	{
 		var (factory, connection) = await ConnectedAsync();
 		var reloads = 0;
 		var first = new TaskCompletionSource();
+		var started = new TaskCompletionSource();
 		using var refresher = new PermissionChangeRefresher(connection, new FakeAccountAuthState(), () =>
 		{
 			reloads++;
-			return reloads == 1 ? first.Task : Task.CompletedTask;
+			if (reloads > 1) return Task.CompletedTask;
+			started.SetResult();
+			return first.Task;
 		}, NullLogger<PermissionChangeRefresher>.Instance);
 
 		factory.Hub.Raise("ReceivePermissionsChanged");
 		var running = refresher.Idle;
+		await started.Task;
 		factory.Hub.Raise("ReceivePermissionsChanged");
 		factory.Hub.Raise("ReceivePermissionsChanged");
 		factory.Hub.Raise("ReceivePermissionsChanged");
