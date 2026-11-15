@@ -620,7 +620,7 @@ Off by default; importing a RhostMUSH database turns it on. With `rhost_printf` 
 - `|` wraps the value onto further rows at the width, and `|"` wraps at a space where it can. `&` starts a new row at each line of the value. Further rows show the text between fields as spaces.
 - `:<character>:` pads with that character rather than a space. `.` leaves out a blank last row, and `!` an empty field and the text after it.
 - With `|"`, `;N.n+W;` indents wrapped rows N spaces (4 by default) after n further rows, and widens every row after the first by W.
-- The less common codes (`@ < > ' `` ` `` # /`) are read as on RhostMUSH as well.
+- The less common codes (`@`, `<`, `>`, `'`, `` ` ``, `#` and `/`) are read as on RhostMUSH as well.
 
 ```sharp rhost_printf
 > think printf(|$-5s|$5s|,ab,cd)

@@ -192,7 +192,7 @@ There is no column count: `align` and `widths` already have exactly one entry pe
   - `%0` or `%<alt>` - The alt text, plain and trimmed; empty if there is none
   - `%1` or `%<url>` - The image URL
   
-- ``RENDERMARKUP`TASKLIST`` - Task list marker (`- `[x]``) rendering
+- ``RENDERMARKUP`TASKLIST`` - Task list marker (`- [x]`) rendering
   - `%0` or `%<checked>` - Is it ticked? (1 for `[x]`, 0 for `[ ]`)
 
 ## Link templates

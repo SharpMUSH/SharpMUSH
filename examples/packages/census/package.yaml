@@ -1,7 +1,7 @@
 format: "1.16"
 package: census
 title: "Census"
-version: 1.0.2
+version: 1.0.3
 authors: [SharpMUSH]
 description: "+census: counts and lists the game's characters by what staff choose to count, such as theme, gender, role or how long since they were last on, with filters and breakdowns that combine."
 license: MIT
@@ -637,7 +637,7 @@ objects:
 
         Output: one line from `+config` for each change, then `+census theme` counts by theme.
 
-        On a big game, `@attribute/index APP`THEME` makes a filter such as `theme=Marvel` read the index.
+        On a big game, `` @attribute/index APP`THEME `` makes a filter such as `theme=Marvel` read the index.
       LOCK`CENSUS`SCOPE: |-
         perm^config.admin
       HELP`CENSUS`SCOPE: |-

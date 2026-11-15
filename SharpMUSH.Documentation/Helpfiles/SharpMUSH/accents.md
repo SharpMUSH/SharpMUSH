@@ -22,7 +22,7 @@ Below is the table of possible accents which can be used with accent() and @name
 
 | Accent Name   | Description            | Template Character | String Character(s)                |
 |---------------|------------------------|--------------------|------------------------------------|
-| grave         | Backward slant above   | `                  | A, E, I, O, U, a, e, i, o, u       |
+| grave         | Backward slant above   | \`                 | A, E, I, O, U, a, e, i, o, u       |
 | acute         | Forward slant above    | '                  | A, E, I, O, U, Y, a, e, i, o, u, y |
 | tilde         | Wavy line above        | ~                  | A, N, O, a, n, o                   |
 | circumflex    | Carat above letter     | ^                  | A, E, I, O, U, a, e, i, o, u       |

@@ -79,7 +79,7 @@ An attribute name may not contain a colon, so an objid such as #30:171943 cannot
 30`171943
 ```
 
-Output: the objid's two numbers as two levels of a tree, such as DATA`30`171943`NAME.
+Output: the objid's two numbers as two levels of a tree, such as DATA\`30\`171943\`NAME.
 
 ## Browsing trees
 

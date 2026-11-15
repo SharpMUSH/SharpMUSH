@@ -20,6 +20,7 @@ Two version numbers matter:
 - The play terminal's settings menu has "Hide pages" and "Hide channel messages" checkboxes. On, pages stay in the sidebar's Pages list and channel messages (connect and disconnect lines included) in their channel's view, out of the main output, the ones already there included. Both are off by default and kept per browser, and are offered only while the game sends channels and pages to the sidebar. A portal connection's output now marks each channel line and page as one.
 - A visitor playing as a guest on the portal's Play page sees a line above the terminal saying so, with a link to create an account.
 - The play terminal's settings menu lists each option by name only; an (i) beside it shows the details on hover, focus or a tap.
+- `help markdown` explains the Markdown that help, +help, the wiki and `rendermarkdown()` read: text and code spans, escaping backticks and bars, help and wiki links, blocks, and Markdown inside softcode.
 - The portal's Mail page has a Sent list: each message the character sent, newest first, with its recipients and how many of them have read it. A message sent to several people is one row.
 - The Mail link in the portal's navigation shows how many inbox messages are unread, and a notice appears when new mail arrives, with a button to read it. comm-feed 1.5.0 pushes each new message to the recipient as the `mail.new` OOB package.
 - Boards (bboards 1.8.0): a new comment or reply is announced to the board's readers as a new post is, as `(New BB comment (5/1/1/3) posted to 'General' by Seliana: Test Post)`.
@@ -45,6 +46,7 @@ Two version numbers matter:
 - Play's Here card shows each character's full name, wrapping to a second line, where it showed only the first word ("The" for "The Foo").
 - Coming back to the play output from a channel or a conversation keeps it where it was: on the newest line if you were following it, or on the line you were reading. It landed a screen or more higher, further the longer the scrollback.
 - An open portal tab follows a change to its account's permissions without a page reload: a character approved, set WIZARD or given a power sees the new pages and controls at once, and one that loses them stops seeing them. The same holds when a role's permissions are edited.
+- Help shows attribute paths such as ``LOG`RADIO`` whole in code examples (`help @feed taps`, `help palette`, `help event list` and others), where a backtick in the path cut the example short and left stray markup. A `\|` in a table's code span shows as `|`, as on the Docs site (`help named arguments`). Census help is version 1.0.3.
 - `Metrics:Port=0` (game server) and `ConnectionServer:MetricsPort=0` (connection server) turn metrics off: no port answers `/metrics`, where they moved the scrape onto the main web port, which a reverse proxy publishes.
 
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.0...HEAD
