@@ -553,6 +553,58 @@ public partial class TelnetServerNegotiationTests
 	}
 
 	/// <summary>
+	/// A Pueblo client that answers the hello inside the negotiation window (MUSHclient answers at once) is
+	/// registered as Pueblo, so the connect screen it is shown is already Pueblo and is not shown again.
+	/// One that answers after registration still gets it again, since the start sequence cleared it.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task PuebloAnswer_ReplaysTheWelcomeOnlyWhenItCameAfterRegistration(bool beforeRegistration)
+	{
+		var registered = new TaskCompletionSource<ProtocolCapabilities?>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var connectionService = Substitute.For<IConnectionServerService>();
+		connectionService
+			.RegisterAsync(
+				Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+				Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<byte[], ValueTask>>(),
+				Arg.Any<Func<Encoding>>(), Arg.Any<Action>(),
+				Arg.Any<Func<string, string, ValueTask>>(),
+				Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(), Arg.Any<bool>(), cancellationToken: Arg.Any<CancellationToken>())
+			.Returns(call =>
+			{
+				registered.TrySetResult(call.ArgAt<ProtocolCapabilities?>(9));
+				return Task.CompletedTask;
+			});
+		var settings = new OutputSettingsHolder();
+		settings.Replace(new OutputSettingsMessage(new Dictionary<string, string>(), Pueblo: true));
+		var (toServer, fromServer, handler, published, cancellation) = StartServer(
+			connectionService: connectionService, settings: settings,
+			negotiationWaitMilliseconds: beforeRegistration ? 2000u : 0u);
+		using var cts = cancellation;
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Encoding.ASCII.GetString(seen).Contains(PuebloProtocol.Hello));
+			if (!beforeRegistration) await registered.Task.WaitAsync(Timeout);
+			await WriteAsync(toServer, Encoding.ASCII.GetBytes("PUEBLOCLIENT 1.10\r\n"));
+
+			var message = await WaitForPublishedAsync<PuebloNegotiatedMessage>(published);
+			var capabilities = await registered.Task.WaitAsync(Timeout);
+
+			await Assert.That(message).IsNotNull();
+			await Assert.That(message!.ReplayWelcome).IsEqualTo(!beforeRegistration);
+			await Assert.That(capabilities!.Format)
+				.IsEqualTo(beforeRegistration ? OutputFormat.Pueblo : OutputFormat.Ansi);
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	/// <summary>
 	/// MXP's <c>&lt;SUPPORT&gt;</c> question, and the answer recorded on the connection so the renderer
 	/// can hold the client to it.
 	/// </summary>

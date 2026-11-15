@@ -83,7 +83,10 @@ public class ConnectionServerService(
 			// MarkupOutputConsumer writes prompts carried on the output subject, in order with output.
 			var established = new ConnectionEstablishedMessage(handle, ipAddress, hostname,
 				connectionType, connectedAt, presenceClass, isSecure, sessionId)
-			{ OrderedPrompts = true, SignIn = signIn, InitialGraphics = capabilities?.Pins?.Graphics };
+			{
+				OrderedPrompts = true, SignIn = signIn, InitialGraphics = capabilities?.Pins?.Graphics,
+				Pueblo = capabilities?.Format == OutputFormat.Pueblo
+			};
 			publishAttempted = true;
 			// Publication may have succeeded when its acknowledgement was lost. Re-publish the
 			// idempotent event, but never overwrite KV again after the engine can bind a player.

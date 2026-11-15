@@ -45,9 +45,10 @@ public class StringFunctionUnitTests
 
 
 	/// <summary>
-	/// Columns are laid out by their own spacing, and a Pueblo client reads the stream as HTML, where
-	/// runs of spaces collapse and a proportional font ignores every width. Marking the result
-	/// preformatted is what <c>&lt;xch_mudtext&gt;</c> is for, and it is what PennMUSH leaves to the game.
+	/// Columns are laid out by their own spacing, and a browser collapses runs of spaces and draws a
+	/// proportional font that ignores every width, so the result is marked preformatted: <c>&lt;pre&gt;</c>
+	/// in HTML. A Pueblo client gets each line ended with <c>&lt;BR&gt;</c>, the only break MUSHclient
+	/// reads after <c>xch_mode=purehtml</c>.
 	/// </summary>
 	[Test]
 	[Arguments("align(5 5,a1%ra2,b1)")]
@@ -57,10 +58,7 @@ public class StringFunctionUnitTests
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(code));
 
-		await Assert.That(result.Render(MarkupFormat.Pueblo)).StartsWith("<xch_mudtext>");
-		await Assert.That(result.Render(MarkupFormat.Pueblo)).EndsWith("</xch_mudtext>");
-		await Assert.That(result.Render(MarkupFormat.Pueblo)).DoesNotContain("<BR>")
-			.Because("inside the region the client breaks the lines itself");
+		await Assert.That(result.Render(MarkupFormat.Pueblo)).DoesNotContain("xch_mudtext");
 		await Assert.That(result.Render(MarkupFormat.Html)).StartsWith("<pre");
 	}
 

@@ -397,7 +397,7 @@ public class MarkupTagFunctionTests
 	{
 		var result = await Eval("preformat(a%b%b1%rb%b%b2)");
 
-		await Assert.That(result.Render(MarkupFormat.Pueblo)).IsEqualTo("<xch_mudtext>a  1\nb  2</xch_mudtext>");
+		await Assert.That(result.Render(MarkupFormat.Pueblo)).IsEqualTo("a  1<BR>\nb  2");
 		await Assert.That(result.Render(MarkupFormat.Html)).StartsWith("<pre");
 		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo("a  1\nb  2");
 	}
@@ -526,7 +526,7 @@ public class MarkupTagFunctionTests
 		var said = await ThinkAs(mortal, "preformat(a%b%b1)");
 
 		await Assert.That(said.ToPlainText()).IsEqualTo("a  1");
-		await Assert.That(said.Render(MarkupFormat.Pueblo)).Contains("<xch_mudtext>");
+		await Assert.That(said.Render(MarkupFormat.Html)).StartsWith("<pre");
 	}
 
 	/// <summary>
