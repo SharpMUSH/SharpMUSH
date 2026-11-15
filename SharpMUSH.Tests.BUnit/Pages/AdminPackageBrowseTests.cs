@@ -271,6 +271,25 @@ public class AdminPackageBrowseTests : BunitContext
 		await Assert.That(row.QuerySelector(".pkg-row-actions button[aria-label='NavRowMore(Tools)']")).IsNotNull();
 	}
 
+	/// <summary>With several remotes and none named in the address, the official library starts selected.</summary>
+	[Test]
+	public async Task Without_a_remote_in_the_address_the_official_library_is_selected()
+	{
+		api.Remotes =
+		[
+			new("bundled", "bundled:sharpmush", PackageRemoteTrust.Official, null),
+			new("mine", "https://example.com/mine.git", PackageRemoteTrust.Community, null),
+			new("official", OfficialPackageRemote.Url, PackageRemoteTrust.Official, null)
+		];
+		Services.GetRequiredService<NavigationManager>().NavigateTo("/admin/packages/browse");
+		var host = Render<MudHarness>(p => p.AddChildContent<AdminPackageBrowse>());
+		var cut = host.FindComponent<AdminPackageBrowse>();
+		var browse = cut.WaitForElement("button.pkg-btn-primary");
+		await Assert.That(browse.HasAttribute("disabled")).IsFalse();
+		await browse.ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".lib-row"));
+	}
+
 	private IRenderedComponent<AdminPackageBrowse> RenderBrowse()
 	{
 		var host = Render<MudHarness>(p => p.AddChildContent<AdminPackageBrowse>());
@@ -291,6 +310,7 @@ public class AdminPackageBrowseTests : BunitContext
 		public string? PackageId { get; set; } = "tools";
 		public IReadOnlyList<PackageRepoEntry>? Packages { get; set; }
 		public IReadOnlyList<PackageRepoEntry> Catalogue { get; set; } = [];
+		public IReadOnlyList<PackageRemoteRecord> Remotes { get; set; } = [new("official", Repo, PackageRemoteTrust.Official, null)];
 
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
@@ -300,7 +320,7 @@ public class AdminPackageBrowseTests : BunitContext
 				"/api/packages/community" when FailCommunity => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable),
 				"/api/packages/community" => Json(new CommunityReposResponse([], [])),
 				"/api/packages/remotes" when FailRemotes => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable),
-				"/api/packages/remotes" => Json(new[] { new PackageRemoteRecord("official", Repo, PackageRemoteTrust.Official, null) }),
+				"/api/packages/remotes" => Json(Remotes),
 				"/api/packages/remotes/official/browse" => Json(new PackageRepoSnapshot("official", Repo, "abc123",
 					Packages ?? [new("tools", PackageId, "1.1.0", "Useful tools", [new("1.0.0", "tools/v1.0.0", "abc123")])])),
 				"/api/packages/remotes/bundled/browse" => Json(new PackageRepoSnapshot("bundled", "bundled", "abc123", Catalogue)),

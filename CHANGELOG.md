@@ -22,6 +22,7 @@ Two version numbers matter:
 - The portal's Mail page has a Sent list: each message the character sent, newest first, with its recipients and how many of them have read it. A message sent to several people is one row.
 - The Mail link in the portal's navigation shows how many inbox messages are unread, and a notice appears when new mail arrives, with a button to read it. comm-feed 1.5.0 pushes each new message to the recipient as the `mail.new` OOB package.
 - Boards (bboards 1.8.0): a new comment or reply is announced to the board's readers as a new post is, as `(New BB comment (5/1/1/3) posted to 'General' by Seliana: Test Post)`.
+- A world comes with the official package library, SharpMUSH Official (`https://github.com/SharpMUSH/SharpMUSH.Packages`), as a remote, and Admin → Packages → Browse starts with it selected. A world that already has the library, or a remote under that name, keeps what it has. It is added once: a library the administrator removes stays removed, unless a later release moves a package the game has installed out of the server and into the library.
 
 ### Changed
 
