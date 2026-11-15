@@ -6099,6 +6099,47 @@
     "file": "mapsql-function.md"
   },
   {
+    "id": "markdown",
+    "lookup": "markdown",
+    "title": "Markdown",
+    "aliases": [
+      "markdown syntax"
+    ],
+    "sections": [
+      {
+        "id": "text",
+        "lookup": "markdown text",
+        "heading": "Text and code spans",
+        "aliases": []
+      },
+      {
+        "id": "escaping",
+        "lookup": "markdown escaping",
+        "heading": "Escaping",
+        "aliases": []
+      },
+      {
+        "id": "links",
+        "lookup": "markdown links",
+        "heading": "Links",
+        "aliases": []
+      },
+      {
+        "id": "blocks",
+        "lookup": "markdown blocks",
+        "heading": "Blocks",
+        "aliases": []
+      },
+      {
+        "id": "softcode",
+        "lookup": "markdown softcode",
+        "heading": "Markdown in softcode",
+        "aliases": []
+      }
+    ],
+    "file": "markdown.md"
+  },
+  {
     "id": "mask-function",
     "lookup": "mask()",
     "title": "mask()",

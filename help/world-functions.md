@@ -156,7 +156,7 @@ Where a room stands on a world map, empty when it stands on none:
 - `coords`: the place, as `x,y,z` (the default)
 - `x`, `y` or `z`: one of them
 - `map`: the map
-- `id`: the place's id, as `MAP`PLACE` holds it
+- `id`: the place's id, as `` MAP`PLACE `` holds it
 - `permanent`: 1 when the room was placed there to stay, else 0
 
 A room needs examining, unless the caller is in it. Anything but a room gives `#-1 NOT A ROOM`.

@@ -35,25 +35,25 @@ Help is available on the following topics:
 | [HOMES]                       | [HTTP]                        | [IMAGE ATTRIBUTES]            |
 | [INTERIORS]                   | [INTERNATIONALIZATION]        | [LINKING]                     |
 | [LISTENING]                   | [LISTS]                       | [LOOPING]                     |
-| [MASTER ROOM]                 | [MATCHING]                    | [ME]                          |
+| [MARKDOWN]                    | [MASTER ROOM]                 | [MATCHING]                    |
 
 ## Additional topics
 
 |                           |                           |                           |
 |---------------------------|---------------------------|---------------------------|
-| [MESSAGES]                | [MONEY]                   | [MUSHCODE]                |
-| [NON-STANDARD ATTRIBUTES] | [OBJECT SNAPSHOTS]        | [PARENTS]                 |
-| [PENNMUSH COMPATIBILITY]  | [PIPING]                  | [PLUGIN HELP]             |
-| [@POWER]                  | [PUPPETS]                 | [QUEUE]                   |
-| [QUEUE BUDGETS]           | [RECURRING JOBS]          | [REGEXPS]                 |
-| [REGISTERS]               | [ROLES]                   | [SECURITY]                |
-| [SEMAPHORES]              | [SETTING-ATTRIBUTES]      | [SHARPMUSH FEATURES]      |
-| [SPOOFING]                | [STACK]                   | [STRINGS]                 |
-| [SUBSTITUTIONS]           | [SUCCESS]                 | [SWITCHES]                |
-| [TIMEZONES]               | [TYPES OF OBJECTS]        | [UNICODE]                 |
-| [USER-DEFINED COMMANDS]   | [VERBS]                   | [WARNINGS]                |
-| [WIKI]                    | [WILDCARDS]               | [ZONE MASTER ROOMS]       |
-| [ZONE MASTERS]            | [ZONES]                   |                           |
+| [ME]                      | [MESSAGES]                | [MONEY]                   |
+| [MUSHCODE]                | [NON-STANDARD ATTRIBUTES] | [OBJECT SNAPSHOTS]        |
+| [PARENTS]                 | [PENNMUSH COMPATIBILITY]  | [PIPING]                  |
+| [PLUGIN HELP]             | [@POWER]                  | [PUPPETS]                 |
+| [QUEUE]                   | [QUEUE BUDGETS]           | [RECURRING JOBS]          |
+| [REGEXPS]                 | [REGISTERS]               | [ROLES]                   |
+| [SECURITY]                | [SEMAPHORES]              | [SETTING-ATTRIBUTES]      |
+| [SHARPMUSH FEATURES]      | [SPOOFING]                | [STACK]                   |
+| [STRINGS]                 | [SUBSTITUTIONS]           | [SUCCESS]                 |
+| [SWITCHES]                | [TIMEZONES]               | [TYPES OF OBJECTS]        |
+| [UNICODE]                 | [USER-DEFINED COMMANDS]   | [VERBS]                   |
+| [WARNINGS]                | [WIKI]                    | [WILDCARDS]               |
+| [ZONE MASTER ROOMS]       | [ZONE MASTERS]            | [ZONES]                   |
 
 Type 'help `<topic name>`' for help.<br>
 For a list of all topics, see [help search]. For what SharpMUSH adds to PennMUSH, see [sharpmush features].
