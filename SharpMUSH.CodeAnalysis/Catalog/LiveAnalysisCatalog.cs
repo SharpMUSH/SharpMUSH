@@ -104,12 +104,12 @@ public sealed class LiveAnalysisCatalog(
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 			if (compiledNames.Contains(definition.Name)) continue;
-			var attribute = new SharpFunctionAttribute
+			// The restriction as the call pipeline reads it (ResolveUserDefinedFunction): words set flags, grants are alternatives.
+			var attribute = FunctionRestrictionFlags.Restricted(new SharpFunctionAttribute
 			{
 				Name = definition.Name, Flags = FunctionFlags.Regular,
-				MinArgs = definition.MinArgs, MaxArgs = definition.MaxArgs, ParameterNames = definition.ArgumentNames,
-				Restrict = string.IsNullOrWhiteSpace(definition.Restriction) ? [] : [definition.Restriction]
-			};
+				MinArgs = definition.MinArgs, MaxArgs = definition.MaxArgs, ParameterNames = definition.ArgumentNames
+			}, definition.Restriction, userFunction: true);
 			if (await FunctionDispatcher.CheckPermissionAsync(attribute, executor) is not null) continue;
 			visible.Add(FunctionEntry(definition.Name, definition.Owner is null ? "user-defined" : "owner-local", attribute, [], null));
 		}

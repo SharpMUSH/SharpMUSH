@@ -267,6 +267,13 @@ public class MarkupTagFunctionTests
 			await Assert.That((await ThinkAs(mortal, $"{clone}(Click,look)")).ToPlainText())
 				.IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SEND_OOB");
 
+			// The Functions power manages @functions, not a built-in's own restriction.
+			await God($"@power {mortal.DbRef}=Functions");
+			await CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@function/restrict {clone}=everyone"));
+			await God($"@power {mortal.DbRef}=!Functions");
+			await Assert.That((await ThinkAs(mortal, $"{clone}(Click,look)")).ToPlainText())
+				.IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SEND_OOB");
+
 			await God($"@function/restrict {clone}=everyone");
 			var marker = Marker();
 			await Assert.That((await ThinkAs(mortal, $"{clone}({marker},look)")).Render(MarkupFormat.Mxp)).Contains("<SEND HREF=\"look\"");

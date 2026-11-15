@@ -1101,9 +1101,9 @@ public partial class Commands : ICommandRestrictionApplier
 						return new NotFound();
 					}
 
-					// A lock key written out (ROLE^staff) keeps the lock's meaning under a !: holders are turned
-					// away. A bare word's ! takes it back off, as Penn's restriction words do.
-					if (clear && word.Contains('^'))
+					// A lock key written out (ROLE^staff) or a permission keeps the lock's meaning under a !: holders
+					// are turned away. A bare flag or power name's ! takes it back off, as Penn's restriction words do.
+					if (clear && (word.Contains('^') || word.Contains('.')))
 					{
 						flags.Remove(term);
 						if (!excluded.Contains(term)) excluded.Add(term);
@@ -1479,6 +1479,13 @@ public partial class Commands : ICommandRestrictionApplier
 		if (await RejectUnlessGlobalFuncs(executor) is { } denied)
 		{
 			return denied;
+		}
+
+		// A built-in's restriction can loosen what the built-in itself asks for, so the Functions power, which
+		// is enough for the game's own @functions, is not enough for it.
+		if ((builtin || userFunctionService.Get(functionName) is null) && await RejectUnlessConfigAdmin(executor) is { } notAdmin)
+		{
+			return notAdmin;
 		}
 
 		if (!SetFunctionRestriction(userFunctionService, functionName, restriction, builtin))

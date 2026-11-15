@@ -141,6 +141,22 @@ public static class FunctionRestrictionFlags
 	{
 		if (string.IsNullOrWhiteSpace(restriction)) return attribute;
 
+		// Asked on every call of a restricted built-in: the last answer for this declaration is kept beside it.
+		var cached = RestrictedCache.GetOrCreateValue(attribute);
+		if (cached.Value is { } hit && hit.UserFunction == userFunction && ReferenceEquals(hit.Restriction, restriction)) return hit.Result;
+
+		var result = Compute(attribute, restriction, userFunction);
+		cached.Value = new RestrictedEntry(restriction, userFunction, result);
+		return result;
+	}
+
+	private sealed record RestrictedEntry(string Restriction, bool UserFunction, SharpFunctionAttribute Result);
+
+	private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<SharpFunctionAttribute,
+		System.Runtime.CompilerServices.StrongBox<RestrictedEntry?>> RestrictedCache = new();
+
+	private static SharpFunctionAttribute Compute(SharpFunctionAttribute attribute, string restriction, bool userFunction)
+	{
 		var flags = Apply(attribute.Flags, restriction, userFunction);
 		var grants = Grants(attribute.Restrict, restriction);
 		return flags == attribute.Flags && grants.SequenceEqual(attribute.Restrict, StringComparer.OrdinalIgnoreCase)

@@ -260,14 +260,18 @@ public static partial class HelperFunctions
 	/// defined is held by God alone, so a typo fails closed.
 	/// </summary>
 	public static async ValueTask<bool> HoldsFunctionGrant(this AnySharpObject executor, string grant)
-		=> grant.Split('^', 2) switch
-		{
-			[var kind, var name] when kind.Equals("role", StringComparison.OrdinalIgnoreCase)
-				=> (await executor.GrantsAsync(ExecutionBudget.CurrentToken)).HoldsRole(name),
-			[var kind, var name] when kind.Equals("power", StringComparison.OrdinalIgnoreCase) => await executor.HasPower(name),
-			[var kind, var name] when kind.Equals("flag", StringComparison.OrdinalIgnoreCase) => await executor.Object().HasFlagOrLetter(name),
-			_ => await executor.Can(grant)
-		};
+	{
+		// Asked on every call of a restricted function, so the kind is read without splitting the grant.
+		var caret = grant.IndexOf('^');
+		if (caret < 0) return await executor.Can(grant);
+		var kind = grant.AsSpan(0, caret);
+		var name = grant[(caret + 1)..];
+		return kind.Equals("role", StringComparison.OrdinalIgnoreCase)
+				? (await executor.GrantsAsync(ExecutionBudget.CurrentToken)).HoldsRole(name)
+			: kind.Equals("power", StringComparison.OrdinalIgnoreCase) ? await executor.HasPower(name)
+			: kind.Equals("flag", StringComparison.OrdinalIgnoreCase) ? await executor.Object().HasFlagOrLetter(name)
+			: await executor.Can(grant);
+	}
 
 	private static async ValueTask<bool> OwnerHasFlag(AnySharpObject executor, string flag)
 	{

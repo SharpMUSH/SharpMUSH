@@ -16,7 +16,7 @@ Two version numbers matter:
 
 ### Changed
 
-- In `@function/restrict`, a `!` in front of `wizard`, `admin`, `god`, `noguest`, `nogagged`, `nofixed` or `nobody` takes that restriction off, as PennMUSH's does, where it turned away whoever met it. A function refused for lacking a permission names it: `#-1 PERMISSION DENIED: NEEDS CHAT.ADMIN`.
+- In `@function/restrict`, a `!` in front of `wizard`, `admin`, `god`, `noguest`, `nogagged`, `nofixed` or `nobody` takes that restriction off, as PennMUSH's does, where it turned away whoever met it. A permission or `royalty` in a built-in's restriction replaces what the built-in asks for instead of adding to it, so a restriction already set may now let more in; check `@function <name>`. Restricting a built-in function needs `config.admin` (the Functions power is still enough for @functions). A function refused for lacking a permission names it: `#-1 PERMISSION DENIED: NEEDS CHAT.ADMIN`.
 
 ### Fixed
 

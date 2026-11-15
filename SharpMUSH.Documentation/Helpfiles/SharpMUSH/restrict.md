@@ -91,7 +91,7 @@ These words let the holders of something use a command or function. Holding any 
     royalty            Functions only: holds `game.royalty`.<br>
     everyone           Drops every one of these words named before it, so none is needed.
 
-A `!` in front of one turns away whoever holds it, even if they hold another. One that does not exist is held by nobody, so a typo locks rather than opens. For a function, God holds every one. For commands, a flag or power can also be named on its own, as `Send_OOB`.
+A `!` in front of one turns away whoever holds it, even if they hold another. One that does not exist is held by nobody, so a typo locks rather than opens. God passes them all on a function. A command also takes a flag or power on its own, as `Send_OOB`, where `!` takes it back off.
 
 ```sharp
 > @function/restrict pemit=role^staff power^Can_Spoof
@@ -102,7 +102,7 @@ Output: #-1 PERMISSION DENIED: NEEDS ROLE^STAFF OR POWER^CAN_SPOOF
 
 ## Changing a built-in's restriction
 
-A built-in function or command comes with its own restriction. `@function/restrict` and `@command/restrict` change it rather than adding a second one, so they can loosen it as well as tighten it.
+A built-in function or command comes with its own restriction. `@function/restrict` and `@command/restrict` change it rather than adding a second one, so they can loosen it as well as tighten it, and need `config.admin` for a built-in.
 
 For a function, each `@function/restrict` starts again from the function's own restriction and applies its words in order. A word in [restrict command restriction rules] sets that restriction, and `!` takes it off: `!wizard` opens a wizard-only function. The first role, power, flag or permission word replaces the function's own; later ones add to it. `@function <name>` shows what it needs now under "Needs one of".
 

@@ -115,7 +115,7 @@ public class ReadPennMushConfigRestrictionTests
 			const string applied = "nobody, noguest, nogagged, nofixed, admin, wizard, god, logname, logargs, deprecated, localize, nosidefx";
 			await Assert.That(import.Skipped).IsEquivalentTo(new[]
 			{
-				$"restrict_function pemit noparse: kept in function_restrictions, but SharpMUSH applies only {applied}, so it has no effect."
+				$"restrict_function pemit noparse: kept in function_restrictions, but SharpMUSH applies only {applied} and the role^, power^, flag^ and perm^ words, so it has no effect."
 			});
 		}
 		finally

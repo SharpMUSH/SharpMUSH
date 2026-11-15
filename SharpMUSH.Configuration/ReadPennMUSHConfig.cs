@@ -432,7 +432,7 @@ public static partial class ReadPennMushConfig
 			foreach (var word in restriction[0].Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries)
 						 .Where(word => !IsAppliedFunctionWord(word.TrimStart('!'))))
 			{
-				skipped.Add($"restrict_function {name} {word}: kept in function_restrictions, but SharpMUSH applies only {string.Join(", ", FunctionPermissionWords)}, so it has no effect.");
+				skipped.Add($"restrict_function {name} {word}: kept in function_restrictions, but SharpMUSH applies only {string.Join(", ", FunctionPermissionWords)} and the role^, power^, flag^ and perm^ words, so it has no effect.");
 			}
 		}
 
