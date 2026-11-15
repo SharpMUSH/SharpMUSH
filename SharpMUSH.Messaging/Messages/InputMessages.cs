@@ -97,6 +97,13 @@ public record ConnectionEstablishedMessage(
 
 	/// <summary>Connection metadata key recording <see cref="SignIn"/> ("1" or "0").</summary>
 	public const string SignInMetadata = "SignIn";
+
+	/// <summary>
+	/// The client answered the Pueblo hello before the connection was registered, so it is a Pueblo connection
+	/// from the start: <c>pueblo()</c> and <c>terminfo()</c> say so when the connect screen is evaluated, and the
+	/// screen is not shown again after the handshake (<see cref="PuebloNegotiatedMessage.ReplayWelcome"/>).
+	/// </summary>
+	public bool Pueblo { get; init; }
 }
 
 /// <summary>

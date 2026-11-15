@@ -344,7 +344,10 @@ public class ConnectionEstablishedConsumer(
 				{ ConnectionEstablishedMessage.OrderedPromptsMetadata, message.OrderedPrompts ? "1" : "0" },
 				{ ConnectionEstablishedMessage.SignInMetadata, message.SignIn ? "1" : "0" },
 				{ TerminalFeatureReader.GraphicsKey, message.InitialGraphics ?? TerminalGraphics.Off }
-			}));
+			}.Concat(message.Pueblo
+				// What PuebloNegotiatedConsumer writes, here before the connect screen is evaluated.
+				? [new KeyValuePair<string, string>("PUEBLO", "1"), new KeyValuePair<string, string>("OUTPUT_FORMAT", "pueblo")]
+				: [])));
 
 		if (hostNames is not null)
 		{

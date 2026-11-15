@@ -82,6 +82,28 @@ public class MarkupNegotiationConsumerTests
 		await Assert.That(service.Get(Handle)!.Metadata["PUEBLO"]).IsEqualTo("1");
 	}
 
+	/// <summary>
+	/// The connect screen is evaluated when the connection registers, so a connection that was Pueblo from the
+	/// start has to say so then: a connect message branching on <c>pueblo(%0)</c> is not evaluated again.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task Registration_RecordsPuebloAnsweredBeforeIt(bool pueblo)
+	{
+		var service = new ConnectionService(Substitute.For<IPublisher>());
+		var consumer = new ConnectionEstablishedConsumer(NullLogger<ConnectionEstablishedConsumer>.Instance, service,
+			Substitute.For<SharpMUSH.Messaging.Abstractions.IMessageBus>());
+
+		await consumer.HandleAsync(new ConnectionEstablishedMessage(Handle, "1.2.3.4", "host", "telnet",
+			DateTimeOffset.UnixEpoch)
+		{ Pueblo = pueblo });
+
+		var metadata = service.Get(Handle)!.Metadata;
+		await Assert.That(metadata.GetValueOrDefault("PUEBLO", "0")).IsEqualTo(pueblo ? "1" : "0");
+		await Assert.That(metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi")).IsEqualTo(pueblo ? "pueblo" : "ansi");
+	}
+
 	[Test]
 	public async Task Pueblo_LeavesALoggedInConnectionAlone()
 	{
