@@ -77,7 +77,7 @@ public class HelpExampleMarkupTests
 	private static IEnumerable<FileInfo> HelpMarkdownFiles() =>
 		TestPaths.Helpfiles.EnumerateFiles("*.md", SearchOption.AllDirectories)
 			.Concat(new DirectoryInfo(TestPaths.RepositoryRoot).EnumerateDirectories("SharpMUSH.Plugins.*")
-				.Select(plugin => new DirectoryInfo(Path.Combine(plugin.FullName, "help")))
+				.Select(plugin => new DirectoryInfo(Path.Join(plugin.FullName, "help")))
 				.Where(help => help.Exists)
 				.SelectMany(help => help.EnumerateFiles("*.md", SearchOption.AllDirectories)));
 
