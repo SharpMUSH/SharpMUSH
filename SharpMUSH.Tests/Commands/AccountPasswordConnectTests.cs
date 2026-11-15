@@ -45,8 +45,11 @@ public class AccountPasswordConnectTests
 
 	private async ValueTask<(CallState Result, long Handle)> ConnectAsync(string character, string password)
 	{
+		// An address of its own: the refused attempts here must not count toward connect_fail_limit for the
+		// "localhost" every other connect test shares.
 		var handle = TestIsolationHelpers.GenerateUniqueHandle();
-		await ConnectionService.Register(handle, "localhost", "localhost", "test",
+		var address = TestIsolationHelpers.GenerateUniqueName("acctconnaddr");
+		await ConnectionService.Register(handle, address, address, "test",
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		return (await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"connect {character} {password}")), handle);
 	}
