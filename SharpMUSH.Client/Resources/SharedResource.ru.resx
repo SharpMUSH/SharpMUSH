@@ -9573,6 +9573,27 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Фон темы неподвижен, и ничто на странице не скользит и не вращается. Всегда включено, если устройство просит уменьшить движение.</value>
   </data>
+  <data name="MailSentEmpty" xml:space="preserve">
+    <value>Ничего из отправленного вами уже нет в почтовых ящиках.</value>
+  </data>
+  <data name="MailSentRead" xml:space="preserve">
+    <value>Прочитано</value>
+  </data>
+  <data name="MailSentNotRead" xml:space="preserve">
+    <value>Ещё не прочитано</value>
+  </data>
+  <data name="MailSentReadBy" xml:space="preserve">
+    <value>Прочитали {0} из {1}</value>
+  </data>
+  <data name="MailNewFrom" xml:space="preserve">
+    <value>Новая почта от {0}</value>
+  </data>
+  <data name="MailNewFromSubject" xml:space="preserve">
+    <value>Новая почта от {0}: {1}</value>
+  </data>
+  <data name="MailNewRead" xml:space="preserve">
+    <value>Читать</value>
+  </data>
   <data name="RolCancelScene" xml:space="preserve">
     <value>Отменить сцену</value>
   </data>

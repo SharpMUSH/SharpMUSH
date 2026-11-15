@@ -1,4 +1,5 @@
 @page "/mail"
+@page "/mail/sent"
 @layout MailLayout
 @attribute [Authorize]
 @using SharpMUSH.Client.Components.Mail
@@ -8,13 +9,14 @@
 @inject IAccountAuthState AccountAuth
 @inject MailService MailApi
 @inject NavigationManager Nav
+@inject MailWatch Watch
 @implements IDisposable
 
 <PageTitle>@Loc["Mail"] — <GameName /></PageTitle>
 
 @* D1 §6.5 mailbox: the folders are the section sidebar's, so the folder on screen is the address's
-   (?folder=, the inbox by default). The page is the plain header over the folder's list card and a
-   reading card beside it; below the narrow tier they stack. *@
+   (?folder=, the inbox by default), or /mail/sent for the mail the character sent. The page is the plain
+   header over the list card and a reading card beside it; below the narrow tier they stack. *@
 @if (!_characterActive)
 {
     <div class="mail-page">
@@ -35,7 +37,7 @@ else
         </PageHeader>
 
         <div class="mail-panes @(FolderEmpty ? "mail-panes--single" : null)">
-            <KitCard Class="mail-list" Title="@MailSidebar.FolderName(Loc, _folder)" Sub="@(_messages.Count > 0 ? Loc.Plural("NavMailMessageCount", "count", _messages.Count) : null)">
+            <KitCard Class="mail-list" Title="@ListTitle" Sub="@(ListCount > 0 ? Loc.Plural("NavMailMessageCount", "count", ListCount) : null)">
                 <div class="mail-list-body" aria-busy="@(_loading ? "true" : "false")">
                     @if (_loading)
                     {
@@ -47,12 +49,31 @@ else
                     {
                         <div class="mail-note mail-list-error">@_listError</div>
                     }
-                    else if (_messages.Count == 0)
+                    else if (ListCount == 0)
                     {
-                        <EmptyState Class="mail-list-empty" Icon="@Icons.Material.Outlined.Inbox">
-                            <ChildContent>@Loc["MailEmpty"]</ChildContent>
+                        <EmptyState Class="mail-list-empty" Icon="@(_sentView ? Icons.Material.Outlined.Send : Icons.Material.Outlined.Inbox)">
+                            <ChildContent>@(_sentView ? Loc["MailSentEmpty"] : Loc["MailEmpty"])</ChildContent>
                             <Action><CapsuleButton Primary="true" Href="/mail/compose" Icon="@Icons.Material.Outlined.Edit">@Loc["Compose"]</CapsuleButton></Action>
                         </EmptyState>
+                    }
+                    else if (_sentView)
+                    {
+                        @foreach (var m in _sent)
+                        {
+                            <button type="button" class="mail-row mail-row--sent @(_selectedSent?.Id == m.Id ? "mail-row--selected" : null)"
+                                    aria-current="@(_selectedSent?.Id == m.Id ? "true" : null)" @onclick="() => SelectSentAsync(m)">
+                                <CharacterAvatar Class="mail-avatar mail-row-avatar" Name="@m.To.FirstOrDefault()" Character="@m.To.FirstOrDefault()" />
+                                <span class="mail-row-top">
+                                    @if (m.Urgent)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Outlined.PriorityHigh" Color="Color.Error" Size="Size.Small" Title="@Loc["Urgent"]" />
+                                    }
+                                    <span class="mail-row-from" title="@string.Join(", ", m.To)">@Loc["To"]: @string.Join(", ", m.To)</span>
+                                    <span class="mail-row-date">@DateDisplay.MonthDay(m.DateSent, asGiven: m.Zoned)</span>
+                                </span>
+                                <span class="mail-row-subject">@m.Subject</span>
+                            </button>
+                        }
                     }
                     else
                     {
@@ -71,7 +92,7 @@ else
                                         <MudIcon Icon="@Icons.Material.Outlined.PriorityHigh" Color="Color.Error" Size="Size.Small" Title="@Loc["Urgent"]" />
                                     }
                                     <span class="mail-row-from">@m.From</span>
-                                    <span class="mail-row-date">@DateDisplay.MonthDay(m.DateSent)</span>
+                                    <span class="mail-row-date">@DateDisplay.MonthDay(m.DateSent, asGiven: m.Zoned)</span>
                                 </span>
                                 <span class="mail-row-subject">@m.Subject</span>
                             </button>
@@ -80,7 +101,49 @@ else
                 </div>
             </KitCard>
 
-            @if (!FolderEmpty)
+            @if (!FolderEmpty && _sentView)
+            {
+                <KitCard Class="@(_selectedSent is null ? "mail-reading mail-reading--empty" : "mail-reading")">
+                    @if (_selectedSent is null)
+                    {
+                        <div class="mail-reading-none">@Loc["NavMailSelectMessage"]</div>
+                    }
+                    else
+                    {
+                        <div class="mail-reading-head">
+                            <CharacterAvatar Class="mail-avatar mail-reading-avatar" Name="@_selectedSent.To.FirstOrDefault()" Character="@_selectedSent.To.FirstOrDefault()" />
+                            <div class="mail-reading-meta">
+                                <div class="mail-reading-subject">@_selectedSent.Subject</div>
+                                <div class="mail-reading-from">@Loc["To"]: @string.Join(", ", _selectedSent.To)</div>
+                                <div class="mail-reading-date">@DateDisplay.LongDateTime(_selectedSent.DateSent, asGiven: _selectedSent.Zoned) · @ReadByText(_selectedSent)</div>
+                            </div>
+                        </div>
+                        <div class="mail-reading-body" aria-busy="@(_bodyLoading ? "true" : "false")">
+                            @if (_bodyLoading)
+                            {
+                                <MudSkeleton Height="18px" Class="mb-1" />
+                                <MudSkeleton Height="18px" Width="80%" Class="mb-1" />
+                                <MudSkeleton Height="18px" Width="60%" />
+                            }
+                            else if (_body is null)
+                            {
+                                <div class="mail-reading-missing">@(_bodyError ?? Loc["MailNotFound"])</div>
+                            }
+                            else
+                            {
+                                <div class="mail-reading-text">@_body</div>
+                            }
+                        </div>
+                        @if (_body is not null)
+                        {
+                            <div class="mail-reading-actions">
+                                <CapsuleButton Class="mail-forward" OnClick="@(() => ForwardSent(_selectedSent, _body))" Icon="@Icons.Material.Outlined.Forward">@Loc["NavMailForward"]</CapsuleButton>
+                            </div>
+                        }
+                    }
+                </KitCard>
+            }
+            else if (!FolderEmpty)
             {
                 <KitCard Class="@(_selected is null ? "mail-reading mail-reading--empty" : "mail-reading")">
                     @if (_selected is null)
@@ -94,7 +157,7 @@ else
                             <div class="mail-reading-meta">
                                 <div class="mail-reading-subject">@_selected.Subject</div>
                                 <div class="mail-reading-from">@Loc["From"]: @_selected.From</div>
-                                <div class="mail-reading-date">@DateDisplay.LongDateTime(_selected.DateSent)</div>
+                                <div class="mail-reading-date">@DateDisplay.LongDateTime(_selected.DateSent, asGiven: _selected.Zoned)</div>
                             </div>
                         </div>
                         <div class="mail-reading-body" aria-busy="@(_bodyLoading ? "true" : "false")">
@@ -142,8 +205,20 @@ else
     private bool _bodyLoading;
     private bool _loading;
 
-    /// <summary>The folder has nothing in it, so the list takes the whole width and no reading card stands empty beside it.</summary>
-    private bool FolderEmpty => !_loading && _listError is null && _messages.Count == 0 && _selected is null;
+    /// <summary>The list of mail the character sent (<c>/mail/sent</c>) rather than a folder.</summary>
+    private bool _sentView;
+    private IReadOnlyList<MailService.SentMail> _sent = [];
+    private MailService.SentMail? _selectedSent;
+
+    private int ListCount => _sentView ? _sent.Count : _messages.Count;
+
+    private string ListTitle => _sentView ? Loc["NavMailFolderSent"] : MailSidebar.FolderName(Loc, _folder);
+
+    /// <summary>The list has nothing in it, so it takes the whole width and no reading card stands empty beside it.</summary>
+    private bool FolderEmpty => !_loading && _listError is null && ListCount == 0 && _selected is null && _selectedSent is null;
+
+    /// <summary>What the sent list's key is in <see cref="_loadedFolder"/>: no folder name has a parenthesis.</summary>
+    private const string SentKey = MailService.SentList;
 
     /// <summary>The folder whose list is on screen (or loading); a query change reloads.</summary>
     private string? _loadedFolder;
@@ -158,11 +233,29 @@ else
         _characterActive = Terminal.IsConnected;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
         AccountAuth.ActiveCharacterChanged += OnActingChanged;
+        Watch.Arrived += OnArrived;
+        MailApi.Changed += OnMailChanged;
+        Nav.LocationChanged += OnLocationChanged;
     }
 
-    protected override async Task OnParametersSetAsync()
+    protected override Task OnParametersSetAsync() => FollowAddressAsync();
+
+    /// <summary>
+    /// /mail and /mail/sent are this one page, and going from one to the other changes no parameter, so the
+    /// address is read again on every navigation.
+    /// </summary>
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+        => InvokeAsync(async () =>
+        {
+            if (SectionPath.Of(Nav).Path is not ("/mail" or MailSidebar.SentHref)) return;
+            await FollowAddressAsync();
+            StateHasChanged();
+        });
+
+    private async Task FollowAddressAsync()
     {
-        _folder = string.IsNullOrWhiteSpace(FolderQuery) ? MailSidebar.Inbox : FolderQuery;
+        _sentView = SectionPath.Of(Nav).Path == MailSidebar.SentHref;
+        _folder = _sentView ? SentKey : string.IsNullOrWhiteSpace(FolderQuery) ? MailSidebar.Inbox : FolderQuery;
         if (_characterActive && !string.Equals(_loadedFolder, _folder, StringComparison.Ordinal))
             await LoadFolderAsync(_folder);
     }
@@ -173,8 +266,15 @@ else
         _readTicket++;
         _loadedFolder = folder;
         _selected = null;
+        _selectedSent = null;
         _body = null;
         _loading = true;
+
+        if (folder == SentKey)
+        {
+            await LoadSentAsync(ticket);
+            return;
+        }
 
         var messages = await MailApi.ListAsync(folder);
 
@@ -186,6 +286,84 @@ else
             ApiFailure failure => ([], failure.Message),
         };
         _loading = false;
+    }
+
+    private async Task LoadSentAsync(long ticket)
+    {
+        var sent = await MailApi.SentAsync();
+        if (ticket != _folderTicket) return;
+
+        (_sent, _listError) = sent switch
+        {
+            IReadOnlyList<MailService.SentMail> rows => (rows, (string?)null),
+            ApiFailure failure => ([], failure.Message),
+        };
+        _messages = [];
+        _loading = false;
+    }
+
+    /// <summary>Selecting a sent row fetches its text. Reading what you sent marks nothing read for its recipients.</summary>
+    private async Task SelectSentAsync(MailService.SentMail msg)
+    {
+        var ticket = ++_readTicket;
+        _selectedSent = msg;
+        _body = null;
+        _bodyError = null;
+        _bodyLoading = true;
+
+        var result = await MailApi.ReadSentAsync(msg.Id);
+
+        if (ticket != _readTicket) return;
+
+        _body = result is MailService.SentMailMessage read ? read.Body : null;
+        _bodyError = result is ApiFailure { Kind: not ApiFailureKind.NotFound } failure ? failure.Message : null;
+        _bodyLoading = false;
+    }
+
+    /// <summary>"Read", "Not read yet", or for several recipients "Read by 1 of 3".</summary>
+    private string ReadByText(MailService.SentMail message) => message.To.Count switch
+    {
+        <= 1 => message.ReadBy > 0 ? Loc["MailSentRead"] : Loc["MailSentNotRead"],
+        var total => Loc["MailSentReadBy", message.ReadBy, total],
+    };
+
+    private void ForwardSent(MailService.SentMail message, string body)
+    {
+        var subject = message.Subject.StartsWith("Fwd:", StringComparison.OrdinalIgnoreCase) ? message.Subject : $"Fwd: {message.Subject}";
+        var draft = MailApi.StageDraft(body);
+        Nav.NavigateTo($"/mail/compose?subject={Uri.EscapeDataString(subject)}&draft={draft}");
+    }
+
+    /// <summary>New mail: the inbox on screen gains it; nothing already open is put away.</summary>
+    private void OnArrived(MailWatch.NewMail _) => InvokeAsync(async () =>
+    {
+        if (!_characterActive || _sentView || !string.Equals(_folder, MailSidebar.Inbox, StringComparison.OrdinalIgnoreCase)) return;
+        await ReloadListAsync();
+    });
+
+    /// <summary>A send from this tab adds to the sent list on screen.</summary>
+    private void OnMailChanged(MailService.MailChange change) => InvokeAsync(async () =>
+    {
+        if (!_characterActive || !_sentView || change.Folder != MailService.SentList) return;
+        await ReloadListAsync();
+    });
+
+    /// <summary>Reads the list on screen again, keeping the open message.</summary>
+    private async Task ReloadListAsync()
+    {
+        var ticket = ++_folderTicket;
+        if (_sentView)
+        {
+            await LoadSentAsync(ticket);
+        }
+        else
+        {
+            var messages = await MailApi.ListAsync(_folder);
+            if (ticket != _folderTicket) return;
+            if (messages is IReadOnlyList<MailService.MailSummary> rows) _messages = rows;
+        }
+
+        StateHasChanged();
     }
 
     /// <summary>Selecting a row fetches the body, the same way <c>/mail/{number}</c> does.</summary>
@@ -257,7 +435,7 @@ else
             if (!_characterActive) return;
             // The open message and the list are the previous character's: they go before the new
             // character's folder is asked for, not when it answers.
-            (_messages, _selected, _body) = ([], null, null);
+            (_messages, _sent, _selected, _selectedSent, _body) = ([], [], null, null, null);
             _loading = true;
             StateHasChanged();
             await LoadFolderAsync(_folder);
@@ -268,5 +446,8 @@ else
     {
         Terminal.ConnectionStateChanged -= OnConnectionChanged;
         AccountAuth.ActiveCharacterChanged -= OnActingChanged;
+        Watch.Arrived -= OnArrived;
+        MailApi.Changed -= OnMailChanged;
+        Nav.LocationChanged -= OnLocationChanged;
     }
 }

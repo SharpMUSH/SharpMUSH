@@ -132,6 +132,7 @@ On the `SharpMUSH` meter (Prometheus `/metrics` on both hosts):
 | `sharpmush.messaging.handler.retries` | in-place retries, by `consumer` |
 | `sharpmush.messaging.handler.terminal_failures` | terminated messages, by `consumer` and `reason` |
 | `sharpmush.messaging.handler.duplicates` | redeliveries acknowledged without running again |
+| `sharpmush.messaging.subscription.dropped` | core messages the server's portal bridge dropped because a subscription's buffer (16,384) was full, by `subscription` (the subscribed subject) |
 | `sharpmush.messaging.stream.bytes` / `.messages` / `.max_bytes` | per stream, every `MonitorInterval` (30 s) |
 | `sharpmush.messaging.consumer.pending` / `.ack_pending` / `.redelivered` | per durable consumer |
 | `sharpmush.messaging.jetstream.storage.used` / `.available` | the account's file storage against `max_file_store` |

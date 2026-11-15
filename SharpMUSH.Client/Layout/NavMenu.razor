@@ -1,3 +1,4 @@
+@using SharpMUSH.Client.Components.Mail
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Models.Applications
@@ -169,6 +170,7 @@
     }
 
     private static readonly string PlayKey = NavKeys.Core("play");
+    private static readonly string MailKey = NavKeys.Core("mail");
 
     // The configured game name shown as the sidebar brand. Defaults to the config default until the
     // ServerInfo fetch settles.
@@ -194,6 +196,10 @@
                     <MudIcon Icon="@item.FillIcon" Class="phosphor-nav-icon" />
                     @* Collapsed to its icon, the link still says where it goes. *@
                     <span class="@(IsCollapsed ? "visually-hidden" : "phosphor-nav-text")">@item.Label</span>
+                    @if (string.Equals(item.Key, MailKey, StringComparison.OrdinalIgnoreCase))
+                    {
+                        <MailUnreadBadge Class="@(IsCollapsed ? "mail-unread-badge--rail" : "mail-unread-badge--nav")" />
+                    }
                     @if (_playActive && string.Equals(item.Key, PlayKey, StringComparison.OrdinalIgnoreCase))
                     {
                         <span class="phosphor-nav-dot @(_playUnread ? "phosphor-nav-dot--unread" : "")" aria-hidden="true"

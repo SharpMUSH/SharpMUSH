@@ -9573,6 +9573,27 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Tło motywu stoi w miejscu, a nic na stronie się nie przesuwa ani nie obraca. Zawsze włączone, gdy urządzenie prosi o ograniczenie ruchu.</value>
   </data>
+  <data name="MailSentEmpty" xml:space="preserve">
+    <value>Nic z tego, co wysłano, nie jest już w żadnej skrzynce.</value>
+  </data>
+  <data name="MailSentRead" xml:space="preserve">
+    <value>Przeczytane</value>
+  </data>
+  <data name="MailSentNotRead" xml:space="preserve">
+    <value>Jeszcze nieprzeczytane</value>
+  </data>
+  <data name="MailSentReadBy" xml:space="preserve">
+    <value>Przeczytane przez {0} z {1}</value>
+  </data>
+  <data name="MailNewFrom" xml:space="preserve">
+    <value>Nowa poczta od {0}</value>
+  </data>
+  <data name="MailNewFromSubject" xml:space="preserve">
+    <value>Nowa poczta od {0}: {1}</value>
+  </data>
+  <data name="MailNewRead" xml:space="preserve">
+    <value>Czytaj</value>
+  </data>
   <data name="RolCancelScene" xml:space="preserve">
     <value>Odwołaj scenę</value>
   </data>

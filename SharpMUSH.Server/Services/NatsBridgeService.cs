@@ -44,6 +44,7 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 	private readonly PluginCatalog _pluginCatalog;
 	private readonly IRoomEventDispatcher _roomDispatcher;
 	private readonly ServerReadiness _readiness;
+	private readonly NatsMessagingMetrics _metrics;
 
 	public NatsBridgeService(
 		IHubContext<GameHub, IGameHubClient> hubContext,
@@ -52,7 +53,8 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 		PluginCatalog pluginCatalog,
 		ILogger<NatsBridgeService> logger,
 		IRoomEventDispatcher roomDispatcher,
-		ServerReadiness readiness)
+		ServerReadiness readiness,
+		NatsMessagingMetrics metrics)
 	{
 		_hubContext = hubContext;
 		_pluginHubContext = pluginHubContext;
@@ -61,6 +63,7 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 		_logger = logger;
 		_roomDispatcher = roomDispatcher;
 		_readiness = readiness;
+		_metrics = metrics;
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -77,6 +80,7 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 			{
 				_logger.LogInformation("[NatsBridge] Connecting to NATS at {Url}", _natsOptions.Url);
 				nats = new NatsConnection(new NatsOpts { Url = _natsOptions.Url });
+				_metrics.WatchDrops(nats);
 				await nats.ConnectAsync();
 				_logger.LogInformation("[NatsBridge] Connected. Subscribing to game.output.* and game.room.* (game.scene.* is now a plugin bridge leg)");
 
