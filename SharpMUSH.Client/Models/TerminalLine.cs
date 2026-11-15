@@ -34,6 +34,20 @@ public class TerminalLine
 	public string Html { get; }
 
 	public TerminalLineSource Source { get; }
+
+	/// <summary>
+	/// The line is a channel line or a page, as the engine marked it: one the comm feed also carries, which Play
+	/// can keep out of its main output.
+	/// </summary>
+	public TerminalLineComm Comm { get; init; }
+}
+
+/// <summary>What kind of conversation a server line belongs to.</summary>
+public enum TerminalLineComm
+{
+	None,
+	Channel,
+	Page
 }
 
 public enum TerminalLineSource

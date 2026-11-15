@@ -8296,6 +8296,18 @@
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Shows each command you send in the output. Off hides them, the ones already there included. Kept in this browser.</value>
   </data>
+  <data name="NavHidePages" xml:space="preserve">
+    <value>Hide pages</value>
+  </data>
+  <data name="NavHidePagesTooltip" xml:space="preserve">
+    <value>Leaves pages out of this output, the ones already there included; they stay in the Pages list. Kept in this browser.</value>
+  </data>
+  <data name="NavHideChannels" xml:space="preserve">
+    <value>Hide channel messages</value>
+  </data>
+  <data name="NavHideChannelsTooltip" xml:space="preserve">
+    <value>Leaves channel messages out of this output, the ones already there included; each stays in its channel's view. Kept in this browser.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Keep longer logs</value>
   </data>

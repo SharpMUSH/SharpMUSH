@@ -6088,6 +6088,18 @@
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Toont elk verzonden commando in de uitvoer. Uit verbergt ze, ook die er al staan. Wordt in deze browser bewaard.</value>
   </data>
+  <data name="NavHidePages" xml:space="preserve">
+    <value>Privéberichten verbergen</value>
+  </data>
+  <data name="NavHidePagesTooltip" xml:space="preserve">
+    <value>Laat privéberichten weg uit deze uitvoer, ook de berichten die er al staan; ze blijven in de lijst Berichten. Wordt in deze browser bewaard.</value>
+  </data>
+  <data name="NavHideChannels" xml:space="preserve">
+    <value>Kanaalberichten verbergen</value>
+  </data>
+  <data name="NavHideChannelsTooltip" xml:space="preserve">
+    <value>Laat kanaalberichten weg uit deze uitvoer, ook de berichten die er al staan; elk blijft in de weergave van zijn kanaal. Wordt in deze browser bewaard.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Langere logs bewaren</value>
   </data>

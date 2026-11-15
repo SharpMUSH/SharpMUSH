@@ -13,6 +13,7 @@ using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Messages;
 
 namespace SharpMUSH.Implementation.Services;
 
@@ -360,7 +361,11 @@ public class ChannelBroadcastService(
 				}
 			}
 
-			await notifyService.Notify(member, finalMessage, sender, notification.MessageType);
+			// Marked as a channel line for a client that files those in a view of their own, as the comm feed
+			// does: every line it pushes, which is all but a presence line.
+			await notifyService.NotifyWithContextAsync(
+				new NotificationContext(member.Object().DBRef, null, []) { Comm = line.ChatType == "@" ? CommOutput.None : CommOutput.Channel },
+				finalMessage, sender, notification.MessageType, target: member);
 			recipients.Add(member);
 		}
 

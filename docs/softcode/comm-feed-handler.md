@@ -58,6 +58,13 @@ saw their own page echoed), `comm.channels` to the player whose list
 changed, and `comm.who` to the members the engine named. Nothing reaches a player who did not see the line in their terminal:
 the handler can only narrow the engine's list, never widen it.
 
+On a portal (WebSocket) connection the engine also marks the terminal line
+itself: a channel line's frame carries `"comm": "channel"` and a page's, the
+pager's copy included, `"comm": "page"`. A presence line is not marked, since
+no `comm.message` carries it. Play's **Hide pages** and **Hide channel
+messages** settings leave the marked lines out of the main output while the
+sidebar lists channels or pages.
+
 A hidden speaker is **not** anonymised: `@channel/hide` keeps a member off the
 channel's who list, and their lines still name them in every member's
 terminal, so they name them in the payload too. An `@cemit` line (with or

@@ -912,6 +912,12 @@
     display: none;
 }
 
+/* Pages or channel lines kept to their own view (Play's terminal settings): still in the scrollback, unshown. */
+.sharp-terminal-no-pages .terminal-comm-page,
+.sharp-terminal-no-channels .terminal-comm-channel {
+    display: none;
+}
+
 /* System/diagnostic lines — accent-dim, matches the prototype terminal */
 .terminal-system {
     color: var(--accent-dim);

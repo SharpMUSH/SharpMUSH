@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using SharpMUSH.SocketServer.Models;
 using SharpMUSH.SocketServer.Services;
+using SharpMUSH.Messaging.Messages;
 
 namespace SharpMUSH.RenderingWorker.Services;
 
@@ -32,19 +33,19 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 	}
 
 	public ValueTask<RenderedOutput> RenderAsync(string markup, ConnectionServerService.ConnectionData connection,
-		bool prompt = false, CancellationToken ct = default) =>
-		RenderAsync(markup, ContextOf(connection), prompt, ct);
+		bool prompt = false, CancellationToken ct = default, CommOutput comm = CommOutput.None) =>
+		RenderAsync(markup, ContextOf(connection), prompt, ct, comm);
 
 	/// <summary>
 	/// <paramref name="markup"/> for <paramref name="connection"/>, waiting up to <see cref="PictureWait"/> for
 	/// any picture it would draw that is still being fetched.
 	/// </summary>
 	public async ValueTask<RenderedOutput> RenderAsync(string markup, RenderContext connection, bool prompt = false,
-		CancellationToken ct = default)
+		CancellationToken ct = default, CommOutput comm = CommOutput.None)
 	{
 		ct.ThrowIfCancellationRequested();
 		var pictures = PicturesFor(connection);
-		var rendered = Render(markup, connection, prompt, pictures);
+		var rendered = Render(markup, connection, prompt, pictures, comm);
 
 		if (pictures is { Pending.Count: > 0 })
 		{
@@ -60,7 +61,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 			if (pictures.Pending.Any(fetch => fetch.IsCompleted))
 			{
 				pictures = PicturesFor(connection)!;
-				rendered = Render(markup, connection, prompt, pictures);
+				rendered = Render(markup, connection, prompt, pictures, comm);
 			}
 		}
 
@@ -113,7 +114,8 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 	private static bool MxpDrawsImages(string? supported) =>
 		supported is null || supported.Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("IMAGE", StringComparer.OrdinalIgnoreCase);
 
-	private static RenderedOutput Render(string markup, RenderContext connection, bool prompt, RenderPictureSource? pictures)
+	private static RenderedOutput Render(string markup, RenderContext connection, bool prompt, RenderPictureSource? pictures,
+		CommOutput comm = CommOutput.None)
 	{
 		var showSeparators = connection.Preferences?.ShowSeparators == true;
 		if (connection.ConnectionType == WebSocketConnectionType)
@@ -121,7 +123,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 			// Forward the markup inside the out-of-band envelope; the browser renders it. Untouched, unless the
 			// reader asked to see list separators.
 			if (showSeparators) markup = MarkupTextSerializer.Serialize(ListSeparators.Show(MarkupTextSerializer.Deserialize(markup)));
-			return new RenderedOutput(WebSocketMarkupFrames.Line(markup), ApplyOutputTransform: false);
+			return new RenderedOutput(WebSocketMarkupFrames.Line(markup, comm), ApplyOutputTransform: false);
 		}
 
 		var depth = ColorDepthFor(connection.Capabilities, connection.Preferences);

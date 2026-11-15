@@ -49,7 +49,7 @@ public class MarkupOutputConsumer(
 
 		try
 		{
-			var rendered = await renderer.RenderAsync(message.Markup, connection, message.Prompt, cancellationToken);
+			var rendered = await renderer.RenderAsync(message.Markup, connection, message.Prompt, cancellationToken, message.Comm);
 			var data = rendered.ApplyOutputTransform
 				? await transformService.TransformAsync(rendered.Data, connection.Capabilities, cancellationToken)
 				: rendered.Data;
@@ -73,7 +73,7 @@ public class MarkupOutputConsumer(
 	{
 		try
 		{
-			await connection.OutputFunction(WebSocketMarkupFrames.Line(message.Markup));
+			await connection.OutputFunction(WebSocketMarkupFrames.Line(message.Markup, message.Comm));
 		}
 		catch (Exception ex)
 		{

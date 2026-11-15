@@ -1,3 +1,4 @@
+using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using System.Collections.Immutable;
@@ -53,6 +54,12 @@ public record NotificationContext(
 	/// the caller, so the listener pass does not check it again.
 	/// </summary>
 	public bool HearingChecked { get; init; }
+
+	/// <summary>
+	/// The line is a channel line or a page (<see cref="MarkupOutputMessage.Comm"/>). Only the target's own copy is
+	/// marked: a listener's relay of it is not.
+	/// </summary>
+	public CommOutput Comm { get; init; }
 }
 
 public enum NotificationRelay { Initial, RelayOnce, NoRelay }

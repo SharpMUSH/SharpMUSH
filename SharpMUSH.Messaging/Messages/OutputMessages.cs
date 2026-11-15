@@ -63,6 +63,20 @@ public record MarkupOutputMessage(long Handle, string Markup) : IHandleMessage
 	/// markup, so a terminal connection, whose prompt is only its last line, is sent nothing.
 	/// </summary>
 	public bool ClearPrompt { get; init; }
+
+	/// <summary>
+	/// The line is a channel line or a page that the comm feed also carries, so a WebSocket client that shows
+	/// those in a view of their own can keep it out of the main output. <see cref="CommOutput.None"/> for any other line.
+	/// </summary>
+	public CommOutput Comm { get; init; }
+}
+
+/// <summary>What kind of conversation a line of output belongs to, for a client that files them apart.</summary>
+public enum CommOutput
+{
+	None,
+	Channel,
+	Page
 }
 
 /// <summary>

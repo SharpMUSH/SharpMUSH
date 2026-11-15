@@ -1,6 +1,6 @@
 @inject IStringLocalizer<SharedResource> Loc
 
-@* Play's terminal settings menu: the width in columns, echo, screen reader mode, the longer log, Clear, and focus mode. The page
+@* Play's terminal settings menu: the width in columns, echo, pages and channels in the output, screen reader mode, the longer log, Clear, and focus mode. The page
    keeps which menu is open, since several can be on it at once (PlaySettingsMenu). *@
 <PopoverMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
              Open="Open" OpenChanged="OpenChanged">
@@ -25,6 +25,23 @@
                        aria-describedby="@EchoWhat" @onchange="e => EchoChanged.InvokeAsync(e.Value is true)" />
             </label>
             <div class="play-cfg-note" id="@EchoWhat">@Loc["NavEchoCommandsTooltip"]</div>
+            @* Per browser, and only while the game files channels and pages in the sidebar: with nowhere else to read them,
+               the main output keeps them. *@
+            @if (CommsFiled)
+            {
+                <label class="play-cfg-row">
+                    <span>@Loc["NavHidePages"]</span>
+                    <input name="hide-pages" class="play-cfg-check" type="checkbox" checked="@HidePagesOn"
+                           aria-describedby="@PagesWhat" @onchange="e => HidePagesChanged.InvokeAsync(e.Value is true)" />
+                </label>
+                <div class="play-cfg-note" id="@PagesWhat">@Loc["NavHidePagesTooltip"]</div>
+                <label class="play-cfg-row">
+                    <span>@Loc["NavHideChannels"]</span>
+                    <input name="hide-channels" class="play-cfg-check" type="checkbox" checked="@HideChannelsOn"
+                           aria-describedby="@ChannelsWhat" @onchange="e => HideChannelsChanged.InvokeAsync(e.Value is true)" />
+                </label>
+                <div class="play-cfg-note" id="@ChannelsWhat">@Loc["NavHideChannelsTooltip"]</div>
+            }
             @* Per browser, and here rather than in Settings so a guest can turn it on too. *@
             <label class="play-cfg-row">
                 <span>@Loc["NavScreenReaderMode"]</span>
@@ -72,6 +89,17 @@
     [Parameter] public bool EchoOn { get; set; } = true;
     [Parameter] public EventCallback<bool> EchoChanged { get; set; }
 
+    /// <summary>The game files channels and pages in Play's sidebar, so the main output may leave them out.</summary>
+    [Parameter] public bool CommsFiled { get; set; }
+
+    /// <summary>The main output leaves out pages.</summary>
+    [Parameter] public bool HidePagesOn { get; set; }
+    [Parameter] public EventCallback<bool> HidePagesChanged { get; set; }
+
+    /// <summary>The main output leaves out channel lines.</summary>
+    [Parameter] public bool HideChannelsOn { get; set; }
+    [Parameter] public EventCallback<bool> HideChannelsChanged { get; set; }
+
     [Parameter] public bool ScreenReaderOn { get; set; }
     [Parameter] public EventCallback<bool> ScreenReaderChanged { get; set; }
 
@@ -85,6 +113,8 @@
     [Parameter] public EventCallback<bool> FocusChanged { get; set; }
 
     private string EchoWhat => $"play-cfg-echo-what-{Menu}";
+    private string PagesWhat => $"play-cfg-pages-what-{Menu}";
+    private string ChannelsWhat => $"play-cfg-channels-what-{Menu}";
     private string ReaderWhat => $"play-cfg-reader-what-{Menu}";
     private string LogsWhat => $"play-cfg-logs-what-{Menu}";
 

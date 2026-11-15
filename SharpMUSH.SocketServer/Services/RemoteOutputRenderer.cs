@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using SharpMUSH.SocketServer.Models;
+using SharpMUSH.Messaging.Messages;
 
 namespace SharpMUSH.SocketServer.Services;
 
@@ -34,13 +35,14 @@ public sealed class RemoteOutputRenderer : IMarkupOutputRenderer, IOutputTransfo
 	}
 
 	public async ValueTask<RenderedOutput> RenderAsync(string markup,
-		ConnectionServerService.ConnectionData connection, bool prompt = false, CancellationToken ct = default) =>
+		ConnectionServerService.ConnectionData connection, bool prompt = false, CancellationToken ct = default,
+		CommOutput comm = CommOutput.None) =>
 		await SendAsync(new RenderRequest(markup, null,
 			new RenderContext(connection.ConnectionType, connection.Capabilities, connection.Preferences,
 				connection.Handle, connection.SessionId, _mssp?.Website,
 				// Only a connection that is not sent UTF-8 uses them.
 				connection.Capabilities.Utf8 ? null : _settings?.AsciiTranslations,
-				_settings?.MaxPictureColumns ?? 200, _settings?.MaxPictureRows ?? 100), prompt), ct);
+				_settings?.MaxPictureColumns ?? 200, _settings?.MaxPictureRows ?? 100), prompt, comm), ct);
 
 	public async ValueTask<byte[]> TransformAsync(byte[] rawOutput, ProtocolCapabilities capabilities,
 		CancellationToken ct = default) =>

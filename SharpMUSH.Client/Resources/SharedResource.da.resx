@@ -6088,6 +6088,18 @@
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Viser hver kommando, du sender, i outputtet. Slået fra skjuler dem, også dem der allerede står der. Gemmes i denne browser.</value>
   </data>
+  <data name="NavHidePages" xml:space="preserve">
+    <value>Skjul private beskeder</value>
+  </data>
+  <data name="NavHidePagesTooltip" xml:space="preserve">
+    <value>Udelader private beskeder fra dette output, også dem der allerede står der; de bliver i listen Beskeder. Gemmes i denne browser.</value>
+  </data>
+  <data name="NavHideChannels" xml:space="preserve">
+    <value>Skjul kanalbeskeder</value>
+  </data>
+  <data name="NavHideChannelsTooltip" xml:space="preserve">
+    <value>Udelader kanalbeskeder fra dette output, også dem der allerede står der; hver bliver i sin kanals visning. Gemmes i denne browser.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Gem længere logs</value>
   </data>

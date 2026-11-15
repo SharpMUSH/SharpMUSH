@@ -33,7 +33,8 @@ public static partial class TerminalScrollback
 		var html = Inert(line.Html);
 		if (string.IsNullOrWhiteSpace(line.Text) && !HasVisibleElement(html)) return new NotFound();
 
-		return JsonSerializer.Serialize(new StoredLine(line.Text, html, new DateTimeOffset(line.Timestamp).ToUnixTimeMilliseconds()));
+		return JsonSerializer.Serialize(new StoredLine(line.Text, html, new DateTimeOffset(line.Timestamp).ToUnixTimeMilliseconds(),
+			line.Comm is TerminalLineComm.None ? null : line.Comm));
 	}
 
 	public static IReadOnlyList<TerminalLine> Parse(string? stored)
@@ -43,7 +44,10 @@ public static partial class TerminalScrollback
 		{
 			return JsonSerializer.Deserialize<StoredLine[]>(stored) is { } lines
 				? [.. lines.Where(l => l.T is not null).Select(l => new TerminalLine(
-					DateTimeOffset.FromUnixTimeMilliseconds(l.At).LocalDateTime, l.T!, Inert(l.H ?? string.Empty), TerminalLineSource.Server))]
+					DateTimeOffset.FromUnixTimeMilliseconds(l.At).LocalDateTime, l.T!, Inert(l.H ?? string.Empty), TerminalLineSource.Server)
+				{
+					Comm = l.C ?? TerminalLineComm.None
+				})]
 				: [];
 		}
 		catch (JsonException)
@@ -99,5 +103,9 @@ public static partial class TerminalScrollback
 	private sealed record StoredLine(
 		[property: System.Text.Json.Serialization.JsonPropertyName("t")] string? T,
 		[property: System.Text.Json.Serialization.JsonPropertyName("h")] string? H,
-		[property: System.Text.Json.Serialization.JsonPropertyName("at")] long At);
+		[property: System.Text.Json.Serialization.JsonPropertyName("at")] long At,
+		// Absent for a line that is neither a channel line nor a page, and in a screen kept before it was recorded.
+		[property: System.Text.Json.Serialization.JsonPropertyName("c"),
+			System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+		TerminalLineComm? C = null);
 }

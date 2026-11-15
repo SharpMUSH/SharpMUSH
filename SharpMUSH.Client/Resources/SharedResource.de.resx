@@ -6088,6 +6088,18 @@
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Zeigt jeden gesendeten Befehl in der Ausgabe. Ausgeschaltet blendet sie aus, auch die bereits angezeigten. Wird in diesem Browser gespeichert.</value>
   </data>
+  <data name="NavHidePages" xml:space="preserve">
+    <value>Pages ausblenden</value>
+  </data>
+  <data name="NavHidePagesTooltip" xml:space="preserve">
+    <value>Lässt Pages aus dieser Ausgabe weg, auch die bereits angezeigten; sie bleiben in der Liste Pages. Wird in diesem Browser gespeichert.</value>
+  </data>
+  <data name="NavHideChannels" xml:space="preserve">
+    <value>Kanalnachrichten ausblenden</value>
+  </data>
+  <data name="NavHideChannelsTooltip" xml:space="preserve">
+    <value>Lässt Kanalnachrichten aus dieser Ausgabe weg, auch die bereits angezeigten; jede bleibt in der Ansicht ihres Kanals. Wird in diesem Browser gespeichert.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Längere Protokolle behalten</value>
   </data>

@@ -295,6 +295,7 @@ public class ListenerRoutingService(
 			PuppetOk = true,
 			// The caller's hearing check was for the listener, not for what it relays to.
 			HearingChecked = false,
+			Comm = CommOutput.None,
 			Relay = context.Relay == NotificationRelay.Initial ? NotificationRelay.RelayOnce : NotificationRelay.NoRelay
 		};
 		do

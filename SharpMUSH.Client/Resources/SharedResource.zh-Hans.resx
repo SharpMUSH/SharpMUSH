@@ -6088,6 +6088,18 @@
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>在输出中显示你发送的每条命令。关闭后会隐藏它们，包括已显示的。保存在此浏览器中。</value>
   </data>
+  <data name="NavHidePages" xml:space="preserve">
+    <value>隐藏私信</value>
+  </data>
+  <data name="NavHidePagesTooltip" xml:space="preserve">
+    <value>不在此输出中显示私信，已显示的也一并隐藏；它们仍在私信列表中。保存在此浏览器中。</value>
+  </data>
+  <data name="NavHideChannels" xml:space="preserve">
+    <value>隐藏频道消息</value>
+  </data>
+  <data name="NavHideChannelsTooltip" xml:space="preserve">
+    <value>不在此输出中显示频道消息，已显示的也一并隐藏；每条仍在其频道视图中。保存在此浏览器中。</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>保留更长的日志</value>
   </data>

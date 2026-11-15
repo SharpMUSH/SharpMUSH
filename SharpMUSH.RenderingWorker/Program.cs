@@ -65,7 +65,7 @@ public static class Program
 				(request.Markup is null) == (request.Data is null))
 				return Results.BadRequest();
 			var rendered = request.Markup is not null
-				? await renderer.RenderAsync(request.Markup, request.Context, request.Prompt, ct)
+				? await renderer.RenderAsync(request.Markup, request.Context, request.Prompt, ct, request.Comm)
 				: new RenderedOutput(request.Data!, true);
 			var bytes = rendered.ApplyOutputTransform
 				? OutputTransformService.Transform(rendered.Data, request.Context.Capabilities, request.Context.AsciiTranslations)
