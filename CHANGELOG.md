@@ -13,6 +13,7 @@ Two version numbers matter:
 
 - The play terminal's settings menu has an "Echo my commands" checkbox. Off hides the commands you send from the output; on (the default) shows them. The choice is kept per browser.
 - The play terminal's settings menu has "Hide pages" and "Hide channel messages" checkboxes. On, pages stay in the sidebar's Pages list and channel messages (connect and disconnect lines included) in their channel's view, out of the main output, the ones already there included. Both are off by default and kept per browser, and are offered only while the game sends channels and pages to the sidebar. A portal connection's output now marks each channel line and page as one.
+- The play terminal's settings menu lists each option by name only; an (i) beside it shows the details on hover, focus or a tap.
 
 ### Fixed
 
