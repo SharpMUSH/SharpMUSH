@@ -92,7 +92,7 @@ Most characters match themselves. Outside character classes, these characters ha
 | `.` | Any character except newline; `(?s)` includes newline. |
 | `^`, `$` | Start and end anchors; see Boundary assertions. |
 | `[abc]` | One character from a class. |
-| `a|b` | Either alternative. |
+| `a\|b` | Either alternative. |
 | `(pattern)` | Capture a subexpression. |
 | `(?:pattern)` | Group without capturing. |
 | `*`, `+`, `?`, `{m,n}` | Repeat the preceding character or group. |

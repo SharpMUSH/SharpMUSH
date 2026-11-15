@@ -44,7 +44,7 @@
 -->
 # Palette Entries
 
-The portal's command palette (Ctrl+K) runs game commands as well as going to pages. A command gets there through a palette entry: an attribute `PALETTE`<name>` on the object that holds the command, whose value is a JSON object saying what the row is called and what line it sends.
+The portal's command palette (Ctrl+K) runs game commands as well as going to pages. A command gets there through a palette entry: an attribute `` PALETTE`<name> `` on the object that holds the command, whose value is a JSON object saying what the row is called and what line it sends.
 
 ```sharp
 > &CMD`JOIN Scene Board=$+join *:@pemit %#=You join scene %0.
@@ -104,7 +104,7 @@ An entry is offered when all of these hold:
 
 1. Its object is somewhere a typed `$`-command would look: the player, what they carry, the room and its contents, the room's zone, the player's zone, or the master room. The player must be able to see it.
 2. The object hears commands (not NO_COMMAND or HALT), and its `@lock/command` and `@lock/use` pass for the player.
-3. An entry on a player is offered only to that player, and rule 2 does not apply to it, so `&PALETTE`WAVE me={"label":"Wave","line":"pose waves."}` is a personal shortcut.
+3. An entry on a player is offered only to that player, and rule 2 does not apply to it, so `` &PALETTE`WAVE me={"label":"Wave","line":"pose waves."} `` is a personal shortcut.
 4. A line whose first word is a built-in command needs the player to be allowed that command.
 5. Its `lock` passes.
 

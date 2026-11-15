@@ -80,7 +80,7 @@ These attribute flags alter the way attributes are used in commands and ^-listen
 - `quiet (Q)`         When altering the attribute's value or flags, don't show the usual confirmation message
 
 These attribute flags are only used internally. They cannot be set, but seen on 'examine' and flags()/lflags(), tested for with hasflag(), etc:
-- `branch (\`)`        This attribute is a branch. See: [attribute trees]
+- `` branch (`) ``       This attribute is a branch. See: [attribute trees]
 
 ## Display formatting
 

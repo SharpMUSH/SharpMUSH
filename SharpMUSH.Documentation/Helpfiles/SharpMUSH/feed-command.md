@@ -211,7 +211,7 @@ Both are empty for a line sent in the game. The positions are there for code wri
 - `@feed/tap <kind>=<object>/<attribute>`
 - `@feed/untap <kind>=<object>/<attribute>`
 
-A tap is another system that hears every line of a kind, such as a scene recorder or a staff log. `@feed/tap radio=Logger/LOG`RADIO` adds one; `*` in place of the kind hears every kind. You must control the tap's object. `@feed/untap` removes one.
+A tap is another system that hears every line of a kind, such as a scene recorder or a staff log. `` @feed/tap radio=Logger/LOG`RADIO `` adds one; `*` in place of the kind hears every kind. You must control the tap's object. `@feed/untap` removes one.
 
 For each line, after it is delivered, the tap's attribute is queued on its object with the speaker as enactor. It gets the names in the table under [@feed tie-in arguments]. A tap whose object or attribute is gone is skipped.
 
@@ -250,7 +250,7 @@ A feed has two locks, ordinary locks evaluated as if they were on the kind's own
 
 `@feed/lock` sets one, and `@feed/unlock` clears it. A lock on a kind needs `feed.admin`; a lock on one feed needs only control of the owner, and applies on top of the kind's lock. A lock that is not set passes everyone. Any other rule about who may do what, such as who moderates a radio frequency, belongs to the system: it keeps its own locks and checks them with [testlock()] before it runs @feed.
 
-An evaluation lock (`<attribute>/<value>`) gets `%0` the feed key and `%1` the kind, so one attribute on the owner can answer for every feed: with `@feed/lock radio/send=LK`MEMBER/1`, `LK`MEMBER` can look `%0` up in the radio's own member lists.
+An evaluation lock (`<attribute>/<value>`) gets `%0` the feed key and `%1` the kind, so one attribute on the owner can answer for every feed: with `` @feed/lock radio/send=LK`MEMBER/1 ``, `` LK`MEMBER `` can look `%0` up in the radio's own member lists.
 
 ```sharp
 > @feed/lock radio/911/read=role^police

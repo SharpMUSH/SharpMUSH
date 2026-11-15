@@ -51,6 +51,7 @@ public static class RecursiveMarkdownHelper
 	public static MarkdownPipelineBuilder ConfigureHelpSyntax(MarkdownPipelineBuilder builder) =>
 		builder
 			.UsePipeTables()
+			.UseTableCodePipes() // `a\|b` in a table cell is a|b, as on GitHub and the Docs site
 			.UseEmphasisExtras(EmphasisExtraOptions.Strikethrough) // ~~struck~~, as the portal's editor writes it
 			.UseHelpTopicLinks() // [topic] → help <topic> hyperlinks
 			.UseCustomContainers()
