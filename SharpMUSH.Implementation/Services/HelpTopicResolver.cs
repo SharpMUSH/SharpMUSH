@@ -26,22 +26,30 @@ public sealed class HelpTopicResolver(ITextFileService textFiles) : IHelpTopicRe
 			return await NarrowAsync(corpus, await SearchAsync(corpus, topic));
 		}
 
-		var exact = await GetExactAsync(corpus, topic);
+		// Most commands are filed under their @-name, so a reader who left the @ off ("feed examples")
+		// still reaches "@feed examples": the @-spelling is tried whenever the topic as typed is not found.
+		var command = topic.StartsWith('@') ? null : "@" + topic;
+		var exact = await GetExactAsync(corpus, topic)
+			?? (command is null ? null : await GetExactAsync(corpus, command));
 		if (exact is not null)
 		{
 			return exact;
 		}
 
-		// PennMUSH tries a prefix match first (name LIKE 'topic%', first alphabetically wins) and only
-		// falls back to the fuzzy pattern when that finds nothing.
-		var prefix = await textFiles.GetPrefixEntryAsync(corpus, topic);
-		if (prefix is not null)
-		{
-			return prefix;
-		}
-
-		return await NarrowAsync(corpus, await SearchAsync(corpus, BuildFuzzyPattern(topic)));
+		var partial = await PartialAsync(corpus, topic);
+		return partial is None && command is not null ? await PartialAsync(corpus, command) : partial;
 	}
+
+	/// <summary>
+	/// PennMUSH tries a prefix match first (name LIKE 'topic%', first alphabetically wins) and only
+	/// falls back to the fuzzy pattern when that finds nothing.
+	/// </summary>
+	private async ValueTask<HelpResolution> PartialAsync(string corpus, string topic) =>
+		await textFiles.GetPrefixEntryAsync(corpus, topic) switch
+		{
+			{ } prefix => prefix,
+			null => await NarrowAsync(corpus, await SearchAsync(corpus, BuildFuzzyPattern(topic)))
+		};
 
 	/// <inheritdoc />
 	public async ValueTask<HelpEntry?> GetExactAsync(string corpus, string topic)
