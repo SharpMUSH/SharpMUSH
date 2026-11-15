@@ -100,4 +100,24 @@ public class AccountPasswordConnectTests
 
 		await RefusedAsync(character, "account-secret-4");
 	}
+
+	[Test]
+	public async ValueTask PasswordToChangeDoesNotConnect()
+	{
+		var (character, account) = await CharacterOnAccountAsync("account-secret-5");
+		await Accounts.SetPasswordAsync(account.Id!, "temporary-secret-5", mustChangePassword: true);
+
+		await RefusedAsync(character, "temporary-secret-5");
+	}
+
+	[Test]
+	public async ValueTask DisabledAccountsPasswordIsRefusedAfterItMatches()
+	{
+		var (character, account) = await CharacterOnAccountAsync("account-secret-6");
+		await Accounts.DisableAccountAsync(account.Id!);
+
+		var (result, handle) = await ConnectAsync(character, "account-secret-6");
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNull();
+	}
 }

@@ -490,13 +490,16 @@ public partial class Commands
 	/// <summary>
 	/// Whether <paramref name="password"/> is the password of the account that holds <paramref name="character"/>, so a
 	/// character made on the portal, which has no password of its own, connects with its account's. A character on no
-	/// account, or on a deleted account or one with no password, checks a hash nothing matches instead, so a wrong
+	/// account, or on a deleted account, one with no password or one whose password staff set to be changed at its next
+	/// sign-in, checks a hash nothing matches instead, so a wrong
 	/// password takes as long whether the character has an account or not.
 	/// </summary>
 	private async ValueTask<bool> AccountPasswordMatchesAsync(SharpPlayer character, string password)
 	{
 		var account = await AccountService.GetAccountForCharacterAsync(character.Object.DBRef);
-		var accountHash = account is { Status: not AccountStatus.Deleted, PasswordHash: { Length: > 0 } hash } ? hash : null;
+		var accountHash = account is { Status: not AccountStatus.Deleted, MustChangePassword: false, PasswordHash: { Length: > 0 } hash }
+			? hash
+			: null;
 		var matches = PasswordService.PasswordIsValid(password, accountHash ?? UnmatchedAccountHash);
 		return accountHash is not null && matches;
 	}
