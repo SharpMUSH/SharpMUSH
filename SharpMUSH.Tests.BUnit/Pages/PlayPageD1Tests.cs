@@ -632,6 +632,53 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task ThePagesAndChannelsSettings_KeepThemOutOfTheOutputAndKeepTheChoice()
+	{
+		_comms.ChannelList = [new CommChannel("Public", 0)];
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".sharp-terminal-output"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".sharp-terminal-no-pages")).IsEmpty();
+		await Assert.That(cut.FindAll(".sharp-terminal-no-channels")).IsEmpty();
+
+		await cut.Find("button.play-settings-btn").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find("input[name=hide-pages]"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find("input[name=hide-pages]").HasAttribute("checked")).IsFalse();
+		await Assert.That(cut.Find("input[name=hide-channels]").HasAttribute("checked")).IsFalse();
+
+		await cut.Find("input[name=hide-pages]").ChangeAsync(new ChangeEventArgs { Value = true });
+		await cut.Find("input[name=hide-channels]").ChangeAsync(new ChangeEventArgs { Value = true });
+		cut.WaitForState(() => cut.FindAll(".sharp-terminal-output.sharp-terminal-no-pages.sharp-terminal-no-channels").Count == 1,
+			TimeSpan.FromSeconds(5));
+		var stored = await cut.InvokeAsync(() => JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
+			.Select(i => i.Arguments).Where(a => (string?)a[0] is "play.hidepages" or "play.hidechannels")
+			.Select(a => $"{a[0]}={a[1]}").ToList());
+		await Assert.That(stored).IsEquivalentTo(new[] { "play.hidepages=on", "play.hidechannels=on" });
+
+		await cut.Find("input[name=hide-pages]").ChangeAsync(new ChangeEventArgs { Value = false });
+		cut.WaitForState(() => cut.FindAll(".sharp-terminal-no-pages").Count == 0, TimeSpan.FromSeconds(5));
+		var removed = await cut.InvokeAsync(() => JSInterop.Invocations.Count(i => i.Identifier == "localStorage.removeItem" && (string?)i.Arguments[0] == "play.hidepages"));
+		await Assert.That(removed).IsEqualTo(1);
+	}
+
+	/// <summary>Without the comm feed the main output is the only place pages and channels show, so it keeps them.</summary>
+	[Test]
+	public async Task WithoutTheCommFeed_PagesAndChannelsStayInTheOutput()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.hidepages").SetResult("on");
+		JSInterop.Setup<string?>("localStorage.getItem", "play.hidechannels").SetResult("on");
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".sharp-terminal-output"), TimeSpan.FromSeconds(5));
+		await cut.Find("button.play-settings-btn").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find("input[name=echo]"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll("input[name=hide-pages]")).IsEmpty();
+		await Assert.That(cut.FindAll(".sharp-terminal-no-pages")).IsEmpty();
+		await Assert.That(cut.FindAll(".sharp-terminal-no-channels")).IsEmpty();
+	}
+
+	[Test]
 	public async Task TheComposer_SendsThroughThePlayConnection()
 	{
 		var cut = RenderPlay();

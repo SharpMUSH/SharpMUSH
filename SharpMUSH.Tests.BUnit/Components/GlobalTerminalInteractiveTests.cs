@@ -112,6 +112,26 @@ public class GlobalTerminalInteractiveTests : BunitContext
 	}
 
 	[Test]
+	public async Task Pages_and_channel_lines_hide_apart_and_come_back()
+	{
+		var terminal = AnonymousTerminal();
+		terminal.Lines.Returns([
+			new TerminalLine(DateTime.Now, "Wren pages: psst", TerminalLineSource.Server) { Comm = TerminalLineComm.Page },
+			new TerminalLine(DateTime.Now, "<Public> Wren says, \"hi\"", TerminalLineSource.Server) { Comm = TerminalLineComm.Channel },
+			new TerminalLine(DateTime.Now, "A quiet room.", TerminalLineSource.Server)]);
+
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, terminal).Add(g => g.HidePages, true));
+		await Assert.That(cut.FindAll(".sharp-terminal-output.sharp-terminal-no-pages")).Count().IsEqualTo(1);
+		await Assert.That(cut.FindAll(".sharp-terminal-no-channels")).IsEmpty();
+		await Assert.That(cut.Find(".terminal-comm-page").TextContent).IsEqualTo("Wren pages: psst");
+		await Assert.That(cut.Find(".terminal-comm-channel").TextContent).IsEqualTo("<Public> Wren says, \"hi\"");
+
+		cut.Render(p => p.Add(g => g.HidePages, false).Add(g => g.HideChannels, true));
+		await Assert.That(cut.FindAll(".sharp-terminal-no-pages")).IsEmpty();
+		await Assert.That(cut.FindAll(".sharp-terminal-output.sharp-terminal-no-channels")).Count().IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task Non_interactive_terminal_has_no_command_input_but_keeps_its_output()
 	{
 		var cut = Render<GlobalTerminal>(p => p

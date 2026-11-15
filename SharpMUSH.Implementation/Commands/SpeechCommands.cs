@@ -14,6 +14,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
+using SharpMUSH.Messaging.Messages;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using System.Collections.Immutable;
 
@@ -485,7 +486,10 @@ public partial class Commands
 				pageParser => AttributeHelpers.EvaluateFormatAttribute(
 					AttributeService, pageParser, executor, executor, "OUTPAGEFORMAT",
 					outPageFormatArgs, outgoingDefault));
-			await NotifyService.Notify(executor, outgoing, executor);
+			// The pager's copy and each recipient's are marked as a page, for a client that files pages apart
+			// (the comm feed pushes the page to both).
+			await NotifyService.NotifyWithContextAsync(PageContext(executor), outgoing, executor,
+				INotifyService.NotificationType.Announce, target: executor);
 
 			foreach (var (company, delivered) in deliveries)
 			{
@@ -496,6 +500,9 @@ public partial class Commands
 
 		return CallState.Empty;
 	}
+
+	private static NotificationContext PageContext(AnySharpObject target) =>
+		new(target.Object().DBRef, null, []) { Comm = CommOutput.Page };
 
 	/// <summary>
 	/// One page's delivery to the <paramref name="company"/> it names: each recipient's line (through their
@@ -522,7 +529,8 @@ public partial class Commands
 				pageParser => AttributeHelpers.EvaluateFormatAttribute(
 					AttributeService, pageParser, recipient, recipient, "PAGEFORMAT",
 					pageFormatArgs, incomingDefault));
-			await NotifyService.Notify(recipient, incoming, executor, INotifyService.NotificationType.Say);
+			await NotifyService.NotifyWithContextAsync(PageContext(recipient), incoming, executor,
+				INotifyService.NotificationType.Say, target: recipient);
 			await PageReturn(parser, executor, recipient, "Idle", "IDLE", null);
 			// Replace legacy text and establish its protection/owner in the same transaction. This internal
 			// context deliberately uses the batch's watch bypass: arbitrary legacy custom watches are not

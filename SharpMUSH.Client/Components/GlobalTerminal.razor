@@ -21,7 +21,7 @@
        the background terminal in the drawer stays quiet. It takes focus so the keyboard can scroll it. In
        Screen reader mode the announcer below reads instead, leaving out the player's own commands. *@
     <div id="@_outputId"
-         class="@(EchoCommands ? "sharp-terminal-output" : "sharp-terminal-output sharp-terminal-no-echo")" data-input-region="@Interactive"
+         class="@OutputClass" data-input-region="@Interactive"
          role="log" aria-live="@(Interactive && !ScreenReader.On ? "polite" : "off")" aria-label="@Loc["TermOutputLabel"]" tabindex="0"
          style="flex:1;min-height:0;overflow:auto;white-space:pre-wrap;word-break:break-word;line-height:1.6;">
         @* When MinColumns is set (the /play terminal asks for 78), this inner track holds a
@@ -200,6 +200,28 @@
     /// input history still have them, and turning echo back on shows them again.
     /// </summary>
     [Parameter] public bool EchoCommands { get; set; } = true;
+
+    /// <summary>
+    /// Whether the output leaves out the pages the engine marked as such (the /play terminal's setting, while
+    /// its Pages list shows them). Like echo, the ones already there are hidden too, and not read out.
+    /// </summary>
+    [Parameter] public bool HidePages { get; set; }
+
+    /// <summary>Whether the output leaves out channel lines, as <see cref="HidePages"/> does pages.</summary>
+    [Parameter] public bool HideChannels { get; set; }
+
+    private string OutputClass => "sharp-terminal-output"
+        + (EchoCommands ? "" : " sharp-terminal-no-echo")
+        + (HidePages ? " sharp-terminal-no-pages" : "")
+        + (HideChannels ? " sharp-terminal-no-channels" : "");
+
+    /// <summary>A line the output shows but does not hide: what a screen reader reads.</summary>
+    private bool Shown(TerminalLine line) => line.Comm switch
+    {
+        TerminalLineComm.Page => !HidePages,
+        TerminalLineComm.Channel => !HideChannels,
+        _ => true
+    };
 
 
     /// <summary>Writes a diagnostic line only when this terminal opted in and we are in dev.</summary>
@@ -630,7 +652,7 @@
     {
         _transcript.Add(line);
         // The player's own command is not read back: they have just typed it.
-        if (ScreenReader.On && line.Source != TerminalLineSource.Client && Spoken(line) is { Length: > 0 } said)
+        if (ScreenReader.On && line.Source != TerminalLineSource.Client && Shown(line) && Spoken(line) is { Length: > 0 } said)
             _announcer?.Announce(said);
         StateHasChanged();
     });
@@ -655,7 +677,7 @@
     public Task ReviewLine(int back) => InvokeAsync(() =>
     {
         var said = _transcript.Lines
-            .Where(l => l.Source != TerminalLineSource.Client)
+            .Where(l => l.Source != TerminalLineSource.Client && Shown(l))
             .Reverse()
             .Select(Spoken)
             .Where(s => s.Length > 0)

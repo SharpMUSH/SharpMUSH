@@ -6088,6 +6088,18 @@
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Prikazuje svaku poslanu naredbu u izlazu. Isključeno ih skriva, uključujući one već prikazane. Pamti se u ovom pregledniku.</value>
   </data>
+  <data name="NavHidePages" xml:space="preserve">
+    <value>Sakrij privatne poruke</value>
+  </data>
+  <data name="NavHidePagesTooltip" xml:space="preserve">
+    <value>Izostavlja privatne poruke iz ovog izlaza, uključujući one koje su već prikazane; ostaju na popisu Poruke. Sprema se u ovom pregledniku.</value>
+  </data>
+  <data name="NavHideChannels" xml:space="preserve">
+    <value>Sakrij poruke kanala</value>
+  </data>
+  <data name="NavHideChannelsTooltip" xml:space="preserve">
+    <value>Izostavlja poruke kanala iz ovog izlaza, uključujući one koje su već prikazane; svaka ostaje u prikazu svog kanala. Sprema se u ovom pregledniku.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Čuvaj duže zapise</value>
   </data>

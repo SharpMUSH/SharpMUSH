@@ -43,6 +43,12 @@ public class SharpFunctionAttribute : Attribute
 	public required FunctionFlags Flags { get; set; } = FunctionFlags.Regular;
 	/// <summary>With HasSideFX, gate only calls with at least this many arguments. Zero gates every call.</summary>
 	public int SideEffectMinArgs { get; set; }
+	/// <summary>
+	/// Who may call the function: holding any one of these lets a caller use it, and none means no grant is needed.
+	/// Each is a permission (<c>game.send_oob</c>) or <c>role^&lt;role&gt;</c>, <c>power^&lt;power&gt;</c> or
+	/// <c>flag^&lt;flag&gt;</c>; one written <c>!&lt;grant&gt;</c> is one the caller must not hold.
+	/// <c>@function/restrict</c> can replace them (<see cref="Services.FunctionRestrictionFlags"/>).
+	/// </summary>
 	public string[] Restrict { get; set; } = [];
 	/// <summary>
 	/// Optional parameter names for better IDE support (inlay hints, signature help, etc.)
@@ -55,7 +61,13 @@ public class SharpFunctionAttribute : Attribute
 	public string[] ParameterNames { get; set; } = [];
 
 	/// <summary>A copy of this declaration with <paramref name="flags"/> in place of <see cref="Flags"/>.</summary>
-	public SharpFunctionAttribute WithFlags(FunctionFlags flags) => new()
+	public SharpFunctionAttribute WithFlags(FunctionFlags flags) => WithRestriction(flags, Restrict);
+
+	/// <summary>
+	/// A copy of this declaration with <paramref name="flags"/> in place of <see cref="Flags"/> and
+	/// <paramref name="restrict"/> in place of <see cref="Restrict"/>.
+	/// </summary>
+	public SharpFunctionAttribute WithRestriction(FunctionFlags flags, string[] restrict) => new()
 	{
 		Name = Name,
 		MinArgs = MinArgs,
@@ -63,7 +75,7 @@ public class SharpFunctionAttribute : Attribute
 		MaxArgs = MaxArgs,
 		Flags = flags,
 		SideEffectMinArgs = SideEffectMinArgs,
-		Restrict = Restrict,
+		Restrict = restrict,
 		ParameterNames = ParameterNames
 	};
 }

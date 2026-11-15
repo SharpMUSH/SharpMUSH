@@ -1,6 +1,6 @@
 @inject IStringLocalizer<SharedResource> Loc
 
-@* Play's terminal settings menu: the width in columns, echo, screen reader mode, the longer log, Clear, and focus mode. The page
+@* Play's terminal settings menu: the width in columns, echo, pages and channels in the output, screen reader mode, the longer log, Clear, and focus mode. The page
    keeps which menu is open, since several can be on it at once (PlaySettingsMenu). *@
 <PopoverMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
              Open="Open" OpenChanged="OpenChanged">
@@ -13,32 +13,26 @@
     <ChildContent>
         <div class="play-cfg" role="group" aria-label="@Loc["NavTerminalSettings"]" @onclick:stopPropagation="true">
             <div class="play-cfg-kicker">@Loc["Terminal"]</div>
-            <label class="play-cfg-row" title="@Loc["NavTerminalWidthTooltip"]">
-                <span>@Loc["NavTerminalWidthCols"]</span>
-                <input name="columns" class="play-cols-input" type="number" min="78" max="240" step="1"
-                       value="@Columns" @onchange="e => ColumnsChanged.InvokeAsync(e.Value?.ToString())" />
-            </label>
+            @* Each option is its name, with an (i) beside it whose details show on hover, focus or a tap (Info below). *@
+            <div class="play-cfg-row">
+                <span class="play-cfg-name"><label for="@Id("columns")">@Loc["NavTerminalWidthCols"]</label>@Info("columns", Loc["NavTerminalWidthTooltip"])</span>
+                <input id="@Id("columns")" name="columns" class="play-cols-input" type="number" min="78" max="240" step="1"
+                       aria-describedby="@What("columns")" value="@Columns" @onchange="e => ColumnsChanged.InvokeAsync(e.Value?.ToString())" />
+            </div>
             @* Per browser, as the width is. Off hides the sent commands already in the output too. *@
-            <label class="play-cfg-row">
-                <span>@Loc["NavEchoCommands"]</span>
-                <input name="echo" class="play-cfg-check" type="checkbox" checked="@EchoOn"
-                       aria-describedby="@EchoWhat" @onchange="e => EchoChanged.InvokeAsync(e.Value is true)" />
-            </label>
-            <div class="play-cfg-note" id="@EchoWhat">@Loc["NavEchoCommandsTooltip"]</div>
+            @Check("echo", Loc["NavEchoCommands"], Loc["NavEchoCommandsTooltip"], EchoOn, EchoChanged)
+            @* Per browser, and only while the game files channels and pages in the sidebar: with nowhere else to read them,
+               the main output keeps them. *@
+            @if (CommsFiled)
+            {
+                @Check("hide-pages", Loc["NavHidePages"], Loc["NavHidePagesTooltip"], HidePagesOn, HidePagesChanged)
+                @Check("hide-channels", Loc["NavHideChannels"], Loc["NavHideChannelsTooltip"], HideChannelsOn, HideChannelsChanged)
+            }
             @* Per browser, and here rather than in Settings so a guest can turn it on too. *@
-            <label class="play-cfg-row">
-                <span>@Loc["NavScreenReaderMode"]</span>
-                <input name="screen-reader" class="play-cfg-check" type="checkbox" checked="@ScreenReaderOn"
-                       aria-describedby="@ReaderWhat" @onchange="e => ScreenReaderChanged.InvokeAsync(e.Value is true)" />
-            </label>
-            <div class="play-cfg-note" id="@ReaderWhat">@Loc["NavScreenReaderModeTooltip"]</div>
+            @Check("screen-reader", Loc["NavScreenReaderMode"], Loc["NavScreenReaderModeTooltip"], ScreenReaderOn, ScreenReaderChanged)
             @* Off until the player turns it on, with what it keeps and where said beside it (TerminalLog). *@
-            <label class="play-cfg-row">
-                <span>@Loc["NavKeepLongerLogs"]</span>
-                <input name="keep-logs" class="play-cfg-check" type="checkbox" checked="@KeepLogsOn"
-                       aria-describedby="@LogsWhat" @onchange="e => KeepLogsChanged.InvokeAsync(e.Value is true)" />
-            </label>
-            <div class="play-cfg-note" id="@LogsWhat">@Loc["NavKeepLongerLogsTooltip", TerminalLog.MaxLines.ToString("N0"), (int)TerminalLog.MaxAge.TotalDays]</div>
+            @Check("keep-logs", Loc["NavKeepLongerLogs"],
+                Loc["NavKeepLongerLogsTooltip", TerminalLog.MaxLines.ToString("N0"), (int)TerminalLog.MaxAge.TotalDays], KeepLogsOn, KeepLogsChanged)
             <button type="button" class="play-cfg-item" @onclick="OnClear">
                 <MudIcon Icon="@Icons.Material.Outlined.ClearAll" Style="font-size:var(--text-md);" />
                 <span>@Loc["TermClearTerminal"]</span>
@@ -72,6 +66,17 @@
     [Parameter] public bool EchoOn { get; set; } = true;
     [Parameter] public EventCallback<bool> EchoChanged { get; set; }
 
+    /// <summary>The game files channels and pages in Play's sidebar, so the main output may leave them out.</summary>
+    [Parameter] public bool CommsFiled { get; set; }
+
+    /// <summary>The main output leaves out pages.</summary>
+    [Parameter] public bool HidePagesOn { get; set; }
+    [Parameter] public EventCallback<bool> HidePagesChanged { get; set; }
+
+    /// <summary>The main output leaves out channel lines.</summary>
+    [Parameter] public bool HideChannelsOn { get; set; }
+    [Parameter] public EventCallback<bool> HideChannelsChanged { get; set; }
+
     [Parameter] public bool ScreenReaderOn { get; set; }
     [Parameter] public EventCallback<bool> ScreenReaderChanged { get; set; }
 
@@ -84,9 +89,40 @@
     [Parameter] public bool Focus { get; set; }
     [Parameter] public EventCallback<bool> FocusChanged { get; set; }
 
-    private string EchoWhat => $"play-cfg-echo-what-{Menu}";
-    private string ReaderWhat => $"play-cfg-reader-what-{Menu}";
-    private string LogsWhat => $"play-cfg-logs-what-{Menu}";
+    /// <summary>An option's id, apart for each menu on the page.</summary>
+    private string Id(string name) => $"play-cfg-{name}-{Menu}";
+
+    /// <summary>The id of an option's details, which its control is described by.</summary>
+    private string What(string name) => $"play-cfg-{name}-what-{Menu}";
+
+    /// <summary>
+    /// The (i) beside an option's name: its details in a tooltip on hover, focus or a tap, and in a hidden copy the
+    /// option's control is described by, so a screen reader still reads them.
+    /// </summary>
+    private RenderFragment Info(string name, string details) => __builder =>
+    {
+        <span class="visually-hidden" id="@What(name)">@details</span>
+        <MudTooltip Placement="Placement.Bottom" ShowOnHover="true" ShowOnFocus="true" ShowOnClick="true">
+            <ChildContent>
+                <span class="play-cfg-info" tabindex="0" role="img" aria-label="@details">
+                    <MudIcon Icon="@Icons.Material.Outlined.Info" />
+                </span>
+            </ChildContent>
+            <TooltipContent>
+                <div class="play-cfg-tip">@details</div>
+            </TooltipContent>
+        </MudTooltip>
+    };
+
+    /// <summary>A checkbox option: its name, its (i), and the box.</summary>
+    private RenderFragment Check(string name, string label, string details, bool on, EventCallback<bool> changed) => __builder =>
+    {
+        <div class="play-cfg-row">
+            <span class="play-cfg-name"><label for="@Id(name)">@label</label>@Info(name, details)</span>
+            <input id="@Id(name)" name="@name" class="play-cfg-check" type="checkbox" checked="@on"
+                   aria-describedby="@What(name)" @onchange="e => changed.InvokeAsync(e.Value is true)" />
+        </div>
+    };
 
     private Task CloseOnEscape(KeyboardEventArgs e) => e.Key == "Escape" ? OnEscape.InvokeAsync() : Task.CompletedTask;
 }

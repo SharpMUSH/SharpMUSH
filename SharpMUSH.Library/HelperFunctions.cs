@@ -237,16 +237,9 @@ public static partial class HelperFunctions
 				|| (await obj.GrantsAsync(ExecutionBudget.CurrentToken)).HoldsRole(BuiltInRoles.ApprovedSlug));
 
 	/// <summary>
-	/// Evaluates an <c>@function/restrict</c> restriction string against <paramref name="executor"/>,
-	/// returning whether the executor is PERMITTED to call the function.
-	///
-	/// <para>The restriction is a space-separated list of permission keywords, each optionally
-	/// prefixed with <c>!</c> to negate it. Recognised keywords: <c>nobody</c> (never permitted),
-	/// <c>god</c>, <c>wizard</c>, <c>royalty</c>, <c>admin</c> (wizard or royalty), and
-	/// <c>noguest</c>, <c>nogagged</c>, <c>nofixed</c> (not a guest; owner not GAGGED; owner not FIXED), and any
-	/// permission scope (<c>players.moderate</c>: the executor holds it). A bare keyword
-	/// requires the executor to satisfy it; a <c>!</c>-prefixed keyword forbids executors that
-	/// satisfy it. All tokens must pass. An empty/whitespace restriction permits everyone.</para>
+	/// Whether <paramref name="executor"/> may call a function restricted by <paramref name="restriction"/> alone,
+	/// a <c>@function/restrict</c> restriction applied to a function that declares nothing
+	/// (<see cref="Services.FunctionRestrictionFlags"/>). An empty restriction permits everyone.
 	/// </summary>
 	public static async ValueTask<bool> SatisfiesFunctionRestriction(this AnySharpObject executor, string? restriction)
 	{
@@ -255,55 +248,29 @@ public static partial class HelperFunctions
 			return true;
 		}
 
-		foreach (var rawToken in restriction.Split([' ', '\t', ','], StringSplitOptions.RemoveEmptyEntries))
-		{
-			var negate = rawToken.StartsWith('!');
-			var keyword = (negate ? rawToken[1..] : rawToken).Trim().ToLowerInvariant();
-			// The words that change how the function runs say nothing about who may call it.
-			if (keyword.Length == 0 || FunctionRestrictionFlags.IsFlagWord(keyword))
-			{
-				continue;
-			}
+		var attribute = Services.FunctionRestrictionFlags.Restricted(
+			new Attributes.SharpFunctionAttribute { Name = string.Empty, Flags = Definitions.FunctionFlags.Regular }, restriction, userFunction: true);
+		return await Services.FunctionDispatcher.CheckPermissionAsync(attribute, executor) is null;
+	}
 
-			var satisfies = keyword switch
-			{
-				"nobody" => false,
-				"god" => executor.IsGod(),
-				"wizard" => await executor.IsWizard(),
-				"royalty" => await executor.IsRoyalty(),
-				"admin" => await executor.IsWizard() || await executor.IsRoyalty(),
-				// check_func (src/function.c): Guest() is the power, Gagged() and Fixed() the owner's flag.
-				"noguest" => !await executor.IsGuest(),
-				"nogagged" => !await OwnerHasFlag(executor, "GAGGED"),
-				"nofixed" => !await OwnerHasFlag(executor, "FIXED"),
-				// A permission, built in (players.moderate) or defined with @permission/define (scene.close): the
-				// executor holds it. A dotted word nobody defined is held by God alone, so a typo fails closed.
-				_ when keyword.Contains('.') => await executor.Can(keyword),
-				// Unknown keywords are treated permissively (ignored) so that unsupported PennMUSH
-				// restriction flags never silently lock everyone out of a function.
-				_ => true
-			};
-
-			// "nobody" forbids everyone regardless of negation: !nobody would mean "permit everyone",
-			// which is the default, so only the bare form is meaningful.
-			if (keyword == "nobody")
-			{
-				if (!negate)
-				{
-					return false;
-				}
-
-				continue;
-			}
-
-			// Bare keyword: executor must satisfy it. Negated keyword: executor must NOT satisfy it.
-			if (negate ? satisfies : !satisfies)
-			{
-				return false;
-			}
-		}
-
-		return true;
+	/// <summary>
+	/// Whether <paramref name="executor"/> holds one of a function's grants (<see cref="Attributes.SharpFunctionAttribute.Restrict"/>):
+	/// for <c>role^&lt;role&gt;</c> a role it holds, for <c>power^&lt;power&gt;</c> a power and for <c>flag^&lt;flag&gt;</c> a flag it
+	/// has, as the lock keys of those names read them, and for anything else a permission it holds. A permission nobody
+	/// defined is held by God alone, so a typo fails closed.
+	/// </summary>
+	public static async ValueTask<bool> HoldsFunctionGrant(this AnySharpObject executor, string grant)
+	{
+		// Asked on every call of a restricted function, so the kind is read without splitting the grant.
+		var caret = grant.IndexOf('^');
+		if (caret < 0) return await executor.Can(grant);
+		var kind = grant.AsSpan(0, caret);
+		var name = grant[(caret + 1)..];
+		return kind.Equals("role", StringComparison.OrdinalIgnoreCase)
+				? (await executor.GrantsAsync(ExecutionBudget.CurrentToken)).HoldsRole(name)
+			: kind.Equals("power", StringComparison.OrdinalIgnoreCase) ? await executor.HasPower(name)
+			: kind.Equals("flag", StringComparison.OrdinalIgnoreCase) ? await executor.Object().HasFlagOrLetter(name)
+			: await executor.Can(grant);
 	}
 
 	private static async ValueTask<bool> OwnerHasFlag(AnySharpObject executor, string flag)

@@ -912,6 +912,12 @@
     display: none;
 }
 
+/* Pages or channel lines kept to their own view (Play's terminal settings): still in the scrollback, unshown. */
+.sharp-terminal-no-pages .terminal-comm-page,
+.sharp-terminal-no-channels .terminal-comm-channel {
+    display: none;
+}
+
 /* System/diagnostic lines — accent-dim, matches the prototype terminal */
 .terminal-system {
     color: var(--accent-dim);
@@ -2088,4 +2094,12 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 		box-sizing: border-box;
 		padding-left: calc(var(--space-8) + env(safe-area-inset-left));
 	}
+}
+
+/* The details behind an (i) in Play's terminal settings: wrapped, not one long line (the tooltip renders outside
+   the component, so its scoped CSS cannot reach it). */
+.play-cfg-tip {
+    max-width: 18rem;
+    white-space: normal;
+    text-align: left;
 }

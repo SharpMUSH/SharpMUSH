@@ -6088,6 +6088,18 @@
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Megjeleníti a kimenetben minden elküldött parancsodat. Kikapcsolva elrejti őket, a már megjelenteket is. Ebben a böngészőben marad meg.</value>
   </data>
+  <data name="NavHidePages" xml:space="preserve">
+    <value>Privát üzenetek elrejtése</value>
+  </data>
+  <data name="NavHidePagesTooltip" xml:space="preserve">
+    <value>Kihagyja a privát üzeneteket ebből a kimenetből, a már megjelenteket is; az Üzenetek listában maradnak. Ebben a böngészőben tárolódik.</value>
+  </data>
+  <data name="NavHideChannels" xml:space="preserve">
+    <value>Csatornaüzenetek elrejtése</value>
+  </data>
+  <data name="NavHideChannelsTooltip" xml:space="preserve">
+    <value>Kihagyja a csatornaüzeneteket ebből a kimenetből, a már megjelenteket is; mindegyik a saját csatornája nézetében marad. Ebben a böngészőben tárolódik.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Hosszabb naplók megőrzése</value>
   </data>

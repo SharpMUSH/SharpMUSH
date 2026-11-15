@@ -132,13 +132,13 @@ public class NotifyService(
 	/// wire format (ANSI/Pueblo/MXP for terminals, a markup envelope for portal/WebSocket clients),
 	/// so the markup is kept as an <see cref="MString"/> here and only serialized for transport.
 	/// </summary>
-	private ValueTask PublishMarkup(long handle, Outgoing outgoing, string? sessionId = null)
+	private ValueTask PublishMarkup(long handle, Outgoing outgoing, string? sessionId = null, CommOutput comm = CommOutput.None)
 	{
 		var wrapped = ApplyOutputPrefixSuffix(handle, outgoing.Text);
 		var serialized = ReferenceEquals(wrapped, outgoing.Text)
 			? outgoing.Serialized
 			: MarkupTextSerializer.Serialize(wrapped);
-		return Publish(handle, new MarkupOutputMessage(handle, serialized) { SessionId = sessionId }, sessionId);
+		return Publish(handle, new MarkupOutputMessage(handle, serialized) { SessionId = sessionId, Comm = comm }, sessionId);
 	}
 
 	/// <summary>
@@ -300,7 +300,7 @@ public class NotifyService(
 			var conn = bound.Current;
 			if (!await CanReceiveBound(conn.Handle, who, sender, perceptions)) continue;
 			if (prompt) await PublishMarkupPrompt(conn.Handle, outgoing);
-			else await PublishMarkup(conn.Handle, outgoing);
+			else await PublishMarkup(conn.Handle, outgoing, comm: context?.Comm ?? CommOutput.None);
 		}
 		while (await bound.MoveNextAsync());
 	}

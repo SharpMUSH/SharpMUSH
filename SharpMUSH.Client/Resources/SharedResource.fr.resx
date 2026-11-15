@@ -5402,6 +5402,18 @@
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Affiche dans la sortie chaque commande envoyée. Désactivé, les masque, y compris celles déjà affichées. Conservé dans ce navigateur.</value>
   </data>
+  <data name="NavHidePages" xml:space="preserve">
+    <value>Masquer les messages privés</value>
+  </data>
+  <data name="NavHidePagesTooltip" xml:space="preserve">
+    <value>Retire les messages privés de cette sortie, y compris ceux déjà affichés ; ils restent dans la liste Messages. Conservé dans ce navigateur.</value>
+  </data>
+  <data name="NavHideChannels" xml:space="preserve">
+    <value>Masquer les messages de canal</value>
+  </data>
+  <data name="NavHideChannelsTooltip" xml:space="preserve">
+    <value>Retire les messages de canal de cette sortie, y compris ceux déjà affichés ; chacun reste dans la vue de son canal. Conservé dans ce navigateur.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Garder des journaux plus longs</value>
   </data>

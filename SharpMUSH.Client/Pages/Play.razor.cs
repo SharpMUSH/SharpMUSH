@@ -132,6 +132,24 @@ public partial class Play
 	/// <summary>Whether the play terminal shows the commands the player sends.</summary>
 	private bool _echo = true;
 
+	/// <summary>Kept as "on" while the player keeps pages out of the main output; off is the default and keeps nothing.</summary>
+	private const string HidePagesKey = "play.hidepages";
+
+	/// <summary>Kept as "on" while the player keeps channel lines out of the main output, as <see cref="HidePagesKey"/>.</summary>
+	private const string HideChannelsKey = "play.hidechannels";
+
+	/// <summary>Whether the player keeps pages to the Pages list, out of the main output.</summary>
+	private bool _hidePages;
+
+	/// <summary>Whether the player keeps channel lines to their channel's view, out of the main output.</summary>
+	private bool _hideChannels;
+
+	/// <summary>
+	/// Whether the game's comm feed is filing channels and pages here. Without it (the <c>comm-feed</c> package
+	/// removed) the main output is the only place they show, so it hides nothing and the settings are not offered.
+	/// </summary>
+	private bool CommsFiled => Comms.Channels.Count > 0 || Comms.Conversations.Count > 0;
+
 	/// <summary>
 	/// The room banner is folded into the card header on every screen: one bar over the game. The header carries
 	/// the room's picture and name, and its name and sub-line open the full banner, whose minimise folds it again.
@@ -323,6 +341,16 @@ public partial class Play
 			changed |= _echo;
 			_echo = false;
 		}
+		if (await JS.GetItemAsync(BrowserStore.Local, HidePagesKey) == "on")
+		{
+			changed |= !_hidePages;
+			_hidePages = true;
+		}
+		if (await JS.GetItemAsync(BrowserStore.Local, HideChannelsKey) == "on")
+		{
+			changed |= !_hideChannels;
+			_hideChannels = true;
+		}
 		return changed;
 	}
 
@@ -442,6 +470,24 @@ public partial class Play
 		_echo = on;
 		if (on) await JS.RemoveItemAsync(BrowserStore.Local, EchoKey);
 		else await JS.SetItemAsync(BrowserStore.Local, EchoKey, "off");
+	}
+
+	private async Task OnHidePagesChanged(bool on)
+	{
+		_hidePages = on;
+		await KeepOnAsync(HidePagesKey, on);
+	}
+
+	private async Task OnHideChannelsChanged(bool on)
+	{
+		_hideChannels = on;
+		await KeepOnAsync(HideChannelsKey, on);
+	}
+
+	private async Task KeepOnAsync(string key, bool on)
+	{
+		if (on) await JS.SetItemAsync(BrowserStore.Local, key, "on");
+		else await JS.RemoveItemAsync(BrowserStore.Local, key);
 	}
 
 	private async Task OnColsChanged(string? value)

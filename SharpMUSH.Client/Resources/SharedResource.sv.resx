@@ -6088,6 +6088,18 @@
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Visar varje kommando du skickar i utdata. Av döljer dem, även de som redan står där. Sparas i den här webbläsaren.</value>
   </data>
+  <data name="NavHidePages" xml:space="preserve">
+    <value>Dölj privata meddelanden</value>
+  </data>
+  <data name="NavHidePagesTooltip" xml:space="preserve">
+    <value>Utelämnar privata meddelanden från den här utdatan, även de som redan visas; de finns kvar i listan Meddelanden. Sparas i den här webbläsaren.</value>
+  </data>
+  <data name="NavHideChannels" xml:space="preserve">
+    <value>Dölj kanalmeddelanden</value>
+  </data>
+  <data name="NavHideChannelsTooltip" xml:space="preserve">
+    <value>Utelämnar kanalmeddelanden från den här utdatan, även de som redan visas; vart och ett finns kvar i sin kanals vy. Sparas i den här webbläsaren.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Behåll längre loggar</value>
   </data>

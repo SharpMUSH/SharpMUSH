@@ -6088,6 +6088,18 @@
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Muestra en la salida cada comando que envías. Desactivado los oculta, incluidos los que ya aparecen. Se guarda en este navegador.</value>
   </data>
+  <data name="NavHidePages" xml:space="preserve">
+    <value>Ocultar mensajes privados</value>
+  </data>
+  <data name="NavHidePagesTooltip" xml:space="preserve">
+    <value>Deja los mensajes privados fuera de esta salida, incluidos los que ya están; siguen en la lista Mensajes. Se guarda en este navegador.</value>
+  </data>
+  <data name="NavHideChannels" xml:space="preserve">
+    <value>Ocultar mensajes de canal</value>
+  </data>
+  <data name="NavHideChannelsTooltip" xml:space="preserve">
+    <value>Deja los mensajes de canal fuera de esta salida, incluidos los que ya están; cada uno sigue en la vista de su canal. Se guarda en este navegador.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Guardar registros más largos</value>
   </data>
