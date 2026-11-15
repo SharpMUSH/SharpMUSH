@@ -116,6 +116,11 @@ public static class BundledPackages
 		new("chargen-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// The checklist's approval step says where the player's application stands.
 		new("onboarding-chargen", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +autoset gives and takes roles on game events, and a game chooses its own roles. It
+		// hears PLAYER`CREATE, PLAYER`CONNECT, PLAYER`LINK and the ROLE` events on the event handler.
+		new("autoset", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("autoset-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("autoset-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Installed: the stored texts are fixed, so a game renamed after its first boot would still greet players
 		// as SharpMUSH; the Messages object reads mudname() each time it is shown.
 		new("messages", BundledPackageHandler.None, InstallAtFirstBoot: true),

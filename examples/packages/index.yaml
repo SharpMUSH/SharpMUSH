@@ -56,6 +56,21 @@ packages:
     package: chargen-config
     version: 1.1.0
     description: Registers the chargen settings with +config (requires chargen and plus-config)
+  - path: autoset/
+    name: Autoset
+    package: autoset
+    version: 1.0.0
+    description: +autoset gives and takes roles when a character is created, logs in, is linked to an account, or gains or loses a role such as approved; rules kept as a +config table
+  - path: autoset-help/
+    name: Autoset help
+    package: autoset-help
+    version: 1.0.0
+    description: Bridge — the autoset topics in +help (requires autoset and plus-help)
+  - path: autoset-config/
+    name: Autoset rules in +config
+    package: autoset-config
+    version: 1.0.0
+    description: Bridge — autoset's rules in +config autoset (requires autoset and plus-config)
   - path: chargen-app/
     package: chargen-app
     version: 2.1.0

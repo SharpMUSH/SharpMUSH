@@ -439,6 +439,18 @@
       <Link>BundledPackages\chargen-app.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.chargen-app.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\autoset\package.yaml">
+      <Link>BundledPackages\autoset.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.autoset.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\autoset-help\package.yaml">
+      <Link>BundledPackages\autoset-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.autoset-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\autoset-config\package.yaml">
+      <Link>BundledPackages\autoset-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.autoset-config.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\messages\package.yaml">
       <Link>BundledPackages\messages.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.messages.package.yaml</LogicalName>

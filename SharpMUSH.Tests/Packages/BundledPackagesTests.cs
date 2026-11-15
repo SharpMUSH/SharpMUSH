@@ -127,6 +127,9 @@ public class BundledPackagesTests
 		await Assert.That(order.IndexOf("plus-help")).IsLessThan(order.IndexOf("onboarding-help"));
 		await Assert.That(order.IndexOf("plus-config")).IsLessThan(order.IndexOf("onboarding-config"));
 		await Assert.That(order.IndexOf("chargen")).IsLessThan(order.IndexOf("onboarding-chargen"));
+		await Assert.That(order.IndexOf("autoset")).IsLessThan(order.IndexOf("autoset-help"));
+		await Assert.That(order.IndexOf("plus-help")).IsLessThan(order.IndexOf("autoset-help"));
+		await Assert.That(order.IndexOf("plus-config")).IsLessThan(order.IndexOf("autoset-config"));
 	}
 
 	/// <summary>

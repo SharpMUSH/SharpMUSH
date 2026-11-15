@@ -40,7 +40,7 @@ These are the events a SharpMUSH game raises. To see the help for a type, type `
 
 ## Player and communication events
 
-- [event player] - player\`create, player\`connect, player\`disconnect, player\`inactivity, player\`channels, player\`warn, player\`link, player\`unlink
+- [event player] - player\`create, player\`connect, player\`disconnect, player\`inactivity, player\`channels, player\`warn, player\`link, player\`unlink, role\`assign, role\`unassign
 - [event socket] - socket\`connect, socket\`disconnect, socket\`loginfail, socket\`createfail, socket\`gmcp, socket\`timezone
 - [event http] - http\`blocked, http\`fail, http\`command
 - [event room] - room\`contents
@@ -56,6 +56,6 @@ The handler gets each argument by position, the first as %0, and by the name sho
 
 ## SharpMUSH-only events
 
-The room, channel, page, mail, scene, backup and gallery events, player\`channels, player\`warn, player\`link, player\`unlink, socket\`gmcp and socket\`timezone are SharpMUSH's own; PennMUSH has no equivalent. The room, channel and page events exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. player\`warn is how a warning from the web portal reaches the game, socket\`gmcp hands softcode what a client sends over GMCP, socket\`timezone the time zone a client reports, the gallery events tell the game about the web portal's profile pictures, and scene\`status lets a package act when a scene starts or ends.
+The room, channel, page, mail, scene, backup and gallery events, player\`channels, player\`warn, player\`link, player\`unlink, role\`assign, role\`unassign, socket\`gmcp and socket\`timezone are SharpMUSH's own; PennMUSH has no equivalent. The room, channel and page events exist so a handler can send a web client structured updates (the bundled room-contents and comm-feed packages), and each names exactly who the update concerns, so a handler never has to work out again who could see what. player\`warn is how a warning from the web portal reaches the game, socket\`gmcp hands softcode what a client sends over GMCP, socket\`timezone the time zone a client reports, the gallery events tell the game about the web portal's profile pictures, scene\`status lets a package act when a scene starts or ends, and the role events let one act when a character is approved or given any other role.
 
 An argument of a SharpMUSH event that holds text a player wrote, such as a channel line or a page, keeps its colour: `%<message>` in a page\`message handler is the page as the recipients saw it. Use stripansi() for the plain text. PennMUSH's events pass plain text, as PennMUSH does.

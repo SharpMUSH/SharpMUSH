@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Mediator;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
@@ -136,8 +137,16 @@ public sealed partial class RoleManagementService(
 	IAdministrativeCapabilityService capabilities,
 	IPermissionResolver resolver,
 	IAccountClaimsInvalidator invalidator,
-	IMediator mediator) : IRoleManagementService
+	IMediator mediator,
+	Lazy<IEventService>? events) : IRoleManagementService
 {
+	/// <summary>Without the event service: no role change raises <c>ROLE`ASSIGN</c> or <c>ROLE`UNASSIGN</c>. Kept for plugins built against it.</summary>
+	public RoleManagementService(IRoleRegistryService registry, IAccountService accounts, IAdministrativeCapabilityService capabilities,
+		IPermissionResolver resolver, IAccountClaimsInvalidator invalidator, IMediator mediator)
+		: this(registry, accounts, capabilities, resolver, invalidator, mediator, null)
+	{
+	}
+
 	/// <summary>Validation and the write it guards run one at a time, so two changes cannot both pass a stale check.</summary>
 	private readonly SemaphoreSlim _gate = new(1, 1);
 
@@ -350,9 +359,11 @@ public sealed partial class RoleManagementService(
 			if (assign && BeyondReach(me, role) is { } shield) return shield;
 			if ((await WizardsOwnAccountAsync(actor, me, accountId, ct) ?? await TargetAsync(actor, me, accountId, ct)) is not string target)
 				return await TargetRefusalAsync(actor, me, accountId, ct);
+			var held = (await registry.GetRolesForAccountAsync(target, ct)).Any(r => r.Slug == role.Slug);
 			if (assign) await registry.AssignRoleToAccountAsync(target, role.Slug);
 			else await registry.RemoveRoleFromAccountAsync(target, role.Slug);
 			await invalidator.InvalidateAsync(target, ct);
+			if (held != assign) await RaiseAssignmentAsync(actor, assign, "", role.Slug, target);
 			return new Success();
 		}, ct);
 
@@ -399,9 +410,11 @@ public sealed partial class RoleManagementService(
 			if (assign && BeyondReach(me.Context, role) is { } shield) return shield;
 
 			var number = target.Object().Key;
+			var held = (await registry.GetObjectRolesAsync(number, ct)).Contains(role.Slug);
 			if (assign) await registry.AssignRoleToObjectAsync(number, role.Slug);
 			else await registry.RemoveRoleFromObjectAsync(number, role.Slug);
 			await ObjectChangedAsync(target, ct);
+			if (held != assign) await RaiseAssignmentAsync(actor, assign, target.Object().DBRef.ToString(), role.Slug, "");
 			return new Success();
 		}, ct);
 
@@ -519,6 +532,18 @@ public sealed partial class RoleManagementService(
 		return theirs.IsOwner || !RoleHierarchy.Outranks(me, theirs.TopPriority)
 			? Refuse<Success>(RoleRefusalKind.Forbidden, $"{target.Object().Name}'s highest role is not below yours ({me.TopPriority}).")
 			: null;
+	}
+
+	/// <summary>
+	/// <c>ROLE`ASSIGN</c> / <c>ROLE`UNASSIGN</c>, raised only when the assignment changed, so assigning a role already held
+	/// (or removing one not held) tells softcode nothing. One of <paramref name="objid"/> and <paramref name="accountId"/> is
+	/// set: the object the role was given to or taken from, or the account.
+	/// </summary>
+	private async Task RaiseAssignmentAsync(RoleActor actor, bool assign, string objid, string slug, string accountId)
+	{
+		if (events is not null)
+			await events.Value.TriggerEventAsync(assign switch { true => SharpEvents.RoleAssign, false => SharpEvents.RoleUnassign },
+				ActingObject(actor), objid, slug, accountId);
 	}
 
 	/// <summary>Expires the object's cached grants and, for a linked character, its account's portal claims.</summary>

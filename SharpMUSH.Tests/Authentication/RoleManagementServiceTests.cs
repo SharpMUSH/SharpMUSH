@@ -1,6 +1,7 @@
 using Mediator;
 using NSubstitute;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
@@ -20,7 +21,7 @@ public class RoleManagementServiceTests
 	/// Accounts: <c>owner</c> plays #1, <c>wiz</c> a WIZARD, <c>mod</c> a player holding moderator,
 	/// <c>pl</c> and <c>pl2</c> plain players.
 	/// </summary>
-	private static World Build()
+	private static World Build(IEventService? events = null)
 	{
 		var registry = InMemoryRoleRegistry.Seeded();
 		var accounts = Substitute.For<IAccountService>();
@@ -41,7 +42,8 @@ public class RoleManagementServiceTests
 		var resolver = new PermissionResolver();
 		var capabilities = new AdministrativeCapabilityService(accounts, registry, resolver);
 		var invalidator = Substitute.For<IAccountClaimsInvalidator>();
-		return new World(new RoleManagementService(registry, accounts, capabilities, resolver, invalidator, Substitute.For<IMediator>()), registry, invalidator);
+		return new World(new RoleManagementService(registry, accounts, capabilities, resolver, invalidator, Substitute.For<IMediator>(),
+			events is null ? null : new Lazy<IEventService>(() => events)), registry, invalidator);
 	}
 
 	private static RoleRefusal? RefusalOf(RoleOutcome<Success> outcome) => outcome switch
@@ -135,6 +137,34 @@ public class RoleManagementServiceTests
 		var thing = AdministrativeCapabilityTests.Player(4);
 		await Accepted(world.Service.AssignToObjectAsync(A("owner"), thing, "Story TELLER"));
 		await Assert.That(await world.Registry.GetObjectRolesAsync(4)).Contains("st");
+	}
+
+	/// <summary>
+	/// ROLE`ASSIGN and ROLE`UNASSIGN tell softcode about a change that happened: giving a role already held, or taking one
+	/// not held, raises nothing, so a package that reacts to them cannot loop on its own no-op writes.
+	/// </summary>
+	[Test]
+	public async Task AnAssignmentThatChangesSomethingRaisesARoleEvent()
+	{
+		var events = Substitute.For<IEventService>();
+		var world = Build(events);
+		var player = AdministrativeCapabilityTests.Player(4);
+		var objid = ((AnySharpObject)player).Object().DBRef.ToString();
+
+		await Accepted(world.Service.AssignToObjectAsync(A("owner"), player, "helper"));
+		await Accepted(world.Service.AssignToObjectAsync(A("owner"), player, "helper"));
+		await events.Received(1).TriggerEventAsync(SharpEvents.RoleAssign, Arg.Any<DBRef?>(), objid, "helper", "");
+
+		await Accepted(world.Service.UnassignFromObjectAsync(A("owner"), player, "helper"));
+		await Accepted(world.Service.UnassignFromObjectAsync(A("owner"), player, "helper"));
+		await events.Received(1).TriggerEventAsync(SharpEvents.RoleUnassign, Arg.Any<DBRef?>(), objid, "helper", "");
+
+		await Accepted(world.Service.AssignAsync(A("owner"), "pl", "helper"));
+		await Accepted(world.Service.AssignAsync(A("owner"), "pl", "helper"));
+		await events.Received(1).TriggerEventAsync(SharpEvents.RoleAssign, Arg.Any<DBRef?>(), "", "helper", "pl");
+
+		await Refused(world.Service.AssignAsync(A("pl"), "pl2", "helper"), RoleRefusalKind.Forbidden);
+		await events.DidNotReceive().TriggerEventAsync(SharpEvents.RoleAssign, Arg.Any<DBRef?>(), "", "helper", "pl2");
 	}
 
 	/// <summary>A wizard changes its own account's roles below its highest one, but not wizard itself or god.</summary>

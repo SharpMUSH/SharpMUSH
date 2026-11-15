@@ -3,9 +3,10 @@
   "corpus": "help",
   "id": "player-events",
   "lookup": "Player Events",
-  "aliases": ["Event Player"],
+  "aliases": ["Event Player", "Event Role"],
   "sections": [
-    {"id": "channels-accounts", "heading": "Channels, warnings and accounts", "lookup": "player events channels and accounts"}
+    {"id": "channels-accounts", "heading": "Channels, warnings and accounts", "lookup": "player events channels and accounts"},
+    {"id": "roles", "heading": "Roles", "lookup": "player events roles"}
   ]
 }
 -->
@@ -36,3 +37,17 @@
 
 - **player\`unlink** (*objid*, *account*)
 - Triggered when a character is taken off an account, by @account/unlink, the web portal, or a move to another account. *<account>* is the id of the account it left. The character itself is kept. %# is #1.
+
+### Roles
+
+- **role\`assign** (*objid*, *role*, *account*)
+- Triggered when an object or an account is given a role it did not hold through @role/assign, @set WIZARD or ROYALTY, @power Builder or Guest, or the web portal's Roles page, by a player or a package. *<role>* is the role's short name, such as `approved`. A role given to an object names it in *<objid>* and leaves *<account>* empty; one given to a whole account leaves *<objid>* empty and names the account's id in *<account>*. Giving a role already held triggers nothing. %# is whoever gave it, or #1.
+
+- **role\`unassign** (*objid*, *role*, *account*)
+- Triggered when a role is taken from an object or an account that held it, with the same arguments as role\`assign. Taking a role away that was not held triggers nothing. Neither event is triggered when roles change without one of those commands: deleting a role with @role/delete, the privileges @chown and @chzone strip, the roles @clone copies, or a database import. %# is whoever took it, or #1.
+
+Approving a character gives it the `approved` role, so role\`assign with *<role>* `approved` is how a handler hears an approval.
+
+```sharp
+> &ROLE`ASSIGN #9=@assert strmatch(%<role>,approved); @cemit Staff=[name(%<objid>)] was approved.
+```
