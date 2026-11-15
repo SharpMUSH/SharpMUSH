@@ -59,6 +59,11 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 	public event Action<CharacterMovedMessage>? OnCharacterMoved;
 	public event Action<SceneEventMessage>? OnSceneEventReceived;
 	public event Action? OnPluginsChanged;
+
+	/// <summary>The server says this account's roles or grants may have changed, or the hub reconnected after
+	/// a gap in which such a notice could have been missed. <see cref="PermissionChangeRefresher"/> reads the
+	/// tab's authority again.</summary>
+	public event Action? OnPermissionsChanged;
 	public event Action? OnSceneLiveChanged;
 
 	/// <inheritdoc/>
@@ -126,6 +131,12 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 			OnPluginsChanged?.Invoke();
 		}));
 
+		_subscriptions.Add(_hub.On("ReceivePermissionsChanged", () =>
+		{
+			_logger.LogInformation("[ConnectionStateService] ReceivePermissionsChanged — reloading this tab's permissions");
+			OnPermissionsChanged?.Invoke();
+		}));
+
 		_hub.Closed += ex =>
 		{
 			_logger.LogWarning(ex, "[ConnectionStateService] Hub closed");
@@ -148,6 +159,8 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 			_logger.LogInformation("[ConnectionStateService] Hub reconnected");
 			SetState(SignalRState.Connected);
 			await SendVisibilityAsync();
+			// A permissions notice sent while the connection was down never arrived.
+			OnPermissionsChanged?.Invoke();
 			// The server is back. A scene connection still waiting out its own back-off would stay down until its
 			// next attempt, up to 30 s on, with the story saying live poses are not arriving.
 			await ReviveSceneHubAsync();

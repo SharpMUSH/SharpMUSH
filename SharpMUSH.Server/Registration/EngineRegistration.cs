@@ -307,9 +307,14 @@ internal static class EngineRegistration
 		// (see RegisterDatabaseProvider).
 		services.AddSingleton<IPermissionResolver, PermissionResolver>();
 		services.AddSingleton<IAdministrativeCapabilityService, AdministrativeCapabilityService>();
-		// Role changes go through the auditing decorator, so every one from either surface is recorded once.
+		// Role changes go through the auditing decorator, so every one from either surface is recorded once, then
+		// through the one that tells every portal tab when a role's or permission's meaning changed.
 		services.AddSingleton<RoleManagementService>();
-		services.AddSingleton<IRoleManagementService, AuditingRoleManagementService>();
+		services.AddSingleton<AuditingRoleManagementService>();
+		services.AddSingleton<PortalPermissionNotices>();
+		services.AddSingleton<Library.Plugins.IAccountChangeListener>(sp => sp.GetRequiredService<PortalPermissionNotices>());
+		services.AddSingleton<IRoleManagementService>(sp => new PermissionNoticeRoleManagementService(
+			sp.GetRequiredService<AuditingRoleManagementService>(), sp.GetRequiredService<PortalPermissionNotices>()));
 		services.AddSingleton<SharpMUSH.Library.Services.RecurringJobs.IRecurringJobService, SharpMUSH.Library.Services.RecurringJobs.RecurringJobService>();
 		services.AddSingleton<SharpMUSH.Library.Services.Snapshots.IObjectSnapshotService, SharpMUSH.Library.Services.Snapshots.ObjectSnapshotService>();
 		services.AddHttpContextAccessor();

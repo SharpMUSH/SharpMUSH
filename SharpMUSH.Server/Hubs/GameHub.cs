@@ -31,6 +31,12 @@ public interface IGameHubClient
 	/// the only way to reclaim a compiled component assembly the WASM runtime may have loaded.
 	/// </summary>
 	Task ReceivePluginsChanged();
+
+	/// <summary>
+	/// The account's roles or grants may have changed (a role assigned or removed, WIZARD set, a power
+	/// granted, a role's permissions edited). Carries nothing: the tab reads its own authority again.
+	/// </summary>
+	Task ReceivePermissionsChanged();
 }
 
 /// <summary>

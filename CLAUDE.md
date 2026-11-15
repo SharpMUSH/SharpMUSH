@@ -206,6 +206,11 @@ standalone client dev server (`dotnet run --project SharpMUSH.Client`, API via `
 - Client connects to `/hubs/game` authenticated via the `AccountSession` token
 - `GameHub` adds client to `char:{dbref}` group on connect
 - Room events broadcast to `room:{dbref}` group
+- A role change tells the tabs it reaches to read their authority again (`ReceivePermissionsChanged`, no payload;
+  the client's `PermissionChangeRefresher` calls `AccountAuthService.ReloadAuthorityAsync`): the account's SignalR
+  user whenever `IAccountClaimsInvalidator` drops its claims (`PortalPermissionNotices`, an `IAccountChangeListener`),
+  everyone when a role's or permission's definition changes (`PermissionNoticeRoleManagementService`), and the tab
+  itself on a hub reconnect
 - The hub carries no commands. A command the portal issues itself goes through `POST api/commands`
   (`GameCommandService` → `CommandsController` → `PortalCommandService`): one line run as the account
   session's bound character — whatever the terminal is playing — on the engine's queue as typed input
