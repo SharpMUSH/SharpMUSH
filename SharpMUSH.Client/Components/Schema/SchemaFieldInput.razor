@@ -31,7 +31,7 @@
 
     case "number":
         <MudNumericField T="double?" Value="SchemaValues.AsNumber(Value)" ValueChanged="v => Set(v)"
-                         Label="@_label" Variant="Variant.Outlined" Class="mb-2"
+                         Label="@_label" Variant="Variant.Outlined" Class="mb-2" Placeholder="@Element.Placeholder"
                          HelperText="@Element.Help" Required="_required" Error="@(Error is not null)" ErrorText="@Error"
                          Min="@(Element.Validation?.Min)" Max="@(Element.Validation?.Max)" />
         break;
@@ -39,7 +39,7 @@
     case "textarea":
     case "mstring":
         <MudTextField T="string" Value="SchemaValues.AsString(Value)" ValueChanged="v => Set(v)"
-                      Label="@_label" Variant="Variant.Outlined" Lines="4" Class="mb-2"
+                      Label="@_label" Variant="Variant.Outlined" Lines="4" Class="mb-2" Placeholder="@Element.Placeholder"
                       HelperText="@Element.Help" Required="_required" Error="@(Error is not null)" ErrorText="@Error" />
         break;
 
@@ -136,7 +136,7 @@
 
     default:
         <MudTextField T="string" Value="SchemaValues.AsString(Value)" ValueChanged="v => Set(v)"
-                      Label="@_label" Variant="Variant.Outlined" Class="mb-2"
+                      Label="@_label" Variant="Variant.Outlined" Class="mb-2" Placeholder="@Element.Placeholder"
                       HelperText="@Element.Help" Required="_required" Error="@(Error is not null)" ErrorText="@Error"
                       MaxLength="@(Element.Validation?.MaxLength ?? 524288)" />
         break;

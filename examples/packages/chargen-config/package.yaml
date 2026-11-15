@@ -1,9 +1,9 @@
 format: "1.20"
 package: chargen-config
 title: "Character applications: +config settings"
-version: 1.0.1
+version: 1.1.0
 authors: [SharpMUSH]
-description: "Puts the Character applications settings into +config: registers them with the +config registry, so staff see and change them with +config chargen."
+description: "Puts the Character applications settings into +config: registers them with the +config registry, so staff see and change them with +config chargen, and lets the portal's settings page check and store them the way +config does."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [chargen, config, bridge]
@@ -13,7 +13,8 @@ requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. chargen declares its settings as
 # DATA`CONFIG`<NAME>, with their types and limits, and reads them with get() whether or not +config is installed.
-# This package is the one leaf that tells the +config registry where they are.
+# This package is the one leaf that tells the +config registry where they are, and that hands chargen's portal
+# settings page (/apps/chargen/settings) +config's checks: CONFIG`PROBLEM and CONFIG`STORE on the Chargen object.
 depends:
   - package: chargen
     version: ">=2.5"
@@ -34,3 +35,16 @@ objects:
     attributes:
       SYSTEM`CHARGEN: |-
         {{chargen/chargen}}
+  # %0 a setting, %1 a value as typed. CONFIG`PROBLEM: why +config would refuse it, or nothing. CONFIG`STORE: the
+  # value in the setting's stored form.
+  - ref: chargen_checks
+    target: "{{chargen/chargen}}"
+    attributes:
+      CONFIG`PROBLEM:
+        value: |-
+          uargs({{plus-config/registry}}/FUN`VALUE`PROBLEM,object,%!,meta,%0,value,%1,setting,%0)
+        flags: [funsyntax]
+      CONFIG`STORE:
+        value: |-
+          u({{plus-config/registry}}/FUN`VALUE`STORE,%!,%0,%1)
+        flags: [funsyntax]

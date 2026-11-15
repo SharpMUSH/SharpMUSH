@@ -1,7 +1,7 @@
 format: "1.16"
 package: chargen
 title: "Character applications"
-version: 2.7.2
+version: 2.8.0
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
@@ -1160,8 +1160,10 @@ objects:
       #
       # Pages, by the address after /apps/chargen/: nothing, the viewer's own application; queue, waitlist,
       # all and decided, the lists (queue alone, for someone who is not a reviewer, is the public count);
-      # a key, one application, for a reviewer. Form inputs are field_<field>, comment_<section> and
-      # comment_all, private_<section> and private_all (a reviewer's Staff only switch), and message.
+      # a key, one application, for a reviewer; settings and form, the settings and the form, for staff who
+      # change the game's configuration (config.admin). Form inputs are field_<field>, comment_<section> and
+      # comment_all, private_<section> and private_all (a reviewer's Staff only switch), and message; on the
+      # settings page each setting's lower-case name, on the form page sections and form_fields.
       #
       # %0 %r-separated JSON values: a JSON array of them.
       WEB`JSON`ARRAY:
@@ -1304,7 +1306,7 @@ objects:
       # schemas: GET /http/chargen/schema?at=<path>
       WEB`SCHEMA:
         value: |-
-          switch(1,not(strlen(%<viewer>)),u(%!/WEB`SCHEMA`ANON),not(strlen(%<at>)),u(%!/WEB`SCHEMA`MINE,%<viewer>),t(match(queue waitlist all decided,%<at>)),u(%!/WEB`SCHEMA`LIST,%<viewer>,%<at>),strmatch(%<at>,u(%!/FUN`APP`KEY,%<viewer>)),u(%!/WEB`SCHEMA`MINE,%<viewer>),u(%!/WEB`SCHEMA`APP,%<viewer>,u(%!/WEB`APP`KEY,%<at>)))
+          switch(1,not(strlen(%<viewer>)),u(%!/WEB`SCHEMA`ANON),not(strlen(%<at>)),u(%!/WEB`SCHEMA`MINE,%<viewer>),t(member(settings form,%<at>)),u(%!/WEB`SCHEMA`%<at>,%<viewer>),t(match(queue waitlist all decided,%<at>)),u(%!/WEB`SCHEMA`LIST,%<viewer>,%<at>),strmatch(%<at>,u(%!/FUN`APP`KEY,%<viewer>)),u(%!/WEB`SCHEMA`MINE,%<viewer>),u(%!/WEB`SCHEMA`APP,%<viewer>,u(%!/WEB`APP`KEY,%<at>)))
         flags: [funsyntax]
       WEB`SCHEMA`ANON:
         value: |-
@@ -1432,7 +1434,7 @@ objects:
       # data: GET /http/chargen/data?at=<path>, for the page WEB`SCHEMA drew.
       WEB`DATA:
         value: |-
-          json(object,fields,switch(1,not(strlen(%<viewer>)),u(%!/WEB`JSON`EMPTY),not(strlen(%<at>)),u(%!/WEB`DATA`APP,u(%!/FUN`APP`KEY,%<viewer>),0,1),t(match(queue waitlist all decided,%<at>)),u(%!/WEB`DATA`LIST,%<viewer>,%<at>),strmatch(%<at>,u(%!/FUN`APP`KEY,%<viewer>)),u(%!/WEB`DATA`APP,%<at>,0,1),cand(u(%!/FUN`IS`REVIEWER,%<viewer>),strlen(u(%!/WEB`APP`KEY,%<at>)),get({{store}}/APP`%<at>`ROUND)),u(%!/WEB`DATA`APP,%<at>,1,0),u(%!/WEB`JSON`EMPTY)))
+          json(object,fields,switch(1,not(strlen(%<viewer>)),u(%!/WEB`JSON`EMPTY),not(strlen(%<at>)),u(%!/WEB`DATA`APP,u(%!/FUN`APP`KEY,%<viewer>),0,1),cand(t(member(settings form,%<at>)),permission(%<viewer>,config.admin)),u(%!/WEB`DATA`%<at>),t(match(queue waitlist all decided,%<at>)),u(%!/WEB`DATA`LIST,%<viewer>,%<at>),strmatch(%<at>,u(%!/FUN`APP`KEY,%<viewer>)),u(%!/WEB`DATA`APP,%<at>,0,1),cand(u(%!/FUN`IS`REVIEWER,%<viewer>),strlen(u(%!/WEB`APP`KEY,%<at>)),get({{store}}/APP`%<at>`ROUND)),u(%!/WEB`DATA`APP,%<at>,1,0),u(%!/WEB`JSON`EMPTY)))
         flags: [funsyntax]
       # %0 a key, %1 1 for a reviewer, %2 1 for its owner: the status lines, the comments in every section, the
       # changes since the round before (for a reviewer) and the draft (for its owner).
@@ -1494,10 +1496,11 @@ objects:
 
       # sidebar: GET /http/chargen/nav
       # Viewer %0's sidebar: their application, the public queue when the game shows it, and for a reviewer the
-      # lists with their counts. Nobody signed in gets no links, and the portal shows the app's own.
+      # lists with their counts, and for staff who change the configuration the settings and the form. Nobody
+      # signed in gets no links, and the portal shows the app's own.
       WEB`NAV:
         value: |-
-          json(object,groups,if(strlen(%0),u(%!/WEB`JSON`ARRAY,json(object,label,json(string,),items,u(%!/WEB`JSON`ARRAY,u(%!/WEB`NAV`LINK,My application,/apps/chargen,assignment_ind)[if(cand(not(u(%!/FUN`IS`REVIEWER,%0)),get(%!/DATA`CONFIG`SHOW-QUEUE)),%r[u(%!/WEB`NAV`LINK,Queue,/apps/chargen/queue,hourglass_top)])]))[if(u(%!/FUN`IS`REVIEWER,%0),%r[json(object,label,json(string,Review),items,u(%!/WEB`JSON`ARRAY,u(%!/WEB`NAV`LINK,Waiting,/apps/chargen/queue,inbox,words(u(%!/FUN`LIST`QUEUE)))%r[u(%!/WEB`NAV`LINK,Waitlist,/apps/chargen/waitlist,hourglass_top,words(u(%!/FUN`LIST`WAITLIST)))]%r[u(%!/WEB`NAV`LINK,Open,/apps/chargen/all,view_list)]%r[u(%!/WEB`NAV`LINK,Decided,/apps/chargen/decided,inventory_2)]))])]),json_array()))
+          json(object,groups,if(strlen(%0),u(%!/WEB`JSON`ARRAY,json(object,label,json(string,),items,u(%!/WEB`JSON`ARRAY,u(%!/WEB`NAV`LINK,My application,/apps/chargen,assignment_ind)[if(cand(not(u(%!/FUN`IS`REVIEWER,%0)),get(%!/DATA`CONFIG`SHOW-QUEUE)),%r[u(%!/WEB`NAV`LINK,Queue,/apps/chargen/queue,hourglass_top)])]))[if(u(%!/FUN`IS`REVIEWER,%0),%r[json(object,label,json(string,Review),items,u(%!/WEB`JSON`ARRAY,u(%!/WEB`NAV`LINK,Waiting,/apps/chargen/queue,inbox,words(u(%!/FUN`LIST`QUEUE)))%r[u(%!/WEB`NAV`LINK,Waitlist,/apps/chargen/waitlist,hourglass_top,words(u(%!/FUN`LIST`WAITLIST)))]%r[u(%!/WEB`NAV`LINK,Open,/apps/chargen/all,view_list)]%r[u(%!/WEB`NAV`LINK,Decided,/apps/chargen/decided,inventory_2)]))])][if(permission(%0,config.admin),%r[json(object,label,json(string,Setup),items,u(%!/WEB`JSON`ARRAY,u(%!/WEB`NAV`LINK,Settings,/apps/chargen/settings,tune)%r[u(%!/WEB`NAV`LINK,Form,/apps/chargen/form,edit_note)]))])]),json_array()))
         flags: [funsyntax]
       DATA`TEMPLATE`WEB`NAV`LINK: |-
         {"label":"","path":"","icon":"","count":0}
@@ -1510,7 +1513,7 @@ objects:
         flags: [funsyntax]
 
       # actions: POST /http/chargen/act, run with @force so the writes are this object's. %q<body> is the posted
-      # JSON: op (save, submit, withdraw, comment, return, approve or retire; nothing is submit, the portal's own
+      # JSON: op (save, submit, withdraw, comment, return, approve, retire, settings or form; nothing is submit, the portal's own
       # Submit button), key (the application, empty for the viewer's own) and the inputs. Each op leaves the
       # answer in %q<web_response>.
       WEB`ACT:
@@ -1519,7 +1522,8 @@ objects:
           web_op,lcstr(firstof(u(%!/WEB`BODY`GET,op),submit)),
           web_target,u(%!/WEB`BODY`GET,key)); @assert cand(strlen(%<viewer>),hastype(%<viewer>,player))=think setq(web_response,u(%!/WEB`RESULT`ERROR,Sign in with a character first.)); think setqm(viewer_objid,objid(%<viewer>),
           viewer_key,u(%!/FUN`APP`KEY,%<viewer>),
-          viewer_staff,u(%!/FUN`IS`REVIEWER,%<viewer>)); @assert match(save submit withdraw comment return approve retire,%q<web_op>)=think setq(web_response,u(%!/WEB`RESULT`ERROR,There is no such action.)); @include %!/WEB`ACT`%q<web_op>
+          viewer_staff,u(%!/FUN`IS`REVIEWER,%<viewer>),
+          viewer_admin,permission(%<viewer>,config.admin)); @assert match(save submit withdraw comment return approve retire settings form,%q<web_op>)=think setq(web_response,u(%!/WEB`RESULT`ERROR,There is no such action.)); @include %!/WEB`ACT`%q<web_op>
         flags: [cmdsyntax]
       # The application the action is about: the posted key's, for a reviewer, else the viewer's own.
       WEB`NEED`APP:
@@ -1606,6 +1610,219 @@ objects:
       WEB`RESULT`FIELDS:
         value: |-
           u(%!/WEB`JSON`OBJECT,iter(u(%!/FUN`APP`ALLSLOTS,%0),json(object,field_[lcstr(%i0)],json(string,u(%!/FUN`SLOT`VALUE,%0,%i0))),%b,%r))
+        flags: [funsyntax]
+
+      # ---- portal: settings and form, for staff --------------------------------------
+      # /apps/chargen/settings and /apps/chargen/form, for staff who change the game's configuration
+      # (config.admin), as +config chargen and +apps/field are. A setting is checked and stored the way +config
+      # does it, through CONFIG`PROBLEM and CONFIG`STORE, which the chargen-config bridge sets here: without it
+      # the settings page says so and changes nothing.
+      #
+      # The settings this object declares: each DATA`CONFIG`<NAME> with a TYPE, by name, lower case.
+      FUN`CONFIG`SETTINGS:
+        value: |-
+          squish(iter(lattr(%!/DATA`CONFIG`*),if(cand(hasattr(%!,%i0`TYPE),not(strmatch(%i0,DATA`CONFIG`LABEL))),lcstr(last(%i0,`))),%b,%b))
+        flags: [funsyntax]
+      DATA`TEMPLATE`WEB`FORM`SETTING: |-
+        {"kind":"field","key":"","label":"","type":"","help":"","placeholder":"","validation":{"required":false,"min":null,"max":null,"max_length":null}}
+      # %0 a setting: its input, keyed by its name, the example its placeholder.
+      WEB`FORM`SETTING:
+        value: |-
+          setqm(setting_type,ucstr(get(%!/DATA`CONFIG`%0`TYPE)),
+          setting_numeric,t(member(INTEGER NUMBER,%q<setting_type>)),
+          setting_min,get(%!/DATA`CONFIG`%0`MIN),
+          setting_max,get(%!/DATA`CONFIG`%0`MAX))[json_fill(v(DATA`TEMPLATE`WEB`FORM`SETTING),/key,%0,/label,firstof(get(%!/DATA`CONFIG`%0`LABEL),%0),/type,if(%q<setting_numeric>,number,if(strmatch(%q<setting_type>,BOOLEAN),boolean,text)),/help,get(%!/DATA`CONFIG`%0`DESCRIPTION),/placeholder,get(%!/DATA`CONFIG`%0`EXAMPLE),/validation/min,if(cand(%q<setting_numeric>,isnum(%q<setting_min>)),%q<setting_min>,null),/validation/max,if(cand(%q<setting_numeric>,isnum(%q<setting_max>)),%q<setting_max>,null),/validation/max_length,if(cand(strmatch(%q<setting_type>,TEXT),isint(%q<setting_max>)),%q<setting_max>,null))]
+        flags: [funsyntax]
+      # %0 a setting, %1 a value as stored: the value as JSON, a number, true or false, or a string.
+      WEB`SETTING`JSON:
+        value: |-
+          switch(ucstr(get(%!/DATA`CONFIG`%0`TYPE)),INTEGER,if(isnum(%1),%1,null),NUMBER,if(isnum(%1),%1,null),BOOLEAN,u(%!/WEB`JSON`BOOLEAN,%1),json(string,%1))
+        flags: [funsyntax]
+      # %0 the viewer: the settings page.
+      WEB`SCHEMA`SETTINGS:
+        value: |-
+          switch(0,permission(%0,config.admin),u(%!/WEB`SCHEMA`SAY,Application settings,Only staff who change the game's configuration can change these settings.),hasattr(%!,CONFIG`STORE),u(%!/WEB`SCHEMA`SAY,Application settings,These settings are changed through +config. Install the chargen-config package to change them here.),u(%!/WEB`SCHEMA`DOCUMENT,form,Application settings,u(%!/WEB`FORM`SECTION,,1,u(%!/WEB`FORM`MARKDOWN,How applications are reviewed. These are the settings +config chargen changes%; an empty box goes back to the default.))%r[u(%!/WEB`FORM`SECTION,Settings,2,iter(u(%!/FUN`CONFIG`SETTINGS),u(%!/WEB`FORM`SETTING,%i0),%b,%r))]%r[u(%!/WEB`FORM`SECTION,,90,u(%!/WEB`FORM`BUTTON,Save,settings,,primary))],json(object,act,u(%!/WEB`FORM`ACTION))))
+        flags: [funsyntax]
+      # The settings page's data: each setting's value.
+      WEB`DATA`SETTINGS:
+        value: |-
+          u(%!/WEB`JSON`OBJECT,iter(u(%!/FUN`CONFIG`SETTINGS),u(%!/WEB`JSON`MEMBER,%i0,u(%!/WEB`SETTING`JSON,%i0,get(%!/DATA`CONFIG`%i0)),1),%b,%r))
+        flags: [funsyntax]
+      # The settings as input values, after a save.
+      WEB`FIELDS`SETTINGS:
+        value: |-
+          u(%!/WEB`JSON`OBJECT,iter(u(%!/FUN`CONFIG`SETTINGS),json(object,%i0,u(%!/WEB`SETTING`JSON,%i0,get(%!/DATA`CONFIG`%i0))),%b,%r))
+        flags: [funsyntax]
+      # %0 a setting: what was posted for it, or nothing.
+      WEB`SETTING`POSTED:
+        value: |-
+          trim(u(%!/WEB`BODY`GET,%0))
+        flags: [funsyntax]
+      # %0 a setting: why what was posted will not do, or nothing. An empty box is the default, which always does.
+      # A change needs the setting's own PERMISSION when it names one, as +config asks.
+      WEB`SETTING`PROBLEM:
+        value: |-
+          setq(setting_changed,u(%!/WEB`SETTING`CHANGED,%0))[setq(setting_posted,u(%!/WEB`SETTING`POSTED,%0))][cond(cand(%q<setting_changed>,not(permission(%q<viewer_objid>,setr(setting_permission,firstof(get(%!/DATA`CONFIG`%0`PERMISSION),config.admin))))),Changing this needs the %q<setting_permission> permission.,strlen(%q<setting_posted>),u(%!/CONFIG`PROBLEM,%0,%q<setting_posted>))]
+        flags: [funsyntax]
+      WEB`SETTING`WRONG:
+        value: |-
+          t(strlen(u(%!/WEB`SETTING`PROBLEM,%0)))
+        flags: [funsyntax]
+      # %0 a setting: what was posted, in the setting's stored form, or its default for an empty box.
+      WEB`SETTING`STORED:
+        value: |-
+          setq(setting_posted,u(%!/WEB`SETTING`POSTED,%0))[if(strlen(%q<setting_posted>),u(%!/CONFIG`STORE,%0,%q<setting_posted>),get(%!/DATA`CONFIG`%0`DEFAULT))]
+        flags: [funsyntax]
+      WEB`SETTING`CHANGED:
+        value: |-
+          t(comp(u(%!/WEB`SETTING`STORED,%0),get(%!/DATA`CONFIG`%0)))
+        flags: [funsyntax]
+      # Stops an action only staff who change the configuration may take.
+      WEB`NEED`ADMIN:
+        value: |-
+          @assert %q<viewer_admin>=think setq(web_response,u(%!/WEB`RESULT`ERROR,Only staff who change the game's configuration can do that.))
+        flags: [cmdsyntax]
+      # Save on the settings page: every setting is checked first, then each that changed is stored and told to
+      # ACONFIG, as +config does.
+      WEB`ACT`SETTINGS:
+        value: |-
+          @include %!/WEB`NEED`ADMIN; @assert hasattr(%!,CONFIG`STORE)=think setq(web_response,u(%!/WEB`RESULT`ERROR,Install the chargen-config package to change these settings here.)); think setq(web_settings,u(%!/FUN`CONFIG`SETTINGS)); think setq(web_errors,iter(filterbool(%!/WEB`SETTING`WRONG,%q<web_settings>),json(object,%i0,json(string,u(%!/WEB`SETTING`PROBLEM,%i0))),%b,%r)); @assert not(strlen(%q<web_errors>))=think setq(web_response,u(%!/WEB`RESULT`ERRORS,%q<web_errors>)); think setq(web_changed,filterbool(%!/WEB`SETTING`CHANGED,%q<web_settings>)); @dolist/inline %q<web_changed>={@include/args %!/WEB`SETTING`WRITE=setting,##}; think setq(web_response,u(%!/WEB`RESULT`ADMIN,if(words(%q<web_changed>),Saved.,Nothing changed.),settings))
+        flags: [cmdsyntax]
+      # %<setting> a setting that changed: stored, and told to ACONFIG with what +config tells it.
+      WEB`SETTING`WRITE:
+        value: |-
+          think setqm(setting_previous,get(%!/DATA`CONFIG`%<setting>),
+          setting_stored,u(%!/WEB`SETTING`STORED,%<setting>)); &DATA`CONFIG`%<setting> %!=%q<setting_stored>; @if hasattr(%!,ACONFIG)={@trigger/args %!/ACONFIG=setting,%<setting>,entry,,field,,action,set,value,%q<setting_stored>,previous,%q<setting_previous>,by,%q<viewer_objid>}
+        flags: [cmdsyntax]
+
+      # The form page: the sections and the fields as rows, in order, which Save writes back. A field's section
+      # is one of the sections already saved, so a new section is saved before fields go in it.
+      DATA`WEB`FORM`SECTIONS: |-
+        {"kind":"field","key":"sections","label":"","type":"rows","help":"Headings on the form, in order. A section with fields in it cannot be removed.","item_fields":[{"key":"key","label":"Key","type":"text","placeholder":"history","help":"One word: letters, digits, - and _.","validation":{"required":true,"max_length":30}},{"key":"title","label":"Title","type":"text","placeholder":"History","validation":{"required":true,"max_length":60}}]}
+      DATA`TEMPLATE`WEB`FORM`FIELDS: |-
+        {"kind":"field","key":"form_fields","label":"","type":"rows","help":"What applicants fill in, in order. Removing a field takes it off the form; what applications said in it stays with them.","item_by":"type","item_fields":[{"key":"key","label":"Key","type":"text","placeholder":"concept","help":"One word. A new key is a new field.","validation":{"required":true,"max_length":30}},{"key":"label","label":"Label","type":"text","placeholder":"Concept","validation":{"required":true,"max_length":60}},{"key":"section","label":"Section","type":"select","options":null,"validation":{"required":true}},{"key":"type","label":"Type","type":"select","default":"text","options":[{"value":"text","label":"One line"},{"value":"long","label":"Many lines"},{"value":"choice","label":"A choice"}]},{"key":"required","label":"Required","type":"boolean","default":false},{"key":"max","label":"Most characters","type":"number","placeholder":"500","help":"Empty is 500 for one line, the game's limit for many.","validation":{"min":1,"max":32000}},{"key":"help","label":"Help","type":"text","placeholder":"Who they are, in a line.","validation":{"max_length":200}},{"key":"attribute","label":"Attribute","type":"text","placeholder":"BG*","help":"Where a character keeps the answer: empty is the key, a * makes chapters.","validation":{"max_length":60}},{"key":"chapters","label":"Chapters","type":"number","placeholder":"20","help":"The most chapters, for an attribute with a *.","validation":{"min":1,"max":100}}],"item_variants":{"choice":[{"key":"choices","label":"Choices","type":"text","placeholder":"Fighter|Scholar|Rogue|Mystic","help":"Separated by |.","validation":{"max_length":400}}]}}
+      # %0 the viewer: the form page.
+      WEB`SCHEMA`FORM:
+        value: |-
+          switch(0,permission(%0,config.admin),u(%!/WEB`SCHEMA`SAY,Application form,Only staff who change the game's configuration can change the form.),u(%!/WEB`SCHEMA`DOCUMENT,form,Application form,u(%!/WEB`FORM`SECTION,,1,u(%!/WEB`FORM`MARKDOWN,The sections and fields applicants fill in%, in the order they see them. +apps/fields shows the same in the terminal.))%r[u(%!/WEB`FORM`SECTION,Sections,2,v(DATA`WEB`FORM`SECTIONS))]%r[u(%!/WEB`FORM`SECTION,Fields,3,json_fill(v(DATA`TEMPLATE`WEB`FORM`FIELDS),/item_fields/2/options,u(%!/WEB`FORM`SECTION`OPTIONS)))]%r[u(%!/WEB`FORM`SECTION,,90,u(%!/WEB`FORM`BUTTON,Save,form,,primary))],json(object,act,u(%!/WEB`FORM`ACTION))))
+        flags: [funsyntax]
+      # The saved sections, as a select's options.
+      WEB`FORM`SECTION`OPTIONS:
+        value: |-
+          u(%!/WEB`JSON`ARRAY,iter(u(%!/FUN`FORM`SECTIONS),json_fill(v(DATA`TEMPLATE`WEB`FORM`INPUT`SLOT),/value,lcstr(%i0),/label,get({{store}}/SECTION`%i0)),%b,%r))
+        flags: [funsyntax]
+      DATA`TEMPLATE`WEB`ROW`SECTION: |-
+        {"key":"","title":""}
+      DATA`TEMPLATE`WEB`ROW`FIELD: |-
+        {"key":"","label":"","section":"","type":"text","required":false,"choices":"","max":null,"help":"","attribute":"","chapters":null}
+      # The sections as rows.
+      WEB`ROWS`SECTIONS:
+        value: |-
+          u(%!/WEB`JSON`ARRAY,iter(u(%!/FUN`FORM`SECTIONS),json_fill(v(DATA`TEMPLATE`WEB`ROW`SECTION),/key,lcstr(%i0),/title,get({{store}}/SECTION`%i0)),%b,%r))
+        flags: [funsyntax]
+      # The fields as rows, section by section; what the form leaves unset is empty.
+      WEB`ROWS`FIELDS:
+        value: |-
+          u(%!/WEB`JSON`ARRAY,iter(u(%!/FUN`FORM`ALLFIELDS),json_fill(v(DATA`TEMPLATE`WEB`ROW`FIELD),/key,lcstr(%i0),/label,get({{store}}/FIELD`%i0),/section,lcstr(get({{store}}/FIELD`%i0`SECTION)),/type,u(%!/FUN`FIELD`TYPE,%i0),/required,t(get({{store}}/FIELD`%i0`REQUIRED)),/choices,get({{store}}/FIELD`%i0`CHOICES),/max,firstof(get({{store}}/FIELD`%i0`MAX),null),/help,get({{store}}/FIELD`%i0`HELP),/attribute,get({{store}}/FIELD`%i0`ATTRIBUTE),/chapters,firstof(get({{store}}/FIELD`%i0`CHAPTERS),null)),%b,%r))
+        flags: [funsyntax]
+      WEB`DATA`FORM:
+        value: |-
+          u(%!/WEB`JSON`OBJECT,u(%!/WEB`JSON`MEMBER,sections,u(%!/WEB`ROWS`SECTIONS),1)%r[u(%!/WEB`JSON`MEMBER,form_fields,u(%!/WEB`ROWS`FIELDS),1)])
+        flags: [funsyntax]
+      WEB`FIELDS`FORM:
+        value: |-
+          json(object,sections,u(%!/WEB`ROWS`SECTIONS),form_fields,u(%!/WEB`ROWS`FIELDS))
+        flags: [funsyntax]
+      # Posted rows %0 (sections or form_fields): the JSON list, or nothing when none was posted.
+      WEB`BODY`ROWS:
+        value: |-
+          setq(web_rows,json_query(%q<body>,get,%0))[if(strmatch(json_query(%q<web_rows>,type),array),%q<web_rows>)]
+        flags: [funsyntax]
+      # %0 rows, %1 a row's index from 0, %2 a member: its value, unquoted and trimmed; nothing when it is missing.
+      WEB`ROW`GET:
+        value: |-
+          setq(web_row_got,json_query(%0,get,%1,%2))[trim(switch(%q<web_row_got>,null,,#-1*,,"*,json_query(%q<web_row_got>,unescape),%q<web_row_got>))]
+        flags: [funsyntax]
+      # %0 rows: the index of each, from 0.
+      WEB`ROWS`INDEXES:
+        value: |-
+          lnum(json_query(%0,size))
+        flags: [funsyntax]
+      # %0 rows, %1 a member: each row's key in it, upper case, ! for one that is not a key.
+      WEB`ROWS`KEYS:
+        value: |-
+          iter(u(%!/WEB`ROWS`INDEXES,%0),firstof(u(%!/FUN`FORM`KEY,u(%!/WEB`ROW`GET,%0,%i0,%1)),!))
+        flags: [funsyntax]
+      # %0 a section row: why it will not do, or nothing.
+      WEB`FORM`SECTION`PROBLEM:
+        value: |-
+          setqm(row_key,extract(%q<form_section_keys>,inc(%0),1),
+          row_title,u(%!/WEB`ROW`GET,%q<form_sections>,%0,title))[cond(strmatch(%q<row_key>,!),A key is one word of up to 30 letters%, digits%, - and _.,gt(words(matchall(%q<form_section_keys>,%q<row_key>)),1),Two sections are called [lcstr(%q<row_key>)].,cor(not(strlen(%q<row_title>)),gt(strlen(%q<row_title>),60)),A title is 1 to 60 characters.)]
+        flags: [funsyntax]
+      # %0 a field row, %1 an option (LABEL, TYPE, CHOICES, REQUIRED, MAX, HELP, ATTRIBUTE or CHAPTERS): what to
+      # keep for it, from FUN`FORM`OPTION`<option> as +apps/field/<option> keeps it, or #-1 and the reason. An
+      # empty type is text and an empty Required no; choices are kept for a choice only.
+      WEB`FORM`OPTION:
+        value: |-
+          setq(row_typed,u(%!/WEB`ROW`GET,%q<form_rows>,%0,lcstr(%1)))[switch(%1,REQUIRED,u(%!/FUN`FORM`OPTION`REQUIRED,firstof(%q<row_typed>,0)),TYPE,u(%!/FUN`FORM`OPTION`TYPE,firstof(%q<row_typed>,text)),CHOICES,if(strmatch(lcstr(u(%!/WEB`ROW`GET,%q<form_rows>,%0,type)),choice),u(%!/FUN`FORM`OPTION`CHOICES,%q<row_typed>)),u(%!/FUN`FORM`OPTION`%1,%q<row_typed>))]
+        flags: [funsyntax]
+      # %0 a field row, %1 an option: why what was posted for it will not do, or nothing.
+      WEB`FORM`OPTION`PROBLEM:
+        value: |-
+          setq(row_option,u(%!/WEB`FORM`OPTION,%0,%1))[if(strmatch(%q<row_option>,#-1 *),after(%q<row_option>,#-1%b))]
+        flags: [funsyntax]
+      # %0 a field row: why it will not do, or nothing.
+      WEB`FORM`FIELD`PROBLEM:
+        value: |-
+          setqm(row_key,extract(%q<form_field_keys>,inc(%0),1),
+          row_section,extract(%q<form_field_sections>,inc(%0),1))[cond(strmatch(%q<row_key>,!),A key is one word of up to 30 letters%, digits%, - and _.,gt(words(matchall(%q<form_field_keys>,%q<row_key>)),1),Two fields are called [lcstr(%q<row_key>)].,not(member(%q<form_section_keys>,%q<row_section>)),Choose one of the sections.,1,firstof(u(%!/WEB`FORM`OPTION`PROBLEM,%0,LABEL),u(%!/WEB`FORM`OPTION`PROBLEM,%0,TYPE),u(%!/WEB`FORM`OPTION`PROBLEM,%0,REQUIRED),u(%!/WEB`FORM`OPTION`PROBLEM,%0,CHOICES),u(%!/WEB`FORM`OPTION`PROBLEM,%0,MAX),u(%!/WEB`FORM`OPTION`PROBLEM,%0,HELP),u(%!/WEB`FORM`OPTION`PROBLEM,%0,ATTRIBUTE),u(%!/WEB`FORM`OPTION`PROBLEM,%0,CHAPTERS)))]
+        flags: [funsyntax]
+      # %0 the rows, %1 the routine checking one: Row <n>: <problem> for each that will not do.
+      WEB`ROWS`PROBLEMS:
+        value: |-
+          trim(iter(u(%!/WEB`ROWS`INDEXES,%0),if(strlen(setr(row_problem,u(%!/%1,%i0))),Row [inc(%i0)]: %q<row_problem>),%b,%b))
+        flags: [funsyntax]
+      # Save on the form page: every row is checked first, then the sections are written, the fields, and what
+      # left the form is removed. A field is written as +apps/field writes it; its order is its place in its section.
+      WEB`ACT`FORM:
+        value: |-
+          @include %!/WEB`NEED`ADMIN; think setqm(form_sections,u(%!/WEB`BODY`ROWS,sections),
+          form_rows,u(%!/WEB`BODY`ROWS,form_fields)); @assert cand(strlen(%q<form_sections>),strlen(%q<form_rows>))=think setq(web_response,u(%!/WEB`RESULT`ERROR,Send the sections and the fields: nothing was saved.)); @assert json_query(%q<form_sections>,size)=think setq(web_response,u(%!/WEB`RESULT`ERRORS,json(object,sections,json(string,Keep at least one section.)))); think setqm(form_section_keys,u(%!/WEB`ROWS`KEYS,%q<form_sections>,key),
+          form_field_keys,u(%!/WEB`ROWS`KEYS,%q<form_rows>,key),
+          form_field_sections,u(%!/WEB`ROWS`KEYS,%q<form_rows>,section)); think setqm(form_section_problems,u(%!/WEB`ROWS`PROBLEMS,%q<form_sections>,WEB`FORM`SECTION`PROBLEM),
+          form_field_problems,u(%!/WEB`ROWS`PROBLEMS,%q<form_rows>,WEB`FORM`FIELD`PROBLEM)); @assert not(strlen(%q<form_section_problems>%q<form_field_problems>))=think setq(web_response,u(%!/WEB`RESULT`ERRORS,squish(if(strlen(%q<form_section_problems>),json(object,sections,json(string,%q<form_section_problems>)))%r[if(strlen(%q<form_field_problems>),json(object,form_fields,json(string,%q<form_field_problems>)))],%r))); @assert u(%!/FUN`ROOM,u(%!/WEB`FORM`NEEDED))=think setq(web_response,u(%!/WEB`RESULT`ERROR,u(%!/FUN`ROOM`TEXT))); @dolist/inline u(%!/WEB`ROWS`INDEXES,%q<form_sections>)={@include/args %!/WEB`FORM`WRITE`SECTION=row,##}; @dolist/inline u(%!/WEB`ROWS`INDEXES,%q<form_rows>)={@include/args %!/WEB`FORM`WRITE`FIELD=row,##}; @dolist/inline setdiff(u(%!/FUN`FORM`ALLFIELDS),%q<form_field_keys>)={@include/args %!/WEB`FORM`REMOVE`FIELD=field,##}; @dolist/inline setdiff(u(%!/FUN`FORM`SECTIONS),%q<form_section_keys>)={&SECTION`##`ORDER {{store}}; &SECTION`## {{store}}}; think setq(web_response,u(%!/WEB`RESULT`ADMIN,Saved the form.,form))
+        flags: [cmdsyntax]
+      # How many attributes a save may add at most: every leaf a posted section (2) or field (10) can have,
+      # less those it has already.
+      WEB`FORM`NEEDED:
+        value: |-
+          sub(add(mul(2,words(%q<form_section_keys>)),mul(10,words(%q<form_field_keys>))),ladd(iter(%q<form_section_keys>,u(%!/WEB`FORM`HELD,SECTION`%i0)) [iter(%q<form_field_keys>,u(%!/WEB`FORM`HELD,FIELD`%i0))]))
+        flags: [funsyntax]
+      # %0 SECTION`<key> or FIELD`<key>: how many of its attributes the store holds.
+      WEB`FORM`HELD:
+        value: |-
+          add(hasattr({{store}},%0),words(lattr({{store}}/%0`*)))
+        flags: [funsyntax]
+      # %<row> a section row, from 0: its title and its place.
+      WEB`FORM`WRITE`SECTION:
+        value: |-
+          think setq(row_key,extract(%q<form_section_keys>,inc(%<row>),1)); &SECTION`%q<row_key> {{store}}=u(%!/WEB`ROW`GET,%q<form_sections>,%<row>,title); &SECTION`%q<row_key>`ORDER {{store}}=inc(%<row>)
+        flags: [cmdsyntax]
+      # %<row> a field row, from 0: every option, an empty one unset so the default applies.
+      WEB`FORM`WRITE`FIELD:
+        value: |-
+          think setqm(row_key,extract(%q<form_field_keys>,inc(%<row>),1),
+          row_section,extract(%q<form_field_sections>,inc(%<row>),1)); &FIELD`%q<row_key> {{store}}=u(%!/WEB`FORM`OPTION,%<row>,LABEL); &FIELD`%q<row_key>`SECTION {{store}}=%q<row_section>; &FIELD`%q<row_key>`ORDER {{store}}=inc(words(matchall(extract(%q<form_field_sections>,1,%<row>),%q<row_section>))); @dolist/inline TYPE REQUIRED CHOICES MAX HELP ATTRIBUTE CHAPTERS={think setq(row_value,u(%!/WEB`FORM`OPTION,%<row>,##)); @if strlen(%q<row_value>)={&FIELD`%q<row_key>`## {{store}}=%q<row_value>},{&FIELD`%q<row_key>`## {{store}}}}
+        flags: [cmdsyntax]
+      # %<field> a field that left the form, as +apps/field/remove takes it off.
+      WEB`FORM`REMOVE`FIELD:
+        value: |-
+          @dolist/inline SECTION TYPE CHOICES REQUIRED MAX ORDER HELP ATTRIBUTE CHAPTERS={&FIELD`%<field>`## {{store}}}; &FIELD`%<field> {{store}}
+        flags: [cmdsyntax]
+      # After a save on page %1 (settings or form): message %0, the inputs as they are now, and the page drawn again.
+      WEB`RESULT`ADMIN:
+        value: |-
+          json_fill(v(DATA`TEMPLATE`WEB`RESULT`DONE),/message,%0,/fields,u(%!/WEB`FIELDS`%1),/schema,u(%!/WEB`SCHEMA`%1,%q<viewer_objid>),/data/fields,u(%!/WEB`DATA`%1))
         flags: [funsyntax]
 
       # ---- hooks ------------------------------------------------------------------
@@ -1916,10 +2133,14 @@ objects:
 
         A character who already has BG1 and BG2 from an imported database finds them as chapters 1 and 2.
         The most characters, `max`, is for each chapter.
+
+        In the web portal, /apps/chargen/form shows the sections and fields as rows to edit, in order, and Save
+        writes them all.
       LOCK`APP`SETTINGS: |-
         perm^config.admin
       HELP`APP`SETTINGS: |-
-        `+config chargen` lists the settings; `+config chargen/<setting>=<value>` changes one.
+        `+config chargen` lists the settings; `+config chargen/<setting>=<value>` changes one. In the web portal,
+        /apps/chargen/settings changes them too, with the same checks.
 
         | Setting | Default | What it does |
         |---|---|---|

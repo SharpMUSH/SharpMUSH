@@ -123,6 +123,7 @@ One document type, `kind: "form" | "view"`, generalizing the profile schema's
   "graph": { ... },            // graph: step kinds, ports, guidance (see the authoring guide)
   "default": 8,
   "help": "Roll 4d6 drop lowest.",
+  "placeholder": "14",         // text|textarea|mstring|number: an example shown in grey while empty
   "validation": { "required": true, "min": 3, "max": 18, "max_length": 120,
                   "pattern": "^[A-Za-z ]+$" },
   "visible_to": "public",      // softcode-owned audience tag (opaque to portal)
