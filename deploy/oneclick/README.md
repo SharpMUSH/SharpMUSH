@@ -90,7 +90,7 @@ it, and a renewed certificate is served from the next connection on, so renewing
 ## Telnet over WebSocket
 
 MU\* clients that speak the mudstandards.org WebSocket subprotocols connect to `wss://<telnet name>/`
-(any path) or `wss://<domain>/telnet`. Both reach the socket server's `/telnet` endpoint, and the
+(any path but `/health`) or `wss://<domain>/telnet`. Both reach the socket server's `/telnet` endpoint, and the
 player is an ordinary telnet connection from there on.
 
 ## The first-boot guard

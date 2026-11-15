@@ -3,13 +3,17 @@ on:
   pull_request:
     paths:
       - 'deploy/oneclick/install.sh'
+      - 'deploy/oneclick/Caddyfile'
       - '.github/scripts/test_oneclick_cloudflare.py'
+      - '.github/scripts/test_oneclick_telnet_routing.py'
       - '.github/workflows/oneclick-installer.yml'
   push:
     branches: [main]
     paths:
       - 'deploy/oneclick/install.sh'
+      - 'deploy/oneclick/Caddyfile'
       - '.github/scripts/test_oneclick_cloudflare.py'
+      - '.github/scripts/test_oneclick_telnet_routing.py'
       - '.github/workflows/oneclick-installer.yml'
 permissions:
   contents: read
@@ -24,3 +28,7 @@ jobs:
         run: |
           bash -n deploy/oneclick/install.sh
           python3 -m unittest discover -s .github/scripts -p 'test_oneclick_cloudflare.py' -v
+      - name: Route telnet over WebSocket through the one-click Caddy
+        env:
+          SHARPMUSH_CADDY_TESTS: '1'
+        run: python3 -m unittest discover -s .github/scripts -p 'test_oneclick_telnet_routing.py' -v

@@ -14,8 +14,9 @@
 	}
 }
 
-# The telnet name's site (install.sh writes it into sites/telnet.caddy): a WebSocket on any path is telnet,
-# so a client needs only wss://<telnet name>/. The guard covers it as it covers the telnet port.
+# The telnet name's site (install.sh writes it into sites/telnet.caddy): a WebSocket on any path but /health
+# is telnet, so a client needs only wss://<telnet name>/. The guard covers it as it covers the telnet port; the
+# guard lets /health through for health checks, so /health is never telnet here.
 (telnet_host) {
 	route {
 		import /etc/caddy/guard/*.caddy
@@ -23,6 +24,7 @@
 		@websocket {
 			header Connection *Upgrade*
 			header Upgrade websocket
+			not path /health
 		}
 		handle @websocket {
 			rewrite * /telnet
