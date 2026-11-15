@@ -4,6 +4,7 @@ using NSubstitute;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Services;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
@@ -69,6 +70,40 @@ public class TextFileServiceTests
 			await Assert.That(prefix.Topic).IsEqualTo("zulu");
 			await Assert.That(await localized.GetEntryAsync("help", "align()", "fr")).Contains("Vue française");
 			await Assert.That((await service.GetHelpEntryAsync("help.fr", "align()"))?.Article?.Id).IsEqualTo("align");
+		}
+		finally
+		{
+			Directory.Delete(root, recursive: true);
+		}
+	}
+
+	/// <summary>
+	/// A topic typed without its @ still finds the @-command's entry: exactly once the topic's own prefix match
+	/// finds nothing, and by prefix or fuzzy match once nothing else does.
+	/// </summary>
+	[Test]
+	public async Task ATopicWithoutItsAt_FindsTheAtCommand()
+	{
+		var (service, root) = BuildServiceOverTempFiles(0, 0);
+		var help = Path.Join(root, "help");
+		Directory.CreateDirectory(help);
+		try
+		{
+			await File.WriteAllTextAsync(Path.Join(help, "feed.md"),
+				"# @feed\nFeeds.\n# @feed examples\nExamples.\n# feedback\nFeedback.\n# lone\nLone.");
+			await service.ReindexAsync();
+			var resolver = new HelpTopicResolver(service);
+			async Task<string> Topic(string typed) => (await resolver.ResolveAsync("help", typed)).Expect<HelpEntry>().Topic;
+
+			await Assert.That(await Topic("feed examples")).IsEqualTo("@feed examples");
+			await Assert.That(await Topic("FEED")).IsEqualTo("feedback").Because("the topic's own prefix match comes first, as in PennMUSH");
+			await Assert.That(await Topic("lone")).IsEqualTo("lone");
+			await Assert.That(await Topic("lon")).IsEqualTo("lone");
+			await Assert.That(await Topic("feed ex")).IsEqualTo("@feed examples").Because("the @-name's prefix is tried last");
+			await Assert.That(await Topic("f examples")).IsEqualTo("@feed examples").Because("and its fuzzy pattern");
+			await Assert.That(await Topic("@feed")).IsEqualTo("@feed");
+			await Assert.That(await resolver.ResolveAsync("help", "@lone") is None).IsTrue().Because("an @ typed is never taken off");
+			await Assert.That(await resolver.ResolveAsync("help", "feed ex*") is None).IsTrue().Because("a wildcard is matched literally");
 		}
 		finally
 		{

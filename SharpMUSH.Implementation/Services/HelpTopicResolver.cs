@@ -40,8 +40,32 @@ public sealed class HelpTopicResolver(ITextFileService textFiles) : IHelpTopicRe
 			return prefix;
 		}
 
-		return await NarrowAsync(corpus, await SearchAsync(corpus, BuildFuzzyPattern(topic)));
+		// Most commands are filed under their @-name, so a reader who left the @ off ("feed examples")
+		// still reaches "@feed examples". It comes after the prefix match, so "help if" stays on if().
+		if (topic.StartsWith('@'))
+		{
+			return await FuzzyAsync(corpus, topic);
+		}
+
+		var command = "@" + topic;
+		if (await GetExactAsync(corpus, command) is { } commandEntry)
+		{
+			return commandEntry;
+		}
+
+		return await FuzzyAsync(corpus, topic) switch
+		{
+			None => await textFiles.GetPrefixEntryAsync(corpus, command) switch
+			{
+				{ } commandPrefix => commandPrefix,
+				null => await FuzzyAsync(corpus, command)
+			},
+			var found => found
+		};
 	}
+
+	private async ValueTask<HelpResolution> FuzzyAsync(string corpus, string topic) =>
+		await NarrowAsync(corpus, await SearchAsync(corpus, BuildFuzzyPattern(topic)));
 
 	/// <inheritdoc />
 	public async ValueTask<HelpEntry?> GetExactAsync(string corpus, string topic)
