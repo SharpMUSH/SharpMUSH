@@ -61,7 +61,7 @@ objects:
       DATA`CONFIG`RULES`ENTRY: |-
         when
       DATA`CONFIG`RULES`FIELDS: |-
-        when role give take guests
+        when role give take guests trigger
       DATA`CONFIG`RULES`KEYPATTERN: |-
         ^[A-Za-z][A-Za-z0-9_-]{0,23}$
       DATA`CONFIG`RULES`FIELD`WHEN`TYPE: |-
@@ -110,6 +110,16 @@ objects:
         Guests too
       DATA`CONFIG`RULES`FIELD`GUESTS`DESCRIPTION: |-
         Whether the rule also runs for guests.
+      DATA`CONFIG`RULES`FIELD`TRIGGER`TYPE: |-
+        text
+      DATA`CONFIG`RULES`FIELD`TRIGGER`MAX: |-
+        200
+      DATA`CONFIG`RULES`FIELD`TRIGGER`CHECK: |-
+        FUN`CONFIG`CHECK`TRIGGER
+      DATA`CONFIG`RULES`FIELD`TRIGGER`LABEL: |-
+        Then trigger
+      DATA`CONFIG`RULES`FIELD`TRIGGER`DESCRIPTION: |-
+        An attribute to @trigger each time the rule runs, after its roles, as #<dbref>/<attribute>. It is told the player, the rule, what ran it, and the roles given and taken.
       # Which INC` routine each switch runs: DATA`ROUTE`<switch>. Without a switch, +autoset lists the rules.
       DATA`ROUTE: |-
         Which routine each switch runs. One leaf per switch.
@@ -148,7 +158,7 @@ objects:
       # Runs apply_key on apply_player and says which roles changed. Rules the change runs in turn come after.
       INC`APPLY`RUN:
         value: |-
-          think setq(apply_before,roles(%q<apply_player>)); @include/args/nobreak %!/INC`RULE`APPLY=rule,%q<apply_key>,player,%q<apply_player>; think setqm(apply_gained,setdiff(roles(%q<apply_player>),%q<apply_before>),
+          think setq(apply_before,roles(%q<apply_player>)); @include/args/nobreak %!/INC`RULE`APPLY=rule,%q<apply_key>,player,%q<apply_player>,when,apply; think setqm(apply_gained,setdiff(roles(%q<apply_player>),%q<apply_before>),
           apply_lost,setdiff(%q<apply_before>,roles(%q<apply_player>))); @pemit %#=notice(AUTOSET,u(%!/FUN`DISPLAY`APPLIED,%q<apply_key>,%q<apply_player>,%q<apply_gained>,%q<apply_lost>),ok)
         flags: [cmdsyntax]
 
@@ -166,14 +176,25 @@ objects:
       # Every rule for %<when> (and %<role>) on %<player>, in name order.
       INC`EVENT`RULES:
         value: |-
-          @assert hastype(%<player>,player); @dolist/inline u(%!/FUN`RULE`MATCHING,%<when>,%<role>)={@include/args/nobreak %!/INC`RULE`APPLY=rule,##,player,%<player>}
+          @assert hastype(%<player>,player); @dolist/inline u(%!/FUN`RULE`MATCHING,%<when>,%<role>)={@include/args/nobreak %!/INC`RULE`APPLY=rule,##,player,%<player>,when,%<when>}
         flags: [cmdsyntax]
-      # %<rule> on %<player>: the roles it gives that they lack, then the ones it takes that they hold. A rule with
-      # nothing to change writes nothing; one that would change a player the guard has stopped is logged instead.
+      # %<rule> on %<player>, because of %<when> (or apply, from +autoset/apply): its roles, then its trigger.
       INC`RULE`APPLY:
         value: |-
           @break u(%!/FUN`RULE`SKIPS,%<rule>,%<player>); think setqm(rule_give,u(%!/FUN`RULE`MISSING,%<rule>,%<player>),
-          rule_take,u(%!/FUN`RULE`HELD,%<rule>,%<player>)); @break not(words(%q<rule_give> %q<rule_take>)); @assert u(%!/FUN`GUARD`ALLOWS,%<player>)=@log/wiz Autoset: rule [u(%!/FUN`RULE`NAME,%<rule>)] left [name(%<player>)] alone. Their roles changed over 20 times in 10 seconds%, so two rules may undo each other.; &GUARD`[after(num(%<player>),#)] %!=u(%!/FUN`GUARD`NEXT,%<player>); @dolist/inline %q<rule_give>={@role/assign %<player>=##}; @dolist/inline %q<rule_take>={@role/unassign %<player>=##}
+          rule_take,u(%!/FUN`RULE`HELD,%<rule>,%<player>),
+          rule_stopped,0); @include/args/nobreak %!/INC`RULE`CHANGE=rule,%<rule>,player,%<player>; @include/args/nobreak %!/INC`RULE`TRIGGER=rule,%<rule>,player,%<player>,when,%<when>
+        flags: [cmdsyntax]
+      # rule_give and rule_take on %<player>: the roles they lack, then the ones they hold. Nothing to change writes
+      # nothing; a change to a player the guard has stopped is logged instead, and sets rule_stopped.
+      INC`RULE`CHANGE:
+        value: |-
+          @break not(words(%q<rule_give> %q<rule_take>)); @assert u(%!/FUN`GUARD`ALLOWS,%<player>)={think setq(rule_stopped,1); @log/wiz Autoset: rule [u(%!/FUN`RULE`NAME,%<rule>)] left [name(%<player>)] alone. Their roles changed over 20 times in 10 seconds%, so two rules may undo each other.}; &GUARD`[after(num(%<player>),#)] %!=u(%!/FUN`GUARD`NEXT,%<player>); @dolist/inline %q<rule_give>={@role/assign %<player>=##}; @dolist/inline %q<rule_take>={@role/unassign %<player>=##}
+        flags: [cmdsyntax]
+      # The rule's TRIGGER, queued with who, which rule, why, and the roles it gave and took. Not after the guard stopped it.
+      INC`RULE`TRIGGER:
+        value: |-
+          @break %q<rule_stopped>; think setq(rule_trigger,trim(get({{store}}/RULE`%<rule>`TRIGGER))); @break not(strlen(%q<rule_trigger>)); @trigger/args %q<rule_trigger>=0,%<player>,1,u(%!/FUN`RULE`NAME,%<rule>),2,%<when>,player,%<player>,rule,u(%!/FUN`RULE`NAME,%<rule>),when,%<when>,gave,%q<rule_give>,took,%q<rule_take>
         flags: [cmdsyntax]
 
       # ---- guard ----------------------------------------------------------------
@@ -282,6 +303,11 @@ objects:
         value: |-
           if(cor(not(strlen(%0)),u(%!/FUN`RANK`EXISTS,lcstr(%0))),,There is no role '%0'. @role/list lists them.)
         flags: [funsyntax]
+      # A trigger is empty, or #<dbref>/<attribute> naming an attribute that object has.
+      FUN`CONFIG`CHECK`TRIGGER:
+        value: |-
+          if(cor(not(strlen(%0)),cand(regmatch(%0,^#%[0-9:%]+/%[^/ %]+$),hasattr(before(%0,/),after(%0,/)))),,Give an object's dbref and one of its attributes%, such as #123/AUTOSET`DONE.)
+        flags: [funsyntax]
       # Each role must exist, be one that is ever assigned, rank below this object, and rank below the setter. Every
       # refusal is listed.
       FUN`CONFIG`CHECK`GRANTS:
@@ -306,7 +332,7 @@ objects:
       # %0 a key: when it runs, in words, and whether guests are included.
       FUN`DISPLAY`WHEN:
         value: |-
-          setq(when_role,u(%!/FUN`RULE`ROLE,%0))[switch(u(%!/FUN`RULE`WHEN,%0),create,Created,connect,Every login,first-connect,First login,link,Linked to an account,gain,if(strlen(%q<when_role>),Gains %q<when_role>,Gains a role: none named),lose,if(strlen(%q<when_role>),Loses %q<when_role>,Loses a role: none named),Never)][if(get({{store}}/RULE`%0`GUESTS),%b· guests too)]
+          setq(when_role,u(%!/FUN`RULE`ROLE,%0))[switch(u(%!/FUN`RULE`WHEN,%0),create,Created,connect,Every login,first-connect,First login,link,Linked to an account,gain,if(strlen(%q<when_role>),Gains %q<when_role>,Gains a role: none named),lose,if(strlen(%q<when_role>),Loses %q<when_role>,Loses a role: none named),Never)][if(get({{store}}/RULE`%0`GUESTS),%b· guests too)][if(strlen(get({{store}}/RULE`%0`TRIGGER)),%b· then [get({{store}}/RULE`%0`TRIGGER)])]
         flags: [funsyntax]
       FUN`DISPLAY`COUNT:
         value: |-
@@ -376,6 +402,8 @@ objects:
 
         A rule changes only the character's own roles. A role given to a whole account, not to the character, runs no rule, a rule does not give a role the account already holds, and it cannot take one away from the account.
 
+        A rule can also name an attribute to `@trigger` each time it runs, after its roles, to do more: send a welcome, move the character, open a job. It runs whether or not any role changed, as the object it is on, with `%%<player>` \(%%0\), `%%<rule>` \(%%1\), `%%<when>` \(%%2, what ran it, or `apply`\), `%%<gave>` and `%%<took>` \(the roles the rule gave and took this time\).
+
         Changing the rules needs the `game.wizard` permission, because Autoset gives roles with a wizard's reach. A rule gives only roles below wizard, and only roles below the highest role of whoever sets it.
 
         ## Example
@@ -395,6 +423,7 @@ objects:
         - `GIVE`: the roles the character is given, separated by spaces.
         - `TAKE`: the roles taken from the character, separated by spaces.
         - `GUESTS`: `1` to run the rule for guests too.
+        - `TRIGGER`: an attribute to `@trigger` after the roles, as `#<dbref>/<attribute>`.
 
         A rule's name starts with a letter and holds letters, digits, `-` and `_`. Rules run in name order. A game starts with none. Written by hand like this, a rule is not checked: a role that does not exist, or that Autoset may not give, is skipped when the rule runs.
 

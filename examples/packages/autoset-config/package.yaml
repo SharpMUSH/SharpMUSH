@@ -53,6 +53,7 @@ objects:
         - `+config autoset/rules/<rule>/take=<roles>` sets the roles it takes away.
         - `+config autoset/rules/<rule>/guests=yes` runs it for guests too. It is `no` for a new rule.
         - `+config autoset/rules/<rule>/when=<when>` changes when it runs.
+        - `+config autoset/rules/<rule>/trigger=#<dbref>/<attribute>` names an attribute to `@trigger` each time the rule runs, after its roles. `+help autoset` says what it is told.
         - `+config/remove autoset/rules/<rule>` takes a rule away.
 
         A role must exist, rank below wizard, and rank below your own highest role.
