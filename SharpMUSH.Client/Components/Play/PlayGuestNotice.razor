@@ -1,0 +1,12 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Above the terminal while the visitor plays a guest: says so, and links to where an account is made. One quiet
+   line, in the theme's own colours, with nothing to dismiss: it goes away when the guest logs out. *@
+<div class="play-guest-notice" role="note" aria-label="@Loc["NavPlayGuestLabel"]">
+    <MudIcon Icon="@Icons.Material.Outlined.PersonOutline" Size="Size.Small" />
+    <span class="play-guest-notice-text">
+        <span class="play-guest-notice-label">@Loc["NavPlayGuestLabel"]</span>
+        <span class="play-guest-notice-detail">@Loc["NavPlayGuestDetail"]</span>
+    </span>
+    <a class="play-guest-notice-action" href="/login?tab=register&returnUrl=%2Fplay">@Loc["NavPlayGuestCreateAccount"]</a>
+</div>

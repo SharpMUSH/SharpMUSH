@@ -205,6 +205,37 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.Markup).DoesNotContain("QuickActions").Because("§5.6: Quick actions is dropped");
 	}
 
+	/// <summary>A visitor playing a guest sees a line saying so above the terminal, with a link to make an account.</summary>
+	[Test]
+	public async Task AGuest_IsToldSo_WithALinkToCreateAnAccount()
+	{
+		_play.IsGuest.Returns(true);
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find(".play-guest-notice"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".play-guest-notice-label").TextContent).IsEqualTo("Playing as a guest");
+		await Assert.That(cut.Find("a.play-guest-notice-action").GetAttribute("href"))
+			.IsEqualTo("/login?tab=register&returnUrl=%2Fplay");
+	}
+
+	/// <summary>A refused guest login (every guest in use) never gets a character: nothing claims it is playing one.</summary>
+	[Test]
+	public async Task ARefusedGuestLogin_IsNotToldItIsPlayingAGuest()
+	{
+		_play.IsGuest.Returns(true);
+		var cut = RenderPlay();
+		await Assert.That(cut.FindAll(".play-guest-notice")).IsEmpty();
+	}
+
+	[Test]
+	public async Task ACharacter_IsNotToldItIsAGuest()
+	{
+		var cut = RenderPlay();
+		PushRoom(scene: false);
+		cut.WaitForAssertion(() => cut.Find(".play-aside .here-card"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-guest-notice")).IsEmpty();
+	}
+
 	/// <summary>
 	/// Walking into a room with a scene keeps the terminal: a marker above it says a scene is running and
 	/// opens the Story when pressed. The Story's composer replaces the terminal's line, which stays mounted.

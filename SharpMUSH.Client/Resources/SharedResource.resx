@@ -4712,6 +4712,15 @@
   <data name="NavPlaySceneHereHide" xml:space="preserve">
     <value>Hide this notice</value>
   </data>
+  <data name="NavPlayGuestLabel" xml:space="preserve">
+    <value>Playing as a guest</value>
+  </data>
+  <data name="NavPlayGuestDetail" xml:space="preserve">
+    <value>Make an account to keep a character of your own.</value>
+  </data>
+  <data name="NavPlayGuestCreateAccount" xml:space="preserve">
+    <value>Create an account</value>
+  </data>
   <data name="NavPlaySceneJoin" xml:space="preserve">
     <value>Join scene</value>
   </data>

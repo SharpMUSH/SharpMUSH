@@ -213,6 +213,12 @@ public partial class Play
 	/// </summary>
 	private RoomOccupant? SelfRow => PlayTerminal.IsConnected ? Room.Occupants.FirstOrDefault(o => o.You) : null;
 
+	/// <summary>
+	/// A guest login that the game answered with a character: the room lists the viewer. A guest login it refused
+	/// (every guest in use) leaves the connection at the login screen, with no row to find.
+	/// </summary>
+	private bool PlayingAsGuest => PlayTerminal.IsGuest && SelfRow is not null;
+
 	/// <summary>The scene's title in a scene; outside one, the room's name only while no banner shows it.</summary>
 	private string? CardSubtitle =>
 		SceneHere?.Title is { Length: > 0 } scene ? scene
