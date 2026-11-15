@@ -166,7 +166,7 @@ public class MailControllerTests
 		Subject = MarkupString.MarkupText.Plain(subject),
 		From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult<AnyOptionalSharpObject>(new None())),
 		To = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(
-			new TestObjectFactory().CreatePlayer((int)(100 + id), to).WithNoneOption()))
+			new TestObjectFactory().CreatePlayer(100 + to.Sum(c => c), to).WithNoneOption()))
 	};
 
 	private static IMediator SentMediator(params SharpMail[] sent)
@@ -198,6 +198,21 @@ public class MailControllerTests
 		await Assert.That(first.To).IsEquivalentTo(new[] { "Alice", "Bob" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(first.ReadBy).IsEqualTo(1);
 		await Assert.That(rows.Single(r => r.Id == 9).To).IsEquivalentTo(new[] { "Alice" });
+	}
+
+	/// <summary>Two sends alike in every way to one recipient stay two messages: one send reaches a mailbox once.</summary>
+	[Test]
+	public async Task SentKeepsTwoLikeSendsToOneRecipientApart()
+	{
+		var at = new DateTimeOffset(2026, 11, 15, 2, 0, 0, TimeSpan.Zero);
+		var mediator = SentMediator(
+			SentCopy(4, "Alice", at, "Ping", "Ping", read: true),
+			SentCopy(5, "Alice", at.AddSeconds(1), "Ping", "Ping", read: true));
+
+		var rows = (await CreateReadController(mediator).Sent(CancellationToken.None)).Value!;
+
+		await Assert.That(rows.Select(r => r.Id)).IsEquivalentTo(new long[] { 5, 4 }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(rows.All(r => r.To.Count == 1 && r.ReadBy == 1)).IsTrue();
 	}
 
 	/// <summary>A sent message is read by its first copy's id; any other id is not the reader's to read.</summary>

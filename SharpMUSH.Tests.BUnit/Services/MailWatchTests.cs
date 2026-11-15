@@ -41,7 +41,44 @@ public class MailWatchTests : TrackingBunitContext
 		fake.Deliver(new(4, "Mara Quill", "Second bell", DateTimeOffset.UnixEpoch, Read: false, Urgent: false, "INBOX"));
 
 		var (mail, unread) = await arrived.Task.WaitAsync(TimeSpan.FromSeconds(5));
-		await Assert.That(mail).IsEqualTo(new MailWatch.NewMail(4, "Mara Quill", "Second bell", false));
+		await Assert.That(mail).IsEqualTo(new MailWatch.NewMail(4, "Mara Quill", "Second bell", false) { InInbox = true });
 		await Assert.That(unread).IsEqualTo(3);
+	}
+
+	/// <summary>A message filed out of the inbox (a MAILFILTER) is announced, but not as an inbox number to open.</summary>
+	[Test]
+	public async Task AMessageNotInTheInbox_IsNotLinkedByItsNumber()
+	{
+		var fake = SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Install(this);
+		var watch = Services.GetRequiredService<MailWatch>();
+		await watch.RefreshAsync();
+
+		var arrived = new TaskCompletionSource<MailWatch.NewMail>();
+		watch.Arrived += mail => arrived.TrySetResult(mail);
+		fake.Oob.Set(MailWatch.NewMailPackage, """{"v":2,"number":9,"from":"Wren","subject":"Filed","urgent":false}""");
+
+		var mail = await arrived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(mail.InInbox).IsFalse();
+	}
+
+	/// <summary>A message for the previous character, still being counted when the tab switches, is not announced.</summary>
+	[Test]
+	public async Task AMessageForThePreviousCharacter_IsNotAnnounced()
+	{
+		var fake = SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Install(this);
+		var watch = Services.GetRequiredService<MailWatch>();
+		await watch.RefreshAsync();
+
+		var announced = 0;
+		watch.Arrived += _ => announced++;
+		var gate = fake.HoldLists = new TaskCompletionSource();
+		fake.Deliver(new(4, "Mara Quill", "Second bell", DateTimeOffset.UnixEpoch, Read: false, Urgent: false, "INBOX"));
+		fake.SwitchCharacter();
+		gate.SetResult();
+		await watch.RefreshAsync();
+		// Nothing to wait for when nothing comes: give the held arrival time to finish, then look.
+		await Task.Delay(TimeSpan.FromMilliseconds(200));
+
+		await Assert.That(announced).IsEqualTo(0);
 	}
 }

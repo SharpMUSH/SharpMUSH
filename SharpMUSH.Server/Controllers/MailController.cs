@@ -175,10 +175,15 @@ public class MailController(
 		public SharpMail First { get; } = first;
 		public List<string> To { get; } = [];
 		public int ReadBy { get; private set; }
+		private readonly HashSet<string> _recipients = [];
 
-		public void Add(string to, bool read)
+		/// <summary>Whether this send already has a copy for that recipient: a second one is another send.</summary>
+		public bool Reached(string? recipient) => recipient is not null && _recipients.Contains(recipient);
+
+		public void Add(string? recipient, string to, bool read)
 		{
-			if (!To.Contains(to)) To.Add(to);
+			if (recipient is not null) _recipients.Add(recipient);
+			To.Add(to);
 			if (read) ReadBy++;
 		}
 	}
@@ -192,7 +197,7 @@ public class MailController(
 	/// <summary>
 	/// The character's sent mail in the order it was sent, the copies of one send folded together: consecutive
 	/// copies (the store keeps them in id order) with the same subject, text and urgency, stamped within
-	/// <see cref="SameSend"/> of the first.
+	/// <see cref="SameSend"/> of the first, each to a recipient the send has not reached yet.
 	/// </summary>
 	private async Task<List<SentMessage>> SentMessagesAsync(SharpPlayer player, CancellationToken ct)
 	{
@@ -201,13 +206,13 @@ public class MailController(
 		await foreach (var mail in mediator.CreateStream(new GetAllSentMailListQuery(player.Object)).WithCancellation(ct))
 		{
 			if (mail.Id is null || MailNumber(mail.Id) is not { } id) continue;
-			var to = await RecipientNameAsync(mail, names);
-			if (messages.Count == 0 || !SameMessage(messages[^1].First, mail))
+			var (recipient, to) = await RecipientAsync(mail, names);
+			if (messages.Count == 0 || !SameMessage(messages[^1].First, mail) || messages[^1].Reached(recipient))
 			{
 				messages.Add(new SentMessage(id, mail));
 			}
 
-			messages[^1].Add(to, mail.Read);
+			messages[^1].Add(recipient, to, mail.Read);
 		}
 
 		return messages;
@@ -225,11 +230,12 @@ public class MailController(
 		=> long.TryParse(id.AsSpan(id.IndexOf('/') + 1), System.Globalization.NumberStyles.None,
 			System.Globalization.CultureInfo.InvariantCulture, out var number) ? number : null;
 
-	private static async ValueTask<string> RecipientNameAsync(SharpMail mail, Dictionary<string, string> names)
+	/// <summary>The mailbox a copy is in, as its dbref and its name; no dbref once that mailbox is gone.</summary>
+	private static async ValueTask<(string? Key, string Name)> RecipientAsync(SharpMail mail, Dictionary<string, string> names)
 	{
-		if (mail.To is null) return UnknownSender;
+		if (mail.To is null) return (null, UnknownSender);
 		var recipient = await mail.To.WithCancellation(CancellationToken.None);
-		if (recipient is not AnySharpObject found) return UnknownSender;
+		if (recipient is not AnySharpObject found) return (null, UnknownSender);
 		var key = found.Object().DBRef.ToString();
 		if (!names.TryGetValue(key, out var name))
 		{
@@ -237,7 +243,7 @@ public class MailController(
 			names[key] = name;
 		}
 
-		return name;
+		return (key, name);
 	}
 
 	/// <summary>

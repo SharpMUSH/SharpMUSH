@@ -23,7 +23,14 @@ public sealed class MailWatch : IDisposable
 
 	/// <summary>A message that has just arrived, as <c>mail.new</c> describes it.</summary>
 	/// <param name="Number">Its number in the inbox, as <c>@mail</c> prints it.</param>
-	public sealed record NewMail(int Number, string From, string Subject, bool Urgent);
+	public sealed record NewMail(int Number, string From, string Subject, bool Urgent)
+	{
+		/// <summary>
+		/// Whether the inbox, read again, still holds it at <see cref="Number"/>: a <c>MAILFILTER</c> may have filed it
+		/// elsewhere, and a later message may have taken the number.
+		/// </summary>
+		public bool InInbox { get; init; }
+	}
 
 	private readonly MailService _mail;
 	private readonly ITerminalService _terminal;
@@ -31,6 +38,11 @@ public sealed class MailWatch : IDisposable
 
 	/// <summary>Only the latest read may write: reads land in any order.</summary>
 	private long _ticket;
+
+	/// <summary>Counts character switches, so a message that arrived for the previous character is not announced.</summary>
+	private long _character;
+
+	private IReadOnlyList<MailService.MailSummary> _inbox = [];
 
 	public MailWatch(MailService mail, ITerminalService terminal, IAccountAuthState auth)
 	{
@@ -57,13 +69,16 @@ public sealed class MailWatch : IDisposable
 		var ticket = ++_ticket;
 		if (!_terminal.IsConnected)
 		{
+			_inbox = [];
 			Set(null);
 			return;
 		}
 
 		var rows = await _mail.ListAsync(Inbox);
 		if (ticket != _ticket) return;
-		Set(rows is IReadOnlyList<MailService.MailSummary> list ? list.Count(r => !r.Read) : InboxUnread);
+		if (rows is not IReadOnlyList<MailService.MailSummary> list) return;
+		_inbox = list;
+		Set(list.Count(r => !r.Read));
 	}
 
 	private void Set(int? unread)
@@ -78,6 +93,8 @@ public sealed class MailWatch : IDisposable
 	/// <summary>The count on screen is the previous character's; it goes at once, not when the new one is read.</summary>
 	private void OnActingChanged()
 	{
+		_character++;
+		_inbox = [];
 		Set(null);
 		_ = RefreshAsync();
 	}
@@ -107,8 +124,12 @@ public sealed class MailWatch : IDisposable
 
 	private async Task ArrivedAsync(NewMail? arrived)
 	{
+		var character = _character;
 		await RefreshAsync();
-		if (arrived is not null) Arrived?.Invoke(arrived);
+		if (arrived is null || character != _character) return;
+		var inInbox = _inbox.Any(row => row.Number == arrived.Number && !row.Read
+			&& row.From == arrived.From && row.Subject == arrived.Subject);
+		Arrived?.Invoke(arrived with { InInbox = inInbox });
 	}
 
 	/// <summary>

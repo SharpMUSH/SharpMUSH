@@ -24,7 +24,8 @@
             config.ActionColor = Color.Primary;
             config.OnClick = _ =>
             {
-                Nav.NavigateTo($"/mail/{mail.Number}");
+                // Filed elsewhere, or its number taken: the inbox, not someone else's message marked read.
+                Nav.NavigateTo(mail.InInbox ? $"/mail/{mail.Number}" : "/mail");
                 return Task.CompletedTask;
             };
         }, key: $"mail-new-{mail.Number}");
