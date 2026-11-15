@@ -180,12 +180,10 @@ public static class FunctionRestrictionFlags
 	{
 		if (word.Equals("royalty", StringComparison.OrdinalIgnoreCase)) return PortalPermission.GameRoyalty;
 
-		foreach (var prefix in GrantPrefixes)
+		if (Array.Find(GrantPrefixes, prefix => word.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) is { } named)
 		{
-			if (!word.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
-			var name = word[prefix.Length..];
-			if (name.Length == 0) return null;
-			return prefix == "perm^" ? name.ToLowerInvariant() : prefix + name;
+			var name = word[named.Length..];
+			return name.Length == 0 ? null : named == "perm^" ? name.ToLowerInvariant() : named + name;
 		}
 
 		return word.Contains('.') && word.IndexOf('^') < 0 ? word.ToLowerInvariant() : null;
