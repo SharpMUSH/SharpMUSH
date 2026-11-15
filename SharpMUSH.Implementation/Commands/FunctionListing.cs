@@ -10,6 +10,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -118,18 +119,20 @@ public partial class Commands
 	}
 
 	/// <summary><c>@function &lt;name&gt;</c> for a built-in.</summary>
-	private MarkupText BuiltinFunctionReport(SharpFunctionAttribute attr, bool isSystem, string? restriction)
+	private MarkupText BuiltinFunctionReport(SharpFunctionAttribute declared, bool isSystem, string? restriction)
 	{
+		// What the function asks of a caller now: its own restriction with any @function/restrict applied.
+		var attr = FunctionRestrictionFlags.Restricted(declared, restriction, userFunction: false);
 		var flags = Enum.GetValues<FunctionFlags>()
 			.Where(flag => flag != FunctionFlags.Regular && flag != FunctionFlags.Arg_Mask && attr.Flags.HasFlag(flag))
 			.Select(flag => flag.ToString()).DefaultIfEmpty(nameof(FunctionFlags.Regular));
-		var restrictions = attr.Restrict.Append(restriction ?? string.Empty).Where(word => !string.IsNullOrWhiteSpace(word)).ToArray();
 		(string, MarkupText)[] fields =
 		[
 			("Type", MarkupText.Plain(isSystem ? "built-in" : "@function")),
 			("Arguments", MarkupText.Plain(FunctionArity(attr.MinArgs, attr.MaxArgs))),
 			("Flags", MarkupText.Plain(string.Join(" · ", flags))),
-			.. restrictions.Length == 0 ? [] : new[] { ("Restricted", MarkupText.Plain(string.Join(" · ", restrictions))) },
+			.. attr.Restrict.Length == 0 ? [] : new[] { ("Needs one of", MarkupText.Plain(string.Join(" · ", attr.Restrict))) },
+			.. string.IsNullOrWhiteSpace(restriction) ? [] : new[] { ("Restricted", MarkupText.Plain(restriction)) },
 		];
 		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"{attr.Name.ToLowerInvariant()}()"), ServerLayout.KeyValues(fields)), 78, HouseLook.Look);
 	}

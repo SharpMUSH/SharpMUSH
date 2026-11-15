@@ -289,9 +289,12 @@ internal sealed class AttributeEvaluator(
 				if (FunctionSandbox.Refusal(attribute.ToPlainText(), userFunction: false, applyFunction.LibraryInformation.Attribute.Name) is { } sandboxed)
 					return new CallState(sandboxed);
 
+				// @function/restrict applies onto what the built-in declares; InvokeAsync checks the result.
 				var builtinRestriction = userFunctions?.GetBuiltinRestriction(attribute.ToPlainText());
-				if (builtinRestriction is not null && !await realExecutor.SatisfiesFunctionRestriction(builtinRestriction))
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
+				var restricted = FunctionRestrictionFlags.Restricted(applyFunction.LibraryInformation.Attribute, builtinRestriction, userFunction: false);
+				var applied = ReferenceEquals(restricted, applyFunction.LibraryInformation.Attribute)
+					? applyFunction.LibraryInformation
+					: applyFunction.LibraryInformation with { Attribute = restricted };
 
 				if (applyFunction.LibraryInformation.Attribute.Flags.HasFlag(FunctionFlags.StripAnsi))
 				{
@@ -303,7 +306,7 @@ internal sealed class AttributeEvaluator(
 
 				var result = await parser.With(
 					s => s.ForAttributeArguments(ArgumentList.From(slimArgs)),
-					async np => await FunctionDispatcher.InvokeAsync(np, applyFunction.LibraryInformation, realExecutor,
+					async np => await FunctionDispatcher.InvokeAsync(np, applied, realExecutor,
 						configuration.CurrentValue.Function.FunctionSideEffects, notifyService,
 						logger, sideEffectsNeedGrant: configuration.CurrentValue.Compatibility.SidefxFlag)
 				);

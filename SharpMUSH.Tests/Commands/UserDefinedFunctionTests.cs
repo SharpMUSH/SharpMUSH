@@ -246,19 +246,59 @@ public class UserDefinedFunctionTests
 	}
 
 	[Test]
-	public async ValueTask RestrictNegationForbidsWizard()
+	public async ValueTask RestrictNegationClearsTheWord()
 	{
-		// "!wizard" forbids wizards; a non-wizard is still permitted.
+		// apply_restrictions (src/function.c): "!wizard" clears the wizard bit a word before it set.
 		var fn = $"negfn{U()}";
 		var attr = $"NEGATTR{U()}";
-		await Cmd($"&{attr} me=plebsonly");
+		await Cmd($"&{attr} me=everyone");
 		await Cmd($"@function {fn}=me,{attr}");
-		await Cmd($"@function/restrict {fn}=!wizard");
-
-		await Assert.That((await Eval($"{fn}()")).ToUpperInvariant()).Contains("PERMISSION DENIED");
+		await Cmd($"@function/restrict {fn}=wizard !wizard");
 
 		var player = await NewNonWizardPlayer();
-		await Assert.That(await EvalAs(player, $"{fn}()")).IsEqualTo("plebsonly");
+		await Assert.That(await EvalAs(player, $"{fn}()")).IsEqualTo("everyone");
+		await Assert.That(await Eval($"{fn}()")).IsEqualTo("everyone");
+	}
+
+	/// <summary>
+	/// Grants are alternatives: a role, a power or a permission each lets its holder call the function, and a
+	/// <c>!</c> grant turns its holders away even when they hold another.
+	/// </summary>
+	[Test]
+	public async ValueTask RestrictToRolesAndPowers_LetsAnyHolderCall()
+	{
+		var fn = $"grantfn{U()}";
+		var attr = $"GRANTATTR{U()}";
+		var role = $"r{U()[..12]}";
+		var muted = $"m{U()[..12]}";
+		await Cmd($"&{attr} me=granted");
+		await Cmd($"@function {fn}=me,{attr}");
+		await Cmd($"@role/create {role}=Staff");
+		await Cmd($"@role/create {muted}=Staff");
+		try
+		{
+			await Cmd($"@function/restrict {fn}=role^{role} power^Send_OOB !role^{muted}");
+
+			var outsider = await NewNonWizardPlayer();
+			var member = await NewNonWizardPlayer();
+			var powered = await NewNonWizardPlayer();
+			var mutedMember = await NewNonWizardPlayer();
+			await Cmd($"@role/assign {member}={role}");
+			await Cmd($"@power {powered}=Send_OOB");
+			await Cmd($"@role/assign {mutedMember}={role}");
+			await Cmd($"@role/assign {mutedMember}={muted}");
+
+			await Assert.That(await EvalAs(outsider, $"{fn}()"))
+				.IsEqualTo($"#-1 PERMISSION DENIED: NEEDS ROLE^{role.ToUpperInvariant()} OR POWER^SEND_OOB");
+			await Assert.That(await EvalAs(member, $"{fn}()")).IsEqualTo("granted");
+			await Assert.That(await EvalAs(powered, $"{fn}()")).IsEqualTo("granted");
+			await Assert.That(await EvalAs(mutedMember, $"{fn}()")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		}
+		finally
+		{
+			await Cmd($"@role/delete {role}");
+			await Cmd($"@role/delete {muted}");
+		}
 	}
 
 	[Test]

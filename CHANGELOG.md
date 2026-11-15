@@ -11,7 +11,12 @@ Two version numbers matter:
 
 ### Added
 
+- `@function/restrict` and `@command/restrict` take `role^<role>`, `power^<power>`, `flag^<flag>` and `perm^<permission>`, any one of which lets its holder in, `!` in front of one to turn its holders away, and `everyone`. On a built-in function they change its own restriction instead of adding to it, so `@function/restrict cmdlink=everyone` lets anyone use `cmdlink()`, and `!wizard` opens a wizard-only function as in PennMUSH. `cmdlink()`, `sound()`, `music()`, `stopsound()`, `image()`, `pane()`, `clearscreen()`, `prefetch()` and `expirelinks()` declare their Send_OOB requirement this way. See `help restrict`.
 - The play terminal's settings menu has an "Echo my commands" checkbox. Off hides the commands you send from the output; on (the default) shows them. The choice is kept per browser.
+
+### Changed
+
+- In `@function/restrict`, a `!` in front of `wizard`, `admin`, `god`, `noguest`, `nogagged`, `nofixed` or `nobody` takes that restriction off, as PennMUSH's does, where it turned away whoever met it. A function refused for lacking a permission names it: `#-1 PERMISSION DENIED: NEEDS CHAT.ADMIN`.
 
 ### Fixed
 

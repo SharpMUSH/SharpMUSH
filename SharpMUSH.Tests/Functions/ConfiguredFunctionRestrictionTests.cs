@@ -122,8 +122,8 @@ public class ConfiguredFunctionRestrictionTests
 	}
 
 	/// <summary>
-	/// Who may call the function and the words that change how a built-in runs (<c>nosidefx</c>) are
-	/// applied; <c>noparse</c> and a <c>!</c> word would otherwise sit in the restriction looking
+	/// Who may call the function, a <c>!</c> word that clears one of those, and the words that change how a
+	/// built-in runs (<c>nosidefx</c>) are applied; <c>noparse</c> would otherwise sit in the restriction looking
 	/// applied while doing nothing. Driven with its own registry, so the shared host's function table
 	/// is untouched.
 	/// </summary>
@@ -141,7 +141,7 @@ public class ConfiguredFunctionRestrictionTests
 			["pemit"] = ["nosidefx"]
 		});
 
-		await Assert.That(registry.GetBuiltinRestriction("lstats")).IsEqualTo("NoGuest");
+		await Assert.That(registry.GetBuiltinRestriction("lstats")).IsEqualTo("NoGuest !admin");
 		await Assert.That(registry.GetBuiltinRestriction("pemit")).IsEqualTo("nosidefx");
 	}
 

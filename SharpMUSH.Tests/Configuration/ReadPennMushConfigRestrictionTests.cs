@@ -97,8 +97,8 @@ public class ReadPennMushConfigRestrictionTests
 	}
 
 	/// <summary>
-	/// A <c>restrict_function</c> word that is not applied to a built-in (<c>noparse</c>) or clears one of
-	/// its own restrictions (<c>!</c>) is kept, and reported as having no effect rather than claimed as working.
+	/// A <c>restrict_function</c> word that is not applied to a built-in (<c>noparse</c>) is kept, and reported as
+	/// having no effect rather than claimed as working. A <c>!</c> word clears that restriction, as it does in PennMUSH.
 	/// </summary>
 	[Test]
 	public async Task FunctionRestrictionWordsThatAreNotApplied_AreReported()
@@ -115,8 +115,7 @@ public class ReadPennMushConfigRestrictionTests
 			const string applied = "nobody, noguest, nogagged, nofixed, admin, wizard, god, logname, logargs, deprecated, localize, nosidefx";
 			await Assert.That(import.Skipped).IsEquivalentTo(new[]
 			{
-				$"restrict_function pemit noparse: kept in function_restrictions, but SharpMUSH applies only {applied}, so it has no effect.",
-				$"restrict_function lstats !admin: kept in function_restrictions, but SharpMUSH applies only {applied}, so it has no effect."
+				$"restrict_function pemit noparse: kept in function_restrictions, but SharpMUSH applies only {applied}, so it has no effect."
 			});
 		}
 		finally

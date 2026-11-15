@@ -73,12 +73,14 @@ public sealed class LiveAnalysisCatalog(
 		foreach (var candidate in captured.Functions)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
-			if (await FunctionDispatcher.CheckPermissionAsync(candidate.Attribute, executor) is not null) continue;
 			var permittedNames = new List<string>();
 			foreach (var name in candidate.Aliases.Prepend(candidate.Name))
 			{
 				cancellationToken.ThrowIfCancellationRequested();
-				if (await executor.SatisfiesFunctionRestriction(captured.Users.BuiltinRestrictions.GetValueOrDefault(name)))
+				// A name's @function/restrict applies onto what the function declares, so it can loosen it too.
+				var restricted = FunctionRestrictionFlags.Restricted(candidate.Attribute,
+					captured.Users.BuiltinRestrictions.GetValueOrDefault(name), userFunction: false);
+				if (await FunctionDispatcher.CheckPermissionAsync(restricted, executor) is null)
 					permittedNames.Add(name);
 			}
 			if (permittedNames.Count == 0) continue;

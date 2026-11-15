@@ -430,7 +430,7 @@ public static partial class ReadPennMushConfig
 		foreach (var (name, restriction) in work.Restriction.FunctionRestrictions)
 		{
 			foreach (var word in restriction[0].Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries)
-						 .Where(word => !FunctionPermissionWords.Contains(word, StringComparer.OrdinalIgnoreCase)))
+						 .Where(word => !IsAppliedFunctionWord(word.TrimStart('!'))))
 			{
 				skipped.Add($"restrict_function {name} {word}: kept in function_restrictions, but SharpMUSH applies only {string.Join(", ", FunctionPermissionWords)}, so it has no effect.");
 			}
@@ -644,6 +644,17 @@ public static partial class ReadPennMushConfig
 	/// file is matched by this alone.
 	/// </summary>
 	public static string IncludedFileName(string name) => name[(name.LastIndexOfAny(['/', '\\']) + 1)..];
+
+	/// <summary>
+	/// A <see cref="FunctionPermissionWords"/> word, or one naming what lets its holder call the function: <c>role^</c>,
+	/// <c>power^</c>, <c>flag^</c> or <c>perm^</c> and a name, a dotted permission, <c>royalty</c> or <c>everyone</c>.
+	/// </summary>
+	private static bool IsAppliedFunctionWord(string word)
+		=> FunctionPermissionWords.Contains(word, StringComparer.OrdinalIgnoreCase)
+			|| word.Equals("royalty", StringComparison.OrdinalIgnoreCase) || word.Equals("everyone", StringComparison.OrdinalIgnoreCase)
+			|| (word.Contains('.') && !word.Contains('^'))
+			|| (word.Split('^', 2) is [var kind, { Length: > 0 }]
+				&& kind.ToLowerInvariant() is "role" or "power" or "flag" or "perm");
 
 	/// <summary>The <c>restrict_function</c> words SharpMUSH applies: the ones <c>check_func</c> tests (<c>src/function.c</c>).</summary>
 	private static readonly string[] FunctionPermissionWords =

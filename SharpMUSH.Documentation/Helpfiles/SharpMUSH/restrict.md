@@ -11,6 +11,16 @@
       "lookup": "restrict command restriction rules"
     },
     {
+      "id": "roles-powers-and-permissions",
+      "heading": "Roles, powers and permissions",
+      "lookup": "restrict roles"
+    },
+    {
+      "id": "built-in-restrictions",
+      "heading": "Changing a built-in's restriction",
+      "lookup": "restrict built-in"
+    },
+    {
       "id": "function-and-command-only",
       "heading": "Restrictions for functions or commands only",
       "lookup": "restrict function only"
@@ -45,6 +55,13 @@ From the game:<br>
 
 For commands, if `<error message>` is given, that message is sent to the player who runs it instead of a generic, unhelpful error message.
 
+- [restrict command restriction rules]: the words a restriction is made of
+- [restrict roles]: letting the holders of a role, power, flag or permission in
+- [restrict built-in]: loosening or replacing what a built-in asks for
+- [restrict function only]: words for functions or commands only
+- [restrict imported]: the configuration settings and imported games
+- [restrict function and command permissions]: a function that stands in for a command
+
 ## Command restriction rules
 
 For commands, `<restriction>` should be an `@lock`-style boolexp (though, for backwards compatability, the restrictions below can be used, and will be converted into an `@lock` automatically). For functions, `<restriction>` should be any combination of the phrases below. For attributes, `<restriction>` is a list of attribute flags, or "none" to create a standard attribute with no restrictions (see [attribute flags]).
@@ -58,6 +75,49 @@ For commands, `<restriction>` should be an `@lock`-style boolexp (though, for ba
     nobody     Nothing can use it. Same as the /disable switch to `@command` or `@function`.<br>
     logname    When a built-in function is used, log its name, and who is using it.<br>
     logargs    When a built-in function is used, log its name and arguments, and who is using it. @command/restrict refuses both.
+
+A `!` in front of one of these words takes it off again, including one the command or function has of its own (see [restrict built-in]).
+
+The words can be mixed with the role, power, flag and permission words in [restrict roles].
+
+## Roles, powers and permissions
+
+These words let the holders of something use a command or function. Holding any one of them is enough.
+
+    role^<role>        Holds the role, such as `role^builder` or a faction's role.<br>
+    power^<power>      Has the power, such as `power^Send_OOB`.<br>
+    flag^<flag>        Has the flag.<br>
+    perm^<permission>  Holds the permission, such as `perm^players.moderate`. A word with a dot in it, such as `chat.admin`, means the same.<br>
+    royalty            Functions only: holds `game.royalty`.<br>
+    everyone           Drops every one of these words named before it, so none is needed.
+
+A `!` in front of one turns away whoever holds it, even if they hold another. One that does not exist is held by nobody, so a typo locks rather than opens. For a function, God holds every one. For commands, a flag or power can also be named on its own, as `Send_OOB`.
+
+```sharp
+> @function/restrict pemit=role^staff power^Can_Spoof
+> @command/restrict +ooc=noguest role^approved !role^muted
+> think pemit(me,hi)
+Output: #-1 PERMISSION DENIED: NEEDS ROLE^STAFF OR POWER^CAN_SPOOF
+```
+
+## Changing a built-in's restriction
+
+A built-in function or command comes with its own restriction. `@function/restrict` and `@command/restrict` change it rather than adding a second one, so they can loosen it as well as tighten it.
+
+For a function, each `@function/restrict` starts again from the function's own restriction and applies its words in order. A word in [restrict command restriction rules] sets that restriction, and `!` takes it off: `!wizard` opens a wizard-only function. The first role, power, flag or permission word replaces the function's own; later ones add to it. `@function <name>` shows what it needs now under "Needs one of".
+
+For a command, a restriction replaces its own lock, and `!` takes off one of its own `god`, `noguest`, `nogagged` or `noapp`.
+
+`cmdlink()` comes needing `game.wizard` or `game.send_oob` (the Send_OOB power):
+```sharp
+> think cmdlink(Look,look)
+Output: #-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SEND_OOB
+> @function/restrict cmdlink=everyone
+> @function/restrict cmdlink=role^builder
+> @function/restrict cmdlink=
+```
+
+The first lets anyone use it, the second only builders, and the third puts it back as it came. `sound()`, `music()`, `stopsound()`, `image()`, `pane()`, `clearscreen()`, `prefetch()` and `expirelinks()` come needing the same, and `image()` also takes `game.send_image`.
 
 ## Restrictions for functions or commands only
 
@@ -75,9 +135,9 @@ Commands can also give any flag, power or type, to restrict to objects with one 
 
 ## Restriction settings and imported games
 
-The game keeps its `restrict_command` lines in the `command_restrictions` setting and its `restrict_function` lines in `function_restrictions`; a new game ships both empty (see [compatibility commands]). In `command_restrictions`, `noguest`, `nofixed`, `noplayer`, `nobody`, a flag or power name, a lock and the `" <message>` suffix all mean what they mean in `restrict.cnf`. `function_restrictions` takes `noguest`, `nogagged`, `nofixed`, `admin`, `wizard`, `god`, `nobody`, `logname`, `logargs`, `deprecated`, `localize` and `nosidefx`.
+The game keeps its `restrict_command` lines in the `command_restrictions` setting and its `restrict_function` lines in `function_restrictions`; a new game ships both empty (see [compatibility commands]). In `command_restrictions`, `noguest`, `nofixed`, `noplayer`, `nobody`, a flag or power name, the words in [restrict roles], a lock and the `" <message>` suffix all mean what they mean in `restrict.cnf`. `function_restrictions` takes `noguest`, `nogagged`, `nofixed`, `admin`, `wizard`, `god`, `nobody`, `logname`, `logargs`, `deprecated`, `localize`, `nosidefx` and the words in [restrict roles], each with or without a `!`.
 
-An imported game keeps its own: reading a PennMUSH `mush.cnf` follows its `include` lines, as `config_file_startup` does, and carries each `restrict_command` line into `command_restrictions` and each `restrict_function` line into `function_restrictions`, and both are applied at startup, so an imported `restrict_function lstats noguest` answers a guest's `lstats()` with `#-1 PERMISSION DENIED` as PennMUSH does. Any other word (`noparse`, `userfn`), or a `!` word that clears one of a built-in's own restrictions, is kept but has no effect, and the import names it. A line that cannot be carried (an include that cannot be read, a restriction with no value, a `restrict_attribute`) is logged by name. A `mush.cnf` uploaded through the portal reads each `include` from the file of that name uploaded beside it, never from the server's disk, and an included file that was not uploaded is logged by name.
+An imported game keeps its own: reading a PennMUSH `mush.cnf` follows its `include` lines, as `config_file_startup` does, and carries each `restrict_command` line into `command_restrictions` and each `restrict_function` line into `function_restrictions`, and both are applied at startup, so an imported `restrict_function lstats noguest` answers a guest's `lstats()` with `#-1 PERMISSION DENIED` as PennMUSH does. Any other word (`noparse`, `userfn`) is kept but has no effect, and the import names it. A line that cannot be carried (an include that cannot be read, a restriction with no value, a `restrict_attribute`) is logged by name. A `mush.cnf` uploaded through the portal reads each `include` from the file of that name uploaded beside it, never from the server's disk, and an included file that was not uploaded is logged by name.
 
 ## Function and command permissions
 
@@ -100,5 +160,6 @@ Examples:
 - [@command]
 - [@function]
 - [@attribute]
+- [roles]
 - [LOCKING]
 :::

@@ -457,6 +457,46 @@ public class CommandManagementTests
 	}
 
 	/// <summary>
+	/// <c>ROLE^</c> keys mix with Penn's restriction words: a holder of the role runs the command, and a
+	/// <c>!ROLE^</c> key turns its holders away. <c>everyone</c> drops what came before it.
+	/// </summary>
+	[Test]
+	public async ValueTask Restrict_TakesRoles()
+	{
+		var wizard = await Wizard();
+		var clone = CommandName();
+		var role = $"r{Guid.NewGuid():N}"[..13];
+		var muted = $"m{Guid.NewGuid():N}"[..13];
+		await AsGod($"@role/create {role}=Staff");
+		await AsGod($"@role/create {muted}=Staff");
+		try
+		{
+			await As(wizard, $"@command/clone think={clone}");
+			var member = await Mortal("CmdRoleMember");
+			var mutedMember = await Mortal("CmdRoleMuted");
+			var outsider = await Mortal("CmdRoleOutsider");
+			await AsGod($"@role/assign {member.DbRef}={role}");
+			await AsGod($"@role/assign {mutedMember.DbRef}={role}");
+			await AsGod($"@role/assign {mutedMember.DbRef}={muted}");
+
+			var described = await ToldSelf(wizard, $"@command/restrict {clone}=noguest role^{role} !role^{muted}");
+
+			await Assert.That(described.Select(line => line.TrimEnd())).Contains($"Lock       : (ROLE^{role})&!ROLE^{muted}");
+			await Assert.That(await As(member, $"{clone} role hello")).Contains("role hello");
+			await Assert.That(await As(mutedMember, $"{clone} role hello")).DoesNotContain("role hello");
+			await Assert.That(await As(outsider, $"{clone} role hello")).DoesNotContain("role hello");
+
+			await As(wizard, $"@command/restrict {clone}=everyone");
+			await Assert.That(await As(outsider, $"{clone} open hello")).Contains("open hello");
+		}
+		finally
+		{
+			await AsGod($"@role/delete {role}");
+			await AsGod($"@role/delete {muted}");
+		}
+	}
+
+	/// <summary>
 	/// <c>cmd_command</c>'s description of a command (<c>src/command.c:2197-2258</c>): name, flags,
 	/// lock, switches, and how each side of the <c>=</c> is parsed. <c>@find</c> splits at the
 	/// <c>=</c> and splits its right side into arguments.
