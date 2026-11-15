@@ -56,7 +56,7 @@ objects:
         - `+config autoset/rules/<rule>/trigger=#<dbref>/<attribute>` names an attribute to `@trigger` each time the rule runs, after its roles. `+help autoset` says what it is told.
         - `+config/remove autoset/rules/<rule>` takes a rule away.
 
-        A role must exist, rank below wizard, and rank below your own highest role.
+        A role must exist and rank below wizard, and only a wizard or higher can set these fields.
 
         Example, giving every approved character the citizen role:
 

@@ -285,12 +285,18 @@ objects:
         value: |-
           cor(permission(%0,roles.admin),permission(%0,config.admin))
         flags: [funsyntax]
-      # %0 an object, %1 a role that exists: whether %0 ranks above it, as giving it needs. hasrole() with at-least
-      # says %0 holds a role at least as high; %1 must not be %0's own highest role. #1 ranks above every role. A role
-      # of the same priority as %0's highest, under another name, passes here; @role/assign still refuses it.
+      # %0 this object, %1 a role that exists: whether %0 ranks above it, as giving it needs. hasrole() with at-least
+      # says %0 holds a role at least as high; %1 must not be %0's own highest role. A role of the same priority as
+      # %0's highest, under another name, passes here; @role/assign, run as %0, still refuses it.
       FUN`RANK`ABOVE:
         value: |-
           cor(strmatch(num(%0),#1),cand(hasrole(%0,%1,1),comp(first(roles(%0)),%1)))
+        flags: [funsyntax]
+      # %0 an object: whether it holds wizard or higher, which makes every role below wizard rank below it. Softcode
+      # cannot read a role's priority, so a setter below wizard could not be checked against the role it names.
+      FUN`RANK`WIZARD:
+        value: |-
+          cor(strmatch(num(%0),#1),hasrole(%0,wizard,1))
         flags: [funsyntax]
       FUN`RANK`EXISTS:
         value: |-
@@ -308,7 +314,7 @@ objects:
         value: |-
           if(cor(not(strlen(%0)),cand(regmatch(%0,^#%[0-9:%]+/%[^/ %]+$),hasattr(before(%0,/),after(%0,/)))),,Give an object's dbref and one of its attributes%, such as #123/AUTOSET`DONE.)
         flags: [funsyntax]
-      # Each role must exist, be one that is ever assigned, rank below this object, and rank below the setter. Every
+      # Each role must exist, be one that is ever assigned and rank below this object, and the setter must be a wizard. Every
       # refusal is listed.
       FUN`CONFIG`CHECK`GRANTS:
         value: |-
@@ -316,7 +322,7 @@ objects:
         flags: [funsyntax]
       FUN`CONFIG`CHECK`GRANT:
         value: |-
-          cond(not(u(%!/FUN`RANK`EXISTS,%0)),There is no role '%0'. @role/list lists them.,match(everyone player god,%0),%0 is never assigned.,not(u(%!/FUN`RANK`ABOVE,%!,%0)),Autoset gives only roles below wizard%, and %0 is not.,not(u(%!/FUN`RANK`ABOVE,%#,%0)),You can give only roles below your highest%, and %0 is not.)
+          cond(not(u(%!/FUN`RANK`EXISTS,%0)),There is no role '%0'. @role/list lists them.,match(everyone player god,%0),%0 is never assigned.,not(u(%!/FUN`RANK`ABOVE,%!,%0)),Autoset gives only roles below wizard%, and %0 is not.,not(u(%!/FUN`RANK`WIZARD,%#)),Only a wizard can name the roles Autoset gives or takes%, since it changes them with its own rank.)
         flags: [funsyntax]
 
       # ---- display --------------------------------------------------------------
@@ -404,7 +410,7 @@ objects:
 
         A rule can also name an attribute to `@trigger` each time it runs, after its roles, to do more: send a welcome, move the character, open a job. It runs whether or not any role changed, as the object it is on, with `%%<player>` \(%%0\), `%%<rule>` \(%%1\), `%%<when>` \(%%2, what ran it, or `apply`\), `%%<gave>` and `%%<took>` \(the roles the rule gave and took this time\).
 
-        Changing the rules needs the `game.wizard` permission, because Autoset gives roles with a wizard's reach. A rule gives only roles below wizard, and only roles below the highest role of whoever sets it.
+        Changing the rules needs the `game.wizard` permission, because Autoset gives roles with a wizard's reach. A rule gives and takes only roles below wizard, and only a wizard or higher can name them, so `game.wizard` held without the wizard role is not enough to set `GIVE` or `TAKE`.
 
         ## Example
 
