@@ -1,4 +1,5 @@
 using SharpMUSH.SocketServer.Models;
+using SharpMUSH.Messaging.Messages;
 
 namespace SharpMUSH.SocketServer.Services;
 
@@ -24,4 +25,6 @@ public sealed record RenderContext(
 	int MaxPictureRows = 100);
 
 /// <param name="Prompt">Whether the markup is a prompt, which is not given a line ending.</param>
-public sealed record RenderRequest(string? Markup, byte[]? Data, RenderContext Context, bool Prompt = false);
+/// <param name="Comm">The markup is a channel line or a page, which a WebSocket frame names.</param>
+public sealed record RenderRequest(string? Markup, byte[]? Data, RenderContext Context, bool Prompt = false,
+	CommOutput Comm = CommOutput.None);

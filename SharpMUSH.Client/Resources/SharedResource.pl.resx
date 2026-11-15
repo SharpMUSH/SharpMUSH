@@ -6088,6 +6088,18 @@
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Pokazuje w wyjściu każde wysłane polecenie. Wyłączone ukrywa je, także te już widoczne. Zapisywane w tej przeglądarce.</value>
   </data>
+  <data name="NavHidePages" xml:space="preserve">
+    <value>Ukryj prywatne wiadomości</value>
+  </data>
+  <data name="NavHidePagesTooltip" xml:space="preserve">
+    <value>Pomija prywatne wiadomości w tym wyjściu, także te już wyświetlone; zostają na liście Wiadomości. Zapisywane w tej przeglądarce.</value>
+  </data>
+  <data name="NavHideChannels" xml:space="preserve">
+    <value>Ukryj wiadomości z kanałów</value>
+  </data>
+  <data name="NavHideChannelsTooltip" xml:space="preserve">
+    <value>Pomija wiadomości z kanałów w tym wyjściu, także te już wyświetlone; każda zostaje w widoku swojego kanału. Zapisywane w tej przeglądarce.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Zachowuj dłuższe logi</value>
   </data>

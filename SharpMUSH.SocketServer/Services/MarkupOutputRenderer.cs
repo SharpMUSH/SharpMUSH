@@ -1,3 +1,4 @@
+using SharpMUSH.Messaging.Messages;
 namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>
@@ -33,5 +34,10 @@ public interface IMarkupOutputRenderer
 	/// Whether this is a prompt rather than a line of output. A prompt is not ended: what follows it is
 	/// the player's own typing, on the same line.
 	/// </param>
-	ValueTask<RenderedOutput> RenderAsync(string markup, ConnectionServerService.ConnectionData connection, bool prompt = false, CancellationToken ct = default);
+	/// <param name="comm">
+	/// The line is a channel line or a page: a WebSocket frame says so (<see cref="WebSocketMarkupFrames"/>). A
+	/// terminal's output is the same either way.
+	/// </param>
+	ValueTask<RenderedOutput> RenderAsync(string markup, ConnectionServerService.ConnectionData connection, bool prompt = false,
+		CancellationToken ct = default, CommOutput comm = CommOutput.None);
 }

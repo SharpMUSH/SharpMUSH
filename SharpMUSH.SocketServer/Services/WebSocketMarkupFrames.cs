@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using SharpMUSH.Messaging.Messages;
 
 namespace SharpMUSH.SocketServer.Services;
 
@@ -10,14 +11,16 @@ namespace SharpMUSH.SocketServer.Services;
 /// browser parses it once and nothing in it is escaped twice. A prompt is the same frame marked
 /// <c>"prompt": true</c>, with the <c>@input</c> session it belongs to when it has one, so a client that
 /// does not know the mark still shows it as a line. The end of a prompt is
-/// <c>{ "type": "prompt", "clear": true, "session": … }</c>.
+/// <c>{ "type": "prompt", "clear": true, "session": … }</c>. A channel line or a page is marked
+/// <c>"comm": "channel"</c> or <c>"comm": "page"</c>, so a client that shows those in a view of their own can
+/// keep it out of the main output.
 /// </summary>
 public static class WebSocketMarkupFrames
 {
 	private static readonly JsonWriterOptions Options = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
 	/// <summary>A line of output. <paramref name="markup"/> is the serializer's JSON, or empty for nothing.</summary>
-	public static byte[] Line(string markup) => Markup(markup, prompt: false, session: null);
+	public static byte[] Line(string markup, CommOutput comm = CommOutput.None) => Markup(markup, prompt: false, session: null, comm);
 
 	public static byte[] Prompt(string markup, string? inputSession) => Markup(markup, prompt: true, inputSession);
 
@@ -28,7 +31,7 @@ public static class WebSocketMarkupFrames
 		if (inputSession is not null) writer.WriteString("session", inputSession);
 	});
 
-	private static byte[] Markup(string markup, bool prompt, string? session) => Write(writer =>
+	private static byte[] Markup(string markup, bool prompt, string? session, CommOutput comm = CommOutput.None) => Write(writer =>
 	{
 		writer.WriteString("type", "markup");
 		writer.WritePropertyName("data");
@@ -36,6 +39,7 @@ public static class WebSocketMarkupFrames
 		writer.WriteRawValue(markup.Length == 0 ? "{}" : markup);
 		if (prompt) writer.WriteBoolean("prompt", true);
 		if (session is not null) writer.WriteString("session", session);
+		if (comm is not CommOutput.None) writer.WriteString("comm", comm is CommOutput.Page ? "page" : "channel");
 	});
 
 	private static byte[] Write(Action<Utf8JsonWriter> properties)

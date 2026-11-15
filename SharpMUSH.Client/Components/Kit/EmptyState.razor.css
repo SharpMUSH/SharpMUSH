@@ -67,6 +67,9 @@
 	font-size: var(--text-sm);
 }
 
+/* The action takes a line of its own under the sentence, lined up with it, so a narrow card never squeezes the text beside a button. */
 .kit-empty--compact .kit-empty-action {
+	flex-basis: 100%;
 	margin-top: 0;
+	padding-inline-start: calc(var(--text-md) + var(--space-3));
 }

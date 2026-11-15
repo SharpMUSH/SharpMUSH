@@ -65,6 +65,21 @@ public class TerminalFrameRendererTests
 	}
 
 	[Test]
+	[Arguments("channel", SharpMUSH.Client.Models.TerminalLineComm.Channel)]
+	[Arguments("page", SharpMUSH.Client.Models.TerminalLineComm.Page)]
+	[Arguments("mail", SharpMUSH.Client.Models.TerminalLineComm.None)]
+	public async Task MarkupNamesItsConversation(string comm, SharpMUSH.Client.Models.TerminalLineComm expected)
+	{
+		var envelope = System.Text.Json.Nodes.JsonNode.Parse(MarkupEnvelope("Wren pages: psst"))!.AsObject();
+		envelope["comm"] = comm;
+
+		var frame = TerminalFrameRenderer.Parse(envelope.ToJsonString());
+
+		await Assert.That(frame.Kind).IsEqualTo(TerminalFrameKind.Markup);
+		await Assert.That(frame.Comm).IsEqualTo(expected);
+	}
+
+	[Test]
 	public async Task OrdinaryMarkupIsNoPrompt()
 	{
 		var frame = TerminalFrameRenderer.Parse(MarkupEnvelope("You see a quay."));
@@ -72,6 +87,7 @@ public class TerminalFrameRendererTests
 		await Assert.That(frame.Kind).IsEqualTo(TerminalFrameKind.Markup);
 		await Assert.That(frame.Prompt).IsFalse();
 		await Assert.That(frame.Session).IsEqualTo(string.Empty);
+		await Assert.That(frame.Comm).IsEqualTo(SharpMUSH.Client.Models.TerminalLineComm.None);
 	}
 
 	[Test]

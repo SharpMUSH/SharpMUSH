@@ -309,7 +309,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 					// and its HTML still has to reach the page.
 					var plainTrimmed = frame.Plain.TrimEnd('\r', '\n');
 					if (!string.IsNullOrEmpty(plainTrimmed) || !string.IsNullOrWhiteSpace(frame.Html))
-						AddLine(frame.Plain, frame.Html, TerminalLineSource.Server);
+						AddLine(new TerminalLine(DateTime.Now, frame.Plain, frame.Html, TerminalLineSource.Server) { Comm = frame.Comm });
 					return;
 				}
 

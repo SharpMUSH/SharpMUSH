@@ -6088,6 +6088,18 @@
   <data name="NavEchoCommandsTooltip" xml:space="preserve">
     <value>Afișează în ieșire fiecare comandă trimisă. Dezactivat le ascunde, inclusiv pe cele deja afișate. Se păstrează în acest browser.</value>
   </data>
+  <data name="NavHidePages" xml:space="preserve">
+    <value>Ascunde mesajele private</value>
+  </data>
+  <data name="NavHidePagesTooltip" xml:space="preserve">
+    <value>Lasă mesajele private în afara acestei ieșiri, inclusiv pe cele deja afișate; rămân în lista Mesaje. Se păstrează în acest browser.</value>
+  </data>
+  <data name="NavHideChannels" xml:space="preserve">
+    <value>Ascunde mesajele de pe canale</value>
+  </data>
+  <data name="NavHideChannelsTooltip" xml:space="preserve">
+    <value>Lasă mesajele de pe canale în afara acestei ieșiri, inclusiv pe cele deja afișate; fiecare rămâne în vizualizarea canalului său. Se păstrează în acest browser.</value>
+  </data>
   <data name="NavKeepLongerLogs" xml:space="preserve">
     <value>Păstrează jurnale mai lungi</value>
   </data>

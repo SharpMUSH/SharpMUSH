@@ -27,6 +27,21 @@ public class TerminalScrollbackTests
 		await Assert.That(restored.Source).IsEqualTo(TerminalLineSource.Server);
 	}
 
+	/// <summary>A page or channel line stays one across a reload, so a terminal that hides those keeps it hidden.</summary>
+	[Test]
+	public async Task A_conversation_line_keeps_its_kind()
+	{
+		var page = new TerminalLine(DateTime.Now, "Wren pages: psst", TerminalLineSource.Server) { Comm = TerminalLineComm.Page };
+		var plain = new TerminalLine(DateTime.Now, "The quay at dusk.", TerminalLineSource.Server);
+
+		var restored = TerminalScrollback.Parse(
+			$"[{TerminalScrollback.Serialize(page).Expect<string>()},{TerminalScrollback.Serialize(plain).Expect<string>()}]");
+
+		await Assert.That(restored.Select(line => line.Comm)).IsEquivalentTo([TerminalLineComm.Page, TerminalLineComm.None],
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(TerminalScrollback.Serialize(plain).Expect<string>()).DoesNotContain("\"c\"");
+	}
+
 	/// <summary>
 	/// Typed input can carry a password (<c>@password</c>, <c>connect</c>), and storage outlives the
 	/// page; system lines describe the connection the page had, not the session.

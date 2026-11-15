@@ -6,7 +6,7 @@
 <div class="sharp-terminal-chunk">
     @foreach (var line in Chunk.Lines)
     {
-        <div @key="line" class="@LineClass(line.Source)" title="@line.Timestamp.ToString("T")">@((Microsoft.AspNetCore.Components.MarkupString)line.Html)</div>
+        <div @key="line" class="@LineClass(line)" title="@line.Timestamp.ToString("T")">@((Microsoft.AspNetCore.Components.MarkupString)line.Html)</div>
     }
 </div>
 
@@ -28,10 +28,12 @@
         return true;
     }
 
-    public static string LineClass(TerminalLineSource source) => source switch
+    public static string LineClass(TerminalLine line) => (line.Source, line.Comm) switch
     {
-        TerminalLineSource.Client => "terminal-line terminal-sent",
-        TerminalLineSource.System => "terminal-line terminal-system",
+        (TerminalLineSource.Client, _) => "terminal-line terminal-sent",
+        (TerminalLineSource.System, _) => "terminal-line terminal-system",
+        (_, TerminalLineComm.Channel) => "terminal-line terminal-comm-channel",
+        (_, TerminalLineComm.Page) => "terminal-line terminal-comm-page",
         _ => "terminal-line"
     };
 }

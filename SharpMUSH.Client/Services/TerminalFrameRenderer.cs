@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using MarkupString.Ansi.Decoding;
 using MarkupString.Decoding;
+using SharpMUSH.Client.Models;
 
 namespace SharpMUSH.Client.Services;
 
@@ -39,8 +40,10 @@ public enum TerminalFrameKind
 /// The <c>@input</c> session a prompt or a prompt clear belongs to; empty for a one-off prompt, and for a
 /// clear that names no session.
 /// </param>
+/// <param name="Comm">A markup frame the engine marked as a channel line (<c>"comm": "channel"</c>) or a page
+/// (<c>"comm": "page"</c>).</param>
 public readonly record struct TerminalFrame(TerminalFrameKind Kind, string Plain, string Html, string Package, string DataJson,
-	bool Prompt = false, string Session = "");
+	bool Prompt = false, string Session = "", TerminalLineComm Comm = TerminalLineComm.None);
 
 /// <summary>One line of a plain-text frame, decoded.</summary>
 /// <param name="Plain">The line's text with every sequence read out of it.</param>
@@ -110,7 +113,7 @@ public static class TerminalFrameRenderer
 							_ => MarkupText.Empty
 						};
 						return new TerminalFrame(TerminalFrameKind.Markup, ms.ToPlainText(), ms.Render(MarkupFormat.Html), string.Empty, string.Empty,
-							IsTrue(root, "prompt"), GetStringProperty(root, "session"));
+							IsTrue(root, "prompt"), GetStringProperty(root, "session"), CommOf(root));
 					}
 				case "prompt" when IsTrue(root, "clear"):
 					return new TerminalFrame(TerminalFrameKind.PromptClear, string.Empty, string.Empty, string.Empty, string.Empty,
@@ -140,6 +143,13 @@ public static class TerminalFrameRenderer
 			return new TerminalFrame(TerminalFrameKind.PlainText, frame, string.Empty, string.Empty, string.Empty);
 		}
 	}
+
+	private static TerminalLineComm CommOf(JsonElement root) => GetStringProperty(root, "comm") switch
+	{
+		"channel" => TerminalLineComm.Channel,
+		"page" => TerminalLineComm.Page,
+		_ => TerminalLineComm.None
+	};
 
 	private static bool IsTrue(JsonElement root, string name) =>
 		root.TryGetProperty(name, out var el) && el.ValueKind == JsonValueKind.True;
