@@ -693,7 +693,11 @@ public class ChargenIntegrationTests
 			await Assert.That(await God($"think [words(jobs(Applications,all))] [job({job},state)]")).IsEqualTo("1 staff")
 				.Because("applying again opens the same job again");
 
-			// With one place, taken by the applicant, a second approval waits for it.
+			// With one place, taken by the applicant, a second approval waits for it. Places are counted by the
+			// approved role, so it is one of this test's own: other tests' players hold "approved".
+			var role = $"cgjob{Guid.NewGuid():N}"[..14];
+			await God($"@role/create {role}=Staff");
+			await God($"&DATA`CONFIG`APPROVED-ROLE {await Chargen()}={role}");
 			await God($"&DATA`CONFIG`CAP {await Chargen()}=1");
 			await As(reviewer, $"+app/approve {applicant.Name}");
 			var second = await Player("CgJobTwo");
