@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const root = new URL('../../SharpMUSH.Client/wwwroot/', import.meta.url);
-function boot() {
+function boot(extra = {}) {
     const listeners = new Map();
     const classes = new Set();
     const box = {
@@ -29,7 +29,7 @@ function boot() {
         observe(target) { resized.push({ target, observer: this, fire: () => this.callback([{ target }]) }); }
         disconnect() { this.disconnected = true; }
     }
-    const context = vm.createContext({ ResizeObserver, getComputedStyle: () => ({ lineHeight: '20px' }), window: { addEventListener: (name) => windowListeners.push(name) }, document: {
+    const context = vm.createContext({ ...extra, ResizeObserver, getComputedStyle: () => ({ lineHeight: '20px' }), window: { addEventListener: (name) => windowListeners.push(name) }, document: {
         getElementById: id => id === 'output' ? output : null
     }});
     const html = readFileSync(new URL('index.html', root), 'utf8');
@@ -110,6 +110,43 @@ test('a reader scrolled up stays where they were when the terminal is shown agai
     output.scrollHeight = 900;
     resized[0].fire();
     assert.equal(output.scrollTop, 100);
+});
+
+test('shown again, a following terminal stays at the bottom while its lines are laid out again', () => {
+    const { terminal, output, resized } = boot();
+    terminal.scrollToBottom('output');
+    output.clientHeight = 0;
+    resized[0].fire();
+    // Shown: chunks off screen stand in at a guessed height at first, so the bottom moves after it is first measured.
+    output.clientHeight = 200;
+    output.scrollHeight = 900;
+    resized[0].fire();
+    assert.equal(output.scrollTop, 900);
+    output.scrollHeight = 1300;
+    resized[0].fire();
+    assert.equal(output.scrollTop, 1300, 'the lines growing keep a follower on the newest line');
+});
+
+test('shown again, a reader is put back on the line they were reading', () => {
+    let lineTop = 0;
+    const line = { isConnected: true, getBoundingClientRect: () => ({ top: lineTop, bottom: lineTop + 20 }) };
+    const chunk = { children: [line], getBoundingClientRect: () => ({ top: lineTop, bottom: lineTop + 20 }) };
+    const { terminal, output, listeners, resized } = boot({ requestAnimationFrame: callback => callback() });
+    output.getBoundingClientRect = () => ({ top: 0 });
+    output.querySelectorAll = () => [chunk];
+    terminal.scrollToBottom('output');
+    listeners.get('wheel')();
+    output.scrollTop = 100;
+    lineTop = -5;
+    listeners.get('scroll')();
+    output.clientHeight = 0;
+    resized[0].fire();
+    // Shown with the lines above laid out taller than their stand-in: the line is 300px lower than it was.
+    output.clientHeight = 200;
+    output.scrollHeight = 1200;
+    lineTop = 295;
+    resized[0].fire();
+    assert.equal(output.scrollTop, 400, 'scrolled by as much as the line moved');
 });
 
 test('an unmounted terminal is let go of by its resize observer', () => {
