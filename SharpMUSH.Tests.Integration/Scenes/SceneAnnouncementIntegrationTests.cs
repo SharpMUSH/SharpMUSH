@@ -113,6 +113,8 @@ public class SceneAnnouncementIntegrationTests
 		var owner = await PlayerAsync("AnnPrivOwner", room);
 		var member = await PlayerAsync("AnnPrivMember", room);
 		var outsider = await PlayerAsync("AnnPrivOut", room);
+		var wizard = await PlayerAsync("AnnPrivWiz", room);
+		await God($"@role/assign #{wizard.DbRef.Number}=wizard");
 		var title = TestIsolationHelpers.GenerateUniqueName("AnnPrivate");
 		await As(owner, $"+scene/create {title}");
 		var scene = await Eval($"scenefocus(#{owner.DbRef.Number})");
@@ -122,12 +124,15 @@ public class SceneAnnouncementIntegrationTests
 		await As(owner, "+scene/pause");
 		var memberBefore = Notifications.CountFor(member.DbRef);
 		var outsiderBefore = Notifications.CountFor(outsider.DbRef);
+		var wizardBefore = Notifications.CountFor(wizard.DbRef);
 
 		await As(owner, "+scene/start");
 
 		await Assert.That(Heard(member, memberBefore)).Contains($"{owner.Name} resumed scene {scene}: {title}")
 			.And.DoesNotContain("to join");
 		await Assert.That(Heard(outsider, outsiderBefore)).DoesNotContain(title).And.DoesNotContain($"scene {scene}");
+		await Assert.That(Heard(wizard, wizardBefore)).Contains($"{owner.Name} resumed scene {scene}: {title}")
+			.Because("a wizard reads every scene");
 	}
 
 	[Test]

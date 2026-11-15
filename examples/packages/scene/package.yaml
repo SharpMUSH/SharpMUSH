@@ -342,9 +342,10 @@ objects:
       FUN`ANNOUNCE`HEARERS: |-
         squish(iter(lcon(%1,player),if(cand(not(strmatch(num(##),num(%2))),u(%!/FUN`ANNOUNCE`SEES,%0,##)),##)))
       # 1 when player %1 may see scene %0, as the Scene plugin decides for whoever asks: a public scene with
-      # scene.view, any scene for a wizard or one of its members. scene() answers for %#, not for %1.
+      # scene.view, any scene for a wizard (God, or game.wizard; not control.all, which Rhost's staff levels hold)
+      # or one of its members. scene() answers for %#, not for %1.
       FUN`ANNOUNCE`SEES: |-
-        cor(cand(scene(%0,public),permission(%1,scene.view)),permission(%1,control.all),not(strmatch(scenemember(%0,%1),#-1*)))
+        cor(cand(scene(%0,public),permission(%1,scene.view)),strmatch(num(%1),#1),permission(%1,game.wizard),not(strmatch(scenemember(%0,%1),#-1*)))
       # %2 <verb %1> scene %0 and its title. A public scene that started or resumed names the command that joins it,
       # unless only those invited may.
       FUN`ANNOUNCE`TEXT: |-
