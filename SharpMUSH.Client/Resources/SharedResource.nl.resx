@@ -9573,4 +9573,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>De achtergrond van het thema staat stil en niets op de pagina schuift of draait. Altijd aan als je apparaat om minder beweging vraagt.</value>
   </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Scène annuleren</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>Een geannuleerde scène verdwijnt voorgoed van het rooster en kan niet opnieuw beginnen.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Scène beëindigen</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>Een beëindigde scène neemt niet meer op en kan niet opnieuw beginnen. Het logboek blijft.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Behouden</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>De scène is niet beëindigd.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>De scène is niet geannuleerd.</value>
+  </data>
 </root>

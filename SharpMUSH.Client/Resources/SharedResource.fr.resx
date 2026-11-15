@@ -8887,4 +8887,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Le fond du thème reste immobile et rien ne glisse ni ne tourne sur la page. Toujours activé quand votre appareil demande moins d'animations.</value>
   </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Annuler la scène</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>Une scène annulée quitte le programme pour de bon et ne peut plus être lancée.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Terminer la scène</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>Une scène terminée cesse d'enregistrer et ne peut plus être relancée. Son journal reste.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>La garder</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>La scène n'a pas été terminée.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>La scène n'a pas été annulée.</value>
+  </data>
 </root>

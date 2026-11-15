@@ -9573,4 +9573,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>A téma háttere mozdulatlan, és semmi sem csúszik vagy forog az oldalon. Mindig be van kapcsolva, ha az eszköze csökkentett mozgást kér.</value>
   </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Jelenet lemondása</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>A lemondott jelenet végleg lekerül a menetrendről, és nem indítható újra.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Jelenet befejezése</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>A befejezett jelenet nem rögzít tovább, és nem indítható újra. A naplója megmarad.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Megtartom</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>A jelenet nem fejeződött be.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>A jelenet nem lett lemondva.</value>
+  </data>
 </root>

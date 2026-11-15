@@ -9573,4 +9573,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Tło motywu stoi w miejscu, a nic na stronie się nie przesuwa ani nie obraca. Zawsze włączone, gdy urządzenie prosi o ograniczenie ruchu.</value>
   </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Odwołaj scenę</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>Odwołana scena na zawsze znika z harmonogramu i nie można jej ponownie rozpocząć.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Zakończ scenę</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>Zakończona scena przestaje nagrywać i nie można jej ponownie rozpocząć. Jej dziennik zostaje.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Zostaw ją</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>Scena nie została zakończona.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>Scena nie została odwołana.</value>
+  </data>
 </root>

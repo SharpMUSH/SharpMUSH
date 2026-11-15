@@ -9573,4 +9573,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Der Hintergrund des Designs steht still, und nichts auf der Seite gleitet oder dreht sich. Immer an, wenn Ihr Gerät reduzierte Bewegung verlangt.</value>
   </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Szene absagen</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>Eine abgesagte Szene verlässt den Plan endgültig und kann nicht wieder gestartet werden.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Szene beenden</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>Eine beendete Szene zeichnet nicht mehr auf und kann nicht wieder gestartet werden. Ihr Protokoll bleibt.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Behalten</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>Die Szene wurde nicht beendet.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>Die Szene wurde nicht abgesagt.</value>
+  </data>
 </root>
