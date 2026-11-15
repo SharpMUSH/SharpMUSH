@@ -60,8 +60,9 @@ the handler can only narrow the engine's list, never widen it.
 
 On a portal (WebSocket) connection the engine also marks the terminal line
 itself: a channel line's frame carries `"comm": "channel"` and a page's, the
-pager's copy included, `"comm": "page"`. A presence line is not marked, since
-no `comm.message` carries it. Play's **Hide pages** and **Hide channel
+pager's copy included, `"comm": "page"`. A presence line (a connect or
+disconnect) is marked as a channel line too, though no `comm.message` carries
+it: the channel view shows who is on as its member list. Play's **Hide pages** and **Hide channel
 messages** settings leave the marked lines out of the main output while the
 sidebar lists channels or pages.
 

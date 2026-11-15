@@ -2095,3 +2095,11 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 		padding-left: calc(var(--space-8) + env(safe-area-inset-left));
 	}
 }
+
+/* The details behind an (i) in Play's terminal settings: wrapped, not one long line (the tooltip renders outside
+   the component, so its scoped CSS cannot reach it). */
+.play-cfg-tip {
+    max-width: 18rem;
+    white-space: normal;
+    text-align: left;
+}

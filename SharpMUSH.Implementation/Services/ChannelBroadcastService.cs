@@ -361,10 +361,9 @@ public class ChannelBroadcastService(
 				}
 			}
 
-			// Marked as a channel line for a client that files those in a view of their own, as the comm feed
-			// does: every line it pushes, which is all but a presence line.
+			// Marked as a channel line, presence lines included, for a client that shows channels in a view of their own.
 			await notifyService.NotifyWithContextAsync(
-				new NotificationContext(member.Object().DBRef, null, []) { Comm = line.ChatType == "@" ? CommOutput.None : CommOutput.Channel },
+				new NotificationContext(member.Object().DBRef, null, []) { Comm = CommOutput.Channel },
 				finalMessage, sender, notification.MessageType, target: member);
 			recipients.Add(member);
 		}

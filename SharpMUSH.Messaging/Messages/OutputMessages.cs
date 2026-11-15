@@ -65,7 +65,7 @@ public record MarkupOutputMessage(long Handle, string Markup) : IHandleMessage
 	public bool ClearPrompt { get; init; }
 
 	/// <summary>
-	/// The line is a channel line or a page that the comm feed also carries, so a WebSocket client that shows
+	/// The line is a channel line or a page, so a WebSocket client that shows
 	/// those in a view of their own can keep it out of the main output. <see cref="CommOutput.None"/> for any other line.
 	/// </summary>
 	public CommOutput Comm { get; init; }

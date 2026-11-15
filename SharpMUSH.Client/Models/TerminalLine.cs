@@ -36,7 +36,7 @@ public class TerminalLine
 	public TerminalLineSource Source { get; }
 
 	/// <summary>
-	/// The line is a channel line or a page, as the engine marked it: one the comm feed also carries, which Play
+	/// The line is a channel line or a page, as the engine marked it, which Play
 	/// can keep out of its main output.
 	/// </summary>
 	public TerminalLineComm Comm { get; init; }
