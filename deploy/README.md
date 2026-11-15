@@ -156,7 +156,7 @@ wss://<your-domain>/telnet
 ```
 
 When the telnet name (`SHARPMUSH_TELNET_HOST`) differs from the domain, the one-click install also serves it there, where a WebSocket
-on any path but `/health` is telnet, so `wss://telnet.<your-domain>/` works. Players connected this way show up in
+on any path but `/health` is telnet, so `wss://<telnet name>/` works. Players connected this way show up in
 `WHO` and the portal as ordinary telnet connections. `/ws` stays the portal terminal's own protocol;
 a MUD client pointed there will not get telnet.
 
