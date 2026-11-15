@@ -76,9 +76,11 @@ objects:
       INC`WAITLIST: |-
         @include/args {{tracker}}/INC`WRITE=character,%<character>,kind,REPLY,keep,1,text,[name(%<actor>)] approved it. Every place is taken%, so it waits for one.[u({{tracker}}/FUN`TEXT`SAID,%<actor>,%<message>)]
       # %<character>'s application is approved: by %<actor> now (%<record> 1), or as a place opened for it (0). The job
-      # closes approved, quietly: chargen told the applicant.
+      # closes approved, quietly: chargen told the applicant. A job staff already closed keeps its outcome and gets
+      # the approval as a staff note.
       INC`APPROVE: |-
-        think setq(cj_job,u({{tracker}}/FUN`JOB,%<character>)); @break not(strlen(%q<cj_job>)); @trigger/inline/nobreak/args {{jobs/jobs}}/INC`API`CLOSE=job,get(%q<cj_job>/JOB`NUM),actor,{{tracker}},outcome,approved,quiet,1,text,[if(%<record>,[name(%<actor>)] approved it.[u({{tracker}}/FUN`TEXT`SAID,%<actor>,%<message>)],A place opened: the application is approved.)]
+        think setqm(cj_job,u({{tracker}}/FUN`JOB,%<character>),
+        cj_text,if(%<record>,[name(%<actor>)] approved it.[u({{tracker}}/FUN`TEXT`SAID,%<actor>,%<message>)],A place opened: the application is approved.)); @break not(strlen(%q<cj_job>)); @break strmatch(get(%q<cj_job>/JOB`STATE),closed)={@include/args {{tracker}}/INC`WRITE=character,%<character>,kind,NOTE,text,%q<cj_text>}; @trigger/inline/nobreak/args {{jobs/jobs}}/INC`API`CLOSE=job,get(%q<cj_job>/JOB`NUM),actor,{{tracker}},outcome,approved,quiet,1,text,%q<cj_text>
       # %<actor> retired %<character>: a staff note on the job.
       INC`RETIRE: |-
         @include/args {{tracker}}/INC`WRITE=character,%<character>,kind,NOTE,text,[name(%<actor>)] retired [name(%<character>)].

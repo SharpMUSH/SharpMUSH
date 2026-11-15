@@ -712,6 +712,14 @@ public class ChargenIntegrationTests
 			await As(reviewer, $"+app/retire {applicant.Name}");
 			await Assert.That(await God($"think [job({secondJob},state)] [job({secondJob},outcome)]")).IsEqualTo("closed approved");
 			await Assert.That(await LastEntry(jobs, secondJob)).IsEqualTo("A place opened: the application is approved.");
+
+			// A job staff closed themselves keeps its outcome, and the approval is a staff note on it.
+			await God($"&DATA`CONFIG`CAP {await Chargen()}=0");
+			await Assert.That(await As(applicant, "+app/submit")).Contains("Submitted.");
+			await God($"@trigger/inline/nobreak/args {jobs}/INC`API`CLOSE=job,{job},actor,#1,outcome,canceled,text,Closed by hand.");
+			await As(reviewer, $"+app/approve {applicant.Name}");
+			await Assert.That(await God($"think [job({job},state)] [job({job},outcome)]")).IsEqualTo("closed canceled");
+			await Assert.That(await LastEntry(jobs, job)).IsEqualTo($"{reviewer.Name} approved it.");
 		}
 		finally
 		{
