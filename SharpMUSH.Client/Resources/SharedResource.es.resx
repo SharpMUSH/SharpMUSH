@@ -9564,4 +9564,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>El fondo del tema se queda quieto y nada en la página se desliza ni gira. Siempre está activado cuando su dispositivo pide menos movimiento.</value>
   </data>
+  <data name="MailSentEmpty" xml:space="preserve">
+    <value>Nada de lo que enviaste sigue en un buzón.</value>
+  </data>
+  <data name="MailSentRead" xml:space="preserve">
+    <value>Leído</value>
+  </data>
+  <data name="MailSentNotRead" xml:space="preserve">
+    <value>Aún no leído</value>
+  </data>
+  <data name="MailSentReadBy" xml:space="preserve">
+    <value>Leído por {0} de {1}</value>
+  </data>
+  <data name="MailNewFrom" xml:space="preserve">
+    <value>Correo nuevo de {0}</value>
+  </data>
+  <data name="MailNewFromSubject" xml:space="preserve">
+    <value>Correo nuevo de {0}: {1}</value>
+  </data>
+  <data name="MailNewRead" xml:space="preserve">
+    <value>Leer</value>
+  </data>
 </root>

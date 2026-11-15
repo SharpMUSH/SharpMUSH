@@ -1,9 +1,10 @@
 # comm-feed
 
-The ``CHANNEL`MESSAGE``, ``PAGE`MESSAGE``, ``PLAYER`CHANNELS`` and
-``CHANNEL`WHO`` event handlers, delivered as an attach-mode package (decision
+The ``CHANNEL`MESSAGE``, ``PAGE`MESSAGE``, ``PLAYER`CHANNELS``,
+``CHANNEL`WHO`` and ``MAIL`RECEIVED`` event handlers, delivered as an attach-mode package (decision
 20.3). They are what fills the web portal's Play sidebar **Channels** and
-**Pages** groups and its channel view and member list, as `room-contents` fills *Here* and *Exits*.
+**Pages** groups and its channel view and member list, as `room-contents` fills *Here* and *Exits*,
+and what tells the portal that new @mail has arrived.
 
 - **`comm.channels`** — `{"v": 2, "viewer": {…}, "channels": [ … ]}`, every
   channel the player may see, each saying whether they are on it, how many
@@ -24,6 +25,10 @@ The ``CHANNEL`MESSAGE``, ``PAGE`MESSAGE``, ``PLAYER`CHANNELS`` and
   only to the members whose view of the list changed. The portal reads the
   whole list from `api/comm/channels/{channel}/who` when it opens a channel and
   keeps it current with these.
+- **`mail.new`** — `{"v": 2, "number": 3, "from": "…", "fromObjid": "…",
+  "subject": "…", "urgent": false}`, one @mail that reached the player's
+  inbox, sent to their connections alone (the portal's background one included). The portal updates the
+  Mail button's unread count and shows a notice with **Read**.
 
 A connect or disconnect line on a channel (style `presence`) is not sent as a
 `comm.message`: the member list shows who is on the channel instead. Players on
@@ -51,6 +56,7 @@ The payload shapes, the event arguments and the tests are in
 | ``FUN`COMM`CHANNELROW`` / ``FUN`COMM`CHANNELS`` | the `comm.channels` rows and payload |
 | ``FUN`COMM`MESSAGE`` | the `comm.message` payload |
 | ``FUN`COMM`WHO`` | the `comm.who` payload |
+| ``FUN`COMM`MAIL`` | the `mail.new` payload |
 
 Each handler is the attribute below its event (``PAGE`MESSAGE`COMMFEED``), so
 another package can hear the same event with an attribute of its own beside it

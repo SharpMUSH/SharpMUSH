@@ -24,4 +24,10 @@ public class SharpMail
 	/// </summary>
 	public bool Anonymous { get; set; }
 	[JsonIgnore] public required AsyncLazy<AnyOptionalSharpObject> From { get; set; }
+
+	/// <summary>
+	/// The mailbox the message is in. A sender's list of sent mail reads it to say who each message went to; it
+	/// is <see langword="null"/> where the store does not say.
+	/// </summary>
+	[JsonIgnore] public AsyncLazy<AnyOptionalSharpObject>? To { get; set; }
 }

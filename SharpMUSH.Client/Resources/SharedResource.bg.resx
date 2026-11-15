@@ -9564,4 +9564,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Фонът на темата стои неподвижен и нищо на страницата не се плъзга и не се върти. Винаги е включено, когато устройството ви изисква намалено движение.</value>
   </data>
+  <data name="MailSentEmpty" xml:space="preserve">
+    <value>Нищо изпратено от вас не е останало в пощенска кутия.</value>
+  </data>
+  <data name="MailSentRead" xml:space="preserve">
+    <value>Прочетено</value>
+  </data>
+  <data name="MailSentNotRead" xml:space="preserve">
+    <value>Още не е прочетено</value>
+  </data>
+  <data name="MailSentReadBy" xml:space="preserve">
+    <value>Прочетено от {0} от {1}</value>
+  </data>
+  <data name="MailNewFrom" xml:space="preserve">
+    <value>Нова поща от {0}</value>
+  </data>
+  <data name="MailNewFromSubject" xml:space="preserve">
+    <value>Нова поща от {0}: {1}</value>
+  </data>
+  <data name="MailNewRead" xml:space="preserve">
+    <value>Прочети</value>
+  </data>
 </root>

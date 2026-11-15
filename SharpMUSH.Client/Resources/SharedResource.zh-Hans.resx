@@ -9564,4 +9564,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>主题背景保持静止，页面上不会有滑动或旋转。设备要求减少动态效果时始终开启。</value>
   </data>
+  <data name="MailSentEmpty" xml:space="preserve">
+    <value>你发送的邮件都已不在任何邮箱中。</value>
+  </data>
+  <data name="MailSentRead" xml:space="preserve">
+    <value>已读</value>
+  </data>
+  <data name="MailSentNotRead" xml:space="preserve">
+    <value>尚未阅读</value>
+  </data>
+  <data name="MailSentReadBy" xml:space="preserve">
+    <value>{1} 人中有 {0} 人已读</value>
+  </data>
+  <data name="MailNewFrom" xml:space="preserve">
+    <value>来自 {0} 的新邮件</value>
+  </data>
+  <data name="MailNewFromSubject" xml:space="preserve">
+    <value>来自 {0} 的新邮件：{1}</value>
+  </data>
+  <data name="MailNewRead" xml:space="preserve">
+    <value>阅读</value>
+  </data>
 </root>

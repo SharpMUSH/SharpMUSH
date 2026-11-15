@@ -9564,4 +9564,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Fundalul temei stă nemișcat și nimic de pe pagină nu alunecă sau nu se rotește. Mereu pornit când dispozitivul dumneavoastră cere mișcare redusă.</value>
   </data>
+  <data name="MailSentEmpty" xml:space="preserve">
+    <value>Nimic din ce ați trimis nu mai este într-o cutie poștală.</value>
+  </data>
+  <data name="MailSentRead" xml:space="preserve">
+    <value>Citit</value>
+  </data>
+  <data name="MailSentNotRead" xml:space="preserve">
+    <value>Necitit încă</value>
+  </data>
+  <data name="MailSentReadBy" xml:space="preserve">
+    <value>Citit de {0} din {1}</value>
+  </data>
+  <data name="MailNewFrom" xml:space="preserve">
+    <value>Mesaj nou de la {0}</value>
+  </data>
+  <data name="MailNewFromSubject" xml:space="preserve">
+    <value>Mesaj nou de la {0}: {1}</value>
+  </data>
+  <data name="MailNewRead" xml:space="preserve">
+    <value>Citește</value>
+  </data>
 </root>

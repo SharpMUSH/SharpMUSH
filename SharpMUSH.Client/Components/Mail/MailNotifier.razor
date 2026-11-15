@@ -1,0 +1,34 @@
+@using SharpMUSH.Client.Services
+@implements IDisposable
+@inject MailWatch Watch
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Renders nothing. Each new @mail the acting character receives, wherever they are in the portal,
+   shows a notice naming the sender and the subject, with Read to open the message. The game's
+   notifications package is what notifies a device while the player is away. *@
+
+@code {
+    protected override void OnInitialized() => Watch.Arrived += OnArrived;
+
+    private void OnArrived(MailWatch.NewMail mail) => _ = InvokeAsync(() =>
+    {
+        var text = string.IsNullOrWhiteSpace(mail.Subject)
+            ? Loc["MailNewFrom", mail.From]
+            : Loc["MailNewFromSubject", mail.From, mail.Subject];
+        Snackbar.Add(text, mail.Urgent ? Severity.Warning : Severity.Info, config =>
+        {
+            config.Icon = Icons.Material.Outlined.Mail;
+            config.Action = Loc["MailNewRead"];
+            config.ActionColor = Color.Primary;
+            config.OnClick = _ =>
+            {
+                Nav.NavigateTo($"/mail/{mail.Number}");
+                return Task.CompletedTask;
+            };
+        }, key: $"mail-new-{mail.Number}");
+    });
+
+    public void Dispose() => Watch.Arrived -= OnArrived;
+}

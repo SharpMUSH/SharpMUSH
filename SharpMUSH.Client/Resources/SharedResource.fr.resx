@@ -8878,4 +8878,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Le fond du thème reste immobile et rien ne glisse ni ne tourne sur la page. Toujours activé quand votre appareil demande moins d'animations.</value>
   </data>
+  <data name="MailSentEmpty" xml:space="preserve">
+    <value>Rien de ce que vous avez envoyé n’est encore dans une boîte aux lettres.</value>
+  </data>
+  <data name="MailSentRead" xml:space="preserve">
+    <value>Lu</value>
+  </data>
+  <data name="MailSentNotRead" xml:space="preserve">
+    <value>Pas encore lu</value>
+  </data>
+  <data name="MailSentReadBy" xml:space="preserve">
+    <value>Lu par {0} sur {1}</value>
+  </data>
+  <data name="MailNewFrom" xml:space="preserve">
+    <value>Nouveau courrier de {0}</value>
+  </data>
+  <data name="MailNewFromSubject" xml:space="preserve">
+    <value>Nouveau courrier de {0} : {1}</value>
+  </data>
+  <data name="MailNewRead" xml:space="preserve">
+    <value>Lire</value>
+  </data>
 </root>

@@ -58,6 +58,8 @@ builder.Services.AddSingleton<DiscordAccountService>();
 builder.Services.AddSingleton<ConnectedAppsService>();
 builder.Services.AddSingleton<DiscordAdminService>();
 builder.Services.AddSingleton<MailService>();
+// The inbox's unread count and new-mail notices, for the navigation and the Mail sidebar.
+builder.Services.AddSingleton<MailWatch>();
 builder.Services.AddSingleton<ICommHistory, CommHistoryService>();
 // Scene data is served by the server API; the WASM client has no local ISceneService
 // implementation — reads go through this HTTP service, writes go through a game command.
@@ -203,6 +205,8 @@ builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHand
 
 var app = builder.Build();
 app.Services.AttachPlayTerminalFeeds();
+// Listening before the command terminal connects, so the first mail.new is not missed.
+app.Services.GetRequiredService<MailWatch>();
 
 var jsRuntime = app.Services.GetRequiredService<IJSRuntime>();
 var storedLocale = await jsRuntime.GetItemAsync(BrowserStore.Local, CharacterLanguage.StorageKey);

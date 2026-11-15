@@ -9564,4 +9564,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Pozadina teme miruje i ništa na stranici ne klizi niti se okreće. Uvijek je uključeno kad vaš uređaj traži smanjeno kretanje.</value>
   </data>
+  <data name="MailSentEmpty" xml:space="preserve">
+    <value>Ništa što ste poslali više nije u poštanskom sandučiću.</value>
+  </data>
+  <data name="MailSentRead" xml:space="preserve">
+    <value>Pročitano</value>
+  </data>
+  <data name="MailSentNotRead" xml:space="preserve">
+    <value>Još nije pročitano</value>
+  </data>
+  <data name="MailSentReadBy" xml:space="preserve">
+    <value>Pročitalo {0} od {1}</value>
+  </data>
+  <data name="MailNewFrom" xml:space="preserve">
+    <value>Nova pošta od {0}</value>
+  </data>
+  <data name="MailNewFromSubject" xml:space="preserve">
+    <value>Nova pošta od {0}: {1}</value>
+  </data>
+  <data name="MailNewRead" xml:space="preserve">
+    <value>Pročitaj</value>
+  </data>
 </root>

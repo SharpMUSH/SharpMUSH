@@ -85,6 +85,7 @@ Each event passes its arguments by name, read as `%<name>`, and by position
 | ``PAGE`MESSAGE`` | `speaker` (pager objid), `recipients` (objids), `style`, `name` (pager name, with the page alias when `page_aliases` is on), `message`, `time` (unix ms), `id` (page id) |
 | ``PLAYER`CHANNELS`` | `objid` (player), `cause`, `channel` (empty on connect and resume) |
 | ``CHANNEL`WHO`` | `channel` (channel name), `member` (objid), `name` (member name), `change` (`on` or `off`), `viewers` (objids), `cause` |
+| ``MAIL`RECEIVED`` | `recipient` (objid), `sender` (objid), `number` (the message's number in the recipient's inbox), `subject`, `urgent` (`1` or `0`) |
 
 - Style is `say`, `pose`, `semipose`, `emit` (`@cemit`) or `presence` (a
   connect or disconnect line) for a channel, and `say`, `pose` or `semipose`
@@ -123,6 +124,7 @@ collide with `room-contents`' ``FUN`ROOMCONTENTS`*``.
 &PAGE`MESSAGE`COMMFEED #9=think null(oob(u(me/FUN`COMM`RECIPIENTS,setunion(%<speaker>,%<recipients>)),comm.message,uargs(me/FUN`COMM`MESSAGE,kind,page,speaker,%<speaker>,name,%<name>,style,%<style>,message,%<message>,time,%<time>,to,%<recipients>,id,%<id>)))
 &PLAYER`CHANNELS`COMMFEED #9=think null(if(u(me/FUN`COMM`VIEWER,%<objid>),oob(%<objid>,comm.channels,u(me/FUN`COMM`CHANNELS,%<objid>))))
 &CHANNEL`WHO`COMMFEED #9=think null(oob(u(me/FUN`COMM`RECIPIENTS,%<viewers>),comm.who,uargs(me/FUN`COMM`WHO,channel,%<channel>,member,%<member>,name,%<name>,change,%<change>)))
+&MAIL`RECEIVED`COMMFEED #9=think null(oob(%<recipient>,mail.new,uargs(me/FUN`COMM`MAIL,number,%<number>,sender,%<sender>,subject,%<subject>,urgent,%<urgent>)))
 ```
 
 | Attribute | Decides |
@@ -134,6 +136,7 @@ collide with `room-contents`' ``FUN`ROOMCONTENTS`*``.
 | ``FUN`COMM`CHANNELS`` (`%0` viewer) | the whole `comm.channels` payload |
 | ``FUN`COMM`MESSAGE`` (named: `%<kind>`, `%<channel>`, `%<speaker>`, `%<name>`, `%<style>`, `%<message>`, `%<time>`, `%<to>` page recipients, `%<id>` line id) | the whole `comm.message` payload |
 | ``FUN`COMM`WHO`` (named: `%<channel>`, `%<member>` objid, `%<name>` member name, `%<change>` on/off) | the whole `comm.who` payload |
+| ``FUN`COMM`MAIL`` (named: `%<number>`, `%<sender>` objid, `%<subject>`, `%<urgent>` 1/0) | the whole `mail.new` payload |
 
 The idioms are the ones `room-contents` uses (see its handler document):
 `think null(...)` to swallow `oob()`'s count, `json_array()` with `%r` as the
@@ -251,6 +254,22 @@ A page (here a group pose-page):
   `GET api/comm/channels/<channel>/who` (`ChannelWhoList`), `@channel/who`'s
   members for the session's character, which the portal reads when it opens
   the channel and keeps current with these.
+
+### `mail.new`
+
+```json
+{"v":2,"number":3,"from":"Wren Halloway","fromObjid":"#12:1790741467794","subject":"Tonight's scene","urgent":false}
+```
+
+- Sent to the recipient's connections alone, for each @mail that reaches their
+  inbox. It is not filtered by ``FUN`COMM`VIEWER``: the portal's background
+  connection, which hears it, does not make a player CONNECTED. `number` is the message's number there, as `@mail`
+  prints it (`/mail/<number>` in the portal).
+- The portal's `MailWatch` reads it off the command terminal's OOB store,
+  which every portal page keeps connected while a character is active: it
+  reads the inbox's unread count again (the Mail button's badge) and shows a
+  notice naming the sender and subject, with **Read** to open it. A device
+  notification while the player is away is the `notifications` package's.
 
 ## What the portal does with them
 

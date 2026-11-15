@@ -9564,4 +9564,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>A téma háttere mozdulatlan, és semmi sem csúszik vagy forog az oldalon. Mindig be van kapcsolva, ha az eszköze csökkentett mozgást kér.</value>
   </data>
+  <data name="MailSentEmpty" xml:space="preserve">
+    <value>Semmi, amit küldött, nincs már postafiókban.</value>
+  </data>
+  <data name="MailSentRead" xml:space="preserve">
+    <value>Elolvasva</value>
+  </data>
+  <data name="MailSentNotRead" xml:space="preserve">
+    <value>Még nem olvasták</value>
+  </data>
+  <data name="MailSentReadBy" xml:space="preserve">
+    <value>{1} címzettből {0} olvasta</value>
+  </data>
+  <data name="MailNewFrom" xml:space="preserve">
+    <value>Új levél: {0}</value>
+  </data>
+  <data name="MailNewFromSubject" xml:space="preserve">
+    <value>Új levél: {0} – {1}</value>
+  </data>
+  <data name="MailNewRead" xml:space="preserve">
+    <value>Elolvasás</value>
+  </data>
 </root>

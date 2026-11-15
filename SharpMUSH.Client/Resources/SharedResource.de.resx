@@ -9564,4 +9564,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Der Hintergrund des Designs steht still, und nichts auf der Seite gleitet oder dreht sich. Immer an, wenn Ihr Gerät reduzierte Bewegung verlangt.</value>
   </data>
+  <data name="MailSentEmpty" xml:space="preserve">
+    <value>Nichts, was Sie gesendet haben, liegt noch in einem Postfach.</value>
+  </data>
+  <data name="MailSentRead" xml:space="preserve">
+    <value>Gelesen</value>
+  </data>
+  <data name="MailSentNotRead" xml:space="preserve">
+    <value>Noch nicht gelesen</value>
+  </data>
+  <data name="MailSentReadBy" xml:space="preserve">
+    <value>Von {0} von {1} gelesen</value>
+  </data>
+  <data name="MailNewFrom" xml:space="preserve">
+    <value>Neue Post von {0}</value>
+  </data>
+  <data name="MailNewFromSubject" xml:space="preserve">
+    <value>Neue Post von {0}: {1}</value>
+  </data>
+  <data name="MailNewRead" xml:space="preserve">
+    <value>Lesen</value>
+  </data>
 </root>

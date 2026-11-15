@@ -13,6 +13,8 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Services;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Time;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -25,12 +27,18 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET    /api/mail?folder=INBOX        — list messages in a folder (numbered as in @mail)
 ///   GET    /api/mail/folders             — the character's folder names
 ///   GET    /api/mail/{folder}/{number}   — read one message (marks it read)
+///   GET    /api/mail/sent                — the mail the character sent that is still in a mailbox
+///   GET    /api/mail/sent/{id}           — read one sent message (leaves it as the recipient has it)
 ///   POST   /api/mail                     — send mail { to, subject, body, urgent }
 ///   DELETE /api/mail/{folder}/{number}   — delete a message
 ///
 /// <c>{number}</c> is the number the list reports, as <c>@mail</c> prints it. A folder is numbered
 /// from 1 for the reader and indexed from 0 in the database, so every route taking one converts it
 /// with <see cref="FolderIndex"/>.
+/// <para>
+/// Every time is in the reader's zone when their <c>TZ</c> attribute names one (<c>Zoned</c>), as boards and jobs
+/// show it; otherwise it is UTC, for the portal to show in the browser's zone.
+/// </para>
 /// </summary>
 [ApiController]
 [Route("api/mail")]
@@ -39,6 +47,7 @@ public class MailController(
 	IMediator mediator,
 	IEngineCommandInvoker commandInvoker,
 	IVisibleWorldProjection projection,
+	IAttributeService attributes,
 	ILogger<MailController> logger) : ControllerBase
 {
 	private const string DefaultFolder = "INBOX";
@@ -47,8 +56,17 @@ public class MailController(
 	/// the body, so refusing beats silently losing the subject.</summary>
 	private const int SubjectLength = 60;
 
-	public record MailSummaryDto(int Number, string From, string Subject, DateTimeOffset DateSent, bool Read, bool Urgent, string Folder);
-	public record MailMessageDto(int Number, string From, string Subject, string Body, DateTimeOffset DateSent, bool Urgent, bool Read, string Folder);
+	public record MailSummaryDto(int Number, string From, string Subject, DateTimeOffset DateSent, bool Read, bool Urgent, string Folder, bool Zoned);
+	public record MailMessageDto(int Number, string From, string Subject, string Body, DateTimeOffset DateSent, bool Urgent, bool Read, string Folder, bool Zoned);
+
+	/// <summary>
+	/// One message as its sender sent it. A message sent to several players is stored once for each of them; the
+	/// copies are one row here, naming every recipient whose copy is still in their mailbox.
+	/// </summary>
+	/// <param name="Id">The id of the first copy, which <c>GET api/mail/sent/{id}</c> reads.</param>
+	/// <param name="ReadBy">How many of the recipients have read their copy.</param>
+	public record SentMailDto(long Id, IReadOnlyList<string> To, string Subject, DateTimeOffset DateSent, bool Urgent, int ReadBy, bool Zoned);
+	public record SentMailMessageDto(long Id, IReadOnlyList<string> To, string Subject, string Body, DateTimeOffset DateSent, bool Urgent, int ReadBy, bool Zoned);
 	public record SendMailRequest(string To, string Subject, string Body, bool Urgent);
 
 	[HttpGet]
@@ -58,6 +76,7 @@ public class MailController(
 		if (player is null) return Unauthorized();
 
 		folder = string.IsNullOrWhiteSpace(folder) ? DefaultFolder : folder;
+		var zone = await ReaderZoneAsync(player);
 		var list = new List<MailSummaryDto>();
 		var number = 1;
 		// The summaries leave the bodies undecoded and name the sender without hydrating it.
@@ -67,10 +86,11 @@ public class MailController(
 				number++,
 				mail.Anonymous ? AnonymousSender : mail.SenderName ?? UnknownSender,
 				mail.Subject.ToPlainText(),
-				mail.DateSent,
+				InZone(mail.DateSent, zone),
 				mail.Read,
 				mail.Urgent,
-				mail.Folder));
+				mail.Folder,
+				zone is not null));
 		}
 		return list;
 	}
@@ -105,16 +125,138 @@ public class MailController(
 			await mediator.Send(new UpdateMailCommand(mail, MailUpdate.ReadEdit(true)), ct);
 		}
 
+		var zone = await ReaderZoneAsync(player);
 		return new MailMessageDto(
 			number,
 			await FromNameAsync(mail),
 			mail.Subject.ToPlainText(),
 			mail.Content.ToPlainText(),
-			mail.DateSent,
+			InZone(mail.DateSent, zone),
 			mail.Urgent,
 			true,
-			mail.Folder);
+			mail.Folder,
+			zone is not null);
 	}
+
+	[HttpGet("sent")]
+	public async Task<ActionResult<IReadOnlyList<SentMailDto>>> Sent(CancellationToken ct)
+	{
+		var player = await ResolvePlayerAsync(ct);
+		if (player is null) return Unauthorized();
+
+		var zone = await ReaderZoneAsync(player);
+		var sent = await SentMessagesAsync(player, ct);
+		// Newest first, as a sent list is read.
+		return sent.AsEnumerable().Reverse()
+			.Select(message => new SentMailDto(message.Id, message.To, message.First.Subject.ToPlainText(),
+				InZone(message.First.DateSent, zone), message.First.Urgent, message.ReadBy, zone is not null))
+			.ToList();
+	}
+
+	[HttpGet("sent/{id:long}")]
+	public async Task<ActionResult<SentMailMessageDto>> ReadSent(long id, CancellationToken ct)
+	{
+		var player = await ResolvePlayerAsync(ct);
+		if (player is null) return Unauthorized();
+
+		// Only the sender's own list is searched, so an id names nothing someone else sent.
+		var sent = await SentMessagesAsync(player, ct);
+		if (sent.FirstOrDefault(message => message.Id == id) is not { } found) return NotFound();
+
+		var zone = await ReaderZoneAsync(player);
+		return new SentMailMessageDto(found.Id, found.To, found.First.Subject.ToPlainText(), found.First.Content.ToPlainText(),
+			InZone(found.First.DateSent, zone), found.First.Urgent, found.ReadBy, zone is not null);
+	}
+
+	/// <summary>One message as sent: its first copy, every recipient's name, and how many have read theirs.</summary>
+	private sealed class SentMessage(long id, SharpMail first)
+	{
+		public long Id { get; } = id;
+		public SharpMail First { get; } = first;
+		public List<string> To { get; } = [];
+		public int ReadBy { get; private set; }
+
+		public void Add(string to, bool read)
+		{
+			if (!To.Contains(to)) To.Add(to);
+			if (read) ReadBy++;
+		}
+	}
+
+	/// <summary>
+	/// How far apart two copies of one message may be stamped. <c>@mail</c> delivers to each recipient in turn and
+	/// stamps each copy as it is stored, so the copies of one send differ by the time the deliveries took.
+	/// </summary>
+	private static readonly TimeSpan SameSend = TimeSpan.FromSeconds(5);
+
+	/// <summary>
+	/// The character's sent mail in the order it was sent, the copies of one send folded together: consecutive
+	/// copies (the store keeps them in id order) with the same subject, text and urgency, stamped within
+	/// <see cref="SameSend"/> of the first.
+	/// </summary>
+	private async Task<List<SentMessage>> SentMessagesAsync(SharpPlayer player, CancellationToken ct)
+	{
+		var names = new Dictionary<string, string>(StringComparer.Ordinal);
+		var messages = new List<SentMessage>();
+		await foreach (var mail in mediator.CreateStream(new GetAllSentMailListQuery(player.Object)).WithCancellation(ct))
+		{
+			if (mail.Id is null || MailNumber(mail.Id) is not { } id) continue;
+			var to = await RecipientNameAsync(mail, names);
+			if (messages.Count == 0 || !SameMessage(messages[^1].First, mail))
+			{
+				messages.Add(new SentMessage(id, mail));
+			}
+
+			messages[^1].Add(to, mail.Read);
+		}
+
+		return messages;
+	}
+
+	private static bool SameMessage(SharpMail first, SharpMail next)
+		=> next.DateSent - first.DateSent <= SameSend
+			&& next.DateSent >= first.DateSent
+			&& next.Urgent == first.Urgent
+			&& next.Subject.ToPlainText() == first.Subject.ToPlainText()
+			&& next.Content.ToPlainText() == first.Content.ToPlainText();
+
+	/// <summary>The number of a <see cref="SharpMail.Id"/> (<c>Mail/12</c>).</summary>
+	private static long? MailNumber(string id)
+		=> long.TryParse(id.AsSpan(id.IndexOf('/') + 1), System.Globalization.NumberStyles.None,
+			System.Globalization.CultureInfo.InvariantCulture, out var number) ? number : null;
+
+	private static async ValueTask<string> RecipientNameAsync(SharpMail mail, Dictionary<string, string> names)
+	{
+		if (mail.To is null) return UnknownSender;
+		var recipient = await mail.To.WithCancellation(CancellationToken.None);
+		if (recipient is not AnySharpObject found) return UnknownSender;
+		var key = found.Object().DBRef.ToString();
+		if (!names.TryGetValue(key, out var name))
+		{
+			name = found.Object().Name;
+			names[key] = name;
+		}
+
+		return name;
+	}
+
+	/// <summary>
+	/// The reader's zone: their <c>TZ</c> attribute when it names one (as <c>+timezone</c> sets it and boards, jobs
+	/// and <c>time()</c> read it), else <see langword="null"/>.
+	/// </summary>
+	private async ValueTask<TimeZoneInfo?> ReaderZoneAsync(SharpPlayer player)
+	{
+		var reader = new AnySharpObject(player);
+		return await attributes.GetAttributeAsync(reader, reader, "TZ", IAttributeService.AttributeMode.Read, parent: false)
+				is SharpAttribute[] { Length: > 0 } tz
+			&& tz.Last().Value.ToPlainText().Trim() is { Length: > 0 } name
+			&& TimeZones.TryFind(name, out var zone)
+				? zone
+				: null;
+	}
+
+	private static DateTimeOffset InZone(DateTimeOffset when, TimeZoneInfo? zone)
+		=> zone is null ? when.ToUniversalTime() : TimeZoneInfo.ConvertTime(when, zone);
 
 	/// <summary>
 	/// Sends by running the engine's own <c>@MAIL</c>, so recipient resolution, the mail lock,

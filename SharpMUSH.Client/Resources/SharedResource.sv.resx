@@ -9564,4 +9564,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Temats bakgrund står still och inget på sidan glider eller roterar. Alltid på när din enhet ber om minskad rörelse.</value>
   </data>
+  <data name="MailSentEmpty" xml:space="preserve">
+    <value>Inget du har skickat finns kvar i en brevlåda.</value>
+  </data>
+  <data name="MailSentRead" xml:space="preserve">
+    <value>Läst</value>
+  </data>
+  <data name="MailSentNotRead" xml:space="preserve">
+    <value>Inte läst än</value>
+  </data>
+  <data name="MailSentReadBy" xml:space="preserve">
+    <value>Läst av {0} av {1}</value>
+  </data>
+  <data name="MailNewFrom" xml:space="preserve">
+    <value>Ny post från {0}</value>
+  </data>
+  <data name="MailNewFromSubject" xml:space="preserve">
+    <value>Ny post från {0}: {1}</value>
+  </data>
+  <data name="MailNewRead" xml:space="preserve">
+    <value>Läs</value>
+  </data>
 </root>

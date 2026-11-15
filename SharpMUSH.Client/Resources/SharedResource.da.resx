@@ -9564,4 +9564,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Temaets baggrund står stille, og intet på siden glider eller drejer. Det er altid slået til, når din enhed beder om reduceret bevægelse.</value>
   </data>
+  <data name="MailSentEmpty" xml:space="preserve">
+    <value>Intet af det, du har sendt, ligger stadig i en postkasse.</value>
+  </data>
+  <data name="MailSentRead" xml:space="preserve">
+    <value>Læst</value>
+  </data>
+  <data name="MailSentNotRead" xml:space="preserve">
+    <value>Ikke læst endnu</value>
+  </data>
+  <data name="MailSentReadBy" xml:space="preserve">
+    <value>Læst af {0} af {1}</value>
+  </data>
+  <data name="MailNewFrom" xml:space="preserve">
+    <value>Ny post fra {0}</value>
+  </data>
+  <data name="MailNewFromSubject" xml:space="preserve">
+    <value>Ny post fra {0}: {1}</value>
+  </data>
+  <data name="MailNewRead" xml:space="preserve">
+    <value>Læs</value>
+  </data>
 </root>

@@ -129,6 +129,7 @@ public partial class LightningDatabase
 	private SharpMail MapRecordToMail(long mailId, MailRecord record)
 	{
 		var sender = record.Sender;
+		var recipient = record.Recipient;
 		var stamp = record.Anonymous ? null : record.SenderCreationTime;
 		return new SharpMail
 		{
@@ -144,11 +145,17 @@ public partial class LightningDatabase
 			Content = MarkupTextSerializer.Deserialize(record.Content),
 			Subject = MarkupTextSerializer.Deserialize(record.Subject),
 			Anonymous = record.Anonymous,
-			From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(LoadMailSender(sender, stamp)))
+			From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(LoadMailSender(sender, stamp))),
+			To = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(LoadMailRecipient(recipient)))
 		};
 	}
 
 	private AnyOptionalSharpObject LoadMailSender(long sender, long? stamp) => Store.Read(tx => ReadMailSender(tx, sender, stamp) is { } found
+		? Hydrate(found.Dbref, found.Record).WithNoneOption()
+		: (AnyOptionalSharpObject)new None());
+
+	/// <summary>The player whose mailbox holds a mail. Destroying a player deletes its mailbox, so the number is still theirs.</summary>
+	private AnyOptionalSharpObject LoadMailRecipient(long recipient) => Store.Read(tx => ReadObject(tx, recipient) is { } found
 		? Hydrate(found.Dbref, found.Record).WithNoneOption()
 		: (AnyOptionalSharpObject)new None());
 
