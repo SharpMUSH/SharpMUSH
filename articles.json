@@ -7994,6 +7994,18 @@
         "aliases": []
       },
       {
+        "id": "roles-powers-and-permissions",
+        "lookup": "restrict roles",
+        "heading": "Roles, powers and permissions",
+        "aliases": []
+      },
+      {
+        "id": "built-in-restrictions",
+        "lookup": "restrict built-in",
+        "heading": "Changing a built-in\u0027s restriction",
+        "aliases": []
+      },
+      {
         "id": "function-and-command-only",
         "lookup": "restrict function only",
         "heading": "Restrictions for functions or commands only",
