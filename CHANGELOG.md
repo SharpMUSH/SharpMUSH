@@ -32,6 +32,7 @@ Two version numbers matter:
 
 - In MUSHclient and other Pueblo clients, tables, headers, the room description and the connect screen keep their line breaks. Preformatted text went to Pueblo as `<xch_mudtext>` with bare newlines, which MUSHclient ignores; each line now ends in `<BR>` (MarkupString 2.31.2).
 - A Pueblo client that answers the hello before its connection is registered (MUSHclient) is shown the connect screen once. It was shown it again after the handshake, as for a client that answered later.
+- `connect <character> <password>` takes the password of the account the character is linked to as well as the character's own, so a character made on the web portal, which gets no password of its own, can connect from a MU* client.
 - The portal's Mail page shows times in the character's `TZ` zone when it names a known one, where it showed the browser's.
 - Boards and Jobs say why they refuse a post, comment or request, such as "Permission denied. Posting on 5 Public needs the approved role." The portal shows it on the board's page and in place of the new-post or new-request form, and a draft (`+bbpost <board>/<title>`, `+request/draft new`) is refused before it starts.
 - Boards: reading the conversation that holds a post's new comments (`+bbread 5/1/1/3`, or opening it in the portal) marks the post read, so it no longer shows as new.

@@ -435,7 +435,8 @@ public partial class Commands
 	{
 		var validPassword = PasswordService.PasswordIsValid(password, foundDB.PasswordHash);
 
-		if (!validPassword && !string.IsNullOrEmpty(foundDB.PasswordHash))
+		if (!validPassword && !string.IsNullOrEmpty(foundDB.PasswordHash)
+			&& !await AccountPasswordMatchesAsync(foundDB, password))
 		{
 			await RecordFailedConnectAsync(handle, foundDB);
 			await TriggerLoginFailAsync(handle, ipAddress, "invalid password", $"#{foundDB.Object.Key}", foundDB.Object.Name);
@@ -485,6 +486,26 @@ public partial class Commands
 		Logger?.LogDebug("Successful login and binding for {@person}", foundDB.Object);
 		return new CallState(playerDbRef);
 	}
+
+	/// <summary>
+	/// Whether <paramref name="password"/> is the password of the account that holds <paramref name="character"/>, so a
+	/// character made on the portal, which has no password of its own, connects with its account's. A character on no
+	/// account, or on a deleted account, one with no password or one whose password staff set to be changed at its next
+	/// sign-in, checks a hash nothing matches instead, so a wrong
+	/// password takes as long whether the character has an account or not.
+	/// </summary>
+	private async ValueTask<bool> AccountPasswordMatchesAsync(SharpPlayer character, string password)
+	{
+		var account = await AccountService.GetAccountForCharacterAsync(character.Object.DBRef);
+		var accountHash = account is { Status: not AccountStatus.Deleted, MustChangePassword: false, PasswordHash: { Length: > 0 } hash }
+			? hash
+			: null;
+		var matches = PasswordService.PasswordIsValid(password, accountHash ?? UnmatchedAccountHash);
+		return accountHash is not null && matches;
+	}
+
+	/// <summary>The hash <see cref="AccountPasswordMatchesAsync"/> checks when there is no account password: of a random password, never shown.</summary>
+	private string UnmatchedAccountHash => field ??= PasswordService.HashPassword(PasswordService.GenerateRandomPassword());
 
 	/// <summary>
 	/// What <c>cd</c>, <c>cv</c> and <c>ch</c> add to a plain <c>connect</c>: <c>cd</c> and <c>ch</c> hide
@@ -1049,6 +1070,10 @@ public partial class Commands
 		}
 	}
 
-	[GeneratedRegex("^(?<User>\"(?:.+?)\"|(?:.+?))(?:\\s+(?<Password>\\S+))?$")]
+	/// <summary>
+	/// A quoted name takes the rest of the line as its password, so an account passphrase with spaces connects; an
+	/// unquoted one takes the last word.
+	/// </summary>
+	[GeneratedRegex("^(?<User>\"(?:.+?)\")(?:\\s+(?<Password>.+))?$|^(?<User>.+?)(?:\\s+(?<Password>\\S+))?$")]
 	private static partial Regex ConnectionPattern();
 }
