@@ -77,7 +77,7 @@
                 </span>
             </DescriptionContent>
             <Actions>
-                @if (ActingOwner(scene) is not null)
+                @if (ActingRunner(scene) is not null)
                 {
                     <MudTooltip Text="@Loc["RolEditScene"]">
                         <CapsuleButton Class="scene-detail-edit" Icon="@Icons.Material.Outlined.Edit" AriaLabel="@Loc["RolEditScene"]"
@@ -87,7 +87,7 @@
                     {
                         <MudTooltip Text="@Loc["RolPauseScene"]">
                             <CapsuleButton Class="scene-detail-pause" Icon="@Icons.Material.Outlined.Pause" AriaLabel="@Loc["RolPauseScene"]"
-                                           Expanded="@_pausing" Disabled="@_busy" OnClick="@(() => _pausing = !_pausing)" />
+                                           Expanded="@_pausing" Disabled="@_busy" OnClick="@(() => { _pausing = !_pausing; _confirming = Confirming.None; })" />
                         </MudTooltip>
                     }
                     else
@@ -98,6 +98,20 @@
                                            Disabled="@_busy" OnClick="StartAsync" />
                         </MudTooltip>
                     }
+                    if (!scene.IsLive && !scene.IsPaused)
+                    {
+                        <MudTooltip Text="@Loc["RolCancelScene"]">
+                            <CapsuleButton Class="scene-detail-cancel" Icon="@Icons.Material.Outlined.EventBusy" AriaLabel="@Loc["RolCancelScene"]"
+                                           Expanded="@(_confirming == Confirming.Cancel)" Disabled="@_busy" OnClick="@(() => Confirm(Confirming.Cancel))" />
+                        </MudTooltip>
+                    }
+                }
+                @if (ActingCloser(scene) is not null)
+                {
+                    <MudTooltip Text="@Loc["RolFinishScene"]">
+                        <CapsuleButton Class="scene-detail-finish" Icon="@Icons.Material.Outlined.Stop" AriaLabel="@Loc["RolFinishScene"]"
+                                       Expanded="@(_confirming == Confirming.Finish)" Disabled="@_busy" OnClick="@(() => Confirm(Confirming.Finish))" />
+                    </MudTooltip>
                 }
                 @if (scene.IsLive)
                 {
@@ -189,6 +203,34 @@
                         <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Pause" Class="scene-pause-submit"
                                        Disabled="@_busy" OnClick="PauseAsync">@Loc["RolPauseScene"]</CapsuleButton>
                         <CapsuleButton OnClick="@(() => _pausing = false)">@Loc["Cancel"]</CapsuleButton>
+                    </div>
+                </div>
+            </KitCard>
+        }
+
+        @if (_confirming == Confirming.Finish && ActingCloser(scene) is not null)
+        {
+            <KitCard Class="scene-finish" Title="@Loc["RolFinishScene"]">
+                <div class="scene-pause-form">
+                    <p class="scene-pause-hint">@Loc["RolFinishSceneHint"]</p>
+                    <div class="scene-pause-buttons">
+                        <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Stop" Class="scene-finish-submit"
+                                       Disabled="@_busy" OnClick="FinishAsync">@Loc["RolFinishScene"]</CapsuleButton>
+                        <CapsuleButton OnClick="@(() => _confirming = Confirming.None)">@Loc["RolKeepScene"]</CapsuleButton>
+                    </div>
+                </div>
+            </KitCard>
+        }
+
+        @if (_confirming == Confirming.Cancel && ActingRunner(scene) is not null)
+        {
+            <KitCard Class="scene-cancel" Title="@Loc["RolCancelScene"]">
+                <div class="scene-pause-form">
+                    <p class="scene-pause-hint">@Loc["RolCancelSceneHint"]</p>
+                    <div class="scene-pause-buttons">
+                        <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.EventBusy" Class="scene-cancel-submit"
+                                       Disabled="@_busy" OnClick="CancelAsync">@Loc["RolCancelScene"]</CapsuleButton>
+                        <CapsuleButton OnClick="@(() => _confirming = Confirming.None)">@Loc["RolKeepScene"]</CapsuleButton>
                     </div>
                 </div>
             </KitCard>
@@ -432,13 +474,23 @@
         // write them onto this one.
         _editing = false;
         _pausing = false;
+        _confirming = Confirming.None;
         _actionError = null;
+        _mayManage = false;
+        _mayClose = false;
 
         // The detail catalogue goes out beside the scene, read again so staff changes show: the header names its details with it.
         var details = SceneDetails.LoadAsync(refresh: true);
+        // Staff run any scene: scene.manage every verb, scene.close finishing. The verbs check again.
+        var manage = Commands.HoldsPermissionAsync("scene.manage");
+        var close = Commands.HoldsPermissionAsync("scene.close");
         var found = await SceneService.GetSceneAsync(Id);
         await details;
+        var mayManage = await manage == true;
+        var mayClose = await close == true;
         if (!_reload.IsCurrent(ticket)) return;
+        _mayManage = mayManage;
+        _mayClose = mayClose;
         switch (found)
         {
             case SceneSummary scene:
@@ -518,14 +570,48 @@
     /// <summary>Why the last pause or start did not take, from the command's own output.</summary>
     private string? _actionError;
 
+    /// <summary>The character this tab acts as holds scene.manage: it runs any scene as its owner would.</summary>
+    private bool _mayManage;
+
+    /// <summary>The character this tab acts as holds scene.close: it may finish any scene.</summary>
+    private bool _mayClose;
+
+    private enum Confirming { None, Finish, Cancel }
+
+    /// <summary>Which ending is waiting for the reader to confirm it: neither can be taken back.</summary>
+    private Confirming _confirming;
+
+    private void Confirm(Confirming which)
+    {
+        _confirming = _confirming == which ? Confirming.None : which;
+        _pausing = false;
+    }
+
+    private static bool IsClosed(SceneSummary scene) =>
+        scene.IsFinished || string.Equals(scene.Status, "cancelled", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The objid of the character this tab acts as, or null when none is.</summary>
+    private string? ActingCharacter() =>
+        AccountAuth.ActiveCharacter is { } acting ? $"#{acting.DbrefNumber}:{acting.CreationTime}" : null;
+
     /// <summary>
-    /// The objid of the character this tab acts as, when that character owns <paramref name="scene"/> and the
-    /// scene is not finished; otherwise null. The commands check ownership again, and staff, who may pause any
-    /// scene, do it in-game.
+    /// The objid of the character this tab acts as, when that character may run <paramref name="scene"/> (its owner,
+    /// or a holder of scene.manage) and the scene is neither finished nor cancelled; otherwise null. The commands
+    /// check again.
     /// </summary>
-    private string? ActingOwner(SceneSummary scene) =>
-        !scene.IsFinished && AccountAuth.ActiveCharacter is { } acting && scene.OwnerDbref == $"#{acting.DbrefNumber}"
-            ? $"#{acting.DbrefNumber}:{acting.CreationTime}"
+    private string? ActingRunner(SceneSummary scene) =>
+        !IsClosed(scene) && AccountAuth.ActiveCharacter is { } acting
+            && (_mayManage || scene.OwnerDbref == $"#{acting.DbrefNumber}")
+            ? ActingCharacter()
+            : null;
+
+    /// <summary>
+    /// The objid of the character this tab acts as, when it may finish <paramref name="scene"/>, one that is running or
+    /// paused: whoever runs it, or a holder of scene.close.
+    /// </summary>
+    private string? ActingCloser(SceneSummary scene) =>
+        (scene.IsLive || scene.IsPaused) && (ActingRunner(scene) ?? (_mayClose ? ActingCharacter() : null)) is { } character
+            ? character
             : null;
 
     /// <summary>
@@ -542,14 +628,20 @@
 
     private Task StartAsync() => RunLifecycleAsync(id => $"+scene/start {id}", "active", Loc["RolSceneNotStarted"]);
 
+    private Task FinishAsync() => RunLifecycleAsync(id => $"+scene/finish {id}", "finished", Loc["RolSceneNotFinished"], ActingCloser);
+
+    private Task CancelAsync() => RunLifecycleAsync(id => $"+scene/cancel {id}", "cancelled", Loc["RolSceneNotCancelled"]);
+
     /// <summary>
-    /// Runs a +scene lifecycle verb as the owner and asks the scene's status in the same queue entry: the verb
-    /// refuses in its output, so only the status says whether it took. The scene id is the server's, never the
-    /// address's, so nothing typed into the URL reaches the command line.
+    /// Runs a +scene lifecycle verb as whoever runs the scene (<paramref name="actor"/>, by default
+    /// <see cref="ActingRunner"/>) and asks the scene's status in the same queue entry: the verb refuses in its
+    /// output, so only the status says whether it took. The scene id is the server's, never the address's, so
+    /// nothing typed into the URL reaches the command line.
     /// </summary>
-    private async Task RunLifecycleAsync(Func<string, string> command, string expected, string fallback)
+    private async Task RunLifecycleAsync(Func<string, string> command, string expected, string fallback,
+        Func<SceneSummary, string?>? actor = null)
     {
-        if (_scene is not { } scene || ActingOwner(scene) is not { } character) return;
+        if (_scene is not { } scene || (actor ?? ActingRunner)(scene) is not { } character) return;
 
         _busy = true;
         _actionError = null;
@@ -564,6 +656,7 @@
             if (_actionError is not null) return;
 
             _pausing = false;
+            _confirming = Confirming.None;
             _resumeDate = null;
             _resumeTime = null;
             // The address may have moved on to another scene while the read was out.
@@ -636,7 +729,7 @@
     /// </summary>
     private async Task SaveAsync()
     {
-        if (_scene is not { } scene || ActingOwner(scene) is not { } character) return;
+        if (_scene is not { } scene || ActingRunner(scene) is not { } character) return;
 
         var id = scene.Id;
         var changes = new List<(string Command, string Result, string Expected)>();

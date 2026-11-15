@@ -9564,4 +9564,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Temaets baggrund står stille, og intet på siden glider eller drejer. Det er altid slået til, når din enhed beder om reduceret bevægelse.</value>
   </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Aflys scene</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>En aflyst scene forlader planen for altid og kan ikke startes igen.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Afslut scene</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>En afsluttet scene stopper optagelsen og kan ikke startes igen. Loggen bliver.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Behold den</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>Scenen blev ikke afsluttet.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>Scenen blev ikke aflyst.</value>
+  </data>
 </root>

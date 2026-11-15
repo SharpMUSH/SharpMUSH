@@ -9564,4 +9564,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Fundalul temei stă nemișcat și nimic de pe pagină nu alunecă sau nu se rotește. Mereu pornit când dispozitivul dumneavoastră cere mișcare redusă.</value>
   </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Anulează scena</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>O scenă anulată părăsește programul definitiv și nu mai poate începe.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Încheie scena</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>O scenă încheiată nu mai înregistrează și nu mai poate începe. Jurnalul ei rămâne.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Păstreaz-o</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>Scena nu a fost încheiată.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>Scena nu a fost anulată.</value>
+  </data>
 </root>

@@ -9564,4 +9564,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>El fondo del tema se queda quieto y nada en la página se desliza ni gira. Siempre está activado cuando su dispositivo pide menos movimiento.</value>
   </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Cancelar escena</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>Una escena cancelada sale del calendario para siempre y no puede volver a empezar.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Terminar escena</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>Una escena terminada deja de grabar y no puede volver a empezar. Su registro se conserva.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Conservarla</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>La escena no se terminó.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>La escena no se canceló.</value>
+  </data>
 </root>

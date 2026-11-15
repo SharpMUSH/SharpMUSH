@@ -9564,4 +9564,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Temats bakgrund står still och inget på sidan glider eller roterar. Alltid på när din enhet ber om minskad rörelse.</value>
   </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Ställ in scenen</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>En inställd scen lämnar schemat för gott och kan inte startas igen.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Avsluta scenen</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>En avslutad scen slutar spela in och kan inte startas igen. Loggen finns kvar.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Behåll den</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>Scenen avslutades inte.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>Scenen ställdes inte in.</value>
+  </data>
 </root>

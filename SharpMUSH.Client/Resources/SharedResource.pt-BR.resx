@@ -9564,4 +9564,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>O fundo do tema fica parado e nada na página desliza ou gira. Sempre ligado quando seu dispositivo pede menos movimento.</value>
   </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Cancelar cena</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>Uma cena cancelada sai da agenda de vez e não pode recomeçar.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Encerrar cena</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>Uma cena encerrada para de gravar e não pode recomeçar. O registro dela fica.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Manter</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>A cena não foi encerrada.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>A cena não foi cancelada.</value>
+  </data>
 </root>
