@@ -37,48 +37,29 @@ public class MarkupNegotiationConsumerTests
 		new MxpNegotiatedConsumer(NullLogger<MxpNegotiatedConsumer>.Instance, service)
 			.HandleAsync(new MxpNegotiatedMessage(Handle));
 
-	private static Task Pueblo(ConnectionService service, IMediator? mediator = null) =>
-		new PuebloNegotiatedConsumer(NullLogger<PuebloNegotiatedConsumer>.Instance, service,
-				mediator ?? Substitute.For<IMediator>())
+	private static Task Pueblo(ConnectionService service) =>
+		new PuebloNegotiatedConsumer(NullLogger<PuebloNegotiatedConsumer>.Instance, service)
 			.HandleAsync(new PuebloNegotiatedMessage(Handle, "PUEBLOCLIENT 2.50"));
 
 	/// <summary>
-	/// The handshake's start sequence ends with <c>&lt;xch_page clear=text&gt;</c>, which wipes
-	/// everything the connection was shown — the configured connect file as much as the greeting. What
-	/// is replayed is arriving at the login prompt, which is what put all of it on screen; PennMUSH
-	/// calls <c>welcome_user</c> again at the same point (<c>src/bsd.c</c>).
+	/// The handshake's start sequence ends with <c>&lt;xch_page clear=text&gt;</c>, but MUSHclient, BeipMU and
+	/// SharpMUTerm ignore it, so a client that answered after it was shown the connect screen keeps that screen.
+	/// Arriving at the login prompt again would show it a second time.
 	/// </summary>
 	[Test]
-	public async Task Pueblo_ShowsTheLoginPromptAgainAfterTheHandshakeClearedTheScreen()
+	public async Task Pueblo_DoesNotShowTheConnectScreenAgain()
 	{
-		var service = await RegisteredAsync();
-		var mediator = Substitute.For<IMediator>();
+		var publisher = Substitute.For<IPublisher>();
+		var service = new ConnectionService(publisher);
+		await service.Register(Handle, "127.0.0.1", "localhost", "telnet",
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8,
+			new ConcurrentDictionary<string, string>());
 
-		await Pueblo(service, mediator);
+		await Pueblo(service);
 
-		await mediator.Received(1).Publish(
-			Arg.Is<ConnectionStateChangeNotification>(n =>
-				n.Handle == Handle
-				&& n.NewState == IConnectionService.ConnectionState.Connected
-				&& n.OldState == IConnectionService.ConnectionState.Connected),
+		await publisher.Received(1).Publish(
+			Arg.Is<ConnectionStateChangeNotification>(n => n.NewState == IConnectionService.ConnectionState.Connected),
 			Arg.Any<CancellationToken>());
-	}
-
-	/// <summary>
-	/// A client that answered the hello before its connection was registered was registered as Pueblo and
-	/// shown the login prompt once, already as Pueblo. MUSHclient does not clear the screen at
-	/// <c>&lt;xch_page clear=text&gt;</c>, so a replay showed it twice.
-	/// </summary>
-	[Test]
-	public async Task Pueblo_AnsweredBeforeRegistration_ShowsTheLoginPromptOnce()
-	{
-		var service = await RegisteredAsync();
-		var mediator = Substitute.For<IMediator>();
-
-		await new PuebloNegotiatedConsumer(NullLogger<PuebloNegotiatedConsumer>.Instance, service, mediator)
-			.HandleAsync(new PuebloNegotiatedMessage(Handle, "PUEBLOCLIENT 1.10") { ReplayWelcome = false });
-
-		await mediator.DidNotReceive().Publish(Arg.Any<ConnectionStateChangeNotification>(), Arg.Any<CancellationToken>());
 		await Assert.That(service.Get(Handle)!.Metadata["PUEBLO"]).IsEqualTo("1");
 	}
 
@@ -102,18 +83,6 @@ public class MarkupNegotiationConsumerTests
 		var metadata = service.Get(Handle)!.Metadata;
 		await Assert.That(metadata.GetValueOrDefault("PUEBLO", "0")).IsEqualTo(pueblo ? "1" : "0");
 		await Assert.That(metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi")).IsEqualTo(pueblo ? "pueblo" : "ansi");
-	}
-
-	[Test]
-	public async Task Pueblo_LeavesALoggedInConnectionAlone()
-	{
-		var service = await RegisteredAsync();
-		await service.Bind(Handle, new DBRef(1));
-		var mediator = Substitute.For<IMediator>();
-
-		await Pueblo(service, mediator);
-
-		await mediator.DidNotReceive().Publish(Arg.Any<ConnectionStateChangeNotification>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]

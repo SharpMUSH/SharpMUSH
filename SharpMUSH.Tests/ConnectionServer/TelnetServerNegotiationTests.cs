@@ -554,13 +554,13 @@ public partial class TelnetServerNegotiationTests
 
 	/// <summary>
 	/// A Pueblo client that answers the hello inside the negotiation window (MUSHclient answers at once) is
-	/// registered as Pueblo, so the connect screen it is shown is already Pueblo and is not shown again.
-	/// One that answers after registration still gets it again, since the start sequence cleared it.
+	/// registered as Pueblo, so the connect screen it is shown is already Pueblo. One that answers after
+	/// registration was shown the screen as ANSI, and is switched to Pueblo from there.
 	/// </summary>
 	[Test]
 	[Arguments(true)]
 	[Arguments(false)]
-	public async Task PuebloAnswer_ReplaysTheWelcomeOnlyWhenItCameAfterRegistration(bool beforeRegistration)
+	public async Task PuebloAnswer_RegistersAsPuebloOnlyWhenItCameBeforeRegistration(bool beforeRegistration)
 	{
 		var registered = new TaskCompletionSource<ProtocolCapabilities?>(TaskCreationOptions.RunContinuationsAsynchronously);
 		var connectionService = Substitute.For<IConnectionServerService>();
@@ -592,7 +592,6 @@ public partial class TelnetServerNegotiationTests
 			var capabilities = await registered.Task.WaitAsync(Timeout);
 
 			await Assert.That(message).IsNotNull();
-			await Assert.That(message!.ReplayWelcome).IsEqualTo(!beforeRegistration);
 			await Assert.That(capabilities!.Format)
 				.IsEqualTo(beforeRegistration ? OutputFormat.Pueblo : OutputFormat.Ansi);
 		}

@@ -100,8 +100,8 @@ public record ConnectionEstablishedMessage(
 
 	/// <summary>
 	/// The client answered the Pueblo hello before the connection was registered, so it is a Pueblo connection
-	/// from the start: <c>pueblo()</c> and <c>terminfo()</c> say so when the connect screen is evaluated, and the
-	/// screen is not shown again after the handshake (<see cref="PuebloNegotiatedMessage.ReplayWelcome"/>).
+	/// from the start: <c>pueblo()</c> and <c>terminfo()</c> say so when the connect screen is evaluated, which
+	/// is then written for Pueblo.
 	/// </summary>
 	public bool Pueblo { get; init; }
 }
@@ -120,15 +120,7 @@ public record WebSocketInputMessage(long Handle, string Input, string? SessionId
 /// Message sent from ConnectionServer to MainProcess when Pueblo handshake is detected.
 /// The main process should set PUEBLO metadata on the connection.
 /// </summary>
-public record PuebloNegotiatedMessage(long Handle, string ClientResponse) : IHandleMessage
-{
-	/// <summary>
-	/// Whether the login prompt is shown again, because the handshake's start sequence cleared it. False when the
-	/// client answered before the connection was registered: it was registered as Pueblo, so the prompt it is
-	/// shown is already written for Pueblo.
-	/// </summary>
-	public bool ReplayWelcome { get; init; } = true;
-}
+public record PuebloNegotiatedMessage(long Handle, string ClientResponse) : IHandleMessage;
 
 /// <summary>
 /// Message sent from ConnectionServer to MainProcess when MXP (telnet option 91) is negotiated.

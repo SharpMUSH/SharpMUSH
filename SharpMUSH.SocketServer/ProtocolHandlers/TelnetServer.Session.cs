@@ -52,10 +52,6 @@ public partial class TelnetServer
 		private long _lastWritten = Stopwatch.GetTimestamp();
 		private volatile int _width;
 		private volatile OutputFormat _negotiatedFormat = OutputFormat.Ansi;
-		// Set after _negotiatedFormat, so a registration that reads it true also registers the format.
-		private volatile bool _puebloEnabled;
-		// Whether the client answered Pueblo before the capabilities were registered.
-		private volatile bool _registeredAsPueblo;
 		private volatile TerminalProbeResult? _probe;
 		private volatile bool _gmcpAgreed;
 
@@ -449,7 +445,6 @@ public partial class TelnetServer
 		private async ValueTask OnPuebloEnabledAsync(string clientVersion)
 		{
 			_negotiatedFormat = _negotiatedFormat.Negotiate(OutputFormat.Pueblo);
-			_puebloEnabled = true;
 			server._logger.LogDebug("Pueblo negotiated on handle {Handle}", handle);
 
 			await held.PublishAsync(async () =>
@@ -459,14 +454,8 @@ public partial class TelnetServer
 					server._logger.LogDebug("Updated Pueblo capabilities for handle {Handle}", handle);
 				}
 
-				// Runs once the connection is registered. A client that answered before then — MUSHclient answers the
-				// hello at once — was registered as Pueblo and is shown the login prompt once, as Pueblo; a replay
-				// would show it twice, since MUSHclient does not clear the screen at <xch_page clear=text>.
 				await server._publishEndpoint.Publish(
-					new PuebloNegotiatedMessage(handle, PuebloProtocol.ClientCommand + clientVersion)
-					{
-						ReplayWelcome = !_registeredAsPueblo
-					}, ct);
+					new PuebloNegotiatedMessage(handle, PuebloProtocol.ClientCommand + clientVersion), ct);
 			});
 		}
 
@@ -498,9 +487,6 @@ public partial class TelnetServer
 		{
 			var telnet = _telnet!;
 			var remoteIp = endpoint.RemoteIp;
-
-			// Read before the capabilities: true here means the format they carry is already Pueblo.
-			_registeredAsPueblo = _puebloEnabled;
 
 			await server._connectionService.RegisterAsync(
 				handle,

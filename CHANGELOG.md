@@ -13,6 +13,10 @@ Two version numbers matter:
 
 - TelnetNegotiationCore 4.13.3. A telnet connection waits for its input to be processed on a signal instead of checking every timer tick, so a line reaches the game in microseconds rather than up to 15 ms.
 
+### Fixed
+
+- A Pueblo client that answers the hello after its connection is registered (SharpMUTerm, or MUSHclient on a slow link) is shown the connect screen once. It was shown it again after the handshake, for a client that clears its screen at `<xch_page clear=text>`, which MUSHclient, BeipMU and SharpMUTerm do not.
+
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.1...HEAD
 
 ## [1.0.1] - 2026-11-15
