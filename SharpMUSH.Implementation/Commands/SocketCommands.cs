@@ -1070,6 +1070,10 @@ public partial class Commands
 		}
 	}
 
-	[GeneratedRegex("^(?<User>\"(?:.+?)\"|(?:.+?))(?:\\s+(?<Password>\\S+))?$")]
+	/// <summary>
+	/// A quoted name takes the rest of the line as its password, so an account passphrase with spaces connects; an
+	/// unquoted one takes the last word.
+	/// </summary>
+	[GeneratedRegex("^(?<User>\"(?:.+?)\")(?:\\s+(?<Password>.+))?$|^(?<User>.+?)(?:\\s+(?<Password>\\S+))?$")]
 	private static partial Regex ConnectionPattern();
 }

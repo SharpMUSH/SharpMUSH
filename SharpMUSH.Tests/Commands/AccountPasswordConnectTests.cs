@@ -120,4 +120,13 @@ public class AccountPasswordConnectTests
 		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNull();
 	}
+
+	[Test]
+	public async ValueTask QuotedNameTakesAPassphraseWithSpaces()
+	{
+		var (character, _) = await CharacterOnAccountAsync("correct horse battery staple");
+
+		await RefusedAsync($"\"{character}\"", "correct horse battery");
+		await ConnectsAsync($"\"{character}\"", "correct horse battery staple");
+	}
 }
