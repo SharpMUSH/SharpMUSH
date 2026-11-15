@@ -9,6 +9,10 @@ Two version numbers matter:
 
 ## [Unreleased]
 
+### Changed
+
+- TelnetNegotiationCore 4.13.3. A telnet connection waits for its input to be processed on a signal instead of checking every timer tick, so a line reaches the game in microseconds rather than up to 15 ms.
+
 [Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.1...HEAD
 
 ## [1.0.1] - 2026-11-15
