@@ -18,6 +18,7 @@ Two version numbers matter:
 - The play terminal's settings menu has "Hide pages" and "Hide channel messages" checkboxes. On, pages stay in the sidebar's Pages list and channel messages (connect and disconnect lines included) in their channel's view, out of the main output, the ones already there included. Both are off by default and kept per browser, and are offered only while the game sends channels and pages to the sidebar. A portal connection's output now marks each channel line and page as one.
 - A visitor playing as a guest on the portal's Play page sees a line above the terminal saying so, with a link to create an account.
 - The play terminal's settings menu lists each option by name only; an (i) beside it shows the details on hover, focus or a tap.
+- `help markdown` explains the Markdown that help, +help, the wiki and `rendermarkdown()` read: text and code spans, escaping backticks and bars, help and wiki links, blocks, and Markdown inside softcode.
 - Boards (bboards 1.8.0): a new comment or reply is announced to the board's readers as a new post is, as `(New BB comment (5/1/1/3) posted to 'General' by Seliana: Test Post)`.
 
 ### Changed
