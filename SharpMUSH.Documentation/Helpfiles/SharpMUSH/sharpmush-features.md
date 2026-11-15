@@ -94,10 +94,10 @@ The game serves a web portal from the same server: a Play page with a terminal, 
 
 ## Roles and permissions
 
-- WIZARD, ROYALTY and every power are [roles], held by characters, objects and accounts. A character also holds its account's roles.
+- WIZARD and ROYALTY are [roles], and each power is a `game.` permission, held by characters, objects and accounts. A character also holds its account's roles.
 - [@role] and [@permission] define the game's own roles and permissions, and give or refuse them to one object or account. [ROLES()], [HASROLE()] and [PERMISSION()] read them.
 - A permission is decided as on Discord: an object's own override first, then its account's, then its roles, where one role that allows it wins over any that refuse it.
-- [administrative capabilities] lists the permissions that guard snapshots, jobs, queues, feeds and reality layers. [security] gives an overview.
+- [administrative capabilities] lists the permissions that guard snapshots, jobs, queues, profiling and reality layers. [security] gives an overview.
 - The `approved` role and [ISAPPROVED()] mark characters that have met the game's own bar.
 
 ## Wiki, feeds, pages and dice
@@ -107,7 +107,7 @@ The game serves a web portal from the same server: a Play page with a terminal, 
 - When the game keeps a page log, `page/recall` and `page/conversations` read a player's own pages. See [page recall] and [page functions].
 - [@roll] and [roll()] roll [dice] and keep each roll under a number that [rollinfo()] checks later.
 - [@appdraft] keeps a form, such as a job request, as a draft the player fills in a field at a time.
-- [recurring jobs] run an attribute on a schedule.
+- [recurring jobs] run an attribute on a schedule, kept in the world database.
 
 ## Plugins, Discord and scenes
 
@@ -115,7 +115,7 @@ The game serves a web portal from the same server: a Play page with a terminal, 
 
 - Discord links game channels to Discord channels, and Discord roles and bans to the game's (`help @discord`).
 - Scenes keep each scene's members and poses, with every edit of a pose, for the portal's scene pages (`help scene system`).
-- World draws a grid map of the game's rooms (`help @world`).
+- World keeps grid maps whose places need no room each, and the portal draws them (`help @world`).
 - MCP and LSP let AI tools and code editors check softcode against the game's own parser. Both start turned off.
 
 ## Softcode packages
@@ -128,13 +128,13 @@ A package is a set of softcode objects that installs, upgrades, rolls back and u
 
 ## Softcode
 
-- Every command has an output, which the next command in the same action list reads as `%>`. See [command output]. [piping] hands what a command showed to the next command as `%|`.
+- Every command has an output, which the next command in the same action list reads as `%>`. See [command output].
 - [named arguments] pass arguments by name, read as `%<name>`, and [hasarg()] tests for one.
 - `%*` marks a [list separators] delimiter, so an item that contains the delimiter stays whole.
 - [@input] passes each line a player types to an attribute, and [@map] runs an attribute for each element of a list.
 - [cache()] and [memo()] keep the answers of slow code. [@attribute index] and [indexed()] find objects by an attribute's value without a search.
 - [@attribute watch] runs event handler code whenever any copy of an attribute changes.
-- [restrictedexpr()] evaluates code limited to the functions you allow, and [localfun] gives each owner their own functions.
+- [restrictedexpr()] evaluates code limited to the functions you allow, with its inputs as literal text.
 - Each command runs under an [execution budget], and [queue budgets] limit the work waiting in the queue.
 - [~] runs a command with strict argument parsing.
 
@@ -145,7 +145,7 @@ A package is a set of softcode objects that installs, upgrades, rolls back and u
 - [JSON FUNCTIONS] add `json_array()`, `json_fill()` and `json_group_by()`.
 - [rendermarkdown()] turns Markdown into game text.
 - [schema functions] check and draw JSON against a schema.
-- [chain()], [dateparse()], [strdistance()], [printf()], [formq()], [standin()], [exitmap()] and [activity()] have no PennMUSH equivalent.
+- [gradient()], [notice()], [chain()], [dateparse()], [formq()], [standin()], [exitmap()] and [activity()] have no PennMUSH equivalent.
 - [syntaxdiagnostics()] reports the parse errors in a piece of code.
 - [account()] returns a character's account, and [context()] the commands its context stack puts first.
 
@@ -162,31 +162,30 @@ New switches on commands PennMUSH has:
 - [@dolist then], [@mapsql then]: run something once the list or the query is done.
 - [@sql prepare], [@mapsql prepare]: queries with `?` parameters.
 - `/args` on [@function], [@command], [@include] and [@trigger] names the arguments.
-- [@ps/history] lists recent queue outcomes.
 
 ## Clients, pictures and sound
 
 - [MEDIA FUNCTIONS] and [CMDLINK()] reach MXP, Pueblo, the portal and plain text, each in its own form.
 - [IMAGE ATTRIBUTES] name the pictures the portal shows for characters, rooms, exits and things.
-- [GMCP] modules reach the client, and [gmcpsupports()] tells what a client asked for.
-- A [screen reader] gets text that reads well aloud. [charset] and [@ascii] serve clients without UTF-8.
-- The game's colours fit each client, from 16 colours to 24-bit; see [colordepth()].
-- [WebSockets] connect at `/ws` on the connection server.
+- [gmcpsupports()] tells which [GMCP] modules a client asked for.
+- A [screen reader] gets text that reads well aloud.
+- [charset] sets a connection's character set, and [@ascii] the game's stand-ins for a client without UTF-8.
+- [@theme] sets the layout theme an object's output is drawn in.
 
 ## TinyMUX, RhostMUSH and imports
 
 - SharpMUSH imports PennMUSH, TinyMUX and RhostMUSH databases, with their configuration files. See [compatibility config].
 - An attribute flagged `mux` or `rhost` is read as that server reads it. See [compatibility dialects] and [dialect switches].
-- TinyMUX and RhostMUSH commands and functions are there too, such as the MUX channel commands, [toggles], [@pipe], [@rollback], [@recover], [@tag], [@livewire] and [@rxlevel]. A command whose name PennMUSH uses for something else is there under an `@dialect_`, `@rhost_` or `@mux_` name.
+- TinyMUX and RhostMUSH commands and functions are there too, such as the MUX channel commands, [piping], [toggles], [@pipe], [@rollback], [@recover], [@tag], [@livewire], [@rxlevel], [printf()], [strdistance()], [colordepth()] and [localfun] (RhostMUSH's @lfunction). A command whose name PennMUSH uses for something else is there under an `@dialect_`, `@rhost_` or `@mux_` name.
 - [compatibility left out] lists what is not.
 
 ## Running the game
 
 - [@backup] copies the live world, and [@storage] reports its disk use and purges old history.
 - [object snapshots] undo a mistake on one room, exit or code object.
-- [@reality] sets reality layers, so objects in one room can be present to some viewers and not to others.
+- [@reality] sets reality layers, off until staff turn them on, so objects in one room can be present to some viewers and not to others. RhostMUSH and TinyMUX reality levels import into them.
 - [@secret] keeps passwords and tokens encrypted, out of reach of softcode.
-- [@profile] records which functions and commands run.
+- [@profile] records which functions and commands run, and [@ps/history] lists recent queue outcomes.
 - An internal error is reported as an [exception] with an id the server log can be searched for.
 - The server reports Prometheus metrics at `/metrics`. With the update agent, the portal updates the game's containers.
 
