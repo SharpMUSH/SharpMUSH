@@ -22,6 +22,7 @@ Two version numbers matter:
 
 ### Fixed
 
+- A Pueblo client that answers the hello before its connection is registered (MUSHclient) is shown the connect screen once. It was shown it again after the handshake, as for a client that answered later.
 - An empty list's button (Who is online and Go home on Play's Here and Exits cards, Add a passkey) sits on its own line under the sentence instead of squeezing it into a narrow column.
 - Play's Here card shows each character's full name, wrapping to a second line, where it showed only the first word ("The" for "The Foo").
 - Coming back to the play output from a channel or a conversation keeps it where it was: on the newest line if you were following it, or on the line you were reading. It landed a screen or more higher, further the longer the scrollback.

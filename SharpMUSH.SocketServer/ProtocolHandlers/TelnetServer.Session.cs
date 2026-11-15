@@ -55,6 +55,10 @@ public partial class TelnetServer
 		private long _lastWritten = Stopwatch.GetTimestamp();
 		private volatile int _width;
 		private volatile OutputFormat _negotiatedFormat = OutputFormat.Ansi;
+		// Set after _negotiatedFormat, so a registration that reads it true also registers the format.
+		private volatile bool _puebloEnabled;
+		// Whether the client answered Pueblo before the capabilities were registered.
+		private volatile bool _registeredAsPueblo;
 		private volatile TerminalProbeResult? _probe;
 		private volatile bool _gmcpAgreed;
 
@@ -413,6 +417,7 @@ public partial class TelnetServer
 		private async ValueTask OnPuebloEnabledAsync(string clientVersion)
 		{
 			_negotiatedFormat = _negotiatedFormat.Negotiate(OutputFormat.Pueblo);
+			_puebloEnabled = true;
 			server._logger.LogDebug("Pueblo negotiated on handle {Handle}", handle);
 
 			await held.PublishAsync(async () =>
@@ -422,8 +427,12 @@ public partial class TelnetServer
 					server._logger.LogDebug("Updated Pueblo capabilities for handle {Handle}", handle);
 				}
 
+				// Runs once the connection is registered. A client that answered before then — MUSHclient answers the
+				// hello at once — was registered as Pueblo and is shown the login prompt once, as Pueblo; a replay
+				// would show it twice, since MUSHclient does not clear the screen at <xch_page clear=text>.
 				await server._publishEndpoint.Publish(
-					new PuebloNegotiatedMessage(handle, PuebloProtocol.ClientCommand + clientVersion), ct);
+					new PuebloNegotiatedMessage(handle, PuebloProtocol.ClientCommand + clientVersion,
+						ReplayWelcome: !_registeredAsPueblo), ct);
 			});
 		}
 
@@ -464,6 +473,9 @@ public partial class TelnetServer
 			// terminated TLS, so this is the handshake that happened rather than anything the client says
 			// about itself — and it is false, correctly, on the plaintext listener.
 			var isSecure = connection.Features.Get<ITlsHandshakeFeature>() is not null;
+
+			// Read before the capabilities: true here means the format they carry is already Pueblo.
+			_registeredAsPueblo = _puebloEnabled;
 
 			await server._connectionService.RegisterAsync(
 				handle,

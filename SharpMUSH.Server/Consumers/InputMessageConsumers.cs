@@ -433,8 +433,10 @@ public class PuebloNegotiatedConsumer(
 		// Arriving at the login prompt is what puts all of it on screen, so that is what is replayed,
 		// rather than one handler's share of it: PennMUSH calls welcome_user again here for the same
 		// reason (src/bsd.c). SOCKET`CONNECT does not fire again, being tied to a connection opening.
-		// A connection that has since logged in is past the greeting and is left alone.
-		if (connectionService.Get(message.Handle) is { State: IConnectionService.ConnectionState.Connected })
+		// A connection that has since logged in is past the greeting and is left alone, and one that answered
+		// before it was registered was shown the greeting once, already as Pueblo.
+		if (message.ReplayWelcome
+			&& connectionService.Get(message.Handle) is { State: IConnectionService.ConnectionState.Connected })
 		{
 			await mediator.Publish(
 				new ConnectionStateChangeNotification(

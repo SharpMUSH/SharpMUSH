@@ -64,6 +64,24 @@ public class MarkupNegotiationConsumerTests
 			Arg.Any<CancellationToken>());
 	}
 
+	/// <summary>
+	/// A client that answered the hello before its connection was registered was registered as Pueblo and
+	/// shown the login prompt once, already as Pueblo. MUSHclient does not clear the screen at
+	/// <c>&lt;xch_page clear=text&gt;</c>, so a replay showed it twice.
+	/// </summary>
+	[Test]
+	public async Task Pueblo_AnsweredBeforeRegistration_ShowsTheLoginPromptOnce()
+	{
+		var service = await RegisteredAsync();
+		var mediator = Substitute.For<IMediator>();
+
+		await new PuebloNegotiatedConsumer(NullLogger<PuebloNegotiatedConsumer>.Instance, service, mediator)
+			.HandleAsync(new PuebloNegotiatedMessage(Handle, "PUEBLOCLIENT 1.10", ReplayWelcome: false));
+
+		await mediator.DidNotReceive().Publish(Arg.Any<ConnectionStateChangeNotification>(), Arg.Any<CancellationToken>());
+		await Assert.That(service.Get(Handle)!.Metadata["PUEBLO"]).IsEqualTo("1");
+	}
+
 	[Test]
 	public async Task Pueblo_LeavesALoggedInConnectionAlone()
 	{
