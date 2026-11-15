@@ -6,8 +6,8 @@ namespace SharpMUSH.Server;
 
 /// <summary>
 /// The plain-HTTP port a Prometheus scraper reads <c>/metrics</c> from: <c>Metrics:Port</c>, 9092 unless set,
-/// 0 for none. The game's own HTTP listener redirects to HTTPS, so a scrape of it gets a 307 to a port and
-/// certificate the scraper does not follow. This port is never redirected and answers <c>/metrics</c> only, and
+/// 0 to turn metrics off. The game's own HTTP listener redirects to HTTPS, so a scrape of it gets a 307 to a port
+/// and certificate the scraper does not follow. This port is never redirected and answers <c>/metrics</c> only, and
 /// no other port answers <c>/metrics</c>.
 /// </summary>
 public static class MetricsListener
@@ -17,6 +17,9 @@ public static class MetricsListener
 	public static readonly PathString Path = "/metrics";
 
 	public static int Port(IConfiguration configuration) => configuration.GetValue("Metrics:Port", DefaultPort);
+
+	/// <summary>False when <c>Metrics:Port</c> is 0: no port answers <c>/metrics</c>.</summary>
+	public static bool Enabled(IConfiguration configuration) => Port(configuration) > 0;
 
 	/// <summary>
 	/// The metrics port the host actually listens on: <see cref="Port"/> when <see cref="Listen"/> adds it, else 0,
@@ -46,12 +49,15 @@ public static class MetricsListener
 
 	/// <summary>
 	/// True when the request must be answered 404: anything but <c>/metrics</c> on the metrics port, and
-	/// <c>/metrics</c> on any other port, which a reverse proxy may publish.
+	/// <c>/metrics</c> on any other port, which a reverse proxy may publish. With metrics off, <c>/metrics</c> on
+	/// every port.
 	/// </summary>
-	public static bool Refuses(HttpContext context, int port) =>
-		port > 0 && (Serves(context, port)
-			? context.Request.Path != Path
-			: context.Request.Path.StartsWithSegments(Path));
+	public static bool Refuses(HttpContext context, int port, bool enabled) =>
+		!enabled
+			? context.Request.Path.StartsWithSegments(Path)
+			: port > 0 && (Serves(context, port)
+				? context.Request.Path != Path
+				: context.Request.Path.StartsWithSegments(Path));
 
 	private static string Urls(IConfiguration configuration)
 	{

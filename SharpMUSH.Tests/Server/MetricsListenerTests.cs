@@ -58,12 +58,12 @@ public class MetricsListenerTests
 		await Assert.That(urls).IsNull();
 	}
 
-	private static bool Refuses(int localPort, string path, int metricsPort = 9092)
+	private static bool Refuses(int localPort, string path, int metricsPort = 9092, bool enabled = true)
 	{
 		var context = new DefaultHttpContext();
 		context.Connection.LocalPort = localPort;
 		context.Request.Path = path;
-		return MetricsListener.Refuses(context, metricsPort);
+		return MetricsListener.Refuses(context, metricsPort, enabled);
 	}
 
 	[Test]
@@ -84,6 +84,26 @@ public class MetricsListenerTests
 	public async Task NoMetricsPortKeepsTheScrapeOnTheMainListener()
 	{
 		await Assert.That(Refuses(8080, "/metrics", metricsPort: 0)).IsFalse();
+	}
+
+	[Test]
+	[Arguments(8080, "/metrics", true)]
+	[Arguments(9092, "/metrics", true)]
+	[Arguments(8080, "/", false)]
+	public async Task PortZeroServesTheScrapeNowhere(int localPort, string path, bool refused)
+	{
+		await Assert.That(Refuses(localPort, path, metricsPort: 0, enabled: false)).IsEqualTo(refused);
+	}
+
+	[Test]
+	[Arguments("0", false)]
+	[Arguments("9100", true)]
+	[Arguments(null, true)]
+	public async Task PortZeroTurnsMetricsOff(string? port, bool enabled)
+	{
+		var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Metrics:Port"] = port }).Build();
+
+		await Assert.That(MetricsListener.Enabled(configuration)).IsEqualTo(enabled);
 	}
 
 	[Test]

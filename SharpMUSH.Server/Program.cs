@@ -128,10 +128,11 @@ public class Program
 		// The metrics port serves the scrape and nothing else, so the portal, the API and /http are never
 		// reachable over its plain HTTP; and the scrape is served nowhere else, so a proxy in front of the
 		// portal port does not publish it.
+		var metricsEnabled = MetricsListener.Enabled(app.Configuration);
 		var metricsPort = MetricsListener.ListenedPort(app.Configuration);
 		app.Use((context, next) =>
 		{
-			if (MetricsListener.Refuses(context, metricsPort))
+			if (MetricsListener.Refuses(context, metricsPort, metricsEnabled))
 			{
 				context.Response.StatusCode = StatusCodes.Status404NotFound;
 				return Task.CompletedTask;
@@ -243,7 +244,10 @@ public class Program
 		app.Map("/http/{**path}", HandleMushHttpRequest)
 			.RequireRateLimiting(Startup.SoftcodeHttpPolicy);
 
-		app.MapPrometheusScrapingEndpoint();
+		if (metricsEnabled)
+		{
+			app.MapPrometheusScrapingEndpoint();
+		}
 
 		// The portal's asset endpoints, and the SPA fallback: all non-API, non-file routes serve
 		// index.html (no-cache) so that Blazor WASM handles client-side routing (deep links, refresh).
