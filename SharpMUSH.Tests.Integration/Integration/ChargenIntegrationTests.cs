@@ -525,6 +525,10 @@ public class ChargenIntegrationTests
 			await Assert.That(cap.GetProperty("label").GetString()).IsEqualTo("Cap on characters");
 			await Assert.That(inputs.Single(input => input.GetProperty("key").GetString() == "show-queue").GetProperty("type").GetString())
 				.IsEqualTo("boolean");
+			await God($"&DATA`CONFIG`CAP`PERMISSION {await Chargen()}=game.boot");
+			var guarded = await Http("POST", "/chargen/act", """{"op":"settings","cap":7}""", admin);
+			await Assert.That(guarded.GetProperty("errors").GetProperty("cap").GetString()).IsEqualTo("Changing this needs the game.boot permission.");
+			await God($"&DATA`CONFIG`CAP`PERMISSION {await Chargen()}=");
 			var data = await Http("GET", "/chargen/data?at=settings", "", admin);
 			await Assert.That(Datum(data, "cap").GetInt32()).IsEqualTo(0);
 			await Assert.That(Datum(data, "show-queue").GetBoolean()).IsTrue();
@@ -574,6 +578,11 @@ public class ChargenIntegrationTests
 			await Assert.That(refused.GetProperty("errors").GetProperty("_global").GetString())
 				.IsEqualTo("Only staff who change the game's configuration can do that.");
 			await Assert.That(await Stored("SECTION`CONCEPT")).IsEqualTo("Concept").Because("a refused save removes nothing");
+			var empty = await Http("POST", "/chargen/act", """{"op":"form"}""", admin);
+			await Assert.That(empty.GetProperty("errors").GetProperty("_global").GetString()).IsEqualTo("Send the sections and the fields: nothing was saved.");
+			var none = await Http("POST", "/chargen/act", """{"op":"form","sections":[],"form_fields":[]}""", admin);
+			await Assert.That(none.GetProperty("errors").GetProperty("sections").GetString()).IsEqualTo("Keep at least one section.");
+			await Assert.That(await Stored("FIELD`CONCEPT")).IsEqualTo("Concept").Because("an empty post never empties the form");
 
 			var page = await Http("GET", "/chargen/schema?at=form", "", admin);
 			var sections = page.GetProperty("pages")[0].GetProperty("sections");

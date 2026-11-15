@@ -1659,9 +1659,10 @@ objects:
           trim(u(%!/WEB`BODY`GET,%0))
         flags: [funsyntax]
       # %0 a setting: why what was posted will not do, or nothing. An empty box is the default, which always does.
+      # A change needs the setting's own PERMISSION when it names one, as +config asks.
       WEB`SETTING`PROBLEM:
         value: |-
-          setq(setting_posted,u(%!/WEB`SETTING`POSTED,%0))[if(strlen(%q<setting_posted>),u(%!/CONFIG`PROBLEM,%0,%q<setting_posted>))]
+          setq(setting_changed,u(%!/WEB`SETTING`CHANGED,%0))[setq(setting_posted,u(%!/WEB`SETTING`POSTED,%0))][cond(cand(%q<setting_changed>,not(permission(%q<viewer_objid>,setr(setting_permission,firstof(get(%!/DATA`CONFIG`%0`PERMISSION),config.admin))))),Changing this needs the %q<setting_permission> permission.,strlen(%q<setting_posted>),u(%!/CONFIG`PROBLEM,%0,%q<setting_posted>))]
         flags: [funsyntax]
       WEB`SETTING`WRONG:
         value: |-
@@ -1691,7 +1692,7 @@ objects:
       WEB`SETTING`WRITE:
         value: |-
           think setqm(setting_previous,get(%!/DATA`CONFIG`%<setting>),
-          setting_stored,u(%!/WEB`SETTING`STORED,%<setting>)); &DATA`CONFIG`%<setting> %!=%q<setting_stored>; @trigger/args %!/ACONFIG=setting,%<setting>,entry,,field,,action,set,value,%q<setting_stored>,previous,%q<setting_previous>,by,%q<viewer_objid>
+          setting_stored,u(%!/WEB`SETTING`STORED,%<setting>)); &DATA`CONFIG`%<setting> %!=%q<setting_stored>; @if hasattr(%!,ACONFIG)={@trigger/args %!/ACONFIG=setting,%<setting>,entry,,field,,action,set,value,%q<setting_stored>,previous,%q<setting_previous>,by,%q<viewer_objid>}
         flags: [cmdsyntax]
 
       # The form page: the sections and the fields as rows, in order, which Save writes back. A field's section
@@ -1732,10 +1733,10 @@ objects:
         value: |-
           json(object,sections,u(%!/WEB`ROWS`SECTIONS),form_fields,u(%!/WEB`ROWS`FIELDS))
         flags: [funsyntax]
-      # Posted rows %0 (sections or form_fields): the JSON list, or an empty one.
+      # Posted rows %0 (sections or form_fields): the JSON list, or nothing when none was posted.
       WEB`BODY`ROWS:
         value: |-
-          setq(web_rows,json_query(%q<body>,get,%0))[if(strmatch(json_query(%q<web_rows>,type),array),%q<web_rows>,json_array())]
+          setq(web_rows,json_query(%q<body>,get,%0))[if(strmatch(json_query(%q<web_rows>,type),array),%q<web_rows>)]
         flags: [funsyntax]
       # %0 rows, %1 a row's index from 0, %2 a member: its value, unquoted and trimmed; nothing when it is missing.
       WEB`ROW`GET:
@@ -1786,15 +1787,21 @@ objects:
       WEB`ACT`FORM:
         value: |-
           @include %!/WEB`NEED`ADMIN; think setqm(form_sections,u(%!/WEB`BODY`ROWS,sections),
-          form_rows,u(%!/WEB`BODY`ROWS,form_fields)); think setqm(form_section_keys,u(%!/WEB`ROWS`KEYS,%q<form_sections>,key),
+          form_rows,u(%!/WEB`BODY`ROWS,form_fields)); @assert cand(strlen(%q<form_sections>),strlen(%q<form_rows>))=think setq(web_response,u(%!/WEB`RESULT`ERROR,Send the sections and the fields: nothing was saved.)); @assert json_query(%q<form_sections>,size)=think setq(web_response,u(%!/WEB`RESULT`ERRORS,json(object,sections,json(string,Keep at least one section.)))); think setqm(form_section_keys,u(%!/WEB`ROWS`KEYS,%q<form_sections>,key),
           form_field_keys,u(%!/WEB`ROWS`KEYS,%q<form_rows>,key),
           form_field_sections,u(%!/WEB`ROWS`KEYS,%q<form_rows>,section)); think setqm(form_section_problems,u(%!/WEB`ROWS`PROBLEMS,%q<form_sections>,WEB`FORM`SECTION`PROBLEM),
-          form_field_problems,u(%!/WEB`ROWS`PROBLEMS,%q<form_rows>,WEB`FORM`FIELD`PROBLEM)); @assert not(strlen(%q<form_section_problems>%q<form_field_problems>))=think setq(web_response,u(%!/WEB`RESULT`ERRORS,squish(if(strlen(%q<form_section_problems>),json(object,sections,json(string,%q<form_section_problems>)))%r[if(strlen(%q<form_field_problems>),json(object,form_fields,json(string,%q<form_field_problems>)))],%r))); @assert u(%!/FUN`ROOM,add(mul(10,words(setdiff(%q<form_field_keys>,u(%!/WEB`FORM`ALLKEYS,FIELD)))),mul(2,words(setdiff(%q<form_section_keys>,u(%!/WEB`FORM`ALLKEYS,SECTION))))))=think setq(web_response,u(%!/WEB`RESULT`ERROR,u(%!/FUN`ROOM`TEXT))); @dolist/inline u(%!/WEB`ROWS`INDEXES,%q<form_sections>)={@include/args %!/WEB`FORM`WRITE`SECTION=row,##}; @dolist/inline u(%!/WEB`ROWS`INDEXES,%q<form_rows>)={@include/args %!/WEB`FORM`WRITE`FIELD=row,##}; @dolist/inline setdiff(u(%!/FUN`FORM`ALLFIELDS),%q<form_field_keys>)={@include/args %!/WEB`FORM`REMOVE`FIELD=field,##}; @dolist/inline setdiff(u(%!/FUN`FORM`SECTIONS),%q<form_section_keys>)={&SECTION`##`ORDER {{store}}; &SECTION`## {{store}}}; think setq(web_response,u(%!/WEB`RESULT`ADMIN,Saved the form.,form))
+          form_field_problems,u(%!/WEB`ROWS`PROBLEMS,%q<form_rows>,WEB`FORM`FIELD`PROBLEM)); @assert not(strlen(%q<form_section_problems>%q<form_field_problems>))=think setq(web_response,u(%!/WEB`RESULT`ERRORS,squish(if(strlen(%q<form_section_problems>),json(object,sections,json(string,%q<form_section_problems>)))%r[if(strlen(%q<form_field_problems>),json(object,form_fields,json(string,%q<form_field_problems>)))],%r))); @assert u(%!/FUN`ROOM,u(%!/WEB`FORM`NEEDED))=think setq(web_response,u(%!/WEB`RESULT`ERROR,u(%!/FUN`ROOM`TEXT))); @dolist/inline u(%!/WEB`ROWS`INDEXES,%q<form_sections>)={@include/args %!/WEB`FORM`WRITE`SECTION=row,##}; @dolist/inline u(%!/WEB`ROWS`INDEXES,%q<form_rows>)={@include/args %!/WEB`FORM`WRITE`FIELD=row,##}; @dolist/inline setdiff(u(%!/FUN`FORM`ALLFIELDS),%q<form_field_keys>)={@include/args %!/WEB`FORM`REMOVE`FIELD=field,##}; @dolist/inline setdiff(u(%!/FUN`FORM`SECTIONS),%q<form_section_keys>)={&SECTION`##`ORDER {{store}}; &SECTION`## {{store}}}; think setq(web_response,u(%!/WEB`RESULT`ADMIN,Saved the form.,form))
         flags: [cmdsyntax]
-      # %0 FIELD or SECTION: the store's keys of that kind, whether or not the form shows them.
-      WEB`FORM`ALLKEYS:
+      # How many attributes a save may add at most: every leaf a posted section (2) or field (10) can have,
+      # less those it has already.
+      WEB`FORM`NEEDED:
         value: |-
-          iter(lattr({{store}}/%0`*),after(%i0,`))
+          sub(add(mul(2,words(%q<form_section_keys>)),mul(10,words(%q<form_field_keys>))),ladd(iter(%q<form_section_keys>,u(%!/WEB`FORM`HELD,SECTION`%i0)) [iter(%q<form_field_keys>,u(%!/WEB`FORM`HELD,FIELD`%i0))]))
+        flags: [funsyntax]
+      # %0 SECTION`<key> or FIELD`<key>: how many of its attributes the store holds.
+      WEB`FORM`HELD:
+        value: |-
+          add(hasattr({{store}},%0),words(lattr({{store}}/%0`*)))
         flags: [funsyntax]
       # %<row> a section row, from 0: its title and its place.
       WEB`FORM`WRITE`SECTION:
