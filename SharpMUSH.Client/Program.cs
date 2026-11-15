@@ -179,6 +179,7 @@ builder.Services.AddSingleton<IConnectionStateService>(sp => sp.GetRequiredServi
 // Same singleton, exposed for scene group join/leave (client-only control surface).
 builder.Services.AddSingleton<ISceneHubControl>(sp => sp.GetRequiredService<ConnectionStateService>());
 builder.Services.AddSingleton<IPortalVisibility>(sp => sp.GetRequiredService<ConnectionStateService>());
+builder.Services.AddSingleton<PermissionChangeRefresher>();
 
 builder.Services.AddTransient<AccountSessionBearerHandler>();
 builder.Services.AddScoped<ExternalProviderConfigurationService>();
@@ -228,6 +229,9 @@ app.Services.GetRequiredService<CharacterLanguage>();
 // same run. (No readiness check here: the server hands out the portal only once the game is ready —
 // see PortalStartupPage in SharpMUSH.Server.)
 _ = app.Services.GetRequiredService<AccountAuthService>().InitAsync();
+
+// Reads the tab's role and grants again whenever the server says a role change reached this account.
+app.Services.GetRequiredService<PermissionChangeRefresher>();
 
 // Web push: whether this tab is in view and which character it plays, and the character a tab opened from a
 // notification asks for. Started here so a tab reports from its first render; nothing waits on it.

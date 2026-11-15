@@ -9573,4 +9573,25 @@
   <data name="NavThemeReduceMotionNote" xml:space="preserve">
     <value>Pozadina teme miruje i ništa na stranici ne klizi niti se okreće. Uvijek je uključeno kad vaš uređaj traži smanjeno kretanje.</value>
   </data>
+  <data name="RolCancelScene" xml:space="preserve">
+    <value>Otkaži scenu</value>
+  </data>
+  <data name="RolCancelSceneHint" xml:space="preserve">
+    <value>Otkazana scena trajno napušta raspored i ne može ponovno početi.</value>
+  </data>
+  <data name="RolFinishScene" xml:space="preserve">
+    <value>Završi scenu</value>
+  </data>
+  <data name="RolFinishSceneHint" xml:space="preserve">
+    <value>Završena scena prestaje snimati i ne može ponovno početi. Njezin zapis ostaje.</value>
+  </data>
+  <data name="RolKeepScene" xml:space="preserve">
+    <value>Zadrži je</value>
+  </data>
+  <data name="RolSceneNotFinished" xml:space="preserve">
+    <value>Scena nije završena.</value>
+  </data>
+  <data name="RolSceneNotCancelled" xml:space="preserve">
+    <value>Scena nije otkazana.</value>
+  </data>
 </root>
