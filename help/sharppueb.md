@@ -222,7 +222,7 @@ A client with no panes shows the text where it is, which is why the text is insi
 
 Says *<text>* is laid out by its own spacing: a table, a map, a listing.
 
-A client reading the stream as HTML (a Pueblo client, the portal) collapses runs of spaces and uses a variable width font, so anything drawn with spaces needs this around it or its columns will not line up. Pueblo gets `<xch_mudtext>`, the portal `<pre>`, and a terminal the text unchanged, since a terminal lays it out that way already.
+The portal collapses runs of spaces and uses a variable width font, so anything drawn with spaces needs this around it or its columns will not line up there. The portal gets `<pre>`. A Pueblo client and a terminal get the text with its spaces as they are, since they lay it out that way already.
 
 [align()], [align()] and [TABLE()] already say it for themselves, as do tables and code blocks in help and wiki text. This is for columns you draw yourself.
 
