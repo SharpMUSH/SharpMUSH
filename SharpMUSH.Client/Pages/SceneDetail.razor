@@ -481,12 +481,15 @@
 
         // The detail catalogue goes out beside the scene, read again so staff changes show: the header names its details with it.
         var details = SceneDetails.LoadAsync(refresh: true);
-        // Staff run any scene: scene.manage every verb, scene.close finishing. The verbs check again.
-        var manage = Commands.HoldsPermissionAsync("scene.manage");
-        var close = Commands.HoldsPermissionAsync("scene.close");
+        // Staff run any scene: scene.manage (or control.all, which the verbs count as it) every verb, scene.close
+        // finishing. The verbs check again. A reader acting as no character has nothing to ask.
+        var acting = AccountAuth.ActiveCharacter is not null;
+        var manage = acting ? Commands.HoldsPermissionAsync("scene.manage") : Task.FromResult<bool?>(false);
+        var controlAll = acting ? Commands.HoldsPermissionAsync("control.all") : Task.FromResult<bool?>(false);
+        var close = acting ? Commands.HoldsPermissionAsync("scene.close") : Task.FromResult<bool?>(false);
         var found = await SceneService.GetSceneAsync(Id);
         await details;
-        var mayManage = await manage == true;
+        var mayManage = await manage == true || await controlAll == true;
         var mayClose = await close == true;
         if (!_reload.IsCurrent(ticket)) return;
         _mayManage = mayManage;
@@ -705,6 +708,7 @@
     private void ToggleEdit()
     {
         _editing = !_editing;
+        _confirming = Confirming.None;
         if (!_editing || _scene is not { } scene) return;
 
         _editTitle = scene.Meta.TryGetValue("title", out var title) ? title : "";

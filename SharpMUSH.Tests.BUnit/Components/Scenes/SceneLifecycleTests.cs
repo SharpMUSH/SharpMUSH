@@ -128,6 +128,17 @@ public class SceneLifecycleTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task AWizard_HoldingControlAll_RunsAnyScene()
+	{
+		_granted.Add("control.all");
+		var cut = await RenderAsActingAsync(314, "active");
+
+		cut.WaitForAssertion(() => cut.Find(".scene-detail-finish"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".scene-detail-pause").Count).IsEqualTo(1)
+			.Because("the verbs count control.all as scene.manage");
+	}
+
+	[Test]
 	public async Task ASceneCloser_MayOnlyFinish()
 	{
 		_granted.Add("scene.close");
