@@ -528,6 +528,34 @@
     window.addEventListener('pointerup', releaseTerminal, { passive: true });
     window.addEventListener('pointercancel', releaseTerminal, { passive: true });
 
+    // The line at the top of a terminal output's view and how far below the view's top it starts, or null.
+    var topLine = function (el) {
+        if (!el.querySelectorAll || !el.getBoundingClientRect) return null;
+        var top = el.getBoundingClientRect().top;
+        var chunks = el.querySelectorAll('.sharp-terminal-chunk');
+        for (var i = 0; i < chunks.length; i++) {
+            if (chunks[i].getBoundingClientRect().bottom <= top) continue;
+            var lines = chunks[i].children;
+            for (var j = 0; j < lines.length; j++) {
+                var box = lines[j].getBoundingClientRect();
+                if (box.bottom > top) return { line: lines[j], offset: box.top - top };
+            }
+        }
+        return null;
+    };
+
+    // A terminal output just shown again, or whose lines have just changed height: on the bottom while it
+    // follows, and, for a second after being shown, back on the line a reader was reading.
+    var keepPlace = function (el) {
+        if (!el._sharpmushReading) { el.scrollTop = el.scrollHeight; return; }
+        var place = el._sharpmushPlace;
+        var shownAt = el._sharpmushShownAt || 0;
+        if (!place || !place.line.isConnected || Date.now() > shownAt + 1000) return;
+        // Not once the reader has moved the view themselves since.
+        if (heldTerminal === el || (el._sharpmushUserAt || 0) > shownAt) return;
+        el.scrollTop += place.line.getBoundingClientRect().top - el.getBoundingClientRect().top - place.offset;
+    };
+
     window.SharpMUSH.Terminal = {
         // Follows new output only while the reader is at the bottom, as a telnet client does: scrolled up to
         // reread something, the view stays where it is, the container gets sharp-terminal--reading (which
@@ -555,6 +583,23 @@
                     el._sharpmushReading = reading;
                     box.classList.toggle('sharp-terminal--reading', reading);
                     if (!reading) box.classList.remove('sharp-terminal--new');
+                    notePlace();
+                };
+                // The line at the top of a reader's view, noted after each scroll (once a frame), for putting
+                // the view back on it when the output is shown again (keepPlace).
+                var noting = false;
+                var notePlace = function () {
+                    if (!el._sharpmushReading) { el._sharpmushPlace = null; return; }
+                    if (noting || typeof requestAnimationFrame === 'undefined') return;
+                    noting = true;
+                    requestAnimationFrame(function () {
+                        noting = false;
+                        if (!el._sharpmushReading || !el.clientHeight) return;
+                        // While keepPlace is still putting the view back, the line it puts back is the one to keep.
+                        var shownAt = el._sharpmushShownAt || 0;
+                        if (Date.now() <= shownAt + 1000 && (el._sharpmushUserAt || 0) < shownAt) return;
+                        el._sharpmushPlace = topLine(el);
+                    });
                 };
                 el.addEventListener('scroll', el._sharpmushFollow, { passive: true });
                 // Hidden (display: none, as Play's terminal is under a channel view), the output has no height,
@@ -563,12 +608,22 @@
                 // follower is put back at the bottom whenever its size changes, which includes being shown.
                 // Removed from the page, the output is resized to nothing too: the observer lets go of it
                 // then, or it would keep the unmounted terminal and its scrollback alive.
+                // The lines are laid out again as the output comes back, chunk by chunk (content-visibility,
+                // shell.css), and a chunk off screen stands in at a guessed height until then, so the height
+                // goes on changing after the output is shown: the lines are watched too (keepPlace).
                 if (typeof ResizeObserver !== 'undefined') {
+                    var track = el.firstElementChild;
                     var resized = new ResizeObserver(function () {
                         if (!el.isConnected) { resized.disconnect(); return; }
-                        if (!el._sharpmushReading) el.scrollTop = el.scrollHeight;
+                        if (!el.clientHeight) { el._sharpmushHidden = true; return; }
+                        if (el._sharpmushHidden) {
+                            el._sharpmushHidden = false;
+                            el._sharpmushShownAt = Date.now();
+                        }
+                        keepPlace(el);
                     });
                     resized.observe(el);
+                    if (track) resized.observe(track);
                 }
             }
             if (el._sharpmushReading) {
