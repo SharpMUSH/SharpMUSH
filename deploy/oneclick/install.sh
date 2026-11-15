@@ -363,22 +363,23 @@ telnet_tls() {
 		echo "# No telnet name apart from the portal's." > "$sites"
 	elif [ -n "${CLOUDFLARE_TUNNEL_TOKEN:-}" ]; then
 		cat > "$sites" <<EOF
-# Written by install.sh: keeps a certificate for TLS telnet's name. Port 80 is not public behind the
-# tunnel, so the certificate is fetched over 443 alone.
+# Written by install.sh: keeps a certificate for TLS telnet's name, and serves MUD clients' telnet over
+# WebSocket on it. Port 80 is not public behind the tunnel, so the certificate is fetched over 443 alone.
 $SHARPMUSH_TELNET_TLS_HOST {
 	tls {
 		issuer acme {
 			disable_http_challenge
 		}
 	}
-	respond "Telnet over TLS is on port 4203." 404
+	import telnet_host
 }
 EOF
 	else
 		cat > "$sites" <<EOF
-# Written by install.sh: keeps a certificate for TLS telnet's name.
+# Written by install.sh: keeps a certificate for TLS telnet's name, and serves MUD clients' telnet over
+# WebSocket on it.
 $SHARPMUSH_TELNET_TLS_HOST {
-	respond "Telnet over TLS is on port 4203." 404
+	import telnet_host
 }
 EOF
 	fi

@@ -14,6 +14,12 @@
 		reverse_proxy socketserver:4202
 	}
 
+	# MUD clients' telnet over WebSocket (the mudstandards.org subprotocols), also on the connection server.
+	@telnet path /telnet
+	handle @telnet {
+		reverse_proxy socketserver:4202
+	}
+
 	# Everything else — Blazor portal, REST API, and the SignalR hub (/hubs/game) — goes to
 	# the main server. reverse_proxy passes WebSocket upgrades (SignalR) through transparently.
 	handle {

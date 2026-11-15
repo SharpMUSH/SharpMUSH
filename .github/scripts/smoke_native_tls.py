@@ -1,4 +1,4 @@
-"""Disposable, loopback-only Docker smoke checks for native TLS and proxied /ws.
+"""Disposable, loopback-only Docker smoke checks for native TLS and proxied /ws and /telnet.
 
 The orchestrator owns image builds, Compose creation, readiness, and final cleanup.
 This module only mutates that project's socketserver and its generated test PEMs.
@@ -285,29 +285,57 @@ def _read_ws(stream: socket.socket, deadline: float | None = None) -> bytes:
     raise TimeoutError("WebSocket message deadline exceeded")
 
 
+def _websocket_upgrade(stream: socket.socket, port: int, path: str, deadline: float,
+                       subprotocol: str | None = None) -> None:
+    key = base64.b64encode(secrets.token_bytes(16)).decode("ascii")
+    offer = f"Sec-WebSocket-Protocol: {subprotocol}\r\n" if subprotocol else ""
+    request = (f"GET {path} HTTP/1.1\r\nHost: localhost:{port}\r\nUpgrade: websocket\r\n"
+               f"Connection: Upgrade\r\nSec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n"
+               f"{offer}Origin: https://localhost:{port}\r\n\r\n")
+    stream.sendall(request.encode("ascii"))
+    headers = bytearray()
+    # Bytewise here avoids swallowing the beginning of the first WebSocket frame.
+    while not headers.endswith(b"\r\n\r\n"):
+        headers.extend(_read_exact(stream, 1, deadline))
+        if len(headers) > 16384:
+            raise RuntimeError("WebSocket HTTP headers exceed smoke limit")
+    lines = headers.decode("iso-8859-1").split("\r\n")
+    if not lines[0].startswith("HTTP/1.1 101 "):
+        raise RuntimeError(f"Proxy {path} upgrade failed: {lines[0]}")
+    fields = dict(line.lower().split(":", 1) for line in lines[1:] if ":" in line)
+    expected = base64.b64encode(hashlib.sha1((key + WS_GUID).encode("ascii")).digest()).decode("ascii")
+    # Header values are case-sensitive for Sec-WebSocket-Accept; parse it separately.
+    accept = next((line.split(":", 1)[1].strip() for line in lines if line.lower().startswith("sec-websocket-accept:")), "")
+    if accept != expected or fields.get("upgrade", "").strip() != "websocket":
+        raise RuntimeError(f"Proxy {path} returned an invalid WebSocket upgrade")
+    if subprotocol and fields.get("sec-websocket-protocol", "").strip() != subprotocol:
+        raise RuntimeError(f"Proxy {path} did not choose the {subprotocol} subprotocol")
+
+
+def telnet_websocket_who(port: int, ca: Path) -> None:
+    """Telnet over WebSocket (mudstandards.org): binary frames carry raw telnet, IAC and all."""
+    with _connect_tls(port, ca) as stream:
+        deadline = time.monotonic() + TIMEOUT
+        _websocket_upgrade(stream, port, "/telnet", deadline, subprotocol="telnet")
+        _send_ws(stream, b"WHO\r\n", opcode=2)
+        reader, output = _TelnetReader(), bytearray()
+        for _ in range(100):
+            text, reply = reader.feed(_read_ws(stream, deadline))
+            if reply:
+                _send_ws(stream, reply, opcode=2)
+            output.extend(text)
+            if WHO_MARKER in output:
+                _send_ws(stream, struct.pack("!H", 1000), opcode=8)
+                return
+            if len(output) > LIMIT:
+                break
+        raise RuntimeError("Proxy /telnet did not carry WHO output")
+
+
 def websocket_who(port: int, ca: Path) -> None:
     with _connect_tls(port, ca) as stream:
         deadline = time.monotonic() + TIMEOUT
-        key = base64.b64encode(secrets.token_bytes(16)).decode("ascii")
-        request = (f"GET /ws HTTP/1.1\r\nHost: localhost:{port}\r\nUpgrade: websocket\r\n"
-                   f"Connection: Upgrade\r\nSec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n"
-                   f"Origin: https://localhost:{port}\r\n\r\n")
-        stream.sendall(request.encode("ascii"))
-        headers = bytearray()
-        # Bytewise here avoids swallowing the beginning of the first WebSocket frame.
-        while not headers.endswith(b"\r\n\r\n"):
-            headers.extend(_read_exact(stream, 1, deadline))
-            if len(headers) > 16384:
-                raise RuntimeError("WebSocket HTTP headers exceed smoke limit")
-        lines = headers.decode("iso-8859-1").split("\r\n")
-        if not lines[0].startswith("HTTP/1.1 101 "):
-            raise RuntimeError(f"Proxy /ws upgrade failed: {lines[0]}")
-        fields = dict(line.lower().split(":", 1) for line in lines[1:] if ":" in line)
-        expected = base64.b64encode(hashlib.sha1((key + WS_GUID).encode("ascii")).digest()).decode("ascii")
-        # Header values are case-sensitive for Sec-WebSocket-Accept; parse it separately.
-        accept = next((line.split(":", 1)[1].strip() for line in lines if line.lower().startswith("sec-websocket-accept:")), "")
-        if accept != expected or fields.get("upgrade", "").strip() != "websocket":
-            raise RuntimeError("Proxy /ws returned an invalid WebSocket upgrade")
+        _websocket_upgrade(stream, port, "/ws", deadline)
         _send_ws(stream, b'{"type":"hello"}')
         _send_ws(stream, b"WHO")
         output = bytearray()
@@ -438,7 +466,8 @@ def run_tls_checks(compose: list[str], *, tls_port: int, plaintext_port: int,
     with socket.create_connection(("127.0.0.1", plaintext_port), timeout=TIMEOUT) as stream:
         _telnet_who(stream)
     websocket_who(websocket_port, ca)
-    print("TLS smoke: verified TLS, plaintext WHO, and Caddy /ws upgrade plus WHO output passed", flush=True)
+    telnet_websocket_who(websocket_port, ca)
+    print("TLS smoke: verified TLS, plaintext WHO, and Caddy /ws and /telnet upgrades plus WHO output passed", flush=True)
 
     try:
         with _connect_tls(tls_port, ca, hostname="wrong-host.invalid"):

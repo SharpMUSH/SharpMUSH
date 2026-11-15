@@ -31,6 +31,14 @@
 			}
 		}
 
+		# MUD clients' telnet over WebSocket (the mudstandards.org subprotocols).
+		@telnet path /telnet
+		handle @telnet {
+			reverse_proxy 127.0.0.1:4202 {
+				header_up X-Forwarded-For {client_ip}
+			}
+		}
+
 		# The game server: beside Caddy, or at its private address when it runs apart (start.sh).
 		handle {
 			reverse_proxy {$SHARPMUSH_SERVER_ADDRESS} {

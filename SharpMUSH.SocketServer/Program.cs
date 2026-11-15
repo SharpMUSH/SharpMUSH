@@ -36,37 +36,7 @@ public class Program
 
 		try
 		{
-			// First, so the /ws handler sees the player's address rather than the proxy's (TrustedProxies).
-			app.UseForwardedHeaders();
-
-			var metricsPort = app.Services.GetRequiredService<ConnectionServerOptions>().MetricsPort;
-			app.Use((context, next) =>
-			{
-				if (MetricsEndpoint.Refuses(context, metricsPort))
-				{
-					context.Response.StatusCode = StatusCodes.Status404NotFound;
-					return Task.CompletedTask;
-				}
-
-				return next(context);
-			});
-
-			var webSocketOptions = new WebSocketOptions
-			{
-				KeepAliveInterval = TimeSpan.FromSeconds(30)
-			};
-			app.UseWebSockets(webSocketOptions);
-			var webSocketHandler = app.Services.GetRequiredService<WebSocketServer>();
-			app.Map("/ws", webSocketHandler.HandleWebSocketAsync);
-
-			app.MapGet("/", () => "SharpMUSH Connection Server");
-			app.MapGet("/health", () => Results.Ok(new HealthReply("healthy", DateTimeOffset.UtcNow)));
-			app.MapGet("/ready", () => Results.Ok(new HealthReply("ready", DateTimeOffset.UtcNow)));
-
-			if (metricsPort > 0)
-			{
-				app.MapPrometheusScrapingEndpoint();
-			}
+			UseEndpoints(app);
 
 			var logger = app.Services.GetRequiredService<ILogger<Program>>();
 			logger.LogTrace("[NATS] Connected to NATS host {NatsHost}", new Uri(natsUrl).Host);
@@ -78,6 +48,53 @@ public class Program
 			await natsStrategy.DisposeAsync();
 		}
 	}
+
+	/// <summary>
+	/// The HTTP pipeline: forwarded headers, the metrics-port guard, the portal terminal's <c>/ws</c>, MUD clients'
+	/// <c>/telnet</c>, and the health endpoints.
+	/// </summary>
+	private static void UseEndpoints(WebApplication app)
+	{
+		// First, so the /ws handler sees the player's address rather than the proxy's (TrustedProxies).
+		app.UseForwardedHeaders();
+
+		var metricsPort = app.Services.GetRequiredService<ConnectionServerOptions>().MetricsPort;
+		app.Use((context, next) =>
+		{
+			if (MetricsEndpoint.Refuses(context, metricsPort))
+			{
+				context.Response.StatusCode = StatusCodes.Status404NotFound;
+				return Task.CompletedTask;
+			}
+
+			return next(context);
+		});
+
+		var webSocketOptions = new WebSocketOptions
+		{
+			KeepAliveInterval = TimeSpan.FromSeconds(30)
+		};
+		app.UseWebSockets(webSocketOptions);
+		var webSocketHandler = app.Services.GetRequiredService<WebSocketServer>();
+		app.Map("/ws", webSocketHandler.HandleWebSocketAsync);
+		MapTelnetWebSocket(app);
+
+		app.MapGet("/", () => "SharpMUSH Connection Server");
+		app.MapGet("/health", () => Results.Ok(new HealthReply("healthy", DateTimeOffset.UtcNow)));
+		app.MapGet("/ready", () => Results.Ok(new HealthReply("ready", DateTimeOffset.UtcNow)));
+
+		if (metricsPort > 0)
+		{
+			app.MapPrometheusScrapingEndpoint();
+		}
+	}
+
+	/// <summary>
+	/// <c>/telnet</c>: MUD clients' telnet over <c>wss://</c> (<c>telnet.mudstandards.org</c>, or no subprotocol), the
+	/// same telnet connection as the telnet port. The one-click stack sends the telnet name's WebSocket requests here.
+	/// </summary>
+	public static void MapTelnetWebSocket(IEndpointRouteBuilder app) =>
+		app.Map("/telnet", app.ServiceProvider.GetRequiredService<TelnetServer>().HandleWebSocketAsync);
 
 	/// <summary>
 	/// Creates and configures the WebApplication host.
@@ -193,6 +210,8 @@ public class Program
 		// This resolves the logger from DI automatically. Protocol plugins and per-connection
 		// callbacks are configured in TelnetServer.OnConnectedAsync via CreateBuilder().
 		builder.Services.AddTelnetServer();
+		// One instance for both telnet listeners and /telnet, so they share the traffic counters and probes.
+		builder.Services.AddSingleton<TelnetServer>();
 		builder.Services.AddSingleton<MsspReportHolder>();
 		builder.Services.AddSingleton<OutputSettingsHolder>();
 		builder.Services.AddSingleton<TerminalProbes>();

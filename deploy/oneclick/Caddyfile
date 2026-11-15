@@ -7,6 +7,32 @@
 	}
 }
 
+# MUD clients' telnet over WebSocket (the mudstandards.org subprotocols), served by the connection server.
+(telnet_websocket) {
+	reverse_proxy socketserver:4202 {
+		header_up X-Forwarded-For {client_ip}
+	}
+}
+
+# The telnet name's site (install.sh writes it into sites/telnet.caddy): a WebSocket on any path is telnet,
+# so a client needs only wss://<telnet name>/. The guard covers it as it covers the telnet port.
+(telnet_host) {
+	route {
+		import /etc/caddy/guard/*.caddy
+
+		@websocket {
+			header Connection *Upgrade*
+			header Upgrade websocket
+		}
+		handle @websocket {
+			rewrite * /telnet
+			import telnet_websocket
+		}
+
+		respond "Telnet over TLS is on port 4203, and telnet over WebSocket on this name's port 443." 404
+	}
+}
+
 {$SHARPMUSH_SITE} {
 	encode zstd gzip
 
@@ -22,6 +48,12 @@
 			reverse_proxy socketserver:4202 {
 				header_up X-Forwarded-For {client_ip}
 			}
+		}
+
+		# Telnet over WebSocket for MUD clients when the game has no telnet name of its own.
+		@telnet path /telnet
+		handle @telnet {
+			import telnet_websocket
 		}
 
 		handle {

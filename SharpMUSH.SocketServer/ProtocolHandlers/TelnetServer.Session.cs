@@ -1,14 +1,12 @@
-using Microsoft.AspNetCore.Connections;
 using MarkupString.Mxp;
-using Microsoft.AspNetCore.Connections.Features;
 using SharpMUSH.Library.Utilities;
 using SharpMUSH.SocketServer.Models;
 using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Messaging.Messages;
 using System.Diagnostics;
-using System.Net;
 using System.Text;
 using TelnetNegotiationCore.Builders;
+using TelnetNegotiationCore.Connections;
 using TelnetNegotiationCore.Gmcp;
 using TelnetNegotiationCore.Handlers;
 using TelnetNegotiationCore.Interpreters;
@@ -35,8 +33,7 @@ public partial class TelnetServer
 
 	private sealed class TelnetSession(
 		TelnetServer server,
-		ConnectionContext connection,
-		ConnectionCloser closer,
+		TelnetEndpoint endpoint,
 		long handle,
 		RegistrationHold held,
 		TrafficCounter traffic,
@@ -62,7 +59,11 @@ public partial class TelnetServer
 		private volatile TerminalProbeResult? _probe;
 		private volatile bool _gmcpAgreed;
 
-		public async ValueTask<TelnetInterpreter> BuildInterpreterAsync()
+		/// <summary>
+		/// Builds the interpreter on the endpoint's transport and starts reading. The connection counts the traffic
+		/// both ways, and samples negotiation after each chunk of input has been handled.
+		/// </summary>
+		public async Task<TelnetConnection> StartAsync()
 		{
 			var terminalTypeProtocol = new TerminalTypeProtocol().OnTerminalTypes(OnTerminalTypesAsync);
 			// Sends through the interpreter, which exists by the time a client can have said anything to answer.
@@ -72,17 +73,48 @@ public partial class TelnetServer
 				OnSupportsChangedAsync = OnGmcpSupportsChangedAsync
 			};
 			var builder = AddMxp(AddPueblo(AddNegotiationPlugins(server._telnetFactory.CreateBuilder(), terminalTypeProtocol, gmcp)))
-				.WithKeepAlive(KeepAliveCheckInterval, SendKeepAliveAsync);
+				.WithKeepAlive(KeepAliveCheckInterval, SendKeepAliveAsync)
+				.OnReceived(bytes =>
+				{
+					traffic.Received(bytes.Length);
+					return ValueTask.CompletedTask;
+				})
+				// Each chunk is a sampling point: whatever it settled has been handled, callbacks included.
+				.OnInputProcessed(_ => AnnounceTelnetIfNegotiatedAsync())
+				.WrapOutput(CountWrites);
 
-			builder.UsePipe(new CountingDuplexPipe(connection.Transport, traffic));
-			var telnet = await builder.BuildAsync();
+			var transport = new HeldReadTransport(endpoint.Transport);
+			var connection = await builder.StartAsync(transport, ct);
 
 			// Before the read loop starts, not after: the loop can deliver a line — a Pueblo handshake buffered
 			// with the client's first packet — before an assignment below it would have run, and every callback
-			// that reaches for the interpreter would find null.
-			_telnet = telnet;
-			return telnet;
+			// that reaches for the interpreter would find null. The transport holds its reads until then.
+			_telnet = connection.Interpreter;
+			endpoint.Connection = connection;
+			transport.Open();
+			return connection;
 		}
+
+		/// <summary>
+		/// Counts each write as waiting until the transport has taken it: a client that reads slowly holds the
+		/// write, and its bytes stay waiting.
+		/// </summary>
+		private Func<ReadOnlyMemory<byte>, ValueTask> CountWrites(Func<ReadOnlyMemory<byte>, ValueTask> write) =>
+			async bytes =>
+			{
+				traffic.Writing(bytes.Length);
+				try
+				{
+					await write(bytes);
+				}
+				catch
+				{
+					traffic.Dropped(bytes.Length);
+					throw;
+				}
+
+				traffic.Written(bytes.Length);
+			};
 
 		private TelnetInterpreterBuilder AddNegotiationPlugins(
 			TelnetInterpreterBuilder builder, TerminalTypeProtocol terminalTypeProtocol, GmcpServerSession gmcp) =>
@@ -465,16 +497,7 @@ public partial class TelnetServer
 		public async Task RegisterAsync()
 		{
 			var telnet = _telnet!;
-			// The address alone, as PennMUSH's ipaddr() and a WebSocket connection give it: sitelock rules, @ban and
-			// softcode read it as an address.
-			var remoteIp = connection.RemoteEndPoint is not IPEndPoint remoteEndpoint
-				? "unknown"
-				: WebSocketServer.ClientAddress(remoteEndpoint.Address);
-
-			// PennMUSH's CONN_SSL. Kestrel attaches ITlsHandshakeFeature only on an endpoint that actually
-			// terminated TLS, so this is the handshake that happened rather than anything the client says
-			// about itself — and it is false, correctly, on the plaintext listener.
-			var isSecure = connection.Features.Get<ITlsHandshakeFeature>() is not null;
+			var remoteIp = endpoint.RemoteIp;
 
 			// Read before the capabilities: true here means the format they carry is already Pueblo.
 			_registeredAsPueblo = _puebloEnabled;
@@ -489,7 +512,7 @@ public partial class TelnetServer
 				WriteOutputAsync,
 				WritePromptAsync,
 				() => telnet.CurrentEncoding,
-				closer.Close,
+				endpoint.Close,
 				async (module, message) =>
 				{
 					await telnet.SendGMCPCommand(Encoding.UTF8.GetBytes(module), Encoding.UTF8.GetBytes(message));
@@ -497,7 +520,7 @@ public partial class TelnetServer
 				// Without the client's word for UTF-8 (CHARSET, MTTS, or a terminal SharpMUSH knows) the connection
 				// is written in ASCII: the clients that never answer are the ones least likely to show Unicode.
 				capabilities: RegisteredCapabilities(),
-				isSecure: isSecure, cancellationToken: ct);
+				isSecure: endpoint.IsSecure, cancellationToken: ct);
 		}
 
 		/// <summary>
@@ -535,11 +558,11 @@ public partial class TelnetServer
 			}
 			catch (ObjectDisposedException ode)
 			{
-				server._logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId);
+				server._logger.LogError(ode, "{ConnectionId} Stream has been closed", endpoint.Id);
 			}
 			catch (Exception ex)
 			{
-				server._logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
+				server._logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", endpoint.Id);
 			}
 		}
 
@@ -563,13 +586,36 @@ public partial class TelnetServer
 			}
 			catch (ObjectDisposedException ode)
 			{
-				server._logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId);
+				server._logger.LogError(ode, "{ConnectionId} Stream has been closed", endpoint.Id);
 			}
 			catch (Exception ex)
 			{
-				server._logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
+				server._logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", endpoint.Id);
 			}
 		}
+	}
+
+	/// <summary>
+	/// A transport whose reads wait for <see cref="Open"/>. TelnetNegotiationCore starts reading as soon as it has
+	/// built the interpreter; the session opens this once it holds the interpreter, so no input reaches a callback
+	/// before it can answer.
+	/// </summary>
+	private sealed class HeldReadTransport(ITelnetTransport inner) : ITelnetTransport
+	{
+		private readonly TaskCompletionSource _open = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+		public void Open() => _open.TrySetResult();
+
+		public async Task ReadAsync(Func<ReadOnlyMemory<byte>, ValueTask> onData, CancellationToken cancellationToken)
+		{
+			await _open.Task.WaitAsync(cancellationToken);
+			await inner.ReadAsync(onData, cancellationToken);
+		}
+
+		public ValueTask WriteAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken) =>
+			inner.WriteAsync(data, cancellationToken);
+
+		public ValueTask CloseAsync(CancellationToken cancellationToken) => inner.CloseAsync(cancellationToken);
 	}
 
 	/// <summary>
