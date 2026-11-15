@@ -37,6 +37,9 @@ public class DefaultPackagesBootstrapService(
 {
 	public async Task StartAsync(CancellationToken cancellationToken)
 	{
+		// Not gated by SHARPMUSH_BOOTSTRAP_BUNDLED_PACKAGES either: a remote installs nothing.
+		await OfficialPackageRemoteDefault.RunAsync(registry, serverData, logger);
+
 		// Not gated by SHARPMUSH_BOOTSTRAP_BUNDLED_PACKAGES: it installs nothing, and a package that left the image
 		// must reach its new home whether or not this boot installs the bundled ones.
 		await BundledPackageHandOver.RunAsync(registry, BundledPackages.Moved, logger);
