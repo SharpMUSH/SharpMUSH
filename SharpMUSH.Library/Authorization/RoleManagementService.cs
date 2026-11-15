@@ -138,8 +138,15 @@ public sealed partial class RoleManagementService(
 	IPermissionResolver resolver,
 	IAccountClaimsInvalidator invalidator,
 	IMediator mediator,
-	Lazy<IEventService>? events = null) : IRoleManagementService
+	Lazy<IEventService>? events) : IRoleManagementService
 {
+	/// <summary>Without the event service: no role change raises <c>ROLE`ASSIGN</c> or <c>ROLE`UNASSIGN</c>. Kept for plugins built against it.</summary>
+	public RoleManagementService(IRoleRegistryService registry, IAccountService accounts, IAdministrativeCapabilityService capabilities,
+		IPermissionResolver resolver, IAccountClaimsInvalidator invalidator, IMediator mediator)
+		: this(registry, accounts, capabilities, resolver, invalidator, mediator, null)
+	{
+	}
+
 	/// <summary>Validation and the write it guards run one at a time, so two changes cannot both pass a stale check.</summary>
 	private readonly SemaphoreSlim _gate = new(1, 1);
 
