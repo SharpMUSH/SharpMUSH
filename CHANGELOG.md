@@ -9,6 +9,12 @@ Two version numbers matter:
 
 ## [Unreleased]
 
+[Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.1...HEAD
+
+## [1.0.1] - 2026-11-15
+
+Plugin contract 4.0.0. World format 1: a 1.0.0 world opens as it is.
+
 ### Added
 
 - The portal's page is sent with a `Link` header naming the stylesheets, fonts and Blazor boot script it loads first, read from the published `index.html`. Behind Cloudflare with Early Hints on, a browser gets them as a `103 Early Hints` response and starts fetching them while the page itself is still on its way.
@@ -57,7 +63,7 @@ Two version numbers matter:
 - Help shows attribute paths such as ``LOG`RADIO`` whole in code examples (`help @feed taps`, `help palette`, `help event list` and others), where a backtick in the path cut the example short and left stray markup. A `\|` in a table's code span shows as `|`, as on the Docs site (`help named arguments`). Census help is version 1.0.3.
 - `Metrics:Port=0` (game server) and `ConnectionServer:MetricsPort=0` (connection server) turn metrics off: no port answers `/metrics`, where they moved the scrape onto the main web port, which a reverse proxy publishes.
 
-[Unreleased]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.0...HEAD
+[1.0.1]: https://github.com/SharpMUSH/SharpMUSH/compare/v1.0.0...v1.0.1
 
 ## [1.0.0] - 2026-11-14
 
