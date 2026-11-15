@@ -154,6 +154,20 @@ public class SceneAnnouncementIntegrationTests
 		await Assert.That(edited).Contains($"Pose {pose} edited.").And.DoesNotContain("edited their pose");
 		await Assert.That(Heard(watcher, watcherBefore)).Contains($"[SCENE] {owner.Name} edited their pose {pose} in scene {scene}.");
 
+		var member = await PlayerAsync("AnnEditMember", room);
+		await As(member, $"+scene/join {scene}");
+		await God($"@teleport #{member.DbRef.Number}={await RoomAsync("AnnEditAway")}");
+		watcherBefore = Notifications.CountFor(watcher.DbRef);
+		var memberBefore = Notifications.CountFor(member.DbRef);
+		await As(owner, $"+scene/undo {pose}");
+		await Assert.That(Heard(watcher, watcherBefore)).Contains($"{owner.Name} undid an edit to their pose {pose} in scene {scene}.");
+		await Assert.That(Heard(member, memberBefore)).Contains($"{owner.Name} undid an edit to their pose {pose} in scene {scene}.")
+			.Because("a member hears about their scene wherever they are");
+
+		memberBefore = Notifications.CountFor(member.DbRef);
+		await As(owner, $"+scene/redo {pose}");
+		await Assert.That(Heard(member, memberBefore)).Contains($"{owner.Name} redid an edit to their pose {pose} in scene {scene}.");
+
 		await As(owner, "+scene/finish");
 		watcherBefore = Notifications.CountFor(watcher.DbRef);
 		await As(owner, $"+scene/rewrite {pose}=sets a lamp on the bar.");

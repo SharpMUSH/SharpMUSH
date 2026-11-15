@@ -338,9 +338,16 @@ objects:
       # What happened to a scene whose status went from %1 to %0, as a verb; empty when the room needn't hear.
       FUN`ANNOUNCE`VERB: |-
         switch(%0|%1,active|paused,resumed,active|active,,active|*,started,paused|active,paused,finished|active,finished,finished|paused,finished,cancelled|active,cancelled,cancelled|paused,cancelled,)
-      # The players in room %1, but %2, who may see scene %0: a private scene reaches only its members.
+      # Who hears about scene %0 but %2: those in its room %1 who may see it (a private scene reaches only its
+      # members), and its owner, GMs and participants wherever they are.
       FUN`ANNOUNCE`HEARERS: |-
-        squish(iter(lcon(%1,player),if(cand(not(strmatch(num(##),num(%2))),u(%!/FUN`ANNOUNCE`SEES,%0,##)),##)))
+        setdiff(setunion(u(%!/FUN`ANNOUNCE`ROOM,%0,%1),u(%!/FUN`ANNOUNCE`MEMBERS,%0)),num(%2))
+      # The players in room %1 who may see scene %0.
+      FUN`ANNOUNCE`ROOM: |-
+        squish(iter(lcon(%1,player),if(u(%!/FUN`ANNOUNCE`SEES,%0,##),num(##))))
+      # Scene %0's owner, GMs and participants.
+      FUN`ANNOUNCE`MEMBERS: |-
+        squish(iter(scenemembers(%0),if(cand(isdbref(##),match(owner gm participant,scenemember(%0,##))),num(##))))
       # 1 when player %1 may see scene %0, as the Scene plugin decides for whoever asks: a public scene with
       # scene.view, any scene for a wizard (God, or game.wizard; not control.all, which Rhost's staff levels hold)
       # or one of its members. scene() answers for %#, not for %1.
@@ -350,13 +357,15 @@ objects:
       # unless only those invited may.
       FUN`ANNOUNCE`TEXT: |-
         [name(%2)] %1 scene %0[if(strlen(setr(announce_title,scene(%0,title))),: %q<announce_title>)][if(cand(match(started resumed,%1),scene(%0,public),not(strmatch(scene(%0,joinpolicy),invite-only))),%b·%b+scene/join %0 to join)]
-      # Triggered when pose %0 is edited, rewritten, undone or redone by %1: the others in the room of its running
-      # scene who may see that scene are told, under the same setting as the announcements above.
+      # Triggered when %1 edits pose %0 (%2 empty), or undoes or redoes an edit to it (%2 `undid` or `redid`): those
+      # who hear about its running scene (FUN`ANNOUNCE`HEARERS) are told, under the same setting as the
+      # announcements above.
       TRIG`EDITED: |-
-        @assert v(DATA`CONFIG`ANNOUNCE); @assert strmatch(scene(setr(edited_scene,scenepose(,%0,scene)),status),active); @assert isdbref(setr(edited_room,scene(%q<edited_scene>,room))); @assert words(setr(edited_hear,u(%!/FUN`ANNOUNCE`HEARERS,%q<edited_scene>,%q<edited_room>,%1))); @pemit/list %q<edited_hear>=notice(SCENE,u(%!/FUN`EDITED`TEXT,%q<edited_scene>,%0,%1),info)
-      # %2 edited pose %1 of scene %0: their own, or the author's, named.
+        @assert v(DATA`CONFIG`ANNOUNCE); @assert strmatch(scene(setr(edited_scene,scenepose(,%0,scene)),status),active); @assert words(setr(edited_hear,u(%!/FUN`ANNOUNCE`HEARERS,%q<edited_scene>,scene(%q<edited_scene>,room),%1))); @pemit/list %q<edited_hear>=notice(SCENE,u(%!/FUN`EDITED`TEXT,%q<edited_scene>,%0,%1,%2),info)
+      # %2 edited pose %1 of scene %0 (or, with %3 `undid` or `redid`, undid or redid an edit to it): their own pose,
+      # or the author's, named.
       FUN`EDITED`TEXT: |-
-        [name(%2)] edited [if(strmatch(scenepose(,%1,author),num(%2)),their pose,[scenepose(,%1,authorname)]'s pose)] %1 in scene %0.
+        [name(%2)] [if(strlen(%3),%3 an edit to,edited)] [if(strmatch(scenepose(,%1,author),num(%2)),their pose,[scenepose(,%1,authorname)]'s pose)] %1 in scene %0.
       PALETTE`LIST: |-
         {"label":"Scenes running now","line":"+scene","always":true,"icon":"Theaters","keywords":"rp scenes list"}
       PALETTE`ABOUT: |-
@@ -883,12 +892,12 @@ objects:
       # call the function, whose answer is the pose id or why it could not: @scene/undo tells only the Logger.
       CMD`UNDO:
         value: |-
-          $(?is)^\+scene/und(?\:o)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.pose)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.pose),error); @assert not(strmatch(scenepose(,%1,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %1,warn); @assert u(%!/FUN`CAN`EDIT,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTPOSER),error); @pemit %#=if(isint(setr(pose_result,sceneundo(%1))),notice(SCENE,Pose %1 undone.,ok),notice(SCENE,%q<pose_result>,warn)); @if isint(%q<pose_result>)={@trigger %!/TRIG`EDITED=%1,%#}
+          $(?is)^\+scene/und(?\:o)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.pose)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.pose),error); @assert not(strmatch(scenepose(,%1,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %1,warn); @assert u(%!/FUN`CAN`EDIT,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTPOSER),error); @pemit %#=if(isint(setr(pose_result,sceneundo(%1))),notice(SCENE,Pose %1 undone.,ok),notice(SCENE,%q<pose_result>,warn)); @if isint(%q<pose_result>)={@trigger %!/TRIG`EDITED=%1,%#,undid}
         flags: [REGEXP]
 
       CMD`REDO:
         value: |-
-          $(?is)^\+scene/red(?\:o)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.pose)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.pose),error); @assert not(strmatch(scenepose(,%1,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %1,warn); @assert u(%!/FUN`CAN`EDIT,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTPOSER),error); @pemit %#=if(isint(setr(pose_result,sceneredo(%1))),notice(SCENE,Pose %1 redone.,ok),notice(SCENE,%q<pose_result>,warn)); @if isint(%q<pose_result>)={@trigger %!/TRIG`EDITED=%1,%#}
+          $(?is)^\+scene/red(?\:o)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.pose)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.pose),error); @assert not(strmatch(scenepose(,%1,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %1,warn); @assert u(%!/FUN`CAN`EDIT,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTPOSER),error); @pemit %#=if(isint(setr(pose_result,sceneredo(%1))),notice(SCENE,Pose %1 redone.,ok),notice(SCENE,%q<pose_result>,warn)); @if isint(%q<pose_result>)={@trigger %!/TRIG`EDITED=%1,%#,redid}
         flags: [REGEXP]
 
       CMD`DELETE:
@@ -1480,12 +1489,13 @@ objects:
           `scene.close` permission, which this package defines; allow it on a role, such as helper, with
           `@role/allow helper=scene.close`
 
-        The others in the room are told when a scene there starts, pauses, resumes or ends, with its title
-        and, for a public scene they may join, how to join it. While it runs, they are also told when a
-        pose in it is edited:
+        The scene's members, wherever they are, and the others in its room are told when it starts, pauses,
+        resumes or ends, with its title and, for a public scene, how to join it. While it runs, they are
+        also told when a pose in it is edited, or an edit is undone or redone:
 
         `\[SCENE\] Alice started scene 12: The Docks · +scene/join 12 to join`
         `\[SCENE\] Alice edited their pose 34 in scene 12.`
+        `\[SCENE\] Alice undid an edit to their pose 34 in scene 12.`
 
         Staff turn this off with `+config scene/announce=no`.
 
