@@ -11,6 +11,7 @@ Two version numbers matter:
 
 ### Added
 
+- `/metrics` reports `sharpmush.messaging.subscription.dropped`, by subscribed subject: portal output (`game.output.*`, `game.room.*`, `game.scene.*`) the server's bridge dropped because it fell behind. Those drops were silent.
 - `@function/restrict` and `@command/restrict` take `role^<role>`, `power^<power>`, `flag^<flag>` and `perm^<permission>`, any one of which lets its holder in, `!` in front of one to turn its holders away, and `everyone`. On a built-in function they change its own restriction instead of adding to it, so `@function/restrict cmdlink=everyone` lets anyone use `cmdlink()`, and `!wizard` opens a wizard-only function as in PennMUSH. `cmdlink()`, `sound()`, `music()`, `stopsound()`, `image()`, `pane()`, `clearscreen()`, `prefetch()` and `expirelinks()` declare their Send_OOB requirement this way. See `help restrict`.
 - A scene's members, wherever they are, and the others in its room are told when it starts, pauses, resumes or ends: who did it, the scene's number and title, and for a public scene the command that joins it (`[SCENE] Mira started scene 12: The Docks · +scene/join 12 to join`). While a scene runs, they are also told when a pose in it is edited, or an edit is undone or redone (`[SCENE] Mira undid an edit to their pose 34 in scene 12.`). A private scene is announced only to its members. `+config scene/announce=no` turns it off (scene package 1.20.0).
 - A scene's page in the portal has Finish and Cancel buttons, each asking once before it runs. Whoever holds `scene.manage` gets every control on any scene (edit, pause, start, finish, cancel), and whoever holds `scene.close` gets Finish.
@@ -22,6 +23,7 @@ Two version numbers matter:
 
 ### Changed
 
+- NATS.Net 3.3.2, from 2.7.3. A core subscription now buffers 16,384 messages before it drops one, where it buffered 1,024, so the portal loses less output in a burst, and a ping that cannot be written counts as a missed pong, so a dead broker connection is noticed. A C# plugin that uses the `NatsConnection` its bridge source is handed builds against NATS.Net 3.
 - In `@function/restrict`, a `!` in front of `wizard`, `admin`, `god`, `noguest`, `nogagged`, `nofixed` or `nobody` takes that restriction off, as PennMUSH's does, where it turned away whoever met it. A permission or `royalty` in a built-in's restriction replaces what the built-in asks for instead of adding to it, so a restriction already set may now let more in; check `@function <name>`. Restricting a built-in function needs `config.admin` (the Functions power is still enough for @functions). A function refused for lacking a permission names it: `#-1 PERMISSION DENIED: NEEDS CHAT.ADMIN`.
 
 ### Fixed
