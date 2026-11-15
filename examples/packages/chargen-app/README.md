@@ -11,16 +11,19 @@ viewer sees and may do:
 | `/apps/chargen/queue` | reviewers | the submitted applications, the longest waiting first |
 | `/apps/chargen/queue` | everyone else | how many are waiting, the typical wait and the places left, without names (when `+config chargen/show-queue` is on) |
 | `/apps/chargen/waitlist`, `/all`, `/decided` | reviewers | the other lists |
+| `/apps/chargen/settings` | staff with `config.admin` | the settings `+config chargen` changes, one input each, checked the way `+config` checks them (needs `chargen-config`) |
+| `/apps/chargen/form` | staff with `config.admin` | the form's sections and fields as rows to edit, in order: what `+apps/section` and `+apps/field` change |
 | `/apps/chargen/<key>` | reviewers | one application: the last submission, a before and after table of what changed since the round before, comments per section with a Staff only switch, and Ask for changes, Approve or Retire |
 
-The sidebar comes from `http/chargen/nav`: the viewer's application, and for reviewers the lists with
-their counts.
+The sidebar comes from `http/chargen/nav`: the viewer's application, for reviewers the lists with
+their counts, and for staff with `config.admin` the settings and the form. The package's
+`configuration_tile` lists both on the portal's configuration page, `/admin/config`, and in its search.
 
 ```yaml
 kind: application
 depends:
   - package: chargen
-    version: ">=2.0"
+    version: ">=2.8"
 application:
   slug: chargen
   type: page

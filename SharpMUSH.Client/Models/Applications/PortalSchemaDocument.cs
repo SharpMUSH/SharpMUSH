@@ -92,6 +92,7 @@ public sealed record SchemaSection(
 /// <c>ItemFields</c> belongs to a <c>rows</c> field: the fields of each row, whose value is a list of objects.
 /// With <c>ItemBy</c>, the row's value under that key (one of the item fields, usually a select) picks further
 /// fields from <c>ItemVariants</c>, so each kind of row has its own details.
+/// <c>Placeholder</c> belongs to a text, textarea, mstring or number field: an example shown while it is empty.
 /// <c>Graph</c> belongs to a <c>graph</c> field: the step kinds it offers and where its guidance comes from.
 /// <c>OptionsFrom</c> belongs to a select on a graph edge: the rows field of the edge's step whose rows are its
 /// choices, each row's <c>id</c> the value and its <c>label</c> (else its first shown item field, else the id) the text.
@@ -134,7 +135,9 @@ public sealed record SchemaElement(
 	// A click on one of the element's values runs this command as the viewer, filled from the value (SchemaClick).
 	string? Command = null,
 	// A click on one of the element's values opens the form this route answers, in a dialog.
-	string? Dialog = null);
+	string? Dialog = null,
+	// An input's example value, shown in grey while it is empty.
+	string? Placeholder = null);
 
 /// <summary>
 /// What a <c>graph</c> field lets its author build: the step kinds, each with the outcomes leaving it and the

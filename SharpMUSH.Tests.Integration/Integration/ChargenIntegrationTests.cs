@@ -484,4 +484,143 @@ public class ChargenIntegrationTests
 			await UninstallAsync();
 		}
 	}
+
+	/// <summary>Installs chargen-config unless installing chargen already brought it, as a bridge.</summary>
+	private async Task BridgeConfigAsync()
+	{
+		if (await God($"think [hasattr({await Chargen()},CONFIG`STORE)]") != "1")
+		{
+			await InstallAsync("chargen-config");
+		}
+	}
+
+	[Test]
+	public async Task StaffChangeTheSettingsInThePortal()
+	{
+		try
+		{
+			await InstallAsync("chargen");
+			await InstallAsync("chargen-app");
+			await BridgeConfigAsync();
+			var player = await Player("CgSet");
+			var admin = await Player("CgSetA");
+			await God($"@permission/allow #{admin.DbRef.Number}=config.admin");
+
+			await Assert.That((await Http("GET", "/chargen/schema?at=settings", "", player)).ToString())
+				.Contains("Only staff who change the game's configuration can change these settings.");
+			await Assert.That((await Http("GET", "/chargen/data?at=settings", "", player)).GetProperty("fields").EnumerateObject().Any()).IsFalse();
+			var refused = await Http("POST", "/chargen/act", """{"op":"settings","cap":"5"}""", player);
+			await Assert.That(refused.GetProperty("errors").GetProperty("_global").GetString())
+				.IsEqualTo("Only staff who change the game's configuration can do that.");
+			await Assert.That((await Http("GET", "/chargen/nav", "", player)).GetProperty("groups").GetArrayLength()).IsEqualTo(1);
+			var adminNav = (await Http("GET", "/chargen/nav", "", admin)).GetProperty("groups");
+			await Assert.That(adminNav[adminNav.GetArrayLength() - 1].GetProperty("items")[0].GetProperty("path").GetString())
+				.IsEqualTo("/apps/chargen/settings");
+
+			var page = await Http("GET", "/chargen/schema?at=settings", "", admin);
+			var inputs = page.GetProperty("pages")[0].GetProperty("sections")[1].GetProperty("elements").EnumerateArray().ToList();
+			var cap = inputs.Single(input => input.GetProperty("key").GetString() == "cap");
+			await Assert.That(cap.GetProperty("type").GetString()).IsEqualTo("number");
+			await Assert.That(cap.GetProperty("placeholder").GetString()).IsEqualTo("40");
+			await Assert.That(cap.GetProperty("label").GetString()).IsEqualTo("Cap on characters");
+			await Assert.That(inputs.Single(input => input.GetProperty("key").GetString() == "show-queue").GetProperty("type").GetString())
+				.IsEqualTo("boolean");
+			var data = await Http("GET", "/chargen/data?at=settings", "", admin);
+			await Assert.That(Datum(data, "cap").GetInt32()).IsEqualTo(0);
+			await Assert.That(Datum(data, "show-queue").GetBoolean()).IsTrue();
+			await Assert.That(Datum(data, "approved-role").GetString()).IsEqualTo("approved");
+
+			var wrong = await Http("POST", "/chargen/act", """{"op":"settings","cap":-1,"wait-sample":500,"approved-role":"two words"}""", admin);
+			var errors = wrong.GetProperty("errors");
+			await Assert.That(errors.GetProperty("cap").GetString()).IsNotEmpty();
+			await Assert.That(errors.GetProperty("wait-sample").GetString()).IsNotEmpty();
+			await Assert.That(errors.GetProperty("approved-role").GetString()).Contains("There is no role 'two words'.");
+			await Assert.That(await God($"think [get({await Chargen()}/DATA`CONFIG`CAP)]")).IsEqualTo("0")
+				.Because("nothing is stored while any setting is wrong");
+
+			var saved = await Http("POST", "/chargen/act",
+				"""{"op":"settings","cap":3,"show-queue":false,"wait-sample":"","approved-role":"approved","mail-offline":true,"comment-length":2000}""", admin);
+			await Assert.That(saved.GetProperty("message").GetString()).IsEqualTo("Saved.").Because(saved.ToString());
+			await Assert.That(saved.GetProperty("fields").GetProperty("cap").GetInt32()).IsEqualTo(3);
+			await Assert.That(saved.GetProperty("fields").GetProperty("show-queue").GetBoolean()).IsFalse();
+			await Assert.That(saved.GetProperty("fields").GetProperty("wait-sample").GetInt32()).IsEqualTo(20)
+				.Because("an empty box goes back to the default");
+			await Assert.That(await God($"think [get({await Chargen()}/DATA`CONFIG`SHOW-QUEUE)]")).IsEqualTo("0");
+			await Assert.That(await God($"think [get({await Chargen()}/DATA`CONFIG`COMMENT-LENGTH)]")).IsEqualTo("2000");
+			var again = await Http("POST", "/chargen/act",
+				"""{"op":"settings","cap":3,"show-queue":false,"wait-sample":20,"approved-role":"approved","mail-offline":true,"comment-length":2000}""", admin);
+			await Assert.That(again.GetProperty("message").GetString()).IsEqualTo("Nothing changed.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task StaffChangeTheFormInThePortal()
+	{
+		try
+		{
+			await InstallAsync("chargen");
+			await InstallAsync("chargen-app");
+			var player = await Player("CgForm");
+			var admin = await Player("CgFormA");
+			await God($"@permission/allow #{admin.DbRef.Number}=config.admin");
+
+			await Assert.That((await Http("GET", "/chargen/schema?at=form", "", player)).ToString())
+				.Contains("Only staff who change the game's configuration can change the form.");
+			var refused = await Http("POST", "/chargen/act", """{"op":"form","sections":[],"form_fields":[]}""", player);
+			await Assert.That(refused.GetProperty("errors").GetProperty("_global").GetString())
+				.IsEqualTo("Only staff who change the game's configuration can do that.");
+			await Assert.That(await Stored("SECTION`CONCEPT")).IsEqualTo("Concept").Because("a refused save removes nothing");
+
+			var page = await Http("GET", "/chargen/schema?at=form", "", admin);
+			var sections = page.GetProperty("pages")[0].GetProperty("sections");
+			var fieldRows = sections[2].GetProperty("elements")[0];
+			await Assert.That(fieldRows.GetProperty("type").GetString()).IsEqualTo("rows");
+			var sectionChoices = fieldRows.GetProperty("item_fields")[2].GetProperty("options").EnumerateArray()
+				.Select(option => option.GetProperty("value").GetString() ?? string.Empty).ToList();
+			await Assert.That(sectionChoices).IsEquivalentTo(["concept", "history", "personality"]);
+
+			var data = await Http("GET", "/chargen/data?at=form", "", admin);
+			var rows = Datum(data, "form_fields");
+			var concept = rows.EnumerateArray().Single(row => row.GetProperty("key").GetString() == "concept");
+			await Assert.That(concept.GetProperty("section").GetString()).IsEqualTo("concept");
+			await Assert.That(concept.GetProperty("required").GetBoolean()).IsTrue();
+			await Assert.That(concept.GetProperty("max").GetInt32()).IsEqualTo(120);
+			await Assert.That(Datum(data, "sections")[0].GetProperty("title").GetString()).IsEqualTo("Concept");
+
+			var wrong = await Http("POST", "/chargen/act",
+				"""{"op":"form","sections":[{"key":"concept","title":"Concept"},{"key":"concept","title":"Again"}],"form_fields":[{"key":"concept","label":"","section":"concept","type":"text"},{"key":"bad key","label":"X","section":"concept"},{"key":"origin","label":"Origin","section":"nowhere"}]}""", admin);
+			await Assert.That(wrong.GetProperty("errors").GetProperty("sections").GetString()).Contains("Row 2: Two sections are called concept.");
+			var fieldProblems = wrong.GetProperty("errors").GetProperty("form_fields").GetString();
+			await Assert.That(fieldProblems).Contains("Row 1: A label is 1 to 60 characters.").And.Contains("Row 2: A key is one word")
+				.And.Contains("Row 3: Choose one of the sections.");
+			await Assert.That(await Stored("SECTION`HISTORY")).IsEqualTo("History").Because("nothing changes while a row is wrong");
+
+			var saved = await Http("POST", "/chargen/act",
+				"""{"op":"form","sections":[{"key":"history","title":"Past"},{"key":"concept","title":"Concept"},{"key":"origins","title":"Origins"}],"form_fields":[{"key":"background","label":"Background","section":"history","type":"long","required":true,"max":null,"attribute":"BG*","chapters":3},{"key":"concept","label":"Concept","section":"concept","type":"text","required":false,"max":80,"help":"In a line."},{"key":"archetype","label":"Archetype","section":"concept","type":"choice","required":true,"choices":"Fighter | Sailor"},{"key":"motto","label":"Motto","section":"history","type":"text","choices":"ignored"}]}""", admin);
+			await Assert.That(saved.GetProperty("message").GetString()).IsEqualTo("Saved the form.").Because(saved.ToString());
+			await Assert.That(await Stored("SECTION`HISTORY")).IsEqualTo("Past");
+			await Assert.That(await Stored("SECTION`HISTORY`ORDER")).IsEqualTo("1");
+			await Assert.That(await Stored("SECTION`ORIGINS`ORDER")).IsEqualTo("3");
+			await Assert.That(await Stored("SECTION`PERSONALITY")).IsEqualTo(string.Empty).Because("a section left out is removed");
+			await Assert.That(await Stored("FIELD`CONCEPT`REQUIRED")).IsEqualTo("0");
+			await Assert.That(await Stored("FIELD`CONCEPT`MAX")).IsEqualTo("80");
+			await Assert.That(await Stored("FIELD`ARCHETYPE`ORDER")).IsEqualTo("2").Because("the order is the place in the section");
+			await Assert.That(await Stored("FIELD`ARCHETYPE`CHOICES")).IsEqualTo("Fighter|Sailor");
+			await Assert.That(await Stored("FIELD`MOTTO`CHOICES")).IsEqualTo(string.Empty).Because("only a choice keeps choices");
+			await Assert.That(await Stored("FIELD`MOTTO`ORDER")).IsEqualTo("2");
+			await Assert.That(await Stored("FIELD`BACKGROUND`ATTRIBUTE")).IsEqualTo("BG*");
+			await Assert.That(await Stored("FIELD`BACKGROUND`MAX")).IsEqualTo(string.Empty).Because("an empty option is the default");
+			await Assert.That(await As(admin, "+apps/fields")).Contains("Motto").And.Contains("Past")
+				.And.DoesNotContain("Personality").Because("+apps/fields reads the same form");
+			await Assert.That(saved.GetProperty("fields").GetProperty("form_fields").GetArrayLength()).IsEqualTo(4);
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
 }

@@ -75,4 +75,16 @@ public class SchemaFormRendererTests : BunitContext
 
 		await Assert.That(cut.Markup).Contains("WidFieldRequired");
 	}
+
+	[TUnit.Core.Test]
+	[TUnit.Core.Arguments("text")]
+	[TUnit.Core.Arguments("textarea")]
+	[TUnit.Core.Arguments("number")]
+	public async Task AnEmptyInputShowsItsPlaceholder(string type)
+	{
+		var cut = Render<SchemaFieldInput>(parameters => parameters
+			.Add(p => p.Element, new SchemaElement(Kind: "field", Key: "cap", Label: "Cap", Type: type, Placeholder: "40")));
+
+		await Assert.That(cut.Find(type == "textarea" ? "textarea" : "input").GetAttribute("placeholder")).IsEqualTo("40");
+	}
 }

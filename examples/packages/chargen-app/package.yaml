@@ -1,10 +1,10 @@
 format: "1.16"
 package: chargen-app
 title: "Character applications in the portal"
-version: 2.0.3
+version: 2.1.0
 kind: application
 authors: [SharpMUSH]
-description: "Registers character applications (the chargen package) as a portal page at /apps/chargen: the applicant's own application as a form, and for reviewers the queue, the waitlist and each application with its comments and what changed."
+description: "Registers character applications (the chargen package) as a portal page at /apps/chargen: the applicant's own application as a form, for reviewers the queue, the waitlist and each application with its comments and what changed, and for staff the settings and the form, listed on the portal's configuration page."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [portal, application, form, chargen, review]
@@ -16,7 +16,7 @@ requires_server: ">=0.1"
 # the page shows, and every button on it, is decided by that softcode for the character viewing it.
 depends:
   - package: chargen
-    version: ">=2.0"
+    version: ">=2.8"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/chargen/
@@ -32,7 +32,9 @@ configure:
 
 # Every player may open it: applicants fill in and follow their own application there, and reviewers read the
 # queue. {path} is what follows /apps/chargen/: nothing for the viewer's own application, queue, waitlist, all
-# or decided for a list, or an application's key. The sidebar comes from nav_url.
+# or decided for a list, settings or form for staff, or an application's key. The sidebar comes from nav_url.
+# The configuration tile lists the settings and the form on the portal's configuration page (/admin/config) and
+# in its search; each option's key is the input it opens.
 application:
   slug: chargen
   display_name: Character Application
@@ -45,3 +47,40 @@ application:
   nav_placement: Play
   nav_url: http/chargen/nav
   order: 50
+  configuration_tile:
+    id: chargen-settings
+    title: Character applications
+    description: How applications are reviewed, and the form applicants fill in.
+    icon: assignment_ind
+    route: /apps/chargen/settings
+    permission: config.admin
+    options:
+      - key: cap
+        label: Cap on characters
+        description: The most active characters. Past it, an approved application waits for a place.
+        aliases: [waitlist, limit]
+      - key: approved-role
+        label: Approved role
+        description: The role an approved character gets.
+        aliases: [role]
+      - key: show-queue
+        label: Show the queue
+        description: Whether applicants see their place in the queue and the typical wait.
+      - key: wait-sample
+        label: Decisions in the typical wait
+        description: How many of the latest decisions the typical wait is the middle of.
+      - key: mail-offline
+        label: Mail when offline
+        description: Whether an applicant who is not connected gets decisions and comments by mail.
+      - key: comment-length
+        label: Longest comment
+        description: The longest comment, staff note or decision message, in characters.
+      - key: form_fields
+        label: Application form fields
+        description: The fields applicants fill in, their types and which are required.
+        aliases: [chargen form, questions]
+        route: /apps/chargen/form
+      - key: sections
+        label: Application form sections
+        description: The headings the form's fields are grouped under.
+        route: /apps/chargen/form
