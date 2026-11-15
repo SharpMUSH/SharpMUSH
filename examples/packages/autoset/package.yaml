@@ -191,10 +191,10 @@ objects:
         value: |-
           @break not(words(%q<rule_give> %q<rule_take>)); @assert u(%!/FUN`GUARD`ALLOWS,%<player>)={think setq(rule_stopped,1); @log/wiz Autoset: rule [u(%!/FUN`RULE`NAME,%<rule>)] left [name(%<player>)] alone. Their roles changed over 20 times in 10 seconds%, so two rules may undo each other.}; &GUARD`[after(num(%<player>),#)] %!=u(%!/FUN`GUARD`NEXT,%<player>); @dolist/inline %q<rule_give>={@role/assign %<player>=##}; @dolist/inline %q<rule_take>={@role/unassign %<player>=##}
         flags: [cmdsyntax]
-      # The rule's TRIGGER, queued with who, which rule, why, and the roles it gave and took. Not after the guard stopped it.
+      # The rule's TRIGGER, queued with who, which rule, why, and the roles it gave and took (those that went through). Not after the guard stopped it.
       INC`RULE`TRIGGER:
         value: |-
-          @break %q<rule_stopped>; think setq(rule_trigger,trim(get({{store}}/RULE`%<rule>`TRIGGER))); @break not(strlen(%q<rule_trigger>)); @trigger/args %q<rule_trigger>=0,%<player>,1,u(%!/FUN`RULE`NAME,%<rule>),2,%<when>,player,%<player>,rule,u(%!/FUN`RULE`NAME,%<rule>),when,%<when>,gave,%q<rule_give>,took,%q<rule_take>
+          @break %q<rule_stopped>; think setq(rule_trigger,trim(get({{store}}/RULE`%<rule>`TRIGGER))); @break not(strlen(%q<rule_trigger>)); @trigger/args %q<rule_trigger>=0,%<player>,1,u(%!/FUN`RULE`NAME,%<rule>),2,%<when>,player,%<player>,rule,u(%!/FUN`RULE`NAME,%<rule>),when,%<when>,gave,squish(iter(%q<rule_give>,if(hasrole(%<player>,%i0),%i0))),took,squish(iter(%q<rule_take>,if(hasrole(%<player>,%i0),,%i0)))
         flags: [cmdsyntax]
 
       # ---- guard ----------------------------------------------------------------
@@ -427,11 +427,11 @@ objects:
 
         The `TRIGGER` attribute runs each time the rule runs, after its roles, even when no role changed, and not when the loop guard stopped the rule. It gets:
 
-        - `%0` or `%<player>`: the character's objid.
-        - `%1` or `%<rule>`: the rule's name, in lower case.
-        - `%2` or `%<when>`: what ran the rule: `create`, `connect`, `first-connect`, `link`, `gain`, `lose`, or `apply` for `+autoset/apply`.
-        - `%<gave>`: the roles given, separated by spaces; empty when none.
-        - `%<took>`: the roles taken, separated by spaces; empty when none.
+        - `%%0` or `%%<player>`: the character's objid.
+        - `%%1` or `%%<rule>`: the rule's name, in lower case.
+        - `%%2` or `%%<when>`: what ran the rule: `create`, `connect`, `first-connect`, `link`, `gain`, `lose`, or `apply` for `+autoset/apply`.
+        - `%%<gave>`: the roles given, separated by spaces; empty when none.
+        - `%%<took>`: the roles taken, separated by spaces; empty when none.
 
         A rule's name starts with a letter and holds letters, digits, `-` and `_`. Rules run in name order. A game starts with none. Written by hand like this, a rule is not checked: a role that does not exist, or that Autoset may not give, is skipped when the rule runs.
 
