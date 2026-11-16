@@ -106,15 +106,19 @@ its server and renderer to each new release by itself, major releases included (
 or Railway game takes it when its operator deploys again. The other deploy files
 (`docker-compose.prod.yml`, the Fly Dockerfile's base tag) pin one exact release. Until the first
 release's images exist, both run `dev`. New games are deployed from the files on `main`, so the
-files move only once the release's images exist. When the workflow has finished, open a pull
-request with:
+files move only once the release's images exist. When a release moves `latest`, the workflow's
+`deploy-pins` job then opens a pull request, `Pin the deploy files to X.Y.Z` on the branch
+`chore/deploy-pins-X.Y.Z`, made with:
 
 ```bash
-python3 .github/scripts/release_images.py bump 1.0.0
+python3 .github/scripts/release_images.py bump X.Y.Z
 ```
 
 It pins the release in the exact files and moves the one-click files to `latest`; after the
-first release only the exact files change. CI fails a build whose one-click files or exact files
+first release only the exact files change. A pull request opened with the workflow's token starts
+no workflow by itself, so the job starts the .NET build on that branch. For this to work,
+**Settings → Actions → General → Allow GitHub Actions to create and approve pull requests** must be
+on; without it the job fails and the command above is run by hand. CI fails a build whose one-click files or exact files
 disagree among themselves (`release_images.py check`). The Railway template lives in Railway's
 template composer, not in this repository: set its three services' images to `latest` there once.
 A DigitalOcean snapshot keeps the tag it was built with, so rebuild and resubmit it after the bump.
