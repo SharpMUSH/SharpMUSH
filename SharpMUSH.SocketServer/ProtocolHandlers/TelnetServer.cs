@@ -178,6 +178,8 @@ public partial class TelnetServer : ConnectionHandler
 	private sealed record TelnetEndpoint(
 		string Id, ITelnetTransport Transport, Action Abort, string RemoteIp, bool IsSecure, CancellationToken Closed)
 	{
+		private int _closedByServer;
+
 		/// <summary>
 		/// How long a close from this side may take before the connection is dropped. A WebSocket close waits behind
 		/// a send to a client that has stopped reading, and TelnetNegotiationCore's own close timeout starts only
@@ -192,12 +194,17 @@ public partial class TelnetServer : ConnectionHandler
 		/// True once the server closed a connection whose client was still there. Closing cancels
 		/// <see cref="Closed"/> just as a client leaving does, so the token alone cannot say whose close it was.
 		/// </summary>
-		public bool ClosedByServer => Connection?.ClosedByServer == true;
+		public bool ClosedByServer => Volatile.Read(ref _closedByServer) == 1;
 
 		/// <summary>Ends the connection from this side, as the main process asks (a @boot, QUIT, a failed registration).</summary>
 		public void Close()
 		{
 			if (Connection is not { } connection) return;
+			// Registration cleanup also closes after the client has cancelled. TNC's read-loop finally
+			// may not have run yet, so its close origin cannot distinguish that cleanup from a server close.
+			// Record our origin before CloseAsync can itself cancel the endpoint token; never clear it.
+			if (!Closed.IsCancellationRequested)
+				Volatile.Write(ref _closedByServer, 1);
 			_ = connection.CloseAsync().AsTask().ContinueWith(
 				static (t, _) => _ = t.Exception, null, TaskContinuationOptions.OnlyOnFaulted);
 			_ = AbortUnlessEndedAsync(connection.Completion);
