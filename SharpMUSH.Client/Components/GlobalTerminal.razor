@@ -422,10 +422,13 @@
             _metricsRef = DotNetObjectReference.Create(this);
             try
             {
-                _metricsHandle = await JsRuntime.InvokeAsync<IJSObjectReference>(
-                    "SharpMUSH.Metrics.observe", _outputId, _metricsRef, TargetColumns, WrapAtTargetColumns);
                 _observedTarget = TargetColumns;
                 _observedWrap = WrapAtTargetColumns;
+                _metricsHandle = await JsRuntime.InvokeAsync<IJSObjectReference>(
+                    "SharpMUSH.Metrics.observe", _outputId, _metricsRef, _observedTarget, _observedWrap);
+                // The page's stored width or wrap can arrive while observe is pending, when OnParametersSetAsync
+                // had no handle to pass it to.
+                await OnParametersSetAsync();
             }
             catch (JSException) { /* ignore if JS not ready */ }
             // Likewise: left attached, the resize observer goes on calling OnTerminalResize through a
