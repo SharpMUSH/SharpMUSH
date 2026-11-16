@@ -62,8 +62,10 @@ objects:
   # as their author. Every +bb command is added with @command/add and hooked to CMD`BB, so what a
   # player types is evaluated as that player, as a built-in command's argument is, before the code
   # reads it. The hook runs with /localize/clearregs, so a register the argument sets never reaches
-  # the code. CMD`BB sets cmd_typed, and text that came that way is not evaluated again; a /mush post
-  # from the portal or a draft is evaluated once, as whoever wrote it.
+  # the code. CMD`BB sets cmd_typed, and text that came that way is not evaluated again: a typed /mush
+  # post keeps decompose() of it as its SOURCE, and a draft keeps its lines that way, so the code a
+  # post keeps always gives back its text. A /mush post from the portal is evaluated once, as whoever
+  # wrote it. A partial edit changes the text as shown and runs nothing.
   #
   # Trees: CMD` the hooked command, INC`CMD` one per command, INC`DO` the writes, INC`NEED` guards,
   # DATA` configuration. A long command is a list of steps named after it (INC`ORDER`CHECK,
@@ -708,27 +710,30 @@ objects:
       # removed. Sets the path_ registers and %q<item_moderator_acting> (INC`NEED`ITEM).
       INC`EDIT`FIND: |-
         @assert %q<cmd_has_equals>=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,+bbedit <post>=<old>/<new>%, +bbedit/title <post>=<title>%, +bbedit/all <post>=<text>.);@include/args {{bboards}}/INC`NEED`ITEM=path,%q<cmd_left_side>;@assert not(strlen(get(%q<path_post>/[if(strlen(%q<path_comment_key>),C`%q<path_comment_key>`)]REMOVED)))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<path_label> was removed.)
-      # The item's stored text and the format the edit keeps (or /all's format switch). Sets
+      # The item's text as shown and the format the edit keeps (or /all's format switch). Sets
       # %q<edit_attr_prefix> (C`<key>` for a comment), %q<edit_format> and %q<edit_source_text>.
       FUN`EDIT`CURRENT: |-
         setqm(edit_attr_prefix,if(strlen(%q<path_comment_key>),C`%q<path_comment_key>`),
         edit_format,firstof(if(strmatch(%q<cmd_switch>,all),%q<cmd_format_switch>),get(%q<path_post>/%q<edit_attr_prefix>FORMAT),md),
-        edit_source_text,if(strmatch(get(%q<path_post>/%q<edit_attr_prefix>FORMAT),mush),get(%q<path_post>/%q<edit_attr_prefix>SOURCE),get(%q<path_post>/%q<edit_attr_prefix>TEXT)))
-      # Replaces <old> with <new> in %q<edit_source_text>. A moderator may not partly edit someone else's
-      # SharpMUSH text. Sets %q<edit_old_text> and %q<edit_new_text>.
+        edit_source_text,get(%q<path_post>/%q<edit_attr_prefix>TEXT))
+      # Replaces <old> with <new> in %q<edit_source_text>, the text as shown. Sets %q<edit_old_text> and
+      # %q<edit_new_text>.
       INC`EDIT`SUBSTITUTE: |-
-        @assert cor(not(%q<item_moderator_acting>),not(strmatch(%q<edit_format>,mush)))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<path_label> is SharpMUSH text someone else wrote%, and a partial edit would run their code as you. Replace it whole: +bbedit/all %q<path_label>=<text>.);think u({{bboards}}/FUN`EDIT`SPLIT,%q<cmd_right_side>)[setqm(edit_old_text,u({{bboards}}/FUN`POST`TEXT,%q<edit_old_text>,md),
+        think u({{bboards}}/FUN`EDIT`SPLIT,%q<cmd_right_side>)[setqm(edit_old_text,u({{bboards}}/FUN`POST`TEXT,%q<edit_old_text>,md),
         edit_new_text,u({{bboards}}/FUN`POST`TEXT,%q<edit_new_text>,md))];@assert strlen(%q<edit_old_text>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,+bbedit %q<path_label>=<old>/<new> replaces <old> with <new>.);@assert gt(pos(%q<edit_old_text>,%q<edit_source_text>),0)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,"%q<edit_old_text>" is not in %q<path_label>.);think setq(edit_source_text,edit(%q<edit_source_text>,%q<edit_old_text>,%q<edit_new_text>))
       # Writes %q<edit_source_text> (or the whole new text with /all) as %q<path_post>'s text, or its comment's.
-      # SharpMUSH text is evaluated as whoever edits it, never as the author: a moderator's words run
-      # with the moderator's own rights. A moderator can only replace someone else's SharpMUSH text
-      # whole (/all), so none of the author's code ever runs as the moderator (INC`CMD`EDIT).
+      # Only /all SharpMUSH text from the portal is evaluated here, as whoever edits it, never as the
+      # author: a moderator's words run with the moderator's own rights. Typed text was evaluated as it
+      # was typed, and a partial edit changes text already shown, so neither runs again; their SOURCE is
+      # decompose() of the text. A moderator's portal form never holds someone else's code (WEB`SCHEMA`EDIT`SOURCE).
       INC`EDIT`REPLACE: |-
-        think if(strmatch(%q<cmd_switch>,all),setq(edit_source_text,%q<cmd_right_side>))[setq(edit_rendered_text,u({{bboards}}/FUN`POST`TEXT,%q<edit_source_text>,%q<edit_format>,cand(%q<cmd_typed>,strmatch(%q<cmd_switch>,all))))];@assert not(strlen(setr(edit_check_error,u({{bboards}}/FUN`CHECK`TEXT,%q<edit_source_text>,%q<edit_rendered_text>,if(strmatch(%q<edit_format>,mush),%q<edit_source_text>)))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<edit_check_error>);&%q<edit_attr_prefix>FORMAT %q<path_post>=%q<edit_format>;&%q<edit_attr_prefix>TEXT %q<path_post>=%q<edit_rendered_text>;&%q<edit_attr_prefix>SOURCE %q<path_post>=if(strmatch(%q<edit_format>,mush),%q<edit_source_text>);&%q<edit_attr_prefix>EDITED %q<path_post>=secs();&%q<edit_attr_prefix>EDITED`BY %q<path_post>=%q<viewer_objid>;&ACTIVE %q<path_post>=secs();@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Edited %q<path_label>.);@trigger/args %q<path_current>/ON`EDIT=0,%q<path_post>,1,%q<viewer_objid>,2,%q<path_comment_key>,post,%q<path_post>,actor,%q<viewer_objid>,comment,%q<path_comment_key>
+        think if(strmatch(%q<cmd_switch>,all),setq(edit_source_text,%q<cmd_right_side>));think setqm(edit_is_text,cor(not(strmatch(%q<cmd_switch>,all)),%q<cmd_typed>),
+        edit_rendered_text,u({{bboards}}/FUN`POST`TEXT,%q<edit_source_text>,%q<edit_format>,%q<edit_is_text>),
+        edit_kept_source,if(strmatch(%q<edit_format>,mush),if(%q<edit_is_text>,decompose(%q<edit_rendered_text>),%q<edit_source_text>)));@assert not(strlen(setr(edit_check_error,u({{bboards}}/FUN`CHECK`TEXT,%q<edit_source_text>,%q<edit_rendered_text>,%q<edit_kept_source>))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<edit_check_error>);&%q<edit_attr_prefix>FORMAT %q<path_post>=%q<edit_format>;&%q<edit_attr_prefix>TEXT %q<path_post>=%q<edit_rendered_text>;&%q<edit_attr_prefix>SOURCE %q<path_post>=%q<edit_kept_source>;&%q<edit_attr_prefix>EDITED %q<path_post>=secs();&%q<edit_attr_prefix>EDITED`BY %q<path_post>=%q<viewer_objid>;&ACTIVE %q<path_post>=secs();@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Edited %q<path_label>.);@trigger/args %q<path_current>/ON`EDIT=0,%q<path_post>,1,%q<viewer_objid>,2,%q<path_comment_key>,post,%q<path_post>,actor,%q<viewer_objid>,comment,%q<path_comment_key>
       INC`EDIT`TITLE: |-
         @assert strmatch(%q<path_kind>,post)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,Comments have no title.);@assert not(strlen(setr(edit_check_error,u({{bboards}}/FUN`CHECK`TITLE,%q<cmd_right_side>))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<edit_check_error>);&TITLE %q<path_post>=%q<cmd_right_side>;&EDITED %q<path_post>=secs();&EDITED`BY %q<path_post>=%q<viewer_objid>;@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Retitled %q<path_label>.);@trigger/args %q<path_current>/ON`EDIT=0,%q<path_post>,1,%q<viewer_objid>,2,,post,%q<path_post>,actor,%q<viewer_objid>,comment,
       INC`EDIT`DRAFT: |-
-        think u({{bboards}}/FUN`EDIT`SPLIT,%q<cmd_right_side>)[setq(draft_text,get(%q<reader_holder>/BBOARD`DRAFT`TEXT))];@assert cand(strlen(%q<edit_old_text>),gt(pos(%q<edit_old_text>,%q<draft_text>),0))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,"%q<edit_old_text>" is not in your draft.);&BBOARD`DRAFT`TEXT %q<reader_holder>=edit(%q<draft_text>,%q<edit_old_text>,%q<edit_new_text>);@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Draft edited.)
+        think u({{bboards}}/FUN`EDIT`SPLIT,%q<cmd_right_side>)[setq(draft_text,get(%q<reader_holder>/BBOARD`DRAFT`TEXT))];[if(strmatch(get(%q<reader_holder>/BBOARD`DRAFT`FORMAT),mush),setqm(edit_old_text,decompose(%q<edit_old_text>),edit_new_text,decompose(%q<edit_new_text>)))];@assert cand(strlen(%q<edit_old_text>),gt(pos(%q<edit_old_text>,%q<draft_text>),0))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,"%q<edit_old_text>" is not in your draft.);&BBOARD`DRAFT`TEXT %q<reader_holder>=edit(%q<draft_text>,%q<edit_old_text>,%q<edit_new_text>);@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,Draft edited.)
       # +bbremove <post or comment>: removes it. Numbers after it move up one, as in Myrddin. A post or
       # comment with replies under it keeps its place, marked removed.
       INC`CMD`REMOVE: |-
@@ -2397,7 +2402,7 @@ objects:
       # %q<post_rendered_text> and %q<post_text_error>.
       INC`POST`TEXT: |-
         think setqm(post_format,u({{bboards}}/FUN`POST`FORMAT),
-        post_source_text,%q<cmd_right_side>,
+        post_source_text,if(cand(%q<cmd_typed>,strmatch(%q<post_format>,mush)),decompose(%q<cmd_right_side>),%q<cmd_right_side>),
         post_rendered_text,u({{bboards}}/FUN`POST`TEXT,%q<cmd_right_side>,%q<post_format>,%q<cmd_typed>));@assert not(strlen(setr(post_text_error,u({{bboards}}/FUN`CHECK`TEXT,%q<cmd_right_side>,%q<post_rendered_text>,if(strmatch(%q<post_format>,mush),%q<post_source_text>)))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<post_text_error>)
       # Posts %<title> on board %<board>: text %<text> in format %<format>, typed as %<source>. Sets
       # %q<post_object>.
@@ -2442,7 +2447,8 @@ objects:
       # +bbwrite <text>: adds a line to the draft.
       INC`CMD`WRITE: |-
         @assert u({{bboards}}/FUN`DRAFT`EXISTS)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,You have no draft. +bbpost <board>/<title> starts one.);@assert strlen(%q<cmd_argument>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,+bbwrite <text> adds a line to your draft.);think setqm(draft_old_text,get(%q<reader_holder>/BBOARD`DRAFT`TEXT),
-        draft_new_text,if(strlen(%q<draft_old_text>),%q<draft_old_text>%%r%q<cmd_argument>,%q<cmd_argument>));@assert lte(strlen(%q<draft_new_text>),config(max_attribute_value_length))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,That would take the draft [sub(strlen(%q<draft_new_text>),config(max_attribute_value_length))] characters over the limit.);&BBOARD`DRAFT`TEXT %q<reader_holder>=%q<draft_new_text>
+        draft_line,if(strmatch(get(%q<reader_holder>/BBOARD`DRAFT`FORMAT),mush),decompose(%q<cmd_argument>),%q<cmd_argument>),
+        draft_new_text,if(strlen(%q<draft_old_text>),%q<draft_old_text>%%r%q<draft_line>,%q<draft_line>));@assert lte(strlen(%q<draft_new_text>),config(max_attribute_value_length))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,That would take the draft [sub(strlen(%q<draft_new_text>),config(max_attribute_value_length))] characters over the limit.);&BBOARD`DRAFT`TEXT %q<reader_holder>=%q<draft_new_text>
       # +bbproof: shows the draft.
       INC`CMD`PROOF: |-
         @assert u({{bboards}}/FUN`DRAFT`EXISTS)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,You have no draft.);think setqm(draft_board,get(%q<reader_holder>/BBOARD`DRAFT),
@@ -2470,7 +2476,7 @@ objects:
       # %q<comment_rendered_text> and %q<comment_text_error>.
       INC`COMMENT`TEXT: |-
         think setqm(comment_format,u({{bboards}}/FUN`POST`FORMAT),
-        comment_source_text,%q<comment_text>,
+        comment_source_text,if(cand(%q<cmd_typed>,strmatch(%q<comment_format>,mush)),decompose(%q<comment_text>),%q<comment_text>),
         comment_rendered_text,u({{bboards}}/FUN`POST`TEXT,%q<comment_text>,%q<comment_format>,%q<cmd_typed>));@assert not(strlen(setr(comment_text_error,u({{bboards}}/FUN`CHECK`TEXT,%q<comment_text>,%q<comment_rendered_text>,if(strmatch(%q<comment_format>,mush),%q<comment_source_text>)))))=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,%q<comment_text_error>)
       # The post (or comment) the path_ registers name must take a comment from the reader: a post, not
       # removed or closed, on a board they may comment on, under its comment limit, and not answering a
@@ -2662,7 +2668,7 @@ objects:
 
         What you type after a +bb command is evaluated once, as you, as `say` is, so a bracket runs a function. Put a backslash before a bracket to keep it.
 
-        Posts and comments are Markdown unless you say otherwise, laid out the same way for everyone, in the game and in the web portal. Add `/mush` to a post, comment or edit to write SharpMUSH text instead, shown as it is with no Markdown layout. A /mush post written in the portal or with +bbwrite is evaluated once, as you, when you post it. What it produced is kept, and nothing in it is evaluated again. `/md` asks for Markdown when your default is SharpMUSH text.
+        Posts and comments are Markdown unless you say otherwise, laid out the same way for everyone, in the game and in the web portal. Add `/mush` to a post, comment or edit to write SharpMUSH text instead, shown as it is with no Markdown layout. What you type, +bbwrite lines included, is evaluated as you type it. A /mush post written in the portal is evaluated once, as you, when you post it. What it produced is kept, and nothing in it is evaluated again. `/md` asks for Markdown when your default is SharpMUSH text.
 
         - `+bboptions`: your settings.
         - `+bboptions format=mush`: make SharpMUSH text your default. `format=md` goes back.

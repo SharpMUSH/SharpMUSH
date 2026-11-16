@@ -346,6 +346,31 @@ public partial class BBoardsIntegrationTests
 	}
 
 	[Test]
+	public async Task TypedSharpMushTextIsEvaluatedOnceThroughDraftsAndEdits()
+	{
+		var admin = await Player("BbAdm", "bboard-admin");
+		var mira = await Player("BbOnce");
+		var board = await Board(admin, "BbOnce");
+
+		await As(mira, $"+bbpost/mush {board}/Drafted");
+		await As(mira, "+bbwrite \\[add(1,2)\\] by [name(me)], 50\\%");
+		await As(mira, "+bbwrite old line");
+		await Assert.That(await As(mira, "+bbedit text=old/new")).Contains("Draft edited.");
+		await Assert.That(await As(mira, "+bbproof")).Contains($"[add(1,2)] by {mira.Name}, 50%").And.Contains("new line");
+		var drafted = PostedLabel().Match(await As(mira, "+bbpost")).Groups[1].Value;
+		var read = await As(admin, $"+bbread {drafted}");
+		await Assert.That(read).Contains($"[add(1,2)] by {mira.Name}, 50%").And.Contains("new line")
+			.Because("a +bbwrite line is evaluated as it is typed, and never again when the draft is posted");
+
+		var typed = await Post(mira, board, "Mush", "x");
+		await As(mira, $"+bbedit/all/mush {typed}=\\[add(1,2)\\] and [add(2,2)] old");
+		await Assert.That(await As(admin, $"+bbread {typed}")).Contains("[add(1,2)] and 4 old");
+		await Assert.That(await As(mira, $"+bbedit {typed}=old/new")).Contains($"Edited {typed}.");
+		await Assert.That(await As(admin, $"+bbread {typed}")).Contains("[add(1,2)] and 4 new")
+			.Because("a partial edit changes the text as shown and evaluates nothing again");
+	}
+
+	[Test]
 	public async Task AModeratorsEditRunsAsTheModeratorAndSeesAnonymousAuthors()
 	{
 		var admin = await Player("BbAdm", "bboard-admin");
@@ -356,9 +381,9 @@ public partial class BBoardsIntegrationTests
 		var post = await Post(mira, board, "Mine", "plain");
 		await As(mira, $"+bbedit/all/mush {post}=Written by [name(me)].");
 		await Assert.That(await As(reader, $"+bbread {post}")).Contains($"Written by {mira.Name}.");
-		await Assert.That(await As(admin, $"+bbedit {post}=Written/Typed")).Contains("Replace it whole");
-		await Assert.That(await As(reader, $"+bbread {post}")).Contains($"Written by {mira.Name}.")
-			.Because("a partial edit of someone else's SharpMUSH text would run their code as the moderator");
+		await Assert.That(await As(admin, $"+bbedit {post}=Written/Typed")).Contains($"Edited {post}.");
+		await Assert.That(await As(reader, $"+bbread {post}")).Contains($"Typed by {mira.Name}.")
+			.Because("a partial edit changes the text as shown and runs none of the author's code");
 		await Assert.That(await As(admin, $"+bbedit/all/mush {post}=Edited by [name(me)]."))
 			.Contains($"Edited {post}.");
 		await Assert.That(await As(reader, $"+bbread {post}")).Contains($"Edited by {admin.Name}.")

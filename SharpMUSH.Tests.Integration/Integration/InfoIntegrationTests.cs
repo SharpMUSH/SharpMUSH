@@ -86,7 +86,7 @@ public class InfoIntegrationTests
 			var staff = await Player("InStaff");
 			await God($"@permission/allow #{staff.DbRef.Number}=softcode.info.staff");
 
-			// What a player types is kept as typed, never evaluated.
+			// What a player types is evaluated as that player; escaped brackets are kept.
 			await Assert.That(await As(ann, "+info Background=Raised on the docks. \\[add(1,2)\\] 50%"))
 				.Contains("Your info file Background is saved.");
 			await Assert.That(await God($"think get(#{ann.DbRef.Number}/INFOFILE`1`TEXT)"))
@@ -117,7 +117,12 @@ public class InfoIntegrationTests
 			await Assert.That(await As(ann, "+info/delete Background")).Contains("Staff locked Background, so only staff change it.");
 			await Assert.That(await As(staff, $"+info/unlock {ann.Name}/Background")).Contains("is unlocked.");
 			await Assert.That(await As(ann, "+info/rename Background=History")).Contains("Your info file Background is called History now.");
-			await Assert.That(await As(ann, "+info/get History")).Contains("+info History=Raised on the docks. [add(1,2)] 50%");
+			var copied = await As(ann, "+info/get History");
+			await Assert.That(copied).Contains(@"+info History=Raised on the docks. \[add\(1\,2\)\] 50\%")
+				.Because("the copied command is typed back, and typed text is evaluated");
+			await Assert.That(await As(ann, copied.Trim())).Contains("Your info file History is updated.");
+			await Assert.That(await God($"think get(#{ann.DbRef.Number}/INFOFILE`1`TEXT)"))
+				.IsEqualTo("Raised on the docks. [add(1,2)] 50%");
 			await Assert.That(await As(ann, "+info/delete History|Nothing"))
 				.Contains("Your info file History is deleted.").And.Contains("There is no info file called 'Nothing'.");
 
