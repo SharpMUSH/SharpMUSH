@@ -2045,9 +2045,9 @@
         "aliases": []
       },
       {
-        "id": "wshtml-accepts-but-does-not-use-default-string-there-is-no-wsjson",
-        "lookup": "compatibility names wshtml accepts but does not use default string there is no wsjson",
-        "heading": "\u0060wshtml()\u0060 accepts but does not use \u0060\u003Cdefault string\u003E\u0060; there is no \u0060wsjson()\u0060",
+        "id": "wshtml-accepts-but-does-not-use-default-string",
+        "lookup": "compatibility names wshtml accepts but does not use default string",
+        "heading": "\u0060wshtml()\u0060 accepts but does not use \u0060\u003Cdefault string\u003E\u0060",
         "aliases": []
       },
       {
@@ -17538,6 +17538,27 @@
       }
     ],
     "file": "wshtml-function.md"
+  },
+  {
+    "id": "wsjson-function",
+    "lookup": "wsjson()",
+    "title": "wsjson()",
+    "aliases": [],
+    "sections": [
+      {
+        "id": "delivery",
+        "lookup": "wsjson() delivery",
+        "heading": "What each reader gets",
+        "aliases": []
+      },
+      {
+        "id": "example",
+        "lookup": "wsjson() example",
+        "heading": "Example",
+        "aliases": []
+      }
+    ],
+    "file": "wsjson-function.md"
   },
   {
     "id": "zchildren-function",
